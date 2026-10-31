@@ -29,9 +29,9 @@ const errorHandler = (err, req, res, next) => {
       });
     } else {
       console.error('ERROR 💥:', err);
-      res.status(500).json({
+      res.status(err.statusCode || 500).json({
         status: 'error',
-        message: 'Something went wrong on the server'
+        message: err.message || 'Something went wrong on the server'
       });
     }
   }
