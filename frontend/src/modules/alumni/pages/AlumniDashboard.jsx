@@ -509,13 +509,14 @@ export default function AlumniDashboard() {
             src={customSchoolLogo || "/assets/gbs_crest_badge.jpg"}
             alt="School Crest"
             style={{
-              width: "48px",
-              height: "48px",
-              borderRadius: "12px",
+              width: "58px",
+              height: "58px",
+              borderRadius: "14px",
               objectFit: "contain",
-              background: "rgba(255, 255, 255, 0.06)",
-              border: "1.5px solid rgba(99, 102, 241, 0.4)",
-              padding: "2px"
+              background: "rgba(15, 23, 42, 0.85)",
+              border: "2.5px solid #6366f1",
+              boxShadow: "0 0 20px rgba(99, 102, 241, 0.45)",
+              padding: "3px"
             }}
           />
           <div>

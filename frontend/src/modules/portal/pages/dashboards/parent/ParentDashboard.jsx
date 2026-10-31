@@ -2861,9 +2861,9 @@ export default function ParentDashboard() {
         <div className="invoice-pay-modal-overlay">
           <div className="invoice-pay-modal" style={{ maxWidth: "620px", background: "#0f172a", border: "2px solid #10b981", borderRadius: "16px", padding: "2rem", boxShadow: "0 25px 60px rgba(0, 0, 0, 0.85)" }}>
             <div style={{ textAlign: "center", borderBottom: "2px solid rgba(255, 255, 255, 0.1)", paddingBottom: "1rem", marginBottom: "1.25rem" }}>
-              <img src="/assets/gbs_crest_badge.jpg" alt="GBS Crest" style={{ width: "64px", height: "64px", borderRadius: "50%", margin: "0 auto 8px", display: "block", border: "2px solid #38bdf8" }} />
+              <img src={customSchoolLogo || "/assets/gbs_crest_badge.jpg"} alt="School Crest" style={{ width: "64px", height: "64px", borderRadius: "14px", margin: "0 auto 8px", display: "block", border: "2px solid #38bdf8", objectFit: "contain", background: "rgba(15, 23, 42, 0.85)", padding: "2px" }} />
               <h2 style={{ margin: "4px 0", color: "#f8fafc", fontSize: "1.3rem", fontWeight: "900", letterSpacing: "1px" }}>
-                GBS SCHOOL MANAGEMENT SYSTEM
+                {reportSchoolName.toUpperCase()}
               </h2>
               <span style={{ fontSize: "0.85rem", color: "#38bdf8", fontWeight: "700", textTransform: "uppercase", letterSpacing: "1px" }}>
                 OFFICIAL BURSARY FEE PAYMENT RECEIPT
@@ -2924,9 +2924,9 @@ export default function ParentDashboard() {
           <div className="invoice-pay-modal" style={{ maxWidth: "680px", background: "#0b1329", border: "1px solid rgba(16, 185, 129, 0.4)" }}>
             <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", borderBottom: "1px solid rgba(255, 255, 255, 0.1)", paddingBottom: "12px", marginBottom: "16px" }}>
               <div style={{ display: "flex", alignItems: "center", gap: "12px" }}>
-                <img src="/assets/gbs_crest_badge.jpg" alt="GBS Crest" style={{ width: "48px", height: "48px", borderRadius: "50%" }} />
+                <img src={customSchoolLogo || "/assets/gbs_crest_badge.jpg"} alt="School Crest" style={{ width: "52px", height: "52px", borderRadius: "10px", objectFit: "contain", border: "2px solid #34d399", background: "rgba(15, 23, 42, 0.85)", padding: "2px" }} />
                 <div>
-                  <h3 style={{ margin: 0, color: "#34d399", fontSize: "1.1rem" }}>GBS SCHOOL MANAGEMENT SYSTEM</h3>
+                  <h3 style={{ margin: 0, color: "#34d399", fontSize: "1.1rem", fontWeight: "800" }}>{reportSchoolName.toUpperCase()}</h3>
                   <span style={{ fontSize: "0.75rem", color: "#94a3b8" }}>OFFICIAL ACADEMIC REPORT & RESULTS SLIP</span>
                 </div>
               </div>
@@ -3129,7 +3129,7 @@ export default function ParentDashboard() {
             <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", borderBottom: "2px solid rgba(139, 92, 246, 0.3)", paddingBottom: "1rem", marginBottom: "1.25rem" }}>
               <div>
                 <span className="role-portal-badge" style={{ color: "#c084fc", marginBottom: "4px", display: "inline-block" }}>
-                  GBS SCHOOL MANAGEMENT SYSTEM • OFFICIAL TRANSCRIPT ARCHIVE
+                  {reportSchoolName.toUpperCase()} • OFFICIAL TRANSCRIPT ARCHIVE
                 </span>
                 <h2 style={{ margin: "4px 0", color: "#f8fafc", fontSize: "1.45rem", letterSpacing: "0.5px" }}>
                   {reportSchoolName.toUpperCase()}
@@ -3229,7 +3229,7 @@ export default function ParentDashboard() {
             <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", borderBottom: "2px solid rgba(56, 189, 248, 0.3)", paddingBottom: "1.25rem", marginBottom: "1.5rem" }}>
               <div>
                 <span className="role-portal-badge" style={{ color: "#38bdf8", marginBottom: "4px", display: "inline-block" }}>
-                  GBS SCHOOL MANAGEMENT SYSTEM • VERIFIED INSTITUTION
+                  {reportSchoolName.toUpperCase()} • VERIFIED INSTITUTION
                 </span>
                 <h2 style={{ margin: "4px 0", color: "#f8fafc", fontSize: "1.5rem", letterSpacing: "0.5px" }}>
                   {reportSchoolName.toUpperCase()}

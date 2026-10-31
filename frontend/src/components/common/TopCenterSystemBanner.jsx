@@ -16,7 +16,10 @@ export default function TopCenterSystemBanner({
   isDeveloper = false
 }) {
   const [schoolName, setSchoolName] = useState(() => {
-    return institutionName || localStorage.getItem("gbs_report_school_name") || "St. Augustine Science & Arts Academy";
+    return institutionName || localStorage.getItem("gbs_report_school_name") || localStorage.getItem("gbs_tenant_name") || "St. Augustine Science & Arts Academy";
+  });
+  const [customLogo, setCustomLogo] = useState(() => {
+    return localStorage.getItem("gbs_custom_school_logo") || "/assets/gbs_crest_badge.jpg";
   });
   const [cleaned, setCleaned] = useState(false);
 
@@ -24,13 +27,17 @@ export default function TopCenterSystemBanner({
 
   useEffect(() => {
     const handleUpdate = () => {
-      const updated = localStorage.getItem("gbs_report_school_name");
+      const updated = localStorage.getItem("gbs_report_school_name") || localStorage.getItem("gbs_tenant_name");
       if (updated) setSchoolName(updated);
+      const updatedLogo = localStorage.getItem("gbs_custom_school_logo");
+      if (updatedLogo) setCustomLogo(updatedLogo);
     };
     window.addEventListener("gbs_school_name_updated", handleUpdate);
+    window.addEventListener("gbs_custom_logo_updated", handleUpdate);
     window.addEventListener("storage", handleUpdate);
     return () => {
       window.removeEventListener("gbs_school_name_updated", handleUpdate);
+      window.removeEventListener("gbs_custom_logo_updated", handleUpdate);
       window.removeEventListener("storage", handleUpdate);
     };
   }, []);
@@ -52,49 +59,62 @@ export default function TopCenterSystemBanner({
         flexDirection: "column",
         alignItems: "center",
         justifyContent: "center",
-        margin: "0 auto 16px auto",
+        margin: "0 auto 18px auto",
         textAlign: "center",
-        padding: "10px 28px",
-        background: "linear-gradient(135deg, rgba(15, 23, 42, 0.96), rgba(30, 41, 59, 0.94))",
-        border: isDevMode ? "2px solid rgba(56, 189, 248, 0.5)" : "2px solid rgba(16, 185, 129, 0.4)",
-        borderRadius: "32px",
-        boxShadow: isDevMode ? "0 10px 32px rgba(0, 0, 0, 0.6), 0 0 20px rgba(56, 189, 248, 0.2)" : "0 10px 32px rgba(0, 0, 0, 0.6), 0 0 20px rgba(16, 185, 129, 0.2)",
+        padding: "12px 32px",
+        background: "linear-gradient(135deg, rgba(15, 23, 42, 0.98), rgba(30, 41, 59, 0.96))",
+        border: isDevMode ? "2.5px solid rgba(56, 189, 248, 0.6)" : "2.5px solid rgba(16, 185, 129, 0.5)",
+        borderRadius: "36px",
+        boxShadow: isDevMode ? "0 12px 36px rgba(0, 0, 0, 0.7), 0 0 25px rgba(56, 189, 248, 0.25)" : "0 12px 36px rgba(0, 0, 0, 0.7), 0 0 25px rgba(16, 185, 129, 0.25)",
         width: "fit-content",
-        maxWidth: "94vw",
+        maxWidth: "95vw",
         zIndex: 20
       }}
     >
       <div
         style={{
-          fontSize: "1.35rem",
+          fontSize: "1.65rem",
           fontWeight: "900",
-          letterSpacing: "1.8px",
+          letterSpacing: "1.5px",
           color: isDevMode ? "#38bdf8" : "#f8fafc",
           textTransform: "uppercase",
           display: "flex",
           alignItems: "center",
-          gap: "12px",
+          gap: "14px",
           flexWrap: "wrap",
-          justifyContent: "center"
+          justifyContent: "center",
+          lineHeight: "1.25"
         }}
       >
-        <span style={{ fontSize: "1.4rem" }}>{isDevMode ? "⚡" : "🏫"}</span>
-        <span style={{ textShadow: "0 2px 14px rgba(0, 0, 0, 0.6)" }}>
+        <img
+          src={isDevMode ? "/assets/gbs_crest_badge.jpg" : customLogo}
+          alt="Crest"
+          style={{
+            width: "42px",
+            height: "42px",
+            borderRadius: "10px",
+            objectFit: "contain",
+            border: isDevMode ? "1.5px solid #38bdf8" : "1.5px solid #10b981",
+            background: "rgba(15, 23, 42, 0.85)",
+            padding: "2px"
+          }}
+        />
+        <span style={{ textShadow: "0 2px 16px rgba(0, 0, 0, 0.7)" }}>
           {isDevMode ? "GBS SCHOOL MANAGEMENT SYSTEM" : schoolName.toUpperCase()}
         </span>
         <span
           style={{
-            fontSize: "0.72rem",
-            background: "rgba(16, 185, 129, 0.2)",
-            color: "#34d399",
-            padding: "3px 10px",
-            borderRadius: "14px",
-            border: "1px solid rgba(16, 185, 129, 0.4)",
+            fontSize: "0.75rem",
+            background: isDevMode ? "rgba(56, 189, 248, 0.2)" : "rgba(16, 185, 129, 0.2)",
+            color: isDevMode ? "#38bdf8" : "#34d399",
+            padding: "4px 12px",
+            borderRadius: "16px",
+            border: isDevMode ? "1px solid rgba(56, 189, 248, 0.4)" : "1px solid rgba(16, 185, 129, 0.4)",
             fontWeight: "800",
             letterSpacing: "0.8px"
           }}
         >
-          {isDevMode ? "● MISSION CONTROL" : "● REGISTERED INSTITUTION"}
+          {isDevMode ? "● MISSION CONTROL" : "● OFFICIAL TENANT INSTITUTION"}
         </span>
       </div>
 

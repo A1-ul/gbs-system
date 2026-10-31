@@ -267,7 +267,7 @@ export default function HRDashboard() {
           <img 
             src={customSchoolLogo || "/assets/gbs_crest_badge.jpg"} 
             alt="School Crest" 
-            style={{ width: "44px", height: "44px", borderRadius: "10px", objectFit: "contain", background: "rgba(255,255,255,0.06)", border: "1px solid rgba(139, 92, 246, 0.4)", padding: "2px" }} 
+            style={{ width: "58px", height: "58px", borderRadius: "14px", objectFit: "contain", background: "rgba(15, 23, 42, 0.85)", border: "2.5px solid #a855f7", boxShadow: "0 0 20px rgba(168, 85, 247, 0.45)", padding: "3px" }} 
           />
           <div>
             <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>

@@ -26,7 +26,7 @@ async function getStaffProfiles(tenantId = 1) {
     const users = await prisma.user.findMany({
       where: {
         tenantId: tid,
-        role: { in: ['TEACHER', 'ACCOUNTANT', 'STAFF', 'ADMIN'] }
+        role: { in: ['TEACHER', 'ACCOUNTANT', 'STAFF', 'ADMIN', 'HR'] }
       },
       select: {
         id: true,
@@ -197,7 +197,7 @@ async function getStats(tenantId = 1) {
     const staffCount = await prisma.user.count({
       where: {
         tenantId: tid,
-        role: { in: ['TEACHER', 'ACCOUNTANT', 'STAFF', 'ADMIN'] }
+        role: { in: ['TEACHER', 'ACCOUNTANT', 'STAFF', 'ADMIN', 'HR'] }
       }
     });
 

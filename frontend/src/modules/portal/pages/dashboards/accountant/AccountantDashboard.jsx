@@ -2936,7 +2936,7 @@ export default function AccountantDashboard() {
 
                       // 1. Master Annual Financial Ledger
                       const masterCSV = [
-                        ["GBS SCHOOL MANAGEMENT SYSTEM - MASTER FINANCIAL LEDGER", `Financial Year: ${currentFinancialYear}`],
+                        [`${(reportSchoolName || "INSTITUTION").toUpperCase()} - MASTER FINANCIAL LEDGER`, `Financial Year: ${currentFinancialYear}`],
                         ["Institution", reportSchoolName],
                         ["Export Date", new Date().toISOString()],
                         ["Currency Standard", currencySymbol],

@@ -8,6 +8,8 @@ const ROLE_ICONS = {
   STUDENT: "🎓",
   PARENT: "👨‍👩‍👧",
   ACCOUNTANT: "📊",
+  HR: "👔",
+  ALUMNI: "🏛️",
   STAFF: "💼",
   DEVELOPER: "💻"
 };

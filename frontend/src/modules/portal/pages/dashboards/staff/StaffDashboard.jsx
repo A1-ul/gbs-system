@@ -36,6 +36,30 @@ export default function StaffDashboard() {
 
   const currentUser = JSON.parse(localStorage.getItem("gbs_user") || '{"firstName":"David","lastName":"Miller","email":"staff.david@gbs.edu","role":"STAFF"}');
 
+  const [schoolName, setSchoolName] = useState(() => {
+    return localStorage.getItem("gbs_report_school_name") || localStorage.getItem("gbs_tenant_name") || "St. Augustine Science & Arts Academy";
+  });
+  const [customSchoolLogo, setCustomSchoolLogo] = useState(() => {
+    return localStorage.getItem("gbs_custom_school_logo") || "/assets/gbs_crest_badge.jpg";
+  });
+
+  useEffect(() => {
+    const handleUpdate = () => {
+      const updated = localStorage.getItem("gbs_report_school_name") || localStorage.getItem("gbs_tenant_name");
+      if (updated) setSchoolName(updated);
+      const updatedLogo = localStorage.getItem("gbs_custom_school_logo");
+      if (updatedLogo) setCustomSchoolLogo(updatedLogo);
+    };
+    window.addEventListener("gbs_school_name_updated", handleUpdate);
+    window.addEventListener("gbs_custom_logo_updated", handleUpdate);
+    window.addEventListener("storage", handleUpdate);
+    return () => {
+      window.removeEventListener("gbs_school_name_updated", handleUpdate);
+      window.removeEventListener("gbs_custom_logo_updated", handleUpdate);
+      window.removeEventListener("storage", handleUpdate);
+    };
+  }, []);
+
   useEffect(() => {
     fetchTickets();
     fetchApplications();
@@ -149,9 +173,16 @@ export default function StaffDashboard() {
         {/* Header */}
         <header className="role-header">
           <div className="role-header-brand">
-            <img src="/assets/gbs_crest_badge.jpg" alt="GBS Crest" className="role-crest" />
+            <img 
+              src={customSchoolLogo || "/assets/gbs_crest_badge.jpg"} 
+              alt="School Crest" 
+              className="role-crest" 
+              style={{ width: "58px", height: "58px", borderRadius: "12px", border: "2px solid #38bdf8", objectFit: "contain", background: "rgba(15,23,42,0.85)", padding: "2px" }}
+            />
             <div className="role-brand-text">
-              <span className="role-brand-title">GBS SCHOOL MANAGEMENT SYSTEM</span>
+              <span className="role-brand-title" style={{ fontSize: "1.2rem", fontWeight: "800", color: "#f8fafc" }}>
+                {schoolName.toUpperCase()}
+              </span>
               <span className="role-portal-badge" style={{ color: "#94a3b8" }}>
                 💼 CAMPUS OPERATIONS & STAFF PORTAL
               </span>

@@ -84,6 +84,8 @@ export default function AppRouter() {
         <Route path="/signup/student" element={<SignUpPage defaultRole="STUDENT" />} />
         <Route path="/signup/parent" element={<SignUpPage defaultRole="PARENT" />} />
         <Route path="/signup/accountant" element={<SignUpPage defaultRole="ACCOUNTANT" />} />
+        <Route path="/signup/hr" element={<SignUpPage defaultRole="HR" />} />
+        <Route path="/signup/alumni" element={<SignUpPage defaultRole="ALUMNI" />} />
         <Route path="/signup/staff" element={<SignUpPage defaultRole="STAFF" />} />
 
         {/* Blueprint Section 2: Dedicated Role-Based Login Pages */}
@@ -94,6 +96,7 @@ export default function AppRouter() {
         <Route path="/login/accountant" element={<AccountantLogin />} />
         <Route path="/login/staff" element={<StaffLogin />} />
         <Route path="/login/hr" element={<StaffLogin defaultRole="HR" />} />
+        <Route path="/login/alumni" element={<StaffLogin defaultRole="ALUMNI" />} />
 
         {/* Master Blueprint Section 3: Dedicated Role-Based Interactive Workspaces */}
         <Route path="/portal/admin/dashboard" element={<AdminDashboard />} />

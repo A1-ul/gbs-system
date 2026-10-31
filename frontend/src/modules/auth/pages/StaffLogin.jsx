@@ -6,8 +6,9 @@ import "./RoleLoginPage.css";
 
 export default function StaffLogin({ defaultRole = "STAFF" }) {
   const navigate = useNavigate();
+  const isAlumni = defaultRole === "ALUMNI" || window.location.pathname.includes("/alumni");
   const isHR = defaultRole === "HR" || window.location.pathname.includes("/hr");
-  const roleKey = isHR ? "HR" : "STAFF";
+  const roleKey = isAlumni ? "ALUMNI" : isHR ? "HR" : "STAFF";
 
   const [avatar, setAvatar] = useState(() => getUserAvatar(roleKey));
   const [email, setEmail] = useState("");
@@ -22,7 +23,13 @@ export default function StaffLogin({ defaultRole = "STAFF" }) {
     try {
       const res = await login({ email: email.trim(), password, portalRole: roleKey });
       if (res?.status === "success") {
-        navigate(isHR ? "/portal/hr/dashboard" : "/portal/staff/dashboard");
+        if (isAlumni) {
+          navigate("/portal/alumni/dashboard");
+        } else if (isHR) {
+          navigate("/portal/hr/dashboard");
+        } else {
+          navigate("/portal/staff/dashboard");
+        }
       } else {
         throw new Error(res?.message || `${roleKey} authentication failed`);
       }
@@ -45,7 +52,7 @@ export default function StaffLogin({ defaultRole = "STAFF" }) {
           <div style={{ display: "flex", justifyContent: "center", alignItems: "center", gap: "12px" }}>
             <img 
               src="/assets/gbs_crest_badge.jpg" 
-              alt="GBS International Crest" 
+              alt="GBS System Crest" 
               className="role-login-crest-logo" 
             />
             <div 
@@ -56,7 +63,13 @@ export default function StaffLogin({ defaultRole = "STAFF" }) {
               <img 
                 src={avatar} 
                 alt={`${roleKey} Portrait`} 
-                style={{ width: "48px", height: "48px", borderRadius: "50%", objectFit: "cover", border: `2px solid ${isHR ? "#a855f7" : "#64748b"}` }} 
+                style={{ 
+                  width: "48px", 
+                  height: "48px", 
+                  borderRadius: "50%", 
+                  objectFit: "cover", 
+                  border: `2px solid ${isAlumni ? "#6366f1" : isHR ? "#a855f7" : "#64748b"}` 
+                }} 
               />
             </div>
           </div>
@@ -65,27 +78,33 @@ export default function StaffLogin({ defaultRole = "STAFF" }) {
         <div 
           className="role-badge-pill" 
           style={{ 
-            borderColor: isHR ? "rgba(168, 85, 247, 0.4)" : "rgba(100, 116, 139, 0.4)", 
-            color: isHR ? "#c084fc" : "#94a3b8", 
-            background: isHR ? "rgba(168, 85, 247, 0.15)" : "rgba(100, 116, 139, 0.15)" 
+            borderColor: isAlumni ? "rgba(99, 102, 241, 0.5)" : isHR ? "rgba(168, 85, 247, 0.4)" : "rgba(100, 116, 139, 0.4)", 
+            color: isAlumni ? "#818cf8" : isHR ? "#c084fc" : "#94a3b8", 
+            background: isAlumni ? "rgba(99, 102, 241, 0.15)" : isHR ? "rgba(168, 85, 247, 0.15)" : "rgba(100, 116, 139, 0.15)" 
           }}
         >
-          {isHR ? "👔 HUMAN RESOURCES & COMPLIANCE PORTAL" : "💼 LOGISTICS & CAMPUS STAFF PORTAL"}
+          {isAlumni ? "🏛️ ALUMNI & CONVOCATION NETWORK" : isHR ? "👔 HUMAN RESOURCES & COMPLIANCE PORTAL" : "💼 LOGISTICS & CAMPUS STAFF PORTAL"}
         </div>
-        <h2 className="role-login-title">{isHR ? "HR PORTAL SIGN IN" : "STAFF SIGN IN"}</h2>
+        <h2 className="role-login-title">
+          {isAlumni ? "ALUMNI NETWORK SIGN IN" : isHR ? "HR PORTAL SIGN IN" : "STAFF SIGN IN"}
+        </h2>
         <p className="role-login-sub">
-          {isHR 
+          {isAlumni 
+            ? "GBS School Management System • Permanent Convocation Records" 
+            : isHR 
             ? "GBS School Management System • Directorate of Human Resources" 
             : "GBS School Management System • Shifts, Operations & Logistics"}
         </p>
         <form onSubmit={handleSubmit} className="role-login-form">
           <div className="form-group">
-            <label htmlFor="staff-email">{isHR ? "HR Email / Officer ID" : "Staff Email / Employee ID"}</label>
+            <label htmlFor="staff-email">
+              {isAlumni ? "Alumni Email / Degree ID" : isHR ? "HR Email / Officer ID" : "Staff Email / Employee ID"}
+            </label>
             <input 
               id="staff-email" 
               type="text" 
               required 
-              placeholder={isHR ? "e.g. hr@gbs.edu" : "Enter staff email"} 
+              placeholder={isAlumni ? "e.g. alumni@gbs.edu" : isHR ? "e.g. hr@gbs.edu" : "Enter staff email"} 
               value={email} 
               onChange={(e) => setEmail(e.target.value)} 
             />
@@ -105,15 +124,24 @@ export default function StaffLogin({ defaultRole = "STAFF" }) {
           <button 
             type="submit" 
             className="role-login-submit" 
-            style={{ background: isHR ? "linear-gradient(135deg, #8b5cf6, #6d28d9)" : "linear-gradient(135deg, #64748b, #475569)" }} 
+            style={{ 
+              background: isAlumni 
+                ? "linear-gradient(135deg, #6366f1, #4f46e5)" 
+                : isHR 
+                ? "linear-gradient(135deg, #8b5cf6, #6d28d9)" 
+                : "linear-gradient(135deg, #64748b, #475569)" 
+            }} 
             disabled={loading}
           >
-            {loading ? "VERIFYING CREDENTIALS..." : (isHR ? "ACCESS HR PORTAL" : "ACCESS STAFF PORTAL")}
+            {loading ? "VERIFYING CREDENTIALS..." : (isAlumni ? "ACCESS ALUMNI PORTAL" : isHR ? "ACCESS HR PORTAL" : "ACCESS STAFF PORTAL")}
           </button>
         </form>
         <div style={{ textAlign: "center", margin: "12px 0" }}>
-          <Link to="/signup/staff" style={{ color: "#94a3b8", fontSize: "0.85rem", textDecoration: "none", fontWeight: "600" }}>
-            ✨ New operational employee? Register Staff Account →
+          <Link 
+            to={isAlumni ? "/signup/alumni" : isHR ? "/signup/hr" : "/signup/staff"} 
+            style={{ color: "#94a3b8", fontSize: "0.85rem", textDecoration: "none", fontWeight: "600" }}
+          >
+            {isAlumni ? "✨ Graduated Scholar? Register Alumni Profile →" : isHR ? "✨ HR Executive? Register HR Directorate →" : "✨ New operational employee? Register Staff Account →"}
           </Link>
         </div>
         <div className="role-switch-grid">
@@ -122,6 +150,7 @@ export default function StaffLogin({ defaultRole = "STAFF" }) {
           <Link to="/login/student" className="portal-switch-link">Student</Link>
           <Link to="/login/parent" className="portal-switch-link">Parent</Link>
           <Link to="/login/accountant" className="portal-switch-link">Accountant</Link>
+          <Link to="/login/alumni" className="portal-switch-link">Alumni</Link>
         </div>
         <Link to="/login" className="main-portal-link">← Return to Main Portal</Link>
       </div>

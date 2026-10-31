@@ -8,6 +8,7 @@ import ParentDashboard from "./dashboards/parent/ParentDashboard";
 import AccountantDashboard from "./dashboards/accountant/AccountantDashboard";
 import StaffDashboard from "./dashboards/staff/StaffDashboard";
 import AlumniDashboard from "../../alumni/pages/AlumniDashboard";
+import HRDashboard from "./dashboards/hr/HRDashboard";
 import "./RoleDashboardView.css";
 
 const ROLE_CONFIGS = {
@@ -147,6 +148,7 @@ export default function RoleDashboardView() {
   if (normalizedRole === "parent") return <ParentDashboard />;
   if (normalizedRole === "accountant" || normalizedRole === "bursar") return <AccountantDashboard />;
   if (normalizedRole === "staff") return <StaffDashboard />;
+  if (normalizedRole === "hr") return <HRDashboard />;
   if (normalizedRole === "alumni" || normalizedRole === "graduate") return <AlumniDashboard />;
   if (normalizedRole === "admin" || normalizedRole === "headmaster") return <AdminDashboard />;
 
@@ -160,6 +162,9 @@ export default function RoleDashboardView() {
     navigate("/login");
   };
 
+  const tenantSchoolName = localStorage.getItem("gbs_report_school_name") || localStorage.getItem("gbs_tenant_name") || "St. Augustine Science & Arts Academy";
+  const customSchoolLogo = localStorage.getItem("gbs_custom_school_logo") || "/assets/gbs_crest_badge.jpg";
+
   return (
     <div className="dashboard-container">
       {/* Real photographic background matching the role */}
@@ -172,9 +177,9 @@ export default function RoleDashboardView() {
       {/* Top Header Navigation */}
       <header className="dashboard-header">
         <div className="nav-brand">
-          <img src="/assets/gbs_crest_badge.jpg" alt="GBS Crest" className="header-crest" />
+          <img src={customSchoolLogo} alt="School Crest" className="header-crest" />
           <div>
-            <span className="brand-title">GBS SCHOOL MANAGEMENT SYSTEM</span>
+            <span className="brand-title">{tenantSchoolName.toUpperCase()}</span>
             <span className="portal-badge" style={{ color: config.badgeColor }}>
               {config.title}
             </span>
@@ -289,7 +294,7 @@ export default function RoleDashboardView() {
       {/* Enterprise Status Footer */}
       <footer className="dashboard-footer">
         <div className="footer-content">
-          <span>GBS International School Management System • Enterprise Production Architecture</span>
+          <span>{tenantSchoolName} • Enterprise Production Architecture</span>
           <span>PostgreSQL Active • Zero Fake Data • Absolute Real Implementation</span>
         </div>
       </footer>

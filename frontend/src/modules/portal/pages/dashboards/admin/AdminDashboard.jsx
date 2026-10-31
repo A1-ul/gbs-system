@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import apiClient from "../../../../../api/client/apiClient";
 import RoleCountGrid from "../../../../user/components/RoleCountGrid";
@@ -876,12 +876,22 @@ export default function AdminDashboard() {
   const [selectedDevMessage, setSelectedDevMessage] = useState(null);
   const [headmasterReplyText, setHeadmasterReplyText] = useState("");
 
-  // Only show warning banner for directives that have NOT yet received a Headmaster reply
+  // Only show warning banner for directives that have NOT yet received a Headmaster reply.
+  // When the Headmaster replies, the warning notice disappears until a new message is sent back by the Developer.
   const unrepliedDirective = developerMessages.find((m) => {
     const threadId = m.threadId || m.id;
     const isDismissed = localStorage.getItem(`gbs_dev_warning_dismissed_${threadId}`) === "true";
-    const hasHmReply = Array.isArray(m.replies) && m.replies.some((r) => r.sender === "HEADMASTER" || r.senderRole === "HEADMASTER");
-    return !isDismissed && !hasHmReply;
+    const replies = Array.isArray(m.replies) ? m.replies : [];
+    if (replies.length > 0) {
+      const lastReply = replies[replies.length - 1];
+      // If Headmaster replied last, the warning notice disappears until a new message is received from Developer
+      if (lastReply.sender === "HEADMASTER" || lastReply.senderRole === "HEADMASTER") {
+        return false;
+      }
+      // If Developer replied or sent a new directive, warning notice must appear
+      return true;
+    }
+    return !isDismissed;
   });
 
   useEffect(() => {
@@ -1072,11 +1082,36 @@ export default function AdminDashboard() {
   const [facialScanStep, setFacialScanStep] = useState("FORM"); // "FORM" | "SCANNING" | "VERIFIED" | "MISMATCH_DENIED"
   const [facialConfidence, setFacialConfidence] = useState(0);
   const [facialMeshSimulated, setFacialMeshSimulated] = useState(false);
+  const facialVideoRef = useRef(null);
+  const facialStreamRef = useRef(null);
+
+  const startLiveWebcam = async () => {
+    try {
+      if (navigator.mediaDevices && navigator.mediaDevices.getUserMedia) {
+        const stream = await navigator.mediaDevices.getUserMedia({ video: { width: 480, height: 360 } });
+        facialStreamRef.current = stream;
+        if (facialVideoRef.current) {
+          facialVideoRef.current.srcObject = stream;
+          facialVideoRef.current.play().catch(() => {});
+        }
+      }
+    } catch (camErr) {
+      console.warn("Live webcam access:", camErr);
+    }
+  };
+
+  const stopLiveWebcam = () => {
+    if (facialStreamRef.current) {
+      facialStreamRef.current.getTracks().forEach((track) => track.stop());
+      facialStreamRef.current = null;
+    }
+  };
 
   const handleStartFacialScan = () => {
     setFacialScanStep("SCANNING");
     setFacialMeshSimulated(true);
     setFacialConfidence(0);
+    startLiveWebcam();
     setTimeout(() => setFacialConfidence(45.2), 600);
     setTimeout(() => setFacialConfidence(78.5), 1200);
     setTimeout(() => {
@@ -1088,6 +1123,7 @@ export default function AdminDashboard() {
   const handleSimulateFacialMismatch = () => {
     setFacialScanStep("SCANNING");
     setFacialMeshSimulated(true);
+    startLiveWebcam();
     setTimeout(() => {
       setFacialConfidence(31.4);
       setFacialScanStep("MISMATCH_DENIED");
@@ -8099,7 +8135,37 @@ export default function AdminDashboard() {
                   }}>
                     {facialMeshSimulated ? (
                       <>
-                        <div style={{ fontSize: "3.2rem", filter: "drop-shadow(0 0 10px #a855f7)", opacity: 0.9 }}>👨‍💼</div>
+                        <video
+                          ref={facialVideoRef}
+                          autoPlay
+                          playsInline
+                          muted
+                          style={{
+                            width: "100%",
+                            height: "100%",
+                            objectFit: "cover",
+                            position: "absolute",
+                            top: 0,
+                            left: 0,
+                            borderRadius: "10px",
+                            zIndex: 1
+                          }}
+                        />
+                        {/* Real-life portrait badge overlay */}
+                        <div style={{ position: "relative", zIndex: 2, display: "flex", flexDirection: "column", alignItems: "center" }}>
+                          <img
+                            src={replacementForm.photoUrl || "/images/headmaster_portrait.jpg"}
+                            alt="Biometric Subject"
+                            style={{
+                              width: "72px",
+                              height: "72px",
+                              borderRadius: "50%",
+                              objectFit: "cover",
+                              border: facialScanStep === "VERIFIED" ? "2.5px solid #10b981" : "2.5px solid #a855f7",
+                              boxShadow: "0 0 16px rgba(0,0,0,0.8)"
+                            }}
+                          />
+                        </div>
                         {/* Laser scanning line */}
                         {facialScanStep === "SCANNING" && (
                           <div style={{
@@ -8110,17 +8176,18 @@ export default function AdminDashboard() {
                             height: "3px",
                             background: "linear-gradient(90deg, transparent, #38bdf8, #a855f7, transparent)",
                             boxShadow: "0 0 12px #38bdf8",
-                            animation: "pulse 1.2s infinite"
+                            animation: "pulse 1.2s infinite",
+                            zIndex: 4
                           }}></div>
                         )}
-                        <div style={{ marginTop: "8px", fontSize: "0.85rem", fontWeight: "800", color: facialScanStep === "VERIFIED" ? "#34d399" : facialScanStep === "MISMATCH_DENIED" ? "#f87171" : "#38bdf8" }}>
+                        <div style={{ position: "relative", zIndex: 3, marginTop: "8px", fontSize: "0.85rem", fontWeight: "800", color: facialScanStep === "VERIFIED" ? "#34d399" : facialScanStep === "MISMATCH_DENIED" ? "#f87171" : "#38bdf8", background: "rgba(15, 23, 42, 0.9)", padding: "3px 12px", borderRadius: "12px", border: "1px solid rgba(255,255,255,0.15)" }}>
                           Biometric Match Confidence: {facialConfidence}%
                         </div>
                       </>
                     ) : (
                       <div style={{ textAlign: "center", color: "#64748b" }}>
-                        <div style={{ fontSize: "2.5rem", marginBottom: "4px" }}>📷</div>
-                        <div style={{ fontSize: "0.85rem" }}>Click "Start Live Facial Scan" to activate camera viewfinder</div>
+                        <div style={{ fontSize: "2.5rem", marginBottom: "4px" }}>📹</div>
+                        <div style={{ fontSize: "0.85rem" }}>Click "Start Live Biometric Facial Scan" to activate camera viewfinder</div>
                       </div>
                     )}
                   </div>

@@ -37,10 +37,20 @@ export const clearFakeDataEntries = () => {
 
     // HR & Governance
     "gbs_hr_leaves",
+    "gbs_hr_leave_requests",
+    "gbs_hr_audit_requests",
+    "gbs_hr_audit_reports",
     "gbs_pending_staff_registrations",
     "gbs_headmaster_replacements",
     "gbs_incoming_onboarding_applications",
-    "gbs_offline_mutation_queue"
+    "gbs_offline_mutation_queue",
+
+    // Alumni & Convocation
+    "gbs_alumni_directory",
+    "gbs_alumni_donations",
+    "gbs_alumni_events",
+    "gbs_alumni_mentorships",
+    "gbs_alumni_job_postings"
   ];
 
   keysToClean.forEach(k => {
@@ -63,6 +73,9 @@ export const clearFakeDataEntries = () => {
     localStorage.setItem("gbs_accountant_increment_requests", "[]");
     localStorage.setItem("gbs_pending_staff_registrations", "[]");
     localStorage.setItem("gbs_incoming_onboarding_applications", "[]");
+    localStorage.setItem("gbs_hr_leave_requests", "[]");
+    localStorage.setItem("gbs_hr_audit_requests", "[]");
+    localStorage.setItem("gbs_hr_audit_reports", "[]");
     localStorage.setItem("gbs_offline_mutation_queue", "[]");
   } catch {}
 

@@ -241,8 +241,10 @@ export default function DeveloperDashboard() {
     });
     setHeadmasterMessages(updated);
     localStorage.setItem("gbs_dev_headmaster_messages", JSON.stringify(updated));
+    localStorage.removeItem(`gbs_dev_warning_dismissed_${threadId}`);
     window.dispatchEvent(new CustomEvent("gbs_dev_headmaster_message_dispatched", { detail: { threadId, replyText } }));
-    showNotification("✓ Response transmitted to Headmaster in thread!");
+    window.dispatchEvent(new Event("storage"));
+    showNotification("✓ Response transmitted to Headmaster in thread! Warning notice restored on Headmaster portal.");
   };
 
   // Lock selected institutions and apply state

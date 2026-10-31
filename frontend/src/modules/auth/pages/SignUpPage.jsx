@@ -11,6 +11,7 @@ const ONBOARDING_TRACKS = [
   { id: "PARENT", title: "Parent / Guardian", icon: "👨‍👩‍👧", desc: "Family & Child Monitoring", color: "#f59e0b" },
   { id: "ACCOUNTANT", title: "Accountant / Bursar", icon: "📊", desc: "Finance & Payroll Officer", color: "#ec4899" },
   { id: "HR", title: "Human Resources (HR)", icon: "🛡️", desc: "HR Manager & Faculty Auditing", color: "#06b6d4" },
+  { id: "ALUMNI", title: "Alumni / Graduate", icon: "🏛️", desc: "Graduates, Mentorship & Alumni Network", color: "#6366f1" },
   { id: "STAFF", title: "Staff & Operations", icon: "💼", desc: "Logistics & Administrative", color: "#64748b" },
   { id: "HEADMASTER_REPLACEMENT", title: "Headmaster Replacement", icon: "👑", desc: "Executive Succession & Picture Upload", color: "#38bdf8" }
 ];
@@ -30,6 +31,7 @@ export default function SignUpPage({ defaultRole }) {
     if (location.pathname.includes("/parent")) return "PARENT";
     if (location.pathname.includes("/accountant")) return "ACCOUNTANT";
     if (location.pathname.includes("/hr")) return "HR";
+    if (location.pathname.includes("/alumni")) return "ALUMNI";
     if (location.pathname.includes("/staff")) return "STAFF";
     return "INSTITUTION";
   };
@@ -228,6 +230,12 @@ export default function SignUpPage({ defaultRole }) {
     financeSpecialization: "Student Invoicing & Billing",
     // Staff specific
     jobTitle: "Administrative Coordinator",
+    // Alumni specific
+    graduationYear: "2024",
+    degreeCertificate: "B.Sc. Computer Science & AI",
+    currentProfession: "Software Engineer",
+    currentEmployer: "Tech Systems Enclave",
+    alumniChapter: "Accra Central Chapter",
     // Compliance
     termsAccepted: false
   });
@@ -1908,6 +1916,85 @@ export default function SignUpPage({ defaultRole }) {
                         required
                         placeholder="e.g. STF-2026-019"
                         value={memberForm.employeeId}
+                        onChange={handleMemberChange}
+                      />
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              {/* Role-Specific Fields: ALUMNI */}
+              {activeTrack === "ALUMNI" && (
+                <div className="form-section-group role-specific-section">
+                  <h3 className="section-title">
+                    <span>🏛️</span> 2. ALUMNI GRADUATION & NETWORK CREDENTIALS
+                  </h3>
+                  <div className="form-grid-3">
+                    <div className="form-field">
+                      <label htmlFor="alm-grad-year">Graduation Year *</label>
+                      <input
+                        id="alm-grad-year"
+                        name="graduationYear"
+                        type="number"
+                        min="1980"
+                        max="2030"
+                        required
+                        placeholder="e.g. 2024"
+                        value={memberForm.graduationYear || "2024"}
+                        onChange={handleMemberChange}
+                      />
+                    </div>
+
+                    <div className="form-field">
+                      <label htmlFor="alm-degree">Degree / Diploma Awarded *</label>
+                      <input
+                        id="alm-degree"
+                        name="degreeCertificate"
+                        type="text"
+                        required
+                        placeholder="e.g. B.Sc. Computer Science & AI"
+                        value={memberForm.degreeCertificate || "B.Sc. Computer Science & AI"}
+                        onChange={handleMemberChange}
+                      />
+                    </div>
+
+                    <div className="form-field">
+                      <label htmlFor="alm-chapter">Alumni Chapter / Location *</label>
+                      <select
+                        id="alm-chapter"
+                        name="alumniChapter"
+                        value={memberForm.alumniChapter || "Accra Central Chapter"}
+                        onChange={handleMemberChange}
+                      >
+                        <option value="Accra Central Chapter">Accra Central Chapter</option>
+                        <option value="Kumasi Regional Chapter">Kumasi Regional Chapter</option>
+                        <option value="Takoradi Western Chapter">Takoradi Western Chapter</option>
+                        <option value="UK & Europe Diaspora">UK & Europe Diaspora</option>
+                        <option value="North America Chapter">North America Chapter</option>
+                        <option value="Global Virtual Network">Global Virtual Network</option>
+                      </select>
+                    </div>
+
+                    <div className="form-field">
+                      <label htmlFor="alm-profession">Current Profession / Field *</label>
+                      <input
+                        id="alm-profession"
+                        name="currentProfession"
+                        type="text"
+                        placeholder="e.g. AI Systems Architect"
+                        value={memberForm.currentProfession || "Software Engineer"}
+                        onChange={handleMemberChange}
+                      />
+                    </div>
+
+                    <div className="form-field">
+                      <label htmlFor="alm-employer">Current Employer / Organization</label>
+                      <input
+                        id="alm-employer"
+                        name="currentEmployer"
+                        type="text"
+                        placeholder="e.g. Tech Solutions Group"
+                        value={memberForm.currentEmployer || "Enterprise Cloud Corp"}
                         onChange={handleMemberChange}
                       />
                     </div>
