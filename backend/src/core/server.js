@@ -1,4 +1,6 @@
 const express = require('express');
+const path = require('path');
+const fs = require('fs');
 const cors = require('cors');
 const helmet = require('helmet');
 const hpp = require('hpp');
@@ -158,6 +160,22 @@ app.use('/api/v1/shards', shardRoutes.shardRouter);
 app.use('/api/v1/replicas', shardRoutes.replicaRouter);
 app.use('/api/v1/dr-failover', shardRoutes.drRouter);
 app.use('/api/v1/monitoring', monitoringRoutes);
+
+// Production Frontend Static Asset Delivery & Single Page Application (SPA) Fallback
+const frontendDistPath = path.resolve(__dirname, '../../../frontend/dist');
+if (fs.existsSync(frontendDistPath)) {
+  app.use(express.static(frontendDistPath));
+  app.get('*', (req, res, next) => {
+    if (req.path.startsWith('/api') || req.path.startsWith('/health')) {
+      return next();
+    }
+    const indexHtml = path.join(frontendDistPath, 'index.html');
+    if (fs.existsSync(indexHtml)) {
+      return res.sendFile(indexHtml);
+    }
+    next();
+  });
+}
 
 // Unhandled route handler
 app.all('*', (req, res, next) => {
