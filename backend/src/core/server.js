@@ -162,8 +162,13 @@ app.use('/api/v1/dr-failover', shardRoutes.drRouter);
 app.use('/api/v1/monitoring', monitoringRoutes);
 
 // Production Frontend Static Asset Delivery & Single Page Application (SPA) Fallback
-const frontendDistPath = path.resolve(__dirname, '../../../frontend/dist');
-if (fs.existsSync(frontendDistPath)) {
+const candidateDistPaths = [
+  path.resolve(__dirname, '../../public'),
+  path.resolve(__dirname, '../../../frontend/dist'),
+  path.resolve(__dirname, '../../dist')
+];
+const frontendDistPath = candidateDistPaths.find(p => fs.existsSync(p));
+if (frontendDistPath) {
   app.use(express.static(frontendDistPath));
   app.get('*', (req, res, next) => {
     if (req.path.startsWith('/api') || req.path.startsWith('/health')) {
