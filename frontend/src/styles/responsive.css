@@ -1,0 +1,30 @@
+@media (max-width: 1200px) {
+
+    .desktop-only {
+        display: none;
+    }
+}
+
+@media (max-width: 992px) {
+
+    .tablet-hidden {
+        display: none;
+    }
+}
+
+@media (max-width: 768px) {
+
+    .mobile-stack {
+
+        display: flex;
+
+        flex-direction: column;
+    }
+}
+
+@media (max-width: 576px) {
+
+    .mobile-hidden {
+        display: none;
+    }
+}

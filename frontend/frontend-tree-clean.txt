@@ -1,0 +1,6631 @@
+﻿Folder PATH listing for volume QUABYNA
+Volume serial number is 00000010 7297:E090
+D:\VERSION1\GBS_SYSTEM\FRONTEND\SRC
+│   App.jsx
+│   main.jsx
+│   
+├───app
+│       App.jsx
+│       AppInitializer.jsx
+│       AppProviders.jsx
+│       index.js
+│       main.jsx
+│       
+├───assets
+│   │   index.js
+│   │   
+│   ├───fonts
+│   │       index.js
+│   │       
+│   ├───icons
+│   │       index.js
+│   │       
+│   ├───images
+│   │       index.js
+│   │       
+│   ├───lottie
+│   │       index.js
+│   │       
+│   └───svg
+│           index.js
+│           
+├───auth
+│   │   index.js
+│   │   
+│   ├───api
+│   │       audit.api.js
+│   │       auth.api.js
+│   │       group.api.js
+│   │       index.js
+│   │       loginHistory.api.js
+│   │       permission.api.js
+│   │       profile.api.js
+│   │       role.api.js
+│   │       session.api.js
+│   │       user.api.js
+│   │       
+│   ├───components
+│   │   │   index.js
+│   │   │   
+│   │   ├───cards
+│   │   │       index.js
+│   │   │       UserCard.jsx
+│   │   │       
+│   │   ├───dialogs
+│   │   │       index.js
+│   │   │       
+│   │   ├───drawers
+│   │   │       index.js
+│   │   │       
+│   │   ├───forms
+│   │   │       index.js
+│   │   │       UserForm.jsx
+│   │   │       
+│   │   ├───tables
+│   │   │       index.js
+│   │   │       UserTable.jsx
+│   │   │       
+│   │   └───widgets
+│   │           index.js
+│   │           
+│   ├───hooks
+│   │       index.js
+│   │       useRoles.js
+│   │       useSessions.js
+│   │       useUser.js
+│   │       useUserPermissions.js
+│   │       useUserProfile.js
+│   │       useUsers.js
+│   │       
+│   ├───pages
+│   │       ForgotPassword.jsx
+│   │       index.js
+│   │       Login.jsx
+│   │       PortalSelection.jsx
+│   │       ResetPassword.jsx
+│   │       
+│   ├───routes
+│   │       index.js
+│   │       lazy.routes.jsx
+│   │       private.routes.jsx
+│   │       public.routes.jsx
+│   │       route.config.js
+│   │       
+│   └───state
+│           auditSlice.js
+│           index.js
+│           permissionSlice.js
+│           profileSlice.js
+│           roleSlice.js
+│           sessionSlice.js
+│           thunks.js
+│           userSlice.js
+│           
+├───core
+│   │   App.jsx
+│   │   Bootstrap.jsx
+│   │   ErrorBoundary.jsx
+│   │   index.js
+│   │   Providers.jsx
+│   │   Startup.jsx
+│   │   StartupManager.jsx
+│   │   SuspenseBoundary.jsx
+│   │   
+│   ├───bootstrap
+│   │       index.js
+│   │       
+│   ├───config
+│   │       constants.js
+│   │       environment.js
+│   │       features.js
+│   │       index.js
+│   │       routes.js
+│   │       
+│   ├───errors
+│   │       index.js
+│   │       
+│   ├───guards
+│   │       AuthGuard.jsx
+│   │       index.js
+│   │       PermissionGuard.jsx
+│   │       PortalGuard.jsx
+│   │       TenantGuard.jsx
+│   │       
+│   ├───initialization
+│   │       auth.init.js
+│   │       index.js
+│   │       monitoring.init.js
+│   │       socket.init.js
+│   │       tenant.init.js
+│   │       
+│   ├───loaders
+│   │       index.js
+│   │       
+│   ├───modules
+│   │       index.js
+│   │       loadModuleRoutes.js
+│   │       moduleRegistry.js
+│   │       
+│   ├───registry
+│   │       index.js
+│   │       moduleRegistry.js
+│   │       
+│   └───routing
+│           index.js
+│           loadModuleRoutes.js
+│           
+├───developer-platform
+│   │   index.js
+│   │   
+│   ├───audit
+│   │       index.js
+│   │       
+│   ├───dashboard
+│   │   │   index.js
+│   │   │   
+│   │   └───diagnostics
+│   │           index.js
+│   │           
+│   ├───deployments
+│   │       index.js
+│   │       
+│   ├───diagnostics
+│   │       index.js
+│   │       
+│   ├───incidents
+│   │       index.js
+│   │       
+│   ├───locks
+│   │       index.js
+│   │       
+│   ├───monitoring
+│   │       index.js
+│   │       
+│   ├───recovery
+│   │       index.js
+│   │       
+│   ├───remote-access
+│   │       index.js
+│   │       
+│   ├───subscriptions
+│   │       index.js
+│   │       
+│   ├───telemetry
+│   │       index.js
+│   │       
+│   ├───tracking
+│   │       index.js
+│   │       
+│   └───unlocks
+│           index.js
+│           
+├───features
+│   │   index.js
+│   │   
+│   └───flags
+│           analytics.flag.js
+│           finance.flag.js
+│           index.js
+│           learning.flag.js
+│           
+├───layouts
+│       AccountantDashboard.jsx
+│       AccountantLayout.jsx
+│       AdminDashboard.jsx
+│       AdminLayout.jsx
+│       AppLayout.jsx
+│       AuthLayout.jsx
+│       DashboardLayout.jsx
+│       EmptyLayout.jsx
+│       ErrorLayout.jsx
+│       index.js
+│       MainLayout.jsx
+│       ParentDashboard.jsx
+│       ParentLayout.jsx
+│       PortalLayout.jsx
+│       PublicLayout.jsx
+│       StaffDashboard.jsx
+│       StaffLayout.jsx
+│       StudentDashboard.jsx
+│       StudentLayout.jsx
+│       TeacherDashboard.jsx
+│       TeacherLayout.jsx
+│       TenantLayout.jsx
+│       
+├───modules
+│   │   index.js
+│   │   
+│   ├───academic
+│   │   │   index.js
+│   │   │   
+│   │   ├───api
+│   │   │       academic.api.js
+│   │   │       index.js
+│   │   │       
+│   │   ├───assets
+│   │   │       index.js
+│   │   │       
+│   │   ├───components
+│   │   │       index.js
+│   │   │       
+│   │   ├───constants
+│   │   │       acadmic.constants.js
+│   │   │       index.js
+│   │   │       
+│   │   ├───hooks
+│   │   │       index.js
+│   │   │       
+│   │   ├───pages
+│   │   │       index.js
+│   │   │       
+│   │   ├───permissions
+│   │   │       index.js
+│   │   │       
+│   │   ├───routes
+│   │   │       index.js
+│   │   │       lazy.routes.jsx
+│   │   │       private.routes.jsx
+│   │   │       public.routes.jsx
+│   │   │       route.config.js
+│   │   │       
+│   │   ├───selectors
+│   │   │       academicSelectors.js
+│   │   │       index.js
+│   │   │       
+│   │   ├───services
+│   │   │       academic.service.js
+│   │   │       index.js
+│   │   │       
+│   │   ├───state
+│   │   │       academicSlice.js
+│   │   │       index.js
+│   │   │       selectors.js
+│   │   │       thunks.js
+│   │   │       
+│   │   └───validators
+│   │           academic.validator.js
+│   │           index.js
+│   │           
+│   ├───accountant
+│   │   │   index.js
+│   │   │   
+│   │   ├───api
+│   │   │       accountant.api.js
+│   │   │       index.js
+│   │   │       
+│   │   ├───assets
+│   │   │       index.js
+│   │   │       
+│   │   ├───components
+│   │   │       ApprovalCard.jsx
+│   │   │       ApprovalForm.jsx
+│   │   │       ApprovalTable.jsx
+│   │   │       index.js
+│   │   │       
+│   │   ├───constants
+│   │   │       accountant.constants.js
+│   │   │       index.js
+│   │   │       
+│   │   ├───hooks
+│   │   │       index.js
+│   │   │       
+│   │   ├───pages
+│   │   │       ApprovalCreate.jsx
+│   │   │       ApprovalDashboard.jsx
+│   │   │       ApprovalDetails.jsx
+│   │   │       ApprovalEdit.jsx
+│   │   │       ApprovalList.jsx
+│   │   │       index.js
+│   │   │       
+│   │   ├───permissions
+│   │   │       index.js
+│   │   │       
+│   │   ├───routes
+│   │   │       index.js
+│   │   │       lazy.routes.jsx
+│   │   │       private.routes.jsx
+│   │   │       public.routes.jsx
+│   │   │       route.config.js
+│   │   │       
+│   │   ├───selectors
+│   │   │       accountantSelectors.js
+│   │   │       index.js
+│   │   │       
+│   │   ├───services
+│   │   │       accountant.service.js
+│   │   │       index.js
+│   │   │       
+│   │   ├───state
+│   │   │       accontantSlice.js
+│   │   │       index.js
+│   │   │       selectors.js
+│   │   │       thunks.js
+│   │   │       
+│   │   └───validators
+│   │           accountant.validator.js
+│   │           index.js
+│   │           
+│   ├───accounting
+│   │   │   index.js
+│   │   │   
+│   │   ├───api
+│   │   │       accounting.api.js
+│   │   │       index.js
+│   │   │       
+│   │   ├───assets
+│   │   │       index.js
+│   │   │       
+│   │   ├───components
+│   │   │       index.js
+│   │   │       
+│   │   ├───constants
+│   │   │       accounting.constants.js
+│   │   │       index.js
+│   │   │       
+│   │   ├───hooks
+│   │   │       index.js
+│   │   │       
+│   │   ├───pages
+│   │   │       index.js
+│   │   │       
+│   │   ├───permissions
+│   │   │       index.js
+│   │   │       
+│   │   ├───routes
+│   │   │       index.js
+│   │   │       lazy.routes.jsx
+│   │   │       private.routes.jsx
+│   │   │       public.routes.jsx
+│   │   │       route.config.js
+│   │   │       
+│   │   ├───selectors
+│   │   │       accountingSelectors.js
+│   │   │       index.js
+│   │   │       
+│   │   ├───services
+│   │   │       accounting.service.js
+│   │   │       index.js
+│   │   │       
+│   │   ├───state
+│   │   │       accountingSlice.js
+│   │   │       index.js
+│   │   │       selectors.js
+│   │   │       thunks.js
+│   │   │       
+│   │   └───validators
+│   │           accounting.validator.js
+│   │           index.js
+│   │           
+│   ├───admin
+│   │   │   index.js
+│   │   │   
+│   │   ├───api
+│   │   │       admin.api.js
+│   │   │       index.js
+│   │   │       
+│   │   ├───assets
+│   │   │       index.js
+│   │   │       
+│   │   ├───components
+│   │   │       index.js
+│   │   │       
+│   │   ├───constants
+│   │   │       admin.constants.js
+│   │   │       index.js
+│   │   │       
+│   │   ├───hooks
+│   │   │       index.js
+│   │   │       
+│   │   ├───pages
+│   │   │       AdminDashboard.jsx
+│   │   │       GlobalUsers.jsx
+│   │   │       index.js
+│   │   │       LicenseManagement.jsx
+│   │   │       SchoolSettings.jsx
+│   │   │       SuperAdminDashboard.jsx
+│   │   │       SystemSettings.jsx
+│   │   │       
+│   │   ├───permissions
+│   │   │       index.js
+│   │   │       
+│   │   ├───routes
+│   │   │       index.js
+│   │   │       lazy.routes.jsx
+│   │   │       private.routes.jsx
+│   │   │       public.routes.jsx
+│   │   │       route.config.js
+│   │   │       
+│   │   ├───selectors
+│   │   │       adminSelectors.js
+│   │   │       index.js
+│   │   │       
+│   │   ├───services
+│   │   │       admin.service.js
+│   │   │       index.js
+│   │   │       
+│   │   ├───state
+│   │   │       adminSlice.js
+│   │   │       index.js
+│   │   │       selectors.js
+│   │   │       thunks.js
+│   │   │       
+│   │   └───validators
+│   │           admin.validator.js
+│   │           index.js
+│   │           
+│   ├───admission
+│   │   │   index.js
+│   │   │   
+│   │   ├───api
+│   │   │       admission.api.js
+│   │   │       index.js
+│   │   │       
+│   │   ├───assets
+│   │   │       index.js
+│   │   │       
+│   │   ├───components
+│   │   │       AdmissionCard.jsx
+│   │   │       AdmissionForm.jsx
+│   │   │       AdmissionTable.jsx
+│   │   │       index.js
+│   │   │       
+│   │   ├───constants
+│   │   │       admission.constants.js
+│   │   │       index.js
+│   │   │       
+│   │   ├───hooks
+│   │   │       index.js
+│   │   │       
+│   │   ├───pages
+│   │   │       AdmissionApproval.jsx
+│   │   │       AdmissionCreate.jsx
+│   │   │       AdmissionDashboard.jsx
+│   │   │       AdmissionDetails.jsx
+│   │   │       AdmissionEdit.jsx
+│   │   │       AdmissionList.jsx
+│   │   │       index.js
+│   │   │       
+│   │   ├───permissions
+│   │   │       index.js
+│   │   │       
+│   │   ├───routes
+│   │   │       index.js
+│   │   │       lazy.routes.jsx
+│   │   │       private.routes.jsx
+│   │   │       public.routes.jsx
+│   │   │       route.config.js
+│   │   │       
+│   │   ├───selectors
+│   │   │       admissionSelectors.js
+│   │   │       index.js
+│   │   │       
+│   │   ├───services
+│   │   │       admission.service.js
+│   │   │       index.js
+│   │   │       
+│   │   ├───state
+│   │   │       admissionSlice.js
+│   │   │       index.js
+│   │   │       selectors.js
+│   │   │       thunks.js
+│   │   │       
+│   │   └───validators
+│   │           admission.validator.js
+│   │           index.js
+│   │           
+│   ├───alumni
+│   │   │   index.js
+│   │   │   
+│   │   ├───api
+│   │   │       alumni.api.js
+│   │   │       index.js
+│   │   │       
+│   │   ├───assets
+│   │   │       index.js
+│   │   │       
+│   │   ├───components
+│   │   │       AlumniCard.jsx
+│   │   │       AlumniForm.jsx
+│   │   │       AlumniTable.jsx
+│   │   │       index.js
+│   │   │       
+│   │   ├───constants
+│   │   │       alumni.constants.js
+│   │   │       index.js
+│   │   │       
+│   │   ├───hooks
+│   │   │       index.js
+│   │   │       
+│   │   ├───pages
+│   │   │       AlumniCreate.jsx
+│   │   │       AlumniDashboard.jsx
+│   │   │       AlumniDetails.jsx
+│   │   │       AlumniEdit.jsx
+│   │   │       AlumniList.jsx
+│   │   │       index.js
+│   │   │       
+│   │   ├───permissions
+│   │   │       index.js
+│   │   │       
+│   │   ├───routes
+│   │   │       index.js
+│   │   │       lazy.routes.jsx
+│   │   │       private.routes.jsx
+│   │   │       public.routes.jsx
+│   │   │       route.config.js
+│   │   │       
+│   │   ├───selectors
+│   │   │       alumniSelectors.js
+│   │   │       index.js
+│   │   │       
+│   │   ├───services
+│   │   │       alumni.service.js
+│   │   │       index.js
+│   │   │       
+│   │   ├───state
+│   │   │       alumniSlice.js
+│   │   │       index.js
+│   │   │       selectors.js
+│   │   │       thunks.js
+│   │   │       
+│   │   └───validators
+│   │       │   alumni.validator.js
+│   │       │   index.js
+│   │       │   
+│   │       ├───common
+│   │       │       index.js
+│   │       │       
+│   │       ├───shared
+│   │       │       index.js
+│   │       │       
+│   │       └───system
+│   │               index.js
+│   │               
+│   ├───analytics
+│   │   │   index.js
+│   │   │   
+│   │   ├───api
+│   │   │       analytics.api.js
+│   │   │       index.js
+│   │   │       
+│   │   ├───assets
+│   │   │       index.js
+│   │   │       
+│   │   ├───components
+│   │   │   │   AnalyticsCard.jsx
+│   │   │   │   AnalyticsForm.jsx
+│   │   │   │   AnalyticsTable.jsx
+│   │   │   │   index.js
+│   │   │   │   
+│   │   │   └───widgets
+│   │   │           PerformanceWidget.jsx
+│   │   │           
+│   │   ├───constants
+│   │   │       analytics.constants.js
+│   │   │       index.js
+│   │   │       
+│   │   ├───hooks
+│   │   │       index.js
+│   │   │       
+│   │   ├───pages
+│   │   │       AnalyticsCreate.jsx
+│   │   │       AnalyticsDashboard.jsx
+│   │   │       AnalyticsDetails.jsx
+│   │   │       AnalyticsEdit.jsx
+│   │   │       AnalyticsList.jsx
+│   │   │       index.js
+│   │   │       
+│   │   ├───permissions
+│   │   │       index.js
+│   │   │       
+│   │   ├───routes
+│   │   │       index.js
+│   │   │       lazy.routes.jsx
+│   │   │       private.routes.jsx
+│   │   │       public.routes.jsx
+│   │   │       route.config.js
+│   │   │       
+│   │   ├───selectors
+│   │   │       analyticsSelectors.js
+│   │   │       index.js
+│   │   │       
+│   │   ├───services
+│   │   │       analytics.service.js
+│   │   │       index.js
+│   │   │       
+│   │   ├───state
+│   │   │       analyticsSlice.js
+│   │   │       index.js
+│   │   │       selectors.js
+│   │   │       thunks.js
+│   │   │       
+│   │   └───validators
+│   │           analytics.validator.js
+│   │           index.js
+│   │           
+│   ├───app
+│   │   ├───config
+│   │   │       constants.js
+│   │   │       env.js
+│   │   │       permissions.js
+│   │   │       roles.js
+│   │   │       
+│   │   ├───providers
+│   │   │       AuthProvider.jsx
+│   │   │       QueryProvider.jsx
+│   │   │       SocketProvider.jsx
+│   │   │       ThemeProvider.jsx
+│   │   │       
+│   │   └───router
+│   │           AppRouter.jsx
+│   │           ProtectedRoute.jsx
+│   │           RoleRoute.jsx
+│   │           routeRegistry.js
+│   │           
+│   ├───application
+│   │   │   index.js
+│   │   │   
+│   │   ├───api
+│   │   │       application.api.js
+│   │   │       index.js
+│   │   │       
+│   │   ├───assets
+│   │   │       index.js
+│   │   │       
+│   │   ├───components
+│   │   │       ApplicationCard.jsx
+│   │   │       ApplicationForm.jsx
+│   │   │       ApplicationTable.jsx
+│   │   │       index.js
+│   │   │       
+│   │   ├───constants
+│   │   │       application.constants.js
+│   │   │       index.js
+│   │   │       
+│   │   ├───hooks
+│   │   │       index.js
+│   │   │       
+│   │   ├───pages
+│   │   │       ApplicationCreate.jsx
+│   │   │       ApplicationDashboard.jsx
+│   │   │       ApplicationDetails.jsx
+│   │   │       ApplicationEdit.jsx
+│   │   │       ApplicationList.jsx
+│   │   │       index.js
+│   │   │       
+│   │   ├───permissions
+│   │   │       index.js
+│   │   │       
+│   │   ├───routes
+│   │   │       index.js
+│   │   │       lazy.routes.jsx
+│   │   │       private.routes.jsx
+│   │   │       public.routes.jsx
+│   │   │       route.config.js
+│   │   │       
+│   │   ├───selectors
+│   │   │       applicationSelectors.js
+│   │   │       index.js
+│   │   │       
+│   │   ├───services
+│   │   │       application.service.js
+│   │   │       index.js
+│   │   │       
+│   │   ├───state
+│   │   │       applicationSlice.js
+│   │   │       index.js
+│   │   │       selectors.js
+│   │   │       thunks.js
+│   │   │       
+│   │   └───validators
+│   │           application.validator.js
+│   │           index.js
+│   │           
+│   ├───approval
+│   │   │   index.js
+│   │   │   
+│   │   ├───api
+│   │   │       approval.api.js
+│   │   │       index.js
+│   │   │       
+│   │   ├───assets
+│   │   │       index.js
+│   │   │       
+│   │   ├───components
+│   │   │       ApprovalCard.jsx
+│   │   │       ApprovalForm.jsx
+│   │   │       ApprovalTable.jsx
+│   │   │       index.js
+│   │   │       
+│   │   ├───constants
+│   │   │       approval.constants.js
+│   │   │       index.js
+│   │   │       
+│   │   ├───hooks
+│   │   │       index.js
+│   │   │       
+│   │   ├───pages
+│   │   │       ApprovalCreate.jsx
+│   │   │       ApprovalDashboard.jsx
+│   │   │       ApprovalDetails.jsx
+│   │   │       ApprovalEdit.jsx
+│   │   │       ApprovalList.jsx
+│   │   │       index.js
+│   │   │       
+│   │   ├───permissions
+│   │   │       index.js
+│   │   │       
+│   │   ├───routes
+│   │   │       index.js
+│   │   │       lazy.routes.jsx
+│   │   │       private.routes.jsx
+│   │   │       public.routes.jsx
+│   │   │       route.config.js
+│   │   │       
+│   │   ├───selectors
+│   │   │       approvalSelectors.js
+│   │   │       index.js
+│   │   │       
+│   │   ├───services
+│   │   │       approval.service.js
+│   │   │       index.js
+│   │   │       
+│   │   ├───state
+│   │   │       approvalSlice.js
+│   │   │       index.js
+│   │   │       selectors.js
+│   │   │       thunks.js
+│   │   │       
+│   │   └───validators
+│   │           approval.validator.js
+│   │           index.js
+│   │           
+│   ├───archive
+│   │   │   index.js
+│   │   │   
+│   │   ├───api
+│   │   │       archive.api.js
+│   │   │       index.js
+│   │   │       
+│   │   ├───assets
+│   │   │       index.js
+│   │   │       
+│   │   ├───components
+│   │   │       ArchiveCard.jsx
+│   │   │       ArchiveForm.jsx
+│   │   │       ArchiveTable.jsx
+│   │   │       index.js
+│   │   │       
+│   │   ├───constants
+│   │   │       archive.constants.js
+│   │   │       index.js
+│   │   │       
+│   │   ├───hooks
+│   │   │       index.js
+│   │   │       
+│   │   ├───pages
+│   │   │       ArchiveCreate.jsx
+│   │   │       ArchiveDashboard.jsx
+│   │   │       ArchiveDetails.jsx
+│   │   │       ArchiveEdit.jsx
+│   │   │       ArchiveList.jsx
+│   │   │       index.js
+│   │   │       
+│   │   ├───permissions
+│   │   │       index.js
+│   │   │       
+│   │   ├───routes
+│   │   │       index.js
+│   │   │       lazy.routes.jsx
+│   │   │       private.routes.jsx
+│   │   │       public.routes.jsx
+│   │   │       route.config.js
+│   │   │       
+│   │   ├───selectors
+│   │   │       archiveSelectors.js
+│   │   │       index.js
+│   │   │       
+│   │   ├───services
+│   │   │       archive.service.js
+│   │   │       index.js
+│   │   │       
+│   │   ├───state
+│   │   │       archiveSlice.js
+│   │   │       index.js
+│   │   │       selectors.js
+│   │   │       thunks.js
+│   │   │       
+│   │   └───validators
+│   │           archive.validator.js
+│   │           index.js
+│   │           
+│   ├───assignment
+│   │   │   index.js
+│   │   │   
+│   │   ├───api
+│   │   │       assignment.api.js
+│   │   │       index.js
+│   │   │       
+│   │   ├───assets
+│   │   │       index.js
+│   │   │       
+│   │   ├───components
+│   │   │       AssignmentCard.jsx
+│   │   │       AssignmentForm.jsx
+│   │   │       AssignmentTable.jsx
+│   │   │       index.js
+│   │   │       
+│   │   ├───constants
+│   │   │       assignment.constants.js
+│   │   │       index.js
+│   │   │       
+│   │   ├───hooks
+│   │   │       index.js
+│   │   │       
+│   │   ├───pages
+│   │   │       AssignmentCreate.jsx
+│   │   │       AssignmentDashboard.jsx
+│   │   │       AssignmentDetails.jsx
+│   │   │       AssignmentEdit.jsx
+│   │   │       AssignmentList.jsx
+│   │   │       Assignments.jsx
+│   │   │       index.js
+│   │   │       
+│   │   ├───permissions
+│   │   │       index.js
+│   │   │       
+│   │   ├───routes
+│   │   │       index.js
+│   │   │       lazy.routes.jsx
+│   │   │       private.routes.jsx
+│   │   │       public.routes.jsx
+│   │   │       route.config.js
+│   │   │       
+│   │   ├───selectors
+│   │   │       assignmentSelectors.js
+│   │   │       index.js
+│   │   │       
+│   │   ├───services
+│   │   │       assignment.service.js
+│   │   │       index.js
+│   │   │       
+│   │   ├───state
+│   │   │       assignmentSlice.js
+│   │   │       index.js
+│   │   │       selectors.js
+│   │   │       thunks.js
+│   │   │       
+│   │   └───validators
+│   │           assignment.validator.js
+│   │           index.js
+│   │           
+│   ├───attendance
+│   │   │   index.js
+│   │   │   
+│   │   ├───api
+│   │   │       attendance.api.js
+│   │   │       index.js
+│   │   │       
+│   │   ├───assets
+│   │   │       index.js
+│   │   │       
+│   │   ├───components
+│   │   │   │   AttendanceCard.jsx
+│   │   │   │   AttendanceForm.jsx
+│   │   │   │   AttendanceTable.jsx
+│   │   │   │   index.js
+│   │   │   │   
+│   │   │   └───widgets
+│   │   │           AttendanceWidget.jsx
+│   │   │           
+│   │   ├───constants
+│   │   │       attendance.constants.js
+│   │   │       index.js
+│   │   │       
+│   │   ├───hooks
+│   │   │       index.js
+│   │   │       
+│   │   ├───pages
+│   │   │       AttendanceCreate.jsx
+│   │   │       AttendanceDashboard.jsx
+│   │   │       AttendanceDetails.jsx
+│   │   │       AttendanceEdit.jsx
+│   │   │       AttendanceList.jsx
+│   │   │       index.js
+│   │   │       StudentAttendance.jsx
+│   │   │       TeacherAttendance.jsx
+│   │   │       
+│   │   ├───permissions
+│   │   │       index.js
+│   │   │       
+│   │   ├───routes
+│   │   │       index.js
+│   │   │       lazy.routes.jsx
+│   │   │       private.routes.jsx
+│   │   │       public.routes.jsx
+│   │   │       route.config.js
+│   │   │       
+│   │   ├───selectors
+│   │   │       attendanceSelectors.js
+│   │   │       index.js
+│   │   │       
+│   │   ├───services
+│   │   │       attendance.service.js
+│   │   │       index.js
+│   │   │       
+│   │   ├───state
+│   │   │       attendanceSlice.js
+│   │   │       index.js
+│   │   │       selectors.js
+│   │   │       thunks.js
+│   │   │       
+│   │   └───validators
+│   │           attendance.validator.js
+│   │           index.js
+│   │           
+│   ├───audit
+│   │   │   index.js
+│   │   │   
+│   │   ├───api
+│   │   │       audit.api.js
+│   │   │       index.js
+│   │   │       
+│   │   ├───assets
+│   │   │       index.js
+│   │   │       
+│   │   ├───components
+│   │   │       AuditCard.jsx
+│   │   │       AuditForm.jsx
+│   │   │       AuditTable.jsx
+│   │   │       index.js
+│   │   │       
+│   │   ├───constants
+│   │   │       audit.constants.js
+│   │   │       index.js
+│   │   │       
+│   │   ├───hooks
+│   │   │       index.js
+│   │   │       
+│   │   ├───pages
+│   │   │       AuditCreate.jsx
+│   │   │       AuditDashboard.jsx
+│   │   │       AuditDetails.jsx
+│   │   │       AuditEdit.jsx
+│   │   │       AuditList.jsx
+│   │   │       index.js
+│   │   │       
+│   │   ├───permissions
+│   │   │       index.js
+│   │   │       
+│   │   ├───routes
+│   │   │       index.js
+│   │   │       lazy.routes.jsx
+│   │   │       private.routes.jsx
+│   │   │       public.routes.jsx
+│   │   │       route.config.js
+│   │   │       
+│   │   ├───selectors
+│   │   │       auditSelectors.js
+│   │   │       index.js
+│   │   │       
+│   │   ├───services
+│   │   │       audit.service.js
+│   │   │       index.js
+│   │   │       
+│   │   ├───state
+│   │   │       auditSlice.js
+│   │   │       index.js
+│   │   │       selectors.js
+│   │   │       thunks.js
+│   │   │       
+│   │   └───validators
+│   │           audit.validator.js
+│   │           index.js
+│   │           
+│   ├───audit-log
+│   │   │   index.js
+│   │   │   
+│   │   ├───api
+│   │   │       audit-log.api.js
+│   │   │       index.js
+│   │   │       
+│   │   ├───assets
+│   │   │       index.js
+│   │   │       
+│   │   ├───components
+│   │   │       ApprovalCard.jsx
+│   │   │       ApprovalForm.jsx
+│   │   │       ApprovalTable.jsx
+│   │   │       index.js
+│   │   │       
+│   │   ├───constants
+│   │   │       audit-log.constants.js
+│   │   │       index.js
+│   │   │       
+│   │   ├───hooks
+│   │   │       index.js
+│   │   │       
+│   │   ├───pages
+│   │   │       ApprovalCreate.jsx
+│   │   │       ApprovalDashboard.jsx
+│   │   │       ApprovalDetails.jsx
+│   │   │       ApprovalEdit.jsx
+│   │   │       ApprovalList.jsx
+│   │   │       index.js
+│   │   │       
+│   │   ├───permissions
+│   │   │       index.js
+│   │   │       
+│   │   ├───routes
+│   │   │       index.js
+│   │   │       lazy.routes.jsx
+│   │   │       private.routes.jsx
+│   │   │       public.routes.jsx
+│   │   │       route.config.js
+│   │   │       
+│   │   ├───selectors
+│   │   │       audit-logSelectors.js
+│   │   │       index.js
+│   │   │       
+│   │   ├───services
+│   │   │       audit-log.service.js
+│   │   │       index.js
+│   │   │       
+│   │   ├───state
+│   │   │       audit-logSlice.js
+│   │   │       index.js
+│   │   │       selectors.js
+│   │   │       thunks.js
+│   │   │       
+│   │   └───validators
+│   │           audit-log.validator.js
+│   │           index.js
+│   │           
+│   ├───auth
+│   │   │   index.js
+│   │   │   
+│   │   ├───api
+│   │   │       auth.api.js
+│   │   │       index.js
+│   │   │       
+│   │   ├───assets
+│   │   │       index.js
+│   │   │       
+│   │   ├───components
+│   │   │       index.js
+│   │   │       LoginForm.jsx
+│   │   │       PasswordField.jsx
+│   │   │       
+│   │   ├───constants
+│   │   │       auth.constants.js
+│   │   │       index.js
+│   │   │       
+│   │   ├───hooks
+│   │   │       index.js
+│   │   │       
+│   │   ├───pages
+│   │   │       AccountantLogin.jsx
+│   │   │       AdminLogin.jsx
+│   │   │       ForgotPassword.jsx
+│   │   │       index.js
+│   │   │       Login.jsx
+│   │   │       MFA.jsx
+│   │   │       ParentLogin.jsx
+│   │   │       Register.jsx
+│   │   │       ResetPassword.jsx
+│   │   │       StaffLogin.jsx
+│   │   │       StudentLogin.jsx
+│   │   │       TeacherLogin.jsx
+│   │   │       VerifyEmail.jsx
+│   │   │       
+│   │   ├───permissions
+│   │   │       index.js
+│   │   │       
+│   │   ├───routes
+│   │   │       index.js
+│   │   │       lazy.routes.jsx
+│   │   │       private.routes.jsx
+│   │   │       public.routes.jsx
+│   │   │       route.config.js
+│   │   │       
+│   │   ├───selectors
+│   │   │       authSelectors.js
+│   │   │       index.js
+│   │   │       
+│   │   ├───services
+│   │   │       auth.service.js
+│   │   │       index.js
+│   │   │       
+│   │   ├───state
+│   │   │       authSlice.js
+│   │   │       index.js
+│   │   │       selectors.js
+│   │   │       thunks.js
+│   │   │       
+│   │   └───validators
+│   │           auth.validator.js
+│   │           index.js
+│   │           
+│   ├───backup
+│   │   │   index.js
+│   │   │   
+│   │   ├───api
+│   │   │       backup.api.js
+│   │   │       index.js
+│   │   │       
+│   │   ├───assets
+│   │   │       index.js
+│   │   │       
+│   │   ├───components
+│   │   │       BackupCard.jsx
+│   │   │       BackupForm.jsx
+│   │   │       BackupTable.jsx
+│   │   │       index.js
+│   │   │       
+│   │   ├───constants
+│   │   │       backup.constants.js
+│   │   │       index.js
+│   │   │       
+│   │   ├───hooks
+│   │   │       index.js
+│   │   │       
+│   │   ├───pages
+│   │   │       BackupCreate.jsx
+│   │   │       BackupDashboard.jsx
+│   │   │       BackupDetails.jsx
+│   │   │       BackupEdit.jsx
+│   │   │       BackupList.jsx
+│   │   │       index.js
+│   │   │       
+│   │   ├───permissions
+│   │   │       index.js
+│   │   │       
+│   │   ├───routes
+│   │   │       index.js
+│   │   │       lazy.routes.jsx
+│   │   │       private.routes.jsx
+│   │   │       public.routes.jsx
+│   │   │       route.config.js
+│   │   │       
+│   │   ├───selectors
+│   │   │       backupSelectors.js
+│   │   │       index.js
+│   │   │       
+│   │   ├───services
+│   │   │       backup.service.js
+│   │   │       index.js
+│   │   │       
+│   │   ├───state
+│   │   │       backupSlice.js
+│   │   │       index.js
+│   │   │       selectors.js
+│   │   │       thunks.js
+│   │   │       
+│   │   └───validators
+│   │           backup.validator.js
+│   │           index.js
+│   │           
+│   ├───base
+│   │   │   index.js
+│   │   │   
+│   │   ├───layouts
+│   │   │       AuthLayout.jsx
+│   │   │       DashboardLayout.jsx
+│   │   │       MainLayout.jsx
+│   │   │       PublicLayout.jsx
+│   │   │       
+│   │   └───pages
+│   │           About.jsx
+│   │           Contact.jsx
+│   │           Home.jsx
+│   │           
+│   ├───calendar
+│   │   │   index.js
+│   │   │   
+│   │   ├───api
+│   │   │       calendar.api.js
+│   │   │       index.js
+│   │   │       
+│   │   ├───assets
+│   │   │       index.js
+│   │   │       
+│   │   ├───components
+│   │   │       CalendarCard.jsx
+│   │   │       CalendarForm.jsx
+│   │   │       CalendarTable.jsx
+│   │   │       index.js
+│   │   │       
+│   │   ├───constants
+│   │   │       calendar.constants.js
+│   │   │       index.js
+│   │   │       
+│   │   ├───hooks
+│   │   │       index.js
+│   │   │       
+│   │   ├───pages
+│   │   │       CalendarCreate.jsx
+│   │   │       CalendarDashboard.jsx
+│   │   │       CalendarDetails.jsx
+│   │   │       CalendarEdit.jsx
+│   │   │       CalendarList.jsx
+│   │   │       index.js
+│   │   │       
+│   │   ├───permissions
+│   │   │       index.js
+│   │   │       
+│   │   ├───routes
+│   │   │       index.js
+│   │   │       lazy.routes.jsx
+│   │   │       private.routes.jsx
+│   │   │       public.routes.jsx
+│   │   │       route.config.js
+│   │   │       
+│   │   ├───selectors
+│   │   │       calendarSelectors.js
+│   │   │       index.js
+│   │   │       
+│   │   ├───services
+│   │   │       calendar.service.js
+│   │   │       index.js
+│   │   │       
+│   │   ├───state
+│   │   │       calendarSlice.js
+│   │   │       index.js
+│   │   │       selectors.js
+│   │   │       thunks.js
+│   │   │       
+│   │   └───validators
+│   │           calendar.validator.js
+│   │           index.js
+│   │           
+│   ├───campus
+│   │   │   index.js
+│   │   │   
+│   │   ├───api
+│   │   │       campus.api.js
+│   │   │       index.js
+│   │   │       
+│   │   ├───assets
+│   │   │       index.js
+│   │   │       
+│   │   ├───components
+│   │   │       index.js
+│   │   │       
+│   │   ├───constants
+│   │   │       campus.constants.js
+│   │   │       index.js
+│   │   │       
+│   │   ├───hooks
+│   │   │       index.js
+│   │   │       
+│   │   ├───pages
+│   │   │       FileCreate.jsx
+│   │   │       FileDashboard.jsx
+│   │   │       FileDetails.jsx
+│   │   │       FileEdit.jsx
+│   │   │       FileList.jsx
+│   │   │       index.js
+│   │   │       
+│   │   ├───permissions
+│   │   │       index.js
+│   │   │       
+│   │   ├───routes
+│   │   │       index.js
+│   │   │       lazy.routes.jsx
+│   │   │       private.routes.jsx
+│   │   │       public.routes.jsx
+│   │   │       route.config.js
+│   │   │       
+│   │   ├───selectors
+│   │   │       campusSelectors.js
+│   │   │       index.js
+│   │   │       
+│   │   ├───services
+│   │   │       campus.service.js
+│   │   │       index.js
+│   │   │       
+│   │   ├───state
+│   │   │       campusSlice.js
+│   │   │       index.js
+│   │   │       selectors.js
+│   │   │       thunks.js
+│   │   │       
+│   │   └───validators
+│   │           campus.validator.js
+│   │           index.js
+│   │           
+│   ├───cctv
+│   │   │   index.js
+│   │   │   
+│   │   ├───api
+│   │   │       cctv.api.js
+│   │   │       index.js
+│   │   │       
+│   │   ├───assets
+│   │   │       index.js
+│   │   │       
+│   │   ├───components
+│   │   │       CCTVCard.jsx
+│   │   │       CCTVForm.jsx
+│   │   │       CCTVTable.jsx
+│   │   │       index.js
+│   │   │       
+│   │   ├───constants
+│   │   │       cctv.constants.js
+│   │   │       index.js
+│   │   │       
+│   │   ├───hooks
+│   │   │       index.js
+│   │   │       
+│   │   ├───pages
+│   │   │       AlertCenter.jsx
+│   │   │       CameraDashboard.jsx
+│   │   │       CameraLiveView.jsx
+│   │   │       CCTVCreate.jsx
+│   │   │       CCTVDashboard.jsx
+│   │   │       CCTVDetails.jsx
+│   │   │       CCTVEdit.jsx
+│   │   │       CCTVList.jsx
+│   │   │       index.js
+│   │   │       MotionDetection.jsx
+│   │   │       RecordingCenter.jsx
+│   │   │       
+│   │   ├───permissions
+│   │   │       index.js
+│   │   │       
+│   │   ├───routes
+│   │   │       index.js
+│   │   │       lazy.routes.jsx
+│   │   │       private.routes.jsx
+│   │   │       public.routes.jsx
+│   │   │       route.config.js
+│   │   │       
+│   │   ├───selectors
+│   │   │       cctvSelectors.js
+│   │   │       index.js
+│   │   │       
+│   │   ├───services
+│   │   │       cctv.service.js
+│   │   │       index.js
+│   │   │       
+│   │   ├───state
+│   │   │       cctvSlice.js
+│   │   │       index.js
+│   │   │       selectors.js
+│   │   │       thunks.js
+│   │   │       
+│   │   └───validators
+│   │           cctv.validator.js
+│   │           index.js
+│   │           
+│   ├───class
+│   │   │   index.js
+│   │   │   
+│   │   ├───api
+│   │   │       campus.api.js
+│   │   │       index.js
+│   │   │       
+│   │   ├───assets
+│   │   │       index.js
+│   │   │       
+│   │   ├───components
+│   │   │       FileCard.jsx
+│   │   │       FileForm.jsx
+│   │   │       FileTable.jsx
+│   │   │       index.js
+│   │   │       
+│   │   ├───constants
+│   │   │       class.constants.js
+│   │   │       index.js
+│   │   │       
+│   │   ├───hooks
+│   │   │       index.js
+│   │   │       
+│   │   ├───pages
+│   │   │       FileCreate.jsx
+│   │   │       FileDashboard.jsx
+│   │   │       FileDetails.jsx
+│   │   │       FileEdit.jsx
+│   │   │       FileList.jsx
+│   │   │       index.js
+│   │   │       
+│   │   ├───permissions
+│   │   │       index.js
+│   │   │       
+│   │   ├───routes
+│   │   │       index.js
+│   │   │       lazy.routes.jsx
+│   │   │       private.routes.jsx
+│   │   │       public.routes.jsx
+│   │   │       route.config.js
+│   │   │       
+│   │   ├───schemas
+│   │   │       index.js
+│   │   │       
+│   │   ├───selectors
+│   │   │       classSelectors.js
+│   │   │       index.js
+│   │   │       
+│   │   ├───services
+│   │   │       class.service.js
+│   │   │       index.js
+│   │   │       
+│   │   ├───state
+│   │   │       classSlice.js
+│   │   │       index.js
+│   │   │       selectors.js
+│   │   │       thunks.js
+│   │   │       
+│   │   └───validators
+│   │           class.validator.js
+│   │           index.js
+│   │           
+│   ├───classroom
+│   │   │   index.js
+│   │   │   
+│   │   ├───api
+│   │   │       classroom.api.js
+│   │   │       index.js
+│   │   │       
+│   │   ├───assets
+│   │   │       index.js
+│   │   │       
+│   │   ├───components
+│   │   │       ClassroomCard.jsx
+│   │   │       ClassroomForm.jsx
+│   │   │       ClassroomTable.jsx
+│   │   │       index.js
+│   │   │       
+│   │   ├───constants
+│   │   │       classroom.constants.js
+│   │   │       index.js
+│   │   │       
+│   │   ├───hooks
+│   │   │       index.js
+│   │   │       
+│   │   ├───pages
+│   │   │       ClassroomCreate.jsx
+│   │   │       ClassroomDashboard.jsx
+│   │   │       ClassroomDetails.jsx
+│   │   │       ClassroomEdit.jsx
+│   │   │       ClassroomList.jsx
+│   │   │       index.js
+│   │   │       
+│   │   ├───permissions
+│   │   │       index.js
+│   │   │       
+│   │   ├───routes
+│   │   │       index.js
+│   │   │       lazy.routes.jsx
+│   │   │       private.routes.jsx
+│   │   │       public.routes.jsx
+│   │   │       route.config.js
+│   │   │       
+│   │   ├───selectors
+│   │   │       classroomSelectors.js
+│   │   │       index.js
+│   │   │       
+│   │   ├───services
+│   │   │       classroom.service.js
+│   │   │       index.js
+│   │   │       
+│   │   ├───state
+│   │   │       classroomSlice.js
+│   │   │       index.js
+│   │   │       selectors.js
+│   │   │       thunks.js
+│   │   │       
+│   │   └───validators
+│   │           classroom.validator.js
+│   │           index.js
+│   │           
+│   ├───communication
+│   │   │   index.js
+│   │   │   
+│   │   ├───announcement
+│   │   │   │   index.js
+│   │   │   │   permissions.js
+│   │   │   │   
+│   │   │   ├───api
+│   │   │   │       announcement.api.js
+│   │   │   │       
+│   │   │   ├───components
+│   │   │   │       index.js
+│   │   │   │       
+│   │   │   └───pages
+│   │   │           AnnouncementCenter.jsx
+│   │   │           
+│   │   ├───api
+│   │   │       communication.api.js
+│   │   │       index.js
+│   │   │       
+│   │   ├───assets
+│   │   │       index.js
+│   │   │       
+│   │   ├───channels
+│   │   │       index.js
+│   │   │       
+│   │   ├───components
+│   │   │       CommunicationCard.jsx
+│   │   │       CommunicationForm.jsx
+│   │   │       CommunicationTable.jsx
+│   │   │       index.js
+│   │   │       
+│   │   ├───constants
+│   │   │       communication.constants.js
+│   │   │       index.js
+│   │   │       
+│   │   ├───hooks
+│   │   │       index.js
+│   │   │       
+│   │   ├───pages
+│   │   │       index.js
+│   │   │       
+│   │   ├───permissions
+│   │   │       index.js
+│   │   │       
+│   │   ├───routes
+│   │   │       index.js
+│   │   │       lazy.routes.jsx
+│   │   │       private.routes.jsx
+│   │   │       public.routes.jsx
+│   │   │       route.config.js
+│   │   │       
+│   │   ├───selectors
+│   │   │       communicationSelectors.js
+│   │   │       index.js
+│   │   │       selectors.js
+│   │   │       
+│   │   ├───services
+│   │   │       commnunication.service.js
+│   │   │       index.js
+│   │   │       
+│   │   ├───state
+│   │   │       communicationSlice.js
+│   │   │       index.js
+│   │   │       selectors.js
+│   │   │       thunks.js
+│   │   │       
+│   │   └───validators
+│   │           communication.validator.js
+│   │           index.js
+│   │           
+│   ├───compliance
+│   │   │   index.js
+│   │   │   
+│   │   ├───api
+│   │   │       compliance.api.js
+│   │   │       index.js
+│   │   │       
+│   │   ├───assets
+│   │   │       index.js
+│   │   │       
+│   │   ├───components
+│   │   │       index.js
+│   │   │       
+│   │   ├───constants
+│   │   │       compliance.constants.js
+│   │   │       index.js
+│   │   │       
+│   │   ├───hooks
+│   │   │       index.js
+│   │   │       
+│   │   ├───pages
+│   │   │       index.js
+│   │   │       
+│   │   ├───permissions
+│   │   │       index.js
+│   │   │       
+│   │   ├───routes
+│   │   │       index.js
+│   │   │       lazy.routes.jsx
+│   │   │       private.routes.jsx
+│   │   │       public.routes.jsx
+│   │   │       route.config.js
+│   │   │       
+│   │   ├───selectors
+│   │   │       complianceSelectors.js
+│   │   │       index.js
+│   │   │       
+│   │   ├───services
+│   │   │       compliance.service.js
+│   │   │       index.js
+│   │   │       
+│   │   ├───state
+│   │   │       complianceSlice.js
+│   │   │       index.js
+│   │   │       selectors.js
+│   │   │       thunks.js
+│   │   │       
+│   │   └───validators
+│   │           compliance.validator.js
+│   │           index.js
+│   │           
+│   ├───dashboard
+│   │   │   index.js
+│   │   │   
+│   │   ├───analytics
+│   │   │       index.js
+│   │   │       
+│   │   ├───api
+│   │   │       dashboard.api.js
+│   │   │       index.js
+│   │   │       
+│   │   ├───assets
+│   │   │       index.js
+│   │   │       
+│   │   ├───charts
+│   │   │       index.js
+│   │   │       
+│   │   ├───components
+│   │   │       index.js
+│   │   │       
+│   │   ├───constants
+│   │   │       dashboard.constants.js
+│   │   │       index.js
+│   │   │       
+│   │   ├───hooks
+│   │   │       index.js
+│   │   │       
+│   │   ├───pages
+│   │   │       AccountantDashboard.jsx
+│   │   │       AdminDashboard.jsx
+│   │   │       AdmissionDashboard.jsx
+│   │   │       CctvDashboard.jsx
+│   │   │       Dashboard.jsx
+│   │   │       DeveloperDashboard.jsx
+│   │   │       index.js
+│   │   │       LicenseDashboard.jsx
+│   │   │       MonitoringDashboard.jsx
+│   │   │       NotificationCenterDashboard.jsx
+│   │   │       OnlineLearningDashboard.jsx
+│   │   │       ParentDashboard.jsx
+│   │   │       SecurityCenterDashboard.jsx
+│   │   │       StaffDashboard.jsx
+│   │   │       StudentDashboard.jsx
+│   │   │       TeacherDashboard.jsx
+│   │   │       
+│   │   ├───permissions
+│   │   │       index.js
+│   │   │       
+│   │   ├───reports
+│   │   │       index.js
+│   │   │       
+│   │   ├───routes
+│   │   │       index.js
+│   │   │       lazy.routes.jsx
+│   │   │       private.routes.jsx
+│   │   │       public.routes.jsx
+│   │   │       route.config.js
+│   │   │       
+│   │   ├───selectors
+│   │   │       dashboardSelectors.js
+│   │   │       index.js
+│   │   │       
+│   │   ├───services
+│   │   │       dashboard.service.js
+│   │   │       index.js
+│   │   │       
+│   │   ├───state
+│   │   │       dashboardSlice.js
+│   │   │       index.js
+│   │   │       selectors.js
+│   │   │       thunks.js
+│   │   │       
+│   │   ├───validators
+│   │   │       dashboard.validator.js
+│   │   │       index.js
+│   │   │       
+│   │   └───widgets
+│   │           index.js
+│   │           
+│   ├───developer
+│   │   │   index.js
+│   │   │   
+│   │   ├───api
+│   │   │       deployment.api.js
+│   │   │       developer.api.js
+│   │   │       diagnostics.api.js
+│   │   │       index.js
+│   │   │       monitoring.api.js
+│   │   │       subscription.api.js
+│   │   │       
+│   │   ├───assets
+│   │   │       index.js
+│   │   │       
+│   │   ├───audit
+│   │   │       index.js
+│   │   │       
+│   │   ├───components
+│   │   │   │   BackupCard.jsx
+│   │   │   │   BackupForm.jsx
+│   │   │   │   BackupTable.jsx
+│   │   │   │   index.js
+│   │   │   │   
+│   │   │   ├───cards
+│   │   │   │       CrashCard.jsx
+│   │   │   │       index.js
+│   │   │   │       SystemHealthCard.jsx
+│   │   │   │       TenantCard.jsx
+│   │   │   │       
+│   │   │   ├───tables
+│   │   │   │       CrashTable.jsx
+│   │   │   │       ErrorTable.jsx
+│   │   │   │       index.js
+│   │   │   │       TenantTable.jsx
+│   │   │   │       
+│   │   │   └───widgets
+│   │   │           ActiveIssuesWidget.jsx
+│   │   │           index.js
+│   │   │           LiveMetricsWidget.jsx
+│   │   │           SystemStatusWidget.jsx
+│   │   │           
+│   │   ├───constants
+│   │   │       developer.constants.js
+│   │   │       index.js
+│   │   │       
+│   │   ├───crash-center
+│   │   │       index.js
+│   │   │       
+│   │   ├───deployment
+│   │   │       index.js
+│   │   │       
+│   │   ├───developer-dashboard
+│   │   │   │   index.js
+│   │   │   │   
+│   │   │   ├───alerts
+│   │   │   │       index.js
+│   │   │   │       
+│   │   │   ├───crashes
+│   │   │   │       index.js
+│   │   │   │       
+│   │   │   ├───issues
+│   │   │   │       index.js
+│   │   │   │       
+│   │   │   └───warnings
+│   │   │           index.js
+│   │   │           
+│   │   ├───diagnostics
+│   │   │       index.js
+│   │   │       
+│   │   ├───emergency
+│   │   │       index.js
+│   │   │       
+│   │   ├───hooks
+│   │   │       index.js
+│   │   │       
+│   │   ├───incidents
+│   │   │       index.js
+│   │   │       
+│   │   ├───issue-tracker
+│   │   │       index.js
+│   │   │       
+│   │   ├───license-control
+│   │   │       index.js
+│   │   │       
+│   │   ├───licensing
+│   │   │       index.js
+│   │   │       
+│   │   ├───live-monitoring
+│   │   │       index.js
+│   │   │       
+│   │   ├───locks
+│   │   │       index.js
+│   │   │       
+│   │   ├───monitoring
+│   │   │       index.js
+│   │   │       
+│   │   ├───pages
+│   │   │       AuditReview.jsx
+│   │   │       BackupCreate.jsx
+│   │   │       BackupDashboard.jsx
+│   │   │       BackupDetails.jsx
+│   │   │       BackupEdit.jsx
+│   │   │       BackupList.jsx
+│   │   │       CrashDiagnostics.jsx
+│   │   │       DeploymentHistory.jsx
+│   │   │       DeveloperDashboard.jsx
+│   │   │       DeveloperGuard.jsx
+│   │   │       DeveloperLayout.jsx
+│   │   │       EmergencyRecovery.jsx
+│   │   │       ErrorTracking.jsx
+│   │   │       index.js
+│   │   │       SecurityAlerts.jsx
+│   │   │       SubscriptionManagement.jsx
+│   │   │       SystemHealth.jsx
+│   │   │       TenantMonitoring.jsx
+│   │   │       
+│   │   ├───permissions
+│   │   │       developer.permissions.js
+│   │   │       index.js
+│   │   │       
+│   │   ├───recovery
+│   │   │       index.js
+│   │   │       
+│   │   ├───recovery-center
+│   │   │       index.js
+│   │   │       
+│   │   ├───remote-control
+│   │   │       index.js
+│   │   │       
+│   │   ├───remote-maintenance
+│   │   │       index.js
+│   │   │       
+│   │   ├───routes
+│   │   │       index.js
+│   │   │       lazy.routes.jsx
+│   │   │       private.routes.jsx
+│   │   │       public.routes.jsx
+│   │   │       route.config.js
+│   │   │       
+│   │   ├───security
+│   │   │       index.js
+│   │   │       
+│   │   ├───security-alerts
+│   │   │       index.js
+│   │   │       
+│   │   ├───selectors
+│   │   │       developerSelectors.js
+│   │   │       index.js
+│   │   │       
+│   │   ├───services
+│   │   │       developer.service.js
+│   │   │       index.js
+│   │   │       
+│   │   ├───state
+│   │   │       developerSlice.js
+│   │   │       index.js
+│   │   │       selectors.js
+│   │   │       thunks.js
+│   │   │       
+│   │   ├───subscriptions
+│   │   │       index.js
+│   │   │       
+│   │   ├───telemetry
+│   │   │       index.js
+│   │   │       
+│   │   ├───tenant-control
+│   │   │       index.js
+│   │   │       
+│   │   ├───tenant-locks
+│   │   │       index.js
+│   │   │       
+│   │   ├───tracking
+│   │   │       index.js
+│   │   │       
+│   │   ├───unlocks
+│   │   │       index.js
+│   │   │       
+│   │   └───validators
+│   │           developer.validator.js
+│   │           index.js
+│   │           
+│   ├───disaster-recovery
+│   │   │   CrashRecovery.jsx
+│   │   │   FailoverCenter.jsx
+│   │   │   index.js
+│   │   │   RecoveryPlan.jsx
+│   │   │   RestartPolicy.jsx
+│   │   │   RestoreValidator.jsx
+│   │   │   
+│   │   ├───api
+│   │   │       disasterRecovery.api.js
+│   │   │       index.js
+│   │   │       
+│   │   ├───assets
+│   │   │       index.js
+│   │   │       
+│   │   ├───components
+│   │   │       index.js
+│   │   │       
+│   │   ├───constants
+│   │   │       disasterRecovery.constants.js
+│   │   │       index.js
+│   │   │       
+│   │   ├───hooks
+│   │   │       index.js
+│   │   │       
+│   │   ├───pages
+│   │   │       index.js
+│   │   │       
+│   │   ├───permissions
+│   │   │       index.js
+│   │   │       
+│   │   ├───routes
+│   │   │       index.js
+│   │   │       lazy.routes.jsx
+│   │   │       private.routes.jsx
+│   │   │       public.routes.jsx
+│   │   │       route.config.js
+│   │   │       
+│   │   ├───selectors
+│   │   │       disasterRecoverySelectors.js
+│   │   │       index.js
+│   │   │       
+│   │   ├───services
+│   │   │       disaster-recovery.service.js
+│   │   │       index.js
+│   │   │       
+│   │   ├───state
+│   │   │       disasterRecoverySlice.js
+│   │   │       index.js
+│   │   │       selectors.js
+│   │   │       thunks.js
+│   │   │       
+│   │   └───validators
+│   │           disaster-recovery.validator.js
+│   │           index.js
+│   │           
+│   ├───document
+│   │   │   index.js
+│   │   │   
+│   │   ├───api
+│   │   │       document.api.js
+│   │   │       index.js
+│   │   │       
+│   │   ├───archive
+│   │   │       index.js
+│   │   │       
+│   │   ├───assets
+│   │   │       index.js
+│   │   │       
+│   │   ├───components
+│   │   │       DocumentCard.jsx
+│   │   │       DocumentForm.jsx
+│   │   │       DocumentTable.jsx
+│   │   │       index.js
+│   │   │       
+│   │   ├───constants
+│   │   │       document.constants.js
+│   │   │       index.js
+│   │   │       
+│   │   ├───hooks
+│   │   │       index.js
+│   │   │       
+│   │   ├───pages
+│   │   │       DocumentCreate.jsx
+│   │   │       DocumentDashboard.jsx
+│   │   │       DocumentDetails.jsx
+│   │   │       DocumentEdit.jsx
+│   │   │       DocumentList.jsx
+│   │   │       index.js
+│   │   │       
+│   │   ├───permissions
+│   │   │       index.js
+│   │   │       
+│   │   ├───routes
+│   │   │       index.js
+│   │   │       lazy.routes.jsx
+│   │   │       private.routes.jsx
+│   │   │       public.routes.jsx
+│   │   │       route.config.js
+│   │   │       
+│   │   ├───selectors
+│   │   │       documentSelectors.js
+│   │   │       index.js
+│   │   │       
+│   │   ├───services
+│   │   │       document.service.js
+│   │   │       index.js
+│   │   │       
+│   │   ├───state
+│   │   │       documentSlice.js
+│   │   │       index.js
+│   │   │       selectors.js
+│   │   │       thunks.js
+│   │   │       
+│   │   └───validators
+│   │           document.validator.js
+│   │           index.js
+│   │           
+│   ├───event
+│   │   │   index.js
+│   │   │   
+│   │   ├───api
+│   │   │       event.api.js
+│   │   │       index.js
+│   │   │       
+│   │   ├───assets
+│   │   │       index.js
+│   │   │       
+│   │   ├───components
+│   │   │       DocumentCard.jsx
+│   │   │       DocumentForm.jsx
+│   │   │       DocumentTable.jsx
+│   │   │       index.js
+│   │   │       
+│   │   ├───constants
+│   │   │       event.constants.js
+│   │   │       index.js
+│   │   │       
+│   │   ├───hooks
+│   │   │       index.js
+│   │   │       
+│   │   ├───pages
+│   │   │       DocumentCreate.jsx
+│   │   │       DocumentDashboard.jsx
+│   │   │       DocumentDetails.jsx
+│   │   │       DocumentEdit.jsx
+│   │   │       DocumentList.jsx
+│   │   │       index.js
+│   │   │       
+│   │   ├───permissions
+│   │   │       index.js
+│   │   │       
+│   │   ├───routes
+│   │   │       index.js
+│   │   │       lazy.routes.jsx
+│   │   │       private.routes.jsx
+│   │   │       public.routes.jsx
+│   │   │       route.config.js
+│   │   │       
+│   │   ├───selectors
+│   │   │       eventSelectors.js
+│   │   │       index.js
+│   │   │       
+│   │   ├───services
+│   │   │       event.service.js
+│   │   │       index.js
+│   │   │       
+│   │   ├───state
+│   │   │       eventSlice.js
+│   │   │       index.js
+│   │   │       selectors.js
+│   │   │       thunks.js
+│   │   │       
+│   │   └───validators
+│   │           event.validator.js
+│   │           index.js
+│   │           
+│   ├───exam
+│   │   │   index.js
+│   │   │   
+│   │   ├───api
+│   │   │       exam.api.js
+│   │   │       index.js
+│   │   │       
+│   │   ├───assets
+│   │   │       index.js
+│   │   │       
+│   │   ├───audit
+│   │   │       iindex.js
+│   │   │       
+│   │   ├───components
+│   │   │       ExamCard.jsx
+│   │   │       ExamForm.jsx
+│   │   │       ExamTable.jsx
+│   │   │       index.js
+│   │   │       
+│   │   ├───constants
+│   │   │       exam.constants.js
+│   │   │       index.js
+│   │   │       
+│   │   ├───hooks
+│   │   │       index.js
+│   │   │       
+│   │   ├───pages
+│   │   │       ExamCreate.jsx
+│   │   │       ExamDashboard.jsx
+│   │   │       ExamDetails.jsx
+│   │   │       ExamEdit.jsx
+│   │   │       ExamList.jsx
+│   │   │       index.js
+│   │   │       
+│   │   ├───permissions
+│   │   │       index.js
+│   │   │       
+│   │   ├───profile
+│   │   │       index.js
+│   │   │       
+│   │   ├───role
+│   │   │       index.js
+│   │   │       
+│   │   ├───routes
+│   │   │       index.js
+│   │   │       lazy.routes.jsx
+│   │   │       private.routes.jsx
+│   │   │       public.routes.jsx
+│   │   │       route.config.js
+│   │   │       
+│   │   ├───selectors
+│   │   │       examsSelectors.js
+│   │   │       index.js
+│   │   │       
+│   │   ├───services
+│   │   │       exam.service.js
+│   │   │       index.js
+│   │   │       
+│   │   ├───session
+│   │   │       index.js
+│   │   │       
+│   │   ├───state
+│   │   │       examSlice.js
+│   │   │       index.js
+│   │   │       selectors.js
+│   │   │       thunks.js
+│   │   │       
+│   │   ├───user
+│   │   │       index.js
+│   │   │       
+│   │   └───validators
+│   │           exam.validator.js
+│   │           index.js
+│   │           
+│   ├───examination
+│   │   │   index.js
+│   │   │   
+│   │   ├───api
+│   │   │       examination.api.js
+│   │   │       index.js
+│   │   │       
+│   │   ├───assets
+│   │   │       index.js
+│   │   │       
+│   │   ├───components
+│   │   │       FileCard.jsx
+│   │   │       FileForm.jsx
+│   │   │       FileTable.jsx
+│   │   │       index.js
+│   │   │       
+│   │   ├───constants
+│   │   │       examination.constants.js
+│   │   │       index.js
+│   │   │       
+│   │   ├───hooks
+│   │   │       index.js
+│   │   │       
+│   │   ├───pages
+│   │   │       FileCreate.jsx
+│   │   │       FileDashboard.jsx
+│   │   │       FileDetails.jsx
+│   │   │       FileEdit.jsx
+│   │   │       FileList.jsx
+│   │   │       index.js
+│   │   │       
+│   │   ├───permissions
+│   │   │       index.js
+│   │   │       
+│   │   ├───routes
+│   │   │       index.js
+│   │   │       lazy.routes.jsx
+│   │   │       private.routes.jsx
+│   │   │       public.routes.jsx
+│   │   │       route.config.js
+│   │   │       
+│   │   ├───selectors
+│   │   │       examinationSelectors.js
+│   │   │       index.js
+│   │   │       
+│   │   ├───services
+│   │   │       examination.service.js
+│   │   │       index.js
+│   │   │       
+│   │   ├───state
+│   │   │       examinationSlice.js
+│   │   │       index.js
+│   │   │       selectors.js
+│   │   │       thunks.js
+│   │   │       
+│   │   └───validators
+│   │           examination.validator.js
+│   │           index.js
+│   │           
+│   ├───feature-flags
+│   │   │   index.js
+│   │   │   
+│   │   ├───api
+│   │   │       feature-flags.api.js
+│   │   │       index.js
+│   │   │       
+│   │   ├───assets
+│   │   │       index.js
+│   │   │       
+│   │   ├───components
+│   │   │       index.js
+│   │   │       
+│   │   ├───constants
+│   │   │       feature-flags.constants.js
+│   │   │       index.js
+│   │   │       
+│   │   ├───hooks
+│   │   │       index.js
+│   │   │       
+│   │   ├───pages
+│   │   │       index.js
+│   │   │       
+│   │   ├───permissions
+│   │   │       index.js
+│   │   │       
+│   │   ├───routes
+│   │   │       index.js
+│   │   │       lazy.routes.jsx
+│   │   │       private.routes.jsx
+│   │   │       public.routes.jsx
+│   │   │       route.config.js
+│   │   │       
+│   │   ├───selectors
+│   │   │       feature-flagsSelectors.js
+│   │   │       index.js
+│   │   │       
+│   │   ├───services
+│   │   │       feature-flags.service.js
+│   │   │       index.js
+│   │   │       
+│   │   ├───state
+│   │   │       feature-flagsSlice.js
+│   │   │       index.js
+│   │   │       selectors.js
+│   │   │       thunks.js
+│   │   │       
+│   │   └───validators
+│   │           feature-flags.validator.js
+│   │           index.js
+│   │           
+│   ├───fee
+│   │   │   index.js
+│   │   │   
+│   │   ├───api
+│   │   │       fee.api.js
+│   │   │       index.js
+│   │   │       
+│   │   ├───assets
+│   │   │       index.js
+│   │   │       
+│   │   ├───components
+│   │   │       FeeCard.jsx
+│   │   │       FeeForm.jsx
+│   │   │       FeeTable.jsx
+│   │   │       index.js
+│   │   │       
+│   │   ├───constants
+│   │   │       fee.constants.js
+│   │   │       index.js
+│   │   │       
+│   │   ├───hooks
+│   │   │       index.js
+│   │   │       
+│   │   ├───pages
+│   │   │       FeeCreate.jsx
+│   │   │       FeeDashboard.jsx
+│   │   │       FeeDetails.jsx
+│   │   │       FeeEdit.jsx
+│   │   │       FeeList.jsx
+│   │   │       index.js
+│   │   │       
+│   │   ├───permissions
+│   │   │       index.js
+│   │   │       
+│   │   ├───routes
+│   │   │       index.js
+│   │   │       lazy.routes.jsx
+│   │   │       private.routes.jsx
+│   │   │       public.routes.jsx
+│   │   │       route.config.js
+│   │   │       
+│   │   ├───selectors
+│   │   │       feeSelectors.js
+│   │   │       index.js
+│   │   │       
+│   │   ├───services
+│   │   │       fee.service.js
+│   │   │       index.js
+│   │   │       
+│   │   ├───state
+│   │   │       feeSlice.js
+│   │   │       index.js
+│   │   │       selectors.js
+│   │   │       thunks.js
+│   │   │       
+│   │   └───validators
+│   │           fee.validator.js
+│   │           index.js
+│   │           
+│   ├───file
+│   │   │   index.js
+│   │   │   
+│   │   ├───api
+│   │   │       file.api.js
+│   │   │       index.js
+│   │   │       
+│   │   ├───assets
+│   │   │       index.js
+│   │   │       
+│   │   ├───components
+│   │   │       FileCard.jsx
+│   │   │       FileForm.jsx
+│   │   │       FileTable.jsx
+│   │   │       index.js
+│   │   │       
+│   │   ├───constants
+│   │   │       file.constants.js
+│   │   │       index.js
+│   │   │       
+│   │   ├───hooks
+│   │   │       index.js
+│   │   │       
+│   │   ├───pages
+│   │   │       FileCreate.jsx
+│   │   │       FileDashboard.jsx
+│   │   │       FileDetails.jsx
+│   │   │       FileEdit.jsx
+│   │   │       FileList.jsx
+│   │   │       index.js
+│   │   │       
+│   │   ├───permissions
+│   │   │       index.js
+│   │   │       
+│   │   ├───routes
+│   │   │       index.js
+│   │   │       lazy.routes.jsx
+│   │   │       private.routes.jsx
+│   │   │       public.routes.jsx
+│   │   │       route.config.js
+│   │   │       
+│   │   ├───selectors
+│   │   │       fileSelectors.js
+│   │   │       index.js
+│   │   │       
+│   │   ├───services
+│   │   │       file.service.js
+│   │   │       index.js
+│   │   │       
+│   │   ├───state
+│   │   │       fileSlice.js
+│   │   │       index.js
+│   │   │       selectors.js
+│   │   │       thunks.js
+│   │   │       
+│   │   └───validators
+│   │           file.validator.js
+│   │           index.js
+│   │           
+│   ├───finance
+│   │   │   index.js
+│   │   │   
+│   │   ├───api
+│   │   │       finance.api.js
+│   │   │       index.js
+│   │   │       
+│   │   ├───assets
+│   │   │       index.js
+│   │   │       
+│   │   ├───components
+│   │   │       BackupCard.jsx
+│   │   │       BackupForm.jsx
+│   │   │       BackupTable.jsx
+│   │   │       index.js
+│   │   │       
+│   │   ├───constants
+│   │   │       finance.constants.js
+│   │   │       index.js
+│   │   │       
+│   │   ├───hooks
+│   │   │       index.js
+│   │   │       
+│   │   ├───pages
+│   │   │       BackupCreate.jsx
+│   │   │       BackupDashboard.jsx
+│   │   │       BackupDetails.jsx
+│   │   │       BackupEdit.jsx
+│   │   │       BackupList.jsx
+│   │   │       index.js
+│   │   │       
+│   │   ├───permissions
+│   │   │       index.js
+│   │   │       
+│   │   ├───routes
+│   │   │       index.js
+│   │   │       lazy.routes.jsx
+│   │   │       private.routes.jsx
+│   │   │       public.routes.jsx
+│   │   │       route.config.js
+│   │   │       
+│   │   ├───selectors
+│   │   │       financeSelectors.js
+│   │   │       index.js
+│   │   │       
+│   │   ├───services
+│   │   │       finance.service.js
+│   │   │       index.js
+│   │   │       
+│   │   ├───state
+│   │   │       financeSlice.js
+│   │   │       index.js
+│   │   │       selectors.js
+│   │   │       
+│   │   └───validators
+│   │           finance.validator.js
+│   │           index.js
+│   │           
+│   ├───gateway
+│   │   │   index.js
+│   │   │   
+│   │   ├───api
+│   │   │       gateway.api.js
+│   │   │       index.js
+│   │   │       
+│   │   ├───assets
+│   │   │       index.js
+│   │   │       
+│   │   ├───components
+│   │   │       GatewayCard.jsx
+│   │   │       GatewayForm.jsx
+│   │   │       GatewayTable.jsx
+│   │   │       index.js
+│   │   │       
+│   │   ├───constants
+│   │   │       gateway.constants.js
+│   │   │       index.js
+│   │   │       
+│   │   ├───hooks
+│   │   │       index.js
+│   │   │       
+│   │   ├───pages
+│   │   │       GatewayCreate.jsx
+│   │   │       GatewayDashboard.jsx
+│   │   │       GatewayDetails.jsx
+│   │   │       GatewayEdit.jsx
+│   │   │       GatewayList.jsx
+│   │   │       index.js
+│   │   │       
+│   │   ├───permissions
+│   │   │       index.js
+│   │   │       
+│   │   ├───routes
+│   │   │       index.js
+│   │   │       lazy.routes.jsx
+│   │   │       private.routes.jsx
+│   │   │       public.routes.jsx
+│   │   │       route.config.js
+│   │   │       
+│   │   ├───selectors
+│   │   │       gatewaySelectors.js
+│   │   │       index.js
+│   │   │       
+│   │   ├───services
+│   │   │   │   index.js
+│   │   │   │   
+│   │   │   └───gateway.service.js
+│   │   ├───state
+│   │   │       gatewaySlice.js
+│   │   │       index.js
+│   │   │       selectors.js
+│   │   │       
+│   │   └───validators
+│   │           gateway.validator.js
+│   │           index.js
+│   │           
+│   ├───grade
+│   │   │   index.js
+│   │   │   
+│   │   ├───api
+│   │   │       grade.api.js
+│   │   │       index.js
+│   │   │       
+│   │   ├───assets
+│   │   ├───components
+│   │   │       GradeCard.jsx
+│   │   │       GradeForm.jsx
+│   │   │       GradeTable.jsx
+│   │   │       index.js
+│   │   │       
+│   │   ├───constants
+│   │   │       grade.constants.js
+│   │   │       index.js
+│   │   │       
+│   │   ├───hooks
+│   │   │       index.js
+│   │   │       
+│   │   ├───pages
+│   │   │       GradeCreate.jsx
+│   │   │       GradeDashboard.jsx
+│   │   │       GradeDetails.jsx
+│   │   │       GradeEdit.jsx
+│   │   │       GradeList.jsx
+│   │   │       index.js
+│   │   │       
+│   │   ├───permissions
+│   │   │       index.js
+│   │   │       
+│   │   ├───routes
+│   │   │       index.js
+│   │   │       lazy.routes.jsx
+│   │   │       private.routes.jsx
+│   │   │       public.routes.jsx
+│   │   │       route.config.js
+│   │   │       
+│   │   ├───selectors
+│   │   │       gradeSelectors.js
+│   │   │       index.js
+│   │   │       
+│   │   ├───services
+│   │   │       grade.service.js
+│   │   │       index.js
+│   │   │       
+│   │   ├───state
+│   │   │       gradeSlice.js
+│   │   │       index.js
+│   │   │       selectors.js
+│   │   │       thunks.js
+│   │   │       
+│   │   └───validators
+│   │           grade.validator.js
+│   │           index.js
+│   │           
+│   ├───graduate
+│   │   │   index.js
+│   │   │   
+│   │   ├───api
+│   │   │       graduate.api.js
+│   │   │       index.js
+│   │   │       
+│   │   ├───assets
+│   │   │       index.js
+│   │   │       
+│   │   ├───components
+│   │   │       GraduateCard.jsx
+│   │   │       GraduateForm.jsx
+│   │   │       GraduateTable.jsx
+│   │   │       index.js
+│   │   │       
+│   │   ├───constants
+│   │   │       graduate.constants.js
+│   │   │       index.js
+│   │   │       
+│   │   ├───hooks
+│   │   │       index.js
+│   │   │       
+│   │   ├───pages
+│   │   │       GraduateCreate.jsx
+│   │   │       GraduateDashboard.jsx
+│   │   │       GraduateDetails.jsx
+│   │   │       GraduateEdit.jsx
+│   │   │       GraduateList.jsx
+│   │   │       index.js
+│   │   │       
+│   │   ├───permissions
+│   │   │       index.js
+│   │   │       
+│   │   ├───routes
+│   │   │       index.js
+│   │   │       lazy.routes.jsx
+│   │   │       private.routes.jsx
+│   │   │       public.routes.jsx
+│   │   │       route.config.js
+│   │   │       
+│   │   ├───selectors
+│   │   │       graduateSelectors.js
+│   │   │       index.js
+│   │   │       
+│   │   ├───services
+│   │   │       graduate.service.js
+│   │   │       index.js
+│   │   │       
+│   │   ├───state
+│   │   │       graduateSlice.js
+│   │   │       index.js
+│   │   │       selectors.js
+│   │   │       thunks.js
+│   │   │       
+│   │   └───validators
+│   │           graduate.validator.js
+│   │           index.js
+│   │           
+│   ├───health
+│   │   │   index.js
+│   │   │   
+│   │   ├───api
+│   │   │       health.api.js
+│   │   │       index.js
+│   │   │       
+│   │   ├───assets
+│   │   │       index.js
+│   │   │       
+│   │   ├───components
+│   │   │       BackupCard.jsx
+│   │   │       BackupForm.jsx
+│   │   │       BackupTable.jsx
+│   │   │       index.js
+│   │   │       
+│   │   ├───constants
+│   │   │       health.constants.js
+│   │   │       index.js
+│   │   │       
+│   │   ├───hooks
+│   │   │       index.js
+│   │   │       
+│   │   ├───pages
+│   │   │       BackupCreate.jsx
+│   │   │       BackupDashboard.jsx
+│   │   │       BackupDetails.jsx
+│   │   │       BackupEdit.jsx
+│   │   │       BackupList.jsx
+│   │   │       index.js
+│   │   │       
+│   │   ├───permissions
+│   │   │       index.js
+│   │   │       
+│   │   ├───routes
+│   │   │       index.js
+│   │   │       lazy.routes.jsx
+│   │   │       private.routes.jsx
+│   │   │       public.routes.jsx
+│   │   │       route.config.js
+│   │   │       
+│   │   ├───selectors
+│   │   │       healthSelectors.js
+│   │   │       index.js
+│   │   │       
+│   │   ├───services
+│   │   │       health.service.js
+│   │   │       index.js
+│   │   │       
+│   │   ├───state
+│   │   │       healthSlice.js
+│   │   │       index.js
+│   │   │       selectors.js
+│   │   │       thunks.js
+│   │   │       
+│   │   └───validators
+│   │           health.validator.js
+│   │           index.js
+│   │           
+│   ├───health-monitoring
+│   │   │   index.js
+│   │   │   
+│   │   ├───api
+│   │   │       health-monitoring.api.js
+│   │   │       
+│   │   ├───api-health
+│   │   │       index.js
+│   │   │       
+│   │   ├───assets
+│   │   │       index.js
+│   │   │       
+│   │   ├───components
+│   │   │       index.js
+│   │   │       
+│   │   ├───constants
+│   │   │       health-monitoring.constants.js
+│   │   │       index.js
+│   │   │       
+│   │   ├───database-health
+│   │   │       index.js
+│   │   │       
+│   │   ├───hooks
+│   │   │       index.js
+│   │   │       
+│   │   ├───pages
+│   │   │       index.js
+│   │   │       
+│   │   ├───performance-health
+│   │   │       index.js
+│   │   │       
+│   │   ├───permissions
+│   │   │       index.js
+│   │   │       
+│   │   ├───queue-health
+│   │   │       index.js
+│   │   │       
+│   │   ├───redis-health
+│   │   │       index.js
+│   │   │       
+│   │   ├───routes
+│   │   │       index.js
+│   │   │       lazy.routes.jsx
+│   │   │       private.routes.jsx
+│   │   │       public.routes.jsx
+│   │   │       route.config.js
+│   │   │       
+│   │   ├───selectors
+│   │   │       health-monitoringSelectors.js
+│   │   │       index.js
+│   │   │       
+│   │   ├───services
+│   │   │       health-monitoring.service.js
+│   │   │       index.js
+│   │   │       
+│   │   ├───socket-health
+│   │   │       index.js
+│   │   │       
+│   │   ├───state
+│   │   │       health-monitoringSlice.js
+│   │   │       index.js
+│   │   │       selectors.js
+│   │   │       thunks.js
+│   │   │       
+│   │   ├───storage-health
+│   │   │       index.js
+│   │   │       
+│   │   ├───system-health
+│   │   │       index.js
+│   │   │       
+│   │   ├───tenant-health
+│   │   │       index.js
+│   │   │       
+│   │   ├───validators
+│   │   │       health-monitoring.validator.js
+│   │   │       index.js
+│   │   │       
+│   │   └───worker-health
+│   │           index.js
+│   │           
+│   ├───hostel
+│   │   │   index.js
+│   │   │   
+│   │   ├───api
+│   │   │       hostel.api.js
+│   │   │       index.js
+│   │   │       
+│   │   ├───assets
+│   │   │       index.js
+│   │   │       
+│   │   ├───components
+│   │   │       index.js
+│   │   │       
+│   │   ├───constants
+│   │   │       hostel.constants.js
+│   │   │       index.js
+│   │   │       
+│   │   ├───hooks
+│   │   │       index.js
+│   │   │       
+│   │   ├───pages
+│   │   │       index.js
+│   │   │       
+│   │   ├───permissions
+│   │   │       index.js
+│   │   │       
+│   │   ├───routes
+│   │   │       index.js
+│   │   │       lazy.routes.jsx
+│   │   │       private.routes.jsx
+│   │   │       public.routes.jsx
+│   │   │       route.config.js
+│   │   │       
+│   │   ├───selectors
+│   │   │       hostelSelectors.js
+│   │   │       index.js
+│   │   │       
+│   │   ├───services
+│   │   │       hostel.service.js
+│   │   │       index.js
+│   │   │       
+│   │   ├───state
+│   │   │       hostelSlice.js
+│   │   │       index.js
+│   │   │       selectors.js
+│   │   │       thunks.js
+│   │   │       
+│   │   └───validators
+│   │           hostel.validator.js
+│   │           index.js
+│   │           
+│   ├───hr
+│   │   │   index.js
+│   │   │   
+│   │   ├───api
+│   │   │       hr.api.js
+│   │   │       index.js
+│   │   │       
+│   │   ├───assets
+│   │   │       index.js
+│   │   │       
+│   │   ├───components
+│   │   │       index.js
+│   │   │       
+│   │   ├───constants
+│   │   │       hr.constants.js
+│   │   │       index.js
+│   │   │       
+│   │   ├───hooks
+│   │   │       index.js
+│   │   │       
+│   │   ├───pages
+│   │   │       index.js
+│   │   │       
+│   │   ├───permissions
+│   │   │       index.js
+│   │   │       
+│   │   ├───routes
+│   │   │       index.js
+│   │   │       lazy.routes.jsx
+│   │   │       private.routes.jsx
+│   │   │       public.routes.jsx
+│   │   │       route.config.js
+│   │   │       
+│   │   ├───selectors
+│   │   │       hrSelectors.js
+│   │   │       index.js
+│   │   │       
+│   │   ├───services
+│   │   │       hr.service.js
+│   │   │       index.js
+│   │   │       
+│   │   ├───state
+│   │   │       hrSlice.js
+│   │   │       index.js
+│   │   │       selectors.js
+│   │   │       thunks.js
+│   │   │       
+│   │   └───validators
+│   │           hr.validator.js
+│   │           index.js
+│   │           
+│   ├───import
+│   │   │   index.js
+│   │   │   
+│   │   ├───api
+│   │   │       import.api.js
+│   │   │       index.js
+│   │   │       
+│   │   ├───assets
+│   │   │       index.js
+│   │   │       
+│   │   ├───components
+│   │   │       index.js
+│   │   │       
+│   │   ├───constants
+│   │   │       import.constants.js
+│   │   │       index.js
+│   │   │       
+│   │   ├───hooks
+│   │   │       index.js
+│   │   │       
+│   │   ├───pages
+│   │   │       index.js
+│   │   │       
+│   │   ├───permissions
+│   │   │       index.js
+│   │   │       
+│   │   ├───routes
+│   │   │       index.js
+│   │   │       lazy.routes.jsx
+│   │   │       private.routes.jsx
+│   │   │       public.routes.jsx
+│   │   │       route.config.js
+│   │   │       
+│   │   ├───selectors
+│   │   │       importSelectors.js
+│   │   │       index.js
+│   │   │       
+│   │   ├───services
+│   │   │       import.service.js
+│   │   │       index.js
+│   │   │       
+│   │   ├───state
+│   │   │       importSlice.js
+│   │   │       index.js
+│   │   │       selectors.js
+│   │   │       thunks.js
+│   │   │       
+│   │   └───validators
+│   │           import.validator.js
+│   │           index.js
+│   │           
+│   ├───integration-center
+│   │   │   EmailIntegration.jsx
+│   │   │   FirebaseIntegration.jsx
+│   │   │   GoogleMeetIntegration.jsx
+│   │   │   index.js
+│   │   │   IntegrationDashboard.jsx
+│   │   │   SmsIntegration.jsx
+│   │   │   WhatsappIntegration.jsx
+│   │   │   ZoomIntegration.jsx
+│   │   │   
+│   │   ├───api
+│   │   │       index.js
+│   │   │       integration-center.api.js
+│   │   │       
+│   │   ├───assets
+│   │   │       index.js
+│   │   │       
+│   │   ├───components
+│   │   │       index.js
+│   │   │       
+│   │   ├───constants
+│   │   │       index.js
+│   │   │       integration-center.constants.js
+│   │   │       
+│   │   ├───hooks
+│   │   │       index.js
+│   │   │       
+│   │   ├───pages
+│   │   │       index.js
+│   │   │       
+│   │   ├───permissions
+│   │   │       index.js
+│   │   │       
+│   │   ├───routes
+│   │   │       index.js
+│   │   │       lazy.routes.jsx
+│   │   │       private.routes.jsx
+│   │   │       public.routes.jsx
+│   │   │       route.config.js
+│   │   │       
+│   │   ├───selectors
+│   │   │       index.js
+│   │   │       integration-centerSelectors.js
+│   │   │       
+│   │   ├───services
+│   │   │       index.js
+│   │   │       integration-center.service.js
+│   │   │       
+│   │   ├───state
+│   │   │       index.js
+│   │   │       integration-centerSlice.js
+│   │   │       selectors.js
+│   │   │       thunks.js
+│   │   │       
+│   │   └───validators
+│   │           index.js
+│   │           integration-center.validator.js
+│   │           
+│   ├───inventory
+│   │   │   index.js
+│   │   │   
+│   │   ├───api
+│   │   │       index.js
+│   │   │       inventory.api.js
+│   │   │       
+│   │   ├───assets
+│   │   │       index.js
+│   │   │       
+│   │   ├───components
+│   │   │       index.js
+│   │   │       InventoryCard.jsx
+│   │   │       InventoryForm.jsx
+│   │   │       InventoryTable.jsx
+│   │   │       
+│   │   ├───constants
+│   │   │       index.js
+│   │   │       inventory.constants.js
+│   │   │       
+│   │   ├───hooks
+│   │   │       index.js
+│   │   │       
+│   │   ├───pages
+│   │   │       index.js
+│   │   │       InventoryCreate.jsx
+│   │   │       InventoryDashboard.jsx
+│   │   │       InventoryDetails.jsx
+│   │   │       InventoryEdit.jsx
+│   │   │       InventoryList.jsx
+│   │   │       
+│   │   ├───permissions
+│   │   │       index.js
+│   │   │       
+│   │   ├───routes
+│   │   │       index.js
+│   │   │       lazy.routes.jsx
+│   │   │       private.routes.jsx
+│   │   │       public.routes.jsx
+│   │   │       route.config.js
+│   │   │       
+│   │   ├───selectors
+│   │   │       index.js
+│   │   │       inventorySelectors.js
+│   │   │       
+│   │   ├───services
+│   │   │       index.js
+│   │   │       inventory.service.js
+│   │   │       
+│   │   ├───state
+│   │   │       index.js
+│   │   │       inventorySlice.js
+│   │   │       selectors.js
+│   │   │       thunks.js
+│   │   │       
+│   │   └───validators
+│   │           index.js
+│   │           inventory.validator.js
+│   │           
+│   ├───learning
+│   │   │   index.js
+│   │   │   
+│   │   ├───api
+│   │   │       index.js
+│   │   │       learning.api.js
+│   │   │       
+│   │   ├───assets
+│   │   │       index.js
+│   │   │       
+│   │   ├───components
+│   │   │       index.js
+│   │   │       LearningCard.jsx
+│   │   │       LearningForm.jsx
+│   │   │       LearningTable.jsx
+│   │   │       
+│   │   ├───constants
+│   │   │       index.js
+│   │   │       learning.constants.js
+│   │   │       
+│   │   ├───hooks
+│   │   │       index.js
+│   │   │       
+│   │   ├───pages
+│   │   │       index.js
+│   │   │       LearningCreate.jsx
+│   │   │       LearningDashboard.jsx
+│   │   │       LearningDetails.jsx
+│   │   │       LearningEdit.jsx
+│   │   │       LearningList.jsx
+│   │   │       LiveClasses.jsx
+│   │   │       Recordings.jsx
+│   │   │       VirtualClassroom.jsx
+│   │   │       Whiteboard.jsx
+│   │   │       
+│   │   ├───permissions
+│   │   │       index.js
+│   │   │       
+│   │   ├───routes
+│   │   │       index.js
+│   │   │       lazy.routes.jsx
+│   │   │       private.routes.jsx
+│   │   │       public.routes.jsx
+│   │   │       route.config.js
+│   │   │       
+│   │   ├───selectors
+│   │   │       index.js
+│   │   │       learningSelectors.js
+│   │   │       
+│   │   ├───services
+│   │   │       index.js
+│   │   │       learning.service.js
+│   │   │       
+│   │   ├───state
+│   │   │       index.js
+│   │   │       learningSlice.js
+│   │   │       selectors.js
+│   │   │       thunks.js
+│   │   │       
+│   │   └───validators
+│   │           index.js
+│   │           learning.validator.js
+│   │           
+│   ├───library
+│   │   │   index.js
+│   │   │   
+│   │   ├───api
+│   │   │       index.js
+│   │   │       library.api.js
+│   │   │       
+│   │   ├───assets
+│   │   │       index.js
+│   │   │       
+│   │   ├───components
+│   │   │       index.js
+│   │   │       LibraryCard.jsx
+│   │   │       LibraryForm.jsx
+│   │   │       LibraryTable.jsx
+│   │   │       
+│   │   ├───constants
+│   │   │       index.js
+│   │   │       library.constants.js
+│   │   │       
+│   │   ├───hooks
+│   │   │       index.js
+│   │   │       
+│   │   ├───pages
+│   │   │       index.js
+│   │   │       LibraryCreate.jsx
+│   │   │       LibraryDashboard.jsx
+│   │   │       LibraryDetails.jsx
+│   │   │       LibraryEdit.jsx
+│   │   │       LibraryList.jsx
+│   │   │       
+│   │   ├───permissions
+│   │   │       index.js
+│   │   │       
+│   │   ├───routes
+│   │   │       index.js
+│   │   │       lazy.routes.jsx
+│   │   │       private.routes.jsx
+│   │   │       public.routes.jsx
+│   │   │       route.config.js
+│   │   │       
+│   │   ├───selectors
+│   │   │       index.js
+│   │   │       librarySelectors.js
+│   │   │       
+│   │   ├───services
+│   │   │       index.js
+│   │   │       library.service.js
+│   │   │       
+│   │   ├───state
+│   │   │       index.js
+│   │   │       librarySlice.js
+│   │   │       selectors.js
+│   │   │       thunks.js
+│   │   │       
+│   │   └───validators
+│   │           index.js
+│   │           library.validator.js
+│   │           
+│   ├───license
+│   │   │   index.js
+│   │   │   
+│   │   ├───api
+│   │   │       index.js
+│   │   │       license.api.js
+│   │   │       
+│   │   ├───assets
+│   │   │       index.js
+│   │   │       
+│   │   ├───components
+│   │   │       index.js
+│   │   │       MeetingCard.jsx
+│   │   │       MeetingForm.jsx
+│   │   │       MeetingTable.jsx
+│   │   │       
+│   │   ├───constants
+│   │   │       index.js
+│   │   │       license.constants.js
+│   │   │       
+│   │   ├───hooks
+│   │   │       index.js
+│   │   │       
+│   │   ├───pages
+│   │   │       index.js
+│   │   │       MeetingCreate.jsx
+│   │   │       MeetingDashboard.jsx
+│   │   │       MeetingDetails.jsx
+│   │   │       MeetingEdit.jsx
+│   │   │       MeetingList.jsx
+│   │   │       
+│   │   ├───permissions
+│   │   │       index.js
+│   │   │       
+│   │   ├───routes
+│   │   │       index.js
+│   │   │       lazy.routes.jsx
+│   │   │       private.routes.jsx
+│   │   │       public.routes.jsx
+│   │   │       route.config.js
+│   │   │       
+│   │   ├───selectors
+│   │   │       index.js
+│   │   │       licenseSelectors.js
+│   │   │       
+│   │   ├───services
+│   │   │       index.js
+│   │   │       license.service.js
+│   │   │       
+│   │   ├───state
+│   │   │       index.js
+│   │   │       licenseSlice.js
+│   │   │       selectors.js
+│   │   │       thunks.js
+│   │   │       
+│   │   └───validators
+│   │           index.js
+│   │           license.validator.js
+│   │           
+│   ├───licensing
+│   │   │   index.js
+│   │   │   
+│   │   ├───api
+│   │   │       index.js
+│   │   │       licensing.api.js
+│   │   │       
+│   │   ├───assets
+│   │   │       index.js
+│   │   │       
+│   │   ├───components
+│   │   │       index.js
+│   │   │       
+│   │   ├───constants
+│   │   │       index.js
+│   │   │       licensing.constants.js
+│   │   │       
+│   │   ├───hooks
+│   │   │       index.js
+│   │   │       
+│   │   ├───pages
+│   │   │       BillingLockManager.jsx
+│   │   │       GracePeriodManager.jsx
+│   │   │       index.js
+│   │   │       LicenseDashboard.jsx
+│   │   │       SubscriptionManager.jsx
+│   │   │       TenantLicenseManager.jsx
+│   │   │       
+│   │   ├───permissions
+│   │   │       index.js
+│   │   │       
+│   │   ├───routes
+│   │   │       index.js
+│   │   │       lazy.routes.jsx
+│   │   │       private.routes.jsx
+│   │   │       public.routes.jsx
+│   │   │       route.config.js
+│   │   │       
+│   │   ├───selectors
+│   │   │       index.js
+│   │   │       licensingSelectors.js
+│   │   │       
+│   │   ├───services
+│   │   │       index.js
+│   │   │       licensing.service.js
+│   │   │       
+│   │   ├───state
+│   │   │       index.js
+│   │   │       licensingSlice.js
+│   │   │       selectors.js
+│   │   │       thunks.js
+│   │   │       
+│   │   └───validators
+│   │           index.js
+│   │           licensing.validator.js
+│   │           
+│   ├───logs
+│   │   │   index.js
+│   │   │   
+│   │   ├───api
+│   │   │       index.js
+│   │   │       logs.api.js
+│   │   │       
+│   │   ├───assets
+│   │   ├───audit
+│   │   │       index.js
+│   │   │       
+│   │   ├───components
+│   │   │   │   index.js
+│   │   │   │   LogsCard.jsx
+│   │   │   │   LogsFilter.jsx
+│   │   │   │   LogsTable.jsx
+│   │   │   │   
+│   │   │   └───audit
+│   │   │           AuditLogCard.jsx
+│   │   │           AuditLogDetails.jsx
+│   │   │           AuditLogTable.jsx
+│   │   │           
+│   │   ├───constants
+│   │   │       index.js
+│   │   │       log.constants.js
+│   │   │       
+│   │   ├───hooks
+│   │   │       index.js
+│   │   │       
+│   │   ├───pages
+│   │   │       ApplicationLogs.jsx
+│   │   │       AuditLogs.jsx
+│   │   │       ErrorLogs.jsx
+│   │   │       index.js
+│   │   │       LogsCreate.jsx
+│   │   │       LogsDashboard.jsx
+│   │   │       LogsDetails.jsx
+│   │   │       LogsEdit.jsx
+│   │   │       LogsList.jsx
+│   │   │       SecurityLogs.jsx
+│   │   │       
+│   │   ├───permissions
+│   │   │       index.js
+│   │   │       
+│   │   ├───routes
+│   │   │       index.js
+│   │   │       lazy.routes.jsx
+│   │   │       private.routes.jsx
+│   │   │       public.routes.jsx
+│   │   │       route.config.js
+│   │   │       
+│   │   ├───selectors
+│   │   │       index.js
+│   │   │       logsSelectors.js
+│   │   │       
+│   │   ├───services
+│   │   │       index.js
+│   │   │       logs.service.js
+│   │   │       
+│   │   ├───state
+│   │   │       index.js
+│   │   │       logsSlice.js
+│   │   │       selectors.js
+│   │   │       thunks.js
+│   │   │       
+│   │   └───validators
+│   │           index.js
+│   │           logs.validator.js
+│   │           
+│   ├───meeting
+│   │   │   index.js
+│   │   │   
+│   │   ├───api
+│   │   │       index.js
+│   │   │       meeting.api.js
+│   │   │       
+│   │   ├───assets
+│   │   │       index.js
+│   │   │       
+│   │   ├───components
+│   │   │       index.js
+│   │   │       MeetingCard.jsx
+│   │   │       MeetingForm.jsx
+│   │   │       MeetingTable.jsx
+│   │   │       
+│   │   ├───constants
+│   │   │       index.js
+│   │   │       meeting.constants.js
+│   │   │       
+│   │   ├───hooks
+│   │   │       index.js
+│   │   │       
+│   │   ├───pages
+│   │   │       index.js
+│   │   │       MeetingCreate.jsx
+│   │   │       MeetingDashboard.jsx
+│   │   │       MeetingDetails.jsx
+│   │   │       MeetingEdit.jsx
+│   │   │       MeetingList.jsx
+│   │   │       
+│   │   ├───permissions
+│   │   │       index.js
+│   │   │       
+│   │   ├───routes
+│   │   │       index.js
+│   │   │       lazy.routes.jsx
+│   │   │       private.routes.jsx
+│   │   │       public.routes.jsx
+│   │   │       route.config.js
+│   │   │       
+│   │   ├───selectors
+│   │   │       index.js
+│   │   │       meetingSelectors.js
+│   │   │       
+│   │   ├───services
+│   │   │       index.js
+│   │   │       meeting.service.js
+│   │   │       
+│   │   ├───state
+│   │   │       index.js
+│   │   │       meetingSlice.js
+│   │   │       selectors.js
+│   │   │       thunks.js
+│   │   │       
+│   │   └───validators
+│   │           index.js
+│   │           meeting.validator.js
+│   │           
+│   ├───monitoring
+│   │   │   index.js
+│   │   │   
+│   │   ├───api
+│   │   │       index.js
+│   │   │       monitoring.api.js
+│   │   │       
+│   │   ├───assets
+│   │   │       index.js
+│   │   │       
+│   │   ├───components
+│   │   │       index.js
+│   │   │       MonitoringCard.jsx
+│   │   │       MonitoringForm.jsx
+│   │   │       MonitoringTable.jsx
+│   │   │       
+│   │   ├───constants
+│   │   │       index.js
+│   │   │       monitoring.constants.js
+│   │   │       
+│   │   ├───hooks
+│   │   │       index.js
+│   │   │       
+│   │   ├───pages
+│   │   │       ApiHealth.jsx
+│   │   │       ErrorTracking.jsx
+│   │   │       index.js
+│   │   │       MonitoringCreate.jsx
+│   │   │       MonitoringDashboard.jsx
+│   │   │       MonitoringDetails.jsx
+│   │   │       MonitoringEdit.jsx
+│   │   │       MonitoringList.jsx
+│   │   │       Performance.jsx
+│   │   │       SystemHealth.jsx
+│   │   │       
+│   │   ├───permissions
+│   │   │       index.js
+│   │   │       
+│   │   ├───routes
+│   │   │       index.js
+│   │   │       lazy.routes.jsx
+│   │   │       private.routes.jsx
+│   │   │       public.routes.jsx
+│   │   │       route.config.js
+│   │   │       
+│   │   ├───selectors
+│   │   │       index.js
+│   │   │       monitoringSelectors.js
+│   │   │       
+│   │   ├───services
+│   │   │       index.js
+│   │   │       monitoring.service.js
+│   │   │       
+│   │   ├───state
+│   │   │       index.js
+│   │   │       monitoringSlice.js
+│   │   │       selectors.js
+│   │   │       thunks.js
+│   │   │       
+│   │   ├───validators
+│   │   │       index.js
+│   │   │       monitoring.validator.js
+│   │   │       
+│   │   └───widgets
+│   │           index.js
+│   │           
+│   ├───monitoring-center
+│   │   │   index.js
+│   │   │   
+│   │   ├───api
+│   │   │       index.js
+│   │   │       monitoring-center.api.js
+│   │   │       
+│   │   ├───assets
+│   │   │       index.js
+│   │   │       
+│   │   ├───components
+│   │   │       index.js
+│   │   │       
+│   │   ├───constants
+│   │   │       index.js
+│   │   │       monitoring-center.constants.js
+│   │   │       
+│   │   ├───hooks
+│   │   │       index.js
+│   │   │       
+│   │   ├───pages
+│   │   │       index.js
+│   │   │       
+│   │   ├───permissions
+│   │   │       index.js
+│   │   │       
+│   │   ├───routes
+│   │   │       index.js
+│   │   │       lazy.routes.jsx
+│   │   │       private.routes.jsx
+│   │   │       public.routes.jsx
+│   │   │       route.config.js
+│   │   │       
+│   │   ├───selectors
+│   │   │       index.js
+│   │   │       monitoringSelectors.js
+│   │   │       
+│   │   ├───services
+│   │   │       index.js
+│   │   │       monitoring-center.service.js
+│   │   │       
+│   │   ├───state
+│   │   │       index.js
+│   │   │       monitoring-centerSlice.js
+│   │   │       selectors.js
+│   │   │       thunks.js
+│   │   │       
+│   │   └───validators
+│   │           index.js
+│   │           monitoring-center.validator.js
+│   │           
+│   ├───notification
+│   │   │   index.js
+│   │   │   
+│   │   ├───api
+│   │   │       index.js
+│   │   │       notification.api.js
+│   │   │       
+│   │   ├───assets
+│   │   │       index.js
+│   │   │       
+│   │   ├───components
+│   │   │   │   index.js
+│   │   │   │   NotificationCard.jsx
+│   │   │   │   NotificationForm.jsx
+│   │   │   │   NotificationTable.jsx
+│   │   │   │   
+│   │   │   └───widgets
+│   │   │           NotificationWidget.jsx
+│   │   │           
+│   │   ├───constants
+│   │   │       index.js
+│   │   │       notification.constants.js
+│   │   │       
+│   │   ├───hooks
+│   │   │       index.js
+│   │   │       
+│   │   ├───pages
+│   │   │       index.js
+│   │   │       NotificationCreate.jsx
+│   │   │       NotificationDashboard.jsx
+│   │   │       NotificationDetails.jsx
+│   │   │       NotificationEdit.jsx
+│   │   │       NotificationList.jsx
+│   │   │       
+│   │   ├───permissions
+│   │   │       index.js
+│   │   │       
+│   │   ├───routes
+│   │   │       index.js
+│   │   │       lazy.routes.jsx
+│   │   │       private.routes.jsx
+│   │   │       public.routes.jsx
+│   │   │       route.config.js
+│   │   │       
+│   │   ├───selectors
+│   │   │       index.js
+│   │   │       notificationSelectors.js
+│   │   │       
+│   │   ├───services
+│   │   │       index.js
+│   │   │       notification.service.js
+│   │   │       
+│   │   ├───state
+│   │   │       index.js
+│   │   │       notificationSlice.js
+│   │   │       selectors.js
+│   │   │       thunks.js
+│   │   │       
+│   │   └───validators
+│   │           index.js
+│   │           notification.validator.js
+│   │           
+│   ├───notification-center
+│   │   │   index.js
+│   │   │   
+│   │   ├───api
+│   │   │       index.js
+│   │   │       notification-center.api.js
+│   │   │       
+│   │   ├───assets
+│   │   │       index.js
+│   │   │       
+│   │   ├───components
+│   │   │       index.js
+│   │   │       
+│   │   ├───constants
+│   │   │       index.js
+│   │   │       notification-center.constants.js
+│   │   │       
+│   │   ├───hooks
+│   │   │       index.js
+│   │   │       
+│   │   ├───pages
+│   │   │       index.js
+│   │   │       
+│   │   ├───permissions
+│   │   │       index.js
+│   │   │       
+│   │   ├───routes
+│   │   │       index.js
+│   │   │       lazy.routes.jsx
+│   │   │       private.routes.jsx
+│   │   │       public.routes.jsx
+│   │   │       route.config.js
+│   │   │       
+│   │   ├───selectors
+│   │   │       index.js
+│   │   │       notification-centerSelectors.js
+│   │   │       
+│   │   ├───services
+│   │   │       index.js
+│   │   │       notification-center.service.js
+│   │   │       
+│   │   ├───state
+│   │   │       index.js
+│   │   │       notification-centerSlice.js
+│   │   │       selectors.js
+│   │   │       thunks.js
+│   │   │       
+│   │   └───validators
+│   │           index.js
+│   │           notification-center.validator.js
+│   │           
+│   ├───notification-engine
+│   │   │   index.js
+│   │   │   
+│   │   ├───api
+│   │   │       index.js
+│   │   │       notification-engine.api.js
+│   │   │       
+│   │   ├───assets
+│   │   │       index.js
+│   │   │       
+│   │   ├───components
+│   │   │       index.js
+│   │   │       
+│   │   ├───constants
+│   │   │       index.js
+│   │   │       notification-engine.constants.js
+│   │   │       
+│   │   ├───hooks
+│   │   │       index.js
+│   │   │       
+│   │   ├───pages
+│   │   │       index.js
+│   │   │       
+│   │   ├───permissions
+│   │   │       index.js
+│   │   │       
+│   │   ├───routes
+│   │   │       index.js
+│   │   │       lazy.routes.jsx
+│   │   │       private.routes.jsx
+│   │   │       public.routes.jsx
+│   │   │       route.config.js
+│   │   │       
+│   │   ├───selectors
+│   │   │       index.js
+│   │   │       notification-engineSelectors.js
+│   │   │       
+│   │   ├───services
+│   │   │       index.js
+│   │   │       notification-engine.service.js
+│   │   │       
+│   │   ├───state
+│   │   │       index.js
+│   │   │       notification-engineSlice.js
+│   │   │       selectors.js
+│   │   │       thunks.js
+│   │   │       
+│   │   └───validators
+│   │           index.js
+│   │           notification-engine.validator.js
+│   │           
+│   ├───online-learning
+│   │   │   index.js
+│   │   │   
+│   │   ├───api
+│   │   │       index.js
+│   │   │       online-learnig.api.js
+│   │   │       
+│   │   ├───assets
+│   │   │       index.js
+│   │   │       
+│   │   ├───components
+│   │   │   │   index.js
+│   │   │   │   NotificationCard.jsx
+│   │   │   │   NotificationForm.jsx
+│   │   │   │   NotificationTable.jsx
+│   │   │   │   
+│   │   │   └───widgets
+│   │   │           NotificationWidget.jsx
+│   │   │           
+│   │   ├───constants
+│   │   │       index.js
+│   │   │       online-learning.constants.js
+│   │   │       
+│   │   ├───hooks
+│   │   │       index.js
+│   │   │       
+│   │   ├───pages
+│   │   │       index.js
+│   │   │       NotificationCreate.jsx
+│   │   │       NotificationDashboard.jsx
+│   │   │       NotificationDetails.jsx
+│   │   │       NotificationEdit.jsx
+│   │   │       NotificationList.jsx
+│   │   │       
+│   │   ├───permissions
+│   │   │       index.js
+│   │   │       
+│   │   ├───routes
+│   │   │       index.js
+│   │   │       lazy.routes.jsx
+│   │   │       private.routes.jsx
+│   │   │       public.routes.jsx
+│   │   │       route.config.js
+│   │   │       
+│   │   ├───selectors
+│   │   │       index.js
+│   │   │       online-learningSelectors.js
+│   │   │       
+│   │   ├───services
+│   │   │       index.js
+│   │   │       online-learning.service.js
+│   │   │       
+│   │   ├───state
+│   │   │       index.js
+│   │   │       online-learningSlice.js
+│   │   │       selectors.js
+│   │   │       thunks.js
+│   │   │       
+│   │   └───validators
+│   │           index.js
+│   │           online-learning.validator.js
+│   │           
+│   ├───parent
+│   │   │   index.js
+│   │   │   
+│   │   ├───api
+│   │   │       index.js
+│   │   │       parent.api.js
+│   │   │       
+│   │   ├───assets
+│   │   │       index.js
+│   │   │       
+│   │   ├───components
+│   │   │       index.js
+│   │   │       ParentCard.jsx
+│   │   │       ParentForm.jsx
+│   │   │       ParentTable.jsx
+│   │   │       
+│   │   ├───constants
+│   │   │       index.js
+│   │   │       parent.constants.js
+│   │   │       
+│   │   ├───hooks
+│   │   │       index.js
+│   │   │       
+│   │   ├───pages
+│   │   │       index.js
+│   │   │       ParentCreate.jsx
+│   │   │       ParentDashboard.jsx
+│   │   │       ParentDetails.jsx
+│   │   │       ParentEdit.jsx
+│   │   │       ParentList.jsx
+│   │   │       ParentPermissions.jsx
+│   │   │       ParentProfile.jsx
+│   │   │       
+│   │   ├───permissions
+│   │   │       index.js
+│   │   │       
+│   │   ├───routes
+│   │   │       index.js
+│   │   │       lazy.routes.jsx
+│   │   │       private.routes.jsx
+│   │   │       public.routes.jsx
+│   │   │       route.config.js
+│   │   │       
+│   │   ├───selectors
+│   │   │       index.js
+│   │   │       parentSelectors.js
+│   │   │       
+│   │   ├───services
+│   │   │       index.js
+│   │   │       parent.service.js
+│   │   │       
+│   │   ├───state
+│   │   │       index.js
+│   │   │       parentSlice.js
+│   │   │       selectors.js
+│   │   │       thunks.js
+│   │   │       
+│   │   └───validators
+│   │           index.js
+│   │           parent.validator.js
+│   │           
+│   ├───payment
+│   │   │   index.js
+│   │   │   
+│   │   ├───api
+│   │   │       index.js
+│   │   │       payment.api.js
+│   │   │       
+│   │   ├───assets
+│   │   │       index.js
+│   │   │       
+│   │   ├───components
+│   │   │       FileCard.jsx
+│   │   │       FileForm.jsx
+│   │   │       FileTable.jsx
+│   │   │       index.js
+│   │   │       
+│   │   ├───constants
+│   │   │       index.js
+│   │   │       payment.constants.js
+│   │   │       
+│   │   ├───hooks
+│   │   │       index.js
+│   │   │       
+│   │   ├───pages
+│   │   │       FileCreate.jsx
+│   │   │       FileDashboard.jsx
+│   │   │       FileDetails.jsx
+│   │   │       FileEdit.jsx
+│   │   │       FileList.jsx
+│   │   │       index.js
+│   │   │       
+│   │   ├───permissions
+│   │   │       index.js
+│   │   │       
+│   │   ├───routes
+│   │   │       index.js
+│   │   │       lazy.routes.jsx
+│   │   │       private.routes.jsx
+│   │   │       public.routes.jsx
+│   │   │       route.config.js
+│   │   │       
+│   │   ├───selectors
+│   │   │       index.js
+│   │   │       paymentSelectors.js
+│   │   │       
+│   │   ├───services
+│   │   │       index.js
+│   │   │       payment.service.js
+│   │   │       
+│   │   ├───state
+│   │   │       index.js
+│   │   │       paymentSlice.js
+│   │   │       selectors.js
+│   │   │       thunks.js
+│   │   │       
+│   │   └───validators
+│   │           index.js
+│   │           payment.validator.js
+│   │           
+│   ├───payroll
+│   │   │   index.js
+│   │   │   
+│   │   ├───api
+│   │   │       index.js
+│   │   │       payroll.api.js
+│   │   │       
+│   │   ├───assets
+│   │   │       index.js
+│   │   │       
+│   │   ├───components
+│   │   │       index.js
+│   │   │       PayrollCard.jsx
+│   │   │       PayrollForm.jsx
+│   │   │       PayrollTable.jsx
+│   │   │       
+│   │   ├───constants
+│   │   │       index.js
+│   │   │       payroll.constants.js
+│   │   │       
+│   │   ├───hooks
+│   │   │       index.js
+│   │   │       
+│   │   ├───pages
+│   │   │       index.js
+│   │   │       PayrollCreate.jsx
+│   │   │       PayrollDashboard.jsx
+│   │   │       PayrollDetails.jsx
+│   │   │       PayrollEdit.jsx
+│   │   │       PayrollList.jsx
+│   │   │       
+│   │   ├───permissions
+│   │   │       index.js
+│   │   │       
+│   │   ├───routes
+│   │   │       index.js
+│   │   │       lazy.routes.jsx
+│   │   │       private.routes.jsx
+│   │   │       public.routes.jsx
+│   │   │       route.config.js
+│   │   │       
+│   │   ├───selectors
+│   │   │       index.js
+│   │   │       payrollSelectors.js
+│   │   │       
+│   │   ├───services
+│   │   │       index.js
+│   │   │       payroll.service.js
+│   │   │       
+│   │   ├───state
+│   │   │       index.js
+│   │   │       payrollSlice.js
+│   │   │       selectors.js
+│   │   │       thunks.js
+│   │   │       
+│   │   └───validators
+│   │           index.js
+│   │           payroll.validator.js
+│   │           
+│   ├───permission
+│   │   │   index.js
+│   │   │   
+│   │   ├───api
+│   │   │       index.js
+│   │   │       permission.api.js
+│   │   │       
+│   │   ├───assets
+│   │   │       index.js
+│   │   │       
+│   │   ├───components
+│   │   │       index.js
+│   │   │       PermissionCard.jsx
+│   │   │       PermissionForm.jsx
+│   │   │       PermissionTable.jsx
+│   │   │       
+│   │   ├───constants
+│   │   │       index.js
+│   │   │       permission.constants.js
+│   │   │       
+│   │   ├───hooks
+│   │   │       index.js
+│   │   │       
+│   │   ├───pages
+│   │   │       index.js
+│   │   │       PermissionCreate.jsx
+│   │   │       PermissionDashboard.jsx
+│   │   │       PermissionDetails.jsx
+│   │   │       PermissionEdit.jsx
+│   │   │       PermissionList.jsx
+│   │   │       
+│   │   ├───permissions
+│   │   │       index.js
+│   │   │       
+│   │   ├───routes
+│   │   │       index.js
+│   │   │       lazy.routes.jsx
+│   │   │       private.routes.jsx
+│   │   │       public.routes.jsx
+│   │   │       route.config.js
+│   │   │       
+│   │   ├───selectors
+│   │   │       index.js
+│   │   │       permissionSelectors.js
+│   │   │       
+│   │   ├───services
+│   │   │       index.js
+│   │   │       persmission.service.js
+│   │   │       
+│   │   ├───state
+│   │   │       index.js
+│   │   │       permissionSlice.js
+│   │   │       selectors.js
+│   │   │       thunks.js
+│   │   │       
+│   │   └───validators
+│   │           index.js
+│   │           permission.validator.js
+│   │           
+│   ├───platform-admin
+│   │   │   index.js
+│   │   │   
+│   │   ├───api
+│   │   │       index.js
+│   │   │       platformAdmin.api.js
+│   │   │       
+│   │   ├───assets
+│   │   │       index.js
+│   │   │       
+│   │   ├───components
+│   │   │       BackupCard.jsx
+│   │   │       BackupForm.jsx
+│   │   │       BackupTable.jsx
+│   │   │       index.js
+│   │   │       
+│   │   ├───constants
+│   │   │       index.js
+│   │   │       platform-admin.constants.js
+│   │   │       
+│   │   ├───hooks
+│   │   │       index.js
+│   │   │       
+│   │   ├───pages
+│   │   │       index.js
+│   │   │       
+│   │   ├───permissions
+│   │   │       index.js
+│   │   │       
+│   │   ├───routes
+│   │   │       index.js
+│   │   │       lazy.routes.jsx
+│   │   │       private.routes.jsx
+│   │   │       public.routes.jsx
+│   │   │       route.config.js
+│   │   │       
+│   │   ├───selectors
+│   │   │       index.js
+│   │   │       platformAdminSelectors.js
+│   │   │       
+│   │   ├───services
+│   │   │       index.js
+│   │   │       platform-admin.service.js
+│   │   │       
+│   │   ├───state
+│   │   │       index.js
+│   │   │       platformAdminSlice.js
+│   │   │       selectors.js
+│   │   │       thunks.js
+│   │   │       
+│   │   └───validators
+│   │           index.js
+│   │           platform-admin.validator.js
+│   │           
+│   ├───portal
+│   │   │   index.js
+│   │   │   
+│   │   ├───api
+│   │   │       index.js
+│   │   │       portal.api.js
+│   │   │       
+│   │   ├───assets
+│   │   │       index.js
+│   │   │       
+│   │   ├───components
+│   │   │       index.js
+│   │   │       PortalCard.jsx
+│   │   │       PortalForm.jsx
+│   │   │       PortalTable.jsx
+│   │   │       
+│   │   ├───constants
+│   │   │       index.js
+│   │   │       portal.constants.js
+│   │   │       
+│   │   ├───hooks
+│   │   │       index.js
+│   │   │       
+│   │   ├───pages
+│   │   │   │   index.js
+│   │   │   │   PortalCreate.jsx
+│   │   │   │   PortalDashboard.jsx
+│   │   │   │   PortalDetails.jsx
+│   │   │   │   PortalEdit.jsx
+│   │   │   │   PortalList.jsx
+│   │   │   │   
+│   │   │   └───dashboards
+│   │   │       │   index.js
+│   │   │       │   
+│   │   │       ├───accountant
+│   │   │       │       AccountantDashboard.jsx
+│   │   │       │       
+│   │   │       ├───admin
+│   │   │       │       AdminDashboard.jsx
+│   │   │       │       
+│   │   │       ├───parent
+│   │   │       │       ParentDashboard.jsx
+│   │   │       │       
+│   │   │       ├───staff
+│   │   │       │       StaffDashboard.jsx
+│   │   │       │       
+│   │   │       ├───student
+│   │   │       │       StudentDashboard.jsx
+│   │   │       │       
+│   │   │       └───teacher
+│   │   │               TeacherDashboard.jsx
+│   │   │               
+│   │   ├───permissions
+│   │   │       index.js
+│   │   │       
+│   │   ├───routes
+│   │   │       index.js
+│   │   │       lazy.routes.jsx
+│   │   │       private.routes.jsx
+│   │   │       public.routes.jsx
+│   │   │       route.config.js
+│   │   │       
+│   │   ├───selectors
+│   │   │       index.js
+│   │   │       portalSelectors.js
+│   │   │       
+│   │   ├───services
+│   │   │       index.js
+│   │   │       portal.service.js
+│   │   │       
+│   │   ├───state
+│   │   │       index.js
+│   │   │       portalSlice.js
+│   │   │       selectors.js
+│   │   │       thunks.js
+│   │   │       
+│   │   └───validators
+│   │           index.js
+│   │           portal.validator.js
+│   │           
+│   ├───procurement
+│   │   │   index.js
+│   │   │   
+│   │   ├───api
+│   │   │       index.js
+│   │   │       procurement.api.js
+│   │   │       
+│   │   ├───assets
+│   │   │       index.js
+│   │   │       
+│   │   ├───components
+│   │   │       index.js
+│   │   │       ProcurementForm.jsx
+│   │   │       PurchaseOrderTable.jsx
+│   │   │       VendorCard.jsx
+│   │   │       
+│   │   ├───constants
+│   │   │       index.js
+│   │   │       procurement.constants.js
+│   │   │       
+│   │   ├───hooks
+│   │   │       index.js
+│   │   │       
+│   │   ├───pages
+│   │   │       index.js
+│   │   │       ProcurementDashboard.jsx
+│   │   │       PurchaseOrders.jsx
+│   │   │       PurchaseRequests.jsx
+│   │   │       Vendors.jsx
+│   │   │       
+│   │   ├───permissions
+│   │   │       index.js
+│   │   │       
+│   │   ├───routes
+│   │   │       index.js
+│   │   │       lazy.routes.jsx
+│   │   │       private.routes.jsx
+│   │   │       public.routes.jsx
+│   │   │       route.config.js
+│   │   │       
+│   │   ├───selectors
+│   │   │       index.js
+│   │   │       procurementSelectors.js
+│   │   │       
+│   │   ├───services
+│   │   │       index.js
+│   │   │       procurement.service.js
+│   │   │       
+│   │   ├───state
+│   │   │       index.js
+│   │   │       procurementSlice.js
+│   │   │       selectors.js
+│   │   │       thunks.js
+│   │   │       
+│   │   └───validators
+│   │           index.js
+│   │           procurement.validator.js
+│   │           
+│   ├───receipt
+│   │   │   index.js
+│   │   │   
+│   │   ├───api
+│   │   │       index.js
+│   │   │       receipt.api.js
+│   │   │       
+│   │   ├───assets
+│   │   │       index.js
+│   │   │       
+│   │   ├───components
+│   │   │       index.js
+│   │   │       ReceiptCard.jsx
+│   │   │       ReceiptForm.jsx
+│   │   │       ReceiptTable.jsx
+│   │   │       
+│   │   ├───constants
+│   │   │       index.js
+│   │   │       receipt.constants.js
+│   │   │       
+│   │   ├───hooks
+│   │   │       index.js
+│   │   │       
+│   │   ├───pages
+│   │   │       index.js
+│   │   │       ReceiptCreate.jsx
+│   │   │       ReceiptDashboard.jsx
+│   │   │       ReceiptDetails.jsx
+│   │   │       ReceiptEdit.jsx
+│   │   │       ReceiptList.jsx
+│   │   │       
+│   │   ├───permissions
+│   │   │       index.js
+│   │   │       
+│   │   ├───routes
+│   │   │       index.js
+│   │   │       lazy.routes.jsx
+│   │   │       private.routes.jsx
+│   │   │       public.routes.jsx
+│   │   │       route.config.js
+│   │   │       
+│   │   ├───selectors
+│   │   │       index.js
+│   │   │       receiptSelectors.js
+│   │   │       
+│   │   ├───services
+│   │   │       index.js
+│   │   │       receipt.service.js
+│   │   │       
+│   │   ├───state
+│   │   │       index.js
+│   │   │       receiptSlice.js
+│   │   │       selectors.js
+│   │   │       thunks.js
+│   │   │       
+│   │   └───validators
+│   │           index.js
+│   │           receipt.validator.js
+│   │           
+│   ├───registry
+│   │   │   index.js
+│   │   │   
+│   │   ├───api
+│   │   │       index.js
+│   │   │       registry.api.js
+│   │   │       
+│   │   ├───assets
+│   │   │       index.js
+│   │   │       
+│   │   ├───components
+│   │   │       index.js
+│   │   │       ReceiptCard.jsx
+│   │   │       ReceiptForm.jsx
+│   │   │       ReceiptTable.jsx
+│   │   │       
+│   │   ├───constants
+│   │   │       index.js
+│   │   │       registry.constants.js
+│   │   │       
+│   │   ├───hooks
+│   │   │       index.js
+│   │   │       
+│   │   ├───pages
+│   │   │       index.js
+│   │   │       ReceiptCreate.jsx
+│   │   │       ReceiptDashboard.jsx
+│   │   │       ReceiptDetails.jsx
+│   │   │       ReceiptEdit.jsx
+│   │   │       ReceiptList.jsx
+│   │   │       
+│   │   ├───permissions
+│   │   │       index.js
+│   │   │       
+│   │   ├───routes
+│   │   │       index.js
+│   │   │       lazy.routes.jsx
+│   │   │       private.routes.jsx
+│   │   │       public.routes.jsx
+│   │   │       route.config.js
+│   │   │       
+│   │   ├───selectors
+│   │   │       index.js
+│   │   │       registrySelectors.js
+│   │   │       
+│   │   ├───services
+│   │   │       index.js
+│   │   │       registry.service.js
+│   │   │       
+│   │   ├───state
+│   │   │       index.js
+│   │   │       registrySlice.js
+│   │   │       selectors.js
+│   │   │       thunks.js
+│   │   │       
+│   │   └───validators
+│   │           index.js
+│   │           registry.validator.js
+│   │           
+│   ├───report-engine
+│   │   │   index.js
+│   │   │   
+│   │   ├───api
+│   │   │       index.js
+│   │   │       report-engine.api.js
+│   │   │       
+│   │   ├───assets
+│   │   │       index.js
+│   │   │       
+│   │   ├───components
+│   │   │       index.js
+│   │   │       
+│   │   ├───constants
+│   │   │       index.js
+│   │   │       report-engine.constants.js
+│   │   │       
+│   │   ├───hooks
+│   │   │       index.js
+│   │   │       
+│   │   ├───pages
+│   │   │       index.js
+│   │   │       
+│   │   ├───permissions
+│   │   │       index.js
+│   │   │       
+│   │   ├───routes
+│   │   │       index.js
+│   │   │       lazy.routes.jsx
+│   │   │       private.routes.jsx
+│   │   │       public.routes.jsx
+│   │   │       route.config.js
+│   │   │       
+│   │   ├───selectors
+│   │   │       index.js
+│   │   │       report-engineSelectors.js
+│   │   │       
+│   │   ├───services
+│   │   │       index.js
+│   │   │       report-engine.service.js
+│   │   │       
+│   │   ├───state
+│   │   │       index.js
+│   │   │       report-engineSlice.js
+│   │   │       selectors.js
+│   │   │       thunks.js
+│   │   │       
+│   │   └───validators
+│   │           index.js
+│   │           report-engine.validator.js
+│   │           
+│   ├───reporting-center
+│   │   │   CsvReports.jsx
+│   │   │   ExcelReports.jsx
+│   │   │   index.js
+│   │   │   PdfReports.jsx
+│   │   │   ReportBuilder.jsx
+│   │   │   ReportExports.jsx
+│   │   │   ReportScheduler.jsx
+│   │   │   ReportStorage.jsx
+│   │   │   
+│   │   ├───api
+│   │   │       index.js
+│   │   │       report-center.api.js
+│   │   │       
+│   │   ├───assets
+│   │   │       index.js
+│   │   │       
+│   │   ├───components
+│   │   │       index.js
+│   │   │       
+│   │   ├───constants
+│   │   │       index.js
+│   │   │       reporting-center.constants.js
+│   │   │       
+│   │   ├───hooks
+│   │   │       index.js
+│   │   │       
+│   │   ├───pages
+│   │   │       index.js
+│   │   │       
+│   │   ├───permissions
+│   │   │       index.js
+│   │   │       
+│   │   ├───reporting
+│   │   │       index.js
+│   │   │       
+│   │   ├───routes
+│   │   │       index.js
+│   │   │       lazy.routes.jsx
+│   │   │       private.routes.jsx
+│   │   │       public.routes.jsx
+│   │   │       route.config.js
+│   │   │       
+│   │   ├───selectors
+│   │   │       index.js
+│   │   │       reportingCenterSelectors.js
+│   │   │       
+│   │   ├───services
+│   │   │       index.js
+│   │   │       reporting-center.service.js
+│   │   │       
+│   │   ├───state
+│   │   │       index.js
+│   │   │       reportingCenterSlice.js
+│   │   │       selectors.js
+│   │   │       thunks.js
+│   │   │       
+│   │   └───validators
+│   │           index.js
+│   │           reporting-center.validator.js
+│   │           
+│   ├───reports
+│   │   │   index.js
+│   │   │   
+│   │   ├───api
+│   │   │       index.js
+│   │   │       reports.api.js
+│   │   │       
+│   │   ├───assets
+│   │   │       index.js
+│   │   │       
+│   │   ├───components
+│   │   │       index.js
+│   │   │       ReportsCard.jsx
+│   │   │       ReportsForm.jsx
+│   │   │       ReportsTable.jsx
+│   │   │       
+│   │   ├───constants
+│   │   │       index.js
+│   │   │       reports.constants.js
+│   │   │       
+│   │   ├───hooks
+│   │   │       index.js
+│   │   │       
+│   │   ├───pages
+│   │   │       index.js
+│   │   │       ReportsCreate.jsx
+│   │   │       ReportsDashboard.jsx
+│   │   │       ReportsDetails.jsx
+│   │   │       ReportsEdit.jsx
+│   │   │       ReportsList.jsx
+│   │   │       
+│   │   ├───permissions
+│   │   │       index.js
+│   │   │       
+│   │   ├───routes
+│   │   │       index.js
+│   │   │       lazy.routes.jsx
+│   │   │       private.routes.jsx
+│   │   │       public.routes.jsx
+│   │   │       route.config.js
+│   │   │       
+│   │   ├───selectors
+│   │   │       index.js
+│   │   │       reportsSelectors.js
+│   │   │       
+│   │   ├───services
+│   │   │       index.js
+│   │   │       reports.service.js
+│   │   │       
+│   │   ├───state
+│   │   │       index.js
+│   │   │       reportsSlice.js
+│   │   │       selectors.js
+│   │   │       thunks.js
+│   │   │       
+│   │   └───validators
+│   │           index.js
+│   │           reports.validator.js
+│   │           
+│   ├───result
+│   │   │   index.js
+│   │   │   
+│   │   ├───api
+│   │   │       index.js
+│   │   │       result.api.js
+│   │   │       
+│   │   ├───assets
+│   │   │       index.js
+│   │   │       
+│   │   ├───components
+│   │   │       index.js
+│   │   │       ResultCard.jsx
+│   │   │       ResultForm.jsx
+│   │   │       ResultTable.jsx
+│   │   │       
+│   │   ├───constants
+│   │   │       index.js
+│   │   │       result.constants.js
+│   │   │       
+│   │   ├───hooks
+│   │   │       index.js
+│   │   │       
+│   │   ├───pages
+│   │   │       index.js
+│   │   │       ResultCreate.jsx
+│   │   │       ResultDashboard.jsx
+│   │   │       ResultDetails.jsx
+│   │   │       ResultEdit.jsx
+│   │   │       ResultList.jsx
+│   │   │       
+│   │   ├───permissions
+│   │   │       index.js
+│   │   │       
+│   │   ├───routes
+│   │   │       index.js
+│   │   │       lazy.routes.jsx
+│   │   │       private.routes.jsx
+│   │   │       public.routes.jsx
+│   │   │       route.config.js
+│   │   │       
+│   │   ├───selectors
+│   │   │       index.js
+│   │   │       resultSelectors.js
+│   │   │       
+│   │   ├───services
+│   │   │       index.js
+│   │   │       result.service.js
+│   │   │       
+│   │   ├───state
+│   │   │       index.js
+│   │   │       resultSlice.js
+│   │   │       selectors.js
+│   │   │       thunks.js
+│   │   │       
+│   │   ├───terminal-report
+│   │   │       index.js
+│   │   │       TerminalReport.jsx
+│   │   │       
+│   │   ├───transcript
+│   │   │       index.js
+│   │   │       Transcript.jsx
+│   │   │       
+│   │   └───validators
+│   │           index.js
+│   │           result.validator.js
+│   │           
+│   ├───role
+│   │   │   index.js
+│   │   │   
+│   │   ├───api
+│   │   │       index.js
+│   │   │       role.api.js
+│   │   │       
+│   │   ├───assets
+│   │   │       index.js
+│   │   │       
+│   │   ├───components
+│   │   │       index.js
+│   │   │       RoleCard.jsx
+│   │   │       RoleForm.jsx
+│   │   │       RoleTable.jsx
+│   │   │       
+│   │   ├───constants
+│   │   │       index.js
+│   │   │       role.constants.js
+│   │   │       
+│   │   ├───hooks
+│   │   │       index.js
+│   │   │       
+│   │   ├───pages
+│   │   │       index.js
+│   │   │       RoleCreate.jsx
+│   │   │       RoleDashboard.jsx
+│   │   │       RoleDetails.jsx
+│   │   │       RoleEdit.jsx
+│   │   │       RoleList.jsx
+│   │   │       RolePermissions.jsx
+│   │   │       
+│   │   ├───permissions
+│   │   │       index.js
+│   │   │       
+│   │   ├───routes
+│   │   │       index.js
+│   │   │       lazy.routes.jsx
+│   │   │       private.routes.jsx
+│   │   │       public.routes.jsx
+│   │   │       route.config.js
+│   │   │       
+│   │   ├───selectors
+│   │   │       index.js
+│   │   │       roleSelectors.js
+│   │   │       
+│   │   ├───services
+│   │   │       index.js
+│   │   │       role.service.js
+│   │   │       
+│   │   ├───state
+│   │   │       index.js
+│   │   │       roleSlice.js
+│   │   │       selectors.js
+│   │   │       thunks.js
+│   │   │       
+│   │   └───validators
+│   │           index.js
+│   │           role.validator.js
+│   │           
+│   ├───school
+│   │   │   index.js
+│   │   │   
+│   │   ├───api
+│   │   │       index.js
+│   │   │       school.api.js
+│   │   │       
+│   │   ├───assets
+│   │   │       index.js
+│   │   │       
+│   │   ├───components
+│   │   │       FileCard.jsx
+│   │   │       FileForm.jsx
+│   │   │       FileTable.jsx
+│   │   │       index.js
+│   │   │       
+│   │   ├───constants
+│   │   │       index.js
+│   │   │       school.constants.js
+│   │   │       
+│   │   ├───hooks
+│   │   │       index.js
+│   │   │       
+│   │   ├───pages
+│   │   │       FileCreate.jsx
+│   │   │       FileDashboard.jsx
+│   │   │       FileDetails.jsx
+│   │   │       FileEdit.jsx
+│   │   │       FileList.jsx
+│   │   │       index.js
+│   │   │       
+│   │   ├───permissions
+│   │   │       index.js
+│   │   │       
+│   │   ├───routes
+│   │   │       index.js
+│   │   │       lazy.routes.jsx
+│   │   │       private.routes.jsx
+│   │   │       public.routes.jsx
+│   │   │       route.config.js
+│   │   │       
+│   │   ├───selectors
+│   │   │       index.js
+│   │   │       schoolSelectors.js
+│   │   │       
+│   │   ├───services
+│   │   │       index.js
+│   │   │       school.service.js
+│   │   │       
+│   │   ├───state
+│   │   │       index.js
+│   │   │       schoolSlice.js
+│   │   │       selectors.js
+│   │   │       thunks.js
+│   │   │       
+│   │   └───validators
+│   │           index.js
+│   │           school.validator.js
+│   │           
+│   ├───search
+│   │   │   index.js
+│   │   │   
+│   │   ├───api
+│   │   │       index.js
+│   │   │       search.api.js
+│   │   │       
+│   │   ├───assets
+│   │   │       index.js
+│   │   │       
+│   │   ├───components
+│   │   │       index.js
+│   │   │       
+│   │   ├───constants
+│   │   │       index.js
+│   │   │       search.constants.js
+│   │   │       
+│   │   ├───hooks
+│   │   │       index.js
+│   │   │       
+│   │   ├───pages
+│   │   │       index.js
+│   │   │       
+│   │   ├───permissions
+│   │   │       index.js
+│   │   │       
+│   │   ├───routes
+│   │   │       index.js
+│   │   │       lazy.routes.jsx
+│   │   │       private.routes.jsx
+│   │   │       public.routes.jsx
+│   │   │       route.config.js
+│   │   │       
+│   │   ├───selectors
+│   │   │       index.js
+│   │   │       searchSelectors.js
+│   │   │       
+│   │   ├───services
+│   │   │       index.js
+│   │   │       search.service.js
+│   │   │       
+│   │   ├───state
+│   │   │       index.js
+│   │   │       searchSlice.js
+│   │   │       selectors.js
+│   │   │       thunks.js
+│   │   │       
+│   │   └───validators
+│   │           search.validator.js
+│   │           
+│   ├───search-center
+│   │   │   DocumentSearch.jsx
+│   │   │   GlobalSearchDashboard.jsx
+│   │   │   index.js
+│   │   │   SearchCacheManager.jsx
+│   │   │   SearchIndexManager.jsx
+│   │   │   SearchRegistry.jsx
+│   │   │   StaffSearch.jsx
+│   │   │   StudentSearch.jsx
+│   │   │   
+│   │   ├───api
+│   │   │       index.js
+│   │   │       searchCenter.api.js
+│   │   │       
+│   │   ├───assets
+│   │   │       index.js
+│   │   │       
+│   │   ├───components
+│   │   │       index.js
+│   │   │       
+│   │   ├───constants
+│   │   │       index.js
+│   │   │       search-center.constants.js
+│   │   │       
+│   │   ├───hooks
+│   │   │       index.js
+│   │   │       
+│   │   ├───pages
+│   │   │       index.js
+│   │   │       
+│   │   ├───permissions
+│   │   │       index.js
+│   │   │       
+│   │   ├───routes
+│   │   │       index.js
+│   │   │       lazy.routes.jsx
+│   │   │       private.routes.jsx
+│   │   │       public.routes.jsx
+│   │   │       route.config.js
+│   │   │       
+│   │   ├───selectors
+│   │   │       index.js
+│   │   │       searchCenterSelectors.js
+│   │   │       
+│   │   ├───services
+│   │   │       index.js
+│   │   │       search-center.service.js
+│   │   │       
+│   │   ├───state
+│   │   │       index.js
+│   │   │       searchCenterSlice.js
+│   │   │       selectors.js
+│   │   │       thunks.js
+│   │   │       
+│   │   └───validators
+│   │           index.js
+│   │           search-center.validator.js
+│   │           
+│   ├───security
+│   │   │   index.js
+│   │   │   
+│   │   ├───api
+│   │   │       index.js
+│   │   │       security.api.js
+│   │   │       
+│   │   ├───assets
+│   │   │       index.js
+│   │   │       
+│   │   ├───audit
+│   │   │       index.js
+│   │   │       
+│   │   ├───components
+│   │   │       index.js
+│   │   │       SessionCard.jsx
+│   │   │       ThreatCard.jsx
+│   │   │       
+│   │   ├───constants
+│   │   │       index.js
+│   │   │       security.constants.js
+│   │   │       
+│   │   ├───hooks
+│   │   │       index.js
+│   │   │       
+│   │   ├───monitoring
+│   │   │       index.js
+│   │   │       
+│   │   ├───pages
+│   │   │       AccessControl.jsx
+│   │   │       index.js
+│   │   │       LoginHistory.jsx
+│   │   │       SecurityDashboard.jsx
+│   │   │       Sessions.jsx
+│   │   │       ThreatCenter.jsx
+│   │   │       
+│   │   ├───permissions
+│   │   │       index.js
+│   │   │       
+│   │   ├───routes
+│   │   │       index.js
+│   │   │       lazy.routes.jsx
+│   │   │       private.routes.jsx
+│   │   │       public.routes.jsx
+│   │   │       route.config.js
+│   │   │       
+│   │   ├───selectors
+│   │   │       index.js
+│   │   │       securitySelectors.js
+│   │   │       
+│   │   ├───services
+│   │   │       index.js
+│   │   │       security.service.js
+│   │   │       
+│   │   ├───state
+│   │   │       index.js
+│   │   │       securitySlice.js
+│   │   │       selectors.js
+│   │   │       thunks.js
+│   │   │       
+│   │   └───validators
+│   │           index.js
+│   │           security.validator.js
+│   │           
+│   ├───security-center
+│   │   │   AccessControlDashboard.jsx
+│   │   │   index.js
+│   │   │   IpTracking.jsx
+│   │   │   LoginHistory.jsx
+│   │   │   PermissionAudit.jsx
+│   │   │   SecurityDashboard.jsx
+│   │   │   SuspiciousLogins.jsx
+│   │   │   
+│   │   ├───api
+│   │   │       index.js
+│   │   │       security-center.api.js
+│   │   │       
+│   │   ├───assets
+│   │   │       index.js
+│   │   │       
+│   │   ├───components
+│   │   │       index.js
+│   │   │       
+│   │   ├───constants
+│   │   │       index.js
+│   │   │       security-center.constants.js
+│   │   │       
+│   │   ├───hooks
+│   │   │       index.js
+│   │   │       
+│   │   ├───pages
+│   │   │       index.js
+│   │   │       
+│   │   ├───permissions
+│   │   │       index.js
+│   │   │       
+│   │   ├───routes
+│   │   │       index.js
+│   │   │       lazy.routes.jsx
+│   │   │       private.routes.jsx
+│   │   │       public.routes.jsx
+│   │   │       route.config.js
+│   │   │       
+│   │   ├───selectors
+│   │   │       index.js
+│   │   │       security-centerSelectors.js
+│   │   │       
+│   │   ├───services
+│   │   │       index.js
+│   │   │       security-center.service.js
+│   │   │       
+│   │   ├───state
+│   │   │       index.js
+│   │   │       security-centerSlice.js
+│   │   │       selectors.js
+│   │   │       thunks.js
+│   │   │       
+│   │   └───validators
+│   │           index.js
+│   │           security-center.validator.js
+│   │           
+│   ├───settings
+│   │   │   index.js
+│   │   │   
+│   │   ├───api
+│   │   │       index.js
+│   │   │       settings.api.js
+│   │   │       
+│   │   ├───assets
+│   │   │       index.js
+│   │   │       
+│   │   ├───components
+│   │   │       index.js
+│   │   │       StaffCard.jsx
+│   │   │       StaffForm.jsx
+│   │   │       StaffTable.jsx
+│   │   │       
+│   │   ├───constants
+│   │   │       index.js
+│   │   │       settings.constants.js
+│   │   │       
+│   │   ├───hooks
+│   │   │       index.js
+│   │   │       
+│   │   ├───pages
+│   │   │       index.js
+│   │   │       StaffCreate.jsx
+│   │   │       StaffDashboard.jsx
+│   │   │       StaffDetails.jsx
+│   │   │       StaffEdit.jsx
+│   │   │       StaffList.jsx
+│   │   │       
+│   │   ├───permissions
+│   │   │       index.js
+│   │   │       
+│   │   ├───routes
+│   │   │       index.js
+│   │   │       lazy.routes.jsx
+│   │   │       private.routes.jsx
+│   │   │       public.routes.jsx
+│   │   │       route.config.js
+│   │   │       
+│   │   ├───selectors
+│   │   │       index.js
+│   │   │       settingsSelectors.js
+│   │   │       
+│   │   ├───services
+│   │   │       index.js
+│   │   │       settings.service.js
+│   │   │       
+│   │   ├───state
+│   │   │       index.js
+│   │   │       selectors.js
+│   │   │       settingsSlice.js
+│   │   │       thunks.js
+│   │   │       
+│   │   └───validators
+│   │           index.js
+│   │           settings.validator.js
+│   │           
+│   ├───staff
+│   │   │   index.js
+│   │   │   
+│   │   ├───api
+│   │   │       index.js
+│   │   │       staff.api.js
+│   │   │       
+│   │   ├───assets
+│   │   │       index.js
+│   │   │       
+│   │   ├───components
+│   │   │       index.js
+│   │   │       StaffCard.jsx
+│   │   │       StaffForm.jsx
+│   │   │       StaffTable.jsx
+│   │   │       
+│   │   ├───constants
+│   │   │       index.js
+│   │   │       staff.constants.js
+│   │   │       
+│   │   ├───hooks
+│   │   │       index.js
+│   │   │       
+│   │   ├───pages
+│   │   │       index.js
+│   │   │       StaffCreate.jsx
+│   │   │       StaffDashboard.jsx
+│   │   │       StaffDetails.jsx
+│   │   │       StaffEdit.jsx
+│   │   │       StaffList.jsx
+│   │   │       
+│   │   ├───permissions
+│   │   │       index.js
+│   │   │       
+│   │   ├───routes
+│   │   │       index.js
+│   │   │       lazy.routes.jsx
+│   │   │       private.routes.jsx
+│   │   │       public.routes.jsx
+│   │   │       route.config.js
+│   │   │       
+│   │   ├───selectors
+│   │   │       index.js
+│   │   │       staffSelectors.js
+│   │   │       
+│   │   ├───services
+│   │   │       index.js
+│   │   │       staff.service.js
+│   │   │       
+│   │   ├───state
+│   │   │       index.js
+│   │   │       selectors.js
+│   │   │       staffSlice.js
+│   │   │       thunks.js
+│   │   │       
+│   │   └───validators
+│   │           index.js
+│   │           staff.validator.js
+│   │           
+│   ├───student
+│   │   │   index.js
+│   │   │   
+│   │   ├───api
+│   │   │       index.js
+│   │   │       student.api.js
+│   │   │       
+│   │   ├───assets
+│   │   │       index.js
+│   │   │       
+│   │   ├───components
+│   │   │       index.js
+│   │   │       StudentCard.jsx
+│   │   │       StudentForm.jsx
+│   │   │       StudentTable.jsx
+│   │   │       
+│   │   ├───constants
+│   │   │       index.js
+│   │   │       student.constants.js
+│   │   │       
+│   │   ├───hooks
+│   │   │       index.js
+│   │   │       useStudent.js
+│   │   │       useStudentPermissions.js
+│   │   │       useStudents.js
+│   │   │       
+│   │   ├───pages
+│   │   │       index.js
+│   │   │       StudentCreate.jsx
+│   │   │       StudentDashboard.jsx
+│   │   │       StudentDetails.jsx
+│   │   │       StudentEdit.jsx
+│   │   │       StudentList.jsx
+│   │   │       StudentPermissions.jsx
+│   │   │       StudentProfile.jsx
+│   │   │       
+│   │   ├───permissions
+│   │   │       index.js
+│   │   │       student.permissions.js
+│   │   │       StudentPermissions.jsx
+│   │   │       useStudentPermissions.js
+│   │   │       
+│   │   ├───routes
+│   │   │       index.js
+│   │   │       lazy.routes.jsx
+│   │   │       private.routes.jsx
+│   │   │       public.routes.jsx
+│   │   │       route.config.js
+│   │   │       
+│   │   ├───selectors
+│   │   │       index.js
+│   │   │       studentSelectors.js
+│   │   │       
+│   │   ├───services
+│   │   │       index.js
+│   │   │       student.service.js
+│   │   │       
+│   │   ├───state
+│   │   │       index.js
+│   │   │       selectors.js
+│   │   │       studentSelectors.js
+│   │   │       studentSlice.js
+│   │   │       thunks.js
+│   │   │       
+│   │   └───validators
+│   │           index.js
+│   │           student.validator.js
+│   │           
+│   ├───subject
+│   │   │   index.js
+│   │   │   
+│   │   ├───api
+│   │   │       index.js
+│   │   │       subject.api.js
+│   │   │       
+│   │   ├───assets
+│   │   │       index.js
+│   │   │       
+│   │   ├───components
+│   │   │       index.js
+│   │   │       SubjectCard.jsx
+│   │   │       SubjectForm.jsx
+│   │   │       SubjectTable.jsx
+│   │   │       
+│   │   ├───constants
+│   │   │       index.js
+│   │   │       subject.constants.js
+│   │   │       
+│   │   ├───hooks
+│   │   │       index.js
+│   │   │       useSubject.js
+│   │   │       useSubjects.js
+│   │   │       
+│   │   ├───pages
+│   │   │       index.js
+│   │   │       SubjectCreate.jsx
+│   │   │       SubjectDashboard.jsx
+│   │   │       SubjectDetails.jsx
+│   │   │       SubjectEdit.jsx
+│   │   │       SubjectList.jsx
+│   │   │       
+│   │   ├───permissions
+│   │   │       index.js
+│   │   │       
+│   │   ├───routes
+│   │   │       index.js
+│   │   │       lazy.routes.jsx
+│   │   │       private.routes.jsx
+│   │   │       public.routes.jsx
+│   │   │       route.config.js
+│   │   │       
+│   │   ├───selectors
+│   │   │       index.js
+│   │   │       subjectSelectors.js
+│   │   │       
+│   │   ├───services
+│   │   │       index.js
+│   │   │       subject.service.js
+│   │   │       
+│   │   ├───state
+│   │   │       index.js
+│   │   │       selectors.js
+│   │   │       subjectSlice.js
+│   │   │       thunks.js
+│   │   │       
+│   │   └───validators
+│   │           createSubject.validator.js
+│   │           index.js
+│   │           subject.validator.js
+│   │           updateSubject.validator.js
+│   │           
+│   ├───system-health
+│   │   │   ApiHealth.jsx
+│   │   │   DatabaseHealth.jsx
+│   │   │   index.js
+│   │   │   PerformanceHealth.jsx
+│   │   │   QueueHealth.jsx
+│   │   │   RedisHealth.jsx
+│   │   │   SocketHealth.jsx
+│   │   │   StorageHealth.jsx
+│   │   │   SystemHealthDashboard.jsx
+│   │   │   TenantHealth.jsx
+│   │   │   WorkerHealth.jsx
+│   │   │   
+│   │   ├───api
+│   │   │       index.js
+│   │   │       systemHealth.api.js
+│   │   │       
+│   │   ├───assets
+│   │   │       index.js
+│   │   │       
+│   │   ├───components
+│   │   │       HealthCard.jsx
+│   │   │       HealthMetricCard.jsx
+│   │   │       HealthMetrics.jsx
+│   │   │       HealthServiceTable.jsx
+│   │   │       HealthStatus.jsx
+│   │   │       HealthStatusBadge.jsx
+│   │   │       index.js
+│   │   │       
+│   │   ├───constants
+│   │   │       index.js
+│   │   │       system-health.constants.js
+│   │   │       
+│   │   ├───hooks
+│   │   │       index.js
+│   │   │       
+│   │   ├───pages
+│   │   │       ApiHealth.jsx
+│   │   │       DatabaseHealth.jsx
+│   │   │       index.js
+│   │   │       PerformanceHealth.jsx
+│   │   │       QueueHealth.jsx
+│   │   │       RedisHealth.jsx
+│   │   │       SocketHealth.jsx
+│   │   │       StorageHealth.jsx
+│   │   │       SystemHealthDashboard.jsx
+│   │   │       TenantHealth.jsx
+│   │   │       WorkerHealth.jsx
+│   │   │       
+│   │   ├───permissions
+│   │   │       index.js
+│   │   │       
+│   │   ├───routes
+│   │   │       index.js
+│   │   │       lazy.routes.jsx
+│   │   │       private.routes.jsx
+│   │   │       public.routes.jsx
+│   │   │       route.config.js
+│   │   │       
+│   │   ├───selectors
+│   │   │       index.js
+│   │   │       systemHealthSelectors.js
+│   │   │       
+│   │   ├───services
+│   │   │       index.js
+│   │   │       system-health.service.js
+│   │   │       
+│   │   ├───state
+│   │   │       index.js
+│   │   │       selectors.js
+│   │   │       systemHealthSlice.js
+│   │   │       thunks.js
+│   │   │       
+│   │   └───validators
+│   │           index.js
+│   │           system-health.validator.js
+│   │           
+│   ├───task
+│   │   │   index.js
+│   │   │   
+│   │   ├───api
+│   │   │       index.js
+│   │   │       task.api.js
+│   │   │       
+│   │   ├───assets
+│   │   │       index.js
+│   │   │       
+│   │   ├───components
+│   │   │       index.js
+│   │   │       TaskCard.jsx
+│   │   │       TaskForm.jsx
+│   │   │       TaskTable.jsx
+│   │   │       
+│   │   ├───constants
+│   │   │       index.js
+│   │   │       task.constants.js
+│   │   │       
+│   │   ├───hooks
+│   │   │       index.js
+│   │   │       
+│   │   ├───pages
+│   │   │       index.js
+│   │   │       TaskCreate.jsx
+│   │   │       TaskDashboard.jsx
+│   │   │       TaskDetails.jsx
+│   │   │       TaskEdit.jsx
+│   │   │       TaskList.jsx
+│   │   │       
+│   │   ├───permissions
+│   │   │       index.js
+│   │   │       
+│   │   ├───routes
+│   │   │       index.js
+│   │   │       lazy.routes.jsx
+│   │   │       private.routes.jsx
+│   │   │       public.routes.jsx
+│   │   │       route.config.js
+│   │   │       
+│   │   ├───selectors
+│   │   │       index.js
+│   │   │       taskSelectors.js
+│   │   │       
+│   │   ├───services
+│   │   │       index.js
+│   │   │       task.service.js
+│   │   │       
+│   │   ├───state
+│   │   │       index.js
+│   │   │       selectors.js
+│   │   │       taskSlice.js
+│   │   │       thunks.js
+│   │   │       
+│   │   └───validators
+│   │           index.js
+│   │           task.validator.js
+│   │           
+│   ├───teacher
+│   │   │   index.js
+│   │   │   
+│   │   ├───api
+│   │   │       index.js
+│   │   │       teacher.api.js
+│   │   │       
+│   │   ├───assets
+│   │   │       index.js
+│   │   │       
+│   │   ├───components
+│   │   │       index.js
+│   │   │       TeacherCard.jsx
+│   │   │       TeacherForm.jsx
+│   │   │       TeacherPermissions.jsx
+│   │   │       TeacherTable.jsx
+│   │   │       
+│   │   ├───constants
+│   │   │       index.js
+│   │   │       teacher.constants.js
+│   │   │       
+│   │   ├───hooks
+│   │   │       index.js
+│   │   │       
+│   │   ├───pages
+│   │   │       index.js
+│   │   │       TeacherCertifications.jsx
+│   │   │       TeacherCreate.jsx
+│   │   │       TeacherDashboard.jsx
+│   │   │       TeacherDetails.jsx
+│   │   │       TeacherDisciplinary.jsx
+│   │   │       TeacherDocuments.jsx
+│   │   │       TeacherEdit.jsx
+│   │   │       TeacherLeave.jsx
+│   │   │       TeacherProfile.jsx
+│   │   │       TeacherQualifications.jsx
+│   │   │       
+│   │   ├───permissions
+│   │   │       index.js
+│   │   │       teacher.permissions.js
+│   │   │       
+│   │   ├───routes
+│   │   │       index.js
+│   │   │       lazy.routes.jsx
+│   │   │       private.routes.jsx
+│   │   │       public.routes.jsx
+│   │   │       route.config.js
+│   │   │       
+│   │   ├───selectors
+│   │   │       index.js
+│   │   │       teacherSelectors.js
+│   │   │       
+│   │   ├───services
+│   │   │       index.js
+│   │   │       teacher.service.js
+│   │   │       
+│   │   ├───state
+│   │   │       index.js
+│   │   │       selectors.js
+│   │   │       teacherSlice.js
+│   │   │       thunks.js
+│   │   │       
+│   │   └───validators
+│   │           index.js
+│   │           teacher.validator.js
+│   │           
+│   ├───tenant
+│   │   │   index.js
+│   │   │   
+│   │   ├───api
+│   │   │       index.js
+│   │   │       tenant.api.js
+│   │   │       
+│   │   ├───assets
+│   │   │       index.js
+│   │   │       
+│   │   ├───components
+│   │   │       index.js
+│   │   │       TenantCard.jsx
+│   │   │       TenantForm.jsx
+│   │   │       TenantTable.jsx
+│   │   │       
+│   │   ├───constants
+│   │   │       index.js
+│   │   │       tenant.constants.js
+│   │   │       
+│   │   ├───hooks
+│   │   │       index.js
+│   │   │       
+│   │   ├───pages
+│   │   │   │   index.js
+│   │   │   │   TenantAudit.jsx
+│   │   │   │   TenantCreate.jsx
+│   │   │   │   TenantDashboard.jsx
+│   │   │   │   TenantDetails.jsx
+│   │   │   │   TenantEdit.jsx
+│   │   │   │   TenantList.jsx
+│   │   │   │   TenantRoles.jsx
+│   │   │   │   TenantSecurity.jsx
+│   │   │   │   TenantSettings.jsx
+│   │   │   │   TenantUsers.jsx
+│   │   │   │   
+│   │   │   ├───billing
+│   │   │   │       index.js
+│   │   │   │       TenantBilling.jsx
+│   │   │   │       
+│   │   │   ├───subscription
+│   │   │   │       index.js
+│   │   │   │       TenantSubscription.jsx
+│   │   │   │       
+│   │   │   └───usage
+│   │   │           index.js
+│   │   │           TenantUsage.jsx
+│   │   │           
+│   │   ├───permissions
+│   │   │       index.js
+│   │   │       tenantPermissions.js
+│   │   │       
+│   │   ├───routes
+│   │   │       index.js
+│   │   │       lazy.routes.jsx
+│   │   │       private.routes.jsx
+│   │   │       public.routes.jsx
+│   │   │       route.config.js
+│   │   │       
+│   │   ├───selectors
+│   │   │       index.js
+│   │   │       tenantSelectors.js
+│   │   │       
+│   │   ├───services
+│   │   │       index.js
+│   │   │       tenant.service.js
+│   │   │       
+│   │   ├───state
+│   │   │       index.js
+│   │   │       selectors.js
+│   │   │       tenantSlice.js
+│   │   │       thunks.js
+│   │   │       
+│   │   └───validators
+│   │           index.js
+│   │           tenant.validator.js
+│   │           
+│   ├───timetable
+│   │   │   index.js
+│   │   │   
+│   │   ├───api
+│   │   │       index.js
+│   │   │       timetable.api.js
+│   │   │       
+│   │   ├───assets
+│   │   │       index.js
+│   │   │       
+│   │   ├───components
+│   │   │       index.js
+│   │   │       TimetableCard.jsx
+│   │   │       TimetableForm.jsx
+│   │   │       TimetableTable.jsx
+│   │   │       
+│   │   ├───constants
+│   │   │       index.js
+│   │   │       timetable.constants.js
+│   │   │       
+│   │   ├───hooks
+│   │   │       index.js
+│   │   │       useTimetable.js
+│   │   │       
+│   │   ├───pages
+│   │   │       index.js
+│   │   │       StudentAllocation.jsx
+│   │   │       TeacherSchedule.jsx
+│   │   │       TimetableConflicts.jsx
+│   │   │       TimetableCreate.jsx
+│   │   │       TimetableDashboard.jsx
+│   │   │       TimetableDetails.jsx
+│   │   │       TimetableEdit.jsx
+│   │   │       TimetableList.jsx
+│   │   │       TimetableSubstitution.jsx
+│   │   │       
+│   │   ├───permissions
+│   │   │       index.js
+│   │   │       
+│   │   ├───routes
+│   │   │       index.js
+│   │   │       lazy.routes.jsx
+│   │   │       private.routes.jsx
+│   │   │       public.routes.jsx
+│   │   │       route.config.js
+│   │   │       
+│   │   ├───selectors
+│   │   │       index.js
+│   │   │       timetableSelectors.js
+│   │   │       
+│   │   ├───services
+│   │   │       index.js
+│   │   │       timetable.service.js
+│   │   │       
+│   │   ├───state
+│   │   │       index.js
+│   │   │       selectors.js
+│   │   │       thunks.js
+│   │   │       timetableSlice.js
+│   │   │       
+│   │   └───validators
+│   │           index.js
+│   │           timetable.validator.js
+│   │           
+│   ├───transport
+│   │   │   index.js
+│   │   │   
+│   │   ├───api
+│   │   │       index.js
+│   │   │       transport.api.js
+│   │   │       
+│   │   ├───assets
+│   │   │       index.js
+│   │   │       
+│   │   ├───components
+│   │   │       AssignmentTable.jsx
+│   │   │       DriverCard.jsx
+│   │   │       DriverTable.jsx
+│   │   │       index.js
+│   │   │       RouteCard.jsx
+│   │   │       VehicleCard.jsx
+│   │   │       
+│   │   ├───constants
+│   │   │       index.js
+│   │   │       transport.constants.js
+│   │   │       
+│   │   ├───hooks
+│   │   │       index.js
+│   │   │       
+│   │   ├───pages
+│   │   │       DriverList.jsx
+│   │   │       FuelManagement.jsx
+│   │   │       GpsMonitoring.jsx
+│   │   │       index.js
+│   │   │       RouteList.jsx
+│   │   │       RouteTable.jsx
+│   │   │       StudentTransport.jsx
+│   │   │       TransportAssignments.jsx
+│   │   │       TransportDashboard.jsx
+│   │   │       TransportIncidents.jsx
+│   │   │       TripHistory.jsx
+│   │   │       VehicleList.jsx
+│   │   │       VehicleTable.jsx
+│   │   │       
+│   │   ├───permissions
+│   │   │       index.js
+│   │   │       
+│   │   ├───routes
+│   │   │       index.js
+│   │   │       lazy.routes.jsx
+│   │   │       private.routes.jsx
+│   │   │       public.routes.jsx
+│   │   │       route.config.js
+│   │   │       
+│   │   ├───selectors
+│   │   │       index.js
+│   │   │       transportSelectors.js
+│   │   │       
+│   │   ├───services
+│   │   │       index.js
+│   │   │       transport.service.js
+│   │   │       
+│   │   ├───state
+│   │   │       index.js
+│   │   │       selectors.js
+│   │   │       thunks.js
+│   │   │       transportSlice.js
+│   │   │       
+│   │   └───validators
+│   │           index.js
+│   │           transport.validator.js
+│   │           
+│   ├───user
+│   │   │   index.js
+│   │   │   
+│   │   ├───api
+│   │   │       audit.api.js
+│   │   │       group.api.js
+│   │   │       index.js
+│   │   │       loginHistory.api.js
+│   │   │       permission.api.js
+│   │   │       profile.api.js
+│   │   │       role.api.js
+│   │   │       session.api.js
+│   │   │       user.api.js
+│   │   │       
+│   │   ├───assets
+│   │   │       index.js
+│   │   │       
+│   │   ├───components
+│   │   │   │   index.js
+│   │   │   │   
+│   │   │   ├───cards
+│   │   │   │       index.js
+│   │   │   │       UserCard.jsx
+│   │   │   │       
+│   │   │   ├───dialogs
+│   │   │   │       index.js
+│   │   │   │       
+│   │   │   ├───drawers
+│   │   │   │       index.js
+│   │   │   │       
+│   │   │   ├───forms
+│   │   │   │       index.js
+│   │   │   │       UserForm.jsx
+│   │   │   │       
+│   │   │   ├───tables
+│   │   │   │       index.js
+│   │   │   │       UserTable.jsx
+│   │   │   │       
+│   │   │   └───widgets
+│   │   │           index.js
+│   │   │           
+│   │   ├───constants
+│   │   │       index.js
+│   │   │       user.constants.js
+│   │   │       
+│   │   ├───hooks
+│   │   │       index.js
+│   │   │       useRoles.js
+│   │   │       useSessions.js
+│   │   │       useUser.js
+│   │   │       useUserPermissions.js
+│   │   │       useUserProfile.js
+│   │   │       useUsers.js
+│   │   │       
+│   │   ├───pages
+│   │   │       index.js
+│   │   │       LoginHistory.jsx
+│   │   │       Notifications.jsx
+│   │   │       PasswordManagement.jsx
+│   │   │       Preferences.jsx
+│   │   │       Profile.jsx
+│   │   │       Security.jsx
+│   │   │       UserAudit.jsx
+│   │   │       UserCreate.jsx
+│   │   │       UserDashboard.jsx
+│   │   │       UserDetails.jsx
+│   │   │       UserEdit.jsx
+│   │   │       UserGroups.jsx
+│   │   │       UserList.jsx
+│   │   │       UserPermissions.jsx
+│   │   │       UserRoles.jsx
+│   │   │       UserSessions.jsx
+│   │   │       
+│   │   ├───permissions
+│   │   │       index.js
+│   │   │       
+│   │   ├───routes
+│   │   │       index.js
+│   │   │       lazy.routes.jsx
+│   │   │       private.routes.jsx
+│   │   │       public.routes.jsx
+│   │   │       route.config.js
+│   │   │       
+│   │   ├───selectors
+│   │   │       index.js
+│   │   │       userSelectors.js
+│   │   │       
+│   │   ├───services
+│   │   │       index.js
+│   │   │       user.service.js
+│   │   │       
+│   │   ├───state
+│   │   │       auditSlice.js
+│   │   │       index.js
+│   │   │       permissionSlice.js
+│   │   │       profileSlice.js
+│   │   │       roleSlice.js
+│   │   │       selectors.js
+│   │   │       sessionSlice.js
+│   │   │       thunks.js
+│   │   │       userSlice.js
+│   │   │       
+│   │   └───validators
+│   │           index.js
+│   │           permission.validator.js
+│   │           profile.validator.js
+│   │           role.validator.js
+│   │           user.validator.js
+│   │           
+│   ├───verification
+│   │   │   index.js
+│   │   │   
+│   │   ├───api
+│   │   │       index.js
+│   │   │       verification.api.js
+│   │   │       
+│   │   ├───assets
+│   │   │       index.js
+│   │   │       
+│   │   ├───components
+│   │   │   │   EmailVerification.jsx
+│   │   │   │   IdentityVerification.jsx
+│   │   │   │   index.js
+│   │   │   │   PhoneVerification.jsx
+│   │   │   │   VerificationAudit.jsx
+│   │   │   │   VerificationMetrics.jsx
+│   │   │   │   VerificationOverview.jsx
+│   │   │   │   VerificationStats.jsx
+│   │   │   │   
+│   │   │   ├───badges
+│   │   │   │       index.js
+│   │   │   │       VerificationStatusBadge.jsx
+│   │   │   │       
+│   │   │   ├───cards
+│   │   │   │       index.js
+│   │   │   │       VerificationCard.jsx
+│   │   │   │       
+│   │   │   ├───dialogs
+│   │   │   │       index.js
+│   │   │   │       
+│   │   │   ├───forms
+│   │   │   │       index.js
+│   │   │   │       
+│   │   │   ├───tables
+│   │   │   │       index.js
+│   │   │   │       VerificationTable.jsx
+│   │   │   │       
+│   │   │   └───widgets
+│   │   │           index.js
+│   │   │           
+│   │   ├───constants
+│   │   │       index.js
+│   │   │       verification.constants.js
+│   │   │       
+│   │   ├───hooks
+│   │   │       index.js
+│   │   │       
+│   │   ├───pages
+│   │   │       index.js
+│   │   │       VerificationApprovals.jsx
+│   │   │       VerificationDashboard.jsx
+│   │   │       VerificationHistory.jsx
+│   │   │       VerificationRequests.jsx
+│   │   │       
+│   │   ├───permissions
+│   │   │       index.js
+│   │   │       
+│   │   ├───routes
+│   │   │       index.js
+│   │   │       lazy.routes.jsx
+│   │   │       private.routes.jsx
+│   │   │       public.routes.jsx
+│   │   │       route.config.js
+│   │   │       
+│   │   ├───selectors
+│   │   │       index.js
+│   │   │       verificationSelectors.js
+│   │   │       
+│   │   ├───services
+│   │   │       index.js
+│   │   │       verification.service.js
+│   │   │       
+│   │   ├───state
+│   │   │       index.js
+│   │   │       selectors.js
+│   │   │       thunks.js
+│   │   │       verificationSlice.js
+│   │   │       
+│   │   └───validators
+│   │           index.js
+│   │           verification.validator.js
+│   │           
+│   └───workflow
+│       │   index.js
+│       │   
+│       ├───api
+│       │       approval.api.js
+│       │       audit.api.js
+│       │       automation.api.js
+│       │       designer.api.js
+│       │       execution.api.js
+│       │       history.api.js
+│       │       index.js
+│       │       monitoring.api.js
+│       │       reports.api.js
+│       │       rules.api.js
+│       │       template.api.js
+│       │       trigger.api.js
+│       │       workflow.api.js
+│       │       
+│       ├───assets
+│       │       index.js
+│       │       
+│       ├───components
+│       │   │   index.js
+│       │   │   
+│       │   ├───cards
+│       │   │       index.js
+│       │   │       WorkflowCard.jsx
+│       │   │       WorkflowExecutionCard.jsx
+│       │   │       WorkflowTemplateCard.jsx
+│       │   │       
+│       │   ├───dialogs
+│       │   │       index.js
+│       │   │       WorkflowApprovalDialog.jsx
+│       │   │       WorkflowExecutionDialog.jsx
+│       │   │       WorkflowTriggerDialog.jsx
+│       │   │       
+│       │   ├───forms
+│       │   │       index.js
+│       │   │       WorkflowForm.jsx
+│       │   │       WorkflowRuleForm.jsx
+│       │   │       WorkflowTemplateForm.jsx
+│       │   │       WorkflowTriggerForm.jsx
+│       │   │       
+│       │   ├───tables
+│       │   │       index.js
+│       │   │       WorkflowExecutionTable.jsx
+│       │   │       WorkflowHistoryTable.jsx
+│       │   │       WorkflowTable.jsx
+│       │   │       
+│       │   └───widgets
+│       │           index.js
+│       │           WorkflowAlerts.jsx
+│       │           WorkflowOverview.jsx
+│       │           WorkflowStats.jsx
+│       │           
+│       ├───constants
+│       │       index.js
+│       │       workflow.constants.js
+│       │       
+│       ├───hooks
+│       │       index.js
+│       │       useWorkflow.js
+│       │       useWorkflowExecution.js
+│       │       useWorkflowHistory.js
+│       │       useWorkflowMonitoring.js
+│       │       useWorkflowRules.js
+│       │       useWorkflows.js
+│       │       useWorkflowTemplates.js
+│       │       useWorkflowTriggers.js
+│       │       
+│       ├───pages
+│       │       index.js
+│       │       WorkflowAnalytics.jsx
+│       │       WorkflowApprovals.jsx
+│       │       WorkflowAutomation.jsx
+│       │       WorkflowCreate.jsx
+│       │       WorkflowDashboard.jsx
+│       │       WorkflowDesigner.jsx
+│       │       WorkflowDetails.jsx
+│       │       WorkflowEdit.jsx
+│       │       WorkflowExecution.jsx
+│       │       WorkflowHistory.jsx
+│       │       WorkflowList.jsx
+│       │       WorkflowMonitoring.jsx
+│       │       WorkflowReports.jsx
+│       │       WorkflowRules.jsx
+│       │       WorkflowTemplates.jsx
+│       │       WorkflowTriggers.jsx
+│       │       
+│       ├───permissions
+│       │       index.js
+│       │       
+│       ├───routes
+│       │       index.js
+│       │       lazy.routes.jsx
+│       │       private.routes.jsx
+│       │       public.routes.jsx
+│       │       route.config.js
+│       │       
+│       ├───selectors
+│       │       index.js
+│       │       workflowSelectors.js
+│       │       
+│       ├───services
+│       │       index.js
+│       │       workflow.service.js
+│       │       
+│       ├───state
+│       │       approvalSlice.js
+│       │       executionSlice.js
+│       │       historySlice.js
+│       │       index.js
+│       │       monitoringSlice.js
+│       │       rulesSlice.js
+│       │       selectors.js
+│       │       templateSlice.js
+│       │       thunks.js
+│       │       triggerSlice.js
+│       │       workflowSlice.js
+│       │       
+│       └───validators
+│               approval.validator.js
+│               createWorkflow.validator.js
+│               execution.validator.js
+│               index.js
+│               rule.validator.js
+│               template.validator.js
+│               trigger.validator.js
+│               updateWorkflow.validator.js
+│               workflow.validator.js
+│               
+├───navigation
+│   │   index.js
+│   │   
+│   ├───breadcrumbs
+│   │       index.js
+│   │       
+│   ├───command-palette
+│   │       index.js
+│   │       
+│   ├───config
+│   │       index.js
+│   │       moduleMenus.js
+│   │       navigationPermissions.js
+│   │       portalMenus.js
+│   │       
+│   ├───favorites
+│   │       index.js
+│   │       
+│   ├───menus
+│   │       index.js
+│   │       
+│   ├───notifications
+│   │       index.js
+│   │       
+│   ├───quick-actions
+│   │       index.js
+│   │       QuickActions.jsx
+│   │       
+│   ├───recent
+│   │       index.js
+│   │       
+│   ├───recent-pages
+│   │       index.js
+│   │       
+│   ├───search
+│   │       index.js
+│   │       
+│   ├───shortcuts
+│   │       index.js
+│   │       
+│   ├───sidebar
+│   │       index.js
+│   │       
+│   ├───tenant-switcher
+│   │       index.js
+│   │       
+│   ├───topbar
+│   │       index.js
+│   │       
+│   └───workspace-switcher
+│           index.js
+│           
+├───pages
+│       index.js
+│       
+├───portals
+│   │   index.js
+│   │   
+│   ├───accountant
+│   │   │   Dashboard.jsx
+│   │   │   index.js
+│   │   │   menu.js
+│   │   │   routes.js
+│   │   │   widgets.js
+│   │   │   
+│   │   ├───expenses
+│   │   │       index.js
+│   │   │       
+│   │   ├───invoices
+│   │   │       index.js
+│   │   │       
+│   │   ├───payments
+│   │   │       index.js
+│   │   │       
+│   │   ├───reports
+│   │   │       index.js
+│   │   │       
+│   │   └───revenue
+│   │           index.js
+│   │           
+│   ├───accountant-assistant
+│   │       Dashboard.jsx
+│   │       index.js
+│   │       menu.js
+│   │       routes.js
+│   │       widgets.js
+│   │       
+│   ├───admin
+│   │   │   Dashboard.jsx
+│   │   │   index.js
+│   │   │   menu.js
+│   │   │   routes.js
+│   │   │   widgets.js
+│   │   │   
+│   │   ├───quick-actions
+│   │   │       index.js
+│   │   │       
+│   │   ├───reports
+│   │   │       index.js
+│   │   │       
+│   │   ├───revenue
+│   │   │       index.js
+│   │   │       
+│   │   ├───system-overview
+│   │   │       index.js
+│   │   │       
+│   │   ├───total-parents
+│   │   │       index.js
+│   │   │       
+│   │   ├───total-students
+│   │   │       index.js
+│   │   │       
+│   │   └───total-teachers
+│   │           index.js
+│   │           
+│   ├───admissions
+│   │       Dashboard.jsx
+│   │       index.js
+│   │       menu.js
+│   │       routes.js
+│   │       widgets.js
+│   │       
+│   ├───alumni-officer
+│   │       Dashboard.jsx
+│   │       index.js
+│   │       menu.js
+│   │       routes.js
+│   │       widgets.js
+│   │       
+│   ├───auditor
+│   │       Dashboard.jsx
+│   │       index.js
+│   │       menu.js
+│   │       routes.js
+│   │       widgets.js
+│   │       
+│   ├───bursar
+│   │       Dashboard.jsx
+│   │       index.js
+│   │       menu.js
+│   │       routes.js
+│   │       widgets.js
+│   │       
+│   ├───communications-officer
+│   │       Dashboard.jsx
+│   │       index.js
+│   │       menu.js
+│   │       routes.js
+│   │       widgets.js
+│   │       
+│   ├───dean
+│   │       Dashboard.jsx
+│   │       index.js
+│   │       menu.js
+│   │       routes.js
+│   │       widgets.js
+│   │       
+│   ├───developer
+│   │       Dashboard.jsx
+│   │       index.js
+│   │       menu.js
+│   │       routes.js
+│   │       widgets.js
+│   │       
+│   ├───exam-officer
+│   │       Dashboard.jsx
+│   │       index.js
+│   │       menu.js
+│   │       routes.js
+│   │       widgets.js
+│   │       
+│   ├───finance-manager
+│   │       Dashboard.jsx
+│   │       index.js
+│   │       menu.js
+│   │       routes.js
+│   │       widgets.js
+│   │       
+│   ├───hod
+│   │       Dashboard.jsx
+│   │       index.js
+│   │       menu.js
+│   │       routes.js
+│   │       widgets.js
+│   │       
+│   ├───hostel-manager
+│   │       Dashboard.jsx
+│   │       index.js
+│   │       menu.js
+│   │       routes.js
+│   │       widgets.js
+│   │       
+│   ├───hr-manager
+│   │       Dashboard.jsx
+│   │       index.js
+│   │       menu.js
+│   │       routes.js
+│   │       widgets.js
+│   │       
+│   ├───it-support
+│   │       Dashboard.jsx
+│   │       index.js
+│   │       menu.js
+│   │       routes.js
+│   │       widgets.js
+│   │       
+│   ├───learning-admin
+│   │       Dashboard.jsx
+│   │       index.js
+│   │       menu.js
+│   │       routes.js
+│   │       widgets.js
+│   │       
+│   ├───librarian
+│   │       Dashboard.jsx
+│   │       index.js
+│   │       menu.js
+│   │       routes.js
+│   │       widgets.js
+│   │       
+│   ├───parent
+│   │   │   Dashboard.jsx
+│   │   │   index.js
+│   │   │   menu.js
+│   │   │   routes.js
+│   │   │   widgets.js
+│   │   │   
+│   │   ├───attendance
+│   │   │       index.js
+│   │   │       
+│   │   ├───children
+│   │   │       index.js
+│   │   │       
+│   │   ├───fees
+│   │   │       index.js
+│   │   │       
+│   │   ├───notices
+│   │   │       index.js
+│   │   │       
+│   │   └───results
+│   │           index.js
+│   │           
+│   ├───payroll-manager
+│   │       Dashboard.jsx
+│   │       index.js
+│   │       menu.js
+│   │       routes.js
+│   │       widgets.js
+│   │       
+│   ├───principal
+│   │   │   Dashboard.jsx
+│   │   │   index.js
+│   │   │   menu.js
+│   │   │   routes.js
+│   │   │   widgets.js
+│   │   │   
+│   │   ├───components
+│   │   │       index.js
+│   │   │       
+│   │   └───pages
+│   │           index.js
+│   │           
+│   ├───procurement-manager
+│   │       Dashboard.jsx
+│   │       index.js
+│   │       menu.js
+│   │       routes.js
+│   │       widgets.js
+│   │       
+│   ├───quality-assurance
+│   │       Dashboard.jsx
+│   │       index.js
+│   │       menu.js
+│   │       routes.js
+│   │       widgets.js
+│   │       
+│   ├───receptionist
+│   │       Dashboard.jsx
+│   │       index.js
+│   │       menu.js
+│   │       routes.js
+│   │       widgets.js
+│   │       
+│   ├───registrar
+│   │       Dashboard.jsx
+│   │       index.js
+│   │       menu.js
+│   │       routes.js
+│   │       widgets.js
+│   │       
+│   ├───security-officer
+│   │       Dashboard.jsx
+│   │       index.js
+│   │       menu.js
+│   │       routes.js
+│   │       widgets.js
+│   │       
+│   ├───staff
+│   │   │   Dashboard.jsx
+│   │   │   index.js
+│   │   │   menu.js
+│   │   │   routes.js
+│   │   │   widgets.js
+│   │   │   
+│   │   ├───attendance
+│   │   │       index.js
+│   │   │       
+│   │   ├───leave
+│   │   │       index.js
+│   │   │       
+│   │   ├───messages
+│   │   │       index.js
+│   │   │       
+│   │   └───tasks
+│   │           index.js
+│   │           
+│   ├───store-manager
+│   │       Dashboard.jsx
+│   │       index.js
+│   │       menu.js
+│   │       routes.js
+│   │       widgets.js
+│   │       
+│   ├───student
+│   │   │   Dashboard.jsx
+│   │   │   index.js
+│   │   │   menu.js
+│   │   │   routes.js
+│   │   │   widgets.js
+│   │   │   
+│   │   ├───assignments
+│   │   │       index.js
+│   │   │       
+│   │   ├───attendance
+│   │   │       index.js
+│   │   │       
+│   │   ├───classes
+│   │   │       index.js
+│   │   │       
+│   │   ├───results
+│   │   │       index.js
+│   │   │       
+│   │   └───timetable
+│   │           index.js
+│   │           
+│   ├───super-admin
+│   │       Dashboard.jsx
+│   │       index.js
+│   │       menu.js
+│   │       routes.js
+│   │       widgets.js
+│   │       
+│   ├───system-monitor
+│   │       Dashboard.jsx
+│   │       index.js
+│   │       menu.js
+│   │       routes.js
+│   │       widgets.js
+│   │       
+│   ├───teacher
+│   │   │   Dashboard.jsx
+│   │   │   index.js
+│   │   │   menu.js
+│   │   │   routes.js
+│   │   │   widgets.js
+│   │   │   
+│   │   ├───assignments
+│   │   │       index.js
+│   │   │       
+│   │   ├───attendance
+│   │   │       index.js
+│   │   │       
+│   │   ├───messages
+│   │   │       index.js
+│   │   │       
+│   │   ├───my-classes
+│   │   │       index.js
+│   │   │       
+│   │   └───schedule
+│   │           index.js
+│   │           
+│   ├───tenant-admin
+│   │       Dashboard.jsx
+│   │       index.js
+│   │       menu.js
+│   │       routes.js
+│   │       widgets.js
+│   │       
+│   ├───transport-manager
+│   │       Dashboard.jsx
+│   │       index.js
+│   │       menu.js
+│   │       routes.js
+│   │       widgets.js
+│   │       
+│   └───vice-principal
+│           Dashboard.jsx
+│           index.js
+│           menu.js
+│           routes.js
+│           widgets.js
+│           
+├───router
+│       AppRouter.jsx
+│       developerRoutes.js
+│       ErrorBoundaryRouter.jsx
+│       index.js
+│       ModuleRouter.jsx
+│       portalRoutes.js
+│       protectedRoutes.js
+│       publicRoutes.js
+│       routeConstants.js
+│       
+├───security
+│       ABAC.js
+│       CSP.js
+│       Encryption.js
+│       FeatureProtection.js
+│       index.js
+│       PermissionEngine.js
+│       RBAC.js
+│       RouteProtection.js
+│       SecureStorage.js
+│       SessionManager.js
+│       TokenManager.js
+│       
+├───shared
+│   ├───api
+│   │       apiClient.js
+│   │       baseApi.js
+│   │       errorHandler.js
+│   │       index.js
+│   │       interceptors.js
+│   │       queryClient.js
+│   │       request.js
+│   │       response.js
+│   │       retry.js
+│   │       
+│   ├───assets
+│   │   │   index.js
+│   │   │   
+│   │   ├───fonts
+│   │   │       index.js
+│   │   │       
+│   │   ├───icons
+│   │   │       index.js
+│   │   │       
+│   │   ├───lottie
+│   │   │       index.js
+│   │   │       
+│   │   └───svg
+│   │           index.js
+│   │           
+│   ├───charts
+│   │   │   index.js
+│   │   │   
+│   │   └───components
+│   │           ChartCard.jsx
+│   │           DashboardCharts.jsx
+│   │           index.js
+│   │           
+│   ├───components
+│   │   │   ConfirmDialog.jsx
+│   │   │   EmptyState.jsx
+│   │   │   index.js
+│   │   │   PageHeader.jsx
+│   │   │   SearchBar.jsx
+│   │   │   Unauthorized.jsx
+│   │   │   
+│   │   ├───cards
+│   │   │       index.js
+│   │   │       
+│   │   ├───dialogs
+│   │   │       index.js
+│   │   │       
+│   │   ├───feedback
+│   │   │       index.js
+│   │   │       
+│   │   ├───forms
+│   │   │       index.js
+│   │   │       
+│   │   ├───tables
+│   │   │       index.js
+│   │   │       
+│   │   └───widgets
+│   │           DashboardStats.jsx
+│   │           index.js
+│   │           
+│   ├───forms
+│   │   │   index.js
+│   │   │   
+│   │   ├───builders
+│   │   │       index.js
+│   │   │       
+│   │   ├───controls
+│   │   │       index.js
+│   │   │       
+│   │   ├───layouts
+│   │   │       index.js
+│   │   │       
+│   │   └───validators
+│   │           index.js
+│   │           
+│   ├───hooks
+│   │       index.js
+│   │       useApi.js
+│   │       useAuth.js
+│   │       useDebounce.js
+│   │       usePermission.js
+│   │       useSocket.js
+│   │       useTenant.js
+│   │       
+│   ├───providers
+│   │       AuditProvider.jsx
+│   │       AuthProvider.jsx
+│   │       FeatureFlagProvider.jsx
+│   │       index.js
+│   │       LocalizationProvider.jsx
+│   │       NotificationProvider.jsx
+│   │       PermissionProvider.jsx
+│   │       QueryProvider.jsx
+│   │       SocketProvider.jsx
+│   │       TenantProvider.jsx
+│   │       ThemeProvider.jsx
+│   │       
+│   ├───recovery
+│   │       ErrorRecovery.jsx
+│   │       RouteRecovery.jsx
+│   │       SessionRecovery.jsx
+│   │       StateRecovery.jsx
+│   │       
+│   ├───socket
+│   │       channels.js
+│   │       events.js
+│   │       index.js
+│   │       reconnect.js
+│   │       socketClient.js
+│   │       
+│   ├───telemetry
+│   │       analytics.js
+│   │       index.js
+│   │       logger.js
+│   │       monitoring.js
+│   │       performance.js
+│   │       
+│   ├───themes
+│   │       index.js
+│   │       
+│   ├───ui
+│   │   │   index.js
+│   │   │   
+│   │   ├───alert
+│   │   │       Alert.jsx
+│   │   │       ErrorAlert.jsx
+│   │   │       index.js
+│   │   │       SuccessAlert.jsx
+│   │   │       WarningAlert.jsx
+│   │   │       
+│   │   ├───avatar
+│   │   │       Avatar.jsx
+│   │   │       index.js
+│   │   │       
+│   │   ├───badge
+│   │   │       Badge.jsx
+│   │   │       index.js
+│   │   │       
+│   │   ├───button
+│   │   │       Button.jsx
+│   │   │       index.js
+│   │   │       
+│   │   ├───card
+│   │   │       Card.jsx
+│   │   │       CardBody.jsx
+│   │   │       CardFooter.jsx
+│   │   │       CardHeader.jsx
+│   │   │       index.js
+│   │   │       
+│   │   ├───checkbox
+│   │   │       index.js
+│   │   │       
+│   │   ├───date-picker
+│   │   │       DatePicker.jsx
+│   │   │       index.js
+│   │   │       
+│   │   ├───drawer
+│   │   │       Drawer.jsx
+│   │   │       index.js
+│   │   │       
+│   │   ├───dropdown
+│   │   │       Dropdown.jsx
+│   │   │       index.js
+│   │   │       
+│   │   ├───error-boundary
+│   │   │       ErrorBoundary.jsx
+│   │   │       ErrorFallback.jsx
+│   │   │       index.js
+│   │   │       
+│   │   ├───input
+│   │   │       index.js
+│   │   │       Input.jsx
+│   │   │       
+│   │   ├───loader
+│   │   │       DashboardLoader.jsx
+│   │   │       index.js
+│   │   │       Loader.jsx
+│   │   │       PageLoader.jsx
+│   │   │       TableLoader.jsx
+│   │   │       
+│   │   ├───modal
+│   │   │       index.js
+│   │   │       Modal.jsx
+│   │   │       
+│   │   ├───multi-select
+│   │   │       index.js
+│   │   │       MultiSelect.jsx
+│   │   │       
+│   │   ├───pagination
+│   │   │       index.js
+│   │   │       Pagination.jsx
+│   │   │       
+│   │   ├───radio
+│   │   │       index.js
+│   │   │       Radio.jsx
+│   │   │       
+│   │   ├───select
+│   │   │       index.js
+│   │   │       Select.jsx
+│   │   │       
+│   │   ├───skeleton
+│   │   │       index.js
+│   │   │       Skeleton.jsx
+│   │   │       
+│   │   ├───stepper
+│   │   │       index.js
+│   │   │       
+│   │   ├───switch
+│   │   │       index.js
+│   │   │       Switch.jsx
+│   │   │       
+│   │   ├───table
+│   │   │       index.js
+│   │   │       Table.jsx
+│   │   │       
+│   │   ├───tabs
+│   │   │       index.js
+│   │   │       Tab.jsx
+│   │   │       Tabs.jsx
+│   │   │       
+│   │   ├───text-area
+│   │   │       index.js
+│   │   │       
+│   │   └───tooltip
+│   │           index.js
+│   │           Tooltip.jsx
+│   │           
+│   └───utils
+│       │   index.js
+│       │   
+│       ├───api
+│       │       index.js
+│       │       utils.api.js
+│       │       
+│       ├───auth
+│       │       index.js
+│       │       
+│       ├───dates
+│       │       index.js
+│       │       
+│       ├───files
+│       │       index.js
+│       │       
+│       ├───formatters
+│       │       index.js
+│       │       
+│       ├───permissions
+│       │       index.js
+│       │       
+│       ├───routes
+│       │       index.js
+│       │       
+│       ├───storage
+│       │       index.js
+│       │       
+│       ├───tenant
+│       │       index.js
+│       │       
+│       └───validation
+│               index.js
+│               
+├───store
+│   │   index.js
+│   │   rootReducer.js
+│   │   store.js
+│   │   
+│   ├───audit
+│   │       index.js
+│   │       
+│   ├───cache
+│   │       index.js
+│   │       
+│   ├───devtools
+│   │       index.js
+│   │       
+│   ├───featureFlags
+│   │       index.js
+│   │       
+│   ├───listeners
+│   │       index.js
+│   │       listenerMiddleware.js
+│   │       
+│   ├───middleware
+│   │       index.js
+│   │       middleware.js
+│   │       
+│   ├───notifications
+│   │       index.js
+│   │       
+│   ├───permissions
+│   │       index.js
+│   │       
+│   ├───persistence
+│   │       persistConfig.js
+│   │       
+│   ├───rtk-query
+│   │       index.js
+│   │       
+│   ├───selectors
+│   │       globalSelectors.js
+│   │       index.js
+│   │       
+│   ├───session
+│   │       index.js
+│   │       
+│   ├───slices
+│   │       index.js
+│   │       
+│   ├───theme
+│   │       themeSlice.js
+│   │       
+│   ├───thunks
+│   │       index.js
+│   │       
+│   └───websocket
+│           index.js
+│           
+├───styles
+│   │   animations.css
+│   │   glass.css
+│   │   globals.css
+│   │   responsive.css
+│   │   theme.css
+│   │   utilities.css
+│   │   variables.css
+│   │   
+│   ├───components
+│   │       index.js
+│   │       
+│   ├───layouts
+│   │       index.js
+│   │       
+│   └───modules
+│           index.js
+│           
+├───tests
+│   │   index.js
+│   │   
+│   ├───e2e
+│   │       index.js
+│   │       
+│   ├───fixtures
+│   │       index.js
+│   │       
+│   ├───integration
+│   │       index.js
+│   │       
+│   ├───mocks
+│   │       index.js
+│   │       
+│   └───unit
+│           index.js
+│           
+└───utils
+        index.js
+        

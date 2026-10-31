@@ -1,0 +1,1486 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// ==================================================
+// ENUMS
+// ==================================================
+
+enum UserRole {
+  ADMIN
+  TEACHER
+  STUDENT
+  PARENT
+  ACCOUNTANT
+  STAFF
+  DEVELOPER
+  HR
+  ALUMNI
+}
+
+enum SubscriptionStatus {
+  ACTIVE
+  GRACE_PERIOD
+  EXPIRED
+  SUSPENDED
+  LOCKED
+}
+
+enum SystemStatus {
+  HEALTHY
+  MAINTENANCE
+  DEGRADED
+  LOCKED
+}
+
+enum SeverityLevel {
+  LOW
+  MEDIUM
+  HIGH
+  CRITICAL
+}
+
+enum AttendanceStatus {
+  PRESENT
+  ABSENT
+  LATE
+  EXCUSED
+}
+
+// ==================================================
+// TENANT & SUBSCRIPTION MODELS
+// ==================================================
+
+model Tenant {
+  id          Int                 @id @default(autoincrement())
+  name        String
+  code        String              @unique
+  domain      String?             @unique
+  isActive    Boolean             @default(true)
+  status      SubscriptionStatus  @default(ACTIVE)
+  createdBy   Int?
+  isDeleted   Boolean             @default(false)
+  deletedAt   DateTime?
+  createdAt   DateTime            @default(now())
+  updatedAt   DateTime            @updatedAt
+
+  users               User[]
+  subscriptions       Subscription[]
+  tenantLocations     TenantLocation[]
+  studentLocations    StudentLocation[]
+  migrationJobs       MigrationJob[]
+  institutionRegistrations InstitutionRegistration[]
+
+  @@index([code])
+  @@index([domain])
+  @@index([isActive])
+  @@index([status])
+  @@index([isDeleted])
+  @@map("tenants")
+}
+
+model Subscription {
+  id              Int                 @id @default(autoincrement())
+  tenantId        Int
+  tenant          Tenant              @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  planName        String
+  startDate       DateTime
+  endDate         DateTime
+  gracePeriodDays Int                 @default(7)
+  autoLock        Boolean             @default(true)
+  status          SubscriptionStatus  @default(ACTIVE)
+  amountPaid      Float               @default(0.0)
+  currency        String              @default("USD")
+  createdAt       DateTime            @default(now())
+  updatedAt       DateTime            @updatedAt
+
+  licenses        License[]
+
+  @@index([tenantId])
+  @@index([status])
+  @@map("subscriptions")
+}
+
+model License {
+  id             Int          @id @default(autoincrement())
+  subscriptionId Int
+  subscription   Subscription @relation(fields: [subscriptionId], references: [id], onDelete: Cascade)
+  licenseKey     String       @unique
+  maxUsers       Int          @default(100)
+  maxStudents    Int          @default(1000)
+  expiresAt      DateTime
+  isActive       Boolean      @default(true)
+  createdAt      DateTime     @default(now())
+  updatedAt      DateTime     @updatedAt
+
+  @@index([licenseKey])
+  @@map("licenses")
+}
+
+// ==================================================
+// USER & SECURITY MODELS
+// ==================================================
+
+model User {
+  id                    Int        @id @default(autoincrement())
+  tenantId              Int
+  tenant                Tenant     @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  firstName             String
+  lastName              String
+  username              String?    @unique
+  email                 String     @unique
+  password              String
+  role                  UserRole   @default(STUDENT)
+  permissions           String[]   @default([])
+  isActive              Boolean    @default(true)
+  failedLoginAttempts   Int        @default(0)
+  isLocked              Boolean    @default(false)
+  lastLoginAt           DateTime?
+  passwordChangedAt     DateTime?
+  isDeleted             Boolean    @default(false)
+  deletedAt             DateTime?
+  createdAt             DateTime   @default(now())
+  updatedAt             DateTime   @updatedAt
+
+  voiceEnrollment       VoiceEnrollment?
+  voiceVerificationLogs VoiceVerificationLog[]
+  auditLogs             AuditLog[]
+  activityLogs          ActivityLog[]
+  teacherSlots          TimetableSlot[]        @relation("TeacherTimetableSlots")
+  studentAttendance     AttendanceRecord[]     @relation("StudentAttendance")
+  markedAttendance      AttendanceRecord[]     @relation("AttendanceMarker")
+  teacherAssignments    Assignment[]           @relation("TeacherAssignments")
+  studentSubmissions    AssignmentSubmission[] @relation("StudentSubmissions")
+  gradedSubmissions     AssignmentSubmission[] @relation("TeacherGradedSubmissions")
+  studentEnrollments    ClassEnrollment[]      @relation("StudentEnrollments")
+  hostedMeetings        OnlineMeeting[]        @relation("HostedMeetings")
+  meetingAttendances    MeetingAttendance[]    @relation("UserMeetingAttendances")
+  parentLinks           ParentStudentLink[]    @relation("ParentLinks")
+  childrenLinks         ParentStudentLink[]    @relation("StudentLinks")
+  notifications         NotificationQueueItem[] @relation("UserNotifications")
+  registrationProfile   UserRegistrationProfile?
+
+  @@index([tenantId])
+  @@index([email])
+  @@index([username])
+  @@index([role])
+  @@index([isActive])
+  @@index([isLocked])
+  @@index([tenantId, role])
+  @@map("users")
+}
+
+model AuditLog {
+  id          Int      @id @default(autoincrement())
+  tenantId    Int?
+  userId      Int?
+  user        User?    @relation(fields: [userId], references: [id], onDelete: SetNull)
+  action      String
+  module      String
+  details     String?
+  ipAddress   String?
+  userAgent   String?
+  createdAt   DateTime @default(now())
+
+  @@index([tenantId])
+  @@index([userId])
+  @@index([action])
+  @@map("audit_logs")
+}
+
+model ActivityLog {
+  id          Int      @id @default(autoincrement())
+  tenantId    Int?
+  userId      Int?
+  user        User?    @relation(fields: [userId], references: [id], onDelete: SetNull)
+  activity    String
+  metadata    String?
+  createdAt   DateTime @default(now())
+
+  @@index([tenantId])
+  @@index([userId])
+  @@map("activity_logs")
+}
+
+// ==================================================
+// VOICE IDENTITY SECURITY MODELS
+// ==================================================
+
+model VoiceEnrollment {
+  id              Int      @id @default(autoincrement())
+  userId          Int      @unique
+  user            User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  voiceSampleUrl  String?
+  voicePrintHash  String
+  passphraseText  String
+  isEnrolled      Boolean  @default(true)
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  @@map("voice_enrollments")
+}
+
+model VoiceVerificationLog {
+  id             Int      @id @default(autoincrement())
+  userId         Int
+  user           User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  confidenceScore Float
+  isMatched      Boolean
+  spokenText     String?
+  createdAt      DateTime @default(now())
+
+  @@index([userId])
+  @@map("voice_verification_logs")
+}
+
+// ==================================================
+// LOCATION & TRACKING MODELS
+// ==================================================
+
+model TenantLocation {
+  id          Int      @id @default(autoincrement())
+  tenantId    Int
+  tenant      Tenant   @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  branchName  String
+  latitude    Float
+  longitude   Float
+  address     String?
+  city        String?
+  country     String?
+  createdAt   DateTime @default(now())
+
+  @@index([tenantId])
+  @@map("tenant_locations")
+}
+
+model StudentLocation {
+  id          Int      @id @default(autoincrement())
+  tenantId    Int
+  tenant      Tenant   @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  studentId   Int
+  latitude    Float
+  longitude   Float
+  speed       Float?   @default(0.0)
+  batteryPct  Int?     @default(100)
+  updatedAt   DateTime @default(now())
+
+  @@index([tenantId, studentId])
+  @@map("student_locations")
+}
+
+model Geofence {
+  id          Int      @id @default(autoincrement())
+  tenantId    Int
+  name        String
+  centerLat   Float
+  centerLng   Float
+  radiusMeters Float
+  isActive    Boolean  @default(true)
+  createdAt   DateTime @default(now())
+
+  @@index([tenantId])
+  @@map("geofences")
+}
+
+// ==================================================
+// ACADEMICS & EXAM AUTO-GRADING MODELS
+// ==================================================
+
+model Class {
+  id          Int      @id @default(autoincrement())
+  tenantId    Int
+  name        String
+  code        String
+  gradeLevel  Int
+  createdAt   DateTime @default(now())
+
+  subjects          Subject[]
+  exams             Exam[]
+  timetableSlots    TimetableSlot[]
+  attendanceRecords AttendanceRecord[]
+  assignments       Assignment[]
+  enrollments       ClassEnrollment[]
+  onlineMeetings    OnlineMeeting[]
+  admissionApplications AdmissionApplication[]
+
+  @@map("classes")
+}
+
+model Subject {
+  id             Int             @id @default(autoincrement())
+  classId        Int
+  class          Class           @relation(fields: [classId], references: [id], onDelete: Cascade)
+  name           String
+  code           String
+  createdAt      DateTime        @default(now())
+
+  timetableSlots    TimetableSlot[]
+  attendanceRecords AttendanceRecord[]
+  assignments       Assignment[]
+  onlineMeetings    OnlineMeeting[]
+
+  @@map("subjects")
+}
+
+model TimetableSlot {
+  id           Int      @id @default(autoincrement())
+  tenantId     Int
+  classId      Int
+  class        Class    @relation(fields: [classId], references: [id], onDelete: Cascade)
+  subjectId    Int
+  subject      Subject  @relation(fields: [subjectId], references: [id], onDelete: Cascade)
+  teacherId    Int?
+  teacher      User?    @relation("TeacherTimetableSlots", fields: [teacherId], references: [id], onDelete: SetNull)
+  dayOfWeek    String
+  startTime    String
+  endTime      String
+  roomNumber   String
+  academicTerm String?  @default("TERM-1")
+  academicYear String?  @default("2026-2027")
+  isActive     Boolean  @default(true)
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  @@index([tenantId])
+  @@index([classId])
+  @@index([teacherId])
+  @@index([dayOfWeek])
+  @@index([roomNumber])
+  @@map("timetable_slots")
+}
+
+model ClassEnrollment {
+  id         Int      @id @default(autoincrement())
+  tenantId   Int
+  classId    Int
+  class      Class    @relation(fields: [classId], references: [id], onDelete: Cascade)
+  studentId  Int
+  student    User     @relation("StudentEnrollments", fields: [studentId], references: [id], onDelete: Cascade)
+  enrolledAt DateTime @default(now())
+  status     String   @default("ACTIVE") // ACTIVE, TRANSFERRED, GRADUATED, DROPPED
+
+  @@unique([classId, studentId])
+  @@index([tenantId])
+  @@index([classId])
+  @@index([studentId])
+  @@map("class_enrollments")
+}
+
+model AttendanceRecord {
+  id         Int              @id @default(autoincrement())
+  tenantId   Int
+  studentId  Int
+  student    User             @relation("StudentAttendance", fields: [studentId], references: [id], onDelete: Cascade)
+  classId    Int
+  class      Class            @relation(fields: [classId], references: [id], onDelete: Cascade)
+  subjectId  Int?
+  subject    Subject?         @relation(fields: [subjectId], references: [id], onDelete: SetNull)
+  date       DateTime
+  status     AttendanceStatus @default(PRESENT)
+  remarks    String?
+  markedById Int?
+  markedBy   User?            @relation("AttendanceMarker", fields: [markedById], references: [id], onDelete: SetNull)
+  createdAt  DateTime         @default(now())
+  updatedAt  DateTime         @updatedAt
+
+  @@index([tenantId])
+  @@index([studentId])
+  @@index([classId])
+  @@index([subjectId])
+  @@index([date])
+  @@index([tenantId, classId, date])
+  @@index([tenantId, studentId, date])
+  @@map("attendance_records")
+}
+
+model Assignment {
+  id            Int                    @id @default(autoincrement())
+  tenantId      Int
+  classId       Int
+  class         Class                  @relation(fields: [classId], references: [id], onDelete: Cascade)
+  subjectId     Int
+  subject       Subject                @relation(fields: [subjectId], references: [id], onDelete: Cascade)
+  teacherId     Int
+  teacher       User                   @relation("TeacherAssignments", fields: [teacherId], references: [id], onDelete: Cascade)
+  title         String
+  description   String?                @db.Text
+  dueDate       DateTime
+  maxScore      Float                  @default(100.0)
+  attachmentUrl String?
+  status        String                 @default("PUBLISHED") // DRAFT, PUBLISHED, CLOSED
+  createdAt     DateTime               @default(now())
+  updatedAt     DateTime               @updatedAt
+
+  submissions   AssignmentSubmission[]
+
+  @@index([tenantId])
+  @@index([classId])
+  @@index([subjectId])
+  @@index([teacherId])
+  @@index([status])
+  @@index([dueDate])
+  @@map("assignments")
+}
+
+model AssignmentSubmission {
+  id                Int        @id @default(autoincrement())
+  tenantId          Int
+  assignmentId      Int
+  assignment        Assignment @relation(fields: [assignmentId], references: [id], onDelete: Cascade)
+  studentId         Int
+  student           User       @relation("StudentSubmissions", fields: [studentId], references: [id], onDelete: Cascade)
+  submissionContent String?    @db.Text
+  attachmentUrl     String?
+  status            String     @default("SUBMITTED") // SUBMITTED, GRADED, LATE, RESUBMISSION_REQUESTED
+  grade             Float?
+  feedback          String?    @db.Text
+  gradedById        Int?
+  gradedBy          User?      @relation("TeacherGradedSubmissions", fields: [gradedById], references: [id], onDelete: SetNull)
+  submittedAt       DateTime   @default(now())
+  gradedAt          DateTime?
+  createdAt         DateTime   @default(now())
+  updatedAt         DateTime   @updatedAt
+
+  @@unique([assignmentId, studentId])
+  @@index([tenantId])
+  @@index([assignmentId])
+  @@index([studentId])
+  @@index([status])
+  @@map("assignment_submissions")
+}
+
+// ==================================================
+// ONLINE LEARNING, VIRTUAL MEETINGS & PARENT MODELS
+// ==================================================
+
+model OnlineMeeting {
+  id                Int                 @id @default(autoincrement())
+  tenantId          Int
+  title             String
+  description       String?             @db.Text
+  platform          String              @default("ZOOM") // ZOOM, GOOGLE_MEET, MICROSOFT_TEAMS
+  meetingType       String              @default("CLASS") // CLASS, STAFF_MEETING, PARENT_TEACHER, WEBINAR
+  meetingUrl        String
+  meetingId         String?
+  passcode          String?
+  hostId            Int
+  host              User                @relation("HostedMeetings", fields: [hostId], references: [id], onDelete: Cascade)
+  classId           Int?
+  class             Class?              @relation(fields: [classId], references: [id], onDelete: SetNull)
+  subjectId         Int?
+  subject           Subject?            @relation(fields: [subjectId], references: [id], onDelete: SetNull)
+  timetableSlotId   Int?
+  startTime         DateTime
+  endTime           DateTime
+  status            String              @default("SCHEDULED") // SCHEDULED, LIVE, COMPLETED, CANCELLED
+  recordingUrl      String?
+  recordingPassword String?
+  isRecorded        Boolean             @default(false)
+  hasChat           Boolean             @default(true)
+  hasBreakout       Boolean             @default(true)
+  hasScreenShare    Boolean             @default(true)
+  hasRaiseHand      Boolean             @default(true)
+  maxParticipants   Int                 @default(100)
+  createdAt         DateTime            @default(now())
+  updatedAt         DateTime            @updatedAt
+
+  attendances       MeetingAttendance[]
+
+  @@index([tenantId])
+  @@index([hostId])
+  @@index([classId])
+  @@index([subjectId])
+  @@index([status])
+  @@index([startTime])
+  @@map("online_meetings")
+}
+
+model MeetingAttendance {
+  id               Int              @id @default(autoincrement())
+  tenantId         Int
+  meetingId        Int
+  meeting          OnlineMeeting    @relation(fields: [meetingId], references: [id], onDelete: Cascade)
+  userId           Int
+  user             User             @relation("UserMeetingAttendances", fields: [userId], references: [id], onDelete: Cascade)
+  joinedAt         DateTime         @default(now())
+  leftAt           DateTime?
+  durationMinutes  Int              @default(0)
+  deviceInfo       String?
+  ipAddress        String?
+  attendanceStatus AttendanceStatus @default(PRESENT)
+  createdAt        DateTime         @default(now())
+
+  @@index([tenantId])
+  @@index([meetingId])
+  @@index([userId])
+  @@map("meeting_attendances")
+}
+
+model ParentStudentLink {
+  id               Int      @id @default(autoincrement())
+  tenantId         Int
+  parentId         Int
+  parent           User     @relation("ParentLinks", fields: [parentId], references: [id], onDelete: Cascade)
+  studentId        Int
+  student          User     @relation("StudentLinks", fields: [studentId], references: [id], onDelete: Cascade)
+  relationship     String   @default("PARENT") // FATHER, MOTHER, GUARDIAN, SPONSOR
+  isPrimaryContact Boolean  @default(true)
+  emergencyPhone   String?
+  address          String?
+  latitude         Float?
+  longitude        Float?
+  createdAt        DateTime @default(now())
+  updatedAt        DateTime @updatedAt
+
+  @@unique([parentId, studentId])
+  @@index([tenantId])
+  @@index([parentId])
+  @@index([studentId])
+  @@index([emergencyPhone])
+  @@map("parent_student_links")
+}
+
+// ==================================================
+// ADMISSION WORKFLOW ENGINE MODELS (BLUEPRINT BOX 6)
+// ==================================================
+
+model AdmissionApplication {
+  id                   Int                  @id @default(autoincrement())
+  tenantId             Int
+  applicationNumber    String               @unique
+  stage                String               @default("INQUIRY") // INQUIRY, APPLIED, DOCUMENTS_UPLOADED, VERIFIED, INTERVIEW_SCHEDULED, INTERVIEW_COMPLETED, APPROVED, REJECTED, ENROLLED
+  academicYear         String               @default("2026-2027")
+  targetGradeLevel     Int
+  targetClassId        Int?
+  targetClass          Class?               @relation(fields: [targetClassId], references: [id], onDelete: SetNull)
+  studentFirstName     String
+  studentLastName      String
+  dateOfBirth          DateTime
+  gender               String               @default("UNSPECIFIED")
+  nationality          String?              @default("International")
+  previousSchool       String?
+  previousGPA          Float?
+  guardianName         String
+  guardianEmail        String
+  guardianPhone        String
+  guardianRelationship String               @default("PARENT")
+  address              String?
+  reviewerNotes        String?              @db.Text
+  interviewDate        DateTime?
+  interviewer          String?
+  interviewFeedback    String?              @db.Text
+  rejectionReason      String?
+  enrolledUserId       Int?
+  enrolledAt           DateTime?
+  createdAt            DateTime             @default(now())
+  updatedAt            DateTime             @updatedAt
+
+  documents            AdmissionDocument[]
+
+  @@index([tenantId])
+  @@index([applicationNumber])
+  @@index([stage])
+  @@index([targetGradeLevel])
+  @@index([targetClassId])
+  @@index([guardianEmail])
+  @@index([guardianPhone])
+  @@map("admission_applications")
+}
+
+model AdmissionDocument {
+  id                  Int                  @id @default(autoincrement())
+  tenantId            Int
+  applicationId       Int
+  application         AdmissionApplication @relation(fields: [applicationId], references: [id], onDelete: Cascade)
+  documentType        String               // BIRTH_CERTIFICATE, TRANSCRIPT, MEDICAL_RECORD, PASSPORT_PHOTO, GUARDIAN_ID
+  fileName            String
+  fileUrl             String
+  fileSize            Int?                 @default(102400)
+  verificationStatus  String               @default("PENDING") // PENDING, VERIFIED, REJECTED
+  verifiedById        Int?
+  verificationRemarks String?
+  createdAt           DateTime             @default(now())
+  updatedAt           DateTime             @updatedAt
+
+  @@index([tenantId])
+  @@index([applicationId])
+  @@index([verificationStatus])
+  @@map("admission_documents")
+}
+
+model Exam {
+  id          Int      @id @default(autoincrement())
+  classId     Int
+  class       Class    @relation(fields: [classId], references: [id], onDelete: Cascade)
+  title       String
+  totalMarks  Float
+  passMarks   Float
+  examDate    DateTime
+  createdAt   DateTime @default(now())
+
+  questionBank QuestionBank[]
+  answerSheets AnswerSheet[]
+
+  @@map("exams")
+}
+
+model QuestionBank {
+  id            Int      @id @default(autoincrement())
+  examId        Int
+  exam          Exam     @relation(fields: [examId], references: [id], onDelete: Cascade)
+  questionNumber Int
+  questionText  String
+  correctAnswer String
+  marks         Float
+  negativeMarks Float    @default(0.0)
+
+  @@map("question_bank")
+}
+
+model AnswerSheet {
+  id               Int                @id @default(autoincrement())
+  examId           Int
+  exam             Exam               @relation(fields: [examId], references: [id], onDelete: Cascade)
+  studentId        Int
+  imageUrl         String
+  status           String             @default("PENDING")
+  scoreObtained    Float?
+  isPassed         Boolean?
+  gradedAt         DateTime?
+  autoGradingResult AutoGradingResult?
+
+  @@map("answer_sheets")
+}
+
+model AutoGradingResult {
+  id            Int         @id @default(autoincrement())
+  answerSheetId Int         @unique
+  answerSheet   AnswerSheet @relation(fields: [answerSheetId], references: [id], onDelete: Cascade)
+  matchedAnswers Int
+  totalQuestions Int
+  confidencePct Float
+  needsManualReview Boolean @default(false)
+  createdAt     DateTime    @default(now())
+
+  @@map("auto_grading_results")
+}
+
+// ==================================================
+// DATA MIGRATION MODULE MODELS
+// ==================================================
+
+model MigrationJob {
+  id            Int      @id @default(autoincrement())
+  tenantId      Int
+  tenant        Tenant   @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  filename      String
+  entityType    String
+  totalRecords  Int      @default(0)
+  processedCount Int     @default(0)
+  failedCount   Int      @default(0)
+  status        String   @default("QUEUED")
+  errorsJson    String?
+  createdAt     DateTime @default(now())
+
+  @@index([tenantId])
+  @@map("migration_jobs")
+}
+
+// ==================================================
+// DEVELOPER CONTROL CENTER MODELS
+// ==================================================
+
+model DeveloperAccount {
+  id            Int      @id @default(autoincrement())
+  username      String   @unique
+  email         String   @unique
+  passwordHash  String
+  pinCode       String
+  isSuperDev    Boolean  @default(true)
+  lastActiveAt  DateTime?
+  createdAt     DateTime @default(now())
+
+  @@map("developer_accounts")
+}
+
+model SystemLock {
+  id          Int      @id @default(autoincrement())
+  tenantId    Int?
+  isLocked    Boolean  @default(false)
+  reason      String
+  lockedBy    String
+  lockedAt    DateTime @default(now())
+
+  @@map("system_locks")
+}
+
+model SystemBackup {
+  id          Int      @id @default(autoincrement())
+  filename    String
+  fileSizeMb  Float
+  backupType  String   @default("FULL")
+  isEncrypted Boolean  @default(true)
+  storagePath String
+  status      String   @default("COMPLETED")
+  createdAt   DateTime @default(now())
+
+  @@map("system_backups")
+}
+
+model SystemAlert {
+  id          Int           @id @default(autoincrement())
+  alertType   String
+  severity    SeverityLevel @default(MEDIUM)
+  message     String
+  isResolved  Boolean       @default(false)
+  createdAt   DateTime      @default(now())
+
+  @@map("system_alerts")
+}
+
+model AIDeveloperFixLog {
+  id             Int      @id @default(autoincrement())
+  issueDetected  String
+  errorCause     String
+  fixRecommended String
+  appliedFixCode String?
+  isAutoApplied  Boolean  @default(false)
+  createdAt      DateTime @default(now())
+
+  @@map("ai_developer_fix_logs")
+}
+
+// ==================================================
+// HR EMPLOYEE SALARY GROUPING & PROGRESSION MODELS
+// ==================================================
+
+model QualificationLevel {
+  id                 Int      @id @default(autoincrement())
+  code               String   @unique
+  name               String
+  baseAllowanceRatio Float    @default(1.0)
+  createdAt          DateTime @default(now())
+
+  profiles           EmployeeSalaryProfile[]
+
+  @@map("qualification_levels")
+}
+
+model SalaryGrade {
+  id          Int          @id @default(autoincrement())
+  gradeCode   String       @unique
+  name        String
+  minSalary   Float
+  maxSalary   Float
+  createdAt   DateTime     @default(now())
+
+  steps       SalaryStep[]
+  profiles    EmployeeSalaryProfile[]
+
+  @@map("salary_grades")
+}
+
+model SalaryStep {
+  id          Int         @id @default(autoincrement())
+  gradeId     Int
+  grade       SalaryGrade @relation(fields: [gradeId], references: [id], onDelete: Cascade)
+  stepNumber  Int
+  amount      Float
+  createdAt   DateTime    @default(now())
+
+  profiles          EmployeeSalaryProfile[]
+  oldStepIncrements SalaryIncrementHistory[] @relation("OldStepRelation")
+  newStepIncrements SalaryIncrementHistory[] @relation("NewStepRelation")
+
+  @@unique([gradeId, stepNumber])
+  @@map("salary_steps")
+}
+
+model ServiceBand {
+  id             Int      @id @default(autoincrement())
+  bandName       String   @unique
+  minYears       Int
+  maxYears       Int
+  bonusAllowance Float    @default(0.0)
+  createdAt      DateTime @default(now())
+
+  profiles       EmployeeSalaryProfile[]
+
+  @@map("service_bands")
+}
+
+model EmployeeSalaryProfile {
+  id                     Int                @id @default(autoincrement())
+  userId                 Int                @unique
+  qualificationLevelId   Int
+  qualificationLevel     QualificationLevel @relation(fields: [qualificationLevelId], references: [id])
+  gradeId                Int
+  grade                  SalaryGrade        @relation(fields: [gradeId], references: [id])
+  stepId                 Int
+  step                   SalaryStep         @relation(fields: [stepId], references: [id])
+  serviceBandId          Int
+  serviceBand            ServiceBand        @relation(fields: [serviceBandId], references: [id])
+  yearsOfService         Float              @default(0.0)
+  branchAllowance        Float              @default(0.0)
+  responsibilityAllowance Float              @default(0.0)
+  housingTransportAllowance Float           @default(0.0)
+  performanceBonus       Float              @default(0.0)
+  grossSalary            Float
+  createdAt              DateTime           @default(now())
+  updatedAt              DateTime           @updatedAt
+
+  incrementHistory       SalaryIncrementHistory[]
+
+  @@map("employee_salary_profiles")
+}
+
+model SalaryIncrementHistory {
+  id             Int                   @id @default(autoincrement())
+  profileId      Int
+  profile        EmployeeSalaryProfile @relation(fields: [profileId], references: [id], onDelete: Cascade)
+  oldStepId      Int?
+  oldStep        SalaryStep?           @relation("OldStepRelation", fields: [oldStepId], references: [id])
+  newStepId      Int
+  newStep        SalaryStep            @relation("NewStepRelation", fields: [newStepId], references: [id])
+  oldSalary      Float
+  newSalary      Float
+  reason         String
+  effectiveDate  DateTime              @default(now())
+
+  @@map("salary_increment_history")
+}
+
+// ==================================================
+// GBS LOAN MANAGEMENT SYSTEM MODELS
+// ==================================================
+
+model LoanApplication {
+  id                Int          @id @default(autoincrement())
+  borrowerId        Int
+  loanType          String       // MICRO, PERSONAL, VEHICLE, SME, MORTGAGE
+  amountRequested   Float
+  termMonths        Int
+  interestRate      Float
+  purpose           String?
+  status            String       @default("PENDING") // PENDING, APPROVED, REJECTED, DISBURSED
+  managerApprovedBy String?
+  disbursedAt       DateTime?
+  createdAt         DateTime     @default(now())
+  updatedAt         DateTime     @updatedAt
+
+  loanAccount       LoanAccount?
+
+  @@index([borrowerId])
+  @@index([status])
+  @@map("loan_applications")
+}
+
+model LoanAccount {
+  id               Int                 @id @default(autoincrement())
+  applicationId    Int                 @unique
+  application      LoanApplication     @relation(fields: [applicationId], references: [id], onDelete: Cascade)
+  accountNumber    String              @unique
+  principalBalance Float
+  interestBalance  Float               @default(0.0)
+  status           String              @default("ACTIVE") // ACTIVE, CLOSED, DEFAULTED
+  createdAt        DateTime            @default(now())
+
+  repaymentSchedules RepaymentSchedule[]
+  collaterals        LoanCollateral[]
+
+  @@index([accountNumber])
+  @@map("loan_accounts")
+}
+
+model RepaymentSchedule {
+  id              Int         @id @default(autoincrement())
+  loanAccountId   Int
+  loanAccount     LoanAccount @relation(fields: [loanAccountId], references: [id], onDelete: Cascade)
+  installmentNumber Int
+  dueDate         DateTime
+  principalAmount Float
+  interestAmount  Float
+  penaltyAmount   Float       @default(0.0)
+  status          String      @default("PENDING") // PENDING, PAID, OVERDUE
+
+  @@index([loanAccountId])
+  @@map("repayment_schedules")
+}
+
+model LoanCollateral {
+  id                 Int         @id @default(autoincrement())
+  loanAccountId      Int
+  loanAccount        LoanAccount @relation(fields: [loanAccountId], references: [id], onDelete: Cascade)
+  assetType          String      // VEHICLE, REAL_ESTATE, EQUIPMENT, SAVINGS
+  estimatedValue     Float
+  documentUrl        String?
+  verificationStatus String      @default("VERIFIED")
+
+  @@map("loan_collaterals")
+}
+
+model CreditScoreRecord {
+  id                Int      @id @default(autoincrement())
+  userId            Int
+  creditScore       Int      // 300 to 850
+  riskLevel         String   // LOW, MEDIUM, HIGH, CRITICAL
+  debtToIncomeRatio Float
+  evaluatedAt       DateTime @default(now())
+
+  @@index([userId])
+  @@map("credit_score_records")
+}
+
+// ==================================================
+// WORKFLOW & AUTOMATION ENGINE (Blueprint Box 7)
+// ==================================================
+
+model WorkflowRule {
+  id              Int                 @id @default(autoincrement())
+  tenantId        Int
+  code            String
+  name            String
+  description     String?
+  triggerEvent    String              // ADMISSION_SUBMITTED, ADMISSION_APPROVED, STUDENT_ABSENT, HOMEWORK_ASSIGNED, EXAM_GRADED, EMERGENCY_ALERT, FEE_OVERDUE
+  conditionLogic  String?             @default("ALL") // ALL, ANY
+  conditions      String?             // JSON string array: [{"field": "gradeLevel", "operator": "EQUALS", "value": "10"}]
+  actionType      String              // DISPATCH_NOTIFICATION, TRIGGER_WEBHOOK, ESCALATE_SLA, SYSTEM_TASK
+  actionConfig    String              // JSON string: {"channel": "SMS", "templateCode": "ADMISSION_WELCOME", "target": "GUARDIAN"}
+  isActive        Boolean             @default(true)
+  priority        Int                 @default(1)
+  createdAt       DateTime            @default(now())
+  updatedAt       DateTime            @updatedAt
+
+  executions      WorkflowExecution[]
+
+  @@unique([tenantId, code])
+  @@index([tenantId])
+  @@index([triggerEvent])
+  @@index([isActive])
+  @@map("workflow_rules")
+}
+
+model WorkflowExecution {
+  id              Int           @id @default(autoincrement())
+  tenantId        Int
+  ruleId          Int?
+  rule            WorkflowRule? @relation(fields: [ruleId], references: [id], onDelete: SetNull)
+  triggerEvent    String
+  status          String        @default("SUCCESS") // SUCCESS, FAILED, SKIPPED, PENDING
+  payload         String?       // JSON string of event payload
+  executionResult String?       // JSON string of executed actions / dispatches
+  errorMessage    String?
+  executionTimeMs Int?          @default(0)
+  createdAt       DateTime      @default(now())
+
+  @@index([tenantId])
+  @@index([ruleId])
+  @@index([triggerEvent])
+  @@index([status])
+  @@map("workflow_executions")
+}
+
+// ==================================================
+// NOTIFICATION & COMMUNICATION ENGINE (Blueprint Box 12)
+// ==================================================
+
+model NotificationTemplate {
+  id              Int      @id @default(autoincrement())
+  tenantId        Int
+  templateCode    String   // e.g. ADMISSION_APPROVED, STUDENT_ABSENT_ALERT, EMERGENCY_BROADCAST
+  name            String
+  channel         String   // EMAIL, SMS, IN_APP, PUSH
+  titleTemplate   String?
+  bodyTemplate    String   // Supports variables: {{studentName}}, {{parentName}}, {{schoolName}}, {{actionUrl}}
+  variables       String?  // JSON string array: ["studentName", "schoolName"]
+  isSystem        Boolean  @default(false)
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  @@unique([tenantId, templateCode])
+  @@index([tenantId])
+  @@index([channel])
+  @@map("notification_templates")
+}
+
+model NotificationQueueItem {
+  id               Int       @id @default(autoincrement())
+  tenantId         Int
+  userId           Int?
+  user             User?     @relation("UserNotifications", fields: [userId], references: [id], onDelete: SetNull)
+  recipientContact String    // Email address or phone number
+  recipientName    String?
+  channel          String    // EMAIL, SMS, IN_APP, PUSH
+  title            String?
+  content          String
+  status           String    @default("PENDING") // PENDING, PROCESSING, SENT, DELIVERED, FAILED
+  priority         String    @default("NORMAL")  // LOW, NORMAL, HIGH, URGENT
+  retryCount       Int       @default(0)
+  maxRetries       Int       @default(3)
+  sentAt           DateTime?
+  deliveredAt      DateTime?
+  failedReason     String?
+  readAt           DateTime? // for IN_APP notifications
+  metadata         String?   // JSON string
+  createdAt        DateTime  @default(now())
+  updatedAt        DateTime  @updatedAt
+
+  @@index([tenantId])
+  @@index([userId])
+  @@index([status])
+  @@index([channel])
+  @@index([priority])
+  @@map("notification_queue")
+}
+
+// ==================================================
+// REPORT & DOCUMENT GENERATION ENGINE (Blueprint Box 11)
+// ==================================================
+
+model ReportDefinition {
+  id            Int      @id @default(autoincrement())
+  tenantId      Int
+  code          String   // e.g. RPT_ACADEMIC_PERFORMANCE, RPT_ATTENDANCE_OVERVIEW, RPT_FEE_COLLECTION, RPT_ENROLLMENT_DEMOGRAPHICS
+  name          String
+  category      String   // ACADEMIC, ATTENDANCE, FINANCE, ENROLLMENT
+  description   String?
+  parameters    String?  // JSON array of filter definitions
+  defaultFormat String   @default("PDF") // PDF, EXCEL, CSV
+  isSystem      Boolean  @default(true)
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  @@unique([tenantId, code])
+  @@index([tenantId])
+  @@index([category])
+  @@map("report_definitions")
+}
+
+model GeneratedDocument {
+  id               Int      @id @default(autoincrement())
+  tenantId         Int
+  documentNumber   String   // DOC-2026-XXXX, RCP-2026-XXXX, TRN-2026-XXXX
+  documentType     String   // REPORT_CARD, TRANSCRIPT, FEE_RECEIPT, ENROLLMENT_CERTIFICATE, ATTENDANCE_SHEET
+  title            String
+  recipientId      Int?     // Student ID or Parent ID
+  recipientName    String
+  className        String?
+  academicTerm     String?  // '2025-2026 Term 1'
+  dataPayload      String   // JSON string of all computed academic grades, totals, breakdown
+  documentUrl      String?
+  fileFormat       String   @default("PDF") // PDF, EXCEL, CSV, JSON
+  verificationHash String?  // SHA-256 digital verification hash
+  status           String   @default("GENERATED") // GENERATED, ARCHIVED, REVOKED
+  generatedById    Int?
+  generatedAt      DateTime @default(now())
+  updatedAt        DateTime @updatedAt
+
+  @@unique([tenantId, documentNumber])
+  @@index([tenantId])
+  @@index([documentType])
+  @@index([recipientId])
+  @@index([status])
+  @@map("generated_documents")
+}
+
+// ==================================================
+// AI RECOMMENDATIONS & LEARNING DIAGNOSTICS (Blueprint Box 9 & 10)
+// ==================================================
+
+model AIDiagnosticReport {
+  id                  Int      @id @default(autoincrement())
+  tenantId            Int
+  studentId           Int
+  academicYear        String   @default("2026-2027")
+  term                String   @default("Term 1")
+  overallGpa          Float    @default(0.0)
+  attendanceRate      Float    @default(0.0) // 0 to 100 percentage
+  submissionRate      Float    @default(0.0) // 0 to 100 percentage
+  riskScore           Float    @default(0.0) // 0 to 100 scale (higher = higher risk)
+  riskCategory        String   @default("ON_TRACK") // HONORS_CANDIDATE, ON_TRACK, LOW_RISK, MODERATE_RISK, CRITICAL_RISK
+  predictedNextGpa    Float?
+  examPassProbability Float?
+  strengths           String?  @db.Text // JSON string array of strengths
+  learningGaps        String?  @db.Text // JSON string array of subject/topic gaps
+  diagnosticSummary   String?  @db.Text
+  diagnosticDetails   String?  @db.Text // JSON string of complete calculation breakdown
+  evaluatedById       Int?
+  evaluatedAt         DateTime @default(now())
+  createdAt           DateTime @default(now())
+  updatedAt           DateTime @updatedAt
+
+  @@index([tenantId])
+  @@index([studentId])
+  @@index([riskCategory])
+  @@index([riskScore])
+  @@map("ai_diagnostic_reports")
+}
+
+model AIStudyPlan {
+  id                   Int      @id @default(autoincrement())
+  tenantId             Int
+  studentId            Int
+  planTitle            String
+  academicGoal         String?
+  focusSubjects        String   @db.Text // JSON array: ["Mathematics", "Physics"]
+  weeklyTargetHours    Int      @default(10)
+  schedulePlan         String   @db.Text // JSON array of study time slots & topics
+  recommendedResources String?  @db.Text // JSON array of study resources/exercises
+  progressPercent      Float    @default(0.0)
+  status               String   @default("ACTIVE") // ACTIVE, IN_PROGRESS, COMPLETED, ARCHIVED
+  generatedById        Int?
+  createdAt            DateTime @default(now())
+  updatedAt            DateTime @updatedAt
+
+  @@index([tenantId])
+  @@index([studentId])
+  @@index([status])
+  @@map("ai_study_plans")
+}
+
+model AILearningIntervention {
+  id                 Int       @id @default(autoincrement())
+  tenantId           Int
+  studentId          Int
+  assignedTeacherId  Int?
+  title              String
+  triggerReason      String    // ATTENDANCE_DROP, GRADE_DROP, MISSING_ASSIGNMENTS, ACADEMIC_RISK
+  severity           String    @default("MEDIUM") // LOW, MEDIUM, HIGH, CRITICAL
+  actionStrategy     String    // 1-on-1 Remedial Session, Parent Conference, Peer Study Group, Tutoring
+  actionNotes        String?   @db.Text
+  status             String    @default("OPEN") // OPEN, IN_PROGRESS, RESOLVED, DISMISSED
+  resolvedAt         DateTime?
+  createdAt          DateTime  @default(now())
+  updatedAt          DateTime  @updatedAt
+
+  @@index([tenantId])
+  @@index([studentId])
+  @@index([severity])
+  @@index([status])
+  @@map("ai_learning_interventions")
+}
+
+model AISystemDiagnostic {
+  id              Int      @id @default(autoincrement())
+  tenantId        Int?
+  scanType        String   // FULL_ARCHITECTURE, DB_INTEGRITY, SECURITY_AUDIT, PERFORMANCE_OPTIMIZATION
+  healthScore     Int      // 0 to 100
+  status          String   @default("HEALTHY") // HEALTHY, WARNING, CRITICAL
+  summary         String
+  diagnosticData  String   @db.Text // JSON breakdown
+  recommendations String   @db.Text // JSON array of recommended actions
+  executedById    Int?
+  createdAt       DateTime @default(now())
+
+  @@index([scanType])
+  @@index([status])
+  @@map("ai_system_diagnostics")
+}
+
+// ==================================================
+// ENTERPRISE FINANCE & FEE MANAGEMENT (Blueprint Box 14 & 15)
+// ==================================================
+
+model FeeStructure {
+  id                Int              @id @default(autoincrement())
+  tenantId          Int
+  code              String           // e.g. TUITION_GRADE_10, LAB_FEE_SCIENCE, TRANSPORT_ZONE_A
+  name              String
+  category          String           @default("TUITION") // TUITION, LAB, TRANSPORT, BOARDING, EXAM, ACTIVITY
+  academicYear      String           @default("2026-2027")
+  term              String           @default("Term 1")
+  gradeLevel        Int?
+  amount            Float
+  currency          String           @default("USD")
+  dueDate           DateTime?
+  lateFeePercentage Float            @default(5.0)
+  isMandatory       Boolean          @default(true)
+  isActive          Boolean          @default(true)
+  createdAt         DateTime         @default(now())
+  updatedAt         DateTime         @updatedAt
+
+  invoices          StudentInvoice[]
+
+  @@unique([tenantId, code])
+  @@index([tenantId])
+  @@index([category])
+  @@index([isActive])
+  @@map("fee_structures")
+}
+
+model StudentInvoice {
+  id             Int                  @id @default(autoincrement())
+  tenantId       Int
+  invoiceNumber  String               // INV-2026-XXXXX
+  studentId      Int
+  feeStructureId Int?
+  feeStructure   FeeStructure?        @relation(fields: [feeStructureId], references: [id], onDelete: SetNull)
+  title          String
+  academicTerm   String               @default("2026-2027 Term 1")
+  amount         Float
+  discountAmount Float                @default(0.0)
+  netAmount      Float
+  paidAmount     Float                @default(0.0)
+  balanceDue     Float
+  dueDate        DateTime
+  status         String               @default("DUE") // DUE, PARTIAL, PAID, OVERDUE, CANCELLED
+  notes          String?              @db.Text
+  createdAt      DateTime             @default(now())
+  updatedAt      DateTime             @updatedAt
+
+  payments       PaymentTransaction[]
+
+  @@unique([tenantId, invoiceNumber])
+  @@index([tenantId])
+  @@index([studentId])
+  @@index([feeStructureId])
+  @@index([status])
+  @@map("student_invoices")
+}
+
+model PaymentTransaction {
+  id             Int            @id @default(autoincrement())
+  tenantId       Int
+  invoiceId      Int
+  invoice        StudentInvoice @relation(fields: [invoiceId], references: [id], onDelete: Cascade)
+  receiptNumber  String         // RCP-2026-XXXXX
+  amountPaid     Float
+  paymentMethod  String         @default("BANK_TRANSFER") // STRIPE, PAYPAL, BANK_TRANSFER, CASH, CHEQUE
+  transactionRef String?
+  gatewayStatus  String         @default("SUCCESS") // SUCCESS, PENDING, FAILED, REFUNDED
+  paidAt         DateTime       @default(now())
+  receivedById   Int?
+  notes          String?        @db.Text
+  createdAt      DateTime       @default(now())
+
+  @@unique([tenantId, receiptNumber])
+  @@index([tenantId])
+  @@index([invoiceId])
+  @@index([gatewayStatus])
+  @@map("payment_transactions")
+}
+
+model SchoolExpense {
+  id            Int      @id @default(autoincrement())
+  tenantId      Int
+  expenseNumber String   // EXP-2026-XXXXX
+  category      String   // UTILITIES, FACILITIES, PAYROLL, LAB_SUPPLIES, TECHNOLOGY, MARKETING, TRANSPORT
+  title         String
+  amount        Float
+  currency      String   @default("USD")
+  vendorName    String?
+  paymentStatus String   @default("PAID") // PAID, PENDING, APPROVED
+  incurredAt    DateTime @default(now())
+  recordedById  Int?
+  notes         String?  @db.Text
+  createdAt     DateTime @default(now())
+
+  @@unique([tenantId, expenseNumber])
+  @@index([tenantId])
+  @@index([category])
+  @@index([paymentStatus])
+  @@map("school_expenses")
+}
+
+// ==================================================
+// COMMUNICATION, MESSAGING & CHAT ENGINE (BOX 13)
+// ==================================================
+
+model ChatChannel {
+  id          Int             @id @default(autoincrement())
+  tenantId    Int
+  channelCode String          // GEN-ANNOUNCEMENTS, FACULTY-LOUNGE, CLASS-10A, DM-1-4
+  name        String
+  type        String          @default("GROUP") // DIRECT, GROUP, ANNOUNCEMENT, CLASS
+  description String?
+  createdById Int?
+  isArchived  Boolean         @default(false)
+  createdAt   DateTime        @default(now())
+  updatedAt   DateTime        @updatedAt
+
+  members     ChannelMember[]
+  messages    ChatMessage[]
+
+  @@unique([tenantId, channelCode])
+  @@index([tenantId])
+  @@index([type])
+  @@map("chat_channels")
+}
+
+model ChannelMember {
+  id         Int         @id @default(autoincrement())
+  tenantId   Int
+  channelId  Int
+  channel    ChatChannel @relation(fields: [channelId], references: [id], onDelete: Cascade)
+  userId     Int
+  role       String      @default("MEMBER") // ADMIN, MODERATOR, MEMBER
+  lastReadAt DateTime?
+  joinedAt   DateTime    @default(now())
+  createdAt  DateTime    @default(now())
+
+  @@unique([channelId, userId])
+  @@index([tenantId])
+  @@index([userId])
+  @@map("channel_members")
+}
+
+model ChatMessage {
+  id              Int         @id @default(autoincrement())
+  tenantId        Int
+  channelId       Int
+  channel         ChatChannel @relation(fields: [channelId], references: [id], onDelete: Cascade)
+  senderId        Int
+  senderName      String?
+  senderRole      String?
+  messageType     String      @default("TEXT") // TEXT, ANNOUNCEMENT, FILE, EMERGENCY_ALERT
+  content         String      @db.Text
+  attachmentUrl   String?
+  priority        String      @default("NORMAL") // NORMAL, HIGH, URGENT
+  isDeleted       Boolean     @default(false)
+  smsDispatched   Boolean     @default(false)
+  emailDispatched Boolean     @default(false)
+  createdAt       DateTime    @default(now())
+  updatedAt       DateTime    @updatedAt
+
+  @@index([tenantId])
+  @@index([channelId])
+  @@index([senderId])
+  @@index([createdAt])
+  @@map("chat_messages")
+}
+
+model BroadcastAnnouncement {
+  id             Int      @id @default(autoincrement())
+  tenantId       Int
+  title          String
+  content        String   @db.Text
+  category       String   @default("GENERAL") // GENERAL, ACADEMIC, EMERGENCY, EVENT, ADMINISTRATIVE
+  priority       String   @default("NORMAL") // NORMAL, HIGH, EMERGENCY
+  targetAudience String   @default("ALL") // ALL, TEACHERS, PARENTS, STUDENTS, STAFF
+  publishedById  Int?
+  isPublished    Boolean  @default(true)
+  publishedAt    DateTime @default(now())
+  smsSentCount   Int      @default(0)
+  emailSentCount Int      @default(0)
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  @@index([tenantId])
+  @@index([category])
+  @@index([priority])
+  @@index([targetAudience])
+  @@map("broadcast_announcements")
+}
+
+// ==================================================
+// ENTERPRISE TENANT & INSTITUTION REGISTRATION (Master Blueprint Section 5 & Onboarding Platform)
+// ==================================================
+
+model InstitutionRegistration {
+  id                      Int       @id @default(autoincrement())
+  tenantId                Int?
+  tenant                  Tenant?   @relation(fields: [tenantId], references: [id], onDelete: SetNull)
+
+  // Tenant Identification System
+  tenantUid               String    @unique // e.g. TEN-2026-000145
+  tenantCode              String    @unique // e.g. GBS-ACC-0145
+  institutionId           String    @unique // e.g. INS-2026-001245
+  subscriptionId          String    @unique // e.g. SUB-2026-000145
+
+  // Institution Information
+  institutionName         String
+  institutionType         String    // K-12 School, International Academy, University / College, Boarding School, Vocational Institute
+  country                 String
+  region                  String
+  city                    String
+  physicalAddress         String
+  gpsLocation             String?
+  officialEmail           String
+  officialPhone           String
+  website                 String?
+  registrationNumber      String
+  businessLicenseNumber   String
+  taxIdentificationNumber String
+  institutionLogo         String?
+
+  // Authorized Representative
+  repFullName             String
+  repPosition             String
+  repEmail                String
+  repPhone                String
+
+  // Administrator Information
+  adminName               String
+  adminEmail              String
+  adminPhone              String
+  adminPasswordHash       String
+
+  // Compliance
+  termsAccepted           Boolean   @default(false)
+  privacyAccepted         Boolean   @default(false)
+  dataProcessingConsent   Boolean   @default(false)
+
+  // Status & Lifecycle
+  status                  String    @default("PENDING") // PENDING, VERIFICATION_REQUIRED, APPROVED, PROVISIONING, ACTIVE_TRIAL, REJECTED
+  rejectionReason         String?
+  reviewNotes             String?
+  approvedBy              Int?
+  approvedAt              DateTime?
+  createdAt               DateTime  @default(now())
+  updatedAt               DateTime  @updatedAt
+
+  @@index([status])
+  @@index([officialEmail])
+  @@index([tenantCode])
+  @@map("institution_registrations")
+}
+
+// ==================================================
+// USER REGISTRATION & QUALIFICATION PROFILES (Master Blueprint Section 5 & 6)
+// ==================================================
+
+model UserRegistrationProfile {
+  id                    Int       @id @default(autoincrement())
+  userId                Int       @unique
+  user                  User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  role                  UserRole
+  title                 String?   // Mr., Mrs., Dr., Prof.
+  phone                 String?
+  whatsappPhone         String?
+  nationalId            String?
+  employeeId            String?
+  department            String?
+  specialization        String?
+  highestQualification  String?
+  experienceYears       Int?      @default(0)
+  dateOfBirth           DateTime?
+  gender                String?
+  bloodGroup            String?
+  medicalNotes          String?
+  targetGrade           String?
+  previousSchool        String?
+  previousGpa           String?
+  emergencyContactName  String?
+  emergencyContactPhone String?
+  residentialAddress    String?
+  city                  String?
+  country               String?
+  relationship          String?
+  linkedStudentId       String?
+  termsAccepted         Boolean   @default(true)
+  verificationStatus    String    @default("PENDING") // PENDING, VERIFIED, REJECTED
+  verifiedBy            Int?
+  verifiedAt            DateTime?
+  verificationNotes     String?
+  createdAt             DateTime  @default(now())
+  updatedAt             DateTime  @updatedAt
+
+  @@index([role])
+  @@index([verificationStatus])
+  @@map("user_registration_profiles")
+}

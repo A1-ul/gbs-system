@@ -1,0 +1,17 @@
+/* ===================================================
+   GBS ENTERPRISE STAFF & OPERATIONS PORTAL STYLING
+   MASTER BLUEPRINT ROLE 7 • PRODUCTION WORKSPACE
+   =================================================== */
+
+@import "../teacher/TeacherDashboard.css";
+
+.staff-priority-pill {
+  padding: 3px 8px;
+  border-radius: 6px;
+  font-size: 0.7rem;
+  font-weight: 800;
+  text-transform: uppercase;
+}
+
+.priority-high { background: rgba(239, 68, 68, 0.2); color: #f87171; border: 1px solid rgba(239, 68, 68, 0.4); }
+.priority-normal { background: rgba(59, 130, 246, 0.2); color: #60a5fa; border: 1px solid rgba(59, 130, 246, 0.4); }

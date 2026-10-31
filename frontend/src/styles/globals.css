@@ -1,0 +1,136 @@
+* {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+}
+
+html,
+body,
+#root {
+    width: 100%;
+    height: 100%;
+}
+
+body {
+
+    font-family:
+        Inter,
+        Arial,
+        sans-serif;
+
+    background:
+        var(--color-background);
+
+    color:
+        var(--color-text);
+
+    line-height: 1.5;
+}
+
+a {
+
+    color: inherit;
+
+    text-decoration: none;
+}
+
+img {
+
+    max-width: 100%;
+
+    display: block;
+}
+
+button,
+input,
+select,
+textarea {
+
+    font: inherit;
+}
+
+ul,
+ol {
+
+    list-style: none;
+}
+
+/* Button Action Signs & Interactive Feedback */
+button,
+.role-action-btn,
+.role-tab-btn,
+.dev-tab-btn,
+.btn-primary,
+.btn-secondary,
+.filter-btn {
+    transition: transform 0.12s cubic-bezier(0.4, 0, 0.2, 1), box-shadow 0.15s ease, filter 0.15s ease, opacity 0.15s ease;
+    cursor: pointer;
+    position: relative;
+    user-select: none;
+}
+
+button:hover,
+.role-action-btn:hover,
+.role-tab-btn:hover,
+.btn-primary:hover {
+    filter: brightness(1.08);
+}
+
+button:active,
+.role-action-btn:active,
+.role-tab-btn:active,
+.dev-tab-btn:active,
+.btn-primary:active,
+.btn-secondary:active,
+.filter-btn:active {
+    transform: scale(0.96) translateY(1px) !important;
+    filter: brightness(0.92) contrast(1.1) !important;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.4) !important;
+}
+
+button:focus-visible,
+.role-action-btn:focus-visible {
+    outline: 2px solid #38bdf8;
+    outline-offset: 2px;
+}
+
+/* Global High-Assurance Delivery Notification Toasts */
+.gbs-toast-container {
+    position: fixed;
+    top: 20px;
+    right: 20px;
+    z-index: 999999;
+    max-width: 440px;
+    pointer-events: none;
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+}
+
+.gbs-toast-card {
+    pointer-events: auto;
+    background: #0f172a;
+    border-radius: 12px;
+    padding: 14px 18px;
+    box-shadow: 0 12px 30px rgba(0, 0, 0, 0.5), 0 0 0 1px rgba(255, 255, 255, 0.1);
+    display: flex;
+    align-items: flex-start;
+    gap: 12px;
+    animation: slideInDown 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.gbs-toast-card.success {
+    border-left: 4px solid #10b981;
+}
+
+.gbs-toast-card.error {
+    border-left: 4px solid #ef4444;
+}
+
+.gbs-toast-card.warning {
+    border-left: 4px solid #f59e0b;
+}
+
+.gbs-toast-card.info {
+    border-left: 4px solid #38bdf8;
+}

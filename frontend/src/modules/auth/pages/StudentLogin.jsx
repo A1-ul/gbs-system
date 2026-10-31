@@ -1,0 +1,96 @@
+import React, { useState } from "react";
+import { Link, useNavigate } from "react-router-dom";
+import { login } from "../api/auth.api";
+import "./RoleLoginPage.css";
+
+export default function StudentLogin() {
+  const navigate = useNavigate();
+  const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState(null);
+
+  const handleSubmit = async (e) => {
+    e.preventDefault();
+    setLoading(true);
+    setError(null);
+    try {
+      const res = await login({ email: email.trim(), password, portalRole: "STUDENT" });
+      if (res?.status === "success") {
+        navigate("/portal/student/dashboard");
+      } else {
+        throw new Error(res?.message || "Student authentication failed");
+      }
+    } catch (err) {
+      setError(err?.response?.data?.message || err?.message || "Invalid credentials");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  return (
+    <div className="role-login-container">
+      <div 
+        className="role-login-bg" 
+        style={{ backgroundImage: `url('/images/student_login_bg.jpg')` }}
+      ></div>
+      <div className="role-login-overlay"></div>
+      <div className="role-login-card">
+        <div className="role-login-crest-box">
+          <img 
+            src="/assets/gbs_crest_badge.jpg" 
+            alt="GBS Crest" 
+            className="role-login-crest-logo" 
+          />
+          <span className="role-login-brand-name">GBS SCHOOL MANAGEMENT SYSTEM</span>
+        </div>
+        <div className="role-badge-pill" style={{ borderColor: "rgba(139, 92, 246, 0.4)", color: "#c084fc", background: "rgba(139, 92, 246, 0.15)" }}>
+          🎓 STUDENT LEARNING PORTAL
+        </div>
+        <h2 className="role-login-title">STUDENT SIGN IN</h2>
+        <p className="role-login-sub">GBS School Management System • Results, Classes & Timetable</p>
+        <form onSubmit={handleSubmit} className="role-login-form">
+          <div className="form-group">
+            <label htmlFor="student-email">Student Email / Admission No.</label>
+            <input 
+              id="student-email" 
+              type="text" 
+              required 
+              placeholder="Enter student email" 
+              value={email} 
+              onChange={(e) => setEmail(e.target.value)} 
+            />
+          </div>
+          <div className="form-group">
+            <label htmlFor="student-password">Account Password</label>
+            <input 
+              id="student-password" 
+              type="password" 
+              required 
+              placeholder="Enter password" 
+              value={password} 
+              onChange={(e) => setPassword(e.target.value)} 
+            />
+          </div>
+          {error && <div className="error-alert" style={{ color: "#ef4444", marginBottom: "12px", fontSize: "0.85rem" }}>{error}</div>}
+          <button type="submit" className="role-login-submit" style={{ background: "linear-gradient(135deg, #8b5cf6, #7c3aed)" }} disabled={loading}>
+            {loading ? "VERIFYING STUDENT CREDENTIALS..." : "ACCESS STUDENT PORTAL"}
+          </button>
+        </form>
+        <div style={{ textAlign: "center", margin: "12px 0" }}>
+          <Link to="/signup/student" style={{ color: "#c084fc", fontSize: "0.85rem", textDecoration: "none", fontWeight: "600" }}>
+            ✨ New student? Register / Apply for Enrollment →
+          </Link>
+        </div>
+        <div className="role-switch-grid">
+          <Link to="/login/admin" className="portal-switch-link">Admin</Link>
+          <Link to="/login/teacher" className="portal-switch-link">Teacher</Link>
+          <Link to="/login/parent" className="portal-switch-link">Parent</Link>
+          <Link to="/login/accountant" className="portal-switch-link">Accountant</Link>
+          <Link to="/login/staff" className="portal-switch-link">Staff</Link>
+        </div>
+        <Link to="/login" className="main-portal-link">← Return to Main Portal</Link>
+      </div>
+    </div>
+  );
+}

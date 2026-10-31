@@ -1,0 +1,5 @@
+User-agent: *
+Allow: /
+Disallow: /api/
+Disallow: /developer-control-center
+Sitemap: https://gbs.enterprise/sitemap.xml

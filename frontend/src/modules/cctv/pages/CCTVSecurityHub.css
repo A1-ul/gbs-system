@@ -1,0 +1,496 @@
+.cctv-container {
+  padding: 2rem;
+  background-color: #0b0f19;
+  min-height: 100vh;
+  color: #e2e8f0;
+  font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+}
+
+.cctv-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  margin-bottom: 1.5rem;
+  flex-wrap: wrap;
+  gap: 1rem;
+}
+
+.cctv-badge {
+  display: inline-block;
+  padding: 0.25rem 0.75rem;
+  border-radius: 9999px;
+  background: rgba(239, 68, 68, 0.15);
+  color: #f87171;
+  font-size: 0.75rem;
+  font-weight: 700;
+  letter-spacing: 0.05em;
+  margin-bottom: 0.5rem;
+  border: 1px solid rgba(239, 68, 68, 0.3);
+}
+
+.cctv-header h1 {
+  font-size: 2rem;
+  font-weight: 800;
+  color: #ffffff;
+  margin: 0 0 0.5rem 0;
+  letter-spacing: -0.02em;
+}
+
+.cctv-header p {
+  color: #94a3b8;
+  font-size: 0.95rem;
+  margin: 0;
+}
+
+.cctv-hero-banner {
+  border-radius: 1rem;
+  padding: 2.5rem;
+  background-size: cover;
+  background-position: center;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.5);
+  margin-bottom: 2rem;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 2rem;
+}
+
+.cctv-alert-banner {
+  padding: 0.85rem 1.25rem;
+  background: rgba(34, 197, 94, 0.15);
+  border: 1px solid rgba(34, 197, 94, 0.4);
+  color: #4ade80;
+  border-radius: 0.5rem;
+  margin-bottom: 1.5rem;
+  font-weight: 600;
+  font-size: 0.9rem;
+}
+
+.cctv-hud-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  gap: 1.25rem;
+  margin-bottom: 2rem;
+}
+
+.cctv-hud-grid .hud-card {
+  background: #111827;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 0.75rem;
+  padding: 1.25rem;
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.3);
+}
+
+.cctv-hud-grid .hud-icon {
+  font-size: 2rem;
+  background: rgba(255, 255, 255, 0.05);
+  width: 52px;
+  height: 52px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 0.5rem;
+}
+
+.cctv-hud-grid .hud-info {
+  display: flex;
+  flex-direction: column;
+}
+
+.cctv-hud-grid .hud-val {
+  font-size: 1.5rem;
+  font-weight: 800;
+  color: #ffffff;
+}
+
+.cctv-hud-grid .hud-label {
+  font-size: 0.78rem;
+  color: #94a3b8;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  margin-top: 2px;
+}
+
+.cctv-hud-grid .hud-sub {
+  font-size: 0.72rem;
+  color: #64748b;
+  margin-top: 2px;
+}
+
+.cctv-hud-grid .hud-card.success .hud-val { color: #10b981; }
+.cctv-hud-grid .hud-card.warning .hud-val { color: #f87171; }
+.cctv-hud-grid .hud-card.liveness .hud-val { color: #38bdf8; }
+
+.cctv-video-wall-card {
+  background: #111827;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 0.75rem;
+  overflow: hidden;
+  box-shadow: 0 4px 10px rgba(0, 0, 0, 0.4);
+  margin-bottom: 2rem;
+}
+
+.wall-header {
+  padding: 1.25rem 1.5rem;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.wall-header h3 {
+  margin: 0;
+  font-size: 1.15rem;
+  color: #f8fafc;
+}
+
+.rec-indicator {
+  font-size: 0.75rem;
+  font-weight: 700;
+  color: #ef4444;
+  letter-spacing: 0.05em;
+}
+
+.cctv-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
+  gap: 1.25rem;
+  padding: 1.5rem;
+  background: #0f172a;
+}
+
+.camera-box {
+  background: #1e293b;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 0.5rem;
+  overflow: hidden;
+  cursor: pointer;
+  transition: all 0.25s ease;
+}
+
+.camera-box:hover {
+  border-color: #3b82f6;
+  box-shadow: 0 6px 15px rgba(0, 0, 0, 0.4);
+}
+
+.camera-box.selected-cam {
+  border-color: #38bdf8;
+  box-shadow: 0 0 12px rgba(56, 189, 248, 0.4);
+}
+
+.camera-viewfinder {
+  position: relative;
+  height: 190px;
+  background: #0a0f1d;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  padding: 0.75rem;
+}
+
+.cam-overlay-top, .cam-overlay-bottom {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  z-index: 2;
+}
+
+.cam-code {
+  font-family: monospace;
+  font-size: 0.75rem;
+  font-weight: 800;
+  color: #f1f5f9;
+  background: rgba(0, 0, 0, 0.6);
+  padding: 0.15rem 0.45rem;
+  border-radius: 3px;
+}
+
+.cam-status {
+  font-size: 0.72rem;
+  font-weight: 800;
+  padding: 0.2rem 0.5rem;
+  border-radius: 3px;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.cam-status.recording { background: rgba(239, 68, 68, 0.3); color: #f87171; border: 1px solid rgba(239, 68, 68, 0.5); }
+.cam-status.online { background: rgba(16, 185, 129, 0.2); color: #34d399; }
+.cam-status.maintenance { background: rgba(245, 158, 11, 0.2); color: #fbbf24; }
+.cam-status.offline { background: rgba(100, 116, 139, 0.3); color: #94a3b8; }
+
+.rec-dot {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: #ef4444;
+  box-shadow: 0 0 6px #ef4444;
+  animation: blink 1s infinite alternate;
+}
+
+@keyframes blink {
+  from { opacity: 0.3; }
+  to { opacity: 1; }
+}
+
+.viewfinder-content {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-grow: 1;
+}
+
+.reticle-box {
+  position: relative;
+  width: 140px;
+  height: 80px;
+  border: 1px dashed rgba(56, 189, 248, 0.4);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.reticle-corner {
+  position: absolute;
+  width: 8px;
+  height: 8px;
+  border-color: #38bdf8;
+  border-style: solid;
+}
+
+.reticle-corner.tl { top: -2px; left: -2px; border-width: 2px 0 0 2px; }
+.reticle-corner.tr { top: -2px; right: -2px; border-width: 2px 2px 0 0; }
+.reticle-corner.bl { bottom: -2px; left: -2px; border-width: 0 0 2px 2px; }
+.reticle-corner.br { bottom: -2px; right: -2px; border-width: 0 2px 2px 0; }
+
+.ai-face-tag {
+  font-size: 0.65rem;
+  font-weight: 700;
+  color: #38bdf8;
+  background: rgba(15, 23, 42, 0.7);
+  padding: 0.15rem 0.35rem;
+  border-radius: 2px;
+  letter-spacing: 0.05em;
+}
+
+.cam-loc {
+  font-size: 0.75rem;
+  color: #e2e8f0;
+  background: rgba(0, 0, 0, 0.6);
+  padding: 0.15rem 0.45rem;
+  border-radius: 3px;
+}
+
+.cam-res {
+  font-size: 0.7rem;
+  color: #94a3b8;
+  font-family: monospace;
+}
+
+.camera-footer {
+  padding: 0.85rem 1rem;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  background: #111827;
+  border-top: 1px solid rgba(255, 255, 255, 0.06);
+}
+
+.footer-title strong {
+  display: block;
+  font-size: 0.88rem;
+  color: #ffffff;
+}
+
+.footer-title span {
+  font-size: 0.75rem;
+  color: #64748b;
+  font-family: monospace;
+}
+
+.camera-quick-controls {
+  display: flex;
+  gap: 0.25rem;
+}
+
+.btn-state {
+  border: 1px solid rgba(255, 255, 255, 0.15);
+  background: #1f2937;
+  color: #94a3b8;
+  padding: 0.2rem 0.45rem;
+  font-size: 0.68rem;
+  font-weight: 700;
+  border-radius: 3px;
+  cursor: pointer;
+}
+
+.btn-state.active {
+  background: #2563eb;
+  color: #ffffff;
+  border-color: #2563eb;
+}
+
+.btn-state.maint:hover {
+  background: #f59e0b;
+  color: #000;
+}
+
+.cctv-events-ledger-card {
+  background: #111827;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 0.75rem;
+  overflow: hidden;
+  box-shadow: 0 4px 10px rgba(0, 0, 0, 0.4);
+}
+
+.events-header {
+  padding: 1.25rem 1.5rem;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 1rem;
+}
+
+.events-header h3 {
+  margin: 0;
+  font-size: 1.15rem;
+  color: #ffffff;
+}
+
+.sub-text {
+  font-size: 0.8rem;
+  color: #94a3b8;
+}
+
+.events-filter-bar {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.events-filter-bar label {
+  font-size: 0.85rem;
+  color: #94a3b8;
+}
+
+.events-filter-bar select {
+  background: #1f2937;
+  color: #ffffff;
+  border: 1px solid rgba(255, 255, 255, 0.15);
+  padding: 0.4rem 0.75rem;
+  border-radius: 0.375rem;
+  font-size: 0.85rem;
+}
+
+.cctv-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.88rem;
+}
+
+.cctv-table th {
+  background: #162032;
+  color: #94a3b8;
+  padding: 0.85rem 1rem;
+  text-align: left;
+  font-size: 0.78rem;
+  text-transform: uppercase;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+.cctv-table td {
+  padding: 0.9rem 1rem;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+  color: #cbd5e1;
+}
+
+.flagged-row {
+  background: rgba(239, 68, 68, 0.08);
+}
+
+.event-code {
+  font-family: monospace;
+  font-weight: 700;
+  color: #38bdf8;
+}
+
+.role-pill {
+  padding: 0.15rem 0.45rem;
+  border-radius: 4px;
+  font-size: 0.72rem;
+  font-weight: 700;
+  background: #1e293b;
+  color: #e2e8f0;
+}
+
+.score-badge {
+  color: #4ade80;
+  font-weight: 700;
+  font-family: monospace;
+}
+
+.liveness-badge {
+  color: #38bdf8;
+  font-weight: 700;
+  font-family: monospace;
+}
+
+.access-pill {
+  display: inline-block;
+  padding: 0.2rem 0.55rem;
+  border-radius: 9999px;
+  font-size: 0.72rem;
+  font-weight: 800;
+}
+
+.access-pill.access_granted { background: rgba(34, 197, 94, 0.2); color: #4ade80; }
+.access-pill.access_denied { background: rgba(239, 68, 68, 0.2); color: #f87171; }
+.access-pill.intrusion_alert { background: rgba(220, 38, 38, 0.3); color: #fca5a5; font-weight: 900; }
+
+.btn-flag {
+  border: 1px solid rgba(255, 255, 255, 0.15);
+  background: #1f2937;
+  color: #94a3b8;
+  padding: 0.25rem 0.6rem;
+  border-radius: 4px;
+  font-size: 0.72rem;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.btn-flag.active {
+  background: #dc2626;
+  color: #ffffff;
+  border-color: #dc2626;
+}
+
+.btn-scan {
+  background: #10b981;
+  color: #ffffff;
+  border: none;
+  padding: 0.65rem 1.25rem;
+  border-radius: 0.5rem;
+  font-weight: 700;
+  font-size: 0.9rem;
+  cursor: pointer;
+}
+
+.btn-scan:hover { background: #059669; }
+
+.cctv-loading, .cctv-empty {
+  padding: 3rem;
+  text-align: center;
+  color: #94a3b8;
+}
+
+@media (max-width: 900px) {
+  .cctv-hero-banner { flex-direction: column; }
+  .hero-photo-showcase-frame { width: 100%; }
+}

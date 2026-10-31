@@ -1,0 +1,187 @@
+.hr-page-container {
+  min-height: 100vh;
+  background: #0f172a;
+  color: #f8fafc;
+  font-family: 'Inter', system-ui, sans-serif;
+}
+
+.hr-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 1rem 2rem;
+  background: rgba(30, 41, 59, 0.8);
+  border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+.hr-header h2 { font-size: 1.1rem; margin: 0; }
+.hr-header p { font-size: 0.7rem; color: #94a3b8; margin: 0.2rem 0 0 0; }
+.hr-header button { padding: 0.5rem 1rem; background: rgba(255, 255, 255, 0.1); border: none; border-radius: 8px; color: #fff; cursor: pointer; }
+
+/* Real-Life HR & Faculty Progression Hero Banner */
+.hr-hero-banner {
+  margin: 1.5rem auto 0;
+  max-width: 950px;
+  border-radius: 18px;
+  padding: 32px 36px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  border: 1px solid rgba(16, 185, 129, 0.35);
+  box-shadow: 0 16px 36px -10px rgba(0, 0, 0, 0.5), 0 0 24px rgba(16, 185, 129, 0.12);
+  background-size: cover;
+  background-position: center;
+  flex-wrap: wrap;
+  gap: 24px;
+}
+
+.hr-hero-banner .hero-pill-badge {
+  display: inline-block;
+  background: rgba(16, 185, 129, 0.2);
+  border: 1px solid rgba(52, 211, 153, 0.5);
+  color: #34d399;
+  font-size: 0.75rem;
+  font-weight: 700;
+  letter-spacing: 1px;
+  padding: 4px 12px;
+  border-radius: 20px;
+  margin-bottom: 12px;
+}
+
+.hr-hero-banner .hero-text-block h2 {
+  font-size: 1.85rem;
+  font-weight: 800;
+  color: #ffffff;
+  margin: 0 0 8px 0;
+}
+
+.hr-hero-banner .hero-text-block p {
+  font-size: 0.95rem;
+  color: #cbd5e1;
+  max-width: 550px;
+  line-height: 1.5;
+  margin: 0;
+}
+
+.hero-photo-showcase-frame {
+  flex-shrink: 0;
+  width: 300px;
+  border-radius: 14px;
+  overflow: hidden;
+  border: 1px solid rgba(16, 185, 129, 0.4);
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.5), 0 0 20px rgba(16, 185, 129, 0.15);
+  background: rgba(15, 23, 42, 0.85);
+  backdrop-filter: blur(8px);
+}
+
+.showcase-photo-wrapper {
+  position: relative;
+  width: 100%;
+  height: 160px;
+  overflow: hidden;
+}
+
+.real-life-dashboard-photo {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  transition: transform 0.4s ease;
+}
+
+.hero-photo-showcase-frame:hover .real-life-dashboard-photo {
+  transform: scale(1.05);
+}
+
+.showcase-verified-badge {
+  position: absolute;
+  top: 10px;
+  left: 10px;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  background: rgba(15, 23, 42, 0.85);
+  border: 1px solid rgba(16, 185, 129, 0.5);
+  padding: 4px 10px;
+  border-radius: 20px;
+  font-size: 0.68rem;
+  font-weight: 700;
+  color: #34d399;
+  letter-spacing: 0.05em;
+}
+
+.live-camera-pulse {
+  width: 7px;
+  height: 7px;
+  background-color: #10b981;
+  border-radius: 50%;
+  box-shadow: 0 0 8px #10b981;
+  animation: cameraPulse 2s infinite ease-in-out;
+}
+
+@keyframes cameraPulse {
+  0%, 100% { opacity: 1; transform: scale(1); }
+  50% { opacity: 0.4; transform: scale(0.85); }
+}
+
+.showcase-photo-caption {
+  padding: 10px 14px;
+  font-size: 0.76rem;
+  color: #cbd5e1;
+  font-weight: 600;
+  line-height: 1.35;
+  background: rgba(15, 23, 42, 0.95);
+  border-top: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+.hr-main {
+  padding: 2rem;
+  max-width: 950px;
+  margin: 0 auto;
+}
+
+.hr-card {
+  background: rgba(30, 41, 59, 0.6);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 16px;
+  padding: 1.75rem;
+  margin-bottom: 1.5rem;
+}
+
+.calc-btn {
+  width: 100%;
+  padding: 0.85rem;
+  background: linear-gradient(135deg, #10b981, #047857);
+  border: none;
+  border-radius: 10px;
+  color: #fff;
+  font-weight: 700;
+  font-size: 0.9rem;
+  cursor: pointer;
+  margin-top: 1rem;
+}
+
+.hr-result-card {
+  background: rgba(30, 41, 59, 0.8);
+  border: 1px solid #10b981;
+  border-radius: 16px;
+  padding: 1.5rem;
+}
+
+.eval-grid {
+  display: flex;
+  gap: 1.5rem;
+  margin-top: 1rem;
+}
+
+.eval-box {
+  flex: 1;
+  background: #0f172a;
+  padding: 1rem;
+  border-radius: 10px;
+  text-align: center;
+}
+
+.eval-box .lbl { display: block; font-size: 0.75rem; color: #94a3b8; margin-bottom: 0.25rem; }
+.eval-box .val { font-size: 1.25rem; font-weight: 800; }
+.eval-box .val.highlight { color: #38bdf8; }
+.eval-box .val.total { color: #34d399; font-size: 1.5rem; }

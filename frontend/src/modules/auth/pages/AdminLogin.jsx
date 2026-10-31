@@ -1,0 +1,94 @@
+import React, { useState } from "react";
+import { Link, useNavigate } from "react-router-dom";
+import { login } from "../api/auth.api";
+import "./RoleLoginPage.css";
+
+export default function AdminLogin() {
+  const navigate = useNavigate();
+  const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState(null);
+
+  const handleSubmit = async (e) => {
+    e.preventDefault();
+    setLoading(true);
+    setError(null);
+    try {
+      const res = await login({ email: email.trim(), password, portalRole: "ADMIN" });
+      if (res?.status === "success") {
+        navigate("/portal/admin/dashboard");
+      } else {
+        throw new Error(res?.message || "Admin authentication failed");
+      }
+    } catch (err) {
+      setError(err?.response?.data?.message || err?.message || "Invalid credentials");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  return (
+    <div className="role-login-container">
+      <div 
+        className="role-login-bg" 
+        style={{ backgroundImage: `url('/images/admin_login_bg.jpg')` }}
+      ></div>
+      <div className="role-login-overlay"></div>
+      <div className="role-login-card">
+        <div className="role-login-crest-box">
+          <img 
+            src="/assets/gbs_crest_badge.jpg" 
+            alt="GBS Crest" 
+            className="role-login-crest-logo" 
+          />
+          <span className="role-login-brand-name">GBS SCHOOL MANAGEMENT SYSTEM</span>
+        </div>
+        <div className="role-badge-pill">🎓 HEADMASTER EXECUTIVE PORTAL</div>
+        <h2 className="role-login-title">HEADMASTER SIGN IN</h2>
+        <p className="role-login-sub">GBS School Management System Enterprise Executive Suite</p>
+        <form onSubmit={handleSubmit} className="role-login-form">
+          <div className="form-group">
+            <label htmlFor="admin-email">Headmaster Email / Staff ID</label>
+            <input 
+              id="admin-email" 
+              type="text" 
+              required 
+              placeholder="Enter headmaster email" 
+              value={email} 
+              onChange={(e) => setEmail(e.target.value)} 
+            />
+          </div>
+          <div className="form-group">
+            <label htmlFor="admin-password">Security Password</label>
+            <input 
+              id="admin-password" 
+              type="password" 
+              required 
+              placeholder="Enter password" 
+              value={password} 
+              onChange={(e) => setPassword(e.target.value)} 
+            />
+          </div>
+          {error && <div className="error-alert" style={{ color: "#ef4444", marginBottom: "12px", fontSize: "0.85rem" }}>{error}</div>}
+          <button type="submit" className="role-login-submit" disabled={loading}>
+            {loading ? "VERIFYING HEADMASTER CREDENTIALS..." : "ACCESS HEADMASTER PORTAL"}
+          </button>
+        </form>
+        <div style={{ textAlign: "center", margin: "12px 0" }}>
+          <Link to="/signup/institution" style={{ color: "#60a5fa", fontSize: "0.85rem", textDecoration: "none", fontWeight: "600" }}>
+            🏛️ New School / Institution? Onboard Your Institution →
+          </Link>
+        </div>
+        <div className="role-switch-grid">
+          <Link to="/login/teacher" className="portal-switch-link">Teacher</Link>
+          <Link to="/login/student" className="portal-switch-link">Student</Link>
+          <Link to="/login/parent" className="portal-switch-link">Parent</Link>
+          <Link to="/login/accountant" className="portal-switch-link">Accountant</Link>
+          <Link to="/login/staff" className="portal-switch-link">Staff</Link>
+        </div>
+        <Link to="/login" className="main-portal-link">← Return to Main Portal</Link>
+      </div>
+    </div>
+  );
+}

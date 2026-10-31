@@ -1,0 +1,22 @@
+{
+  "watch": [
+    "src"
+  ],
+
+  "ext": "js,json",
+
+  "ignore": [
+    "node_modules",
+    "logs",
+    "uploads",
+    "storage",
+    "backups",
+    "coverage",
+    "prisma/migrations",
+    "src/generated/prisma"
+  ],
+
+  "delay": "1000",
+
+  "exec": "node src/core/server.js"
+}

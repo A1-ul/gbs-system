@@ -1,0 +1,16 @@
+/* ===================================================
+   GBS ENTERPRISE ACCOUNTANT & BURSAR PORTAL STYLING
+   MASTER BLUEPRINT ROLE 6 • PRODUCTION WORKSPACE
+   =================================================== */
+
+@import "../teacher/TeacherDashboard.css";
+
+.accountant-stat-badge {
+  background: rgba(236, 72, 153, 0.15);
+  border: 1px solid rgba(236, 72, 153, 0.4);
+  color: #f472b6;
+  padding: 4px 10px;
+  border-radius: 20px;
+  font-size: 0.72rem;
+  font-weight: 700;
+}
