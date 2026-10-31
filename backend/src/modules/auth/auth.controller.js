@@ -2,15 +2,20 @@ const authService = require('./auth.service');
 
 const login = async (req, res, next) => {
   try {
-    const { email, username, password, portalRole } = req.body;
-    if ((!email && !username) || !password) {
+    const rawId = req.body.identifier || req.body.email || req.body.username;
+    const email = req.body.email || (rawId && rawId.includes('@') ? rawId : undefined);
+    const username = req.body.username || (rawId && !rawId.includes('@') ? rawId : undefined);
+    const password = req.body.password;
+    const portalRole = req.body.portalRole || req.body.portal;
+
+    if (!rawId || !password) {
       return res.status(400).json({
         status: 'fail',
         message: 'Please provide email/username and password.'
       });
     }
 
-    const result = await authService.login({ email, username, password, portalRole });
+    const result = await authService.login({ email, username, identifier: rawId, password, portalRole });
 
     res.cookie('jwt', result.accessToken, {
       httpOnly: true,
