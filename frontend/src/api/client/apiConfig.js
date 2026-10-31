@@ -1,39 +1,53 @@
 /**
  * apiConfig.js
- * Centralized API & Server URL detection for Desktop, Mobile Phone Browsers, and LAN clients.
- * Automatically resolves to the device host IP (e.g. http://192.168.x.x:5001) when accessed from mobile.
+ * Centralized API & Server URL detection for Desktop, Mobile Phone Browsers, Cloud deployments, and LAN clients.
+ * Automatically uses same-origin HTTPS in production/cloud, and port 5001 only during local Vite development.
  */
 
 export const getServerHost = () => {
   if (typeof window !== "undefined" && window.location) {
-    const hostname = window.location.hostname;
-    if (hostname && hostname !== "localhost" && hostname !== "127.0.0.1") {
-      return hostname;
-    }
+    return window.location.hostname || "localhost";
   }
   return "localhost";
 };
 
 export const getServerBaseUrl = () => {
-  const host = getServerHost();
-  const port = import.meta.env.VITE_BACKEND_PORT || "5001";
-  return `http://${host}:${port}`;
+  if (typeof window !== "undefined" && window.location) {
+    // When running in production/cloud or served by backend (port is not local Vite dev 3000/5173)
+    if (window.location.port !== "3000" && window.location.port !== "5173") {
+      return window.location.origin;
+    }
+    // Local development: frontend on 3000, backend on 5001
+    const host = window.location.hostname;
+    const port = import.meta.env.VITE_BACKEND_PORT || "5001";
+    return `${window.location.protocol}//${host}:${port}`;
+  }
+  return "http://localhost:5001";
 };
 
 export const getApiBaseUrl = () => {
   if (typeof window !== "undefined" && window.location) {
-    const hostname = window.location.hostname;
-    // When accessed from mobile browser via LAN IP, use that same IP for backend port 5001
-    if (hostname && hostname !== "localhost" && hostname !== "127.0.0.1") {
-      const port = import.meta.env.VITE_BACKEND_PORT || "5001";
-      return `http://${hostname}:${port}/api/v1`;
+    // When running in production/cloud or served by backend, use same-origin HTTPS /api/v1
+    if (window.location.port !== "3000" && window.location.port !== "5173") {
+      return `${window.location.origin}/api/v1`;
     }
+    // Local Vite dev:
+    const host = window.location.hostname;
+    const port = import.meta.env.VITE_BACKEND_PORT || "5001";
+    return `${window.location.protocol}//${host}:${port}/api/v1`;
   }
   return import.meta.env.VITE_API_BASE_URL || "http://localhost:5001/api/v1";
 };
 
 export const getWebSocketUrl = () => {
-  const host = getServerHost();
-  const port = import.meta.env.VITE_BACKEND_PORT || "5001";
-  return `ws://${host}:${port}`;
+  if (typeof window !== "undefined" && window.location) {
+    const wsProto = window.location.protocol === "https:" ? "wss:" : "ws:";
+    if (window.location.port !== "3000" && window.location.port !== "5173") {
+      return `${wsProto}//${window.location.host}`;
+    }
+    const host = window.location.hostname;
+    const port = import.meta.env.VITE_BACKEND_PORT || "5001";
+    return `${wsProto}//${host}:${port}`;
+  }
+  return "ws://localhost:5001";
 };
