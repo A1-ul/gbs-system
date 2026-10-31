@@ -61,6 +61,18 @@ export default function TopCenterSystemBanner({
     setTimeout(() => setCleaned(false), 4000);
   };
 
+  const handleLogout = () => {
+    try {
+      localStorage.removeItem("gbs_token");
+      localStorage.removeItem("gbs_user");
+      localStorage.removeItem("gbs_auth_role");
+      localStorage.removeItem("gbs_dev_token");
+      localStorage.removeItem("gbs_dev_authenticated");
+      sessionStorage.clear();
+    } catch {}
+    window.location.href = isDevMode ? "/developer-control-center/login" : "/login";
+  };
+
   return (
     <div
       className="gbs-system-top-center-banner"
@@ -166,6 +178,29 @@ export default function TopCenterSystemBanner({
           title="Clear all fake mock data and reset dashboard to fresh blank state for real user entry"
         >
           {cleaned ? "✓ Cleared Fresh" : "🧹 Clear Test Data"}
+        </button>
+        <span style={{ color: "#475569" }}>•</span>
+        <button
+          type="button"
+          onClick={handleLogout}
+          style={{
+            background: "linear-gradient(135deg, #ef4444, #b91c1c)",
+            border: "1.5px solid #f87171",
+            color: "#ffffff",
+            fontSize: "0.82rem",
+            padding: "5px 16px",
+            borderRadius: "20px",
+            cursor: "pointer",
+            fontWeight: "800",
+            display: "inline-flex",
+            alignItems: "center",
+            gap: "6px",
+            boxShadow: "0 3px 12px rgba(239, 68, 68, 0.5)",
+            transition: "all 0.15s ease"
+          }}
+          title="Sign out of your active dashboard and return to portal login"
+        >
+          🚪 Sign Out
         </button>
       </div>
     </div>

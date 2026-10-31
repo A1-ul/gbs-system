@@ -16,6 +16,59 @@ const ONBOARDING_TRACKS = [
   { id: "HEADMASTER_REPLACEMENT", title: "Headmaster Replacement", icon: "👑", desc: "Executive Succession & Picture Upload", color: "#38bdf8" }
 ];
 
+const SUBSCRIPTION_TIERS = [
+  {
+    id: "1_MONTH_TRIAL",
+    name: "1 Month Free Trial",
+    duration: "30 Days Free Autonomous Access",
+    feeGHS: 0,
+    badge: "FREE INSTANT ACCESS",
+    badgeColor: "#10b981",
+    desc: "Instant access to test drive the entire GBS system with real modules and zero upfront payment.",
+    popular: false
+  },
+  {
+    id: "3_MONTHS",
+    name: "3 Months (Quarterly)",
+    duration: "1 Academic Term",
+    feeGHS: 500,
+    badge: "TERM PLAN",
+    badgeColor: "#3b82f6",
+    desc: "Ideal for short academic evaluations and term-by-term operational licensing.",
+    popular: false
+  },
+  {
+    id: "6_MONTHS",
+    name: "6 Months (Semester)",
+    duration: "2 Academic Terms",
+    feeGHS: 900,
+    badge: "SEMESTER PLAN",
+    badgeColor: "#8b5cf6",
+    desc: "Complete half-year coverage with priority support and database backups.",
+    popular: false
+  },
+  {
+    id: "12_MONTHS",
+    name: "12 Months (Annual)",
+    duration: "Full Academic Year",
+    feeGHS: 1500,
+    badge: "★ RECOMMENDED",
+    badgeColor: "#f59e0b",
+    desc: "Comprehensive 365-day access for Nursery, Basic, SHS, and Universities with maximum institutional discount.",
+    popular: true
+  },
+  {
+    id: "LIFETIME",
+    name: "Lifetime Institutional",
+    duration: "Perpetual License",
+    feeGHS: 4500,
+    badge: "PERPETUAL LICENSE",
+    badgeColor: "#ec4899",
+    desc: "Permanent ownership with zero recurring subscription fees and lifetime developer support.",
+    popular: false
+  }
+];
+
 export default function SignUpPage({ defaultRole }) {
   const navigate = useNavigate();
   const location = useLocation();
@@ -71,9 +124,10 @@ export default function SignUpPage({ defaultRole }) {
     confirmPassword: "",
     biometricFaceToken: "",
     facePhoto: "",
-    // Subscription Payment to Developer Gabriel Kubi Osei-Appiah (0554594193)
-    momoTxnId: "",
-    paymentAmount: "500",
+    // Subscription choice and payment (Default: 1 Month Free Trial)
+    subscriptionPlan: "1_MONTH_TRIAL",
+    momoTxnId: "FREE_TRIAL_AUTO",
+    paymentAmount: "0",
     senderPhone: "",
     termsAccepted: false,
     privacyAccepted: false,
@@ -306,18 +360,18 @@ export default function SignUpPage({ defaultRole }) {
       setLoading(false);
       return;
     }
-    if (instForm.password.length < 8) {
-      setError("Administrator password must be at least 8 characters.");
+    if (instForm.password.length < 6) {
+      setError("Administrator password must be at least 6 characters.");
       setLoading(false);
       return;
     }
     if (!instForm.termsAccepted || !instForm.privacyAccepted || !instForm.dataProcessingConsent) {
-      setError("You must accept all terms, privacy policies, and data processing consents.");
+      setError("You must accept terms of service, privacy policy, and data processing consent.");
       setLoading(false);
       return;
     }
-    if (!instForm.momoTxnId || !instForm.momoTxnId.trim()) {
-      setError("Subscription payment reference is required. Please remit your onboarding payment to MoMo 0554594193 (GABRIELKUBI OSEI-APPIAH) and enter the Transaction ID.");
+    if (instForm.subscriptionPlan !== "1_MONTH_TRIAL" && (!instForm.momoTxnId || !instForm.momoTxnId.trim() || instForm.momoTxnId === "FREE_TRIAL_AUTO")) {
+      setError("Subscription payment reference is required for paid tiers. Please remit your payment to MoMo 0554594193 (GABRIELKUBI OSEI-APPIAH) and enter the Transaction ID.");
       setLoading(false);
       return;
     }
@@ -764,19 +818,18 @@ export default function SignUpPage({ defaultRole }) {
 
                 <div className="form-grid-2">
                   <div className="form-field">
-                    <label htmlFor="inst-address">Physical Campus Address *</label>
+                    <label htmlFor="inst-address">Physical Campus Address (Optional)</label>
                     <input
                       id="inst-address"
                       name="physicalAddress"
                       type="text"
-                      required
                       placeholder="e.g. 42 Queens Gate, South Kensington"
                       value={instForm.physicalAddress}
                       onChange={handleInstChange}
                     />
                   </div>
                   <div className="form-field">
-                    <label htmlFor="inst-gps">GPS Location (Coordinates)</label>
+                    <label htmlFor="inst-gps">GPS Location (Coordinates) (Optional)</label>
                     <input
                       id="inst-gps"
                       name="gpsLocation"
@@ -802,19 +855,18 @@ export default function SignUpPage({ defaultRole }) {
                     />
                   </div>
                   <div className="form-field">
-                    <label htmlFor="inst-phone">Official Phone Number *</label>
+                    <label htmlFor="inst-phone">Official Phone Number (Optional)</label>
                     <input
                       id="inst-phone"
                       name="officialPhone"
                       type="tel"
-                      required
                       placeholder="+44 20 7946 0912"
                       value={instForm.officialPhone}
                       onChange={handleInstChange}
                     />
                   </div>
                   <div className="form-field">
-                    <label htmlFor="inst-web">Institution Website</label>
+                    <label htmlFor="inst-web">Institution Website (Optional)</label>
                     <input
                       id="inst-web"
                       name="website"
@@ -828,36 +880,33 @@ export default function SignUpPage({ defaultRole }) {
 
                 <div className="form-grid-3">
                   <div className="form-field">
-                    <label htmlFor="inst-regno">Ministry / Board Registration # *</label>
+                    <label htmlFor="inst-regno">Ministry / Board Registration # (Optional)</label>
                     <input
                       id="inst-regno"
                       name="registrationNumber"
                       type="text"
-                      required
                       placeholder="e.g. UK-DFE-2026-9921"
                       value={instForm.registrationNumber}
                       onChange={handleInstChange}
                     />
                   </div>
                   <div className="form-field">
-                    <label htmlFor="inst-lic">Business License Number *</label>
+                    <label htmlFor="inst-lic">Business License Number (Optional)</label>
                     <input
                       id="inst-lic"
                       name="businessLicenseNumber"
                       type="text"
-                      required
                       placeholder="e.g. BL-LON-883491"
                       value={instForm.businessLicenseNumber}
                       onChange={handleInstChange}
                     />
                   </div>
                   <div className="form-field">
-                    <label htmlFor="inst-tin">Tax ID Number (TIN / VAT) *</label>
+                    <label htmlFor="inst-tin">Tax ID Number (TIN / VAT) (Optional)</label>
                     <input
                       id="inst-tin"
                       name="taxIdentificationNumber"
                       type="text"
-                      required
                       placeholder="e.g. GB-VAT-9923847"
                       value={instForm.taxIdentificationNumber}
                       onChange={handleInstChange}
@@ -873,48 +922,44 @@ export default function SignUpPage({ defaultRole }) {
                 </h3>
                 <div className="form-grid-4">
                   <div className="form-field col-2">
-                    <label htmlFor="rep-name">Representative Full Name *</label>
+                    <label htmlFor="rep-name">Representative Full Name (Optional)</label>
                     <input
                       id="rep-name"
                       name="repFullName"
                       type="text"
-                      required
                       placeholder="e.g. Dr. Arthur Sterling"
                       value={instForm.repFullName}
                       onChange={handleInstChange}
                     />
                   </div>
                   <div className="form-field col-2">
-                    <label htmlFor="rep-pos">Position / Executive Role *</label>
+                    <label htmlFor="rep-pos">Position / Executive Role (Optional)</label>
                     <input
                       id="rep-pos"
                       name="repPosition"
                       type="text"
-                      required
                       placeholder="e.g. Chancellor / Board Director"
                       value={instForm.repPosition}
                       onChange={handleInstChange}
                     />
                   </div>
                   <div className="form-field col-2">
-                    <label htmlFor="rep-email">Representative Email *</label>
+                    <label htmlFor="rep-email">Representative Email (Optional)</label>
                     <input
                       id="rep-email"
                       name="repEmail"
                       type="email"
-                      required
                       placeholder="chancellor@institution.edu"
                       value={instForm.repEmail}
                       onChange={handleInstChange}
                     />
                   </div>
                   <div className="form-field col-2">
-                    <label htmlFor="rep-phone">Representative Phone Number *</label>
+                    <label htmlFor="rep-phone">Representative Phone Number (Optional)</label>
                     <input
                       id="rep-phone"
                       name="repPhone"
                       type="tel"
-                      required
                       placeholder="+44 20 7946 0915"
                       value={instForm.repPhone}
                       onChange={handleInstChange}
@@ -954,12 +999,11 @@ export default function SignUpPage({ defaultRole }) {
                     />
                   </div>
                   <div className="form-field">
-                    <label htmlFor="admin-phone">Administrator Mobile Phone *</label>
+                    <label htmlFor="admin-phone">Administrator Mobile Phone (Optional)</label>
                     <input
                       id="admin-phone"
                       name="adminPhone"
                       type="tel"
-                      required
                       placeholder="+44 7700 900234"
                       value={instForm.adminPhone}
                       onChange={handleInstChange}
@@ -975,8 +1019,8 @@ export default function SignUpPage({ defaultRole }) {
                       name="password"
                       type="password"
                       required
-                      minLength={8}
-                      placeholder="Minimum 8 characters"
+                      minLength={6}
+                      placeholder="Minimum 6 characters"
                       value={instForm.password}
                       onChange={handleInstChange}
                     />
@@ -988,7 +1032,7 @@ export default function SignUpPage({ defaultRole }) {
                       name="confirmPassword"
                       type="password"
                       required
-                      minLength={8}
+                      minLength={6}
                       placeholder="Confirm password"
                       value={instForm.confirmPassword}
                       onChange={handleInstChange}
@@ -1003,7 +1047,7 @@ export default function SignUpPage({ defaultRole }) {
                       <span style={{ fontSize: "1.2rem" }}>📷</span>
                       <div>
                         <strong style={{ fontSize: "0.9rem", color: "#f8fafc", display: "block" }}>
-                          Headmaster Biometric Facial Scan (Device Camera)
+                          Headmaster Biometric Facial Scan (Device Camera) (Optional)
                         </strong>
                         <span style={{ fontSize: "0.78rem", color: "#94a3b8" }}>
                           Live device camera face recognition for executive cryptographic registration.
@@ -1043,72 +1087,147 @@ export default function SignUpPage({ defaultRole }) {
                 </div>
               </div>
 
-              {/* Section 4: Subscription Onboarding Payment Process (Developer Gabriel Kubi Osei-Appiah) */}
+              {/* Section 4: Subscription Onboarding Tier & Payment Process */}
               <div className="form-section-group" style={{ background: "linear-gradient(135deg, rgba(16, 185, 129, 0.08), rgba(6, 95, 70, 0.15))", border: "1.5px solid rgba(16, 185, 129, 0.4)", borderRadius: "14px", padding: "1.5rem" }}>
                 <h3 className="section-title" style={{ color: "#34d399", marginBottom: "0.5rem" }}>
-                  <span>📱</span> 4. SUBSCRIPTION ONBOARDING PAYMENT PROCESS
+                  <span>📱</span> 4. SUBSCRIPTION PLAN SELECTION & ONBOARDING PAYMENT
                 </h3>
-                <p style={{ fontSize: "0.85rem", color: "#cbd5e1", margin: "0 0 1rem", lineHeight: "1.5" }}>
-                  Follow the official subscription payment process by sending your onboarding fee via Mobile Money to the registered Developer details below. Once paid, input your Transaction ID and your Headmaster facial verification will be submitted to Developer Gabriel Kubi Osei-Appiah for verification and approval.
+                <p style={{ fontSize: "0.88rem", color: "#cbd5e1", margin: "0 0 1.25rem", lineHeight: "1.5" }}>
+                  👉 Please select your preferred institutional subscription plan below. The <strong>1 Month Free Trial</strong> provides immediate activation with <strong>zero upfront payment</strong>, while term and annual plans provide extended uninterrupted coverage for your school.
                 </p>
 
-                {/* Developer Payment Account Banner */}
-                <div style={{ background: "rgba(15, 23, 42, 0.85)", border: "1px solid rgba(56, 189, 248, 0.4)", borderRadius: "10px", padding: "12px 18px", display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: "12px", marginBottom: "1.25rem" }}>
-                  <div>
-                    <span style={{ fontSize: "0.72rem", color: "#94a3b8", display: "block", fontWeight: "700" }}>REGISTERED DEVELOPER NUMBER</span>
-                    <strong style={{ fontSize: "1.25rem", color: "#34d399", fontFamily: "monospace", letterSpacing: "1px" }}>
-                      0554594193
-                    </strong>
-                  </div>
-                  <div>
-                    <span style={{ fontSize: "0.72rem", color: "#94a3b8", display: "block", fontWeight: "700" }}>REGISTERED DEVELOPER NAME</span>
-                    <strong style={{ fontSize: "1.1rem", color: "#38bdf8", letterSpacing: "0.5px" }}>
-                      GABRIELKUBI OSEI-APPIAH
-                    </strong>
-                  </div>
-                  <span style={{ background: "rgba(16, 185, 129, 0.2)", color: "#6ee7b7", border: "1px solid #10b981", padding: "4px 12px", borderRadius: "999px", fontSize: "0.75rem", fontWeight: "800" }}>
-                    ✓ OFFICIAL PAYMENT GATEWAY
-                  </span>
+                {/* Interactive Subscription Tier Cards (5 choices) */}
+                <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(210px, 1fr))", gap: "12px", marginBottom: "1.5rem" }}>
+                  {SUBSCRIPTION_TIERS.map((tier) => {
+                    const isSelected = (instForm.subscriptionPlan || "1_MONTH_TRIAL") === tier.id;
+                    return (
+                      <div
+                        key={tier.id}
+                        onClick={() => {
+                          setInstForm((prev) => ({
+                            ...prev,
+                            subscriptionPlan: tier.id,
+                            paymentAmount: String(tier.feeGHS),
+                            momoTxnId: tier.id === "1_MONTH_TRIAL" ? "FREE_TRIAL_AUTO" : (prev.momoTxnId === "FREE_TRIAL_AUTO" ? "" : prev.momoTxnId)
+                          }));
+                        }}
+                        style={{
+                          background: isSelected ? "rgba(15, 23, 42, 0.98)" : "rgba(15, 23, 42, 0.75)",
+                          border: isSelected ? `2.5px solid ${tier.badgeColor}` : "1.5px solid rgba(255, 255, 255, 0.12)",
+                          borderRadius: "14px",
+                          padding: "16px",
+                          cursor: "pointer",
+                          display: "flex",
+                          flexDirection: "column",
+                          justifyContent: "space-between",
+                          boxShadow: isSelected ? `0 10px 25px ${tier.badgeColor}35` : "0 4px 12px rgba(0,0,0,0.4)",
+                          transform: isSelected ? "translateY(-3px)" : "none",
+                          transition: "all 0.2s ease"
+                        }}
+                      >
+                        <div>
+                          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "8px" }}>
+                            <span style={{ fontSize: "0.68rem", fontWeight: 800, color: tier.badgeColor, background: `${tier.badgeColor}20`, padding: "3px 8px", borderRadius: "12px", border: `1px solid ${tier.badgeColor}40` }}>
+                              {tier.badge}
+                            </span>
+                            <span style={{ fontSize: "1.2rem" }}>
+                              {isSelected ? "✅" : "⚪"}
+                            </span>
+                          </div>
+                          <h4 style={{ margin: "0 0 4px 0", fontSize: "1rem", color: "#f8fafc", fontWeight: 800 }}>
+                            {tier.name}
+                          </h4>
+                          <span style={{ fontSize: "0.75rem", color: "#94a3b8", display: "block", marginBottom: "8px" }}>
+                            {tier.duration}
+                          </span>
+                          <div style={{ fontSize: "1.35rem", fontWeight: 900, color: tier.feeGHS === 0 ? "#34d399" : "#38bdf8", marginBottom: "8px" }}>
+                            {tier.feeGHS === 0 ? "FREE" : `GHS ${tier.feeGHS.toLocaleString()}`}
+                          </div>
+                          <p style={{ fontSize: "0.76rem", color: "#cbd5e1", margin: 0, lineHeight: "1.4" }}>
+                            {tier.desc}
+                          </p>
+                        </div>
+                        <div style={{ marginTop: "12px", paddingTop: "8px", borderTop: "1px solid rgba(255,255,255,0.08)", fontSize: "0.72rem", color: isSelected ? tier.badgeColor : "#94a3b8", fontWeight: 700, textAlign: "center" }}>
+                          {isSelected ? "● CURRENTLY SELECTED" : "Click to Select Plan"}
+                        </div>
+                      </div>
+                    );
+                  })}
                 </div>
 
-                <div className="form-grid-3">
-                  <div className="form-field">
-                    <label htmlFor="momo-txnid">MoMo Transaction ID / Reference *</label>
-                    <input
-                      id="momo-txnid"
-                      name="momoTxnId"
-                      type="text"
-                      required
-                      placeholder="e.g. 29384729104"
-                      value={instForm.momoTxnId}
-                      onChange={handleInstChange}
-                    />
+                {/* Conditional Payment Guidance */}
+                {instForm.subscriptionPlan === "1_MONTH_TRIAL" ? (
+                  <div style={{ background: "rgba(16, 185, 129, 0.15)", border: "1.5px solid #10b981", borderRadius: "12px", padding: "14px 18px", display: "flex", alignItems: "center", gap: "12px", marginBottom: "1rem" }}>
+                    <span style={{ fontSize: "1.8rem" }}>🎉</span>
+                    <div>
+                      <strong style={{ color: "#34d399", fontSize: "0.92rem", display: "block" }}>
+                        1 Month Free Trial Plan Active (Zero Payment Required)
+                      </strong>
+                      <span style={{ color: "#cbd5e1", fontSize: "0.78rem" }}>
+                        Your institution will be provisioned immediately with full system access. Mobile Money Transaction ID is not required for this trial.
+                      </span>
+                    </div>
                   </div>
-                  <div className="form-field">
-                    <label htmlFor="payment-amount">Payment Amount (GHS) *</label>
-                    <input
-                      id="payment-amount"
-                      name="paymentAmount"
-                      type="number"
-                      required
-                      placeholder="500"
-                      value={instForm.paymentAmount}
-                      onChange={handleInstChange}
-                    />
-                  </div>
-                  <div className="form-field">
-                    <label htmlFor="sender-phone">Sender Mobile Number *</label>
-                    <input
-                      id="sender-phone"
-                      name="senderPhone"
-                      type="tel"
-                      required
-                      placeholder="e.g. 0244123456"
-                      value={instForm.senderPhone}
-                      onChange={handleInstChange}
-                    />
-                  </div>
-                </div>
+                ) : (
+                  <>
+                    {/* Developer MoMo Payment Details */}
+                    <div style={{ background: "rgba(15, 23, 42, 0.95)", border: "1px solid rgba(56, 189, 248, 0.4)", borderRadius: "12px", padding: "14px 18px", display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: "12px", marginBottom: "1.25rem" }}>
+                      <div>
+                        <span style={{ fontSize: "0.72rem", color: "#94a3b8", display: "block", fontWeight: "700" }}>REGISTERED DEVELOPER NUMBER</span>
+                        <strong style={{ fontSize: "1.3rem", color: "#34d399", fontFamily: "monospace", letterSpacing: "1px" }}>
+                          0554594193
+                        </strong>
+                      </div>
+                      <div>
+                        <span style={{ fontSize: "0.72rem", color: "#94a3b8", display: "block", fontWeight: "700" }}>REGISTERED DEVELOPER NAME</span>
+                        <strong style={{ fontSize: "1.1rem", color: "#38bdf8", letterSpacing: "0.5px" }}>
+                          GABRIELKUBI OSEI-APPIAH
+                        </strong>
+                      </div>
+                      <span style={{ background: "rgba(16, 185, 129, 0.2)", color: "#6ee7b7", border: "1px solid #10b981", padding: "4px 12px", borderRadius: "999px", fontSize: "0.75rem", fontWeight: "800" }}>
+                        ✓ OFFICIAL DEVELOPER RECIPIENT
+                      </span>
+                    </div>
+
+                    <div className="form-grid-3">
+                      <div className="form-field">
+                        <label htmlFor="momo-txnid">MoMo Transaction ID / Reference *</label>
+                        <input
+                          id="momo-txnid"
+                          name="momoTxnId"
+                          type="text"
+                          required
+                          placeholder="e.g. 29384729104"
+                          value={instForm.momoTxnId}
+                          onChange={handleInstChange}
+                        />
+                      </div>
+                      <div className="form-field">
+                        <label htmlFor="payment-amount">Plan Fee Amount (GHS) *</label>
+                        <input
+                          id="payment-amount"
+                          name="paymentAmount"
+                          type="number"
+                          required
+                          value={instForm.paymentAmount}
+                          onChange={handleInstChange}
+                        />
+                      </div>
+                      <div className="form-field">
+                        <label htmlFor="sender-phone">Sender Mobile Number *</label>
+                        <input
+                          id="sender-phone"
+                          name="senderPhone"
+                          type="tel"
+                          required
+                          placeholder="e.g. 0244123456"
+                          value={instForm.senderPhone}
+                          onChange={handleInstChange}
+                        />
+                      </div>
+                    </div>
+                  </>
+                )}
               </div>
 
               {/* Section 5: Compliance & Consent */}

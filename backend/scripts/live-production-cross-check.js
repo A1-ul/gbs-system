@@ -182,6 +182,34 @@ async function runLiveAudit() {
     };
   });
 
+  const trialSchoolName = `GBS Trial Academy ${Date.now() % 10000}`;
+  await assert(`Dynamic 1-Month Free Trial Onboarding ("${trialSchoolName}")`, async () => {
+    const res = await makeRequest("/api/v1/auth/register-institution", "POST", {
+      institutionName: trialSchoolName,
+      institutionType: "PRIMARY",
+      curriculum: "NATIONAL",
+      officialEmail: `trial_${Date.now()}@gbs-trial.edu`,
+      adminEmail: `admin_${Date.now()}@gbs-trial.edu`,
+      repFullName: "Madam Grace Appiah",
+      repEmail: `admin_${Date.now()}@gbs-trial.edu`,
+      repPhone: "0244123456",
+      country: "Ghana",
+      password: "TrialSchool2026!",
+      confirmPassword: "TrialSchool2026!",
+      subscriptionTier: "trial_1m",
+      momoTransactionId: "FREE_TRIAL_AUTO",
+      termsAccepted: true,
+      privacyAccepted: true,
+      dataProcessingConsent: true
+    });
+    const inst = res.json?.data?.institution || res.json?.data;
+    return {
+      success: (res.statusCode === 201 || res.statusCode === 200) && !!inst,
+      info: `Free Trial Tenant UID: ${inst?.tenantUid || "Auto-Provisioned"} (HTTP ${res.statusCode})`,
+      error: res.json?.message || `HTTP ${res.statusCode}`
+    };
+  });
+
   // 4. MOBILE BROWSER RESPONSIVE PORTAL ROUTES
   console.log("\n--- [STAGE 4] MOBILE BROWSER SPA ROUTE DELIVERY & BUNDLE VERIFICATION ---");
   const mobileRoutes = [
@@ -208,10 +236,10 @@ async function runLiveAudit() {
       const res = await makeRequest(r.path);
       const isHtml = (res.headers["content-type"] || "").includes("text/html");
       const hasRoot = res.text.includes('id="root"');
-      const hasNewBundle = res.text.includes("index-DPTt99dE.js");
+      const hasNewBundle = res.text.includes("index-COvgGTSD.js");
       return {
         success: res.ok && isHtml && hasRoot && hasNewBundle,
-        info: `HTTP ${res.statusCode} | SPA Root Mounted | Bundle: index-DPTt99dE.js`,
+        info: `HTTP ${res.statusCode} | SPA Root Mounted | Bundle: index-COvgGTSD.js`,
         error: `HTTP ${res.statusCode} (isHtml: ${isHtml}, hasRoot: ${hasRoot}, hasNewBundle: ${hasNewBundle})`
       };
     });
