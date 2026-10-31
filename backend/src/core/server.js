@@ -197,6 +197,16 @@ const server = app.listen(PORT, HOST, async () => {
   console.log(`🚀 [GBS SYSTEM] Server running on http://${HOST}:${PORT} (LAN & Mobile accessible) in ${envConfig.env} mode.`);
   try {
     initializeSocket(server);
+    if (process.env.DATABASE_URL) {
+      try {
+        console.log('🔄 [DATABASE] Ensuring PostgreSQL schema tables exist...');
+        const { execSync } = require('child_process');
+        execSync('npx prisma db push --skip-generate --accept-data-loss', { stdio: 'inherit' });
+        console.log('✅ [DATABASE] PostgreSQL schema tables verified.');
+      } catch (dbSyncErr) {
+        console.warn('⚠️ [DATABASE] Schema sync note:', dbSyncErr.message);
+      }
+    }
     const defaultData = await authService.seedDefaultAdmin();
     console.log(`✅ [DATABASE] Default Tenant '${defaultData.tenant.code}' & Super Admin seeded.`);
   } catch (err) {
