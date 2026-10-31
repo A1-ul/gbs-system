@@ -86,7 +86,16 @@ export default function AccountantDashboard() {
 
   // Tenant School Branding & Official Crest
   const [reportSchoolName, setReportSchoolName] = useState(() => {
-    return localStorage.getItem("gbs_report_school_name") || "St. Augustine International Academy";
+    let storedUser = null;
+    try {
+      storedUser = JSON.parse(localStorage.getItem("gbs_user") || "{}");
+    } catch {}
+    return (
+      localStorage.getItem("gbs_report_school_name") ||
+      localStorage.getItem("gbs_tenant_name") ||
+      storedUser?.tenant?.name ||
+      "GBS Educational Institution"
+    );
   });
   const [customSchoolLogo, setCustomSchoolLogo] = useState(() => {
     return localStorage.getItem("gbs_custom_school_logo") || "/assets/gbs_crest_badge.jpg";
@@ -153,8 +162,8 @@ export default function AccountantDashboard() {
       webhookUrl: "https://api.gbs.edu/api/v1/finance/webhooks/mtn-momo",
       webhookStatus: "VERIFIED_200_OK",
       supportedCurrencies: ["GHS"],
-      totalProcessed: 184500,
-      totalCount: 412,
+      totalProcessed: 0,
+      totalCount: 0,
       lastPing: new Date().toLocaleTimeString()
     },
     {
@@ -169,8 +178,8 @@ export default function AccountantDashboard() {
       webhookUrl: "https://api.gbs.edu/api/v1/finance/webhooks/telecel-cash",
       webhookStatus: "VERIFIED_200_OK",
       supportedCurrencies: ["GHS"],
-      totalProcessed: 92300,
-      totalCount: 198,
+      totalProcessed: 0,
+      totalCount: 0,
       lastPing: new Date().toLocaleTimeString()
     },
     {
@@ -185,8 +194,8 @@ export default function AccountantDashboard() {
       webhookUrl: "https://api.gbs.edu/api/v1/finance/webhooks/at-money",
       webhookStatus: "VERIFIED_200_OK",
       supportedCurrencies: ["GHS"],
-      totalProcessed: 41200,
-      totalCount: 89,
+      totalProcessed: 0,
+      totalCount: 0,
       lastPing: new Date().toLocaleTimeString()
     },
     {
@@ -201,8 +210,8 @@ export default function AccountantDashboard() {
       webhookUrl: "https://api.gbs.edu/api/v1/finance/webhooks/paystack",
       webhookStatus: "VERIFIED_200_OK",
       supportedCurrencies: ["GHS", "USD", "NGN"],
-      totalProcessed: 310400,
-      totalCount: 654,
+      totalProcessed: 0,
+      totalCount: 0,
       lastPing: new Date().toLocaleTimeString()
     },
     {
@@ -217,8 +226,8 @@ export default function AccountantDashboard() {
       webhookUrl: "https://api.gbs.edu/api/v1/finance/webhooks/flutterwave",
       webhookStatus: "VERIFIED_200_OK",
       supportedCurrencies: ["GHS", "USD", "EUR", "GBP"],
-      totalProcessed: 145000,
-      totalCount: 230,
+      totalProcessed: 0,
+      totalCount: 0,
       lastPing: new Date().toLocaleTimeString()
     },
     {
@@ -233,8 +242,8 @@ export default function AccountantDashboard() {
       webhookUrl: "https://api.gbs.edu/api/v1/finance/webhooks/stanbic-ach",
       webhookStatus: "VERIFIED_200_OK",
       supportedCurrencies: ["GHS", "USD"],
-      totalProcessed: 520000,
-      totalCount: 142,
+      totalProcessed: 0,
+      totalCount: 0,
       lastPing: new Date().toLocaleTimeString()
     },
     {
@@ -249,8 +258,8 @@ export default function AccountantDashboard() {
       webhookUrl: "https://api.gbs.edu/api/v1/finance/webhooks/gcb-teller",
       webhookStatus: "VERIFIED_200_OK",
       supportedCurrencies: ["GHS"],
-      totalProcessed: 285000,
-      totalCount: 310,
+      totalProcessed: 0,
+      totalCount: 0,
       lastPing: new Date().toLocaleTimeString()
     },
     {
@@ -265,8 +274,8 @@ export default function AccountantDashboard() {
       webhookUrl: "https://api.gbs.edu/api/v1/finance/webhooks/stripe",
       webhookStatus: "VERIFIED_200_OK",
       supportedCurrencies: ["USD", "EUR", "GBP", "CAD"],
-      totalProcessed: 198000,
-      totalCount: 88,
+      totalProcessed: 0,
+      totalCount: 0,
       lastPing: new Date().toLocaleTimeString()
     },
     {
@@ -281,8 +290,8 @@ export default function AccountantDashboard() {
       webhookUrl: "https://api.gbs.edu/api/v1/finance/webhooks/pos-terminal",
       webhookStatus: "VERIFIED_200_OK",
       supportedCurrencies: ["GHS"],
-      totalProcessed: 87400,
-      totalCount: 205,
+      totalProcessed: 0,
+      totalCount: 0,
       lastPing: new Date().toLocaleTimeString()
     },
     {
@@ -297,8 +306,8 @@ export default function AccountantDashboard() {
       webhookUrl: "https://api.gbs.edu/api/v1/finance/webhooks/paypal",
       webhookStatus: "VERIFIED_200_OK",
       supportedCurrencies: ["USD", "EUR", "GBP"],
-      totalProcessed: 112500,
-      totalCount: 64,
+      totalProcessed: 0,
+      totalCount: 0,
       lastPing: new Date().toLocaleTimeString()
     }
   ]);

@@ -120,9 +120,9 @@ export default function StudentDashboard() {
   // Online Exam Interactive Engine State
   const [unlockedExamIds, setUnlockedExamIds] = useState(() => {
     try {
-      return JSON.parse(localStorage.getItem("gbs_student_unlocked_exams") || '["demo_1"]');
+      return JSON.parse(localStorage.getItem("gbs_student_unlocked_exams") || '[]');
     } catch {
-      return ["demo_1"];
+      return [];
     }
   });
 
@@ -1563,11 +1563,13 @@ export default function StudentDashboard() {
 
                           if (exams.length === 0) {
                             return (
-                              <>
-                                {renderRow({ id: "demo_1", restrictBeforeStart: false }, "Advanced Mathematics", "Calculus & Discrete Mathematical Logic", "09:00 AM", "11:30 AM")}
-                                {renderRow({ id: "demo_2", restrictBeforeStart: true, isScheduled: true }, "Physics & Mechanics", "Electromagnetism & Thermodynamics Paper I", "01:00 PM", "03:00 PM")}
-                                {renderRow({ id: "demo_3", restrictBeforeStart: true, isScheduled: true }, "Computer Science & AI", "Algorithms, Data Structures & Cloud Architecture", "10:00 AM", "12:30 PM")}
-                              </>
+                              <tr>
+                                <td colSpan="6" style={{ textAlign: "center", padding: "2.5rem", color: "#94a3b8" }}>
+                                  <div style={{ fontSize: "2rem", marginBottom: "0.5rem" }}>📝</div>
+                                  <strong style={{ display: "block", color: "#f8fafc", fontSize: "1rem" }}>No Scheduled Online Examinations</strong>
+                                  <span style={{ fontSize: "0.85rem" }}>Your faculty instructors have not published any pending online exam papers for this term yet.</span>
+                                </td>
+                              </tr>
                             );
                           }
 

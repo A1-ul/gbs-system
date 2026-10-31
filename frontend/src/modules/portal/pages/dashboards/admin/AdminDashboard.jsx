@@ -2383,7 +2383,7 @@ export default function AdminDashboard() {
         }
       });
       
-      const mockSummary = {
+      const promotionSummary = {
         executedAt: new Date().toISOString(),
         promotedCount: promoted.length,
         restrictedCount: withheld.length,
@@ -2392,7 +2392,7 @@ export default function AdminDashboard() {
         restrictedStudents: withheld,
         graduatedStudents: graduated
       };
-      setPromotionReport(mockSummary);
+      setPromotionReport(promotionSummary);
       setShowPromotionModal(true);
       setFeedback({
         type: "success",

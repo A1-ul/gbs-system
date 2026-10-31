@@ -702,28 +702,9 @@ export default function TeacherDashboard() {
   const [facultyDirectives, setFacultyDirectives] = useState(() => {
     try {
       const saved = JSON.parse(localStorage.getItem("gbs_faculty_directives") || "[]");
-      if (Array.isArray(saved) && saved.length > 0) return saved;
+      if (Array.isArray(saved)) return saved;
     } catch {}
-    return [
-      {
-        id: "dir-1",
-        target: "ALL",
-        targetTeacherName: "All Faculty Members & Subject Educators",
-        subject: "Mandatory Vetting Timeline for Term 1 Lesson Notes & Weekly Forecasts",
-        message: "Notice to all faculty: In line with school quality standards, all weekly plans and lesson notes must be uploaded to the portal every Friday by 5:00 PM for Headmaster vetting. Ensure learning objectives are measurable using Bloom's taxonomy.",
-        issuedBy: "Headmaster Arthur Pendleton",
-        issuedAt: "2026-10-15T10:00:00.000Z"
-      },
-      {
-        id: "dir-2",
-        target: "1",
-        targetTeacherName: "Dr. Robert Vance",
-        subject: "Commendation on Mathematics Yearly Curriculum Scope",
-        message: "Dear Dr. Vance, your 2025/2026 Yearly Mathematics Scheme has been vetted and endorsed. Please share the calculus diagnostic rubric with the junior department educators as a reference benchmark.",
-        issuedBy: "Headmaster Arthur Pendleton",
-        issuedAt: "2026-10-18T14:20:00.000Z"
-      }
-    ];
+    return [];
   });
 
   // Load classes, exams, plans, and directives on mount

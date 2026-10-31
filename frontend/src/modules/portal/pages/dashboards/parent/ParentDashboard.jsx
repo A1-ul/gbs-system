@@ -100,7 +100,16 @@ export default function ParentDashboard() {
 
   // Tenant School Branding & Official Crest
   const [reportSchoolName, setReportSchoolName] = useState(() => {
-    return localStorage.getItem("gbs_report_school_name") || "St. Augustine International Academy";
+    let storedUser = null;
+    try {
+      storedUser = JSON.parse(localStorage.getItem("gbs_user") || "{}");
+    } catch {}
+    return (
+      localStorage.getItem("gbs_report_school_name") ||
+      localStorage.getItem("gbs_tenant_name") ||
+      storedUser?.tenant?.name ||
+      "GBS Educational Institution"
+    );
   });
   const [customSchoolLogo, setCustomSchoolLogo] = useState(() => {
     return localStorage.getItem("gbs_custom_school_logo") || "/assets/gbs_crest_badge.jpg";
@@ -142,7 +151,7 @@ export default function ParentDashboard() {
   const [activeInvoiceToPay, setActiveInvoiceToPay] = useState(null);
   const [payAmount, setPayAmount] = useState("");
   const [paymentMethod, setPaymentMethod] = useState("MOMO");
-  const [momoNumber, setMomoNumber] = useState("+233-24-412-8990");
+  const [momoNumber, setMomoNumber] = useState("");
   const [momoNetwork, setMomoNetwork] = useState("MTN_MOMO");
   const [bankAccountNumber, setBankAccountNumber] = useState("");
   const [bankName, setBankName] = useState("Ecobank Ghana Ltd");
@@ -172,8 +181,8 @@ export default function ParentDashboard() {
   const [transcriptSubmitting, setTranscriptSubmitting] = useState(false);
   const currencySymbol = localStorage.getItem("gbs_currency_symbol") || "$";
 
-  // Direct Communication with Educators
-  const [selectedTeacherId, setSelectedTeacherId] = useState("1");
+  // Direct Communication with Educators (Real Dynamic Faculty from API)
+  const [selectedTeacherId, setSelectedTeacherId] = useState("");
   const [teacherMsgSubject, setTeacherMsgSubject] = useState("");
   const [teacherMsg, setTeacherMsg] = useState("");
   const [sentMsgs, setSentMsgs] = useState([]);
@@ -185,12 +194,26 @@ export default function ParentDashboard() {
     return [];
   });
 
-  const facultyList = [
-    { id: "1", name: "Dr. Robert Vance", role: "Classroom Teacher & Advanced Mathematics Faculty" },
-    { id: "2", name: "Prof. Eleanor Sterling", role: "Physics & Chemistry Instructor" },
-    { id: "3", name: "Ms. Claire Montgomery", role: "World History & Literature Teacher" },
-    { id: "4", name: "Headmaster Dr. Arthur Sterling", role: "Headmaster & Academic Director" }
-  ];
+  const [facultyList, setFacultyList] = useState([]);
+
+  useEffect(() => {
+    const fetchTeachers = async () => {
+      try {
+        const res = await apiClient.get('/users?role=TEACHER');
+        const list = res.data?.data?.users || res.data?.users || [];
+        if (Array.isArray(list) && list.length > 0) {
+          const formatted = list.map((u) => ({
+            id: u.id,
+            name: `${u.firstName || ''} ${u.lastName || ''}`.trim() || u.username,
+            role: u.designation || "Classroom Teacher & Faculty Instructor"
+          }));
+          setFacultyList(formatted);
+          if (formatted.length > 0) setSelectedTeacherId(formatted[0].id);
+        }
+      } catch {}
+    };
+    fetchTeachers();
+  }, []);
 
   // Headmaster Admission Review Status Notice State (Approved or Denied)
   const [admissionStatusNotice, setAdmissionStatusNotice] = useState(() => {
@@ -1775,36 +1798,13 @@ export default function ParentDashboard() {
                   </thead>
                   <tbody>
                     {childAttendance.length === 0 ? (
-                      <>
-                        <tr>
-                          <td><strong>Today (Oct 16, 2026)</strong></td>
-                          <td>Morning Homeroom</td>
-                          <td><span className="badge-status badge-present">PRESENT</span></td>
-                          <td>Dr. Robert Vance</td>
-                          <td>Arrived on time at 08:25 AM</td>
-                        </tr>
-                        <tr>
-                          <td><strong>Yesterday (Oct 15, 2026)</strong></td>
-                          <td>Full Day Academic</td>
-                          <td><span className="badge-status badge-present">PRESENT</span></td>
-                          <td>Ms. Claire Montgomery</td>
-                          <td>Participated actively in literature</td>
-                        </tr>
-                        <tr>
-                          <td><strong>Oct 14, 2026</strong></td>
-                          <td>Full Day Academic</td>
-                          <td><span className="badge-status badge-present">PRESENT</span></td>
-                          <td>Dr. Robert Vance</td>
-                          <td>On time</td>
-                        </tr>
-                        <tr>
-                          <td><strong>Oct 08, 2026</strong></td>
-                          <td>Morning Homeroom</td>
-                          <td><span className="badge-status badge-late">LATE (15 min)</span></td>
-                          <td>Dr. Robert Vance</td>
-                          <td>School bus traffic delay (Excused)</td>
-                        </tr>
-                      </>
+                      <tr>
+                        <td colSpan="5" style={{ textAlign: "center", padding: "2.5rem", color: "#94a3b8" }}>
+                          <div style={{ fontSize: "1.8rem", marginBottom: "0.4rem" }}>📅</div>
+                          <strong style={{ display: "block", color: "#f8fafc" }}>No Attendance Records Found</strong>
+                          <span style={{ fontSize: "0.85rem" }}>Daily attendance logs recorded by homeroom and course teachers will appear here.</span>
+                        </td>
+                      </tr>
                     ) : (
                       childAttendance.map((r) => (
                         <tr key={r.id}>
@@ -1859,9 +1859,9 @@ export default function ParentDashboard() {
                   </div>
                 </div>
                 <div style={{ display: "flex", gap: "20px", fontSize: "0.85rem" }}>
-                  <span>Term Status: <strong style={{ color: "#38bdf8" }}>TERM 1 COMPLETE</strong></span>
-                  <span>Cumulative GPA: <strong style={{ color: "#34d399" }}>3.92 / 4.00 (Distinction)</strong></span>
-                  <span>Class Rank: <strong style={{ color: "#fbbf24" }}>2nd of 28 Scholars</strong></span>
+                  <span>Term Status: <strong style={{ color: "#38bdf8" }}>{selectedChild?.termStatus || "CURRENT TERM ACTIVE"}</strong></span>
+                  <span>Cumulative GPA: <strong style={{ color: "#34d399" }}>{selectedChild?.gpa || "—"}</strong></span>
+                  <span>Class Standing: <strong style={{ color: "#fbbf24" }}>{selectedChild?.rank || "Evaluation Ongoing"}</strong></span>
                 </div>
               </div>
 
@@ -1879,42 +1879,27 @@ export default function ParentDashboard() {
                     </tr>
                   </thead>
                   <tbody>
-                    <tr>
-                      <td><strong>Advanced Mathematics</strong></td>
-                      <td>Dr. Robert Vance</td>
-                      <td>38 / 40</td>
-                      <td>56 / 60</td>
-                      <td><strong>94%</strong></td>
-                      <td><strong style={{ color: "#10b981" }}>A+</strong></td>
-                      <td>Demonstrates exceptional problem-solving in quadratic algebra.</td>
-                    </tr>
-                    <tr>
-                      <td><strong>Physics & Mechanics</strong></td>
-                      <td>Prof. Eleanor Sterling</td>
-                      <td>36 / 40</td>
-                      <td>53 / 60</td>
-                      <td><strong>89%</strong></td>
-                      <td><strong style={{ color: "#10b981" }}>A</strong></td>
-                      <td>Excellent experiment design and analytical documentation.</td>
-                    </tr>
-                    <tr>
-                      <td><strong>World History & Literature</strong></td>
-                      <td>Ms. Claire Montgomery</td>
-                      <td>37 / 40</td>
-                      <td>54 / 60</td>
-                      <td><strong>91%</strong></td>
-                      <td><strong style={{ color: "#10b981" }}>A</strong></td>
-                      <td>Very thoughtful historical essays and active discussions.</td>
-                    </tr>
-                    <tr>
-                      <td><strong>Computer Science & AI</strong></td>
-                      <td>Eng. Marcus Thorne</td>
-                      <td>40 / 40</td>
-                      <td>58 / 60</td>
-                      <td><strong>98%</strong></td>
-                      <td><strong style={{ color: "#10b981" }}>A+</strong></td>
-                      <td>Top of class in algorithm design and database structures.</td>
-                    </tr>
+                    {selectedChild?.grades && selectedChild.grades.length > 0 ? (
+                      selectedChild.grades.map((g, idx) => (
+                        <tr key={idx}>
+                          <td><strong>{g.subject || g.courseName}</strong></td>
+                          <td>{g.instructor || "Faculty Instructor"}</td>
+                          <td>{g.caScore || "—"}</td>
+                          <td>{g.examScore || "—"}</td>
+                          <td><strong>{g.totalMark || "—"}%</strong></td>
+                          <td><strong style={{ color: "#10b981" }}>{g.letterGrade || "—"}</strong></td>
+                          <td>{g.teacherFeedback || "Term performance logged."}</td>
+                        </tr>
+                      ))
+                    ) : (
+                      <tr>
+                        <td colSpan="7" style={{ textAlign: "center", padding: "2.5rem", color: "#94a3b8" }}>
+                          <div style={{ fontSize: "2rem", marginBottom: "0.5rem" }}>📊</div>
+                          <strong style={{ display: "block", color: "#f8fafc", fontSize: "1rem" }}>No Terminal Exam Records Available Yet</strong>
+                          <span style={{ fontSize: "0.85rem" }}>Official continuous assessment and end-of-term examination scores uploaded by teachers will be reflected here upon publication.</span>
+                        </td>
+                      </tr>
+                    )}
                   </tbody>
                 </table>
               </div>

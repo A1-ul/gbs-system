@@ -51,7 +51,16 @@ export default function HRDashboard() {
 
   // Dynamic School Name & Crest
   const [schoolName, setSchoolName] = useState(() => {
-    return localStorage.getItem("gbs_report_school_name") || "St. Augustine International Academy";
+    let storedUser = null;
+    try {
+      storedUser = JSON.parse(localStorage.getItem("gbs_user") || "{}");
+    } catch {}
+    return (
+      localStorage.getItem("gbs_report_school_name") ||
+      localStorage.getItem("gbs_tenant_name") ||
+      storedUser?.tenant?.name ||
+      "GBS Educational Institution"
+    );
   });
   const [customSchoolLogo, setCustomSchoolLogo] = useState(() => {
     return localStorage.getItem("gbs_custom_school_logo") || "/assets/gbs_crest_badge.jpg";

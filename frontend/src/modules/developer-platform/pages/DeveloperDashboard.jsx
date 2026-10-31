@@ -152,23 +152,31 @@ export default function DeveloperDashboard() {
 
   const [showComposeMessageModal, setShowComposeMessageModal] = useState(false);
   const [composeMessageForm, setComposeMessageForm] = useState({
-    tenantCode: "GBS-ROYALOAK",
-    institutionName: "St. Augustine Science Academy",
-    headmasterName: "Arthur Pendleton",
-    headmasterEmail: "admin@gbs.edu",
+    tenantCode: "",
+    institutionName: "",
+    headmasterName: "",
+    headmasterEmail: "",
     subject: "",
     messageText: "",
     urgency: "HIGH_CEASE_AND_DESIST",
     requiresReply: true
   });
 
-  // Developer Master List of Institution Headmasters (to verify if onboarding tallies!)
-  const masterDeveloperHeadmasterRoster = [
-    { tenantCode: "GBS-ROYALOAK", institutionName: "St. Augustine Science Academy", officialHeadmasterName: "Arthur Pendleton", officialPhone: "+233-24-555-0199", officialEmail: "admin@gbs.edu", appointmentResolution: "MOE-GES-REG-2023-441", biometricHash: "BIO-FACIAL-7A9B" },
-    { tenantCode: "GBS-MAIN", institutionName: "GBS International School (Main Enclave)", officialHeadmasterName: "Dr. Kwabena Mensah", officialPhone: "+233 24 456 7890", officialEmail: "k.mensah@gbs.edu", appointmentResolution: "GOV-BOARD-RES-2026-088", biometricHash: "BIO-FACIAL-9C21" },
-    { tenantCode: "GBS-KUMASI", institutionName: "Prempeh STEM Model Institute", officialHeadmasterName: "Rev. Dr. Emmanuel Frimpong", officialPhone: "+233 20 891 2234", officialEmail: "principal@prempeh.edu.gh", appointmentResolution: "GES-KUM-DIR-2024-112", biometricHash: "BIO-FACIAL-4D88" },
-    { tenantCode: "GBS-LEGON", institutionName: "University of Ghana Modern Primary", officialHeadmasterName: "Prof. Cecilia Addo", officialPhone: "+233 24 990 1234", officialEmail: "c.addo@ug.edu.gh", appointmentResolution: "UG-COE-HM-2025-003", biometricHash: "BIO-FACIAL-1F55" }
-  ];
+  // Developer Real-Time Institution Headmaster Roster derived dynamically from live database records
+  const masterDeveloperHeadmasterRoster = React.useMemo(() => {
+    if (Array.isArray(countdowns) && countdowns.length > 0) {
+      return countdowns.map((t) => ({
+        tenantCode: t.tenantCode || t.code || "GBS-MAIN",
+        institutionName: t.institutionName || t.name || "Educational Institution",
+        officialHeadmasterName: t.headmasterName || t.principalName || "Principal / Administrator",
+        officialPhone: t.phone || t.contactPhone || "—",
+        officialEmail: t.email || t.contactEmail || "admin@school.edu",
+        appointmentResolution: t.registrationNumber || `REG-${t.tenantCode || 'ACTIVE'}`,
+        biometricHash: t.id ? `BIO-SEC-${String(t.id).slice(-4)}` : "BIO-PENDING"
+      }));
+    }
+    return [];
+  }, [countdowns]);
 
   const handleSendDirectiveToHeadmaster = (e) => {
     e?.preventDefault();

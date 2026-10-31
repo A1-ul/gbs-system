@@ -34,10 +34,19 @@ export default function StaffDashboard() {
     details: ""
   });
 
-  const currentUser = JSON.parse(localStorage.getItem("gbs_user") || '{"firstName":"David","lastName":"Miller","email":"staff.david@gbs.edu","role":"STAFF"}');
+  const currentUser = JSON.parse(localStorage.getItem("gbs_user") || '{"firstName":"Staff","lastName":"Member","role":"STAFF"}');
 
   const [schoolName, setSchoolName] = useState(() => {
-    return localStorage.getItem("gbs_report_school_name") || localStorage.getItem("gbs_tenant_name") || "St. Augustine Science & Arts Academy";
+    let storedUser = null;
+    try {
+      storedUser = JSON.parse(localStorage.getItem("gbs_user") || "{}");
+    } catch {}
+    return (
+      localStorage.getItem("gbs_report_school_name") ||
+      localStorage.getItem("gbs_tenant_name") ||
+      storedUser?.tenant?.name ||
+      "GBS Educational Institution"
+    );
   });
   const [customSchoolLogo, setCustomSchoolLogo] = useState(() => {
     return localStorage.getItem("gbs_custom_school_logo") || "/assets/gbs_crest_badge.jpg";

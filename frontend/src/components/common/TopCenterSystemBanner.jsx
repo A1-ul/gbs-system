@@ -16,7 +16,17 @@ export default function TopCenterSystemBanner({
   isDeveloper = false
 }) {
   const [schoolName, setSchoolName] = useState(() => {
-    return institutionName || localStorage.getItem("gbs_report_school_name") || localStorage.getItem("gbs_tenant_name") || "St. Augustine Science & Arts Academy";
+    let storedUser = null;
+    try {
+      storedUser = JSON.parse(localStorage.getItem("gbs_user") || "{}");
+    } catch {}
+    return (
+      institutionName ||
+      localStorage.getItem("gbs_report_school_name") ||
+      localStorage.getItem("gbs_tenant_name") ||
+      storedUser?.tenant?.name ||
+      "GBS EDUCATIONAL INSTITUTION"
+    );
   });
   const [customLogo, setCustomLogo] = useState(() => {
     return localStorage.getItem("gbs_custom_school_logo") || "/assets/gbs_crest_badge.jpg";

@@ -59,6 +59,17 @@ export const clearFakeDataEntries = () => {
     } catch {}
   });
 
+  try {
+    const demoSchoolName = localStorage.getItem("gbs_report_school_name");
+    if (demoSchoolName && demoSchoolName.includes("St. Augustine")) {
+      localStorage.removeItem("gbs_report_school_name");
+    }
+    const demoLogo = localStorage.getItem("gbs_custom_school_logo");
+    if (demoLogo && demoLogo.includes("gbs_crest_badge")) {
+      localStorage.removeItem("gbs_custom_school_logo");
+    }
+  } catch {}
+
   // Re-initialize clean empty array/object structures
   try {
     localStorage.setItem("gbs_parent_teacher_messages", "[]");
