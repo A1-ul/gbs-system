@@ -50,13 +50,31 @@ export default function TeacherLogin() {
         <h2 className="role-login-title">TEACHER SIGN IN</h2>
         <p className="role-login-sub">GBS School Management System • Attendance, Grading & Classes</p>
         <form onSubmit={handleSubmit} className="role-login-form">
+          <div style={{ display: "flex", justifyContent: "flex-end", marginBottom: "8px" }}>
+            <button
+              type="button"
+              onClick={() => { setEmail("teacher@gbs.com"); setPassword("Teacher123!"); }}
+              style={{
+                background: "rgba(16, 185, 129, 0.15)",
+                border: "1px solid rgba(16, 185, 129, 0.4)",
+                color: "#34d399",
+                padding: "3px 10px",
+                borderRadius: "14px",
+                fontSize: "0.74rem",
+                fontWeight: "700",
+                cursor: "pointer"
+              }}
+            >
+              ⚡ Fill Teacher Demo Login
+            </button>
+          </div>
           <div className="form-group">
             <label htmlFor="teacher-email">Teacher Email / Staff ID</label>
             <input 
               id="teacher-email" 
               type="text" 
               required 
-              placeholder="Enter teacher email" 
+              placeholder="e.g. teacher@gbs.com or teacher1" 
               value={email} 
               onChange={(e) => setEmail(e.target.value)} 
             />

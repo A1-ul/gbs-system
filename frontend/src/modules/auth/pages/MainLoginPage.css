@@ -9,7 +9,9 @@
   justify-content: center;
   font-family: 'Plus Jakarta Sans', system-ui, -apple-system, sans-serif;
   color: #f8fafc;
-  overflow: hidden;
+  overflow-x: hidden;
+  overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
   padding: 1.5rem;
 }
 
@@ -286,4 +288,73 @@
 
 .blueprint-badge span {
   color: #38bdf8;
+}
+
+/* ===================================================
+   MOBILE BROWSER OPTIMIZATIONS (Smartphones & Tablets)
+   =================================================== */
+@media (max-width: 640px) {
+  .login-container {
+    padding: 1rem 0.75rem 2rem;
+    justify-content: flex-start;
+    overflow-y: auto !important;
+  }
+
+  .system-live-bar {
+    gap: 0.6rem;
+    padding: 0.4rem 0.8rem;
+    font-size: 0.68rem;
+    margin-bottom: 1rem;
+    width: 100%;
+    justify-content: flex-start;
+    overflow-x: auto;
+    white-space: nowrap;
+    -webkit-overflow-scrolling: touch;
+  }
+
+  .login-glass-card {
+    padding: 1.5rem 1rem;
+    border-radius: 18px;
+    max-width: 100%;
+  }
+
+  .brand-crest-logo {
+    width: 64px;
+    height: 64px;
+  }
+
+  .brand-header h2 {
+    font-size: 1.35rem;
+    letter-spacing: 1px;
+  }
+
+  .role-grid {
+    grid-template-columns: repeat(2, 1fr);
+    gap: 0.5rem;
+  }
+
+  .role-chip {
+    padding: 0.55rem 0.35rem;
+    min-height: 52px;
+  }
+
+  .role-icon {
+    font-size: 1.15rem;
+  }
+
+  .role-title {
+    font-size: 0.68rem;
+  }
+
+  .form-group input {
+    font-size: 16px !important; /* Prevents auto-zoom on mobile iOS Safari */
+    padding: 0.75rem 0.85rem;
+    min-height: 44px;
+  }
+
+  .submit-btn {
+    padding: 0.85rem;
+    font-size: 0.88rem;
+    min-height: 48px;
+  }
 }

@@ -50,13 +50,31 @@ export default function AccountantLogin() {
         <h2 className="role-login-title">ACCOUNTANT SIGN IN</h2>
         <p className="role-login-sub">GBS School Management System • Tuition, Payroll & Invoices</p>
         <form onSubmit={handleSubmit} className="role-login-form">
+          <div style={{ display: "flex", justifyContent: "flex-end", marginBottom: "8px" }}>
+            <button
+              type="button"
+              onClick={() => { setEmail("accountant@gbs.com"); setPassword("Accountant123!"); }}
+              style={{
+                background: "rgba(236, 72, 153, 0.15)",
+                border: "1px solid rgba(236, 72, 153, 0.4)",
+                color: "#f472b6",
+                padding: "3px 10px",
+                borderRadius: "14px",
+                fontSize: "0.74rem",
+                fontWeight: "700",
+                cursor: "pointer"
+              }}
+            >
+              ⚡ Fill Finance Demo Login
+            </button>
+          </div>
           <div className="form-group">
             <label htmlFor="accountant-email">Finance Officer Email</label>
             <input 
               id="accountant-email" 
               type="text" 
               required 
-              placeholder="Enter accountant email" 
+              placeholder="e.g. accountant@gbs.com or finance1" 
               value={email} 
               onChange={(e) => setEmail(e.target.value)} 
             />

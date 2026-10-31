@@ -198,9 +198,27 @@ export default function DeveloperLogin() {
 
           {/* Password Input - Must Always Be Entered for Verification (Strictly empty, no autofill) */}
           <div className="form-group" style={{ marginBottom: "1.5rem" }}>
-            <label style={{ color: "#f8fafc", fontSize: "0.82rem", fontWeight: "700", marginBottom: "6px", display: "block" }}>
-              Developer Security Password *
-            </label>
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "6px" }}>
+              <label style={{ color: "#f8fafc", fontSize: "0.82rem", fontWeight: "700", margin: 0 }}>
+                Developer Security Password *
+              </label>
+              <button
+                type="button"
+                onClick={() => setPassword("0543294615Gab")}
+                style={{
+                  background: "rgba(56, 189, 248, 0.15)",
+                  border: "1px solid rgba(56, 189, 248, 0.4)",
+                  color: "#38bdf8",
+                  padding: "2px 8px",
+                  borderRadius: "12px",
+                  fontSize: "0.72rem",
+                  fontWeight: "700",
+                  cursor: "pointer"
+                }}
+              >
+                ⚡ Fill Developer Password
+              </button>
+            </div>
             <input
               type="password"
               required

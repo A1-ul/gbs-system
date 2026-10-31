@@ -50,13 +50,31 @@ export default function ParentLogin() {
         <h2 className="role-login-title">PARENT SIGN IN</h2>
         <p className="role-login-sub">GBS School Management System • Attendance, Fees & Performance</p>
         <form onSubmit={handleSubmit} className="role-login-form">
+          <div style={{ display: "flex", justifyContent: "flex-end", marginBottom: "8px" }}>
+            <button
+              type="button"
+              onClick={() => { setEmail("parent@gbs.com"); setPassword("Parent123!"); }}
+              style={{
+                background: "rgba(245, 158, 11, 0.15)",
+                border: "1px solid rgba(245, 158, 11, 0.4)",
+                color: "#fbbf24",
+                padding: "3px 10px",
+                borderRadius: "14px",
+                fontSize: "0.74rem",
+                fontWeight: "700",
+                cursor: "pointer"
+              }}
+            >
+              ⚡ Fill Parent Demo Login
+            </button>
+          </div>
           <div className="form-group">
             <label htmlFor="parent-email">Parent Email / Registered Mobile</label>
             <input 
               id="parent-email" 
               type="text" 
               required 
-              placeholder="Enter parent email" 
+              placeholder="e.g. parent@gbs.com or parent1" 
               value={email} 
               onChange={(e) => setEmail(e.target.value)} 
             />

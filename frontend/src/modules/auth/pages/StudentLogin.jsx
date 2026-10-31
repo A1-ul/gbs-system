@@ -50,13 +50,31 @@ export default function StudentLogin() {
         <h2 className="role-login-title">STUDENT SIGN IN</h2>
         <p className="role-login-sub">GBS School Management System • Results, Classes & Timetable</p>
         <form onSubmit={handleSubmit} className="role-login-form">
+          <div style={{ display: "flex", justifyContent: "flex-end", marginBottom: "8px" }}>
+            <button
+              type="button"
+              onClick={() => { setEmail("student@gbs.com"); setPassword("Student123!"); }}
+              style={{
+                background: "rgba(139, 92, 246, 0.15)",
+                border: "1px solid rgba(139, 92, 246, 0.4)",
+                color: "#c084fc",
+                padding: "3px 10px",
+                borderRadius: "14px",
+                fontSize: "0.74rem",
+                fontWeight: "700",
+                cursor: "pointer"
+              }}
+            >
+              ⚡ Fill Student Demo Login
+            </button>
+          </div>
           <div className="form-group">
             <label htmlFor="student-email">Student Email / Admission No.</label>
             <input 
               id="student-email" 
               type="text" 
               required 
-              placeholder="Enter student email" 
+              placeholder="e.g. student@gbs.com or student1" 
               value={email} 
               onChange={(e) => setEmail(e.target.value)} 
             />

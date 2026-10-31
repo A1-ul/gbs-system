@@ -96,6 +96,28 @@ export default function StaffLogin({ defaultRole = "STAFF" }) {
             : "GBS School Management System • Shifts, Operations & Logistics"}
         </p>
         <form onSubmit={handleSubmit} className="role-login-form">
+          <div style={{ display: "flex", justifyContent: "flex-end", marginBottom: "8px" }}>
+            <button
+              type="button"
+              onClick={() => {
+                if (isAlumni) { setEmail("alumni@gbs.com"); setPassword("Alumni123!"); }
+                else if (isHR) { setEmail("hr@gbs.com"); setPassword("Hr123!"); }
+                else { setEmail("staff@gbs.com"); setPassword("Staff123!"); }
+              }}
+              style={{
+                background: "rgba(100, 116, 139, 0.2)",
+                border: "1px solid rgba(148, 163, 184, 0.4)",
+                color: "#cbd5e1",
+                padding: "3px 10px",
+                borderRadius: "14px",
+                fontSize: "0.74rem",
+                fontWeight: "700",
+                cursor: "pointer"
+              }}
+            >
+              ⚡ Fill {isAlumni ? "Alumni" : isHR ? "HR" : "Staff"} Demo Login
+            </button>
+          </div>
           <div className="form-group">
             <label htmlFor="staff-email">
               {isAlumni ? "Alumni Email / Degree ID" : isHR ? "HR Email / Officer ID" : "Staff Email / Employee ID"}

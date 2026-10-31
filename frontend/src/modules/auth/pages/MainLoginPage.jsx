@@ -136,6 +136,23 @@ export default function MainLoginPage() {
       });
   }, []);
 
+  const ROLE_CREDENTIALS = {
+    ADMIN: { email: "admin@gbs.com", password: "Admin123!" },
+    TEACHER: { email: "teacher@gbs.com", password: "Teacher123!" },
+    STUDENT: { email: "student@gbs.com", password: "Student123!" },
+    PARENT: { email: "parent@gbs.com", password: "Parent123!" },
+    ACCOUNTANT: { email: "accountant@gbs.com", password: "Accountant123!" },
+    STAFF: { email: "staff@gbs.com", password: "Staff123!" },
+    HR: { email: "hr@gbs.com", password: "Hr123!" },
+    ALUMNI: { email: "alumni@gbs.com", password: "Alumni123!" }
+  };
+
+  const handleFillCredentials = (role) => {
+    const cred = ROLE_CREDENTIALS[role] || ROLE_CREDENTIALS.ADMIN;
+    setEmail(cred.email);
+    setPassword(cred.password);
+  };
+
   const handleRoleSelect = (roleId) => {
     setSelectedRole(roleId);
     setError(null);
@@ -157,8 +174,14 @@ export default function MainLoginPage() {
         throw new Error(result?.message || "Authentication failed");
       }
 
-      const userRole = result?.data?.user?.role || selectedRole;
-      navigate(`/portal/${String(userRole).toLowerCase()}/dashboard`);
+      const rawRole = result?.data?.user?.role || selectedRole;
+      if (rawRole === "DEVELOPER") {
+        navigate("/developer-control-center/dashboard");
+      } else if (rawRole === "SUPER_ADMIN" || rawRole === "ADMIN") {
+        navigate("/portal/admin/dashboard");
+      } else {
+        navigate(`/portal/${String(rawRole).toLowerCase()}/dashboard`);
+      }
     } catch (err) {
       const message =
         err?.response?.data?.message ||
@@ -300,13 +323,36 @@ export default function MainLoginPage() {
 
         {/* Real Login Form */}
         <form onSubmit={handleLogin} className="login-form">
+          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "8px" }}>
+            <span style={{ fontSize: "0.75rem", color: "#94a3b8", fontWeight: "600" }}>CREDENTIALS ENTRY</span>
+            <button
+              type="button"
+              onClick={() => handleFillCredentials(selectedRole)}
+              style={{
+                background: "rgba(56, 189, 248, 0.15)",
+                border: "1px solid rgba(56, 189, 248, 0.4)",
+                color: "#38bdf8",
+                padding: "4px 12px",
+                borderRadius: "16px",
+                fontSize: "0.75rem",
+                fontWeight: "700",
+                cursor: "pointer"
+              }}
+            >
+              ⚡ Fill {selectedRole} Demo Login
+            </button>
+          </div>
+
           <div className="form-group">
-            <label htmlFor="email">Email Address / Username</label>
+            <label htmlFor="email">Email Address or Username</label>
             <input
               id="email"
-              type="email"
+              type="text"
+              inputMode="email"
+              autoCapitalize="none"
+              autoCorrect="off"
               required
-              placeholder="Enter email address"
+              placeholder="e.g. admin@gbs.com or superadmin"
               value={email}
               onChange={(e) => setEmail(e.target.value)}
             />

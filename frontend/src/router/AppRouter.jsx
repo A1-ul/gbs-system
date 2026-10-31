@@ -108,6 +108,7 @@ export default function AppRouter() {
         <Route path="/portal/staff/dashboard" element={<StaffDashboard />} />
         <Route path="/portal/hr/dashboard" element={<HRDashboard />} />
         <Route path="/portal/alumni/dashboard" element={<AlumniDashboard />} />
+        <Route path="/portal/developer/dashboard" element={<Navigate to="/developer-control-center/dashboard" replace />} />
         <Route path="/portal/:role/dashboard" element={<RoleDashboardView />} />
 
         {/* Hidden Enterprise Developer Control Center */}

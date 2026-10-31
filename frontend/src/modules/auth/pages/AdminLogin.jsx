@@ -48,13 +48,31 @@ export default function AdminLogin() {
         <h2 className="role-login-title">HEADMASTER SIGN IN</h2>
         <p className="role-login-sub">GBS School Management System Enterprise Executive Suite</p>
         <form onSubmit={handleSubmit} className="role-login-form">
+          <div style={{ display: "flex", justifyContent: "flex-end", marginBottom: "8px" }}>
+            <button
+              type="button"
+              onClick={() => { setEmail("admin@gbs.com"); setPassword("Admin123!"); }}
+              style={{
+                background: "rgba(56, 189, 248, 0.15)",
+                border: "1px solid rgba(56, 189, 248, 0.4)",
+                color: "#38bdf8",
+                padding: "3px 10px",
+                borderRadius: "14px",
+                fontSize: "0.74rem",
+                fontWeight: "700",
+                cursor: "pointer"
+              }}
+            >
+              ⚡ Fill Headmaster Demo Login
+            </button>
+          </div>
           <div className="form-group">
             <label htmlFor="admin-email">Headmaster Email / Staff ID</label>
             <input 
               id="admin-email" 
               type="text" 
               required 
-              placeholder="Enter headmaster email" 
+              placeholder="e.g. admin@gbs.com or superadmin" 
               value={email} 
               onChange={(e) => setEmail(e.target.value)} 
             />
