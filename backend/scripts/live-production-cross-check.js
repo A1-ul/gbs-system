@@ -105,8 +105,10 @@ async function runLiveAudit() {
     { role: "TEACHER", user: "teacher1", pass: "teacher123", endpoint: "/api/v1/auth/login", portal: "TEACHER" },
     { role: "STUDENT", user: "student1", pass: "student123", endpoint: "/api/v1/auth/login", portal: "STUDENT" },
     { role: "PARENT", user: "parent1", pass: "parent123", endpoint: "/api/v1/auth/login", portal: "PARENT" },
-    { role: "ACCOUNTANT", user: "accountant1", pass: "account123", endpoint: "/api/v1/auth/login", portal: "ACCOUNTANT" },
-    { role: "HR", user: "hr1", pass: "hr123456", endpoint: "/api/v1/auth/login", portal: "HR" },
+    { role: "ACCOUNTANT", user: "accountant@gbs.com", pass: "Accountant123!", endpoint: "/api/v1/auth/login", portal: "ACCOUNTANT" },
+    { role: "ACCOUNTANT (ALT)", user: "accountant1", pass: "Accountant123!", endpoint: "/api/v1/auth/login", portal: "ACCOUNTANT" },
+    { role: "HR", user: "hr@gbs.com", pass: "Hr123!", endpoint: "/api/v1/auth/login", portal: "HR" },
+    { role: "HR (ALT)", user: "hr1", pass: "Hr123!", endpoint: "/api/v1/auth/login", portal: "HR" },
     { role: "STAFF", user: "staff1", pass: "staff123", endpoint: "/api/v1/auth/login", portal: "STAFF" },
     { role: "ALUMNI", user: "alumni1", pass: "alumni123", endpoint: "/api/v1/auth/login", portal: "ALUMNI" }
   ];

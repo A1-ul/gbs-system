@@ -114,6 +114,20 @@ const BUILTIN_SYSTEM_USERS = [
     tenant: DEFAULT_TENANT
   },
   {
+    id: 'usr_accountant_alt',
+    tenantId: 'tnt_master_default',
+    email: 'finance@gbs.com',
+    username: 'accountant1',
+    passwordHash: bcrypt.hashSync('Accountant123!', 10),
+    role: 'ACCOUNTANT',
+    firstName: 'David',
+    lastName: 'Accountant',
+    isActive: true,
+    isLocked: false,
+    permissions: ['*'],
+    tenant: DEFAULT_TENANT
+  },
+  {
     id: 'usr_staff_master',
     tenantId: 'tnt_master_default',
     email: 'staff@gbs.com',
