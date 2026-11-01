@@ -266,24 +266,31 @@
 /* Tenant Registration Console Cards */
 .tenant-console-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(130px, 1fr));
-  gap: 0.85rem;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 14px;
   margin-bottom: 2rem;
+  align-items: stretch;
+  width: 100%;
 }
 
 .console-stat-card {
   background: #0f172a;
-  border: 1px solid rgba(255, 255, 255, 0.08);
-  border-radius: 10px;
-  padding: 1rem;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 12px;
+  padding: 14px 16px;
   display: flex;
   flex-direction: column;
-  transition: transform 0.2s;
+  justify-content: center;
+  height: 100%;
+  min-height: 94px;
+  box-sizing: border-box;
+  box-shadow: 0 4px 14px rgba(0, 0, 0, 0.35);
+  transition: transform 0.2s ease, border-color 0.2s ease;
 }
 
 .console-stat-card:hover {
   transform: translateY(-2px);
-  border-color: rgba(255, 255, 255, 0.18);
+  border-color: rgba(255, 255, 255, 0.25);
 }
 
 .console-stat-lbl {
@@ -292,10 +299,13 @@
   color: #94a3b8;
   letter-spacing: 0.5px;
   margin-bottom: 0.35rem;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
 .console-stat-val {
-  font-size: 1.5rem;
+  font-size: 1.55rem;
   font-weight: 800;
   color: #fff;
 }
@@ -305,6 +315,18 @@
 .console-stat-card.expiring .console-stat-val { color: #f59e0b; }
 .console-stat-card.expired .console-stat-val { color: #ef4444; }
 .console-stat-card.locked .console-stat-val { color: #f43f5e; }
+
+@media (max-width: 1100px) {
+  .tenant-console-grid {
+    grid-template-columns: repeat(2, 1fr);
+  }
+}
+
+@media (max-width: 560px) {
+  .tenant-console-grid {
+    grid-template-columns: 1fr;
+  }
+}
 
 /* Real-Time Countdown Monitoring Board */
 .countdown-table-container {
@@ -570,28 +592,48 @@
 /* System Telemetry & Remote Controls */
 .telemetry-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
-  gap: 1rem;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 14px;
   margin-bottom: 2rem;
+  align-items: stretch;
+  width: 100%;
 }
 
 .metric-box {
   background: #0f172a;
-  border: 1px solid rgba(255, 255, 255, 0.08);
-  padding: 1.25rem;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  padding: 16px 18px;
   border-radius: 12px;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  height: 100%;
+  min-height: 105px;
+  box-sizing: border-box;
+  box-shadow: 0 4px 14px rgba(0, 0, 0, 0.35);
+  transition: transform 0.2s ease, border-color 0.2s ease;
+}
+
+.metric-box:hover {
+  transform: translateY(-2px);
+  border-color: rgba(56, 189, 248, 0.4);
 }
 
 .box-title {
   display: block;
-  font-size: 0.75rem;
+  font-size: 0.76rem;
   color: #94a3b8;
   margin-bottom: 0.4rem;
-  font-weight: 600;
+  font-weight: 700;
+  letter-spacing: 0.5px;
+  text-transform: uppercase;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
 .box-val {
-  font-size: 1.4rem;
+  font-size: 1.45rem;
   font-weight: 800;
 }
 
@@ -599,23 +641,28 @@
 
 .controls-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
-  gap: 1rem;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 14px;
+  align-items: stretch;
+  width: 100%;
 }
 
 .ctrl-btn {
-  padding: 1rem;
+  padding: 14px 18px;
   border: none;
   border-radius: 12px;
   color: #fff;
   font-weight: 700;
-  font-size: 0.85rem;
+  font-size: 0.88rem;
   cursor: pointer;
-  transition: all 0.2s;
+  transition: all 0.2s ease;
   display: flex;
   align-items: center;
   justify-content: center;
   gap: 8px;
+  height: 100%;
+  min-height: 52px;
+  box-sizing: border-box;
 }
 
 .ctrl-btn.danger { background: linear-gradient(135deg, #dc2626, #b91c1c); }
@@ -632,18 +679,24 @@
 .dev-hero-pills {
   display: flex;
   flex-wrap: wrap;
-  gap: 8px;
+  gap: 10px;
   margin-top: 14px;
+  align-items: center;
 }
 
 .telemetry-pill {
-  background: rgba(15, 23, 42, 0.75);
-  border: 1px solid rgba(255, 255, 255, 0.15);
-  padding: 4px 10px;
-  border-radius: 6px;
-  font-size: 0.75rem;
+  background: rgba(15, 23, 42, 0.85);
+  border: 1px solid rgba(255, 255, 255, 0.18);
+  padding: 6px 14px;
+  border-radius: 8px;
+  font-size: 0.78rem;
   font-weight: 700;
   color: #e2e8f0;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  height: 32px;
+  box-sizing: border-box;
 }
 
 .telemetry-pill.healthy {
@@ -654,9 +707,22 @@
 /* Photographic Tri-Card Grid */
 .infra-photographic-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
+  grid-template-columns: repeat(3, 1fr);
   gap: 1.25rem;
   margin-bottom: 2rem;
+  align-items: stretch;
+}
+
+@media (max-width: 960px) {
+  .telemetry-grid, .controls-grid, .infra-photographic-grid {
+    grid-template-columns: repeat(2, 1fr);
+  }
+}
+
+@media (max-width: 560px) {
+  .telemetry-grid, .controls-grid, .infra-photographic-grid {
+    grid-template-columns: 1fr;
+  }
 }
 
 .infra-photo-card {

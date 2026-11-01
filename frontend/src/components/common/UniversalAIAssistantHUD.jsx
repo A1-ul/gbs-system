@@ -13,13 +13,9 @@ import { clearFakeDataEntries } from "../../utils/freshSystemReset";
 export default function UniversalAIAssistantHUD() {
   const [isDeveloper, setIsDeveloper] = useState(() => {
     try {
-      const rawUser = localStorage.getItem("gbs_user");
-      const user = rawUser ? JSON.parse(rawUser) : null;
-      const role = user?.role?.toUpperCase();
-      const email = user?.email?.toLowerCase();
-      const isPathDev = typeof window !== "undefined" && window.location.pathname.includes("/developer-");
-      const isSessionDev = typeof sessionStorage !== "undefined" && sessionStorage.getItem("gbs_developer_authenticated") === "true";
-      return role === "DEVELOPER" || email === "gabosei48@gmail.com" || isPathDev || isSessionDev;
+      if (typeof window === "undefined") return false;
+      const isPathDev = window.location.pathname.startsWith("/developer-");
+      return isPathDev;
     } catch {
       return false;
     }
@@ -32,29 +28,31 @@ export default function UniversalAIAssistantHUD() {
   const [isRepairing, setIsRepairing] = useState(false);
   const [unreadCount, setUnreadCount] = useState(0);
 
-  // Monitor Auth Changes to enforce Developer-Only visibility
+  // Monitor Route & Path Changes to enforce Developer-Only visibility strictly
   useEffect(() => {
     const checkIsDeveloper = () => {
       try {
-        const rawUser = localStorage.getItem("gbs_user");
-        const user = rawUser ? JSON.parse(rawUser) : null;
-        const role = user?.role?.toUpperCase();
-        const email = user?.email?.toLowerCase();
-        const isPathDev = window.location.pathname.includes("/developer-");
-        const isSessionDev = sessionStorage.getItem("gbs_developer_authenticated") === "true";
-        setIsDeveloper(role === "DEVELOPER" || email === "gabosei48@gmail.com" || isPathDev || isSessionDev);
+        if (typeof window === "undefined") {
+          setIsDeveloper(false);
+          return;
+        }
+        // STRICT RULE: AI Assistant ONLY appears on the Developer Dashboard routes
+        // It is strictly excluded and hidden from ANY other user dashboard (Headmaster, Teacher, Student, Parent, Accountant, Staff, HR, Alumni, etc.)
+        const isPathDev = window.location.pathname.startsWith("/developer-");
+        setIsDeveloper(isPathDev);
       } catch {
         setIsDeveloper(false);
       }
     };
 
-    window.addEventListener("storage", checkIsDeveloper);
+    checkIsDeveloper();
     window.addEventListener("popstate", checkIsDeveloper);
-    const authInterval = setInterval(checkIsDeveloper, 2000);
+    window.addEventListener("storage", checkIsDeveloper);
+    const routeInterval = setInterval(checkIsDeveloper, 400);
     return () => {
-      window.removeEventListener("storage", checkIsDeveloper);
       window.removeEventListener("popstate", checkIsDeveloper);
-      clearInterval(authInterval);
+      window.removeEventListener("storage", checkIsDeveloper);
+      clearInterval(routeInterval);
     };
   }, []);
 
@@ -154,7 +152,10 @@ export default function UniversalAIAssistantHUD() {
     }, 4000);
   };
 
-  if (!isDeveloper) {
+  // STRICT RULE: AI Assistant HUD is strictly restricted to the Developer Dashboard.
+  // It NEVER renders on any other dashboard (Headmaster, Teacher, Student, Parent, Accountant, Staff, HR, etc.)
+  const isDevPath = typeof window !== "undefined" && window.location.pathname.startsWith("/developer-");
+  if (!isDeveloper || !isDevPath) {
     return null;
   }
 

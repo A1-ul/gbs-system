@@ -75,7 +75,7 @@ const ROLE_CONFIGS = {
       { title: "My Timetable", desc: "Today's Lessons & Classrooms", path: "/timetable", icon: "🗓️", color: "#8b5cf6" },
       { title: "Homework & Tasks", desc: "Submit Projects & Check Grades", path: "/assignments", icon: "📝", color: "#3b82f6" },
       { title: "Virtual Classrooms", desc: "Join Live Interactive Sessions", path: "/online-learning", icon: "💻", color: "#10b981" },
-      { title: "AI Study Assistant", desc: "Personalized Diagnostic Insights", path: "/ai-diagnostics", icon: "🧠", color: "#f59e0b" },
+      { title: "Academic Diagnostic Hub", desc: "Curriculum Diagnostic Insights", path: "/academic", icon: "🧠", color: "#f59e0b" },
       { title: "Report Cards", desc: "View Verified Transcripts", path: "/reports", icon: "📄", color: "#06b6d4" }
     ]
   },

@@ -275,30 +275,65 @@
 
 .sub-telemetry-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
-  gap: 12px;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 14px;
   margin-top: 14px;
+  align-items: stretch;
+  width: 100%;
 }
 
 .sub-telemetry-pill {
-  background: rgba(0, 0, 0, 0.35);
-  border: 1px solid rgba(255, 255, 255, 0.08);
-  border-radius: 10px;
-  padding: 10px 14px;
+  background: rgba(0, 0, 0, 0.45);
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  border-radius: 12px;
+  padding: 12px 16px;
+  height: 100%;
+  min-height: 74px;
+  box-sizing: border-box;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  box-shadow: 0 4px 14px rgba(0, 0, 0, 0.25);
+  transition: transform 0.2s ease, border-color 0.2s ease;
+}
+
+.sub-telemetry-pill:hover {
+  transform: translateY(-2px);
+  border-color: rgba(56, 189, 248, 0.45);
 }
 
 .sub-telemetry-pill span {
   display: block;
-  font-size: 0.7rem;
+  font-size: 0.72rem;
   color: #94a3b8;
-  margin-bottom: 2px;
+  margin-bottom: 4px;
   text-transform: uppercase;
   letter-spacing: 0.5px;
+  font-weight: 700;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
 .sub-telemetry-pill strong {
-  font-size: 0.95rem;
+  font-size: 0.98rem;
   color: #f8fafc;
+  font-weight: 800;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+@media (max-width: 960px) {
+  .sub-telemetry-grid {
+    grid-template-columns: repeat(2, 1fr);
+  }
+}
+
+@media (max-width: 520px) {
+  .sub-telemetry-grid {
+    grid-template-columns: 1fr;
+  }
 }
 
 /* Headmaster Renewal Celebration Modal */
