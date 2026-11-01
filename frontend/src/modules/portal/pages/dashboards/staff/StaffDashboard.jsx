@@ -3,10 +3,12 @@ import { Link, useNavigate } from "react-router-dom";
 import apiClient from "../../../../../api/client/apiClient";
 import WindowControlsBar from "../../../../../components/common/WindowControlsBar";
 import TopCenterSystemBanner from "../../../../../components/common/TopCenterSystemBanner";
+import UniversalRoleGuideModal from "../../../../../components/common/UniversalRoleGuideModal";
 import "./StaffDashboard.css";
 
 export default function StaffDashboard() {
   const navigate = useNavigate();
+  const [showStaffGuideModal, setShowStaffGuideModal] = useState(false);
   const [activeTab, setActiveTab] = useState("duties");
   const [loading, setLoading] = useState(false);
   const [feedback, setFeedback] = useState(null);
@@ -221,6 +223,22 @@ export default function StaffDashboard() {
             <Link to="/library" className="role-action-btn">
               📚 Library
             </Link>
+            <button
+              type="button"
+              className="role-action-btn"
+              onClick={() => setShowStaffGuideModal(true)}
+              style={{
+                background: "linear-gradient(135deg, #10b981 0%, #059669 100%)",
+                border: "1.5px solid rgba(52, 211, 153, 0.6)",
+                color: "#ffffff",
+                boxShadow: "0 4px 14px rgba(16, 185, 129, 0.35)",
+                display: "inline-flex",
+                alignItems: "center",
+                gap: "6px"
+              }}
+            >
+              📖 Operating Guide
+            </button>
             <button type="button" className="role-action-btn logout" onClick={handleLogout}>
               🚪 Sign Out
             </button>
@@ -242,28 +260,56 @@ export default function StaffDashboard() {
               </p>
 
               <div className="role-kpi-row">
-                <div className="role-kpi-box">
+                <div 
+                  className="role-kpi-box"
+                  onClick={() => setActiveTab("duties")}
+                  style={{ cursor: "pointer", transition: "transform 0.15s, border-color 0.15s" }}
+                  title="Click to view Operational Duties & Tasks"
+                  onMouseEnter={(e) => { e.currentTarget.style.transform = "translateY(-3px)"; e.currentTarget.style.borderColor = "#38bdf8"; }}
+                  onMouseLeave={(e) => { e.currentTarget.style.transform = "none"; e.currentTarget.style.borderColor = ""; }}
+                >
                   <span className="role-kpi-icon">📌</span>
                   <div className="role-kpi-data">
                     <span className="role-kpi-title">Open Tasks</span>
                     <strong className="role-kpi-num">{tasks.filter((t) => t.status !== "COMPLETED").length} Pending</strong>
                   </div>
                 </div>
-                <div className="role-kpi-box">
+                <div 
+                  className="role-kpi-box"
+                  onClick={() => navigate("/transport")}
+                  style={{ cursor: "pointer", transition: "transform 0.15s, border-color 0.15s" }}
+                  title="Click to view Transport Fleet"
+                  onMouseEnter={(e) => { e.currentTarget.style.transform = "translateY(-3px)"; e.currentTarget.style.borderColor = "#34d399"; }}
+                  onMouseLeave={(e) => { e.currentTarget.style.transform = "none"; e.currentTarget.style.borderColor = ""; }}
+                >
                   <span className="role-kpi-icon">🚌</span>
                   <div className="role-kpi-data">
                     <span className="role-kpi-title">Transport Fleet</span>
                     <strong className="role-kpi-num" style={{ color: "#34d399" }}>All Active</strong>
                   </div>
                 </div>
-                <div className="role-kpi-box">
+                <div 
+                  className="role-kpi-box"
+                  onClick={() => setActiveTab("admissions")}
+                  style={{ cursor: "pointer", transition: "transform 0.15s, border-color 0.15s" }}
+                  title="Click to view Admissions Document Verification"
+                  onMouseEnter={(e) => { e.currentTarget.style.transform = "translateY(-3px)"; e.currentTarget.style.borderColor = "#38bdf8"; }}
+                  onMouseLeave={(e) => { e.currentTarget.style.transform = "none"; e.currentTarget.style.borderColor = ""; }}
+                >
                   <span className="role-kpi-icon">📂</span>
                   <div className="role-kpi-data">
                     <span className="role-kpi-title">Admissions Intake</span>
                     <strong className="role-kpi-num">{applications.length} Records</strong>
                   </div>
                 </div>
-                <div className="role-kpi-box">
+                <div 
+                  className="role-kpi-box"
+                  onClick={() => setActiveTab("maintenance")}
+                  style={{ cursor: "pointer", transition: "transform 0.15s, border-color 0.15s" }}
+                  title="Click to view Campus Facility & Maintenance"
+                  onMouseEnter={(e) => { e.currentTarget.style.transform = "translateY(-3px)"; e.currentTarget.style.borderColor = "#38bdf8"; }}
+                  onMouseLeave={(e) => { e.currentTarget.style.transform = "none"; e.currentTarget.style.borderColor = ""; }}
+                >
                   <span className="role-kpi-icon">⚡</span>
                   <div className="role-kpi-data">
                     <span className="role-kpi-title">Campus Facilities</span>
@@ -584,6 +630,13 @@ export default function StaffDashboard() {
           )}
         </main>
       </div>
+
+      {/* Universal Role Operating Guide Modal */}
+      <UniversalRoleGuideModal
+        role="STAFF"
+        isOpen={showStaffGuideModal}
+        onClose={() => setShowStaffGuideModal(false)}
+      />
     </div>
   );
 }

@@ -3,9 +3,11 @@ import { Link, useNavigate } from "react-router-dom";
 import WindowControlsBar from "../../../../../components/common/WindowControlsBar";
 import TopCenterSystemBanner from "../../../../../components/common/TopCenterSystemBanner";
 import { getUserAvatar } from "../../../../../utils/userAvatars";
+import UniversalRoleGuideModal from "../../../../../components/common/UniversalRoleGuideModal";
 
 export default function HRDashboard() {
   const navigate = useNavigate();
+  const [showHRGuideModal, setShowHRGuideModal] = useState(false);
   const [hrAvatar, setHrAvatar] = useState(() => getUserAvatar("HR"));
 
   useEffect(() => {
@@ -314,6 +316,26 @@ export default function HRDashboard() {
           </button>
           <button
             type="button"
+            onClick={() => setShowHRGuideModal(true)}
+            style={{
+              background: "linear-gradient(135deg, #10b981 0%, #059669 100%)",
+              border: "1.5px solid rgba(52, 211, 153, 0.6)",
+              color: "#ffffff",
+              padding: "8px 16px",
+              borderRadius: "8px",
+              cursor: "pointer",
+              fontWeight: "800",
+              fontSize: "0.82rem",
+              boxShadow: "0 4px 12px rgba(16, 185, 129, 0.35)",
+              display: "inline-flex",
+              alignItems: "center",
+              gap: "6px"
+            }}
+          >
+            📖 Operating Guide
+          </button>
+          <button
+            type="button"
             className="role-action-btn logout"
             onClick={() => navigate("/login")}
             style={{
@@ -344,6 +366,105 @@ export default function HRDashboard() {
 
         {/* Prominent Top Center System Branding */}
         <TopCenterSystemBanner roleTitle="Human Resources & Faculty Affairs" />
+
+        {/* Interactive KPI Inscription Cards */}
+        <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(220px, 1fr))", gap: "1rem", marginBottom: "1.5rem" }}>
+          <div
+            onClick={() => setActiveTab("staff_roster")}
+            style={{
+              background: "rgba(15, 23, 42, 0.7)",
+              border: "1px solid rgba(139, 92, 246, 0.3)",
+              borderRadius: "12px",
+              padding: "1rem 1.25rem",
+              cursor: "pointer",
+              transition: "transform 0.15s, border-color 0.15s",
+              display: "flex",
+              alignItems: "center",
+              gap: "1rem"
+            }}
+            title="Click to view Staff & Faculty Directory"
+            onMouseEnter={(e) => { e.currentTarget.style.transform = "translateY(-3px)"; e.currentTarget.style.borderColor = "#c084fc"; }}
+            onMouseLeave={(e) => { e.currentTarget.style.transform = "none"; e.currentTarget.style.borderColor = "rgba(139, 92, 246, 0.3)"; }}
+          >
+            <span style={{ fontSize: "2rem" }}>👥</span>
+            <div>
+              <div style={{ fontSize: "0.75rem", color: "#94a3b8", textTransform: "uppercase", fontWeight: "700" }}>Total Personnel</div>
+              <strong style={{ fontSize: "1.3rem", color: "#f8fafc" }}>{employees.length} Staff</strong>
+            </div>
+          </div>
+
+          <div
+            onClick={() => setActiveTab("hr_audits")}
+            style={{
+              background: "rgba(15, 23, 42, 0.7)",
+              border: "1px solid rgba(139, 92, 246, 0.3)",
+              borderRadius: "12px",
+              padding: "1rem 1.25rem",
+              cursor: "pointer",
+              transition: "transform 0.15s, border-color 0.15s",
+              display: "flex",
+              alignItems: "center",
+              gap: "1rem"
+            }}
+            title="Click to view Headmaster Audit Directives"
+            onMouseEnter={(e) => { e.currentTarget.style.transform = "translateY(-3px)"; e.currentTarget.style.borderColor = "#c084fc"; }}
+            onMouseLeave={(e) => { e.currentTarget.style.transform = "none"; e.currentTarget.style.borderColor = "rgba(139, 92, 246, 0.3)"; }}
+          >
+            <span style={{ fontSize: "2rem" }}>📋</span>
+            <div>
+              <div style={{ fontSize: "0.75rem", color: "#94a3b8", textTransform: "uppercase", fontWeight: "700" }}>Audit Directives</div>
+              <strong style={{ fontSize: "1.3rem", color: "#f59e0b" }}>{hrAuditRequests.filter(r => r.status === "PENDING_HR_SUBMISSION").length} Pending</strong>
+            </div>
+          </div>
+
+          <div
+            onClick={() => setActiveTab("leaves")}
+            style={{
+              background: "rgba(15, 23, 42, 0.7)",
+              border: "1px solid rgba(139, 92, 246, 0.3)",
+              borderRadius: "12px",
+              padding: "1rem 1.25rem",
+              cursor: "pointer",
+              transition: "transform 0.15s, border-color 0.15s",
+              display: "flex",
+              alignItems: "center",
+              gap: "1rem"
+            }}
+            title="Click to view Leave & Absence Management"
+            onMouseEnter={(e) => { e.currentTarget.style.transform = "translateY(-3px)"; e.currentTarget.style.borderColor = "#c084fc"; }}
+            onMouseLeave={(e) => { e.currentTarget.style.transform = "none"; e.currentTarget.style.borderColor = "rgba(139, 92, 246, 0.3)"; }}
+          >
+            <span style={{ fontSize: "2rem" }}>🏖️</span>
+            <div>
+              <div style={{ fontSize: "0.75rem", color: "#94a3b8", textTransform: "uppercase", fontWeight: "700" }}>Leave Requests</div>
+              <strong style={{ fontSize: "1.3rem", color: "#38bdf8" }}>{leaveRequests.filter(l => l.status === "PENDING").length} Pending</strong>
+            </div>
+          </div>
+
+          <div
+            onClick={() => setActiveTab("payroll_structure")}
+            style={{
+              background: "rgba(15, 23, 42, 0.7)",
+              border: "1px solid rgba(139, 92, 246, 0.3)",
+              borderRadius: "12px",
+              padding: "1rem 1.25rem",
+              cursor: "pointer",
+              transition: "transform 0.15s, border-color 0.15s",
+              display: "flex",
+              alignItems: "center",
+              gap: "1rem"
+            }}
+            title="Click to view Payroll & Salary Tiers"
+            onMouseEnter={(e) => { e.currentTarget.style.transform = "translateY(-3px)"; e.currentTarget.style.borderColor = "#c084fc"; }}
+            onMouseLeave={(e) => { e.currentTarget.style.transform = "none"; e.currentTarget.style.borderColor = "rgba(139, 92, 246, 0.3)"; }}
+          >
+            <span style={{ fontSize: "2rem" }}>💳</span>
+            <div>
+              <div style={{ fontSize: "0.75rem", color: "#94a3b8", textTransform: "uppercase", fontWeight: "700" }}>Monthly Payroll</div>
+              <strong style={{ fontSize: "1.3rem", color: "#34d399" }}>${employees.reduce((acc, e) => acc + (parseFloat(e.salary) || 0), 0).toLocaleString()}</strong>
+            </div>
+          </div>
+        </div>
 
         {/* Navigation Tabs */}
         <div style={{ display: "flex", gap: "8px", borderBottom: "1px solid rgba(255,255,255,0.1)", marginBottom: "1.5rem", overflowX: "auto", paddingBottom: "4px" }}>
@@ -753,6 +874,13 @@ export default function HRDashboard() {
           </div>
         </div>
       )}
+
+      {/* Universal Role Operating Guide Modal */}
+      <UniversalRoleGuideModal
+        role="HR"
+        isOpen={showHRGuideModal}
+        onClose={() => setShowHRGuideModal(false)}
+      />
     </div>
   );
 }

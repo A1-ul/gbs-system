@@ -5,10 +5,12 @@ import WindowControlsBar from "../../../../../components/common/WindowControlsBa
 import TopCenterSystemBanner from "../../../../../components/common/TopCenterSystemBanner";
 import { getUserAvatar } from "../../../../../utils/userAvatars";
 import { offlineSyncEngine } from "../../../../../utils/offlineSync";
+import UniversalRoleGuideModal from "../../../../../components/common/UniversalRoleGuideModal";
 import "./StudentDashboard.css";
 
 export default function StudentDashboard() {
   const navigate = useNavigate();
+  const [showStudentGuideModal, setShowStudentGuideModal] = useState(false);
 
   // Real-Life Scholar Portrait
   const [studentAvatar, setStudentAvatar] = useState(() => getUserAvatar("STUDENT"));
@@ -879,6 +881,20 @@ export default function StudentDashboard() {
             >
               🎓 Alumni Hall of Fame
             </button>
+            <button
+              type="button"
+              className="role-action-btn"
+              onClick={() => setShowStudentGuideModal(true)}
+              style={{
+                borderColor: "#10b981",
+                color: "#6ee7b7",
+                fontWeight: 800,
+                background: "rgba(16, 185, 129, 0.15)",
+                boxShadow: "0 0 10px rgba(16, 185, 129, 0.2)"
+              }}
+            >
+              📖 Operating Guide
+            </button>
             <button type="button" className="role-action-btn logout" onClick={handleLogout}>
               🚪 Sign Out
             </button>
@@ -1008,33 +1024,53 @@ export default function StudentDashboard() {
               </p>
 
               <div className="role-kpi-row">
-                <div className="role-kpi-box">
+                <div
+                  className="role-kpi-box"
+                  onClick={() => setActiveTab("grades")}
+                  style={{ cursor: "pointer", transition: "transform 0.15s" }}
+                  title="Click to view term report card and GPA analytics"
+                >
                   <span className="role-kpi-icon">⭐</span>
                   <div className="role-kpi-data">
-                    <span className="role-kpi-title">Current GPA</span>
+                    <span className="role-kpi-title">Current GPA ↗</span>
                     <strong className="role-kpi-num">3.88 / 4.0</strong>
                   </div>
                 </div>
-                <div className="role-kpi-box">
+                <div
+                  className="role-kpi-box"
+                  onClick={() => setActiveTab("exams")}
+                  style={{ cursor: "pointer", transition: "transform 0.15s" }}
+                  title="Click to view examination timetable and status"
+                >
                   <span className="role-kpi-icon">📝</span>
                   <div className="role-kpi-data">
-                    <span className="role-kpi-title">Exams Remaining</span>
+                    <span className="role-kpi-title">Exams Remaining ↗</span>
                     <strong className="role-kpi-num" style={{ color: "#38bdf8" }}>
                       {exams.length > 0 ? exams.length : 3} to Write
                     </strong>
                   </div>
                 </div>
-                <div className="role-kpi-box">
+                <div
+                  className="role-kpi-box"
+                  onClick={() => setActiveTab("assignments")}
+                  style={{ cursor: "pointer", transition: "transform 0.15s" }}
+                  title="Click to view homework tasks and assignment submission desk"
+                >
                   <span className="role-kpi-icon">⏳</span>
                   <div className="role-kpi-data">
-                    <span className="role-kpi-title">Homework Due</span>
+                    <span className="role-kpi-title">Homework Due ↗</span>
                     <strong className="role-kpi-num">{assignments.length} Tasks</strong>
                   </div>
                 </div>
-                <div className="role-kpi-box">
+                <div
+                  className="role-kpi-box"
+                  onClick={() => setActiveTab("attendance")}
+                  style={{ cursor: "pointer", transition: "transform 0.15s" }}
+                  title="Click to view attendance record and term presence rate"
+                >
                   <span className="role-kpi-icon">🎯</span>
                   <div className="role-kpi-data">
-                    <span className="role-kpi-title">Attendance</span>
+                    <span className="role-kpi-title">Attendance ↗</span>
                     <strong className="role-kpi-num">{attendanceSummary?.rate || "98.5%"} Present</strong>
                   </div>
                 </div>
@@ -2996,6 +3032,12 @@ export default function StudentDashboard() {
           ⬇️
         </button>
       </div>
+
+      <UniversalRoleGuideModal
+        role="STUDENT"
+        isOpen={showStudentGuideModal}
+        onClose={() => setShowStudentGuideModal(false)}
+      />
     </div>
   );
 }

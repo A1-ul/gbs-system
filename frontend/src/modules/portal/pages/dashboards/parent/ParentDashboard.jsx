@@ -6,10 +6,12 @@ import TopCenterSystemBanner from "../../../../../components/common/TopCenterSys
 import VoiceNoteRecorder from "../../../../../components/common/VoiceNoteRecorder";
 import VoiceNotePlayer from "../../../../../components/common/VoiceNotePlayer";
 import { getUserAvatar } from "../../../../../utils/userAvatars";
+import UniversalRoleGuideModal from "../../../../../components/common/UniversalRoleGuideModal";
 import "./ParentDashboard.css";
 
 export default function ParentDashboard() {
   const navigate = useNavigate();
+  const [showParentGuideModal, setShowParentGuideModal] = useState(false);
   const [parentAvatar, setParentAvatar] = useState(() => getUserAvatar("PARENT"));
   const [parentCommMode, setParentCommMode] = useState("TEXT");
   const [universalVoiceNotes, setUniversalVoiceNotes] = useState(() => {
@@ -948,6 +950,22 @@ export default function ParentDashboard() {
             <Link to="/portal/parent/dashboard" className="role-action-btn">
               🏠 Parent Hub
             </Link>
+            <button
+              type="button"
+              className="role-action-btn"
+              onClick={() => setShowParentGuideModal(true)}
+              style={{
+                background: "linear-gradient(135deg, #10b981 0%, #059669 100%)",
+                border: "1.5px solid rgba(52, 211, 153, 0.6)",
+                color: "#ffffff",
+                boxShadow: "0 4px 14px rgba(16, 185, 129, 0.35)",
+                display: "inline-flex",
+                alignItems: "center",
+                gap: "6px"
+              }}
+            >
+              📖 Operating Guide
+            </button>
             <button type="button" className="role-action-btn logout" onClick={handleLogout}>
               🚪 Sign Out
             </button>
@@ -976,28 +994,56 @@ export default function ParentDashboard() {
               </p>
 
               <div className="role-kpi-row">
-                <div className="role-kpi-box">
+                <div 
+                  className="role-kpi-box" 
+                  onClick={() => setActiveTab("children")} 
+                  style={{ cursor: "pointer", transition: "transform 0.15s, border-color 0.15s" }}
+                  title="Click to view Child Profiles & Overview"
+                  onMouseEnter={(e) => { e.currentTarget.style.transform = "translateY(-3px)"; e.currentTarget.style.borderColor = "#38bdf8"; }}
+                  onMouseLeave={(e) => { e.currentTarget.style.transform = "none"; e.currentTarget.style.borderColor = ""; }}
+                >
                   <span className="role-kpi-icon">👨‍👩‍👧</span>
                   <div className="role-kpi-data">
                     <span className="role-kpi-title">Children</span>
                     <strong className="role-kpi-num">{children.length} Linked</strong>
                   </div>
                 </div>
-                <div className="role-kpi-box">
+                <div 
+                  className="role-kpi-box" 
+                  onClick={() => setActiveTab("attendance")} 
+                  style={{ cursor: "pointer", transition: "transform 0.15s, border-color 0.15s" }}
+                  title="Click to view Attendance & Punctuality"
+                  onMouseEnter={(e) => { e.currentTarget.style.transform = "translateY(-3px)"; e.currentTarget.style.borderColor = "#38bdf8"; }}
+                  onMouseLeave={(e) => { e.currentTarget.style.transform = "none"; e.currentTarget.style.borderColor = ""; }}
+                >
                   <span className="role-kpi-icon">📊</span>
                   <div className="role-kpi-data">
                     <span className="role-kpi-title">Term Attendance</span>
                     <strong className="role-kpi-num">98.5% Present</strong>
                   </div>
                 </div>
-                <div className="role-kpi-box">
+                <div 
+                  className="role-kpi-box" 
+                  onClick={() => setActiveTab("fees")} 
+                  style={{ cursor: "pointer", transition: "transform 0.15s, border-color 0.15s" }}
+                  title="Click to view School Fees & Billing Portal"
+                  onMouseEnter={(e) => { e.currentTarget.style.transform = "translateY(-3px)"; e.currentTarget.style.borderColor = "#38bdf8"; }}
+                  onMouseLeave={(e) => { e.currentTarget.style.transform = "none"; e.currentTarget.style.borderColor = ""; }}
+                >
                   <span className="role-kpi-icon">💳</span>
                   <div className="role-kpi-data">
                     <span className="role-kpi-title">Tuition Balance</span>
                     <strong className="role-kpi-num">$1,300 Due</strong>
                   </div>
                 </div>
-                <div className="role-kpi-box">
+                <div 
+                  className="role-kpi-box" 
+                  onClick={() => setActiveTab("grades")} 
+                  style={{ cursor: "pointer", transition: "transform 0.15s, border-color 0.15s" }}
+                  title="Click to view Academic Grades & Report Cards"
+                  onMouseEnter={(e) => { e.currentTarget.style.transform = "translateY(-3px)"; e.currentTarget.style.borderColor = "#38bdf8"; }}
+                  onMouseLeave={(e) => { e.currentTarget.style.transform = "none"; e.currentTarget.style.borderColor = ""; }}
+                >
                   <span className="role-kpi-icon">⭐</span>
                   <div className="role-kpi-data">
                     <span className="role-kpi-title">Child GPA</span>
@@ -3373,6 +3419,13 @@ export default function ParentDashboard() {
           ⬇️
         </button>
       </div>
+
+      {/* Universal Role Operating Guide Modal */}
+      <UniversalRoleGuideModal
+        role="PARENT"
+        isOpen={showParentGuideModal}
+        onClose={() => setShowParentGuideModal(false)}
+      />
     </div>
   );
 }

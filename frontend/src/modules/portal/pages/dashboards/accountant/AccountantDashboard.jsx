@@ -4,10 +4,12 @@ import apiClient from "../../../../../api/client/apiClient";
 import WindowControlsBar from "../../../../../components/common/WindowControlsBar";
 import TopCenterSystemBanner from "../../../../../components/common/TopCenterSystemBanner";
 import { getUserAvatar } from "../../../../../utils/userAvatars";
+import UniversalRoleGuideModal from "../../../../../components/common/UniversalRoleGuideModal";
 import "./AccountantDashboard.css";
 
 export default function AccountantDashboard() {
   const navigate = useNavigate();
+  const [showAccountantGuideModal, setShowAccountantGuideModal] = useState(false);
   const [accountantAvatar, setAccountantAvatar] = useState(() => getUserAvatar("ACCOUNTANT"));
 
   useEffect(() => {
@@ -1252,6 +1254,20 @@ export default function AccountantDashboard() {
             >
               🔍 GAAP / IFRS Audit
             </button>
+            <button
+              type="button"
+              className="role-action-btn"
+              onClick={() => setShowAccountantGuideModal(true)}
+              style={{
+                borderColor: "#10b981",
+                color: "#6ee7b7",
+                fontWeight: 800,
+                background: "rgba(16, 185, 129, 0.15)",
+                boxShadow: "0 0 10px rgba(16, 185, 129, 0.2)"
+              }}
+            >
+              📖 Operating Guide
+            </button>
             <button type="button" className="role-action-btn logout" onClick={handleLogout}>
               🚪 Sign Out
             </button>
@@ -1280,31 +1296,51 @@ export default function AccountantDashboard() {
               </p>
 
               <div className="role-kpi-row">
-                <div className="role-kpi-box">
+                <div
+                  className="role-kpi-box"
+                  onClick={() => setActiveTab("invoices")}
+                  style={{ cursor: "pointer", transition: "transform 0.15s" }}
+                  title="Click to inspect all student billing invoices"
+                >
                   <span className="role-kpi-icon">💰</span>
                   <div className="role-kpi-data">
-                    <span className="role-kpi-title">Total Billed</span>
+                    <span className="role-kpi-title">Total Billed ↗</span>
                     <strong className="role-kpi-num">{currencySymbol}{(telemetry.totalBilled || 148500).toLocaleString()}</strong>
                   </div>
                 </div>
-                <div className="role-kpi-box">
+                <div
+                  className="role-kpi-box"
+                  onClick={() => setActiveTab("payments")}
+                  style={{ cursor: "pointer", transition: "transform 0.15s" }}
+                  title="Click to inspect confirmed payments and MoMo reconciliations"
+                >
                   <span className="role-kpi-icon">💳</span>
                   <div className="role-kpi-data">
-                    <span className="role-kpi-title">Collected</span>
+                    <span className="role-kpi-title">Collected ↗</span>
                     <strong className="role-kpi-num" style={{ color: "#34d399" }}>{currencySymbol}{(telemetry.totalCollected || 124200).toLocaleString()}</strong>
                   </div>
                 </div>
-                <div className="role-kpi-box">
+                <div
+                  className="role-kpi-box"
+                  onClick={() => setActiveTab("debtors")}
+                  style={{ cursor: "pointer", transition: "transform 0.15s" }}
+                  title="Click to view students with outstanding arrears"
+                >
                   <span className="role-kpi-icon">⏳</span>
                   <div className="role-kpi-data">
-                    <span className="role-kpi-title">Arrears Due</span>
+                    <span className="role-kpi-title">Arrears Due ↗</span>
                     <strong className="role-kpi-num" style={{ color: "#f87171" }}>{currencySymbol}{(telemetry.totalPending || 24300).toLocaleString()}</strong>
                   </div>
                 </div>
-                <div className="role-kpi-box">
+                <div
+                  className="role-kpi-box"
+                  onClick={() => setActiveTab("reports")}
+                  style={{ cursor: "pointer", transition: "transform 0.15s" }}
+                  title="Click to generate balance sheet and collection reports"
+                >
                   <span className="role-kpi-icon">📈</span>
                   <div className="role-kpi-data">
-                    <span className="role-kpi-title">Collection Rate</span>
+                    <span className="role-kpi-title">Collection Rate ↗</span>
                     <strong className="role-kpi-num">{telemetry.collectionRate || 83.6}%</strong>
                   </div>
                 </div>
@@ -3641,6 +3677,12 @@ export default function AccountantDashboard() {
           ⬇️
         </button>
       </div>
+
+      <UniversalRoleGuideModal
+        role="ACCOUNTANT"
+        isOpen={showAccountantGuideModal}
+        onClose={() => setShowAccountantGuideModal(false)}
+      />
     </div>
   );
 }

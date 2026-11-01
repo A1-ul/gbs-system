@@ -8,10 +8,12 @@ import VoiceNoteRecorder from "../../../../../components/common/VoiceNoteRecorde
 import VoiceNotePlayer from "../../../../../components/common/VoiceNotePlayer";
 import { getUserAvatar } from "../../../../../utils/userAvatars";
 import { offlineSyncEngine } from "../../../../../utils/offlineSync";
+import UniversalRoleGuideModal from "../../../../../components/common/UniversalRoleGuideModal";
 import "./AdminDashboard.css";
 
 export default function AdminDashboard() {
   const navigate = useNavigate();
+  const [showAdminGuideModal, setShowAdminGuideModal] = useState(false);
   // Tab & Scroll Preservation (Back button restores exact tab & view)
   const [activeTab, setActiveTabState] = useState(() => {
     const urlTab = new URLSearchParams(window.location.search).get("tab");
@@ -3453,6 +3455,20 @@ export default function AdminDashboard() {
             <Link to="/hr" className="role-action-btn">
               👔 HR Staff
             </Link>
+            <button
+              type="button"
+              className="role-action-btn"
+              onClick={() => setShowAdminGuideModal(true)}
+              style={{
+                borderColor: "#10b981",
+                color: "#6ee7b7",
+                fontWeight: 800,
+                background: "rgba(16, 185, 129, 0.15)",
+                boxShadow: "0 0 10px rgba(16, 185, 129, 0.2)"
+              }}
+            >
+              📖 Operating Guide
+            </button>
             <button type="button" className="role-action-btn logout" onClick={handleLogout}>
               🚪 Sign Out
             </button>
@@ -3488,31 +3504,51 @@ export default function AdminDashboard() {
               </p>
 
               <div className="role-kpi-row">
-                <div className="role-kpi-box">
+                <div
+                  className="role-kpi-box"
+                  onClick={() => setActiveTab("classes")}
+                  style={{ cursor: "pointer", transition: "transform 0.15s" }}
+                  title="Click to manage institution classes and level tiers"
+                >
                   <span className="role-kpi-icon">🏛️</span>
                   <div className="role-kpi-data">
-                    <span className="role-kpi-title">Active Classes</span>
+                    <span className="role-kpi-title">Active Classes ↗</span>
                     <strong className="role-kpi-num">{classes.length} Tiers</strong>
                   </div>
                 </div>
-                <div className="role-kpi-box">
+                <div
+                  className="role-kpi-box"
+                  onClick={() => setActiveTab("admissions")}
+                  style={{ cursor: "pointer", transition: "transform 0.15s" }}
+                  title="Click to inspect admissions applications intake pipeline"
+                >
                   <span className="role-kpi-icon">📂</span>
                   <div className="role-kpi-data">
-                    <span className="role-kpi-title">Admissions Intake</span>
+                    <span className="role-kpi-title">Admissions Intake ↗</span>
                     <strong className="role-kpi-num">{applications.length} In Pipeline</strong>
                   </div>
                 </div>
-                <div className="role-kpi-box">
+                <div
+                  className="role-kpi-box"
+                  onClick={() => setActiveTab("fees")}
+                  style={{ cursor: "pointer", transition: "transform 0.15s" }}
+                  title="Click to inspect billing and student fee ledger"
+                >
                   <span className="role-kpi-icon">💳</span>
                   <div className="role-kpi-data">
-                    <span className="role-kpi-title">Invoices Billed</span>
+                    <span className="role-kpi-title">Invoices Billed ↗</span>
                     <strong className="role-kpi-num">{invoices.length} Active</strong>
                   </div>
                 </div>
-                <div className="role-kpi-box">
+                <div
+                  className="role-kpi-box"
+                  onClick={() => setActiveTab("overview")}
+                  style={{ cursor: "pointer", transition: "transform 0.15s" }}
+                  title="Click to view database health & system overview"
+                >
                   <span className="role-kpi-icon">⚡</span>
                   <div className="role-kpi-data">
-                    <span className="role-kpi-title">PostgreSQL State</span>
+                    <span className="role-kpi-title">PostgreSQL State ↗</span>
                     <strong className="role-kpi-num" style={{ color: "#34d399" }}>ONLINE</strong>
                   </div>
                 </div>
@@ -10405,6 +10441,11 @@ export default function AdminDashboard() {
           </button>
         </div>
 
+        <UniversalRoleGuideModal
+          role="ADMIN"
+          isOpen={showAdminGuideModal}
+          onClose={() => setShowAdminGuideModal(false)}
+        />
     </div>
   );
 }

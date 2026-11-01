@@ -5,6 +5,7 @@ import WindowControlsBar from "../../../components/common/WindowControlsBar";
 import TopCenterSystemBanner from "../../../components/common/TopCenterSystemBanner";
 import { offlineSyncEngine } from "../../../utils/offlineSync";
 import { getOnboardingRates, updateOnboardingRates } from "../../../utils/pricingEngine";
+import UniversalRoleGuideModal from "../../../components/common/UniversalRoleGuideModal";
 import "./DeveloperPlatform.css";
 
 const BASE_URL = `${getApiBaseUrl()}/dev-control`;
@@ -485,10 +486,11 @@ export default function DeveloperDashboard() {
       localStorage.setItem("gbs_incoming_onboarding_applications", JSON.stringify(updated));
 
       const newTenantId = Date.now().toString().slice(-4);
+      const assignedTenantCode = app.tenantCode || `GBS-${app.institutionName.replace(/[^A-Za-z0-9]/g, "").slice(0, 6).toUpperCase()}-${newTenantId}`;
       const newCountdown = {
         tenantId: parseInt(newTenantId, 10),
         tenantName: app.institutionName,
-        tenantCode: app.tenantCode || `GBS-${app.institutionName.replace(/[^A-Za-z0-9]/g, "").slice(0, 6).toUpperCase()}-${newTenantId}`,
+        tenantCode: assignedTenantCode,
         institutionType: app.institutionType || "NURSERY_TO_JHS",
         subscriptionPlan: "ENTERPRISE",
         subscriptionStatus: "ACTIVE",
@@ -506,8 +508,49 @@ export default function DeveloperDashboard() {
       };
       setCountdowns((prev) => [newCountdown, ...prev]);
       localStorage.setItem("gbs_institution_type", app.institutionType || "NURSERY_TO_JHS");
+
+      // 1. DISPATCH ACCEPTANCE SMS TO REGISTERED MOBILE NUMBER
+      const acceptanceSmsContent = `GBS REGISTRATION ACCEPTANCE: Congratulations ${app.institutionName}! Your application to join the GBS Management System has been verified & approved. Your assigned Tenant Code is ${assignedTenantCode}. You can now sign in at http://localhost:3000/login using ${app.headmasterEmail}. Welcome aboard!`;
+
+      const newSmsEntry = {
+        id: `SMS-${Date.now()}`,
+        recipientPhone: app.headmasterPhone,
+        headmasterName: app.headmasterName,
+        tenantName: app.institutionName,
+        message: acceptanceSmsContent,
+        type: "REGISTRATION_ACCEPTANCE",
+        timestamp: new Date().toISOString(),
+        status: "DELIVERED"
+      };
+
+      try {
+        const existingSms = JSON.parse(localStorage.getItem("gbs_dispatched_sms_logs") || "[]");
+        localStorage.setItem("gbs_dispatched_sms_logs", JSON.stringify([newSmsEntry, ...existingSms]));
+        setSmsLogs((prev) => [newSmsEntry, ...(Array.isArray(prev) ? prev : [])]);
+      } catch (smsErr) {}
+
+      // 2. PERMANENTLY ARCHIVE APPROVED ONBOARDING REGISTRATION FOR REFERENCE
+      const archiveRecord = {
+        ...app,
+        status: "APPROVED_AND_ARCHIVED",
+        approvedAt: new Date().toISOString(),
+        approvedBy: "GABRIEL OSEI (gabosei48@gmail.com)",
+        assignedTenantCode,
+        assignedTenantId: newCountdown.tenantId,
+        dispatchedSms: acceptanceSmsContent,
+        dispatchedPhone: app.headmasterPhone,
+        archiveRef: `ARC-${Date.now().toString(36).toUpperCase()}`
+      };
+
+      try {
+        const existingArchives = JSON.parse(localStorage.getItem("gbs_archived_onboarded_tenants") || "[]");
+        const updatedArchives = [archiveRecord, ...existingArchives.filter((item) => item.id !== app.id && item.tenantUid !== app.tenantUid)];
+        localStorage.setItem("gbs_archived_onboarded_tenants", JSON.stringify(updatedArchives));
+        setArchivedTenants(updatedArchives);
+      } catch (arcErr) {}
+
       triggerPadlockFeedback(false, app.institutionName, "ONBOARDING_APPROVED_PROVISIONED");
-      showNotification(`✓ Institution '${app.institutionName}' (${app.institutionType || "NURSERY_TO_JHS"}) APPROVED & PROVISIONED! Enclave active.`);
+      showNotification(`✓ Acceptance SMS dispatched to ${app.headmasterPhone}! Institution '${app.institutionName}' approved and permanently archived for reference.`);
     } catch (err) {
       showNotification("⚠ Error approving institution onboarding.");
     }
@@ -528,6 +571,112 @@ export default function DeveloperDashboard() {
     }
   };
 
+  const handlePrintAcceptanceCertificate = (tenant) => {
+    const win = window.open("", "_blank");
+    if (!win) {
+      showNotification("⚠ Popup blocked! Please allow popups to print acceptance certificate.");
+      return;
+    }
+    win.document.write(`
+      <!DOCTYPE html>
+      <html>
+        <head>
+          <title>GBS Registration Acceptance Certificate - ${tenant.institutionName}</title>
+          <style>
+            body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; padding: 40px; color: #0f172a; background: #fff; }
+            .cert-box { border: 4px double #0284c7; padding: 32px; border-radius: 12px; max-width: 760px; margin: 0 auto; box-shadow: 0 4px 20px rgba(0,0,0,0.1); }
+            .cert-header { text-align: center; border-bottom: 2px solid #0284c7; padding-bottom: 16px; margin-bottom: 24px; }
+            h1 { color: #0369a1; margin: 0; font-size: 26px; text-transform: uppercase; letter-spacing: 1px; }
+            .subtitle { color: #64748b; font-size: 13px; font-weight: 700; margin-top: 6px; letter-spacing: 2px; text-transform: uppercase; }
+            .meta-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; margin-bottom: 20px; }
+            .meta-item { border-bottom: 1px dashed #cbd5e1; padding-bottom: 8px; }
+            .meta-label { font-size: 11px; color: #64748b; text-transform: uppercase; font-weight: 700; }
+            .meta-value { font-size: 14px; color: #0f172a; font-weight: 600; margin-top: 2px; }
+            .highlight { color: #0284c7; font-weight: 800; font-family: monospace; font-size: 15px; }
+            .sms-box { background: #f0fdf4; border: 1.5px solid #86efac; border-radius: 8px; padding: 14px; margin: 20px 0; }
+            .sms-title { color: #166534; font-weight: 800; font-size: 12px; text-transform: uppercase; margin-bottom: 4px; }
+            .sms-body { font-size: 13px; color: #14532d; font-family: monospace; line-height: 1.4; }
+            .cert-footer { margin-top: 30px; text-align: center; border-top: 1px solid #e2e8f0; padding-top: 16px; font-size: 11px; color: #94a3b8; }
+            .stamp { display: inline-block; border: 2px solid #16a34a; color: #16a34a; padding: 6px 14px; font-weight: 900; text-transform: uppercase; border-radius: 6px; transform: rotate(-2deg); margin-top: 10px; font-size: 13px; }
+          </style>
+        </head>
+        <body>
+          <div class="cert-box">
+            <div class="cert-header">
+              <h1>GBS MANAGEMENT SYSTEM</h1>
+              <div class="subtitle">Official Institutional Registration Acceptance Certificate</div>
+              <div class="stamp">✓ VERIFIED & ENCLAVE PROVISIONED</div>
+            </div>
+            <div class="meta-grid">
+              <div class="meta-item">
+                <div class="meta-label">Archive Reference</div>
+                <div class="meta-value highlight">${tenant.archiveRef || "ARC-REG"}</div>
+              </div>
+              <div class="meta-item">
+                <div class="meta-label">Assigned Tenant Code</div>
+                <div class="meta-value highlight">${tenant.assignedTenantCode || tenant.tenantCode || "GBS-AUTO"}</div>
+              </div>
+              <div class="meta-item">
+                <div class="meta-label">Institution / School Name</div>
+                <div class="meta-value" style="font-size: 16px;">${tenant.institutionName}</div>
+              </div>
+              <div class="meta-item">
+                <div class="meta-label">Institution Tier</div>
+                <div class="meta-value">${tenant.institutionType || "Basic School (Nursery to JHS)"}</div>
+              </div>
+              <div class="meta-item">
+                <div class="meta-label">Headmaster / Administrator</div>
+                <div class="meta-value">${tenant.headmasterName}</div>
+              </div>
+              <div class="meta-item">
+                <div class="meta-label">Registered Mobile (SMS Contact)</div>
+                <div class="meta-value" style="color: #059669; font-weight: 700;">${tenant.headmasterPhone}</div>
+              </div>
+              <div class="meta-item">
+                <div class="meta-label">Headmaster Official Email</div>
+                <div class="meta-value">${tenant.headmasterEmail}</div>
+              </div>
+              <div class="meta-item">
+                <div class="meta-label">MoMo Payment Reference</div>
+                <div class="meta-value">${tenant.momoTxnId || "MTN-TXN"} (GHS ${tenant.paymentAmount || 500})</div>
+              </div>
+              <div class="meta-item">
+                <div class="meta-label">Approval Date & Time</div>
+                <div class="meta-value">${new Date(tenant.approvedAt || Date.now()).toLocaleString()}</div>
+              </div>
+              <div class="meta-item">
+                <div class="meta-label">Authorized Lead Developer</div>
+                <div class="meta-value">GABRIEL OSEI (gabosei48@gmail.com)</div>
+              </div>
+            </div>
+            <div class="sms-box">
+              <div class="sms-title">📱 Registered Acceptance SMS Transmission</div>
+              <div class="sms-body">"${tenant.dispatchedSms || "Your institution onboarding has been approved."}"</div>
+              <div style="font-size: 11px; color: #15803d; margin-top: 6px; font-weight: 700;">Status: DELIVERED TO REGISTERED CONTACT (${tenant.dispatchedPhone || tenant.headmasterPhone})</div>
+            </div>
+            <div class="cert-footer">
+              GBS Management System • Multi-Tenant Enterprise Cloud Enclave • Secured by PostgreSQL Sharded Clusters<br/>
+              Printed from GBS Platform Registry on: ${new Date().toLocaleString()}
+            </div>
+          </div>
+          <script>window.onload = function() { window.print(); };</script>
+        </body>
+      </html>
+    `);
+    win.document.close();
+  };
+
+  const [archivedTenants, setArchivedTenants] = useState(() => {
+    try {
+      return JSON.parse(localStorage.getItem("gbs_archived_onboarded_tenants") || "[]");
+    } catch {
+      return [];
+    }
+  });
+  const [onboardingTabMode, setOnboardingTabMode] = useState("INCOMING"); // "INCOMING" | "ARCHIVED"
+  const [showDevGuideModal, setShowDevGuideModal] = useState(false);
+  const [archivedSearchQuery, setArchivedSearchQuery] = useState("");
+
   const [tenantOtpModal, setTenantOtpModal] = useState({
     isOpen: false,
     dispatchedSms: null,
@@ -535,7 +684,13 @@ export default function DeveloperDashboard() {
     verifying: false,
     error: null
   });
-  const [smsLogs, setSmsLogs] = useState([]);
+  const [smsLogs, setSmsLogs] = useState(() => {
+    try {
+      return JSON.parse(localStorage.getItem("gbs_dispatched_sms_logs") || "[]");
+    } catch {
+      return [];
+    }
+  });
 
   // Requirement: Headmaster Online Enforcement, SMS Dispatch & Dossier Modals
   const [showHeadmasterOfflineNoticeModal, setShowHeadmasterOfflineNoticeModal] = useState({
@@ -2748,6 +2903,19 @@ export default function DeveloperDashboard() {
           <button onClick={handleLockConsole} style={{ borderColor: "#f59e0b", color: "#fbbf24" }}>
             🔒 Lock Console
           </button>
+          <button
+            type="button"
+            onClick={() => setShowDevGuideModal(true)}
+            style={{
+              borderColor: "#10b981",
+              color: "#6ee7b7",
+              fontWeight: 800,
+              background: "rgba(16, 185, 129, 0.15)",
+              boxShadow: "0 0 10px rgba(16, 185, 129, 0.2)"
+            }}
+          >
+            📖 Operating Guide
+          </button>
           <button className="dev-logout-btn" onClick={handleLogout}>
             🚪 Sign Out
           </button>
@@ -2801,10 +2969,15 @@ export default function DeveloperDashboard() {
 
         {/* Real-Life Infrastructure Tri-Card Photo Showcase */}
         <div className="infra-photographic-grid">
-          <div className="infra-photo-card">
+          <div
+            className="infra-photo-card"
+            onClick={() => navigate("/developer-control-center/sharding")}
+            style={{ cursor: "pointer" }}
+            title="Click to launch Sharding Console & Datacenter Replicas"
+          >
             <div className="infra-card-media-wrapper">
               <img src="/assets/sharding-datacenter-bg.jpg" alt="Tier-4 Regional Datacenter Racks" className="infra-card-img" />
-              <div className="infra-card-tag">TIER-4 REGIONAL DATACENTER</div>
+              <div className="infra-card-tag">TIER-4 REGIONAL DATACENTER ↗</div>
             </div>
             <div className="infra-card-body">
               <h4>Regional Sharding & Read Replicas</h4>
@@ -2816,10 +2989,18 @@ export default function DeveloperDashboard() {
             </div>
           </div>
 
-          <div className="infra-photo-card">
+          <div
+            className="infra-photo-card"
+            onClick={() => {
+              setActiveTab("biometrics");
+              showNotification("Switched to Biometric Security & Facial Liveness Sentinel");
+            }}
+            style={{ cursor: "pointer" }}
+            title="Click to inspect Biometric Security & Optical Perimeter"
+          >
             <div className="infra-card-media-wrapper">
               <img src="/assets/cctv-bg.jpg" alt="Surveillance & Sentinel Security" className="infra-card-img" />
-              <div className="infra-card-tag">SENTINEL PERIMETER LAB</div>
+              <div className="infra-card-tag">SENTINEL PERIMETER LAB ↗</div>
             </div>
             <div className="infra-card-body">
               <h4>Facial Liveness & Optical Perimeter</h4>
@@ -2831,10 +3012,15 @@ export default function DeveloperDashboard() {
             </div>
           </div>
 
-          <div className="infra-photo-card">
+          <div
+            className="infra-photo-card"
+            onClick={() => navigate("/developer-control-center/ai-diagnostics")}
+            style={{ cursor: "pointer" }}
+            title="Click to launch AI Sentinel Neural Radar"
+          >
             <div className="infra-card-media-wrapper">
               <img src="/assets/ai-diagnostics-bg.jpg" alt="AI Neural Diagnostics" className="infra-card-img" />
-              <div className="infra-card-tag">AI SENTINEL RADAR</div>
+              <div className="infra-card-tag">AI SENTINEL RADAR ↗</div>
             </div>
             <div className="infra-card-body">
               <h4>Neural Diagnostics & Error Auto-Fix</h4>
@@ -2989,25 +3175,106 @@ export default function DeveloperDashboard() {
                 marginBottom: "1.25rem",
                 alignItems: "stretch"
               }}>
-                <div className="dev-inscription-box" style={{ background: "rgba(2, 6, 23, 0.75)", padding: "16px 18px", borderRadius: "12px", border: "1.5px solid rgba(56, 189, 248, 0.25)", display: "flex", flexDirection: "column", justifyContent: "space-between", minHeight: "96px" }}>
-                  <span style={{ fontSize: "0.74rem", color: "#94a3b8", display: "block", fontWeight: 800, letterSpacing: "0.5px" }}>REGISTRATION START DATE</span>
+                <div
+                  className="dev-inscription-box"
+                  onClick={() => {
+                    setShowSubscriptionEditModal(true);
+                    showNotification("Opening Subscription Window Settings (Start Date)...");
+                  }}
+                  style={{
+                    background: "rgba(2, 6, 23, 0.75)",
+                    padding: "16px 18px",
+                    borderRadius: "12px",
+                    border: "1.5px solid rgba(56, 189, 248, 0.25)",
+                    display: "flex",
+                    flexDirection: "column",
+                    justifyContent: "space-between",
+                    minHeight: "96px",
+                    cursor: "pointer",
+                    transition: "all 0.2s"
+                  }}
+                  title="Click to modify registration start date"
+                >
+                  <span style={{ fontSize: "0.74rem", color: "#94a3b8", display: "block", fontWeight: 800, letterSpacing: "0.5px" }}>REGISTRATION START DATE ✏️</span>
                   <strong style={{ color: "#f8fafc", fontSize: "1.05rem", fontFamily: "monospace" }}>{subscriptionSettings.startDate}</strong>
                 </div>
 
-                <div className="dev-inscription-box" style={{ background: "rgba(2, 6, 23, 0.75)", padding: "16px 18px", borderRadius: "12px", border: "1.5px solid rgba(56, 189, 248, 0.25)", display: "flex", flexDirection: "column", justifyContent: "space-between", minHeight: "96px" }}>
-                  <span style={{ fontSize: "0.74rem", color: "#94a3b8", display: "block", fontWeight: 800, letterSpacing: "0.5px" }}>SUBSCRIPTION END DATE</span>
+                <div
+                  className="dev-inscription-box"
+                  onClick={() => {
+                    setShowSubscriptionEditModal(true);
+                    showNotification("Opening Subscription Window Settings (End Date)...");
+                  }}
+                  style={{
+                    background: "rgba(2, 6, 23, 0.75)",
+                    padding: "16px 18px",
+                    borderRadius: "12px",
+                    border: "1.5px solid rgba(56, 189, 248, 0.25)",
+                    display: "flex",
+                    flexDirection: "column",
+                    justifyContent: "space-between",
+                    minHeight: "96px",
+                    cursor: "pointer",
+                    transition: "all 0.2s"
+                  }}
+                  title="Click to modify subscription end date"
+                >
+                  <span style={{ fontSize: "0.74rem", color: "#94a3b8", display: "block", fontWeight: 800, letterSpacing: "0.5px" }}>SUBSCRIPTION END DATE ✏️</span>
                   <strong style={{ color: isExpired ? "#fca5a5" : "#38bdf8", fontSize: "1.05rem", fontFamily: "monospace" }}>{subscriptionSettings.endDate}</strong>
                 </div>
 
-                <div className="dev-inscription-box" style={{ background: "rgba(2, 6, 23, 0.75)", padding: "16px 18px", borderRadius: "12px", border: "1.5px solid rgba(56, 189, 248, 0.25)", display: "flex", flexDirection: "column", justifyContent: "space-between", minHeight: "96px" }}>
-                  <span style={{ fontSize: "0.74rem", color: "#94a3b8", display: "block", fontWeight: 800, letterSpacing: "0.5px" }}>DAYS REMAINING COUNTDOWN</span>
+                <div
+                  className="dev-inscription-box"
+                  onClick={() => {
+                    setActiveTab("licenses");
+                    showNotification("Navigating to Tenant Licenses & Subscription Countdowns...");
+                  }}
+                  style={{
+                    background: "rgba(2, 6, 23, 0.75)",
+                    padding: "16px 18px",
+                    borderRadius: "12px",
+                    border: "1.5px solid rgba(56, 189, 248, 0.25)",
+                    display: "flex",
+                    flexDirection: "column",
+                    justifyContent: "space-between",
+                    minHeight: "96px",
+                    cursor: "pointer",
+                    transition: "all 0.2s"
+                  }}
+                  title="Click to inspect all active tenant countdowns"
+                >
+                  <span style={{ fontSize: "0.74rem", color: "#94a3b8", display: "block", fontWeight: 800, letterSpacing: "0.5px" }}>DAYS REMAINING COUNTDOWN 🔍</span>
                   <strong style={{ color: isExpired ? "#ef4444" : (isWarning ? "#fbbf24" : "#34d399"), fontSize: "1.2rem", fontWeight: 900 }}>
                     {isExpired ? "0 Days (Expired)" : `${daysLeft} Days Remaining`}
                   </strong>
                 </div>
 
-                <div className="dev-inscription-box" style={{ background: "rgba(2, 6, 23, 0.75)", padding: "16px 18px", borderRadius: "12px", border: "1.5px solid rgba(56, 189, 248, 0.25)", display: "flex", flexDirection: "column", justifyContent: "space-between", minHeight: "96px" }}>
-                  <span style={{ fontSize: "0.74rem", color: "#94a3b8", display: "block", fontWeight: 800, letterSpacing: "0.5px" }}>AUTO-LOCK ON FAILURE</span>
+                <div
+                  className="dev-inscription-box"
+                  onClick={() => {
+                    const nextVal = !subscriptionSettings.autoLockOnFailure;
+                    setSubscriptionSettings((prev) => {
+                      const updated = { ...prev, autoLockOnFailure: nextVal };
+                      localStorage.setItem("gbs_platform_subscription_settings", JSON.stringify(updated));
+                      return updated;
+                    });
+                    showNotification(`Auto-Lock on non-payment ${nextVal ? "ACTIVATED" : "DEACTIVATED"}`);
+                  }}
+                  style={{
+                    background: "rgba(2, 6, 23, 0.75)",
+                    padding: "16px 18px",
+                    borderRadius: "12px",
+                    border: "1.5px solid rgba(56, 189, 248, 0.25)",
+                    display: "flex",
+                    flexDirection: "column",
+                    justifyContent: "space-between",
+                    minHeight: "96px",
+                    cursor: "pointer",
+                    transition: "all 0.2s"
+                  }}
+                  title="Click to toggle auto-lock enforcement on unpaid tenants"
+                >
+                  <span style={{ fontSize: "0.74rem", color: "#94a3b8", display: "block", fontWeight: 800, letterSpacing: "0.5px" }}>AUTO-LOCK ON FAILURE ⚡</span>
                   <strong style={{ color: subscriptionSettings.autoLockOnFailure ? "#34d399" : "#fca5a5", fontSize: "1rem", fontWeight: 800 }}>
                     {subscriptionSettings.autoLockOnFailure ? "✓ AUTO-LOCK STRICT" : "DISABLED"}
                   </strong>
@@ -3463,123 +3730,324 @@ export default function DeveloperDashboard() {
               </form>
             </div>
 
-            {/* INCOMING INSTITUTIONAL ONBOARDINGS & MOMO PAYMENT APPROVALS */}
+            {/* INCOMING INSTITUTIONAL ONBOARDINGS & ARCHIVED REGISTRATIONS VAULT */}
             <div className="incoming-onboarding-panel">
-              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "1rem", flexWrap: "wrap", gap: "10px" }}>
+              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "1rem", flexWrap: "wrap", gap: "12px" }}>
                 <div>
                   <h4 style={{ margin: 0, color: "#f8fafc", fontSize: "1.1rem", fontWeight: 800 }}>
-                    📥 INCOMING INSTITUTIONAL ONBOARDINGS & MOMO SUBSCRIPTION APPROVALS
+                    {onboardingTabMode === "INCOMING"
+                      ? "📥 INCOMING INSTITUTIONAL ONBOARDINGS & MOMO APPROVALS"
+                      : "📦 ARCHIVED APPROVED REGISTRATIONS & ACCEPTANCE VAULT"}
                   </h4>
                   <span style={{ fontSize: "0.75rem", color: "#34d399" }}>
-                    Verified payments forwarded to <strong>0554594193 - GABRIELKUBI OSEI-APPIAH</strong>. Review Headmaster facial liveness and approve to provision tenant enclave.
+                    {onboardingTabMode === "INCOMING"
+                      ? "Verified payments forwarded to 0554594193 (GABRIELKUBI OSEI-APPIAH). Review Headmaster facial liveness and approve to dispatch acceptance SMS & provision enclave."
+                      : "Permanent audit record of all developer-approved institutional registrations with dispatched SMS delivery proof and printable certificates."}
                   </span>
                 </div>
-                <span className="sms-msg-badge" style={{ background: "rgba(16, 185, 129, 0.2)", color: "#34d399", fontWeight: 800 }}>
-                  ● {incomingApplications.filter(a => a.status === "PENDING_DEVELOPER_APPROVAL").length} PENDING APPLICATION(S)
-                </span>
+
+                <div style={{ display: "flex", gap: "8px", alignItems: "center", flexWrap: "wrap" }}>
+                  <button
+                    type="button"
+                    onClick={() => setOnboardingTabMode("INCOMING")}
+                    style={{
+                      background: onboardingTabMode === "INCOMING" ? "#38bdf8" : "rgba(15, 23, 42, 0.7)",
+                      color: onboardingTabMode === "INCOMING" ? "#0f172a" : "#cbd5e1",
+                      border: "1px solid #38bdf8",
+                      borderRadius: "8px",
+                      padding: "6px 14px",
+                      fontSize: "0.8rem",
+                      fontWeight: 800,
+                      cursor: "pointer",
+                      transition: "all 0.2s"
+                    }}
+                  >
+                    📥 Incoming ({incomingApplications.filter(a => a.status === "PENDING_DEVELOPER_APPROVAL").length})
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setOnboardingTabMode("ARCHIVED")}
+                    style={{
+                      background: onboardingTabMode === "ARCHIVED" ? "#10b981" : "rgba(15, 23, 42, 0.7)",
+                      color: onboardingTabMode === "ARCHIVED" ? "#0f172a" : "#cbd5e1",
+                      border: "1px solid #10b981",
+                      borderRadius: "8px",
+                      padding: "6px 14px",
+                      fontSize: "0.8rem",
+                      fontWeight: 800,
+                      cursor: "pointer",
+                      transition: "all 0.2s"
+                    }}
+                  >
+                    📦 Archived Approved ({archivedTenants.length})
+                  </button>
+                </div>
               </div>
 
-              {incomingApplications.length === 0 ? (
-                <div style={{ padding: "1.5rem", textAlign: "center", color: "#94a3b8", background: "rgba(2, 6, 23, 0.6)", borderRadius: "10px" }}>
-                  <span style={{ fontSize: "1.8rem", display: "block", marginBottom: "6px" }}>📭</span>
-                  No pending institution onboarding applications. New submissions will appear here live with MoMo references and Headmaster facial tokens.
-                </div>
+              {onboardingTabMode === "INCOMING" ? (
+                incomingApplications.length === 0 ? (
+                  <div style={{ padding: "1.5rem", textAlign: "center", color: "#94a3b8", background: "rgba(2, 6, 23, 0.6)", borderRadius: "10px" }}>
+                    <span style={{ fontSize: "1.8rem", display: "block", marginBottom: "6px" }}>📭</span>
+                    No pending institution onboarding applications. New submissions will appear here live with MoMo references and Headmaster facial tokens.
+                  </div>
+                ) : (
+                  <div className="incoming-apps-list">
+                    {incomingApplications.map((app, idx) => {
+                      const isPending = app.status === "PENDING_DEVELOPER_APPROVAL";
+                      const tierLabel = app.institutionType === "SENIOR_HIGH_SCHOOL"
+                        ? "Senior High School (Form 1-3)"
+                        : app.institutionType === "UNIVERSITY"
+                        ? "University / Tertiary Institution"
+                        : "Basic School (Nursery to JHS)";
+                      const tierClass = app.institutionType === "SENIOR_HIGH_SCHOOL" ? "shs" : (app.institutionType === "UNIVERSITY" ? "uni" : "jhs");
+
+                      return (
+                        <div key={idx} className="incoming-app-card" style={{ borderLeft: `4px solid ${tierClass === "shs" ? "#38bdf8" : (tierClass === "uni" ? "#c084fc" : "#34d399")}` }}>
+                          <div>
+                            <div style={{ display: "flex", alignItems: "center", gap: "8px", flexWrap: "wrap" }}>
+                              <strong style={{ color: "#f8fafc", fontSize: "1.05rem" }}>{app.institutionName}</strong>
+                              <span className={`tier-badge ${tierClass}`}>{tierLabel}</span>
+                              <span style={{
+                                fontSize: "0.7rem",
+                                fontWeight: 800,
+                                padding: "2px 6px",
+                                borderRadius: "4px",
+                                background: isPending ? "rgba(245, 158, 11, 0.2)" : (app.status === "APPROVED" ? "rgba(16, 185, 129, 0.2)" : "rgba(239, 68, 68, 0.2)"),
+                                color: isPending ? "#fde68a" : (app.status === "APPROVED" ? "#a7f3d0" : "#fca5a5")
+                              }}>
+                                {app.status}
+                              </span>
+                            </div>
+                            <div style={{ fontSize: "0.75rem", color: "#94a3b8", marginTop: "4px" }}>
+                              App Ref: <strong style={{ color: "#fbbf24" }}>{app.appRef || app.id}</strong> • Tenant Code: <strong style={{ color: "#cbd5e1" }}>{app.tenantCode || `GBS-${idx + 1}`}</strong>
+                            </div>
+                            <div style={{ fontSize: "0.75rem", color: "#34d399", marginTop: "2px" }}>
+                              Declared Population: <strong>{app.totalStudentsEnrolled || 500} Students</strong> • Onboarding Fee: <strong>GHS {app.calculatedFee || app.paymentAmount || 2500}</strong>
+                            </div>
+                          </div>
+
+                          <div>
+                            <span style={{ fontSize: "0.72rem", color: "#94a3b8", display: "block" }}>Headmaster Identity</span>
+                            <strong style={{ color: "#f8fafc", fontSize: "0.85rem" }}>{app.headmasterName}</strong>
+                            <div style={{ fontSize: "0.75rem", color: "#38bdf8" }}>{app.headmasterPhone}</div>
+                            <div style={{ fontSize: "0.72rem", color: "#64748b" }}>{app.headmasterEmail}</div>
+                          </div>
+
+                          <div>
+                            <span style={{ fontSize: "0.72rem", color: "#94a3b8", display: "block" }}>MoMo Payment Proof</span>
+                            <strong style={{ color: "#34d399", fontSize: "0.85rem" }}>Txn: {app.momoTxnId || "MTN-REC-PENDING"}</strong>
+                            <div style={{ fontSize: "0.75rem", color: "#cbd5e1" }}>Amount: <strong>GHS {app.paymentAmount || "500"}</strong></div>
+                            <div style={{ fontSize: "0.7rem", color: "#fbbf24" }}>Sent to: 0554594193 GABRIELKUBI OSEI-APPIAH</div>
+                          </div>
+
+                          <div style={{ display: "flex", gap: "8px", justifyContent: "flex-end" }}>
+                            {isPending ? (
+                              <>
+                                <button
+                                  type="button"
+                                  onClick={() => handleApproveIncomingApplication(app)}
+                                  style={{
+                                    background: "linear-gradient(135deg, #10b981, #059669)",
+                                    color: "#fff",
+                                    border: "none",
+                                    borderRadius: "8px",
+                                    padding: "8px 14px",
+                                    fontWeight: 800,
+                                    fontSize: "0.8rem",
+                                    cursor: "pointer",
+                                    boxShadow: "0 2px 10px rgba(16, 185, 129, 0.4)"
+                                  }}
+                                >
+                                  ✓ Approve & Provision Enclave
+                                </button>
+                                <button
+                                  type="button"
+                                  onClick={() => handleRejectIncomingApplication(app)}
+                                  style={{
+                                    background: "rgba(239, 68, 68, 0.2)",
+                                    border: "1px solid #ef4444",
+                                    color: "#fca5a5",
+                                    borderRadius: "8px",
+                                    padding: "8px 12px",
+                                    fontWeight: 700,
+                                    fontSize: "0.78rem",
+                                    cursor: "pointer"
+                                  }}
+                                >
+                                  ✕ Reject
+                                </button>
+                              </>
+                            ) : (
+                              <span style={{ fontSize: "0.78rem", color: app.status === "APPROVED" ? "#34d399" : "#f87171", fontWeight: 700 }}>
+                                {app.status === "APPROVED" ? "Enclave Provisioned" : "Rejected"}
+                              </span>
+                            )}
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
+                )
               ) : (
-                <div className="incoming-apps-list">
-                  {incomingApplications.map((app, idx) => {
-                    const isPending = app.status === "PENDING_DEVELOPER_APPROVAL";
-                    const tierLabel = app.institutionType === "SENIOR_HIGH_SCHOOL"
-                      ? "Senior High School (Form 1-3)"
-                      : app.institutionType === "UNIVERSITY"
-                      ? "University / Tertiary Institution"
-                      : "Basic School (Nursery to JHS)";
-                    const tierClass = app.institutionType === "SENIOR_HIGH_SCHOOL" ? "shs" : (app.institutionType === "UNIVERSITY" ? "uni" : "jhs");
+                /* ARCHIVED APPROVED REGISTRATIONS VAULT */
+                <div>
+                  <div style={{ marginBottom: "1rem", display: "flex", gap: "10px", alignItems: "center" }}>
+                    <input
+                      type="text"
+                      placeholder="🔍 Search archives by Institution Name, Tenant Code, Headmaster, Phone, or Archive Ref..."
+                      value={archivedSearchQuery}
+                      onChange={(e) => setArchivedSearchQuery(e.target.value)}
+                      style={{
+                        flex: 1,
+                        background: "rgba(15, 23, 42, 0.8)",
+                        border: "1px solid rgba(56, 189, 248, 0.3)",
+                        borderRadius: "8px",
+                        padding: "10px 14px",
+                        color: "#fff",
+                        fontSize: "0.85rem"
+                      }}
+                    />
+                    {archivedSearchQuery && (
+                      <button
+                        type="button"
+                        onClick={() => setArchivedSearchQuery("")}
+                        style={{
+                          background: "rgba(239, 68, 68, 0.2)",
+                          border: "1px solid #ef4444",
+                          color: "#fca5a5",
+                          borderRadius: "8px",
+                          padding: "10px 14px",
+                          cursor: "pointer",
+                          fontWeight: 700,
+                          fontSize: "0.8rem"
+                        }}
+                      >
+                        Clear
+                      </button>
+                    )}
+                  </div>
 
-                    return (
-                      <div key={idx} className="incoming-app-card" style={{ borderLeft: `4px solid ${tierClass === "shs" ? "#38bdf8" : (tierClass === "uni" ? "#c084fc" : "#34d399")}` }}>
-                        <div>
-                          <div style={{ display: "flex", alignItems: "center", gap: "8px", flexWrap: "wrap" }}>
-                            <strong style={{ color: "#f8fafc", fontSize: "1.05rem" }}>{app.institutionName}</strong>
-                            <span className={`tier-badge ${tierClass}`}>{tierLabel}</span>
-                            <span style={{
-                              fontSize: "0.7rem",
-                              fontWeight: 800,
-                              padding: "2px 6px",
-                              borderRadius: "4px",
-                              background: isPending ? "rgba(245, 158, 11, 0.2)" : (app.status === "APPROVED" ? "rgba(16, 185, 129, 0.2)" : "rgba(239, 68, 68, 0.2)"),
-                              color: isPending ? "#fde68a" : (app.status === "APPROVED" ? "#a7f3d0" : "#fca5a5")
-                            }}>
-                              {app.status}
-                            </span>
-                          </div>
-                          <div style={{ fontSize: "0.75rem", color: "#94a3b8", marginTop: "4px" }}>
-                            App Ref: <strong style={{ color: "#fbbf24" }}>{app.appRef || app.id}</strong> • Tenant Code: <strong style={{ color: "#cbd5e1" }}>{app.tenantCode || `GBS-${idx + 1}`}</strong>
-                          </div>
-                          <div style={{ fontSize: "0.75rem", color: "#34d399", marginTop: "2px" }}>
-                            Declared Population: <strong>{app.totalStudentsEnrolled || 500} Students</strong> • Onboarding Fee: <strong>GHS {app.calculatedFee || app.paymentAmount || 2500}</strong>
-                          </div>
-                        </div>
-
-                        <div>
-                          <span style={{ fontSize: "0.72rem", color: "#94a3b8", display: "block" }}>Headmaster Identity</span>
-                          <strong style={{ color: "#f8fafc", fontSize: "0.85rem" }}>{app.headmasterName}</strong>
-                          <div style={{ fontSize: "0.75rem", color: "#38bdf8" }}>{app.headmasterPhone}</div>
-                          <div style={{ fontSize: "0.72rem", color: "#64748b" }}>{app.headmasterEmail}</div>
-                        </div>
-
-                        <div>
-                          <span style={{ fontSize: "0.72rem", color: "#94a3b8", display: "block" }}>MoMo Payment Proof</span>
-                          <strong style={{ color: "#34d399", fontSize: "0.85rem" }}>Txn: {app.momoTxnId || "MTN-REC-PENDING"}</strong>
-                          <div style={{ fontSize: "0.75rem", color: "#cbd5e1" }}>Amount: <strong>GHS {app.paymentAmount || "500"}</strong></div>
-                          <div style={{ fontSize: "0.7rem", color: "#fbbf24" }}>Sent to: 0554594193 GABRIELKUBI OSEI-APPIAH</div>
-                        </div>
-
-                        <div style={{ display: "flex", gap: "8px", justifyContent: "flex-end" }}>
-                          {isPending ? (
-                            <>
-                              <button
-                                type="button"
-                                onClick={() => handleApproveIncomingApplication(app)}
-                                style={{
-                                  background: "linear-gradient(135deg, #10b981, #059669)",
-                                  color: "#fff",
-                                  border: "none",
-                                  borderRadius: "8px",
-                                  padding: "8px 14px",
-                                  fontWeight: 800,
-                                  fontSize: "0.8rem",
-                                  cursor: "pointer",
-                                  boxShadow: "0 2px 10px rgba(16, 185, 129, 0.4)"
-                                }}
-                              >
-                                ✓ Approve & Provision Enclave
-                              </button>
-                              <button
-                                type="button"
-                                onClick={() => handleRejectIncomingApplication(app)}
-                                style={{
-                                  background: "rgba(239, 68, 68, 0.2)",
-                                  border: "1px solid #ef4444",
-                                  color: "#fca5a5",
-                                  borderRadius: "8px",
-                                  padding: "8px 12px",
-                                  fontWeight: 700,
-                                  fontSize: "0.78rem",
-                                  cursor: "pointer"
-                                }}
-                              >
-                                ✕ Reject
-                              </button>
-                            </>
-                          ) : (
-                            <span style={{ fontSize: "0.78rem", color: app.status === "APPROVED" ? "#34d399" : "#f87171", fontWeight: 700 }}>
-                              {app.status === "APPROVED" ? "Enclave Provisioned" : "Rejected"}
-                            </span>
-                          )}
-                        </div>
+                  {archivedTenants.length === 0 ? (
+                    <div style={{ padding: "2rem", textAlign: "center", color: "#94a3b8", background: "rgba(2, 6, 23, 0.6)", borderRadius: "10px" }}>
+                      <span style={{ fontSize: "2rem", display: "block", marginBottom: "8px" }}>📦</span>
+                      <strong style={{ color: "#f8fafc", fontSize: "0.95rem" }}>No Archived Registrations Yet</strong>
+                      <div style={{ fontSize: "0.8rem", marginTop: "4px" }}>
+                        When incoming institution onboarding applications are approved, they are permanently archived here for reference.
                       </div>
-                    );
-                  })}
+                    </div>
+                  ) : (
+                    <div style={{ display: "flex", flexDirection: "column", gap: "12px" }}>
+                      {archivedTenants
+                        .filter((item) => {
+                          if (!archivedSearchQuery.trim()) return true;
+                          const q = archivedSearchQuery.toLowerCase();
+                          return (
+                            (item.institutionName && item.institutionName.toLowerCase().includes(q)) ||
+                            (item.assignedTenantCode && item.assignedTenantCode.toLowerCase().includes(q)) ||
+                            (item.tenantCode && item.tenantCode.toLowerCase().includes(q)) ||
+                            (item.headmasterName && item.headmasterName.toLowerCase().includes(q)) ||
+                            (item.headmasterPhone && item.headmasterPhone.includes(q)) ||
+                            (item.archiveRef && item.archiveRef.toLowerCase().includes(q))
+                          );
+                        })
+                        .map((tenant, idx) => (
+                          <div
+                            key={idx}
+                            style={{
+                              background: "rgba(15, 23, 42, 0.85)",
+                              border: "1.5px solid rgba(16, 185, 129, 0.35)",
+                              borderRadius: "12px",
+                              padding: "16px 20px",
+                              boxShadow: "0 4px 15px rgba(0, 0, 0, 0.3)"
+                            }}
+                          >
+                            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", flexWrap: "wrap", gap: "10px", marginBottom: "10px" }}>
+                              <div>
+                                <div style={{ display: "flex", alignItems: "center", gap: "10px", flexWrap: "wrap" }}>
+                                  <strong style={{ color: "#f8fafc", fontSize: "1.1rem" }}>{tenant.institutionName}</strong>
+                                  <span style={{ background: "rgba(16, 185, 129, 0.2)", color: "#34d399", border: "1px solid #10b981", borderRadius: "6px", padding: "2px 8px", fontSize: "0.72rem", fontWeight: 800 }}>
+                                    ✓ APPROVED & ARCHIVED
+                                  </span>
+                                  <span style={{ background: "rgba(56, 189, 248, 0.15)", color: "#38bdf8", borderRadius: "6px", padding: "2px 8px", fontSize: "0.72rem", fontWeight: 700, fontFamily: "monospace" }}>
+                                    {tenant.archiveRef || `ARC-${idx + 1}`}
+                                  </span>
+                                </div>
+                                <div style={{ fontSize: "0.78rem", color: "#94a3b8", marginTop: "4px" }}>
+                                  Tenant Code: <strong style={{ color: "#38bdf8", fontFamily: "monospace" }}>{tenant.assignedTenantCode || tenant.tenantCode}</strong> •
+                                  Approved: <strong style={{ color: "#cbd5e1" }}>{new Date(tenant.approvedAt || Date.now()).toLocaleString()}</strong> •
+                                  Approver: <strong style={{ color: "#fde68a" }}>{tenant.approvedBy || "Gabriel Osei"}</strong>
+                                </div>
+                              </div>
+
+                              <div style={{ display: "flex", gap: "8px" }}>
+                                <button
+                                  type="button"
+                                  onClick={() => handlePrintAcceptanceCertificate(tenant)}
+                                  style={{
+                                    background: "linear-gradient(135deg, #0284c7, #0369a1)",
+                                    color: "#fff",
+                                    border: "none",
+                                    borderRadius: "8px",
+                                    padding: "7px 14px",
+                                    fontSize: "0.78rem",
+                                    fontWeight: 700,
+                                    cursor: "pointer",
+                                    display: "flex",
+                                    alignItems: "center",
+                                    gap: "6px"
+                                  }}
+                                >
+                                  🖨️ Print Acceptance Voucher
+                                </button>
+                                <button
+                                  type="button"
+                                  onClick={() => {
+                                    navigator.clipboard.writeText(
+                                      `GBS Onboarded Tenant: ${tenant.institutionName}\nTenant Code: ${tenant.assignedTenantCode || tenant.tenantCode}\nHeadmaster: ${tenant.headmasterName} (${tenant.headmasterPhone})\nLogin URL: http://localhost:3000/login`
+                                    );
+                                    showNotification(`✓ Tenant credentials copied to clipboard!`);
+                                  }}
+                                  style={{
+                                    background: "rgba(56, 189, 248, 0.15)",
+                                    border: "1px solid #38bdf8",
+                                    color: "#7dd3fc",
+                                    borderRadius: "8px",
+                                    padding: "7px 12px",
+                                    fontSize: "0.78rem",
+                                    fontWeight: 700,
+                                    cursor: "pointer"
+                                  }}
+                                >
+                                  📋 Copy Details
+                                </button>
+                              </div>
+                            </div>
+
+                            {/* SMS Transmission Proof Box */}
+                            <div style={{ background: "rgba(6, 95, 70, 0.25)", border: "1px solid rgba(16, 185, 129, 0.35)", borderRadius: "8px", padding: "10px 14px", marginTop: "10px" }}>
+                              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "4px" }}>
+                                <span style={{ fontSize: "0.72rem", color: "#6ee7b7", fontWeight: 800, textTransform: "uppercase" }}>
+                                  📱 Registered Mobile SMS Transmission Proof
+                                </span>
+                                <span style={{ fontSize: "0.7rem", color: "#34d399", fontWeight: 700 }}>
+                                  ✓ DELIVERED TO: {tenant.dispatchedPhone || tenant.headmasterPhone}
+                                </span>
+                              </div>
+                              <div style={{ fontSize: "0.78rem", color: "#d1fae5", fontFamily: "monospace", lineHeight: 1.4 }}>
+                                "{tenant.dispatchedSms || `GBS REGISTRATION ACCEPTANCE: Congratulations ${tenant.institutionName}! Your application to join the GBS Management System has been verified & approved. Assigned Tenant Code: ${tenant.assignedTenantCode || tenant.tenantCode}.`}"
+                              </div>
+                            </div>
+
+                            <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(200px, 1fr))", gap: "10px", marginTop: "10px", fontSize: "0.75rem", color: "#94a3b8" }}>
+                              <div>Headmaster: <strong style={{ color: "#f8fafc" }}>{tenant.headmasterName}</strong></div>
+                              <div>Mobile: <strong style={{ color: "#38bdf8" }}>{tenant.headmasterPhone}</strong></div>
+                              <div>Email: <strong style={{ color: "#cbd5e1" }}>{tenant.headmasterEmail}</strong></div>
+                              <div>MoMo Txn: <strong style={{ color: "#34d399" }}>{tenant.momoTxnId || "MTN-TXN"} (GHS {tenant.paymentAmount || 500})</strong></div>
+                            </div>
+                          </div>
+                        ))}
+                    </div>
+                  )}
                 </div>
               )}
             </div>
@@ -7773,6 +8241,12 @@ export default function DeveloperDashboard() {
             ⬇️
           </button>
         </div>
+
+        <UniversalRoleGuideModal
+          role="DEVELOPER"
+          isOpen={showDevGuideModal}
+          onClose={() => setShowDevGuideModal(false)}
+        />
 
       </main>
     </div>
