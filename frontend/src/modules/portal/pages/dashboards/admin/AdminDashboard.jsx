@@ -8329,6 +8329,8 @@ export default function AdminDashboard() {
                       >
                         <option value="TEACHER">TEACHER (Class Instructor / Faculty)</option>
                         <option value="ACCOUNTANT">ACCOUNTANT (Bursar / Finance)</option>
+                        <option value="HR">HR (Human Resources Manager & Directorate)</option>
+                        <option value="ALUMNI">ALUMNI (Graduate Scholar & Alumni Officer)</option>
                         <option value="STAFF">STAFF (Administration / Support)</option>
                         <option value="ADMIN">ADMIN (Vice Principal / Assistant)</option>
                       </select>

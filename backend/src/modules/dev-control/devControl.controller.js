@@ -436,6 +436,61 @@ const getTenantSubscription = async (req, res, next) => {
   }
 };
 
+// 18. Developer Onboarding Review & Approvals
+const getPendingOnboardings = async (req, res, next) => {
+  try {
+    const list = await devControlService.getPendingInstitutionApplications();
+    res.status(200).json({
+      status: 'success',
+      results: list.length,
+      data: { applications: list }
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+
+const approveOnboarding = async (req, res, next) => {
+  try {
+    const { id } = req.params;
+    const { developerNotes } = req.body;
+    const result = await devControlService.verifyAndApproveInstitution(id, developerNotes);
+    res.status(200).json({
+      status: 'success',
+      data: result
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+
+const rejectOnboarding = async (req, res, next) => {
+  try {
+    const { id } = req.params;
+    const { reason } = req.body;
+    const result = await devControlService.rejectInstitutionRegistration(id, reason);
+    res.status(200).json({
+      status: 'success',
+      data: result
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+
+// 19. Direct Developer SMS to Headmaster
+const sendHeadmasterSms = async (req, res, next) => {
+  try {
+    const result = await devControlService.sendDeveloperSmsToHeadmaster(req.body);
+    res.status(200).json({
+      status: 'success',
+      data: result
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+
 module.exports = {
   devLogin,
   verifyPin,
@@ -466,6 +521,11 @@ module.exports = {
   verifyTenantOnboard,
   getOnboardedTenants,
   locateTenantByHeadmaster,
-  getTenantSubscription
+  getTenantSubscription,
+  getPendingOnboardings,
+  approveOnboarding,
+  rejectOnboarding,
+  sendHeadmasterSms
 };
+
 

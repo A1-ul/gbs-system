@@ -95,43 +95,44 @@ export default function TopCenterSystemBanner({
     >
       <div
         style={{
-          fontSize: "1.65rem",
+          fontSize: "2.1rem",
           fontWeight: "900",
-          letterSpacing: "1.5px",
-          color: isDevMode ? "#38bdf8" : "#f8fafc",
+          letterSpacing: "1.2px",
+          color: isDevMode ? "#38bdf8" : "#ffffff",
           textTransform: "uppercase",
           display: "flex",
           alignItems: "center",
-          gap: "14px",
+          gap: "18px",
           flexWrap: "wrap",
           justifyContent: "center",
-          lineHeight: "1.25"
+          lineHeight: "1.2"
         }}
       >
         <img
           src={isDevMode ? "/assets/gbs_crest_badge.jpg" : customLogo}
           alt="Crest"
           style={{
-            width: "42px",
-            height: "42px",
-            borderRadius: "10px",
+            width: "58px",
+            height: "58px",
+            borderRadius: "14px",
             objectFit: "contain",
-            border: isDevMode ? "1.5px solid #38bdf8" : "1.5px solid #10b981",
-            background: "rgba(15, 23, 42, 0.85)",
-            padding: "2px"
+            border: isDevMode ? "2.5px solid #38bdf8" : "2.5px solid #10b981",
+            background: "rgba(15, 23, 42, 0.95)",
+            padding: "4px",
+            boxShadow: isDevMode ? "0 4px 18px rgba(56, 189, 248, 0.45)" : "0 4px 18px rgba(16, 185, 129, 0.4)"
           }}
         />
-        <span style={{ textShadow: "0 2px 16px rgba(0, 0, 0, 0.7)" }}>
-          {isDevMode ? "GBS SCHOOL MANAGEMENT SYSTEM" : schoolName.toUpperCase()}
+        <span style={{ textShadow: "0 3px 20px rgba(0, 0, 0, 0.85)", filter: "drop-shadow(0 2px 8px rgba(0,0,0,0.6))" }}>
+          {isDevMode ? "GBS SCHOOL MANAGEMENT SYSTEM" : (schoolName || "OFFICIAL INSTITUTION ACADEMY").toUpperCase()}
         </span>
         <span
           style={{
-            fontSize: "0.75rem",
+            fontSize: "0.8rem",
             background: isDevMode ? "rgba(56, 189, 248, 0.2)" : "rgba(16, 185, 129, 0.2)",
             color: isDevMode ? "#38bdf8" : "#34d399",
-            padding: "4px 12px",
-            borderRadius: "16px",
-            border: isDevMode ? "1px solid rgba(56, 189, 248, 0.4)" : "1px solid rgba(16, 185, 129, 0.4)",
+            padding: "5px 14px",
+            borderRadius: "20px",
+            border: isDevMode ? "1px solid rgba(56, 189, 248, 0.5)" : "1px solid rgba(16, 185, 129, 0.5)",
             fontWeight: "800",
             letterSpacing: "0.8px"
           }}

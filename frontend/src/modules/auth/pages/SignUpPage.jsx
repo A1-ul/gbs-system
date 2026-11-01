@@ -16,58 +16,86 @@ const ONBOARDING_TRACKS = [
   { id: "HEADMASTER_REPLACEMENT", title: "Headmaster Replacement", icon: "👑", desc: "Executive Succession & Picture Upload", color: "#38bdf8" }
 ];
 
-const SUBSCRIPTION_TIERS = [
-  {
-    id: "1_MONTH_TRIAL",
-    name: "1 Month Free Trial",
-    duration: "30 Days Free Autonomous Access",
-    feeGHS: 0,
-    badge: "FREE INSTANT ACCESS",
-    badgeColor: "#10b981",
-    desc: "Instant access to test drive the entire GBS system with real modules and zero upfront payment.",
-    popular: false
-  },
-  {
-    id: "3_MONTHS",
-    name: "3 Months (Quarterly)",
-    duration: "1 Academic Term",
-    feeGHS: 500,
-    badge: "TERM PLAN",
-    badgeColor: "#3b82f6",
-    desc: "Ideal for short academic evaluations and term-by-term operational licensing.",
-    popular: false
-  },
-  {
-    id: "6_MONTHS",
-    name: "6 Months (Semester)",
-    duration: "2 Academic Terms",
-    feeGHS: 900,
-    badge: "SEMESTER PLAN",
-    badgeColor: "#8b5cf6",
-    desc: "Complete half-year coverage with priority support and database backups.",
-    popular: false
-  },
-  {
-    id: "12_MONTHS",
-    name: "12 Months (Annual)",
-    duration: "Full Academic Year",
-    feeGHS: 1500,
-    badge: "★ RECOMMENDED",
-    badgeColor: "#f59e0b",
-    desc: "Comprehensive 365-day access for Nursery, Basic, SHS, and Universities with maximum institutional discount.",
-    popular: true
-  },
-  {
-    id: "LIFETIME",
-    name: "Lifetime Institutional",
-    duration: "Perpetual License",
-    feeGHS: 4500,
-    badge: "PERPETUAL LICENSE",
-    badgeColor: "#ec4899",
-    desc: "Permanent ownership with zero recurring subscription fees and lifetime developer support.",
-    popular: false
-  }
-];
+export const getStudentRate = (instType) => {
+  if (instType === "UNIVERSITY") return 20; // 20 cedis for University
+  if (instType === "SENIOR_HIGH_SCHOOL") return 10; // 10 cedis for SHS
+  return 5; // 5 cedis for JHS / Basic School
+};
+
+export const getTierFee = (tierId, instType, studentCount) => {
+  if (tierId === "1_MONTH_TRIAL") return 0;
+  const count = Math.max(0, parseInt(studentCount, 10) || 0);
+  const rate = getStudentRate(instType);
+  const annualBase = count > 0 ? (rate * count) : (rate * 100);
+  
+  if (tierId === "3_MONTHS") return Math.round(annualBase * 0.35);
+  if (tierId === "6_MONTHS") return Math.round(annualBase * 0.60);
+  if (tierId === "12_MONTHS") return annualBase;
+  if (tierId === "LIFETIME") return Math.round(annualBase * 2.5);
+  return 0;
+};
+
+export const computeSubscriptionTiers = (instType, studentCountInput, hasUsedTrial = false) => {
+  const students = Math.max(0, parseInt(studentCountInput, 10) || 0);
+  const rate = getStudentRate(instType);
+  const annualBase = students > 0 ? (rate * students) : (rate * 100);
+
+  return [
+    {
+      id: "1_MONTH_TRIAL",
+      name: "1 Month Free Trial",
+      duration: "30 Days Free Autonomous Access",
+      feeGHS: 0,
+      badge: hasUsedTrial ? "TRIAL EXPIRED / REDEEMED" : "FREE INSTANT ACCESS",
+      badgeColor: hasUsedTrial ? "#64748b" : "#10b981",
+      desc: hasUsedTrial
+        ? "1-Month Free Trial already used upon registration. Renewals must select 3 Months to Lifetime."
+        : `Instant 30-day trial for all ${students > 0 ? students : "registered"} students with zero upfront payment required.`,
+      disabled: Boolean(hasUsedTrial),
+      popular: false
+    },
+    {
+      id: "3_MONTHS",
+      name: "3 Months (Quarterly)",
+      duration: "1 Academic Term",
+      feeGHS: Math.round(annualBase * 0.35),
+      badge: "TERM PLAN",
+      badgeColor: "#3b82f6",
+      desc: `Term licensing: GHS ${(rate * 0.35).toFixed(2)} per student for 1 term (${students > 0 ? `${students} students` : "term evaluation"}).`,
+      popular: false
+    },
+    {
+      id: "6_MONTHS",
+      name: "6 Months (Semester)",
+      duration: "2 Academic Terms",
+      feeGHS: Math.round(annualBase * 0.60),
+      badge: "SEMESTER PLAN",
+      badgeColor: "#8b5cf6",
+      desc: `Semester licensing: GHS ${(rate * 0.60).toFixed(2)} per student for two terms with priority backups.`,
+      popular: false
+    },
+    {
+      id: "12_MONTHS",
+      name: "12 Months (Full Academic Year)",
+      duration: "Full Academic Year (365 Days)",
+      feeGHS: annualBase,
+      badge: "★ RECOMMENDED",
+      badgeColor: "#f59e0b",
+      desc: `Full Year Standard: GHS ${rate}.00 × ${students > 0 ? `${students} students = GHS ${annualBase.toLocaleString()}` : "total student population"}.`,
+      popular: true
+    },
+    {
+      id: "LIFETIME",
+      name: "Lifetime Institutional",
+      duration: "Perpetual License",
+      feeGHS: Math.round(annualBase * 2.5),
+      badge: "VIP PERPETUAL",
+      badgeColor: "#ec4899",
+      desc: `Perpetual institutional license with zero recurring subscription fees forever (2.5× annual fee).`,
+      popular: false
+    }
+  ];
+};
 
 export default function SignUpPage({ defaultRole }) {
   const navigate = useNavigate();
@@ -335,10 +363,25 @@ export default function SignUpPage({ defaultRole }) {
 
   const handleInstChange = (e) => {
     const { name, value, type, checked } = e.target;
-    setInstForm((prev) => ({
-      ...prev,
-      [name]: type === "checkbox" ? checked : value
-    }));
+    setInstForm((prev) => {
+      const next = {
+        ...prev,
+        [name]: type === "checkbox" ? checked : value
+      };
+
+      if (name === "institutionType" || name === "totalStudentsEnrolled") {
+        const plan = next.subscriptionPlan || "1_MONTH_TRIAL";
+        if (plan === "1_MONTH_TRIAL") {
+          next.paymentAmount = "0";
+          next.momoTxnId = "FREE_TRIAL_AUTO";
+        } else {
+          const fee = getTierFee(plan, next.institutionType, next.totalStudentsEnrolled);
+          next.paymentAmount = String(fee);
+        }
+      }
+
+      return next;
+    });
   };
 
   const handleMemberChange = (e) => {
@@ -593,7 +636,7 @@ export default function SignUpPage({ defaultRole }) {
       <header className="signup-topbar">
         <div className="topbar-brand">
           <span className="brand-crest">🛡️ GBS</span>
-          <span className="brand-title">INTERNATIONAL SCHOOL MANAGEMENT SYSTEM</span>
+          <span className="brand-title">GBS SCHOOL MANAGEMENT SYSTEM</span>
         </div>
         <div className="topbar-telemetry">
           <span className="telemetry-pill">
@@ -758,9 +801,9 @@ export default function SignUpPage({ defaultRole }) {
                       value={instForm.institutionType}
                       onChange={handleInstChange}
                     >
-                      <option value="NURSERY_TO_JHS">🏫 Basic School (Nursery to JHS Institution)</option>
-                      <option value="SENIOR_HIGH_SCHOOL">🎓 Senior High School (SHS Institution)</option>
-                      <option value="UNIVERSITY">🏛️ University / Tertiary Institution</option>
+                      <option value="NURSERY_TO_JHS">🏫 Basic School / JHS (JHS: 5 Cedis per student)</option>
+                      <option value="SENIOR_HIGH_SCHOOL">🎓 Senior High School (SHS: 10 Cedis per student)</option>
+                      <option value="UNIVERSITY">🏛️ University & Tertiary (University: 20 Cedis per student)</option>
                     </select>
                   </div>
                   <div className="form-field">
@@ -1096,64 +1139,103 @@ export default function SignUpPage({ defaultRole }) {
                   👉 Please select your preferred institutional subscription plan below. The <strong>1 Month Free Trial</strong> provides immediate activation with <strong>zero upfront payment</strong>, while term and annual plans provide extended uninterrupted coverage for your school.
                 </p>
 
-                {/* Interactive Subscription Tier Cards (5 choices) */}
-                <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(210px, 1fr))", gap: "12px", marginBottom: "1.5rem" }}>
-                  {SUBSCRIPTION_TIERS.map((tier) => {
-                    const isSelected = (instForm.subscriptionPlan || "1_MONTH_TRIAL") === tier.id;
-                    return (
-                      <div
-                        key={tier.id}
-                        onClick={() => {
-                          setInstForm((prev) => ({
-                            ...prev,
-                            subscriptionPlan: tier.id,
-                            paymentAmount: String(tier.feeGHS),
-                            momoTxnId: tier.id === "1_MONTH_TRIAL" ? "FREE_TRIAL_AUTO" : (prev.momoTxnId === "FREE_TRIAL_AUTO" ? "" : prev.momoTxnId)
-                          }));
-                        }}
-                        style={{
-                          background: isSelected ? "rgba(15, 23, 42, 0.98)" : "rgba(15, 23, 42, 0.75)",
-                          border: isSelected ? `2.5px solid ${tier.badgeColor}` : "1.5px solid rgba(255, 255, 255, 0.12)",
-                          borderRadius: "14px",
-                          padding: "16px",
-                          cursor: "pointer",
-                          display: "flex",
-                          flexDirection: "column",
-                          justifyContent: "space-between",
-                          boxShadow: isSelected ? `0 10px 25px ${tier.badgeColor}35` : "0 4px 12px rgba(0,0,0,0.4)",
-                          transform: isSelected ? "translateY(-3px)" : "none",
-                          transition: "all 0.2s ease"
-                        }}
-                      >
+                {/* Automated Headcount Multiplier Formula Card */}
+                {(() => {
+                  const ratePerStudent = getStudentRate(instForm.institutionType);
+                  const studentCount = Math.max(0, parseInt(instForm.totalStudentsEnrolled, 10) || 0);
+                  const fullAnnualFee = studentCount > 0 ? (ratePerStudent * studentCount) : (ratePerStudent * 100);
+                  const activeTiers = computeSubscriptionTiers(instForm.institutionType, instForm.totalStudentsEnrolled);
+
+                  return (
+                    <>
+                      <div style={{ background: "rgba(15, 23, 42, 0.95)", border: "1.5px solid #38bdf8", borderRadius: "12px", padding: "14px 18px", marginBottom: "1.25rem", display: "flex", flexWrap: "wrap", justifyContent: "space-between", alignItems: "center", gap: "12px" }}>
                         <div>
-                          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "8px" }}>
-                            <span style={{ fontSize: "0.68rem", fontWeight: 800, color: tier.badgeColor, background: `${tier.badgeColor}20`, padding: "3px 8px", borderRadius: "12px", border: `1px solid ${tier.badgeColor}40` }}>
-                              {tier.badge}
-                            </span>
-                            <span style={{ fontSize: "1.2rem" }}>
-                              {isSelected ? "✅" : "⚪"}
-                            </span>
-                          </div>
-                          <h4 style={{ margin: "0 0 4px 0", fontSize: "1rem", color: "#f8fafc", fontWeight: 800 }}>
-                            {tier.name}
-                          </h4>
-                          <span style={{ fontSize: "0.75rem", color: "#94a3b8", display: "block", marginBottom: "8px" }}>
-                            {tier.duration}
+                          <span style={{ fontSize: "0.72rem", color: "#94a3b8", fontWeight: 800, textTransform: "uppercase", letterSpacing: "0.5px", display: "block" }}>
+                            ⚡ AUTOMATIC HEADCOUNT PRICING FORMULA
                           </span>
-                          <div style={{ fontSize: "1.35rem", fontWeight: 900, color: tier.feeGHS === 0 ? "#34d399" : "#38bdf8", marginBottom: "8px" }}>
-                            {tier.feeGHS === 0 ? "FREE" : `GHS ${tier.feeGHS.toLocaleString()}`}
+                          <div style={{ display: "flex", alignItems: "center", gap: "8px", marginTop: "4px" }}>
+                            <span style={{ fontSize: "1.2rem" }}>
+                              {instForm.institutionType === "UNIVERSITY" ? "🏛️" : (instForm.institutionType === "SENIOR_HIGH_SCHOOL" ? "🎓" : "🏫")}
+                            </span>
+                            <strong style={{ color: "#38bdf8", fontSize: "0.98rem" }}>
+                              {instForm.institutionType === "UNIVERSITY" ? "University / Tertiary (20 Cedis per student)" : (instForm.institutionType === "SENIOR_HIGH_SCHOOL" ? "Senior High School (10 Cedis per student)" : "Basic School / JHS (5 Cedis per student)")}
+                            </strong>
                           </div>
-                          <p style={{ fontSize: "0.76rem", color: "#cbd5e1", margin: 0, lineHeight: "1.4" }}>
-                            {tier.desc}
-                          </p>
+                          <span style={{ fontSize: "0.82rem", color: "#cbd5e1", marginTop: "4px", display: "block" }}>
+                            Multiplier: <strong>GHS {ratePerStudent}.00</strong> × <strong>{studentCount} Students</strong> = <strong style={{ color: "#34d399" }}>GHS {fullAnnualFee.toLocaleString()}</strong> (Full Academic Year)
+                          </span>
                         </div>
-                        <div style={{ marginTop: "12px", paddingTop: "8px", borderTop: "1px solid rgba(255,255,255,0.08)", fontSize: "0.72rem", color: isSelected ? tier.badgeColor : "#94a3b8", fontWeight: 700, textAlign: "center" }}>
-                          {isSelected ? "● CURRENTLY SELECTED" : "Click to Select Plan"}
+                        <div style={{ textAlign: "right" }}>
+                          <span style={{ fontSize: "0.72rem", color: "#94a3b8", fontWeight: 700, display: "block" }}>
+                            CURRENT PAYABLE AMOUNT
+                          </span>
+                          <span style={{ fontSize: "1.5rem", fontWeight: 900, color: (instForm.subscriptionPlan === "1_MONTH_TRIAL" || instForm.paymentAmount === "0") ? "#34d399" : "#38bdf8" }}>
+                            {(instForm.subscriptionPlan === "1_MONTH_TRIAL" || instForm.paymentAmount === "0") ? "FREE (0 GHS)" : `GHS ${Number(instForm.paymentAmount || fullAnnualFee).toLocaleString()}`}
+                          </span>
                         </div>
                       </div>
-                    );
-                  })}
-                </div>
+
+                      {/* Interactive Subscription Tier Cards (5 choices) */}
+                      <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(210px, 1fr))", gap: "12px", marginBottom: "1.5rem" }}>
+                        {activeTiers.map((tier) => {
+                          const isSelected = (instForm.subscriptionPlan || "1_MONTH_TRIAL") === tier.id;
+                          return (
+                            <div
+                              key={tier.id}
+                              onClick={() => {
+                                setInstForm((prev) => ({
+                                  ...prev,
+                                  subscriptionPlan: tier.id,
+                                  paymentAmount: String(tier.feeGHS),
+                                  momoTxnId: tier.id === "1_MONTH_TRIAL" ? "FREE_TRIAL_AUTO" : (prev.momoTxnId === "FREE_TRIAL_AUTO" ? "" : prev.momoTxnId)
+                                }));
+                              }}
+                              style={{
+                                background: isSelected ? "rgba(15, 23, 42, 0.98)" : "rgba(15, 23, 42, 0.75)",
+                                border: isSelected ? `2.5px solid ${tier.badgeColor}` : "1.5px solid rgba(255, 255, 255, 0.12)",
+                                borderRadius: "14px",
+                                padding: "16px",
+                                cursor: "pointer",
+                                display: "flex",
+                                flexDirection: "column",
+                                justifyContent: "space-between",
+                                boxShadow: isSelected ? `0 10px 25px ${tier.badgeColor}35` : "0 4px 12px rgba(0,0,0,0.4)",
+                                transform: isSelected ? "translateY(-3px)" : "none",
+                                transition: "all 0.2s ease"
+                              }}
+                            >
+                              <div>
+                                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "8px" }}>
+                                  <span style={{ fontSize: "0.68rem", fontWeight: 800, color: tier.badgeColor, background: `${tier.badgeColor}20`, padding: "3px 8px", borderRadius: "12px", border: `1px solid ${tier.badgeColor}40` }}>
+                                    {tier.badge}
+                                  </span>
+                                  <span style={{ fontSize: "1.2rem" }}>
+                                    {isSelected ? "✅" : "⚪"}
+                                  </span>
+                                </div>
+                                <h4 style={{ margin: "0 0 4px 0", fontSize: "1rem", color: "#f8fafc", fontWeight: 800 }}>
+                                  {tier.name}
+                                </h4>
+                                <span style={{ fontSize: "0.75rem", color: "#94a3b8", display: "block", marginBottom: "8px" }}>
+                                  {tier.duration}
+                                </span>
+                                <div style={{ fontSize: "1.35rem", fontWeight: 900, color: tier.feeGHS === 0 ? "#34d399" : "#38bdf8", marginBottom: "8px" }}>
+                                  {tier.feeGHS === 0 ? "FREE" : `GHS ${tier.feeGHS.toLocaleString()}`}
+                                </div>
+                                <p style={{ fontSize: "0.76rem", color: "#cbd5e1", margin: 0, lineHeight: "1.4" }}>
+                                  {tier.desc}
+                                </p>
+                              </div>
+                              <div style={{ marginTop: "12px", paddingTop: "8px", borderTop: "1px solid rgba(255,255,255,0.08)", fontSize: "0.72rem", color: isSelected ? tier.badgeColor : "#94a3b8", fontWeight: 700, textAlign: "center" }}>
+                                {isSelected ? "● CURRENTLY SELECTED" : "Click to Select Plan"}
+                              </div>
+                            </div>
+                          );
+                        })}
+                      </div>
+                    </>
+                  );
+                })()}
 
                 {/* Conditional Payment Guidance */}
                 {instForm.subscriptionPlan === "1_MONTH_TRIAL" ? (

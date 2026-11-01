@@ -11,6 +11,20 @@ import { clearFakeDataEntries } from "../../utils/freshSystemReset";
  *   re-aligns resilience pools, and refreshes nominal system operations.
  */
 export default function UniversalAIAssistantHUD() {
+  const [isDeveloper, setIsDeveloper] = useState(() => {
+    try {
+      const rawUser = localStorage.getItem("gbs_user");
+      const user = rawUser ? JSON.parse(rawUser) : null;
+      const role = user?.role?.toUpperCase();
+      const email = user?.email?.toLowerCase();
+      const isPathDev = typeof window !== "undefined" && window.location.pathname.includes("/developer-");
+      const isSessionDev = typeof sessionStorage !== "undefined" && sessionStorage.getItem("gbs_developer_authenticated") === "true";
+      return role === "DEVELOPER" || email === "gabosei48@gmail.com" || isPathDev || isSessionDev;
+    } catch {
+      return false;
+    }
+  });
+
   const [isOpen, setIsOpen] = useState(false);
   const [systemStatus, setSystemStatus] = useState("HEALTHY"); // "HEALTHY" | "ANOMALY" | "REPAIRING" | "REPAIRED"
   const [detectedIssues, setDetectedIssues] = useState([]);
@@ -18,8 +32,35 @@ export default function UniversalAIAssistantHUD() {
   const [isRepairing, setIsRepairing] = useState(false);
   const [unreadCount, setUnreadCount] = useState(0);
 
+  // Monitor Auth Changes to enforce Developer-Only visibility
+  useEffect(() => {
+    const checkIsDeveloper = () => {
+      try {
+        const rawUser = localStorage.getItem("gbs_user");
+        const user = rawUser ? JSON.parse(rawUser) : null;
+        const role = user?.role?.toUpperCase();
+        const email = user?.email?.toLowerCase();
+        const isPathDev = window.location.pathname.includes("/developer-");
+        const isSessionDev = sessionStorage.getItem("gbs_developer_authenticated") === "true";
+        setIsDeveloper(role === "DEVELOPER" || email === "gabosei48@gmail.com" || isPathDev || isSessionDev);
+      } catch {
+        setIsDeveloper(false);
+      }
+    };
+
+    window.addEventListener("storage", checkIsDeveloper);
+    window.addEventListener("popstate", checkIsDeveloper);
+    const authInterval = setInterval(checkIsDeveloper, 2000);
+    return () => {
+      window.removeEventListener("storage", checkIsDeveloper);
+      window.removeEventListener("popstate", checkIsDeveloper);
+      clearInterval(authInterval);
+    };
+  }, []);
+
   // Monitor Global Errors & API Telemetry
   useEffect(() => {
+    if (!isDeveloper) return;
     const handleGlobalError = (event) => {
       const errorMsg = event?.message || event?.reason?.message || "Unexpected runtime exception intercepted";
       addIssue("JavaScript Runtime Exception", errorMsg);
@@ -113,9 +154,13 @@ export default function UniversalAIAssistantHUD() {
     }, 4000);
   };
 
+  if (!isDeveloper) {
+    return null;
+  }
+
   return (
     <>
-      {/* Floating AI Sentinel Status Badge */}
+      {/* Floating Antigravity AI IDE Assistant Status Badge (Developer Only) */}
       <div
         className="gbs-ai-sentinel-badge"
         onClick={() => {
@@ -153,17 +198,17 @@ export default function UniversalAIAssistantHUD() {
           transition: "all 0.25s ease",
           userSelect: "none"
         }}
-        title="GBS AI Assistant & Autonomous System Repair Sentinel"
+        title="Antigravity AI IDE Assistant • System Health & Autonomous Repair Sentinel"
       >
         <span style={{ fontSize: "1.1rem" }}>
           {systemStatus === "ANOMALY" ? "⚠️" : systemStatus === "REPAIRING" ? "⚙️" : "🤖"}
         </span>
         <span>
           {systemStatus === "ANOMALY"
-            ? `AI Sentinel: ${detectedIssues.length} Anomaly • Ask for Repair`
+            ? `Antigravity AI: ${detectedIssues.length} Anomaly • Ask for Repair`
             : systemStatus === "REPAIRING"
-            ? "AI Repairing System..."
-            : "AI Assistant: Online"}
+            ? "Antigravity AI Repairing System..."
+            : "Antigravity AI IDE Assistant"}
         </span>
         {unreadCount > 0 && (
           <span
@@ -224,10 +269,10 @@ export default function UniversalAIAssistantHUD() {
               <span style={{ fontSize: "1.4rem" }}>🤖</span>
               <div>
                 <strong style={{ fontSize: "0.95rem", color: "#38bdf8", display: "block" }}>
-                  GBS AI SYSTEM SENTINEL
+                  ANTIGRAVITY AI IDE ASSISTANT
                 </strong>
                 <span style={{ fontSize: "0.72rem", color: "#94a3b8" }}>
-                  Deep Telemetry, Autonomous Diagnostics & Repairs
+                  Developer Exclusive • Autonomous Diagnostics & Self-Healing
                 </span>
               </div>
             </div>

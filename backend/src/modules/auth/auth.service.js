@@ -212,6 +212,23 @@ const login = async ({ email, username, identifier, password, portalRole }) => {
   }
 
   if (!user) {
+    const cleanId = (email || username || '').toLowerCase().trim();
+    try {
+      const pendingReg = await prisma.institutionRegistration.findFirst({
+        where: {
+          OR: [
+            { adminEmail: cleanId },
+            { officialEmail: cleanId }
+          ],
+          status: { in: ['PENDING', 'PENDING_DEVELOPER_APPROVAL'] }
+        }
+      });
+      if (pendingReg && !pendingReg.isApproved) {
+        throw new AppError('ACCESS DENIED: Your institution registration is pending Developer verification and approval. The lead system developer must review your application and approve your institution before any portal access is granted.', 403);
+      }
+    } catch (e) {
+      if (e.statusCode === 403) throw e;
+    }
     throw new AppError('Invalid email/username or password.', 401);
   }
 
@@ -262,6 +279,24 @@ const login = async ({ email, username, identifier, password, portalRole }) => {
                          (user.email && user.email.toLowerCase() === 'gabosei48@gmail.com');
     if (!isMasterUser && user.role !== pRole) {
       throw new AppError(`Access denied. User does not have ${portalRole} authorization.`, 403);
+    }
+  }
+
+  // Developer verification and approval enforcement:
+  // No headmaster or institution user can access the system without developer approving
+  if (user.role === 'ADMIN' && user.email !== 'admin@gbs.com') {
+    try {
+      const pendingReg = await prisma.institutionRegistration.findFirst({
+        where: {
+          adminEmail: user.email.toLowerCase().trim(),
+          status: { in: ['PENDING', 'PENDING_DEVELOPER_APPROVAL'] }
+        }
+      });
+      if (pendingReg && !pendingReg.isApproved) {
+        throw new AppError('ACCESS DENIED: Your institution registration is pending Developer verification and approval. The lead system developer must review your application and approve your institution before any portal access is granted.', 403);
+      }
+    } catch (e) {
+      if (e.statusCode === 403) throw e;
     }
   }
 
@@ -376,6 +411,8 @@ const registerInstitution = async (data) => {
     throw new AppError('You must accept terms of service, privacy policy, and data processing consent to proceed.', 400);
   }
 
+  const hashedPassword = await bcrypt.hash(effPassword, 10);
+
   const year = new Date().getFullYear();
   const randSuffix = Math.floor(1000 + Math.random() * 9000);
   const tenantUid = `TEN-${year}-${String(randSuffix).padStart(6, '0')}`;
@@ -389,7 +426,17 @@ const registerInstitution = async (data) => {
   const institutionId = `INS-${year}-${String(randSuffix + 1100).padStart(6, '0')}`;
   const subscriptionId = `SUB-${year}-${String(randSuffix).padStart(6, '0')}`;
 
-  const hashedPassword = await bcrypt.hash(effPassword, envConfig.jwt.saltRounds || 10);
+  const studentCount = parseInt(data.totalStudentsEnrolled || data.studentsCount || 0, 10);
+  let perStudentRate = 5; // JHS / Basic: 5 cedis per student
+  const typeUpper = (institutionType || '').toUpperCase();
+  if (typeUpper.includes('UNIVERSITY') || typeUpper.includes('TERTIARY')) {
+    perStudentRate = 20; // University: 20 cedis per student
+  } else if (typeUpper.includes('SENIOR') || typeUpper.includes('SHS') || typeUpper.includes('SECONDARY')) {
+    perStudentRate = 10; // Senior High School: 10 cedis per student
+  } else {
+    perStudentRate = 5; // JHS / Basic School: 5 cedis per student
+  }
+  const calculatedBaseFee = studentCount > 0 ? (perStudentRate * studentCount) : 0;
 
   const regData = {
     id: `reg_${Date.now()}`,
@@ -400,8 +447,16 @@ const registerInstitution = async (data) => {
     institutionName: institutionName.trim(),
     name: institutionName.trim(),
     code: tenantCode,
-    institutionType: institutionType || 'K-12 Private Academy',
-    country: country || 'United Kingdom',
+    institutionType: institutionType || 'NURSERY_TO_JHS',
+    totalStudentsEnrolled: studentCount,
+    perStudentRate,
+    calculatedBaseFee,
+    subscriptionPlan: data.subscriptionPlan || '1_MONTH_TRIAL',
+    paymentAmount: String(data.paymentAmount || (data.subscriptionPlan === '1_MONTH_TRIAL' ? '0' : calculatedBaseFee)),
+    momoTxnId: data.momoTxnId || (data.subscriptionPlan === '1_MONTH_TRIAL' ? 'FREE_TRIAL_AUTO' : ''),
+    hasUsedTrial: (data.subscriptionPlan === '1_MONTH_TRIAL'),
+    isApproved: false,
+    country: country || 'Ghana',
     region: region || '',
     city: city || '',
     physicalAddress: physicalAddress || '',
@@ -425,7 +480,7 @@ const registerInstitution = async (data) => {
     privacyAccepted: effPrivacy,
     dataProcessingConsent: effConsent,
     status: 'PENDING_DEVELOPER_APPROVAL',
-    isActive: true,
+    isActive: false,
     createdAt: new Date().toISOString()
   };
 

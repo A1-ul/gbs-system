@@ -76,6 +76,15 @@ router.get('/tenant-locator', devControlController.locateTenantByHeadmaster);
 router.get('/tenant-subscription/:idOrCode', devControlController.getTenantSubscription);
 router.get('/tenants/:idOrCode/subscription', devControlController.getTenantSubscription);
 
+// 18. Developer Onboarding Review & Approvals
+router.get('/onboarding/pending', devControlController.getPendingOnboardings);
+router.post('/onboarding/:id/approve', devControlController.approveOnboarding);
+router.post('/onboarding/:id/reject', devControlController.rejectOnboarding);
+
+// 19. Developer Direct SMS to Headmaster
+router.post('/sms/send-headmaster', devControlController.sendHeadmasterSms);
+
 module.exports = router;
+
 
 

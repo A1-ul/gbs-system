@@ -12,6 +12,7 @@ datasource db {
 // ==================================================
 
 enum UserRole {
+  SUPER_ADMIN
   ADMIN
   TEACHER
   STUDENT
@@ -1425,6 +1426,16 @@ model InstitutionRegistration {
   privacyAccepted         Boolean   @default(false)
   dataProcessingConsent   Boolean   @default(false)
 
+  // Headcount & Subscription Plan Formula
+  totalStudentsEnrolled   Int?      @default(0)
+  perStudentRate          Float?    @default(5.0)
+  calculatedBaseFee       Float?    @default(0.0)
+  subscriptionPlan        String?   @default("1_MONTH_TRIAL")
+  paymentAmount           String?   @default("0")
+  momoTxnId               String?   @default("FREE_TRIAL_AUTO")
+  hasUsedTrial            Boolean   @default(false)
+  isApproved              Boolean   @default(false)
+
   // Status & Lifecycle
   status                  String    @default("PENDING") // PENDING, VERIFICATION_REQUIRED, APPROVED, PROVISIONING, ACTIVE_TRIAL, REJECTED
   rejectionReason         String?
@@ -1483,4 +1494,274 @@ model UserRegistrationProfile {
   @@index([role])
   @@index([verificationStatus])
   @@map("user_registration_profiles")
+}
+
+// ==================================================
+// FACILITY & MAINTENANCE WORK ORDERS
+// ==================================================
+
+model FacilityTicket {
+  id              Int       @id @default(autoincrement())
+  tenant_id       Int       @default(1)
+  ticket_number   String    @unique @db.VarChar(50)
+  title           String    @db.VarChar(255)
+  category        String    @db.VarChar(50)
+  location        String    @db.VarChar(150)
+  priority        String    @default("MEDIUM") @db.VarChar(20)
+  status          String    @default("PENDING") @db.VarChar(30)
+  estimated_cost  Decimal   @default(0.00) @db.Decimal(10, 2)
+  actual_cost     Decimal   @default(0.00) @db.Decimal(10, 2)
+  assigned_staff  String?   @db.VarChar(100)
+  reported_by     String?   @db.VarChar(100)
+  resolution_notes String?
+  created_at      DateTime  @default(now())
+  updated_at      DateTime  @default(now()) @updatedAt
+
+  @@index([tenant_id])
+  @@index([status])
+  @@map("facility_tickets")
+}
+
+// ==================================================
+// CAMPUS DIGITAL TWIN & IoT TELEMETRY
+// ==================================================
+
+model CampusZone {
+  id                    Int       @id @default(autoincrement())
+  tenant_id             Int       @default(1)
+  zone_code             String    @unique @db.VarChar(50)
+  zone_name             String    @db.VarChar(150)
+  building              String    @db.VarChar(100)
+  floor_level           String?   @default("Ground Floor") @db.VarChar(50)
+  max_capacity          Int       @default(120)
+  current_occupancy     Int       @default(0)
+  lock_status           String?   @default("SECURE") @db.VarChar(30)
+  power_consumption_kw  Decimal   @default(14.5) @db.Decimal(8, 2)
+  temperature_celsius   Decimal   @default(22.4) @db.Decimal(5, 2)
+  humidity_percent      Decimal   @default(46.0) @db.Decimal(5, 2)
+  air_quality_index     Int       @default(24)
+  is_active             Boolean   @default(true)
+  created_at            DateTime  @default(now())
+  updated_at            DateTime  @default(now()) @updatedAt
+
+  telemetryLogs         CampusTelemetryLog[]
+
+  @@index([tenant_id])
+  @@map("campus_zones")
+}
+
+model CampusTelemetryLog {
+  id           Int        @id @default(autoincrement())
+  zone_id      Int
+  zone         CampusZone @relation(fields: [zone_id], references: [id], onDelete: Cascade)
+  metric_type  String     @db.VarChar(50)
+  metric_value Decimal    @db.Decimal(10, 2)
+  unit         String?    @db.VarChar(20)
+  recorded_at  DateTime   @default(now())
+
+  @@index([zone_id])
+  @@map("campus_telemetry_logs")
+}
+
+// ==================================================
+// SMART CCTV & SECURITY GATE EVENTS
+// ==================================================
+
+model CctvStream {
+  id            Int       @id @default(autoincrement())
+  tenant_id     Int       @default(1)
+  camera_code   String    @unique @db.VarChar(50)
+  camera_name   String    @db.VarChar(150)
+  location      String    @db.VarChar(150)
+  rtsp_endpoint String    @db.VarChar(255)
+  resolution    String?   @default("1080p FHD") @db.VarChar(50)
+  fps           Int       @default(30)
+  status        String?   @default("ONLINE") @db.VarChar(30)
+  ai_enabled    Boolean   @default(true)
+  storage_days  Int       @default(30)
+  created_at    DateTime  @default(now())
+  updated_at    DateTime  @default(now()) @updatedAt
+
+  @@index([tenant_id])
+  @@map("cctv_streams")
+}
+
+model SecurityGateEvent {
+  id             Int       @id @default(autoincrement())
+  tenant_id      Int       @default(1)
+  gate_name      String    @db.VarChar(100)
+  event_type     String    @db.VarChar(50)
+  person_name    String    @db.VarChar(150)
+  person_role    String    @db.VarChar(50)
+  badge_id       String?   @db.VarChar(50)
+  facial_match   Boolean   @default(true)
+  confidence_pct Decimal   @default(99.4) @db.Decimal(5, 2)
+  status         String?   @default("GRANTED") @db.VarChar(30)
+  event_time     DateTime  @default(now())
+
+  @@index([tenant_id])
+  @@map("security_gate_events")
+}
+
+// ==================================================
+// REGIONAL SHARDING & DR FAILOVER
+// ==================================================
+
+model ShardRegistry {
+  id                  Int       @id @default(autoincrement())
+  shard_key           String    @unique @db.VarChar(64)
+  name                String    @db.VarChar(255)
+  region              String    @db.VarChar(64)
+  host                String    @db.VarChar(255)
+  port                Int       @default(5432)
+  database_name       String    @default("gbs_system") @db.VarChar(128)
+  allocated_tenants   Int?      @default(1)
+  max_tenants         Int?      @default(50)
+  storage_capacity_gb Decimal?  @default(500.00) @db.Decimal(10, 2)
+  storage_used_gb     Decimal?  @default(42.50) @db.Decimal(10, 2)
+  avg_latency_ms      Decimal?  @default(4.20) @db.Decimal(8, 2)
+  status              String?   @default("ONLINE") @db.VarChar(32)
+  is_primary          Boolean?  @default(true)
+  created_at          DateTime  @default(now())
+  updated_at          DateTime  @default(now()) @updatedAt
+
+  @@map("shard_registry")
+}
+
+model ReplicaStatus {
+  id                 Int       @id @default(autoincrement())
+  replica_name       String    @unique @db.VarChar(128)
+  role               String    @db.VarChar(32)
+  endpoint           String    @db.VarChar(255)
+  region             String    @db.VarChar(64)
+  replication_lag_ms Decimal?  @default(0.0) @db.Decimal(8, 2)
+  sync_state         String?   @default("STREAMING") @db.VarChar(32)
+  wal_lsn            String?   @default("0/1F88420") @db.VarChar(64)
+  health_score       Int?      @default(100)
+  is_healthy         Boolean?  @default(true)
+  last_heartbeat     DateTime  @default(now())
+  created_at         DateTime  @default(now())
+
+  @@map("replica_status")
+}
+
+model DrFailoverLog {
+  id                Int       @id @default(autoincrement())
+  drill_id          String    @unique @db.VarChar(64)
+  trigger_type      String    @db.VarChar(32)
+  source_shard      String    @db.VarChar(64)
+  target_shard      String    @db.VarChar(64)
+  rpo_seconds       Decimal?  @default(0.0) @db.Decimal(8, 2)
+  rto_minutes       Decimal?  @default(1.5) @db.Decimal(8, 2)
+  status            String?   @default("COMPLETED") @db.VarChar(32)
+  initiated_by      String    @default("Developer Root / Sentinel") @db.VarChar(128)
+  verification_hash String    @db.VarChar(128)
+  notes             String?
+  created_at        DateTime  @default(now())
+
+  @@map("dr_failover_logs")
+}
+
+// ==================================================
+// INVENTORY & REQUISITIONS
+// ==================================================
+
+model InventoryItem {
+  id                 Int       @id @default(autoincrement())
+  tenant_id          Int       @default(1)
+  item_code          String    @unique @db.VarChar(100)
+  name               String    @db.VarChar(255)
+  category           String    @db.VarChar(100)
+  unit               String?   @default("PIECES") @db.VarChar(50)
+  quantity_on_hand   Int       @default(0)
+  reorder_level      Int       @default(10)
+  unit_price         Decimal   @default(0.00) @db.Decimal(10, 2)
+  location           String?   @db.VarChar(150)
+  status             String?   @default("IN_STOCK") @db.VarChar(50)
+  purchased_by_staff String?   @db.VarChar(150)
+  purchaser_dept     String?   @db.VarChar(100)
+  created_at         DateTime  @default(now())
+  updated_at         DateTime  @default(now()) @updatedAt
+
+  @@index([tenant_id])
+  @@index([item_code])
+  @@map("inventory_items")
+}
+
+model InventoryRequest {
+  id                 Int       @id @default(autoincrement())
+  tenant_id          Int       @default(1)
+  request_number     String    @unique @db.VarChar(100)
+  item_id            Int?
+  item_name          String?   @db.VarChar(255)
+  requester_id       Int?
+  requester_name     String?   @db.VarChar(150)
+  department         String?   @db.VarChar(100)
+  quantity_requested Int       @default(1)
+  urgency            String?   @default("MEDIUM") @db.VarChar(50)
+  status             String?   @default("PENDING") @db.VarChar(50)
+  notes              String?
+  reviewed_by        String?   @db.VarChar(150)
+  created_at         DateTime  @default(now())
+  updated_at         DateTime  @default(now()) @updatedAt
+
+  @@index([tenant_id])
+  @@map("inventory_requests")
+}
+
+// ==================================================
+// STAFF LEAVE REQUESTS
+// ==================================================
+
+model StaffLeaveRequest {
+  id               Int       @id @default(autoincrement())
+  tenant_id        Int       @default(1)
+  staff_id         Int?
+  staff_name       String?   @db.VarChar(150)
+  staff_role       String?   @default("STAFF") @db.VarChar(50)
+  leave_type       String    @db.VarChar(50)
+  start_date       DateTime  @db.Date
+  end_date         DateTime  @db.Date
+  days_count       Int       @default(1)
+  reason           String
+  status           String?   @default("PENDING") @db.VarChar(50)
+  reviewed_by      String?   @db.VarChar(150)
+  rejection_reason String?
+  created_at       DateTime  @default(now())
+  updated_at       DateTime  @default(now()) @updatedAt
+
+  @@index([tenant_id])
+  @@index([staff_id])
+  @@map("staff_leave_requests")
+}
+
+// ==================================================
+// ATTENDANCE ARCHIVES (Teacher Reference Archive)
+// ==================================================
+
+model AttendanceArchive {
+  id                    Int       @id @default(autoincrement())
+  tenant_id             Int       @default(1)
+  teacher_id            Int?
+  teacher_name          String?   @db.VarChar(150)
+  class_id              Int?
+  class_name            String?   @db.VarChar(150)
+  academic_week         String?   @db.VarChar(50)
+  term                  String?   @db.VarChar(50)
+  academic_year         String?   @db.VarChar(50)
+  total_students        Int       @default(0)
+  present_count         Int       @default(0)
+  absent_count          Int       @default(0)
+  late_count            Int       @default(0)
+  excused_count         Int       @default(0)
+  attendance_percentage Decimal   @default(100.0) @db.Decimal(5, 2)
+  headmaster_approved   Boolean   @default(true)
+  approved_by           String?   @default("Headmaster") @db.VarChar(150)
+  approved_at           DateTime  @default(now())
+  archived_at           DateTime  @default(now())
+  notes                 String?
+
+  @@index([tenant_id])
+  @@index([teacher_id])
+  @@map("attendance_archives")
 }

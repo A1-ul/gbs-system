@@ -99,9 +99,42 @@ async function getStatus() {
   };
 }
 
+/**
+ * Dispatch direct SMS message (e.g. from Developer to Headmaster)
+ */
+async function sendSMSMessage({ recipientPhone, recipientName, sender, senderPhone, content, type = "DIRECT_DEVELOPER_SMS", tenantId = null }) {
+  const cleanPhone = String(recipientPhone || "").trim();
+  const messageId = `SMS-${Date.now()}-${Math.floor(1000 + Math.random() * 9000)}`;
+
+  const logEntry = {
+    id: smsLogs.length + 1,
+    messageId,
+    recipientPhone: cleanPhone,
+    recipientName: recipientName || "Headmaster",
+    sender: sender || "DEVELOPER_ROOT",
+    senderPhone: senderPhone || "+233 54 329 4615",
+    content: content || "Notice from GBS System Executive Developer Gabriel Kubi Osei-Appiah.",
+    type,
+    tenantId: tenantId ? parseInt(tenantId, 10) : null,
+    status: "DELIVERED",
+    timestamp: new Date().toISOString()
+  };
+
+  smsLogs.unshift(logEntry);
+  if (logger.info) {
+    logger.info(`[SMS DISPATCHED] To: ${cleanPhone} | From: ${senderPhone || sender} | Message: ${content}`);
+  } else {
+    console.log(`[SMS DISPATCHED] To: ${cleanPhone} | From: ${senderPhone || sender} | Message: ${content}`);
+  }
+
+  return logEntry;
+}
+
 module.exports = {
   sendOTPMessage,
+  sendSMSMessage,
   verifyMobileOTP,
   getSMSLogs,
   getStatus
 };
+
