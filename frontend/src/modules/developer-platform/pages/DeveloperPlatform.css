@@ -19,21 +19,90 @@
   display: flex;
   justify-content: space-between;
   align-items: center;
-  padding: 1rem 2rem;
-  background: rgba(15, 23, 42, 0.95);
-  backdrop-filter: blur(12px);
-  border-bottom: 1.5px solid rgba(239, 68, 68, 0.35);
+  padding: 0.85rem 2rem;
+  background: rgba(15, 23, 42, 0.96);
+  backdrop-filter: blur(14px);
+  border-bottom: 1.5px solid rgba(56, 189, 248, 0.35);
   position: relative;
   z-index: 50;
+  gap: 1.25rem;
+  flex-wrap: wrap;
+}
+
+.dev-brand {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+}
+
+.dev-pin-indicator {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  background: rgba(56, 189, 248, 0.12);
+  border: 1px solid rgba(56, 189, 248, 0.35);
+  padding: 4px 12px;
+  border-radius: 6px;
+  font-size: 0.74rem;
+  font-weight: 700;
+  color: #7dd3fc;
+  letter-spacing: 0.5px;
+}
+
+.pin-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: #38bdf8;
+  box-shadow: 0 0 10px #38bdf8;
+  animation: cameraPulse 2s infinite ease-in-out;
+}
+
+.dev-nav {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+}
+
+.dev-nav button,
+.dev-nav .dev-action-btn,
+.dev-padlock-quick-widget {
+  height: 38px !important;
+  box-sizing: border-box !important;
+  display: inline-flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  gap: 6px !important;
+  padding: 0 14px !important;
+  background: rgba(30, 41, 59, 0.7) !important;
+  border: 1.5px solid rgba(255, 255, 255, 0.12) !important;
+  border-radius: 8px !important;
+  color: #e2e8f0 !important;
+  font-size: 0.8rem !important;
+  font-weight: 700 !important;
+  cursor: pointer !important;
+  white-space: nowrap !important;
+  transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1) !important;
+}
+
+.dev-nav button:hover,
+.dev-padlock-quick-widget:hover {
+  background: rgba(56, 189, 248, 0.18) !important;
+  border-color: rgba(56, 189, 248, 0.45) !important;
+  color: #ffffff !important;
+  transform: translateY(-1px) !important;
 }
 
 .dev-logout-btn {
-  background: linear-gradient(135deg, #ef4444, #b91c1c) !important;
+  background: linear-gradient(135deg, #ef4444 0%, #b91c1c 100%) !important;
   color: #ffffff !important;
-  border: 1.5px solid #f87171 !important;
+  border: 1.5px solid rgba(254, 202, 202, 0.6) !important;
   box-shadow: 0 4px 14px rgba(239, 68, 68, 0.45) !important;
   font-weight: 800 !important;
-  padding: 8px 18px !important;
+  height: 38px !important;
+  padding: 0 18px !important;
   border-radius: 8px !important;
   cursor: pointer !important;
   display: inline-flex !important;
@@ -43,68 +112,9 @@
 }
 
 .dev-logout-btn:hover {
-  background: linear-gradient(135deg, #dc2626, #991b1b) !important;
+  background: linear-gradient(135deg, #dc2626 0%, #991b1b 100%) !important;
   box-shadow: 0 6px 20px rgba(239, 68, 68, 0.6) !important;
   transform: translateY(-1px) scale(1.02) !important;
-}
-
-.dev-brand {
-  display: flex;
-  align-items: center;
-  gap: 12px;
-}
-
-.dev-pin-indicator {
-  display: flex;
-  align-items: center;
-  gap: 6px;
-  background: rgba(239, 68, 68, 0.15);
-  border: 1px solid rgba(239, 68, 68, 0.4);
-  padding: 4px 10px;
-  border-radius: 6px;
-  font-size: 0.72rem;
-  font-weight: 700;
-  color: #fca5a5;
-  letter-spacing: 0.5px;
-}
-
-.pin-dot {
-  width: 8px;
-  height: 8px;
-  border-radius: 50%;
-  background: #ef4444;
-  box-shadow: 0 0 8px #ef4444;
-}
-
-.dev-header h2 {
-  font-size: 1.05rem;
-  font-weight: 800;
-  margin: 0;
-  color: #fff;
-  letter-spacing: 0.5px;
-}
-
-.dev-nav {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-}
-
-.dev-nav button {
-  padding: 6px 14px;
-  background: rgba(255, 255, 255, 0.05);
-  border: 1px solid rgba(255, 255, 255, 0.12);
-  border-radius: 6px;
-  color: #e2e8f0;
-  font-size: 0.8rem;
-  font-weight: 600;
-  cursor: pointer;
-  transition: all 0.2s;
-}
-
-.dev-nav button:hover {
-  background: rgba(255, 255, 255, 0.1);
-  border-color: rgba(255, 255, 255, 0.25);
 }
 
 .dev-main {
@@ -263,68 +273,103 @@
   margin: 0;
 }
 
-/* Tenant Registration Console Cards */
+/* Tenant Registration Console Cards: Symmetrical 4-Column Grid */
 .tenant-console-grid {
-  display: grid;
-  grid-template-columns: repeat(4, 1fr);
-  gap: 14px;
-  margin-bottom: 2rem;
-  align-items: stretch;
-  width: 100%;
+  display: grid !important;
+  grid-template-columns: repeat(4, 1fr) !important;
+  gap: 14px !important;
+  margin-bottom: 2rem !important;
+  align-items: stretch !important;
+  width: 100% !important;
 }
 
 .console-stat-card {
-  background: #0f172a;
-  border: 1px solid rgba(255, 255, 255, 0.1);
-  border-radius: 12px;
-  padding: 14px 16px;
-  display: flex;
-  flex-direction: column;
-  justify-content: center;
-  height: 100%;
-  min-height: 94px;
-  box-sizing: border-box;
-  box-shadow: 0 4px 14px rgba(0, 0, 0, 0.35);
-  transition: transform 0.2s ease, border-color 0.2s ease;
+  background: #0f172a !important;
+  border: 1.5px solid rgba(255, 255, 255, 0.12) !important;
+  border-radius: 12px !important;
+  padding: 16px 20px !important;
+  display: flex !important;
+  flex-direction: column !important;
+  justify-content: space-between !important;
+  height: 100% !important;
+  min-height: 106px !important;
+  box-sizing: border-box !important;
+  box-shadow: 0 4px 14px rgba(0, 0, 0, 0.35) !important;
+  transition: transform 0.2s ease, border-color 0.2s ease, box-shadow 0.2s ease !important;
 }
 
 .console-stat-card:hover {
-  transform: translateY(-2px);
-  border-color: rgba(255, 255, 255, 0.25);
+  transform: translateY(-2px) !important;
+  border-color: rgba(56, 189, 248, 0.4) !important;
+  box-shadow: 0 6px 18px rgba(0, 0, 0, 0.45) !important;
 }
 
 .console-stat-lbl {
-  font-size: 0.72rem;
-  font-weight: 700;
-  color: #94a3b8;
-  letter-spacing: 0.5px;
-  margin-bottom: 0.35rem;
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
+  font-size: 0.74rem !important;
+  font-weight: 800 !important;
+  color: #94a3b8 !important;
+  letter-spacing: 0.6px !important;
+  margin-bottom: 0.4rem !important;
+  white-space: nowrap !important;
+  overflow: hidden !important;
+  text-overflow: ellipsis !important;
+  text-transform: uppercase !important;
 }
 
 .console-stat-val {
-  font-size: 1.55rem;
-  font-weight: 800;
-  color: #fff;
+  font-size: 1.7rem !important;
+  font-weight: 900 !important;
+  color: #ffffff !important;
+  line-height: 1.2 !important;
 }
 
-.console-stat-card.active .console-stat-val { color: #10b981; }
-.console-stat-card.trial .console-stat-val { color: #3b82f6; }
-.console-stat-card.expiring .console-stat-val { color: #f59e0b; }
-.console-stat-card.expired .console-stat-val { color: #ef4444; }
-.console-stat-card.locked .console-stat-val { color: #f43f5e; }
+.console-stat-card.active .console-stat-val { color: #10b981 !important; }
+.console-stat-card.trial .console-stat-val { color: #38bdf8 !important; }
+.console-stat-card.expiring .console-stat-val { color: #f59e0b !important; }
+.console-stat-card.expired .console-stat-val { color: #ef4444 !important; }
+.console-stat-card.locked .console-stat-val { color: #f43f5e !important; }
+
+/* Universal Equal-Size Inscription Box System for Developer Dashboard */
+.dev-equal-inscription-grid {
+  display: grid !important;
+  grid-template-columns: repeat(4, 1fr) !important;
+  gap: 14px !important;
+  align-items: stretch !important;
+  width: 100% !important;
+  margin-bottom: 1.5rem !important;
+}
+
+.dev-inscription-box {
+  background: rgba(2, 6, 23, 0.75) !important;
+  border: 1.5px solid rgba(56, 189, 248, 0.25) !important;
+  border-radius: 12px !important;
+  padding: 16px 18px !important;
+  display: flex !important;
+  flex-direction: column !important;
+  justify-content: space-between !important;
+  min-height: 94px !important;
+  box-sizing: border-box !important;
+  box-shadow: 0 4px 14px rgba(0, 0, 0, 0.35) !important;
+  transition: all 0.2s ease !important;
+}
+
+.dev-inscription-box:hover {
+  border-color: rgba(56, 189, 248, 0.5) !important;
+  transform: translateY(-2px) !important;
+  box-shadow: 0 6px 18px rgba(0, 0, 0, 0.45) !important;
+}
 
 @media (max-width: 1100px) {
-  .tenant-console-grid {
-    grid-template-columns: repeat(2, 1fr);
+  .tenant-console-grid,
+  .dev-equal-inscription-grid {
+    grid-template-columns: repeat(2, 1fr) !important;
   }
 }
 
-@media (max-width: 560px) {
-  .tenant-console-grid {
-    grid-template-columns: 1fr;
+@media (max-width: 580px) {
+  .tenant-console-grid,
+  .dev-equal-inscription-grid {
+    grid-template-columns: 1fr !important;
   }
 }
 

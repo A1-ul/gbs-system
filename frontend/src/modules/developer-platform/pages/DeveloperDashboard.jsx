@@ -2628,20 +2628,20 @@ export default function DeveloperDashboard() {
 
       {/* High-Security Header */}
       <header className="dev-header">
-        <div className="dev-brand" style={{ display: "flex", alignItems: "center", gap: "16px" }}>
+        <div className="dev-brand" style={{ display: "flex", alignItems: "center", gap: "14px" }}>
           <img 
             src="/assets/gbs_crest_badge.jpg" 
             alt="GBS System Crest" 
-            style={{ width: "58px", height: "58px", borderRadius: "14px", border: "2.5px solid #38bdf8", objectFit: "cover", boxShadow: "0 0 24px rgba(56, 189, 248, 0.55)", padding: "2px" }} 
+            style={{ width: "52px", height: "52px", borderRadius: "12px", border: "2px solid #38bdf8", objectFit: "cover", boxShadow: "0 0 20px rgba(56, 189, 248, 0.45)", padding: "2px" }} 
           />
           <div>
-            <div className="dev-pin-indicator" style={{ display: "flex", alignItems: "center", gap: "8px", flexWrap: "wrap" }}>
+            <div className="dev-pin-indicator" style={{ display: "inline-flex", alignItems: "center", gap: "8px" }}>
               <span className="pin-dot"></span>
-              <span>ENGINEER: <strong>GABRIEL OSEI (gabosei48@gmail.com)</strong> • ANTIGRAVITY MISSION CONTROL ACTIVE</span>
+              <span>ENGINEER: <strong>GABRIEL OSEI (gabosei48@gmail.com)</strong> • ROOT ARCHITECT</span>
             </div>
-            <h2 style={{ fontSize: "1.5rem", fontWeight: "900", letterSpacing: "1.5px", color: "#f8fafc", margin: "3px 0 0" }}>
-              GBS SCHOOL MANAGEMENT SYSTEM • DEVELOPER MISSION CONTROL
-            </h2>
+            <span style={{ color: "#38bdf8", fontSize: "0.92rem", fontWeight: "900", letterSpacing: "0.6px", display: "block", marginTop: "3px" }}>
+              🛠️ DEVELOPER MISSION CONTROL • ROOT ENGINE
+            </span>
           </div>
         </div>
 
@@ -2981,33 +2981,34 @@ export default function DeveloperDashboard() {
                 </div>
               )}
 
-              {/* Subscription Telemetry Grid */}
-              <div style={{
+              {/* Subscription Telemetry Inscription Grid: Strictly Equal In Size */}
+              <div className="dev-equal-inscription-grid" style={{
                 display: "grid",
-                gridTemplateColumns: "repeat(auto-fit, minmax(200px, 1fr))",
-                gap: "12px",
-                marginBottom: "1.25rem"
+                gridTemplateColumns: "repeat(4, 1fr)",
+                gap: "14px",
+                marginBottom: "1.25rem",
+                alignItems: "stretch"
               }}>
-                <div style={{ background: "rgba(0,0,0,0.3)", padding: "12px 14px", borderRadius: "10px", border: "1px solid rgba(255,255,255,0.08)" }}>
-                  <span style={{ fontSize: "0.72rem", color: "#94a3b8", display: "block" }}>REGISTRATION START DATE</span>
-                  <strong style={{ color: "#f8fafc", fontSize: "1rem", fontFamily: "monospace" }}>{subscriptionSettings.startDate}</strong>
+                <div className="dev-inscription-box" style={{ background: "rgba(2, 6, 23, 0.75)", padding: "16px 18px", borderRadius: "12px", border: "1.5px solid rgba(56, 189, 248, 0.25)", display: "flex", flexDirection: "column", justifyContent: "space-between", minHeight: "96px" }}>
+                  <span style={{ fontSize: "0.74rem", color: "#94a3b8", display: "block", fontWeight: 800, letterSpacing: "0.5px" }}>REGISTRATION START DATE</span>
+                  <strong style={{ color: "#f8fafc", fontSize: "1.05rem", fontFamily: "monospace" }}>{subscriptionSettings.startDate}</strong>
                 </div>
 
-                <div style={{ background: "rgba(0,0,0,0.3)", padding: "12px 14px", borderRadius: "10px", border: "1px solid rgba(255,255,255,0.08)" }}>
-                  <span style={{ fontSize: "0.72rem", color: "#94a3b8", display: "block" }}>SUBSCRIPTION END DATE</span>
-                  <strong style={{ color: isExpired ? "#fca5a5" : "#38bdf8", fontSize: "1rem", fontFamily: "monospace" }}>{subscriptionSettings.endDate}</strong>
+                <div className="dev-inscription-box" style={{ background: "rgba(2, 6, 23, 0.75)", padding: "16px 18px", borderRadius: "12px", border: "1.5px solid rgba(56, 189, 248, 0.25)", display: "flex", flexDirection: "column", justifyContent: "space-between", minHeight: "96px" }}>
+                  <span style={{ fontSize: "0.74rem", color: "#94a3b8", display: "block", fontWeight: 800, letterSpacing: "0.5px" }}>SUBSCRIPTION END DATE</span>
+                  <strong style={{ color: isExpired ? "#fca5a5" : "#38bdf8", fontSize: "1.05rem", fontFamily: "monospace" }}>{subscriptionSettings.endDate}</strong>
                 </div>
 
-                <div style={{ background: "rgba(0,0,0,0.3)", padding: "12px 14px", borderRadius: "10px", border: "1px solid rgba(255,255,255,0.08)" }}>
-                  <span style={{ fontSize: "0.72rem", color: "#94a3b8", display: "block" }}>DAYS REMAINING COUNTDOWN</span>
-                  <strong style={{ color: isExpired ? "#ef4444" : (isWarning ? "#fbbf24" : "#34d399"), fontSize: "1.1rem" }}>
+                <div className="dev-inscription-box" style={{ background: "rgba(2, 6, 23, 0.75)", padding: "16px 18px", borderRadius: "12px", border: "1.5px solid rgba(56, 189, 248, 0.25)", display: "flex", flexDirection: "column", justifyContent: "space-between", minHeight: "96px" }}>
+                  <span style={{ fontSize: "0.74rem", color: "#94a3b8", display: "block", fontWeight: 800, letterSpacing: "0.5px" }}>DAYS REMAINING COUNTDOWN</span>
+                  <strong style={{ color: isExpired ? "#ef4444" : (isWarning ? "#fbbf24" : "#34d399"), fontSize: "1.2rem", fontWeight: 900 }}>
                     {isExpired ? "0 Days (Expired)" : `${daysLeft} Days Remaining`}
                   </strong>
                 </div>
 
-                <div style={{ background: "rgba(0,0,0,0.3)", padding: "12px 14px", borderRadius: "10px", border: "1px solid rgba(255,255,255,0.08)" }}>
-                  <span style={{ fontSize: "0.72rem", color: "#94a3b8", display: "block" }}>AUTO-LOCK ON FAILURE</span>
-                  <strong style={{ color: subscriptionSettings.autoLockOnFailure ? "#34d399" : "#fca5a5", fontSize: "0.95rem" }}>
+                <div className="dev-inscription-box" style={{ background: "rgba(2, 6, 23, 0.75)", padding: "16px 18px", borderRadius: "12px", border: "1.5px solid rgba(56, 189, 248, 0.25)", display: "flex", flexDirection: "column", justifyContent: "space-between", minHeight: "96px" }}>
+                  <span style={{ fontSize: "0.74rem", color: "#94a3b8", display: "block", fontWeight: 800, letterSpacing: "0.5px" }}>AUTO-LOCK ON FAILURE</span>
+                  <strong style={{ color: subscriptionSettings.autoLockOnFailure ? "#34d399" : "#fca5a5", fontSize: "1rem", fontWeight: 800 }}>
                     {subscriptionSettings.autoLockOnFailure ? "✓ AUTO-LOCK STRICT" : "DISABLED"}
                   </strong>
                 </div>
@@ -3388,9 +3389,9 @@ export default function DeveloperDashboard() {
                 )}
               </div>
 
-              <form onSubmit={handleSaveDeveloperRates} style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(200px, 1fr))", gap: "14px", alignItems: "flex-end" }}>
-                <div>
-                  <label style={{ fontSize: "0.75rem", fontWeight: 700, color: "#34d399", display: "block", marginBottom: "4px" }}>
+              <form onSubmit={handleSaveDeveloperRates} className="dev-equal-inscription-grid" style={{ display: "grid", gridTemplateColumns: "repeat(4, 1fr)", gap: "14px", alignItems: "stretch" }}>
+                <div style={{ background: "rgba(2, 6, 23, 0.75)", padding: "14px 16px", borderRadius: "12px", border: "1.5px solid rgba(52, 211, 153, 0.35)", display: "flex", flexDirection: "column", justifyContent: "space-between", minHeight: "94px" }}>
+                  <label style={{ fontSize: "0.72rem", fontWeight: 800, color: "#34d399", display: "block", letterSpacing: "0.4px", marginBottom: "6px" }}>
                     NURSERY TO JHS RATE (GH₵ / STUDENT)
                   </label>
                   <input
@@ -3399,12 +3400,12 @@ export default function DeveloperDashboard() {
                     max="500"
                     value={editableRates.JHS}
                     onChange={(e) => setEditableRates({ ...editableRates, JHS: Number(e.target.value) })}
-                    style={{ width: "100%", padding: "8px 12px", background: "rgba(2, 6, 23, 0.8)", border: "1px solid rgba(255,255,255,0.15)", borderRadius: "8px", color: "#fff", fontWeight: 800, fontSize: "0.95rem" }}
+                    style={{ width: "100%", height: "40px", padding: "8px 12px", background: "rgba(15, 23, 42, 0.9)", border: "1.5px solid rgba(52, 211, 153, 0.5)", borderRadius: "8px", color: "#fff", fontWeight: 800, fontSize: "1rem", boxSizing: "border-box" }}
                   />
                 </div>
 
-                <div>
-                  <label style={{ fontSize: "0.75rem", fontWeight: 700, color: "#38bdf8", display: "block", marginBottom: "4px" }}>
+                <div style={{ background: "rgba(2, 6, 23, 0.75)", padding: "14px 16px", borderRadius: "12px", border: "1.5px solid rgba(56, 189, 248, 0.35)", display: "flex", flexDirection: "column", justifyContent: "space-between", minHeight: "94px" }}>
+                  <label style={{ fontSize: "0.72rem", fontWeight: 800, color: "#38bdf8", display: "block", letterSpacing: "0.4px", marginBottom: "6px" }}>
                     SENIOR HIGH (SHS) RATE (GH₵ / STUDENT)
                   </label>
                   <input
@@ -3413,12 +3414,12 @@ export default function DeveloperDashboard() {
                     max="1000"
                     value={editableRates.SHS}
                     onChange={(e) => setEditableRates({ ...editableRates, SHS: Number(e.target.value) })}
-                    style={{ width: "100%", padding: "8px 12px", background: "rgba(2, 6, 23, 0.8)", border: "1px solid rgba(255,255,255,0.15)", borderRadius: "8px", color: "#fff", fontWeight: 800, fontSize: "0.95rem" }}
+                    style={{ width: "100%", height: "40px", padding: "8px 12px", background: "rgba(15, 23, 42, 0.9)", border: "1.5px solid rgba(56, 189, 248, 0.5)", borderRadius: "8px", color: "#fff", fontWeight: 800, fontSize: "1rem", boxSizing: "border-box" }}
                   />
                 </div>
 
-                <div>
-                  <label style={{ fontSize: "0.75rem", fontWeight: 700, color: "#c084fc", display: "block", marginBottom: "4px" }}>
+                <div style={{ background: "rgba(2, 6, 23, 0.75)", padding: "14px 16px", borderRadius: "12px", border: "1.5px solid rgba(192, 132, 252, 0.35)", display: "flex", flexDirection: "column", justifyContent: "space-between", minHeight: "94px" }}>
+                  <label style={{ fontSize: "0.72rem", fontWeight: 800, color: "#c084fc", display: "block", letterSpacing: "0.4px", marginBottom: "6px" }}>
                     UNIVERSITY RATE (GH₵ / STUDENT)
                   </label>
                   <input
@@ -3427,16 +3428,20 @@ export default function DeveloperDashboard() {
                     max="2000"
                     value={editableRates.UNIVERSITY}
                     onChange={(e) => setEditableRates({ ...editableRates, UNIVERSITY: Number(e.target.value) })}
-                    style={{ width: "100%", padding: "8px 12px", background: "rgba(2, 6, 23, 0.8)", border: "1px solid rgba(255,255,255,0.15)", borderRadius: "8px", color: "#fff", fontWeight: 800, fontSize: "0.95rem" }}
+                    style={{ width: "100%", height: "40px", padding: "8px 12px", background: "rgba(15, 23, 42, 0.9)", border: "1.5px solid rgba(192, 132, 252, 0.5)", borderRadius: "8px", color: "#fff", fontWeight: 800, fontSize: "1rem", boxSizing: "border-box" }}
                   />
                 </div>
 
-                <div>
+                <div style={{ background: "rgba(2, 6, 23, 0.75)", padding: "14px 16px", borderRadius: "12px", border: "1.5px solid rgba(245, 158, 11, 0.35)", display: "flex", flexDirection: "column", justifyContent: "space-between", minHeight: "94px" }}>
+                  <span style={{ fontSize: "0.72rem", fontWeight: 800, color: "#fbbf24", display: "block", letterSpacing: "0.4px", marginBottom: "6px" }}>
+                    BROADCAST ACTION
+                  </span>
                   <button
                     type="submit"
                     style={{
                       width: "100%",
-                      padding: "10px 16px",
+                      height: "40px",
+                      padding: "0 16px",
                       background: "linear-gradient(135deg, #d97706, #b45309)",
                       color: "#fff",
                       border: "none",
@@ -3444,7 +3449,12 @@ export default function DeveloperDashboard() {
                       fontWeight: 800,
                       fontSize: "0.85rem",
                       cursor: "pointer",
-                      boxShadow: "0 4px 12px rgba(217, 119, 6, 0.3)"
+                      boxShadow: "0 4px 14px rgba(217, 119, 6, 0.35)",
+                      display: "flex",
+                      alignItems: "center",
+                      justifyContent: "center",
+                      gap: "6px",
+                      boxSizing: "border-box"
                     }}
                   >
                     💾 Save & Broadcast Rates
@@ -4264,34 +4274,35 @@ export default function DeveloperDashboard() {
                   </div>
                 </div>
 
-                {/* KPI Metrics Grid */}
-                <div style={{
+                {/* KPI Metrics Grid: Strictly Equal In Size */}
+                <div className="dev-equal-inscription-grid" style={{
                   display: "grid",
-                  gridTemplateColumns: "repeat(auto-fit, minmax(200px, 1fr))",
-                  gap: "1rem",
-                  marginTop: "1.25rem"
+                  gridTemplateColumns: "repeat(4, 1fr)",
+                  gap: "14px",
+                  marginTop: "1.25rem",
+                  alignItems: "stretch"
                 }}>
-                  <div style={{ background: "rgba(2, 6, 23, 0.6)", padding: "12px 16px", borderRadius: "10px", border: "1px solid rgba(255,255,255,0.08)" }}>
-                    <span style={{ fontSize: "0.75rem", color: "#94a3b8", textTransform: "uppercase" }}>Total Intrusion Attempts</span>
-                    <div style={{ fontSize: "1.5rem", fontWeight: "800", color: "#f87171", marginTop: "4px" }}>
+                  <div className="dev-inscription-box" style={{ background: "rgba(2, 6, 23, 0.75)", padding: "16px 18px", borderRadius: "12px", border: "1.5px solid rgba(239, 68, 68, 0.3)", display: "flex", flexDirection: "column", justifyContent: "space-between", minHeight: "96px" }}>
+                    <span style={{ fontSize: "0.74rem", color: "#94a3b8", textTransform: "uppercase", fontWeight: 800, letterSpacing: "0.5px" }}>Total Intrusion Attempts</span>
+                    <div style={{ fontSize: "1.55rem", fontWeight: "900", color: "#f87171", marginTop: "4px" }}>
                       {securityViolations.length} Detected
                     </div>
                   </div>
-                  <div style={{ background: "rgba(2, 6, 23, 0.6)", padding: "12px 16px", borderRadius: "10px", border: "1px solid rgba(255,255,255,0.08)" }}>
-                    <span style={{ fontSize: "0.75rem", color: "#94a3b8", textTransform: "uppercase" }}>Institutions Implicated</span>
-                    <div style={{ fontSize: "1.5rem", fontWeight: "800", color: "#fbbf24", marginTop: "4px" }}>
-                      {new Set(securityViolations.map((v) => v.tenantCode)).size} Registered Tenants
+                  <div className="dev-inscription-box" style={{ background: "rgba(2, 6, 23, 0.75)", padding: "16px 18px", borderRadius: "12px", border: "1.5px solid rgba(251, 191, 36, 0.3)", display: "flex", flexDirection: "column", justifyContent: "space-between", minHeight: "96px" }}>
+                    <span style={{ fontSize: "0.74rem", color: "#94a3b8", textTransform: "uppercase", fontWeight: 800, letterSpacing: "0.5px" }}>Institutions Implicated</span>
+                    <div style={{ fontSize: "1.55rem", fontWeight: "900", color: "#fbbf24", marginTop: "4px" }}>
+                      {new Set(securityViolations.map((v) => v.tenantCode)).size} Registered
                     </div>
                   </div>
-                  <div style={{ background: "rgba(2, 6, 23, 0.6)", padding: "12px 16px", borderRadius: "10px", border: "1px solid rgba(255,255,255,0.08)" }}>
-                    <span style={{ fontSize: "0.75rem", color: "#94a3b8", textTransform: "uppercase" }}>Headmaster Transmittals</span>
-                    <div style={{ fontSize: "1.5rem", fontWeight: "800", color: "#34d399", marginTop: "4px" }}>
+                  <div className="dev-inscription-box" style={{ background: "rgba(2, 6, 23, 0.75)", padding: "16px 18px", borderRadius: "12px", border: "1.5px solid rgba(52, 211, 153, 0.3)", display: "flex", flexDirection: "column", justifyContent: "space-between", minHeight: "96px" }}>
+                    <span style={{ fontSize: "0.74rem", color: "#94a3b8", textTransform: "uppercase", fontWeight: 800, letterSpacing: "0.5px" }}>Headmaster Transmittals</span>
+                    <div style={{ fontSize: "1.55rem", fontWeight: "900", color: "#34d399", marginTop: "4px" }}>
                       {securityViolations.filter((v) => v.reportedToHeadmaster).length} Dispatched
                     </div>
                   </div>
-                  <div style={{ background: "rgba(2, 6, 23, 0.6)", padding: "12px 16px", borderRadius: "10px", border: "1px solid rgba(255,255,255,0.08)" }}>
-                    <span style={{ fontSize: "0.75rem", color: "#94a3b8", textTransform: "uppercase" }}>Sentinel Perimeter Status</span>
-                    <div style={{ fontSize: "1.2rem", fontWeight: "800", color: "#38bdf8", marginTop: "6px" }}>
+                  <div className="dev-inscription-box" style={{ background: "rgba(2, 6, 23, 0.75)", padding: "16px 18px", borderRadius: "12px", border: "1.5px solid rgba(56, 189, 248, 0.3)", display: "flex", flexDirection: "column", justifyContent: "space-between", minHeight: "96px" }}>
+                    <span style={{ fontSize: "0.74rem", color: "#94a3b8", textTransform: "uppercase", fontWeight: 800, letterSpacing: "0.5px" }}>Sentinel Perimeter Status</span>
+                    <div style={{ fontSize: "1.25rem", fontWeight: "900", color: "#38bdf8", marginTop: "6px" }}>
                       🛡️ STRICT LOCKOUT
                     </div>
                   </div>
