@@ -2740,14 +2740,6 @@ export default function DeveloperDashboard() {
           </button>
           <button
             type="button"
-            className="dev-logout-btn"
-            onClick={handleLogout}
-            title="Sign out of Developer Mission Control"
-          >
-            🚪 Sign Out
-          </button>
-          <button
-            type="button"
             onClick={() => navigate("/login")}
             style={{
               background: "linear-gradient(135deg, #1e293b, #334155)",
