@@ -3,7 +3,7 @@ import { Link, useNavigate } from "react-router-dom";
 import apiClient from "../../../../../api/client/apiClient";
 import WindowControlsBar from "../../../../../components/common/WindowControlsBar";
 import TopCenterSystemBanner from "../../../../../components/common/TopCenterSystemBanner";
-import { getUserAvatar, rotateUserAvatar } from "../../../../../utils/userAvatars";
+import { getUserAvatar } from "../../../../../utils/userAvatars";
 import "./AccountantDashboard.css";
 
 export default function AccountantDashboard() {
@@ -1196,10 +1196,7 @@ export default function AccountantDashboard() {
               }}
             />
             <div className="role-brand-text">
-              <span className="role-brand-title" style={{ fontSize: "1.45rem", fontWeight: "900", letterSpacing: "1px", color: "#f8fafc", display: "block" }}>
-                {(reportSchoolName || "St. Augustine International Academy").toUpperCase()}
-              </span>
-              <span className="role-portal-badge" style={{ color: "#f472b6", fontSize: "0.82rem", fontWeight: "800" }}>
+              <span className="role-portal-badge" style={{ color: "#f472b6", fontSize: "0.95rem", fontWeight: "900", letterSpacing: "0.8px" }}>
                 📊 FINANCE & BURSAR PORTAL • OFFICIAL TENANT
               </span>
             </div>
@@ -1207,22 +1204,7 @@ export default function AccountantDashboard() {
 
           <div className="role-status-ticker">
             <span className="ticker-dot"></span>
-            <div 
-              onClick={() => {
-                const next = rotateUserAvatar("ACCOUNTANT");
-                setAccountantAvatar(next);
-                setFeedback({ type: "success", message: "Switched finance director profile portrait photo!" });
-              }}
-              title="Click to rotate real-life profile photo"
-              style={{ display: "flex", alignItems: "center", gap: "8px", cursor: "pointer" }}
-            >
-              <img 
-                src={accountantAvatar} 
-                alt="Accountant Avatar" 
-                style={{ width: "32px", height: "32px", borderRadius: "50%", objectFit: "cover", border: "2px solid #f472b6" }} 
-              />
-              <span>Bursar: <strong>{currentUser.firstName} {currentUser.lastName}</strong></span>
-            </div>
+            <span>Bursar: <strong>{currentUser.firstName} {currentUser.lastName}</strong></span>
             
             {/* REQUIREMENT: Institutional Currency Selector */}
             <div style={{ display: "flex", alignItems: "center", gap: "6px", marginLeft: "8px" }}>

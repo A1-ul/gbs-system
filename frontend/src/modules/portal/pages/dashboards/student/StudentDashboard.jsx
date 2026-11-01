@@ -3,7 +3,7 @@ import { Link, useNavigate } from "react-router-dom";
 import apiClient from "../../../../../api/client/apiClient";
 import WindowControlsBar from "../../../../../components/common/WindowControlsBar";
 import TopCenterSystemBanner from "../../../../../components/common/TopCenterSystemBanner";
-import { getUserAvatar, rotateUserAvatar } from "../../../../../utils/userAvatars";
+import { getUserAvatar } from "../../../../../utils/userAvatars";
 import { offlineSyncEngine } from "../../../../../utils/offlineSync";
 import "./StudentDashboard.css";
 
@@ -845,32 +845,13 @@ export default function StudentDashboard() {
               }}
             />
             <div className="role-brand-text">
-              <span className="role-brand-title" style={{ fontSize: "1.45rem", fontWeight: "900", letterSpacing: "1px", color: "#f8fafc", display: "block" }}>
-                {(schoolOfficialName || "St. Augustine International Academy").toUpperCase()}
-              </span>
-              <span className="role-portal-badge" style={{ color: "#a855f7", fontSize: "0.82rem", fontWeight: "800" }}>
+              <span className="role-portal-badge" style={{ color: "#a855f7", fontSize: "0.95rem", fontWeight: "900", letterSpacing: "0.8px" }}>
                 🎓 STUDENT LEARNING PORTAL • OFFICIAL TENANT
               </span>
             </div>
           </div>
 
           <div className="role-status-ticker">
-            {/* Real-Life Production Scholar Portrait Switcher */}
-            <div 
-              style={{ display: "inline-flex", alignItems: "center", gap: "6px", cursor: "pointer", background: "rgba(15, 23, 42, 0.8)", padding: "2px 8px", borderRadius: "20px", border: "1.5px solid #a855f7" }}
-              onClick={() => {
-                const nextAvatar = rotateUserAvatar("STUDENT");
-                setStudentAvatar(nextAvatar);
-              }}
-              title="Click to switch real-life scholar portrait"
-            >
-              <img 
-                src={studentAvatar} 
-                alt="Student Portrait" 
-                style={{ width: "26px", height: "26px", borderRadius: "50%", objectFit: "cover" }} 
-              />
-              <span style={{ fontSize: "0.68rem", color: "#c084fc", fontWeight: 800 }}>🔄 Rotate</span>
-            </div>
             <span className="ticker-dot"></span>
             <span>Student: <strong>{currentUser.firstName} {currentUser.lastName}</strong></span>
             <span>Level: <strong>{academicLevel}</strong></span>

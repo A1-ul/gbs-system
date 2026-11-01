@@ -5,7 +5,7 @@ import WindowControlsBar from "../../../../../components/common/WindowControlsBa
 import TopCenterSystemBanner from "../../../../../components/common/TopCenterSystemBanner";
 import VoiceNoteRecorder from "../../../../../components/common/VoiceNoteRecorder";
 import VoiceNotePlayer from "../../../../../components/common/VoiceNotePlayer";
-import { getUserAvatar, rotateUserAvatar } from "../../../../../utils/userAvatars";
+import { getUserAvatar } from "../../../../../utils/userAvatars";
 import { offlineSyncEngine } from "../../../../../utils/offlineSync";
 import { 
   getActiveInstitutionType, 
@@ -58,6 +58,10 @@ export default function TeacherDashboard() {
       window.removeEventListener("storage", syncSchedule);
     };
   }, []);
+
+  // Weekly Activities Inscription Modal State
+  const [showWeeklyActivitiesModal, setShowWeeklyActivitiesModal] = useState(false);
+  const [weeklyActivitiesFilter, setWeeklyActivitiesFilter] = useState("ALL");
 
   const [activeTab, setActiveTab] = useState(() => {
     try {
@@ -2393,32 +2397,13 @@ export default function TeacherDashboard() {
               }}
             />
             <div className="role-brand-text">
-              <span className="role-brand-title" title="Tenant School Official Identity" style={{ fontSize: "1.45rem", fontWeight: "900", letterSpacing: "1px", color: "#f8fafc", display: "block" }}>
-                {(reportSchoolName || currentUser?.schoolName || "St. Augustine International Academy").toUpperCase()}
-              </span>
-              <span className="role-portal-badge" style={{ color: "#34d399", fontSize: "0.82rem", fontWeight: "800" }}>
+              <span className="role-portal-badge" style={{ color: "#34d399", fontSize: "0.95rem", fontWeight: "900", letterSpacing: "0.8px" }}>
                 👨‍🏫 TEACHER ACADEMIC SUITE • OFFICIAL TENANT
               </span>
             </div>
           </div>
 
           <div className="role-status-ticker">
-            {/* Real-Life Production Faculty Portrait Switcher */}
-            <div 
-              style={{ display: "inline-flex", alignItems: "center", gap: "6px", cursor: "pointer", background: "rgba(15, 23, 42, 0.8)", padding: "2px 8px", borderRadius: "20px", border: "1.5px solid #34d399" }}
-              onClick={() => {
-                const nextAvatar = rotateUserAvatar("TEACHER");
-                setTeacherAvatar(nextAvatar);
-              }}
-              title="Click to switch real-life teacher portrait"
-            >
-              <img 
-                src={teacherAvatar} 
-                alt="Teacher Portrait" 
-                style={{ width: "26px", height: "26px", borderRadius: "50%", objectFit: "cover" }} 
-              />
-              <span style={{ fontSize: "0.68rem", color: "#34d399", fontWeight: 800 }}>🔄 Rotate</span>
-            </div>
             <span className="ticker-dot"></span>
             <span>Teacher: <strong>{currentUser.firstName} {currentUser.lastName}</strong></span>
             <span>Position: <strong style={{ color: "#38bdf8" }}>{assignedStaffPosition?.positionTitle || "Head of Academics"} ({assignedStaffPosition?.schoolTier || "SHS"})</strong></span>
@@ -2638,11 +2623,35 @@ export default function TeacherDashboard() {
                 <span style={{ fontSize: "0.7rem", color: "#94a3b8", display: "block" }}>ACTIVE TERM / SEMESTER</span>
                 <strong style={{ color: "#38bdf8", fontSize: "0.95rem" }}>{publishedSchedule.activeTerm || "TERM_1"}</strong>
               </div>
-              <div style={{ background: "rgba(2, 6, 23, 0.6)", padding: "10px 14px", borderRadius: "10px", border: "1.5px solid #34d399" }}>
-                <span style={{ fontSize: "0.7rem", color: "#a7f3d0", display: "block", fontWeight: 700 }}>NUMBER OF WEEKS IN SCHOOL</span>
-                <strong style={{ color: "#34d399", fontSize: "1.15rem" }}>{publishedSchedule.numberOfWeeksInSchool || 14} Official Weeks</strong>
+              <div 
+                onClick={() => setShowWeeklyActivitiesModal(true)}
+                title="Click to view all activities for the weeks to spend in school"
+                style={{ 
+                  background: "linear-gradient(135deg, rgba(16, 185, 129, 0.2), rgba(2, 6, 23, 0.85))", 
+                  padding: "12px 16px", 
+                  borderRadius: "12px", 
+                  border: "2px solid #34d399", 
+                  cursor: "pointer",
+                  boxShadow: "0 4px 18px rgba(16, 185, 129, 0.25)",
+                  transition: "all 0.2s ease"
+                }}
+              >
+                <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: "4px" }}>
+                  <span style={{ fontSize: "0.72rem", color: "#a7f3d0", display: "block", fontWeight: 800, letterSpacing: "0.5px" }}>
+                    NUMBER OF WEEKS IN SCHOOL
+                  </span>
+                  <span style={{ fontSize: "0.68rem", background: "#10b981", color: "#ffffff", padding: "2px 8px", borderRadius: "10px", fontWeight: 800 }}>
+                    📅 Click for Activities
+                  </span>
+                </div>
+                <strong style={{ color: "#34d399", fontSize: "1.2rem", display: "block" }}>
+                  {publishedSchedule.numberOfWeeksInSchool || 14} Official Weeks
+                </strong>
+                <span style={{ fontSize: "0.72rem", color: "#6ee7b7", marginTop: "2px", display: "block" }}>
+                  🔍 Tap to view complete week-by-week curriculum activities
+                </span>
               </div>
-              <div style={{ background: "rgba(2, 6, 23, 0.6)", padding: "10px 14px", borderRadius: "10px", border: "1.5px solid #fbbf24" }}>
+              <div style={{ background: "rgba(2, 6, 23, 0.6)", padding: "12px 16px", borderRadius: "12px", border: "1.5px solid #fbbf24" }}>
                 <span style={{ fontSize: "0.7rem", color: "#fde68a", display: "block", fontWeight: 700 }}>OFFICIAL VACATION DATE</span>
                 <strong style={{ color: "#fbbf24", fontSize: "1.05rem" }}>
                   {publishedSchedule.vacationDate ? new Date(publishedSchedule.vacationDate).toLocaleDateString("en-US", { weekday: 'short', year: 'numeric', month: 'short', day: 'numeric' }) : "December 18, 2026"}
@@ -5862,6 +5871,315 @@ export default function TeacherDashboard() {
       </div>
 
       {/* ======================================================== */}
+      {/* ======================================================== */}
+      {/* POP-UP MODAL: NUMBER OF WEEKS IN SCHOOL - WEEKLY ACTIVITIES */}
+      {/* ======================================================== */}
+      {showWeeklyActivitiesModal && (
+        <div className="modal-backdrop" onClick={() => setShowWeeklyActivitiesModal(false)}>
+          <div className="modal-window" style={{ maxWidth: "980px", maxHeight: "90vh", display: "flex", flexDirection: "column" }} onClick={(e) => e.stopPropagation()}>
+            <div className="modal-header" style={{ borderBottom: "2px solid #10b981", background: "linear-gradient(135deg, rgba(16, 185, 129, 0.15), rgba(15, 23, 42, 0.95))" }}>
+              <div>
+                <h3 style={{ margin: 0, display: "flex", alignItems: "center", gap: "10px", color: "#34d399" }}>
+                  <span>📅</span> ACADEMIC TERM ACTIVITIES & WEEKLY BREAKDOWN
+                </h3>
+                <span style={{ fontSize: "0.8rem", color: "#cbd5e1" }}>
+                  Official Headmaster Published Schedule • {publishedSchedule.numberOfWeeksInSchool || 14} Weeks to Spend in School • Vacation Date: {publishedSchedule.vacationDate ? new Date(publishedSchedule.vacationDate).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" }) : "Dec 18, 2026"}
+                </span>
+              </div>
+              <button type="button" className="modal-close-btn" onClick={() => setShowWeeklyActivitiesModal(false)}>✕</button>
+            </div>
+
+            {/* Filter Tabs */}
+            <div style={{ display: "flex", gap: "10px", padding: "14px 24px", background: "rgba(15, 23, 42, 0.95)", borderBottom: "1px solid rgba(255,255,255,0.08)" }}>
+              <button
+                type="button"
+                onClick={() => setWeeklyActivitiesFilter("ALL")}
+                style={{
+                  padding: "6px 14px",
+                  borderRadius: "8px",
+                  border: weeklyActivitiesFilter === "ALL" ? "2px solid #34d399" : "1px solid rgba(255,255,255,0.15)",
+                  background: weeklyActivitiesFilter === "ALL" ? "rgba(16, 185, 129, 0.25)" : "rgba(255,255,255,0.05)",
+                  color: weeklyActivitiesFilter === "ALL" ? "#34d399" : "#cbd5e1",
+                  fontWeight: 700,
+                  fontSize: "0.82rem",
+                  cursor: "pointer"
+                }}
+              >
+                All 14 Weeks
+              </button>
+              <button
+                type="button"
+                onClick={() => setWeeklyActivitiesFilter("FIRST_HALF")}
+                style={{
+                  padding: "6px 14px",
+                  borderRadius: "8px",
+                  border: weeklyActivitiesFilter === "FIRST_HALF" ? "2px solid #38bdf8" : "1px solid rgba(255,255,255,0.15)",
+                  background: weeklyActivitiesFilter === "FIRST_HALF" ? "rgba(56, 189, 248, 0.25)" : "rgba(255,255,255,0.05)",
+                  color: weeklyActivitiesFilter === "FIRST_HALF" ? "#38bdf8" : "#cbd5e1",
+                  fontWeight: 700,
+                  fontSize: "0.82rem",
+                  cursor: "pointer"
+                }}
+              >
+                Weeks 1–7 (First Half & Mid-Term)
+              </button>
+              <button
+                type="button"
+                onClick={() => setWeeklyActivitiesFilter("SECOND_HALF")}
+                style={{
+                  padding: "6px 14px",
+                  borderRadius: "8px",
+                  border: weeklyActivitiesFilter === "SECOND_HALF" ? "2px solid #fbbf24" : "1px solid rgba(255,255,255,0.15)",
+                  background: weeklyActivitiesFilter === "SECOND_HALF" ? "rgba(245, 158, 11, 0.25)" : "rgba(255,255,255,0.05)",
+                  color: weeklyActivitiesFilter === "SECOND_HALF" ? "#fbbf24" : "#cbd5e1",
+                  fontWeight: 700,
+                  fontSize: "0.82rem",
+                  cursor: "pointer"
+                }}
+              >
+                Weeks 8–14 (Second Half, Exams & Vacation)
+              </button>
+            </div>
+
+            {/* Modal Body: Week by Week Activities */}
+            <div className="modal-body" style={{ overflowY: "auto", padding: "1.25rem 1.5rem", flex: 1, display: "flex", flexDirection: "column", gap: "12px" }}>
+              {[
+                {
+                  week: 1,
+                  title: "School Reopening, Registration & Orientation",
+                  theme: "Faculty Alignment & Student Welcome",
+                  focus: "Timetable distribution, syllabus presentation, course material vetting, academic goal setting, and classroom allocation.",
+                  deliverables: ["Submit Scheme of Work", "Verify Class Roster", "Timetable Handout"],
+                  status: "COMPLETED",
+                  badgeColor: "#10b981"
+                },
+                {
+                  week: 2,
+                  title: "Teaching Resumption & Diagnostic Baseline Assessment",
+                  theme: "Foundational Knowledge Baseline",
+                  focus: "Commence core syllabus topic coverage, administer baseline diagnostic assessment to identify student strengths and learning gaps.",
+                  deliverables: ["Week 2 Lesson Notes", "Diagnostic Test Report", "Daily Attendance Register"],
+                  status: "COMPLETED",
+                  badgeColor: "#10b981"
+                },
+                {
+                  week: 3,
+                  title: "Core Subject Instruction & Laboratory Practical Sessions",
+                  theme: "Curriculum Deep Dive",
+                  focus: "Intensive classroom teaching across all enrolled subjects, introductory science/computer laboratory experiments, and structured homework distribution.",
+                  deliverables: ["Lab Safety Briefing", "Homework Task 1 Published", "Weekly Attendance Archive"],
+                  status: "COMPLETED",
+                  badgeColor: "#10b981"
+                },
+                {
+                  week: 4,
+                  title: "Continuous Assessment Test 1 (CAT 1)",
+                  theme: "Progress Evaluation",
+                  focus: "First formal mid-cycle assessment test. Evaluate student retention on Weeks 1–3 syllabus content. Grade submissions via AI Exam Scanner.",
+                  deliverables: ["CAT 1 Score Entry", "Remedial Student Identification", "Teacher Lesson Plan 4"],
+                  status: "COMPLETED",
+                  badgeColor: "#10b981"
+                },
+                {
+                  week: 5,
+                  title: "Remedial Teaching & Inter-Class Competitions",
+                  theme: "Targeted Reinforcement",
+                  focus: "Targeted remedial support for struggling students, inter-class math and science quiz competitions, and mid-term syllabus progress audits.",
+                  deliverables: ["Remedial Roster Vetting", "Class Quiz Results", "Weekly Attendance Ledger"],
+                  status: "COMPLETED",
+                  badgeColor: "#10b981"
+                },
+                {
+                  week: 6,
+                  title: "STEM Project Work & Practical Demonstrations",
+                  theme: "Applied Learning",
+                  focus: "Group project presentations, science exhibitions, creative arts evaluations, and mid-term exam question paper moderation with Headmaster.",
+                  deliverables: ["Submit Mid-Term Exam Drafts", "Project Scoring Matrix", "Lesson Notes Vetting"],
+                  status: "COMPLETED",
+                  badgeColor: "#10b981"
+                },
+                {
+                  week: 7,
+                  title: "Official Mid-Term Examination Week",
+                  theme: "Mid-Semester Assessment",
+                  focus: "Administration of formal mid-term examinations under standardized test conditions. Optical mark sheet and written exam answer grading.",
+                  deliverables: ["Mid-Term Exam Administration", "Batch Scan Answer Sheets", "Headmaster Progress Report"],
+                  status: "ACTIVE",
+                  badgeColor: "#38bdf8"
+                },
+                {
+                  week: 8,
+                  title: "Mid-Term Break & Parent-Teacher Consultation (PTA)",
+                  theme: "Stakeholder Engagement & Academic Rest",
+                  focus: "Official mid-term holiday break, compilation of mid-term progress slips, and hosting Parent-Teacher Association (PTA) consultation meetings.",
+                  deliverables: ["Issue Progress Slips to Parents", "PTA Meeting Attendance", "Term Half Review"],
+                  status: "UPCOMING",
+                  badgeColor: "#f59e0b"
+                },
+                {
+                  week: 9,
+                  title: "Second Half Syllabus Resumption & Practical Workshops",
+                  theme: "Advanced Curriculum Topics",
+                  focus: "Resumption of classroom teaching, tackling advanced syllabus objectives, research assignments, and coursework expansion.",
+                  deliverables: ["Week 9 Lesson Plans", "Assignment 3 Publishing", "Daily Register Verification"],
+                  status: "UPCOMING",
+                  badgeColor: "#64748b"
+                },
+                {
+                  week: 10,
+                  title: "Continuous Assessment Test 2 (CAT 2)",
+                  theme: "Second Milestone Vetting",
+                  focus: "Second continuous assessment testing, term project collection, and evaluation of practical laboratory logbooks.",
+                  deliverables: ["CAT 2 Gradebook Upload", "Homework Archive Review", "Weekly Report to Admin"],
+                  status: "UPCOMING",
+                  badgeColor: "#64748b"
+                },
+                {
+                  week: 11,
+                  title: "Comprehensive Syllabus Revision & Mock Drills",
+                  theme: "Exam Preparation & Past Questions",
+                  focus: "Review of high-yield examination topics, mock test simulations, past question paper drills, and resolving student question areas.",
+                  deliverables: ["End-of-Term Revision Guide", "Submit Final Exam Papers", "Exam Hall Seat Allocation"],
+                  status: "UPCOMING",
+                  badgeColor: "#64748b"
+                },
+                {
+                  week: 12,
+                  title: "Official End-of-Term Examinations",
+                  theme: "Final Terminal Assessment",
+                  focus: "Commencement of main end-of-term examinations across all departments. Strict exam hall invigilation and script security.",
+                  deliverables: ["Conduct Final Exams", "Invigilation Reports", "Security Script Custody"],
+                  status: "UPCOMING",
+                  badgeColor: "#64748b"
+                },
+                {
+                  week: 13,
+                  title: "Exam Script Grading & Promotion Records Collation",
+                  theme: "Mark Collation & Report Cards",
+                  focus: "Optical mark scanning and written script grading, entry of 30% class score + 70% exam score into GBS grading engine, report card compilation.",
+                  deliverables: ["Final Grade Submissions", "Report Cards Generated", "Headmaster Promotion Sign-Off"],
+                  status: "UPCOMING",
+                  badgeColor: "#64748b"
+                },
+                {
+                  week: 14,
+                  title: "Speech & Prize Day, Vacation & Departure",
+                  theme: "Academic Celebration & Term Closure",
+                  focus: "Official Speech and Prize-Giving Day ceremonies, graduation awards, distributing verified report cards to parents, and official school vacation departure.",
+                  deliverables: ["Distribute Report Cards", "Vacation Date Enforcement", "Archive Term Attendance"],
+                  status: "UPCOMING",
+                  badgeColor: "#64748b"
+                }
+              ]
+                .filter((w) => {
+                  if (weeklyActivitiesFilter === "FIRST_HALF") return w.week <= 7;
+                  if (weeklyActivitiesFilter === "SECOND_HALF") return w.week > 7;
+                  return true;
+                })
+                .map((w) => (
+                  <div
+                    key={w.week}
+                    style={{
+                      background: w.status === "ACTIVE" ? "rgba(56, 189, 248, 0.12)" : "rgba(15, 23, 42, 0.8)",
+                      border: w.status === "ACTIVE" ? "2px solid #38bdf8" : "1px solid rgba(255, 255, 255, 0.08)",
+                      borderRadius: "12px",
+                      padding: "14px 18px",
+                      display: "flex",
+                      flexDirection: "column",
+                      gap: "6px"
+                    }}
+                  >
+                    <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: "8px" }}>
+                      <div style={{ display: "flex", alignItems: "center", gap: "10px" }}>
+                        <span
+                          style={{
+                            background: "rgba(255,255,255,0.1)",
+                            color: "#fff",
+                            fontWeight: 900,
+                            fontSize: "0.85rem",
+                            padding: "4px 10px",
+                            borderRadius: "6px"
+                          }}
+                        >
+                          WEEK {w.week}
+                        </span>
+                        <strong style={{ color: "#f8fafc", fontSize: "1rem" }}>{w.title}</strong>
+                      </div>
+                      <span
+                        style={{
+                          background: `${w.badgeColor}22`,
+                          color: w.badgeColor,
+                          border: `1px solid ${w.badgeColor}55`,
+                          fontSize: "0.72rem",
+                          fontWeight: 800,
+                          padding: "3px 10px",
+                          borderRadius: "12px"
+                        }}
+                      >
+                        ● {w.status}
+                      </span>
+                    </div>
+
+                    <div style={{ fontSize: "0.85rem", color: "#38bdf8", fontWeight: 700 }}>
+                      📌 Theme: {w.theme}
+                    </div>
+
+                    <p style={{ margin: "2px 0 6px", fontSize: "0.85rem", color: "#cbd5e1", lineHeight: "1.4" }}>
+                      {w.focus}
+                    </p>
+
+                    <div style={{ display: "flex", alignItems: "center", gap: "8px", flexWrap: "wrap", marginTop: "2px" }}>
+                      <span style={{ fontSize: "0.72rem", color: "#94a3b8", fontWeight: 700 }}>Required Faculty Deliverables:</span>
+                      {w.deliverables.map((del, i) => (
+                        <span
+                          key={i}
+                          style={{
+                            fontSize: "0.72rem",
+                            background: "rgba(255,255,255,0.06)",
+                            color: "#e2e8f0",
+                            padding: "2px 8px",
+                            borderRadius: "6px",
+                            border: "1px solid rgba(255,255,255,0.08)"
+                          }}
+                        >
+                          ✓ {del}
+                        </span>
+                      ))}
+                    </div>
+                  </div>
+                ))}
+            </div>
+
+            <div className="modal-footer" style={{ borderTop: "1px solid rgba(255,255,255,0.1)", background: "rgba(15, 23, 42, 0.95)", display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+              <button
+                type="button"
+                onClick={() => window.print()}
+                style={{
+                  background: "rgba(56, 189, 248, 0.2)",
+                  border: "1.5px solid #38bdf8",
+                  color: "#38bdf8",
+                  padding: "8px 18px",
+                  borderRadius: "8px",
+                  fontWeight: 700,
+                  fontSize: "0.85rem",
+                  cursor: "pointer"
+                }}
+              >
+                🖨️ Print / Save Term Schedule
+              </button>
+              <button
+                type="button"
+                className="btn-secondary"
+                onClick={() => setShowWeeklyActivitiesModal(false)}
+                style={{ padding: "8px 20px" }}
+              >
+                Close Schedule
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* POP-UP MODAL 1: REGISTERED CLASSES SELECTION             */}
       {/* ======================================================== */}
       {showClassSelectorModal && (

@@ -189,10 +189,7 @@ export default function StaffDashboard() {
               style={{ width: "58px", height: "58px", borderRadius: "12px", border: "2px solid #38bdf8", objectFit: "contain", background: "rgba(15,23,42,0.85)", padding: "2px" }}
             />
             <div className="role-brand-text">
-              <span className="role-brand-title" style={{ fontSize: "1.2rem", fontWeight: "800", color: "#f8fafc" }}>
-                {schoolName.toUpperCase()}
-              </span>
-              <span className="role-portal-badge" style={{ color: "#94a3b8" }}>
+              <span className="role-portal-badge" style={{ color: "#38bdf8", fontSize: "0.95rem", fontWeight: "900", letterSpacing: "0.8px" }}>
                 💼 CAMPUS OPERATIONS & STAFF PORTAL
               </span>
             </div>

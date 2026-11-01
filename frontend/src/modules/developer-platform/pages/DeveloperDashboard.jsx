@@ -3,7 +3,6 @@ import { useNavigate } from "react-router-dom";
 import { getApiBaseUrl } from "../../../api/client/apiConfig";
 import WindowControlsBar from "../../../components/common/WindowControlsBar";
 import TopCenterSystemBanner from "../../../components/common/TopCenterSystemBanner";
-import { getUserAvatar, rotateUserAvatar } from "../../../utils/userAvatars";
 import { offlineSyncEngine } from "../../../utils/offlineSync";
 import { getOnboardingRates, updateOnboardingRates } from "../../../utils/pricingEngine";
 import "./DeveloperPlatform.css";
@@ -12,16 +11,6 @@ const BASE_URL = `${getApiBaseUrl()}/dev-control`;
 
 export default function DeveloperDashboard() {
   const navigate = useNavigate();
-
-  // Real-Life Developer Portrait
-  const [devAvatar, setDevAvatar] = useState(() => getUserAvatar("DEVELOPER"));
-  useEffect(() => {
-    const handleAvatarChange = (e) => {
-      if (e.detail?.role === "DEVELOPER") setDevAvatar(e.detail.avatar);
-    };
-    window.addEventListener("gbs_user_avatar_changed", handleAvatarChange);
-    return () => window.removeEventListener("gbs_user_avatar_changed", handleAvatarChange);
-  }, []);
 
   // Active Tab: 'telemetry' | 'backups' | 'alerts' | 'deployments' | 'audit-logs' | 'licenses' | 'biometrics' | 'locations'
   const [activeTab, setActiveTab] = useState(() => {
@@ -2648,24 +2637,7 @@ export default function DeveloperDashboard() {
           <div>
             <div className="dev-pin-indicator" style={{ display: "flex", alignItems: "center", gap: "8px", flexWrap: "wrap" }}>
               <span className="pin-dot"></span>
-              {/* Real-Life Production Portrait Gallery Switcher */}
-              <div 
-                style={{ display: "inline-flex", alignItems: "center", gap: "6px", cursor: "pointer", background: "rgba(15, 23, 42, 0.8)", padding: "2px 8px", borderRadius: "20px", border: "1.5px solid #38bdf8" }}
-                onClick={() => {
-                  const nextAvatar = rotateUserAvatar("DEVELOPER");
-                  setDevAvatar(nextAvatar);
-                  showNotification("Developer production portrait updated.");
-                }}
-                title="Click to switch real-life developer portrait"
-              >
-                <img 
-                  src={devAvatar} 
-                  alt="Developer Gabriel Osei" 
-                  style={{ width: "24px", height: "24px", borderRadius: "50%", objectFit: "cover" }} 
-                />
-                <span style={{ fontSize: "0.68rem", color: "#38bdf8", fontWeight: 800 }}>🔄 Rotate</span>
-              </div>
-              <span>ENGINEER: <strong>GABRIEL OSEI (gabosei48@gmail.com)</strong> • ANTIGRAVITY AI SENTINEL ACTIVE</span>
+              <span>ENGINEER: <strong>GABRIEL OSEI (gabosei48@gmail.com)</strong> • ANTIGRAVITY MISSION CONTROL ACTIVE</span>
             </div>
             <h2 style={{ fontSize: "1.5rem", fontWeight: "900", letterSpacing: "1.5px", color: "#f8fafc", margin: "3px 0 0" }}>
               GBS SCHOOL MANAGEMENT SYSTEM • DEVELOPER MISSION CONTROL

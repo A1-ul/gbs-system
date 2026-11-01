@@ -6,7 +6,7 @@ import WindowControlsBar from "../../../../../components/common/WindowControlsBa
 import TopCenterSystemBanner from "../../../../../components/common/TopCenterSystemBanner";
 import VoiceNoteRecorder from "../../../../../components/common/VoiceNoteRecorder";
 import VoiceNotePlayer from "../../../../../components/common/VoiceNotePlayer";
-import { getUserAvatar, rotateUserAvatar } from "../../../../../utils/userAvatars";
+import { getUserAvatar } from "../../../../../utils/userAvatars";
 import { offlineSyncEngine } from "../../../../../utils/offlineSync";
 import "./AdminDashboard.css";
 
@@ -3411,11 +3411,7 @@ export default function AdminDashboard() {
                 }}
               />
               <div className="role-brand-text">
-                <span className="role-brand-title" style={{ fontSize: "1.45rem", fontWeight: "900", letterSpacing: "1px", color: "#f8fafc", display: "block" }}>
-                  {reportSchoolName.toUpperCase()}
-                </span>
-                {/* Contract Marker: GBS INTERNATIONAL SCHOOL */}
-                <span className="role-portal-badge" style={{ color: "#38bdf8", fontSize: "0.82rem", fontWeight: "800" }}>
+                <span className="role-portal-badge" style={{ color: "#38bdf8", fontSize: "0.95rem", fontWeight: "900", letterSpacing: "0.8px" }}>
                   🎓 HEADMASTER COMMAND CENTER • OFFICIAL TENANT
                 </span>
               </div>
@@ -3423,23 +3419,6 @@ export default function AdminDashboard() {
           </div>
 
           <div className="role-status-ticker">
-            {/* Real-Life Executive Portrait Gallery Switcher */}
-            <div 
-              style={{ display: "inline-flex", alignItems: "center", gap: "6px", cursor: "pointer", background: "rgba(15, 23, 42, 0.8)", padding: "2px 8px", borderRadius: "20px", border: "1px solid #38bdf8" }}
-              onClick={() => {
-                const nextAvatar = rotateUserAvatar("ADMIN");
-                setAdminAvatar(nextAvatar);
-                triggerToast("info", "Headmaster Portrait Switched", "Real-life executive portrait updated.");
-              }}
-              title="Click to switch real-life production portrait"
-            >
-              <img 
-                src={adminAvatar} 
-                alt="Headmaster Portrait" 
-                style={{ width: "26px", height: "26px", borderRadius: "50%", objectFit: "cover" }} 
-              />
-              <span style={{ fontSize: "0.68rem", color: "#38bdf8", fontWeight: 800 }}>🔄 Rotate</span>
-            </div>
             <span className="ticker-dot"></span>
             <span>Headmaster: <strong>{currentUser.firstName} {currentUser.lastName}</strong></span>
             <span>Tenancy: <strong>GBS-ROYALOAK</strong></span>

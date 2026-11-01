@@ -1,7 +1,7 @@
 import React, { useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { login } from "../api/auth.api";
-import { getUserAvatar, rotateUserAvatar, getRoleBackgroundImage } from "../../../utils/userAvatars";
+import { getRoleBackgroundImage } from "../../../utils/userAvatars";
 import "./RoleLoginPage.css";
 
 export default function StaffLogin({ defaultRole = "STAFF" }) {
@@ -10,7 +10,6 @@ export default function StaffLogin({ defaultRole = "STAFF" }) {
   const isHR = defaultRole === "HR" || window.location.pathname.includes("/hr");
   const roleKey = isAlumni ? "ALUMNI" : isHR ? "HR" : "STAFF";
 
-  const [avatar, setAvatar] = useState(() => getUserAvatar(roleKey));
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [loading, setLoading] = useState(false);
@@ -49,29 +48,12 @@ export default function StaffLogin({ defaultRole = "STAFF" }) {
       <div className="role-login-overlay"></div>
       <div className="role-login-card">
         <div className="role-login-crest-box">
-          <div style={{ display: "flex", justifyContent: "center", alignItems: "center", gap: "12px" }}>
+          <div style={{ display: "flex", justifyContent: "center", alignItems: "center", marginBottom: "8px" }}>
             <img 
               src="/assets/gbs_crest_badge.jpg" 
               alt="GBS System Crest" 
               className="role-login-crest-logo" 
             />
-            <div 
-              onClick={() => setAvatar(rotateUserAvatar(roleKey))}
-              title="Click to rotate real-life profile photo"
-              style={{ cursor: "pointer" }}
-            >
-              <img 
-                src={avatar} 
-                alt={`${roleKey} Portrait`} 
-                style={{ 
-                  width: "48px", 
-                  height: "48px", 
-                  borderRadius: "50%", 
-                  objectFit: "cover", 
-                  border: `2px solid ${isAlumni ? "#6366f1" : isHR ? "#a855f7" : "#64748b"}` 
-                }} 
-              />
-            </div>
           </div>
           <span className="role-login-brand-name">GBS SCHOOL MANAGEMENT SYSTEM</span>
         </div>

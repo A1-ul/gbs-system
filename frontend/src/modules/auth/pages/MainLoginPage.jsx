@@ -2,7 +2,7 @@ import React, { useState, useEffect } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { login } from "../api/auth.api";
 import { getServerBaseUrl } from "../../../api/client/apiConfig";
-import { getUserAvatar, rotateUserAvatar, getRoleBackgroundImage } from "../../../utils/userAvatars";
+import { getRoleBackgroundImage } from "../../../utils/userAvatars";
 import "./MainLoginPage.css";
 
 const ROLES = [
@@ -19,20 +19,10 @@ const ROLES = [
 export default function MainLoginPage() {
   const navigate = useNavigate();
   const [selectedRole, setSelectedRole] = useState("ADMIN");
-  const [currentRoleAvatar, setCurrentRoleAvatar] = useState(() => getUserAvatar("ADMIN"));
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
-
-  useEffect(() => {
-    setCurrentRoleAvatar(getUserAvatar(selectedRole));
-  }, [selectedRole]);
-
-  const handleRotateAvatar = () => {
-    const next = rotateUserAvatar(selectedRole);
-    setCurrentRoleAvatar(next);
-  };
   
   // Realtime System Checks state
   const [systemChecks, setSystemChecks] = useState({
@@ -227,28 +217,14 @@ export default function MainLoginPage() {
       </div>
 
       <div className="login-glass-card">
-        {/* Crest Logo & Brand Title with Real Life Avatar Gallery Switcher */}
+        {/* Crest Logo & Brand Title */}
         <div className="brand-header">
-          <div style={{ display: "flex", justifyContent: "center", alignItems: "center", gap: "16px", marginBottom: "8px" }}>
+          <div style={{ display: "flex", justifyContent: "center", alignItems: "center", marginBottom: "12px" }}>
             <img 
               src="/assets/gbs_crest_badge.jpg" 
               alt="GBS Crest Badge" 
               className="brand-crest-logo"
             />
-            <div 
-              onClick={handleRotateAvatar}
-              title={`Click to rotate real-life ${selectedRole} profile portrait`}
-              style={{ position: "relative", cursor: "pointer" }}
-            >
-              <img 
-                src={currentRoleAvatar} 
-                alt={`${selectedRole} Portrait`} 
-                style={{ width: "54px", height: "54px", borderRadius: "50%", objectFit: "cover", border: `3px solid ${ROLES.find(r => r.id === selectedRole)?.color || "#38bdf8"}`, boxShadow: "0 4px 15px rgba(0,0,0,0.4)" }} 
-              />
-              <span style={{ position: "absolute", bottom: "-2px", right: "-2px", background: "#0f172a", borderRadius: "50%", width: "20px", height: "20px", display: "flex", alignItems: "center", justifyContent: "center", fontSize: "10px", border: "1px solid rgba(255,255,255,0.3)" }}>
-                🔄
-              </span>
-            </div>
           </div>
           <h2>GBS SCHOOL MANAGEMENT SYSTEM</h2>
           <p className="brand-sub">ENTERPRISE MANAGEMENT SYSTEM — MASTER BLUEPRINT</p>

@@ -5,7 +5,7 @@ import WindowControlsBar from "../../../../../components/common/WindowControlsBa
 import TopCenterSystemBanner from "../../../../../components/common/TopCenterSystemBanner";
 import VoiceNoteRecorder from "../../../../../components/common/VoiceNoteRecorder";
 import VoiceNotePlayer from "../../../../../components/common/VoiceNotePlayer";
-import { getUserAvatar, rotateUserAvatar } from "../../../../../utils/userAvatars";
+import { getUserAvatar } from "../../../../../utils/userAvatars";
 import "./ParentDashboard.css";
 
 export default function ParentDashboard() {
@@ -928,10 +928,7 @@ export default function ParentDashboard() {
               }}
             />
             <div className="role-brand-text">
-              <span className="role-brand-title" style={{ fontSize: "1.45rem", fontWeight: "900", letterSpacing: "1px", color: "#f8fafc", display: "block" }}>
-                {(reportSchoolName || "St. Augustine International Academy").toUpperCase()}
-              </span>
-              <span className="role-portal-badge" style={{ color: "#f59e0b", fontSize: "0.82rem", fontWeight: "800" }}>
+              <span className="role-portal-badge" style={{ color: "#f59e0b", fontSize: "0.95rem", fontWeight: "900", letterSpacing: "0.8px" }}>
                 👨‍👩‍👧 PARENT & GUARDIAN PORTAL • OFFICIAL TENANT
               </span>
             </div>
@@ -939,22 +936,7 @@ export default function ParentDashboard() {
 
           <div className="role-status-ticker">
             <span className="ticker-dot"></span>
-            <div 
-              onClick={() => {
-                const next = rotateUserAvatar("PARENT");
-                setParentAvatar(next);
-                setFeedback({ type: "success", message: "Switched parent profile portrait gallery photo!" });
-              }}
-              title="Click to rotate real-life profile photo"
-              style={{ display: "flex", alignItems: "center", gap: "8px", cursor: "pointer" }}
-            >
-              <img 
-                src={parentAvatar} 
-                alt="Parent Avatar" 
-                style={{ width: "32px", height: "32px", borderRadius: "50%", objectFit: "cover", border: "2px solid #f59e0b" }} 
-              />
-              <span>Guardian: <strong>{currentUser.firstName} {currentUser.lastName}</strong></span>
-            </div>
+            <span>Guardian: <strong>{currentUser.firstName} {currentUser.lastName}</strong></span>
             <span>Linked Children: <strong>{children.length}</strong></span>
             <span>Billing: <strong>ACTIVE</strong></span>
           </div>

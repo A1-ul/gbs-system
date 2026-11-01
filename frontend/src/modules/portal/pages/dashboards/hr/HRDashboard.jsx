@@ -2,7 +2,7 @@ import React, { useState, useEffect } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import WindowControlsBar from "../../../../../components/common/WindowControlsBar";
 import TopCenterSystemBanner from "../../../../../components/common/TopCenterSystemBanner";
-import { getUserAvatar, rotateUserAvatar } from "../../../../../utils/userAvatars";
+import { getUserAvatar } from "../../../../../utils/userAvatars";
 
 export default function HRDashboard() {
   const navigate = useNavigate();
@@ -280,35 +280,19 @@ export default function HRDashboard() {
           />
           <div>
             <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
-              <span style={{ fontSize: "0.75rem", fontWeight: "800", color: "#c084fc", letterSpacing: "1px", textTransform: "uppercase" }}>
-                Directorate of Human Resources & Institutional Operations
+              <span style={{ fontSize: "0.85rem", fontWeight: "900", color: "#c084fc", letterSpacing: "1px", textTransform: "uppercase" }}>
+                👔 Directorate of Human Resources & Institutional Operations
               </span>
               <span style={{ background: "rgba(168, 85, 247, 0.2)", color: "#c084fc", fontSize: "0.7rem", padding: "2px 8px", borderRadius: "20px", fontWeight: "700" }}>
                 AUTONOMOUS HR CONTROL
               </span>
             </div>
-            <h1 style={{ margin: "2px 0 0", fontSize: "1.35rem", fontWeight: "900", color: "#f8fafc" }}>
-              {schoolName}
-            </h1>
           </div>
         </div>
 
         <div style={{ display: "flex", alignItems: "center", gap: "12px" }}>
-          <div 
-            onClick={() => {
-              const next = rotateUserAvatar("HR");
-              setHrAvatar(next);
-              showToast("success", "Portrait Updated", "Switched HR Director profile portrait photo!");
-            }}
-            title="Click to rotate real-life profile photo"
-            style={{ display: "flex", alignItems: "center", gap: "8px", cursor: "pointer", background: "rgba(255,255,255,0.06)", padding: "4px 10px", borderRadius: "999px", border: "1px solid rgba(139, 92, 246, 0.4)" }}
-          >
-            <img 
-              src={hrAvatar} 
-              alt="HR Director Avatar" 
-              style={{ width: "32px", height: "32px", borderRadius: "50%", objectFit: "cover", border: "2px solid #8b5cf6" }} 
-            />
-            <span style={{ fontSize: "0.8rem", color: "#e2e8f0", fontWeight: "700" }}>HR Director</span>
+          <div style={{ display: "flex", alignItems: "center", gap: "8px", background: "rgba(255,255,255,0.06)", padding: "4px 12px", borderRadius: "999px", border: "1px solid rgba(139, 92, 246, 0.4)" }}>
+            <span style={{ fontSize: "0.82rem", color: "#e2e8f0", fontWeight: "700" }}>HR Director Active</span>
           </div>
 
           <button
@@ -330,19 +314,24 @@ export default function HRDashboard() {
           </button>
           <button
             type="button"
+            className="role-action-btn logout"
             onClick={() => navigate("/login")}
             style={{
-              background: "rgba(239, 68, 68, 0.15)",
-              border: "1px solid rgba(239, 68, 68, 0.3)",
-              color: "#f87171",
-              padding: "8px 14px",
-              borderRadius: "8px",
+              background: "linear-gradient(135deg, #ef4444 0%, #b91c1c 100%)",
+              border: "1.5px solid rgba(254, 202, 202, 0.6)",
+              color: "#ffffff",
+              padding: "9px 18px",
+              borderRadius: "9px",
               cursor: "pointer",
-              fontSize: "0.8rem",
-              fontWeight: "700"
+              fontSize: "0.85rem",
+              fontWeight: "800",
+              boxShadow: "0 4px 14px rgba(239, 68, 68, 0.45)",
+              display: "inline-flex",
+              alignItems: "center",
+              gap: "6px"
             }}
           >
-            Sign Out
+            🚪 Sign Out
           </button>
         </div>
       </header>

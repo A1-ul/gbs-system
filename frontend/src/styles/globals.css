@@ -205,4 +205,48 @@ button:focus-visible,
 
 .gbs-toast-card.info {
     border-left: 4px solid #38bdf8;
+}
+
+/* ==========================================================================
+   UNIVERSAL SIGN OUT / LOGOUT BUTTON DISPLAY SPECIFICATION
+   Ensures Sign Out displays cleanly, prominently, and distinctly across all dashboards
+   ========================================================================== */
+.role-action-btn.logout,
+.quick-btn.logout,
+.dev-logout-btn {
+    display: inline-flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+    gap: 8px !important;
+    background: linear-gradient(135deg, #ef4444 0%, #b91c1c 100%) !important;
+    color: #ffffff !important;
+    border: 1.5px solid rgba(254, 202, 202, 0.6) !important;
+    border-radius: 9px !important;
+    padding: 8px 18px !important;
+    font-size: 0.88rem !important;
+    font-weight: 800 !important;
+    letter-spacing: 0.3px !important;
+    cursor: pointer !important;
+    box-shadow: 0 4px 14px rgba(239, 68, 68, 0.45) !important;
+    transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1) !important;
+    white-space: nowrap !important;
+    flex-shrink: 0 !important;
+}
+
+.role-action-btn.logout:hover,
+.quick-btn.logout:hover,
+.dev-logout-btn:hover {
+    background: linear-gradient(135deg, #dc2626 0%, #991b1b 100%) !important;
+    transform: translateY(-2px) scale(1.02) !important;
+    box-shadow: 0 6px 18px rgba(239, 68, 68, 0.6) !important;
+    border-color: #ffffff !important;
+}
+
+.role-header-actions,
+.role-header-right,
+.dev-header-actions {
+    display: flex !important;
+    align-items: center !important;
+    gap: 12px !important;
+    flex-wrap: wrap !important;
 }
