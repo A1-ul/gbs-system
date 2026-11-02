@@ -480,7 +480,7 @@ export default function DeveloperDashboard() {
     try {
       const updated = incomingApplications.map((a) =>
         (a.tenantUid === app.tenantUid || a.institutionName === app.institutionName || a.id === app.id)
-          ? { ...a, status: "APPROVED", approvedAt: new Date().toISOString() }
+          ? { ...a, status: "APPROVED", isApproved: true, approvedAt: new Date().toISOString() }
           : a
       );
       setIncomingApplications(updated);
@@ -572,6 +572,7 @@ export default function DeveloperDashboard() {
       const archiveRecord = {
         ...app,
         status: "APPROVED_AND_ARCHIVED",
+        isApproved: true,
         approvedAt: new Date().toISOString(),
         approvedBy: "GABRIEL OSEI (gabosei48@gmail.com)",
         assignedTenantCode,
@@ -590,6 +591,9 @@ export default function DeveloperDashboard() {
 
       triggerPadlockFeedback(false, app.institutionName, "ONBOARDING_APPROVED_PROVISIONED");
       showNotification(`✓ Acceptance SMS dispatched to ${targetPhone}! Institution '${app.institutionName}' approved and full system access granted.`);
+      try {
+        await fetchOnboardingApplications();
+      } catch {}
       fetchData();
     } catch (err) {
       showNotification("⚠ Error approving institution onboarding.");
@@ -600,7 +604,7 @@ export default function DeveloperDashboard() {
     try {
       const updated = incomingApplications.map((a) =>
         (a.tenantUid === app.tenantUid || a.institutionName === app.institutionName || a.id === app.id)
-          ? { ...a, status: "REJECTED", rejectedAt: new Date().toISOString() }
+          ? { ...a, status: "REJECTED", isApproved: false, rejectedAt: new Date().toISOString() }
           : a
       );
       setIncomingApplications(updated);
@@ -622,6 +626,9 @@ export default function DeveloperDashboard() {
       }
 
       showNotification(`Application for '${app.institutionName}' marked as REJECTED.`);
+      try {
+        await fetchOnboardingApplications();
+      } catch {}
       fetchData();
     } catch (err) {
       showNotification("⚠ Error rejecting application.");
@@ -1095,21 +1102,97 @@ export default function DeveloperDashboard() {
     }
   });
 
+  // Live fetch of all institutional onboarding registrations from PostgreSQL backend API
+  const fetchOnboardingApplications = async () => {
+    try {
+      const token = localStorage.getItem("gbs_dev_token") || localStorage.getItem("gbs_token");
+      const authHeaders = token ? { Authorization: `Bearer ${token}` } : {};
+      const onbRes = await fetch(`${BASE_URL}/onboarding/pending`, { headers: authHeaders });
+      if (onbRes.ok) {
+        const onbData = await onbRes.json();
+        const rawApps = onbData.data?.applications || [];
+        const dbApps = rawApps.map((a) => {
+          const isPending = !a.isApproved && a.status !== "APPROVED" && a.status !== "REJECTED";
+          return {
+            ...a,
+            id: a.id,
+            appRef: a.tenantUid || `APP-${a.id}`,
+            institutionName: a.institutionName,
+            tenantCode: a.tenantCode,
+            institutionType: a.institutionType || "NURSERY_TO_JHS",
+            headmasterName: a.headmasterName || a.adminName || a.repFullName || "Executive Headmaster",
+            headmasterPhone: a.headmasterPhone || a.adminPhone || a.officialPhone || a.repPhone || "—",
+            headmasterEmail: a.headmasterEmail || a.adminEmail || a.officialEmail || a.repEmail || "admin@school.edu",
+            totalStudentsEnrolled: a.totalStudentsEnrolled || a.maxStudents || 500,
+            calculatedFee: a.calculatedFee || a.calculatedBaseFee || a.paymentAmount || 500,
+            paymentAmount: a.paymentAmount || (a.calculatedBaseFee ? String(a.calculatedBaseFee) : "500"),
+            momoTxnId: a.momoTxnId || a.momoRef || a.momoTransactionId || "MOMO-VERIFIED",
+            status: isPending ? "PENDING_DEVELOPER_APPROVAL" : (a.status || "APPROVED"),
+            isApproved: Boolean(a.isApproved),
+            createdAt: a.createdAt,
+            submittedAt: a.createdAt,
+            source: "DATABASE"
+          };
+        });
+
+        // Also merge any local-only submissions that haven't hit the DB yet
+        let localApps = [];
+        try {
+          localApps = JSON.parse(localStorage.getItem("gbs_incoming_onboarding_applications") || "[]");
+        } catch {}
+
+        const localOnly = localApps.filter(
+          (p) => !dbApps.some((d) => d.id === p.id || (d.tenantCode && d.tenantCode === p.tenantCode) || (d.institutionName && d.institutionName?.toLowerCase() === p.institutionName?.toLowerCase()))
+        );
+
+        const allApplications = [...dbApps, ...localOnly];
+        setIncomingApplications(allApplications);
+
+        // Populate archivedTenants with all approved registrations from DB
+        const approvedFromDb = dbApps
+          .filter((a) => a.isApproved || a.status === "APPROVED" || a.status === "APPROVED_AND_ARCHIVED")
+          .map((a) => ({
+            ...a,
+            status: "APPROVED_AND_ARCHIVED",
+            approvedAt: a.approvedAt || a.updatedAt || a.createdAt,
+            approvedBy: a.approvedBy || "GABRIEL OSEI (gabosei48@gmail.com)",
+            assignedTenantCode: a.tenantCode,
+            assignedTenantId: a.tenantId || a.id,
+            dispatchedPhone: a.headmasterPhone,
+            archiveRef: `ARC-${a.id}`
+          }));
+
+        if (approvedFromDb.length > 0) {
+          setArchivedTenants((prev) => {
+            const prevList = Array.isArray(prev) ? prev : [];
+            const merged = [...approvedFromDb];
+            prevList.forEach((p) => {
+              if (!merged.some((m) => m.id === p.id || (m.assignedTenantCode && m.assignedTenantCode === p.assignedTenantCode) || (m.institutionName && m.institutionName?.toLowerCase() === p.institutionName?.toLowerCase()))) {
+                merged.push(p);
+              }
+            });
+            return merged;
+          });
+        }
+      }
+    } catch (err) {
+      console.warn("Could not sync onboarding applications:", err);
+    }
+  };
+
   useEffect(() => {
     const syncMomoPayments = () => {
       try {
         const list = JSON.parse(localStorage.getItem("gbs_momo_subscription_reconciliations") || "[]");
         setMomoReconciliations(list);
       } catch {}
-      try {
-        const apps = JSON.parse(localStorage.getItem("gbs_incoming_onboarding_applications") || "[]");
-        setIncomingApplications(apps);
-      } catch {}
+      fetchOnboardingApplications();
     };
+    syncMomoPayments();
     window.addEventListener("gbs_momo_payment_submitted", syncMomoPayments);
     window.addEventListener("gbs_new_onboarding_application", syncMomoPayments);
     window.addEventListener("storage", syncMomoPayments);
-    const poller = setInterval(syncMomoPayments, 3000);
+    const poller = setInterval(syncMomoPayments, 3500);
     return () => {
       window.removeEventListener("gbs_momo_payment_submitted", syncMomoPayments);
       window.removeEventListener("gbs_new_onboarding_application", syncMomoPayments);
@@ -1215,35 +1298,7 @@ export default function DeveloperDashboard() {
 
       // 11. Fetch Live Database Institutional Onboarding Applications
       try {
-        const onbRes = await fetch(`${BASE_URL}/onboarding/pending`, { headers: authHeaders });
-        if (onbRes.ok) {
-          const onbData = await onbRes.json();
-          const dbApps = (onbData.data?.applications || []).map((a) => ({
-            ...a,
-            id: a.id,
-            appRef: a.tenantUid || `APP-${a.id}`,
-            institutionName: a.institutionName,
-            tenantCode: a.tenantCode,
-            institutionType: a.institutionType || "NURSERY_TO_JHS",
-            headmasterName: a.headmasterName || a.adminName || "Executive Headmaster",
-            headmasterPhone: a.headmasterPhone || a.adminPhone || a.officialPhone || "—",
-            headmasterEmail: a.headmasterEmail || a.adminEmail || a.officialEmail || "admin@school.edu",
-            totalStudentsEnrolled: a.totalStudentsEnrolled || a.maxStudents || 500,
-            calculatedFee: a.calculatedFee || a.paymentAmount || 500,
-            paymentAmount: a.paymentAmount || "500",
-            momoTxnId: a.momoTxnId || a.momoRef || a.momoTransactionId || "MOMO-VERIFIED",
-            status: a.isApproved ? "APPROVED" : (a.status || "PENDING_DEVELOPER_APPROVAL"),
-            createdAt: a.createdAt,
-            source: "DATABASE"
-          }));
-
-          setIncomingApplications((prev) => {
-            const localOnly = (Array.isArray(prev) ? prev : []).filter(
-              (p) => !dbApps.some((d) => d.id === p.id || (d.tenantCode && d.tenantCode === p.tenantCode) || (d.institutionName && d.institutionName?.toLowerCase() === p.institutionName?.toLowerCase()))
-            );
-            return [...dbApps, ...localOnly];
-          });
-        }
+        await fetchOnboardingApplications();
       } catch (onbErr) {
         console.warn("Could not fetch database onboarding applications:", onbErr);
       }
@@ -2865,6 +2920,11 @@ export default function DeveloperDashboard() {
     );
   }
 
+  const pendingIncomingList = (incomingApplications || []).filter(
+    (a) => a.status === "PENDING_DEVELOPER_APPROVAL" || a.status === "PENDING" || (!a.isApproved && a.status !== "APPROVED" && a.status !== "REJECTED")
+  );
+  const pendingAppsCount = pendingIncomingList.length;
+
   return (
     <div className="dev-dashboard-layout">
       {/* Universal Navigation & Scroll Controls */}
@@ -3596,14 +3656,86 @@ export default function DeveloperDashboard() {
           </div>
         )}
 
+        {/* HERO ALERT BANNER: PENDING ONBOARDING APPLICATIONS QUEUE */}
+        {pendingAppsCount > 0 && (
+          <div style={{
+            margin: "0 0 1.25rem 0",
+            padding: "16px 22px",
+            background: "linear-gradient(135deg, rgba(245, 158, 11, 0.22) 0%, rgba(180, 83, 9, 0.35) 100%)",
+            border: "2px solid #f59e0b",
+            borderRadius: "14px",
+            boxShadow: "0 0 25px rgba(245, 158, 11, 0.35)",
+            display: "flex",
+            justifyContent: "space-between",
+            alignItems: "center",
+            flexWrap: "wrap",
+            gap: "12px"
+          }}>
+            <div style={{ display: "flex", alignItems: "center", gap: "14px" }}>
+              <div style={{
+                width: "48px",
+                height: "48px",
+                borderRadius: "50%",
+                background: "rgba(245, 158, 11, 0.3)",
+                border: "2px solid #f59e0b",
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "center",
+                fontSize: "1.6rem",
+                boxShadow: "0 0 15px rgba(245, 158, 11, 0.6)"
+              }}>
+                ⚡
+              </div>
+              <div>
+                <div style={{ display: "flex", alignItems: "center", gap: "10px" }}>
+                  <h4 style={{ margin: 0, color: "#fef08a", fontSize: "1.05rem", fontWeight: "900", textTransform: "uppercase", letterSpacing: "0.5px" }}>
+                    ONBOARDING QUEUE: {pendingAppsCount} NEW INSTITUTION REGISTRATION{pendingAppsCount > 1 ? "S" : ""} AWAITING DEVELOPER APPROVAL
+                  </h4>
+                  <span style={{ background: "#f59e0b", color: "#0f172a", fontSize: "0.72rem", padding: "2px 8px", borderRadius: "10px", fontWeight: "900" }}>
+                    ACTION REQUIRED
+                  </span>
+                </div>
+                <p style={{ margin: "4px 0 0 0", color: "#fde68a", fontSize: "0.85rem", maxWidth: "900px" }}>
+                  New school onboarding applications have been submitted. Review institution credentials and approve to provision tenant enclaves and trigger automated confirmation SMS.
+                </p>
+              </div>
+            </div>
+            <div style={{ display: "flex", gap: "10px" }}>
+              <button
+                type="button"
+                onClick={() => { setActiveTab("onboarding"); setOnboardingTabMode("INCOMING"); }}
+                style={{
+                  background: "linear-gradient(135deg, #f59e0b, #d97706)",
+                  color: "#0f172a",
+                  border: "none",
+                  borderRadius: "8px",
+                  padding: "10px 18px",
+                  fontWeight: "900",
+                  fontSize: "0.82rem",
+                  cursor: "pointer",
+                  boxShadow: "0 4px 15px rgba(245, 158, 11, 0.4)"
+                }}
+              >
+                ⚡ Review & Approve Now ({pendingAppsCount} Pending)
+              </button>
+            </div>
+          </div>
+        )}
+
         {/* Interactive Developer Tab Navigation */}
         <div className="dev-tab-navigation">
           <button
             className={`dev-tab-btn ${activeTab === "onboarding" ? "active" : ""}`}
             onClick={() => setActiveTab("onboarding")}
-            style={{ borderColor: "#10b981", color: activeTab === "onboarding" ? "#fff" : "#34d399", fontWeight: 800 }}
+            style={{
+              borderColor: pendingAppsCount > 0 ? "#f59e0b" : "#10b981",
+              background: pendingAppsCount > 0 ? (activeTab === "onboarding" ? "#f59e0b" : "rgba(245, 158, 11, 0.15)") : undefined,
+              color: pendingAppsCount > 0 ? (activeTab === "onboarding" ? "#0f172a" : "#fbbf24") : (activeTab === "onboarding" ? "#fff" : "#34d399"),
+              fontWeight: 800,
+              boxShadow: pendingAppsCount > 0 ? "0 0 14px rgba(245, 158, 11, 0.4)" : "none"
+            }}
           >
-            🏫 Tenant Onboarding & Mobile OTP ({onboardedTenants.length})
+            🏫 Tenant Onboarding & Approvals {pendingAppsCount > 0 ? `(${pendingAppsCount} PENDING)` : `(${onboardedTenants.length})`}
           </button>
           <button
             className={`dev-tab-btn ${activeTab === "headmaster_verifications" ? "active" : ""}`}
@@ -3723,104 +3855,6 @@ export default function DeveloperDashboard() {
               </div>
             </div>
 
-            {/* GBS ENTERPRISE PER-STUDENT RATE CONFIGURATOR */}
-            <div style={{
-              background: "linear-gradient(135deg, rgba(30, 41, 59, 0.7) 0%, rgba(15, 23, 42, 0.9) 100%)",
-              border: "1.5px solid #f59e0b",
-              borderRadius: "14px",
-              padding: "20px",
-              marginBottom: "1.5rem",
-              boxShadow: "0 6px 20px rgba(0, 0, 0, 0.4)"
-            }}>
-              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "12px", flexWrap: "wrap", gap: "10px" }}>
-                <div>
-                  <h4 style={{ margin: 0, color: "#fbbf24", fontSize: "1.05rem", fontWeight: 800 }}>
-                    ⚙️ GBS ONBOARDING PRICING & PER-STUDENT RATE CONFIGURATOR
-                  </h4>
-                  <span style={{ fontSize: "0.75rem", color: "#94a3b8" }}>
-                    Configure the multiplier rates charged per student. Changes sync in real-time throughout the GBS System.
-                  </span>
-                </div>
-                {ratesSavedFeedback && (
-                  <span style={{ background: "rgba(16, 185, 129, 0.2)", color: "#34d399", padding: "4px 12px", borderRadius: "999px", fontSize: "0.75rem", fontWeight: 800, border: "1px solid #10b981" }}>
-                    ✓ RATES SAVED TO SYSTEM REGISTRY
-                  </span>
-                )}
-              </div>
-
-              <form onSubmit={handleSaveDeveloperRates} className="dev-equal-inscription-grid" style={{ display: "grid", gridTemplateColumns: "repeat(4, 1fr)", gap: "14px", alignItems: "stretch" }}>
-                <div style={{ background: "rgba(2, 6, 23, 0.75)", padding: "14px 16px", borderRadius: "12px", border: "1.5px solid rgba(52, 211, 153, 0.35)", display: "flex", flexDirection: "column", justifyContent: "space-between", minHeight: "94px" }}>
-                  <label style={{ fontSize: "0.72rem", fontWeight: 800, color: "#34d399", display: "block", letterSpacing: "0.4px", marginBottom: "6px" }}>
-                    NURSERY TO JHS RATE (GH₵ / STUDENT)
-                  </label>
-                  <input
-                    type="number"
-                    min="1"
-                    max="500"
-                    value={editableRates.JHS}
-                    onChange={(e) => setEditableRates({ ...editableRates, JHS: Number(e.target.value) })}
-                    style={{ width: "100%", height: "40px", padding: "8px 12px", background: "rgba(15, 23, 42, 0.9)", border: "1.5px solid rgba(52, 211, 153, 0.5)", borderRadius: "8px", color: "#fff", fontWeight: 800, fontSize: "1rem", boxSizing: "border-box" }}
-                  />
-                </div>
-
-                <div style={{ background: "rgba(2, 6, 23, 0.75)", padding: "14px 16px", borderRadius: "12px", border: "1.5px solid rgba(56, 189, 248, 0.35)", display: "flex", flexDirection: "column", justifyContent: "space-between", minHeight: "94px" }}>
-                  <label style={{ fontSize: "0.72rem", fontWeight: 800, color: "#38bdf8", display: "block", letterSpacing: "0.4px", marginBottom: "6px" }}>
-                    SENIOR HIGH (SHS) RATE (GH₵ / STUDENT)
-                  </label>
-                  <input
-                    type="number"
-                    min="1"
-                    max="1000"
-                    value={editableRates.SHS}
-                    onChange={(e) => setEditableRates({ ...editableRates, SHS: Number(e.target.value) })}
-                    style={{ width: "100%", height: "40px", padding: "8px 12px", background: "rgba(15, 23, 42, 0.9)", border: "1.5px solid rgba(56, 189, 248, 0.5)", borderRadius: "8px", color: "#fff", fontWeight: 800, fontSize: "1rem", boxSizing: "border-box" }}
-                  />
-                </div>
-
-                <div style={{ background: "rgba(2, 6, 23, 0.75)", padding: "14px 16px", borderRadius: "12px", border: "1.5px solid rgba(192, 132, 252, 0.35)", display: "flex", flexDirection: "column", justifyContent: "space-between", minHeight: "94px" }}>
-                  <label style={{ fontSize: "0.72rem", fontWeight: 800, color: "#c084fc", display: "block", letterSpacing: "0.4px", marginBottom: "6px" }}>
-                    UNIVERSITY RATE (GH₵ / STUDENT)
-                  </label>
-                  <input
-                    type="number"
-                    min="1"
-                    max="2000"
-                    value={editableRates.UNIVERSITY}
-                    onChange={(e) => setEditableRates({ ...editableRates, UNIVERSITY: Number(e.target.value) })}
-                    style={{ width: "100%", height: "40px", padding: "8px 12px", background: "rgba(15, 23, 42, 0.9)", border: "1.5px solid rgba(192, 132, 252, 0.5)", borderRadius: "8px", color: "#fff", fontWeight: 800, fontSize: "1rem", boxSizing: "border-box" }}
-                  />
-                </div>
-
-                <div style={{ background: "rgba(2, 6, 23, 0.75)", padding: "14px 16px", borderRadius: "12px", border: "1.5px solid rgba(245, 158, 11, 0.35)", display: "flex", flexDirection: "column", justifyContent: "space-between", minHeight: "94px" }}>
-                  <span style={{ fontSize: "0.72rem", fontWeight: 800, color: "#fbbf24", display: "block", letterSpacing: "0.4px", marginBottom: "6px" }}>
-                    BROADCAST ACTION
-                  </span>
-                  <button
-                    type="submit"
-                    style={{
-                      width: "100%",
-                      height: "40px",
-                      padding: "0 16px",
-                      background: "linear-gradient(135deg, #d97706, #b45309)",
-                      color: "#fff",
-                      border: "none",
-                      borderRadius: "8px",
-                      fontWeight: 800,
-                      fontSize: "0.85rem",
-                      cursor: "pointer",
-                      boxShadow: "0 4px 14px rgba(217, 119, 6, 0.35)",
-                      display: "flex",
-                      alignItems: "center",
-                      justifyContent: "center",
-                      gap: "6px",
-                      boxSizing: "border-box"
-                    }}
-                  >
-                    💾 Save & Broadcast Rates
-                  </button>
-                </div>
-              </form>
-            </div>
 
             {/* INCOMING INSTITUTIONAL ONBOARDINGS & ARCHIVED REGISTRATIONS VAULT */}
             <div className="incoming-onboarding-panel">
@@ -3854,7 +3888,7 @@ export default function DeveloperDashboard() {
                       transition: "all 0.2s"
                     }}
                   >
-                    📥 Incoming ({incomingApplications.filter(a => a.status === "PENDING_DEVELOPER_APPROVAL").length})
+                    📥 Incoming ({pendingAppsCount})
                   </button>
                   <button
                     type="button"
@@ -3884,100 +3918,109 @@ export default function DeveloperDashboard() {
                   </div>
                 ) : (
                   <div className="incoming-apps-list">
-                    {incomingApplications.map((app, idx) => {
-                      const isPending = app.status === "PENDING_DEVELOPER_APPROVAL";
-                      const tierLabel = app.institutionType === "SENIOR_HIGH_SCHOOL"
-                        ? "Senior High School (Form 1-3)"
-                        : app.institutionType === "UNIVERSITY"
-                        ? "University / Tertiary Institution"
-                        : "Basic School (Nursery to JHS)";
-                      const tierClass = app.institutionType === "SENIOR_HIGH_SCHOOL" ? "shs" : (app.institutionType === "UNIVERSITY" ? "uni" : "jhs");
+                    {incomingApplications
+                      .slice()
+                      .sort((a, b) => {
+                        const aPending = a.status === "PENDING_DEVELOPER_APPROVAL" || a.status === "PENDING" || (!a.isApproved && a.status !== "APPROVED" && a.status !== "REJECTED");
+                        const bPending = b.status === "PENDING_DEVELOPER_APPROVAL" || b.status === "PENDING" || (!b.isApproved && b.status !== "APPROVED" && b.status !== "REJECTED");
+                        if (aPending && !bPending) return -1;
+                        if (!aPending && bPending) return 1;
+                        return new Date(b.createdAt || 0) - new Date(a.createdAt || 0);
+                      })
+                      .map((app, idx) => {
+                        const isPending = app.status === "PENDING_DEVELOPER_APPROVAL" || app.status === "PENDING" || (!app.isApproved && app.status !== "APPROVED" && app.status !== "REJECTED");
+                        const tierLabel = app.institutionType === "SENIOR_HIGH_SCHOOL"
+                          ? "Senior High School (Form 1-3)"
+                          : app.institutionType === "UNIVERSITY"
+                          ? "University / Tertiary Institution"
+                          : "Basic School (Nursery to JHS)";
+                        const tierClass = app.institutionType === "SENIOR_HIGH_SCHOOL" ? "shs" : (app.institutionType === "UNIVERSITY" ? "uni" : "jhs");
 
-                      return (
-                        <div key={idx} className="incoming-app-card" style={{ borderLeft: `4px solid ${tierClass === "shs" ? "#38bdf8" : (tierClass === "uni" ? "#c084fc" : "#34d399")}` }}>
-                          <div>
-                            <div style={{ display: "flex", alignItems: "center", gap: "8px", flexWrap: "wrap" }}>
-                              <strong style={{ color: "#f8fafc", fontSize: "1.05rem" }}>{app.institutionName}</strong>
-                              <span className={`tier-badge ${tierClass}`}>{tierLabel}</span>
-                              <span style={{
-                                fontSize: "0.7rem",
-                                fontWeight: 800,
-                                padding: "2px 6px",
-                                borderRadius: "4px",
-                                background: isPending ? "rgba(245, 158, 11, 0.2)" : (app.status === "APPROVED" ? "rgba(16, 185, 129, 0.2)" : "rgba(239, 68, 68, 0.2)"),
-                                color: isPending ? "#fde68a" : (app.status === "APPROVED" ? "#a7f3d0" : "#fca5a5")
-                              }}>
-                                {app.status}
-                              </span>
+                        return (
+                          <div key={idx} className="incoming-app-card" style={{ borderLeft: `4px solid ${tierClass === "shs" ? "#38bdf8" : (tierClass === "uni" ? "#c084fc" : "#34d399")}` }}>
+                            <div>
+                              <div style={{ display: "flex", alignItems: "center", gap: "8px", flexWrap: "wrap" }}>
+                                <strong style={{ color: "#f8fafc", fontSize: "1.05rem" }}>{app.institutionName}</strong>
+                                <span className={`tier-badge ${tierClass}`}>{tierLabel}</span>
+                                <span style={{
+                                  fontSize: "0.7rem",
+                                  fontWeight: 800,
+                                  padding: "2px 6px",
+                                  borderRadius: "4px",
+                                  background: isPending ? "rgba(245, 158, 11, 0.2)" : ((app.status === "APPROVED" || app.isApproved) ? "rgba(16, 185, 129, 0.2)" : "rgba(239, 68, 68, 0.2)"),
+                                  color: isPending ? "#fde68a" : ((app.status === "APPROVED" || app.isApproved) ? "#a7f3d0" : "#fca5a5")
+                                }}>
+                                  {isPending ? "PENDING APPROVAL" : ((app.status === "APPROVED" || app.isApproved) ? "APPROVED" : "REJECTED")}
+                                </span>
+                              </div>
+                              <div style={{ fontSize: "0.75rem", color: "#94a3b8", marginTop: "4px" }}>
+                                App Ref: <strong style={{ color: "#fbbf24" }}>{app.appRef || app.id}</strong> • Tenant Code: <strong style={{ color: "#cbd5e1" }}>{app.tenantCode || `GBS-${idx + 1}`}</strong>
+                              </div>
+                              <div style={{ fontSize: "0.75rem", color: "#34d399", marginTop: "2px" }}>
+                                Declared Population: <strong>{app.totalStudentsEnrolled || 500} Students</strong> • Onboarding Fee: <strong>GHS {app.calculatedFee || app.paymentAmount || 2500}</strong>
+                              </div>
                             </div>
-                            <div style={{ fontSize: "0.75rem", color: "#94a3b8", marginTop: "4px" }}>
-                              App Ref: <strong style={{ color: "#fbbf24" }}>{app.appRef || app.id}</strong> • Tenant Code: <strong style={{ color: "#cbd5e1" }}>{app.tenantCode || `GBS-${idx + 1}`}</strong>
+
+                            <div>
+                              <span style={{ fontSize: "0.72rem", color: "#94a3b8", display: "block" }}>Headmaster Identity</span>
+                              <strong style={{ color: "#f8fafc", fontSize: "0.85rem" }}>{app.headmasterName}</strong>
+                              <div style={{ fontSize: "0.75rem", color: "#38bdf8" }}>{app.headmasterPhone}</div>
+                              <div style={{ fontSize: "0.72rem", color: "#64748b" }}>{app.headmasterEmail}</div>
                             </div>
-                            <div style={{ fontSize: "0.75rem", color: "#34d399", marginTop: "2px" }}>
-                              Declared Population: <strong>{app.totalStudentsEnrolled || 500} Students</strong> • Onboarding Fee: <strong>GHS {app.calculatedFee || app.paymentAmount || 2500}</strong>
+
+                            <div>
+                              <span style={{ fontSize: "0.72rem", color: "#94a3b8", display: "block" }}>MoMo Payment Proof</span>
+                              <strong style={{ color: "#34d399", fontSize: "0.85rem" }}>Txn: {app.momoTxnId || "MTN-REC-PENDING"}</strong>
+                              <div style={{ fontSize: "0.75rem", color: "#cbd5e1" }}>Amount: <strong>GHS {app.paymentAmount || "500"}</strong></div>
+                              <div style={{ fontSize: "0.7rem", color: "#fbbf24" }}>Sent to: 0554594193 GABRIELKUBI OSEI-APPIAH</div>
+                            </div>
+
+                            <div style={{ display: "flex", gap: "8px", justifyContent: "flex-end" }}>
+                              {isPending ? (
+                                <>
+                                  <button
+                                    type="button"
+                                    onClick={() => handleApproveIncomingApplication(app)}
+                                    style={{
+                                      background: "linear-gradient(135deg, #10b981, #059669)",
+                                      color: "#fff",
+                                      border: "none",
+                                      borderRadius: "8px",
+                                      padding: "8px 14px",
+                                      fontWeight: 800,
+                                      fontSize: "0.8rem",
+                                      cursor: "pointer",
+                                      boxShadow: "0 2px 10px rgba(16, 185, 129, 0.4)"
+                                    }}
+                                  >
+                                    ✓ Approve & Provision Enclave
+                                  </button>
+                                  <button
+                                    type="button"
+                                    onClick={() => handleRejectIncomingApplication(app)}
+                                    style={{
+                                      background: "rgba(239, 68, 68, 0.2)",
+                                      border: "1px solid #ef4444",
+                                      color: "#fca5a5",
+                                      borderRadius: "8px",
+                                      padding: "8px 12px",
+                                      fontWeight: 700,
+                                      fontSize: "0.78rem",
+                                      cursor: "pointer"
+                                    }}
+                                  >
+                                    ✕ Reject
+                                  </button>
+                                </>
+                              ) : (
+                                <span style={{ fontSize: "0.78rem", color: (app.status === "APPROVED" || app.isApproved) ? "#34d399" : "#f87171", fontWeight: 700 }}>
+                                  {(app.status === "APPROVED" || app.isApproved) ? "Enclave Provisioned" : "Rejected"}
+                                </span>
+                              )}
                             </div>
                           </div>
-
-                          <div>
-                            <span style={{ fontSize: "0.72rem", color: "#94a3b8", display: "block" }}>Headmaster Identity</span>
-                            <strong style={{ color: "#f8fafc", fontSize: "0.85rem" }}>{app.headmasterName}</strong>
-                            <div style={{ fontSize: "0.75rem", color: "#38bdf8" }}>{app.headmasterPhone}</div>
-                            <div style={{ fontSize: "0.72rem", color: "#64748b" }}>{app.headmasterEmail}</div>
-                          </div>
-
-                          <div>
-                            <span style={{ fontSize: "0.72rem", color: "#94a3b8", display: "block" }}>MoMo Payment Proof</span>
-                            <strong style={{ color: "#34d399", fontSize: "0.85rem" }}>Txn: {app.momoTxnId || "MTN-REC-PENDING"}</strong>
-                            <div style={{ fontSize: "0.75rem", color: "#cbd5e1" }}>Amount: <strong>GHS {app.paymentAmount || "500"}</strong></div>
-                            <div style={{ fontSize: "0.7rem", color: "#fbbf24" }}>Sent to: 0554594193 GABRIELKUBI OSEI-APPIAH</div>
-                          </div>
-
-                          <div style={{ display: "flex", gap: "8px", justifyContent: "flex-end" }}>
-                            {isPending ? (
-                              <>
-                                <button
-                                  type="button"
-                                  onClick={() => handleApproveIncomingApplication(app)}
-                                  style={{
-                                    background: "linear-gradient(135deg, #10b981, #059669)",
-                                    color: "#fff",
-                                    border: "none",
-                                    borderRadius: "8px",
-                                    padding: "8px 14px",
-                                    fontWeight: 800,
-                                    fontSize: "0.8rem",
-                                    cursor: "pointer",
-                                    boxShadow: "0 2px 10px rgba(16, 185, 129, 0.4)"
-                                  }}
-                                >
-                                  ✓ Approve & Provision Enclave
-                                </button>
-                                <button
-                                  type="button"
-                                  onClick={() => handleRejectIncomingApplication(app)}
-                                  style={{
-                                    background: "rgba(239, 68, 68, 0.2)",
-                                    border: "1px solid #ef4444",
-                                    color: "#fca5a5",
-                                    borderRadius: "8px",
-                                    padding: "8px 12px",
-                                    fontWeight: 700,
-                                    fontSize: "0.78rem",
-                                    cursor: "pointer"
-                                  }}
-                                >
-                                  ✕ Reject
-                                </button>
-                              </>
-                            ) : (
-                              <span style={{ fontSize: "0.78rem", color: app.status === "APPROVED" ? "#34d399" : "#f87171", fontWeight: 700 }}>
-                                {app.status === "APPROVED" ? "Enclave Provisioned" : "Rejected"}
-                              </span>
-                            )}
-                          </div>
-                        </div>
-                      );
-                    })}
+                        );
+                      })}
                   </div>
                 )
               ) : (
@@ -4142,6 +4185,105 @@ export default function DeveloperDashboard() {
                   )}
                 </div>
               )}
+            </div>
+
+            {/* GBS ENTERPRISE PER-STUDENT RATE CONFIGURATOR */}
+            <div style={{
+              background: "linear-gradient(135deg, rgba(30, 41, 59, 0.7) 0%, rgba(15, 23, 42, 0.9) 100%)",
+              border: "1.5px solid #f59e0b",
+              borderRadius: "14px",
+              padding: "20px",
+              marginBottom: "1.5rem",
+              boxShadow: "0 6px 20px rgba(0, 0, 0, 0.4)"
+            }}>
+              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "12px", flexWrap: "wrap", gap: "10px" }}>
+                <div>
+                  <h4 style={{ margin: 0, color: "#fbbf24", fontSize: "1.05rem", fontWeight: 800 }}>
+                    ⚙️ GBS ONBOARDING PRICING & PER-STUDENT RATE CONFIGURATOR
+                  </h4>
+                  <span style={{ fontSize: "0.75rem", color: "#94a3b8" }}>
+                    Configure the multiplier rates charged per student. Changes sync in real-time throughout the GBS System.
+                  </span>
+                </div>
+                {ratesSavedFeedback && (
+                  <span style={{ background: "rgba(16, 185, 129, 0.2)", color: "#34d399", padding: "4px 12px", borderRadius: "999px", fontSize: "0.75rem", fontWeight: 800, border: "1px solid #10b981" }}>
+                    ✓ RATES SAVED TO SYSTEM REGISTRY
+                  </span>
+                )}
+              </div>
+
+              <form onSubmit={handleSaveDeveloperRates} className="dev-equal-inscription-grid" style={{ display: "grid", gridTemplateColumns: "repeat(4, 1fr)", gap: "14px", alignItems: "stretch" }}>
+                <div style={{ background: "rgba(2, 6, 23, 0.75)", padding: "14px 16px", borderRadius: "12px", border: "1.5px solid rgba(52, 211, 153, 0.35)", display: "flex", flexDirection: "column", justifyContent: "space-between", minHeight: "94px" }}>
+                  <label style={{ fontSize: "0.72rem", fontWeight: 800, color: "#34d399", display: "block", letterSpacing: "0.4px", marginBottom: "6px" }}>
+                    NURSERY TO JHS RATE (GH₵ / STUDENT)
+                  </label>
+                  <input
+                    type="number"
+                    min="1"
+                    max="500"
+                    value={editableRates.JHS}
+                    onChange={(e) => setEditableRates({ ...editableRates, JHS: Number(e.target.value) })}
+                    style={{ width: "100%", height: "40px", padding: "8px 12px", background: "rgba(15, 23, 42, 0.9)", border: "1.5px solid rgba(52, 211, 153, 0.5)", borderRadius: "8px", color: "#fff", fontWeight: 800, fontSize: "1rem", boxSizing: "border-box" }}
+                  />
+                </div>
+
+                <div style={{ background: "rgba(2, 6, 23, 0.75)", padding: "14px 16px", borderRadius: "12px", border: "1.5px solid rgba(56, 189, 248, 0.35)", display: "flex", flexDirection: "column", justifyContent: "space-between", minHeight: "94px" }}>
+                  <label style={{ fontSize: "0.72rem", fontWeight: 800, color: "#38bdf8", display: "block", letterSpacing: "0.4px", marginBottom: "6px" }}>
+                    SENIOR HIGH (SHS) RATE (GH₵ / STUDENT)
+                  </label>
+                  <input
+                    type="number"
+                    min="1"
+                    max="1000"
+                    value={editableRates.SHS}
+                    onChange={(e) => setEditableRates({ ...editableRates, SHS: Number(e.target.value) })}
+                    style={{ width: "100%", height: "40px", padding: "8px 12px", background: "rgba(15, 23, 42, 0.9)", border: "1.5px solid rgba(56, 189, 248, 0.5)", borderRadius: "8px", color: "#fff", fontWeight: 800, fontSize: "1rem", boxSizing: "border-box" }}
+                  />
+                </div>
+
+                <div style={{ background: "rgba(2, 6, 23, 0.75)", padding: "14px 16px", borderRadius: "12px", border: "1.5px solid rgba(192, 132, 252, 0.35)", display: "flex", flexDirection: "column", justifyContent: "space-between", minHeight: "94px" }}>
+                  <label style={{ fontSize: "0.72rem", fontWeight: 800, color: "#c084fc", display: "block", letterSpacing: "0.4px", marginBottom: "6px" }}>
+                    UNIVERSITY RATE (GH₵ / STUDENT)
+                  </label>
+                  <input
+                    type="number"
+                    min="1"
+                    max="2000"
+                    value={editableRates.UNIVERSITY}
+                    onChange={(e) => setEditableRates({ ...editableRates, UNIVERSITY: Number(e.target.value) })}
+                    style={{ width: "100%", height: "40px", padding: "8px 12px", background: "rgba(15, 23, 42, 0.9)", border: "1.5px solid rgba(192, 132, 252, 0.5)", borderRadius: "8px", color: "#fff", fontWeight: 800, fontSize: "1rem", boxSizing: "border-box" }}
+                  />
+                </div>
+
+                <div style={{ background: "rgba(2, 6, 23, 0.75)", padding: "14px 16px", borderRadius: "12px", border: "1.5px solid rgba(245, 158, 11, 0.35)", display: "flex", flexDirection: "column", justifyContent: "space-between", minHeight: "94px" }}>
+                  <span style={{ fontSize: "0.72rem", fontWeight: 800, color: "#fbbf24", display: "block", letterSpacing: "0.4px", marginBottom: "6px" }}>
+                    BROADCAST ACTION
+                  </span>
+                  <button
+                    type="submit"
+                    style={{
+                      width: "100%",
+                      height: "40px",
+                      padding: "0 16px",
+                      background: "linear-gradient(135deg, #d97706, #b45309)",
+                      color: "#fff",
+                      border: "none",
+                      borderRadius: "8px",
+                      fontWeight: 800,
+                      fontSize: "0.85rem",
+                      cursor: "pointer",
+                      boxShadow: "0 4px 14px rgba(217, 119, 6, 0.35)",
+                      display: "flex",
+                      alignItems: "center",
+                      justifyContent: "center",
+                      gap: "6px",
+                      boxSizing: "border-box"
+                    }}
+                  >
+                    💾 Save & Broadcast Rates
+                  </button>
+                </div>
+              </form>
             </div>
 
             <div className="onboard-grid">
@@ -5309,6 +5451,114 @@ export default function DeveloperDashboard() {
 
           {activeTab === "telemetry" && (
           <div className="tab-pane-content">
+            {/* QUICK ONBOARDING VERIFICATION & APPROVAL QUEUE (LIVE DATABASE) */}
+            {pendingAppsCount > 0 && (
+              <div style={{
+                background: "linear-gradient(135deg, rgba(30, 41, 59, 0.9) 0%, rgba(15, 23, 42, 0.95) 100%)",
+                border: "2px solid #f59e0b",
+                borderRadius: "14px",
+                padding: "1.2rem 1.4rem",
+                marginBottom: "1.5rem",
+                boxShadow: "0 0 25px rgba(245, 158, 11, 0.25)"
+              }}>
+                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "1rem", flexWrap: "wrap", gap: "10px" }}>
+                  <div style={{ display: "flex", alignItems: "center", gap: "10px" }}>
+                    <span style={{ fontSize: "1.5rem" }}>⚡</span>
+                    <div>
+                      <h4 style={{ margin: 0, color: "#fef08a", fontSize: "1.05rem", fontWeight: 900 }}>
+                        LIVE ONBOARDING QUEUE: {pendingAppsCount} NEW INSTITUTION REGISTRATION{pendingAppsCount > 1 ? "S" : ""} AWAITING APPROVAL
+                      </h4>
+                      <span style={{ fontSize: "0.75rem", color: "#fbbf24" }}>
+                        Review school credentials and click "Approve & Provision Enclave" to grant system access and dispatch confirmation SMS.
+                      </span>
+                    </div>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => { setActiveTab("onboarding"); setOnboardingTabMode("INCOMING"); }}
+                    style={{
+                      background: "linear-gradient(135deg, #f59e0b, #d97706)",
+                      color: "#0f172a",
+                      border: "none",
+                      borderRadius: "8px",
+                      padding: "8px 16px",
+                      fontWeight: 900,
+                      fontSize: "0.8rem",
+                      cursor: "pointer"
+                    }}
+                  >
+                    View All In Onboarding Tab ({pendingAppsCount}) →
+                  </button>
+                </div>
+
+                <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(360px, 1fr))", gap: "12px" }}>
+                  {pendingIncomingList.slice(0, 4).map((app, idx) => (
+                    <div key={idx} style={{
+                      background: "rgba(2, 6, 23, 0.8)",
+                      border: "1px solid rgba(245, 158, 11, 0.4)",
+                      borderLeft: "4px solid #f59e0b",
+                      borderRadius: "10px",
+                      padding: "12px 14px",
+                      display: "flex",
+                      flexDirection: "column",
+                      justifyContent: "space-between",
+                      gap: "8px"
+                    }}>
+                      <div>
+                        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: "8px" }}>
+                          <strong style={{ color: "#f8fafc", fontSize: "0.95rem" }}>{app.institutionName}</strong>
+                          <span style={{ fontSize: "0.68rem", background: "rgba(245, 158, 11, 0.2)", color: "#fde68a", padding: "2px 6px", borderRadius: "4px", fontWeight: 800 }}>
+                            PENDING APPROVAL
+                          </span>
+                        </div>
+                        <div style={{ fontSize: "0.75rem", color: "#94a3b8", marginTop: "4px" }}>
+                          👤 Headmaster: <strong style={{ color: "#cbd5e1" }}>{app.headmasterName}</strong> • 📞 <span style={{ color: "#38bdf8" }}>{app.headmasterPhone}</span>
+                        </div>
+                        <div style={{ fontSize: "0.75rem", color: "#34d399", marginTop: "2px" }}>
+                          💰 Fee: <strong>GHS {app.calculatedFee || app.paymentAmount || "—"}</strong> • Txn: <strong style={{ color: "#fbbf24" }}>{app.momoTxnId || "MOMO-VERIFIED"}</strong>
+                        </div>
+                      </div>
+                      <div style={{ display: "flex", gap: "8px", marginTop: "4px" }}>
+                        <button
+                          type="button"
+                          onClick={() => handleApproveIncomingApplication(app)}
+                          style={{
+                            flex: 1,
+                            background: "linear-gradient(135deg, #10b981, #059669)",
+                            color: "#fff",
+                            border: "none",
+                            borderRadius: "6px",
+                            padding: "7px 10px",
+                            fontWeight: 800,
+                            fontSize: "0.78rem",
+                            cursor: "pointer"
+                          }}
+                        >
+                          ✓ Approve & Provision
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => handleRejectIncomingApplication(app)}
+                          style={{
+                            background: "rgba(239, 68, 68, 0.15)",
+                            border: "1px solid #ef4444",
+                            color: "#fca5a5",
+                            borderRadius: "6px",
+                            padding: "7px 10px",
+                            fontWeight: 700,
+                            fontSize: "0.75rem",
+                            cursor: "pointer"
+                          }}
+                        >
+                          ✕ Reject
+                        </button>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+
             {/* REAL-LIFE PHOTOGRAPHIC MASTER TENANT LOCK CONSOLE */}
             <div className={`real-padlock-master-card ${masterTenantLockStatus === "LOCKED" ? "is-locked" : "is-unlocked"}`}>
               <div
