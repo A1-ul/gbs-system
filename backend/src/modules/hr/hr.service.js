@@ -309,13 +309,14 @@ async function getStaffAssignments(tenantId = 1) {
 async function assignStaffPosition(payload, tenantId = 1) {
   try {
     const { staffId, staffName, staffEmail, positionTitle, schoolTier = 'ALL', department = 'Academics', notes = '' } = payload;
-    if (!staffId || !positionTitle) {
+    const effStaffId = staffId || (staffName ? Date.now() : null);
+    if (!effStaffId || !positionTitle) {
       return failure('staffId and positionTitle are required.');
     }
-    const existingIdx = staffAssignmentsStore.findIndex(a => String(a.staffId) === String(staffId));
+    const existingIdx = staffAssignmentsStore.findIndex(a => String(a.staffId) === String(effStaffId));
     const record = {
-      staffId: parseInt(staffId, 10) || staffId,
-      staffName: staffName || `Staff Member #${staffId}`,
+      staffId: parseInt(effStaffId, 10) || effStaffId,
+      staffName: staffName || `Staff Member #${effStaffId}`,
       staffEmail: staffEmail || '',
       positionTitle,
       schoolTier,

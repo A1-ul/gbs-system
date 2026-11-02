@@ -419,10 +419,12 @@ const pendingStaffRegistrations = new Map();
  * Headmaster registers new staff with SMS OTP sent to staff mobile referencing Headmaster registration phone
  */
 const initiateStaffRegistration = async (data, adminUser, currentTenantId) => {
-  const { firstName, lastName, email, role, phone, department, highestQualification, password } = data;
+  const { email, role, phone, department, highestQualification, password } = data;
+  const firstName = data.firstName || (data.fullName ? String(data.fullName).split(' ')[0] : 'Staff');
+  const lastName = data.lastName || (data.fullName ? String(data.fullName).split(' ').slice(1).join(' ') || 'Member' : 'Member');
 
-  if (!firstName || !lastName || !email || !phone) {
-    throw new AppError('Staff First Name, Last Name, Email, and Mobile Phone Number are required.', 400);
+  if (!email || !phone) {
+    throw new AppError('Staff Email and Mobile Phone Number are required.', 400);
   }
 
   const validRoles = ['TEACHER', 'ACCOUNTANT', 'STAFF', 'ADMIN', 'HR', 'ALUMNI'];
@@ -439,7 +441,7 @@ const initiateStaffRegistration = async (data, adminUser, currentTenantId) => {
     }
   });
 
-  const headmasterPhone = tenant?.institutionRegistrations[0]?.adminPhone || adminUser?.phone || '+1-555-019-8877';
+  const headmasterPhone = tenant?.institutionRegistrations?.[0]?.adminPhone || adminUser?.phone || '+1-555-019-8877';
   const schoolName = tenant?.name || 'GBS International School';
 
   const generatedOtp = String(Math.floor(100000 + Math.random() * 900000));

@@ -1,5 +1,4 @@
-const { PrismaClient } = require('@prisma/client');
-const prisma = new PrismaClient();
+const prisma = require('../../core/database/prisma.client');
 
 class FacilityService {
   async getTickets(tenantId = 1, filters = {}) {

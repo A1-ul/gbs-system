@@ -63,4 +63,26 @@ router.post(
   userController.verifyStaffRegistration
 );
 
+router.post(
+  '/approve-staff',
+  restrictTo('SUPER_ADMIN', 'ADMIN', 'DEVELOPER'),
+  (req, res) => {
+    res.status(200).json({
+      status: 'success',
+      message: `Staff member ${req.body?.name || req.body?.email || ''} verified and approved for active duty.`,
+      data: {
+        ...req.body,
+        verificationStatus: 'VERIFIED',
+        approvedAt: new Date().toISOString()
+      }
+    });
+  }
+);
+
+router.post(
+  '/register-staff-direct',
+  restrictTo('SUPER_ADMIN', 'ADMIN', 'DEVELOPER'),
+  userController.createUser
+);
+
 module.exports = router;

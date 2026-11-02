@@ -1,5 +1,4 @@
-const { PrismaClient } = require('@prisma/client');
-const prisma = new PrismaClient();
+const prisma = require('../../core/database/prisma.client');
 
 class DigitalTwinService {
   async getZones(tenantId = 1) {

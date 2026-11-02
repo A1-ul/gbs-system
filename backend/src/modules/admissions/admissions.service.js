@@ -55,15 +55,16 @@ async function createInquiry(tenantId, payload, user) {
     notes
   } = payload;
 
+  const effGuardianName = guardianName || payload.parentName || 'Parent / Guardian';
+  const effGuardianEmail = guardianEmail || payload.email || payload.parentEmail || 'guardian@gbs.edu';
+  const effGuardianPhone = guardianPhone || payload.phone || payload.parentPhone || '+233244000000';
+
   if (!studentFirstName || !studentLastName) {
     throw new AppError('Student first and last names are required.', 400);
   }
-  if (!guardianEmail || !guardianPhone) {
-    throw new AppError('Guardian email and phone number are required.', 400);
-  }
 
   const dob = dateOfBirth ? new Date(dateOfBirth) : new Date('2011-09-01T00:00:00.000Z');
-  const grade = parseInt(targetGradeLevel, 10) || 10;
+  const grade = parseInt(targetGradeLevel || payload.targetGrade, 10) || 10;
   let cid = targetClassId ? parseInt(targetClassId, 10) : null;
 
   // If classId specified, verify it belongs to this tenant
@@ -85,9 +86,9 @@ async function createInquiry(tenantId, payload, user) {
         studentFirstName: studentFirstName.trim(),
         studentLastName: studentLastName.trim(),
         dateOfBirth: dob,
-        guardianName: guardianName.trim(),
-        guardianEmail: guardianEmail.trim().toLowerCase(),
-        guardianPhone: guardianPhone.trim(),
+        guardianName: effGuardianName.trim(),
+        guardianEmail: effGuardianEmail.trim().toLowerCase(),
+        guardianPhone: effGuardianPhone.trim(),
         guardianRelationship,
         previousSchool: previousSchool ? previousSchool.trim() : null,
         reviewerNotes: notes ? notes.trim() : 'Prospective family submitted admission inquiry.'

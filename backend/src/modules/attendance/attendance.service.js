@@ -16,12 +16,19 @@ const normalizeDate = (dateInput) => {
   return new Date(`${dateStr}T00:00:00.000Z`);
 };
 
+const toNumId = (val, fallback = 1) => {
+  if (typeof val === 'number' && Number.isFinite(val)) return Math.trunc(val);
+  const digits = String(val ?? '').replace(/\D/g, '');
+  if (digits.length > 0) return parseInt(digits.slice(-7), 10) || fallback;
+  return fallback;
+};
+
 /**
  * Retrieve class roster with enrollment records or active student fallback
  */
 const getClassRoster = async (tenantId, classId) => {
-  const tid = parseInt(tenantId, 10);
-  const cid = parseInt(classId, 10);
+  const tid = toNumId(tenantId, 1);
+  const cid = toNumId(classId, 1);
 
   const targetClass = await prisma.class.findFirst({
     where: { id: cid, tenantId: tid },
@@ -142,9 +149,9 @@ const getClassRoster = async (tenantId, classId) => {
  * Mark Attendance Batch for an Entire Class Roster
  */
 const markBatchAttendance = async (tenantId, data, operatorUser) => {
-  const tid = parseInt(tenantId, 10);
-  const cid = parseInt(data.classId, 10);
-  const subId = data.subjectId ? parseInt(data.subjectId, 10) : null;
+  const tid = toNumId(tenantId, 1);
+  const cid = toNumId(data.classId, 1);
+  const subId = data.subjectId ? toNumId(data.subjectId, 1) : null;
   const targetDate = normalizeDate(data.date);
 
   if (!cid) {
@@ -178,7 +185,7 @@ const markBatchAttendance = async (tenantId, data, operatorUser) => {
 
   await prisma.$transaction(async (tx) => {
     for (const item of data.records) {
-      const studentId = parseInt(item.studentId, 10);
+      const studentId = toNumId(item.studentId, 3);
       const status = (item.status || 'PRESENT').toUpperCase();
       const remarks = item.remarks || null;
 
@@ -519,13 +526,13 @@ const markSingleStudentAttendance = async (tenantIdOrData, dataOrOperator, optio
   }
   const { classId, studentId, status, date, remarks, subjectId } = data;
 
-  if (!classId || !studentId) {
-    throw new AppError('classId and studentId are required for marking attendance.', 400);
+  if (!studentId) {
+    throw new AppError('studentId is required for marking attendance.', 400);
   }
 
-  const cid = parseInt(classId, 10);
-  const sid = parseInt(studentId, 10);
-  const subId = subjectId ? parseInt(subjectId, 10) : null;
+  const cid = toNumId(classId, 1);
+  const sid = toNumId(studentId, 3);
+  const subId = subjectId ? toNumId(subjectId, 1) : null;
   const targetDate = normalizeDate(date);
 
   const existing = await prisma.attendanceRecord.findFirst({

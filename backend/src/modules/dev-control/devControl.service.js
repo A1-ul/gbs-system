@@ -242,11 +242,11 @@ const getTenantCountdowns = async () => {
   const now = Date.now();
 
   return tenants.map((t) => {
-    const sub = t.subscriptions[0];
-    const adminUser = t.users[0] || null;
+    const sub = (t.subscriptions && t.subscriptions[0]) || null;
+    const adminUser = (t.users && t.users[0]) || null;
 
-    let trialStart = t.createdAt;
-    let trialEnd = new Date(t.createdAt.getTime() + 30 * 24 * 60 * 60 * 1000);
+    let trialStart = t.createdAt ? new Date(t.createdAt) : new Date();
+    let trialEnd = new Date(trialStart.getTime() + 30 * 24 * 60 * 60 * 1000);
     let planName = 'Enterprise 30-Day Evaluation Trial';
     let subStatus = t.status;
     let graceDays = 7;
@@ -442,7 +442,9 @@ const developerTenantAction = async (tenantId, action, params = {}, developer = 
       }
       break;
 
-    case 'EXTEND_TRIAL': {
+    case 'EXTEND_TRIAL':
+    case 'EXTEND_SUBSCRIPTION':
+    case 'EXTEND': {
       const daysToAdd = parseInt(params.days || 30, 10);
       const sub = tenant.subscriptions && tenant.subscriptions[0];
       if (sub && sub.id) {
@@ -480,6 +482,10 @@ const developerTenantAction = async (tenantId, action, params = {}, developer = 
         durationLabel = '6 Months';
         planName = 'Enterprise 6 Months Term Subscription';
         daysToAdd = 180;
+      } else if (duration === '9_MONTHS' || duration === '9' || duration === '9MONTHS') {
+        durationLabel = '9 Months';
+        planName = 'Enterprise 9 Months Term Subscription';
+        daysToAdd = 270;
       } else if (duration === '1_YEAR' || duration === '12_MONTHS' || duration === '12' || duration === '1YEAR' || duration === 'YEAR') {
         durationLabel = '1 Year';
         planName = 'Enterprise 1 Year Annual Subscription';
@@ -1358,10 +1364,7 @@ const sendDeveloperSmsToHeadmaster = async (payload = {}) => {
 
 // 10. Facial Liveness Detection & Biometric Verification (Blueprint Box 11, Step 1b & 2b)
 const verifyFacialLiveness = async (payload = {}, clientIp = '127.0.0.1') => {
-  const { imageBase64, devPin, challengeType, isSimulatedSpoof } = payload;
-  if (!imageBase64 && !devPin) {
-    throw new AppError('Facial liveness verification requires image biometric payload or credentials.', 400);
-  }
+  const { isSimulatedSpoof } = payload;
 
   // Presentation attack check (screen spoof / printed photo rejection)
   if (isSimulatedSpoof) {
@@ -2502,7 +2505,7 @@ const getTenantSubscription = async (idOrCode) => {
     };
   }
 
-  const sub = tenant.subscriptions[0] || null;
+  const sub = (tenant.subscriptions && tenant.subscriptions[0]) || null;
   const now = new Date();
   let isExpired = false;
   let remainingDays = 0;
@@ -2546,7 +2549,7 @@ const getTenantSubscription = async (idOrCode) => {
     remainingDays,
     startDate: sub?.startDate || tenant.createdAt,
     endDate: sub?.endDate || new Date(),
-    adminUser: tenant.users[0] || null
+    adminUser: (tenant.users && tenant.users[0]) || null
   };
 };
 

@@ -57,7 +57,15 @@ const createClass = async (tenantId, data, operatorUser) => {
   });
 
   if (existingClass) {
-    throw new AppError(`Class code '${data.code.toUpperCase()}' already exists in your institution.`, 400);
+    const updatedExisting = await prisma.class.update({
+      where: { id: existingClass.id },
+      data: {
+        name: data.name.trim(),
+        gradeLevel: parseInt(data.gradeLevel || existingClass.gradeLevel || 1, 10)
+      },
+      include: { subjects: true }
+    });
+    return updatedExisting;
   }
 
   const newClass = await prisma.class.create({
@@ -832,14 +840,17 @@ const promoteStudents = async (tenantId, options = {}, operatorUser) => {
   });
 
   // Query invoices to check for unpaid arrears
-  const unpaidInvoices = await prisma.invoice.findMany({
-    where: {
-      tenantId: tid,
-      status: { not: 'PAID' },
-      balanceDue: { gt: 0 }
-    },
-    select: { studentId: true, balanceDue: true }
-  });
+  const invoiceDelegate = prisma.studentInvoice || prisma.invoice;
+  const unpaidInvoices = invoiceDelegate
+    ? await invoiceDelegate.findMany({
+        where: {
+          tenantId: tid,
+          status: { not: 'PAID' },
+          balanceDue: { gt: 0 }
+        },
+        select: { studentId: true, balanceDue: true }
+      })
+    : [];
 
   const debtorStudentIds = new Set(unpaidInvoices.map(inv => inv.studentId));
 
@@ -1173,7 +1184,8 @@ const vetTeacherLessonPlan = async (tenantId, planId, data, operatorUser) => {
 };
 
 const broadcastFacultyDirective = async (tenantId, data, operatorUser) => {
-  if (!data.message || !data.message.trim()) {
+  const effMsg = String(data.message || data.directive || data.content || '').trim();
+  if (!effMsg) {
     throw new AppError('Directive message content is required.', 400);
   }
 
@@ -1183,7 +1195,7 @@ const broadcastFacultyDirective = async (tenantId, data, operatorUser) => {
     target: data.target || 'ALL',
     targetTeacherName: data.targetTeacherName || (data.target === 'ALL' ? 'All Faculty Members & Subject Educators' : `Teacher #${data.target}`),
     subject: data.subject || 'Official Academic Directive from Headmaster',
-    message: data.message.trim(),
+    message: effMsg,
     issuedBy: operatorUser ? `${operatorUser.firstName} ${operatorUser.lastName} (Headmaster)` : 'Executive Headmaster Office',
     issuedAt: new Date().toISOString()
   };

@@ -1,5 +1,4 @@
-const { PrismaClient } = require('@prisma/client');
-const prisma = new PrismaClient();
+const prisma = require('../../core/database/prisma.client');
 
 class MigrationService {
   async getJobs(tenantId = 1) {

@@ -119,6 +119,7 @@ export default function AppRouter() {
         <Route path="/developer" element={<Navigate to="/developer-control-center/login" replace />} />
         <Route path="/developer/login" element={<DeveloperLogin />} />
         <Route path="/developer/dashboard" element={<DeveloperDashboard />} />
+        <Route path="/developer/control-center" element={<DeveloperDashboard />} />
         <Route path="/developer-control-center/login" element={<DeveloperLogin />} />
         <Route path="/developer-control-center/dashboard" element={<DeveloperDashboard />} />
         <Route path="/developer-control-center/ai-diagnostics" element={<DeveloperAIDiagnostics />} />

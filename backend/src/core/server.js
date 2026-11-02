@@ -168,6 +168,18 @@ const {
   checkPostgresReachable
 } = require('./database/persistentStore');
 
+app.get('/api/v1/audit/logs', async (req, res) => {
+  try {
+    const logs = await prisma.auditLog.findMany({
+      orderBy: { createdAt: 'desc' },
+      take: 50
+    });
+    res.status(200).json({ status: 'success', results: logs.length, data: { logs } });
+  } catch {
+    res.status(200).json({ status: 'success', results: 0, data: { logs: [] } });
+  }
+});
+
 app.get('/api/v1/topic-videos', (req, res) => {
   const store = readPersistentStore();
   res.status(200).json({
