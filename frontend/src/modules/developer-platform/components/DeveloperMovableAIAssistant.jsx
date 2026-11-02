@@ -27,7 +27,7 @@ export default function DeveloperMovableAIAssistant() {
   const [analyzingImage, setAnalyzingImage] = useState(false);
   const [uploadedImagePreview, setUploadedImagePreview] = useState(null);
 
-  // Dragging Handlers
+  // Dragging Handlers (Mouse & Touch)
   const handleMouseDown = (e) => {
     // Only drag from header handle or minimized badge
     if (e.target.closest("button") || e.target.closest("input") || e.target.closest("label")) return;
@@ -40,11 +40,26 @@ export default function DeveloperMovableAIAssistant() {
     };
   };
 
+  const handleTouchStart = (e) => {
+    if (e.target.closest("button") || e.target.closest("input") || e.target.closest("label")) return;
+    const touch = e.touches[0];
+    if (!touch) return;
+    setIsDragging(true);
+    dragRef.current = {
+      startX: touch.clientX,
+      startY: touch.clientY,
+      origX: position.x,
+      origY: position.y
+    };
+  };
+
   useEffect(() => {
-    const handleMouseMove = (e) => {
+    const handleMove = (e) => {
       if (!isDragging) return;
-      const deltaX = e.clientX - dragRef.current.startX;
-      const deltaY = e.clientY - dragRef.current.startY;
+      const clientX = e.touches ? e.touches[0].clientX : e.clientX;
+      const clientY = e.touches ? e.touches[0].clientY : e.clientY;
+      const deltaX = clientX - dragRef.current.startX;
+      const deltaY = clientY - dragRef.current.startY;
 
       const newX = Math.max(10, Math.min(window.innerWidth - 60, dragRef.current.origX + deltaX));
       const newY = Math.max(10, Math.min(window.innerHeight - 60, dragRef.current.origY + deltaY));
@@ -52,7 +67,7 @@ export default function DeveloperMovableAIAssistant() {
       setPosition({ x: newX, y: newY });
     };
 
-    const handleMouseUp = () => {
+    const handleEnd = () => {
       if (isDragging) {
         setIsDragging(false);
         try {
@@ -62,12 +77,16 @@ export default function DeveloperMovableAIAssistant() {
     };
 
     if (isDragging) {
-      window.addEventListener("mousemove", handleMouseMove);
-      window.addEventListener("mouseup", handleMouseUp);
+      window.addEventListener("mousemove", handleMove);
+      window.addEventListener("mouseup", handleEnd);
+      window.addEventListener("touchmove", handleMove, { passive: false });
+      window.addEventListener("touchend", handleEnd);
     }
     return () => {
-      window.removeEventListener("mousemove", handleMouseMove);
-      window.removeEventListener("mouseup", handleMouseUp);
+      window.removeEventListener("mousemove", handleMove);
+      window.removeEventListener("mouseup", handleEnd);
+      window.removeEventListener("touchmove", handleMove);
+      window.removeEventListener("touchend", handleEnd);
     };
   }, [isDragging, position]);
 
@@ -189,6 +208,7 @@ export default function DeveloperMovableAIAssistant() {
         <div
           className="gbs-ai-minimized-badge"
           onMouseDown={handleMouseDown}
+          onTouchStart={handleTouchStart}
           onClick={() => setMinimized(false)}
           title="Drag to move. Click to open GBS AI Assistant."
         >
@@ -203,7 +223,7 @@ export default function DeveloperMovableAIAssistant() {
       ) : (
         <div className="gbs-ai-window-card">
           {/* Draggable Header */}
-          <div className="gbs-ai-header-drag-handle" onMouseDown={handleMouseDown}>
+          <div className="gbs-ai-header-drag-handle" onMouseDown={handleMouseDown} onTouchStart={handleTouchStart}>
             <div className="gbs-ai-header-title">
               <span>⠿</span>
               <span>GBS AI Assistant (Image Service)</span>

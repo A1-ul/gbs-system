@@ -25,15 +25,17 @@ jobs:
 
       - name: Install Backend Dependencies
         working-directory: backend
-        run: npm ci
+        run: npm ci || npm install
         env:
           DATABASE_URL: "postgresql://postgres:postgres@localhost:5432/gbs_dev?schema=public"
+          PRISMA_CLI_QUERY_ENGINE_TYPE: "binary"
 
       - name: Generate Prisma Client
         working-directory: backend
         run: npx prisma generate
         env:
           DATABASE_URL: "postgresql://postgres:postgres@localhost:5432/gbs_dev?schema=public"
+          PRISMA_CLI_QUERY_ENGINE_TYPE: "binary"
 
   frontend-validation:
     name: Frontend CI (Vite & React)

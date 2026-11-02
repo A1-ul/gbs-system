@@ -233,9 +233,10 @@ const login = async ({ email, username, identifier, password, portalRole }) => {
   }
 
   let isPasswordValid = false;
-  if (user.password) {
+  const hashToCompare = user.password || user.passwordHash || user.adminPasswordHash;
+  if (hashToCompare) {
     try {
-      isPasswordValid = await bcrypt.compare(password, user.password);
+      isPasswordValid = await bcrypt.compare(password, hashToCompare);
     } catch {}
   }
 
@@ -285,18 +286,30 @@ const login = async ({ email, username, identifier, password, portalRole }) => {
   // Developer verification and approval enforcement:
   // No headmaster or institution user can access the system without developer approving
   if (user.role === 'ADMIN' && user.email !== 'admin@gbs.com') {
-    try {
-      const pendingReg = await prisma.institutionRegistration.findFirst({
-        where: {
-          adminEmail: user.email.toLowerCase().trim(),
-          status: { in: ['PENDING', 'PENDING_DEVELOPER_APPROVAL'] }
-        }
-      });
-      if (pendingReg && !pendingReg.isApproved) {
+    // Check in-memory dynamic registry first for instant approval status
+    const dynMatch = DYNAMIC_INSTITUTIONS.find(
+      (d) => (d.adminEmail && d.adminEmail.toLowerCase() === user.email.toLowerCase().trim()) ||
+             (d.officialEmail && d.officialEmail.toLowerCase() === user.email.toLowerCase().trim())
+    );
+
+    if (dynMatch) {
+      if (!dynMatch.isApproved && dynMatch.status !== 'APPROVED') {
         throw new AppError('ACCESS DENIED: Your institution registration is pending Developer verification and approval. The lead system developer must review your application and approve your institution before any portal access is granted.', 403);
       }
-    } catch (e) {
-      if (e.statusCode === 403) throw e;
+    } else {
+      try {
+        const pendingReg = await prisma.institutionRegistration.findFirst({
+          where: {
+            adminEmail: user.email.toLowerCase().trim(),
+            status: { in: ['PENDING', 'PENDING_DEVELOPER_APPROVAL'] }
+          }
+        });
+        if (pendingReg && !pendingReg.isApproved) {
+          throw new AppError('ACCESS DENIED: Your institution registration is pending Developer verification and approval. The lead system developer must review your application and approve your institution before any portal access is granted.', 403);
+        }
+      } catch (e) {
+        if (e.statusCode === 403) throw e;
+      }
     }
   }
 
@@ -932,5 +945,6 @@ module.exports = {
   seedDefaultAdmin,
   getDynamicInstitutions: () => [...DYNAMIC_INSTITUTIONS],
   addDynamicInstitution: (item) => DYNAMIC_INSTITUTIONS.unshift(item),
-  getDynamicUsers: () => [...DYNAMIC_REGISTERED_USERS]
+  getDynamicUsers: () => [...DYNAMIC_REGISTERED_USERS],
+  addDynamicUser: (u) => DYNAMIC_REGISTERED_USERS.unshift(u)
 };
