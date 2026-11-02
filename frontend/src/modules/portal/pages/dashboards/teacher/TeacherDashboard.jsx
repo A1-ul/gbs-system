@@ -2653,12 +2653,34 @@ export default function TeacherDashboard() {
             </div>
 
             <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(180px, 1fr))", gap: "12px", marginTop: "10px" }}>
-              <div style={{ background: "rgba(2, 6, 23, 0.6)", padding: "10px 14px", borderRadius: "10px", border: "1px solid rgba(255, 255, 255, 0.08)" }}>
-                <span style={{ fontSize: "0.7rem", color: "#94a3b8", display: "block" }}>ACADEMIC YEAR</span>
+              <div 
+                onClick={() => setShowWeeklyActivitiesModal(true)}
+                title="Click to view Academic Year schedule and weekly activities"
+                style={{ 
+                  background: "rgba(2, 6, 23, 0.6)", 
+                  padding: "10px 14px", 
+                  borderRadius: "10px", 
+                  border: "1px solid rgba(255, 255, 255, 0.08)",
+                  cursor: "pointer",
+                  transition: "all 0.2s ease"
+                }}
+              >
+                <span style={{ fontSize: "0.7rem", color: "#94a3b8", display: "block" }}>ACADEMIC YEAR 📅</span>
                 <strong style={{ color: "#f8fafc", fontSize: "0.95rem" }}>{publishedSchedule.academicYear || "2026/2027"}</strong>
               </div>
-              <div style={{ background: "rgba(2, 6, 23, 0.6)", padding: "10px 14px", borderRadius: "10px", border: "1px solid rgba(255, 255, 255, 0.08)" }}>
-                <span style={{ fontSize: "0.7rem", color: "#94a3b8", display: "block" }}>ACTIVE TERM / SEMESTER</span>
+              <div 
+                onClick={() => setShowWeeklyActivitiesModal(true)}
+                title="Click to inspect Active Term curriculum timeline"
+                style={{ 
+                  background: "rgba(2, 6, 23, 0.6)", 
+                  padding: "10px 14px", 
+                  borderRadius: "10px", 
+                  border: "1px solid rgba(56, 189, 248, 0.3)",
+                  cursor: "pointer",
+                  transition: "all 0.2s ease"
+                }}
+              >
+                <span style={{ fontSize: "0.7rem", color: "#94a3b8", display: "block" }}>ACTIVE TERM / SEMESTER 🔍</span>
                 <strong style={{ color: "#38bdf8", fontSize: "0.95rem" }}>{publishedSchedule.activeTerm || "TERM_1"}</strong>
               </div>
               <div 
@@ -2689,8 +2711,22 @@ export default function TeacherDashboard() {
                   🔍 Tap to view complete week-by-week curriculum activities
                 </span>
               </div>
-              <div style={{ background: "rgba(2, 6, 23, 0.6)", padding: "12px 16px", borderRadius: "12px", border: "1.5px solid #fbbf24" }}>
-                <span style={{ fontSize: "0.7rem", color: "#fde68a", display: "block", fontWeight: 700 }}>OFFICIAL VACATION DATE</span>
+              <div 
+                onClick={() => {
+                  setShowWeeklyActivitiesModal(true);
+                  setWeeklyActivitiesFilter("WEEKS_8_14");
+                }}
+                title="Click to view Revision, Examination and Vacation dates"
+                style={{ 
+                  background: "rgba(2, 6, 23, 0.6)", 
+                  padding: "12px 16px", 
+                  borderRadius: "12px", 
+                  border: "1.5px solid #fbbf24",
+                  cursor: "pointer",
+                  transition: "all 0.2s ease"
+                }}
+              >
+                <span style={{ fontSize: "0.7rem", color: "#fde68a", display: "block", fontWeight: 700 }}>OFFICIAL VACATION DATE 🏖️</span>
                 <strong style={{ color: "#fbbf24", fontSize: "1.05rem" }}>
                   {publishedSchedule.vacationDate ? new Date(publishedSchedule.vacationDate).toLocaleDateString("en-US", { weekday: 'short', year: 'numeric', month: 'short', day: 'numeric' }) : "December 18, 2026"}
                 </strong>

@@ -200,8 +200,21 @@ const server = app.listen(PORT, HOST, async () => {
     if (process.env.DATABASE_URL) {
       try {
         console.log('🔄 [DATABASE] Ensuring PostgreSQL schema tables exist...');
+        const prismaClient = require('./database/prisma.client');
+        await prismaClient.$executeRawUnsafe(`
+          DO $$
+          BEGIN
+            IF EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name = 'cctv_streams' AND column_name = 'rtsp_endpoint') THEN
+              UPDATE cctv_streams SET rtsp_endpoint = COALESCE(stream_url, 'rtsp://stream.gbs-system.edu/live/cam_default') WHERE rtsp_endpoint IS NULL;
+            END IF;
+            IF EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name = 'security_gate_events' AND column_name = 'gate_name') THEN
+              UPDATE security_gate_events SET gate_name = COALESCE(gate_location, 'Main Campus Gate') WHERE gate_name IS NULL;
+            END IF;
+          END $$;
+        `).catch(() => {});
+
         const { execSync } = require('child_process');
-        execSync('npx prisma db push --skip-generate --accept-data-loss', { stdio: 'inherit' });
+        execSync('npx prisma db push --skip-generate --accept-data-loss', { stdio: ['ignore', 'inherit', 'inherit'] });
         console.log('✅ [DATABASE] PostgreSQL schema tables verified.');
       } catch (dbSyncErr) {
         console.warn('⚠️ [DATABASE] Schema sync note:', dbSyncErr.message);

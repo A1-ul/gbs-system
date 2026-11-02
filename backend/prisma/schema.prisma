@@ -1568,36 +1568,47 @@ model CampusTelemetryLog {
 // ==================================================
 
 model CctvStream {
-  id            Int       @id @default(autoincrement())
-  tenant_id     Int       @default(1)
-  camera_code   String    @unique @db.VarChar(50)
-  camera_name   String    @db.VarChar(150)
-  location      String    @db.VarChar(150)
-  rtsp_endpoint String    @db.VarChar(255)
-  resolution    String?   @default("1080p FHD") @db.VarChar(50)
-  fps           Int       @default(30)
-  status        String?   @default("ONLINE") @db.VarChar(30)
-  ai_enabled    Boolean   @default(true)
-  storage_days  Int       @default(30)
-  created_at    DateTime  @default(now())
-  updated_at    DateTime  @default(now()) @updatedAt
+  id                   Int       @id @default(autoincrement())
+  tenant_id            Int       @default(1)
+  camera_code          String    @unique @db.VarChar(50)
+  camera_name          String    @db.VarChar(150)
+  location             String    @db.VarChar(150)
+  stream_url           String?   @db.VarChar(255)
+  rtsp_endpoint        String?   @default("rtsp://stream.gbs-system.edu/live/cam_default") @db.VarChar(255)
+  resolution           String?   @default("1080p 60FPS") @db.VarChar(50)
+  fps                  Int       @default(30)
+  status               String?   @default("ONLINE") @db.VarChar(30)
+  ip_address           String?   @db.VarChar(50)
+  ai_enabled           Boolean   @default(true)
+  ai_detection_enabled Boolean?  @default(true)
+  storage_days         Int       @default(30)
+  created_at           DateTime  @default(now())
+  updated_at           DateTime  @default(now()) @updatedAt
 
   @@index([tenant_id])
   @@map("cctv_streams")
 }
 
 model SecurityGateEvent {
-  id             Int       @id @default(autoincrement())
-  tenant_id      Int       @default(1)
-  gate_name      String    @db.VarChar(100)
-  event_type     String    @db.VarChar(50)
-  person_name    String    @db.VarChar(150)
-  person_role    String    @db.VarChar(50)
-  badge_id       String?   @db.VarChar(50)
-  facial_match   Boolean   @default(true)
-  confidence_pct Decimal   @default(99.4) @db.Decimal(5, 2)
-  status         String?   @default("GRANTED") @db.VarChar(30)
-  event_time     DateTime  @default(now())
+  id               Int       @id @default(autoincrement())
+  tenant_id        Int       @default(1)
+  event_id         String?   @unique @db.VarChar(50)
+  camera_id        Int?
+  gate_name        String?   @default("Main Campus Gate") @db.VarChar(100)
+  gate_location    String?   @db.VarChar(150)
+  event_type       String    @db.VarChar(50)
+  person_name      String    @db.VarChar(150)
+  person_role      String    @db.VarChar(50)
+  badge_id         String?   @db.VarChar(50)
+  facial_match     Boolean   @default(true)
+  confidence_pct   Decimal?  @default(99.4) @db.Decimal(5, 2)
+  match_confidence Decimal?  @default(99.4) @db.Decimal(5, 2)
+  liveness_score   Decimal?  @default(99.0) @db.Decimal(5, 2)
+  snapshot_url     String?   @db.VarChar(255)
+  is_flagged       Boolean?  @default(false)
+  status           String?   @default("GRANTED") @db.VarChar(30)
+  timestamp        DateTime? @default(now())
+  event_time       DateTime? @default(now())
 
   @@index([tenant_id])
   @@map("security_gate_events")
@@ -1764,4 +1775,108 @@ model AttendanceArchive {
   @@index([tenant_id])
   @@index([teacher_id])
   @@map("attendance_archives")
+}
+
+// ==================================================
+// LIBRARY MANAGEMENT
+// ==================================================
+
+model LibraryBook {
+  id               Int            @id @default(autoincrement())
+  tenant_id        Int
+  isbn             String         @db.VarChar(50)
+  title            String         @db.VarChar(255)
+  author           String         @db.VarChar(255)
+  category         String         @default("GENERAL") @db.VarChar(100)
+  shelf_location   String?        @default("Section A-1") @db.VarChar(100)
+  total_copies     Int            @default(1)
+  available_copies Int            @default(1)
+  created_at       DateTime       @default(now())
+  updated_at       DateTime       @default(now()) @updatedAt
+  loans            LibraryLoan[]
+
+  @@unique([tenant_id, isbn], map: "uq_library_books_tenant_isbn")
+  @@index([tenant_id])
+  @@map("library_books")
+}
+
+model LibraryLoan {
+  id            Int         @id @default(autoincrement())
+  tenant_id     Int
+  book_id       Int
+  book          LibraryBook @relation(fields: [book_id], references: [id], onDelete: Cascade)
+  borrower_id   Int
+  borrower_name String      @db.VarChar(255)
+  borrower_role String      @default("STUDENT") @db.VarChar(50)
+  borrowed_at   DateTime    @default(now())
+  due_date      DateTime
+  returned_at   DateTime?
+  status        String      @default("BORROWED") @db.VarChar(50)
+  fine_amount   Decimal?    @default(0.00) @db.Decimal(10, 2)
+  fine_paid     Boolean?    @default(false)
+  created_at    DateTime    @default(now())
+
+  @@index([tenant_id])
+  @@index([book_id])
+  @@map("library_loans")
+}
+
+// ==================================================
+// TRANSPORT & FLEET MANAGEMENT
+// ==================================================
+
+model TransportRoute {
+  id             Int                    @id @default(autoincrement())
+  tenant_id      Int
+  route_code     String                 @db.VarChar(50)
+  name           String                 @db.VarChar(255)
+  start_location String                 @db.VarChar(255)
+  end_location   String                 @db.VarChar(255)
+  stops          String                 @db.Text
+  monthly_fare   Decimal                @default(150.00) @db.Decimal(10, 2)
+  status         String?                @default("ACTIVE") @db.VarChar(50)
+  created_at     DateTime               @default(now())
+  updated_at     DateTime               @default(now()) @updatedAt
+  vehicles       TransportVehicle[]
+  assignments    TransportAssignment[]
+
+  @@unique([tenant_id, route_code], map: "uq_transport_routes_tenant_code")
+  @@index([tenant_id])
+  @@map("transport_routes")
+}
+
+model TransportVehicle {
+  id                  Int             @id @default(autoincrement())
+  tenant_id           Int
+  registration_number String          @db.VarChar(50)
+  model               String          @db.VarChar(100)
+  capacity            Int             @default(32)
+  driver_name         String          @db.VarChar(255)
+  driver_phone        String          @db.VarChar(50)
+  assigned_route_id   Int?
+  route               TransportRoute? @relation(fields: [assigned_route_id], references: [id], onDelete: SetNull)
+  status              String?         @default("OPERATIONAL") @db.VarChar(50)
+  created_at          DateTime        @default(now())
+  updated_at          DateTime        @default(now()) @updatedAt
+
+  @@unique([tenant_id, registration_number], map: "uq_transport_vehicles_tenant_reg")
+  @@index([tenant_id])
+  @@map("transport_vehicles")
+}
+
+model TransportAssignment {
+  id           Int            @id @default(autoincrement())
+  tenant_id    Int
+  student_id   Int
+  student_name String         @db.VarChar(255)
+  route_id     Int
+  route        TransportRoute @relation(fields: [route_id], references: [id], onDelete: Cascade)
+  pickup_stop  String         @db.VarChar(255)
+  dropoff_stop String         @db.VarChar(255)
+  status       String?        @default("ACTIVE") @db.VarChar(50)
+  created_at   DateTime       @default(now())
+
+  @@index([tenant_id])
+  @@index([route_id])
+  @@map("transport_assignments")
 }

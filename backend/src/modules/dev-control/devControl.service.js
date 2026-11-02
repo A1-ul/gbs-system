@@ -746,7 +746,9 @@ const verifyAndApproveInstitution = async (idOrTenantUid, developerNotes = 'Appr
         OR: [
           { tenantUid: String(idOrTenantUid) },
           { tenantCode: String(idOrTenantUid) },
-          { officialEmail: String(idOrTenantUid).toLowerCase() }
+          { officialEmail: String(idOrTenantUid).toLowerCase() },
+          { adminEmail: String(idOrTenantUid).toLowerCase() },
+          { institutionName: String(idOrTenantUid) }
         ]
       }
     });
@@ -881,7 +883,7 @@ const verifyAndApproveInstitution = async (idOrTenantUid, developerNotes = 'Appr
         recipientName: reg.adminName,
         sender: 'DEVELOPER_ROOT',
         senderPhone: '+233 54 329 4615',
-        content: `🎉 Congratulations! Lead Developer Gabriel Kubi Osei-Appiah has verified and APPROVED your institution '${reg.institutionName}'. Your Headmaster portal is now ACTIVE on GBS School Management System. Log in at http://localhost:3000/login/admin using ${reg.adminEmail}.`,
+        content: `🎉 Congratulations ${reg.institutionName}! Your onboarding application is approved, you can continue to enjoy your platforms. Your assigned Tenant Code is ${reg.tenantCode}. You can now sign in at http://localhost:3000/login/admin using ${reg.adminEmail}.`,
         type: 'ONBOARDING_APPROVED',
         tenantId: tenant.id
       });
@@ -931,7 +933,10 @@ const rejectInstitutionRegistration = async (idOrTenantUid, reason = 'Applicatio
       where: {
         OR: [
           { tenantUid: String(idOrTenantUid) },
-          { tenantCode: String(idOrTenantUid) }
+          { tenantCode: String(idOrTenantUid) },
+          { officialEmail: String(idOrTenantUid).toLowerCase() },
+          { adminEmail: String(idOrTenantUid).toLowerCase() },
+          { institutionName: String(idOrTenantUid) }
         ]
       }
     });

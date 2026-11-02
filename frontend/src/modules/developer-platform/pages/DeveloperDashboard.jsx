@@ -290,6 +290,7 @@ export default function DeveloperDashboard() {
     } catch {}
     return [];
   });
+  const [securityIntrusionFilter, setSecurityIntrusionFilter] = useState("ALL"); // "ALL" | "IMPLICATED" | "TRANSMITTED"
 
   useEffect(() => {
     const syncViolations = () => {
@@ -478,14 +479,14 @@ export default function DeveloperDashboard() {
   const handleApproveIncomingApplication = async (app) => {
     try {
       const updated = incomingApplications.map((a) =>
-        (a.tenantUid === app.tenantUid || a.institutionName === app.institutionName)
+        (a.tenantUid === app.tenantUid || a.institutionName === app.institutionName || a.id === app.id)
           ? { ...a, status: "APPROVED", approvedAt: new Date().toISOString() }
           : a
       );
       setIncomingApplications(updated);
       localStorage.setItem("gbs_incoming_onboarding_applications", JSON.stringify(updated));
 
-      const newTenantId = Date.now().toString().slice(-4);
+      const newTenantId = app.id ? String(app.id) : Date.now().toString().slice(-4);
       const assignedTenantCode = app.tenantCode || `GBS-${app.institutionName.replace(/[^A-Za-z0-9]/g, "").slice(0, 6).toUpperCase()}-${newTenantId}`;
       const newCountdown = {
         tenantId: parseInt(newTenantId, 10),
@@ -500,22 +501,24 @@ export default function DeveloperDashboard() {
         warningLevel: "OPERATIONAL_STABLE",
         isExpired: false,
         headmaster: {
-          name: app.headmasterName,
-          email: app.headmasterEmail,
-          phone: app.headmasterPhone,
+          name: app.headmasterName || app.adminName,
+          email: app.headmasterEmail || app.adminEmail,
+          phone: app.headmasterPhone || app.adminPhone || app.officialPhone,
           photo: app.facePhoto
         }
       };
       setCountdowns((prev) => [newCountdown, ...prev]);
       localStorage.setItem("gbs_institution_type", app.institutionType || "NURSERY_TO_JHS");
 
-      // 1. DISPATCH ACCEPTANCE SMS TO REGISTERED MOBILE NUMBER
-      const acceptanceSmsContent = `GBS REGISTRATION ACCEPTANCE: Congratulations ${app.institutionName}! Your application to join the GBS Management System has been verified & approved. Your assigned Tenant Code is ${assignedTenantCode}. You can now sign in at http://localhost:3000/login using ${app.headmasterEmail}. Welcome aboard!`;
+      // 1. DISPATCH ACCEPTANCE SMS TO REGISTERED MOBILE NUMBER WITH EXACT REQUIRED WORDING
+      const targetPhone = app.headmasterPhone || app.adminPhone || app.officialPhone || "+233-24-555-0199";
+      const targetEmail = app.headmasterEmail || app.adminEmail || "admin@school.edu";
+      const acceptanceSmsContent = `🎉 Congratulations ${app.institutionName}! Your onboarding application is approved, you can continue to enjoy your platforms. Your assigned Tenant Code is ${assignedTenantCode}. You can now sign in at http://localhost:3000/login/admin using ${targetEmail}.`;
 
       const newSmsEntry = {
         id: `SMS-${Date.now()}`,
-        recipientPhone: app.headmasterPhone,
-        headmasterName: app.headmasterName,
+        recipientPhone: targetPhone,
+        headmasterName: app.headmasterName || app.adminName,
         tenantName: app.institutionName,
         message: acceptanceSmsContent,
         type: "REGISTRATION_ACCEPTANCE",
@@ -529,7 +532,43 @@ export default function DeveloperDashboard() {
         setSmsLogs((prev) => [newSmsEntry, ...(Array.isArray(prev) ? prev : [])]);
       } catch (smsErr) {}
 
-      // 2. PERMANENTLY ARCHIVE APPROVED ONBOARDING REGISTRATION FOR REFERENCE
+      // 2. DISPATCH TO BACKEND DATABASE APPROVAL ENDPOINT
+      const targetId = app.id || app.tenantUid || app.tenantCode || app.institutionName;
+      try {
+        const token = localStorage.getItem("gbs_dev_token") || localStorage.getItem("gbs_token");
+        await fetch(`${BASE_URL}/onboarding/${encodeURIComponent(targetId)}/approve`, {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            ...(token ? { Authorization: `Bearer ${token}` } : {})
+          },
+          body: JSON.stringify({ developerNotes: "Approved by Developer Gabriel Kubi Osei-Appiah" })
+        });
+      } catch (apiErr) {
+        console.warn("Backend approval API dispatch notice:", apiErr);
+      }
+
+      // 3. DISPATCH DIRECT SMS GATEWAY DISPATCH
+      try {
+        const token = localStorage.getItem("gbs_dev_token") || localStorage.getItem("gbs_token");
+        await fetch(`${BASE_URL}/sms/send-headmaster`, {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            ...(token ? { Authorization: `Bearer ${token}` } : {})
+          },
+          body: JSON.stringify({
+            recipientPhone: targetPhone,
+            headmasterName: app.headmasterName || app.adminName,
+            institutionName: app.institutionName,
+            smsMessage: acceptanceSmsContent
+          })
+        });
+      } catch (smsSendErr) {
+        console.warn("Direct SMS dispatch notice:", smsSendErr);
+      }
+
+      // 4. PERMANENTLY ARCHIVE APPROVED ONBOARDING REGISTRATION FOR REFERENCE
       const archiveRecord = {
         ...app,
         status: "APPROVED_AND_ARCHIVED",
@@ -538,7 +577,7 @@ export default function DeveloperDashboard() {
         assignedTenantCode,
         assignedTenantId: newCountdown.tenantId,
         dispatchedSms: acceptanceSmsContent,
-        dispatchedPhone: app.headmasterPhone,
+        dispatchedPhone: targetPhone,
         archiveRef: `ARC-${Date.now().toString(36).toUpperCase()}`
       };
 
@@ -550,22 +589,40 @@ export default function DeveloperDashboard() {
       } catch (arcErr) {}
 
       triggerPadlockFeedback(false, app.institutionName, "ONBOARDING_APPROVED_PROVISIONED");
-      showNotification(`✓ Acceptance SMS dispatched to ${app.headmasterPhone}! Institution '${app.institutionName}' approved and permanently archived for reference.`);
+      showNotification(`✓ Acceptance SMS dispatched to ${targetPhone}! Institution '${app.institutionName}' approved and full system access granted.`);
+      fetchData();
     } catch (err) {
       showNotification("⚠ Error approving institution onboarding.");
     }
   };
 
-  const handleRejectIncomingApplication = (app) => {
+  const handleRejectIncomingApplication = async (app) => {
     try {
       const updated = incomingApplications.map((a) =>
-        (a.tenantUid === app.tenantUid || a.institutionName === app.institutionName)
+        (a.tenantUid === app.tenantUid || a.institutionName === app.institutionName || a.id === app.id)
           ? { ...a, status: "REJECTED", rejectedAt: new Date().toISOString() }
           : a
       );
       setIncomingApplications(updated);
       localStorage.setItem("gbs_incoming_onboarding_applications", JSON.stringify(updated));
+
+      const targetId = app.id || app.tenantUid || app.tenantCode || app.institutionName;
+      try {
+        const token = localStorage.getItem("gbs_dev_token") || localStorage.getItem("gbs_token");
+        await fetch(`${BASE_URL}/onboarding/${encodeURIComponent(targetId)}/reject`, {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            ...(token ? { Authorization: `Bearer ${token}` } : {})
+          },
+          body: JSON.stringify({ reason: "Developer Rejected Application" })
+        });
+      } catch (apiErr) {
+        console.warn("Backend reject API dispatch notice:", apiErr);
+      }
+
       showNotification(`Application for '${app.institutionName}' marked as REJECTED.`);
+      fetchData();
     } catch (err) {
       showNotification("⚠ Error rejecting application.");
     }
@@ -1154,6 +1211,41 @@ export default function DeveloperDashboard() {
       if (sRes.ok) {
         const sData = await sRes.json();
         if (sData.data?.logs) setSmsLogs(sData.data.logs);
+      }
+
+      // 11. Fetch Live Database Institutional Onboarding Applications
+      try {
+        const onbRes = await fetch(`${BASE_URL}/onboarding/pending`, { headers: authHeaders });
+        if (onbRes.ok) {
+          const onbData = await onbRes.json();
+          const dbApps = (onbData.data?.applications || []).map((a) => ({
+            ...a,
+            id: a.id,
+            appRef: a.tenantUid || `APP-${a.id}`,
+            institutionName: a.institutionName,
+            tenantCode: a.tenantCode,
+            institutionType: a.institutionType || "NURSERY_TO_JHS",
+            headmasterName: a.headmasterName || a.adminName || "Executive Headmaster",
+            headmasterPhone: a.headmasterPhone || a.adminPhone || a.officialPhone || "—",
+            headmasterEmail: a.headmasterEmail || a.adminEmail || a.officialEmail || "admin@school.edu",
+            totalStudentsEnrolled: a.totalStudentsEnrolled || a.maxStudents || 500,
+            calculatedFee: a.calculatedFee || a.paymentAmount || 500,
+            paymentAmount: a.paymentAmount || "500",
+            momoTxnId: a.momoTxnId || a.momoRef || a.momoTransactionId || "MOMO-VERIFIED",
+            status: a.isApproved ? "APPROVED" : (a.status || "PENDING_DEVELOPER_APPROVAL"),
+            createdAt: a.createdAt,
+            source: "DATABASE"
+          }));
+
+          setIncomingApplications((prev) => {
+            const localOnly = (Array.isArray(prev) ? prev : []).filter(
+              (p) => !dbApps.some((d) => d.id === p.id || (d.tenantCode && d.tenantCode === p.tenantCode) || (d.institutionName && d.institutionName?.toLowerCase() === p.institutionName?.toLowerCase()))
+            );
+            return [...dbApps, ...localOnly];
+          });
+        }
+      } catch (onbErr) {
+        console.warn("Could not fetch database onboarding applications:", onbErr);
       }
     } catch (err) {
       console.error("Developer dashboard telemetry error:", err);
@@ -4364,6 +4456,26 @@ export default function DeveloperDashboard() {
                         </td>
                         <td>
                           <div style={{ display: "flex", flexDirection: "column", gap: "6px" }}>
+                            <div style={{ display: "flex", gap: "6px" }}>
+                              <button
+                                type="button"
+                                className="action-btn-sm lock"
+                                style={{ flex: 1, padding: "6px 8px", fontSize: "0.78rem", background: "#dc2626", color: "#fff", border: "1px solid #ef4444", fontWeight: 700 }}
+                                onClick={() => handleTenantAction(t.id, "LOCK", { reason: "Developer Manual Lock" })}
+                                title="Lock this specific tenant"
+                              >
+                                🔒 Lock
+                              </button>
+                              <button
+                                type="button"
+                                className="action-btn-sm unlock"
+                                style={{ flex: 1, padding: "6px 8px", fontSize: "0.78rem", background: "#16a34a", color: "#fff", border: "1px solid #22c55e", fontWeight: 700 }}
+                                onClick={() => handleTenantAction(t.id, "UNLOCK")}
+                                title="Unlock this selected tenant directly"
+                              >
+                                🔓 Unlock
+                              </button>
+                            </div>
                             <button
                               type="button"
                               className="action-btn-sm renew"
@@ -4742,7 +4854,7 @@ export default function DeveloperDashboard() {
                   </div>
                 </div>
 
-                {/* KPI Metrics Grid: Strictly Equal In Size */}
+                {/* KPI Metrics Grid: Strictly Equal In Size & Fully Interactive */}
                 <div className="dev-equal-inscription-grid" style={{
                   display: "grid",
                   gridTemplateColumns: "repeat(4, 1fr)",
@@ -4750,26 +4862,112 @@ export default function DeveloperDashboard() {
                   marginTop: "1.25rem",
                   alignItems: "stretch"
                 }}>
-                  <div className="dev-inscription-box" style={{ background: "rgba(2, 6, 23, 0.75)", padding: "16px 18px", borderRadius: "12px", border: "1.5px solid rgba(239, 68, 68, 0.3)", display: "flex", flexDirection: "column", justifyContent: "space-between", minHeight: "96px" }}>
-                    <span style={{ fontSize: "0.74rem", color: "#94a3b8", textTransform: "uppercase", fontWeight: 800, letterSpacing: "0.5px" }}>Total Intrusion Attempts</span>
+                  <div
+                    className="dev-inscription-box"
+                    onClick={() => {
+                      setSecurityIntrusionFilter("ALL");
+                      showNotification(`🔍 Showing all ${securityViolations.length} detected security intrusions.`);
+                    }}
+                    style={{
+                      background: "rgba(2, 6, 23, 0.75)",
+                      padding: "16px 18px",
+                      borderRadius: "12px",
+                      border: securityIntrusionFilter === "ALL" ? "2px solid #ef4444" : "1.5px solid rgba(239, 68, 68, 0.35)",
+                      boxShadow: securityIntrusionFilter === "ALL" ? "0 0 16px rgba(239, 68, 68, 0.45)" : undefined,
+                      display: "flex",
+                      flexDirection: "column",
+                      justifyContent: "space-between",
+                      minHeight: "96px",
+                      cursor: "pointer",
+                      transition: "all 0.2s ease"
+                    }}
+                    title="Click to view all detected intrusion attempts"
+                  >
+                    <span style={{ fontSize: "0.74rem", color: "#94a3b8", textTransform: "uppercase", fontWeight: 800, letterSpacing: "0.5px" }}>
+                      TOTAL INTRUSION ATTEMPTS {securityIntrusionFilter === "ALL" ? "✓" : "🔍"}
+                    </span>
                     <div style={{ fontSize: "1.55rem", fontWeight: "900", color: "#f87171", marginTop: "4px" }}>
                       {securityViolations.length} Detected
                     </div>
                   </div>
-                  <div className="dev-inscription-box" style={{ background: "rgba(2, 6, 23, 0.75)", padding: "16px 18px", borderRadius: "12px", border: "1.5px solid rgba(251, 191, 36, 0.3)", display: "flex", flexDirection: "column", justifyContent: "space-between", minHeight: "96px" }}>
-                    <span style={{ fontSize: "0.74rem", color: "#94a3b8", textTransform: "uppercase", fontWeight: 800, letterSpacing: "0.5px" }}>Institutions Implicated</span>
+                  <div
+                    className="dev-inscription-box"
+                    onClick={() => {
+                      setSecurityIntrusionFilter("IMPLICATED");
+                      showNotification(`🏛️ Filtering by ${new Set(securityViolations.map((v) => v.tenantCode)).size} registered institutions implicated.`);
+                    }}
+                    style={{
+                      background: "rgba(2, 6, 23, 0.75)",
+                      padding: "16px 18px",
+                      borderRadius: "12px",
+                      border: securityIntrusionFilter === "IMPLICATED" ? "2px solid #fbbf24" : "1.5px solid rgba(251, 191, 36, 0.35)",
+                      boxShadow: securityIntrusionFilter === "IMPLICATED" ? "0 0 16px rgba(251, 191, 36, 0.45)" : undefined,
+                      display: "flex",
+                      flexDirection: "column",
+                      justifyContent: "space-between",
+                      minHeight: "96px",
+                      cursor: "pointer",
+                      transition: "all 0.2s ease"
+                    }}
+                    title="Click to filter intrusions by implicated institutions"
+                  >
+                    <span style={{ fontSize: "0.74rem", color: "#94a3b8", textTransform: "uppercase", fontWeight: 800, letterSpacing: "0.5px" }}>
+                      INSTITUTIONS IMPLICATED {securityIntrusionFilter === "IMPLICATED" ? "✓" : "🏛️"}
+                    </span>
                     <div style={{ fontSize: "1.55rem", fontWeight: "900", color: "#fbbf24", marginTop: "4px" }}>
                       {new Set(securityViolations.map((v) => v.tenantCode)).size} Registered
                     </div>
                   </div>
-                  <div className="dev-inscription-box" style={{ background: "rgba(2, 6, 23, 0.75)", padding: "16px 18px", borderRadius: "12px", border: "1.5px solid rgba(52, 211, 153, 0.3)", display: "flex", flexDirection: "column", justifyContent: "space-between", minHeight: "96px" }}>
-                    <span style={{ fontSize: "0.74rem", color: "#94a3b8", textTransform: "uppercase", fontWeight: 800, letterSpacing: "0.5px" }}>Headmaster Transmittals</span>
+                  <div
+                    className="dev-inscription-box"
+                    onClick={() => {
+                      setSecurityIntrusionFilter("TRANSMITTED");
+                      showNotification(`📨 Filtering by ${securityViolations.filter((v) => v.reportedToHeadmaster).length} dispatched Headmaster transmittals.`);
+                    }}
+                    style={{
+                      background: "rgba(2, 6, 23, 0.75)",
+                      padding: "16px 18px",
+                      borderRadius: "12px",
+                      border: securityIntrusionFilter === "TRANSMITTED" ? "2px solid #34d399" : "1.5px solid rgba(52, 211, 153, 0.35)",
+                      boxShadow: securityIntrusionFilter === "TRANSMITTED" ? "0 0 16px rgba(52, 211, 153, 0.45)" : undefined,
+                      display: "flex",
+                      flexDirection: "column",
+                      justifyContent: "space-between",
+                      minHeight: "96px",
+                      cursor: "pointer",
+                      transition: "all 0.2s ease"
+                    }}
+                    title="Click to filter by dispatched Headmaster transmittals"
+                  >
+                    <span style={{ fontSize: "0.74rem", color: "#94a3b8", textTransform: "uppercase", fontWeight: 800, letterSpacing: "0.5px" }}>
+                      HEADMASTER TRANSMITTALS {securityIntrusionFilter === "TRANSMITTED" ? "✓" : "📨"}
+                    </span>
                     <div style={{ fontSize: "1.55rem", fontWeight: "900", color: "#34d399", marginTop: "4px" }}>
                       {securityViolations.filter((v) => v.reportedToHeadmaster).length} Dispatched
                     </div>
                   </div>
-                  <div className="dev-inscription-box" style={{ background: "rgba(2, 6, 23, 0.75)", padding: "16px 18px", borderRadius: "12px", border: "1.5px solid rgba(56, 189, 248, 0.3)", display: "flex", flexDirection: "column", justifyContent: "space-between", minHeight: "96px" }}>
-                    <span style={{ fontSize: "0.74rem", color: "#94a3b8", textTransform: "uppercase", fontWeight: 800, letterSpacing: "0.5px" }}>Sentinel Perimeter Status</span>
+                  <div
+                    className="dev-inscription-box"
+                    onClick={() => {
+                      showNotification("🛡️ Sentinel Perimeter Status: STRICT LOCKOUT active. All unauthorized root attempts are intercepted and sessions revoked immediately.");
+                    }}
+                    style={{
+                      background: "rgba(2, 6, 23, 0.75)",
+                      padding: "16px 18px",
+                      borderRadius: "12px",
+                      border: "1.5px solid rgba(56, 189, 248, 0.35)",
+                      display: "flex",
+                      flexDirection: "column",
+                      justifyContent: "space-between",
+                      minHeight: "96px",
+                      cursor: "pointer",
+                      transition: "all 0.2s ease"
+                    }}
+                    title="Click to inspect Sentinel Perimeter security level"
+                  >
+                    <span style={{ fontSize: "0.74rem", color: "#94a3b8", textTransform: "uppercase", fontWeight: 800, letterSpacing: "0.5px" }}>
+                      SENTINEL PERIMETER STATUS 🛡️
+                    </span>
                     <div style={{ fontSize: "1.25rem", fontWeight: "900", color: "#38bdf8", marginTop: "6px" }}>
                       🛡️ STRICT LOCKOUT
                     </div>
@@ -4784,9 +4982,29 @@ export default function DeveloperDashboard() {
                 borderRadius: "14px",
                 padding: "1.5rem"
               }}>
-                <h3 style={{ margin: "0 0 1rem", color: "#f8fafc", fontSize: "1.1rem", display: "flex", alignItems: "center", gap: "8px" }}>
-                  <span>📋</span> Detailed Tenant Intrusion Log & Disciplinary Action Trail ({securityViolations.length})
-                </h3>
+                <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: "1rem", flexWrap: "wrap", gap: "10px" }}>
+                  <h3 style={{ margin: 0, color: "#f8fafc", fontSize: "1.1rem", display: "flex", alignItems: "center", gap: "8px" }}>
+                    <span>📋</span> Detailed Tenant Intrusion Log & Disciplinary Action Trail ({securityViolations.length})
+                  </h3>
+                  {securityIntrusionFilter !== "ALL" && (
+                    <button
+                      type="button"
+                      onClick={() => setSecurityIntrusionFilter("ALL")}
+                      style={{
+                        background: "rgba(56, 189, 248, 0.2)",
+                        border: "1px solid #38bdf8",
+                        color: "#38bdf8",
+                        borderRadius: "6px",
+                        padding: "4px 10px",
+                        fontSize: "0.75rem",
+                        fontWeight: 700,
+                        cursor: "pointer"
+                      }}
+                    >
+                      Clear Filter (Show All)
+                    </button>
+                  )}
+                </div>
 
                 {securityViolations.length === 0 ? (
                   <div style={{ textAlign: "center", padding: "2.5rem 1rem", color: "#94a3b8" }}>
@@ -4809,7 +5027,13 @@ export default function DeveloperDashboard() {
                         </tr>
                       </thead>
                       <tbody>
-                        {securityViolations.map((vio) => (
+                        {securityViolations
+                          .filter((vio) => {
+                            if (securityIntrusionFilter === "TRANSMITTED") return vio.reportedToHeadmaster;
+                            if (securityIntrusionFilter === "IMPLICATED") return !!vio.tenantCode;
+                            return true;
+                          })
+                          .map((vio) => (
                           <tr key={vio.id} style={{ borderBottom: "1px solid rgba(255,255,255,0.06)", background: "rgba(15, 23, 42, 0.4)" }}>
                             <td style={{ padding: "12px", fontSize: "0.8rem", color: "#cbd5e1", whiteSpace: "nowrap" }}>
                               <div>{new Date(vio.timestamp).toLocaleDateString()}</div>
@@ -5501,23 +5725,42 @@ export default function DeveloperDashboard() {
                                 </button>
                               </div>
 
-                              {c.subscriptionStatus === "LOCKED" ? (
-                                <button
-                                  className="action-btn-sm unlock"
-                                  disabled={actionLoadingMap[c.tenantId]}
-                                  onClick={() => handleTenantAction(c.tenantId, "UNLOCK")}
-                                >
-                                  {actionLoadingMap[`${c.tenantId}-UNLOCK`] ? "⏳..." : "Unlock"}
-                                </button>
-                              ) : (
-                                <button
-                                  className="action-btn-sm lock"
-                                  disabled={actionLoadingMap[c.tenantId]}
-                                  onClick={() => handleTenantAction(c.tenantId, "LOCK", { reason: "Developer Manual Lock" })}
-                                >
-                                  {actionLoadingMap[`${c.tenantId}-LOCK`] ? "⏳..." : "Lock"}
-                                </button>
-                              )}
+                              {/* DEDICATED LOCK BUTTON */}
+                              <button
+                                type="button"
+                                className="action-btn-sm lock"
+                                style={{
+                                  background: c.subscriptionStatus === "LOCKED" ? "rgba(220, 38, 38, 0.4)" : "#dc2626",
+                                  border: "1px solid #ef4444",
+                                  color: "#fff",
+                                  fontWeight: 700,
+                                  cursor: "pointer"
+                                }}
+                                disabled={actionLoadingMap[c.tenantId] || actionLoadingMap[`${c.tenantId}-LOCK`]}
+                                onClick={() => handleTenantAction(c.tenantId, "LOCK", { reason: "Developer Manual Lock" })}
+                                title="Lock this specific tenant"
+                              >
+                                {actionLoadingMap[`${c.tenantId}-LOCK`] ? "⏳..." : "🔒 Lock"}
+                              </button>
+
+                              {/* DEDICATED UNLOCK BUTTON */}
+                              <button
+                                type="button"
+                                className="action-btn-sm unlock"
+                                style={{
+                                  background: c.subscriptionStatus === "ACTIVE" ? "#16a34a" : "#15803d",
+                                  border: "1px solid #22c55e",
+                                  color: "#fff",
+                                  fontWeight: 700,
+                                  cursor: "pointer",
+                                  boxShadow: c.subscriptionStatus === "LOCKED" ? "0 0 10px rgba(34, 197, 94, 0.5)" : undefined
+                                }}
+                                disabled={actionLoadingMap[c.tenantId] || actionLoadingMap[`${c.tenantId}-UNLOCK`]}
+                                onClick={() => handleTenantAction(c.tenantId, "UNLOCK")}
+                                title="Unlock this selected tenant directly (does not require lifting master lock on entire system)"
+                              >
+                                {actionLoadingMap[`${c.tenantId}-UNLOCK`] ? "⏳..." : "🔓 Unlock"}
+                              </button>
                               <button
                                 className="action-btn-sm"
                                 style={{ background: "linear-gradient(135deg, #6366f1, #4f46e5)", color: "#fff", display: "inline-flex", alignItems: "center", gap: "4px", fontWeight: 700 }}

@@ -131,13 +131,13 @@ async function setupProcedure3Tables() {
   const camCount = await client.query('SELECT COUNT(*) FROM cctv_streams');
   if (parseInt(camCount.rows[0].count) === 0) {
     await client.query(`
-      INSERT INTO cctv_streams (tenant_id, camera_code, camera_name, location, stream_url, resolution, status, ip_address)
+      INSERT INTO cctv_streams (tenant_id, camera_code, camera_name, location, stream_url, rtsp_endpoint, resolution, status, ip_address)
       VALUES
-      (1, 'CAM-GATE-01', 'North Gate High-Speed ANPR & Facial Scanner', 'North Main Gatehouse', 'rtsp://stream.gbs-system.edu/live/cam_gate_01', '4K UltraHD 60FPS', 'RECORDING', '192.168.10.101'),
-      (1, 'CAM-STEM-02', 'STEM Robotics Arena Overhead Feed', 'Edison Hall Room 204', 'rtsp://stream.gbs-system.edu/live/cam_stem_02', '1080p 60FPS', 'ONLINE', '192.168.10.102'),
-      (1, 'CAM-LIB-01', 'Library Central Reading Room Panoramic', 'Sir Isaac Newton Library', 'rtsp://stream.gbs-system.edu/live/cam_lib_01', '1080p 30FPS', 'RECORDING', '192.168.10.103'),
-      (1, 'CAM-QUAD-01', 'Academic Quadrangle Main Promenade', 'Central Campus Park', 'rtsp://stream.gbs-system.edu/live/cam_quad_01', '4K UltraHD 60FPS', 'ONLINE', '192.168.10.104'),
-      (1, 'CAM-BURSAR-01', 'Bursar & Finance Vault Access Camera', 'Admin Hall Suite 108', 'rtsp://stream.gbs-system.edu/live/cam_bursar_01', '1080p 60FPS', 'RECORDING', '192.168.10.105');
+      (1, 'CAM-GATE-01', 'North Gate High-Speed ANPR & Facial Scanner', 'North Main Gatehouse', 'rtsp://stream.gbs-system.edu/live/cam_gate_01', 'rtsp://stream.gbs-system.edu/live/cam_gate_01', '4K UltraHD 60FPS', 'RECORDING', '192.168.10.101'),
+      (1, 'CAM-STEM-02', 'STEM Robotics Arena Overhead Feed', 'Edison Hall Room 204', 'rtsp://stream.gbs-system.edu/live/cam_stem_02', 'rtsp://stream.gbs-system.edu/live/cam_stem_02', '1080p 60FPS', 'ONLINE', '192.168.10.102'),
+      (1, 'CAM-LIB-01', 'Library Central Reading Room Panoramic', 'Sir Isaac Newton Library', 'rtsp://stream.gbs-system.edu/live/cam_lib_01', 'rtsp://stream.gbs-system.edu/live/cam_lib_01', '1080p 30FPS', 'RECORDING', '192.168.10.103'),
+      (1, 'CAM-QUAD-01', 'Academic Quadrangle Main Promenade', 'Central Campus Park', 'rtsp://stream.gbs-system.edu/live/cam_quad_01', 'rtsp://stream.gbs-system.edu/live/cam_quad_01', '4K UltraHD 60FPS', 'ONLINE', '192.168.10.104'),
+      (1, 'CAM-BURSAR-01', 'Bursar & Finance Vault Access Camera', 'Admin Hall Suite 108', 'rtsp://stream.gbs-system.edu/live/cam_bursar_01', 'rtsp://stream.gbs-system.edu/live/cam_bursar_01', '1080p 60FPS', 'RECORDING', '192.168.10.105');
     `);
     console.log('Seeded initial CCTV cameras');
   }
@@ -145,12 +145,12 @@ async function setupProcedure3Tables() {
   const eventCount = await client.query('SELECT COUNT(*) FROM security_gate_events');
   if (parseInt(eventCount.rows[0].count) === 0) {
     await client.query(`
-      INSERT INTO security_gate_events (tenant_id, event_id, camera_id, person_name, person_role, event_type, gate_location, match_confidence, liveness_score, is_flagged)
+      INSERT INTO security_gate_events (tenant_id, event_id, camera_id, person_name, person_role, event_type, gate_location, gate_name, match_confidence, liveness_score, is_flagged)
       VALUES
-      (1, 'SGE-2026-901', 1, 'Julian Vance', 'STUDENT', 'ACCESS_GRANTED', 'North Turnstile #1', 99.4, 99.8, false),
-      (1, 'SGE-2026-902', 1, 'Dr. Alan Walker', 'TEACHER', 'ACCESS_GRANTED', 'Faculty Express Lane', 98.9, 99.5, false),
-      (1, 'SGE-2026-903', 1, 'Unrecognized Visitor', 'UNKNOWN', 'ACCESS_DENIED', 'Visitor Gate B', 42.1, 88.0, true),
-      (1, 'SGE-2026-904', 1, 'Marcus Vance', 'STAFF', 'ACCESS_GRANTED', 'Service Entry Gate', 99.1, 99.2, false);
+      (1, 'SGE-2026-901', 1, 'Julian Vance', 'STUDENT', 'ACCESS_GRANTED', 'North Turnstile #1', 'North Turnstile #1', 99.4, 99.8, false),
+      (1, 'SGE-2026-902', 1, 'Dr. Alan Walker', 'TEACHER', 'ACCESS_GRANTED', 'Faculty Express Lane', 'Faculty Express Lane', 98.9, 99.5, false),
+      (1, 'SGE-2026-903', 1, 'Unrecognized Visitor', 'UNKNOWN', 'ACCESS_DENIED', 'Visitor Gate B', 'Visitor Gate B', 42.1, 88.0, true),
+      (1, 'SGE-2026-904', 1, 'Marcus Vance', 'STAFF', 'ACCESS_GRANTED', 'Service Entry Gate', 'Service Entry Gate', 99.1, 99.2, false);
     `);
     console.log('Seeded initial security gate events');
   }

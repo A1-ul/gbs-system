@@ -33,9 +33,9 @@ class CCTVService {
 
     const result = await prisma.$queryRawUnsafe(`
       INSERT INTO cctv_streams (
-        tenant_id, camera_code, camera_name, location, stream_url,
+        tenant_id, camera_code, camera_name, location, stream_url, rtsp_endpoint,
         resolution, status, ip_address, ai_detection_enabled, created_at
-      ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, true, NOW())
+      ) VALUES ($1, $2, $3, $4, $5, $5, $6, $7, $8, true, NOW())
       RETURNING *
     `, tenantId, cameraCode, cameraName, location, streamUrl, resolution, status, ipAddress);
 
@@ -102,9 +102,9 @@ class CCTVService {
     const result = await prisma.$queryRawUnsafe(`
       INSERT INTO security_gate_events (
         tenant_id, event_id, camera_id, person_name, person_role,
-        event_type, gate_location, match_confidence, liveness_score,
+        event_type, gate_location, gate_name, match_confidence, liveness_score,
         snapshot_url, is_flagged, timestamp
-      ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, NOW())
+      ) VALUES ($1, $2, $3, $4, $5, $6, $7, $7, $8, $9, $10, $11, NOW())
       RETURNING *
     `, tenantId, eventId, cameraId, personName, personRole, eventType, gateLocation, matchConfidence, livenessScore, data.snapshotUrl || null, isFlagged);
 
