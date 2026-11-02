@@ -3,7 +3,7 @@ import { getApiBaseUrl } from "./apiConfig";
 
 const axiosInstance = axios.create({
   baseURL: getApiBaseUrl(),
-  timeout: 30000,
+  timeout: 60000,
   headers: {
     "Content-Type": "application/json",
   },
@@ -28,12 +28,20 @@ axiosInstance.interceptors.request.use(
   (error) => Promise.reject(error)
 );
 
-// Response Interceptor: Global Error Handling
+// Response Interceptor: Global Error Handling & Timeout Resilience
 axiosInstance.interceptors.response.use(
   (response) => response,
-  (error) => {
+  async (error) => {
+    const config = error.config;
+    // Cold start / timeout retry once for critical auth endpoints
+    if (error.code === 'ECONNABORTED' && !config._retry && config.url && (config.url.includes('/auth/') || config.url.includes('/login'))) {
+      config._retry = true;
+      console.warn("Connection delay encountered, retrying auth request...");
+      return axiosInstance(config);
+    }
+
     if (error.response && error.response.status === 401) {
-      console.warn("Unauthorized access - redirecting to login");
+      console.warn("Unauthorized access - session expired or invalid credentials");
     }
     return Promise.reject(error);
   }

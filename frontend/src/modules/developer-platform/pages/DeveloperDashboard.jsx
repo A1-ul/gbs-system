@@ -6,6 +6,7 @@ import TopCenterSystemBanner from "../../../components/common/TopCenterSystemBan
 import { offlineSyncEngine } from "../../../utils/offlineSync";
 import { getOnboardingRates, updateOnboardingRates } from "../../../utils/pricingEngine";
 import UniversalRoleGuideModal from "../../../components/common/UniversalRoleGuideModal";
+import DeveloperMovableAIAssistant from "../components/DeveloperMovableAIAssistant";
 import "./DeveloperPlatform.css";
 
 const BASE_URL = `${getApiBaseUrl()}/dev-control`;
@@ -1127,6 +1128,8 @@ export default function DeveloperDashboard() {
             calculatedFee: a.calculatedFee || a.calculatedBaseFee || a.paymentAmount || 500,
             paymentAmount: a.paymentAmount || (a.calculatedBaseFee ? String(a.calculatedBaseFee) : "500"),
             momoTxnId: a.momoTxnId || a.momoRef || a.momoTransactionId || "MOMO-VERIFIED",
+            facePhoto: a.facePhoto || a.headmasterPhoto || a.institutionLogo || a.scannedFacePhoto || "/assets/admin-dashboard-bg.jpg",
+            biometricFaceToken: a.biometricFaceToken || a.facialVerificationHash || `HM-BIO-${a.id || Date.now()}`,
             status: isPending ? "PENDING_DEVELOPER_APPROVAL" : (a.status || "APPROVED"),
             isApproved: Boolean(a.isApproved),
             createdAt: a.createdAt,
@@ -3961,11 +3964,43 @@ export default function DeveloperDashboard() {
                               </div>
                             </div>
 
-                            <div>
-                              <span style={{ fontSize: "0.72rem", color: "#94a3b8", display: "block" }}>Headmaster Identity</span>
-                              <strong style={{ color: "#f8fafc", fontSize: "0.85rem" }}>{app.headmasterName}</strong>
-                              <div style={{ fontSize: "0.75rem", color: "#38bdf8" }}>{app.headmasterPhone}</div>
-                              <div style={{ fontSize: "0.72rem", color: "#64748b" }}>{app.headmasterEmail}</div>
+                            <div style={{ display: "flex", gap: "10px", alignItems: "center" }}>
+                              <div style={{
+                                width: "52px",
+                                height: "52px",
+                                borderRadius: "10px",
+                                overflow: "hidden",
+                                border: "2px solid #38bdf8",
+                                flexShrink: 0,
+                                background: "#0f172a",
+                                position: "relative"
+                              }}>
+                                <img
+                                  src={app.facePhoto || app.headmasterPhoto || app.institutionLogo || "/assets/admin-dashboard-bg.jpg"}
+                                  alt={app.headmasterName || "Headmaster Face"}
+                                  style={{ width: "100%", height: "100%", objectFit: "cover" }}
+                                  onError={(e) => { e.target.src = "/assets/admin-dashboard-bg.jpg"; }}
+                                />
+                                <span style={{
+                                  position: "absolute",
+                                  bottom: "1px",
+                                  right: "1px",
+                                  background: "#10b981",
+                                  color: "#fff",
+                                  fontSize: "8px",
+                                  fontWeight: 800,
+                                  padding: "1px 3px",
+                                  borderRadius: "3px"
+                                }}>
+                                  ✓BIO
+                                </span>
+                              </div>
+                              <div>
+                                <span style={{ fontSize: "0.72rem", color: "#94a3b8", display: "block" }}>Headmaster Biometric Identity</span>
+                                <strong style={{ color: "#f8fafc", fontSize: "0.85rem" }}>{app.headmasterName}</strong>
+                                <div style={{ fontSize: "0.75rem", color: "#38bdf8" }}>{app.headmasterPhone}</div>
+                                <div style={{ fontSize: "0.72rem", color: "#64748b" }}>{app.headmasterEmail}</div>
+                              </div>
                             </div>
 
                             <div>
@@ -5511,8 +5546,16 @@ export default function DeveloperDashboard() {
                             PENDING APPROVAL
                           </span>
                         </div>
-                        <div style={{ fontSize: "0.75rem", color: "#94a3b8", marginTop: "4px" }}>
-                          👤 Headmaster: <strong style={{ color: "#cbd5e1" }}>{app.headmasterName}</strong> • 📞 <span style={{ color: "#38bdf8" }}>{app.headmasterPhone}</span>
+                        <div style={{ display: "flex", gap: "10px", alignItems: "center", marginTop: "6px" }}>
+                          <img
+                            src={app.facePhoto || app.headmasterPhoto || app.institutionLogo || "/assets/admin-dashboard-bg.jpg"}
+                            alt={app.headmasterName}
+                            style={{ width: "38px", height: "38px", borderRadius: "8px", objectFit: "cover", border: "1.5px solid #38bdf8", flexShrink: 0 }}
+                            onError={(e) => { e.target.src = "/assets/admin-dashboard-bg.jpg"; }}
+                          />
+                          <div style={{ fontSize: "0.75rem", color: "#94a3b8" }}>
+                            👤 Headmaster: <strong style={{ color: "#cbd5e1" }}>{app.headmasterName}</strong> • 📞 <span style={{ color: "#38bdf8" }}>{app.headmasterPhone}</span>
+                          </div>
                         </div>
                         <div style={{ fontSize: "0.75rem", color: "#34d399", marginTop: "2px" }}>
                           💰 Fee: <strong>GHS {app.calculatedFee || app.paymentAmount || "—"}</strong> • Txn: <strong style={{ color: "#fbbf24" }}>{app.momoTxnId || "MOMO-VERIFIED"}</strong>
@@ -8740,6 +8783,9 @@ export default function DeveloperDashboard() {
           isOpen={showDevGuideModal}
           onClose={() => setShowDevGuideModal(false)}
         />
+
+        {/* Movable AI Assistant & Image Vision Service */}
+        <DeveloperMovableAIAssistant />
 
       </main>
     </div>

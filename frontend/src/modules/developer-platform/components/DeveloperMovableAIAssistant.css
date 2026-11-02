@@ -1,0 +1,302 @@
+/* ==========================================================================
+   DEVELOPER DASHBOARD - MOVABLE AI ASSISTANT IMAGE SERVICE
+   ========================================================================== */
+
+.gbs-movable-ai-container {
+  position: fixed;
+  z-index: 9999;
+  user-select: none;
+}
+
+/* Floating Circular Badge when Minimized */
+.gbs-ai-minimized-badge {
+  width: 58px;
+  height: 58px;
+  border-radius: 50%;
+  background: linear-gradient(135deg, #4a151b 0%, #1e293b 50%, #0284c7 100%);
+  border: 2px solid #d4af37;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.6), 0 0 16px rgba(56, 189, 248, 0.4);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: grab;
+  position: relative;
+  transition: transform 0.2s ease;
+}
+
+.gbs-ai-minimized-badge:hover {
+  transform: scale(1.08);
+  box-shadow: 0 10px 28px rgba(0, 0, 0, 0.8), 0 0 22px rgba(212, 175, 55, 0.6);
+}
+
+.gbs-ai-avatar-thumb {
+  width: 48px;
+  height: 48px;
+  border-radius: 50%;
+  object-fit: cover;
+}
+
+.gbs-ai-badge-pulse {
+  position: absolute;
+  top: 0;
+  right: 0;
+  width: 14px;
+  height: 14px;
+  border-radius: 50%;
+  background: #10b981;
+  border: 2px solid #0f172a;
+}
+
+/* Expanded Card */
+.gbs-ai-window-card {
+  width: 380px;
+  max-width: 95vw;
+  background: rgba(15, 23, 42, 0.96);
+  border: 1px solid rgba(212, 175, 55, 0.5);
+  border-radius: 18px;
+  box-shadow: 0 20px 50px rgba(0, 0, 0, 0.8), 0 0 25px rgba(56, 189, 248, 0.25);
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+}
+
+/* Drag Handle Header */
+.gbs-ai-header-drag-handle {
+  background: linear-gradient(135deg, rgba(74, 21, 27, 0.9), rgba(30, 41, 59, 0.95));
+  padding: 10px 14px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  cursor: grab;
+  border-bottom: 1px solid rgba(212, 175, 55, 0.3);
+}
+
+.gbs-ai-header-drag-handle:active {
+  cursor: grabbing;
+}
+
+.gbs-ai-header-title {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 0.82rem;
+  font-weight: 800;
+  color: #fbbf24;
+  letter-spacing: 0.03em;
+}
+
+.gbs-ai-header-controls {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.gbs-ai-ctrl-btn {
+  background: rgba(255, 255, 255, 0.08);
+  border: none;
+  color: #cbd5e1;
+  width: 24px;
+  height: 24px;
+  border-radius: 6px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 0.75rem;
+  transition: all 0.15s ease;
+}
+
+.gbs-ai-ctrl-btn:hover {
+  background: rgba(255, 255, 255, 0.2);
+  color: #ffffff;
+}
+
+/* Image Service Hero Banner */
+.gbs-ai-image-banner {
+  position: relative;
+  height: 90px;
+  overflow: hidden;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.gbs-ai-image-banner img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  filter: brightness(0.7);
+}
+
+.gbs-ai-image-banner-overlay {
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(180deg, transparent 0%, rgba(15, 23, 42, 0.95) 100%);
+  display: flex;
+  align-items: flex-end;
+  padding: 10px 14px;
+  gap: 10px;
+}
+
+.gbs-ai-service-badge {
+  font-size: 0.65rem;
+  font-weight: 800;
+  background: rgba(56, 189, 248, 0.25);
+  border: 1px solid #38bdf8;
+  color: #e0f2fe;
+  padding: 2px 8px;
+  border-radius: 999px;
+  text-transform: uppercase;
+}
+
+/* Image Upload & Vision Analyzer */
+.gbs-ai-vision-box {
+  padding: 10px 14px;
+  background: rgba(30, 41, 59, 0.5);
+  border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+.gbs-ai-vision-upload-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.gbs-ai-vision-label {
+  font-size: 0.75rem;
+  color: #94a3b8;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.gbs-ai-upload-btn {
+  background: linear-gradient(135deg, #0284c7, #0369a1);
+  color: #ffffff;
+  border: none;
+  border-radius: 6px;
+  padding: 4px 10px;
+  font-size: 0.72rem;
+  font-weight: 700;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.gbs-ai-preview-strip {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-top: 8px;
+  padding: 6px 10px;
+  background: rgba(15, 23, 42, 0.7);
+  border-radius: 8px;
+  border: 1px solid rgba(56, 189, 248, 0.3);
+}
+
+.gbs-ai-preview-thumb {
+  width: 36px;
+  height: 36px;
+  border-radius: 6px;
+  object-fit: cover;
+  border: 1px solid #38bdf8;
+}
+
+/* Chat & Messages Area */
+.gbs-ai-chat-body {
+  height: 220px;
+  overflow-y: auto;
+  padding: 12px 14px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.gbs-ai-msg {
+  padding: 8px 12px;
+  border-radius: 12px;
+  font-size: 0.78rem;
+  line-height: 1.4;
+  max-width: 90%;
+  word-break: break-word;
+}
+
+.gbs-ai-msg-bot {
+  background: rgba(30, 41, 59, 0.9);
+  border: 1px solid rgba(212, 175, 55, 0.25);
+  color: #f1f5f9;
+  align-self: flex-start;
+}
+
+.gbs-ai-msg-user {
+  background: linear-gradient(135deg, #0369a1, #0284c7);
+  color: #ffffff;
+  align-self: flex-end;
+}
+
+/* Quick Diagnostic Pills */
+.gbs-ai-quick-actions {
+  display: flex;
+  gap: 6px;
+  overflow-x: auto;
+  padding: 6px 14px;
+  background: rgba(15, 23, 42, 0.8);
+  border-top: 1px solid rgba(255, 255, 255, 0.05);
+}
+
+.gbs-ai-action-chip {
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px solid rgba(212, 175, 55, 0.25);
+  color: #cbd5e1;
+  padding: 4px 8px;
+  border-radius: 6px;
+  font-size: 0.68rem;
+  font-weight: 600;
+  cursor: pointer;
+  white-space: nowrap;
+  transition: all 0.15s ease;
+}
+
+.gbs-ai-action-chip:hover {
+  background: rgba(212, 175, 55, 0.2);
+  border-color: #fbbf24;
+  color: #ffffff;
+}
+
+/* Footer Input */
+.gbs-ai-input-row {
+  display: flex;
+  align-items: center;
+  padding: 8px 12px;
+  background: rgba(15, 23, 42, 0.98);
+  border-top: 1px solid rgba(255, 255, 255, 0.1);
+  gap: 8px;
+}
+
+.gbs-ai-text-input {
+  flex: 1;
+  background: rgba(30, 41, 59, 0.8);
+  border: 1px solid rgba(212, 175, 55, 0.25);
+  border-radius: 8px;
+  padding: 8px 10px;
+  color: #ffffff;
+  font-size: 0.8rem;
+  outline: none;
+}
+
+.gbs-ai-text-input:focus {
+  border-color: #38bdf8;
+}
+
+.gbs-ai-send-btn {
+  background: linear-gradient(135deg, #d4af37, #b45309);
+  color: #ffffff;
+  border: none;
+  border-radius: 8px;
+  padding: 8px 12px;
+  font-size: 0.78rem;
+  font-weight: 800;
+  cursor: pointer;
+}

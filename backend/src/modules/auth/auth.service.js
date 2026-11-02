@@ -499,12 +499,49 @@ const registerInstitution = async (data) => {
       throw new AppError('An institution registration with this official email, admin email, or registration number already exists.', 400);
     }
 
-    const { id: _ignoreId, name: _ignoreName, code: _ignoreCode, isActive: _ignoreActive, createdAt: _ignoreCreated, ...prismaRegData } = regData;
+    const prismaData = {
+      tenantUid,
+      tenantCode,
+      institutionId,
+      subscriptionId,
+      institutionName: regData.institutionName,
+      institutionType: regData.institutionType,
+      country: regData.country || 'Ghana',
+      region: regData.region || '',
+      city: regData.city || '',
+      physicalAddress: regData.physicalAddress || '',
+      gpsLocation: regData.gpsLocation || null,
+      officialEmail: regData.officialEmail,
+      officialPhone: regData.officialPhone || '',
+      website: regData.website || null,
+      registrationNumber: regData.registrationNumber,
+      businessLicenseNumber: regData.businessLicenseNumber,
+      taxIdentificationNumber: regData.taxIdentificationNumber,
+      institutionLogo: data.facePhoto || data.scannedFacePhoto || data.headmasterPhoto || regData.institutionLogo || null,
+      repFullName: regData.repFullName,
+      repPosition: regData.repPosition,
+      repEmail: regData.repEmail,
+      repPhone: String(regData.repPhone || officialPhone || adminPhone || '+233000000000'),
+      adminName: regData.adminName,
+      adminEmail: regData.adminEmail,
+      adminPhone: regData.adminPhone || '',
+      adminPasswordHash: regData.adminPasswordHash,
+      termsAccepted: Boolean(regData.termsAccepted),
+      privacyAccepted: Boolean(regData.privacyAccepted),
+      dataProcessingConsent: Boolean(regData.dataProcessingConsent),
+      totalStudentsEnrolled: regData.totalStudentsEnrolled || 0,
+      perStudentRate: regData.perStudentRate || 5.0,
+      calculatedBaseFee: regData.calculatedBaseFee || 0.0,
+      subscriptionPlan: regData.subscriptionPlan || '1_MONTH_TRIAL',
+      paymentAmount: String(regData.paymentAmount || '0'),
+      momoTxnId: regData.momoTxnId || 'FREE_TRIAL_AUTO',
+      hasUsedTrial: Boolean(regData.hasUsedTrial),
+      isApproved: false,
+      status: 'PENDING_DEVELOPER_APPROVAL'
+    };
+
     const registration = await prisma.institutionRegistration.create({
-      data: {
-        ...prismaRegData,
-        repPhone: String(regData.repPhone || officialPhone || adminPhone || '+233000000000')
-      }
+      data: prismaData
     });
 
     try {
@@ -514,10 +551,17 @@ const registerInstitution = async (data) => {
           module: 'TENANT_ONBOARDING',
           details: `Institution registration submitted: ${institutionName} (${tenantUid}, ${tenantCode}). Admin: ${adminEmail}. Status: PENDING_DEVELOPER_REVIEW.`
         }
-      });
+      }).catch(() => {});
     } catch {}
 
-    DYNAMIC_INSTITUTIONS.unshift(regData);
+    const enrichedReg = {
+      ...regData,
+      id: registration.id,
+      facePhoto: data.facePhoto || data.scannedFacePhoto || data.headmasterPhoto || null,
+      scannedFacePhoto: data.facePhoto || data.scannedFacePhoto || null,
+      biometricFaceToken: data.biometricFaceToken || null
+    };
+    DYNAMIC_INSTITUTIONS.unshift(enrichedReg);
 
     return {
       registration: {
@@ -529,13 +573,20 @@ const registerInstitution = async (data) => {
         institutionName: registration.institutionName,
         status: registration.status,
         adminEmail: registration.adminEmail,
+        facePhoto: enrichedReg.facePhoto,
         createdAt: registration.createdAt
       },
       message: 'Institution registration received successfully. Your institution credentials and identifiers have been recorded for Developer Control Center review and provisioning.'
     };
   } catch (dbErr) {
     console.warn('⚠️ [AUTH] Database institution registration fallback:', dbErr.message);
-    DYNAMIC_INSTITUTIONS.unshift(regData);
+    const enrichedReg = {
+      ...regData,
+      facePhoto: data.facePhoto || data.scannedFacePhoto || data.headmasterPhoto || null,
+      scannedFacePhoto: data.facePhoto || data.scannedFacePhoto || null,
+      biometricFaceToken: data.biometricFaceToken || null
+    };
+    DYNAMIC_INSTITUTIONS.unshift(enrichedReg);
 
     // Also register the administrator user dynamically so they can sign in
     const adminUser = {
@@ -878,5 +929,8 @@ module.exports = {
   register,
   registerInstitution,
   getPublicInstitutions,
-  seedDefaultAdmin
+  seedDefaultAdmin,
+  getDynamicInstitutions: () => [...DYNAMIC_INSTITUTIONS],
+  addDynamicInstitution: (item) => DYNAMIC_INSTITUTIONS.unshift(item),
+  getDynamicUsers: () => [...DYNAMIC_REGISTERED_USERS]
 };

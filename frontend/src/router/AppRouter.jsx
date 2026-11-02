@@ -2,6 +2,7 @@ import React from "react";
 import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
 
 import MainLoginPage from "../modules/auth/pages/MainLoginPage";
+import TenantOnboardingFirstPage from "../modules/auth/pages/TenantOnboardingFirstPage";
 import SignUpPage from "../modules/auth/pages/SignUpPage";
 import AdminLogin from "../modules/auth/pages/AdminLogin";
 import TeacherLogin from "../modules/auth/pages/TeacherLogin";
@@ -60,8 +61,10 @@ export default function AppRouter() {
   return (
     <BrowserRouter>
       <Routes>
-        {/* Standalone Master GBS System Entry: Main Login & Role Portal Gateway */}
-        <Route path="/" element={<MainLoginPage />} />
+        {/* Master First Page of the System: Tenant Onboarding Forms with Auto-Redirect */}
+        <Route path="/" element={<TenantOnboardingFirstPage />} />
+        <Route path="/onboarding" element={<TenantOnboardingFirstPage />} />
+        <Route path="/onboard" element={<TenantOnboardingFirstPage />} />
         <Route path="/website" element={<GBSCompanyWebsite />} />
         <Route path="/company" element={<GBSCompanyWebsite />} />
         <Route path="/home" element={<GBSCompanyWebsite />} />

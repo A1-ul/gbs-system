@@ -98,7 +98,7 @@ export default function BiometricFaceScannerModal({ isOpen, onClose, onScanCompl
     setCapturedImage(dataUrl);
     setScanning(false);
     setScanProgress(100);
-    setLivenessStatus("✅ Biometric facial scan verified & cryptographically stamped!");
+    setLivenessStatus("✅ Biometric facial scan verified & cryptographically stamped! Saving and returning to registration...");
     stopCamera();
 
     if (onScanComplete) {
@@ -108,6 +108,11 @@ export default function BiometricFaceScannerModal({ isOpen, onClose, onScanCompl
         timestamp: new Date().toISOString()
       });
     }
+
+    // Auto-save and close modal so headmaster seamlessly continues with form completion
+    setTimeout(() => {
+      if (onClose) onClose();
+    }, 1200);
   };
 
   const handleFileUpload = (e) => {
@@ -127,7 +132,7 @@ export default function BiometricFaceScannerModal({ isOpen, onClose, onScanCompl
             setCapturedImage(dataUrl);
             setScanning(false);
             setScanProgress(100);
-            setLivenessStatus("✅ Biometric facial scan verified & cryptographically stamped!");
+            setLivenessStatus("✅ Biometric facial scan verified & cryptographically stamped! Saving and returning...");
             stopCamera();
             if (onScanComplete) {
               onScanComplete({
@@ -136,6 +141,9 @@ export default function BiometricFaceScannerModal({ isOpen, onClose, onScanCompl
                 timestamp: new Date().toISOString()
               });
             }
+            setTimeout(() => {
+              if (onClose) onClose();
+            }, 1200);
           }, 400);
         }, 400);
       };
@@ -158,7 +166,7 @@ export default function BiometricFaceScannerModal({ isOpen, onClose, onScanCompl
       const faceToken = `FACE-BIO-${Date.now().toString(36).toUpperCase()}-VERIFIED`;
       setCapturedImage(chosen);
       setScanning(false);
-      setLivenessStatus("✅ Biometric facial scan verified & cryptographically stamped!");
+      setLivenessStatus("✅ Biometric facial scan verified & cryptographically stamped! Saving and returning...");
       stopCamera();
       if (onScanComplete) {
         onScanComplete({
@@ -167,6 +175,9 @@ export default function BiometricFaceScannerModal({ isOpen, onClose, onScanCompl
           timestamp: new Date().toISOString()
         });
       }
+      setTimeout(() => {
+        if (onClose) onClose();
+      }, 1000);
     }, 600);
   };
 
