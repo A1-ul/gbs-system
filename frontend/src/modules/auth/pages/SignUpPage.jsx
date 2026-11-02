@@ -27,7 +27,7 @@ export const getTierFee = (tierId, instType, studentCount) => {
   const count = Math.max(0, parseInt(studentCount, 10) || 0);
   const rate = getStudentRate(instType);
   const annualBase = count > 0 ? (rate * count) : (rate * 100);
-  
+
   if (tierId === "3_MONTHS") return Math.round(annualBase * 0.35);
   if (tierId === "6_MONTHS") return Math.round(annualBase * 0.60);
   if (tierId === "12_MONTHS") return annualBase;
@@ -164,6 +164,8 @@ export default function SignUpPage({ defaultRole }) {
 
   const [showFaceScannerModal, setShowFaceScannerModal] = useState(false);
   const [faceScanTarget, setFaceScanTarget] = useState("INSTITUTION"); // "INSTITUTION" | "HEADMASTER_REPLACEMENT"
+  const [showPassword, setShowPassword] = useState(false);
+  const [showConfirmPassword, setShowConfirmPassword] = useState(false);
 
   // Pre-fill from GBS System Onboarding Fee Calculator query parameters
   useEffect(() => {
@@ -186,7 +188,7 @@ export default function SignUpPage({ defaultRole }) {
           };
         });
       }
-    } catch {}
+    } catch { }
   }, [location.search]);
 
   // Headmaster Replacement Registration State
@@ -214,8 +216,8 @@ export default function SignUpPage({ defaultRole }) {
       const reader = new FileReader();
       reader.onloadend = () => {
         setHmPicturePreview(reader.result);
-        setHmReplacementForm((prev) => ({ 
-          ...prev, 
+        setHmReplacementForm((prev) => ({
+          ...prev,
           pictureBase64: reader.result,
           biometricMatch: !!prev.scannedFacePhoto
         }));
@@ -456,12 +458,38 @@ export default function SignUpPage({ defaultRole }) {
         submittedAt: new Date().toISOString()
       };
 
-      // Save into Developer's incoming onboarding queue
+      // Save into Developer's incoming onboarding queue and local registered users for resilient login
+      const computedTenantCode = `GBS-${instForm.institutionName.replace(/[^A-Za-z0-9]/g, "").slice(0, 8).toUpperCase()}-${timestamp}`;
+      appRecord.tenantCode = computedTenantCode;
       try {
         const existingApps = JSON.parse(localStorage.getItem("gbs_incoming_onboarding_applications") || "[]");
         localStorage.setItem("gbs_incoming_onboarding_applications", JSON.stringify([appRecord, ...existingApps]));
         window.dispatchEvent(new CustomEvent("gbs_new_onboarding_application", { detail: appRecord }));
-      } catch {}
+
+        const localUsers = JSON.parse(localStorage.getItem("gbs_local_registered_users") || "[]");
+        const cleanAdminEmail = (instForm.adminEmail || instForm.officialEmail || "").toLowerCase().trim();
+        const filteredUsers = localUsers.filter((u) => (u.email || "").toLowerCase() !== cleanAdminEmail);
+        filteredUsers.unshift({
+          id: `usr_hm_${Date.now()}`,
+          email: cleanAdminEmail,
+          username: cleanAdminEmail.split("@")[0] || "headmaster",
+          password: instForm.password,
+          role: "ADMIN",
+          firstName: instForm.adminName || instForm.repFullName || "Headmaster",
+          lastName: "",
+          tenantId: `TEN-2026-${timestamp}`,
+          tenantCode: computedTenantCode,
+          tenantName: instForm.institutionName,
+          facePhoto: appRecord.facePhoto
+        });
+        localStorage.setItem("gbs_local_registered_users", JSON.stringify(filteredUsers));
+        localStorage.setItem("gbs_tenant_already_onboarded", "true");
+        localStorage.setItem("gbs_assigned_tenant_code", computedTenantCode);
+        localStorage.setItem("gbs_institution_name", instForm.institutionName);
+        if (instForm.subscriptionPlan === "1_MONTH_TRIAL") {
+          localStorage.setItem("gbs_trial_redeemed", "true");
+        }
+      } catch { }
 
       setSuccessData({
         type: "INSTITUTION",
@@ -567,7 +595,7 @@ export default function SignUpPage({ defaultRole }) {
             };
             currentPending.unshift(newRequest);
             localStorage.setItem("gbs_pending_staff_registrations", JSON.stringify(currentPending));
-            
+
             // Dispatch Headmaster notification
             const notifications = JSON.parse(localStorage.getItem("gbs_admin_notifications") || "[]");
             notifications.unshift({
@@ -626,7 +654,7 @@ export default function SignUpPage({ defaultRole }) {
   return (
     <div className="signup-portal-container">
       {/* Real School Campus Background Image */}
-      <div 
+      <div
         className="signup-campus-bg"
         style={{ backgroundImage: `url('/assets/onboarding_campus_bg.jpg')` }}
       ></div>
@@ -1057,29 +1085,56 @@ export default function SignUpPage({ defaultRole }) {
                 <div className="form-grid-2">
                   <div className="form-field">
                     <label htmlFor="admin-pass">Master Administrator Password *</label>
-                    <input
-                      id="admin-pass"
-                      name="password"
-                      type="password"
-                      required
-                      minLength={6}
-                      placeholder="Minimum 6 characters"
-                      value={instForm.password}
-                      onChange={handleInstChange}
-                    />
+                    <div style={{ position: "relative", display: "flex", alignItems: "center" }}>
+                      <input
+                        id="admin-pass"
+                        name="password"
+                        type={showPassword ? "text" : "password"}
+                        required
+                        minLength={6}
+                        placeholder="Minimum 6 characters"
+                        value={instForm.password}
+                        onChange={handleInstChange}
+                        style={{ width: "100%", paddingRight: "42px" }}
+                      />
+                      <button
+                        type="button"
+                        onClick={() => setShowPassword((prev) => !prev)}
+                        title={showPassword ? "Hide password" : "View password"}
+                        style={{ position: "absolute", right: "10px", background: "none", border: "none", color: "#94a3b8", cursor: "pointer", fontSize: "1rem", padding: "4px" }}
+                      >
+                        {showPassword ? "🙈" : "👁️"}
+                      </button>
+                    </div>
                   </div>
                   <div className="form-field">
                     <label htmlFor="admin-cpass">Confirm Password *</label>
-                    <input
-                      id="admin-cpass"
-                      name="confirmPassword"
-                      type="password"
-                      required
-                      minLength={6}
-                      placeholder="Confirm password"
-                      value={instForm.confirmPassword}
-                      onChange={handleInstChange}
-                    />
+                    <div style={{ position: "relative", display: "flex", alignItems: "center" }}>
+                      <input
+                        id="admin-cpass"
+                        name="confirmPassword"
+                        type={showConfirmPassword ? "text" : "password"}
+                        required
+                        minLength={6}
+                        placeholder="Confirm password"
+                        value={instForm.confirmPassword}
+                        onChange={handleInstChange}
+                        style={{ width: "100%", paddingRight: "42px" }}
+                      />
+                      <button
+                        type="button"
+                        onClick={() => setShowConfirmPassword((prev) => !prev)}
+                        title={showConfirmPassword ? "Hide password" : "View password"}
+                        style={{ position: "absolute", right: "10px", background: "none", border: "none", color: "#94a3b8", cursor: "pointer", fontSize: "1rem", padding: "4px" }}
+                      >
+                        {showConfirmPassword ? "🙈" : "👁️"}
+                      </button>
+                    </div>
+                    {instForm.confirmPassword.length > 0 && (
+                      <div style={{ fontSize: "0.78rem", fontWeight: 700, marginTop: "4px", color: instForm.password === instForm.confirmPassword ? "#34d399" : "#f87171" }}>
+                        {instForm.password === instForm.confirmPassword ? "✓ Passwords match perfectly" : "✕ Passwords do not match"}
+                      </div>
+                    )}
                   </div>
                 </div>
 
@@ -1111,10 +1166,10 @@ export default function SignUpPage({ defaultRole }) {
                   {instForm.biometricFaceToken && (
                     <div style={{ display: "flex", alignItems: "center", gap: "12px", background: "rgba(16, 185, 129, 0.12)", border: "1px solid rgba(16, 185, 129, 0.3)", padding: "10px 14px", borderRadius: "10px", marginTop: "10px" }}>
                       {instForm.facePhoto && (
-                        <img 
-                          src={instForm.facePhoto} 
-                          alt="Verified Face" 
-                          style={{ width: "48px", height: "48px", borderRadius: "50%", objectFit: "cover", border: "2px solid #34d399" }} 
+                        <img
+                          src={instForm.facePhoto}
+                          alt="Verified Face"
+                          style={{ width: "48px", height: "48px", borderRadius: "50%", objectFit: "cover", border: "2px solid #34d399" }}
                         />
                       )}
                       <div>
@@ -1525,10 +1580,10 @@ export default function SignUpPage({ defaultRole }) {
 
                   {hmReplacementForm.scannedFacePhoto && (
                     <div style={{ display: "flex", alignItems: "center", gap: "14px", background: "rgba(16, 185, 129, 0.12)", border: "1px solid rgba(16, 185, 129, 0.35)", padding: "12px 16px", borderRadius: "10px", marginTop: "10px" }}>
-                      <img 
-                        src={hmReplacementForm.scannedFacePhoto} 
-                        alt="Scanned Face" 
-                        style={{ width: "54px", height: "54px", borderRadius: "50%", objectFit: "cover", border: "2px solid #34d399" }} 
+                      <img
+                        src={hmReplacementForm.scannedFacePhoto}
+                        alt="Scanned Face"
+                        style={{ width: "54px", height: "54px", borderRadius: "50%", objectFit: "cover", border: "2px solid #34d399" }}
                       />
                       <div style={{ flex: 1 }}>
                         <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
@@ -2238,30 +2293,57 @@ export default function SignUpPage({ defaultRole }) {
                 <div className="form-grid-2">
                   <div className="form-field">
                     <label htmlFor="mem-pass">Account Password *</label>
-                    <input
-                      id="mem-pass"
-                      name="password"
-                      type="password"
-                      required
-                      minLength={8}
-                      placeholder="Minimum 8 characters"
-                      value={memberForm.password}
-                      onChange={handleMemberChange}
-                    />
+                    <div style={{ position: "relative", display: "flex", alignItems: "center" }}>
+                      <input
+                        id="mem-pass"
+                        name="password"
+                        type={showPassword ? "text" : "password"}
+                        required
+                        minLength={8}
+                        placeholder="Minimum 8 characters"
+                        value={memberForm.password}
+                        onChange={handleMemberChange}
+                        style={{ width: "100%", paddingRight: "42px" }}
+                      />
+                      <button
+                        type="button"
+                        onClick={() => setShowPassword((prev) => !prev)}
+                        title={showPassword ? "Hide password" : "View password"}
+                        style={{ position: "absolute", right: "10px", background: "none", border: "none", color: "#94a3b8", cursor: "pointer", fontSize: "1rem", padding: "4px" }}
+                      >
+                        {showPassword ? "🙈" : "👁️"}
+                      </button>
+                    </div>
                   </div>
 
                   <div className="form-field">
                     <label htmlFor="mem-cpass">Confirm Password *</label>
-                    <input
-                      id="mem-cpass"
-                      name="confirmPassword"
-                      type="password"
-                      required
-                      minLength={8}
-                      placeholder="Re-enter password"
-                      value={memberForm.confirmPassword}
-                      onChange={handleMemberChange}
-                    />
+                    <div style={{ position: "relative", display: "flex", alignItems: "center" }}>
+                      <input
+                        id="mem-cpass"
+                        name="confirmPassword"
+                        type={showConfirmPassword ? "text" : "password"}
+                        required
+                        minLength={8}
+                        placeholder="Re-enter password"
+                        value={memberForm.confirmPassword}
+                        onChange={handleMemberChange}
+                        style={{ width: "100%", paddingRight: "42px" }}
+                      />
+                      <button
+                        type="button"
+                        onClick={() => setShowConfirmPassword((prev) => !prev)}
+                        title={showConfirmPassword ? "Hide password" : "View password"}
+                        style={{ position: "absolute", right: "10px", background: "none", border: "none", color: "#94a3b8", cursor: "pointer", fontSize: "1rem", padding: "4px" }}
+                      >
+                        {showConfirmPassword ? "🙈" : "👁️"}
+                      </button>
+                    </div>
+                    {memberForm.confirmPassword.length > 0 && (
+                      <div style={{ fontSize: "0.78rem", fontWeight: 700, marginTop: "4px", color: memberForm.password === memberForm.confirmPassword ? "#34d399" : "#f87171" }}>
+                        {memberForm.password === memberForm.confirmPassword ? "✓ Passwords match perfectly" : "✕ Passwords do not match"}
+                      </div>
+                    )}
                   </div>
                 </div>
 

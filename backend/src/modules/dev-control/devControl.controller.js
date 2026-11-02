@@ -490,8 +490,8 @@ const getPendingOnboardings = async (req, res, next) => {
 const approveOnboarding = async (req, res, next) => {
   try {
     const { id } = req.params;
-    const { developerNotes } = req.body;
-    const result = await devControlService.verifyAndApproveInstitution(id, developerNotes);
+    const { developerNotes, applicationData } = req.body || {};
+    const result = await devControlService.verifyAndApproveInstitution(id, developerNotes, applicationData);
     res.status(200).json({
       status: 'success',
       data: result
@@ -504,8 +504,8 @@ const approveOnboarding = async (req, res, next) => {
 const rejectOnboarding = async (req, res, next) => {
   try {
     const { id } = req.params;
-    const { reason } = req.body;
-    const result = await devControlService.rejectInstitutionRegistration(id, reason);
+    const { reason, applicationData } = req.body || {};
+    const result = await devControlService.rejectInstitutionRegistration(id, reason, applicationData);
     res.status(200).json({
       status: 'success',
       data: result

@@ -7,6 +7,7 @@ export default function ParentLogin() {
   const navigate = useNavigate();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
+  const [showPassword, setShowPassword] = useState(false);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
 
@@ -81,14 +82,25 @@ export default function ParentLogin() {
           </div>
           <div className="form-group">
             <label htmlFor="parent-password">Account Password</label>
-            <input 
-              id="parent-password" 
-              type="password" 
-              required 
-              placeholder="Enter password" 
-              value={password} 
-              onChange={(e) => setPassword(e.target.value)} 
-            />
+            <div style={{ position: "relative", display: "flex", alignItems: "center" }}>
+              <input 
+                id="parent-password" 
+                type={showPassword ? "text" : "password"} 
+                required 
+                placeholder="Enter password" 
+                value={password} 
+                onChange={(e) => setPassword(e.target.value)} 
+                style={{ width: "100%", paddingRight: "42px" }}
+              />
+              <button
+                type="button"
+                onClick={() => setShowPassword((prev) => !prev)}
+                title={showPassword ? "Hide password" : "View password"}
+                style={{ position: "absolute", right: "10px", background: "none", border: "none", color: "#94a3b8", cursor: "pointer", fontSize: "1rem", padding: "4px" }}
+              >
+                {showPassword ? "🙈" : "👁️"}
+              </button>
+            </div>
           </div>
           {error && <div className="error-alert" style={{ color: "#ef4444", marginBottom: "12px", fontSize: "0.85rem" }}>{error}</div>}
           <button type="submit" className="role-login-submit" style={{ background: "linear-gradient(135deg, #f59e0b, #d97706)" }} disabled={loading}>

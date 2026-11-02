@@ -10,6 +10,7 @@ export default function DeveloperLogin() {
   const permanentEmail = "gabosei48@gmail.com";
   const [email, setEmail] = useState("gabosei48@gmail.com");
   const [password, setPassword] = useState("");
+  const [showPassword, setShowPassword] = useState(false);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
   const [unauthorizedWarningModal, setUnauthorizedWarningModal] = useState(null);
@@ -219,25 +220,35 @@ export default function DeveloperLogin() {
                 ⚡ Fill Developer Password
               </button>
             </div>
-            <input
-              type="password"
-              required
-              autoComplete="new-password"
-              autoCorrect="off"
-              spellCheck="false"
-              placeholder="Enter developer verification password"
-              value={password}
-              onChange={(e) => setPassword(e.target.value)}
-              style={{
-                width: "100%",
-                padding: "12px 16px",
-                background: "rgba(15, 23, 42, 0.9)",
-                border: "1.5px solid rgba(245, 158, 11, 0.5)",
-                color: "#f8fafc",
-                fontSize: "1rem",
-                borderRadius: "10px"
-              }}
-            />
+            <div style={{ position: "relative", display: "flex", alignItems: "center" }}>
+              <input
+                type={showPassword ? "text" : "password"}
+                required
+                autoComplete="new-password"
+                autoCorrect="off"
+                spellCheck="false"
+                placeholder="Enter developer verification password"
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
+                style={{
+                  width: "100%",
+                  padding: "12px 44px 12px 16px",
+                  background: "rgba(15, 23, 42, 0.9)",
+                  border: "1.5px solid rgba(245, 158, 11, 0.5)",
+                  color: "#f8fafc",
+                  fontSize: "1rem",
+                  borderRadius: "10px"
+                }}
+              />
+              <button
+                type="button"
+                onClick={() => setShowPassword((prev) => !prev)}
+                title={showPassword ? "Hide password" : "View password"}
+                style={{ position: "absolute", right: "12px", background: "none", border: "none", color: "#94a3b8", cursor: "pointer", fontSize: "1.05rem", padding: "4px" }}
+              >
+                {showPassword ? "🙈" : "👁️"}
+              </button>
+            </div>
           </div>
 
           {error && (

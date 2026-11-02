@@ -21,6 +21,7 @@ export default function MainLoginPage() {
   const [selectedRole, setSelectedRole] = useState("ADMIN");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
+  const [showPassword, setShowPassword] = useState(false);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
   
@@ -336,14 +337,34 @@ export default function MainLoginPage() {
 
           <div className="form-group">
             <label htmlFor="password">Security Password</label>
-            <input
-              id="password"
-              type="password"
-              required
-              placeholder="Enter password"
-              value={password}
-              onChange={(e) => setPassword(e.target.value)}
-            />
+            <div style={{ position: "relative", display: "flex", alignItems: "center" }}>
+              <input
+                id="password"
+                type={showPassword ? "text" : "password"}
+                required
+                placeholder="Enter password"
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
+                style={{ width: "100%", paddingRight: "44px" }}
+              />
+              <button
+                type="button"
+                onClick={() => setShowPassword((prev) => !prev)}
+                title={showPassword ? "Hide password" : "View password"}
+                style={{
+                  position: "absolute",
+                  right: "10px",
+                  background: "none",
+                  border: "none",
+                  color: "#94a3b8",
+                  cursor: "pointer",
+                  fontSize: "1.05rem",
+                  padding: "4px"
+                }}
+              >
+                {showPassword ? "🙈" : "👁️"}
+              </button>
+            </div>
           </div>
 
           {error && <div className="error-alert">{error}</div>}
@@ -381,7 +402,7 @@ export default function MainLoginPage() {
               ✨ New to GBS? Register as a {selectedRole} Member →
             </Link>
             <Link 
-              to="/signup/institution" 
+              to="/onboarding?force=true" 
               className="signup-institution-btn"
               style={{
                 display: "block",

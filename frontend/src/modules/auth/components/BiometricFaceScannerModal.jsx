@@ -104,6 +104,7 @@ export default function BiometricFaceScannerModal({ isOpen, onClose, onScanCompl
     if (onScanComplete) {
       onScanComplete({
         faceImage: dataUrl,
+        photoDataUrl: dataUrl,
         biometricToken: faceToken,
         timestamp: new Date().toISOString()
       });
@@ -112,7 +113,15 @@ export default function BiometricFaceScannerModal({ isOpen, onClose, onScanCompl
     // Auto-save and close modal so headmaster seamlessly continues with form completion
     setTimeout(() => {
       if (onClose) onClose();
-    }, 1200);
+    }, 900);
+  };
+
+  const handleRetake = () => {
+    setCapturedImage(null);
+    setScanning(false);
+    setScanProgress(0);
+    setLivenessStatus("Position your face inside the oval frame");
+    startCamera();
   };
 
   const handleFileUpload = (e) => {
@@ -271,7 +280,7 @@ export default function BiometricFaceScannerModal({ isOpen, onClose, onScanCompl
           ) : (
             <div style={{ display: "flex", flexDirection: "column", gap: "10px", width: "100%" }}>
               <div style={{ background: "rgba(16, 185, 129, 0.15)", border: "1px solid #10b981", padding: "8px 12px", borderRadius: "8px", textAlign: "center", fontSize: "0.82rem", color: "#34d399", fontWeight: 700 }}>
-                📢 Facial scan complete. Please click "Save & Send to Developer for Verification" to submit your biometrics to the Developer Platform.
+                ✅ Facial scan captured & saved! Returning to onboarding form so you can complete and submit your registration...
               </div>
               <div style={{ display: "flex", gap: "10px", width: "100%" }}>
                 <button type="button" className="btn-secondary" style={{ flex: 1 }} onClick={handleRetake}>
@@ -283,7 +292,7 @@ export default function BiometricFaceScannerModal({ isOpen, onClose, onScanCompl
                   style={{ flex: 2, background: "linear-gradient(135deg, #10b981, #059669)", fontWeight: 800 }}
                   onClick={onClose}
                 >
-                  💾 Save & Send to Developer for Verification
+                  💾 Save & Continue Form Completion →
                 </button>
               </div>
             </div>
