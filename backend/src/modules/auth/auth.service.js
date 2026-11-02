@@ -499,35 +499,49 @@ const registerInstitution = async (data) => {
   const subscriptionId = `SUB-${year}-${String(randSuffix).padStart(6, '0')}`;
 
   const studentCount = parseInt(data.totalStudentsEnrolled || data.studentsCount || data.studentCount || 0, 10);
-  let perStudentRate = 5; // Nursery to JHS: 5 cedis per student per month
+  let perStudentRate = 3; // Official Policy: Nursery – JHS = GH₵ 3 per active student per month
   const typeUpper = (institutionType || '').toUpperCase();
   if (typeUpper.includes('UNIVERSITY') || typeUpper.includes('TERTIARY')) {
-    perStudentRate = 20; // University: 20 cedis per student per month
+    perStudentRate = 10; // Official Policy: University = GH₵ 10 per active student per month
   } else if (typeUpper.includes('SENIOR') || typeUpper.includes('SHS') || typeUpper.includes('SECONDARY')) {
-    perStudentRate = 10; // Senior High School: 10 cedis per student per month
+    perStudentRate = 5; // Official Policy: SHS = GH₵ 5 per active student per month
   } else {
-    perStudentRate = 5; // Nursery to JHS / Basic School: 5 cedis per student per month
+    perStudentRate = 3; // Official Policy: Nursery – JHS = GH₵ 3 per active student per month
   }
 
   const monthlyFee = studentCount > 0 ? (perStudentRate * studentCount) : (Number(data.monthlyFee || data.calculatedBaseFee || data.calculatedFee) || 0);
-  const effPlan = data.subscriptionPlan || data.subscriptionDuration || '1_MONTH_TRIAL';
+  const effPlan = data.subscriptionPlan || data.subscriptionDuration || '3_MONTHS';
   const planMonthsMap = {
+    '1_MONTH': 1,
     '1_MONTH_TRIAL': 1,
     '3_MONTHS': 3,
     '6_MONTHS': 6,
     '9_MONTHS': 9,
     '12_MONTHS': 12,
     '1_YEAR': 12,
-    'LIFETIME': 36
+    'LIFETIME': 12
+  };
+  const planDiscountMap = {
+    '1_MONTH': 0,
+    '1_MONTH_TRIAL': 0,
+    '3_MONTHS': 3,
+    '6_MONTHS': 5,
+    '9_MONTHS': 7,
+    '12_MONTHS': 10,
+    '1_YEAR': 10,
+    'LIFETIME': 10
   };
   const subscribedMonths = planMonthsMap[effPlan] || 3;
-  const totalTermFee = effPlan === '1_MONTH_TRIAL' ? 0 : (monthlyFee * subscribedMonths);
-  const paymentScheduleMode = data.paymentScheduleMode || 'MONTHLY_SPREAD'; // 'MONTHLY_SPREAD' | 'BULK_FULL_TERM'
+  const discountPct = planDiscountMap[effPlan] || 0;
+  const grossTermFee = monthlyFee * subscribedMonths;
+  const discountAmount = Math.round(grossTermFee * (discountPct / 100) * 100) / 100;
+  const totalTermFee = Math.round((grossTermFee - discountAmount) * 100) / 100;
+  const paymentScheduleMode = data.paymentScheduleMode || 'BULK_FULL_TERM'; // 'MONTHLY_SPREAD' | 'BULK_FULL_TERM'
   const bulkTermsAccepted = Boolean(data.bulkTermsAccepted);
   const bulkTermsSignedBy = data.bulkTermsSignedBy || effAdminName;
-  const amountDueNow = effPlan === '1_MONTH_TRIAL'
-    ? 0
-    : (paymentScheduleMode === 'BULK_FULL_TERM' ? totalTermFee : monthlyFee);
+  const amountDueNow = paymentScheduleMode === 'BULK_FULL_TERM'
+    ? totalTermFee
+    : Math.round((totalTermFee / subscribedMonths) * 100) / 100;
   const calculatedBaseFee = monthlyFee;
 
   const regData = {

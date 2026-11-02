@@ -425,19 +425,23 @@ export default function AdminDashboard() {
   const [showMomoSubmitModal, setShowMomoSubmitModal] = useState(false);
   const [momoTxnId, setMomoTxnId] = useState("");
   const [momoAmount, setMomoAmount] = useState("2500");
-  const [subInstitutionTier, setSubInstitutionTier] = useState("NURSERY_TO_JHS"); // NURSERY_TO_JHS (5 GHS) | SHS (10 GHS) | UNIVERSITY (20 GHS)
-  const [subStudentCount, setSubStudentCount] = useState("500");
-  const [subTermPlan, setSubTermPlan] = useState("6_MONTHS"); // 3_MONTHS | 6_MONTHS | 9_MONTHS | 12_MONTHS | LIFETIME
-  const [subPaymentScheduleMode, setSubPaymentScheduleMode] = useState("MONTHLY_SPREAD"); // MONTHLY_SPREAD | BULK_FULL_TERM
-  const [subBulkTermsAccepted, setSubBulkTermsAccepted] = useState(false);
+  const [subInstitutionTier, setSubInstitutionTier] = useState("NURSERY_TO_JHS"); // NURSERY_TO_JHS (GH₵3) | SHS (GH₵5) | UNIVERSITY (GH₵10)
+  const [subStudentCount, setSubStudentCount] = useState("300");
+  const [subTermPlan, setSubTermPlan] = useState("6_MONTHS"); // 1_MONTH | 3_MONTHS | 6_MONTHS | 9_MONTHS | 12_MONTHS
+  const [subPaymentScheduleMode, setSubPaymentScheduleMode] = useState("BULK_FULL_TERM"); // MONTHLY_SPREAD | BULK_FULL_TERM
+  const [subBulkTermsAccepted, setSubBulkTermsAccepted] = useState(true);
   const [subBulkSignatory, setSubBulkSignatory] = useState(`${currentUser.firstName} ${currentUser.lastName}`);
 
-  const subPerStudentRate = subInstitutionTier === "UNIVERSITY" ? 20 : subInstitutionTier === "SHS" ? 10 : 5;
+  const subPerStudentRate = subInstitutionTier === "UNIVERSITY" ? 10 : subInstitutionTier === "SHS" ? 5 : 3;
   const subMonthlyFee = (Math.max(0, parseInt(subStudentCount, 10) || 0)) * subPerStudentRate;
-  const subMonthsMap = { "3_MONTHS": 3, "6_MONTHS": 6, "9_MONTHS": 9, "12_MONTHS": 12, "LIFETIME": 36 };
+  const subMonthsMap = { "1_MONTH": 1, "3_MONTHS": 3, "6_MONTHS": 6, "9_MONTHS": 9, "12_MONTHS": 12, "LIFETIME": 12 };
+  const subDiscountMap = { "1_MONTH": 0, "3_MONTHS": 3, "6_MONTHS": 5, "9_MONTHS": 7, "12_MONTHS": 10, "LIFETIME": 10 };
   const subMonthsCount = subMonthsMap[subTermPlan] || 6;
-  const subTotalTermFee = subMonthlyFee * subMonthsCount;
-  const subAmountDueNow = subPaymentScheduleMode === "BULK_FULL_TERM" ? subTotalTermFee : subMonthlyFee;
+  const subDiscountPct = subDiscountMap[subTermPlan] || 0;
+  const subGrossTermFee = subMonthlyFee * subMonthsCount;
+  const subDiscountAmount = Math.round(subGrossTermFee * (subDiscountPct / 100) * 100) / 100;
+  const subTotalTermFee = Math.round((subGrossTermFee - subDiscountAmount) * 100) / 100;
+  const subAmountDueNow = subPaymentScheduleMode === "BULK_FULL_TERM" ? subTotalTermFee : Math.round((subTotalTermFee / subMonthsCount) * 100) / 100;
 
   const [isSystemLocked, setIsSystemLocked] = useState(() => {
     return localStorage.getItem("gbs_system_locked") === "true";
@@ -8610,15 +8614,15 @@ export default function AdminDashboard() {
                         fontWeight: 700
                       }}
                     >
-                      <option value="NURSERY_TO_JHS">Nursery to JHS (GH₵ 5 / Student / Month)</option>
-                      <option value="SHS">Senior High School - SHS (GH₵ 10 / Student / Month)</option>
-                      <option value="UNIVERSITY">University Level (GH₵ 20 / Student / Month)</option>
+                      <option value="NURSERY_TO_JHS">Nursery – JHS (GH₵ 3 / Active Student / Month)</option>
+                      <option value="SHS">Senior High School - SHS (GH₵ 5 / Active Student / Month)</option>
+                      <option value="UNIVERSITY">University Level (GH₵ 10 / Active Student / Month)</option>
                     </select>
                   </div>
 
                   <div>
                     <label style={{ display: "block", color: "#94a3b8", fontSize: "0.78rem", fontWeight: 700, marginBottom: "4px" }}>
-                      Total Students in Registered Institution *
+                      Active Registered Students *
                     </label>
                     <input
                       type="number"
@@ -8644,60 +8648,65 @@ export default function AdminDashboard() {
                 <div style={{ background: "rgba(2, 6, 23, 0.85)", border: "1px solid rgba(56, 189, 248, 0.35)", borderRadius: "10px", padding: "12px", marginBottom: "0.9rem" }}>
                   <div style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: "8px", textAlign: "center" }}>
                     <div>
-                      <span style={{ fontSize: "0.7rem", color: "#94a3b8", display: "block" }}>Monthly Amount to Pay</span>
+                      <span style={{ fontSize: "0.7rem", color: "#94a3b8", display: "block" }}>Monthly Subscription</span>
                       <strong style={{ fontSize: "1rem", color: "#38bdf8" }}>GH₵ {subMonthlyFee.toLocaleString()} / mo</strong>
                       <span style={{ fontSize: "0.68rem", color: "#64748b", display: "block" }}>{subStudentCount || 0} × GH₵ {subPerStudentRate}</span>
                     </div>
                     <div>
-                      <span style={{ fontSize: "0.7rem", color: "#94a3b8", display: "block" }}>Subscribed Term ({subMonthsCount} Mo)</span>
+                      <span style={{ fontSize: "0.7rem", color: "#94a3b8", display: "block" }}>Duration ({subMonthsCount} Mo • {subDiscountPct}% Off)</span>
                       <strong style={{ fontSize: "1rem", color: "#34d399" }}>GH₵ {subTotalTermFee.toLocaleString()}</strong>
-                      <span style={{ fontSize: "0.68rem", color: "#64748b", display: "block" }}>GH₵ {subMonthlyFee.toLocaleString()} × {subMonthsCount} Mo</span>
+                      <span style={{ fontSize: "0.68rem", color: "#64748b", display: "block" }}>
+                        {subDiscountPct > 0 ? `Gross GH₵ ${subGrossTermFee.toLocaleString()} − GH₵ ${subDiscountAmount.toLocaleString()}` : `GH₵ ${subMonthlyFee.toLocaleString()} × 1 Mo`}
+                      </span>
                     </div>
                     <div>
                       <span style={{ fontSize: "0.7rem", color: "#94a3b8", display: "block" }}>Amount Payable Now</span>
                       <strong style={{ fontSize: "1rem", color: "#fbbf24" }}>GH₵ {subAmountDueNow.toLocaleString()}</strong>
                       <span style={{ fontSize: "0.68rem", color: "#64748b", display: "block" }}>
-                        {subPaymentScheduleMode === "BULK_FULL_TERM" ? "Bulk Full Term" : "Monthly Spread"}
+                        {subPaymentScheduleMode === "BULK_FULL_TERM" ? "Bulk Full Period" : "Monthly Installment"}
                       </span>
                     </div>
                   </div>
                 </div>
 
-                {/* Preferred Subscription Term Selector */}
+                {/* Official 5 Payment Periods Selector */}
                 <div style={{ marginBottom: "0.9rem" }}>
                   <label style={{ display: "block", color: "#cbd5e1", fontSize: "0.78rem", fontWeight: 700, marginBottom: "6px" }}>
-                    Preferred Subscription Term (3, 6, 9, 12 Months & Lifetime):
+                    Official Subscription Duration &amp; Discount (1, 3, 6, 9, 12 Months):
                   </label>
                   <div style={{ display: "grid", gridTemplateColumns: "repeat(5, 1fr)", gap: "6px" }}>
                     {[
-                      { id: "3_MONTHS", label: "3 Months", months: 3 },
-                      { id: "6_MONTHS", label: "6 Months", months: 6 },
-                      { id: "9_MONTHS", label: "9 Months", months: 9 },
-                      { id: "12_MONTHS", label: "12 Months", months: 12 },
-                      { id: "LIFETIME", label: "Lifetime", months: 36 }
-                    ].map((t) => (
-                      <button
-                        key={t.id}
-                        type="button"
-                        onClick={() => setSubTermPlan(t.id)}
-                        style={{
-                          padding: "8px 6px",
-                          borderRadius: "8px",
-                          cursor: "pointer",
-                          border: subTermPlan === t.id ? "2px solid #38bdf8" : "1px solid rgba(148,163,184,0.2)",
-                          background: subTermPlan === t.id ? "rgba(56, 189, 248, 0.18)" : "rgba(15, 23, 42, 0.7)",
-                          color: "#f8fafc",
-                          fontSize: "0.74rem",
-                          fontWeight: 800,
-                          textAlign: "center"
-                        }}
-                      >
-                        <div>{t.label}</div>
-                        <div style={{ color: "#34d399", fontSize: "0.7rem", marginTop: "2px" }}>
-                          GH₵ {(subMonthlyFee * t.months).toLocaleString()}
-                        </div>
-                      </button>
-                    ))}
+                      { id: "1_MONTH", label: "1 Month (0%)", months: 1, discountPct: 0 },
+                      { id: "3_MONTHS", label: "3 Months (3%)", months: 3, discountPct: 3 },
+                      { id: "6_MONTHS", label: "6 Months (5%)", months: 6, discountPct: 5 },
+                      { id: "9_MONTHS", label: "9 Months (7%)", months: 9, discountPct: 7 },
+                      { id: "12_MONTHS", label: "12 Months (10%)", months: 12, discountPct: 10 }
+                    ].map((t) => {
+                      const net = Math.round(subMonthlyFee * t.months * (1 - t.discountPct / 100) * 100) / 100;
+                      return (
+                        <button
+                          key={t.id}
+                          type="button"
+                          onClick={() => setSubTermPlan(t.id)}
+                          style={{
+                            padding: "8px 6px",
+                            borderRadius: "8px",
+                            cursor: "pointer",
+                            border: subTermPlan === t.id ? "2px solid #38bdf8" : "1px solid rgba(148,163,184,0.2)",
+                            background: subTermPlan === t.id ? "rgba(56, 189, 248, 0.18)" : "rgba(15, 23, 42, 0.7)",
+                            color: "#f8fafc",
+                            fontSize: "0.72rem",
+                            fontWeight: 800,
+                            textAlign: "center"
+                          }}
+                        >
+                          <div>{t.label}</div>
+                          <div style={{ color: "#34d399", fontSize: "0.7rem", marginTop: "2px" }}>
+                            GH₵ {net.toLocaleString()}
+                          </div>
+                        </button>
+                      );
+                    })}
                   </div>
                 </div>
 

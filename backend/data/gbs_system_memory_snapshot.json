@@ -23,31 +23,30 @@
     }
   },
   "subscriptionPricingMemory": {
+    "policyTitle": "OFFICIAL GBS STUDENT-BASED SUBSCRIPTION PRICING POLICY (Revised GBS Developer Policy)",
+    "pricingPrinciple": "100% student-based subscription model. NO fixed tenant fees, NO basic package fees, NO additional monthly access charges. Inactive, deleted, and archived students do not attract charges.",
     "ratesPerStudentPerMonthGHS": {
-      "NURSERY_TO_JHS": 5,
-      "SHS": 10,
-      "UNIVERSITY": 20
+      "NURSERY_TO_JHS": 3,
+      "SHS": 5,
+      "UNIVERSITY": 10
     },
-    "formula": "monthlyFee = studentCount * ratePerStudent; totalTermFee = monthlyFee * monthsSubscribed",
-    "termsMonths": {
-      "1_MONTH_TRIAL": 1,
-      "3_MONTHS": 3,
-      "6_MONTHS": 6,
-      "9_MONTHS": 9,
-      "12_MONTHS": 12,
-      "LIFETIME": 36
-    },
-    "paymentSchedules": [
-      {
-        "mode": "MONTHLY_SPREAD",
-        "description": "Tenant pays monthlyFee each month across the subscribed term."
-      },
-      {
-        "mode": "BULK_FULL_TERM",
-        "description": "Tenant signs Terms & Conditions and pays totalTermFee in bulk upfront without spreading into months."
-      }
+    "formula": "monthlyCharge = activeStudents * ratePerStudent; grossTotal = monthlyCharge * months; discountAmount = grossTotal * (discountPct / 100); netTotalPayment = grossTotal - discountAmount",
+    "paymentPeriodsAndDiscounts": [
+      { "id": "1_MONTH", "months": 1, "discountPct": 0 },
+      { "id": "3_MONTHS", "months": 3, "discountPct": 3 },
+      { "id": "6_MONTHS", "months": 6, "discountPct": 5 },
+      { "id": "9_MONTHS", "months": 9, "discountPct": 7 },
+      { "id": "12_MONTHS", "months": 12, "discountPct": 10 }
     ],
-    "trialRule": "Once the 1-Month Free Trial is used or expired, the tenant is locked from selecting another free trial and is prompted to upgrade to a paid plan (3, 6, 9, 12 Months, or Lifetime)."
+    "example300StudentsNurseryJhs": {
+      "monthlyChargeGHS": 900,
+      "1_month": 900,
+      "3_months_3pct_off": 2619,
+      "6_months_5pct_off": 5130,
+      "9_months_7pct_off": 7533,
+      "12_months_10pct_off": 9720
+    },
+    "populationGrowthPolicy": "Subscription amount increases or decreases on future invoices according to the institution's active student population (e.g., 200->300 increases next billing; 500->400 decreases next billing). Previously paid subscription periods are never retrospectively changed."
   },
   "dashboardsAndRoutesMemory": [
     {
@@ -199,3 +198,4 @@
     "uncaughtBrowserConsoleErrors": 0
   }
 }
+

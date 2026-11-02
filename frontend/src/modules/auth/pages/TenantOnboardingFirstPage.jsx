@@ -115,11 +115,11 @@ export default function TenantOnboardingFirstPage() {
     adminPhone: "",
     password: "",
     confirmPassword: "",
-    subscriptionPlan: "1_MONTH_TRIAL", // 1_MONTH_TRIAL | 3_MONTHS | 6_MONTHS | 9_MONTHS | 12_MONTHS | LIFETIME
-    paymentScheduleMode: "MONTHLY_SPREAD", // "MONTHLY_SPREAD" | "BULK_FULL_TERM"
-    bulkTermsAccepted: false,
+    subscriptionPlan: "3_MONTHS", // 1_MONTH | 3_MONTHS | 6_MONTHS | 9_MONTHS | 12_MONTHS
+    paymentScheduleMode: "BULK_FULL_TERM", // "BULK_FULL_TERM" | "MONTHLY_SPREAD"
+    bulkTermsAccepted: true,
     bulkTermsSignedBy: "",
-    momoTxnId: "FREE_TRIAL_AUTO",
+    momoTxnId: "",
     facePhoto: null,
     biometricFaceToken: null,
     termsAccepted: true
@@ -129,7 +129,7 @@ export default function TenantOnboardingFirstPage() {
   const [error, setError] = useState(null);
   const [successData, setSuccessData] = useState(null);
 
-  // Pricing Engine Rates
+  // Pricing Engine Rates (Official Policy: Nursery–JHS = GH₵3, SHS = GH₵5, University = GH₵10)
   const activeRates = useMemo(() => getOnboardingRates(), []);
 
   // Check if 1-Month Free Trial has already been used by this tenant
@@ -141,55 +141,71 @@ export default function TenantOnboardingFirstPage() {
     }
   });
 
-  // Calculate Rate per Student per Month based on Institution Type
-  // Nursery to JHS: 5 Cedis | SHS: 10 Cedis | University: 20 Cedis
+  // Calculate Official Rate per Student per Month based on Institution Category
+  // Nursery – JHS: GH₵ 3 | SHS: GH₵ 5 | University: GH₵ 10
   const currentRatePerStudent = useMemo(() => {
-    if (form.institutionType === "UNIVERSITY") return activeRates.UNIVERSITY || 20;
-    if (form.institutionType === "SENIOR_HIGH_SCHOOL") return activeRates.SHS || 10;
-    return activeRates.JHS || 5;
+    if (form.institutionType === "UNIVERSITY") return activeRates.UNIVERSITY || 10;
+    if (form.institutionType === "SENIOR_HIGH_SCHOOL") return activeRates.SHS || 5;
+    return activeRates.JHS || 3;
   }, [form.institutionType, activeRates]);
 
-  // Real-time Student Multiplier & Subscription Term Calculation
-  // Formula: Monthly Amount = Rate Per Student (5 / 10 / 20 GHS) × Total Students
-  // Total Subscribed Term Amount = Monthly Amount × Subscribed Months (3, 6, 9, 12, or 36 for Lifetime)
+  // Official 100% Student-Based Subscription & Multi-Month Discount Calculation
+  // Subscription = Number of Active Students × Rate (No fixed tenant fees, no package fees, no access charges)
+  // Discounts: 1 Month (0%), 3 Months (3%), 6 Months (5%), 9 Months (7%), 12 Months (10%)
   const calculation = useMemo(() => {
     const count = Math.max(0, parseInt(form.totalStudentsEnrolled, 10) || 0);
     const monthlyRate = count * currentRatePerStudent;
-    const term3Months = monthlyRate * 3;
-    const term6Months = monthlyRate * 6;
-    const term9Months = monthlyRate * 9;
-    const term12Months = monthlyRate * 12;
-    const lifetimeRate = monthlyRate * 36;
 
-    const monthsMap = {
-      "1_MONTH_TRIAL": 1,
-      "3_MONTHS": 3,
-      "6_MONTHS": 6,
-      "9_MONTHS": 9,
-      "12_MONTHS": 12,
-      "LIFETIME": 36
+    const calcDiscounted = (months, discountPct) => {
+      const gross = monthlyRate * months;
+      const discountAmt = Math.round(gross * (discountPct / 100) * 100) / 100;
+      const net = Math.round((gross - discountAmt) * 100) / 100;
+      return { months, discountPct, gross, discountAmt, net };
     };
-    const subscribedMonths = monthsMap[form.subscriptionPlan] || 3;
-    const isTrial = form.subscriptionPlan === "1_MONTH_TRIAL";
-    const totalTermFee = isTrial ? 0 : monthlyRate * subscribedMonths;
 
-    // Payable amount now depends on whether the tenant spreads payment monthly or pays in bulk
-    const payableAmount = isTrial
-      ? 0
-      : form.paymentScheduleMode === "BULK_FULL_TERM"
-        ? totalTermFee
-        : monthlyRate;
+    const p1 = calcDiscounted(1, 0);
+    const p3 = calcDiscounted(3, 3);
+    const p6 = calcDiscounted(6, 5);
+    const p9 = calcDiscounted(9, 7);
+    const p12 = calcDiscounted(12, 10);
+
+    const periodMap = {
+      "1_MONTH": p1,
+      "1_MONTH_TRIAL": p1,
+      "3_MONTHS": p3,
+      "6_MONTHS": p6,
+      "9_MONTHS": p9,
+      "12_MONTHS": p12,
+      "LIFETIME": p12
+    };
+
+    const selectedPeriod = periodMap[form.subscriptionPlan] || p3;
+    const subscribedMonths = selectedPeriod.months;
+    const discountPct = selectedPeriod.discountPct;
+    const grossTermFee = selectedPeriod.gross;
+    const discountAmount = selectedPeriod.discountAmt;
+    const totalTermFee = selectedPeriod.net;
+
+    const payableAmount =
+      form.paymentScheduleMode === "MONTHLY_SPREAD"
+        ? Math.round((totalTermFee / subscribedMonths) * 100) / 100
+        : totalTermFee;
 
     return {
       count,
       rate: currentRatePerStudent,
       monthlyRate,
-      termRate: term3Months,
-      semesterRate: term6Months,
-      nineMonthRate: term9Months,
-      annualBase: term12Months,
-      lifetimeRate,
+      oneMonthRate: p1.net,
+      termRate: p3.net,
+      semesterRate: p6.net,
+      nineMonthRate: p9.net,
+      annualBase: p12.net,
+      lifetimeRate: p12.net,
+      periods: { p1, p3, p6, p9, p12 },
       subscribedMonths,
+      discountPct,
+      grossTermFee,
+      discountAmount,
       totalTermFee,
       payableAmount
     };
@@ -814,152 +830,164 @@ export default function TenantOnboardingFirstPage() {
               </div>
             </div>
 
-            {/* Section 3: Student Multiplier & Term Subscription Calculation */}
+            {/* Section 3: Official 100% Student-Based Subscription Pricing Policy */}
             <h3 className="gbs-card-section-title" style={{ marginTop: "28px" }}>
               <span className="section-num">3</span>
-              <span>Student Multiplier Calculation & Preferred Subscription Term</span>
+              <span>Official GBS Student-Based Subscription Pricing Policy (100% Student-Based)</span>
             </h3>
 
             <div className="gbs-pricing-summary-card">
+              <div style={{ marginBottom: "14px", padding: "10px 14px", borderRadius: "10px", background: "rgba(16, 185, 129, 0.12)", border: "1px solid rgba(16, 185, 129, 0.35)", fontSize: "0.78rem", color: "#d1fae5" }}>
+                <strong>✓ 100% Student-Based Subscription Model:</strong> NO fixed tenant fees, NO basic package fees, and NO additional monthly access charges. Only active registered students are billed (inactive, deleted, and archived students attract zero charges).
+              </div>
+
               <div className="gbs-rate-pill-group">
                 <div className="gbs-rate-pill active">
-                  <div className="gbs-rate-pill-title">Rate Per Student / Month</div>
+                  <div className="gbs-rate-pill-title">Official Student Rate / Month</div>
                   <div className="gbs-rate-pill-val">GH₵ {calculation.rate}.00</div>
                   <span style={{ fontSize: "0.7rem", color: "#94a3b8" }}>
-                    {form.institutionType === "UNIVERSITY" ? "University Level (GH₵ 20)" : form.institutionType === "SENIOR_HIGH_SCHOOL" ? "SHS Level (GH₵ 10)" : "Nursery to JHS Level (GH₵ 5)"}
+                    {form.institutionType === "UNIVERSITY" ? "University (GH₵ 10 / student)" : form.institutionType === "SENIOR_HIGH_SCHOOL" ? "SHS (GH₵ 5 / student)" : "Nursery – JHS (GH₵ 3 / student)"}
                   </span>
                 </div>
 
                 <div className="gbs-rate-pill">
-                  <div className="gbs-rate-pill-title">Total Students</div>
+                  <div className="gbs-rate-pill-title">Active Registered Students</div>
                   <div className="gbs-rate-pill-val">{calculation.count} Students</div>
-                  <span style={{ fontSize: "0.7rem", color: "#94a3b8" }}>Registered Institution</span>
+                  <span style={{ fontSize: "0.7rem", color: "#94a3b8" }}>No Fixed or Package Fees</span>
                 </div>
 
                 <div className="gbs-rate-pill">
-                  <div className="gbs-rate-pill-title">Amount To Pay Every Month</div>
+                  <div className="gbs-rate-pill-title">Monthly Subscription Charge</div>
                   <div className="gbs-rate-pill-val" style={{ color: "#38bdf8" }}>GH₵ {calculation.monthlyRate.toLocaleString()} / mo</div>
-                  <span style={{ fontSize: "0.7rem", color: "#94a3b8" }}>{calculation.count} Students × GH₵ {calculation.rate}</span>
+                  <span style={{ fontSize: "0.7rem", color: "#94a3b8" }}>{calculation.count} Active Students × GH₵ {calculation.rate}</span>
                 </div>
 
                 <div className="gbs-rate-pill">
-                  <div className="gbs-rate-pill-title">Subscribed Term Total ({calculation.subscribedMonths} Mo)</div>
+                  <div className="gbs-rate-pill-title">Total Payment ({calculation.subscribedMonths} Mo • {calculation.discountPct}% Off)</div>
                   <div className="gbs-rate-pill-val" style={{ color: "#34d399" }}>
-                    {form.subscriptionPlan === "1_MONTH_TRIAL" ? "GH₵ 0.00 (Trial)" : `GH₵ ${calculation.totalTermFee.toLocaleString()}`}
+                    GH₵ {calculation.totalTermFee.toLocaleString()}
                   </div>
                   <span style={{ fontSize: "0.7rem", color: "#94a3b8" }}>
-                    {form.subscriptionPlan === "1_MONTH_TRIAL"
-                      ? `Then GH₵ ${calculation.monthlyRate.toLocaleString()}/mo`
-                      : `GH₵ ${calculation.monthlyRate.toLocaleString()}/mo × ${calculation.subscribedMonths} Months`}
+                    {calculation.discountPct > 0
+                      ? `Gross GH₵ ${calculation.grossTermFee.toLocaleString()} − GH₵ ${calculation.discountAmount.toLocaleString()} (${calculation.discountPct}% Discount)`
+                      : `GH₵ ${calculation.monthlyRate.toLocaleString()} × 1 Month (0% Discount)`}
                   </span>
                 </div>
               </div>
 
               <div style={{ fontSize: "0.82rem", color: "#cbd5e1", marginBottom: "8px", fontWeight: 700 }}>
-                Select Preferred Subscription Term (Monthly Amount × Subscribed Months):
+                Select Official Payment Period (5 Supported Durations & Discounts):
               </div>
 
-              {/* Subscription Tiers Grid */}
+              {/* 5 Official Subscription Periods Grid */}
               <div className="gbs-subscription-tier-grid">
-                {/* 1 Month Free Trial */}
+                {/* 1 Month (0% Discount) */}
                 <div
-                  className={`gbs-tier-card ${form.subscriptionPlan === "1_MONTH_TRIAL" ? "selected" : ""} ${hasUsedTrial ? "disabled" : ""}`}
-                  onClick={() => {
-                    if (!hasUsedTrial) {
-                      setForm((prev) => ({ ...prev, subscriptionPlan: "1_MONTH_TRIAL", momoTxnId: "FREE_TRIAL_AUTO" }));
-                    }
-                  }}
+                  className={`gbs-tier-card ${form.subscriptionPlan === "1_MONTH" || form.subscriptionPlan === "1_MONTH_TRIAL" ? "selected" : ""}`}
+                  onClick={() => setForm((prev) => ({ ...prev, subscriptionPlan: "1_MONTH" }))}
                 >
                   <div>
-                    <span
-                      className="gbs-tier-badge"
-                      style={{ background: hasUsedTrial ? "#64748b" : "#10b981", color: "#fff" }}
-                    >
-                      {hasUsedTrial ? "TRIAL REDEEMED" : "30-DAY FREE TRIAL"}
+                    <span className="gbs-tier-badge" style={{ background: "#10b981", color: "#fff" }}>
+                      1 MONTH • 0% DISCOUNT
                     </span>
-                    <div className="gbs-tier-name">1 Month Autonomous Trial</div>
-                    <div className="gbs-tier-fee">GH₵ 0.00</div>
+                    <div className="gbs-tier-name">1 Month Subscription</div>
+                    <div className="gbs-tier-fee">GH₵ {calculation.oneMonthRate.toLocaleString()}</div>
                     <div className="gbs-tier-desc">
-                      {hasUsedTrial
-                        ? "1-Month trial already redeemed. Upgrades are required to preserve records and cloud backups."
-                        : `Instant 30-day autonomous access for all ${calculation.count} students (Standard: GH₵ ${calculation.monthlyRate.toLocaleString()}/mo after trial).`}
+                      {calculation.count} students × GH₵ {calculation.rate} × 1 month (0% discount).
                     </div>
                   </div>
                 </div>
 
-                {/* 3 Months */}
+                {/* 3 Months (3% Discount) */}
                 <div
                   className={`gbs-tier-card ${form.subscriptionPlan === "3_MONTHS" ? "selected" : ""}`}
-                  onClick={() => setForm((prev) => ({ ...prev, subscriptionPlan: "3_MONTHS", momoTxnId: prev.momoTxnId === "FREE_TRIAL_AUTO" ? "" : prev.momoTxnId }))}
+                  onClick={() => setForm((prev) => ({ ...prev, subscriptionPlan: "3_MONTHS" }))}
                 >
                   <div>
-                    <span className="gbs-tier-badge" style={{ background: "#3b82f6", color: "#fff" }}>3 MONTHS TERM</span>
+                    <span className="gbs-tier-badge" style={{ background: "#3b82f6", color: "#fff" }}>3 MONTHS • 3% DISCOUNT</span>
                     <div className="gbs-tier-name">3 Months Subscription</div>
                     <div className="gbs-tier-fee">GH₵ {calculation.termRate.toLocaleString()}</div>
                     <div className="gbs-tier-desc">
-                      GH₵ {calculation.monthlyRate.toLocaleString()}/month × 3 months ({calculation.count} × GH₵ {calculation.rate}).
+                      Gross GH₵ {calculation.periods.p3.gross.toLocaleString()} less 3% discount (−GH₵ {calculation.periods.p3.discountAmt.toLocaleString()}).
                     </div>
                   </div>
                 </div>
 
-                {/* 6 Months */}
+                {/* 6 Months (5% Discount) */}
                 <div
                   className={`gbs-tier-card ${form.subscriptionPlan === "6_MONTHS" ? "selected" : ""}`}
-                  onClick={() => setForm((prev) => ({ ...prev, subscriptionPlan: "6_MONTHS", momoTxnId: prev.momoTxnId === "FREE_TRIAL_AUTO" ? "" : prev.momoTxnId }))}
+                  onClick={() => setForm((prev) => ({ ...prev, subscriptionPlan: "6_MONTHS" }))}
                 >
                   <div>
-                    <span className="gbs-tier-badge" style={{ background: "#8b5cf6", color: "#fff" }}>6 MONTHS PLAN</span>
+                    <span className="gbs-tier-badge" style={{ background: "#8b5cf6", color: "#fff" }}>6 MONTHS • 5% DISCOUNT</span>
                     <div className="gbs-tier-name">6 Months Subscription</div>
                     <div className="gbs-tier-fee">GH₵ {calculation.semesterRate.toLocaleString()}</div>
                     <div className="gbs-tier-desc">
-                      GH₵ {calculation.monthlyRate.toLocaleString()}/month × 6 months ({calculation.count} × GH₵ {calculation.rate}).
+                      Gross GH₵ {calculation.periods.p6.gross.toLocaleString()} less 5% discount (−GH₵ {calculation.periods.p6.discountAmt.toLocaleString()}).
                     </div>
                   </div>
                 </div>
 
-                {/* 9 Months */}
+                {/* 9 Months (7% Discount) */}
                 <div
                   className={`gbs-tier-card ${form.subscriptionPlan === "9_MONTHS" ? "selected" : ""}`}
-                  onClick={() => setForm((prev) => ({ ...prev, subscriptionPlan: "9_MONTHS", momoTxnId: prev.momoTxnId === "FREE_TRIAL_AUTO" ? "" : prev.momoTxnId }))}
+                  onClick={() => setForm((prev) => ({ ...prev, subscriptionPlan: "9_MONTHS" }))}
                 >
                   <div>
-                    <span className="gbs-tier-badge" style={{ background: "#06b6d4", color: "#fff" }}>9 MONTHS PLAN</span>
+                    <span className="gbs-tier-badge" style={{ background: "#06b6d4", color: "#fff" }}>9 MONTHS • 7% DISCOUNT</span>
                     <div className="gbs-tier-name">9 Months Subscription</div>
                     <div className="gbs-tier-fee">GH₵ {calculation.nineMonthRate.toLocaleString()}</div>
                     <div className="gbs-tier-desc">
-                      GH₵ {calculation.monthlyRate.toLocaleString()}/month × 9 months ({calculation.count} × GH₵ {calculation.rate}).
+                      Gross GH₵ {calculation.periods.p9.gross.toLocaleString()} less 7% discount (−GH₵ {calculation.periods.p9.discountAmt.toLocaleString()}).
                     </div>
                   </div>
                 </div>
 
-                {/* 12 Months / Full Academic Year */}
+                {/* 12 Months (10% Discount) */}
                 <div
                   className={`gbs-tier-card ${form.subscriptionPlan === "12_MONTHS" ? "selected" : ""}`}
-                  onClick={() => setForm((prev) => ({ ...prev, subscriptionPlan: "12_MONTHS", momoTxnId: prev.momoTxnId === "FREE_TRIAL_AUTO" ? "" : prev.momoTxnId }))}
+                  onClick={() => setForm((prev) => ({ ...prev, subscriptionPlan: "12_MONTHS" }))}
                 >
                   <div>
-                    <span className="gbs-tier-badge" style={{ background: "#f59e0b", color: "#000" }}>★ 12 MONTHS PLAN</span>
+                    <span className="gbs-tier-badge" style={{ background: "#f59e0b", color: "#000" }}>★ 12 MONTHS • 10% DISCOUNT</span>
                     <div className="gbs-tier-name">12 Months Subscription</div>
                     <div className="gbs-tier-fee">GH₵ {calculation.annualBase.toLocaleString()}</div>
                     <div className="gbs-tier-desc">
-                      GH₵ {calculation.monthlyRate.toLocaleString()}/month × 12 months ({calculation.count} × GH₵ {calculation.rate}).
+                      Gross GH₵ {calculation.periods.p12.gross.toLocaleString()} less 10% discount (−GH₵ {calculation.periods.p12.discountAmt.toLocaleString()}).
                     </div>
                   </div>
                 </div>
+              </div>
 
-                {/* Lifetime Perpetual */}
-                <div
-                  className={`gbs-tier-card ${form.subscriptionPlan === "LIFETIME" ? "selected" : ""}`}
-                  onClick={() => setForm((prev) => ({ ...prev, subscriptionPlan: "LIFETIME", momoTxnId: prev.momoTxnId === "FREE_TRIAL_AUTO" ? "" : prev.momoTxnId }))}
-                >
-                  <div>
-                    <span className="gbs-tier-badge" style={{ background: "#ec4899", color: "#fff" }}>VIP PERPETUAL</span>
-                    <div className="gbs-tier-name">Lifetime Subscription</div>
-                    <div className="gbs-tier-fee">GH₵ {calculation.lifetimeRate.toLocaleString()}</div>
-                    <div className="gbs-tier-desc">
-                      GH₵ {calculation.monthlyRate.toLocaleString()}/mo × 36 months perpetual buyout with zero recurring fees forever.
-                    </div>
-                  </div>
+              {/* Official Student Subscription Rate & Population Reference Matrix */}
+              <div style={{ marginTop: "16px", padding: "12px 14px", background: "rgba(2, 6, 23, 0.65)", borderRadius: "10px", border: "1px solid rgba(148, 163, 184, 0.2)" }}>
+                <div style={{ fontSize: "0.78rem", fontWeight: 800, color: "#fbbf24", marginBottom: "8px" }}>
+                  📊 Official GBS Monthly Student Subscription Benchmark (Students × Rate) & Population Growth Policy:
+                </div>
+                <div style={{ overflowX: "auto" }}>
+                  <table style={{ width: "100%", borderCollapse: "collapse", fontSize: "0.74rem", color: "#e2e8f0", textAlign: "left" }}>
+                    <thead>
+                      <tr style={{ borderBottom: "1px solid rgba(148, 163, 184, 0.25)", color: "#38bdf8" }}>
+                        <th style={{ padding: "5px 8px" }}>Active Students</th>
+                        <th style={{ padding: "5px 8px" }}>Nursery – JHS (GH₵3)</th>
+                        <th style={{ padding: "5px 8px" }}>SHS (GH₵5)</th>
+                        <th style={{ padding: "5px 8px" }}>University (GH₵10)</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {[100, 200, 300, 500, 1000, 2000].map((stu) => (
+                        <tr key={stu} style={{ borderBottom: "1px solid rgba(148, 163, 184, 0.1)" }}>
+                          <td style={{ padding: "4px 8px", fontWeight: 700 }}>{stu.toLocaleString()}</td>
+                          <td style={{ padding: "4px 8px" }}>GH₵ {(stu * 3).toLocaleString()}</td>
+                          <td style={{ padding: "4px 8px" }}>GH₵ {(stu * 5).toLocaleString()}</td>
+                          <td style={{ padding: "4px 8px" }}>GH₵ {(stu * 10).toLocaleString()}</td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+                <div style={{ marginTop: "6px", fontSize: "0.72rem", color: "#94a3b8" }}>
+                  • <strong>Population Growth Policy:</strong> Future billing adjusts automatically as active student population grows or reduces (e.g., 200→300 increases next billing; 500→400 decreases next billing). Previously paid subscription periods are never retrospectively changed.
                 </div>
               </div>
 

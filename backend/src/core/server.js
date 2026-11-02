@@ -273,38 +273,70 @@ app.post('/api/v1/subscriptions/calculate-and-subscribe', (req, res) => {
   const body = req.body || {};
   const tier = String(body.institutionType || body.tier || 'NURSERY_TO_JHS').toUpperCase();
   const studentCount = Math.max(1, parseInt(body.studentCount || body.totalStudentsEnrolled || 100, 10));
-  const ratePerStudent = tier.includes('UNI') || tier.includes('TERTIARY') ? 20 : (tier.includes('SHS') || tier.includes('SENIOR')) ? 10 : 5;
+  // Official GBS Student Subscription Rates: Nursery–JHS = GH₵3, SHS = GH₵5, University = GH₵10
+  const ratePerStudent = tier.includes('UNI') || tier.includes('TERTIARY') ? 10 : (tier.includes('SHS') || tier.includes('SENIOR')) ? 5 : 3;
+  // 100% student-based: zero fixed tenant fees, zero basic package fees, zero additional access charges
   const monthlyFee = ratePerStudent * studentCount;
   const plan = String(body.subscriptionPlan || body.term || '3_MONTHS').toUpperCase();
   const monthsMap = {
+    '1_MONTH': 1,
     '1_MONTH_TRIAL': 1,
     '3_MONTHS': 3,
     '6_MONTHS': 6,
     '9_MONTHS': 9,
     '12_MONTHS': 12,
-    'LIFETIME': 36
+    'LIFETIME': 12
+  };
+  const discountMap = {
+    '1_MONTH': 0,
+    '1_MONTH_TRIAL': 0,
+    '3_MONTHS': 3,
+    '6_MONTHS': 5,
+    '9_MONTHS': 7,
+    '12_MONTHS': 10,
+    'LIFETIME': 10
   };
   const monthsSubscribed = monthsMap[plan] || 3;
-  const totalTermFee = plan === '1_MONTH_TRIAL' ? 0 : monthlyFee * monthsSubscribed;
-  const paymentScheduleMode = body.paymentScheduleMode || 'MONTHLY_SPREAD'; // 'MONTHLY_SPREAD' | 'BULK_FULL_TERM'
-  const amountDueNow = plan === '1_MONTH_TRIAL' ? 0 : (paymentScheduleMode === 'BULK_FULL_TERM' ? totalTermFee : monthlyFee);
+  const discountPct = discountMap[plan] || 0;
+  const grossTermFee = monthlyFee * monthsSubscribed;
+  const discountAmount = Math.round(grossTermFee * (discountPct / 100) * 100) / 100;
+  const totalTermFee = Math.round((grossTermFee - discountAmount) * 100) / 100;
+  const paymentScheduleMode = body.paymentScheduleMode || 'BULK_FULL_TERM'; // 'MONTHLY_SPREAD' | 'BULK_FULL_TERM'
+  const amountDueNow = paymentScheduleMode === 'BULK_FULL_TERM'
+    ? totalTermFee
+    : Math.round((totalTermFee / monthsSubscribed) * 100) / 100;
+
+  const now = new Date();
+  const expiry = new Date(now.getTime() + monthsSubscribed * 30 * 86400000);
 
   const subRecord = {
     id: `SUB-${Date.now()}`,
+    invoiceNumber: `INV-GBS-${Date.now().toString().slice(-6)}`,
+    receiptNumber: body.momoTxnId ? `RCP-GBS-${Date.now().toString().slice(-6)}` : null,
     institutionName: body.institutionName || 'GBS Tenant Institution',
     institutionType: tier,
     studentCount,
     ratePerStudent,
+    fixedTenantFee: 0,
+    basicPackageFee: 0,
+    additionalAccessFee: 0,
     monthlyFee,
     subscriptionPlan: plan,
     monthsSubscribed,
+    discountPct,
+    grossTermFee,
+    discountAmount,
     totalTermFee,
     paymentScheduleMode,
     amountDueNow,
     bulkTermsAccepted: Boolean(body.bulkTermsAccepted),
     bulkTermsSignedBy: body.bulkTermsSignedBy || body.headmasterName || null,
     momoTxnId: body.momoTxnId || null,
-    createdAt: new Date().toISOString()
+    paymentVerified: false, // Payments must be verified before subscription activation
+    subscriptionStatus: 'PENDING_PAYMENT_VERIFICATION',
+    commencementDate: now.toISOString(),
+    expiryDate: expiry.toISOString(),
+    createdAt: now.toISOString()
   };
 
   writePersistentStore((curr) => ({
@@ -314,11 +346,43 @@ app.post('/api/v1/subscriptions/calculate-and-subscribe', (req, res) => {
 
   res.status(201).json({
     status: 'success',
-    message:
-      paymentScheduleMode === 'BULK_FULL_TERM'
-        ? `Bulk subscription agreement signed and recorded for ${monthsSubscribed} months (GH₵ ${totalTermFee.toLocaleString()}).`
-        : `Monthly spread subscription recorded: GH₵ ${monthlyFee.toLocaleString()} per month × ${monthsSubscribed} months (Total: GH₵ ${totalTermFee.toLocaleString()}).`,
+    message: `100% Student-Based Subscription Invoice (${subRecord.invoiceNumber}) generated for ${studentCount} active students × GH₵ ${ratePerStudent} (${monthsSubscribed} months, ${discountPct}% discount = GH₵ ${totalTermFee.toLocaleString()}).`,
     data: subRecord
+  });
+});
+
+app.post('/api/v1/subscriptions/recalculate-population', (req, res) => {
+  const body = req.body || {};
+  const tier = String(body.institutionType || body.tier || 'NURSERY_TO_JHS').toUpperCase();
+  const ratePerStudent = tier.includes('UNI') || tier.includes('TERTIARY') ? 10 : (tier.includes('SHS') || tier.includes('SENIOR')) ? 5 : 3;
+  const previousStudents = Math.max(0, parseInt(body.previousStudents || 200, 10));
+  const newActiveStudents = Math.max(0, parseInt(body.newActiveStudents || 300, 10));
+  const months = Math.max(1, parseInt(body.months || 3, 10));
+  const discountMap = { 1: 0, 3: 3, 6: 5, 9: 7, 12: 10 };
+  const discountPct = discountMap[months] || 0;
+
+  const previousMonthly = previousStudents * ratePerStudent;
+  const nextMonthly = newActiveStudents * ratePerStudent;
+  const nextGross = nextMonthly * months;
+  const nextDiscount = Math.round(nextGross * (discountPct / 100) * 100) / 100;
+  const nextTotalPayment = Math.round((nextGross - nextDiscount) * 100) / 100;
+
+  res.status(200).json({
+    status: 'success',
+    message: 'Future subscription billing recalculated according to active student population policy (previously paid periods preserved).',
+    data: {
+      institutionType: tier,
+      ratePerStudent,
+      previousStudents,
+      newActiveStudents,
+      direction: newActiveStudents > previousStudents ? 'INCREASED' : newActiveStudents < previousStudents ? 'DECREASED' : 'UNCHANGED',
+      previousMonthlyCharge: previousMonthly,
+      nextMonthlyCharge: nextMonthly,
+      months,
+      discountPct,
+      nextTotalPayment,
+      retrospectiveChangeApplied: false
+    }
   });
 });
 

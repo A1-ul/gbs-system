@@ -35,18 +35,21 @@
 
 ---
 
-## 3. Subscription Pricing & Billing Memory
+## 3. Official GBS Student-Based Subscription Pricing Policy (Revised Developer Policy)
 
-- **Per-Student Monthly Rates:**
-  - **Nursery to JHS (`NURSERY_TO_JHS`):** `5 GHS` per student × total students = **Monthly Fee**
-  - **Senior High School (`SHS`):** `10 GHS` per student × total students = **Monthly Fee**
-  - **University / Tertiary (`UNIVERSITY`):** `20 GHS` per student × total students = **Monthly Fee**
-- **Subscription Durations:** `1_MONTH_TRIAL` (1 month, free once only), `3_MONTHS` (3), `6_MONTHS` (6), `9_MONTHS` (9), `12_MONTHS` (12), `LIFETIME` (36).
-- **Total Subscription Calculation:** `totalTermFee = monthlyFee × monthsSubscribed`.
-- **Payment Schedule Modes:**
-  1. **`MONTHLY_SPREAD`:** Tenant pays `monthlyFee` each month over the subscribed duration.
-  2. **`BULK_FULL_TERM`:** Tenant signs the Bulk Payment Terms & Conditions (`bulkTermsAccepted: true`, `bulkTermsSignedBy`) and pays `totalTermFee` in bulk upfront.
-- **1-Month Trial Lock:** Once a tenant's 1-month trial has been used or expired, the system blocks selecting another free trial and prompts the tenant to upgrade.
+- **Pricing Principle:** 100% student-based subscription model. **NO fixed tenant fees, NO basic package fees, and NO additional monthly access charges.** Inactive, deleted, and archived students do not attract charges, and no student is double-counted.
+- **Official Monthly Student Subscription Rates:**
+  - **Nursery – JHS (`NURSERY_TO_JHS`):** `GH₵ 3` per active student / month
+  - **SHS (`SHS`):** `GH₵ 5` per active student / month
+  - **University (`UNIVERSITY`):** `GH₵ 10` per active student / month
+- **Subscription Formula:** $\text{Monthly Charge} = \text{Number of Active Students} \times \text{Rate}$
+- **5 Supported Payment Periods & Discounts:**
+  - **1 month (`1_MONTH`):** `0%` discount (e.g., 300 Nursery–JHS students = `GH₵ 900`)
+  - **3 months (`3_MONTHS`):** `3%` discount (e.g., 300 Nursery–JHS students = `GH₵ 2,619`)
+  - **6 months (`6_MONTHS`):** `5%` discount (e.g., 300 Nursery–JHS students = `GH₵ 5,130`)
+  - **9 months (`9_MONTHS`):** `7%` discount (e.g., 300 Nursery–JHS students = `GH₵ 7,533`)
+  - **12 months (`12_MONTHS`):** `10%` discount (e.g., 300 Nursery–JHS students = `GH₵ 9,720`)
+- **Student Population Growth Policy:** Future invoices automatically increase or decrease when an institution's active student population changes (e.g., `200 → 300` increases next billing; `500 → 400` decreases next billing). Previously paid subscription periods are never retrospectively changed.
 
 ---
 
@@ -61,3 +64,4 @@
 7. **Parent Dashboard (`/portal/parent/dashboard`):** Ward Attendance, Fee Invoices & Mobile Money/Card Payments, Transcript Requests, and PTA Meetings.
 8. **Accountant Dashboard (`/portal/accountant/dashboard`):** Fee Invoicing, Payment Recording, Scholarships, Payroll, and GAAP/IFRS Financial Audits.
 9. **Staff & HR Dashboard (`/portal/staff/dashboard`):** Staff Attendance, Leave Applications, Salary Grouping, Loans, and Campus Operations.
+

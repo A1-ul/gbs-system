@@ -17,82 +17,101 @@ const ONBOARDING_TRACKS = [
 ];
 
 export const getStudentRate = (instType) => {
-  if (instType === "UNIVERSITY") return 20; // 20 cedis for University
-  if (instType === "SENIOR_HIGH_SCHOOL") return 10; // 10 cedis for SHS
-  return 5; // 5 cedis for JHS / Basic School
+  const norm = String(instType || "NURSERY_TO_JHS").toUpperCase();
+  if (norm.includes("UNI") || norm.includes("COLLEGE") || norm.includes("TERTIARY")) return 10; // GH₵ 10 for University
+  if (norm.includes("SHS") || norm.includes("SENIOR") || norm.includes("SECONDARY")) return 5; // GH₵ 5 for SHS
+  return 3; // GH₵ 3 for Nursery – JHS
 };
 
 export const getTierFee = (tierId, instType, studentCount) => {
-  if (tierId === "1_MONTH_TRIAL") return 0;
   const count = Math.max(0, parseInt(studentCount, 10) || 0);
   const rate = getStudentRate(instType);
-  const annualBase = count > 0 ? (rate * count) : (rate * 100);
+  const monthlyCharge = count > 0 ? rate * count : rate * 100;
 
-  if (tierId === "3_MONTHS") return Math.round(annualBase * 0.35);
-  if (tierId === "6_MONTHS") return Math.round(annualBase * 0.60);
-  if (tierId === "12_MONTHS") return annualBase;
-  if (tierId === "LIFETIME") return Math.round(annualBase * 2.5);
-  return 0;
+  if (tierId === "1_MONTH" || tierId === "1_MONTH_TRIAL") return monthlyCharge; // 0% discount
+  if (tierId === "3_MONTHS") return Math.round(monthlyCharge * 3 * 0.97 * 100) / 100; // 3% discount
+  if (tierId === "6_MONTHS") return Math.round(monthlyCharge * 6 * 0.95 * 100) / 100; // 5% discount
+  if (tierId === "9_MONTHS") return Math.round(monthlyCharge * 9 * 0.93 * 100) / 100; // 7% discount
+  if (tierId === "12_MONTHS" || tierId === "LIFETIME") return Math.round(monthlyCharge * 12 * 0.90 * 100) / 100; // 10% discount
+  return monthlyCharge;
 };
 
-export const computeSubscriptionTiers = (instType, studentCountInput, hasUsedTrial = false) => {
+export const computeSubscriptionTiers = (instType, studentCountInput) => {
   const students = Math.max(0, parseInt(studentCountInput, 10) || 0);
+  const effectiveStudents = students > 0 ? students : 100;
   const rate = getStudentRate(instType);
-  const annualBase = students > 0 ? (rate * students) : (rate * 100);
+  const monthlyCharge = effectiveStudents * rate;
 
   return [
     {
-      id: "1_MONTH_TRIAL",
-      name: "1 Month Free Trial",
-      duration: "30 Days Free Autonomous Access",
-      feeGHS: 0,
-      badge: hasUsedTrial ? "TRIAL EXPIRED / REDEEMED" : "FREE INSTANT ACCESS",
-      badgeColor: hasUsedTrial ? "#64748b" : "#10b981",
-      desc: hasUsedTrial
-        ? "1-Month Free Trial already used upon registration. Renewals must select 3 Months to Lifetime."
-        : `Instant 30-day trial for all ${students > 0 ? students : "registered"} students with zero upfront payment required.`,
-      disabled: Boolean(hasUsedTrial),
+      id: "1_MONTH",
+      name: "1 Month Subscription",
+      duration: "1 Month (0% Discount)",
+      months: 1,
+      discountPct: 0,
+      grossGHS: monthlyCharge,
+      feeGHS: monthlyCharge,
+      badge: "0% DISCOUNT",
+      badgeColor: "#10b981",
+      desc: `${effectiveStudents} active students × GH₵ ${rate} = GH₵ ${monthlyCharge.toLocaleString()}/month (0% discount).`,
+      disabled: false,
       popular: false
     },
     {
       id: "3_MONTHS",
-      name: "3 Months (Quarterly)",
-      duration: "1 Academic Term",
-      feeGHS: Math.round(annualBase * 0.35),
-      badge: "TERM PLAN",
+      name: "3 Months Subscription",
+      duration: "3 Months (3% Discount)",
+      months: 3,
+      discountPct: 3,
+      grossGHS: monthlyCharge * 3,
+      feeGHS: Math.round(monthlyCharge * 3 * 0.97 * 100) / 100,
+      badge: "3% DISCOUNT",
       badgeColor: "#3b82f6",
-      desc: `Term licensing: GHS ${(rate * 0.35).toFixed(2)} per student for 1 term (${students > 0 ? `${students} students` : "term evaluation"}).`,
+      desc: `Gross GH₵ ${(monthlyCharge * 3).toLocaleString()} less 3% discount = GH₵ ${(Math.round(monthlyCharge * 3 * 0.97 * 100) / 100).toLocaleString()}.`,
+      disabled: false,
       popular: false
     },
     {
       id: "6_MONTHS",
-      name: "6 Months (Semester)",
-      duration: "2 Academic Terms",
-      feeGHS: Math.round(annualBase * 0.60),
-      badge: "SEMESTER PLAN",
+      name: "6 Months Subscription",
+      duration: "6 Months (5% Discount)",
+      months: 6,
+      discountPct: 5,
+      grossGHS: monthlyCharge * 6,
+      feeGHS: Math.round(monthlyCharge * 6 * 0.95 * 100) / 100,
+      badge: "5% DISCOUNT",
       badgeColor: "#8b5cf6",
-      desc: `Semester licensing: GHS ${(rate * 0.60).toFixed(2)} per student for two terms with priority backups.`,
+      desc: `Gross GH₵ ${(monthlyCharge * 6).toLocaleString()} less 5% discount = GH₵ ${(Math.round(monthlyCharge * 6 * 0.95 * 100) / 100).toLocaleString()}.`,
+      disabled: false,
+      popular: false
+    },
+    {
+      id: "9_MONTHS",
+      name: "9 Months Subscription",
+      duration: "9 Months (7% Discount)",
+      months: 9,
+      discountPct: 7,
+      grossGHS: monthlyCharge * 9,
+      feeGHS: Math.round(monthlyCharge * 9 * 0.93 * 100) / 100,
+      badge: "7% DISCOUNT",
+      badgeColor: "#06b6d4",
+      desc: `Gross GH₵ ${(monthlyCharge * 9).toLocaleString()} less 7% discount = GH₵ ${(Math.round(monthlyCharge * 9 * 0.93 * 100) / 100).toLocaleString()}.`,
+      disabled: false,
       popular: false
     },
     {
       id: "12_MONTHS",
-      name: "12 Months (Full Academic Year)",
-      duration: "Full Academic Year (365 Days)",
-      feeGHS: annualBase,
-      badge: "★ RECOMMENDED",
+      name: "12 Months Subscription",
+      duration: "12 Months (10% Discount)",
+      months: 12,
+      discountPct: 10,
+      grossGHS: monthlyCharge * 12,
+      feeGHS: Math.round(monthlyCharge * 12 * 0.90 * 100) / 100,
+      badge: "★ 10% DISCOUNT",
       badgeColor: "#f59e0b",
-      desc: `Full Year Standard: GHS ${rate}.00 × ${students > 0 ? `${students} students = GHS ${annualBase.toLocaleString()}` : "total student population"}.`,
+      desc: `Gross GH₵ ${(monthlyCharge * 12).toLocaleString()} less 10% discount = GH₵ ${(Math.round(monthlyCharge * 12 * 0.90 * 100) / 100).toLocaleString()}.`,
+      disabled: false,
       popular: true
-    },
-    {
-      id: "LIFETIME",
-      name: "Lifetime Institutional",
-      duration: "Perpetual License",
-      feeGHS: Math.round(annualBase * 2.5),
-      badge: "VIP PERPETUAL",
-      badgeColor: "#ec4899",
-      desc: `Perpetual institutional license with zero recurring subscription fees forever (2.5× annual fee).`,
-      popular: false
     }
   ];
 };

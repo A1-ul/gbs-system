@@ -353,7 +353,7 @@
       "createdAt": "2026-11-02T21:55:25.367Z"
     }
   ],
-  "updatedAt": "2026-11-02T22:16:18.790Z",
+  "updatedAt": "2026-11-02T23:07:14.758Z",
   "registeredUsers": [
     {
       "id": "usr_9",
@@ -450,6 +450,93 @@
   ],
   "prismaModels": {
     "AuditLog": [
+      {
+        "id": 73,
+        "tenantId": 1,
+        "userId": 2,
+        "action": "ASSIGNMENT_DELETED",
+        "module": "assignments",
+        "details": "{\"assignmentId\":2,\"title\":\"Algebra Homework 1\"}",
+        "isDeleted": false,
+        "createdAt": "2026-11-02T23:07:14.751Z",
+        "updatedAt": "2026-11-02T23:07:14.751Z"
+      },
+      {
+        "id": 72,
+        "tenantId": 1,
+        "userId": 2,
+        "action": "ASSIGNMENT_DELETED",
+        "module": "assignments",
+        "details": "{\"assignmentId\":5,\"title\":\"Algebra Homework 1\"}",
+        "isDeleted": false,
+        "createdAt": "2026-11-02T23:07:07.575Z",
+        "updatedAt": "2026-11-02T23:07:07.575Z"
+      },
+      {
+        "id": 71,
+        "tenantId": 1,
+        "userId": 2,
+        "action": "ASSIGNMENT_DELETED",
+        "module": "assignments",
+        "details": "{\"assignmentId\":1792623791131,\"title\":\"Algebra Homework 1\"}",
+        "isDeleted": false,
+        "createdAt": "2026-11-02T23:07:00.850Z",
+        "updatedAt": "2026-11-02T23:07:00.850Z"
+      },
+      {
+        "id": 70,
+        "tenantId": 1,
+        "userId": 2,
+        "action": "SINGLE_STUDENT_ATTENDANCE_MARKED",
+        "module": "ATTENDANCE",
+        "details": "Marked student #3 as PRESENT for class #13 on Mon Nov 02 2026 00:00:00 GMT+0000 (Greenwich Mean Time).",
+        "isDeleted": false,
+        "createdAt": "2026-11-02T23:06:20.574Z",
+        "updatedAt": "2026-11-02T23:06:20.574Z"
+      },
+      {
+        "id": 69,
+        "tenantId": 1,
+        "userId": 2,
+        "action": "SINGLE_STUDENT_ATTENDANCE_MARKED",
+        "module": "ATTENDANCE",
+        "details": "Marked student #3 as PRESENT for class #13 on Mon Nov 02 2026 00:00:00 GMT+0000 (Greenwich Mean Time).",
+        "isDeleted": false,
+        "createdAt": "2026-11-02T23:06:17.213Z",
+        "updatedAt": "2026-11-02T23:06:17.213Z"
+      },
+      {
+        "id": 68,
+        "tenantId": 1,
+        "action": "DATA_MIGRATION_ROLLED_BACK",
+        "module": "MIGRATION",
+        "details": "Job #1: Rolled back 0 imported records.",
+        "isDeleted": false,
+        "createdAt": "2026-11-02T23:00:58.035Z",
+        "updatedAt": "2026-11-02T23:00:58.035Z"
+      },
+      {
+        "id": 67,
+        "tenantId": 1,
+        "action": "DATA_MIGRATION_BATCH_IMPORTED",
+        "module": "MIGRATION",
+        "details": "Job #1: Imported 15/15 FEE_RECORDS records from annual_tuition_schedules.csv",
+        "isDeleted": false,
+        "createdAt": "2026-11-02T23:00:47.809Z",
+        "updatedAt": "2026-11-02T23:00:47.809Z"
+      },
+      {
+        "id": 66,
+        "tenantId": 1,
+        "userId": null,
+        "module": "DEV_CONTROL",
+        "action": "DEVELOPER_LOGIN_AUTHENTICATED",
+        "details": "Developer session initialized for 'gabosei48@gmail.com' with Level 5 root clearance",
+        "ipAddress": "127.0.0.1",
+        "isDeleted": false,
+        "createdAt": "2026-11-02T22:50:34.641Z",
+        "updatedAt": "2026-11-02T22:50:34.641Z"
+      },
       {
         "id": 65,
         "tenantId": 1,
@@ -1677,22 +1764,6 @@
     ],
     "Assignment": [
       {
-        "id": 5,
-        "tenantId": 1,
-        "classId": 21,
-        "subjectId": 1,
-        "teacherId": 1,
-        "title": "Algebra Homework 1",
-        "description": null,
-        "dueDate": "2026-11-15T00:00:00.000Z",
-        "maxScore": 20,
-        "attachmentUrl": null,
-        "status": "PUBLISHED",
-        "isDeleted": false,
-        "createdAt": "2026-11-02T22:16:18.704Z",
-        "updatedAt": "2026-11-02T22:16:18.704Z"
-      },
-      {
         "id": 4,
         "tenantId": 1,
         "classId": 21,
@@ -1723,22 +1794,6 @@
         "isDeleted": false,
         "createdAt": "2026-11-02T22:10:46.275Z",
         "updatedAt": "2026-11-02T22:10:46.275Z"
-      },
-      {
-        "id": 2,
-        "tenantId": 1,
-        "classId": 21,
-        "subjectId": 1,
-        "teacherId": 1,
-        "title": "Algebra Homework 1",
-        "description": null,
-        "dueDate": "2026-11-15T00:00:00.000Z",
-        "maxScore": 20,
-        "attachmentUrl": null,
-        "status": "PUBLISHED",
-        "isDeleted": false,
-        "createdAt": "2026-11-02T22:06:07.501Z",
-        "updatedAt": "2026-11-02T22:06:07.501Z"
       },
       {
         "id": 1,
@@ -2300,6 +2355,34 @@
     ],
     "AttendanceRecord": [
       {
+        "id": 8,
+        "tenantId": 1,
+        "classId": 13,
+        "studentId": 3,
+        "subjectId": null,
+        "date": "2026-11-02T00:00:00.000Z",
+        "status": "PRESENT",
+        "remarks": null,
+        "markedById": 2,
+        "isDeleted": false,
+        "createdAt": "2026-11-02T23:06:19.558Z",
+        "updatedAt": "2026-11-02T23:06:19.558Z"
+      },
+      {
+        "id": 7,
+        "tenantId": 1,
+        "classId": 13,
+        "studentId": 3,
+        "subjectId": null,
+        "date": "2026-11-02T00:00:00.000Z",
+        "status": "PRESENT",
+        "remarks": null,
+        "markedById": 2,
+        "isDeleted": false,
+        "createdAt": "2026-11-02T23:06:17.197Z",
+        "updatedAt": "2026-11-02T23:06:17.197Z"
+      },
+      {
         "id": 6,
         "tenantId": 1,
         "classId": 1,
@@ -2514,6 +2597,22 @@
         "createdAt": "2026-11-02T22:14:21.412Z",
         "updatedAt": "2026-11-02T22:14:21.412Z"
       }
+    ],
+    "MigrationJob": [
+      {
+        "id": 1,
+        "tenantId": 1,
+        "filename": "annual_tuition_schedules.csv",
+        "entityType": "FEE_RECORDS",
+        "totalRecords": 15,
+        "processedCount": 15,
+        "failedCount": 0,
+        "status": "ROLLED_BACK",
+        "isDeleted": false,
+        "createdAt": "2026-11-02T23:00:47.792Z",
+        "updatedAt": "2026-11-02T23:00:58.026Z",
+        "errorsJson": "{\"rollbackTime\":\"2026-11-02T23:00:58.023Z\",\"recordsRemoved\":0}"
+      }
     ]
   },
   "rawSqlTables": {
@@ -2602,6 +2701,86 @@
         "resolution_notes": "Technician scheduled for inspection.",
         "created_at": "2026-11-02T22:06:07.600Z",
         "updated_at": "2026-11-02T22:06:07.600Z"
+      }
+    ],
+    "inventory_items": [
+      {
+        "id": 1,
+        "created_at": "2026-11-02T22:57:59.443Z",
+        "updated_at": "2026-11-02T22:57:59.443Z",
+        "tenant_id": 1,
+        "item_code": "dfsh",
+        "name": "hshd",
+        "category": "LAB_SUPPLIES",
+        "unit": "PIECES",
+        "quantity_on_hand": 20,
+        "reorder_level": 10,
+        "unit_price": 25,
+        "location": "Science Storeroom B1",
+        "status": "IN_STOCK",
+        "purchased_by_staff": "Dr. Evelyn Reed (Head of Sciences)",
+        "purchaser_dept": "Faculty of Sciences"
+      }
+    ],
+    "transport_routes": [
+      {
+        "id": 1,
+        "created_at": "2026-11-02T22:59:18.896Z",
+        "updated_at": "2026-11-02T22:59:18.896Z",
+        "tenant_id": 1,
+        "route_code": "fhfh",
+        "name": "dfhdfh",
+        "start_location": "dfshf",
+        "end_location": "GBS Main Campus",
+        "stops": "[{\"name\":\"Central Station (07:00)\",\"time\":\"Scheduled\"},{\"name\":\"North Gate (07:20)\",\"time\":\"Scheduled\"},{\"name\":\"West Gate (07:40)\",\"time\":\"Scheduled\"}]",
+        "monthly_fare": 160
+      }
+    ],
+    "transport_vehicles": [
+      {
+        "id": 1,
+        "created_at": "2026-11-02T22:59:24.978Z",
+        "updated_at": "2026-11-02T22:59:24.978Z",
+        "tenant_id": 1,
+        "registration_number": "dhsdf",
+        "model": "Mercedes-Bsdfhfdenz Sprinter 32-Seater",
+        "capacity": 32,
+        "driver_name": "sdfhsdf",
+        "driver_phone": "sdfhfd",
+        "assigned_route_id": null
+      }
+    ],
+    "security_gate_events": [
+      {
+        "id": 1,
+        "created_at": "2026-11-02T23:01:28.943Z",
+        "updated_at": "2026-11-02T23:01:28.943Z",
+        "tenant_id": 1,
+        "event_id": "SGE-2026-4270",
+        "camera_id": 1,
+        "person_name": "Marcus Vance",
+        "person_role": "STAFF",
+        "event_type": "ACCESS_GRANTED",
+        "gate_location": "North Gate Turnstile #1",
+        "gate_name": 99.4,
+        "match_confidence": 99.5,
+        "liveness_score": null,
+        "snapshot_url": false
+      }
+    ],
+    "cctv_streams": [
+      {
+        "id": 1,
+        "created_at": "2026-11-02T23:01:40.221Z",
+        "updated_at": "2026-11-02T23:01:47.317Z",
+        "tenant_id": 1,
+        "camera_code": "CAM-0207",
+        "camera_name": "South Entrance Panoramic Cam",
+        "location": "Main Administrative Quadrangle",
+        "stream_url": "rtsp://192.168.1.108:554/ch0",
+        "rtsp_endpoint": "1080p FHD 60FPS",
+        "resolution": "ONLINE",
+        "status": "ONLINE"
       }
     ]
   }
