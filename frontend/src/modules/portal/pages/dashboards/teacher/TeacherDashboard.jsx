@@ -15,6 +15,7 @@ import {
   INSTITUTION_TIERS 
 } from "../../../../../utils/institutionScope";
 import UniversalRoleGuideModal from "../../../../../components/common/UniversalRoleGuideModal";
+import ClassTopicVideoPlatform from "../../../../../components/common/ClassTopicVideoPlatform";
 import "./TeacherDashboard.css";
 
 export default function TeacherDashboard() {
@@ -2785,6 +2786,14 @@ export default function TeacherDashboard() {
               onClick={() => setActiveTab("meetings")}
             >
               💻 Virtual Classrooms (Zoom / Meet)
+            </button>
+            <button 
+              type="button" 
+              className={`role-tab-btn ${activeTab === "topicVideos" ? "active" : ""}`}
+              onClick={() => setActiveTab("topicVideos")}
+              style={{ borderLeft: "3px solid #10b981", color: activeTab === "topicVideos" ? "#34d399" : undefined }}
+            >
+              🎬 Class Topic Videos (In Teacher's Absence)
             </button>
             <button 
               type="button" 
@@ -5652,6 +5661,20 @@ export default function TeacherDashboard() {
                   </div>
                 </div>
               )}
+
+              {/* Teacher Topic Video Upload Platform (also accessible inside Virtual Classrooms) */}
+              <div style={{ marginTop: "2rem" }}>
+                <ClassTopicVideoPlatform mode="TEACHER" currentUser={currentUser} />
+              </div>
+            </div>
+          )}
+
+          {/* ======================================================== */}
+          {/* TAB 7B: TEACHER TOPIC VIDEOS FOR CLASS PLAYBACK IN ABSENCE */}
+          {/* ======================================================== */}
+          {activeTab === "topicVideos" && (
+            <div className="role-workspace-card">
+              <ClassTopicVideoPlatform mode="TEACHER" currentUser={currentUser} />
             </div>
           )}
 

@@ -67,12 +67,12 @@ export default function TenantOnboardingFirstPage() {
           setOfflineSyncNotice(`Connecting to internet: syncing ${queued.length} queued registration(s) to cloud database...`);
           // Dispatch sync
           queued.forEach((item) => {
-            registerInstitution(item).catch(() => {});
+            registerInstitution(item).catch(() => { });
           });
           localStorage.removeItem("gbs_offline_onboarding_queue");
           setTimeout(() => setOfflineSyncNotice("✓ Offline registrations successfully synced to GBS cloud hosting!"), 2500);
         }
-      } catch (err) {}
+      } catch (err) { }
     };
 
     const handleOffline = () => {
@@ -115,7 +115,10 @@ export default function TenantOnboardingFirstPage() {
     adminPhone: "",
     password: "",
     confirmPassword: "",
-    subscriptionPlan: "1_MONTH_TRIAL", // 1_MONTH_TRIAL | 3_MONTHS | 6_MONTHS | 12_MONTHS | LIFETIME
+    subscriptionPlan: "1_MONTH_TRIAL", // 1_MONTH_TRIAL | 3_MONTHS | 6_MONTHS | 9_MONTHS | 12_MONTHS | LIFETIME
+    paymentScheduleMode: "MONTHLY_SPREAD", // "MONTHLY_SPREAD" | "BULK_FULL_TERM"
+    bulkTermsAccepted: false,
+    bulkTermsSignedBy: "",
     momoTxnId: "FREE_TRIAL_AUTO",
     facePhoto: null,
     biometricFaceToken: null,
@@ -138,46 +141,59 @@ export default function TenantOnboardingFirstPage() {
     }
   });
 
-  // Calculate Rate per Student based on Institution Type
+  // Calculate Rate per Student per Month based on Institution Type
+  // Nursery to JHS: 5 Cedis | SHS: 10 Cedis | University: 20 Cedis
   const currentRatePerStudent = useMemo(() => {
     if (form.institutionType === "UNIVERSITY") return activeRates.UNIVERSITY || 20;
     if (form.institutionType === "SENIOR_HIGH_SCHOOL") return activeRates.SHS || 10;
     return activeRates.JHS || 5;
   }, [form.institutionType, activeRates]);
 
-  // Real-time Student Multiplier Calculation
+  // Real-time Student Multiplier & Subscription Term Calculation
+  // Formula: Monthly Amount = Rate Per Student (5 / 10 / 20 GHS) × Total Students
+  // Total Subscribed Term Amount = Monthly Amount × Subscribed Months (3, 6, 9, 12, or 36 for Lifetime)
   const calculation = useMemo(() => {
     const count = Math.max(0, parseInt(form.totalStudentsEnrolled, 10) || 0);
-    const annualBase = count * currentRatePerStudent;
-    const monthlyRate = Math.round(annualBase / 12);
-    const termRate = Math.round(annualBase * 0.35);
-    const semesterRate = Math.round(annualBase * 0.60);
-    const lifetimeRate = Math.round(annualBase * 2.5);
+    const monthlyRate = count * currentRatePerStudent;
+    const term3Months = monthlyRate * 3;
+    const term6Months = monthlyRate * 6;
+    const term9Months = monthlyRate * 9;
+    const term12Months = monthlyRate * 12;
+    const lifetimeRate = monthlyRate * 36;
 
-    let payableAmount = 0;
-    if (form.subscriptionPlan === "1_MONTH_TRIAL") {
-      payableAmount = 0;
-    } else if (form.subscriptionPlan === "3_MONTHS") {
-      payableAmount = termRate;
-    } else if (form.subscriptionPlan === "6_MONTHS") {
-      payableAmount = semesterRate;
-    } else if (form.subscriptionPlan === "12_MONTHS") {
-      payableAmount = annualBase;
-    } else if (form.subscriptionPlan === "LIFETIME") {
-      payableAmount = lifetimeRate;
-    }
+    const monthsMap = {
+      "1_MONTH_TRIAL": 1,
+      "3_MONTHS": 3,
+      "6_MONTHS": 6,
+      "9_MONTHS": 9,
+      "12_MONTHS": 12,
+      "LIFETIME": 36
+    };
+    const subscribedMonths = monthsMap[form.subscriptionPlan] || 3;
+    const isTrial = form.subscriptionPlan === "1_MONTH_TRIAL";
+    const totalTermFee = isTrial ? 0 : monthlyRate * subscribedMonths;
+
+    // Payable amount now depends on whether the tenant spreads payment monthly or pays in bulk
+    const payableAmount = isTrial
+      ? 0
+      : form.paymentScheduleMode === "BULK_FULL_TERM"
+        ? totalTermFee
+        : monthlyRate;
 
     return {
       count,
       rate: currentRatePerStudent,
-      annualBase,
       monthlyRate,
-      termRate,
-      semesterRate,
+      termRate: term3Months,
+      semesterRate: term6Months,
+      nineMonthRate: term9Months,
+      annualBase: term12Months,
       lifetimeRate,
+      subscribedMonths,
+      totalTermFee,
       payableAmount
     };
-  }, [form.totalStudentsEnrolled, currentRatePerStudent, form.subscriptionPlan]);
+  }, [form.totalStudentsEnrolled, currentRatePerStudent, form.subscriptionPlan, form.paymentScheduleMode]);
 
   // Detected Carriers for Phones
   const officialPhoneCarrier = useMemo(() => {
@@ -241,7 +257,13 @@ export default function TenantOnboardingFirstPage() {
 
     // Trial Lock Verification
     if (form.subscriptionPlan === "1_MONTH_TRIAL" && hasUsedTrial) {
-      setError("Your institution has already used its 1-Month Free Trial. Please select a Term, Semester, or Annual plan to protect your institutional records.");
+      setError("Your institution has already used its 1-Month Free Trial. Please select a 3 Months, 6 Months, 9 Months, 12 Months, or Lifetime subscription to protect your institutional records.");
+      return;
+    }
+
+    // Bulk Payment Terms & Conditions Verification
+    if (form.subscriptionPlan !== "1_MONTH_TRIAL" && form.paymentScheduleMode === "BULK_FULL_TERM" && !form.bulkTermsAccepted) {
+      setError("Please sign and accept the Bulk Subscription Payment Terms & Conditions to pay your preferred subscription in bulk without monthly spread.");
       return;
     }
 
@@ -255,7 +277,14 @@ export default function TenantOnboardingFirstPage() {
       ...form,
       appRef,
       tenantCode,
-      calculatedFee: String(calculation.payableAmount),
+      perStudentRate: calculation.rate,
+      monthlyFee: calculation.monthlyRate,
+      subscribedMonths: calculation.subscribedMonths,
+      totalTermFee: calculation.totalTermFee,
+      paymentScheduleMode: form.paymentScheduleMode,
+      bulkTermsAccepted: Boolean(form.bulkTermsAccepted),
+      bulkTermsSignedBy: form.bulkTermsSignedBy || form.adminName,
+      calculatedFee: String(calculation.totalTermFee || calculation.monthlyRate),
       paymentAmount: String(calculation.payableAmount),
       headmasterName: form.adminName,
       headmasterEmail: form.adminEmail,
@@ -270,7 +299,7 @@ export default function TenantOnboardingFirstPage() {
       try {
         const queued = JSON.parse(localStorage.getItem("gbs_offline_onboarding_queue") || "[]");
         localStorage.setItem("gbs_offline_onboarding_queue", JSON.stringify([submissionPayload, ...queued]));
-      } catch {}
+      } catch { }
     } else {
       try {
         await registerInstitution(submissionPayload);
@@ -286,7 +315,7 @@ export default function TenantOnboardingFirstPage() {
       localStorage.setItem("gbs_incoming_onboarding_applications", JSON.stringify(updated));
       window.dispatchEvent(new CustomEvent("gbs_new_onboarding_application", { detail: submissionPayload }));
       window.dispatchEvent(new Event("storage"));
-    } catch {}
+    } catch { }
 
     // Mark as onboarded on this device so next visit takes the user straight to /login
     localStorage.setItem("gbs_tenant_already_onboarded", "true");
@@ -794,34 +823,40 @@ export default function TenantOnboardingFirstPage() {
             <div className="gbs-pricing-summary-card">
               <div className="gbs-rate-pill-group">
                 <div className="gbs-rate-pill active">
-                  <div className="gbs-rate-pill-title">Rate Per Student</div>
+                  <div className="gbs-rate-pill-title">Rate Per Student / Month</div>
                   <div className="gbs-rate-pill-val">GH₵ {calculation.rate}.00</div>
                   <span style={{ fontSize: "0.7rem", color: "#94a3b8" }}>
-                    {form.institutionType === "UNIVERSITY" ? "Tertiary Level" : form.institutionType === "SENIOR_HIGH_SCHOOL" ? "Senior High Level" : "Basic / JHS Level"}
+                    {form.institutionType === "UNIVERSITY" ? "University Level (GH₵ 20)" : form.institutionType === "SENIOR_HIGH_SCHOOL" ? "SHS Level (GH₵ 10)" : "Nursery to JHS Level (GH₵ 5)"}
                   </span>
                 </div>
 
                 <div className="gbs-rate-pill">
-                  <div className="gbs-rate-pill-title">Declared Population</div>
+                  <div className="gbs-rate-pill-title">Total Students</div>
                   <div className="gbs-rate-pill-val">{calculation.count} Students</div>
-                  <span style={{ fontSize: "0.7rem", color: "#94a3b8" }}>Active Enrollment</span>
+                  <span style={{ fontSize: "0.7rem", color: "#94a3b8" }}>Registered Institution</span>
                 </div>
 
                 <div className="gbs-rate-pill">
-                  <div className="gbs-rate-pill-title">Estimated Monthly Equivalent</div>
+                  <div className="gbs-rate-pill-title">Amount To Pay Every Month</div>
                   <div className="gbs-rate-pill-val" style={{ color: "#38bdf8" }}>GH₵ {calculation.monthlyRate.toLocaleString()} / mo</div>
-                  <span style={{ fontSize: "0.7rem", color: "#94a3b8" }}>Annual ÷ 12 Months</span>
+                  <span style={{ fontSize: "0.7rem", color: "#94a3b8" }}>{calculation.count} Students × GH₵ {calculation.rate}</span>
                 </div>
 
                 <div className="gbs-rate-pill">
-                  <div className="gbs-rate-pill-title">Full Academic Year Base</div>
-                  <div className="gbs-rate-pill-val" style={{ color: "#34d399" }}>GH₵ {calculation.annualBase.toLocaleString()}</div>
-                  <span style={{ fontSize: "0.7rem", color: "#94a3b8" }}>{calculation.count} × GH₵ {calculation.rate}</span>
+                  <div className="gbs-rate-pill-title">Subscribed Term Total ({calculation.subscribedMonths} Mo)</div>
+                  <div className="gbs-rate-pill-val" style={{ color: "#34d399" }}>
+                    {form.subscriptionPlan === "1_MONTH_TRIAL" ? "GH₵ 0.00 (Trial)" : `GH₵ ${calculation.totalTermFee.toLocaleString()}`}
+                  </div>
+                  <span style={{ fontSize: "0.7rem", color: "#94a3b8" }}>
+                    {form.subscriptionPlan === "1_MONTH_TRIAL"
+                      ? `Then GH₵ ${calculation.monthlyRate.toLocaleString()}/mo`
+                      : `GH₵ ${calculation.monthlyRate.toLocaleString()}/mo × ${calculation.subscribedMonths} Months`}
+                  </span>
                 </div>
               </div>
 
               <div style={{ fontSize: "0.82rem", color: "#cbd5e1", marginBottom: "8px", fontWeight: 700 }}>
-                Select Preferred Subscription Term:
+                Select Preferred Subscription Term (Monthly Amount × Subscribed Months):
               </div>
 
               {/* Subscription Tiers Grid */}
@@ -847,37 +882,52 @@ export default function TenantOnboardingFirstPage() {
                     <div className="gbs-tier-desc">
                       {hasUsedTrial
                         ? "1-Month trial already redeemed. Upgrades are required to preserve records and cloud backups."
-                        : `Instant 30-day autonomous access for all ${calculation.count} students with zero upfront payment.`}
+                        : `Instant 30-day autonomous access for all ${calculation.count} students (Standard: GH₵ ${calculation.monthlyRate.toLocaleString()}/mo after trial).`}
                     </div>
                   </div>
                 </div>
 
-                {/* 3 Months / 1 Term */}
+                {/* 3 Months */}
                 <div
                   className={`gbs-tier-card ${form.subscriptionPlan === "3_MONTHS" ? "selected" : ""}`}
                   onClick={() => setForm((prev) => ({ ...prev, subscriptionPlan: "3_MONTHS", momoTxnId: prev.momoTxnId === "FREE_TRIAL_AUTO" ? "" : prev.momoTxnId }))}
                 >
                   <div>
-                    <span className="gbs-tier-badge" style={{ background: "#3b82f6", color: "#fff" }}>1 ACADEMIC TERM</span>
-                    <div className="gbs-tier-name">3 Months (Term Licensing)</div>
+                    <span className="gbs-tier-badge" style={{ background: "#3b82f6", color: "#fff" }}>3 MONTHS TERM</span>
+                    <div className="gbs-tier-name">3 Months Subscription</div>
                     <div className="gbs-tier-fee">GH₵ {calculation.termRate.toLocaleString()}</div>
                     <div className="gbs-tier-desc">
-                      GH₵ {(calculation.rate * 0.35).toFixed(2)} per student for 1 full academic term.
+                      GH₵ {calculation.monthlyRate.toLocaleString()}/month × 3 months ({calculation.count} × GH₵ {calculation.rate}).
                     </div>
                   </div>
                 </div>
 
-                {/* 6 Months / Semester */}
+                {/* 6 Months */}
                 <div
                   className={`gbs-tier-card ${form.subscriptionPlan === "6_MONTHS" ? "selected" : ""}`}
                   onClick={() => setForm((prev) => ({ ...prev, subscriptionPlan: "6_MONTHS", momoTxnId: prev.momoTxnId === "FREE_TRIAL_AUTO" ? "" : prev.momoTxnId }))}
                 >
                   <div>
-                    <span className="gbs-tier-badge" style={{ background: "#8b5cf6", color: "#fff" }}>SEMESTER PLAN</span>
-                    <div className="gbs-tier-name">6 Months (2 Terms)</div>
+                    <span className="gbs-tier-badge" style={{ background: "#8b5cf6", color: "#fff" }}>6 MONTHS PLAN</span>
+                    <div className="gbs-tier-name">6 Months Subscription</div>
                     <div className="gbs-tier-fee">GH₵ {calculation.semesterRate.toLocaleString()}</div>
                     <div className="gbs-tier-desc">
-                      GH₵ {(calculation.rate * 0.6).toFixed(2)} per student with priority cloud backups.
+                      GH₵ {calculation.monthlyRate.toLocaleString()}/month × 6 months ({calculation.count} × GH₵ {calculation.rate}).
+                    </div>
+                  </div>
+                </div>
+
+                {/* 9 Months */}
+                <div
+                  className={`gbs-tier-card ${form.subscriptionPlan === "9_MONTHS" ? "selected" : ""}`}
+                  onClick={() => setForm((prev) => ({ ...prev, subscriptionPlan: "9_MONTHS", momoTxnId: prev.momoTxnId === "FREE_TRIAL_AUTO" ? "" : prev.momoTxnId }))}
+                >
+                  <div>
+                    <span className="gbs-tier-badge" style={{ background: "#06b6d4", color: "#fff" }}>9 MONTHS PLAN</span>
+                    <div className="gbs-tier-name">9 Months Subscription</div>
+                    <div className="gbs-tier-fee">GH₵ {calculation.nineMonthRate.toLocaleString()}</div>
+                    <div className="gbs-tier-desc">
+                      GH₵ {calculation.monthlyRate.toLocaleString()}/month × 9 months ({calculation.count} × GH₵ {calculation.rate}).
                     </div>
                   </div>
                 </div>
@@ -888,11 +938,11 @@ export default function TenantOnboardingFirstPage() {
                   onClick={() => setForm((prev) => ({ ...prev, subscriptionPlan: "12_MONTHS", momoTxnId: prev.momoTxnId === "FREE_TRIAL_AUTO" ? "" : prev.momoTxnId }))}
                 >
                   <div>
-                    <span className="gbs-tier-badge" style={{ background: "#f59e0b", color: "#000" }}>★ RECOMMENDED</span>
-                    <div className="gbs-tier-name">12 Months (Full Academic Year)</div>
+                    <span className="gbs-tier-badge" style={{ background: "#f59e0b", color: "#000" }}>★ 12 MONTHS PLAN</span>
+                    <div className="gbs-tier-name">12 Months Subscription</div>
                     <div className="gbs-tier-fee">GH₵ {calculation.annualBase.toLocaleString()}</div>
                     <div className="gbs-tier-desc">
-                      Full Year Standard: GH₵ {calculation.rate}.00 × {calculation.count} students.
+                      GH₵ {calculation.monthlyRate.toLocaleString()}/month × 12 months ({calculation.count} × GH₵ {calculation.rate}).
                     </div>
                   </div>
                 </div>
@@ -904,21 +954,119 @@ export default function TenantOnboardingFirstPage() {
                 >
                   <div>
                     <span className="gbs-tier-badge" style={{ background: "#ec4899", color: "#fff" }}>VIP PERPETUAL</span>
-                    <div className="gbs-tier-name">Lifetime Perpetual</div>
+                    <div className="gbs-tier-name">Lifetime Subscription</div>
                     <div className="gbs-tier-fee">GH₵ {calculation.lifetimeRate.toLocaleString()}</div>
                     <div className="gbs-tier-desc">
-                      Perpetual institutional license with zero recurring subscription fees forever.
+                      GH₵ {calculation.monthlyRate.toLocaleString()}/mo × 36 months perpetual buyout with zero recurring fees forever.
                     </div>
                   </div>
                 </div>
               </div>
+
+              {/* Payment Schedule Mode Selector (Spread Monthly vs Bulk Full Term with Signed T&C) */}
+              {form.subscriptionPlan !== "1_MONTH_TRIAL" && (
+                <div style={{ marginTop: "18px", padding: "16px", background: "rgba(15, 23, 42, 0.85)", borderRadius: "12px", border: "1px solid rgba(56, 189, 248, 0.35)" }}>
+                  <div style={{ fontSize: "0.86rem", color: "#38bdf8", fontWeight: 800, marginBottom: "10px" }}>
+                    ⚖️ Choose Preferred Subscription Payment Structure ({calculation.subscribedMonths} Months Selected):
+                  </div>
+
+                  <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(260px, 1fr))", gap: "12px" }}>
+                    {/* Option 1: Monthly Spread */}
+                    <div
+                      onClick={() => setForm((prev) => ({ ...prev, paymentScheduleMode: "MONTHLY_SPREAD" }))}
+                      style={{
+                        padding: "14px",
+                        borderRadius: "10px",
+                        cursor: "pointer",
+                        border: form.paymentScheduleMode === "MONTHLY_SPREAD" ? "2px solid #38bdf8" : "1px solid rgba(148, 163, 184, 0.25)",
+                        background: form.paymentScheduleMode === "MONTHLY_SPREAD" ? "rgba(56, 189, 248, 0.12)" : "rgba(30, 41, 59, 0.6)"
+                      }}
+                    >
+                      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "6px" }}>
+                        <strong style={{ color: "#f8fafc", fontSize: "0.85rem" }}>📅 Spread Payment Every Month</strong>
+                        <span style={{ fontSize: "0.72rem", background: "#0284c7", color: "#fff", padding: "2px 8px", borderRadius: "999px", fontWeight: 700 }}>
+                          Monthly Spread
+                        </span>
+                      </div>
+                      <div style={{ fontSize: "1.1rem", fontWeight: 800, color: "#38bdf8", marginBottom: "4px" }}>
+                        Pay GH₵ {calculation.monthlyRate.toLocaleString()} / Month
+                      </div>
+                      <div style={{ fontSize: "0.76rem", color: "#cbd5e1", lineHeight: 1.4 }}>
+                        Your subscription of <strong>GH₵ {calculation.totalTermFee.toLocaleString()}</strong> is spread across <strong>{calculation.subscribedMonths} monthly installments</strong> of GH₵ {calculation.monthlyRate.toLocaleString()} per month.
+                      </div>
+                    </div>
+
+                    {/* Option 2: Bulk Payment (No Monthly Spread, Sign T&C) */}
+                    <div
+                      onClick={() => setForm((prev) => ({ ...prev, paymentScheduleMode: "BULK_FULL_TERM" }))}
+                      style={{
+                        padding: "14px",
+                        borderRadius: "10px",
+                        cursor: "pointer",
+                        border: form.paymentScheduleMode === "BULK_FULL_TERM" ? "2px solid #f59e0b" : "1px solid rgba(148, 163, 184, 0.25)",
+                        background: form.paymentScheduleMode === "BULK_FULL_TERM" ? "rgba(245, 158, 11, 0.14)" : "rgba(30, 41, 59, 0.6)"
+                      }}
+                    >
+                      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "6px" }}>
+                        <strong style={{ color: "#f8fafc", fontSize: "0.85rem" }}>📦 Pay in Bulk (Full Preferred Term)</strong>
+                        <span style={{ fontSize: "0.72rem", background: "#d97706", color: "#fff", padding: "2px 8px", borderRadius: "999px", fontWeight: 700 }}>
+                          Bulk Settlement
+                        </span>
+                      </div>
+                      <div style={{ fontSize: "1.1rem", fontWeight: 800, color: "#fbbf24", marginBottom: "4px" }}>
+                        Pay GH₵ {calculation.totalTermFee.toLocaleString()} in Bulk
+                      </div>
+                      <div style={{ fontSize: "0.76rem", color: "#cbd5e1", lineHeight: 1.4 }}>
+                        Sign Terms & Conditions to pay the entire <strong>{calculation.subscribedMonths}-month subscription</strong> in one bulk settlement without spreading into months.
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Bulk Payment Terms & Conditions Signatory Box */}
+                  {form.paymentScheduleMode === "BULK_FULL_TERM" && (
+                    <div style={{ marginTop: "14px", padding: "14px", borderRadius: "10px", background: "rgba(245, 158, 11, 0.1)", border: "1px solid rgba(245, 158, 11, 0.45)" }}>
+                      <div style={{ fontSize: "0.82rem", fontWeight: 800, color: "#fbbf24", marginBottom: "6px" }}>
+                        📜 Bulk Subscription Payment Terms & Conditions Covenant
+                      </div>
+                      <p style={{ fontSize: "0.76rem", color: "#e2e8f0", lineHeight: 1.5, margin: "0 0 10px" }}>
+                        By selecting Bulk Settlement, the Tenant agrees to remit the full preferred subscription amount of <strong>GH₵ {calculation.totalTermFee.toLocaleString()}</strong> ({calculation.count} students × GH₵ {calculation.rate} × {calculation.subscribedMonths} months) in bulk without monthly installment spread, securing uninterrupted cloud hosting, automated disaster recovery, and full platform licensing for the entire {calculation.subscribedMonths}-month term.
+                      </p>
+                      <div className="gbs-form-grid-2" style={{ alignItems: "center" }}>
+                        <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
+                          <input
+                            type="checkbox"
+                            id="bulkTermsAcceptedCheck"
+                            name="bulkTermsAccepted"
+                            checked={form.bulkTermsAccepted}
+                            onChange={handleChange}
+                            style={{ width: "18px", height: "18px", accentColor: "#f59e0b", cursor: "pointer" }}
+                          />
+                          <label htmlFor="bulkTermsAcceptedCheck" style={{ fontSize: "0.78rem", color: "#fef3c7", fontWeight: 700, cursor: "pointer" }}>
+                            I accept & sign the Bulk Subscription Payment Terms & Conditions
+                          </label>
+                        </div>
+                        <div>
+                          <input
+                            type="text"
+                            name="bulkTermsSignedBy"
+                            className="gbs-input-control"
+                            placeholder="Digital Signatory (Full Name of Headmaster / Director)"
+                            value={form.bulkTermsSignedBy}
+                            onChange={handleChange}
+                          />
+                        </div>
+                      </div>
+                    </div>
+                  )}
+                </div>
+              )}
 
               {/* Upgrade Prompt If Trial Used */}
               {hasUsedTrial && (
                 <div className="gbs-trial-upgrade-prompt">
                   <span style={{ fontSize: "1.4rem" }}>🛡️</span>
                   <div>
-                    <strong>Disaster Recovery & Modernization Notice:</strong> Your institution's 1-Month Free Trial has expired. Please select a Term (3 Months) to Lifetime license to transition from traditional to modern school management, keeping all institutional data, grades, and records secure even in catastrophic events.
+                    <strong>Disaster Recovery & Modernization Notice:</strong> Your institution's 1-Month Free Trial has expired. Please select a 3 Months, 6 Months, 9 Months, 12 Months, or Lifetime license to transition from traditional to modern school management, keeping all institutional data, grades, and records secure even in catastrophic events.
                   </div>
                 </div>
               )}
@@ -927,10 +1075,10 @@ export default function TenantOnboardingFirstPage() {
               {form.subscriptionPlan !== "1_MONTH_TRIAL" && (
                 <div style={{ marginTop: "18px", padding: "14px", background: "rgba(30, 41, 59, 0.8)", borderRadius: "10px", border: "1px solid rgba(212, 175, 55, 0.3)" }}>
                   <div style={{ fontSize: "0.85rem", color: "#fbbf24", fontWeight: 700, marginBottom: "6px" }}>
-                    💳 Mobile Money / Bank Payment Remittance
+                    💳 Mobile Money / Bank Payment Remittance ({form.paymentScheduleMode === "BULK_FULL_TERM" ? `Bulk Full Term — ${calculation.subscribedMonths} Months` : "First Month of Monthly Spread"})
                   </div>
                   <div style={{ fontSize: "0.78rem", color: "#cbd5e1", marginBottom: "8px" }}>
-                    Please remit GH₵ {calculation.payableAmount.toLocaleString()} to MTN MoMo: <strong>0554594193</strong> (GABRIELKUBI OSEI-APPIAH) and enter your MoMo Transaction ID below:
+                    Please remit <strong>GH₵ {calculation.payableAmount.toLocaleString()}</strong> ({form.paymentScheduleMode === "BULK_FULL_TERM" ? `Bulk payment for ${calculation.subscribedMonths} months` : `Monthly installment 1 of ${calculation.subscribedMonths} at GH₵ ${calculation.monthlyRate.toLocaleString()}/month`}) to MTN MoMo: <strong>0554594193</strong> (GABRIELKUBI OSEI-APPIAH) and enter your MoMo Transaction ID below:
                   </div>
                   <input
                     type="text"

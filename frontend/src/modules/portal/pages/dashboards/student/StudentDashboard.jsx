@@ -6,6 +6,7 @@ import TopCenterSystemBanner from "../../../../../components/common/TopCenterSys
 import { getUserAvatar } from "../../../../../utils/userAvatars";
 import { offlineSyncEngine } from "../../../../../utils/offlineSync";
 import UniversalRoleGuideModal from "../../../../../components/common/UniversalRoleGuideModal";
+import ClassTopicVideoPlatform from "../../../../../components/common/ClassTopicVideoPlatform";
 import "./StudentDashboard.css";
 
 export default function StudentDashboard() {
@@ -1148,6 +1149,14 @@ export default function StudentDashboard() {
             </button>
             <button 
               type="button" 
+              className={`role-tab-btn ${activeTab === "topicVideos" ? "active" : ""}`}
+              onClick={() => setActiveTab("topicVideos")}
+              style={{ borderLeft: "3px solid #38bdf8", color: activeTab === "topicVideos" ? "#38bdf8" : undefined }}
+            >
+              🎬 Teacher Topic Videos (Play & Watch)
+            </button>
+            <button 
+              type="button" 
               className={`role-tab-btn ${activeTab === "report-card" ? "active" : ""}`}
               onClick={() => setActiveTab("report-card")}
             >
@@ -2000,6 +2009,11 @@ export default function StudentDashboard() {
                 </span>
               </div>
 
+              {/* Teacher Topic Videos for Class Playback in Teacher's Absence */}
+              <div style={{ marginBottom: "2rem" }}>
+                <ClassTopicVideoPlatform mode="STUDENT" currentUser={currentUser} />
+              </div>
+
               {/* Requirement: Live Online Classes with Day Reminder from Teacher Notice */}
               <h3 style={{ color: "#34d399", margin: "0 0 12px", display: "flex", alignItems: "center", gap: "8px" }}>
                 <span>🔴</span> Active & Upcoming Live Online Classes to Join:
@@ -2142,6 +2156,13 @@ export default function StudentDashboard() {
                   ))
                 )}
               </div>
+            </div>
+          )}
+
+          {/* TAB 5B: TEACHER TOPIC VIDEOS FOR CLASS PLAYBACK */}
+          {activeTab === "topicVideos" && (
+            <div className="role-workspace-card">
+              <ClassTopicVideoPlatform mode="STUDENT" currentUser={currentUser} />
             </div>
           )}
 

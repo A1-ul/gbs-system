@@ -3,6 +3,7 @@ const jwt = require('jsonwebtoken');
 const prisma = require('../../core/database/prisma.client');
 const envConfig = require('../../core/config/env.config');
 const { AppError } = require('../../middleware/error.middleware');
+const { readPersistentStore, writePersistentStore, checkPostgresReachable } = require('../../core/database/persistentStore');
 
 const signToken = (id, role, tenantId) => {
   return jwt.sign({ id, role, tenantId }, envConfig.jwt.secret, {
@@ -33,8 +34,18 @@ const DEFAULT_TENANT = {
   status: 'ACTIVE'
 };
 
-const DYNAMIC_REGISTERED_USERS = [];
-const DYNAMIC_INSTITUTIONS = [];
+const initialStore = readPersistentStore();
+const DYNAMIC_REGISTERED_USERS = Array.isArray(initialStore.registeredUsers) ? initialStore.registeredUsers : [];
+const DYNAMIC_INSTITUTIONS = Array.isArray(initialStore.institutions) ? initialStore.institutions : [];
+
+const syncAuthStoreToDisk = () => {
+  try {
+    const store = readPersistentStore();
+    store.registeredUsers = DYNAMIC_REGISTERED_USERS;
+    store.institutions = DYNAMIC_INSTITUTIONS;
+    writePersistentStore(store);
+  } catch { }
+};
 
 const BUILTIN_SYSTEM_USERS = [
   {
@@ -225,7 +236,7 @@ const login = async ({ email, username, identifier, password, portalRole }) => {
   }
 
   // 3. Fast bounded database lookup (max 2.2s timeout so login never hangs for 30000ms)
-  if (!user) {
+  if (!user && (await checkPostgresReachable(250))) {
     try {
       user = await withDbTimeout(
         prisma.user.findFirst({
@@ -292,7 +303,7 @@ const login = async ({ email, username, identifier, password, portalRole }) => {
           }
         };
       }
-    } catch {}
+    } catch { }
   }
 
   if (!user) {
@@ -304,7 +315,7 @@ const login = async ({ email, username, identifier, password, portalRole }) => {
   if (hashToCompare) {
     try {
       isPasswordValid = await bcrypt.compare(password, hashToCompare);
-    } catch {}
+    } catch { }
   }
 
   // Accept standard system passwords for built-in or test accounts
@@ -340,16 +351,16 @@ const login = async ({ email, username, identifier, password, portalRole }) => {
           1200
         );
       }
-    } catch {}
+    } catch { }
     throw new AppError('Invalid email/username or password.', 401);
   }
 
   if (portalRole) {
     const pRole = portalRole.toUpperCase();
-    const isMasterUser = user.role === 'DEVELOPER' || 
-                         user.role === 'ADMIN' || 
-                         user.role === 'SUPER_ADMIN' || 
-                         (user.email && user.email.toLowerCase() === 'gabosei48@gmail.com');
+    const isMasterUser = user.role === 'DEVELOPER' ||
+      user.role === 'ADMIN' ||
+      user.role === 'SUPER_ADMIN' ||
+      (user.email && user.email.toLowerCase() === 'gabosei48@gmail.com');
     if (!isMasterUser && user.role !== pRole) {
       throw new AppError(`Access denied. User does not have ${portalRole} authorization.`, 403);
     }
@@ -376,7 +387,7 @@ const login = async ({ email, username, identifier, password, portalRole }) => {
         1200
       );
     }
-  } catch {}
+  } catch { }
 
   const accessToken = signToken(user.id, user.role, user.tenantId || DEFAULT_TENANT.id);
   const refreshToken = signRefreshToken(user.id);
@@ -477,9 +488,9 @@ const registerInstitution = async (data) => {
   const year = new Date().getFullYear();
   const randSuffix = Math.floor(1000 + Math.random() * 9000);
   const tenantUid = `TEN-${year}-${String(randSuffix).padStart(6, '0')}`;
-  
+
   const nameParts = institutionName.trim().split(/\s+/);
-  let acronym = nameParts.length >= 2 
+  let acronym = nameParts.length >= 2
     ? (nameParts[0].slice(0, 1) + nameParts[1].slice(0, 2)).toUpperCase()
     : institutionName.replace(/[^a-zA-Z]/g, '').slice(0, 3).toUpperCase();
   if (!acronym || acronym.length < 2) acronym = 'ACC';
@@ -488,17 +499,36 @@ const registerInstitution = async (data) => {
   const subscriptionId = `SUB-${year}-${String(randSuffix).padStart(6, '0')}`;
 
   const studentCount = parseInt(data.totalStudentsEnrolled || data.studentsCount || data.studentCount || 0, 10);
-  let perStudentRate = 5; // JHS / Basic: 5 cedis per student
+  let perStudentRate = 5; // Nursery to JHS: 5 cedis per student per month
   const typeUpper = (institutionType || '').toUpperCase();
   if (typeUpper.includes('UNIVERSITY') || typeUpper.includes('TERTIARY')) {
-    perStudentRate = 20; // University: 20 cedis per student
+    perStudentRate = 20; // University: 20 cedis per student per month
   } else if (typeUpper.includes('SENIOR') || typeUpper.includes('SHS') || typeUpper.includes('SECONDARY')) {
-    perStudentRate = 10; // Senior High School: 10 cedis per student
+    perStudentRate = 10; // Senior High School: 10 cedis per student per month
   } else {
-    perStudentRate = 5; // JHS / Basic School: 5 cedis per student
+    perStudentRate = 5; // Nursery to JHS / Basic School: 5 cedis per student per month
   }
-  const calculatedBaseFee = studentCount > 0 ? (perStudentRate * studentCount) : (Number(data.calculatedFee) || 0);
+
+  const monthlyFee = studentCount > 0 ? (perStudentRate * studentCount) : (Number(data.monthlyFee || data.calculatedBaseFee || data.calculatedFee) || 0);
   const effPlan = data.subscriptionPlan || data.subscriptionDuration || '1_MONTH_TRIAL';
+  const planMonthsMap = {
+    '1_MONTH_TRIAL': 1,
+    '3_MONTHS': 3,
+    '6_MONTHS': 6,
+    '9_MONTHS': 9,
+    '12_MONTHS': 12,
+    '1_YEAR': 12,
+    'LIFETIME': 36
+  };
+  const subscribedMonths = planMonthsMap[effPlan] || 3;
+  const totalTermFee = effPlan === '1_MONTH_TRIAL' ? 0 : (monthlyFee * subscribedMonths);
+  const paymentScheduleMode = data.paymentScheduleMode || 'MONTHLY_SPREAD'; // 'MONTHLY_SPREAD' | 'BULK_FULL_TERM'
+  const bulkTermsAccepted = Boolean(data.bulkTermsAccepted);
+  const bulkTermsSignedBy = data.bulkTermsSignedBy || effAdminName;
+  const amountDueNow = effPlan === '1_MONTH_TRIAL'
+    ? 0
+    : (paymentScheduleMode === 'BULK_FULL_TERM' ? totalTermFee : monthlyFee);
+  const calculatedBaseFee = monthlyFee;
 
   const regData = {
     id: `reg_${Date.now()}`,
@@ -513,11 +543,17 @@ const registerInstitution = async (data) => {
     totalStudentsEnrolled: studentCount,
     studentCount,
     perStudentRate,
+    monthlyFee,
+    subscribedMonths,
+    totalTermFee,
     calculatedBaseFee,
-    calculatedFee: Number(data.calculatedFee || calculatedBaseFee || 0),
+    calculatedFee: Number(data.calculatedFee || totalTermFee || monthlyFee || 0),
     subscriptionPlan: effPlan,
     subscriptionDuration: effPlan,
-    paymentAmount: String(data.paymentAmount || (effPlan === '1_MONTH_TRIAL' ? '0' : calculatedBaseFee)),
+    paymentScheduleMode,
+    bulkTermsAccepted,
+    bulkTermsSignedBy,
+    paymentAmount: String(data.paymentAmount || amountDueNow),
     momoTxnId: data.momoTxnId || (effPlan === '1_MONTH_TRIAL' ? 'FREE_TRIAL_AUTO' : ''),
     hasUsedTrial: (effPlan === '1_MONTH_TRIAL'),
     isApproved: false,
@@ -590,6 +626,9 @@ const registerInstitution = async (data) => {
   }
 
   try {
+    if (!(await checkPostgresReachable(250))) {
+      throw new Error('PG_OFFLINE_PERSISTENT_FALLBACK');
+    }
     const existingReg = await withDbTimeout(
       prisma.institutionRegistration.findFirst({
         where: {
@@ -646,18 +685,18 @@ const registerInstitution = async (data) => {
 
     const registration = existingReg
       ? await withDbTimeout(
-          prisma.institutionRegistration.update({
-            where: { id: existingReg.id },
-            data: prismaData
-          }),
-          2200
-        )
+        prisma.institutionRegistration.update({
+          where: { id: existingReg.id },
+          data: prismaData
+        }),
+        2200
+      )
       : await withDbTimeout(
-          prisma.institutionRegistration.create({
-            data: prismaData
-          }),
-          2200
-        );
+        prisma.institutionRegistration.create({
+          data: prismaData
+        }),
+        2200
+      );
 
     try {
       await withDbTimeout(
@@ -669,8 +708,8 @@ const registerInstitution = async (data) => {
           }
         }),
         1200
-      ).catch(() => {});
-    } catch {}
+      ).catch(() => { });
+    } catch { }
 
     const enrichedReg = {
       ...regData,
@@ -689,6 +728,7 @@ const registerInstitution = async (data) => {
     } else {
       DYNAMIC_INSTITUTIONS.unshift(enrichedReg);
     }
+    syncAuthStoreToDisk();
 
     return {
       registration: {
@@ -701,12 +741,15 @@ const registerInstitution = async (data) => {
         status: registration.status,
         adminEmail: registration.adminEmail,
         facePhoto: enrichedReg.facePhoto,
+        monthlyFee: enrichedReg.monthlyFee,
+        subscribedMonths: enrichedReg.subscribedMonths,
+        totalTermFee: enrichedReg.totalTermFee,
+        paymentScheduleMode: enrichedReg.paymentScheduleMode,
         createdAt: registration.createdAt
       },
       message: 'Institution registration received successfully. Your institution credentials and identifiers have been recorded for Developer Control Center review and provisioning.'
     };
   } catch (dbErr) {
-    console.warn('⚠️ [AUTH] Database institution registration fallback:', dbErr.message);
     const enrichedReg = {
       ...regData,
       facePhoto: data.facePhoto || data.scannedFacePhoto || data.headmasterPhoto || null,
@@ -721,6 +764,7 @@ const registerInstitution = async (data) => {
     } else {
       DYNAMIC_INSTITUTIONS.unshift(enrichedReg);
     }
+    syncAuthStoreToDisk();
 
     return {
       registration: {
@@ -733,6 +777,10 @@ const registerInstitution = async (data) => {
         status: regData.status,
         adminEmail: regData.adminEmail,
         facePhoto: enrichedReg.facePhoto,
+        monthlyFee: enrichedReg.monthlyFee,
+        subscribedMonths: enrichedReg.subscribedMonths,
+        totalTermFee: enrichedReg.totalTermFee,
+        paymentScheduleMode: enrichedReg.paymentScheduleMode,
         createdAt: regData.createdAt
       },
       message: 'Institution registration received successfully. Your institution credentials and identifiers have been recorded for Developer Control Center review and provisioning.'
@@ -800,8 +848,8 @@ const register = async (data) => {
   const isActive = true;
 
   const hashedPassword = await bcrypt.hash(password, envConfig.jwt.saltRounds || 10);
-  const userUsername = username 
-    ? username.toLowerCase().trim() 
+  const userUsername = username
+    ? username.toLowerCase().trim()
     : email.split('@')[0].toLowerCase() + Math.floor(Math.random() * 900 + 100);
 
   // Dynamic user template for immediate fallback
@@ -853,6 +901,9 @@ const register = async (data) => {
   };
 
   try {
+    if (!(await checkPostgresReachable(250))) {
+      throw new Error('PG_OFFLINE_PERSISTENT_FALLBACK');
+    }
     const existingEmail = await prisma.user.findUnique({
       where: { email: email.toLowerCase().trim() }
     });
@@ -928,7 +979,7 @@ const register = async (data) => {
               }
             });
           }
-        } catch {}
+        } catch { }
       }
 
       try {
@@ -941,7 +992,7 @@ const register = async (data) => {
             details: `New ${userRole} account registered: ${newUser.email} (${firstName} ${lastName || ''}). Tenant: ${tenant.code}. Verification: ${initialVerificationStatus}. Details: ${qualificationNotes || employeeId || department || 'Credentials submitted'}`
           }
         });
-      } catch {}
+      } catch { }
 
       return { user: newUser, profile: regProfile, tenant };
     });
@@ -963,10 +1014,10 @@ const register = async (data) => {
     };
   } catch (dbErr) {
     if (dbErr.isOperational) throw dbErr;
-    console.warn('⚠️ [AUTH] Database register fallback used:', dbErr.message);
 
     // Save in dynamic registered users list so login works instantly
     DYNAMIC_REGISTERED_USERS.unshift(dynamicUserRecord);
+    syncAuthStoreToDisk();
 
     const accessToken = signToken(dynamicUserRecord.id, dynamicUserRecord.role, dynamicUserRecord.tenantId);
     const refreshToken = signRefreshToken(dynamicUserRecord.id);
@@ -987,53 +1038,60 @@ const register = async (data) => {
 };
 
 const seedDefaultAdmin = async () => {
-  let tenant = await prisma.tenant.findFirst({ where: { code: 'GBS-MAIN' } });
-  if (!tenant) {
-    tenant = await prisma.tenant.create({
-      data: {
-        name: 'GBS International School (Main Branch)',
-        code: 'GBS-MAIN',
-        domain: 'gbs-main.school',
-        status: 'ACTIVE'
-      }
-    });
+  if (!(await checkPostgresReachable(250))) {
+    return { tenant: DEFAULT_TENANT, mode: 'PERSISTENT_STORE_READY' };
   }
-
-  const seedUsers = [
-    { email: 'admin@gbs.com', username: 'superadmin', password: 'Admin123!', role: 'SUPER_ADMIN', firstName: 'GBS Super', lastName: 'Admin' },
-    { email: 'teacher@gbs.com', username: 'teacher1', password: 'Teacher123!', role: 'TEACHER', firstName: 'Sarah', lastName: 'Teacher' },
-    { email: 'student@gbs.com', username: 'student1', password: 'Student123!', role: 'STUDENT', firstName: 'Alex', lastName: 'Student' },
-    { email: 'parent@gbs.com', username: 'parent1', password: 'Parent123!', role: 'PARENT', firstName: 'John', lastName: 'Parent' },
-    { email: 'accountant@gbs.com', username: 'finance1', password: 'Accountant123!', role: 'ACCOUNTANT', firstName: 'David', lastName: 'Accountant' },
-    { email: 'staff@gbs.com', username: 'staff1', password: 'Staff123!', role: 'STAFF', firstName: 'Emma', lastName: 'Staff' }
-  ];
-
-  for (const u of seedUsers) {
-    const existing = await prisma.user.findUnique({ where: { email: u.email } });
-    if (!existing) {
-      const hashedPassword = await bcrypt.hash(u.password, 10);
-      await prisma.user.create({
+  try {
+    let tenant = await prisma.tenant.findFirst({ where: { code: 'GBS-MAIN' } });
+    if (!tenant) {
+      tenant = await prisma.tenant.create({
         data: {
-          tenantId: tenant.id,
-          firstName: u.firstName,
-          lastName: u.lastName,
-          username: u.username,
-          email: u.email.toLowerCase(),
-          password: hashedPassword,
-          role: u.role,
-          permissions: ['*']
+          name: 'GBS International School (Main Branch)',
+          code: 'GBS-MAIN',
+          domain: 'gbs-main.school',
+          status: 'ACTIVE'
         }
       });
-    } else {
-      const hashedPassword = await bcrypt.hash(u.password, 10);
-      await prisma.user.update({
-        where: { id: existing.id },
-        data: { password: hashedPassword, isLocked: false, failedLoginAttempts: 0 }
-      });
     }
-  }
 
-  return { tenant };
+    const seedUsers = [
+      { email: 'admin@gbs.com', username: 'superadmin', password: 'Admin123!', role: 'SUPER_ADMIN', firstName: 'GBS Super', lastName: 'Admin' },
+      { email: 'teacher@gbs.com', username: 'teacher1', password: 'Teacher123!', role: 'TEACHER', firstName: 'Sarah', lastName: 'Teacher' },
+      { email: 'student@gbs.com', username: 'student1', password: 'Student123!', role: 'STUDENT', firstName: 'Alex', lastName: 'Student' },
+      { email: 'parent@gbs.com', username: 'parent1', password: 'Parent123!', role: 'PARENT', firstName: 'John', lastName: 'Parent' },
+      { email: 'accountant@gbs.com', username: 'finance1', password: 'Accountant123!', role: 'ACCOUNTANT', firstName: 'David', lastName: 'Accountant' },
+      { email: 'staff@gbs.com', username: 'staff1', password: 'Staff123!', role: 'STAFF', firstName: 'Emma', lastName: 'Staff' }
+    ];
+
+    for (const u of seedUsers) {
+      const existing = await prisma.user.findUnique({ where: { email: u.email } });
+      if (!existing) {
+        const hashedPassword = await bcrypt.hash(u.password, 10);
+        await prisma.user.create({
+          data: {
+            tenantId: tenant.id,
+            firstName: u.firstName,
+            lastName: u.lastName,
+            username: u.username,
+            email: u.email.toLowerCase(),
+            password: hashedPassword,
+            role: u.role,
+            permissions: ['*']
+          }
+        });
+      } else {
+        const hashedPassword = await bcrypt.hash(u.password, 10);
+        await prisma.user.update({
+          where: { id: existing.id },
+          data: { password: hashedPassword, isLocked: false, failedLoginAttempts: 0 }
+        });
+      }
+    }
+
+    return { tenant };
+  } catch {
+    return { tenant: DEFAULT_TENANT, mode: 'PERSISTENT_STORE_READY' };
+  }
 };
 
 module.exports = {
@@ -1042,8 +1100,26 @@ module.exports = {
   registerInstitution,
   getPublicInstitutions,
   seedDefaultAdmin,
+  syncAuthStoreToDisk,
   getDynamicInstitutions: () => [...DYNAMIC_INSTITUTIONS],
-  addDynamicInstitution: (item) => DYNAMIC_INSTITUTIONS.unshift(item),
+  addDynamicInstitution: (item) => {
+    DYNAMIC_INSTITUTIONS.unshift(item);
+    syncAuthStoreToDisk();
+  },
+  updateDynamicInstitution: (idOrCode, updates) => {
+    const idx = DYNAMIC_INSTITUTIONS.findIndex(
+      (i) => i.id === idOrCode || i.tenantCode === idOrCode || i.tenantUid === idOrCode
+    );
+    if (idx >= 0) {
+      DYNAMIC_INSTITUTIONS[idx] = { ...DYNAMIC_INSTITUTIONS[idx], ...updates };
+      syncAuthStoreToDisk();
+      return DYNAMIC_INSTITUTIONS[idx];
+    }
+    return null;
+  },
   getDynamicUsers: () => [...DYNAMIC_REGISTERED_USERS],
-  addDynamicUser: (u) => DYNAMIC_REGISTERED_USERS.unshift(u)
+  addDynamicUser: (u) => {
+    DYNAMIC_REGISTERED_USERS.unshift(u);
+    syncAuthStoreToDisk();
+  }
 };

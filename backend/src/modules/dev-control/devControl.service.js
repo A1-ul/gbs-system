@@ -370,7 +370,7 @@ const developerTenantAction = async (tenantId, action, params = {}, developer = 
           storagePath: `/backups/tenants/${safeTid}/${backupFilename}`,
           status: 'COMPLETED'
         }
-      }).catch(() => {});
+      }).catch(() => { });
 
       try {
         updatedTenant = await prisma.tenant.update({
@@ -387,7 +387,7 @@ const developerTenantAction = async (tenantId, action, params = {}, developer = 
           reason: params.reason || 'Developer Enforced Administrative Lock. All data preserved in pre-lock snapshot.',
           lockedBy: 'DEVELOPER_CONTROL_CENTER'
         }
-      }).catch(() => {});
+      }).catch(() => { });
       break;
     }
 
@@ -397,7 +397,7 @@ const developerTenantAction = async (tenantId, action, params = {}, developer = 
         await prisma.subscription.update({
           where: { id: sub.id },
           data: { status: 'ACTIVE' }
-        }).catch(() => {});
+        }).catch(() => { });
       }
 
       try {
@@ -415,7 +415,7 @@ const developerTenantAction = async (tenantId, action, params = {}, developer = 
           reason: 'Developer Administrative System Unlock. All records restored.',
           lockedBy: 'DEVELOPER_CONTROL_CENTER'
         }
-      }).catch(() => {});
+      }).catch(() => { });
       break;
     }
 
@@ -450,7 +450,7 @@ const developerTenantAction = async (tenantId, action, params = {}, developer = 
         await prisma.subscription.update({
           where: { id: sub.id },
           data: { endDate: newEndDate, status: 'ACTIVE' }
-        }).catch(() => {});
+        }).catch(() => { });
       }
       try {
         updatedTenant = await prisma.tenant.update({
@@ -515,7 +515,7 @@ const developerTenantAction = async (tenantId, action, params = {}, developer = 
             planName,
             status: 'ACTIVE'
           }
-        }).catch(() => {});
+        }).catch(() => { });
       } else {
         await prisma.subscription.create({
           data: {
@@ -529,7 +529,7 @@ const developerTenantAction = async (tenantId, action, params = {}, developer = 
             currency: 'USD',
             amountPaid: 0.0
           }
-        }).catch(() => {});
+        }).catch(() => { });
       }
 
       try {
@@ -544,7 +544,7 @@ const developerTenantAction = async (tenantId, action, params = {}, developer = 
       await prisma.systemLock.updateMany({
         where: { tenantId: safeTid, isLocked: true },
         data: { isLocked: false }
-      }).catch(() => {});
+      }).catch(() => { });
 
       await prisma.systemLock.create({
         data: {
@@ -553,7 +553,7 @@ const developerTenantAction = async (tenantId, action, params = {}, developer = 
           reason: `Developer Administrative Renewal: Renewed for ${durationLabel}. All access restored and unfrozen.`,
           lockedBy: 'DEVELOPER_CONTROL_CENTER'
         }
-      }).catch(() => {});
+      }).catch(() => { });
 
       const expiryFormatted = isLifetime ? 'Permanent Lifetime Access (Never Expires)' : newEndDate.toLocaleDateString();
       await prisma.broadcastAnnouncement.create({
@@ -565,7 +565,7 @@ const developerTenantAction = async (tenantId, action, params = {}, developer = 
           priority: 'HIGH',
           targetAudience: 'ALL'
         }
-      }).catch(() => {});
+      }).catch(() => { });
 
       auditAction = 'SUBSCRIPTION_RENEWED';
       auditDetails = `Developer renewed subscription for '${tenant.name}' for ${durationLabel} (${planName}). Valid until ${expiryFormatted}. System unlocked.`;
@@ -599,7 +599,7 @@ const developerTenantAction = async (tenantId, action, params = {}, developer = 
       details: auditDetails,
       ipAddress: '127.0.0.1'
     }
-  }).catch(() => {});
+  }).catch(() => { });
 
   return updatedTenant;
 };
@@ -651,7 +651,7 @@ const executeAutoLockAndBackup = async (tenantId = null) => {
       await prisma.tenant.update({
         where: { id: t.id },
         data: { status: 'LOCKED', isActive: false }
-      }).catch(() => {});
+      }).catch(() => { });
 
       await prisma.systemLock.create({
         data: {
@@ -660,7 +660,7 @@ const executeAutoLockAndBackup = async (tenantId = null) => {
           reason: `Automated Subscription Expiry Lock (Grace period ${graceDays} days elapsed). Data safely archived.`,
           lockedBy: 'AUTO_LOCK_ENGINE'
         }
-      }).catch(() => {});
+      }).catch(() => { });
 
       await prisma.auditLog.create({
         data: {
@@ -671,7 +671,7 @@ const executeAutoLockAndBackup = async (tenantId = null) => {
           details: `System automatically locked Tenant '${t.name}' due to grace period expiry. Backup verified: ${backupFilename}`,
           ipAddress: '127.0.0.1'
         }
-      }).catch(() => {});
+      }).catch(() => { });
 
       processedTenants.push({
         tenantId: t.id,
@@ -727,7 +727,7 @@ const triggerSystemBackup = async (backupType = 'FULL', reason = 'Manual Develop
       details: `Triggered encrypted system backup '${filename}' (${backup.fileSizeMb} MB, Reason: ${reason})`,
       ipAddress: '127.0.0.1'
     }
-  }).catch(() => {});
+  }).catch(() => { });
 
   return backup;
 };
@@ -747,7 +747,7 @@ const toggleSystemLock = async (tenantId, { isLocked, reason, lockedBy }) => {
         storagePath: `/backups/system/${backupFilename}`,
         status: 'COMPLETED'
       }
-    }).catch(() => {});
+    }).catch(() => { });
   }
 
   const lockReason = reason || (isLocked ? 'Developer Maintenance System Lock. All data preserved.' : 'Developer System Unlock. Records restored.');
@@ -776,11 +776,11 @@ const toggleSystemLock = async (tenantId, { isLocked, reason, lockedBy }) => {
     await prisma.tenant.update({
       where: { id: tid },
       data: { status: isLocked ? 'LOCKED' : 'ACTIVE', isActive: !isLocked }
-    }).catch(() => {});
+    }).catch(() => { });
   } else {
     await prisma.tenant.updateMany({
       data: { status: isLocked ? 'LOCKED' : 'ACTIVE', isActive: !isLocked }
-    }).catch(() => {});
+    }).catch(() => { });
   }
 
   await prisma.auditLog.create({
@@ -792,7 +792,7 @@ const toggleSystemLock = async (tenantId, { isLocked, reason, lockedBy }) => {
       details: `${isLocked ? 'Locked' : 'Unlocked'} system (Reason: ${lock.reason})`,
       ipAddress: '127.0.0.1'
     }
-  }).catch(() => {});
+  }).catch(() => { });
 
   return lock;
 };
@@ -856,7 +856,7 @@ const executeServiceAction = async (serviceAction, developer = null) => {
       details,
       ipAddress: '127.0.0.1'
     }
-  }).catch(() => {});
+  }).catch(() => { });
 
   return {
     action,
@@ -908,7 +908,7 @@ const verifyAndApproveInstitution = async (idOrTenantUid, developerNotes = 'Appr
   if (!isNaN(numId)) {
     try {
       reg = await prisma.institutionRegistration.findUnique({ where: { id: numId } });
-    } catch {}
+    } catch { }
   }
   if (!reg) {
     try {
@@ -923,7 +923,7 @@ const verifyAndApproveInstitution = async (idOrTenantUid, developerNotes = 'Appr
           ]
         }
       });
-    } catch {}
+    } catch { }
   }
 
   // Check dynamic memory registrations
@@ -1053,7 +1053,7 @@ const verifyAndApproveInstitution = async (idOrTenantUid, developerNotes = 'Appr
         data: { tenantId: tenant.id }
       });
     }
-  } catch {}
+  } catch { }
 
   // 4. Create or unlock the Headmaster user account
   let headmaster = null;
@@ -1105,7 +1105,8 @@ const verifyAndApproveInstitution = async (idOrTenantUid, developerNotes = 'Appr
   let durationDays = 30;
   if (reg.subscriptionPlan === '3_MONTHS') durationDays = 90;
   else if (reg.subscriptionPlan === '6_MONTHS') durationDays = 180;
-  else if (reg.subscriptionPlan === '12_MONTHS') durationDays = 365;
+  else if (reg.subscriptionPlan === '9_MONTHS') durationDays = 270;
+  else if (reg.subscriptionPlan === '12_MONTHS' || reg.subscriptionPlan === '1_YEAR') durationDays = 365;
   else if (reg.subscriptionPlan === 'LIFETIME') durationDays = 3650;
 
   const startDate = new Date();
@@ -1142,7 +1143,7 @@ const verifyAndApproveInstitution = async (idOrTenantUid, developerNotes = 'Appr
         });
       }
     }
-  } catch {}
+  } catch { }
 
   // 6. Dispatch Congratulatory SMS to Headmaster
   const hmPhone = reg.adminPhone || reg.officialPhone;
@@ -1174,10 +1175,25 @@ const verifyAndApproveInstitution = async (idOrTenantUid, developerNotes = 'Appr
         details: `Developer Gabriel Kubi Osei-Appiah verified and approved institution ${reg.institutionName} (${reg.tenantCode}). Enclave active. Headmaster: ${reg.adminEmail}.`,
         ipAddress: '127.0.0.1'
       }
-    }).catch(() => {});
-  } catch {}
+    }).catch(() => { });
+  } catch { }
   // Ensure in-memory dynamic state reflects immediate approval and headmaster login capability
-  if (authService.addDynamicInstitution) {
+  if (authService.updateDynamicInstitution) {
+    const updatedInStore = authService.updateDynamicInstitution(reg.tenantCode || reg.id, {
+      ...updatedReg,
+      isApproved: true,
+      status: 'APPROVED',
+      tenantId: tenant?.id || reg.tenantUid
+    });
+    if (!updatedInStore && authService.addDynamicInstitution) {
+      authService.addDynamicInstitution({
+        ...updatedReg,
+        isApproved: true,
+        status: 'APPROVED',
+        tenantId: tenant?.id || reg.tenantUid
+      });
+    }
+  } else if (authService.addDynamicInstitution) {
     authService.addDynamicInstitution({
       ...updatedReg,
       isApproved: true,
@@ -1234,7 +1250,7 @@ const rejectInstitutionRegistration = async (idOrTenantUid, reason = 'Applicatio
   if (!isNaN(numId)) {
     try {
       reg = await prisma.institutionRegistration.findUnique({ where: { id: numId } });
-    } catch {}
+    } catch { }
   }
   if (!reg) {
     try {
@@ -1249,7 +1265,7 @@ const rejectInstitutionRegistration = async (idOrTenantUid, reason = 'Applicatio
           ]
         }
       });
-    } catch {}
+    } catch { }
   }
 
   if (!reg && authService.getDynamicInstitutions) {
@@ -1292,7 +1308,7 @@ const rejectInstitutionRegistration = async (idOrTenantUid, reason = 'Applicatio
         }
       });
     }
-  } catch {}
+  } catch { }
 
   const hmPhone = reg.adminPhone || reg.officialPhone;
   if (hmPhone) {
@@ -1304,7 +1320,7 @@ const rejectInstitutionRegistration = async (idOrTenantUid, reason = 'Applicatio
         content: `Notice from GBS System Developer: Your institution registration for '${reg.institutionName}' requires additional verification. Reason: ${reason}. Please update your submission.`,
         type: 'ONBOARDING_REJECTED'
       });
-    } catch {}
+    } catch { }
   }
 
   return {
@@ -1358,7 +1374,7 @@ const verifyFacialLiveness = async (payload = {}, clientIp = '127.0.0.1') => {
         details: 'Facial liveness rejected: 2D presentation attack / screen spoof pattern detected.',
         ipAddress: clientIp
       }
-    }).catch(() => {});
+    }).catch(() => { });
     throw new AppError('Facial liveness verification rejected: 2D presentation attack / screen spoof detected.', 403);
   }
 
@@ -1375,7 +1391,7 @@ const verifyFacialLiveness = async (payload = {}, clientIp = '127.0.0.1') => {
       details: `Facial liveness verified successfully (Liveness: ${(livenessScore * 100).toFixed(1)}%, Anti-spoofing: ${(antiSpoofingScore * 100).toFixed(1)}%). Root clearance confirmed.`,
       ipAddress: clientIp
     }
-  }).catch(() => {});
+  }).catch(() => { });
 
   return {
     verified: true,
@@ -1511,7 +1527,7 @@ const getDeployments = async () => {
           }),
           ipAddress: '127.0.0.1'
         }
-      }).catch(() => {});
+      }).catch(() => { });
     }
 
     const records = await prisma.auditLog.findMany({
@@ -1695,7 +1711,7 @@ const issueLicense = async (data = {}) => {
       details: `Issued enterprise license key ${licenseKey} (Max Users: ${maxUsers}, Max Students: ${maxStudents})`,
       ipAddress: '127.0.0.1'
     }
-  }).catch(() => {});
+  }).catch(() => { });
 
   return license;
 };
@@ -1815,7 +1831,7 @@ const verifyAndProvisionTenant = async (payload = {}) => {
   } catch (cErr) {
     console.warn('Tenant count db notice:', cErr.message);
   }
-  const tenantCode = data.tenantCode 
+  const tenantCode = data.tenantCode
     ? (data.tenantCode.startsWith('GBS-') ? data.tenantCode.toUpperCase() : `GBS-${data.tenantCode.toUpperCase()}`)
     : `GBS-TEN-${Date.now().toString().slice(-4)}`;
 
@@ -1888,7 +1904,7 @@ const verifyAndProvisionTenant = async (payload = {}) => {
           maxUsers: parseInt(data.maxUsers, 10) || 250,
           maxStudents: parseInt(data.maxStudents, 10) || 2500
         }
-      }).catch(() => {});
+      }).catch(() => { });
 
       // 4. Create or Update Headmaster Administrator Account
       const hashedPassword = await bcrypt.hash(data.adminPassword || 'Headmaster123!', 10);
@@ -1938,7 +1954,7 @@ const verifyAndProvisionTenant = async (payload = {}) => {
             ]
           }
         });
-      } catch (rErr) {}
+      } catch (rErr) { }
 
       if (!regRecord) {
         regRecord = await tx.institutionRegistration.create({
@@ -1983,7 +1999,7 @@ const verifyAndProvisionTenant = async (payload = {}) => {
             status: 'ACTIVE_TRIAL',
             isApproved: true
           }
-        }).catch(() => {});
+        }).catch(() => { });
       }
 
       // 6. User Registration Profile
@@ -2002,12 +2018,12 @@ const verifyAndProvisionTenant = async (payload = {}) => {
             department: 'Executive Governance',
             highestQualification: 'Ph.D. Education Administration'
           }
-        }).catch(() => {});
+        }).catch(() => { });
       } else {
         await tx.userRegistrationProfile.update({
           where: { userId: adminUser.id },
           data: { phone: cleanPhone, whatsappPhone: cleanPhone }
-        }).catch(() => {});
+        }).catch(() => { });
       }
 
       // 7. Audit Log
@@ -2021,8 +2037,8 @@ const verifyAndProvisionTenant = async (payload = {}) => {
             details: `Tenant '${tenant.name}' (${tenant.code}) successfully provisioned by Developer Root. OTP verified for Headmaster phone ${cleanPhone}.`,
             ipAddress: '127.0.0.1'
           }
-        }).catch(() => {});
-      } catch {}
+        }).catch(() => { });
+      } catch { }
 
       return { tenant, subscription, adminUser, licenseKey };
     });

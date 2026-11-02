@@ -7791,9 +7791,27 @@ export default function DeveloperDashboard() {
                     </div>
                   </div>
                   <div style={{ background: "rgba(15, 23, 42, 0.65)", padding: "10px", borderRadius: "8px", border: "1px solid #334155" }}>
-                    <div style={{ fontSize: "0.68rem", color: "#94a3b8" }}>STUDENT POPULATION × RATE FEE</div>
+                    <div style={{ fontSize: "0.68rem", color: "#94a3b8" }}>STUDENT POPULATION × MONTHLY RATE</div>
                     <div style={{ fontSize: "0.85rem", fontWeight: 800, color: "#fbbf24" }}>
-                      {(selectedOnboardingAppDossier.studentCount || 150).toLocaleString()} Students ({selectedOnboardingAppDossier.subscriptionDuration || "1_MONTH_TRIAL"}) — {selectedOnboardingAppDossier.currency || "GHS"} {Number(selectedOnboardingAppDossier.calculatedFee || 0).toLocaleString()}
+                      {(selectedOnboardingAppDossier.totalStudentsEnrolled || selectedOnboardingAppDossier.studentCount || 150).toLocaleString()} Students × GH₵ {selectedOnboardingAppDossier.perStudentRate || 5}/mo = GH₵ {Number(selectedOnboardingAppDossier.monthlyFee || ((selectedOnboardingAppDossier.totalStudentsEnrolled || selectedOnboardingAppDossier.studentCount || 150) * (selectedOnboardingAppDossier.perStudentRate || 5))).toLocaleString()}/month
+                    </div>
+                  </div>
+                  <div style={{ gridColumn: "1 / -1", background: "rgba(15, 23, 42, 0.75)", padding: "10px", borderRadius: "8px", border: "1px solid rgba(56, 189, 248, 0.35)", display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: "10px" }}>
+                    <div>
+                      <span style={{ fontSize: "0.7rem", color: "#94a3b8" }}>SUBSCRIBED TERM: </span>
+                      <strong style={{ fontSize: "0.8rem", color: "#38bdf8" }}>{selectedOnboardingAppDossier.subscriptionPlan || selectedOnboardingAppDossier.subscriptionDuration || "1_MONTH_TRIAL"} ({selectedOnboardingAppDossier.subscribedMonths || 1} Mo)</strong>
+                    </div>
+                    <div>
+                      <span style={{ fontSize: "0.7rem", color: "#94a3b8" }}>PAYMENT STRUCTURE: </span>
+                      <strong style={{ fontSize: "0.8rem", color: selectedOnboardingAppDossier.paymentScheduleMode === "BULK_FULL_TERM" ? "#fbbf24" : "#34d399" }}>
+                        {selectedOnboardingAppDossier.paymentScheduleMode === "BULK_FULL_TERM" ? `📦 Bulk Full Term (Signed T&C: ${selectedOnboardingAppDossier.bulkTermsSignedBy || "Yes"})` : "📅 Spread Every Month"}
+                      </strong>
+                    </div>
+                    <div>
+                      <span style={{ fontSize: "0.7rem", color: "#94a3b8" }}>TERM TOTAL: </span>
+                      <strong style={{ fontSize: "0.82rem", color: "#34d399" }}>
+                        GH₵ {Number(selectedOnboardingAppDossier.totalTermFee || selectedOnboardingAppDossier.calculatedFee || 0).toLocaleString()}
+                      </strong>
                     </div>
                   </div>
                   <div style={{ gridColumn: "1 / -1", background: "rgba(15, 23, 42, 0.65)", padding: "10px", borderRadius: "8px", border: "1px solid #334155", display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: "8px" }}>

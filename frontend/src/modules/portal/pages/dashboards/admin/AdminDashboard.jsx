@@ -425,6 +425,20 @@ export default function AdminDashboard() {
   const [showMomoSubmitModal, setShowMomoSubmitModal] = useState(false);
   const [momoTxnId, setMomoTxnId] = useState("");
   const [momoAmount, setMomoAmount] = useState("2500");
+  const [subInstitutionTier, setSubInstitutionTier] = useState("NURSERY_TO_JHS"); // NURSERY_TO_JHS (5 GHS) | SHS (10 GHS) | UNIVERSITY (20 GHS)
+  const [subStudentCount, setSubStudentCount] = useState("500");
+  const [subTermPlan, setSubTermPlan] = useState("6_MONTHS"); // 3_MONTHS | 6_MONTHS | 9_MONTHS | 12_MONTHS | LIFETIME
+  const [subPaymentScheduleMode, setSubPaymentScheduleMode] = useState("MONTHLY_SPREAD"); // MONTHLY_SPREAD | BULK_FULL_TERM
+  const [subBulkTermsAccepted, setSubBulkTermsAccepted] = useState(false);
+  const [subBulkSignatory, setSubBulkSignatory] = useState(`${currentUser.firstName} ${currentUser.lastName}`);
+
+  const subPerStudentRate = subInstitutionTier === "UNIVERSITY" ? 20 : subInstitutionTier === "SHS" ? 10 : 5;
+  const subMonthlyFee = (Math.max(0, parseInt(subStudentCount, 10) || 0)) * subPerStudentRate;
+  const subMonthsMap = { "3_MONTHS": 3, "6_MONTHS": 6, "9_MONTHS": 9, "12_MONTHS": 12, "LIFETIME": 36 };
+  const subMonthsCount = subMonthsMap[subTermPlan] || 6;
+  const subTotalTermFee = subMonthlyFee * subMonthsCount;
+  const subAmountDueNow = subPaymentScheduleMode === "BULK_FULL_TERM" ? subTotalTermFee : subMonthlyFee;
+
   const [isSystemLocked, setIsSystemLocked] = useState(() => {
     return localStorage.getItem("gbs_system_locked") === "true";
   });
@@ -456,20 +470,51 @@ export default function AdminDashboard() {
     setTimeout(() => setCopiedRef(false), 3000);
   };
 
-  const handleSubmitMomoReference = (e) => {
+  const handleSubmitMomoReference = async (e) => {
     e.preventDefault();
     if (!momoTxnId.trim()) return;
+    if (subPaymentScheduleMode === "BULK_FULL_TERM" && !subBulkTermsAccepted) {
+      setFeedback({
+        type: "error",
+        message: "Please accept and sign the Bulk Subscription Payment Terms & Conditions to pay in bulk without monthly spread."
+      });
+      return;
+    }
+    const finalPaidAmount = subAmountDueNow || Number(momoAmount) || 2500;
     const rec = {
       id: `RECON-${Date.now()}`,
       tenantName: institutionName,
       headmasterName: `${currentUser.firstName} ${currentUser.lastName}`,
       headmasterEmail: currentUser.email,
       txnId: momoTxnId.trim(),
-      amount: momoAmount,
+      amount: String(finalPaidAmount),
+      institutionType: subInstitutionTier,
+      studentCount: parseInt(subStudentCount, 10) || 0,
+      perStudentRate: subPerStudentRate,
+      monthlyFee: subMonthlyFee,
+      subscriptionPlan: subTermPlan,
+      subscribedMonths: subMonthsCount,
+      totalTermFee: subTotalTermFee,
+      paymentScheduleMode: subPaymentScheduleMode,
+      bulkTermsAccepted: subBulkTermsAccepted,
+      bulkTermsSignedBy: subBulkSignatory,
       referenceUsed: institutionName,
       submittedAt: new Date().toISOString(),
       status: "PENDING_DEVELOPER_RECONCILIATION"
     };
+    try {
+      await apiClient.post("/subscriptions/calculate-and-subscribe", {
+        institutionName,
+        institutionType: subInstitutionTier,
+        totalStudentsEnrolled: subStudentCount,
+        subscriptionPlan: subTermPlan,
+        paymentScheduleMode: subPaymentScheduleMode,
+        bulkTermsAccepted: subBulkTermsAccepted,
+        bulkTermsSignedBy: subBulkSignatory,
+        momoTxnId: momoTxnId.trim(),
+        paymentAmount: finalPaidAmount
+      });
+    } catch {}
     const saved = JSON.parse(localStorage.getItem("gbs_momo_subscription_reconciliations") || "[]");
     saved.unshift(rec);
     localStorage.setItem("gbs_momo_subscription_reconciliations", JSON.stringify(saved));
@@ -478,7 +523,7 @@ export default function AdminDashboard() {
     setMomoTxnId("");
     setFeedback({
       type: "success",
-      message: `✓ MoMo Transaction Reference '${rec.txnId}' for institution '${institutionName}' submitted to Developer Control Center for instant verification!`
+      message: `✓ Subscription (${subMonthsCount} Months • ${subPaymentScheduleMode === "BULK_FULL_TERM" ? "Bulk Settlement" : "Monthly Spread"} • GHS ${finalPaidAmount.toLocaleString()}) & MoMo Ref '${rec.txnId}' submitted to Developer Control Center!`
     });
   };
   const [academicPlan, setAcademicPlan] = useState(() => {
@@ -8506,7 +8551,7 @@ export default function AdminDashboard() {
           </div>
         )}
 
-        {/* MOMO TRANSACTION REFERENCE SUBMISSION MODAL */}
+        {/* MOMO TRANSACTION REFERENCE & SUBSCRIPTION TERM CALCULATOR MODAL */}
         {showMomoSubmitModal && (
           <div style={{
             position: "fixed",
@@ -8519,20 +8564,23 @@ export default function AdminDashboard() {
             zIndex: 99999,
             display: "flex",
             alignItems: "center",
-            justifyContent: "center"
+            justifyContent: "center",
+            padding: "16px"
           }}>
             <div style={{
               background: "linear-gradient(135deg, #0f172a, #1e293b)",
               border: "1.5px solid #38bdf8",
               borderRadius: "20px",
-              padding: "2rem",
-              maxWidth: "500px",
-              width: "92%",
+              padding: "1.75rem",
+              maxWidth: "660px",
+              width: "96%",
+              maxHeight: "90vh",
+              overflowY: "auto",
               boxShadow: "0 25px 60px rgba(0,0,0,0.85)"
             }}>
-              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "1.25rem" }}>
-                <h3 style={{ margin: 0, color: "#f8fafc", fontSize: "1.15rem", fontWeight: 800 }}>
-                  📱 Submit MoMo Subscription Transaction Reference
+              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "1rem" }}>
+                <h3 style={{ margin: 0, color: "#f8fafc", fontSize: "1.12rem", fontWeight: 800 }}>
+                  📱 Institutional Subscription Calculator & MoMo Remittance
                 </h3>
                 <button
                   type="button"
@@ -8544,75 +8592,231 @@ export default function AdminDashboard() {
               </div>
 
               <form onSubmit={handleSubmitMomoReference}>
-                <div style={{ marginBottom: "1rem" }}>
-                  <label style={{ display: "block", color: "#94a3b8", fontSize: "0.8rem", fontWeight: 700, marginBottom: "4px" }}>
-                    Institution Name Reference (Used for Payment) *
-                  </label>
-                  <input
-                    type="text"
-                    readOnly
-                    value={institutionName}
-                    style={{
-                      width: "100%",
-                      padding: "10px 14px",
-                      background: "rgba(30, 41, 59, 0.8)",
-                      border: "1px solid rgba(56, 189, 248, 0.4)",
-                      borderRadius: "8px",
-                      color: "#38bdf8",
-                      fontWeight: 800,
-                      boxSizing: "border-box"
-                    }}
-                  />
-                  <span style={{ fontSize: "0.72rem", color: "#34d399", marginTop: "3px", display: "block" }}>
-                    ✓ This exact reference is transmitted to the Developer for instant reconciliation.
-                  </span>
+                <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "12px", marginBottom: "0.9rem" }}>
+                  <div>
+                    <label style={{ display: "block", color: "#94a3b8", fontSize: "0.78rem", fontWeight: 700, marginBottom: "4px" }}>
+                      Institution Level & Per-Student Rate *
+                    </label>
+                    <select
+                      value={subInstitutionTier}
+                      onChange={(e) => setSubInstitutionTier(e.target.value)}
+                      style={{
+                        width: "100%",
+                        padding: "10px 12px",
+                        background: "rgba(15, 23, 42, 0.9)",
+                        border: "1px solid #334155",
+                        borderRadius: "8px",
+                        color: "#f8fafc",
+                        fontWeight: 700
+                      }}
+                    >
+                      <option value="NURSERY_TO_JHS">Nursery to JHS (GH₵ 5 / Student / Month)</option>
+                      <option value="SHS">Senior High School - SHS (GH₵ 10 / Student / Month)</option>
+                      <option value="UNIVERSITY">University Level (GH₵ 20 / Student / Month)</option>
+                    </select>
+                  </div>
+
+                  <div>
+                    <label style={{ display: "block", color: "#94a3b8", fontSize: "0.78rem", fontWeight: 700, marginBottom: "4px" }}>
+                      Total Students in Registered Institution *
+                    </label>
+                    <input
+                      type="number"
+                      min="1"
+                      required
+                      value={subStudentCount}
+                      onChange={(e) => setSubStudentCount(e.target.value)}
+                      style={{
+                        width: "100%",
+                        padding: "10px 12px",
+                        background: "rgba(15, 23, 42, 0.9)",
+                        border: "1px solid #334155",
+                        borderRadius: "8px",
+                        color: "#38bdf8",
+                        fontWeight: 800,
+                        boxSizing: "border-box"
+                      }}
+                    />
+                  </div>
                 </div>
 
-                <div style={{ marginBottom: "1rem" }}>
-                  <label style={{ display: "block", color: "#f8fafc", fontSize: "0.8rem", fontWeight: 700, marginBottom: "4px" }}>
-                    MoMo Transaction ID / Reference Code *
-                  </label>
-                  <input
-                    type="text"
-                    required
-                    placeholder="e.g. 29381048123 or MOMO-9182"
-                    value={momoTxnId}
-                    onChange={(e) => setMomoTxnId(e.target.value)}
-                    style={{
-                      width: "100%",
-                      padding: "10px 14px",
-                      background: "rgba(15, 23, 42, 0.9)",
-                      border: "1.5px solid rgba(245, 158, 11, 0.5)",
-                      borderRadius: "8px",
-                      color: "#f8fafc",
-                      fontSize: "0.95rem",
-                      boxSizing: "border-box"
-                    }}
-                  />
+                {/* Live Monthly & Subscribed Term Calculation Banner */}
+                <div style={{ background: "rgba(2, 6, 23, 0.85)", border: "1px solid rgba(56, 189, 248, 0.35)", borderRadius: "10px", padding: "12px", marginBottom: "0.9rem" }}>
+                  <div style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: "8px", textAlign: "center" }}>
+                    <div>
+                      <span style={{ fontSize: "0.7rem", color: "#94a3b8", display: "block" }}>Monthly Amount to Pay</span>
+                      <strong style={{ fontSize: "1rem", color: "#38bdf8" }}>GH₵ {subMonthlyFee.toLocaleString()} / mo</strong>
+                      <span style={{ fontSize: "0.68rem", color: "#64748b", display: "block" }}>{subStudentCount || 0} × GH₵ {subPerStudentRate}</span>
+                    </div>
+                    <div>
+                      <span style={{ fontSize: "0.7rem", color: "#94a3b8", display: "block" }}>Subscribed Term ({subMonthsCount} Mo)</span>
+                      <strong style={{ fontSize: "1rem", color: "#34d399" }}>GH₵ {subTotalTermFee.toLocaleString()}</strong>
+                      <span style={{ fontSize: "0.68rem", color: "#64748b", display: "block" }}>GH₵ {subMonthlyFee.toLocaleString()} × {subMonthsCount} Mo</span>
+                    </div>
+                    <div>
+                      <span style={{ fontSize: "0.7rem", color: "#94a3b8", display: "block" }}>Amount Payable Now</span>
+                      <strong style={{ fontSize: "1rem", color: "#fbbf24" }}>GH₵ {subAmountDueNow.toLocaleString()}</strong>
+                      <span style={{ fontSize: "0.68rem", color: "#64748b", display: "block" }}>
+                        {subPaymentScheduleMode === "BULK_FULL_TERM" ? "Bulk Full Term" : "Monthly Spread"}
+                      </span>
+                    </div>
+                  </div>
                 </div>
 
-                <div style={{ marginBottom: "1.25rem" }}>
-                  <label style={{ display: "block", color: "#94a3b8", fontSize: "0.8rem", fontWeight: 700, marginBottom: "4px" }}>
-                    Amount Paid (GHS)
+                {/* Preferred Subscription Term Selector */}
+                <div style={{ marginBottom: "0.9rem" }}>
+                  <label style={{ display: "block", color: "#cbd5e1", fontSize: "0.78rem", fontWeight: 700, marginBottom: "6px" }}>
+                    Preferred Subscription Term (3, 6, 9, 12 Months & Lifetime):
                   </label>
-                  <input
-                    type="number"
-                    value={momoAmount}
-                    onChange={(e) => setMomoAmount(e.target.value)}
-                    style={{
-                      width: "100%",
-                      padding: "10px 14px",
-                      background: "rgba(15, 23, 42, 0.9)",
-                      border: "1px solid #334155",
-                      borderRadius: "8px",
-                      color: "#f8fafc",
-                      boxSizing: "border-box"
-                    }}
-                  />
+                  <div style={{ display: "grid", gridTemplateColumns: "repeat(5, 1fr)", gap: "6px" }}>
+                    {[
+                      { id: "3_MONTHS", label: "3 Months", months: 3 },
+                      { id: "6_MONTHS", label: "6 Months", months: 6 },
+                      { id: "9_MONTHS", label: "9 Months", months: 9 },
+                      { id: "12_MONTHS", label: "12 Months", months: 12 },
+                      { id: "LIFETIME", label: "Lifetime", months: 36 }
+                    ].map((t) => (
+                      <button
+                        key={t.id}
+                        type="button"
+                        onClick={() => setSubTermPlan(t.id)}
+                        style={{
+                          padding: "8px 6px",
+                          borderRadius: "8px",
+                          cursor: "pointer",
+                          border: subTermPlan === t.id ? "2px solid #38bdf8" : "1px solid rgba(148,163,184,0.2)",
+                          background: subTermPlan === t.id ? "rgba(56, 189, 248, 0.18)" : "rgba(15, 23, 42, 0.7)",
+                          color: "#f8fafc",
+                          fontSize: "0.74rem",
+                          fontWeight: 800,
+                          textAlign: "center"
+                        }}
+                      >
+                        <div>{t.label}</div>
+                        <div style={{ color: "#34d399", fontSize: "0.7rem", marginTop: "2px" }}>
+                          GH₵ {(subMonthlyFee * t.months).toLocaleString()}
+                        </div>
+                      </button>
+                    ))}
+                  </div>
                 </div>
 
-                <div style={{ background: "rgba(16, 185, 129, 0.12)", border: "1px solid rgba(16, 185, 129, 0.3)", borderRadius: "8px", padding: "10px 14px", marginBottom: "1.25rem", fontSize: "0.8rem", color: "#a7f3d0" }}>
-                  Recipient: <strong>0554594193</strong> (GABRIEL KUBI OSEI-APPIAH)
+                {/* Payment Schedule Mode: Monthly Spread vs Bulk with Terms & Conditions */}
+                <div style={{ marginBottom: "0.9rem" }}>
+                  <label style={{ display: "block", color: "#cbd5e1", fontSize: "0.78rem", fontWeight: 700, marginBottom: "6px" }}>
+                    Payment Schedule Structure:
+                  </label>
+                  <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "10px" }}>
+                    <div
+                      onClick={() => setSubPaymentScheduleMode("MONTHLY_SPREAD")}
+                      style={{
+                        padding: "10px",
+                        borderRadius: "8px",
+                        cursor: "pointer",
+                        border: subPaymentScheduleMode === "MONTHLY_SPREAD" ? "2px solid #38bdf8" : "1px solid rgba(148,163,184,0.25)",
+                        background: subPaymentScheduleMode === "MONTHLY_SPREAD" ? "rgba(56, 189, 248, 0.12)" : "rgba(15, 23, 42, 0.6)"
+                      }}
+                    >
+                      <strong style={{ color: "#38bdf8", fontSize: "0.8rem", display: "block" }}>📅 Spread Every Month</strong>
+                      <span style={{ fontSize: "0.72rem", color: "#cbd5e1" }}>
+                        Pay <strong>GH₵ {subMonthlyFee.toLocaleString()}</strong> every month for {subMonthsCount} months.
+                      </span>
+                    </div>
+                    <div
+                      onClick={() => setSubPaymentScheduleMode("BULK_FULL_TERM")}
+                      style={{
+                        padding: "10px",
+                        borderRadius: "8px",
+                        cursor: "pointer",
+                        border: subPaymentScheduleMode === "BULK_FULL_TERM" ? "2px solid #f59e0b" : "1px solid rgba(148,163,184,0.25)",
+                        background: subPaymentScheduleMode === "BULK_FULL_TERM" ? "rgba(245, 158, 11, 0.14)" : "rgba(15, 23, 42, 0.6)"
+                      }}
+                    >
+                      <strong style={{ color: "#fbbf24", fontSize: "0.8rem", display: "block" }}>📦 Pay in Bulk (Full Term)</strong>
+                      <span style={{ fontSize: "0.72rem", color: "#cbd5e1" }}>
+                        Sign T&amp;C to pay <strong>GH₵ {subTotalTermFee.toLocaleString()}</strong> in bulk without monthly spread.
+                      </span>
+                    </div>
+                  </div>
+
+                  {subPaymentScheduleMode === "BULK_FULL_TERM" && (
+                    <div style={{ marginTop: "8px", padding: "10px", borderRadius: "8px", background: "rgba(245, 158, 11, 0.1)", border: "1px solid rgba(245, 158, 11, 0.4)" }}>
+                      <label style={{ display: "flex", alignItems: "center", gap: "8px", fontSize: "0.76rem", color: "#fef3c7", fontWeight: 700, cursor: "pointer", marginBottom: "6px" }}>
+                        <input
+                          type="checkbox"
+                          checked={subBulkTermsAccepted}
+                          onChange={(e) => setSubBulkTermsAccepted(e.target.checked)}
+                        />
+                        I accept &amp; sign the Terms and Conditions for paying the {subMonthsCount}-month subscription (GH₵ {subTotalTermFee.toLocaleString()}) in bulk.
+                      </label>
+                      <input
+                        type="text"
+                        value={subBulkSignatory}
+                        onChange={(e) => setSubBulkSignatory(e.target.value)}
+                        placeholder="Signed by Headmaster / Director"
+                        style={{
+                          width: "100%",
+                          padding: "7px 10px",
+                          background: "rgba(15, 23, 42, 0.9)",
+                          border: "1px solid rgba(245, 158, 11, 0.4)",
+                          borderRadius: "6px",
+                          color: "#f8fafc",
+                          fontSize: "0.78rem",
+                          boxSizing: "border-box"
+                        }}
+                      />
+                    </div>
+                  )}
+                </div>
+
+                <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "12px", marginBottom: "1rem" }}>
+                  <div>
+                    <label style={{ display: "block", color: "#94a3b8", fontSize: "0.78rem", fontWeight: 700, marginBottom: "4px" }}>
+                      Institution Name Reference *
+                    </label>
+                    <input
+                      type="text"
+                      readOnly
+                      value={institutionName}
+                      style={{
+                        width: "100%",
+                        padding: "10px 12px",
+                        background: "rgba(30, 41, 59, 0.8)",
+                        border: "1px solid rgba(56, 189, 248, 0.4)",
+                        borderRadius: "8px",
+                        color: "#38bdf8",
+                        fontWeight: 800,
+                        boxSizing: "border-box"
+                      }}
+                    />
+                  </div>
+
+                  <div>
+                    <label style={{ display: "block", color: "#f8fafc", fontSize: "0.78rem", fontWeight: 700, marginBottom: "4px" }}>
+                      MoMo Transaction ID / Reference Code *
+                    </label>
+                    <input
+                      type="text"
+                      required
+                      placeholder="e.g. 29381048123 or MOMO-9182"
+                      value={momoTxnId}
+                      onChange={(e) => setMomoTxnId(e.target.value)}
+                      style={{
+                        width: "100%",
+                        padding: "10px 12px",
+                        background: "rgba(15, 23, 42, 0.9)",
+                        border: "1.5px solid rgba(245, 158, 11, 0.5)",
+                        borderRadius: "8px",
+                        color: "#f8fafc",
+                        fontSize: "0.9rem",
+                        boxSizing: "border-box"
+                      }}
+                    />
+                  </div>
+                </div>
+
+                <div style={{ background: "rgba(16, 185, 129, 0.12)", border: "1px solid rgba(16, 185, 129, 0.3)", borderRadius: "8px", padding: "10px 14px", marginBottom: "1rem", fontSize: "0.8rem", color: "#a7f3d0" }}>
+                  Remit <strong>GH₵ {subAmountDueNow.toLocaleString()}</strong> to MTN MoMo: <strong>0554594193</strong> (GABRIEL KUBI OSEI-APPIAH)
                 </div>
 
                 <div style={{ display: "flex", justifyContent: "flex-end", gap: "10px" }}>
@@ -8628,7 +8832,7 @@ export default function AdminDashboard() {
                     className="btn-primary"
                     style={{ background: "#10b981", borderColor: "#059669" }}
                   >
-                    Submit Transaction Reference →
+                    Submit Subscription &amp; MoMo Reference →
                   </button>
                 </div>
               </form>
