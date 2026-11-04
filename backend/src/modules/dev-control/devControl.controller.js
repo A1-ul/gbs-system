@@ -195,7 +195,7 @@ const getBackups = async (req, res, next) => {
 // 10. Subscription Expiry & Auto-Lock Process
 const autoLockProcess = async (req, res, next) => {
   try {
-    const result = await devControlService.executeAutoLockAndBackup(req.body.tenantId);
+    const result = await devControlService.executeAutoLockAndBackup(req.body?.tenantId, req.body || {});
     res.status(200).json({
       status: 'success',
       data: result

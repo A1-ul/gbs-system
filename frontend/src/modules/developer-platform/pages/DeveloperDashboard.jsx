@@ -255,11 +255,12 @@ export default function DeveloperDashboard() {
   };
 
   // Lock selected institutions and apply state
-  const handleBatchLockSelected = (targetStatus = "LOCKED") => {
+  const handleBatchLockSelected = async (targetStatus = "LOCKED") => {
     if (selectedTenants.length === 0) {
       showNotification("Please select specific institutions from the table first.");
       return;
     }
+    const apiAction = targetStatus === "LOCKED" ? "LOCK" : "UNLOCK";
     const newOverrides = { ...tenantLockOverrides };
     selectedTenants.forEach((id) => {
       newOverrides[id] = targetStatus;
@@ -267,18 +268,32 @@ export default function DeveloperDashboard() {
     setTenantLockOverrides(newOverrides);
     localStorage.setItem("gbs_tenant_lock_overrides", JSON.stringify(newOverrides));
     setCountdowns((prev) =>
-      prev.map((c) => selectedTenants.includes(c.tenantId) ? { ...c, subscriptionStatus: targetStatus, warningLevel: targetStatus === "LOCKED" ? "LOCKED_ADMIN" : "HEALTHY" } : c)
+      prev.map((c) => selectedTenants.includes(c.tenantId) ? { ...c, subscriptionStatus: targetStatus, warningLevel: targetStatus === "LOCKED" ? "LOCKED_BY_DEVELOPER" : "NORMAL", formattedCountdown: targetStatus === "LOCKED" ? "🔒 Locked by Developer Control" : c.formattedCountdown } : c)
     );
-    showNotification(`✓ Status changed completely to ${targetStatus} for ${selectedTenants.length} selected institution(s). Status locked until you toggle it.`);
+    triggerPadlockFeedback(targetStatus === "LOCKED", `${selectedTenants.length} Selected Tenants`, `BATCH_${apiAction}`);
+    try {
+      await Promise.all(
+        selectedTenants.map((id) =>
+          fetch(`${BASE_URL}/tenants/${id}/action`, {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ action: apiAction, reason: `Developer Batch ${apiAction}` })
+          })
+        )
+      );
+      fetchData();
+    } catch {}
+    showNotification(`✓ Status changed completely to ${targetStatus} for ${selectedTenants.length} selected institution(s).`);
   };
 
   // Lock or unlock all unselected institutions
-  const handleApplyToUnselectedTenants = (targetStatus = "LOCKED") => {
+  const handleApplyToUnselectedTenants = async (targetStatus = "LOCKED") => {
     const unselectedList = countdowns.filter((c) => !selectedTenants.includes(c.tenantId));
     if (unselectedList.length === 0) {
       showNotification("All tenants are currently selected.");
       return;
     }
+    const apiAction = targetStatus === "LOCKED" ? "LOCK" : "UNLOCK";
     const newOverrides = { ...tenantLockOverrides };
     unselectedList.forEach((c) => {
       newOverrides[c.tenantId] = targetStatus;
@@ -286,8 +301,21 @@ export default function DeveloperDashboard() {
     setTenantLockOverrides(newOverrides);
     localStorage.setItem("gbs_tenant_lock_overrides", JSON.stringify(newOverrides));
     setCountdowns((prev) =>
-      prev.map((c) => !selectedTenants.includes(c.tenantId) ? { ...c, subscriptionStatus: targetStatus, warningLevel: targetStatus === "LOCKED" ? "LOCKED_ADMIN" : "HEALTHY" } : c)
+      prev.map((c) => !selectedTenants.includes(c.tenantId) ? { ...c, subscriptionStatus: targetStatus, warningLevel: targetStatus === "LOCKED" ? "LOCKED_BY_DEVELOPER" : "NORMAL", formattedCountdown: targetStatus === "LOCKED" ? "🔒 Locked by Developer Control" : c.formattedCountdown } : c)
     );
+    triggerPadlockFeedback(targetStatus === "LOCKED", `${unselectedList.length} Unselected Tenants`, `BATCH_UNSELECTED_${apiAction}`);
+    try {
+      await Promise.all(
+        unselectedList.map((c) =>
+          fetch(`${BASE_URL}/tenants/${c.tenantId}/action`, {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ action: apiAction, reason: `Developer Batch Unselected ${apiAction}` })
+          })
+        )
+      );
+      fetchData();
+    } catch {}
     showNotification(`✓ Status changed completely to ${targetStatus} for all ${unselectedList.length} unselected institution(s).`);
   };
 
@@ -1113,7 +1141,26 @@ export default function DeveloperDashboard() {
     };
     setAuditLogs((prev) => [newLog, ...prev]);
 
-    // 5. Trigger real photographic padlock feedback
+    // 5. Persist to backend database
+    if (tId) {
+      try {
+        await fetch(`${BASE_URL}/tenants/${tId}/action`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            action: "CHANGE_HEADMASTER",
+            headmasterName: headmasterChangeForm.newHeadmasterName,
+            headmasterEmail: headmasterChangeForm.newHeadmasterEmail,
+            headmasterPhone: headmasterChangeForm.newHeadmasterPhone,
+            headmasterPhoto: headmasterChangeForm.photo,
+            resolutionNumber: headmasterChangeForm.appointmentRef
+          })
+        });
+        fetchData();
+      } catch {}
+    }
+
+    // 6. Trigger real photographic padlock feedback
     triggerPadlockFeedback(false, tName, "HEADMASTER_HANDOVER_COMPLETE");
 
     showNotification(`✓ Headmaster handover committed for '${tName}'! New Headmaster '${headmasterChangeForm.newHeadmasterName}' is immediately activated.`);
@@ -1434,7 +1481,7 @@ export default function DeveloperDashboard() {
     const ticker = setInterval(() => {
       setCountdowns((prevList) =>
         prevList.map((item) => {
-          if (item.isExpired) return item;
+          if (item.isExpired || item.subscriptionStatus === "LOCKED" || item.warningLevel === "LIFETIME_ACTIVE") return item;
 
           let s = item.remainingSeconds - 1;
           let m = item.remainingMinutes;
@@ -1876,7 +1923,7 @@ export default function DeveloperDashboard() {
     setOnboardedTenants((prev) =>
       prev.map((t) => ({ ...t, status: "LOCKED" }))
     );
-    handleAutoLockProcess();
+    handleAutoLockProcess({ forceEnforce: true });
     showNotification("🔒 Auto-Lock Pipeline Executed: Delinquent institutions locked. All institutional records snapshotted in encrypted backup. Platform Continuation MoMo: 0554594193 (GABRIEL KUBI OSEI-APPIAH) displayed.");
   };
 
@@ -2028,6 +2075,22 @@ export default function DeveloperDashboard() {
       localStorage.setItem("gbs_tenant_status", "ACTIVE");
       setMasterTenantLockStatus("ACTIVE");
       triggerPadlockFeedback(false, `${batchIds.length} Multi-Selected Tenants`, "BATCH_SUBSCRIPTION_RENEWAL");
+      try {
+        await Promise.all(
+          batchIds.map((id) =>
+            fetch(`${BASE_URL}/tenants/${id}/action`, {
+              method: "POST",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify({
+                action: "RENEW_SUBSCRIPTION",
+                duration,
+                notes: notes || "Developer Batch Renewal"
+              })
+            })
+          )
+        );
+        fetchData();
+      } catch {}
       showNotification(`✓ Batch Subscription Renewal executed for ${batchIds.length} tenants (${durationLabel})!`);
       setSelectedTenants([]);
       setShowRenewModal(false);
@@ -2221,15 +2284,18 @@ export default function DeveloperDashboard() {
         })
       });
       if (res.ok) {
+        appendConsoleLog(`SUCCESS >> SYSTEM_${isLocked ? "LOCK" : "UNLOCK"}: Master Padlock ${isLocked ? "ENGAGED" : "RELEASED"} across all tenant enclaves.`);
         showNotification(`✓ System ${isLocked ? "LOCKED (All Data Encrypted & Preserved in PostgreSQL Backup)" : "UNLOCKED (All Institutional Records Restored)"} successfully.`);
         fetchData();
       }
     } catch (err) {
+      appendConsoleLog(`FAIL >> SYSTEM_${isLocked ? "LOCK" : "UNLOCK"} error: ${err.message}`);
       showNotification("⚠ Error toggling system lock.");
     }
   };
 
   const handleTriggerBackup = async (backupType = "FULL") => {
+    appendConsoleLog(`EXEC >> TRIGGERING ENCRYPTED POSTGRESQL BACKUP (${backupType})...`);
     try {
       const res = await fetch(`${BASE_URL}/backup-now`, {
         method: "POST",
@@ -2238,26 +2304,32 @@ export default function DeveloperDashboard() {
       });
       const data = await res.json();
       if (res.ok) {
+        appendConsoleLog(`SUCCESS >> BACKUP_GENERATED: ${data.data?.backup?.filename} (${data.data?.backup?.fileSizeMb} MB, AES-256)`);
         showNotification(`✓ Encrypted Backup Generated: ${data.data.backup.filename} (${data.data.backup.fileSizeMb} MB)`);
         fetchData();
       }
     } catch (err) {
+      appendConsoleLog(`FAIL >> BACKUP_TRIGGER error: ${err.message}`);
       showNotification("⚠ Error triggering database backup.");
     }
   };
 
-  const handleAutoLockProcess = async () => {
+  const handleAutoLockProcess = async (opts = {}) => {
+    appendConsoleLog(`EXEC >> RUNNING SUBSCRIPTION AUTO-LOCK & PRE-LOCK BACKUP PIPELINE...`);
     try {
       const res = await fetch(`${BASE_URL}/auto-lock-process`, {
         method: "POST",
-        headers: { "Content-Type": "application/json" }
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ forceEnforce: opts?.forceEnforce !== false })
       });
       const data = await res.json();
       if (res.ok) {
-        showNotification(`✓ Auto-Lock Pipeline Executed: ${data.data.processedCount} expired tenant(s) archived & backed up.`);
+        appendConsoleLog(`SUCCESS >> AUTO_LOCK_PIPELINE: ${data.data?.processedCount || 0} tenant(s) locked & archived in encrypted pre-lock backup.`);
+        showNotification(`✓ Auto-Lock Pipeline Executed: ${data.data.processedCount} tenant(s) locked, archived & backed up.`);
         fetchData();
       }
     } catch (err) {
+      appendConsoleLog(`FAIL >> AUTO_LOCK_PIPELINE error: ${err.message}`);
       showNotification("⚠ Error executing auto-lock process.");
     }
   };
@@ -3128,13 +3200,7 @@ export default function DeveloperDashboard() {
             className="dev-padlock-quick-widget"
             onClick={() => {
               const newLockState = masterTenantLockStatus !== "LOCKED";
-              const newStatus = newLockState ? "LOCKED" : "ACTIVE";
-              setMasterTenantLockStatus(newStatus);
-              localStorage.setItem("gbs_tenant_status", newStatus);
-              localStorage.setItem("gbs_system_locked", newLockState ? "true" : "false");
-              window.dispatchEvent(new CustomEvent("gbs_tenant_status_updated", { detail: { status: newStatus } }));
-              window.dispatchEvent(new CustomEvent("gbs_system_lock_changed", { detail: { isLocked: newLockState } }));
-              triggerPadlockFeedback(newLockState, "Master Institutional Network", newLockState ? "MASTER_SYSTEM_LOCK" : "MASTER_SYSTEM_UNLOCK");
+              handleSystemLockToggle(newLockState);
             }}
             title="Interactive Real Padlock: Click to toggle system lock state"
             style={{
@@ -3634,6 +3700,7 @@ export default function DeveloperDashboard() {
                     const nextVal = !subscriptionSettings.autoLockOnFailure;
                     setSubscriptionSettings((prev) => {
                       const updated = { ...prev, autoLockOnFailure: nextVal };
+                      localStorage.setItem("gbs_system_subscription_settings", JSON.stringify(updated));
                       localStorage.setItem("gbs_platform_subscription_settings", JSON.stringify(updated));
                       return updated;
                     });
@@ -6092,7 +6159,7 @@ export default function DeveloperDashboard() {
                   title="Click to view all registered tenants in database"
                 >
                   <span className="console-stat-lbl">TOTAL TENANTS</span>
-                  <span className="console-stat-val">{consoleStats.totalTenants || countdowns.length}</span>
+                  <span className="console-stat-val">{countdowns.length || consoleStats.totalTenants}</span>
                 </div>
                 <div
                   className={`console-stat-card active ${tenantConsoleFilter === "ACTIVE" ? "selected-filter-card" : ""}`}
@@ -6101,7 +6168,7 @@ export default function DeveloperDashboard() {
                   title="Click to filter and view active tenants"
                 >
                   <span className="console-stat-lbl">ACTIVE TENANTS</span>
-                  <span className="console-stat-val">{consoleStats.activeTenants || countdowns.filter(c => c.subscriptionStatus === "ACTIVE" && !c.isExpired).length}</span>
+                  <span className="console-stat-val">{countdowns.length ? countdowns.filter(c => c.subscriptionStatus === "ACTIVE" && !c.isExpired).length : consoleStats.activeTenants}</span>
                 </div>
                 <div
                   className={`console-stat-card trial ${tenantConsoleFilter === "TRIAL" ? "selected-filter-card" : ""}`}
@@ -6110,7 +6177,7 @@ export default function DeveloperDashboard() {
                   title="Click to filter and view trial tenants"
                 >
                   <span className="console-stat-lbl">TRIAL TENANTS</span>
-                  <span className="console-stat-val">{consoleStats.trialTenants || countdowns.filter(c => c.subscriptionPlan?.toUpperCase().includes("TRIAL") || c.isTrial).length}</span>
+                  <span className="console-stat-val">{countdowns.length ? countdowns.filter(c => c.subscriptionPlan?.toUpperCase().includes("TRIAL") || c.isTrial).length : consoleStats.trialTenants}</span>
                 </div>
                 <div
                   className={`console-stat-card expiring ${tenantConsoleFilter === "EXPIRING" ? "selected-filter-card" : ""}`}
@@ -6119,7 +6186,7 @@ export default function DeveloperDashboard() {
                   title="Click to filter and view expiring tenants"
                 >
                   <span className="console-stat-lbl">EXPIRING TENANTS</span>
-                  <span className="console-stat-val">{consoleStats.expiringTenants || countdowns.filter(c => c.remainingDays <= 7 && !c.isExpired).length}</span>
+                  <span className="console-stat-val">{countdowns.length ? countdowns.filter(c => c.remainingDays <= 7 && !c.isExpired).length : consoleStats.expiringTenants}</span>
                 </div>
                 <div
                   className={`console-stat-card expired ${tenantConsoleFilter === "EXPIRED" ? "selected-filter-card" : ""}`}
@@ -6128,7 +6195,7 @@ export default function DeveloperDashboard() {
                   title="Click to filter and view expired tenants"
                 >
                   <span className="console-stat-lbl">EXPIRED TENANTS</span>
-                  <span className="console-stat-val">{consoleStats.expiredTenants || countdowns.filter(c => c.isExpired).length}</span>
+                  <span className="console-stat-val">{countdowns.length ? countdowns.filter(c => c.isExpired).length : consoleStats.expiredTenants}</span>
                 </div>
                 <div
                   className={`console-stat-card ${tenantConsoleFilter === "SUSPENDED" ? "selected-filter-card" : ""}`}
@@ -6137,7 +6204,7 @@ export default function DeveloperDashboard() {
                   title="Click to filter and view suspended tenants"
                 >
                   <span className="console-stat-lbl">SUSPENDED</span>
-                  <span className="console-stat-val">{consoleStats.suspendedTenants || countdowns.filter(c => c.subscriptionStatus === "SUSPENDED").length}</span>
+                  <span className="console-stat-val">{countdowns.length ? countdowns.filter(c => c.subscriptionStatus === "SUSPENDED").length : consoleStats.suspendedTenants}</span>
                 </div>
                 <div
                   className={`console-stat-card ${tenantConsoleFilter === "PAID" ? "selected-filter-card" : ""}`}
@@ -6146,7 +6213,7 @@ export default function DeveloperDashboard() {
                   title="Click to filter and view paid plans"
                 >
                   <span className="console-stat-lbl">PAID PLANS</span>
-                  <span className="console-stat-val">{consoleStats.paidTenants || countdowns.filter(c => !c.subscriptionPlan?.toUpperCase().includes("TRIAL") && c.subscriptionStatus === "ACTIVE").length}</span>
+                  <span className="console-stat-val">{countdowns.length ? countdowns.filter(c => !c.subscriptionPlan?.toUpperCase().includes("TRIAL") && c.subscriptionStatus === "ACTIVE").length : consoleStats.paidTenants}</span>
                 </div>
                 <div
                   className={`console-stat-card locked ${tenantConsoleFilter === "LOCKED" ? "selected-filter-card" : ""}`}
@@ -6155,7 +6222,7 @@ export default function DeveloperDashboard() {
                   title="Click to filter and view locked tenants"
                 >
                   <span className="console-stat-lbl">LOCKED TENANTS</span>
-                  <span className="console-stat-val">{consoleStats.lockedTenants || countdowns.filter(c => c.subscriptionStatus === "LOCKED").length}</span>
+                  <span className="console-stat-val">{countdowns.length ? countdowns.filter(c => c.subscriptionStatus === "LOCKED").length : consoleStats.lockedTenants}</span>
                 </div>
               </div>
 
@@ -6461,7 +6528,7 @@ export default function DeveloperDashboard() {
                               <button
                                 className="action-btn-sm"
                                 style={{ background: "linear-gradient(135deg, #0284c7, #0369a1)", color: "#fff", display: "inline-flex", alignItems: "center", gap: "4px" }}
-                                onClick={() => handleCallHeadmaster({ id: c.tenantId, name: c.tenantName, headmaster: { name: "Headmaster Arthur Pendleton", phone: "+233-24-555-0199" } })}
+                                onClick={() => handleCallHeadmaster({ id: c.tenantId, name: c.tenantName, headmaster: { name: c.headmaster?.name || c.headmasterName || "Headmaster", phone: c.headmaster?.phone || c.headmasterPhone || "+233-24-555-0199", email: c.headmaster?.email || c.headmasterEmail || "admin@gbs.edu" } })}
                               >
                                 📹 Video Call
                               </button>

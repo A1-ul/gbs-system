@@ -38,6 +38,30 @@ const initialStore = readPersistentStore();
 const DYNAMIC_REGISTERED_USERS = Array.isArray(initialStore.registeredUsers) ? initialStore.registeredUsers : [];
 const DYNAMIC_INSTITUTIONS = Array.isArray(initialStore.institutions) ? initialStore.institutions : [];
 
+const deriveDeterministicTenantId = (item, fallbackIdx = 0) => {
+  if (typeof item.tenantId === 'number' && !isNaN(item.tenantId) && item.tenantId > 0) return item.tenantId;
+  if (typeof item.id === 'number' && !isNaN(item.id) && item.id > 0) return item.id;
+  const str = String(item.tenantCode || item.id || item.institutionName || `inst_${fallbackIdx}`);
+  const digits = str.replace(/\D/g, '');
+  if (digits.length >= 3) {
+    return parseInt(digits.slice(-4), 10) || (1000 + fallbackIdx);
+  }
+  let hash = 0;
+  for (let i = 0; i < str.length; i++) {
+    hash = ((hash << 5) - hash + str.charCodeAt(i)) | 0;
+  }
+  return 1000 + (Math.abs(hash) % 8999);
+};
+
+let needsInitialInstitutionSync = false;
+DYNAMIC_INSTITUTIONS.forEach((inst, idx) => {
+  const detId = deriveDeterministicTenantId(inst, idx + 1);
+  if (inst.tenantId !== detId) {
+    inst.tenantId = detId;
+    needsInitialInstitutionSync = true;
+  }
+});
+
 const syncAuthStoreToDisk = () => {
   try {
     const store = readPersistentStore();
@@ -46,6 +70,10 @@ const syncAuthStoreToDisk = () => {
     writePersistentStore(store);
   } catch { }
 };
+
+if (needsInitialInstitutionSync) {
+  syncAuthStoreToDisk();
+}
 
 const BUILTIN_SYSTEM_USERS = [
   {
@@ -1117,19 +1145,34 @@ module.exports = {
   syncAuthStoreToDisk,
   getDynamicInstitutions: () => [...DYNAMIC_INSTITUTIONS],
   addDynamicInstitution: (item) => {
-    DYNAMIC_INSTITUTIONS.unshift(item);
+    const tenantId = deriveDeterministicTenantId(item, DYNAMIC_INSTITUTIONS.length + 1);
+    DYNAMIC_INSTITUTIONS.unshift({ ...item, tenantId });
     syncAuthStoreToDisk();
   },
   updateDynamicInstitution: (idOrCode, updates) => {
+    const target = String(idOrCode ?? '').trim().toLowerCase();
+    if (!target) return null;
     const idx = DYNAMIC_INSTITUTIONS.findIndex(
-      (i) => i.id === idOrCode || i.tenantCode === idOrCode || i.tenantUid === idOrCode
+      (i) =>
+        String(i.id ?? '').toLowerCase() === target ||
+        String(i.tenantId ?? '').toLowerCase() === target ||
+        String(i.tenantCode ?? '').toLowerCase() === target ||
+        String(i.tenantUid ?? '').toLowerCase() === target ||
+        String(i.institutionName ?? '').toLowerCase() === target
     );
     if (idx >= 0) {
-      DYNAMIC_INSTITUTIONS[idx] = { ...DYNAMIC_INSTITUTIONS[idx], ...updates };
+      DYNAMIC_INSTITUTIONS[idx] = { ...DYNAMIC_INSTITUTIONS[idx], ...updates, updatedAt: new Date().toISOString() };
       syncAuthStoreToDisk();
       return DYNAMIC_INSTITUTIONS[idx];
     }
     return null;
+  },
+  updateAllDynamicInstitutions: (updates) => {
+    for (let i = 0; i < DYNAMIC_INSTITUTIONS.length; i++) {
+      DYNAMIC_INSTITUTIONS[i] = { ...DYNAMIC_INSTITUTIONS[i], ...updates, updatedAt: new Date().toISOString() };
+    }
+    syncAuthStoreToDisk();
+    return [...DYNAMIC_INSTITUTIONS];
   },
   getDynamicUsers: () => [...DYNAMIC_REGISTERED_USERS],
   addDynamicUser: (u) => {

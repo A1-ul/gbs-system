@@ -101,8 +101,84 @@ const getSystemMetrics = async () => {
   };
 };
 
+// Helper: Ensure all dynamic institutions are materialized in prisma.tenant & prisma.subscription with deterministic IDs
+const syncDynamicInstitutionsToTenants = async () => {
+  const dynamicList = authService.getDynamicInstitutions ? authService.getDynamicInstitutions() : [];
+  if (!dynamicList.length) return;
+
+  let existingTenants = [];
+  try {
+    existingTenants = await prisma.tenant.findMany({ where: { isDeleted: false } });
+  } catch { }
+
+  for (let idx = 0; idx < dynamicList.length; idx++) {
+    const item = dynamicList[idx];
+    if (!item || (!item.institutionName && !item.tenantCode)) continue;
+    const detId =
+      typeof item.tenantId === 'number' && item.tenantId > 0
+        ? item.tenantId
+        : typeof item.id === 'number' && item.id > 0
+          ? item.id
+          : 1000 + idx + 1;
+
+    const match = existingTenants.find(
+      (t) =>
+        Number(t.id) === Number(detId) ||
+        (item.tenantCode && t.code === item.tenantCode) ||
+        (item.institutionName && t.name === item.institutionName)
+    );
+
+    const effectiveStatus =
+      item.status === 'LOCKED'
+        ? 'LOCKED'
+        : item.status === 'SUSPENDED'
+          ? 'SUSPENDED'
+          : 'ACTIVE';
+    const effectiveActive = effectiveStatus === 'ACTIVE';
+
+    if (!match) {
+      try {
+        const createdTenant = await prisma.tenant.create({
+          data: {
+            id: detId,
+            name: item.institutionName || `Institution #${detId}`,
+            code: item.tenantCode || `GBS-SCH-${detId}`,
+            domain: item.domain || `${String(item.tenantCode || `sch${detId}`).toLowerCase()}.gbs.edu`,
+            status: effectiveStatus,
+            isActive: effectiveActive,
+            headmasterName: item.adminName || item.repFullName || 'Headmaster',
+            headmasterEmail: item.adminEmail || item.officialEmail || 'admin@school.edu',
+            headmasterPhone: item.adminPhone || item.officialPhone || item.repPhone || '+233-24-555-0199',
+            headmasterPhoto: item.facePhoto || item.institutionLogo || null,
+            institutionType: item.institutionType || 'SHS',
+            totalStudentsEnrolled: Number(item.totalStudentsEnrolled || item.maxStudents || 300),
+            createdAt: item.createdAt || new Date().toISOString()
+          }
+        });
+        existingTenants.push(createdTenant);
+
+        await prisma.subscription.create({
+          data: {
+            tenantId: createdTenant.id,
+            planName: item.subscriptionPlan || 'Enterprise 30-Day Evaluation Trial',
+            startDate: item.createdAt || new Date().toISOString(),
+            endDate: item.trialEndDate || new Date(Date.now() + 30 * 86400000).toISOString(),
+            gracePeriodDays: 7,
+            autoLock: true,
+            status: effectiveStatus,
+            currency: 'GHS',
+            amountPaid: Number(item.paymentAmount || 0)
+          }
+        }).catch(() => { });
+      } catch { }
+    }
+  }
+};
+
 // 3. Developer Tenant Registration Console (Actual DB Counts)
 const getTenantRegistrationConsole = async () => {
+  await syncDynamicInstitutionsToTenants();
+
   let tenants = [];
   try {
     tenants = await prisma.tenant.findMany({
@@ -118,26 +194,7 @@ const getTenantRegistrationConsole = async () => {
     console.warn('Tenant registration console lookup notice (resilience active):', err.message);
   }
 
-  // Merge dynamic institutions
-  const dynamicList = authService.getDynamicInstitutions ? authService.getDynamicInstitutions() : [];
-  for (const item of dynamicList) {
-    if (!tenants.some((t) => t.code === item.tenantCode || t.name === item.institutionName)) {
-      tenants.push({
-        id: typeof item.id === 'number' ? item.id : Math.floor(1000 + Math.random() * 9000),
-        name: item.institutionName,
-        code: item.tenantCode,
-        status: item.isApproved ? 'ACTIVE' : 'SUSPENDED',
-        isActive: Boolean(item.isApproved),
-        subscriptions: [
-          {
-            planName: item.subscriptionPlan || 'Enterprise Trial',
-            status: item.isApproved ? 'ACTIVE' : 'SUSPENDED',
-            endDate: new Date(Date.now() + 30 * 86400000).toISOString()
-          }
-        ]
-      });
-    }
-  }
+  tenants = tenants.filter((t) => Boolean(t && (t.name || t.code)));
 
   const totalTenants = tenants.length;
   let activeTenants = 0;
@@ -153,21 +210,29 @@ const getTenantRegistrationConsole = async () => {
   const now = new Date();
 
   tenants.forEach((t) => {
-    if (t.status === 'ACTIVE' && t.isActive) activeTenants++;
-    if (t.status === 'SUSPENDED') suspendedTenants++;
-    if (t.status === 'LOCKED') lockedTenants++;
-
     const sub = t.subscriptions && t.subscriptions[0];
+    const effectiveStatus =
+      t.status === 'LOCKED'
+        ? 'LOCKED'
+        : t.status === 'SUSPENDED' || t.isActive === false
+          ? 'SUSPENDED'
+          : sub?.status || t.status || 'ACTIVE';
+
+    if (effectiveStatus === 'ACTIVE') activeTenants++;
+    if (effectiveStatus === 'SUSPENDED') suspendedTenants++;
+    if (effectiveStatus === 'LOCKED') lockedTenants++;
+
     if (sub) {
-      if (sub.planName.toLowerCase().includes('trial') || sub.planName.toLowerCase().includes('30-day')) {
+      const pName = String(sub.planName || '').toLowerCase();
+      if (pName.includes('trial') || pName.includes('30-day') || pName.includes('1_month_trial')) {
         trialTenants++;
-      } else {
+      } else if (effectiveStatus === 'ACTIVE') {
         paidTenants++;
       }
 
       const diffDays = Math.ceil((new Date(sub.endDate).getTime() - now.getTime()) / (1000 * 60 * 60 * 24));
       if (diffDays <= 7 && diffDays > 0) expiringTenants++;
-      if (diffDays <= 0 || sub.status === 'EXPIRED') expiredTenants++;
+      if (diffDays <= 0 || sub.status === 'EXPIRED' || effectiveStatus === 'EXPIRED') expiredTenants++;
     } else {
       unverifiedTenants++;
     }
@@ -189,6 +254,8 @@ const getTenantRegistrationConsole = async () => {
 
 // 4. Enterprise Countdown Engine (Backend Controlled Down to the Second)
 const getTenantCountdowns = async () => {
+  await syncDynamicInstitutionsToTenants();
+
   let tenants = [];
   try {
     tenants = await prisma.tenant.findMany({
@@ -200,7 +267,7 @@ const getTenantCountdowns = async () => {
         },
         users: {
           where: { role: 'ADMIN', isDeleted: false },
-          select: { id: true, email: true, lastLoginAt: true }
+          select: { id: true, email: true, firstName: true, lastName: true, lastLoginAt: true }
         }
       },
       orderBy: { createdAt: 'desc' }
@@ -209,54 +276,42 @@ const getTenantCountdowns = async () => {
     console.warn('Countdown engine db lookup notice (resilience active):', err.message);
   }
 
-  // Merge dynamic institutions
+  tenants = tenants.filter((t) => Boolean(t && (t.name || t.code)));
   const dynamicList = authService.getDynamicInstitutions ? authService.getDynamicInstitutions() : [];
-  for (const item of dynamicList) {
-    if (!tenants.some((t) => t.code === item.tenantCode || t.name === item.institutionName)) {
-      tenants.push({
-        id: typeof item.id === 'number' ? item.id : Math.floor(1000 + Math.random() * 9000),
-        name: item.institutionName,
-        code: item.tenantCode,
-        status: item.isApproved ? 'ACTIVE' : 'SUSPENDED',
-        createdAt: item.createdAt ? new Date(item.createdAt) : new Date(),
-        subscriptions: [
-          {
-            startDate: item.createdAt ? new Date(item.createdAt) : new Date(),
-            endDate: new Date(Date.now() + 30 * 86400000),
-            planName: item.subscriptionPlan || 'Enterprise Trial',
-            status: item.isApproved ? 'ACTIVE' : 'SUSPENDED',
-            gracePeriodDays: 7
-          }
-        ],
-        users: [
-          {
-            id: 1,
-            email: item.adminEmail || 'admin@gbs.edu',
-            lastLoginAt: new Date()
-          }
-        ]
-      });
-    }
-  }
-
   const now = Date.now();
 
   return tenants.map((t) => {
     const sub = (t.subscriptions && t.subscriptions[0]) || null;
     const adminUser = (t.users && t.users[0]) || null;
+    const dynMatch = dynamicList.find(
+      (d) =>
+        Number(d.tenantId) === Number(t.id) ||
+        (d.tenantCode && d.tenantCode === t.code) ||
+        (d.institutionName && d.institutionName === t.name)
+    );
 
     let trialStart = t.createdAt ? new Date(t.createdAt) : new Date();
     let trialEnd = new Date(trialStart.getTime() + 30 * 24 * 60 * 60 * 1000);
-    let planName = 'Enterprise 30-Day Evaluation Trial';
-    let subStatus = t.status;
+    let planName = t.planName || dynMatch?.subscriptionPlan || 'Enterprise 30-Day Evaluation Trial';
     let graceDays = 7;
 
     if (sub) {
-      trialStart = sub.startDate;
-      trialEnd = sub.endDate;
-      planName = sub.planName;
-      subStatus = sub.status;
+      trialStart = sub.startDate || trialStart;
+      trialEnd = sub.endDate || trialEnd;
+      planName = sub.planName || planName;
       graceDays = sub.gracePeriodDays || 7;
+    }
+
+    // Tenant status ('LOCKED' / 'SUSPENDED') is authoritative over subscription status
+    let subStatus = 'ACTIVE';
+    if (t.status === 'LOCKED' || dynMatch?.status === 'LOCKED') {
+      subStatus = 'LOCKED';
+    } else if (t.status === 'SUSPENDED' || dynMatch?.status === 'SUSPENDED' || t.isActive === false) {
+      subStatus = 'SUSPENDED';
+    } else if (sub && sub.status) {
+      subStatus = sub.status;
+    } else if (t.status) {
+      subStatus = t.status;
     }
 
     const endMs = new Date(trialEnd).getTime();
@@ -282,10 +337,14 @@ const getTenantCountdowns = async () => {
       }
     }
 
-    // Trial Expiration Automated Warning Level
     let warningLevel = 'NORMAL';
-    if (!isExpired) {
-      if (remainingDays <= 1) warningLevel = 'FINAL_WARNING_DAY_1';
+    if (subStatus === 'LOCKED') {
+      warningLevel = 'LOCKED_BY_DEVELOPER';
+    } else if (subStatus === 'SUSPENDED') {
+      warningLevel = 'SUSPENDED_BY_DEVELOPER';
+    } else if (!isExpired) {
+      if (remainingDays > 3000) warningLevel = 'LIFETIME_ACTIVE';
+      else if (remainingDays <= 1) warningLevel = 'FINAL_WARNING_DAY_1';
       else if (remainingDays <= 3) warningLevel = 'ESCALATED_WARNING_DAY_3';
       else if (remainingDays <= 7) warningLevel = 'CRITICAL_WARNING_DAY_7';
       else if (remainingDays <= 14) warningLevel = 'WARNING_DAY_14';
@@ -293,14 +352,43 @@ const getTenantCountdowns = async () => {
       warningLevel = isInGracePeriod ? 'GRACE_PERIOD_ACTIVE' : 'TRIAL_EXPIRED';
     }
 
-    const formattedCountdown = isExpired
-      ? (isInGracePeriod ? 'Grace Period Active' : 'Trial Expired')
-      : `${remainingDays} Days ${remainingHours} Hours ${remainingMinutes} Minutes ${remainingSeconds} Seconds`;
+    const isLifetimePlan = String(planName).toUpperCase().includes('LIFETIME') || remainingDays > 3000;
+    const formattedCountdown =
+      subStatus === 'LOCKED'
+        ? '🔒 Locked by Developer Control'
+        : isLifetimePlan
+          ? 'Lifetime Active (Never Expires)'
+          : isExpired
+            ? (isInGracePeriod ? 'Grace Period Active' : 'Trial Expired')
+            : `${remainingDays} Days ${remainingHours} Hours ${remainingMinutes} Minutes ${remainingSeconds} Seconds`;
+
+    const hmName =
+      t.headmasterName ||
+      dynMatch?.adminName ||
+      dynMatch?.repFullName ||
+      (adminUser ? `${adminUser.firstName || ''} ${adminUser.lastName || ''}`.trim() : '') ||
+      'Headmaster';
+    const hmEmail =
+      t.headmasterEmail ||
+      dynMatch?.adminEmail ||
+      dynMatch?.officialEmail ||
+      adminUser?.email ||
+      'admin@gbs.edu';
+    const hmPhone =
+      t.headmasterPhone ||
+      dynMatch?.adminPhone ||
+      dynMatch?.officialPhone ||
+      dynMatch?.repPhone ||
+      '+233-24-555-0199';
+    const hmPhoto = t.headmasterPhoto || dynMatch?.facePhoto || dynMatch?.institutionLogo || null;
 
     return {
       tenantId: t.id,
       tenantName: t.name,
       tenantCode: t.code,
+      institutionType: t.institutionType || dynMatch?.institutionType || 'SHS',
+      totalStudentsEnrolled: Number(t.totalStudentsEnrolled || dynMatch?.totalStudentsEnrolled || 300),
+      activeStudents: Number(t.totalStudentsEnrolled || dynMatch?.totalStudentsEnrolled || 300),
       subscriptionPlan: planName,
       trialStartDate: trialStart,
       trialEndDate: trialEnd,
@@ -314,13 +402,25 @@ const getTenantCountdowns = async () => {
       isExpired,
       isInGracePeriod,
       lastLogin: adminUser?.lastLoginAt || t.updatedAt,
-      tenantHealthStatus: t.status === 'ACTIVE' ? 'HEALTHY' : 'SUSPENDED'
+      tenantHealthStatus: subStatus === 'ACTIVE' ? 'HEALTHY' : subStatus,
+      headmasterName: hmName,
+      headmasterEmail: hmEmail,
+      headmasterPhone: hmPhone,
+      headmasterPhoto: hmPhoto,
+      headmaster: {
+        name: hmName,
+        email: hmEmail,
+        phone: hmPhone,
+        photo: hmPhoto
+      }
     };
   });
 };
 
 // 5. Developer Tenant Command Center (Actions)
 const developerTenantAction = async (tenantId, action, params = {}, developer = null) => {
+  await syncDynamicInstitutionsToTenants();
+
   const tid = parseInt(tenantId, 10);
   let tenant = null;
   if (!isNaN(tid)) {
@@ -334,29 +434,52 @@ const developerTenantAction = async (tenantId, action, params = {}, developer = 
     }
   }
 
-  // Fallback to dynamic institutions or synthetic tenant if not in DB yet
+  const dynList = authService.getDynamicInstitutions ? authService.getDynamicInstitutions() : [];
+  const dynMatch = dynList.find(
+    (d) =>
+      String(d.id) === String(tenantId) ||
+      String(d.tenantId) === String(tenantId) ||
+      d.tenantUid === String(tenantId) ||
+      d.tenantCode === String(tenantId) ||
+      (tenant && (d.tenantCode === tenant.code || d.institutionName === tenant.name))
+  );
+
   if (!tenant) {
-    const dynList = authService.getDynamicInstitutions ? authService.getDynamicInstitutions() : [];
-    const dynMatch = dynList.find(
-      (d) =>
-        String(d.id) === String(tenantId) ||
-        d.tenantUid === String(tenantId) ||
-        d.tenantCode === String(tenantId)
-    );
+    const fallbackId = dynMatch?.tenantId || (!isNaN(tid) ? tid : 1);
     tenant = {
-      id: !isNaN(tid) ? tid : 1,
+      id: fallbackId,
       name: dynMatch?.institutionName || params.tenantName || `Tenant Enclave #${tenantId}`,
       code: dynMatch?.tenantCode || params.tenantCode || `GBS-TEN-${String(tenantId).slice(-4)}`,
       status: 'ACTIVE',
       isActive: true,
       subscriptions: []
     };
+    try {
+      tenant = await prisma.tenant.create({
+        data: {
+          id: tenant.id,
+          name: tenant.name,
+          code: tenant.code,
+          status: 'ACTIVE',
+          isActive: true
+        }
+      });
+    } catch { }
   }
 
-  const safeTid = !isNaN(tid) ? tid : (typeof tenant.id === 'number' ? tenant.id : 1);
+  const safeTid = typeof tenant.id === 'number' ? tenant.id : (!isNaN(tid) ? tid : 1);
   let updatedTenant = { ...tenant };
   let auditAction = `TENANT_${String(action || 'ACTIVATE').toUpperCase()}`;
   let auditDetails = `Developer performed ${action} on tenant '${tenant.name}'`;
+
+  const syncDynState = (patch) => {
+    if (authService.updateDynamicInstitution) {
+      authService.updateDynamicInstitution(safeTid, patch);
+      if (tenant.code) authService.updateDynamicInstitution(tenant.code, patch);
+      if (tenant.name) authService.updateDynamicInstitution(tenant.name, patch);
+      if (dynMatch?.id) authService.updateDynamicInstitution(dynMatch.id, patch);
+    }
+  };
 
   switch (String(action || 'ACTIVATE').toUpperCase()) {
     case 'LOCK': {
@@ -372,6 +495,18 @@ const developerTenantAction = async (tenantId, action, params = {}, developer = 
         }
       }).catch(() => { });
 
+      const sub = tenant.subscriptions && tenant.subscriptions[0];
+      if (sub && sub.id) {
+        await prisma.subscription.update({
+          where: { id: sub.id },
+          data: { status: 'LOCKED' }
+        }).catch(() => { });
+      }
+      await prisma.subscription.updateMany({
+        where: { tenantId: safeTid },
+        data: { status: 'LOCKED' }
+      }).catch(() => { });
+
       try {
         updatedTenant = await prisma.tenant.update({
           where: { id: safeTid },
@@ -380,6 +515,9 @@ const developerTenantAction = async (tenantId, action, params = {}, developer = 
       } catch {
         updatedTenant = { ...tenant, status: 'LOCKED', isActive: false };
       }
+
+      syncDynState({ status: 'LOCKED', isActive: false });
+
       await prisma.systemLock.create({
         data: {
           tenantId: safeTid,
@@ -399,6 +537,10 @@ const developerTenantAction = async (tenantId, action, params = {}, developer = 
           data: { status: 'ACTIVE' }
         }).catch(() => { });
       }
+      await prisma.subscription.updateMany({
+        where: { tenantId: safeTid },
+        data: { status: 'ACTIVE' }
+      }).catch(() => { });
 
       try {
         updatedTenant = await prisma.tenant.update({
@@ -408,6 +550,14 @@ const developerTenantAction = async (tenantId, action, params = {}, developer = 
       } catch {
         updatedTenant = { ...tenant, status: 'ACTIVE', isActive: true };
       }
+
+      syncDynState({ status: 'ACTIVE', isActive: true, isApproved: true });
+
+      await prisma.systemLock.updateMany({
+        where: { tenantId: safeTid, isLocked: true },
+        data: { isLocked: false }
+      }).catch(() => { });
+
       await prisma.systemLock.create({
         data: {
           tenantId: safeTid,
@@ -419,7 +569,12 @@ const developerTenantAction = async (tenantId, action, params = {}, developer = 
       break;
     }
 
-    case 'SUSPEND':
+    case 'SUSPEND': {
+      await prisma.subscription.updateMany({
+        where: { tenantId: safeTid },
+        data: { status: 'SUSPENDED' }
+      }).catch(() => { });
+
       try {
         updatedTenant = await prisma.tenant.update({
           where: { id: safeTid },
@@ -428,10 +583,23 @@ const developerTenantAction = async (tenantId, action, params = {}, developer = 
       } catch {
         updatedTenant = { ...tenant, status: 'SUSPENDED', isActive: false };
       }
+
+      syncDynState({ status: 'SUSPENDED', isActive: false });
       break;
+    }
 
     case 'ACTIVATE':
-    case 'REACTIVATE':
+    case 'REACTIVATE': {
+      await prisma.subscription.updateMany({
+        where: { tenantId: safeTid },
+        data: { status: 'ACTIVE' }
+      }).catch(() => { });
+
+      await prisma.systemLock.updateMany({
+        where: { tenantId: safeTid, isLocked: true },
+        data: { isLocked: false }
+      }).catch(() => { });
+
       try {
         updatedTenant = await prisma.tenant.update({
           where: { id: safeTid },
@@ -440,28 +608,48 @@ const developerTenantAction = async (tenantId, action, params = {}, developer = 
       } catch {
         updatedTenant = { ...tenant, status: 'ACTIVE', isActive: true };
       }
+
+      syncDynState({ status: 'ACTIVE', isActive: true, isApproved: true });
       break;
+    }
 
     case 'EXTEND_TRIAL':
     case 'EXTEND_SUBSCRIPTION':
     case 'EXTEND': {
       const daysToAdd = parseInt(params.days || 30, 10);
       const sub = tenant.subscriptions && tenant.subscriptions[0];
+      const newEndDate = new Date(
+        (sub?.endDate ? new Date(sub.endDate).getTime() : Date.now()) + daysToAdd * 24 * 60 * 60 * 1000
+      );
       if (sub && sub.id) {
-        const newEndDate = new Date(new Date(sub.endDate).getTime() + daysToAdd * 24 * 60 * 60 * 1000);
         await prisma.subscription.update({
           where: { id: sub.id },
-          data: { endDate: newEndDate, status: 'ACTIVE' }
+          data: { endDate: newEndDate.toISOString(), status: 'ACTIVE' }
+        }).catch(() => { });
+      } else {
+        await prisma.subscription.create({
+          data: {
+            tenantId: safeTid,
+            planName: 'Enterprise Extended Trial',
+            startDate: new Date().toISOString(),
+            endDate: newEndDate.toISOString(),
+            gracePeriodDays: 7,
+            autoLock: true,
+            status: 'ACTIVE',
+            currency: 'GHS',
+            amountPaid: 0
+          }
         }).catch(() => { });
       }
       try {
         updatedTenant = await prisma.tenant.update({
           where: { id: safeTid },
-          data: { status: 'ACTIVE', isActive: true }
+          data: { status: 'ACTIVE', isActive: true, trialEndDate: newEndDate.toISOString() }
         });
       } catch {
         updatedTenant = { ...tenant, status: 'ACTIVE', isActive: true };
       }
+      syncDynState({ status: 'ACTIVE', isActive: true, isApproved: true, trialEndDate: newEndDate.toISOString() });
       auditDetails += ` (Extended by ${daysToAdd} days)`;
       break;
     }
@@ -474,7 +662,15 @@ const developerTenantAction = async (tenantId, action, params = {}, developer = 
       let daysToAdd = 90;
       let isLifetime = false;
 
-      if (duration === '3_MONTHS' || duration === '3' || duration === '3MONTHS') {
+      if (duration === '1_MONTH' || duration === '1' || duration === '1MONTH') {
+        durationLabel = '1 Month';
+        planName = 'Enterprise 1 Month Subscription';
+        daysToAdd = 30;
+      } else if (duration === '2_MONTHS' || duration === '2' || duration === '2MONTHS') {
+        durationLabel = '2 Months';
+        planName = 'Enterprise 2 Months Subscription';
+        daysToAdd = 60;
+      } else if (duration === '3_MONTHS' || duration === '3' || duration === '3MONTHS') {
         durationLabel = '3 Months';
         planName = 'Enterprise 3 Months Term Subscription';
         daysToAdd = 90;
@@ -484,12 +680,16 @@ const developerTenantAction = async (tenantId, action, params = {}, developer = 
         daysToAdd = 180;
       } else if (duration === '9_MONTHS' || duration === '9' || duration === '9MONTHS') {
         durationLabel = '9 Months';
-        planName = 'Enterprise 9 Months Term Subscription';
+        planName = 'Enterprise 9 Months Academic Year Subscription';
         daysToAdd = 270;
       } else if (duration === '1_YEAR' || duration === '12_MONTHS' || duration === '12' || duration === '1YEAR' || duration === 'YEAR') {
-        durationLabel = '1 Year';
+        durationLabel = '1 Year (12 Months)';
         planName = 'Enterprise 1 Year Annual Subscription';
         daysToAdd = 365;
+      } else if (duration === '2_YEARS' || duration === '24_MONTHS' || duration === '24' || duration === '2YEARS') {
+        durationLabel = '2 Years (24 Months)';
+        planName = 'Enterprise 2 Years Multi-Term Subscription';
+        daysToAdd = 730;
       } else if (duration === 'LIFETIME' || duration === 'PERMANENT') {
         durationLabel = 'Lifetime Joined Subscription';
         planName = 'Enterprise Lifetime Joined Subscription';
@@ -508,16 +708,11 @@ const developerTenantAction = async (tenantId, action, params = {}, developer = 
 
       const sub = tenant.subscriptions && tenant.subscriptions[0];
       if (sub && sub.id) {
-        if (new Date(sub.endDate) > now && !isLifetime) {
-          newStartDate = sub.startDate;
-          newEndDate = new Date(new Date(sub.endDate).getTime() + daysToAdd * 24 * 60 * 60 * 1000);
-        }
-
         await prisma.subscription.update({
           where: { id: sub.id },
           data: {
-            startDate: newStartDate,
-            endDate: newEndDate,
+            startDate: newStartDate.toISOString(),
+            endDate: newEndDate.toISOString(),
             planName,
             status: 'ACTIVE'
           }
@@ -527,25 +722,49 @@ const developerTenantAction = async (tenantId, action, params = {}, developer = 
           data: {
             tenantId: safeTid,
             planName,
-            startDate: newStartDate,
-            endDate: newEndDate,
+            startDate: newStartDate.toISOString(),
+            endDate: newEndDate.toISOString(),
             gracePeriodDays: 7,
             autoLock: true,
             status: 'ACTIVE',
-            currency: 'USD',
+            currency: 'GHS',
             amountPaid: 0.0
           }
         }).catch(() => { });
       }
 
+      await prisma.subscription.updateMany({
+        where: { tenantId: safeTid },
+        data: {
+          startDate: newStartDate.toISOString(),
+          endDate: newEndDate.toISOString(),
+          planName,
+          status: 'ACTIVE'
+        }
+      }).catch(() => { });
+
       try {
         updatedTenant = await prisma.tenant.update({
           where: { id: safeTid },
-          data: { status: 'ACTIVE', isActive: true }
+          data: {
+            status: 'ACTIVE',
+            isActive: true,
+            planName,
+            trialStartDate: newStartDate.toISOString(),
+            trialEndDate: newEndDate.toISOString()
+          }
         });
       } catch {
-        updatedTenant = { ...tenant, status: 'ACTIVE', isActive: true };
+        updatedTenant = { ...tenant, status: 'ACTIVE', isActive: true, planName };
       }
+
+      syncDynState({
+        status: 'ACTIVE',
+        isActive: true,
+        isApproved: true,
+        subscriptionPlan: planName,
+        trialEndDate: newEndDate.toISOString()
+      });
 
       await prisma.systemLock.updateMany({
         where: { tenantId: safeTid, isLocked: true },
@@ -583,11 +802,55 @@ const developerTenantAction = async (tenantId, action, params = {}, developer = 
         durationLabel,
         planName,
         isLifetime,
-        startDate: newStartDate,
-        endDate: newEndDate,
+        startDate: newStartDate.toISOString(),
+        endDate: newEndDate.toISOString(),
         status: 'ACTIVE',
         renewedAt: now.toISOString()
       };
+      break;
+    }
+
+    case 'CHANGE_HEADMASTER': {
+      const hmName = params.headmasterName || params.fullName || params.name || tenant.headmasterName || 'Headmaster';
+      const hmEmail = params.headmasterEmail || params.email || tenant.headmasterEmail || 'admin@school.edu';
+      const hmPhone = params.headmasterPhone || params.phone || tenant.headmasterPhone || '+233-24-555-0199';
+      const hmPhoto = params.headmasterPhoto || params.pictureBase64 || tenant.headmasterPhoto || null;
+      const hmQual = params.qualification || '';
+      const hmRes = params.resolutionNumber || '';
+
+      try {
+        updatedTenant = await prisma.tenant.update({
+          where: { id: safeTid },
+          data: {
+            headmasterName: hmName,
+            headmasterEmail: hmEmail,
+            headmasterPhone: hmPhone,
+            ...(hmPhoto ? { headmasterPhoto: hmPhoto } : {}),
+            ...(hmQual ? { headmasterQualification: hmQual } : {}),
+            ...(hmRes ? { headmasterResolution: hmRes } : {})
+          }
+        });
+      } catch {
+        updatedTenant = {
+          ...tenant,
+          headmasterName: hmName,
+          headmasterEmail: hmEmail,
+          headmasterPhone: hmPhone
+        };
+      }
+
+      syncDynState({
+        adminName: hmName,
+        repFullName: hmName,
+        adminEmail: hmEmail,
+        officialEmail: hmEmail,
+        adminPhone: hmPhone,
+        officialPhone: hmPhone,
+        ...(hmPhoto ? { facePhoto: hmPhoto } : {})
+      });
+
+      auditAction = 'HEADMASTER_SUCCESSION_UPDATED';
+      auditDetails = `Developer updated Headmaster for '${tenant.name}' to ${hmName} (${hmEmail}, ${hmPhone}).`;
       break;
     }
 
@@ -611,7 +874,9 @@ const developerTenantAction = async (tenantId, action, params = {}, developer = 
 };
 
 // 6. Subscription Expiry & Auto Lock Process (With Automated Backup Protection)
-const executeAutoLockAndBackup = async (tenantId = null) => {
+const executeAutoLockAndBackup = async (tenantId = null, options = {}) => {
+  await syncDynamicInstitutionsToTenants();
+
   const whereClause = { isDeleted: false };
   const parsedTid = tenantId ? parseInt(tenantId, 10) : NaN;
   if (!isNaN(parsedTid)) whereClause.id = parsedTid;
@@ -631,62 +896,89 @@ const executeAutoLockAndBackup = async (tenantId = null) => {
     console.warn('executeAutoLockAndBackup db notice:', err.message);
   }
 
+  tenants = tenants.filter((t) => Boolean(t && (t.name || t.code)));
   const now = new Date();
   const processedTenants = [];
+  const forceEnforce = Boolean(options && (options.forceEnforce || options.manualEnforce));
 
-  for (const t of tenants) {
+  // Identify expired / grace-elapsed tenants first
+  let targetTenants = tenants.filter((t) => {
+    if (t.status === 'LOCKED') return false;
     const sub = t.subscriptions && t.subscriptions[0];
-    if (!sub) continue;
-
+    if (!sub) return true;
     const graceDays = sub.gracePeriodDays || 7;
     const graceExpiryDate = new Date(new Date(sub.endDate).getTime() + graceDays * 24 * 60 * 60 * 1000);
+    return now >= graceExpiryDate || now >= new Date(sub.endDate) || sub.status === 'EXPIRED';
+  });
 
-    if (now >= graceExpiryDate && t.status !== 'LOCKED') {
-      const backupFilename = `auto_backup_tenant_${t.id}_pre_lock_${Date.now()}.sql`;
-      const backupRecord = await prisma.systemBackup.create({
-        data: {
-          filename: backupFilename,
-          fileSizeMb: 12.4,
-          backupType: 'PRE_LOCK_EMERGENCY_BACKUP',
-          isEncrypted: true,
-          storagePath: `/backups/tenants/${t.id}/${backupFilename}`,
-          status: 'COMPLETED'
-        }
-      }).catch(() => ({ id: Date.now() }));
+  // When Developer explicitly commands Auto-Lock Pipeline enforcement, lock all unlocked non-lifetime tenants if none are strictly past grace date
+  if (targetTenants.length === 0 && (forceEnforce || isNaN(parsedTid))) {
+    targetTenants = tenants.filter((t) => {
+      if (t.status === 'LOCKED') return false;
+      const sub = t.subscriptions && t.subscriptions[0];
+      const pName = String(sub?.planName || t.planName || '').toUpperCase();
+      return !pName.includes('LIFETIME');
+    });
+  }
 
-      await prisma.tenant.update({
-        where: { id: t.id },
-        data: { status: 'LOCKED', isActive: false }
-      }).catch(() => { });
+  for (const t of targetTenants) {
+    const sub = t.subscriptions && t.subscriptions[0];
+    const graceDays = sub?.gracePeriodDays || 7;
+    const backupFilename = `auto_backup_tenant_${t.id}_pre_lock_${Date.now()}.sql`;
+    const backupRecord = await prisma.systemBackup.create({
+      data: {
+        filename: backupFilename,
+        fileSizeMb: 12.4,
+        backupType: 'PRE_LOCK_EMERGENCY_BACKUP',
+        isEncrypted: true,
+        storagePath: `/backups/tenants/${t.id}/${backupFilename}`,
+        status: 'COMPLETED'
+      }
+    }).catch(() => ({ id: Date.now() }));
 
-      await prisma.systemLock.create({
-        data: {
-          tenantId: t.id,
-          isLocked: true,
-          reason: `Automated Subscription Expiry Lock (Grace period ${graceDays} days elapsed). Data safely archived.`,
-          lockedBy: 'AUTO_LOCK_ENGINE'
-        }
-      }).catch(() => { });
+    await prisma.tenant.update({
+      where: { id: t.id },
+      data: { status: 'LOCKED', isActive: false }
+    }).catch(() => { });
 
-      await prisma.auditLog.create({
-        data: {
-          tenantId: t.id,
-          userId: null,
-          module: 'DEV_CONTROL',
-          action: 'TENANT_AUTO_LOCKED_WITH_BACKUP',
-          details: `System automatically locked Tenant '${t.name}' due to grace period expiry. Backup verified: ${backupFilename}`,
-          ipAddress: '127.0.0.1'
-        }
-      }).catch(() => { });
+    await prisma.subscription.updateMany({
+      where: { tenantId: t.id },
+      data: { status: 'LOCKED' }
+    }).catch(() => { });
 
-      processedTenants.push({
-        tenantId: t.id,
-        tenantName: t.name,
-        backupId: backupRecord.id,
-        backupFilename,
-        status: 'LOCKED'
-      });
+    if (authService.updateDynamicInstitution) {
+      authService.updateDynamicInstitution(t.id, { status: 'LOCKED', isActive: false });
+      if (t.code) authService.updateDynamicInstitution(t.code, { status: 'LOCKED', isActive: false });
+      if (t.name) authService.updateDynamicInstitution(t.name, { status: 'LOCKED', isActive: false });
     }
+
+    await prisma.systemLock.create({
+      data: {
+        tenantId: t.id,
+        isLocked: true,
+        reason: `Automated Subscription Expiry Lock (Grace period ${graceDays} days enforced). Data safely archived.`,
+        lockedBy: 'AUTO_LOCK_ENGINE'
+      }
+    }).catch(() => { });
+
+    await prisma.auditLog.create({
+      data: {
+        tenantId: t.id,
+        userId: null,
+        module: 'DEV_CONTROL',
+        action: 'TENANT_AUTO_LOCKED_WITH_BACKUP',
+        details: `System locked Tenant '${t.name}' via Auto-Lock Pipeline. Backup verified: ${backupFilename}`,
+        ipAddress: '127.0.0.1'
+      }
+    }).catch(() => { });
+
+    processedTenants.push({
+      tenantId: t.id,
+      tenantName: t.name,
+      backupId: backupRecord.id,
+      backupFilename,
+      status: 'LOCKED'
+    });
   }
 
   return {
@@ -739,6 +1031,8 @@ const triggerSystemBackup = async (backupType = 'FULL', reason = 'Manual Develop
 };
 
 const toggleSystemLock = async (tenantId, { isLocked, reason, lockedBy }) => {
+  await syncDynamicInstitutionsToTenants();
+
   const parsedTid = tenantId ? parseInt(tenantId, 10) : NaN;
   const tid = !isNaN(parsedTid) ? parsedTid : null;
 
@@ -754,6 +1048,18 @@ const toggleSystemLock = async (tenantId, { isLocked, reason, lockedBy }) => {
         status: 'COMPLETED'
       }
     }).catch(() => { });
+  } else {
+    if (tid) {
+      await prisma.systemLock.updateMany({
+        where: { tenantId: tid, isLocked: true },
+        data: { isLocked: false }
+      }).catch(() => { });
+    } else {
+      await prisma.systemLock.updateMany({
+        where: { isLocked: true },
+        data: { isLocked: false }
+      }).catch(() => { });
+    }
   }
 
   const lockReason = reason || (isLocked ? 'Developer Maintenance System Lock. All data preserved.' : 'Developer System Unlock. Records restored.');
@@ -778,15 +1084,31 @@ const toggleSystemLock = async (tenantId, { isLocked, reason, lockedBy }) => {
     console.warn('toggleSystemLock db fallback notice:', err.message);
   }
 
+  const targetStatus = isLocked ? 'LOCKED' : 'ACTIVE';
+  const targetActive = !isLocked;
+
   if (tid) {
     await prisma.tenant.update({
       where: { id: tid },
-      data: { status: isLocked ? 'LOCKED' : 'ACTIVE', isActive: !isLocked }
+      data: { status: targetStatus, isActive: targetActive }
     }).catch(() => { });
+    await prisma.subscription.updateMany({
+      where: { tenantId: tid },
+      data: { status: targetStatus }
+    }).catch(() => { });
+    if (authService.updateDynamicInstitution) {
+      authService.updateDynamicInstitution(tid, { status: targetStatus, isActive: targetActive });
+    }
   } else {
     await prisma.tenant.updateMany({
-      data: { status: isLocked ? 'LOCKED' : 'ACTIVE', isActive: !isLocked }
+      data: { status: targetStatus, isActive: targetActive }
     }).catch(() => { });
+    await prisma.subscription.updateMany({
+      data: { status: targetStatus }
+    }).catch(() => { });
+    if (authService.updateAllDynamicInstitutions) {
+      authService.updateAllDynamicInstitutions({ status: targetStatus, isActive: targetActive });
+    }
   }
 
   await prisma.auditLog.create({
@@ -824,11 +1146,11 @@ const executeServiceAction = async (serviceAction, developer = null) => {
       details = 'Initiated graceful microservice orchestration reload. API Gateway, WebSocket listeners, and DB connection pools refreshed.';
       break;
     case 'SYSTEM_LOCK':
-      await toggleSystemLock(1, { isLocked: true, reason: 'Developer initiated emergency platform lock.' });
+      await toggleSystemLock(null, { isLocked: true, reason: 'Developer initiated emergency platform lock.' });
       details = 'Global System Lock engaged. Non-developer sessions restricted.';
       break;
     case 'SYSTEM_UNLOCK':
-      await toggleSystemLock(1, { isLocked: false, reason: 'Developer released emergency platform lock.' });
+      await toggleSystemLock(null, { isLocked: false, reason: 'Developer released emergency platform lock.' });
       details = 'Global System Lock released. All portals fully operational.';
       break;
     case 'RESTART_SOCKETS':
@@ -2133,6 +2455,8 @@ const verifyAndProvisionTenant = async (payload = {}) => {
  * Retrieve all onboarded tenants with Headmaster details & phone numbers
  */
 const getOnboardedTenants = async () => {
+  await syncDynamicInstitutionsToTenants();
+
   let tenants = [];
   try {
     tenants = await prisma.tenant.findMany({
@@ -2152,46 +2476,71 @@ const getOnboardedTenants = async () => {
     console.warn('Onboarded tenants db lookup notice (resilience active):', err.message);
   }
 
-  const result = tenants.map((t) => {
-    const headmaster = t.users[0];
-    const inst = t.institutionRegistrations[0];
-    const phone = inst?.adminPhone || headmaster?.registrationProfile?.phone || 'Not Specified';
+  tenants = tenants.filter((t) => Boolean(t && (t.name || t.code)));
+  const dynamicList = authService.getDynamicInstitutions ? authService.getDynamicInstitutions() : [];
+
+  return tenants.map((t) => {
+    const headmaster = t.users ? t.users[0] : null;
+    const inst = t.institutionRegistrations ? t.institutionRegistrations[0] : null;
+    const dynMatch = dynamicList.find(
+      (d) =>
+        Number(d.tenantId) === Number(t.id) ||
+        (d.tenantCode && d.tenantCode === t.code) ||
+        (d.institutionName && d.institutionName === t.name)
+    );
+    const hmName =
+      t.headmasterName ||
+      dynMatch?.adminName ||
+      inst?.adminName ||
+      (headmaster ? `${headmaster.firstName} ${headmaster.lastName}` : 'Headmaster');
+    const hmEmail =
+      t.headmasterEmail ||
+      dynMatch?.adminEmail ||
+      inst?.adminEmail ||
+      headmaster?.email ||
+      'admin@school.com';
+    const hmPhone =
+      t.headmasterPhone ||
+      dynMatch?.adminPhone ||
+      dynMatch?.officialPhone ||
+      inst?.adminPhone ||
+      headmaster?.registrationProfile?.phone ||
+      '+233-24-555-0199';
+    const hmPhoto = t.headmasterPhoto || dynMatch?.facePhoto || null;
+    const planName = t.subscriptions?.[0]?.planName || t.planName || dynMatch?.subscriptionPlan || 'Enterprise Trial';
+    const maxStu = Number(t.totalStudentsEnrolled || dynMatch?.totalStudentsEnrolled || 2500);
+
     return {
       id: t.id,
+      tenantId: t.id,
       name: t.name,
+      institutionName: t.name,
       code: t.code,
-      domain: t.domain,
-      status: t.status,
-      headmasterName: headmaster ? `${headmaster.firstName} ${headmaster.lastName}` : (inst?.adminName || 'Headmaster'),
-      headmasterEmail: headmaster ? headmaster.email : (inst?.adminEmail || 'admin@school.com'),
-      headmasterPhone: phone,
-      planName: t.subscriptions[0]?.planName || 'Enterprise Trial',
+      tenantCode: t.code,
+      domain: t.domain || `${String(t.code || 'school').toLowerCase()}.gbs.edu`,
+      status: t.status || 'ACTIVE',
+      headmasterName: hmName,
+      headmasterEmail: hmEmail,
+      headmasterPhone: hmPhone,
+      headmasterPhoto: hmPhoto,
+      adminPhone: hmPhone,
+      headmaster: {
+        name: hmName,
+        email: hmEmail,
+        phone: hmPhone,
+        photo: hmPhoto
+      },
+      planName,
+      maxStudents: maxStu,
+      subscription: {
+        tier: planName,
+        planName,
+        maxStudents: maxStu
+      },
       createdAt: t.createdAt,
       isOtpVerified: true
     };
   });
-
-  // Merge dynamic institutions
-  const dynamicList = authService.getDynamicInstitutions ? authService.getDynamicInstitutions() : [];
-  for (const item of dynamicList) {
-    if (!result.some((r) => r.code === item.tenantCode || r.name === item.institutionName)) {
-      result.push({
-        id: typeof item.id === 'number' ? item.id : Math.floor(1000 + Math.random() * 9000),
-        name: item.institutionName,
-        code: item.tenantCode,
-        domain: `${item.tenantCode?.toLowerCase()}.gbs.edu`,
-        status: item.isApproved ? 'ACTIVE' : 'SUSPENDED',
-        headmasterName: item.adminName || 'Headmaster',
-        headmasterEmail: item.adminEmail || 'admin@school.com',
-        headmasterPhone: item.adminPhone || item.officialPhone || 'Not Specified',
-        planName: item.subscriptionPlan || 'Enterprise Trial',
-        createdAt: item.createdAt || new Date().toISOString(),
-        isOtpVerified: true
-      });
-    }
-  }
-
-  return result;
 };
 
 /**

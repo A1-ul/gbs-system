@@ -554,30 +554,42 @@ const attachIncludes = (row, includeOrSelect, store) => {
     copy.studentEnrollments = copy.studentEnrollments || enrollments;
   }
   if (inc.subscriptions || copy.code) {
-    copy.subscriptions = copy.subscriptions || [
-      {
-        id: 1,
-        tenantId: copy.id || 1,
-        planName: 'ENTERPRISE_TERM',
-        startDate: new Date(Date.now() - 86400000 * 5).toISOString(),
-        endDate: new Date(Date.now() + 86400000 * 85).toISOString(),
-        gracePeriodDays: 7,
-        autoLock: true,
-        status: 'ACTIVE',
-        amountPaid: 1200,
-        currency: 'GHS',
-        licenses: [
-          {
-            id: 1,
-            licenseKey: 'GBS-ENT-2026-ACTIVE',
-            maxUsers: 500,
-            maxStudents: 2500,
-            expiresAt: new Date(Date.now() + 86400000 * 85).toISOString(),
-            isActive: true
-          }
-        ]
-      }
-    ];
+    const allSubs = getModelTable(store, 'Subscription').filter(
+      (s) => Number(s.tenantId) === Number(copy.id)
+    );
+    const effectiveTenantStatus =
+      copy.status === 'LOCKED' || copy.status === 'SUSPENDED' ? copy.status : null;
+    if (allSubs.length > 0) {
+      copy.subscriptions = allSubs.map((s) => ({
+        ...s,
+        status: effectiveTenantStatus || s.status || 'ACTIVE'
+      }));
+    } else {
+      copy.subscriptions = copy.subscriptions || [
+        {
+          id: Number(copy.id) || 1,
+          tenantId: copy.id || 1,
+          planName: copy.planName || 'ENTERPRISE_TERM',
+          startDate: copy.trialStartDate || new Date(Date.now() - 86400000 * 5).toISOString(),
+          endDate: copy.trialEndDate || new Date(Date.now() + 86400000 * 85).toISOString(),
+          gracePeriodDays: 7,
+          autoLock: true,
+          status: effectiveTenantStatus || 'ACTIVE',
+          amountPaid: 1200,
+          currency: 'GHS',
+          licenses: [
+            {
+              id: 1,
+              licenseKey: 'GBS-ENT-2026-ACTIVE',
+              maxUsers: 500,
+              maxStudents: 2500,
+              expiresAt: new Date(Date.now() + 86400000 * 85).toISOString(),
+              isActive: effectiveTenantStatus ? false : true
+            }
+          ]
+        }
+      ];
+    }
   }
   if (inc.users || copy.code) {
     copy.users = copy.users || DEFAULT_USERS_LIST;
@@ -609,11 +621,21 @@ const attachIncludes = (row, includeOrSelect, store) => {
 const executeLocalPrismaQuery = ({ model, action, args = {} }) => {
   const store = readPersistentStore();
   if (!model) return null;
-  const table = getModelTable(store, model);
+  let table = getModelTable(store, model);
+
+  // Sanitize any corrupted nameless phantom Tenant rows created by legacy random-ID updates
+  if (model === 'Tenant' && Array.isArray(table)) {
+    const validTenants = table.filter((r) => Boolean(r && (r.name || r.code)));
+    if (validTenants.length !== table.length) {
+      store.prismaModels.Tenant = validTenants;
+      table = store.prismaModels.Tenant;
+      writePersistentStore(store);
+    }
+  }
 
   if (action === 'findUnique' || action === 'findUniqueOrThrow' || action === 'findFirst' || action === 'findFirstOrThrow') {
     let found = table.find((r) => matchesWhere(r, args.where));
-    if (!found && model === 'Tenant') {
+    if (!found && model === 'Tenant' && (!args.where || Object.keys(args.where).length === 0)) {
       found = table[0] || DEFAULT_TENANT_OBJ;
     }
     if (!found && model === 'User' && args.where?.id !== undefined) {
@@ -643,7 +665,8 @@ const executeLocalPrismaQuery = ({ model, action, args = {} }) => {
 
   if (action === 'findMany') {
     let list = table.filter((r) => matchesWhere(r, args.where));
-    if (list.length === 0 && table.length > 0 && !args.where?.email && !args.where?.code) {
+    const strictModels = ['Tenant', 'Subscription', 'SystemLock', 'SystemAlert', 'SystemBackup', 'AuditLog', 'BroadcastAnnouncement'];
+    if (list.length === 0 && table.length > 0 && !strictModels.includes(model) && !args.where?.email && !args.where?.code) {
       list = [...table];
     }
     if (typeof args.take === 'number' && args.take > 0) {
@@ -654,7 +677,7 @@ const executeLocalPrismaQuery = ({ model, action, args = {} }) => {
 
   if (action === 'count') {
     const list = table.filter((r) => matchesWhere(r, args.where));
-    return list.length || table.length || 1;
+    return list.length;
   }
 
   if (action === 'aggregate') {
@@ -734,6 +757,9 @@ const executeLocalPrismaQuery = ({ model, action, args = {} }) => {
       table[idx] = { ...table[idx], ...cleanPatch, updatedAt: nowIso };
       writePersistentStore(store);
       return attachIncludes(table[idx], args.include || args.select, store);
+    }
+    if (model === 'Tenant' && !cleanPatch.name && !cleanPatch.code) {
+      return null;
     }
     const nextId = table.reduce((max, r) => Math.max(max, typeof r.id === 'number' ? r.id : 0), 0) + 1;
     const created = {
