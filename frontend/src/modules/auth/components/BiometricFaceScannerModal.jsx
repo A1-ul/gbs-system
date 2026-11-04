@@ -31,7 +31,7 @@ export default function BiometricFaceScannerModal({ isOpen, onClose, onScanCompl
       if (videoRef.current.srcObject !== activeStream) {
         videoRef.current.srcObject = activeStream;
       }
-      videoRef.current.play?.().catch(() => {});
+      videoRef.current.play?.().catch(() => { });
     }
   }, [stream, isOpen, capturedImage]);
 
@@ -159,7 +159,7 @@ export default function BiometricFaceScannerModal({ isOpen, onClose, onScanCompl
       setStream(mediaStream);
       if (videoRef.current) {
         videoRef.current.srcObject = mediaStream;
-        videoRef.current.play?.().catch(() => {});
+        videoRef.current.play?.().catch(() => { });
       }
       setLivenessStatus("Live camera active. Position face in the oval and press 'Capture & Scan Face Now'.");
     } catch (err) {
@@ -170,7 +170,7 @@ export default function BiometricFaceScannerModal({ isOpen, onClose, onScanCompl
         setStream(fallbackStream);
         if (videoRef.current) {
           videoRef.current.srcObject = fallbackStream;
-          videoRef.current.play?.().catch(() => {});
+          videoRef.current.play?.().catch(() => { });
         }
       }
       setCameraError(err.message || "Hardware webcam unavailable — Live Optical Sensor Feed engaged.");

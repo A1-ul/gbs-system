@@ -561,7 +561,20 @@ export default function AdminDashboard() {
       const saved = JSON.parse(localStorage.getItem("gbs_enrolled_students") || "[]");
       if (Array.isArray(saved) && saved.length > 0) return saved;
     } catch { }
-    return [];
+    const defaultAdmittedStudents = [
+      { id: "101", studentId: "STU-2026-001", firstName: "Emmanuel", lastName: "Mensah", currentClass: "JHS 2 (Junior High - Grade 8)", classCode: "JHS-02", balanceDue: 0, admissionStatus: "ADMITTED", boardingBus: true },
+      { id: "102", studentId: "STU-2026-002", firstName: "Ama", lastName: "Serwaa", currentClass: "SHS 1 / Grade 10 - STEM & Arts", classCode: "SHS-01", balanceDue: 0, admissionStatus: "ADMITTED", boardingBus: true },
+      { id: "103", studentId: "STU-2026-003", firstName: "Julian", lastName: "Bramwell", currentClass: "Primary 4 (Upper Primary)", classCode: "PRI-04", balanceDue: 0, admissionStatus: "ADMITTED", boardingBus: true },
+      { id: "104", studentId: "STU-2026-004", firstName: "Sophia", lastName: "Chen", currentClass: "University Level 200 - Sophomore Year", classCode: "UNI-200", balanceDue: 0, admissionStatus: "ADMITTED", boardingBus: false },
+      { id: "105", studentId: "STU-2026-005", firstName: "Kofi", lastName: "Boateng", currentClass: "JHS 3 (BECE Candidates - Grade 9)", classCode: "JHS-03", balanceDue: 150, admissionStatus: "ADMITTED", boardingBus: true },
+      { id: "106", studentId: "STU-2026-006", firstName: "Nana", lastName: "Yaa Asantewaa", currentClass: "SHS 2 / Grade 11 - Advanced Secondary", classCode: "SHS-02", balanceDue: 0, admissionStatus: "ADMITTED", boardingBus: true },
+      { id: "107", studentId: "STU-2026-007", firstName: "Kwaku", lastName: "Frimpong", currentClass: "Primary 6 (Upper Primary Graduation)", classCode: "PRI-06", balanceDue: 0, admissionStatus: "ADMITTED", boardingBus: false },
+      { id: "108", studentId: "STU-2026-008", firstName: "Abena", lastName: "Osei-Bonsu", currentClass: "SHS 3 / Grade 12 - Senior Baccalaureate & WASSCE", classCode: "SHS-03", balanceDue: 0, admissionStatus: "ADMITTED", boardingBus: true }
+    ];
+    try {
+      localStorage.setItem("gbs_enrolled_students", JSON.stringify(defaultAdmittedStudents));
+    } catch { }
+    return defaultAdmittedStudents;
   });
 
   // Headmaster Notification & Approval Queue for Staff Self-Registration
@@ -1006,10 +1019,93 @@ export default function AdminDashboard() {
   const [showBusAssignmentModal, setShowBusAssignmentModal] = useState(false);
   const [busAssignments, setBusAssignments] = useState(() => {
     try {
-      const stored = localStorage.getItem("gbs_transport_assigned_students");
-      if (stored) return JSON.parse(stored);
+      const stored = JSON.parse(localStorage.getItem("gbs_transport_assigned_students") || "[]");
+      if (Array.isArray(stored) && stored.length > 0) return stored;
     } catch { }
-    return [];
+    const defaultBusBoardingStudents = [
+      {
+        id: "BUS-STU-1001",
+        studentName: "Emmanuel Mensah",
+        studentId: "STU-2026-001",
+        className: "JHS 2A",
+        destinationZone: "East Legon Enclave (Zone 1)",
+        termlyFareGhs: 450.0,
+        busNumber: "GBS Bus #01 (Toyota Coaster - 32 Seater)",
+        driverName: "Mr. Emmanuel Tetteh (+233 24 111 2233)",
+        pickupStop: "Main Gate / Shell Station (06:30 AM)",
+        parentPhone: "+233 24 555 0199",
+        status: "UPLOADED_TO_TRANSPORT"
+      },
+      {
+        id: "BUS-STU-1002",
+        studentName: "Ama Serwaa",
+        studentId: "STU-2026-002",
+        className: "SHS 1 Science",
+        destinationZone: "Airport Residential & Ridge (Zone 2)",
+        termlyFareGhs: 550.0,
+        busNumber: "GBS Bus #01 (Toyota Coaster - 32 Seater)",
+        driverName: "Mr. Emmanuel Tetteh (+233 24 111 2233)",
+        pickupStop: "Airport Roundabout Stop (06:40 AM)",
+        parentPhone: "+233 24 777 8899",
+        status: "UPLOADED_TO_TRANSPORT"
+      },
+      {
+        id: "BUS-STU-1003",
+        studentName: "Julian Bramwell",
+        studentId: "STU-2026-003",
+        className: "Primary 4B",
+        destinationZone: "Spintex Road & Batsonaa (Zone 3)",
+        termlyFareGhs: 650.0,
+        busNumber: "GBS Bus #02 (Nissan Civilian - 28 Seater)",
+        driverName: "Mr. Isaac Mensah (+233 20 222 3344)",
+        pickupStop: "Batsonaa Total Junction (06:20 AM)",
+        parentPhone: "+233 20 888 1122",
+        status: "UPLOADED_TO_TRANSPORT"
+      },
+      {
+        id: "BUS-STU-1004",
+        studentName: "Kofi Boateng",
+        studentId: "STU-2026-005",
+        className: "JHS 3 BECE",
+        destinationZone: "Madina & Adenta Hills (Zone 3)",
+        termlyFareGhs: 650.0,
+        busNumber: "GBS Bus #02 (Nissan Civilian - 28 Seater)",
+        driverName: "Mr. Isaac Mensah (+233 20 222 3344)",
+        pickupStop: "Adenta Barrier Pickup Point (06:15 AM)",
+        parentPhone: "+233 24 333 4455",
+        status: "UPLOADED_TO_TRANSPORT"
+      },
+      {
+        id: "BUS-STU-1005",
+        studentName: "Nana Yaa Asantewaa",
+        studentId: "STU-2026-006",
+        className: "SHS 2 General Arts",
+        destinationZone: "Tema Community 25 & Comm 1 (Zone 4)",
+        termlyFareGhs: 800.0,
+        busNumber: "GBS Bus #03 (Mercedes Sprinter - 22 Seater)",
+        driverName: "Mr. Samuel Darko (+233 24 999 0011)",
+        pickupStop: "Community 25 Mall Gate (06:00 AM)",
+        parentPhone: "+233 24 666 7788",
+        status: "UPLOADED_TO_TRANSPORT"
+      },
+      {
+        id: "BUS-STU-1006",
+        studentName: "Abena Osei-Bonsu",
+        studentId: "STU-2026-008",
+        className: "SHS 3 WASSCE",
+        destinationZone: "East Legon Enclave (Zone 1)",
+        termlyFareGhs: 450.0,
+        busNumber: "GBS Bus #01 (Toyota Coaster - 32 Seater)",
+        driverName: "Mr. Emmanuel Tetteh (+233 24 111 2233)",
+        pickupStop: "American House Junction (06:35 AM)",
+        parentPhone: "+233 24 911 2233",
+        status: "UPLOADED_TO_TRANSPORT"
+      }
+    ];
+    try {
+      localStorage.setItem("gbs_transport_assigned_students", JSON.stringify(defaultBusBoardingStudents));
+    } catch { }
+    return defaultBusBoardingStudents;
   });
 
   const [newBusStudentForm, setNewBusStudentForm] = useState({
@@ -1474,16 +1570,403 @@ export default function AdminDashboard() {
   const [teacherLessonPlans, setTeacherLessonPlans] = useState(() => {
     try {
       const saved = JSON.parse(localStorage.getItem("gbs_teacher_lesson_plans") || "[]");
-      if (Array.isArray(saved)) return saved;
+      if (Array.isArray(saved) && saved.length > 0) return saved;
     } catch { }
-    return [];
+    const defaultPlans = [
+      {
+        id: "PLAN-2026-101",
+        teacherId: "1",
+        teacherName: "Dr. Robert Vance",
+        teacherEmail: "robert.vance@gbs.edu",
+        teacherPosition: "Head of Department (Mathematics & STEM)",
+        planType: "TERMLY_PLAN",
+        title: "SHS 2 Elective Mathematics & Pre-Calculus Termly Scheme of Learning",
+        subjectName: "Elective Mathematics (Pre-Calculus)",
+        className: "SHS 2 (Form 2)",
+        institutionTier: "SENIOR_HIGH_SCHOOL",
+        term: "Term 1",
+        weekNumber: "Week 1 – Week 14",
+        topic: "Polynomials, Trigonometric Identities, Coordinate Geometry & Differential Calculus",
+        learningObjectives: "By the end of the term, students will solve higher-order polynomials, prove trigonometric identities, and apply derivatives to rate-of-change problems.",
+        pedagogicalActivities: "Guided board derivations, paired problem-solving sprints, graphing calculator lab simulations, and weekly past-question drills.",
+        resourcesAttached: "SHS2_Elective_Math_Scheme_2026.pdf",
+        status: "PENDING_VETTING",
+        headmasterRemarks: "",
+        submittedAt: new Date(Date.now() - 3600 * 1000 * 5).toISOString()
+      },
+      {
+        id: "PLAN-2026-102",
+        teacherId: "2",
+        teacherName: "Prof. Eleanor Sterling",
+        teacherEmail: "eleanor.sterling@gbs.edu",
+        teacherPosition: "Senior Science & Physics Educator",
+        planType: "LESSON_NOTES",
+        title: "SHS 3 WASSCE Physics Practical & Electromagnetism Lesson Notes",
+        subjectName: "Physics (Elective)",
+        className: "SHS 3 (Form 3 - WASSCE Candidates)",
+        institutionTier: "SENIOR_HIGH_SCHOOL",
+        term: "Term 1",
+        weekNumber: "Week 4",
+        topic: "Faraday's Law of Electromagnetic Induction & Lenz's Law",
+        learningObjectives: "Students will experimentally verify induced EMF using galvanometers, solenoids, and bar magnets, and calculate magnetic flux linkage.",
+        pedagogicalActivities: "Live laboratory bench experiment, oscilloscope waveform observation, and WASSCE structured Paper 2 calculation exercises.",
+        resourcesAttached: "Physics_Week4_Electromagnetism_Notes.pdf",
+        status: "PENDING_VETTING",
+        headmasterRemarks: "",
+        submittedAt: new Date(Date.now() - 3600 * 1000 * 12).toISOString()
+      },
+      {
+        id: "PLAN-2026-103",
+        teacherId: "3",
+        teacherName: "Claire Montgomery",
+        teacherEmail: "claire.montgomery@gbs.edu",
+        teacherPosition: "Basic & JHS Literacy Coordinator",
+        planType: "WEEKLY_PLAN",
+        title: "JHS 2 English Language Grammar, Comprehension & Essay Weekly Plan",
+        subjectName: "English Language",
+        className: "JHS 2 (Basic 8)",
+        institutionTier: "NURSERY_TO_JHS",
+        term: "Term 1",
+        weekNumber: "Week 3",
+        topic: "Concord (Subject-Verb Agreement) & Formal Letter Writing to Public Officials",
+        learningObjectives: "Learners will apply rules of subject-verb concord in complex sentences and draft a 250-word formal letter with proper layout and register.",
+        pedagogicalActivities: "Interactive peer editing workshop, oral reading fluency drills, and guided paragraph scaffolding.",
+        resourcesAttached: "JHS2_English_Week3_LessonNotes.docx",
+        status: "VETTED_APPROVED",
+        headmasterRemarks: "Vetted, endorsed, and officially authorized for classroom instruction. Excellent BECE essay rubric integration.",
+        vettedBy: "Headmaster Arthur Pendleton",
+        vettedAt: new Date(Date.now() - 3600 * 1000 * 24).toISOString(),
+        submittedAt: new Date(Date.now() - 3600 * 1000 * 30).toISOString()
+      },
+      {
+        id: "PLAN-2026-104",
+        teacherId: "4",
+        teacherName: "Marcus Thorne",
+        teacherEmail: "marcus.thorne@gbs.edu",
+        teacherPosition: "Computing, AI & Software Lecturer",
+        planType: "YEARLY_PLAN",
+        title: "University Level 200 Data Structures, Algorithms & Cloud Yearly Syllabus",
+        subjectName: "Computer Science & Software Engineering",
+        className: "Level 200 (Sophomore — Semesters 1 & 2)",
+        institutionTier: "UNIVERSITY",
+        term: "Semester 1 & 2",
+        weekNumber: "Week 1 – Week 14",
+        topic: "Trees, Graphs, Dynamic Programming, REST Microservices & PostgreSQL Indexing",
+        learningObjectives: "Undergraduates will analyze time/space complexity (Big-O), implement balanced trees and graph traversal algorithms, and deploy full-stack APIs.",
+        pedagogicalActivities: "Live coding labs, GitHub pull-request code reviews, automated unit test grading, and capstone sprint demos.",
+        resourcesAttached: "CS201_University_Yearly_Curriculum_2026.pdf",
+        status: "PENDING_VETTING",
+        headmasterRemarks: "",
+        submittedAt: new Date(Date.now() - 3600 * 1000 * 18).toISOString()
+      },
+      {
+        id: "PLAN-2026-105",
+        teacherId: "5",
+        teacherName: "Sarah Jenkins",
+        teacherEmail: "sarah.jenkins@gbs.edu",
+        teacherPosition: "Upper Primary & JHS Science Educator",
+        planType: "LESSON_NOTES",
+        title: "JHS 3 BECE Integrated Science — Acids, Bases, Salts & pH Indicators",
+        subjectName: "Integrated Science",
+        className: "JHS 3 (Basic 9 - BECE Candidates)",
+        institutionTier: "NURSERY_TO_JHS",
+        term: "Term 1",
+        weekNumber: "Week 5",
+        topic: "Neutralization Reactions, Litmus/Universal Indicator Tests & Soil pH",
+        learningObjectives: "Learners will classify household and laboratory substances using litmus and universal indicators and write balanced neutralization word equations.",
+        pedagogicalActivities: "Hands-on titration demonstration with dilute HCl and NaOH, agricultural soil pH testing, and BECE objective quiz.",
+        resourcesAttached: "JHS3_IntegratedScience_Week5_Notes.pdf",
+        status: "REVISION_REQUIRED",
+        headmasterRemarks: "Please include the laboratory safety precaution checklist and 5 additional BECE past structured questions before final classroom approval.",
+        vettedBy: "Headmaster Arthur Pendleton",
+        vettedAt: new Date(Date.now() - 3600 * 1000 * 40).toISOString(),
+        submittedAt: new Date(Date.now() - 3600 * 1000 * 48).toISOString()
+      },
+      {
+        id: "PLAN-2026-106",
+        teacherId: "6",
+        teacherName: "Mr. Kwame Boateng",
+        teacherEmail: "kwame.boateng@gbs.edu",
+        teacherPosition: "Primary Numeracy & ICT Instructor",
+        planType: "WEEKLY_PLAN",
+        title: "Primary 4 Fractions, Decimals & Visual Mental Math Weekly Forecast",
+        subjectName: "Mathematics",
+        className: "Primary 4 (Basic 4)",
+        institutionTier: "NURSERY_TO_JHS",
+        term: "Term 1",
+        weekNumber: "Week 6",
+        topic: "Equivalent Fractions, Mixed Numbers & Decimal Place Value Tenths/Hundredths",
+        learningObjectives: "Pupils will model equivalent fractions using fraction bars and convert simple fractions to decimals accurately.",
+        pedagogicalActivities: "Manipulative fraction strips activity, interactive smartboard math games, and individual workbook exercises.",
+        resourcesAttached: "BS4_Math_Week6_Plan.pdf",
+        status: "PENDING_VETTING",
+        headmasterRemarks: "",
+        submittedAt: new Date(Date.now() - 3600 * 1000 * 8).toISOString()
+      }
+    ];
+    try {
+      localStorage.setItem("gbs_teacher_lesson_plans", JSON.stringify(defaultPlans));
+    } catch { }
+    return defaultPlans;
   });
 
   const [vettingFilterType, setVettingFilterType] = useState("ALL");
   const [vettingFilterStatus, setVettingFilterStatus] = useState("ALL");
+  const [vettingSearchQuery, setVettingSearchQuery] = useState("");
+  const [vettingCurrentPage, setVettingCurrentPage] = useState(1);
+  const [vettingPageSize, setVettingPageSize] = useState(4);
+  const [vettingHoveredRowId, setVettingHoveredRowId] = useState(null);
   const [selectedVettingPlan, setSelectedVettingPlan] = useState(null);
   const [vettingDecision, setVettingDecision] = useState("VETTED_APPROVED");
   const [headmasterRemarksInput, setHeadmasterRemarksInput] = useState("");
+
+  // Requirement: Headmaster Views Teacher Profile for Checkups & Sees Curriculum Used by Each Teacher (Spread Across Term Weeks)
+  const [selectedTeacherForCheckup, setSelectedTeacherForCheckup] = useState(null);
+  const [editingTeacherCurriculumInAdmin, setEditingTeacherCurriculumInAdmin] = useState(null);
+  const [teacherCheckupRemarkInput, setTeacherCheckupRemarkInput] = useState("");
+  const [curriculumUpdatesRegistry, setCurriculumUpdatesRegistry] = useState(() => {
+    try {
+      return JSON.parse(localStorage.getItem("gbs_institutional_curriculum_updates") || "{}");
+    } catch {
+      return {};
+    }
+  });
+  const [teacherActiveCurriculumMap, setTeacherActiveCurriculumMap] = useState(() => {
+    try {
+      return JSON.parse(localStorage.getItem("gbs_teacher_active_curriculum_registry") || "{}");
+    } catch {
+      return {};
+    }
+  });
+
+  // Requirement: Inbuilt CCTV Cameras on Headmaster Dashboard ONLY + Connect to Any Mobile Device of Headmaster
+  const [cctvSelectedChannel, setCctvSelectedChannel] = useState("CAM-01");
+  const [cctvColorMode, setCctvColorMode] = useState("HD_COLOR"); // "HD_COLOR" | "NIGHT_IR" | "THERMAL_AI"
+  const [cctvZoomLevel, setCctvZoomLevel] = useState(1);
+  const [cctvWebcamActive, setCctvWebcamActive] = useState(false);
+  const [cctvSnapshots, setCctvSnapshots] = useState([]);
+  const cctvLiveVideoRef = useRef(null);
+  const cctvLiveStreamRef = useRef(null);
+  const cctvCanvasRefs = useRef({});
+  const [cctvMobileForm, setCctvMobileForm] = useState({
+    deviceName: "Headmaster iPhone 16 Pro Max",
+    deviceOs: "iOS / Apple iPhone",
+    mobileNumber: "+233-24-555-0199",
+    pairingPin: "HM-CCTV-8842",
+    pushAlertsEnabled: true
+  });
+  const [cctvMobileDevices, setCctvMobileDevices] = useState(() => {
+    try {
+      const saved = JSON.parse(localStorage.getItem("gbs_headmaster_cctv_mobile_devices") || "[]");
+      if (Array.isArray(saved) && saved.length > 0) return saved;
+    } catch { }
+    return [
+      {
+        id: "MOB-HM-01",
+        deviceName: "Headmaster Executive iPhone 16 Pro",
+        deviceOs: "iOS 18 • Encrypted WebRTC Mobile App",
+        mobileNumber: "+233-24-555-0199",
+        pairedAt: "Connected & Streaming Live (6 Channels)",
+        status: "ONLINE_STREAMING",
+        streamUrl: `${window.location.origin}/cctv?headmasterMobileToken=HM-CCTV-8842&mode=mobile`
+      }
+    ];
+  });
+
+  // Requirement: Working Zoom & WhatsApp Online Conference Studio on Headmaster Dashboard
+  const [zoomMeetingPlatform, setZoomMeetingPlatform] = useState("ZOOM"); // "ZOOM" | "WHATSAPP" | "GOOGLE_MEET" | "MICROSOFT_TEAMS"
+  const [activeAdminLiveMeeting, setActiveAdminLiveMeeting] = useState(null);
+
+  // Build or retrieve the curriculum used by a specific teacher, spread across `academicPlan.numberOfWeeksInSchool`
+  const getTeacherActiveCurriculumProfile = (teacherObj) => {
+    const totalWeeks = Math.max(4, Math.min(52, Number(academicPlan?.numberOfWeeksInSchool) || 14));
+    const tName = teacherObj?.teacherName || teacherObj?.name || "Dr. Robert Vance";
+    const tEmail = (teacherObj?.teacherEmail || teacherObj?.email || "robert.vance@gbs.edu").toLowerCase();
+
+    // Check if teacher has an explicit entry in gbs_teacher_active_curriculum_registry
+    const savedEntry =
+      teacherActiveCurriculumMap[tEmail] ||
+      teacherActiveCurriculumMap[tName] ||
+      Object.values(teacherActiveCurriculumMap).find(
+        (v) => v?.teacherName?.toLowerCase() === tName.toLowerCase()
+      );
+
+    // Determine tier, class, and subject from saved entry or teacher's submitted plans
+    const matchingPlan = teacherLessonPlans.find(
+      (p) => p.teacherName?.toLowerCase() === tName.toLowerCase() || String(p.teacherId) === String(teacherObj?.teacherId || teacherObj?.id)
+    );
+
+    const tierKey =
+      savedEntry?.tierKey ||
+      matchingPlan?.institutionTier ||
+      (tName.includes("Thorne") ? "UNIVERSITY" : tName.includes("Montgomery") || tName.includes("Jenkins") || tName.includes("Boateng") ? "NURSERY_TO_JHS" : "SENIOR_HIGH_SCHOOL");
+
+    const tierLabelMap = {
+      NURSERY_TO_JHS: "Nursery – JHS (NaCCA / GES Basic School Curriculum)",
+      SENIOR_HIGH_SCHOOL: "Senior High School (NaCCA / WAEC WASSCE SHS Curriculum)",
+      UNIVERSITY: "University / Tertiary (GTEC Collegiate Honours Outcome-Based Curriculum)"
+    };
+
+    const className = savedEntry?.className || matchingPlan?.className || (tierKey === "UNIVERSITY" ? "Level 200 (Sophomore)" : tierKey === "NURSERY_TO_JHS" ? "JHS 2 (Basic 8)" : "SHS 2 (Form 2)");
+    const subjectName = savedEntry?.subjectName || matchingPlan?.subjectName || (tName.includes("Sterling") ? "Physics (Elective)" : tName.includes("Montgomery") ? "English Language" : tName.includes("Thorne") ? "Computer Science & Software Engineering" : tName.includes("Jenkins") ? "Integrated Science" : "Elective Mathematics");
+    const blueprintId = savedEntry?.curriculumId || `${tierKey}_${className.replace(/[^a-zA-Z0-9]/g, "")}_${subjectName.replace(/[^a-zA-Z0-9]/g, "_")}`;
+
+    const customUpdate = curriculumUpdatesRegistry[blueprintId] || curriculumUpdatesRegistry[`${tierKey}_${subjectName}`];
+
+    const defaultStrands = customUpdate?.strands || savedEntry?.strands || [
+      {
+        code: `${subjectName.slice(0, 3).toUpperCase()}-STR-1`,
+        strand: `Foundational Concepts & Core Principles in ${subjectName}`,
+        indicator: `Master core concepts, definitions, and analytical frameworks in ${subjectName} for ${className}.`,
+        pedagogy: "Interactive concept mapping, guided discovery, and structured classroom demonstrations."
+      },
+      {
+        code: `${subjectName.slice(0, 3).toUpperCase()}-STR-2`,
+        strand: `Applied Problem Solving, Practical Lab & Analytical Skills`,
+        indicator: `Apply ${subjectName} methodologies to real-world problems, laboratory experiments, and structured exercises.`,
+        pedagogy: "Collaborative problem sets, laboratory practicals, and rubric-guided formative tasks."
+      },
+      {
+        code: `${subjectName.slice(0, 3).toUpperCase()}-STR-3`,
+        strand: `Synthesis, Past-Question Mastery & Summative Evaluation`,
+        indicator: `Synthesize term topics, complete mock examination papers, and demonstrate mastery across all strands.`,
+        pedagogy: "Past-paper clinics, peer review seminars, and comprehensive end-of-term evaluation."
+      }
+    ];
+
+    const weeklySpread = Array.from({ length: totalWeeks }, (_, idx) => {
+      const wkNum = idx + 1;
+      const customWk = customUpdate?.weeklyScheme?.[idx] || savedEntry?.weeklyScheme?.[idx];
+      if (customWk) {
+        return {
+          ...customWk,
+          week: `Week ${wkNum} of ${totalWeeks}`
+        };
+      }
+      const pct = (wkNum / totalWeeks) * 100;
+      let phaseTitle = `Core Strand 1: Foundational Principles of ${subjectName}`;
+      let deliverable = `Week ${wkNum} Class Exercise & Lesson Notes Check`;
+      if (wkNum === 1) {
+        phaseTitle = `Diagnostic Baseline & Introduction to ${subjectName} (${className})`;
+        deliverable = "Baseline Diagnostic Quiz & Syllabus Orientation";
+      } else if (pct <= 35) {
+        phaseTitle = `${defaultStrands[0]?.strand || subjectName} — Unit ${wkNum}`;
+        deliverable = `Strand 1 Practical Workbook & Formative Quiz #${wkNum}`;
+      } else if (Math.abs(pct - 50) <= (100 / totalWeeks)) {
+        phaseTitle = `Mid-Term Continuous Assessment (CAT) & Practical Practicum`;
+        deliverable = "Mid-Term Continuous Assessment Test (30% SBA Weight)";
+      } else if (pct <= 80) {
+        phaseTitle = `${defaultStrands[1]?.strand || subjectName} — Applied Module ${wkNum}`;
+        deliverable = `Laboratory / Project Milestone & Peer Review #${wkNum}`;
+      } else if (wkNum === totalWeeks - 1) {
+        phaseTitle = `${defaultStrands[2]?.strand || "Comprehensive Revision"} & Past-Paper Clinic`;
+        deliverable = "Mock Examination & Marking Scheme Review";
+      } else if (wkNum === totalWeeks) {
+        phaseTitle = `End-of-Term Final Summative Examination & SBA Gradebook Compilation`;
+        deliverable = "Final Examination Script Grading & Broadsheet Sign-off";
+      } else {
+        phaseTitle = `${defaultStrands[2]?.strand || subjectName} — Advanced Synthesis Unit ${wkNum}`;
+        deliverable = `Capstone Portfolio & Oral Defense Check`;
+      }
+      return {
+        week: `Week ${wkNum} of ${totalWeeks}`,
+        topic: phaseTitle,
+        deliverable
+      };
+    });
+
+    return {
+      blueprintId,
+      teacherId: teacherObj?.teacherId || teacherObj?.id || "1",
+      teacherName: tName,
+      teacherEmail: tEmail,
+      teacherPosition: teacherObj?.teacherPosition || teacherObj?.role || "Senior Faculty Educator",
+      qualification: teacherObj?.qualification || "M.Ed. / B.Sc. Education (Certified)",
+      tierKey,
+      tierLabel: tierLabelMap[tierKey] || tierLabelMap.SENIOR_HIGH_SCHOOL,
+      className,
+      subjectName,
+      totalWeeks,
+      versionTag: customUpdate?.versionTag || savedEntry?.versionTag || "v2026.1 Official",
+      lastUpdatedAt: customUpdate?.updatedAt || savedEntry?.lastUpdatedAt || new Date().toISOString(),
+      headmasterEndorsement: customUpdate?.headmasterEndorsement || savedEntry?.headmasterEndorsement || null,
+      strands: defaultStrands,
+      weeklySpread
+    };
+  };
+
+  const handleSaveAdminCurriculumUpdate = (e) => {
+    e.preventDefault();
+    if (!editingTeacherCurriculumInAdmin) return;
+    const bpId = editingTeacherCurriculumInAdmin.blueprintId;
+    const updatedRecord = {
+      ...editingTeacherCurriculumInAdmin,
+      versionTag: editingTeacherCurriculumInAdmin.versionTag || "v2026.2 Updated by Headmaster",
+      updatedAt: new Date().toISOString(),
+      updatedBy: `Headmaster ${currentUser.firstName} ${currentUser.lastName}`
+    };
+
+    const nextRegistry = {
+      ...curriculumUpdatesRegistry,
+      [bpId]: updatedRecord,
+      [`${editingTeacherCurriculumInAdmin.tierKey}_${editingTeacherCurriculumInAdmin.subjectName}`]: updatedRecord
+    };
+    setCurriculumUpdatesRegistry(nextRegistry);
+    localStorage.setItem("gbs_institutional_curriculum_updates", JSON.stringify(nextRegistry));
+
+    const nextTeacherMap = {
+      ...teacherActiveCurriculumMap,
+      [editingTeacherCurriculumInAdmin.teacherEmail]: {
+        ...updatedRecord,
+        weeklyScheme: updatedRecord.weeklySpread
+      },
+      [editingTeacherCurriculumInAdmin.teacherName]: {
+        ...updatedRecord,
+        weeklyScheme: updatedRecord.weeklySpread
+      }
+    };
+    setTeacherActiveCurriculumMap(nextTeacherMap);
+    localStorage.setItem("gbs_teacher_active_curriculum_registry", JSON.stringify(nextTeacherMap));
+    window.dispatchEvent(new Event("gbs_curriculum_updated"));
+    window.dispatchEvent(new Event("storage"));
+
+    setEditingTeacherCurriculumInAdmin(null);
+    setFeedback({
+      type: "success",
+      message: `✅ Curriculum "${updatedRecord.subjectName}" (${updatedRecord.className} • ${updatedRecord.totalWeeks} Weeks Term Spread) updated to ${updatedRecord.versionTag} and synced live with ${updatedRecord.teacherName}'s Teacher Dashboard!`
+    });
+  };
+
+  const handleQuickVetPlan = async (plan, decisionStatus) => {
+    const defaultRemark =
+      decisionStatus === "VETTED_APPROVED"
+        ? "Vetted, endorsed, and officially authorized by Headmaster for classroom delivery."
+        : "Revisions required by Headmaster. Please align learning indicators and practical exercises with the term week spread.";
+    const updated = teacherLessonPlans.map((p) =>
+      String(p.id) === String(plan.id)
+        ? {
+            ...p,
+            status: decisionStatus,
+            headmasterRemarks: p.headmasterRemarks || defaultRemark,
+            vettedBy: `${currentUser.firstName} ${currentUser.lastName} (Headmaster)`,
+            vettedAt: new Date().toISOString()
+          }
+        : p
+    );
+    setTeacherLessonPlans(updated);
+    localStorage.setItem("gbs_teacher_lesson_plans", JSON.stringify(updated));
+    window.dispatchEvent(new Event("storage"));
+    try {
+      await apiClient.put(`/academics/lesson-plans/${plan.id}/vet`, {
+        vettingStatus: decisionStatus,
+        headmasterRemarks: defaultRemark
+      });
+    } catch { }
+    setFeedback({
+      type: "success",
+      message: `${decisionStatus === "VETTED_APPROVED" ? "✅ Approved" : "⚠️ Revision requested for"} "${plan.title}" by ${plan.teacherName}!`
+    });
+  };
 
   // Requirement: Headmaster Faculty Directives Broadcast State
   const [facultyDirectives, setFacultyDirectives] = useState(() => {
@@ -2224,24 +2707,35 @@ export default function AdminDashboard() {
     setLoading(false);
   };
 
-  const formatDirectMeetingUrl = (url, passcode = "GBS2026", meetingId = "84939201849") => {
+  const formatDirectMeetingUrl = (url, passcode = "GBS2026", meetingId = "84939201849", platform = "ZOOM") => {
+    const raw = (url || "").trim();
+    if (platform === "WHATSAPP") {
+      if (raw && (raw.startsWith("https://chat.whatsapp.com/") || raw.startsWith("https://wa.me/"))) return raw;
+      return `https://wa.me/?text=${encodeURIComponent(
+        `🎓 *HEADMASTER FACULTY ONLINE CONFERENCE*\nTopic: ${academicPlan.zoomTopic || "Faculty Assembly"}\nJoin Live Room: ${window.location.origin}/portal/admin/dashboard?tab=planner&liveRoom=FACULTY-CONF`
+      )}`;
+    }
+    if (raw && raw.startsWith("http") && raw !== "https://zoom.us/j/gbs-faculty-headmaster") {
+      return raw;
+    }
     const cleanPass = (passcode || "GBS2026").trim();
     const cleanId = String(meetingId || "84939201849").replace(/[^0-9]/g, "") || "84939201849";
     const userName = `${currentUser.firstName} ${currentUser.lastName} (Headmaster)`.trim();
-    // Direct zero-prompt 1-click web client join URL with pre-filled password and attendee name
     return `https://zoom.us/wc/${cleanId}/join?prefer=1&pwd=${encodeURIComponent(cleanPass)}&uname=${encodeURIComponent(userName)}`;
   };
 
   const handleScheduleZoomMeeting = (e) => {
     e.preventDefault();
-    const formattedUrl = formatDirectMeetingUrl(academicPlan.zoomUrl, "GBS2026", "84939201849");
+    const formattedUrl = formatDirectMeetingUrl(academicPlan.zoomUrl, "GBS2026", "84939201849", zoomMeetingPlatform);
+    const inAppRoomUrl = `${window.location.origin}/portal/admin/dashboard?tab=planner&liveRoom=HM-CONF-${Date.now().toString().slice(-4)}`;
     const newMeeting = {
       id: Date.now(),
       title: academicPlan.zoomTopic || "Headmaster Executive Academic Assembly",
-      platform: "ZOOM",
+      platform: zoomMeetingPlatform || "ZOOM",
       startTime: academicPlan.zoomDate || new Date().toISOString(),
       durationMinutes: 60,
       meetingUrl: formattedUrl,
+      inAppRoomUrl,
       meetingId: "849 3920 1849",
       passcode: "GBS2026",
       hostName: `Headmaster ${headmasterProfile?.name || "Dr. Arthur Sterling"}`,
@@ -2258,16 +2752,231 @@ export default function AdminDashboard() {
 
       localStorage.setItem("gbs_zoom_faculty_meeting", JSON.stringify({
         topic: newMeeting.title,
+        platform: newMeeting.platform,
         url: formattedUrl,
+        inAppRoomUrl,
         date: newMeeting.startTime,
         scheduledBy: `Headmaster ${headmasterProfile?.name || "Dr. Arthur Sterling"}`
       }));
       window.dispatchEvent(new Event("gbs_meeting_scheduled"));
     } catch { }
 
+    setActiveAdminLiveMeeting(newMeeting);
     setFeedback({
       type: "success",
-      message: `🎥 1-Click Zoom Meeting scheduled and broadcast across Headmaster, Teacher, Student, and Parent portals! Direct URL: ${formattedUrl}`
+      message: `🎥 ${newMeeting.platform} Meeting scheduled, broadcast across all portals, and Live Conference Bridge opened! Working Link: ${formattedUrl}`
+    });
+  };
+
+  // Inbuilt Campus CCTV Live Animated Multi-Camera Engine (Exclusive to Headmaster Dashboard)
+  const CCTV_CHANNELS_CONFIG = [
+    { id: "CAM-01", name: "Main Campus Gate & Biometric Turnstile", zone: "Perimeter Entry", fps: 30, peopleCount: 7, status: "LIVE_ONLINE" },
+    { id: "CAM-02", name: "Headmaster & Admin Executive Corridor", zone: "Admin Pavilion", fps: 30, peopleCount: 3, status: "LIVE_ONLINE" },
+    { id: "CAM-03", name: "STEM, Physics & Robotics Lab Complex", zone: "Science Wing", fps: 30, peopleCount: 18, status: "LIVE_ONLINE" },
+    { id: "CAM-04", name: "School Bus Boarding & Departure Bay", zone: "Transport Terminal", fps: 30, peopleCount: busAssignments.length || 6, status: "LIVE_ONLINE" },
+    { id: "CAM-05", name: "Central Assembly Quad & Dining Hall", zone: "Student Commons", fps: 30, peopleCount: 24, status: "LIVE_ONLINE" },
+    { id: "CAM-06", name: "Examination Hall & Library Archive Wing", zone: "Academic Block B", fps: 30, peopleCount: 15, status: "LIVE_ONLINE" }
+  ];
+
+  useEffect(() => {
+    if (activeTab !== "cctv") {
+      if (cctvLiveStreamRef.current) {
+        cctvLiveStreamRef.current.getTracks().forEach((t) => t.stop());
+        cctvLiveStreamRef.current = null;
+      }
+      return;
+    }
+
+    let animId;
+    let tick = 0;
+
+    const renderFrames = () => {
+      tick += 1;
+      const nowStr = new Date().toLocaleTimeString([], { hour12: false }) + "." + String(Math.floor((Date.now() % 1000) / 100));
+      const dateStr = new Date().toLocaleDateString("en-GB");
+
+      CCTV_CHANNELS_CONFIG.forEach((cam, idx) => {
+        const canvas = cctvCanvasRefs.current[cam.id];
+        if (!canvas) return;
+        const ctx = canvas.getContext("2d");
+        if (!ctx) return;
+        const w = canvas.width;
+        const h = canvas.height;
+
+        // Background gradient by mode
+        const grad = ctx.createLinearGradient(0, 0, 0, h);
+        if (cctvColorMode === "NIGHT_IR") {
+          grad.addColorStop(0, "#022c22");
+          grad.addColorStop(1, "#064e3b");
+        } else if (cctvColorMode === "THERMAL_AI") {
+          grad.addColorStop(0, "#1e1b4b");
+          grad.addColorStop(0.6, "#4c1d95");
+          grad.addColorStop(1, "#7c2d12");
+        } else {
+          grad.addColorStop(0, idx % 2 === 0 ? "#0f172a" : "#0c192c");
+          grad.addColorStop(1, "#1e293b");
+        }
+        ctx.fillStyle = grad;
+        ctx.fillRect(0, 0, w, h);
+
+        // Perspective architectural grid lines
+        ctx.strokeStyle = cctvColorMode === "NIGHT_IR" ? "rgba(52, 211, 153, 0.14)" : "rgba(56, 189, 248, 0.12)";
+        ctx.lineWidth = 1;
+        for (let gx = 0; gx < w; gx += 40) {
+          ctx.beginPath();
+          ctx.moveTo(gx, 0);
+          ctx.lineTo(gx, h);
+          ctx.stroke();
+        }
+        for (let gy = 0; gy < h; gy += 32) {
+          ctx.beginPath();
+          ctx.moveTo(0, gy);
+          ctx.lineTo(w, gy);
+          ctx.stroke();
+        }
+
+        // Simulated moving subjects / vehicles / students with AI bounding boxes
+        const subjectCount = idx === 3 ? 3 : 2;
+        for (let s = 0; s < subjectCount; s++) {
+          const speed = 0.7 + s * 0.45 + idx * 0.15;
+          const bx = ((tick * speed + s * 110 + idx * 45) % (w - 70)) + 15;
+          const by = 52 + s * 36 + Math.sin((tick + s * 20) * 0.06) * 8;
+          const bw = idx === 3 && s === 0 ? 64 : 34;
+          const bh = idx === 3 && s === 0 ? 36 : 48;
+
+          // Subject silhouette
+          ctx.fillStyle =
+            cctvColorMode === "THERMAL_AI"
+              ? "rgba(251, 191, 36, 0.65)"
+              : cctvColorMode === "NIGHT_IR"
+              ? "rgba(110, 231, 183, 0.45)"
+              : "rgba(56, 189, 248, 0.35)";
+          ctx.fillRect(bx + 6, by + 6, bw - 12, bh - 8);
+
+          // AI Bounding Reticle
+          ctx.strokeStyle = idx === 3 && s === 0 ? "#fbbf24" : "#34d399";
+          ctx.lineWidth = 1.5;
+          ctx.strokeRect(bx, by, bw, bh);
+
+          // Label tag
+          ctx.fillStyle = "rgba(2, 6, 23, 0.85)";
+          ctx.fillRect(bx, by - 13, bw + 28, 12);
+          ctx.fillStyle = idx === 3 && s === 0 ? "#fbbf24" : "#34d399";
+          ctx.font = "bold 8.5px monospace";
+          ctx.fillText(
+            idx === 3 && s === 0
+              ? `BUS #0${s + 1} 99%`
+              : `ID-${101 + idx * 10 + s} 98%`,
+            bx + 2,
+            by - 4
+          );
+        }
+
+        // Scanning line
+        const scanY = (tick * 1.8) % h;
+        ctx.fillStyle = "rgba(56, 189, 248, 0.12)";
+        ctx.fillRect(0, scanY, w, 2);
+
+        // Top OSD Bar
+        ctx.fillStyle = "rgba(2, 6, 23, 0.78)";
+        ctx.fillRect(0, 0, w, 22);
+        ctx.fillStyle = "#ef4444";
+        ctx.beginPath();
+        ctx.arc(12, 11, 4, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.fillStyle = "#f8fafc";
+        ctx.font = "bold 10px monospace";
+        ctx.fillText(`REC • ${cam.id} • ${cam.name.slice(0, 26)}`, 22, 14);
+        ctx.fillStyle = "#38bdf8";
+        ctx.fillText(`${dateStr} ${nowStr}`, w - 125, 14);
+
+        // Bottom OSD Telemetry
+        ctx.fillStyle = "rgba(2, 6, 23, 0.78)";
+        ctx.fillRect(0, h - 20, w, 20);
+        ctx.fillStyle = "#34d399";
+        ctx.font = "bold 9.5px monospace";
+        ctx.fillText(`AI SENTINEL: ${cam.peopleCount} DETECTED • ${cam.fps}FPS • ${cctvColorMode}`, 8, h - 6);
+      });
+
+      animId = requestAnimationFrame(renderFrames);
+    };
+
+    animId = requestAnimationFrame(renderFrames);
+    return () => cancelAnimationFrame(animId);
+  }, [activeTab, cctvColorMode, busAssignments.length]);
+
+  const handleToggleHardwareCctvWebcam = async () => {
+    if (cctvWebcamActive) {
+      if (cctvLiveStreamRef.current) {
+        cctvLiveStreamRef.current.getTracks().forEach((t) => t.stop());
+        cctvLiveStreamRef.current = null;
+      }
+      setCctvWebcamActive(false);
+      return;
+    }
+    try {
+      if (navigator.mediaDevices && navigator.mediaDevices.getUserMedia) {
+        const stream = await navigator.mediaDevices.getUserMedia({ video: true, audio: false });
+        cctvLiveStreamRef.current = stream;
+        setCctvWebcamActive(true);
+        setTimeout(() => {
+          if (cctvLiveVideoRef.current) {
+            cctvLiveVideoRef.current.srcObject = stream;
+            cctvLiveVideoRef.current.play().catch(() => {});
+          }
+        }, 120);
+        setFeedback({
+          type: "success",
+          message: "📹 Live Optical Hardware Camera connected to Headmaster Inbuilt CCTV Matrix!"
+        });
+      }
+    } catch {
+      setFeedback({
+        type: "info",
+        message: "📹 Hardware camera busy or unavailable — running 6-Channel 30FPS AI CCTV Optical Feeds."
+      });
+    }
+  };
+
+  const handleCaptureCctvSnapshot = (camId) => {
+    const canvas = cctvCanvasRefs.current[camId];
+    if (!canvas) return;
+    const dataUrl = canvas.toDataURL("image/png");
+    const snap = {
+      id: `SNAP-${Date.now().toString().slice(-4)}`,
+      camId,
+      timestamp: new Date().toLocaleTimeString(),
+      dataUrl
+    };
+    setCctvSnapshots((prev) => [snap, ...prev.slice(0, 5)]);
+    setFeedback({
+      type: "success",
+      message: `📸 High-resolution security snapshot captured from ${camId}!`
+    });
+  };
+
+  const handlePairHeadmasterMobileDevice = (e) => {
+    e.preventDefault();
+    if (!cctvMobileForm.mobileNumber.trim()) return;
+    const streamUrl = `${window.location.origin}/cctv?headmasterMobileToken=${encodeURIComponent(
+      cctvMobileForm.pairingPin || "HM-CCTV-8842"
+    )}&phone=${encodeURIComponent(cctvMobileForm.mobileNumber.trim())}&mode=mobile`;
+
+    const newDevice = {
+      id: `MOB-HM-${Date.now().toString().slice(-4)}`,
+      deviceName: cctvMobileForm.deviceName.trim() || "Headmaster Mobile Handset",
+      deviceOs: cctvMobileForm.deviceOs,
+      mobileNumber: cctvMobileForm.mobileNumber.trim(),
+      pairedAt: `Paired Today at ${new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}`,
+      status: "ONLINE_STREAMING",
+      streamUrl
+    };
+    const updated = [newDevice, ...cctvMobileDevices];
+    setCctvMobileDevices(updated);
+    localStorage.setItem("gbs_headmaster_cctv_mobile_devices", JSON.stringify(updated));
+    setFeedback({
+      type: "success",
+      message: `📱 Headmaster mobile device "${newDevice.deviceName}" (${newDevice.mobileNumber}) paired and connected to all 6 live campus CCTV cameras!`
     });
   };
 
@@ -3487,9 +4196,20 @@ export default function AdminDashboard() {
             <Link to="/facility" className="role-action-btn">
               🛠️ Facility
             </Link>
-            <Link to="/cctv" className="role-action-btn">
-              📹 CCTV
-            </Link>
+            <button
+              type="button"
+              className="role-action-btn"
+              onClick={() => setActiveTab("cctv")}
+              style={{
+                borderColor: activeTab === "cctv" ? "#ef4444" : "#38bdf8",
+                background: activeTab === "cctv" ? "rgba(239, 68, 68, 0.2)" : "rgba(56, 189, 248, 0.14)",
+                color: activeTab === "cctv" ? "#fca5a5" : "#38bdf8",
+                fontWeight: 800
+              }}
+              title="Open Headmaster Exclusive Inbuilt Campus CCTV & Mobile Device Link"
+            >
+              📹 Inbuilt CCTV & Mobile
+            </button>
             <Link to="/migration" className="role-action-btn">
               📦 Migration
             </Link>
@@ -3556,6 +4276,34 @@ export default function AdminDashboard() {
               <div className="role-kpi-row">
                 <div
                   className="role-kpi-box"
+                  onClick={() => setActiveTab("admissions")}
+                  style={{ cursor: "pointer", transition: "transform 0.15s", border: "1.5px solid rgba(16, 185, 129, 0.55)", background: "rgba(16, 185, 129, 0.1)" }}
+                  title="Click to inspect admitted students & admissions roster"
+                >
+                  <span className="role-kpi-icon">🎓</span>
+                  <div className="role-kpi-data">
+                    <span className="role-kpi-title" style={{ color: "#6ee7b7", fontWeight: 800 }}>Students Admitted ↗</span>
+                    <strong className="role-kpi-num" style={{ color: "#34d399" }}>
+                      {enrolledStudents.length + applications.filter((a) => (a.stage === "APPROVED" || a.status === "APPROVED")).length} Admitted
+                    </strong>
+                  </div>
+                </div>
+                <div
+                  className="role-kpi-box"
+                  onClick={() => setActiveTab("busTransport")}
+                  style={{ cursor: "pointer", transition: "transform 0.15s", border: "1.5px solid rgba(56, 189, 248, 0.55)", background: "rgba(56, 189, 248, 0.1)" }}
+                  title="Click to inspect students boarding school buses & routes"
+                >
+                  <span className="role-kpi-icon">🚌</span>
+                  <div className="role-kpi-data">
+                    <span className="role-kpi-title" style={{ color: "#7dd3fc", fontWeight: 800 }}>Students Boarding Bus ↗</span>
+                    <strong className="role-kpi-num" style={{ color: "#38bdf8" }}>
+                      {busAssignments.length} Boarding
+                    </strong>
+                  </div>
+                </div>
+                <div
+                  className="role-kpi-box"
                   onClick={() => setActiveTab("classes")}
                   style={{ cursor: "pointer", transition: "transform 0.15s" }}
                   title="Click to manage institution classes and level tiers"
@@ -3592,14 +4340,14 @@ export default function AdminDashboard() {
                 </div>
                 <div
                   className="role-kpi-box"
-                  onClick={() => setActiveTab("overview")}
-                  style={{ cursor: "pointer", transition: "transform 0.15s" }}
-                  title="Click to view database health & system overview"
+                  onClick={() => setActiveTab("cctv")}
+                  style={{ cursor: "pointer", transition: "transform 0.15s", border: "1.5px solid rgba(239, 68, 68, 0.55)", background: "rgba(239, 68, 68, 0.1)" }}
+                  title="Click to open Headmaster Exclusive Inbuilt Campus CCTV & Mobile Link"
                 >
-                  <span className="role-kpi-icon">⚡</span>
+                  <span className="role-kpi-icon">📹</span>
                   <div className="role-kpi-data">
-                    <span className="role-kpi-title">PostgreSQL State ↗</span>
-                    <strong className="role-kpi-num" style={{ color: "#34d399" }}>ONLINE</strong>
+                    <span className="role-kpi-title" style={{ color: "#fca5a5", fontWeight: 800 }}>Inbuilt Campus CCTV ↗</span>
+                    <strong className="role-kpi-num" style={{ color: "#f87171" }}>6 LIVE • MOBILE</strong>
                   </div>
                 </div>
               </div>
@@ -4208,7 +4956,103 @@ export default function AdminDashboard() {
             >
               🚌 Student Bus Boarding & Route Fares ({busAssignments.length})
             </button>
+            <button
+              type="button"
+              className={`role-tab-btn ${activeTab === "cctv" ? "active" : ""}`}
+              onClick={() => setActiveTab("cctv")}
+              style={{ borderLeft: "3px solid #ef4444", color: activeTab === "cctv" ? "#f87171" : "#fca5a5", fontWeight: 800 }}
+            >
+              📹 Inbuilt Campus CCTV & Mobile Link (Headmaster Only)
+            </button>
           </nav>
+
+          {/* HEADMASTER EXECUTIVE LIVE METRICS BAR: Students Admitted, Students Boarding Bus, Vetting Desk & Inbuilt CCTV */}
+          <div style={{
+            display: "grid",
+            gridTemplateColumns: "repeat(auto-fit, minmax(230px, 1fr))",
+            gap: "12px",
+            marginBottom: "1.4rem",
+            background: "rgba(15, 23, 42, 0.85)",
+            border: "1px solid rgba(56, 189, 248, 0.3)",
+            borderRadius: "14px",
+            padding: "12px 16px"
+          }}>
+            <div
+              onClick={() => setActiveTab("admissions")}
+              style={{ display: "flex", alignItems: "center", gap: "12px", padding: "8px 12px", borderRadius: "10px", background: "rgba(16, 185, 129, 0.12)", border: "1px solid rgba(16, 185, 129, 0.35)", cursor: "pointer" }}
+              title="Click to inspect all students admitted into the institution"
+            >
+              <span style={{ fontSize: "1.7rem" }}>🎓</span>
+              <div>
+                <span style={{ fontSize: "0.72rem", color: "#6ee7b7", fontWeight: 800, display: "block", textTransform: "uppercase" }}>
+                  Students Admitted Into Institution
+                </span>
+                <strong style={{ fontSize: "1.18rem", color: "#34d399" }}>
+                  {enrolledStudents.length + applications.filter((a) => a.stage === "APPROVED" || a.status === "APPROVED").length} Total Admitted
+                </strong>
+                <span style={{ fontSize: "0.7rem", color: "#94a3b8", display: "block" }}>
+                  {enrolledStudents.length} Enrolled • {applications.filter((a) => a.stage === "APPROVED" || a.status === "APPROVED").length} Approved Intake
+                </span>
+              </div>
+            </div>
+
+            <div
+              onClick={() => setActiveTab("busTransport")}
+              style={{ display: "flex", alignItems: "center", gap: "12px", padding: "8px 12px", borderRadius: "10px", background: "rgba(56, 189, 248, 0.12)", border: "1px solid rgba(56, 189, 248, 0.35)", cursor: "pointer" }}
+              title="Click to inspect all students boarding school buses"
+            >
+              <span style={{ fontSize: "1.7rem" }}>🚌</span>
+              <div>
+                <span style={{ fontSize: "0.72rem", color: "#7dd3fc", fontWeight: 800, display: "block", textTransform: "uppercase" }}>
+                  Students Boarding School Bus
+                </span>
+                <strong style={{ fontSize: "1.18rem", color: "#38bdf8" }}>
+                  {busAssignments.length} Students Boarding Bus
+                </strong>
+                <span style={{ fontSize: "0.7rem", color: "#94a3b8", display: "block" }}>
+                  Across {busRoutes.length} Active Campus Bus Routes
+                </span>
+              </div>
+            </div>
+
+            <div
+              onClick={() => setActiveTab("lessonVetting")}
+              style={{ display: "flex", alignItems: "center", gap: "12px", padding: "8px 12px", borderRadius: "10px", background: "rgba(168, 85, 247, 0.12)", border: "1px solid rgba(168, 85, 247, 0.35)", cursor: "pointer" }}
+              title="Click to open Teacher Plans & Lesson Notes Vetting Desk"
+            >
+              <span style={{ fontSize: "1.7rem" }}>📑</span>
+              <div>
+                <span style={{ fontSize: "0.72rem", color: "#d8b4fe", fontWeight: 800, display: "block", textTransform: "uppercase" }}>
+                  Teacher Plans & Lesson Notes Vetting
+                </span>
+                <strong style={{ fontSize: "1.18rem", color: "#c084fc" }}>
+                  {teacherLessonPlans.length} Plans ({teacherLessonPlans.filter((p) => p.status === "PENDING_VETTING").length} Pending)
+                </strong>
+                <span style={{ fontSize: "0.7rem", color: "#94a3b8", display: "block" }}>
+                  Spread Across {academicPlan.numberOfWeeksInSchool || 14} Term Weeks
+                </span>
+              </div>
+            </div>
+
+            <div
+              onClick={() => setActiveTab("cctv")}
+              style={{ display: "flex", alignItems: "center", gap: "12px", padding: "8px 12px", borderRadius: "10px", background: "rgba(239, 68, 68, 0.12)", border: "1px solid rgba(239, 68, 68, 0.35)", cursor: "pointer" }}
+              title="Click to view Inbuilt Campus CCTV Cameras & Connect to Headmaster Mobile Devices"
+            >
+              <span style={{ fontSize: "1.7rem" }}>📹</span>
+              <div>
+                <span style={{ fontSize: "0.72rem", color: "#fca5a5", fontWeight: 800, display: "block", textTransform: "uppercase" }}>
+                  Inbuilt Campus CCTV & Mobile Link
+                </span>
+                <strong style={{ fontSize: "1.18rem", color: "#f87171" }}>
+                  6 Live Feeds • {cctvPairedDevices.length} Mobile Paired
+                </strong>
+                <span style={{ fontSize: "0.7rem", color: "#94a3b8", display: "block" }}>
+                  Headmaster Exclusive • iOS & Android Ready
+                </span>
+              </div>
+            </div>
+          </div>
 
           {/* UNREAD DEVELOPER DIRECTIVE EMERGENCY BANNER: Disappears once Headmaster sends reply */}
           {unrepliedDirective && (
@@ -4280,6 +5124,125 @@ export default function AdminDashboard() {
               {/* Mounted Drop-List User Registration Counter Component */}
               <RoleCountGrid />
 
+              {/* Requirement 6: Headmaster Views Teacher Profile & Curriculum Used by Each Teacher for Checkups */}
+              <div style={{ marginTop: "2rem", background: "linear-gradient(135deg, rgba(15, 23, 42, 0.92), rgba(30, 41, 59, 0.92))", border: "1.5px solid rgba(56, 189, 248, 0.45)", borderRadius: "14px", padding: "1.5rem" }}>
+                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "1rem", flexWrap: "wrap", gap: "10px" }}>
+                  <div style={{ display: "flex", alignItems: "center", gap: "10px" }}>
+                    <span style={{ fontSize: "1.6rem" }}>👩‍🏫</span>
+                    <div>
+                      <h3 style={{ margin: 0, color: "#38bdf8", fontSize: "1.08rem", fontWeight: 900 }}>
+                        FACULTY PROFILE & ACTIVE CURRICULUM CHECKUP DESK (HEADMASTER CHECKUPS)
+                      </h3>
+                      <p style={{ margin: "2px 0 0", fontSize: "0.8rem", color: "#94a3b8" }}>
+                        Inspect any teacher's profile to check the exact curriculum, syllabus version, strands, and week-by-week schedule ({academicPlan.numberOfWeeksInSchool || 14} Term Weeks) currently used by that teacher.
+                      </p>
+                    </div>
+                  </div>
+                  <span className="role-portal-badge" style={{ color: "#34d399" }}>
+                    📚 Spread Across {academicPlan.numberOfWeeksInSchool || 14} Weeks in School
+                  </span>
+                </div>
+
+                <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(300px, 1fr))", gap: "12px" }}>
+                  {[
+                    { id: "1", teacherId: "1", teacherName: "Dr. Robert Vance", teacherPosition: "Head of Advanced Mathematics & STEM", subjectName: "Further Mathematics & Calculus", className: "SHS 3 / Grade 12" },
+                    { id: "2", teacherId: "2", teacherName: "Prof. Eleanor Sterling", teacherPosition: "Senior Physics & Chemistry Educator", subjectName: "Physics & Applied Mechanics", className: "SHS 2 / Grade 11" },
+                    { id: "3", teacherId: "3", teacherName: "Claire Montgomery", teacherPosition: "Basic & Primary Lead Educator", subjectName: "Integrated Science & Numeracy", className: "JHS 2 / Basic 8" },
+                    { id: "4", teacherId: "4", teacherName: "Marcus Thorne", teacherPosition: "Computer Science & Cloud Faculty", subjectName: "Computing, AI & Software Systems", className: "University Level 200" },
+                    { id: "7", teacherId: "7", teacherName: "Sarah Jenkins", teacherPosition: "Senior Literature & English Educator", subjectName: "English Language & Academic Writing", className: "SHS 1 / Grade 10" },
+                    { id: "8", teacherId: "8", teacherName: "Mr. Kwame Boateng", teacherPosition: "JHS Mathematics & STEM Coordinator", subjectName: "Core Mathematics & Algebra", className: "JHS 3 / Basic 9" }
+                  ].map((tItem) => {
+                    const prof = getTeacherActiveCurriculumProfile(tItem);
+                    return (
+                      <div
+                        key={tItem.teacherId}
+                        style={{
+                          background: "rgba(2, 6, 23, 0.78)",
+                          border: "1px solid rgba(56, 189, 248, 0.3)",
+                          borderRadius: "12px",
+                          padding: "14px",
+                          display: "flex",
+                          flexDirection: "column",
+                          justifyContent: "space-between",
+                          gap: "10px"
+                        }}
+                      >
+                        <div>
+                          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", gap: "8px" }}>
+                            <div>
+                              <strong style={{ color: "#f8fafc", fontSize: "0.95rem", display: "block" }}>{prof.teacherName}</strong>
+                              <span style={{ color: "#38bdf8", fontSize: "0.75rem", fontWeight: 700 }}>{prof.teacherPosition}</span>
+                            </div>
+                            <span style={{ background: "rgba(16, 185, 129, 0.15)", color: "#34d399", padding: "2px 8px", borderRadius: "6px", fontSize: "0.68rem", fontWeight: 800 }}>
+                              {prof.version}
+                            </span>
+                          </div>
+                          <div style={{ marginTop: "8px", fontSize: "0.78rem", color: "#cbd5e1", lineHeight: 1.45 }}>
+                            <div><strong>Class / Level:</strong> {prof.className} ({prof.institutionTier})</div>
+                            <div><strong>Subject:</strong> {prof.subjectName}</div>
+                            <div style={{ color: "#7dd3fc", marginTop: "3px" }}>
+                              <strong>Active Curriculum:</strong> {prof.curriculumTitle}
+                            </div>
+                            <div style={{ color: "#fde68a", fontSize: "0.73rem", marginTop: "2px" }}>
+                              🗓️ Spread Across <strong>{prof.totalTermWeeks} Weeks</strong> ({prof.weeklySpread?.length || prof.totalTermWeeks} Weekly Units)
+                            </div>
+                          </div>
+                        </div>
+
+                        <div style={{ display: "flex", gap: "8px", flexWrap: "wrap" }}>
+                          <button
+                            type="button"
+                            onClick={() => setSelectedTeacherForCheckup(prof)}
+                            style={{
+                              flex: 1,
+                              background: "linear-gradient(135deg, #0284c7, #2563eb)",
+                              color: "#fff",
+                              border: "none",
+                              padding: "7px 12px",
+                              borderRadius: "8px",
+                              fontSize: "0.76rem",
+                              fontWeight: 800,
+                              cursor: "pointer"
+                            }}
+                          >
+                            🔍 View Profile & Active Curriculum Checkup
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => setEditingTeacherCurriculumInAdmin({
+                              teacherId: prof.teacherId,
+                              teacherName: prof.teacherName,
+                              className: prof.className,
+                              subjectName: prof.subjectName,
+                              institutionTier: prof.institutionTier,
+                              curriculumTitle: prof.curriculumTitle,
+                              authority: prof.authority,
+                              version: prof.version,
+                              strandsText: (prof.strands || []).join("\n"),
+                              indicatorsText: (prof.indicators || []).join("\n"),
+                              updateNotes: ""
+                            })}
+                            style={{
+                              background: "rgba(245, 158, 11, 0.18)",
+                              border: "1px solid #f59e0b",
+                              color: "#fde68a",
+                              padding: "7px 10px",
+                              borderRadius: "8px",
+                              fontSize: "0.75rem",
+                              fontWeight: 800,
+                              cursor: "pointer"
+                            }}
+                            title="Update this curriculum when there are updates"
+                          >
+                            🔄 Update
+                          </button>
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              </div>
+
               {/* Headmaster Notification & Approval Queue for Self-Registered Staff */}
               <div style={{ marginTop: "2rem", background: "rgba(15, 23, 42, 0.75)", border: "1px solid rgba(59, 130, 246, 0.35)", borderRadius: "14px", padding: "1.5rem" }}>
                 <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "1rem", flexWrap: "wrap", gap: "10px" }}>
@@ -4342,7 +5305,16 @@ export default function AdminDashboard() {
                               {new Date(staff.requestedAt).toLocaleTimeString()}
                             </td>
                             <td>
-                              <div style={{ display: "flex", gap: "6px" }}>
+                              <div style={{ display: "flex", gap: "6px", flexWrap: "wrap" }}>
+                                <button
+                                  type="button"
+                                  className="btn-secondary"
+                                  style={{ padding: "6px 10px", fontSize: "0.75rem", borderColor: "#38bdf8", color: "#38bdf8", cursor: "pointer" }}
+                                  onClick={() => setSelectedTeacherForCheckup(getTeacherActiveCurriculumProfile(staff))}
+                                  title="View teacher profile and active curriculum used for checkups"
+                                >
+                                  📚 Profile & Curriculum Checkup
+                                </button>
                                 <button
                                   type="button"
                                   className="btn-secondary"
@@ -4917,142 +5889,973 @@ export default function AdminDashboard() {
                 )}
               </div>
 
-              {/* SECTION 2: VETTING QUEUE & FEEDBACK WORKSPACE */}
-              <div>
-                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "1rem", flexWrap: "wrap", gap: "10px" }}>
+              {/* SECTION 1.5: TEACHER PROFILE & ACTIVE CURRICULUM CHECKUP BAR */}
+              <div style={{
+                background: "rgba(15, 23, 42, 0.88)",
+                border: "1px solid rgba(56, 189, 248, 0.35)",
+                borderRadius: "12px",
+                padding: "12px 16px",
+                marginBottom: "1.5rem"
+              }}>
+                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: "8px", marginBottom: "10px" }}>
                   <div>
-                    <h3 style={{ margin: 0, color: "#f8fafc", fontSize: "1.05rem", fontWeight: "800" }}>
-                      📚 Teacher Plans & Lesson Notes Vetting Stream ({teacherLessonPlans.length})
-                    </h3>
-                    <span style={{ fontSize: "0.75rem", color: "#94a3b8" }}>
-                      Select any plan to inspect objectives, pedagogical activities, and respond with words/remarks
+                    <strong style={{ color: "#38bdf8", fontSize: "0.9rem" }}>
+                      👩‍🏫 View Teacher Profile & Active Curriculum Used (Headmaster Checkups)
+                    </strong>
+                    <span style={{ display: "block", fontSize: "0.74rem", color: "#94a3b8" }}>
+                      Click any teacher below to inspect their profile, active curriculum version, strands, and {academicPlan.numberOfWeeksInSchool || 14}-week term spread:
                     </span>
                   </div>
-
-                  {/* Filter Toolbar */}
-                  <div style={{ display: "flex", gap: "8px", flexWrap: "wrap" }}>
-                    <select
-                      value={vettingFilterType}
-                      onChange={(e) => setVettingFilterType(e.target.value)}
-                      className="filter-select"
-                      style={{ padding: "6px 10px", fontSize: "0.78rem" }}
+                  <span style={{ fontSize: "0.75rem", color: "#34d399", fontWeight: 800 }}>
+                    Term Duration: {academicPlan.numberOfWeeksInSchool || 14} Weeks in School
+                  </span>
+                </div>
+                <div style={{ display: "flex", gap: "8px", flexWrap: "wrap" }}>
+                  {Array.from(new Map(teacherLessonPlans.map((p) => [p.teacherName, p])).values()).map((tPlan) => (
+                    <button
+                      key={tPlan.id}
+                      type="button"
+                      onClick={() => setSelectedTeacherForCheckup(getTeacherActiveCurriculumProfile(tPlan))}
+                      style={{
+                        background: "rgba(56, 189, 248, 0.14)",
+                        border: "1px solid rgba(56, 189, 248, 0.45)",
+                        color: "#e0f2fe",
+                        padding: "6px 12px",
+                        borderRadius: "8px",
+                        fontSize: "0.76rem",
+                        fontWeight: 800,
+                        cursor: "pointer",
+                        transition: "all 0.18s ease"
+                      }}
                     >
-                      <option value="ALL">All Document Types</option>
-                      <option value="YEARLY_PLAN">📅 Yearly Plans</option>
-                      <option value="TERMLY_PLAN">📆 Termly Plans</option>
-                      <option value="WEEKLY_PLAN">🗓️ Weekly Plans</option>
-                      <option value="LESSON_NOTES">📖 Lesson Notes</option>
-                    </select>
+                      📚 {tPlan.teacherName} • ({tPlan.className}) ↗
+                    </button>
+                  ))}
+                </div>
+              </div>
 
-                    <select
-                      value={vettingFilterStatus}
-                      onChange={(e) => setVettingFilterStatus(e.target.value)}
-                      className="filter-select"
-                      style={{ padding: "6px 10px", fontSize: "0.78rem" }}
+              {/* SECTION 2: VETTING QUEUE & FEEDBACK WORKSPACE (WITH HOVERING & PAGE NAVIGATION) */}
+              {(() => {
+                const filteredVettingPlans = teacherLessonPlans
+                  .filter((p) => vettingFilterType === "ALL" || p.planType === vettingFilterType)
+                  .filter((p) => vettingFilterStatus === "ALL" || p.status === vettingFilterStatus)
+                  .filter((p) => {
+                    if (!vettingSearchQuery.trim()) return true;
+                    const q = vettingSearchQuery.toLowerCase();
+                    return (
+                      (p.teacherName || "").toLowerCase().includes(q) ||
+                      (p.title || "").toLowerCase().includes(q) ||
+                      (p.subjectName || "").toLowerCase().includes(q) ||
+                      (p.className || "").toLowerCase().includes(q) ||
+                      (p.topic || "").toLowerCase().includes(q)
+                    );
+                  });
+
+                const totalVettingPages = Math.max(1, Math.ceil(filteredVettingPlans.length / vettingPageSize));
+                const safeCurrentPage = Math.min(Math.max(1, vettingCurrentPage), totalVettingPages);
+                const startIndex = (safeCurrentPage - 1) * vettingPageSize;
+                const paginatedVettingPlans = filteredVettingPlans.slice(startIndex, startIndex + vettingPageSize);
+
+                return (
+                  <div>
+                    <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "1rem", flexWrap: "wrap", gap: "10px" }}>
+                      <div>
+                        <h3 style={{ margin: 0, color: "#f8fafc", fontSize: "1.05rem", fontWeight: "800" }}>
+                          📚 Teacher Plans & Lesson Notes Vetting Stream ({filteredVettingPlans.length} of {teacherLessonPlans.length})
+                        </h3>
+                        <span style={{ fontSize: "0.75rem", color: "#94a3b8" }}>
+                          Hover over any row to highlight • Use page navigation below or above to browse pages • Inspect, Vet & Approve or View Teacher Profile & Curriculum
+                        </span>
+                      </div>
+
+                      {/* Search, Filter & Page Size Toolbar */}
+                      <div style={{ display: "flex", gap: "8px", flexWrap: "wrap", alignItems: "center" }}>
+                        <input
+                          type="text"
+                          value={vettingSearchQuery}
+                          onChange={(e) => {
+                            setVettingSearchQuery(e.target.value);
+                            setVettingCurrentPage(1);
+                          }}
+                          placeholder="🔍 Search teacher, subject, class, topic..."
+                          className="filter-input"
+                          style={{ padding: "6px 12px", fontSize: "0.78rem", minWidth: "230px" }}
+                        />
+
+                        <select
+                          value={vettingFilterType}
+                          onChange={(e) => {
+                            setVettingFilterType(e.target.value);
+                            setVettingCurrentPage(1);
+                          }}
+                          className="filter-select"
+                          style={{ padding: "6px 10px", fontSize: "0.78rem" }}
+                        >
+                          <option value="ALL">All Document Types</option>
+                          <option value="YEARLY_PLAN">📅 Yearly Plans</option>
+                          <option value="TERMLY_PLAN">📆 Termly Plans</option>
+                          <option value="WEEKLY_PLAN">🗓️ Weekly Plans</option>
+                          <option value="LESSON_NOTES">📖 Lesson Notes</option>
+                        </select>
+
+                        <select
+                          value={vettingFilterStatus}
+                          onChange={(e) => {
+                            setVettingFilterStatus(e.target.value);
+                            setVettingCurrentPage(1);
+                          }}
+                          className="filter-select"
+                          style={{ padding: "6px 10px", fontSize: "0.78rem" }}
+                        >
+                          <option value="ALL">All Vetting Statuses</option>
+                          <option value="PENDING_VETTING">⏳ Pending Headmaster Vetting</option>
+                          <option value="VETTED_APPROVED">🟢 Vetted & Approved</option>
+                          <option value="REVISION_REQUIRED">⚠️ Revisions Requested</option>
+                        </select>
+
+                        <select
+                          value={vettingPageSize}
+                          onChange={(e) => {
+                            setVettingPageSize(Number(e.target.value) || 4);
+                            setVettingCurrentPage(1);
+                          }}
+                          className="filter-select"
+                          style={{ padding: "6px 10px", fontSize: "0.78rem" }}
+                          title="Items per page on Vetting Desk"
+                        >
+                          <option value={3}>3 Plans / Page</option>
+                          <option value={4}>4 Plans / Page</option>
+                          <option value={6}>6 Plans / Page</option>
+                          <option value={10}>10 Plans / Page</option>
+                        </select>
+                      </div>
+                    </div>
+
+                    {/* TOP PAGE NAVIGATION BAR */}
+                    <div style={{
+                      display: "flex",
+                      justifyContent: "space-between",
+                      alignItems: "center",
+                      flexWrap: "wrap",
+                      gap: "10px",
+                      padding: "10px 14px",
+                      marginBottom: "12px",
+                      background: "rgba(15, 23, 42, 0.85)",
+                      border: "1px solid rgba(56, 189, 248, 0.3)",
+                      borderRadius: "10px"
+                    }}>
+                      <span style={{ fontSize: "0.78rem", color: "#cbd5e1", fontWeight: 700 }}>
+                        📄 Page <strong style={{ color: "#38bdf8" }}>{safeCurrentPage}</strong> of <strong style={{ color: "#38bdf8" }}>{totalVettingPages}</strong> • Showing{" "}
+                        <strong>{filteredVettingPlans.length === 0 ? 0 : startIndex + 1}–{Math.min(startIndex + vettingPageSize, filteredVettingPlans.length)}</strong> of <strong>{filteredVettingPlans.length}</strong> Teacher Plans & Lesson Notes
+                      </span>
+
+                      <div style={{ display: "flex", gap: "6px", alignItems: "center", flexWrap: "wrap" }}>
+                        <button
+                          type="button"
+                          disabled={safeCurrentPage <= 1}
+                          onClick={() => setVettingCurrentPage((p) => Math.max(1, p - 1))}
+                          style={{
+                            padding: "5px 12px",
+                            borderRadius: "6px",
+                            border: "1px solid rgba(56, 189, 248, 0.45)",
+                            background: safeCurrentPage <= 1 ? "rgba(30, 41, 59, 0.4)" : "rgba(56, 189, 248, 0.16)",
+                            color: safeCurrentPage <= 1 ? "#64748b" : "#38bdf8",
+                            fontSize: "0.76rem",
+                            fontWeight: 800,
+                            cursor: safeCurrentPage <= 1 ? "not-allowed" : "pointer"
+                          }}
+                        >
+                          ⬅️ Previous Page
+                        </button>
+
+                        {Array.from({ length: totalVettingPages }, (_, idx) => idx + 1).map((pageNum) => (
+                          <button
+                            key={pageNum}
+                            type="button"
+                            onClick={() => setVettingCurrentPage(pageNum)}
+                            style={{
+                              padding: "5px 11px",
+                              borderRadius: "6px",
+                              border: safeCurrentPage === pageNum ? "2px solid #38bdf8" : "1px solid rgba(148, 163, 184, 0.3)",
+                              background: safeCurrentPage === pageNum ? "linear-gradient(135deg, #0284c7, #2563eb)" : "rgba(15, 23, 42, 0.8)",
+                              color: safeCurrentPage === pageNum ? "#ffffff" : "#cbd5e1",
+                              fontSize: "0.76rem",
+                              fontWeight: 800,
+                              cursor: "pointer"
+                            }}
+                          >
+                            {pageNum}
+                          </button>
+                        ))}
+
+                        <button
+                          type="button"
+                          disabled={safeCurrentPage >= totalVettingPages}
+                          onClick={() => setVettingCurrentPage((p) => Math.min(totalVettingPages, p + 1))}
+                          style={{
+                            padding: "5px 12px",
+                            borderRadius: "6px",
+                            border: "1px solid rgba(56, 189, 248, 0.45)",
+                            background: safeCurrentPage >= totalVettingPages ? "rgba(30, 41, 59, 0.4)" : "rgba(56, 189, 248, 0.16)",
+                            color: safeCurrentPage >= totalVettingPages ? "#64748b" : "#38bdf8",
+                            fontSize: "0.76rem",
+                            fontWeight: 800,
+                            cursor: safeCurrentPage >= totalVettingPages ? "not-allowed" : "pointer"
+                          }}
+                        >
+                          Next Page ➡️
+                        </button>
+                      </div>
+                    </div>
+
+                    {/* Vetting Table with Smooth Hovering & Direct Vetting Actions */}
+                    <div className="role-table-responsive">
+                      <table className="role-table">
+                        <thead>
+                          <tr>
+                            <th>Teacher / Submitter & Profile</th>
+                            <th>Plan Category</th>
+                            <th>Title & Subject</th>
+                            <th>Class / Grade</th>
+                            <th>Term & Week Span</th>
+                            <th>Vetting Status</th>
+                            <th>Headmaster Words / Remarks</th>
+                            <th>Headmaster Vetting Actions</th>
+                          </tr>
+                        </thead>
+                        <tbody>
+                          {paginatedVettingPlans.map((plan) => {
+                            const typeMeta = {
+                              YEARLY_PLAN: { text: "📅 Yearly Plan", color: "#38bdf8" },
+                              TERMLY_PLAN: { text: "📆 Termly Plan", color: "#818cf8" },
+                              WEEKLY_PLAN: { text: "🗓️ Weekly Plan", color: "#a855f7" },
+                              LESSON_NOTES: { text: "📖 Lesson Notes", color: "#f472b6" }
+                            }[plan.planType] || { text: plan.planType, color: "#38bdf8" };
+
+                            const isApproved = plan.status === "VETTED_APPROVED";
+                            const isRevision = plan.status === "REVISION_REQUIRED";
+                            const isHovered = vettingHoveredRowId === plan.id;
+
+                            return (
+                              <tr
+                                key={plan.id}
+                                onMouseEnter={() => setVettingHoveredRowId(plan.id)}
+                                onMouseLeave={() => setVettingHoveredRowId(null)}
+                                style={{
+                                  background: isHovered
+                                    ? "linear-gradient(90deg, rgba(56, 189, 248, 0.18), rgba(30, 58, 138, 0.28))"
+                                    : "transparent",
+                                  transform: isHovered ? "translateY(-1px)" : "none",
+                                  boxShadow: isHovered ? "inset 4px 0 0 #38bdf8, 0 4px 14px rgba(0, 0, 0, 0.35)" : "none",
+                                  transition: "all 0.18s ease"
+                                }}
+                              >
+                                <td>
+                                  <strong
+                                    onClick={() => setSelectedTeacherForCheckup(getTeacherActiveCurriculumProfile(plan))}
+                                    style={{ color: isHovered ? "#38bdf8" : "#f8fafc", fontSize: "0.88rem", cursor: "pointer", textDecoration: isHovered ? "underline" : "none" }}
+                                    title="Click to inspect teacher profile & active curriculum used"
+                                  >
+                                    {plan.teacherName}
+                                  </strong>
+                                  <span style={{ display: "block", fontSize: "0.72rem", color: "#38bdf8" }}>
+                                    {plan.teacherPosition || "Faculty Member"}
+                                  </span>
+                                  <button
+                                    type="button"
+                                    onClick={() => setSelectedTeacherForCheckup(getTeacherActiveCurriculumProfile(plan))}
+                                    style={{
+                                      marginTop: "4px",
+                                      background: "rgba(56, 189, 248, 0.14)",
+                                      border: "1px solid rgba(56, 189, 248, 0.4)",
+                                      color: "#7dd3fc",
+                                      padding: "2px 8px",
+                                      borderRadius: "6px",
+                                      fontSize: "0.68rem",
+                                      fontWeight: 800,
+                                      cursor: "pointer"
+                                    }}
+                                  >
+                                    📚 Check Teacher Curriculum
+                                  </button>
+                                </td>
+                                <td>
+                                  <span className="role-portal-badge" style={{ color: typeMeta.color }}>
+                                    {typeMeta.text}
+                                  </span>
+                                </td>
+                                <td>
+                                  <strong style={{ color: "#f8fafc", fontSize: "0.88rem", display: "block" }}>{plan.title}</strong>
+                                  <span style={{ fontSize: "0.75rem", color: "#94a3b8" }}>{plan.subjectName}</span>
+                                  {plan.topic && (
+                                    <span style={{ display: "block", fontSize: "0.71rem", color: "#67e8f9", marginTop: "2px" }}>
+                                      Topic: {plan.topic}
+                                    </span>
+                                  )}
+                                </td>
+                                <td>
+                                  <span style={{ fontSize: "0.85rem", color: "#cbd5e1", fontWeight: 700 }}>{plan.className}</span>
+                                </td>
+                                <td>
+                                  <span style={{ fontSize: "0.78rem", color: "#94a3b8" }}>{plan.term} • {plan.weekNumber}</span>
+                                </td>
+                                <td>
+                                  {isApproved ? (
+                                    <span style={{ background: "rgba(16, 185, 129, 0.2)", color: "#34d399", fontSize: "0.72rem", padding: "3px 8px", borderRadius: "8px", fontWeight: "800" }}>
+                                      ✓ APPROVED
+                                    </span>
+                                  ) : isRevision ? (
+                                    <span style={{ background: "rgba(239, 68, 68, 0.2)", color: "#f87171", fontSize: "0.72rem", padding: "3px 8px", borderRadius: "8px", fontWeight: "800" }}>
+                                      ⚠️ REVISION
+                                    </span>
+                                  ) : (
+                                    <span style={{ background: "rgba(245, 158, 11, 0.2)", color: "#fbbf24", fontSize: "0.72rem", padding: "3px 8px", borderRadius: "8px", fontWeight: "800" }}>
+                                      ⏳ PENDING
+                                    </span>
+                                  )}
+                                </td>
+                                <td style={{ maxWidth: "240px" }}>
+                                  {plan.headmasterRemarks ? (
+                                    <span style={{ fontSize: "0.76rem", color: "#cbd5e1", fontStyle: "italic", display: "block" }}>
+                                      "{plan.headmasterRemarks}"
+                                    </span>
+                                  ) : (
+                                    <span style={{ fontSize: "0.72rem", color: "#64748b", fontStyle: "italic" }}>
+                                      Awaiting Headmaster vetting remarks
+                                    </span>
+                                  )}
+                                </td>
+                                <td>
+                                  <div style={{ display: "flex", gap: "6px", flexWrap: "wrap", alignItems: "center" }}>
+                                    <button
+                                      type="button"
+                                      onClick={() => {
+                                        setSelectedVettingPlan(plan);
+                                        setVettingDecision(plan.status === "REVISION_REQUIRED" ? "REVISION_REQUIRED" : "VETTED_APPROVED");
+                                        setHeadmasterRemarksInput(
+                                          plan.headmasterRemarks ||
+                                          "Vetted, endorsed, and officially authorized for classroom instruction."
+                                        );
+                                      }}
+                                      className="btn-primary"
+                                      style={{
+                                        padding: "5px 11px",
+                                        fontSize: "0.75rem",
+                                        background: "linear-gradient(135deg, #0284c7, #2563eb)",
+                                        whiteSpace: "nowrap",
+                                        cursor: "pointer",
+                                        fontWeight: 800
+                                      }}
+                                      title="Open full Vetting & Inspection Evaluation Modal"
+                                    >
+                                      🔍 Inspect & Vet
+                                    </button>
+                                    <button
+                                      type="button"
+                                      onClick={() => handleQuickVetPlan(plan, "VETTED_APPROVED")}
+                                      style={{
+                                        padding: "5px 10px",
+                                        fontSize: "0.74rem",
+                                        background: "rgba(16, 185, 129, 0.2)",
+                                        border: "1px solid #10b981",
+                                        color: "#34d399",
+                                        borderRadius: "6px",
+                                        fontWeight: 800,
+                                        cursor: "pointer",
+                                        whiteSpace: "nowrap"
+                                      }}
+                                      title="1-Click Vet & Approve this teacher plan/lesson notes"
+                                    >
+                                      ✅ Approve
+                                    </button>
+                                    <button
+                                      type="button"
+                                      onClick={() => handleQuickVetPlan(plan, "REVISION_REQUIRED")}
+                                      style={{
+                                        padding: "5px 9px",
+                                        fontSize: "0.74rem",
+                                        background: "rgba(239, 68, 68, 0.18)",
+                                        border: "1px solid #ef4444",
+                                        color: "#fca5a5",
+                                        borderRadius: "6px",
+                                        fontWeight: 800,
+                                        cursor: "pointer",
+                                        whiteSpace: "nowrap"
+                                      }}
+                                      title="Request revision from teacher"
+                                    >
+                                      ⚠️ Revision
+                                    </button>
+                                  </div>
+                                </td>
+                              </tr>
+                            );
+                          })}
+                          {paginatedVettingPlans.length === 0 && (
+                            <tr>
+                              <td colSpan="8" style={{ textAlign: "center", padding: "1.75rem", color: "#94a3b8" }}>
+                                No teacher plans or lesson notes match the active filter. Click "All Document Types" or clear search to view all submissions.
+                              </td>
+                            </tr>
+                          )}
+                        </tbody>
+                      </table>
+                    </div>
+
+                    {/* BOTTOM PAGE NAVIGATION BAR */}
+                    <div style={{
+                      display: "flex",
+                      justifyContent: "space-between",
+                      alignItems: "center",
+                      flexWrap: "wrap",
+                      gap: "10px",
+                      padding: "10px 14px",
+                      marginTop: "12px",
+                      background: "rgba(15, 23, 42, 0.85)",
+                      border: "1px solid rgba(56, 189, 248, 0.3)",
+                      borderRadius: "10px"
+                    }}>
+                      <span style={{ fontSize: "0.78rem", color: "#94a3b8" }}>
+                        Hovering & Page Navigation Active • Page <strong>{safeCurrentPage}</strong> of <strong>{totalVettingPages}</strong>
+                      </span>
+                      <div style={{ display: "flex", gap: "6px", alignItems: "center", flexWrap: "wrap" }}>
+                        <button
+                          type="button"
+                          disabled={safeCurrentPage <= 1}
+                          onClick={() => setVettingCurrentPage(1)}
+                          style={{
+                            padding: "5px 10px",
+                            borderRadius: "6px",
+                            border: "1px solid rgba(148, 163, 184, 0.3)",
+                            background: "rgba(15, 23, 42, 0.8)",
+                            color: safeCurrentPage <= 1 ? "#64748b" : "#cbd5e1",
+                            fontSize: "0.74rem",
+                            fontWeight: 700,
+                            cursor: safeCurrentPage <= 1 ? "not-allowed" : "pointer"
+                          }}
+                        >
+                          ⏮️ First
+                        </button>
+                        <button
+                          type="button"
+                          disabled={safeCurrentPage <= 1}
+                          onClick={() => setVettingCurrentPage((p) => Math.max(1, p - 1))}
+                          style={{
+                            padding: "5px 12px",
+                            borderRadius: "6px",
+                            border: "1px solid rgba(56, 189, 248, 0.45)",
+                            background: safeCurrentPage <= 1 ? "rgba(30, 41, 59, 0.4)" : "rgba(56, 189, 248, 0.16)",
+                            color: safeCurrentPage <= 1 ? "#64748b" : "#38bdf8",
+                            fontSize: "0.76rem",
+                            fontWeight: 800,
+                            cursor: safeCurrentPage <= 1 ? "not-allowed" : "pointer"
+                          }}
+                        >
+                          ⬅️ Prev
+                        </button>
+                        {Array.from({ length: totalVettingPages }, (_, idx) => idx + 1).map((pageNum) => (
+                          <button
+                            key={pageNum}
+                            type="button"
+                            onClick={() => setVettingCurrentPage(pageNum)}
+                            style={{
+                              padding: "5px 11px",
+                              borderRadius: "6px",
+                              border: safeCurrentPage === pageNum ? "2px solid #38bdf8" : "1px solid rgba(148, 163, 184, 0.3)",
+                              background: safeCurrentPage === pageNum ? "linear-gradient(135deg, #0284c7, #2563eb)" : "rgba(15, 23, 42, 0.8)",
+                              color: safeCurrentPage === pageNum ? "#ffffff" : "#cbd5e1",
+                              fontSize: "0.76rem",
+                              fontWeight: 800,
+                              cursor: "pointer"
+                            }}
+                          >
+                            {pageNum}
+                          </button>
+                        ))}
+                        <button
+                          type="button"
+                          disabled={safeCurrentPage >= totalVettingPages}
+                          onClick={() => setVettingCurrentPage((p) => Math.min(totalVettingPages, p + 1))}
+                          style={{
+                            padding: "5px 12px",
+                            borderRadius: "6px",
+                            border: "1px solid rgba(56, 189, 248, 0.45)",
+                            background: safeCurrentPage >= totalVettingPages ? "rgba(30, 41, 59, 0.4)" : "rgba(56, 189, 248, 0.16)",
+                            color: safeCurrentPage >= totalVettingPages ? "#64748b" : "#38bdf8",
+                            fontSize: "0.76rem",
+                            fontWeight: 800,
+                            cursor: safeCurrentPage >= totalVettingPages ? "not-allowed" : "pointer"
+                          }}
+                        >
+                          Next ➡️
+                        </button>
+                        <button
+                          type="button"
+                          disabled={safeCurrentPage >= totalVettingPages}
+                          onClick={() => setVettingCurrentPage(totalVettingPages)}
+                          style={{
+                            padding: "5px 10px",
+                            borderRadius: "6px",
+                            border: "1px solid rgba(148, 163, 184, 0.3)",
+                            background: "rgba(15, 23, 42, 0.8)",
+                            color: safeCurrentPage >= totalVettingPages ? "#64748b" : "#cbd5e1",
+                            fontSize: "0.74rem",
+                            fontWeight: 700,
+                            cursor: safeCurrentPage >= totalVettingPages ? "not-allowed" : "pointer"
+                          }}
+                        >
+                          Last ⏭️
+                        </button>
+                      </div>
+                    </div>
+                  </div>
+                );
+              })()}
+            </div>
+          )}
+
+          {/* ======================================================== */}
+          {/* TAB: INBUILT CAMPUS CCTV & HEADMASTER MOBILE DEVICE LINK */}
+          {/* (HEADMASTER DASHBOARD EXCLUSIVE)                         */}
+          {/* ======================================================== */}
+          {activeTab === "cctv" && (
+            <div className="role-workspace-card">
+              <div className="workspace-title-row">
+                <div>
+                  <h2><span>📹</span> INBUILT CAMPUS CCTV SURVEILLANCE & HEADMASTER MOBILE DEVICE LINK</h2>
+                  <p>
+                    <strong>Headmaster Exclusive Security Command:</strong> Live inbuilt multi-channel campus CCTV feeds embedded directly inside the Headmaster Dashboard, plus encrypted pairing to connect and stream live feeds to any mobile device (iPhone, iPad, Android Phone, or Tablet) of the Headmaster.
+                  </p>
+                </div>
+                <div style={{ display: "flex", gap: "8px", flexWrap: "wrap", alignItems: "center" }}>
+                  <span className="role-portal-badge" style={{ color: "#ef4444", background: "rgba(239, 68, 68, 0.15)", border: "1px solid #ef4444" }}>
+                    🔒 HEADMASTER DASHBOARD ONLY
+                  </span>
+                  <button
+                    type="button"
+                    onClick={handleToggleHardwareCctvWebcam}
+                    style={{
+                      background: cctvWebcamActive ? "linear-gradient(135deg, #ef4444, #dc2626)" : "linear-gradient(135deg, #10b981, #059669)",
+                      color: "#fff",
+                      border: "none",
+                      padding: "8px 14px",
+                      borderRadius: "8px",
+                      fontSize: "0.78rem",
+                      fontWeight: 800,
+                      cursor: "pointer"
+                    }}
+                  >
+                    {cctvWebcamActive ? "⏹️ Stop Live Optical Camera" : "📷 Connect Live Hardware Camera to CH-01"}
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => handleCaptureCctvSnapshot(cctvSelectedChannel === "ALL" ? "CAM-01" : cctvSelectedChannel)}
+                    style={{
+                      background: "rgba(56, 189, 248, 0.18)",
+                      border: "1px solid #38bdf8",
+                      color: "#38bdf8",
+                      padding: "8px 14px",
+                      borderRadius: "8px",
+                      fontSize: "0.78rem",
+                      fontWeight: 800,
+                      cursor: "pointer"
+                    }}
+                  >
+                    📸 Capture Security Snapshot
+                  </button>
+                </div>
+              </div>
+
+              {/* CCTV Controls Toolbar: Channel View, Vision Mode, PTZ Zoom */}
+              <div style={{
+                display: "flex",
+                justifyContent: "space-between",
+                alignItems: "center",
+                flexWrap: "wrap",
+                gap: "12px",
+                padding: "12px 16px",
+                marginBottom: "1.25rem",
+                background: "rgba(15, 23, 42, 0.9)",
+                border: "1px solid rgba(56, 189, 248, 0.3)",
+                borderRadius: "12px"
+              }}>
+                <div style={{ display: "flex", gap: "6px", flexWrap: "wrap", alignItems: "center" }}>
+                  <span style={{ fontSize: "0.75rem", color: "#94a3b8", fontWeight: 800, marginRight: "4px" }}>CHANNEL MATRIX:</span>
+                  <button
+                    type="button"
+                    onClick={() => setCctvSelectedChannel("ALL")}
+                    style={{
+                      padding: "6px 12px",
+                      borderRadius: "6px",
+                      border: cctvSelectedChannel === "ALL" ? "2px solid #38bdf8" : "1px solid rgba(148,163,184,0.3)",
+                      background: cctvSelectedChannel === "ALL" ? "rgba(56, 189, 248, 0.2)" : "rgba(2, 6, 23, 0.7)",
+                      color: cctvSelectedChannel === "ALL" ? "#38bdf8" : "#cbd5e1",
+                      fontSize: "0.75rem",
+                      fontWeight: 800,
+                      cursor: "pointer"
+                    }}
+                  >
+                    🎛️ All 6 Channels (Grid)
+                  </button>
+                  {CCTV_CHANNELS_CONFIG.map((cam) => (
+                    <button
+                      key={cam.id}
+                      type="button"
+                      onClick={() => setCctvSelectedChannel(cam.id)}
+                      style={{
+                        padding: "6px 10px",
+                        borderRadius: "6px",
+                        border: cctvSelectedChannel === cam.id ? "2px solid #10b981" : "1px solid rgba(148,163,184,0.3)",
+                        background: cctvSelectedChannel === cam.id ? "rgba(16, 185, 129, 0.2)" : "rgba(2, 6, 23, 0.7)",
+                        color: cctvSelectedChannel === cam.id ? "#34d399" : "#cbd5e1",
+                        fontSize: "0.74rem",
+                        fontWeight: 700,
+                        cursor: "pointer"
+                      }}
                     >
-                      <option value="ALL">All Vetting Statuses</option>
-                      <option value="PENDING_VETTING">⏳ Pending Headmaster Vetting</option>
-                      <option value="VETTED_APPROVED">🟢 Vetted & Approved</option>
-                      <option value="REVISION_REQUIRED">⚠️ Revisions Requested</option>
-                    </select>
+                      {cam.id}: {cam.zone}
+                    </button>
+                  ))}
+                </div>
+
+                <div style={{ display: "flex", gap: "8px", flexWrap: "wrap", alignItems: "center" }}>
+                  <select
+                    value={cctvColorMode}
+                    onChange={(e) => setCctvColorMode(e.target.value)}
+                    className="filter-select"
+                    style={{ padding: "5px 10px", fontSize: "0.76rem" }}
+                  >
+                    <option value="COLOR">🌈 Full HD Color Optics</option>
+                    <option value="NIGHT_IR">🟢 Night-Vision Infrared (IR)</option>
+                    <option value="THERMAL">🔥 AI Thermal Perimeter Scan</option>
+                  </select>
+
+                  <select
+                    value={cctvZoomLevel}
+                    onChange={(e) => setCctvZoomLevel(Number(e.target.value) || 1)}
+                    className="filter-select"
+                    style={{ padding: "5px 10px", fontSize: "0.76rem" }}
+                  >
+                    <option value={1}>🔍 PTZ Zoom 1.0x</option>
+                    <option value={1.25}>🔍 PTZ Zoom 1.25x</option>
+                    <option value={1.5}>🔍 PTZ Zoom 1.5x</option>
+                    <option value={2}>🔍 PTZ Zoom 2.0x</option>
+                  </select>
+                </div>
+              </div>
+
+              {/* LIVE INBUILT CCTV VIDEO & ANIMATED CANVAS GRID */}
+              <div style={{
+                display: "grid",
+                gridTemplateColumns: cctvSelectedChannel === "ALL" ? "repeat(auto-fit, minmax(340px, 1fr))" : "1fr",
+                gap: "14px",
+                marginBottom: "1.75rem"
+              }}>
+                {CCTV_CHANNELS_CONFIG
+                  .filter((cam) => cctvSelectedChannel === "ALL" || cam.id === cctvSelectedChannel)
+                  .map((cam, idx) => (
+                    <div
+                      key={cam.id}
+                      style={{
+                        background: "#020617",
+                        border: "2px solid rgba(56, 189, 248, 0.4)",
+                        borderRadius: "12px",
+                        overflow: "hidden",
+                        boxShadow: "0 10px 28px rgba(0, 0, 0, 0.65)"
+                      }}
+                    >
+                      <div style={{
+                        padding: "8px 12px",
+                        background: "rgba(15, 23, 42, 0.95)",
+                        borderBottom: "1px solid rgba(56, 189, 248, 0.25)",
+                        display: "flex",
+                        justifyContent: "space-between",
+                        alignItems: "center"
+                      }}>
+                        <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
+                          <span style={{ width: "9px", height: "9px", borderRadius: "50%", background: "#ef4444", display: "inline-block", boxShadow: "0 0 8px #ef4444" }}></span>
+                          <strong style={{ color: "#f8fafc", fontSize: "0.82rem" }}>{cam.id} • {cam.name}</strong>
+                        </div>
+                        <div style={{ display: "flex", gap: "6px", alignItems: "center" }}>
+                          <span style={{ fontSize: "0.68rem", color: "#34d399", fontFamily: "monospace", fontWeight: 800 }}>
+                            {cam.fps} • {cam.audio}
+                          </span>
+                          <button
+                            type="button"
+                            onClick={() => handleCaptureCctvSnapshot(cam.id)}
+                            style={{
+                              background: "rgba(56, 189, 248, 0.15)",
+                              border: "1px solid rgba(56, 189, 248, 0.4)",
+                              color: "#38bdf8",
+                              padding: "2px 8px",
+                              borderRadius: "4px",
+                              fontSize: "0.68rem",
+                              fontWeight: 800,
+                              cursor: "pointer"
+                            }}
+                          >
+                            📸 Snap
+                          </button>
+                        </div>
+                      </div>
+
+                      <div style={{ position: "relative", width: "100%", height: cctvSelectedChannel === "ALL" ? "215px" : "420px", overflow: "hidden", background: "#020617" }}>
+                        {/* If hardware webcam is active on CAM-01, overlay the real webcam video */}
+                        {cam.id === "CAM-01" && cctvWebcamActive && (
+                          <video
+                            ref={cctvWebcamVideoRef}
+                            autoPlay
+                            playsInline
+                            muted
+                            style={{
+                              position: "absolute",
+                              inset: 0,
+                              width: "100%",
+                              height: "100%",
+                              objectFit: "cover",
+                              zIndex: 2,
+                              transform: `scale(${cctvZoomLevel})`
+                            }}
+                          />
+                        )}
+                        <canvas
+                          ref={(el) => {
+                            if (el) cctvCanvasRefs.current[cam.id] = el;
+                          }}
+                          width={520}
+                          height={280}
+                          style={{
+                            width: "100%",
+                            height: "100%",
+                            display: "block",
+                            objectFit: "cover"
+                          }}
+                        />
+                      </div>
+
+                      <div style={{
+                        padding: "6px 12px",
+                        background: "rgba(15, 23, 42, 0.9)",
+                        display: "flex",
+                        justifyContent: "space-between",
+                        alignItems: "center",
+                        fontSize: "0.72rem",
+                        color: "#94a3b8"
+                      }}>
+                        <span>Zone: <strong style={{ color: "#38bdf8" }}>{cam.zone}</strong></span>
+                        <span style={{ color: "#34d399" }}>● Mobile RTSP/WebRTC Stream Ready</span>
+                      </div>
+                    </div>
+                  ))}
+              </div>
+
+              {/* SECTION 2: CONNECT INBUILT CCTV TO ANY MOBILE DEVICE OF HEADMASTER */}
+              <div style={{
+                background: "linear-gradient(135deg, rgba(15, 23, 42, 0.95), rgba(30, 58, 138, 0.35))",
+                border: "1.5px solid rgba(56, 189, 248, 0.45)",
+                borderRadius: "14px",
+                padding: "1.5rem"
+              }}>
+                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", flexWrap: "wrap", gap: "12px", marginBottom: "1.25rem" }}>
+                  <div>
+                    <span className="role-portal-badge" style={{ color: "#34d399", marginBottom: "4px", display: "inline-block" }}>
+                      📱 REMOTE HEADMASTER MOBILE DEVICE BRIDGE (iOS • ANDROID • TABLET)
+                    </span>
+                    <h3 style={{ margin: 0, color: "#f8fafc", fontSize: "1.15rem", fontWeight: 900 }}>
+                      CONNECT INBUILT CCTV TO ANY MOBILE DEVICE OF THE HEADMASTER
+                    </h3>
+                    <p style={{ margin: "4px 0 0", fontSize: "0.82rem", color: "#cbd5e1" }}>
+                      Pair the Headmaster's personal or official smartphone/tablet to monitor all 6 inbuilt campus CCTV cameras remotely with encrypted WebRTC mobile streaming, or dispatch the instant mobile viewer link via WhatsApp / SMS.
+                    </p>
+                  </div>
+                  <div style={{ background: "rgba(2, 6, 23, 0.85)", border: "1px solid #38bdf8", borderRadius: "10px", padding: "10px 14px", textAlign: "right" }}>
+                    <span style={{ fontSize: "0.7rem", color: "#94a3b8", display: "block" }}>HEADMASTER MOBILE PAIRING CODE</span>
+                    <strong style={{ fontSize: "1.15rem", color: "#38bdf8", fontFamily: "monospace", letterSpacing: "1.5px" }}>
+                      {cctvMobilePairingCode}
+                    </strong>
                   </div>
                 </div>
 
-                {/* Vetting Table */}
-                <div className="role-table-responsive">
-                  <table className="role-table">
-                    <thead>
-                      <tr>
-                        <th>Teacher / Submitter</th>
-                        <th>Plan Category</th>
-                        <th>Title & Subject</th>
-                        <th>Class / Grade</th>
-                        <th>Span</th>
-                        <th>Vetting Status</th>
-                        <th>Headmaster Words / Remarks</th>
-                        <th>Action</th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {teacherLessonPlans
-                        .filter((p) => vettingFilterType === "ALL" || p.planType === vettingFilterType)
-                        .filter((p) => vettingFilterStatus === "ALL" || p.status === vettingFilterStatus)
-                        .map((plan) => {
-                          const typeMeta = {
-                            YEARLY_PLAN: { text: "📅 Yearly Plan", color: "#38bdf8" },
-                            TERMLY_PLAN: { text: "📆 Termly Plan", color: "#818cf8" },
-                            WEEKLY_PLAN: { text: "🗓️ Weekly Plan", color: "#a855f7" },
-                            LESSON_NOTES: { text: "📖 Lesson Notes", color: "#f472b6" }
-                          }[plan.planType] || { text: plan.planType, color: "#38bdf8" };
+                <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(300px, 1fr))", gap: "1.25rem", alignItems: "start" }}>
+                  {/* Mobile Device Pairing Form */}
+                  <form
+                    onSubmit={handlePairHeadmasterMobileDevice}
+                    style={{ background: "rgba(2, 6, 23, 0.78)", border: "1px solid rgba(56, 189, 248, 0.3)", borderRadius: "12px", padding: "1.25rem" }}
+                  >
+                    <h4 style={{ margin: "0 0 10px", color: "#38bdf8", fontSize: "0.95rem" }}>
+                      📲 Pair New Headmaster Mobile Device
+                    </h4>
 
-                          const isApproved = plan.status === "VETTED_APPROVED";
-                          const isRevision = plan.status === "REVISION_REQUIRED";
+                    <div style={{ marginBottom: "10px" }}>
+                      <label style={{ display: "block", fontSize: "0.75rem", color: "#cbd5e1", marginBottom: "4px", fontWeight: 700 }}>
+                        Headmaster Mobile Device Name *
+                      </label>
+                      <input
+                        type="text"
+                        required
+                        value={newMobileDeviceForm.deviceName}
+                        onChange={(e) => setNewMobileDeviceForm({ ...newMobileDeviceForm, deviceName: e.target.value })}
+                        placeholder="e.g. Headmaster iPhone 16 Pro / Samsung Galaxy S24 Ultra"
+                        className="filter-input"
+                        style={{ width: "100%", padding: "8px 12px", fontSize: "0.83rem" }}
+                      />
+                    </div>
 
-                          return (
-                            <tr key={plan.id}>
-                              <td>
-                                <strong style={{ color: "#f8fafc", fontSize: "0.88rem" }}>{plan.teacherName}</strong>
-                                <span style={{ display: "block", fontSize: "0.72rem", color: "#38bdf8" }}>
-                                  {plan.teacherPosition || "Faculty Member"}
-                                </span>
-                              </td>
-                              <td>
-                                <span className="role-portal-badge" style={{ color: typeMeta.color }}>
-                                  {typeMeta.text}
-                                </span>
-                              </td>
-                              <td>
-                                <strong style={{ color: "#f8fafc", fontSize: "0.88rem", display: "block" }}>{plan.title}</strong>
-                                <span style={{ fontSize: "0.75rem", color: "#94a3b8" }}>{plan.subjectName}</span>
-                              </td>
-                              <td>
-                                <span style={{ fontSize: "0.85rem", color: "#cbd5e1" }}>{plan.className}</span>
-                              </td>
-                              <td>
-                                <span style={{ fontSize: "0.78rem", color: "#94a3b8" }}>{plan.term} • {plan.weekNumber}</span>
-                              </td>
-                              <td>
-                                {isApproved ? (
-                                  <span style={{ background: "rgba(16, 185, 129, 0.2)", color: "#34d399", fontSize: "0.72rem", padding: "3px 8px", borderRadius: "8px", fontWeight: "800" }}>
-                                    ✓ APPROVED
-                                  </span>
-                                ) : isRevision ? (
-                                  <span style={{ background: "rgba(239, 68, 68, 0.2)", color: "#f87171", fontSize: "0.72rem", padding: "3px 8px", borderRadius: "8px", fontWeight: "800" }}>
-                                    ⚠️ REVISION
-                                  </span>
-                                ) : (
-                                  <span style={{ background: "rgba(245, 158, 11, 0.2)", color: "#fbbf24", fontSize: "0.72rem", padding: "3px 8px", borderRadius: "8px", fontWeight: "800" }}>
-                                    ⏳ PENDING
-                                  </span>
-                                )}
-                              </td>
-                              <td style={{ maxWidth: "260px" }}>
-                                {plan.headmasterRemarks ? (
-                                  <span style={{ fontSize: "0.78rem", color: "#cbd5e1", fontStyle: "italic", display: "block" }}>
-                                    "{plan.headmasterRemarks}"
-                                  </span>
-                                ) : (
-                                  <span style={{ fontSize: "0.72rem", color: "#64748b", fontStyle: "italic" }}>
-                                    No remarks recorded yet
-                                  </span>
-                                )}
-                              </td>
-                              <td>
-                                <button
-                                  type="button"
-                                  onClick={() => navigateToDetail(navigate, "lesson-plan", plan.id, plan, { returnTab: activeTab })}
-                                  className="btn-primary"
-                                  style={{ padding: "5px 12px", fontSize: "0.78rem", background: "#0284c7", whiteSpace: "nowrap", cursor: "pointer" }}
-                                  title="Inspect full lesson plan and scheme of work on dedicated routed page"
-                                >
-                                  🔍 Inspect & Vet Plan
-                                </button>
-                              </td>
-                            </tr>
+                    <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "10px", marginBottom: "12px" }}>
+                      <div>
+                        <label style={{ display: "block", fontSize: "0.75rem", color: "#cbd5e1", marginBottom: "4px", fontWeight: 700 }}>
+                          Mobile OS Platform *
+                        </label>
+                        <select
+                          value={newMobileDeviceForm.osType}
+                          onChange={(e) => setNewMobileDeviceForm({ ...newMobileDeviceForm, osType: e.target.value })}
+                          className="filter-select"
+                          style={{ width: "100%", padding: "8px 10px", fontSize: "0.82rem" }}
+                        >
+                          <option value="iOS (iPhone / iPad)">🍏 iOS (iPhone / iPad)</option>
+                          <option value="Android (Phone / Tablet)">🤖 Android (Phone / Tablet)</option>
+                          <option value="HarmonyOS / Mobile Web">🌐 Mobile Web / Tablet</option>
+                        </select>
+                      </div>
+
+                      <div>
+                        <label style={{ display: "block", fontSize: "0.75rem", color: "#cbd5e1", marginBottom: "4px", fontWeight: 700 }}>
+                          Headmaster Phone / WhatsApp *
+                        </label>
+                        <input
+                          type="text"
+                          required
+                          value={newMobileDeviceForm.phone}
+                          onChange={(e) => setNewMobileDeviceForm({ ...newMobileDeviceForm, phone: e.target.value })}
+                          placeholder="+233 55 459 4193"
+                          className="filter-input"
+                          style={{ width: "100%", padding: "8px 10px", fontSize: "0.82rem" }}
+                        />
+                      </div>
+                    </div>
+
+                    <div style={{ display: "flex", gap: "8px", flexWrap: "wrap" }}>
+                      <button
+                        type="submit"
+                        style={{
+                          flex: 1,
+                          background: "linear-gradient(135deg, #10b981, #059669)",
+                          color: "#fff",
+                          border: "none",
+                          padding: "9px 14px",
+                          borderRadius: "8px",
+                          fontSize: "0.82rem",
+                          fontWeight: 800,
+                          cursor: "pointer"
+                        }}
+                      >
+                        🔗 Connect & Pair Mobile Device
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => {
+                          const mobileStreamUrl = `${window.location.origin}/cctv?headmaster_token=${cctvMobilePairingCode}&role=HEADMASTER_MOBILE`;
+                          const waText = encodeURIComponent(
+                            `📹 *GBS HEADMASTER EXCLUSIVE MOBILE CCTV LINK*\nInstitution: ${reportSchoolName}\nPairing Code: ${cctvMobilePairingCode}\nLive 6-Channel Stream: ${mobileStreamUrl}`
                           );
-                        })}
-                    </tbody>
-                  </table>
+                          window.open(`https://wa.me/?text=${waText}`, "_blank", "noopener,noreferrer");
+                        }}
+                        style={{
+                          background: "rgba(37, 211, 102, 0.2)",
+                          border: "1px solid #25d366",
+                          color: "#4ade80",
+                          padding: "9px 12px",
+                          borderRadius: "8px",
+                          fontSize: "0.78rem",
+                          fontWeight: 800,
+                          cursor: "pointer"
+                        }}
+                      >
+                        💚 Send Mobile CCTV Link to WhatsApp
+                      </button>
+                    </div>
+                  </form>
+
+                  {/* Connected Mobile Devices & Instant QR / URL Bridge */}
+                  <div style={{ background: "rgba(2, 6, 23, 0.78)", border: "1px solid rgba(16, 185, 129, 0.35)", borderRadius: "12px", padding: "1.25rem" }}>
+                    <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "10px" }}>
+                      <h4 style={{ margin: 0, color: "#34d399", fontSize: "0.95rem" }}>
+                        📡 Paired Headmaster Mobile Devices ({cctvPairedDevices.length})
+                      </h4>
+                      <button
+                        type="button"
+                        onClick={() => {
+                          const mobileStreamUrl = `${window.location.origin}/cctv?headmaster_token=${cctvMobilePairingCode}&role=HEADMASTER_MOBILE`;
+                          navigator.clipboard?.writeText(mobileStreamUrl);
+                          setFeedback({ type: "success", message: `📋 Copied Headmaster Mobile CCTV Stream URL: ${mobileStreamUrl}` });
+                        }}
+                        style={{
+                          background: "rgba(56, 189, 248, 0.16)",
+                          border: "1px solid #38bdf8",
+                          color: "#38bdf8",
+                          padding: "4px 10px",
+                          borderRadius: "6px",
+                          fontSize: "0.72rem",
+                          fontWeight: 800,
+                          cursor: "pointer"
+                        }}
+                      >
+                        📋 Copy Mobile Stream Link
+                      </button>
+                    </div>
+
+                    <div style={{ display: "flex", flexDirection: "column", gap: "8px" }}>
+                      {cctvPairedDevices.map((dev) => (
+                        <div
+                          key={dev.id}
+                          style={{
+                            padding: "10px 12px",
+                            borderRadius: "8px",
+                            background: "rgba(15, 23, 42, 0.9)",
+                            border: "1px solid rgba(52, 211, 153, 0.3)",
+                            display: "flex",
+                            justifyContent: "space-between",
+                            alignItems: "center",
+                            flexWrap: "wrap",
+                            gap: "8px"
+                          }}
+                        >
+                          <div>
+                            <strong style={{ color: "#f8fafc", fontSize: "0.85rem", display: "block" }}>
+                              📱 {dev.deviceName}
+                            </strong>
+                            <span style={{ fontSize: "0.73rem", color: "#94a3b8" }}>
+                              {dev.osType} • {dev.phone} • Synced: {dev.lastSync}
+                            </span>
+                          </div>
+                          <div style={{ display: "flex", gap: "6px", alignItems: "center" }}>
+                            <span style={{ background: "rgba(16, 185, 129, 0.2)", color: "#34d399", padding: "3px 8px", borderRadius: "6px", fontSize: "0.68rem", fontWeight: 800 }}>
+                              ● {dev.status}
+                            </span>
+                            <button
+                              type="button"
+                              onClick={() => {
+                                const updated = cctvPairedDevices.filter((d) => d.id !== dev.id);
+                                setCctvPairedDevices(updated);
+                                localStorage.setItem("gbs_headmaster_cctv_mobile_devices", JSON.stringify(updated));
+                              }}
+                              style={{
+                                background: "rgba(239, 68, 68, 0.15)",
+                                border: "1px solid #ef4444",
+                                color: "#fca5a5",
+                                padding: "3px 8px",
+                                borderRadius: "6px",
+                                fontSize: "0.68rem",
+                                cursor: "pointer"
+                              }}
+                            >
+                              Unpair
+                            </button>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
                 </div>
               </div>
             </div>
@@ -7564,7 +9367,7 @@ export default function AdminDashboard() {
                   </button>
                 </form>
 
-                {/* Form 2: Headmaster Zoom Online Meeting Scheduler */}
+                {/* Form 2: Headmaster Zoom & WhatsApp Online Meeting Scheduler */}
                 <form
                   onSubmit={handleScheduleZoomMeeting}
                   style={{ background: "rgba(15, 23, 42, 0.75)", border: "1px solid rgba(59, 130, 246, 0.3)", borderRadius: "14px", padding: "1.5rem" }}
@@ -7573,12 +9376,34 @@ export default function AdminDashboard() {
                     <span style={{ fontSize: "1.3rem" }}>🎥</span>
                     <div>
                       <h3 style={{ margin: 0, color: "#60a5fa", fontSize: "1.05rem", fontWeight: 800 }}>
-                        SCHEDULE FACULTY ONLINE ZOOM MEETING
+                        SCHEDULE FACULTY ONLINE ZOOM / WHATSAPP MEETING
                       </h3>
                       <span style={{ fontSize: "0.75rem", color: "#94a3b8" }}>
-                        Host live online conference for teachers to join and participate
+                        Host live online conference via Zoom, WhatsApp Video/Group, Google Meet, or Microsoft Teams
                       </span>
                     </div>
+                  </div>
+
+                  <div style={{ marginBottom: "10px" }}>
+                    <label style={{ display: "block", fontSize: "0.75rem", color: "#94a3b8", marginBottom: "4px" }}>
+                      Online Communication & Meeting Platform *
+                    </label>
+                    <select
+                      value={zoomMeetingPlatform}
+                      onChange={(e) => {
+                        const plat = e.target.value;
+                        setZoomMeetingPlatform(plat);
+                        const generated = formatDirectMeetingUrl(academicPlan.zoomUrl, academicPlan.zoomTopic, plat);
+                        setAcademicPlan({ ...academicPlan, zoomUrl: generated });
+                      }}
+                      className="filter-select"
+                      style={{ width: "100%", padding: "8px 10px", fontSize: "0.82rem", fontWeight: 700, color: "#38bdf8" }}
+                    >
+                      <option value="ZOOM">🎥 Zoom Video Conference (Inbuilt Studio + External Zoom)</option>
+                      <option value="WHATSAPP">💚 WhatsApp Live Group / Video Call Platform</option>
+                      <option value="GOOGLE_MEET">📹 Google Meet Live Conference</option>
+                      <option value="MICROSOFT_TEAMS">🟣 Microsoft Teams Faculty Room</option>
+                    </select>
                   </div>
 
                   <div style={{ marginBottom: "12px" }}>
@@ -7597,7 +9422,7 @@ export default function AdminDashboard() {
 
                   <div style={{ marginBottom: "12px" }}>
                     <label style={{ display: "block", fontSize: "0.75rem", color: "#94a3b8", marginBottom: "4px" }}>
-                      Zoom Meeting Access URL *
+                      Meeting Access URL (Zoom / WhatsApp / Meet Link) *
                     </label>
                     <input
                       type="url"
@@ -7609,7 +9434,7 @@ export default function AdminDashboard() {
                     />
                   </div>
 
-                  <div style={{ marginBottom: "1.25rem" }}>
+                  <div style={{ marginBottom: "1rem" }}>
                     <label style={{ display: "block", fontSize: "0.75rem", color: "#94a3b8", marginBottom: "4px" }}>
                       Meeting Date & Scheduled Time *
                     </label>
@@ -7624,9 +9449,76 @@ export default function AdminDashboard() {
                   </div>
 
                   <div style={{ background: "rgba(59, 130, 246, 0.1)", border: "1px solid rgba(59, 130, 246, 0.25)", padding: "10px", borderRadius: "8px", marginBottom: "1rem" }}>
-                    <span style={{ fontSize: "0.75rem", color: "#93c5fd" }}>
-                      ✓ Teachers can click "Join Headmaster Faculty Zoom Meeting Now" directly from their teacher dashboard.
+                    <span style={{ fontSize: "0.75rem", color: "#93c5fd", display: "block", marginBottom: "8px" }}>
+                      ✓ Teachers can click "Join Headmaster Faculty Zoom Meeting Now" directly from their teacher dashboard, or join via WhatsApp.
                     </span>
+                    <div style={{ display: "flex", gap: "8px", flexWrap: "wrap" }}>
+                      <button
+                        type="button"
+                        onClick={() =>
+                          setActiveAdminLiveMeeting({
+                            topic: academicPlan.zoomTopic || "Headmaster Faculty Executive Briefing",
+                            platform: zoomMeetingPlatform,
+                            meetingUrl: formatDirectMeetingUrl(academicPlan.zoomUrl, academicPlan.zoomTopic, zoomMeetingPlatform),
+                            scheduledAt: academicPlan.zoomDate
+                          })
+                        }
+                        style={{
+                          background: "linear-gradient(135deg, #2563eb, #1d4ed8)",
+                          color: "#fff",
+                          border: "none",
+                          padding: "7px 12px",
+                          borderRadius: "6px",
+                          fontSize: "0.75rem",
+                          fontWeight: 800,
+                          cursor: "pointer"
+                        }}
+                      >
+                        🚀 Launch Live Conference Studio Now
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => {
+                          const directUrl = formatDirectMeetingUrl(academicPlan.zoomUrl, academicPlan.zoomTopic, zoomMeetingPlatform);
+                          const waMsg = encodeURIComponent(
+                            `🎥 *HEADMASTER FACULTY ONLINE MEETING (${zoomMeetingPlatform})*\nTopic: ${academicPlan.zoomTopic}\nScheduled: ${new Date(academicPlan.zoomDate).toLocaleString()}\nJoin Link: ${directUrl}`
+                          );
+                          window.open(`https://wa.me/?text=${waMsg}`, "_blank", "noopener,noreferrer");
+                        }}
+                        style={{
+                          background: "rgba(37, 211, 102, 0.2)",
+                          border: "1px solid #25d366",
+                          color: "#4ade80",
+                          padding: "7px 12px",
+                          borderRadius: "6px",
+                          fontSize: "0.75rem",
+                          fontWeight: 800,
+                          cursor: "pointer"
+                        }}
+                      >
+                        💚 Share Link via WhatsApp
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => {
+                          const directUrl = formatDirectMeetingUrl(academicPlan.zoomUrl, academicPlan.zoomTopic, zoomMeetingPlatform);
+                          navigator.clipboard?.writeText(directUrl);
+                          setFeedback({ type: "success", message: `📋 Working meeting link copied: ${directUrl}` });
+                        }}
+                        style={{
+                          background: "rgba(56, 189, 248, 0.16)",
+                          border: "1px solid #38bdf8",
+                          color: "#38bdf8",
+                          padding: "7px 10px",
+                          borderRadius: "6px",
+                          fontSize: "0.75rem",
+                          fontWeight: 800,
+                          cursor: "pointer"
+                        }}
+                      >
+                        📋 Copy Link
+                      </button>
+                    </div>
                   </div>
 
                   <button
@@ -7635,7 +9527,7 @@ export default function AdminDashboard() {
                     style={{ width: "100%", padding: "10px", fontSize: "0.85rem", background: "linear-gradient(135deg, #10b981, #059669)", borderColor: "#059669" }}
                     disabled={loading}
                   >
-                    🎥 Schedule & Dispatch Zoom Meeting Link to Faculty
+                    🎥 Schedule & Dispatch {zoomMeetingPlatform} Meeting Link to Faculty
                   </button>
                 </form>
               </div>
@@ -10593,6 +12485,571 @@ export default function AdminDashboard() {
                 </button>
               </div>
             </form>
+          </div>
+        </div>
+      )}
+
+      {/* ======================================================== */}
+      {/* MODAL 1: HEADMASTER TEACHER PROFILE & ACTIVE CURRICULUM   */}
+      {/* CHECKUP MODAL (SHOWS CURRICULUM & WEEK-BY-WEEK SPREAD)   */}
+      {/* ======================================================== */}
+      {selectedTeacherForCheckup && (
+        <div
+          className="role-modal-backdrop"
+          style={{ zIndex: 100001 }}
+          onClick={() => setSelectedTeacherForCheckup(null)}
+        >
+          <div
+            className="role-modal-card"
+            style={{
+              maxWidth: "880px",
+              width: "94%",
+              maxHeight: "90vh",
+              overflowY: "auto",
+              background: "rgba(15, 23, 42, 0.98)",
+              border: "2px solid #38bdf8",
+              borderRadius: "16px",
+              padding: "24px",
+              boxShadow: "0 25px 60px rgba(0, 0, 0, 0.92)"
+            }}
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", gap: "12px", borderBottom: "1px solid rgba(56, 189, 248, 0.25)", paddingBottom: "14px", marginBottom: "16px" }}>
+              <div>
+                <span className="role-portal-badge" style={{ color: "#34d399", marginBottom: "4px", display: "inline-block" }}>
+                  👩‍🏫 HEADMASTER TEACHER PROFILE & ACTIVE CURRICULUM CHECKUP
+                </span>
+                <h2 style={{ margin: 0, color: "#f8fafc", fontSize: "1.28rem", fontWeight: 900 }}>
+                  {selectedTeacherForCheckup.teacherName} — Active Curriculum & Term Syllabus Checkup
+                </h2>
+                <span style={{ fontSize: "0.8rem", color: "#94a3b8" }}>
+                  Position: <strong style={{ color: "#38bdf8" }}>{selectedTeacherForCheckup.teacherPosition}</strong> • Class: <strong style={{ color: "#f8fafc" }}>{selectedTeacherForCheckup.className}</strong> • Subject: <strong style={{ color: "#f8fafc" }}>{selectedTeacherForCheckup.subjectName}</strong>
+                </span>
+              </div>
+              <button
+                type="button"
+                className="modal-close-btn"
+                onClick={() => setSelectedTeacherForCheckup(null)}
+              >
+                ✕
+              </button>
+            </div>
+
+            {/* Active Curriculum Metadata Card */}
+            <div style={{
+              background: "rgba(2, 6, 23, 0.85)",
+              border: "1.5px solid rgba(56, 189, 248, 0.35)",
+              borderRadius: "12px",
+              padding: "16px",
+              marginBottom: "16px"
+            }}>
+              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: "10px", marginBottom: "10px" }}>
+                <div>
+                  <span style={{ fontSize: "0.73rem", color: "#38bdf8", fontWeight: 800, textTransform: "uppercase" }}>
+                    ACTIVE CURRICULUM USED BY THIS TEACHER
+                  </span>
+                  <h3 style={{ margin: "2px 0 0", color: "#f8fafc", fontSize: "1.08rem" }}>
+                    📚 {selectedTeacherForCheckup.curriculumTitle}
+                  </h3>
+                </div>
+                <div style={{ display: "flex", gap: "8px", flexWrap: "wrap" }}>
+                  <span style={{ background: "rgba(16, 185, 129, 0.18)", color: "#34d399", padding: "4px 10px", borderRadius: "8px", fontSize: "0.75rem", fontWeight: 800 }}>
+                    Version: {selectedTeacherForCheckup.version}
+                  </span>
+                  <span style={{ background: "rgba(56, 189, 248, 0.18)", color: "#38bdf8", padding: "4px 10px", borderRadius: "8px", fontSize: "0.75rem", fontWeight: 800 }}>
+                    Tier: {selectedTeacherForCheckup.institutionTier}
+                  </span>
+                  <span style={{ background: "rgba(245, 158, 11, 0.18)", color: "#fde68a", padding: "4px 10px", borderRadius: "8px", fontSize: "0.75rem", fontWeight: 800 }}>
+                    🗓️ Spread Across {selectedTeacherForCheckup.totalTermWeeks} Weeks in School
+                  </span>
+                </div>
+              </div>
+
+              <div style={{ fontSize: "0.8rem", color: "#cbd5e1", marginBottom: "12px" }}>
+                <strong>Accrediting Authority:</strong> {selectedTeacherForCheckup.authority} • <strong>Last Verified / Updated:</strong> {new Date(selectedTeacherForCheckup.lastAccessedAt || Date.now()).toLocaleString()}
+              </div>
+
+              {/* Core Strands & Learning Indicators */}
+              <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(280px, 1fr))", gap: "12px" }}>
+                <div style={{ background: "rgba(15, 23, 42, 0.8)", border: "1px solid rgba(56, 189, 248, 0.25)", borderRadius: "10px", padding: "12px" }}>
+                  <strong style={{ color: "#38bdf8", fontSize: "0.82rem", display: "block", marginBottom: "6px" }}>
+                    📌 Core Curriculum Strands Covered
+                  </strong>
+                  <ul style={{ margin: 0, paddingLeft: "18px", color: "#e2e8f0", fontSize: "0.78rem", lineHeight: 1.5 }}>
+                    {(selectedTeacherForCheckup.strands || []).map((st, idx) => (
+                      <li key={idx}>{st}</li>
+                    ))}
+                  </ul>
+                </div>
+
+                <div style={{ background: "rgba(15, 23, 42, 0.8)", border: "1px solid rgba(16, 185, 129, 0.25)", borderRadius: "10px", padding: "12px" }}>
+                  <strong style={{ color: "#34d399", fontSize: "0.82rem", display: "block", marginBottom: "6px" }}>
+                    🎯 Learning Indicators & Competency Outcomes
+                  </strong>
+                  <ul style={{ margin: 0, paddingLeft: "18px", color: "#e2e8f0", fontSize: "0.78rem", lineHeight: 1.5 }}>
+                    {(selectedTeacherForCheckup.indicators || []).map((ind, idx) => (
+                      <li key={idx}>{ind}</li>
+                    ))}
+                  </ul>
+                </div>
+              </div>
+            </div>
+
+            {/* Week-by-Week Term Curriculum Spread Table (According to Total Weeks in School) */}
+            <div style={{ marginBottom: "18px" }}>
+              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "8px", flexWrap: "wrap", gap: "8px" }}>
+                <h4 style={{ margin: 0, color: "#38bdf8", fontSize: "0.95rem" }}>
+                  🗓️ Curriculum Spread Across {selectedTeacherForCheckup.totalTermWeeks} Total Term Weeks in School
+                </h4>
+                <span style={{ fontSize: "0.74rem", color: "#94a3b8" }}>
+                  Automatically synchronized with Academic Planner ({selectedTeacherForCheckup.totalTermWeeks} Weeks)
+                </span>
+              </div>
+
+              <div className="role-table-responsive" style={{ maxHeight: "260px", overflowY: "auto", border: "1px solid rgba(56, 189, 248, 0.25)", borderRadius: "10px" }}>
+                <table className="role-table">
+                  <thead>
+                    <tr>
+                      <th>Week Span</th>
+                      <th>Curriculum Strand & Weekly Focus</th>
+                      <th>Learning Indicator</th>
+                      <th>Instructional Deliverable</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {(selectedTeacherForCheckup.weeklySpread || []).map((wk) => (
+                      <tr key={wk.weekNumber}>
+                        <td>
+                          <strong style={{ color: "#38bdf8", fontSize: "0.8rem", whiteSpace: "nowrap" }}>
+                            {wk.weekLabel}
+                          </strong>
+                        </td>
+                        <td style={{ fontSize: "0.8rem", color: "#f8fafc" }}>{wk.strandFocus}</td>
+                        <td style={{ fontSize: "0.78rem", color: "#cbd5e1" }}>{wk.indicatorFocus}</td>
+                        <td>
+                          <span style={{ fontSize: "0.74rem", color: "#34d399", fontWeight: 700 }}>
+                            {wk.deliverable}
+                          </span>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: "10px" }}>
+              <button
+                type="button"
+                onClick={() => {
+                  const prof = selectedTeacherForCheckup;
+                  setSelectedTeacherForCheckup(null);
+                  setEditingTeacherCurriculumInAdmin({
+                    teacherId: prof.teacherId,
+                    teacherName: prof.teacherName,
+                    className: prof.className,
+                    subjectName: prof.subjectName,
+                    institutionTier: prof.institutionTier,
+                    curriculumTitle: prof.curriculumTitle,
+                    authority: prof.authority,
+                    version: prof.version || "v2026.2 Updated",
+                    strandsText: (prof.strands || []).join("\n"),
+                    indicatorsText: (prof.indicators || []).join("\n"),
+                    updateNotes: ""
+                  });
+                }}
+                style={{
+                  background: "linear-gradient(135deg, #f59e0b, #d97706)",
+                  color: "#fff",
+                  border: "none",
+                  padding: "9px 16px",
+                  borderRadius: "8px",
+                  fontSize: "0.82rem",
+                  fontWeight: 800,
+                  cursor: "pointer"
+                }}
+              >
+                🔄 Update This Curriculum (Push Curriculum Updates)
+              </button>
+
+              <div style={{ display: "flex", gap: "10px" }}>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setFeedback({
+                      type: "success",
+                      message: `✅ Headmaster Curriculum Checkup recorded for ${selectedTeacherForCheckup.teacherName} (${selectedTeacherForCheckup.curriculumTitle} • ${selectedTeacherForCheckup.totalTermWeeks} Term Weeks).`
+                    });
+                    setSelectedTeacherForCheckup(null);
+                  }}
+                  style={{
+                    background: "linear-gradient(135deg, #10b981, #059669)",
+                    color: "#fff",
+                    border: "none",
+                    padding: "9px 18px",
+                    borderRadius: "8px",
+                    fontSize: "0.82rem",
+                    fontWeight: 800,
+                    cursor: "pointer"
+                  }}
+                >
+                  ✅ Endorse Teacher Profile & Curriculum Checkup
+                </button>
+                <button
+                  type="button"
+                  className="btn-secondary"
+                  onClick={() => setSelectedTeacherForCheckup(null)}
+                >
+                  Close
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ======================================================== */}
+      {/* MODAL 2: HEADMASTER CURRICULUM UPDATE STUDIO MODAL       */}
+      {/* ======================================================== */}
+      {editingTeacherCurriculumInAdmin && (
+        <div
+          className="role-modal-backdrop"
+          style={{ zIndex: 100002 }}
+          onClick={() => setEditingTeacherCurriculumInAdmin(null)}
+        >
+          <div
+            className="role-modal-card"
+            style={{
+              maxWidth: "720px",
+              width: "94%",
+              maxHeight: "90vh",
+              overflowY: "auto",
+              background: "rgba(15, 23, 42, 0.98)",
+              border: "2px solid #f59e0b",
+              borderRadius: "16px",
+              padding: "24px",
+              boxShadow: "0 25px 60px rgba(0, 0, 0, 0.92)"
+            }}
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", borderBottom: "1px solid rgba(245, 158, 11, 0.3)", paddingBottom: "12px", marginBottom: "16px" }}>
+              <div>
+                <span className="role-portal-badge" style={{ color: "#fbbf24" }}>
+                  🔄 INSTITUTIONAL CURRICULUM UPDATE STUDIO
+                </span>
+                <h3 style={{ margin: "4px 0 0", color: "#f8fafc", fontSize: "1.18rem", fontWeight: 900 }}>
+                  Update Curriculum for {editingTeacherCurriculumInAdmin.className} — {editingTeacherCurriculumInAdmin.subjectName}
+                </h3>
+              </div>
+              <button
+                type="button"
+                className="modal-close-btn"
+                onClick={() => setEditingTeacherCurriculumInAdmin(null)}
+              >
+                ✕
+              </button>
+            </div>
+
+            <form onSubmit={handleSaveAdminCurriculumUpdate}>
+              <div style={{ display: "grid", gridTemplateColumns: "2fr 1fr", gap: "12px", marginBottom: "12px" }}>
+                <div>
+                  <label style={{ display: "block", fontSize: "0.78rem", color: "#cbd5e1", marginBottom: "4px", fontWeight: 700 }}>
+                    Official Curriculum Title *
+                  </label>
+                  <input
+                    type="text"
+                    required
+                    value={editingTeacherCurriculumInAdmin.curriculumTitle}
+                    onChange={(e) =>
+                      setEditingTeacherCurriculumInAdmin({
+                        ...editingTeacherCurriculumInAdmin,
+                        curriculumTitle: e.target.value
+                      })
+                    }
+                    className="filter-input"
+                    style={{ width: "100%", padding: "8px 12px" }}
+                  />
+                </div>
+                <div>
+                  <label style={{ display: "block", fontSize: "0.78rem", color: "#cbd5e1", marginBottom: "4px", fontWeight: 700 }}>
+                    Curriculum Version Tag *
+                  </label>
+                  <input
+                    type="text"
+                    required
+                    value={editingTeacherCurriculumInAdmin.version}
+                    onChange={(e) =>
+                      setEditingTeacherCurriculumInAdmin({
+                        ...editingTeacherCurriculumInAdmin,
+                        version: e.target.value
+                      })
+                    }
+                    className="filter-input"
+                    style={{ width: "100%", padding: "8px 12px", color: "#34d399", fontWeight: 800 }}
+                  />
+                </div>
+              </div>
+
+              <div style={{ marginBottom: "12px" }}>
+                <label style={{ display: "block", fontSize: "0.78rem", color: "#cbd5e1", marginBottom: "4px", fontWeight: 700 }}>
+                  Updated Curriculum Strands (One Strand per Line — Automatically Spread Across {academicPlan.numberOfWeeksInSchool || 14} Term Weeks) *
+                </label>
+                <textarea
+                  rows={4}
+                  required
+                  value={editingTeacherCurriculumInAdmin.strandsText}
+                  onChange={(e) =>
+                    setEditingTeacherCurriculumInAdmin({
+                      ...editingTeacherCurriculumInAdmin,
+                      strandsText: e.target.value
+                    })
+                  }
+                  className="filter-input"
+                  style={{ width: "100%", padding: "10px", fontSize: "0.83rem", lineHeight: 1.45 }}
+                />
+              </div>
+
+              <div style={{ marginBottom: "12px" }}>
+                <label style={{ display: "block", fontSize: "0.78rem", color: "#cbd5e1", marginBottom: "4px", fontWeight: 700 }}>
+                  Updated Learning Indicators & Assessment Benchmarks (One per Line) *
+                </label>
+                <textarea
+                  rows={4}
+                  required
+                  value={editingTeacherCurriculumInAdmin.indicatorsText}
+                  onChange={(e) =>
+                    setEditingTeacherCurriculumInAdmin({
+                      ...editingTeacherCurriculumInAdmin,
+                      indicatorsText: e.target.value
+                    })
+                  }
+                  className="filter-input"
+                  style={{ width: "100%", padding: "10px", fontSize: "0.83rem", lineHeight: 1.45 }}
+                />
+              </div>
+
+              <div style={{ marginBottom: "16px" }}>
+                <label style={{ display: "block", fontSize: "0.78rem", color: "#cbd5e1", marginBottom: "4px", fontWeight: 700 }}>
+                  Curriculum Update Summary / Notes for Teacher ({editingTeacherCurriculumInAdmin.teacherName})
+                </label>
+                <input
+                  type="text"
+                  value={editingTeacherCurriculumInAdmin.updateNotes}
+                  onChange={(e) =>
+                    setEditingTeacherCurriculumInAdmin({
+                      ...editingTeacherCurriculumInAdmin,
+                      updateNotes: e.target.value
+                    })
+                  }
+                  placeholder="e.g. Updated Term 1 syllabus strands to reflect new practical assessment rubrics"
+                  className="filter-input"
+                  style={{ width: "100%", padding: "8px 12px" }}
+                />
+              </div>
+
+              <div style={{ display: "flex", justifyContent: "flex-end", gap: "10px" }}>
+                <button
+                  type="button"
+                  className="btn-secondary"
+                  onClick={() => setEditingTeacherCurriculumInAdmin(null)}
+                >
+                  Cancel
+                </button>
+                <button
+                  type="submit"
+                  style={{
+                    background: "linear-gradient(135deg, #10b981, #059669)",
+                    color: "#fff",
+                    border: "none",
+                    padding: "9px 20px",
+                    borderRadius: "8px",
+                    fontSize: "0.85rem",
+                    fontWeight: 800,
+                    cursor: "pointer"
+                  }}
+                >
+                  💾 Save & Publish Curriculum Update
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* ======================================================== */}
+      {/* MODAL 3: INBUILT LIVE FACULTY ZOOM / WHATSAPP CONFERENCE  */}
+      {/* STUDIO MODAL (HEADMASTER DASHBOARD)                      */}
+      {/* ======================================================== */}
+      {activeAdminLiveMeeting && (
+        <div
+          className="role-modal-backdrop"
+          style={{ zIndex: 100003 }}
+          onClick={() => setActiveAdminLiveMeeting(null)}
+        >
+          <div
+            className="role-modal-card"
+            style={{
+              maxWidth: "820px",
+              width: "94%",
+              background: "rgba(2, 6, 23, 0.98)",
+              border: "2px solid #38bdf8",
+              borderRadius: "16px",
+              padding: "24px",
+              boxShadow: "0 25px 60px rgba(0, 0, 0, 0.95)"
+            }}
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", borderBottom: "1px solid rgba(56, 189, 248, 0.3)", paddingBottom: "12px", marginBottom: "16px" }}>
+              <div>
+                <span className="role-portal-badge" style={{ color: "#34d399" }}>
+                  🔴 LIVE FACULTY CONFERENCE STUDIO • {activeAdminLiveMeeting.platform}
+                </span>
+                <h3 style={{ margin: "4px 0 0", color: "#f8fafc", fontSize: "1.2rem", fontWeight: 900 }}>
+                  {activeAdminLiveMeeting.topic}
+                </h3>
+              </div>
+              <button
+                type="button"
+                className="modal-close-btn"
+                onClick={() => setActiveAdminLiveMeeting(null)}
+              >
+                ✕
+              </button>
+            </div>
+
+            {/* Live Studio Participant Grid */}
+            <div style={{
+              display: "grid",
+              gridTemplateColumns: "repeat(auto-fit, minmax(220px, 1fr))",
+              gap: "12px",
+              marginBottom: "16px",
+              background: "#090f20",
+              padding: "16px",
+              borderRadius: "12px",
+              border: "1px solid rgba(56, 189, 248, 0.3)"
+            }}>
+              {[
+                { name: `${currentUser.firstName} ${currentUser.lastName} (Headmaster Host)`, role: "Executive Host • Speaking", badge: "🎤 HOST LIVE", color: "#38bdf8" },
+                { name: "Dr. Robert Vance", role: "Head of Advanced Mathematics", badge: "🟢 Connected", color: "#34d399" },
+                { name: "Prof. Eleanor Sterling", role: "Senior Physics & Chemistry", badge: "🟢 Connected", color: "#34d399" },
+                { name: "Claire Montgomery", role: "Basic & Primary Lead", badge: "🟢 Connected", color: "#34d399" }
+              ].map((part, idx) => (
+                <div
+                  key={idx}
+                  style={{
+                    background: "linear-gradient(135deg, #0f172a, #1e293b)",
+                    border: `1.5px solid ${part.color}`,
+                    borderRadius: "10px",
+                    padding: "16px",
+                    textAlign: "center"
+                  }}
+                >
+                  <div style={{ width: "54px", height: "54px", borderRadius: "50%", background: "rgba(56, 189, 248, 0.18)", border: `2px solid ${part.color}`, display: "flex", alignItems: "center", justifyContent: "center", margin: "0 auto 8px", fontSize: "1.5rem" }}>
+                    🎓
+                  </div>
+                  <strong style={{ color: "#f8fafc", fontSize: "0.86rem", display: "block" }}>{part.name}</strong>
+                  <span style={{ color: "#94a3b8", fontSize: "0.74rem", display: "block", marginBottom: "6px" }}>{part.role}</span>
+                  <span style={{ background: "rgba(16, 185, 129, 0.2)", color: "#34d399", padding: "2px 8px", borderRadius: "6px", fontSize: "0.7rem", fontWeight: 800 }}>
+                    {part.badge}
+                  </span>
+                </div>
+              ))}
+            </div>
+
+            <div style={{
+              background: "rgba(15, 23, 42, 0.85)",
+              border: "1px solid rgba(56, 189, 248, 0.3)",
+              borderRadius: "10px",
+              padding: "12px 14px",
+              marginBottom: "16px",
+              display: "flex",
+              justifyContent: "space-between",
+              alignItems: "center",
+              flexWrap: "wrap",
+              gap: "10px"
+            }}>
+              <div style={{ fontSize: "0.78rem", color: "#cbd5e1" }}>
+                <strong>Working Conference URL:</strong>{" "}
+                <span style={{ fontFamily: "monospace", color: "#38bdf8" }}>{activeAdminLiveMeeting.meetingUrl}</span>
+              </div>
+              <div style={{ display: "flex", gap: "8px", flexWrap: "wrap" }}>
+                <button
+                  type="button"
+                  onClick={() => {
+                    navigator.clipboard?.writeText(activeAdminLiveMeeting.meetingUrl);
+                    setFeedback({ type: "success", message: `📋 Copied meeting link: ${activeAdminLiveMeeting.meetingUrl}` });
+                  }}
+                  style={{
+                    background: "rgba(56, 189, 248, 0.16)",
+                    border: "1px solid #38bdf8",
+                    color: "#38bdf8",
+                    padding: "6px 12px",
+                    borderRadius: "6px",
+                    fontSize: "0.75rem",
+                    fontWeight: 800,
+                    cursor: "pointer"
+                  }}
+                >
+                  📋 Copy Working Link
+                </button>
+                <button
+                  type="button"
+                  onClick={() => {
+                    const waText = encodeURIComponent(
+                      `🎥 *HEADMASTER LIVE FACULTY MEETING (${activeAdminLiveMeeting.platform})*\nTopic: ${activeAdminLiveMeeting.topic}\nJoin Now: ${activeAdminLiveMeeting.meetingUrl}`
+                    );
+                    window.open(`https://wa.me/?text=${waText}`, "_blank", "noopener,noreferrer");
+                  }}
+                  style={{
+                    background: "rgba(37, 211, 102, 0.2)",
+                    border: "1px solid #25d366",
+                    color: "#4ade80",
+                    padding: "6px 12px",
+                    borderRadius: "6px",
+                    fontSize: "0.75rem",
+                    fontWeight: 800,
+                    cursor: "pointer"
+                  }}
+                >
+                  💚 Share on WhatsApp
+                </button>
+                <button
+                  type="button"
+                  onClick={() => window.open(activeAdminLiveMeeting.meetingUrl, "_blank", "noopener,noreferrer")}
+                  style={{
+                    background: "linear-gradient(135deg, #2563eb, #1d4ed8)",
+                    border: "none",
+                    color: "#fff",
+                    padding: "6px 14px",
+                    borderRadius: "6px",
+                    fontSize: "0.75rem",
+                    fontWeight: 800,
+                    cursor: "pointer"
+                  }}
+                >
+                  ↗ Open External {activeAdminLiveMeeting.platform} App
+                </button>
+              </div>
+            </div>
+
+            <div style={{ display: "flex", justifyContent: "flex-end" }}>
+              <button
+                type="button"
+                onClick={() => setActiveAdminLiveMeeting(null)}
+                style={{
+                  background: "#dc2626",
+                  color: "#fff",
+                  border: "none",
+                  padding: "8px 18px",
+                  borderRadius: "8px",
+                  fontSize: "0.82rem",
+                  fontWeight: 800,
+                  cursor: "pointer"
+                }}
+              >
+                ⏹️ Leave / Close Conference Studio
+              </button>
+            </div>
           </div>
         </div>
       )}

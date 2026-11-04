@@ -155,7 +155,7 @@ export default function WindowControlsBar({
             onClick={() => {
               try {
                 localStorage.removeItem("gbs_tenant_already_onboarded");
-              } catch {}
+              } catch { }
               navigate("/onboarding?force=true");
             }}
             style={{

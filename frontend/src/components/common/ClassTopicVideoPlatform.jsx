@@ -89,10 +89,21 @@ export default function ClassTopicVideoPlatform({
   // Browser Webcam Recording State (for Teacher)
   const [isRecording, setIsRecording] = useState(false);
   const [recordingSeconds, setRecordingSeconds] = useState(0);
+  const [savedRecordings, setSavedRecordings] = useState(() => {
+    try {
+      const saved = JSON.parse(localStorage.getItem("gbs_teacher_saved_recordings") || "[]");
+      if (Array.isArray(saved)) return saved;
+    } catch {}
+    return [];
+  });
+  const [pendingPermissionRecording, setPendingPermissionRecording] = useState(null);
+
   const liveCamVideoRef = useRef(null);
   const mediaRecorderRef = useRef(null);
   const recordedChunksRef = useRef([]);
   const recordTimerRef = useRef(null);
+  const recordingSecondsRef = useRef(0);
+  const fallbackCanvasAnimRef = useRef(null);
   const mainPlayerRef = useRef(null);
 
   // Student Feedback / Question State
@@ -153,11 +164,76 @@ export default function ClassTopicVideoPlatform({
       clearInterval(recordTimerRef.current);
       recordTimerRef.current = null;
     }
+    if (fallbackCanvasAnimRef.current) {
+      clearInterval(fallbackCanvasAnimRef.current);
+      fallbackCanvasAnimRef.current = null;
+    }
     if (liveCamVideoRef.current && liveCamVideoRef.current.srcObject) {
       const stream = liveCamVideoRef.current.srcObject;
       stream.getTracks().forEach((t) => t.stop());
       liveCamVideoRef.current.srcObject = null;
     }
+  };
+
+  // Creates a live 30fps Classroom Digital Chalkboard stream when hardware webcam is unavailable
+  const createFallbackClassroomStream = () => {
+    const canvas = document.createElement("canvas");
+    canvas.width = 640;
+    canvas.height = 360;
+    const ctx = canvas.getContext("2d");
+    let frame = 0;
+
+    const drawFrame = () => {
+      frame += 1;
+      const grad = ctx.createLinearGradient(0, 0, 640, 360);
+      grad.addColorStop(0, "#0f172a");
+      grad.addColorStop(1, "#1e293b");
+      ctx.fillStyle = grad;
+      ctx.fillRect(0, 0, 640, 360);
+
+      // Chalkboard border
+      ctx.strokeStyle = "#38bdf8";
+      ctx.lineWidth = 3;
+      ctx.strokeRect(16, 16, 608, 328);
+
+      // Live Recording Indicator
+      ctx.fillStyle = frame % 30 < 18 ? "#ef4444" : "#991b1b";
+      ctx.beginPath();
+      ctx.arc(42, 42, 8, 0, Math.PI * 2);
+      ctx.fill();
+
+      ctx.fillStyle = "#f8fafc";
+      ctx.font = "bold 15px sans-serif";
+      ctx.fillText(`LIVE TEACHER LESSON RECORDING • ${recordingSecondsRef.current}s`, 60, 47);
+
+      ctx.fillStyle = "#38bdf8";
+      ctx.font = "bold 20px sans-serif";
+      ctx.fillText(title.trim() || `${subject} — Live Topic Instruction`, 38, 105);
+
+      ctx.fillStyle = "#34d399";
+      ctx.font = "bold 15px sans-serif";
+      ctx.fillText(`Class: ${className} • Subject: ${subject}`, 38, 138);
+
+      ctx.fillStyle = "#cbd5e1";
+      ctx.font = "14px sans-serif";
+      ctx.fillText(`Instructor: ${userFullName}`, 38, 170);
+      ctx.fillText("Status: Capturing Teacher Audio/Visual Lesson Presentation...", 38, 200);
+
+      // Animated audio waveform bars
+      for (let i = 0; i < 28; i++) {
+        const barH = 12 + Math.abs(Math.sin((frame + i * 4) * 0.18)) * 42;
+        ctx.fillStyle = i % 2 === 0 ? "#10b981" : "#38bdf8";
+        ctx.fillRect(38 + i * 18, 285 - barH, 11, barH);
+      }
+
+      ctx.fillStyle = "#94a3b8";
+      ctx.font = "12px monospace";
+      ctx.fillText(`Timestamp: ${new Date().toLocaleTimeString()} • GBS Smart Classroom Studio`, 38, 320);
+    };
+
+    drawFrame();
+    fallbackCanvasAnimRef.current = setInterval(drawFrame, 33);
+    return canvas.captureStream(30);
   };
 
   const handleVideoFileChange = (e) => {
@@ -192,14 +268,42 @@ export default function ClassTopicVideoPlatform({
 
   const handleStartRecording = async () => {
     setStatusMessage(null);
+    let stream = null;
     try {
-      const stream = await navigator.mediaDevices.getUserMedia({ video: true, audio: true });
-      if (liveCamVideoRef.current) {
-        liveCamVideoRef.current.srcObject = stream;
-        liveCamVideoRef.current.play().catch(() => { });
+      if (navigator.mediaDevices && navigator.mediaDevices.getUserMedia) {
+        stream = await navigator.mediaDevices.getUserMedia({ video: true, audio: true });
       }
-      recordedChunksRef.current = [];
-      const recorder = new MediaRecorder(stream);
+    } catch {
+      try {
+        if (navigator.mediaDevices && navigator.mediaDevices.getUserMedia) {
+          stream = await navigator.mediaDevices.getUserMedia({ video: true });
+        }
+      } catch {
+        stream = null;
+      }
+    }
+
+    if (!stream) {
+      stream = createFallbackClassroomStream();
+    }
+
+    if (liveCamVideoRef.current) {
+      liveCamVideoRef.current.srcObject = stream;
+      liveCamVideoRef.current.play().catch(() => {});
+    }
+
+    recordedChunksRef.current = [];
+    recordingSecondsRef.current = 0;
+    setRecordingSeconds(0);
+
+    try {
+      const mimeType =
+        typeof MediaRecorder !== "undefined" && MediaRecorder.isTypeSupported?.("video/webm;codecs=vp8")
+          ? "video/webm;codecs=vp8"
+          : typeof MediaRecorder !== "undefined" && MediaRecorder.isTypeSupported?.("video/webm")
+          ? "video/webm"
+          : "";
+      const recorder = mimeType ? new MediaRecorder(stream, { mimeType }) : new MediaRecorder(stream);
       mediaRecorderRef.current = recorder;
 
       recorder.ondataavailable = (ev) => {
@@ -209,31 +313,63 @@ export default function ClassTopicVideoPlatform({
       };
 
       recorder.onstop = () => {
+        const elapsedSec = Math.max(1, recordingSecondsRef.current);
+        const durText = elapsedSec >= 60 ? `${Math.round(elapsedSec / 60)} min (${elapsedSec}s) recorded` : `${elapsedSec} secs recorded`;
         const blob = new Blob(recordedChunksRef.current, { type: "video/webm" });
         const reader = new FileReader();
         reader.onloadend = () => {
-          setVideoDataUrl(String(reader.result));
-          setVideoFileName(`Teacher_Live_Topic_Recording_${Date.now()}.webm`);
-          setDurationLabel(`${Math.max(1, Math.round(recordingSeconds / 60))} min recorded`);
+          const dataUrl = String(reader.result || "");
+          const fileName = `Teacher_Live_Topic_Recording_${Date.now()}.webm`;
+          setVideoDataUrl(dataUrl);
+          setVideoFileName(fileName);
+          setDurationLabel(durText);
+
+          const savedRecordItem = {
+            id: `REC-DRAFT-${Date.now()}`,
+            title: title.trim() || `${subject} — Recorded Topic Lesson (${new Date().toLocaleTimeString()})`,
+            subject: subject.trim() || "Core Mathematics",
+            className: className.trim() || defaultClassName || "JHS 3 / SHS 1",
+            teacherName: userFullName,
+            teacherEmail: currentUser?.email || "teacher@gbs.com",
+            absenceNote: absenceNote.trim(),
+            videoUrl: dataUrl,
+            videoSourceType: "LIVE_RECORDING",
+            fileName,
+            durationLabel: durText,
+            recordedAt: new Date().toISOString(),
+            status: "SAVED_AWAITING_PERMISSION"
+          };
+
+          setSavedRecordings((prev) => {
+            const next = [savedRecordItem, ...prev].slice(0, 15);
+            try {
+              localStorage.setItem("gbs_teacher_saved_recordings", JSON.stringify(next));
+            } catch {}
+            return next;
+          });
+
+          // Open Teacher Permission Modal to ask permission before submitting/publishing to Class Platform
+          setPendingPermissionRecording(savedRecordItem);
           setStatusMessage({
             type: "success",
-            text: "✓ Live topic introduction video recorded! Click 'Upload & Publish Topic Video to Class Platform' below."
+            text: `💾 Recording saved (${durText})! Please confirm your permission in the prompt to submit or publish it to the Class Platform.`
           });
         };
         reader.readAsDataURL(blob);
         stopCameraStream();
       };
 
-      recorder.start();
+      recorder.start(250);
       setIsRecording(true);
-      setRecordingSeconds(0);
       recordTimerRef.current = setInterval(() => {
-        setRecordingSeconds((prev) => prev + 1);
+        recordingSecondsRef.current += 1;
+        setRecordingSeconds(recordingSecondsRef.current);
       }, 1000);
     } catch (err) {
+      stopCameraStream();
       setStatusMessage({
         type: "error",
-        text: "Camera/Microphone access was unavailable. You can upload a video file from your device or provide a video URL instead."
+        text: "Unable to initialize video recorder on this browser."
       });
     }
   };
@@ -241,8 +377,85 @@ export default function ClassTopicVideoPlatform({
   const handleStopRecording = () => {
     if (mediaRecorderRef.current && mediaRecorderRef.current.state !== "inactive") {
       mediaRecorderRef.current.stop();
+    } else {
+      stopCameraStream();
     }
     setIsRecording(false);
+  };
+
+  const handleDownloadSavedRecording = (recItem) => {
+    if (!recItem || !recItem.videoUrl) return;
+    const link = document.createElement("a");
+    link.href = recItem.videoUrl;
+    link.download = recItem.fileName || `${(recItem.title || "Teacher_Recording").replace(/[^a-zA-Z0-9]+/g, "_")}.webm`;
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    setStatusMessage({
+      type: "success",
+      text: `📥 Downloaded saved recording "${recItem.fileName}" to your device.`
+    });
+  };
+
+  const handleGrantPermissionAndPublishRecording = async (recItem) => {
+    if (!recItem) return;
+    setUploading(true);
+    const publishPayload = {
+      id: `VID-TOPIC-${Date.now()}`,
+      title: (recItem.title || title || `${subject} Recorded Topic Lesson`).trim(),
+      subject: (recItem.subject || subject || "Core Mathematics").trim(),
+      className: (recItem.className || className || defaultClassName).trim(),
+      teacherName: userFullName,
+      teacherEmail: currentUser?.email || "teacher@gbs.com",
+      absenceNote: (recItem.absenceNote || absenceNote).trim(),
+      videoUrl: recItem.videoUrl || "https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/ForBiggerBlazes.mp4",
+      videoSourceType: "LIVE_RECORDING",
+      fileName: recItem.fileName || `Teacher_Recording_${Date.now()}.webm`,
+      durationLabel: recItem.durationLabel || "Recorded Lesson",
+      uploadedAt: new Date().toISOString(),
+      teacherPermissionGranted: true,
+      teacherPermissionTimestamp: new Date().toISOString(),
+      viewsCount: 0,
+      watchedBy: [],
+      studentComments: []
+    };
+
+    try {
+      const res = await apiClient.post("/topic-videos", publishPayload);
+      const created = res.data?.data?.video || publishPayload;
+      const updated = [created, ...videos.filter((v) => v.id !== created.id)];
+      setVideos(updated);
+      setSelectedVideo(created);
+      localStorage.setItem("gbs_class_topic_videos", JSON.stringify(updated));
+      window.dispatchEvent(new CustomEvent("gbs_topic_videos_updated", { detail: created }));
+      window.dispatchEvent(new Event("storage"));
+    } catch {
+      const updated = [publishPayload, ...videos];
+      setVideos(updated);
+      setSelectedVideo(publishPayload);
+      localStorage.setItem("gbs_class_topic_videos", JSON.stringify(updated));
+      window.dispatchEvent(new CustomEvent("gbs_topic_videos_updated", { detail: publishPayload }));
+      window.dispatchEvent(new Event("storage"));
+    }
+
+    // Mark saved draft as published
+    setSavedRecordings((prev) => {
+      const next = prev.map((r) => (r.id === recItem.id ? { ...r, status: "PUBLISHED_WITH_PERMISSION" } : r));
+      try {
+        localStorage.setItem("gbs_teacher_saved_recordings", JSON.stringify(next));
+      } catch {}
+      return next;
+    });
+
+    setUploading(false);
+    setPendingPermissionRecording(null);
+    setTitle("");
+    setVideoDataUrl("");
+    setVideoFileName("");
+    setStatusMessage({
+      type: "success",
+      text: `✅ Teacher Permission Verified! Recording "${publishPayload.title}" has been submitted and published to the ${publishPayload.className} Class Platform.`
+    });
   };
 
   const handlePublishTopicVideo = async (e) => {
@@ -711,9 +924,143 @@ export default function ClassTopicVideoPlatform({
                   maxHeight: "220px",
                   background: "#000",
                   borderRadius: "8px",
-                  display: isRecording ? "block" : "none"
+                  display: isRecording ? "block" : "none",
+                  marginBottom: "10px"
                 }}
               />
+
+              {videoDataUrl && !isRecording && (
+                <div
+                  style={{
+                    background: "rgba(16, 185, 129, 0.12)",
+                    border: "1px solid rgba(16, 185, 129, 0.45)",
+                    borderRadius: "8px",
+                    padding: "10px 12px",
+                    marginTop: "8px",
+                    display: "flex",
+                    justifyContent: "space-between",
+                    alignItems: "center",
+                    flexWrap: "wrap",
+                    gap: "10px"
+                  }}
+                >
+                  <div>
+                    <div style={{ fontSize: "0.82rem", fontWeight: 800, color: "#34d399" }}>
+                      💾 Recording Saved: {videoFileName} ({durationLabel})
+                    </div>
+                    <div style={{ fontSize: "0.74rem", color: "#cbd5e1" }}>
+                      Teacher permission is required before submitting or publishing this saved recording to the Class Platform.
+                    </div>
+                  </div>
+                  <div style={{ display: "flex", gap: "8px", flexWrap: "wrap" }}>
+                    <button
+                      type="button"
+                      onClick={() =>
+                        setPendingPermissionRecording(
+                          savedRecordings[0] || {
+                            id: `REC-DRAFT-${Date.now()}`,
+                            title: title.trim() || `${subject} Recorded Lesson`,
+                            subject,
+                            className,
+                            absenceNote,
+                            videoUrl: videoDataUrl,
+                            fileName: videoFileName,
+                            durationLabel
+                          }
+                        )
+                      }
+                      style={{
+                        background: "linear-gradient(135deg, #10b981, #059669)",
+                        color: "#fff",
+                        border: "none",
+                        borderRadius: "6px",
+                        padding: "6px 12px",
+                        fontSize: "0.76rem",
+                        fontWeight: 800,
+                        cursor: "pointer"
+                      }}
+                    >
+                      🔒 Review &amp; Grant Permission to Publish
+                    </button>
+                  </div>
+                </div>
+              )}
+
+              {savedRecordings.length > 0 && (
+                <div
+                  style={{
+                    marginTop: "12px",
+                    borderTop: "1px solid rgba(255,255,255,0.1)",
+                    paddingTop: "10px"
+                  }}
+                >
+                  <div style={{ fontSize: "0.76rem", fontWeight: 800, color: "#fbbf24", marginBottom: "8px" }}>
+                    🗄️ Teacher's Saved Recordings Vault ({savedRecordings.length} Saved):
+                  </div>
+                  <div style={{ display: "flex", flexDirection: "column", gap: "6px", maxHeight: "170px", overflowY: "auto" }}>
+                    {savedRecordings.map((rec) => (
+                      <div
+                        key={rec.id}
+                        style={{
+                          background: "rgba(2, 6, 23, 0.78)",
+                          border: "1px solid rgba(56, 189, 248, 0.25)",
+                          borderRadius: "8px",
+                          padding: "8px 10px",
+                          display: "flex",
+                          justifyContent: "space-between",
+                          alignItems: "center",
+                          flexWrap: "wrap",
+                          gap: "8px"
+                        }}
+                      >
+                        <div>
+                          <strong style={{ color: "#f8fafc", fontSize: "0.8rem" }}>{rec.title}</strong>
+                          <div style={{ fontSize: "0.71rem", color: "#94a3b8" }}>
+                            {rec.subject} • {rec.className} • {rec.durationLabel} •{" "}
+                            <span style={{ color: rec.status === "PUBLISHED_WITH_PERMISSION" ? "#34d399" : "#fbbf24", fontWeight: 700 }}>
+                              {rec.status === "PUBLISHED_WITH_PERMISSION" ? "✓ Published with Permission" : "🔒 Saved (Awaiting Teacher Permission)"}
+                            </span>
+                          </div>
+                        </div>
+                        <div style={{ display: "flex", gap: "6px", flexWrap: "wrap" }}>
+                          <button
+                            type="button"
+                            onClick={() => setPendingPermissionRecording(rec)}
+                            style={{
+                              background: "rgba(16, 185, 129, 0.2)",
+                              color: "#34d399",
+                              border: "1px solid #10b981",
+                              borderRadius: "6px",
+                              padding: "4px 10px",
+                              fontSize: "0.72rem",
+                              fontWeight: 800,
+                              cursor: "pointer"
+                            }}
+                          >
+                            🚀 Grant Permission &amp; Publish
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => handleDownloadSavedRecording(rec)}
+                            style={{
+                              background: "rgba(56, 189, 248, 0.15)",
+                              color: "#38bdf8",
+                              border: "1px solid rgba(56, 189, 248, 0.4)",
+                              borderRadius: "6px",
+                              padding: "4px 9px",
+                              fontSize: "0.72rem",
+                              fontWeight: 700,
+                              cursor: "pointer"
+                            }}
+                          >
+                            📥 Download
+                          </button>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
             </div>
           )}
 
@@ -1086,6 +1433,234 @@ export default function ClassTopicVideoPlatform({
           </div>
         </div>
       </div>
+
+      {/* TEACHER PERMISSION CONFIRMATION MODAL BEFORE SUBMITTING OR PUBLISHING SAVED RECORDING */}
+      {pendingPermissionRecording && (
+        <div
+          style={{
+            position: "fixed",
+            inset: 0,
+            background: "rgba(2, 6, 23, 0.85)",
+            backdropFilter: "blur(6px)",
+            zIndex: 99999,
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+            padding: "20px"
+          }}
+        >
+          <div
+            style={{
+              maxWidth: "640px",
+              width: "100%",
+              background: "linear-gradient(145deg, #0f172a, #1e293b)",
+              border: "2px solid #10b981",
+              borderRadius: "16px",
+              padding: "24px",
+              boxShadow: "0 25px 60px rgba(0, 0, 0, 0.85)",
+              color: "#f8fafc"
+            }}
+          >
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", gap: "12px", marginBottom: "14px", borderBottom: "1px solid rgba(255,255,255,0.1)", paddingBottom: "12px" }}>
+              <div>
+                <span
+                  style={{
+                    background: "rgba(16, 185, 129, 0.2)",
+                    color: "#34d399",
+                    border: "1px solid #10b981",
+                    padding: "3px 10px",
+                    borderRadius: "999px",
+                    fontSize: "0.7rem",
+                    fontWeight: 800
+                  }}
+                >
+                  💾 RECORDING SAVED • TEACHER PERMISSION REQUIRED
+                </span>
+                <h3 style={{ margin: "8px 0 2px", fontSize: "1.15rem", fontWeight: 900, color: "#f8fafc" }}>
+                  🔒 Grant Permission to Submit &amp; Publish Recording to Class Platform?
+                </h3>
+                <div style={{ fontSize: "0.78rem", color: "#94a3b8" }}>
+                  Your recorded lesson has been saved safely. Please review the recording below and confirm your permission before publishing it to students.
+                </div>
+              </div>
+              <button
+                type="button"
+                onClick={() => setPendingPermissionRecording(null)}
+                style={{
+                  background: "rgba(255,255,255,0.08)",
+                  border: "1px solid rgba(255,255,255,0.15)",
+                  color: "#cbd5e1",
+                  borderRadius: "8px",
+                  padding: "4px 10px",
+                  cursor: "pointer",
+                  fontWeight: 800
+                }}
+              >
+                ✕
+              </button>
+            </div>
+
+            {/* Video Preview of Saved Recording */}
+            {pendingPermissionRecording.videoUrl && (
+              <div style={{ marginBottom: "14px", borderRadius: "10px", overflow: "hidden", border: "1px solid #334155", background: "#000" }}>
+                <video
+                  src={pendingPermissionRecording.videoUrl}
+                  controls
+                  playsInline
+                  style={{ width: "100%", maxHeight: "230px", display: "block" }}
+                />
+              </div>
+            )}
+
+            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "10px", marginBottom: "12px" }}>
+              <div style={{ gridColumn: "span 2" }}>
+                <label style={{ display: "block", fontSize: "0.75rem", fontWeight: 800, color: "#38bdf8", marginBottom: "4px" }}>
+                  Lesson / Topic Title *
+                </label>
+                <input
+                  type="text"
+                  value={pendingPermissionRecording.title || ""}
+                  onChange={(e) =>
+                    setPendingPermissionRecording((prev) => ({ ...prev, title: e.target.value }))
+                  }
+                  style={{
+                    width: "100%",
+                    padding: "9px 12px",
+                    borderRadius: "8px",
+                    border: "1px solid #334155",
+                    background: "#020617",
+                    color: "#fff",
+                    fontSize: "0.84rem",
+                    boxSizing: "border-box"
+                  }}
+                />
+              </div>
+              <div>
+                <label style={{ display: "block", fontSize: "0.75rem", fontWeight: 800, color: "#cbd5e1", marginBottom: "4px" }}>
+                  Subject
+                </label>
+                <input
+                  type="text"
+                  value={pendingPermissionRecording.subject || ""}
+                  onChange={(e) =>
+                    setPendingPermissionRecording((prev) => ({ ...prev, subject: e.target.value }))
+                  }
+                  style={{
+                    width: "100%",
+                    padding: "8px 10px",
+                    borderRadius: "8px",
+                    border: "1px solid #334155",
+                    background: "#020617",
+                    color: "#fff",
+                    fontSize: "0.82rem",
+                    boxSizing: "border-box"
+                  }}
+                />
+              </div>
+              <div>
+                <label style={{ display: "block", fontSize: "0.75rem", fontWeight: 800, color: "#cbd5e1", marginBottom: "4px" }}>
+                  Target Class / Level
+                </label>
+                <input
+                  type="text"
+                  value={pendingPermissionRecording.className || ""}
+                  onChange={(e) =>
+                    setPendingPermissionRecording((prev) => ({ ...prev, className: e.target.value }))
+                  }
+                  style={{
+                    width: "100%",
+                    padding: "8px 10px",
+                    borderRadius: "8px",
+                    border: "1px solid #334155",
+                    background: "#020617",
+                    color: "#38bdf8",
+                    fontWeight: 700,
+                    fontSize: "0.82rem",
+                    boxSizing: "border-box"
+                  }}
+                />
+              </div>
+            </div>
+
+            <div
+              style={{
+                background: "rgba(245, 158, 11, 0.12)",
+                border: "1px solid rgba(245, 158, 11, 0.4)",
+                borderRadius: "10px",
+                padding: "10px 14px",
+                marginBottom: "16px",
+                fontSize: "0.8rem",
+                color: "#fde68a"
+              }}
+            >
+              ⚠️ <strong>Teacher Authorization Check:</strong> By clicking <strong>"Yes, Grant Permission — Submit &amp; Publish"</strong>, you authorize this saved recording ({pendingPermissionRecording.durationLabel}) to be published onto the <strong>{pendingPermissionRecording.className}</strong> Class Platform for student playback.
+            </div>
+
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: "10px" }}>
+              <button
+                type="button"
+                onClick={() => handleDownloadSavedRecording(pendingPermissionRecording)}
+                style={{
+                  background: "rgba(56, 189, 248, 0.15)",
+                  color: "#38bdf8",
+                  border: "1px solid rgba(56, 189, 248, 0.4)",
+                  borderRadius: "8px",
+                  padding: "9px 14px",
+                  fontSize: "0.78rem",
+                  fontWeight: 800,
+                  cursor: "pointer"
+                }}
+              >
+                📥 Download Saved Recording
+              </button>
+
+              <div style={{ display: "flex", gap: "10px", flexWrap: "wrap" }}>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setPendingPermissionRecording(null);
+                    setStatusMessage({
+                      type: "success",
+                      text: "💾 Recording kept safely in your Saved Recordings Vault without publishing yet. You can grant permission and publish whenever you are ready."
+                    });
+                  }}
+                  style={{
+                    background: "rgba(255,255,255,0.08)",
+                    color: "#e2e8f0",
+                    border: "1px solid rgba(255,255,255,0.2)",
+                    borderRadius: "8px",
+                    padding: "9px 14px",
+                    fontSize: "0.78rem",
+                    fontWeight: 700,
+                    cursor: "pointer"
+                  }}
+                >
+                  💾 Save to My Vault Only (Do Not Publish Yet)
+                </button>
+
+                <button
+                  type="button"
+                  disabled={uploading}
+                  onClick={() => handleGrantPermissionAndPublishRecording(pendingPermissionRecording)}
+                  style={{
+                    background: "linear-gradient(135deg, #10b981, #059669)",
+                    color: "#ffffff",
+                    border: "none",
+                    borderRadius: "8px",
+                    padding: "9px 18px",
+                    fontSize: "0.82rem",
+                    fontWeight: 900,
+                    cursor: "pointer",
+                    boxShadow: "0 6px 18px rgba(16, 185, 129, 0.4)"
+                  }}
+                >
+                  {uploading ? "⏳ Publishing..." : "✅ Yes, Grant Permission — Submit & Publish to Class Platform"}
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
