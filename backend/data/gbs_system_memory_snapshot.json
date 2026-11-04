@@ -32,11 +32,31 @@
     },
     "formula": "monthlyCharge = activeStudents * ratePerStudent; grossTotal = monthlyCharge * months; discountAmount = grossTotal * (discountPct / 100); netTotalPayment = grossTotal - discountAmount",
     "paymentPeriodsAndDiscounts": [
-      { "id": "1_MONTH", "months": 1, "discountPct": 0 },
-      { "id": "3_MONTHS", "months": 3, "discountPct": 3 },
-      { "id": "6_MONTHS", "months": 6, "discountPct": 5 },
-      { "id": "9_MONTHS", "months": 9, "discountPct": 7 },
-      { "id": "12_MONTHS", "months": 12, "discountPct": 10 }
+      {
+        "id": "1_MONTH",
+        "months": 1,
+        "discountPct": 0
+      },
+      {
+        "id": "3_MONTHS",
+        "months": 3,
+        "discountPct": 3
+      },
+      {
+        "id": "6_MONTHS",
+        "months": 6,
+        "discountPct": 5
+      },
+      {
+        "id": "9_MONTHS",
+        "months": 9,
+        "discountPct": 7
+      },
+      {
+        "id": "12_MONTHS",
+        "months": 12,
+        "discountPct": 10
+      }
     ],
     "example300StudentsNurseryJhs": {
       "monthlyChargeGHS": 900,
@@ -53,7 +73,10 @@
       "id": 1,
       "name": "Tenant Onboarding First Page",
       "route": "/",
-      "aliasRoutes": ["/onboarding", "/onboard"],
+      "aliasRoutes": [
+        "/onboarding",
+        "/onboard"
+      ],
       "component": "frontend/src/modules/auth/pages/TenantOnboardingFirstPage.jsx",
       "keyBehaviors": [
         "Displays GBS MANAGEMENT SYSTEM + crest logo on top center with Golden, Wine-Brown, Grey, and Sky-Blue gradient.",
@@ -68,7 +91,15 @@
       "id": 2,
       "name": "Main Login & Role Login Pages",
       "route": "/login",
-      "aliasRoutes": ["/login/admin", "/login/teacher", "/login/student", "/login/parent", "/login/accountant", "/login/staff", "/login/hr"],
+      "aliasRoutes": [
+        "/login/admin",
+        "/login/teacher",
+        "/login/student",
+        "/login/parent",
+        "/login/accountant",
+        "/login/staff",
+        "/login/hr"
+      ],
       "component": "frontend/src/modules/auth/pages/MainLoginPage.jsx",
       "keyBehaviors": [
         "Authenticates all roles with zero 30000ms timeout (instant hybrid local-cloud fallback).",
@@ -79,7 +110,10 @@
       "id": 3,
       "name": "Developer Control Center",
       "route": "/developer/control-center",
-      "aliasRoutes": ["/developer/dashboard", "/developer-control-center/dashboard"],
+      "aliasRoutes": [
+        "/developer/dashboard",
+        "/developer-control-center/dashboard"
+      ],
       "component": "frontend/src/modules/developer-platform/pages/DeveloperDashboard.jsx",
       "keyBehaviors": [
         "Displays pending tenant onboarding registrations with captured Headmaster facial photo.",
@@ -139,7 +173,9 @@
       "id": 9,
       "name": "Staff & HR Dashboard",
       "route": "/portal/staff/dashboard",
-      "aliasRoutes": ["/portal/hr/dashboard"],
+      "aliasRoutes": [
+        "/portal/hr/dashboard"
+      ],
       "component": "frontend/src/modules/portal/pages/dashboards/staff/StaffDashboard.jsx",
       "keyBehaviors": [
         "Manages staff attendance, leave applications, salary grouping, loans, and campus operations."
@@ -198,4 +234,3 @@
     "uncaughtBrowserConsoleErrors": 0
   }
 }
-

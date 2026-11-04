@@ -9,6 +9,7 @@ import VoiceNotePlayer from "../../../../../components/common/VoiceNotePlayer";
 import { getUserAvatar } from "../../../../../utils/userAvatars";
 import { offlineSyncEngine } from "../../../../../utils/offlineSync";
 import UniversalRoleGuideModal from "../../../../../components/common/UniversalRoleGuideModal";
+import { navigateToDetail } from "../../../../../utils/universalNavigation";
 import "./AdminDashboard.css";
 
 export default function AdminDashboard() {
@@ -98,7 +99,7 @@ export default function AdminDashboard() {
     try {
       const msgs = JSON.parse(localStorage.getItem("gbs_admin_parent_messages") || "[]");
       if (Array.isArray(msgs)) return msgs;
-    } catch {}
+    } catch { }
     return [];
   });
   const [replyTextMap, setReplyTextMap] = useState({});
@@ -452,7 +453,7 @@ export default function AdminDashboard() {
     try {
       const saved = JSON.parse(localStorage.getItem("gbs_tenant_subscription") || "null");
       if (saved) return saved;
-    } catch {}
+    } catch { }
     return {
       status: "ACTIVE",
       planName: "Enterprise 6 Months Term Subscription",
@@ -518,7 +519,7 @@ export default function AdminDashboard() {
         momoTxnId: momoTxnId.trim(),
         paymentAmount: finalPaidAmount
       });
-    } catch {}
+    } catch { }
     const saved = JSON.parse(localStorage.getItem("gbs_momo_subscription_reconciliations") || "[]");
     saved.unshift(rec);
     localStorage.setItem("gbs_momo_subscription_reconciliations", JSON.stringify(saved));
@@ -534,7 +535,7 @@ export default function AdminDashboard() {
     try {
       const saved = JSON.parse(localStorage.getItem("gbs_academic_plan") || "null");
       if (saved) return saved;
-    } catch {}
+    } catch { }
     return {
       systemType: "TERMLY_3",
       academicYear: "2026/2027",
@@ -559,7 +560,7 @@ export default function AdminDashboard() {
     try {
       const saved = JSON.parse(localStorage.getItem("gbs_enrolled_students") || "[]");
       if (Array.isArray(saved) && saved.length > 0) return saved;
-    } catch {}
+    } catch { }
     return [];
   });
 
@@ -568,7 +569,7 @@ export default function AdminDashboard() {
     try {
       const saved = JSON.parse(localStorage.getItem("gbs_pending_staff_registrations") || "[]");
       if (Array.isArray(saved) && saved.length > 0) return saved;
-    } catch {}
+    } catch { }
     return [];
   });
 
@@ -585,7 +586,7 @@ export default function AdminDashboard() {
     try {
       const saved = JSON.parse(localStorage.getItem("gbs_headmaster_sent_messages") || "[]");
       if (Array.isArray(saved) && saved.length > 0) return saved;
-    } catch {}
+    } catch { }
     return [];
   });
   const [commFilter, setCommFilter] = useState("ALL");
@@ -668,7 +669,7 @@ export default function AdminDashboard() {
             message: smsContent,
             senderId: "GBS-HEADMASTER"
           });
-        } catch {}
+        } catch { }
 
         const record = {
           id: `MSG-SMS-${Date.now()}`,
@@ -708,7 +709,7 @@ export default function AdminDashboard() {
             content: emailBody,
             sender: headmasterProfile.email
           });
-        } catch {}
+        } catch { }
 
         const record = {
           id: `MSG-EML-${Date.now()}`,
@@ -768,7 +769,7 @@ export default function AdminDashboard() {
       localStorage.setItem("gbs_headmaster_sent_messages", JSON.stringify(updated));
       const publicNotes = JSON.parse(localStorage.getItem("gbs_universal_voice_notes") || "[]");
       localStorage.setItem("gbs_universal_voice_notes", JSON.stringify([record, ...publicNotes]));
-    } catch {}
+    } catch { }
 
     triggerToast("success", "Voice Note Dispatched", `Voice note (${voiceNoteData.durationLabel}) successfully sent to ${recipientDisplayName}!`);
     setFeedback({
@@ -785,16 +786,16 @@ export default function AdminDashboard() {
       } catch (e) {
         console.warn("Backend staff approval fallback:", e.message);
       }
-      
+
       const updated = pendingStaff.filter((s) => s.id !== staffMember.id);
       setPendingStaff(updated);
       localStorage.setItem("gbs_pending_staff_registrations", JSON.stringify(updated));
-      
+
       setFeedback({
         type: "success",
         message: `✅ Staff Member ${staffMember.firstName} ${staffMember.lastName} (${staffMember.role}) officially approved and admitted to the institution by Headmaster!`
       });
-      
+
       setAuditLogs((prev) => [
         {
           id: Date.now(),
@@ -863,7 +864,7 @@ export default function AdminDashboard() {
     window.dispatchEvent(new Event("storage"));
 
     try {
-      await apiClient.put("/reporting/school-branding", { 
+      await apiClient.put("/reporting/school-branding", {
         preferredSchoolName: trimmed,
         schoolLogo: tempLogoPreview || customSchoolLogo
       });
@@ -882,7 +883,7 @@ export default function AdminDashboard() {
     try {
       const saved = JSON.parse(localStorage.getItem("gbs_accountant_increment_requests") || "[]");
       if (Array.isArray(saved) && saved.length > 0) return saved;
-    } catch {}
+    } catch { }
     return [];
   });
   const [showIncrementApprovalModal, setShowIncrementApprovalModal] = useState(false);
@@ -894,7 +895,7 @@ export default function AdminDashboard() {
     try {
       const saved = JSON.parse(localStorage.getItem("gbs_headmaster_profile") || "{}");
       if (saved.name) return saved;
-    } catch {}
+    } catch { }
     return {
       id: "HM-001",
       name: "Dr. Arthur Sterling",
@@ -911,7 +912,7 @@ export default function AdminDashboard() {
     try {
       const saved = JSON.parse(localStorage.getItem("gbs_headmaster_history") || "[]");
       if (Array.isArray(saved)) return saved;
-    } catch {}
+    } catch { }
     return [];
   });
 
@@ -920,7 +921,7 @@ export default function AdminDashboard() {
     try {
       const stored = localStorage.getItem("gbs_dev_headmaster_messages");
       if (stored) return JSON.parse(stored);
-    } catch {}
+    } catch { }
     return [];
   });
   const [showDevMessageModal, setShowDevMessageModal] = useState(false);
@@ -950,7 +951,7 @@ export default function AdminDashboard() {
       try {
         const stored = localStorage.getItem("gbs_dev_headmaster_messages");
         if (stored) setDeveloperMessages(JSON.parse(stored));
-      } catch {}
+      } catch { }
     };
     window.addEventListener("gbs_dev_headmaster_message_dispatched", syncDevMessages);
     window.addEventListener("storage", syncDevMessages);
@@ -1007,7 +1008,7 @@ export default function AdminDashboard() {
     try {
       const stored = localStorage.getItem("gbs_transport_assigned_students");
       if (stored) return JSON.parse(stored);
-    } catch {}
+    } catch { }
     return [];
   });
 
@@ -1027,7 +1028,7 @@ export default function AdminDashboard() {
     try {
       const stored = localStorage.getItem("gbs_bus_route_fares");
       if (stored) return JSON.parse(stored);
-    } catch {}
+    } catch { }
     return {
       "East Legon Enclave (Zone 1)": 450.0,
       "Airport Residential & Ridge (Zone 2)": 550.0,
@@ -1043,7 +1044,7 @@ export default function AdminDashboard() {
     try {
       const stored = localStorage.getItem("gbs_bus_registered_drivers");
       if (stored) return JSON.parse(stored);
-    } catch {}
+    } catch { }
     return [
       { id: "DRV-01", name: "Mr. Emmanuel Tetteh (+233 24 111 2233)", busNumber: "GBS Bus #01 (Toyota Coaster - 32 Seater)" },
       { id: "DRV-02", name: "Mr. Isaac Mensah (+233 20 222 3344)", busNumber: "GBS Bus #02 (Nissan Civilian - 28 Seater)" },
@@ -1143,7 +1144,7 @@ export default function AdminDashboard() {
         facialStreamRef.current = stream;
         if (facialVideoRef.current) {
           facialVideoRef.current.srcObject = stream;
-          facialVideoRef.current.play().catch(() => {});
+          facialVideoRef.current.play().catch(() => { });
         }
       }
     } catch (camErr) {
@@ -1227,7 +1228,7 @@ export default function AdminDashboard() {
     });
   };
 
-    const [showReplacementModal, setShowReplacementModal] = useState(false);
+  const [showReplacementModal, setShowReplacementModal] = useState(false);
   const [replacementForm, setReplacementForm] = useState({
     name: "",
     email: "",
@@ -1259,7 +1260,7 @@ export default function AdminDashboard() {
       try {
         localStorage.setItem("gbs_headmaster_online_status", JSON.stringify(statusData));
         window.dispatchEvent(new Event("gbs_headmaster_heartbeat"));
-      } catch {}
+      } catch { }
     };
 
     updateOnlineHeartbeat();
@@ -1275,7 +1276,7 @@ export default function AdminDashboard() {
       try {
         const reqs = JSON.parse(localStorage.getItem("gbs_accountant_increment_requests") || "[]");
         setAccountantIncrementRequests(reqs);
-      } catch {}
+      } catch { }
     };
 
     const handleHeadmasterProfileSync = () => {
@@ -1291,7 +1292,7 @@ export default function AdminDashboard() {
             photoUrl: saved.photo || saved.photoUrl || prev.photoUrl
           }));
         }
-      } catch {}
+      } catch { }
     };
 
     window.addEventListener("gbs_tenant_status_changed", handleTenantStatus);
@@ -1310,7 +1311,7 @@ export default function AdminDashboard() {
           tenantId: "TENANT-001"
         };
         localStorage.setItem("gbs_headmaster_online_status", JSON.stringify(offlineData));
-      } catch {}
+      } catch { }
     };
 
     window.addEventListener("beforeunload", handleBeforeUnload);
@@ -1332,7 +1333,7 @@ export default function AdminDashboard() {
     try {
       const saved = JSON.parse(localStorage.getItem("gbs_staff_positions") || "[]");
       if (Array.isArray(saved) && saved.length > 0) return saved;
-    } catch {}
+    } catch { }
     return [
       { id: "pos-1", title: "Head of Academics", department: "Academic Directorate", schoolTier: "ALL", tierLabel: "Institution-Wide", responsibilities: "Curriculum oversight, academic quality audits, and syllabus delivery across all tiers." },
       { id: "pos-2", title: "Vice Chancellor", department: "Executive Governance", schoolTier: "UNIVERSITY", tierLabel: "University", responsibilities: "Executive oversight of university academic planning, research governance, and collegiate boards." },
@@ -1353,7 +1354,7 @@ export default function AdminDashboard() {
     try {
       const saved = JSON.parse(localStorage.getItem("gbs_staff_assignments") || "[]");
       if (Array.isArray(saved)) return saved;
-    } catch {}
+    } catch { }
     return [];
   });
 
@@ -1474,7 +1475,7 @@ export default function AdminDashboard() {
     try {
       const saved = JSON.parse(localStorage.getItem("gbs_teacher_lesson_plans") || "[]");
       if (Array.isArray(saved)) return saved;
-    } catch {}
+    } catch { }
     return [];
   });
 
@@ -1489,7 +1490,7 @@ export default function AdminDashboard() {
     try {
       const saved = JSON.parse(localStorage.getItem("gbs_faculty_directives") || "[]");
       if (Array.isArray(saved)) return saved;
-    } catch {}
+    } catch { }
     return [];
   });
 
@@ -1530,8 +1531,8 @@ export default function AdminDashboard() {
     e.preventDefault();
     if (!selectedVettingPlan) return;
 
-    const remarksText = headmasterRemarksInput.trim() || (vettingDecision === "VETTED_APPROVED" 
-      ? "Vetted, endorsed, and officially authorized for classroom instruction." 
+    const remarksText = headmasterRemarksInput.trim() || (vettingDecision === "VETTED_APPROVED"
+      ? "Vetted, endorsed, and officially authorized for classroom instruction."
       : "Revisions requested. Please align lesson objectives with practical exercises and resubmit.");
 
     const updated = teacherLessonPlans.map((p) => {
@@ -1616,7 +1617,7 @@ export default function AdminDashboard() {
     try {
       const saved = JSON.parse(localStorage.getItem("gbs_weekly_attendance_reports") || "[]");
       if (Array.isArray(saved) && saved.length > 0) return saved;
-    } catch {}
+    } catch { }
     return [];
   });
   const [crossCheckRemark, setCrossCheckRemark] = useState({});
@@ -1626,7 +1627,7 @@ export default function AdminDashboard() {
     try {
       const saved = JSON.parse(localStorage.getItem("gbs_faculty_weekly_attendance_archives") || "[]");
       if (Array.isArray(saved)) return saved;
-    } catch {}
+    } catch { }
     return [];
   });
   const [selectedWeeklyArchiveToView, setSelectedWeeklyArchiveToView] = useState(null);
@@ -1636,7 +1637,7 @@ export default function AdminDashboard() {
     try {
       const saved = JSON.parse(localStorage.getItem("gbs_account_audit_requests") || "[]");
       if (Array.isArray(saved)) return saved;
-    } catch {}
+    } catch { }
     return [];
   });
   const [showAuditRequestModal, setShowAuditRequestModal] = useState(false);
@@ -1670,7 +1671,7 @@ export default function AdminDashboard() {
     try {
       const stored = localStorage.getItem("gbs_admission_letter_template");
       if (stored) return JSON.parse(stored);
-    } catch {}
+    } catch { }
     return {
       UNIVERSITY: {
         letterTitle: "OFFICIAL OFFER OF PROVISIONAL UNDERGRADUATE ADMISSION",
@@ -1738,7 +1739,7 @@ export default function AdminDashboard() {
     try {
       const stored = localStorage.getItem("gbs_hr_audit_requests");
       if (stored) return JSON.parse(stored);
-    } catch {}
+    } catch { }
     return [];
   });
   const [showHrAuditRequestModal, setShowHrAuditRequestModal] = useState(false);
@@ -1751,7 +1752,7 @@ export default function AdminDashboard() {
     try {
       const stored = localStorage.getItem("gbs_hr_audit_reports");
       if (stored) return JSON.parse(stored);
-    } catch {}
+    } catch { }
     return [];
   });
   const [selectedHrReportToInspect, setSelectedHrReportToInspect] = useState(null);
@@ -1762,7 +1763,7 @@ export default function AdminDashboard() {
       try {
         const stored = localStorage.getItem("gbs_hr_audit_reports");
         if (stored) setSubmittedHrReports(JSON.parse(stored));
-      } catch {}
+      } catch { }
     };
     window.addEventListener("gbs_hr_audit_submitted", syncHrAudits);
     window.addEventListener("storage", syncHrAudits);
@@ -1815,7 +1816,7 @@ export default function AdminDashboard() {
     try {
       const saved = JSON.parse(localStorage.getItem("gbs_teacher_class_assignments") || "[]");
       if (Array.isArray(saved)) return saved;
-    } catch {}
+    } catch { }
     return [];
   });
   const [assignTeacherForm, setAssignTeacherForm] = useState({
@@ -2214,7 +2215,7 @@ export default function AdminDashboard() {
 
     try {
       await apiClient.post("/academics/planner", academicPlan);
-    } catch (err) {}
+    } catch (err) { }
 
     setFeedback({
       type: "success",
@@ -2247,11 +2248,11 @@ export default function AdminDashboard() {
       status: "SCHEDULED",
       agenda: "Executive institutional address on academic curriculum and termly directives."
     };
-    
+
     try {
       const savedMeetings = JSON.parse(localStorage.getItem("gbs_saved_meetings") || "[]");
       localStorage.setItem("gbs_saved_meetings", JSON.stringify([newMeeting, ...savedMeetings]));
-      
+
       const parentMeetings = JSON.parse(localStorage.getItem("gbs_parent_meetings") || "[]");
       localStorage.setItem("gbs_parent_meetings", JSON.stringify([newMeeting, ...parentMeetings]));
 
@@ -2262,7 +2263,7 @@ export default function AdminDashboard() {
         scheduledBy: `Headmaster ${headmasterProfile?.name || "Dr. Arthur Sterling"}`
       }));
       window.dispatchEvent(new Event("gbs_meeting_scheduled"));
-    } catch {}
+    } catch { }
 
     setFeedback({
       type: "success",
@@ -2342,7 +2343,7 @@ export default function AdminDashboard() {
       setFeedback({ type: "error", message: "A clear Profile Picture of the new Headmaster is mandatory before completing handover." });
       return;
     }
-    
+
     const startYr = headmasterProfile?.appointedDate ? new Date(headmasterProfile.appointedDate).getFullYear() : 2021;
     const endYr = replacementForm.effectiveDate ? new Date(replacementForm.effectiveDate).getFullYear() : new Date().getFullYear();
     const yrsCount = Math.max(1, endYr - startYr);
@@ -2356,7 +2357,7 @@ export default function AdminDashboard() {
       status: "RETIRED_PREDECESSOR"
     };
     const updatedHistory = [archiveOld, ...headmasterHistory];
-    
+
     const newHeadmaster = {
       id: `HM-${Date.now().toString().slice(-4)}`,
       name: replacementForm.name.trim(),
@@ -2373,7 +2374,7 @@ export default function AdminDashboard() {
     localStorage.setItem("gbs_headmaster_profile", JSON.stringify(newHeadmaster));
     localStorage.setItem("gbs_headmaster_history", JSON.stringify(updatedHistory));
     window.dispatchEvent(new Event("gbs_headmaster_updated"));
-    
+
     setShowReplacementModal(false);
     setReplacementForm({
       name: "",
@@ -2409,7 +2410,7 @@ export default function AdminDashboard() {
       const promoted = [];
       const withheld = [];
       const graduated = [];
-      
+
       enrolledStudents.forEach((st) => {
         if (st.balanceDue > 0) {
           withheld.push({
@@ -2433,7 +2434,7 @@ export default function AdminDashboard() {
           });
         }
       });
-      
+
       const promotionSummary = {
         executedAt: new Date().toISOString(),
         promotedCount: promoted.length,
@@ -2465,11 +2466,11 @@ export default function AdminDashboard() {
       await apiClient.put(`/academics/students/${selectedStudentForClass}/class`, {
         classId: targetClassForAssignment
       });
-      
+
       const stObj = enrolledStudents.find((s) => String(s.id) === String(selectedStudentForClass));
       const clObj = CLASS_CURRICULUM_PRESETS.find((c) => String(c.code) === String(targetClassForAssignment)) || classes.find((c) => String(c.id) === String(targetClassForAssignment));
       const targetName = clObj?.levelTitle || clObj?.name || targetClassForAssignment;
-      
+
       const targetCode = clObj?.code || targetClassForAssignment;
       const updatedStudents = enrolledStudents.map((s) =>
         String(s.id) === String(selectedStudentForClass)
@@ -2478,7 +2479,7 @@ export default function AdminDashboard() {
       );
       setEnrolledStudents(updatedStudents);
       localStorage.setItem("gbs_enrolled_students", JSON.stringify(updatedStudents));
-      
+
       const counts = {};
       updatedStudents.forEach(st => {
         const cCode = st.classCode || "PRI-01";
@@ -2486,12 +2487,12 @@ export default function AdminDashboard() {
       });
       localStorage.setItem("gbs_class_enrollment_counts", JSON.stringify(counts));
       window.dispatchEvent(new Event("gbs_students_updated"));
-      
+
       setFeedback({
         type: "success",
         message: `🎓 Class assignment committed: ${stObj?.firstName} ${stObj?.lastName} is now officially registered in "${targetName}". Immediately reflected on Accountant Tuition Matrix & Institutional Compilation.`
       });
-      
+
       setAuditLogs((prev) => [
         {
           id: Date.now(),
@@ -2509,7 +2510,7 @@ export default function AdminDashboard() {
       const clObj = CLASS_CURRICULUM_PRESETS.find((c) => String(c.code) === String(targetClassForAssignment)) || classes.find((c) => String(c.id) === String(targetClassForAssignment));
       const targetName = clObj?.levelTitle || clObj?.name || targetClassForAssignment;
       const targetCode = clObj?.code || targetClassForAssignment;
-      
+
       const updatedStudents = enrolledStudents.map((s) =>
         String(s.id) === String(selectedStudentForClass)
           ? { ...s, currentClass: targetName, classCode: targetCode }
@@ -2517,7 +2518,7 @@ export default function AdminDashboard() {
       );
       setEnrolledStudents(updatedStudents);
       localStorage.setItem("gbs_enrolled_students", JSON.stringify(updatedStudents));
-      
+
       const counts = {};
       updatedStudents.forEach(st => {
         const cCode = st.classCode || "PRI-01";
@@ -2525,7 +2526,7 @@ export default function AdminDashboard() {
       });
       localStorage.setItem("gbs_class_enrollment_counts", JSON.stringify(counts));
       window.dispatchEvent(new Event("gbs_students_updated"));
-      
+
       setFeedback({
         type: "success",
         message: `🎓 Class assignment committed: ${stObj?.firstName} ${stObj?.lastName} is now officially registered in "${targetName}". Immediately reflected on Accountant Tuition Matrix & Institutional Compilation.`
@@ -2632,7 +2633,7 @@ export default function AdminDashboard() {
           setIncomingCallSession(null);
           setActiveVideoCall(null);
         }
-      } catch {}
+      } catch { }
     };
 
     const syncParentMessages = () => {
@@ -2661,14 +2662,14 @@ export default function AdminDashboard() {
         if (combined.length > 0) {
           setParentInquiries(combined);
         }
-      } catch {}
+      } catch { }
     };
 
     const checkLockStatus = () => {
       try {
         const locked = localStorage.getItem("gbs_system_locked") === "true";
         setIsSystemLocked(locked);
-      } catch {}
+      } catch { }
     };
 
     const syncSubscriptionStatus = async () => {
@@ -2700,8 +2701,8 @@ export default function AdminDashboard() {
               localStorage.setItem("gbs_system_locked", "false");
             }
           }
-        } catch {}
-      } catch {}
+        } catch { }
+      } catch { }
     };
 
     const handleSubscriptionRenewedEvent = (e) => {
@@ -2728,14 +2729,14 @@ export default function AdminDashboard() {
         if (Array.isArray(saved)) setWeeklyAttendanceReports(saved);
         const archives = JSON.parse(localStorage.getItem("gbs_faculty_weekly_attendance_archives") || "[]");
         if (Array.isArray(archives)) setWeeklyArchives(archives);
-      } catch {}
+      } catch { }
     };
 
     const syncAuditRequests = () => {
       try {
         const saved = JSON.parse(localStorage.getItem("gbs_account_audit_requests") || "[]");
         if (Array.isArray(saved)) setAuditRequests(saved);
-      } catch {}
+      } catch { }
     };
 
     syncWeeklyAttendance();
@@ -2826,7 +2827,7 @@ export default function AdminDashboard() {
         });
         list = combined;
       }
-    } catch {}
+    } catch { }
 
     // Filter out blacklisted deleted applications
     list = list.filter((a) => !deletedIds.includes(String(a.id)) && !deletedIds.includes(String(a.applicationNumber)));
@@ -2943,7 +2944,7 @@ export default function AdminDashboard() {
           city: liveBeacon.city || "Live Device GPS Beacon Ping Acquired"
         };
       }
-    } catch {}
+    } catch { }
 
     try {
       const res = await apiClient.get(`/parents/emergency-search?phone=${encodeURIComponent(phoneClean)}`);
@@ -2997,8 +2998,8 @@ export default function AdminDashboard() {
 
   // Helper to send automated verification notice to parent contact upon Headmaster approval
   const sendAdmissionVerificationNotice = async (targetApp) => {
-    const wardName = targetApp?.studentFirstName 
-      ? `${targetApp.studentFirstName} ${targetApp.studentLastName || ""}`.trim() 
+    const wardName = targetApp?.studentFirstName
+      ? `${targetApp.studentFirstName} ${targetApp.studentLastName || ""}`.trim()
       : (targetApp?.studentName || "your ward");
     const parentContact = targetApp?.guardianPhone || targetApp?.guardianEmail || targetApp?.guardianName || "Parent Contact";
     const appNum = targetApp?.applicationNumber || `ADM-${targetApp?.id || "2026"}`;
@@ -3036,7 +3037,7 @@ export default function AdminDashboard() {
         recipientId: targetApp?.guardianPhone || "ADMISSIONS_PARENT",
         content: `[GBS HEADMASTER NOTICE]: ${noticeObj.message}`,
         priority: "HIGH"
-      }).catch(() => {});
+      }).catch(() => { });
     } catch (e) {
       console.warn("Notice storage error:", e);
     }
@@ -3062,9 +3063,9 @@ export default function AdminDashboard() {
     window.dispatchEvent(new Event("gbs_admission_status_changed"));
     window.dispatchEvent(new Event("storage"));
 
-    setFeedback({ 
-      type: "success", 
-      message: `🎉 Application ${appNumber} approved by Headmaster! Official verification notice sent to parent contact (${notice.guardianContact}). Parent can now download Admission Letter.` 
+    setFeedback({
+      type: "success",
+      message: `🎉 Application ${appNumber} approved by Headmaster! Official verification notice sent to parent contact (${notice.guardianContact}). Parent can now download Admission Letter.`
     });
     setSelectedApps((prev) => prev.filter((id) => id !== appId));
     fetchAdmissions();
@@ -3129,9 +3130,9 @@ export default function AdminDashboard() {
       window.dispatchEvent(new Event("gbs_admission_status_changed"));
       window.dispatchEvent(new Event("storage"));
 
-      setFeedback({ 
-        type: "info", 
-        message: `Application ${appNumber} marked as DENIED by Headmaster. Feedback and remarks transmitted to Parent Dashboard.` 
+      setFeedback({
+        type: "info",
+        message: `Application ${appNumber} marked as DENIED by Headmaster. Feedback and remarks transmitted to Parent Dashboard.`
       });
       setSelectedApps((prev) => prev.filter((id) => id !== appId));
       fetchAdmissions();
@@ -3199,9 +3200,9 @@ export default function AdminDashboard() {
         await sendAdmissionVerificationNotice(targetApp);
         successCount++;
       }
-      setFeedback({ 
-        type: "success", 
-        message: `🎉 Batch approved ${successCount} application(s)! Automatic verification notices dispatched to all parent contacts for campus physical verification.` 
+      setFeedback({
+        type: "success",
+        message: `🎉 Batch approved ${successCount} application(s)! Automatic verification notices dispatched to all parent contacts for campus physical verification.`
       });
       setSelectedApps([]);
       fetchAdmissions();
@@ -3414,7 +3415,7 @@ export default function AdminDashboard() {
         repliedAt: new Date().toLocaleString()
       });
       localStorage.setItem("gbs_parent_feedback_inbox", JSON.stringify(feedbackInbox));
-    } catch {}
+    } catch { }
 
     window.dispatchEvent(new CustomEvent("gbs_parent_feedback_updated"));
     setReplyTextMap((prev) => ({ ...prev, [inquiryId]: "" }));
@@ -3429,8 +3430,8 @@ export default function AdminDashboard() {
 
   return (
     <div className="role-dashboard-wrapper">
-      <div 
-        className="role-dashboard-bg" 
+      <div
+        className="role-dashboard-bg"
         style={{ backgroundImage: `url('/images/admin_login_bg.jpg')` }}
       ></div>
       <div className="role-dashboard-overlay"></div>
@@ -3606,9 +3607,9 @@ export default function AdminDashboard() {
 
             {/* Clear Daytime Real-Life Photograph */}
             <div className="role-hero-photo-frame">
-              <img 
-                src="/images/admin_login_bg.jpg" 
-                alt="School Governance Campus Center" 
+              <img
+                src="/images/admin_login_bg.jpg"
+                alt="School Governance Campus Center"
               />
               <div className="photo-live-pill">
                 <span className="ticker-dot"></span>
@@ -3633,12 +3634,11 @@ export default function AdminDashboard() {
                     <span style={{ fontSize: "1.05rem", fontWeight: 900, color: "#f8fafc", letterSpacing: "0.5px" }}>
                       INSTITUTIONAL PLATFORM SUBSCRIPTION: {tenantSubscription.status === "ACTIVE" ? "ACTIVE & RENEWED" : tenantSubscription.status}
                     </span>
-                    <span className={`renewed-duration-chip ${
-                      tenantSubscription.durationLabel === "3 Months" ? "chip-3m" :
-                      tenantSubscription.durationLabel === "6 Months" ? "chip-6m" :
-                      tenantSubscription.durationLabel === "1 Year" ? "chip-1y" :
-                      "chip-lifetime"
-                    }`}>
+                    <span className={`renewed-duration-chip ${tenantSubscription.durationLabel === "3 Months" ? "chip-3m" :
+                        tenantSubscription.durationLabel === "6 Months" ? "chip-6m" :
+                          tenantSubscription.durationLabel === "1 Year" ? "chip-1y" :
+                            "chip-lifetime"
+                      }`}>
                       <span>●</span>
                       RENEWED FOR: {tenantSubscription.durationLabel || "6 Months"}
                     </span>
@@ -3893,7 +3893,7 @@ export default function AdminDashboard() {
 
           {/* Feedback Alert */}
           {feedback && (
-            <div 
+            <div
               style={{
                 padding: "12px 18px",
                 borderRadius: "10px",
@@ -4085,123 +4085,123 @@ export default function AdminDashboard() {
 
           {/* Workspace Tabs Navigation */}
           <nav className="role-tab-nav">
-            <button 
-              type="button" 
+            <button
+              type="button"
               className={`role-tab-btn ${activeTab === "roster" ? "active" : ""}`}
               onClick={() => setActiveTab("roster")}
             >
               👥 User Registration Roster (Drop-List Verification)
             </button>
-            <button 
-              type="button" 
+            <button
+              type="button"
               className={`role-tab-btn ${activeTab === "hr_audits" ? "active" : ""}`}
               onClick={() => setActiveTab("hr_audits")}
               style={{ borderLeft: "3px solid #a855f7", color: activeTab === "hr_audits" ? "#c084fc" : undefined }}
             >
               🛡️ HR Audit Directives & Reports ({submittedHrReports.length})
             </button>
-            <button 
-              type="button" 
+            <button
+              type="button"
               className={`role-tab-btn ${activeTab === "attendanceCrossCheck" ? "active" : ""}`}
               onClick={() => setActiveTab("attendanceCrossCheck")}
               style={{ borderLeft: "3px solid #10b981", color: activeTab === "attendanceCrossCheck" ? "#34d399" : undefined }}
             >
               📋 Weekly Attendance Cross-Check ({weeklyAttendanceReports.filter((r) => r.status === "PENDING_CROSS_CHECK").length} Pending)
             </button>
-            <button 
-              type="button" 
+            <button
+              type="button"
               className={`role-tab-btn ${activeTab === "lessonVetting" ? "active" : ""}`}
               onClick={() => setActiveTab("lessonVetting")}
               style={{ borderLeft: "3px solid #06b6d4", color: activeTab === "lessonVetting" ? "#22d3ee" : undefined }}
             >
               📑 Teacher Plans & Notes Vetting ({teacherLessonPlans.filter((p) => p.status === "PENDING_VETTING").length} Pending)
             </button>
-            <button 
-              type="button" 
+            <button
+              type="button"
               className={`role-tab-btn ${activeTab === "planner" ? "active" : ""}`}
               onClick={() => setActiveTab("planner")}
               style={{ borderLeft: "3px solid #38bdf8", color: activeTab === "planner" ? "#38bdf8" : undefined }}
             >
               🗓️ Academic Planner & Automatic Promotions
             </button>
-            <button 
-              type="button" 
+            <button
+              type="button"
               className={`role-tab-btn ${activeTab === "academics" ? "active" : ""}`}
               onClick={() => setActiveTab("academics")}
             >
               📚 Academic Classes & Curriculum
             </button>
-            <button 
-              type="button" 
+            <button
+              type="button"
               className={`role-tab-btn ${activeTab === "admissions" ? "active" : ""}`}
               onClick={() => setActiveTab("admissions")}
             >
               📂 Admissions Pipeline & Intake
             </button>
-            <button 
-              type="button" 
+            <button
+              type="button"
               className={`role-tab-btn ${activeTab === "communications" ? "active" : ""}`}
               onClick={() => setActiveTab("communications")}
               style={{ borderLeft: "3px solid #2563eb", color: activeTab === "communications" ? "#60a5fa" : "#38bdf8", fontWeight: 800 }}
             >
               📨 Multi-Channel Communications (SMS • WhatsApp • Email)
             </button>
-            <button 
-              type="button" 
+            <button
+              type="button"
               className={`role-tab-btn ${activeTab === "locator" ? "active" : ""}`}
               onClick={() => setActiveTab("locator")}
             >
               📍 Emergency Guardian Locator
             </button>
-            <button 
-              type="button" 
+            <button
+              type="button"
               className={`role-tab-btn ${activeTab === "circulars" ? "active" : ""}`}
               onClick={() => setActiveTab("circulars")}
             >
               📢 School Circulars & Announcements
             </button>
-            <button 
-              type="button" 
+            <button
+              type="button"
               className={`role-tab-btn ${activeTab === "inquiries" ? "active" : ""}`}
               onClick={() => setActiveTab("inquiries")}
               style={{ borderLeft: "3px solid #f59e0b", color: activeTab === "inquiries" ? "#f59e0b" : undefined }}
             >
               💬 Parent Inquiries & Feedback ({parentInquiries.length})
             </button>
-            <button 
-              type="button" 
+            <button
+              type="button"
               className={`role-tab-btn ${activeTab === "audits" ? "active" : ""}`}
               onClick={() => setActiveTab("audits")}
               style={{ borderLeft: "3px solid #10b981" }}
             >
               🛡️ Audit References & Compliance Ledger
             </button>
-            <button 
-              type="button" 
+            <button
+              type="button"
               className={`role-tab-btn ${activeTab === "feeApprovals" ? "active" : ""}`}
               onClick={() => setActiveTab("feeApprovals")}
               style={{ borderLeft: "3px solid #ec4899", color: activeTab === "feeApprovals" ? "#ec4899" : undefined }}
             >
               💳 Fee Increment Approvals ({accountantIncrementRequests.filter(r => r.status === "PENDING_HEADMASTER_APPROVAL").length})
             </button>
-            <button 
-              type="button" 
+            <button
+              type="button"
               className={`role-tab-btn ${activeTab === "leadership" ? "active" : ""}`}
               onClick={() => setActiveTab("leadership")}
               style={{ borderLeft: "3px solid #a855f7", color: activeTab === "leadership" ? "#a855f7" : undefined }}
             >
               👑 Leadership & Succession Dossier
             </button>
-            <button 
-              type="button" 
+            <button
+              type="button"
               className={`role-tab-btn ${activeTab === "devDirectives" ? "active" : ""}`}
               onClick={() => setActiveTab("devDirectives")}
               style={{ borderLeft: "3px solid #8b5cf6", color: activeTab === "devDirectives" ? "#8b5cf6" : undefined }}
             >
               💬 Developer Directives & Remediation ({developerMessages.length})
             </button>
-            <button 
-              type="button" 
+            <button
+              type="button"
               className={`role-tab-btn ${activeTab === "busTransport" ? "active" : ""}`}
               onClick={() => setActiveTab("busTransport")}
               style={{ borderLeft: "3px solid #06b6d4", color: activeTab === "busTransport" ? "#06b6d4" : undefined }}
@@ -4345,6 +4345,15 @@ export default function AdminDashboard() {
                               <div style={{ display: "flex", gap: "6px" }}>
                                 <button
                                   type="button"
+                                  className="btn-secondary"
+                                  style={{ padding: "6px 10px", fontSize: "0.78rem", borderColor: "#38bdf8", color: "#38bdf8", cursor: "pointer" }}
+                                  onClick={() => navigateToDetail(navigate, "staff", staff.id, staff, { returnTab: activeTab })}
+                                  title="View staff profile on dedicated routed page"
+                                >
+                                  🔍 View
+                                </button>
+                                <button
+                                  type="button"
                                   className="btn-primary"
                                   style={{ padding: "6px 12px", fontSize: "0.78rem", background: "#10b981", borderColor: "#059669" }}
                                   onClick={() => handleApproveStaff(staff)}
@@ -4478,9 +4487,10 @@ export default function AdminDashboard() {
                             <td>
                               <button
                                 type="button"
-                                onClick={() => setSelectedHrReportToInspect(rep)}
+                                onClick={() => navigateToDetail(navigate, "hr-report", rep.id, rep, { returnTab: activeTab })}
                                 className="btn-primary"
                                 style={{ padding: "5px 12px", fontSize: "0.78rem", background: "#0284c7" }}
+                                title="Inspect HR report details on dedicated routed page"
                               >
                                 🔍 Inspect & Certify
                               </button>
@@ -4568,8 +4578,8 @@ export default function AdminDashboard() {
                             </div>
                           </td>
                           <td style={{ fontSize: "0.8rem", whiteSpace: "nowrap" }}>
-                            <span style={{ color: "#34d399", fontWeight: "700" }}>{rep.totalPresentDays} P</span> • 
-                            <span style={{ color: "#fbbf24", fontWeight: "700" }}> {rep.totalLateDays} L</span> • 
+                            <span style={{ color: "#34d399", fontWeight: "700" }}>{rep.totalPresentDays} P</span> •
+                            <span style={{ color: "#fbbf24", fontWeight: "700" }}> {rep.totalLateDays} L</span> •
                             <span style={{ color: "#f87171", fontWeight: "700" }}> {rep.totalAbsentDays} A</span>
                           </td>
                           <td style={{ fontSize: "0.78rem", maxWidth: "220px", color: "#cbd5e1" }}>
@@ -4587,7 +4597,7 @@ export default function AdminDashboard() {
                             {rep.teacherNotes || "Regular daily attendance records submitted."}
                           </td>
                           <td>
-                            <span 
+                            <span
                               className={`badge-status ${isVerified ? "badge-present" : "badge-late"}`}
                               style={{ whiteSpace: "nowrap" }}
                             >
@@ -4612,12 +4622,10 @@ export default function AdminDashboard() {
                                 />
                                 <button
                                   type="button"
-                                  onClick={() => {
-                                    setSelectedAttendanceForInspection(rep);
-                                    setShowAttendanceInspectionModal(true);
-                                  }}
+                                  onClick={() => navigateToDetail(navigate, "attendance", rep.id, rep, { returnTab: activeTab })}
                                   className="btn-secondary"
-                                  style={{ padding: "5px 10px", fontSize: "0.78rem", borderColor: "#38bdf8", color: "#38bdf8", display: "flex", alignItems: "center", gap: "6px", justifyContent: "center" }}
+                                  style={{ padding: "5px 10px", fontSize: "0.78rem", borderColor: "#38bdf8", color: "#38bdf8", display: "flex", alignItems: "center", gap: "6px", justifyContent: "center", cursor: "pointer" }}
+                                  title="View full class attendance register on dedicated routed page"
                                 >
                                   🔍 View & Verify Roll-Call Sheet
                                 </button>
@@ -5032,13 +5040,10 @@ export default function AdminDashboard() {
                               <td>
                                 <button
                                   type="button"
-                                  onClick={() => {
-                                    setSelectedVettingPlan(plan);
-                                    setVettingDecision(plan.status === "PENDING_VETTING" ? "VETTED_APPROVED" : plan.status);
-                                    setHeadmasterRemarksInput(plan.headmasterRemarks || "");
-                                  }}
+                                  onClick={() => navigateToDetail(navigate, "lesson-plan", plan.id, plan, { returnTab: activeTab })}
                                   className="btn-primary"
-                                  style={{ padding: "5px 12px", fontSize: "0.78rem", background: "#0284c7", whiteSpace: "nowrap" }}
+                                  style={{ padding: "5px 12px", fontSize: "0.78rem", background: "#0284c7", whiteSpace: "nowrap", cursor: "pointer" }}
+                                  title="Inspect full lesson plan and scheme of work on dedicated routed page"
                                 >
                                   🔍 Inspect & Vet Plan
                                 </button>
@@ -5083,8 +5088,8 @@ export default function AdminDashboard() {
                   <label style={{ display: "block", fontSize: "0.75rem", color: "#38bdf8", fontWeight: "700", marginBottom: "6px" }}>
                     Select Class Level Tier (Nursery 1 to University Level 400) *
                   </label>
-                  <select 
-                    className="filter-select" 
+                  <select
+                    className="filter-select"
                     style={{ width: "100%", borderColor: "#38bdf8" }}
                     onChange={(e) => {
                       const selected = CLASS_CURRICULUM_PRESETS.find(p => p.code === e.target.value);
@@ -5144,10 +5149,10 @@ export default function AdminDashboard() {
                 <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(220px, 1fr))", gap: "12px", marginBottom: "1rem" }}>
                   <div>
                     <label style={{ display: "block", fontSize: "0.75rem", color: "#94a3b8", marginBottom: "4px" }}>Class Name / Title *</label>
-                    <input 
-                      type="text" 
-                      required 
-                      className="filter-input" 
+                    <input
+                      type="text"
+                      required
+                      className="filter-input"
                       style={{ width: "100%" }}
                       value={newClass.name}
                       onChange={(e) => setNewClass({ ...newClass, name: e.target.value })}
@@ -5157,10 +5162,10 @@ export default function AdminDashboard() {
                     <label style={{ display: "block", fontSize: "0.75rem", color: "#94a3b8", marginBottom: "4px" }}>
                       Class Title / Registration Code *
                     </label>
-                    <input 
-                      type="text" 
-                      required 
-                      className="filter-input" 
+                    <input
+                      type="text"
+                      required
+                      className="filter-input"
                       style={{ width: "100%", fontFamily: "monospace", color: "#38bdf8", fontWeight: "700" }}
                       value={newClass.code}
                       onChange={(e) => setNewClass({ ...newClass, code: e.target.value })}
@@ -5168,12 +5173,12 @@ export default function AdminDashboard() {
                   </div>
                   <div>
                     <label style={{ display: "block", fontSize: "0.75rem", color: "#94a3b8", marginBottom: "4px" }}>Grade Level (1 - 16) *</label>
-                    <input 
-                      type="number" 
-                      required 
-                      min="1" 
-                      max="16" 
-                      className="filter-input" 
+                    <input
+                      type="number"
+                      required
+                      min="1"
+                      max="16"
+                      className="filter-input"
                       style={{ width: "100%" }}
                       value={newClass.gradeLevel}
                       onChange={(e) => setNewClass({ ...newClass, gradeLevel: e.target.value })}
@@ -5193,14 +5198,14 @@ export default function AdminDashboard() {
                   <div style={{ display: "flex", flexWrap: "wrap", gap: "8px", marginBottom: "12px" }}>
                     {newClass.subjects && newClass.subjects.length > 0 ? (
                       newClass.subjects.map((sub, sIdx) => (
-                        <div 
-                          key={sIdx} 
+                        <div
+                          key={sIdx}
                           style={{ display: "inline-flex", alignItems: "center", gap: "6px", background: "rgba(56, 189, 248, 0.15)", border: "1px solid rgba(56, 189, 248, 0.3)", padding: "4px 10px", borderRadius: "6px", fontSize: "0.8rem", color: "#f8fafc" }}
                         >
                           <span>{sub.name}</span>
                           <strong style={{ color: "#38bdf8", fontFamily: "monospace" }}>[{sub.code}]</strong>
-                          <button 
-                            type="button" 
+                          <button
+                            type="button"
                             onClick={() => handleRemoveSubjectFromClass(sub.code)}
                             style={{ background: "none", border: "none", color: "#f87171", cursor: "pointer", marginLeft: "4px", fontWeight: "700" }}
                           >
@@ -5215,25 +5220,25 @@ export default function AdminDashboard() {
 
                   {/* Add Custom Subject / Course Row */}
                   <div style={{ display: "flex", gap: "8px", alignItems: "center", flexWrap: "wrap" }}>
-                    <input 
-                      type="text" 
+                    <input
+                      type="text"
                       placeholder="Subject / Course Name (e.g. Data Structures)"
                       className="filter-input"
                       style={{ flex: 2, minWidth: "200px" }}
                       value={customSubjectName}
                       onChange={(e) => setCustomSubjectName(e.target.value)}
                     />
-                    <input 
-                      type="text" 
+                    <input
+                      type="text"
                       placeholder="Course Code (e.g. CS-201)"
                       className="filter-input"
                       style={{ flex: 1, minWidth: "120px", fontFamily: "monospace" }}
                       value={customSubjectCode}
                       onChange={(e) => setCustomSubjectCode(e.target.value)}
                     />
-                    <button 
-                      type="button" 
-                      className="btn-secondary" 
+                    <button
+                      type="button"
+                      className="btn-secondary"
                       onClick={handleAddCustomSubject}
                       style={{ padding: "8px 14px", fontSize: "0.8rem", borderColor: "#34d399", color: "#34d399", whiteSpace: "nowrap" }}
                     >
@@ -5685,13 +5690,9 @@ export default function AdminDashboard() {
                               <button
                                 type="button"
                                 className="btn-secondary"
-                                onClick={() => {
-                                  setSelectedAppForVerification(app);
-                                  setAdmissionVettingRemarks(app.notes || "Applicant credentials, identity certificates, and prior academic record verified in order.");
-                                  setShowAppVerificationModal(true);
-                                }}
-                                style={{ padding: "4px 10px", fontSize: "0.78rem", borderColor: "#38bdf8", color: "#38bdf8", whiteSpace: "nowrap" }}
-                                title="View full admission enquiry dossier and verify criteria before approval"
+                                onClick={() => navigateToDetail(navigate, "admission", app.applicationNumber || app.id, app, { returnTab: activeTab })}
+                                style={{ padding: "4px 10px", fontSize: "0.78rem", borderColor: "#38bdf8", color: "#38bdf8", whiteSpace: "nowrap", cursor: "pointer" }}
+                                title="View full admission enquiry dossier on dedicated routed page"
                               >
                                 🔍 View & Verify
                               </button>
@@ -5744,11 +5745,11 @@ export default function AdminDashboard() {
               </div>
 
               <form onSubmit={handleSearchEmergencyLocator} style={{ background: "rgba(2, 6, 23, 0.5)", padding: "1.25rem", borderRadius: "12px", marginBottom: "1.5rem", display: "flex", gap: "12px", flexWrap: "wrap" }}>
-                <input 
-                  type="text" 
-                  required 
-                  placeholder="Enter Parent / Guardian Mobile Number (e.g. +1-555-0199 or +233...)" 
-                  className="filter-input" 
+                <input
+                  type="text"
+                  required
+                  placeholder="Enter Parent / Guardian Mobile Number (e.g. +1-555-0199 or +233...)"
+                  className="filter-input"
                   style={{ flex: 1, minWidth: "250px" }}
                   value={searchPhone}
                   onChange={(e) => setSearchPhone(e.target.value)}
@@ -5815,9 +5816,9 @@ export default function AdminDashboard() {
 
                   {/* Action & Direct Navigation Links */}
                   <div style={{ display: "flex", gap: "10px", flexWrap: "wrap", alignItems: "center" }}>
-                    <a 
-                      href={`tel:${locatorResult.phone}`} 
-                      className="btn-primary" 
+                    <a
+                      href={`tel:${locatorResult.phone}`}
+                      className="btn-primary"
                       style={{ textDecoration: "none", background: "linear-gradient(135deg, #ef4444, #b91c1c)", padding: "10px 18px", display: "inline-flex", alignItems: "center", gap: "8px" }}
                     >
                       📞 Emergency Voice Call Guardian
@@ -6147,8 +6148,8 @@ export default function AdminDashboard() {
                               commChannel === "WHATSAPP"
                                 ? "linear-gradient(135deg, #25D366, #128C7E)"
                                 : commChannel === "SMS"
-                                ? "linear-gradient(135deg, #0284c7, #0369a1)"
-                                : "linear-gradient(135deg, #9333ea, #7e22ce)",
+                                  ? "linear-gradient(135deg, #0284c7, #0369a1)"
+                                  : "linear-gradient(135deg, #9333ea, #7e22ce)",
                             color: "#fff",
                             border: "none",
                             boxShadow: "0 4px 15px rgba(0, 0, 0, 0.4)",
@@ -6412,27 +6413,26 @@ export default function AdminDashboard() {
                                       item.channel === "WHATSAPP"
                                         ? "rgba(37, 211, 102, 0.2)"
                                         : item.channel === "SMS"
-                                        ? "rgba(56, 189, 248, 0.2)"
-                                        : item.channel === "VOICE_NOTE"
-                                        ? "rgba(236, 72, 153, 0.2)"
-                                        : "rgba(168, 85, 247, 0.2)",
+                                          ? "rgba(56, 189, 248, 0.2)"
+                                          : item.channel === "VOICE_NOTE"
+                                            ? "rgba(236, 72, 153, 0.2)"
+                                            : "rgba(168, 85, 247, 0.2)",
                                     color:
                                       item.channel === "WHATSAPP"
                                         ? "#25D366"
                                         : item.channel === "SMS"
-                                        ? "#38bdf8"
-                                        : item.channel === "VOICE_NOTE"
-                                        ? "#f472b6"
-                                        : "#c084fc",
-                                    border: `1px solid ${
-                                      item.channel === "WHATSAPP"
+                                          ? "#38bdf8"
+                                          : item.channel === "VOICE_NOTE"
+                                            ? "#f472b6"
+                                            : "#c084fc",
+                                    border: `1px solid ${item.channel === "WHATSAPP"
                                         ? "#25D366"
                                         : item.channel === "SMS"
-                                        ? "#38bdf8"
-                                        : item.channel === "VOICE_NOTE"
-                                        ? "#ec4899"
-                                        : "#a855f7"
-                                    }`
+                                          ? "#38bdf8"
+                                          : item.channel === "VOICE_NOTE"
+                                            ? "#ec4899"
+                                            : "#a855f7"
+                                      }`
                                   }}
                                 >
                                   {item.channel === "VOICE_NOTE" ? "🎙️ VOICE NOTE" : item.channel}
@@ -6558,20 +6558,20 @@ export default function AdminDashboard() {
               {announcementTab === "active" ? (
                 <>
                   <form onSubmit={handleBroadcastAnnouncement} style={{ background: "rgba(2, 6, 23, 0.5)", padding: "1.25rem", borderRadius: "12px", marginBottom: "1.5rem" }}>
-                    <input 
-                      type="text" 
-                      required 
-                      placeholder="Announcement Headline" 
-                      className="filter-input" 
+                    <input
+                      type="text"
+                      required
+                      placeholder="Announcement Headline"
+                      className="filter-input"
                       style={{ width: "100%", marginBottom: "10px" }}
                       value={announcementTitle}
                       onChange={(e) => setAnnouncementTitle(e.target.value)}
                     />
-                    <textarea 
-                      rows={3} 
-                      required 
-                      placeholder="Write announcement body..." 
-                      className="filter-input" 
+                    <textarea
+                      rows={3}
+                      required
+                      placeholder="Write announcement body..."
+                      className="filter-input"
                       style={{ width: "100%", marginBottom: "10px" }}
                       value={announcementText}
                       onChange={(e) => setAnnouncementText(e.target.value)}
@@ -6662,7 +6662,7 @@ export default function AdminDashboard() {
                   </div>
                 ) : (
                   parentInquiries.map((inq) => (
-                    <div 
+                    <div
                       key={inq.id}
                       style={{
                         background: "rgba(15, 23, 42, 0.8)",
@@ -6871,8 +6871,8 @@ export default function AdminDashboard() {
                       </tr>
                     ) : (
                       auditLogs.map((log) => (
-                        <tr 
-                          key={log.id} 
+                        <tr
+                          key={log.id}
                           style={{ cursor: "pointer", transition: "background 0.2s" }}
                           onClick={() => setSelectedAuditLog(log)}
                           title="Click to view full reference details"
@@ -7411,8 +7411,8 @@ export default function AdminDashboard() {
               {/* SECTION 1: YEARLY & TERMLY ACADEMIC SYSTEM PLANNER & STAFF DIRECTIVES */}
               <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(420px, 1fr))", gap: "1.5rem", marginBottom: "2rem" }}>
                 {/* Form 1: Academic Schedule & Directives */}
-                <form 
-                  onSubmit={handleSaveAcademicPlan} 
+                <form
+                  onSubmit={handleSaveAcademicPlan}
                   style={{ background: "rgba(15, 23, 42, 0.75)", border: "1px solid rgba(59, 130, 246, 0.3)", borderRadius: "14px", padding: "1.5rem" }}
                 >
                   <div style={{ display: "flex", alignItems: "center", gap: "10px", marginBottom: "1rem", borderBottom: "1px solid rgba(255,255,255,0.08)", paddingBottom: "10px" }}>
@@ -7565,8 +7565,8 @@ export default function AdminDashboard() {
                 </form>
 
                 {/* Form 2: Headmaster Zoom Online Meeting Scheduler */}
-                <form 
-                  onSubmit={handleScheduleZoomMeeting} 
+                <form
+                  onSubmit={handleScheduleZoomMeeting}
                   style={{ background: "rgba(15, 23, 42, 0.75)", border: "1px solid rgba(59, 130, 246, 0.3)", borderRadius: "14px", padding: "1.5rem" }}
                 >
                   <div style={{ display: "flex", alignItems: "center", gap: "10px", marginBottom: "1rem", borderBottom: "1px solid rgba(255,255,255,0.08)", paddingBottom: "10px" }}>
@@ -7982,12 +7982,12 @@ export default function AdminDashboard() {
                 }}>
                   {typeof selectedAuditLog.details === "string"
                     ? (() => {
-                        try {
-                          return JSON.stringify(JSON.parse(selectedAuditLog.details), null, 2);
-                        } catch {
-                          return selectedAuditLog.details;
-                        }
-                      })()
+                      try {
+                        return JSON.stringify(JSON.parse(selectedAuditLog.details), null, 2);
+                      } catch {
+                        return selectedAuditLog.details;
+                      }
+                    })()
                     : JSON.stringify(selectedAuditLog.details || {}, null, 2)}
                 </pre>
               </div>
@@ -9596,12 +9596,11 @@ export default function AdminDashboard() {
               </p>
 
               <div style={{ margin: "0 auto 1.5rem", display: "inline-block" }}>
-                <span className={`renewed-duration-chip ${
-                  tenantSubscription.durationLabel === "3 Months" ? "chip-3m" :
-                  tenantSubscription.durationLabel === "6 Months" ? "chip-6m" :
-                  tenantSubscription.durationLabel === "1 Year" ? "chip-1y" :
-                  "chip-lifetime"
-                }`} style={{ fontSize: "1.1rem", padding: "8px 20px" }}>
+                <span className={`renewed-duration-chip ${tenantSubscription.durationLabel === "3 Months" ? "chip-3m" :
+                    tenantSubscription.durationLabel === "6 Months" ? "chip-6m" :
+                      tenantSubscription.durationLabel === "1 Year" ? "chip-1y" :
+                        "chip-lifetime"
+                  }`} style={{ fontSize: "1.1rem", padding: "8px 20px" }}>
                   <span>{tenantSubscription.isLifetime || tenantSubscription.durationLabel?.includes("Lifetime") ? "👑" : "📅"}</span>
                   RENEWED FOR: {tenantSubscription.durationLabel || "6 Months"}
                 </span>
@@ -9664,8 +9663,8 @@ export default function AdminDashboard() {
         {/* ======================================================== */}
         {selectedVettingPlan && (
           <div className="role-modal-backdrop" onClick={() => setSelectedVettingPlan(null)}>
-            <div 
-              className="role-modal-card" 
+            <div
+              className="role-modal-card"
               style={{ maxWidth: "720px", background: "rgba(15, 23, 42, 0.98)", border: "2px solid #38bdf8", borderRadius: "16px", padding: "24px", boxShadow: "0 25px 60px rgba(0,0,0,0.9)" }}
               onClick={(e) => e.stopPropagation()}
             >
@@ -9849,8 +9848,8 @@ export default function AdminDashboard() {
                     type="submit"
                     className="btn-primary"
                     style={{
-                      background: vettingDecision === "VETTED_APPROVED" 
-                        ? "linear-gradient(135deg, #10b981, #059669)" 
+                      background: vettingDecision === "VETTED_APPROVED"
+                        ? "linear-gradient(135deg, #10b981, #059669)"
                         : "linear-gradient(135deg, #ef4444, #dc2626)",
                       padding: "8px 22px",
                       fontSize: "0.85rem",
@@ -10114,551 +10113,551 @@ export default function AdminDashboard() {
           </div>
         </div>
       )}
-        {/* MODAL: DEVELOPER DIRECTIVE & HEADMASTER TWO-WAY REPLY */}
-        {showDevMessageModal && selectedDevMessage && (
-          <div className="staff-modal-overlay">
-            <div className="staff-modal-card" style={{ maxWidth: "660px", width: "95%" }}>
-              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "1.25rem", borderBottom: "1.5px solid #8b5cf6", paddingBottom: "12px" }}>
-                <div style={{ display: "flex", alignItems: "center", gap: "12px" }}>
-                  <button
-                    type="button"
-                    onClick={() => setShowDevMessageModal(false)}
-                    style={{
-                      background: "rgba(148, 163, 184, 0.15)",
-                      border: "1px solid #475569",
-                      color: "#f8fafc",
-                      padding: "6px 14px",
-                      borderRadius: "8px",
-                      fontSize: "0.82rem",
-                      fontWeight: "700",
-                      cursor: "pointer",
-                      display: "flex",
-                      alignItems: "center",
-                      gap: "6px"
-                    }}
-                  >
-                    ⬅️ Back
-                  </button>
-                  <span style={{ fontSize: "1.6rem" }}>💬</span>
-                  <div>
-                    <h3 style={{ margin: 0, color: "#f8fafc", fontSize: "1.15rem", fontWeight: 800 }}>
-                      SYSTEM DEVELOPER DIRECTIVE & ACTION REPLY
-                    </h3>
-                    <span style={{ fontSize: "0.75rem", color: "#c4b5fd" }}>
-                      From: <strong>Gabriel Osei (Chief System Engineer)</strong>
-                    </span>
-                  </div>
-                </div>
+      {/* MODAL: DEVELOPER DIRECTIVE & HEADMASTER TWO-WAY REPLY */}
+      {showDevMessageModal && selectedDevMessage && (
+        <div className="staff-modal-overlay">
+          <div className="staff-modal-card" style={{ maxWidth: "660px", width: "95%" }}>
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "1.25rem", borderBottom: "1.5px solid #8b5cf6", paddingBottom: "12px" }}>
+              <div style={{ display: "flex", alignItems: "center", gap: "12px" }}>
                 <button
                   type="button"
                   onClick={() => setShowDevMessageModal(false)}
-                  style={{ background: "transparent", border: "none", color: "#94a3b8", fontSize: "1.2rem", cursor: "pointer" }}
+                  style={{
+                    background: "rgba(148, 163, 184, 0.15)",
+                    border: "1px solid #475569",
+                    color: "#f8fafc",
+                    padding: "6px 14px",
+                    borderRadius: "8px",
+                    fontSize: "0.82rem",
+                    fontWeight: "700",
+                    cursor: "pointer",
+                    display: "flex",
+                    alignItems: "center",
+                    gap: "6px"
+                  }}
                 >
-                  ✕
+                  ⬅️ Back
+                </button>
+                <span style={{ fontSize: "1.6rem" }}>💬</span>
+                <div>
+                  <h3 style={{ margin: 0, color: "#f8fafc", fontSize: "1.15rem", fontWeight: 800 }}>
+                    SYSTEM DEVELOPER DIRECTIVE & ACTION REPLY
+                  </h3>
+                  <span style={{ fontSize: "0.75rem", color: "#c4b5fd" }}>
+                    From: <strong>Gabriel Osei (Chief System Engineer)</strong>
+                  </span>
+                </div>
+              </div>
+              <button
+                type="button"
+                onClick={() => setShowDevMessageModal(false)}
+                style={{ background: "transparent", border: "none", color: "#94a3b8", fontSize: "1.2rem", cursor: "pointer" }}
+              >
+                ✕
+              </button>
+            </div>
+
+            {/* Directive Body */}
+            <div style={{ background: "rgba(2, 6, 23, 0.8)", padding: "1.25rem", borderRadius: "10px", borderLeft: "4px solid #ef4444", marginBottom: "1.25rem" }}>
+              <div style={{ display: "flex", justifyContent: "space-between", marginBottom: "6px", fontSize: "0.75rem" }}>
+                <strong style={{ color: "#f87171" }}>{selectedDevMessage.subject}</strong>
+                <span style={{ color: "#94a3b8" }}>{new Date(selectedDevMessage.timestamp).toLocaleString()}</span>
+              </div>
+              <div style={{ whiteSpace: "pre-wrap", color: "#f1f5f9", fontSize: "0.9rem", lineHeight: "1.6" }}>
+                {selectedDevMessage.messageText}
+              </div>
+            </div>
+
+            {/* Headmaster Reply Form */}
+            <form onSubmit={handleSendHeadmasterReply}>
+              <div className="staff-field" style={{ marginBottom: "1.25rem" }}>
+                <label style={{ color: "#34d399", fontWeight: "800", fontSize: "0.85rem", display: "block", marginBottom: "6px" }}>
+                  ✍️ Headmaster Reply (Detailing What You Are Supposed to Do & Corrective Actions Taken) *
+                </label>
+                <textarea
+                  rows={5}
+                  required
+                  placeholder="Enter your official reply to Chief Developer Gabriel Osei explaining the investigation conducted, sanctions issued, and security protocols enforced to put a stop to unauthorized logins..."
+                  value={headmasterReplyText}
+                  onChange={(e) => setHeadmasterReplyText(e.target.value)}
+                  style={{ width: "100%", padding: "12px", background: "#020617", border: "1px solid #334155", borderRadius: "8px", color: "#fff", fontSize: "0.88rem", fontFamily: "inherit", boxSizing: "border-box", lineHeight: "1.6" }}
+                />
+              </div>
+
+              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+                <button
+                  type="button"
+                  onClick={() => setShowDevMessageModal(false)}
+                  style={{ background: "#334155", color: "#cbd5e1", border: "none", padding: "10px 18px", borderRadius: "8px", fontWeight: "700", cursor: "pointer" }}
+                >
+                  ⬅️ Back / Cancel
+                </button>
+                <button
+                  type="submit"
+                  style={{
+                    background: "linear-gradient(135deg, #10b981, #059669)",
+                    color: "#fff",
+                    border: "none",
+                    padding: "10px 24px",
+                    borderRadius: "8px",
+                    fontWeight: "800",
+                    fontSize: "0.85rem",
+                    cursor: "pointer",
+                    boxShadow: "0 4px 14px rgba(16, 185, 129, 0.4)"
+                  }}
+                >
+                  📤 Transmit Official Reply to Developer
                 </button>
               </div>
-
-              {/* Directive Body */}
-              <div style={{ background: "rgba(2, 6, 23, 0.8)", padding: "1.25rem", borderRadius: "10px", borderLeft: "4px solid #ef4444", marginBottom: "1.25rem" }}>
-                <div style={{ display: "flex", justifyContent: "space-between", marginBottom: "6px", fontSize: "0.75rem" }}>
-                  <strong style={{ color: "#f87171" }}>{selectedDevMessage.subject}</strong>
-                  <span style={{ color: "#94a3b8" }}>{new Date(selectedDevMessage.timestamp).toLocaleString()}</span>
-                </div>
-                <div style={{ whiteSpace: "pre-wrap", color: "#f1f5f9", fontSize: "0.9rem", lineHeight: "1.6" }}>
-                  {selectedDevMessage.messageText}
-                </div>
-              </div>
-
-              {/* Headmaster Reply Form */}
-              <form onSubmit={handleSendHeadmasterReply}>
-                <div className="staff-field" style={{ marginBottom: "1.25rem" }}>
-                  <label style={{ color: "#34d399", fontWeight: "800", fontSize: "0.85rem", display: "block", marginBottom: "6px" }}>
-                    ✍️ Headmaster Reply (Detailing What You Are Supposed to Do & Corrective Actions Taken) *
-                  </label>
-                  <textarea
-                    rows={5}
-                    required
-                    placeholder="Enter your official reply to Chief Developer Gabriel Osei explaining the investigation conducted, sanctions issued, and security protocols enforced to put a stop to unauthorized logins..."
-                    value={headmasterReplyText}
-                    onChange={(e) => setHeadmasterReplyText(e.target.value)}
-                    style={{ width: "100%", padding: "12px", background: "#020617", border: "1px solid #334155", borderRadius: "8px", color: "#fff", fontSize: "0.88rem", fontFamily: "inherit", boxSizing: "border-box", lineHeight: "1.6" }}
-                  />
-                </div>
-
-                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-                  <button
-                    type="button"
-                    onClick={() => setShowDevMessageModal(false)}
-                    style={{ background: "#334155", color: "#cbd5e1", border: "none", padding: "10px 18px", borderRadius: "8px", fontWeight: "700", cursor: "pointer" }}
-                  >
-                    ⬅️ Back / Cancel
-                  </button>
-                  <button
-                    type="submit"
-                    style={{
-                      background: "linear-gradient(135deg, #10b981, #059669)",
-                      color: "#fff",
-                      border: "none",
-                      padding: "10px 24px",
-                      borderRadius: "8px",
-                      fontWeight: "800",
-                      fontSize: "0.85rem",
-                      cursor: "pointer",
-                      boxShadow: "0 4px 14px rgba(16, 185, 129, 0.4)"
-                    }}
-                  >
-                    📤 Transmit Official Reply to Developer
-                  </button>
-                </div>
-              </form>
-            </div>
+            </form>
           </div>
-        )}
+        </div>
+      )}
 
-        {/* MODAL: STUDENT BUS BOARDING & ROUTE FARE ASSIGNMENT */}
-        {showBusAssignmentModal && (
-          <div className="staff-modal-overlay">
-            <div className="staff-modal-card" style={{ maxWidth: "680px", width: "95%" }}>
-              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "1.25rem", borderBottom: "1.5px solid #06b6d4", paddingBottom: "12px" }}>
-                <div style={{ display: "flex", alignItems: "center", gap: "12px" }}>
-                  <button
-                    type="button"
-                    onClick={() => setShowBusAssignmentModal(false)}
-                    style={{
-                      background: "rgba(148, 163, 184, 0.15)",
-                      border: "1px solid #475569",
-                      color: "#f8fafc",
-                      padding: "6px 14px",
-                      borderRadius: "8px",
-                      fontSize: "0.82rem",
-                      fontWeight: "700",
-                      cursor: "pointer",
-                      display: "flex",
-                      alignItems: "center",
-                      gap: "6px"
-                    }}
-                  >
-                    ⬅️ Back
-                  </button>
-                  <span style={{ fontSize: "1.6rem" }}>🚌</span>
-                  <div>
-                    <h3 style={{ margin: 0, color: "#f8fafc", fontSize: "1.15rem", fontWeight: 800 }}>
-                      ASSIGN STUDENT TO BUS & DESTINATION FARE
-                    </h3>
-                    <span style={{ fontSize: "0.75rem", color: "#67e8f9" }}>
-                      Upload directly to Transport Dashboard with location-based fare amount
-                    </span>
-                  </div>
-                </div>
+      {/* MODAL: STUDENT BUS BOARDING & ROUTE FARE ASSIGNMENT */}
+      {showBusAssignmentModal && (
+        <div className="staff-modal-overlay">
+          <div className="staff-modal-card" style={{ maxWidth: "680px", width: "95%" }}>
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "1.25rem", borderBottom: "1.5px solid #06b6d4", paddingBottom: "12px" }}>
+              <div style={{ display: "flex", alignItems: "center", gap: "12px" }}>
                 <button
                   type="button"
                   onClick={() => setShowBusAssignmentModal(false)}
-                  style={{ background: "transparent", border: "none", color: "#94a3b8", fontSize: "1.2rem", cursor: "pointer" }}
+                  style={{
+                    background: "rgba(148, 163, 184, 0.15)",
+                    border: "1px solid #475569",
+                    color: "#f8fafc",
+                    padding: "6px 14px",
+                    borderRadius: "8px",
+                    fontSize: "0.82rem",
+                    fontWeight: "700",
+                    cursor: "pointer",
+                    display: "flex",
+                    alignItems: "center",
+                    gap: "6px"
+                  }}
                 >
-                  ✕
+                  ⬅️ Back
                 </button>
-              </div>
-
-              <form onSubmit={handleSaveAndUploadBusStudent}>
-                <div className="staff-form-grid" style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "12px" }}>
-                  <div className="staff-field">
-                    <label>Student Full Name *</label>
-                    <input
-                      type="text"
-                      required
-                      placeholder="e.g. Kwame Boateng"
-                      className="filter-input"
-                      value={newBusStudentForm.studentName}
-                      onChange={(e) => setNewBusStudentForm({ ...newBusStudentForm, studentName: e.target.value })}
-                    />
-                  </div>
-                  <div className="staff-field">
-                    <label>Student ID / Index (Optional)</label>
-                    <input
-                      type="text"
-                      placeholder="e.g. STU-2026-088"
-                      className="filter-input"
-                      value={newBusStudentForm.studentId}
-                      onChange={(e) => setNewBusStudentForm({ ...newBusStudentForm, studentId: e.target.value })}
-                    />
-                  </div>
-                  <div className="staff-field">
-                    <label>Class Cohort *</label>
-                    <input
-                      type="text"
-                      required
-                      placeholder="e.g. Class 4B or JHS 2A"
-                      className="filter-input"
-                      value={newBusStudentForm.className}
-                      onChange={(e) => setNewBusStudentForm({ ...newBusStudentForm, className: e.target.value })}
-                    />
-                  </div>
-                  <div className="staff-field">
-                    <label>Destination Location & Zone *</label>
-                    <select
-                      className="filter-select"
-                      style={{ width: "100%", padding: "10px", background: "#020617", border: "1px solid #334155", borderRadius: "8px", color: "#fff" }}
-                      value={newBusStudentForm.destinationZone}
-                      onChange={(e) => {
-                        const zone = e.target.value;
-                        const fare = busRouteFares[zone] || 450.0;
-                        setNewBusStudentForm({
-                          ...newBusStudentForm,
-                          destinationZone: zone,
-                          termlyFareGhs: fare
-                        });
-                      }}
-                    >
-                      {Object.keys(busRouteFares).map((zone) => (
-                        <option key={zone} value={zone}>
-                          {zone} — GHS {busRouteFares[zone]}
-                        </option>
-                      ))}
-                    </select>
-                  </div>
-
-                  <div className="staff-field">
-                    <label>Termly Bus Fare Amount (GHS) *</label>
-                    <input
-                      type="number"
-                      required
-                      step="0.01"
-                      className="filter-input"
-                      value={newBusStudentForm.termlyFareGhs}
-                      onChange={(e) => setNewBusStudentForm({ ...newBusStudentForm, termlyFareGhs: parseFloat(e.target.value) || 0 })}
-                    />
-                  </div>
-
-                  <div className="staff-field">
-                    <label>Assigned Bus & Driver *</label>
-                    <select
-                      className="filter-select"
-                      style={{ width: "100%", padding: "10px", background: "#020617", border: "1px solid #334155", borderRadius: "8px", color: "#fff" }}
-                      value={newBusStudentForm.busNumber}
-                      onChange={(e) => setNewBusStudentForm({ ...newBusStudentForm, busNumber: e.target.value })}
-                    >
-                      {registeredBusDrivers.map((d, i) => (
-                        <option key={i} value={`${d.busNumber} (${d.driverName})`}>
-                          {d.busNumber} — {d.driverName} ({d.driverPhone})
-                        </option>
-                      ))}
-                    </select>
-                  </div>
-
-                  <div className="staff-field">
-                    <label>Pickup Stop & Time *</label>
-                    <input
-                      type="text"
-                      required
-                      placeholder="e.g. Shell Station / Main Junction (06:30 AM)"
-                      className="filter-input"
-                      value={newBusStudentForm.pickupStop}
-                      onChange={(e) => setNewBusStudentForm({ ...newBusStudentForm, pickupStop: e.target.value })}
-                    />
-                  </div>
-
-                  <div className="staff-field">
-                    <label>Parent / Guardian Phone Contact *</label>
-                    <input
-                      type="text"
-                      required
-                      placeholder="+233-24-555-0199"
-                      className="filter-input"
-                      value={newBusStudentForm.parentPhone}
-                      onChange={(e) => setNewBusStudentForm({ ...newBusStudentForm, parentPhone: e.target.value })}
-                    />
-                  </div>
+                <span style={{ fontSize: "1.6rem" }}>🚌</span>
+                <div>
+                  <h3 style={{ margin: 0, color: "#f8fafc", fontSize: "1.15rem", fontWeight: 800 }}>
+                    ASSIGN STUDENT TO BUS & DESTINATION FARE
+                  </h3>
+                  <span style={{ fontSize: "0.75rem", color: "#67e8f9" }}>
+                    Upload directly to Transport Dashboard with location-based fare amount
+                  </span>
                 </div>
+              </div>
+              <button
+                type="button"
+                onClick={() => setShowBusAssignmentModal(false)}
+                style={{ background: "transparent", border: "none", color: "#94a3b8", fontSize: "1.2rem", cursor: "pointer" }}
+              >
+                ✕
+              </button>
+            </div>
 
-                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginTop: "1.5rem" }}>
-                  <button
-                    type="button"
-                    onClick={() => setShowBusAssignmentModal(false)}
-                    style={{ background: "#334155", color: "#cbd5e1", border: "none", padding: "10px 18px", borderRadius: "8px", fontWeight: "700", cursor: "pointer" }}
-                  >
-                    ⬅️ Back / Cancel
-                  </button>
-                  <button
-                    type="submit"
-                    style={{
-                      background: "linear-gradient(135deg, #06b6d4, #0891b2)",
-                      color: "#fff",
-                      border: "none",
-                      padding: "10px 22px",
-                      borderRadius: "8px",
-                      fontWeight: "800",
-                      fontSize: "0.85rem",
-                      cursor: "pointer",
-                      boxShadow: "0 4px 14px rgba(6, 182, 212, 0.4)"
+            <form onSubmit={handleSaveAndUploadBusStudent}>
+              <div className="staff-form-grid" style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "12px" }}>
+                <div className="staff-field">
+                  <label>Student Full Name *</label>
+                  <input
+                    type="text"
+                    required
+                    placeholder="e.g. Kwame Boateng"
+                    className="filter-input"
+                    value={newBusStudentForm.studentName}
+                    onChange={(e) => setNewBusStudentForm({ ...newBusStudentForm, studentName: e.target.value })}
+                  />
+                </div>
+                <div className="staff-field">
+                  <label>Student ID / Index (Optional)</label>
+                  <input
+                    type="text"
+                    placeholder="e.g. STU-2026-088"
+                    className="filter-input"
+                    value={newBusStudentForm.studentId}
+                    onChange={(e) => setNewBusStudentForm({ ...newBusStudentForm, studentId: e.target.value })}
+                  />
+                </div>
+                <div className="staff-field">
+                  <label>Class Cohort *</label>
+                  <input
+                    type="text"
+                    required
+                    placeholder="e.g. Class 4B or JHS 2A"
+                    className="filter-input"
+                    value={newBusStudentForm.className}
+                    onChange={(e) => setNewBusStudentForm({ ...newBusStudentForm, className: e.target.value })}
+                  />
+                </div>
+                <div className="staff-field">
+                  <label>Destination Location & Zone *</label>
+                  <select
+                    className="filter-select"
+                    style={{ width: "100%", padding: "10px", background: "#020617", border: "1px solid #334155", borderRadius: "8px", color: "#fff" }}
+                    value={newBusStudentForm.destinationZone}
+                    onChange={(e) => {
+                      const zone = e.target.value;
+                      const fare = busRouteFares[zone] || 450.0;
+                      setNewBusStudentForm({
+                        ...newBusStudentForm,
+                        destinationZone: zone,
+                        termlyFareGhs: fare
+                      });
                     }}
                   >
-                    🚌 Assign & Upload to Transport Portal
-                  </button>
+                    {Object.keys(busRouteFares).map((zone) => (
+                      <option key={zone} value={zone}>
+                        {zone} — GHS {busRouteFares[zone]}
+                      </option>
+                    ))}
+                  </select>
                 </div>
-              </form>
-            </div>
-          </div>
-        )}
 
-        {/* MODAL: CREATE DESTINATION ROUTE & FARE */}
-        {showCreateRouteModal && (
-          <div className="staff-modal-overlay">
-            <div className="staff-modal-card" style={{ maxWidth: "560px", width: "95%" }}>
-              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "1.25rem", borderBottom: "1.5px solid #10b981", paddingBottom: "12px" }}>
-                <div style={{ display: "flex", alignItems: "center", gap: "12px" }}>
-                  <button
-                    type="button"
-                    onClick={() => setShowCreateRouteModal(false)}
-                    style={{ background: "rgba(148, 163, 184, 0.15)", border: "1px solid #475569", color: "#f8fafc", padding: "6px 14px", borderRadius: "8px", fontSize: "0.82rem", fontWeight: "700", cursor: "pointer", display: "flex", alignItems: "center", gap: "6px" }}
-                  >
-                    ⬅️ Back
-                  </button>
-                  <span style={{ fontSize: "1.6rem" }}>📍</span>
-                  <div>
-                    <h3 style={{ margin: 0, color: "#f8fafc", fontSize: "1.15rem", fontWeight: 800 }}>
-                      CREATE DESTINATION & FARE
-                    </h3>
-                    <span style={{ fontSize: "0.75rem", color: "#34d399" }}>
-                      Establish new bus route with zone-specific termly fare
-                    </span>
-                  </div>
+                <div className="staff-field">
+                  <label>Termly Bus Fare Amount (GHS) *</label>
+                  <input
+                    type="number"
+                    required
+                    step="0.01"
+                    className="filter-input"
+                    value={newBusStudentForm.termlyFareGhs}
+                    onChange={(e) => setNewBusStudentForm({ ...newBusStudentForm, termlyFareGhs: parseFloat(e.target.value) || 0 })}
+                  />
                 </div>
+
+                <div className="staff-field">
+                  <label>Assigned Bus & Driver *</label>
+                  <select
+                    className="filter-select"
+                    style={{ width: "100%", padding: "10px", background: "#020617", border: "1px solid #334155", borderRadius: "8px", color: "#fff" }}
+                    value={newBusStudentForm.busNumber}
+                    onChange={(e) => setNewBusStudentForm({ ...newBusStudentForm, busNumber: e.target.value })}
+                  >
+                    {registeredBusDrivers.map((d, i) => (
+                      <option key={i} value={`${d.busNumber} (${d.driverName})`}>
+                        {d.busNumber} — {d.driverName} ({d.driverPhone})
+                      </option>
+                    ))}
+                  </select>
+                </div>
+
+                <div className="staff-field">
+                  <label>Pickup Stop & Time *</label>
+                  <input
+                    type="text"
+                    required
+                    placeholder="e.g. Shell Station / Main Junction (06:30 AM)"
+                    className="filter-input"
+                    value={newBusStudentForm.pickupStop}
+                    onChange={(e) => setNewBusStudentForm({ ...newBusStudentForm, pickupStop: e.target.value })}
+                  />
+                </div>
+
+                <div className="staff-field">
+                  <label>Parent / Guardian Phone Contact *</label>
+                  <input
+                    type="text"
+                    required
+                    placeholder="+233-24-555-0199"
+                    className="filter-input"
+                    value={newBusStudentForm.parentPhone}
+                    onChange={(e) => setNewBusStudentForm({ ...newBusStudentForm, parentPhone: e.target.value })}
+                  />
+                </div>
+              </div>
+
+              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginTop: "1.5rem" }}>
+                <button
+                  type="button"
+                  onClick={() => setShowBusAssignmentModal(false)}
+                  style={{ background: "#334155", color: "#cbd5e1", border: "none", padding: "10px 18px", borderRadius: "8px", fontWeight: "700", cursor: "pointer" }}
+                >
+                  ⬅️ Back / Cancel
+                </button>
+                <button
+                  type="submit"
+                  style={{
+                    background: "linear-gradient(135deg, #06b6d4, #0891b2)",
+                    color: "#fff",
+                    border: "none",
+                    padding: "10px 22px",
+                    borderRadius: "8px",
+                    fontWeight: "800",
+                    fontSize: "0.85rem",
+                    cursor: "pointer",
+                    boxShadow: "0 4px 14px rgba(6, 182, 212, 0.4)"
+                  }}
+                >
+                  🚌 Assign & Upload to Transport Portal
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* MODAL: CREATE DESTINATION ROUTE & FARE */}
+      {showCreateRouteModal && (
+        <div className="staff-modal-overlay">
+          <div className="staff-modal-card" style={{ maxWidth: "560px", width: "95%" }}>
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "1.25rem", borderBottom: "1.5px solid #10b981", paddingBottom: "12px" }}>
+              <div style={{ display: "flex", alignItems: "center", gap: "12px" }}>
                 <button
                   type="button"
                   onClick={() => setShowCreateRouteModal(false)}
-                  style={{ background: "transparent", border: "none", color: "#94a3b8", fontSize: "1.2rem", cursor: "pointer" }}
+                  style={{ background: "rgba(148, 163, 184, 0.15)", border: "1px solid #475569", color: "#f8fafc", padding: "6px 14px", borderRadius: "8px", fontSize: "0.82rem", fontWeight: "700", cursor: "pointer", display: "flex", alignItems: "center", gap: "6px" }}
                 >
-                  ✕
+                  ⬅️ Back
                 </button>
+                <span style={{ fontSize: "1.6rem" }}>📍</span>
+                <div>
+                  <h3 style={{ margin: 0, color: "#f8fafc", fontSize: "1.15rem", fontWeight: 800 }}>
+                    CREATE DESTINATION & FARE
+                  </h3>
+                  <span style={{ fontSize: "0.75rem", color: "#34d399" }}>
+                    Establish new bus route with zone-specific termly fare
+                  </span>
+                </div>
+              </div>
+              <button
+                type="button"
+                onClick={() => setShowCreateRouteModal(false)}
+                style={{ background: "transparent", border: "none", color: "#94a3b8", fontSize: "1.2rem", cursor: "pointer" }}
+              >
+                ✕
+              </button>
+            </div>
+
+            <form onSubmit={handleCreateNewDestination}>
+              <div className="staff-form-grid" style={{ display: "flex", flexDirection: "column", gap: "12px" }}>
+                <div className="staff-field">
+                  <label>Destination Route / Zone Name *</label>
+                  <input
+                    type="text"
+                    required
+                    placeholder="e.g. Spintex / Baatsona (Zone 4)"
+                    className="filter-input"
+                    value={newRouteForm.name}
+                    onChange={(e) => setNewRouteForm({ ...newRouteForm, name: e.target.value })}
+                  />
+                </div>
+                <div className="staff-field">
+                  <label>Termly Fare Amount (GHS) *</label>
+                  <input
+                    type="number"
+                    required
+                    step="0.01"
+                    placeholder="e.g. 580.00"
+                    className="filter-input"
+                    value={newRouteForm.fare}
+                    onChange={(e) => setNewRouteForm({ ...newRouteForm, fare: e.target.value })}
+                  />
+                </div>
+                <div className="staff-field">
+                  <label>Key Pickup / Drop-off Stop (Optional)</label>
+                  <input
+                    type="text"
+                    placeholder="e.g. Community 18 Junction"
+                    className="filter-input"
+                    value={newRouteForm.pickupStop}
+                    onChange={(e) => setNewRouteForm({ ...newRouteForm, pickupStop: e.target.value })}
+                  />
+                </div>
               </div>
 
-              <form onSubmit={handleCreateNewDestination}>
-                <div className="staff-form-grid" style={{ display: "flex", flexDirection: "column", gap: "12px" }}>
-                  <div className="staff-field">
-                    <label>Destination Route / Zone Name *</label>
-                    <input
-                      type="text"
-                      required
-                      placeholder="e.g. Spintex / Baatsona (Zone 4)"
-                      className="filter-input"
-                      value={newRouteForm.name}
-                      onChange={(e) => setNewRouteForm({ ...newRouteForm, name: e.target.value })}
-                    />
-                  </div>
-                  <div className="staff-field">
-                    <label>Termly Fare Amount (GHS) *</label>
-                    <input
-                      type="number"
-                      required
-                      step="0.01"
-                      placeholder="e.g. 580.00"
-                      className="filter-input"
-                      value={newRouteForm.fare}
-                      onChange={(e) => setNewRouteForm({ ...newRouteForm, fare: e.target.value })}
-                    />
-                  </div>
-                  <div className="staff-field">
-                    <label>Key Pickup / Drop-off Stop (Optional)</label>
-                    <input
-                      type="text"
-                      placeholder="e.g. Community 18 Junction"
-                      className="filter-input"
-                      value={newRouteForm.pickupStop}
-                      onChange={(e) => setNewRouteForm({ ...newRouteForm, pickupStop: e.target.value })}
-                    />
-                  </div>
-                </div>
-
-                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginTop: "1.5rem" }}>
-                  <button
-                    type="button"
-                    onClick={() => setShowCreateRouteModal(false)}
-                    style={{ background: "#334155", color: "#cbd5e1", border: "none", padding: "10px 18px", borderRadius: "8px", fontWeight: "700", cursor: "pointer" }}
-                  >
-                    ⬅️ Back / Cancel
-                  </button>
-                  <button
-                    type="submit"
-                    style={{
-                      background: "linear-gradient(135deg, #10b981, #059669)",
-                      color: "#fff",
-                      border: "none",
-                      padding: "10px 22px",
-                      borderRadius: "8px",
-                      fontWeight: "800",
-                      fontSize: "0.85rem",
-                      cursor: "pointer",
-                      boxShadow: "0 4px 14px rgba(16, 185, 129, 0.4)"
-                    }}
-                  >
-                    💾 Save Destination Route & Fare
-                  </button>
-                </div>
-              </form>
-            </div>
+              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginTop: "1.5rem" }}>
+                <button
+                  type="button"
+                  onClick={() => setShowCreateRouteModal(false)}
+                  style={{ background: "#334155", color: "#cbd5e1", border: "none", padding: "10px 18px", borderRadius: "8px", fontWeight: "700", cursor: "pointer" }}
+                >
+                  ⬅️ Back / Cancel
+                </button>
+                <button
+                  type="submit"
+                  style={{
+                    background: "linear-gradient(135deg, #10b981, #059669)",
+                    color: "#fff",
+                    border: "none",
+                    padding: "10px 22px",
+                    borderRadius: "8px",
+                    fontWeight: "800",
+                    fontSize: "0.85rem",
+                    cursor: "pointer",
+                    boxShadow: "0 4px 14px rgba(16, 185, 129, 0.4)"
+                  }}
+                >
+                  💾 Save Destination Route & Fare
+                </button>
+              </div>
+            </form>
           </div>
-        )}
+        </div>
+      )}
 
-        {/* MODAL: ASSIGN / REGISTER BUS DRIVER */}
-        {showAssignDriverModal && (
-          <div className="staff-modal-overlay">
-            <div className="staff-modal-card" style={{ maxWidth: "560px", width: "95%" }}>
-              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "1.25rem", borderBottom: "1.5px solid #8b5cf6", paddingBottom: "12px" }}>
-                <div style={{ display: "flex", alignItems: "center", gap: "12px" }}>
-                  <button
-                    type="button"
-                    onClick={() => setShowAssignDriverModal(false)}
-                    style={{ background: "rgba(148, 163, 184, 0.15)", border: "1px solid #475569", color: "#f8fafc", padding: "6px 14px", borderRadius: "8px", fontSize: "0.82rem", fontWeight: "700", cursor: "pointer", display: "flex", alignItems: "center", gap: "6px" }}
-                  >
-                    ⬅️ Back
-                  </button>
-                  <span style={{ fontSize: "1.6rem" }}>👤</span>
-                  <div>
-                    <h3 style={{ margin: 0, color: "#f8fafc", fontSize: "1.15rem", fontWeight: 800 }}>
-                      ASSIGN / REGISTER BUS DRIVER
-                    </h3>
-                    <span style={{ fontSize: "0.75rem", color: "#c084fc" }}>
-                      Register licensed driver and allocate school bus fleet vehicle
-                    </span>
-                  </div>
-                </div>
+      {/* MODAL: ASSIGN / REGISTER BUS DRIVER */}
+      {showAssignDriverModal && (
+        <div className="staff-modal-overlay">
+          <div className="staff-modal-card" style={{ maxWidth: "560px", width: "95%" }}>
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "1.25rem", borderBottom: "1.5px solid #8b5cf6", paddingBottom: "12px" }}>
+              <div style={{ display: "flex", alignItems: "center", gap: "12px" }}>
                 <button
                   type="button"
                   onClick={() => setShowAssignDriverModal(false)}
-                  style={{ background: "transparent", border: "none", color: "#94a3b8", fontSize: "1.2rem", cursor: "pointer" }}
+                  style={{ background: "rgba(148, 163, 184, 0.15)", border: "1px solid #475569", color: "#f8fafc", padding: "6px 14px", borderRadius: "8px", fontSize: "0.82rem", fontWeight: "700", cursor: "pointer", display: "flex", alignItems: "center", gap: "6px" }}
                 >
-                  ✕
+                  ⬅️ Back
                 </button>
+                <span style={{ fontSize: "1.6rem" }}>👤</span>
+                <div>
+                  <h3 style={{ margin: 0, color: "#f8fafc", fontSize: "1.15rem", fontWeight: 800 }}>
+                    ASSIGN / REGISTER BUS DRIVER
+                  </h3>
+                  <span style={{ fontSize: "0.75rem", color: "#c084fc" }}>
+                    Register licensed driver and allocate school bus fleet vehicle
+                  </span>
+                </div>
+              </div>
+              <button
+                type="button"
+                onClick={() => setShowAssignDriverModal(false)}
+                style={{ background: "transparent", border: "none", color: "#94a3b8", fontSize: "1.2rem", cursor: "pointer" }}
+              >
+                ✕
+              </button>
+            </div>
+
+            <form onSubmit={handleAssignNewDriver}>
+              <div className="staff-form-grid" style={{ display: "flex", flexDirection: "column", gap: "12px" }}>
+                <div className="staff-field">
+                  <label>Driver Full Name *</label>
+                  <input
+                    type="text"
+                    required
+                    placeholder="e.g. Mr. Emmanuel Tetteh"
+                    className="filter-input"
+                    value={newDriverForm.name}
+                    onChange={(e) => setNewDriverForm({ ...newDriverForm, name: e.target.value })}
+                  />
+                </div>
+                <div className="staff-field">
+                  <label>Driver Contact Phone *</label>
+                  <input
+                    type="text"
+                    required
+                    placeholder="e.g. +233-24-411-9022"
+                    className="filter-input"
+                    value={newDriverForm.phone}
+                    onChange={(e) => setNewDriverForm({ ...newDriverForm, phone: e.target.value })}
+                  />
+                </div>
+                <div className="staff-field">
+                  <label>Bus Fleet Vehicle Number & Model *</label>
+                  <input
+                    type="text"
+                    required
+                    placeholder="e.g. GBS Bus #04 (Toyota Hiace - 18 Seater)"
+                    className="filter-input"
+                    value={newDriverForm.busNumber}
+                    onChange={(e) => setNewDriverForm({ ...newDriverForm, busNumber: e.target.value })}
+                  />
+                </div>
               </div>
 
-              <form onSubmit={handleAssignNewDriver}>
-                <div className="staff-form-grid" style={{ display: "flex", flexDirection: "column", gap: "12px" }}>
-                  <div className="staff-field">
-                    <label>Driver Full Name *</label>
-                    <input
-                      type="text"
-                      required
-                      placeholder="e.g. Mr. Emmanuel Tetteh"
-                      className="filter-input"
-                      value={newDriverForm.name}
-                      onChange={(e) => setNewDriverForm({ ...newDriverForm, name: e.target.value })}
-                    />
-                  </div>
-                  <div className="staff-field">
-                    <label>Driver Contact Phone *</label>
-                    <input
-                      type="text"
-                      required
-                      placeholder="e.g. +233-24-411-9022"
-                      className="filter-input"
-                      value={newDriverForm.phone}
-                      onChange={(e) => setNewDriverForm({ ...newDriverForm, phone: e.target.value })}
-                    />
-                  </div>
-                  <div className="staff-field">
-                    <label>Bus Fleet Vehicle Number & Model *</label>
-                    <input
-                      type="text"
-                      required
-                      placeholder="e.g. GBS Bus #04 (Toyota Hiace - 18 Seater)"
-                      className="filter-input"
-                      value={newDriverForm.busNumber}
-                      onChange={(e) => setNewDriverForm({ ...newDriverForm, busNumber: e.target.value })}
-                    />
-                  </div>
-                </div>
-
-                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginTop: "1.5rem" }}>
-                  <button
-                    type="button"
-                    onClick={() => setShowAssignDriverModal(false)}
-                    style={{ background: "#334155", color: "#cbd5e1", border: "none", padding: "10px 18px", borderRadius: "8px", fontWeight: "700", cursor: "pointer" }}
-                  >
-                    ⬅️ Back / Cancel
-                  </button>
-                  <button
-                    type="submit"
-                    style={{
-                      background: "linear-gradient(135deg, #8b5cf6, #7c3aed)",
-                      color: "#fff",
-                      border: "none",
-                      padding: "10px 22px",
-                      borderRadius: "8px",
-                      fontWeight: "800",
-                      fontSize: "0.85rem",
-                      cursor: "pointer",
-                      boxShadow: "0 4px 14px rgba(139, 92, 246, 0.4)"
-                    }}
-                  >
-                    🚌 Register Driver & Assign Bus
-                  </button>
-                </div>
-              </form>
-            </div>
+              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginTop: "1.5rem" }}>
+                <button
+                  type="button"
+                  onClick={() => setShowAssignDriverModal(false)}
+                  style={{ background: "#334155", color: "#cbd5e1", border: "none", padding: "10px 18px", borderRadius: "8px", fontWeight: "700", cursor: "pointer" }}
+                >
+                  ⬅️ Back / Cancel
+                </button>
+                <button
+                  type="submit"
+                  style={{
+                    background: "linear-gradient(135deg, #8b5cf6, #7c3aed)",
+                    color: "#fff",
+                    border: "none",
+                    padding: "10px 22px",
+                    borderRadius: "8px",
+                    fontWeight: "800",
+                    fontSize: "0.85rem",
+                    cursor: "pointer",
+                    boxShadow: "0 4px 14px rgba(139, 92, 246, 0.4)"
+                  }}
+                >
+                  🚌 Register Driver & Assign Bus
+                </button>
+              </div>
+            </form>
           </div>
-        )}
-
-        {/* UNIVERSAL FLOATING SCROLL CONTROLS */}
-        <div style={{
-          position: "fixed",
-          bottom: "24px",
-          right: "24px",
-          display: "flex",
-          flexDirection: "column",
-          gap: "8px",
-          zIndex: 9999
-        }}>
-          <button
-            type="button"
-            onClick={() => window.scrollTo({ top: 0, behavior: "smooth" })}
-            style={{
-              width: "42px",
-              height: "42px",
-              borderRadius: "50%",
-              background: "rgba(15, 23, 42, 0.9)",
-              border: "1.5px solid #a855f7",
-              color: "#c084fc",
-              fontSize: "1.2rem",
-              fontWeight: "900",
-              cursor: "pointer",
-              boxShadow: "0 4px 15px rgba(0, 0, 0, 0.6)",
-              display: "flex",
-              alignItems: "center",
-              justifyContent: "center"
-            }}
-            title="Scroll to Top"
-          >
-            ⬆️
-          </button>
-          <button
-            type="button"
-            onClick={() => window.scrollTo({ top: document.body.scrollHeight, behavior: "smooth" })}
-            style={{
-              width: "42px",
-              height: "42px",
-              borderRadius: "50%",
-              background: "rgba(15, 23, 42, 0.9)",
-              border: "1.5px solid #a855f7",
-              color: "#c084fc",
-              fontSize: "1.2rem",
-              fontWeight: "900",
-              cursor: "pointer",
-              boxShadow: "0 4px 15px rgba(0, 0, 0, 0.6)",
-              display: "flex",
-              alignItems: "center",
-              justifyContent: "center"
-            }}
-            title="Scroll to Bottom"
-          >
-            ⬇️
-          </button>
         </div>
+      )}
 
-        <UniversalRoleGuideModal
-          role="ADMIN"
-          isOpen={showAdminGuideModal}
-          onClose={() => setShowAdminGuideModal(false)}
-        />
+      {/* UNIVERSAL FLOATING SCROLL CONTROLS */}
+      <div style={{
+        position: "fixed",
+        bottom: "24px",
+        right: "24px",
+        display: "flex",
+        flexDirection: "column",
+        gap: "8px",
+        zIndex: 9999
+      }}>
+        <button
+          type="button"
+          onClick={() => window.scrollTo({ top: 0, behavior: "smooth" })}
+          style={{
+            width: "42px",
+            height: "42px",
+            borderRadius: "50%",
+            background: "rgba(15, 23, 42, 0.9)",
+            border: "1.5px solid #a855f7",
+            color: "#c084fc",
+            fontSize: "1.2rem",
+            fontWeight: "900",
+            cursor: "pointer",
+            boxShadow: "0 4px 15px rgba(0, 0, 0, 0.6)",
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center"
+          }}
+          title="Scroll to Top"
+        >
+          ⬆️
+        </button>
+        <button
+          type="button"
+          onClick={() => window.scrollTo({ top: document.body.scrollHeight, behavior: "smooth" })}
+          style={{
+            width: "42px",
+            height: "42px",
+            borderRadius: "50%",
+            background: "rgba(15, 23, 42, 0.9)",
+            border: "1.5px solid #a855f7",
+            color: "#c084fc",
+            fontSize: "1.2rem",
+            fontWeight: "900",
+            cursor: "pointer",
+            boxShadow: "0 4px 15px rgba(0, 0, 0, 0.6)",
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center"
+          }}
+          title="Scroll to Bottom"
+        >
+          ⬇️
+        </button>
+      </div>
+
+      <UniversalRoleGuideModal
+        role="ADMIN"
+        isOpen={showAdminGuideModal}
+        onClose={() => setShowAdminGuideModal(false)}
+      />
     </div>
   );
 }

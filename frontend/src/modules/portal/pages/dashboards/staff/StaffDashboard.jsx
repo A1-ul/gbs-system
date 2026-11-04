@@ -4,6 +4,7 @@ import apiClient from "../../../../../api/client/apiClient";
 import WindowControlsBar from "../../../../../components/common/WindowControlsBar";
 import TopCenterSystemBanner from "../../../../../components/common/TopCenterSystemBanner";
 import UniversalRoleGuideModal from "../../../../../components/common/UniversalRoleGuideModal";
+import { navigateToDetail } from "../../../../../utils/universalNavigation";
 import "./StaffDashboard.css";
 
 export default function StaffDashboard() {
@@ -441,15 +442,26 @@ export default function StaffDashboard() {
                           </td>
                           <td>{t.location || t.assigned_staff || t.assignedTo || "Campus Maintenance"}</td>
                           <td>
-                            <button
-                              type="button"
-                              className="btn-secondary"
-                              style={{ padding: "4px 10px", fontSize: "0.75rem" }}
-                              onClick={() => handleToggleTask(t.id, t.status)}
-                              disabled={loading}
-                            >
-                              {t.status === "RESOLVED" || t.status === "COMPLETED" ? "↩️ Reopen" : "✅ Mark Completed"}
-                            </button>
+                            <div style={{ display: "flex", gap: "6px", alignItems: "center" }}>
+                              <button
+                                type="button"
+                                className="btn-secondary"
+                                style={{ padding: "4px 10px", fontSize: "0.75rem", borderColor: "#38bdf8", color: "#38bdf8", cursor: "pointer" }}
+                                onClick={() => navigateToDetail(navigate, "activity", t.ticket_number || t.id, t, { returnTab: activeTab })}
+                                title="View full task details on dedicated page"
+                              >
+                                🔍 View
+                              </button>
+                              <button
+                                type="button"
+                                className="btn-secondary"
+                                style={{ padding: "4px 10px", fontSize: "0.75rem" }}
+                                onClick={() => handleToggleTask(t.id, t.status)}
+                                disabled={loading}
+                              >
+                                {t.status === "RESOLVED" || t.status === "COMPLETED" ? "↩️ Reopen" : "✅ Mark Completed"}
+                              </button>
+                            </div>
                           </td>
                         </tr>
                       ))
@@ -501,14 +513,25 @@ export default function StaffDashboard() {
                           <td>{app.guardianPhone}</td>
                           <td><span className="badge-status badge-late">{app.stage}</span></td>
                           <td>
-                            <button
-                              type="button"
-                              className="btn-primary"
-                              style={{ padding: "4px 10px", fontSize: "0.75rem" }}
-                              onClick={() => setFeedback({ type: "success", message: `Application ${app.applicationNumber} verified and forwarded to Headmaster.` })}
-                            >
-                              🔍 Verify Documents
-                            </button>
+                            <div style={{ display: "flex", gap: "6px", alignItems: "center" }}>
+                              <button
+                                type="button"
+                                className="btn-secondary"
+                                style={{ padding: "4px 10px", fontSize: "0.75rem", borderColor: "#38bdf8", color: "#38bdf8", cursor: "pointer" }}
+                                onClick={() => navigateToDetail(navigate, "admission", app.applicationNumber || app.id, app, { returnTab: activeTab })}
+                                title="View admission application dossier on dedicated page"
+                              >
+                                🔍 View Dossier
+                              </button>
+                              <button
+                                type="button"
+                                className="btn-primary"
+                                style={{ padding: "4px 10px", fontSize: "0.75rem" }}
+                                onClick={() => setFeedback({ type: "success", message: `Application ${app.applicationNumber} verified and forwarded to Headmaster.` })}
+                              >
+                                ✅ Verify Documents
+                              </button>
+                            </div>
                           </td>
                         </tr>
                       ))

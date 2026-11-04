@@ -7,6 +7,7 @@ import { getUserAvatar } from "../../../../../utils/userAvatars";
 import { offlineSyncEngine } from "../../../../../utils/offlineSync";
 import UniversalRoleGuideModal from "../../../../../components/common/UniversalRoleGuideModal";
 import ClassTopicVideoPlatform from "../../../../../components/common/ClassTopicVideoPlatform";
+import { navigateToDetail } from "../../../../../utils/universalNavigation";
 import "./StudentDashboard.css";
 
 export default function StudentDashboard() {
@@ -2791,14 +2792,9 @@ export default function StudentDashboard() {
                           <button
                             type="button"
                             className="btn-primary"
-                            style={{ padding: "4px 10px", fontSize: "0.75rem" }}
-                            onClick={() => {
-                              setViewingFilePreview(file);
-                              setFeedback({
-                                type: "success",
-                                message: `✓ Retrieved ${file.name} from local server storage repository.`
-                              });
-                            }}
+                            style={{ padding: "4px 10px", fontSize: "0.75rem", cursor: "pointer" }}
+                            onClick={() => navigateToDetail(navigate, "report", file.id || file.name, file, { returnTab: activeTab })}
+                            title="View full course material details on dedicated page"
                           >
                             👁️ View
                           </button>

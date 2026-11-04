@@ -93,18 +93,7 @@ const getUserCountsByRole = async (tenantId) => {
       users = await prisma.$queryRawUnsafe(rawSql);
     } catch (rawErr) {
       console.warn('[User Service] Raw query fallback also failed:', rawErr.message);
-      users = [
-        { id: 1, role: 'SUPER_ADMIN', isActive: true, isLocked: false },
-        { id: 2, role: 'ADMIN', isActive: true, isLocked: false },
-        { id: 3, role: 'TEACHER', isActive: true, isLocked: false },
-        { id: 4, role: 'STUDENT', isActive: true, isLocked: false },
-        { id: 5, role: 'PARENT', isActive: true, isLocked: false },
-        { id: 6, role: 'ACCOUNTANT', isActive: true, isLocked: false },
-        { id: 7, role: 'STAFF', isActive: true, isLocked: false },
-        { id: 8, role: 'HR', isActive: true, isLocked: false },
-        { id: 9, role: 'ALUMNI', isActive: true, isLocked: false },
-        { id: 10, role: 'DEVELOPER', isActive: true, isLocked: false }
-      ];
+      users = [];
     }
   }
 

@@ -200,7 +200,7 @@ app.post('/api/v1/topic-videos', (req, res) => {
     teacherEmail: String(body.teacherEmail || 'teacher@gbs.com').trim(),
     absenceNote: String(
       body.absenceNote ||
-        'Topic Introduction in Teacher Absence — Watch this lesson completely and review the attached topic notes.'
+      'Topic Introduction in Teacher Absence — Watch this lesson completely and review the attached topic notes.'
     ).trim(),
     lessonSummary: String(body.lessonSummary || '').trim(),
     videoUrl:
@@ -438,7 +438,7 @@ const server = app.listen(PORT, HOST, async () => {
               UPDATE security_gate_events SET gate_name = COALESCE(gate_location, 'Main Campus Gate') WHERE gate_name IS NULL;
             END IF;
           END $$;
-        `).catch(() => {});
+        `).catch(() => { });
 
         const { execSync } = require('child_process');
         execSync('npx prisma db push --skip-generate --accept-data-loss', { stdio: ['ignore', 'pipe', 'pipe'] });

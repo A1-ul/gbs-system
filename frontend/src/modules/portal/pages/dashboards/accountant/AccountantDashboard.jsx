@@ -5,6 +5,7 @@ import WindowControlsBar from "../../../../../components/common/WindowControlsBa
 import TopCenterSystemBanner from "../../../../../components/common/TopCenterSystemBanner";
 import { getUserAvatar } from "../../../../../utils/userAvatars";
 import UniversalRoleGuideModal from "../../../../../components/common/UniversalRoleGuideModal";
+import { navigateToDetail } from "../../../../../utils/universalNavigation";
 import "./AccountantDashboard.css";
 
 export default function AccountantDashboard() {
@@ -1619,12 +1620,13 @@ export default function AccountantDashboard() {
                       <th>Net Billed</th>
                       <th>Due Date</th>
                       <th>Status</th>
+                      <th>Action</th>
                     </tr>
                   </thead>
                   <tbody>
                     {invoices.length === 0 ? (
                       <tr>
-                        <td colSpan="7" style={{ textAlign: "center", padding: "2.5rem 1rem", color: "#94a3b8" }}>
+                        <td colSpan="8" style={{ textAlign: "center", padding: "2.5rem 1rem", color: "#94a3b8" }}>
                           <div style={{ fontSize: "1.5rem", marginBottom: "0.5rem" }}>📄</div>
                           <div style={{ fontWeight: 700 }}>No Institutional Invoices Generated Yet</div>
                           <div style={{ fontSize: "0.82rem", color: "#64748b" }}>Click "+ Create New Invoice" above to issue a tuition or hostel fee bill.</div>
@@ -1643,6 +1645,17 @@ export default function AccountantDashboard() {
                             <span className={`badge-status ${inv.status === "PAID" ? "badge-present" : "badge-absent"}`}>
                               {inv.status}
                             </span>
+                          </td>
+                          <td>
+                            <button
+                              type="button"
+                              className="btn-secondary"
+                              style={{ padding: "4px 10px", fontSize: "0.75rem", borderColor: "#38bdf8", color: "#38bdf8", cursor: "pointer" }}
+                              onClick={() => navigateToDetail(navigate, "invoice", inv.invoiceNumber || inv.id, inv, { returnTab: activeTab })}
+                              title="View full student fee invoice on dedicated page"
+                            >
+                              🔍 View Invoice
+                            </button>
                           </td>
                         </tr>
                       ))
@@ -2520,7 +2533,18 @@ export default function AccountantDashboard() {
                               <div style={{ fontSize: "0.82rem", color: "#f8fafc" }}>{p.paidAt}</div>
                             </td>
                             <td>
-                              <span className="badge-status badge-present">✓ RECONCILED</span>
+                              <div style={{ display: "flex", gap: "6px", alignItems: "center" }}>
+                                <span className="badge-status badge-present">✓ RECONCILED</span>
+                                <button
+                                  type="button"
+                                  className="btn-secondary"
+                                  style={{ padding: "3px 8px", fontSize: "0.72rem", borderColor: "#38bdf8", color: "#38bdf8", cursor: "pointer" }}
+                                  onClick={() => navigateToDetail(navigate, "payment", p.receiptNumber || p.id, p, { returnTab: activeTab })}
+                                  title="View payment receipt on dedicated page"
+                                >
+                                  🔍 View Receipt
+                                </button>
+                              </div>
                             </td>
                           </tr>
                         ))
@@ -2912,11 +2936,9 @@ export default function AccountantDashboard() {
                             <button
                               type="button"
                               className="btn-primary"
-                              style={{ background: "linear-gradient(135deg, #0284c7, #0369a1)", fontSize: "0.75rem", padding: "4px 8px", whiteSpace: "nowrap" }}
-                              onClick={() => {
-                                setSelectedArchiveRecord(ay);
-                                setShowArchiveDetailModal(true);
-                              }}
+                              style={{ background: "linear-gradient(135deg, #0284c7, #0369a1)", fontSize: "0.75rem", padding: "4px 8px", whiteSpace: "nowrap", cursor: "pointer" }}
+                              onClick={() => navigateToDetail(navigate, "report", ay.academicYear || idx, ay, { returnTab: activeTab })}
+                              title="View full audited fiscal year dossier on dedicated page"
                             >
                               📜 Reference Dossier
                             </button>

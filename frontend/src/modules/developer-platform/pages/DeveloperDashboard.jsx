@@ -7,6 +7,7 @@ import { offlineSyncEngine } from "../../../utils/offlineSync";
 import { getOnboardingRates, updateOnboardingRates } from "../../../utils/pricingEngine";
 import UniversalRoleGuideModal from "../../../components/common/UniversalRoleGuideModal";
 import DeveloperMovableAIAssistant from "../components/DeveloperMovableAIAssistant";
+import { navigateToDetail } from "../../../utils/universalNavigation";
 import "./DeveloperPlatform.css";
 
 const BASE_URL = `${getApiBaseUrl()}/dev-control`;
@@ -103,6 +104,14 @@ export default function DeveloperDashboard() {
   const [alerts, setAlerts] = useState([]);
   const [selectedAlerts, setSelectedAlerts] = useState([]);
   const [selectedTenants, setSelectedTenants] = useState([]);
+
+  // Enterprise Environment & Provenance Status State
+  const [systemEnv, setSystemEnv] = useState({
+    activeEnvironment: localStorage.getItem("gbs_system_environment") || "PRODUCTION",
+    database: { engine: "PostgreSQL", host: "localhost", port: 5432, database: "gbs_system", isConnected: true },
+    provenanceBreakdown: { GENUINE_ONBOARDING: 0, LIVE_USER_REGISTRATION: 0, SEEDED_BASELINE: 0, DEV_TEST: 0 },
+    stats: { totalUsers: 0, totalTenants: 0, totalBackups: 0, totalAuditLogs: 0 }
+  });
 
   // Tenant Console Active Filter State (Trial, Active, Expiring, Expired, Suspended, Paid, Locked)
   const [tenantConsoleFilter, setTenantConsoleFilter] = useState("ALL");
@@ -1350,10 +1359,68 @@ export default function DeveloperDashboard() {
       } catch (onbErr) {
         console.warn("Could not fetch database onboarding applications:", onbErr);
       }
+
+      // 12. Active Environment & Provenance Telemetry (Dev-Control)
+      try {
+        const envRes = await fetch(`${BASE_URL}/environment`, { headers: authHeaders });
+        if (envRes.ok) {
+          const envJson = await envRes.json();
+          if (envJson.data) {
+            setSystemEnv(envJson.data);
+            if (envJson.data.activeEnvironment) {
+              localStorage.setItem("gbs_system_environment", envJson.data.activeEnvironment);
+            }
+          }
+        }
+      } catch (envErr) {
+        console.warn("Could not query dev-control environment telemetry:", envErr);
+      }
     } catch (err) {
       console.error("Developer dashboard telemetry error:", err);
     } finally {
       setLoading(false);
+    }
+  };
+
+  const handleToggleEnvironment = async () => {
+    const nextEnv = systemEnv?.activeEnvironment === "PRODUCTION" ? "DEVELOPMENT" : "PRODUCTION";
+    try {
+      showNotification(`⏳ Switching system cluster environment to ${nextEnv}...`);
+      const res = await fetch(`${BASE_URL}/environment/set`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ environment: nextEnv })
+      });
+      const data = await res.json();
+      if (res.ok) {
+        localStorage.setItem("gbs_system_environment", nextEnv);
+        showNotification(`✓ System active environment switched to ${nextEnv}`);
+        fetchData();
+      } else {
+        showNotification(`⚠ Failed to switch environment: ${data.message}`);
+      }
+    } catch (err) {
+      showNotification(`⚠ Error updating environment: ${err.message}`);
+    }
+  };
+
+  const handleCreateSnapshotBackup = async () => {
+    try {
+      showNotification("⏳ Generating full PostgreSQL database snapshot...");
+      const res = await fetch(`${BASE_URL}/backup/create`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ label: "Developer Pre-Flight Snapshot" })
+      });
+      const data = await res.json();
+      if (res.ok) {
+        showNotification(`✓ Database snapshot created: ${data.data?.backupFile || "backup.json"} (${((data.data?.bytes || 0) / 1024).toFixed(1)} KB)`);
+        fetchData();
+      } else {
+        showNotification(`⚠ Backup creation failed: ${data.message}`);
+      }
+    } catch (err) {
+      showNotification(`⚠ Backup error: ${err.message}`);
     }
   };
 
@@ -2318,98 +2385,21 @@ export default function DeveloperDashboard() {
 
       if (!data) {
         const digitsOnly = phone.replace(/\D/g, "");
-        const allCandidates = [
-          ...onboardedTenants.map((t) => ({
-            tenantName: t.name || t.institutionName,
-            tenantCode: t.code || t.tenantCode || "GBS-TEN",
-            headmasterName: t.headmasterName || "Headmaster",
-            headmasterPhone: t.headmasterPhone || "+233-24-555-0199",
-            headmasterEmail: t.headmasterEmail || "admin@school.com",
-            address: t.address || "Academic Boulevard Campus Enclave",
-            city: t.city || "Accra",
-            region: t.region || "Greater Accra",
-            country: t.country || "Ghana",
-            latitude: t.latitude || 5.55602,
-            longitude: t.longitude || -0.19690,
-            activeStudents: t.maxStudents || 1850,
-            status: t.status || "ACTIVE"
-          })),
-          {
-            tenantName: "St. Augustine Science Academy",
-            tenantCode: "GBS-ROYALOAK",
-            headmasterName: "Arthur Pendleton",
-            headmasterPhone: "+233-24-555-0199",
-            headmasterEmail: "admin@gbs.edu",
-            address: "Plot 14, Independence Avenue / Academic Ridge, Accra, Ghana",
-            city: "Accra",
-            region: "Greater Accra",
-            country: "Ghana",
-            latitude: 5.55602,
-            longitude: -0.19690,
-            activeStudents: 1850,
-            status: "ACTIVE"
-          },
-          {
-            tenantName: "Royal Oak International STEM Enclave",
-            tenantCode: "GBS-KUMASI-01",
-            headmasterName: "Dr. Kwabena Asante",
-            headmasterPhone: "+233-24-442-1199",
-            headmasterEmail: "k.asante@gbs-staff.edu",
-            address: "Kwame Nkrumah Way, Asokwa Enclave, Kumasi, Ghana",
-            city: "Kumasi",
-            region: "Ashanti Region",
-            country: "Ghana",
-            latitude: 6.68848,
-            longitude: -1.62443,
-            activeStudents: 1220,
-            status: "ACTIVE"
-          },
-          {
-            tenantName: "St. Jude Senior Academy",
-            tenantCode: "GBS-CAPE-01",
-            headmasterName: "Elena Rostova",
-            headmasterPhone: "+233-24-111-2233",
-            headmasterEmail: "e.rostova@gbs.edu",
-            address: "Coastal Road, University Enclave, Cape Coast, Ghana",
-            city: "Cape Coast",
-            region: "Central Region",
-            country: "Ghana",
-            latitude: 5.10535,
-            longitude: -1.24660,
-            activeStudents: 940,
-            status: "ACTIVE"
-          },
-          {
-            tenantName: "Kampala Main Campus",
-            tenantCode: "GBS-KAMPALA-01",
-            headmasterName: "Dr. Peter Mukasa",
-            headmasterPhone: "+256-70-112-3456",
-            headmasterEmail: "p.mukasa@gbs.ug",
-            address: "Plot 12, Makerere Hill Road, Kampala, Uganda",
-            city: "Kampala",
-            region: "Central",
-            country: "Uganda",
-            latitude: 0.34760,
-            longitude: 32.58250,
-            activeStudents: 1450,
-            status: "ACTIVE"
-          },
-          {
-            tenantName: "Entebbe Science Campus",
-            tenantCode: "GBS-ENTEBBE-01",
-            headmasterName: "Sarah Nansubuga",
-            headmasterPhone: "+256-77-998-1122",
-            headmasterEmail: "s.nansubuga@gbs.ug",
-            address: "Airport View Road, Entebbe, Uganda",
-            city: "Entebbe",
-            region: "Central",
-            country: "Uganda",
-            latitude: 0.05120,
-            longitude: 32.46370,
-            activeStudents: 820,
-            status: "ACTIVE"
-          }
-        ];
+        const allCandidates = onboardedTenants.map((t) => ({
+          tenantName: t.name || t.institutionName || "Institutional Tenant",
+          tenantCode: t.code || t.tenantCode || "GBS-TEN",
+          headmasterName: t.headmasterName || t.adminName || "Headmaster",
+          headmasterPhone: t.headmasterPhone || t.phone || "",
+          headmasterEmail: t.headmasterEmail || t.email || "",
+          address: t.address || "Institutional Campus Enclave",
+          city: t.city || "Accra",
+          region: t.region || "Greater Accra",
+          country: t.country || "Ghana",
+          latitude: t.latitude || 5.55602,
+          longitude: t.longitude || -0.19690,
+          activeStudents: t.maxStudents || t.activeStudents || 0,
+          status: t.status || "ACTIVE"
+        }));
 
         const match = allCandidates.find((c) => {
           const cDigits = (c.headmasterPhone || "").replace(/\D/g, "");
@@ -3179,6 +3169,60 @@ export default function DeveloperDashboard() {
               </div>
             </div>
           </div>
+
+          {/* ENVIRONMENT & PROVENANCE CLUSTER CONTROLLER */}
+          <div
+            className="dev-env-cluster-widget"
+            style={{
+              display: "flex",
+              alignItems: "center",
+              gap: "8px",
+              background: systemEnv?.activeEnvironment === "PRODUCTION" ? "rgba(16, 185, 129, 0.16)" : "rgba(245, 158, 11, 0.16)",
+              border: `1.5px solid ${systemEnv?.activeEnvironment === "PRODUCTION" ? "#10b981" : "#f59e0b"}`,
+              borderRadius: "10px",
+              padding: "4px 10px",
+              cursor: "pointer"
+            }}
+            onClick={handleToggleEnvironment}
+            title={`Active Environment: ${systemEnv?.activeEnvironment || "PRODUCTION"}. Click to toggle Sandbox / Live Production mode.`}
+          >
+            <div style={{
+              width: "10px",
+              height: "10px",
+              borderRadius: "50%",
+              background: systemEnv?.activeEnvironment === "PRODUCTION" ? "#10b981" : "#f59e0b",
+              boxShadow: systemEnv?.activeEnvironment === "PRODUCTION" ? "0 0 10px #10b981" : "0 0 10px #f59e0b"
+            }}></div>
+            <div style={{ textAlign: "left" }}>
+              <div style={{ fontSize: "0.62rem", color: "#94a3b8", fontWeight: 800, textTransform: "uppercase" }}>
+                CLUSTER ENVIRONMENT
+              </div>
+              <div style={{ fontSize: "0.78rem", fontWeight: 900, color: systemEnv?.activeEnvironment === "PRODUCTION" ? "#34d399" : "#fbbf24" }}>
+                {systemEnv?.activeEnvironment === "PRODUCTION" ? "🟢 PRODUCTION (LIVE)" : "🟡 DEV SANDBOX"}
+              </div>
+            </div>
+            <button
+              type="button"
+              onClick={(e) => {
+                e.stopPropagation();
+                handleCreateSnapshotBackup();
+              }}
+              style={{
+                marginLeft: "4px",
+                padding: "2px 7px",
+                borderRadius: "5px",
+                background: "rgba(56, 189, 248, 0.25)",
+                border: "1px solid #38bdf8",
+                color: "#38bdf8",
+                fontSize: "0.68rem",
+                fontWeight: 800,
+                cursor: "pointer"
+              }}
+              title="Click to take an instant PostgreSQL database snapshot backup"
+            >
+              💾 Backup
+            </button>
+          </div>
           <button
             type="button"
             onClick={() => window.history.back()}
@@ -3274,6 +3318,9 @@ export default function DeveloperDashboard() {
             </p>
 
             <div className="dev-hero-pills">
+              <span className={`telemetry-pill ${systemEnv?.activeEnvironment === "PRODUCTION" ? "healthy" : ""}`} style={{ fontWeight: 800 }}>
+                {systemEnv?.activeEnvironment === "PRODUCTION" ? "🟢 PRODUCTION CLUSTER [LIVE]" : "🟡 DEV SANDBOX [ISOLATED]"}
+              </span>
               <span className="telemetry-pill healthy">● Kernel: ONLINE</span>
               <span className="telemetry-pill">🐘 PostgreSQL: 5 Pools</span>
               <span className="telemetry-pill">🔒 Locks: {metrics.metrics?.activeLocks || 0}</span>
@@ -4144,8 +4191,8 @@ export default function DeveloperDashboard() {
 
                             <div style={{ display: "flex", gap: "10px", alignItems: "center" }}>
                               <div
-                                onClick={() => setSelectedOnboardingAppDossier(app)}
-                                title="Click to view full Headmaster Facial Camera Scan & Registration Dossier"
+                                onClick={() => navigateToDetail(navigate, "application", app.appRef || app.id, app, { returnTab: activeTab })}
+                                title="Click to view full Headmaster Facial Camera Scan & Registration Dossier on dedicated page"
                                 style={{
                                   width: "58px",
                                   height: "58px",
@@ -4196,7 +4243,7 @@ export default function DeveloperDashboard() {
                             <div style={{ display: "flex", gap: "8px", justifyContent: "flex-end", flexWrap: "wrap", alignItems: "center" }}>
                               <button
                                 type="button"
-                                onClick={() => setSelectedOnboardingAppDossier(app)}
+                                onClick={() => navigateToDetail(navigate, "application", app.appRef || app.id, app, { returnTab: activeTab })}
                                 style={{
                                   background: "rgba(56, 189, 248, 0.16)",
                                   border: "1px solid #38bdf8",
@@ -4207,7 +4254,7 @@ export default function DeveloperDashboard() {
                                   fontSize: "0.78rem",
                                   cursor: "pointer"
                                 }}
-                                title="View all filled onboarding details & captured Headmaster facial scan before approval"
+                                title="View all filled onboarding details & captured Headmaster facial scan on dedicated page"
                               >
                                 🔍 View Details & Facial Scan
                               </button>
@@ -4371,6 +4418,23 @@ export default function DeveloperDashboard() {
                                 </button>
                                 <button
                                   type="button"
+                                  onClick={() => navigateToDetail(navigate, "onboarding", tenant.archiveRef || tenant.id || tenant.assignedTenantCode, tenant, { returnTab: activeTab })}
+                                  style={{
+                                    background: "rgba(56, 189, 248, 0.16)",
+                                    border: "1px solid #38bdf8",
+                                    color: "#38bdf8",
+                                    borderRadius: "8px",
+                                    padding: "7px 12px",
+                                    fontSize: "0.78rem",
+                                    fontWeight: 700,
+                                    cursor: "pointer"
+                                  }}
+                                  title="View archived registration dossier on dedicated routed page"
+                                >
+                                  🔍 View Dossier
+                                </button>
+                                <button
+                                  type="button"
                                   onClick={() => {
                                     navigator.clipboard.writeText(
                                       `GBS Onboarded Tenant: ${tenant.institutionName}\nTenant Code: ${tenant.assignedTenantCode || tenant.tenantCode}\nHeadmaster: ${tenant.headmasterName} (${tenant.headmasterPhone})\nLogin URL: http://localhost:3000/login`
@@ -4522,18 +4586,24 @@ export default function DeveloperDashboard() {
 
               {/* Developer Revenue, Active Student Population, Discount Matrix & Historical Billing Monitor */}
               {(() => {
-                const instList = countdowns.length > 0 ? countdowns : [
-                  { tenantId: 1, tenantName: "St. Augustine Science Academy", institutionType: "SHS", activeStudents: 500, previousStudents: 400, subscriptionStatus: "ACTIVE", subscriptionPlan: "12_MONTHS" },
-                  { tenantId: 2, tenantName: "Royal Oak Basic & JHS School", institutionType: "NURSERY_TO_JHS", activeStudents: 300, previousStudents: 200, subscriptionStatus: "ACTIVE", subscriptionPlan: "6_MONTHS" },
-                  { tenantId: 3, tenantName: "Crestwood Collegiate University", institutionType: "UNIVERSITY", activeStudents: 1000, previousStudents: 1000, subscriptionStatus: "ACTIVE", subscriptionPlan: "12_MONTHS" }
-                ];
+                const instList = (countdowns.length > 0 ? countdowns : onboardedTenants) || [];
+
+                if (instList.length === 0) {
+                  return (
+                    <div style={{ marginTop: "16px", background: "rgba(2, 6, 23, 0.78)", border: "1px dashed rgba(56, 189, 248, 0.3)", borderRadius: "12px", padding: "2rem", textAlign: "center", color: "#64748b" }}>
+                      <span style={{ fontSize: "2rem", display: "block", marginBottom: "8px" }}>📊</span>
+                      <strong style={{ color: "#94a3b8", display: "block", marginBottom: "4px" }}>No registered institutions enrolled for student-based subscription billing in live database.</strong>
+                      <span style={{ fontSize: "0.78rem" }}>Registered schools will automatically appear here with their exact student counts and tiered rates.</span>
+                    </div>
+                  );
+                }
 
                 const rows = instList.map((inst, idx) => {
-                  const rawType = String(inst.institutionType || (idx === 1 ? "NURSERY_TO_JHS" : idx === 2 ? "UNIVERSITY" : "SHS")).toUpperCase();
+                  const rawType = String(inst.institutionType || "SHS").toUpperCase();
                   const category = rawType.includes("UNI") ? "University" : rawType.includes("SHS") || rawType.includes("SENIOR") ? "SHS" : "Nursery – JHS";
                   const rate = category === "University" ? (editableRates.UNIVERSITY || 10) : category === "SHS" ? (editableRates.SHS || 5) : (editableRates.JHS || 3);
-                  const activeStu = Number(inst.activeStudents || inst.totalStudentsEnrolled || (category === "University" ? 1000 : category === "SHS" ? 500 : 300));
-                  const prevStu = Number(inst.previousStudents || Math.max(100, activeStu - 100));
+                  const activeStu = Number(inst.activeStudents || inst.totalStudentsEnrolled || 0);
+                  const prevStu = Number(inst.previousStudents || activeStu);
                   const monthly = activeStu * rate;
                   const qtrNet = Math.round(monthly * 3 * 0.97 * 100) / 100; // 3% discount
                   const semNet = Math.round(monthly * 6 * 0.95 * 100) / 100; // 5% discount
@@ -4994,11 +5064,11 @@ export default function DeveloperDashboard() {
                               className="action-btn-sm"
                               style={{ background: "rgba(99, 102, 241, 0.2)", color: "#a5b4fc", border: "1px solid rgba(129, 140, 248, 0.4)", display: "inline-flex", alignItems: "center", gap: "4px" }}
                               onClick={() => {
-                                setSelectedDossierTenant(t);
-                                setShowHeadmasterDossierModal(true);
+                                navigateToDetail(navigate, "school", t.id || t.tenantCode || t.code, t, { returnTab: activeTab });
                               }}
+                              title="View full school information, headmaster credentials, and succession on dedicated page"
                             >
-                              👤 Headmaster Dossier & Succession
+                              👤 View School Information & Dossier
                             </button>
                             <div style={{ background: "rgba(245, 158, 11, 0.15)", border: "1px solid rgba(245, 158, 11, 0.3)", borderRadius: "6px", padding: "4px 8px", fontSize: "0.7rem", color: "#fbbf24" }}>
                               MoMo: <strong>0554594193</strong> (GABRIEL KUBI OSEI-APPIAH)
@@ -6611,14 +6681,25 @@ export default function DeveloperDashboard() {
                           </span>
                         </td>
                         <td>
-                          <button
-                            className="action-btn-sm"
-                            style={{ background: "#dc2626", color: "#fff", padding: "4px 8px" }}
-                            onClick={() => handleDeleteBackup(b.id, b.filename)}
-                            title="Delete backup snapshot"
-                          >
-                            🗑️ Delete
-                          </button>
+                          <div style={{ display: "flex", gap: "6px" }}>
+                            <button
+                              type="button"
+                              className="action-btn-sm"
+                              style={{ background: "rgba(56, 189, 248, 0.2)", color: "#38bdf8", border: "1px solid #38bdf8", padding: "4px 8px", cursor: "pointer" }}
+                              onClick={() => navigateToDetail(navigate, "backup", b.id, b, { returnTab: activeTab })}
+                              title="View full backup manifest on dedicated page"
+                            >
+                              🔍 View
+                            </button>
+                            <button
+                              className="action-btn-sm"
+                              style={{ background: "#dc2626", color: "#fff", padding: "4px 8px" }}
+                              onClick={() => handleDeleteBackup(b.id, b.filename)}
+                              title="Delete backup snapshot"
+                            >
+                              🗑️ Delete
+                            </button>
+                          </div>
                         </td>
                       </tr>
                     ))
@@ -6792,6 +6873,15 @@ export default function DeveloperDashboard() {
                         </td>
                         <td>
                           <div style={{ display: "flex", gap: "6px" }}>
+                            <button
+                              type="button"
+                              className="action-btn-sm"
+                              style={{ background: "rgba(56, 189, 248, 0.2)", color: "#38bdf8", border: "1px solid #38bdf8", padding: "4px 8px", cursor: "pointer" }}
+                              onClick={() => navigateToDetail(navigate, "alert", a.id, a, { returnTab: activeTab })}
+                              title="View full alert incident on dedicated page"
+                            >
+                              🔍 View
+                            </button>
                             {!a.isResolved && (
                               <button
                                 className="action-btn-sm unlock"
@@ -6873,13 +6963,24 @@ export default function DeveloperDashboard() {
                         </span>
                       </td>
                       <td>
-                        <button
-                          className="action-btn-sm"
-                          style={{ background: "#7c3aed", color: "#fff" }}
-                          onClick={() => handleRollback(d.version)}
-                        >
-                          🔄 Verify Rollback
-                        </button>
+                        <div style={{ display: "flex", gap: "6px" }}>
+                          <button
+                            type="button"
+                            className="action-btn-sm"
+                            style={{ background: "rgba(56, 189, 248, 0.2)", color: "#38bdf8", border: "1px solid #38bdf8", padding: "4px 8px", cursor: "pointer" }}
+                            onClick={() => navigateToDetail(navigate, "deployment", d.id || d.version, d, { returnTab: activeTab })}
+                            title="View deployment manifest on dedicated page"
+                          >
+                            🔍 View
+                          </button>
+                          <button
+                            className="action-btn-sm"
+                            style={{ background: "#7c3aed", color: "#fff" }}
+                            onClick={() => handleRollback(d.version)}
+                          >
+                            🔄 Rollback
+                          </button>
+                        </div>
                       </td>
                     </tr>
                   ))}
@@ -6912,6 +7013,7 @@ export default function DeveloperDashboard() {
                     <th>ACTION</th>
                     <th>DETAILS</th>
                     <th>IP ADDRESS</th>
+                    <th>ACTION</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -6940,6 +7042,17 @@ export default function DeveloperDashboard() {
                         <span style={{ fontFamily: "monospace", fontSize: "0.75rem", color: "#94a3b8" }}>
                           {log.ipAddress || "127.0.0.1"}
                         </span>
+                      </td>
+                      <td>
+                        <button
+                          type="button"
+                          className="action-btn-sm"
+                          style={{ background: "rgba(56, 189, 248, 0.2)", color: "#38bdf8", border: "1px solid #38bdf8", padding: "4px 8px", cursor: "pointer" }}
+                          onClick={() => navigateToDetail(navigate, "audit-log", log.id, log, { returnTab: activeTab })}
+                          title="View audit event ledger on dedicated page"
+                        >
+                          🔍 View
+                        </button>
                       </td>
                     </tr>
                   ))}
@@ -7032,6 +7145,7 @@ export default function DeveloperDashboard() {
                     <th>MAX STUDENTS</th>
                     <th>EXPIRES AT</th>
                     <th>STATUS</th>
+                    <th>ACTION</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -7062,6 +7176,17 @@ export default function DeveloperDashboard() {
                         <span className={`status-badge ${lic.isActive ? "active" : "locked"}`}>
                           {lic.isActive ? "ACTIVE_LICENSED" : "REVOKED"}
                         </span>
+                      </td>
+                      <td>
+                        <button
+                          type="button"
+                          className="action-btn-sm"
+                          style={{ background: "rgba(56, 189, 248, 0.2)", color: "#38bdf8", border: "1px solid #38bdf8", padding: "4px 8px", cursor: "pointer" }}
+                          onClick={() => navigateToDetail(navigate, "license", lic.id, lic, { returnTab: activeTab })}
+                          title="View cryptographic license manifest on dedicated page"
+                        >
+                          🔍 View
+                        </button>
                       </td>
                     </tr>
                   ))}
@@ -7379,37 +7504,42 @@ export default function DeveloperDashboard() {
               {/* Quick Select Headmaster Contacts */}
               <div>
                 <span style={{ fontSize: "0.72rem", color: "#64748b", fontWeight: 700, textTransform: "uppercase", display: "block", marginBottom: "6px" }}>
-                  Quick-Select Registered Headmaster Numbers:
+                  Quick-Select Registered Headmaster Numbers (From Database):
                 </span>
                 <div style={{ display: "flex", gap: "8px", flexWrap: "wrap" }}>
-                  {[
-                    { name: "St. Augustine Science Academy", phone: "+233-24-555-0199" },
-                    { name: "Royal Oak STEM Enclave", phone: "+233-24-442-1199" },
-                    { name: "St. Jude Senior Academy", phone: "+233-24-111-2233" },
-                    { name: "Kampala Main Campus", phone: "+256-70-112-3456" },
-                    { name: "Entebbe Science Campus", phone: "+256-77-998-1122" },
-                    ...onboardedTenants.map((t) => ({ name: t.name || t.institutionName, phone: t.headmasterPhone || t.headmaster?.phone }))
-                  ]
-                    .filter((inst, idx, arr) => inst.phone && arr.findIndex((x) => x.phone === inst.phone) === idx)
-                    .map((inst) => (
-                    <button
-                      key={inst.phone}
-                      type="button"
-                      onClick={(e) => handleLocateTenant(e, inst.phone)}
-                      style={{
-                        background: locatedTenant?.headmasterPhone === inst.phone ? "rgba(56, 189, 248, 0.25)" : "rgba(30, 41, 59, 0.8)",
-                        border: locatedTenant?.headmasterPhone === inst.phone ? "1.5px solid #38bdf8" : "1px solid #334155",
-                        color: locatedTenant?.headmasterPhone === inst.phone ? "#38bdf8" : "#cbd5e1",
-                        padding: "5px 10px",
-                        borderRadius: "6px",
-                        fontSize: "0.75rem",
-                        fontWeight: 700,
-                        cursor: "pointer"
-                      }}
-                    >
-                      🏫 {inst.name} ({inst.phone})
-                    </button>
-                  ))}
+                  {(() => {
+                    const realPhones = onboardedTenants
+                      .map((t) => ({ name: t.name || t.institutionName, phone: t.headmasterPhone || t.headmaster?.phone || t.phone }))
+                      .filter((inst, idx, arr) => inst.phone && arr.findIndex((x) => x.phone === inst.phone) === idx);
+
+                    if (realPhones.length === 0) {
+                      return (
+                        <span style={{ fontSize: "0.74rem", color: "#64748b", fontStyle: "italic" }}>
+                          No registered headmaster phone numbers found in live database yet.
+                        </span>
+                      );
+                    }
+
+                    return realPhones.map((inst) => (
+                      <button
+                        key={inst.phone}
+                        type="button"
+                        onClick={(e) => handleLocateTenant(e, inst.phone)}
+                        style={{
+                          background: locatedTenant?.headmasterPhone === inst.phone ? "rgba(56, 189, 248, 0.25)" : "rgba(30, 41, 59, 0.8)",
+                          border: locatedTenant?.headmasterPhone === inst.phone ? "1.5px solid #38bdf8" : "1px solid #334155",
+                          color: locatedTenant?.headmasterPhone === inst.phone ? "#38bdf8" : "#cbd5e1",
+                          padding: "5px 10px",
+                          borderRadius: "6px",
+                          fontSize: "0.75rem",
+                          fontWeight: 700,
+                          cursor: "pointer"
+                        }}
+                      >
+                        🏫 {inst.name} ({inst.phone})
+                      </button>
+                    ));
+                  })()}
                 </div>
               </div>
 

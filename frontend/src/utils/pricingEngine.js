@@ -222,10 +222,10 @@ export function calculateSubscriptionPricing({
   const studentAudit = Array.isArray(studentRecords) && studentRecords.length > 0
     ? countActiveBillableStudents(studentRecords, studentCount)
     : {
-        activeCount: Math.max(0, parseInt(studentCount, 10) || 0),
-        excludedInactiveOrArchivedCount: 0,
-        duplicatesRemovedCount: 0
-      };
+      activeCount: Math.max(0, parseInt(studentCount, 10) || 0),
+      excludedInactiveOrArchivedCount: 0,
+      duplicatesRemovedCount: 0
+    };
 
   const count = studentAudit.activeCount;
 

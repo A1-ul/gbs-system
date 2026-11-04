@@ -91,6 +91,112 @@ router.post('/sms/send-headmaster', devControlController.sendHeadmasterSms);
 const fs = require('fs');
 const path = require('path');
 const SYSTEM_MEMORY_FILE = path.resolve(__dirname, '../../../data/gbs_system_memory_snapshot.json');
+const {
+  readPersistentStore,
+  writePersistentStore,
+  getActiveEnvironment,
+  createDatabaseBackup,
+  listDatabaseBackups,
+  restoreDatabaseBackup,
+  checkPostgresReachable
+} = require('../../core/database/persistentStore');
+
+// 21. GBS Production & Development Environment Management & Live Provenance
+router.get('/environment', async (req, res) => {
+  const store = readPersistentStore();
+  const isPgOnline = await checkPostgresReachable(250);
+  const activeEnv = store.systemEnvironment || getActiveEnvironment();
+  const backups = listDatabaseBackups();
+
+  const institutions = store.institutions || [];
+  const registeredUsers = store.registeredUsers || [];
+  const subscriptions = store.subscriptions || [];
+
+  const productionInstitutions = institutions.filter(i => (i.environment || 'PRODUCTION') === 'PRODUCTION');
+  const devInstitutions = institutions.filter(i => (i.environment || 'PRODUCTION') === 'DEVELOPMENT');
+
+  res.status(200).json({
+    status: 'success',
+    data: {
+      activeEnvironment: activeEnv,
+      isProduction: activeEnv === 'PRODUCTION',
+      isDevelopment: activeEnv === 'DEVELOPMENT',
+      databaseMode: isPgOnline ? 'POSTGRESQL_LIVE' : 'HYBRID_PERSISTENT_ENGINE',
+      databaseHost: process.env.DATABASE_URL ? (new URL(process.env.DATABASE_URL)).host : 'localhost:5432',
+      liveDatabaseStatistics: {
+        totalInstitutions: institutions.length,
+        productionInstitutionsCount: productionInstitutions.length,
+        developmentInstitutionsCount: devInstitutions.length,
+        totalRegisteredUsers: registeredUsers.length,
+        totalSubscriptions: subscriptions.length,
+        totalTopicVideos: (store.topicVideos || []).length,
+        totalBackupsAvailable: backups.length,
+        latestBackupAt: backups[0]?.createdAt || null
+      },
+      backups: backups.slice(0, 5),
+      timestamp: new Date().toISOString()
+    }
+  });
+});
+
+router.post('/environment/set', (req, res) => {
+  const { environment } = req.body || {};
+  const targetEnv = String(environment || 'PRODUCTION').toUpperCase() === 'DEVELOPMENT' ? 'DEVELOPMENT' : 'PRODUCTION';
+  writePersistentStore((curr) => ({
+    ...curr,
+    systemEnvironment: targetEnv
+  }));
+  res.status(200).json({
+    status: 'success',
+    message: `Active system environment switched to ${targetEnv}.`,
+    data: { activeEnvironment: targetEnv }
+  });
+});
+
+// 22. Safe Database Backup & Restore Protection Mechanism
+router.post('/backup/create', (req, res) => {
+  try {
+    const label = req.body?.label || 'developer_snapshot';
+    const backupResult = createDatabaseBackup(label);
+    res.status(201).json({
+      status: 'success',
+      message: `Database backup created successfully (${backupResult.fileName}).`,
+      data: backupResult
+    });
+  } catch (err) {
+    res.status(500).json({ status: 'error', message: err.message });
+  }
+});
+
+router.get('/backup/list', (req, res) => {
+  try {
+    const list = listDatabaseBackups();
+    res.status(200).json({
+      status: 'success',
+      results: list.length,
+      data: { backups: list }
+    });
+  } catch (err) {
+    res.status(500).json({ status: 'error', message: err.message });
+  }
+});
+
+router.post('/backup/restore', (req, res) => {
+  try {
+    const { fileName } = req.body || {};
+    if (!fileName) {
+      return res.status(400).json({ status: 'error', message: 'Please specify the backup fileName to restore.' });
+    }
+    const restoreResult = restoreDatabaseBackup(fileName);
+    res.status(200).json({
+      status: 'success',
+      message: `System successfully restored from backup '${fileName}'. A pre-restore safety snapshot was also preserved.`,
+      data: restoreResult
+    });
+  } catch (err) {
+    res.status(500).json({ status: 'error', message: err.message });
+  }
+});
 
 const loadSystemMemory = () => {
   try {

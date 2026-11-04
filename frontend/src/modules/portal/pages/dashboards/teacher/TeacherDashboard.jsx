@@ -16,6 +16,7 @@ import {
 } from "../../../../../utils/institutionScope";
 import UniversalRoleGuideModal from "../../../../../components/common/UniversalRoleGuideModal";
 import ClassTopicVideoPlatform from "../../../../../components/common/ClassTopicVideoPlatform";
+import { navigateToDetail } from "../../../../../utils/universalNavigation";
 import "./TeacherDashboard.css";
 
 export default function TeacherDashboard() {
@@ -3273,8 +3274,9 @@ export default function TeacherDashboard() {
                                 <button
                                   type="button"
                                   className="btn-secondary"
-                                  style={{ padding: "4px 10px", fontSize: "0.75rem", borderColor: "#38bdf8", color: "#38bdf8", fontWeight: "700" }}
-                                  onClick={() => setSelectedDailyArchiveToView(arch)}
+                                  style={{ padding: "4px 10px", fontSize: "0.75rem", borderColor: "#38bdf8", color: "#38bdf8", fontWeight: "700", cursor: "pointer" }}
+                                  onClick={() => navigateToDetail(navigate, "attendance", arch.id || arch.date, arch, { returnTab: activeTab })}
+                                  title="View full attendance roll sheet on dedicated page"
                                 >
                                   👁️ View Full Roll
                                 </button>

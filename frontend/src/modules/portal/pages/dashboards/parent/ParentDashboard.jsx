@@ -7,6 +7,7 @@ import VoiceNoteRecorder from "../../../../../components/common/VoiceNoteRecorde
 import VoiceNotePlayer from "../../../../../components/common/VoiceNotePlayer";
 import { getUserAvatar } from "../../../../../utils/userAvatars";
 import UniversalRoleGuideModal from "../../../../../components/common/UniversalRoleGuideModal";
+import { navigateToDetail } from "../../../../../utils/universalNavigation";
 import "./ParentDashboard.css";
 
 export default function ParentDashboard() {
@@ -1593,11 +1594,9 @@ export default function ParentDashboard() {
                                 <button
                                   type="button"
                                   className="btn-secondary"
-                                  style={{ padding: "4px 8px", fontSize: "0.72rem", borderColor: "#38bdf8", color: "#38bdf8", fontWeight: "700" }}
-                                  onClick={() => {
-                                    alert(`📂 ADMISSION INTAKE FILE DOSSIER: ${app.studentFirstName} ${app.studentLastName}\n• Application Ref: ${app.applicationNumber || app.id}\n• Birth Certificate: VERIFIED (PDF attached)\n• Immunization Record: COMPLETE\n• Prior Academic Testimonial: VERIFIED (Aggregate 08)\n• Health Clearance: PASSED`);
-                                  }}
-                                  title="View complete intake file and submitted documents"
+                                  style={{ padding: "4px 8px", fontSize: "0.72rem", borderColor: "#38bdf8", color: "#38bdf8", fontWeight: "700", cursor: "pointer" }}
+                                  onClick={() => navigateToDetail(navigate, "admission", app.applicationNumber || app.id, app, { returnTab: activeTab })}
+                                  title="View complete intake file and submitted documents on dedicated page"
                                 >
                                   📁 View Intake File
                                 </button>
@@ -1992,11 +1991,9 @@ export default function ParentDashboard() {
                                 <button
                                   type="button"
                                   className="btn-primary"
-                                  style={{ background: "linear-gradient(135deg, #10b981, #059669)", fontSize: "0.78rem", padding: "4px 10px" }}
-                                  onClick={() => {
-                                    setSelectedReleasedTranscript(req);
-                                    setShowViewReleasedTranscriptModal(true);
-                                  }}
+                                  style={{ background: "linear-gradient(135deg, #10b981, #059669)", fontSize: "0.78rem", padding: "4px 10px", cursor: "pointer" }}
+                                  onClick={() => navigateToDetail(navigate, "report", req.id || req.purpose, req, { returnTab: activeTab })}
+                                  title="View and print sealed academic transcript on dedicated page"
                                 >
                                   📜 View & Print Sealed Transcript
                                 </button>
@@ -2230,25 +2227,36 @@ export default function ParentDashboard() {
                             </span>
                           </td>
                           <td>
-                            {inv.balanceDue > 0 ? (
-                              <button
-                                type="button"
-                                className="btn-primary"
-                                style={{ padding: "6px 12px", fontSize: "0.78rem" }}
-                                onClick={() => { setActiveInvoiceToPay(inv); setPayAmount(inv.balanceDue); }}
-                              >
-                                💳 Settle Balance
-                              </button>
-                            ) : (
+                            <div style={{ display: "flex", gap: "6px", alignItems: "center" }}>
                               <button
                                 type="button"
                                 className="btn-secondary"
-                                style={{ padding: "6px 12px", fontSize: "0.78rem" }}
-                                onClick={() => setFeedback({ type: "success", message: `Official receipt for ${inv.invoiceNumber} downloaded with SHA-256 digital stamp.` })}
+                                style={{ padding: "6px 10px", fontSize: "0.75rem", borderColor: "#38bdf8", color: "#38bdf8", cursor: "pointer" }}
+                                onClick={() => navigateToDetail(navigate, "invoice", inv.invoiceNumber || inv.id, inv, { returnTab: activeTab })}
+                                title="View full fee invoice statement on dedicated page"
                               >
-                                📥 Receipt
+                                🔍 View
                               </button>
-                            )}
+                              {inv.balanceDue > 0 ? (
+                                <button
+                                  type="button"
+                                  className="btn-primary"
+                                  style={{ padding: "6px 12px", fontSize: "0.78rem" }}
+                                  onClick={() => { setActiveInvoiceToPay(inv); setPayAmount(inv.balanceDue); }}
+                                >
+                                  💳 Settle Balance
+                                </button>
+                              ) : (
+                                <button
+                                  type="button"
+                                  className="btn-secondary"
+                                  style={{ padding: "6px 12px", fontSize: "0.78rem" }}
+                                  onClick={() => navigateToDetail(navigate, "receipt", inv.invoiceNumber || inv.id, inv, { returnTab: activeTab })}
+                                >
+                                  📥 Receipt
+                                </button>
+                              )}
+                            </div>
                           </td>
                         </tr>
                       ))

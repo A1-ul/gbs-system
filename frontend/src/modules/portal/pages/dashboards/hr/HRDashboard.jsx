@@ -4,6 +4,7 @@ import WindowControlsBar from "../../../../../components/common/WindowControlsBa
 import TopCenterSystemBanner from "../../../../../components/common/TopCenterSystemBanner";
 import { getUserAvatar } from "../../../../../utils/userAvatars";
 import UniversalRoleGuideModal from "../../../../../components/common/UniversalRoleGuideModal";
+import { navigateToDetail } from "../../../../../utils/universalNavigation";
 
 export default function HRDashboard() {
   const navigate = useNavigate();
@@ -536,12 +537,13 @@ export default function HRDashboard() {
                     <th style={{ padding: "12px 16px" }}>Monthly Salary</th>
                     <th style={{ padding: "12px 16px" }}>Compliance</th>
                     <th style={{ padding: "12px 16px" }}>Status</th>
+                    <th style={{ padding: "12px 16px" }}>Action</th>
                   </tr>
                 </thead>
                 <tbody>
                   {employees.length === 0 ? (
                     <tr>
-                      <td colSpan="7" style={{ padding: "32px 16px", textAlign: "center", color: "#94a3b8" }}>
+                      <td colSpan="8" style={{ padding: "32px 16px", textAlign: "center", color: "#94a3b8" }}>
                         No staff members onboarded yet. Click "➕ Onboard New Staff Member" to add certified faculty and personnel to your institution.
                       </td>
                     </tr>
@@ -569,6 +571,25 @@ export default function HRDashboard() {
                         <span style={{ background: "rgba(59, 130, 246, 0.15)", color: "#60a5fa", padding: "2px 8px", borderRadius: "12px", fontSize: "0.75rem", fontWeight: "700" }}>
                           {emp.status}
                         </span>
+                      </td>
+                      <td style={{ padding: "12px 16px" }}>
+                        <button
+                          type="button"
+                          onClick={() => navigateToDetail(navigate, "staff", emp.id, emp, { returnTab: activeTab })}
+                          style={{
+                            background: "rgba(56, 189, 248, 0.15)",
+                            border: "1px solid #38bdf8",
+                            color: "#38bdf8",
+                            borderRadius: "8px",
+                            padding: "5px 10px",
+                            fontSize: "0.75rem",
+                            fontWeight: "700",
+                            cursor: "pointer"
+                          }}
+                          title="View full staff profile on dedicated page"
+                        >
+                          🔍 View Profile
+                        </button>
                       </td>
                     </tr>
                   ))}

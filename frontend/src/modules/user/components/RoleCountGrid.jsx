@@ -1,5 +1,7 @@
 import React, { useState, useEffect } from "react";
+import { useNavigate } from "react-router-dom";
 import { getApiBaseUrl } from "../../../api/client/apiConfig";
+import { navigateToDetail } from "../../../utils/universalNavigation";
 import "./RoleCountGrid.css";
 
 const ROLE_ICONS = {
@@ -15,6 +17,7 @@ const ROLE_ICONS = {
 };
 
 export default function RoleCountGrid() {
+  const navigate = useNavigate();
   const [countsData, setCountsData] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
@@ -378,14 +381,34 @@ export default function RoleCountGrid() {
         </div>
       )}
 
-      {/* Cross-Check & User Verification Modal */}
+      {/* Cross-Check & User Verification Dedicated Section */}
       {selectedRole && (
-        <div className="modal-overlay" onClick={() => setSelectedRole(null)}>
-          <div className="modal-card" onClick={(e) => e.stopPropagation()}>
-            <div className="modal-header">
-              <h3>
-                {ROLE_ICONS[selectedRole.role]} {selectedRole.roleTitle} Portal — Registered User Roster ({roleUsers.length})
-              </h3>
+        <div className="role-roster-dedicated-panel" style={{ marginTop: "1.5rem", background: "rgba(15, 23, 42, 0.95)", border: "1.5px solid #38bdf8", borderRadius: "14px", padding: "1.5rem", boxShadow: "0 10px 30px rgba(0,0,0,0.45)" }}>
+          <div className=" dedicated-panel-inner">
+            <div className="modal-header" style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: "12px", flexWrap: "wrap", borderBottom: "1px solid rgba(56, 189, 248, 0.25)", paddingBottom: "12px", marginBottom: "14px" }}>
+              <div style={{ display: "flex", alignItems: "center", gap: "12px", flexWrap: "wrap" }}>
+                <button
+                  type="button"
+                  onClick={() => setSelectedRole(null)}
+                  style={{
+                    background: "linear-gradient(135deg, #1e293b, #0f172a)",
+                    border: "1.5px solid #38bdf8",
+                    color: "#38bdf8",
+                    fontWeight: 800,
+                    padding: "6px 14px",
+                    borderRadius: "8px",
+                    cursor: "pointer",
+                    display: "inline-flex",
+                    alignItems: "center",
+                    gap: "6px"
+                  }}
+                >
+                  ⬅ Back
+                </button>
+                <h3 style={{ margin: 0 }}>
+                  {ROLE_ICONS[selectedRole.role]} {selectedRole.roleTitle} Portal — Registered User Roster ({roleUsers.length})
+                </h3>
+              </div>
               <button
                 className="modal-close-btn"
                 onClick={() => setSelectedRole(null)}
@@ -487,9 +510,10 @@ export default function RoleCountGrid() {
                           <div className="action-btn-group">
                             <button
                               className="inspect-btn"
-                              onClick={() => handleInspectUser(u.id)}
+                              onClick={() => navigateToDetail(navigate, (u.role || "user").toLowerCase(), u.id, u)}
+                              title="View full user profile and verification credentials on dedicated page"
                             >
-                              View Profile
+                              🔍 View Profile
                             </button>
                             <button
                               className="toggle-status-btn"

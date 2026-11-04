@@ -56,6 +56,7 @@ import CCTVSecurityHubPage from "../modules/cctv/pages/CCTVSecurityHubPage";
 import ShardingDrManagementPage from "../modules/infrastructure/pages/ShardingDrManagementPage";
 import VideoPresentationEngine from "../modules/presentation/pages/VideoPresentationEngine";
 import GBSCompanyWebsite from "../modules/website/pages/GBSCompanyWebsite";
+import UniversalDetailPage from "../components/common/UniversalDetailPage";
 
 export default function AppRouter() {
   return (
@@ -251,6 +252,10 @@ export default function AppRouter() {
         <Route path="/admin/infrastructure" element={<ShardingDrManagementPage />} />
         <Route path="/admin/sharding" element={<ShardingDrManagementPage />} />
         <Route path="/admin/dr-failover" element={<ShardingDrManagementPage />} />
+
+        {/* Universal Detail Routed View (Universal Page Navigation for all dashboards) */}
+        <Route path="/details/:category/:id" element={<UniversalDetailPage />} />
+        <Route path="/details/:category" element={<UniversalDetailPage />} />
 
         {/* Fallback */}
         <Route path="*" element={<Navigate to="/login" replace />} />
