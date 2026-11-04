@@ -43,7 +43,7 @@ export default function StaffDashboard() {
     let storedUser = null;
     try {
       storedUser = JSON.parse(localStorage.getItem("gbs_user") || "{}");
-    } catch {}
+    } catch { }
     return (
       localStorage.getItem("gbs_report_school_name") ||
       localStorage.getItem("gbs_tenant_name") ||
@@ -169,8 +169,8 @@ export default function StaffDashboard() {
 
   return (
     <div className="role-dashboard-wrapper">
-      <div 
-        className="role-dashboard-bg" 
+      <div
+        className="role-dashboard-bg"
         style={{ backgroundImage: `url('/assets/login-staff.jpg')` }}
       ></div>
       <div className="role-dashboard-overlay"></div>
@@ -185,10 +185,10 @@ export default function StaffDashboard() {
         {/* Header */}
         <header className="role-header">
           <div className="role-header-brand">
-            <img 
-              src={customSchoolLogo || "/assets/gbs_crest_badge.jpg"} 
-              alt="School Crest" 
-              className="role-crest" 
+            <img
+              src={customSchoolLogo || "/assets/gbs_crest_badge.jpg"}
+              alt="School Crest"
+              className="role-crest"
               style={{ width: "58px", height: "58px", borderRadius: "12px", border: "2px solid #38bdf8", objectFit: "contain", background: "rgba(15,23,42,0.85)", padding: "2px" }}
             />
             <div className="role-brand-text">
@@ -261,7 +261,7 @@ export default function StaffDashboard() {
               </p>
 
               <div className="role-kpi-row">
-                <div 
+                <div
                   className="role-kpi-box"
                   onClick={() => setActiveTab("duties")}
                   style={{ cursor: "pointer", transition: "transform 0.15s, border-color 0.15s" }}
@@ -275,7 +275,7 @@ export default function StaffDashboard() {
                     <strong className="role-kpi-num">{tasks.filter((t) => t.status !== "COMPLETED").length} Pending</strong>
                   </div>
                 </div>
-                <div 
+                <div
                   className="role-kpi-box"
                   onClick={() => navigate("/transport")}
                   style={{ cursor: "pointer", transition: "transform 0.15s, border-color 0.15s" }}
@@ -289,7 +289,7 @@ export default function StaffDashboard() {
                     <strong className="role-kpi-num" style={{ color: "#34d399" }}>All Active</strong>
                   </div>
                 </div>
-                <div 
+                <div
                   className="role-kpi-box"
                   onClick={() => setActiveTab("admissions")}
                   style={{ cursor: "pointer", transition: "transform 0.15s, border-color 0.15s" }}
@@ -303,7 +303,7 @@ export default function StaffDashboard() {
                     <strong className="role-kpi-num">{applications.length} Records</strong>
                   </div>
                 </div>
-                <div 
+                <div
                   className="role-kpi-box"
                   onClick={() => setActiveTab("maintenance")}
                   style={{ cursor: "pointer", transition: "transform 0.15s, border-color 0.15s" }}
@@ -322,9 +322,9 @@ export default function StaffDashboard() {
 
             {/* Clear Daytime Real-Life Photograph */}
             <div className="role-hero-photo-frame">
-              <img 
-                src="/assets/login-staff.jpg" 
-                alt="Staff Operations Facility Workspace" 
+              <img
+                src="/assets/login-staff.jpg"
+                alt="Staff Operations Facility Workspace"
               />
               <div className="photo-live-pill">
                 <span className="ticker-dot"></span>
@@ -339,7 +339,7 @@ export default function StaffDashboard() {
 
           {/* Feedback Alert */}
           {feedback && (
-            <div 
+            <div
               style={{
                 padding: "12px 18px",
                 borderRadius: "10px",
@@ -361,29 +361,29 @@ export default function StaffDashboard() {
 
           {/* Workspace Tabs Navigation */}
           <nav className="role-tab-nav">
-            <button 
-              type="button" 
+            <button
+              type="button"
               className={`role-tab-btn ${activeTab === "duties" ? "active" : ""}`}
               onClick={() => setActiveTab("duties")}
             >
               📌 Operational Duties & Tasks
             </button>
-            <button 
-              type="button" 
+            <button
+              type="button"
               className={`role-tab-btn ${activeTab === "admissions" ? "active" : ""}`}
               onClick={() => setActiveTab("admissions")}
             >
               📂 Admissions Document Verification
             </button>
-            <button 
-              type="button" 
+            <button
+              type="button"
               className={`role-tab-btn ${activeTab === "maintenance" ? "active" : ""}`}
               onClick={() => setActiveTab("maintenance")}
             >
               🛠️ Campus Facility & Maintenance
             </button>
-            <button 
-              type="button" 
+            <button
+              type="button"
               className={`role-tab-btn ${activeTab === "incidents" ? "active" : ""}`}
               onClick={() => setActiveTab("incidents")}
             >
@@ -554,15 +554,15 @@ export default function StaffDashboard() {
 
               <form onSubmit={handleSubmitTicket} style={{ background: "rgba(2, 6, 23, 0.5)", padding: "1.25rem", borderRadius: "12px", marginBottom: "1.5rem" }}>
                 <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(200px, 1fr))", gap: "12px", marginBottom: "12px" }}>
-                  <input 
-                    type="text" 
-                    required 
-                    placeholder="Issue Title (e.g. Science Lab 2 Water Pressure)" 
-                    className="filter-input" 
+                  <input
+                    type="text"
+                    required
+                    placeholder="Issue Title (e.g. Science Lab 2 Water Pressure)"
+                    className="filter-input"
                     value={newTicket.title}
                     onChange={(e) => setNewTicket({ ...newTicket, title: e.target.value })}
                   />
-                  <select 
+                  <select
                     className="filter-select"
                     value={newTicket.location}
                     onChange={(e) => setNewTicket({ ...newTicket, location: e.target.value })}
@@ -572,7 +572,7 @@ export default function StaffDashboard() {
                     <option value="Sports Pavilion">Sports Pavilion</option>
                     <option value="Dining Hall & Kitchen">Dining Hall & Kitchen</option>
                   </select>
-                  <select 
+                  <select
                     className="filter-select"
                     value={newTicket.category}
                     onChange={(e) => setNewTicket({ ...newTicket, category: e.target.value })}
@@ -582,7 +582,7 @@ export default function StaffDashboard() {
                     <option value="HVAC">Air Conditioning & HVAC</option>
                     <option value="FURNITURE">Desk & Seating Repair</option>
                   </select>
-                  <select 
+                  <select
                     className="filter-select"
                     value={newTicket.priority}
                     onChange={(e) => setNewTicket({ ...newTicket, priority: e.target.value })}
@@ -610,23 +610,23 @@ export default function StaffDashboard() {
 
               <form onSubmit={handleSubmitIncident} style={{ background: "rgba(2, 6, 23, 0.5)", padding: "1.25rem", borderRadius: "12px" }}>
                 <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(200px, 1fr))", gap: "12px", marginBottom: "12px" }}>
-                  <input 
-                    type="text" 
-                    required 
-                    placeholder="Incident Headline" 
-                    className="filter-input" 
+                  <input
+                    type="text"
+                    required
+                    placeholder="Incident Headline"
+                    className="filter-input"
                     value={incident.title}
                     onChange={(e) => setIncident({ ...incident, title: e.target.value })}
                   />
-                  <input 
-                    type="text" 
-                    required 
-                    placeholder="Specific Location (e.g. West Gate Parking)" 
-                    className="filter-input" 
+                  <input
+                    type="text"
+                    required
+                    placeholder="Specific Location (e.g. West Gate Parking)"
+                    className="filter-input"
                     value={incident.location}
                     onChange={(e) => setIncident({ ...incident, location: e.target.value })}
                   />
-                  <select 
+                  <select
                     className="filter-select"
                     value={incident.severity}
                     onChange={(e) => setIncident({ ...incident, severity: e.target.value })}
@@ -636,11 +636,11 @@ export default function StaffDashboard() {
                     <option value="MEDIUM">Medium Severity</option>
                   </select>
                 </div>
-                <textarea 
-                  rows={3} 
-                  required 
-                  placeholder="Describe incident, parties involved, and immediate actions taken..." 
-                  className="filter-input" 
+                <textarea
+                  rows={3}
+                  required
+                  placeholder="Describe incident, parties involved, and immediate actions taken..."
+                  className="filter-input"
                   style={{ width: "100%", marginBottom: "12px" }}
                   value={incident.details}
                   onChange={(e) => setIncident({ ...incident, details: e.target.value })}

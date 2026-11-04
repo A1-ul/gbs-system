@@ -6,7 +6,6 @@ import TopCenterSystemBanner from "../../../components/common/TopCenterSystemBan
 import { offlineSyncEngine } from "../../../utils/offlineSync";
 import { getOnboardingRates, updateOnboardingRates } from "../../../utils/pricingEngine";
 import UniversalRoleGuideModal from "../../../components/common/UniversalRoleGuideModal";
-import DeveloperMovableAIAssistant from "../components/DeveloperMovableAIAssistant";
 import { navigateToDetail } from "../../../utils/universalNavigation";
 import "./DeveloperPlatform.css";
 
@@ -9423,9 +9422,6 @@ export default function DeveloperDashboard() {
           isOpen={showDevGuideModal}
           onClose={() => setShowDevGuideModal(false)}
         />
-
-        {/* Movable AI Assistant & Image Vision Service */}
-        <DeveloperMovableAIAssistant />
 
       </main>
     </div>

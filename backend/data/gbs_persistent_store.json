@@ -404,7 +404,7 @@
       "createdAt": "2026-11-02T21:55:25.367Z"
     }
   ],
-  "updatedAt": "2026-11-04T16:23:35.593Z",
+  "updatedAt": "2026-11-04T18:33:30.994Z",
   "registeredUsers": [
     {
       "id": "usr_9",
@@ -501,6 +501,186 @@
   ],
   "prismaModels": {
     "AuditLog": [
+      {
+        "id": 96,
+        "tenantId": 1,
+        "userId": null,
+        "module": "DEV_CONTROL",
+        "action": "TENANT_UNLOCK",
+        "details": "Developer performed UNLOCK on tenant 'GBS International School (Main Campus)'",
+        "ipAddress": "127.0.0.1",
+        "isDeleted": false,
+        "createdAt": "2026-11-04T18:33:30.959Z",
+        "updatedAt": "2026-11-04T18:33:30.959Z"
+      },
+      {
+        "id": 95,
+        "tenantId": 6172,
+        "userId": null,
+        "module": "DEV_CONTROL",
+        "action": "TENANT_LOCK",
+        "details": "Developer performed LOCK on tenant 'undefined'",
+        "ipAddress": "127.0.0.1",
+        "isDeleted": false,
+        "createdAt": "2026-11-04T18:33:19.901Z",
+        "updatedAt": "2026-11-04T18:33:19.901Z"
+      },
+      {
+        "id": 94,
+        "tenantId": 1,
+        "userId": null,
+        "module": "DEV_CONTROL",
+        "action": "TENANT_LOCK",
+        "details": "Developer performed LOCK on tenant 'GBS International School (Main Campus)'",
+        "ipAddress": "127.0.0.1",
+        "isDeleted": false,
+        "createdAt": "2026-11-04T18:33:16.647Z",
+        "updatedAt": "2026-11-04T18:33:16.647Z"
+      },
+      {
+        "id": 93,
+        "tenantId": 2835,
+        "userId": null,
+        "module": "DEV_CONTROL",
+        "action": "TENANT_UNLOCK",
+        "details": "Developer performed UNLOCK on tenant 'undefined'",
+        "ipAddress": "127.0.0.1",
+        "isDeleted": false,
+        "createdAt": "2026-11-04T18:32:49.797Z",
+        "updatedAt": "2026-11-04T18:32:49.797Z"
+      },
+      {
+        "id": 92,
+        "tenantId": 8232,
+        "userId": null,
+        "module": "DEV_CONTROL",
+        "action": "TENANT_UNLOCK",
+        "details": "Developer performed UNLOCK on tenant 'undefined'",
+        "ipAddress": "127.0.0.1",
+        "isDeleted": false,
+        "createdAt": "2026-11-04T18:32:47.610Z",
+        "updatedAt": "2026-11-04T18:32:47.610Z"
+      },
+      {
+        "id": 91,
+        "tenantId": 3355,
+        "userId": null,
+        "module": "DEV_CONTROL",
+        "action": "TENANT_UNLOCK",
+        "details": "Developer performed UNLOCK on tenant 'undefined'",
+        "ipAddress": "127.0.0.1",
+        "isDeleted": false,
+        "createdAt": "2026-11-04T18:32:40.037Z",
+        "updatedAt": "2026-11-04T18:32:40.037Z"
+      },
+      {
+        "id": 90,
+        "tenantId": 1,
+        "userId": null,
+        "module": "DEV_CONTROL",
+        "action": "TENANT_UNLOCK",
+        "details": "Developer performed UNLOCK on tenant 'GBS International School (Main Campus)'",
+        "ipAddress": "127.0.0.1",
+        "isDeleted": false,
+        "createdAt": "2026-11-04T18:32:34.806Z",
+        "updatedAt": "2026-11-04T18:32:34.806Z"
+      },
+      {
+        "id": 89,
+        "tenantId": 1,
+        "userId": null,
+        "module": "DEV_CONTROL",
+        "action": "TENANT_SUSPEND",
+        "details": "Developer performed SUSPEND on tenant 'GBS International School (Main Campus)'",
+        "ipAddress": "127.0.0.1",
+        "isDeleted": false,
+        "createdAt": "2026-11-04T18:32:31.232Z",
+        "updatedAt": "2026-11-04T18:32:31.232Z"
+      },
+      {
+        "id": 88,
+        "tenantId": 5734,
+        "userId": null,
+        "module": "DEV_CONTROL",
+        "action": "TENANT_UNLOCK",
+        "details": "Developer performed UNLOCK on tenant 'undefined'",
+        "ipAddress": "127.0.0.1",
+        "isDeleted": false,
+        "createdAt": "2026-11-04T18:32:11.924Z",
+        "updatedAt": "2026-11-04T18:32:11.924Z"
+      },
+      {
+        "id": 87,
+        "tenantId": 7803,
+        "userId": null,
+        "module": "DEV_CONTROL",
+        "action": "TENANT_UNLOCK",
+        "details": "Developer performed UNLOCK on tenant 'undefined'",
+        "ipAddress": "127.0.0.1",
+        "isDeleted": false,
+        "createdAt": "2026-11-04T18:32:08.371Z",
+        "updatedAt": "2026-11-04T18:32:08.371Z"
+      },
+      {
+        "id": 86,
+        "tenantId": 2714,
+        "userId": null,
+        "module": "DEV_CONTROL",
+        "action": "TENANT_UNLOCK",
+        "details": "Developer performed UNLOCK on tenant 'undefined'",
+        "ipAddress": "127.0.0.1",
+        "isDeleted": false,
+        "createdAt": "2026-11-04T18:32:04.452Z",
+        "updatedAt": "2026-11-04T18:32:04.452Z"
+      },
+      {
+        "id": 85,
+        "tenantId": 1,
+        "userId": null,
+        "module": "DEV_CONTROL",
+        "action": "TENANT_LOCK",
+        "details": "Developer performed LOCK on tenant 'GBS International School (Main Campus)'",
+        "ipAddress": "127.0.0.1",
+        "isDeleted": false,
+        "createdAt": "2026-11-04T18:31:59.021Z",
+        "updatedAt": "2026-11-04T18:31:59.021Z"
+      },
+      {
+        "id": 84,
+        "tenantId": 3882,
+        "userId": null,
+        "module": "DEV_CONTROL",
+        "action": "TENANT_LOCK",
+        "details": "Developer performed LOCK on tenant 'undefined'",
+        "ipAddress": "127.0.0.1",
+        "isDeleted": false,
+        "createdAt": "2026-11-04T18:31:56.054Z",
+        "updatedAt": "2026-11-04T18:31:56.054Z"
+      },
+      {
+        "id": 83,
+        "tenantId": 4517,
+        "userId": null,
+        "module": "DEV_CONTROL",
+        "action": "TENANT_LOCK",
+        "details": "Developer performed LOCK on tenant 'GBS International School (Main Campus)'",
+        "ipAddress": "127.0.0.1",
+        "isDeleted": false,
+        "createdAt": "2026-11-04T18:31:52.415Z",
+        "updatedAt": "2026-11-04T18:31:52.415Z"
+      },
+      {
+        "id": 82,
+        "tenantId": 1,
+        "userId": null,
+        "module": "DEV_CONTROL",
+        "action": "DEVELOPER_LOGIN_AUTHENTICATED",
+        "details": "Developer session initialized for 'gabosei48@gmail.com' with Level 5 root clearance",
+        "ipAddress": "127.0.0.1",
+        "isDeleted": false,
+        "createdAt": "2026-11-04T18:23:30.096Z",
+        "updatedAt": "2026-11-04T18:23:30.096Z"
+      },
       {
         "id": 81,
         "tenantId": 1,
@@ -2653,6 +2833,78 @@
     ],
     "Tenant": [
       {
+        "id": 6172,
+        "tenantId": 1,
+        "status": "LOCKED",
+        "isActive": false,
+        "createdAt": "2026-11-04T18:33:19.753Z",
+        "updatedAt": "2026-11-04T18:33:19.753Z"
+      },
+      {
+        "id": 2835,
+        "tenantId": 1,
+        "status": "ACTIVE",
+        "isActive": true,
+        "createdAt": "2026-11-04T18:32:49.702Z",
+        "updatedAt": "2026-11-04T18:32:49.702Z"
+      },
+      {
+        "id": 8232,
+        "tenantId": 1,
+        "status": "ACTIVE",
+        "isActive": true,
+        "createdAt": "2026-11-04T18:32:47.433Z",
+        "updatedAt": "2026-11-04T18:32:47.433Z"
+      },
+      {
+        "id": 3355,
+        "tenantId": 1,
+        "status": "ACTIVE",
+        "isActive": true,
+        "createdAt": "2026-11-04T18:32:39.893Z",
+        "updatedAt": "2026-11-04T18:32:39.893Z"
+      },
+      {
+        "id": 5734,
+        "tenantId": 1,
+        "status": "ACTIVE",
+        "isActive": true,
+        "createdAt": "2026-11-04T18:32:11.814Z",
+        "updatedAt": "2026-11-04T18:32:11.814Z"
+      },
+      {
+        "id": 7803,
+        "tenantId": 1,
+        "status": "ACTIVE",
+        "isActive": true,
+        "createdAt": "2026-11-04T18:32:08.110Z",
+        "updatedAt": "2026-11-04T18:32:08.110Z"
+      },
+      {
+        "id": 2714,
+        "tenantId": 1,
+        "status": "ACTIVE",
+        "isActive": true,
+        "createdAt": "2026-11-04T18:32:03.456Z",
+        "updatedAt": "2026-11-04T18:32:03.456Z"
+      },
+      {
+        "id": 3882,
+        "tenantId": 1,
+        "status": "LOCKED",
+        "isActive": false,
+        "createdAt": "2026-11-04T18:31:55.867Z",
+        "updatedAt": "2026-11-04T18:31:55.867Z"
+      },
+      {
+        "id": 4517,
+        "tenantId": 1,
+        "status": "LOCKED",
+        "isActive": false,
+        "createdAt": "2026-11-04T18:31:52.223Z",
+        "updatedAt": "2026-11-04T18:31:52.223Z"
+      },
+      {
         "id": 1,
         "name": "GBS International School (Main Campus)",
         "code": "GBS-MAIN",
@@ -2661,7 +2913,7 @@
         "status": "ACTIVE",
         "isDeleted": false,
         "createdAt": "2026-01-01T00:00:00.000Z",
-        "updatedAt": "2026-11-02T22:16:17.349Z"
+        "updatedAt": "2026-11-04T18:33:30.772Z"
       }
     ],
     "Subscription": [
@@ -2677,10 +2929,75 @@
         "currency": "GHS",
         "isDeleted": false,
         "createdAt": "2026-11-02T22:14:21.221Z",
-        "updatedAt": "2026-11-02T22:16:17.337Z"
+        "updatedAt": "2026-11-04T18:33:30.672Z"
       }
     ],
     "SystemBackup": [
+      {
+        "id": 7,
+        "tenantId": 1,
+        "filename": "pre_lock_snapshot_tenant_6172_1793817199522.sql",
+        "fileSizeMb": 14.8,
+        "backupType": "PRE_LOCK_EMERGENCY_BACKUP",
+        "isEncrypted": true,
+        "storagePath": "/backups/tenants/6172/pre_lock_snapshot_tenant_6172_1793817199522.sql",
+        "status": "COMPLETED",
+        "isDeleted": false,
+        "createdAt": "2026-11-04T18:33:19.558Z",
+        "updatedAt": "2026-11-04T18:33:19.558Z"
+      },
+      {
+        "id": 6,
+        "tenantId": 1,
+        "filename": "pre_lock_snapshot_tenant_1_1793817196347.sql",
+        "fileSizeMb": 14.8,
+        "backupType": "PRE_LOCK_EMERGENCY_BACKUP",
+        "isEncrypted": true,
+        "storagePath": "/backups/tenants/1/pre_lock_snapshot_tenant_1_1793817196347.sql",
+        "status": "COMPLETED",
+        "isDeleted": false,
+        "createdAt": "2026-11-04T18:33:16.375Z",
+        "updatedAt": "2026-11-04T18:33:16.375Z"
+      },
+      {
+        "id": 5,
+        "tenantId": 1,
+        "filename": "pre_lock_snapshot_tenant_1_1793817118585.sql",
+        "fileSizeMb": 14.8,
+        "backupType": "PRE_LOCK_EMERGENCY_BACKUP",
+        "isEncrypted": true,
+        "storagePath": "/backups/tenants/1/pre_lock_snapshot_tenant_1_1793817118585.sql",
+        "status": "COMPLETED",
+        "isDeleted": false,
+        "createdAt": "2026-11-04T18:31:58.620Z",
+        "updatedAt": "2026-11-04T18:31:58.620Z"
+      },
+      {
+        "id": 4,
+        "tenantId": 1,
+        "filename": "pre_lock_snapshot_tenant_3882_1793817115716.sql",
+        "fileSizeMb": 14.8,
+        "backupType": "PRE_LOCK_EMERGENCY_BACKUP",
+        "isEncrypted": true,
+        "storagePath": "/backups/tenants/3882/pre_lock_snapshot_tenant_3882_1793817115716.sql",
+        "status": "COMPLETED",
+        "isDeleted": false,
+        "createdAt": "2026-11-04T18:31:55.740Z",
+        "updatedAt": "2026-11-04T18:31:55.740Z"
+      },
+      {
+        "id": 3,
+        "tenantId": 1,
+        "filename": "pre_lock_snapshot_tenant_4517_1793817111864.sql",
+        "fileSizeMb": 14.8,
+        "backupType": "PRE_LOCK_EMERGENCY_BACKUP",
+        "isEncrypted": true,
+        "storagePath": "/backups/tenants/4517/pre_lock_snapshot_tenant_4517_1793817111864.sql",
+        "status": "COMPLETED",
+        "isDeleted": false,
+        "createdAt": "2026-11-04T18:31:51.889Z",
+        "updatedAt": "2026-11-04T18:31:51.889Z"
+      },
       {
         "id": 2,
         "tenantId": 1,
@@ -2761,6 +3078,136 @@
       }
     ],
     "SystemLock": [
+      {
+        "id": 15,
+        "tenantId": 1,
+        "isLocked": false,
+        "reason": "Developer Administrative System Unlock. All records restored.",
+        "lockedBy": "DEVELOPER_CONTROL_CENTER",
+        "isDeleted": false,
+        "createdAt": "2026-11-04T18:33:30.855Z",
+        "updatedAt": "2026-11-04T18:33:30.855Z"
+      },
+      {
+        "id": 14,
+        "tenantId": 6172,
+        "isLocked": true,
+        "reason": "Developer Manual Lock",
+        "lockedBy": "DEVELOPER_CONTROL_CENTER",
+        "isDeleted": false,
+        "createdAt": "2026-11-04T18:33:19.842Z",
+        "updatedAt": "2026-11-04T18:33:19.842Z"
+      },
+      {
+        "id": 13,
+        "tenantId": 1,
+        "isLocked": true,
+        "reason": "Developer Manual Lock",
+        "lockedBy": "DEVELOPER_CONTROL_CENTER",
+        "isDeleted": false,
+        "createdAt": "2026-11-04T18:33:16.562Z",
+        "updatedAt": "2026-11-04T18:33:16.562Z"
+      },
+      {
+        "id": 12,
+        "tenantId": 2835,
+        "isLocked": false,
+        "reason": "Developer Administrative System Unlock. All records restored.",
+        "lockedBy": "DEVELOPER_CONTROL_CENTER",
+        "isDeleted": false,
+        "createdAt": "2026-11-04T18:32:49.747Z",
+        "updatedAt": "2026-11-04T18:32:49.747Z"
+      },
+      {
+        "id": 11,
+        "tenantId": 8232,
+        "isLocked": false,
+        "reason": "Developer Administrative System Unlock. All records restored.",
+        "lockedBy": "DEVELOPER_CONTROL_CENTER",
+        "isDeleted": false,
+        "createdAt": "2026-11-04T18:32:47.539Z",
+        "updatedAt": "2026-11-04T18:32:47.539Z"
+      },
+      {
+        "id": 10,
+        "tenantId": 3355,
+        "isLocked": false,
+        "reason": "Developer Administrative System Unlock. All records restored.",
+        "lockedBy": "DEVELOPER_CONTROL_CENTER",
+        "isDeleted": false,
+        "createdAt": "2026-11-04T18:32:39.979Z",
+        "updatedAt": "2026-11-04T18:32:39.979Z"
+      },
+      {
+        "id": 9,
+        "tenantId": 1,
+        "isLocked": false,
+        "reason": "Developer Administrative System Unlock. All records restored.",
+        "lockedBy": "DEVELOPER_CONTROL_CENTER",
+        "isDeleted": false,
+        "createdAt": "2026-11-04T18:32:34.745Z",
+        "updatedAt": "2026-11-04T18:32:34.745Z"
+      },
+      {
+        "id": 8,
+        "tenantId": 5734,
+        "isLocked": false,
+        "reason": "Developer Administrative System Unlock. All records restored.",
+        "lockedBy": "DEVELOPER_CONTROL_CENTER",
+        "isDeleted": false,
+        "createdAt": "2026-11-04T18:32:11.863Z",
+        "updatedAt": "2026-11-04T18:32:11.863Z"
+      },
+      {
+        "id": 7,
+        "tenantId": 7803,
+        "isLocked": false,
+        "reason": "Developer Administrative System Unlock. All records restored.",
+        "lockedBy": "DEVELOPER_CONTROL_CENTER",
+        "isDeleted": false,
+        "createdAt": "2026-11-04T18:32:08.251Z",
+        "updatedAt": "2026-11-04T18:32:08.251Z"
+      },
+      {
+        "id": 6,
+        "tenantId": 2714,
+        "isLocked": false,
+        "reason": "Developer Administrative System Unlock. All records restored.",
+        "lockedBy": "DEVELOPER_CONTROL_CENTER",
+        "isDeleted": false,
+        "createdAt": "2026-11-04T18:32:03.653Z",
+        "updatedAt": "2026-11-04T18:32:03.653Z"
+      },
+      {
+        "id": 5,
+        "tenantId": 1,
+        "isLocked": true,
+        "reason": "Developer Manual Lock",
+        "lockedBy": "DEVELOPER_CONTROL_CENTER",
+        "isDeleted": false,
+        "createdAt": "2026-11-04T18:31:58.904Z",
+        "updatedAt": "2026-11-04T18:31:58.904Z"
+      },
+      {
+        "id": 4,
+        "tenantId": 3882,
+        "isLocked": true,
+        "reason": "Developer Manual Lock",
+        "lockedBy": "DEVELOPER_CONTROL_CENTER",
+        "isDeleted": false,
+        "createdAt": "2026-11-04T18:31:55.987Z",
+        "updatedAt": "2026-11-04T18:31:55.987Z"
+      },
+      {
+        "id": 3,
+        "tenantId": 4517,
+        "isLocked": true,
+        "reason": "Developer Manual Lock",
+        "lockedBy": "DEVELOPER_CONTROL_CENTER",
+        "isDeleted": false,
+        "createdAt": "2026-11-04T18:31:52.343Z",
+        "updatedAt": "2026-11-04T18:31:52.343Z"
+      },
       {
         "id": 2,
         "tenantId": null,

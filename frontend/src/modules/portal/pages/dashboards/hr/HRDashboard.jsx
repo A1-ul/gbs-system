@@ -57,7 +57,7 @@ export default function HRDashboard() {
     let storedUser = null;
     try {
       storedUser = JSON.parse(localStorage.getItem("gbs_user") || "{}");
-    } catch {}
+    } catch { }
     return (
       localStorage.getItem("gbs_report_school_name") ||
       localStorage.getItem("gbs_tenant_name") ||
@@ -95,7 +95,7 @@ export default function HRDashboard() {
     try {
       const stored = localStorage.getItem("gbs_hr_employees");
       if (stored) return JSON.parse(stored);
-    } catch {}
+    } catch { }
     return [];
   });
 
@@ -104,7 +104,7 @@ export default function HRDashboard() {
     try {
       const stored = localStorage.getItem("gbs_hr_leave_requests");
       if (stored) return JSON.parse(stored);
-    } catch {}
+    } catch { }
     return [];
   });
 
@@ -113,7 +113,7 @@ export default function HRDashboard() {
     try {
       const stored = localStorage.getItem("gbs_hr_audit_requests");
       if (stored) return JSON.parse(stored);
-    } catch {}
+    } catch { }
     return [];
   });
 
@@ -123,7 +123,7 @@ export default function HRDashboard() {
       try {
         const stored = localStorage.getItem("gbs_hr_audit_requests");
         if (stored) setHrAuditRequests(JSON.parse(stored));
-      } catch {}
+      } catch { }
     };
     window.addEventListener("gbs_hr_audit_request_updated", handleSync);
     window.addEventListener("storage", handleSync);
@@ -276,10 +276,10 @@ export default function HRDashboard() {
           >
             ← Back
           </button>
-          <img 
-            src={customSchoolLogo || "/assets/gbs_crest_badge.jpg"} 
-            alt="School Crest" 
-            style={{ width: "58px", height: "58px", borderRadius: "14px", objectFit: "contain", background: "rgba(15, 23, 42, 0.85)", border: "2.5px solid #a855f7", boxShadow: "0 0 20px rgba(168, 85, 247, 0.45)", padding: "3px" }} 
+          <img
+            src={customSchoolLogo || "/assets/gbs_crest_badge.jpg"}
+            alt="School Crest"
+            style={{ width: "58px", height: "58px", borderRadius: "14px", objectFit: "contain", background: "rgba(15, 23, 42, 0.85)", border: "2.5px solid #a855f7", boxShadow: "0 0 20px rgba(168, 85, 247, 0.45)", padding: "3px" }}
           />
           <div>
             <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
@@ -361,7 +361,7 @@ export default function HRDashboard() {
 
       {/* Main Workspace Container */}
       <main style={{ maxWidth: "1400px", margin: "0 auto", padding: "1.5rem 2rem" }}>
-        
+
         {/* Universal Window & Navigation Controls Bar */}
         <WindowControlsBar />
 
