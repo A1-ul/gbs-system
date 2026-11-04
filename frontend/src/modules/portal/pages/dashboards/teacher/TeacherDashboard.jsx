@@ -233,6 +233,441 @@ export default function TeacherDashboard() {
   const [pendingPublishExam, setPendingPublishExam] = useState(null);
   const [questionsVerifiedCheck, setQuestionsVerifiedCheck] = useState(false);
 
+  // ============================================================================
+  // OFFICIAL INSTITUTIONAL CURRICULUM & TEACHING GUIDE DOWNLOAD CENTER STATE
+  // Automatically scoped to the registered institution category (Nursery-JHS, SHS, University)
+  // ============================================================================
+  const [registeredInstitutionTier, setRegisteredInstitutionTier] = useState(() => getActiveInstitutionType());
+  const [curriculumInstitutionTier, setCurriculumInstitutionTier] = useState(() => getActiveInstitutionType());
+  const [selectedCurriculumClassId, setSelectedCurriculumClassId] = useState(() => {
+    const tierKey = getActiveInstitutionType();
+    const tierObj = INSTITUTION_TIERS[tierKey] || INSTITUTION_TIERS.NURSERY_TO_JHS;
+    return tierObj.classes?.[0]?.id || "JHS_1";
+  });
+  const [selectedCurriculumSubject, setSelectedCurriculumSubject] = useState("ALL");
+  const [curriculumSearchQuery, setCurriculumSearchQuery] = useState("");
+  const [previewCurriculumItem, setPreviewCurriculumItem] = useState(null);
+
+  useEffect(() => {
+    const syncInstitutionTier = () => {
+      const activeTier = getActiveInstitutionType();
+      setRegisteredInstitutionTier(activeTier);
+      setCurriculumInstitutionTier(activeTier);
+      const tierObj = INSTITUTION_TIERS[activeTier] || INSTITUTION_TIERS.NURSERY_TO_JHS;
+      if (tierObj.classes?.length > 0) {
+        setSelectedCurriculumClassId(tierObj.classes[0].id);
+      }
+    };
+    window.addEventListener("gbs_institution_type_changed", syncInstitutionTier);
+    window.addEventListener("storage", syncInstitutionTier);
+    return () => {
+      window.removeEventListener("gbs_institution_type_changed", syncInstitutionTier);
+      window.removeEventListener("storage", syncInstitutionTier);
+    };
+  }, []);
+
+  const handleSelectCurriculumTier = (tierKey) => {
+    const validTier = INSTITUTION_TIERS[tierKey] ? tierKey : "NURSERY_TO_JHS";
+    setCurriculumInstitutionTier(validTier);
+    const tierObj = INSTITUTION_TIERS[validTier];
+    if (tierObj.classes?.length > 0) {
+      setSelectedCurriculumClassId(tierObj.classes[0].id);
+    }
+    setSelectedCurriculumSubject("ALL");
+  };
+
+  // Builds rich, level-specific curriculum data for a given institution category, class/level, and subject
+  const buildCurriculumBlueprint = (tierKey, classObj, subjectName) => {
+    const tierMeta = INSTITUTION_TIERS[tierKey] || INSTITUTION_TIERS.NURSERY_TO_JHS;
+    const className = classObj?.name || "Selected Class / Level";
+    const classCode = classObj?.id || "CLS-01";
+    const isUniversity = tierKey === "UNIVERSITY";
+    const isSHS = tierKey === "SENIOR_HIGH_SCHOOL";
+    const isEarlyChildhood = classCode.includes("CRECHE") || classCode.includes("NURSERY") || classCode.includes("KG");
+    const isJHS = classCode.includes("JHS");
+
+    const frameworkAuthority = isUniversity
+      ? "GTEC / National Tertiary Accreditation & Credit-Hour Outcome-Based Framework"
+      : isSHS
+      ? "NaCCA / WAEC WASSCE Senior High School Harmonized Standard Curriculum"
+      : "NaCCA / GES Standard-Based Basic & JHS National Curriculum Framework";
+
+    const assessmentWeighting = isUniversity
+      ? "40% Continuous Coursework, Labs & Mid-Semester Seminars • 60% End-of-Semester Written/Practical Examination"
+      : isSHS
+      ? "30% School-Based Assessment (SBA: Class Tests, Projects, Practicals) • 70% End-of-Term / WASSCE Standard Examination"
+      : isEarlyChildhood
+      ? "100% Continuous Observational Checklist, Phonics/Numeracy Portfolio & Psychomotor Skill Mastery"
+      : "30% Continuous School-Based Assessment (CAT 1, CAT 2, Homework & Classwork) • 70% Terminal / BECE Standard Examination";
+
+    const strands = isUniversity
+      ? [
+          {
+            code: "MOD-101",
+            strand: `Module 1: Theoretical Foundations & Core Principles of ${subjectName}`,
+            subStrand: "Epistemological frameworks, scholarly literature review, and quantitative/qualitative modeling",
+            indicator: `Students critically analyze foundational theorems, industry standards, and peer-reviewed methodologies in ${subjectName} at ${className} standard.`,
+            pedagogy: "Socratic lectures, peer-reviewed seminar critiques, and problem-based case analyses.",
+            resources: "University Reference Textbooks, IEEE/ACM/Elsevier Digital Library, Lecture Slide Decks"
+          },
+          {
+            code: "MOD-202",
+            strand: `Module 2: Applied Laboratory / Studio Practicum & Computational Modeling`,
+            subStrand: "Experimental design, instrumentation, simulation workflows, and data interpretation",
+            indicator: `Students design, execute, and document reproducible laboratory or field experiments in ${subjectName} with rigorous error analysis.`,
+            pedagogy: "Guided laboratory workshops, collaborative engineering/research sprints, and live code/lab walkthroughs.",
+            resources: "Departmental Lab Manual, Simulation Software Suite, Safety & Ethics Protocol Guide"
+          },
+          {
+            code: "MOD-303",
+            strand: `Module 3: Industry Case Studies, Research Synthesis & Capstone Application`,
+            subStrand: "Real-world systems integration, ethical governance, and capstone project defense",
+            indicator: `Students synthesize multi-disciplinary concepts to solve real-world institutional or industrial challenges in ${subjectName}.`,
+            pedagogy: "Capstone project supervision, industry guest symposia, and oral/written defense panels.",
+            resources: "Capstone Rubric Handbook, Industry Case Dossiers, Peer Evaluation Matrix"
+          }
+        ]
+      : isSHS
+      ? [
+          {
+            code: "SHS-STR-1",
+            strand: `Strand 1: Foundational Concepts, Terminologies & Core Principles in ${subjectName}`,
+            subStrand: `Analytical frameworks and WASSCE syllabus core competencies for ${className}`,
+            indicator: `Learners demonstrate mastery of foundational laws, definitions, and structured problem-solving in ${subjectName}.`,
+            pedagogy: "Interactive direct instruction, guided derivation, worked WASSCE exemplars, and think-pair-share drills.",
+            resources: "NaCCA SHS Teacher's Guide, Approved SHS Textbook, WAEC Chief Examiner's Reports"
+          },
+          {
+            code: "SHS-STR-2",
+            strand: `Strand 2: Practical Application, Analytical Reasoning & Laboratory / Field Inquiry`,
+            subStrand: "Hands-on experimentation, data tabulation, critical interpretation, and technical communication",
+            indicator: `Learners conduct structured practical investigations or analytical essays and interpret real-world phenomena using ${subjectName} principles.`,
+            pedagogy: "Laboratory practical sessions, group inquiry tasks, debate seminars, and graphical analysis workshops.",
+            resources: "SHS Practical Workbook, Laboratory Apparatus / Visual Charts, Past Practical Papers"
+          },
+          {
+            code: "SHS-STR-3",
+            strand: `Strand 3: Advanced Problem Solving, Synthesis & WASSCE Examination Mastery`,
+            subStrand: "Higher-order application, multi-topic synthesis, and timed examination answering techniques",
+            indicator: `Learners solve complex multi-step problems and construct high-scoring structured responses aligned with WASSCE marking schemes.`,
+            pedagogy: "Timed mock drills, rubric-guided peer marking, error-diagnostic clinics, and targeted remediation.",
+            resources: "WAEC Past Questions Compendium, Marking Scheme Rubrics, GBS AI Exam Scanner OMR Sheets"
+          }
+        ]
+      : isEarlyChildhood
+      ? [
+          {
+            code: "ECE-STR-1",
+            strand: `Strand 1: Sensory Discovery, Oral Expression & Play-Based Foundations in ${subjectName}`,
+            subStrand: "Phonics, storytelling, number songs, motor coordination, and curiosity-driven exploration",
+            indicator: `Young learners recognize core symbols, sounds, patterns, and vocabulary in ${subjectName} through joyful guided play.`,
+            pedagogy: "Activity-based learning corners, action rhymes, puppetry, flashcards, and tactile manipulation.",
+            resources: "Picture Storybooks, Alphabet/Number Manipulatives, Audio-Visual Nursery Charts, Crayons & Clay"
+          },
+          {
+            code: "ECE-STR-2",
+            strand: `Strand 2: Guided Practice, Tracing, Grouping & Interactive Classroom Tasks`,
+            subStrand: "Fine-motor writing readiness, sorting, matching, and cooperative social skills",
+            indicator: `Learners trace, match, count, and verbally express simple ideas in ${subjectName} with teacher scaffolding.`,
+            pedagogy: "Small-group workstations, sand/slate tracing, picture-word matching games, and positive reinforcement.",
+            resources: "Early Childhood Activity Workbook, Counters & Building Blocks, Interactive Wall Posters"
+          },
+          {
+            code: "ECE-STR-3",
+            strand: `Strand 3: Creative Expression, Daily Life Habits & Portfolio Showcase`,
+            subStrand: "Applying classroom learning to everyday routines, hygiene, empathy, and creative expression",
+            indicator: `Learners demonstrate confidence in reciting, drawing, counting, and sharing their work with peers and parents.`,
+            pedagogy: "Show-and-tell circle time, role-play, creative drawing/singing, and observational portfolio check-ins.",
+            resources: "Learner Observation Checklist, Art Supplies, Parent-Teacher Progress Sticker Chart"
+          }
+        ]
+      : [
+          {
+            code: isJHS ? "JHS-STR-1" : "BSC-STR-1",
+            strand: `Strand 1: Core Knowledge, Conceptual Understanding & Foundational Skills in ${subjectName}`,
+            subStrand: `National Standard-Based Curriculum core competencies for ${className}`,
+            indicator: `Learners explain key concepts, apply foundational rules, and demonstrate accurate comprehension in ${subjectName}.`,
+            pedagogy: "Learner-centered explanation, concept mapping, real-life Ghanaian/global examples, and guided board exercises.",
+            resources: `NaCCA ${className} Curriculum Guide, Approved Learner's Textbook, Classroom Flipcharts`
+          },
+          {
+            code: isJHS ? "JHS-STR-2" : "BSC-STR-2",
+            strand: `Strand 2: Inquiry, Practical Problem-Solving & Collaborative Group Projects`,
+            subStrand: "Critical thinking, hands-on demonstrations, digital literacy, and real-world application",
+            indicator: `Learners investigate practical problems, collaborate in teams, and present structured solutions in ${subjectName}.`,
+            pedagogy: "Activity-based group work, practical demonstrations, ICT-assisted lessons, and peer presentations.",
+            resources: "Science/ICT Kit, Workbook Exercises, Teacher's Resource Pack, Local Community Examples"
+          },
+          {
+            code: isJHS ? "JHS-STR-3" : "BSC-STR-3",
+            strand: `Strand 3: Assessment Mastery, Revision & ${isJHS ? "BECE Readiness" : "Competency Consolidation"}`,
+            subStrand: "Diagnostic review, continuous assessment mastery, and structured exam preparation",
+            indicator: `Learners independently solve objective and structured theory questions in ${subjectName} with high accuracy.`,
+            pedagogy: "Weekly diagnostic quizzes, past-question clinics, individualized remediation, and AI Exam Scanner practice.",
+            resources: `${isJHS ? "BECE Past Questions & Chief Examiner Guide" : "Termly Assessment Bank"}, Marking Rubrics`
+          }
+        ];
+
+    const weeklyScheme = [
+      { week: "Weeks 1–2", topic: `Orientation, Baseline Diagnostic & Introduction to ${subjectName} Strand 1`, activity: "Introduce syllabus objectives, administer baseline diagnostic test, and teach foundational concepts with guided examples.", deliverable: "Diagnostic Report & Week 1–2 Lesson Notes" },
+      { week: "Weeks 3–4", topic: `Deep Dive into Strand 1 Sub-Strands & Continuous Assessment Test 1 (CAT 1)`, activity: "Conduct interactive classroom instruction, practical workbook drills, and administer formal CAT 1 evaluation.", deliverable: "CAT 1 Marked Scripts & Score Entry" },
+      { week: "Weeks 5–6", topic: `Transition to Strand 2: Practical Inquiry, Laboratory / Studio & Group Projects`, activity: "Facilitate hands-on practical sessions, collaborative student projects, and targeted remediation for CAT 1 gaps.", deliverable: "Practical / Project Assessment Rubric" },
+      { week: "Weeks 7–8", topic: `Official Mid-Term / Mid-Semester Examination & Parent/Student Feedback`, activity: "Administer standardized Mid-Term exam covering Strands 1 & 2, grade via GBS AI Scanner, and review performance.", deliverable: "Mid-Term Broadsheet & Progress Review" },
+      { week: "Weeks 9–10", topic: `Strand 3 Advanced Topics, Applied Synthesis & Continuous Assessment Test 2 (CAT 2)`, activity: "Teach advanced syllabus topics, supervise applied problem-solving workshops, and conduct CAT 2.", deliverable: "CAT 2 Gradebook & Lesson Plan Vetting" },
+      { week: "Weeks 11–12", topic: `Comprehensive Syllabus Revision, Past Question Clinics & Terminal Examinations`, activity: "Run intensive revision drills, chief examiner marking-scheme walkthroughs, and conduct End-of-Term / Semester Exams.", deliverable: "Final Exam Papers & Invigilation Log" },
+      { week: "Weeks 13–14", topic: `Script Marking, 30%/70% (or 40%/60%) Result Collation & Term Closure`, activity: "Finalize script grading, compute cumulative continuous + exam scores, submit to Headmaster for promotion/transcripts.", deliverable: "Verified Terminal Results & Curriculum Audit" }
+    ];
+
+    return {
+      id: `${tierKey}_${classCode}_${subjectName.replace(/[^a-zA-Z0-9]/g, "_")}`,
+      tierKey,
+      tierTitle: tierMeta.title,
+      tierShortLabel: tierMeta.shortLabel,
+      badgeColor: tierMeta.badgeColor,
+      classId: classCode,
+      className,
+      subjectName,
+      academicYear: publishedSchedule.academicYear || "2026/2027",
+      activeTerm: publishedSchedule.activeTerm || "TERM_1",
+      numberOfWeeks: publishedSchedule.numberOfWeeksInSchool || 14,
+      frameworkAuthority,
+      assessmentWeighting,
+      strands,
+      weeklyScheme
+    };
+  };
+
+  // Generates a standalone, printable/saveable HTML curriculum document and downloads it immediately
+  const handleDownloadSubjectCurriculum = (blueprint, openPrintPreview = false) => {
+    if (!blueprint) return;
+    const htmlContent = `<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <title>${blueprint.subjectName} — ${blueprint.className} Official Curriculum Guide (${reportSchoolName})</title>
+  <style>
+    body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; color: #0f172a; background: #f8fafc; margin: 0; padding: 32px; line-height: 1.55; }
+    .container { max-width: 980px; margin: 0 auto; background: #ffffff; border: 2px solid #0f172a; border-radius: 12px; padding: 32px; box-shadow: 0 10px 30px rgba(0,0,0,0.08); }
+    .header { border-bottom: 3px solid #0284c7; padding-bottom: 18px; margin-bottom: 24px; display: flex; justify-content: space-between; align-items: flex-start; }
+    .school-title { font-size: 22px; font-weight: 900; color: #0f172a; text-transform: uppercase; margin: 0 0 4px 0; }
+    .doc-subtitle { font-size: 14px; font-weight: 700; color: #0284c7; text-transform: uppercase; letter-spacing: 0.6px; }
+    .badge { display: inline-block; background: #0f172a; color: #ffffff; font-size: 12px; font-weight: 800; padding: 6px 12px; border-radius: 6px; text-transform: uppercase; }
+    .meta-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 12px; background: #f1f5f9; border: 1px solid #cbd5e1; border-radius: 8px; padding: 16px; margin-bottom: 24px; font-size: 13px; }
+    .meta-item strong { color: #0f172a; display: block; font-size: 11px; text-transform: uppercase; color: #475569; }
+    .meta-item span { font-size: 14px; font-weight: 800; color: #0f172a; }
+    h2 { font-size: 16px; font-weight: 900; color: #0f172a; text-transform: uppercase; border-left: 5px solid #0284c7; padding-left: 10px; margin: 24px 0 12px 0; }
+    table { width: 100%; border-collapse: collapse; margin-bottom: 24px; font-size: 13px; }
+    th { background: #0f172a; color: #ffffff; text-align: left; padding: 10px 12px; font-weight: 800; text-transform: uppercase; font-size: 11px; }
+    td { border: 1px solid #cbd5e1; padding: 10px 12px; vertical-align: top; }
+    tr:nth-child(even) td { background: #f8fafc; }
+    .footer { margin-top: 32px; border-top: 2px dashed #94a3b8; padding-top: 16px; display: flex; justify-content: space-between; font-size: 12px; color: #475569; }
+    @media print { body { background: #fff; padding: 0; } .container { border: none; box-shadow: none; } }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <div class="header">
+      <div>
+        <div class="school-title">${reportSchoolName}</div>
+        <div class="doc-subtitle">OFFICIAL TEACHER CURRICULUM & SYLLABUS TEACHING GUIDE</div>
+        <div style="font-size: 12px; color: #475569; margin-top: 4px;">Framework Authority: ${blueprint.frameworkAuthority}</div>
+      </div>
+      <div style="text-align: right;">
+        <div class="badge">${blueprint.tierTitle}</div>
+        <div style="font-size: 12px; color: #475569; margin-top: 6px;">Generated: ${new Date().toLocaleDateString()}</div>
+      </div>
+    </div>
+
+    <div class="meta-grid">
+      <div class="meta-item"><strong>Institution Category</strong><span>${blueprint.tierTitle}</span></div>
+      <div class="meta-item"><strong>Target Class / Level</strong><span>${blueprint.className} (${blueprint.classId})</span></div>
+      <div class="meta-item"><strong>Subject / Course Title</strong><span>${blueprint.subjectName}</span></div>
+      <div class="meta-item"><strong>Academic Year & Term</strong><span>${blueprint.academicYear} • ${blueprint.activeTerm} (${blueprint.numberOfWeeks} Weeks)</span></div>
+      <div class="meta-item" style="grid-column: span 2;"><strong>Official Assessment & Grading Weighting</strong><span>${blueprint.assessmentWeighting}</span></div>
+    </div>
+
+    <h2>1. Curriculum Strands, Learning Indicators & Pedagogical Guide</h2>
+    <table>
+      <thead>
+        <tr>
+          <th style="width: 10%;">Code</th>
+          <th style="width: 24%;">Strand & Sub-Strand</th>
+          <th style="width: 24%;">Content Standard & Learning Indicator</th>
+          <th style="width: 22%;">Recommended Teaching Methodology</th>
+          <th style="width: 20%;">Teaching & Learning Resources (TLRs)</th>
+        </tr>
+      </thead>
+      <tbody>
+        ${blueprint.strands
+          .map(
+            (s) => `<tr>
+          <td><strong>${s.code}</strong></td>
+          <td><strong>${s.strand}</strong><br/><span style="color:#475569;font-size:12px;">${s.subStrand}</span></td>
+          <td>${s.indicator}</td>
+          <td>${s.pedagogy}</td>
+          <td>${s.resources}</td>
+        </tr>`
+          )
+          .join("")}
+      </tbody>
+    </table>
+
+    <h2>2. ${blueprint.numberOfWeeks}-Week Termly / Semester Teaching Scheme of Work</h2>
+    <table>
+      <thead>
+        <tr>
+          <th style="width: 14%;">Timeline</th>
+          <th style="width: 30%;">Syllabus Topic & Strand Focus</th>
+          <th style="width: 36%;">Classroom Instructional Activities</th>
+          <th style="width: 20%;">Expected Faculty Deliverable</th>
+        </tr>
+      </thead>
+      <tbody>
+        ${blueprint.weeklyScheme
+          .map(
+            (w) => `<tr>
+          <td><strong>${w.week}</strong></td>
+          <td><strong>${w.topic}</strong></td>
+          <td>${w.activity}</td>
+          <td><strong>${w.deliverable}</strong></td>
+        </tr>`
+          )
+          .join("")}
+      </tbody>
+    </table>
+
+    <div class="footer">
+      <div><strong>Issued By:</strong> Academic Directorate — ${reportSchoolName}</div>
+      <div><strong>Teacher Sign-Off:</strong> ___________________________</div>
+      <div><strong>Headmaster Vetting Stamp:</strong> APPROVED CURRICULUM</div>
+    </div>
+  </div>
+</body>
+</html>`;
+
+    if (openPrintPreview) {
+      const printWin = window.open("", "_blank", "width=1020,height=800");
+      if (printWin) {
+        printWin.document.write(htmlContent);
+        printWin.document.close();
+        printWin.focus();
+        setTimeout(() => printWin.print(), 350);
+      }
+      setFeedback({
+        type: "success",
+        message: `🖨️ Opened printable curriculum guide for "${blueprint.subjectName}" (${blueprint.className}).`
+      });
+      return;
+    }
+
+    const blob = new Blob([htmlContent], { type: "text/html;charset=utf-8" });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement("a");
+    const safeClass = blueprint.className.replace(/[^a-zA-Z0-9]+/g, "_");
+    const safeSubj = blueprint.subjectName.replace(/[^a-zA-Z0-9]+/g, "_");
+    link.href = url;
+    link.download = `GBS_Curriculum_${blueprint.tierShortLabel.replace(/[^a-zA-Z0-9]+/g, "_")}_${safeClass}_${safeSubj}.html`;
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    URL.revokeObjectURL(url);
+
+    setFeedback({
+      type: "success",
+      message: `📥 Downloaded official "${blueprint.subjectName}" curriculum guide for ${blueprint.className} (${blueprint.tierShortLabel}).`
+    });
+  };
+
+  // Downloads the Complete Master Curriculum Pack (all subjects for the selected Class/Level)
+  const handleDownloadClassMasterCurriculumPack = (tierKey, classObj, subjectList) => {
+    const tierMeta = INSTITUTION_TIERS[tierKey] || INSTITUTION_TIERS.NURSERY_TO_JHS;
+    const blueprints = (subjectList || []).map((subj) => buildCurriculumBlueprint(tierKey, classObj, subj));
+    if (blueprints.length === 0) return;
+
+    const htmlContent = `<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <title>MASTER CURRICULUM PACK — ${classObj?.name || "Class"} (${tierMeta.title})</title>
+  <style>
+    body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; color: #0f172a; background: #f1f5f9; margin: 0; padding: 28px; line-height: 1.5; }
+    .cover { max-width: 1000px; margin: 0 auto 28px auto; background: #0f172a; color: #ffffff; border-radius: 14px; padding: 32px; border: 3px solid #38bdf8; }
+    .subject-card { max-width: 1000px; margin: 0 auto 28px auto; background: #ffffff; border: 2px solid #0f172a; border-radius: 12px; padding: 28px; page-break-inside: avoid; }
+    h1 { margin: 0 0 8px 0; font-size: 24px; color: #38bdf8; text-transform: uppercase; }
+    h2 { margin: 0 0 10px 0; font-size: 18px; color: #0f172a; border-bottom: 2px solid #0284c7; padding-bottom: 6px; }
+    h3 { margin: 16px 0 8px 0; font-size: 14px; color: #0284c7; text-transform: uppercase; }
+    table { width: 100%; border-collapse: collapse; margin-bottom: 14px; font-size: 12.5px; }
+    th { background: #0f172a; color: #ffffff; text-align: left; padding: 8px 10px; font-size: 11px; text-transform: uppercase; }
+    td { border: 1px solid #cbd5e1; padding: 8px 10px; vertical-align: top; }
+  </style>
+</head>
+<body>
+  <div class="cover">
+    <div style="font-size: 12px; color: #34d399; font-weight: 800; text-transform: uppercase; letter-spacing: 1px;">${reportSchoolName} • OFFICIAL TEACHING CURRICULUM COMPENDIUM</div>
+    <h1>COMPLETE CLASS / LEVEL MASTER CURRICULUM PACK</h1>
+    <div style="font-size: 16px; font-weight: 700; color: #f8fafc; margin-bottom: 12px;">
+      Institution Category: ${tierMeta.title} &nbsp;|&nbsp; Class / Level: ${classObj?.name || "All Levels"} (${classObj?.id || ""})
+    </div>
+    <div style="font-size: 13px; color: #cbd5e1;">
+      Academic Year: ${publishedSchedule.academicYear || "2026/2027"} • Active Term/Semester: ${publishedSchedule.activeTerm || "TERM_1"} • Total Subjects Included: ${blueprints.length} Subjects
+    </div>
+  </div>
+  ${blueprints
+    .map(
+      (bp, idx) => `<div class="subject-card">
+    <h2>${idx + 1}. ${bp.subjectName} — (${bp.className})</h2>
+    <div style="font-size: 12px; color: #475569; margin-bottom: 10px;">
+      <strong>Framework:</strong> ${bp.frameworkAuthority} &nbsp;|&nbsp; <strong>Assessment Weighting:</strong> ${bp.assessmentWeighting}
+    </div>
+    <h3>Curriculum Strands & Learning Indicators</h3>
+    <table>
+      <thead>
+        <tr><th>Code</th><th>Strand & Sub-Strand</th><th>Learning Indicator</th><th>Teaching Methodology</th><th>Resources (TLRs)</th></tr>
+      </thead>
+      <tbody>
+        ${bp.strands
+          .map(
+            (s) => `<tr><td><strong>${s.code}</strong></td><td><strong>${s.strand}</strong><br/>${s.subStrand}</td><td>${s.indicator}</td><td>${s.pedagogy}</td><td>${s.resources}</td></tr>`
+          )
+          .join("")}
+      </tbody>
+    </table>
+    <h3>${bp.numberOfWeeks}-Week Teaching Scheme of Work</h3>
+    <table>
+      <thead>
+        <tr><th>Weeks</th><th>Topic & Strand Focus</th><th>Instructional Activities</th><th>Faculty Deliverable</th></tr>
+      </thead>
+      <tbody>
+        ${bp.weeklyScheme
+          .map(
+            (w) => `<tr><td><strong>${w.week}</strong></td><td><strong>${w.topic}</strong></td><td>${w.activity}</td><td>${w.deliverable}</td></tr>`
+          )
+          .join("")}
+      </tbody>
+    </table>
+  </div>`
+    )
+    .join("")}
+</body>
+</html>`;
+
+    const blob = new Blob([htmlContent], { type: "text/html;charset=utf-8" });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement("a");
+    const safeClass = (classObj?.name || "Class").replace(/[^a-zA-Z0-9]+/g, "_");
+    link.href = url;
+    link.download = `GBS_Master_Curriculum_Pack_${tierMeta.code}_${safeClass}_All_${blueprints.length}_Subjects.html`;
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    URL.revokeObjectURL(url);
+
+    setFeedback({
+      type: "success",
+      message: `📦 Downloaded Complete Master Curriculum Pack (${blueprints.length} subjects) for ${classObj?.name} (${tierMeta.shortLabel}).`
+    });
+  };
+
   useEffect(() => {
     const handleBrandingSync = () => {
       const savedName = localStorage.getItem("gbs_report_school_name");
@@ -2649,9 +3084,31 @@ export default function TeacherDashboard() {
                   </span>
                 </div>
               </div>
-              <span style={{ background: "rgba(16, 185, 129, 0.25)", color: "#34d399", padding: "4px 12px", borderRadius: "8px", fontSize: "0.75rem", fontWeight: 800, border: "1px solid rgba(16, 185, 129, 0.4)" }}>
-                ● PUBLISHED BY HEADMASTER
-              </span>
+              <div style={{ display: "flex", alignItems: "center", gap: "8px", flexWrap: "wrap" }}>
+                <button
+                  type="button"
+                  onClick={() => setActiveTab("curriculum")}
+                  style={{
+                    background: "linear-gradient(135deg, #0284c7, #2563eb)",
+                    color: "#ffffff",
+                    border: "1px solid #38bdf8",
+                    padding: "6px 14px",
+                    borderRadius: "8px",
+                    fontSize: "0.78rem",
+                    fontWeight: 800,
+                    cursor: "pointer",
+                    boxShadow: "0 4px 12px rgba(2, 132, 199, 0.35)",
+                    display: "inline-flex",
+                    alignItems: "center",
+                    gap: "6px"
+                  }}
+                >
+                  📥 Download Class / Level Curriculum Guides
+                </button>
+                <span style={{ background: "rgba(16, 185, 129, 0.25)", color: "#34d399", padding: "4px 12px", borderRadius: "8px", fontSize: "0.75rem", fontWeight: 800, border: "1px solid rgba(16, 185, 129, 0.4)" }}>
+                  ● PUBLISHED BY HEADMASTER
+                </span>
+              </div>
             </div>
 
             <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(180px, 1fr))", gap: "12px", marginTop: "10px" }}>
@@ -2811,6 +3268,14 @@ export default function TeacherDashboard() {
               style={{ borderLeft: "3px solid #fbbf24", color: activeTab === "transcripts" ? "#fbbf24" : undefined }}
             >
               📜 Head of Academics Transcripts ({parentTranscriptRequests.filter((r) => r.status === "PENDING_HEAD_OF_ACADEMICS_RELEASE").length} Pending)
+            </button>
+            <button 
+              type="button" 
+              className={`role-tab-btn ${activeTab === "curriculum" ? "active" : ""}`}
+              onClick={() => setActiveTab("curriculum")}
+              style={{ borderLeft: "3px solid #10b981", color: activeTab === "curriculum" ? "#34d399" : undefined, fontWeight: 800 }}
+            >
+              📥 Curriculum Download (By Class / Level)
             </button>
           </nav>
 
@@ -6189,6 +6654,484 @@ export default function TeacherDashboard() {
               </div>
             </div>
           )}
+
+          {/* ======================================================== */}
+          {/* TAB 11: OFFICIAL CURRICULUM & SYLLABUS DOWNLOAD CENTER   */}
+          {/* ======================================================== */}
+          {activeTab === "curriculum" && (() => {
+            const activeTierMeta = INSTITUTION_TIERS[curriculumInstitutionTier] || INSTITUTION_TIERS.NURSERY_TO_JHS;
+            const registeredTierMeta = INSTITUTION_TIERS[registeredInstitutionTier] || INSTITUTION_TIERS.NURSERY_TO_JHS;
+            const tierClasses = [
+              ...(activeTierMeta.classes || []),
+              ...(curriculumInstitutionTier === registeredInstitutionTier
+                ? (classes || [])
+                    .filter((c) => !(activeTierMeta.classes || []).some((tc) => tc.id === String(c.id) || tc.name === c.name))
+                    .map((c) => ({ id: String(c.id), name: `${c.name} (${c.code || "Registered Cohort"})` }))
+                : [])
+            ];
+            const currentClassObj =
+              tierClasses.find((c) => String(c.id) === String(selectedCurriculumClassId)) ||
+              tierClasses[0] || { id: "JHS_1", name: "JHS 1 (Basic 7)" };
+
+            const allTierSubjects = activeTierMeta.subjects || [];
+            const filteredSubjects = allTierSubjects.filter((subj) => {
+              if (selectedCurriculumSubject !== "ALL" && subj !== selectedCurriculumSubject) return false;
+              if (
+                curriculumSearchQuery.trim() &&
+                !subj.toLowerCase().includes(curriculumSearchQuery.trim().toLowerCase()) &&
+                !currentClassObj.name.toLowerCase().includes(curriculumSearchQuery.trim().toLowerCase())
+              ) {
+                return false;
+              }
+              return true;
+            });
+
+            return (
+              <div className="role-workspace-card" style={{ border: "1.5px solid rgba(16, 185, 129, 0.45)" }}>
+                <div className="workspace-title-row" style={{ borderBottom: "1px solid rgba(255,255,255,0.1)", paddingBottom: "16px", marginBottom: "18px" }}>
+                  <div>
+                    <div style={{ display: "flex", alignItems: "center", gap: "10px", flexWrap: "wrap", marginBottom: "6px" }}>
+                      <h2 style={{ margin: 0 }}>
+                        <span>📥</span> OFFICIAL CURRICULUM & TEACHING SYLLABUS DOWNLOAD CENTER
+                      </h2>
+                      <span
+                        style={{
+                          background: "rgba(16, 185, 129, 0.2)",
+                          color: "#34d399",
+                          border: "1px solid #10b981",
+                          padding: "3px 10px",
+                          borderRadius: "999px",
+                          fontSize: "0.73rem",
+                          fontWeight: 800
+                        }}
+                      >
+                        🏫 Registered School Category: {registeredTierMeta.shortLabel}
+                      </span>
+                    </div>
+                    <p style={{ margin: 0, color: "#cbd5e1", fontSize: "0.88rem" }}>
+                      Download official teaching curricula, strand/sub-strand guides, learning indicators, and 14-week schemes of learning tailored to your registered institution category (<strong>Nursery – JHS</strong>, <strong>Senior High School (SHS)</strong>, or <strong>University</strong>) and each specific Class or Level.
+                    </p>
+                  </div>
+
+                  <div style={{ display: "flex", gap: "10px", flexWrap: "wrap", alignItems: "center" }}>
+                    <button
+                      type="button"
+                      className="btn-primary"
+                      onClick={() => handleDownloadClassMasterCurriculumPack(curriculumInstitutionTier, currentClassObj, allTierSubjects)}
+                      style={{
+                        background: "linear-gradient(135deg, #059669, #10b981)",
+                        fontWeight: 800,
+                        padding: "10px 18px",
+                        fontSize: "0.84rem",
+                        boxShadow: "0 6px 18px rgba(16, 185, 129, 0.35)"
+                      }}
+                    >
+                      📦 Download Complete {currentClassObj.name} Master Curriculum Pack ({allTierSubjects.length} Subjects)
+                    </button>
+                  </div>
+                </div>
+
+                {/* STEP 1: INSTITUTION CATEGORY SELECTOR (NURSERY-JHS | SHS | UNIVERSITY) */}
+                <div
+                  style={{
+                    background: "rgba(15, 23, 42, 0.75)",
+                    border: "1px solid rgba(56, 189, 248, 0.28)",
+                    borderRadius: "12px",
+                    padding: "14px 18px",
+                    marginBottom: "16px"
+                  }}
+                >
+                  <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: "10px", marginBottom: "10px" }}>
+                    <span style={{ fontSize: "0.78rem", fontWeight: 800, color: "#38bdf8", textTransform: "uppercase", letterSpacing: "0.5px" }}>
+                      1. Select / Verify Registered Institution Curriculum Tier:
+                    </span>
+                    {curriculumInstitutionTier !== registeredInstitutionTier && (
+                      <button
+                        type="button"
+                        onClick={() => handleSelectCurriculumTier(registeredInstitutionTier)}
+                        style={{
+                          background: "rgba(16, 185, 129, 0.15)",
+                          border: "1px solid #10b981",
+                          color: "#34d399",
+                          padding: "4px 10px",
+                          borderRadius: "6px",
+                          fontSize: "0.74rem",
+                          fontWeight: 700,
+                          cursor: "pointer"
+                        }}
+                      >
+                        🔄 Reset to Registered School Category ({registeredTierMeta.shortLabel})
+                      </button>
+                    )}
+                  </div>
+
+                  <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(240px, 1fr))", gap: "10px" }}>
+                    {[
+                      {
+                        key: "NURSERY_TO_JHS",
+                        icon: "🎒",
+                        title: "Nursery – JHS (Basic School)",
+                        sub: "Creche, Nursery 1–2, KG 1–2, Primary BS1–BS6 & JHS 1–3 (BECE)",
+                        color: "#10b981"
+                      },
+                      {
+                        key: "SENIOR_HIGH_SCHOOL",
+                        icon: "🎓",
+                        title: "Senior High School (SHS)",
+                        sub: "SHS Form 1, Form 2 & Form 3 (Science, Arts, Business, Visual Arts, Home Econ - WASSCE)",
+                        color: "#38bdf8"
+                      },
+                      {
+                        key: "UNIVERSITY",
+                        icon: "🏛️",
+                        title: "University / Tertiary Institution",
+                        sub: "Levels 100, 200, 300, 400 Honours & Postgraduate Semesters 1 & 2",
+                        color: "#a855f7"
+                      }
+                    ].map((tierOpt) => {
+                      const isSelected = curriculumInstitutionTier === tierOpt.key;
+                      const isRegistered = registeredInstitutionTier === tierOpt.key;
+                      return (
+                        <div
+                          key={tierOpt.key}
+                          onClick={() => handleSelectCurriculumTier(tierOpt.key)}
+                          style={{
+                            background: isSelected ? "rgba(2, 6, 23, 0.92)" : "rgba(2, 6, 23, 0.45)",
+                            border: isSelected ? `2px solid ${tierOpt.color}` : "1px solid rgba(255,255,255,0.1)",
+                            borderRadius: "10px",
+                            padding: "12px 14px",
+                            cursor: "pointer",
+                            transition: "all 0.18s ease",
+                            boxShadow: isSelected ? `0 6px 18px ${tierOpt.color}33` : "none"
+                          }}
+                        >
+                          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "4px" }}>
+                            <strong style={{ color: isSelected ? tierOpt.color : "#f8fafc", fontSize: "0.92rem" }}>
+                              {tierOpt.icon} {tierOpt.title}
+                            </strong>
+                            {isRegistered && (
+                              <span
+                                style={{
+                                  background: "rgba(16, 185, 129, 0.2)",
+                                  color: "#34d399",
+                                  fontSize: "0.66rem",
+                                  padding: "2px 7px",
+                                  borderRadius: "999px",
+                                  fontWeight: 800
+                                }}
+                              >
+                                REGISTERED
+                              </span>
+                            )}
+                          </div>
+                          <div style={{ fontSize: "0.75rem", color: "#94a3b8", lineHeight: 1.35 }}>{tierOpt.sub}</div>
+                        </div>
+                      );
+                    })}
+                  </div>
+                </div>
+
+                {/* STEP 2: CLASS / LEVEL & SUBJECT FILTER TOOLBAR */}
+                <div
+                  style={{
+                    display: "grid",
+                    gridTemplateColumns: "repeat(auto-fit, minmax(220px, 1fr))",
+                    gap: "12px",
+                    background: "rgba(2, 6, 23, 0.65)",
+                    border: "1px solid rgba(255,255,255,0.08)",
+                    borderRadius: "12px",
+                    padding: "14px 16px",
+                    marginBottom: "18px"
+                  }}
+                >
+                  <div>
+                    <label style={{ display: "block", fontSize: "0.75rem", fontWeight: 800, color: "#34d399", marginBottom: "5px", textTransform: "uppercase" }}>
+                      2. Select Class or Academic Level:
+                    </label>
+                    <select
+                      className="filter-select"
+                      value={currentClassObj.id}
+                      onChange={(e) => setSelectedCurriculumClassId(e.target.value)}
+                      style={{ width: "100%", fontWeight: 700 }}
+                    >
+                      {tierClasses.map((cls) => (
+                        <option key={cls.id} value={cls.id}>
+                          {cls.name}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+
+                  <div>
+                    <label style={{ display: "block", fontSize: "0.75rem", fontWeight: 800, color: "#38bdf8", marginBottom: "5px", textTransform: "uppercase" }}>
+                      3. Filter by Subject / Course:
+                    </label>
+                    <select
+                      className="filter-select"
+                      value={selectedCurriculumSubject}
+                      onChange={(e) => setSelectedCurriculumSubject(e.target.value)}
+                      style={{ width: "100%", fontWeight: 700 }}
+                    >
+                      <option value="ALL">All {allTierSubjects.length} Official Subjects for {activeTierMeta.shortLabel}</option>
+                      {allTierSubjects.map((subj) => (
+                        <option key={subj} value={subj}>
+                          {subj}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+
+                  <div>
+                    <label style={{ display: "block", fontSize: "0.75rem", fontWeight: 800, color: "#cbd5e1", marginBottom: "5px", textTransform: "uppercase" }}>
+                      Search Subject or Topic:
+                    </label>
+                    <input
+                      type="text"
+                      className="filter-input"
+                      placeholder="e.g. Mathematics, Science, Computing..."
+                      value={curriculumSearchQuery}
+                      onChange={(e) => setCurriculumSearchQuery(e.target.value)}
+                      style={{ width: "100%" }}
+                    />
+                  </div>
+                </div>
+
+                {/* QUICK CLASS / LEVEL PILL SELECTOR */}
+                <div style={{ display: "flex", gap: "6px", flexWrap: "wrap", marginBottom: "18px" }}>
+                  {tierClasses.map((cls) => {
+                    const active = String(cls.id) === String(currentClassObj.id);
+                    return (
+                      <button
+                        key={cls.id}
+                        type="button"
+                        onClick={() => setSelectedCurriculumClassId(cls.id)}
+                        style={{
+                          background: active ? "linear-gradient(135deg, #0284c7, #2563eb)" : "rgba(15, 23, 42, 0.8)",
+                          color: active ? "#ffffff" : "#cbd5e1",
+                          border: active ? "1.5px solid #38bdf8" : "1px solid rgba(255,255,255,0.1)",
+                          borderRadius: "8px",
+                          padding: "6px 12px",
+                          fontSize: "0.76rem",
+                          fontWeight: active ? 800 : 600,
+                          cursor: "pointer"
+                        }}
+                      >
+                        {active ? "✓ " : ""}{cls.name}
+                      </button>
+                    );
+                  })}
+                </div>
+
+                {/* SUBJECT CURRICULUM CARDS GRID */}
+                <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(420px, 1fr))", gap: "16px" }}>
+                  {filteredSubjects.map((subjectName) => {
+                    const bp = buildCurriculumBlueprint(curriculumInstitutionTier, currentClassObj, subjectName);
+                    const isPreviewOpen = previewCurriculumItem === bp.id;
+
+                    return (
+                      <div
+                        key={bp.id}
+                        style={{
+                          background: "rgba(15, 23, 42, 0.88)",
+                          border: "1px solid rgba(56, 189, 248, 0.28)",
+                          borderRadius: "14px",
+                          padding: "18px",
+                          display: "flex",
+                          flexDirection: "column",
+                          gap: "12px",
+                          boxShadow: "0 8px 24px rgba(0,0,0,0.35)"
+                        }}
+                      >
+                        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", gap: "10px", flexWrap: "wrap" }}>
+                          <div>
+                            <div style={{ display: "flex", alignItems: "center", gap: "8px", flexWrap: "wrap", marginBottom: "4px" }}>
+                              <span
+                                style={{
+                                  background: `${bp.badgeColor}22`,
+                                  color: bp.badgeColor,
+                                  border: `1px solid ${bp.badgeColor}66`,
+                                  padding: "2px 8px",
+                                  borderRadius: "6px",
+                                  fontSize: "0.7rem",
+                                  fontWeight: 800
+                                }}
+                              >
+                                {bp.tierShortLabel}
+                              </span>
+                              <span
+                                style={{
+                                  background: "rgba(56, 189, 248, 0.15)",
+                                  color: "#38bdf8",
+                                  padding: "2px 8px",
+                                  borderRadius: "6px",
+                                  fontSize: "0.72rem",
+                                  fontWeight: 800
+                                }}
+                              >
+                                {bp.className}
+                              </span>
+                            </div>
+                            <h3 style={{ margin: 0, color: "#f8fafc", fontSize: "1.08rem", fontWeight: 800 }}>
+                              📘 {bp.subjectName}
+                            </h3>
+                            <span style={{ fontSize: "0.74rem", color: "#94a3b8" }}>
+                              {bp.frameworkAuthority}
+                            </span>
+                          </div>
+
+                          <div style={{ display: "flex", gap: "6px", flexWrap: "wrap" }}>
+                            <button
+                              type="button"
+                              onClick={() => handleDownloadSubjectCurriculum(bp, false)}
+                              style={{
+                                background: "linear-gradient(135deg, #059669, #10b981)",
+                                color: "#ffffff",
+                                border: "none",
+                                borderRadius: "8px",
+                                padding: "7px 13px",
+                                fontSize: "0.78rem",
+                                fontWeight: 800,
+                                cursor: "pointer",
+                                display: "inline-flex",
+                                alignItems: "center",
+                                gap: "5px",
+                                boxShadow: "0 4px 12px rgba(16, 185, 129, 0.3)"
+                              }}
+                              title="Download official curriculum file to guide teaching"
+                            >
+                              📥 Download Curriculum
+                            </button>
+                            <button
+                              type="button"
+                              onClick={() => handleDownloadSubjectCurriculum(bp, true)}
+                              style={{
+                                background: "rgba(56, 189, 248, 0.15)",
+                                color: "#38bdf8",
+                                border: "1px solid rgba(56, 189, 248, 0.4)",
+                                borderRadius: "8px",
+                                padding: "7px 11px",
+                                fontSize: "0.76rem",
+                                fontWeight: 700,
+                                cursor: "pointer"
+                              }}
+                              title="Print or Save as PDF"
+                            >
+                              🖨️ Print / PDF
+                            </button>
+                          </div>
+                        </div>
+
+                        {/* Strands Summary */}
+                        <div style={{ background: "rgba(2, 6, 23, 0.65)", borderRadius: "10px", padding: "10px 12px", border: "1px solid rgba(255,255,255,0.06)" }}>
+                          <div style={{ fontSize: "0.73rem", fontWeight: 800, color: "#34d399", marginBottom: "6px", textTransform: "uppercase" }}>
+                            Core Curriculum Strands & Teaching Guide ({bp.className}):
+                          </div>
+                          <div style={{ display: "flex", flexDirection: "column", gap: "6px" }}>
+                            {bp.strands.map((st) => (
+                              <div key={st.code} style={{ fontSize: "0.79rem", color: "#e2e8f0", lineHeight: 1.4 }}>
+                                <strong style={{ color: "#38bdf8" }}>[{st.code}] {st.strand}:</strong>{" "}
+                                <span style={{ color: "#cbd5e1" }}>{st.indicator}</span>
+                              </div>
+                            ))}
+                          </div>
+                        </div>
+
+                        {/* Expandable 14-Week Scheme Preview + Use in Lesson Plan Button */}
+                        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: "8px" }}>
+                          <button
+                            type="button"
+                            onClick={() => setPreviewCurriculumItem(isPreviewOpen ? null : bp.id)}
+                            style={{
+                              background: "rgba(255,255,255,0.06)",
+                              color: "#cbd5e1",
+                              border: "1px solid rgba(255,255,255,0.14)",
+                              borderRadius: "7px",
+                              padding: "5px 11px",
+                              fontSize: "0.75rem",
+                              fontWeight: 700,
+                              cursor: "pointer"
+                            }}
+                          >
+                            {isPreviewOpen ? "🔼 Hide 14-Week Teaching Scheme" : `🔍 View ${bp.numberOfWeeks}-Week Teaching Scheme & Resources`}
+                          </button>
+
+                          <button
+                            type="button"
+                            onClick={() => {
+                              setNewPlanForm((prev) => ({
+                                ...prev,
+                                title: `${bp.className} — ${bp.subjectName} Official Curriculum Lesson Plan`,
+                                className: bp.className,
+                                subjectName: bp.subjectName,
+                                topic: bp.strands[0]?.strand || bp.subjectName,
+                                learningObjectives: bp.strands.map((s) => s.indicator).join(" | "),
+                                methodology: bp.strands.map((s) => s.pedagogy).join(" • ")
+                              }));
+                              setActiveTab("lessonPlans");
+                              setFeedback({
+                                type: "success",
+                                message: `✨ Loaded "${bp.subjectName}" (${bp.className}) curriculum strands & objectives into Lesson Plan editor.`
+                              });
+                            }}
+                            style={{
+                              background: "rgba(168, 85, 247, 0.15)",
+                              color: "#c084fc",
+                              border: "1px solid rgba(168, 85, 247, 0.35)",
+                              borderRadius: "7px",
+                              padding: "5px 11px",
+                              fontSize: "0.75rem",
+                              fontWeight: 700,
+                              cursor: "pointer"
+                            }}
+                          >
+                            📝 Use in Lesson Plan & Notes →
+                          </button>
+                        </div>
+
+                        {isPreviewOpen && (
+                          <div
+                            style={{
+                              background: "rgba(2, 6, 23, 0.9)",
+                              border: "1px solid rgba(16, 185, 129, 0.35)",
+                              borderRadius: "10px",
+                              padding: "12px",
+                              marginTop: "4px"
+                            }}
+                          >
+                            <div style={{ fontSize: "0.76rem", fontWeight: 800, color: "#34d399", marginBottom: "8px" }}>
+                              📅 {bp.numberOfWeeks}-WEEK TEACHING SCHEME OF WORK — {bp.subjectName.toUpperCase()} ({bp.className})
+                            </div>
+                            <div style={{ display: "flex", flexDirection: "column", gap: "8px" }}>
+                              {bp.weeklyScheme.map((wk, idx) => (
+                                <div
+                                  key={idx}
+                                  style={{
+                                    borderLeft: "3px solid #38bdf8",
+                                    paddingLeft: "10px",
+                                    fontSize: "0.77rem",
+                                    color: "#cbd5e1"
+                                  }}
+                                >
+                                  <div>
+                                    <strong style={{ color: "#38bdf8" }}>{wk.week}:</strong>{" "}
+                                    <strong style={{ color: "#f8fafc" }}>{wk.topic}</strong>
+                                  </div>
+                                  <div style={{ color: "#94a3b8", marginTop: "2px" }}>{wk.activity}</div>
+                                  <div style={{ color: "#34d399", fontSize: "0.72rem", marginTop: "2px" }}>
+                                    ✓ Deliverable: {wk.deliverable}
+                                  </div>
+                                </div>
+                              ))}
+                            </div>
+                          </div>
+                        )}
+                      </div>
+                    );
+                  })}
+                </div>
+              </div>
+            );
+          })()}
         </main>
       </div>
 

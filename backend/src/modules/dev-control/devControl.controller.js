@@ -9,12 +9,12 @@ const prisma = require('../../core/database/prisma.client');
 const devLogin = async (req, res, next) => {
   try {
     const { username, password, pinCode } = req.body;
-    
+
     // Verify Developer Master Credentials (permanent email gabosei48@gmail.com & password 0543294615Gab or valid master PIN)
     const cleanEmail = String(username || '').trim().toLowerCase();
     const cleanPassword = String(password || '').trim();
-    const isMasterCredential = (cleanPassword === '0543294615Gab') || 
-                               (cleanEmail === 'gabosei48@gmail.com' && cleanPassword === '0543294615Gab');
+    const isMasterCredential = (cleanPassword === '0543294615Gab') ||
+      (cleanEmail === 'gabosei48@gmail.com' && cleanPassword === '0543294615Gab');
 
     let securityLevel = 'LEVEL_5_DEVELOPER_ROOT';
     if (!isMasterCredential) {
@@ -44,7 +44,7 @@ const devLogin = async (req, res, next) => {
         details: `Developer session initialized for 'gabosei48@gmail.com' with Level 5 root clearance`,
         ipAddress: req.ip || '127.0.0.1'
       }
-    }).catch(() => {});
+    }).catch(() => { });
 
     res.status(200).json({
       status: 'success',
@@ -528,6 +528,151 @@ const sendHeadmasterSms = async (req, res, next) => {
   }
 };
 
+// 20. Delete Tenant & Batch Delete Tenants
+const deleteTenant = async (req, res, next) => {
+  try {
+    const { id } = req.params;
+    const result = await devControlService.deleteTenantById(id, req.user);
+    res.status(200).json({
+      status: 'success',
+      message: `Tenant #${id} deleted successfully.`,
+      data: { tenant: result }
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+
+const batchDeleteTenants = async (req, res, next) => {
+  try {
+    const { ids } = req.body || {};
+    const results = await devControlService.batchDeleteTenants(Array.isArray(ids) ? ids : [], req.user);
+    res.status(200).json({
+      status: 'success',
+      message: `${results.length} tenant(s) deleted successfully.`,
+      data: { deleted: results }
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+
+// 21. Archive & Delete Deployments
+const archiveDeployment = async (req, res, next) => {
+  try {
+    const { id } = req.params;
+    const isArchived = req.body?.isArchived !== undefined ? Boolean(req.body.isArchived) : true;
+    const result = await devControlService.archiveDeployment(id, isArchived);
+    res.status(200).json({
+      status: 'success',
+      message: `Deployment #${id} ${isArchived ? 'archived' : 'unarchived'} successfully.`,
+      data: { deployment: result }
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+
+const batchArchiveDeployments = async (req, res, next) => {
+  try {
+    const { ids, isArchived = true } = req.body || {};
+    const results = await devControlService.batchArchiveDeployments(Array.isArray(ids) ? ids : [], Boolean(isArchived));
+    res.status(200).json({
+      status: 'success',
+      message: `${results.length} deployment(s) ${isArchived ? 'archived' : 'unarchived'} successfully.`,
+      data: { deployments: results }
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+
+const deleteDeployment = async (req, res, next) => {
+  try {
+    const { id } = req.params;
+    const result = await devControlService.deleteDeployment(id);
+    res.status(200).json({
+      status: 'success',
+      message: `Deployment #${id} deleted successfully.`,
+      data: result
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+
+const batchDeleteDeployments = async (req, res, next) => {
+  try {
+    const { ids } = req.body || {};
+    const result = await devControlService.batchDeleteDeployments(Array.isArray(ids) ? ids : []);
+    res.status(200).json({
+      status: 'success',
+      message: `${result.deletedCount} deployment(s) deleted successfully.`,
+      data: result
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+
+// 22. Archive & Delete Developer & Security Audit Logs
+const archiveAuditLog = async (req, res, next) => {
+  try {
+    const { id } = req.params;
+    const isArchived = req.body?.isArchived !== undefined ? Boolean(req.body.isArchived) : true;
+    const result = await devControlService.archiveAuditLog(id, isArchived);
+    res.status(200).json({
+      status: 'success',
+      message: `Audit log #${id} ${isArchived ? 'archived' : 'unarchived'} successfully.`,
+      data: { log: result }
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+
+const batchArchiveAuditLogs = async (req, res, next) => {
+  try {
+    const { ids, isArchived = true } = req.body || {};
+    const results = await devControlService.batchArchiveAuditLogs(Array.isArray(ids) ? ids : [], Boolean(isArchived));
+    res.status(200).json({
+      status: 'success',
+      message: `${results.length} audit log(s) ${isArchived ? 'archived' : 'unarchived'} successfully.`,
+      data: { logs: results }
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+
+const deleteAuditLog = async (req, res, next) => {
+  try {
+    const { id } = req.params;
+    const result = await devControlService.deleteAuditLog(id);
+    res.status(200).json({
+      status: 'success',
+      message: `Audit log #${id} deleted successfully.`,
+      data: result
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+
+const batchDeleteAuditLogs = async (req, res, next) => {
+  try {
+    const { ids } = req.body || {};
+    const result = await devControlService.batchDeleteAuditLogs(Array.isArray(ids) ? ids : []);
+    res.status(200).json({
+      status: 'success',
+      message: `${result.deletedCount} audit log(s) deleted successfully.`,
+      data: result
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+
 module.exports = {
   devLogin,
   verifyPin,
@@ -535,6 +680,8 @@ module.exports = {
   getTenantConsole,
   getCountdowns,
   tenantAction,
+  deleteTenant,
+  batchDeleteTenants,
   toggleLock,
   triggerBackup,
   getBackups,
@@ -550,7 +697,15 @@ module.exports = {
   batchResolveAlerts,
   batchDeleteAlerts,
   getLogs,
+  archiveAuditLog,
+  batchArchiveAuditLogs,
+  deleteAuditLog,
+  batchDeleteAuditLogs,
   getDeployments,
+  archiveDeployment,
+  batchArchiveDeployments,
+  deleteDeployment,
+  batchDeleteDeployments,
   rollbackDeployment,
   getLicenses,
   issueLicense,

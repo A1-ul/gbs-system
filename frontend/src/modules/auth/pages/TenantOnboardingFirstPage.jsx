@@ -37,16 +37,13 @@ const detectCarrier = (phone, countryCode) => {
 export default function TenantOnboardingFirstPage() {
   const navigate = useNavigate();
 
-  // 1. AUTO-REDIRECT: If tenant has already registered or onboarded, redirect straight to Main Login Page
+  // 1. Ensure visitors & walkthrough users clicking "Onboard Your Educational Institution / School" always see the onboarding form
   useEffect(() => {
     try {
-      const alreadyOnboarded = localStorage.getItem("gbs_tenant_already_onboarded") === "true";
-      const hasAuthToken = Boolean(localStorage.getItem("gbs_token") || localStorage.getItem("gbs_access_token"));
-      const isApprovedTenant = Boolean(localStorage.getItem("gbs_assigned_tenant_code"));
-
-      if (alreadyOnboarded || (hasAuthToken && isApprovedTenant)) {
-        console.log("Tenant already onboarded onto GBS SYSTEM. Directing to Main Login Page...");
-        navigate("/login", { replace: true });
+      const path = window.location.pathname || "";
+      const search = window.location.search || "";
+      if (path.includes("/onboard") || search.includes("force=true") || search.includes("new=true")) {
+        localStorage.removeItem("gbs_tenant_already_onboarded");
       }
     } catch (e) {
       console.warn("Storage check exception:", e);

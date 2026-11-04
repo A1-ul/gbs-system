@@ -20,8 +20,10 @@ router.get('/tenants', devControlController.getTenantConsole);
 // 4. Enterprise Countdown Engine (Step 36)
 router.get('/countdowns', devControlController.getCountdowns);
 
-// 5. Developer Tenant Command Center (Actions)
+// 5. Developer Tenant Command Center (Actions & Deletion)
 router.post('/tenants/:id/action', devControlController.tenantAction);
+router.delete('/tenants/:id', devControlController.deleteTenant);
+router.post('/tenants/batch-delete', devControlController.batchDeleteTenants);
 
 // 6. System Lock & Remote Management (Step 35)
 router.post('/toggle-lock', devControlController.toggleLock);
@@ -56,10 +58,18 @@ router.post('/alerts/batch-delete', devControlController.batchDeleteAlerts);
 // 12. System Audit Logs & Diagnostics (Blueprint Box 9)
 router.get('/audit-logs', devControlController.getLogs);
 router.get('/logs', devControlController.getLogs);
+router.patch('/audit-logs/:id/archive', devControlController.archiveAuditLog);
+router.post('/audit-logs/batch-archive', devControlController.batchArchiveAuditLogs);
+router.delete('/audit-logs/:id', devControlController.deleteAuditLog);
+router.post('/audit-logs/batch-delete', devControlController.batchDeleteAuditLogs);
 
 // 13. Deployment History & Release Control
 router.get('/deployments', devControlController.getDeployments);
 router.post('/deployments/rollback', devControlController.rollbackDeployment);
+router.patch('/deployments/:id/archive', devControlController.archiveDeployment);
+router.post('/deployments/batch-archive', devControlController.batchArchiveDeployments);
+router.delete('/deployments/:id', devControlController.deleteDeployment);
+router.post('/deployments/batch-delete', devControlController.batchDeleteDeployments);
 
 // 14. Enterprise Licensing & Subscription Controls
 router.get('/licenses', devControlController.getLicenses);

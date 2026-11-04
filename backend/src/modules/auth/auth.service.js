@@ -1174,6 +1174,26 @@ module.exports = {
     syncAuthStoreToDisk();
     return [...DYNAMIC_INSTITUTIONS];
   },
+  deleteDynamicInstitution: (idOrCode) => {
+    const target = String(idOrCode ?? '').trim().toLowerCase();
+    if (!target) return false;
+    let removed = false;
+    for (let i = DYNAMIC_INSTITUTIONS.length - 1; i >= 0; i--) {
+      const inst = DYNAMIC_INSTITUTIONS[i];
+      if (
+        String(inst.id ?? '').toLowerCase() === target ||
+        String(inst.tenantId ?? '').toLowerCase() === target ||
+        String(inst.tenantCode ?? '').toLowerCase() === target ||
+        String(inst.tenantUid ?? '').toLowerCase() === target ||
+        String(inst.institutionName ?? '').toLowerCase() === target
+      ) {
+        DYNAMIC_INSTITUTIONS.splice(i, 1);
+        removed = true;
+      }
+    }
+    if (removed) syncAuthStoreToDisk();
+    return removed;
+  },
   getDynamicUsers: () => [...DYNAMIC_REGISTERED_USERS],
   addDynamicUser: (u) => {
     DYNAMIC_REGISTERED_USERS.unshift(u);

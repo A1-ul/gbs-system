@@ -147,7 +147,32 @@ export default function WindowControlsBar({
         </span>
       </div>
 
-      <div style={{ display: "flex", alignItems: "center", gap: "6px" }}>
+      <div style={{ display: "flex", alignItems: "center", gap: "6px", flexWrap: "wrap" }}>
+        {!isModal && (
+          <button
+            type="button"
+            className="btn-window-control btn-onboard-school"
+            onClick={() => {
+              try {
+                localStorage.removeItem("gbs_tenant_already_onboarded");
+              } catch {}
+              navigate("/onboarding?force=true");
+            }}
+            style={{
+              padding: "5px 11px",
+              background: "rgba(16, 185, 129, 0.18)",
+              border: "1px solid rgba(16, 185, 129, 0.55)",
+              borderRadius: "6px",
+              color: "#34d399",
+              cursor: "pointer",
+              fontSize: "0.75rem",
+              fontWeight: "800"
+            }}
+            title="Open the Official Onboarding Form to register your Educational Institution / School"
+          >
+            🏫 Onboard Your Educational Institution / School
+          </button>
+        )}
         {/* Scroll Buttons */}
         <button
           type="button"

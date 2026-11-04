@@ -404,6 +404,11 @@ export default function MainLoginPage() {
             <Link 
               to="/onboarding?force=true" 
               className="signup-institution-btn"
+              onClick={() => {
+                try {
+                  localStorage.removeItem("gbs_tenant_already_onboarded");
+                } catch {}
+              }}
               style={{
                 display: "block",
                 padding: "10px 14px",
