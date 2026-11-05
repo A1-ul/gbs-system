@@ -22,6 +22,15 @@ import "./TeacherDashboard.css";
 export default function TeacherDashboard() {
   const navigate = useNavigate();
 
+  // Faculty Authenticated User Identity
+  const currentUser = (() => {
+    try {
+      const stored = localStorage.getItem("gbs_user");
+      if (stored) return JSON.parse(stored);
+    } catch {}
+    return { firstName: "Sarah", lastName: "Jenkins", email: "teacher@gbs.edu", role: "TEACHER" };
+  })();
+
   // Real-Life Faculty Portrait
   const [teacherAvatar, setTeacherAvatar] = useState(() => getUserAvatar("TEACHER"));
   useEffect(() => {
@@ -1290,10 +1299,7 @@ export default function TeacherDashboard() {
     meetingUrl: "https://zoom.us/j/84939201849?pwd=GBS2026"
   });
 
-  const currentUser = JSON.parse(
-    localStorage.getItem("gbs_user") ||
-      '{"firstName":"Sarah","lastName":"Jenkins","email":"teacher@gbs.edu","role":"TEACHER"}'
-  );
+  // currentUser initialized at top of TeacherDashboard
 
   // Requirement: Staff Positions created by Headmaster (Head of Academics, Head of Department, Vice Chancellor, etc.)
   const [assignedStaffPosition, setAssignedStaffPosition] = useState(() => {
@@ -6575,6 +6581,8 @@ export default function TeacherDashboard() {
                               onClick={() =>
                                 setActiveLiveClassroomSession({
                                   ...m,
+                                  className: m.class?.name || (m.classId ? `Class #${m.classId}` : "Assigned Class"),
+                                  meetingLink: safeMeetingUrl || m.meetingUrl || workingInAppLink,
                                   safeMeetingUrl,
                                   workingInAppLink
                                 })
@@ -6684,9 +6692,33 @@ export default function TeacherDashboard() {
                 </div>
               )}
 
-              {/* Teacher Topic Video Upload Platform (also accessible inside Virtual Classrooms) */}
-              <div style={{ marginTop: "2rem" }}>
-                <ClassTopicVideoPlatform mode="TEACHER" currentUser={currentUser} />
+              {/* Quick Link to Dedicated Class Topic Video Platform */}
+              <div style={{ marginTop: "2rem", padding: "16px 20px", background: "rgba(16, 185, 129, 0.08)", border: "1px solid rgba(16, 185, 129, 0.3)", borderRadius: "14px", display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: "12px" }}>
+                <div>
+                  <h4 style={{ margin: "0 0 4px", color: "#34d399", fontSize: "0.95rem" }}>
+                    🎬 Recorded Class Topic Lessons (For Class Playback in Teacher's Absence)
+                  </h4>
+                  <p style={{ margin: 0, color: "#cbd5e1", fontSize: "0.82rem" }}>
+                    Record, store, and authorize asynchronous topic video lectures for students when you are absent or conducting off-campus faculty duties.
+                  </p>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => setActiveTab("topicVideos")}
+                  style={{
+                    background: "linear-gradient(135deg, #059669, #10b981)",
+                    color: "#fff",
+                    border: "none",
+                    padding: "9px 18px",
+                    borderRadius: "8px",
+                    fontWeight: 800,
+                    fontSize: "0.82rem",
+                    cursor: "pointer",
+                    boxShadow: "0 4px 12px rgba(16, 185, 129, 0.35)"
+                  }}
+                >
+                  🎥 Open Class Topic Videos Suite →
+                </button>
               </div>
             </div>
           )}
@@ -10079,7 +10111,12 @@ export default function TeacherDashboard() {
       {/* ======================================================== */}
       {/* MODAL: INBUILT LIVE VIRTUAL CLASSROOM & ZOOM STUDIO       */}
       {/* ======================================================== */}
-      {activeLiveClassroomSession && (
+      {activeLiveClassroomSession && (() => {
+        const studioHostName = currentUser ? `${currentUser.firstName || "Faculty"} ${currentUser.lastName || "Teacher"}`.trim() : "Faculty Instructor";
+        const studioMeetingLink = activeLiveClassroomSession.meetingLink || activeLiveClassroomSession.safeMeetingUrl || activeLiveClassroomSession.meetingUrl || activeLiveClassroomSession.workingInAppLink || "https://zoom.us";
+        const studioClassName = activeLiveClassroomSession.className || activeLiveClassroomSession.class?.name || (activeLiveClassroomSession.classId ? `Class #${activeLiveClassroomSession.classId}` : "Assigned Cohort");
+
+        return (
         <div className="role-modal-backdrop" onClick={() => setActiveLiveClassroomSession(null)}>
           <div
             className="role-modal-card"
@@ -10105,7 +10142,7 @@ export default function TeacherDashboard() {
                   </span>
                 </div>
                 <h3 style={{ margin: "6px 0 0", color: "#f8fafc", fontSize: "1.18rem", fontWeight: 800 }}>
-                  🎥 {activeLiveClassroomSession.title} ({activeLiveClassroomSession.className})
+                  🎥 {activeLiveClassroomSession.title} ({studioClassName || activeLiveClassroomSession.class?.name || "Assigned Cohort"})
                 </h3>
               </div>
               <button type="button" className="modal-close-btn" onClick={() => setActiveLiveClassroomSession(null)}>✕</button>
@@ -10128,7 +10165,7 @@ export default function TeacherDashboard() {
               >
                 <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
                   <span style={{ background: "rgba(16, 185, 129, 0.2)", color: "#34d399", padding: "4px 10px", borderRadius: "6px", fontSize: "0.74rem", fontWeight: 800 }}>
-                    🎙️ Host: {user?.fullName || "Subject Teacher"} (HD Audio & Screen Share Ready)
+                    🎙️ Host: {studioHostName} (HD Audio & Screen Share Ready)
                   </span>
                   <span style={{ fontSize: "0.74rem", color: "#94a3b8", fontFamily: "monospace" }}>
                     ENCRYPTED E2EE • 60 FPS
@@ -10151,8 +10188,8 @@ export default function TeacherDashboard() {
                   <button
                     type="button"
                     onClick={() => {
-                      navigator.clipboard?.writeText(activeLiveClassroomSession.meetingLink);
-                      setFeedback({ type: "success", message: `📋 Working meeting link copied: ${activeLiveClassroomSession.meetingLink}` });
+                      navigator.clipboard?.writeText(studioMeetingLink);
+                      setFeedback({ type: "success", message: `📋 Working meeting link copied: ${studioMeetingLink}` });
                     }}
                     style={{ background: "rgba(56, 189, 248, 0.2)", border: "1px solid #38bdf8", color: "#38bdf8", padding: "7px 14px", borderRadius: "8px", fontSize: "0.78rem", fontWeight: 800, cursor: "pointer" }}
                   >
@@ -10162,7 +10199,7 @@ export default function TeacherDashboard() {
                     type="button"
                     onClick={() => {
                       const waUrl = `https://wa.me/?text=${encodeURIComponent(
-                        `🎓 *LIVE CLASS INVITATION (${activeLiveClassroomSession.className})*\nTopic: ${activeLiveClassroomSession.title}\nJoin Link: ${activeLiveClassroomSession.meetingLink}\nPasscode: ${activeLiveClassroomSession.passcode || "GBS2026"}`
+                        `🎓 *LIVE CLASS INVITATION (${studioClassName})*\nTopic: ${activeLiveClassroomSession.title}\nJoin Link: ${studioMeetingLink}\nPasscode: ${activeLiveClassroomSession.passcode || "GBS2026"}`
                       )}`;
                       window.open(waUrl, "_blank", "noopener,noreferrer");
                     }}
@@ -10171,7 +10208,7 @@ export default function TeacherDashboard() {
                     💚 Share Live Link on WhatsApp
                   </button>
                   <a
-                    href={activeLiveClassroomSession.meetingLink}
+                    href={studioMeetingLink}
                     target="_blank"
                     rel="noopener noreferrer"
                     style={{ background: "linear-gradient(135deg, #0284c7, #2563eb)", color: "#fff", padding: "7px 15px", borderRadius: "8px", fontSize: "0.78rem", fontWeight: 800, textDecoration: "none" }}
@@ -10188,7 +10225,7 @@ export default function TeacherDashboard() {
                     🔗 Verified Shareable Meeting Link:
                   </div>
                   <div style={{ background: "rgba(15, 23, 42, 0.9)", padding: "8px 10px", borderRadius: "8px", border: "1px solid rgba(56, 189, 248, 0.3)", fontSize: "0.74rem", color: "#e2e8f0", wordBreak: "break-all", marginBottom: "12px", fontFamily: "monospace" }}>
-                    {activeLiveClassroomSession.meetingLink}
+                    {studioMeetingLink}
                   </div>
                   <div style={{ fontSize: "0.76rem", fontWeight: 800, color: "#34d399", marginBottom: "6px", textTransform: "uppercase" }}>
                     👥 Connected Class Participants ({(roster || []).length || 4} Ready):
@@ -10219,7 +10256,8 @@ export default function TeacherDashboard() {
             </div>
           </div>
         </div>
-      )}
+        );
+      })()}
 
       <UniversalRoleGuideModal
         role="TEACHER"

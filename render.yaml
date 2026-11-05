@@ -1,23 +1,35 @@
+# ==============================================================================
+# GBS ENTERPRISE ECOSYSTEM - RENDER BLUEPRINT (render.yaml)
+# Hosting Platform: Render (https://render.com)
+# Central Account Email: gabosei48@gmail.com
+# Primary Web Service Domain: gbs-school.onrender.com
+# ==============================================================================
+
 services:
+  # 1. GBS Unified Enterprise Web Service & API Engine (Node.js + WebSockets + Static SPA)
   - type: web
-    name: gbs-backend
+    name: gbs-school
     env: node
     rootDir: backend
     buildCommand: npm install && npm run build
     startCommand: npm start
     plan: free
+    autoDeploy: true
     envVars:
       - key: NODE_ENV
         value: production
       - key: PORT
         value: 5001
+      - key: HOST
+        value: 0.0.0.0
       - key: CORS_ORIGIN
-        value: https://gbs-schools.com,https://www.gbs-schools.com
+        value: https://gbs-school.onrender.com,https://gbs-frontend.onrender.com,https://gbs-schools.com,https://www.gbs-schools.com
       - fromDatabase:
           name: gbs-db
           property: connectionString
         key: DATABASE_URL
 
+  # 2. GBS High-Performance Static Frontend CDN Service
   - type: web
     name: gbs-frontend
     env: static
@@ -25,12 +37,18 @@ services:
     buildCommand: npm install && npm run build
     staticPublishPath: ./dist
     plan: free
+    autoDeploy: true
     routes:
       - type: rewrite
         source: /*
         destination: /index.html
+    headers:
+      - path: /*
+        name: Cache-Control
+        value: no-cache
 
 databases:
+  # 3. GBS Production PostgreSQL Database
   - name: gbs-db
     databaseName: gbs_production
     user: gbs_admin

@@ -319,7 +319,7 @@
       "createdAt": "2026-11-02T21:55:25.367Z"
     }
   ],
-  "updatedAt": "2026-11-04T21:12:22.023Z",
+  "updatedAt": "2026-11-05T06:42:06.390Z",
   "registeredUsers": [
     {
       "id": "usr_12",
@@ -466,6 +466,50 @@
   ],
   "prismaModels": {
     "AuditLog": [
+      {
+        "id": 193,
+        "tenantId": 1,
+        "userId": 17,
+        "module": "ONLINE_MEETING",
+        "action": "ONLINE_MEETINGS_BATCH_DELETED",
+        "details": "Batch deleted 1 online meetings.",
+        "isDeleted": false,
+        "createdAt": "2026-11-05T06:42:06.387Z",
+        "updatedAt": "2026-11-05T06:42:06.387Z"
+      },
+      {
+        "id": 192,
+        "tenantId": 1,
+        "userId": 10,
+        "module": "ONLINE_MEETING",
+        "action": "ONLINE_MEETING_CREATED",
+        "details": "Created ZOOM VIDEO session \"Weekly Interactive STEM Seminar\" (ID: 1) for class N/A",
+        "isDeleted": false,
+        "createdAt": "2026-11-05T06:42:06.356Z",
+        "updatedAt": "2026-11-05T06:42:06.356Z"
+      },
+      {
+        "id": 191,
+        "tenantId": 1,
+        "userId": 10,
+        "action": "ASSIGNMENT_CREATED",
+        "module": "assignments",
+        "details": "{\"count\":2,\"title\":\"Advanced STEM Research Assignment\",\"classes\":[21,20]}",
+        "isDeleted": false,
+        "createdAt": "2026-11-05T06:42:06.335Z",
+        "updatedAt": "2026-11-05T06:42:06.335Z"
+      },
+      {
+        "id": 190,
+        "tenantId": 1,
+        "userId": 1,
+        "action": "SINGLE_STUDENT_ATTENDANCE_MARKED",
+        "module": "ATTENDANCE",
+        "details": "Marked student #17 as PRESENT for class #21 on Thu Nov 05 2026 00:00:00 GMT+0000 (Greenwich Mean Time).",
+        "isDeleted": false,
+        "createdAt": "2026-11-05T06:42:06.277Z",
+        "updatedAt": "2026-11-05T06:42:06.277Z"
+      },
       {
         "id": 189,
         "tenantId": 1,
@@ -2938,6 +2982,38 @@
     ],
     "Assignment": [
       {
+        "id": 6,
+        "tenantId": 1,
+        "classId": 20,
+        "subjectId": 1,
+        "teacherId": 10,
+        "title": "Advanced STEM Research Assignment",
+        "description": "Autonomous research project for secondary and undergraduate scholars.",
+        "dueDate": "2026-11-10T06:42:06.286Z",
+        "maxScore": 100,
+        "attachmentUrl": null,
+        "status": "PUBLISHED",
+        "isDeleted": false,
+        "createdAt": "2026-11-05T06:42:06.318Z",
+        "updatedAt": "2026-11-05T06:42:06.318Z"
+      },
+      {
+        "id": 5,
+        "tenantId": 1,
+        "classId": 21,
+        "subjectId": 1,
+        "teacherId": 10,
+        "title": "Advanced STEM Research Assignment",
+        "description": "Autonomous research project for secondary and undergraduate scholars.",
+        "dueDate": "2026-11-10T06:42:06.286Z",
+        "maxScore": 100,
+        "attachmentUrl": null,
+        "status": "PUBLISHED",
+        "isDeleted": false,
+        "createdAt": "2026-11-05T06:42:06.301Z",
+        "updatedAt": "2026-11-05T06:42:06.301Z"
+      },
+      {
         "id": 4,
         "tenantId": 1,
         "classId": 21,
@@ -3527,6 +3603,20 @@
       }
     ],
     "AttendanceRecord": [
+      {
+        "id": 16,
+        "tenantId": 1,
+        "classId": 21,
+        "studentId": 17,
+        "subjectId": null,
+        "date": "2026-11-05T00:00:00.000Z",
+        "status": "PRESENT",
+        "remarks": null,
+        "markedById": 1,
+        "isDeleted": false,
+        "createdAt": "2026-11-05T06:42:06.266Z",
+        "updatedAt": "2026-11-05T06:42:06.266Z"
+      },
       {
         "id": 15,
         "tenantId": 1,
