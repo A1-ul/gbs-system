@@ -142,6 +142,7 @@ export default function MainLoginPage() {
     const cred = ROLE_CREDENTIALS[role] || ROLE_CREDENTIALS.ADMIN;
     setEmail(cred.email);
     setPassword(cred.password);
+    setError(null);
   };
 
   const handleRoleSelect = (roleId) => {

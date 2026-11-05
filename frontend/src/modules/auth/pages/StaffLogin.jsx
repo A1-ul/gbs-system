@@ -83,6 +83,7 @@ export default function StaffLogin({ defaultRole = "STAFF" }) {
             <button
               type="button"
               onClick={() => {
+                setError(null);
                 if (isAlumni) { setEmail("alumni@gbs.com"); setPassword("Alumni123!"); }
                 else if (isHR) { setEmail("hr@gbs.com"); setPassword("Hr123!"); }
                 else { setEmail("staff@gbs.com"); setPassword("Staff123!"); }

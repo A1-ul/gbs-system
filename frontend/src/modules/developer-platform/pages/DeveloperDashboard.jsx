@@ -14,6 +14,21 @@ const BASE_URL = `${getApiBaseUrl()}/dev-control`;
 export default function DeveloperDashboard() {
   const navigate = useNavigate();
 
+  // IRONCLAD DEVELOPER ACCESS GUARD: Strictly only the authorized developer can view this dashboard
+  useEffect(() => {
+    const devToken = localStorage.getItem("gbs_dev_token");
+    let devProfile = null;
+    try {
+      devProfile = JSON.parse(localStorage.getItem("gbs_developer") || "null");
+    } catch {}
+
+    const isAuthorized = devToken && devProfile && devProfile.email && devProfile.email.toLowerCase() === "gabosei48@gmail.com";
+    if (!isAuthorized) {
+      console.warn("Unauthorized attempt to access Developer Dashboard. Redirecting to security login.");
+      navigate("/developer-control-center/login", { replace: true });
+    }
+  }, [navigate]);
+
   // Active Tab: 'telemetry' | 'backups' | 'alerts' | 'deployments' | 'audit-logs' | 'licenses' | 'biometrics' | 'locations'
   const [activeTab, setActiveTab] = useState(() => {
     try {

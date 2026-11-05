@@ -40,15 +40,12 @@ export default function TenantOnboardingFirstPage() {
   // 1. Ensure visitors & walkthrough users clicking "Onboard Your Educational Institution / School" always see the onboarding form
   useEffect(() => {
     try {
-      const path = window.location.pathname || "";
-      const search = window.location.search || "";
-      if (path.includes("/onboard") || search.includes("force=true") || search.includes("new=true")) {
-        localStorage.removeItem("gbs_tenant_already_onboarded");
-      }
+      localStorage.removeItem("gbs_tenant_already_onboarded");
+      localStorage.removeItem("gbs_walkthrough_completed");
     } catch (e) {
       console.warn("Storage check exception:", e);
     }
-  }, [navigate]);
+  }, []);
 
   // Online / Offline synchronization state
   const [isOnline, setIsOnline] = useState(typeof navigator !== "undefined" ? navigator.onLine : true);

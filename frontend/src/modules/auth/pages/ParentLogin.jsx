@@ -54,7 +54,7 @@ export default function ParentLogin() {
           <div style={{ display: "flex", justifyContent: "flex-end", marginBottom: "8px" }}>
             <button
               type="button"
-              onClick={() => { setEmail("parent@gbs.com"); setPassword("Parent123!"); }}
+              onClick={() => { setEmail("parent@gbs.com"); setPassword("Parent123!"); setError(null); }}
               style={{
                 background: "rgba(245, 158, 11, 0.15)",
                 border: "1px solid rgba(245, 158, 11, 0.4)",

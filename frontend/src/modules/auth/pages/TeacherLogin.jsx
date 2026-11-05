@@ -54,7 +54,7 @@ export default function TeacherLogin() {
           <div style={{ display: "flex", justifyContent: "flex-end", marginBottom: "8px" }}>
             <button
               type="button"
-              onClick={() => { setEmail("teacher@gbs.com"); setPassword("Teacher123!"); }}
+              onClick={() => { setEmail("teacher@gbs.com"); setPassword("Teacher123!"); setError(null); }}
               style={{
                 background: "rgba(16, 185, 129, 0.15)",
                 border: "1px solid rgba(16, 185, 129, 0.4)",

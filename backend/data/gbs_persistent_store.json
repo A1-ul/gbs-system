@@ -15,7 +15,7 @@
       "reviewNotes": "Verified and approved.",
       "tenantId": 1,
       "isActive": true,
-      "updatedAt": "2026-11-04T20:56:51.933Z"
+      "updatedAt": "2026-11-05T06:50:47.079Z"
     },
     {
       "id": "reg_1793657777810",
@@ -82,7 +82,7 @@
       "scannedFacePhoto": null,
       "biometricFaceToken": null,
       "tenantId": 9904,
-      "updatedAt": "2026-11-04T20:56:50.759Z"
+      "updatedAt": "2026-11-05T06:50:44.823Z"
     }
   ],
   "users": [],
@@ -319,7 +319,7 @@
       "createdAt": "2026-11-02T21:55:25.367Z"
     }
   ],
-  "updatedAt": "2026-11-05T06:42:06.390Z",
+  "updatedAt": "2026-11-05T16:53:08.557Z",
   "registeredUsers": [
     {
       "id": "usr_12",
@@ -466,6 +466,122 @@
   ],
   "prismaModels": {
     "AuditLog": [
+      {
+        "id": 203,
+        "tenantId": 1,
+        "userId": 17,
+        "module": "ONLINE_MEETING",
+        "action": "ONLINE_MEETINGS_BATCH_DELETED",
+        "details": "Batch deleted 1 online meetings.",
+        "isDeleted": false,
+        "createdAt": "2026-11-05T16:53:08.554Z",
+        "updatedAt": "2026-11-05T16:53:08.554Z"
+      },
+      {
+        "id": 202,
+        "tenantId": 1,
+        "userId": 10,
+        "module": "ONLINE_MEETING",
+        "action": "ONLINE_MEETING_CREATED",
+        "details": "Created ZOOM VIDEO session \"Weekly Interactive STEM Seminar\" (ID: 1) for class N/A",
+        "isDeleted": false,
+        "createdAt": "2026-11-05T16:53:08.524Z",
+        "updatedAt": "2026-11-05T16:53:08.524Z"
+      },
+      {
+        "id": 201,
+        "tenantId": 1,
+        "userId": 10,
+        "action": "ASSIGNMENT_CREATED",
+        "module": "assignments",
+        "details": "{\"count\":2,\"title\":\"Advanced STEM Research Assignment\",\"classes\":[21,20]}",
+        "isDeleted": false,
+        "createdAt": "2026-11-05T16:53:08.505Z",
+        "updatedAt": "2026-11-05T16:53:08.505Z"
+      },
+      {
+        "id": 200,
+        "tenantId": 1,
+        "userId": 1,
+        "action": "SINGLE_STUDENT_ATTENDANCE_MARKED",
+        "module": "ATTENDANCE",
+        "details": "Marked student #17 as PRESENT for class #21 on Thu Nov 05 2026 00:00:00 GMT+0000 (Greenwich Mean Time).",
+        "isDeleted": false,
+        "createdAt": "2026-11-05T16:53:08.453Z",
+        "updatedAt": "2026-11-05T16:53:08.453Z"
+      },
+      {
+        "id": 199,
+        "tenantId": 1,
+        "userId": null,
+        "module": "DEV_CONTROL",
+        "action": "TENANT_UNLOCK",
+        "details": "Developer performed UNLOCK on tenant 'GBS International School (Main Campus)'",
+        "ipAddress": "127.0.0.1",
+        "isDeleted": false,
+        "createdAt": "2026-11-05T06:50:47.120Z",
+        "updatedAt": "2026-11-05T06:50:47.120Z"
+      },
+      {
+        "id": 198,
+        "tenantId": 9904,
+        "userId": null,
+        "module": "DEV_CONTROL",
+        "action": "TENANT_UNLOCK",
+        "details": "Developer performed UNLOCK on tenant 'Walkthrough Test School'",
+        "ipAddress": "127.0.0.1",
+        "isDeleted": false,
+        "createdAt": "2026-11-05T06:50:44.852Z",
+        "updatedAt": "2026-11-05T06:50:44.852Z"
+      },
+      {
+        "id": 197,
+        "tenantId": 9904,
+        "userId": null,
+        "module": "DEV_CONTROL",
+        "action": "TENANT_LOCK",
+        "details": "Developer performed LOCK on tenant 'Walkthrough Test School'",
+        "ipAddress": "127.0.0.1",
+        "isDeleted": false,
+        "createdAt": "2026-11-05T06:50:42.485Z",
+        "updatedAt": "2026-11-05T06:50:42.485Z"
+      },
+      {
+        "id": 196,
+        "tenantId": 1,
+        "userId": null,
+        "module": "DEV_CONTROL",
+        "action": "TENANT_LOCK",
+        "details": "Developer performed LOCK on tenant 'GBS International School (Main Campus)'",
+        "ipAddress": "127.0.0.1",
+        "isDeleted": false,
+        "createdAt": "2026-11-05T06:50:39.502Z",
+        "updatedAt": "2026-11-05T06:50:39.502Z"
+      },
+      {
+        "id": 195,
+        "tenantId": 1,
+        "userId": null,
+        "module": "DEV_CONTROL",
+        "action": "DEVELOPER_LOGIN_AUTHENTICATED",
+        "details": "Developer session initialized for 'gabosei48@gmail.com' with Level 5 root clearance",
+        "ipAddress": "127.0.0.1",
+        "isDeleted": false,
+        "createdAt": "2026-11-05T06:50:24.462Z",
+        "updatedAt": "2026-11-05T06:50:24.462Z"
+      },
+      {
+        "id": 194,
+        "tenantId": 1,
+        "userId": null,
+        "module": "DEV_CONTROL",
+        "action": "DEVELOPER_LOGIN_AUTHENTICATED",
+        "details": "Developer session initialized for 'gabosei48@gmail.com' with Level 5 root clearance",
+        "ipAddress": "127.0.0.1",
+        "isDeleted": false,
+        "createdAt": "2026-11-05T06:50:23.518Z",
+        "updatedAt": "2026-11-05T06:50:23.518Z"
+      },
       {
         "id": 193,
         "tenantId": 1,
@@ -2982,6 +3098,38 @@
     ],
     "Assignment": [
       {
+        "id": 8,
+        "tenantId": 1,
+        "classId": 20,
+        "subjectId": 1,
+        "teacherId": 10,
+        "title": "Advanced STEM Research Assignment",
+        "description": "Autonomous research project for secondary and undergraduate scholars.",
+        "dueDate": "2026-11-10T16:53:08.461Z",
+        "maxScore": 100,
+        "attachmentUrl": null,
+        "status": "PUBLISHED",
+        "isDeleted": false,
+        "createdAt": "2026-11-05T16:53:08.493Z",
+        "updatedAt": "2026-11-05T16:53:08.493Z"
+      },
+      {
+        "id": 7,
+        "tenantId": 1,
+        "classId": 21,
+        "subjectId": 1,
+        "teacherId": 10,
+        "title": "Advanced STEM Research Assignment",
+        "description": "Autonomous research project for secondary and undergraduate scholars.",
+        "dueDate": "2026-11-10T16:53:08.461Z",
+        "maxScore": 100,
+        "attachmentUrl": null,
+        "status": "PUBLISHED",
+        "isDeleted": false,
+        "createdAt": "2026-11-05T16:53:08.475Z",
+        "updatedAt": "2026-11-05T16:53:08.475Z"
+      },
+      {
         "id": 6,
         "tenantId": 1,
         "classId": 20,
@@ -3604,6 +3752,20 @@
     ],
     "AttendanceRecord": [
       {
+        "id": 17,
+        "tenantId": 1,
+        "classId": 21,
+        "studentId": 17,
+        "subjectId": null,
+        "date": "2026-11-05T00:00:00.000Z",
+        "status": "PRESENT",
+        "remarks": null,
+        "markedById": 1,
+        "isDeleted": false,
+        "createdAt": "2026-11-05T16:53:08.444Z",
+        "updatedAt": "2026-11-05T16:53:08.444Z"
+      },
+      {
         "id": 16,
         "tenantId": 1,
         "classId": 21,
@@ -3845,7 +4007,7 @@
         "totalStudentsEnrolled": 150,
         "createdAt": "2026-11-02T22:16:17.810Z",
         "isDeleted": false,
-        "updatedAt": "2026-11-04T20:56:50.687Z"
+        "updatedAt": "2026-11-05T06:50:44.787Z"
       },
       {
         "id": 1,
@@ -3856,7 +4018,7 @@
         "status": "ACTIVE",
         "isDeleted": false,
         "createdAt": "2026-01-01T00:00:00.000Z",
-        "updatedAt": "2026-11-04T20:56:51.902Z"
+        "updatedAt": "2026-11-05T06:50:47.063Z"
       }
     ],
     "Subscription": [
@@ -3873,7 +4035,7 @@
         "amountPaid": 750,
         "isDeleted": false,
         "createdAt": "2026-11-04T19:02:32.371Z",
-        "updatedAt": "2026-11-04T20:56:50.673Z"
+        "updatedAt": "2026-11-05T06:50:44.777Z"
       },
       {
         "id": 1,
@@ -3887,10 +4049,36 @@
         "currency": "GHS",
         "isDeleted": false,
         "createdAt": "2026-11-02T22:14:21.221Z",
-        "updatedAt": "2026-11-04T20:56:51.889Z"
+        "updatedAt": "2026-11-05T06:50:47.050Z"
       }
     ],
     "SystemBackup": [
+      {
+        "id": 24,
+        "tenantId": 1,
+        "filename": "pre_lock_snapshot_tenant_9904_1793861442372.sql",
+        "fileSizeMb": 14.8,
+        "backupType": "PRE_LOCK_EMERGENCY_BACKUP",
+        "isEncrypted": true,
+        "storagePath": "/backups/tenants/9904/pre_lock_snapshot_tenant_9904_1793861442372.sql",
+        "status": "COMPLETED",
+        "isDeleted": false,
+        "createdAt": "2026-11-05T06:50:42.376Z",
+        "updatedAt": "2026-11-05T06:50:42.376Z"
+      },
+      {
+        "id": 23,
+        "tenantId": 1,
+        "filename": "pre_lock_snapshot_tenant_1_1793861439358.sql",
+        "fileSizeMb": 14.8,
+        "backupType": "PRE_LOCK_EMERGENCY_BACKUP",
+        "isEncrypted": true,
+        "storagePath": "/backups/tenants/1/pre_lock_snapshot_tenant_1_1793861439358.sql",
+        "status": "COMPLETED",
+        "isDeleted": false,
+        "createdAt": "2026-11-05T06:50:39.363Z",
+        "updatedAt": "2026-11-05T06:50:39.363Z"
+      },
       {
         "id": 22,
         "tenantId": 1,
@@ -4257,6 +4445,46 @@
       }
     ],
     "SystemLock": [
+      {
+        "id": 73,
+        "tenantId": 1,
+        "isLocked": false,
+        "reason": "Developer Administrative System Unlock. All records restored.",
+        "lockedBy": "DEVELOPER_CONTROL_CENTER",
+        "isDeleted": false,
+        "createdAt": "2026-11-05T06:50:47.111Z",
+        "updatedAt": "2026-11-05T06:50:47.111Z"
+      },
+      {
+        "id": 72,
+        "tenantId": 9904,
+        "isLocked": false,
+        "reason": "Developer Administrative System Unlock. All records restored.",
+        "lockedBy": "DEVELOPER_CONTROL_CENTER",
+        "isDeleted": false,
+        "createdAt": "2026-11-05T06:50:44.845Z",
+        "updatedAt": "2026-11-05T06:50:44.845Z"
+      },
+      {
+        "id": 71,
+        "tenantId": 9904,
+        "isLocked": false,
+        "reason": "Developer Manual Lock",
+        "lockedBy": "DEVELOPER_CONTROL_CENTER",
+        "isDeleted": false,
+        "createdAt": "2026-11-05T06:50:42.478Z",
+        "updatedAt": "2026-11-05T06:50:44.834Z"
+      },
+      {
+        "id": 70,
+        "tenantId": 1,
+        "isLocked": false,
+        "reason": "Developer Manual Lock",
+        "lockedBy": "DEVELOPER_CONTROL_CENTER",
+        "isDeleted": false,
+        "createdAt": "2026-11-05T06:50:39.489Z",
+        "updatedAt": "2026-11-05T06:50:47.100Z"
+      },
       {
         "id": 69,
         "tenantId": 1,

@@ -54,7 +54,7 @@ export default function AccountantLogin() {
           <div style={{ display: "flex", justifyContent: "flex-end", marginBottom: "8px" }}>
             <button
               type="button"
-              onClick={() => { setEmail("accountant@gbs.com"); setPassword("Accountant123!"); }}
+              onClick={() => { setEmail("accountant@gbs.com"); setPassword("Accountant123!"); setError(null); }}
               style={{
                 background: "rgba(236, 72, 153, 0.15)",
                 border: "1px solid rgba(236, 72, 153, 0.4)",

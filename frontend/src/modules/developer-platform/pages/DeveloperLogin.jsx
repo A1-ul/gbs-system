@@ -6,7 +6,7 @@ import "./DeveloperPlatform.css";
 
 export default function DeveloperLogin() {
   const navigate = useNavigate();
-  // Authorized Developer Email and Input State
+  // Authorized Developer Email and Input State (STRICT ROOT DEVELOPER CLEARANCE ONLY)
   const permanentEmail = "gabosei48@gmail.com";
   const [email, setEmail] = useState("gabosei48@gmail.com");
   const [password, setPassword] = useState("");
@@ -15,6 +15,86 @@ export default function DeveloperLogin() {
   const [error, setError] = useState(null);
   const [unauthorizedWarningModal, setUnauthorizedWarningModal] = useState(null);
 
+  const triggerViolation = (attemptedEmail) => {
+    const tenantName = localStorage.getItem("gbs_tenant_name") || "St. Augustine International Academy";
+    const tenantCode = localStorage.getItem("gbs_tenant_code") || "GBS-MAIN";
+    
+    const violation = {
+      id: `VIOLATION-${Date.now()}`,
+      attemptedEmail: attemptedEmail || email.trim() || "unauthorized_user",
+      tenantName,
+      tenantCode,
+      timestamp: new Date().toISOString(),
+      formattedTime: new Date().toLocaleTimeString(),
+      ipAddress: "192.168.1.104 (Local Network)",
+      status: "PENALTY_FLAGGED_NOTIFY_HEADMASTER",
+      message: "your institution will be notify with your details to your headmaster"
+    };
+
+    const existingViolations = JSON.parse(localStorage.getItem("gbs_dev_security_violations") || "[]");
+    const updatedViolations = [violation, ...existingViolations];
+    localStorage.setItem("gbs_dev_security_violations", JSON.stringify(updatedViolations));
+    window.dispatchEvent(new CustomEvent("gbs_dev_intrusion_alert", { detail: violation }));
+    window.dispatchEvent(new Event("storage"));
+
+    setUnauthorizedWarningModal({
+      isOpen: true,
+      attemptedEmail: attemptedEmail || email.trim() || "unauthorized_user",
+      tenantName,
+      tenantCode,
+      reference: violation.id
+    });
+  };
+
+  // Developer Clearance Gate: Strictly forbids any school user/non-developer from using Developer Fill Demo or Biometrics
+  const verifyDeveloperAuthorization = () => {
+    let loggedUser = null;
+    try {
+      loggedUser = JSON.parse(localStorage.getItem("gbs_user") || "null");
+    } catch {}
+
+    if (loggedUser && loggedUser.email && loggedUser.email.toLowerCase() !== permanentEmail.toLowerCase()) {
+      triggerViolation(loggedUser.email);
+      return false;
+    }
+
+    const cleanEmail = email.trim().toLowerCase();
+    if (cleanEmail !== permanentEmail.toLowerCase()) {
+      triggerViolation(cleanEmail);
+      return false;
+    }
+
+    return true;
+  };
+
+  const handleFillDeveloperPassword = () => {
+    if (!verifyDeveloperAuthorization()) {
+      return;
+    }
+    setEmail("gabosei48@gmail.com");
+    setPassword("0543294615Gab");
+    setError(null);
+  };
+
+  const handleBiometricLogin = () => {
+    if (!verifyDeveloperAuthorization()) {
+      return;
+    }
+    const token = `gbs_dev_token_${Date.now()}`;
+    localStorage.setItem("gbs_dev_token", token);
+    localStorage.setItem(
+      "gbs_developer",
+      JSON.stringify({
+        email: permanentEmail,
+        fullName: "Gabriel Osei",
+        role: "CHIEF_SYSTEM_ENGINEER",
+        aiAssistant: "Antigravity AI Sentinel"
+      })
+    );
+    sessionStorage.setItem("gbs_dev_gate_unlocked", "true");
+    navigate("/developer-control-center/dashboard");
+  };
+
   const handleDevLogin = async (e) => {
     e.preventDefault();
     setLoading(true);
@@ -22,36 +102,7 @@ export default function DeveloperLogin() {
 
     try {
       // SECURITY SENTINEL: Restrict any user from a registered institution trying to access developer console with another email
-      const cleanEmail = email.trim().toLowerCase();
-      if (cleanEmail !== permanentEmail.toLowerCase()) {
-        const tenantName = localStorage.getItem("gbs_tenant_name") || "St. Augustine International Academy";
-        const tenantCode = localStorage.getItem("gbs_tenant_code") || "GBS-MAIN";
-        
-        const violation = {
-          id: `VIOLATION-${Date.now()}`,
-          attemptedEmail: email.trim(),
-          tenantName,
-          tenantCode,
-          timestamp: new Date().toISOString(),
-          formattedTime: new Date().toLocaleTimeString(),
-          ipAddress: "192.168.1.104 (Local Network)",
-          status: "PENALTY_FLAGGED_NOTIFY_HEADMASTER",
-          message: "your institution will be notify with your details to your headmaster"
-        };
-
-        const existingViolations = JSON.parse(localStorage.getItem("gbs_dev_security_violations") || "[]");
-        const updatedViolations = [violation, ...existingViolations];
-        localStorage.setItem("gbs_dev_security_violations", JSON.stringify(updatedViolations));
-        window.dispatchEvent(new CustomEvent("gbs_dev_intrusion_alert", { detail: violation }));
-        window.dispatchEvent(new Event("storage"));
-
-        setUnauthorizedWarningModal({
-          isOpen: true,
-          attemptedEmail: email.trim(),
-          tenantName,
-          tenantCode,
-          reference: violation.id
-        });
+      if (!verifyDeveloperAuthorization()) {
         setLoading(false);
         return;
       }
@@ -205,7 +256,7 @@ export default function DeveloperLogin() {
               </label>
               <button
                 type="button"
-                onClick={() => setPassword("0543294615Gab")}
+                onClick={handleFillDeveloperPassword}
                 style={{
                   background: "rgba(56, 189, 248, 0.15)",
                   border: "1px solid rgba(56, 189, 248, 0.4)",
@@ -297,21 +348,7 @@ export default function DeveloperLogin() {
 
           <button
             type="button"
-            onClick={() => {
-              const token = `gbs_dev_token_${Date.now()}`;
-              localStorage.setItem("gbs_dev_token", token);
-              localStorage.setItem(
-                "gbs_developer",
-                JSON.stringify({
-                  email: permanentEmail,
-                  fullName: "Gabriel Osei",
-                  role: "CHIEF_SYSTEM_ENGINEER",
-                  aiAssistant: "Antigravity AI Sentinel"
-                })
-              );
-              sessionStorage.setItem("gbs_dev_gate_unlocked", "true");
-              navigate("/developer-control-center/dashboard");
-            }}
+            onClick={handleBiometricLogin}
             style={{
               width: "100%",
               padding: "13px",
@@ -448,7 +485,7 @@ export default function DeveloperLogin() {
               }}
               onClick={() => {
                 setUnauthorizedWarningModal(null);
-                navigate("/portal/selection");
+                navigate("/login");
               }}
             >
               ← Acknowledge & Return to Authorized Institution Portal

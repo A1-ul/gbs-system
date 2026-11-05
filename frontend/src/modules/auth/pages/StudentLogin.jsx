@@ -54,7 +54,7 @@ export default function StudentLogin() {
           <div style={{ display: "flex", justifyContent: "flex-end", marginBottom: "8px" }}>
             <button
               type="button"
-              onClick={() => { setEmail("student@gbs.com"); setPassword("Student123!"); }}
+              onClick={() => { setEmail("student@gbs.com"); setPassword("Student123!"); setError(null); }}
               style={{
                 background: "rgba(139, 92, 246, 0.15)",
                 border: "1px solid rgba(139, 92, 246, 0.4)",

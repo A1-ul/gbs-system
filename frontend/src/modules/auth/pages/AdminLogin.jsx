@@ -52,7 +52,7 @@ export default function AdminLogin() {
           <div style={{ display: "flex", justifyContent: "flex-end", marginBottom: "8px" }}>
             <button
               type="button"
-              onClick={() => { setEmail("admin@gbs.com"); setPassword("Admin123!"); }}
+              onClick={() => { setEmail("admin@gbs.com"); setPassword("Admin123!"); setError(null); }}
               style={{
                 background: "rgba(56, 189, 248, 0.15)",
                 border: "1px solid rgba(56, 189, 248, 0.4)",
