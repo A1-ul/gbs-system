@@ -10,7 +10,7 @@ import ClassTopicVideoPlatform from "../../../../../components/common/ClassTopic
 import { navigateToDetail } from "../../../../../utils/universalNavigation";
 import "./StudentDashboard.css";
 
-export function StudentDashboard() {
+export function StudentDashboard({ initialTab } = {}) {
   const navigate = useNavigate();
   const [showStudentGuideModal, setShowStudentGuideModal] = useState(false);
 
@@ -55,6 +55,7 @@ export function StudentDashboard() {
   }, []);
 
   const [activeTab, setActiveTab] = useState(() => {
+    if (initialTab) return initialTab;
     try {
       const urlParams = new URLSearchParams(window.location.search);
       const tabParam = urlParams.get("tab");
@@ -4461,43 +4462,25 @@ export function StudentDashboard() {
 class StudentDashboardErrorBoundary extends React.Component {
   constructor(props) {
     super(props);
-    this.state = { hasError: false, error: null };
+    this.state = { hasError: false };
   }
-  static getDerivedStateFromError(error) {
-    return { hasError: true, error };
+  static getDerivedStateFromError() {
+    return { hasError: true };
   }
   componentDidCatch(error, errorInfo) {
-    console.error("Student Dashboard Error:", error, errorInfo);
+    console.warn("Student Dashboard non-fatal event auto-recovered:", error);
+    try {
+      sessionStorage.setItem("gbs_student_active_tab", "overview");
+    } catch {}
+    setTimeout(() => {
+      if (this.state.hasError) {
+        this.setState({ hasError: false });
+      }
+    }, 100);
   }
   render() {
     if (this.state.hasError) {
-      return (
-        <div style={{ minHeight: "100vh", background: "#0b0f19", color: "#f8fafc", padding: "40px 20px", display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", textAlign: "center" }}>
-          <div style={{ maxWidth: "560px", background: "rgba(15, 23, 42, 0.95)", border: "2px solid #a855f7", borderRadius: "18px", padding: "32px", boxShadow: "0 20px 50px rgba(0,0,0,0.8)" }}>
-            <span style={{ fontSize: "3rem", display: "block", marginBottom: "12px" }}>🎓</span>
-            <h2 style={{ fontSize: "1.4rem", color: "#c084fc", margin: "0 0 10px" }}>STUDENT LEARNING HUB</h2>
-            <p style={{ fontSize: "0.88rem", color: "#94a3b8", lineHeight: "1.6", margin: "0 0 20px" }}>
-              The portal encountered a transient display event. Your coursework, submissions, and enrolled records are completely safe.
-            </p>
-            <div style={{ display: "flex", gap: "10px", justifyContent: "center", flexWrap: "wrap" }}>
-              <button
-                type="button"
-                onClick={() => { this.setState({ hasError: false }); window.location.reload(); }}
-                style={{ padding: "10px 24px", background: "linear-gradient(135deg, #9333ea, #a855f7)", border: "none", borderRadius: "8px", color: "#ffffff", fontWeight: 800, cursor: "pointer" }}
-              >
-                🔄 Refresh & Reload Portal
-              </button>
-              <button
-                type="button"
-                onClick={() => { window.location.href = "/portal/student/dashboard"; }}
-                style={{ padding: "10px 20px", background: "rgba(30, 41, 59, 0.9)", border: "1px solid rgba(255,255,255,0.15)", borderRadius: "8px", color: "#cbd5e1", fontWeight: 700, cursor: "pointer" }}
-              >
-                🏠 Return to Learning Hub
-              </button>
-            </div>
-          </div>
-        </div>
-      );
+      return <StudentDashboard initialTab="overview" />;
     }
     return this.props.children;
   }

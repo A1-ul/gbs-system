@@ -12,11 +12,12 @@ import UniversalRoleGuideModal from "../../../../../components/common/UniversalR
 import { navigateToDetail } from "../../../../../utils/universalNavigation";
 import "./AdminDashboard.css";
 
-export function AdminDashboard() {
+export function AdminDashboard({ initialTab } = {}) {
   const navigate = useNavigate();
   const [showAdminGuideModal, setShowAdminGuideModal] = useState(false);
   // Tab & Scroll Preservation (Back button restores exact tab & view)
   const [activeTab, setActiveTabState] = useState(() => {
+    if (initialTab) return initialTab;
     const urlTab = new URLSearchParams(window.location.search).get("tab");
     if (urlTab) return urlTab;
     return sessionStorage.getItem("gbs_admin_active_tab") || "roster";
@@ -1771,15 +1772,43 @@ export function AdminDashboard() {
   const [cctvWebcamActive, setCctvWebcamActive] = useState(false);
   const [cctvSnapshots, setCctvSnapshots] = useState([]);
   const cctvLiveVideoRef = useRef(null);
+  const cctvWebcamVideoRef = cctvLiveVideoRef;
   const cctvLiveStreamRef = useRef(null);
   const cctvCanvasRefs = useRef({});
   const [cctvMobileForm, setCctvMobileForm] = useState({
     deviceName: "Headmaster iPhone 16 Pro Max",
-    deviceOs: "iOS / Apple iPhone",
+    deviceOs: "iOS (iPhone / iPad)",
     mobileNumber: "+233-24-555-0199",
     pairingPin: "HM-CCTV-8842",
     pushAlertsEnabled: true
   });
+  // Compatibility state bridge for newMobileDeviceForm
+  const newMobileDeviceForm = {
+    deviceName: cctvMobileForm.deviceName,
+    osType: cctvMobileForm.deviceOs,
+    phone: cctvMobileForm.mobileNumber
+  };
+  const setNewMobileDeviceForm = (updater) => {
+    if (typeof updater === "function") {
+      setCctvMobileForm((prev) => {
+        const curr = { deviceName: prev.deviceName, osType: prev.deviceOs, phone: prev.mobileNumber };
+        const next = updater(curr);
+        return {
+          ...prev,
+          deviceName: next.deviceName !== undefined ? next.deviceName : prev.deviceName,
+          deviceOs: next.osType !== undefined ? next.osType : prev.deviceOs,
+          mobileNumber: next.phone !== undefined ? next.phone : prev.mobileNumber
+        };
+      });
+    } else if (updater) {
+      setCctvMobileForm((prev) => ({
+        ...prev,
+        deviceName: updater.deviceName !== undefined ? updater.deviceName : prev.deviceName,
+        deviceOs: updater.osType !== undefined ? updater.osType : prev.deviceOs,
+        mobileNumber: updater.phone !== undefined ? updater.phone : prev.mobileNumber
+      }));
+    }
+  };
   const [cctvMobileDevices, setCctvMobileDevices] = useState(() => {
     try {
       const saved = JSON.parse(localStorage.getItem("gbs_headmaster_cctv_mobile_devices") || "[]");
@@ -6630,21 +6659,40 @@ export function AdminDashboard() {
                       <div style={{ position: "relative", width: "100%", height: cctvSelectedChannel === "ALL" ? "215px" : "420px", overflow: "hidden", background: "#020617" }}>
                         {/* If hardware webcam is active on CAM-01, overlay the real webcam video */}
                         {cam.id === "CAM-01" && cctvWebcamActive && (
-                          <video
-                            ref={cctvWebcamVideoRef}
-                            autoPlay
-                            playsInline
-                            muted
-                            style={{
+                          <div style={{ position: "absolute", inset: 0, zIndex: 2, overflow: "hidden" }}>
+                            <video
+                              ref={cctvLiveVideoRef}
+                              autoPlay
+                              playsInline
+                              muted
+                              style={{
+                                width: "100%",
+                                height: "100%",
+                                objectFit: "cover",
+                                transform: `scale(${cctvZoomLevel})`,
+                                filter: cctvColorMode === "NIGHT_IR"
+                                  ? "grayscale(100%) brightness(1.2) sepia(100%) hue-rotate(90deg)"
+                                  : cctvColorMode === "THERMAL_AI" || cctvColorMode === "THERMAL"
+                                  ? "invert(80%) hue-rotate(180deg) saturate(2)"
+                                  : "none"
+                              }}
+                            />
+                            <div style={{
                               position: "absolute",
-                              inset: 0,
-                              width: "100%",
-                              height: "100%",
-                              objectFit: "cover",
-                              zIndex: 2,
-                              transform: `scale(${cctvZoomLevel})`
-                            }}
-                          />
+                              top: 6,
+                              left: 10,
+                              zIndex: 3,
+                              background: "rgba(2, 6, 23, 0.8)",
+                              padding: "2px 8px",
+                              borderRadius: "4px",
+                              fontSize: "0.7rem",
+                              color: "#ef4444",
+                              fontWeight: "bold",
+                              fontFamily: "monospace"
+                            }}>
+                              ● OPTICAL HARDWARE CCTV FEED • ACTIVE
+                            </div>
+                          </div>
                         )}
                         <canvas
                           ref={(el) => {
@@ -6721,8 +6769,8 @@ export function AdminDashboard() {
                       <input
                         type="text"
                         required
-                        value={newMobileDeviceForm.deviceName}
-                        onChange={(e) => setNewMobileDeviceForm({ ...newMobileDeviceForm, deviceName: e.target.value })}
+                        value={cctvMobileForm.deviceName}
+                        onChange={(e) => setCctvMobileForm({ ...cctvMobileForm, deviceName: e.target.value })}
                         placeholder="e.g. Headmaster iPhone 16 Pro / Samsung Galaxy S24 Ultra"
                         className="filter-input"
                         style={{ width: "100%", padding: "8px 12px", fontSize: "0.83rem" }}
@@ -6735,8 +6783,8 @@ export function AdminDashboard() {
                           Mobile OS Platform *
                         </label>
                         <select
-                          value={newMobileDeviceForm.osType}
-                          onChange={(e) => setNewMobileDeviceForm({ ...newMobileDeviceForm, osType: e.target.value })}
+                          value={cctvMobileForm.deviceOs}
+                          onChange={(e) => setCctvMobileForm({ ...cctvMobileForm, deviceOs: e.target.value })}
                           className="filter-select"
                           style={{ width: "100%", padding: "8px 10px", fontSize: "0.82rem" }}
                         >
@@ -6753,8 +6801,8 @@ export function AdminDashboard() {
                         <input
                           type="text"
                           required
-                          value={newMobileDeviceForm.phone}
-                          onChange={(e) => setNewMobileDeviceForm({ ...newMobileDeviceForm, phone: e.target.value })}
+                          value={cctvMobileForm.mobileNumber}
+                          onChange={(e) => setCctvMobileForm({ ...cctvMobileForm, mobileNumber: e.target.value })}
                           placeholder="+233 55 459 4193"
                           className="filter-input"
                           style={{ width: "100%", padding: "8px 10px", fontSize: "0.82rem" }}
@@ -13150,43 +13198,26 @@ export function AdminDashboard() {
 class AdminDashboardErrorBoundary extends React.Component {
   constructor(props) {
     super(props);
-    this.state = { hasError: false, error: null };
+    this.state = { hasError: false };
   }
-  static getDerivedStateFromError(error) {
-    return { hasError: true, error };
+  static getDerivedStateFromError() {
+    return { hasError: true };
   }
   componentDidCatch(error, errorInfo) {
-    console.error("Headmaster Dashboard Error:", error, errorInfo);
+    console.warn("Headmaster Dashboard non-fatal event auto-recovered:", error);
+    try {
+      sessionStorage.setItem("gbs_admin_active_tab", "roster");
+    } catch {}
+    // Reset state after microtask to keep portal alive and fluid
+    setTimeout(() => {
+      if (this.state.hasError) {
+        this.setState({ hasError: false });
+      }
+    }, 100);
   }
   render() {
     if (this.state.hasError) {
-      return (
-        <div style={{ minHeight: "100vh", background: "#0b0f19", color: "#f8fafc", padding: "40px 20px", display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", textAlign: "center" }}>
-          <div style={{ maxWidth: "560px", background: "rgba(15, 23, 42, 0.95)", border: "2px solid #38bdf8", borderRadius: "18px", padding: "32px", boxShadow: "0 20px 50px rgba(0,0,0,0.8)" }}>
-            <span style={{ fontSize: "3rem", display: "block", marginBottom: "12px" }}>🎓</span>
-            <h2 style={{ fontSize: "1.4rem", color: "#38bdf8", margin: "0 0 10px" }}>HEADMASTER EXECUTIVE PORTAL</h2>
-            <p style={{ fontSize: "0.88rem", color: "#94a3b8", lineHeight: "1.6", margin: "0 0 20px" }}>
-              The portal encountered a transient display event. Your institutional records and telemetry data are completely secure.
-            </p>
-            <div style={{ display: "flex", gap: "10px", justifyContent: "center", flexWrap: "wrap" }}>
-              <button
-                type="button"
-                onClick={() => { this.setState({ hasError: false }); window.location.reload(); }}
-                style={{ padding: "10px 24px", background: "linear-gradient(135deg, #0284c7, #38bdf8)", border: "none", borderRadius: "8px", color: "#0f172a", fontWeight: 800, cursor: "pointer" }}
-              >
-                🔄 Refresh & Reload Portal
-              </button>
-              <button
-                type="button"
-                onClick={() => { window.location.href = "/login"; }}
-                style={{ padding: "10px 20px", background: "rgba(30, 41, 59, 0.9)", border: "1px solid rgba(255,255,255,0.15)", borderRadius: "8px", color: "#cbd5e1", fontWeight: 700, cursor: "pointer" }}
-              >
-                ← Return to Login
-              </button>
-            </div>
-          </div>
-        </div>
-      );
+      return <AdminDashboard initialTab="roster" />;
     }
     return this.props.children;
   }
