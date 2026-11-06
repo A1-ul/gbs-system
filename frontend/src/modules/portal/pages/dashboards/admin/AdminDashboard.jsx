@@ -6309,6 +6309,27 @@ export function AdminDashboard({ initialTab } = {}) {
                                     </button>
                                     <button
                                       type="button"
+                                      onClick={() => navigateToDetail(navigate, "lesson-plan", plan.id, {
+                                        ...plan,
+                                        institutionName: reportSchoolName
+                                      }, { returnTab: activeTab })}
+                                      style={{
+                                        padding: "5px 10px",
+                                        fontSize: "0.74rem",
+                                        background: "rgba(139, 92, 246, 0.2)",
+                                        border: "1px solid #8b5cf6",
+                                        color: "#c4b5fd",
+                                        borderRadius: "6px",
+                                        fontWeight: 800,
+                                        cursor: "pointer",
+                                        whiteSpace: "nowrap"
+                                      }}
+                                      title="Open on dedicated full-page verification desk"
+                                    >
+                                      📄 Verify on New Page ↗
+                                    </button>
+                                    <button
+                                      type="button"
                                       onClick={() => handleQuickVetPlan(plan, "VETTED_APPROVED")}
                                       style={{
                                         padding: "5px 10px",
@@ -9854,36 +9875,7 @@ export function AdminDashboard({ initialTab } = {}) {
               )}
 
               {promotionReport.promotedStudents?.length > 0 && (
-                <div style={{ marginBottom: "1rem", background: "rgba(16, 185, 129, 0.08)", border: "1px solid rgba(16, 185, 129, 0.25)", padding: "12px", borderRadius: "8px" }}>
-                  <strong style={{ fontSize: "0.82rem", color: "#34d399", display: "block", marginBottom: "6px" }}>
-                    ✅ Advanced to Next Class Tier:
-                  </strong>
-                  <ul style={{ margin: 0, paddingLeft: "18px", fontSize: "0.8rem", color: "#cbd5e1" }}>
-                    {promotionReport.promotedStudents.map((st, pIdx) => (
-                      <li key={pIdx}>
-                        <strong>{st.name}</strong>: {st.fromClass} ➔ <span style={{ color: "#34d399", fontWeight: 700 }}>{st.toClass}</span>
-                      </li>
-                    ))}
-                  </ul>
-                </div>
-              )}
-
-              <div style={{ display: "flex", justifyContent: "flex-end" }}>
-                <button
-                  type="button"
-                  className="btn-primary"
-                  onClick={() => setShowPromotionModal(false)}
-                >
-                  Close Summary
-                </button>
-              </div>
-            </div>
-          </div>
-        )}
-
-        {/* Audit Record Reference Details Modal */}
-        {selectedAuditLog && (
-          <div className="staff-modal-overlay" onClick={() => setSelectedAuditLog(null)}>
+                <div style={{ marginBottom: "1rem", background: "rgba(16, 185, 129, 0.08)", border: "1px solid rgba(16
             <div className="staff-modal-card" style={{ maxWidth: "650px" }} onClick={(e) => e.stopPropagation()}>
               <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "1.25rem", borderBottom: "1px solid rgba(255,255,255,0.1)", paddingBottom: "10px" }}>
                 <div style={{ display: "flex", alignItems: "center", gap: "10px" }}>

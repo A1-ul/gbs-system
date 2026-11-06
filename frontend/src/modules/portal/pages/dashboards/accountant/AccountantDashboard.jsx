@@ -3788,24 +3788,48 @@ export default function AccountantDashboard() {
                               <span style={{ fontSize: "0.7rem", color: "#64748b" }}>{p.date}</span>
                             </td>
                             <td>
-                              <button
-                                type="button"
-                                onClick={() => {
-                                  alert(`Official Philanthropic Donor Receipt\n--------------------------------\nDonor: ${p.donorName}\nCohort: ${p.gradClass}\nReceipt Ref: ${p.receiptRef}\nAmount: ${currencySymbol}${p.redeemedAmount.toLocaleString()}\nProject: ${p.campaign}\nStatus: Verified & Audited by GBS Chief Accountant`);
-                                }}
-                                style={{
-                                  background: "rgba(56, 189, 248, 0.15)",
-                                  border: "1px solid #38bdf8",
-                                  color: "#38bdf8",
-                                  borderRadius: "6px",
-                                  padding: "4px 8px",
-                                  fontSize: "0.72rem",
-                                  fontWeight: 700,
-                                  cursor: "pointer"
-                                }}
-                              >
-                                🖨️ Receipt
-                              </button>
+                              <div style={{ display: "flex", gap: "5px" }}>
+                                <button
+                                  type="button"
+                                  onClick={() => navigateToDetail(navigate, "payment", p.receiptRef || p.id, {
+                                    ...p,
+                                    title: `Alumni Gift: ${p.donorName} (${p.campaign})`,
+                                    amountPaid: p.redeemedAmount,
+                                    currency: currencySymbol
+                                  }, { returnTab: activeTab })}
+                                  style={{
+                                    background: "rgba(56, 189, 248, 0.2)",
+                                    border: "1px solid #38bdf8",
+                                    color: "#7dd3fc",
+                                    borderRadius: "6px",
+                                    padding: "4px 8px",
+                                    fontSize: "0.72rem",
+                                    fontWeight: 700,
+                                    cursor: "pointer"
+                                  }}
+                                  title="Open full verification dossier on dedicated routed page"
+                                >
+                                  📄 Verify on New Page ↗
+                                </button>
+                                <button
+                                  type="button"
+                                  onClick={() => {
+                                    alert(`Official Philanthropic Donor Receipt\n--------------------------------\nDonor: ${p.donorName}\nCohort: ${p.gradClass}\nReceipt Ref: ${p.receiptRef}\nAmount: ${currencySymbol}${p.redeemedAmount.toLocaleString()}\nProject: ${p.campaign}\nStatus: Verified & Audited by GBS Chief Accountant`);
+                                  }}
+                                  style={{
+                                    background: "rgba(16, 185, 129, 0.15)",
+                                    border: "1px solid #10b981",
+                                    color: "#34d399",
+                                    borderRadius: "6px",
+                                    padding: "4px 8px",
+                                    fontSize: "0.72rem",
+                                    fontWeight: 700,
+                                    cursor: "pointer"
+                                  }}
+                                >
+                                  🖨️ Receipt
+                                </button>
+                              </div>
                             </td>
                           </tr>
                         );
@@ -3977,7 +4001,31 @@ export default function AccountantDashboard() {
                             <div style={{ color: "#34d399" }}>{item.accountantAuditSeal}</div>
                           </td>
                           <td>
-                            <span className="badge-status badge-present">✓ AUDITED</span>
+                            <div style={{ display: "flex", gap: "6px", alignItems: "center" }}>
+                              <span className="badge-status badge-present">✓ AUDITED</span>
+                              <button
+                                type="button"
+                                onClick={() => navigateToDetail(navigate, "transaction", item.id, {
+                                  ...item,
+                                  title: `Procurement: ${item.itemDescription}`,
+                                  amountPaid: item.amount,
+                                  currency: currencySymbol
+                                }, { returnTab: activeTab })}
+                                style={{
+                                  background: "rgba(56, 189, 248, 0.2)",
+                                  border: "1px solid #38bdf8",
+                                  color: "#7dd3fc",
+                                  borderRadius: "6px",
+                                  padding: "3px 8px",
+                                  fontSize: "0.72rem",
+                                  fontWeight: 700,
+                                  cursor: "pointer"
+                                }}
+                                title="Open full verification dossier on dedicated page"
+                              >
+                                📄 Verify ↗
+                              </button>
+                            </div>
                           </td>
                         </tr>
                       ))}

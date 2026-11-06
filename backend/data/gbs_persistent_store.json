@@ -15,7 +15,7 @@
       "reviewNotes": "Verified and approved.",
       "tenantId": 1,
       "isActive": true,
-      "updatedAt": "2026-11-05T06:50:47.079Z"
+      "updatedAt": "2026-11-06T23:51:29.947Z"
     },
     {
       "id": "reg_1793657777810",
@@ -82,7 +82,7 @@
       "scannedFacePhoto": null,
       "biometricFaceToken": null,
       "tenantId": 9904,
-      "updatedAt": "2026-11-05T06:50:44.823Z"
+      "updatedAt": "2026-11-06T23:51:29.947Z"
     }
   ],
   "users": [],
@@ -336,7 +336,7 @@
       "createdAt": "2026-11-02T21:55:25.367Z"
     }
   ],
-  "updatedAt": "2026-11-06T23:23:26.398Z",
+  "updatedAt": "2026-11-06T23:55:12.230Z",
   "registeredUsers": [
     {
       "id": "usr_12",
@@ -483,6 +483,133 @@
   ],
   "prismaModels": {
     "AuditLog": [
+      {
+        "id": 234,
+        "tenantId": 1,
+        "userId": 17,
+        "module": "ONLINE_MEETING",
+        "action": "ONLINE_MEETINGS_BATCH_DELETED",
+        "details": "Batch deleted 1 online meetings.",
+        "isDeleted": false,
+        "createdAt": "2026-11-06T23:55:12.044Z",
+        "updatedAt": "2026-11-06T23:55:12.044Z"
+      },
+      {
+        "id": 233,
+        "tenantId": 1,
+        "userId": 10,
+        "module": "ONLINE_MEETING",
+        "action": "ONLINE_MEETING_CREATED",
+        "details": "Created ZOOM VIDEO session \"Weekly Interactive STEM Seminar\" (ID: 1) for class N/A",
+        "isDeleted": false,
+        "createdAt": "2026-11-06T23:55:09.529Z",
+        "updatedAt": "2026-11-06T23:55:09.529Z"
+      },
+      {
+        "id": 232,
+        "tenantId": 1,
+        "userId": 10,
+        "action": "ASSIGNMENT_CREATED",
+        "module": "assignments",
+        "details": "{\"count\":2,\"title\":\"Advanced STEM Research Assignment\",\"classes\":[21,20]}",
+        "isDeleted": false,
+        "createdAt": "2026-11-06T23:55:08.033Z",
+        "updatedAt": "2026-11-06T23:55:08.033Z"
+      },
+      {
+        "id": 231,
+        "tenantId": 1,
+        "userId": 1,
+        "action": "SINGLE_STUDENT_ATTENDANCE_MARKED",
+        "module": "ATTENDANCE",
+        "details": "Marked student #17 as PRESENT for class #21 on Fri Nov 06 2026 00:00:00 GMT+0000 (Greenwich Mean Time).",
+        "isDeleted": false,
+        "createdAt": "2026-11-06T23:55:04.398Z",
+        "updatedAt": "2026-11-06T23:55:04.398Z"
+      },
+      {
+        "id": 230,
+        "tenantId": 1,
+        "userId": null,
+        "module": "BIOMETRIC_SECURITY",
+        "action": "FACIAL_LIVENESS_VERIFIED",
+        "details": "Facial liveness verified successfully (Liveness: 98.8%, Anti-spoofing: 99.4%). Root clearance confirmed.",
+        "ipAddress": "127.0.0.1",
+        "isDeleted": false,
+        "createdAt": "2026-11-06T23:52:56.571Z",
+        "updatedAt": "2026-11-06T23:52:56.571Z"
+      },
+      {
+        "id": 229,
+        "tenantId": 1,
+        "userId": null,
+        "module": "BIOMETRIC_SECURITY",
+        "action": "FACIAL_LIVENESS_VERIFIED",
+        "details": "Facial liveness verified successfully (Liveness: 98.8%, Anti-spoofing: 99.4%). Root clearance confirmed.",
+        "ipAddress": "127.0.0.1",
+        "isDeleted": false,
+        "createdAt": "2026-11-06T23:52:51.294Z",
+        "updatedAt": "2026-11-06T23:52:51.294Z"
+      },
+      {
+        "id": 228,
+        "tenantId": 1,
+        "userId": null,
+        "module": "DEV_CONTROL",
+        "action": "SYSTEM_UNLOCKED",
+        "details": "Unlocked system (Reason: Developer System Unlock (All Institutional Records Restored & Unfrozen))",
+        "ipAddress": "127.0.0.1",
+        "isDeleted": false,
+        "createdAt": "2026-11-06T23:51:30.247Z",
+        "updatedAt": "2026-11-06T23:51:30.247Z"
+      },
+      {
+        "id": 227,
+        "tenantId": 1,
+        "userId": null,
+        "module": "DEV_CONTROL",
+        "action": "SYSTEM_LOCKED",
+        "details": "Locked system (Reason: Developer Emergency Lock (Pre-Lock Backup Generated & Data Safely Preserved))",
+        "ipAddress": "127.0.0.1",
+        "isDeleted": false,
+        "createdAt": "2026-11-06T23:51:26.321Z",
+        "updatedAt": "2026-11-06T23:51:26.321Z"
+      },
+      {
+        "id": 226,
+        "tenantId": 1,
+        "userId": null,
+        "module": "DEV_CONTROL",
+        "action": "DEVELOPER_LOGIN_AUTHENTICATED",
+        "details": "Developer session initialized for 'gabosei48@gmail.com' with Level 5 root clearance",
+        "ipAddress": "127.0.0.1",
+        "isDeleted": false,
+        "createdAt": "2026-11-06T23:50:58.663Z",
+        "updatedAt": "2026-11-06T23:50:58.663Z"
+      },
+      {
+        "id": 225,
+        "tenantId": 1,
+        "userId": null,
+        "module": "DEV_CONTROL",
+        "action": "DEVELOPER_LOGIN_AUTHENTICATED",
+        "details": "Developer session initialized for 'gabosei48@gmail.com' with Level 5 root clearance",
+        "ipAddress": "127.0.0.1",
+        "isDeleted": false,
+        "createdAt": "2026-11-06T23:50:42.921Z",
+        "updatedAt": "2026-11-06T23:50:42.921Z"
+      },
+      {
+        "id": 224,
+        "tenantId": 1,
+        "userId": 1,
+        "module": "EMERGENCY_LOCATOR",
+        "action": "ADMIN_EMERGENCY_LOCATOR_SEARCH",
+        "details": "Emergency search for mobile/student: \"0554594193\". Coordinates: 6.6885, -1.6244. Matches found: 1",
+        "isDeleted": false,
+        "createdAt": "2026-11-06T23:45:49.244Z",
+        "updatedAt": "2026-11-06T23:45:49.244Z"
+      },
       {
         "id": 223,
         "tenantId": 1,
@@ -3413,6 +3540,38 @@
     ],
     "Assignment": [
       {
+        "id": 13,
+        "tenantId": 1,
+        "classId": 20,
+        "subjectId": 1,
+        "teacherId": 10,
+        "title": "Advanced STEM Research Assignment",
+        "description": "Autonomous research project for secondary and undergraduate scholars.",
+        "dueDate": "2026-11-11T23:55:05.334Z",
+        "maxScore": 100,
+        "attachmentUrl": null,
+        "status": "PUBLISHED",
+        "isDeleted": false,
+        "createdAt": "2026-11-06T23:55:07.003Z",
+        "updatedAt": "2026-11-06T23:55:07.003Z"
+      },
+      {
+        "id": 12,
+        "tenantId": 1,
+        "classId": 21,
+        "subjectId": 1,
+        "teacherId": 10,
+        "title": "Advanced STEM Research Assignment",
+        "description": "Autonomous research project for secondary and undergraduate scholars.",
+        "dueDate": "2026-11-11T23:55:05.334Z",
+        "maxScore": 100,
+        "attachmentUrl": null,
+        "status": "PUBLISHED",
+        "isDeleted": false,
+        "createdAt": "2026-11-06T23:55:06.087Z",
+        "updatedAt": "2026-11-06T23:55:06.087Z"
+      },
+      {
         "id": 11,
         "tenantId": 1,
         "classId": 20,
@@ -4038,6 +4197,20 @@
     ],
     "AttendanceRecord": [
       {
+        "id": 25,
+        "tenantId": 1,
+        "classId": 21,
+        "studentId": 17,
+        "subjectId": null,
+        "date": "2026-11-06T00:00:00.000Z",
+        "status": "PRESENT",
+        "remarks": null,
+        "markedById": 1,
+        "isDeleted": false,
+        "createdAt": "2026-11-06T23:55:03.685Z",
+        "updatedAt": "2026-11-06T23:55:03.685Z"
+      },
+      {
         "id": 24,
         "tenantId": 1,
         "classId": 21,
@@ -4391,7 +4564,7 @@
         "totalStudentsEnrolled": 150,
         "createdAt": "2026-11-02T22:16:17.810Z",
         "isDeleted": false,
-        "updatedAt": "2026-11-05T06:50:44.787Z"
+        "updatedAt": "2026-11-06T23:51:28.872Z"
       },
       {
         "id": 1,
@@ -4402,7 +4575,7 @@
         "status": "ACTIVE",
         "isDeleted": false,
         "createdAt": "2026-01-01T00:00:00.000Z",
-        "updatedAt": "2026-11-05T06:50:47.063Z"
+        "updatedAt": "2026-11-06T23:51:28.872Z"
       }
     ],
     "Subscription": [
@@ -4419,7 +4592,7 @@
         "amountPaid": 750,
         "isDeleted": false,
         "createdAt": "2026-11-04T19:02:32.371Z",
-        "updatedAt": "2026-11-05T06:50:44.777Z"
+        "updatedAt": "2026-11-06T23:51:29.390Z"
       },
       {
         "id": 1,
@@ -4433,10 +4606,23 @@
         "currency": "GHS",
         "isDeleted": false,
         "createdAt": "2026-11-02T22:14:21.221Z",
-        "updatedAt": "2026-11-05T06:50:47.050Z"
+        "updatedAt": "2026-11-06T23:51:29.390Z"
       }
     ],
     "SystemBackup": [
+      {
+        "id": 25,
+        "tenantId": 1,
+        "filename": "system_pre_lock_backup_1794009084544.sql",
+        "fileSizeMb": 28.5,
+        "backupType": "PRE_LOCK_EMERGENCY_BACKUP",
+        "isEncrypted": true,
+        "storagePath": "/backups/system/system_pre_lock_backup_1794009084544.sql",
+        "status": "COMPLETED",
+        "isDeleted": false,
+        "createdAt": "2026-11-06T23:51:24.621Z",
+        "updatedAt": "2026-11-06T23:51:24.621Z"
+      },
       {
         "id": 24,
         "tenantId": 1,
@@ -4829,6 +5015,26 @@
       }
     ],
     "SystemLock": [
+      {
+        "id": 75,
+        "tenantId": null,
+        "isLocked": false,
+        "reason": "Developer System Unlock (All Institutional Records Restored & Unfrozen)",
+        "lockedBy": "DEV_CONTROL_CENTER",
+        "isDeleted": false,
+        "createdAt": "2026-11-06T23:51:28.278Z",
+        "updatedAt": "2026-11-06T23:51:28.278Z"
+      },
+      {
+        "id": 74,
+        "tenantId": null,
+        "isLocked": false,
+        "reason": "Developer Emergency Lock (Pre-Lock Backup Generated & Data Safely Preserved)",
+        "lockedBy": "DEV_CONTROL_CENTER",
+        "isDeleted": false,
+        "createdAt": "2026-11-06T23:51:24.968Z",
+        "updatedAt": "2026-11-06T23:51:27.887Z"
+      },
       {
         "id": 73,
         "tenantId": 1,

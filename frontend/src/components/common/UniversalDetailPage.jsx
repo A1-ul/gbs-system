@@ -57,6 +57,75 @@ export default function UniversalDetailPage() {
   const [copiedId, setCopiedId] = useState(false);
   const [actionNotice, setActionNotice] = useState(null);
 
+  // Dedicated Verification State & Handlers
+  const [verificationStatus, setVerificationStatus] = useState(() => {
+    return record?.verificationStatus || record?.status || "PENDING_VERIFICATION";
+  });
+  const [showQueryModal, setShowQueryModal] = useState(false);
+  const [queryInput, setQueryInput] = useState("");
+  const [actionFeedback, setActionFeedback] = useState(null);
+
+  const handleVerifyAndApprove = () => {
+    const updatedStatus = "VERIFIED_AND_APPROVED";
+    setVerificationStatus(updatedStatus);
+    const updatedRecord = {
+      ...record,
+      status: updatedStatus,
+      verificationStatus: updatedStatus,
+      isVerified: true,
+      verifiedAt: new Date().toLocaleString(),
+      verifier: "Headmaster & Chief Developer Verified Stamped"
+    };
+    setRecord(updatedRecord);
+    try {
+      sessionStorage.setItem(`gbs_detail_${category}_${id}`, JSON.stringify(updatedRecord));
+      localStorage.setItem(`gbs_verified_${category}_${id}`, JSON.stringify(updatedRecord));
+    } catch {}
+    setActionFeedback({
+      type: "success",
+      message: `✅ Record #${id} officially VERIFIED & APPROVED. Institutional records updated.`
+    });
+  };
+
+  const handleIssueQuery = (e) => {
+    if (e) e.preventDefault();
+    const updatedStatus = "REVISION_REQUIRED";
+    setVerificationStatus(updatedStatus);
+    const updatedRecord = {
+      ...record,
+      status: updatedStatus,
+      verificationStatus: updatedStatus,
+      verificationRemarks: queryInput || "Documentation clarification requested.",
+      queriedAt: new Date().toLocaleString()
+    };
+    setRecord(updatedRecord);
+    try {
+      sessionStorage.setItem(`gbs_detail_${category}_${id}`, JSON.stringify(updatedRecord));
+    } catch {}
+    setShowQueryModal(false);
+    setActionFeedback({
+      type: "warning",
+      message: `⚠️ Official Query / Revision Notice dispatched for #${id}: "${queryInput || "Documentation clarification requested."}"`
+    });
+  };
+
+  const handleComplianceEndorsement = () => {
+    const stamp = `STAMP-COMPLY-${Date.now().toString().slice(-6)}`;
+    const updatedRecord = {
+      ...record,
+      complianceStamp: stamp,
+      endorsedAt: new Date().toLocaleString()
+    };
+    setRecord(updatedRecord);
+    try {
+      sessionStorage.setItem(`gbs_detail_${category}_${id}`, JSON.stringify(updatedRecord));
+    } catch {}
+    setActionFeedback({
+      type: "success",
+      message: `⚖️ Compliance Seal ${stamp} stamped to permanent regulatory file.`
+    });
+  };
+
   // Active environment detection
   const [environment, setEnvironment] = useState(() => {
     try {
@@ -379,6 +448,242 @@ export default function UniversalDetailPage() {
                 </button>
               </div>
             </section>
+
+            {/* ACTION FEEDBACK ALERT */}
+            {actionFeedback && (
+              <div style={{
+                margin: "1rem 0",
+                padding: "12px 18px",
+                borderRadius: "10px",
+                background: actionFeedback.type === "success" ? "rgba(16, 185, 129, 0.2)" : "rgba(245, 158, 11, 0.2)",
+                border: `1.5px solid ${actionFeedback.type === "success" ? "#10b981" : "#f59e0b"}`,
+                color: actionFeedback.type === "success" ? "#34d399" : "#fde68a",
+                fontSize: "0.85rem",
+                fontWeight: 700,
+                display: "flex",
+                justifyContent: "space-between",
+                alignItems: "center"
+              }}>
+                <span>{actionFeedback.message}</span>
+                <button
+                  type="button"
+                  onClick={() => setActionFeedback(null)}
+                  style={{ background: "transparent", border: "none", color: "inherit", cursor: "pointer", fontWeight: 900 }}
+                >
+                  ✕
+                </button>
+              </div>
+            )}
+
+            {/* DEDICATED OFFICIAL VERIFICATION & AUDIT ACTIONS BAR */}
+            <section style={{
+              margin: "1rem 0 1.5rem",
+              padding: "16px 20px",
+              background: "linear-gradient(135deg, rgba(15, 23, 42, 0.98), rgba(30, 41, 59, 0.92))",
+              border: "2px solid rgba(56, 189, 248, 0.4)",
+              borderRadius: "14px",
+              boxShadow: "0 10px 30px rgba(0, 0, 0, 0.5)",
+              display: "flex",
+              justifyContent: "space-between",
+              alignItems: "center",
+              flexWrap: "wrap",
+              gap: "14px"
+            }}>
+              <div>
+                <div style={{ display: "flex", alignItems: "center", gap: "10px", marginBottom: "4px" }}>
+                  <span style={{ fontSize: "1.3rem" }}>⚖️</span>
+                  <h3 style={{ margin: 0, color: "#f8fafc", fontSize: "1.05rem", fontWeight: 800 }}>
+                    EXECUTIVE VERIFICATION & AUDIT CONTROLS
+                  </h3>
+                  <span style={{
+                    padding: "3px 10px",
+                    borderRadius: "12px",
+                    fontSize: "0.75rem",
+                    fontWeight: 800,
+                    background: verificationStatus === "VERIFIED_AND_APPROVED" || verificationStatus === "APPROVED"
+                      ? "rgba(16, 185, 129, 0.25)"
+                      : verificationStatus === "REVISION_REQUIRED"
+                      ? "rgba(239, 68, 68, 0.25)"
+                      : "rgba(245, 158, 11, 0.25)",
+                    color: verificationStatus === "VERIFIED_AND_APPROVED" || verificationStatus === "APPROVED"
+                      ? "#34d399"
+                      : verificationStatus === "REVISION_REQUIRED"
+                      ? "#f87171"
+                      : "#fbbf24",
+                    border: `1px solid ${verificationStatus === "VERIFIED_AND_APPROVED" || verificationStatus === "APPROVED" ? "#10b981" : verificationStatus === "REVISION_REQUIRED" ? "#ef4444" : "#f59e0b"}`
+                  }}>
+                    ● {verificationStatus}
+                  </span>
+                </div>
+                <span style={{ fontSize: "0.78rem", color: "#94a3b8" }}>
+                  Verifier: <strong style={{ color: "#38bdf8" }}>{record?.verifier || "Office of the Executive Headmaster / Chief System Developer"}</strong>
+                  {record?.verifiedAt && <span> • Timestamp: <strong style={{ color: "#cbd5e1" }}>{record.verifiedAt}</strong></span>}
+                </span>
+                {record?.complianceStamp && (
+                  <div style={{ fontSize: "0.74rem", color: "#c084fc", fontWeight: 700, marginTop: "2px" }}>
+                    ✓ Compliance Stamp: {record.complianceStamp}
+                  </div>
+                )}
+                {record?.verificationRemarks && (
+                  <div style={{ fontSize: "0.75rem", color: "#fca5a5", fontStyle: "italic", marginTop: "4px" }}>
+                    Query Note: "{record.verificationRemarks}"
+                  </div>
+                )}
+              </div>
+
+              <div style={{ display: "flex", gap: "8px", flexWrap: "wrap", alignItems: "center" }}>
+                <button
+                  type="button"
+                  onClick={handleVerifyAndApprove}
+                  style={{
+                    display: "inline-flex",
+                    alignItems: "center",
+                    gap: "6px",
+                    padding: "8px 18px",
+                    borderRadius: "8px",
+                    background: "linear-gradient(135deg, #10b981, #059669)",
+                    color: "#ffffff",
+                    fontWeight: 800,
+                    fontSize: "0.82rem",
+                    border: "none",
+                    cursor: "pointer",
+                    boxShadow: "0 4px 14px rgba(16, 185, 129, 0.4)"
+                  }}
+                  title="Officially verify and approve this dossier"
+                >
+                  ✅ Verify & Approve Dossier
+                </button>
+
+                <button
+                  type="button"
+                  onClick={() => setShowQueryModal(true)}
+                  style={{
+                    display: "inline-flex",
+                    alignItems: "center",
+                    gap: "6px",
+                    padding: "8px 16px",
+                    borderRadius: "8px",
+                    background: "rgba(245, 158, 11, 0.2)",
+                    color: "#fde68a",
+                    fontWeight: 800,
+                    fontSize: "0.82rem",
+                    border: "1px solid #f59e0b",
+                    cursor: "pointer"
+                  }}
+                  title="Issue clarification query or revision request"
+                >
+                  ⚠️ Issue Query / Revision
+                </button>
+
+                <button
+                  type="button"
+                  onClick={handleComplianceEndorsement}
+                  style={{
+                    display: "inline-flex",
+                    alignItems: "center",
+                    gap: "6px",
+                    padding: "8px 16px",
+                    borderRadius: "8px",
+                    background: "rgba(168, 85, 247, 0.2)",
+                    color: "#d8b4fe",
+                    fontWeight: 800,
+                    fontSize: "0.82rem",
+                    border: "1px solid #a855f7",
+                    cursor: "pointer"
+                  }}
+                  title="Apply administrative compliance seal"
+                >
+                  ⚖️ Compliance Endorsement
+                </button>
+
+                <button
+                  type="button"
+                  onClick={handleBack}
+                  style={{
+                    display: "inline-flex",
+                    alignItems: "center",
+                    gap: "6px",
+                    padding: "8px 14px",
+                    borderRadius: "8px",
+                    background: "rgba(30, 41, 59, 0.8)",
+                    color: "#cbd5e1",
+                    fontWeight: 700,
+                    fontSize: "0.82rem",
+                    border: "1px solid rgba(255, 255, 255, 0.2)",
+                    cursor: "pointer"
+                  }}
+                  title="Return to originating dashboard"
+                >
+                  ⬅ Back to Dashboard
+                </button>
+              </div>
+            </section>
+
+            {/* QUERY / REVISION PROMPT MODAL */}
+            {showQueryModal && (
+              <div style={{
+                position: "fixed",
+                inset: 0,
+                background: "rgba(0, 0, 0, 0.75)",
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "center",
+                zIndex: 9999,
+                padding: "20px"
+              }}>
+                <div style={{
+                  background: "rgba(15, 23, 42, 0.98)",
+                  border: "2px solid #f59e0b",
+                  borderRadius: "14px",
+                  padding: "24px",
+                  maxWidth: "520px",
+                  width: "100%",
+                  boxShadow: "0 20px 50px rgba(0, 0, 0, 0.8)"
+                }}>
+                  <h3 style={{ margin: "0 0 8px", color: "#fbbf24", display: "flex", alignItems: "center", gap: "8px" }}>
+                    <span>⚠️</span> Issue Official Verification Query / Revision
+                  </h3>
+                  <p style={{ margin: "0 0 14px", fontSize: "0.82rem", color: "#94a3b8", lineHeight: 1.5 }}>
+                    Specify the discrepancy, missing document, or correction required for <strong>{title}</strong> (#{id}).
+                  </p>
+                  <form onSubmit={handleIssueQuery}>
+                    <textarea
+                      rows={3}
+                      required
+                      value={queryInput}
+                      onChange={(e) => setQueryInput(e.target.value)}
+                      placeholder="e.g. Please re-upload verified WASSCE certificate and certified birth registry record..."
+                      style={{
+                        width: "100%",
+                        padding: "10px",
+                        borderRadius: "8px",
+                        background: "rgba(2, 6, 23, 0.85)",
+                        border: "1px solid rgba(255, 255, 255, 0.2)",
+                        color: "#f8fafc",
+                        fontSize: "0.85rem",
+                        marginBottom: "14px",
+                        lineHeight: 1.4
+                      }}
+                    />
+                    <div style={{ display: "flex", justifyContent: "flex-end", gap: "8px" }}>
+                      <button
+                        type="button"
+                        onClick={() => setShowQueryModal(false)}
+                        style={{ padding: "8px 14px", borderRadius: "6px", background: "rgba(30, 41, 59, 0.8)", color: "#cbd5e1", border: "1px solid rgba(255,255,255,0.2)", cursor: "pointer" }}
+                      >
+                        Cancel
+                      </button>
+                      <button
+                        type="submit"
+                        style={{ padding: "8px 18px", borderRadius: "6px", background: "linear-gradient(135deg, #f59e0b, #d97706)", color: "#ffffff", fontWeight: 800, border: "none", cursor: "pointer" }}
+                      >
+                        📤 Dispatch Query
+                      </button>
+                    </div>
+                  </form>
+                </div>
+              </div>
+            )}
 
             {/* KPI Metric Summary Row (Adaptive based on available fields) */}
             <div className="gbs-detail-kpi-grid">

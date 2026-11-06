@@ -10,6 +10,18 @@ import { clearFakeDataEntries } from "../../utils/freshSystemReset";
  *    Displays ONLY the registered tenant school name (e.g. "ST. AUGUSTINE INTERNATIONAL ACADEMY")
  *    at top center with increased font size. The main system name does NOT appear on user dashboards.
  */
+const DASHBOARDS_LIST = [
+  { path: "/onboarding", title: "Onboard School", icon: "🏫", tooltip: "Register educational institution / school", highlight: true },
+  { path: "/portal/admin/dashboard", title: "Headmaster Portal", icon: "🎓", tooltip: "Executive Leadership, Vetting, Admissions, CCTV" },
+  { path: "/portal/teacher/dashboard", title: "Teacher Portal", icon: "👨‍🏫", tooltip: "Attendance, Grading, Plans & Live Classes" },
+  { path: "/portal/student/dashboard", title: "Student Hub", icon: "🎒", tooltip: "Examinations, Peer Chat, Video Lessons & Schedule" },
+  { path: "/portal/parent/dashboard", title: "Parent Portal", icon: "👨‍👩‍👧", tooltip: "Ward Performance, Fees, Bus Tracking" },
+  { path: "/portal/accountant/dashboard", title: "Accountant Desk", icon: "💰", tooltip: "Fee Ledgers, Alumni Gifts & Procurement Audit" },
+  { path: "/portal/staff/dashboard", title: "Staff & HR", icon: "👔", tooltip: "Staff Directory, Appraisals, Campus Operations" },
+  { path: "/portal/alumni/dashboard", title: "Alumni Hub", icon: "🏛️", tooltip: "Alumni Pledges, Networking & Institutional Gifts" },
+  { path: "/developer-control-center/dashboard", title: "Developer Center", icon: "🛡️", tooltip: "Chief Developer Mission Control & Security Sentinel" }
+];
+
 export default function TopCenterSystemBanner({ 
   roleTitle = "Enterprise Workspace",
   institutionName = null,
@@ -180,6 +192,79 @@ export default function TopCenterSystemBanner({
         >
           {cleaned ? "✓ Cleared Fresh" : "🧹 Clear Test Data"}
         </button>
+      </div>
+
+      {/* DASHBOARD-TO-DASHBOARD WALKTHROUGH & INSTANT PORTAL SWITCHER */}
+      <div style={{
+        marginTop: "12px",
+        paddingTop: "10px",
+        borderTop: "1px solid rgba(255, 255, 255, 0.12)",
+        width: "100%",
+        display: "flex",
+        flexDirection: "column",
+        alignItems: "center",
+        gap: "6px"
+      }}>
+        <div style={{ display: "flex", alignItems: "center", gap: "8px", fontSize: "0.72rem", color: "#94a3b8", fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.5px" }}>
+          <span>🧭 Dashboard-to-Dashboard Portal Navigation & Walkthrough:</span>
+        </div>
+        <div style={{
+          display: "flex",
+          gap: "6px",
+          flexWrap: "wrap",
+          justifyContent: "center",
+          alignItems: "center"
+        }}>
+          {DASHBOARDS_LIST.map((dash) => {
+            const currentPath = typeof window !== "undefined" ? window.location.pathname : "";
+            const isActive = currentPath === dash.path;
+            return (
+              <button
+                key={dash.path}
+                type="button"
+                onClick={() => {
+                  if (dash.path === "/onboarding") {
+                    try {
+                      localStorage.removeItem("gbs_tenant_already_onboarded");
+                      localStorage.removeItem("gbs_walkthrough_completed");
+                    } catch {}
+                  }
+                  window.location.href = dash.path;
+                }}
+                style={{
+                  display: "inline-flex",
+                  alignItems: "center",
+                  gap: "5px",
+                  padding: "5px 11px",
+                  borderRadius: "18px",
+                  fontSize: "0.74rem",
+                  fontWeight: 800,
+                  cursor: "pointer",
+                  transition: "all 0.18s ease",
+                  border: isActive
+                    ? "1.5px solid #38bdf8"
+                    : dash.highlight
+                    ? "1.5px solid #10b981"
+                    : "1px solid rgba(255, 255, 255, 0.16)",
+                  background: isActive
+                    ? "linear-gradient(135deg, rgba(2, 132, 199, 0.45), rgba(56, 189, 248, 0.25))"
+                    : dash.highlight
+                    ? "linear-gradient(135deg, rgba(16, 185, 129, 0.28), rgba(5, 150, 105, 0.18))"
+                    : "rgba(15, 23, 42, 0.7)",
+                  color: isActive ? "#ffffff" : dash.highlight ? "#34d399" : "#cbd5e1",
+                  boxShadow: isActive ? "0 0 10px rgba(56, 189, 248, 0.4)" : "none"
+                }}
+                title={dash.tooltip}
+              >
+                <span>{dash.icon}</span>
+                <span>{dash.title}</span>
+                {isActive && (
+                  <span style={{ width: "6px", height: "6px", borderRadius: "50%", background: "#38bdf8", boxShadow: "0 0 6px #38bdf8" }} />
+                )}
+              </button>
+            );
+          })}
+        </div>
       </div>
     </div>
   );
