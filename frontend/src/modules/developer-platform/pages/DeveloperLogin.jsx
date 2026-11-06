@@ -18,17 +18,39 @@ export default function DeveloperLogin() {
   const triggerViolation = (attemptedEmail) => {
     const tenantName = localStorage.getItem("gbs_tenant_name") || "St. Augustine International Academy";
     const tenantCode = localStorage.getItem("gbs_tenant_code") || "GBS-MAIN";
+    const cleanAttemptEmail = (attemptedEmail || email.trim() || "unauthorized_staff@school.edu").toLowerCase();
     
-    const violation = {
-      id: `VIOLATION-${Date.now()}`,
-      attemptedEmail: attemptedEmail || email.trim() || "unauthorized_user",
+    // Update repeat trial intrusion tracking for registered staff
+    let trials = {};
+    try {
+      trials = JSON.parse(localStorage.getItem("gbs_dev_staff_intrusion_trials") || "{}");
+    } catch {}
+
+    const prevTrial = trials[cleanAttemptEmail] || {};
+    const trialCount = (prevTrial.trialCount || 0) + 1;
+    trials[cleanAttemptEmail] = {
+      email: cleanAttemptEmail,
+      staffName: prevTrial.staffName || `Staff Member (${cleanAttemptEmail.split('@')[0]})`,
       tenantName,
       tenantCode,
+      trialCount,
+      lastAttempt: new Date().toLocaleString(),
+      status: trialCount >= 3 ? "SUMMON_FOR_QUESTIONING" : "MONITORED_ATTEMPT",
+      notes: `Staff member recorded ${trialCount} unauthorized breach trial(s) against the Developer Platform.`
+    };
+    localStorage.setItem("gbs_dev_staff_intrusion_trials", JSON.stringify(trials));
+
+    const violation = {
+      id: `VIOLATION-${Date.now()}`,
+      attemptedEmail: cleanAttemptEmail,
+      tenantName,
+      tenantCode,
+      trialCount,
       timestamp: new Date().toISOString(),
       formattedTime: new Date().toLocaleTimeString(),
-      ipAddress: "192.168.1.104 (Local Network)",
-      status: "PENALTY_FLAGGED_NOTIFY_HEADMASTER",
-      message: "your institution will be notify with your details to your headmaster"
+      ipAddress: "192.168.1.104 (Local Network / School Campus)",
+      status: trialCount >= 3 ? "SUMMON_FOR_QUESTIONING" : "PENALTY_FLAGGED_NOTIFY_HEADMASTER",
+      message: `Repeated breach trial (${trialCount}) detected by registered staff. Your institution Headmaster and Chief Engineer have been alerted to summon and question you.`
     };
 
     const existingViolations = JSON.parse(localStorage.getItem("gbs_dev_security_violations") || "[]");
@@ -39,9 +61,10 @@ export default function DeveloperLogin() {
 
     setUnauthorizedWarningModal({
       isOpen: true,
-      attemptedEmail: attemptedEmail || email.trim() || "unauthorized_user",
+      attemptedEmail: cleanAttemptEmail,
       tenantName,
       tenantCode,
+      trialCount,
       reference: violation.id
     });
   };

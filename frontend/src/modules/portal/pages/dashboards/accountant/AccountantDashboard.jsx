@@ -386,6 +386,236 @@ export default function AccountantDashboard() {
     return [];
   });
 
+  // 🎓 Alumni Pledges & Philanthropic Gifts State
+  const [alumniPledges, setAlumniPledges] = useState(() => {
+    try {
+      const stored = JSON.parse(localStorage.getItem("gbs_alumni_pledges_and_gifts") || "[]");
+      if (Array.isArray(stored) && stored.length > 0) return stored;
+    } catch {}
+    return [
+      {
+        id: "ALM-PLG-001",
+        donorName: "Dr. Kwesi Appiah",
+        gradClass: "Class of 2008",
+        contact: "+233-24-490-1122",
+        email: "k.appiah@alumni.org",
+        campaign: "Advanced STEM Robotics & AI Innovation Lab",
+        pledgedAmount: 25000,
+        redeemedAmount: 25000,
+        fulfillmentStatus: "FULFILLED",
+        paymentMethod: "Stanbic Bank Wire",
+        date: "2026-10-15",
+        receiptRef: "GBS-ALM-REC-1084"
+      },
+      {
+        id: "ALM-PLG-002",
+        donorName: "Hon. Patricia Mensah",
+        gradClass: "Class of 2012",
+        contact: "+233-20-811-3344",
+        email: "p.mensah@parliament.gov.gh",
+        campaign: "Institutional Digital Library & E-Books Vault",
+        pledgedAmount: 15000,
+        redeemedAmount: 10000,
+        fulfillmentStatus: "PARTIALLY_FULFILLED",
+        paymentMethod: "MTN Mobile Money",
+        date: "2026-10-28",
+        receiptRef: "GBS-ALM-REC-1092"
+      },
+      {
+        id: "ALM-PLG-003",
+        donorName: "Michael B. Osei",
+        gradClass: "Class of 2015",
+        contact: "+233-55-772-9011",
+        email: "m.osei@venturecapital.io",
+        campaign: "Campus Sports Complex & Gymnasium Upgrades",
+        pledgedAmount: 10000,
+        redeemedAmount: 0,
+        fulfillmentStatus: "PLEDGED",
+        paymentMethod: "Pledged (Pending Call)",
+        date: "2026-11-02",
+        receiptRef: "GBS-ALM-REC-1105"
+      },
+      {
+        id: "ALM-PLG-004",
+        donorName: "Nana Ama Darko",
+        gradClass: "Class of 2005",
+        contact: "+233-27-665-4321",
+        email: "na.darko@globalhealth.org",
+        campaign: "Need-Based Girls in STEM Scholarship Endowment",
+        pledgedAmount: 50000,
+        redeemedAmount: 50000,
+        fulfillmentStatus: "FULFILLED",
+        paymentMethod: "Ecobank Direct Swift",
+        date: "2026-09-20",
+        receiptRef: "GBS-ALM-REC-1044"
+      }
+    ];
+  });
+
+  const [newAlumniPledgeForm, setNewAlumniPledgeForm] = useState({
+    donorName: "",
+    gradClass: "Class of 2010",
+    contact: "",
+    email: "",
+    campaign: "STEM Scholarship Endowment",
+    pledgedAmount: "",
+    redeemedAmount: "",
+    paymentMethod: "MTN Mobile Money"
+  });
+
+  const handleRecordAlumniPledge = (e) => {
+    e.preventDefault();
+    const pledged = parseFloat(newAlumniPledgeForm.pledgedAmount);
+    if (!pledged || pledged <= 0) {
+      setFeedback({ type: "error", message: "Please enter a valid pledged amount." });
+      return;
+    }
+    const redeemed = parseFloat(newAlumniPledgeForm.redeemedAmount || 0);
+    const status = redeemed >= pledged ? "FULFILLED" : redeemed > 0 ? "PARTIALLY_FULFILLED" : "PLEDGED";
+
+    const newRecord = {
+      id: `ALM-PLG-${Date.now().toString().slice(-4)}`,
+      donorName: newAlumniPledgeForm.donorName.trim(),
+      gradClass: newAlumniPledgeForm.gradClass.trim(),
+      contact: newAlumniPledgeForm.contact.trim(),
+      email: newAlumniPledgeForm.email.trim(),
+      campaign: newAlumniPledgeForm.campaign.trim(),
+      pledgedAmount: pledged,
+      redeemedAmount: redeemed,
+      fulfillmentStatus: status,
+      paymentMethod: newAlumniPledgeForm.paymentMethod,
+      date: new Date().toISOString().split("T")[0],
+      receiptRef: `GBS-ALM-REC-${Date.now().toString().slice(-4)}`
+    };
+
+    const updated = [newRecord, ...alumniPledges];
+    setAlumniPledges(updated);
+    try {
+      localStorage.setItem("gbs_alumni_pledges_and_gifts", JSON.stringify(updated));
+    } catch {}
+
+    setFeedback({
+      type: "success",
+      message: `🎉 Alumni gift from ${newRecord.donorName} recorded! Pledged: ${currencySymbol}${pledged.toLocaleString()} (Redeemed: ${currencySymbol}${redeemed.toLocaleString()}).`
+    });
+    setNewAlumniPledgeForm({
+      donorName: "",
+      gradClass: "Class of 2010",
+      contact: "",
+      email: "",
+      campaign: "STEM Scholarship Endowment",
+      pledgedAmount: "",
+      redeemedAmount: "",
+      paymentMethod: "MTN Mobile Money"
+    });
+  };
+
+  // 🏛️ Headmaster Purchases & Procurement Audit Ledger State
+  const [headmasterPurchases, setHeadmasterPurchases] = useState(() => {
+    try {
+      const stored = JSON.parse(localStorage.getItem("gbs_headmaster_procurement_ledger") || "[]");
+      if (Array.isArray(stored) && stored.length > 0) return stored;
+    } catch {}
+    return [
+      {
+        id: "PO-HM-2026-001",
+        itemDescription: "12x Advanced Compound Dual-Light Microscopes for Biology Lab",
+        category: "Laboratory Equipment & STEM Supplies",
+        amount: 18400,
+        vendor: "SciTech Educational Ghana Ltd",
+        authorizedBy: "Dr. Arthur Pendleton (Headmaster)",
+        status: "APPROVED_AND_AUDITED",
+        disbursementDate: "2026-10-12",
+        disbursementVoucher: "VCH-DISB-2026-088",
+        accountantAuditSeal: "AUDIT-CLEARED-HM-PURCHASE-01"
+      },
+      {
+        id: "PO-HM-2026-002",
+        itemDescription: "Campus Bus 03 Engine Overhaul & Braking System Replacement",
+        category: "Transport & Bus Fleet Maintenance",
+        amount: 9850,
+        vendor: "AutoMech Fleet Engineering Accra",
+        authorizedBy: "Dr. Arthur Pendleton (Headmaster)",
+        status: "APPROVED_AND_AUDITED",
+        disbursementDate: "2026-10-20",
+        disbursementVoucher: "VCH-DISB-2026-104",
+        accountantAuditSeal: "AUDIT-CLEARED-HM-PURCHASE-02"
+      },
+      {
+        id: "PO-HM-2026-003",
+        itemDescription: "Smart Interactive Touchboards for SHS 1 & SHS 2 Lecture Theatres",
+        category: "Classroom IT & Digital Infrastructure",
+        amount: 32000,
+        vendor: "Global Smart Classroom Systems",
+        authorizedBy: "Dr. Arthur Pendleton (Headmaster)",
+        status: "APPROVED_AND_AUDITED",
+        disbursementDate: "2026-11-01",
+        disbursementVoucher: "VCH-DISB-2026-119",
+        accountantAuditSeal: "AUDIT-CLEARED-HM-PURCHASE-03"
+      },
+      {
+        id: "PO-HM-2026-004",
+        itemDescription: "Term 1 Government-Approved Core Curricula Textbooks & Teacher Guides",
+        category: "Textbooks & Library Acquisitions",
+        amount: 14200,
+        vendor: "National Educational Publishers",
+        authorizedBy: "Dr. Arthur Pendleton (Headmaster)",
+        status: "APPROVED_AND_AUDITED",
+        disbursementDate: "2026-11-04",
+        disbursementVoucher: "VCH-DISB-2026-132",
+        accountantAuditSeal: "AUDIT-CLEARED-HM-PURCHASE-04"
+      }
+    ];
+  });
+
+  const [newHeadmasterPurchaseForm, setNewHeadmasterPurchaseForm] = useState({
+    itemDescription: "",
+    category: "Laboratory Equipment & STEM Supplies",
+    amount: "",
+    vendor: "",
+    authorizedBy: "Dr. Arthur Pendleton (Headmaster)"
+  });
+
+  const handleRecordHeadmasterPurchase = (e) => {
+    e.preventDefault();
+    const cost = parseFloat(newHeadmasterPurchaseForm.amount);
+    if (!cost || cost <= 0) {
+      setFeedback({ type: "error", message: "Please enter a valid purchase cost." });
+      return;
+    }
+
+    const newPurchase = {
+      id: `PO-HM-${Date.now().toString().slice(-4)}`,
+      itemDescription: newHeadmasterPurchaseForm.itemDescription.trim(),
+      category: newHeadmasterPurchaseForm.category,
+      amount: cost,
+      vendor: newHeadmasterPurchaseForm.vendor.trim() || "Institutional Supplier",
+      authorizedBy: "Dr. Arthur Pendleton (Headmaster)",
+      status: "APPROVED_AND_AUDITED",
+      disbursementDate: new Date().toISOString().split("T")[0],
+      disbursementVoucher: `VCH-DISB-${Date.now().toString().slice(-4)}`,
+      accountantAuditSeal: `AUDIT-CLEARED-HM-PURCHASE-${Date.now().toString().slice(-4)}`
+    };
+
+    const updated = [newPurchase, ...headmasterPurchases];
+    setHeadmasterPurchases(updated);
+    try {
+      localStorage.setItem("gbs_headmaster_procurement_ledger", JSON.stringify(updated));
+    } catch {}
+
+    setFeedback({
+      type: "success",
+      message: `🏛️ Headmaster purchase of ${currencySymbol}${cost.toLocaleString()} for "${newPurchase.itemDescription}" recorded and audited into the institutional general ledger!`
+    });
+    setNewHeadmasterPurchaseForm({
+      itemDescription: "",
+      category: "Laboratory Equipment & STEM Supplies",
+      amount: "",
+      vendor: "",
+      authorizedBy: "Dr. Arthur Pendleton (Headmaster)"
+    });
+  };
+
   // Seed / Live Payment Reconciliations (with MoMo & Bank, timestamps, and Reference format: [Student Name] - [Class] (Index Number))
   const [reconciledPayments, setReconciledPayments] = useState(() => {
     try {
@@ -1446,6 +1676,22 @@ export default function AccountantDashboard() {
               onClick={() => setActiveTab("statements")}
             >
               📊 Financial Statements & Audit Engine
+            </button>
+            <button 
+              type="button" 
+              className={`role-tab-btn ${activeTab === "alumni-gifts" ? "active" : ""}`}
+              onClick={() => setActiveTab("alumni-gifts")}
+              style={{ borderLeft: "3px solid #10b981", color: activeTab === "alumni-gifts" ? "#34d399" : undefined, fontWeight: 800 }}
+            >
+              🎓 Alumni Pledges & Philanthropic Gifts
+            </button>
+            <button 
+              type="button" 
+              className={`role-tab-btn ${activeTab === "headmaster-procurement" ? "active" : ""}`}
+              onClick={() => setActiveTab("headmaster-procurement")}
+              style={{ borderLeft: "3px solid #f59e0b", color: activeTab === "headmaster-procurement" ? "#fbbf24" : undefined, fontWeight: 800 }}
+            >
+              🏛️ Headmaster Purchases & Procurement Audit Ledger
             </button>
           </nav>
 
@@ -3330,6 +3576,417 @@ export default function AccountantDashboard() {
               </div>
             </div>
           )}
+
+          {/* ======================================================== */}
+          {/* TAB 7: ALUMNI PLEDGES & PHILANTHROPIC GIFTS LEDGER       */}
+          {/* ======================================================== */}
+          {activeTab === "alumni-gifts" && (() => {
+            const totalPledged = alumniPledges.reduce((sum, p) => sum + (parseFloat(p.pledgedAmount) || 0), 0);
+            const totalRedeemed = alumniPledges.reduce((sum, p) => sum + (parseFloat(p.redeemedAmount) || 0), 0);
+            const totalOutstanding = Math.max(0, totalPledged - totalRedeemed);
+            const fulfillmentRate = totalPledged > 0 ? Math.round((totalRedeemed / totalPledged) * 100) : 0;
+
+            return (
+              <div className="role-workspace-card">
+                <div className="workspace-title-row">
+                  <div>
+                    <h2><span>🎓</span> ALUMNI PLEDGES & PHILANTHROPIC ENDOWMENT LEDGER</h2>
+                    <p>Track alumni donations, capital campaign gifts, and endowment fulfillments reconciled directly into the school general account.</p>
+                  </div>
+                  <span className="role-portal-badge" style={{ color: "#34d399", background: "rgba(16, 185, 129, 0.15)", fontWeight: 800 }}>
+                    {alumniPledges.length} Registered Alumni Pledges & Gifts
+                  </span>
+                </div>
+
+                {/* Telemetry Cards */}
+                <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(220px, 1fr))", gap: "1rem", marginBottom: "1.75rem" }}>
+                  <div className="item-card">
+                    <span className="role-portal-badge" style={{ color: "#38bdf8" }}>Total Pledged Capital</span>
+                    <h2 style={{ margin: "4px 0", color: "#f8fafc" }}>{currencySymbol}{totalPledged.toLocaleString()}</h2>
+                    <p style={{ fontSize: "0.78rem", color: "#94a3b8" }}>Aggregated across all graduation cohorts.</p>
+                  </div>
+                  <div className="item-card">
+                    <span className="role-portal-badge" style={{ color: "#34d399" }}>Received in Bank / MoMo</span>
+                    <h2 style={{ margin: "4px 0", color: "#34d399" }}>{currencySymbol}{totalRedeemed.toLocaleString()}</h2>
+                    <p style={{ fontSize: "0.78rem", color: "#94a3b8" }}>Reconciled & cleared funds in school treasury.</p>
+                  </div>
+                  <div className="item-card">
+                    <span className="role-portal-badge" style={{ color: "#f59e0b" }}>Outstanding Pledges</span>
+                    <h2 style={{ margin: "4px 0", color: "#fbbf24" }}>{currencySymbol}{totalOutstanding.toLocaleString()}</h2>
+                    <p style={{ fontSize: "0.78rem", color: "#94a3b8" }}>Pending installment follow-ups.</p>
+                  </div>
+                  <div className="item-card">
+                    <span className="role-portal-badge" style={{ color: "#a855f7" }}>Fulfillment Rate</span>
+                    <h2 style={{ margin: "4px 0", color: "#c084fc" }}>{fulfillmentRate}%</h2>
+                    <p style={{ fontSize: "0.78rem", color: "#94a3b8" }}>Ratio of redeemed pledges to total commitments.</p>
+                  </div>
+                </div>
+
+                {/* Form to Record New Alumni Pledge / Gift */}
+                <form onSubmit={handleRecordAlumniPledge} style={{
+                  background: "linear-gradient(135deg, rgba(15, 23, 42, 0.9) 0%, rgba(30, 41, 59, 0.75) 100%)",
+                  border: "1.5px solid rgba(16, 185, 129, 0.35)",
+                  borderRadius: "14px",
+                  padding: "1.25rem",
+                  marginBottom: "2rem"
+                }}>
+                  <h4 style={{ margin: "0 0 1rem", color: "#34d399", fontSize: "1rem", display: "flex", alignItems: "center", gap: "8px" }}>
+                    <span>🎁</span> Record New Alumni Pledge or Philanthropic Gift
+                  </h4>
+
+                  <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(200px, 1fr))", gap: "12px", marginBottom: "12px" }}>
+                    <div>
+                      <label style={{ display: "block", fontSize: "0.75rem", color: "#94a3b8", marginBottom: "4px" }}>Donor / Alumnus Name *</label>
+                      <input
+                        type="text"
+                        required
+                        placeholder="e.g. Dr. Kwesi Appiah"
+                        className="filter-input"
+                        style={{ width: "100%" }}
+                        value={newAlumniPledgeForm.donorName}
+                        onChange={(e) => setNewAlumniPledgeForm({ ...newAlumniPledgeForm, donorName: e.target.value })}
+                      />
+                    </div>
+                    <div>
+                      <label style={{ display: "block", fontSize: "0.75rem", color: "#94a3b8", marginBottom: "4px" }}>Graduation Cohort / Year *</label>
+                      <input
+                        type="text"
+                        required
+                        placeholder="e.g. Class of 2012"
+                        className="filter-input"
+                        style={{ width: "100%" }}
+                        value={newAlumniPledgeForm.gradClass}
+                        onChange={(e) => setNewAlumniPledgeForm({ ...newAlumniPledgeForm, gradClass: e.target.value })}
+                      />
+                    </div>
+                    <div>
+                      <label style={{ display: "block", fontSize: "0.75rem", color: "#94a3b8", marginBottom: "4px" }}>Contact Phone / Mobile *</label>
+                      <input
+                        type="tel"
+                        required
+                        placeholder="e.g. +233 24 555 0199"
+                        className="filter-input"
+                        style={{ width: "100%" }}
+                        value={newAlumniPledgeForm.contact}
+                        onChange={(e) => setNewAlumniPledgeForm({ ...newAlumniPledgeForm, contact: e.target.value })}
+                      />
+                    </div>
+                    <div>
+                      <label style={{ display: "block", fontSize: "0.75rem", color: "#94a3b8", marginBottom: "4px" }}>Email Address</label>
+                      <input
+                        type="email"
+                        placeholder="e.g. alumnus@gmail.com"
+                        className="filter-input"
+                        style={{ width: "100%" }}
+                        value={newAlumniPledgeForm.email}
+                        onChange={(e) => setNewAlumniPledgeForm({ ...newAlumniPledgeForm, email: e.target.value })}
+                      />
+                    </div>
+                    <div>
+                      <label style={{ display: "block", fontSize: "0.75rem", color: "#94a3b8", marginBottom: "4px" }}>Campaign / Project Allocation *</label>
+                      <select
+                        className="filter-select"
+                        style={{ width: "100%" }}
+                        value={newAlumniPledgeForm.campaign}
+                        onChange={(e) => setNewAlumniPledgeForm({ ...newAlumniPledgeForm, campaign: e.target.value })}
+                      >
+                        <option value="STEM Scholarship Endowment">STEM Scholarship Endowment</option>
+                        <option value="Advanced Robotics & AI Lab">Advanced Robotics & AI Lab</option>
+                        <option value="Digital Library & E-Books Vault">Digital Library & E-Books Vault</option>
+                        <option value="Campus Sports Complex & Gymnasium">Campus Sports Complex & Gymnasium</option>
+                        <option value="General Institutional Endowment">General Institutional Endowment</option>
+                      </select>
+                    </div>
+                    <div>
+                      <label style={{ display: "block", fontSize: "0.75rem", color: "#94a3b8", marginBottom: "4px" }}>Total Pledged Amount ({currencySymbol}) *</label>
+                      <input
+                        type="number"
+                        required
+                        min="1"
+                        placeholder="e.g. 10000"
+                        className="filter-input"
+                        style={{ width: "100%", fontFamily: "monospace" }}
+                        value={newAlumniPledgeForm.pledgedAmount}
+                        onChange={(e) => setNewAlumniPledgeForm({ ...newAlumniPledgeForm, pledgedAmount: e.target.value })}
+                      />
+                    </div>
+                    <div>
+                      <label style={{ display: "block", fontSize: "0.75rem", color: "#94a3b8", marginBottom: "4px" }}>Amount Redeemed Now ({currencySymbol})</label>
+                      <input
+                        type="number"
+                        min="0"
+                        placeholder="e.g. 5000"
+                        className="filter-input"
+                        style={{ width: "100%", fontFamily: "monospace" }}
+                        value={newAlumniPledgeForm.redeemedAmount}
+                        onChange={(e) => setNewAlumniPledgeForm({ ...newAlumniPledgeForm, redeemedAmount: e.target.value })}
+                      />
+                    </div>
+                    <div>
+                      <label style={{ display: "block", fontSize: "0.75rem", color: "#94a3b8", marginBottom: "4px" }}>Payment Method / Channel</label>
+                      <select
+                        className="filter-select"
+                        style={{ width: "100%" }}
+                        value={newAlumniPledgeForm.paymentMethod}
+                        onChange={(e) => setNewAlumniPledgeForm({ ...newAlumniPledgeForm, paymentMethod: e.target.value })}
+                      >
+                        <option value="MTN Mobile Money">MTN Mobile Money</option>
+                        <option value="Stanbic Bank ACH Wire">Stanbic Bank Wire</option>
+                        <option value="Ecobank Swift Direct">Ecobank Swift Transfer</option>
+                        <option value="Telecel Cash">Telecel Cash</option>
+                        <option value="Pledged (Pending Settlement)">Pledged (Pending Settlement)</option>
+                      </select>
+                    </div>
+                  </div>
+
+                  <button
+                    type="submit"
+                    className="btn-primary"
+                    style={{ background: "linear-gradient(135deg, #10b981, #059669)", fontWeight: 800, padding: "10px 24px" }}
+                  >
+                    💾 Save & Record Alumni Gift
+                  </button>
+                </form>
+
+                {/* Table of Alumni Pledges */}
+                <div className="role-table-responsive">
+                  <table className="role-table">
+                    <thead>
+                      <tr>
+                        <th>Receipt #</th>
+                        <th>Donor & Class</th>
+                        <th>Campaign / Project</th>
+                        <th>Pledged Amount</th>
+                        <th>Redeemed Amount</th>
+                        <th>Outstanding</th>
+                        <th>Status</th>
+                        <th>Channel & Date</th>
+                        <th>Action</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {alumniPledges.map((p) => {
+                        const out = Math.max(0, p.pledgedAmount - p.redeemedAmount);
+                        return (
+                          <tr key={p.id}>
+                            <td style={{ fontFamily: "monospace", color: "#38bdf8", fontWeight: 700 }}>{p.receiptRef}</td>
+                            <td>
+                              <strong>{p.donorName}</strong>
+                              <span style={{ fontSize: "0.72rem", color: "#94a3b8", display: "block" }}>{p.gradClass} • {p.contact}</span>
+                            </td>
+                            <td style={{ color: "#c084fc", fontWeight: 600 }}>{p.campaign}</td>
+                            <td style={{ fontFamily: "monospace", fontWeight: 800 }}>{currencySymbol}{p.pledgedAmount.toLocaleString()}</td>
+                            <td style={{ fontFamily: "monospace", color: "#34d399", fontWeight: 800 }}>{currencySymbol}{p.redeemedAmount.toLocaleString()}</td>
+                            <td style={{ fontFamily: "monospace", color: out > 0 ? "#f87171" : "#94a3b8" }}>{currencySymbol}{out.toLocaleString()}</td>
+                            <td>
+                              <span className={`badge-status ${p.fulfillmentStatus === "FULFILLED" ? "badge-present" : p.fulfillmentStatus === "PARTIALLY_FULFILLED" ? "badge-late" : "badge-absent"}`}>
+                                {p.fulfillmentStatus === "FULFILLED" ? "✓ FULFILLED" : p.fulfillmentStatus === "PARTIALLY_FULFILLED" ? "⏳ PARTIAL" : "☐ PLEDGED"}
+                              </span>
+                            </td>
+                            <td style={{ fontSize: "0.78rem", color: "#cbd5e1" }}>
+                              <div>{p.paymentMethod}</div>
+                              <span style={{ fontSize: "0.7rem", color: "#64748b" }}>{p.date}</span>
+                            </td>
+                            <td>
+                              <button
+                                type="button"
+                                onClick={() => {
+                                  alert(`Official Philanthropic Donor Receipt\n--------------------------------\nDonor: ${p.donorName}\nCohort: ${p.gradClass}\nReceipt Ref: ${p.receiptRef}\nAmount: ${currencySymbol}${p.redeemedAmount.toLocaleString()}\nProject: ${p.campaign}\nStatus: Verified & Audited by GBS Chief Accountant`);
+                                }}
+                                style={{
+                                  background: "rgba(56, 189, 248, 0.15)",
+                                  border: "1px solid #38bdf8",
+                                  color: "#38bdf8",
+                                  borderRadius: "6px",
+                                  padding: "4px 8px",
+                                  fontSize: "0.72rem",
+                                  fontWeight: 700,
+                                  cursor: "pointer"
+                                }}
+                              >
+                                🖨️ Receipt
+                              </button>
+                            </td>
+                          </tr>
+                        );
+                      })}
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+            );
+          })()}
+
+          {/* ======================================================== */}
+          {/* TAB 8: HEADMASTER PURCHASES & PROCUREMENT AUDIT LEDGER   */}
+          {/* ======================================================== */}
+          {activeTab === "headmaster-procurement" && (() => {
+            const totalHeadmasterCost = headmasterPurchases.reduce((sum, item) => sum + (parseFloat(item.amount) || 0), 0);
+
+            return (
+              <div className="role-workspace-card">
+                <div className="workspace-title-row">
+                  <div>
+                    <h2><span>🏛️</span> HEADMASTER PURCHASES & PROCUREMENT AUDIT LEDGER</h2>
+                    <p>
+                      Statutory Audit Requirement: Every purchase, equipment requisition, and capital disbursement authorized by the
+                      Headmaster must be recorded by the Accountant for term-end and annual auditing.
+                    </p>
+                  </div>
+                  <span className="role-portal-badge" style={{ color: "#fbbf24", background: "rgba(245, 158, 11, 0.15)", fontWeight: 800 }}>
+                    {headmasterPurchases.length} Audited Headmaster Purchases
+                  </span>
+                </div>
+
+                {/* Audit Telemetry */}
+                <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(220px, 1fr))", gap: "1rem", marginBottom: "1.75rem" }}>
+                  <div className="item-card">
+                    <span className="role-portal-badge" style={{ color: "#fbbf24" }}>Total Authorized Purchases</span>
+                    <h2 style={{ margin: "4px 0", color: "#f8fafc" }}>{currencySymbol}{totalHeadmasterCost.toLocaleString()}</h2>
+                    <p style={{ fontSize: "0.78rem", color: "#94a3b8" }}>Cumulative Headmaster procurements this academic year.</p>
+                  </div>
+                  <div className="item-card">
+                    <span className="role-portal-badge" style={{ color: "#34d399" }}>Audited & Cleared</span>
+                    <h2 style={{ margin: "4px 0", color: "#34d399" }}>{headmasterPurchases.length} Orders (100%)</h2>
+                    <p style={{ fontSize: "0.78rem", color: "#94a3b8" }}>Reconciled against supplier invoices & bank vouchers.</p>
+                  </div>
+                  <div className="item-card">
+                    <span className="role-portal-badge" style={{ color: "#38bdf8" }}>Primary Approver</span>
+                    <h2 style={{ margin: "4px 0", color: "#38bdf8", fontSize: "1.3rem" }}>Dr. Arthur Pendleton</h2>
+                    <p style={{ fontSize: "0.78rem", color: "#94a3b8" }}>Headmaster & Institutional Executive.</p>
+                  </div>
+                </div>
+
+                {/* Record New Headmaster Purchase Form */}
+                <form onSubmit={handleRecordHeadmasterPurchase} style={{
+                  background: "linear-gradient(135deg, rgba(15, 23, 42, 0.9) 0%, rgba(30, 41, 59, 0.75) 100%)",
+                  border: "1.5px solid rgba(245, 158, 11, 0.35)",
+                  borderRadius: "14px",
+                  padding: "1.25rem",
+                  marginBottom: "2rem"
+                }}>
+                  <h4 style={{ margin: "0 0 1rem", color: "#fbbf24", fontSize: "1rem", display: "flex", alignItems: "center", gap: "8px" }}>
+                    <span>🏛️</span> Record & Audit New Headmaster Institutional Purchase
+                  </h4>
+
+                  <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(200px, 1fr))", gap: "12px", marginBottom: "12px" }}>
+                    <div style={{ gridColumn: "1 / -1" }}>
+                      <label style={{ display: "block", fontSize: "0.75rem", color: "#94a3b8", marginBottom: "4px" }}>Item Description & Purpose *</label>
+                      <input
+                        type="text"
+                        required
+                        placeholder="e.g. 10x Dell Core i7 Desktop Workstations for Level 200 Computer Science Lab"
+                        className="filter-input"
+                        style={{ width: "100%" }}
+                        value={newHeadmasterPurchaseForm.itemDescription}
+                        onChange={(e) => setNewHeadmasterPurchaseForm({ ...newHeadmasterPurchaseForm, itemDescription: e.target.value })}
+                      />
+                    </div>
+                    <div>
+                      <label style={{ display: "block", fontSize: "0.75rem", color: "#94a3b8", marginBottom: "4px" }}>Procurement Category *</label>
+                      <select
+                        className="filter-select"
+                        style={{ width: "100%" }}
+                        value={newHeadmasterPurchaseForm.category}
+                        onChange={(e) => setNewHeadmasterPurchaseForm({ ...newHeadmasterPurchaseForm, category: e.target.value })}
+                      >
+                        <option value="Laboratory Equipment & STEM Supplies">Laboratory Equipment & STEM Supplies</option>
+                        <option value="Classroom IT & Digital Infrastructure">Classroom IT & Digital Infrastructure</option>
+                        <option value="Transport & Bus Fleet Maintenance">Transport & Bus Fleet Maintenance</option>
+                        <option value="Textbooks & Library Acquisitions">Textbooks & Library Acquisitions</option>
+                        <option value="Campus Facilities & Building Maintenance">Campus Facilities & Building Maintenance</option>
+                      </select>
+                    </div>
+                    <div>
+                      <label style={{ display: "block", fontSize: "0.75rem", color: "#94a3b8", marginBottom: "4px" }}>Disbursement Amount ({currencySymbol}) *</label>
+                      <input
+                        type="number"
+                        required
+                        min="1"
+                        placeholder="e.g. 15000"
+                        className="filter-input"
+                        style={{ width: "100%", fontFamily: "monospace" }}
+                        value={newHeadmasterPurchaseForm.amount}
+                        onChange={(e) => setNewHeadmasterPurchaseForm({ ...newHeadmasterPurchaseForm, amount: e.target.value })}
+                      />
+                    </div>
+                    <div>
+                      <label style={{ display: "block", fontSize: "0.75rem", color: "#94a3b8", marginBottom: "4px" }}>Supplier / Vendor Name *</label>
+                      <input
+                        type="text"
+                        required
+                        placeholder="e.g. SciTech Ghana Ltd"
+                        className="filter-input"
+                        style={{ width: "100%" }}
+                        value={newHeadmasterPurchaseForm.vendor}
+                        onChange={(e) => setNewHeadmasterPurchaseForm({ ...newHeadmasterPurchaseForm, vendor: e.target.value })}
+                      />
+                    </div>
+                    <div>
+                      <label style={{ display: "block", fontSize: "0.75rem", color: "#94a3b8", marginBottom: "4px" }}>Authorized Signatory</label>
+                      <input
+                        type="text"
+                        disabled
+                        value="Dr. Arthur Pendleton (Headmaster)"
+                        className="filter-input"
+                        style={{ width: "100%", opacity: 0.8 }}
+                      />
+                    </div>
+                  </div>
+
+                  <button
+                    type="submit"
+                    className="btn-primary"
+                    style={{ background: "linear-gradient(135deg, #d97706, #f59e0b)", color: "#0f172a", fontWeight: 800, padding: "10px 24px" }}
+                  >
+                    🏛️ Record & Seal Headmaster Procurement Order
+                  </button>
+                </form>
+
+                {/* Audit Table */}
+                <div className="role-table-responsive">
+                  <table className="role-table">
+                    <thead>
+                      <tr>
+                        <th>Purchase Order #</th>
+                        <th>Item Description & Scope</th>
+                        <th>Category</th>
+                        <th>Vendor / Supplier</th>
+                        <th>Cost</th>
+                        <th>Authorized By</th>
+                        <th>Voucher & Seal</th>
+                        <th>Audit Status</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {headmasterPurchases.map((item) => (
+                        <tr key={item.id}>
+                          <td style={{ fontFamily: "monospace", color: "#fbbf24", fontWeight: 700 }}>{item.id}</td>
+                          <td>
+                            <strong>{item.itemDescription}</strong>
+                            <span style={{ fontSize: "0.72rem", color: "#94a3b8", display: "block" }}>Date: {item.disbursementDate}</span>
+                          </td>
+                          <td style={{ color: "#38bdf8", fontSize: "0.82rem" }}>{item.category}</td>
+                          <td style={{ fontWeight: 600 }}>{item.vendor}</td>
+                          <td style={{ fontFamily: "monospace", fontWeight: 800, color: "#f8fafc" }}>
+                            {currencySymbol}{item.amount.toLocaleString()}
+                          </td>
+                          <td style={{ fontSize: "0.82rem", color: "#cbd5e1" }}>{item.authorizedBy}</td>
+                          <td style={{ fontSize: "0.72rem", fontFamily: "monospace" }}>
+                            <div style={{ color: "#f472b6" }}>{item.disbursementVoucher}</div>
+                            <div style={{ color: "#34d399" }}>{item.accountantAuditSeal}</div>
+                          </td>
+                          <td>
+                            <span className="badge-status badge-present">✓ AUDITED</span>
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+            );
+          })()}
         </main>
       </div>
 

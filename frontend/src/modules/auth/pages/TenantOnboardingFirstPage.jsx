@@ -5,6 +5,39 @@ import BiometricFaceScannerModal from "../components/BiometricFaceScannerModal";
 import { getOnboardingRates } from "../../../utils/pricingEngine";
 import "./TenantOnboardingFirstPage.css";
 
+// 25+ Global Country Codes with Flags and Regional Identifiers
+const GLOBAL_COUNTRIES = [
+  { name: "Ghana", code: "+233", flag: "🇬🇭" },
+  { name: "Nigeria", code: "+234", flag: "🇳🇬" },
+  { name: "Kenya", code: "+254", flag: "🇰🇪" },
+  { name: "South Africa", code: "+27", flag: "🇿🇦" },
+  { name: "Uganda", code: "+256", flag: "🇺🇬" },
+  { name: "United Kingdom", code: "+44", flag: "🇬🇧" },
+  { name: "United States", code: "+1", flag: "🇺🇸" },
+  { name: "Canada", code: "+1", flag: "🇨🇦" },
+  { name: "Germany", code: "+49", flag: "🇩🇪" },
+  { name: "United Arab Emirates", code: "+971", flag: "🇦🇪" },
+  { name: "India", code: "+91", flag: "🇮🇳" },
+  { name: "China", code: "+86", flag: "🇨🇳" },
+  { name: "France", code: "+33", flag: "🇫🇷" },
+  { name: "Italy", code: "+39", flag: "🇮🇹" },
+  { name: "Spain", code: "+34", flag: "🇪🇸" },
+  { name: "Australia", code: "+61", flag: "🇦🇺" },
+  { name: "Rwanda", code: "+250", flag: "🇷🇼" },
+  { name: "Tanzania", code: "+255", flag: "🇹🇿" },
+  { name: "Côte d'Ivoire", code: "+225", flag: "🇨🇮" },
+  { name: "Senegal", code: "+221", flag: "🇸🇳" },
+  { name: "Egypt", code: "+20", flag: "🇪🇬" },
+  { name: "Saudi Arabia", code: "+966", flag: "🇸🇦" },
+  { name: "Brazil", code: "+55", flag: "🇧🇷" },
+  { name: "Japan", code: "+81", flag: "🇯🇵" },
+  { name: "South Korea", code: "+82", flag: "🇰🇷" },
+  { name: "Netherlands", code: "+31", flag: "🇳🇱" },
+  { name: "Switzerland", code: "+41", flag: "🇨🇭" },
+  { name: "Zambia", code: "+260", flag: "🇿🇲" },
+  { name: "Zimbabwe", code: "+263", flag: "🇿🇼" }
+];
+
 // Global Carrier Detector
 const detectCarrier = (phone, countryCode) => {
   if (!phone) return null;
@@ -13,23 +46,33 @@ const detectCarrier = (phone, countryCode) => {
   if (countryCode === "+233" || clean.startsWith("233")) {
     const local = clean.startsWith("233") ? clean.slice(3) : clean;
     if (/^(0?24|0?54|0?55|0?59|0?53)/.test(local)) {
-      return { name: "MTN Ghana", code: "MTN", class: "carrier-mtn", icon: "🟡" };
+      return { name: "MTN Ghana (4G/5G Network)", code: "MTN", class: "carrier-mtn", icon: "🟡" };
     }
     if (/^(0?20|0?50)/.test(local)) {
-      return { name: "Telecel (Vodafone)", code: "TELECEL", class: "carrier-telecel", icon: "🔴" };
+      return { name: "Telecel (Vodafone Ghana)", code: "TELECEL", class: "carrier-telecel", icon: "🔴" };
     }
     if (/^(0?27|0?57|0?26|0?56)/.test(local)) {
-      return { name: "AirtelTigo", code: "AIRTEL", class: "carrier-airtel", icon: "🔵" };
+      return { name: "AirtelTigo (AT Ghana)", code: "AIRTEL", class: "carrier-airtel", icon: "🔵" };
     }
     return { name: "Ghana Telecom Network", code: "GH_NET", class: "carrier-global", icon: "🇬🇭" };
   }
 
   if (countryCode === "+1" || clean.startsWith("1")) {
-    return { name: "North American Carrier (AT&T / T-Mobile / Verizon)", code: "USA_CAN", class: "carrier-global", icon: "🇺🇸" };
+    return { name: "North American Carrier (AT&T / T-Mobile / Verizon / Bell)", code: "USA_CAN", class: "carrier-global", icon: "🇺🇸" };
   }
-  if (countryCode === "+44") return { name: "UK Mobile (EE / Vodafone / O2)", code: "UK", class: "carrier-global", icon: "🇬🇧" };
+  if (countryCode === "+44") return { name: "UK Cellular (EE / Vodafone / O2 / Three)", code: "UK", class: "carrier-global", icon: "🇬🇧" };
   if (countryCode === "+234") return { name: "Nigeria (MTN / Airtel / Glo / 9mobile)", code: "NG", class: "carrier-global", icon: "🇳🇬" };
-  if (countryCode === "+254") return { name: "Kenya (Safaricom / Airtel)", code: "KE", class: "carrier-global", icon: "🇰🇪" };
+  if (countryCode === "+254") return { name: "Kenya (Safaricom / Airtel / Telkom)", code: "KE", class: "carrier-global", icon: "🇰🇪" };
+  if (countryCode === "+27") return { name: "South Africa (Vodacom / MTN / Cell C)", code: "ZA", class: "carrier-global", icon: "🇿🇦" };
+  if (countryCode === "+49") return { name: "Germany (Telekom / Vodafone / O2)", code: "DE", class: "carrier-global", icon: "🇩🇪" };
+  if (countryCode === "+971") return { name: "UAE (e& Etisalat / du Telecom)", code: "AE", class: "carrier-global", icon: "🇦🇪" };
+  if (countryCode === "+91") return { name: "India (Jio / Airtel / Vi)", code: "IN", class: "carrier-global", icon: "🇮🇳" };
+  if (countryCode === "+86") return { name: "China (China Mobile / Telecom / Unicom)", code: "CN", class: "carrier-global", icon: "🇨🇳" };
+
+  const matched = GLOBAL_COUNTRIES.find(c => c.code === countryCode);
+  if (matched) {
+    return { name: `${matched.name} National Cellular Network`, code: matched.code, class: "carrier-global", icon: matched.flag };
+  }
 
   return { name: "International Global Cellular Network", code: "INTL", class: "carrier-global", icon: "🌐" };
 };
@@ -542,25 +585,17 @@ export default function TenantOnboardingFirstPage() {
                   value={form.country}
                   onChange={(e) => {
                     const country = e.target.value;
-                    let code = "+233";
-                    if (country === "United States" || country === "Canada") code = "+1";
-                    else if (country === "United Kingdom") code = "+44";
-                    else if (country === "Nigeria") code = "+234";
-                    else if (country === "Kenya") code = "+254";
-                    else if (country === "South Africa") code = "+27";
-                    else if (country === "Uganda") code = "+256";
+                    const matched = GLOBAL_COUNTRIES.find((c) => c.name === country);
+                    const code = matched ? matched.code : "+233";
                     setForm((prev) => ({ ...prev, country, countryCode: code }));
                   }}
                   required
                 >
-                  <option value="Ghana">🇬🇭 Ghana (+233)</option>
-                  <option value="United States">🇺🇸 United States (+1)</option>
-                  <option value="Canada">🇨🇦 Canada (+1)</option>
-                  <option value="United Kingdom">🇬🇧 United Kingdom (+44)</option>
-                  <option value="Nigeria">🇳🇬 Nigeria (+234)</option>
-                  <option value="Kenya">🇰🇪 Kenya (+254)</option>
-                  <option value="South Africa">🇿🇦 South Africa (+27)</option>
-                  <option value="Uganda">🇺🇬 Uganda (+256)</option>
+                  {GLOBAL_COUNTRIES.map((c) => (
+                    <option key={c.name} value={c.name}>
+                      {c.flag} {c.name} ({c.code})
+                    </option>
+                  ))}
                 </select>
               </div>
 
@@ -615,9 +650,26 @@ export default function TenantOnboardingFirstPage() {
                   Official Institution Phone & Carrier Link
                 </label>
                 <div className="gbs-phone-input-wrap">
-                  <span className="gbs-country-code-select" style={{ display: "flex", alignItems: "center", justifyContent: "center" }}>
-                    {form.countryCode}
-                  </span>
+                  <select
+                    className="gbs-country-code-select"
+                    value={form.countryCode}
+                    onChange={(e) => {
+                      const code = e.target.value;
+                      const matched = GLOBAL_COUNTRIES.find((c) => c.code === code);
+                      setForm((prev) => ({
+                        ...prev,
+                        countryCode: code,
+                        country: matched ? matched.name : prev.country
+                      }));
+                    }}
+                    style={{ minWidth: "115px", cursor: "pointer", background: "rgba(15, 23, 42, 0.8)", color: "#f8fafc", border: "1px solid rgba(255,255,255,0.2)", borderRadius: "8px 0 0 8px", padding: "0 8px" }}
+                  >
+                    {GLOBAL_COUNTRIES.map((c) => (
+                      <option key={`off-${c.name}-${c.code}`} value={c.code}>
+                        {c.flag} {c.code}
+                      </option>
+                    ))}
+                  </select>
                   <input
                     type="tel"
                     name="officialPhone"
@@ -727,9 +779,26 @@ export default function TenantOnboardingFirstPage() {
                   Headmaster Direct Mobile (For OTP & SMS Notifications) <span className="req">*</span>
                 </label>
                 <div className="gbs-phone-input-wrap">
-                  <span className="gbs-country-code-select" style={{ display: "flex", alignItems: "center", justifyContent: "center" }}>
-                    {form.countryCode}
-                  </span>
+                  <select
+                    className="gbs-country-code-select"
+                    value={form.countryCode}
+                    onChange={(e) => {
+                      const code = e.target.value;
+                      const matched = GLOBAL_COUNTRIES.find((c) => c.code === code);
+                      setForm((prev) => ({
+                        ...prev,
+                        countryCode: code,
+                        country: matched ? matched.name : prev.country
+                      }));
+                    }}
+                    style={{ minWidth: "115px", cursor: "pointer", background: "rgba(15, 23, 42, 0.8)", color: "#f8fafc", border: "1px solid rgba(255,255,255,0.2)", borderRadius: "8px 0 0 8px", padding: "0 8px" }}
+                  >
+                    {GLOBAL_COUNTRIES.map((c) => (
+                      <option key={`adm-${c.name}-${c.code}`} value={c.code}>
+                        {c.flag} {c.code}
+                      </option>
+                    ))}
+                  </select>
                   <input
                     type="tel"
                     name="adminPhone"

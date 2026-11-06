@@ -1761,12 +1761,29 @@ export default function ParentDashboard() {
               </div>
 
               <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(240px, 1fr))", gap: "1rem" }}>
-                <div className="item-card">
-                  <span className="role-portal-badge" style={{ color: "#34d399" }}>Enrolled Student</span>
-                  <h3 style={{ margin: "4px 0" }}>{selectedChild.firstName} {selectedChild.lastName}</h3>
-                  <p style={{ fontSize: "0.85rem", color: "#94a3b8" }}>Class: <strong>{selectedChild.grade || "Grade 10-A"}</strong></p>
-                  <p style={{ fontSize: "0.85rem", color: "#94a3b8" }}>Student Email: <strong>{selectedChild.email}</strong></p>
-                  <p style={{ fontSize: "0.85rem", color: "#94a3b8" }}>Current Status: <strong style={{ color: "#10b981" }}>GOOD STANDING</strong></p>
+                <div className="item-card" style={{ display: "flex", gap: "16px", alignItems: "center" }}>
+                  <div style={{
+                    width: "84px",
+                    height: "84px",
+                    borderRadius: "12px",
+                    overflow: "hidden",
+                    border: "2px solid #a855f7",
+                    flexShrink: 0,
+                    boxShadow: "0 0 15px rgba(168, 85, 247, 0.35)"
+                  }}>
+                    <img
+                      src={selectedChild.photo || localStorage.getItem("gbs_student_avatar") || "https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=200&h=200&fit=crop"}
+                      alt={`${selectedChild.firstName} ${selectedChild.lastName}`}
+                      style={{ width: "100%", height: "100%", objectFit: "cover" }}
+                    />
+                  </div>
+                  <div>
+                    <span className="role-portal-badge" style={{ color: "#34d399" }}>Enrolled Student (Verified Photo)</span>
+                    <h3 style={{ margin: "4px 0" }}>{selectedChild.firstName} {selectedChild.lastName}</h3>
+                    <p style={{ fontSize: "0.85rem", color: "#94a3b8", margin: "2px 0" }}>Class: <strong>{selectedChild.grade || "Grade 10-A"}</strong></p>
+                    <p style={{ fontSize: "0.85rem", color: "#94a3b8", margin: "2px 0" }}>Student ID: <strong style={{ color: "#38bdf8", fontFamily: "monospace" }}>{selectedChild.studentId || "STU-2026-001"}</strong></p>
+                    <p style={{ fontSize: "0.85rem", color: "#94a3b8", margin: "2px 0" }}>Current Status: <strong style={{ color: "#10b981" }}>GOOD STANDING (UNIFORM VERIFIED)</strong></p>
+                  </div>
                 </div>
 
                 <div className="item-card">

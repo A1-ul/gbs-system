@@ -31,17 +31,17 @@ export default function TeacherLogin() {
 
   return (
     <div className="role-login-container">
-      <div 
-        className="role-login-bg" 
+      <div
+        className="role-login-bg"
         style={{ backgroundImage: `url('/images/teacher_login_bg.jpg')` }}
       ></div>
       <div className="role-login-overlay"></div>
       <div className="role-login-card">
         <div className="role-login-crest-box">
-          <img 
-            src="/assets/gbs_crest_badge.jpg" 
-            alt="GBS Crest" 
-            className="role-login-crest-logo" 
+          <img
+            src="/assets/gbs_crest_badge.jpg"
+            alt="GBS Crest"
+            className="role-login-crest-logo"
           />
           <span className="role-login-brand-name">GBS SCHOOL MANAGEMENT SYSTEM</span>
         </div>
@@ -71,25 +71,25 @@ export default function TeacherLogin() {
           </div>
           <div className="form-group">
             <label htmlFor="teacher-email">Teacher Email / Staff ID</label>
-            <input 
-              id="teacher-email" 
-              type="text" 
-              required 
-              placeholder="e.g. teacher@gbs.com or teacher1" 
-              value={email} 
-              onChange={(e) => setEmail(e.target.value)} 
+            <input
+              id="teacher-email"
+              type="text"
+              required
+              placeholder="e.g. teacher@gbs.com or teacher1"
+              value={email}
+              onChange={(e) => setEmail(e.target.value)}
             />
           </div>
           <div className="form-group">
             <label htmlFor="teacher-password">Account Password</label>
             <div style={{ position: "relative", display: "flex", alignItems: "center" }}>
-              <input 
-                id="teacher-password" 
-                type={showPassword ? "text" : "password"} 
-                required 
-                placeholder="Enter password" 
-                value={password} 
-                onChange={(e) => setPassword(e.target.value)} 
+              <input
+                id="teacher-password"
+                type={showPassword ? "text" : "password"}
+                required
+                placeholder="Enter password"
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
                 style={{ width: "100%", paddingRight: "42px" }}
               />
               <button

@@ -20,7 +20,7 @@ export default function DeveloperDashboard() {
     let devProfile = null;
     try {
       devProfile = JSON.parse(localStorage.getItem("gbs_developer") || "null");
-    } catch {}
+    } catch { }
 
     const isAuthorized = devToken && devProfile && devProfile.email && devProfile.email.toLowerCase() === "gabosei48@gmail.com";
     if (!isAuthorized) {
@@ -37,7 +37,7 @@ export default function DeveloperDashboard() {
       if (tabParam) return tabParam;
       const stored = sessionStorage.getItem("gbs_dev_active_tab");
       if (stored) return stored;
-    } catch {}
+    } catch { }
     return "telemetry";
   });
 
@@ -50,7 +50,7 @@ export default function DeveloperDashboard() {
         url.searchParams.set("tab", activeTab);
         window.history.pushState({ tab: activeTab }, "", url.toString());
       }
-    } catch {}
+    } catch { }
   }, [activeTab]);
 
   useEffect(() => {
@@ -63,18 +63,18 @@ export default function DeveloperDashboard() {
         if (savedScroll) {
           setTimeout(() => window.scrollTo(0, parseInt(savedScroll, 10)), 100);
         }
-      } catch {}
+      } catch { }
     };
 
     const handleScroll = () => {
       try {
         sessionStorage.setItem("gbs_dev_scroll_pos", String(window.scrollY));
-      } catch {}
+      } catch { }
     };
 
     window.addEventListener("popstate", handlePopState);
     window.addEventListener("scroll", handleScroll, { passive: true });
-    
+
     // Initial scroll restore
     const savedScroll = sessionStorage.getItem("gbs_dev_scroll_pos");
     if (savedScroll) {
@@ -135,7 +135,7 @@ export default function DeveloperDashboard() {
     try {
       const stored = localStorage.getItem("gbs_tenant_lock_overrides");
       if (stored) return JSON.parse(stored);
-    } catch {}
+    } catch { }
     return {};
   });
 
@@ -144,7 +144,7 @@ export default function DeveloperDashboard() {
     try {
       const stored = localStorage.getItem("gbs_dev_headmaster_messages");
       if (stored) return JSON.parse(stored);
-    } catch {}
+    } catch { }
     return [];
   });
 
@@ -154,7 +154,7 @@ export default function DeveloperDashboard() {
       try {
         const stored = localStorage.getItem("gbs_dev_headmaster_messages");
         if (stored) setHeadmasterMessages(JSON.parse(stored));
-      } catch {}
+      } catch { }
     };
     window.addEventListener("gbs_dev_headmaster_message_dispatched", syncHeadmasterMessages);
     window.addEventListener("storage", syncHeadmasterMessages);
@@ -297,7 +297,7 @@ export default function DeveloperDashboard() {
         )
       );
       fetchData();
-    } catch {}
+    } catch { }
     showNotification(`✓ Status changed completely to ${targetStatus} for ${selectedTenants.length} selected institution(s).`);
   };
 
@@ -330,7 +330,7 @@ export default function DeveloperDashboard() {
         )
       );
       fetchData();
-    } catch {}
+    } catch { }
     showNotification(`✓ Status changed completely to ${targetStatus} for all ${unselectedList.length} unselected institution(s).`);
   };
 
@@ -339,17 +339,49 @@ export default function DeveloperDashboard() {
     try {
       const stored = localStorage.getItem("gbs_dev_security_violations");
       if (stored) return JSON.parse(stored);
-    } catch {}
+    } catch { }
     return [];
   });
   const [securityIntrusionFilter, setSecurityIntrusionFilter] = useState("ALL"); // "ALL" | "IMPLICATED" | "TRANSMITTED"
+
+  // Registered Staff Developer Breach Tracker & Repeat Trials Watchlist
+  const [staffBreachTrials, setStaffBreachTrials] = useState(() => {
+    try {
+      const stored = localStorage.getItem("gbs_dev_staff_intrusion_trials");
+      if (stored) return JSON.parse(stored);
+    } catch { }
+    return {
+      "mr.kofi.physics@staugustine.edu": {
+        email: "mr.kofi.physics@staugustine.edu",
+        staffName: "Kofi Owusu-Ansah (Senior Physics Tutor)",
+        tenantName: "St. Augustine Science Academy",
+        tenantCode: "GBS-ROYALOAK",
+        trialCount: 4,
+        lastAttempt: new Date(Date.now() - 3600000).toLocaleString(),
+        status: "SUMMON_FOR_QUESTIONING",
+        notes: "Repeatedly attempted to probe developer control center credentials during exam week."
+      },
+      "accounts.sarah@accracityschool.edu": {
+        email: "accounts.sarah@accracityschool.edu",
+        staffName: "Sarah Addo (Assistant Bursar)",
+        tenantName: "Accra City Model College",
+        tenantCode: "GBS-ACCRA01",
+        trialCount: 2,
+        lastAttempt: new Date(Date.now() - 7200000).toLocaleString(),
+        status: "MONITORED_ATTEMPT",
+        notes: "Trial breach intercepted at developer login gateway."
+      }
+    };
+  });
 
   useEffect(() => {
     const syncViolations = () => {
       try {
         const stored = localStorage.getItem("gbs_dev_security_violations");
         if (stored) setSecurityViolations(JSON.parse(stored));
-      } catch {}
+        const storedTrials = localStorage.getItem("gbs_dev_staff_intrusion_trials");
+        if (storedTrials) setStaffBreachTrials(JSON.parse(storedTrials));
+      } catch { }
     };
     window.addEventListener("gbs_dev_intrusion_alert", syncViolations);
     window.addEventListener("storage", syncViolations);
@@ -358,6 +390,44 @@ export default function DeveloperDashboard() {
       window.removeEventListener("storage", syncViolations);
     };
   }, []);
+
+  const handleSummonStaffMember = (staffEmail) => {
+    const record = staffBreachTrials[staffEmail] || {};
+    showNotification(`⚖️ Formal Executive Summons dispatched to ${staffEmail} and Headmaster of ${record.tenantName || "Institution"} for questioning.`);
+    const updated = {
+      ...staffBreachTrials,
+      [staffEmail]: {
+        ...record,
+        status: "OFFICIAL_SUMMONS_DISPATCHED",
+        summonsSentAt: new Date().toLocaleString()
+      }
+    };
+    setStaffBreachTrials(updated);
+    localStorage.setItem("gbs_dev_staff_intrusion_trials", JSON.stringify(updated));
+  };
+
+  const handleIssueBreachWarning = (staffEmail) => {
+    const record = staffBreachTrials[staffEmail] || {};
+    showNotification(`⚠️ Formal Breach Sanction Warning issued to ${staffEmail}. Logged in Regulatory Audit.`);
+    const updated = {
+      ...staffBreachTrials,
+      [staffEmail]: {
+        ...record,
+        status: "FORMAL_SANCTION_RECORDED",
+        warningSentAt: new Date().toLocaleString()
+      }
+    };
+    setStaffBreachTrials(updated);
+    localStorage.setItem("gbs_dev_staff_intrusion_trials", JSON.stringify(updated));
+  };
+
+  const handleClearStaffBreach = (staffEmail) => {
+    const updated = { ...staffBreachTrials };
+    delete updated[staffEmail];
+    setStaffBreachTrials(updated);
+    localStorage.setItem("gbs_dev_staff_intrusion_trials", JSON.stringify(updated));
+    showNotification(`✓ Watchlist dossier for ${staffEmail} archived.`);
+  };
 
   const handleNotifyHeadmaster = (id) => {
     const updated = securityViolations.map((v) => {
@@ -410,7 +480,7 @@ export default function DeveloperDashboard() {
     try {
       const stored = localStorage.getItem("gbs_headmaster_replacements");
       if (stored) return JSON.parse(stored);
-    } catch {}
+    } catch { }
     return [];
   });
 
@@ -419,7 +489,7 @@ export default function DeveloperDashboard() {
       try {
         const stored = localStorage.getItem("gbs_headmaster_replacements");
         if (stored) setHeadmasterReplacements(JSON.parse(stored));
-      } catch {}
+      } catch { }
     };
     window.addEventListener("gbs_headmaster_replacement_submitted", syncReplacements);
     window.addEventListener("storage", syncReplacements);
@@ -594,7 +664,7 @@ export default function DeveloperDashboard() {
           ...localUsers.filter((u) => String(u.email || "").toLowerCase() !== targetEmailLower)
         ];
         localStorage.setItem("gbs_local_registered_users", JSON.stringify(mergedUsers));
-      } catch {}
+      } catch { }
 
       // 1. DISPATCH ACCEPTANCE SMS TO REGISTERED MOBILE NUMBER WITH EXACT REQUIRED WORDING
       const targetPhone = app.headmasterPhone || app.adminPhone || app.officialPhone || "+233-24-555-0199";
@@ -620,7 +690,7 @@ export default function DeveloperDashboard() {
         const existingSms = JSON.parse(localStorage.getItem("gbs_dispatched_sms_logs") || "[]");
         localStorage.setItem("gbs_dispatched_sms_logs", JSON.stringify([newSmsEntry, ...existingSms]));
         setSmsLogs((prev) => [newSmsEntry, ...(Array.isArray(prev) ? prev : [])]);
-      } catch (smsErr) {}
+      } catch (smsErr) { }
 
       // 2. DISPATCH TO BACKEND DATABASE APPROVAL ENDPOINT
       const targetId = app.id || app.tenantUid || app.tenantCode || app.institutionName;
@@ -680,7 +750,7 @@ export default function DeveloperDashboard() {
         const updatedArchives = [archiveRecord, ...existingArchives.filter((item) => item.id !== app.id && item.tenantUid !== app.tenantUid)];
         localStorage.setItem("gbs_archived_onboarded_tenants", JSON.stringify(updatedArchives));
         setArchivedTenants(updatedArchives);
-      } catch (arcErr) {}
+      } catch (arcErr) { }
 
       if (selectedOnboardingAppDossier && (selectedOnboardingAppDossier.id === app.id || selectedOnboardingAppDossier.institutionName === app.institutionName)) {
         setSelectedOnboardingAppDossier({ ...archiveRecord });
@@ -690,7 +760,7 @@ export default function DeveloperDashboard() {
       showNotification(`✓ Acceptance SMS dispatched to ${targetPhone}! Institution '${app.institutionName}' approved and full system access granted.`);
       try {
         await fetchOnboardingApplications();
-      } catch {}
+      } catch { }
       fetchData();
     } catch (err) {
       showNotification("⚠ Error approving institution onboarding.");
@@ -725,7 +795,7 @@ export default function DeveloperDashboard() {
       showNotification(`Application for '${app.institutionName}' marked as REJECTED.`);
       try {
         await fetchOnboardingApplications();
-      } catch {}
+      } catch { }
       fetchData();
     } catch (err) {
       showNotification("⚠ Error rejecting application.");
@@ -904,7 +974,7 @@ export default function DeveloperDashboard() {
       }
       osc.start();
       osc.stop(ctx.currentTime + 0.26);
-    } catch {}
+    } catch { }
   };
 
   const triggerPadlockFeedback = (isLocked, tenantName, action) => {
@@ -1036,14 +1106,14 @@ export default function DeveloperDashboard() {
     try {
       const saved = sessionStorage.getItem("gbs_dev_biometric_clearance");
       if (saved) return JSON.parse(saved);
-    } catch {}
+    } catch { }
     return null;
   });
   const [facialStatus, setFacialStatus] = useState(() => {
     try {
       const saved = sessionStorage.getItem("gbs_dev_biometric_clearance");
       if (saved) return JSON.parse(saved);
-    } catch {}
+    } catch { }
     return {
       livenessScore: 0.989,
       antiSpoofingScore: 0.994,
@@ -1066,7 +1136,7 @@ export default function DeveloperDashboard() {
       if (el.srcObject !== biometricStreamRef.current) {
         el.srcObject = biometricStreamRef.current;
       }
-      el.play?.().catch(() => {});
+      el.play?.().catch(() => { });
     }
   };
 
@@ -1075,7 +1145,7 @@ export default function DeveloperDashboard() {
       if (biometricVideoRef.current.srcObject !== biometricStreamRef.current) {
         biometricVideoRef.current.srcObject = biometricStreamRef.current;
       }
-      biometricVideoRef.current.play?.().catch(() => {});
+      biometricVideoRef.current.play?.().catch(() => { });
     }
   }, [biometricCameraActive, activeTab]);
 
@@ -1105,7 +1175,7 @@ export default function DeveloperDashboard() {
         setBiometricCameraActive(true);
         if (biometricVideoRef.current) {
           biometricVideoRef.current.srcObject = stream;
-          biometricVideoRef.current.play?.().catch(() => {});
+          biometricVideoRef.current.play?.().catch(() => { });
         }
         showNotification("📷 Live biometric optical camera stream initialized.");
         return;
@@ -1120,7 +1190,7 @@ export default function DeveloperDashboard() {
       setBiometricCameraActive(true);
       if (biometricVideoRef.current) {
         biometricVideoRef.current.srcObject = fallbackStream;
-        biometricVideoRef.current.play?.().catch(() => {});
+        biometricVideoRef.current.play?.().catch(() => { });
       }
       showNotification("📷 Live Optical Biometric Sentinel feed engaged (30 FPS).");
     }
@@ -1148,7 +1218,7 @@ export default function DeveloperDashboard() {
       if (el.srcObject !== onboardHeadmasterStreamRef.current) {
         el.srcObject = onboardHeadmasterStreamRef.current;
       }
-      el.play?.().catch(() => {});
+      el.play?.().catch(() => { });
     }
   };
 
@@ -1157,7 +1227,7 @@ export default function DeveloperDashboard() {
       if (onboardHeadmasterVideoRef.current.srcObject !== onboardHeadmasterStreamRef.current) {
         onboardHeadmasterVideoRef.current.srcObject = onboardHeadmasterStreamRef.current;
       }
-      onboardHeadmasterVideoRef.current.play?.().catch(() => {});
+      onboardHeadmasterVideoRef.current.play?.().catch(() => { });
     }
   }, [onboardCameraActive, activeTab]);
 
@@ -1180,7 +1250,7 @@ export default function DeveloperDashboard() {
         setOnboardCameraActive(true);
         if (onboardHeadmasterVideoRef.current) {
           onboardHeadmasterVideoRef.current.srcObject = stream;
-          onboardHeadmasterVideoRef.current.play?.().catch(() => {});
+          onboardHeadmasterVideoRef.current.play?.().catch(() => { });
         }
         showNotification("📸 Headmaster live camera activated. Position face and click 'Snap & Use Live Photo'.");
         return;
@@ -1195,7 +1265,7 @@ export default function DeveloperDashboard() {
       setOnboardCameraActive(true);
       if (onboardHeadmasterVideoRef.current) {
         onboardHeadmasterVideoRef.current.srcObject = fallbackStream;
-        onboardHeadmasterVideoRef.current.play?.().catch(() => {});
+        onboardHeadmasterVideoRef.current.play?.().catch(() => { });
       }
       showNotification("📸 Headmaster live optical camera feed active. Click 'Snap & Use Live Photo' to capture.");
     }
@@ -1238,7 +1308,7 @@ export default function DeveloperDashboard() {
   const handleRunBiometricScan = async () => {
     setBiometricScanning(true);
     showNotification("🎯 Analyzing 3D facial depth mesh, pupil reflection & presentation attack vectors...");
-    
+
     await new Promise((resolve) => setTimeout(resolve, 1400));
 
     let frameBase64 = null;
@@ -1251,7 +1321,7 @@ export default function DeveloperDashboard() {
         const ctx = canvas.getContext("2d");
         ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
         frameBase64 = canvas.toDataURL("image/jpeg", 0.85);
-      } catch {}
+      } catch { }
     }
 
     const clearanceToken = `BIO-SEC-ROOT-${Date.now().toString(16).toUpperCase()}-${Math.floor(1000 + Math.random() * 9000)}`;
@@ -1285,8 +1355,8 @@ export default function DeveloperDashboard() {
           challengeType: "DYNAMIC_PUPIL_REFLECTION",
           clearanceToken
         })
-      }).catch(() => {});
-    } catch {}
+      }).catch(() => { });
+    } catch { }
   };
 
   const handleOpenChangeHeadmaster = (tenant) => {
@@ -1323,14 +1393,14 @@ export default function DeveloperDashboard() {
       prev.map((c) =>
         (c.tenantId === tId || c.tenantName === tName)
           ? {
-              ...c,
-              headmaster: {
-                name: headmasterChangeForm.newHeadmasterName,
-                email: headmasterChangeForm.newHeadmasterEmail,
-                phone: headmasterChangeForm.newHeadmasterPhone,
-                photo: headmasterChangeForm.photo
-              }
+            ...c,
+            headmaster: {
+              name: headmasterChangeForm.newHeadmasterName,
+              email: headmasterChangeForm.newHeadmasterEmail,
+              phone: headmasterChangeForm.newHeadmasterPhone,
+              photo: headmasterChangeForm.photo
             }
+          }
           : c
       )
     );
@@ -1340,12 +1410,12 @@ export default function DeveloperDashboard() {
       prev.map((t) =>
         (t.id === tId || t.institutionName === tName)
           ? {
-              ...t,
-              headmasterName: headmasterChangeForm.newHeadmasterName,
-              headmasterEmail: headmasterChangeForm.newHeadmasterEmail,
-              headmasterPhone: headmasterChangeForm.newHeadmasterPhone,
-              headmasterPhoto: headmasterChangeForm.photo
-            }
+            ...t,
+            headmasterName: headmasterChangeForm.newHeadmasterName,
+            headmasterEmail: headmasterChangeForm.newHeadmasterEmail,
+            headmasterPhone: headmasterChangeForm.newHeadmasterPhone,
+            headmasterPhoto: headmasterChangeForm.photo
+          }
           : t
       )
     );
@@ -1411,7 +1481,7 @@ export default function DeveloperDashboard() {
           })
         });
         fetchData();
-      } catch {}
+      } catch { }
     }
 
     // 6. Trigger real photographic padlock feedback
@@ -1436,7 +1506,7 @@ export default function DeveloperDashboard() {
     try {
       const saved = JSON.parse(localStorage.getItem("gbs_system_subscription_settings") || "null");
       if (saved) return saved;
-    } catch {}
+    } catch { }
     return {
       startDate: "2026-01-01",
       endDate: "2027-01-01",
@@ -1496,7 +1566,7 @@ export default function DeveloperDashboard() {
         let localApps = [];
         try {
           localApps = JSON.parse(localStorage.getItem("gbs_incoming_onboarding_applications") || "[]");
-        } catch {}
+        } catch { }
 
         const localOnly = localApps.filter(
           (p) => !dbApps.some((d) => d.id === p.id || (d.tenantCode && d.tenantCode === p.tenantCode) || (d.institutionName && d.institutionName?.toLowerCase() === p.institutionName?.toLowerCase()))
@@ -1542,7 +1612,7 @@ export default function DeveloperDashboard() {
       try {
         const list = JSON.parse(localStorage.getItem("gbs_momo_subscription_reconciliations") || "[]");
         setMomoReconciliations(list);
-      } catch {}
+      } catch { }
       fetchOnboardingApplications();
     };
     syncMomoPayments();
@@ -1896,7 +1966,7 @@ export default function DeveloperDashboard() {
         } else if (!session || session.status === "ENDED") {
           setActiveCallingSession(null);
         }
-      } catch {}
+      } catch { }
     };
 
     syncCallSession();
@@ -1940,7 +2010,7 @@ export default function DeveloperDashboard() {
           headmasterName = statusObj.headmasterName || headmasterName;
         }
       }
-    } catch {}
+    } catch { }
 
     if (!isHeadmasterOnline) {
       setShowHeadmasterOfflineNoticeModal({
@@ -2002,7 +2072,7 @@ export default function DeveloperDashboard() {
         },
         ...prev
       ]);
-    } catch {}
+    } catch { }
     appendConsoleLog(`SMS-GATEWAY >> Dispatched direct SMS to ${showHeadmasterOfflineNoticeModal.headmasterName} (${targetPhone}): "${alertMsg.substring(0, 40)}..." [STATUS: DELIVERED]`);
     setShowHeadmasterOfflineNoticeModal((prev) => ({ ...prev, isOpen: false }));
     setCustomSmsMessage("");
@@ -2092,7 +2162,7 @@ export default function DeveloperDashboard() {
       });
       localStorage.setItem("gbs_announcements", JSON.stringify(circulars));
       window.dispatchEvent(new CustomEvent("gbs_announcements_updated"));
-    } catch {}
+    } catch { }
 
     showNotification("✓ Advance preparation reminder notice broadcast to all registered Headmasters and Admin Dashboards.");
   };
@@ -2133,7 +2203,7 @@ export default function DeveloperDashboard() {
             reason: `MoMo Payment Reconciled (${reconItem.txnId}) for ${reconItem.tenantName}. All records and institutional access restored.`
           })
         });
-      } catch {}
+      } catch { }
 
       showNotification(`✓ MoMo Payment verified for "${reconItem.tenantName}". System unlocked and all institution data safely restored!`);
       fetchData();
@@ -2344,7 +2414,7 @@ export default function DeveloperDashboard() {
           )
         );
         fetchData();
-      } catch {}
+      } catch { }
       showNotification(`✓ Batch Subscription Renewal executed for ${batchIds.length} tenants (${durationLabel})!`);
       setSelectedTenants([]);
       setShowRenewModal(false);
@@ -2357,9 +2427,9 @@ export default function DeveloperDashboard() {
     if (!tId) return;
 
     const targetTenant = countdowns.find((c) => c.tenantId === tId) ||
-                         onboardedTenants.find((t) => t.id === tId) ||
-                         renewTargetTenant ||
-                         { tenantName: `Institutional Tenant #${tId}` };
+      onboardedTenants.find((t) => t.id === tId) ||
+      renewTargetTenant ||
+      { tenantName: `Institutional Tenant #${tId}` };
     const tName = targetTenant.tenantName || targetTenant.name || targetTenant.institutionName || `Tenant #${tId}`;
 
     setRenewSubmitting(true);
@@ -2442,7 +2512,7 @@ export default function DeveloperDashboard() {
         archived: false
       });
       localStorage.setItem("gbs_announcements", JSON.stringify(circulars));
-    } catch {}
+    } catch { }
 
     // 5. Fire window events for multi-tab instantaneous update
     window.dispatchEvent(new CustomEvent("gbs_subscription_renewed", { detail: renewalPayload }));
@@ -2778,7 +2848,7 @@ export default function DeveloperDashboard() {
       });
       showNotification(`📦 ${ids.length} deployment(s) ${isArchived ? "archived" : "unarchived"}.`);
       fetchData();
-    } catch {}
+    } catch { }
   };
 
   const handleBatchDeleteDeployments = async () => {
@@ -2795,7 +2865,7 @@ export default function DeveloperDashboard() {
       });
       showNotification(`🗑️ ${ids.length} deployment(s) deleted.`);
       fetchData();
-    } catch {}
+    } catch { }
   };
 
   // 6b. Audit Logs Archive & Deletion (Developer & Security Audit Logs)
@@ -2826,7 +2896,7 @@ export default function DeveloperDashboard() {
       await fetch(`${BASE_URL}/audit-logs/${logId}`, { method: "DELETE" });
       showNotification(`🗑️ Audit log #${logId} deleted.`);
       fetchData();
-    } catch {}
+    } catch { }
   };
 
   const handleBatchArchiveAuditLogs = async (isArchived = true, customIds = null) => {
@@ -2844,7 +2914,7 @@ export default function DeveloperDashboard() {
       });
       showNotification(`📦 ${ids.length} developer & security audit log(s) ${isArchived ? "archived" : "restored"}.`);
       fetchData();
-    } catch {}
+    } catch { }
   };
 
   const handleBatchDeleteAuditLogs = async () => {
@@ -2861,7 +2931,7 @@ export default function DeveloperDashboard() {
       });
       showNotification(`🗑️ ${ids.length} audit log(s) deleted.`);
       fetchData();
-    } catch {}
+    } catch { }
   };
 
   // 7. Issue License
@@ -2909,7 +2979,7 @@ export default function DeveloperDashboard() {
               region = revJson.address?.state || revJson.address?.region || region;
               country = revJson.address?.country || country;
             }
-          } catch {}
+          } catch { }
 
           const liveData = {
             tenantName: `Live Device GPS Position (${city})`,
@@ -2965,7 +3035,7 @@ export default function DeveloperDashboard() {
           const json = await res.json();
           if (json.data) data = json.data;
         }
-      } catch {}
+      } catch { }
 
       // 2. If the user searched a real-world place/address/school name (non-phone or custom address), geocode via OpenStreetMap Nominatim for exact real-world coordinates
       const isLikelyPlaceOrSchoolName = /[a-zA-Z]{3,}/.test(query) && !query.toUpperCase().startsWith("GBS-");
@@ -3003,7 +3073,7 @@ export default function DeveloperDashboard() {
               }
             }
           }
-        } catch {}
+        } catch { }
       }
 
       if (!data) {
@@ -3238,7 +3308,7 @@ export default function DeveloperDashboard() {
         setArchivedTenants(updatedArchives);
 
         window.dispatchEvent(new CustomEvent("gbs_headmaster_profile_updated", { detail: newHeadmaster }));
-      } catch {}
+      } catch { }
 
       setOnboardedTenants((prev) => [
         {
@@ -3486,9 +3556,9 @@ export default function DeveloperDashboard() {
   if (!isDevGateUnlocked) {
     return (
       <div className="role-login-container" style={{ minHeight: "100vh", display: "flex", alignItems: "center", justifyContent: "center", position: "relative" }}>
-        <div 
-          className="role-login-bg" 
-          style={{ 
+        <div
+          className="role-login-bg"
+          style={{
             backgroundImage: `url('/assets/developer-command-center-bg.jpg')`,
             filter: "brightness(0.55) contrast(1.15) saturate(1.2)"
           }}
@@ -3496,11 +3566,11 @@ export default function DeveloperDashboard() {
         <div className="role-login-overlay" style={{ background: "rgba(2, 6, 23, 0.88)" }}></div>
 
         <div className="role-login-card" style={{ maxWidth: "520px", width: "92%", padding: "2.5rem 2rem", borderRadius: "20px", backdropFilter: "blur(18px)", background: "rgba(15, 23, 42, 0.92)", border: "1.5px solid rgba(56, 189, 248, 0.4)", boxShadow: "0 25px 60px rgba(0,0,0,0.85)", position: "relative", zIndex: 10 }}>
-          
+
           <div style={{ textAlign: "center", marginBottom: "1.75rem" }}>
-            <img 
-              src="/assets/gbs_crest_badge.jpg" 
-              alt="GBS Crest Badge" 
+            <img
+              src="/assets/gbs_crest_badge.jpg"
+              alt="GBS Crest Badge"
               style={{
                 width: "82px",
                 height: "82px",
@@ -3512,20 +3582,20 @@ export default function DeveloperDashboard() {
                 objectFit: "cover"
               }}
             />
-            <h1 style={{ 
-              fontSize: "1.6rem", 
-              fontWeight: "900", 
-              letterSpacing: "1.5px", 
-              color: "#f8fafc", 
+            <h1 style={{
+              fontSize: "1.6rem",
+              fontWeight: "900",
+              letterSpacing: "1.5px",
+              color: "#f8fafc",
               margin: "0 0 4px",
               textTransform: "uppercase"
             }}>
               GBS SCHOOL MANAGEMENT SYSTEM
             </h1>
-            <div style={{ 
-              fontSize: "0.85rem", 
-              color: "#38bdf8", 
-              letterSpacing: "1.5px", 
+            <div style={{
+              fontSize: "0.85rem",
+              color: "#38bdf8",
+              letterSpacing: "1.5px",
               fontWeight: "800",
               textTransform: "uppercase",
               marginBottom: "8px"
@@ -3612,9 +3682,9 @@ export default function DeveloperDashboard() {
               </div>
             )}
 
-            <button 
-              type="submit" 
-              className="dev-submit-btn" 
+            <button
+              type="submit"
+              className="dev-submit-btn"
               disabled={gateLoading}
               style={{
                 width: "100%",
@@ -3704,10 +3774,10 @@ export default function DeveloperDashboard() {
       {/* High-Security Header */}
       <header className="dev-header">
         <div className="dev-brand" style={{ display: "flex", alignItems: "center", gap: "14px" }}>
-          <img 
-            src="/assets/gbs_crest_badge.jpg" 
-            alt="GBS System Crest" 
-            style={{ width: "52px", height: "52px", borderRadius: "12px", border: "2px solid #38bdf8", objectFit: "cover", boxShadow: "0 0 20px rgba(56, 189, 248, 0.45)", padding: "2px" }} 
+          <img
+            src="/assets/gbs_crest_badge.jpg"
+            alt="GBS System Crest"
+            style={{ width: "52px", height: "52px", borderRadius: "12px", border: "2px solid #38bdf8", objectFit: "cover", boxShadow: "0 0 20px rgba(56, 189, 248, 0.45)", padding: "2px" }}
           />
           <div>
             <div className="dev-pin-indicator" style={{ display: "inline-flex", alignItems: "center", gap: "8px" }}>
@@ -4752,8 +4822,8 @@ export default function DeveloperDashboard() {
                         const tierLabel = app.institutionType === "SENIOR_HIGH_SCHOOL"
                           ? "Senior High School (Form 1-3)"
                           : app.institutionType === "UNIVERSITY"
-                          ? "University / Tertiary Institution"
-                          : "Basic School (Nursery to JHS)";
+                            ? "University / Tertiary Institution"
+                            : "Basic School (Nursery to JHS)";
                         const tierClass = app.institutionType === "SENIOR_HIGH_SCHOOL" ? "shs" : (app.institutionType === "UNIVERSITY" ? "uni" : "jhs");
 
                         return (
@@ -5805,520 +5875,520 @@ export default function DeveloperDashboard() {
 
         {/* TAB 1: MISSION TELEMETRY & COUNTDOWNS */}
         {/* TAB: HEADMASTER REPLACEMENTS, PICTURE & BIOMETRIC FACIAL VERIFICATION */}
-          {activeTab === "headmaster_verifications" && (
-            <div className="dev-section-box">
-              {/* SECTION 1: INSTITUTION HEADMASTER ONBOARDING TALLY AUDIT */}
-              <div style={{ background: "rgba(15, 23, 42, 0.85)", border: "1.5px solid #38bdf8", borderRadius: "14px", padding: "1.5rem", marginBottom: "2rem" }}>
-                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "1rem", flexWrap: "wrap", gap: "10px" }}>
-                  <div>
-                    <h3 style={{ margin: 0, color: "#38bdf8", fontSize: "1.2rem", fontWeight: "900", display: "flex", alignItems: "center", gap: "8px" }}>
-                      <span>🏛️</span> INSTITUTION ONBOARDING HEADMASTER TALLY & CREDENTIAL AUDIT
-                    </h3>
-                    <p style={{ margin: "4px 0 0", color: "#94a3b8", fontSize: "0.85rem" }}>
-                      Cross-checks every onboarded institution's registered Headmaster against the Developer's Official Master Roster to verify that credentials and onboarding identities tally 100%.
-                    </p>
-                  </div>
-                  <span className="telemetry-chip active" style={{ background: "rgba(16, 185, 129, 0.2)", color: "#34d399", border: "1px solid #10b981" }}>
-                    ✓ Master Roster Synchronized (4 Institutions)
-                  </span>
-                </div>
-
-                <div style={{ overflowX: "auto" }}>
-                  <table className="dev-table" style={{ width: "100%", textAlign: "left", borderCollapse: "collapse" }}>
-                    <thead>
-                      <tr style={{ background: "rgba(30, 41, 59, 0.6)", borderBottom: "1px solid rgba(255, 255, 255, 0.15)" }}>
-                        <th style={{ padding: "10px 12px", color: "#94a3b8", fontSize: "0.75rem" }}>INSTITUTION & CODE</th>
-                        <th style={{ padding: "10px 12px", color: "#94a3b8", fontSize: "0.75rem" }}>REGISTERED HEADMASTER</th>
-                        <th style={{ padding: "10px 12px", color: "#94a3b8", fontSize: "0.75rem" }}>DEVELOPER MASTER ROSTER</th>
-                        <th style={{ padding: "10px 12px", color: "#94a3b8", fontSize: "0.75rem" }}>ONBOARDING TALLY STATUS</th>
-                        <th style={{ padding: "10px 12px", color: "#94a3b8", fontSize: "0.75rem" }}>BIOMETRIC FACIAL STATUS</th>
-                        <th style={{ padding: "10px 12px", color: "#94a3b8", fontSize: "0.75rem" }}>AUDIT ACTIONS</th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {masterDeveloperHeadmasterRoster.map((roster) => {
-                        const activeTenant = countdowns.find((c) => c.tenantCode === roster.tenantCode) || onboardedTenants.find((t) => t.tenantCode === roster.tenantCode) || {};
-                        const currentHmName = activeTenant.headmasterName || roster.officialHeadmasterName;
-                        const isMatch = currentHmName.toLowerCase().includes(roster.officialHeadmasterName.toLowerCase().split(" ")[0]) || currentHmName === roster.officialHeadmasterName;
-
-                        return (
-                          <tr key={roster.tenantCode} style={{ borderBottom: "1px solid rgba(255, 255, 255, 0.06)", background: "rgba(15, 23, 42, 0.4)" }}>
-                            <td style={{ padding: "12px", fontSize: "0.82rem" }}>
-                              <strong style={{ color: "#38bdf8" }}>{roster.institutionName}</strong>
-                              <div style={{ color: "#64748b", fontSize: "0.72rem" }}>Code: {roster.tenantCode}</div>
-                            </td>
-                            <td style={{ padding: "12px", fontSize: "0.82rem", color: "#f8fafc" }}>
-                              <div><strong>{currentHmName}</strong></div>
-                              <div style={{ color: "#94a3b8", fontSize: "0.72rem" }}>{roster.officialPhone}</div>
-                            </td>
-                            <td style={{ padding: "12px", fontSize: "0.82rem", color: "#cbd5e1" }}>
-                              <div>{roster.officialHeadmasterName}</div>
-                              <div style={{ color: "#38bdf8", fontSize: "0.7rem" }}>Res: {roster.appointmentResolution}</div>
-                            </td>
-                            <td style={{ padding: "12px" }}>
-                              {isMatch ? (
-                                <span style={{ background: "rgba(16, 185, 129, 0.2)", color: "#34d399", border: "1px solid rgba(16, 185, 129, 0.4)", padding: "2px 8px", borderRadius: "6px", fontWeight: "800", fontSize: "0.72rem" }}>
-                                  ✓ TALLIES 100% (VERIFIED)
-                                </span>
-                              ) : (
-                                <span style={{ background: "rgba(245, 158, 11, 0.2)", color: "#fbbf24", border: "1px solid rgba(245, 158, 11, 0.4)", padding: "2px 8px", borderRadius: "6px", fontWeight: "800", fontSize: "0.72rem" }}>
-                                  ⚠️ SUCCESSION PENDING VETTING
-                                </span>
-                              )}
-                            </td>
-                            <td style={{ padding: "12px" }}>
-                              <div style={{ display: "flex", alignItems: "center", gap: "6px" }}>
-                                <span style={{ fontSize: "1rem" }}>👤</span>
-                                <div>
-                                  <span style={{ fontSize: "0.72rem", color: "#a7f3d0", fontWeight: "700" }}>FACIAL VECTOR HASH</span>
-                                  <div style={{ fontFamily: "monospace", color: "#38bdf8", fontSize: "0.7rem" }}>{roster.biometricHash}</div>
-                                </div>
-                              </div>
-                            </td>
-                            <td style={{ padding: "12px" }}>
-                              <button
-                                type="button"
-                                className="action-btn-sm"
-                                style={{ padding: "4px 10px", fontSize: "0.72rem", background: "#0284c7", color: "#fff", border: "none", borderRadius: "6px", fontWeight: "700", cursor: "pointer" }}
-                                onClick={() => showNotification(`✓ Onboarding tally confirmed: ${roster.institutionName} credentials match Master Roster.`)}
-                              >
-                                🔍 Audit Tally
-                              </button>
-                            </td>
-                          </tr>
-                        );
-                      })}
-                    </tbody>
-                  </table>
-                </div>
-              </div>
-
-              {/* SECTION 2: NEW REGISTERED HEADMASTER FACIAL SCANNING VETTING QUEUE */}
-              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "1.25rem", flexWrap: "wrap", gap: "10px" }}>
+        {activeTab === "headmaster_verifications" && (
+          <div className="dev-section-box">
+            {/* SECTION 1: INSTITUTION HEADMASTER ONBOARDING TALLY AUDIT */}
+            <div style={{ background: "rgba(15, 23, 42, 0.85)", border: "1.5px solid #38bdf8", borderRadius: "14px", padding: "1.5rem", marginBottom: "2rem" }}>
+              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "1rem", flexWrap: "wrap", gap: "10px" }}>
                 <div>
                   <h3 style={{ margin: 0, color: "#38bdf8", fontSize: "1.2rem", fontWeight: "900", display: "flex", alignItems: "center", gap: "8px" }}>
-                    <span>👑</span> NEW REGISTERED HEADMASTERS & LIVE BIOMETRIC FACIAL SCAN VETTING QUEUE
+                    <span>🏛️</span> INSTITUTION ONBOARDING HEADMASTER TALLY & CREDENTIAL AUDIT
                   </h3>
                   <p style={{ margin: "4px 0 0", color: "#94a3b8", fontSize: "0.85rem" }}>
-                    When a new Headmaster replacement completes live facial scanning on their dashboard, their portrait and biometric scan arrive here. The developer verifies facial geometry, and on approval, the system uploads their photo and details directly onto the institution's onboarding registration details.
+                    Cross-checks every onboarded institution's registered Headmaster against the Developer's Official Master Roster to verify that credentials and onboarding identities tally 100%.
                   </p>
                 </div>
-                <span className="telemetry-chip active">
-                  {headmasterReplacements.filter((h) => h.status === "PENDING_DEVELOPER_VERIFICATION").length} Awaiting Developer Vetting
+                <span className="telemetry-chip active" style={{ background: "rgba(16, 185, 129, 0.2)", color: "#34d399", border: "1px solid #10b981" }}>
+                  ✓ Master Roster Synchronized (4 Institutions)
                 </span>
               </div>
 
-              <div style={{ display: "grid", gridTemplateColumns: headmasterReplacements.length === 0 ? "1fr" : "repeat(auto-fit, minmax(420px, 1fr))", gap: "1.5rem" }}>
-                {headmasterReplacements.length === 0 ? (
-                  <div style={{ padding: "40px", textAlign: "center", color: "#94a3b8", background: "rgba(15, 23, 42, 0.7)", borderRadius: "14px", border: "1px dashed rgba(255,255,255,0.15)" }}>
-                    👑 No pending headmaster replacement dossiers submitted. When an institution board nominates a successor or new Headmaster, their biometric face snapshot and appointment credentials will appear here for developer verification.
-                  </div>
-                ) : headmasterReplacements.map((hm) => {
-                  const isPending = hm.status === "PENDING_DEVELOPER_VERIFICATION";
-                  const isApproved = hm.status === "APPROVED_BY_DEVELOPER";
-                  const isRejected = hm.status === "REJECTED_BY_DEVELOPER" || hm.status === "DENIED_BIOMETRIC_MISMATCH";
+              <div style={{ overflowX: "auto" }}>
+                <table className="dev-table" style={{ width: "100%", textAlign: "left", borderCollapse: "collapse" }}>
+                  <thead>
+                    <tr style={{ background: "rgba(30, 41, 59, 0.6)", borderBottom: "1px solid rgba(255, 255, 255, 0.15)" }}>
+                      <th style={{ padding: "10px 12px", color: "#94a3b8", fontSize: "0.75rem" }}>INSTITUTION & CODE</th>
+                      <th style={{ padding: "10px 12px", color: "#94a3b8", fontSize: "0.75rem" }}>REGISTERED HEADMASTER</th>
+                      <th style={{ padding: "10px 12px", color: "#94a3b8", fontSize: "0.75rem" }}>DEVELOPER MASTER ROSTER</th>
+                      <th style={{ padding: "10px 12px", color: "#94a3b8", fontSize: "0.75rem" }}>ONBOARDING TALLY STATUS</th>
+                      <th style={{ padding: "10px 12px", color: "#94a3b8", fontSize: "0.75rem" }}>BIOMETRIC FACIAL STATUS</th>
+                      <th style={{ padding: "10px 12px", color: "#94a3b8", fontSize: "0.75rem" }}>AUDIT ACTIONS</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {masterDeveloperHeadmasterRoster.map((roster) => {
+                      const activeTenant = countdowns.find((c) => c.tenantCode === roster.tenantCode) || onboardedTenants.find((t) => t.tenantCode === roster.tenantCode) || {};
+                      const currentHmName = activeTenant.headmasterName || roster.officialHeadmasterName;
+                      const isMatch = currentHmName.toLowerCase().includes(roster.officialHeadmasterName.toLowerCase().split(" ")[0]) || currentHmName === roster.officialHeadmasterName;
 
-                  return (
-                    <div
-                      key={hm.id}
-                      style={{
-                        background: "rgba(15, 23, 42, 0.85)",
-                        border: isPending ? "2px solid #38bdf8" : isApproved ? "1.5px solid #10b981" : "1.5px solid #ef4444",
-                        borderRadius: "14px",
-                        padding: "1.5rem",
-                        display: "flex",
-                        flexDirection: "column",
-                        gap: "1.2rem",
-                        boxShadow: isPending ? "0 0 20px rgba(56, 189, 248, 0.25)" : "none"
-                      }}
-                    >
-                      {/* Portrait & Facial Mesh Visual Comparison */}
-                      <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "12px", background: "rgba(2, 6, 23, 0.7)", padding: "12px", borderRadius: "10px", border: "1px solid rgba(255, 255, 255, 0.08)" }}>
-                        {/* 1. Uploaded Official Portrait */}
-                        <div style={{ textAlign: "center" }}>
-                          <span style={{ fontSize: "0.72rem", color: "#94a3b8", fontWeight: "700", textTransform: "uppercase", display: "block", marginBottom: "6px" }}>
-                            1. Uploaded Official Portrait
-                          </span>
-                          <div style={{ width: "100%", height: "130px", borderRadius: "8px", overflow: "hidden", border: "2px solid #38bdf8", background: "#020617", display: "flex", alignItems: "center", justifyContent: "center" }}>
-                            {hm.pictureBase64 ? (
-                              <img src={hm.pictureBase64} alt={hm.fullName} style={{ width: "100%", height: "100%", objectFit: "cover" }} />
+                      return (
+                        <tr key={roster.tenantCode} style={{ borderBottom: "1px solid rgba(255, 255, 255, 0.06)", background: "rgba(15, 23, 42, 0.4)" }}>
+                          <td style={{ padding: "12px", fontSize: "0.82rem" }}>
+                            <strong style={{ color: "#38bdf8" }}>{roster.institutionName}</strong>
+                            <div style={{ color: "#64748b", fontSize: "0.72rem" }}>Code: {roster.tenantCode}</div>
+                          </td>
+                          <td style={{ padding: "12px", fontSize: "0.82rem", color: "#f8fafc" }}>
+                            <div><strong>{currentHmName}</strong></div>
+                            <div style={{ color: "#94a3b8", fontSize: "0.72rem" }}>{roster.officialPhone}</div>
+                          </td>
+                          <td style={{ padding: "12px", fontSize: "0.82rem", color: "#cbd5e1" }}>
+                            <div>{roster.officialHeadmasterName}</div>
+                            <div style={{ color: "#38bdf8", fontSize: "0.7rem" }}>Res: {roster.appointmentResolution}</div>
+                          </td>
+                          <td style={{ padding: "12px" }}>
+                            {isMatch ? (
+                              <span style={{ background: "rgba(16, 185, 129, 0.2)", color: "#34d399", border: "1px solid rgba(16, 185, 129, 0.4)", padding: "2px 8px", borderRadius: "6px", fontWeight: "800", fontSize: "0.72rem" }}>
+                                ✓ TALLIES 100% (VERIFIED)
+                              </span>
                             ) : (
-                              <div style={{ fontSize: "2.8rem" }}>👨‍💼</div>
+                              <span style={{ background: "rgba(245, 158, 11, 0.2)", color: "#fbbf24", border: "1px solid rgba(245, 158, 11, 0.4)", padding: "2px 8px", borderRadius: "6px", fontWeight: "800", fontSize: "0.72rem" }}>
+                                ⚠️ SUCCESSION PENDING VETTING
+                              </span>
                             )}
-                          </div>
-                          <span style={{ fontSize: "0.7rem", color: "#34d399", marginTop: "4px", display: "block" }}>✓ High-Res RGB Portrait</span>
-                        </div>
-
-                        {/* 2. Scanned Biometric Facial Mesh */}
-                        <div style={{ textAlign: "center" }}>
-                          <span style={{ fontSize: "0.72rem", color: "#94a3b8", fontWeight: "700", textTransform: "uppercase", display: "block", marginBottom: "6px" }}>
-                            2. Live Biometric Facial Scan
-                          </span>
-                          <div style={{ width: "100%", height: "130px", borderRadius: "8px", overflow: "hidden", border: "2px solid #a855f7", background: "linear-gradient(135deg, rgba(30, 41, 59, 0.9), rgba(15, 23, 42, 0.9))", position: "relative", display: "flex", alignItems: "center", justifyContent: "center" }}>
-                            {/* Face Mesh Wireframe Simulation */}
-                            <div style={{ fontSize: "2.6rem", opacity: 0.85, filter: "drop-shadow(0 0 8px #a855f7)" }}>🧑‍💻</div>
-                            <div style={{ position: "absolute", inset: 0, border: "1px dashed #a855f7", borderRadius: "6px", pointerEvents: "none" }}></div>
-                            <div style={{ position: "absolute", top: "10px", right: "10px", background: "rgba(16, 185, 129, 0.3)", color: "#34d399", fontSize: "0.68rem", fontWeight: "800", padding: "1px 6px", borderRadius: "4px" }}>
-                              98.9% MATCH
+                          </td>
+                          <td style={{ padding: "12px" }}>
+                            <div style={{ display: "flex", alignItems: "center", gap: "6px" }}>
+                              <span style={{ fontSize: "1rem" }}>👤</span>
+                              <div>
+                                <span style={{ fontSize: "0.72rem", color: "#a7f3d0", fontWeight: "700" }}>FACIAL VECTOR HASH</span>
+                                <div style={{ fontFamily: "monospace", color: "#38bdf8", fontSize: "0.7rem" }}>{roster.biometricHash}</div>
+                              </div>
                             </div>
-                          </div>
-                          <span style={{ fontSize: "0.7rem", color: "#c084fc", marginTop: "4px", display: "block" }}>
-                            68-Point Vector Mesh Validated
-                          </span>
-                        </div>
-                      </div>
-
-                      {/* Headmaster Credentials & Institution Details */}
-                      <div>
-                        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "4px" }}>
-                          <span style={{ fontSize: "0.75rem", color: "#38bdf8", fontWeight: "800" }}>ID: {hm.id}</span>
-                          <span style={{
-                            background: isApproved ? "rgba(16, 185, 129, 0.2)" : isRejected ? "rgba(239, 68, 68, 0.2)" : "rgba(245, 158, 11, 0.2)",
-                            color: isApproved ? "#34d399" : isRejected ? "#f87171" : "#fbbf24",
-                            padding: "2px 8px",
-                            borderRadius: "6px",
-                            fontSize: "0.72rem",
-                            fontWeight: "800"
-                          }}>
-                            {isApproved ? "✓ APPROVED & ONBOARDING UPDATED" : isRejected ? "✕ DENIED (MISMATCH)" : "⏳ PENDING DEVELOPER FACIAL VETTING"}
-                          </span>
-                        </div>
-                        <h4 style={{ margin: "0 0 2px", fontSize: "1.1rem", color: "#f8fafc" }}>{hm.fullName}</h4>
-                        <div style={{ fontSize: "0.8rem", color: "#94a3b8" }}>{hm.qualification}</div>
-                        <div style={{ fontSize: "0.82rem", color: "#38bdf8", marginTop: "4px" }}>
-                          Institution: <strong>{hm.institutionName}</strong> ({hm.tenantCode})
-                        </div>
-                      </div>
-
-                      <div style={{ background: "rgba(2, 6, 23, 0.6)", padding: "10px 12px", borderRadius: "8px", fontSize: "0.78rem", color: "#94a3b8", display: "flex", flexDirection: "column", gap: "4px" }}>
-                        <div>Council Resolution: <strong style={{ color: "#f8fafc" }}>{hm.appointmentResolutionNumber}</strong></div>
-                        <div>Contact: {hm.email} • {hm.phone}</div>
-                        <div>Reason for Succession: <span style={{ color: "#cbd5e1" }}>{hm.reasonForReplacement}</span></div>
-                        <div>Submitted: {new Date(hm.submittedAt).toLocaleString()}</div>
-                      </div>
-
-                      {/* Developer Verification & Update Onboarding Actions */}
-                      {isPending && (
-                        <div style={{ display: "flex", gap: "10px", marginTop: "auto" }}>
-                          <button
-                            type="button"
-                            onClick={() => {
-                              const updated = headmasterReplacements.map((h) => h.id === hm.id ? { ...h, status: "DENIED_BIOMETRIC_MISMATCH", rejectedAt: new Date().toISOString() } : h);
-                              setHeadmasterReplacements(updated);
-                              localStorage.setItem("gbs_headmaster_replacements", JSON.stringify(updated));
-                              showNotification(`❌ Headmaster candidate ${hm.fullName} denied: Biometric facial scan did not match exact person.`);
-                            }}
-                            style={{ flex: 1, background: "rgba(239, 68, 68, 0.15)", border: "1px solid #ef4444", color: "#f87171", padding: "10px", borderRadius: "8px", fontWeight: "800", fontSize: "0.78rem", cursor: "pointer" }}
-                            title="Deny if facial match is not the exact authorized person"
-                          >
-                            ✕ Deny (Person Mismatch)
-                          </button>
-                          <button
-                            type="button"
-                            onClick={() => {
-                              // Approve and upload/replace new Headmaster details on institution's onboarding record!
-                              const updated = headmasterReplacements.map((h) => h.id === hm.id ? { ...h, status: "APPROVED_BY_DEVELOPER", clearedAt: new Date().toISOString() } : h);
-                              setHeadmasterReplacements(updated);
-                              localStorage.setItem("gbs_headmaster_replacements", JSON.stringify(updated));
-
-                              // Update onboardedTenants
-                              setOnboardedTenants((prev) =>
-                                prev.map((t) => (t.tenantCode === hm.tenantCode || t.institutionName === hm.institutionName) ? {
-                                  ...t,
-                                  headmasterName: hm.fullName,
-                                  headmasterEmail: hm.email,
-                                  headmasterPhone: hm.phone,
-                                  headmasterPhoto: hm.pictureBase64,
-                                  facialVerified: true
-                                } : t)
-                              );
-
-                              // Update countdowns
-                              setCountdowns((prev) =>
-                                prev.map((c) => (c.tenantCode === hm.tenantCode || c.tenantName === hm.institutionName) ? {
-                                  ...c,
-                                  headmasterName: hm.fullName
-                                } : c)
-                              );
-
-                              // Update headmaster profile in local storage
-                              const newHmProfile = {
-                                name: hm.fullName,
-                                email: hm.email,
-                                phone: hm.phone,
-                                qualification: hm.qualification,
-                                photoUrl: hm.pictureBase64,
-                                status: "ACTIVE",
-                                verifiedAt: new Date().toISOString()
-                              };
-                              localStorage.setItem("gbs_headmaster_profile", JSON.stringify(newHmProfile));
-                              window.dispatchEvent(new Event("gbs_headmaster_updated"));
-                              window.dispatchEvent(new CustomEvent("gbs_headmaster_replacement_approved", { detail: hm }));
-
-                              showNotification(`✓ Headmaster facial scan verified! ${hm.fullName} uploaded and set as active Headmaster on ${hm.institutionName}'s onboarding details.`);
-                            }}
-                            style={{ flex: 2, background: "linear-gradient(135deg, #10b981, #059669)", border: "none", color: "#ffffff", padding: "10px", borderRadius: "8px", fontWeight: "800", fontSize: "0.82rem", cursor: "pointer", boxShadow: "0 4px 14px rgba(16, 185, 129, 0.4)" }}
-                            title="Verify facial match and upload new Headmaster onto institution's onboarding details"
-                          >
-                            ✓ Verify Facial Scan & Update Onboarding Details
-                          </button>
-                        </div>
-                      )}
-                    </div>
-                  );
-                })}
+                          </td>
+                          <td style={{ padding: "12px" }}>
+                            <button
+                              type="button"
+                              className="action-btn-sm"
+                              style={{ padding: "4px 10px", fontSize: "0.72rem", background: "#0284c7", color: "#fff", border: "none", borderRadius: "6px", fontWeight: "700", cursor: "pointer" }}
+                              onClick={() => showNotification(`✓ Onboarding tally confirmed: ${roster.institutionName} credentials match Master Roster.`)}
+                            >
+                              🔍 Audit Tally
+                            </button>
+                          </td>
+                        </tr>
+                      );
+                    })}
+                  </tbody>
+                </table>
               </div>
             </div>
-          )}
 
-          {/* TAB: TENANT INTRUSION SENTINEL & HEADMASTER PENALTY ENFORCEMENT */}
-          {activeTab === "intrusion_sentinel" && (
-            <div className="tab-pane-content" style={{ animation: "fadeIn 0.3s ease" }}>
-              {/* Surveillance Radar Header Card */}
+            {/* SECTION 2: NEW REGISTERED HEADMASTER FACIAL SCANNING VETTING QUEUE */}
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "1.25rem", flexWrap: "wrap", gap: "10px" }}>
+              <div>
+                <h3 style={{ margin: 0, color: "#38bdf8", fontSize: "1.2rem", fontWeight: "900", display: "flex", alignItems: "center", gap: "8px" }}>
+                  <span>👑</span> NEW REGISTERED HEADMASTERS & LIVE BIOMETRIC FACIAL SCAN VETTING QUEUE
+                </h3>
+                <p style={{ margin: "4px 0 0", color: "#94a3b8", fontSize: "0.85rem" }}>
+                  When a new Headmaster replacement completes live facial scanning on their dashboard, their portrait and biometric scan arrive here. The developer verifies facial geometry, and on approval, the system uploads their photo and details directly onto the institution's onboarding registration details.
+                </p>
+              </div>
+              <span className="telemetry-chip active">
+                {headmasterReplacements.filter((h) => h.status === "PENDING_DEVELOPER_VERIFICATION").length} Awaiting Developer Vetting
+              </span>
+            </div>
+
+            <div style={{ display: "grid", gridTemplateColumns: headmasterReplacements.length === 0 ? "1fr" : "repeat(auto-fit, minmax(420px, 1fr))", gap: "1.5rem" }}>
+              {headmasterReplacements.length === 0 ? (
+                <div style={{ padding: "40px", textAlign: "center", color: "#94a3b8", background: "rgba(15, 23, 42, 0.7)", borderRadius: "14px", border: "1px dashed rgba(255,255,255,0.15)" }}>
+                  👑 No pending headmaster replacement dossiers submitted. When an institution board nominates a successor or new Headmaster, their biometric face snapshot and appointment credentials will appear here for developer verification.
+                </div>
+              ) : headmasterReplacements.map((hm) => {
+                const isPending = hm.status === "PENDING_DEVELOPER_VERIFICATION";
+                const isApproved = hm.status === "APPROVED_BY_DEVELOPER";
+                const isRejected = hm.status === "REJECTED_BY_DEVELOPER" || hm.status === "DENIED_BIOMETRIC_MISMATCH";
+
+                return (
+                  <div
+                    key={hm.id}
+                    style={{
+                      background: "rgba(15, 23, 42, 0.85)",
+                      border: isPending ? "2px solid #38bdf8" : isApproved ? "1.5px solid #10b981" : "1.5px solid #ef4444",
+                      borderRadius: "14px",
+                      padding: "1.5rem",
+                      display: "flex",
+                      flexDirection: "column",
+                      gap: "1.2rem",
+                      boxShadow: isPending ? "0 0 20px rgba(56, 189, 248, 0.25)" : "none"
+                    }}
+                  >
+                    {/* Portrait & Facial Mesh Visual Comparison */}
+                    <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "12px", background: "rgba(2, 6, 23, 0.7)", padding: "12px", borderRadius: "10px", border: "1px solid rgba(255, 255, 255, 0.08)" }}>
+                      {/* 1. Uploaded Official Portrait */}
+                      <div style={{ textAlign: "center" }}>
+                        <span style={{ fontSize: "0.72rem", color: "#94a3b8", fontWeight: "700", textTransform: "uppercase", display: "block", marginBottom: "6px" }}>
+                          1. Uploaded Official Portrait
+                        </span>
+                        <div style={{ width: "100%", height: "130px", borderRadius: "8px", overflow: "hidden", border: "2px solid #38bdf8", background: "#020617", display: "flex", alignItems: "center", justifyContent: "center" }}>
+                          {hm.pictureBase64 ? (
+                            <img src={hm.pictureBase64} alt={hm.fullName} style={{ width: "100%", height: "100%", objectFit: "cover" }} />
+                          ) : (
+                            <div style={{ fontSize: "2.8rem" }}>👨‍💼</div>
+                          )}
+                        </div>
+                        <span style={{ fontSize: "0.7rem", color: "#34d399", marginTop: "4px", display: "block" }}>✓ High-Res RGB Portrait</span>
+                      </div>
+
+                      {/* 2. Scanned Biometric Facial Mesh */}
+                      <div style={{ textAlign: "center" }}>
+                        <span style={{ fontSize: "0.72rem", color: "#94a3b8", fontWeight: "700", textTransform: "uppercase", display: "block", marginBottom: "6px" }}>
+                          2. Live Biometric Facial Scan
+                        </span>
+                        <div style={{ width: "100%", height: "130px", borderRadius: "8px", overflow: "hidden", border: "2px solid #a855f7", background: "linear-gradient(135deg, rgba(30, 41, 59, 0.9), rgba(15, 23, 42, 0.9))", position: "relative", display: "flex", alignItems: "center", justifyContent: "center" }}>
+                          {/* Face Mesh Wireframe Simulation */}
+                          <div style={{ fontSize: "2.6rem", opacity: 0.85, filter: "drop-shadow(0 0 8px #a855f7)" }}>🧑‍💻</div>
+                          <div style={{ position: "absolute", inset: 0, border: "1px dashed #a855f7", borderRadius: "6px", pointerEvents: "none" }}></div>
+                          <div style={{ position: "absolute", top: "10px", right: "10px", background: "rgba(16, 185, 129, 0.3)", color: "#34d399", fontSize: "0.68rem", fontWeight: "800", padding: "1px 6px", borderRadius: "4px" }}>
+                            98.9% MATCH
+                          </div>
+                        </div>
+                        <span style={{ fontSize: "0.7rem", color: "#c084fc", marginTop: "4px", display: "block" }}>
+                          68-Point Vector Mesh Validated
+                        </span>
+                      </div>
+                    </div>
+
+                    {/* Headmaster Credentials & Institution Details */}
+                    <div>
+                      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "4px" }}>
+                        <span style={{ fontSize: "0.75rem", color: "#38bdf8", fontWeight: "800" }}>ID: {hm.id}</span>
+                        <span style={{
+                          background: isApproved ? "rgba(16, 185, 129, 0.2)" : isRejected ? "rgba(239, 68, 68, 0.2)" : "rgba(245, 158, 11, 0.2)",
+                          color: isApproved ? "#34d399" : isRejected ? "#f87171" : "#fbbf24",
+                          padding: "2px 8px",
+                          borderRadius: "6px",
+                          fontSize: "0.72rem",
+                          fontWeight: "800"
+                        }}>
+                          {isApproved ? "✓ APPROVED & ONBOARDING UPDATED" : isRejected ? "✕ DENIED (MISMATCH)" : "⏳ PENDING DEVELOPER FACIAL VETTING"}
+                        </span>
+                      </div>
+                      <h4 style={{ margin: "0 0 2px", fontSize: "1.1rem", color: "#f8fafc" }}>{hm.fullName}</h4>
+                      <div style={{ fontSize: "0.8rem", color: "#94a3b8" }}>{hm.qualification}</div>
+                      <div style={{ fontSize: "0.82rem", color: "#38bdf8", marginTop: "4px" }}>
+                        Institution: <strong>{hm.institutionName}</strong> ({hm.tenantCode})
+                      </div>
+                    </div>
+
+                    <div style={{ background: "rgba(2, 6, 23, 0.6)", padding: "10px 12px", borderRadius: "8px", fontSize: "0.78rem", color: "#94a3b8", display: "flex", flexDirection: "column", gap: "4px" }}>
+                      <div>Council Resolution: <strong style={{ color: "#f8fafc" }}>{hm.appointmentResolutionNumber}</strong></div>
+                      <div>Contact: {hm.email} • {hm.phone}</div>
+                      <div>Reason for Succession: <span style={{ color: "#cbd5e1" }}>{hm.reasonForReplacement}</span></div>
+                      <div>Submitted: {new Date(hm.submittedAt).toLocaleString()}</div>
+                    </div>
+
+                    {/* Developer Verification & Update Onboarding Actions */}
+                    {isPending && (
+                      <div style={{ display: "flex", gap: "10px", marginTop: "auto" }}>
+                        <button
+                          type="button"
+                          onClick={() => {
+                            const updated = headmasterReplacements.map((h) => h.id === hm.id ? { ...h, status: "DENIED_BIOMETRIC_MISMATCH", rejectedAt: new Date().toISOString() } : h);
+                            setHeadmasterReplacements(updated);
+                            localStorage.setItem("gbs_headmaster_replacements", JSON.stringify(updated));
+                            showNotification(`❌ Headmaster candidate ${hm.fullName} denied: Biometric facial scan did not match exact person.`);
+                          }}
+                          style={{ flex: 1, background: "rgba(239, 68, 68, 0.15)", border: "1px solid #ef4444", color: "#f87171", padding: "10px", borderRadius: "8px", fontWeight: "800", fontSize: "0.78rem", cursor: "pointer" }}
+                          title="Deny if facial match is not the exact authorized person"
+                        >
+                          ✕ Deny (Person Mismatch)
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => {
+                            // Approve and upload/replace new Headmaster details on institution's onboarding record!
+                            const updated = headmasterReplacements.map((h) => h.id === hm.id ? { ...h, status: "APPROVED_BY_DEVELOPER", clearedAt: new Date().toISOString() } : h);
+                            setHeadmasterReplacements(updated);
+                            localStorage.setItem("gbs_headmaster_replacements", JSON.stringify(updated));
+
+                            // Update onboardedTenants
+                            setOnboardedTenants((prev) =>
+                              prev.map((t) => (t.tenantCode === hm.tenantCode || t.institutionName === hm.institutionName) ? {
+                                ...t,
+                                headmasterName: hm.fullName,
+                                headmasterEmail: hm.email,
+                                headmasterPhone: hm.phone,
+                                headmasterPhoto: hm.pictureBase64,
+                                facialVerified: true
+                              } : t)
+                            );
+
+                            // Update countdowns
+                            setCountdowns((prev) =>
+                              prev.map((c) => (c.tenantCode === hm.tenantCode || c.tenantName === hm.institutionName) ? {
+                                ...c,
+                                headmasterName: hm.fullName
+                              } : c)
+                            );
+
+                            // Update headmaster profile in local storage
+                            const newHmProfile = {
+                              name: hm.fullName,
+                              email: hm.email,
+                              phone: hm.phone,
+                              qualification: hm.qualification,
+                              photoUrl: hm.pictureBase64,
+                              status: "ACTIVE",
+                              verifiedAt: new Date().toISOString()
+                            };
+                            localStorage.setItem("gbs_headmaster_profile", JSON.stringify(newHmProfile));
+                            window.dispatchEvent(new Event("gbs_headmaster_updated"));
+                            window.dispatchEvent(new CustomEvent("gbs_headmaster_replacement_approved", { detail: hm }));
+
+                            showNotification(`✓ Headmaster facial scan verified! ${hm.fullName} uploaded and set as active Headmaster on ${hm.institutionName}'s onboarding details.`);
+                          }}
+                          style={{ flex: 2, background: "linear-gradient(135deg, #10b981, #059669)", border: "none", color: "#ffffff", padding: "10px", borderRadius: "8px", fontWeight: "800", fontSize: "0.82rem", cursor: "pointer", boxShadow: "0 4px 14px rgba(16, 185, 129, 0.4)" }}
+                          title="Verify facial match and upload new Headmaster onto institution's onboarding details"
+                        >
+                          ✓ Verify Facial Scan & Update Onboarding Details
+                        </button>
+                      </div>
+                    )}
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+        )}
+
+        {/* TAB: TENANT INTRUSION SENTINEL & HEADMASTER PENALTY ENFORCEMENT */}
+        {activeTab === "intrusion_sentinel" && (
+          <div className="tab-pane-content" style={{ animation: "fadeIn 0.3s ease" }}>
+            {/* Surveillance Radar Header Card */}
+            <div style={{
+              background: "linear-gradient(135deg, rgba(15, 23, 42, 0.95) 0%, rgba(30, 41, 59, 0.9) 100%)",
+              border: "2px solid rgba(239, 68, 68, 0.5)",
+              borderRadius: "16px",
+              padding: "1.75rem",
+              marginBottom: "1.5rem",
+              boxShadow: "0 10px 30px rgba(239, 68, 68, 0.15)"
+            }}>
+              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", flexWrap: "wrap", gap: "1rem", marginBottom: "1.25rem" }}>
+                <div>
+                  <div style={{ display: "flex", alignItems: "center", gap: "10px" }}>
+                    <span style={{ fontSize: "1.8rem" }}>🛡️</span>
+                    <h2 style={{ margin: 0, color: "#f87171", fontSize: "1.4rem", fontWeight: "900", letterSpacing: "0.5px" }}>
+                      TENANT INTRUSION SENTINEL & HEADMASTER DISCIPLINARY LEDGER
+                    </h2>
+                  </div>
+                  <p style={{ margin: "6px 0 0", color: "#cbd5e1", fontSize: "0.88rem", maxWidth: "860px", lineHeight: "1.5" }}>
+                    Surveillance perimeter monitors unauthorized access attempts to the Developer Platform. When non-developer users belonging to registered onboarded institutions attempt to log in using another email or institutional credentials, the system blocks them, displays the mandatory penalty warning, and transmits an infraction dossier to their institution Headmaster.
+                  </p>
+                </div>
+                <div style={{ display: "flex", gap: "10px" }}>
+                  <button
+                    type="button"
+                    onClick={handleSimulateIntrusion}
+                    style={{
+                      background: "rgba(239, 68, 68, 0.2)",
+                      border: "1px solid #ef4444",
+                      color: "#fca5a5",
+                      borderRadius: "8px",
+                      padding: "8px 14px",
+                      fontWeight: "700",
+                      fontSize: "0.8rem",
+                      cursor: "pointer"
+                    }}
+                  >
+                    🧪 Simulate Unauthorized Login Interception
+                  </button>
+                </div>
+              </div>
+
+              {/* Statutory Warning Display Replica */}
               <div style={{
-                background: "linear-gradient(135deg, rgba(15, 23, 42, 0.95) 0%, rgba(30, 41, 59, 0.9) 100%)",
-                border: "2px solid rgba(239, 68, 68, 0.5)",
-                borderRadius: "16px",
-                padding: "1.75rem",
-                marginBottom: "1.5rem",
-                boxShadow: "0 10px 30px rgba(239, 68, 68, 0.15)"
+                background: "rgba(2, 6, 23, 0.8)",
+                border: "1px dashed rgba(239, 68, 68, 0.6)",
+                borderRadius: "12px",
+                padding: "1rem 1.25rem",
+                display: "flex",
+                alignItems: "center",
+                gap: "14px"
               }}>
-                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", flexWrap: "wrap", gap: "1rem", marginBottom: "1.25rem" }}>
-                  <div>
-                    <div style={{ display: "flex", alignItems: "center", gap: "10px" }}>
-                      <span style={{ fontSize: "1.8rem" }}>🛡️</span>
-                      <h2 style={{ margin: 0, color: "#f87171", fontSize: "1.4rem", fontWeight: "900", letterSpacing: "0.5px" }}>
-                        TENANT INTRUSION SENTINEL & HEADMASTER DISCIPLINARY LEDGER
-                      </h2>
-                    </div>
-                    <p style={{ margin: "6px 0 0", color: "#cbd5e1", fontSize: "0.88rem", maxWidth: "860px", lineHeight: "1.5" }}>
-                      Surveillance perimeter monitors unauthorized access attempts to the Developer Platform. When non-developer users belonging to registered onboarded institutions attempt to log in using another email or institutional credentials, the system blocks them, displays the mandatory penalty warning, and transmits an infraction dossier to their institution Headmaster.
-                    </p>
+                <div style={{ fontSize: "2rem" }}>⚠️</div>
+                <div>
+                  <div style={{ color: "#ef4444", fontWeight: "800", fontSize: "0.82rem", textTransform: "uppercase" }}>
+                    Enforced Statutory Pop-up Warning Shown to Intruders
                   </div>
-                  <div style={{ display: "flex", gap: "10px" }}>
-                    <button
-                      type="button"
-                      onClick={handleSimulateIntrusion}
-                      style={{
-                        background: "rgba(239, 68, 68, 0.2)",
-                        border: "1px solid #ef4444",
-                        color: "#fca5a5",
-                        borderRadius: "8px",
-                        padding: "8px 14px",
-                        fontWeight: "700",
-                        fontSize: "0.8rem",
-                        cursor: "pointer"
-                      }}
-                    >
-                      🧪 Simulate Unauthorized Login Interception
-                    </button>
+                  <div style={{ color: "#fef08a", fontWeight: "900", fontSize: "1.05rem", fontFamily: "monospace", marginTop: "2px" }}>
+                    "your institution will be notify with your details to your headmaster"
                   </div>
-                </div>
-
-                {/* Statutory Warning Display Replica */}
-                <div style={{
-                  background: "rgba(2, 6, 23, 0.8)",
-                  border: "1px dashed rgba(239, 68, 68, 0.6)",
-                  borderRadius: "12px",
-                  padding: "1rem 1.25rem",
-                  display: "flex",
-                  alignItems: "center",
-                  gap: "14px"
-                }}>
-                  <div style={{ fontSize: "2rem" }}>⚠️</div>
-                  <div>
-                    <div style={{ color: "#ef4444", fontWeight: "800", fontSize: "0.82rem", textTransform: "uppercase" }}>
-                      Enforced Statutory Pop-up Warning Shown to Intruders
-                    </div>
-                    <div style={{ color: "#fef08a", fontWeight: "900", fontSize: "1.05rem", fontFamily: "monospace", marginTop: "2px" }}>
-                      "your institution will be notify with your details to your headmaster"
-                    </div>
-                    <div style={{ color: "#94a3b8", fontSize: "0.75rem", marginTop: "2px" }}>
-                      Displayed as a blocking modal whenever a non-developer attempts access. Access tokens and sessions are immediately revoked.
-                    </div>
-                  </div>
-                </div>
-
-                {/* KPI Metrics Grid: Strictly Equal In Size & Fully Interactive */}
-                <div className="dev-equal-inscription-grid" style={{
-                  display: "grid",
-                  gridTemplateColumns: "repeat(4, 1fr)",
-                  gap: "14px",
-                  marginTop: "1.25rem",
-                  alignItems: "stretch"
-                }}>
-                  <div
-                    className="dev-inscription-box"
-                    onClick={() => {
-                      setSecurityIntrusionFilter("ALL");
-                      showNotification(`🔍 Showing all ${securityViolations.length} detected security intrusions.`);
-                    }}
-                    style={{
-                      background: "rgba(2, 6, 23, 0.75)",
-                      padding: "16px 18px",
-                      borderRadius: "12px",
-                      border: securityIntrusionFilter === "ALL" ? "2px solid #ef4444" : "1.5px solid rgba(239, 68, 68, 0.35)",
-                      boxShadow: securityIntrusionFilter === "ALL" ? "0 0 16px rgba(239, 68, 68, 0.45)" : undefined,
-                      display: "flex",
-                      flexDirection: "column",
-                      justifyContent: "space-between",
-                      minHeight: "96px",
-                      cursor: "pointer",
-                      transition: "all 0.2s ease"
-                    }}
-                    title="Click to view all detected intrusion attempts"
-                  >
-                    <span style={{ fontSize: "0.74rem", color: "#94a3b8", textTransform: "uppercase", fontWeight: 800, letterSpacing: "0.5px" }}>
-                      TOTAL INTRUSION ATTEMPTS {securityIntrusionFilter === "ALL" ? "✓" : "🔍"}
-                    </span>
-                    <div style={{ fontSize: "1.55rem", fontWeight: "900", color: "#f87171", marginTop: "4px" }}>
-                      {securityViolations.length} Detected
-                    </div>
-                  </div>
-                  <div
-                    className="dev-inscription-box"
-                    onClick={() => {
-                      setSecurityIntrusionFilter("IMPLICATED");
-                      showNotification(`🏛️ Filtering by ${new Set(securityViolations.map((v) => v.tenantCode)).size} registered institutions implicated.`);
-                    }}
-                    style={{
-                      background: "rgba(2, 6, 23, 0.75)",
-                      padding: "16px 18px",
-                      borderRadius: "12px",
-                      border: securityIntrusionFilter === "IMPLICATED" ? "2px solid #fbbf24" : "1.5px solid rgba(251, 191, 36, 0.35)",
-                      boxShadow: securityIntrusionFilter === "IMPLICATED" ? "0 0 16px rgba(251, 191, 36, 0.45)" : undefined,
-                      display: "flex",
-                      flexDirection: "column",
-                      justifyContent: "space-between",
-                      minHeight: "96px",
-                      cursor: "pointer",
-                      transition: "all 0.2s ease"
-                    }}
-                    title="Click to filter intrusions by implicated institutions"
-                  >
-                    <span style={{ fontSize: "0.74rem", color: "#94a3b8", textTransform: "uppercase", fontWeight: 800, letterSpacing: "0.5px" }}>
-                      INSTITUTIONS IMPLICATED {securityIntrusionFilter === "IMPLICATED" ? "✓" : "🏛️"}
-                    </span>
-                    <div style={{ fontSize: "1.55rem", fontWeight: "900", color: "#fbbf24", marginTop: "4px" }}>
-                      {new Set(securityViolations.map((v) => v.tenantCode)).size} Registered
-                    </div>
-                  </div>
-                  <div
-                    className="dev-inscription-box"
-                    onClick={() => {
-                      setSecurityIntrusionFilter("TRANSMITTED");
-                      showNotification(`📨 Filtering by ${securityViolations.filter((v) => v.reportedToHeadmaster).length} dispatched Headmaster transmittals.`);
-                    }}
-                    style={{
-                      background: "rgba(2, 6, 23, 0.75)",
-                      padding: "16px 18px",
-                      borderRadius: "12px",
-                      border: securityIntrusionFilter === "TRANSMITTED" ? "2px solid #34d399" : "1.5px solid rgba(52, 211, 153, 0.35)",
-                      boxShadow: securityIntrusionFilter === "TRANSMITTED" ? "0 0 16px rgba(52, 211, 153, 0.45)" : undefined,
-                      display: "flex",
-                      flexDirection: "column",
-                      justifyContent: "space-between",
-                      minHeight: "96px",
-                      cursor: "pointer",
-                      transition: "all 0.2s ease"
-                    }}
-                    title="Click to filter by dispatched Headmaster transmittals"
-                  >
-                    <span style={{ fontSize: "0.74rem", color: "#94a3b8", textTransform: "uppercase", fontWeight: 800, letterSpacing: "0.5px" }}>
-                      HEADMASTER TRANSMITTALS {securityIntrusionFilter === "TRANSMITTED" ? "✓" : "📨"}
-                    </span>
-                    <div style={{ fontSize: "1.55rem", fontWeight: "900", color: "#34d399", marginTop: "4px" }}>
-                      {securityViolations.filter((v) => v.reportedToHeadmaster).length} Dispatched
-                    </div>
-                  </div>
-                  <div
-                    className="dev-inscription-box"
-                    onClick={() => {
-                      showNotification("🛡️ Sentinel Perimeter Status: STRICT LOCKOUT active. All unauthorized root attempts are intercepted and sessions revoked immediately.");
-                    }}
-                    style={{
-                      background: "rgba(2, 6, 23, 0.75)",
-                      padding: "16px 18px",
-                      borderRadius: "12px",
-                      border: "1.5px solid rgba(56, 189, 248, 0.35)",
-                      display: "flex",
-                      flexDirection: "column",
-                      justifyContent: "space-between",
-                      minHeight: "96px",
-                      cursor: "pointer",
-                      transition: "all 0.2s ease"
-                    }}
-                    title="Click to inspect Sentinel Perimeter security level"
-                  >
-                    <span style={{ fontSize: "0.74rem", color: "#94a3b8", textTransform: "uppercase", fontWeight: 800, letterSpacing: "0.5px" }}>
-                      SENTINEL PERIMETER STATUS 🛡️
-                    </span>
-                    <div style={{ fontSize: "1.25rem", fontWeight: "900", color: "#38bdf8", marginTop: "6px" }}>
-                      🛡️ STRICT LOCKOUT
-                    </div>
+                  <div style={{ color: "#94a3b8", fontSize: "0.75rem", marginTop: "2px" }}>
+                    Displayed as a blocking modal whenever a non-developer attempts access. Access tokens and sessions are immediately revoked.
                   </div>
                 </div>
               </div>
 
-              {/* Intrusion Log Table */}
-              <div style={{
-                background: "rgba(15, 23, 42, 0.8)",
-                border: "1px solid rgba(255, 255, 255, 0.1)",
-                borderRadius: "14px",
-                padding: "1.5rem"
+              {/* KPI Metrics Grid: Strictly Equal In Size & Fully Interactive */}
+              <div className="dev-equal-inscription-grid" style={{
+                display: "grid",
+                gridTemplateColumns: "repeat(4, 1fr)",
+                gap: "14px",
+                marginTop: "1.25rem",
+                alignItems: "stretch"
               }}>
-                <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: "1rem", flexWrap: "wrap", gap: "10px" }}>
-                  <h3 style={{ margin: 0, color: "#f8fafc", fontSize: "1.1rem", display: "flex", alignItems: "center", gap: "8px" }}>
-                    <span>📋</span> Detailed Tenant Intrusion Log & Disciplinary Action Trail ({securityViolations.length})
-                  </h3>
-                  {securityIntrusionFilter !== "ALL" && (
-                    <button
-                      type="button"
-                      onClick={() => setSecurityIntrusionFilter("ALL")}
-                      style={{
-                        background: "rgba(56, 189, 248, 0.2)",
-                        border: "1px solid #38bdf8",
-                        color: "#38bdf8",
-                        borderRadius: "6px",
-                        padding: "4px 10px",
-                        fontSize: "0.75rem",
-                        fontWeight: 700,
-                        cursor: "pointer"
-                      }}
-                    >
-                      Clear Filter (Show All)
-                    </button>
-                  )}
-                </div>
-
-                {securityViolations.length === 0 ? (
-                  <div style={{ textAlign: "center", padding: "2.5rem 1rem", color: "#94a3b8" }}>
-                    <div style={{ fontSize: "2.5rem", marginBottom: "8px" }}>✅</div>
-                    <div style={{ fontSize: "1.05rem", fontWeight: "700", color: "#34d399" }}>Perimeter Clear — Zero Active Violations</div>
-                    <div style={{ fontSize: "0.85rem", marginTop: "4px" }}>No unauthorized developer login attempts recorded from onboarded tenants.</div>
+                <div
+                  className="dev-inscription-box"
+                  onClick={() => {
+                    setSecurityIntrusionFilter("ALL");
+                    showNotification(`🔍 Showing all ${securityViolations.length} detected security intrusions.`);
+                  }}
+                  style={{
+                    background: "rgba(2, 6, 23, 0.75)",
+                    padding: "16px 18px",
+                    borderRadius: "12px",
+                    border: securityIntrusionFilter === "ALL" ? "2px solid #ef4444" : "1.5px solid rgba(239, 68, 68, 0.35)",
+                    boxShadow: securityIntrusionFilter === "ALL" ? "0 0 16px rgba(239, 68, 68, 0.45)" : undefined,
+                    display: "flex",
+                    flexDirection: "column",
+                    justifyContent: "space-between",
+                    minHeight: "96px",
+                    cursor: "pointer",
+                    transition: "all 0.2s ease"
+                  }}
+                  title="Click to view all detected intrusion attempts"
+                >
+                  <span style={{ fontSize: "0.74rem", color: "#94a3b8", textTransform: "uppercase", fontWeight: 800, letterSpacing: "0.5px" }}>
+                    TOTAL INTRUSION ATTEMPTS {securityIntrusionFilter === "ALL" ? "✓" : "🔍"}
+                  </span>
+                  <div style={{ fontSize: "1.55rem", fontWeight: "900", color: "#f87171", marginTop: "4px" }}>
+                    {securityViolations.length} Detected
                   </div>
-                ) : (
-                  <div style={{ overflowX: "auto" }}>
-                    <table className="dev-table" style={{ width: "100%", textAlign: "left", borderCollapse: "collapse" }}>
-                      <thead>
-                        <tr style={{ borderBottom: "1px solid rgba(255,255,255,0.15)", background: "rgba(30, 41, 59, 0.5)" }}>
-                          <th style={{ padding: "10px 12px", color: "#94a3b8", fontSize: "0.75rem" }}>TIMESTAMP</th>
-                          <th style={{ padding: "10px 12px", color: "#94a3b8", fontSize: "0.75rem" }}>ATTEMPTED USER / EMAIL</th>
-                          <th style={{ padding: "10px 12px", color: "#94a3b8", fontSize: "0.75rem" }}>REGISTERED INSTITUTION</th>
-                          <th style={{ padding: "10px 12px", color: "#94a3b8", fontSize: "0.75rem" }}>NETWORK IP / USER AGENT</th>
-                          <th style={{ padding: "10px 12px", color: "#94a3b8", fontSize: "0.75rem" }}>ENFORCED WARNING</th>
-                          <th style={{ padding: "10px 12px", color: "#94a3b8", fontSize: "0.75rem" }}>HEADMASTER STATUS</th>
-                          <th style={{ padding: "10px 12px", color: "#94a3b8", fontSize: "0.75rem" }}>ACTIONS</th>
-                        </tr>
-                      </thead>
-                      <tbody>
-                        {securityViolations
-                          .filter((vio) => {
-                            if (securityIntrusionFilter === "TRANSMITTED") return vio.reportedToHeadmaster;
-                            if (securityIntrusionFilter === "IMPLICATED") return !!vio.tenantCode;
-                            return true;
-                          })
-                          .map((vio) => (
+                </div>
+                <div
+                  className="dev-inscription-box"
+                  onClick={() => {
+                    setSecurityIntrusionFilter("IMPLICATED");
+                    showNotification(`🏛️ Filtering by ${new Set(securityViolations.map((v) => v.tenantCode)).size} registered institutions implicated.`);
+                  }}
+                  style={{
+                    background: "rgba(2, 6, 23, 0.75)",
+                    padding: "16px 18px",
+                    borderRadius: "12px",
+                    border: securityIntrusionFilter === "IMPLICATED" ? "2px solid #fbbf24" : "1.5px solid rgba(251, 191, 36, 0.35)",
+                    boxShadow: securityIntrusionFilter === "IMPLICATED" ? "0 0 16px rgba(251, 191, 36, 0.45)" : undefined,
+                    display: "flex",
+                    flexDirection: "column",
+                    justifyContent: "space-between",
+                    minHeight: "96px",
+                    cursor: "pointer",
+                    transition: "all 0.2s ease"
+                  }}
+                  title="Click to filter intrusions by implicated institutions"
+                >
+                  <span style={{ fontSize: "0.74rem", color: "#94a3b8", textTransform: "uppercase", fontWeight: 800, letterSpacing: "0.5px" }}>
+                    INSTITUTIONS IMPLICATED {securityIntrusionFilter === "IMPLICATED" ? "✓" : "🏛️"}
+                  </span>
+                  <div style={{ fontSize: "1.55rem", fontWeight: "900", color: "#fbbf24", marginTop: "4px" }}>
+                    {new Set(securityViolations.map((v) => v.tenantCode)).size} Registered
+                  </div>
+                </div>
+                <div
+                  className="dev-inscription-box"
+                  onClick={() => {
+                    setSecurityIntrusionFilter("TRANSMITTED");
+                    showNotification(`📨 Filtering by ${securityViolations.filter((v) => v.reportedToHeadmaster).length} dispatched Headmaster transmittals.`);
+                  }}
+                  style={{
+                    background: "rgba(2, 6, 23, 0.75)",
+                    padding: "16px 18px",
+                    borderRadius: "12px",
+                    border: securityIntrusionFilter === "TRANSMITTED" ? "2px solid #34d399" : "1.5px solid rgba(52, 211, 153, 0.35)",
+                    boxShadow: securityIntrusionFilter === "TRANSMITTED" ? "0 0 16px rgba(52, 211, 153, 0.45)" : undefined,
+                    display: "flex",
+                    flexDirection: "column",
+                    justifyContent: "space-between",
+                    minHeight: "96px",
+                    cursor: "pointer",
+                    transition: "all 0.2s ease"
+                  }}
+                  title="Click to filter by dispatched Headmaster transmittals"
+                >
+                  <span style={{ fontSize: "0.74rem", color: "#94a3b8", textTransform: "uppercase", fontWeight: 800, letterSpacing: "0.5px" }}>
+                    HEADMASTER TRANSMITTALS {securityIntrusionFilter === "TRANSMITTED" ? "✓" : "📨"}
+                  </span>
+                  <div style={{ fontSize: "1.55rem", fontWeight: "900", color: "#34d399", marginTop: "4px" }}>
+                    {securityViolations.filter((v) => v.reportedToHeadmaster).length} Dispatched
+                  </div>
+                </div>
+                <div
+                  className="dev-inscription-box"
+                  onClick={() => {
+                    showNotification("🛡️ Sentinel Perimeter Status: STRICT LOCKOUT active. All unauthorized root attempts are intercepted and sessions revoked immediately.");
+                  }}
+                  style={{
+                    background: "rgba(2, 6, 23, 0.75)",
+                    padding: "16px 18px",
+                    borderRadius: "12px",
+                    border: "1.5px solid rgba(56, 189, 248, 0.35)",
+                    display: "flex",
+                    flexDirection: "column",
+                    justifyContent: "space-between",
+                    minHeight: "96px",
+                    cursor: "pointer",
+                    transition: "all 0.2s ease"
+                  }}
+                  title="Click to inspect Sentinel Perimeter security level"
+                >
+                  <span style={{ fontSize: "0.74rem", color: "#94a3b8", textTransform: "uppercase", fontWeight: 800, letterSpacing: "0.5px" }}>
+                    SENTINEL PERIMETER STATUS 🛡️
+                  </span>
+                  <div style={{ fontSize: "1.25rem", fontWeight: "900", color: "#38bdf8", marginTop: "6px" }}>
+                    🛡️ STRICT LOCKOUT
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            {/* Intrusion Log Table */}
+            <div style={{
+              background: "rgba(15, 23, 42, 0.8)",
+              border: "1px solid rgba(255, 255, 255, 0.1)",
+              borderRadius: "14px",
+              padding: "1.5rem"
+            }}>
+              <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: "1rem", flexWrap: "wrap", gap: "10px" }}>
+                <h3 style={{ margin: 0, color: "#f8fafc", fontSize: "1.1rem", display: "flex", alignItems: "center", gap: "8px" }}>
+                  <span>📋</span> Detailed Tenant Intrusion Log & Disciplinary Action Trail ({securityViolations.length})
+                </h3>
+                {securityIntrusionFilter !== "ALL" && (
+                  <button
+                    type="button"
+                    onClick={() => setSecurityIntrusionFilter("ALL")}
+                    style={{
+                      background: "rgba(56, 189, 248, 0.2)",
+                      border: "1px solid #38bdf8",
+                      color: "#38bdf8",
+                      borderRadius: "6px",
+                      padding: "4px 10px",
+                      fontSize: "0.75rem",
+                      fontWeight: 700,
+                      cursor: "pointer"
+                    }}
+                  >
+                    Clear Filter (Show All)
+                  </button>
+                )}
+              </div>
+
+              {securityViolations.length === 0 ? (
+                <div style={{ textAlign: "center", padding: "2.5rem 1rem", color: "#94a3b8" }}>
+                  <div style={{ fontSize: "2.5rem", marginBottom: "8px" }}>✅</div>
+                  <div style={{ fontSize: "1.05rem", fontWeight: "700", color: "#34d399" }}>Perimeter Clear — Zero Active Violations</div>
+                  <div style={{ fontSize: "0.85rem", marginTop: "4px" }}>No unauthorized developer login attempts recorded from onboarded tenants.</div>
+                </div>
+              ) : (
+                <div style={{ overflowX: "auto" }}>
+                  <table className="dev-table" style={{ width: "100%", textAlign: "left", borderCollapse: "collapse" }}>
+                    <thead>
+                      <tr style={{ borderBottom: "1px solid rgba(255,255,255,0.15)", background: "rgba(30, 41, 59, 0.5)" }}>
+                        <th style={{ padding: "10px 12px", color: "#94a3b8", fontSize: "0.75rem" }}>TIMESTAMP</th>
+                        <th style={{ padding: "10px 12px", color: "#94a3b8", fontSize: "0.75rem" }}>ATTEMPTED USER / EMAIL</th>
+                        <th style={{ padding: "10px 12px", color: "#94a3b8", fontSize: "0.75rem" }}>REGISTERED INSTITUTION</th>
+                        <th style={{ padding: "10px 12px", color: "#94a3b8", fontSize: "0.75rem" }}>NETWORK IP / USER AGENT</th>
+                        <th style={{ padding: "10px 12px", color: "#94a3b8", fontSize: "0.75rem" }}>ENFORCED WARNING</th>
+                        <th style={{ padding: "10px 12px", color: "#94a3b8", fontSize: "0.75rem" }}>HEADMASTER STATUS</th>
+                        <th style={{ padding: "10px 12px", color: "#94a3b8", fontSize: "0.75rem" }}>ACTIONS</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {securityViolations
+                        .filter((vio) => {
+                          if (securityIntrusionFilter === "TRANSMITTED") return vio.reportedToHeadmaster;
+                          if (securityIntrusionFilter === "IMPLICATED") return !!vio.tenantCode;
+                          return true;
+                        })
+                        .map((vio) => (
                           <tr key={vio.id} style={{ borderBottom: "1px solid rgba(255,255,255,0.06)", background: "rgba(15, 23, 42, 0.4)" }}>
                             <td style={{ padding: "12px", fontSize: "0.8rem", color: "#cbd5e1", whiteSpace: "nowrap" }}>
                               <div>{new Date(vio.timestamp).toLocaleDateString()}</div>
@@ -6418,181 +6488,354 @@ export default function DeveloperDashboard() {
                             </td>
                           </tr>
                         ))}
-                      </tbody>
-                    </table>
-                  </div>
-                )}
-              </div>
+                    </tbody>
+                  </table>
+                </div>
+              )}
             </div>
-          )}
 
-          {/* TAB: DEVELOPER <-> HEADMASTER DIRECTIVES & TWO-WAY REPLIES */}
-          {activeTab === "headmaster_messages" && (
-            <div className="tab-pane-content" style={{ animation: "fadeIn 0.3s ease" }}>
-              <div style={{
-                background: "linear-gradient(135deg, rgba(15, 23, 42, 0.95) 0%, rgba(30, 41, 59, 0.9) 100%)",
-                border: "2px solid rgba(139, 92, 246, 0.5)",
-                borderRadius: "16px",
-                padding: "1.75rem",
-                marginBottom: "1.5rem"
-              }}>
-                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", flexWrap: "wrap", gap: "1rem" }}>
-                  <div>
-                    <div style={{ display: "flex", alignItems: "center", gap: "10px" }}>
-                      <span style={{ fontSize: "1.8rem" }}>💬</span>
-                      <h2 style={{ margin: 0, color: "#c4b5fd", fontSize: "1.4rem", fontWeight: "900" }}>
-                        HEADMASTER DIRECTIVES & TWO-WAY SECURITY DISPATCH DESK
-                      </h2>
-                    </div>
-                    <p style={{ margin: "6px 0 0", color: "#cbd5e1", fontSize: "0.88rem", maxWidth: "860px", lineHeight: "1.5" }}>
-                      Direct secure channel between System Developer Gabriel Osei and Institution Headmasters. Issue formal warnings, security directives, or compliance instructions. Headmasters receive immediate pop-up alerts on their dashboards and reply outlining the corrective actions they have completed.
-                    </p>
+            {/* REGISTERED STAFF DEVELOPER BREACH TRACKER (REPEAT TRIALS WATCHLIST) */}
+            <div style={{
+              marginTop: "2rem",
+              background: "linear-gradient(135deg, rgba(15, 23, 42, 0.95) 0%, rgba(30, 41, 59, 0.9) 100%)",
+              border: "2px solid rgba(239, 68, 68, 0.4)",
+              borderRadius: "16px",
+              padding: "1.75rem",
+              boxShadow: "0 10px 25px -5px rgba(239, 68, 68, 0.15)"
+            }}>
+              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", flexWrap: "wrap", gap: "1rem", marginBottom: "1.25rem" }}>
+                <div>
+                  <div style={{ display: "flex", alignItems: "center", gap: "10px" }}>
+                    <span style={{ fontSize: "1.6rem" }}>⚠️</span>
+                    <h3 style={{ margin: 0, color: "#fca5a5", fontSize: "1.2rem", fontWeight: "900", letterSpacing: "0.5px" }}>
+                      REGISTERED STAFF DEVELOPER BREACH TRACKER (REPEAT TRIALS WATCHLIST)
+                    </h3>
                   </div>
-                  <button
-                    type="button"
-                    onClick={() => {
-                      setComposeMessageForm({
-                        tenantCode: "GBS-ROYALOAK",
-                        institutionName: "St. Augustine Science Academy",
-                        headmasterName: "Arthur Pendleton",
-                        headmasterEmail: "admin@gbs.edu",
-                        subject: "",
-                        messageText: "",
-                        urgency: "HIGH",
-                        requiresReply: true
-                      });
-                      setShowComposeMessageModal(true);
-                    }}
-                    style={{
-                      background: "linear-gradient(135deg, #8b5cf6, #6d28d9)",
-                      color: "#fff",
-                      border: "none",
-                      padding: "10px 18px",
-                      borderRadius: "8px",
-                      fontWeight: "800",
-                      fontSize: "0.85rem",
-                      cursor: "pointer",
-                      display: "flex",
-                      alignItems: "center",
-                      gap: "8px",
-                      boxShadow: "0 4px 15px rgba(139, 92, 246, 0.4)"
-                    }}
-                  >
-                    <span>✉️</span> Compose Directive to Headmaster
-                  </button>
+                  <p style={{ margin: "6px 0 0", color: "#cbd5e1", fontSize: "0.85rem", maxWidth: "900px" }}>
+                    Active tracking of registered institutional staff members attempting repeated unauthorized logins into the Developer Control Center. Staff members exceeding threshold trials can be immediately summoned for administrative questioning and formal sanctions.
+                  </p>
+                </div>
+                <div style={{ display: "flex", gap: "10px" }}>
+                  <div style={{ background: "rgba(239, 68, 68, 0.15)", border: "1px solid rgba(239, 68, 68, 0.3)", borderRadius: "8px", padding: "6px 14px", textAlign: "center" }}>
+                    <div style={{ fontSize: "1.1rem", fontWeight: "900", color: "#f87171" }}>
+                      {Object.keys(staffBreachTrials).length}
+                    </div>
+                    <div style={{ fontSize: "0.7rem", color: "#fca5a5", fontWeight: "700" }}>STAFF MONITORED</div>
+                  </div>
+                  <div style={{ background: "rgba(245, 158, 11, 0.15)", border: "1px solid rgba(245, 158, 11, 0.3)", borderRadius: "8px", padding: "6px 14px", textAlign: "center" }}>
+                    <div style={{ fontSize: "1.1rem", fontWeight: "900", color: "#fbbf24" }}>
+                      {Object.values(staffBreachTrials).reduce((sum, item) => sum + (item.trialCount || 1), 0)}
+                    </div>
+                    <div style={{ fontSize: "0.7rem", color: "#fde68a", fontWeight: "700" }}>TOTAL BREACH TRIALS</div>
+                  </div>
                 </div>
               </div>
 
-              {/* Message Threads List */}
-              <div style={{ display: "flex", flexDirection: "column", gap: "1.25rem" }}>
-                {headmasterMessages.length === 0 ? (
-                  <div style={{ background: "rgba(15, 23, 42, 0.7)", padding: "2.5rem", textAlign: "center", borderRadius: "14px", color: "#94a3b8" }}>
-                    <div style={{ fontSize: "2.5rem", marginBottom: "8px" }}>📭</div>
-                    <div style={{ fontSize: "1.1rem", fontWeight: "700", color: "#e2e8f0" }}>No Headmaster Messages Active</div>
-                    <p style={{ fontSize: "0.85rem", marginTop: "4px" }}>Click "Compose Directive to Headmaster" to send an official instruction.</p>
+              {Object.keys(staffBreachTrials).length === 0 ? (
+                <div style={{ textAlign: "center", padding: "2rem", color: "#94a3b8" }}>
+                  <span style={{ fontSize: "2rem" }}>🛡️</span>
+                  <p style={{ margin: "8px 0 0", fontWeight: "600" }}>No repeat breach trials recorded from registered staff members.</p>
+                </div>
+              ) : (
+                <div style={{ overflowX: "auto" }}>
+                  <table className="dev-table" style={{ width: "100%", textAlign: "left", borderCollapse: "collapse" }}>
+                    <thead>
+                      <tr style={{ borderBottom: "1px solid rgba(255,255,255,0.15)", background: "rgba(30, 41, 59, 0.6)" }}>
+                        <th style={{ padding: "10px 12px", color: "#94a3b8", fontSize: "0.75rem" }}>STAFF MEMBER & GMAIL</th>
+                        <th style={{ padding: "10px 12px", color: "#94a3b8", fontSize: "0.75rem" }}>REGISTERED INSTITUTION</th>
+                        <th style={{ padding: "10px 12px", color: "#94a3b8", fontSize: "0.75rem" }}>UNAUTHORIZED TRIALS</th>
+                        <th style={{ padding: "10px 12px", color: "#94a3b8", fontSize: "0.75rem" }}>LAST DETECTED ATTEMPT</th>
+                        <th style={{ padding: "10px 12px", color: "#94a3b8", fontSize: "0.75rem" }}>REGULATORY STATUS</th>
+                        <th style={{ padding: "10px 12px", color: "#94a3b8", fontSize: "0.75rem" }}>ACTIONS / QUESTIONING</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {Object.entries(staffBreachTrials).map(([emailKey, staff]) => {
+                        const count = staff.trialCount || 1;
+                        const isSevere = count >= 3;
+                        return (
+                          <tr key={emailKey} style={{ borderBottom: "1px solid rgba(255,255,255,0.06)", background: "rgba(15, 23, 42, 0.4)" }}>
+                            <td style={{ padding: "12px" }}>
+                              <div style={{ fontWeight: "700", color: "#f87171", fontSize: "0.85rem" }}>
+                                {staff.staffName || staff.email}
+                              </div>
+                              <div style={{ fontSize: "0.75rem", color: "#38bdf8", fontFamily: "monospace" }}>
+                                ✉️ {staff.email}
+                              </div>
+                            </td>
+                            <td style={{ padding: "12px", fontSize: "0.82rem" }}>
+                              <div style={{ color: "#e2e8f0", fontWeight: "600" }}>{staff.tenantName}</div>
+                              <div style={{ color: "#94a3b8", fontSize: "0.72rem" }}>Code: {staff.tenantCode}</div>
+                            </td>
+                            <td style={{ padding: "12px" }}>
+                              <span style={{
+                                display: "inline-block",
+                                padding: "4px 10px",
+                                borderRadius: "12px",
+                                fontSize: "0.78rem",
+                                fontWeight: "800",
+                                background: isSevere ? "rgba(239, 68, 68, 0.25)" : "rgba(245, 158, 11, 0.2)",
+                                color: isSevere ? "#f87171" : "#fbbf24",
+                                border: isSevere ? "1px solid #ef4444" : "1px solid #f59e0b"
+                              }}>
+                                🚨 {count} Trial{count > 1 ? "s" : ""} Intercepted
+                              </span>
+                            </td>
+                            <td style={{ padding: "12px", fontSize: "0.78rem", color: "#cbd5e1" }}>
+                              <div>{staff.lastAttempt || "Recent"}</div>
+                            </td>
+                            <td style={{ padding: "12px", fontSize: "0.8rem" }}>
+                              <span style={{
+                                display: "inline-block",
+                                padding: "3px 8px",
+                                borderRadius: "6px",
+                                fontSize: "0.72rem",
+                                fontWeight: "800",
+                                background: staff.status === "OFFICIAL_SUMMONS_DISPATCHED" ? "rgba(16, 185, 129, 0.2)" : "rgba(239, 68, 68, 0.2)",
+                                color: staff.status === "OFFICIAL_SUMMONS_DISPATCHED" ? "#34d399" : "#fca5a5",
+                                border: staff.status === "OFFICIAL_SUMMONS_DISPATCHED" ? "1px solid #10b981" : "1px solid #ef4444"
+                              }}>
+                                {staff.status === "OFFICIAL_SUMMONS_DISPATCHED" ? "✓ SUMMONS DISPATCHED" : staff.status || "MONITORED"}
+                              </span>
+                              {staff.summonsSentAt && (
+                                <div style={{ fontSize: "0.68rem", color: "#94a3b8", marginTop: "2px" }}>
+                                  Sent: {staff.summonsSentAt}
+                                </div>
+                              )}
+                            </td>
+                            <td style={{ padding: "12px" }}>
+                              <div style={{ display: "flex", gap: "6px", flexWrap: "wrap" }}>
+                                <button
+                                  type="button"
+                                  onClick={() => handleSummonStaffMember(emailKey)}
+                                  style={{
+                                    background: "rgba(239, 68, 68, 0.25)",
+                                    border: "1px solid #ef4444",
+                                    color: "#fca5a5",
+                                    borderRadius: "6px",
+                                    padding: "4px 8px",
+                                    fontSize: "0.72rem",
+                                    fontWeight: "800",
+                                    cursor: "pointer"
+                                  }}
+                                  title="Dispatch official executive summons to staff member and headmaster for questioning"
+                                >
+                                  ⚖️ Summon for Questioning
+                                </button>
+                                <button
+                                  type="button"
+                                  onClick={() => handleIssueBreachWarning(emailKey)}
+                                  style={{
+                                    background: "rgba(245, 158, 11, 0.2)",
+                                    border: "1px solid #f59e0b",
+                                    color: "#fde68a",
+                                    borderRadius: "6px",
+                                    padding: "4px 8px",
+                                    fontSize: "0.72rem",
+                                    fontWeight: "700",
+                                    cursor: "pointer"
+                                  }}
+                                  title="Issue formal breach sanction warning"
+                                >
+                                  📜 Issue Sanction
+                                </button>
+                                <button
+                                  type="button"
+                                  onClick={() => handleClearStaffBreach(emailKey)}
+                                  style={{
+                                    background: "rgba(148, 163, 184, 0.15)",
+                                    border: "1px solid #64748b",
+                                    color: "#cbd5e1",
+                                    borderRadius: "6px",
+                                    padding: "4px 8px",
+                                    fontSize: "0.72rem",
+                                    fontWeight: "700",
+                                    cursor: "pointer"
+                                  }}
+                                  title="Archive this staff tracking dossier"
+                                >
+                                  ✓ Archive
+                                </button>
+                              </div>
+                            </td>
+                          </tr>
+                        );
+                      })}
+                    </tbody>
+                  </table>
+                </div>
+              )}
+            </div>
+          </div>
+        )}
+
+        {/* TAB: DEVELOPER <-> HEADMASTER DIRECTIVES & TWO-WAY REPLIES */}
+        {activeTab === "headmaster_messages" && (
+          <div className="tab-pane-content" style={{ animation: "fadeIn 0.3s ease" }}>
+            <div style={{
+              background: "linear-gradient(135deg, rgba(15, 23, 42, 0.95) 0%, rgba(30, 41, 59, 0.9) 100%)",
+              border: "2px solid rgba(139, 92, 246, 0.5)",
+              borderRadius: "16px",
+              padding: "1.75rem",
+              marginBottom: "1.5rem"
+            }}>
+              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", flexWrap: "wrap", gap: "1rem" }}>
+                <div>
+                  <div style={{ display: "flex", alignItems: "center", gap: "10px" }}>
+                    <span style={{ fontSize: "1.8rem" }}>💬</span>
+                    <h2 style={{ margin: 0, color: "#c4b5fd", fontSize: "1.4rem", fontWeight: "900" }}>
+                      HEADMASTER DIRECTIVES & TWO-WAY SECURITY DISPATCH DESK
+                    </h2>
                   </div>
-                ) : (
-                  headmasterMessages.map((msg) => (
-                    <div
-                      key={msg.id}
-                      style={{
-                        background: "rgba(15, 23, 42, 0.85)",
-                        border: "1px solid rgba(139, 92, 246, 0.4)",
-                        borderRadius: "14px",
-                        padding: "1.5rem",
-                        boxShadow: "0 6px 20px rgba(0, 0, 0, 0.3)"
-                      }}
-                    >
-                      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", flexWrap: "wrap", gap: "10px", marginBottom: "12px", borderBottom: "1px solid rgba(255, 255, 255, 0.08)", paddingBottom: "10px" }}>
-                        <div>
-                          <div style={{ display: "flex", alignItems: "center", gap: "8px", flexWrap: "wrap" }}>
-                            <span style={{ background: "rgba(139, 92, 246, 0.2)", color: "#c4b5fd", border: "1px solid #8b5cf6", padding: "2px 8px", borderRadius: "6px", fontSize: "0.72rem", fontWeight: "800" }}>
-                              {msg.tenantCode}
-                            </span>
-                            <strong style={{ color: "#38bdf8", fontSize: "1.05rem" }}>{msg.institutionName}</strong>
-                            <span style={{ fontSize: "0.85rem", color: "#94a3b8" }}>• Headmaster: <strong>{msg.headmasterName}</strong></span>
-                          </div>
-                          <h4 style={{ margin: "6px 0 0", color: "#f8fafc", fontSize: "1.1rem" }}>{msg.subject}</h4>
-                        </div>
-                        <div style={{ textAlign: "right" }}>
-                          <span style={{ fontSize: "0.75rem", color: "#94a3b8" }}>{new Date(msg.timestamp).toLocaleString()}</span>
-                          <div style={{ marginTop: "4px" }}>
-                            <span style={{ background: msg.replies?.length ? "rgba(16, 185, 129, 0.2)" : "rgba(245, 158, 11, 0.2)", color: msg.replies?.length ? "#34d399" : "#fbbf24", padding: "2px 8px", borderRadius: "4px", fontSize: "0.7rem", fontWeight: "800" }}>
-                              {msg.replies?.length ? `✓ HEADMASTER REPLIED (${msg.replies.length})` : "⏳ AWAITING HEADMASTER REPLY"}
-                            </span>
-                          </div>
-                        </div>
-                      </div>
-
-                      {/* Developer Original Directive Body */}
-                      <div style={{ background: "rgba(2, 6, 23, 0.7)", padding: "1rem 1.25rem", borderRadius: "10px", borderLeft: "4px solid #8b5cf6", marginBottom: "1rem" }}>
-                        <div style={{ display: "flex", justifyContent: "space-between", marginBottom: "6px", fontSize: "0.75rem", color: "#c4b5fd" }}>
-                          <span><strong>From:</strong> {msg.senderName}</span>
-                          <span>SENT VIA ENCRYPTED DEVELOPER DIRECTIVE</span>
-                        </div>
-                        <div style={{ whiteSpace: "pre-wrap", color: "#e2e8f0", fontSize: "0.9rem", lineHeight: "1.6" }}>
-                          {msg.messageText}
-                        </div>
-                      </div>
-
-                      {/* Headmaster Replies Section */}
-                      {(msg.replies || []).length > 0 && (
-                        <div style={{ marginLeft: "1.5rem", borderLeft: "2px dashed rgba(56, 189, 248, 0.5)", paddingLeft: "1.25rem", marginTop: "1rem", display: "flex", flexDirection: "column", gap: "10px" }}>
-                          <span style={{ fontSize: "0.78rem", color: "#38bdf8", fontWeight: "800", textTransform: "uppercase" }}>
-                            📥 Headmaster Responses & Remedial Actions Taken:
-                          </span>
-                          {msg.replies.map((rep) => (
-                            <div key={rep.id} style={{ background: rep.sender === "HEADMASTER" ? "rgba(16, 185, 129, 0.1)" : "rgba(139, 92, 246, 0.1)", border: `1px solid ${rep.sender === "HEADMASTER" ? "#10b981" : "#8b5cf6"}`, borderRadius: "10px", padding: "12px 14px" }}>
-                              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "4px", fontSize: "0.75rem" }}>
-                                <strong style={{ color: rep.sender === "HEADMASTER" ? "#34d399" : "#c4b5fd" }}>
-                                  {rep.sender === "HEADMASTER" ? `🎓 Headmaster ${rep.senderName}` : `👨‍💻 Developer ${rep.senderName}`}
-                                </strong>
-                                <span style={{ color: "#94a3b8" }}>{new Date(rep.timestamp).toLocaleString()}</span>
-                              </div>
-                              <div style={{ whiteSpace: "pre-wrap", color: "#f8fafc", fontSize: "0.88rem", lineHeight: "1.5" }}>
-                                {rep.messageText}
-                              </div>
-                            </div>
-                          ))}
-                        </div>
-                      )}
-
-                      {/* Quick Reply Box for Developer in Thread */}
-                      <div style={{ marginTop: "1.25rem", display: "flex", gap: "10px" }}>
-                        <input
-                          type="text"
-                          id={`dev_reply_input_${msg.id}`}
-                          placeholder="Type follow-up instruction to Headmaster in this thread..."
-                          style={{ flex: 1, padding: "8px 12px", background: "#020617", border: "1px solid #334155", borderRadius: "8px", color: "#fff", fontSize: "0.85rem" }}
-                          onKeyDown={(e) => {
-                            if (e.key === "Enter") {
-                              handleDeveloperReplyInThread(msg.id, e.target.value);
-                              e.target.value = "";
-                            }
-                          }}
-                        />
-                        <button
-                          type="button"
-                          onClick={() => {
-                            const input = document.getElementById(`dev_reply_input_${msg.id}`);
-                            if (input && input.value) {
-                              handleDeveloperReplyInThread(msg.id, input.value);
-                              input.value = "";
-                            }
-                          }}
-                          style={{ background: "#8b5cf6", color: "#fff", border: "none", borderRadius: "8px", padding: "8px 16px", fontWeight: "700", fontSize: "0.82rem", cursor: "pointer" }}
-                        >
-                          Send Follow-up
-                        </button>
-                      </div>
-                    </div>
-                  ))
-                )}
+                  <p style={{ margin: "6px 0 0", color: "#cbd5e1", fontSize: "0.88rem", maxWidth: "860px", lineHeight: "1.5" }}>
+                    Direct secure channel between System Developer Gabriel Osei and Institution Headmasters. Issue formal warnings, security directives, or compliance instructions. Headmasters receive immediate pop-up alerts on their dashboards and reply outlining the corrective actions they have completed.
+                  </p>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setComposeMessageForm({
+                      tenantCode: "GBS-ROYALOAK",
+                      institutionName: "St. Augustine Science Academy",
+                      headmasterName: "Arthur Pendleton",
+                      headmasterEmail: "admin@gbs.edu",
+                      subject: "",
+                      messageText: "",
+                      urgency: "HIGH",
+                      requiresReply: true
+                    });
+                    setShowComposeMessageModal(true);
+                  }}
+                  style={{
+                    background: "linear-gradient(135deg, #8b5cf6, #6d28d9)",
+                    color: "#fff",
+                    border: "none",
+                    padding: "10px 18px",
+                    borderRadius: "8px",
+                    fontWeight: "800",
+                    fontSize: "0.85rem",
+                    cursor: "pointer",
+                    display: "flex",
+                    alignItems: "center",
+                    gap: "8px",
+                    boxShadow: "0 4px 15px rgba(139, 92, 246, 0.4)"
+                  }}
+                >
+                  <span>✉️</span> Compose Directive to Headmaster
+                </button>
               </div>
             </div>
-          )}
 
-          {activeTab === "telemetry" && (
+            {/* Message Threads List */}
+            <div style={{ display: "flex", flexDirection: "column", gap: "1.25rem" }}>
+              {headmasterMessages.length === 0 ? (
+                <div style={{ background: "rgba(15, 23, 42, 0.7)", padding: "2.5rem", textAlign: "center", borderRadius: "14px", color: "#94a3b8" }}>
+                  <div style={{ fontSize: "2.5rem", marginBottom: "8px" }}>📭</div>
+                  <div style={{ fontSize: "1.1rem", fontWeight: "700", color: "#e2e8f0" }}>No Headmaster Messages Active</div>
+                  <p style={{ fontSize: "0.85rem", marginTop: "4px" }}>Click "Compose Directive to Headmaster" to send an official instruction.</p>
+                </div>
+              ) : (
+                headmasterMessages.map((msg) => (
+                  <div
+                    key={msg.id}
+                    style={{
+                      background: "rgba(15, 23, 42, 0.85)",
+                      border: "1px solid rgba(139, 92, 246, 0.4)",
+                      borderRadius: "14px",
+                      padding: "1.5rem",
+                      boxShadow: "0 6px 20px rgba(0, 0, 0, 0.3)"
+                    }}
+                  >
+                    <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", flexWrap: "wrap", gap: "10px", marginBottom: "12px", borderBottom: "1px solid rgba(255, 255, 255, 0.08)", paddingBottom: "10px" }}>
+                      <div>
+                        <div style={{ display: "flex", alignItems: "center", gap: "8px", flexWrap: "wrap" }}>
+                          <span style={{ background: "rgba(139, 92, 246, 0.2)", color: "#c4b5fd", border: "1px solid #8b5cf6", padding: "2px 8px", borderRadius: "6px", fontSize: "0.72rem", fontWeight: "800" }}>
+                            {msg.tenantCode}
+                          </span>
+                          <strong style={{ color: "#38bdf8", fontSize: "1.05rem" }}>{msg.institutionName}</strong>
+                          <span style={{ fontSize: "0.85rem", color: "#94a3b8" }}>• Headmaster: <strong>{msg.headmasterName}</strong></span>
+                        </div>
+                        <h4 style={{ margin: "6px 0 0", color: "#f8fafc", fontSize: "1.1rem" }}>{msg.subject}</h4>
+                      </div>
+                      <div style={{ textAlign: "right" }}>
+                        <span style={{ fontSize: "0.75rem", color: "#94a3b8" }}>{new Date(msg.timestamp).toLocaleString()}</span>
+                        <div style={{ marginTop: "4px" }}>
+                          <span style={{ background: msg.replies?.length ? "rgba(16, 185, 129, 0.2)" : "rgba(245, 158, 11, 0.2)", color: msg.replies?.length ? "#34d399" : "#fbbf24", padding: "2px 8px", borderRadius: "4px", fontSize: "0.7rem", fontWeight: "800" }}>
+                            {msg.replies?.length ? `✓ HEADMASTER REPLIED (${msg.replies.length})` : "⏳ AWAITING HEADMASTER REPLY"}
+                          </span>
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* Developer Original Directive Body */}
+                    <div style={{ background: "rgba(2, 6, 23, 0.7)", padding: "1rem 1.25rem", borderRadius: "10px", borderLeft: "4px solid #8b5cf6", marginBottom: "1rem" }}>
+                      <div style={{ display: "flex", justifyContent: "space-between", marginBottom: "6px", fontSize: "0.75rem", color: "#c4b5fd" }}>
+                        <span><strong>From:</strong> {msg.senderName}</span>
+                        <span>SENT VIA ENCRYPTED DEVELOPER DIRECTIVE</span>
+                      </div>
+                      <div style={{ whiteSpace: "pre-wrap", color: "#e2e8f0", fontSize: "0.9rem", lineHeight: "1.6" }}>
+                        {msg.messageText}
+                      </div>
+                    </div>
+
+                    {/* Headmaster Replies Section */}
+                    {(msg.replies || []).length > 0 && (
+                      <div style={{ marginLeft: "1.5rem", borderLeft: "2px dashed rgba(56, 189, 248, 0.5)", paddingLeft: "1.25rem", marginTop: "1rem", display: "flex", flexDirection: "column", gap: "10px" }}>
+                        <span style={{ fontSize: "0.78rem", color: "#38bdf8", fontWeight: "800", textTransform: "uppercase" }}>
+                          📥 Headmaster Responses & Remedial Actions Taken:
+                        </span>
+                        {msg.replies.map((rep) => (
+                          <div key={rep.id} style={{ background: rep.sender === "HEADMASTER" ? "rgba(16, 185, 129, 0.1)" : "rgba(139, 92, 246, 0.1)", border: `1px solid ${rep.sender === "HEADMASTER" ? "#10b981" : "#8b5cf6"}`, borderRadius: "10px", padding: "12px 14px" }}>
+                            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "4px", fontSize: "0.75rem" }}>
+                              <strong style={{ color: rep.sender === "HEADMASTER" ? "#34d399" : "#c4b5fd" }}>
+                                {rep.sender === "HEADMASTER" ? `🎓 Headmaster ${rep.senderName}` : `👨‍💻 Developer ${rep.senderName}`}
+                              </strong>
+                              <span style={{ color: "#94a3b8" }}>{new Date(rep.timestamp).toLocaleString()}</span>
+                            </div>
+                            <div style={{ whiteSpace: "pre-wrap", color: "#f8fafc", fontSize: "0.88rem", lineHeight: "1.5" }}>
+                              {rep.messageText}
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    )}
+
+                    {/* Quick Reply Box for Developer in Thread */}
+                    <div style={{ marginTop: "1.25rem", display: "flex", gap: "10px" }}>
+                      <input
+                        type="text"
+                        id={`dev_reply_input_${msg.id}`}
+                        placeholder="Type follow-up instruction to Headmaster in this thread..."
+                        style={{ flex: 1, padding: "8px 12px", background: "#020617", border: "1px solid #334155", borderRadius: "8px", color: "#fff", fontSize: "0.85rem" }}
+                        onKeyDown={(e) => {
+                          if (e.key === "Enter") {
+                            handleDeveloperReplyInThread(msg.id, e.target.value);
+                            e.target.value = "";
+                          }
+                        }}
+                      />
+                      <button
+                        type="button"
+                        onClick={() => {
+                          const input = document.getElementById(`dev_reply_input_${msg.id}`);
+                          if (input && input.value) {
+                            handleDeveloperReplyInThread(msg.id, input.value);
+                            input.value = "";
+                          }
+                        }}
+                        style={{ background: "#8b5cf6", color: "#fff", border: "none", borderRadius: "8px", padding: "8px 16px", fontWeight: "700", fontSize: "0.82rem", cursor: "pointer" }}
+                      >
+                        Send Follow-up
+                      </button>
+                    </div>
+                  </div>
+                ))
+              )}
+            </div>
+          </div>
+        )}
+
+        {activeTab === "telemetry" && (
           <div className="tab-pane-content">
             {/* QUICK ONBOARDING VERIFICATION & APPROVAL QUEUE (LIVE DATABASE) */}
             {pendingAppsCount > 0 && (
@@ -9594,7 +9837,7 @@ export default function DeveloperDashboard() {
                 let activeProfile = null;
                 try {
                   activeProfile = JSON.parse(localStorage.getItem("gbs_headmaster_profile") || "null");
-                } catch {}
+                } catch { }
                 const currentName = activeProfile?.name || selectedDossierTenant?.headmaster?.name || selectedDossierTenant?.adminName || "Prof. Arthur Sterling";
                 const currentPhoto = activeProfile?.photo || "/assets/admin-avatar.jpg";
                 const currentPhone = activeProfile?.phone || selectedDossierTenant?.headmasterPhone || "+233-24-555-0199";
@@ -9666,7 +9909,7 @@ export default function DeveloperDashboard() {
                         let savedHistory = [];
                         try {
                           savedHistory = JSON.parse(localStorage.getItem("gbs_headmaster_history") || "[]");
-                        } catch {}
+                        } catch { }
                         const seedHistory = [
                           {
                             name: "Dr. Kwesi Appiah Mensah",
@@ -9997,13 +10240,13 @@ export default function DeveloperDashboard() {
                     <strong style={{ color: "#34d399", fontSize: "0.95rem" }}>
                       Subscription renewed for {
                         selectedRenewDuration === "1_MONTH" ? "1 Month" :
-                        selectedRenewDuration === "2_MONTHS" ? "2 Months" :
-                        selectedRenewDuration === "3_MONTHS" ? "3 Months" :
-                        selectedRenewDuration === "6_MONTHS" ? "6 Months" :
-                        selectedRenewDuration === "9_MONTHS" ? "9 Months" :
-                        selectedRenewDuration === "1_YEAR" ? "1 Year (12 Months)" :
-                        selectedRenewDuration === "2_YEARS" ? "2 Years (24 Months)" :
-                        "Lifetime Joined Subscription"
+                          selectedRenewDuration === "2_MONTHS" ? "2 Months" :
+                            selectedRenewDuration === "3_MONTHS" ? "3 Months" :
+                              selectedRenewDuration === "6_MONTHS" ? "6 Months" :
+                                selectedRenewDuration === "9_MONTHS" ? "9 Months" :
+                                  selectedRenewDuration === "1_YEAR" ? "1 Year (12 Months)" :
+                                    selectedRenewDuration === "2_YEARS" ? "2 Years (24 Months)" :
+                                      "Lifetime Joined Subscription"
                       }
                     </strong>
                   </div>
@@ -10013,12 +10256,12 @@ export default function DeveloperDashboard() {
                       {selectedRenewDuration === "LIFETIME" ? "Permanent Lifetime Access (Never Expires)" :
                         new Date(Date.now() + (
                           selectedRenewDuration === "1_MONTH" ? 30 :
-                          selectedRenewDuration === "2_MONTHS" ? 60 :
-                          selectedRenewDuration === "3_MONTHS" ? 90 :
-                          selectedRenewDuration === "6_MONTHS" ? 180 :
-                          selectedRenewDuration === "9_MONTHS" ? 270 :
-                          selectedRenewDuration === "1_YEAR" ? 365 :
-                          730
+                            selectedRenewDuration === "2_MONTHS" ? 60 :
+                              selectedRenewDuration === "3_MONTHS" ? 90 :
+                                selectedRenewDuration === "6_MONTHS" ? 180 :
+                                  selectedRenewDuration === "9_MONTHS" ? 270 :
+                                    selectedRenewDuration === "1_YEAR" ? 365 :
+                                      730
                         ) * 86400000).toLocaleDateString()}
                     </strong>
                   </div>
@@ -10066,22 +10309,22 @@ export default function DeveloperDashboard() {
                   >
                     Cancel
                   </button>
-                <button
-                  type="button"
-                  disabled={renewSubmitting}
-                  className="action-btn-sm renew"
-                  style={{ padding: "10px 24px", borderRadius: "8px", fontSize: "0.85rem", fontWeight: 800 }}
-                  onClick={() => handleRenewSubscription(renewTargetTenant.tenantId || renewTargetTenant.id, selectedRenewDuration, renewNotes)}
-                >
-                  {renewSubmitting ? "⏳ Applying Renewal..." : "✓ Confirm & Renew Subscription Now"}
-                </button>
+                  <button
+                    type="button"
+                    disabled={renewSubmitting}
+                    className="action-btn-sm renew"
+                    style={{ padding: "10px 24px", borderRadius: "8px", fontSize: "0.85rem", fontWeight: 800 }}
+                    onClick={() => handleRenewSubscription(renewTargetTenant.tenantId || renewTargetTenant.id, selectedRenewDuration, renewNotes)}
+                  >
+                    {renewSubmitting ? "⏳ Applying Renewal..." : "✓ Confirm & Renew Subscription Now"}
+                  </button>
+                </div>
               </div>
             </div>
           </div>
-        </div>
         )}
 
-                {/* DEVELOPER PROTOCOL: COMPOSE DIRECTIVE / WARNING TO HEADMASTER MODAL */}
+        {/* DEVELOPER PROTOCOL: COMPOSE DIRECTIVE / WARNING TO HEADMASTER MODAL */}
         {showComposeMessageModal && (
           <div className="dev-modal-overlay">
             <div className="dev-modal-card" style={{ maxWidth: "680px", width: "95%" }}>

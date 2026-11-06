@@ -31,17 +31,17 @@ export default function ParentLogin() {
 
   return (
     <div className="role-login-container">
-      <div 
-        className="role-login-bg" 
+      <div
+        className="role-login-bg"
         style={{ backgroundImage: `url('/images/parent_login_bg.jpg')` }}
       ></div>
       <div className="role-login-overlay"></div>
       <div className="role-login-card">
         <div className="role-login-crest-box">
-          <img 
-            src="/assets/gbs_crest_badge.jpg" 
-            alt="GBS Crest" 
-            className="role-login-crest-logo" 
+          <img
+            src="/assets/gbs_crest_badge.jpg"
+            alt="GBS Crest"
+            className="role-login-crest-logo"
           />
           <span className="role-login-brand-name">GBS SCHOOL MANAGEMENT SYSTEM</span>
         </div>
@@ -71,25 +71,25 @@ export default function ParentLogin() {
           </div>
           <div className="form-group">
             <label htmlFor="parent-email">Parent Email / Registered Mobile</label>
-            <input 
-              id="parent-email" 
-              type="text" 
-              required 
-              placeholder="e.g. parent@gbs.com or parent1" 
-              value={email} 
-              onChange={(e) => setEmail(e.target.value)} 
+            <input
+              id="parent-email"
+              type="text"
+              required
+              placeholder="e.g. parent@gbs.com or parent1"
+              value={email}
+              onChange={(e) => setEmail(e.target.value)}
             />
           </div>
           <div className="form-group">
             <label htmlFor="parent-password">Account Password</label>
             <div style={{ position: "relative", display: "flex", alignItems: "center" }}>
-              <input 
-                id="parent-password" 
-                type={showPassword ? "text" : "password"} 
-                required 
-                placeholder="Enter password" 
-                value={password} 
-                onChange={(e) => setPassword(e.target.value)} 
+              <input
+                id="parent-password"
+                type={showPassword ? "text" : "password"}
+                required
+                placeholder="Enter password"
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
                 style={{ width: "100%", paddingRight: "42px" }}
               />
               <button

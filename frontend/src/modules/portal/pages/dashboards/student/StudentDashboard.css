@@ -47,7 +47,7 @@
   border-color: rgba(139, 92, 246, 0.4);
 }
 
-.option-label input[type="radio"]:checked + span {
+.option-label input[type="radio"]:checked+span {
   color: #c084fc;
   font-weight: 700;
 }
@@ -77,7 +77,8 @@
   margin: 1rem 0;
 }
 
-.report-table th, .report-table td {
+.report-table th,
+.report-table td {
   border: 1px solid #cbd5e1;
   padding: 10px 12px;
   text-align: left;
@@ -119,7 +120,9 @@
   position: relative;
   width: 76px;
   height: 76px;
-  border-radius: 50%;
+  border-radius: 12px;
+  /* Square container with subtle rounded corners as specified */
+  aspect-ratio: 1 / 1;
   border: 2px solid #a855f7;
   overflow: hidden;
   flex-shrink: 0;
@@ -187,4 +190,3 @@
   transform: translateY(-2px);
   box-shadow: 0 8px 24px rgba(168, 85, 247, 0.15);
 }
-

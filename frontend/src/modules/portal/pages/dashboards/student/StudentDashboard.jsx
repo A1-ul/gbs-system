@@ -10,7 +10,7 @@ import ClassTopicVideoPlatform from "../../../../../components/common/ClassTopic
 import { navigateToDetail } from "../../../../../utils/universalNavigation";
 import "./StudentDashboard.css";
 
-export default function StudentDashboard() {
+export function StudentDashboard() {
   const navigate = useNavigate();
   const [showStudentGuideModal, setShowStudentGuideModal] = useState(false);
 
@@ -29,7 +29,7 @@ export default function StudentDashboard() {
     try {
       const stored = localStorage.getItem("gbs_academic_published_schedule");
       if (stored) return JSON.parse(stored);
-    } catch {}
+    } catch { }
     return {
       academicYear: "2026/2027",
       activeTerm: "TERM_1",
@@ -44,7 +44,7 @@ export default function StudentDashboard() {
       try {
         const stored = localStorage.getItem("gbs_academic_published_schedule");
         if (stored) setPublishedSchedule(JSON.parse(stored));
-      } catch {}
+      } catch { }
     };
     window.addEventListener("gbs_academic_schedule_published", syncSchedule);
     window.addEventListener("storage", syncSchedule);
@@ -61,7 +61,7 @@ export default function StudentDashboard() {
       if (tabParam) return tabParam;
       const stored = sessionStorage.getItem("gbs_student_active_tab");
       if (stored) return stored;
-    } catch {}
+    } catch { }
     return "timetable";
   });
 
@@ -74,7 +74,7 @@ export default function StudentDashboard() {
         url.searchParams.set("tab", activeTab);
         window.history.pushState({ tab: activeTab }, "", url.toString());
       }
-    } catch {}
+    } catch { }
   }, [activeTab]);
 
   useEffect(() => {
@@ -87,18 +87,18 @@ export default function StudentDashboard() {
         if (savedScroll) {
           setTimeout(() => window.scrollTo(0, parseInt(savedScroll, 10)), 100);
         }
-      } catch {}
+      } catch { }
     };
 
     const handleScroll = () => {
       try {
         sessionStorage.setItem("gbs_student_scroll_pos", String(window.scrollY));
-      } catch {}
+      } catch { }
     };
 
     window.addEventListener("popstate", handlePopState);
     window.addEventListener("scroll", handleScroll, { passive: true });
-    
+
     // Initial scroll restore
     const savedScroll = sessionStorage.getItem("gbs_student_scroll_pos");
     if (savedScroll) {
@@ -145,9 +145,34 @@ export default function StudentDashboard() {
   const [activeExam, setActiveExam] = useState(null);
   const [examStarted, setExamStarted] = useState(false);
   const [examSubmitted, setExamSubmitted] = useState(false);
+  const [examTimeLeftSeconds, setExamTimeLeftSeconds] = useState(900);
   const [examAnswers, setExamAnswers] = useState({});
   const [examScoreResult, setExamScoreResult] = useState(null);
   const [showExamConfirmModal, setShowExamConfirmModal] = useState(false);
+
+  useEffect(() => {
+    if (!examStarted || examSubmitted) return;
+    const timer = setInterval(() => {
+      setExamTimeLeftSeconds((prev) => {
+        if (prev <= 1) {
+          clearInterval(timer);
+          setFeedback({
+            type: "warning",
+            message: "⏱️ Examination time expired! Your written responses are auto-saved and locked for grading."
+          });
+          return 0;
+        }
+        return prev - 1;
+      });
+    }, 1000);
+    return () => clearInterval(timer);
+  }, [examStarted, examSubmitted]);
+
+  const formatExamTime = (secs) => {
+    const mins = Math.floor(secs / 60);
+    const rem = secs % 60;
+    return `${mins.toString().padStart(2, "0")}:${rem.toString().padStart(2, "0")}`;
+  };
   const [submittedExams, setSubmittedExams] = useState(() => {
     try {
       return JSON.parse(localStorage.getItem("gbs_student_submitted_exams") || "{}");
@@ -166,7 +191,7 @@ export default function StudentDashboard() {
     try {
       const saved = localStorage.getItem("gbs_student_attendance_summary");
       if (saved) return JSON.parse(saved);
-    } catch {}
+    } catch { }
     return {
       rate: "0.0%",
       presentCount: 0,
@@ -296,7 +321,7 @@ export default function StudentDashboard() {
     try {
       const stored = localStorage.getItem("gbs_examination_timetable");
       if (stored) return JSON.parse(stored);
-    } catch {}
+    } catch { }
     return [
       {
         id: "ET-01",
@@ -345,7 +370,7 @@ export default function StudentDashboard() {
       try {
         const stored = localStorage.getItem("gbs_examination_timetable");
         if (stored) setExamTimetableGuide(JSON.parse(stored));
-      } catch {}
+      } catch { }
     };
     window.addEventListener("gbs_exam_timetable_updated", syncExamTimetable);
     window.addEventListener("storage", syncExamTimetable);
@@ -359,9 +384,231 @@ export default function StudentDashboard() {
     try {
       const saved = JSON.parse(localStorage.getItem("gbs_registered_courses") || "[]");
       if (Array.isArray(saved) && saved.length > 0) return saved;
-    } catch {}
+    } catch { }
     return ["CS 201", "MATH 205", "PHYS 203", "ENG 210", "AI 220", "GBS 200"];
   });
+
+  // Live Class Broadcast Sentinel from Teachers
+  const [activeLiveBroadcast, setActiveLiveBroadcast] = useState(() => {
+    try {
+      const list = JSON.parse(localStorage.getItem("gbs_active_live_classes") || "[]");
+      return list[0] || null;
+    } catch {
+      return null;
+    }
+  });
+
+  // Dress Code Guidelines Modal State
+  const [showDressCodeModal, setShowDressCodeModal] = useState(false);
+
+  // Fee Payment & Rescheduled Late Exam Writing Slip State
+  const [showFeePaymentModal, setShowFeePaymentModal] = useState(false);
+  const [showRescheduledExamSlipModal, setShowRescheduledExamSlipModal] = useState(false);
+  const [paymentAmount, setPaymentAmount] = useState("500");
+  const [paymentChannel, setPaymentChannel] = useState("MTN_MOMO");
+  const [payerPhone, setPayerPhone] = useState("+233-24-411-9201");
+  const [paymentSuccessSlip, setPaymentSuccessSlip] = useState(null);
+
+  // Student-to-Student Peer Chat & Study Circle State
+  const [searchIndexInput, setSearchIndexInput] = useState("");
+  const [candidatePeer, setCandidatePeer] = useState(null);
+  const [showPeerConfirmModal, setShowPeerConfirmModal] = useState(false);
+  const [activePeerChat, setActivePeerChat] = useState(null);
+  const [chatMessages, setChatMessages] = useState([]);
+  const [newMessageText, setNewMessageText] = useState("");
+  const [archivedPeerChats, setArchivedPeerChats] = useState(() => {
+    try {
+      return JSON.parse(localStorage.getItem("gbs_peer_archived_chats") || "[]");
+    } catch {
+      return [];
+    }
+  });
+  const [showArchivedChatsModal, setShowArchivedChatsModal] = useState(false);
+
+  // Enrolled Student Roster for Peer Resolution
+  const [enrolledPeersList, setEnrolledPeersList] = useState(() => {
+    try {
+      const stored = JSON.parse(localStorage.getItem("gbs_enrolled_students") || "[]");
+      if (Array.isArray(stored) && stored.length > 0) return stored;
+    } catch { }
+    return [
+      { id: "101", studentId: "STU-2026-001", indexNumber: "STU-2026-001", firstName: "Emmanuel", lastName: "Mensah", registeredMobile: "+233-24-411-9201", currentClass: "JHS 2 (Junior High - Grade 8)", classCode: "JHS-02", photo: "https://images.unsplash.com/photo-1539571696357-5a69c17a67c6?w=200&h=200&fit=crop" },
+      { id: "102", studentId: "STU-2026-002", indexNumber: "STU-2026-002", firstName: "Ama", lastName: "Serwaa", registeredMobile: "+233-20-882-3490", currentClass: "SHS 1 / Grade 10 - STEM & Arts", classCode: "SHS-01", photo: "https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=200&h=200&fit=crop" },
+      { id: "103", studentId: "STU-2026-003", indexNumber: "STU-2026-003", firstName: "Julian", lastName: "Bramwell", registeredMobile: "+233-55-901-4478", currentClass: "Primary 4 (Upper Primary)", classCode: "PRI-04", photo: "https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=200&h=200&fit=crop" },
+      { id: "104", studentId: "STU-2026-004", indexNumber: "STU-2026-004", firstName: "Sophia", lastName: "Chen", registeredMobile: "+233-27-312-5509", currentClass: "University Level 200 - Sophomore Year", classCode: "UNI-200", photo: "https://images.unsplash.com/photo-1517841905240-472988babdf9?w=200&h=200&fit=crop" },
+      { id: "105", studentId: "STU-2026-005", indexNumber: "STU-2026-005", firstName: "Kofi", lastName: "Boateng", registeredMobile: "+233-24-998-1123", currentClass: "JHS 3 (BECE Candidates - Grade 9)", classCode: "JHS-03", photo: "https://images.unsplash.com/photo-1500648767791-00dcc994a43e?w=200&h=200&fit=crop" }
+    ];
+  });
+
+  const handleSearchPeerByIndex = (query) => {
+    const q = (query || searchIndexInput).trim().toLowerCase();
+    if (!q) {
+      setFeedback({ type: "error", message: "Please enter a Student Index Number or Admission Number to search." });
+      return;
+    }
+    const match = enrolledPeersList.find((s) => {
+      const idx = String(s.indexNumber || s.studentId || s.id || "").toLowerCase();
+      const fn = `${s.firstName || ""} ${s.lastName || ""}`.toLowerCase();
+      return idx === q || idx.includes(q) || fn.includes(q);
+    });
+
+    if (!match) {
+      setCandidatePeer(null);
+      setFeedback({
+        type: "error",
+        message: `❌ Student not found: No registered scholar found with Index/ID "${q}".`
+      });
+      return;
+    }
+
+    setCandidatePeer(match);
+    setShowPeerConfirmModal(true);
+  };
+
+  const handleConfirmStartChat = (peer) => {
+    setActivePeerChat(peer);
+    setShowPeerConfirmModal(false);
+    const threadKey = `gbs_peer_chat_${currentUser?.id || "student"}_${peer.studentId || peer.id}`;
+    try {
+      const saved = JSON.parse(localStorage.getItem(threadKey) || "[]");
+      if (Array.isArray(saved) && saved.length > 0) {
+        setChatMessages(saved);
+      } else {
+        const welcome = [
+          {
+            id: `msg-${Date.now()}`,
+            sender: "PEER",
+            senderName: `${peer.firstName} ${peer.lastName}`,
+            text: `Hello ${currentUser?.firstName || "Scholar"}! Glad to connect on the GBS Study Circle. Let's collaborate on our coursework!`,
+            timestamp: new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })
+          }
+        ];
+        setChatMessages(welcome);
+        localStorage.setItem(threadKey, JSON.stringify(welcome));
+      }
+    } catch {
+      setChatMessages([]);
+    }
+  };
+
+  const handleSendMessage = (customText) => {
+    const textToSend = (customText || newMessageText).trim();
+    if (!textToSend || !activePeerChat) return;
+
+    const myMsg = {
+      id: `msg-${Date.now()}`,
+      sender: "ME",
+      senderName: `${currentUser?.firstName || "Me"} ${currentUser?.lastName || ""}`.trim(),
+      text: textToSend,
+      timestamp: new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })
+    };
+
+    const nextMessages = [...chatMessages, myMsg];
+    setChatMessages(nextMessages);
+    setNewMessageText("");
+
+    const threadKey = `gbs_peer_chat_${currentUser?.id || "student"}_${activePeerChat.studentId || activePeerChat.id}`;
+    try {
+      localStorage.setItem(threadKey, JSON.stringify(nextMessages));
+    } catch { }
+
+    // Simulated peer reply
+    setTimeout(() => {
+      const replies = [
+        "Understood! Let me review the lecture notes and verify that concept with you.",
+        "Yes, absolutely. We can work on the practice questions together this evening.",
+        "I just checked the timetable; our next session is tomorrow morning.",
+        "Thanks for checking in! Make sure to double check the assignment requirements."
+      ];
+      const replyText = replies[Math.floor(Math.random() * replies.length)];
+      const peerReply = {
+        id: `msg-${Date.now()}`,
+        sender: "PEER",
+        senderName: `${activePeerChat.firstName} ${activePeerChat.lastName}`,
+        text: replyText,
+        timestamp: new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })
+      };
+      setChatMessages((prev) => {
+        const updated = [...prev, peerReply];
+        try {
+          localStorage.setItem(threadKey, JSON.stringify(updated));
+        } catch { }
+        return updated;
+      });
+    }, 1200);
+  };
+
+  const handleArchiveCurrentChat = () => {
+    if (!activePeerChat || chatMessages.length === 0) {
+      setFeedback({ type: "info", message: "No active conversation messages to archive." });
+      return;
+    }
+
+    const archiveItem = {
+      id: `ARCH-CHAT-${Date.now()}`,
+      peerName: `${activePeerChat.firstName} ${activePeerChat.lastName}`,
+      peerIndex: activePeerChat.studentId || activePeerChat.indexNumber || activePeerChat.id,
+      peerClass: activePeerChat.currentClass || activePeerChat.classCode || "Class",
+      peerPhone: activePeerChat.registeredMobile || activePeerChat.phone || "—",
+      archivedAt: new Date().toLocaleString(),
+      messageCount: chatMessages.length,
+      messages: chatMessages
+    };
+
+    const updated = [archiveItem, ...archivedPeerChats];
+    setArchivedPeerChats(updated);
+    try {
+      localStorage.setItem("gbs_peer_archived_chats", JSON.stringify(updated));
+    } catch { }
+
+    setFeedback({
+      type: "success",
+      message: `📁 Conversation with ${archiveItem.peerName} (${archiveItem.messageCount} messages) saved & archived successfully!`
+    });
+    if (window.showGBSOpenNotice) {
+      window.showGBSOpenNotice(`Chat with ${archiveItem.peerName} archived!`, "success", "Chat Archived");
+    }
+  };
+
+  const handleProcessFeePayment = (e) => {
+    e.preventDefault();
+    const amt = parseFloat(paymentAmount);
+    if (!amt || amt <= 0) {
+      setFeedback({ type: "error", message: "Please enter a valid payment amount." });
+      return;
+    }
+
+    const currentArr = typeof feeArrears === "number" ? feeArrears : parseFloat(feeArrears || 0);
+    const newArrears = Math.max(0, currentArr - amt);
+    setFeeArrears(newArrears);
+    try {
+      localStorage.setItem("gbs_student_fee_arrears", String(newArrears));
+      const paymentRec = {
+        id: `REC-PAY-${Date.now()}`,
+        amountPaid: amt,
+        payerPhone,
+        paymentChannel,
+        newBalanceDue: newArrears,
+        studentName: `${currentUser.firstName} ${currentUser.lastName}`,
+        studentId: currentUser.studentId || "GBS-STU-2026-084",
+        reconciledAt: new Date().toISOString()
+      };
+      const existingHistory = JSON.parse(localStorage.getItem("gbs_reconciled_payments") || "[]");
+      localStorage.setItem("gbs_reconciled_payments", JSON.stringify([paymentRec, ...existingHistory]));
+      window.dispatchEvent(new Event("gbs_payment_made"));
+      window.dispatchEvent(new Event("storage"));
+      setPaymentSuccessSlip(paymentRec);
+    } catch { }
+
+    setFeedback({
+      type: "success",
+      message: `🎉 Payment of GH₵ ${amt.toFixed(2)} processed successfully via ${paymentChannel}! Remaining arrears: GH₵ ${newArrears.toFixed(2)}.`
+    });
+    if (window.showGBSOpenNotice) {
+      window.showGBSOpenNotice(`Payment of GH₵ ${amt.toFixed(2)} confirmed!`, "success", "Payment Confirmation");
+    }
+    setShowFeePaymentModal(false);
+  };
 
   const handleToggleCourseRegistration = (courseCode) => {
     if (feeArrears > 0) {
@@ -421,7 +668,7 @@ export default function StudentDashboard() {
     try {
       const saved = JSON.parse(localStorage.getItem("gbs_student_published_results") || localStorage.getItem("gbs_published_grades") || "[]");
       if (Array.isArray(saved) && saved.length > 0) return saved;
-    } catch {}
+    } catch { }
     return [];
   });
 
@@ -438,7 +685,7 @@ export default function StudentDashboard() {
       try {
         const saved = JSON.parse(localStorage.getItem("gbs_student_published_results") || localStorage.getItem("gbs_published_grades") || "[]");
         if (Array.isArray(saved)) setPublishedGrades(saved);
-      } catch {}
+      } catch { }
     };
 
     window.addEventListener("storage", handleSchoolNameSync);
@@ -463,7 +710,7 @@ export default function StudentDashboard() {
     try {
       const saved = JSON.parse(localStorage.getItem("gbs_report_wrap_info") || "null");
       if (saved) return saved;
-    } catch {}
+    } catch { }
     return null;
   });
 
@@ -472,13 +719,13 @@ export default function StudentDashboard() {
     try {
       const stored = localStorage.getItem("gbs_alumni_directory");
       if (stored) return JSON.parse(stored);
-    } catch {}
+    } catch { }
     return [];
   });
 
   const currentUser = JSON.parse(
     localStorage.getItem("gbs_user") ||
-      '{"id":1,"firstName":"Enrolled","lastName":"Student","email":"student@gbs.edu","role":"STUDENT"}'
+    '{"id":1,"firstName":"Enrolled","lastName":"Student","email":"student@gbs.edu","role":"STUDENT"}'
   );
 
   useEffect(() => {
@@ -513,7 +760,7 @@ export default function StudentDashboard() {
         if (Array.isArray(saved)) {
           setPublishedGrades(saved);
         }
-      } catch {}
+      } catch { }
     };
 
     const handleSubmissionsSync = () => {
@@ -534,45 +781,57 @@ export default function StudentDashboard() {
           });
           setMySubmissions((prev) => ({ ...prev, ...mapped }));
         }
-      } catch {}
+      } catch { }
     };
 
     const handleAttendanceSync = () => {
       try {
         const saved = localStorage.getItem("gbs_student_attendance_summary");
         if (saved) setAttendanceSummary(JSON.parse(saved));
-      } catch {}
+      } catch { }
     };
 
     const handleExamPublishedSync = () => {
       setNewExamPublished(localStorage.getItem("gbs_new_exam_published") === "true");
     };
 
+    const handleLiveClassSync = () => {
+      try {
+        const list = JSON.parse(localStorage.getItem("gbs_active_live_classes") || "[]");
+        setActiveLiveBroadcast(list[0] || null);
+      } catch { }
+    };
+
     handleGradesUpdate();
     handleSubmissionsSync();
     handleAttendanceSync();
+    handleLiveClassSync();
 
     window.addEventListener("gbs_payment_made", handlePaymentUpdate);
     window.addEventListener("gbs_grades_updated", handleGradesUpdate);
     window.addEventListener("gbs_submission_updated", handleSubmissionsSync);
     window.addEventListener("gbs_attendance_updated", handleAttendanceSync);
     window.addEventListener("gbs_new_exam_published", handleExamPublishedSync);
+    window.addEventListener("gbs_live_class_broadcast", handleLiveClassSync);
     window.addEventListener("storage", handlePaymentUpdate);
     window.addEventListener("storage", handleGradesUpdate);
     window.addEventListener("storage", handleSubmissionsSync);
     window.addEventListener("storage", handleAttendanceSync);
     window.addEventListener("storage", handleExamPublishedSync);
+    window.addEventListener("storage", handleLiveClassSync);
     return () => {
       window.removeEventListener("gbs_payment_made", handlePaymentUpdate);
       window.removeEventListener("gbs_grades_updated", handleGradesUpdate);
       window.removeEventListener("gbs_submission_updated", handleSubmissionsSync);
       window.removeEventListener("gbs_attendance_updated", handleAttendanceSync);
       window.removeEventListener("gbs_new_exam_published", handleExamPublishedSync);
+      window.removeEventListener("gbs_live_class_broadcast", handleLiveClassSync);
       window.removeEventListener("storage", handlePaymentUpdate);
       window.removeEventListener("storage", handleGradesUpdate);
       window.removeEventListener("storage", handleSubmissionsSync);
       window.removeEventListener("storage", handleAttendanceSync);
       window.removeEventListener("storage", handleExamPublishedSync);
+      window.removeEventListener("storage", handleLiveClassSync);
     };
   }, []);
 
@@ -725,7 +984,7 @@ export default function StudentDashboard() {
         const existing = JSON.parse(localStorage.getItem("gbs_student_submissions") || "[]");
         localStorage.setItem("gbs_student_submissions", JSON.stringify([submissionRecord, ...existing]));
         window.dispatchEvent(new Event("gbs_submission_updated"));
-      } catch (e) {}
+      } catch (e) { }
 
       setMySubmissions((prev) => ({
         ...prev,
@@ -786,9 +1045,9 @@ export default function StudentDashboard() {
 
         setExamSubmitted(true);
         setExamStarted(false);
-        setFeedback({ 
-          type: "success", 
-          message: `✅ Exam submitted, locked, and auto-graded in PostgreSQL! Exact Score: ${pct}% • Letter Grade: ${letterGrade}. Exam portal locked until next exam session.` 
+        setFeedback({
+          type: "success",
+          message: `✅ Exam submitted, locked, and auto-graded in PostgreSQL! Exact Score: ${pct}% • Letter Grade: ${letterGrade}. Exam portal locked until next exam session.`
         });
       }
     } catch (err) {
@@ -818,8 +1077,8 @@ export default function StudentDashboard() {
 
   return (
     <div className="role-dashboard-wrapper">
-      <div 
-        className="role-dashboard-bg" 
+      <div
+        className="role-dashboard-bg"
         style={{ backgroundImage: `url('/images/student_login_bg.jpg')` }}
       ></div>
       <div className="role-dashboard-overlay"></div>
@@ -834,9 +1093,9 @@ export default function StudentDashboard() {
         {/* Header */}
         <header className="role-header">
           <div className="role-header-brand" style={{ display: "flex", alignItems: "center", gap: "16px" }}>
-            <img 
-              src={customSchoolLogo || "/assets/gbs_crest_badge.jpg"} 
-              alt="School Crest" 
+            <img
+              src={customSchoolLogo || "/assets/gbs_crest_badge.jpg"}
+              alt="School Crest"
               style={{
                 width: "58px",
                 height: "58px",
@@ -863,8 +1122,8 @@ export default function StudentDashboard() {
           </div>
 
           <div className="role-header-actions">
-            <button 
-              type="button" 
+            <button
+              type="button"
               className="role-action-btn"
               onClick={() => window.history.back()}
               title="Return to previous view or page"
@@ -875,8 +1134,8 @@ export default function StudentDashboard() {
             <Link to="/portal/student/dashboard" className="role-action-btn">
               🏠 Learning Hub
             </Link>
-            <button 
-              type="button" 
+            <button
+              type="button"
               className="role-action-btn"
               onClick={() => setActiveTab("alumni")}
               style={{ borderColor: "#a855f7", color: "#c084fc" }}
@@ -905,22 +1164,93 @@ export default function StudentDashboard() {
 
         {/* Main Content */}
         <main className="role-main">
+          {/* Active Live Class Broadcast Sentinel from Faculty */}
+          {activeLiveBroadcast && (
+            <div style={{
+              background: "linear-gradient(135deg, rgba(220, 38, 38, 0.95) 0%, rgba(185, 28, 28, 0.9) 100%)",
+              border: "2px solid #ef4444",
+              color: "#ffffff",
+              padding: "14px 20px",
+              borderRadius: "14px",
+              marginBottom: "1.25rem",
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "space-between",
+              boxShadow: "0 10px 30px rgba(239, 68, 68, 0.4)",
+              flexWrap: "wrap",
+              gap: "12px"
+            }}>
+              <div style={{ display: "flex", alignItems: "center", gap: "12px" }}>
+                <span style={{ fontSize: "1.8rem" }}>🔴</span>
+                <div>
+                  <div style={{ fontWeight: 900, fontSize: "1rem", letterSpacing: "0.02em" }}>
+                    LIVE CLASSROOM BROADCAST IN PROGRESS
+                  </div>
+                  <div style={{ fontSize: "0.85rem", color: "#fecaca", marginTop: "2px" }}>
+                    Topic: <strong>{activeLiveBroadcast.title}</strong> • Instructor: <strong>{activeLiveBroadcast.teacherName || "Faculty"}</strong> • Platform: <strong>{activeLiveBroadcast.platform}</strong>
+                  </div>
+                </div>
+              </div>
+              <div style={{ display: "flex", gap: "10px", alignItems: "center" }}>
+                <a
+                  href={activeLiveBroadcast.workingInAppLink || activeLiveBroadcast.meetingUrl || "/online-learning"}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  style={{
+                    background: "#ffffff",
+                    color: "#b91c1c",
+                    padding: "10px 22px",
+                    borderRadius: "10px",
+                    fontWeight: 900,
+                    textDecoration: "none",
+                    fontSize: "0.88rem",
+                    boxShadow: "0 4px 14px rgba(0,0,0,0.3)",
+                    display: "inline-flex",
+                    alignItems: "center",
+                    gap: "6px"
+                  }}
+                >
+                  <span>🚀</span> JOIN LIVE CLASS NOW →
+                </a>
+              </div>
+            </div>
+          )}
+
           {/* REQUIREMENT: Student Profile Card with Uploaded Picture and Class / Level Progression */}
           <div className="student-profile-header-card">
-            <label className="student-avatar-frame" title="Click to upload profile photo">
-              <img 
-                src={studentPhoto} 
-                alt="Student Profile" 
-                className="student-avatar-img" 
-              />
-              <span className="student-avatar-overlay-label">📷 Change</span>
-              <input 
-                type="file" 
-                accept="image/*" 
-                style={{ display: "none" }} 
-                onChange={handlePhotoUpload} 
-              />
-            </label>
+            <div style={{ display: "flex", flexDirection: "column", gap: "6px", alignItems: "center" }}>
+              <label className="student-avatar-frame" title="Click to upload profile photo (Must satisfy dress code)">
+                <img
+                  src={studentPhoto}
+                  alt="Student Profile"
+                  className="student-avatar-img"
+                />
+                <span className="student-avatar-overlay-label">📷 Change</span>
+                <input
+                  type="file"
+                  accept="image/*"
+                  style={{ display: "none" }}
+                  onChange={handlePhotoUpload}
+                />
+              </label>
+              <button
+                type="button"
+                onClick={() => setShowDressCodeModal(true)}
+                style={{
+                  background: "rgba(168, 85, 247, 0.15)",
+                  border: "1px solid rgba(168, 85, 247, 0.4)",
+                  color: "#d8b4fe",
+                  borderRadius: "6px",
+                  padding: "2px 8px",
+                  fontSize: "0.68rem",
+                  fontWeight: 700,
+                  cursor: "pointer"
+                }}
+                title="Review official school uniform and dress-code standards for scholar profile photographs"
+              >
+                👔 Dress Code
+              </button>
+            </div>
 
             <div style={{ flex: 1 }}>
               <div style={{ display: "flex", alignItems: "center", gap: "10px", flexWrap: "wrap" }}>
@@ -957,17 +1287,17 @@ export default function StudentDashboard() {
 
               {/* REQUIREMENT: Debtor Student Restriction Banner or Financial Clearance Confirmation */}
               {feeArrears > 0 ? (
-                <div style={{ 
-                  marginTop: "12px", 
-                  background: "rgba(239, 68, 68, 0.15)", 
-                  border: "1px solid rgba(239, 68, 68, 0.4)", 
-                  borderRadius: "8px", 
-                  padding: "8px 14px", 
-                  display: "flex", 
-                  alignItems: "center", 
-                  justifyContent: "space-between", 
-                  flexWrap: "wrap", 
-                  gap: "8px" 
+                <div style={{
+                  marginTop: "12px",
+                  background: "rgba(239, 68, 68, 0.15)",
+                  border: "1px solid rgba(239, 68, 68, 0.4)",
+                  borderRadius: "8px",
+                  padding: "8px 14px",
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "space-between",
+                  flexWrap: "wrap",
+                  gap: "8px"
                 }}>
                   <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
                     <span>⚠️</span>
@@ -980,17 +1310,17 @@ export default function StudentDashboard() {
                   </Link>
                 </div>
               ) : (
-                <div style={{ 
-                  marginTop: "12px", 
-                  background: "rgba(16, 185, 129, 0.15)", 
-                  border: "1px solid rgba(16, 185, 129, 0.4)", 
-                  borderRadius: "8px", 
-                  padding: "8px 14px", 
-                  display: "flex", 
-                  alignItems: "center", 
-                  justifyContent: "space-between", 
-                  flexWrap: "wrap", 
-                  gap: "8px" 
+                <div style={{
+                  marginTop: "12px",
+                  background: "rgba(16, 185, 129, 0.15)",
+                  border: "1px solid rgba(16, 185, 129, 0.4)",
+                  borderRadius: "8px",
+                  padding: "8px 14px",
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "space-between",
+                  flexWrap: "wrap",
+                  gap: "8px"
                 }}>
                   <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
                     <span>✅</span>
@@ -1001,9 +1331,9 @@ export default function StudentDashboard() {
                       )}
                     </span>
                   </div>
-                  <button 
-                    type="button" 
-                    onClick={() => setActiveTab("courses")} 
+                  <button
+                    type="button"
+                    onClick={() => setActiveTab("courses")}
                     style={{ background: "#10b981", color: "#ffffff", border: "none", borderRadius: "6px", padding: "4px 10px", fontSize: "0.78rem", fontWeight: "700", cursor: "pointer" }}
                   >
                     Go to Course Registration →
@@ -1081,9 +1411,9 @@ export default function StudentDashboard() {
 
             {/* Clear Daytime Real-Life Photograph */}
             <div className="role-hero-photo-frame">
-              <img 
-                src="/images/student_dash_banner.jpg" 
-                alt="Student Campus Life Daytime" 
+              <img
+                src="/images/student_dash_banner.jpg"
+                alt="Student Campus Life Daytime"
               />
               <div className="photo-live-pill">
                 <span className="ticker-dot"></span>
@@ -1098,7 +1428,7 @@ export default function StudentDashboard() {
 
           {/* Feedback Alert */}
           {feedback && (
-            <div 
+            <div
               style={{
                 padding: "12px 18px",
                 borderRadius: "10px",
@@ -1120,64 +1450,72 @@ export default function StudentDashboard() {
 
           {/* Workspace Tabs Navigation */}
           <nav className="role-tab-nav">
-            <button 
-              type="button" 
+            <button
+              type="button"
               className={`role-tab-btn ${activeTab === "timetable" ? "active" : ""}`}
               onClick={() => setActiveTab("timetable")}
             >
               🗓️ My Class Timetable
             </button>
-            <button 
-              type="button" 
+            <button
+              type="button"
               className={`role-tab-btn ${activeTab === "assignments" ? "active" : ""}`}
               onClick={() => setActiveTab("assignments")}
             >
               📝 Homework & Submissions
             </button>
-            <button 
-              type="button" 
+            <button
+              type="button"
               className={`role-tab-btn ${activeTab === "exams" ? "active" : ""}`}
               onClick={() => setActiveTab("exams")}
             >
               🎯 Examinations & Schedule {isExamPortalLocked && "🔒"}
             </button>
-            <button 
-              type="button" 
+            <button
+              type="button"
               className={`role-tab-btn ${activeTab === "meetings" ? "active" : ""}`}
               onClick={() => setActiveTab("meetings")}
             >
               💻 Live Classes & References
             </button>
-            <button 
-              type="button" 
+            <button
+              type="button"
               className={`role-tab-btn ${activeTab === "topicVideos" ? "active" : ""}`}
               onClick={() => setActiveTab("topicVideos")}
               style={{ borderLeft: "3px solid #38bdf8", color: activeTab === "topicVideos" ? "#38bdf8" : undefined }}
             >
               🎬 Teacher Topic Videos (Play & Watch)
             </button>
-            <button 
-              type="button" 
+            <button
+              type="button"
               className={`role-tab-btn ${activeTab === "report-card" ? "active" : ""}`}
               onClick={() => setActiveTab("report-card")}
             >
               📄 Verified Report Card
             </button>
-            <button 
-              type="button" 
+            <button
+              type="button"
               className={`role-tab-btn ${activeTab === "courses" ? "active" : ""}`}
               onClick={() => setActiveTab("courses")}
               style={{ borderLeft: "3px solid #10b981" }}
             >
               📚 Course & Class Registration
             </button>
-            <button 
-              type="button" 
+            <button
+              type="button"
               className={`role-tab-btn ${activeTab === "alumni" ? "active" : ""}`}
               onClick={() => setActiveTab("alumni")}
               style={{ borderLeft: "3px solid #a855f7" }}
             >
               🎓 Alumni Directory & Hall of Fame
+            </button>
+            <button
+              type="button"
+              className={`role-tab-btn ${activeTab === "peer-chat" ? "active" : ""}`}
+              onClick={() => setActiveTab("peer-chat")}
+              style={{ borderLeft: "3px solid #06b6d4", color: activeTab === "peer-chat" ? "#22d3ee" : undefined, fontWeight: 800 }}
+            >
+              💬 Peer Chat & Study Circle
             </button>
           </nav>
 
@@ -1335,17 +1673,17 @@ export default function StudentDashboard() {
                           </div>
                         ) : (
                           <div style={{ marginTop: "auto", display: "flex", flexDirection: "column", gap: "8px" }}>
-                            <textarea 
+                            <textarea
                               rows={2}
-                              placeholder="Write homework response or paste project document link..." 
+                              placeholder="Write homework response or paste project document link..."
                               className="filter-input"
                               style={{ width: "100%", fontSize: "0.8rem", resize: "vertical" }}
                               value={submissionInputs[a.id] || ""}
                               onChange={(e) => setSubmissionInputs({ ...submissionInputs, [a.id]: e.target.value })}
                             />
-                            <button 
-                              type="button" 
-                              className="btn-primary" 
+                            <button
+                              type="button"
+                              className="btn-primary"
                               onClick={() => handleSubmitAssignment(a.id)}
                               disabled={loading || !submissionInputs[a.id]?.trim()}
                             >
@@ -1362,459 +1700,594 @@ export default function StudentDashboard() {
           )}
 
           {/* TAB 3: ONLINE EXAMS & SCHEDULE */}
-          {activeTab === "exams" && (
-            <div className="role-workspace-card">
-              <div className="workspace-title-row">
-                <div>
-                  <h2><span>🎯</span> AUTHORIZED ONLINE EXAMINATIONS & SCHEDULE</h2>
-                  <p>Comprehensive examination roster with start and end times, exact term/semester tracking, and instant auto-grading</p>
-                </div>
-                <div style={{ display: "flex", gap: "10px", alignItems: "center" }}>
-                  <span className="badge-status badge-present" style={{ fontSize: "0.85rem", padding: "6px 14px" }}>
-                    📋 Remaining to Write: <strong>{isExamPortalLocked ? "0 Exam(s) (Locked)" : (exams.length > 0 ? exams.length : 3) + " Exam(s)"}</strong>
-                  </span>
-                  <span style={{ fontSize: "0.8rem", color: "#94a3b8" }}>
-                    Active Term: <strong style={{ color: "#38bdf8" }}>{academicTerm} ({academicLevel})</strong>
-                  </span>
-                </div>
-              </div>
+          {activeTab === "exams" && (() => {
+            const totalTermFees = 2500.00;
+            const currentArrears = typeof feeArrears === "number" ? feeArrears : parseFloat(feeArrears || 0);
+            const totalPaid = Math.max(0, totalTermFees - currentArrears);
+            const paidPercentage = Math.min(100, Math.round((totalPaid / totalTermFees) * 100));
+            const meets80PercentThreshold = currentArrears === 0 || paidPercentage >= 80;
 
-              {/* Requirement: Student exam portal lockout screen once an exam is taken, submitted & graded */}
-              {isExamPortalLocked ? (
-                <div style={{
-                  background: "linear-gradient(135deg, rgba(15, 23, 42, 0.95), rgba(30, 41, 59, 0.9))",
-                  border: "2px solid rgba(239, 68, 68, 0.4)",
-                  borderRadius: "16px",
-                  padding: "2.5rem",
-                  textAlign: "center",
-                  boxShadow: "0 20px 40px rgba(0, 0, 0, 0.6)",
-                  margin: "1rem 0"
-                }}>
-                  <div style={{ fontSize: "3.5rem", marginBottom: "0.5rem" }}>🔒</div>
-                  <span className="role-portal-badge" style={{ color: "#ef4444", borderColor: "#ef4444", fontSize: "0.85rem", padding: "4px 12px" }}>
-                    EXAMINATION SESSION SUBMITTED & LOCKED
-                  </span>
-                  <h2 style={{ color: "#f87171", margin: "1rem 0 0.5rem", fontSize: "1.6rem" }}>
-                    Examination Completed, Graded & Portal Access Restricted
-                  </h2>
-                  <p style={{ color: "#cbd5e1", maxWidth: "680px", margin: "0 auto 1.5rem", lineHeight: "1.6", fontSize: "0.95rem" }}>
-                    Per school examination regulations, your examination has been completed, submitted for marking, and graded by the deterministic engine. Access to the examination hall is locked until another examination session is officially published and scheduled for writing by the faculty.
-                  </p>
-
-                  {/* Summary of Graded Performance */}
-                  <div style={{
-                    display: "grid",
-                    gridTemplateColumns: "repeat(auto-fit, minmax(180px, 1fr))",
-                    gap: "1rem",
-                    background: "rgba(2, 6, 23, 0.8)",
-                    border: "1px solid rgba(255, 255, 255, 0.1)",
-                    borderRadius: "12px",
-                    padding: "1.25rem",
-                    textAlign: "left",
-                    maxWidth: "680px",
-                    margin: "0 auto 1.5rem"
-                  }}>
-                    <div>
-                      <span style={{ fontSize: "0.75rem", color: "#94a3b8", textTransform: "uppercase" }}>Grading Status</span>
-                      <div style={{ color: "#34d399", fontWeight: "700", fontSize: "1rem", marginTop: "2px" }}>✅ Verified & Marked</div>
-                    </div>
-                    <div>
-                      <span style={{ fontSize: "0.75rem", color: "#94a3b8", textTransform: "uppercase" }}>Deterministic Grade</span>
-                      <div style={{ color: "#fbbf24", fontWeight: "700", fontSize: "1rem", marginTop: "2px" }}>
-                        {examScoreResult?.grade || "Grade A (85%)"}
-                      </div>
-                    </div>
-                    <div>
-                      <span style={{ fontSize: "0.75rem", color: "#94a3b8", textTransform: "uppercase" }}>PostgreSQL Audit Seal</span>
-                      <div style={{ color: "#38bdf8", fontWeight: "700", fontSize: "1rem", marginTop: "2px" }}>SECURE-GBS-2026</div>
-                    </div>
+            return (
+              <div className="role-workspace-card">
+                <div className="workspace-title-row">
+                  <div>
+                    <h2><span>🎯</span> AUTHORIZED ONLINE EXAMINATIONS & SCHEDULE</h2>
+                    <p>Comprehensive examination roster with start and end times, exact term/semester tracking, and instant auto-grading</p>
                   </div>
-
-                  <div style={{ display: "flex", gap: "12px", justifyContent: "center", flexWrap: "wrap" }}>
-                    <button
-                      type="button"
-                      className="btn-primary"
-                      style={{ background: "linear-gradient(135deg, #3b82f6, #1d4ed8)", padding: "10px 20px" }}
-                      onClick={() => setActiveTab("report-card")}
-                    >
-                      📄 View Official Grade on Report Card
-                    </button>
-                    <button
-                      type="button"
-                      className="btn-secondary"
-                      style={{ borderColor: "#10b981", color: "#34d399", padding: "10px 20px" }}
-                      onClick={handlePublishNewExamSession}
-                      title="Faculty/Teacher publishes a new exam session"
-                    >
-                      📢 Simulate Faculty Publishing Next Exam Session
-                    </button>
-                  </div>
-                </div>
-              ) : (
-                <>
-                  {/* KPI Summary for Examinations */}
-                  <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(200px, 1fr))", gap: "1rem", marginBottom: "1.5rem" }}>
-                    <div style={{ background: "rgba(15, 23, 42, 0.7)", border: "1px solid rgba(56, 189, 248, 0.2)", borderRadius: "10px", padding: "1rem" }}>
-                      <span style={{ fontSize: "0.75rem", color: "#94a3b8", textTransform: "uppercase", fontWeight: "700" }}>Total Scheduled</span>
-                      <div style={{ fontSize: "1.6rem", fontWeight: "800", color: "#38bdf8", marginTop: "4px" }}>{exams.length || 3} Papers</div>
-                      <span style={{ fontSize: "0.75rem", color: "#cbd5e1" }}>Assigned by Subject Faculty</span>
-                    </div>
-                    <div style={{ background: "rgba(15, 23, 42, 0.7)", border: "1px solid rgba(245, 158, 11, 0.2)", borderRadius: "10px", padding: "1rem" }}>
-                      <span style={{ fontSize: "0.75rem", color: "#94a3b8", textTransform: "uppercase", fontWeight: "700" }}>Exams Remaining</span>
-                      <div style={{ fontSize: "1.6rem", fontWeight: "800", color: "#fbbf24", marginTop: "4px" }}>
-                        {exams.length > 0 ? exams.length : 3} Remaining
-                      </div>
-                      <span style={{ fontSize: "0.75rem", color: "#fef08a" }}>Pending student submission</span>
-                    </div>
-                    <div style={{ background: "rgba(15, 23, 42, 0.7)", border: "1px solid rgba(16, 185, 129, 0.2)", borderRadius: "10px", padding: "1rem" }}>
-                      <span style={{ fontSize: "0.75rem", color: "#94a3b8", textTransform: "uppercase", fontWeight: "700" }}>Grading System</span>
-                      <div style={{ fontSize: "1.4rem", fontWeight: "800", color: "#34d399", marginTop: "4px" }}>Deterministic AI/OMR</div>
-                      <span style={{ fontSize: "0.75rem", color: "#a7f3d0" }}>Instant PostgreSQL Verification</span>
-                    </div>
-                    <div style={{ background: "rgba(15, 23, 42, 0.7)", border: "1px solid rgba(168, 85, 247, 0.2)", borderRadius: "10px", padding: "1rem" }}>
-                      <span style={{ fontSize: "0.75rem", color: "#94a3b8", textTransform: "uppercase", fontWeight: "700" }}>Current Academic Term</span>
-                      <div style={{ fontSize: "1.2rem", fontWeight: "800", color: "#c084fc", marginTop: "4px" }}>{academicTerm}</div>
-                      <span style={{ fontSize: "0.75rem", color: "#e9d5ff" }}>{academicLevel}</span>
-                    </div>
-                  </div>
-
-              {!examStarted && !examSubmitted && (
-                <div>
-                  <h3 style={{ color: "#f8fafc", fontSize: "1.05rem", marginBottom: "0.75rem", display: "flex", alignItems: "center", gap: "8px" }}>
-                    <span>📅</span> Upcoming Examinations Schedule & Timetable:
-                  </h3>
-                  
-                  <div style={{ overflowX: "auto", marginBottom: "1.5rem" }}>
-                    <table className="role-table">
-                      <thead>
-                        <tr>
-                          <th>Subject / Course</th>
-                          <th>Exam Paper Title</th>
-                          <th>Level & Exact Term</th>
-                          <th>Exam Date</th>
-                          <th>Start Time</th>
-                          <th>End Time</th>
-                          <th>Duration</th>
-                          <th>Max / Pass</th>
-                          <th>Action / Score</th>
-                        </tr>
-                      </thead>
-                      <tbody>
-                        {(() => {
-                          const renderRow = (ex, fallbackSubject, fallbackTitle, defaultStart, defaultEnd) => {
-                            const examId = ex.id || fallbackTitle;
-                            const isSubmitted = !!submittedExams[examId];
-                            const sTime = ex.startTime || defaultStart;
-                            const eTime = ex.endTime || defaultEnd;
-                            const isRestricted = (ex.restrictBeforeStart || ex.isScheduled) && !unlockedExamIds.includes(examId);
-
-                            return (
-                              <tr key={examId}>
-                                <td>
-                                  <strong style={{ color: "#38bdf8" }}>{ex.class?.name || ex.subjectName || fallbackSubject}</strong>
-                                  {ex.examMode && (
-                                    <div style={{ fontSize: "0.7rem", color: "#a7f3d0", marginTop: "2px" }}>
-                                      Mode: {ex.examMode === "HYBRID_PRINT_SCAN" ? "📄 Print / AI Scanner" : "💻 Online CBT"}
-                                    </div>
-                                  )}
-                                </td>
-                                <td>
-                                  <div style={{ fontWeight: "600", color: "#f8fafc" }}>{ex.title || fallbackTitle}</div>
-                                  {ex.uploadedDocName && (
-                                    <span style={{ fontSize: "0.72rem", color: "#fbbf24" }}>📎 Attached: {ex.uploadedDocName}</span>
-                                  )}
-                                </td>
-                                <td>
-                                  <span className="role-portal-badge" style={{ color: "#c084fc" }}>
-                                    {academicLevel} • {academicTerm}
-                                  </span>
-                                </td>
-                                <td>{new Date(ex.examDate || Date.now()).toLocaleDateString()}</td>
-                                <td><strong style={{ color: "#34d399" }}>{sTime}</strong></td>
-                                <td><strong style={{ color: "#f87171" }}>{eTime}</strong></td>
-                                <td>{ex.durationMinutes ? `${ex.durationMinutes} mins` : "2 hrs 30 mins"}</td>
-                                <td>{ex.totalMarks || 100} / {ex.passMarks || 50}</td>
-                                <td>
-                                  {isSubmitted ? (
-                                    <div style={{ display: "flex", flexDirection: "column", gap: "4px" }}>
-                                      <span className="badge-status badge-present" style={{ fontSize: "0.75rem", background: "rgba(16, 185, 129, 0.2)", color: "#34d399", border: "1px solid rgba(16, 185, 129, 0.4)" }}>
-                                        🔒 Submitted & Locked
-                                      </span>
-                                      <span style={{ fontSize: "0.72rem", color: "#fbbf24", fontWeight: "700" }}>
-                                        Score: {submittedExams[examId].score}% ({submittedExams[examId].grade})
-                                      </span>
-                                    </div>
-                                  ) : isRestricted ? (
-                                    <div style={{ display: "flex", flexDirection: "column", gap: "6px" }}>
-                                      <span className="badge-status badge-absent" style={{ fontSize: "0.72rem", background: "rgba(239, 68, 68, 0.2)", color: "#fca5a5", border: "1px solid rgba(239, 68, 68, 0.4)" }}>
-                                        🔒 Restricted (Opens at {sTime})
-                                      </span>
-                                      <button
-                                        type="button"
-                                        className="btn-secondary"
-                                        style={{ padding: "4px 8px", fontSize: "0.7rem", borderColor: "#f59e0b", color: "#fbbf24", fontWeight: "700" }}
-                                        onClick={() => handleUnlockExam({ id: examId, title: ex.title || fallbackTitle })}
-                                        title="Simulate scheduled start time arrived and unlock portal"
-                                      >
-                                        ⏱️ Time Ready: Unlock Portal
-                                      </button>
-                                    </div>
-                                  ) : (
-                                    <button 
-                                      type="button" 
-                                      className="btn-primary" 
-                                      style={{ padding: "6px 14px", fontSize: "0.8rem", background: "linear-gradient(135deg, #10b981, #059669)", boxShadow: "0 4px 12px rgba(16, 185, 129, 0.4)" }}
-                                      onClick={() => {
-                                        setActiveExam({
-                                          ...ex,
-                                          id: examId,
-                                          title: ex.title || fallbackTitle,
-                                          totalMarks: ex.totalMarks || 100,
-                                          passMarks: ex.passMarks || 50,
-                                          questionBank: ex.questionBank || [
-                                            { id: 101, questionNumber: 1, questionText: "Solve for the derivative of f(x) = 4x^3 - 5x + 7." },
-                                            { id: 102, questionNumber: 2, questionText: "Which logic gate represents the proposition: (A ∧ B)' ≡ A' ∨ B'?" },
-                                            { id: 103, questionNumber: 3, questionText: "What is the limit of (sin x) / x as x approaches 0?" }
-                                          ]
-                                        });
-                                        setExamStarted(true);
-                                      }}
-                                    >
-                                      🚀 Portal Ready: Launch Exam
-                                    </button>
-                                  )}
-                                </td>
-                              </tr>
-                            );
-                          };
-
-                          if (exams.length === 0) {
-                            return (
-                              <tr>
-                                <td colSpan="6" style={{ textAlign: "center", padding: "2.5rem", color: "#94a3b8" }}>
-                                  <div style={{ fontSize: "2rem", marginBottom: "0.5rem" }}>📝</div>
-                                  <strong style={{ display: "block", color: "#f8fafc", fontSize: "1rem" }}>No Scheduled Online Examinations</strong>
-                                  <span style={{ fontSize: "0.85rem" }}>Your faculty instructors have not published any pending online exam papers for this term yet.</span>
-                                </td>
-                              </tr>
-                            );
-                          }
-
-                          return exams.map((ex, idx) => {
-                            const defS = idx === 0 ? "09:00 AM" : idx === 1 ? "01:00 PM" : "10:30 AM";
-                            const defE = idx === 0 ? "11:30 AM" : idx === 1 ? "03:00 PM" : "12:30 PM";
-                            return renderRow(ex, "STEM Curriculum", ex.title, defS, defE);
-                          });
-                        })()}
-                      </tbody>
-                    </table>
-                  </div>
-
-                  {/* OFFICIAL TEACHER-AUTHORED EXAMINATION TIMETABLE & PROCEDURE GUIDE */}
-                  <div style={{ background: "linear-gradient(135deg, rgba(30, 41, 59, 0.6) 0%, rgba(15, 23, 42, 0.8) 100%)", border: "1.5px solid rgba(56, 189, 248, 0.4)", borderRadius: "14px", padding: "1.5rem", marginBottom: "2rem" }}>
-                    <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "1rem", flexWrap: "wrap", gap: "10px" }}>
-                      <div>
-                        <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
-                          <span style={{ fontSize: "1.3rem" }}>📚</span>
-                          <h3 style={{ margin: 0, color: "#38bdf8", fontSize: "1.1rem", fontWeight: "800" }}>
-                            OFFICIAL EXAMINATION TIMETABLE & REVISION PROCEDURE GUIDE
-                          </h3>
-                        </div>
-                        <p style={{ margin: "4px 0 0", color: "#94a3b8", fontSize: "0.82rem" }}>
-                          Created by faculty teachers to guide student study according to the official examination procedure and regulations.
-                        </p>
-                      </div>
-                      <span className="badge-status badge-present" style={{ fontSize: "0.75rem" }}>
-                        ✓ Faculty Board Certified
-                      </span>
-                    </div>
-
-                    <div className="role-table-responsive">
-                      <table className="role-table" style={{ fontSize: "0.82rem" }}>
-                        <thead>
-                          <tr>
-                            <th>Course / Paper</th>
-                            <th>Date & Time Window</th>
-                            <th>Exam Hall & Invigilator</th>
-                            <th>Permitted Tools & Equipment</th>
-                            <th>Syllabus Scope & Focus</th>
-                            <th>Special Instructions</th>
-                          </tr>
-                        </thead>
-                        <tbody>
-                          {examTimetableGuide.map((t) => (
-                            <tr key={t.id}>
-                              <td>
-                                <strong style={{ color: "#38bdf8", display: "block" }}>{t.courseCode}</strong>
-                                <span style={{ color: "#f8fafc" }}>{t.subject}</span>
-                              </td>
-                              <td>
-                                <div style={{ color: "#34d399", fontWeight: 700 }}>{t.examDate}</div>
-                                <span style={{ color: "#fbbf24", fontSize: "0.75rem" }}>{t.startTime} - {t.endTime}</span>
-                              </td>
-                              <td>
-                                <div style={{ color: "#cbd5e1" }}>{t.hall}</div>
-                                <span style={{ color: "#94a3b8", fontSize: "0.72rem" }}>Invigilator: {t.invigilator}</span>
-                              </td>
-                              <td style={{ color: "#a5b4fc" }}>{t.permittedTools}</td>
-                              <td style={{ color: "#cbd5e1", maxWidth: "220px" }}>{t.syllabusScope}</td>
-                              <td style={{ color: "#94a3b8", fontSize: "0.75rem", maxWidth: "200px" }}>{t.instructions}</td>
-                            </tr>
-                          ))}
-                        </tbody>
-                      </table>
-                    </div>
-                  </div>
-
-                  {/* Active Exam Ready Banner */}
-                  <div style={{ background: "rgba(2, 6, 23, 0.7)", padding: "1.75rem", borderRadius: "12px", textAlign: "center", border: "1px solid rgba(139, 92, 246, 0.3)" }}>
-                    <span style={{ fontSize: "2.5rem" }}>📝</span>
-                    <h3 style={{ margin: "0.5rem 0 0.25rem", color: "#f8fafc" }}>
-                      {activeExam ? activeExam.title : "Term 1 Advanced STEM & Academic Evaluation"}
-                    </h3>
-                    <p style={{ color: "#94a3b8", fontSize: "0.9rem", marginBottom: "1rem" }}>
-                      Class Level: <strong>{academicLevel}</strong> • Term: <strong>{academicTerm}</strong> • Start: <strong>09:00 AM</strong> • End: <strong>11:30 AM</strong> • Questions: {activeExam?.questionBank?.length || 10}
-                    </p>
-                    {submittedExams[activeExam?.id || "demo_1"] ? (
-                      <span className="badge-status badge-present" style={{ fontSize: "0.95rem", padding: "8px 20px" }}>
-                        🔒 Exam Already Submitted & Locked (Score: {submittedExams[activeExam?.id || "demo_1"].score}%)
-                      </span>
-                    ) : (
-                      <button 
-                        type="button" 
-                        className="btn-primary" 
-                        style={{ fontSize: "1rem", padding: "12px 28px", background: "linear-gradient(135deg, #8b5cf6, #6d28d9)" }}
-                        onClick={() => setExamStarted(true)}
-                      >
-                        🚀 Begin Active Examination Now
-                      </button>
-                    )}
-                  </div>
-                </div>
-              )}
-
-              {examStarted && !examSubmitted && (
-                <div className="student-exam-card">
-                  <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "1.5rem", borderBottom: "1px solid rgba(255, 255, 255, 0.1)", paddingBottom: "1rem" }}>
-                    <div>
-                      <h3 style={{ margin: 0, color: "#c084fc" }}>{activeExam?.title || "Academic Evaluation"}</h3>
-                      <span style={{ fontSize: "0.8rem", color: "#94a3b8" }}>
-                        PostgreSQL Question Bank • Objective Assessment • {academicLevel} ({academicTerm})
-                      </span>
-                    </div>
-                    <div style={{ display: "flex", gap: "8px", alignItems: "center" }}>
-                      <span className="badge-status badge-present">⏱️ Time Remaining: 14:58</span>
-                      <button 
-                        type="button" 
-                        className="btn-secondary" 
-                        style={{ padding: "4px 10px", fontSize: "0.75rem" }}
-                        onClick={() => setExamStarted(false)}
-                      >
-                        Cancel
-                      </button>
-                    </div>
-                  </div>
-
-                  {/* Typed Questions / Uploaded Paper Preview */}
-                  {activeExam?.typedQuestionText && (
-                    <div style={{
-                      background: "rgba(15, 23, 42, 0.9)",
-                      border: "1.5px solid rgba(56, 189, 248, 0.5)",
-                      borderRadius: "12px",
-                      padding: "1.25rem",
-                      marginBottom: "1.5rem"
+                  <div style={{ display: "flex", gap: "10px", alignItems: "center", flexWrap: "wrap" }}>
+                    <span className="badge-status badge-present" style={{ fontSize: "0.85rem", padding: "6px 14px" }}>
+                      📋 Remaining to Write: <strong>{isExamPortalLocked ? "0 Exam(s) (Locked)" : (exams.length > 0 ? exams.length : 3) + " Exam(s)"}</strong>
+                    </span>
+                    <span style={{ fontSize: "0.8rem", color: "#94a3b8" }}>
+                      Active Term: <strong style={{ color: "#38bdf8" }}>{academicTerm} ({academicLevel})</strong>
+                    </span>
+                    <span style={{
+                      fontSize: "0.8rem",
+                      padding: "4px 10px",
+                      borderRadius: "6px",
+                      background: meets80PercentThreshold ? "rgba(16, 185, 129, 0.2)" : "rgba(239, 68, 68, 0.2)",
+                      color: meets80PercentThreshold ? "#34d399" : "#f87171",
+                      fontWeight: 800,
+                      border: meets80PercentThreshold ? "1px solid #10b981" : "1px solid #ef4444"
                     }}>
-                      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "8px" }}>
-                        <h4 style={{ margin: 0, color: "#38bdf8", fontSize: "0.95rem", textTransform: "uppercase", display: "flex", alignItems: "center", gap: "6px" }}>
-                          <span>📄</span> Teacher's Typed & Uploaded Examination Paper ({activeExam.uploadedDocName || "Online Questions"})
-                        </h4>
-                        <span style={{ fontSize: "0.72rem", color: "#34d399", background: "rgba(16, 185, 129, 0.2)", padding: "2px 8px", borderRadius: "6px" }}>
-                          AI Scanner & OMR Ready
-                        </span>
-                      </div>
-                      <div style={{
-                        whiteSpace: "pre-wrap",
-                        color: "#e2e8f0",
-                        fontSize: "0.9rem",
-                        lineHeight: "1.7",
-                        fontFamily: "monospace",
-                        background: "rgba(2, 6, 23, 0.8)",
-                        padding: "1rem",
-                        borderRadius: "8px",
-                        maxHeight: "220px",
-                        overflowY: "auto",
-                        border: "1px solid rgba(255,255,255,0.08)"
-                      }}>
-                        {activeExam.typedQuestionText}
-                      </div>
-                    </div>
-                  )}
-
-                  {(activeExam?.questionBank || []).map((q, idx) => (
-                    <div key={q.id || idx} className="question-block">
-                      <div className="question-text">
-                        Question {idx + 1}: {q.questionText}
-                      </div>
-                      {["A", "B", "C", "D"].map((opt) => (
-                        <label key={opt} className="option-label">
-                          <input 
-                            type="radio" 
-                            name={`q_${q.id}`} 
-                            checked={examAnswers[q.id] === opt}
-                            onChange={() => setExamAnswers({ ...examAnswers, [q.id]: opt })}
-                          />
-                          <span>Option {opt}</span>
-                        </label>
-                      ))}
-                    </div>
-                  ))}
-
-                  {/* REQUIREMENT: Prompt with notice before submitting */}
-                  <button 
-                    type="button" 
-                    className="btn-primary" 
-                    style={{ marginTop: "1rem", width: "100%", padding: "12px", justifyContent: "center" }}
-                    onClick={() => setShowExamConfirmModal(true)}
-                    disabled={loading}
-                  >
-                    {loading ? "Submitting to PostgreSQL..." : "💾 Submit Examination for Auto-Grading"}
-                  </button>
-                </div>
-              )}
-
-              {examSubmitted && examScoreResult && (
-                <div style={{ background: "rgba(2, 6, 23, 0.8)", padding: "2rem", borderRadius: "14px", border: "1px solid rgba(16, 185, 129, 0.4)", textAlign: "center" }}>
-                  <span style={{ fontSize: "3rem" }}>{examScoreResult.isPassed ? "🎉" : "📚"}</span>
-                  <h2 style={{ margin: "0.5rem 0", color: examScoreResult.isPassed ? "#34d399" : "#f87171" }}>
-                    {examScoreResult.isPassed ? "EXAMINATION PASSED" : "ASSESSMENT COMPLETED"}
-                  </h2>
-                  <p style={{ color: "#94a3b8", fontSize: "1.1rem" }}>
-                    Exact Performance Score: <strong style={{ color: "#38bdf8", fontSize: "1.3rem" }}>{examScoreResult.score}%</strong> 
-                    &nbsp;•&nbsp; Official Letter Grade: <strong style={{ color: "#fbbf24", fontSize: "1.3rem" }}>{examScoreResult.grade}</strong>
-                  </p>
-                  <p style={{ color: "#94a3b8", fontSize: "0.85rem" }}>
-                    ({examScoreResult.correct} out of {examScoreResult.total} questions verified correct by deterministic engine)
-                  </p>
-                  <div style={{ display: "inline-block", background: "rgba(255, 255, 255, 0.05)", padding: "10px 20px", borderRadius: "8px", margin: "1rem 0" }}>
-                    <span style={{ color: "#cbd5e1" }}>
-                      🔒 Recorded & Permanently Locked in Database: <strong>VERIFIED DETERMINISTIC RESULT FOR {academicTerm.toUpperCase()}</strong>
+                      {meets80PercentThreshold ? `✓ Fee Clearance: ${paidPercentage}% (>=80% Pass)` : `⚠️ Fee Restricted: ${paidPercentage}% Paid (<80%)`}
                     </span>
                   </div>
-                  <div>
-                    <button 
-                      type="button" 
-                      className="btn-secondary" 
-                      onClick={() => { setExamSubmitted(false); setExamAnswers({}); }}
-                    >
-                      ← Back to Examination Schedule
-                    </button>
-                  </div>
                 </div>
-              )}
-                </>
-              )}
-            </div>
-          )}
+
+                {!meets80PercentThreshold ? (
+                  <div style={{
+                    background: "linear-gradient(135deg, rgba(30, 41, 59, 0.95), rgba(15, 23, 42, 0.9))",
+                    border: "2px solid #ef4444",
+                    borderRadius: "16px",
+                    padding: "2rem",
+                    textAlign: "center",
+                    margin: "1rem 0",
+                    boxShadow: "0 15px 35px rgba(239, 68, 68, 0.2)"
+                  }}>
+                    <div style={{ fontSize: "3rem", marginBottom: "8px" }}>⚠️ 💳</div>
+                    <h3 style={{ color: "#f87171", margin: "0 0 10px", fontSize: "1.3rem" }}>
+                      EXAMINATION SITTING RESTRICTED — FEE PAYMENT BELOW 80% THRESHOLD
+                    </h3>
+                    <p style={{ color: "#cbd5e1", maxWidth: "640px", margin: "0 auto 1.25rem", lineHeight: "1.6", fontSize: "0.9rem" }}>
+                      Per institutional examination policy, enrolled scholars must clear at least <strong>80% of total term fees</strong> before admission into examination halls or accessing online testing terminals.
+                    </p>
+
+                    <div style={{
+                      display: "inline-grid",
+                      gridTemplateColumns: "repeat(3, 1fr)",
+                      gap: "16px",
+                      background: "rgba(2, 6, 23, 0.7)",
+                      padding: "14px 20px",
+                      borderRadius: "10px",
+                      border: "1px solid rgba(255, 255, 255, 0.1)",
+                      marginBottom: "1.5rem",
+                      textAlign: "left"
+                    }}>
+                      <div>
+                        <span style={{ fontSize: "0.72rem", color: "#94a3b8", display: "block" }}>TOTAL TERM FEES</span>
+                        <strong style={{ color: "#f8fafc" }}>GH₵ {totalTermFees.toFixed(2)}</strong>
+                      </div>
+                      <div>
+                        <span style={{ fontSize: "0.72rem", color: "#94a3b8", display: "block" }}>AMOUNT PAID ({paidPercentage}%)</span>
+                        <strong style={{ color: "#38bdf8" }}>GH₵ {totalPaid.toFixed(2)}</strong>
+                      </div>
+                      <div>
+                        <span style={{ fontSize: "0.72rem", color: "#94a3b8", display: "block" }}>NEEDED FOR 80% CLEARANCE</span>
+                        <strong style={{ color: "#f59e0b" }}>GH₵ {Math.max(0, (totalTermFees * 0.8) - totalPaid).toFixed(2)}</strong>
+                      </div>
+                    </div>
+
+                    <div style={{ display: "flex", justifyContent: "center", gap: "12px", flexWrap: "wrap" }}>
+                      <button
+                        type="button"
+                        className="btn-primary"
+                        onClick={() => {
+                          const deficit = Math.max(0, (totalTermFees * 0.8) - totalPaid);
+                          setPaymentAmount(String(deficit > 0 ? deficit : 200));
+                          setShowFeePaymentModal(true);
+                        }}
+                        style={{
+                          background: "linear-gradient(135deg, #10b981, #059669)",
+                          border: "none",
+                          padding: "10px 22px",
+                          fontSize: "0.9rem",
+                          fontWeight: 800
+                        }}
+                      >
+                        💳 Make Instant Payment to Reach 80% & Unlock Exams (MoMo / Card)
+                      </button>
+                    </div>
+                  </div>
+                ) : (
+                  <>
+                    {/* Conditional Rescheduled Late Exam Writing Slip Notice */}
+                    {currentArrears > 0 && (
+                      <div style={{
+                        background: "linear-gradient(135deg, rgba(16, 185, 129, 0.15), rgba(5, 150, 105, 0.25))",
+                        border: "1.5px solid #10b981",
+                        borderRadius: "12px",
+                        padding: "14px 18px",
+                        marginBottom: "1.25rem",
+                        display: "flex",
+                        justifyContent: "space-between",
+                        alignItems: "center",
+                        flexWrap: "wrap",
+                        gap: "12px"
+                      }}>
+                        <div>
+                          <div style={{ color: "#34d399", fontWeight: 800, fontSize: "0.95rem", display: "flex", alignItems: "center", gap: "8px" }}>
+                            <span>🎓</span> RESCHEDULED LATE EXAM WRITING CLEARANCE GRANTED (80%+ PAID)
+                          </div>
+                          <p style={{ margin: "4px 0 0", color: "#cbd5e1", fontSize: "0.82rem" }}>
+                            You have paid {paidPercentage}% of term fees (GH₵ {totalPaid.toFixed(2)}). As an authorized candidate, you are cleared to sit for examinations with late scheduling dispensation.
+                          </p>
+                        </div>
+                        <button
+                          type="button"
+                          onClick={() => setShowRescheduledExamSlipModal(true)}
+                          style={{
+                            background: "rgba(16, 185, 129, 0.25)",
+                            border: "1.5px solid #10b981",
+                            color: "#34d399",
+                            padding: "8px 16px",
+                            borderRadius: "8px",
+                            fontWeight: 800,
+                            fontSize: "0.82rem",
+                            cursor: "pointer",
+                            display: "inline-flex",
+                            alignItems: "center",
+                            gap: "6px"
+                          }}
+                        >
+                          🖨️ View & Print Rescheduled Exam Writing Slip
+                        </button>
+                      </div>
+                    )}
+
+                    {/* Requirement: Student exam portal lockout screen once an exam is taken, submitted & graded */}
+                    {isExamPortalLocked ? (
+                      <div style={{
+                        background: "linear-gradient(135deg, rgba(15, 23, 42, 0.95), rgba(30, 41, 59, 0.9))",
+                        border: "2px solid rgba(239, 68, 68, 0.4)",
+                        borderRadius: "16px",
+                        padding: "2.5rem",
+                        textAlign: "center",
+                        boxShadow: "0 20px 40px rgba(0, 0, 0, 0.6)",
+                        margin: "1rem 0"
+                      }}>
+                        <div style={{ fontSize: "3.5rem", marginBottom: "0.5rem" }}>🔒</div>
+                        <span className="role-portal-badge" style={{ color: "#ef4444", borderColor: "#ef4444", fontSize: "0.85rem", padding: "4px 12px" }}>
+                          EXAMINATION SESSION SUBMITTED & LOCKED
+                        </span>
+                        <h2 style={{ color: "#f87171", margin: "1rem 0 0.5rem", fontSize: "1.6rem" }}>
+                          Examination Completed, Graded & Portal Access Restricted
+                        </h2>
+                        <p style={{ color: "#cbd5e1", maxWidth: "680px", margin: "0 auto 1.5rem", lineHeight: "1.6", fontSize: "0.95rem" }}>
+                          Per school examination regulations, your examination has been completed, submitted for marking, and graded by the deterministic engine. Access to the examination hall is locked until another examination session is officially published and scheduled for writing by the faculty.
+                        </p>
+
+                        {/* Summary of Graded Performance */}
+                        <div style={{
+                          display: "grid",
+                          gridTemplateColumns: "repeat(auto-fit, minmax(180px, 1fr))",
+                          gap: "1rem",
+                          background: "rgba(2, 6, 23, 0.8)",
+                          border: "1px solid rgba(255, 255, 255, 0.1)",
+                          borderRadius: "12px",
+                          padding: "1.25rem",
+                          textAlign: "left",
+                          maxWidth: "680px",
+                          margin: "0 auto 1.5rem"
+                        }}>
+                          <div>
+                            <span style={{ fontSize: "0.75rem", color: "#94a3b8", textTransform: "uppercase" }}>Grading Status</span>
+                            <div style={{ color: "#34d399", fontWeight: "700", fontSize: "1rem", marginTop: "2px" }}>✅ Verified & Marked</div>
+                          </div>
+                          <div>
+                            <span style={{ fontSize: "0.75rem", color: "#94a3b8", textTransform: "uppercase" }}>Deterministic Grade</span>
+                            <div style={{ color: "#fbbf24", fontWeight: "700", fontSize: "1rem", marginTop: "2px" }}>
+                              {examScoreResult?.grade || "Grade A (85%)"}
+                            </div>
+                          </div>
+                          <div>
+                            <span style={{ fontSize: "0.75rem", color: "#94a3b8", textTransform: "uppercase" }}>PostgreSQL Audit Seal</span>
+                            <div style={{ color: "#38bdf8", fontWeight: "700", fontSize: "1rem", marginTop: "2px" }}>SECURE-GBS-2026</div>
+                          </div>
+                        </div>
+
+                        <div style={{ display: "flex", gap: "12px", justifyContent: "center", flexWrap: "wrap" }}>
+                          <button
+                            type="button"
+                            className="btn-primary"
+                            style={{ background: "linear-gradient(135deg, #3b82f6, #1d4ed8)", padding: "10px 20px" }}
+                            onClick={() => setActiveTab("report-card")}
+                          >
+                            📄 View Official Grade on Report Card
+                          </button>
+                          <button
+                            type="button"
+                            className="btn-secondary"
+                            style={{ borderColor: "#10b981", color: "#34d399", padding: "10px 20px" }}
+                            onClick={handlePublishNewExamSession}
+                            title="Faculty/Teacher publishes a new exam session"
+                          >
+                            📢 Simulate Faculty Publishing Next Exam Session
+                          </button>
+                        </div>
+                      </div>
+                    ) : (
+                      <>
+                        {/* KPI Summary for Examinations */}
+                        <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(200px, 1fr))", gap: "1rem", marginBottom: "1.5rem" }}>
+                          <div style={{ background: "rgba(15, 23, 42, 0.7)", border: "1px solid rgba(56, 189, 248, 0.2)", borderRadius: "10px", padding: "1rem" }}>
+                            <span style={{ fontSize: "0.75rem", color: "#94a3b8", textTransform: "uppercase", fontWeight: "700" }}>Total Scheduled</span>
+                            <div style={{ fontSize: "1.6rem", fontWeight: "800", color: "#38bdf8", marginTop: "4px" }}>{exams.length || 3} Papers</div>
+                            <span style={{ fontSize: "0.75rem", color: "#cbd5e1" }}>Assigned by Subject Faculty</span>
+                          </div>
+                          <div style={{ background: "rgba(15, 23, 42, 0.7)", border: "1px solid rgba(245, 158, 11, 0.2)", borderRadius: "10px", padding: "1rem" }}>
+                            <span style={{ fontSize: "0.75rem", color: "#94a3b8", textTransform: "uppercase", fontWeight: "700" }}>Exams Remaining</span>
+                            <div style={{ fontSize: "1.6rem", fontWeight: "800", color: "#fbbf24", marginTop: "4px" }}>
+                              {exams.length > 0 ? exams.length : 3} Remaining
+                            </div>
+                            <span style={{ fontSize: "0.75rem", color: "#fef08a" }}>Pending student submission</span>
+                          </div>
+                          <div style={{ background: "rgba(15, 23, 42, 0.7)", border: "1px solid rgba(16, 185, 129, 0.2)", borderRadius: "10px", padding: "1rem" }}>
+                            <span style={{ fontSize: "0.75rem", color: "#94a3b8", textTransform: "uppercase", fontWeight: "700" }}>Grading System</span>
+                            <div style={{ fontSize: "1.4rem", fontWeight: "800", color: "#34d399", marginTop: "4px" }}>Deterministic AI/OMR</div>
+                            <span style={{ fontSize: "0.75rem", color: "#a7f3d0" }}>Instant PostgreSQL Verification</span>
+                          </div>
+                          <div style={{ background: "rgba(15, 23, 42, 0.7)", border: "1px solid rgba(168, 85, 247, 0.2)", borderRadius: "10px", padding: "1rem" }}>
+                            <span style={{ fontSize: "0.75rem", color: "#94a3b8", textTransform: "uppercase", fontWeight: "700" }}>Current Academic Term</span>
+                            <div style={{ fontSize: "1.2rem", fontWeight: "800", color: "#c084fc", marginTop: "4px" }}>{academicTerm}</div>
+                            <span style={{ fontSize: "0.75rem", color: "#e9d5ff" }}>{academicLevel}</span>
+                          </div>
+                        </div>
+
+                        {!examStarted && !examSubmitted && (
+                          <div>
+                            <h3 style={{ color: "#f8fafc", fontSize: "1.05rem", marginBottom: "0.75rem", display: "flex", alignItems: "center", gap: "8px" }}>
+                              <span>📅</span> Upcoming Examinations Schedule & Timetable:
+                            </h3>
+
+                            <div style={{ overflowX: "auto", marginBottom: "1.5rem" }}>
+                              <table className="role-table">
+                                <thead>
+                                  <tr>
+                                    <th>Subject / Course</th>
+                                    <th>Exam Paper Title</th>
+                                    <th>Level & Exact Term</th>
+                                    <th>Exam Date</th>
+                                    <th>Start Time</th>
+                                    <th>End Time</th>
+                                    <th>Duration</th>
+                                    <th>Max / Pass</th>
+                                    <th>Action / Score</th>
+                                  </tr>
+                                </thead>
+                                <tbody>
+                                  {(() => {
+                                    const renderRow = (ex, fallbackSubject, fallbackTitle, defaultStart, defaultEnd) => {
+                                      const examId = ex.id || fallbackTitle;
+                                      const isSubmitted = !!submittedExams[examId];
+                                      const sTime = ex.startTime || defaultStart;
+                                      const eTime = ex.endTime || defaultEnd;
+                                      const isRestricted = (ex.restrictBeforeStart || ex.isScheduled) && !unlockedExamIds.includes(examId);
+
+                                      return (
+                                        <tr key={examId}>
+                                          <td>
+                                            <strong style={{ color: "#38bdf8" }}>{ex.class?.name || ex.subjectName || fallbackSubject}</strong>
+                                            {ex.examMode && (
+                                              <div style={{ fontSize: "0.7rem", color: "#a7f3d0", marginTop: "2px" }}>
+                                                Mode: {ex.examMode === "HYBRID_PRINT_SCAN" ? "📄 Print / AI Scanner" : "💻 Online CBT"}
+                                              </div>
+                                            )}
+                                          </td>
+                                          <td>
+                                            <div style={{ fontWeight: "600", color: "#f8fafc" }}>{ex.title || fallbackTitle}</div>
+                                            {ex.uploadedDocName && (
+                                              <span style={{ fontSize: "0.72rem", color: "#fbbf24" }}>📎 Attached: {ex.uploadedDocName}</span>
+                                            )}
+                                          </td>
+                                          <td>
+                                            <span className="role-portal-badge" style={{ color: "#c084fc" }}>
+                                              {academicLevel} • {academicTerm}
+                                            </span>
+                                          </td>
+                                          <td>{new Date(ex.examDate || Date.now()).toLocaleDateString()}</td>
+                                          <td><strong style={{ color: "#34d399" }}>{sTime}</strong></td>
+                                          <td><strong style={{ color: "#f87171" }}>{eTime}</strong></td>
+                                          <td>{ex.durationMinutes ? `${ex.durationMinutes} mins` : "2 hrs 30 mins"}</td>
+                                          <td>{ex.totalMarks || 100} / {ex.passMarks || 50}</td>
+                                          <td>
+                                            {isSubmitted ? (
+                                              <div style={{ display: "flex", flexDirection: "column", gap: "4px" }}>
+                                                <span className="badge-status badge-present" style={{ fontSize: "0.75rem", background: "rgba(16, 185, 129, 0.2)", color: "#34d399", border: "1px solid rgba(16, 185, 129, 0.4)" }}>
+                                                  🔒 Submitted & Locked
+                                                </span>
+                                                <span style={{ fontSize: "0.72rem", color: "#fbbf24", fontWeight: "700" }}>
+                                                  Score: {submittedExams[examId].score}% ({submittedExams[examId].grade})
+                                                </span>
+                                              </div>
+                                            ) : isRestricted ? (
+                                              <div style={{ display: "flex", flexDirection: "column", gap: "6px" }}>
+                                                <span className="badge-status badge-absent" style={{ fontSize: "0.72rem", background: "rgba(239, 68, 68, 0.2)", color: "#fca5a5", border: "1px solid rgba(239, 68, 68, 0.4)" }}>
+                                                  🔒 Restricted (Opens at {sTime})
+                                                </span>
+                                                <button
+                                                  type="button"
+                                                  className="btn-secondary"
+                                                  style={{ padding: "4px 8px", fontSize: "0.7rem", borderColor: "#f59e0b", color: "#fbbf24", fontWeight: "700" }}
+                                                  onClick={() => handleUnlockExam({ id: examId, title: ex.title || fallbackTitle })}
+                                                  title="Simulate scheduled start time arrived and unlock portal"
+                                                >
+                                                  ⏱️ Time Ready: Unlock Portal
+                                                </button>
+                                              </div>
+                                            ) : (
+                                              <button
+                                                type="button"
+                                                className="btn-primary"
+                                                style={{ padding: "6px 14px", fontSize: "0.8rem", background: "linear-gradient(135deg, #10b981, #059669)", boxShadow: "0 4px 12px rgba(16, 185, 129, 0.4)" }}
+                                                onClick={() => {
+                                                  setActiveExam({
+                                                    ...ex,
+                                                    id: examId,
+                                                    title: ex.title || fallbackTitle,
+                                                    totalMarks: ex.totalMarks || 100,
+                                                    passMarks: ex.passMarks || 50,
+                                                    questionBank: ex.questionBank || [
+                                                      { id: 101, questionNumber: 1, questionText: "Solve for the derivative of f(x) = 4x^3 - 5x + 7." },
+                                                      { id: 102, questionNumber: 2, questionText: "Which logic gate represents the proposition: (A ∧ B)' ≡ A' ∨ B'?" },
+                                                      { id: 103, questionNumber: 3, questionText: "What is the limit of (sin x) / x as x approaches 0?" }
+                                                    ]
+                                                  });
+                                                  setExamTimeLeftSeconds(ex.durationMinutes ? ex.durationMinutes * 60 : 900);
+                                                  setExamStarted(true);
+                                                }}
+                                              >
+                                                🚀 Portal Ready: Launch Exam
+                                              </button>
+                                            )}
+                                          </td>
+                                        </tr>
+                                      );
+                                    };
+
+                                    if (exams.length === 0) {
+                                      return (
+                                        <tr>
+                                          <td colSpan="6" style={{ textAlign: "center", padding: "2.5rem", color: "#94a3b8" }}>
+                                            <div style={{ fontSize: "2rem", marginBottom: "0.5rem" }}>📝</div>
+                                            <strong style={{ display: "block", color: "#f8fafc", fontSize: "1rem" }}>No Scheduled Online Examinations</strong>
+                                            <span style={{ fontSize: "0.85rem" }}>Your faculty instructors have not published any pending online exam papers for this term yet.</span>
+                                          </td>
+                                        </tr>
+                                      );
+                                    }
+
+                                    return exams.map((ex, idx) => {
+                                      const defS = idx === 0 ? "09:00 AM" : idx === 1 ? "01:00 PM" : "10:30 AM";
+                                      const defE = idx === 0 ? "11:30 AM" : idx === 1 ? "03:00 PM" : "12:30 PM";
+                                      return renderRow(ex, "STEM Curriculum", ex.title, defS, defE);
+                                    });
+                                  })()}
+                                </tbody>
+                              </table>
+                            </div>
+
+                            {/* OFFICIAL TEACHER-AUTHORED EXAMINATION TIMETABLE & PROCEDURE GUIDE */}
+                            <div style={{ background: "linear-gradient(135deg, rgba(30, 41, 59, 0.6) 0%, rgba(15, 23, 42, 0.8) 100%)", border: "1.5px solid rgba(56, 189, 248, 0.4)", borderRadius: "14px", padding: "1.5rem", marginBottom: "2rem" }}>
+                              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "1rem", flexWrap: "wrap", gap: "10px" }}>
+                                <div>
+                                  <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
+                                    <span style={{ fontSize: "1.3rem" }}>📚</span>
+                                    <h3 style={{ margin: 0, color: "#38bdf8", fontSize: "1.1rem", fontWeight: "800" }}>
+                                      OFFICIAL EXAMINATION TIMETABLE & REVISION PROCEDURE GUIDE
+                                    </h3>
+                                  </div>
+                                  <p style={{ margin: "4px 0 0", color: "#94a3b8", fontSize: "0.82rem" }}>
+                                    Created by faculty teachers to guide student study according to the official examination procedure and regulations.
+                                  </p>
+                                </div>
+                                <span className="badge-status badge-present" style={{ fontSize: "0.75rem" }}>
+                                  ✓ Faculty Board Certified
+                                </span>
+                              </div>
+
+                              <div className="role-table-responsive">
+                                <table className="role-table" style={{ fontSize: "0.82rem" }}>
+                                  <thead>
+                                    <tr>
+                                      <th>Course / Paper</th>
+                                      <th>Date & Time Window</th>
+                                      <th>Exam Hall & Invigilator</th>
+                                      <th>Permitted Tools & Equipment</th>
+                                      <th>Syllabus Scope & Focus</th>
+                                      <th>Special Instructions</th>
+                                    </tr>
+                                  </thead>
+                                  <tbody>
+                                    {examTimetableGuide.map((t) => (
+                                      <tr key={t.id}>
+                                        <td>
+                                          <strong style={{ color: "#38bdf8", display: "block" }}>{t.courseCode}</strong>
+                                          <span style={{ color: "#f8fafc" }}>{t.subject}</span>
+                                        </td>
+                                        <td>
+                                          <div style={{ color: "#34d399", fontWeight: 700 }}>{t.examDate}</div>
+                                          <span style={{ color: "#fbbf24", fontSize: "0.75rem" }}>{t.startTime} - {t.endTime}</span>
+                                        </td>
+                                        <td>
+                                          <div style={{ color: "#cbd5e1" }}>{t.hall}</div>
+                                          <span style={{ color: "#94a3b8", fontSize: "0.72rem" }}>Invigilator: {t.invigilator}</span>
+                                        </td>
+                                        <td style={{ color: "#a5b4fc" }}>{t.permittedTools}</td>
+                                        <td style={{ color: "#cbd5e1", maxWidth: "220px" }}>{t.syllabusScope}</td>
+                                        <td style={{ color: "#94a3b8", fontSize: "0.75rem", maxWidth: "200px" }}>{t.instructions}</td>
+                                      </tr>
+                                    ))}
+                                  </tbody>
+                                </table>
+                              </div>
+                            </div>
+
+                            {/* Active Exam Ready Banner */}
+                            <div style={{ background: "rgba(2, 6, 23, 0.7)", padding: "1.75rem", borderRadius: "12px", textAlign: "center", border: "1px solid rgba(139, 92, 246, 0.3)" }}>
+                              <span style={{ fontSize: "2.5rem" }}>📝</span>
+                              <h3 style={{ margin: "0.5rem 0 0.25rem", color: "#f8fafc" }}>
+                                {activeExam ? activeExam.title : "Term 1 Advanced STEM & Academic Evaluation"}
+                              </h3>
+                              <p style={{ color: "#94a3b8", fontSize: "0.9rem", marginBottom: "1rem" }}>
+                                Class Level: <strong>{academicLevel}</strong> • Term: <strong>{academicTerm}</strong> • Start: <strong>09:00 AM</strong> • End: <strong>11:30 AM</strong> • Questions: {activeExam?.questionBank?.length || 10}
+                              </p>
+                              {submittedExams[activeExam?.id || "demo_1"] ? (
+                                <span className="badge-status badge-present" style={{ fontSize: "0.95rem", padding: "8px 20px" }}>
+                                  🔒 Exam Already Submitted & Locked (Score: {submittedExams[activeExam?.id || "demo_1"].score}%)
+                                </span>
+                              ) : (
+                                <button
+                                  type="button"
+                                  className="btn-primary"
+                                  style={{ fontSize: "1rem", padding: "12px 28px", background: "linear-gradient(135deg, #8b5cf6, #6d28d9)" }}
+                                  onClick={() => {
+                                    setExamTimeLeftSeconds(activeExam?.durationMinutes ? activeExam.durationMinutes * 60 : 900);
+                                    setExamStarted(true);
+                                  }}
+                                >
+                                  🚀 Begin Active Examination Now
+                                </button>
+                              )}
+                            </div>
+                          </div>
+                        )}
+
+                        {examStarted && !examSubmitted && (
+                          <div className="student-exam-card">
+                            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "1.5rem", borderBottom: "1px solid rgba(255, 255, 255, 0.1)", paddingBottom: "1rem" }}>
+                              <div>
+                                <h3 style={{ margin: 0, color: "#c084fc" }}>{activeExam?.title || "Academic Evaluation"}</h3>
+                                <span style={{ fontSize: "0.8rem", color: "#94a3b8" }}>
+                                  PostgreSQL Question Bank • Objective Assessment • {academicLevel} ({academicTerm})
+                                </span>
+                              </div>
+                              <div style={{ display: "flex", gap: "8px", alignItems: "center" }}>
+                                <span className="badge-status badge-present">⏱️ Time Remaining: {formatExamTime(examTimeLeftSeconds)}</span>
+                                <button
+                                  type="button"
+                                  className="btn-secondary"
+                                  style={{ padding: "4px 10px", fontSize: "0.75rem" }}
+                                  onClick={() => setExamStarted(false)}
+                                >
+                                  Cancel
+                                </button>
+                              </div>
+                            </div>
+
+                            {/* Typed Questions / Uploaded Paper Preview */}
+                            {activeExam?.typedQuestionText && (
+                              <div style={{
+                                background: "rgba(15, 23, 42, 0.9)",
+                                border: "1.5px solid rgba(56, 189, 248, 0.5)",
+                                borderRadius: "12px",
+                                padding: "1.25rem",
+                                marginBottom: "1.5rem"
+                              }}>
+                                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "8px" }}>
+                                  <h4 style={{ margin: 0, color: "#38bdf8", fontSize: "0.95rem", textTransform: "uppercase", display: "flex", alignItems: "center", gap: "6px" }}>
+                                    <span>📄</span> Teacher's Typed & Uploaded Examination Paper ({activeExam.uploadedDocName || "Online Questions"})
+                                  </h4>
+                                  <span style={{ fontSize: "0.72rem", color: "#34d399", background: "rgba(16, 185, 129, 0.2)", padding: "2px 8px", borderRadius: "6px" }}>
+                                    AI Scanner & OMR Ready
+                                  </span>
+                                </div>
+                                <div style={{
+                                  whiteSpace: "pre-wrap",
+                                  color: "#e2e8f0",
+                                  fontSize: "0.9rem",
+                                  lineHeight: "1.7",
+                                  fontFamily: "monospace",
+                                  background: "rgba(2, 6, 23, 0.8)",
+                                  padding: "1rem",
+                                  borderRadius: "8px",
+                                  maxHeight: "220px",
+                                  overflowY: "auto",
+                                  border: "1px solid rgba(255,255,255,0.08)"
+                                }}>
+                                  {activeExam.typedQuestionText}
+                                </div>
+                              </div>
+                            )}
+
+                            {(activeExam?.questionBank || []).map((q, idx) => (
+                              <div key={q.id || idx} className="question-block">
+                                <div className="question-text">
+                                  Question {idx + 1}: {q.questionText}
+                                </div>
+                                {["A", "B", "C", "D"].map((opt) => (
+                                  <label key={opt} className="option-label">
+                                    <input
+                                      type="radio"
+                                      name={`q_${q.id}`}
+                                      checked={examAnswers[q.id] === opt}
+                                      onChange={() => setExamAnswers({ ...examAnswers, [q.id]: opt })}
+                                    />
+                                    <span>Option {opt}</span>
+                                  </label>
+                                ))}
+                              </div>
+                            ))}
+
+                            {/* REQUIREMENT: Prompt with notice before submitting */}
+                            <button
+                              type="button"
+                              className="btn-primary"
+                              style={{ marginTop: "1rem", width: "100%", padding: "12px", justifyContent: "center" }}
+                              onClick={() => setShowExamConfirmModal(true)}
+                              disabled={loading}
+                            >
+                              {loading ? "Submitting to PostgreSQL..." : "💾 Submit Examination for Auto-Grading"}
+                            </button>
+                          </div>
+                        )}
+
+                        {examSubmitted && examScoreResult && (
+                          <div style={{ background: "rgba(2, 6, 23, 0.8)", padding: "2rem", borderRadius: "14px", border: "1px solid rgba(16, 185, 129, 0.4)", textAlign: "center" }}>
+                            <span style={{ fontSize: "3rem" }}>{examScoreResult.isPassed ? "🎉" : "📚"}</span>
+                            <h2 style={{ margin: "0.5rem 0", color: examScoreResult.isPassed ? "#34d399" : "#f87171" }}>
+                              {examScoreResult.isPassed ? "EXAMINATION PASSED" : "ASSESSMENT COMPLETED"}
+                            </h2>
+                            <p style={{ color: "#94a3b8", fontSize: "1.1rem" }}>
+                              Exact Performance Score: <strong style={{ color: "#38bdf8", fontSize: "1.3rem" }}>{examScoreResult.score}%</strong>
+                              &nbsp;•&nbsp; Official Letter Grade: <strong style={{ color: "#fbbf24", fontSize: "1.3rem" }}>{examScoreResult.grade}</strong>
+                            </p>
+                            <p style={{ color: "#94a3b8", fontSize: "0.85rem" }}>
+                              ({examScoreResult.correct} out of {examScoreResult.total} questions verified correct by deterministic engine)
+                            </p>
+                            <div style={{ display: "inline-block", background: "rgba(255, 255, 255, 0.05)", padding: "10px 20px", borderRadius: "8px", margin: "1rem 0" }}>
+                              <span style={{ color: "#cbd5e1" }}>
+                                🔒 Recorded & Permanently Locked in Database: <strong>VERIFIED DETERMINISTIC RESULT FOR {academicTerm.toUpperCase()}</strong>
+                              </span>
+                            </div>
+                            <div>
+                              <button
+                                type="button"
+                                className="btn-secondary"
+                                onClick={() => { setExamSubmitted(false); setExamAnswers({}); }}
+                              >
+                                ← Back to Examination Schedule
+                              </button>
+                            </div>
+                          </div>
+                        )}
+                      </>
+                    )}
+                  </>
+                )}
+              </div>
+            );
+          })()}
 
           {/* TAB 4: VERIFIED REPORT CARD */}
           {activeTab === "report-card" && (
@@ -1825,9 +2298,9 @@ export default function StudentDashboard() {
                   <p>Cryptographically verified student performance record across all grades and levels</p>
                 </div>
                 {feeArrears <= 0 && (
-                  <button 
-                    type="button" 
-                    className="btn-primary" 
+                  <button
+                    type="button"
+                    className="btn-primary"
                     onClick={() => window.print()}
                   >
                     🖨️ Print / Download Transcript (PDF)
@@ -1837,13 +2310,13 @@ export default function StudentDashboard() {
 
               {/* REQUIREMENT: Debtor restriction - cannot access result if student owes */}
               {feeArrears > 0 ? (
-                <div style={{ 
-                  background: "rgba(239, 68, 68, 0.12)", 
-                  border: "1px solid rgba(239, 68, 68, 0.4)", 
-                  borderRadius: "14px", 
-                  padding: "3rem 2rem", 
-                  textAlign: "center", 
-                  margin: "1.5rem 0" 
+                <div style={{
+                  background: "rgba(239, 68, 68, 0.12)",
+                  border: "1px solid rgba(239, 68, 68, 0.4)",
+                  borderRadius: "14px",
+                  padding: "3rem 2rem",
+                  textAlign: "center",
+                  margin: "1.5rem 0"
                 }}>
                   <span style={{ fontSize: "3.5rem", display: "block", marginBottom: "12px" }}>🔒</span>
                   <h2 style={{ color: "#f87171", margin: "0 0 10px" }}>
@@ -1854,9 +2327,9 @@ export default function StudentDashboard() {
                     Per GBS International School Financial Regulations, students in fee arrears cannot access academic results or register for new semester courses until cleared by the Accountant.
                   </p>
                   <div style={{ display: "flex", gap: "12px", justifyContent: "center" }}>
-                    <button 
-                      type="button" 
-                      className="btn-primary" 
+                    <button
+                      type="button"
+                      className="btn-primary"
                       style={{ background: "linear-gradient(135deg, #10b981, #059669)" }}
                       onClick={() => setFeedback({ type: "info", message: "Parent/Guardian notified to settle fees via Mobile Money / Bank Transfer." })}
                     >
@@ -1910,10 +2383,10 @@ export default function StudentDashboard() {
 
                   <div className="report-header" style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: "1rem", flexWrap: "wrap" }}>
                     <div style={{ display: "flex", alignItems: "center", gap: "14px" }}>
-                      <img 
-                        src={customSchoolLogo || "/assets/gbs_crest_badge.jpg"} 
-                        alt="School Crest" 
-                        style={{ width: "56px", height: "56px", objectFit: "contain", borderRadius: "8px", border: "1px solid #cbd5e1", background: "#ffffff", padding: "3px" }} 
+                      <img
+                        src={customSchoolLogo || "/assets/gbs_crest_badge.jpg"}
+                        alt="School Crest"
+                        style={{ width: "56px", height: "56px", objectFit: "contain", borderRadius: "8px", border: "1px solid #cbd5e1", background: "#ffffff", padding: "3px" }}
                       />
                       <div>
                         <h2 style={{ margin: 0, fontSize: "1.4rem", fontWeight: "900", color: "#0f172a" }}>{schoolOfficialName}</h2>
@@ -2044,11 +2517,11 @@ export default function StudentDashboard() {
                         </p>
 
                         {/* REQUIREMENT: Days reminder from teacher notice */}
-                        <div style={{ 
-                          background: daysDiff <= 0 ? "rgba(16, 185, 129, 0.15)" : "rgba(245, 158, 11, 0.15)", 
-                          padding: "8px 10px", 
-                          borderRadius: "6px", 
-                          border: `1px solid ${daysDiff <= 0 ? "rgba(16, 185, 129, 0.3)" : "rgba(245, 158, 11, 0.3)"}` 
+                        <div style={{
+                          background: daysDiff <= 0 ? "rgba(16, 185, 129, 0.15)" : "rgba(245, 158, 11, 0.15)",
+                          padding: "8px 10px",
+                          borderRadius: "6px",
+                          border: `1px solid ${daysDiff <= 0 ? "rgba(16, 185, 129, 0.3)" : "rgba(245, 158, 11, 0.3)"}`
                         }}>
                           <span style={{ display: "block", fontSize: "0.75rem", fontWeight: "700", color: daysDiff <= 0 ? "#34d399" : "#fbbf24" }}>
                             {daysDiff <= 0 ? "⚡ HAPPENING TODAY — JOIN NOW" : `⏰ REMINDER: Starts in ${daysDiff} day(s) from Teacher Notice`}
@@ -2060,23 +2533,23 @@ export default function StudentDashboard() {
 
                         {/* Actions: Join and Save for Reference (1-Click Auto Join with Embedded Passcode) */}
                         <div style={{ display: "flex", gap: "8px", marginTop: "auto" }}>
-                          <a 
-                            href={formatMeetingUrl(m.meetingUrl, m.passcode || "GBS2026", m.meetingId || "84939201849")} 
-                            target="_blank" 
-                            rel="noreferrer" 
-                            className="btn-primary" 
+                          <a
+                            href={formatMeetingUrl(m.meetingUrl, m.passcode || "GBS2026", m.meetingId || "84939201849")}
+                            target="_blank"
+                            rel="noreferrer"
+                            className="btn-primary"
                             style={{ flex: 1, textDecoration: "none", textAlign: "center", fontSize: "0.8rem", padding: "8px" }}
                           >
                             🚀 Join Live Class
                           </a>
-                          <button 
-                            type="button" 
-                            className="btn-secondary" 
+                          <button
+                            type="button"
+                            className="btn-secondary"
                             onClick={() => handleSaveMeetingReference(m)}
                             title="Save this online class for future reference"
-                            style={{ 
-                              fontSize: "0.8rem", 
-                              padding: "8px 12px", 
+                            style={{
+                              fontSize: "0.8rem",
+                              padding: "8px 12px",
                               borderColor: isSaved ? "#10b981" : "rgba(255, 255, 255, 0.2)",
                               color: isSaved ? "#34d399" : "#cbd5e1"
                             }}
@@ -2111,8 +2584,8 @@ export default function StudentDashboard() {
                       <div key={s.id} style={{ background: "rgba(2, 6, 23, 0.6)", padding: "12px", borderRadius: "8px", border: "1px solid rgba(255, 255, 255, 0.1)" }}>
                         <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
                           <span className="role-portal-badge" style={{ color: "#38bdf8", fontSize: "0.7rem" }}>{s.platform || "Virtual Lecture"}</span>
-                          <button 
-                            type="button" 
+                          <button
+                            type="button"
                             onClick={() => handleSaveMeetingReference(s)}
                             style={{ background: "none", border: "none", color: "#f87171", cursor: "pointer", fontSize: "0.75rem" }}
                             title="Remove from saved references"
@@ -2125,11 +2598,11 @@ export default function StudentDashboard() {
                           Scheduled: {new Date(s.startTime).toLocaleString()}
                         </span>
                         <div style={{ marginTop: "8px", display: "flex", gap: "8px" }}>
-                          <a 
-                            href={formatMeetingUrl(s.meetingUrl, "GBS2026")} 
-                            target="_blank" 
-                            rel="noreferrer" 
-                            className="btn-primary" 
+                          <a
+                            href={formatMeetingUrl(s.meetingUrl, "GBS2026")}
+                            target="_blank"
+                            rel="noreferrer"
+                            className="btn-primary"
                             style={{ fontSize: "0.75rem", padding: "4px 10px", textDecoration: "none" }}
                           >
                             ▶️ Access Recording / Notes
@@ -2176,8 +2649,8 @@ export default function StudentDashboard() {
                   <p>Register official curriculum subjects, verify course credits, and print verified registration slips</p>
                 </div>
                 {feeArrears <= 0 && (
-                  <button 
-                    type="button" 
+                  <button
+                    type="button"
                     className="btn-primary"
                     onClick={() => window.print()}
                   >
@@ -2187,13 +2660,13 @@ export default function StudentDashboard() {
               </div>
 
               {feeArrears > 0 ? (
-                <div style={{ 
-                  background: "rgba(239, 68, 68, 0.12)", 
-                  border: "1px solid rgba(239, 68, 68, 0.4)", 
-                  borderRadius: "14px", 
-                  padding: "3rem 2rem", 
-                  textAlign: "center", 
-                  margin: "1.5rem 0" 
+                <div style={{
+                  background: "rgba(239, 68, 68, 0.12)",
+                  border: "1px solid rgba(239, 68, 68, 0.4)",
+                  borderRadius: "14px",
+                  padding: "3rem 2rem",
+                  textAlign: "center",
+                  margin: "1.5rem 0"
                 }}>
                   <span style={{ fontSize: "3.5rem", display: "block", marginBottom: "12px" }}>🔒</span>
                   <h2 style={{ color: "#f87171", margin: "0 0 10px" }}>
@@ -2203,8 +2676,8 @@ export default function StudentDashboard() {
                     Official semester course enrollment and class group selection are locked due to an outstanding fee balance of <strong style={{ color: "#fca5a5" }}>${feeArrears.toFixed(2)}</strong>.
                     Once tuition and institutional fees are settled, the system automatically lifts the hold and authorizes full course registration.
                   </p>
-                  <Link 
-                    to="/portal/parent/dashboard" 
+                  <Link
+                    to="/portal/parent/dashboard"
                     className="btn-primary"
                     style={{ textDecoration: "none", display: "inline-flex", background: "linear-gradient(135deg, #10b981, #059669)", padding: "10px 22px" }}
                   >
@@ -2214,12 +2687,12 @@ export default function StudentDashboard() {
               ) : (
                 <div>
                   {/* Financial Clearance Verified Banner */}
-                  <div style={{ 
-                    background: "linear-gradient(135deg, rgba(16, 185, 129, 0.18) 0%, rgba(5, 150, 105, 0.1) 100%)", 
-                    border: "1px solid rgba(16, 185, 129, 0.4)", 
-                    borderRadius: "12px", 
-                    padding: "1.25rem", 
-                    marginBottom: "1.5rem" 
+                  <div style={{
+                    background: "linear-gradient(135deg, rgba(16, 185, 129, 0.18) 0%, rgba(5, 150, 105, 0.1) 100%)",
+                    border: "1px solid rgba(16, 185, 129, 0.4)",
+                    borderRadius: "12px",
+                    padding: "1.25rem",
+                    marginBottom: "1.5rem"
                   }}>
                     <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: "10px" }}>
                       <div>
@@ -2410,8 +2883,8 @@ export default function StudentDashboard() {
                   <p>Explore graduates from Primary to University levels (Level 100-400 to Alumni), career pathways, and mentorship connections</p>
                 </div>
                 <div style={{ display: "flex", gap: "10px", flexWrap: "wrap" }}>
-                  <button 
-                    type="button" 
+                  <button
+                    type="button"
                     className="btn-secondary"
                     style={{ borderColor: "#a855f7", color: "#c084fc", fontSize: "0.82rem" }}
                     onClick={() => setShowAlumniRecordsModal(true)}
@@ -2430,9 +2903,9 @@ export default function StudentDashboard() {
                   🏛️ Complete Academic Journey: From Lower Primary to University Alumni
                 </h3>
                 <p style={{ margin: 0, fontSize: "0.85rem", color: "#cbd5e1", lineHeight: "1.5" }}>
-                  At GBS International School, every student progresses systematically through <strong>Nursery 1-2</strong>, <strong>Kindergarten 1-2</strong>, 
-                  <strong>Lower Primary (Primary 1-3)</strong>, <strong>Upper Primary (Primary 4-6)</strong>, <strong>Junior High (JHS 1-3)</strong>, <strong>Senior High (SHS 1-3)</strong>, 
-                  and <strong>University Undergraduate (Level 100 to Level 400 across Semesters 1 & 2)</strong>. Upon successful thesis and comprehensive examination completion, 
+                  At GBS International School, every student progresses systematically through <strong>Nursery 1-2</strong>, <strong>Kindergarten 1-2</strong>,
+                  <strong>Lower Primary (Primary 1-3)</strong>, <strong>Upper Primary (Primary 4-6)</strong>, <strong>Junior High (JHS 1-3)</strong>, <strong>Senior High (SHS 1-3)</strong>,
+                  and <strong>University Undergraduate (Level 100 to Level 400 across Semesters 1 & 2)</strong>. Upon successful thesis and comprehensive examination completion,
                   scholars transition into the prestigious GBS Alumni Association with permanent verifiable cryptographic credentials.
                 </p>
               </div>
@@ -2445,77 +2918,77 @@ export default function StudentDashboard() {
                   </div>
                 ) : (
                   alumniList.map((alumnus) => (
-                  <div 
-                    key={alumnus.id} 
-                    style={{ 
-                      background: "rgba(15, 23, 42, 0.75)", 
-                      borderRadius: "12px", 
-                      padding: "1.25rem", 
-                      border: "1px solid rgba(255, 255, 255, 0.1)",
-                      display: "flex", 
-                      flexDirection: "column", 
-                      gap: "10px" 
-                    }}
-                  >
-                    <div style={{ display: "flex", alignItems: "center", gap: "12px" }}>
-                      <div style={{ 
-                        width: "52px", 
-                        height: "52px", 
-                        borderRadius: "50%", 
-                        background: "linear-gradient(135deg, #a855f7, #3b82f6)", 
-                        display: "flex", 
-                        alignItems: "center", 
-                        justifyContent: "center", 
-                        fontSize: "1.5rem", 
-                        color: "#fff", 
-                        fontWeight: "bold", 
-                        flexShrink: 0 
-                      }}>
-                        {alumnus.name.charAt(0)}
+                    <div
+                      key={alumnus.id}
+                      style={{
+                        background: "rgba(15, 23, 42, 0.75)",
+                        borderRadius: "12px",
+                        padding: "1.25rem",
+                        border: "1px solid rgba(255, 255, 255, 0.1)",
+                        display: "flex",
+                        flexDirection: "column",
+                        gap: "10px"
+                      }}
+                    >
+                      <div style={{ display: "flex", alignItems: "center", gap: "12px" }}>
+                        <div style={{
+                          width: "52px",
+                          height: "52px",
+                          borderRadius: "50%",
+                          background: "linear-gradient(135deg, #a855f7, #3b82f6)",
+                          display: "flex",
+                          alignItems: "center",
+                          justifyContent: "center",
+                          fontSize: "1.5rem",
+                          color: "#fff",
+                          fontWeight: "bold",
+                          flexShrink: 0
+                        }}>
+                          {alumnus.name.charAt(0)}
+                        </div>
+                        <div>
+                          <h3 style={{ margin: 0, fontSize: "1.05rem", color: "#f8fafc" }}>{alumnus.name}</h3>
+                          <span style={{ fontSize: "0.75rem", color: "#34d399", fontWeight: "700" }}>
+                            Class of {alumnus.graduatingYear} • {alumnus.degree}
+                          </span>
+                        </div>
                       </div>
-                      <div>
-                        <h3 style={{ margin: 0, fontSize: "1.05rem", color: "#f8fafc" }}>{alumnus.name}</h3>
-                        <span style={{ fontSize: "0.75rem", color: "#34d399", fontWeight: "700" }}>
-                          Class of {alumnus.graduatingYear} • {alumnus.degree}
-                        </span>
+
+                      <div style={{ fontSize: "0.82rem", color: "#cbd5e1", lineHeight: "1.4" }}>
+                        <p style={{ margin: "2px 0" }}>
+                          📚 <strong>Program:</strong> {alumnus.program}
+                        </p>
+                        <p style={{ margin: "2px 0" }}>
+                          💼 <strong>Current Placement:</strong> <strong style={{ color: "#38bdf8" }}>{alumnus.careerPlacement}</strong>
+                        </p>
+                        <p style={{ margin: "2px 0" }}>
+                          🌍 <strong>Chapter:</strong> {alumnus.alumniChapter}
+                        </p>
+                      </div>
+
+                      <div style={{ marginTop: "auto", display: "flex", gap: "8px" }}>
+                        <button
+                          type="button"
+                          className="btn-primary"
+                          style={{ flex: 1, padding: "8px", fontSize: "0.75rem", justifyContent: "center" }}
+                          onClick={() => {
+                            setSelectedMentorAlumnus(alumnus);
+                            setShowMentorModal(true);
+                          }}
+                        >
+                          🤝 Request Mentorship
+                        </button>
+                        <a
+                          href={`mailto:${alumnus.email}`}
+                          className="btn-secondary"
+                          style={{ padding: "8px 12px", fontSize: "0.75rem", textDecoration: "none", display: "flex", alignItems: "center" }}
+                        >
+                          ✉️ Contact
+                        </a>
                       </div>
                     </div>
-
-                    <div style={{ fontSize: "0.82rem", color: "#cbd5e1", lineHeight: "1.4" }}>
-                      <p style={{ margin: "2px 0" }}>
-                        📚 <strong>Program:</strong> {alumnus.program}
-                      </p>
-                      <p style={{ margin: "2px 0" }}>
-                        💼 <strong>Current Placement:</strong> <strong style={{ color: "#38bdf8" }}>{alumnus.careerPlacement}</strong>
-                      </p>
-                      <p style={{ margin: "2px 0" }}>
-                        🌍 <strong>Chapter:</strong> {alumnus.alumniChapter}
-                      </p>
-                    </div>
-
-                    <div style={{ marginTop: "auto", display: "flex", gap: "8px" }}>
-                      <button 
-                        type="button" 
-                        className="btn-primary" 
-                        style={{ flex: 1, padding: "8px", fontSize: "0.75rem", justifyContent: "center" }}
-                        onClick={() => {
-                          setSelectedMentorAlumnus(alumnus);
-                          setShowMentorModal(true);
-                        }}
-                      >
-                        🤝 Request Mentorship
-                      </button>
-                      <a 
-                        href={`mailto:${alumnus.email}`}
-                        className="btn-secondary" 
-                        style={{ padding: "8px 12px", fontSize: "0.75rem", textDecoration: "none", display: "flex", alignItems: "center" }}
-                      >
-                        ✉️ Contact
-                      </a>
-                    </div>
-                  </div>
-                ))
-              )}
+                  ))
+                )}
               </div>
 
               {/* Alumni Association Engagement & Mentorship Portal */}
@@ -2542,6 +3015,407 @@ export default function StudentDashboard() {
                   </div>
                 </div>
               </div>
+            </div>
+          )}
+
+          {/* ======================================================== */}
+          {/* TAB 8: PEER CHAT & STUDY CIRCLE VIA INDEX NUMBER         */}
+          {/* ======================================================== */}
+          {activeTab === "peer-chat" && (
+            <div className="role-workspace-card">
+              <div className="workspace-title-row">
+                <div>
+                  <h2><span>💬</span> STUDENT PEER CHAT & ACADEMIC STUDY CIRCLE</h2>
+                  <p>
+                    Connect with friends and study partners across the institution. Enter the student's registered <strong>Index Number</strong>,
+                    verify identity, and collaborate in private study chats with automatic transcript archiving.
+                  </p>
+                </div>
+                <div style={{ display: "flex", gap: "10px", alignItems: "center", flexWrap: "wrap" }}>
+                  <button
+                    type="button"
+                    onClick={() => setShowArchivedChatsModal(true)}
+                    style={{
+                      background: "rgba(148, 163, 184, 0.15)",
+                      border: "1px solid #64748b",
+                      color: "#cbd5e1",
+                      borderRadius: "8px",
+                      padding: "8px 14px",
+                      fontSize: "0.82rem",
+                      fontWeight: 700,
+                      cursor: "pointer",
+                      display: "inline-flex",
+                      alignItems: "center",
+                      gap: "6px"
+                    }}
+                  >
+                    🗄️ View Archived Chats ({archivedPeerChats.length})
+                  </button>
+                  <span className="role-portal-badge" style={{ color: "#22d3ee", background: "rgba(6, 182, 212, 0.15)" }}>
+                    {enrolledPeersList.length} Verified Scholars in Institution
+                  </span>
+                </div>
+              </div>
+
+              {/* Index Number Search & Verification Box */}
+              <div style={{
+                background: "linear-gradient(135deg, rgba(15, 23, 42, 0.9) 0%, rgba(30, 41, 59, 0.75) 100%)",
+                border: "1.5px solid rgba(6, 182, 212, 0.35)",
+                borderRadius: "14px",
+                padding: "1.25rem",
+                marginBottom: "1.5rem"
+              }}>
+                <label style={{ display: "block", color: "#22d3ee", fontWeight: 800, fontSize: "0.88rem", marginBottom: "8px" }}>
+                  🔍 Search Classmate / Friend by Registered Index Number:
+                </label>
+                <form
+                  onSubmit={(e) => {
+                    e.preventDefault();
+                    handleSearchPeerByIndex();
+                  }}
+                  style={{ display: "flex", gap: "10px", flexWrap: "wrap", alignItems: "center" }}
+                >
+                  <input
+                    type="text"
+                    value={searchIndexInput}
+                    onChange={(e) => setSearchIndexInput(e.target.value)}
+                    placeholder="Enter Student Index Number (e.g. STU-2026-001, STU-2026-002, 101)"
+                    className="filter-input"
+                    style={{ flex: 1, minWidth: "260px", padding: "10px 14px", fontFamily: "monospace", fontSize: "0.95rem" }}
+                  />
+                  <button
+                    type="submit"
+                    className="btn-primary"
+                    style={{ background: "linear-gradient(135deg, #0891b2, #06b6d4)", padding: "10px 20px", fontWeight: 800 }}
+                  >
+                    🔍 Verify & Open Chat
+                  </button>
+                </form>
+
+                {/* Quick Select Chips */}
+                <div style={{ display: "flex", gap: "8px", marginTop: "12px", alignItems: "center", flexWrap: "wrap" }}>
+                  <span style={{ fontSize: "0.75rem", color: "#94a3b8", fontWeight: 700 }}>Quick Select Classmates:</span>
+                  {enrolledPeersList.slice(0, 5).map((p) => (
+                    <button
+                      key={p.id}
+                      type="button"
+                      onClick={() => {
+                        setSearchIndexInput(p.indexNumber || p.studentId);
+                        handleSearchPeerByIndex(p.indexNumber || p.studentId);
+                      }}
+                      style={{
+                        background: "rgba(6, 182, 212, 0.12)",
+                        border: "1px solid rgba(6, 182, 212, 0.3)",
+                        color: "#67e8f9",
+                        borderRadius: "20px",
+                        padding: "3px 10px",
+                        fontSize: "0.75rem",
+                        cursor: "pointer",
+                        fontWeight: 700
+                      }}
+                    >
+                      {p.firstName} {p.lastName} ({p.indexNumber || p.studentId})
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              {/* Active Conversation Interface */}
+              {activePeerChat ? (
+                <div style={{
+                  background: "rgba(15, 23, 42, 0.8)",
+                  border: "1.5px solid rgba(6, 182, 212, 0.4)",
+                  borderRadius: "14px",
+                  overflow: "hidden",
+                  boxShadow: "0 10px 30px rgba(0,0,0,0.4)"
+                }}>
+                  {/* Chat Header */}
+                  <div style={{
+                    background: "rgba(30, 41, 59, 0.9)",
+                    borderBottom: "1px solid rgba(255, 255, 255, 0.1)",
+                    padding: "12px 18px",
+                    display: "flex",
+                    justifyContent: "space-between",
+                    alignItems: "center",
+                    flexWrap: "wrap",
+                    gap: "10px"
+                  }}>
+                    <div style={{ display: "flex", alignItems: "center", gap: "12px" }}>
+                      <img
+                        src={activePeerChat.photo || "https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=100&h=100&fit=crop"}
+                        alt={activePeerChat.firstName}
+                        style={{ width: "48px", height: "48px", borderRadius: "10px", objectFit: "cover", border: "2px solid #06b6d4" }}
+                      />
+                      <div>
+                        <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
+                          <h3 style={{ margin: 0, color: "#f8fafc", fontSize: "1.05rem" }}>
+                            {activePeerChat.firstName} {activePeerChat.lastName}
+                          </h3>
+                          <span style={{ fontSize: "0.72rem", background: "#064e3b", color: "#34d399", padding: "2px 8px", borderRadius: "999px", fontWeight: 800 }}>
+                            🟢 STUDY CIRCLE ACTIVE
+                          </span>
+                        </div>
+                        <div style={{ fontSize: "0.78rem", color: "#94a3b8", display: "flex", gap: "10px", flexWrap: "wrap", marginTop: "2px" }}>
+                          <span>Index: <strong style={{ color: "#22d3ee", fontFamily: "monospace" }}>{activePeerChat.indexNumber || activePeerChat.studentId}</strong></span>
+                          <span>•</span>
+                          <span>Class: <strong>{activePeerChat.currentClass || activePeerChat.classCode}</strong></span>
+                          <span>•</span>
+                          <span>📞 <a href={`tel:${activePeerChat.registeredMobile || activePeerChat.phone}`} style={{ color: "#38bdf8", textDecoration: "none" }}>{activePeerChat.registeredMobile || activePeerChat.phone || "—"}</a></span>
+                        </div>
+                      </div>
+                    </div>
+
+                    <div style={{ display: "flex", gap: "8px", alignItems: "center" }}>
+                      <button
+                        type="button"
+                        onClick={handleArchiveCurrentChat}
+                        style={{
+                          background: "rgba(16, 185, 129, 0.2)",
+                          border: "1px solid #10b981",
+                          color: "#34d399",
+                          borderRadius: "8px",
+                          padding: "6px 12px",
+                          fontSize: "0.78rem",
+                          fontWeight: 800,
+                          cursor: "pointer"
+                        }}
+                      >
+                        📁 Save & Archive Chat
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => {
+                          const transcript = chatMessages.map((m) => `[${m.timestamp}] ${m.senderName}: ${m.text}`).join("\n");
+                          const blob = new Blob([transcript], { type: "text/plain" });
+                          const url = URL.createObjectURL(blob);
+                          const a = document.createElement("a");
+                          a.href = url;
+                          a.download = `Study_Chat_${activePeerChat.firstName}_${Date.now()}.txt`;
+                          a.click();
+                        }}
+                        style={{
+                          background: "rgba(56, 189, 248, 0.15)",
+                          border: "1px solid #38bdf8",
+                          color: "#38bdf8",
+                          borderRadius: "8px",
+                          padding: "6px 12px",
+                          fontSize: "0.78rem",
+                          fontWeight: 700,
+                          cursor: "pointer"
+                        }}
+                      >
+                        📥 Export Transcript
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => setActivePeerChat(null)}
+                        style={{
+                          background: "rgba(239, 68, 68, 0.15)",
+                          border: "1px solid #ef4444",
+                          color: "#f87171",
+                          borderRadius: "8px",
+                          padding: "6px 10px",
+                          fontSize: "0.78rem",
+                          fontWeight: 700,
+                          cursor: "pointer"
+                        }}
+                      >
+                        ✕ Close
+                      </button>
+                    </div>
+                  </div>
+
+                  {/* Messages Timeline */}
+                  <div style={{
+                    padding: "20px",
+                    minHeight: "280px",
+                    maxHeight: "420px",
+                    overflowY: "auto",
+                    display: "flex",
+                    flexDirection: "column",
+                    gap: "12px",
+                    background: "rgba(2, 6, 23, 0.4)"
+                  }}>
+                    {chatMessages.length === 0 ? (
+                      <div style={{ textAlign: "center", color: "#64748b", margin: "auto", fontSize: "0.88rem" }}>
+                        💬 No messages yet. Say hello to start collaborating!
+                      </div>
+                    ) : (
+                      chatMessages.map((m) => {
+                        const isMe = m.sender === "ME";
+                        return (
+                          <div
+                            key={m.id}
+                            style={{
+                              display: "flex",
+                              flexDirection: "column",
+                              alignItems: isMe ? "flex-end" : "flex-start",
+                              maxWidth: "80%",
+                              alignSelf: isMe ? "flex-end" : "flex-start"
+                            }}
+                          >
+                            <span style={{ fontSize: "0.7rem", color: "#94a3b8", marginBottom: "2px" }}>
+                              {isMe ? "You" : m.senderName} • {m.timestamp}
+                            </span>
+                            <div
+                              style={{
+                                background: isMe
+                                  ? "linear-gradient(135deg, #0284c7, #0891b2)"
+                                  : "rgba(30, 41, 59, 0.9)",
+                                color: "#f8fafc",
+                                padding: "10px 16px",
+                                borderRadius: isMe ? "14px 14px 2px 14px" : "14px 14px 14px 2px",
+                                border: isMe ? "none" : "1px solid rgba(255, 255, 255, 0.1)",
+                                fontSize: "0.9rem",
+                                lineHeight: "1.45",
+                                boxShadow: "0 2px 8px rgba(0,0,0,0.2)"
+                              }}
+                            >
+                              {m.text}
+                            </div>
+                          </div>
+                        );
+                      })
+                    )}
+                  </div>
+
+                  {/* Quick Prompts Bar */}
+                  <div style={{
+                    padding: "8px 16px",
+                    background: "rgba(15, 23, 42, 0.9)",
+                    borderTop: "1px solid rgba(255, 255, 255, 0.08)",
+                    display: "flex",
+                    gap: "8px",
+                    alignItems: "center",
+                    flexWrap: "wrap"
+                  }}>
+                    <span style={{ fontSize: "0.72rem", color: "#94a3b8" }}>Quick Study Prompts:</span>
+                    <button
+                      type="button"
+                      onClick={() => handleSendMessage("Hey! Did you finish the mathematics exercise assignment?")}
+                      style={{ background: "rgba(255, 255, 255, 0.05)", border: "1px solid rgba(255, 255, 255, 0.15)", color: "#cbd5e1", borderRadius: "14px", padding: "3px 10px", fontSize: "0.72rem", cursor: "pointer" }}
+                    >
+                      📐 Homework Status?
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => handleSendMessage("Could you share your lecture notes for Chapter 3?")}
+                      style={{ background: "rgba(255, 255, 255, 0.05)", border: "1px solid rgba(255, 255, 255, 0.15)", color: "#cbd5e1", borderRadius: "14px", padding: "3px 10px", fontSize: "0.72rem", cursor: "pointer" }}
+                    >
+                      📖 Share Chapter Notes
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => handleSendMessage("Let's review the past questions before the examination tomorrow!")}
+                      style={{ background: "rgba(255, 255, 255, 0.05)", border: "1px solid rgba(255, 255, 255, 0.15)", color: "#cbd5e1", borderRadius: "14px", padding: "3px 10px", fontSize: "0.72rem", cursor: "pointer" }}
+                    >
+                      🎯 Exam Review
+                    </button>
+                  </div>
+
+                  {/* Input Form */}
+                  <form
+                    onSubmit={(e) => {
+                      e.preventDefault();
+                      handleSendMessage();
+                    }}
+                    style={{
+                      padding: "12px 16px",
+                      background: "rgba(30, 41, 59, 0.95)",
+                      display: "flex",
+                      gap: "10px",
+                      alignItems: "center"
+                    }}
+                  >
+                    <input
+                      type="text"
+                      placeholder={`Type study message to ${activePeerChat.firstName}... (Press Enter)`}
+                      value={newMessageText}
+                      onChange={(e) => setNewMessageText(e.target.value)}
+                      style={{
+                        flex: 1,
+                        background: "rgba(15, 23, 42, 0.9)",
+                        border: "1px solid rgba(255, 255, 255, 0.15)",
+                        color: "#ffffff",
+                        padding: "10px 14px",
+                        borderRadius: "10px",
+                        fontSize: "0.88rem"
+                      }}
+                    />
+                    <button
+                      type="submit"
+                      className="btn-primary"
+                      style={{ background: "linear-gradient(135deg, #0891b2, #06b6d4)", padding: "10px 20px", fontWeight: 800 }}
+                    >
+                      Send 💬
+                    </button>
+                  </form>
+                </div>
+              ) : (
+                /* Registered Scholars Cohort Directory */
+                <div>
+                  <h3 style={{ margin: "0 0 12px", color: "#f8fafc", fontSize: "1.05rem" }}>
+                    📚 Registered Cohort Directory & Verified Index Numbers
+                  </h3>
+                  <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(280px, 1fr))", gap: "14px" }}>
+                    {enrolledPeersList.map((peer) => (
+                      <div
+                        key={peer.id}
+                        style={{
+                          background: "rgba(15, 23, 42, 0.75)",
+                          border: "1px solid rgba(255, 255, 255, 0.1)",
+                          borderRadius: "12px",
+                          padding: "16px",
+                          display: "flex",
+                          gap: "12px",
+                          alignItems: "center",
+                          boxShadow: "0 4px 14px rgba(0,0,0,0.2)"
+                        }}
+                      >
+                        <img
+                          src={peer.photo || "https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=100&h=100&fit=crop"}
+                          alt={peer.firstName}
+                          style={{ width: "60px", height: "60px", borderRadius: "10px", objectFit: "cover", border: "1.5px solid #06b6d4" }}
+                        />
+                        <div style={{ flex: 1 }}>
+                          <h4 style={{ margin: 0, color: "#f8fafc", fontSize: "0.95rem" }}>
+                            {peer.firstName} {peer.lastName}
+                          </h4>
+                          <span style={{ fontSize: "0.75rem", color: "#22d3ee", fontFamily: "monospace", display: "block", marginTop: "2px" }}>
+                            Index: {peer.indexNumber || peer.studentId}
+                          </span>
+                          <span style={{ fontSize: "0.72rem", color: "#94a3b8", display: "block" }}>
+                            {peer.currentClass || peer.classCode}
+                          </span>
+                          <span style={{ fontSize: "0.72rem", color: "#38bdf8", display: "block", marginTop: "2px" }}>
+                            📱 {peer.registeredMobile || peer.phone || "+233-24-000-0000"}
+                          </span>
+                        </div>
+                        <button
+                          type="button"
+                          onClick={() => {
+                            setCandidatePeer(peer);
+                            setShowPeerConfirmModal(true);
+                          }}
+                          style={{
+                            background: "rgba(6, 182, 212, 0.15)",
+                            border: "1px solid #06b6d4",
+                            color: "#22d3ee",
+                            borderRadius: "8px",
+                            padding: "8px 12px",
+                            fontSize: "0.78rem",
+                            fontWeight: 800,
+                            cursor: "pointer",
+                            whiteSpace: "nowrap"
+                          }}
+                        >
+                          💬 Chat
+                        </button>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
             </div>
           )}
         </main>
@@ -2592,17 +3466,17 @@ export default function StudentDashboard() {
               </p>
             </div>
             <div style={{ display: "flex", gap: "12px", justifyContent: "center", marginTop: "1.5rem" }}>
-              <button 
-                type="button" 
-                className="btn-secondary" 
+              <button
+                type="button"
+                className="btn-secondary"
                 style={{ padding: "10px 18px", fontSize: "0.85rem" }}
                 onClick={() => setShowExamConfirmModal(false)}
               >
                 ← Read Through Answers
               </button>
-              <button 
-                type="button" 
-                className="btn-primary" 
+              <button
+                type="button"
+                className="btn-primary"
                 style={{ padding: "10px 22px", fontSize: "0.85rem", background: "linear-gradient(135deg, #10b981, #059669)" }}
                 onClick={() => {
                   setShowExamConfirmModal(false);
@@ -2645,8 +3519,8 @@ export default function StudentDashboard() {
               <h3 style={{ margin: 0, color: "#38bdf8", fontSize: "1.15rem" }}>
                 🤝 Request Alumni Mentorship
               </h3>
-              <button 
-                type="button" 
+              <button
+                type="button"
                 onClick={() => setShowMentorModal(false)}
                 style={{ background: "none", border: "none", color: "#94a3b8", cursor: "pointer", fontSize: "1.2rem" }}
               >
@@ -2665,8 +3539,8 @@ export default function StudentDashboard() {
                 <label style={{ display: "block", fontSize: "0.8rem", color: "#94a3b8", marginBottom: "4px" }}>
                   Your Desired Career / Research Track:
                 </label>
-                <input 
-                  type="text" 
+                <input
+                  type="text"
                   className="filter-input"
                   style={{ width: "100%", boxSizing: "border-box" }}
                   value={mentorRequestData.careerTrack}
@@ -2678,8 +3552,8 @@ export default function StudentDashboard() {
                 <label style={{ display: "block", fontSize: "0.8rem", color: "#94a3b8", marginBottom: "4px" }}>
                   Personal Statement / Note to Mentor:
                 </label>
-                <textarea 
-                  rows={4} 
+                <textarea
+                  rows={4}
                   className="filter-input"
                   style={{ width: "100%", boxSizing: "border-box", resize: "vertical" }}
                   placeholder="Introduce yourself, your academic goals at GBS, and what guidance you are seeking..."
@@ -2689,23 +3563,23 @@ export default function StudentDashboard() {
               </div>
 
               <div style={{ display: "flex", gap: "10px", marginTop: "8px" }}>
-                <button 
-                  type="button" 
-                  className="btn-secondary" 
+                <button
+                  type="button"
+                  className="btn-secondary"
                   style={{ flex: 1 }}
                   onClick={() => setShowMentorModal(false)}
                 >
                   Cancel
                 </button>
-                <button 
-                  type="button" 
-                  className="btn-primary" 
+                <button
+                  type="button"
+                  className="btn-primary"
                   style={{ flex: 2, justifyContent: "center" }}
                   onClick={() => {
                     setShowMentorModal(false);
-                    setFeedback({ 
-                      type: "success", 
-                      message: `Mentorship invitation successfully delivered to ${selectedMentorAlumnus.name} via the GBS Alumni Network!` 
+                    setFeedback({
+                      type: "success",
+                      message: `Mentorship invitation successfully delivered to ${selectedMentorAlumnus.name} via the GBS Alumni Network!`
                     });
                   }}
                 >
@@ -2736,9 +3610,9 @@ export default function StudentDashboard() {
                   </span>
                 </div>
               </div>
-              <button 
-                type="button" 
-                className="btn-secondary" 
+              <button
+                type="button"
+                className="btn-secondary"
                 style={{ padding: "4px 10px", fontSize: "0.9rem" }}
                 onClick={() => { setShowCourseFilesModal(false); setViewingFilePreview(null); }}
               >
@@ -2841,9 +3715,9 @@ export default function StudentDashboard() {
               <span style={{ fontSize: "0.78rem", color: "#94a3b8" }}>
                 * All course materials are hosted on the local institutional storage server and accessible across campus LAN.
               </span>
-              <button 
-                type="button" 
-                className="btn-secondary" 
+              <button
+                type="button"
+                className="btn-secondary"
                 onClick={() => { setShowCourseFilesModal(false); setViewingFilePreview(null); }}
               >
                 Close Location Viewer
@@ -2881,10 +3755,10 @@ export default function StudentDashboard() {
           }}>
             <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "1.25rem" }}>
               <div style={{ display: "flex", alignItems: "center", gap: "12px" }}>
-                <img 
-                  src={customSchoolLogo || "/assets/gbs_crest_badge.jpg"} 
-                  alt="School Crest" 
-                  style={{ width: "42px", height: "42px", borderRadius: "50%", objectFit: "cover", border: "1.5px solid #a855f7" }} 
+                <img
+                  src={customSchoolLogo || "/assets/gbs_crest_badge.jpg"}
+                  alt="School Crest"
+                  style={{ width: "42px", height: "42px", borderRadius: "50%", objectFit: "cover", border: "1.5px solid #a855f7" }}
                 />
                 <div>
                   <h3 style={{ margin: 0, color: "#f8fafc", fontSize: "1.2rem" }}>
@@ -2895,8 +3769,8 @@ export default function StudentDashboard() {
                   </span>
                 </div>
               </div>
-              <button 
-                type="button" 
+              <button
+                type="button"
                 onClick={() => setShowAlumniRecordsModal(false)}
                 style={{ background: "none", border: "none", color: "#94a3b8", cursor: "pointer", fontSize: "1.2rem" }}
               >
@@ -2968,16 +3842,16 @@ export default function StudentDashboard() {
             </div>
 
             <div style={{ display: "flex", gap: "10px", marginTop: "1.5rem", justifyContent: "flex-end" }}>
-              <button 
-                type="button" 
-                className="btn-secondary" 
+              <button
+                type="button"
+                className="btn-secondary"
                 onClick={() => setShowAlumniRecordsModal(false)}
               >
                 Close Archive
               </button>
-              <button 
-                type="button" 
-                className="btn-primary" 
+              <button
+                type="button"
+                className="btn-primary"
                 onClick={() => {
                   window.print();
                 }}
@@ -2989,7 +3863,7 @@ export default function StudentDashboard() {
         </div>
       )}
       {/* Universal Floating Scroll Controls */}
-      <div 
+      <div
         style={{
           position: "fixed",
           bottom: "24px",
@@ -3050,6 +3924,531 @@ export default function StudentDashboard() {
         </button>
       </div>
 
+      {/* MODAL: DRESS CODE GUIDELINES */}
+      {showDressCodeModal && (
+        <div style={{
+          position: "fixed",
+          inset: 0,
+          background: "rgba(3, 7, 18, 0.85)",
+          backdropFilter: "blur(6px)",
+          display: "flex",
+          alignItems: "center",
+          justifyContent: "center",
+          zIndex: 999999,
+          padding: "20px"
+        }}>
+          <div style={{
+            background: "linear-gradient(145deg, #0f172a 0%, #1e293b 100%)",
+            border: "2px solid #a855f7",
+            borderRadius: "18px",
+            maxWidth: "520px",
+            width: "100%",
+            padding: "26px",
+            boxShadow: "0 20px 50px rgba(0,0,0,0.8)",
+            color: "#f8fafc"
+          }}>
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "14px" }}>
+              <h3 style={{ margin: 0, color: "#c084fc", fontSize: "1.15rem", display: "flex", alignItems: "center", gap: "8px" }}>
+                <span>👔</span> OFFICIAL SCHOLAR DRESS CODE & PORTRAIT STANDARDS
+              </h3>
+              <button
+                type="button"
+                onClick={() => setShowDressCodeModal(false)}
+                style={{ background: "transparent", border: "none", color: "#94a3b8", fontSize: "1.2rem", cursor: "pointer" }}
+              >
+                ✕
+              </button>
+            </div>
+            <p style={{ fontSize: "0.85rem", color: "#cbd5e1", lineHeight: "1.5", margin: "0 0 16px" }}>
+              To maintain institutional identity and security verification across examinations, live classrooms, and parental records, every student profile photograph must strictly adhere to the following standards:
+            </p>
+            <div style={{ display: "flex", flexDirection: "column", gap: "10px", marginBottom: "20px" }}>
+              <div style={{ background: "rgba(15, 23, 42, 0.6)", padding: "10px 14px", borderRadius: "10px", border: "1px solid rgba(168, 85, 247, 0.25)" }}>
+                <strong style={{ color: "#a855f7", fontSize: "0.85rem" }}>1. Prescribed Academic Uniform:</strong>
+                <p style={{ margin: "2px 0 0", fontSize: "0.8rem", color: "#94a3b8" }}>
+                  Official institutional school uniform, collared shirt, or formal academic blazer. Casual t-shirts are not permitted.
+                </p>
+              </div>
+              <div style={{ background: "rgba(15, 23, 42, 0.6)", padding: "10px 14px", borderRadius: "10px", border: "1px solid rgba(168, 85, 247, 0.25)" }}>
+                <strong style={{ color: "#38bdf8", fontSize: "0.85rem" }}>2. Plain Neutral Background:</strong>
+                <p style={{ margin: "2px 0 0", fontSize: "0.8rem", color: "#94a3b8" }}>
+                  Solid white, light blue, or neutral studio background without shadows or background objects.
+                </p>
+              </div>
+              <div style={{ background: "rgba(15, 23, 42, 0.6)", padding: "10px 14px", borderRadius: "10px", border: "1px solid rgba(168, 85, 247, 0.25)" }}>
+                <strong style={{ color: "#34d399", fontSize: "0.85rem" }}>3. Square Ratio (1:1) & Clear Facial View:</strong>
+                <p style={{ margin: "2px 0 0", fontSize: "0.8rem", color: "#94a3b8" }}>
+                  Front-facing centered portrait with shoulders visible. No sunglasses, decorative headwear, or digital augmented filters.
+                </p>
+              </div>
+            </div>
+            <button
+              type="button"
+              className="btn-primary"
+              onClick={() => setShowDressCodeModal(false)}
+              style={{ width: "100%", padding: "10px", background: "linear-gradient(135deg, #9333ea, #a855f7)", fontWeight: 800 }}
+            >
+              ✓ Understood & Acknowledged
+            </button>
+          </div>
+        </div>
+      )}
+
+      {/* MODAL: CONFIRM PEER CHAT IDENTITY */}
+      {showPeerConfirmModal && candidatePeer && (
+        <div style={{
+          position: "fixed",
+          inset: 0,
+          background: "rgba(3, 7, 18, 0.85)",
+          backdropFilter: "blur(6px)",
+          display: "flex",
+          alignItems: "center",
+          justifyContent: "center",
+          zIndex: 999999,
+          padding: "20px"
+        }}>
+          <div style={{
+            background: "linear-gradient(145deg, #0f172a 0%, #1e293b 100%)",
+            border: "2px solid #06b6d4",
+            borderRadius: "18px",
+            maxWidth: "460px",
+            width: "100%",
+            padding: "24px",
+            boxShadow: "0 20px 50px rgba(0,0,0,0.8)",
+            color: "#f8fafc",
+            textAlign: "center"
+          }}>
+            <div style={{ fontSize: "2.2rem", marginBottom: "8px" }}>💬 ✨</div>
+            <h3 style={{ margin: "0 0 6px", color: "#22d3ee", fontSize: "1.2rem" }}>
+              CONFIRM PEER IDENTITY
+            </h3>
+            <p style={{ fontSize: "0.82rem", color: "#94a3b8", margin: "0 0 16px" }}>
+              Please verify that this is the classmate you wish to communicate and collaborate with:
+            </p>
+
+            <div style={{
+              background: "rgba(15, 23, 42, 0.8)",
+              border: "1px solid rgba(6, 182, 212, 0.3)",
+              borderRadius: "14px",
+              padding: "16px",
+              display: "flex",
+              alignItems: "center",
+              gap: "14px",
+              textAlign: "left",
+              marginBottom: "20px"
+            }}>
+              <img
+                src={candidatePeer.photo || "https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=100&h=100&fit=crop"}
+                alt={candidatePeer.firstName}
+                style={{ width: "64px", height: "64px", borderRadius: "12px", objectFit: "cover", border: "2px solid #06b6d4" }}
+              />
+              <div>
+                <h4 style={{ margin: 0, color: "#f8fafc", fontSize: "1.05rem" }}>
+                  {candidatePeer.firstName} {candidatePeer.lastName}
+                </h4>
+                <div style={{ fontSize: "0.78rem", color: "#22d3ee", fontFamily: "monospace", marginTop: "2px" }}>
+                  Index: {candidatePeer.indexNumber || candidatePeer.studentId}
+                </div>
+                <div style={{ fontSize: "0.75rem", color: "#94a3b8" }}>
+                  {candidatePeer.currentClass || candidatePeer.classCode}
+                </div>
+                <div style={{ fontSize: "0.75rem", color: "#34d399", marginTop: "3px" }}>
+                  📞 {candidatePeer.registeredMobile || candidatePeer.phone || "+233-24-000-0000"}
+                </div>
+              </div>
+            </div>
+
+            <div style={{ display: "flex", gap: "12px" }}>
+              <button
+                type="button"
+                className="btn-secondary"
+                onClick={() => {
+                  setShowPeerConfirmModal(false);
+                  setCandidatePeer(null);
+                }}
+                style={{ flex: 1, padding: "10px" }}
+              >
+                ✕ Cancel
+              </button>
+              <button
+                type="button"
+                className="btn-primary"
+                onClick={() => handleConfirmStartChat(candidatePeer)}
+                style={{ flex: 1, padding: "10px", background: "linear-gradient(135deg, #0891b2, #06b6d4)", fontWeight: 800 }}
+              >
+                ✅ Verify & Start Chat
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* MODAL: VIEW ARCHIVED CHATS */}
+      {showArchivedChatsModal && (
+        <div style={{
+          position: "fixed",
+          inset: 0,
+          background: "rgba(3, 7, 18, 0.85)",
+          backdropFilter: "blur(6px)",
+          display: "flex",
+          alignItems: "center",
+          justifyContent: "center",
+          zIndex: 999999,
+          padding: "20px"
+        }}>
+          <div style={{
+            background: "linear-gradient(145deg, #0f172a 0%, #1e293b 100%)",
+            border: "2px solid #64748b",
+            borderRadius: "18px",
+            maxWidth: "600px",
+            width: "100%",
+            padding: "24px",
+            boxShadow: "0 20px 50px rgba(0,0,0,0.8)",
+            color: "#f8fafc"
+          }}>
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "14px" }}>
+              <h3 style={{ margin: 0, color: "#cbd5e1", fontSize: "1.15rem", display: "flex", alignItems: "center", gap: "8px" }}>
+                <span>🗄️</span> ARCHIVED PEER CHATS VAULT ({archivedPeerChats.length})
+              </h3>
+              <button
+                type="button"
+                onClick={() => setShowArchivedChatsModal(false)}
+                style={{ background: "transparent", border: "none", color: "#94a3b8", fontSize: "1.2rem", cursor: "pointer" }}
+              >
+                ✕
+              </button>
+            </div>
+
+            {archivedPeerChats.length === 0 ? (
+              <div style={{ textAlign: "center", padding: "30px", color: "#64748b" }}>
+                <span style={{ fontSize: "2rem", display: "block", marginBottom: "8px" }}>📦</span>
+                No conversations have been archived yet. Click "Save & Archive Chat" in any conversation to preserve study notes here.
+              </div>
+            ) : (
+              <div style={{ display: "flex", flexDirection: "column", gap: "10px", maxHeight: "360px", overflowY: "auto" }}>
+                {archivedPeerChats.map((arch) => (
+                  <div
+                    key={arch.id}
+                    style={{
+                      background: "rgba(15, 23, 42, 0.75)",
+                      border: "1px solid rgba(255, 255, 255, 0.1)",
+                      borderRadius: "10px",
+                      padding: "12px 16px",
+                      display: "flex",
+                      justifyContent: "space-between",
+                      alignItems: "center",
+                      flexWrap: "wrap",
+                      gap: "10px"
+                    }}
+                  >
+                    <div>
+                      <h4 style={{ margin: 0, color: "#38bdf8", fontSize: "0.95rem" }}>
+                        {arch.peerName} ({arch.peerIndex})
+                      </h4>
+                      <span style={{ fontSize: "0.75rem", color: "#94a3b8" }}>
+                        Archived: {arch.archivedAt} • {arch.messageCount} messages
+                      </span>
+                    </div>
+                    <div style={{ display: "flex", gap: "8px" }}>
+                      <button
+                        type="button"
+                        onClick={() => {
+                          const peerMatch = enrolledPeersList.find((p) => (p.indexNumber || p.studentId) === arch.peerIndex) || {
+                            firstName: arch.peerName.split(" ")[0],
+                            lastName: arch.peerName.split(" ")[1] || "",
+                            indexNumber: arch.peerIndex,
+                            studentId: arch.peerIndex,
+                            currentClass: arch.peerClass
+                          };
+                          setActivePeerChat(peerMatch);
+                          setChatMessages(arch.messages || []);
+                          setShowArchivedChatsModal(false);
+                          setActiveTab("peer-chat");
+                        }}
+                        style={{
+                          background: "rgba(6, 182, 212, 0.2)",
+                          border: "1px solid #06b6d4",
+                          color: "#22d3ee",
+                          borderRadius: "6px",
+                          padding: "5px 10px",
+                          fontSize: "0.75rem",
+                          fontWeight: 700,
+                          cursor: "pointer"
+                        }}
+                      >
+                        🔄 Open
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => {
+                          const transcript = (arch.messages || []).map((m) => `[${m.timestamp}] ${m.senderName}: ${m.text}`).join("\n");
+                          const blob = new Blob([transcript], { type: "text/plain" });
+                          const url = URL.createObjectURL(blob);
+                          const a = document.createElement("a");
+                          a.href = url;
+                          a.download = `Archived_Chat_${arch.peerName}_${Date.now()}.txt`;
+                          a.click();
+                        }}
+                        style={{
+                          background: "rgba(148, 163, 184, 0.15)",
+                          border: "1px solid #64748b",
+                          color: "#cbd5e1",
+                          borderRadius: "6px",
+                          padding: "5px 10px",
+                          fontSize: "0.75rem",
+                          fontWeight: 700,
+                          cursor: "pointer"
+                        }}
+                      >
+                        📥 Download
+                      </button>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+        </div>
+      )}
+
+      {/* MODAL: INSTANT FEE PAYMENT GATEWAY */}
+      {showFeePaymentModal && (
+        <div style={{
+          position: "fixed",
+          inset: 0,
+          background: "rgba(3, 7, 18, 0.85)",
+          backdropFilter: "blur(6px)",
+          display: "flex",
+          alignItems: "center",
+          justifyContent: "center",
+          zIndex: 999999,
+          padding: "20px"
+        }}>
+          <div style={{
+            background: "linear-gradient(145deg, #0f172a 0%, #1e293b 100%)",
+            border: "2px solid #10b981",
+            borderRadius: "18px",
+            maxWidth: "480px",
+            width: "100%",
+            padding: "26px",
+            boxShadow: "0 20px 50px rgba(0,0,0,0.8)",
+            color: "#f8fafc"
+          }}>
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "12px" }}>
+              <h3 style={{ margin: 0, color: "#34d399", fontSize: "1.15rem", display: "flex", alignItems: "center", gap: "8px" }}>
+                <span>💳</span> INSTANT TUITION & EXAMINATION PAYMENT
+              </h3>
+              <button
+                type="button"
+                onClick={() => setShowFeePaymentModal(false)}
+                style={{ background: "transparent", border: "none", color: "#94a3b8", fontSize: "1.2rem", cursor: "pointer" }}
+              >
+                ✕
+              </button>
+            </div>
+            <p style={{ fontSize: "0.82rem", color: "#cbd5e1", margin: "0 0 16px" }}>
+              Settling at least <strong>80% of term fees</strong> automatically unlocks examination hall entry and generates an official late exam clearance slip.
+            </p>
+
+            <form onSubmit={handleProcessFeePayment} style={{ display: "flex", flexDirection: "column", gap: "12px" }}>
+              <div>
+                <label style={{ display: "block", fontSize: "0.75rem", color: "#94a3b8", marginBottom: "4px" }}>
+                  Payment Method / Gateway *
+                </label>
+                <select
+                  value={paymentChannel}
+                  onChange={(e) => setPaymentChannel(e.target.value)}
+                  className="filter-select"
+                  style={{ width: "100%", padding: "8px 12px" }}
+                >
+                  <option value="MTN_MOMO">🟡 MTN Mobile Money (*170#)</option>
+                  <option value="TELECEL_CASH">🔴 Telecel Cash (*110#)</option>
+                  <option value="AIRTELTIGO_MONEY">🔵 AirtelTigo Money (*110#)</option>
+                  <option value="VISA_MASTERCARD">💳 Visa / Mastercard / Debit</option>
+                  <option value="BANK_DIRECT">🏦 Direct Commercial Bank Transfer</option>
+                </select>
+              </div>
+
+              <div>
+                <label style={{ display: "block", fontSize: "0.75rem", color: "#94a3b8", marginBottom: "4px" }}>
+                  Payment Amount (GH₵) *
+                </label>
+                <input
+                  type="number"
+                  required
+                  min="1"
+                  value={paymentAmount}
+                  onChange={(e) => setPaymentAmount(e.target.value)}
+                  className="filter-input"
+                  style={{ width: "100%", padding: "8px 12px", fontFamily: "monospace", fontSize: "1.05rem" }}
+                />
+              </div>
+
+              <div>
+                <label style={{ display: "block", fontSize: "0.75rem", color: "#94a3b8", marginBottom: "4px" }}>
+                  Payer Mobile Number (for MoMo Prompt) *
+                </label>
+                <input
+                  type="tel"
+                  required
+                  value={payerPhone}
+                  onChange={(e) => setPayerPhone(e.target.value)}
+                  className="filter-input"
+                  style={{ width: "100%", padding: "8px 12px" }}
+                />
+              </div>
+
+              <div style={{ display: "flex", gap: "10px", marginTop: "12px" }}>
+                <button
+                  type="button"
+                  className="btn-secondary"
+                  onClick={() => setShowFeePaymentModal(false)}
+                  style={{ flex: 1, padding: "10px" }}
+                >
+                  Cancel
+                </button>
+                <button
+                  type="submit"
+                  className="btn-primary"
+                  style={{ flex: 1, padding: "10px", background: "linear-gradient(135deg, #10b981, #059669)", fontWeight: 800 }}
+                >
+                  Confirm Payment (GH₵ {parseFloat(paymentAmount || 0).toFixed(2)})
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* MODAL: RESCHEDULED LATE EXAM WRITING SLIP */}
+      {showRescheduledExamSlipModal && (
+        <div style={{
+          position: "fixed",
+          inset: 0,
+          background: "rgba(3, 7, 18, 0.85)",
+          backdropFilter: "blur(6px)",
+          display: "flex",
+          alignItems: "center",
+          justifyContent: "center",
+          zIndex: 999999,
+          padding: "20px"
+        }}>
+          <div style={{
+            background: "#ffffff",
+            color: "#0f172a",
+            borderRadius: "16px",
+            maxWidth: "540px",
+            width: "100%",
+            padding: "28px",
+            boxShadow: "0 25px 60px rgba(0,0,0,0.8)",
+            fontFamily: "serif"
+          }}>
+            <div style={{ borderBottom: "2px solid #0f172a", paddingBottom: "12px", marginBottom: "16px", textAlign: "center" }}>
+              <div style={{ fontSize: "1.8rem" }}>🎓 🏛️</div>
+              <h2 style={{ margin: "4px 0", fontSize: "1.3rem", fontWeight: 900, textTransform: "uppercase", letterSpacing: "0.05em" }}>
+                ST. AUGUSTINE INTERNATIONAL ACADEMY
+              </h2>
+              <span style={{ fontSize: "0.8rem", color: "#475569", fontWeight: 700 }}>
+                EXAMINATIONS COUNCIL & FINANCIAL CLEARANCE DIVISION
+              </span>
+              <div style={{
+                background: "#0f172a",
+                color: "#ffffff",
+                padding: "4px 12px",
+                borderRadius: "4px",
+                display: "inline-block",
+                marginTop: "8px",
+                fontSize: "0.82rem",
+                fontWeight: 900,
+                letterSpacing: "0.08em"
+              }}>
+                OFFICIAL RESCHEDULED LATE EXAM WRITING SLIP
+              </div>
+            </div>
+
+            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "10px", fontSize: "0.85rem", marginBottom: "16px" }}>
+              <div>
+                <span style={{ color: "#64748b", fontSize: "0.75rem", display: "block" }}>CANDIDATE NAME</span>
+                <strong>{currentUser.firstName} {currentUser.lastName}</strong>
+              </div>
+              <div>
+                <span style={{ color: "#64748b", fontSize: "0.75rem", display: "block" }}>INDEX / ADMISSION NO.</span>
+                <strong style={{ fontFamily: "monospace" }}>GBS-STU-2026-084</strong>
+              </div>
+              <div>
+                <span style={{ color: "#64748b", fontSize: "0.75rem", display: "block" }}>ACADEMIC LEVEL & TERM</span>
+                <strong>{academicLevel} • {academicTerm}</strong>
+              </div>
+              <div>
+                <span style={{ color: "#64748b", fontSize: "0.75rem", display: "block" }}>FEE CLEARANCE STATUS</span>
+                <strong style={{ color: "#059669" }}>{"CLEARED (>= 80% MET)"}</strong>
+              </div>
+              <div>
+                <span style={{ color: "#64748b", fontSize: "0.75rem", display: "block" }}>ASSIGNED EXAM HALL</span>
+                <strong>Executive CBT Annex Hall 2</strong>
+              </div>
+              <div>
+                <span style={{ color: "#64748b", fontSize: "0.75rem", display: "block" }}>RESCHEDULED TIMING</span>
+                <strong>Late Session: 02:00 PM - 04:30 PM</strong>
+              </div>
+            </div>
+
+            <div style={{
+              background: "#f1f5f9",
+              border: "1px dashed #94a3b8",
+              padding: "10px",
+              borderRadius: "8px",
+              fontSize: "0.78rem",
+              color: "#334155",
+              lineHeight: "1.4",
+              marginBottom: "16px"
+            }}>
+              <strong>NOTICE TO CHIEF INVIGILATOR:</strong> The candidate has cleared the required fee threshold with finance and is officially authorized to sit for all scheduled examinations during late exam windows.
+            </div>
+
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", borderTop: "1px solid #cbd5e1", paddingTop: "12px" }}>
+              <div style={{ fontSize: "0.72rem", color: "#64748b" }}>
+                Ref: CLR-80P-{Date.now().toString().slice(-6)} • Verified by Headmaster
+              </div>
+              <div style={{ display: "flex", gap: "8px" }}>
+                <button
+                  type="button"
+                  onClick={() => window.print()}
+                  style={{
+                    background: "#0284c7",
+                    color: "#ffffff",
+                    border: "none",
+                    borderRadius: "6px",
+                    padding: "8px 16px",
+                    fontSize: "0.82rem",
+                    fontWeight: 800,
+                    cursor: "pointer"
+                  }}
+                >
+                  🖨️ Print Slip
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setShowRescheduledExamSlipModal(false)}
+                  style={{
+                    background: "#e2e8f0",
+                    color: "#334155",
+                    border: "none",
+                    borderRadius: "6px",
+                    padding: "8px 14px",
+                    fontSize: "0.82rem",
+                    fontWeight: 700,
+                    cursor: "pointer"
+                  }}
+                >
+                  Close
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
       <UniversalRoleGuideModal
         role="STUDENT"
         isOpen={showStudentGuideModal}
@@ -3058,3 +4457,58 @@ export default function StudentDashboard() {
     </div>
   );
 }
+
+class StudentDashboardErrorBoundary extends React.Component {
+  constructor(props) {
+    super(props);
+    this.state = { hasError: false, error: null };
+  }
+  static getDerivedStateFromError(error) {
+    return { hasError: true, error };
+  }
+  componentDidCatch(error, errorInfo) {
+    console.error("Student Dashboard Error:", error, errorInfo);
+  }
+  render() {
+    if (this.state.hasError) {
+      return (
+        <div style={{ minHeight: "100vh", background: "#0b0f19", color: "#f8fafc", padding: "40px 20px", display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", textAlign: "center" }}>
+          <div style={{ maxWidth: "560px", background: "rgba(15, 23, 42, 0.95)", border: "2px solid #a855f7", borderRadius: "18px", padding: "32px", boxShadow: "0 20px 50px rgba(0,0,0,0.8)" }}>
+            <span style={{ fontSize: "3rem", display: "block", marginBottom: "12px" }}>🎓</span>
+            <h2 style={{ fontSize: "1.4rem", color: "#c084fc", margin: "0 0 10px" }}>STUDENT LEARNING HUB</h2>
+            <p style={{ fontSize: "0.88rem", color: "#94a3b8", lineHeight: "1.6", margin: "0 0 20px" }}>
+              The portal encountered a transient display event. Your coursework, submissions, and enrolled records are completely safe.
+            </p>
+            <div style={{ display: "flex", gap: "10px", justifyContent: "center", flexWrap: "wrap" }}>
+              <button
+                type="button"
+                onClick={() => { this.setState({ hasError: false }); window.location.reload(); }}
+                style={{ padding: "10px 24px", background: "linear-gradient(135deg, #9333ea, #a855f7)", border: "none", borderRadius: "8px", color: "#ffffff", fontWeight: 800, cursor: "pointer" }}
+              >
+                🔄 Refresh & Reload Portal
+              </button>
+              <button
+                type="button"
+                onClick={() => { window.location.href = "/portal/student/dashboard"; }}
+                style={{ padding: "10px 20px", background: "rgba(30, 41, 59, 0.9)", border: "1px solid rgba(255,255,255,0.15)", borderRadius: "8px", color: "#cbd5e1", fontWeight: 700, cursor: "pointer" }}
+              >
+                🏠 Return to Learning Hub
+              </button>
+            </div>
+          </div>
+        </div>
+      );
+    }
+    return this.props.children;
+  }
+}
+
+export function SafeStudentDashboardWrapper(props) {
+  return (
+    <StudentDashboardErrorBoundary>
+      <StudentDashboard {...props} />
+    </StudentDashboardErrorBoundary>
+  );
+}
+
+export default SafeStudentDashboardWrapper;

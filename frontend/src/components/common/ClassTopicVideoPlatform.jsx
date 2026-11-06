@@ -400,6 +400,14 @@ export default function ClassTopicVideoPlatform({
   const handleGrantPermissionAndPublishRecording = async (recItem) => {
     if (!recItem) return;
     setUploading(true);
+    setStatusMessage({
+      type: "info",
+      text: "⏳ Processing Video & Encoding Bitrate for Class Platform..."
+    });
+    if (window.showGBSOpenNotice) {
+      window.showGBSOpenNotice("Processing Video & Encoding Bitrate for Class Platform...", "info", "Video Ingestion");
+    }
+
     const publishPayload = {
       id: `VID-TOPIC-${Date.now()}`,
       title: (recItem.title || title || `${subject} Recorded Topic Lesson`).trim(),
@@ -454,8 +462,11 @@ export default function ClassTopicVideoPlatform({
     setVideoFileName("");
     setStatusMessage({
       type: "success",
-      text: `✅ Teacher Permission Verified! Recording "${publishPayload.title}" has been submitted and published to the ${publishPayload.className} Class Platform.`
+      text: `✅ Notice of Work Done: Video Uploaded & Published Successfully to ${publishPayload.className} Class Platform! All students can now view it.`
     });
+    if (window.showGBSOpenNotice) {
+      window.showGBSOpenNotice(`Notice of Work Done: Video "${publishPayload.title}" Uploaded & Published Successfully!`, "success", "Work Done Confirmation");
+    }
   };
 
   const handlePublishTopicVideo = async (e) => {
@@ -471,6 +482,14 @@ export default function ClassTopicVideoPlatform({
         : videoDataUrl || "https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/ForBiggerBlazes.mp4";
 
     setUploading(true);
+    setStatusMessage({
+      type: "info",
+      text: "⏳ Processing Video & Encoding Bitrate for Class Platform..."
+    });
+    if (window.showGBSOpenNotice) {
+      window.showGBSOpenNotice("Processing Video & Encoding Bitrate...", "info", "Video Ingestion");
+    }
+
     const newVideoPayload = {
       id: `VID-TOPIC-${Date.now()}`,
       title: title.trim(),
@@ -514,8 +533,11 @@ export default function ClassTopicVideoPlatform({
     setCustomVideoUrl("");
     setStatusMessage({
       type: "success",
-      text: `🎬 Topic Video "${newVideoPayload.title}" uploaded to the ${newVideoPayload.className} Class Platform! All students can now play and watch it in your absence.`
+      text: `✅ Notice of Work Done: Topic Video "${newVideoPayload.title}" Uploaded & Published Successfully to the ${newVideoPayload.className} Class Platform! All students can now view it.`
     });
+    if (window.showGBSOpenNotice) {
+      window.showGBSOpenNotice(`Notice of Work Done: Video "${newVideoPayload.title}" Published Successfully!`, "success", "Work Done Confirmation");
+    }
   };
 
   const handleMarkWatchedAndComment = async (e) => {

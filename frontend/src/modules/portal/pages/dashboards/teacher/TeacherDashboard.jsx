@@ -1674,6 +1674,25 @@ export default function TeacherDashboard() {
     fetchRoster(classId);
   };
 
+  // Ensure switching attendance date reloads individual tick status for that specific date
+  useEffect(() => {
+    if (selectedClassId && attendanceDate && roster.length > 0) {
+      const savedKey = `gbs_attendance_${selectedClassId}_${attendanceDate}`;
+      try {
+        const cachedStatus = JSON.parse(localStorage.getItem(savedKey) || "{}");
+        setAttendanceRecords(() => {
+          const updated = {};
+          roster.forEach((s) => {
+            const sid = s.id || s.studentId;
+            updated[sid] = cachedStatus[sid] !== undefined ? cachedStatus[sid] : null;
+            updated[String(sid)] = cachedStatus[String(sid)] !== undefined ? cachedStatus[String(sid)] : null;
+          });
+          return updated;
+        });
+      } catch {}
+    }
+  }, [attendanceDate, selectedClassId, roster.length]);
+
   const handleStatusChange = (studentId, status) => {
     setAttendanceRecords((prev) => ({
       ...prev,
@@ -6624,6 +6643,49 @@ export default function TeacherDashboard() {
                               title="Share meeting link via WhatsApp"
                             >
                               💚 Share on WhatsApp
+                            </button>
+                            <button
+                              type="button"
+                              onClick={() => {
+                                const broadcastPayload = {
+                                  id: m.id,
+                                  title: m.title,
+                                  platform: m.platform,
+                                  teacherName: `${currentUser?.firstName || "Faculty"} ${currentUser?.lastName || "Teacher"}`.trim(),
+                                  meetingUrl: safeMeetingUrl || m.meetingUrl,
+                                  workingInAppLink,
+                                  startTime: m.startTime,
+                                  broadcastAt: new Date().toISOString()
+                                };
+                                try {
+                                  localStorage.setItem("gbs_active_live_classes", JSON.stringify([broadcastPayload]));
+                                  window.dispatchEvent(new CustomEvent("gbs_live_class_broadcast", { detail: broadcastPayload }));
+                                  window.dispatchEvent(new Event("storage"));
+                                } catch {}
+                                setFeedback({
+                                  type: "success",
+                                  message: `📡 Link Broadcasted to ALL Classes! All student dashboards will now display the "Join Live Class Now" banner.`
+                                });
+                                if (window.showGBSOpenNotice) {
+                                  window.showGBSOpenNotice(`Broadcast dispatched to all classes: ${m.title}`, "success", "Live Class Broadcast");
+                                }
+                              }}
+                              style={{
+                                background: "rgba(56, 189, 248, 0.2)",
+                                border: "1.5px solid #38bdf8",
+                                color: "#38bdf8",
+                                borderRadius: "8px",
+                                padding: "6px 12px",
+                                fontSize: "0.76rem",
+                                fontWeight: 800,
+                                cursor: "pointer",
+                                display: "inline-flex",
+                                alignItems: "center",
+                                gap: "4px"
+                              }}
+                              title="Broadcast this live class link so every student sees an instant join banner"
+                            >
+                              🌐 Share Link to All Classes
                             </button>
                             <button 
                               type="button" 

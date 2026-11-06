@@ -12,7 +12,7 @@ import UniversalRoleGuideModal from "../../../../../components/common/UniversalR
 import { navigateToDetail } from "../../../../../utils/universalNavigation";
 import "./AdminDashboard.css";
 
-export default function AdminDashboard() {
+export function AdminDashboard() {
   const navigate = useNavigate();
   const [showAdminGuideModal, setShowAdminGuideModal] = useState(false);
   // Tab & Scroll Preservation (Back button restores exact tab & view)
@@ -420,7 +420,31 @@ export default function AdminDashboard() {
     error: null
   });
 
-  const currentUser = JSON.parse(localStorage.getItem("gbs_user") || '{"firstName":"Arthur","lastName":"Pendleton","email":"admin@gbs.edu","role":"ADMIN"}');
+  const currentUser = React.useMemo(() => {
+    try {
+      const stored = localStorage.getItem("gbs_user");
+      if (stored && stored !== "null" && stored !== "undefined") {
+        const parsed = JSON.parse(stored);
+        if (parsed && typeof parsed === "object") {
+          return {
+            firstName: parsed.firstName || "Arthur",
+            lastName: parsed.lastName || "Pendleton",
+            name: parsed.name || `${parsed.firstName || "Dr. Arthur"} ${parsed.lastName || "Pendleton"}`.trim(),
+            email: parsed.email || "admin@gbs.edu",
+            role: parsed.role || "ADMIN",
+            ...parsed
+          };
+        }
+      }
+    } catch {}
+    return {
+      firstName: "Arthur",
+      lastName: "Pendleton",
+      name: "Dr. Arthur Pendleton",
+      email: "admin@gbs.edu",
+      role: "ADMIN"
+    };
+  }, []);
   const institutionName = currentUser?.schoolName || currentUser?.institutionName || currentUser?.tenantName || "St. Augustine Science Academy";
   const [copiedRef, setCopiedRef] = useState(false);
   const [showMomoSubmitModal, setShowMomoSubmitModal] = useState(false);
@@ -431,7 +455,7 @@ export default function AdminDashboard() {
   const [subTermPlan, setSubTermPlan] = useState("6_MONTHS"); // 1_MONTH | 3_MONTHS | 6_MONTHS | 9_MONTHS | 12_MONTHS
   const [subPaymentScheduleMode, setSubPaymentScheduleMode] = useState("BULK_FULL_TERM"); // MONTHLY_SPREAD | BULK_FULL_TERM
   const [subBulkTermsAccepted, setSubBulkTermsAccepted] = useState(true);
-  const [subBulkSignatory, setSubBulkSignatory] = useState(`${currentUser.firstName} ${currentUser.lastName}`);
+  const [subBulkSignatory, setSubBulkSignatory] = useState(() => `${currentUser?.firstName || "Arthur"} ${currentUser?.lastName || "Pendleton"}`);
 
   const subPerStudentRate = subInstitutionTier === "UNIVERSITY" ? 10 : subInstitutionTier === "SHS" ? 5 : 3;
   const subMonthlyFee = (Math.max(0, parseInt(subStudentCount, 10) || 0)) * subPerStudentRate;
@@ -1135,6 +1159,7 @@ export default function AdminDashboard() {
       "Kasoa Tollgate Enclave (Zone 5)": 950.0
     };
   });
+  const busRoutes = Object.keys(busRouteFares || {});
 
   const [registeredBusDrivers, setRegisteredBusDrivers] = useState(() => {
     try {
@@ -1772,6 +1797,9 @@ export default function AdminDashboard() {
       }
     ];
   });
+  const cctvPairedDevices = cctvMobileDevices;
+  const setCctvPairedDevices = setCctvMobileDevices;
+  const cctvMobilePairingCode = cctvMobileForm?.pairingPin || "HM-CCTV-8842";
 
   // Requirement: Working Zoom & WhatsApp Online Conference Studio on Headmaster Dashboard
   const [zoomMeetingPlatform, setZoomMeetingPlatform] = useState("ZOOM"); // "ZOOM" | "WHATSAPP" | "GOOGLE_MEET" | "MICROSOFT_TEAMS"
@@ -5010,7 +5038,7 @@ export default function AdminDashboard() {
                   {busAssignments.length} Students Boarding Bus
                 </strong>
                 <span style={{ fontSize: "0.7rem", color: "#94a3b8", display: "block" }}>
-                  Across {busRoutes.length} Active Campus Bus Routes
+                  Across {busRoutes?.length || Object.keys(busRouteFares || {}).length || 7} Active Campus Bus Routes
                 </span>
               </div>
             </div>
@@ -13118,3 +13146,58 @@ export default function AdminDashboard() {
     </div>
   );
 }
+
+class AdminDashboardErrorBoundary extends React.Component {
+  constructor(props) {
+    super(props);
+    this.state = { hasError: false, error: null };
+  }
+  static getDerivedStateFromError(error) {
+    return { hasError: true, error };
+  }
+  componentDidCatch(error, errorInfo) {
+    console.error("Headmaster Dashboard Error:", error, errorInfo);
+  }
+  render() {
+    if (this.state.hasError) {
+      return (
+        <div style={{ minHeight: "100vh", background: "#0b0f19", color: "#f8fafc", padding: "40px 20px", display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", textAlign: "center" }}>
+          <div style={{ maxWidth: "560px", background: "rgba(15, 23, 42, 0.95)", border: "2px solid #38bdf8", borderRadius: "18px", padding: "32px", boxShadow: "0 20px 50px rgba(0,0,0,0.8)" }}>
+            <span style={{ fontSize: "3rem", display: "block", marginBottom: "12px" }}>🎓</span>
+            <h2 style={{ fontSize: "1.4rem", color: "#38bdf8", margin: "0 0 10px" }}>HEADMASTER EXECUTIVE PORTAL</h2>
+            <p style={{ fontSize: "0.88rem", color: "#94a3b8", lineHeight: "1.6", margin: "0 0 20px" }}>
+              The portal encountered a transient display event. Your institutional records and telemetry data are completely secure.
+            </p>
+            <div style={{ display: "flex", gap: "10px", justifyContent: "center", flexWrap: "wrap" }}>
+              <button
+                type="button"
+                onClick={() => { this.setState({ hasError: false }); window.location.reload(); }}
+                style={{ padding: "10px 24px", background: "linear-gradient(135deg, #0284c7, #38bdf8)", border: "none", borderRadius: "8px", color: "#0f172a", fontWeight: 800, cursor: "pointer" }}
+              >
+                🔄 Refresh & Reload Portal
+              </button>
+              <button
+                type="button"
+                onClick={() => { window.location.href = "/login"; }}
+                style={{ padding: "10px 20px", background: "rgba(30, 41, 59, 0.9)", border: "1px solid rgba(255,255,255,0.15)", borderRadius: "8px", color: "#cbd5e1", fontWeight: 700, cursor: "pointer" }}
+              >
+                ← Return to Login
+              </button>
+            </div>
+          </div>
+        </div>
+      );
+    }
+    return this.props.children;
+  }
+}
+
+export function SafeAdminDashboardWrapper(props) {
+  return (
+    <AdminDashboardErrorBoundary>
+      <AdminDashboard {...props} />
+    </AdminDashboardErrorBoundary>
+  );
+}
+
+export default SafeAdminDashboardWrapper;
