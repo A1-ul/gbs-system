@@ -714,6 +714,12 @@ export function AdminDashboard({ initialTab } = {}) {
         const updated = [record, ...commHistory];
         setCommHistory(updated);
         localStorage.setItem("gbs_headmaster_sent_messages", JSON.stringify(updated));
+        try {
+          const parentInbox = JSON.parse(localStorage.getItem("gbs_parent_received_messages") || "[]");
+          localStorage.setItem("gbs_parent_received_messages", JSON.stringify([record, ...parentInbox]));
+          const staffInbox = JSON.parse(localStorage.getItem("gbs_staff_received_messages") || "[]");
+          localStorage.setItem("gbs_staff_received_messages", JSON.stringify([record, ...staffInbox]));
+        } catch {}
 
         setFeedback({
           type: "success",
@@ -2229,6 +2235,107 @@ export function AdminDashboard({ initialTab } = {}) {
   const [selectedAppForVerification, setSelectedAppForVerification] = useState(null);
   const [showAppVerificationModal, setShowAppVerificationModal] = useState(false);
 
+  // Walk-In Student Admission Desk (Parent Physical Visit) State & Handlers
+  const [showWalkInModal, setShowWalkInModal] = useState(false);
+  const [admissionFilterMode, setAdmissionFilterMode] = useState("ALL");
+  const [admissionSearchQuery, setAdmissionSearchQuery] = useState("");
+  const [walkInSuccessRecord, setWalkInSuccessRecord] = useState(null);
+  const [walkInForm, setWalkInForm] = useState({
+    studentFirstName: "",
+    studentLastName: "",
+    gender: "Male",
+    dateOfBirth: "2012-05-14",
+    targetGradeLevel: "1",
+    tier: "BASIC",
+    guardianName: "",
+    guardianPhone: "+233 24 555 0199",
+    guardianWhatsApp: "+233 24 555 0199",
+    guardianEmail: "parent.walkin@gmail.com",
+    homeGpsAddress: "GA-183-9024",
+    previousSchool: "St. Jude Preparatory School",
+    entryAggregate: "08",
+    autoEnroll: true
+  });
+
+  const handleSaveWalkInAdmission = (e) => {
+    e.preventDefault();
+    if (!walkInForm.studentFirstName.trim() || !walkInForm.studentLastName.trim()) {
+      alert("Please provide the student first and last name.");
+      return;
+    }
+
+    const appNumber = "APP-WALKIN-" + Date.now().toString().slice(-6);
+    const indexNumber = "GBS-2026-WK" + Math.floor(Math.random() * 899 + 100);
+    const isAutoEnroll = walkInForm.autoEnroll;
+
+    const newApp = {
+      id: "walkin_" + Date.now(),
+      applicationNumber: appNumber,
+      studentFirstName: walkInForm.studentFirstName.trim(),
+      studentLastName: walkInForm.studentLastName.trim(),
+      targetGradeLevel: walkInForm.targetGradeLevel,
+      grade: "Grade " + walkInForm.targetGradeLevel,
+      gender: walkInForm.gender,
+      dateOfBirth: walkInForm.dateOfBirth,
+      guardianName: walkInForm.guardianName.trim() || "Visiting Parent / Guardian",
+      guardianEmail: walkInForm.guardianEmail.trim() || "parent.walkin@institution.org",
+      guardianPhone: walkInForm.guardianPhone.trim() || "+233 24 000 0000",
+      guardianWhatsApp: walkInForm.guardianWhatsApp.trim() || walkInForm.guardianPhone.trim(),
+      homeGpsAddress: walkInForm.homeGpsAddress.trim() || "GA-183-9024",
+      previousSchool: walkInForm.previousSchool.trim() || "Previous Academy",
+      entryAggregate: walkInForm.entryAggregate || "08",
+      submissionDate: new Date().toISOString(),
+      stage: isAutoEnroll ? "APPROVED" : "PENDING",
+      status: isAutoEnroll ? "ENROLLED" : "PENDING_VETTING",
+      admissionType: "WALK_IN_IN_PERSON",
+      indexNumber: isAutoEnroll ? indexNumber : null,
+      admittedBy: "Headmaster " + (headmasterProfile?.name || "Arthur Pendleton"),
+      notes: "Admitted on-site at Executive Admission Desk during parent physical visit."
+    };
+
+    try {
+      const existing = JSON.parse(localStorage.getItem("gbs_submitted_admissions") || "[]");
+      localStorage.setItem("gbs_submitted_admissions", JSON.stringify([newApp, ...existing]));
+
+      if (isAutoEnroll) {
+        const enrolled = JSON.parse(localStorage.getItem("gbs_enrolled_students") || "[]");
+        const newStudent = {
+          id: "STU-" + Date.now().toString().slice(-6),
+          studentId: indexNumber,
+          indexNumber: indexNumber,
+          firstName: newApp.studentFirstName,
+          lastName: newApp.studentLastName,
+          name: newApp.studentFirstName + " " + newApp.studentLastName,
+          gradeLevel: newApp.targetGradeLevel,
+          currentClass: "Grade " + newApp.targetGradeLevel,
+          gender: newApp.gender,
+          guardianName: newApp.guardianName,
+          guardianPhone: newApp.guardianPhone,
+          registeredMobile: newApp.guardianPhone,
+          homeGpsAddress: newApp.homeGpsAddress,
+          enrolledAt: new Date().toLocaleDateString(),
+          status: "ACTIVE"
+        };
+        localStorage.setItem("gbs_enrolled_students", JSON.stringify([newStudent, ...enrolled]));
+        window.dispatchEvent(new CustomEvent("gbs_student_enrolled", { detail: newStudent }));
+      }
+
+      window.dispatchEvent(new CustomEvent("gbs_admission_approved", { detail: newApp }));
+      window.dispatchEvent(new Event("storage"));
+    } catch (err) {
+      console.warn("Storage sync notice:", err);
+    }
+
+    setApplications((prev) => [newApp, ...prev]);
+    setWalkInSuccessRecord(newApp);
+    setShowWalkInModal(false);
+    triggerAudioFeedback("success");
+    setFeedback({
+      type: "success",
+      message: "🎉 Walk-in student " + newApp.studentFirstName + " " + newApp.studentLastName + " admitted! Official Index: " + (indexNumber || "Pending Enrollment") + "."
+    });
+  };
+
   // Institutional Admission Letter Templates & Composition Studio State
   const [showLetterTemplateModal, setShowLetterTemplateModal] = useState(false);
   const [selectedInstitutionTier, setSelectedInstitutionTier] = useState(() => {
@@ -3710,20 +3817,38 @@ export function AdminDashboard({ initialTab } = {}) {
     setFeedback(null);
     const phoneClean = searchPhone.trim();
 
-    // 1. Country code coordinates resolver
-    let resolvedCoords = { latitude: 5.6037, longitude: -0.1870, country: "Ghana", city: "Greater Accra Enclave" };
-    if (phoneClean.startsWith("+233") || phoneClean.startsWith("02") || phoneClean.startsWith("05")) {
-      resolvedCoords = { latitude: 5.6037, longitude: -0.1870, country: "Ghana", city: "Accra • Greater Accra Region" };
+    // 1. Digital GPS address & Country code coordinates resolver
+    let resolvedCoords = { latitude: 5.6037, longitude: -0.1870, country: "Ghana", city: "Accra • Greater Accra Region", digitalAddress: "GA-183-9024" };
+    const upperInput = phoneClean.toUpperCase();
+
+    // GhanaPost GPS Digital Address resolution
+    if (upperInput.startsWith("GA") || upperInput.startsWith("GW") || upperInput.startsWith("GE") || upperInput.startsWith("GS") || upperInput.startsWith("GN") || upperInput.startsWith("GM")) {
+      resolvedCoords = { latitude: 5.6037, longitude: -0.1870, country: "Ghana", city: "Accra Central • Greater Accra Region (" + upperInput + ")", digitalAddress: upperInput };
+    } else if (upperInput.startsWith("AK") || upperInput.startsWith("AS") || upperInput.startsWith("AH")) {
+      resolvedCoords = { latitude: 6.6885, longitude: -1.6244, country: "Ghana", city: "Ashanti Region • Kumasi Central (" + upperInput + ")", digitalAddress: upperInput };
+    } else if (upperInput.startsWith("WS") || upperInput.startsWith("WR")) {
+      resolvedCoords = { latitude: 4.9016, longitude: -1.7831, country: "Ghana", city: "Western Region • Sekondi-Takoradi (" + upperInput + ")", digitalAddress: upperInput };
+    } else if (upperInput.startsWith("CR") || upperInput.startsWith("CC")) {
+      resolvedCoords = { latitude: 5.1053, longitude: -1.2466, country: "Ghana", city: "Central Region • Cape Coast (" + upperInput + ")", digitalAddress: upperInput };
+    } else if (upperInput.startsWith("ER") || upperInput.startsWith("EN")) {
+      resolvedCoords = { latitude: 6.0941, longitude: -0.2591, country: "Ghana", city: "Eastern Region • Koforidua (" + upperInput + ")", digitalAddress: upperInput };
+    } else if (upperInput.startsWith("NR") || upperInput.startsWith("NT")) {
+      resolvedCoords = { latitude: 9.4008, longitude: -0.8393, country: "Ghana", city: "Northern Region • Tamale (" + upperInput + ")", digitalAddress: upperInput };
+    } else if (phoneClean.includes(",") && !isNaN(parseFloat(phoneClean.split(",")[0])) && !isNaN(parseFloat(phoneClean.split(",")[1]))) {
+      const parts = phoneClean.split(",");
+      resolvedCoords = { latitude: parseFloat(parts[0].trim()), longitude: parseFloat(parts[1].trim()), country: "GPS Coordinates Lock", city: "Digital Coordinate Fix (" + phoneClean + ")", digitalAddress: phoneClean };
+    } else if (phoneClean.startsWith("+233") || phoneClean.startsWith("02") || phoneClean.startsWith("05")) {
+      resolvedCoords = { latitude: 5.6037, longitude: -0.1870, country: "Ghana", city: "Accra • Greater Accra Region", digitalAddress: "GA-183-9024" };
     } else if (phoneClean.startsWith("+234")) {
-      resolvedCoords = { latitude: 6.5244, longitude: 3.3792, country: "Nigeria", city: "Lagos Mainland Central" };
+      resolvedCoords = { latitude: 6.5244, longitude: 3.3792, country: "Nigeria", city: "Lagos Mainland Central", digitalAddress: "NG-LOS-1001" };
     } else if (phoneClean.startsWith("+1")) {
-      resolvedCoords = { latitude: 40.7128, longitude: -74.0060, country: "United States", city: "New York Metropolitan Zone" };
+      resolvedCoords = { latitude: 40.7128, longitude: -74.0060, country: "United States", city: "New York Metropolitan Zone", digitalAddress: "US-NY-10001" };
     } else if (phoneClean.startsWith("+44")) {
-      resolvedCoords = { latitude: 51.5074, longitude: -0.1278, country: "United Kingdom", city: "Greater London Central" };
+      resolvedCoords = { latitude: 51.5074, longitude: -0.1278, country: "United Kingdom", city: "Greater London Central", digitalAddress: "UK-LON-SW1" };
     } else if (phoneClean.startsWith("+254")) {
-      resolvedCoords = { latitude: -1.2921, longitude: 36.8219, country: "Kenya", city: "Nairobi County" };
+      resolvedCoords = { latitude: -1.2921, longitude: 36.8219, country: "Kenya", city: "Nairobi County", digitalAddress: "KE-NBI-00100" };
     } else if (phoneClean.startsWith("+27")) {
-      resolvedCoords = { latitude: -26.2041, longitude: 28.0473, country: "South Africa", city: "Johannesburg Gauteng" };
+      resolvedCoords = { latitude: -26.2041, longitude: 28.0473, country: "South Africa", city: "Johannesburg Gauteng", digitalAddress: "ZA-JHB-2000" };
     }
 
     // 2. Check if parent device emitted live GPS beacon from Parent Dashboard
@@ -7499,24 +7624,104 @@ export function AdminDashboard({ initialTab } = {}) {
           )}
 
           {/* TAB 3: ADMISSIONS PIPELINE */}
-          {activeTab === "admissions" && (
+          {activeTab === "admissions" && (() => {
+            const walkInCount = applications.filter((a) => a.admissionType === "WALK_IN_IN_PERSON").length;
+            const onlineCount = applications.filter((a) => a.admissionType !== "WALK_IN_IN_PERSON").length;
+            const pendingCount = applications.filter((a) => a.stage === "PENDING" || a.stage === "IN_REVIEW").length;
+            const approvedCount = applications.filter((a) => a.stage === "APPROVED").length;
+            const rejectedCount = applications.filter((a) => a.stage === "REJECTED").length;
+
+            const filteredApplications = applications.filter((app) => {
+              if (admissionFilterMode === "WALK_IN" && app.admissionType !== "WALK_IN_IN_PERSON") return false;
+              if (admissionFilterMode === "ONLINE" && app.admissionType === "WALK_IN_IN_PERSON") return false;
+              if (admissionFilterMode === "PENDING" && app.stage !== "PENDING" && app.stage !== "IN_REVIEW") return false;
+              if (admissionFilterMode === "APPROVED" && app.stage !== "APPROVED") return false;
+              if (admissionFilterMode === "REJECTED" && app.stage !== "REJECTED") return false;
+
+              if (!admissionSearchQuery.trim()) return true;
+              const q = admissionSearchQuery.toLowerCase();
+              return (
+                (app.studentFirstName || "").toLowerCase().includes(q) ||
+                (app.studentLastName || "").toLowerCase().includes(q) ||
+                (app.applicationNumber || "").toLowerCase().includes(q) ||
+                (app.indexNumber || "").toLowerCase().includes(q) ||
+                (app.guardianPhone || "").toLowerCase().includes(q) ||
+                (app.guardianEmail || "").toLowerCase().includes(q) ||
+                (app.homeGpsAddress || "").toLowerCase().includes(q)
+              );
+            });
+
+            return (
             <div className="role-workspace-card">
               <div className="workspace-title-row">
                 <div>
                   <h2><span>📂</span> ADMISSIONS PIPELINE & APPLICANT INTAKE</h2>
-                  <p>Process prospective applicants: review, verify, approve, reject, or delete records</p>
+                  <p>Process prospective applicants: review, verify, approve, reject, or admit visiting parents on-site</p>
                 </div>
-                <button
-                  type="button"
-                  className="btn-primary"
-                  style={{ background: "linear-gradient(135deg, #0284c7, #0369a1)", display: "inline-flex", alignItems: "center", gap: "6px", fontWeight: "800", fontSize: "0.85rem", boxShadow: "0 4px 14px rgba(2, 132, 199, 0.4)", cursor: "pointer" }}
-                  onClick={() => setShowLetterTemplateModal(true)}
-                >
-                  🏛️ Admission Letter Templates & Composition Studio
-                </button>
-                <Link to="/admissions" className="btn-secondary">
-                  Open Visual Pipeline Board →
-                </Link>
+                <div style={{ display: "flex", gap: "8px", flexWrap: "wrap", alignItems: "center" }}>
+                  <button
+                    type="button"
+                    className="btn-primary"
+                    style={{ background: "linear-gradient(135deg, #10b981, #059669)", display: "inline-flex", alignItems: "center", gap: "6px", fontWeight: "800", fontSize: "0.85rem", boxShadow: "0 4px 14px rgba(16, 185, 129, 0.4)", cursor: "pointer" }}
+                    onClick={() => setShowWalkInModal(true)}
+                  >
+                    + Walk-In Student Admission Desk (Parent Visit)
+                  </button>
+                  <button
+                    type="button"
+                    className="btn-secondary"
+                    style={{ background: "linear-gradient(135deg, #0284c7, #0369a1)", display: "inline-flex", alignItems: "center", gap: "6px", fontWeight: "800", fontSize: "0.85rem", color: "#fff", border: "none", cursor: "pointer" }}
+                    onClick={() => setShowLetterTemplateModal(true)}
+                  >
+                    🏛️ Admission Letter Templates
+                  </button>
+                  <Link to="/admissions" className="btn-secondary">
+                    Open Visual Pipeline Board →
+                  </Link>
+                </div>
+              </div>
+
+              {/* Admissions Pipeline Filters & Search Control Bar */}
+              <div style={{ background: "rgba(15, 23, 42, 0.7)", border: "1px solid rgba(56, 189, 248, 0.25)", borderRadius: "12px", padding: "12px 14px", marginBottom: "1.25rem", display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: "10px" }}>
+                <div style={{ display: "flex", gap: "6px", flexWrap: "wrap", alignItems: "center" }}>
+                  {[
+                    { id: "ALL", label: "🌟 All Applicants (" + applications.length + ")" },
+                    { id: "WALK_IN", label: "🏛️ Walk-In Visits (" + walkInCount + ")" },
+                    { id: "ONLINE", label: "🌐 Online Portal (" + onlineCount + ")" },
+                    { id: "PENDING", label: "⏳ Pending (" + pendingCount + ")" },
+                    { id: "APPROVED", label: "✅ Approved & Enrolled (" + approvedCount + ")" },
+                    { id: "REJECTED", label: "❌ Rejected (" + rejectedCount + ")" }
+                  ].map((tab) => (
+                    <button
+                      key={tab.id}
+                      type="button"
+                      onClick={() => setAdmissionFilterMode(tab.id)}
+                      style={{
+                        padding: "5px 12px",
+                        borderRadius: "8px",
+                        fontSize: "0.78rem",
+                        fontWeight: 700,
+                        cursor: "pointer",
+                        background: admissionFilterMode === tab.id ? "linear-gradient(135deg, #0284c7, #0369a1)" : "rgba(30, 41, 59, 0.6)",
+                        border: admissionFilterMode === tab.id ? "1.5px solid #38bdf8" : "1px solid rgba(255, 255, 255, 0.1)",
+                        color: admissionFilterMode === tab.id ? "#ffffff" : "#cbd5e1"
+                      }}
+                    >
+                      {tab.label}
+                    </button>
+                  ))}
+                </div>
+
+                <div style={{ minWidth: "240px" }}>
+                  <input
+                    type="text"
+                    value={admissionSearchQuery}
+                    onChange={(e) => setAdmissionSearchQuery(e.target.value)}
+                    placeholder="🔍 Search student name, index #, phone, GPS..."
+                    className="filter-input"
+                    style={{ width: "100%", padding: "6px 12px", fontSize: "0.82rem" }}
+                  />
+                </div>
               </div>
 
               {/* Multiple Selection Batch Operations Bar */}
@@ -7572,28 +7777,28 @@ export function AdminDashboard({ initialTab } = {}) {
                         <input
                           type="checkbox"
                           className="table-checkbox"
-                          checked={selectedApps.length === applications.length && applications.length > 0}
+                          checked={selectedApps.length === filteredApplications.length && filteredApplications.length > 0}
                           onChange={toggleSelectAllApps}
                           title="Select all applications"
                         />
                       </th>
-                      <th>App #</th>
+                      <th>App # & Type</th>
                       <th>Applicant Name</th>
                       <th>Target Grade</th>
-                      <th>Guardian Email</th>
-                      <th>Stage</th>
+                      <th>Guardian Phone & Email</th>
+                      <th>Stage & Index</th>
                       <th>Headmaster Actions</th>
                     </tr>
                   </thead>
                   <tbody>
-                    {applications.length === 0 ? (
+                    {filteredApplications.length === 0 ? (
                       <tr>
                         <td colSpan="7" style={{ textAlign: "center", padding: "1.5rem", color: "#94a3b8" }}>
-                          No admission applications pending.
+                          No admission applications found for selected filters.
                         </td>
                       </tr>
                     ) : (
-                      applications.map((app) => (
+                      filteredApplications.map((app) => (
                         <tr key={app.id}>
                           <td style={{ textAlign: "center" }}>
                             <input
@@ -7603,14 +7808,44 @@ export function AdminDashboard({ initialTab } = {}) {
                               onChange={() => toggleSelectApp(app.id)}
                             />
                           </td>
-                          <td><strong style={{ fontFamily: "monospace" }}>{app.applicationNumber}</strong></td>
-                          <td><strong>{app.studentFirstName} {app.studentLastName}</strong></td>
-                          <td>Grade {app.targetGradeLevel}</td>
-                          <td>{app.guardianEmail}</td>
                           <td>
-                            <span className={`badge-status ${app.stage === "APPROVED" ? "badge-present" : app.stage === "REJECTED" ? "badge-absent" : "badge-late"}`}>
+                            <strong style={{ fontFamily: "monospace" }}>{app.applicationNumber}</strong>
+                            {app.admissionType === "WALK_IN_IN_PERSON" ? (
+                              <span style={{ display: "block", fontSize: "0.68rem", background: "rgba(16, 185, 129, 0.2)", color: "#34d399", padding: "2px 6px", borderRadius: "4px", width: "fit-content", marginTop: "3px", fontWeight: 800 }}>
+                                🏛️ WALK-IN VISIT
+                              </span>
+                            ) : (
+                              <span style={{ display: "block", fontSize: "0.68rem", background: "rgba(56, 189, 248, 0.15)", color: "#38bdf8", padding: "2px 6px", borderRadius: "4px", width: "fit-content", marginTop: "3px", fontWeight: 700 }}>
+                                🌐 ONLINE PORTAL
+                              </span>
+                            )}
+                          </td>
+                          <td>
+                            <strong>{app.studentFirstName} {app.studentLastName}</strong>
+                            {app.homeGpsAddress && (
+                              <span style={{ display: "block", fontSize: "0.72rem", color: "#94a3b8", fontFamily: "monospace" }}>
+                                📍 {app.homeGpsAddress}
+                              </span>
+                            )}
+                          </td>
+                          <td>Grade {app.targetGradeLevel}</td>
+                          <td>
+                            <div>{app.guardianEmail || "—"}</div>
+                            {app.guardianPhone && (
+                              <a href={'tel:' + app.guardianPhone} style={{ fontSize: "0.75rem", color: "#38bdf8", textDecoration: "none" }}>
+                                📞 {app.guardianPhone}
+                              </a>
+                            )}
+                          </td>
+                          <td>
+                            <span className={'badge-status ' + (app.stage === "APPROVED" ? "badge-present" : app.stage === "REJECTED" ? "badge-absent" : "badge-late")}>
                               {app.stage}
                             </span>
+                            {app.indexNumber && (
+                              <div style={{ fontSize: "0.75rem", color: "#34d399", fontFamily: "monospace", marginTop: "3px", fontWeight: 800 }}>
+                                ID: {app.indexNumber}
+                              </div>
+                            )}
                           </td>
                           <td>
                             <div className="row-actions-group">
@@ -7623,6 +7858,16 @@ export function AdminDashboard({ initialTab } = {}) {
                               >
                                 🔍 View & Verify
                               </button>
+                              {app.stage === "APPROVED" && (
+                                <button
+                                  type="button"
+                                  onClick={() => navigateToDetail(navigate, "admission", app.applicationNumber || app.id, { ...app, printMode: true }, { returnTab: activeTab })}
+                                  style={{ padding: "4px 8px", fontSize: "0.75rem", background: "rgba(16, 185, 129, 0.2)", border: "1px solid #10b981", color: "#34d399", borderRadius: "6px", cursor: "pointer", fontWeight: 800, whiteSpace: "nowrap" }}
+                                  title="Print or download official letter of admission"
+                                >
+                                  🖨️ Admission Letter
+                                </button>
+                              )}
                               <button
                                 type="button"
                                 className="btn-action-approve"
@@ -7659,8 +7904,8 @@ export function AdminDashboard({ initialTab } = {}) {
                 </table>
               </div>
             </div>
-          )}
-
+            );
+          })()}
           {/* TAB 4: EMERGENCY GUARDIAN LOCATOR (GENUINE LIVE GOOGLE MAP EMBED) */}
           {activeTab === "locator" && (
             <div className="role-workspace-card">
@@ -8028,6 +8273,26 @@ export function AdminDashboard({ initialTab } = {}) {
                           + {t.title}
                         </button>
                       ))}
+                      <button
+                        type="button"
+                        onClick={() => {
+                          const zoomSnippet = "\n\n📹 OFFICIAL LIVE ZOOM / VIRTUAL CLASS LINK:\nhttps://zoom.us/j/84920491823?pwd=GBS_INSTITUTE\nMeeting ID: 849 2049 1823 | Passcode: GBS2026\n(Click to join directly from WhatsApp or any web browser)";
+                          setCommMessage((prev) => (prev ? prev + zoomSnippet : ("Dear Parent / Guardian,\nPlease find the official live virtual meeting link below." + zoomSnippet)));
+                          if (!commSubject) setCommSubject("📹 Live Virtual Meeting / Class Session Link • " + reportSchoolName);
+                        }}
+                        style={{
+                          padding: "3px 10px",
+                          fontSize: "0.72rem",
+                          borderRadius: "6px",
+                          background: "rgba(56, 189, 248, 0.18)",
+                          border: "1px solid #38bdf8",
+                          color: "#38bdf8",
+                          fontWeight: "800",
+                          cursor: "pointer"
+                        }}
+                      >
+                        📹 + Attach Zoom Link
+                      </button>
                     </div>
                   </div>
 
@@ -11929,6 +12194,226 @@ export function AdminDashboard({ initialTab } = {}) {
           </div>
         )}
       </div>
+      {/* WALK-IN / IN-PERSON STUDENT ADMISSION & INSTANT ENROLLMENT MODAL */}
+      {showWalkInModal && (
+        <div className="invoice-pay-modal-overlay">
+          <div className="invoice-pay-modal" style={{ maxWidth: "780px", background: "#0b1329", border: "2px solid #10b981", borderRadius: "18px", padding: "1.75rem", maxHeight: "90vh", overflowY: "auto" }}>
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", borderBottom: "1.5px solid rgba(16, 185, 129, 0.3)", paddingBottom: "1rem", marginBottom: "1.25rem" }}>
+              <div>
+                <span className="role-portal-badge" style={{ color: "#34d399", background: "rgba(16, 185, 129, 0.15)", marginBottom: "4px", display: "inline-block" }}>
+                  🏛️ EXECUTIVE WALK-IN ADMISSION DESK (PARENT PHYSICAL VISIT)
+                </span>
+                <h2 style={{ margin: "2px 0 0", color: "#f8fafc", fontSize: "1.3rem", fontWeight: "900" }}>
+                  Admit Student On-Site & Issue Instant Enrollment
+                </h2>
+                <p style={{ margin: "4px 0 0", color: "#94a3b8", fontSize: "0.82rem" }}>
+                  For parents visiting the school campus in person. Complete admission, generate index number, and register student directly to institutional rosters.
+                </p>
+              </div>
+              <button type="button" className="btn-secondary" onClick={() => setShowWalkInModal(false)}>✕</button>
+            </div>
+
+            <form onSubmit={handleSaveWalkInAdmission}>
+              {/* Section 1: Student Information */}
+              <div style={{ background: "rgba(15, 23, 42, 0.6)", border: "1px solid rgba(255, 255, 255, 0.08)", borderRadius: "10px", padding: "14px", marginBottom: "1rem" }}>
+                <span style={{ fontSize: "0.8rem", color: "#38bdf8", fontWeight: 800, display: "block", marginBottom: "8px" }}>
+                  1. PROSPECTIVE STUDENT DEMOGRAPHICS
+                </span>
+                <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "10px", marginBottom: "10px" }}>
+                  <div>
+                    <label style={{ display: "block", fontSize: "0.76rem", color: "#cbd5e1", marginBottom: "4px", fontWeight: 700 }}>Student First Name *</label>
+                    <input
+                      type="text"
+                      required
+                      placeholder="e.g. Kwame"
+                      value={walkInForm.studentFirstName}
+                      onChange={(e) => setWalkInForm({ ...walkInForm, studentFirstName: e.target.value })}
+                      className="filter-input"
+                      style={{ width: "100%", padding: "8px 10px" }}
+                    />
+                  </div>
+                  <div>
+                    <label style={{ display: "block", fontSize: "0.76rem", color: "#cbd5e1", marginBottom: "4px", fontWeight: 700 }}>Student Last Name *</label>
+                    <input
+                      type="text"
+                      required
+                      placeholder="e.g. Mensah"
+                      value={walkInForm.studentLastName}
+                      onChange={(e) => setWalkInForm({ ...walkInForm, studentLastName: e.target.value })}
+                      className="filter-input"
+                      style={{ width: "100%", padding: "8px 10px" }}
+                    />
+                  </div>
+                </div>
+
+                <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: "10px" }}>
+                  <div>
+                    <label style={{ display: "block", fontSize: "0.76rem", color: "#cbd5e1", marginBottom: "4px", fontWeight: 700 }}>Gender</label>
+                    <select
+                      value={walkInForm.gender}
+                      onChange={(e) => setWalkInForm({ ...walkInForm, gender: e.target.value })}
+                      className="filter-select"
+                      style={{ width: "100%", padding: "8px" }}
+                    >
+                      <option value="Male">Male</option>
+                      <option value="Female">Female</option>
+                    </select>
+                  </div>
+                  <div>
+                    <label style={{ display: "block", fontSize: "0.76rem", color: "#cbd5e1", marginBottom: "4px", fontWeight: 700 }}>Date of Birth</label>
+                    <input
+                      type="date"
+                      value={walkInForm.dateOfBirth}
+                      onChange={(e) => setWalkInForm({ ...walkInForm, dateOfBirth: e.target.value })}
+                      className="filter-input"
+                      style={{ width: "100%", padding: "8px" }}
+                    />
+                  </div>
+                  <div>
+                    <label style={{ display: "block", fontSize: "0.76rem", color: "#cbd5e1", marginBottom: "4px", fontWeight: 700 }}>Target Grade / Class</label>
+                    <select
+                      value={walkInForm.targetGradeLevel}
+                      onChange={(e) => setWalkInForm({ ...walkInForm, targetGradeLevel: e.target.value })}
+                      className="filter-select"
+                      style={{ width: "100%", padding: "8px" }}
+                    >
+                      <option value="1">Primary 1 (Grade 1)</option>
+                      <option value="2">Primary 2 (Grade 2)</option>
+                      <option value="3">Primary 3 (Grade 3)</option>
+                      <option value="4">Primary 4 (Grade 4)</option>
+                      <option value="5">Primary 5 (Grade 5)</option>
+                      <option value="6">Primary 6 (Grade 6)</option>
+                      <option value="7">JHS 1 (Grade 7)</option>
+                      <option value="8">JHS 2 (Grade 8)</option>
+                      <option value="9">JHS 3 (Grade 9 - BECE)</option>
+                      <option value="10">SHS 1 (Grade 10)</option>
+                      <option value="11">SHS 2 (Grade 11)</option>
+                      <option value="12">SHS 3 (Grade 12 - WASSCE)</option>
+                      <option value="100">University Level 100 (Freshman)</option>
+                    </select>
+                  </div>
+                </div>
+              </div>
+
+              {/* Section 2: Visiting Parent / Guardian Contact & GPS */}
+              <div style={{ background: "rgba(15, 23, 42, 0.6)", border: "1px solid rgba(255, 255, 255, 0.08)", borderRadius: "10px", padding: "14px", marginBottom: "1rem" }}>
+                <span style={{ fontSize: "0.8rem", color: "#34d399", fontWeight: 800, display: "block", marginBottom: "8px" }}>
+                  2. VISITING PARENT / GUARDIAN CONTACT DETAILS
+                </span>
+                <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "10px", marginBottom: "10px" }}>
+                  <div>
+                    <label style={{ display: "block", fontSize: "0.76rem", color: "#cbd5e1", marginBottom: "4px", fontWeight: 700 }}>Parent / Guardian Full Name *</label>
+                    <input
+                      type="text"
+                      required
+                      placeholder="e.g. Mr. David Mensah"
+                      value={walkInForm.guardianName}
+                      onChange={(e) => setWalkInForm({ ...walkInForm, guardianName: e.target.value })}
+                      className="filter-input"
+                      style={{ width: "100%", padding: "8px 10px" }}
+                    />
+                  </div>
+                  <div>
+                    <label style={{ display: "block", fontSize: "0.76rem", color: "#cbd5e1", marginBottom: "4px", fontWeight: 700 }}>Contact Telephone Number *</label>
+                    <input
+                      type="text"
+                      required
+                      placeholder="+233 24 555 0199"
+                      value={walkInForm.guardianPhone}
+                      onChange={(e) => setWalkInForm({ ...walkInForm, guardianPhone: e.target.value })}
+                      className="filter-input"
+                      style={{ width: "100%", padding: "8px 10px" }}
+                    />
+                  </div>
+                </div>
+
+                <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "10px" }}>
+                  <div>
+                    <label style={{ display: "block", fontSize: "0.76rem", color: "#cbd5e1", marginBottom: "4px", fontWeight: 700 }}>Home GPS Digital Address (GhanaPost GPS) *</label>
+                    <input
+                      type="text"
+                      required
+                      placeholder="e.g. GA-183-9024"
+                      value={walkInForm.homeGpsAddress}
+                      onChange={(e) => setWalkInForm({ ...walkInForm, homeGpsAddress: e.target.value })}
+                      className="filter-input"
+                      style={{ width: "100%", padding: "8px 10px", fontFamily: "monospace" }}
+                    />
+                  </div>
+                  <div>
+                    <label style={{ display: "block", fontSize: "0.76rem", color: "#cbd5e1", marginBottom: "4px", fontWeight: 700 }}>Email Address</label>
+                    <input
+                      type="email"
+                      placeholder="parent.guardian@gmail.com"
+                      value={walkInForm.guardianEmail}
+                      onChange={(e) => setWalkInForm({ ...walkInForm, guardianEmail: e.target.value })}
+                      className="filter-input"
+                      style={{ width: "100%", padding: "8px 10px" }}
+                    />
+                  </div>
+                </div>
+              </div>
+
+              {/* Section 3: Academic Background & Instant Enrollment Toggle */}
+              <div style={{ background: "rgba(15, 23, 42, 0.6)", border: "1px solid rgba(255, 255, 255, 0.08)", borderRadius: "10px", padding: "14px", marginBottom: "1.25rem" }}>
+                <span style={{ fontSize: "0.8rem", color: "#fbbf24", fontWeight: 800, display: "block", marginBottom: "8px" }}>
+                  3. ACADEMIC CREDENTIALS & INSTANT ENROLLMENT
+                </span>
+                <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "10px", marginBottom: "10px" }}>
+                  <div>
+                    <label style={{ display: "block", fontSize: "0.76rem", color: "#cbd5e1", marginBottom: "4px", fontWeight: 700 }}>Previous School Attended</label>
+                    <input
+                      type="text"
+                      value={walkInForm.previousSchool}
+                      onChange={(e) => setWalkInForm({ ...walkInForm, previousSchool: e.target.value })}
+                      className="filter-input"
+                      style={{ width: "100%", padding: "8px 10px" }}
+                    />
+                  </div>
+                  <div>
+                    <label style={{ display: "block", fontSize: "0.76rem", color: "#cbd5e1", marginBottom: "4px", fontWeight: 700 }}>Entry Evaluation Aggregate / Score</label>
+                    <input
+                      type="text"
+                      placeholder="e.g. Aggregate 08"
+                      value={walkInForm.entryAggregate}
+                      onChange={(e) => setWalkInForm({ ...walkInForm, entryAggregate: e.target.value })}
+                      className="filter-input"
+                      style={{ width: "100%", padding: "8px 10px" }}
+                    />
+                  </div>
+                </div>
+
+                <div style={{ display: "flex", alignItems: "center", gap: "10px", background: "rgba(16, 185, 129, 0.15)", border: "1px solid rgba(16, 185, 129, 0.35)", borderRadius: "8px", padding: "10px" }}>
+                  <input
+                    type="checkbox"
+                    id="walkin-auto-enroll"
+                    checked={walkInForm.autoEnroll}
+                    onChange={(e) => setWalkInForm({ ...walkInForm, autoEnroll: e.target.checked })}
+                    style={{ width: "18px", height: "18px", cursor: "pointer" }}
+                  />
+                  <label htmlFor="walkin-auto-enroll" style={{ color: "#34d399", fontSize: "0.82rem", fontWeight: 700, cursor: "pointer" }}>
+                    ✅ Instant Institutional Enrollment: Generate official student Index Number immediately and register to class rosters.
+                  </label>
+                </div>
+              </div>
+
+              <div style={{ display: "flex", justifyContent: "flex-end", gap: "10px" }}>
+                <button type="button" className="btn-secondary" onClick={() => setShowWalkInModal(false)}>
+                  Cancel
+                </button>
+                <button
+                  type="submit"
+                  className="btn-primary"
+                  style={{ background: "linear-gradient(135deg, #10b981, #059669)", padding: "12px 24px", fontWeight: "900", fontSize: "0.92rem", boxShadow: "0 4px 15px rgba(16, 185, 129, 0.4)" }}
+                >
+                  🏛️ Complete Walk-In Admission & Generate Dossier
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
       {/* INSTITUTIONAL ADMISSION LETTER TEMPLATES & COMPOSITION STUDIO MODAL */}
       {showLetterTemplateModal && (
         <div className="invoice-pay-modal-overlay">

@@ -692,6 +692,10 @@ export default function AccountantDashboard() {
     }
   });
 
+  // Class Tier Grouping Modal State & Drilldown
+  const [showClassGroupingModal, setShowClassGroupingModal] = useState(false);
+  const [selectedGroupTier, setSelectedGroupTier] = useState("ALL");
+
   // Registered Classes Tuition Matrix & Grand Institutional Compilation State
   const [classFeeMatrix, setClassFeeMatrix] = useState(() => {
     try {
@@ -2194,12 +2198,35 @@ export default function AccountantDashboard() {
 
                 {/* Institutional Grand Total Compiled Cards (Strictly Read-Only Compilation) */}
                 <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(220px, 1fr))", gap: "1rem", marginBottom: "1.5rem" }}>
-                  <div style={{ background: "rgba(15, 23, 42, 0.8)", border: "1px solid rgba(56, 189, 248, 0.3)", borderRadius: "12px", padding: "1.25rem" }}>
-                    <span style={{ fontSize: "0.75rem", color: "#94a3b8", textTransform: "uppercase", fontWeight: "700" }}>Total Registered Classes</span>
+                  <div
+                    onClick={() => setShowClassGroupingModal(true)}
+                    style={{
+                      background: "linear-gradient(135deg, rgba(15, 23, 42, 0.9), rgba(30, 58, 138, 0.3))",
+                      border: "1.5px solid #38bdf8",
+                      borderRadius: "12px",
+                      padding: "1.25rem",
+                      cursor: "pointer",
+                      transition: "all 0.2s ease",
+                      boxShadow: "0 6px 18px rgba(56, 189, 248, 0.2)"
+                    }}
+                    onMouseEnter={(e) => {
+                      e.currentTarget.style.transform = "translateY(-3px)";
+                      e.currentTarget.style.boxShadow = "0 12px 28px rgba(56, 189, 248, 0.35)";
+                    }}
+                    onMouseLeave={(e) => {
+                      e.currentTarget.style.transform = "none";
+                      e.currentTarget.style.boxShadow = "0 6px 18px rgba(56, 189, 248, 0.2)";
+                    }}
+                    title="Click to expand full interactive breakdown grouped by tier (Basic, JHS, SHS, University)"
+                  >
+                    <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+                      <span style={{ fontSize: "0.75rem", color: "#94a3b8", textTransform: "uppercase", fontWeight: "700" }}>Total Registered Classes</span>
+                      <span style={{ fontSize: "0.75rem", background: "rgba(56, 189, 248, 0.2)", color: "#38bdf8", padding: "2px 8px", borderRadius: "10px", fontWeight: 800 }}>Click to Group ↗</span>
+                    </div>
                     <div style={{ fontSize: "1.8rem", fontWeight: "800", color: "#38bdf8", marginTop: "4px" }}>
                       {classFeeMatrix.length} Classes
                     </div>
-                    <span style={{ fontSize: "0.75rem", color: "#cbd5e1" }}>Basic, JHS, SHS & University Tiers</span>
+                    <span style={{ fontSize: "0.75rem", color: "#cbd5e1" }}>Basic, JHS, SHS & University Tiers (Click to expand)</span>
                   </div>
 
                   <div style={{ background: "rgba(15, 23, 42, 0.8)", border: "1px solid rgba(168, 85, 247, 0.3)", borderRadius: "12px", padding: "1.25rem" }}>
@@ -3831,6 +3858,27 @@ export default function AccountantDashboard() {
                                 <button
                                   type="button"
                                   onClick={() => {
+                                    const cleanPhone = (p.contact || "+233245550199").replace(/[^0-9]/g, "");
+                                    const waMsg = `Dear ${p.donorName},\nThank you immensely for your generous philanthropic pledge of ${currencySymbol}${p.pledgedAmount.toLocaleString()} to ${reportSchoolName} (${p.campaign}).\n\n📹 Zoom Alumni Donor Briefing Link: https://zoom.us/j/84920491823?pwd=GBS_INSTITUTE\nMeeting ID: 849 2049 1823 | Passcode: GBS2026\n\nOffice of the Bursar & Endowment Management.`;
+                                    window.open(`https://api.whatsapp.com/send?phone=${cleanPhone}&text=${encodeURIComponent(waMsg)}`, "_blank");
+                                  }}
+                                  style={{
+                                    background: "rgba(37, 211, 102, 0.15)",
+                                    border: "1px solid #25D366",
+                                    color: "#25D366",
+                                    borderRadius: "6px",
+                                    padding: "4px 8px",
+                                    fontSize: "0.72rem",
+                                    fontWeight: 700,
+                                    cursor: "pointer"
+                                  }}
+                                  title="Dispatch WhatsApp acknowledgement with Zoom link"
+                                >
+                                  💬 WhatsApp + Zoom
+                                </button>
+                                <button
+                                  type="button"
+                                  onClick={() => {
                                     alert(`Official Philanthropic Donor Receipt\n--------------------------------\nDonor: ${p.donorName}\nCohort: ${p.gradClass}\nReceipt Ref: ${p.receiptRef}\nAmount: ${currencySymbol}${p.redeemedAmount.toLocaleString()}\nProject: ${p.campaign}\nStatus: Verified & Audited by GBS Chief Accountant`);
                                   }}
                                   style={{
@@ -4421,6 +4469,199 @@ export default function AccountantDashboard() {
           ⬇️
         </button>
       </div>
+
+      {/* INTERACTIVE REGISTERED CLASSES TIER GROUPING MODAL */}
+      {showClassGroupingModal && (() => {
+        const tiers = [
+          {
+            name: "Basic Education Tier",
+            icon: "🏫",
+            classes: classFeeMatrix.filter((c) => c.className.toLowerCase().includes("kg") || c.className.toLowerCase().includes("primary") || c.className.toLowerCase().includes("pri") || c.className.toLowerCase().includes("nursery")),
+            description: "Early childhood development, kindergarten, and lower/upper primary instruction streams."
+          },
+          {
+            name: "Junior High School (JHS) Tier",
+            icon: "🎒",
+            classes: classFeeMatrix.filter((c) => c.className.toLowerCase().includes("jhs")),
+            description: "Junior High 1, 2, and 3 BECE candidates syllabus curriculum."
+          },
+          {
+            name: "Senior High School (SHS) Tier",
+            icon: "🎓",
+            classes: classFeeMatrix.filter((c) => c.className.toLowerCase().includes("shs") || c.className.toLowerCase().includes("grade 10") || c.className.toLowerCase().includes("grade 11") || c.className.toLowerCase().includes("grade 12")),
+            description: "General Science, General Arts, Business, and Visual Arts WASSCE streams."
+          },
+          {
+            name: "University / Tertiary Degree Tier",
+            icon: "🏛️",
+            classes: classFeeMatrix.filter((c) => c.className.toLowerCase().includes("uni") || c.className.toLowerCase().includes("level") || c.className.toLowerCase().includes("degree") || c.className.toLowerCase().includes("freshman") || c.className.toLowerCase().includes("sophomore")),
+            description: "Undergraduate degree programs and higher learning faculties."
+          }
+        ];
+
+        return (
+          <div style={{
+            position: "fixed",
+            inset: 0,
+            background: "rgba(2, 6, 23, 0.88)",
+            backdropFilter: "blur(10px)",
+            zIndex: 999999,
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+            padding: "1rem"
+          }}>
+            <div style={{
+              background: "#090d16",
+              border: "2px solid #38bdf8",
+              borderRadius: "18px",
+              width: "100%",
+              maxWidth: "850px",
+              maxHeight: "90vh",
+              overflowY: "auto",
+              padding: "1.75rem",
+              boxShadow: "0 25px 60px rgba(0, 0, 0, 0.9)",
+              color: "#fff"
+            }}>
+              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", borderBottom: "1.5px solid rgba(56, 189, 248, 0.3)", paddingBottom: "1rem", marginBottom: "1.25rem" }}>
+                <div>
+                  <span className="role-portal-badge" style={{ color: "#38bdf8", marginBottom: "4px", display: "inline-block" }}>
+                    REGISTERED CLASSES TUITION MATRIX • TIER GROUPED COMPILATION
+                  </span>
+                  <h2 style={{ margin: "2px 0 0", color: "#f8fafc", fontSize: "1.3rem", fontWeight: 900 }}>
+                    Institutional Classes Breakdown by Academic Tier
+                  </h2>
+                  <p style={{ margin: "4px 0 0", color: "#94a3b8", fontSize: "0.82rem" }}>
+                    Hover over any tier to inspect student enrollment, average base fee rate, and compiled revenue yield.
+                  </p>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => setShowClassGroupingModal(false)}
+                  style={{
+                    background: "rgba(255, 255, 255, 0.08)",
+                    border: "1px solid rgba(255, 255, 255, 0.2)",
+                    color: "#fff",
+                    borderRadius: "8px",
+                    padding: "6px 12px",
+                    cursor: "pointer",
+                    fontWeight: 800
+                  }}
+                >
+                  ✕ Close
+                </button>
+              </div>
+
+              {/* Tiers Grid */}
+              <div style={{ display: "flex", flexDirection: "column", gap: "16px", marginBottom: "1.5rem" }}>
+                {tiers.map((tier) => {
+                  const tierStudents = tier.classes.reduce((sum, c) => sum + (c.studentCount || 0), 0);
+                  const tierTermRevenue = tier.classes.reduce((sum, c) => sum + (c.totalPerTerm || 0), 0);
+                  const tierAnnualRevenue = tier.classes.reduce((sum, c) => sum + (c.totalAnnual || 0), 0);
+                  const avgRate = tier.classes.length > 0 ? (tierTermRevenue / (tierStudents || 1)) : 0;
+
+                  return (
+                    <div
+                      key={tier.name}
+                      style={{
+                        background: "rgba(15, 23, 42, 0.75)",
+                        border: "1.5px solid rgba(56, 189, 248, 0.3)",
+                        borderRadius: "14px",
+                        padding: "16px 20px",
+                        transition: "all 0.2s ease"
+                      }}
+                      onMouseEnter={(e) => {
+                        e.currentTarget.style.transform = "translateY(-2px)";
+                        e.currentTarget.style.borderColor = "#38bdf8";
+                        e.currentTarget.style.boxShadow = "0 8px 24px rgba(56, 189, 248, 0.2)";
+                      }}
+                      onMouseLeave={(e) => {
+                        e.currentTarget.style.transform = "none";
+                        e.currentTarget.style.borderColor = "rgba(56, 189, 248, 0.3)";
+                        e.currentTarget.style.boxShadow = "none";
+                      }}
+                    >
+                      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: "8px", flexWrap: "wrap", gap: "10px" }}>
+                        <div style={{ display: "flex", alignItems: "center", gap: "10px" }}>
+                          <span style={{ fontSize: "1.6rem" }}>{tier.icon}</span>
+                          <div>
+                            <h3 style={{ margin: 0, fontSize: "1.1rem", color: "#f8fafc", fontWeight: 800 }}>
+                              {tier.name}
+                            </h3>
+                            <span style={{ fontSize: "0.78rem", color: "#94a3b8" }}>
+                              {tier.description}
+                            </span>
+                          </div>
+                        </div>
+                        <span style={{ background: "rgba(56, 189, 248, 0.2)", color: "#38bdf8", padding: "4px 10px", borderRadius: "12px", fontSize: "0.78rem", fontWeight: 800 }}>
+                          {tier.classes.length} Registered Class{tier.classes.length !== 1 ? 'es' : ''}
+                        </span>
+                      </div>
+
+                      <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(160px, 1fr))", gap: "10px", background: "rgba(2, 6, 23, 0.5)", padding: "12px", borderRadius: "10px", marginTop: "10px" }}>
+                        <div>
+                          <span style={{ fontSize: "0.7rem", color: "#94a3b8" }}>Enrolled Scholars</span>
+                          <div style={{ fontSize: "1.1rem", fontWeight: 800, color: "#c084fc" }}>{tierStudents} Students</div>
+                        </div>
+                        <div>
+                          <span style={{ fontSize: "0.7rem", color: "#94a3b8" }}>Average Term Rate</span>
+                          <div style={{ fontSize: "1.1rem", fontWeight: 800, color: "#38bdf8" }}>{currencySymbol}{Math.round(avgRate).toLocaleString()}</div>
+                        </div>
+                        <div>
+                          <span style={{ fontSize: "0.7rem", color: "#94a3b8" }}>Expected Term Yield</span>
+                          <div style={{ fontSize: "1.1rem", fontWeight: 800, color: "#34d399" }}>{currencySymbol}{tierTermRevenue.toLocaleString()}</div>
+                        </div>
+                        <div>
+                          <span style={{ fontSize: "0.7rem", color: "#94a3b8" }}>Expected Annual Total</span>
+                          <div style={{ fontSize: "1.1rem", fontWeight: 800, color: "#fbbf24" }}>{currencySymbol}{tierAnnualRevenue.toLocaleString()}</div>
+                        </div>
+                      </div>
+
+                      {/* Class Badges in Tier */}
+                      <div style={{ display: "flex", gap: "6px", flexWrap: "wrap", marginTop: "10px" }}>
+                        {tier.classes.map((cls) => (
+                          <span
+                            key={cls.id || cls.className}
+                            style={{
+                              background: "rgba(255, 255, 255, 0.06)",
+                              border: "1px solid rgba(255, 255, 255, 0.12)",
+                              color: "#cbd5e1",
+                              fontSize: "0.72rem",
+                              padding: "2px 8px",
+                              borderRadius: "6px",
+                              fontWeight: 600
+                            }}
+                          >
+                            {cls.className} ({cls.studentCount || 0} students)
+                          </span>
+                        ))}
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+
+              <div style={{ display: "flex", justifyContent: "flex-end" }}>
+                <button
+                  type="button"
+                  onClick={() => setShowClassGroupingModal(false)}
+                  style={{
+                    background: "linear-gradient(135deg, #0284c7, #0369a1)",
+                    border: "none",
+                    borderRadius: "8px",
+                    color: "#fff",
+                    fontWeight: 800,
+                    padding: "10px 22px",
+                    cursor: "pointer"
+                  }}
+                >
+                  ← Return to Finance Matrix
+                </button>
+              </div>
+            </div>
+          </div>
+        );
+      })()}
 
       <UniversalRoleGuideModal
         role="ACCOUNTANT"

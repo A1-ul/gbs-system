@@ -7186,15 +7186,30 @@ export default function TeacherDashboard() {
                           <div
                             key={plan.id}
                             style={{
-                              background: "rgba(15, 23, 42, 0.8)",
+                              background: "rgba(15, 23, 42, 0.85)",
                               borderRadius: "12px",
                               border: plan.status === "VETTED_APPROVED" 
-                                ? "1.5px solid rgba(16, 185, 129, 0.4)" 
+                                ? "1.5px solid rgba(16, 185, 129, 0.5)" 
                                 : plan.status === "REVISION_REQUIRED"
-                                ? "1.5px solid rgba(239, 68, 68, 0.4)"
-                                : "1.5px solid rgba(245, 158, 11, 0.4)",
-                              padding: "14px 16px",
-                              boxShadow: "0 6px 16px rgba(0,0,0,0.3)"
+                                ? "1.5px solid rgba(239, 68, 68, 0.5)"
+                                : "1.5px solid rgba(245, 158, 11, 0.5)",
+                              padding: "16px",
+                              boxShadow: "0 6px 18px rgba(0,0,0,0.35)",
+                              transition: "all 0.2s ease"
+                            }}
+                            onMouseEnter={(e) => {
+                              e.currentTarget.style.transform = "translateY(-2px)";
+                              e.currentTarget.style.borderColor = "#38bdf8";
+                              e.currentTarget.style.boxShadow = "0 10px 25px rgba(56, 189, 248, 0.25)";
+                            }}
+                            onMouseLeave={(e) => {
+                              e.currentTarget.style.transform = "none";
+                              e.currentTarget.style.borderColor = plan.status === "VETTED_APPROVED" 
+                                ? "rgba(16, 185, 129, 0.5)" 
+                                : plan.status === "REVISION_REQUIRED"
+                                ? "rgba(239, 68, 68, 0.5)"
+                                : "rgba(245, 158, 11, 0.5)";
+                              e.currentTarget.style.boxShadow = "0 6px 18px rgba(0,0,0,0.35)";
                             }}
                           >
                             <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: "8px", flexWrap: "wrap", gap: "8px" }}>
@@ -7273,27 +7288,55 @@ export default function TeacherDashboard() {
                               </div>
                             )}
 
-                            {/* Revision Action if required */}
-                            {plan.status === "REVISION_REQUIRED" && (
-                              <div style={{ marginTop: "10px", display: "flex", justifyContent: "flex-end" }}>
+                            {/* Interactive Action Bar with Hover & Page Navigation */}
+                            <div style={{ marginTop: "12px", borderTop: "1px solid rgba(255, 255, 255, 0.08)", paddingTop: "10px", display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: "8px" }}>
+                              <span style={{ fontSize: "0.72rem", color: "#94a3b8" }}>
+                                Plan Ref: <code style={{ color: "#38bdf8" }}>{plan.id}</code>
+                              </span>
+                              <div style={{ display: "flex", gap: "8px", alignItems: "center" }}>
                                 <button
                                   type="button"
-                                  onClick={() => handleResubmitPlan(plan)}
+                                  onClick={() => navigateToDetail(navigate, "lesson-plan", plan.id, {
+                                    ...plan,
+                                    institutionName: localStorage.getItem("gbs_report_school_name") || "St. Augustine International Academy"
+                                  }, { returnTab: activeTab })}
                                   style={{
-                                    background: "rgba(239, 68, 68, 0.15)",
-                                    border: "1px solid #ef4444",
-                                    color: "#fca5a5",
-                                    padding: "5px 12px",
-                                    borderRadius: "6px",
+                                    background: "linear-gradient(135deg, rgba(2, 132, 199, 0.25), rgba(56, 189, 248, 0.15))",
+                                    border: "1px solid #38bdf8",
+                                    color: "#38bdf8",
+                                    borderRadius: "8px",
+                                    padding: "6px 14px",
                                     fontSize: "0.78rem",
-                                    fontWeight: "700",
-                                    cursor: "pointer"
+                                    fontWeight: "800",
+                                    cursor: "pointer",
+                                    display: "inline-flex",
+                                    alignItems: "center",
+                                    gap: "6px"
                                   }}
+                                  title="Inspect full plan dossier on dedicated routed page"
                                 >
-                                  ✏️ Address Remarks & Revise Plan
+                                  🔍 View & Inspect Dossier ↗
                                 </button>
+                                {plan.status === "REVISION_REQUIRED" && (
+                                  <button
+                                    type="button"
+                                    onClick={() => handleResubmitPlan(plan)}
+                                    style={{
+                                      background: "rgba(239, 68, 68, 0.15)",
+                                      border: "1px solid #ef4444",
+                                      color: "#fca5a5",
+                                      padding: "6px 12px",
+                                      borderRadius: "8px",
+                                      fontSize: "0.78rem",
+                                      fontWeight: "700",
+                                      cursor: "pointer"
+                                    }}
+                                  >
+                                    ✏️ Address Remarks & Revise Plan
+                                  </button>
+                                )}
                               </div>
-                            )}
+                            </div>
                           </div>
                         );
                       })

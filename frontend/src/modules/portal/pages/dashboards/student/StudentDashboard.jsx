@@ -8,6 +8,7 @@ import { offlineSyncEngine } from "../../../../../utils/offlineSync";
 import UniversalRoleGuideModal from "../../../../../components/common/UniversalRoleGuideModal";
 import ClassTopicVideoPlatform from "../../../../../components/common/ClassTopicVideoPlatform";
 import { navigateToDetail } from "../../../../../utils/universalNavigation";
+import OfficialPaymentGatewayModal from "../../../../../components/common/OfficialPaymentGatewayModal";
 import "./StudentDashboard.css";
 
 export function StudentDashboard({ initialTab } = {}) {
@@ -409,6 +410,136 @@ export function StudentDashboard({ initialTab } = {}) {
   const [paymentChannel, setPaymentChannel] = useState("MTN_MOMO");
   const [payerPhone, setPayerPhone] = useState("+233-24-411-9201");
   const [paymentSuccessSlip, setPaymentSuccessSlip] = useState(null);
+
+  // Official Payment Gateway Modal State
+  const [showOfficialPaymentModal, setShowOfficialPaymentModal] = useState(false);
+  const [feeBalance, setFeeBalance] = useState(() => {
+    return Number(localStorage.getItem("gbs_student_fee_STU-2026-0891") || "400");
+  });
+
+  // Live Online Class Concluded Notice & Catch-Up Video State
+  const [concludedClassNotice, setConcludedClassNotice] = useState(() => {
+    try {
+      const stored = JSON.parse(localStorage.getItem("gbs_concluded_class_notice") || "null");
+      if (stored) return stored;
+    } catch {}
+    return {
+      id: "CLS-CONCL-902",
+      subject: "Advanced Mathematics",
+      topic: "Composite Functions, Calculus Derivatives & Rate of Change",
+      date: "Today",
+      time: "09:00 AM - 10:15 AM",
+      duration: "1h 15m",
+      instructor: "Mr. Kwame Mensah",
+      endingTime: "10:15 AM",
+      recordingUrl: "https://www.youtube.com/embed/dQw4w9WgXcQ",
+      notesFile: "Advanced_Calculus_Lesson_Notes_Week7.pdf",
+      dismissed: false
+    };
+  });
+  const [showCatchUpModal, setShowCatchUpModal] = useState(false);
+
+  // Peer Live Video Calling State
+  const [activePeerVideoCall, setActivePeerVideoCall] = useState(null);
+  const [peerCallDuration, setPeerCallDuration] = useState(0);
+  const [isPeerMicMuted, setIsPeerMicMuted] = useState(false);
+  const [isPeerCameraOff, setIsPeerCameraOff] = useState(false);
+  const [isPeerScreenSharing, setIsPeerScreenSharing] = useState(false);
+
+  useEffect(() => {
+    let timer = null;
+    if (activePeerVideoCall) {
+      timer = setInterval(() => {
+        setPeerCallDuration((d) => d + 1);
+      }, 1000);
+    } else {
+      setPeerCallDuration(0);
+    }
+    return () => clearInterval(timer);
+  }, [activePeerVideoCall]);
+
+  const handleStartPeerVideoCall = (peer) => {
+    setActivePeerVideoCall(peer);
+    setPeerCallDuration(0);
+  };
+
+  const handleEndPeerVideoCall = () => {
+    setActivePeerVideoCall(null);
+  };
+
+  // Student Digital Library & E-Book Hub State
+  const [borrowedBooks, setBorrowedBooks] = useState(() => {
+    try {
+      const stored = JSON.parse(localStorage.getItem("gbs_library_borrowed_records") || "[]");
+      if (Array.isArray(stored) && stored.length > 0) return stored;
+    } catch {}
+    return [
+      {
+        id: "BK-01",
+        title: "Core Mathematics for Senior High Schools",
+        author: "Prof. J. K. Mensah",
+        isbn: "978-0-19-842718-6",
+        borrowDate: "2026-11-01",
+        dueDate: "2026-11-15",
+        status: "BORROWED",
+        daysRemaining: 8,
+        cover: "https://images.unsplash.com/photo-1544716278-ca5e3f4abd8c?w=200&h=260&fit=crop"
+      },
+      {
+        id: "BK-02",
+        title: "Integrated Science & Biology Laboratory Practical",
+        author: "Dr. Kwabena Asante",
+        isbn: "978-0-14-312774-1",
+        borrowDate: "2026-11-03",
+        dueDate: "2026-11-17",
+        status: "BORROWED",
+        daysRemaining: 10,
+        cover: "https://images.unsplash.com/photo-1532012164546-f432f2e3777f?w=200&h=260&fit=crop"
+      }
+    ];
+  });
+
+  const LIBRARY_CATALOG = [
+    { id: "CAT-1", title: "Comprehensive Chemistry for Secondary Schools", author: "Dr. Evelyn Addo", category: "General Science", pages: 420, cover: "https://images.unsplash.com/photo-1532012164546-f432f2e3777f?w=200&h=260&fit=crop" },
+    { id: "CAT-2", title: "Physics Fundamentals: Mechanics & Electromagnetism", author: "Prof. Arthur Sterling", category: "Physical Sciences", pages: 512, cover: "https://images.unsplash.com/photo-1509228468518-180dd4864904?w=200&h=260&fit=crop" },
+    { id: "CAT-3", title: "African & World History: Pre-Colonial to Modern Era", author: "Dr. Nana Osei-Tutu", category: "Arts & Humanities", pages: 380, cover: "https://images.unsplash.com/photo-1461360370896-922624d12aa1?w=200&h=260&fit=crop" },
+    { id: "CAT-4", title: "Advanced Python Programming & Machine Learning", author: "Chief Dev. Gabriel Osei", category: "Computer Science", pages: 460, cover: "https://images.unsplash.com/photo-1526374965328-7f61d4dc18c5?w=200&h=260&fit=crop" },
+    { id: "CAT-5", title: "Economics: Principles, Markets & Macro Policy", author: "Mrs. Beatrice Arthur", category: "Business Studies", pages: 395, cover: "https://images.unsplash.com/photo-1554224155-8d04cb21cd6c?w=200&h=260&fit=crop" },
+    { id: "CAT-6", title: "English Language, Rhetoric & Literature Anthology", author: "Rev. Grace Osei", category: "Languages", pages: 340, cover: "https://images.unsplash.com/photo-1497633762265-9d179a990aa6?w=200&h=260&fit=crop" }
+  ];
+
+  const handleBorrowBook = (book) => {
+    if (borrowedBooks.some((b) => b.title === book.title)) {
+      alert("You have already borrowed this textbook.");
+      return;
+    }
+    const newRecord = {
+      id: "BORROW-" + Date.now().toString().slice(-6),
+      title: book.title,
+      author: book.author,
+      isbn: "GBS-EBOOK-" + Math.floor(Math.random() * 89999 + 10000),
+      borrowDate: new Date().toISOString().split("T")[0],
+      dueDate: new Date(Date.now() + 14 * 86400000).toISOString().split("T")[0],
+      status: "BORROWED",
+      daysRemaining: 14,
+      cover: book.cover
+    };
+    const updated = [newRecord, ...borrowedBooks];
+    setBorrowedBooks(updated);
+    try {
+      localStorage.setItem("gbs_library_borrowed_records", JSON.stringify(updated));
+    } catch {}
+    setFeedback({ type: "success", message: '📖 Textbook "' + book.title + '" checked out successfully! Return due in 14 days.' });
+  };
+
+  const handleReturnBook = (id) => {
+    const updated = borrowedBooks.filter((b) => b.id !== id);
+    setBorrowedBooks(updated);
+    try {
+      localStorage.setItem("gbs_library_borrowed_records", JSON.stringify(updated));
+    } catch {}
+    setFeedback({ type: "success", message: "📥 Textbook returned to school library successfully." });
+  };
 
   // Student-to-Student Peer Chat & Study Circle State
   const [searchIndexInput, setSearchIndexInput] = useState("");
@@ -1449,6 +1580,133 @@ export function StudentDashboard({ initialTab } = {}) {
             </div>
           )}
 
+          {/* CONCLUDED CLASS CATCH-UP NOTICE BANNER */}
+          {concludedClassNotice && !concludedClassNotice.dismissed && (
+            <div style={{
+              background: "linear-gradient(135deg, rgba(30, 58, 138, 0.95), rgba(15, 23, 42, 0.9))",
+              border: "1.5px solid #38bdf8",
+              borderRadius: "14px",
+              padding: "14px 20px",
+              marginBottom: "1.25rem",
+              display: "flex",
+              justifyContent: "space-between",
+              alignItems: "center",
+              flexWrap: "wrap",
+              gap: "12px",
+              boxShadow: "0 8px 24px rgba(0, 0, 0, 0.4)"
+            }}>
+              <div style={{ display: "flex", alignItems: "center", gap: "12px" }}>
+                <span style={{ fontSize: "1.8rem" }}>🎓</span>
+                <div>
+                  <div style={{ fontSize: "0.75rem", color: "#38bdf8", fontWeight: 800, textTransform: "uppercase" }}>
+                    LIVE CLASS CONCLUDED NOTICE • RECORDING AVAILABLE FOR CATCH-UP
+                  </div>
+                  <div style={{ fontSize: "0.95rem", color: "#f8fafc", fontWeight: 800 }}>
+                    {concludedClassNotice.subject}: <em>{concludedClassNotice.topic}</em>
+                  </div>
+                  <div style={{ fontSize: "0.78rem", color: "#cbd5e1", marginTop: "2px" }}>
+                    Concluded {concludedClassNotice.date} at {concludedClassNotice.endingTime} (Duration: {concludedClassNotice.duration}) • Taught by {concludedClassNotice.instructor}
+                  </div>
+                </div>
+              </div>
+
+              <div style={{ display: "flex", gap: "8px", alignItems: "center", flexWrap: "wrap" }}>
+                <button
+                  type="button"
+                  onClick={() => setShowCatchUpModal(true)}
+                  style={{
+                    background: "linear-gradient(135deg, #0284c7, #38bdf8)",
+                    border: "none",
+                    color: "#0f172a",
+                    fontWeight: 900,
+                    borderRadius: "8px",
+                    padding: "8px 16px",
+                    fontSize: "0.82rem",
+                    cursor: "pointer",
+                    boxShadow: "0 4px 14px rgba(56, 189, 248, 0.4)"
+                  }}
+                >
+                  ▶️ Watch Full Catch-Up Recording
+                </button>
+                <button
+                  type="button"
+                  onClick={() => {
+                    alert("Class notes for " + concludedClassNotice.topic + " downloaded.");
+                  }}
+                  style={{
+                    background: "rgba(255, 255, 255, 0.1)",
+                    border: "1px solid rgba(255, 255, 255, 0.2)",
+                    color: "#fff",
+                    borderRadius: "8px",
+                    padding: "8px 14px",
+                    fontSize: "0.82rem",
+                    cursor: "pointer",
+                    fontWeight: 700
+                  }}
+                >
+                  📑 Class Notes PDF
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setConcludedClassNotice({ ...concludedClassNotice, dismissed: true })}
+                  style={{ background: "transparent", border: "none", color: "#94a3b8", cursor: "pointer", fontSize: "1.1rem", padding: "4px" }}
+                  title="Dismiss notification"
+                >
+                  ✕
+                </button>
+              </div>
+            </div>
+          )}
+
+          {/* STUDENT OUTSTANDING FEE ARREARS STATUS CARD */}
+          <div style={{
+            background: "linear-gradient(135deg, rgba(15, 23, 42, 0.95), rgba(30, 41, 59, 0.85))",
+            border: feeBalance > 0 ? "1.5px solid rgba(239, 68, 68, 0.45)" : "1.5px solid rgba(16, 185, 129, 0.45)",
+            borderRadius: "14px",
+            padding: "14px 20px",
+            marginBottom: "1.5rem",
+            display: "flex",
+            justifyContent: "space-between",
+            alignItems: "center",
+            flexWrap: "wrap",
+            gap: "12px"
+          }}>
+            <div style={{ display: "flex", alignItems: "center", gap: "12px" }}>
+              <span style={{ fontSize: "1.8rem" }}>💳</span>
+              <div>
+                <div style={{ fontSize: "0.75rem", color: feeBalance > 0 ? "#f87171" : "#34d399", fontWeight: 800, textTransform: "uppercase" }}>
+                  OFFICIAL STUDENT TUITION & LEDGER STATUS
+                </div>
+                <div style={{ fontSize: "1.15rem", fontWeight: 900, color: "#f8fafc" }}>
+                  Total Billed: GHS 3,200.00 • Total Settled: GHS 2,800.00
+                </div>
+                <div style={{ fontSize: "0.82rem", color: feeBalance > 0 ? "#fca5a5" : "#a7f3d0", marginTop: "2px" }}>
+                  {feeBalance > 0 ? "Outstanding Remaining Fee Arrears: GHS " + feeBalance.toFixed(2) + " (Due: End of Academic Term)" : "✓ All institutional tuition and facility user fees are fully settled."}
+                </div>
+              </div>
+            </div>
+
+            {feeBalance > 0 && (
+              <button
+                type="button"
+                onClick={() => setShowOfficialPaymentModal(true)}
+                style={{
+                  background: "linear-gradient(135deg, #10b981, #059669)",
+                  border: "none",
+                  borderRadius: "8px",
+                  color: "#fff",
+                  fontWeight: 900,
+                  fontSize: "0.88rem",
+                  padding: "10px 18px",
+                  cursor: "pointer",
+                  boxShadow: "0 4px 14px rgba(16, 185, 129, 0.4)"
+                }}
+              >
+                💳 Pay Outstanding Balance (GHS {feeBalance}) →
+              </button>
+            )}
+          </div>
+
           {/* Workspace Tabs Navigation */}
           <nav className="role-tab-nav">
             <button
@@ -1509,6 +1767,14 @@ export function StudentDashboard({ initialTab } = {}) {
               style={{ borderLeft: "3px solid #a855f7" }}
             >
               🎓 Alumni Directory & Hall of Fame
+            </button>
+            <button
+              type="button"
+              className={'role-tab-btn ' + (activeTab === "library" ? "active" : "")}
+              onClick={() => setActiveTab("library")}
+              style={{ borderLeft: "3px solid #f59e0b", color: activeTab === "library" ? "#fbbf24" : undefined, fontWeight: 800 }}
+            >
+              📚 Digital Library & E-Books
             </button>
             <button
               type="button"
@@ -3022,6 +3288,143 @@ export function StudentDashboard({ initialTab } = {}) {
           {/* ======================================================== */}
           {/* TAB 8: PEER CHAT & STUDY CIRCLE VIA INDEX NUMBER         */}
           {/* ======================================================== */}
+          {/* TAB: DIGITAL LIBRARY & E-BOOK HUB */}
+          {activeTab === "library" && (
+            <div className="role-workspace-card">
+              <div className="workspace-title-row">
+                <div>
+                  <h2><span>📚</span> STUDENT DIGITAL LIBRARY & E-BOOK HUB</h2>
+                  <p>Browse educational textbooks, borrow e-books for syllabus study, monitor due date alert countdowns, and return books.</p>
+                </div>
+                <div style={{ display: "flex", gap: "10px", alignItems: "center" }}>
+                  <span className="role-portal-badge" style={{ color: "#fbbf24", background: "rgba(245, 158, 11, 0.15)" }}>
+                    {borrowedBooks.length} Active Borrowed Books
+                  </span>
+                </div>
+              </div>
+
+              {/* Borrowed Books Section */}
+              <div style={{ marginBottom: "2rem" }}>
+                <h3 style={{ color: "#38bdf8", fontSize: "1.05rem", fontWeight: 800, marginBottom: "12px", display: "flex", alignItems: "center", gap: "8px" }}>
+                  <span>📖</span> Currently Borrowed Textbooks & Due Date Alerts:
+                </h3>
+                {borrowedBooks.length === 0 ? (
+                  <div style={{ background: "rgba(15, 23, 42, 0.5)", border: "1px dashed rgba(255, 255, 255, 0.15)", borderRadius: "12px", padding: "1.5rem", textAlign: "center", color: "#94a3b8" }}>
+                    No books currently borrowed. Select a textbook from the catalog below to borrow.
+                  </div>
+                ) : (
+                  <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(320px, 1fr))", gap: "14px" }}>
+                    {borrowedBooks.map((b) => (
+                      <div
+                        key={b.id}
+                        style={{
+                          background: "rgba(15, 23, 42, 0.8)",
+                          border: "1.5px solid rgba(245, 158, 11, 0.4)",
+                          borderRadius: "12px",
+                          padding: "14px",
+                          display: "flex",
+                          gap: "14px"
+                        }}
+                      >
+                        <img
+                          src={b.cover}
+                          alt={b.title}
+                          style={{ width: "70px", height: "95px", objectFit: "cover", borderRadius: "8px" }}
+                        />
+                        <div style={{ flex: 1, display: "flex", flexDirection: "column", justifyContent: "space-between" }}>
+                          <div>
+                            <h4 style={{ margin: "0 0 4px", fontSize: "0.92rem", color: "#f8fafc" }}>{b.title}</h4>
+                            <div style={{ fontSize: "0.76rem", color: "#94a3b8" }}>By: {b.author}</div>
+                            <div style={{ fontSize: "0.72rem", color: "#38bdf8", fontFamily: "monospace", marginTop: "2px" }}>ISBN: {b.isbn}</div>
+                          </div>
+                          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginTop: "8px" }}>
+                            <span style={{ fontSize: "0.75rem", background: "rgba(239, 68, 68, 0.2)", color: "#f87171", padding: "3px 8px", borderRadius: "6px", fontWeight: 800 }}>
+                              ⏱️ Due in {b.daysRemaining} days ({b.dueDate})
+                            </span>
+                            <button
+                              type="button"
+                              onClick={() => handleReturnBook(b.id)}
+                              style={{
+                                background: "rgba(16, 185, 129, 0.2)",
+                                border: "1px solid #10b981",
+                                color: "#34d399",
+                                borderRadius: "6px",
+                                padding: "4px 10px",
+                                fontSize: "0.75rem",
+                                fontWeight: 800,
+                                cursor: "pointer"
+                              }}
+                            >
+                              📥 Return Book
+                            </button>
+                          </div>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+
+              {/* Available Library Catalog */}
+              <div>
+                <h3 style={{ color: "#34d399", fontSize: "1.05rem", fontWeight: 800, marginBottom: "12px", display: "flex", alignItems: "center", gap: "8px" }}>
+                  <span>🏛️</span> Institutional Syllabus E-Book Catalog (Available for Free Loan):
+                </h3>
+                <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(280px, 1fr))", gap: "14px" }}>
+                  {LIBRARY_CATALOG.map((cat) => {
+                    const isAlreadyBorrowed = borrowedBooks.some((b) => b.title === cat.title);
+                    return (
+                      <div
+                        key={cat.id}
+                        style={{
+                          background: "rgba(15, 23, 42, 0.65)",
+                          border: "1px solid rgba(255, 255, 255, 0.08)",
+                          borderRadius: "12px",
+                          padding: "12px",
+                          display: "flex",
+                          gap: "12px"
+                        }}
+                      >
+                        <img
+                          src={cat.cover}
+                          alt={cat.title}
+                          style={{ width: "65px", height: "90px", objectFit: "cover", borderRadius: "6px" }}
+                        />
+                        <div style={{ flex: 1, display: "flex", flexDirection: "column", justifyContent: "space-between" }}>
+                          <div>
+                            <span style={{ fontSize: "0.68rem", background: "rgba(56, 189, 248, 0.15)", color: "#38bdf8", padding: "2px 6px", borderRadius: "4px", fontWeight: 700 }}>
+                              {cat.category}
+                            </span>
+                            <h4 style={{ margin: "4px 0 2px", fontSize: "0.85rem", color: "#f8fafc" }}>{cat.title}</h4>
+                            <div style={{ fontSize: "0.72rem", color: "#94a3b8" }}>{cat.author} • {cat.pages} pgs</div>
+                          </div>
+                          <button
+                            type="button"
+                            disabled={isAlreadyBorrowed}
+                            onClick={() => handleBorrowBook(cat)}
+                            style={{
+                              marginTop: "6px",
+                              background: isAlreadyBorrowed ? "rgba(255, 255, 255, 0.08)" : "linear-gradient(135deg, #0284c7, #0369a1)",
+                              border: "none",
+                              borderRadius: "6px",
+                              color: isAlreadyBorrowed ? "#64748b" : "#fff",
+                              padding: "6px 12px",
+                              fontSize: "0.75rem",
+                              fontWeight: 800,
+                              cursor: isAlreadyBorrowed ? "not-allowed" : "pointer"
+                            }}
+                          >
+                            {isAlreadyBorrowed ? "✓ Currently Borrowed" : "📖 Borrow / Order E-Book"}
+                          </button>
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              </div>
+            </div>
+          )}
+
           {activeTab === "peer-chat" && (
             <div className="role-workspace-card">
               <div className="workspace-title-row">
@@ -3167,6 +3570,26 @@ export function StudentDashboard({ initialTab } = {}) {
                     </div>
 
                     <div style={{ display: "flex", gap: "8px", alignItems: "center" }}>
+                      <button
+                        type="button"
+                        onClick={() => handleStartPeerVideoCall(activePeerChat)}
+                        style={{
+                          background: "linear-gradient(135deg, #0284c7, #06b6d4)",
+                          border: "none",
+                          color: "#ffffff",
+                          borderRadius: "8px",
+                          padding: "6px 14px",
+                          fontSize: "0.78rem",
+                          fontWeight: 800,
+                          cursor: "pointer",
+                          display: "inline-flex",
+                          alignItems: "center",
+                          gap: "6px",
+                          boxShadow: "0 4px 12px rgba(6, 182, 212, 0.4)"
+                        }}
+                      >
+                        📹 Start Live Video Call
+                      </button>
                       <button
                         type="button"
                         onClick={handleArchiveCurrentChat}
@@ -4449,6 +4872,237 @@ export function StudentDashboard({ initialTab } = {}) {
           </div>
         </div>
       )}
+
+      {/* PEER-TO-PEER LIVE VIDEO CALL MODAL */}
+      {activePeerVideoCall && (
+        <div style={{
+          position: "fixed",
+          inset: 0,
+          background: "rgba(2, 6, 23, 0.92)",
+          backdropFilter: "blur(12px)",
+          zIndex: 999999,
+          display: "flex",
+          alignItems: "center",
+          justifyContent: "center",
+          padding: "1rem"
+        }}>
+          <div style={{
+            background: "#090d16",
+            border: "2px solid #06b6d4",
+            borderRadius: "20px",
+            width: "100%",
+            maxWidth: "760px",
+            padding: "1.5rem",
+            boxShadow: "0 25px 60px rgba(0, 0, 0, 0.9)",
+            color: "#fff"
+          }}>
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", borderBottom: "1px solid rgba(255, 255, 255, 0.1)", paddingBottom: "10px", marginBottom: "14px" }}>
+              <div style={{ display: "flex", alignItems: "center", gap: "10px" }}>
+                <span style={{ fontSize: "1.5rem" }}>📹</span>
+                <div>
+                  <h3 style={{ margin: 0, fontSize: "1.1rem", fontWeight: 800, color: "#22d3ee" }}>
+                    LIVE PEER STUDY CALL • {activePeerVideoCall.firstName} {activePeerVideoCall.lastName}
+                  </h3>
+                  <span style={{ fontSize: "0.75rem", color: "#94a3b8" }}>
+                    Verified Scholar Index: {activePeerVideoCall.indexNumber || activePeerVideoCall.studentId} • Encrypted WebRTC Session
+                  </span>
+                </div>
+              </div>
+              <div style={{ background: "rgba(6, 182, 212, 0.2)", border: "1px solid #06b6d4", borderRadius: "20px", padding: "4px 12px", color: "#67e8f9", fontFamily: "monospace", fontWeight: 800 }}>
+                ⏱️ {Math.floor(peerCallDuration / 60).toString().padStart(2, '0')}:{(peerCallDuration % 60).toString().padStart(2, '0')}
+              </div>
+            </div>
+
+            {/* Video Screens Split */}
+            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "12px", height: "300px", marginBottom: "1rem" }}>
+              {/* Remote Peer Stream */}
+              <div style={{ background: "#020617", border: "1.5px solid rgba(255, 255, 255, 0.15)", borderRadius: "14px", position: "relative", overflow: "hidden", display: "flex", alignItems: "center", justifyContent: "center" }}>
+                <img
+                  src={activePeerVideoCall.photo || "https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=400&h=400&fit=crop"}
+                  alt={activePeerVideoCall.firstName}
+                  style={{ width: "100%", height: "100%", objectFit: "cover", filter: isPeerCameraOff ? "blur(20px)" : "none" }}
+                />
+                <div style={{ position: "absolute", bottom: "10px", left: "10px", background: "rgba(0,0,0,0.7)", padding: "3px 8px", borderRadius: "6px", fontSize: "0.72rem", color: "#34d399", fontWeight: 700 }}>
+                  ● {activePeerVideoCall.firstName} ({activePeerVideoCall.currentClass || "Scholar"})
+                </div>
+              </div>
+
+              {/* Local User Stream */}
+              <div style={{ background: "#020617", border: "1.5px solid #06b6d4", borderRadius: "14px", position: "relative", overflow: "hidden", display: "flex", alignItems: "center", justifyContent: "center" }}>
+                <img
+                  src={studentAvatar || "/assets/illustrations/user_face_placeholder.jpg"}
+                  alt="You"
+                  style={{ width: "100%", height: "100%", objectFit: "cover" }}
+                />
+                <div style={{ position: "absolute", bottom: "10px", left: "10px", background: "rgba(0,0,0,0.7)", padding: "3px 8px", borderRadius: "6px", fontSize: "0.72rem", color: "#38bdf8", fontWeight: 700 }}>
+                  ● You (Live Camera Feed)
+                </div>
+                {isPeerScreenSharing && (
+                  <div style={{ position: "absolute", top: "10px", right: "10px", background: "rgba(16, 185, 129, 0.9)", padding: "2px 8px", borderRadius: "4px", fontSize: "0.7rem", fontWeight: 800 }}>
+                    🖥️ Screen Shared
+                  </div>
+                )}
+              </div>
+            </div>
+
+            {/* Video Call Controls Bar */}
+            <div style={{ display: "flex", justifyContent: "center", gap: "12px", alignItems: "center" }}>
+              <button
+                type="button"
+                onClick={() => setIsPeerMicMuted(!isPeerMicMuted)}
+                style={{
+                  padding: "10px 16px",
+                  borderRadius: "10px",
+                  background: isPeerMicMuted ? "#ef4444" : "rgba(30, 41, 59, 0.8)",
+                  border: "1px solid rgba(255, 255, 255, 0.15)",
+                  color: "#fff",
+                  fontWeight: 700,
+                  cursor: "pointer"
+                }}
+              >
+                {isPeerMicMuted ? "🔇 Unmute Mic" : "🎤 Mute Mic"}
+              </button>
+              <button
+                type="button"
+                onClick={() => setIsPeerCameraOff(!isPeerCameraOff)}
+                style={{
+                  padding: "10px 16px",
+                  borderRadius: "10px",
+                  background: isPeerCameraOff ? "#ef4444" : "rgba(30, 41, 59, 0.8)",
+                  border: "1px solid rgba(255, 255, 255, 0.15)",
+                  color: "#fff",
+                  fontWeight: 700,
+                  cursor: "pointer"
+                }}
+              >
+                {isPeerCameraOff ? "📷 Start Camera" : "📷 Stop Camera"}
+              </button>
+              <button
+                type="button"
+                onClick={() => setIsPeerScreenSharing(!isPeerScreenSharing)}
+                style={{
+                  padding: "10px 16px",
+                  borderRadius: "10px",
+                  background: isPeerScreenSharing ? "#10b981" : "rgba(30, 41, 59, 0.8)",
+                  border: "1px solid rgba(255, 255, 255, 0.15)",
+                  color: "#fff",
+                  fontWeight: 700,
+                  cursor: "pointer"
+                }}
+              >
+                {isPeerScreenSharing ? "🖥️ Stop Share" : "🖥️ Share Screen"}
+              </button>
+              <button
+                type="button"
+                onClick={handleEndPeerVideoCall}
+                style={{
+                  padding: "10px 22px",
+                  borderRadius: "10px",
+                  background: "linear-gradient(135deg, #ef4444, #b91c1c)",
+                  border: "none",
+                  color: "#fff",
+                  fontWeight: 900,
+                  cursor: "pointer",
+                  boxShadow: "0 4px 14px rgba(239, 68, 68, 0.4)"
+                }}
+              >
+                🔴 End Video Call
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* CATCH-UP RECORDING VIDEO PLAYER MODAL */}
+      {showCatchUpModal && (
+        <div style={{
+          position: "fixed",
+          inset: 0,
+          background: "rgba(2, 6, 23, 0.9)",
+          backdropFilter: "blur(10px)",
+          zIndex: 999999,
+          display: "flex",
+          alignItems: "center",
+          justifyContent: "center",
+          padding: "1rem"
+        }}>
+          <div style={{
+            background: "#090d16",
+            border: "1.5px solid #38bdf8",
+            borderRadius: "18px",
+            width: "100%",
+            maxWidth: "760px",
+            padding: "1.5rem",
+            boxShadow: "0 25px 60px rgba(0, 0, 0, 0.9)",
+            color: "#fff"
+          }}>
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "1rem" }}>
+              <div>
+                <h3 style={{ margin: 0, fontSize: "1.1rem", fontWeight: 800, color: "#38bdf8" }}>
+                  📹 CATCH-UP RECORDING: {concludedClassNotice.subject}
+                </h3>
+                <span style={{ fontSize: "0.75rem", color: "#94a3b8" }}>
+                  Topic: {concludedClassNotice.topic} • Instructor: {concludedClassNotice.instructor}
+                </span>
+              </div>
+              <button
+                type="button"
+                onClick={() => setShowCatchUpModal(false)}
+                style={{ background: "rgba(255, 255, 255, 0.1)", border: "1px solid rgba(255, 255, 255, 0.2)", color: "#fff", borderRadius: "8px", padding: "4px 10px", cursor: "pointer", fontWeight: 800 }}
+              >
+                ← Back / Close
+              </button>
+            </div>
+
+            <div style={{ position: "relative", width: "100%", height: "380px", background: "#000", borderRadius: "12px", overflow: "hidden", marginBottom: "1rem" }}>
+              <iframe
+                src="https://www.youtube.com/embed/dQw4w9WgXcQ?autoplay=1"
+                title="Concluded Lesson Catch-Up Video"
+                allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+                allowFullScreen
+                style={{ width: "100%", height: "100%", border: "none" }}
+              />
+            </div>
+
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+              <span style={{ fontSize: "0.78rem", color: "#34d399" }}>
+                ✓ Synced to Institutional Video Archive
+              </span>
+              <button
+                type="button"
+                onClick={() => setShowCatchUpModal(false)}
+                style={{
+                  background: "linear-gradient(135deg, #0284c7, #0369a1)",
+                  border: "none",
+                  borderRadius: "8px",
+                  color: "#fff",
+                  fontWeight: 800,
+                  padding: "8px 18px",
+                  cursor: "pointer"
+                }}
+              >
+                ← Back to Student Hub
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* OFFICIAL PAYMENT GATEWAY MODAL FOR OUTSTANDING ARREARS */}
+      <OfficialPaymentGatewayModal
+        isOpen={showOfficialPaymentModal}
+        onClose={() => setShowOfficialPaymentModal(false)}
+        amount={feeBalance}
+        currency="GHS"
+        title="Term 2 School Tuition Arrears"
+        studentId="STU-2026-0891"
+        studentName="Emmanuel Mensah"
+        onSuccess={() => {
+          setFeeBalance(0);
+          localStorage.setItem("gbs_student_fee_STU-2026-0891", "0");
+          setFeedback({ type: "success", message: "🎉 Payment settled officially! Your fee balance is now GHS 0.00." });
+        }}
+      />
 
       <UniversalRoleGuideModal
         role="STUDENT"

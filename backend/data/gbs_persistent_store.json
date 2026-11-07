@@ -336,7 +336,7 @@
       "createdAt": "2026-11-02T21:55:25.367Z"
     }
   ],
-  "updatedAt": "2026-11-07T00:48:20.840Z",
+  "updatedAt": "2026-11-07T12:22:49.714Z",
   "registeredUsers": [
     {
       "id": "usr_12",
@@ -483,6 +483,62 @@
   ],
   "prismaModels": {
     "AuditLog": [
+      {
+        "id": 258,
+        "tenantId": 1,
+        "userId": 17,
+        "module": "ONLINE_MEETING",
+        "action": "ONLINE_MEETINGS_BATCH_DELETED",
+        "details": "Batch deleted 1 online meetings.",
+        "isDeleted": false,
+        "createdAt": "2026-11-07T12:22:49.669Z",
+        "updatedAt": "2026-11-07T12:22:49.669Z"
+      },
+      {
+        "id": 257,
+        "tenantId": 1,
+        "userId": 10,
+        "module": "ONLINE_MEETING",
+        "action": "ONLINE_MEETING_CREATED",
+        "details": "Created ZOOM VIDEO session \"Weekly Interactive STEM Seminar\" (ID: 1) for class N/A",
+        "isDeleted": false,
+        "createdAt": "2026-11-07T12:22:49.228Z",
+        "updatedAt": "2026-11-07T12:22:49.228Z"
+      },
+      {
+        "id": 256,
+        "tenantId": 1,
+        "userId": 10,
+        "action": "ASSIGNMENT_CREATED",
+        "module": "assignments",
+        "details": "{\"count\":2,\"title\":\"Advanced STEM Research Assignment\",\"classes\":[21,20]}",
+        "isDeleted": false,
+        "createdAt": "2026-11-07T12:22:48.967Z",
+        "updatedAt": "2026-11-07T12:22:48.967Z"
+      },
+      {
+        "id": 255,
+        "tenantId": 1,
+        "userId": 1,
+        "action": "SINGLE_STUDENT_ATTENDANCE_MARKED",
+        "module": "ATTENDANCE",
+        "details": "Marked student #18 as PRESENT for class #21 on Sat Nov 07 2026 00:00:00 GMT+0000 (Greenwich Mean Time).",
+        "isDeleted": false,
+        "createdAt": "2026-11-07T12:22:48.277Z",
+        "updatedAt": "2026-11-07T12:22:48.277Z"
+      },
+      {
+        "id": 254,
+        "tenantId": 1,
+        "userId": null,
+        "module": "BIOMETRIC_SECURITY",
+        "action": "FACIAL_LIVENESS_VERIFIED",
+        "details": "Facial liveness verified successfully (Liveness: 98.8%, Anti-spoofing: 99.4%). Root clearance confirmed.",
+        "ipAddress": "127.0.0.1",
+        "isDeleted": false,
+        "createdAt": "2026-11-07T00:49:01.767Z",
+        "updatedAt": "2026-11-07T00:49:01.767Z"
+      },
       {
         "id": 253,
         "tenantId": 1,
@@ -1148,11 +1204,11 @@
         "userId": null,
         "module": "DEV_CONTROL",
         "action": "DEVELOPER_LOGIN_AUTHENTICATED",
-        "details": "Developer session initialized for 'gabosei48@gmail.com' with Level 5 root clearance",
+        "details": "[ARCHIVED] Developer session initialized for 'gabosei48@gmail.com' with Level 5 root clearance",
         "ipAddress": "127.0.0.1",
         "isDeleted": false,
         "createdAt": "2026-11-05T06:50:24.462Z",
-        "updatedAt": "2026-11-05T06:50:24.462Z"
+        "updatedAt": "2026-11-07T00:48:26.276Z"
       },
       {
         "id": 194,
@@ -1160,11 +1216,11 @@
         "userId": null,
         "module": "DEV_CONTROL",
         "action": "DEVELOPER_LOGIN_AUTHENTICATED",
-        "details": "Developer session initialized for 'gabosei48@gmail.com' with Level 5 root clearance",
+        "details": "[ARCHIVED] Developer session initialized for 'gabosei48@gmail.com' with Level 5 root clearance",
         "ipAddress": "127.0.0.1",
         "isDeleted": false,
         "createdAt": "2026-11-05T06:50:23.518Z",
-        "updatedAt": "2026-11-05T06:50:23.518Z"
+        "updatedAt": "2026-11-07T00:48:27.873Z"
       },
       {
         "id": 193,
@@ -1282,11 +1338,11 @@
         "userId": null,
         "module": "DEV_CONTROL",
         "action": "SERVICE_VACUUM_DATABASE",
-        "details": "Executed PostgreSQL ANALYZE and table statistics optimization. Reclaimed space and refreshed planner stats.",
+        "details": "[ARCHIVED] Executed PostgreSQL ANALYZE and table statistics optimization. Reclaimed space and refreshed planner stats.",
         "ipAddress": "127.0.0.1",
         "isDeleted": false,
         "createdAt": "2026-11-04T21:02:22.690Z",
-        "updatedAt": "2026-11-04T21:02:22.690Z"
+        "updatedAt": "2026-11-07T00:48:25.549Z"
       },
       {
         "id": 182,
@@ -1294,11 +1350,11 @@
         "userId": null,
         "module": "DEV_CONTROL",
         "action": "SYSTEM_BACKUP_TRIGGERED",
-        "details": "Triggered encrypted system backup 'gbs_enterprise_backup_1793826128704.sql' (18.5 MB, Reason: Manual Developer Trigger)",
+        "details": "[ARCHIVED] Triggered encrypted system backup 'gbs_enterprise_backup_1793826128704.sql' (18.5 MB, Reason: Manual Developer Trigger)",
         "ipAddress": "127.0.0.1",
         "isDeleted": false,
         "createdAt": "2026-11-04T21:02:08.720Z",
-        "updatedAt": "2026-11-04T21:02:08.720Z"
+        "updatedAt": "2026-11-07T00:48:26.574Z"
       },
       {
         "id": 181,
@@ -1306,11 +1362,11 @@
         "userId": null,
         "module": "BIOMETRIC_SECURITY",
         "action": "FACIAL_LIVENESS_VERIFIED",
-        "details": "Facial liveness verified successfully (Liveness: 98.8%, Anti-spoofing: 99.4%). Root clearance confirmed.",
+        "details": "[ARCHIVED] Facial liveness verified successfully (Liveness: 98.8%, Anti-spoofing: 99.4%). Root clearance confirmed.",
         "ipAddress": "127.0.0.1",
         "isDeleted": false,
         "createdAt": "2026-11-04T20:58:19.324Z",
-        "updatedAt": "2026-11-04T20:58:19.324Z"
+        "updatedAt": "2026-11-07T00:48:27.034Z"
       },
       {
         "id": 180,
@@ -1318,11 +1374,11 @@
         "userId": null,
         "module": "BIOMETRIC_SECURITY",
         "action": "FACIAL_LIVENESS_VERIFIED",
-        "details": "Facial liveness verified successfully (Liveness: 98.8%, Anti-spoofing: 99.4%). Root clearance confirmed.",
+        "details": "[ARCHIVED] Facial liveness verified successfully (Liveness: 98.8%, Anti-spoofing: 99.4%). Root clearance confirmed.",
         "ipAddress": "127.0.0.1",
         "isDeleted": false,
         "createdAt": "2026-11-04T20:58:11.910Z",
-        "updatedAt": "2026-11-04T20:58:11.910Z"
+        "updatedAt": "2026-11-07T00:48:25.891Z"
       },
       {
         "id": 179,
@@ -1330,11 +1386,11 @@
         "userId": null,
         "module": "BIOMETRIC_SECURITY",
         "action": "FACIAL_LIVENESS_VERIFIED",
-        "details": "Facial liveness verified successfully (Liveness: 98.8%, Anti-spoofing: 99.4%). Root clearance confirmed.",
+        "details": "[ARCHIVED] Facial liveness verified successfully (Liveness: 98.8%, Anti-spoofing: 99.4%). Root clearance confirmed.",
         "ipAddress": "127.0.0.1",
         "isDeleted": false,
         "createdAt": "2026-11-04T20:58:05.391Z",
-        "updatedAt": "2026-11-04T20:58:05.391Z"
+        "updatedAt": "2026-11-07T00:48:27.441Z"
       },
       {
         "id": 178,
@@ -3760,6 +3816,38 @@
     ],
     "Assignment": [
       {
+        "id": 17,
+        "tenantId": 1,
+        "classId": 20,
+        "subjectId": 1,
+        "teacherId": 10,
+        "title": "Advanced STEM Research Assignment",
+        "description": "Autonomous research project for secondary and undergraduate scholars.",
+        "dueDate": "2026-11-12T12:22:48.401Z",
+        "maxScore": 100,
+        "attachmentUrl": null,
+        "status": "PUBLISHED",
+        "isDeleted": false,
+        "createdAt": "2026-11-07T12:22:48.805Z",
+        "updatedAt": "2026-11-07T12:22:48.805Z"
+      },
+      {
+        "id": 16,
+        "tenantId": 1,
+        "classId": 21,
+        "subjectId": 1,
+        "teacherId": 10,
+        "title": "Advanced STEM Research Assignment",
+        "description": "Autonomous research project for secondary and undergraduate scholars.",
+        "dueDate": "2026-11-12T12:22:48.401Z",
+        "maxScore": 100,
+        "attachmentUrl": null,
+        "status": "PUBLISHED",
+        "isDeleted": false,
+        "createdAt": "2026-11-07T12:22:48.560Z",
+        "updatedAt": "2026-11-07T12:22:48.560Z"
+      },
+      {
         "id": 15,
         "tenantId": 1,
         "classId": 20,
@@ -4477,6 +4565,20 @@
       }
     ],
     "AttendanceRecord": [
+      {
+        "id": 27,
+        "tenantId": 1,
+        "classId": 21,
+        "studentId": 18,
+        "subjectId": null,
+        "date": "2026-11-07T00:00:00.000Z",
+        "status": "PRESENT",
+        "remarks": null,
+        "markedById": 1,
+        "isDeleted": false,
+        "createdAt": "2026-11-07T12:22:48.153Z",
+        "updatedAt": "2026-11-07T12:22:48.153Z"
+      },
       {
         "id": 26,
         "tenantId": 1,
@@ -6478,4 +6580,5 @@
       }
     ]
   },
-  "systemEnvironment": "PR
+  "systemEnvironment": "PRODUCTION"
+}

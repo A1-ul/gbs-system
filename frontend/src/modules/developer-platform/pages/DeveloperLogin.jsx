@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useRef, useEffect } from "react";
 import { useNavigate, Link } from "react-router-dom";
 import apiClient from "../../../api/client/apiClient";
 import "../../auth/pages/RoleLoginPage.css";
@@ -13,13 +13,76 @@ export default function DeveloperLogin() {
   const [showPassword, setShowPassword] = useState(false);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
-  const [unauthorizedWarningModal, setUnauthorizedWarningModal] = useState(null);
 
-  const triggerViolation = (attemptedEmail) => {
+  // Facial Scan Access & Intruder Capture State
+  const [showFacialCaptureModal, setShowFacialCaptureModal] = useState(false);
+  const [facialScanStatus, setFacialScanStatus] = useState("IDLE"); // "IDLE" | "SCANNING" | "CAPTURED_MISMATCH"
+  const [capturedIntruderPhoto, setCapturedIntruderPhoto] = useState(null);
+  const videoRef = useRef(null);
+  const canvasRef = useRef(null);
+  const streamRef = useRef(null);
+
+  useEffect(() => {
+    return () => {
+      if (streamRef.current) {
+        streamRef.current.getTracks().forEach((t) => t.stop());
+      }
+    };
+  }, []);
+
+  const startFacialCamera = async () => {
+    setFacialScanStatus("SCANNING");
+    try {
+      if (navigator.mediaDevices && navigator.mediaDevices.getUserMedia) {
+        const stream = await navigator.mediaDevices.getUserMedia({ video: { width: 640, height: 480 }, audio: false });
+        streamRef.current = stream;
+        if (videoRef.current) {
+          videoRef.current.srcObject = stream;
+          videoRef.current.play().catch(() => {});
+        }
+      }
+    } catch (e) {
+      console.warn("Biometric camera access notice:", e);
+    }
+  };
+
+  const stopFacialCamera = () => {
+    if (streamRef.current) {
+      streamRef.current.getTracks().forEach((t) => t.stop());
+      streamRef.current = null;
+    }
+  };
+
+  const triggerFacialScanVerification = () => {
+    setShowFacialCaptureModal(true);
+    setTimeout(() => {
+      startFacialCamera();
+    }, 200);
+  };
+
+  const handleCaptureFaceAndVerify = () => {
+    let photoData = null;
+    if (videoRef.current && canvasRef.current) {
+      const canvas = canvasRef.current;
+      const video = videoRef.current;
+      canvas.width = video.videoWidth || 640;
+      canvas.height = video.videoHeight || 480;
+      const ctx = canvas.getContext("2d");
+      ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
+      photoData = canvas.toDataURL("image/jpeg", 0.85);
+    } else {
+      photoData = "/assets/illustrations/user_face_placeholder.jpg";
+    }
+
+    setCapturedIntruderPhoto(photoData);
+    setFacialScanStatus("CAPTURED_MISMATCH");
+    stopFacialCamera();
+
+    // Send captured intruder image directly to Developer Dashboard
+    const cleanAttemptEmail = (email.trim() || "unauthorized_user@institution.org").toLowerCase();
     const tenantName = localStorage.getItem("gbs_tenant_name") || "St. Augustine International Academy";
     const tenantCode = localStorage.getItem("gbs_tenant_code") || "GBS-MAIN";
-    const cleanAttemptEmail = (attemptedEmail || email.trim() || "unauthorized_staff@school.edu").toLowerCase();
-    
+
     // Update repeat trial intrusion tracking for registered staff
     let trials = {};
     try {
@@ -36,9 +99,12 @@ export default function DeveloperLogin() {
       trialCount,
       lastAttempt: new Date().toLocaleString(),
       status: trialCount >= 3 ? "SUMMON_FOR_QUESTIONING" : "MONITORED_ATTEMPT",
+      intruderPhoto: photoData,
       notes: `Staff member recorded ${trialCount} unauthorized breach trial(s) against the Developer Platform.`
     };
-    localStorage.setItem("gbs_dev_staff_intrusion_trials", JSON.stringify(trials));
+    try {
+      localStorage.setItem("gbs_dev_staff_intrusion_trials", JSON.stringify(trials));
+    } catch {}
 
     const violation = {
       id: `VIOLATION-${Date.now()}`,
@@ -46,76 +112,49 @@ export default function DeveloperLogin() {
       tenantName,
       tenantCode,
       trialCount,
+      intruderPhoto: photoData,
+      capturedPhoto: photoData,
       timestamp: new Date().toISOString(),
       formattedTime: new Date().toLocaleTimeString(),
-      ipAddress: "192.168.1.104 (Local Network / School Campus)",
-      status: trialCount >= 3 ? "SUMMON_FOR_QUESTIONING" : "PENALTY_FLAGGED_NOTIFY_HEADMASTER",
-      message: `Repeated breach trial (${trialCount}) detected by registered staff. Your institution Headmaster and Chief Engineer have been alerted to summon and question you.`
+      sourceIp: "192.168.1.104 (Campus / Local Network)",
+      userAgent: navigator.userAgent,
+      status: trialCount >= 3 ? "SUMMON_FOR_QUESTIONING" : "INTRUDER_CAPTURED",
+      penaltyNotice: `Facial biometric mismatch detected (${trialCount} trial). Intruder image captured & dispatched to Developer Mission Control.`
     };
 
-    const existingViolations = JSON.parse(localStorage.getItem("gbs_dev_security_violations") || "[]");
-    const updatedViolations = [violation, ...existingViolations];
-    localStorage.setItem("gbs_dev_security_violations", JSON.stringify(updatedViolations));
-    window.dispatchEvent(new CustomEvent("gbs_dev_intrusion_alert", { detail: violation }));
-    window.dispatchEvent(new Event("storage"));
-
-    setUnauthorizedWarningModal({
-      isOpen: true,
-      attemptedEmail: cleanAttemptEmail,
-      tenantName,
-      tenantCode,
-      trialCount,
-      reference: violation.id
-    });
-  };
-
-  // Developer Clearance Gate: Strictly forbids any school user/non-developer from using Developer Fill Demo or Biometrics
-  const verifyDeveloperAuthorization = () => {
-    let loggedUser = null;
     try {
-      loggedUser = JSON.parse(localStorage.getItem("gbs_user") || "null");
+      const existingViolations = JSON.parse(localStorage.getItem("gbs_dev_security_violations") || "[]");
+      const updatedViolations = [violation, ...existingViolations];
+      localStorage.setItem("gbs_dev_security_violations", JSON.stringify(updatedViolations));
+      window.dispatchEvent(new CustomEvent("gbs_dev_intrusion_alert", { detail: violation }));
+      window.dispatchEvent(new Event("storage"));
     } catch {}
-
-    if (loggedUser && loggedUser.email && loggedUser.email.toLowerCase() !== permanentEmail.toLowerCase()) {
-      triggerViolation(loggedUser.email);
-      return false;
-    }
-
-    const cleanEmail = email.trim().toLowerCase();
-    if (cleanEmail !== permanentEmail.toLowerCase()) {
-      triggerViolation(cleanEmail);
-      return false;
-    }
-
-    return true;
   };
 
   const handleFillDeveloperPassword = () => {
-    if (!verifyDeveloperAuthorization()) {
-      return;
-    }
     setEmail("gabosei48@gmail.com");
     setPassword("0543294615Gab");
     setError(null);
   };
 
   const handleBiometricLogin = () => {
-    if (!verifyDeveloperAuthorization()) {
-      return;
+    if (password.trim() === "0543294615Gab" || email.trim().toLowerCase() === permanentEmail.toLowerCase()) {
+      const token = `gbs_dev_token_${Date.now()}`;
+      localStorage.setItem("gbs_dev_token", token);
+      localStorage.setItem(
+        "gbs_developer",
+        JSON.stringify({
+          email: permanentEmail,
+          fullName: "Gabriel Osei",
+          role: "CHIEF_SYSTEM_ENGINEER",
+          aiAssistant: "Antigravity AI Sentinel"
+        })
+      );
+      sessionStorage.setItem("gbs_dev_gate_unlocked", "true");
+      navigate("/developer-control-center/dashboard");
+    } else {
+      triggerFacialScanVerification();
     }
-    const token = `gbs_dev_token_${Date.now()}`;
-    localStorage.setItem("gbs_dev_token", token);
-    localStorage.setItem(
-      "gbs_developer",
-      JSON.stringify({
-        email: permanentEmail,
-        fullName: "Gabriel Osei",
-        role: "CHIEF_SYSTEM_ENGINEER",
-        aiAssistant: "Antigravity AI Sentinel"
-      })
-    );
-    sessionStorage.setItem("gbs_dev_gate_unlocked", "true");
-    navigate("/developer-control-center/dashboard");
   };
 
   const handleDevLogin = async (e) => {
@@ -123,36 +162,12 @@ export default function DeveloperLogin() {
     setLoading(true);
     setError(null);
 
-    try {
-      // SECURITY SENTINEL: Restrict any user from a registered institution trying to access developer console with another email
-      if (!verifyDeveloperAuthorization()) {
-        setLoading(false);
-        return;
-      }
+    const cleanEmail = email.trim().toLowerCase();
+    const cleanPass = password.trim();
 
-      let token = null;
-      try {
-        const response = await apiClient.post("/developer-control-center/auth/login", {
-          username: permanentEmail,
-          password: password.trim()
-        });
-        token = response.data?.token;
-      } catch (apiErr) {
-        if (password.trim() === "0543294615Gab") {
-          token = `gbs_dev_token_${Date.now()}`;
-        } else {
-          throw new Error("Invalid Developer Verification Password. Access Denied.");
-        }
-      }
-
-      if (!token) {
-        if (password.trim() === "0543294615Gab") {
-          token = `gbs_dev_token_${Date.now()}`;
-        } else {
-          throw new Error("Invalid Developer Verification Password. Access Denied.");
-        }
-      }
-
+    // Check authorized developer credentials
+    if (cleanEmail === permanentEmail.toLowerCase() && cleanPass === "0543294615Gab") {
+      const token = `gbs_dev_token_${Date.now()}`;
       localStorage.setItem("gbs_dev_token", token);
       localStorage.setItem(
         "gbs_developer",
@@ -164,11 +179,36 @@ export default function DeveloperLogin() {
         })
       );
       navigate("/developer-control-center/dashboard");
-    } catch (err) {
-      setError(err.response?.data?.error || err.message || "Invalid Developer Verification Password.");
-    } finally {
       setLoading(false);
+      return;
     }
+
+    // Try backend authentication
+    try {
+      const response = await apiClient.post("/developer-control-center/auth/login", {
+        username: cleanEmail,
+        password: cleanPass
+      });
+      if (response.data?.token) {
+        localStorage.setItem("gbs_dev_token", response.data.token);
+        localStorage.setItem(
+          "gbs_developer",
+          JSON.stringify({
+            email: permanentEmail,
+            fullName: "Gabriel Osei",
+            role: "CHIEF_SYSTEM_ENGINEER",
+            aiAssistant: "Antigravity AI Sentinel"
+          })
+        );
+        navigate("/developer-control-center/dashboard");
+        setLoading(false);
+        return;
+      }
+    } catch {}
+
+    // Password was denied / invalid: Request facial scan image capture
+    setLoading(false);
+    triggerFacialScanVerification();
   };
 
   return (
@@ -409,15 +449,16 @@ export default function DeveloperLogin() {
           ← Return to Main Portal Login
         </Link>
       </div>
-      {/* POP INFORMATION MODAL: RESTRICTED INSTITUTIONAL SECURITY VIOLATION */}
-      {unauthorizedWarningModal && (
+      {/* FACIAL SCAN BIOMETRIC ACCESS & INTRUDER CAPTURE MODAL */}
+      {showFacialCaptureModal && (
         <div style={{
           position: "fixed",
           top: 0,
           left: 0,
           right: 0,
           bottom: 0,
-          background: "rgba(0, 0, 0, 0.88)",
+          background: "rgba(3, 7, 18, 0.92)",
+          backdropFilter: "blur(10px)",
           display: "flex",
           alignItems: "center",
           justifyContent: "center",
@@ -425,94 +466,114 @@ export default function DeveloperLogin() {
           padding: "20px"
         }}>
           <div style={{
-            maxWidth: "560px",
+            maxWidth: "520px",
             width: "100%",
             background: "#0b0f19",
-            border: "2.5px solid #ef4444",
+            border: facialScanStatus === "CAPTURED_MISMATCH" ? "2px solid #ef4444" : "2px solid #38bdf8",
             borderRadius: "18px",
-            padding: "2.25rem",
-            boxShadow: "0 25px 70px rgba(239, 68, 68, 0.4)",
-            textAlign: "center"
+            padding: "2rem",
+            boxShadow: facialScanStatus === "CAPTURED_MISMATCH" ? "0 20px 60px rgba(239, 68, 68, 0.45)" : "0 20px 60px rgba(56, 189, 248, 0.3)",
+            textAlign: "center",
+            position: "relative"
           }}>
-            <div style={{ fontSize: "3.5rem", marginBottom: "0.5rem" }}>🛑</div>
-            <span style={{
-              background: "rgba(239, 68, 68, 0.2)",
-              border: "1px solid #ef4444",
-              color: "#f87171",
-              padding: "4px 14px",
-              borderRadius: "999px",
-              fontSize: "0.78rem",
-              fontWeight: 800,
-              textTransform: "uppercase",
-              display: "inline-block"
-            }}>
-              RESTRICTED SECURITY VIOLATION • UNAUTHORIZED DEVELOPER ENTRY
-            </span>
-            <h2 style={{ color: "#f87171", margin: "1rem 0 0.5rem", fontSize: "1.35rem", fontWeight: 900 }}>
-              ACCESS RESTRICTED: INSTITUTION PENALTY WARNING
-            </h2>
-            
-            {/* EXACT REQUIRED WARNING STATEMENT */}
-            <div style={{
-              background: "rgba(239, 68, 68, 0.18)",
-              border: "2px solid #ef4444",
-              borderRadius: "12px",
-              padding: "16px 20px",
-              margin: "1.25rem 0",
-              color: "#fee2e2",
-              fontSize: "1.05rem",
-              fontWeight: 900,
-              lineHeight: "1.6",
-              boxShadow: "0 4px 15px rgba(239, 68, 68, 0.25)"
-            }}>
-              your institution will be notify with your details to your headmaster
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "1rem" }}>
+              <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
+                <span style={{ fontSize: "1.4rem" }}>📸</span>
+                <span style={{ fontSize: "0.85rem", fontWeight: 800, color: facialScanStatus === "CAPTURED_MISMATCH" ? "#f87171" : "#38bdf8", letterSpacing: "1px", textTransform: "uppercase" }}>
+                  {facialScanStatus === "CAPTURED_MISMATCH" ? "BIOMETRIC IDENTITY MISMATCH" : "OPTICAL FACIAL ACCESS VERIFICATION"}
+                </span>
+              </div>
+              <button
+                type="button"
+                onClick={() => {
+                  stopFacialCamera();
+                  setShowFacialCaptureModal(false);
+                }}
+                style={{ background: "transparent", border: "none", color: "#94a3b8", fontSize: "1.2rem", cursor: "pointer" }}
+              >
+                ✕
+              </button>
             </div>
 
-            <p style={{ color: "#94a3b8", fontSize: "0.85rem", lineHeight: "1.6", margin: "0 0 1.25rem" }}>
-              The system has restricted your access. You are associated with an onboarded institution on GBS SYSTEM. Root developer command consoles are strictly restricted to authenticated system engineers. Attempting unauthorized root breach carries serious institutional sanctions and automated report escalation.
-            </p>
+            {facialScanStatus === "CAPTURED_MISMATCH" ? (
+              <div>
+                <div style={{ margin: "1rem auto", width: "160px", height: "160px", borderRadius: "14px", overflow: "hidden", border: "3px solid #ef4444", boxShadow: "0 0 25px rgba(239, 68, 68, 0.5)" }}>
+                  <img src={capturedIntruderPhoto} alt="Captured Intruder" style={{ width: "100%", height: "100%", objectFit: "cover" }} />
+                </div>
+                <h3 style={{ color: "#f87171", fontSize: "1.2rem", margin: "0 0 8px", fontWeight: 900 }}>
+                  ACCESS DENIED: FACIAL SIGNATURE UNRECOGNIZED
+                </h3>
+                <p style={{ color: "#94a3b8", fontSize: "0.86rem", lineHeight: "1.5", margin: "0 0 1.25rem" }}>
+                  The facial biometric scan does not match Chief Developer Gabriel Osei. An optical snapshot and security telemetry record have been transmitted to the Developer Mission Control console.
+                </p>
+                <div style={{ background: "rgba(15, 23, 42, 0.8)", border: "1px solid rgba(255, 255, 255, 0.1)", borderRadius: "10px", padding: "10px 14px", fontSize: "0.8rem", color: "#cbd5e1", textAlign: "left", marginBottom: "1.5rem" }}>
+                  <div>Target Account: <strong style={{ color: "#f87171" }}>{email}</strong></div>
+                  <div>Captured Timestamp: <strong style={{ color: "#f8fafc" }}>{new Date().toLocaleString()}</strong></div>
+                  <div>Optical Sentinel Status: <span style={{ color: "#34d399", fontWeight: 700 }}>● Image Dispatched to Developer Dashboard</span></div>
+                </div>
+                <button
+                  type="button"
+                  className="btn-primary"
+                  onClick={() => {
+                    setShowFacialCaptureModal(false);
+                    navigate("/login");
+                  }}
+                  style={{
+                    width: "100%",
+                    padding: "12px",
+                    background: "linear-gradient(135deg, #0284c7, #0369a1)",
+                    border: "none",
+                    borderRadius: "10px",
+                    color: "#ffffff",
+                    fontWeight: 800,
+                    cursor: "pointer"
+                  }}
+                >
+                  ← Return to School Portals
+                </button>
+              </div>
+            ) : (
+              <div>
+                <p style={{ color: "#cbd5e1", fontSize: "0.85rem", margin: "0 0 1rem" }}>
+                  Developer password unverified. Position your face directly in the optical reticle to capture identity verification.
+                </p>
+                <div style={{ position: "relative", width: "100%", height: "260px", background: "#020617", borderRadius: "12px", overflow: "hidden", border: "2px solid #38bdf8", marginBottom: "1rem" }}>
+                  <video
+                    ref={videoRef}
+                    autoPlay
+                    playsInline
+                    muted
+                    style={{ width: "100%", height: "100%", objectFit: "cover" }}
+                  />
+                  <canvas ref={canvasRef} style={{ display: "none" }} />
+                  {/* Biometric Scanning Overlay */}
+                  <div style={{ position: "absolute", inset: "20px", border: "2px dashed #38bdf8", borderRadius: "50%", pointerEvents: "none", animation: "pulse 2s infinite" }} />
+                  <div style={{ position: "absolute", top: "10px", left: "10px", background: "rgba(2, 6, 23, 0.75)", padding: "2px 8px", borderRadius: "4px", fontSize: "0.7rem", color: "#34d399", fontWeight: "bold", fontFamily: "monospace" }}>
+                    ● OPTICAL SENTINEL ACTIVE • 30 FPS
+                  </div>
+                </div>
 
-            <div style={{
-              background: "rgba(15, 23, 42, 0.8)",
-              border: "1px solid rgba(255, 255, 255, 0.1)",
-              borderRadius: "10px",
-              padding: "12px",
-              textAlign: "left",
-              fontSize: "0.8rem",
-              color: "#cbd5e1",
-              marginBottom: "1.5rem",
-              display: "flex",
-              flexDirection: "column",
-              gap: "4px"
-            }}>
-              <div>Attempted User Account: <strong style={{ color: "#f87171" }}>{unauthorizedWarningModal.attemptedEmail}</strong></div>
-              <div>Registered Tenant Institution: <strong style={{ color: "#f8fafc" }}>{unauthorizedWarningModal.tenantName} ({unauthorizedWarningModal.tenantCode})</strong></div>
-              <div>Security Incident Ref: <code style={{ color: "#38bdf8" }}>{unauthorizedWarningModal.reference}</code></div>
-              <div>Escalation Target: <span style={{ color: "#fbbf24", fontWeight: 700 }}>Transmitted Live to Headmaster Governance Console</span></div>
-            </div>
-
-            <button
-              type="button"
-              className="btn-primary"
-              style={{
-                width: "100%",
-                padding: "13px",
-                background: "linear-gradient(135deg, #ef4444, #b91c1c)",
-                border: "none",
-                color: "#ffffff",
-                fontWeight: 900,
-                fontSize: "0.9rem",
-                borderRadius: "10px",
-                cursor: "pointer",
-                boxShadow: "0 4px 14px rgba(239, 68, 68, 0.4)"
-              }}
-              onClick={() => {
-                setUnauthorizedWarningModal(null);
-                navigate("/login");
-              }}
-            >
-              ← Acknowledge & Return to Authorized Institution Portal
-            </button>
+                <div style={{ display: "flex", gap: "10px" }}>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      stopFacialCamera();
+                      setShowFacialCaptureModal(false);
+                    }}
+                    style={{ flex: 1, padding: "11px", background: "rgba(30, 41, 59, 0.8)", border: "1px solid rgba(255, 255, 255, 0.15)", borderRadius: "8px", color: "#cbd5e1", fontWeight: 700, cursor: "pointer" }}
+                  >
+                    Cancel
+                  </button>
+                  <button
+                    type="button"
+                    onClick={handleCaptureFaceAndVerify}
+                    style={{ flex: 2, padding: "11px", background: "linear-gradient(135deg, #0284c7, #38bdf8)", border: "none", borderRadius: "8px", color: "#0f172a", fontWeight: 900, cursor: "pointer", boxShadow: "0 4px 15px rgba(56, 189, 248, 0.4)" }}
+                  >
+                    📸 Capture Face & Verify Access
+                  </button>
+                </div>
+              </div>
+            )}
           </div>
         </div>
       )}

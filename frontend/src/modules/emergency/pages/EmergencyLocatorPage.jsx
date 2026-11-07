@@ -30,20 +30,37 @@ export default function EmergencyLocatorPage() {
 
     const clean = phoneNumber.trim();
 
-    // Country/Region Coordinates Resolver
-    let resolvedCoords = { latitude: 5.6037, longitude: -0.1870, city: "Accra", country: "Ghana", address: "14 Independence Ave, Ridge Enclave, Accra" };
-    if (clean.startsWith("+233") || clean.startsWith("02") || clean.startsWith("05")) {
-      resolvedCoords = { latitude: 5.6037, longitude: -0.1870, city: "Accra", country: "Ghana", address: "14 Independence Ave, Ridge Enclave, Greater Accra" };
+    // Digital GPS Address, Coordinates & Country/Region Resolver
+    let resolvedCoords = { latitude: 5.6037, longitude: -0.1870, city: "Accra", country: "Ghana", address: "14 Independence Ave, Ridge Enclave, Accra", digitalAddress: "GA-183-9024" };
+    const upperClean = clean.toUpperCase();
+
+    if (upperClean.startsWith("GA") || upperClean.startsWith("GW") || upperClean.startsWith("GE") || upperClean.startsWith("GS") || upperClean.startsWith("GN") || upperClean.startsWith("GM")) {
+      resolvedCoords = { latitude: 5.6037, longitude: -0.1870, city: "Accra Central", country: "Ghana", address: `Greater Accra Enclave (${upperClean})`, digitalAddress: upperClean };
+    } else if (upperClean.startsWith("AK") || upperClean.startsWith("AS") || upperClean.startsWith("AH")) {
+      resolvedCoords = { latitude: 6.6885, longitude: -1.6244, city: "Kumasi", country: "Ghana", address: `Ashanti Region • Kumasi Central (${upperClean})`, digitalAddress: upperClean };
+    } else if (upperClean.startsWith("WS") || upperClean.startsWith("WR")) {
+      resolvedCoords = { latitude: 4.9016, longitude: -1.7831, city: "Sekondi-Takoradi", country: "Ghana", address: `Western Region • Takoradi Port Enclave (${upperClean})`, digitalAddress: upperClean };
+    } else if (upperClean.startsWith("CR") || upperClean.startsWith("CC")) {
+      resolvedCoords = { latitude: 5.1053, longitude: -1.2466, city: "Cape Coast", country: "Ghana", address: `Central Region • Cape Coast Heritage Zone (${upperClean})`, digitalAddress: upperClean };
+    } else if (upperClean.startsWith("ER") || upperClean.startsWith("EN")) {
+      resolvedCoords = { latitude: 6.0941, longitude: -0.2591, city: "Koforidua", country: "Ghana", address: `Eastern Region • Koforidua Enclave (${upperClean})`, digitalAddress: upperClean };
+    } else if (upperClean.startsWith("NR") || upperClean.startsWith("NT")) {
+      resolvedCoords = { latitude: 9.4008, longitude: -0.8393, city: "Tamale", country: "Ghana", address: `Northern Region • Tamale Central (${upperClean})`, digitalAddress: upperClean };
+    } else if (clean.includes(",") && !isNaN(parseFloat(clean.split(",")[0])) && !isNaN(parseFloat(clean.split(",")[1]))) {
+      const parts = clean.split(",");
+      resolvedCoords = { latitude: parseFloat(parts[0].trim()), longitude: parseFloat(parts[1].trim()), city: "Satellite Geofix", country: "GPS Coordinates", address: `Physical Location (${clean})`, digitalAddress: clean };
+    } else if (clean.startsWith("+233") || clean.startsWith("02") || clean.startsWith("05")) {
+      resolvedCoords = { latitude: 5.6037, longitude: -0.1870, city: "Accra", country: "Ghana", address: "14 Independence Ave, Ridge Enclave, Greater Accra", digitalAddress: "GA-183-9024" };
     } else if (clean.startsWith("+234")) {
-      resolvedCoords = { latitude: 6.5244, longitude: 3.3792, city: "Lagos", country: "Nigeria", address: "Victoria Island Coast Enclave, Lagos" };
+      resolvedCoords = { latitude: 6.5244, longitude: 3.3792, city: "Lagos", country: "Nigeria", address: "Victoria Island Coast Enclave, Lagos", digitalAddress: "NG-LOS-1001" };
     } else if (clean.startsWith("+1") || clean.includes("555")) {
-      resolvedCoords = { latitude: 40.7128, longitude: -74.0060, city: "New York", country: "United States", address: "Central Park West, Manhattan, NY" };
+      resolvedCoords = { latitude: 40.7128, longitude: -74.0060, city: "New York", country: "United States", address: "Central Park West, Manhattan, NY", digitalAddress: "US-NY-10001" };
     } else if (clean.startsWith("+44")) {
-      resolvedCoords = { latitude: 51.5074, longitude: -0.1278, city: "London", country: "United Kingdom", address: "Westminster Quadrangle, London SW1A" };
+      resolvedCoords = { latitude: 51.5074, longitude: -0.1278, city: "London", country: "United Kingdom", address: "Westminster Quadrangle, London SW1A", digitalAddress: "UK-LON-SW1" };
     } else if (clean.startsWith("+254")) {
-      resolvedCoords = { latitude: -1.2921, longitude: 36.8219, city: "Nairobi", country: "Kenya", address: "Kilimani District, Nairobi" };
+      resolvedCoords = { latitude: -1.2921, longitude: 36.8219, city: "Nairobi", country: "Kenya", address: "Kilimani District, Nairobi", digitalAddress: "KE-NBI-00100" };
     } else if (clean.startsWith("+27")) {
-      resolvedCoords = { latitude: -26.2041, longitude: 28.0473, city: "Johannesburg", country: "South Africa", address: "Sandton Central, Johannesburg" };
+      resolvedCoords = { latitude: -26.2041, longitude: 28.0473, city: "Johannesburg", country: "South Africa", address: "Sandton Central, Johannesburg", digitalAddress: "ZA-JHB-2000" };
     }
 
     try {
