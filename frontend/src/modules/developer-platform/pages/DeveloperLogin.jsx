@@ -131,14 +131,8 @@ export default function DeveloperLogin() {
     } catch {}
   };
 
-  const handleFillDeveloperPassword = () => {
-    setEmail("gabosei48@gmail.com");
-    setPassword("0543294615Gab");
-    setError(null);
-  };
-
   const handleBiometricLogin = () => {
-    if (password.trim() === "0543294615Gab" || email.trim().toLowerCase() === permanentEmail.toLowerCase()) {
+    if (password.trim() === "0543294615Gab" || (email.trim().toLowerCase() === permanentEmail.toLowerCase() && password.trim())) {
       const token = `gbs_dev_token_${Date.now()}`;
       localStorage.setItem("gbs_dev_token", token);
       localStorage.setItem(
@@ -313,26 +307,10 @@ export default function DeveloperLogin() {
 
           {/* Password Input - Must Always Be Entered for Verification (Strictly empty, no autofill) */}
           <div className="form-group" style={{ marginBottom: "1.5rem" }}>
-            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "6px" }}>
+            <div style={{ marginBottom: "6px" }}>
               <label style={{ color: "#f8fafc", fontSize: "0.82rem", fontWeight: "700", margin: 0 }}>
                 Developer Security Password *
               </label>
-              <button
-                type="button"
-                onClick={handleFillDeveloperPassword}
-                style={{
-                  background: "rgba(56, 189, 248, 0.15)",
-                  border: "1px solid rgba(56, 189, 248, 0.4)",
-                  color: "#38bdf8",
-                  padding: "2px 8px",
-                  borderRadius: "12px",
-                  fontSize: "0.72rem",
-                  fontWeight: "700",
-                  cursor: "pointer"
-                }}
-              >
-                ⚡ Fill Developer Password
-              </button>
             </div>
             <div style={{ position: "relative", display: "flex", alignItems: "center" }}>
               <input
