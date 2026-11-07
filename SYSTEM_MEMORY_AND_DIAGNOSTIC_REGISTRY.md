@@ -1,14 +1,11 @@
-# GBS MANAGEMENT SYSTEM — Complete System Memory & Diagnostic Cause Registry
+# GBS MANAGEMENT SYSTEM — Master System Memory & Diagnostic Cause Reference
 
-**System Version:** `2.5.0-PRODUCTION`  
-**Verification Status:** `95/95` API Endpoints Passing • `9/9` Dashboards Verified • `0` Runtime Exceptions • `0` Undeclared AST Identifiers  
-**Persistent Memory Store:** `backend/data/gbs_system_memory_snapshot.json` & `backend/data/gbs_persistent_store.json`  
-**Live Diagnostic Endpoint:** `GET /api/v1/dev-control/system-memory` & `POST /api/v1/dev-control/system-memory`  
-**Hosting Platform:** **Render ONLY** (`render.com` — `https://gbs-school.onrender.com`). Production Branch: `origin/main` at `https://github.com/A1-ul/gbs-system.git`.
+> [!IMPORTANT]
+> This master system memory is saved across the project repository ([`SYSTEM_MEMORY_AND_DIAGNOSTIC_REGISTRY.md`](file:///d:/version1/GBS_SYSTEM/SYSTEM_MEMORY_AND_DIAGNOSTIC_REGISTRY.md) and [`gbs_system_memory_snapshot.json`](file:///d:/version1/GBS_SYSTEM/backend/data/gbs_system_memory_snapshot.json)) and wired directly into the live backend diagnostic engine (`GET /api/v1/dev-control/system-memory` & `POST /api/v1/dev-control/system-memory`) so the system and Developer AI Assistant can immediately identify and resolve any operational issue.
 
 ---
 
-## 1. Hosting, Deployment & Repository Architecture
+## 1. Hosting, Continuous Deployment & Repository Architecture
 
 | Parameter | Configuration & Enforcement |
 |---|---|
@@ -25,51 +22,127 @@
 
 | Subsystem | Primary File Path | Responsibility |
 |---|---|---|
-| **Server & Static Engine** | `backend/src/core/server.js` | Express HTTP + Socket.IO server, `/api/v1/onboarding/*`, `/api/v1/topic-videos/*`, SPA static routing. |
-| **Hybrid Cloud-Local Prisma Engine** | `backend/src/core/database/prisma.client.js` | Intercepts Prisma queries & raw SQL when PostgreSQL (`localhost:5432`) is offline; persists to `backend/data/gbs_persistent_store.json`. |
-| **Main Application Router** | `frontend/src/router/AppRouter.jsx` | Maps `/` (Onboarding First Page), `/login`, `/portal/:role/dashboard`, `/developer-control-center/dashboard`, and `/details/:category/:id`. |
-| **Headmaster Executive Command Center** | `frontend/src/modules/portal/pages/dashboards/admin/AdminDashboard.jsx` | Vetting desk, Inbuilt CCTV Surveillance Matrix, Staff OTP Registration, Fee Approvals, and Academic Plan Management. |
-| **Teacher Interactive Workspace** | `frontend/src/modules/portal/pages/dashboards/teacher/TeacherDashboard.jsx` | Individual student-by-student attendance roll call (`PRESENT`, `ABSENT`, `LATE`, `EXCUSED`), exam grading, weekly attendance archives, and lesson note submission. |
-| **Student Scholar Hub** | `frontend/src/modules/portal/pages/dashboards/student/StudentDashboard.jsx` | Examination CBT, Peer-to-Peer Scholar Chat by index search with verification modal & archive, Class Topic Videos, and Academic Schedule. |
-| **Accountant & Finance Portal** | `frontend/src/modules/portal/pages/dashboards/accountant/AccountantDashboard.jsx` | Fee collection, Fee Increment & Recalculation Requests, Alumni Pledges & Philanthropic Gifts Ledger, and Headmaster Procurement Ledger. |
-| **Parent Portal** | `frontend/src/modules/portal/pages/dashboards/parent/ParentDashboard.jsx` | Ward performance, live emergency school bus tracking, fee invoices, admission letters, and official transcript requests. |
-| **Alumni & Convocation Hub** | `frontend/src/modules/alumni/pages/AlumniDashboard.jsx` | Alumni directory, reunions, and philanthropic endowment donations syncing live to Accountant ledger (`gbs_alumni_pledges_and_gifts`). |
-| **Developer Mission Control** | `frontend/src/modules/developer-platform/pages/DeveloperDashboard.jsx` | 49 system control panels, tenant approvals/deletions, deployment logs, backups, and Repeat Staff Intrusion Sentinel. |
-| **Developer Access Gate & Login** | `frontend/src/modules/developer-platform/pages/DeveloperLogin.jsx` | Strict root developer credentials (`gabosei48@gmail.com`). Tracks staff breach trials and flags violators for questioning. |
-| **Dedicated Verification Page** | `frontend/src/components/common/UniversalDetailPage.jsx` | Full-page verification desk with `✅ Verify & Approve`, `⚠️ Issue Query / Revision`, `⚖️ Compliance Endorsement`, and `🖨️ Print`. |
-| **Universal Top Banner & Walkthrough** | `frontend/src/components/common/TopCenterSystemBanner.jsx` | Universal 1-click walkthrough navigation bar across all 9 portals + Onboarding School. |
-| **Mobile Experience Notice Modal** | `frontend/src/components/common/MobileExperienceNoticeModal.jsx` | Alerts mobile viewports: *"YOU WOULD ENJOY THE APPEARANCE WHEN LAUNCHED ON A LAPTOP OR PC."* |
-| **Class Topic Video Platform** | `frontend/src/components/common/ClassTopicVideoPlatform.jsx` | Teacher topic video upload/recording in teacher's absence + Student video playback and notice of workdone. |
+| **Server & Static Engine** | [`server.js`](file:///d:/version1/GBS_SYSTEM/backend/src/core/server.js) | Express HTTP + Socket.IO server, `/api/v1/onboarding/*`, `/api/v1/topic-videos/*`, SPA static routing. |
+| **Hybrid Cloud-Local Prisma Engine** | [`prisma.client.js`](file:///d:/version1/GBS_SYSTEM/backend/src/core/database/prisma.client.js) | Intercepts Prisma queries & raw SQL when PostgreSQL (`localhost:5432`) is offline; persists to [`gbs_persistent_store.json`](file:///d:/version1/GBS_SYSTEM/backend/data/gbs_persistent_store.json). |
+| **Main Application Router** | [`AppRouter.jsx`](file:///d:/version1/GBS_SYSTEM/frontend/src/router/AppRouter.jsx) | Maps `/` (Onboarding First Page), `/login`, `/portal/:role/dashboard`, `/developer-control-center/dashboard`, and `/details/:category/:id`. |
+| **Headmaster Executive Command Center** | [`AdminDashboard.jsx`](file:///d:/version1/GBS_SYSTEM/frontend/src/modules/portal/pages/dashboards/admin/AdminDashboard.jsx) | Vetting desk, Inbuilt CCTV Surveillance Matrix, Staff OTP Registration, Fee Approvals, and Academic Plan Management. |
+| **Teacher Interactive Workspace** | [`TeacherDashboard.jsx`](file:///d:/version1/GBS_SYSTEM/frontend/src/modules/portal/pages/dashboards/teacher/TeacherDashboard.jsx) | Individual student-by-student attendance roll call (`PRESENT`, `ABSENT`, `LATE`, `EXCUSED`), exam grading, weekly attendance archives, and lesson note submission. |
+| **Student Scholar Hub** | [`StudentDashboard.jsx`](file:///d:/version1/GBS_SYSTEM/frontend/src/modules/portal/pages/dashboards/student/StudentDashboard.jsx) | Examination CBT, Peer-to-Peer Scholar Chat by index search with verification modal & archive, Class Topic Videos, and Academic Schedule. |
+| **Accountant & Finance Portal** | [`AccountantDashboard.jsx`](file:///d:/version1/GBS_SYSTEM/frontend/src/modules/portal/pages/dashboards/accountant/AccountantDashboard.jsx) | Fee collection, Fee Increment & Recalculation Requests, Alumni Pledges & Philanthropic Gifts Ledger, and Headmaster Procurement Ledger. |
+| **Parent Portal** | [`ParentDashboard.jsx`](file:///d:/version1/GBS_SYSTEM/frontend/src/modules/portal/pages/dashboards/parent/ParentDashboard.jsx) | Ward performance, live emergency school bus tracking, fee invoices, admission letters, and official transcript requests. |
+| **Alumni & Convocation Hub** | [`AlumniDashboard.jsx`](file:///d:/version1/GBS_SYSTEM/frontend/src/modules/alumni/pages/AlumniDashboard.jsx) | Alumni directory, reunions, and philanthropic endowment donations syncing live to Accountant ledger (`gbs_alumni_pledges_and_gifts`). |
+| **Developer Mission Control** | [`DeveloperDashboard.jsx`](file:///d:/version1/GBS_SYSTEM/frontend/src/modules/developer-platform/pages/DeveloperDashboard.jsx) | 49 system control panels, tenant approvals/deletions, deployment logs, backups, and Repeat Staff Intrusion Sentinel. |
+| **Developer Access Gate & Login** | [`DeveloperLogin.jsx`](file:///d:/version1/GBS_SYSTEM/frontend/src/modules/developer-platform/pages/DeveloperLogin.jsx) | Strict root developer credentials (`gabosei48@gmail.com`). Tracks staff breach trials and flags violators for questioning. |
+| **Dedicated Verification Page** | [`UniversalDetailPage.jsx`](file:///d:/version1/GBS_SYSTEM/frontend/src/components/common/UniversalDetailPage.jsx) | Full-page verification desk with `✅ Verify & Approve`, `⚠️ Issue Query / Revision`, `⚖️ Compliance Endorsement`, and `🖨️ Print`. |
+| **Universal Top Banner & Walkthrough** | [`TopCenterSystemBanner.jsx`](file:///d:/version1/GBS_SYSTEM/frontend/src/components/common/TopCenterSystemBanner.jsx) | Universal 1-click walkthrough navigation bar across all 9 portals + Onboarding School. |
+| **Mobile Experience Notice Modal** | [`MobileExperienceNoticeModal.jsx`](file:///d:/version1/GBS_SYSTEM/frontend/src/components/common/MobileExperienceNoticeModal.jsx) | Alerts mobile viewports: *"YOU WOULD ENJOY THE APPEARANCE WHEN LAUNCHED ON A LAPTOP OR PC."* |
+| **Class Topic Video Platform** | [`ClassTopicVideoPlatform.jsx`](file:///d:/version1/GBS_SYSTEM/frontend/src/components/common/ClassTopicVideoPlatform.jsx) | Teacher topic video upload/recording in teacher's absence + Student video playback and notice of workdone. |
 
 ---
 
-## 3. Diagnostic Cause & Instant Resolution Knowledge Base
+## 3. Critical Rules, Bug Protections & Resolved Issues
 
-| Issue Code | Symptom / Error Message | Exact Root Cause | Permanent Guard & Resolution |
-|---|---|---|---|
-| **`DIAG-DB-P1001`** | `Can't reach database server at localhost:5432` or `Invalid prisma.<model>.<method>() invocation` | Local PostgreSQL service on port `5432` is stopped, or a service module created a standalone `new PrismaClient()` instead of using the shared hybrid engine. | `backend/src/core/database/prisma.client.js` checks TCP reachability (`checkPostgresReachable`) and routes all operations through `executeLocalPrismaQuery()` and `handleRawSqlOffline()` backed by `backend/data/gbs_persistent_store.json`. |
-| **`DIAG-AUTH-TIMEOUT-30000MS`** | Login or onboarding submission hangs with `timeout of 30000ms exceeded` | Auth or onboarding handler waiting on an unreachable database pool or external SMTP/SMS socket. | Fast 350ms TCP check in `prisma.client.js` and `server.js` immediately switches to local persistent execution (<50ms response time). |
-| **`DIAG-PRISMA-ID-MISMATCH`** | `Invalid prisma.user.findUnique()` when passing string IDs (`'usr_admin_master'`, `'tnt_master_default'`) | Offline/fallback tokens carry string IDs whereas Prisma schema defines `id` and `tenantId` as `Int`. | `sanitizeIdsForPrisma()` in `prisma.client.js` and `protect()` in `auth.middleware.js` automatically coerce string IDs to valid integers (`1`). |
-| **`DIAG-OTP-DISPATCH-PRISMA`** | Developer Dashboard OTP SMS dispatch displays `Invalid Prisma` | OTP dispatch tried to write unvalidated fields directly to Prisma when PostgreSQL was unreachable. | `POST /api/v1/dev-control/dispatch-otp` and `POST /api/v1/auth/send-otp` validate inputs, detect global mobile network carriers (`+233` MTN/Telecel/AirtelTigo, `+1`, `+44`, `+234`, etc.), and persist OTP logs safely. |
-| **`DIAG-ONBOARDING-VISIBILITY`** | Headmaster onboarding submission does not show on Developer Dashboard | Mismatched storage endpoints between the public onboarding form and the Developer verification queue. | Unified `POST /api/v1/onboarding/register`, `GET /api/v1/onboarding/registrations`, and `GET /api/v1/dev-control/onboarding-registrations` with Headmaster facial capture photo (`headmasterFacePhoto`). |
-| **`DIAG-TOPIC-VIDEO-SYNC`** | Teacher topic video upload is not visible to students in the teacher's absence | Missing shared endpoint or tab integration between Teacher and Student portals. | `ClassTopicVideoPlatform.jsx` is integrated into `TeacherDashboard.jsx` (`mode="TEACHER"`) and `StudentDashboard.jsx` (`mode="STUDENT"`), synced via `/api/v1/topic-videos`. |
-| **`DIAG-ADMIN-TRANSIENT-FALLBACK`** | Transient display event warning appears when clicking CCTV or other buttons | Undeclared identifiers (`newMobileDeviceForm`, `currencySymbol`, `triggerAudioFeedback`) or broken tab mappings (`classes`, `fees`) threw ReferenceErrors caught by old boundary. | AST analysis verified zero undeclared variables; error boundaries redesigned to never render transient text or re-throw; tab keys normalized to `academics` and `feeApprovals`. |
+```mermaid
+flowchart TD
+    A["User Action on Portal"] --> B{"Error Occurred?"}
+    B -- No --> C["Render Functional UI & Update State"]
+    B -- Yes --> D["Catch in ErrorBoundary"]
+    D --> E["Log Warn to Console"]
+    D --> F["Preserve Universal Top Navigation Bar"]
+    D --> G["Provide Instant Reset / View Restoration Button"]
+    D --> H["NEVER display transient error banner or throw secondary error"]
+```
+
+### A. Permanent Prohibition of Transient Display Message
+* The following error fallback message is strictly prohibited and must **NEVER** appear anywhere in the system:
+  > `"🎓 HEADMASTER EXECUTIVE PORTAL The portal encountered a transient display event. Your institutional records and telemetry data are completely secure."`
+* All error boundaries (`AdminDashboardErrorBoundary`, `StudentDashboardErrorBoundary`) render non-reentrant safe recovery headers with full top navigation, never crashing into a blank white screen.
+
+### B. Inbuilt CCTV & Mobile Handset Pairing
+* Hardware camera stream binds directly to `cctvLiveVideoRef` with IR night vision and thermal AI filters.
+* 6-Channel 30FPS simulated feeds maintain active canvas rendering without throwing undefined references.
+* Mobile pairing form uses `cctvMobileForm` with pairing token `HM-CCTV-8842` for Headmaster smartphone monitoring.
+
+### C. Teacher Roll Call & Examination Grading
+* Attendance requires **tick-by-tick individual student selection** (`PRESENT`, `ABSENT`, `LATE`, `EXCUSED`). No "select-all" button exists.
+* Assessment and examination scoring applies the identical individual scholar entry approach with live grade stamps.
+
+### D. Student Registered Mobile Numbers & Peer Chat
+* Registered student phone numbers are collected and displayed on rosters for direct contact.
+* Peer-to-peer scholar chat permits searching classmates by Index/Admission number, inspecting the candidate in an verification modal, confirming before chatting, and archiving chat threads in `gbs_peer_archived_chats`.
+
+### E. Alumni Gifts & Accountant Ledger Synchronization
+* When an alumnus contributes in [`AlumniDashboard.jsx`](file:///d:/version1/GBS_SYSTEM/frontend/src/modules/alumni/pages/AlumniDashboard.jsx), the transaction is recorded in `gbs_alumni_pledges_and_gifts` with receipt IDs and dispatches `gbs_alumni_gift_added`.
+* [`AccountantDashboard.jsx`](file:///d:/version1/GBS_SYSTEM/frontend/src/modules/portal/pages/dashboards/accountant/AccountantDashboard.jsx) listens for storage events and updates total pledged, total redeemed, and individual donation rows immediately.
+
+### F. Developer Intrusion Sentinel & Staff Tracking
+* Any non-developer staff member attempting to access Developer Mission Control is intercepted by [`DeveloperLogin.jsx`](file:///d:/version1/GBS_SYSTEM/frontend/src/modules/developer-platform/pages/DeveloperLogin.jsx).
+* Breach attempts are recorded in `gbs_dev_staff_intrusion_trials` and `gbs_dev_security_violations` with Gmail, IP address, timestamp, and trial count.
+* Upon reaching 3 trials, status automatically switches to `SUMMON_FOR_QUESTIONING` for executive questioning by the Chief Developer.
+
+### G. Topic Video Notice of Workdone
+* Upon publishing or recording a lesson video in [`ClassTopicVideoPlatform.jsx`](file:///d:/version1/GBS_SYSTEM/frontend/src/components/common/ClassTopicVideoPlatform.jsx), the system displays:
+  > `"✅ Notice of Work Done: Topic Video ... Uploaded & Published Successfully to Class!"`
 
 ---
 
-## 4. Official GBS Student-Based Subscription Pricing Policy
+## 4. Official Student-Based Subscription Pricing Formula
 
-- **Pricing Principle:** 100% student-based subscription model. **NO fixed tenant fees, NO basic package fees, and NO additional monthly access charges.** Inactive, deleted, and archived students do not attract charges, and no student is double-counted.
-- **Official Monthly Student Subscription Rates:**
-  - **Nursery – JHS (`NURSERY_TO_JHS`):** `GH₵ 3` per active student / month
-  - **SHS (`SHS`):** `GH₵ 5` per active student / month
-  - **University (`UNIVERSITY`):** `GH₵ 10` per active student / month
-- **Subscription Formula:**
+- **Pricing Model:** 100% student-based subscription. **No fixed tenant fees, no basic package fees, and no monthly platform surcharges.**
+- **Monthly Rates:**
+  - **Nursery – JHS:** `GH₵ 3` per active student / month
+  - **SHS:** `GH₵ 5` per active student / month
+  - **University:** `GH₵ 10` per active student / month
+- **Billing Duration Discounts:**
+  - `1 Month`: 0% discount
+  - `3 Months`: 3% discount
+  - `6 Months`: 5% discount
+  - `9 Months`: 7% discount
+  - `12 Months`: 10% discount
+- **Formula:**
   $$\text{Invoice Total} = (\text{Active Students} \times \text{Rate} \times \text{Months}) \times (1 - \text{Discount})$$
-- **5 Supported Payment Periods & Discounts:**
-  - **1 month (`1_MONTH`):** `0%` discount (e.g., 300 Nursery–JHS students = `GH₵ 900`)
-  - **3 months (`3_MONTHS`):** `3%` discount (e.g., 300 Nursery–JHS students = `GH₵ 2,619`)
-  - **6 months (`6_MONTHS`):** `5%` discount (e.g., 300 Nursery–JHS students = `GH₵ 5,130`)
-  - **9 months (`9_MONTHS`):** `7%` discount (e.g., 300 Nursery–JHS students = `GH₵ 7,533`)
-  - **12 months (`12_MONTHS`):** `10%` discount (e.g., 300 Nursery–JHS students = `GH₵ 9,720`)
-- **Student Population Growth Policy:** Future invoices automatically increase or decrease when an institution's active student population changes (e.g., `200 → 300` increases next billing; `500 → 400` decreases next billing). Previously paid subscription periods are never retrospectively changed.
+
+---
+
+## 5. Enterprise Functional Upgrades & Advanced Workflow Implementations
+
+### A. Walk-in Admissions Desk for Headmaster
+- **Physical Parent Walk-in Intake:** Physical admissions desk in [`AdminDashboard.jsx`](file:///d:/version1/GBS_SYSTEM/frontend/src/modules/portal/pages/dashboards/admin/AdminDashboard.jsx) allows immediate student registration when parents visit on-site.
+- **Index Number Generation:** System automatically issues institutional index format (`GBS-2026-WKxxx`).
+- **Instant Enrollment & Letter Generation:** Immediate enrollment toggle to register the student directly into the active student roster and generate an official printable admission letter.
+- **Admission Pipeline Filter Controls:** Interactive filter buttons (`ALL`, `WALK_IN`, `ONLINE`, `PENDING`, `APPROVED`, `REJECTED`) dynamically filter the admissions ledger.
+
+### B. Universal Multilingual Support & Educational Sentence Explainer
+- **Country Official Language Picker:** Located in [`UniversalLanguageTranslator.jsx`](file:///d:/version1/GBS_SYSTEM/frontend/src/components/common/UniversalLanguageTranslator.jsx) (mounted in [`App.jsx`](file:///d:/version1/GBS_SYSTEM/frontend/src/App.jsx)) supporting 13 country official languages: Ghana (Twi/Akan), Nigeria (Yoruba, Hausa, Igbo), Kenya (Swahili), France/Francophone (French), Spain/LatAm (Spanish), Germany (German), China (Mandarin), Saudi Arabia/MENA (Arabic), Portugal/Brazil (Portuguese), Japan (Japanese), Russia (Russian), UK/US (English).
+- **Interactive Term & Sentence Explainer:** Translates unclear educational phrases and sentences with speech audio pronunciation, dictionary lookups, and pedagogical meaning breakdowns.
+
+### C. Authentic 3-Step Payment Gateway Engine
+- **Component:** [`OfficialPaymentGatewayModal.jsx`](file:///d:/version1/GBS_SYSTEM/frontend/src/components/common/OfficialPaymentGatewayModal.jsx) mounted globally for student fee settlement and accountant transaction verification.
+- **Supported Payment Methods:**
+  - **Mobile Money (MTN MoMo, Telecel Cash, AT Money):** 60-second animated USSD authorization countdown with simulated prompt on subscriber handset (`"Simulated USSD Prompt: Authorize payment by entering PIN on handset"`).
+  - **Credit / Debit Cards (Visa, Mastercard, Verve, UnionPay):** Real 3D Secure OTP authentication verification step.
+  - **Direct Bank Settlement / Wire:** Live account reference generation and instant settlement clearing.
+- **Official Digital Stamped Receipts:** Stamped with `VERIFIED & AUDITED GBS TREASURY` and printable digital tax invoices with universal `← Back` navigation.
+
+### D. Engineering & Facility Command Center Telemetry
+- **Component:** [`FacilityManagementPage.jsx`](file:///d:/version1/GBS_SYSTEM/frontend/src/modules/facility/pages/FacilityManagementPage.jsx).
+- **Live SLA Countdown Ticker:** Active countdown displaying resolution deadlines for pending tickets.
+- **Optimistic State Recalculation:** When a technician changes ticket status (`RESOLVED`, `IN_PROGRESS`, `PENDING`), KPI telemetry counters (Total Work Orders, Open Issues, Resolved, Urgent Escalations) recalculate immediately.
+
+### E. Peer-to-Peer Live Video Call in Scholar Chat
+- **Component:** [`StudentDashboard.jsx`](file:///d:/version1/GBS_SYSTEM/frontend/src/modules/portal/pages/dashboards/student/StudentDashboard.jsx).
+- **Verified Video Calling:** Students search peer by student index number; upon verification, launches WebRTC-style live video modal with camera stream, microphone mute toggle, video on/off toggle, screen sharing, call timer, and end call control.
+
+### F. Live Class Concluded Notice & Catch-Up Video Player
+- **Component:** [`StudentDashboard.jsx`](file:///d:/version1/GBS_SYSTEM/frontend/src/modules/portal/pages/dashboards/student/StudentDashboard.jsx).
+- **Post-Session Notice:** Notification banner displaying day, time, duration, instructor name, and topic after online live classes conclude.
+- **Catch-Up Playback Modal:** Absent students can open the recording modal to view lecture notes, slides, and recorded video stream.
+
+### G. Student Digital Syllabus Library & Arrears Settlement
+- **Digital Textbook Hub:** Students can borrow and order syllabus textbooks with automatic 14-day due date countdown alert banners (`"Due in 14 days"`) and return management synced to `gbs_library_borrowed_records`.
+- **Outstanding Arrears Banner:** Displays live balance owed with 1-click launch of [`OfficialPaymentGatewayModal.jsx`](file:///d:/version1/GBS_SYSTEM/frontend/src/components/common/OfficialPaymentGatewayModal.jsx).
+
+### H. Accountant Class Tier Grouping & Philanthropic Alumni Outreach
+- **Interactive Class Tier Grouping:** Clicking "Total Registered Classes" on [`AccountantDashboard.jsx`](file:///d:/version1/GBS_SYSTEM/frontend/src/modules/portal/pages/dashboards/accountant/AccountantDashboard.jsx) opens an interactive modal grouping classes into Basic Education, Junior High (JHS), Senior High (SHS), and Tertiary/Pre-University, with stream breakdowns, student headcounts, average tuition, term yield, and annual projections.
+- **Direct Alumni Outreach:** Pledges and donations ledger includes 1-click WhatsApp messaging and Zoom meeting invitations to contact donors.
+
