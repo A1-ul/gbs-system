@@ -224,6 +224,27 @@
       "rootCause": "Missing shared backend endpoint and cross-dashboard component state sync.",
       "resolution": "ClassTopicVideoPlatform.jsx is mounted in both TeacherDashboard.jsx (mode='TEACHER') and StudentDashboard.jsx (mode='STUDENT'), syncing via /api/v1/topic-videos and gbs_class_topic_videos.",
       "status": "PERMANENTLY_GUARDED"
+    },
+    {
+      "issueCode": "DIAG-ADMIN-TRANSIENT-FALLBACK",
+      "symptom": "Transient display event warning appears when clicking CCTV or other buttons on Headmaster dashboard",
+      "rootCause": "Undeclared identifiers (newMobileDeviceForm, currencySymbol, triggerAudioFeedback) and broken tab keys (classes, fees) caused ReferenceErrors caught by old boundary.",
+      "resolution": "AST analysis verified zero undeclared variables; tab keys normalized to academics and feeApprovals; error boundaries redesigned to never render transient fallback text or re-throw.",
+      "status": "PERMANENTLY_GUARDED"
+    },
+    {
+      "issueCode": "DIAG-ALUMNI-ACCOUNTANT-SYNC",
+      "symptom": "Alumni gifts and pledges made in Alumni Dashboard not appearing in Accountant ledger",
+      "rootCause": "handleDonateEndowment only updated local success state without saving to shared storage.",
+      "resolution": "handleDonateEndowment commits gifts to gbs_alumni_pledges_and_gifts with receipt IDs and dispatches gbs_alumni_gift_added; AccountantDashboard actively listens and refreshes live.",
+      "status": "PERMANENTLY_GUARDED"
+    },
+    {
+      "issueCode": "DIAG-DEV-STAFF-INTRUSION-SENTINEL",
+      "symptom": "Need to track registered school staff members attempting unauthorized access to Developer Mission Control",
+      "rootCause": "Non-developer staff attempting developer logins required automated breach auditing and trial aggregation.",
+      "resolution": "DeveloperLogin.jsx tracks Gmail, IP, and trial count in gbs_dev_staff_intrusion_trials; automatically elevates status to SUMMON_FOR_QUESTIONING after 3 attempts.",
+      "status": "PERMANENTLY_GUARDED"
     }
   ],
   "verificationSummary": {
@@ -231,6 +252,7 @@
     "devControlAndAuthEndpointsPassed": "33/33",
     "totalEndpointsVerified": "95/95",
     "browserRoutesWalkedThrough": "9/9",
-    "uncaughtBrowserConsoleErrors": 0
+    "uncaughtBrowserConsoleErrors": 0,
+    "astUndeclaredErrors": 0
   }
 }

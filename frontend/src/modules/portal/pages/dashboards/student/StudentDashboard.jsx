@@ -4471,7 +4471,7 @@ class StudentDashboardErrorBoundary extends React.Component {
     console.warn("Student Dashboard non-fatal event:", error);
     try {
       sessionStorage.setItem("gbs_student_active_tab", "timetable");
-    } catch {}
+    } catch { }
   }
   render() {
     if (this.state.hasError) {

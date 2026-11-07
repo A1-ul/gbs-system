@@ -30,7 +30,7 @@ export default function AccountantDashboard() {
       if (tabParam) return tabParam;
       const stored = sessionStorage.getItem("gbs_accountant_active_tab");
       if (stored) return stored;
-    } catch {}
+    } catch { }
     return "invoices";
   });
 
@@ -43,7 +43,7 @@ export default function AccountantDashboard() {
         url.searchParams.set("tab", activeTab);
         window.history.pushState({ tab: activeTab }, "", url.toString());
       }
-    } catch {}
+    } catch { }
   }, [activeTab]);
 
   useEffect(() => {
@@ -56,18 +56,18 @@ export default function AccountantDashboard() {
         if (savedScroll) {
           setTimeout(() => window.scrollTo(0, parseInt(savedScroll, 10)), 100);
         }
-      } catch {}
+      } catch { }
     };
 
     const handleScroll = () => {
       try {
         sessionStorage.setItem("gbs_accountant_scroll_pos", String(window.scrollY));
-      } catch {}
+      } catch { }
     };
 
     window.addEventListener("popstate", handlePopState);
     window.addEventListener("scroll", handleScroll, { passive: true });
-    
+
     // Initial scroll restore
     const savedScroll = sessionStorage.getItem("gbs_accountant_scroll_pos");
     if (savedScroll) {
@@ -92,7 +92,7 @@ export default function AccountantDashboard() {
     let storedUser = null;
     try {
       storedUser = JSON.parse(localStorage.getItem("gbs_user") || "{}");
-    } catch {}
+    } catch { }
     return (
       localStorage.getItem("gbs_report_school_name") ||
       localStorage.getItem("gbs_tenant_name") ||
@@ -382,7 +382,7 @@ export default function AccountantDashboard() {
     try {
       const stored = JSON.parse(localStorage.getItem("gbs_debtors_list") || "[]");
       if (Array.isArray(stored)) return stored;
-    } catch {}
+    } catch { }
     return [];
   });
 
@@ -391,7 +391,7 @@ export default function AccountantDashboard() {
     try {
       const stored = JSON.parse(localStorage.getItem("gbs_alumni_pledges_and_gifts") || "[]");
       if (Array.isArray(stored) && stored.length > 0) return stored;
-    } catch {}
+    } catch { }
     return [
       {
         id: "ALM-PLG-001",
@@ -459,7 +459,7 @@ export default function AccountantDashboard() {
         if (Array.isArray(stored) && stored.length > 0) {
           setAlumniPledges(stored);
         }
-      } catch {}
+      } catch { }
     };
     window.addEventListener("gbs_alumni_gift_added", syncAlumniGifts);
     window.addEventListener("storage", syncAlumniGifts);
@@ -509,7 +509,7 @@ export default function AccountantDashboard() {
     setAlumniPledges(updated);
     try {
       localStorage.setItem("gbs_alumni_pledges_and_gifts", JSON.stringify(updated));
-    } catch {}
+    } catch { }
 
     setFeedback({
       type: "success",
@@ -532,7 +532,7 @@ export default function AccountantDashboard() {
     try {
       const stored = JSON.parse(localStorage.getItem("gbs_headmaster_procurement_ledger") || "[]");
       if (Array.isArray(stored) && stored.length > 0) return stored;
-    } catch {}
+    } catch { }
     return [
       {
         id: "PO-HM-2026-001",
@@ -618,7 +618,7 @@ export default function AccountantDashboard() {
     setHeadmasterPurchases(updated);
     try {
       localStorage.setItem("gbs_headmaster_procurement_ledger", JSON.stringify(updated));
-    } catch {}
+    } catch { }
 
     setFeedback({
       type: "success",
@@ -638,7 +638,7 @@ export default function AccountantDashboard() {
     try {
       const stored = JSON.parse(localStorage.getItem("gbs_reconciled_payments") || "[]");
       if (Array.isArray(stored)) return stored;
-    } catch {}
+    } catch { }
     return [];
   });
 
@@ -704,7 +704,7 @@ export default function AccountantDashboard() {
           studentCount: counts[c.classCode] !== undefined ? counts[c.classCode] : 0
         }));
       }
-    } catch {}
+    } catch { }
     return [
       { classCode: "NUR-01", className: "Nursery 1", level: "Nursery", tier: "BASIC", studentCount: 0, feePerStudent: 350.00, incrementHistory: [] },
       { classCode: "KG-01", className: "Kindergarten 1", level: "Kindergarten", tier: "BASIC", studentCount: 0, feePerStudent: 400.00, incrementHistory: [] },
@@ -735,7 +735,7 @@ export default function AccountantDashboard() {
     try {
       const saved = JSON.parse(localStorage.getItem("gbs_accountant_increment_requests") || "[]");
       if (Array.isArray(saved) && saved.length > 0) return saved;
-    } catch {}
+    } catch { }
     return [
       {
         id: 101,
@@ -767,7 +767,7 @@ export default function AccountantDashboard() {
     try {
       const saved = localStorage.getItem("gbs_financial_archives");
       if (saved) return JSON.parse(saved);
-    } catch {}
+    } catch { }
     return [];
   });
 
@@ -776,7 +776,7 @@ export default function AccountantDashboard() {
     try {
       const saved = JSON.parse(localStorage.getItem("gbs_account_audit_requests") || "[]");
       if (Array.isArray(saved)) return saved;
-    } catch {}
+    } catch { }
     return [];
   });
 
@@ -841,7 +841,7 @@ export default function AccountantDashboard() {
 
   const currentUser = JSON.parse(
     localStorage.getItem("gbs_user") ||
-      '{"firstName":"Sarah","lastName":"Jenkins","email":"accountant@gbs.edu","role":"ACCOUNTANT"}'
+    '{"firstName":"Sarah","lastName":"Jenkins","email":"accountant@gbs.edu","role":"ACCOUNTANT"}'
   );
 
   useEffect(() => {
@@ -855,14 +855,14 @@ export default function AccountantDashboard() {
       try {
         const saved = JSON.parse(localStorage.getItem("gbs_account_audit_requests") || "[]");
         if (Array.isArray(saved)) setAuditRequests(saved);
-      } catch {}
+      } catch { }
     };
 
     const syncMatrixEnrollments = () => {
       try {
         const counts = JSON.parse(localStorage.getItem("gbs_class_enrollment_counts") || "{}");
         const storedStudents = JSON.parse(localStorage.getItem("gbs_enrolled_students") || localStorage.getItem("gbs_student_roster") || "[]");
-        
+
         const dynamicCounts = { ...counts };
         if (Array.isArray(storedStudents)) {
           storedStudents.forEach((s) => {
@@ -878,7 +878,7 @@ export default function AccountantDashboard() {
             studentCount: dynamicCounts[c.classCode] !== undefined ? dynamicCounts[c.classCode] : c.studentCount
           }));
         });
-      } catch {}
+      } catch { }
     };
 
     syncAuditRequests();
@@ -905,7 +905,7 @@ export default function AccountantDashboard() {
             return combined;
           });
         }
-      } catch {}
+      } catch { }
     };
 
     const handleStudentSync = () => {
@@ -919,14 +919,14 @@ export default function AccountantDashboard() {
             return c;
           })
         );
-      } catch {}
+      } catch { }
     };
 
     const handleIncrementApprovalSync = () => {
       try {
         const reqs = JSON.parse(localStorage.getItem("gbs_accountant_increment_requests") || "[]");
         setPendingIncrementRequests(reqs);
-      } catch {}
+      } catch { }
     };
 
     window.addEventListener("storage", handleSyncPayments);
@@ -1033,9 +1033,9 @@ export default function AccountantDashboard() {
         notes: `Tuition: ${currencySymbol}${tuition.toFixed(2)} | Hostel: ${currencySymbol}${hostel.toFixed(2)} | Discount: ${currencySymbol}${discount.toFixed(2)}. ${newInvoice.notes}`
       });
 
-      setFeedback({ 
-        type: "success", 
-        message: `Invoice generated successfully! Total Billed: ${currencySymbol}${totalAmount.toFixed(2)} (Tuition: ${currencySymbol}${tuition.toFixed(2)} + Hostel: ${currencySymbol}${hostel.toFixed(2)}).` 
+      setFeedback({
+        type: "success",
+        message: `Invoice generated successfully! Total Billed: ${currencySymbol}${totalAmount.toFixed(2)} (Tuition: ${currencySymbol}${tuition.toFixed(2)} + Hostel: ${currencySymbol}${hostel.toFixed(2)}).`
       });
 
       fetchInvoices();
@@ -1114,9 +1114,9 @@ export default function AccountantDashboard() {
         localStorage.setItem("gbs_student_fee_arrears", remaining.toString());
       }
 
-      setFeedback({ 
-        type: "success", 
-        message: `Payment of ${currencySymbol}${newPayment.amountPaid} reconciled via ${newPayment.paymentMethod}! Official Reference: "${formattedRef}".` 
+      setFeedback({
+        type: "success",
+        message: `Payment of ${currencySymbol}${newPayment.amountPaid} reconciled via ${newPayment.paymentMethod}! Official Reference: "${formattedRef}".`
       });
 
       setNewPayment({
@@ -1276,8 +1276,8 @@ export default function AccountantDashboard() {
     }
 
     const targetClassObj = classFeeMatrix.find(c => c.classCode === incrementForm.targetClassCode);
-    const targetName = incrementForm.targetClassCode === "ALL" 
-      ? "All Registered Classes (Institution-Wide)" 
+    const targetName = incrementForm.targetClassCode === "ALL"
+      ? "All Registered Classes (Institution-Wide)"
       : (targetClassObj ? `${targetClassObj.className} (${targetClassObj.classCode})` : incrementForm.targetClassCode);
 
     const newRequest = {
@@ -1298,7 +1298,7 @@ export default function AccountantDashboard() {
       localStorage.setItem("gbs_accountant_increment_requests", JSON.stringify(updated));
       setPendingIncrementRequests(updated);
       window.dispatchEvent(new Event("gbs_increment_requested"));
-    } catch {}
+    } catch { }
 
     setFeedback({
       type: "success",
@@ -1316,7 +1316,7 @@ export default function AccountantDashboard() {
         const newFee = isPct
           ? Math.round((oldFee + (oldFee * (incVal / 100))) * 100) / 100
           : Math.round((oldFee + incVal) * 100) / 100;
-        
+
         const historyEntry = {
           id: Date.now() + Math.random(),
           incrementType: approvedReq.type,
@@ -1421,8 +1421,8 @@ export default function AccountantDashboard() {
 
   return (
     <div className="role-dashboard-wrapper">
-      <div 
-        className="role-dashboard-bg" 
+      <div
+        className="role-dashboard-bg"
         style={{ backgroundImage: `url('/assets/finance-hero-bg.jpg')` }}
       ></div>
       <div className="role-dashboard-overlay"></div>
@@ -1431,9 +1431,9 @@ export default function AccountantDashboard() {
         {/* Header */}
         <header className="role-header">
           <div className="role-header-brand" style={{ display: "flex", alignItems: "center", gap: "16px" }}>
-            <img 
-              src={customSchoolLogo || "/assets/gbs_crest_badge.jpg"} 
-              alt="School Crest" 
+            <img
+              src={customSchoolLogo || "/assets/gbs_crest_badge.jpg"}
+              alt="School Crest"
               style={{
                 width: "58px",
                 height: "58px",
@@ -1455,19 +1455,19 @@ export default function AccountantDashboard() {
           <div className="role-status-ticker">
             <span className="ticker-dot"></span>
             <span>Bursar: <strong>{currentUser.firstName} {currentUser.lastName}</strong></span>
-            
+
             {/* REQUIREMENT: Institutional Currency Selector */}
             <div style={{ display: "flex", alignItems: "center", gap: "6px", marginLeft: "8px" }}>
               <span style={{ fontSize: "0.8rem", color: "#f472b6", fontWeight: "700" }}>💱 Currency:</span>
-              <select 
-                value={currencySymbol} 
+              <select
+                value={currencySymbol}
                 onChange={(e) => handleCurrencyChange(e.target.value)}
-                style={{ 
-                  padding: "4px 8px", 
-                  fontSize: "0.82rem", 
-                  fontWeight: "700", 
-                  borderColor: "#f472b6", 
-                  color: "#f8fafc", 
+                style={{
+                  padding: "4px 8px",
+                  fontSize: "0.82rem",
+                  fontWeight: "700",
+                  borderColor: "#f472b6",
+                  color: "#f8fafc",
                   background: "rgba(15, 23, 42, 0.9)",
                   borderRadius: "6px",
                   cursor: "pointer"
@@ -1482,8 +1482,8 @@ export default function AccountantDashboard() {
           </div>
 
           <div className="role-header-actions">
-            <button 
-              type="button" 
+            <button
+              type="button"
               className="role-action-btn"
               onClick={() => window.history.back()}
               title="Return to previous view or page"
@@ -1494,8 +1494,8 @@ export default function AccountantDashboard() {
             <Link to="/portal/accountant/dashboard" className="role-action-btn">
               🏠 Finance Desk
             </Link>
-            <button 
-              type="button" 
+            <button
+              type="button"
               className="role-action-btn"
               style={{ borderColor: "#10b981", color: "#34d399" }}
               onClick={() => setShowAuditModal(true)}
@@ -1597,9 +1597,9 @@ export default function AccountantDashboard() {
 
             {/* Clear Daytime Real-Life Photograph */}
             <div className="role-hero-photo-frame">
-              <img 
-                src="/assets/login-accountant.jpg" 
-                alt="Finance Office Daytime Workplace" 
+              <img
+                src="/assets/login-accountant.jpg"
+                alt="Finance Office Daytime Workplace"
               />
               <div className="photo-live-pill">
                 <span className="ticker-dot"></span>
@@ -1614,7 +1614,7 @@ export default function AccountantDashboard() {
 
           {/* Feedback Alert */}
           {feedback && (
-            <div 
+            <div
               style={{
                 padding: "12px 18px",
                 borderRadius: "10px",
@@ -1636,74 +1636,74 @@ export default function AccountantDashboard() {
 
           {/* Workspace Tabs Navigation */}
           <nav className="role-tab-nav">
-            <button 
-              type="button" 
+            <button
+              type="button"
               className={`role-tab-btn ${activeTab === "invoices" ? "active" : ""}`}
               onClick={() => setActiveTab("invoices")}
             >
               📑 Student Invoicing & Arrears
             </button>
-            <button 
-              type="button" 
+            <button
+              type="button"
               className={`role-tab-btn ${activeTab === "debtors" ? "active" : ""}`}
               onClick={() => setActiveTab("debtors")}
             >
               ⚠️ Debtor Registry & Arrears Holds
             </button>
-            <button 
-              type="button" 
+            <button
+              type="button"
               className={`role-tab-btn ${activeTab === "fee-structures" ? "active" : ""}`}
               onClick={() => setActiveTab("fee-structures")}
             >
               🏷️ Fee Schedules & Hostel Tiers
             </button>
-            <button 
-              type="button" 
+            <button
+              type="button"
               className={`role-tab-btn ${activeTab === "matrix" ? "active" : ""}`}
               onClick={() => setActiveTab("matrix")}
               style={{ borderLeft: "3px solid #10b981" }}
             >
               💰 Class Fee Matrix & Institutional Total
             </button>
-            <button 
-              type="button" 
+            <button
+              type="button"
               className={`role-tab-btn ${activeTab === "gateways" ? "active" : ""}`}
               onClick={() => setActiveTab("gateways")}
               style={{ borderColor: "#38bdf8", color: activeTab === "gateways" ? "#fff" : "#7dd3fc", fontWeight: 800 }}
             >
               🌐 Payment Gateways & Channels (9)
             </button>
-            <button 
-              type="button" 
+            <button
+              type="button"
               className={`role-tab-btn ${activeTab === "payments" ? "active" : ""}`}
               onClick={() => setActiveTab("payments")}
             >
               💳 Payment Verification & Reconciliations
             </button>
-            <button 
-              type="button" 
+            <button
+              type="button"
               className={`role-tab-btn ${activeTab === "expenses" ? "active" : ""}`}
               onClick={() => setActiveTab("expenses")}
             >
               📉 Operating Expense Ledger & Archive
             </button>
-            <button 
-              type="button" 
+            <button
+              type="button"
               className={`role-tab-btn ${activeTab === "statements" ? "active" : ""}`}
               onClick={() => setActiveTab("statements")}
             >
               📊 Financial Statements & Audit Engine
             </button>
-            <button 
-              type="button" 
+            <button
+              type="button"
               className={`role-tab-btn ${activeTab === "alumni-gifts" ? "active" : ""}`}
               onClick={() => setActiveTab("alumni-gifts")}
               style={{ borderLeft: "3px solid #10b981", color: activeTab === "alumni-gifts" ? "#34d399" : undefined, fontWeight: 800 }}
             >
               🎓 Alumni Pledges & Philanthropic Gifts
             </button>
-            <button 
-              type="button" 
+            <button
+              type="button"
               className={`role-tab-btn ${activeTab === "headmaster-procurement" ? "active" : ""}`}
               onClick={() => setActiveTab("headmaster-procurement")}
               style={{ borderLeft: "3px solid #f59e0b", color: activeTab === "headmaster-procurement" ? "#fbbf24" : undefined, fontWeight: 800 }}
@@ -1780,10 +1780,10 @@ export default function AccountantDashboard() {
                 <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(200px, 1fr))", gap: "12px", marginBottom: "12px" }}>
                   <div>
                     <label style={{ display: "block", fontSize: "0.75rem", color: "#94a3b8", marginBottom: "4px" }}>Invoice Title</label>
-                    <input 
-                      type="text" 
-                      required 
-                      className="filter-input" 
+                    <input
+                      type="text"
+                      required
+                      className="filter-input"
                       style={{ width: "100%" }}
                       value={newInvoice.title}
                       onChange={(e) => setNewInvoice({ ...newInvoice, title: e.target.value })}
@@ -1791,10 +1791,10 @@ export default function AccountantDashboard() {
                   </div>
                   <div>
                     <label style={{ display: "block", fontSize: "0.75rem", color: "#94a3b8", marginBottom: "4px" }}>Student Name</label>
-                    <input 
-                      type="text" 
-                      required 
-                      className="filter-input" 
+                    <input
+                      type="text"
+                      required
+                      className="filter-input"
                       style={{ width: "100%" }}
                       value={newInvoice.studentName}
                       onChange={(e) => setNewInvoice({ ...newInvoice, studentName: e.target.value })}
@@ -1802,10 +1802,10 @@ export default function AccountantDashboard() {
                   </div>
                   <div>
                     <label style={{ display: "block", fontSize: "0.75rem", color: "#94a3b8", marginBottom: "4px" }}>Class / Level</label>
-                    <input 
-                      type="text" 
-                      required 
-                      className="filter-input" 
+                    <input
+                      type="text"
+                      required
+                      className="filter-input"
                       style={{ width: "100%" }}
                       value={newInvoice.studentClass}
                       onChange={(e) => setNewInvoice({ ...newInvoice, studentClass: e.target.value })}
@@ -1815,11 +1815,11 @@ export default function AccountantDashboard() {
                     <label style={{ display: "block", fontSize: "0.75rem", color: "#94a3b8", marginBottom: "4px" }}>
                       Academic Tuition ({currencySymbol})
                     </label>
-                    <input 
-                      type="number" 
-                      step="0.01" 
-                      required 
-                      className="filter-input" 
+                    <input
+                      type="number"
+                      step="0.01"
+                      required
+                      className="filter-input"
                       style={{ width: "100%" }}
                       value={newInvoice.tuitionAmount}
                       onChange={(e) => setNewInvoice({ ...newInvoice, tuitionAmount: e.target.value })}
@@ -1830,11 +1830,11 @@ export default function AccountantDashboard() {
                     <label style={{ display: "block", fontSize: "0.75rem", color: "#38bdf8", marginBottom: "4px", fontWeight: "700" }}>
                       Hostel / Dormitory ({currencySymbol})
                     </label>
-                    <input 
-                      type="number" 
-                      step="0.01" 
-                      required 
-                      className="filter-input" 
+                    <input
+                      type="number"
+                      step="0.01"
+                      required
+                      className="filter-input"
                       style={{ width: "100%", borderColor: "#38bdf8" }}
                       value={newInvoice.hostelAmount}
                       onChange={(e) => setNewInvoice({ ...newInvoice, hostelAmount: e.target.value })}
@@ -1844,10 +1844,10 @@ export default function AccountantDashboard() {
                     <label style={{ display: "block", fontSize: "0.75rem", color: "#94a3b8", marginBottom: "4px" }}>
                       Scholarship / Discount ({currencySymbol})
                     </label>
-                    <input 
-                      type="number" 
-                      step="0.01" 
-                      className="filter-input" 
+                    <input
+                      type="number"
+                      step="0.01"
+                      className="filter-input"
                       style={{ width: "100%" }}
                       value={newInvoice.discountAmount}
                       onChange={(e) => setNewInvoice({ ...newInvoice, discountAmount: e.target.value })}
@@ -1855,10 +1855,10 @@ export default function AccountantDashboard() {
                   </div>
                   <div>
                     <label style={{ display: "block", fontSize: "0.75rem", color: "#94a3b8", marginBottom: "4px" }}>Due Date</label>
-                    <input 
-                      type="date" 
-                      required 
-                      className="filter-input" 
+                    <input
+                      type="date"
+                      required
+                      className="filter-input"
                       style={{ width: "100%" }}
                       value={newInvoice.dueDate}
                       onChange={(e) => setNewInvoice({ ...newInvoice, dueDate: e.target.value })}
@@ -1938,9 +1938,9 @@ export default function AccountantDashboard() {
                   <p>Search students with outstanding arrears, distribute payment reminders, and enforce registration & result holds</p>
                 </div>
                 <div style={{ display: "flex", gap: "10px", alignItems: "center" }}>
-                  <input 
-                    type="text" 
-                    placeholder="Search by student name, class, ID or phone..." 
+                  <input
+                    type="text"
+                    placeholder="Search by student name, class, ID or phone..."
                     className="filter-input"
                     style={{ width: "320px" }}
                     value={debtorSearchQuery}
@@ -1958,7 +1958,7 @@ export default function AccountantDashboard() {
                   🔒 INSTITUTIONAL ENFORCEMENT POLICY:
                 </strong>
                 <p style={{ margin: 0, fontSize: "0.85rem", color: "#fecaca", lineHeight: "1.5" }}>
-                  Students who owe fee arrears are <strong>strictly blocked from registering for classes/courses</strong> at the start of any term/semester, 
+                  Students who owe fee arrears are <strong>strictly blocked from registering for classes/courses</strong> at the start of any term/semester,
                   and their <strong>academic results & transcripts remain locked</strong> until the Accountant confirms settlement.
                 </p>
               </div>
@@ -2025,9 +2025,9 @@ export default function AccountantDashboard() {
                           <td>
                             <div style={{ display: "flex", gap: "6px", flexWrap: "wrap" }}>
                               {d.totalArrears > 0 && (
-                                <button 
-                                  type="button" 
-                                  className="btn-primary" 
+                                <button
+                                  type="button"
+                                  className="btn-primary"
                                   style={{ padding: "6px 10px", fontSize: "0.75rem", background: "linear-gradient(135deg, #f59e0b, #d97706)" }}
                                   onClick={() => handleDistributePaymentReminder(d)}
                                   title="Send payment reminder SMS to parent"
@@ -2036,9 +2036,9 @@ export default function AccountantDashboard() {
                                 </button>
                               )}
                               {d.totalArrears > 0 ? (
-                                <button 
-                                  type="button" 
-                                  className="btn-secondary" 
+                                <button
+                                  type="button"
+                                  className="btn-secondary"
                                   style={{ padding: "6px 10px", fontSize: "0.75rem", borderColor: "#10b981", color: "#34d399" }}
                                   onClick={() => handleClearDebtorHold(d)}
                                   title="Mark as paid and release holds"
@@ -2072,23 +2072,23 @@ export default function AccountantDashboard() {
               <form onSubmit={handleCreateFeeStructure} style={{ background: "rgba(2, 6, 23, 0.5)", padding: "1.25rem", borderRadius: "12px", marginBottom: "1.5rem" }}>
                 <h4 style={{ margin: "0 0 1rem", color: "#3b82f6", fontSize: "0.95rem" }}>Create New Fee or Hostel Tier</h4>
                 <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(200px, 1fr))", gap: "12px", marginBottom: "12px" }}>
-                  <input 
-                    type="text" 
-                    required 
-                    placeholder="Fee Code (e.g. HOSTEL_HALL_A)" 
-                    className="filter-input" 
+                  <input
+                    type="text"
+                    required
+                    placeholder="Fee Code (e.g. HOSTEL_HALL_A)"
+                    className="filter-input"
                     value={newFee.code}
                     onChange={(e) => setNewFee({ ...newFee, code: e.target.value })}
                   />
-                  <input 
-                    type="text" 
-                    required 
-                    placeholder="Fee Name (e.g. Kwame Nkrumah Hall Residency)" 
-                    className="filter-input" 
+                  <input
+                    type="text"
+                    required
+                    placeholder="Fee Name (e.g. Kwame Nkrumah Hall Residency)"
+                    className="filter-input"
                     value={newFee.name}
                     onChange={(e) => setNewFee({ ...newFee, name: e.target.value })}
                   />
-                  <select 
+                  <select
                     className="filter-select"
                     value={newFee.category}
                     onChange={(e) => setNewFee({ ...newFee, category: e.target.value })}
@@ -2098,12 +2098,12 @@ export default function AccountantDashboard() {
                     <option value="LAB">Lab & STEM Equipment Fee</option>
                     <option value="TRANSPORT">Campus Bus Transit</option>
                   </select>
-                  <input 
-                    type="number" 
-                    step="0.01" 
-                    required 
-                    placeholder={`Amount (${currencySymbol})`} 
-                    className="filter-input" 
+                  <input
+                    type="number"
+                    step="0.01"
+                    required
+                    placeholder={`Amount (${currencySymbol})`}
+                    className="filter-input"
                     value={newFee.amount}
                     onChange={(e) => setNewFee({ ...newFee, amount: e.target.value })}
                   />
@@ -2167,7 +2167,7 @@ export default function AccountantDashboard() {
                     </p>
                   </div>
                   <div style={{ display: "flex", gap: "10px", alignItems: "center", flexWrap: "wrap" }}>
-                    <select 
+                    <select
                       className="filter-select"
                       value={matrixTerm}
                       onChange={(e) => setMatrixTerm(e.target.value)}
@@ -2178,7 +2178,7 @@ export default function AccountantDashboard() {
                       <option value="Term 3 (Basic & High Schools)">Term 3 (Basic & High Schools)</option>
                       <option value="Summer Resit Session">Summer Resit Session</option>
                     </select>
-                    <select 
+                    <select
                       className="filter-select"
                       value={matrixTierFilter}
                       onChange={(e) => setMatrixTierFilter(e.target.value)}
@@ -2268,7 +2268,7 @@ export default function AccountantDashboard() {
                   <form onSubmit={handleRequestIncrementApproval} style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(200px, 1fr))", gap: "10px", alignItems: "end" }}>
                     <div>
                       <label style={{ display: "block", fontSize: "0.75rem", color: "#cbd5e1", marginBottom: "4px" }}>Target Class / Level:</label>
-                      <select 
+                      <select
                         className="filter-select"
                         style={{ width: "100%" }}
                         value={incrementForm.targetClassCode}
@@ -2285,7 +2285,7 @@ export default function AccountantDashboard() {
 
                     <div>
                       <label style={{ display: "block", fontSize: "0.75rem", color: "#cbd5e1", marginBottom: "4px" }}>Increment Type:</label>
-                      <select 
+                      <select
                         className="filter-select"
                         style={{ width: "100%" }}
                         value={incrementForm.type}
@@ -2300,7 +2300,7 @@ export default function AccountantDashboard() {
                       <label style={{ display: "block", fontSize: "0.75rem", color: "#cbd5e1", marginBottom: "4px" }}>
                         Requested Value ({incrementForm.type === "PERCENTAGE" ? "%" : currencySymbol}):
                       </label>
-                      <input 
+                      <input
                         type="number"
                         step="0.01"
                         required
@@ -2314,7 +2314,7 @@ export default function AccountantDashboard() {
 
                     <div>
                       <label style={{ display: "block", fontSize: "0.75rem", color: "#cbd5e1", marginBottom: "4px" }}>Increment Justification:</label>
-                      <input 
+                      <input
                         type="text"
                         required
                         className="filter-input"
@@ -2326,8 +2326,8 @@ export default function AccountantDashboard() {
                     </div>
 
                     <div>
-                      <button 
-                        type="submit" 
+                      <button
+                        type="submit"
                         className="btn-primary"
                         disabled={loading}
                         style={{ width: "100%", padding: "10px", background: "linear-gradient(135deg, #ec4899, #be185d)", fontWeight: "700" }}
@@ -2360,7 +2360,7 @@ export default function AccountantDashboard() {
                         return (
                           <tr key={c.classCode}>
                             <td>
-                              <span className="role-portal-badge" style={{ 
+                              <span className="role-portal-badge" style={{
                                 color: c.tier === "UNIVERSITY" ? "#a855f7" : c.tier === "SHS" ? "#38bdf8" : c.tier === "JHS" ? "#f59e0b" : "#34d399",
                                 fontSize: "0.7rem"
                               }}>
@@ -2665,10 +2665,10 @@ export default function AccountantDashboard() {
                   <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(200px, 1fr))", gap: "12px", marginBottom: "12px" }}>
                     <div>
                       <label style={{ display: "block", fontSize: "0.75rem", color: "#94a3b8", marginBottom: "4px" }}>Student Name *</label>
-                      <input 
-                        type="text" 
-                        required 
-                        className="filter-input" 
+                      <input
+                        type="text"
+                        required
+                        className="filter-input"
                         style={{ width: "100%" }}
                         value={newPayment.studentName}
                         onChange={(e) => {
@@ -2683,10 +2683,10 @@ export default function AccountantDashboard() {
                     </div>
                     <div>
                       <label style={{ display: "block", fontSize: "0.75rem", color: "#94a3b8", marginBottom: "4px" }}>Student Class / Index Number</label>
-                      <input 
-                        type="text" 
-                        required 
-                        className="filter-input" 
+                      <input
+                        type="text"
+                        required
+                        className="filter-input"
                         style={{ width: "100%" }}
                         value={newPayment.studentClass}
                         onChange={(e) => {
@@ -2701,11 +2701,11 @@ export default function AccountantDashboard() {
                     </div>
                     <div>
                       <label style={{ display: "block", fontSize: "0.75rem", color: "#94a3b8", marginBottom: "4px" }}>Amount Paid ({currencySymbol})</label>
-                      <input 
-                        type="number" 
-                        step="0.01" 
-                        required 
-                        className="filter-input" 
+                      <input
+                        type="number"
+                        step="0.01"
+                        required
+                        className="filter-input"
                         style={{ width: "100%" }}
                         value={newPayment.amountPaid}
                         onChange={(e) => setNewPayment({ ...newPayment, amountPaid: e.target.value })}
@@ -2713,7 +2713,7 @@ export default function AccountantDashboard() {
                     </div>
                     <div>
                       <label style={{ display: "block", fontSize: "0.75rem", color: "#94a3b8", marginBottom: "4px" }}>Gateway / Channel</label>
-                      <select 
+                      <select
                         className="filter-select"
                         style={{ width: "100%" }}
                         value={newPayment.paymentMethod}
@@ -2732,10 +2732,10 @@ export default function AccountantDashboard() {
                       <label style={{ display: "block", fontSize: "0.75rem", color: "#34d399", marginBottom: "4px", fontWeight: "700" }}>
                         Transaction Reference (Student Name - Class)
                       </label>
-                      <input 
-                        type="text" 
-                        readOnly 
-                        className="filter-input" 
+                      <input
+                        type="text"
+                        readOnly
+                        className="filter-input"
                         style={{ width: "100%", background: "rgba(16, 185, 129, 0.1)", color: "#34d399", fontWeight: "700" }}
                         value={`${newPayment.studentName} - ${newPayment.studentClass}`}
                       />
@@ -2828,16 +2828,16 @@ export default function AccountantDashboard() {
                   <p>Record facility maintenance, power utilities, laboratory supplies, and keep archives of all historical expenses</p>
                 </div>
                 <div style={{ display: "flex", gap: "10px" }}>
-                  <button 
-                    type="button" 
+                  <button
+                    type="button"
                     className={`btn-secondary ${!showArchivedExpenses ? "active" : ""}`}
                     onClick={() => setShowArchivedExpenses(false)}
                     style={{ fontSize: "0.82rem" }}
                   >
                     Active Expenses ({expenses.length || 4})
                   </button>
-                  <button 
-                    type="button" 
+                  <button
+                    type="button"
                     className={`btn-secondary ${showArchivedExpenses ? "active" : ""}`}
                     onClick={() => setShowArchivedExpenses(true)}
                     style={{ fontSize: "0.82rem", borderColor: "#a855f7", color: "#c084fc" }}
@@ -2852,15 +2852,15 @@ export default function AccountantDashboard() {
                   <form onSubmit={handleCreateExpense} style={{ background: "rgba(2, 6, 23, 0.5)", padding: "1.25rem", borderRadius: "12px", marginBottom: "1.5rem" }}>
                     <h4 style={{ margin: "0 0 1rem", color: "#f59e0b", fontSize: "0.95rem" }}>Log Operating Expense</h4>
                     <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(200px, 1fr))", gap: "12px", marginBottom: "12px" }}>
-                      <input 
-                        type="text" 
-                        required 
-                        placeholder="Expense Title (e.g. Fiber Cloud Internet)" 
-                        className="filter-input" 
+                      <input
+                        type="text"
+                        required
+                        placeholder="Expense Title (e.g. Fiber Cloud Internet)"
+                        className="filter-input"
                         value={newExpense.title}
                         onChange={(e) => setNewExpense({ ...newExpense, title: e.target.value })}
                       />
-                      <select 
+                      <select
                         className="filter-select"
                         value={newExpense.category}
                         onChange={(e) => setNewExpense({ ...newExpense, category: e.target.value })}
@@ -2870,19 +2870,19 @@ export default function AccountantDashboard() {
                         <option value="LAB_SUPPLIES">Science Lab Consumables</option>
                         <option value="FACILITIES">Campus Maintenance</option>
                       </select>
-                      <input 
-                        type="number" 
-                        step="0.01" 
-                        required 
-                        placeholder={`Amount (${currencySymbol})`} 
-                        className="filter-input" 
+                      <input
+                        type="number"
+                        step="0.01"
+                        required
+                        placeholder={`Amount (${currencySymbol})`}
+                        className="filter-input"
                         value={newExpense.amount}
                         onChange={(e) => setNewExpense({ ...newExpense, amount: e.target.value })}
                       />
-                      <input 
-                        type="text" 
-                        placeholder="Vendor Name" 
-                        className="filter-input" 
+                      <input
+                        type="text"
+                        placeholder="Vendor Name"
+                        className="filter-input"
                         value={newExpense.vendorName}
                         onChange={(e) => setNewExpense({ ...newExpense, vendorName: e.target.value })}
                       />
@@ -2916,9 +2916,9 @@ export default function AccountantDashboard() {
                               <td style={{ color: "#f87171", fontWeight: "700" }}>{currencySymbol}1,850.00</td>
                               <td>2026-10-14</td>
                               <td>
-                                <button 
-                                  type="button" 
-                                  className="btn-secondary" 
+                                <button
+                                  type="button"
+                                  className="btn-secondary"
                                   style={{ padding: "4px 8px", fontSize: "0.75rem" }}
                                   onClick={() => handleArchiveExpense({ id: 81, expenseNumber: "EXP-2026-081", title: "High-Speed Dedicated Fiber Internet", category: "TECHNOLOGY", amount: 1850.00, vendorName: "Vodafone Cloud Services" })}
                                 >
@@ -2934,9 +2934,9 @@ export default function AccountantDashboard() {
                               <td style={{ color: "#f87171", fontWeight: "700" }}>{currencySymbol}3,400.00</td>
                               <td>2026-10-12</td>
                               <td>
-                                <button 
-                                  type="button" 
-                                  className="btn-secondary" 
+                                <button
+                                  type="button"
+                                  className="btn-secondary"
                                   style={{ padding: "4px 8px", fontSize: "0.75rem" }}
                                   onClick={() => handleArchiveExpense({ id: 82, expenseNumber: "EXP-2026-082", title: "Biochemical Reagents & Physics Lab Supplies", category: "LAB_SUPPLIES", amount: 3400.00, vendorName: "Global Scientific Ltd" })}
                                 >
@@ -2955,9 +2955,9 @@ export default function AccountantDashboard() {
                               <td style={{ color: "#f87171", fontWeight: "700" }}>{currencySymbol}{ex.amount}</td>
                               <td>{new Date(ex.incurredAt).toLocaleDateString()}</td>
                               <td>
-                                <button 
-                                  type="button" 
-                                  className="btn-secondary" 
+                                <button
+                                  type="button"
+                                  className="btn-secondary"
                                   style={{ padding: "4px 8px", fontSize: "0.75rem" }}
                                   onClick={() => handleArchiveExpense(ex)}
                                 >
@@ -3021,16 +3021,16 @@ export default function AccountantDashboard() {
                   <p>Comprehensive telemetry of revenue, collections, expenses, year wrapping, and GAAP/IFRS audits</p>
                 </div>
                 <div style={{ display: "flex", gap: "10px" }}>
-                  <button 
-                    type="button" 
+                  <button
+                    type="button"
                     className="btn-primary"
                     style={{ background: "linear-gradient(135deg, #10b981, #059669)", fontSize: "0.85rem" }}
                     onClick={() => setShowAuditModal(true)}
                   >
                     🔍 Run Full GAAP / IFRS Audit
                   </button>
-                  <button 
-                    type="button" 
+                  <button
+                    type="button"
                     className="btn-primary"
                     style={{ background: "linear-gradient(135deg, #a855f7, #6d28d9)", fontSize: "0.85rem" }}
                     onClick={() => setShowWrapYearModal(true)}
@@ -3092,12 +3092,12 @@ export default function AccountantDashboard() {
                       </span>
                     </div>
                     <h3 style={{ margin: "4px 0 2px", color: "#f8fafc", fontSize: "1.15rem" }}>
-                      {isYearEndClosed 
-                        ? `Financial Year ${currentFinancialYear} Report has been Wrapped & Sealed!` 
+                      {isYearEndClosed
+                        ? `Financial Year ${currentFinancialYear} Report has been Wrapped & Sealed!`
                         : `Financial Year ${currentFinancialYear} Accounting Cycle Completed — Ready for Wrap & Rollover`}
                     </h3>
                     <p style={{ margin: 0, fontSize: "0.82rem", color: "#cbd5e1" }}>
-                      {isYearEndClosed 
+                      {isYearEndClosed
                         ? `The reporting ledger for year ${currentFinancialYear} is archived with immutable cryptographic checksum. Prompting accountant to initialize fresh financial account for ${currentFinancialYear + 1}.`
                         : `When the financial year ends in December, wrap the annual report to display the year number and automatically launch the next calendar year's ledger (${currentFinancialYear + 1}).`}
                     </p>
@@ -3181,33 +3181,33 @@ export default function AccountantDashboard() {
                       archivedYears
                         .filter((ay) => selectedArchiveYearFilter === "ALL" || String(ay.yearNumber || ay.archiveYear) === selectedArchiveYearFilter)
                         .map((ay, idx) => (
-                        <tr key={idx}>
-                          <td><strong style={{ color: "#38bdf8" }}>{ay.academicYear}</strong></td>
-                          <td>
-                            <span className="role-portal-badge" style={{ color: "#34d399", fontWeight: "700" }}>
-                              ARCHIVE YEAR: {ay.yearNumber || ay.archiveYear || "2026"}
-                            </span>
-                          </td>
-                          <td>{ay.wrappedDate}</td>
-                          <td>{currencySymbol}{ay.totalInvoiced.toLocaleString()}</td>
-                          <td style={{ color: "#34d399", fontWeight: "700" }}>{currencySymbol}{ay.totalCollected.toLocaleString()}</td>
-                          <td style={{ color: "#f87171" }}>{currencySymbol}{ay.totalExpenses.toLocaleString()}</td>
-                          <td style={{ color: "#10b981", fontWeight: "700" }}>{currencySymbol}{ay.netSurplus.toLocaleString()}</td>
-                          <td><strong>{ay.collectionRate}</strong></td>
-                          <td><span className="badge-status badge-present">{ay.auditorStatus}</span></td>
-                          <td>
-                            <button
-                              type="button"
-                              className="btn-primary"
-                              style={{ background: "linear-gradient(135deg, #0284c7, #0369a1)", fontSize: "0.75rem", padding: "4px 8px", whiteSpace: "nowrap", cursor: "pointer" }}
-                              onClick={() => navigateToDetail(navigate, "report", ay.academicYear || idx, ay, { returnTab: activeTab })}
-                              title="View full audited fiscal year dossier on dedicated page"
-                            >
-                              📜 Reference Dossier
-                            </button>
-                          </td>
-                        </tr>
-                      ))
+                          <tr key={idx}>
+                            <td><strong style={{ color: "#38bdf8" }}>{ay.academicYear}</strong></td>
+                            <td>
+                              <span className="role-portal-badge" style={{ color: "#34d399", fontWeight: "700" }}>
+                                ARCHIVE YEAR: {ay.yearNumber || ay.archiveYear || "2026"}
+                              </span>
+                            </td>
+                            <td>{ay.wrappedDate}</td>
+                            <td>{currencySymbol}{ay.totalInvoiced.toLocaleString()}</td>
+                            <td style={{ color: "#34d399", fontWeight: "700" }}>{currencySymbol}{ay.totalCollected.toLocaleString()}</td>
+                            <td style={{ color: "#f87171" }}>{currencySymbol}{ay.totalExpenses.toLocaleString()}</td>
+                            <td style={{ color: "#10b981", fontWeight: "700" }}>{currencySymbol}{ay.netSurplus.toLocaleString()}</td>
+                            <td><strong>{ay.collectionRate}</strong></td>
+                            <td><span className="badge-status badge-present">{ay.auditorStatus}</span></td>
+                            <td>
+                              <button
+                                type="button"
+                                className="btn-primary"
+                                style={{ background: "linear-gradient(135deg, #0284c7, #0369a1)", fontSize: "0.75rem", padding: "4px 8px", whiteSpace: "nowrap", cursor: "pointer" }}
+                                onClick={() => navigateToDetail(navigate, "report", ay.academicYear || idx, ay, { returnTab: activeTab })}
+                                title="View full audited fiscal year dossier on dedicated page"
+                              >
+                                📜 Reference Dossier
+                              </button>
+                            </td>
+                          </tr>
+                        ))
                     )}
                   </tbody>
                 </table>
@@ -4103,16 +4103,16 @@ export default function AccountantDashboard() {
               </ul>
             </div>
             <div style={{ display: "flex", gap: "12px", justifyContent: "center", marginTop: "1.5rem" }}>
-              <button 
-                type="button" 
-                className="btn-secondary" 
+              <button
+                type="button"
+                className="btn-secondary"
                 onClick={() => setShowWrapYearModal(false)}
               >
                 Cancel
               </button>
-              <button 
-                type="button" 
-                className="btn-primary" 
+              <button
+                type="button"
+                className="btn-primary"
                 style={{ background: "linear-gradient(135deg, #a855f7, #6d28d9)" }}
                 onClick={handleWrapFinancialYear}
               >
@@ -4161,8 +4161,8 @@ export default function AccountantDashboard() {
                   </span>
                 </div>
               </div>
-              <button 
-                type="button" 
+              <button
+                type="button"
                 onClick={() => setShowAuditModal(false)}
                 style={{ background: "none", border: "none", color: "#94a3b8", cursor: "pointer", fontSize: "1.2rem" }}
               >
@@ -4221,16 +4221,16 @@ export default function AccountantDashboard() {
             </div>
 
             <div style={{ display: "flex", gap: "10px", marginTop: "1.5rem", justifyContent: "flex-end" }}>
-              <button 
-                type="button" 
-                className="btn-secondary" 
+              <button
+                type="button"
+                className="btn-secondary"
                 onClick={() => setShowAuditModal(false)}
               >
                 Close Audit Viewer
               </button>
-              <button 
-                type="button" 
-                className="btn-primary" 
+              <button
+                type="button"
+                className="btn-primary"
                 onClick={() => {
                   window.print();
                 }}
@@ -4340,16 +4340,16 @@ export default function AccountantDashboard() {
             </div>
 
             <div style={{ display: "flex", gap: "10px", marginTop: "1.5rem", justifyContent: "flex-end" }}>
-              <button 
-                type="button" 
-                className="btn-secondary" 
+              <button
+                type="button"
+                className="btn-secondary"
                 onClick={() => setShowArchiveDetailModal(false)}
               >
                 Close Archive Dossier
               </button>
-              <button 
-                type="button" 
-                className="btn-primary" 
+              <button
+                type="button"
+                className="btn-primary"
                 onClick={() => {
                   window.print();
                 }}
@@ -4361,7 +4361,7 @@ export default function AccountantDashboard() {
         </div>
       )}
       {/* Universal Floating Scroll Controls */}
-      <div 
+      <div
         style={{
           position: "fixed",
           bottom: "24px",
