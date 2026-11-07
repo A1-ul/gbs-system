@@ -15,26 +15,53 @@ import "./AdminDashboard.css";
 export function AdminDashboard({ initialTab } = {}) {
   const navigate = useNavigate();
   const [showAdminGuideModal, setShowAdminGuideModal] = useState(false);
+  const currencySymbol = localStorage.getItem("gbs_currency_symbol") || "$";
+
+  const triggerAudioFeedback = (type = "success") => {
+    try {
+      if (typeof window !== "undefined" && (window.AudioContext || window.webkitAudioContext)) {
+        const AudioCtx = window.AudioContext || window.webkitAudioContext;
+        const ctx = new AudioCtx();
+        const osc = ctx.createOscillator();
+        const gain = ctx.createGain();
+        osc.connect(gain);
+        gain.connect(ctx.destination);
+        osc.type = "sine";
+        osc.frequency.setValueAtTime(type === "success" ? 587.33 : 440, ctx.currentTime);
+        gain.gain.setValueAtTime(0.08, ctx.currentTime);
+        gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.25);
+        osc.start();
+        osc.stop(ctx.currentTime + 0.26);
+      }
+    } catch {}
+  };
+  const normalizeAdminTab = (tab) => {
+    if (tab === "classes") return "academics";
+    if (tab === "fees") return "feeApprovals";
+    return tab;
+  };
+
   // Tab & Scroll Preservation (Back button restores exact tab & view)
   const [activeTab, setActiveTabState] = useState(() => {
-    if (initialTab) return initialTab;
+    if (initialTab) return normalizeAdminTab(initialTab);
     const urlTab = new URLSearchParams(window.location.search).get("tab");
-    if (urlTab) return urlTab;
-    return sessionStorage.getItem("gbs_admin_active_tab") || "roster";
+    if (urlTab) return normalizeAdminTab(urlTab);
+    return normalizeAdminTab(sessionStorage.getItem("gbs_admin_active_tab") || "roster");
   });
 
   const setActiveTab = (tab) => {
-    setActiveTabState(tab);
-    sessionStorage.setItem("gbs_admin_active_tab", tab);
+    const cleanTab = normalizeAdminTab(tab);
+    setActiveTabState(cleanTab);
+    sessionStorage.setItem("gbs_admin_active_tab", cleanTab);
     const url = new URL(window.location);
-    url.searchParams.set("tab", tab);
-    window.history.replaceState({ tab }, "", url);
+    url.searchParams.set("tab", cleanTab);
+    window.history.replaceState({ tab: cleanTab }, "", url);
   };
 
   useEffect(() => {
     const handlePopState = () => {
       const tab = new URLSearchParams(window.location.search).get("tab") || sessionStorage.getItem("gbs_admin_active_tab");
-      if (tab) setActiveTabState(tab);
+      if (tab) setActiveTabState(normalizeAdminTab(tab));
     };
     window.addEventListener("popstate", handlePopState);
     return () => window.removeEventListener("popstate", handlePopState);
@@ -4361,7 +4388,7 @@ export function AdminDashboard({ initialTab } = {}) {
                 </div>
                 <div
                   className="role-kpi-box"
-                  onClick={() => setActiveTab("classes")}
+                  onClick={() => setActiveTab("academics")}
                   style={{ cursor: "pointer", transition: "transform 0.15s" }}
                   title="Click to manage institution classes and level tiers"
                 >
@@ -4385,7 +4412,7 @@ export function AdminDashboard({ initialTab } = {}) {
                 </div>
                 <div
                   className="role-kpi-box"
-                  onClick={() => setActiveTab("fees")}
+                  onClick={() => setActiveTab("feeApprovals")}
                   style={{ cursor: "pointer", transition: "transform 0.15s" }}
                   title="Click to inspect billing and student fee ledger"
                 >
@@ -8875,7 +8902,29 @@ export function AdminDashboard({ initialTab } = {}) {
                             <td style={{ fontSize: "0.85rem", color: "#e2e8f0" }}>{req.reason}</td>
                             <td style={{ fontSize: "0.8rem", color: "#94a3b8" }}>{req.requestedAt}</td>
                             <td>
-                              <div style={{ display: "flex", gap: "6px", alignItems: "center" }}>
+                              <div style={{ display: "flex", gap: "6px", alignItems: "center", flexWrap: "wrap" }}>
+                                <button
+                                  type="button"
+                                  onClick={() => navigateToDetail(navigate, "payment", req.id, {
+                                    ...req,
+                                    institutionName: reportSchoolName,
+                                    title: `Fee Increment Request #${req.id} - ${req.targetClassName || req.targetClassCode}`
+                                  }, { returnTab: activeTab })}
+                                  style={{
+                                    padding: "5px 10px",
+                                    fontSize: "0.74rem",
+                                    background: "rgba(139, 92, 246, 0.2)",
+                                    border: "1px solid #8b5cf6",
+                                    color: "#c4b5fd",
+                                    borderRadius: "6px",
+                                    fontWeight: 800,
+                                    cursor: "pointer",
+                                    whiteSpace: "nowrap"
+                                  }}
+                                  title="Open on dedicated full-page verification desk"
+                                >
+                                  📄 Verify on New Page ↗
+                                </button>
                                 <input
                                   type="number"
                                   placeholder={String(req.requestedValue)}
@@ -8956,7 +9005,33 @@ export function AdminDashboard({ initialTab } = {}) {
                           </td>
                           <td>{hist.approvedBy || "Headmaster Arthur Sterling"}</td>
                           <td style={{ color: "#94a3b8" }}>{hist.approvedAt || hist.reviewedAt || hist.requestedAt}</td>
-                          <td style={{ fontStyle: "italic", color: "#cbd5e1" }}>{hist.decisionNotes || "Executive fiscal audit passed."}</td>
+                          <td style={{ fontStyle: "italic", color: "#cbd5e1" }}>
+                            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: "8px" }}>
+                              <span>{hist.decisionNotes || "Executive fiscal audit passed."}</span>
+                              <button
+                                type="button"
+                                onClick={() => navigateToDetail(navigate, "payment", hist.id, {
+                                  ...hist,
+                                  institutionName: reportSchoolName,
+                                  title: `Historical Authorization #${hist.id} - ${hist.targetClassName || hist.targetClassCode}`
+                                }, { returnTab: activeTab })}
+                                style={{
+                                  padding: "3px 8px",
+                                  fontSize: "0.72rem",
+                                  background: "rgba(56, 189, 248, 0.15)",
+                                  border: "1px solid rgba(56, 189, 248, 0.4)",
+                                  color: "#38bdf8",
+                                  borderRadius: "4px",
+                                  fontWeight: 700,
+                                  cursor: "pointer",
+                                  whiteSpace: "nowrap"
+                                }}
+                                title="Inspect authorization dossier on dedicated page"
+                              >
+                                🔍 Inspect Dossier ↗
+                              </button>
+                            </div>
+                          </td>
                         </tr>
                       ))}
                     </tbody>
@@ -9875,7 +9950,36 @@ export function AdminDashboard({ initialTab } = {}) {
               )}
 
               {promotionReport.promotedStudents?.length > 0 && (
-                <div style={{ marginBottom: "1rem", background: "rgba(16, 185, 129, 0.08)", border: "1px solid rgba(16
+                <div style={{ marginBottom: "1rem", background: "rgba(16, 185, 129, 0.08)", border: "1px solid rgba(16, 185, 129, 0.25)", padding: "12px", borderRadius: "8px" }}>
+                  <strong style={{ fontSize: "0.82rem", color: "#34d399", display: "block", marginBottom: "6px" }}>
+                    ✅ Advanced to Next Class Tier:
+                  </strong>
+                  <ul style={{ margin: 0, paddingLeft: "18px", fontSize: "0.8rem", color: "#cbd5e1" }}>
+                    {promotionReport.promotedStudents.map((st, pIdx) => (
+                      <li key={pIdx}>
+                        <strong>{st.name}</strong>: {st.fromClass} ➔ <span style={{ color: "#34d399", fontWeight: 700 }}>{st.toClass}</span>
+                      </li>
+                    ))}
+                  </ul>
+                </div>
+              )}
+
+              <div style={{ display: "flex", justifyContent: "flex-end" }}>
+                <button
+                  type="button"
+                  className="btn-primary"
+                  onClick={() => setShowPromotionModal(false)}
+                >
+                  Close Summary
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* Audit Record Reference Details Modal */}
+        {selectedAuditLog && (
+          <div className="staff-modal-overlay" onClick={() => setSelectedAuditLog(null)}>
             <div className="staff-modal-card" style={{ maxWidth: "650px" }} onClick={(e) => e.stopPropagation()}>
               <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "1.25rem", borderBottom: "1px solid rgba(255,255,255,0.1)", paddingBottom: "10px" }}>
                 <div style={{ display: "flex", alignItems: "center", gap: "10px" }}>
@@ -13196,20 +13300,46 @@ class AdminDashboardErrorBoundary extends React.Component {
     return { hasError: true };
   }
   componentDidCatch(error, errorInfo) {
-    console.warn("Headmaster Dashboard non-fatal event auto-recovered:", error);
+    console.warn("Headmaster Dashboard non-fatal event:", error);
     try {
       sessionStorage.setItem("gbs_admin_active_tab", "roster");
     } catch {}
-    // Reset state after microtask to keep portal alive and fluid
-    setTimeout(() => {
-      if (this.state.hasError) {
-        this.setState({ hasError: false });
-      }
-    }, 100);
   }
   render() {
     if (this.state.hasError) {
-      return <AdminDashboard initialTab="roster" />;
+      return (
+        <div style={{ minHeight: "100vh", background: "#0b0f19", color: "#f8fafc", padding: "20px" }}>
+          <TopCenterSystemBanner currentRole="ADMIN" activeDashboard="ADMIN" />
+          <div style={{ maxWidth: "620px", margin: "60px auto", textAlign: "center", background: "rgba(15, 23, 42, 0.95)", border: "1.5px solid #38bdf8", borderRadius: "16px", padding: "32px", boxShadow: "0 20px 50px rgba(0,0,0,0.8)" }}>
+            <span style={{ fontSize: "2.8rem" }}>🎓</span>
+            <h3 style={{ color: "#38bdf8", margin: "12px 0 8px" }}>Headmaster Executive Command Center</h3>
+            <p style={{ color: "#94a3b8", fontSize: "0.88rem", marginBottom: "20px" }}>
+              Switching directly to the Institutional Roster & Enrolment Master View.
+            </p>
+            <div style={{ display: "flex", gap: "12px", justifyContent: "center" }}>
+              <button
+                type="button"
+                onClick={() => {
+                  sessionStorage.setItem("gbs_admin_active_tab", "roster");
+                  window.location.href = "/portal/admin/dashboard?tab=roster";
+                }}
+                style={{ padding: "10px 22px", background: "linear-gradient(135deg, #0284c7, #38bdf8)", border: "none", borderRadius: "8px", color: "#0f172a", fontWeight: 800, cursor: "pointer" }}
+              >
+                📋 Open Institutional Roster
+              </button>
+              <button
+                type="button"
+                onClick={() => {
+                  window.location.href = "/portal/admin/dashboard?tab=roster";
+                }}
+                style={{ padding: "10px 18px", background: "rgba(30, 41, 59, 0.9)", border: "1px solid rgba(255,255,255,0.15)", borderRadius: "8px", color: "#cbd5e1", fontWeight: 700, cursor: "pointer" }}
+              >
+                🔄 Reload Executive View
+              </button>
+            </div>
+          </div>
+        </div>
+      );
     }
     return this.props.children;
   }

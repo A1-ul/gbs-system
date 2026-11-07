@@ -475,9 +475,33 @@ export default function AlumniDashboard() {
     alert(`Zoom Reunion scheduled successfully!\n\nDirect 1-Click Join Link:\n${directUrl}\n\nAll alumni and attendees can join with ZERO prompt for meeting ID or password.`);
   };
 
-  // Handle Donate Endowment
+  // Handle Donate Endowment: Records the gift in the institutional ledger for the Accountant Dashboard
   const handleDonateEndowment = (e) => {
     e.preventDefault();
+    const amount = parseFloat(donationAmount) || 100;
+    const newGift = {
+      id: `ALM-PLG-${Date.now().toString().slice(-4)}`,
+      donorName: alumniProfile?.fullName || "Dr. Kwesi Appiah (Alumnus)",
+      gradClass: `Class of ${alumniProfile?.gradYear || "2018"}`,
+      contact: alumniProfile?.phone || "+233 24 555 8192",
+      email: alumniProfile?.email || "alumni@alumni.org",
+      campaign: donationFund ? donationFund.replace(/_/g, " ") : "General Campus Endowment",
+      pledgedAmount: amount,
+      redeemedAmount: amount,
+      fulfillmentStatus: "FULFILLED",
+      paymentMethod: "Online Card / Mobile Money",
+      date: new Date().toISOString().split("T")[0],
+      receiptRef: `GBS-ALM-REC-${Math.floor(1000 + Math.random() * 9000)}`
+    };
+
+    try {
+      const existing = JSON.parse(localStorage.getItem("gbs_alumni_pledges_and_gifts") || "[]");
+      const updated = [newGift, ...existing];
+      localStorage.setItem("gbs_alumni_pledges_and_gifts", JSON.stringify(updated));
+      window.dispatchEvent(new Event("gbs_alumni_gift_added"));
+      window.dispatchEvent(new Event("storage"));
+    } catch {}
+
     setDonationSuccess(true);
     setTimeout(() => {
       setShowDonateModal(false);

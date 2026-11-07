@@ -452,6 +452,23 @@ export default function AccountantDashboard() {
     ];
   });
 
+  useEffect(() => {
+    const syncAlumniGifts = () => {
+      try {
+        const stored = JSON.parse(localStorage.getItem("gbs_alumni_pledges_and_gifts") || "[]");
+        if (Array.isArray(stored) && stored.length > 0) {
+          setAlumniPledges(stored);
+        }
+      } catch {}
+    };
+    window.addEventListener("gbs_alumni_gift_added", syncAlumniGifts);
+    window.addEventListener("storage", syncAlumniGifts);
+    return () => {
+      window.removeEventListener("gbs_alumni_gift_added", syncAlumniGifts);
+      window.removeEventListener("storage", syncAlumniGifts);
+    };
+  }, []);
+
   const [newAlumniPledgeForm, setNewAlumniPledgeForm] = useState({
     donorName: "",
     gradClass: "Class of 2010",

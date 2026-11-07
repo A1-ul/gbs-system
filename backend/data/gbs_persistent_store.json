@@ -15,7 +15,7 @@
       "reviewNotes": "Verified and approved.",
       "tenantId": 1,
       "isActive": true,
-      "updatedAt": "2026-11-06T23:51:29.947Z"
+      "updatedAt": "2026-11-07T00:07:52.323Z"
     },
     {
       "id": "reg_1793657777810",
@@ -82,7 +82,7 @@
       "scannedFacePhoto": null,
       "biometricFaceToken": null,
       "tenantId": 9904,
-      "updatedAt": "2026-11-06T23:51:29.947Z"
+      "updatedAt": "2026-11-07T00:07:47.253Z"
     }
   ],
   "users": [],
@@ -336,7 +336,7 @@
       "createdAt": "2026-11-02T21:55:25.367Z"
     }
   ],
-  "updatedAt": "2026-11-06T23:55:12.230Z",
+  "updatedAt": "2026-11-07T00:37:21.007Z",
   "registeredUsers": [
     {
       "id": "usr_12",
@@ -483,6 +483,166 @@
   ],
   "prismaModels": {
     "AuditLog": [
+      {
+        "id": 248,
+        "tenantId": 1,
+        "userId": 17,
+        "module": "ONLINE_MEETING",
+        "action": "ONLINE_MEETINGS_BATCH_DELETED",
+        "details": "Batch deleted 1 online meetings.",
+        "isDeleted": false,
+        "createdAt": "2026-11-07T00:37:20.973Z",
+        "updatedAt": "2026-11-07T00:37:20.973Z"
+      },
+      {
+        "id": 247,
+        "tenantId": 1,
+        "userId": 10,
+        "module": "ONLINE_MEETING",
+        "action": "ONLINE_MEETING_CREATED",
+        "details": "Created ZOOM VIDEO session \"Weekly Interactive STEM Seminar\" (ID: 1) for class N/A",
+        "isDeleted": false,
+        "createdAt": "2026-11-07T00:37:20.475Z",
+        "updatedAt": "2026-11-07T00:37:20.475Z"
+      },
+      {
+        "id": 246,
+        "tenantId": 1,
+        "userId": 10,
+        "action": "ASSIGNMENT_CREATED",
+        "module": "assignments",
+        "details": "{\"count\":2,\"title\":\"Advanced STEM Research Assignment\",\"classes\":[21,20]}",
+        "isDeleted": false,
+        "createdAt": "2026-11-07T00:37:19.959Z",
+        "updatedAt": "2026-11-07T00:37:19.959Z"
+      },
+      {
+        "id": 245,
+        "tenantId": 1,
+        "userId": 1,
+        "action": "SINGLE_STUDENT_ATTENDANCE_MARKED",
+        "module": "ATTENDANCE",
+        "details": "Marked student #18 as PRESENT for class #21 on Sat Nov 07 2026 00:00:00 GMT+0000 (Greenwich Mean Time).",
+        "isDeleted": false,
+        "createdAt": "2026-11-07T00:37:19.074Z",
+        "updatedAt": "2026-11-07T00:37:19.074Z"
+      },
+      {
+        "id": 244,
+        "tenantId": 1,
+        "userId": 1,
+        "module": "FINANCE",
+        "action": "PAYMENT_RECORDED",
+        "details": "Recorded payment of $1500 for Invoice INV-2026-648527. Balance: $0 (Receipt: RCP-2026-874113)",
+        "ipAddress": "127.0.0.1",
+        "isDeleted": false,
+        "createdAt": "2026-11-07T00:26:27.123Z",
+        "updatedAt": "2026-11-07T00:26:27.123Z"
+      },
+      {
+        "id": 243,
+        "tenantId": 1,
+        "userId": 1,
+        "module": "FINANCE",
+        "action": "PAYMENT_RECORDED",
+        "details": "Recorded payment of $1500 for Invoice INV-2026-179455. Balance: $0 (Receipt: RCP-2026-506047)",
+        "ipAddress": "127.0.0.1",
+        "isDeleted": false,
+        "createdAt": "2026-11-07T00:26:16.914Z",
+        "updatedAt": "2026-11-07T00:26:16.914Z"
+      },
+      {
+        "id": 242,
+        "tenantId": 1,
+        "userId": 1,
+        "action": "ACADEMIC_PLAN_UPDATED",
+        "module": "ACADEMIC",
+        "details": "Headmaster updated Academic Plan for 2026/2027 (TERMLY_3: Term 1). Promotional Flag: true.",
+        "isDeleted": false,
+        "createdAt": "2026-11-07T00:19:13.843Z",
+        "updatedAt": "2026-11-07T00:19:13.843Z"
+      },
+      {
+        "id": 241,
+        "tenantId": 1,
+        "userId": 1,
+        "module": "ADMISSION",
+        "action": "ADMISSION_APPLICATION_APPROVED",
+        "details": "Approved application ADM-2026-4354. Provisioned student account yaw.boateng.1794010691437261@gbs.edu (ID: 18) into class 14",
+        "isDeleted": false,
+        "createdAt": "2026-11-07T00:18:12.187Z",
+        "updatedAt": "2026-11-07T00:18:12.187Z"
+      },
+      {
+        "id": 240,
+        "tenantId": 1,
+        "userId": 1,
+        "module": "ADMISSION",
+        "action": "ADMISSION_APPLICATION_REJECTED",
+        "details": "Rejected admission application ADM-2026-4354. Reason: Cohort capacity reached for current intake term. Prerequisites under review.",
+        "isDeleted": false,
+        "createdAt": "2026-11-07T00:18:08.488Z",
+        "updatedAt": "2026-11-07T00:18:08.488Z"
+      },
+      {
+        "id": 239,
+        "tenantId": 1,
+        "userId": 1,
+        "module": "ADMISSION",
+        "action": "ADMISSION_APPLICATION_DELETED",
+        "details": "Deleted admission application ADM-2026-4027 (Yaw Boateng).",
+        "isDeleted": false,
+        "createdAt": "2026-11-07T00:18:01.333Z",
+        "updatedAt": "2026-11-07T00:18:01.333Z"
+      },
+      {
+        "id": 238,
+        "tenantId": 1,
+        "userId": null,
+        "module": "DEV_CONTROL",
+        "action": "TENANT_UNLOCK",
+        "details": "Developer performed UNLOCK on tenant 'GBS International School (Main Campus)'",
+        "ipAddress": "127.0.0.1",
+        "isDeleted": false,
+        "createdAt": "2026-11-07T00:07:52.776Z",
+        "updatedAt": "2026-11-07T00:07:52.776Z"
+      },
+      {
+        "id": 237,
+        "tenantId": 9904,
+        "userId": null,
+        "module": "DEV_CONTROL",
+        "action": "TENANT_UNLOCK",
+        "details": "Developer performed UNLOCK on tenant 'Walkthrough Test School'",
+        "ipAddress": "127.0.0.1",
+        "isDeleted": false,
+        "createdAt": "2026-11-07T00:07:47.735Z",
+        "updatedAt": "2026-11-07T00:07:47.735Z"
+      },
+      {
+        "id": 236,
+        "tenantId": 1,
+        "userId": null,
+        "module": "DEV_CONTROL",
+        "action": "TENANT_LOCK",
+        "details": "Developer performed LOCK on tenant 'GBS International School (Main Campus)'",
+        "ipAddress": "127.0.0.1",
+        "isDeleted": false,
+        "createdAt": "2026-11-07T00:07:41.252Z",
+        "updatedAt": "2026-11-07T00:07:41.252Z"
+      },
+      {
+        "id": 235,
+        "tenantId": 9904,
+        "userId": null,
+        "module": "DEV_CONTROL",
+        "action": "TENANT_LOCK",
+        "details": "Developer performed LOCK on tenant 'Walkthrough Test School'",
+        "ipAddress": "127.0.0.1",
+        "isDeleted": false,
+        "createdAt": "2026-11-07T00:07:39.948Z",
+        "updatedAt": "2026-11-07T00:07:39.948Z"
+      },
       {
         "id": 234,
         "tenantId": 1,
@@ -3540,6 +3700,38 @@
     ],
     "Assignment": [
       {
+        "id": 15,
+        "tenantId": 1,
+        "classId": 20,
+        "subjectId": 1,
+        "teacherId": 10,
+        "title": "Advanced STEM Research Assignment",
+        "description": "Autonomous research project for secondary and undergraduate scholars.",
+        "dueDate": "2026-11-12T00:37:19.203Z",
+        "maxScore": 100,
+        "attachmentUrl": null,
+        "status": "PUBLISHED",
+        "isDeleted": false,
+        "createdAt": "2026-11-07T00:37:19.720Z",
+        "updatedAt": "2026-11-07T00:37:19.720Z"
+      },
+      {
+        "id": 14,
+        "tenantId": 1,
+        "classId": 21,
+        "subjectId": 1,
+        "teacherId": 10,
+        "title": "Advanced STEM Research Assignment",
+        "description": "Autonomous research project for secondary and undergraduate scholars.",
+        "dueDate": "2026-11-12T00:37:19.203Z",
+        "maxScore": 100,
+        "attachmentUrl": null,
+        "status": "PUBLISHED",
+        "isDeleted": false,
+        "createdAt": "2026-11-07T00:37:19.384Z",
+        "updatedAt": "2026-11-07T00:37:19.384Z"
+      },
+      {
         "id": 13,
         "tenantId": 1,
         "classId": 20,
@@ -3654,6 +3846,25 @@
     ],
     "OnlineMeeting": [],
     "User": [
+      {
+        "id": 18,
+        "tenantId": 1,
+        "firstName": "Yaw",
+        "lastName": "Boateng",
+        "email": "yaw.boateng.1794010691437261@gbs.edu",
+        "password": "$2a$10$LuhuCUIdMh4BH20c2jC8Xep2OOlOUJ0TmH6ySkztYQMKL9CB4AwB.",
+        "role": "STUDENT",
+        "isActive": true,
+        "permissions": [
+          "view_attendance",
+          "view_timetable",
+          "view_assignments",
+          "join_online_classes"
+        ],
+        "isDeleted": false,
+        "createdAt": "2026-11-07T00:18:11.619Z",
+        "updatedAt": "2026-11-07T00:18:11.619Z"
+      },
       {
         "id": 17,
         "tenantId": 1,
@@ -3980,32 +4191,10 @@
         "reviewerNotes": "Approved by Admissions Board. Student account provisioned.",
         "isDeleted": false,
         "createdAt": "2026-11-02T22:16:18.270Z",
-        "updatedAt": "2026-11-04T21:12:13.757Z",
-        "enrolledUserId": 16,
-        "enrolledAt": "2026-11-04T21:12:13.752Z",
+        "updatedAt": "2026-11-07T00:18:12.036Z",
+        "enrolledUserId": 18,
+        "enrolledAt": "2026-11-07T00:18:11.984Z",
         "rejectionReason": "Cohort capacity reached for current intake term. Prerequisites under review."
-      },
-      {
-        "id": 3,
-        "tenantId": 1,
-        "applicationNumber": "ADM-2026-4027",
-        "stage": "APPROVED",
-        "targetGradeLevel": 10,
-        "targetClassId": 14,
-        "studentFirstName": "Yaw",
-        "studentLastName": "Boateng",
-        "dateOfBirth": "2011-09-01T00:00:00.000Z",
-        "guardianName": "Parent / Guardian",
-        "guardianEmail": "guardian@gbs.edu",
-        "guardianPhone": "+233244999888",
-        "guardianRelationship": "PARENT",
-        "previousSchool": null,
-        "reviewerNotes": "Approved by Admissions Board. Student account provisioned.",
-        "isDeleted": false,
-        "createdAt": "2026-11-02T22:12:07.785Z",
-        "updatedAt": "2026-11-04T21:11:59.699Z",
-        "enrolledUserId": 15,
-        "enrolledAt": "2026-11-04T21:11:59.695Z"
       },
       {
         "id": 2,
@@ -4042,14 +4231,14 @@
         "amount": 1500,
         "discountAmount": 0,
         "netAmount": 1500,
-        "paidAmount": 0,
-        "balanceDue": 1500,
+        "paidAmount": 1500,
+        "balanceDue": 0,
         "dueDate": "2026-12-02T22:16:18.306Z",
-        "status": "DUE",
+        "status": "PAID",
         "notes": null,
         "isDeleted": false,
         "createdAt": "2026-11-02T22:16:18.309Z",
-        "updatedAt": "2026-11-02T22:16:18.309Z"
+        "updatedAt": "2026-11-07T00:26:16.708Z"
       },
       {
         "id": 2,
@@ -4062,14 +4251,14 @@
         "amount": 1500,
         "discountAmount": 0,
         "netAmount": 1500,
-        "paidAmount": 0,
-        "balanceDue": 1500,
+        "paidAmount": 1500,
+        "balanceDue": 0,
         "dueDate": "2026-12-02T22:12:07.813Z",
-        "status": "DUE",
+        "status": "PAID",
         "notes": null,
         "isDeleted": false,
         "createdAt": "2026-11-02T22:12:07.815Z",
-        "updatedAt": "2026-11-02T22:12:07.815Z"
+        "updatedAt": "2026-11-07T00:26:26.969Z"
       },
       {
         "id": 1,
@@ -4093,6 +4282,38 @@
       }
     ],
     "PaymentTransaction": [
+      {
+        "id": 5,
+        "tenantId": 1,
+        "invoiceId": 2,
+        "receiptNumber": "RCP-2026-874113",
+        "amountPaid": 1500,
+        "paymentMethod": "MOMO",
+        "transactionRef": "Yaw Boateng - JHS 3 Science & Mathematics (Index: 18) - Inv #INV-2026-648527",
+        "gatewayStatus": "SUCCESS",
+        "paidAt": "2026-11-07T00:26:26.803Z",
+        "receivedById": 1,
+        "notes": null,
+        "isDeleted": false,
+        "createdAt": "2026-11-07T00:26:26.840Z",
+        "updatedAt": "2026-11-07T00:26:26.840Z"
+      },
+      {
+        "id": 4,
+        "tenantId": 1,
+        "invoiceId": 3,
+        "receiptNumber": "RCP-2026-506047",
+        "amountPaid": 1500,
+        "paymentMethod": "MOMO",
+        "transactionRef": "Yaw Boateng - JHS 3 Science & Mathematics (Index: 18) - Inv #INV-2026-179455",
+        "gatewayStatus": "SUCCESS",
+        "paidAt": "2026-11-07T00:26:16.430Z",
+        "receivedById": 1,
+        "notes": null,
+        "isDeleted": false,
+        "createdAt": "2026-11-07T00:26:16.468Z",
+        "updatedAt": "2026-11-07T00:26:16.468Z"
+      },
       {
         "id": 3,
         "tenantId": 1,
@@ -4196,6 +4417,20 @@
       }
     ],
     "AttendanceRecord": [
+      {
+        "id": 26,
+        "tenantId": 1,
+        "classId": 21,
+        "studentId": 18,
+        "subjectId": null,
+        "date": "2026-11-07T00:00:00.000Z",
+        "status": "PRESENT",
+        "remarks": null,
+        "markedById": 1,
+        "isDeleted": false,
+        "createdAt": "2026-11-07T00:37:18.924Z",
+        "updatedAt": "2026-11-07T00:37:18.924Z"
+      },
       {
         "id": 25,
         "tenantId": 1,
@@ -4564,7 +4799,7 @@
         "totalStudentsEnrolled": 150,
         "createdAt": "2026-11-02T22:16:17.810Z",
         "isDeleted": false,
-        "updatedAt": "2026-11-06T23:51:28.872Z"
+        "updatedAt": "2026-11-07T00:07:46.734Z"
       },
       {
         "id": 1,
@@ -4575,7 +4810,7 @@
         "status": "ACTIVE",
         "isDeleted": false,
         "createdAt": "2026-01-01T00:00:00.000Z",
-        "updatedAt": "2026-11-06T23:51:28.872Z"
+        "updatedAt": "2026-11-07T00:07:52.118Z"
       }
     ],
     "Subscription": [
@@ -4592,7 +4827,7 @@
         "amountPaid": 750,
         "isDeleted": false,
         "createdAt": "2026-11-04T19:02:32.371Z",
-        "updatedAt": "2026-11-06T23:51:29.390Z"
+        "updatedAt": "2026-11-07T00:07:46.596Z"
       },
       {
         "id": 1,
@@ -4606,10 +4841,36 @@
         "currency": "GHS",
         "isDeleted": false,
         "createdAt": "2026-11-02T22:14:21.221Z",
-        "updatedAt": "2026-11-06T23:51:29.390Z"
+        "updatedAt": "2026-11-07T00:07:51.997Z"
       }
     ],
     "SystemBackup": [
+      {
+        "id": 27,
+        "tenantId": 1,
+        "filename": "pre_lock_snapshot_tenant_1_1794010060296.sql",
+        "fileSizeMb": 14.8,
+        "backupType": "PRE_LOCK_EMERGENCY_BACKUP",
+        "isEncrypted": true,
+        "storagePath": "/backups/tenants/1/pre_lock_snapshot_tenant_1_1794010060296.sql",
+        "status": "COMPLETED",
+        "isDeleted": false,
+        "createdAt": "2026-11-07T00:07:40.350Z",
+        "updatedAt": "2026-11-07T00:07:40.350Z"
+      },
+      {
+        "id": 26,
+        "tenantId": 1,
+        "filename": "pre_lock_snapshot_tenant_9904_1794010057934.sql",
+        "fileSizeMb": 14.8,
+        "backupType": "PRE_LOCK_EMERGENCY_BACKUP",
+        "isEncrypted": true,
+        "storagePath": "/backups/tenants/9904/pre_lock_snapshot_tenant_9904_1794010057934.sql",
+        "status": "COMPLETED",
+        "isDeleted": false,
+        "createdAt": "2026-11-07T00:07:38.102Z",
+        "updatedAt": "2026-11-07T00:07:38.102Z"
+      },
       {
         "id": 25,
         "tenantId": 1,
@@ -5015,6 +5276,46 @@
       }
     ],
     "SystemLock": [
+      {
+        "id": 79,
+        "tenantId": 1,
+        "isLocked": false,
+        "reason": "Developer Administrative System Unlock. All records restored.",
+        "lockedBy": "DEVELOPER_CONTROL_CENTER",
+        "isDeleted": false,
+        "createdAt": "2026-11-07T00:07:52.639Z",
+        "updatedAt": "2026-11-07T00:07:52.639Z"
+      },
+      {
+        "id": 78,
+        "tenantId": 9904,
+        "isLocked": false,
+        "reason": "Developer Administrative System Unlock. All records restored.",
+        "lockedBy": "DEVELOPER_CONTROL_CENTER",
+        "isDeleted": false,
+        "createdAt": "2026-11-07T00:07:47.577Z",
+        "updatedAt": "2026-11-07T00:07:47.577Z"
+      },
+      {
+        "id": 77,
+        "tenantId": 1,
+        "isLocked": false,
+        "reason": "Developer Manual Lock",
+        "lockedBy": "DEVELOPER_CONTROL_CENTER",
+        "isDeleted": false,
+        "createdAt": "2026-11-07T00:07:41.129Z",
+        "updatedAt": "2026-11-07T00:07:52.480Z"
+      },
+      {
+        "id": 76,
+        "tenantId": 9904,
+        "isLocked": false,
+        "reason": "Developer Manual Lock",
+        "lockedBy": "DEVELOPER_CONTROL_CENTER",
+        "isDeleted": false,
+        "createdAt": "2026-11-07T00:07:39.746Z",
+        "updatedAt": "2026-11-07T00:07:47.436Z"
+      },
       {
         "id": 75,
         "tenantId": null,
@@ -5765,6 +6066,16 @@
     ],
     "ClassEnrollment": [
       {
+        "id": 6,
+        "tenantId": 1,
+        "classId": 14,
+        "studentId": 18,
+        "status": "ACTIVE",
+        "isDeleted": false,
+        "createdAt": "2026-11-07T00:18:11.740Z",
+        "updatedAt": "2026-11-07T00:18:11.740Z"
+      },
+      {
         "id": 5,
         "tenantId": 1,
         "classId": 14,
@@ -5821,7 +6132,7 @@
         "relationship": "PARENT",
         "emergencyPhone": "+233244999888",
         "createdAt": "2026-01-10T08:00:00.000Z",
-        "updatedAt": "2026-11-04T21:12:21.990Z"
+        "updatedAt": "2026-11-07T00:18:11.894Z"
       }
     ],
     "AdmissionDocument": [],

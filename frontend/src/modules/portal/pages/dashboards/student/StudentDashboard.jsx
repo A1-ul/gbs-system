@@ -4468,19 +4468,46 @@ class StudentDashboardErrorBoundary extends React.Component {
     return { hasError: true };
   }
   componentDidCatch(error, errorInfo) {
-    console.warn("Student Dashboard non-fatal event auto-recovered:", error);
+    console.warn("Student Dashboard non-fatal event:", error);
     try {
-      sessionStorage.setItem("gbs_student_active_tab", "overview");
+      sessionStorage.setItem("gbs_student_active_tab", "timetable");
     } catch {}
-    setTimeout(() => {
-      if (this.state.hasError) {
-        this.setState({ hasError: false });
-      }
-    }, 100);
   }
   render() {
     if (this.state.hasError) {
-      return <StudentDashboard initialTab="overview" />;
+      return (
+        <div style={{ minHeight: "100vh", background: "#0b0f19", color: "#f8fafc", padding: "20px" }}>
+          <TopCenterSystemBanner currentRole="STUDENT" activeDashboard="STUDENT" />
+          <div style={{ maxWidth: "600px", margin: "60px auto", textAlign: "center", background: "rgba(15, 23, 42, 0.95)", border: "1.5px solid #38bdf8", borderRadius: "16px", padding: "32px", boxShadow: "0 20px 50px rgba(0,0,0,0.8)" }}>
+            <span style={{ fontSize: "2.8rem" }}>🎒</span>
+            <h3 style={{ color: "#38bdf8", margin: "12px 0 8px" }}>Student Scholar Portal</h3>
+            <p style={{ color: "#94a3b8", fontSize: "0.88rem", marginBottom: "20px" }}>
+              Switching directly to your active Timetable & Academic Overview.
+            </p>
+            <div style={{ display: "flex", gap: "12px", justifyContent: "center" }}>
+              <button
+                type="button"
+                onClick={() => {
+                  sessionStorage.setItem("gbs_student_active_tab", "timetable");
+                  window.location.href = "/portal/student/dashboard?tab=timetable";
+                }}
+                style={{ padding: "10px 22px", background: "linear-gradient(135deg, #0284c7, #38bdf8)", border: "none", borderRadius: "8px", color: "#0f172a", fontWeight: 800, cursor: "pointer" }}
+              >
+                📅 Open Timetable View
+              </button>
+              <button
+                type="button"
+                onClick={() => {
+                  window.location.href = "/portal/student/dashboard?tab=timetable";
+                }}
+                style={{ padding: "10px 18px", background: "rgba(30, 41, 59, 0.9)", border: "1px solid rgba(255,255,255,0.15)", borderRadius: "8px", color: "#cbd5e1", fontWeight: 700, cursor: "pointer" }}
+              >
+                🔄 Reload Scholar View
+              </button>
+            </div>
+          </div>
+        </div>
+      );
     }
     return this.props.children;
   }

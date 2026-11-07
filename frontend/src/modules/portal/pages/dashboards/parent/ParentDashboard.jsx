@@ -166,6 +166,7 @@ export default function ParentDashboard() {
   const [showResultSlipModal, setShowResultSlipModal] = useState(false);
   const [showTranscriptModal, setShowTranscriptModal] = useState(false);
   const [showAdmissionLetterModal, setShowAdmissionLetterModal] = useState(false);
+  const [selectedAdmissionForLetter, setSelectedAdmissionForLetter] = useState(null);
   const [showViewReleasedTranscriptModal, setShowViewReleasedTranscriptModal] = useState(false);
   const [selectedReleasedTranscript, setSelectedReleasedTranscript] = useState(null);
   const [parentTranscriptRequests, setParentTranscriptRequests] = useState(() => {
