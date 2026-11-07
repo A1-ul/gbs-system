@@ -2240,6 +2240,96 @@ export function AdminDashboard({ initialTab } = {}) {
   const [admissionFilterMode, setAdmissionFilterMode] = useState("ALL");
   const [admissionSearchQuery, setAdmissionSearchQuery] = useState("");
   const [walkInSuccessRecord, setWalkInSuccessRecord] = useState(null);
+  // Headmaster Admission Amendment Modal State (Parent-requested changes)
+  const [editingAdmission, setEditingAdmission] = useState(null);
+  const [editAdmissionForm, setEditAdmissionForm] = useState({
+    studentFirstName: "",
+    studentLastName: "",
+    targetGradeLevel: "1",
+    gender: "Male",
+    dateOfBirth: "",
+    guardianName: "",
+    guardianPhone: "",
+    guardianWhatsApp: "",
+    guardianEmail: "",
+    homeGpsAddress: "",
+    previousSchool: "",
+    entryAggregate: "",
+    stage: "PENDING",
+    amendmentReason: ""
+  });
+
+  const handleOpenEditAdmissionModal = (app) => {
+    setEditingAdmission(app);
+    setEditAdmissionForm({
+      studentFirstName: app.studentFirstName || "",
+      studentLastName: app.studentLastName || "",
+      targetGradeLevel: String(app.targetGradeLevel || "1"),
+      gender: app.gender || "Male",
+      dateOfBirth: app.dateOfBirth || "2012-05-14",
+      guardianName: app.guardianName || "",
+      guardianPhone: app.guardianPhone || "",
+      guardianWhatsApp: app.guardianWhatsApp || app.guardianPhone || "",
+      guardianEmail: app.guardianEmail || "",
+      homeGpsAddress: app.homeGpsAddress || "",
+      previousSchool: app.previousSchool || "",
+      entryAggregate: app.entryAggregate || "08",
+      stage: app.stage || "PENDING",
+      amendmentReason: app.amendmentReason || ""
+    });
+  };
+
+  const handleSaveEditedAdmission = async (e) => {
+    if (e && e.preventDefault) e.preventDefault();
+    if (!editingAdmission) return;
+
+    const updated = {
+      ...editingAdmission,
+      studentFirstName: editAdmissionForm.studentFirstName.trim(),
+      studentLastName: editAdmissionForm.studentLastName.trim(),
+      targetGradeLevel: editAdmissionForm.targetGradeLevel,
+      grade: "Grade " + editAdmissionForm.targetGradeLevel,
+      gender: editAdmissionForm.gender,
+      dateOfBirth: editAdmissionForm.dateOfBirth,
+      guardianName: editAdmissionForm.guardianName.trim(),
+      guardianPhone: editAdmissionForm.guardianPhone.trim(),
+      guardianWhatsApp: editAdmissionForm.guardianWhatsApp.trim() || editAdmissionForm.guardianPhone.trim(),
+      guardianEmail: editAdmissionForm.guardianEmail.trim(),
+      homeGpsAddress: editAdmissionForm.homeGpsAddress.trim(),
+      previousSchool: editAdmissionForm.previousSchool.trim(),
+      entryAggregate: editAdmissionForm.entryAggregate,
+      stage: editAdmissionForm.stage,
+      amendmentReason: editAdmissionForm.amendmentReason.trim() || "Parent informed changes on student details",
+      updatedAt: new Date().toISOString()
+    };
+
+    // Update in-memory state
+    setApplications((prev) =>
+      prev.map((a) => ((a.id === editingAdmission.id || a.applicationNumber === editingAdmission.applicationNumber) ? updated : a))
+    );
+
+    // Persist in localStorage
+    try {
+      const existing = JSON.parse(localStorage.getItem("gbs_submitted_admissions") || "[]");
+      const next = existing.map((a) => ((a.id === editingAdmission.id || a.applicationNumber === editingAdmission.applicationNumber) ? updated : a));
+      localStorage.setItem("gbs_submitted_admissions", JSON.stringify(next));
+      window.dispatchEvent(new Event("gbs_admission_status_changed"));
+    } catch {}
+
+    // Synchronize to backend
+    try {
+      await apiClient.patch(`/admissions/${editingAdmission.id}`, updated);
+    } catch (apiErr) {
+      console.warn("Backend admission patch fallback:", apiErr?.message);
+    }
+
+    setToastNotification({
+      type: "success",
+      message: `✓ Admission record for ${updated.studentFirstName} ${updated.studentLastName} amended and saved successfully!`
+    });
+    setEditingAdmission(null);
+  };
+
   const [walkInForm, setWalkInForm] = useState({
     studentFirstName: "",
     studentLastName: "",
@@ -7857,6 +7947,24 @@ export function AdminDashboard({ initialTab } = {}) {
                                 title="View full admission enquiry dossier on dedicated routed page"
                               >
                                 🔍 View & Verify
+                              </button>
+                              <button
+                                type="button"
+                                onClick={() => handleOpenEditAdmissionModal(app)}
+                                style={{
+                                  padding: "4px 10px",
+                                  fontSize: "0.78rem",
+                                  background: "rgba(245, 158, 11, 0.2)",
+                                  border: "1px solid #f59e0b",
+                                  color: "#fbbf24",
+                                  borderRadius: "6px",
+                                  cursor: "pointer",
+                                  fontWeight: 800,
+                                  whiteSpace: "nowrap"
+                                }}
+                                title="Edit or amend student admission details based on parent request"
+                              >
+                                ✏️ Edit / Amend Details
                               </button>
                               {app.stage === "APPROVED" && (
                                 <button

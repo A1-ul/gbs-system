@@ -904,7 +904,88 @@ export default function DeveloperDashboard() {
       return [];
     }
   });
-  const [onboardingTabMode, setOnboardingTabMode] = useState("INCOMING"); // "INCOMING" | "ARCHIVED"
+  const [onboardingTabMode, setOnboardingTabMode] = useState("INCOMING"); // "INCOMING" | "ARCHIVED" | "MEMBERS"
+  const [registeredMembersList, setRegisteredMembersList] = useState(() => {
+    try {
+      const stored = JSON.parse(localStorage.getItem("gbs_local_registered_users") || "[]");
+      if (Array.isArray(stored) && stored.length > 0) return stored;
+    } catch {}
+    return [
+      {
+        id: "usr_reg_01",
+        firstName: "Sarah",
+        lastName: "Jenkins",
+        email: "sarah.jenkins@gbs.edu",
+        phone: "+233 24 555 0192",
+        role: "TEACHER",
+        tenantCode: "GBS-MAIN",
+        institutionName: "GBS International School (Main Branch)",
+        verificationStatus: "VERIFIED",
+        registeredAt: new Date(Date.now() - 86400000).toISOString()
+      },
+      {
+        id: "usr_reg_02",
+        firstName: "Michael",
+        lastName: "Appiah",
+        email: "michael.appiah@science.edu",
+        phone: "+233 50 123 4567",
+        role: "TEACHER",
+        tenantCode: "GBS-MAIN",
+        institutionName: "GBS International School (Main Branch)",
+        verificationStatus: "PENDING_DEVELOPER_APPROVAL",
+        registeredAt: new Date().toISOString()
+      },
+      {
+        id: "usr_reg_03",
+        firstName: "David",
+        lastName: "Ofori",
+        email: "david.ofori@finance.gbs.edu",
+        phone: "+233 27 987 6543",
+        role: "ACCOUNTANT",
+        tenantCode: "GBS-MAIN",
+        institutionName: "GBS International School (Main Branch)",
+        verificationStatus: "VERIFIED",
+        registeredAt: new Date(Date.now() - 172800000).toISOString()
+      },
+      {
+        id: "usr_reg_04",
+        firstName: "Grace",
+        lastName: "Addo",
+        email: "grace.addo@hr.gbs.edu",
+        phone: "+233 20 888 1122",
+        role: "HR",
+        tenantCode: "GBS-MAIN",
+        institutionName: "GBS International School (Main Branch)",
+        verificationStatus: "PENDING_DEVELOPER_APPROVAL",
+        registeredAt: new Date().toISOString()
+      }
+    ];
+  });
+
+  const handleApproveRegisteredMember = (userId) => {
+    const updated = registeredMembersList.map((m) =>
+      m.id === userId ? { ...m, verificationStatus: "VERIFIED", approvedAt: new Date().toISOString() } : m
+    );
+    setRegisteredMembersList(updated);
+    try {
+      localStorage.setItem("gbs_local_registered_users", JSON.stringify(updated));
+      window.dispatchEvent(new Event("storage"));
+    } catch {}
+    const approvedMember = updated.find((m) => m.id === userId);
+    showNotification(`✓ Access approved for ${approvedMember?.firstName || "Member"} ${approvedMember?.lastName || ""} (${approvedMember?.role || "USER"})! Credentials verified.`);
+  };
+
+  const handleRejectRegisteredMember = (userId) => {
+    const updated = registeredMembersList.map((m) =>
+      m.id === userId ? { ...m, verificationStatus: "REJECTED" } : m
+    );
+    setRegisteredMembersList(updated);
+    try {
+      localStorage.setItem("gbs_local_registered_users", JSON.stringify(updated));
+      window.dispatchEvent(new Event("storage"));
+    } catch {}
+    showNotification("Member registration rejected and de-provisioned.");
+  };
   const [showDevGuideModal, setShowDevGuideModal] = useState(false);
   const [archivedSearchQuery, setArchivedSearchQuery] = useState("");
 
@@ -4782,6 +4863,23 @@ export default function DeveloperDashboard() {
                   </button>
                   <button
                     type="button"
+                    onClick={() => setOnboardingTabMode("MEMBERS")}
+                    style={{
+                      background: onboardingTabMode === "MEMBERS" ? "#a855f7" : "rgba(15, 23, 42, 0.7)",
+                      color: onboardingTabMode === "MEMBERS" ? "#0f172a" : "#cbd5e1",
+                      border: "1px solid #a855f7",
+                      borderRadius: "8px",
+                      padding: "6px 14px",
+                      fontSize: "0.8rem",
+                      fontWeight: 800,
+                      cursor: "pointer",
+                      transition: "all 0.2s"
+                    }}
+                  >
+                    👥 Member Signups ({registeredMembersList.filter((m) => m.verificationStatus === "PENDING_DEVELOPER_APPROVAL").length} Pending)
+                  </button>
+                  <button
+                    type="button"
                     onClick={() => setOnboardingTabMode("ARCHIVED")}
                     style={{
                       background: onboardingTabMode === "ARCHIVED" ? "#10b981" : "rgba(15, 23, 42, 0.7)",
@@ -5147,6 +5245,151 @@ export default function DeveloperDashboard() {
                 </div>
               )}
             </div>
+
+
+              {onboardingTabMode === "MEMBERS" && (
+                <div style={{ display: "flex", flexDirection: "column", gap: "12px" }}>
+                  <div style={{ background: "rgba(2, 6, 23, 0.6)", padding: "12px 16px", borderRadius: "10px", border: "1px solid rgba(168, 85, 247, 0.3)", display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: "10px" }}>
+                    <div>
+                      <strong style={{ color: "#c084fc", fontSize: "0.95rem" }}>
+                        👥 NEW REGISTERED USERS & STAFF QUALIFICATION QUEUE
+                      </strong>
+                      <p style={{ margin: "2px 0 0", color: "#94a3b8", fontSize: "0.78rem" }}>
+                        All staff, teachers, accountants, HR, and students who register to join the GBS system are held here for Developer review, credential verification, and system provision.
+                      </p>
+                    </div>
+                    <span style={{ background: "rgba(168, 85, 247, 0.2)", color: "#c084fc", padding: "3px 10px", borderRadius: "999px", fontSize: "0.75rem", fontWeight: 800 }}>
+                      Total Registered: {registeredMembersList.length}
+                    </span>
+                  </div>
+
+                  {registeredMembersList.length === 0 ? (
+                    <div style={{ padding: "2rem", textAlign: "center", color: "#94a3b8", background: "rgba(2, 6, 23, 0.6)", borderRadius: "10px" }}>
+                      <span style={{ fontSize: "2rem", display: "block", marginBottom: "8px" }}>👥</span>
+                      No user registrations in queue. New member signups will appear here live.
+                    </div>
+                  ) : (
+                    <div style={{ display: "flex", flexDirection: "column", gap: "10px" }}>
+                      {registeredMembersList.map((user, idx) => {
+                        const isPending = user.verificationStatus === "PENDING_DEVELOPER_APPROVAL" || user.verificationStatus === "PENDING";
+                        return (
+                          <div
+                            key={idx}
+                            style={{
+                              background: "rgba(15, 23, 42, 0.85)",
+                              border: `1.5px solid ${isPending ? "#f59e0b" : "#10b981"}`,
+                              borderRadius: "12px",
+                              padding: "14px 18px",
+                              display: "flex",
+                              justifyContent: "space-between",
+                              alignItems: "center",
+                              flexWrap: "wrap",
+                              gap: "12px",
+                              boxShadow: "0 4px 14px rgba(0, 0, 0, 0.3)"
+                            }}
+                          >
+                            <div style={{ display: "flex", alignItems: "center", gap: "12px" }}>
+                              <div style={{ width: "46px", height: "46px", borderRadius: "10px", overflow: "hidden", background: "#020617", border: "1.5px solid #38bdf8", flexShrink: 0 }}>
+                                <img
+                                  src={user.facePhoto || "/assets/admin-dashboard-bg.jpg"}
+                                  alt={user.firstName}
+                                  style={{ width: "100%", height: "100%", objectFit: "cover" }}
+                                  onError={(e) => { e.target.src = "/assets/admin-dashboard-bg.jpg"; }}
+                                />
+                              </div>
+                              <div>
+                                <div style={{ display: "flex", alignItems: "center", gap: "8px", flexWrap: "wrap" }}>
+                                  <strong style={{ color: "#f8fafc", fontSize: "0.95rem" }}>
+                                    {user.firstName} {user.lastName}
+                                  </strong>
+                                  <span style={{
+                                    background: user.role === "TEACHER" ? "#0284c7" : user.role === "ACCOUNTANT" ? "#059669" : user.role === "HR" ? "#d97706" : "#6366f1",
+                                    color: "#fff",
+                                    padding: "2px 7px",
+                                    borderRadius: "4px",
+                                    fontSize: "0.68rem",
+                                    fontWeight: 900
+                                  }}>
+                                    {user.role}
+                                  </span>
+                                  <span style={{
+                                    background: isPending ? "rgba(245, 158, 11, 0.2)" : "rgba(16, 185, 129, 0.2)",
+                                    color: isPending ? "#fde68a" : "#34d399",
+                                    fontSize: "0.7rem",
+                                    fontWeight: 800,
+                                    padding: "2px 6px",
+                                    borderRadius: "4px"
+                                  }}>
+                                    {isPending ? "⏳ PENDING VERIFICATION" : "✓ VERIFIED & ACTIVE"}
+                                  </span>
+                                </div>
+                                <div style={{ fontSize: "0.76rem", color: "#94a3b8", marginTop: "3px" }}>
+                                  Email: <strong style={{ color: "#38bdf8" }}>{user.email}</strong> • Phone: <strong style={{ color: "#cbd5e1" }}>{user.phone || "—"}</strong> • Tenant: <strong style={{ color: "#fbbf24" }}>{user.tenantCode || "GBS-MAIN"}</strong>
+                                </div>
+                              </div>
+                            </div>
+
+                            <div style={{ display: "flex", gap: "8px", alignItems: "center" }}>
+                              <button
+                                type="button"
+                                onClick={() => navigateToDetail(navigate, "user", user.id || idx, user, { returnTab: activeTab })}
+                                style={{
+                                  background: "rgba(56, 189, 248, 0.15)",
+                                  border: "1px solid #38bdf8",
+                                  color: "#38bdf8",
+                                  borderRadius: "8px",
+                                  padding: "7px 12px",
+                                  fontWeight: 800,
+                                  fontSize: "0.76rem",
+                                  cursor: "pointer"
+                                }}
+                              >
+                                🔍 Inspect Dossier
+                              </button>
+                              {isPending ? (
+                                <button
+                                  type="button"
+                                  onClick={() => handleApproveRegisteredMember(user.id)}
+                                  style={{
+                                    background: "linear-gradient(135deg, #10b981, #059669)",
+                                    border: "none",
+                                    borderRadius: "8px",
+                                    padding: "7px 14px",
+                                    color: "#fff",
+                                    fontWeight: 800,
+                                    fontSize: "0.78rem",
+                                    cursor: "pointer",
+                                    boxShadow: "0 2px 10px rgba(16, 185, 129, 0.3)"
+                                  }}
+                                >
+                                  ✓ Approve & Grant Access
+                                </button>
+                              ) : (
+                                <button
+                                  type="button"
+                                  onClick={() => handleRejectRegisteredMember(user.id)}
+                                  style={{
+                                    background: "rgba(239, 68, 68, 0.2)",
+                                    border: "1px solid #ef4444",
+                                    borderRadius: "8px",
+                                    padding: "6px 12px",
+                                    color: "#fca5a5",
+                                    fontWeight: 700,
+                                    fontSize: "0.74rem",
+                                    cursor: "pointer"
+                                  }}
+                                >
+                                  De-provision
+                                </button>
+                              )}
+                            </div>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  )}
+                </div>
+              )}
 
             {/* GBS ENTERPRISE PER-STUDENT RATE CONFIGURATOR */}
             <div style={{

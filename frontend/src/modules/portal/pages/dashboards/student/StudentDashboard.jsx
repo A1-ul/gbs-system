@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import apiClient from "../../../../../api/client/apiClient";
 import WindowControlsBar from "../../../../../components/common/WindowControlsBar";
@@ -14,6 +14,14 @@ import "./StudentDashboard.css";
 export function StudentDashboard({ initialTab } = {}) {
   const navigate = useNavigate();
   const [showStudentGuideModal, setShowStudentGuideModal] = useState(false);
+
+  const studentProfile = (() => {
+    try {
+      const stored = localStorage.getItem("gbs_user");
+      if (stored) return JSON.parse(stored);
+    } catch {}
+    return { firstName: "Alex", lastName: "Mensah", role: "STUDENT", indexNumber: "STU-2026-001" };
+  })();
 
   // Real-Life Scholar Portrait
   const [studentAvatar, setStudentAvatar] = useState(() => getUserAvatar("STUDENT"));
@@ -439,12 +447,82 @@ export function StudentDashboard({ initialTab } = {}) {
   });
   const [showCatchUpModal, setShowCatchUpModal] = useState(false);
 
-  // Peer Live Video Calling State
+  // Peer Live Video Calling State & Hardware Camera Stream Refs
+  const localPeerVideoRef = useRef(null);
+  const localPeerStreamRef = useRef(null);
   const [activePeerVideoCall, setActivePeerVideoCall] = useState(null);
   const [peerCallDuration, setPeerCallDuration] = useState(0);
   const [isPeerMicMuted, setIsPeerMicMuted] = useState(false);
   const [isPeerCameraOff, setIsPeerCameraOff] = useState(false);
   const [isPeerScreenSharing, setIsPeerScreenSharing] = useState(false);
+
+  // In-App Live Scheduled Meeting / Classroom Session State
+  const [activeJoinedMeeting, setActiveJoinedMeeting] = useState(null);
+  const [classroomHandRaised, setClassroomHandRaised] = useState(false);
+  const [classroomMicMuted, setClassroomMicMuted] = useState(true);
+  const [classroomCameraOn, setClassroomCameraOn] = useState(true);
+  const [classroomChatMessages, setClassroomChatMessages] = useState([
+    { sender: "Teacher (Moderator)", text: "Welcome everyone to today's live interactive session. Please raise your hand if you have questions.", time: "10:00 AM" },
+    { sender: "Kwame Mensah", text: "Good morning teacher, audio and video are crystal clear!", time: "10:02 AM" }
+  ]);
+  const [newClassroomMsg, setNewClassroomMsg] = useState("");
+
+  const startLocalPeerCamera = async () => {
+    try {
+      if (navigator.mediaDevices && navigator.mediaDevices.getUserMedia) {
+        const stream = await navigator.mediaDevices.getUserMedia({ video: { width: 640, height: 480 }, audio: true });
+        localPeerStreamRef.current = stream;
+        if (localPeerVideoRef.current) {
+          localPeerVideoRef.current.srcObject = stream;
+          localPeerVideoRef.current.play().catch(() => {});
+        }
+      }
+    } catch (err) {
+      console.warn("Peer video camera access notice:", err.message);
+    }
+  };
+
+  const stopLocalPeerCamera = () => {
+    if (localPeerStreamRef.current) {
+      localPeerStreamRef.current.getTracks().forEach((t) => t.stop());
+      localPeerStreamRef.current = null;
+    }
+  };
+
+  const handleStartPeerVideoCall = (peer) => {
+    setActivePeerVideoCall(peer);
+    setPeerCallDuration(0);
+    setIsPeerCameraOff(false);
+    setTimeout(() => {
+      startLocalPeerCamera();
+    }, 200);
+  };
+
+  const handleEndPeerVideoCall = () => {
+    stopLocalPeerCamera();
+    setActivePeerVideoCall(null);
+  };
+
+  const handleJoinLiveMeeting = (meeting) => {
+    setActiveJoinedMeeting(meeting);
+    setClassroomHandRaised(false);
+    setFeedback({
+      type: "success",
+      message: `🚀 Joined live online meeting: "${meeting.title}"`
+    });
+  };
+
+  const handleSendClassroomChat = (e) => {
+    if (e && e.preventDefault) e.preventDefault();
+    if (!newClassroomMsg.trim()) return;
+    const msg = {
+      sender: `${studentProfile?.firstName || "Scholar"} ${studentProfile?.lastName || ""}`.trim() || "You",
+      text: newClassroomMsg.trim(),
+      time: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
+    };
+    setClassroomChatMessages((prev) => [...prev, msg]);
+    setNewClassroomMsg("");
+  };
 
   useEffect(() => {
     let timer = null;
@@ -457,15 +535,6 @@ export function StudentDashboard({ initialTab } = {}) {
     }
     return () => clearInterval(timer);
   }, [activePeerVideoCall]);
-
-  const handleStartPeerVideoCall = (peer) => {
-    setActivePeerVideoCall(peer);
-    setPeerCallDuration(0);
-  };
-
-  const handleEndPeerVideoCall = () => {
-    setActivePeerVideoCall(null);
-  };
 
   // Student Digital Library & E-Book Hub State
   const [borrowedBooks, setBorrowedBooks] = useState(() => {
@@ -2800,15 +2869,14 @@ export function StudentDashboard({ initialTab } = {}) {
 
                         {/* Actions: Join and Save for Reference (1-Click Auto Join with Embedded Passcode) */}
                         <div style={{ display: "flex", gap: "8px", marginTop: "auto" }}>
-                          <a
-                            href={formatMeetingUrl(m.meetingUrl, m.passcode || "GBS2026", m.meetingId || "84939201849")}
-                            target="_blank"
-                            rel="noreferrer"
+                          <button
+                            type="button"
+                            onClick={() => handleJoinLiveMeeting(m)}
                             className="btn-primary"
-                            style={{ flex: 1, textDecoration: "none", textAlign: "center", fontSize: "0.8rem", padding: "8px" }}
+                            style={{ flex: 1, textAlign: "center", fontSize: "0.8rem", padding: "8px", cursor: "pointer", background: "linear-gradient(135deg, #0284c7, #0369a1)", border: "none", borderRadius: "8px", color: "#fff", fontWeight: 800, boxShadow: "0 4px 12px rgba(2, 132, 199, 0.4)" }}
                           >
                             🚀 Join Live Class
-                          </a>
+                          </button>
                           <button
                             type="button"
                             className="btn-secondary"
@@ -4873,6 +4941,192 @@ export function StudentDashboard({ initialTab } = {}) {
         </div>
       )}
 
+
+      {/* IN-APP LIVE VIRTUAL CLASSROOM & MEETING STUDIO MODAL */}
+      {activeJoinedMeeting && (
+        <div style={{
+          position: "fixed",
+          inset: 0,
+          background: "rgba(2, 6, 23, 0.94)",
+          backdropFilter: "blur(14px)",
+          zIndex: 999999,
+          display: "flex",
+          alignItems: "center",
+          justifyContent: "center",
+          padding: "1rem"
+        }}>
+          <div style={{
+            background: "#090d16",
+            border: "2px solid #0284c7",
+            borderRadius: "20px",
+            width: "100%",
+            maxWidth: "960px",
+            height: "85vh",
+            display: "flex",
+            flexDirection: "column",
+            boxShadow: "0 25px 70px rgba(0, 0, 0, 0.9)",
+            color: "#fff",
+            overflow: "hidden"
+          }}>
+            {/* Header */}
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "14px 20px", background: "rgba(15, 23, 42, 0.9)", borderBottom: "1px solid rgba(255, 255, 255, 0.1)" }}>
+              <div style={{ display: "flex", alignItems: "center", gap: "12px" }}>
+                <span style={{ fontSize: "1.6rem" }}>🎓</span>
+                <div>
+                  <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
+                    <h3 style={{ margin: 0, fontSize: "1.1rem", fontWeight: 900, color: "#38bdf8" }}>
+                      {activeJoinedMeeting.title}
+                    </h3>
+                    <span style={{ background: "#10b981", color: "#064e3b", fontSize: "0.68rem", fontWeight: 900, padding: "2px 6px", borderRadius: "999px" }}>
+                      ● LIVE NOW
+                    </span>
+                  </div>
+                  <span style={{ fontSize: "0.75rem", color: "#94a3b8" }}>
+                    Tutor / Host: <strong>{activeJoinedMeeting.host || "Teacher"}</strong> • Subject: <strong>{activeJoinedMeeting.subject || "Academic Seminar"}</strong>
+                  </span>
+                </div>
+              </div>
+
+              <div style={{ display: "flex", gap: "10px", alignItems: "center" }}>
+                <a
+                  href={formatMeetingUrl(activeJoinedMeeting.meetingUrl, activeJoinedMeeting.passcode || "GBS2026", activeJoinedMeeting.meetingId || "84939201849")}
+                  target="_blank"
+                  rel="noreferrer"
+                  style={{
+                    background: "rgba(56, 189, 248, 0.15)",
+                    border: "1px solid #38bdf8",
+                    color: "#38bdf8",
+                    padding: "6px 12px",
+                    borderRadius: "8px",
+                    fontSize: "0.76rem",
+                    fontWeight: 800,
+                    textDecoration: "none"
+                  }}
+                  title="Launch in external Zoom or Google Meet app"
+                >
+                  🔗 Open in External App ↗
+                </a>
+                <button
+                  type="button"
+                  onClick={() => setActiveJoinedMeeting(null)}
+                  style={{
+                    background: "rgba(239, 68, 68, 0.2)",
+                    border: "1px solid #ef4444",
+                    color: "#fca5a5",
+                    padding: "6px 12px",
+                    borderRadius: "8px",
+                    fontWeight: 800,
+                    fontSize: "0.78rem",
+                    cursor: "pointer"
+                  }}
+                >
+                  ⏹️ Leave Class
+                </button>
+              </div>
+            </div>
+
+            {/* Main Stage: Left Video Presentation & Right Chat/Roster */}
+            <div style={{ flex: 1, display: "grid", gridTemplateColumns: "1fr 300px", overflow: "hidden" }}>
+              
+              {/* Left: Interactive Class Presentation & Teacher Feed */}
+              <div style={{ background: "#020617", position: "relative", display: "flex", alignItems: "center", justifyContent: "center", overflow: "hidden" }}>
+                <img
+                  src="/assets/teacher-dashboard-bg.jpg"
+                  alt="Teacher Live Presentation"
+                  style={{ width: "100%", height: "100%", objectFit: "cover", opacity: 0.85 }}
+                />
+                
+                {/* Live Teacher Banner Overlay */}
+                <div style={{ position: "absolute", top: "16px", left: "16px", background: "rgba(2, 6, 23, 0.85)", border: "1px solid rgba(255, 255, 255, 0.15)", padding: "6px 12px", borderRadius: "8px", display: "flex", alignItems: "center", gap: "8px" }}>
+                  <span style={{ width: "10px", height: "10px", borderRadius: "50%", background: "#ef4444", animation: "pulse 1.5s infinite" }}></span>
+                  <span style={{ fontSize: "0.78rem", color: "#f8fafc", fontWeight: 800 }}>Teacher Screen Sharing • Interactive Whiteboard</span>
+                </div>
+
+                {/* Picture-in-Picture: Student's Own Video Preview */}
+                <div style={{ position: "absolute", bottom: "16px", right: "16px", width: "160px", height: "110px", background: "#0f172a", borderRadius: "10px", border: "2px solid #38bdf8", overflow: "hidden", boxShadow: "0 4px 20px rgba(0,0,0,0.8)" }}>
+                  <img
+                    src={studentAvatar || "/assets/illustrations/user_face_placeholder.jpg"}
+                    alt="You"
+                    style={{ width: "100%", height: "100%", objectFit: "cover" }}
+                  />
+                  <div style={{ position: "absolute", bottom: "4px", left: "4px", background: "rgba(0,0,0,0.75)", padding: "1px 6px", borderRadius: "4px", fontSize: "0.65rem", color: "#38bdf8", fontWeight: 700 }}>
+                    You (Active)
+                  </div>
+                </div>
+
+                {/* Hand Raised Banner */}
+                {classroomHandRaised && (
+                  <div style={{ position: "absolute", top: "16px", right: "16px", background: "linear-gradient(135deg, #f59e0b, #d97706)", padding: "6px 14px", borderRadius: "8px", fontSize: "0.8rem", fontWeight: 900, color: "#0f172a", display: "flex", alignItems: "center", gap: "6px", boxShadow: "0 4px 15px rgba(245, 158, 11, 0.4)" }}>
+                    ✋ Hand Raised — Teacher Notified
+                  </div>
+                )}
+              </div>
+
+              {/* Right: Live Classroom Chat & Participants Roster */}
+              <div style={{ background: "rgba(15, 23, 42, 0.95)", borderLeft: "1px solid rgba(255, 255, 255, 0.1)", display: "flex", flexDirection: "column" }}>
+                <div style={{ padding: "10px 14px", borderBottom: "1px solid rgba(255, 255, 255, 0.08)", fontSize: "0.82rem", fontWeight: 800, color: "#38bdf8" }}>
+                  💬 CLASSROOM LIVE CHAT
+                </div>
+
+                <div style={{ flex: 1, padding: "12px", overflowY: "auto", display: "flex", flexDirection: "column", gap: "10px" }}>
+                  {classroomChatMessages.map((msg, i) => (
+                    <div key={i} style={{ background: "rgba(2, 6, 23, 0.6)", padding: "8px 10px", borderRadius: "8px", border: "1px solid rgba(255, 255, 255, 0.05)" }}>
+                      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "2px" }}>
+                        <strong style={{ color: msg.sender.includes("Teacher") ? "#34d399" : "#38bdf8", fontSize: "0.75rem" }}>{msg.sender}</strong>
+                        <span style={{ fontSize: "0.65rem", color: "#64748b" }}>{msg.time}</span>
+                      </div>
+                      <p style={{ margin: 0, fontSize: "0.8rem", color: "#cbd5e1" }}>{msg.text}</p>
+                    </div>
+                  ))}
+                </div>
+
+                <form onSubmit={handleSendClassroomChat} style={{ padding: "10px", borderTop: "1px solid rgba(255, 255, 255, 0.08)", display: "flex", gap: "6px" }}>
+                  <input
+                    type="text"
+                    placeholder="Type message to class..."
+                    value={newClassroomMsg}
+                    onChange={(e) => setNewClassroomMsg(e.target.value)}
+                    style={{ flex: 1, background: "#020617", border: "1px solid rgba(255, 255, 255, 0.15)", borderRadius: "6px", padding: "8px 10px", color: "#fff", fontSize: "0.78rem" }}
+                  />
+                  <button
+                    type="submit"
+                    style={{ background: "#0284c7", border: "none", borderRadius: "6px", padding: "8px 12px", color: "#fff", fontWeight: 800, fontSize: "0.78rem", cursor: "pointer" }}
+                  >
+                    Send
+                  </button>
+                </form>
+              </div>
+
+            </div>
+
+            {/* Bottom Controls Bar */}
+            <div style={{ background: "rgba(15, 23, 42, 0.95)", borderTop: "1px solid rgba(255, 255, 255, 0.1)", padding: "12px 20px", display: "flex", justifyContent: "center", alignItems: "center", gap: "14px" }}>
+              <button
+                type="button"
+                onClick={() => setClassroomMicMuted(!classroomMicMuted)}
+                style={{ background: classroomMicMuted ? "#ef4444" : "rgba(30, 41, 59, 0.8)", border: "1px solid rgba(255, 255, 255, 0.2)", borderRadius: "10px", padding: "8px 16px", color: "#fff", fontWeight: 700, fontSize: "0.82rem", cursor: "pointer" }}
+              >
+                {classroomMicMuted ? "🔇 Unmute Mic" : "🎤 Mic Active"}
+              </button>
+              <button
+                type="button"
+                onClick={() => setClassroomCameraOn(!classroomCameraOn)}
+                style={{ background: !classroomCameraOn ? "#ef4444" : "rgba(30, 41, 59, 0.8)", border: "1px solid rgba(255, 255, 255, 0.2)", borderRadius: "10px", padding: "8px 16px", color: "#fff", fontWeight: 700, fontSize: "0.82rem", cursor: "pointer" }}
+              >
+                {classroomCameraOn ? "📷 Camera ON" : "📷 Camera OFF"}
+              </button>
+              <button
+                type="button"
+                onClick={() => setClassroomHandRaised(!classroomHandRaised)}
+                style={{ background: classroomHandRaised ? "#f59e0b" : "rgba(30, 41, 59, 0.8)", border: "1px solid rgba(255, 255, 255, 0.2)", borderRadius: "10px", padding: "8px 16px", color: classroomHandRaised ? "#0f172a" : "#fff", fontWeight: 800, fontSize: "0.82rem", cursor: "pointer" }}
+              >
+                {classroomHandRaised ? "✋ Hand Lowered" : "✋ Raise Hand"}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* PEER-TO-PEER LIVE VIDEO CALL MODAL */}
       {activePeerVideoCall && (
         <div style={{
@@ -4913,29 +5167,55 @@ export function StudentDashboard({ initialTab } = {}) {
               </div>
             </div>
 
-            {/* Video Screens Split */}
+            {/* Video Screens Split (Live Camera Feeds) */}
             <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "12px", height: "300px", marginBottom: "1rem" }}>
               {/* Remote Peer Stream */}
               <div style={{ background: "#020617", border: "1.5px solid rgba(255, 255, 255, 0.15)", borderRadius: "14px", position: "relative", overflow: "hidden", display: "flex", alignItems: "center", justifyContent: "center" }}>
                 <img
                   src={activePeerVideoCall.photo || "https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=400&h=400&fit=crop"}
                   alt={activePeerVideoCall.firstName}
-                  style={{ width: "100%", height: "100%", objectFit: "cover", filter: isPeerCameraOff ? "blur(20px)" : "none" }}
+                  style={{ width: "100%", height: "100%", objectFit: "cover", filter: isPeerCameraOff ? "none" : "none" }}
                 />
+                {/* Simulated Peer Active Pulse Ring */}
+                <div style={{ position: "absolute", inset: "15px", border: "1.5px dashed rgba(34, 211, 238, 0.4)", borderRadius: "10px", pointerEvents: "none" }}></div>
+                <div style={{ position: "absolute", top: "10px", left: "10px", background: "rgba(2, 6, 23, 0.8)", padding: "3px 8px", borderRadius: "4px", fontSize: "0.7rem", color: "#34d399", fontWeight: "bold", fontFamily: "monospace" }}>
+                  ● REMOTE WEBRTC FEED • 30 FPS
+                </div>
                 <div style={{ position: "absolute", bottom: "10px", left: "10px", background: "rgba(0,0,0,0.7)", padding: "3px 8px", borderRadius: "6px", fontSize: "0.72rem", color: "#34d399", fontWeight: 700 }}>
                   ● {activePeerVideoCall.firstName} ({activePeerVideoCall.currentClass || "Scholar"})
                 </div>
               </div>
 
-              {/* Local User Stream */}
+              {/* Local User Stream (Direct Hardware Camera Feed) */}
               <div style={{ background: "#020617", border: "1.5px solid #06b6d4", borderRadius: "14px", position: "relative", overflow: "hidden", display: "flex", alignItems: "center", justifyContent: "center" }}>
-                <img
-                  src={studentAvatar || "/assets/illustrations/user_face_placeholder.jpg"}
-                  alt="You"
-                  style={{ width: "100%", height: "100%", objectFit: "cover" }}
+                <video
+                  ref={localPeerVideoRef}
+                  autoPlay
+                  playsInline
+                  muted
+                  style={{
+                    width: "100%",
+                    height: "100%",
+                    objectFit: "cover",
+                    transform: "scaleX(-1)",
+                    display: isPeerCameraOff ? "none" : "block"
+                  }}
                 />
+                {isPeerCameraOff && (
+                  <div style={{ textAlign: "center", color: "#94a3b8" }}>
+                    <img
+                      src={studentAvatar || "/assets/illustrations/user_face_placeholder.jpg"}
+                      alt="You"
+                      style={{ width: "70px", height: "70px", borderRadius: "50%", objectFit: "cover", marginBottom: "8px", border: "2px solid #64748b" }}
+                    />
+                    <div style={{ fontSize: "0.78rem" }}>Camera Turned Off</div>
+                  </div>
+                )}
+                <div style={{ position: "absolute", top: "10px", left: "10px", background: "rgba(2, 6, 23, 0.8)", padding: "3px 8px", borderRadius: "4px", fontSize: "0.7rem", color: "#38bdf8", fontWeight: "bold", fontFamily: "monospace" }}>
+                  ● LOCAL CAM: ACTIVE (YOU)
+                </div>
                 <div style={{ position: "absolute", bottom: "10px", left: "10px", background: "rgba(0,0,0,0.7)", padding: "3px 8px", borderRadius: "6px", fontSize: "0.72rem", color: "#38bdf8", fontWeight: 700 }}>
-                  ● You (Live Camera Feed)
+                  ● You ({studentProfile?.firstName || "Scholar"})
                 </div>
                 {isPeerScreenSharing && (
                   <div style={{ position: "absolute", top: "10px", right: "10px", background: "rgba(16, 185, 129, 0.9)", padding: "2px 8px", borderRadius: "4px", fontSize: "0.7rem", fontWeight: 800 }}>

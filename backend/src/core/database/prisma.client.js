@@ -10,10 +10,11 @@ let lastPgCheckAt = 0;
 
 const isPostgresOnline = async () => {
   const now = Date.now();
-  if (cachedPgOnline !== null && now - lastPgCheckAt < 2500) {
+  const cacheTtl = cachedPgOnline === true ? 15000 : 45000;
+  if (cachedPgOnline !== null && now - lastPgCheckAt < cacheTtl) {
     return cachedPgOnline;
   }
-  cachedPgOnline = await checkPostgresReachable(250);
+  cachedPgOnline = await checkPostgresReachable(150);
   lastPgCheckAt = Date.now();
   return cachedPgOnline;
 };

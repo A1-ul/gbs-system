@@ -17,12 +17,43 @@ import {
 import UniversalRoleGuideModal from "../../../../../components/common/UniversalRoleGuideModal";
 import ClassTopicVideoPlatform from "../../../../../components/common/ClassTopicVideoPlatform";
 import { navigateToDetail } from "../../../../../utils/universalNavigation";
+import MobileCameraAIExamScannerModal from "../../../../../components/common/MobileCameraAIExamScannerModal";
 import "./TeacherDashboard.css";
 
 export default function TeacherDashboard() {
   const navigate = useNavigate();
 
   // Faculty Authenticated User Identity
+  // Mobile Camera AI Exam Scanner Modal State (50-Point Mobile Engine)
+  const [showMobileCameraScanner, setShowMobileCameraScanner] = useState(false);
+
+  // Faculty Profile State
+  const [teacherProfile, setTeacherProfile] = useState(() => {
+    try {
+      const stored = localStorage.getItem("gbs_teacher_profile");
+      if (stored) return JSON.parse(stored);
+    } catch {}
+    return {
+      fullName: "Sarah Jenkins",
+      employeeId: "GBS-FAC-2026-0042",
+      email: "teacher@gbs.edu",
+      phone: "+233 24 555 0192",
+      whatsapp: "+233 24 555 0192",
+      position: "Head of Sciences & Senior Educator",
+      department: "Natural & Applied Sciences",
+      tier: "Senior High School (SHS)",
+      qualifications: "B.Ed Integrated Science, M.Sc Educational Technology",
+      assignedClasses: ["SHS 2 Science", "SHS 3 Physics", "JHS 3 General Science"],
+      officeLocation: "Science Block, Room 204",
+      officeHours: "Mon - Thu: 2:00 PM - 4:30 PM",
+      biometricVerified: true,
+      hireDate: "January 2022",
+      photo: "/assets/admin-dashboard-bg.jpg"
+    };
+  });
+  const [showEditProfileModal, setShowEditProfileModal] = useState(false);
+  const [editProfileForm, setEditProfileForm] = useState({ ...teacherProfile });
+
   const currentUser = (() => {
     try {
       const stored = localStorage.getItem("gbs_user");
@@ -3124,6 +3155,24 @@ export default function TeacherDashboard() {
             <button 
               type="button" 
               className="role-action-btn"
+              onClick={() => setActiveTab("profile")}
+              style={{ borderColor: "#34d399", color: "#34d399", fontWeight: 800 }}
+              title="View & Edit Faculty Profile"
+            >
+              👤 My Profile
+            </button>
+            <button 
+              type="button" 
+              className="role-action-btn"
+              onClick={() => setShowMobileCameraScanner(true)}
+              style={{ borderColor: "#a855f7", color: "#c084fc", fontWeight: 800, background: "rgba(168, 85, 247, 0.15)" }}
+              title="Launch Phone Camera AI Exam Scanner"
+            >
+              📸 Mobile Camera Scanner
+            </button>
+            <button 
+              type="button" 
+              className="role-action-btn"
               onClick={() => setActiveTab("scanner")}
               style={{ borderColor: "#a855f7", color: "#c084fc" }}
             >
@@ -3533,6 +3582,14 @@ export default function TeacherDashboard() {
               style={{ borderLeft: "3px solid #10b981", color: activeTab === "curriculum" ? "#34d399" : undefined, fontWeight: 800 }}
             >
               📥 Curriculum Download (By Class / Level)
+            </button>
+            <button 
+              type="button" 
+              className={`role-tab-btn ${activeTab === "profile" ? "active" : ""}`}
+              onClick={() => setActiveTab("profile")}
+              style={{ borderLeft: "3px solid #34d399", color: activeTab === "profile" ? "#34d399" : undefined, fontWeight: 800 }}
+            >
+              👤 Faculty Profile
             </button>
           </nav>
 
@@ -5014,6 +5071,74 @@ export default function TeacherDashboard() {
           {/* ======================================================== */}
           {activeTab === "scanner" && (
             <div className="role-workspace-card">
+              {/* 50-Point Mobile Phone Camera Integration Banner */}
+              <div style={{
+                background: "linear-gradient(135deg, rgba(168, 85, 247, 0.22), rgba(88, 28, 135, 0.4))",
+                border: "2px solid #a855f7",
+                borderRadius: "16px",
+                padding: "20px 24px",
+                marginBottom: "1.5rem",
+                display: "flex",
+                justifyContent: "space-between",
+                alignItems: "center",
+                flexWrap: "wrap",
+                gap: "16px",
+                boxShadow: "0 8px 30px rgba(168, 85, 247, 0.3)"
+              }}>
+                <div style={{ display: "flex", alignItems: "center", gap: "16px" }}>
+                  <div style={{
+                    width: "56px",
+                    height: "56px",
+                    borderRadius: "14px",
+                    background: "linear-gradient(135deg, #a855f7, #6d28d9)",
+                    display: "flex",
+                    alignItems: "center",
+                    justifyContent: "center",
+                    fontSize: "2rem",
+                    boxShadow: "0 0 20px rgba(168, 85, 247, 0.5)"
+                  }}>
+                    📸
+                  </div>
+                  <div>
+                    <div style={{ display: "flex", alignItems: "center", gap: "8px", flexWrap: "wrap" }}>
+                      <strong style={{ color: "#f8fafc", fontSize: "1.2rem", fontWeight: 900 }}>
+                        GBS MOBILE PHONE CAMERA SCANNER • AI EXAM ENGINE
+                      </strong>
+                      <span style={{ background: "#10b981", color: "#064e3b", fontWeight: 900, fontSize: "0.72rem", padding: "2px 8px", borderRadius: "999px" }}>
+                        ANDROID & IPHONE LINK READY
+                      </span>
+                    </div>
+                    <p style={{ margin: "4px 0 0", color: "#cbd5e1", fontSize: "0.88rem", maxWidth: "700px", lineHeight: "1.4" }}>
+                      No physical flatbed scanner required. Use your smartphone camera to scan multi-page student scripts page-by-page. AI auto-detects paper edges, removes shadows, transcribes handwritten answers via OCR, checks acceptable alternatives from your answer key, and calculates grades instantly.
+                    </p>
+                  </div>
+                </div>
+
+                <div style={{ display: "flex", gap: "12px", flexWrap: "wrap" }}>
+                  <button
+                    type="button"
+                    onClick={() => setShowMobileCameraScanner(true)}
+                    style={{
+                      background: "linear-gradient(135deg, #a855f7, #7c3aed)",
+                      border: "none",
+                      borderRadius: "12px",
+                      padding: "14px 24px",
+                      color: "#ffffff",
+                      fontSize: "0.95rem",
+                      fontWeight: 900,
+                      cursor: "pointer",
+                      boxShadow: "0 4px 20px rgba(168, 85, 247, 0.5)",
+                      display: "flex",
+                      alignItems: "center",
+                      gap: "8px"
+                    }}
+                  >
+                    <span>📸</span>
+                    <span>Launch Mobile Camera Scanner</span>
+                  </button>
+                </div>
+              </div>
+
               <div className="workspace-title-row">
                 <div>
                   <h2><span>🤖</span> AI EXAM SCANNER & OBJECTIVE AUTO-GRADING SUITE</h2>
@@ -7350,6 +7475,272 @@ export default function TeacherDashboard() {
           {/* ======================================================== */}
           {/* TAB 11: OFFICIAL CURRICULUM & SYLLABUS DOWNLOAD CENTER   */}
           {/* ======================================================== */}
+
+          {/* ======================================================== */}
+          {/* TAB: FACULTY PROFILE & CREDENTIALS                       */}
+          {/* ======================================================== */}
+          {activeTab === "profile" && (
+            <div className="role-workspace-card">
+              <div className="workspace-title-row">
+                <div>
+                  <h2><span>👤</span> FACULTY PROFILE & CREDENTIALS</h2>
+                  <p>Official teaching identity, assigned curriculum classes, office hours, and academic qualifications.</p>
+                </div>
+                <div style={{ display: "flex", gap: "10px" }}>
+                  <button
+                    type="button"
+                    className="btn-primary"
+                    style={{ background: "linear-gradient(135deg, #0284c7, #0369a1)", fontWeight: 800 }}
+                    onClick={() => {
+                      setEditProfileForm({ ...teacherProfile });
+                      setShowEditProfileModal(true);
+                    }}
+                  >
+                    ✏️ Edit Profile Details
+                  </button>
+                </div>
+              </div>
+
+              {/* Profile Card Header */}
+              <div style={{
+                background: "linear-gradient(135deg, rgba(15, 23, 42, 0.9), rgba(30, 41, 59, 0.8))",
+                border: "1px solid rgba(255, 255, 255, 0.12)",
+                borderRadius: "16px",
+                padding: "24px",
+                display: "flex",
+                gap: "24px",
+                flexWrap: "wrap",
+                alignItems: "center",
+                marginBottom: "1.5rem"
+              }}>
+                <div style={{ position: "relative" }}>
+                  <img
+                    src={teacherAvatar || teacherProfile.photo || "/assets/admin-dashboard-bg.jpg"}
+                    alt={teacherProfile.fullName}
+                    style={{
+                      width: "105px",
+                      height: "105px",
+                      borderRadius: "16px",
+                      border: "3px solid #34d399",
+                      objectFit: "cover",
+                      boxShadow: "0 0 25px rgba(52, 211, 153, 0.35)"
+                    }}
+                  />
+                  <span style={{
+                    position: "absolute",
+                    bottom: "-4px",
+                    right: "-4px",
+                    background: "#10b981",
+                    color: "#064e3b",
+                    fontSize: "0.68rem",
+                    fontWeight: 900,
+                    padding: "2px 6px",
+                    borderRadius: "6px",
+                    boxShadow: "0 2px 8px rgba(0,0,0,0.4)"
+                  }}>
+                    ✓ VERIFIED
+                  </span>
+                </div>
+
+                <div style={{ flex: 1, minWidth: "260px" }}>
+                  <div style={{ display: "flex", alignItems: "center", gap: "10px", flexWrap: "wrap" }}>
+                    <h2 style={{ margin: 0, color: "#f8fafc", fontSize: "1.5rem", fontWeight: 900 }}>
+                      {teacherProfile.fullName}
+                    </h2>
+                    <span style={{
+                      background: "rgba(56, 189, 248, 0.18)",
+                      border: "1px solid #38bdf8",
+                      color: "#38bdf8",
+                      fontSize: "0.75rem",
+                      fontWeight: 800,
+                      padding: "3px 10px",
+                      borderRadius: "999px"
+                    }}>
+                      ID: {teacherProfile.employeeId}
+                    </span>
+                  </div>
+
+                  <p style={{ margin: "4px 0 8px", color: "#34d399", fontSize: "1rem", fontWeight: 700 }}>
+                    {teacherProfile.position} • {teacherProfile.department}
+                  </p>
+
+                  <div style={{ display: "flex", gap: "16px", flexWrap: "wrap", fontSize: "0.85rem", color: "#cbd5e1" }}>
+                    <span>📧 <a href={`mailto:${teacherProfile.email}`} style={{ color: "#38bdf8", textDecoration: "none" }}>{teacherProfile.email}</a></span>
+                    <span>📞 <a href={`tel:${teacherProfile.phone}`} style={{ color: "#38bdf8", textDecoration: "none" }}>{teacherProfile.phone}</a></span>
+                    <span>💬 WhatsApp: <strong style={{ color: "#34d399" }}>{teacherProfile.whatsapp}</strong></span>
+                  </div>
+                </div>
+              </div>
+
+              {/* Grid: Academic Qualifications, Assigned Classes & Office Hours */}
+              <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(280px, 1fr))", gap: "16px" }}>
+                
+                {/* Academic Credentials */}
+                <div style={{ background: "rgba(15, 23, 42, 0.7)", border: "1px solid rgba(255, 255, 255, 0.08)", borderRadius: "12px", padding: "18px" }}>
+                  <h4 style={{ margin: "0 0 10px", color: "#38bdf8", fontSize: "0.95rem", display: "flex", alignItems: "center", gap: "8px" }}>
+                    <span>🎓</span> Academic Qualifications & Certifications
+                  </h4>
+                  <p style={{ margin: 0, color: "#f8fafc", fontSize: "0.9rem", lineHeight: "1.5" }}>
+                    {teacherProfile.qualifications}
+                  </p>
+                  <div style={{ marginTop: "12px", fontSize: "0.78rem", color: "#94a3b8" }}>
+                    Institution Tier: <strong style={{ color: "#cbd5e1" }}>{teacherProfile.tier}</strong> • Hired: <strong style={{ color: "#cbd5e1" }}>{teacherProfile.hireDate}</strong>
+                  </div>
+                </div>
+
+                {/* Assigned Classes */}
+                <div style={{ background: "rgba(15, 23, 42, 0.7)", border: "1px solid rgba(255, 255, 255, 0.08)", borderRadius: "12px", padding: "18px" }}>
+                  <h4 style={{ margin: "0 0 10px", color: "#34d399", fontSize: "0.95rem", display: "flex", alignItems: "center", gap: "8px" }}>
+                    <span>📚</span> Assigned Classes & Teaching Streams
+                  </h4>
+                  <div style={{ display: "flex", gap: "8px", flexWrap: "wrap" }}>
+                    {classes.map((c) => (
+                      <span key={c.id} style={{ background: "rgba(52, 211, 153, 0.15)", border: "1px solid #10b981", color: "#a7f3d0", padding: "4px 10px", borderRadius: "6px", fontSize: "0.82rem", fontWeight: 700 }}>
+                        {c.name} ({c.code})
+                      </span>
+                    ))}
+                  </div>
+                </div>
+
+                {/* Office & Consultation Hours */}
+                <div style={{ background: "rgba(15, 23, 42, 0.7)", border: "1px solid rgba(255, 255, 255, 0.08)", borderRadius: "12px", padding: "18px" }}>
+                  <h4 style={{ margin: "0 0 10px", color: "#fbbf24", fontSize: "0.95rem", display: "flex", alignItems: "center", gap: "8px" }}>
+                    <span>📍</span> Location & Consultation Hours
+                  </h4>
+                  <p style={{ margin: "0 0 6px", color: "#f8fafc", fontSize: "0.9rem" }}>
+                    Room / Hall: <strong>{teacherProfile.officeLocation}</strong>
+                  </p>
+                  <p style={{ margin: 0, color: "#cbd5e1", fontSize: "0.85rem" }}>
+                    Visiting Hours: <strong style={{ color: "#fbbf24" }}>{teacherProfile.officeHours}</strong>
+                  </p>
+                </div>
+
+              </div>
+
+              {/* Edit Profile Modal */}
+              {showEditProfileModal && (
+                <div style={{
+                  position: "fixed",
+                  inset: 0,
+                  zIndex: 99999,
+                  background: "rgba(2, 6, 23, 0.85)",
+                  backdropFilter: "blur(8px)",
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "center",
+                  padding: "20px"
+                }}>
+                  <div style={{
+                    background: "#0f172a",
+                    border: "1px solid #38bdf8",
+                    borderRadius: "16px",
+                    maxWidth: "520px",
+                    width: "100%",
+                    padding: "24px",
+                    color: "#f8fafc",
+                    boxShadow: "0 10px 40px rgba(56, 189, 248, 0.3)"
+                  }}>
+                    <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "16px" }}>
+                      <h3 style={{ margin: 0, color: "#38bdf8", fontSize: "1.2rem" }}>
+                        ✏️ Edit Faculty Profile
+                      </h3>
+                      <button
+                        type="button"
+                        onClick={() => setShowEditProfileModal(false)}
+                        style={{ background: "none", border: "none", color: "#cbd5e1", fontSize: "1.2rem", cursor: "pointer" }}
+                      >
+                        ✕
+                      </button>
+                    </div>
+
+                    <div style={{ display: "flex", flexDirection: "column", gap: "12px" }}>
+                      <div>
+                        <label style={{ display: "block", fontSize: "0.78rem", color: "#94a3b8", marginBottom: "4px" }}>Full Name</label>
+                        <input
+                          type="text"
+                          value={editProfileForm.fullName}
+                          onChange={(e) => setEditProfileForm({ ...editProfileForm, fullName: e.target.value })}
+                          style={{ width: "100%", background: "#1e293b", border: "1px solid rgba(255,255,255,0.2)", color: "#fff", borderRadius: "8px", padding: "8px" }}
+                        />
+                      </div>
+                      <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "10px" }}>
+                        <div>
+                          <label style={{ display: "block", fontSize: "0.78rem", color: "#94a3b8", marginBottom: "4px" }}>Contact Phone</label>
+                          <input
+                            type="text"
+                            value={editProfileForm.phone}
+                            onChange={(e) => setEditProfileForm({ ...editProfileForm, phone: e.target.value })}
+                            style={{ width: "100%", background: "#1e293b", border: "1px solid rgba(255,255,255,0.2)", color: "#fff", borderRadius: "8px", padding: "8px" }}
+                          />
+                        </div>
+                        <div>
+                          <label style={{ display: "block", fontSize: "0.78rem", color: "#94a3b8", marginBottom: "4px" }}>WhatsApp Number</label>
+                          <input
+                            type="text"
+                            value={editProfileForm.whatsapp}
+                            onChange={(e) => setEditProfileForm({ ...editProfileForm, whatsapp: e.target.value })}
+                            style={{ width: "100%", background: "#1e293b", border: "1px solid rgba(255,255,255,0.2)", color: "#fff", borderRadius: "8px", padding: "8px" }}
+                          />
+                        </div>
+                      </div>
+                      <div>
+                        <label style={{ display: "block", fontSize: "0.78rem", color: "#94a3b8", marginBottom: "4px" }}>Academic Qualifications</label>
+                        <input
+                          type="text"
+                          value={editProfileForm.qualifications}
+                          onChange={(e) => setEditProfileForm({ ...editProfileForm, qualifications: e.target.value })}
+                          style={{ width: "100%", background: "#1e293b", border: "1px solid rgba(255,255,255,0.2)", color: "#fff", borderRadius: "8px", padding: "8px" }}
+                        />
+                      </div>
+                      <div>
+                        <label style={{ display: "block", fontSize: "0.78rem", color: "#94a3b8", marginBottom: "4px" }}>Office Location</label>
+                        <input
+                          type="text"
+                          value={editProfileForm.officeLocation}
+                          onChange={(e) => setEditProfileForm({ ...editProfileForm, officeLocation: e.target.value })}
+                          style={{ width: "100%", background: "#1e293b", border: "1px solid rgba(255,255,255,0.2)", color: "#fff", borderRadius: "8px", padding: "8px" }}
+                        />
+                      </div>
+                      <div>
+                        <label style={{ display: "block", fontSize: "0.78rem", color: "#94a3b8", marginBottom: "4px" }}>Office / Consultation Hours</label>
+                        <input
+                          type="text"
+                          value={editProfileForm.officeHours}
+                          onChange={(e) => setEditProfileForm({ ...editProfileForm, officeHours: e.target.value })}
+                          style={{ width: "100%", background: "#1e293b", border: "1px solid rgba(255,255,255,0.2)", color: "#fff", borderRadius: "8px", padding: "8px" }}
+                        />
+                      </div>
+                    </div>
+
+                    <div style={{ display: "flex", gap: "10px", marginTop: "20px" }}>
+                      <button
+                        type="button"
+                        onClick={() => setShowEditProfileModal(false)}
+                        style={{ flex: 1, background: "rgba(30, 41, 59, 0.8)", border: "1px solid rgba(255,255,255,0.15)", borderRadius: "8px", color: "#cbd5e1", padding: "10px", fontWeight: 700, cursor: "pointer" }}
+                      >
+                        Cancel
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setTeacherProfile({ ...editProfileForm });
+                          try {
+                            localStorage.setItem("gbs_teacher_profile", JSON.stringify(editProfileForm));
+                          } catch {}
+                          setShowEditProfileModal(false);
+                          setFeedback({ type: "success", message: "✓ Faculty profile updated successfully!" });
+                        }}
+                        style={{ flex: 1, background: "linear-gradient(135deg, #10b981, #059669)", border: "none", borderRadius: "8px", color: "#fff", padding: "10px", fontWeight: 800, cursor: "pointer" }}
+                      >
+                        ✓ Save Changes
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              )}
+            </div>
+          )}
+
           {activeTab === "curriculum" && (() => {
             const activeTierMeta = INSTITUTION_TIERS[curriculumInstitutionTier] || INSTITUTION_TIERS.NURSERY_TO_JHS;
             const registeredTierMeta = INSTITUTION_TIERS[registeredInstitutionTier] || INSTITUTION_TIERS.NURSERY_TO_JHS;
@@ -10363,6 +10754,20 @@ export default function TeacherDashboard() {
         </div>
         );
       })()}
+
+      <MobileCameraAIExamScannerModal
+        isOpen={showMobileCameraScanner}
+        onClose={() => setShowMobileCameraScanner(false)}
+        initialClass={classes.find((c) => String(c.id) === String(selectedClassId)) || classes[0]}
+        classes={classes}
+        currentUser={currentUser}
+        onGradingComplete={(result) => {
+          setFeedback({
+            type: "success",
+            message: `✓ Examination marked via Mobile Camera! ${result.studentName} scored ${result.score}/${result.maxScore} (Grade ${result.grade})`
+          });
+        }}
+      />
 
       <UniversalRoleGuideModal
         role="TEACHER"
