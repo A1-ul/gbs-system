@@ -10,6 +10,7 @@ import { getUserAvatar } from "../../../../../utils/userAvatars";
 import { offlineSyncEngine } from "../../../../../utils/offlineSync";
 import UniversalRoleGuideModal from "../../../../../components/common/UniversalRoleGuideModal";
 import { navigateToDetail } from "../../../../../utils/universalNavigation";
+import FileUploadVerificationCard from "../../../../../components/common/FileUploadVerificationCard";
 import "./AdminDashboard.css";
 
 export function AdminDashboard({ initialTab } = {}) {
@@ -2259,6 +2260,74 @@ export function AdminDashboard({ initialTab } = {}) {
     amendmentReason: ""
   });
 
+  // Headmaster Enrolled Student Amendment State
+  const [editingStudent, setEditingStudent] = useState(null);
+  const [editStudentForm, setEditStudentForm] = useState({
+    firstName: "",
+    lastName: "",
+    studentId: "",
+    currentClass: "",
+    classCode: "",
+    balanceDue: 0,
+    boardingBus: false,
+    guardianPhone: "",
+    guardianEmail: "",
+    homeGpsAddress: "",
+    amendmentReason: ""
+  });
+
+  const handleOpenEditStudentModal = (student) => {
+    setEditingStudent(student);
+    setEditStudentForm({
+      firstName: student.firstName || "",
+      lastName: student.lastName || "",
+      studentId: student.studentId || "",
+      currentClass: student.currentClass || "Primary 4 (Upper Primary)",
+      classCode: student.classCode || "PRI-04",
+      balanceDue: student.balanceDue !== undefined ? student.balanceDue : 0,
+      boardingBus: Boolean(student.boardingBus),
+      guardianPhone: student.guardianPhone || "+233-24-555-0199",
+      guardianEmail: student.guardianEmail || `${(student.firstName || "parent").toLowerCase()}@gmail.com`,
+      homeGpsAddress: student.homeGpsAddress || "GA-492-1084, Accra",
+      amendmentReason: ""
+    });
+  };
+
+  const handleSaveEditedStudent = (e) => {
+    if (e && e.preventDefault) e.preventDefault();
+    if (!editingStudent) return;
+
+    const updated = {
+      ...editingStudent,
+      firstName: editStudentForm.firstName.trim(),
+      lastName: editStudentForm.lastName.trim(),
+      studentId: editStudentForm.studentId.trim(),
+      currentClass: editStudentForm.currentClass,
+      classCode: editStudentForm.classCode,
+      balanceDue: parseFloat(editStudentForm.balanceDue) || 0,
+      boardingBus: Boolean(editStudentForm.boardingBus),
+      guardianPhone: editStudentForm.guardianPhone.trim(),
+      guardianEmail: editStudentForm.guardianEmail.trim(),
+      homeGpsAddress: editStudentForm.homeGpsAddress.trim(),
+      amendmentReason: editStudentForm.amendmentReason.trim() || "Headmaster amendment of student record",
+      amendedAt: new Date().toISOString()
+    };
+
+    const nextEnrolled = enrolledStudents.map((s) => (s.id === editingStudent.id ? updated : s));
+    setEnrolledStudents(nextEnrolled);
+    try {
+      localStorage.setItem("gbs_enrolled_students", JSON.stringify(nextEnrolled));
+      window.dispatchEvent(new CustomEvent("gbs_student_enrolled", { detail: updated }));
+      window.dispatchEvent(new Event("storage"));
+    } catch {}
+
+    setToastNotification({
+      type: "success",
+      message: `✓ Student record for ${updated.firstName} ${updated.lastName} (${updated.studentId}) successfully amended and saved!`
+    });
+    setEditingStudent(null);
+  };
+
   const handleOpenEditAdmissionModal = (app) => {
     setEditingAdmission(app);
     setEditAdmissionForm({
@@ -2346,6 +2415,8 @@ export function AdminDashboard({ initialTab } = {}) {
     entryAggregate: "08",
     autoEnroll: true
   });
+  const [walkInDocumentFile, setWalkInDocumentFile] = useState(null);
+  const [isWalkInDocVerified, setIsWalkInDocVerified] = useState(false);
 
   const handleSaveWalkInAdmission = (e) => {
     e.preventDefault();
@@ -10186,6 +10257,7 @@ export function AdminDashboard({ initialTab } = {}) {
                         <th>Assigned Class</th>
                         <th>Financial Standing</th>
                         <th>Authority Badge</th>
+                        <th>Action</th>
                       </tr>
                     </thead>
                     <tbody>
@@ -10215,6 +10287,27 @@ export function AdminDashboard({ initialTab } = {}) {
                             <span style={{ fontSize: "0.75rem", color: "#cbd5e1" }}>
                               🔒 Assigned Exclusively by Headmaster
                             </span>
+                          </td>
+                          <td>
+                            <button
+                              type="button"
+                              onClick={() => handleOpenEditStudentModal(st)}
+                              style={{
+                                padding: "5px 12px",
+                                fontSize: "0.78rem",
+                                background: "rgba(245, 158, 11, 0.2)",
+                                border: "1px solid #f59e0b",
+                                color: "#fbbf24",
+                                borderRadius: "6px",
+                                cursor: "pointer",
+                                fontWeight: "700",
+                                display: "inline-flex",
+                                alignItems: "center",
+                                gap: "4px"
+                              }}
+                            >
+                              ✏️ Edit / Amend Details
+                            </button>
                           </td>
                         </tr>
                       ))}
@@ -12491,6 +12584,38 @@ export function AdminDashboard({ initialTab } = {}) {
                   </div>
                 </div>
 
+                <div style={{ marginTop: "10px", marginBottom: "10px" }}>
+                  <label style={{ display: "block", fontSize: "0.76rem", color: "#38bdf8", marginBottom: "4px", fontWeight: 700 }}>
+                    📎 Attach Prior Academic Records / Birth Certificate (Inspection & Verification Required)
+                  </label>
+                  <input
+                    type="file"
+                    accept=".pdf,.png,.jpg,.jpeg,.doc,.docx"
+                    onChange={(e) => {
+                      const file = e.target.files?.[0];
+                      if (file) {
+                        const size = file.size > 1024 * 1024 ? `${(file.size / (1024 * 1024)).toFixed(2)} MB` : `${(file.size / 1024).toFixed(1)} KB`;
+                        setWalkInDocumentFile({ name: file.name, size });
+                        setIsWalkInDocVerified(false);
+                      }
+                    }}
+                    style={{ fontSize: "0.8rem", color: "#94a3b8" }}
+                  />
+                  {walkInDocumentFile && (
+                    <FileUploadVerificationCard
+                      file={walkInDocumentFile}
+                      isVerified={isWalkInDocVerified}
+                      onVerify={() => setIsWalkInDocVerified(true)}
+                      onRemove={() => {
+                        setWalkInDocumentFile(null);
+                        setIsWalkInDocVerified(false);
+                      }}
+                      label="Applicant Credential Dossier"
+                      category="Admissions Verification"
+                    />
+                  )}
+                </div>
+
                 <div style={{ display: "flex", alignItems: "center", gap: "10px", background: "rgba(16, 185, 129, 0.15)", border: "1px solid rgba(16, 185, 129, 0.35)", borderRadius: "8px", padding: "10px" }}>
                   <input
                     type="checkbox"
@@ -12512,9 +12637,361 @@ export function AdminDashboard({ initialTab } = {}) {
                 <button
                   type="submit"
                   className="btn-primary"
-                  style={{ background: "linear-gradient(135deg, #10b981, #059669)", padding: "12px 24px", fontWeight: "900", fontSize: "0.92rem", boxShadow: "0 4px 15px rgba(16, 185, 129, 0.4)" }}
+                  disabled={Boolean(walkInDocumentFile && !isWalkInDocVerified)}
+                  style={{
+                    background: (walkInDocumentFile && !isWalkInDocVerified)
+                      ? "rgba(100, 116, 139, 0.4)"
+                      : "linear-gradient(135deg, #10b981, #059669)",
+                    padding: "12px 24px",
+                    fontWeight: "900",
+                    fontSize: "0.92rem",
+                    boxShadow: "0 4px 15px rgba(16, 185, 129, 0.4)",
+                    cursor: (walkInDocumentFile && !isWalkInDocVerified) ? "not-allowed" : "pointer"
+                  }}
                 >
-                  🏛️ Complete Walk-In Admission & Generate Dossier
+                  {walkInDocumentFile && !isWalkInDocVerified ? "⚠️ Verify Attached File to Complete" : "🏛️ Complete Walk-In Admission & Generate Dossier"}
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* HEADMASTER ADMISSION RECORD AMENDMENT MODAL */}
+      {editingAdmission && (
+        <div className="invoice-pay-modal-overlay" style={{ zIndex: 9999 }}>
+          <div className="invoice-pay-modal" style={{ maxWidth: "780px", background: "#0b1329", border: "2px solid #f59e0b", borderRadius: "18px", padding: "1.75rem", maxHeight: "90vh", overflowY: "auto" }}>
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", borderBottom: "1.5px solid rgba(245, 158, 11, 0.3)", paddingBottom: "1rem", marginBottom: "1.25rem" }}>
+              <div>
+                <span className="role-portal-badge" style={{ color: "#fbbf24", background: "rgba(245, 158, 11, 0.15)", marginBottom: "4px", display: "inline-block" }}>
+                  HEADMASTER EXECUTIVE SUITE • ADMISSION RECORD AMENDMENT
+                </span>
+                <h2 style={{ margin: "2px 0 0", color: "#f8fafc", fontSize: "1.35rem", fontWeight: "900" }}>
+                  ✏️ AMEND APPLICANT & ADMISSION RECORD DETAILS
+                </h2>
+                <p style={{ margin: "4px 0 0", color: "#94a3b8", fontSize: "0.82rem" }}>
+                  For parent-notified corrections or institutional record revisions on application <strong>#{editingAdmission.applicationNumber || editingAdmission.id}</strong>.
+                </p>
+              </div>
+              <button type="button" className="btn-secondary" onClick={() => setEditingAdmission(null)}>✕</button>
+            </div>
+
+            <form onSubmit={handleSaveEditedAdmission}>
+              {/* Student Demographics */}
+              <div style={{ background: "rgba(15, 23, 42, 0.6)", border: "1px solid rgba(255, 255, 255, 0.08)", borderRadius: "10px", padding: "14px", marginBottom: "1rem" }}>
+                <h4 style={{ margin: "0 0 10px", color: "#38bdf8", fontSize: "0.9rem" }}>1. Student Identity & Placement</h4>
+                <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "10px", marginBottom: "10px" }}>
+                  <div>
+                    <label style={{ fontSize: "0.78rem", color: "#94a3b8", display: "block", marginBottom: "4px" }}>First Name *</label>
+                    <input
+                      type="text"
+                      className="filter-input"
+                      style={{ width: "100%" }}
+                      value={editAdmissionForm.studentFirstName}
+                      onChange={(e) => setEditAdmissionForm({ ...editAdmissionForm, studentFirstName: e.target.value })}
+                      required
+                    />
+                  </div>
+                  <div>
+                    <label style={{ fontSize: "0.78rem", color: "#94a3b8", display: "block", marginBottom: "4px" }}>Last Name *</label>
+                    <input
+                      type="text"
+                      className="filter-input"
+                      style={{ width: "100%" }}
+                      value={editAdmissionForm.studentLastName}
+                      onChange={(e) => setEditAdmissionForm({ ...editAdmissionForm, studentLastName: e.target.value })}
+                      required
+                    />
+                  </div>
+                </div>
+                <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: "10px" }}>
+                  <div>
+                    <label style={{ fontSize: "0.78rem", color: "#94a3b8", display: "block", marginBottom: "4px" }}>Target Grade Level</label>
+                    <select
+                      className="filter-select"
+                      style={{ width: "100%" }}
+                      value={editAdmissionForm.targetGradeLevel}
+                      onChange={(e) => setEditAdmissionForm({ ...editAdmissionForm, targetGradeLevel: e.target.value })}
+                    >
+                      {[1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12].map((g) => (
+                        <option key={g} value={String(g)}>Grade {g}</option>
+                      ))}
+                    </select>
+                  </div>
+                  <div>
+                    <label style={{ fontSize: "0.78rem", color: "#94a3b8", display: "block", marginBottom: "4px" }}>Gender</label>
+                    <select
+                      className="filter-select"
+                      style={{ width: "100%" }}
+                      value={editAdmissionForm.gender}
+                      onChange={(e) => setEditAdmissionForm({ ...editAdmissionForm, gender: e.target.value })}
+                    >
+                      <option value="Male">Male</option>
+                      <option value="Female">Female</option>
+                    </select>
+                  </div>
+                  <div>
+                    <label style={{ fontSize: "0.78rem", color: "#94a3b8", display: "block", marginBottom: "4px" }}>Date of Birth</label>
+                    <input
+                      type="date"
+                      className="filter-input"
+                      style={{ width: "100%" }}
+                      value={editAdmissionForm.dateOfBirth}
+                      onChange={(e) => setEditAdmissionForm({ ...editAdmissionForm, dateOfBirth: e.target.value })}
+                    />
+                  </div>
+                </div>
+              </div>
+
+              {/* Guardian & Contact Information */}
+              <div style={{ background: "rgba(15, 23, 42, 0.6)", border: "1px solid rgba(255, 255, 255, 0.08)", borderRadius: "10px", padding: "14px", marginBottom: "1rem" }}>
+                <h4 style={{ margin: "0 0 10px", color: "#34d399", fontSize: "0.9rem" }}>2. Parent / Guardian Contact Details</h4>
+                <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "10px", marginBottom: "10px" }}>
+                  <div>
+                    <label style={{ fontSize: "0.78rem", color: "#94a3b8", display: "block", marginBottom: "4px" }}>Guardian Full Name</label>
+                    <input
+                      type="text"
+                      className="filter-input"
+                      style={{ width: "100%" }}
+                      value={editAdmissionForm.guardianName}
+                      onChange={(e) => setEditAdmissionForm({ ...editAdmissionForm, guardianName: e.target.value })}
+                    />
+                  </div>
+                  <div>
+                    <label style={{ fontSize: "0.78rem", color: "#94a3b8", display: "block", marginBottom: "4px" }}>Guardian Phone</label>
+                    <input
+                      type="text"
+                      className="filter-input"
+                      style={{ width: "100%" }}
+                      value={editAdmissionForm.guardianPhone}
+                      onChange={(e) => setEditAdmissionForm({ ...editAdmissionForm, guardianPhone: e.target.value })}
+                    />
+                  </div>
+                </div>
+                <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "10px" }}>
+                  <div>
+                    <label style={{ fontSize: "0.78rem", color: "#94a3b8", display: "block", marginBottom: "4px" }}>Guardian Email</label>
+                    <input
+                      type="email"
+                      className="filter-input"
+                      style={{ width: "100%" }}
+                      value={editAdmissionForm.guardianEmail}
+                      onChange={(e) => setEditAdmissionForm({ ...editAdmissionForm, guardianEmail: e.target.value })}
+                    />
+                  </div>
+                  <div>
+                    <label style={{ fontSize: "0.78rem", color: "#94a3b8", display: "block", marginBottom: "4px" }}>Digital Address / GPS</label>
+                    <input
+                      type="text"
+                      className="filter-input"
+                      style={{ width: "100%" }}
+                      value={editAdmissionForm.homeGpsAddress}
+                      onChange={(e) => setEditAdmissionForm({ ...editAdmissionForm, homeGpsAddress: e.target.value })}
+                    />
+                  </div>
+                </div>
+              </div>
+
+              {/* Admission Pipeline Stage & Amendment Reason */}
+              <div style={{ background: "rgba(15, 23, 42, 0.6)", border: "1px solid rgba(255, 255, 255, 0.08)", borderRadius: "10px", padding: "14px", marginBottom: "1.25rem" }}>
+                <h4 style={{ margin: "0 0 10px", color: "#fbbf24", fontSize: "0.9rem" }}>3. Admission Status & Amendment Reason</h4>
+                <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "10px", marginBottom: "10px" }}>
+                  <div>
+                    <label style={{ fontSize: "0.78rem", color: "#94a3b8", display: "block", marginBottom: "4px" }}>Pipeline Stage / Status</label>
+                    <select
+                      className="filter-select"
+                      style={{ width: "100%" }}
+                      value={editAdmissionForm.stage}
+                      onChange={(e) => setEditAdmissionForm({ ...editAdmissionForm, stage: e.target.value })}
+                    >
+                      <option value="PENDING">PENDING (Under Initial Review)</option>
+                      <option value="UNDER_REVIEW">UNDER REVIEW (Dossier Inspection)</option>
+                      <option value="INTERVIEW_SCHEDULED">INTERVIEW SCHEDULED</option>
+                      <option value="APPROVED">APPROVED (Admit Notice Dispatched)</option>
+                      <option value="ADMITTED">ADMITTED (Enrolled to Cohort)</option>
+                      <option value="DOCUMENTS_REQUESTED">DOCUMENTS REQUESTED</option>
+                      <option value="REJECTED">REJECTED</option>
+                    </select>
+                  </div>
+                  <div>
+                    <label style={{ fontSize: "0.78rem", color: "#94a3b8", display: "block", marginBottom: "4px" }}>BECE / Aggregate Score</label>
+                    <input
+                      type="text"
+                      className="filter-input"
+                      style={{ width: "100%" }}
+                      value={editAdmissionForm.entryAggregate}
+                      onChange={(e) => setEditAdmissionForm({ ...editAdmissionForm, entryAggregate: e.target.value })}
+                    />
+                  </div>
+                </div>
+                <div>
+                  <label style={{ fontSize: "0.78rem", color: "#94a3b8", display: "block", marginBottom: "4px" }}>Amendment Reason / Parent Request Note</label>
+                  <input
+                    type="text"
+                    className="filter-input"
+                    style={{ width: "100%" }}
+                    placeholder="e.g. Parent informed Headmaster to update guardian contact and grade level"
+                    value={editAdmissionForm.amendmentReason}
+                    onChange={(e) => setEditAdmissionForm({ ...editAdmissionForm, amendmentReason: e.target.value })}
+                  />
+                </div>
+              </div>
+
+              <div style={{ display: "flex", justifyContent: "flex-end", gap: "10px" }}>
+                <button type="button" className="btn-secondary" onClick={() => setEditingAdmission(null)}>
+                  Cancel
+                </button>
+                <button
+                  type="submit"
+                  className="btn-primary"
+                  style={{ background: "linear-gradient(135deg, #f59e0b, #d97706)", padding: "11px 24px", fontWeight: "900", color: "#ffffff" }}
+                >
+                  💾 Save & Amend Admission Record
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* HEADMASTER ENROLLED STUDENT AMENDMENT MODAL */}
+      {editingStudent && (
+        <div className="invoice-pay-modal-overlay" style={{ zIndex: 9999 }}>
+          <div className="invoice-pay-modal" style={{ maxWidth: "720px", background: "#0b1329", border: "2px solid #38bdf8", borderRadius: "18px", padding: "1.75rem", maxHeight: "90vh", overflowY: "auto" }}>
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", borderBottom: "1.5px solid rgba(56, 189, 248, 0.3)", paddingBottom: "1rem", marginBottom: "1.25rem" }}>
+              <div>
+                <span className="role-portal-badge" style={{ color: "#38bdf8", background: "rgba(56, 189, 248, 0.15)", marginBottom: "4px", display: "inline-block" }}>
+                  HEADMASTER MASTER DASHBOARD • ENROLLED SCHOLAR ROSTER AMENDMENT
+                </span>
+                <h2 style={{ margin: "2px 0 0", color: "#f8fafc", fontSize: "1.35rem", fontWeight: "900" }}>
+                  ✏️ AMEND ENROLLED STUDENT DETAILS
+                </h2>
+                <p style={{ margin: "4px 0 0", color: "#94a3b8", fontSize: "0.82rem" }}>
+                  Update student identity, assigned classroom cohort, financial clearance balance, and bus service details.
+                </p>
+              </div>
+              <button type="button" className="btn-secondary" onClick={() => setEditingStudent(null)}>✕</button>
+            </div>
+
+            <form onSubmit={handleSaveEditedStudent}>
+              <div style={{ background: "rgba(15, 23, 42, 0.6)", border: "1px solid rgba(255, 255, 255, 0.08)", borderRadius: "10px", padding: "14px", marginBottom: "1rem" }}>
+                <h4 style={{ margin: "0 0 10px", color: "#38bdf8", fontSize: "0.9rem" }}>1. Scholar Details</h4>
+                <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "10px", marginBottom: "10px" }}>
+                  <div>
+                    <label style={{ fontSize: "0.78rem", color: "#94a3b8", display: "block", marginBottom: "4px" }}>First Name *</label>
+                    <input
+                      type="text"
+                      className="filter-input"
+                      style={{ width: "100%" }}
+                      value={editStudentForm.firstName}
+                      onChange={(e) => setEditStudentForm({ ...editStudentForm, firstName: e.target.value })}
+                      required
+                    />
+                  </div>
+                  <div>
+                    <label style={{ fontSize: "0.78rem", color: "#94a3b8", display: "block", marginBottom: "4px" }}>Last Name *</label>
+                    <input
+                      type="text"
+                      className="filter-input"
+                      style={{ width: "100%" }}
+                      value={editStudentForm.lastName}
+                      onChange={(e) => setEditStudentForm({ ...editStudentForm, lastName: e.target.value })}
+                      required
+                    />
+                  </div>
+                </div>
+                <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "10px" }}>
+                  <div>
+                    <label style={{ fontSize: "0.78rem", color: "#94a3b8", display: "block", marginBottom: "4px" }}>Matric / Student ID *</label>
+                    <input
+                      type="text"
+                      className="filter-input"
+                      style={{ width: "100%", fontFamily: "monospace" }}
+                      value={editStudentForm.studentId}
+                      onChange={(e) => setEditStudentForm({ ...editStudentForm, studentId: e.target.value })}
+                      required
+                    />
+                  </div>
+                  <div>
+                    <label style={{ fontSize: "0.78rem", color: "#94a3b8", display: "block", marginBottom: "4px" }}>Assigned Class Cohort</label>
+                    <select
+                      className="filter-select"
+                      style={{ width: "100%" }}
+                      value={editStudentForm.classCode}
+                      onChange={(e) => {
+                        const code = e.target.value;
+                        const preset = CLASS_CURRICULUM_PRESETS.find((c) => c.code === code);
+                        setEditStudentForm({
+                          ...editStudentForm,
+                          classCode: code,
+                          currentClass: preset?.levelTitle || code
+                        });
+                      }}
+                    >
+                      {CLASS_CURRICULUM_PRESETS.map((p) => (
+                        <option key={p.code} value={p.code}>
+                          {p.levelTitle} ({p.code})
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+                </div>
+              </div>
+
+              <div style={{ background: "rgba(15, 23, 42, 0.6)", border: "1px solid rgba(255, 255, 255, 0.08)", borderRadius: "10px", padding: "14px", marginBottom: "1.25rem" }}>
+                <h4 style={{ margin: "0 0 10px", color: "#10b981", fontSize: "0.9rem" }}>2. Financial Standing & Logistics</h4>
+                <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "10px", marginBottom: "10px" }}>
+                  <div>
+                    <label style={{ fontSize: "0.78rem", color: "#94a3b8", display: "block", marginBottom: "4px" }}>Fee Balance Due ($)</label>
+                    <input
+                      type="number"
+                      min="0"
+                      step="0.01"
+                      className="filter-input"
+                      style={{ width: "100%" }}
+                      value={editStudentForm.balanceDue}
+                      onChange={(e) => setEditStudentForm({ ...editStudentForm, balanceDue: e.target.value })}
+                    />
+                    <span style={{ fontSize: "0.72rem", color: editStudentForm.balanceDue > 0 ? "#f87171" : "#34d399", marginTop: "3px", display: "block" }}>
+                      {editStudentForm.balanceDue > 0 ? "⚠️ Student has fee arrears (Blocks automatic promotion)" : "✓ Fully Cleared ($0.00)"}
+                    </span>
+                  </div>
+                  <div>
+                    <label style={{ fontSize: "0.78rem", color: "#94a3b8", display: "block", marginBottom: "4px" }}>School Bus Transport Boarding</label>
+                    <select
+                      className="filter-select"
+                      style={{ width: "100%" }}
+                      value={editStudentForm.boardingBus ? "YES" : "NO"}
+                      onChange={(e) => setEditStudentForm({ ...editStudentForm, boardingBus: e.target.value === "YES" })}
+                    >
+                      <option value="YES">Yes (Assigned to Bus Route)</option>
+                      <option value="NO">No (Day Student / Self-Commute)</option>
+                    </select>
+                  </div>
+                </div>
+                <div>
+                  <label style={{ fontSize: "0.78rem", color: "#94a3b8", display: "block", marginBottom: "4px" }}>Amendment Note / Parent Request</label>
+                  <input
+                    type="text"
+                    className="filter-input"
+                    style={{ width: "100%" }}
+                    placeholder="e.g. Headmaster amended class allocation and fee status upon parent clearance receipt"
+                    value={editStudentForm.amendmentReason}
+                    onChange={(e) => setEditStudentForm({ ...editStudentForm, amendmentReason: e.target.value })}
+                  />
+                </div>
+              </div>
+
+              <div style={{ display: "flex", justifyContent: "flex-end", gap: "10px" }}>
+                <button type="button" className="btn-secondary" onClick={() => setEditingStudent(null)}>
+                  Cancel
+                </button>
+                <button
+                  type="submit"
+                  className="btn-primary"
+                  style={{ background: "linear-gradient(135deg, #0284c7, #0369a1)", padding: "11px 24px", fontWeight: "900", color: "#ffffff" }}
+                >
+                  💾 Save & Amend Student Details
                 </button>
               </div>
             </form>

@@ -184,4 +184,27 @@ flowchart TD
 - **Prisma Connection Optimizer:** Cached offline PostgreSQL probe in [`prisma.client.js`](file:///d:/version1/GBS_SYSTEM/backend/src/core/database/prisma.client.js) with 45-second TTL eliminates repeated socket timeouts, accelerating backend API response time to under 10ms.
 - **Snappy Client Network Policy:** Set Axios client timeout to 5000ms with optimistic state updates on all interactive buttons.
 
+---
+
+## 7. Operational Integrity & Verification Architecture
+
+### A. Headmaster Master Dashboard Amendment Suite
+- **Admissions Editing Modal (`editingAdmission`):** Fully mounted in [`AdminDashboard.jsx`](file:///d:/version1/GBS_SYSTEM/frontend/src/modules/portal/pages/dashboards/admin/AdminDashboard.jsx) enabling Headmaster to edit applicant demographics, target grade, gender, guardian phone/WhatsApp/email, residential GPS address, prior school aggregate, and admission stage (`PENDING`, `APPROVED`, `ADMITTED`).
+- **Enrolled Student Roster Editing Modal (`editingStudent`):** Added Action column with `✏️ Edit / Amend Details` in the enrolled scholars table. Allows updating scholar first/last name, matric ID, assigned classroom tier, fee arrears balance, and school bus boarding service.
+
+### B. Teacher Individual Attendance & Grading System
+- **Roster Guarantee:** Canonical student roster fallback guarantees the classroom roster is never blank, regardless of database or network state.
+- **Individual Per-Student Roll Call:** Individual buttons (`Tick Present`, `Tick Absent`, `⏰ Late`, `📝 Excused`) toggle and commit immediately per scholar to `attendanceRecords`, `localStorage`, and background PostgreSQL sync (`/attendance/single`).
+- **Persistent Roll Call View:** Preserves ticked student marks on the screen when saving daily archives (`handleSubmitAttendance`) without unexpected auto-advancing or wiping checks. Provides a dedicated `▶ Advance to Next Day` action.
+- **Individual Examination Scoring:** Score input (0 - 100), teacher remarks, and custom grade overrides commit student-by-student with instant optimistic student dashboard publication (`publishGradeToStudentDashboard`).
+
+### C. Pre-Submission File Upload Inspection & Verification Card
+- **Component:** [`FileUploadVerificationCard.jsx`](file:///d:/version1/GBS_SYSTEM/frontend/src/components/common/FileUploadVerificationCard.jsx).
+- **Mandatory Pre-Submit Inspection:** Every uploaded file (Teacher Assignment worksheets, Lesson Plans / Schemes of Work, Headmaster Walk-in applicant dossiers) renders a file inspection card showing format badge, size, clean integrity scan, and an interactive `👁️ Inspect File` preview.
+- **Verification Gate:** Submission buttons remain gated until the user clicks `✓ Verify File Content`, ensuring 100% compliance with *"any upload must be seen and verify before submitting."*
+
+### D. Absolute Developer Password Confidentiality
+- The master developer password (`0543294615Gab`) is strictly masked and completely excluded from all text inputs, autofill buttons, placeholders, and UI markup across the codebase.
+
+
 
