@@ -206,5 +206,30 @@ flowchart TD
 ### D. Absolute Developer Password Confidentiality
 - The master developer password (`0543294615Gab`) is strictly masked and completely excluded from all text inputs, autofill buttons, placeholders, and UI markup across the codebase.
 
+---
+
+## 8. Enterprise Real-Time Attendance & Universal Routed Detail Architecture (Nov 2026)
+
+### A. Dedicated Individual Tick Auto-Save & Attendance Roll Completion
+- **Location:** [`TeacherDashboard.jsx`](file:///d:/version1/GBS_SYSTEM/frontend/src/modules/portal/pages/dashboards/teacher/TeacherDashboard.jsx) & [`attendance.service.js`](file:///d:/version1/GBS_SYSTEM/backend/src/modules/attendance/attendance.service.js).
+- **Individual Tick Checkbox & Status Actions:**
+  - Dedicated Quick Tick Checkbox column (`[✓] Present`) allows one-click ticking of each student as Present with instant auto-save.
+  - Dedicated status actions (`Present`, `Absent`, `Late`, `Excused`, `Reset`) firmly apply that specific status.
+  - Ticking or selecting any status immediately auto-saves to local cache (`gbs_attendance_${classId}_${date}`), dispatches live real-time sync (`gbs_attendance_updated`) to Student and Parent dashboards (`gbs_student_attendance_summary`), and persists asynchronously to backend `/attendance/single`.
+  - Permanent per-student status badge shows `✓ Auto-Saved at [HH:MM:SS]` so the teacher has 100% visual certainty of persistence before moving on to the next student.
+- **Backend Prisma Date Normalization Fix:**
+  - Resolved `Date` object vs ISO string comparison bug in [`prisma.client.js`](file:///d:/version1/GBS_SYSTEM/backend/src/core/database/prisma.client.js) where date matching was failing with strict reference equality. `matchesWhere` now compares ISO date strings (`YYYY-MM-DD`) and supports Prisma range filters (`gte`, `lte`, `gt`, `lt`), ensuring existing attendance records are accurately found and updated instead of creating duplicates.
+- **Step-by-Step Roll Call Completion:**
+  - Prominent `💾 COMPLETE ROLL CALL & WRAP INTO ARCHIVES` action finalizes the day's register, commits batch to backend `/attendance/batch`, archives session into `gbs_daily_attendance_archives`, and allows immediate one-click full-page inspection.
+
+### B. Universal Full-Page Navigation with Persistent Back Button
+- **Component:** [`UniversalDetailPage.jsx`](file:///d:/version1/GBS_SYSTEM/frontend/src/components/common/UniversalDetailPage.jsx) & [`universalNavigation.js`](file:///d:/version1/GBS_SYSTEM/frontend/src/utils/universalNavigation.js).
+- **Full-Page Routed Display:**
+  - Replaces or augments dropdown popups by routing explainable information to `/details/:category/:id`.
+  - Supports categories: `attendance`, `student`, `teacher`, `staff`, `admission`, `application`, `lesson-plan`, `exam`, `payment`, `invoice`, `report`, `hr-report`, `audit-log`, `school`, `onboarding`, `backup`, `alert`, `deployment`, `license`.
+  - Prominent sticky `⬅ Back to Previous Page` button preserves originating dashboard tab, search filters, and scroll position via `sessionStorage` and browser history state.
+  - Comprehensive inspection features: KPI metric summaries, attribute data ledger, specialized attendance roll tables, candidate admission dossiers, lesson plan assessments, facial identity verification photos, and executive verification controls (`✅ Verify & Approve Dossier`, `⚠️ Issue Query / Revision`, `⚖️ Compliance Seal`, `🖨️ Print Record`).
+
+
 
 

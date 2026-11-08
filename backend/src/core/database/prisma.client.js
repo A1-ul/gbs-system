@@ -483,6 +483,29 @@ const matchesWhere = (row, where) => {
         if (String(rowVal) !== String(cond.equals)) return false;
         continue;
       }
+      if (cond.gte !== undefined || cond.lte !== undefined || cond.gt !== undefined || cond.lt !== undefined) {
+        const isDate = cond.gte instanceof Date || cond.lte instanceof Date || !isNaN(Date.parse(rowVal));
+        if (isDate) {
+          const rowTime = new Date(rowVal).getTime();
+          if (cond.gte !== undefined && rowTime < new Date(cond.gte).getTime()) return false;
+          if (cond.lte !== undefined && rowTime > new Date(cond.lte).getTime()) return false;
+          if (cond.gt !== undefined && rowTime <= new Date(cond.gt).getTime()) return false;
+          if (cond.lt !== undefined && rowTime >= new Date(cond.lt).getTime()) return false;
+        } else {
+          const num = Number(rowVal);
+          if (cond.gte !== undefined && num < Number(cond.gte)) return false;
+          if (cond.lte !== undefined && num > Number(cond.lte)) return false;
+          if (cond.gt !== undefined && num <= Number(cond.gt)) return false;
+          if (cond.lt !== undefined && num >= Number(cond.lt)) return false;
+        }
+        continue;
+      }
+      continue;
+    }
+    if (k === 'date' || cond instanceof Date || (typeof cond === 'string' && /^\d{4}-\d{2}-\d{2}/.test(cond) && /^\d{4}-\d{2}-\d{2}/.test(String(rowVal || '')))) {
+      const d1 = new Date(cond).toISOString().split('T')[0];
+      const d2 = new Date(rowVal).toISOString().split('T')[0];
+      if (d1 !== d2) return false;
       continue;
     }
     if (INT_ID_FIELDS.has(k)) {

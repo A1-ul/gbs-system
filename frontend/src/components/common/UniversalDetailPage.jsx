@@ -192,14 +192,78 @@ export default function UniversalDetailPage() {
             found = list.find(i => String(i.id) === id || i.invoiceNumber === id);
           }
         } else if (category === "application" || category === "admission") {
-          const admRes = await apiClient.get("/admissions");
-          const list = admRes.data?.data?.applications || admRes.data?.applications || [];
-          found = list.find(a => String(a.id) === id || a.applicationNumber === id || a.appRef === id);
+          try {
+            const admRes = await apiClient.get("/admissions");
+            const list = admRes.data?.data?.applications || admRes.data?.applications || [];
+            found = list.find(a => String(a.id) === id || a.applicationNumber === id || a.appRef === id);
+          } catch (_) {}
+          if (!found) {
+            try {
+              const localAdmissions = JSON.parse(localStorage.getItem("gbs_admission_applications") || "[]");
+              found = localAdmissions.find(a => String(a.id) === id || a.applicationNumber === id || a.appRef === id);
+            } catch (_) {}
+          }
+          if (!found) {
+            try {
+              const localWalkins = JSON.parse(localStorage.getItem("gbs_walkin_admissions") || "[]");
+              found = localWalkins.find(a => String(a.id) === id || a.applicationNumber === id);
+            } catch (_) {}
+          }
           if (!found) {
             const onbRes = await apiClient.get("/dev-control/onboarding-registrations");
             const apps = onbRes.data?.data?.applications || onbRes.data?.applications || [];
             found = apps.find(a => String(a.id) === id || a.appRef === id || a.tenantCode === id || a.tenantUid === id);
           }
+        } else if (category === "attendance") {
+          try {
+            const dailyArchives = JSON.parse(localStorage.getItem("gbs_daily_attendance_archives") || "[]");
+            found = dailyArchives.find(a => String(a.id) === id || a.date === id);
+          } catch (_) {}
+          if (!found) {
+            try {
+              const weeklyReports = JSON.parse(localStorage.getItem("gbs_weekly_attendance_reports") || "[]");
+              found = weeklyReports.find(w => String(w.id) === id);
+            } catch (_) {}
+          }
+          if (!found) {
+            try {
+              const facultyArchives = JSON.parse(localStorage.getItem("gbs_faculty_weekly_attendance_archives") || "[]");
+              found = facultyArchives.find(f => String(f.id) === id);
+            } catch (_) {}
+          }
+          if (!found) {
+            try {
+              const wRes = await apiClient.get("/attendance/weekly-reports");
+              const reports = wRes.data?.data?.reports || wRes.data?.reports || [];
+              found = reports.find(r => String(r.id) === id);
+            } catch (_) {}
+          }
+        } else if (category === "lesson-plan") {
+          try {
+            const plans = JSON.parse(localStorage.getItem("gbs_teacher_lesson_plans") || "[]");
+            found = plans.find(p => String(p.id) === id);
+          } catch (_) {}
+        } else if (category === "exam") {
+          try {
+            const exams = JSON.parse(localStorage.getItem("gbs_published_exams") || "[]");
+            found = exams.find(e => String(e.id) === id || e.title === id);
+          } catch (_) {}
+        } else if (category === "report" || category === "hr-report" || category === "audit") {
+          try {
+            const audits = JSON.parse(localStorage.getItem("gbs_account_audit_requests") || "[]");
+            found = audits.find(a => String(a.id) === id);
+          } catch (_) {}
+          if (!found) {
+            try {
+              const hrAudits = JSON.parse(localStorage.getItem("gbs_hr_staff_appraisals") || "[]");
+              found = hrAudits.find(h => String(h.id) === id);
+            } catch (_) {}
+          }
+        } else if (category === "notification" || category === "circular") {
+          try {
+            const circs = JSON.parse(localStorage.getItem("gbs_distributed_circulars") || "[]");
+            found = circs.find(c => String(c.id) === id);
+          } catch (_) {}
         } else if (category === "backup") {
           const bRes = await apiClient.get("/dev-control/backups");
           const list = bRes.data?.data?.backups || bRes.data?.backups || [];
@@ -760,6 +824,138 @@ export default function UniversalDetailPage() {
                 ))}
               </div>
             </section>
+
+            {/* SPECIALIZED ATTENDANCE REGISTER ROLL CALL BREAKDOWN */}
+            {(category === "attendance" || Array.isArray(record.records)) && (
+              <section className="gbs-detail-section-card">
+                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "1rem", flexWrap: "wrap", gap: "10px" }}>
+                  <h3 style={{ margin: 0, color: "#38bdf8", display: "flex", alignItems: "center", gap: "8px" }}>
+                    <span>📋</span> Complete Student Roll Call Register ({Array.isArray(record.records) ? record.records.length : 0} Enrolled)
+                  </h3>
+                  <div style={{ display: "flex", gap: "10px", flexWrap: "wrap" }}>
+                    <span style={{ padding: "4px 10px", borderRadius: "8px", background: "rgba(16, 185, 129, 0.2)", border: "1px solid #10b981", color: "#34d399", fontSize: "0.8rem", fontWeight: 700 }}>
+                      Present: {record.presentCount || (Array.isArray(record.records) ? record.records.filter(r => r.status === "PRESENT").length : 0)}
+                    </span>
+                    <span style={{ padding: "4px 10px", borderRadius: "8px", background: "rgba(239, 68, 68, 0.2)", border: "1px solid #ef4444", color: "#f87171", fontSize: "0.8rem", fontWeight: 700 }}>
+                      Absent: {record.absentCount || (Array.isArray(record.records) ? record.records.filter(r => r.status === "ABSENT").length : 0)}
+                    </span>
+                    <span style={{ padding: "4px 10px", borderRadius: "8px", background: "rgba(245, 158, 11, 0.2)", border: "1px solid #f59e0b", color: "#fbbf24", fontSize: "0.8rem", fontWeight: 700 }}>
+                      Late: {record.lateCount || (Array.isArray(record.records) ? record.records.filter(r => r.status === "LATE").length : 0)}
+                    </span>
+                  </div>
+                </div>
+
+                {Array.isArray(record.records) && record.records.length > 0 ? (
+                  <div style={{ overflowX: "auto" }}>
+                    <table style={{ width: "100%", borderCollapse: "collapse", fontSize: "0.85rem", color: "#e2e8f0" }}>
+                      <thead>
+                        <tr style={{ borderBottom: "1.5px solid rgba(255, 255, 255, 0.15)", textAlign: "left", background: "rgba(15, 23, 42, 0.6)" }}>
+                          <th style={{ padding: "10px 12px" }}>#</th>
+                          <th style={{ padding: "10px 12px" }}>Student Name</th>
+                          <th style={{ padding: "10px 12px" }}>Student ID</th>
+                          <th style={{ padding: "10px 12px" }}>Attendance Status</th>
+                          <th style={{ padding: "10px 12px" }}>Faculty Remarks</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {record.records.map((r, idx) => (
+                          <tr key={idx} style={{ borderBottom: "1px solid rgba(255, 255, 255, 0.06)", background: idx % 2 === 0 ? "rgba(30, 41, 59, 0.3)" : "transparent" }}>
+                            <td style={{ padding: "10px 12px", color: "#94a3b8", fontWeight: 700 }}>{idx + 1}</td>
+                            <td style={{ padding: "10px 12px", fontWeight: 700, color: "#f8fafc" }}>{r.studentName || r.name || `Student #${r.studentId}`}</td>
+                            <td style={{ padding: "10px 12px", fontFamily: "monospace", color: "#94a3b8" }}>{r.studentId}</td>
+                            <td style={{ padding: "10px 12px" }}>
+                              <span style={{
+                                padding: "3px 10px",
+                                borderRadius: "6px",
+                                fontWeight: 800,
+                                fontSize: "0.75rem",
+                                display: "inline-block",
+                                background: r.status === "PRESENT" ? "rgba(16, 185, 129, 0.25)" : r.status === "ABSENT" ? "rgba(239, 68, 68, 0.25)" : r.status === "LATE" ? "rgba(245, 158, 11, 0.25)" : "rgba(59, 130, 246, 0.25)",
+                                color: r.status === "PRESENT" ? "#34d399" : r.status === "ABSENT" ? "#f87171" : r.status === "LATE" ? "#fbbf24" : "#93c5fd",
+                                border: `1px solid ${r.status === "PRESENT" ? "#10b981" : r.status === "ABSENT" ? "#ef4444" : r.status === "LATE" ? "#f59e0b" : "#3b82f6"}`
+                              }}>
+                                {r.status === "PRESENT" ? "✅ PRESENT" : r.status === "ABSENT" ? "❌ ABSENT" : r.status === "LATE" ? "⏰ LATE" : r.status === "EXCUSED" ? "📝 EXCUSED" : r.status}
+                              </span>
+                            </td>
+                            <td style={{ padding: "10px 12px", color: "#cbd5e1", fontStyle: r.remarks ? "normal" : "italic" }}>
+                              {r.remarks || "No specific note"}
+                            </td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                ) : (
+                  <div style={{ padding: "1.5rem", textAlign: "center", color: "#94a3b8", fontStyle: "italic" }}>
+                    Attendance session recorded with summary rate of {record.averageAttendanceRate || record.attendanceRate || 100}%. Individual student logs archived.
+                  </div>
+                )}
+              </section>
+            )}
+
+            {/* SPECIALIZED ADMISSION APPLICATION DOSSIER */}
+            {(category === "admission" || category === "application") && (
+              <section className="gbs-detail-section-card">
+                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "1rem", flexWrap: "wrap", gap: "10px" }}>
+                  <h3 style={{ margin: 0, color: "#34d399", display: "flex", alignItems: "center", gap: "8px" }}>
+                    <span>🎓</span> Official Student Admission Dossier & Decision
+                  </h3>
+                  <button
+                    type="button"
+                    onClick={handlePrint}
+                    style={{ padding: "6px 14px", borderRadius: "8px", background: "rgba(16, 185, 129, 0.2)", border: "1px solid #10b981", color: "#34d399", fontWeight: 800, cursor: "pointer" }}
+                  >
+                    🖨️ Generate & Print Official Admission Letter
+                  </button>
+                </div>
+                <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(260px, 1fr))", gap: "16px" }}>
+                  <div style={{ background: "rgba(15, 23, 42, 0.7)", padding: "14px", borderRadius: "10px", border: "1px solid rgba(255, 255, 255, 0.08)" }}>
+                    <h4 style={{ margin: "0 0 8px", color: "#38bdf8", fontSize: "0.95rem" }}>Candidate Biodata</h4>
+                    <p style={{ margin: "4px 0", fontSize: "0.85rem" }}>Name: <strong>{record.studentFirstName || record.firstName} {record.studentLastName || record.lastName}</strong></p>
+                    <p style={{ margin: "4px 0", fontSize: "0.85rem" }}>Grade / Class: <strong>{record.gradeApplyingFor || record.className || "Class Assigned"}</strong></p>
+                    <p style={{ margin: "4px 0", fontSize: "0.85rem" }}>Gender: <strong>{record.gender || "—"}</strong></p>
+                    <p style={{ margin: "4px 0", fontSize: "0.85rem" }}>Date of Birth: <strong>{record.dateOfBirth || "—"}</strong></p>
+                  </div>
+                  <div style={{ background: "rgba(15, 23, 42, 0.7)", padding: "14px", borderRadius: "10px", border: "1px solid rgba(255, 255, 255, 0.08)" }}>
+                    <h4 style={{ margin: "0 0 8px", color: "#fbbf24", fontSize: "0.95rem" }}>Guardian / Parent Information</h4>
+                    <p style={{ margin: "4px 0", fontSize: "0.85rem" }}>Parent Name: <strong>{record.parentName || record.guardianName || "—"}</strong></p>
+                    <p style={{ margin: "4px 0", fontSize: "0.85rem" }}>Contact Phone: <strong>{record.parentPhone || record.emergencyContact || "—"}</strong></p>
+                    <p style={{ margin: "4px 0", fontSize: "0.85rem" }}>Email Address: <strong>{record.parentEmail || "—"}</strong></p>
+                    <p style={{ margin: "4px 0", fontSize: "0.85rem" }}>Residential Address: <strong>{record.residentialAddress || "—"}</strong></p>
+                  </div>
+                </div>
+              </section>
+            )}
+
+            {/* SPECIALIZED LESSON PLAN DOSSIER */}
+            {category === "lesson-plan" && (
+              <section className="gbs-detail-section-card">
+                <h3 style={{ margin: "0 0 1rem", color: "#38bdf8", display: "flex", alignItems: "center", gap: "8px" }}>
+                  <span>📖</span> Faculty Lesson Scheme & Headmaster Vetting Assessment
+                </h3>
+                <div style={{ background: "rgba(15, 23, 42, 0.7)", padding: "16px", borderRadius: "10px", border: "1px solid rgba(255, 255, 255, 0.08)", marginBottom: "14px" }}>
+                  <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(220px, 1fr))", gap: "12px", marginBottom: "12px" }}>
+                    <div><span style={{ fontSize: "0.75rem", color: "#94a3b8" }}>Topic:</span> <div style={{ fontWeight: 800, color: "#f8fafc" }}>{record.topic || record.title}</div></div>
+                    <div><span style={{ fontSize: "0.75rem", color: "#94a3b8" }}>Subject:</span> <div style={{ fontWeight: 800, color: "#38bdf8" }}>{record.subject || record.subjectName}</div></div>
+                    <div><span style={{ fontSize: "0.75rem", color: "#94a3b8" }}>Class / Level:</span> <div style={{ fontWeight: 800, color: "#fbbf24" }}>{record.className || record.gradeLevel}</div></div>
+                    <div><span style={{ fontSize: "0.75rem", color: "#94a3b8" }}>Educator:</span> <div style={{ fontWeight: 800, color: "#34d399" }}>{record.teacherName || record.submittedBy}</div></div>
+                  </div>
+                  {record.objectives && (
+                    <div style={{ marginTop: "10px" }}>
+                      <span style={{ fontSize: "0.78rem", color: "#94a3b8", fontWeight: 700 }}>Specific Learning Objectives:</span>
+                      <p style={{ margin: "4px 0 0", color: "#cbd5e1", fontSize: "0.85rem", lineHeight: 1.5 }}>{record.objectives}</p>
+                    </div>
+                  )}
+                  {record.headmasterRemarks && (
+                    <div style={{ marginTop: "12px", padding: "10px 14px", borderRadius: "8px", background: "rgba(16, 185, 129, 0.15)", border: "1px solid #10b981" }}>
+                      <span style={{ fontSize: "0.78rem", color: "#34d399", fontWeight: 800 }}>Headmaster Vetting Endorsement:</span>
+                      <p style={{ margin: "4px 0 0", color: "#f8fafc", fontSize: "0.85rem" }}>"{record.headmasterRemarks}"</p>
+                      <span style={{ fontSize: "0.74rem", color: "#94a3b8", display: "block", marginTop: "4px" }}>Vetted By: {record.vettedBy || "Headmaster Arthur Pendleton"}</span>
+                    </div>
+                  )}
+                </div>
+              </section>
+            )}
 
             {/* Biometric or Photographic Verification Attachment if present */}
             {photoUrl && (

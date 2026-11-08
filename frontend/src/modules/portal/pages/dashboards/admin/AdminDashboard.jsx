@@ -34,7 +34,7 @@ export function AdminDashboard({ initialTab } = {}) {
         osc.start();
         osc.stop(ctx.currentTime + 0.26);
       }
-    } catch {}
+    } catch { }
   };
   const normalizeAdminTab = (tab) => {
     if (tab === "classes") return "academics";
@@ -465,7 +465,7 @@ export function AdminDashboard({ initialTab } = {}) {
           };
         }
       }
-    } catch {}
+    } catch { }
     return {
       firstName: "Arthur",
       lastName: "Pendleton",
@@ -720,7 +720,7 @@ export function AdminDashboard({ initialTab } = {}) {
           localStorage.setItem("gbs_parent_received_messages", JSON.stringify([record, ...parentInbox]));
           const staffInbox = JSON.parse(localStorage.getItem("gbs_staff_received_messages") || "[]");
           localStorage.setItem("gbs_staff_received_messages", JSON.stringify([record, ...staffInbox]));
-        } catch {}
+        } catch { }
 
         setFeedback({
           type: "success",
@@ -2036,12 +2036,12 @@ export function AdminDashboard({ initialTab } = {}) {
     const updated = teacherLessonPlans.map((p) =>
       String(p.id) === String(plan.id)
         ? {
-            ...p,
-            status: decisionStatus,
-            headmasterRemarks: p.headmasterRemarks || defaultRemark,
-            vettedBy: `${currentUser.firstName} ${currentUser.lastName} (Headmaster)`,
-            vettedAt: new Date().toISOString()
-          }
+          ...p,
+          status: decisionStatus,
+          headmasterRemarks: p.headmasterRemarks || defaultRemark,
+          vettedBy: `${currentUser.firstName} ${currentUser.lastName} (Headmaster)`,
+          vettedAt: new Date().toISOString()
+        }
         : p
     );
     setTeacherLessonPlans(updated);
@@ -2319,7 +2319,7 @@ export function AdminDashboard({ initialTab } = {}) {
       localStorage.setItem("gbs_enrolled_students", JSON.stringify(nextEnrolled));
       window.dispatchEvent(new CustomEvent("gbs_student_enrolled", { detail: updated }));
       window.dispatchEvent(new Event("storage"));
-    } catch {}
+    } catch { }
 
     setToastNotification({
       type: "success",
@@ -2383,7 +2383,7 @@ export function AdminDashboard({ initialTab } = {}) {
       const next = existing.map((a) => ((a.id === editingAdmission.id || a.applicationNumber === editingAdmission.applicationNumber) ? updated : a));
       localStorage.setItem("gbs_submitted_admissions", JSON.stringify(next));
       window.dispatchEvent(new Event("gbs_admission_status_changed"));
-    } catch {}
+    } catch { }
 
     // Synchronize to backend
     try {
@@ -3201,8 +3201,8 @@ export function AdminDashboard({ initialTab } = {}) {
             cctvColorMode === "THERMAL_AI"
               ? "rgba(251, 191, 36, 0.65)"
               : cctvColorMode === "NIGHT_IR"
-              ? "rgba(110, 231, 183, 0.45)"
-              : "rgba(56, 189, 248, 0.35)";
+                ? "rgba(110, 231, 183, 0.45)"
+                : "rgba(56, 189, 248, 0.35)";
           ctx.fillRect(bx + 6, by + 6, bw - 12, bh - 8);
 
           // AI Bounding Reticle
@@ -3274,7 +3274,7 @@ export function AdminDashboard({ initialTab } = {}) {
         setTimeout(() => {
           if (cctvLiveVideoRef.current) {
             cctvLiveVideoRef.current.srcObject = stream;
-            cctvLiveVideoRef.current.play().catch(() => {});
+            cctvLiveVideoRef.current.play().catch(() => { });
           }
         }, 120);
         setFeedback({
@@ -4753,9 +4753,9 @@ export function AdminDashboard({ initialTab } = {}) {
                       INSTITUTIONAL PLATFORM SUBSCRIPTION: {tenantSubscription.status === "ACTIVE" ? "ACTIVE & RENEWED" : tenantSubscription.status}
                     </span>
                     <span className={`renewed-duration-chip ${tenantSubscription.durationLabel === "3 Months" ? "chip-3m" :
-                        tenantSubscription.durationLabel === "6 Months" ? "chip-6m" :
-                          tenantSubscription.durationLabel === "1 Year" ? "chip-1y" :
-                            "chip-lifetime"
+                      tenantSubscription.durationLabel === "6 Months" ? "chip-6m" :
+                        tenantSubscription.durationLabel === "1 Year" ? "chip-1y" :
+                          "chip-lifetime"
                       }`}>
                       <span>●</span>
                       RENEWED FOR: {tenantSubscription.durationLabel || "6 Months"}
@@ -7007,8 +7007,8 @@ export function AdminDashboard({ initialTab } = {}) {
                                 filter: cctvColorMode === "NIGHT_IR"
                                   ? "grayscale(100%) brightness(1.2) sepia(100%) hue-rotate(90deg)"
                                   : cctvColorMode === "THERMAL_AI" || cctvColorMode === "THERMAL"
-                                  ? "invert(80%) hue-rotate(180deg) saturate(2)"
-                                  : "none"
+                                    ? "invert(80%) hue-rotate(180deg) saturate(2)"
+                                    : "none"
                               }}
                             />
                             <div style={{
@@ -7813,276 +7813,276 @@ export function AdminDashboard({ initialTab } = {}) {
             });
 
             return (
-            <div className="role-workspace-card">
-              <div className="workspace-title-row">
-                <div>
-                  <h2><span>📂</span> ADMISSIONS PIPELINE & APPLICANT INTAKE</h2>
-                  <p>Process prospective applicants: review, verify, approve, reject, or admit visiting parents on-site</p>
-                </div>
-                <div style={{ display: "flex", gap: "8px", flexWrap: "wrap", alignItems: "center" }}>
-                  <button
-                    type="button"
-                    className="btn-primary"
-                    style={{ background: "linear-gradient(135deg, #10b981, #059669)", display: "inline-flex", alignItems: "center", gap: "6px", fontWeight: "800", fontSize: "0.85rem", boxShadow: "0 4px 14px rgba(16, 185, 129, 0.4)", cursor: "pointer" }}
-                    onClick={() => setShowWalkInModal(true)}
-                  >
-                    + Walk-In Student Admission Desk (Parent Visit)
-                  </button>
-                  <button
-                    type="button"
-                    className="btn-secondary"
-                    style={{ background: "linear-gradient(135deg, #0284c7, #0369a1)", display: "inline-flex", alignItems: "center", gap: "6px", fontWeight: "800", fontSize: "0.85rem", color: "#fff", border: "none", cursor: "pointer" }}
-                    onClick={() => setShowLetterTemplateModal(true)}
-                  >
-                    🏛️ Admission Letter Templates
-                  </button>
-                  <Link to="/admissions" className="btn-secondary">
-                    Open Visual Pipeline Board →
-                  </Link>
-                </div>
-              </div>
-
-              {/* Admissions Pipeline Filters & Search Control Bar */}
-              <div style={{ background: "rgba(15, 23, 42, 0.7)", border: "1px solid rgba(56, 189, 248, 0.25)", borderRadius: "12px", padding: "12px 14px", marginBottom: "1.25rem", display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: "10px" }}>
-                <div style={{ display: "flex", gap: "6px", flexWrap: "wrap", alignItems: "center" }}>
-                  {[
-                    { id: "ALL", label: "🌟 All Applicants (" + applications.length + ")" },
-                    { id: "WALK_IN", label: "🏛️ Walk-In Visits (" + walkInCount + ")" },
-                    { id: "ONLINE", label: "🌐 Online Portal (" + onlineCount + ")" },
-                    { id: "PENDING", label: "⏳ Pending (" + pendingCount + ")" },
-                    { id: "APPROVED", label: "✅ Approved & Enrolled (" + approvedCount + ")" },
-                    { id: "REJECTED", label: "❌ Rejected (" + rejectedCount + ")" }
-                  ].map((tab) => (
-                    <button
-                      key={tab.id}
-                      type="button"
-                      onClick={() => setAdmissionFilterMode(tab.id)}
-                      style={{
-                        padding: "5px 12px",
-                        borderRadius: "8px",
-                        fontSize: "0.78rem",
-                        fontWeight: 700,
-                        cursor: "pointer",
-                        background: admissionFilterMode === tab.id ? "linear-gradient(135deg, #0284c7, #0369a1)" : "rgba(30, 41, 59, 0.6)",
-                        border: admissionFilterMode === tab.id ? "1.5px solid #38bdf8" : "1px solid rgba(255, 255, 255, 0.1)",
-                        color: admissionFilterMode === tab.id ? "#ffffff" : "#cbd5e1"
-                      }}
-                    >
-                      {tab.label}
-                    </button>
-                  ))}
-                </div>
-
-                <div style={{ minWidth: "240px" }}>
-                  <input
-                    type="text"
-                    value={admissionSearchQuery}
-                    onChange={(e) => setAdmissionSearchQuery(e.target.value)}
-                    placeholder="🔍 Search student name, index #, phone, GPS..."
-                    className="filter-input"
-                    style={{ width: "100%", padding: "6px 12px", fontSize: "0.82rem" }}
-                  />
-                </div>
-              </div>
-
-              {/* Multiple Selection Batch Operations Bar */}
-              {selectedApps.length > 0 && (
-                <div className="batch-actions-bar">
-                  <div className="batch-info">
-                    <span>☑️ {selectedApps.length} Application{selectedApps.length > 1 ? "s" : ""} Selected</span>
+              <div className="role-workspace-card">
+                <div className="workspace-title-row">
+                  <div>
+                    <h2><span>📂</span> ADMISSIONS PIPELINE & APPLICANT INTAKE</h2>
+                    <p>Process prospective applicants: review, verify, approve, reject, or admit visiting parents on-site</p>
                   </div>
-                  <div className="batch-btn-group">
+                  <div style={{ display: "flex", gap: "8px", flexWrap: "wrap", alignItems: "center" }}>
                     <button
                       type="button"
-                      className="btn-action-approve"
-                      style={{ padding: "6px 14px", fontSize: "0.85rem" }}
-                      onClick={handleBatchApprove}
-                      disabled={loading}
+                      className="btn-primary"
+                      style={{ background: "linear-gradient(135deg, #10b981, #059669)", display: "inline-flex", alignItems: "center", gap: "6px", fontWeight: "800", fontSize: "0.85rem", boxShadow: "0 4px 14px rgba(16, 185, 129, 0.4)", cursor: "pointer" }}
+                      onClick={() => setShowWalkInModal(true)}
                     >
-                      ✅ Batch Approve ({selectedApps.length})
+                      + Walk-In Student Admission Desk (Parent Visit)
                     </button>
                     <button
                       type="button"
-                      className="btn-action-reject"
-                      style={{ padding: "6px 14px", fontSize: "0.85rem" }}
-                      onClick={handleBatchReject}
-                      disabled={loading}
+                      className="btn-secondary"
+                      style={{ background: "linear-gradient(135deg, #0284c7, #0369a1)", display: "inline-flex", alignItems: "center", gap: "6px", fontWeight: "800", fontSize: "0.85rem", color: "#fff", border: "none", cursor: "pointer" }}
+                      onClick={() => setShowLetterTemplateModal(true)}
                     >
-                      ❌ Batch Reject ({selectedApps.length})
+                      🏛️ Admission Letter Templates
                     </button>
-                    <button
-                      type="button"
-                      className="btn-action-delete"
-                      style={{ padding: "6px 14px", fontSize: "0.85rem" }}
-                      onClick={handleBatchDelete}
-                      disabled={loading}
-                    >
-                      🗑️ Batch Delete ({selectedApps.length})
-                    </button>
-                    <button
-                      type="button"
-                      style={{ background: "transparent", border: "1px solid #64748b", color: "#94a3b8", padding: "6px 12px", borderRadius: "6px", cursor: "pointer", fontSize: "0.8rem" }}
-                      onClick={() => setSelectedApps([])}
-                    >
-                      Deselect All
-                    </button>
+                    <Link to="/admissions" className="btn-secondary">
+                      Open Visual Pipeline Board →
+                    </Link>
                   </div>
                 </div>
-              )}
 
-              <div className="role-table-responsive">
-                <table className="role-table">
-                  <thead>
-                    <tr>
-                      <th style={{ width: "40px", textAlign: "center" }}>
-                        <input
-                          type="checkbox"
-                          className="table-checkbox"
-                          checked={selectedApps.length === filteredApplications.length && filteredApplications.length > 0}
-                          onChange={toggleSelectAllApps}
-                          title="Select all applications"
-                        />
-                      </th>
-                      <th>App # & Type</th>
-                      <th>Applicant Name</th>
-                      <th>Target Grade</th>
-                      <th>Guardian Phone & Email</th>
-                      <th>Stage & Index</th>
-                      <th>Headmaster Actions</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {filteredApplications.length === 0 ? (
+                {/* Admissions Pipeline Filters & Search Control Bar */}
+                <div style={{ background: "rgba(15, 23, 42, 0.7)", border: "1px solid rgba(56, 189, 248, 0.25)", borderRadius: "12px", padding: "12px 14px", marginBottom: "1.25rem", display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: "10px" }}>
+                  <div style={{ display: "flex", gap: "6px", flexWrap: "wrap", alignItems: "center" }}>
+                    {[
+                      { id: "ALL", label: "🌟 All Applicants (" + applications.length + ")" },
+                      { id: "WALK_IN", label: "🏛️ Walk-In Visits (" + walkInCount + ")" },
+                      { id: "ONLINE", label: "🌐 Online Portal (" + onlineCount + ")" },
+                      { id: "PENDING", label: "⏳ Pending (" + pendingCount + ")" },
+                      { id: "APPROVED", label: "✅ Approved & Enrolled (" + approvedCount + ")" },
+                      { id: "REJECTED", label: "❌ Rejected (" + rejectedCount + ")" }
+                    ].map((tab) => (
+                      <button
+                        key={tab.id}
+                        type="button"
+                        onClick={() => setAdmissionFilterMode(tab.id)}
+                        style={{
+                          padding: "5px 12px",
+                          borderRadius: "8px",
+                          fontSize: "0.78rem",
+                          fontWeight: 700,
+                          cursor: "pointer",
+                          background: admissionFilterMode === tab.id ? "linear-gradient(135deg, #0284c7, #0369a1)" : "rgba(30, 41, 59, 0.6)",
+                          border: admissionFilterMode === tab.id ? "1.5px solid #38bdf8" : "1px solid rgba(255, 255, 255, 0.1)",
+                          color: admissionFilterMode === tab.id ? "#ffffff" : "#cbd5e1"
+                        }}
+                      >
+                        {tab.label}
+                      </button>
+                    ))}
+                  </div>
+
+                  <div style={{ minWidth: "240px" }}>
+                    <input
+                      type="text"
+                      value={admissionSearchQuery}
+                      onChange={(e) => setAdmissionSearchQuery(e.target.value)}
+                      placeholder="🔍 Search student name, index #, phone, GPS..."
+                      className="filter-input"
+                      style={{ width: "100%", padding: "6px 12px", fontSize: "0.82rem" }}
+                    />
+                  </div>
+                </div>
+
+                {/* Multiple Selection Batch Operations Bar */}
+                {selectedApps.length > 0 && (
+                  <div className="batch-actions-bar">
+                    <div className="batch-info">
+                      <span>☑️ {selectedApps.length} Application{selectedApps.length > 1 ? "s" : ""} Selected</span>
+                    </div>
+                    <div className="batch-btn-group">
+                      <button
+                        type="button"
+                        className="btn-action-approve"
+                        style={{ padding: "6px 14px", fontSize: "0.85rem" }}
+                        onClick={handleBatchApprove}
+                        disabled={loading}
+                      >
+                        ✅ Batch Approve ({selectedApps.length})
+                      </button>
+                      <button
+                        type="button"
+                        className="btn-action-reject"
+                        style={{ padding: "6px 14px", fontSize: "0.85rem" }}
+                        onClick={handleBatchReject}
+                        disabled={loading}
+                      >
+                        ❌ Batch Reject ({selectedApps.length})
+                      </button>
+                      <button
+                        type="button"
+                        className="btn-action-delete"
+                        style={{ padding: "6px 14px", fontSize: "0.85rem" }}
+                        onClick={handleBatchDelete}
+                        disabled={loading}
+                      >
+                        🗑️ Batch Delete ({selectedApps.length})
+                      </button>
+                      <button
+                        type="button"
+                        style={{ background: "transparent", border: "1px solid #64748b", color: "#94a3b8", padding: "6px 12px", borderRadius: "6px", cursor: "pointer", fontSize: "0.8rem" }}
+                        onClick={() => setSelectedApps([])}
+                      >
+                        Deselect All
+                      </button>
+                    </div>
+                  </div>
+                )}
+
+                <div className="role-table-responsive">
+                  <table className="role-table">
+                    <thead>
                       <tr>
-                        <td colSpan="7" style={{ textAlign: "center", padding: "1.5rem", color: "#94a3b8" }}>
-                          No admission applications found for selected filters.
-                        </td>
+                        <th style={{ width: "40px", textAlign: "center" }}>
+                          <input
+                            type="checkbox"
+                            className="table-checkbox"
+                            checked={selectedApps.length === filteredApplications.length && filteredApplications.length > 0}
+                            onChange={toggleSelectAllApps}
+                            title="Select all applications"
+                          />
+                        </th>
+                        <th>App # & Type</th>
+                        <th>Applicant Name</th>
+                        <th>Target Grade</th>
+                        <th>Guardian Phone & Email</th>
+                        <th>Stage & Index</th>
+                        <th>Headmaster Actions</th>
                       </tr>
-                    ) : (
-                      filteredApplications.map((app) => (
-                        <tr key={app.id}>
-                          <td style={{ textAlign: "center" }}>
-                            <input
-                              type="checkbox"
-                              className="table-checkbox"
-                              checked={selectedApps.includes(app.id)}
-                              onChange={() => toggleSelectApp(app.id)}
-                            />
-                          </td>
-                          <td>
-                            <strong style={{ fontFamily: "monospace" }}>{app.applicationNumber}</strong>
-                            {app.admissionType === "WALK_IN_IN_PERSON" ? (
-                              <span style={{ display: "block", fontSize: "0.68rem", background: "rgba(16, 185, 129, 0.2)", color: "#34d399", padding: "2px 6px", borderRadius: "4px", width: "fit-content", marginTop: "3px", fontWeight: 800 }}>
-                                🏛️ WALK-IN VISIT
-                              </span>
-                            ) : (
-                              <span style={{ display: "block", fontSize: "0.68rem", background: "rgba(56, 189, 248, 0.15)", color: "#38bdf8", padding: "2px 6px", borderRadius: "4px", width: "fit-content", marginTop: "3px", fontWeight: 700 }}>
-                                🌐 ONLINE PORTAL
-                              </span>
-                            )}
-                          </td>
-                          <td>
-                            <strong>{app.studentFirstName} {app.studentLastName}</strong>
-                            {app.homeGpsAddress && (
-                              <span style={{ display: "block", fontSize: "0.72rem", color: "#94a3b8", fontFamily: "monospace" }}>
-                                📍 {app.homeGpsAddress}
-                              </span>
-                            )}
-                          </td>
-                          <td>Grade {app.targetGradeLevel}</td>
-                          <td>
-                            <div>{app.guardianEmail || "—"}</div>
-                            {app.guardianPhone && (
-                              <a href={'tel:' + app.guardianPhone} style={{ fontSize: "0.75rem", color: "#38bdf8", textDecoration: "none" }}>
-                                📞 {app.guardianPhone}
-                              </a>
-                            )}
-                          </td>
-                          <td>
-                            <span className={'badge-status ' + (app.stage === "APPROVED" ? "badge-present" : app.stage === "REJECTED" ? "badge-absent" : "badge-late")}>
-                              {app.stage}
-                            </span>
-                            {app.indexNumber && (
-                              <div style={{ fontSize: "0.75rem", color: "#34d399", fontFamily: "monospace", marginTop: "3px", fontWeight: 800 }}>
-                                ID: {app.indexNumber}
-                              </div>
-                            )}
-                          </td>
-                          <td>
-                            <div className="row-actions-group">
-                              <button
-                                type="button"
-                                className="btn-secondary"
-                                onClick={() => navigateToDetail(navigate, "admission", app.applicationNumber || app.id, app, { returnTab: activeTab })}
-                                style={{ padding: "4px 10px", fontSize: "0.78rem", borderColor: "#38bdf8", color: "#38bdf8", whiteSpace: "nowrap", cursor: "pointer" }}
-                                title="View full admission enquiry dossier on dedicated routed page"
-                              >
-                                🔍 View & Verify
-                              </button>
-                              <button
-                                type="button"
-                                onClick={() => handleOpenEditAdmissionModal(app)}
-                                style={{
-                                  padding: "4px 10px",
-                                  fontSize: "0.78rem",
-                                  background: "rgba(245, 158, 11, 0.2)",
-                                  border: "1px solid #f59e0b",
-                                  color: "#fbbf24",
-                                  borderRadius: "6px",
-                                  cursor: "pointer",
-                                  fontWeight: 800,
-                                  whiteSpace: "nowrap"
-                                }}
-                                title="Edit or amend student admission details based on parent request"
-                              >
-                                ✏️ Edit / Amend Details
-                              </button>
-                              {app.stage === "APPROVED" && (
-                                <button
-                                  type="button"
-                                  onClick={() => navigateToDetail(navigate, "admission", app.applicationNumber || app.id, { ...app, printMode: true }, { returnTab: activeTab })}
-                                  style={{ padding: "4px 8px", fontSize: "0.75rem", background: "rgba(16, 185, 129, 0.2)", border: "1px solid #10b981", color: "#34d399", borderRadius: "6px", cursor: "pointer", fontWeight: 800, whiteSpace: "nowrap" }}
-                                  title="Print or download official letter of admission"
-                                >
-                                  🖨️ Admission Letter
-                                </button>
-                              )}
-                              <button
-                                type="button"
-                                className="btn-action-approve"
-                                onClick={() => handleApproveApplication(app.id, app.applicationNumber)}
-                                disabled={loading || app.stage === "APPROVED"}
-                                title="Approve applicant & provision student"
-                              >
-                                ✅ Approve
-                              </button>
-                              <button
-                                type="button"
-                                className="btn-action-reject"
-                                onClick={() => handleRejectApplication(app.id, app.applicationNumber)}
-                                disabled={loading || app.stage === "REJECTED"}
-                                title="Reject applicant"
-                              >
-                                ❌ Reject
-                              </button>
-                              <button
-                                type="button"
-                                className="btn-action-delete"
-                                onClick={() => handleDeleteApplication(app.id, app.applicationNumber)}
-                                disabled={loading}
-                                title="Permanently delete application record"
-                              >
-                                🗑️ Delete
-                              </button>
-                            </div>
+                    </thead>
+                    <tbody>
+                      {filteredApplications.length === 0 ? (
+                        <tr>
+                          <td colSpan="7" style={{ textAlign: "center", padding: "1.5rem", color: "#94a3b8" }}>
+                            No admission applications found for selected filters.
                           </td>
                         </tr>
-                      ))
-                    )}
-                  </tbody>
-                </table>
+                      ) : (
+                        filteredApplications.map((app) => (
+                          <tr key={app.id}>
+                            <td style={{ textAlign: "center" }}>
+                              <input
+                                type="checkbox"
+                                className="table-checkbox"
+                                checked={selectedApps.includes(app.id)}
+                                onChange={() => toggleSelectApp(app.id)}
+                              />
+                            </td>
+                            <td>
+                              <strong style={{ fontFamily: "monospace" }}>{app.applicationNumber}</strong>
+                              {app.admissionType === "WALK_IN_IN_PERSON" ? (
+                                <span style={{ display: "block", fontSize: "0.68rem", background: "rgba(16, 185, 129, 0.2)", color: "#34d399", padding: "2px 6px", borderRadius: "4px", width: "fit-content", marginTop: "3px", fontWeight: 800 }}>
+                                  🏛️ WALK-IN VISIT
+                                </span>
+                              ) : (
+                                <span style={{ display: "block", fontSize: "0.68rem", background: "rgba(56, 189, 248, 0.15)", color: "#38bdf8", padding: "2px 6px", borderRadius: "4px", width: "fit-content", marginTop: "3px", fontWeight: 700 }}>
+                                  🌐 ONLINE PORTAL
+                                </span>
+                              )}
+                            </td>
+                            <td>
+                              <strong>{app.studentFirstName} {app.studentLastName}</strong>
+                              {app.homeGpsAddress && (
+                                <span style={{ display: "block", fontSize: "0.72rem", color: "#94a3b8", fontFamily: "monospace" }}>
+                                  📍 {app.homeGpsAddress}
+                                </span>
+                              )}
+                            </td>
+                            <td>Grade {app.targetGradeLevel}</td>
+                            <td>
+                              <div>{app.guardianEmail || "—"}</div>
+                              {app.guardianPhone && (
+                                <a href={'tel:' + app.guardianPhone} style={{ fontSize: "0.75rem", color: "#38bdf8", textDecoration: "none" }}>
+                                  📞 {app.guardianPhone}
+                                </a>
+                              )}
+                            </td>
+                            <td>
+                              <span className={'badge-status ' + (app.stage === "APPROVED" ? "badge-present" : app.stage === "REJECTED" ? "badge-absent" : "badge-late")}>
+                                {app.stage}
+                              </span>
+                              {app.indexNumber && (
+                                <div style={{ fontSize: "0.75rem", color: "#34d399", fontFamily: "monospace", marginTop: "3px", fontWeight: 800 }}>
+                                  ID: {app.indexNumber}
+                                </div>
+                              )}
+                            </td>
+                            <td>
+                              <div className="row-actions-group">
+                                <button
+                                  type="button"
+                                  className="btn-secondary"
+                                  onClick={() => navigateToDetail(navigate, "admission", app.applicationNumber || app.id, app, { returnTab: activeTab })}
+                                  style={{ padding: "4px 10px", fontSize: "0.78rem", borderColor: "#38bdf8", color: "#38bdf8", whiteSpace: "nowrap", cursor: "pointer" }}
+                                  title="View full admission enquiry dossier on dedicated routed page"
+                                >
+                                  🔍 View & Verify
+                                </button>
+                                <button
+                                  type="button"
+                                  onClick={() => handleOpenEditAdmissionModal(app)}
+                                  style={{
+                                    padding: "4px 10px",
+                                    fontSize: "0.78rem",
+                                    background: "rgba(245, 158, 11, 0.2)",
+                                    border: "1px solid #f59e0b",
+                                    color: "#fbbf24",
+                                    borderRadius: "6px",
+                                    cursor: "pointer",
+                                    fontWeight: 800,
+                                    whiteSpace: "nowrap"
+                                  }}
+                                  title="Edit or amend student admission details based on parent request"
+                                >
+                                  ✏️ Edit / Amend Details
+                                </button>
+                                {app.stage === "APPROVED" && (
+                                  <button
+                                    type="button"
+                                    onClick={() => navigateToDetail(navigate, "admission", app.applicationNumber || app.id, { ...app, printMode: true }, { returnTab: activeTab })}
+                                    style={{ padding: "4px 8px", fontSize: "0.75rem", background: "rgba(16, 185, 129, 0.2)", border: "1px solid #10b981", color: "#34d399", borderRadius: "6px", cursor: "pointer", fontWeight: 800, whiteSpace: "nowrap" }}
+                                    title="Print or download official letter of admission"
+                                  >
+                                    🖨️ Admission Letter
+                                  </button>
+                                )}
+                                <button
+                                  type="button"
+                                  className="btn-action-approve"
+                                  onClick={() => handleApproveApplication(app.id, app.applicationNumber)}
+                                  disabled={loading || app.stage === "APPROVED"}
+                                  title="Approve applicant & provision student"
+                                >
+                                  ✅ Approve
+                                </button>
+                                <button
+                                  type="button"
+                                  className="btn-action-reject"
+                                  onClick={() => handleRejectApplication(app.id, app.applicationNumber)}
+                                  disabled={loading || app.stage === "REJECTED"}
+                                  title="Reject applicant"
+                                >
+                                  ❌ Reject
+                                </button>
+                                <button
+                                  type="button"
+                                  className="btn-action-delete"
+                                  onClick={() => handleDeleteApplication(app.id, app.applicationNumber)}
+                                  disabled={loading}
+                                  title="Permanently delete application record"
+                                >
+                                  🗑️ Delete
+                                </button>
+                              </div>
+                            </td>
+                          </tr>
+                        ))
+                      )}
+                    </tbody>
+                  </table>
+                </div>
               </div>
-            </div>
             );
           })()}
           {/* TAB 4: EMERGENCY GUARDIAN LOCATOR (GENUINE LIVE GOOGLE MAP EMBED) */}
@@ -8797,12 +8797,12 @@ export function AdminDashboard({ initialTab } = {}) {
                                             ? "#f472b6"
                                             : "#c084fc",
                                     border: `1px solid ${item.channel === "WHATSAPP"
-                                        ? "#25D366"
-                                        : item.channel === "SMS"
-                                          ? "#38bdf8"
-                                          : item.channel === "VOICE_NOTE"
-                                            ? "#ec4899"
-                                            : "#a855f7"
+                                      ? "#25D366"
+                                      : item.channel === "SMS"
+                                        ? "#38bdf8"
+                                        : item.channel === "VOICE_NOTE"
+                                          ? "#ec4899"
+                                          : "#a855f7"
                                       }`
                                   }}
                                 >
@@ -10289,25 +10289,47 @@ export function AdminDashboard({ initialTab } = {}) {
                             </span>
                           </td>
                           <td>
-                            <button
-                              type="button"
-                              onClick={() => handleOpenEditStudentModal(st)}
-                              style={{
-                                padding: "5px 12px",
-                                fontSize: "0.78rem",
-                                background: "rgba(245, 158, 11, 0.2)",
-                                border: "1px solid #f59e0b",
-                                color: "#fbbf24",
-                                borderRadius: "6px",
-                                cursor: "pointer",
-                                fontWeight: "700",
-                                display: "inline-flex",
-                                alignItems: "center",
-                                gap: "4px"
-                              }}
-                            >
-                              ✏️ Edit / Amend Details
-                            </button>
+                            <div style={{ display: "flex", gap: "6px", alignItems: "center", flexWrap: "wrap" }}>
+                              <button
+                                type="button"
+                                onClick={() => navigateToDetail(navigate, "student", st.id || st.studentId, st, { returnTab: activeTab })}
+                                style={{
+                                  padding: "5px 10px",
+                                  fontSize: "0.78rem",
+                                  background: "rgba(56, 189, 248, 0.2)",
+                                  border: "1px solid #38bdf8",
+                                  color: "#38bdf8",
+                                  borderRadius: "6px",
+                                  cursor: "pointer",
+                                  fontWeight: "700",
+                                  display: "inline-flex",
+                                  alignItems: "center",
+                                  gap: "4px"
+                                }}
+                                title="View full student profile on dedicated routed page"
+                              >
+                                👁️ View Profile (Full Page)
+                              </button>
+                              <button
+                                type="button"
+                                onClick={() => handleOpenEditStudentModal(st)}
+                                style={{
+                                  padding: "5px 10px",
+                                  fontSize: "0.78rem",
+                                  background: "rgba(245, 158, 11, 0.2)",
+                                  border: "1px solid #f59e0b",
+                                  color: "#fbbf24",
+                                  borderRadius: "6px",
+                                  cursor: "pointer",
+                                  fontWeight: "700",
+                                  display: "inline-flex",
+                                  alignItems: "center",
+                                  gap: "4px"
+                                }}
+                              >
+                                ✏️ Edit
+                              </button>
+                            </div>
                           </td>
                         </tr>
                       ))}
@@ -12127,9 +12149,9 @@ export function AdminDashboard({ initialTab } = {}) {
 
               <div style={{ margin: "0 auto 1.5rem", display: "inline-block" }}>
                 <span className={`renewed-duration-chip ${tenantSubscription.durationLabel === "3 Months" ? "chip-3m" :
-                    tenantSubscription.durationLabel === "6 Months" ? "chip-6m" :
-                      tenantSubscription.durationLabel === "1 Year" ? "chip-1y" :
-                        "chip-lifetime"
+                  tenantSubscription.durationLabel === "6 Months" ? "chip-6m" :
+                    tenantSubscription.durationLabel === "1 Year" ? "chip-1y" :
+                      "chip-lifetime"
                   }`} style={{ fontSize: "1.1rem", padding: "8px 20px" }}>
                   <span>{tenantSubscription.isLifetime || tenantSubscription.durationLabel?.includes("Lifetime") ? "👑" : "📅"}</span>
                   RENEWED FOR: {tenantSubscription.durationLabel || "6 Months"}
@@ -14373,7 +14395,7 @@ class AdminDashboardErrorBoundary extends React.Component {
     console.warn("Headmaster Dashboard non-fatal event:", error);
     try {
       sessionStorage.setItem("gbs_admin_active_tab", "roster");
-    } catch {}
+    } catch { }
   }
   render() {
     if (this.state.hasError) {

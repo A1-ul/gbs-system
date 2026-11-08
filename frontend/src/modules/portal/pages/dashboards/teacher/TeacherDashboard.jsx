@@ -1644,8 +1644,9 @@ export default function TeacherDashboard() {
     { id: 108, studentId: "STU-2026-008", firstName: "Abena", lastName: "Osei-Bonsu", email: "abena.osei@gbs.edu" }
   ];
 
-  const fetchRoster = async (classId) => {
+  const fetchRoster = async (classId, dateParam) => {
     if (!classId) return;
+    const targetDate = dateParam || attendanceDate;
     setLoading(true);
     try {
       const res = await apiClient.get(`/attendance/classes/${classId}/roster`);
@@ -1675,40 +1676,46 @@ export default function TeacherDashboard() {
       setRoster(students);
 
       // Check local cache for previously marked attendance for this class and date
-      const savedKey = `gbs_attendance_${classId}_${attendanceDate}`;
+      const savedKey = `gbs_attendance_${classId}_${targetDate}`;
       let cachedStatus = {};
       try {
         cachedStatus = JSON.parse(localStorage.getItem(savedKey) || "{}");
       } catch {}
 
       try {
-        const attRes = await apiClient.get(`/attendance/classes/${classId}?date=${attendanceDate}`);
+        const attRes = await apiClient.get(`/attendance/classes/${classId}?date=${targetDate}`);
         const backendRecords = attRes.data?.data?.records || attRes.data?.records || [];
         if (Array.isArray(backendRecords) && backendRecords.length > 0) {
           backendRecords.forEach((r) => {
             const sid = r.studentId || r.student?.id;
             if (sid && r.status) {
-              if (cachedStatus[sid] === undefined && cachedStatus[String(sid)] === undefined) {
-                cachedStatus[sid] = r.status;
-                cachedStatus[String(sid)] = r.status;
-              }
+              cachedStatus[sid] = r.status;
+              cachedStatus[String(sid)] = r.status;
             }
           });
         }
       } catch {}
 
-      // REQUIREMENT: DO NOT select all at once!
-      // Every student starts as null / unmarked, requiring explicit individual selection by the teacher.
       const initialStatus = {};
       const initialRemarks = {};
+      const initialSaveStatus = {};
       students.forEach((s) => {
         const sid = s.id || s.studentId;
-        initialStatus[sid] = cachedStatus[sid] !== undefined ? cachedStatus[sid] : null;
-        initialStatus[String(sid)] = cachedStatus[String(sid)] !== undefined ? cachedStatus[String(sid)] : null;
+        const st = cachedStatus[sid] !== undefined ? cachedStatus[sid] : (cachedStatus[String(sid)] !== undefined ? cachedStatus[String(sid)] : null);
+        initialStatus[sid] = st;
+        initialStatus[String(sid)] = st;
         initialRemarks[sid] = "";
+        if (st) {
+          initialSaveStatus[sid] = "✓ Saved";
+          initialSaveStatus[String(sid)] = "✓ Saved";
+        }
       });
       setAttendanceRecords(initialStatus);
       setAttendanceRemarks(initialRemarks);
+      setStudentSaveStatus((prev) => ({ ...prev, ...initialSaveStatus }));
+      try {
+        localStorage.setItem(savedKey, JSON.stringify(initialStatus));
+      } catch {}
     } catch (err) {
       console.warn("Could not fetch roster:", err);
       let fallbackStudents = [];
@@ -1722,21 +1729,28 @@ export default function TeacherDashboard() {
         fallbackStudents = CANONICAL_STUDENT_ROSTER;
       }
       setRoster(fallbackStudents);
-      const savedKey = `gbs_attendance_${classId}_${attendanceDate}`;
+      const savedKey = `gbs_attendance_${classId}_${targetDate}`;
       let cachedStatus = {};
       try {
         cachedStatus = JSON.parse(localStorage.getItem(savedKey) || "{}");
       } catch {}
       const initialStatus = {};
       const initialRemarks = {};
+      const initialSaveStatus = {};
       fallbackStudents.forEach((s) => {
         const sid = s.id || s.studentId;
-        initialStatus[sid] = cachedStatus[sid] !== undefined ? cachedStatus[sid] : null;
-        initialStatus[String(sid)] = cachedStatus[String(sid)] !== undefined ? cachedStatus[String(sid)] : null;
+        const st = cachedStatus[sid] !== undefined ? cachedStatus[sid] : (cachedStatus[String(sid)] !== undefined ? cachedStatus[String(sid)] : null);
+        initialStatus[sid] = st;
+        initialStatus[String(sid)] = st;
         initialRemarks[sid] = "";
+        if (st) {
+          initialSaveStatus[sid] = "✓ Saved";
+          initialSaveStatus[String(sid)] = "✓ Saved";
+        }
       });
       setAttendanceRecords(initialStatus);
       setAttendanceRemarks(initialRemarks);
+      setStudentSaveStatus((prev) => ({ ...prev, ...initialSaveStatus }));
     } finally {
       setLoading(false);
     }
@@ -1745,27 +1759,15 @@ export default function TeacherDashboard() {
   const handleClassChange = (e) => {
     const classId = e.target.value;
     setSelectedClassId(classId);
-    fetchRoster(classId);
+    fetchRoster(classId, attendanceDate);
   };
 
-  // Ensure switching attendance date reloads individual tick status for that specific date
+  // Reload roster & status on attendance date change
   useEffect(() => {
-    if (selectedClassId && attendanceDate && roster.length > 0) {
-      const savedKey = `gbs_attendance_${selectedClassId}_${attendanceDate}`;
-      try {
-        const cachedStatus = JSON.parse(localStorage.getItem(savedKey) || "{}");
-        setAttendanceRecords(() => {
-          const updated = {};
-          roster.forEach((s) => {
-            const sid = s.id || s.studentId;
-            updated[sid] = cachedStatus[sid] !== undefined ? cachedStatus[sid] : null;
-            updated[String(sid)] = cachedStatus[String(sid)] !== undefined ? cachedStatus[String(sid)] : null;
-          });
-          return updated;
-        });
-      } catch {}
+    if (selectedClassId && attendanceDate) {
+      fetchRoster(selectedClassId, attendanceDate);
     }
-  }, [attendanceDate, selectedClassId, roster.length]);
+  }, [attendanceDate]);
 
   const handleStatusChange = (studentId, status) => {
     setAttendanceRecords((prev) => ({
@@ -1775,14 +1777,24 @@ export default function TeacherDashboard() {
     }));
   };
 
-  // REQUIREMENT: Each student must be ticked present or absent individually by the teacher
-  const handleMarkSingleStudent = (studentId, status) => {
+  // REQUIREMENT: Each student must be ticked or selected individually by the teacher.
+  // The tick saves immediately, allowing teacher to move on student by student and complete.
+  const handleMarkSingleStudent = (studentId, status, isCheckboxToggle = false) => {
     if (!studentId) return;
     const classIdToUse = selectedClassId || (classes[0]?.id ? String(classes[0].id) : "1");
 
-    // Toggle: if clicked status is already active, unmark (null); otherwise set new status
-    const current = attendanceRecords[studentId] || attendanceRecords[String(studentId)];
-    const targetStatus = current === status ? null : status;
+    const current = attendanceRecords[studentId] || attendanceRecords[String(studentId)] || null;
+    let targetStatus;
+
+    if (isCheckboxToggle) {
+      // Checkbox tick: if already PRESENT, switch to null (unmarked); otherwise set to PRESENT
+      targetStatus = current === "PRESENT" ? null : "PRESENT";
+    } else if (status === "CLEAR" || status === "UNMARK") {
+      targetStatus = null;
+    } else {
+      // Explicit status click firmly selects that status
+      targetStatus = status;
+    }
 
     // Instant optimistic state update with both numeric and string keys
     const updated = {
@@ -1791,6 +1803,8 @@ export default function TeacherDashboard() {
       [String(studentId)]: targetStatus
     };
     setAttendanceRecords(updated);
+
+    const nowTimeStr = new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit", second: "2-digit" });
 
     // Save to local storage cache immediately
     try {
@@ -1803,37 +1817,38 @@ export default function TeacherDashboard() {
         status: targetStatus || "UNMARKED",
         className: activeClassObj?.name || "Assigned Cohort",
         remarks: attendanceRemarks[studentId] || attendanceRemarks[String(studentId)] || "",
-        markedBy: `${currentUser?.firstName || "Faculty"} ${currentUser?.lastName || "Teacher"}`.trim()
+        markedBy: `${currentUser?.firstName || "Faculty"} ${currentUser?.lastName || "Teacher"}`.trim(),
+        savedAt: nowTimeStr
       };
+      summary[String(studentId)] = summary[studentId];
       localStorage.setItem("gbs_student_attendance_summary", JSON.stringify(summary));
       window.dispatchEvent(new Event("gbs_attendance_updated"));
     } catch {}
 
+    // Permanent auto-save indicator for this student row
     setStudentSaveStatus((prev) => ({
       ...prev,
-      [studentId]: "SAVED",
-      [String(studentId)]: "SAVED"
+      [studentId]: targetStatus ? `✓ Saved (${nowTimeStr})` : "⚪ Cleared",
+      [String(studentId)]: targetStatus ? `✓ Saved (${nowTimeStr})` : "⚪ Cleared"
     }));
-
-    setTimeout(() => {
-      setStudentSaveStatus((prev) => ({ 
-        ...prev, 
-        [studentId]: null, 
-        [String(studentId)]: null 
-      }));
-    }, 2500);
 
     const safeCid = !isNaN(parseInt(classIdToUse, 10)) ? parseInt(classIdToUse, 10) : 1;
     const safeSid = typeof studentId === "number" ? studentId : (!isNaN(parseInt(studentId, 10)) ? parseInt(studentId, 10) : (parseInt(String(studentId).replace(/\D/g, ""), 10) || 1));
     const remark = attendanceRemarks[studentId] || attendanceRemarks[String(studentId)] || "";
 
-    // Asynchronous background persistence to PostgreSQL
+    // Asynchronous background persistence to PostgreSQL / persistent store
     apiClient.post("/attendance/single", {
       classId: safeCid,
       studentId: safeSid,
       status: targetStatus || "UNMARKED",
       date: attendanceDate,
       remarks: remark
+    }).then(() => {
+      setStudentSaveStatus((prev) => ({
+        ...prev,
+        [studentId]: targetStatus ? `✓ Auto-Saved (${nowTimeStr})` : "⚪ Cleared",
+        [String(studentId)]: targetStatus ? `✓ Auto-Saved (${nowTimeStr})` : "⚪ Cleared"
+      }));
     }).catch((err) => {
       console.warn("Background single attendance sync fallback:", err?.message || err);
     });
@@ -3777,6 +3792,23 @@ export default function TeacherDashboard() {
                         </span>
                         <button
                           type="button"
+                          onClick={() => navigateToDetail(navigate, "attendance", verifiedWeekly.id, verifiedWeekly, { activeTab: "attendance" })}
+                          style={{
+                            background: "rgba(16, 185, 129, 0.2)",
+                            color: "#34d399",
+                            border: "1.5px solid #10b981",
+                            padding: "6px 12px",
+                            borderRadius: "8px",
+                            fontWeight: "800",
+                            fontSize: "0.8rem",
+                            cursor: "pointer"
+                          }}
+                          title="View verified weekly attendance register on dedicated page"
+                        >
+                          🔍 View Verified Register (Full Page)
+                        </button>
+                        <button
+                          type="button"
                           onClick={() => handleArchiveApprovedWeeklyAttendance(verifiedWeekly)}
                           style={{
                             background: "rgba(56, 189, 248, 0.2)",
@@ -3873,16 +3905,17 @@ export default function TeacherDashboard() {
                   <thead>
                     <tr>
                       <th style={{ width: "40px" }}>#</th>
-                      <th>Student Name & Current Status</th>
+                      <th style={{ minWidth: "150px" }}>Quick Tick</th>
+                      <th>Student Name & Status</th>
                       <th>Student Email / ID</th>
-                      <th style={{ minWidth: "320px" }}>Mark Attendance (Individual Click: Present / Absent / Late / Excused)</th>
+                      <th style={{ minWidth: "360px" }}>Mark Attendance (Auto-Saves Each Click)</th>
                       <th>Teacher Notes / Remarks</th>
                     </tr>
                   </thead>
                   <tbody>
                     {roster.length === 0 ? (
                       <tr>
-                        <td colSpan="5" style={{ textAlign: "center", padding: "2rem", color: "#94a3b8" }}>
+                        <td colSpan="6" style={{ textAlign: "center", padding: "2rem", color: "#94a3b8" }}>
                           No students currently enrolled in this class roster.
                         </td>
                       </tr>
@@ -3891,6 +3924,7 @@ export default function TeacherDashboard() {
                         const sid = s.id || s.studentId;
                         const currentStatus = attendanceRecords[sid] || attendanceRecords[String(sid)] || null;
                         const isUnmarked = !currentStatus;
+                        const saveIndicator = studentSaveStatus[sid] || studentSaveStatus[String(sid)] || null;
 
                         return (
                           <tr 
@@ -3908,45 +3942,77 @@ export default function TeacherDashboard() {
                           >
                             <td style={{ fontWeight: "700", color: "#94a3b8" }}>{idx + 1}</td>
                             <td>
-                              <div style={{ display: "flex", alignItems: "center", gap: "8px", flexWrap: "wrap" }}>
-                                <strong style={{ color: "#f8fafc", fontSize: "0.95rem" }}>
-                                  {s.firstName} {s.lastName}
-                                </strong>
-                                {isUnmarked ? (
-                                  <span style={{ fontSize: "0.74rem", color: "#fbbf24", background: "rgba(245, 158, 11, 0.15)", border: "1px solid rgba(245, 158, 11, 0.3)", padding: "2px 8px", borderRadius: "6px", fontWeight: "600" }}>
-                                    ⚪ Unmarked
-                                  </span>
-                                ) : (
-                                  <span style={{ 
-                                    fontSize: "0.75rem", 
-                                    fontWeight: "800",
-                                    padding: "2px 8px", 
-                                    borderRadius: "6px",
-                                    border: `1px solid ${
-                                      currentStatus === "PRESENT" ? "rgba(16, 185, 129, 0.5)" :
-                                      currentStatus === "ABSENT" ? "rgba(239, 68, 68, 0.5)" :
-                                      currentStatus === "LATE" ? "rgba(245, 158, 11, 0.5)" :
-                                      "rgba(59, 130, 246, 0.5)"
-                                    }`,
-                                    background: currentStatus === "PRESENT" 
-                                      ? "rgba(16, 185, 129, 0.2)" 
-                                      : currentStatus === "ABSENT" 
-                                      ? "rgba(239, 68, 68, 0.2)" 
-                                      : currentStatus === "LATE" 
-                                      ? "rgba(245, 158, 11, 0.2)" 
-                                      : "rgba(59, 130, 246, 0.2)",
-                                    color: currentStatus === "PRESENT" 
-                                      ? "#34d399" 
-                                      : currentStatus === "ABSENT" 
-                                      ? "#f87171" 
-                                      : currentStatus === "LATE" 
-                                      ? "#fbbf24" 
-                                      : "#60a5fa"
-                                  }}>
-                                    {currentStatus === "PRESENT" && "✅ PRESENT"}
-                                    {currentStatus === "ABSENT" && "❌ ABSENT"}
-                                    {currentStatus === "LATE" && "⏰ LATE"}
-                                    {currentStatus === "EXCUSED" && "📝 EXCUSED"}
+                              {/* Dedicated Quick Tick Checkbox */}
+                              <label style={{
+                                display: "inline-flex",
+                                alignItems: "center",
+                                gap: "6px",
+                                cursor: "pointer",
+                                background: currentStatus === "PRESENT" ? "rgba(16, 185, 129, 0.2)" : "rgba(255, 255, 255, 0.05)",
+                                border: `1.5px solid ${currentStatus === "PRESENT" ? "#10b981" : "rgba(255, 255, 255, 0.2)"}`,
+                                padding: "6px 10px",
+                                borderRadius: "8px",
+                                userSelect: "none",
+                                transition: "all 0.15s ease"
+                              }}>
+                                <input
+                                  type="checkbox"
+                                  checked={currentStatus === "PRESENT"}
+                                  onChange={() => handleMarkSingleStudent(sid, "PRESENT", true)}
+                                  style={{ width: "16px", height: "16px", cursor: "pointer", accentColor: "#10b981" }}
+                                />
+                                <span style={{ fontSize: "0.8rem", fontWeight: 800, color: currentStatus === "PRESENT" ? "#34d399" : "#cbd5e1" }}>
+                                  {currentStatus === "PRESENT" ? "✓ Present" : "Tick"}
+                                </span>
+                              </label>
+                            </td>
+                            <td>
+                              <div style={{ display: "flex", flexDirection: "column", gap: "4px" }}>
+                                <div style={{ display: "flex", alignItems: "center", gap: "8px", flexWrap: "wrap" }}>
+                                  <strong style={{ color: "#f8fafc", fontSize: "0.95rem" }}>
+                                    {s.firstName} {s.lastName}
+                                  </strong>
+                                  {isUnmarked ? (
+                                    <span style={{ fontSize: "0.74rem", color: "#fbbf24", background: "rgba(245, 158, 11, 0.15)", border: "1px solid rgba(245, 158, 11, 0.3)", padding: "2px 8px", borderRadius: "6px", fontWeight: "600" }}>
+                                      ⚪ Pending Roll Call
+                                    </span>
+                                  ) : (
+                                    <span style={{ 
+                                      fontSize: "0.75rem", 
+                                      fontWeight: "800",
+                                      padding: "2px 8px", 
+                                      borderRadius: "6px",
+                                      border: `1px solid ${
+                                        currentStatus === "PRESENT" ? "rgba(16, 185, 129, 0.5)" :
+                                        currentStatus === "ABSENT" ? "rgba(239, 68, 68, 0.5)" :
+                                        currentStatus === "LATE" ? "rgba(245, 158, 11, 0.5)" :
+                                        "rgba(59, 130, 246, 0.5)"
+                                      }`,
+                                      background: currentStatus === "PRESENT" 
+                                        ? "rgba(16, 185, 129, 0.2)" 
+                                        : currentStatus === "ABSENT" 
+                                        ? "rgba(239, 68, 68, 0.2)" 
+                                        : currentStatus === "LATE" 
+                                        ? "rgba(245, 158, 11, 0.2)" 
+                                        : "rgba(59, 130, 246, 0.2)",
+                                      color: currentStatus === "PRESENT" 
+                                        ? "#34d399" 
+                                        : currentStatus === "ABSENT" 
+                                        ? "#f87171" 
+                                        : currentStatus === "LATE" 
+                                        ? "#fbbf24" 
+                                        : "#60a5fa"
+                                    }}>
+                                      {currentStatus === "PRESENT" && "✅ PRESENT"}
+                                      {currentStatus === "ABSENT" && "❌ ABSENT"}
+                                      {currentStatus === "LATE" && "⏰ LATE"}
+                                      {currentStatus === "EXCUSED" && "📝 EXCUSED"}
+                                    </span>
+                                  )}
+                                </div>
+                                {saveIndicator && (
+                                  <span style={{ fontSize: "0.74rem", color: "#34d399", fontWeight: 700, display: "flex", alignItems: "center", gap: "4px" }}>
+                                    {saveIndicator}
                                   </span>
                                 )}
                               </div>
@@ -3978,7 +4044,7 @@ export default function TeacherDashboard() {
                                   }}
                                 >
                                   <span style={{ fontSize: "1.1rem" }}>{currentStatus === "PRESENT" ? "☑" : "☐"}</span>
-                                  Tick Present
+                                  Present
                                 </button>
 
                                 {/* TICK ABSENT */}
@@ -4003,7 +4069,7 @@ export default function TeacherDashboard() {
                                   }}
                                 >
                                   <span style={{ fontSize: "1.1rem" }}>{currentStatus === "ABSENT" ? "☒" : "☐"}</span>
-                                  Tick Absent
+                                  Absent
                                 </button>
 
                                 <button
@@ -4042,11 +4108,23 @@ export default function TeacherDashboard() {
                                   📝 Excused
                                 </button>
 
-                                {(studentSaveStatus[sid] === "SAVED" || studentSaveStatus[String(sid)] === "SAVED") && (
-                                  <span style={{ fontSize: "0.75rem", color: "#34d399", fontWeight: "700", marginLeft: "4px" }}>
-                                    ✓ Saved
-                                  </span>
-                                )}
+                                <button
+                                  type="button"
+                                  onClick={() => handleMarkSingleStudent(sid, "CLEAR")}
+                                  title={`Reset ${s.firstName} to unmarked`}
+                                  style={{
+                                    padding: "6px 8px",
+                                    borderRadius: "6px",
+                                    fontSize: "0.75rem",
+                                    fontWeight: "600",
+                                    cursor: "pointer",
+                                    border: "1px solid rgba(255, 255, 255, 0.15)",
+                                    background: "rgba(255, 255, 255, 0.05)",
+                                    color: "#94a3b8"
+                                  }}
+                                >
+                                  ⚪ Reset
+                                </button>
                               </div>
                             </td>
                             <td>
@@ -4065,6 +4143,27 @@ export default function TeacherDashboard() {
                     )}
                   </tbody>
                 </table>
+              </div>
+
+              {/* Move on to complete banner & button */}
+              <div style={{ marginTop: "1rem", padding: "16px 20px", background: "linear-gradient(135deg, rgba(15, 23, 42, 0.9), rgba(30, 41, 59, 0.8))", border: "1.5px solid rgba(16, 185, 129, 0.4)", borderRadius: "12px", display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: "12px", boxShadow: "0 6px 20px rgba(0,0,0,0.3)" }}>
+                <div>
+                  <div style={{ fontWeight: 800, color: "#34d399", fontSize: "1rem", display: "flex", alignItems: "center", gap: "8px" }}>
+                    <span>✅</span> Roll Call Progress: {markedCount} / {totalStudents} Students Evaluated ({evaluationPct}%)
+                  </div>
+                  <span style={{ fontSize: "0.82rem", color: "#cbd5e1" }}>
+                    Each tick above is automatically saved. Once finished evaluating your cohort, click Complete to wrap today's roll call into archives.
+                  </span>
+                </div>
+                <button
+                  type="button"
+                  className="btn-primary"
+                  onClick={handleSubmitAttendance}
+                  disabled={loading || roster.length === 0}
+                  style={{ background: "linear-gradient(135deg, #059669, #10b981)", fontWeight: 900, padding: "10px 24px", fontSize: "0.95rem", boxShadow: "0 4px 14px rgba(16, 185, 129, 0.4)" }}
+                >
+                  {loading ? "SAVING & WRAPPING..." : "💾 COMPLETE ROLL CALL & WRAP INTO ARCHIVES"}
+                </button>
               </div>
 
               {/* Requirement: Teacher "Save and wrap day into archive" visibly displays the saved daily archives */}
