@@ -28,27 +28,74 @@ function normalizePhoneDigits(phone = "") {
 }
 
 /**
+ * Resolve the registered school name dynamically for SMS branding (Default: WITHIN DE BRAIN ACADEMY)
+ */
+function resolveRegisteredSchoolName(tenantId = null, customSchoolName = null) {
+  if (customSchoolName && String(customSchoolName).trim().length > 0) {
+    return String(customSchoolName).trim().toUpperCase();
+  }
+  try {
+    const { readPersistentStore } = require('../../core/database/persistentStore');
+    const store = readPersistentStore();
+    if (tenantId && Array.isArray(store.institutions)) {
+      const match = store.institutions.find(
+        (i) => String(i.id) === String(tenantId) || String(i.tenantId) === String(tenantId) || String(i.tenantCode) === String(tenantId)
+      );
+      if (match && (match.name || match.institutionName)) {
+        return String(match.name || match.institutionName).trim().toUpperCase();
+      }
+    }
+    if (Array.isArray(store.institutions) && store.institutions.length > 0) {
+      const first = store.institutions[0];
+      if (first.name || first.institutionName) {
+        return String(first.name || first.institutionName).trim().toUpperCase();
+      }
+    }
+  } catch (_) {}
+
+  return "WITHIN DE BRAIN ACADEMY";
+}
+
+/**
+ * Format any outgoing SMS with the registered school name prefix
+ */
+function formatSMSWithSchoolHeader(rawContent, schoolName) {
+  const cleanSchool = schoolName || "WITHIN DE BRAIN ACADEMY";
+  const text = String(rawContent || "").trim();
+  const header = `[${cleanSchool}]`;
+  if (text.startsWith(header) || text.toUpperCase().startsWith(`[${cleanSchool.toUpperCase()}]`)) {
+    return text;
+  }
+  return `${header} ${text}`;
+}
+
+/**
  * Dispatch an official OTP SMS message to a mobile number
  */
-async function sendOTPMessage({ recipientPhone, recipientName, sender, senderPhone, otp, content, type, tenantId }) {
+async function sendOTPMessage({ recipientPhone, recipientName, sender, senderPhone, otp, content, type, tenantId, schoolName = null }) {
   const cleanPhone = String(recipientPhone || "").trim();
   const digits = normalizePhoneDigits(cleanPhone);
   const cleanOtp = String(otp || Math.floor(100000 + Math.random() * 900000)).trim();
   const messageId = `SMS-${Date.now()}-${Math.floor(1000 + Math.random() * 9000)}`;
   const carrierNetwork = detectGlobalCarrier(cleanPhone);
+  const registeredSchool = resolveRegisteredSchoolName(tenantId, schoolName);
+
+  const rawBody = content || `Your verification OTP security code is ${cleanOtp}. Valid for 15 minutes. Authorized by institutional clearance.`;
+  const formattedContent = formatSMSWithSchoolHeader(rawBody, registeredSchool);
 
   const logEntry = {
     id: smsLogs.length + 1,
     messageId,
+    schoolName: registeredSchool,
     recipientPhone: cleanPhone,
     recipientName: recipientName || "Subscriber",
-    sender: sender || "GBS_SENTINEL",
+    sender: sender || registeredSchool.replace(/\s+/g, "_").slice(0, 11),
     senderPhone: senderPhone || "+233-54-329-4615",
     otp: cleanOtp,
     carrierNetwork,
     channels: ["SMS", "WHATSAPP", "EMAIL"],
     latencyMs: 118,
-    content: content || `Your GBS System Verification OTP code is ${cleanOtp}. Valid for 15 minutes.`,
+    content: formattedContent,
     type: type || "GENERIC_OTP",
     tenantId: tenantId && !isNaN(parseInt(tenantId, 10)) ? parseInt(tenantId, 10) : null,
     status: "DELIVERED",
@@ -61,7 +108,7 @@ async function sendOTPMessage({ recipientPhone, recipientName, sender, senderPho
     otp: cleanOtp,
     expiresAt: Date.now() + 30 * 60 * 1000,
     type,
-    payload: { recipientName, sender, senderPhone, tenantId, carrierNetwork }
+    payload: { recipientName, sender, senderPhone, tenantId, carrierNetwork, schoolName: registeredSchool }
   };
 
   // Store by both raw phone string, normalized digits, and last 9 digits for universal matching
@@ -74,7 +121,7 @@ async function sendOTPMessage({ recipientPhone, recipientName, sender, senderPho
   }
 
   if (logger.info) {
-    logger.info(`[SMS GATEWAY DELIVERED] [${carrierNetwork}] To: ${cleanPhone} | OTP: ${cleanOtp}`);
+    logger.info(`[SMS GATEWAY DELIVERED] [${carrierNetwork}] [${registeredSchool}] To: ${cleanPhone} | Message: ${formattedContent}`);
   }
 
   return logEntry;
@@ -126,6 +173,52 @@ function verifyMobileOTP(phoneNumber, otp) {
 }
 
 /**
+ * Dispatch general school SMS message with Registered School Name prefix to user's personal mobile phone
+ */
+async function sendSMSMessage({ recipientPhone, recipientName, sender, senderPhone, content, type = "DIRECT_DEVELOPER_SMS", tenantId = null, schoolName = null }) {
+  const cleanPhone = String(recipientPhone || "").trim();
+  const messageId = `SMS-${Date.now()}-${Math.floor(1000 + Math.random() * 9000)}`;
+  const carrierNetwork = detectGlobalCarrier(cleanPhone);
+  const registeredSchool = resolveRegisteredSchoolName(tenantId, schoolName);
+
+  const rawContent = content || "Institutional alert from GBS System.";
+  const formattedContent = formatSMSWithSchoolHeader(rawContent, registeredSchool);
+
+  const logEntry = {
+    id: smsLogs.length + 1,
+    messageId,
+    schoolName: registeredSchool,
+    recipientPhone: cleanPhone,
+    recipientName: recipientName || "User / Parent / Staff",
+    sender: sender || registeredSchool.replace(/\s+/g, "_").slice(0, 11),
+    senderPhone: senderPhone || "+233 54 329 4615",
+    otp: "DIRECT-SMS",
+    carrierNetwork,
+    channels: ["SMS", "WHATSAPP", "EMAIL"],
+    latencyMs: 112,
+    content: formattedContent,
+    type,
+    tenantId: tenantId && !isNaN(parseInt(tenantId, 10)) ? parseInt(tenantId, 10) : null,
+    status: "DELIVERED",
+    timestamp: new Date().toISOString()
+  };
+
+  smsLogs.unshift(logEntry);
+  if (logger.info) {
+    logger.info(`[SMS DISPATCHED] [${carrierNetwork}] [${registeredSchool}] To Personal Phone: ${cleanPhone} | Message: ${formattedContent}`);
+  }
+
+  return logEntry;
+}
+
+/**
+ * Universal School SMS Dispatch Helper
+ */
+async function sendSchoolSMS(options) {
+  return sendSMSMessage(options);
+}
+
+/**
  * Get all dispatched SMS and OTP messages
  */
 async function getSMSLogs(filter = {}) {
@@ -136,6 +229,14 @@ async function getSMSLogs(filter = {}) {
   if (filter.type) {
     list = list.filter((l) => l.type === filter.type);
   }
+  if (filter.search) {
+    const q = String(filter.search).toLowerCase();
+    list = list.filter((l) =>
+      (l.recipientPhone && l.recipientPhone.toLowerCase().includes(q)) ||
+      (l.content && l.content.toLowerCase().includes(q)) ||
+      (l.schoolName && l.schoolName.toLowerCase().includes(q))
+    );
+  }
   return list;
 }
 
@@ -143,6 +244,7 @@ async function getStatus() {
   return {
     module: "sms",
     status: "OPERATIONAL",
+    defaultSchoolName: "WITHIN DE BRAIN ACADEMY",
     carriers: ["MTN", "Telecel", "AirtelTigo", "Global International (+233, +1, +44, +234, +254)"],
     uptime: process.uptime(),
     totalMessagesDispatched: smsLogs.length,
@@ -151,47 +253,16 @@ async function getStatus() {
   };
 }
 
-/**
- * Dispatch direct SMS message (e.g. from Developer to Headmaster)
- */
-async function sendSMSMessage({ recipientPhone, recipientName, sender, senderPhone, content, type = "DIRECT_DEVELOPER_SMS", tenantId = null }) {
-  const cleanPhone = String(recipientPhone || "").trim();
-  const messageId = `SMS-${Date.now()}-${Math.floor(1000 + Math.random() * 9000)}`;
-  const carrierNetwork = detectGlobalCarrier(cleanPhone);
-
-  const logEntry = {
-    id: smsLogs.length + 1,
-    messageId,
-    recipientPhone: cleanPhone,
-    recipientName: recipientName || "Headmaster",
-    sender: sender || "DEVELOPER_ROOT",
-    senderPhone: senderPhone || "+233 54 329 4615",
-    otp: "DIRECT-MSG",
-    carrierNetwork,
-    channels: ["SMS", "WHATSAPP", "EMAIL"],
-    latencyMs: 112,
-    content: content || "Notice from GBS System Executive Developer Gabriel Kubi Osei-Appiah.",
-    type,
-    tenantId: tenantId && !isNaN(parseInt(tenantId, 10)) ? parseInt(tenantId, 10) : null,
-    status: "DELIVERED",
-    timestamp: new Date().toISOString()
-  };
-
-  smsLogs.unshift(logEntry);
-  if (logger.info) {
-    logger.info(`[SMS DISPATCHED] [${carrierNetwork}] To: ${cleanPhone} | Message: ${content}`);
-  }
-
-  return logEntry;
-}
-
 module.exports = {
   sendOTPMessage,
   sendSMSMessage,
+  sendSchoolSMS,
   verifyMobileOTP,
   verifyOTP: verifyMobileOTP,
   getSMSLogs,
   getSmsLogs: getSMSLogs,
   getStatus,
-  detectGlobalCarrier
+  detectGlobalCarrier,
+  resolveRegisteredSchoolName,
+  formatSMSWithSchoolHeader
 };

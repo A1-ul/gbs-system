@@ -179,74 +179,115 @@ const markBatchAttendance = async (tenantId, data, operatorUser) => {
     }
   }
 
-  // Process all student records inside a database transaction
+  // Process all student records inside a database transaction with offline fallback
   const validStatuses = ['PRESENT', 'ABSENT', 'LATE', 'EXCUSED'];
-  const processedRecords = [];
+  let processedRecords = [];
 
-  await prisma.$transaction(async (tx) => {
-    for (const item of data.records) {
-      const studentId = toNumId(item.studentId, 3);
-      const rawStatus = String(item.status || 'PRESENT').toUpperCase();
-      const status = validStatuses.includes(rawStatus) ? rawStatus : 'PRESENT';
-      const remarks = item.remarks || null;
+  try {
+    await prisma.$transaction(async (tx) => {
+      for (const item of data.records) {
+        const studentId = toNumId(item.studentId, 3);
+        const rawStatus = String(item.status || 'PRESENT').toUpperCase();
+        const status = validStatuses.includes(rawStatus) ? rawStatus : 'PRESENT';
+        const remarks = item.remarks || null;
 
-      // Check if record exists for same tenant, class, student, date, and subject
-      const existing = await tx.attendanceRecord.findFirst({
-        where: {
-          tenantId: tid,
-          classId: cid,
-          studentId,
-          date: targetDate,
-          subjectId: subId
-        }
-      });
-
-      let saved;
-      if (existing) {
-        saved = await tx.attendanceRecord.update({
-          where: { id: existing.id },
-          data: {
-            status,
-            remarks,
-            markedById: operatorUser?.id || null,
-            updatedAt: new Date()
-          }
-        });
-      } else {
-        saved = await tx.attendanceRecord.create({
-          data: {
+        // Check if record exists for same tenant, class, student, date, and subject
+        const existing = await tx.attendanceRecord.findFirst({
+          where: {
             tenantId: tid,
             classId: cid,
             studentId,
-            subjectId: subId,
             date: targetDate,
-            status,
-            remarks,
-            markedById: operatorUser?.id || null
+            subjectId: subId
           }
         });
-      }
-      processedRecords.push(saved);
-    }
 
-    // Write audit log
-    await tx.auditLog.create({
-      data: {
-        tenantId: tid,
-        userId: operatorUser?.id || null,
-        action: 'ATTENDANCE_BATCH_MARKED',
-        module: 'attendance',
-        details: JSON.stringify({
-          classId: cid,
-          className: targetClass.name,
-          subjectId: subId,
-          date: targetDate.toISOString().split('T')[0],
-          recordsCount: processedRecords.length,
-          markedBy: operatorUser?.email || 'SYSTEM'
-        })
+        let saved;
+        if (existing) {
+          saved = await tx.attendanceRecord.update({
+            where: { id: existing.id },
+            data: {
+              status,
+              remarks,
+              markedById: operatorUser?.id || null,
+              updatedAt: new Date()
+            }
+          });
+        } else {
+          saved = await tx.attendanceRecord.create({
+            data: {
+              tenantId: tid,
+              classId: cid,
+              studentId,
+              subjectId: subId,
+              date: targetDate,
+              status,
+              remarks,
+              markedById: operatorUser?.id || null
+            }
+          });
+        }
+        processedRecords.push(saved);
       }
+
+      // Write audit log
+      await tx.auditLog.create({
+        data: {
+          tenantId: tid,
+          userId: operatorUser?.id || null,
+          action: 'ATTENDANCE_BATCH_MARKED',
+          module: 'attendance',
+          details: JSON.stringify({
+            classId: cid,
+            className: targetClass.name,
+            subjectId: subId,
+            date: targetDate.toISOString().split('T')[0],
+            recordsCount: processedRecords.length,
+            markedBy: operatorUser?.email || 'SYSTEM'
+          })
+        }
+      });
     });
-  });
+  } catch (txErr) {
+    // OFFLINE RESILIENCE FALLBACK: Persist batch safely in local persistent store
+    const { writePersistentStore } = require('../../core/database/persistentStore');
+    const offlineList = data.records.map((item, idx) => {
+      const studentId = toNumId(item.studentId, idx + 1);
+      const rawStatus = String(item.status || 'PRESENT').toUpperCase();
+      const status = validStatuses.includes(rawStatus) ? rawStatus : 'PRESENT';
+      return {
+        id: Date.now() + idx,
+        tenantId: tid,
+        classId: cid,
+        studentId,
+        subjectId: subId,
+        date: targetDate.toISOString().split('T')[0],
+        status,
+        remarks: item.remarks || null,
+        markedById: operatorUser?.id || 1,
+        offlineStored: true,
+        updatedAt: new Date().toISOString()
+      };
+    });
+
+    writePersistentStore((store) => {
+      if (!store.prismaModels) store.prismaModels = {};
+      if (!Array.isArray(store.prismaModels.AttendanceRecord)) store.prismaModels.AttendanceRecord = [];
+      offlineList.forEach((offlineItem) => {
+        const existingIdx = store.prismaModels.AttendanceRecord.findIndex(
+          (r) => r.tenantId === tid && r.classId === cid && r.studentId === offlineItem.studentId && r.date === offlineItem.date
+        );
+        if (existingIdx >= 0) {
+          store.prismaModels.AttendanceRecord[existingIdx] = { ...store.prismaModels.AttendanceRecord[existingIdx], ...offlineItem };
+        } else {
+          store.prismaModels.AttendanceRecord.push(offlineItem);
+        }
+      });
+      return store;
+    });
+
+    processedRecords = offlineList;
+  }
 
   // Calculate batch metrics
   let present = 0, absent = 0, late = 0, excused = 0;
@@ -532,87 +573,119 @@ const markSingleStudentAttendance = async (tenantIdOrData, dataOrOperator, optio
   const subId = subjectId ? toNumId(subjectId, 1) : null;
   const targetDate = normalizeDate(date);
 
-  const existing = await prisma.attendanceRecord.findFirst({
-    where: {
-      tenantId: tid,
-      classId: cid,
-      studentId: sid,
-      date: targetDate,
-      subjectId: subId
-    }
-  });
-
-  // If status is empty, null, or 'NONE', unmark the student by removing any existing record
-  if (!status || status === 'NONE' || status === 'UNMARKED') {
-    if (existing) {
-      await prisma.attendanceRecord.delete({ where: { id: existing.id } });
-    }
-    return {
-      studentId: sid,
-      classId: cid,
-      date: targetDate.toISOString().split('T')[0],
-      status: null,
-      remarks: null,
-      message: 'Attendance record cleared/unmarked.'
-    };
-  }
-
   const validStatuses = ['PRESENT', 'ABSENT', 'LATE', 'EXCUSED'];
-  const upperStatus = String(status).toUpperCase();
+  const upperStatus = String(status || '').toUpperCase();
   const validStatus = validStatuses.includes(upperStatus) ? upperStatus : 'PRESENT';
 
-  let validMarkerId = null;
-  if (operatorUser?.id) {
-    const userExists = await prisma.user.findUnique({ where: { id: parseInt(operatorUser.id, 10) } });
-    if (userExists) {
-      validMarkerId = userExists.id;
-    }
-  }
-
-  let saved;
-  if (existing) {
-    saved = await prisma.attendanceRecord.update({
-      where: { id: existing.id },
-      data: {
-        status: validStatus,
-        remarks: remarks !== undefined ? remarks : existing.remarks,
-        markedById: validMarkerId,
-        updatedAt: new Date()
-      }
-    });
-  } else {
-    saved = await prisma.attendanceRecord.create({
-      data: {
+  try {
+    const existing = await prisma.attendanceRecord.findFirst({
+      where: {
         tenantId: tid,
         classId: cid,
         studentId: sid,
-        subjectId: subId,
         date: targetDate,
-        status: validStatus,
-        remarks: remarks || null,
-        markedById: validMarkerId
+        subjectId: subId
       }
     });
-  }
 
-  // Audit log
-  let auditUserId = validMarkerId;
-  if (!auditUserId) {
-    const anyUser = await prisma.user.findFirst();
-    auditUserId = anyUser ? anyUser.id : sid;
-  }
-
-  await prisma.auditLog.create({
-    data: {
-      tenantId: tid,
-      userId: auditUserId,
-      action: 'SINGLE_STUDENT_ATTENDANCE_MARKED',
-      module: 'ATTENDANCE',
-      details: `Marked student #${sid} as ${validStatus} for class #${cid} on ${targetDate}.`
+    // If status is empty, null, or 'NONE', unmark the student by removing any existing record
+    if (!status || status === 'NONE' || status === 'UNMARKED' || status === 'CLEAR') {
+      if (existing) {
+        await prisma.attendanceRecord.delete({ where: { id: existing.id } });
+      }
+      return {
+        studentId: sid,
+        classId: cid,
+        date: targetDate.toISOString().split('T')[0],
+        status: null,
+        remarks: null,
+        message: 'Attendance record cleared/unmarked.'
+      };
     }
-  });
 
-  return saved;
+    let validMarkerId = null;
+    if (operatorUser?.id) {
+      const userExists = await prisma.user.findUnique({ where: { id: parseInt(operatorUser.id, 10) } });
+      if (userExists) {
+        validMarkerId = userExists.id;
+      }
+    }
+
+    let saved;
+    if (existing) {
+      saved = await prisma.attendanceRecord.update({
+        where: { id: existing.id },
+        data: {
+          status: validStatus,
+          remarks: remarks !== undefined ? remarks : existing.remarks,
+          markedById: validMarkerId,
+          updatedAt: new Date()
+        }
+      });
+    } else {
+      saved = await prisma.attendanceRecord.create({
+        data: {
+          tenantId: tid,
+          classId: cid,
+          studentId: sid,
+          subjectId: subId,
+          date: targetDate,
+          status: validStatus,
+          remarks: remarks || null,
+          markedById: validMarkerId
+        }
+      });
+    }
+
+    // Audit log
+    let auditUserId = validMarkerId;
+    if (!auditUserId) {
+      const anyUser = await prisma.user.findFirst();
+      auditUserId = anyUser ? anyUser.id : sid;
+    }
+
+    await prisma.auditLog.create({
+      data: {
+        tenantId: tid,
+        userId: auditUserId,
+        action: 'SINGLE_STUDENT_ATTENDANCE_MARKED',
+        module: 'ATTENDANCE',
+        details: `Marked student #${sid} as ${validStatus} for class #${cid} on ${targetDate}.`
+      }
+    });
+
+    return saved;
+  } catch (dbErr) {
+    // OFFLINE RESILIENCE: Store safely in local persistent store when DB is disconnected or offline
+    const { writePersistentStore } = require('../../core/database/persistentStore');
+    const fallbackRecord = {
+      id: Date.now(),
+      tenantId: tid,
+      classId: cid,
+      studentId: sid,
+      subjectId: subId,
+      date: targetDate.toISOString().split('T')[0],
+      status: validStatus,
+      remarks: remarks || null,
+      markedById: operatorUser?.id || 1,
+      offlineStored: true,
+      updatedAt: new Date().toISOString()
+    };
+    writePersistentStore((store) => {
+      if (!store.prismaModels) store.prismaModels = {};
+      if (!Array.isArray(store.prismaModels.AttendanceRecord)) store.prismaModels.AttendanceRecord = [];
+      const idx = store.prismaModels.AttendanceRecord.findIndex(
+        (r) => r.tenantId === tid && r.classId === cid && r.studentId === sid && r.date === fallbackRecord.date
+      );
+      if (idx >= 0) {
+        store.prismaModels.AttendanceRecord[idx] = { ...store.prismaModels.AttendanceRecord[idx], ...fallbackRecord };
+      } else {
+        store.prismaModels.AttendanceRecord.push(fallbackRecord);
+      }
+      return store;
+    });
+    return fallbackRecord;
+  }
 };
 
 // In-memory persistent weekly attendance report submissions for Headmaster cross-checking

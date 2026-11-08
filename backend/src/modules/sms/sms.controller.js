@@ -70,9 +70,42 @@ async function getLogs(req, res, next) {
   }
 }
 
+async function sendSMS(req, res, next) {
+  try {
+    const { recipientPhone, recipientName, sender, senderPhone, content, type, tenantId, schoolName } = req.body;
+    if (!recipientPhone) {
+      return res.status(400).json({ status: "fail", message: "recipientPhone (personal mobile phone) is required." });
+    }
+    const result = await service.sendSMSMessage({
+      recipientPhone,
+      recipientName,
+      sender,
+      senderPhone,
+      content,
+      type: type || "DIRECT_SCHOOL_SMS",
+      tenantId: tenantId || req.tenantId,
+      schoolName: schoolName || req.body.institutionName
+    });
+
+    return res.status(200).json({
+      status: "success",
+      message: `SMS message with registered school name successfully dispatched to ${recipientPhone}`,
+      data: result
+    });
+  } catch (error) {
+    return next(error);
+  }
+}
+
+async function sendSchoolSMS(req, res, next) {
+  return sendSMS(req, res, next);
+}
+
 module.exports = {
   getStatus,
   sendOTP,
   verifyOTP,
-  getLogs
+  getLogs,
+  sendSMS,
+  sendSchoolSMS
 };

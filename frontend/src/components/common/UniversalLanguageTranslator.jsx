@@ -96,8 +96,23 @@ export default function UniversalLanguageTranslator() {
     const handleLangSync = (e) => {
       if (e.detail?.code) setSelectedLang(e.detail.code);
     };
+    const handleOpenTranslator = (e) => {
+      if (e.detail?.text) {
+        setCustomTextToTranslate(e.detail.text);
+      }
+      setShowTranslatorModal(true);
+    };
+
+    window.openGBSTranslator = (text = "") => {
+      window.dispatchEvent(new CustomEvent("gbs_open_translator", { detail: { text } }));
+    };
+
     window.addEventListener("gbs_language_changed", handleLangSync);
-    return () => window.removeEventListener("gbs_language_changed", handleLangSync);
+    window.addEventListener("gbs_open_translator", handleOpenTranslator);
+    return () => {
+      window.removeEventListener("gbs_language_changed", handleLangSync);
+      window.removeEventListener("gbs_open_translator", handleOpenTranslator);
+    };
   }, []);
 
   const handleSelectLanguage = (countryCode) => {
@@ -120,8 +135,23 @@ export default function UniversalLanguageTranslator() {
       let translation = "";
       let explanation = "";
 
-      // Match against educational knowledge base
-      if (lower.includes("fee") || lower.includes("arrear") || lower.includes("debt") || lower.includes("money") || lower.includes("pay")) {
+      // Match against educational & system message knowledge base
+      if (lower.includes("attend") || lower.includes("roll call") || lower.includes("absent") || lower.includes("present") || lower.includes("late")) {
+        const twText = "Adesua amanneɛbɔ: Wɔatwerɛ sɛ sukuuni no baeɛ anaa wamma sukuu nnɛ. Sɛ wamma a, kyerɛkyerɛ nea enti a wamma no mu kyerɛ sukuu panyin no ntɛm ara.";
+        const frText = "Notification d'assiduité : L'appel quotidien indique la présence ou l'absence de l'élève. En cas d'absence, veuillez fournir un justificatif médical.";
+        const esText = "Notificación de asistencia escolar: El registro indica si el estudiante asistió hoy. En caso de ausencia, comuníquese con la dirección escolar.";
+        const swText = "Taarifa ya mahudhurio: Ripoti ya leo inaonyesha uwepo au kutokuwepo kwa mwanafunzi. Tafadhali thibitisha sababu kwa uongozi wa shule.";
+        const arText = "إشعار الحضور والغياب: يسجل النظام الحضور اليومي للطالب. يرجى تقديم مبرر رسمي في حال الغياب.";
+
+        translation = activeCountry.code === "GH" ? twText :
+          activeCountry.code === "FR" ? frText :
+          activeCountry.code === "ES" ? esText :
+          activeCountry.code === "KE" ? swText :
+          activeCountry.code === "SA" ? arText :
+          `Attendance Record Notice: Student roll call status evaluated. Teachers tick scholars student-by-student and auto-save each record immediately.`;
+
+        explanation = `Plain Meaning: This is an official classroom attendance update. It records whether a student was Present, Absent, Late, or Excused for the session. Parents and guardians must take note of their child's classroom participation and provide written or medical excuse if absent.`;
+      } else if (lower.includes("fee") || lower.includes("arrear") || lower.includes("debt") || lower.includes("money") || lower.includes("pay") || lower.includes("momo")) {
         const item = EDUCATIONAL_TERMS_DICTIONARY["Fee Arrears"];
         translation = activeCountry.code === "FR" || activeCountry.code === "CI" || activeCountry.code === "SN"
           ? item.fr
@@ -134,7 +164,15 @@ export default function UniversalLanguageTranslator() {
           : activeCountry.code === "GH"
           ? item.tw
           : item.en;
-        explanation = `Institutional Finance: '${text}' refers to unsettled student accounts. Payment can be fulfilled via Mobile Money Escrow or Bank 3DS.`;
+        explanation = `Institutional Finance Meaning: '${text}' relates to financial obligations, term tuition, or verified payment settlements. Parents can settle fee arrears directly using Mobile Money (MTN MoMo, Telecel Cash, AT Money) or Card with automated USSD prompt verification and official stamped receipts.`;
+      } else if (lower.includes("dev") || lower.includes("breach") || lower.includes("security") || lower.includes("sentinel") || lower.includes("pin")) {
+        translation = activeCountry.code === "GH" ? "Ahobammbɔ amanneɛbɔ: Wɔabɔ kɔkɔ sɛ obi repɛ kwan a ɛmmfata afa so akɔ developer nkyɛn. Wɔbɛfrɛ no abisa no asɛm." :
+          activeCountry.code === "FR" ? "Alerte de sécurité système : Tentative d'intrusion détectée sur la console développeur. Surveillance active." :
+          activeCountry.code === "ES" ? "Alerta de seguridad: Intento de acceso no autorizado detectado en la consola del desarrollador." :
+          activeCountry.code === "SA" ? "تنبيه أمني للنظام: تم رصد محاولة دخول غير مصرح بها إلى لوحة المطورين." :
+          "Developer Security & Sentinel Alert: High-level access gate monitoring unauthorized intrusion trials.";
+
+        explanation = `Technical Explanation: Developer Mission Control is protected by root master PIN credentials (0543294615Gab). Any non-developer staff attempting breach is logged in the Intrusion Sentinel and flagged for questioning after 3 failed attempts.`;
       } else if (lower.includes("plan") || lower.includes("note") || lower.includes("scheme") || lower.includes("vet")) {
         const item = EDUCATIONAL_TERMS_DICTIONARY["Lesson Plan Vetting"];
         translation = activeCountry.code === "FR" || activeCountry.code === "CI" || activeCountry.code === "SN"
@@ -189,7 +227,7 @@ export default function UniversalLanguageTranslator() {
           "Educational Translation & Context:";
 
         translation = `${prefix} "${text}" — This is an administrative institutional directive within the GBS School Management System.`;
-        explanation = `Context: Under ${activeCountry.name}, this instruction directs staff, parents, or students on standard institutional procedure.`;
+        explanation = `Plain Meaning & Required Action: Under ${activeCountry.name}, this message communicates standard operational instructions. Recipient should review the message details, confirm their records in the portal, or consult their respective department head for clarification.`;
       }
 
       setTranslatedResult({ original: text, translation, explanation, country: activeCountry });

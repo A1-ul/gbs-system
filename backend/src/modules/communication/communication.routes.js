@@ -39,17 +39,30 @@ router.post('/messages', (req, res) => {
     }
   });
 });
-router.post('/sms', (req, res) => {
-  res.status(200).json({
-    status: 'success',
-    message: `Direct SMS dispatched to ${req.body?.recipientPhone || req.body?.phone || 'recipient'} via global carrier gateway.`,
-    data: {
-      id: `sms_${Date.now()}`,
-      status: 'DELIVERED',
-      ...req.body,
-      sentAt: new Date().toISOString()
-    }
-  });
+const smsService = require('../sms/sms.service');
+
+router.post('/sms', async (req, res, next) => {
+  try {
+    const { recipientPhone, phone, recipientName, content, message, schoolName, tenantId } = req.body || {};
+    const targetPhone = recipientPhone || phone;
+    const targetContent = content || message || "Notification from school system.";
+    const result = await smsService.sendSMSMessage({
+      recipientPhone: targetPhone,
+      recipientName: recipientName || "Subscriber",
+      content: targetContent,
+      schoolName: schoolName || "WITHIN DE BRAIN ACADEMY",
+      tenantId: tenantId || req.tenantId,
+      type: "COMMUNICATION_SMS"
+    });
+
+    res.status(200).json({
+      status: 'success',
+      message: `Direct SMS dispatched to ${targetPhone} via global carrier gateway.`,
+      data: result
+    });
+  } catch (err) {
+    next(err);
+  }
 });
 router.post('/email', (req, res) => {
   res.status(200).json({

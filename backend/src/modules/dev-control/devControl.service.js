@@ -1724,7 +1724,8 @@ const sendDeveloperSmsToHeadmaster = async (payload = {}) => {
     senderPhone: '+233 54 329 4615',
     content: targetMessage,
     type: 'DEVELOPER_DIRECT_SMS',
-    tenantId: payload.tenantId || null
+    tenantId: payload.tenantId || null,
+    schoolName: payload.schoolName || payload.institutionName || 'WITHIN DE BRAIN ACADEMY'
   });
 
   return {

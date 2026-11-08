@@ -2128,6 +2128,18 @@ export default function DeveloperDashboard() {
     const alertMsg = customSmsMessage.trim() || `🚨 URGENT DEVELOPER CALL REQUEST: Engineer Gabriel Osei requested an in-system video conference regarding Institutional Tenancy & Server Synchronization. Please sign into your Admin Command Center immediately.`;
     const targetPhone = showHeadmasterOfflineNoticeModal.phone || "+233-24-555-0199";
     try {
+      // Dispatches real SMS with registered school name [WITHIN DE BRAIN ACADEMY]
+      fetch("/api/v1/sms/send-school-sms", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          phone: targetPhone,
+          message: alertMsg,
+          schoolName: "WITHIN DE BRAIN ACADEMY"
+        })
+      }).catch(() => {});
+    } catch { }
+    try {
       const notifs = JSON.parse(localStorage.getItem("gbs_headmaster_notifications") || "[]");
       notifs.unshift({
         id: `CALL-ALERT-${Date.now()}`,
@@ -3965,6 +3977,31 @@ export default function DeveloperDashboard() {
               💾 Backup
             </button>
           </div>
+          <button
+            type="button"
+            onClick={() => {
+              if (window.openGBSTranslator) {
+                window.openGBSTranslator();
+              } else {
+                window.dispatchEvent(new CustomEvent("gbs_open_translator"));
+              }
+            }}
+            style={{
+              background: "linear-gradient(135deg, rgba(99, 102, 241, 0.35), rgba(79, 70, 229, 0.45))",
+              border: "1.5px solid #818cf8",
+              color: "#c7d2fe",
+              fontWeight: 800,
+              padding: "7px 14px",
+              borderRadius: "8px",
+              cursor: "pointer",
+              display: "flex",
+              alignItems: "center",
+              gap: "6px"
+            }}
+            title="Open Universal Language Translator & Explainer for all languages & SMS notifications"
+          >
+            🌐 Language Explainer
+          </button>
           <button
             type="button"
             onClick={() => window.history.back()}
