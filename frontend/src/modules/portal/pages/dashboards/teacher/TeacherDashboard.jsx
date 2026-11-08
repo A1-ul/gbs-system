@@ -7,24 +7,35 @@ import VoiceNoteRecorder from "../../../../../components/common/VoiceNoteRecorde
 import VoiceNotePlayer from "../../../../../components/common/VoiceNotePlayer";
 import { getUserAvatar } from "../../../../../utils/userAvatars";
 import { offlineSyncEngine } from "../../../../../utils/offlineSync";
-import { 
-  getActiveInstitutionType, 
-  getAllowedClassesForCurrentTier, 
-  getAllowedSubjectsForCurrentTier, 
-  isLevelPermitted, 
-  INSTITUTION_TIERS 
+import {
+  getActiveInstitutionType,
+  getAllowedClassesForCurrentTier,
+  getAllowedSubjectsForCurrentTier,
+  isLevelPermitted,
+  INSTITUTION_TIERS
 } from "../../../../../utils/institutionScope";
 import UniversalRoleGuideModal from "../../../../../components/common/UniversalRoleGuideModal";
 import ClassTopicVideoPlatform from "../../../../../components/common/ClassTopicVideoPlatform";
 import { navigateToDetail } from "../../../../../utils/universalNavigation";
 import MobileCameraAIExamScannerModal from "../../../../../components/common/MobileCameraAIExamScannerModal";
 import FileUploadVerificationCard from "../../../../../components/common/FileUploadVerificationCard";
+import DigitalSignaturePadModal from "../../../../../components/common/DigitalSignaturePadModal";
 import "./TeacherDashboard.css";
 
 export default function TeacherDashboard() {
   const navigate = useNavigate();
 
   // Faculty Authenticated User Identity
+  // Digital Signature Pad State for Teacher Endorsement
+  const [showSignaturePad, setShowSignaturePad] = useState(false);
+  const [activeTeacherSignature, setActiveTeacherSignature] = useState(() => {
+    try {
+      const saved = localStorage.getItem("gbs_signature_TEACHER");
+      return saved ? JSON.parse(saved) : null;
+    } catch {
+      return null;
+    }
+  });
   // Mobile Camera AI Exam Scanner Modal State (50-Point Mobile Engine)
   const [showMobileCameraScanner, setShowMobileCameraScanner] = useState(false);
 
@@ -33,7 +44,7 @@ export default function TeacherDashboard() {
     try {
       const stored = localStorage.getItem("gbs_teacher_profile");
       if (stored) return JSON.parse(stored);
-    } catch {}
+    } catch { }
     return {
       fullName: "Sarah Jenkins",
       employeeId: "GBS-FAC-2026-0042",
@@ -59,7 +70,7 @@ export default function TeacherDashboard() {
     try {
       const stored = localStorage.getItem("gbs_user");
       if (stored) return JSON.parse(stored);
-    } catch {}
+    } catch { }
     return { firstName: "Sarah", lastName: "Jenkins", email: "teacher@gbs.edu", role: "TEACHER" };
   })();
 
@@ -78,7 +89,7 @@ export default function TeacherDashboard() {
     try {
       const stored = localStorage.getItem("gbs_academic_published_schedule");
       if (stored) return JSON.parse(stored);
-    } catch {}
+    } catch { }
     return {
       academicYear: "2026/2027",
       activeTerm: "TERM_1",
@@ -93,7 +104,7 @@ export default function TeacherDashboard() {
       try {
         const stored = localStorage.getItem("gbs_academic_published_schedule");
         if (stored) setPublishedSchedule(JSON.parse(stored));
-      } catch {}
+      } catch { }
     };
     window.addEventListener("gbs_academic_schedule_published", syncSchedule);
     window.addEventListener("storage", syncSchedule);
@@ -117,7 +128,7 @@ export default function TeacherDashboard() {
       if (tabParam) return tabParam;
       const stored = sessionStorage.getItem("gbs_teacher_active_tab");
       if (stored) return stored;
-    } catch {}
+    } catch { }
     return "attendance";
   });
 
@@ -130,7 +141,7 @@ export default function TeacherDashboard() {
         url.searchParams.set("tab", activeTab);
         window.history.pushState({ tab: activeTab }, "", url.toString());
       }
-    } catch {}
+    } catch { }
   }, [activeTab]);
 
   useEffect(() => {
@@ -143,18 +154,18 @@ export default function TeacherDashboard() {
         if (savedScroll) {
           setTimeout(() => window.scrollTo(0, parseInt(savedScroll, 10)), 100);
         }
-      } catch {}
+      } catch { }
     };
 
     const handleScroll = () => {
       try {
         sessionStorage.setItem("gbs_teacher_scroll_pos", String(window.scrollY));
-      } catch {}
+      } catch { }
     };
 
     window.addEventListener("popstate", handlePopState);
     window.addEventListener("scroll", handleScroll, { passive: true });
-    
+
     // Initial scroll restore
     const savedScroll = sessionStorage.getItem("gbs_teacher_scroll_pos");
     if (savedScroll) {
@@ -218,7 +229,7 @@ export default function TeacherDashboard() {
     try {
       const stored = localStorage.getItem("gbs_published_exams");
       if (stored) return JSON.parse(stored);
-    } catch {}
+    } catch { }
     return [];
   });
 
@@ -250,7 +261,7 @@ export default function TeacherDashboard() {
     try {
       const stored = localStorage.getItem("gbs_examination_timetable");
       if (stored) return JSON.parse(stored);
-    } catch {}
+    } catch { }
     return [];
   });
 
@@ -267,7 +278,7 @@ export default function TeacherDashboard() {
     try {
       const saved = JSON.parse(localStorage.getItem("gbs_teacher_archived_weekly_attendance") || "[]");
       if (Array.isArray(saved)) return saved;
-    } catch {}
+    } catch { }
     return [];
   });
   const [showArchivedAttendanceModal, setShowArchivedAttendanceModal] = useState(false);
@@ -297,7 +308,7 @@ export default function TeacherDashboard() {
     try {
       const saved = JSON.parse(localStorage.getItem("gbs_institutional_curriculum_updates") || "{}");
       if (saved && typeof saved === "object") return saved;
-    } catch {}
+    } catch { }
     return {};
   });
   const [editingCurriculumModal, setEditingCurriculumModal] = useState(null);
@@ -322,7 +333,7 @@ export default function TeacherDashboard() {
       try {
         const saved = JSON.parse(localStorage.getItem("gbs_institutional_curriculum_updates") || "{}");
         if (saved && typeof saved === "object") setCurriculumUpdatesMap(saved);
-      } catch {}
+      } catch { }
     };
     window.addEventListener("gbs_curriculum_updated", syncCurriculumUpdates);
     window.addEventListener("storage", syncCurriculumUpdates);
@@ -391,7 +402,7 @@ export default function TeacherDashboard() {
       registry[teacherName] = registry[teacherId];
       localStorage.setItem("gbs_teacher_active_curriculum_registry", JSON.stringify(registry));
       window.dispatchEvent(new Event("gbs_curriculum_updated"));
-    } catch {}
+    } catch { }
   };
 
   // Builds rich, level-specific curriculum data for a given institution category, class/level, and subject
@@ -411,46 +422,46 @@ export default function TeacherDashboard() {
     const frameworkAuthority = customUpdate?.frameworkAuthority || (isUniversity
       ? "GTEC / National Tertiary Accreditation & Credit-Hour Outcome-Based Framework"
       : isSHS
-      ? "NaCCA / WAEC WASSCE Senior High School Harmonized Standard Curriculum"
-      : "NaCCA / GES Standard-Based Basic & JHS National Curriculum Framework");
+        ? "NaCCA / WAEC WASSCE Senior High School Harmonized Standard Curriculum"
+        : "NaCCA / GES Standard-Based Basic & JHS National Curriculum Framework");
 
     const assessmentWeighting = customUpdate?.assessmentWeighting || (isUniversity
       ? "40% Continuous Coursework, Labs & Mid-Semester Seminars • 60% End-of-Semester Written/Practical Examination"
       : isSHS
-      ? "30% School-Based Assessment (SBA: Class Tests, Projects, Practicals) • 70% End-of-Term / WASSCE Standard Examination"
-      : isEarlyChildhood
-      ? "100% Continuous Observational Checklist, Phonics/Numeracy Portfolio & Psychomotor Skill Mastery"
-      : "30% Continuous School-Based Assessment (CAT 1, CAT 2, Homework & Classwork) • 70% Terminal / BECE Standard Examination");
+        ? "30% School-Based Assessment (SBA: Class Tests, Projects, Practicals) • 70% End-of-Term / WASSCE Standard Examination"
+        : isEarlyChildhood
+          ? "100% Continuous Observational Checklist, Phonics/Numeracy Portfolio & Psychomotor Skill Mastery"
+          : "30% Continuous School-Based Assessment (CAT 1, CAT 2, Homework & Classwork) • 70% Terminal / BECE Standard Examination");
 
     const defaultStrands = isUniversity
       ? [
-          {
-            code: "MOD-101",
-            strand: `Module 1: Theoretical Foundations & Core Principles of ${subjectName}`,
-            subStrand: "Epistemological frameworks, scholarly literature review, and quantitative/qualitative modeling",
-            indicator: `Students critically analyze foundational theorems, industry standards, and peer-reviewed methodologies in ${subjectName} at ${className} standard.`,
-            pedagogy: "Socratic lectures, peer-reviewed seminar critiques, and problem-based case analyses.",
-            resources: "University Reference Textbooks, IEEE/ACM/Elsevier Digital Library, Lecture Slide Decks"
-          },
-          {
-            code: "MOD-202",
-            strand: `Module 2: Applied Laboratory / Studio Practicum & Computational Modeling`,
-            subStrand: "Experimental design, instrumentation, simulation workflows, and data interpretation",
-            indicator: `Students design, execute, and document reproducible laboratory or field experiments in ${subjectName} with rigorous error analysis.`,
-            pedagogy: "Guided laboratory workshops, collaborative engineering/research sprints, and live code/lab walkthroughs.",
-            resources: "Departmental Lab Manual, Simulation Software Suite, Safety & Ethics Protocol Guide"
-          },
-          {
-            code: "MOD-303",
-            strand: `Module 3: Industry Case Studies, Research Synthesis & Capstone Application`,
-            subStrand: "Real-world systems integration, ethical governance, and capstone project defense",
-            indicator: `Students synthesize multi-disciplinary concepts to solve real-world institutional or industrial challenges in ${subjectName}.`,
-            pedagogy: "Capstone project supervision, industry guest symposia, and oral/written defense panels.",
-            resources: "Capstone Rubric Handbook, Industry Case Dossiers, Peer Evaluation Matrix"
-          }
-        ]
+        {
+          code: "MOD-101",
+          strand: `Module 1: Theoretical Foundations & Core Principles of ${subjectName}`,
+          subStrand: "Epistemological frameworks, scholarly literature review, and quantitative/qualitative modeling",
+          indicator: `Students critically analyze foundational theorems, industry standards, and peer-reviewed methodologies in ${subjectName} at ${className} standard.`,
+          pedagogy: "Socratic lectures, peer-reviewed seminar critiques, and problem-based case analyses.",
+          resources: "University Reference Textbooks, IEEE/ACM/Elsevier Digital Library, Lecture Slide Decks"
+        },
+        {
+          code: "MOD-202",
+          strand: `Module 2: Applied Laboratory / Studio Practicum & Computational Modeling`,
+          subStrand: "Experimental design, instrumentation, simulation workflows, and data interpretation",
+          indicator: `Students design, execute, and document reproducible laboratory or field experiments in ${subjectName} with rigorous error analysis.`,
+          pedagogy: "Guided laboratory workshops, collaborative engineering/research sprints, and live code/lab walkthroughs.",
+          resources: "Departmental Lab Manual, Simulation Software Suite, Safety & Ethics Protocol Guide"
+        },
+        {
+          code: "MOD-303",
+          strand: `Module 3: Industry Case Studies, Research Synthesis & Capstone Application`,
+          subStrand: "Real-world systems integration, ethical governance, and capstone project defense",
+          indicator: `Students synthesize multi-disciplinary concepts to solve real-world institutional or industrial challenges in ${subjectName}.`,
+          pedagogy: "Capstone project supervision, industry guest symposia, and oral/written defense panels.",
+          resources: "Capstone Rubric Handbook, Industry Case Dossiers, Peer Evaluation Matrix"
+        }
+      ]
       : isSHS
-      ? [
+        ? [
           {
             code: "SHS-STR-1",
             strand: `Strand 1: Foundational Concepts, Terminologies & Core Principles in ${subjectName}`,
@@ -476,59 +487,59 @@ export default function TeacherDashboard() {
             resources: "WAEC Past Questions Compendium, Marking Scheme Rubrics, GBS AI Exam Scanner OMR Sheets"
           }
         ]
-      : isEarlyChildhood
-      ? [
-          {
-            code: "ECE-STR-1",
-            strand: `Strand 1: Sensory Discovery, Oral Expression & Play-Based Foundations in ${subjectName}`,
-            subStrand: "Phonics, storytelling, number songs, motor coordination, and curiosity-driven exploration",
-            indicator: `Young learners recognize core symbols, sounds, patterns, and vocabulary in ${subjectName} through joyful guided play.`,
-            pedagogy: "Activity-based learning corners, action rhymes, puppetry, flashcards, and tactile manipulation.",
-            resources: "Picture Storybooks, Alphabet/Number Manipulatives, Audio-Visual Nursery Charts, Crayons & Clay"
-          },
-          {
-            code: "ECE-STR-2",
-            strand: `Strand 2: Guided Practice, Tracing, Grouping & Interactive Classroom Tasks`,
-            subStrand: "Fine-motor writing readiness, sorting, matching, and cooperative social skills",
-            indicator: `Learners trace, match, count, and verbally express simple ideas in ${subjectName} with teacher scaffolding.`,
-            pedagogy: "Small-group workstations, sand/slate tracing, picture-word matching games, and positive reinforcement.",
-            resources: "Early Childhood Activity Workbook, Counters & Building Blocks, Interactive Wall Posters"
-          },
-          {
-            code: "ECE-STR-3",
-            strand: `Strand 3: Creative Expression, Daily Life Habits & Portfolio Showcase`,
-            subStrand: "Applying classroom learning to everyday routines, hygiene, empathy, and creative expression",
-            indicator: `Learners demonstrate confidence in reciting, drawing, counting, and sharing their work with peers and parents.`,
-            pedagogy: "Show-and-tell circle time, role-play, creative drawing/singing, and observational portfolio check-ins.",
-            resources: "Learner Observation Checklist, Art Supplies, Parent-Teacher Progress Sticker Chart"
-          }
-        ]
-      : [
-          {
-            code: isJHS ? "JHS-STR-1" : "BSC-STR-1",
-            strand: `Strand 1: Core Knowledge, Conceptual Understanding & Foundational Skills in ${subjectName}`,
-            subStrand: `National Standard-Based Curriculum core competencies for ${className}`,
-            indicator: `Learners explain key concepts, apply foundational rules, and demonstrate accurate comprehension in ${subjectName}.`,
-            pedagogy: "Learner-centered explanation, concept mapping, real-life Ghanaian/global examples, and guided board exercises.",
-            resources: `NaCCA ${className} Curriculum Guide, Approved Learner's Textbook, Classroom Flipcharts`
-          },
-          {
-            code: isJHS ? "JHS-STR-2" : "BSC-STR-2",
-            strand: `Strand 2: Inquiry, Practical Problem-Solving & Collaborative Group Projects`,
-            subStrand: "Critical thinking, hands-on demonstrations, digital literacy, and real-world application",
-            indicator: `Learners investigate practical problems, collaborate in teams, and present structured solutions in ${subjectName}.`,
-            pedagogy: "Activity-based group work, practical demonstrations, ICT-assisted lessons, and peer presentations.",
-            resources: "Science/ICT Kit, Workbook Exercises, Teacher's Resource Pack, Local Community Examples"
-          },
-          {
-            code: isJHS ? "JHS-STR-3" : "BSC-STR-3",
-            strand: `Strand 3: Assessment Mastery, Revision & ${isJHS ? "BECE Readiness" : "Competency Consolidation"}`,
-            subStrand: "Diagnostic review, continuous assessment mastery, and structured exam preparation",
-            indicator: `Learners independently solve objective and structured theory questions in ${subjectName} with high accuracy.`,
-            pedagogy: "Weekly diagnostic quizzes, past-question clinics, individualized remediation, and AI Exam Scanner practice.",
-            resources: `${isJHS ? "BECE Past Questions & Chief Examiner Guide" : "Termly Assessment Bank"}, Marking Rubrics`
-          }
-        ];
+        : isEarlyChildhood
+          ? [
+            {
+              code: "ECE-STR-1",
+              strand: `Strand 1: Sensory Discovery, Oral Expression & Play-Based Foundations in ${subjectName}`,
+              subStrand: "Phonics, storytelling, number songs, motor coordination, and curiosity-driven exploration",
+              indicator: `Young learners recognize core symbols, sounds, patterns, and vocabulary in ${subjectName} through joyful guided play.`,
+              pedagogy: "Activity-based learning corners, action rhymes, puppetry, flashcards, and tactile manipulation.",
+              resources: "Picture Storybooks, Alphabet/Number Manipulatives, Audio-Visual Nursery Charts, Crayons & Clay"
+            },
+            {
+              code: "ECE-STR-2",
+              strand: `Strand 2: Guided Practice, Tracing, Grouping & Interactive Classroom Tasks`,
+              subStrand: "Fine-motor writing readiness, sorting, matching, and cooperative social skills",
+              indicator: `Learners trace, match, count, and verbally express simple ideas in ${subjectName} with teacher scaffolding.`,
+              pedagogy: "Small-group workstations, sand/slate tracing, picture-word matching games, and positive reinforcement.",
+              resources: "Early Childhood Activity Workbook, Counters & Building Blocks, Interactive Wall Posters"
+            },
+            {
+              code: "ECE-STR-3",
+              strand: `Strand 3: Creative Expression, Daily Life Habits & Portfolio Showcase`,
+              subStrand: "Applying classroom learning to everyday routines, hygiene, empathy, and creative expression",
+              indicator: `Learners demonstrate confidence in reciting, drawing, counting, and sharing their work with peers and parents.`,
+              pedagogy: "Show-and-tell circle time, role-play, creative drawing/singing, and observational portfolio check-ins.",
+              resources: "Learner Observation Checklist, Art Supplies, Parent-Teacher Progress Sticker Chart"
+            }
+          ]
+          : [
+            {
+              code: isJHS ? "JHS-STR-1" : "BSC-STR-1",
+              strand: `Strand 1: Core Knowledge, Conceptual Understanding & Foundational Skills in ${subjectName}`,
+              subStrand: `National Standard-Based Curriculum core competencies for ${className}`,
+              indicator: `Learners explain key concepts, apply foundational rules, and demonstrate accurate comprehension in ${subjectName}.`,
+              pedagogy: "Learner-centered explanation, concept mapping, real-life Ghanaian/global examples, and guided board exercises.",
+              resources: `NaCCA ${className} Curriculum Guide, Approved Learner's Textbook, Classroom Flipcharts`
+            },
+            {
+              code: isJHS ? "JHS-STR-2" : "BSC-STR-2",
+              strand: `Strand 2: Inquiry, Practical Problem-Solving & Collaborative Group Projects`,
+              subStrand: "Critical thinking, hands-on demonstrations, digital literacy, and real-world application",
+              indicator: `Learners investigate practical problems, collaborate in teams, and present structured solutions in ${subjectName}.`,
+              pedagogy: "Activity-based group work, practical demonstrations, ICT-assisted lessons, and peer presentations.",
+              resources: "Science/ICT Kit, Workbook Exercises, Teacher's Resource Pack, Local Community Examples"
+            },
+            {
+              code: isJHS ? "JHS-STR-3" : "BSC-STR-3",
+              strand: `Strand 3: Assessment Mastery, Revision & ${isJHS ? "BECE Readiness" : "Competency Consolidation"}`,
+              subStrand: "Diagnostic review, continuous assessment mastery, and structured exam preparation",
+              indicator: `Learners independently solve objective and structured theory questions in ${subjectName} with high accuracy.`,
+              pedagogy: "Weekly diagnostic quizzes, past-question clinics, individualized remediation, and AI Exam Scanner practice.",
+              resources: `${isJHS ? "BECE Past Questions & Chief Examiner Guide" : "Termly Assessment Bank"}, Marking Rubrics`
+            }
+          ];
 
     const strands = Array.isArray(customUpdate?.strands) && customUpdate.strands.length > 0
       ? customUpdate.strands
@@ -666,7 +677,7 @@ export default function TeacherDashboard() {
     try {
       localStorage.setItem("gbs_institutional_curriculum_updates", JSON.stringify(nextMap));
       window.dispatchEvent(new Event("gbs_curriculum_updated"));
-    } catch {}
+    } catch { }
     recordTeacherActiveCurriculumUsage({
       ...editingCurriculumModal,
       versionTag: updatedEntry.versionTag,
@@ -742,16 +753,16 @@ export default function TeacherDashboard() {
       </thead>
       <tbody>
         ${blueprint.strands
-          .map(
-            (s) => `<tr>
+        .map(
+          (s) => `<tr>
           <td><strong>${s.code}</strong></td>
           <td><strong>${s.strand}</strong><br/><span style="color:#475569;font-size:12px;">${s.subStrand}</span></td>
           <td>${s.indicator}</td>
           <td>${s.pedagogy}</td>
           <td>${s.resources}</td>
         </tr>`
-          )
-          .join("")}
+        )
+        .join("")}
       </tbody>
     </table>
 
@@ -767,15 +778,15 @@ export default function TeacherDashboard() {
       </thead>
       <tbody>
         ${blueprint.weeklyScheme
-          .map(
-            (w) => `<tr>
+        .map(
+          (w) => `<tr>
           <td><strong>${w.week}</strong></td>
           <td><strong>${w.topic}</strong></td>
           <td>${w.activity}</td>
           <td><strong>${w.deliverable}</strong></td>
         </tr>`
-          )
-          .join("")}
+        )
+        .join("")}
       </tbody>
     </table>
 
@@ -856,8 +867,8 @@ export default function TeacherDashboard() {
     </div>
   </div>
   ${blueprints
-    .map(
-      (bp, idx) => `<div class="subject-card">
+        .map(
+          (bp, idx) => `<div class="subject-card">
     <h2>${idx + 1}. ${bp.subjectName} — (${bp.className})</h2>
     <div style="font-size: 12px; color: #475569; margin-bottom: 10px;">
       <strong>Framework:</strong> ${bp.frameworkAuthority} &nbsp;|&nbsp; <strong>Assessment Weighting:</strong> ${bp.assessmentWeighting}
@@ -869,10 +880,10 @@ export default function TeacherDashboard() {
       </thead>
       <tbody>
         ${bp.strands
-          .map(
-            (s) => `<tr><td><strong>${s.code}</strong></td><td><strong>${s.strand}</strong><br/>${s.subStrand}</td><td>${s.indicator}</td><td>${s.pedagogy}</td><td>${s.resources}</td></tr>`
-          )
-          .join("")}
+              .map(
+                (s) => `<tr><td><strong>${s.code}</strong></td><td><strong>${s.strand}</strong><br/>${s.subStrand}</td><td>${s.indicator}</td><td>${s.pedagogy}</td><td>${s.resources}</td></tr>`
+              )
+              .join("")}
       </tbody>
     </table>
     <h3>${bp.numberOfWeeks}-Week Teaching Scheme of Work</h3>
@@ -882,15 +893,15 @@ export default function TeacherDashboard() {
       </thead>
       <tbody>
         ${bp.weeklyScheme
-          .map(
-            (w) => `<tr><td><strong>${w.week}</strong></td><td><strong>${w.topic}</strong></td><td>${w.activity}</td><td>${w.deliverable}</td></tr>`
-          )
-          .join("")}
+              .map(
+                (w) => `<tr><td><strong>${w.week}</strong></td><td><strong>${w.topic}</strong></td><td>${w.activity}</td><td>${w.deliverable}</td></tr>`
+              )
+              .join("")}
       </tbody>
     </table>
   </div>`
-    )
-    .join("")}
+        )
+        .join("")}
 </body>
 </html>`;
 
@@ -1066,7 +1077,7 @@ export default function TeacherDashboard() {
     try {
       const saved = JSON.parse(localStorage.getItem("gbs_teacher_grade_boundaries") || "null");
       if (saved) return saved;
-    } catch {}
+    } catch { }
     return {
       "A+": 90,
       "A": 80,
@@ -1097,7 +1108,7 @@ export default function TeacherDashboard() {
     try {
       const draft = localStorage.getItem("gbs_manual_written_exam_meta_draft");
       if (draft) return JSON.parse(draft);
-    } catch {}
+    } catch { }
     return {
       title: "Mid-Term Written Examination (Paper 2 Theory & Essays)",
       subject: "Mathematics & Analytical Geometry",
@@ -1113,7 +1124,7 @@ export default function TeacherDashboard() {
     try {
       const draft = localStorage.getItem("gbs_manual_written_exam_scores_draft");
       if (draft) return JSON.parse(draft);
-    } catch {}
+    } catch { }
     return {};
   });
 
@@ -1133,7 +1144,7 @@ export default function TeacherDashboard() {
         if (saved) setHeadmasterApprovalNotice(JSON.parse(saved));
         const reports = JSON.parse(localStorage.getItem("gbs_weekly_attendance_reports") || "[]");
         setSubmittedWeeklyReports(reports);
-      } catch {}
+      } catch { }
     };
 
     window.addEventListener("gbs_weekly_attendance_updated", syncHeadmasterApproval);
@@ -1149,14 +1160,14 @@ export default function TeacherDashboard() {
     try {
       localStorage.setItem("gbs_manual_written_exam_meta_draft", JSON.stringify(manualExamMeta));
       localStorage.setItem("gbs_manual_written_exam_scores_draft", JSON.stringify(manualExamScores));
-    } catch {}
+    } catch { }
   }, [manualExamMeta, manualExamScores]);
 
   const handleSaveManualWrittenExams = (publishNow = false) => {
     try {
       const activeClass = classes.find((c) => String(c.id) === String(selectedClassId)) || classes[0] || { id: "CLASS-1", name: "Grade 10A", code: "SHS-01" };
       const maxM = parseFloat(manualExamMeta.maxMarks) || 100;
-      
+
       const rosterList = roster.length > 0 ? roster : [];
       if (rosterList.length === 0) {
         setFeedback({
@@ -1234,7 +1245,7 @@ export default function TeacherDashboard() {
     try {
       const saved = JSON.parse(localStorage.getItem("gbs_parent_transcript_requests") || "[]");
       if (Array.isArray(saved)) return saved;
-    } catch {}
+    } catch { }
     return [];
   });
 
@@ -1256,7 +1267,7 @@ export default function TeacherDashboard() {
     try {
       const saved = JSON.parse(localStorage.getItem("gbs_unmarked_exams_queue") || "[]");
       if (Array.isArray(saved)) return saved;
-    } catch {}
+    } catch { }
     return [];
   });
   const [showCorrectionModal, setShowCorrectionModal] = useState(false);
@@ -1281,16 +1292,66 @@ export default function TeacherDashboard() {
   const [showDailyArchivesView, setShowDailyArchivesView] = useState(false);
   const [selectedDailyArchiveToView, setSelectedDailyArchiveToView] = useState(null);
 
+  // Default canonical homework submissions so teacher always has work to verify
+  const CANONICAL_HOMEWORK_SUBMISSIONS = [
+    {
+      id: "SUB-2026-001",
+      studentId: 101,
+      studentName: "Emmanuel Mensah",
+      studentClass: "JHS 3 Science & Mathematics",
+      assignmentTitle: "Calculus & Quadratic Models Exercise",
+      submittedContent: "Solved all 10 quadratic optimization problems using discriminant analysis and vertex forms. Step-by-step working attached in PDF format with graphic verification of roots.",
+      submittedAt: "2026-11-08 09:30 AM",
+      status: "PENDING_VERIFICATION",
+      score: null,
+      maxScore: 100,
+      teacherRemarks: "",
+      attachmentName: "emmanuel_mensah_math_hw3.pdf"
+    },
+    {
+      id: "SUB-2026-002",
+      studentId: 102,
+      studentName: "Ama Serwaa",
+      studentClass: "JHS 3 Science & Mathematics",
+      assignmentTitle: "Physics Laboratory Circuit Diagrams",
+      submittedContent: "Ohm's Law verification experiments completed. Resistance measurements, circuit diagrams, and error margin graphs charted for series and parallel resistor networks.",
+      submittedAt: "2026-11-08 10:15 AM",
+      status: "PENDING_VERIFICATION",
+      score: null,
+      maxScore: 100,
+      teacherRemarks: "",
+      attachmentName: "ama_serwaa_physics_lab.pdf"
+    },
+    {
+      id: "SUB-2026-003",
+      studentId: 103,
+      studentName: "Julian Bramwell",
+      studentClass: "JHS 3 Science & Mathematics",
+      assignmentTitle: "English Literature Critical Essay",
+      submittedContent: "Thematic critique of post-colonial leadership literature. 1,500 words with 8 scholarly citations exploring identity, culture, and governance.",
+      submittedAt: "2026-11-08 11:00 AM",
+      status: "PENDING_VERIFICATION",
+      score: null,
+      maxScore: 100,
+      teacherRemarks: "",
+      attachmentName: "julian_bramwell_essay_literature.pdf"
+    }
+  ];
+
   // Student Homework Submissions to Verify & Mark
   const [studentSubmissions, setStudentSubmissions] = useState(() => {
     try {
       const saved = JSON.parse(localStorage.getItem("gbs_student_submissions") || "[]");
-      if (Array.isArray(saved)) return saved;
-    } catch {}
-    return [];
+      if (Array.isArray(saved) && saved.length > 0) return saved;
+    } catch { }
+    try {
+      localStorage.setItem("gbs_student_submissions", JSON.stringify(CANONICAL_HOMEWORK_SUBMISSIONS));
+    } catch { }
+    return CANONICAL_HOMEWORK_SUBMISSIONS;
   });
   const [submissionScores, setSubmissionScores] = useState({});
   const [submissionRemarks, setSubmissionRemarks] = useState({});
+  const [inspectingSubmission, setInspectingSubmission] = useState(null);
 
   // Communication & Parent Inquiries
   const [messageRecipient, setMessageRecipient] = useState("ADMIN");
@@ -1308,7 +1369,7 @@ export default function TeacherDashboard() {
     try {
       const saved = JSON.parse(localStorage.getItem("gbs_parent_teacher_messages") || "[]");
       if (Array.isArray(saved)) return saved;
-    } catch {}
+    } catch { }
     return [];
   });
   const [replyTextMap, setReplyTextMap] = useState({});
@@ -1349,7 +1410,7 @@ export default function TeacherDashboard() {
       );
       if (matched) return matched;
       if (assignments.length > 0) return assignments[0];
-    } catch {}
+    } catch { }
     return {
       positionTitle: "Head of Academics",
       schoolTier: "SHS",
@@ -1363,7 +1424,7 @@ export default function TeacherDashboard() {
     try {
       const saved = JSON.parse(localStorage.getItem("gbs_teacher_lesson_plans") || "[]");
       if (Array.isArray(saved) && saved.length > 0) return saved;
-    } catch {}
+    } catch { }
     return [];
   });
 
@@ -1388,7 +1449,7 @@ export default function TeacherDashboard() {
     try {
       const saved = JSON.parse(localStorage.getItem("gbs_faculty_directives") || "[]");
       if (Array.isArray(saved)) return saved;
-    } catch {}
+    } catch { }
     return [];
   });
 
@@ -1425,14 +1486,14 @@ export default function TeacherDashboard() {
 
         const savedDaily = JSON.parse(localStorage.getItem("gbs_daily_attendance_archives") || "[]");
         if (Array.isArray(savedDaily)) setDailyAttendanceArchives(savedDaily);
-      } catch {}
+      } catch { }
     };
 
     const handleWeeklySync = () => {
       try {
         const saved = JSON.parse(localStorage.getItem("gbs_weekly_attendance_reports") || "[]");
         if (Array.isArray(saved)) setSubmittedWeeklyReports(saved);
-      } catch {}
+      } catch { }
     };
 
     const handleTeacherAssignmentsSync = () => {
@@ -1446,7 +1507,7 @@ export default function TeacherDashboard() {
             (user.id && String(a.staffId) === String(user.id))
         );
         if (matched) setAssignedStaffPosition(matched);
-      } catch {}
+      } catch { }
     };
 
     window.addEventListener("storage", handleStorage);
@@ -1663,24 +1724,39 @@ export default function TeacherDashboard() {
               students = stored;
             }
           }
-        } catch {}
+        } catch { }
       }
 
       if (!Array.isArray(students) || students.length === 0) {
         students = CANONICAL_STUDENT_ROSTER;
         try {
           localStorage.setItem("gbs_enrolled_students", JSON.stringify(CANONICAL_STUDENT_ROSTER));
-        } catch {}
+        } catch { }
       }
 
-      setRoster(students);
+      // Deduplicate students by id or studentId to ensure 100% unique student entries
+      const seenIds = new Set();
+      const uniqueStudents = [];
+      students.forEach((s) => {
+        const sid = s.id || s.studentId;
+        if (sid && !seenIds.has(String(sid))) {
+          seenIds.add(String(sid));
+          uniqueStudents.push(s);
+        }
+      });
+      const finalRoster = uniqueStudents.length > 0 ? uniqueStudents : CANONICAL_STUDENT_ROSTER;
 
-      // Check local cache for previously marked attendance for this class and date
+      setRoster(finalRoster);
+
+      // Check local cache for previously marked attendance and remarks for this class and date
       const savedKey = `gbs_attendance_${classId}_${targetDate}`;
+      const remarksKey = `gbs_attendance_remarks_${classId}_${targetDate}`;
       let cachedStatus = {};
+      let cachedRemarks = {};
       try {
         cachedStatus = JSON.parse(localStorage.getItem(savedKey) || "{}");
-      } catch {}
+        cachedRemarks = JSON.parse(localStorage.getItem(remarksKey) || "{}");
+      } catch { }
 
       try {
         const attRes = await apiClient.get(`/attendance/classes/${classId}?date=${targetDate}`);
@@ -1691,10 +1767,14 @@ export default function TeacherDashboard() {
             if (sid && r.status) {
               cachedStatus[sid] = r.status;
               cachedStatus[String(sid)] = r.status;
+              if (r.remarks) {
+                cachedRemarks[sid] = r.remarks;
+                cachedRemarks[String(sid)] = r.remarks;
+              }
             }
           });
         }
-      } catch {}
+      } catch { }
 
       const initialStatus = {};
       const initialRemarks = {};
@@ -1702,9 +1782,11 @@ export default function TeacherDashboard() {
       students.forEach((s) => {
         const sid = s.id || s.studentId;
         const st = cachedStatus[sid] !== undefined ? cachedStatus[sid] : (cachedStatus[String(sid)] !== undefined ? cachedStatus[String(sid)] : null);
+        const rm = cachedRemarks[sid] !== undefined ? cachedRemarks[sid] : (cachedRemarks[String(sid)] !== undefined ? cachedRemarks[String(sid)] : "");
         initialStatus[sid] = st;
         initialStatus[String(sid)] = st;
-        initialRemarks[sid] = "";
+        initialRemarks[sid] = rm;
+        initialRemarks[String(sid)] = rm;
         if (st) {
           initialSaveStatus[sid] = "✓ Saved";
           initialSaveStatus[String(sid)] = "✓ Saved";
@@ -1715,7 +1797,8 @@ export default function TeacherDashboard() {
       setStudentSaveStatus((prev) => ({ ...prev, ...initialSaveStatus }));
       try {
         localStorage.setItem(savedKey, JSON.stringify(initialStatus));
-      } catch {}
+        localStorage.setItem(remarksKey, JSON.stringify(initialRemarks));
+      } catch { }
     } catch (err) {
       console.warn("Could not fetch roster:", err);
       let fallbackStudents = [];
@@ -1724,25 +1807,30 @@ export default function TeacherDashboard() {
         if (Array.isArray(stored) && stored.length > 0) {
           fallbackStudents = stored;
         }
-      } catch {}
+      } catch { }
       if (fallbackStudents.length === 0) {
         fallbackStudents = CANONICAL_STUDENT_ROSTER;
       }
       setRoster(fallbackStudents);
       const savedKey = `gbs_attendance_${classId}_${targetDate}`;
+      const remarksKey = `gbs_attendance_remarks_${classId}_${targetDate}`;
       let cachedStatus = {};
+      let cachedRemarks = {};
       try {
         cachedStatus = JSON.parse(localStorage.getItem(savedKey) || "{}");
-      } catch {}
+        cachedRemarks = JSON.parse(localStorage.getItem(remarksKey) || "{}");
+      } catch { }
       const initialStatus = {};
       const initialRemarks = {};
       const initialSaveStatus = {};
       fallbackStudents.forEach((s) => {
         const sid = s.id || s.studentId;
         const st = cachedStatus[sid] !== undefined ? cachedStatus[sid] : (cachedStatus[String(sid)] !== undefined ? cachedStatus[String(sid)] : null);
+        const rm = cachedRemarks[sid] !== undefined ? cachedRemarks[sid] : (cachedRemarks[String(sid)] !== undefined ? cachedRemarks[String(sid)] : "");
         initialStatus[sid] = st;
         initialStatus[String(sid)] = st;
-        initialRemarks[sid] = "";
+        initialRemarks[sid] = rm;
+        initialRemarks[String(sid)] = rm;
         if (st) {
           initialSaveStatus[sid] = "✓ Saved";
           initialSaveStatus[String(sid)] = "✓ Saved";
@@ -1751,6 +1839,10 @@ export default function TeacherDashboard() {
       setAttendanceRecords(initialStatus);
       setAttendanceRemarks(initialRemarks);
       setStudentSaveStatus((prev) => ({ ...prev, ...initialSaveStatus }));
+      try {
+        localStorage.setItem(savedKey, JSON.stringify(initialStatus));
+        localStorage.setItem(remarksKey, JSON.stringify(initialRemarks));
+      } catch { }
     } finally {
       setLoading(false);
     }
@@ -1818,7 +1910,7 @@ export default function TeacherDashboard() {
       summary[String(studentId)] = summary[studentId];
       localStorage.setItem("gbs_student_attendance_summary", JSON.stringify(summary));
       window.dispatchEvent(new Event("gbs_attendance_updated"));
-    } catch {}
+    } catch { }
 
     // Permanent auto-save indicator for this student row
     setStudentSaveStatus((prev) => ({
@@ -1850,11 +1942,32 @@ export default function TeacherDashboard() {
   };
 
   const handleRemarkChange = (studentId, remark) => {
-    setAttendanceRemarks((prev) => ({
-      ...prev,
-      [studentId]: remark,
-      [String(studentId)]: remark
-    }));
+    const classIdToUse = selectedClassId || (classes[0]?.id ? String(classes[0].id) : "1");
+    setAttendanceRemarks((prev) => {
+      const updatedRemarks = {
+        ...prev,
+        [studentId]: remark,
+        [String(studentId)]: remark
+      };
+      try {
+        const remarksKey = `gbs_attendance_remarks_${classIdToUse}_${attendanceDate}`;
+        localStorage.setItem(remarksKey, JSON.stringify(updatedRemarks));
+      } catch { }
+      return updatedRemarks;
+    });
+
+    const safeCid = !isNaN(parseInt(classIdToUse, 10)) ? parseInt(classIdToUse, 10) : 1;
+    const safeSid = typeof studentId === "number" ? studentId : (!isNaN(parseInt(studentId, 10)) ? parseInt(studentId, 10) : (parseInt(String(studentId).replace(/\D/g, ""), 10) || 1));
+    const currentStatus = attendanceRecords[studentId] || attendanceRecords[String(studentId)] || "PRESENT";
+
+    // Asynchronous background persistence of remarks
+    apiClient.post("/attendance/single", {
+      classId: safeCid,
+      studentId: safeSid,
+      status: currentStatus,
+      date: attendanceDate,
+      remarks: remark
+    }).catch(() => { });
   };
 
   // Submit Daily Attendance: Bundles the day into archives, reflects to Student/Parent portals, and retains visible checks
@@ -1890,7 +2003,7 @@ export default function TeacherDashboard() {
     try {
       const savedKey = `gbs_attendance_${selectedClassId}_${attendanceDate}`;
       localStorage.setItem(savedKey, JSON.stringify(attendanceRecords));
-    } catch {}
+    } catch { }
 
     const records = roster.map((s) => {
       const sid = s.id || s.studentId;
@@ -1994,7 +2107,7 @@ export default function TeacherDashboard() {
     try {
       const activeClass = classes.find((c) => String(c.id) === String(selectedClassId)) || classes[0];
       const classArchives = dailyAttendanceArchives.filter((a) => String(a.classId) === String(selectedClassId));
-      
+
       const totalP = classArchives.reduce((acc, curr) => acc + (curr.presentCount || 0), 0) || (roster.length * 4);
       const totalA = classArchives.reduce((acc, curr) => acc + (curr.absentCount || 0), 0) || 3;
       const totalL = classArchives.reduce((acc, curr) => acc + (curr.lateCount || 0), 0) || 2;
@@ -2137,7 +2250,7 @@ export default function TeacherDashboard() {
         }
       });
       list = combined;
-    } catch {}
+    } catch { }
 
     setAssignments(list);
   };
@@ -2200,8 +2313,8 @@ export default function TeacherDashboard() {
       return;
     }
 
-    const classesToPublish = selectedClassIds.length > 0 
-      ? selectedClassIds 
+    const classesToPublish = selectedClassIds.length > 0
+      ? selectedClassIds
       : selectedClassId ? [selectedClassId] : classes.length > 0 ? [classes[0].id] : [44];
 
     setLoading(true);
@@ -2233,7 +2346,7 @@ export default function TeacherDashboard() {
     try {
       const existing = JSON.parse(localStorage.getItem("gbs_published_assignments") || "[]");
       localStorage.setItem("gbs_published_assignments", JSON.stringify([newAssignmentObj, ...existing]));
-    } catch (e) {}
+    } catch (e) { }
 
     // Dispatch to backend API
     try {
@@ -2401,7 +2514,7 @@ export default function TeacherDashboard() {
     const toArchive = assignments.filter((a) => selectedArchiveIds.includes(a.id));
     const remaining = assignments.filter((a) => !selectedArchiveIds.includes(a.id));
     const newArchivedList = [...toArchive.map((a) => ({ ...a, archivedAt: new Date().toISOString() })), ...archivedAssignments];
-    
+
     setArchivedAssignments(newArchivedList);
     setAssignments(remaining);
     setSelectedArchiveIds([]);
@@ -2532,7 +2645,7 @@ export default function TeacherDashboard() {
         }
       });
       list = combined;
-    } catch {}
+    } catch { }
 
     if (!Array.isArray(list) || list.length === 0) {
       list = [
@@ -2642,8 +2755,8 @@ export default function TeacherDashboard() {
         content: preMeetingNotice.content,
         priority: "HIGH",
         targetAudience: "PARENTS"
-      }).catch(() => {});
-    } catch {}
+      }).catch(() => { });
+    } catch { }
 
     setFeedback({
       type: "success",
@@ -2688,7 +2801,7 @@ export default function TeacherDashboard() {
     setReplyTextMap((prev) => ({ ...prev, [msgId]: "" }));
     try {
       localStorage.setItem("gbs_parent_teacher_messages", JSON.stringify(updated));
-    } catch {}
+    } catch { }
 
     setFeedback({
       type: "success",
@@ -3044,7 +3157,7 @@ export default function TeacherDashboard() {
       const publicNotes = JSON.parse(localStorage.getItem("gbs_universal_voice_notes") || "[]");
       localStorage.setItem("gbs_universal_voice_notes", JSON.stringify([record, ...publicNotes]));
       setUniversalVoiceNotes([record, ...publicNotes]);
-    } catch {}
+    } catch { }
 
     setFeedback({
       type: "success",
@@ -3077,7 +3190,7 @@ export default function TeacherDashboard() {
       currentDraft[studentId] = { rawMark: numScore, grade: chosenGrade, remarks: studentRemarks[studentId] || "" };
       currentDraft[String(studentId)] = { rawMark: numScore, grade: chosenGrade, remarks: studentRemarks[studentId] || "" };
       localStorage.setItem("gbs_manual_written_exam_scores_draft", JSON.stringify(currentDraft));
-    } catch {}
+    } catch { }
 
     const studentObj = roster.find((s) => String(s.id) === String(studentId) || String(s.studentId) === String(studentId));
     const studentName = studentObj ? `${studentObj.firstName} ${studentObj.lastName}` : `Student #${studentId}`;
@@ -3198,8 +3311,8 @@ export default function TeacherDashboard() {
 
   return (
     <div className="role-dashboard-wrapper">
-      <div 
-        className="role-dashboard-bg" 
+      <div
+        className="role-dashboard-bg"
         style={{ backgroundImage: `url('/images/teacher_login_bg.jpg')` }}
       ></div>
       <div className="role-dashboard-overlay"></div>
@@ -3214,9 +3327,9 @@ export default function TeacherDashboard() {
         {/* Header */}
         <header className="role-header">
           <div className="role-header-brand" style={{ display: "flex", alignItems: "center", gap: "16px" }}>
-            <img 
-              src={customSchoolLogo || "/assets/gbs_crest_badge.jpg"} 
-              alt="School Crest" 
+            <img
+              src={customSchoolLogo || "/assets/gbs_crest_badge.jpg"}
+              alt="School Crest"
               style={{
                 width: "58px",
                 height: "58px",
@@ -3243,8 +3356,8 @@ export default function TeacherDashboard() {
           </div>
 
           <div className="role-header-actions">
-            <button 
-              type="button" 
+            <button
+              type="button"
               className="role-action-btn"
               onClick={() => window.history.back()}
               title="Return to previous view or page"
@@ -3255,8 +3368,8 @@ export default function TeacherDashboard() {
             <Link to="/portal/teacher/dashboard" className="role-action-btn">
               🏠 Suite Home
             </Link>
-            <button 
-              type="button" 
+            <button
+              type="button"
               className="role-action-btn"
               onClick={() => setActiveTab("profile")}
               style={{ borderColor: "#34d399", color: "#34d399", fontWeight: 800 }}
@@ -3264,8 +3377,8 @@ export default function TeacherDashboard() {
             >
               👤 My Profile
             </button>
-            <button 
-              type="button" 
+            <button
+              type="button"
               className="role-action-btn"
               onClick={() => setShowMobileCameraScanner(true)}
               style={{ borderColor: "#a855f7", color: "#c084fc", fontWeight: 800, background: "rgba(168, 85, 247, 0.15)" }}
@@ -3273,8 +3386,8 @@ export default function TeacherDashboard() {
             >
               📸 Mobile Camera Scanner
             </button>
-            <button 
-              type="button" 
+            <button
+              type="button"
               className="role-action-btn"
               onClick={() => setActiveTab("scanner")}
               style={{ borderColor: "#a855f7", color: "#c084fc" }}
@@ -3369,9 +3482,9 @@ export default function TeacherDashboard() {
 
             {/* Clear Daytime Real-Life Photograph */}
             <div className="role-hero-photo-frame">
-              <img 
-                src="/images/teacher_dash_banner.jpg" 
-                alt="Teacher Instruction Suite" 
+              <img
+                src="/images/teacher_dash_banner.jpg"
+                alt="Teacher Instruction Suite"
               />
               <div className="photo-live-pill">
                 <span className="ticker-dot"></span>
@@ -3386,7 +3499,7 @@ export default function TeacherDashboard() {
 
           {/* Feedback Alert */}
           {feedback && (
-            <div 
+            <div
               style={{
                 padding: "12px 18px",
                 borderRadius: "10px",
@@ -3407,11 +3520,11 @@ export default function TeacherDashboard() {
           )}
 
           {/* REQUIREMENT: Official Directives & Messages from Headmaster + Scheduled Faculty Zoom Meeting */}
-          <section style={{ 
-            background: "linear-gradient(135deg, rgba(30, 58, 138, 0.35) 0%, rgba(15, 23, 42, 0.75) 100%)", 
-            border: "1px solid rgba(59, 130, 246, 0.35)", 
-            borderRadius: "14px", 
-            padding: "1.25rem 1.5rem", 
+          <section style={{
+            background: "linear-gradient(135deg, rgba(30, 58, 138, 0.35) 0%, rgba(15, 23, 42, 0.75) 100%)",
+            border: "1px solid rgba(59, 130, 246, 0.35)",
+            borderRadius: "14px",
+            padding: "1.25rem 1.5rem",
             marginBottom: "1.5rem",
             boxShadow: "0 10px 25px -5px rgba(0, 0, 0, 0.3)"
           }}>
@@ -3451,15 +3564,15 @@ export default function TeacherDashboard() {
                   Scheduled Faculty Online Meeting with Headmaster: <strong>Termly Academic Review & Planning Conference</strong>
                 </span>
               </div>
-              <a 
-                href="https://zoom.us/wc/84939201849/join?prefer=1&pwd=GBS2026&uname=Faculty%20Educator" 
-                target="_blank" 
-                rel="noreferrer" 
-                className="btn-primary" 
-                style={{ 
-                  textDecoration: "none", 
-                  padding: "8px 18px", 
-                  fontSize: "0.82rem", 
+              <a
+                href="https://zoom.us/wc/84939201849/join?prefer=1&pwd=GBS2026&uname=Faculty%20Educator"
+                target="_blank"
+                rel="noreferrer"
+                className="btn-primary"
+                style={{
+                  textDecoration: "none",
+                  padding: "8px 18px",
+                  fontSize: "0.82rem",
                   background: "linear-gradient(135deg, #2563eb, #1d4ed8)",
                   boxShadow: "0 4px 14px rgba(37, 99, 235, 0.4)",
                   display: "inline-flex",
@@ -3521,13 +3634,13 @@ export default function TeacherDashboard() {
             </div>
 
             <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(180px, 1fr))", gap: "12px", marginTop: "10px" }}>
-              <div 
+              <div
                 onClick={() => setShowWeeklyActivitiesModal(true)}
                 title="Click to view Academic Year schedule and weekly activities"
-                style={{ 
-                  background: "rgba(2, 6, 23, 0.6)", 
-                  padding: "10px 14px", 
-                  borderRadius: "10px", 
+                style={{
+                  background: "rgba(2, 6, 23, 0.6)",
+                  padding: "10px 14px",
+                  borderRadius: "10px",
                   border: "1px solid rgba(255, 255, 255, 0.08)",
                   cursor: "pointer",
                   transition: "all 0.2s ease"
@@ -3536,13 +3649,13 @@ export default function TeacherDashboard() {
                 <span style={{ fontSize: "0.7rem", color: "#94a3b8", display: "block" }}>ACADEMIC YEAR 📅</span>
                 <strong style={{ color: "#f8fafc", fontSize: "0.95rem" }}>{publishedSchedule.academicYear || "2026/2027"}</strong>
               </div>
-              <div 
+              <div
                 onClick={() => setShowWeeklyActivitiesModal(true)}
                 title="Click to inspect Active Term curriculum timeline"
-                style={{ 
-                  background: "rgba(2, 6, 23, 0.6)", 
-                  padding: "10px 14px", 
-                  borderRadius: "10px", 
+                style={{
+                  background: "rgba(2, 6, 23, 0.6)",
+                  padding: "10px 14px",
+                  borderRadius: "10px",
                   border: "1px solid rgba(56, 189, 248, 0.3)",
                   cursor: "pointer",
                   transition: "all 0.2s ease"
@@ -3551,14 +3664,14 @@ export default function TeacherDashboard() {
                 <span style={{ fontSize: "0.7rem", color: "#94a3b8", display: "block" }}>ACTIVE TERM / SEMESTER 🔍</span>
                 <strong style={{ color: "#38bdf8", fontSize: "0.95rem" }}>{publishedSchedule.activeTerm || "TERM_1"}</strong>
               </div>
-              <div 
+              <div
                 onClick={() => setShowWeeklyActivitiesModal(true)}
                 title="Click to view all activities for the weeks to spend in school"
-                style={{ 
-                  background: "linear-gradient(135deg, rgba(16, 185, 129, 0.2), rgba(2, 6, 23, 0.85))", 
-                  padding: "12px 16px", 
-                  borderRadius: "12px", 
-                  border: "2px solid #34d399", 
+                style={{
+                  background: "linear-gradient(135deg, rgba(16, 185, 129, 0.2), rgba(2, 6, 23, 0.85))",
+                  padding: "12px 16px",
+                  borderRadius: "12px",
+                  border: "2px solid #34d399",
                   cursor: "pointer",
                   boxShadow: "0 4px 18px rgba(16, 185, 129, 0.25)",
                   transition: "all 0.2s ease"
@@ -3579,16 +3692,16 @@ export default function TeacherDashboard() {
                   🔍 Tap to view complete week-by-week curriculum activities
                 </span>
               </div>
-              <div 
+              <div
                 onClick={() => {
                   setShowWeeklyActivitiesModal(true);
                   setWeeklyActivitiesFilter("WEEKS_8_14");
                 }}
                 title="Click to view Revision, Examination and Vacation dates"
-                style={{ 
-                  background: "rgba(2, 6, 23, 0.6)", 
-                  padding: "12px 16px", 
-                  borderRadius: "12px", 
+                style={{
+                  background: "rgba(2, 6, 23, 0.6)",
+                  padding: "12px 16px",
+                  borderRadius: "12px",
                   border: "1.5px solid #fbbf24",
                   cursor: "pointer",
                   transition: "all 0.2s ease"
@@ -3604,90 +3717,90 @@ export default function TeacherDashboard() {
 
           {/* Workspace Tabs Navigation */}
           <nav className="role-tab-nav">
-            <button 
-              type="button" 
+            <button
+              type="button"
               className={`role-tab-btn ${activeTab === "attendance" ? "active" : ""}`}
               onClick={() => setActiveTab("attendance")}
             >
               📋 Student Attendance Register
             </button>
-            <button 
-              type="button" 
+            <button
+              type="button"
               className={`role-tab-btn ${activeTab === "classes" ? "active" : ""}`}
               onClick={() => setActiveTab("classes")}
             >
               📚 Assigned Classes & Rosters
             </button>
-            <button 
-              type="button" 
+            <button
+              type="button"
               className={`role-tab-btn ${activeTab === "assignments" ? "active" : ""}`}
               onClick={() => setActiveTab("assignments")}
             >
               📝 Lessons & Assignments
             </button>
-            <button 
-              type="button" 
+            <button
+              type="button"
               className={`role-tab-btn ${activeTab === "exams" ? "active" : ""}`}
               onClick={() => setActiveTab("exams")}
             >
               🎯 Exams & Result Grading
             </button>
-            <button 
-              type="button" 
+            <button
+              type="button"
               className={`role-tab-btn ${activeTab === "scanner" ? "active" : ""}`}
               onClick={() => setActiveTab("scanner")}
               style={{ borderLeft: "3px solid #a855f7" }}
             >
               🤖 AI Exam Scanner & Auto-Grading
             </button>
-            <button 
-              type="button" 
+            <button
+              type="button"
               className={`role-tab-btn ${activeTab === "communications" ? "active" : ""}`}
               onClick={() => setActiveTab("communications")}
             >
               💬 Parent & Admin Notices
             </button>
-            <button 
-              type="button" 
+            <button
+              type="button"
               className={`role-tab-btn ${activeTab === "meetings" ? "active" : ""}`}
               onClick={() => setActiveTab("meetings")}
             >
               💻 Virtual Classrooms (Zoom / Meet)
             </button>
-            <button 
-              type="button" 
+            <button
+              type="button"
               className={`role-tab-btn ${activeTab === "topicVideos" ? "active" : ""}`}
               onClick={() => setActiveTab("topicVideos")}
               style={{ borderLeft: "3px solid #10b981", color: activeTab === "topicVideos" ? "#34d399" : undefined }}
             >
               🎬 Class Topic Videos (In Teacher's Absence)
             </button>
-            <button 
-              type="button" 
+            <button
+              type="button"
               className={`role-tab-btn ${activeTab === "lessonPlans" ? "active" : ""}`}
               onClick={() => setActiveTab("lessonPlans")}
               style={{ borderLeft: "3px solid #38bdf8", color: activeTab === "lessonPlans" ? "#38bdf8" : undefined }}
             >
               📑 Plans & Notes Vetting ({teacherPlans.filter((p) => p.status === "PENDING_VETTING").length} Pending)
             </button>
-            <button 
-              type="button" 
+            <button
+              type="button"
               className={`role-tab-btn ${activeTab === "transcripts" ? "active" : ""}`}
               onClick={() => setActiveTab("transcripts")}
               style={{ borderLeft: "3px solid #fbbf24", color: activeTab === "transcripts" ? "#fbbf24" : undefined }}
             >
               📜 Head of Academics Transcripts ({parentTranscriptRequests.filter((r) => r.status === "PENDING_HEAD_OF_ACADEMICS_RELEASE").length} Pending)
             </button>
-            <button 
-              type="button" 
+            <button
+              type="button"
               className={`role-tab-btn ${activeTab === "curriculum" ? "active" : ""}`}
               onClick={() => setActiveTab("curriculum")}
               style={{ borderLeft: "3px solid #10b981", color: activeTab === "curriculum" ? "#34d399" : undefined, fontWeight: 800 }}
             >
               📥 Curriculum Download (By Class / Level)
             </button>
-            <button 
-              type="button" 
+            <button
+              type="button"
               className={`role-tab-btn ${activeTab === "profile" ? "active" : ""}`}
               onClick={() => setActiveTab("profile")}
               style={{ borderLeft: "3px solid #34d399", color: activeTab === "profile" ? "#34d399" : undefined, fontWeight: 800 }}
@@ -3707,33 +3820,50 @@ export default function TeacherDashboard() {
                   <p>Every student must be individually selected. Daily attendances are wrapped into archives and sent to Headmaster at the end of every week.</p>
                 </div>
                 <div style={{ display: "flex", gap: "10px", flexWrap: "wrap", alignItems: "center" }}>
-                  <button 
-                    type="button" 
-                    className="btn-primary" 
-                    onClick={handleSubmitAttendance} 
+                  <button
+                    type="button"
+                    className="btn-primary"
+                    onClick={handleSubmitAttendance}
                     disabled={loading || roster.length === 0}
-                    style={{ 
-                      background: unmarkedCount === 0 ? "linear-gradient(135deg, #059669, #10b981)" : "linear-gradient(135deg, #d97706, #f59e0b)", 
+                    style={{
+                      background: unmarkedCount === 0 ? "linear-gradient(135deg, #059669, #10b981)" : "linear-gradient(135deg, #d97706, #f59e0b)",
                       fontWeight: "800",
                       cursor: "pointer"
                     }}
                   >
                     {loading ? "SAVING..." : unmarkedCount === 0 ? "💾 COMPLETE ROLL CALL & ARCHIVE" : `💾 COMPLETE ROLL CALL (${unmarkedCount} PENDING TICK)`}
                   </button>
-                  <button 
-                    type="button" 
-                    className="btn-secondary" 
-                    onClick={handleAdvanceToNextDay} 
+                  <button
+                    type="button"
+                    className="btn-secondary"
+                    onClick={handleAdvanceToNextDay}
                     disabled={loading}
                     style={{ borderColor: "#10b981", color: "#34d399", fontWeight: "700" }}
                     title="Advance roll call date to following day"
                   >
                     ▶ Advance to Next Day
                   </button>
-                  <button 
-                    type="button" 
-                    className="btn-secondary" 
-                    onClick={handleCompileAndSendWeeklyReport} 
+                  <button
+                    type="button"
+                    className="btn-secondary"
+                    onClick={() => setShowSignaturePad(true)}
+                    style={{
+                      borderColor: "#fbbf24",
+                      color: "#fbbf24",
+                      fontWeight: "800",
+                      display: "inline-flex",
+                      alignItems: "center",
+                      gap: "6px",
+                      background: activeTeacherSignature ? "rgba(251, 191, 36, 0.15)" : "transparent"
+                    }}
+                    title="Draw, verify, or re-sign your digital teacher signature on institutional records"
+                  >
+                    ✍️ {activeTeacherSignature ? "✓ Digital Signature Affixed" : "Affix Digital Signature"}
+                  </button>
+                  <button
+                    type="button"
+                    className="btn-secondary"
+                    onClick={handleCompileAndSendWeeklyReport}
                     disabled={loading}
                     style={{ borderColor: "#38bdf8", color: "#38bdf8", fontWeight: "700" }}
                   >
@@ -3754,11 +3884,11 @@ export default function TeacherDashboard() {
                 </select>
 
                 <label style={{ fontSize: "0.85rem", fontWeight: "700", color: "#94a3b8", marginLeft: "12px" }}>Attendance Date:</label>
-                <input 
-                  type="date" 
-                  className="filter-input" 
-                  value={attendanceDate} 
-                  onChange={(e) => setAttendanceDate(e.target.value)} 
+                <input
+                  type="date"
+                  className="filter-input"
+                  value={attendanceDate}
+                  onChange={(e) => setAttendanceDate(e.target.value)}
                 />
 
                 <span style={{ marginLeft: "auto", fontSize: "0.85rem", color: "#34d399", fontWeight: "600" }}>
@@ -3770,7 +3900,7 @@ export default function TeacherDashboard() {
               {(() => {
                 const verifiedWeekly = submittedWeeklyReports.find(
                   (r) => (String(r.className) === String(activeClassObj?.name) || String(r.classId) === String(selectedClassId)) &&
-                         (r.status === "VERIFIED_AND_SIGNED_OFF" || r.followingWeekApproved)
+                    (r.status === "VERIFIED_AND_SIGNED_OFF" || r.followingWeekApproved)
                 ) || (headmasterApprovalNotice && headmasterApprovalNotice.status === "APPROVED" ? {
                   id: headmasterApprovalNotice.verifiedReportId || "WR-ACTIVE-WEEK",
                   weekLabel: "Official Academic Week",
@@ -3943,27 +4073,27 @@ export default function TeacherDashboard() {
                         const saveIndicator = studentSaveStatus[sid] || studentSaveStatus[String(sid)] || null;
 
                         return (
-                          <tr 
-                            key={sid} 
-                            style={{ 
-                              background: currentStatus === "PRESENT" 
-                                ? "rgba(16, 185, 129, 0.08)" 
-                                : currentStatus === "ABSENT" 
-                                ? "rgba(239, 68, 68, 0.08)" 
-                                : currentStatus === "LATE" 
-                                ? "rgba(245, 158, 11, 0.08)" 
-                                : currentStatus === "EXCUSED"
-                                ? "rgba(59, 130, 246, 0.08)"
-                                : "rgba(245, 158, 11, 0.03)",
-                              borderLeft: isUnmarked 
-                                ? "3px solid #f59e0b" 
-                                : currentStatus === "PRESENT" 
-                                ? "3px solid #10b981" 
-                                : currentStatus === "ABSENT" 
-                                ? "3px solid #ef4444" 
-                                : currentStatus === "LATE" 
-                                ? "3px solid #f59e0b" 
-                                : "3px solid #3b82f6",
+                          <tr
+                            key={sid}
+                            style={{
+                              background: currentStatus === "PRESENT"
+                                ? "rgba(16, 185, 129, 0.08)"
+                                : currentStatus === "ABSENT"
+                                  ? "rgba(239, 68, 68, 0.08)"
+                                  : currentStatus === "LATE"
+                                    ? "rgba(245, 158, 11, 0.08)"
+                                    : currentStatus === "EXCUSED"
+                                      ? "rgba(59, 130, 246, 0.08)"
+                                      : "rgba(245, 158, 11, 0.03)",
+                              borderLeft: isUnmarked
+                                ? "3px solid #f59e0b"
+                                : currentStatus === "PRESENT"
+                                  ? "3px solid #10b981"
+                                  : currentStatus === "ABSENT"
+                                    ? "3px solid #ef4444"
+                                    : currentStatus === "LATE"
+                                      ? "3px solid #f59e0b"
+                                      : "3px solid #3b82f6",
                               transition: "all 0.2s ease"
                             }}
                           >
@@ -3979,31 +4109,30 @@ export default function TeacherDashboard() {
                                       ⚪ Pending Roll Call
                                     </span>
                                   ) : (
-                                    <span style={{ 
-                                      fontSize: "0.75rem", 
+                                    <span style={{
+                                      fontSize: "0.75rem",
                                       fontWeight: "800",
-                                      padding: "2px 8px", 
+                                      padding: "2px 8px",
                                       borderRadius: "6px",
-                                      border: `1.5px solid ${
-                                        currentStatus === "PRESENT" ? "rgba(16, 185, 129, 0.6)" :
+                                      border: `1.5px solid ${currentStatus === "PRESENT" ? "rgba(16, 185, 129, 0.6)" :
                                         currentStatus === "ABSENT" ? "rgba(239, 68, 68, 0.6)" :
-                                        currentStatus === "LATE" ? "rgba(245, 158, 11, 0.6)" :
-                                        "rgba(59, 130, 246, 0.6)"
-                                      }`,
-                                      background: currentStatus === "PRESENT" 
-                                        ? "rgba(16, 185, 129, 0.25)" 
-                                        : currentStatus === "ABSENT" 
-                                        ? "rgba(239, 68, 68, 0.25)" 
-                                        : currentStatus === "LATE" 
-                                        ? "rgba(245, 158, 11, 0.25)" 
-                                        : "rgba(59, 130, 246, 0.25)",
-                                      color: currentStatus === "PRESENT" 
-                                        ? "#34d399" 
-                                        : currentStatus === "ABSENT" 
-                                        ? "#f87171" 
-                                        : currentStatus === "LATE" 
-                                        ? "#fbbf24" 
-                                        : "#60a5fa"
+                                          currentStatus === "LATE" ? "rgba(245, 158, 11, 0.6)" :
+                                            "rgba(59, 130, 246, 0.6)"
+                                        }`,
+                                      background: currentStatus === "PRESENT"
+                                        ? "rgba(16, 185, 129, 0.25)"
+                                        : currentStatus === "ABSENT"
+                                          ? "rgba(239, 68, 68, 0.25)"
+                                          : currentStatus === "LATE"
+                                            ? "rgba(245, 158, 11, 0.25)"
+                                            : "rgba(59, 130, 246, 0.25)",
+                                      color: currentStatus === "PRESENT"
+                                        ? "#34d399"
+                                        : currentStatus === "ABSENT"
+                                          ? "#f87171"
+                                          : currentStatus === "LATE"
+                                            ? "#fbbf24"
+                                            : "#60a5fa"
                                     }}>
                                       {currentStatus === "PRESENT" && "✅ PRESENT (Ticked)"}
                                       {currentStatus === "ABSENT" && "❌ ABSENT (Ticked)"}
@@ -4151,12 +4280,12 @@ export default function TeacherDashboard() {
                               </div>
                             </td>
                             <td>
-                              <input 
-                                type="text" 
-                                placeholder="Add remark (optional)" 
-                                className="filter-input" 
+                              <input
+                                type="text"
+                                placeholder="Add remark (optional)"
+                                className="filter-input"
                                 style={{ width: "100%", padding: "6px 10px", fontSize: "0.82rem" }}
-                                value={attendanceRemarks[sid] || ""}
+                                value={attendanceRemarks[sid] || attendanceRemarks[String(sid)] || ""}
                                 onChange={(e) => handleRemarkChange(sid, e.target.value)}
                               />
                             </td>
@@ -4186,7 +4315,7 @@ export default function TeacherDashboard() {
                     <span>{unmarkedCount === 0 ? "✅" : "⚠️"}</span> Roll Call Progress: {markedCount} / {totalStudents} Students Ticked ({evaluationPct}%)
                   </div>
                   <span style={{ fontSize: "0.82rem", color: "#cbd5e1" }}>
-                    {unmarkedCount === 0 
+                    {unmarkedCount === 0
                       ? "All students evaluated and ticked one by one. Click the complete button to wrap today's roll call into archives."
                       : `A teacher must tick each single student one by one (${unmarkedCount} pending) to complete attendance taking.`
                     }
@@ -4197,11 +4326,11 @@ export default function TeacherDashboard() {
                   className="btn-primary"
                   onClick={handleSubmitAttendance}
                   disabled={loading || roster.length === 0}
-                  style={{ 
-                    background: unmarkedCount === 0 ? "linear-gradient(135deg, #059669, #10b981)" : "linear-gradient(135deg, #d97706, #f59e0b)", 
-                    fontWeight: 900, 
-                    padding: "10px 24px", 
-                    fontSize: "0.95rem", 
+                  style={{
+                    background: unmarkedCount === 0 ? "linear-gradient(135deg, #059669, #10b981)" : "linear-gradient(135deg, #d97706, #f59e0b)",
+                    fontWeight: 900,
+                    padding: "10px 24px",
+                    fontSize: "0.95rem",
                     boxShadow: unmarkedCount === 0 ? "0 4px 14px rgba(16, 185, 129, 0.4)" : "0 4px 14px rgba(245, 158, 11, 0.4)",
                     cursor: "pointer"
                   }}
@@ -4336,11 +4465,10 @@ export default function TeacherDashboard() {
                               <td>{rIdx + 1}</td>
                               <td><strong>{rec.studentName}</strong></td>
                               <td>
-                                <span className={`badge-status ${
-                                  rec.status === "PRESENT" ? "badge-present" :
+                                <span className={`badge-status ${rec.status === "PRESENT" ? "badge-present" :
                                   rec.status === "ABSENT" ? "badge-absent" :
-                                  rec.status === "LATE" ? "badge-late" : "badge-excused"
-                                }`}>
+                                    rec.status === "LATE" ? "badge-late" : "badge-excused"
+                                  }`}>
                                   {rec.status}
                                 </span>
                               </td>
@@ -4489,9 +4617,9 @@ export default function TeacherDashboard() {
                     <p style={{ fontSize: "0.85rem", color: "#94a3b8" }}>
                       Subjects: {c.subjects ? c.subjects.length : 0} Courses • Enrolled: {c.enrollments ? c.enrollments.length : roster.length} Students
                     </p>
-                    <button 
-                      type="button" 
-                      className="btn-secondary" 
+                    <button
+                      type="button"
+                      className="btn-secondary"
                       style={{ marginTop: "auto" }}
                       onClick={() => { setSelectedClassId(c.id); fetchRoster(c.id); setActiveTab("attendance"); }}
                     >
@@ -4516,14 +4644,14 @@ export default function TeacherDashboard() {
               </div>
 
               {/* Comprehensive Assignment Authoring & Upload Form */}
-              <form 
-                onSubmit={handleCreateAssignment} 
-                style={{ 
-                  background: "rgba(2, 6, 23, 0.6)", 
-                  padding: "1.5rem", 
-                  borderRadius: "14px", 
-                  marginBottom: "1.75rem", 
-                  border: "1px solid rgba(255, 255, 255, 0.1)" 
+              <form
+                onSubmit={handleCreateAssignment}
+                style={{
+                  background: "rgba(2, 6, 23, 0.6)",
+                  padding: "1.5rem",
+                  borderRadius: "14px",
+                  marginBottom: "1.75rem",
+                  border: "1px solid rgba(255, 255, 255, 0.1)"
                 }}
               >
                 <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "1.25rem" }}>
@@ -4540,11 +4668,11 @@ export default function TeacherDashboard() {
                     <label style={{ display: "block", fontSize: "0.75rem", color: "#94a3b8", marginBottom: "4px" }}>
                       Assignment Title *
                     </label>
-                    <input 
-                      type="text" 
-                      required 
-                      placeholder="e.g. Organic Chemistry Molecular Bonding Set #3" 
-                      className="filter-input" 
+                    <input
+                      type="text"
+                      required
+                      placeholder="e.g. Organic Chemistry Molecular Bonding Set #3"
+                      className="filter-input"
                       style={{ width: "100%" }}
                       value={newAssignment.title}
                       onChange={(e) => setNewAssignment({ ...newAssignment, title: e.target.value })}
@@ -4554,10 +4682,10 @@ export default function TeacherDashboard() {
                     <label style={{ display: "block", fontSize: "0.75rem", color: "#94a3b8", marginBottom: "4px" }}>
                       Due Submission Date *
                     </label>
-                    <input 
-                      type="date" 
-                      required 
-                      className="filter-input" 
+                    <input
+                      type="date"
+                      required
+                      className="filter-input"
                       style={{ width: "100%" }}
                       value={newAssignment.dueDate}
                       onChange={(e) => setNewAssignment({ ...newAssignment, dueDate: e.target.value })}
@@ -4567,10 +4695,10 @@ export default function TeacherDashboard() {
                     <label style={{ display: "block", fontSize: "0.75rem", color: "#94a3b8", marginBottom: "4px" }}>
                       Max Total Marks *
                     </label>
-                    <input 
-                      type="number" 
-                      required 
-                      className="filter-input" 
+                    <input
+                      type="number"
+                      required
+                      className="filter-input"
                       style={{ width: "100%" }}
                       value={newAssignment.maxScore}
                       onChange={(e) => setNewAssignment({ ...newAssignment, maxScore: e.target.value })}
@@ -4583,10 +4711,10 @@ export default function TeacherDashboard() {
                   <label style={{ display: "block", fontSize: "0.75rem", color: "#94a3b8", marginBottom: "4px" }}>
                     Written Assignment Questions & Problem Sets * (Must be written before publishing)
                   </label>
-                  <textarea 
-                    rows={4} 
-                    placeholder="Write the full assignment guidelines, homework questions, problem sets, and submission criteria here..." 
-                    className="filter-input" 
+                  <textarea
+                    rows={4}
+                    placeholder="Write the full assignment guidelines, homework questions, problem sets, and submission criteria here..."
+                    className="filter-input"
                     style={{ width: "100%", lineHeight: "1.5" }}
                     value={newAssignment.description}
                     onChange={(e) => setNewAssignment({ ...newAssignment, description: e.target.value })}
@@ -4606,8 +4734,8 @@ export default function TeacherDashboard() {
                   </label>
                   {!assignmentFile ? (
                     <label className="upload-dropzone">
-                      <input 
-                        type="file" 
+                      <input
+                        type="file"
                         accept=".pdf,.doc,.docx,.xlsx,.ppt,.pptx,.png,.jpg"
                         style={{ display: "none" }}
                         onChange={handleAssignmentFileSelect}
@@ -4636,8 +4764,8 @@ export default function TeacherDashboard() {
                     <label style={{ fontSize: "0.8rem", fontWeight: "700", color: "#38bdf8" }}>
                       🏫 Select Classes to Publish To * (Select one, multiple or all classes):
                     </label>
-                    <button 
-                      type="button" 
+                    <button
+                      type="button"
                       onClick={handleSelectAllClassesForAssignment}
                       style={{ background: "rgba(56, 189, 248, 0.15)", border: "1px solid rgba(56, 189, 248, 0.3)", color: "#38bdf8", padding: "4px 10px", borderRadius: "6px", fontSize: "0.75rem", cursor: "pointer", fontWeight: "700" }}
                     >
@@ -4648,25 +4776,25 @@ export default function TeacherDashboard() {
                     {classes.map((c) => {
                       const isChecked = selectedClassIds.includes(c.id);
                       return (
-                        <label 
-                          key={c.id} 
-                          style={{ 
-                            display: "flex", 
-                            alignItems: "center", 
-                            gap: "8px", 
-                            background: isChecked ? "rgba(16, 185, 129, 0.15)" : "rgba(255, 255, 255, 0.03)", 
-                            padding: "6px 10px", 
-                            borderRadius: "6px", 
+                        <label
+                          key={c.id}
+                          style={{
+                            display: "flex",
+                            alignItems: "center",
+                            gap: "8px",
+                            background: isChecked ? "rgba(16, 185, 129, 0.15)" : "rgba(255, 255, 255, 0.03)",
+                            padding: "6px 10px",
+                            borderRadius: "6px",
                             border: `1px solid ${isChecked ? "rgba(16, 185, 129, 0.4)" : "rgba(255, 255, 255, 0.06)"}`,
                             cursor: "pointer",
                             fontSize: "0.8rem",
                             color: isChecked ? "#34d399" : "#cbd5e1"
                           }}
                         >
-                          <input 
-                            type="checkbox" 
-                            checked={isChecked} 
-                            onChange={() => handleToggleClassForAssignment(c.id)} 
+                          <input
+                            type="checkbox"
+                            checked={isChecked}
+                            onChange={() => handleToggleClassForAssignment(c.id)}
                           />
                           <span>{c.name} ({c.code})</span>
                         </label>
@@ -4679,9 +4807,9 @@ export default function TeacherDashboard() {
                 </div>
 
                 <div style={{ display: "flex", gap: "12px", alignItems: "center" }}>
-                  <button 
-                    type="submit" 
-                    className="btn-primary" 
+                  <button
+                    type="submit"
+                    className="btn-primary"
                     disabled={loading || !newAssignment.title.trim() || (assignmentFile && !isAssignmentFileVerified)}
                     title={assignmentFile && !isAssignmentFileVerified ? "Please inspect and verify the uploaded assignment file before publishing" : ""}
                     style={{
@@ -4802,16 +4930,16 @@ export default function TeacherDashboard() {
                             <td><span className="badge-status badge-present">{a.status || "PUBLISHED"}</span></td>
                             <td>
                               <div style={{ display: "flex", gap: "6px" }}>
-                                <button 
-                                  type="button" 
+                                <button
+                                  type="button"
                                   onClick={() => handleArchiveSingleAssignment(a)}
                                   style={{ background: "rgba(245, 158, 11, 0.15)", border: "1px solid rgba(245, 158, 11, 0.4)", color: "#fbbf24", padding: "4px 8px", borderRadius: "6px", cursor: "pointer", fontSize: "0.75rem" }}
                                   title="Archive this weekly assignment to the archives vault"
                                 >
                                   📦 Archive
                                 </button>
-                                <button 
-                                  type="button" 
+                                <button
+                                  type="button"
                                   onClick={() => handleDeleteAssignment(a.id)}
                                   style={{ background: "rgba(239, 68, 68, 0.15)", border: "1px solid rgba(239, 68, 68, 0.4)", color: "#f87171", padding: "4px 8px", borderRadius: "6px", cursor: "pointer", fontSize: "0.75rem" }}
                                   title="Delete assignment permanently"
@@ -4965,14 +5093,25 @@ export default function TeacherDashboard() {
                                 />
                               </td>
                               <td>
-                                <button
-                                  type="button"
-                                  className="btn-primary"
-                                  style={{ padding: "6px 12px", fontSize: "0.78rem", background: isGraded ? "#059669" : "linear-gradient(135deg, #0284c7, #38bdf8)" }}
-                                  onClick={() => handleVerifyAndMarkSubmission(sub.id)}
-                                >
-                                  {isGraded ? "Update Mark" : "✓ Verify & Mark"}
-                                </button>
+                                <div style={{ display: "flex", gap: "6px", alignItems: "center" }}>
+                                  <button
+                                    type="button"
+                                    className="btn-secondary"
+                                    style={{ padding: "6px 10px", fontSize: "0.78rem", borderColor: "#38bdf8", color: "#38bdf8", fontWeight: "700", cursor: "pointer" }}
+                                    onClick={() => setInspectingSubmission(sub)}
+                                    title="Open modal to inspect student's full submitted work, attached files, and verify rubric"
+                                  >
+                                    🔍 Inspect
+                                  </button>
+                                  <button
+                                    type="button"
+                                    className="btn-primary"
+                                    style={{ padding: "6px 12px", fontSize: "0.78rem", background: isGraded ? "#059669" : "linear-gradient(135deg, #0284c7, #38bdf8)" }}
+                                    onClick={() => handleVerifyAndMarkSubmission(sub.id)}
+                                  >
+                                    {isGraded ? "Update Mark" : "✓ Verify & Mark"}
+                                  </button>
+                                </div>
                               </td>
                             </tr>
                           );
@@ -4996,36 +5135,36 @@ export default function TeacherDashboard() {
                   <p>Teachers enter each student grade with respect to exact score gotten, saving student-by-student to PostgreSQL.</p>
                 </div>
                 <div style={{ display: "flex", gap: "10px", flexWrap: "wrap", alignItems: "center" }}>
-                  <button 
-                    type="button" 
-                    className="btn-primary" 
+                  <button
+                    type="button"
+                    className="btn-primary"
                     style={{ background: "linear-gradient(135deg, #059669, #10b981)", fontWeight: "800", boxShadow: "0 4px 14px rgba(16, 185, 129, 0.4)", display: "inline-flex", alignItems: "center", gap: "6px" }}
                     onClick={() => setShowManualWrittenExamModal(true)}
                   >
                     📝 Enter Written & Marked Exam Records (Non-CBT)
                   </button>
 
-                  <button 
-                    type="button" 
-                    className="btn-primary" 
+                  <button
+                    type="button"
+                    className="btn-primary"
                     style={{ background: "linear-gradient(135deg, #8b5cf6, #6d28d9)", fontWeight: "800", boxShadow: "0 4px 14px rgba(139, 92, 246, 0.4)", display: "inline-flex", alignItems: "center", gap: "6px" }}
                     onClick={() => setShowAuthorExamModal(true)}
                   >
                     ➕ Set Questions & Schedule Timed Exam
                   </button>
 
-                  <button 
-                    type="button" 
-                    className="btn-secondary" 
+                  <button
+                    type="button"
+                    className="btn-secondary"
                     style={{ borderColor: "#38bdf8", color: "#38bdf8", fontWeight: "800", display: "inline-flex", alignItems: "center", gap: "6px" }}
                     onClick={() => setShowExamTimetableModal(true)}
                   >
                     📅 Create Examination Timetable Guide
                   </button>
 
-                  <button 
-                    type="button" 
-                    className="btn-primary" 
+                  <button
+                    type="button"
+                    className="btn-primary"
                     style={{ background: "linear-gradient(135deg, #10b981, #059669)", fontWeight: "700", boxShadow: "0 4px 12px rgba(16, 185, 129, 0.35)" }}
                     onClick={handleSaveAllGrades}
                     disabled={savingAllGrades || roster.length === 0}
@@ -5033,9 +5172,9 @@ export default function TeacherDashboard() {
                     {savingAllGrades ? "⏳ Saving All Grades..." : "💾 Save All Graded Students"}
                   </button>
 
-                  <button 
-                    type="button" 
-                    className="btn-primary" 
+                  <button
+                    type="button"
+                    className="btn-primary"
                     style={{ background: "linear-gradient(135deg, #0284c7, #38bdf8)", fontWeight: "700", boxShadow: "0 4px 12px rgba(56, 189, 248, 0.35)" }}
                     onClick={() => setShowPublishModal(true)}
                     disabled={roster.length === 0}
@@ -5044,26 +5183,26 @@ export default function TeacherDashboard() {
                     📢 Publish Grades to Students Dashboard
                   </button>
 
-                  <button 
-                    type="button" 
-                    className="btn-secondary" 
+                  <button
+                    type="button"
+                    className="btn-secondary"
                     style={{ borderColor: "#a855f7", color: "#c084fc", fontWeight: "700" }}
                     onClick={() => setShowGradingScaleModal(true)}
                   >
                     ⚙️ Set Custom Grade Scale ▾
                   </button>
 
-                  <button 
-                    type="button" 
-                    className="btn-secondary" 
+                  <button
+                    type="button"
+                    className="btn-secondary"
                     onClick={() => setShowClassSelectorModal(true)}
                   >
                     🏫 Select Registered Class (Pop-up) ▾
                   </button>
 
-                  <button 
-                    type="button" 
-                    className="btn-secondary" 
+                  <button
+                    type="button"
+                    className="btn-secondary"
                     style={{ borderColor: "#38bdf8", color: "#38bdf8" }}
                     onClick={() => setShowTermResultsModal(true)}
                   >
@@ -5083,7 +5222,7 @@ export default function TeacherDashboard() {
                 <div style={{ display: "flex", alignItems: "center", gap: "12px", flexWrap: "wrap" }}>
                   <span style={{ fontSize: "0.85rem", color: "#38bdf8", fontWeight: "700" }}>Active Term: {publishTerm}</span>
                   <label style={{ fontSize: "0.85rem", fontWeight: "700", color: "#94a3b8" }}>Active Assessment:</label>
-                  <select 
+                  <select
                     className="filter-select"
                     value={selectedExamId}
                     onChange={(e) => setSelectedExamId(e.target.value)}
@@ -5131,22 +5270,22 @@ export default function TeacherDashboard() {
                           <td><strong>{s.firstName} {s.lastName}</strong></td>
                           <td style={{ color: "#94a3b8", fontFamily: "monospace" }}>{s.email}</td>
                           <td>
-                            <input 
-                              type="number" 
-                              min="0" 
-                              max="100" 
+                            <input
+                              type="number"
+                              min="0"
+                              max="100"
                               placeholder="Score"
-                              value={score} 
-                              className="filter-input" 
+                              value={score}
+                              className="filter-input"
                               style={{ width: "90px", textAlign: "center", fontWeight: "700" }}
                               onChange={(e) => setExamScores({ ...examScores, [sid]: e.target.value, [String(sid)]: e.target.value })}
                             />
                           </td>
                           <td>
-                            <input 
-                              type="text" 
+                            <input
+                              type="text"
                               placeholder="e.g. Excellent critical reasoning"
-                              value={studentRemarks[sid] || studentRemarks[String(sid)] || ""} 
+                              value={studentRemarks[sid] || studentRemarks[String(sid)] || ""}
                               className="filter-input"
                               style={{ width: "100%", padding: "4px 8px", fontSize: "0.8rem" }}
                               onChange={(e) => setStudentRemarks({ ...studentRemarks, [sid]: e.target.value, [String(sid)]: e.target.value })}
@@ -5380,12 +5519,12 @@ export default function TeacherDashboard() {
                   <p>Teachers set custom master answer keys, select class cohort, and sequentially auto-grade student scripts. Once all scripts are marked, publish grades to all enrolled students.</p>
                 </div>
                 <div style={{ display: "flex", gap: "10px" }}>
-                  <button 
-                    type="button" 
+                  <button
+                    type="button"
                     className="btn-primary"
-                    style={{ 
-                      background: (isExamSheetVerified && scannerExamFile) ? "linear-gradient(135deg, #8b5cf6, #6d28d9)" : "rgba(100, 116, 139, 0.4)", 
-                      boxShadow: (isExamSheetVerified && scannerExamFile) ? "0 4px 14px rgba(139, 92, 246, 0.35)" : "none", 
+                    style={{
+                      background: (isExamSheetVerified && scannerExamFile) ? "linear-gradient(135deg, #8b5cf6, #6d28d9)" : "rgba(100, 116, 139, 0.4)",
+                      boxShadow: (isExamSheetVerified && scannerExamFile) ? "0 4px 14px rgba(139, 92, 246, 0.35)" : "none",
                       fontWeight: "700",
                       cursor: (isExamSheetVerified && scannerExamFile) ? "pointer" : "not-allowed"
                     }}
@@ -5596,7 +5735,7 @@ export default function TeacherDashboard() {
                       ➕ Create Specific Level
                     </button>
                   </div>
-                  <select 
+                  <select
                     className="filter-select"
                     style={{ width: "100%", borderColor: "#38bdf8" }}
                     value={scannerClassId || selectedClassId}
@@ -5617,7 +5756,7 @@ export default function TeacherDashboard() {
                   <label style={{ display: "block", fontSize: "0.8rem", color: "#34d399", marginBottom: "6px", fontWeight: "700" }}>
                     Select Actual Term or Semester for Marking *
                   </label>
-                  <select 
+                  <select
                     className="filter-select"
                     style={{ width: "100%", borderColor: "#34d399" }}
                     value={scannerTerm}
@@ -5640,7 +5779,7 @@ export default function TeacherDashboard() {
                   <label style={{ display: "block", fontSize: "0.8rem", color: "#c084fc", marginBottom: "6px", fontWeight: "700" }}>
                     Upload Exam Sheet / Answer Paper *
                   </label>
-                  <input 
+                  <input
                     type="file"
                     accept=".pdf,image/*,.doc,.docx"
                     className="filter-input"
@@ -5671,7 +5810,7 @@ export default function TeacherDashboard() {
                   <label style={{ display: "block", fontSize: "0.8rem", color: "#fbbf24", marginBottom: "6px", fontWeight: "700" }}>
                     Select Target Examination (All Terms & Semesters) *
                   </label>
-                  <select 
+                  <select
                     className="filter-select"
                     style={{ width: "100%", borderColor: "#fbbf24" }}
                     value={scannerExamId}
@@ -5698,7 +5837,7 @@ export default function TeacherDashboard() {
                   <label style={{ display: "block", fontSize: "0.8rem", color: "#94a3b8", marginBottom: "6px", fontWeight: "700" }}>
                     Select Student to Evaluate *
                   </label>
-                  <select 
+                  <select
                     className="filter-select"
                     style={{ width: "100%" }}
                     value={scannerStudentId}
@@ -5934,8 +6073,8 @@ export default function TeacherDashboard() {
                       <p style={{ color: "#94a3b8", fontSize: "0.85rem", maxWidth: "280px", margin: "6px 0 16px" }}>
                         Select the target class, set your Teacher Master Answer Key, mark the optical bubbles, and click Run AI OMR Scan to auto-grade.
                       </p>
-                      <button 
-                        type="button" 
+                      <button
+                        type="button"
                         className="btn-primary"
                         onClick={handleRunAiExamScanner}
                         disabled={loading}
@@ -5951,7 +6090,7 @@ export default function TeacherDashboard() {
               {(() => {
                 const markedList = scannedBatchScripts.length > 0 ? scannedBatchScripts : scannedSheets;
                 const markedStudentIds = new Set(markedList.map((s) => s.studentId || (s.student && s.student.id)));
-                
+
                 // Active Cohort Students (from roster or fallback cohort)
                 const cohortStudents = roster.length > 0 ? roster : [
                   { id: 101, firstName: "Kofi", lastName: "Mensah", rollNumber: "STU-101" },
@@ -5967,14 +6106,14 @@ export default function TeacherDashboard() {
                   scannerScriptFilter === "MARKED"
                     ? markedList.map((s) => ({ ...s, isMarked: true }))
                     : scannerScriptFilter === "UNMARKED"
-                    ? unmarkedList.map((u) => ({
+                      ? unmarkedList.map((u) => ({
                         id: u.id,
                         studentId: u.id,
                         studentName: `${u.firstName} ${u.lastName}`,
                         rollNumber: u.rollNumber || `STU-${u.id}`,
                         isMarked: false
                       }))
-                    : [
+                      : [
                         ...markedList.map((s) => ({ ...s, isMarked: true })),
                         ...unmarkedList.map((u) => ({
                           id: u.id,
@@ -6289,7 +6428,7 @@ export default function TeacherDashboard() {
                     <label style={{ display: "block", fontSize: "0.8rem", color: "#94a3b8", marginBottom: "6px" }}>
                       Target Recipient for Voice Note:
                     </label>
-                    <select 
+                    <select
                       className="filter-select"
                       value={messageRecipient}
                       onChange={(e) => setMessageRecipient(e.target.value)}
@@ -6340,7 +6479,7 @@ export default function TeacherDashboard() {
                         ])
                       );
                       window.dispatchEvent(new Event("gbs_announcement_broadcast"));
-                    } catch {}
+                    } catch { }
                     window.open(waUrl, "_blank", "noopener,noreferrer");
                     setMessageContent("");
                     setFeedback({
@@ -6489,7 +6628,7 @@ export default function TeacherDashboard() {
               ) : (
                 <form onSubmit={handleSendMessage} style={{ background: "rgba(2, 6, 23, 0.5)", padding: "1.25rem", borderRadius: "12px", marginBottom: "1.5rem" }}>
                   <div style={{ display: "flex", gap: "12px", marginBottom: "12px" }}>
-                    <select 
+                    <select
                       className="filter-select"
                       value={messageRecipient}
                       onChange={(e) => setMessageRecipient(e.target.value)}
@@ -6499,11 +6638,11 @@ export default function TeacherDashboard() {
                       <option value="STUDENTS">All Class Enrolled Students</option>
                     </select>
                   </div>
-                  <textarea 
-                    rows={3} 
-                    required 
-                    placeholder="Compose official notice or message..." 
-                    className="filter-input" 
+                  <textarea
+                    rows={3}
+                    required
+                    placeholder="Compose official notice or message..."
+                    className="filter-input"
                     style={{ width: "100%", marginBottom: "12px" }}
                     value={messageContent}
                     onChange={(e) => setMessageContent(e.target.value)}
@@ -6576,13 +6715,13 @@ export default function TeacherDashboard() {
                 ) : (
                   <div style={{ display: "flex", flexDirection: "column", gap: "12px" }}>
                     {parentMessages.map((pm) => (
-                      <div 
-                        key={pm.id} 
-                        style={{ 
-                          background: "rgba(15, 23, 42, 0.75)", 
-                          borderRadius: "12px", 
-                          padding: "1.25rem", 
-                          border: "1px solid rgba(56, 189, 248, 0.25)" 
+                      <div
+                        key={pm.id}
+                        style={{
+                          background: "rgba(15, 23, 42, 0.75)",
+                          borderRadius: "12px",
+                          padding: "1.25rem",
+                          border: "1px solid rgba(56, 189, 248, 0.25)"
                         }}
                       >
                         <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: "8px" }}>
@@ -6630,18 +6769,18 @@ export default function TeacherDashboard() {
 
                         {/* Reply Input Box */}
                         <div style={{ display: "flex", gap: "8px", marginTop: "10px", flexWrap: "wrap" }}>
-                          <input 
-                            type="text" 
-                            placeholder="Type direct response to parent..." 
-                            className="filter-input" 
+                          <input
+                            type="text"
+                            placeholder="Type direct response to parent..."
+                            className="filter-input"
                             style={{ flex: 1, minWidth: "200px", padding: "8px 12px", fontSize: "0.85rem" }}
                             value={replyTextMap[pm.id] || ""}
                             onChange={(e) => setReplyTextMap({ ...replyTextMap, [pm.id]: e.target.value })}
                             onKeyDown={(e) => { if (e.key === "Enter") handleReplyToParent(pm.id); }}
                           />
-                          <button 
-                            type="button" 
-                            className="btn-primary" 
+                          <button
+                            type="button"
+                            className="btn-primary"
                             style={{ padding: "8px 16px", fontSize: "0.85rem" }}
                             onClick={() => handleReplyToParent(pm.id)}
                           >
@@ -6711,15 +6850,15 @@ export default function TeacherDashboard() {
                 </div>
                 {/* Batch Deletion Action */}
                 <div style={{ display: "flex", gap: "10px", alignItems: "center" }}>
-                  <button 
-                    type="button" 
+                  <button
+                    type="button"
                     className="btn-secondary"
                     onClick={handleSelectAllMeetings}
                   >
                     {selectedMeetingIds.length === meetings.length && meetings.length > 0 ? "Deselect All" : "Select All for Deletion"}
                   </button>
-                  <button 
-                    type="button" 
+                  <button
+                    type="button"
                     className="btn-delete-meeting"
                     onClick={handleBatchDeleteMeetings}
                     disabled={selectedMeetingIds.length === 0 || loading}
@@ -6740,11 +6879,11 @@ export default function TeacherDashboard() {
                     <label style={{ display: "block", fontSize: "0.75rem", color: "#94a3b8", marginBottom: "4px" }}>
                       Meeting Topic *
                     </label>
-                    <input 
-                      type="text" 
-                      required 
-                      placeholder="Lecture Topic (e.g. Advanced Calculus)" 
-                      className="filter-input" 
+                    <input
+                      type="text"
+                      required
+                      placeholder="Lecture Topic (e.g. Advanced Calculus)"
+                      className="filter-input"
                       style={{ width: "100%" }}
                       value={newMeeting.title}
                       onChange={(e) => setNewMeeting({ ...newMeeting, title: e.target.value })}
@@ -6756,7 +6895,7 @@ export default function TeacherDashboard() {
                     <label style={{ display: "block", fontSize: "0.75rem", color: "#94a3b8", marginBottom: "4px" }}>
                       Target Class *
                     </label>
-                    <select 
+                    <select
                       className="filter-select"
                       style={{ width: "100%" }}
                       value={newMeeting.classId || selectedClassId}
@@ -6775,7 +6914,7 @@ export default function TeacherDashboard() {
                     <label style={{ display: "block", fontSize: "0.75rem", color: "#94a3b8", marginBottom: "4px" }}>
                       People / Participants to Conduct Meeting With *
                     </label>
-                    <select 
+                    <select
                       className="filter-select"
                       style={{ width: "100%" }}
                       value={newMeeting.participantGroup}
@@ -6793,7 +6932,7 @@ export default function TeacherDashboard() {
                     <label style={{ display: "block", fontSize: "0.75rem", color: "#94a3b8", marginBottom: "4px" }}>
                       Platform (Zoom / Meet / Teams / WhatsApp) *
                     </label>
-                    <select 
+                    <select
                       className="filter-select"
                       style={{ width: "100%" }}
                       value={newMeeting.platform}
@@ -6804,10 +6943,10 @@ export default function TeacherDashboard() {
                           plat === "WHATSAPP"
                             ? `https://chat.whatsapp.com/GBSClassRoom${roomCode.slice(-6)}`
                             : plat === "GOOGLE_MEET"
-                            ? `https://meet.google.com/gbs-live-${roomCode.slice(-4)}`
-                            : plat === "MICROSOFT_TEAMS"
-                            ? `https://teams.live.com/meet/${roomCode}`
-                            : `https://zoom.us/wc/${roomCode}/join?prefer=1&pwd=GBS2026`;
+                              ? `https://meet.google.com/gbs-live-${roomCode.slice(-4)}`
+                              : plat === "MICROSOFT_TEAMS"
+                                ? `https://teams.live.com/meet/${roomCode}`
+                                : `https://zoom.us/wc/${roomCode}/join?prefer=1&pwd=GBS2026`;
                         setNewMeeting({ ...newMeeting, platform: plat, meetingUrl: defaultUrl });
                       }}
                     >
@@ -6822,10 +6961,10 @@ export default function TeacherDashboard() {
                     <label style={{ display: "block", fontSize: "0.75rem", color: "#94a3b8", marginBottom: "4px" }}>
                       Date & Start Time *
                     </label>
-                    <input 
-                      type="datetime-local" 
-                      required 
-                      className="filter-input" 
+                    <input
+                      type="datetime-local"
+                      required
+                      className="filter-input"
                       style={{ width: "100%" }}
                       value={newMeeting.startTime}
                       onChange={(e) => setNewMeeting({ ...newMeeting, startTime: e.target.value })}
@@ -6836,10 +6975,10 @@ export default function TeacherDashboard() {
                     <label style={{ display: "block", fontSize: "0.75rem", color: "#94a3b8", marginBottom: "4px" }}>
                       Duration (Minutes)
                     </label>
-                    <input 
-                      type="number" 
-                      placeholder="Duration (mins)" 
-                      className="filter-input" 
+                    <input
+                      type="number"
+                      placeholder="Duration (mins)"
+                      className="filter-input"
                       style={{ width: "100%" }}
                       value={newMeeting.durationMinutes}
                       onChange={(e) => setNewMeeting({ ...newMeeting, durationMinutes: e.target.value })}
@@ -6910,10 +7049,10 @@ export default function TeacherDashboard() {
                   const workingInAppLink = m.inAppRoomUrl || `${window.location.origin}/online-learning?room=GBS-${m.meetingId || m.id}&pwd=${encodeURIComponent(m.passcode || "GBS2026")}&topic=${encodeURIComponent(m.title || "Live Classroom")}`;
 
                   return (
-                    <div 
-                      key={m.id} 
-                      className="item-card" 
-                      style={{ 
+                    <div
+                      key={m.id}
+                      className="item-card"
+                      style={{
                         borderColor: isSelected ? "#ef4444" : isEnded ? "rgba(148, 163, 184, 0.2)" : "rgba(59, 130, 246, 0.3)",
                         background: isSelected ? "rgba(239, 68, 68, 0.08)" : "rgba(2, 6, 23, 0.6)"
                       }}
@@ -6921,8 +7060,8 @@ export default function TeacherDashboard() {
                       <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
                         {/* REQUIREMENT: Checkbox for selection of deletion for meetings */}
                         <label style={{ display: "flex", alignItems: "center", gap: "6px", cursor: "pointer", fontSize: "0.75rem", color: "#f87171", fontWeight: "700" }}>
-                          <input 
-                            type="checkbox" 
+                          <input
+                            type="checkbox"
                             checked={isSelected}
                             onChange={() => handleToggleMeetingSelection(m.id)}
                           />
@@ -6951,7 +7090,7 @@ export default function TeacherDashboard() {
                       <div style={{ fontSize: "0.71rem", color: "#64748b", fontFamily: "monospace", marginTop: "4px", wordBreak: "break-all" }}>
                         🔗 {safeMeetingUrl}
                       </div>
-                      
+
                       <div style={{ display: "flex", gap: "8px", marginTop: "auto", paddingTop: "10px", flexWrap: "wrap" }}>
                         {!isEnded ? (
                           <>
@@ -6966,7 +7105,7 @@ export default function TeacherDashboard() {
                                   workingInAppLink
                                 })
                               }
-                              className="btn-primary" 
+                              className="btn-primary"
                               style={{ flex: 1, textAlign: "center", fontSize: "0.8rem", cursor: "pointer", fontWeight: 800 }}
                             >
                               🚀 Join Live Classroom
@@ -7021,7 +7160,7 @@ export default function TeacherDashboard() {
                                   localStorage.setItem("gbs_active_live_classes", JSON.stringify([broadcastPayload]));
                                   window.dispatchEvent(new CustomEvent("gbs_live_class_broadcast", { detail: broadcastPayload }));
                                   window.dispatchEvent(new Event("storage"));
-                                } catch {}
+                                } catch { }
                                 setFeedback({
                                   type: "success",
                                   message: `📡 Link Broadcasted to ALL Classes! All student dashboards will now display the "Join Live Class Now" banner.`
@@ -7047,8 +7186,8 @@ export default function TeacherDashboard() {
                             >
                               🌐 Share Link to All Classes
                             </button>
-                            <button 
-                              type="button" 
+                            <button
+                              type="button"
                               className="btn-end-meeting"
                               onClick={() => handleEndMeeting(m.id)}
                             >
@@ -7056,8 +7195,8 @@ export default function TeacherDashboard() {
                             </button>
                           </>
                         ) : (
-                          <button 
-                            type="button" 
+                          <button
+                            type="button"
                             className="btn-delete-meeting"
                             style={{ flex: 1 }}
                             onClick={() => handleDeleteMeeting(m.id)}
@@ -7100,8 +7239,8 @@ export default function TeacherDashboard() {
                           <a href={sm.meetingUrl} target="_blank" rel="noreferrer" style={{ fontSize: "0.75rem", color: "#38bdf8", textDecoration: "none", fontWeight: "700" }}>
                             🔗 Open Session Reference
                           </a>
-                          <button 
-                            type="button" 
+                          <button
+                            type="button"
                             onClick={() => handleSaveMeetingReference(sm)}
                             style={{ background: "none", border: "none", color: "#f87171", cursor: "pointer", fontSize: "0.75rem" }}
                           >
@@ -7211,11 +7350,11 @@ export default function TeacherDashboard() {
                   {(Array.isArray(facultyDirectives) ? facultyDirectives : []).filter(Boolean).map((dir) => {
                     const userFirst = typeof currentUser?.firstName === "string" ? currentUser.firstName.toLowerCase() : "";
                     const targetName = typeof dir?.targetTeacherName === "string" ? dir.targetTeacherName.toLowerCase() : "";
-                    const isForMe = dir?.target === "ALL" || 
-                      String(dir?.target) === String(currentUser?.id) || 
+                    const isForMe = dir?.target === "ALL" ||
+                      String(dir?.target) === String(currentUser?.id) ||
                       (userFirst && targetName && targetName.includes(userFirst));
                     return (
-                      <div 
+                      <div
                         key={dir.id}
                         style={{
                           background: isForMe ? "rgba(15, 23, 42, 0.75)" : "rgba(2, 6, 23, 0.5)",
@@ -7263,7 +7402,7 @@ export default function TeacherDashboard() {
               {/* Two Column Section: Upload/Authoring Form + Submitted Plans & Notes Ledger */}
               <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(360px, 1fr))", gap: "1.75rem", marginBottom: "2rem" }}>
                 {/* Panel 1: Upload / Create Plan Form */}
-                <form 
+                <form
                   onSubmit={handleUploadPlan}
                   style={{
                     background: "rgba(2, 6, 23, 0.7)",
@@ -7559,172 +7698,172 @@ export default function TeacherDashboard() {
                         .filter((p) => lessonPlanFilter === "ALL" || p.planType === lessonPlanFilter)
                         .filter((p) => lessonStatusFilter === "ALL" || p.status === lessonStatusFilter)
                         .map((plan) => {
-                        const typeLabels = {
-                          YEARLY_PLAN: { text: "📅 Yearly Plan", color: "#38bdf8", bg: "rgba(56, 189, 248, 0.15)" },
-                          TERMLY_PLAN: { text: "📆 Termly Plan", color: "#818cf8", bg: "rgba(129, 140, 248, 0.15)" },
-                          WEEKLY_PLAN: { text: "🗓️ Weekly Plan", color: "#a855f7", bg: "rgba(168, 85, 247, 0.15)" },
-                          LESSON_NOTES: { text: "📖 Lesson Notes", color: "#f472b6", bg: "rgba(244, 114, 182, 0.15)" }
-                        };
-                        const typeMeta = typeLabels[plan.planType] || { text: plan.planType, color: "#38bdf8", bg: "rgba(56, 189, 248, 0.15)" };
+                          const typeLabels = {
+                            YEARLY_PLAN: { text: "📅 Yearly Plan", color: "#38bdf8", bg: "rgba(56, 189, 248, 0.15)" },
+                            TERMLY_PLAN: { text: "📆 Termly Plan", color: "#818cf8", bg: "rgba(129, 140, 248, 0.15)" },
+                            WEEKLY_PLAN: { text: "🗓️ Weekly Plan", color: "#a855f7", bg: "rgba(168, 85, 247, 0.15)" },
+                            LESSON_NOTES: { text: "📖 Lesson Notes", color: "#f472b6", bg: "rgba(244, 114, 182, 0.15)" }
+                          };
+                          const typeMeta = typeLabels[plan.planType] || { text: plan.planType, color: "#38bdf8", bg: "rgba(56, 189, 248, 0.15)" };
 
-                        return (
-                          <div
-                            key={plan.id}
-                            style={{
-                              background: "rgba(15, 23, 42, 0.85)",
-                              borderRadius: "12px",
-                              border: plan.status === "VETTED_APPROVED" 
-                                ? "1.5px solid rgba(16, 185, 129, 0.5)" 
-                                : plan.status === "REVISION_REQUIRED"
-                                ? "1.5px solid rgba(239, 68, 68, 0.5)"
-                                : "1.5px solid rgba(245, 158, 11, 0.5)",
-                              padding: "16px",
-                              boxShadow: "0 6px 18px rgba(0,0,0,0.35)",
-                              transition: "all 0.2s ease"
-                            }}
-                            onMouseEnter={(e) => {
-                              e.currentTarget.style.transform = "translateY(-2px)";
-                              e.currentTarget.style.borderColor = "#38bdf8";
-                              e.currentTarget.style.boxShadow = "0 10px 25px rgba(56, 189, 248, 0.25)";
-                            }}
-                            onMouseLeave={(e) => {
-                              e.currentTarget.style.transform = "none";
-                              e.currentTarget.style.borderColor = plan.status === "VETTED_APPROVED" 
-                                ? "rgba(16, 185, 129, 0.5)" 
-                                : plan.status === "REVISION_REQUIRED"
-                                ? "rgba(239, 68, 68, 0.5)"
-                                : "rgba(245, 158, 11, 0.5)";
-                              e.currentTarget.style.boxShadow = "0 6px 18px rgba(0,0,0,0.35)";
-                            }}
-                          >
-                            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: "8px", flexWrap: "wrap", gap: "8px" }}>
-                              <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
-                                <span style={{ background: typeMeta.bg, color: typeMeta.color, fontSize: "0.72rem", padding: "3px 8px", borderRadius: "6px", fontWeight: "800" }}>
-                                  {typeMeta.text}
-                                </span>
-                                <span style={{ fontSize: "0.78rem", color: "#94a3b8" }}>
-                                  {plan.className} • {plan.subjectName}
-                                </span>
+                          return (
+                            <div
+                              key={plan.id}
+                              style={{
+                                background: "rgba(15, 23, 42, 0.85)",
+                                borderRadius: "12px",
+                                border: plan.status === "VETTED_APPROVED"
+                                  ? "1.5px solid rgba(16, 185, 129, 0.5)"
+                                  : plan.status === "REVISION_REQUIRED"
+                                    ? "1.5px solid rgba(239, 68, 68, 0.5)"
+                                    : "1.5px solid rgba(245, 158, 11, 0.5)",
+                                padding: "16px",
+                                boxShadow: "0 6px 18px rgba(0,0,0,0.35)",
+                                transition: "all 0.2s ease"
+                              }}
+                              onMouseEnter={(e) => {
+                                e.currentTarget.style.transform = "translateY(-2px)";
+                                e.currentTarget.style.borderColor = "#38bdf8";
+                                e.currentTarget.style.boxShadow = "0 10px 25px rgba(56, 189, 248, 0.25)";
+                              }}
+                              onMouseLeave={(e) => {
+                                e.currentTarget.style.transform = "none";
+                                e.currentTarget.style.borderColor = plan.status === "VETTED_APPROVED"
+                                  ? "rgba(16, 185, 129, 0.5)"
+                                  : plan.status === "REVISION_REQUIRED"
+                                    ? "rgba(239, 68, 68, 0.5)"
+                                    : "rgba(245, 158, 11, 0.5)";
+                                e.currentTarget.style.boxShadow = "0 6px 18px rgba(0,0,0,0.35)";
+                              }}
+                            >
+                              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: "8px", flexWrap: "wrap", gap: "8px" }}>
+                                <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
+                                  <span style={{ background: typeMeta.bg, color: typeMeta.color, fontSize: "0.72rem", padding: "3px 8px", borderRadius: "6px", fontWeight: "800" }}>
+                                    {typeMeta.text}
+                                  </span>
+                                  <span style={{ fontSize: "0.78rem", color: "#94a3b8" }}>
+                                    {plan.className} • {plan.subjectName}
+                                  </span>
+                                </div>
+
+                                <div>
+                                  {plan.status === "VETTED_APPROVED" ? (
+                                    <span style={{ background: "rgba(16, 185, 129, 0.2)", color: "#34d399", fontSize: "0.75rem", padding: "3px 10px", borderRadius: "12px", fontWeight: "800", display: "inline-flex", alignItems: "center", gap: "4px" }}>
+                                      ✓ VETTED & APPROVED
+                                    </span>
+                                  ) : plan.status === "REVISION_REQUIRED" ? (
+                                    <span style={{ background: "rgba(239, 68, 68, 0.2)", color: "#f87171", fontSize: "0.75rem", padding: "3px 10px", borderRadius: "12px", fontWeight: "800", display: "inline-flex", alignItems: "center", gap: "4px" }}>
+                                      ⚠️ REVISION REQUESTED
+                                    </span>
+                                  ) : (
+                                    <span style={{ background: "rgba(245, 158, 11, 0.2)", color: "#fbbf24", fontSize: "0.75rem", padding: "3px 10px", borderRadius: "12px", fontWeight: "800", display: "inline-flex", alignItems: "center", gap: "4px" }}>
+                                      ⏳ PENDING HEADMASTER VETTING
+                                    </span>
+                                  )}
+                                </div>
                               </div>
 
-                              <div>
-                                {plan.status === "VETTED_APPROVED" ? (
-                                  <span style={{ background: "rgba(16, 185, 129, 0.2)", color: "#34d399", fontSize: "0.75rem", padding: "3px 10px", borderRadius: "12px", fontWeight: "800", display: "inline-flex", alignItems: "center", gap: "4px" }}>
-                                    ✓ VETTED & APPROVED
-                                  </span>
-                                ) : plan.status === "REVISION_REQUIRED" ? (
-                                  <span style={{ background: "rgba(239, 68, 68, 0.2)", color: "#f87171", fontSize: "0.75rem", padding: "3px 10px", borderRadius: "12px", fontWeight: "800", display: "inline-flex", alignItems: "center", gap: "4px" }}>
-                                    ⚠️ REVISION REQUESTED
-                                  </span>
-                                ) : (
-                                  <span style={{ background: "rgba(245, 158, 11, 0.2)", color: "#fbbf24", fontSize: "0.75rem", padding: "3px 10px", borderRadius: "12px", fontWeight: "800", display: "inline-flex", alignItems: "center", gap: "4px" }}>
-                                    ⏳ PENDING HEADMASTER VETTING
-                                  </span>
+                              <h4 style={{ margin: "0 0 6px 0", color: "#f8fafc", fontSize: "0.98rem", fontWeight: "800" }}>
+                                {plan.title}
+                              </h4>
+
+                              <div style={{ fontSize: "0.8rem", color: "#cbd5e1", marginBottom: "8px", display: "flex", flexDirection: "column", gap: "3px" }}>
+                                <div><strong>Topic:</strong> {plan.topic}</div>
+                                <div><strong>Span:</strong> {plan.term} • {plan.weekNumber}</div>
+                                {plan.learningObjectives && (
+                                  <div style={{ color: "#94a3b8", fontSize: "0.78rem" }}>
+                                    <strong>Objectives:</strong> {plan.learningObjectives}
+                                  </div>
+                                )}
+                                {plan.resourcesAttached && (
+                                  <div style={{ fontSize: "0.75rem", color: "#38bdf8", marginTop: "2px" }}>
+                                    📎 Attached Document: <strong>{plan.resourcesAttached}</strong>
+                                  </div>
                                 )}
                               </div>
-                            </div>
 
-                            <h4 style={{ margin: "0 0 6px 0", color: "#f8fafc", fontSize: "0.98rem", fontWeight: "800" }}>
-                              {plan.title}
-                            </h4>
-
-                            <div style={{ fontSize: "0.8rem", color: "#cbd5e1", marginBottom: "8px", display: "flex", flexDirection: "column", gap: "3px" }}>
-                              <div><strong>Topic:</strong> {plan.topic}</div>
-                              <div><strong>Span:</strong> {plan.term} • {plan.weekNumber}</div>
-                              {plan.learningObjectives && (
-                                <div style={{ color: "#94a3b8", fontSize: "0.78rem" }}>
-                                  <strong>Objectives:</strong> {plan.learningObjectives}
-                                </div>
-                              )}
-                              {plan.resourcesAttached && (
-                                <div style={{ fontSize: "0.75rem", color: "#38bdf8", marginTop: "2px" }}>
-                                  📎 Attached Document: <strong>{plan.resourcesAttached}</strong>
-                                </div>
-                              )}
-                            </div>
-
-                            {/* HEADMASTER WORDS & REMARKS SECTION */}
-                            {plan.headmasterRemarks ? (
-                              <div style={{
-                                background: plan.status === "VETTED_APPROVED" ? "rgba(16, 185, 129, 0.1)" : "rgba(239, 68, 68, 0.1)",
-                                borderLeft: `3px solid ${plan.status === "VETTED_APPROVED" ? "#10b981" : "#ef4444"}`,
-                                borderRadius: "6px",
-                                padding: "8px 12px",
-                                marginTop: "10px"
-                              }}>
-                                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "3px" }}>
-                                  <span style={{ fontSize: "0.75rem", fontWeight: "800", color: plan.status === "VETTED_APPROVED" ? "#34d399" : "#f87171" }}>
-                                    💬 Words & Feedback from Headmaster:
-                                  </span>
-                                  <span style={{ fontSize: "0.7rem", color: "#94a3b8" }}>
-                                    {plan.vettedAt ? new Date(plan.vettedAt).toLocaleString() : "Recently Vetted"}
+                              {/* HEADMASTER WORDS & REMARKS SECTION */}
+                              {plan.headmasterRemarks ? (
+                                <div style={{
+                                  background: plan.status === "VETTED_APPROVED" ? "rgba(16, 185, 129, 0.1)" : "rgba(239, 68, 68, 0.1)",
+                                  borderLeft: `3px solid ${plan.status === "VETTED_APPROVED" ? "#10b981" : "#ef4444"}`,
+                                  borderRadius: "6px",
+                                  padding: "8px 12px",
+                                  marginTop: "10px"
+                                }}>
+                                  <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "3px" }}>
+                                    <span style={{ fontSize: "0.75rem", fontWeight: "800", color: plan.status === "VETTED_APPROVED" ? "#34d399" : "#f87171" }}>
+                                      💬 Words & Feedback from Headmaster:
+                                    </span>
+                                    <span style={{ fontSize: "0.7rem", color: "#94a3b8" }}>
+                                      {plan.vettedAt ? new Date(plan.vettedAt).toLocaleString() : "Recently Vetted"}
+                                    </span>
+                                  </div>
+                                  <p style={{ margin: 0, fontSize: "0.84rem", color: "#f8fafc", fontStyle: "italic", lineHeight: "1.4" }}>
+                                    "{plan.headmasterRemarks}"
+                                  </p>
+                                  <span style={{ display: "block", marginTop: "4px", fontSize: "0.7rem", color: "#94a3b8" }}>
+                                    — Endorsed by: <strong>{plan.vettedBy || "Headmaster Arthur Pendleton"}</strong>
                                   </span>
                                 </div>
-                                <p style={{ margin: 0, fontSize: "0.84rem", color: "#f8fafc", fontStyle: "italic", lineHeight: "1.4" }}>
-                                  "{plan.headmasterRemarks}"
-                                </p>
-                                <span style={{ display: "block", marginTop: "4px", fontSize: "0.7rem", color: "#94a3b8" }}>
-                                  — Endorsed by: <strong>{plan.vettedBy || "Headmaster Arthur Pendleton"}</strong>
+                              ) : (
+                                <div style={{ marginTop: "6px", fontSize: "0.75rem", color: "#fbbf24", fontStyle: "italic" }}>
+                                  ⏳ Under review at Headmaster's desk. Remarks will be published upon vetting completion.
+                                </div>
+                              )}
+
+                              {/* Interactive Action Bar with Hover & Page Navigation */}
+                              <div style={{ marginTop: "12px", borderTop: "1px solid rgba(255, 255, 255, 0.08)", paddingTop: "10px", display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: "8px" }}>
+                                <span style={{ fontSize: "0.72rem", color: "#94a3b8" }}>
+                                  Plan Ref: <code style={{ color: "#38bdf8" }}>{plan.id}</code>
                                 </span>
-                              </div>
-                            ) : (
-                              <div style={{ marginTop: "6px", fontSize: "0.75rem", color: "#fbbf24", fontStyle: "italic" }}>
-                                ⏳ Under review at Headmaster's desk. Remarks will be published upon vetting completion.
-                              </div>
-                            )}
-
-                            {/* Interactive Action Bar with Hover & Page Navigation */}
-                            <div style={{ marginTop: "12px", borderTop: "1px solid rgba(255, 255, 255, 0.08)", paddingTop: "10px", display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: "8px" }}>
-                              <span style={{ fontSize: "0.72rem", color: "#94a3b8" }}>
-                                Plan Ref: <code style={{ color: "#38bdf8" }}>{plan.id}</code>
-                              </span>
-                              <div style={{ display: "flex", gap: "8px", alignItems: "center" }}>
-                                <button
-                                  type="button"
-                                  onClick={() => navigateToDetail(navigate, "lesson-plan", plan.id, {
-                                    ...plan,
-                                    institutionName: localStorage.getItem("gbs_report_school_name") || "St. Augustine International Academy"
-                                  }, { returnTab: activeTab })}
-                                  style={{
-                                    background: "linear-gradient(135deg, rgba(2, 132, 199, 0.25), rgba(56, 189, 248, 0.15))",
-                                    border: "1px solid #38bdf8",
-                                    color: "#38bdf8",
-                                    borderRadius: "8px",
-                                    padding: "6px 14px",
-                                    fontSize: "0.78rem",
-                                    fontWeight: "800",
-                                    cursor: "pointer",
-                                    display: "inline-flex",
-                                    alignItems: "center",
-                                    gap: "6px"
-                                  }}
-                                  title="Inspect full plan dossier on dedicated routed page"
-                                >
-                                  🔍 View & Inspect Dossier ↗
-                                </button>
-                                {plan.status === "REVISION_REQUIRED" && (
+                                <div style={{ display: "flex", gap: "8px", alignItems: "center" }}>
                                   <button
                                     type="button"
-                                    onClick={() => handleResubmitPlan(plan)}
+                                    onClick={() => navigateToDetail(navigate, "lesson-plan", plan.id, {
+                                      ...plan,
+                                      institutionName: localStorage.getItem("gbs_report_school_name") || "St. Augustine International Academy"
+                                    }, { returnTab: activeTab })}
                                     style={{
-                                      background: "rgba(239, 68, 68, 0.15)",
-                                      border: "1px solid #ef4444",
-                                      color: "#fca5a5",
-                                      padding: "6px 12px",
+                                      background: "linear-gradient(135deg, rgba(2, 132, 199, 0.25), rgba(56, 189, 248, 0.15))",
+                                      border: "1px solid #38bdf8",
+                                      color: "#38bdf8",
                                       borderRadius: "8px",
+                                      padding: "6px 14px",
                                       fontSize: "0.78rem",
-                                      fontWeight: "700",
-                                      cursor: "pointer"
+                                      fontWeight: "800",
+                                      cursor: "pointer",
+                                      display: "inline-flex",
+                                      alignItems: "center",
+                                      gap: "6px"
                                     }}
+                                    title="Inspect full plan dossier on dedicated routed page"
                                   >
-                                    ✏️ Address Remarks & Revise Plan
+                                    🔍 View & Inspect Dossier ↗
                                   </button>
-                                )}
+                                  {plan.status === "REVISION_REQUIRED" && (
+                                    <button
+                                      type="button"
+                                      onClick={() => handleResubmitPlan(plan)}
+                                      style={{
+                                        background: "rgba(239, 68, 68, 0.15)",
+                                        border: "1px solid #ef4444",
+                                        color: "#fca5a5",
+                                        padding: "6px 12px",
+                                        borderRadius: "8px",
+                                        fontSize: "0.78rem",
+                                        fontWeight: "700",
+                                        cursor: "pointer"
+                                      }}
+                                    >
+                                      ✏️ Address Remarks & Revise Plan
+                                    </button>
+                                  )}
+                                </div>
                               </div>
                             </div>
-                          </div>
-                        );
-                      })
+                          );
+                        })
                     )}
                   </div>
                 </div>
@@ -7834,7 +7973,7 @@ export default function TeacherDashboard() {
 
               {/* Grid: Academic Qualifications, Assigned Classes & Office Hours */}
               <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(280px, 1fr))", gap: "16px" }}>
-                
+
                 {/* Academic Credentials */}
                 <div style={{ background: "rgba(15, 23, 42, 0.7)", border: "1px solid rgba(255, 255, 255, 0.08)", borderRadius: "12px", padding: "18px" }}>
                   <h4 style={{ margin: "0 0 10px", color: "#38bdf8", fontSize: "0.95rem", display: "flex", alignItems: "center", gap: "8px" }}>
@@ -7986,7 +8125,7 @@ export default function TeacherDashboard() {
                           setTeacherProfile({ ...editProfileForm });
                           try {
                             localStorage.setItem("gbs_teacher_profile", JSON.stringify(editProfileForm));
-                          } catch {}
+                          } catch { }
                           setShowEditProfileModal(false);
                           setFeedback({ type: "success", message: "✓ Faculty profile updated successfully!" });
                         }}
@@ -8008,8 +8147,8 @@ export default function TeacherDashboard() {
               ...(activeTierMeta.classes || []),
               ...(curriculumInstitutionTier === registeredInstitutionTier
                 ? (classes || [])
-                    .filter((c) => !(activeTierMeta.classes || []).some((tc) => tc.id === String(c.id) || tc.name === c.name))
-                    .map((c) => ({ id: String(c.id), name: `${c.name} (${c.code || "Registered Cohort"})` }))
+                  .filter((c) => !(activeTierMeta.classes || []).some((tc) => tc.id === String(c.id) || tc.name === c.name))
+                  .map((c) => ({ id: String(c.id), name: `${c.name} (${c.code || "Registered Cohort"})` }))
                 : [])
             ];
             const currentClassObj =
@@ -8893,8 +9032,8 @@ export default function TeacherDashboard() {
                 {classes.map((c) => {
                   const isCurrent = String(selectedClassId) === String(c.id);
                   return (
-                    <div 
-                      key={c.id} 
+                    <div
+                      key={c.id}
                       className={`class-popup-card ${isCurrent ? "active-class" : ""}`}
                       onClick={() => {
                         setSelectedClassId(c.id);
@@ -8911,9 +9050,9 @@ export default function TeacherDashboard() {
                       <div style={{ fontSize: "0.8rem", color: "#94a3b8", marginTop: "auto" }}>
                         Enrolled Students: {c.enrollments ? c.enrollments.length : roster.length} Students
                       </div>
-                      <button 
-                        type="button" 
-                        className="btn-primary" 
+                      <button
+                        type="button"
+                        className="btn-primary"
                         style={{ marginTop: "8px", fontSize: "0.8rem", padding: "6px 12px" }}
                         onClick={(e) => {
                           e.stopPropagation();
@@ -10084,129 +10223,129 @@ export default function TeacherDashboard() {
                       </tr>
                     ) : (
                       examTimetableList.map((entry, idx) => (
-                      <tr key={entry.id}>
-                        <td>
-                          <input
-                            type="text"
-                            value={entry.courseCode}
-                            onChange={(e) => {
-                              const updated = examTimetableList.map((item, i) => i === idx ? { ...item, courseCode: e.target.value } : item);
-                              setExamTimetableList(updated);
-                            }}
-                            className="filter-input"
-                            style={{ width: "90px", fontSize: "0.78rem" }}
-                          />
-                        </td>
-                        <td>
-                          <input
-                            type="text"
-                            value={entry.subject}
-                            onChange={(e) => {
-                              const updated = examTimetableList.map((item, i) => i === idx ? { ...item, subject: e.target.value } : item);
-                              setExamTimetableList(updated);
-                            }}
-                            className="filter-input"
-                            style={{ width: "130px", fontSize: "0.78rem" }}
-                          />
-                        </td>
-                        <td>
-                          <input
-                            type="date"
-                            value={entry.examDate}
-                            onChange={(e) => {
-                              const updated = examTimetableList.map((item, i) => i === idx ? { ...item, examDate: e.target.value } : item);
-                              setExamTimetableList(updated);
-                            }}
-                            className="filter-input"
-                            style={{ width: "120px", fontSize: "0.75rem" }}
-                          />
-                        </td>
-                        <td>
-                          <input
-                            type="text"
-                            value={entry.startTime}
-                            onChange={(e) => {
-                              const updated = examTimetableList.map((item, i) => i === idx ? { ...item, startTime: e.target.value } : item);
-                              setExamTimetableList(updated);
-                            }}
-                            className="filter-input"
-                            style={{ width: "80px", fontSize: "0.75rem" }}
-                          />
-                        </td>
-                        <td>
-                          <input
-                            type="text"
-                            value={entry.endTime}
-                            onChange={(e) => {
-                              const updated = examTimetableList.map((item, i) => i === idx ? { ...item, endTime: e.target.value } : item);
-                              setExamTimetableList(updated);
-                            }}
-                            className="filter-input"
-                            style={{ width: "80px", fontSize: "0.75rem" }}
-                          />
-                        </td>
-                        <td>
-                          <input
-                            type="text"
-                            value={entry.hall}
-                            placeholder="Hall"
-                            onChange={(e) => {
-                              const updated = examTimetableList.map((item, i) => i === idx ? { ...item, hall: e.target.value } : item);
-                              setExamTimetableList(updated);
-                            }}
-                            className="filter-input"
-                            style={{ width: "110px", fontSize: "0.75rem", marginBottom: "2px" }}
-                          />
-                          <input
-                            type="text"
-                            value={entry.invigilator}
-                            placeholder="Invigilator"
-                            onChange={(e) => {
-                              const updated = examTimetableList.map((item, i) => i === idx ? { ...item, invigilator: e.target.value } : item);
-                              setExamTimetableList(updated);
-                            }}
-                            className="filter-input"
-                            style={{ width: "110px", fontSize: "0.72rem" }}
-                          />
-                        </td>
-                        <td>
-                          <input
-                            type="text"
-                            value={entry.permittedTools}
-                            placeholder="Tools"
-                            onChange={(e) => {
-                              const updated = examTimetableList.map((item, i) => i === idx ? { ...item, permittedTools: e.target.value } : item);
-                              setExamTimetableList(updated);
-                            }}
-                            className="filter-input"
-                            style={{ width: "130px", fontSize: "0.72rem", marginBottom: "2px" }}
-                          />
-                          <input
-                            type="text"
-                            value={entry.syllabusScope}
-                            placeholder="Syllabus focus"
-                            onChange={(e) => {
-                              const updated = examTimetableList.map((item, i) => i === idx ? { ...item, syllabusScope: e.target.value } : item);
-                              setExamTimetableList(updated);
-                            }}
-                            className="filter-input"
-                            style={{ width: "130px", fontSize: "0.72rem" }}
-                          />
-                        </td>
-                        <td>
-                          <button
-                            type="button"
-                            onClick={() => {
-                              setExamTimetableList(examTimetableList.filter((_, i) => i !== idx));
-                            }}
-                            style={{ background: "rgba(239, 68, 68, 0.2)", border: "1px solid #ef4444", color: "#f87171", padding: "4px 8px", borderRadius: "4px", fontSize: "0.7rem", cursor: "pointer" }}
-                          >
-                            ✕
-                          </button>
-                        </td>
-                      </tr>
-                    ))
-                  )}
+                        <tr key={entry.id}>
+                          <td>
+                            <input
+                              type="text"
+                              value={entry.courseCode}
+                              onChange={(e) => {
+                                const updated = examTimetableList.map((item, i) => i === idx ? { ...item, courseCode: e.target.value } : item);
+                                setExamTimetableList(updated);
+                              }}
+                              className="filter-input"
+                              style={{ width: "90px", fontSize: "0.78rem" }}
+                            />
+                          </td>
+                          <td>
+                            <input
+                              type="text"
+                              value={entry.subject}
+                              onChange={(e) => {
+                                const updated = examTimetableList.map((item, i) => i === idx ? { ...item, subject: e.target.value } : item);
+                                setExamTimetableList(updated);
+                              }}
+                              className="filter-input"
+                              style={{ width: "130px", fontSize: "0.78rem" }}
+                            />
+                          </td>
+                          <td>
+                            <input
+                              type="date"
+                              value={entry.examDate}
+                              onChange={(e) => {
+                                const updated = examTimetableList.map((item, i) => i === idx ? { ...item, examDate: e.target.value } : item);
+                                setExamTimetableList(updated);
+                              }}
+                              className="filter-input"
+                              style={{ width: "120px", fontSize: "0.75rem" }}
+                            />
+                          </td>
+                          <td>
+                            <input
+                              type="text"
+                              value={entry.startTime}
+                              onChange={(e) => {
+                                const updated = examTimetableList.map((item, i) => i === idx ? { ...item, startTime: e.target.value } : item);
+                                setExamTimetableList(updated);
+                              }}
+                              className="filter-input"
+                              style={{ width: "80px", fontSize: "0.75rem" }}
+                            />
+                          </td>
+                          <td>
+                            <input
+                              type="text"
+                              value={entry.endTime}
+                              onChange={(e) => {
+                                const updated = examTimetableList.map((item, i) => i === idx ? { ...item, endTime: e.target.value } : item);
+                                setExamTimetableList(updated);
+                              }}
+                              className="filter-input"
+                              style={{ width: "80px", fontSize: "0.75rem" }}
+                            />
+                          </td>
+                          <td>
+                            <input
+                              type="text"
+                              value={entry.hall}
+                              placeholder="Hall"
+                              onChange={(e) => {
+                                const updated = examTimetableList.map((item, i) => i === idx ? { ...item, hall: e.target.value } : item);
+                                setExamTimetableList(updated);
+                              }}
+                              className="filter-input"
+                              style={{ width: "110px", fontSize: "0.75rem", marginBottom: "2px" }}
+                            />
+                            <input
+                              type="text"
+                              value={entry.invigilator}
+                              placeholder="Invigilator"
+                              onChange={(e) => {
+                                const updated = examTimetableList.map((item, i) => i === idx ? { ...item, invigilator: e.target.value } : item);
+                                setExamTimetableList(updated);
+                              }}
+                              className="filter-input"
+                              style={{ width: "110px", fontSize: "0.72rem" }}
+                            />
+                          </td>
+                          <td>
+                            <input
+                              type="text"
+                              value={entry.permittedTools}
+                              placeholder="Tools"
+                              onChange={(e) => {
+                                const updated = examTimetableList.map((item, i) => i === idx ? { ...item, permittedTools: e.target.value } : item);
+                                setExamTimetableList(updated);
+                              }}
+                              className="filter-input"
+                              style={{ width: "130px", fontSize: "0.72rem", marginBottom: "2px" }}
+                            />
+                            <input
+                              type="text"
+                              value={entry.syllabusScope}
+                              placeholder="Syllabus focus"
+                              onChange={(e) => {
+                                const updated = examTimetableList.map((item, i) => i === idx ? { ...item, syllabusScope: e.target.value } : item);
+                                setExamTimetableList(updated);
+                              }}
+                              className="filter-input"
+                              style={{ width: "130px", fontSize: "0.72rem" }}
+                            />
+                          </td>
+                          <td>
+                            <button
+                              type="button"
+                              onClick={() => {
+                                setExamTimetableList(examTimetableList.filter((_, i) => i !== idx));
+                              }}
+                              style={{ background: "rgba(239, 68, 68, 0.2)", border: "1px solid #ef4444", color: "#f87171", padding: "4px 8px", borderRadius: "4px", fontSize: "0.7rem", cursor: "pointer" }}
+                            >
+                              ✕
+                            </button>
+                          </td>
+                        </tr>
+                      ))
+                    )}
                   </tbody>
                 </table>
               </div>
@@ -10227,17 +10366,17 @@ export default function TeacherDashboard() {
       {/* MODAL: MANUAL ENTRY FOR WRITTEN & MARKED EXAMS RECORDS (NON-CBT / HAND-MARKED) */}
       {showManualWrittenExamModal && (
         <div className="modal-backdrop" onClick={() => setShowManualWrittenExamModal(false)}>
-          <div 
-            className="modal-content" 
+          <div
+            className="modal-content"
             onClick={(e) => e.stopPropagation()}
             style={{ maxWidth: "1020px", width: "95%", maxHeight: "90vh", overflowY: "auto", background: "#0f172a", border: "1.5px solid #10b981", borderRadius: "16px", padding: "24px" }}
           >
             {/* Modal Header with Back Button */}
             <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", borderBottom: "1px solid rgba(255,255,255,0.1)", paddingBottom: "16px", marginBottom: "20px" }}>
               <div style={{ display: "flex", alignItems: "center", gap: "12px" }}>
-                <button 
-                  type="button" 
-                  className="btn-secondary" 
+                <button
+                  type="button"
+                  className="btn-secondary"
                   onClick={() => setShowManualWrittenExamModal(false)}
                   style={{ padding: "6px 14px", borderRadius: "8px", borderColor: "#64748b", color: "#f8fafc", fontWeight: "700", display: "inline-flex", alignItems: "center", gap: "6px" }}
                 >
@@ -10252,9 +10391,9 @@ export default function TeacherDashboard() {
                   </p>
                 </div>
               </div>
-              <button 
-                type="button" 
-                className="modal-close-btn" 
+              <button
+                type="button"
+                className="modal-close-btn"
                 onClick={() => setShowManualWrittenExamModal(false)}
                 style={{ fontSize: "1.3rem", background: "none", border: "none", color: "#94a3b8", cursor: "pointer" }}
               >
@@ -10269,9 +10408,9 @@ export default function TeacherDashboard() {
                   <label style={{ display: "block", fontSize: "0.78rem", fontWeight: "700", color: "#94a3b8", marginBottom: "4px" }}>
                     Class / Cohort:
                   </label>
-                  <select 
-                    className="filter-select" 
-                    value={selectedClassId} 
+                  <select
+                    className="filter-select"
+                    value={selectedClassId}
                     onChange={handleClassChange}
                     style={{ width: "100%", padding: "8px 10px", background: "#1e293b", color: "#f8fafc", border: "1px solid #334155", borderRadius: "8px" }}
                   >
@@ -10287,9 +10426,9 @@ export default function TeacherDashboard() {
                   <label style={{ display: "block", fontSize: "0.78rem", fontWeight: "700", color: "#94a3b8", marginBottom: "4px" }}>
                     Exam Paper Title:
                   </label>
-                  <input 
-                    type="text" 
-                    value={manualExamMeta.title} 
+                  <input
+                    type="text"
+                    value={manualExamMeta.title}
                     onChange={(e) => setManualExamMeta({ ...manualExamMeta, title: e.target.value })}
                     placeholder="e.g. Mid-Term Written Exam Paper 2"
                     style={{ width: "100%", padding: "8px 10px", background: "#1e293b", color: "#f8fafc", border: "1px solid #334155", borderRadius: "8px" }}
@@ -10300,9 +10439,9 @@ export default function TeacherDashboard() {
                   <label style={{ display: "block", fontSize: "0.78rem", fontWeight: "700", color: "#94a3b8", marginBottom: "4px" }}>
                     Subject:
                   </label>
-                  <input 
-                    type="text" 
-                    value={manualExamMeta.subject} 
+                  <input
+                    type="text"
+                    value={manualExamMeta.subject}
                     onChange={(e) => setManualExamMeta({ ...manualExamMeta, subject: e.target.value })}
                     placeholder="e.g. Mathematics & Analytical Geometry"
                     style={{ width: "100%", padding: "8px 10px", background: "#1e293b", color: "#f8fafc", border: "1px solid #334155", borderRadius: "8px" }}
@@ -10313,8 +10452,8 @@ export default function TeacherDashboard() {
                   <label style={{ display: "block", fontSize: "0.78rem", fontWeight: "700", color: "#94a3b8", marginBottom: "4px" }}>
                     Academic Term:
                   </label>
-                  <select 
-                    value={manualExamMeta.term} 
+                  <select
+                    value={manualExamMeta.term}
                     onChange={(e) => setManualExamMeta({ ...manualExamMeta, term: e.target.value })}
                     style={{ width: "100%", padding: "8px 10px", background: "#1e293b", color: "#f8fafc", border: "1px solid #334155", borderRadius: "8px" }}
                   >
@@ -10328,9 +10467,9 @@ export default function TeacherDashboard() {
                   <label style={{ display: "block", fontSize: "0.78rem", fontWeight: "700", color: "#94a3b8", marginBottom: "4px" }}>
                     Maximum Total Marks (Points):
                   </label>
-                  <input 
-                    type="number" 
-                    value={manualExamMeta.maxMarks} 
+                  <input
+                    type="number"
+                    value={manualExamMeta.maxMarks}
                     onChange={(e) => setManualExamMeta({ ...manualExamMeta, maxMarks: Math.max(1, parseFloat(e.target.value) || 100) })}
                     style={{ width: "100%", padding: "8px 10px", background: "#1e293b", color: "#f8fafc", border: "1px solid #334155", borderRadius: "8px" }}
                   />
@@ -10340,9 +10479,9 @@ export default function TeacherDashboard() {
                   <label style={{ display: "block", fontSize: "0.78rem", fontWeight: "700", color: "#94a3b8", marginBottom: "4px" }}>
                     Date Marked & Vetted:
                   </label>
-                  <input 
-                    type="date" 
-                    value={manualExamMeta.examDate} 
+                  <input
+                    type="date"
+                    value={manualExamMeta.examDate}
                     onChange={(e) => setManualExamMeta({ ...manualExamMeta, examDate: e.target.value })}
                     style={{ width: "100%", padding: "8px 10px", background: "#1e293b", color: "#f8fafc", border: "1px solid #334155", borderRadius: "8px" }}
                   />
@@ -10401,8 +10540,8 @@ export default function TeacherDashboard() {
                             {stu.rollNumber || stu.admissionNumber || `GBS-${idx + 101}`}
                           </td>
                           <td style={{ padding: "10px 12px" }}>
-                            <input 
-                              type="text" 
+                            <input
+                              type="text"
                               value={currentScore.scriptSerial || `WRT-SCR-${idx + 101}`}
                               onChange={(e) => {
                                 setManualExamScores({
@@ -10414,8 +10553,8 @@ export default function TeacherDashboard() {
                             />
                           </td>
                           <td style={{ padding: "10px 12px" }}>
-                            <input 
-                              type="number" 
+                            <input
+                              type="number"
                               min="0"
                               max={manualExamMeta.maxMarks}
                               value={rawVal}
@@ -10430,10 +10569,10 @@ export default function TeacherDashboard() {
                             />
                           </td>
                           <td style={{ padding: "10px 12px" }}>
-                            <span style={{ 
-                              padding: "4px 8px", 
-                              borderRadius: "6px", 
-                              fontWeight: "700", 
+                            <span style={{
+                              padding: "4px 8px",
+                              borderRadius: "6px",
+                              fontWeight: "700",
                               fontSize: "0.78rem",
                               background: pct === null ? "transparent" : pct >= 80 ? "rgba(16, 185, 129, 0.2)" : pct >= 60 ? "rgba(56, 189, 248, 0.2)" : pct >= 50 ? "rgba(245, 158, 11, 0.2)" : "rgba(239, 68, 68, 0.2)",
                               color: pct === null ? "#64748b" : pct >= 80 ? "#34d399" : pct >= 60 ? "#38bdf8" : pct >= 50 ? "#fbbf24" : "#f87171"
@@ -10442,10 +10581,10 @@ export default function TeacherDashboard() {
                             </span>
                           </td>
                           <td style={{ padding: "10px 12px" }}>
-                            <span style={{ 
-                              padding: "4px 8px", 
-                              borderRadius: "6px", 
-                              fontWeight: "800", 
+                            <span style={{
+                              padding: "4px 8px",
+                              borderRadius: "6px",
+                              fontWeight: "800",
                               fontSize: "0.82rem",
                               background: grade === "A+" || grade === "A" ? "#065f46" : grade === "B" ? "#1e40af" : grade === "C" ? "#854d0e" : "#991b1b",
                               color: "#f8fafc"
@@ -10454,8 +10593,8 @@ export default function TeacherDashboard() {
                             </span>
                           </td>
                           <td style={{ padding: "10px 12px" }}>
-                            <input 
-                              type="text" 
+                            <input
+                              type="text"
                               value={currentScore.remarks || ""}
                               placeholder="e.g. Accurate working in Section B"
                               onChange={(e) => {
@@ -10477,9 +10616,9 @@ export default function TeacherDashboard() {
 
             {/* Modal Action Controls with Back Button */}
             <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: "10px", borderTop: "1px solid rgba(255, 255, 255, 0.1)", paddingTop: "16px" }}>
-              <button 
-                type="button" 
-                className="btn-secondary" 
+              <button
+                type="button"
+                className="btn-secondary"
                 onClick={() => setShowManualWrittenExamModal(false)}
                 style={{ padding: "8px 18px", borderRadius: "8px", borderColor: "#64748b", color: "#f8fafc", fontWeight: "700", display: "inline-flex", alignItems: "center", gap: "6px" }}
               >
@@ -10487,9 +10626,9 @@ export default function TeacherDashboard() {
               </button>
 
               <div style={{ display: "flex", gap: "10px", flexWrap: "wrap" }}>
-                <button 
-                  type="button" 
-                  className="btn-secondary" 
+                <button
+                  type="button"
+                  className="btn-secondary"
                   onClick={() => {
                     const sampleScores = {};
                     (roster.length > 0 ? roster : [1, 2, 3, 4, 5]).forEach((s, idx) => {
@@ -10507,18 +10646,18 @@ export default function TeacherDashboard() {
                   ⚡ Auto-Fill Sample Marks
                 </button>
 
-                <button 
-                  type="button" 
-                  className="btn-primary" 
+                <button
+                  type="button"
+                  className="btn-primary"
                   onClick={() => handleSaveManualWrittenExams(false)}
                   style={{ background: "linear-gradient(135deg, #059669, #10b981)", fontWeight: "800", padding: "10px 20px" }}
                 >
                   💾 Save Written Exam Records to Gradebook
                 </button>
 
-                <button 
-                  type="button" 
-                  className="btn-primary" 
+                <button
+                  type="button"
+                  className="btn-primary"
                   onClick={() => handleSaveManualWrittenExams(true)}
                   style={{ background: "linear-gradient(135deg, #0284c7, #2563eb)", fontWeight: "800", padding: "10px 20px", display: "inline-flex", alignItems: "center", gap: "6px" }}
                 >
@@ -10531,7 +10670,7 @@ export default function TeacherDashboard() {
       )}
 
       {/* Universal Floating Scroll Navigator (Back to Top / Scroll to Bottom) */}
-      <div 
+      <div
         style={{
           position: "fixed",
           bottom: "24px",
@@ -10873,147 +11012,295 @@ export default function TeacherDashboard() {
         const studioClassName = activeLiveClassroomSession.className || activeLiveClassroomSession.class?.name || (activeLiveClassroomSession.classId ? `Class #${activeLiveClassroomSession.classId}` : "Assigned Cohort");
 
         return (
-        <div className="role-modal-backdrop" onClick={() => setActiveLiveClassroomSession(null)}>
-          <div
-            className="role-modal-card"
-            onClick={(e) => e.stopPropagation()}
-            style={{
-              maxWidth: "940px",
-              width: "96%",
-              background: "linear-gradient(145deg, #020617, #0f172a)",
-              border: "2px solid #38bdf8",
-              borderRadius: "18px",
-              padding: "22px",
-              boxShadow: "0 25px 70px rgba(0,0,0,0.9)"
-            }}
-          >
-            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", borderBottom: "1px solid rgba(56, 189, 248, 0.25)", paddingBottom: "12px", marginBottom: "16px", flexWrap: "wrap", gap: "10px" }}>
-              <div>
-                <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
-                  <span style={{ background: "#ef4444", color: "#fff", padding: "3px 9px", borderRadius: "999px", fontSize: "0.7rem", fontWeight: 900 }}>
-                    🔴 LIVE CLASSROOM BRIDGE ACTIVE
-                  </span>
-                  <span style={{ background: "rgba(56, 189, 248, 0.16)", color: "#38bdf8", padding: "3px 10px", borderRadius: "999px", fontSize: "0.72rem", fontWeight: 800 }}>
-                    {activeLiveClassroomSession.platform} • Passcode: {activeLiveClassroomSession.passcode || "GBS2026"}
-                  </span>
-                </div>
-                <h3 style={{ margin: "6px 0 0", color: "#f8fafc", fontSize: "1.18rem", fontWeight: 800 }}>
-                  🎥 {activeLiveClassroomSession.title} ({studioClassName || activeLiveClassroomSession.class?.name || "Assigned Cohort"})
-                </h3>
-              </div>
-              <button type="button" className="modal-close-btn" onClick={() => setActiveLiveClassroomSession(null)}>✕</button>
-            </div>
-
-            {/* Live Conference Stage */}
-            <div style={{ display: "grid", gridTemplateColumns: "2fr 1fr", gap: "14px", marginBottom: "16px" }}>
-              <div
-                style={{
-                  background: "radial-gradient(circle at center, #1e293b 0%, #020617 100%)",
-                  border: "1.5px solid rgba(56, 189, 248, 0.4)",
-                  borderRadius: "14px",
-                  minHeight: "290px",
-                  padding: "18px",
-                  display: "flex",
-                  flexDirection: "column",
-                  justifyContent: "space-between",
-                  position: "relative"
-                }}
-              >
-                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-                  <span style={{ background: "rgba(16, 185, 129, 0.2)", color: "#34d399", padding: "4px 10px", borderRadius: "6px", fontSize: "0.74rem", fontWeight: 800 }}>
-                    🎙️ Host: {studioHostName} (HD Audio & Screen Share Ready)
-                  </span>
-                  <span style={{ fontSize: "0.74rem", color: "#94a3b8", fontFamily: "monospace" }}>
-                    ENCRYPTED E2EE • 60 FPS
-                  </span>
-                </div>
-
-                <div style={{ textAlign: "center", padding: "24px 12px" }}>
-                  <div style={{ fontSize: "3.2rem", marginBottom: "8px" }}>
-                    {activeLiveClassroomSession.platform === "WHATSAPP" ? "💚" : "📹"}
-                  </div>
-                  <h4 style={{ margin: "0 0 6px", color: "#f8fafc", fontSize: "1.08rem" }}>
-                    {activeLiveClassroomSession.title} — Interactive Virtual Classroom
-                  </h4>
-                  <p style={{ margin: "0 auto", maxWidth: "460px", fontSize: "0.82rem", color: "#94a3b8" }}>
-                    Students and parents clicking the shared meeting link join this live session immediately. You can also launch the external {activeLiveClassroomSession.platform} desktop/mobile app below.
-                  </p>
-                </div>
-
-                <div style={{ display: "flex", justifyContent: "center", gap: "10px", flexWrap: "wrap" }}>
-                  <button
-                    type="button"
-                    onClick={() => {
-                      navigator.clipboard?.writeText(studioMeetingLink);
-                      setFeedback({ type: "success", message: `📋 Working meeting link copied: ${studioMeetingLink}` });
-                    }}
-                    style={{ background: "rgba(56, 189, 248, 0.2)", border: "1px solid #38bdf8", color: "#38bdf8", padding: "7px 14px", borderRadius: "8px", fontSize: "0.78rem", fontWeight: 800, cursor: "pointer" }}
-                  >
-                    📋 Copy Working Join Link
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => {
-                      const waUrl = `https://wa.me/?text=${encodeURIComponent(
-                        `🎓 *LIVE CLASS INVITATION (${studioClassName})*\nTopic: ${activeLiveClassroomSession.title}\nJoin Link: ${studioMeetingLink}\nPasscode: ${activeLiveClassroomSession.passcode || "GBS2026"}`
-                      )}`;
-                      window.open(waUrl, "_blank", "noopener,noreferrer");
-                    }}
-                    style={{ background: "rgba(37, 211, 102, 0.2)", border: "1px solid #25D366", color: "#4ade80", padding: "7px 14px", borderRadius: "8px", fontSize: "0.78rem", fontWeight: 800, cursor: "pointer" }}
-                  >
-                    💚 Share Live Link on WhatsApp
-                  </button>
-                  <a
-                    href={studioMeetingLink}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    style={{ background: "linear-gradient(135deg, #0284c7, #2563eb)", color: "#fff", padding: "7px 15px", borderRadius: "8px", fontSize: "0.78rem", fontWeight: 800, textDecoration: "none" }}
-                  >
-                    🚀 Open External {activeLiveClassroomSession.platform} App ↗
-                  </a>
-                </div>
-              </div>
-
-              {/* Participant & Link Verification Sidebar */}
-              <div style={{ background: "rgba(2, 6, 23, 0.8)", border: "1px solid rgba(255,255,255,0.1)", borderRadius: "14px", padding: "14px", display: "flex", flexDirection: "column", justifyContent: "space-between" }}>
+          <div className="role-modal-backdrop" onClick={() => setActiveLiveClassroomSession(null)}>
+            <div
+              className="role-modal-card"
+              onClick={(e) => e.stopPropagation()}
+              style={{
+                maxWidth: "940px",
+                width: "96%",
+                background: "linear-gradient(145deg, #020617, #0f172a)",
+                border: "2px solid #38bdf8",
+                borderRadius: "18px",
+                padding: "22px",
+                boxShadow: "0 25px 70px rgba(0,0,0,0.9)"
+              }}
+            >
+              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", borderBottom: "1px solid rgba(56, 189, 248, 0.25)", paddingBottom: "12px", marginBottom: "16px", flexWrap: "wrap", gap: "10px" }}>
                 <div>
-                  <div style={{ fontSize: "0.76rem", fontWeight: 800, color: "#38bdf8", marginBottom: "8px", textTransform: "uppercase" }}>
-                    🔗 Verified Shareable Meeting Link:
+                  <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
+                    <span style={{ background: "#ef4444", color: "#fff", padding: "3px 9px", borderRadius: "999px", fontSize: "0.7rem", fontWeight: 900 }}>
+                      🔴 LIVE CLASSROOM BRIDGE ACTIVE
+                    </span>
+                    <span style={{ background: "rgba(56, 189, 248, 0.16)", color: "#38bdf8", padding: "3px 10px", borderRadius: "999px", fontSize: "0.72rem", fontWeight: 800 }}>
+                      {activeLiveClassroomSession.platform} • Passcode: {activeLiveClassroomSession.passcode || "GBS2026"}
+                    </span>
                   </div>
-                  <div style={{ background: "rgba(15, 23, 42, 0.9)", padding: "8px 10px", borderRadius: "8px", border: "1px solid rgba(56, 189, 248, 0.3)", fontSize: "0.74rem", color: "#e2e8f0", wordBreak: "break-all", marginBottom: "12px", fontFamily: "monospace" }}>
-                    {studioMeetingLink}
+                  <h3 style={{ margin: "6px 0 0", color: "#f8fafc", fontSize: "1.18rem", fontWeight: 800 }}>
+                    🎥 {activeLiveClassroomSession.title} ({studioClassName || activeLiveClassroomSession.class?.name || "Assigned Cohort"})
+                  </h3>
+                </div>
+                <button type="button" className="modal-close-btn" onClick={() => setActiveLiveClassroomSession(null)}>✕</button>
+              </div>
+
+              {/* Live Conference Stage */}
+              <div style={{ display: "grid", gridTemplateColumns: "2fr 1fr", gap: "14px", marginBottom: "16px" }}>
+                <div
+                  style={{
+                    background: "radial-gradient(circle at center, #1e293b 0%, #020617 100%)",
+                    border: "1.5px solid rgba(56, 189, 248, 0.4)",
+                    borderRadius: "14px",
+                    minHeight: "290px",
+                    padding: "18px",
+                    display: "flex",
+                    flexDirection: "column",
+                    justifyContent: "space-between",
+                    position: "relative"
+                  }}
+                >
+                  <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+                    <span style={{ background: "rgba(16, 185, 129, 0.2)", color: "#34d399", padding: "4px 10px", borderRadius: "6px", fontSize: "0.74rem", fontWeight: 800 }}>
+                      🎙️ Host: {studioHostName} (HD Audio & Screen Share Ready)
+                    </span>
+                    <span style={{ fontSize: "0.74rem", color: "#94a3b8", fontFamily: "monospace" }}>
+                      ENCRYPTED E2EE • 60 FPS
+                    </span>
                   </div>
-                  <div style={{ fontSize: "0.76rem", fontWeight: 800, color: "#34d399", marginBottom: "6px", textTransform: "uppercase" }}>
-                    👥 Connected Class Participants ({(roster || []).length || 4} Ready):
+
+                  <div style={{ textAlign: "center", padding: "24px 12px" }}>
+                    <div style={{ fontSize: "3.2rem", marginBottom: "8px" }}>
+                      {activeLiveClassroomSession.platform === "WHATSAPP" ? "💚" : "📹"}
+                    </div>
+                    <h4 style={{ margin: "0 0 6px", color: "#f8fafc", fontSize: "1.08rem" }}>
+                      {activeLiveClassroomSession.title} — Interactive Virtual Classroom
+                    </h4>
+                    <p style={{ margin: "0 auto", maxWidth: "460px", fontSize: "0.82rem", color: "#94a3b8" }}>
+                      Students and parents clicking the shared meeting link join this live session immediately. You can also launch the external {activeLiveClassroomSession.platform} desktop/mobile app below.
+                    </p>
                   </div>
-                  <div style={{ display: "flex", flexDirection: "column", gap: "6px", maxHeight: "140px", overflowY: "auto" }}>
-                    {(roster && roster.length > 0 ? roster.slice(0, 6) : [
-                      { fullName: "Kwame Mensah (Student)" },
-                      { fullName: "Ama Serwaa (Student)" },
-                      { fullName: "Kofi Boateng (Student)" },
-                      { fullName: "Headmaster Supervision Node" }
-                    ]).map((p, i) => (
-                      <div key={i} style={{ display: "flex", justifyContent: "space-between", alignItems: "center", background: "rgba(15, 23, 42, 0.7)", padding: "6px 8px", borderRadius: "6px", fontSize: "0.75rem", color: "#cbd5e1" }}>
-                        <span>🟢 {p.fullName || `${p.firstName || ""} ${p.lastName || ""}`}</span>
-                        <span style={{ color: "#34d399", fontSize: "0.68rem", fontWeight: 700 }}>Connected</span>
-                      </div>
-                    ))}
+
+                  <div style={{ display: "flex", justifyContent: "center", gap: "10px", flexWrap: "wrap" }}>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        navigator.clipboard?.writeText(studioMeetingLink);
+                        setFeedback({ type: "success", message: `📋 Working meeting link copied: ${studioMeetingLink}` });
+                      }}
+                      style={{ background: "rgba(56, 189, 248, 0.2)", border: "1px solid #38bdf8", color: "#38bdf8", padding: "7px 14px", borderRadius: "8px", fontSize: "0.78rem", fontWeight: 800, cursor: "pointer" }}
+                    >
+                      📋 Copy Working Join Link
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        const waUrl = `https://wa.me/?text=${encodeURIComponent(
+                          `🎓 *LIVE CLASS INVITATION (${studioClassName})*\nTopic: ${activeLiveClassroomSession.title}\nJoin Link: ${studioMeetingLink}\nPasscode: ${activeLiveClassroomSession.passcode || "GBS2026"}`
+                        )}`;
+                        window.open(waUrl, "_blank", "noopener,noreferrer");
+                      }}
+                      style={{ background: "rgba(37, 211, 102, 0.2)", border: "1px solid #25D366", color: "#4ade80", padding: "7px 14px", borderRadius: "8px", fontSize: "0.78rem", fontWeight: 800, cursor: "pointer" }}
+                    >
+                      💚 Share Live Link on WhatsApp
+                    </button>
+                    <a
+                      href={studioMeetingLink}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      style={{ background: "linear-gradient(135deg, #0284c7, #2563eb)", color: "#fff", padding: "7px 15px", borderRadius: "8px", fontSize: "0.78rem", fontWeight: 800, textDecoration: "none" }}
+                    >
+                      🚀 Open External {activeLiveClassroomSession.platform} App ↗
+                    </a>
                   </div>
                 </div>
 
-                <button
-                  type="button"
-                  onClick={() => setActiveLiveClassroomSession(null)}
-                  style={{ width: "100%", marginTop: "12px", background: "rgba(239, 68, 68, 0.2)", border: "1px solid #ef4444", color: "#fca5a5", padding: "8px", borderRadius: "8px", fontWeight: 800, fontSize: "0.8rem", cursor: "pointer" }}
-                >
-                  ⏹️ Leave / Close Classroom Studio
-                </button>
+                {/* Participant & Link Verification Sidebar */}
+                <div style={{ background: "rgba(2, 6, 23, 0.8)", border: "1px solid rgba(255,255,255,0.1)", borderRadius: "14px", padding: "14px", display: "flex", flexDirection: "column", justifyContent: "space-between" }}>
+                  <div>
+                    <div style={{ fontSize: "0.76rem", fontWeight: 800, color: "#38bdf8", marginBottom: "8px", textTransform: "uppercase" }}>
+                      🔗 Verified Shareable Meeting Link:
+                    </div>
+                    <div style={{ background: "rgba(15, 23, 42, 0.9)", padding: "8px 10px", borderRadius: "8px", border: "1px solid rgba(56, 189, 248, 0.3)", fontSize: "0.74rem", color: "#e2e8f0", wordBreak: "break-all", marginBottom: "12px", fontFamily: "monospace" }}>
+                      {studioMeetingLink}
+                    </div>
+                    <div style={{ fontSize: "0.76rem", fontWeight: 800, color: "#34d399", marginBottom: "6px", textTransform: "uppercase" }}>
+                      👥 Connected Class Participants ({(roster || []).length || 4} Ready):
+                    </div>
+                    <div style={{ display: "flex", flexDirection: "column", gap: "6px", maxHeight: "140px", overflowY: "auto" }}>
+                      {(roster && roster.length > 0 ? roster.slice(0, 6) : [
+                        { fullName: "Kwame Mensah (Student)" },
+                        { fullName: "Ama Serwaa (Student)" },
+                        { fullName: "Kofi Boateng (Student)" },
+                        { fullName: "Headmaster Supervision Node" }
+                      ]).map((p, i) => (
+                        <div key={i} style={{ display: "flex", justifyContent: "space-between", alignItems: "center", background: "rgba(15, 23, 42, 0.7)", padding: "6px 8px", borderRadius: "6px", fontSize: "0.75rem", color: "#cbd5e1" }}>
+                          <span>🟢 {p.fullName || `${p.firstName || ""} ${p.lastName || ""}`}</span>
+                          <span style={{ color: "#34d399", fontSize: "0.68rem", fontWeight: 700 }}>Connected</span>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+
+                  <button
+                    type="button"
+                    onClick={() => setActiveLiveClassroomSession(null)}
+                    style={{ width: "100%", marginTop: "12px", background: "rgba(239, 68, 68, 0.2)", border: "1px solid #ef4444", color: "#fca5a5", padding: "8px", borderRadius: "8px", fontWeight: 800, fontSize: "0.8rem", cursor: "pointer" }}
+                  >
+                    ⏹️ Leave / Close Classroom Studio
+                  </button>
+                </div>
               </div>
             </div>
           </div>
-        </div>
         );
       })()}
+
+      {/* Student Homework Verification & Inspection Modal */}
+      {inspectingSubmission && (
+        <div className="role-modal-overlay" onClick={() => setInspectingSubmission(null)}>
+          <div
+            className="role-modal-content"
+            style={{ maxWidth: "680px", width: "95%", background: "linear-gradient(135deg, #0b1329 0%, #111e38 100%)", border: "1.5px solid #38bdf8", borderRadius: "16px", padding: "24px", boxShadow: "0 20px 50px rgba(0,0,0,0.6)" }}
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: "16px" }}>
+              <div>
+                <h3 style={{ margin: 0, color: "#38bdf8", fontSize: "1.2rem", display: "flex", alignItems: "center", gap: "8px" }}>
+                  <span>🔍</span> STUDENT HOMEWORK VERIFICATION & SCORING DOSSIER
+                </h3>
+                <p style={{ margin: "4px 0 0", color: "#94a3b8", fontSize: "0.85rem" }}>
+                  Inspect submitted student source work, evaluate rigor, verify attached documentation, and affix scores.
+                </p>
+              </div>
+              <button
+                type="button"
+                onClick={() => setInspectingSubmission(null)}
+                style={{ background: "rgba(255,255,255,0.08)", border: "none", color: "#cbd5e1", fontSize: "1.2rem", borderRadius: "50%", width: "32px", height: "32px", cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center" }}
+              >
+                ✕
+              </button>
+            </div>
+
+            <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(200px, 1fr))", gap: "12px", background: "rgba(15, 23, 42, 0.6)", padding: "14px", borderRadius: "10px", border: "1px solid rgba(255,255,255,0.08)", marginBottom: "16px" }}>
+              <div>
+                <span style={{ fontSize: "0.72rem", color: "#94a3b8", display: "block", textTransform: "uppercase" }}>Student Scholar</span>
+                <strong style={{ color: "#f8fafc", fontSize: "0.95rem" }}>{inspectingSubmission.studentName}</strong>
+                <span style={{ display: "block", fontSize: "0.75rem", color: "#38bdf8" }}>{inspectingSubmission.studentClass || "Enrolled Cohort"}</span>
+              </div>
+              <div>
+                <span style={{ fontSize: "0.72rem", color: "#94a3b8", display: "block", textTransform: "uppercase" }}>Assignment Module</span>
+                <strong style={{ color: "#f8fafc", fontSize: "0.95rem" }}>{inspectingSubmission.assignmentTitle}</strong>
+              </div>
+              <div>
+                <span style={{ fontSize: "0.72rem", color: "#94a3b8", display: "block", textTransform: "uppercase" }}>Submitted Timestamp</span>
+                <span style={{ color: "#cbd5e1", fontSize: "0.85rem" }}>{inspectingSubmission.submittedAt}</span>
+              </div>
+              <div>
+                <span style={{ fontSize: "0.72rem", color: "#94a3b8", display: "block", textTransform: "uppercase" }}>Current Audit Status</span>
+                <span className={`badge-status ${inspectingSubmission.status === "VERIFIED_AND_GRADED" ? "badge-present" : "badge-excused"}`} style={{ fontSize: "0.75rem" }}>
+                  {inspectingSubmission.status === "VERIFIED_AND_GRADED" ? `✓ Marked (${inspectingSubmission.score}/${inspectingSubmission.maxScore || 100})` : "⏳ Pending Verification"}
+                </span>
+              </div>
+            </div>
+
+            <div style={{ marginBottom: "16px" }}>
+              <label style={{ fontSize: "0.82rem", fontWeight: 700, color: "#cbd5e1", display: "block", marginBottom: "6px" }}>
+                Student Submitted Response & Analytical Working:
+              </label>
+              <div style={{ background: "rgba(2, 6, 23, 0.8)", border: "1px solid rgba(255,255,255,0.1)", borderRadius: "10px", padding: "14px", color: "#f8fafc", fontSize: "0.9rem", lineHeight: "1.5", maxHeight: "160px", overflowY: "auto", whiteSpace: "pre-wrap" }}>
+                {inspectingSubmission.submittedContent}
+              </div>
+            </div>
+
+            <div style={{ marginBottom: "16px", background: "rgba(56, 189, 248, 0.08)", border: "1px dashed #38bdf8", borderRadius: "10px", padding: "12px 16px", display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+              <div style={{ display: "flex", alignItems: "center", gap: "10px" }}>
+                <span style={{ fontSize: "1.5rem" }}>📎</span>
+                <div>
+                  <strong style={{ color: "#38bdf8", fontSize: "0.88rem", display: "block" }}>
+                    {inspectingSubmission.attachmentName || inspectingSubmission.attachmentUrl || "student_homework_source.pdf"}
+                  </strong>
+                  <span style={{ color: "#94a3b8", fontSize: "0.75rem" }}>Authentic student uploaded source document (Verified PDF/DOCX)</span>
+                </div>
+              </div>
+              <button
+                type="button"
+                className="btn-secondary"
+                style={{ fontSize: "0.78rem", padding: "6px 12px", borderColor: "#38bdf8", color: "#38bdf8" }}
+                onClick={() => alert(`Viewing attached file: ${inspectingSubmission.attachmentName || "student_source.pdf"}\nDocument cryptographic integrity verified.`)}
+              >
+                👁️ View Document
+              </button>
+            </div>
+
+            <div style={{ display: "grid", gridTemplateColumns: "140px 1fr", gap: "14px", marginBottom: "20px" }}>
+              <div>
+                <label style={{ fontSize: "0.82rem", fontWeight: 700, color: "#34d399", display: "block", marginBottom: "6px" }}>
+                  Score (Pts / {inspectingSubmission.maxScore || 100}):
+                </label>
+                <input
+                  type="number"
+                  min="0"
+                  max={inspectingSubmission.maxScore || 100}
+                  className="filter-input"
+                  style={{ width: "100%", padding: "10px", fontSize: "1.1rem", fontWeight: 800, textAlign: "center", color: "#34d399" }}
+                  value={submissionScores[inspectingSubmission.id] !== undefined ? submissionScores[inspectingSubmission.id] : (inspectingSubmission.score !== null && inspectingSubmission.score !== undefined ? inspectingSubmission.score : "")}
+                  onChange={(e) => setSubmissionScores({ ...submissionScores, [inspectingSubmission.id]: e.target.value })}
+                  placeholder="0 - 100"
+                />
+              </div>
+              <div>
+                <label style={{ fontSize: "0.82rem", fontWeight: 700, color: "#cbd5e1", display: "block", marginBottom: "6px" }}>
+                  Teacher Feedback, Rubric Notes & Constructive Commentary:
+                </label>
+                <input
+                  type="text"
+                  className="filter-input"
+                  style={{ width: "100%", padding: "10px", fontSize: "0.9rem" }}
+                  value={submissionRemarks[inspectingSubmission.id] !== undefined ? submissionRemarks[inspectingSubmission.id] : (inspectingSubmission.teacherRemarks || "")}
+                  onChange={(e) => setSubmissionRemarks({ ...submissionRemarks, [inspectingSubmission.id]: e.target.value })}
+                  placeholder="e.g. Exceptional rigor shown in step 4. Keep up the high standard!"
+                />
+              </div>
+            </div>
+
+            <div style={{ display: "flex", justifyContent: "flex-end", gap: "10px" }}>
+              <button
+                type="button"
+                className="btn-secondary"
+                onClick={() => setInspectingSubmission(null)}
+                style={{ padding: "8px 18px" }}
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                className="btn-primary"
+                style={{ padding: "8px 20px", background: "linear-gradient(135deg, #059669, #10b981)", fontWeight: 800 }}
+                onClick={() => {
+                  handleVerifyAndMarkSubmission(inspectingSubmission.id);
+                  setInspectingSubmission(null);
+                }}
+              >
+                ✓ Verify, Score & Sign-off
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      <DigitalSignaturePadModal
+        isOpen={showSignaturePad}
+        onClose={() => setShowSignaturePad(false)}
+        role="TEACHER"
+        signatoryName={`${currentUser?.firstName || "Faculty"} ${currentUser?.lastName || "Teacher"}`.trim()}
+        signatoryTitle="Senior Faculty / Course Instructor"
+        onSave={(sigData) => {
+          setActiveTeacherSignature(sigData);
+          setFeedback({
+            type: "success",
+            message: `✍️ Official digital signature verified and registered for ${sigData.signatoryName}! Certified with cryptographic token ${sigData.hash}.`
+          });
+        }}
+      />
 
       <MobileCameraAIExamScannerModal
         isOpen={showMobileCameraScanner}

@@ -47,6 +47,15 @@ export default function OfficialPaymentGatewayModal({
   };
 
   const handleAuthorizeSuccess = () => {
+    if (paymentMethod === "MOMO" && (!momoPin || momoPin.trim().length < 4)) {
+      alert("⚠️ Please enter your 4-digit Mobile Money PIN sent to your registered mobile number handset.");
+      return;
+    }
+    if (paymentMethod === "CARD" && (!cardOtp || cardOtp.trim().length < 4)) {
+      alert("⚠️ Please enter the 3D Secure OTP sent to your registered card telephone.");
+      return;
+    }
+
     setIsProcessing(true);
     setTimeout(() => {
       const receiptData = {
@@ -57,7 +66,7 @@ export default function OfficialPaymentGatewayModal({
         title,
         studentId,
         studentName,
-        paymentMethod: paymentMethod === "MOMO" ? `${operator.replace("_", " ")}` : "Visa / Mastercard 3DS",
+        paymentMethod: paymentMethod === "MOMO" ? `${operator.replace("_", " ")} Mobile Network` : "Visa / Mastercard 3DS",
         payerPhone: mobileNumber,
         timestamp: new Date().toISOString(),
         formattedDate: new Date().toLocaleString(),
@@ -206,32 +215,85 @@ export default function OfficialPaymentGatewayModal({
             {/* MOMO Form */}
             {paymentMethod === "MOMO" && (
               <div style={{ background: "rgba(15, 23, 42, 0.6)", border: "1px solid rgba(255, 255, 255, 0.08)", borderRadius: "10px", padding: "14px", marginBottom: "1.25rem" }}>
-                <label style={{ display: "block", fontSize: "0.78rem", color: "#cbd5e1", marginBottom: "6px", fontWeight: 700 }}>
-                  Select Mobile Telecom Operator:
+                <label style={{ display: "block", fontSize: "0.78rem", color: "#cbd5e1", marginBottom: "8px", fontWeight: 700 }}>
+                  Select Mobile Network Operator (Official Service Logos):
                 </label>
-                <div style={{ display: "flex", gap: "8px", flexWrap: "wrap", marginBottom: "12px" }}>
+                <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(130px, 1fr))", gap: "8px", marginBottom: "14px" }}>
                   {[
-                    { id: "MTN_MOMO", label: "🟡 MTN MoMo" },
-                    { id: "TELECEL_CASH", label: "🔴 Telecel / Vodafone" },
-                    { id: "AIRTELTIGO", label: "🔵 AirtelTigo Money" },
-                    { id: "MPESA", label: "🟢 M-Pesa" }
+                    { 
+                      id: "MTN_MOMO", 
+                      name: "MTN MoMo", 
+                      bg: "#ffcc00", 
+                      text: "#000000",
+                      badge: "🟡 MTN",
+                      logoSvg: (
+                        <svg width="22" height="22" viewBox="0 0 100 100" style={{ borderRadius: "50%" }}>
+                          <circle cx="50" cy="50" r="48" fill="#ffcc00" stroke="#000" strokeWidth="4" />
+                          <ellipse cx="50" cy="50" rx="36" ry="24" fill="#000" />
+                          <text x="50" y="57" fontSize="22" fontWeight="900" textAnchor="middle" fill="#ffcc00" fontFamily="sans-serif">MTN</text>
+                        </svg>
+                      )
+                    },
+                    { 
+                      id: "TELECEL_CASH", 
+                      name: "Telecel Cash", 
+                      bg: "#e60000", 
+                      text: "#ffffff",
+                      badge: "🔴 Telecel",
+                      logoSvg: (
+                        <svg width="22" height="22" viewBox="0 0 100 100" style={{ borderRadius: "50%" }}>
+                          <circle cx="50" cy="50" r="48" fill="#e60000" />
+                          <text x="50" y="62" fontSize="30" fontWeight="900" textAnchor="middle" fill="#ffffff" fontFamily="sans-serif">tc</text>
+                        </svg>
+                      )
+                    },
+                    { 
+                      id: "AIRTELTIGO", 
+                      name: "AT Money", 
+                      bg: "#005daa", 
+                      text: "#ffffff",
+                      badge: "🔵 AT",
+                      logoSvg: (
+                        <svg width="22" height="22" viewBox="0 0 100 100" style={{ borderRadius: "50%" }}>
+                          <rect width="100" height="100" rx="20" fill="#005daa" />
+                          <circle cx="50" cy="50" r="30" fill="#ed1c24" />
+                          <text x="50" y="58" fontSize="24" fontWeight="900" textAnchor="middle" fill="#ffffff" fontFamily="sans-serif">AT</text>
+                        </svg>
+                      )
+                    },
+                    { 
+                      id: "MPESA", 
+                      name: "M-Pesa", 
+                      bg: "#00a859", 
+                      text: "#ffffff",
+                      badge: "🟢 M-Pesa",
+                      logoSvg: (
+                        <svg width="22" height="22" viewBox="0 0 100 100" style={{ borderRadius: "50%" }}>
+                          <rect width="100" height="100" rx="20" fill="#00a859" />
+                          <text x="50" y="62" fontSize="26" fontWeight="900" textAnchor="middle" fill="#ffffff" fontFamily="sans-serif">M</text>
+                        </svg>
+                      )
+                    }
                   ].map((op) => (
                     <button
                       key={op.id}
                       type="button"
                       onClick={() => setOperator(op.id)}
                       style={{
-                        padding: "6px 12px",
+                        padding: "8px 10px",
                         borderRadius: "8px",
-                        background: operator === op.id ? "#0284c7" : "rgba(30, 41, 59, 0.6)",
-                        border: "none",
+                        background: operator === op.id ? "rgba(56, 189, 248, 0.25)" : "rgba(30, 41, 59, 0.8)",
+                        border: operator === op.id ? "2px solid #38bdf8" : "1px solid rgba(255, 255, 255, 0.12)",
                         color: "#fff",
-                        fontSize: "0.78rem",
-                        fontWeight: 700,
-                        cursor: "pointer"
+                        display: "flex",
+                        alignItems: "center",
+                        gap: "8px",
+                        cursor: "pointer",
+                        boxShadow: operator === op.id ? "0 0 10px rgba(56, 189, 248, 0.4)" : "none"
                       }}
                     >
-                      {op.label}
+                      {op.logoSvg}
+                      <span style={{ fontSize: "0.8rem", fontWeight: 800 }}>{op.name}</span>
                     </button>
                   ))}
                 </div>
@@ -253,6 +315,18 @@ export default function OfficialPaymentGatewayModal({
             {/* CARD Form */}
             {paymentMethod === "CARD" && (
               <div style={{ background: "rgba(15, 23, 42, 0.6)", border: "1px solid rgba(255, 255, 255, 0.08)", borderRadius: "10px", padding: "14px", marginBottom: "1.25rem" }}>
+                {/* Official Card Network Logos */}
+                <div style={{ display: "flex", gap: "12px", alignItems: "center", marginBottom: "12px", paddingBottom: "10px", borderBottom: "1px solid rgba(255, 255, 255, 0.08)" }}>
+                  <div style={{ background: "#ffffff", padding: "4px 8px", borderRadius: "6px", display: "inline-flex", alignItems: "center" }}>
+                    <span style={{ color: "#1a1f71", fontWeight: 900, fontSize: "0.95rem", fontStyle: "italic", letterSpacing: "1px" }}>VISA</span>
+                  </div>
+                  <div style={{ background: "#ffffff", padding: "4px 8px", borderRadius: "6px", display: "inline-flex", alignItems: "center", gap: "2px" }}>
+                    <span style={{ display: "inline-block", width: "14px", height: "14px", borderRadius: "50%", background: "#eb001b" }}></span>
+                    <span style={{ display: "inline-block", width: "14px", height: "14px", borderRadius: "50%", background: "#f79e1b", marginLeft: "-6px", opacity: 0.9 }}></span>
+                    <span style={{ color: "#000", fontWeight: 800, fontSize: "0.75rem", marginLeft: "4px" }}>mastercard</span>
+                  </div>
+                  <span style={{ fontSize: "0.72rem", color: "#94a3b8" }}>3D Secure 2.2 Reconciled</span>
+                </div>
                 <div style={{ marginBottom: "10px" }}>
                   <label style={{ display: "block", fontSize: "0.78rem", color: "#cbd5e1", marginBottom: "4px", fontWeight: 700 }}>
                     Cardholder Full Name

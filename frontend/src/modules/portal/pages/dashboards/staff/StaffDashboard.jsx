@@ -29,6 +29,21 @@ export default function StaffDashboard() {
     description: ""
   });
 
+  // Inventory Depot State
+  const [inventoryItems, setInventoryItems] = useState([
+    { id: 1, item_code: "INV-SCI-101", name: "Grade 11 Chemistry Reagents Set", category: "LAB_SUPPLIES", quantity_on_hand: 28, reorder_level: 10, unit: "KITS", location: "Science Block B - Room 2", status: "IN_STOCK", unit_price: 65.0 },
+    { id: 2, item_code: "INV-EXM-204", name: "Official WASSCE Continuous Assessment Answer Booklets", category: "STATIONERY", quantity_on_hand: 450, reorder_level: 100, unit: "PACKS", location: "Central Academic Archives Depot", status: "IN_STOCK", unit_price: 18.5 },
+    { id: 3, item_code: "INV-ICT-302", name: "Cat6 Shielded High-Speed Ethernet Cables (50m)", category: "IT_EQUIPMENT", quantity_on_hand: 14, reorder_level: 8, unit: "REELS", location: "Server Room Rack Bay 1", status: "IN_STOCK", unit_price: 85.0 },
+    { id: 4, item_code: "INV-MED-401", name: "Campus Infirmary First Aid Emergency Refill Packs", category: "MEDICAL_FIRST_AID", quantity_on_hand: 6, reorder_level: 10, unit: "BOXES", location: "Campus Clinic Dispensary", status: "LOW_STOCK", unit_price: 120.0 },
+    { id: 5, item_code: "INV-FAC-505", name: "Heavy-Duty LED Classroom Tube Bulbs (40W)", category: "ELECTRICAL", quantity_on_hand: 32, reorder_level: 15, unit: "UNITS", location: "Facility Workshop Locker", status: "IN_STOCK", unit_price: 14.0 }
+  ]);
+  const [newRequisitionItem, setNewRequisitionItem] = useState({ itemName: "", quantity: 1, department: "FACILITY_OPS", urgency: "MEDIUM", notes: "" });
+  const [showReqForm, setShowReqForm] = useState(false);
+
+  // New Operational Task Form State
+  const [showNewTaskForm, setShowNewTaskForm] = useState(false);
+  const [newTaskInput, setNewTaskInput] = useState({ title: "", category: "DAILY_INSPECTION", priority: "HIGH", assignedUnit: "Morning Patrol Team", location: "Main Gate & Assembly Grounds" });
+
   // Incident Reporting Form
   const [incident, setIncident] = useState({
     title: "",
@@ -161,6 +176,53 @@ export default function StaffDashboard() {
     }
   };
 
+  const handleCreateNewTask = (e) => {
+    e.preventDefault();
+    if (!newTaskInput.title) return;
+    const taskObj = {
+      id: Date.now(),
+      title: newTaskInput.title,
+      ticket_number: `DUTY-${Date.now().toString().slice(-5)}`,
+      category: newTaskInput.category,
+      priority: newTaskInput.priority,
+      status: "PENDING",
+      location: newTaskInput.location,
+      assigned_staff: newTaskInput.assignedUnit
+    };
+    setTasks((prev) => [taskObj, ...prev]);
+    setFeedback({ type: "success", message: `✓ Operational Task "${taskObj.title}" successfully added to Campus Roster!` });
+    setNewTaskInput({ title: "", category: "DAILY_INSPECTION", priority: "HIGH", assignedUnit: "Morning Patrol Team", location: "Main Gate & Assembly Grounds" });
+    setShowNewTaskForm(false);
+  };
+
+  const handleQuickRestock = (itemId, addQty) => {
+    setInventoryItems((prev) =>
+      prev.map((it) => {
+        if (it.id === itemId) {
+          const newQty = it.quantity_on_hand + addQty;
+          return {
+            ...it,
+            quantity_on_hand: newQty,
+            status: newQty <= it.reorder_level ? "LOW_STOCK" : "IN_STOCK"
+          };
+        }
+        return it;
+      })
+    );
+    setFeedback({ type: "success", message: `✓ Stock replenishment recorded! Updated on hand balance.` });
+  };
+
+  const handleRequisitionSubmit = (e) => {
+    e.preventDefault();
+    if (!newRequisitionItem.itemName) return;
+    setFeedback({
+      type: "success",
+      message: `✓ Requisition for "${newRequisitionItem.itemName}" (${newRequisitionItem.quantity} units) logged and forwarded to Bursar & Procurement Desk!`
+    });
+    setNewRequisitionItem({ itemName: "", quantity: 1, department: "FACILITY_OPS", urgency: "MEDIUM", notes: "" });
+    setShowReqForm(false);
+  };
+
   const handleLogout = () => {
     localStorage.removeItem("gbs_token");
     localStorage.removeItem("gbs_user");
@@ -215,9 +277,14 @@ export default function StaffDashboard() {
             <Link to="/cctv" className="role-action-btn">
               📹 CCTV Security
             </Link>
-            <Link to="/inventory" className="role-action-btn">
+            <button
+              type="button"
+              className={`role-action-btn ${activeTab === "inventory" ? "active" : ""}`}
+              onClick={() => setActiveTab("inventory")}
+              style={{ cursor: "pointer", background: activeTab === "inventory" ? "rgba(16, 185, 129, 0.3)" : undefined }}
+            >
               📦 Inventory Depot
-            </Link>
+            </button>
             <Link to="/transport" className="role-action-btn">
               🚌 Transport Fleet
             </Link>
@@ -370,6 +437,13 @@ export default function StaffDashboard() {
             </button>
             <button
               type="button"
+              className={`role-tab-btn ${activeTab === "inventory" ? "active" : ""}`}
+              onClick={() => setActiveTab("inventory")}
+            >
+              📦 Inventory Depot & Supplies
+            </button>
+            <button
+              type="button"
               className={`role-tab-btn ${activeTab === "admissions" ? "active" : ""}`}
               onClick={() => setActiveTab("admissions")}
             >
@@ -399,7 +473,60 @@ export default function StaffDashboard() {
                   <h2><span>📌</span> CAMPUS OPERATIONAL ROSTER & TASKS</h2>
                   <p>Daily facility duties, inspection routines, and logistical tasks</p>
                 </div>
+                <button
+                  type="button"
+                  className="btn-primary"
+                  onClick={() => setShowNewTaskForm(!showNewTaskForm)}
+                  style={{ background: "linear-gradient(135deg, #0284c7, #0369a1)", display: "inline-flex", alignItems: "center", gap: "6px" }}
+                >
+                  {showNewTaskForm ? "✕ Cancel" : "➕ Log Shift Duty / Task"}
+                </button>
               </div>
+
+              {showNewTaskForm && (
+                <form onSubmit={handleCreateNewTask} style={{ background: "rgba(15, 23, 42, 0.7)", border: "1px solid rgba(56, 189, 248, 0.3)", borderRadius: "10px", padding: "16px", marginBottom: "16px" }}>
+                  <h4 style={{ margin: "0 0 10px", color: "#38bdf8" }}>Add Operational Shift Task to Campus Roster</h4>
+                  <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(200px, 1fr))", gap: "10px", marginBottom: "10px" }}>
+                    <input
+                      type="text"
+                      required
+                      placeholder="Task Title (e.g. Morning Perimeter & Lock Inspection)"
+                      className="filter-input"
+                      value={newTaskInput.title}
+                      onChange={(e) => setNewTaskInput({ ...newTaskInput, title: e.target.value })}
+                    />
+                    <select
+                      className="filter-select"
+                      value={newTaskInput.category}
+                      onChange={(e) => setNewTaskInput({ ...newTaskInput, category: e.target.value })}
+                    >
+                      <option value="DAILY_INSPECTION">Daily Facility Inspection</option>
+                      <option value="GATE_DUTY">Campus Gate Security Duty</option>
+                      <option value="CLEANING_SANITATION">Hygiene & Sanitation Check</option>
+                      <option value="LOGISTICS_TRANSPORT">Fleet & Transport Logistics</option>
+                    </select>
+                    <select
+                      className="filter-select"
+                      value={newTaskInput.priority}
+                      onChange={(e) => setNewTaskInput({ ...newTaskInput, priority: e.target.value })}
+                    >
+                      <option value="HIGH">High Priority</option>
+                      <option value="NORMAL">Normal Priority</option>
+                      <option value="URGENT">Urgent Escalation</option>
+                    </select>
+                    <input
+                      type="text"
+                      placeholder="Location / Zone"
+                      className="filter-input"
+                      value={newTaskInput.location}
+                      onChange={(e) => setNewTaskInput({ ...newTaskInput, location: e.target.value })}
+                    />
+                  </div>
+                  <button type="submit" className="btn-primary" style={{ background: "#10b981", padding: "6px 14px", fontWeight: 700 }}>
+                    💾 Save to Campus Roster
+                  </button>
+                </form>
+              )}
 
               <div className="role-table-responsive">
                 <table className="role-table">
@@ -649,6 +776,159 @@ export default function StaffDashboard() {
                   🚨 Escalate Emergency Alert
                 </button>
               </form>
+            </div>
+          )}
+
+          {/* TAB 5: INVENTORY DEPOT & SUPPLIES (FIXED: NEVER EMPTY BLANK SCREEN) */}
+          {activeTab === "inventory" && (
+            <div className="role-workspace-card">
+              <div className="workspace-title-row">
+                <div>
+                  <h2><span>📦</span> CAMPUS INVENTORY DEPOT & SUPPLY CHAIN</h2>
+                  <p>Real-time campus supplies, laboratory reagents, stationary depot, and stock replenishment</p>
+                </div>
+                <div style={{ display: "flex", gap: "8px", flexWrap: "wrap" }}>
+                  <button
+                    type="button"
+                    className="btn-primary"
+                    onClick={() => setShowReqForm(!showReqForm)}
+                    style={{ background: "linear-gradient(135deg, #10b981, #059669)", display: "inline-flex", alignItems: "center", gap: "6px" }}
+                  >
+                    {showReqForm ? "✕ Cancel" : "➕ Request Supplies / Requisition"}
+                  </button>
+                  <Link
+                    to="/inventory"
+                    className="btn-secondary"
+                    style={{ borderColor: "#38bdf8", color: "#38bdf8", display: "inline-flex", alignItems: "center", gap: "6px" }}
+                  >
+                    🔍 Open Full Supply Hub
+                  </Link>
+                </div>
+              </div>
+
+              {/* KPI Mini-HUD */}
+              <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(180px, 1fr))", gap: "12px", marginBottom: "16px" }}>
+                <div style={{ background: "rgba(15, 23, 42, 0.7)", border: "1px solid rgba(56, 189, 248, 0.3)", borderRadius: "10px", padding: "12px" }}>
+                  <span style={{ fontSize: "0.72rem", color: "#94a3b8", display: "block" }}>TOTAL TRACKED SKUs</span>
+                  <strong style={{ fontSize: "1.3rem", color: "#38bdf8" }}>{inventoryItems.length} Products</strong>
+                </div>
+                <div style={{ background: "rgba(15, 23, 42, 0.7)", border: "1px solid rgba(16, 185, 129, 0.3)", borderRadius: "10px", padding: "12px" }}>
+                  <span style={{ fontSize: "0.72rem", color: "#94a3b8", display: "block" }}>TOTAL STOCK UNITS</span>
+                  <strong style={{ fontSize: "1.3rem", color: "#34d399" }}>
+                    {inventoryItems.reduce((acc, it) => acc + (it.quantity_on_hand || 0), 0)} Units
+                  </strong>
+                </div>
+                <div style={{ background: "rgba(15, 23, 42, 0.7)", border: "1px solid rgba(245, 158, 11, 0.3)", borderRadius: "10px", padding: "12px" }}>
+                  <span style={{ fontSize: "0.72rem", color: "#94a3b8", display: "block" }}>LOW STOCK ALERTS</span>
+                  <strong style={{ fontSize: "1.3rem", color: "#fbbf24" }}>
+                    {inventoryItems.filter((it) => it.status === "LOW_STOCK").length} Items
+                  </strong>
+                </div>
+                <div style={{ background: "rgba(15, 23, 42, 0.7)", border: "1px solid rgba(139, 92, 246, 0.3)", borderRadius: "10px", padding: "12px" }}>
+                  <span style={{ fontSize: "0.72rem", color: "#94a3b8", display: "block" }}>VALUATION</span>
+                  <strong style={{ fontSize: "1.3rem", color: "#c084fc" }}>
+                    ${inventoryItems.reduce((acc, it) => acc + ((it.quantity_on_hand || 0) * (it.unit_price || 0)), 0).toFixed(2)}
+                  </strong>
+                </div>
+              </div>
+
+              {/* Requisition Form */}
+              {showReqForm && (
+                <form onSubmit={handleRequisitionSubmit} style={{ background: "rgba(15, 23, 42, 0.8)", border: "1px solid rgba(16, 185, 129, 0.4)", borderRadius: "10px", padding: "16px", marginBottom: "16px" }}>
+                  <h4 style={{ margin: "0 0 10px", color: "#34d399" }}>Submit Supply Requisition to Procurement</h4>
+                  <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(200px, 1fr))", gap: "10px", marginBottom: "10px" }}>
+                    <input
+                      type="text"
+                      required
+                      placeholder="Item Name / Requisition Detail"
+                      className="filter-input"
+                      value={newRequisitionItem.itemName}
+                      onChange={(e) => setNewRequisitionItem({ ...newRequisitionItem, itemName: e.target.value })}
+                    />
+                    <input
+                      type="number"
+                      min="1"
+                      placeholder="Quantity"
+                      className="filter-input"
+                      value={newRequisitionItem.quantity}
+                      onChange={(e) => setNewRequisitionItem({ ...newRequisitionItem, quantity: parseInt(e.target.value, 10) || 1 })}
+                    />
+                    <select
+                      className="filter-select"
+                      value={newRequisitionItem.urgency}
+                      onChange={(e) => setNewRequisitionItem({ ...newRequisitionItem, urgency: e.target.value })}
+                    >
+                      <option value="LOW">Low Urgency (Routine Stock)</option>
+                      <option value="MEDIUM">Medium Urgency</option>
+                      <option value="HIGH">High Urgency (Mid-Term Exams / Lab)</option>
+                    </select>
+                  </div>
+                  <button type="submit" className="btn-primary" style={{ background: "#10b981", padding: "6px 14px", fontWeight: 700 }}>
+                    📤 Submit Requisition to Bursar
+                  </button>
+                </form>
+              )}
+
+              {/* Live Inventory Table */}
+              <div className="role-table-responsive">
+                <table className="role-table">
+                  <thead>
+                    <tr>
+                      <th>SKU Code</th>
+                      <th>Product / Supply Name</th>
+                      <th>Category</th>
+                      <th>On Hand Balance</th>
+                      <th>Reorder Level</th>
+                      <th>Unit Price</th>
+                      <th>Depot Location</th>
+                      <th>Status</th>
+                      <th>Quick Restock</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {inventoryItems.map((it) => (
+                      <tr key={it.id}>
+                        <td><strong style={{ color: "#38bdf8", fontFamily: "monospace" }}>{it.item_code}</strong></td>
+                        <td><strong>{it.name}</strong></td>
+                        <td><span style={{ fontSize: "0.8rem", color: "#94a3b8" }}>{it.category}</span></td>
+                        <td>
+                          <span style={{ fontSize: "1rem", fontWeight: 800, color: it.quantity_on_hand <= it.reorder_level ? "#f87171" : "#34d399" }}>
+                            {it.quantity_on_hand}
+                          </span>{" "}
+                          <span style={{ fontSize: "0.75rem", color: "#64748b" }}>{it.unit}</span>
+                        </td>
+                        <td>{it.reorder_level}</td>
+                        <td style={{ fontWeight: 700 }}>${it.unit_price?.toFixed(2)}</td>
+                        <td>📍 {it.location}</td>
+                        <td>
+                          <span style={{
+                            fontSize: "0.75rem",
+                            fontWeight: 800,
+                            padding: "2px 8px",
+                            borderRadius: "6px",
+                            background: it.status === "IN_STOCK" ? "rgba(16, 185, 129, 0.2)" : "rgba(239, 68, 68, 0.2)",
+                            color: it.status === "IN_STOCK" ? "#34d399" : "#f87171",
+                            border: `1px solid ${it.status === "IN_STOCK" ? "rgba(16, 185, 129, 0.4)" : "rgba(239, 68, 68, 0.4)"}`
+                          }}>
+                            {it.status === "IN_STOCK" ? "✓ IN STOCK" : "⚠️ LOW STOCK"}
+                          </span>
+                        </td>
+                        <td>
+                          <button
+                            type="button"
+                            className="btn-secondary"
+                            onClick={() => handleQuickRestock(it.id, 10)}
+                            style={{ padding: "3px 8px", fontSize: "0.74rem", borderColor: "#10b981", color: "#34d399", cursor: "pointer" }}
+                            title="Restock +10 units immediately"
+                          >
+                            +10 Restock
+                          </button>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
             </div>
           )}
         </main>

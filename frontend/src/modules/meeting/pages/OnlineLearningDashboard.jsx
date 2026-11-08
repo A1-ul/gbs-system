@@ -127,6 +127,14 @@ export default function OnlineLearningDashboard() {
   // Join meeting action (real attendance logging & in-app virtual classroom)
   const handleJoinMeeting = async (meeting) => {
     try {
+      const user = JSON.parse(localStorage.getItem('gbs_user') || '{}');
+      if (meeting.status !== 'LIVE' && user.role === 'STUDENT') {
+        setActionNotice({
+          type: 'warning',
+          text: '⚠️ Live class will start soon - please stay on standby.'
+        });
+      }
+
       setActionNotice({ type: 'info', text: `Connecting to ${meeting.platform} classroom "${meeting.title}"...` });
       try {
         await fetch(`${API_BASE}/meetings/${meeting.id}/join`, {
@@ -136,10 +144,17 @@ export default function OnlineLearningDashboard() {
       } catch {}
 
       setActiveVirtualClassroom(meeting);
-      setActionNotice({
-        type: 'success',
-        text: `✅ Joined! Attendance logged into PostgreSQL. Virtual Video Classroom is LIVE!`
-      });
+      if (meeting.status !== 'LIVE') {
+        setActionNotice({
+          type: 'warning',
+          text: '⚠️ Live class will start soon - please stay on standby.'
+        });
+      } else {
+        setActionNotice({
+          type: 'success',
+          text: `✅ Joined! Attendance logged into PostgreSQL. Virtual Video Classroom is LIVE!`
+        });
+      }
 
       // Try camera stream initialization
       setTimeout(async () => {
@@ -159,6 +174,53 @@ export default function OnlineLearningDashboard() {
     } catch (err) {
       setActionNotice({ type: 'error', text: `❌ ${err.message}` });
     }
+  };
+
+  const handleToggleScreenShare = async () => {
+    if (!isScreenSharing) {
+      try {
+        if (navigator.mediaDevices && navigator.mediaDevices.getDisplayMedia) {
+          const stream = await navigator.mediaDevices.getDisplayMedia({ video: true, audio: true });
+          if (classroomVideoRef.current) {
+            classroomVideoRef.current.srcObject = stream;
+            classroomVideoRef.current.play().catch(() => {});
+          }
+          const videoTrack = stream.getVideoTracks()[0];
+          if (videoTrack) {
+            videoTrack.onended = () => {
+              setIsScreenSharing(false);
+              if (classroomVideoRef.current) classroomVideoRef.current.srcObject = null;
+              setActionNotice({ type: 'info', text: 'Screen sharing ended.' });
+            };
+          }
+          setIsScreenSharing(true);
+          setActionNotice({ type: 'success', text: '🖥️ Screen sharing live! Presentation stream active.' });
+        } else {
+          setIsScreenSharing(true);
+          setActionNotice({ type: 'info', text: '🖥️ Screen sharing simulation active.' });
+        }
+      } catch (err) {
+        console.warn('Screen sharing cancelled:', err);
+      }
+    } else {
+      if (classroomVideoRef.current && classroomVideoRef.current.srcObject) {
+        const tracks = classroomVideoRef.current.srcObject.getTracks();
+        tracks.forEach(t => t.stop());
+        classroomVideoRef.current.srcObject = null;
+      }
+      setIsScreenSharing(false);
+      setActionNotice({ type: 'info', text: 'Screen sharing stopped.' });
+    }
+  };
+
+  const handleOrganizeWhatsAppMeeting = () => {
+    const parentPhone = prompt("Enter Parent / Guardian Telephone Number for WhatsApp Meeting Invite:", "+233245550192");
+    if (!parentPhone) return;
+    const cleanPhone = parentPhone.replace(/\D/g, "");
+    const inviteText = encodeURIComponent(
+      `🏛️ GBS International School Notice:\nDear Parent/Guardian,\nYou are invited to an official virtual academic review meeting regarding your scholar's progress.\nPlease connect here: https://meet.google.com/gbs-parent-review\nThank you.\n- Academic Directorate`
+    );
+    window.open(`https://api.whatsapp.com/send?phone=${cleanPhone}&text=${inviteText}`, "_blank");
   };
 
   const handleLeaveClassroom = () => {
@@ -390,6 +452,27 @@ export default function OnlineLearningDashboard() {
           </div>
 
           <div className="toolbar-actions">
+            <button
+              type="button"
+              onClick={handleOrganizeWhatsAppMeeting}
+              style={{
+                background: "#25D366",
+                color: "#ffffff",
+                border: "none",
+                borderRadius: "8px",
+                padding: "8px 16px",
+                fontWeight: 800,
+                fontSize: "0.82rem",
+                display: "inline-flex",
+                alignItems: "center",
+                gap: "6px",
+                cursor: "pointer",
+                boxShadow: "0 4px 12px rgba(37, 211, 102, 0.3)"
+              }}
+              title="Organize / Invite Parents to Virtual Meeting via WhatsApp"
+            >
+              <span>💬</span> Organize WhatsApp Meeting
+            </button>
             <button
               type="button"
               className="schedule-btn"
@@ -916,7 +999,7 @@ export default function OnlineLearningDashboard() {
                 <button
                   type="button"
                   className={`ctrl-btn ${isScreenSharing ? 'active' : ''}`}
-                  onClick={() => setIsScreenSharing(!isScreenSharing)}
+                  onClick={handleToggleScreenShare}
                 >
                   🖥️ {isScreenSharing ? 'Stop Share' : 'Share Screen'}
                 </button>

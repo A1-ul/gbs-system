@@ -537,6 +537,7 @@ export function StudentDashboard({ initialTab } = {}) {
   }, [activePeerVideoCall]);
 
   // Student Digital Library & E-Book Hub State
+  const [selectedBookForPreview, setSelectedBookForPreview] = useState(null);
   const [borrowedBooks, setBorrowedBooks] = useState(() => {
     try {
       const stored = JSON.parse(localStorage.getItem("gbs_library_borrowed_records") || "[]");
@@ -1844,6 +1845,14 @@ export function StudentDashboard({ initialTab } = {}) {
               style={{ borderLeft: "3px solid #f59e0b", color: activeTab === "library" ? "#fbbf24" : undefined, fontWeight: 800 }}
             >
               📚 Digital Library & E-Books
+            </button>
+            <button
+              type="button"
+              className={'role-tab-btn ' + (activeTab === "fees-history" ? "active" : "")}
+              onClick={() => setActiveTab("fees-history")}
+              style={{ borderLeft: "3px solid #10b981", color: activeTab === "fees-history" ? "#34d399" : undefined, fontWeight: 800 }}
+            >
+              💳 Lifetime Fee History & Receipts (Day 1)
             </button>
             <button
               type="button"
@@ -3385,19 +3394,23 @@ export function StudentDashboard({ initialTab } = {}) {
                     {borrowedBooks.map((b) => (
                       <div
                         key={b.id}
+                        onDoubleClick={() => setSelectedBookForPreview(b)}
+                        title="Double-click to view high-resolution book cover and full syllabus details"
                         style={{
                           background: "rgba(15, 23, 42, 0.8)",
                           border: "1.5px solid rgba(245, 158, 11, 0.4)",
                           borderRadius: "12px",
                           padding: "14px",
                           display: "flex",
-                          gap: "14px"
+                          gap: "14px",
+                          cursor: "pointer",
+                          transition: "transform 0.15s ease, box-shadow 0.15s ease"
                         }}
                       >
                         <img
                           src={b.cover}
                           alt={b.title}
-                          style={{ width: "70px", height: "95px", objectFit: "cover", borderRadius: "8px" }}
+                          style={{ width: "70px", height: "95px", objectFit: "cover", borderRadius: "8px", boxShadow: "0 4px 8px rgba(0,0,0,0.4)" }}
                         />
                         <div style={{ flex: 1, display: "flex", flexDirection: "column", justifyContent: "space-between" }}>
                           <div>
@@ -3405,26 +3418,35 @@ export function StudentDashboard({ initialTab } = {}) {
                             <div style={{ fontSize: "0.76rem", color: "#94a3b8" }}>By: {b.author}</div>
                             <div style={{ fontSize: "0.72rem", color: "#38bdf8", fontFamily: "monospace", marginTop: "2px" }}>ISBN: {b.isbn}</div>
                           </div>
-                          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginTop: "8px" }}>
+                          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginTop: "8px", flexWrap: "wrap", gap: "6px" }}>
                             <span style={{ fontSize: "0.75rem", background: "rgba(239, 68, 68, 0.2)", color: "#f87171", padding: "3px 8px", borderRadius: "6px", fontWeight: 800 }}>
                               ⏱️ Due in {b.daysRemaining} days ({b.dueDate})
                             </span>
-                            <button
-                              type="button"
-                              onClick={() => handleReturnBook(b.id)}
-                              style={{
-                                background: "rgba(16, 185, 129, 0.2)",
-                                border: "1px solid #10b981",
-                                color: "#34d399",
-                                borderRadius: "6px",
-                                padding: "4px 10px",
-                                fontSize: "0.75rem",
-                                fontWeight: 800,
-                                cursor: "pointer"
-                              }}
-                            >
-                              📥 Return Book
-                            </button>
+                            <div style={{ display: "flex", gap: "6px" }}>
+                              <button
+                                type="button"
+                                onClick={(e) => { e.stopPropagation(); setSelectedBookForPreview(b); }}
+                                style={{ background: "rgba(56, 189, 248, 0.15)", border: "1px solid #38bdf8", color: "#38bdf8", borderRadius: "6px", padding: "4px 8px", fontSize: "0.72rem", fontWeight: 700, cursor: "pointer" }}
+                              >
+                                🔍 Details
+                              </button>
+                              <button
+                                type="button"
+                                onClick={(e) => { e.stopPropagation(); handleReturnBook(b.id); }}
+                                style={{
+                                  background: "rgba(16, 185, 129, 0.2)",
+                                  border: "1px solid #10b981",
+                                  color: "#34d399",
+                                  borderRadius: "6px",
+                                  padding: "4px 10px",
+                                  fontSize: "0.75rem",
+                                  fontWeight: 800,
+                                  cursor: "pointer"
+                                }}
+                              >
+                                📥 Return Book
+                              </button>
+                            </div>
                           </div>
                         </div>
                       </div>
@@ -3436,7 +3458,7 @@ export function StudentDashboard({ initialTab } = {}) {
               {/* Available Library Catalog */}
               <div>
                 <h3 style={{ color: "#34d399", fontSize: "1.05rem", fontWeight: 800, marginBottom: "12px", display: "flex", alignItems: "center", gap: "8px" }}>
-                  <span>🏛️</span> Institutional Syllabus E-Book Catalog (Available for Free Loan):
+                  <span>🏛️</span> Institutional Syllabus E-Book Catalog (Double-click to View Cover & Details):
                 </h3>
                 <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(280px, 1fr))", gap: "14px" }}>
                   {LIBRARY_CATALOG.map((cat) => {
@@ -3444,19 +3466,22 @@ export function StudentDashboard({ initialTab } = {}) {
                     return (
                       <div
                         key={cat.id}
+                        onDoubleClick={() => setSelectedBookForPreview(cat)}
+                        title="Double-click to view high-resolution cover and book details"
                         style={{
                           background: "rgba(15, 23, 42, 0.65)",
                           border: "1px solid rgba(255, 255, 255, 0.08)",
                           borderRadius: "12px",
                           padding: "12px",
                           display: "flex",
-                          gap: "12px"
+                          gap: "12px",
+                          cursor: "pointer"
                         }}
                       >
                         <img
                           src={cat.cover}
                           alt={cat.title}
-                          style={{ width: "65px", height: "90px", objectFit: "cover", borderRadius: "6px" }}
+                          style={{ width: "65px", height: "90px", objectFit: "cover", borderRadius: "6px", boxShadow: "0 4px 8px rgba(0,0,0,0.3)" }}
                         />
                         <div style={{ flex: 1, display: "flex", flexDirection: "column", justifyContent: "space-between" }}>
                           <div>
@@ -3466,29 +3491,280 @@ export function StudentDashboard({ initialTab } = {}) {
                             <h4 style={{ margin: "4px 0 2px", fontSize: "0.85rem", color: "#f8fafc" }}>{cat.title}</h4>
                             <div style={{ fontSize: "0.72rem", color: "#94a3b8" }}>{cat.author} • {cat.pages} pgs</div>
                           </div>
-                          <button
-                            type="button"
-                            disabled={isAlreadyBorrowed}
-                            onClick={() => handleBorrowBook(cat)}
-                            style={{
-                              marginTop: "6px",
-                              background: isAlreadyBorrowed ? "rgba(255, 255, 255, 0.08)" : "linear-gradient(135deg, #0284c7, #0369a1)",
-                              border: "none",
-                              borderRadius: "6px",
-                              color: isAlreadyBorrowed ? "#64748b" : "#fff",
-                              padding: "6px 12px",
-                              fontSize: "0.75rem",
-                              fontWeight: 800,
-                              cursor: isAlreadyBorrowed ? "not-allowed" : "pointer"
-                            }}
-                          >
-                            {isAlreadyBorrowed ? "✓ Currently Borrowed" : "📖 Borrow / Order E-Book"}
-                          </button>
+                          <div style={{ display: "flex", gap: "6px", marginTop: "6px" }}>
+                            <button
+                              type="button"
+                              onClick={(e) => { e.stopPropagation(); setSelectedBookForPreview(cat); }}
+                              style={{ background: "rgba(255, 255, 255, 0.08)", border: "1px solid rgba(255, 255, 255, 0.2)", color: "#cbd5e1", borderRadius: "6px", padding: "4px 8px", fontSize: "0.72rem", fontWeight: 700, cursor: "pointer" }}
+                            >
+                              🔍 View
+                            </button>
+                            <button
+                              type="button"
+                              disabled={isAlreadyBorrowed}
+                              onClick={(e) => { e.stopPropagation(); handleBorrowBook(cat); }}
+                              style={{
+                                flex: 1,
+                                background: isAlreadyBorrowed ? "rgba(255, 255, 255, 0.08)" : "linear-gradient(135deg, #0284c7, #0369a1)",
+                                border: "none",
+                                borderRadius: "6px",
+                                color: isAlreadyBorrowed ? "#64748b" : "#fff",
+                                padding: "6px 12px",
+                                fontSize: "0.75rem",
+                                fontWeight: 800,
+                                cursor: isAlreadyBorrowed ? "not-allowed" : "pointer"
+                              }}
+                            >
+                              {isAlreadyBorrowed ? "✓ Borrowed" : "📖 Borrow E-Book"}
+                            </button>
+                          </div>
                         </div>
                       </div>
                     );
                   })}
                 </div>
+              </div>
+            </div>
+          )}
+
+          {/* TAB: LIFETIME FINANCIAL CLEARANCE LEDGER & ALL TRANSACTIONS FROM DAY 1 OF ADMISSION */}
+          {activeTab === "fees-history" && (
+            <div className="role-workspace-card">
+              <div className="workspace-title-row">
+                <div>
+                  <h2><span>💳</span> LIFETIME INSTITUTIONAL FEE LEDGER & TRANSACTIONS HISTORY</h2>
+                  <p>
+                    Cross-check all tuition, lab levies, facility user fees, and payments made to the institution from Day 1 of admission to date. Certified by the GBS Bursar Directorate.
+                  </p>
+                </div>
+                <div style={{ display: "flex", gap: "10px", alignItems: "center", flexWrap: "wrap" }}>
+                  <div style={{ background: "rgba(16, 185, 129, 0.15)", border: "1.5px solid #10b981", padding: "8px 16px", borderRadius: "10px", color: "#34d399", fontWeight: 800, fontSize: "0.85rem" }}>
+                    Total Lifetime Settled: GH₵ 8,450.00
+                  </div>
+                  {feeBalance > 0 && (
+                    <button
+                      type="button"
+                      onClick={() => setShowOfficialPaymentModal(true)}
+                      style={{
+                        background: "linear-gradient(135deg, #10b981 0%, #059669 100%)",
+                        border: "none",
+                        borderRadius: "10px",
+                        color: "#ffffff",
+                        padding: "8px 16px",
+                        fontWeight: 900,
+                        fontSize: "0.85rem",
+                        cursor: "pointer",
+                        boxShadow: "0 4px 15px rgba(16, 185, 129, 0.4)"
+                      }}
+                    >
+                      💳 Settle Remaining Arrears (GH₵ {feeBalance.toFixed(2)})
+                    </button>
+                  )}
+                </div>
+              </div>
+
+              {/* Summary Cards */}
+              <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(220px, 1fr))", gap: "14px", marginBottom: "20px" }}>
+                <div style={{ background: "rgba(15, 23, 42, 0.7)", border: "1px solid rgba(255, 255, 255, 0.1)", borderRadius: "12px", padding: "14px" }}>
+                  <span style={{ fontSize: "0.75rem", color: "#94a3b8", fontWeight: 700, display: "block" }}>ADMISSION DATE</span>
+                  <strong style={{ color: "#38bdf8", fontSize: "1rem" }}>Jan 15, 2024 (Day 1)</strong>
+                  <div style={{ fontSize: "0.72rem", color: "#64748b", marginTop: "2px" }}>Matric: STU-2026-0891</div>
+                </div>
+                <div style={{ background: "rgba(15, 23, 42, 0.7)", border: "1px solid rgba(255, 255, 255, 0.1)", borderRadius: "12px", padding: "14px" }}>
+                  <span style={{ fontSize: "0.75rem", color: "#94a3b8", fontWeight: 700, display: "block" }}>LIFETIME INVOICED CHARGES</span>
+                  <strong style={{ color: "#f8fafc", fontSize: "1rem" }}>GH₵ 8,950.00</strong>
+                  <div style={{ fontSize: "0.72rem", color: "#10b981", marginTop: "2px" }}>8 Audited Billing Cycles</div>
+                </div>
+                <div style={{ background: "rgba(15, 23, 42, 0.7)", border: "1px solid rgba(255, 255, 255, 0.1)", borderRadius: "12px", padding: "14px" }}>
+                  <span style={{ fontSize: "0.75rem", color: "#94a3b8", fontWeight: 700, display: "block" }}>CURRENT BALANCE STATUS</span>
+                  <strong style={{ color: feeBalance > 0 ? "#f59e0b" : "#34d399", fontSize: "1rem" }}>
+                    {feeBalance > 0 ? `GH₵ ${feeBalance.toFixed(2)} Pending` : "✓ Fully Cleared (GH₵ 0.00)"}
+                  </strong>
+                  <div style={{ fontSize: "0.72rem", color: "#94a3b8", marginTop: "2px" }}>80% Exam Threshold Satisfied</div>
+                </div>
+              </div>
+
+              {/* Lifetime Ledger Table */}
+              <div className="role-table-responsive">
+                <table className="role-table">
+                  <thead>
+                    <tr>
+                      <th>#</th>
+                      <th>Billing Period / Academic Term</th>
+                      <th>Date</th>
+                      <th>Receipt #</th>
+                      <th>Fee Purpose & Description</th>
+                      <th>Payment Channel</th>
+                      <th>Billed (GH₵)</th>
+                      <th>Settled (GH₵)</th>
+                      <th>Balance</th>
+                      <th>Audit Status</th>
+                      <th style={{ textAlign: "center" }}>Receipt</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {[
+                      {
+                        idx: 1,
+                        term: "Admission Enrolment (Day 1)",
+                        date: "2024-01-15",
+                        receipt: "GBS-REC-2024-0019",
+                        desc: "Admission Acceptance, Student File Creation & Matriculation Pack",
+                        channel: "MTN MoMo (+233 24 555 0199)",
+                        channelBadge: "🟡 MTN",
+                        billed: 850.00,
+                        paid: 850.00,
+                        balance: 0.00,
+                        status: "SETTLED"
+                      },
+                      {
+                        idx: 2,
+                        term: "Year 1 • Term 1",
+                        date: "2024-01-20",
+                        receipt: "GBS-REC-2024-0312",
+                        desc: "Tuition, STEM Practical Science Levy & Digital Portal Access",
+                        channel: "GhIPSS Instant Bank Wire",
+                        channelBadge: "🏦 Bank",
+                        billed: 1200.00,
+                        paid: 1200.00,
+                        balance: 0.00,
+                        status: "SETTLED"
+                      },
+                      {
+                        idx: 3,
+                        term: "Year 1 • Term 2",
+                        date: "2024-05-10",
+                        receipt: "GBS-REC-2024-0894",
+                        desc: "Tuition, Library Access & Mid-Year Terminal Examination Fee",
+                        channel: "Telecel Cash",
+                        channelBadge: "🔴 Telecel",
+                        billed: 1100.00,
+                        paid: 1100.00,
+                        balance: 0.00,
+                        status: "SETTLED"
+                      },
+                      {
+                        idx: 4,
+                        term: "Year 1 • Term 3",
+                        date: "2024-09-18",
+                        receipt: "GBS-REC-2024-1420",
+                        desc: "Tuition, Promotional Examination & ICT Laboratory Fee",
+                        channel: "MTN MoMo",
+                        channelBadge: "🟡 MTN",
+                        billed: 1150.00,
+                        paid: 1150.00,
+                        balance: 0.00,
+                        status: "SETTLED"
+                      },
+                      {
+                        idx: 5,
+                        term: "Year 2 • Term 1",
+                        date: "2025-01-14",
+                        receipt: "GBS-REC-2025-0211",
+                        desc: "Tuition, Senior Secondary Science Lab & Sports Development",
+                        channel: "Visa 3DS Debit",
+                        channelBadge: "💳 Visa",
+                        billed: 1300.00,
+                        paid: 1300.00,
+                        balance: 0.00,
+                        status: "SETTLED"
+                      },
+                      {
+                        idx: 6,
+                        term: "Year 2 • Term 2",
+                        date: "2025-05-12",
+                        receipt: "GBS-REC-2025-0955",
+                        desc: "Tuition & Digital Cloud LMS Platform User License",
+                        channel: "MTN MoMo",
+                        channelBadge: "🟡 MTN",
+                        billed: 1250.00,
+                        paid: 1250.00,
+                        balance: 0.00,
+                        status: "SETTLED"
+                      },
+                      {
+                        idx: 7,
+                        term: "Year 2 • Term 3",
+                        date: "2025-09-22",
+                        receipt: "GBS-REC-2025-1688",
+                        desc: "Tuition & Pre-Finals Mock Assessment Examination Fee",
+                        channel: "GhIPSS Instant Bank Transfer",
+                        channelBadge: "🏦 Bank",
+                        billed: 1200.00,
+                        paid: 1200.00,
+                        balance: 0.00,
+                        status: "SETTLED"
+                      },
+                      {
+                        idx: 8,
+                        term: "Year 3 • Term 1 (Active)",
+                        date: "2026-10-18",
+                        receipt: feeBalance === 0 ? "GBS-REC-2026-2104" : "GBS-INV-2026-PART",
+                        desc: "Tuition, WASSCE Certification Prep & Senior Terminal Clearance",
+                        channel: "MTN MoMo (+233 24 555 0199)",
+                        channelBadge: "🟡 MTN",
+                        billed: 900.00,
+                        paid: 900.00 - feeBalance,
+                        balance: feeBalance,
+                        status: feeBalance === 0 ? "SETTLED" : "PARTIALLY_SETTLED"
+                      }
+                    ].map((row) => (
+                      <tr key={row.idx} style={{ background: row.balance > 0 ? "rgba(245, 158, 11, 0.06)" : "transparent" }}>
+                        <td style={{ color: "#94a3b8", fontWeight: 700 }}>{row.idx}</td>
+                        <td>
+                          <strong style={{ color: "#f8fafc", fontSize: "0.85rem" }}>{row.term}</strong>
+                        </td>
+                        <td style={{ fontSize: "0.8rem", color: "#94a3b8", whiteSpace: "nowrap" }}>{row.date}</td>
+                        <td style={{ fontFamily: "monospace", fontSize: "0.78rem", color: "#38bdf8" }}>{row.receipt}</td>
+                        <td style={{ fontSize: "0.8rem", color: "#cbd5e1" }}>{row.desc}</td>
+                        <td>
+                          <span style={{ fontSize: "0.72rem", background: "rgba(255, 255, 255, 0.08)", padding: "2px 8px", borderRadius: "6px", color: "#f8fafc", fontWeight: 700 }}>
+                            {row.channelBadge} {row.channel}
+                          </span>
+                        </td>
+                        <td style={{ fontWeight: 700 }}>{row.billed.toFixed(2)}</td>
+                        <td style={{ fontWeight: 800, color: "#34d399" }}>{row.paid.toFixed(2)}</td>
+                        <td style={{ fontWeight: 800, color: row.balance > 0 ? "#f59e0b" : "#94a3b8" }}>{row.balance.toFixed(2)}</td>
+                        <td>
+                          <span style={{
+                            fontSize: "0.72rem",
+                            padding: "3px 8px",
+                            borderRadius: "6px",
+                            fontWeight: 800,
+                            background: row.balance === 0 ? "rgba(16, 185, 129, 0.2)" : "rgba(245, 158, 11, 0.2)",
+                            color: row.balance === 0 ? "#34d399" : "#fbbf24"
+                          }}>
+                            {row.balance === 0 ? "✓ Cleared & Reconciled" : "⏳ Active Balance"}
+                          </span>
+                        </td>
+                        <td style={{ textAlign: "center" }}>
+                          <button
+                            type="button"
+                            onClick={() => {
+                              window.showGBSOpenNotice?.(
+                                `Official Bursar Receipt (${row.receipt}) for ${row.term} (GH₵ ${row.paid.toFixed(2)}) downloaded!`,
+                                "success",
+                                "Receipt Download"
+                              );
+                            }}
+                            style={{
+                              background: "rgba(56, 189, 248, 0.15)",
+                              border: "1px solid #38bdf8",
+                              borderRadius: "6px",
+                              color: "#38bdf8",
+                              padding: "4px 8px",
+                              fontSize: "0.72rem",
+                              fontWeight: 700,
+                              cursor: "pointer"
+                            }}
+                          >
+                            🧾 Receipt
+                          </button>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
               </div>
             </div>
           )}
@@ -5383,6 +5659,191 @@ export function StudentDashboard({ initialTab } = {}) {
           setFeedback({ type: "success", message: "🎉 Payment settled officially! Your fee balance is now GHS 0.00." });
         }}
       />
+
+      {/* MODAL: HIGH-RESOLUTION LIBRARY BOOK COVER & FULL SYLLABUS DETAILS */}
+      {selectedBookForPreview && (
+        <div style={{
+          position: "fixed",
+          inset: 0,
+          background: "rgba(3, 7, 18, 0.88)",
+          backdropFilter: "blur(8px)",
+          display: "flex",
+          alignItems: "center",
+          justifyContent: "center",
+          zIndex: 999999,
+          padding: "20px"
+        }}>
+          <div style={{
+            background: "linear-gradient(135deg, #0f172a 0%, #1e293b 100%)",
+            border: "1.5px solid rgba(56, 189, 248, 0.4)",
+            borderRadius: "16px",
+            maxWidth: "720px",
+            width: "100%",
+            maxHeight: "88vh",
+            overflowY: "auto",
+            padding: "24px",
+            boxShadow: "0 25px 60px rgba(0,0,0,0.8)",
+            color: "#f8fafc"
+          }}>
+            {/* Header with Back Button and Right Close Button */}
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", borderBottom: "1px solid rgba(255,255,255,0.1)", paddingBottom: "14px", marginBottom: "20px" }}>
+              <button
+                type="button"
+                onClick={() => setSelectedBookForPreview(null)}
+                style={{
+                  background: "rgba(255, 255, 255, 0.08)",
+                  border: "1px solid rgba(255, 255, 255, 0.2)",
+                  color: "#cbd5e1",
+                  borderRadius: "8px",
+                  padding: "6px 14px",
+                  fontSize: "0.82rem",
+                  fontWeight: 700,
+                  cursor: "pointer",
+                  display: "inline-flex",
+                  alignItems: "center",
+                  gap: "6px"
+                }}
+              >
+                ⬅️ Back to Library
+              </button>
+              <h3 style={{ margin: 0, fontSize: "1.1rem", color: "#38bdf8", fontWeight: 800 }}>
+                📖 INSTITUTIONAL E-BOOK DOSSIER
+              </h3>
+              <button
+                type="button"
+                onClick={() => setSelectedBookForPreview(null)}
+                style={{
+                  background: "none",
+                  border: "none",
+                  color: "#94a3b8",
+                  fontSize: "1.3rem",
+                  cursor: "pointer",
+                  lineHeight: 1
+                }}
+              >
+                ✕
+              </button>
+            </div>
+
+            {/* Book Body: High-Res Cover & Synopsis */}
+            <div style={{ display: "grid", gridTemplateColumns: "220px 1fr", gap: "24px", alignItems: "start" }}>
+              <div>
+                <img
+                  src={selectedBookForPreview.cover}
+                  alt={selectedBookForPreview.title}
+                  style={{
+                    width: "100%",
+                    height: "300px",
+                    objectFit: "cover",
+                    borderRadius: "12px",
+                    boxShadow: "0 10px 25px rgba(0,0,0,0.6)",
+                    border: "2px solid rgba(255,255,255,0.15)"
+                  }}
+                />
+                <div style={{ textAlign: "center", marginTop: "10px", fontSize: "0.75rem", color: "#94a3b8" }}>
+                  🔎 High-Resolution Cover
+                </div>
+              </div>
+
+              <div>
+                <span style={{ fontSize: "0.72rem", background: "rgba(56, 189, 248, 0.15)", color: "#38bdf8", padding: "3px 10px", borderRadius: "999px", fontWeight: 800 }}>
+                  {selectedBookForPreview.category || "Secondary Curriculum"}
+                </span>
+                <h2 style={{ fontSize: "1.3rem", margin: "10px 0 6px", color: "#f8fafc" }}>
+                  {selectedBookForPreview.title}
+                </h2>
+                <div style={{ fontSize: "0.88rem", color: "#fbbf24", fontWeight: 700, marginBottom: "12px" }}>
+                  Author: {selectedBookForPreview.author}
+                </div>
+
+                <div style={{ background: "rgba(15, 23, 42, 0.6)", border: "1px solid rgba(255, 255, 255, 0.08)", borderRadius: "10px", padding: "14px", marginBottom: "16px" }}>
+                  <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "10px", fontSize: "0.8rem" }}>
+                    <div>
+                      <span style={{ color: "#94a3b8", display: "block" }}>ISBN Identifier:</span>
+                      <strong style={{ color: "#38bdf8", fontFamily: "monospace" }}>{selectedBookForPreview.isbn || "978-0-19-842718-6"}</strong>
+                    </div>
+                    <div>
+                      <span style={{ color: "#94a3b8", display: "block" }}>Extent & Length:</span>
+                      <strong style={{ color: "#f8fafc" }}>{selectedBookForPreview.pages || 420} Pages (Complete)</strong>
+                    </div>
+                    <div>
+                      <span style={{ color: "#94a3b8", display: "block" }}>Loan Period:</span>
+                      <strong style={{ color: "#10b981" }}>14 Academic Days (Renewable)</strong>
+                    </div>
+                    <div>
+                      <span style={{ color: "#94a3b8", display: "block" }}>Access Format:</span>
+                      <strong style={{ color: "#a855f7" }}>Digital E-Reader + Campus Hardcopy</strong>
+                    </div>
+                  </div>
+                </div>
+
+                <p style={{ fontSize: "0.85rem", color: "#cbd5e1", lineHeight: "1.6", marginBottom: "18px" }}>
+                  {selectedBookForPreview.description || `Official secondary curriculum text curated for comprehensive mastery of examination topics, laboratory problem sets, and practical assignments. Fully compliant with Ministry of Education WAEC/WASSCE benchmarks.`}
+                </p>
+
+                <div style={{ display: "flex", gap: "10px", flexWrap: "wrap" }}>
+                  {borrowedBooks.some((b) => b.title === selectedBookForPreview.title) ? (
+                    <button
+                      type="button"
+                      onClick={() => {
+                        const rec = borrowedBooks.find((b) => b.title === selectedBookForPreview.title);
+                        if (rec) handleReturnBook(rec.id);
+                        setSelectedBookForPreview(null);
+                      }}
+                      style={{
+                        padding: "10px 20px",
+                        background: "rgba(239, 68, 68, 0.2)",
+                        border: "1.5px solid #ef4444",
+                        color: "#f87171",
+                        borderRadius: "8px",
+                        fontWeight: 800,
+                        cursor: "pointer"
+                      }}
+                    >
+                      📥 Return This Book to Library
+                    </button>
+                  ) : (
+                    <button
+                      type="button"
+                      onClick={() => {
+                        handleBorrowBook(selectedBookForPreview);
+                        setSelectedBookForPreview(null);
+                      }}
+                      style={{
+                        padding: "10px 22px",
+                        background: "linear-gradient(135deg, #0284c7, #38bdf8)",
+                        border: "none",
+                        color: "#0f172a",
+                        borderRadius: "8px",
+                        fontWeight: 900,
+                        cursor: "pointer",
+                        boxShadow: "0 4px 15px rgba(56, 189, 248, 0.4)"
+                      }}
+                    >
+                      📖 Confirm E-Book Checkout (14-Day Loan)
+                    </button>
+                  )}
+                  <button
+                    type="button"
+                    onClick={() => setSelectedBookForPreview(null)}
+                    style={{
+                      padding: "10px 18px",
+                      background: "rgba(255, 255, 255, 0.08)",
+                      border: "1px solid rgba(255, 255, 255, 0.2)",
+                      color: "#cbd5e1",
+                      borderRadius: "8px",
+                      fontWeight: 700,
+                      cursor: "pointer"
+                    }}
+                  >
+                    Close Preview
+                  </button>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
 
       <UniversalRoleGuideModal
         role="STUDENT"

@@ -11,11 +11,21 @@ import { offlineSyncEngine } from "../../../../../utils/offlineSync";
 import UniversalRoleGuideModal from "../../../../../components/common/UniversalRoleGuideModal";
 import { navigateToDetail } from "../../../../../utils/universalNavigation";
 import FileUploadVerificationCard from "../../../../../components/common/FileUploadVerificationCard";
+import DigitalSignaturePadModal from "../../../../../components/common/DigitalSignaturePadModal";
 import "./AdminDashboard.css";
 
 export function AdminDashboard({ initialTab } = {}) {
   const navigate = useNavigate();
   const [showAdminGuideModal, setShowAdminGuideModal] = useState(false);
+  const [showHeadmasterSignaturePad, setShowHeadmasterSignaturePad] = useState(false);
+  const [headmasterSignature, setHeadmasterSignature] = useState(() => {
+    try {
+      const saved = localStorage.getItem("gbs_signature_HEADMASTER");
+      return saved ? JSON.parse(saved) : null;
+    } catch {
+      return null;
+    }
+  });
   const currencySymbol = localStorage.getItem("gbs_currency_symbol") || "$";
 
   const triggerAudioFeedback = (type = "success") => {
@@ -14373,6 +14383,18 @@ export function AdminDashboard({ initialTab } = {}) {
           ⬇️
         </button>
       </div>
+
+      <DigitalSignaturePadModal
+        isOpen={showHeadmasterSignaturePad}
+        onClose={() => setShowHeadmasterSignaturePad(false)}
+        role="HEADMASTER"
+        signatoryName="Dr. Arthur Pendleton"
+        signatoryTitle="Headmaster & Chief Academic Chancellor"
+        onSave={(sigData) => {
+          setHeadmasterSignature(sigData);
+          alert(`✍️ Headmaster digital signature verified and registered! Token: ${sigData.hash}`);
+        }}
+      />
 
       <UniversalRoleGuideModal
         role="ADMIN"

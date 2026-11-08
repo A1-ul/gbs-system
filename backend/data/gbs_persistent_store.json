@@ -101,7 +101,14 @@
       "fileName": "7422adb5942748229a945eec31bb96cc.mp4",
       "durationLabel": "Uploaded Video (4.6 MB)",
       "createdAt": "2026-11-05T17:29:27.103Z",
-      "watchedBy": []
+      "watchedBy": [
+        {
+          "studentName": "Sarah Teacher (JHS 3 / SHS 1)",
+          "studentEmail": "student@gbs.com",
+          "studentQuestion": "Watched topic video lesson completely.",
+          "watchedAt": "2026-11-08T19:18:04.556Z"
+        }
+      ]
     }
   ],
   "subscriptions": [
@@ -336,7 +343,7 @@
       "createdAt": "2026-11-02T21:55:25.367Z"
     }
   ],
-  "updatedAt": "2026-11-08T18:19:46.121Z",
+  "updatedAt": "2026-11-08T22:32:58.125Z",
   "registeredUsers": [
     {
       "id": "usr_12",
@@ -483,6 +490,419 @@
   ],
   "prismaModels": {
     "AuditLog": [
+      {
+        "id": 322,
+        "tenantId": 1,
+        "userId": 1,
+        "action": "SINGLE_STUDENT_ATTENDANCE_MARKED",
+        "module": "ATTENDANCE",
+        "details": "Marked student #102 as ABSENT for class #1 on Sun Nov 08 2026 00:00:00 GMT+0000 (Greenwich Mean Time).",
+        "isDeleted": false,
+        "createdAt": "2026-11-08T22:32:58.080Z",
+        "updatedAt": "2026-11-08T22:32:58.080Z"
+      },
+      {
+        "id": 321,
+        "tenantId": 1,
+        "userId": 1,
+        "action": "SINGLE_STUDENT_ATTENDANCE_MARKED",
+        "module": "ATTENDANCE",
+        "details": "Marked student #101 as PRESENT for class #1 on Sun Nov 08 2026 00:00:00 GMT+0000 (Greenwich Mean Time).",
+        "isDeleted": false,
+        "createdAt": "2026-11-08T22:32:57.706Z",
+        "updatedAt": "2026-11-08T22:32:57.706Z"
+      },
+      {
+        "id": 320,
+        "tenantId": 1,
+        "userId": 2,
+        "action": "SINGLE_STUDENT_ATTENDANCE_MARKED",
+        "module": "ATTENDANCE",
+        "details": "Marked student #18 as ABSENT for class #1 on Sun Nov 08 2026 00:00:00 GMT+0000 (Greenwich Mean Time).",
+        "isDeleted": false,
+        "createdAt": "2026-11-08T21:42:31.477Z",
+        "updatedAt": "2026-11-08T21:42:31.477Z"
+      },
+      {
+        "id": 319,
+        "tenantId": 1,
+        "userId": 2,
+        "action": "SINGLE_STUDENT_ATTENDANCE_MARKED",
+        "module": "ATTENDANCE",
+        "details": "Marked student #18 as LATE for class #1 on Sun Nov 08 2026 00:00:00 GMT+0000 (Greenwich Mean Time).",
+        "isDeleted": false,
+        "createdAt": "2026-11-08T21:42:24.601Z",
+        "updatedAt": "2026-11-08T21:42:24.601Z"
+      },
+      {
+        "id": 318,
+        "tenantId": 1,
+        "userId": 2,
+        "action": "SINGLE_STUDENT_ATTENDANCE_MARKED",
+        "module": "ATTENDANCE",
+        "details": "Marked student #18 as LATE for class #1 on Sun Nov 08 2026 00:00:00 GMT+0000 (Greenwich Mean Time).",
+        "isDeleted": false,
+        "createdAt": "2026-11-08T21:42:03.546Z",
+        "updatedAt": "2026-11-08T21:42:03.546Z"
+      },
+      {
+        "id": 317,
+        "tenantId": 1,
+        "userId": 2,
+        "action": "SINGLE_STUDENT_ATTENDANCE_MARKED",
+        "module": "ATTENDANCE",
+        "details": "Marked student #18 as EXCUSED for class #1 on Sun Nov 08 2026 00:00:00 GMT+0000 (Greenwich Mean Time).",
+        "isDeleted": false,
+        "createdAt": "2026-11-08T21:41:57.561Z",
+        "updatedAt": "2026-11-08T21:41:57.561Z"
+      },
+      {
+        "id": 316,
+        "tenantId": 1,
+        "userId": 2,
+        "action": "SINGLE_STUDENT_ATTENDANCE_MARKED",
+        "module": "ATTENDANCE",
+        "details": "Marked student #18 as LATE for class #1 on Sun Nov 08 2026 00:00:00 GMT+0000 (Greenwich Mean Time).",
+        "isDeleted": false,
+        "createdAt": "2026-11-08T21:41:53.163Z",
+        "updatedAt": "2026-11-08T21:41:53.163Z"
+      },
+      {
+        "id": 315,
+        "tenantId": 1,
+        "userId": 2,
+        "action": "SINGLE_STUDENT_ATTENDANCE_MARKED",
+        "module": "ATTENDANCE",
+        "details": "Marked student #18 as ABSENT for class #1 on Sun Nov 08 2026 00:00:00 GMT+0000 (Greenwich Mean Time).",
+        "isDeleted": false,
+        "createdAt": "2026-11-08T21:41:49.596Z",
+        "updatedAt": "2026-11-08T21:41:49.596Z"
+      },
+      {
+        "id": 314,
+        "tenantId": 1,
+        "userId": 2,
+        "action": "SINGLE_STUDENT_ATTENDANCE_MARKED",
+        "module": "ATTENDANCE",
+        "details": "Marked student #18 as PRESENT for class #1 on Sun Nov 08 2026 00:00:00 GMT+0000 (Greenwich Mean Time).",
+        "isDeleted": false,
+        "createdAt": "2026-11-08T21:41:32.457Z",
+        "updatedAt": "2026-11-08T21:41:32.457Z"
+      },
+      {
+        "id": 313,
+        "tenantId": 1,
+        "userId": 2,
+        "action": "ATTENDANCE_BATCH_MARKED",
+        "module": "attendance",
+        "details": "{\"classId\":1,\"className\":\"Nursery 1 (Early Years Foundation)\",\"subjectId\":null,\"date\":\"2026-11-08\",\"recordsCount\":6,\"markedBy\":\"teacher@gbs.com\"}",
+        "isDeleted": false,
+        "createdAt": "2026-11-08T20:52:28.546Z",
+        "updatedAt": "2026-11-08T20:52:28.546Z"
+      },
+      {
+        "id": 312,
+        "tenantId": 1,
+        "userId": 2,
+        "action": "SINGLE_STUDENT_ATTENDANCE_MARKED",
+        "module": "ATTENDANCE",
+        "details": "Marked student #18 as ABSENT for class #1 on Sun Nov 08 2026 00:00:00 GMT+0000 (Greenwich Mean Time).",
+        "isDeleted": false,
+        "createdAt": "2026-11-08T20:52:18.574Z",
+        "updatedAt": "2026-11-08T20:52:18.574Z"
+      },
+      {
+        "id": 311,
+        "tenantId": 1,
+        "userId": 2,
+        "action": "SINGLE_STUDENT_ATTENDANCE_MARKED",
+        "module": "ATTENDANCE",
+        "details": "Marked student #18 as PRESENT for class #1 on Sun Nov 08 2026 00:00:00 GMT+0000 (Greenwich Mean Time).",
+        "isDeleted": false,
+        "createdAt": "2026-11-08T20:52:13.407Z",
+        "updatedAt": "2026-11-08T20:52:13.407Z"
+      },
+      {
+        "id": 310,
+        "tenantId": 1,
+        "action": "FACILITY_TICKET_STATUS_UPDATED",
+        "module": "FACILITY",
+        "details": "Ticket TKT-2026-1797658 status set to RESOLVED. Actual cost: $0",
+        "isDeleted": false,
+        "createdAt": "2026-11-08T20:33:14.083Z",
+        "updatedAt": "2026-11-08T20:33:14.083Z"
+      },
+      {
+        "id": 309,
+        "tenantId": 1,
+        "action": "FACILITY_TICKET_STATUS_UPDATED",
+        "module": "FACILITY",
+        "details": "Ticket TKT-2026-1797658 status set to RESOLVED. Actual cost: $3000",
+        "isDeleted": false,
+        "createdAt": "2026-11-08T20:28:48.345Z",
+        "updatedAt": "2026-11-08T20:28:48.345Z"
+      },
+      {
+        "id": 308,
+        "tenantId": 1,
+        "action": "FACILITY_TICKET_STATUS_UPDATED",
+        "module": "FACILITY",
+        "details": "Ticket TKT-2026-1797658 status set to IN_PROGRESS. Actual cost: $0",
+        "isDeleted": false,
+        "createdAt": "2026-11-08T20:28:39.746Z",
+        "updatedAt": "2026-11-08T20:28:39.746Z"
+      },
+      {
+        "id": 307,
+        "tenantId": 1,
+        "action": "FACILITY_TICKET_STATUS_UPDATED",
+        "module": "FACILITY",
+        "details": "Ticket TKT-2026-1797658 status set to APPROVED. Actual cost: $0",
+        "isDeleted": false,
+        "createdAt": "2026-11-08T20:28:38.513Z",
+        "updatedAt": "2026-11-08T20:28:38.513Z"
+      },
+      {
+        "id": 306,
+        "tenantId": 1,
+        "action": "FACILITY_TICKET_STATUS_UPDATED",
+        "module": "FACILITY",
+        "details": "Ticket TKT-2026-1797658 status set to RESOLVED. Actual cost: $50",
+        "isDeleted": false,
+        "createdAt": "2026-11-08T20:25:45.774Z",
+        "updatedAt": "2026-11-08T20:25:45.774Z"
+      },
+      {
+        "id": 305,
+        "tenantId": 1,
+        "action": "FACILITY_TICKET_STATUS_UPDATED",
+        "module": "FACILITY",
+        "details": "Ticket TKT-2026-1797658 status set to IN_PROGRESS. Actual cost: $0",
+        "isDeleted": false,
+        "createdAt": "2026-11-08T20:25:28.062Z",
+        "updatedAt": "2026-11-08T20:25:28.062Z"
+      },
+      {
+        "id": 304,
+        "tenantId": 1,
+        "action": "FACILITY_TICKET_STATUS_UPDATED",
+        "module": "FACILITY",
+        "details": "Ticket TKT-2026-1797658 status set to APPROVED. Actual cost: $0",
+        "isDeleted": false,
+        "createdAt": "2026-11-08T20:25:25.984Z",
+        "updatedAt": "2026-11-08T20:25:25.984Z"
+      },
+      {
+        "id": 303,
+        "tenantId": 1,
+        "action": "FACILITY_TICKET_STATUS_UPDATED",
+        "module": "FACILITY",
+        "details": "Ticket TKT-2026-1797658 status set to RESOLVED. Actual cost: $0",
+        "isDeleted": false,
+        "createdAt": "2026-11-08T20:17:14.509Z",
+        "updatedAt": "2026-11-08T20:17:14.509Z"
+      },
+      {
+        "id": 302,
+        "tenantId": 1,
+        "action": "FACILITY_TICKET_STATUS_UPDATED",
+        "module": "FACILITY",
+        "details": "Ticket TKT-2026-1797658 status set to RESOLVED. Actual cost: $0",
+        "isDeleted": false,
+        "createdAt": "2026-11-08T20:17:13.299Z",
+        "updatedAt": "2026-11-08T20:17:13.299Z"
+      },
+      {
+        "id": 301,
+        "tenantId": 1,
+        "action": "FACILITY_TICKET_STATUS_UPDATED",
+        "module": "FACILITY",
+        "details": "Ticket TKT-2026-1797658 status set to RESOLVED. Actual cost: $0",
+        "isDeleted": false,
+        "createdAt": "2026-11-08T20:17:11.740Z",
+        "updatedAt": "2026-11-08T20:17:11.740Z"
+      },
+      {
+        "id": 300,
+        "tenantId": 1,
+        "action": "FACILITY_TICKET_STATUS_UPDATED",
+        "module": "FACILITY",
+        "details": "Ticket TKT-2026-1797658 status set to PENDING. Actual cost: $0",
+        "isDeleted": false,
+        "createdAt": "2026-11-08T20:17:02.385Z",
+        "updatedAt": "2026-11-08T20:17:02.385Z"
+      },
+      {
+        "id": 299,
+        "tenantId": 1,
+        "action": "FACILITY_TICKET_STATUS_UPDATED",
+        "module": "FACILITY",
+        "details": "Ticket TKT-2026-1797658 status set to RESOLVED. Actual cost: $0",
+        "isDeleted": false,
+        "createdAt": "2026-11-08T20:16:53.945Z",
+        "updatedAt": "2026-11-08T20:16:53.945Z"
+      },
+      {
+        "id": 298,
+        "tenantId": 1,
+        "action": "FACILITY_TICKET_STATUS_UPDATED",
+        "module": "FACILITY",
+        "details": "Ticket TKT-2026-1797658 status set to RESOLVED. Actual cost: $0",
+        "isDeleted": false,
+        "createdAt": "2026-11-08T20:16:52.655Z",
+        "updatedAt": "2026-11-08T20:16:52.655Z"
+      },
+      {
+        "id": 297,
+        "tenantId": 1,
+        "action": "FACILITY_TICKET_STATUS_UPDATED",
+        "module": "FACILITY",
+        "details": "Ticket TKT-2026-1797658 status set to RESOLVED. Actual cost: $0",
+        "isDeleted": false,
+        "createdAt": "2026-11-08T20:16:50.014Z",
+        "updatedAt": "2026-11-08T20:16:50.014Z"
+      },
+      {
+        "id": 296,
+        "tenantId": 1,
+        "action": "FACILITY_TICKET_STATUS_UPDATED",
+        "module": "FACILITY",
+        "details": "Ticket TKT-2026-1797658 status set to RESOLVED. Actual cost: $0",
+        "isDeleted": false,
+        "createdAt": "2026-11-08T20:16:47.310Z",
+        "updatedAt": "2026-11-08T20:16:47.310Z"
+      },
+      {
+        "id": 295,
+        "tenantId": 1,
+        "action": "FACILITY_TICKET_STATUS_UPDATED",
+        "module": "FACILITY",
+        "details": "Ticket TKT-2026-1797658 status set to RESOLVED. Actual cost: $0",
+        "isDeleted": false,
+        "createdAt": "2026-11-08T20:16:38.604Z",
+        "updatedAt": "2026-11-08T20:16:38.604Z"
+      },
+      {
+        "id": 294,
+        "tenantId": 1,
+        "userId": 2,
+        "action": "ASSIGNMENT_SUBMITTED",
+        "module": "assignments",
+        "details": "{\"assignmentId\":22,\"studentId\":2,\"isLate\":false,\"submissionStatus\":\"SUBMITTED\"}",
+        "isDeleted": false,
+        "createdAt": "2026-11-08T19:39:50.191Z",
+        "updatedAt": "2026-11-08T19:39:50.191Z"
+      },
+      {
+        "id": 293,
+        "tenantId": 1,
+        "userId": 2,
+        "action": "SINGLE_STUDENT_ATTENDANCE_MARKED",
+        "module": "ATTENDANCE",
+        "details": "Marked student #18 as ABSENT for class #13 on Sun Nov 08 2026 00:00:00 GMT+0000 (Greenwich Mean Time).",
+        "isDeleted": false,
+        "createdAt": "2026-11-08T19:39:04.958Z",
+        "updatedAt": "2026-11-08T19:39:04.958Z"
+      },
+      {
+        "id": 292,
+        "tenantId": 1,
+        "userId": 2,
+        "action": "ATTENDANCE_BATCH_MARKED",
+        "module": "attendance",
+        "details": "{\"classId\":13,\"className\":\"JHS 3 (BECE Candidates - Grade 9)\",\"subjectId\":null,\"date\":\"2026-11-08\",\"recordsCount\":6,\"markedBy\":\"teacher@gbs.com\"}",
+        "isDeleted": false,
+        "createdAt": "2026-11-08T19:24:59.449Z",
+        "updatedAt": "2026-11-08T19:24:59.449Z"
+      },
+      {
+        "id": 291,
+        "tenantId": 1,
+        "userId": 2,
+        "action": "SINGLE_STUDENT_ATTENDANCE_MARKED",
+        "module": "ATTENDANCE",
+        "details": "Marked student #18 as PRESENT for class #13 on Sun Nov 08 2026 00:00:00 GMT+0000 (Greenwich Mean Time).",
+        "isDeleted": false,
+        "createdAt": "2026-11-08T19:24:46.739Z",
+        "updatedAt": "2026-11-08T19:24:46.739Z"
+      },
+      {
+        "id": 290,
+        "tenantId": 1,
+        "userId": 2,
+        "action": "SINGLE_STUDENT_ATTENDANCE_MARKED",
+        "module": "ATTENDANCE",
+        "details": "Marked student #18 as ABSENT for class #13 on Sun Nov 08 2026 00:00:00 GMT+0000 (Greenwich Mean Time).",
+        "isDeleted": false,
+        "createdAt": "2026-11-08T19:24:44.183Z",
+        "updatedAt": "2026-11-08T19:24:44.183Z"
+      },
+      {
+        "id": 289,
+        "tenantId": 1,
+        "userId": 2,
+        "action": "SINGLE_STUDENT_ATTENDANCE_MARKED",
+        "module": "ATTENDANCE",
+        "details": "Marked student #18 as PRESENT for class #13 on Sun Nov 08 2026 00:00:00 GMT+0000 (Greenwich Mean Time).",
+        "isDeleted": false,
+        "createdAt": "2026-11-08T19:24:42.720Z",
+        "updatedAt": "2026-11-08T19:24:42.720Z"
+      },
+      {
+        "id": 288,
+        "tenantId": 1,
+        "userId": 2,
+        "action": "SINGLE_STUDENT_ATTENDANCE_MARKED",
+        "module": "ATTENDANCE",
+        "details": "Marked student #18 as LATE for class #13 on Sun Nov 08 2026 00:00:00 GMT+0000 (Greenwich Mean Time).",
+        "isDeleted": false,
+        "createdAt": "2026-11-08T19:24:40.419Z",
+        "updatedAt": "2026-11-08T19:24:40.419Z"
+      },
+      {
+        "id": 287,
+        "tenantId": 1,
+        "userId": 2,
+        "action": "ASSIGNMENT_SUBMITTED",
+        "module": "assignments",
+        "details": "{\"assignmentId\":23,\"studentId\":2,\"isLate\":false,\"submissionStatus\":\"SUBMITTED\"}",
+        "isDeleted": false,
+        "createdAt": "2026-11-08T19:11:37.826Z",
+        "updatedAt": "2026-11-08T19:11:37.826Z"
+      },
+      {
+        "id": 286,
+        "tenantId": 1,
+        "userId": 2,
+        "module": "ONLINE_MEETING",
+        "action": "ONLINE_MEETING_CREATED",
+        "details": "Created WHATSAPP session \"LOVE\" (ID: 1) for class 13",
+        "isDeleted": false,
+        "createdAt": "2026-11-08T19:02:45.207Z",
+        "updatedAt": "2026-11-08T19:02:45.207Z"
+      },
+      {
+        "id": 285,
+        "tenantId": 1,
+        "userId": 2,
+        "action": "SINGLE_STUDENT_ATTENDANCE_MARKED",
+        "module": "ATTENDANCE",
+        "details": "Marked student #18 as ABSENT for class #13 on Sun Nov 08 2026 00:00:00 GMT+0000 (Greenwich Mean Time).",
+        "isDeleted": false,
+        "createdAt": "2026-11-08T18:38:28.821Z",
+        "updatedAt": "2026-11-08T18:38:28.821Z"
+      },
+      {
+        "id": 284,
+        "tenantId": 1,
+        "userId": 2,
+        "action": "SINGLE_STUDENT_ATTENDANCE_MARKED",
+        "module": "ATTENDANCE",
+        "details": "Marked student #18 as PRESENT for class #13 on Sun Nov 08 2026 00:00:00 GMT+0000 (Greenwich Mean Time).",
+        "isDeleted": false,
+        "createdAt": "2026-11-08T18:38:10.287Z",
+        "updatedAt": "2026-11-08T18:38:10.287Z"
+      },
       {
         "id": 283,
         "tenantId": 1,
@@ -3749,6 +4169,76 @@
     ],
     "AnswerSheet": [
       {
+        "id": 18,
+        "tenantId": 1,
+        "examId": 1,
+        "studentId": 18,
+        "imageUrl": "https://gbs.edu/scans/sample_sheet.jpg",
+        "status": "GRADED",
+        "isDeleted": false,
+        "createdAt": "2026-11-08T19:29:43.833Z",
+        "updatedAt": "2026-11-08T19:29:44.057Z",
+        "scoreObtained": 10,
+        "isPassed": false,
+        "gradedAt": "2026-11-08T19:29:44.003Z"
+      },
+      {
+        "id": 17,
+        "tenantId": 1,
+        "examId": 1,
+        "studentId": 18,
+        "imageUrl": "https://gbs.edu/scans/sample_sheet.jpg",
+        "status": "GRADED",
+        "isDeleted": false,
+        "createdAt": "2026-11-08T19:29:35.316Z",
+        "updatedAt": "2026-11-08T19:29:35.480Z",
+        "scoreObtained": 10,
+        "isPassed": false,
+        "gradedAt": "2026-11-08T19:29:35.433Z"
+      },
+      {
+        "id": 16,
+        "tenantId": 1,
+        "examId": 1,
+        "studentId": 18,
+        "imageUrl": "https://gbs.edu/scans/sample_sheet.jpg",
+        "status": "GRADED",
+        "isDeleted": false,
+        "createdAt": "2026-11-08T19:13:34.586Z",
+        "updatedAt": "2026-11-08T19:13:34.708Z",
+        "scoreObtained": 10,
+        "isPassed": false,
+        "gradedAt": "2026-11-08T19:13:34.671Z"
+      },
+      {
+        "id": 15,
+        "tenantId": 1,
+        "examId": 1,
+        "studentId": 18,
+        "imageUrl": "/images/teacher_dash_banner.jpg",
+        "status": "GRADED",
+        "isDeleted": false,
+        "createdAt": "2026-11-08T18:57:25.871Z",
+        "updatedAt": "2026-11-08T18:57:26.021Z",
+        "scoreObtained": 20,
+        "isPassed": false,
+        "gradedAt": "2026-11-08T18:57:25.989Z"
+      },
+      {
+        "id": 14,
+        "tenantId": 1,
+        "examId": 1,
+        "studentId": 18,
+        "imageUrl": "https://gbs.edu/scans/sample_sheet.jpg",
+        "status": "GRADED",
+        "isDeleted": false,
+        "createdAt": "2026-11-08T18:55:08.998Z",
+        "updatedAt": "2026-11-08T18:55:09.130Z",
+        "scoreObtained": 80,
+        "isPassed": true,
+        "gradedAt": "2026-11-08T18:55:09.093Z"
+      },
+      {
         "id": 13,
         "tenantId": 1,
         "examId": 1,
@@ -3932,6 +4422,66 @@
       }
     ],
     "AutoGradingResult": [
+      {
+        "id": 18,
+        "tenantId": 1,
+        "answerSheetId": 18,
+        "matchedAnswers": 1,
+        "totalQuestions": 2,
+        "confidencePct": 97.2,
+        "needsManualReview": false,
+        "isDeleted": false,
+        "createdAt": "2026-11-08T19:29:44.292Z",
+        "updatedAt": "2026-11-08T19:29:44.292Z"
+      },
+      {
+        "id": 17,
+        "tenantId": 1,
+        "answerSheetId": 17,
+        "matchedAnswers": 1,
+        "totalQuestions": 2,
+        "confidencePct": 98.3,
+        "needsManualReview": false,
+        "isDeleted": false,
+        "createdAt": "2026-11-08T19:29:35.662Z",
+        "updatedAt": "2026-11-08T19:29:35.662Z"
+      },
+      {
+        "id": 16,
+        "tenantId": 1,
+        "answerSheetId": 16,
+        "matchedAnswers": 1,
+        "totalQuestions": 2,
+        "confidencePct": 98.9,
+        "needsManualReview": false,
+        "isDeleted": false,
+        "createdAt": "2026-11-08T19:13:34.843Z",
+        "updatedAt": "2026-11-08T19:13:34.843Z"
+      },
+      {
+        "id": 15,
+        "tenantId": 1,
+        "answerSheetId": 15,
+        "matchedAnswers": 2,
+        "totalQuestions": 2,
+        "confidencePct": 95.1,
+        "needsManualReview": false,
+        "isDeleted": false,
+        "createdAt": "2026-11-08T18:57:26.189Z",
+        "updatedAt": "2026-11-08T18:57:26.189Z"
+      },
+      {
+        "id": 14,
+        "tenantId": 1,
+        "answerSheetId": 14,
+        "matchedAnswers": 8,
+        "totalQuestions": 2,
+        "confidencePct": 95.8,
+        "needsManualReview": false,
+        "isDeleted": false,
+        "createdAt": "2026-11-08T18:55:09.264Z",
+        "updatedAt": "2026-11-08T18:55:09.264Z"
+      },
       {
         "id": 13,
         "tenantId": 1,
@@ -4363,7 +4913,35 @@
         "updatedAt": "2026-11-05T16:53:08.475Z"
       }
     ],
-    "OnlineMeeting": [],
+    "OnlineMeeting": [
+      {
+        "id": 1,
+        "tenantId": 1,
+        "title": "LOVE",
+        "description": null,
+        "platform": "WHATSAPP",
+        "meetingType": "CLASS",
+        "meetingUrl": "https://chat.whatsapp.com/GBSClass890762",
+        "meetingId": "1756630213",
+        "passcode": "GBS2026",
+        "hostId": 2,
+        "classId": 13,
+        "subjectId": null,
+        "timetableSlotId": null,
+        "startTime": "2026-11-11T19:10:00.000Z",
+        "endTime": "2026-11-11T19:55:00.000Z",
+        "status": "SCHEDULED",
+        "isRecorded": false,
+        "hasChat": true,
+        "hasBreakout": true,
+        "hasScreenShare": true,
+        "hasRaiseHand": true,
+        "maxParticipants": 100,
+        "isDeleted": false,
+        "createdAt": "2026-11-08T19:02:45.082Z",
+        "updatedAt": "2026-11-08T19:02:45.082Z"
+      }
+    ],
     "User": [
       {
         "id": 18,
@@ -4387,8 +4965,8 @@
       {
         "id": 17,
         "tenantId": 1,
-        "firstName": "Yaw",
-        "lastName": "Boateng",
+        "firstName": "Akosua",
+        "lastName": "Agyeman",
         "email": "yaw.boateng.1793826741790430@gbs.edu",
         "password": "$2a$10$IPnuocbhSY27qJJefGKczOrXXxQCrBSBgwGFsE44pDFKqLwUiQMyC",
         "role": "STUDENT",
@@ -4406,8 +4984,8 @@
       {
         "id": 16,
         "tenantId": 1,
-        "firstName": "Yaw",
-        "lastName": "Boateng",
+        "firstName": "Kojo",
+        "lastName": "Antwi",
         "email": "yaw.boateng.1793826733216319@gbs.edu",
         "password": "$2a$10$tWwJlKl3Rq4U2nFjtUHmMeElvGfou4g5t7t.3PcxMLhGcu97ydEVq",
         "role": "STUDENT",
@@ -4425,8 +5003,8 @@
       {
         "id": 15,
         "tenantId": 1,
-        "firstName": "Yaw",
-        "lastName": "Boateng",
+        "firstName": "Esi",
+        "lastName": "Mensah",
         "email": "yaw.boateng.1793826719435539@gbs.edu",
         "password": "$2a$10$INPoA72qSF0gHqUW5cdnie1NJ.OQ.ObizYokqv248XVPaKjlVv9Zy",
         "role": "STUDENT",
@@ -4457,8 +5035,8 @@
       {
         "id": 13,
         "tenantId": 1,
-        "firstName": "Yaw",
-        "lastName": "Boateng",
+        "firstName": "Kwame",
+        "lastName": "Mensah",
         "email": "yaw.boateng.1793826716349873@gbs.edu",
         "password": "$2a$10$nIauW2muZYucl0hzvTlNOOjOziPL6WZuk.xQwrYDjacQWE4JXynEK",
         "role": "STUDENT",
@@ -4687,6 +5265,150 @@
         "isLocked": false,
         "isDeleted": false,
         "failedLoginAttempts": 0,
+        "createdAt": "2026-01-01T00:00:00.000Z",
+        "updatedAt": "2026-01-01T00:00:00.000Z"
+      },
+      {
+        "id": 101,
+        "tenantId": 1,
+        "firstName": "Emmanuel",
+        "lastName": "Mensah",
+        "email": "emmanuel.mensah@gbs.edu",
+        "role": "STUDENT",
+        "isActive": true,
+        "permissions": [
+          "view_attendance",
+          "view_timetable",
+          "view_assignments",
+          "join_online_classes"
+        ],
+        "isDeleted": false,
+        "createdAt": "2026-01-01T00:00:00.000Z",
+        "updatedAt": "2026-01-01T00:00:00.000Z"
+      },
+      {
+        "id": 102,
+        "tenantId": 1,
+        "firstName": "Ama",
+        "lastName": "Serwaa",
+        "email": "ama.serwaa@gbs.edu",
+        "role": "STUDENT",
+        "isActive": true,
+        "permissions": [
+          "view_attendance",
+          "view_timetable",
+          "view_assignments",
+          "join_online_classes"
+        ],
+        "isDeleted": false,
+        "createdAt": "2026-01-01T00:00:00.000Z",
+        "updatedAt": "2026-01-01T00:00:00.000Z"
+      },
+      {
+        "id": 103,
+        "tenantId": 1,
+        "firstName": "Julian",
+        "lastName": "Bramwell",
+        "email": "julian.bramwell@gbs.edu",
+        "role": "STUDENT",
+        "isActive": true,
+        "permissions": [
+          "view_attendance",
+          "view_timetable",
+          "view_assignments",
+          "join_online_classes"
+        ],
+        "isDeleted": false,
+        "createdAt": "2026-01-01T00:00:00.000Z",
+        "updatedAt": "2026-01-01T00:00:00.000Z"
+      },
+      {
+        "id": 104,
+        "tenantId": 1,
+        "firstName": "Sophia",
+        "lastName": "Chen",
+        "email": "sophia.chen@gbs.edu",
+        "role": "STUDENT",
+        "isActive": true,
+        "permissions": [
+          "view_attendance",
+          "view_timetable",
+          "view_assignments",
+          "join_online_classes"
+        ],
+        "isDeleted": false,
+        "createdAt": "2026-01-01T00:00:00.000Z",
+        "updatedAt": "2026-01-01T00:00:00.000Z"
+      },
+      {
+        "id": 105,
+        "tenantId": 1,
+        "firstName": "Kofi",
+        "lastName": "Boateng",
+        "email": "kofi.boateng@gbs.edu",
+        "role": "STUDENT",
+        "isActive": true,
+        "permissions": [
+          "view_attendance",
+          "view_timetable",
+          "view_assignments",
+          "join_online_classes"
+        ],
+        "isDeleted": false,
+        "createdAt": "2026-01-01T00:00:00.000Z",
+        "updatedAt": "2026-01-01T00:00:00.000Z"
+      },
+      {
+        "id": 106,
+        "tenantId": 1,
+        "firstName": "Nana",
+        "lastName": "Yaa Asantewaa",
+        "email": "nana.yaa@gbs.edu",
+        "role": "STUDENT",
+        "isActive": true,
+        "permissions": [
+          "view_attendance",
+          "view_timetable",
+          "view_assignments",
+          "join_online_classes"
+        ],
+        "isDeleted": false,
+        "createdAt": "2026-01-01T00:00:00.000Z",
+        "updatedAt": "2026-01-01T00:00:00.000Z"
+      },
+      {
+        "id": 107,
+        "tenantId": 1,
+        "firstName": "Kwaku",
+        "lastName": "Frimpong",
+        "email": "kwaku.frimpong@gbs.edu",
+        "role": "STUDENT",
+        "isActive": true,
+        "permissions": [
+          "view_attendance",
+          "view_timetable",
+          "view_assignments",
+          "join_online_classes"
+        ],
+        "isDeleted": false,
+        "createdAt": "2026-01-01T00:00:00.000Z",
+        "updatedAt": "2026-01-01T00:00:00.000Z"
+      },
+      {
+        "id": 108,
+        "tenantId": 1,
+        "firstName": "Abena",
+        "lastName": "Osei-Bonsu",
+        "email": "abena.osei@gbs.edu",
+        "role": "STUDENT",
+        "isActive": true,
+        "permissions": [
+          "view_attendance",
+          "view_timetable",
+          "view_assignments",
+          "join_online_classes"
+        ],
+        "isDeleted": false,
         "createdAt": "2026-01-01T00:00:00.000Z",
         "updatedAt": "2026-01-01T00:00:00.000Z"
       }
@@ -4937,6 +5659,34 @@
     ],
     "AttendanceRecord": [
       {
+        "id": 39,
+        "tenantId": 1,
+        "classId": 1,
+        "studentId": 102,
+        "subjectId": null,
+        "date": "2026-11-08T00:00:00.000Z",
+        "status": "ABSENT",
+        "remarks": "Sick note",
+        "markedById": 1,
+        "isDeleted": false,
+        "createdAt": "2026-11-08T22:32:57.926Z",
+        "updatedAt": "2026-11-08T22:32:57.926Z"
+      },
+      {
+        "id": 38,
+        "tenantId": 1,
+        "classId": 1,
+        "studentId": 18,
+        "subjectId": null,
+        "date": "2026-11-08T00:00:00.000Z",
+        "status": "ABSENT",
+        "remarks": "",
+        "markedById": 2,
+        "isDeleted": false,
+        "createdAt": "2026-11-08T21:42:24.451Z",
+        "updatedAt": "2026-11-08T21:42:31.316Z"
+      },
+      {
         "id": 37,
         "tenantId": 1,
         "classId": 13,
@@ -4948,7 +5698,7 @@
         "markedById": 2,
         "isDeleted": false,
         "createdAt": "2026-11-08T17:58:57.676Z",
-        "updatedAt": "2026-11-08T17:59:30.739Z"
+        "updatedAt": "2026-11-08T19:39:04.650Z"
       },
       {
         "id": 36,
@@ -4973,23 +5723,9 @@
         "status": "PRESENT",
         "isDeleted": false,
         "createdAt": "2026-11-08T16:03:05.313Z",
-        "updatedAt": "2026-11-08T18:19:45.547Z",
-        "remarks": "Punctual roll call",
+        "updatedAt": "2026-11-08T22:32:57.556Z",
+        "remarks": "On time",
         "markedById": 1
-      },
-      {
-        "id": 34,
-        "tenantId": 1,
-        "classId": 1,
-        "studentId": 18,
-        "subjectId": null,
-        "date": "2026-11-08T00:00:00.000Z",
-        "status": "PRESENT",
-        "remarks": null,
-        "markedById": 2,
-        "isDeleted": false,
-        "createdAt": "2026-11-08T15:59:00.797Z",
-        "updatedAt": "2026-11-08T15:59:00.797Z"
       },
       {
         "id": 33,
@@ -6315,14 +7051,14 @@
         "tenantId": 1,
         "correctAnswer": "C",
         "createdAt": "2026-11-02T23:23:00.851Z",
-        "updatedAt": "2026-11-05T17:26:18.582Z"
+        "updatedAt": "2026-11-08T18:57:25.701Z"
       },
       {
         "id": 101,
         "tenantId": 1,
         "correctAnswer": "A",
         "createdAt": "2026-11-02T23:23:00.840Z",
-        "updatedAt": "2026-11-05T17:26:18.570Z"
+        "updatedAt": "2026-11-08T18:57:25.551Z"
       }
     ],
     "MeetingAttendance": [],
@@ -6409,7 +7145,7 @@
         "status": "ACTIVE",
         "isDeleted": false,
         "createdAt": "2026-11-07T00:18:11.740Z",
-        "updatedAt": "2026-11-07T00:18:11.740Z"
+        "updatedAt": "2026-11-08T22:29:51.651Z"
       },
       {
         "id": 5,
@@ -6457,6 +7193,86 @@
         "classId": 1,
         "studentId": 3,
         "enrolledAt": "2026-01-10T08:00:00.000Z"
+      },
+      {
+        "id": 7,
+        "tenantId": 1,
+        "classId": 1,
+        "studentId": 101,
+        "status": "ACTIVE",
+        "isDeleted": false,
+        "createdAt": "2026-01-01T00:00:00.000Z",
+        "updatedAt": "2026-01-01T00:00:00.000Z"
+      },
+      {
+        "id": 8,
+        "tenantId": 1,
+        "classId": 1,
+        "studentId": 102,
+        "status": "ACTIVE",
+        "isDeleted": false,
+        "createdAt": "2026-01-01T00:00:00.000Z",
+        "updatedAt": "2026-01-01T00:00:00.000Z"
+      },
+      {
+        "id": 9,
+        "tenantId": 1,
+        "classId": 1,
+        "studentId": 103,
+        "status": "ACTIVE",
+        "isDeleted": false,
+        "createdAt": "2026-01-01T00:00:00.000Z",
+        "updatedAt": "2026-01-01T00:00:00.000Z"
+      },
+      {
+        "id": 10,
+        "tenantId": 1,
+        "classId": 1,
+        "studentId": 104,
+        "status": "ACTIVE",
+        "isDeleted": false,
+        "createdAt": "2026-01-01T00:00:00.000Z",
+        "updatedAt": "2026-01-01T00:00:00.000Z"
+      },
+      {
+        "id": 11,
+        "tenantId": 1,
+        "classId": 1,
+        "studentId": 105,
+        "status": "ACTIVE",
+        "isDeleted": false,
+        "createdAt": "2026-01-01T00:00:00.000Z",
+        "updatedAt": "2026-01-01T00:00:00.000Z"
+      },
+      {
+        "id": 12,
+        "tenantId": 1,
+        "classId": 1,
+        "studentId": 106,
+        "status": "ACTIVE",
+        "isDeleted": false,
+        "createdAt": "2026-01-01T00:00:00.000Z",
+        "updatedAt": "2026-01-01T00:00:00.000Z"
+      },
+      {
+        "id": 13,
+        "tenantId": 1,
+        "classId": 1,
+        "studentId": 107,
+        "status": "ACTIVE",
+        "isDeleted": false,
+        "createdAt": "2026-01-01T00:00:00.000Z",
+        "updatedAt": "2026-01-01T00:00:00.000Z"
+      },
+      {
+        "id": 14,
+        "tenantId": 1,
+        "classId": 1,
+        "studentId": 108,
+        "status": "ACTIVE",
+        "isDeleted": false,
+        "createdAt": "2026-01-01T00:00:00.000Z",
+        "updatedAt": "2026-01-01T00:00:00.000Z"
       }
     ],
     "ParentStudentLink": [
@@ -6482,12 +7298,12 @@
         },
         "assignmentId": 7,
         "studentId": 3,
-        "submissionContent": "Mr.Gabriel is the God on his own",
+        "submissionContent": "HIM",
         "attachmentUrl": null,
         "status": "SUBMITTED",
-        "submittedAt": "2026-11-06T21:34:00.975Z",
+        "submittedAt": "2026-11-08T19:39:50.015Z",
         "createdAt": "2026-11-06T21:34:01.012Z",
-        "updatedAt": "2026-11-06T21:34:01.012Z"
+        "updatedAt": "2026-11-08T19:39:50.062Z"
       }
     ]
   },
@@ -6496,14 +7312,14 @@
       {
         "id": 6,
         "created_at": "2026-11-02T23:55:18.002Z",
-        "updated_at": "2026-11-02T23:55:18.002Z",
+        "updated_at": "2026-11-08T20:33:13.815Z",
         "tenant_id": 1,
         "ticket_number": "TKT-2026-1797658",
         "title": "hjjjjjjjjjjjjjjjjjjj",
         "category": "PLUMBING",
         "location": "Main Academic Building",
         "priority": "HIGH",
-        "status": "PENDING",
+        "status": "RESOLVED",
         "estimated_cost": 150,
         "actual_cost": "Emma Staff",
         "assigned_staff": "Unassigned Staff Lead",
@@ -6600,7 +7416,7 @@
       {
         "id": 1,
         "created_at": "2026-11-02T22:57:59.443Z",
-        "updated_at": "2026-11-02T22:57:59.443Z",
+        "updated_at": "2026-11-08T20:31:20.032Z",
         "tenant_id": 1,
         "item_code": "dfsh",
         "name": "hshd",
@@ -6610,7 +7426,7 @@
         "reorder_level": 10,
         "unit_price": 25,
         "location": "Science Storeroom B1",
-        "status": "IN_STOCK",
+        "status": 34,
         "purchased_by_staff": "Dr. Evelyn Reed (Head of Sciences)",
         "purchaser_dept": "Faculty of Sciences"
       }
@@ -6662,6 +7478,19 @@
       }
     ],
     "cctv_streams": [
+      {
+        "id": 3,
+        "created_at": "2026-11-08T20:19:52.503Z",
+        "updated_at": "2026-11-08T20:21:21.254Z",
+        "tenant_id": 1,
+        "camera_code": "CAM-2428",
+        "camera_name": "South Entrance Panoramic Cam",
+        "location": "Main Administrative Quadrangle",
+        "stream_url": "rtsp://192.168.1.108:554/ch0",
+        "rtsp_endpoint": "1080p FHD 60FPS",
+        "resolution": "ONLINE",
+        "status": "MAINTENANCE"
+      },
       {
         "id": 2,
         "created_at": "2026-11-04T20:01:48.382Z",

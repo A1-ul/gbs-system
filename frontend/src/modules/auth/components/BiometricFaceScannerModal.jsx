@@ -255,21 +255,22 @@ export default function BiometricFaceScannerModal({ isOpen, onClose, onScanCompl
     setCapturedImage(dataUrl);
     setScanning(false);
     setScanProgress(100);
-    setLivenessStatus("✅ Biometric facial scan verified & cryptographically stamped! Saving and returning to registration...");
+    setLivenessStatus("📷 Picture captured! Please preview your photo below and click 'Confirm & Submit Photo' or retake.");
     stopCamera();
+  };
 
+  const handleConfirmSubmit = () => {
+    if (!capturedImage) return;
+    const faceToken = `FACE-BIO-${Date.now().toString(36).toUpperCase()}-${Math.random().toString(36).substr(2, 6).toUpperCase()}`;
     if (onScanComplete) {
       onScanComplete({
-        faceImage: dataUrl,
-        photoDataUrl: dataUrl,
+        faceImage: capturedImage,
+        photoDataUrl: capturedImage,
         biometricToken: faceToken,
         timestamp: new Date().toISOString()
       });
     }
-
-    setTimeout(() => {
-      if (onClose) onClose();
-    }, 950);
+    if (onClose) onClose();
   };
 
   const handleRetake = () => {
@@ -431,21 +432,21 @@ export default function BiometricFaceScannerModal({ isOpen, onClose, onScanCompl
               </label>
             </div>
           ) : (
-            <div style={{ display: "flex", flexDirection: "column", gap: "10px", width: "100%" }}>
-              <div style={{ background: "rgba(16, 185, 129, 0.15)", border: "1px solid #10b981", padding: "8px 12px", borderRadius: "8px", textAlign: "center", fontSize: "0.82rem", color: "#34d399", fontWeight: 700 }}>
-                ✅ Facial scan captured & saved! Returning to onboarding form so you can complete and submit your registration...
+            <div style={{ display: "flex", flexDirection: "column", gap: "12px", width: "100%" }}>
+              <div style={{ background: "rgba(16, 185, 129, 0.15)", border: "1px solid #10b981", padding: "10px 14px", borderRadius: "8px", textAlign: "center", fontSize: "0.85rem", color: "#34d399", fontWeight: 700 }}>
+                📷 Picture captured successfully! Preview your photo above. Click "Confirm & Submit Photo" to commit, or retake.
               </div>
               <div style={{ display: "flex", gap: "10px", width: "100%" }}>
-                <button type="button" className="btn-secondary" style={{ flex: 1 }} onClick={handleRetake}>
-                  🔄 Retake Scan
+                <button type="button" className="btn-secondary" style={{ flex: 1, padding: "10px" }} onClick={handleRetake}>
+                  🔄 Retake Photo
                 </button>
                 <button
                   type="button"
                   className="btn-primary"
-                  style={{ flex: 2, background: "linear-gradient(135deg, #10b981, #059669)", fontWeight: 800 }}
-                  onClick={onClose}
+                  style={{ flex: 2, background: "linear-gradient(135deg, #10b981, #059669)", fontWeight: 800, padding: "10px" }}
+                  onClick={handleConfirmSubmit}
                 >
-                  💾 Save & Continue Form Completion →
+                  ✅ Confirm & Submit Photo
                 </button>
               </div>
             </div>

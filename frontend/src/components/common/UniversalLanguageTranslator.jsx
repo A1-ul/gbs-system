@@ -121,7 +121,7 @@ export default function UniversalLanguageTranslator() {
       localStorage.setItem("gbs_system_language", countryCode);
       const match = SUPPORTED_LANGUAGES.find((c) => c.code === countryCode);
       window.dispatchEvent(new CustomEvent("gbs_language_changed", { detail: { code: countryCode, lang: match?.lang } }));
-    } catch {}
+    } catch { }
   };
 
   const handleTranslateCustom = (e) => {
@@ -145,10 +145,10 @@ export default function UniversalLanguageTranslator() {
 
         translation = activeCountry.code === "GH" ? twText :
           activeCountry.code === "FR" ? frText :
-          activeCountry.code === "ES" ? esText :
-          activeCountry.code === "KE" ? swText :
-          activeCountry.code === "SA" ? arText :
-          `Attendance Record Notice: Student roll call status evaluated. Teachers tick scholars student-by-student and auto-save each record immediately.`;
+            activeCountry.code === "ES" ? esText :
+              activeCountry.code === "KE" ? swText :
+                activeCountry.code === "SA" ? arText :
+                  `Attendance Record Notice: Student roll call status evaluated. Teachers tick scholars student-by-student and auto-save each record immediately.`;
 
         explanation = `Plain Meaning: This is an official classroom attendance update. It records whether a student was Present, Absent, Late, or Excused for the session. Parents and guardians must take note of their child's classroom participation and provide written or medical excuse if absent.`;
       } else if (lower.includes("fee") || lower.includes("arrear") || lower.includes("debt") || lower.includes("money") || lower.includes("pay") || lower.includes("momo")) {
@@ -156,21 +156,21 @@ export default function UniversalLanguageTranslator() {
         translation = activeCountry.code === "FR" || activeCountry.code === "CI" || activeCountry.code === "SN"
           ? item.fr
           : activeCountry.code === "ES"
-          ? item.es
-          : activeCountry.code === "KE"
-          ? item.sw
-          : activeCountry.code === "SA"
-          ? item.ar
-          : activeCountry.code === "GH"
-          ? item.tw
-          : item.en;
+            ? item.es
+            : activeCountry.code === "KE"
+              ? item.sw
+              : activeCountry.code === "SA"
+                ? item.ar
+                : activeCountry.code === "GH"
+                  ? item.tw
+                  : item.en;
         explanation = `Institutional Finance Meaning: '${text}' relates to financial obligations, term tuition, or verified payment settlements. Parents can settle fee arrears directly using Mobile Money (MTN MoMo, Telecel Cash, AT Money) or Card with automated USSD prompt verification and official stamped receipts.`;
       } else if (lower.includes("dev") || lower.includes("breach") || lower.includes("security") || lower.includes("sentinel") || lower.includes("pin")) {
         translation = activeCountry.code === "GH" ? "Ahobammbɔ amanneɛbɔ: Wɔabɔ kɔkɔ sɛ obi repɛ kwan a ɛmmfata afa so akɔ developer nkyɛn. Wɔbɛfrɛ no abisa no asɛm." :
           activeCountry.code === "FR" ? "Alerte de sécurité système : Tentative d'intrusion détectée sur la console développeur. Surveillance active." :
-          activeCountry.code === "ES" ? "Alerta de seguridad: Intento de acceso no autorizado detectado en la consola del desarrollador." :
-          activeCountry.code === "SA" ? "تنبيه أمني للنظام: تم رصد محاولة دخول غير مصرح بها إلى لوحة المطورين." :
-          "Developer Security & Sentinel Alert: High-level access gate monitoring unauthorized intrusion trials.";
+            activeCountry.code === "ES" ? "Alerta de seguridad: Intento de acceso no autorizado detectado en la consola del desarrollador." :
+              activeCountry.code === "SA" ? "تنبيه أمني للنظام: تم رصد محاولة دخول غير مصرح بها إلى لوحة المطورين." :
+                "Developer Security & Sentinel Alert: High-level access gate monitoring unauthorized intrusion trials.";
 
         explanation = `Technical Explanation: Developer Mission Control is protected by root master PIN credentials (0543294615Gab). Any non-developer staff attempting breach is logged in the Intrusion Sentinel and flagged for questioning after 3 failed attempts.`;
       } else if (lower.includes("plan") || lower.includes("note") || lower.includes("scheme") || lower.includes("vet")) {
@@ -178,53 +178,53 @@ export default function UniversalLanguageTranslator() {
         translation = activeCountry.code === "FR" || activeCountry.code === "CI" || activeCountry.code === "SN"
           ? item.fr
           : activeCountry.code === "ES"
-          ? item.es
-          : activeCountry.code === "KE"
-          ? item.sw
-          : activeCountry.code === "SA"
-          ? item.ar
-          : activeCountry.code === "GH"
-          ? item.tw
-          : item.en;
+            ? item.es
+            : activeCountry.code === "KE"
+              ? item.sw
+              : activeCountry.code === "SA"
+                ? item.ar
+                : activeCountry.code === "GH"
+                  ? item.tw
+                  : item.en;
         explanation = `Curriculum & Governance: Official syllabus forecast prepared by teachers, vetted by the Headmaster with constructive pedagogical remarks.`;
       } else if (lower.includes("admit") || lower.includes("admission") || lower.includes("walk-in") || lower.includes("parent")) {
         const item = EDUCATIONAL_TERMS_DICTIONARY["Admission Intake Pipeline"];
         translation = activeCountry.code === "FR" || activeCountry.code === "CI" || activeCountry.code === "SN"
           ? item.fr
           : activeCountry.code === "ES"
-          ? item.es
-          : activeCountry.code === "KE"
-          ? item.sw
-          : activeCountry.code === "SA"
-          ? item.ar
-          : activeCountry.code === "GH"
-          ? item.tw
-          : item.en;
+            ? item.es
+            : activeCountry.code === "KE"
+              ? item.sw
+              : activeCountry.code === "SA"
+                ? item.ar
+                : activeCountry.code === "GH"
+                  ? item.tw
+                  : item.en;
         explanation = `Admissions Desk: Walk-in parent admissions and online applicants enrolled with instant institutional index numbers.`;
       } else if (lower.includes("score") || lower.includes("exam") || lower.includes("grade") || lower.includes("assessment")) {
         const item = EDUCATIONAL_TERMS_DICTIONARY["Continuous Assessment"];
         translation = activeCountry.code === "FR" || activeCountry.code === "CI" || activeCountry.code === "SN"
           ? item.fr
           : activeCountry.code === "ES"
-          ? item.es
-          : activeCountry.code === "KE"
-          ? item.sw
-          : activeCountry.code === "SA"
-          ? item.ar
-          : activeCountry.code === "GH"
-          ? item.tw
-          : item.en;
+            ? item.es
+            : activeCountry.code === "KE"
+              ? item.sw
+              : activeCountry.code === "SA"
+                ? item.ar
+                : activeCountry.code === "GH"
+                  ? item.tw
+                  : item.en;
         explanation = `Examination & Scoring: Direct individual student-by-student scoring records, terminal grade weighting, and rank classification.`;
       } else {
         // Generic multi-lingual translation response
         const prefix = activeCountry.code === "FR" ? "Traduction et explication scolaire :" :
           activeCountry.code === "ES" ? "Traducción y significado institucional :" :
-          activeCountry.code === "KE" ? "Tafsiri ya kielimu na maana :" :
-          activeCountry.code === "SA" ? "الترجمة والمعنى المؤسسي :" :
-          activeCountry.code === "DE" ? "Schulische Übersetzung & Erklärung :" :
-          activeCountry.code === "CN" ? "综合教育语境翻译与解析：" :
-          activeCountry.code === "GH" ? "Adesua asekyerɛ wɔ Twi ne Engiresi mu :" :
-          "Educational Translation & Context:";
+            activeCountry.code === "KE" ? "Tafsiri ya kielimu na maana :" :
+              activeCountry.code === "SA" ? "الترجمة والمعنى المؤسسي :" :
+                activeCountry.code === "DE" ? "Schulische Übersetzung & Erklärung :" :
+                  activeCountry.code === "CN" ? "综合教育语境翻译与解析：" :
+                    activeCountry.code === "GH" ? "Adesua asekyerɛ wɔ Twi ne Engiresi mu :" :
+                      "Educational Translation & Context:";
 
         translation = `${prefix} "${text}" — This is an administrative institutional directive within the GBS School Management System.`;
         explanation = `Plain Meaning & Required Action: Under ${activeCountry.name}, this message communicates standard operational instructions. Recipient should review the message details, confirm their records in the portal, or consult their respective department head for clarification.`;
@@ -492,14 +492,14 @@ export default function UniversalLanguageTranslator() {
                         {activeCountry.code === "FR" || activeCountry.code === "CI" || activeCountry.code === "SN"
                           ? data.fr
                           : activeCountry.code === "ES"
-                          ? data.es
-                          : activeCountry.code === "KE"
-                          ? data.sw
-                          : activeCountry.code === "SA"
-                          ? data.ar
-                          : activeCountry.code === "GH"
-                          ? `${data.tw} (${data.en})`
-                          : data.en}
+                            ? data.es
+                            : activeCountry.code === "KE"
+                              ? data.sw
+                              : activeCountry.code === "SA"
+                                ? data.ar
+                                : activeCountry.code === "GH"
+                                  ? `${data.tw} (${data.en})`
+                                  : data.en}
                       </p>
                     </div>
                     <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginTop: "4px", borderTop: "1px solid rgba(255, 255, 255, 0.05)", paddingTop: "4px" }}>

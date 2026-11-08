@@ -23,6 +23,7 @@ export default function AttendanceDashboard() {
   // Roster & Attendance Marking State
   const [roster, setRoster] = useState([]);
   const [attendanceMap, setAttendanceMap] = useState({}); // { [studentId]: { status, remarks } }
+  const [studentSaveStatus, setStudentSaveStatus] = useState({}); // { [studentId]: "✓ Ticked & Auto-Saved (time)" }
   const [loadingRoster, setLoadingRoster] = useState(false);
   const [savingAttendance, setSavingAttendance] = useState(false);
   const [saveSuccessMessage, setSaveSuccessMessage] = useState('');
@@ -95,15 +96,32 @@ export default function AttendanceDashboard() {
       const students = res.data?.data?.students || [];
       setRoster(students);
 
-      // Prepopulate attendance map: default everyone to PRESENT
+      // Do NOT default everyone to PRESENT! A teacher must tick each student one by one.
+      const savedKey = `gbs_attendance_${classId}_${attendanceDate}`;
+      const remarksKey = `gbs_attendance_remarks_${classId}_${attendanceDate}`;
+      let cachedStatus = {};
+      let cachedRemarks = {};
+      try {
+        cachedStatus = JSON.parse(localStorage.getItem(savedKey) || "{}");
+        cachedRemarks = JSON.parse(localStorage.getItem(remarksKey) || "{}");
+      } catch {}
+
       const initialMap = {};
+      const initialSaveStatus = {};
       students.forEach(s => {
-        initialMap[s.studentId] = {
-          status: 'PRESENT',
-          remarks: ''
+        const sid = s.studentId;
+        const st = cachedStatus[sid] !== undefined ? cachedStatus[sid] : (cachedStatus[String(sid)] !== undefined ? cachedStatus[String(sid)] : null);
+        const rm = cachedRemarks[sid] !== undefined ? cachedRemarks[sid] : (cachedRemarks[String(sid)] !== undefined ? cachedRemarks[String(sid)] : '');
+        initialMap[sid] = {
+          status: st,
+          remarks: rm
         };
+        if (st) {
+          initialSaveStatus[sid] = "✓ Saved";
+        }
       });
       setAttendanceMap(initialMap);
+      setStudentSaveStatus(initialSaveStatus);
     } catch (err) {
       console.error('Error fetching roster:', err);
       setErrorMessage(err.response?.data?.message || 'Failed to load class roster.');
@@ -158,45 +176,94 @@ export default function AttendanceDashboard() {
     }
   };
 
-  // Status Change per student
+  // Status Change per student: Teachers tick each student one by one, immediately auto-saving
   const handleStatusChange = (studentId, newStatus) => {
-    setAttendanceMap(prev => ({
-      ...prev,
+    const updatedMap = {
+      ...attendanceMap,
       [studentId]: {
-        ...(prev[studentId] || { remarks: '' }),
+        ...(attendanceMap[studentId] || { remarks: '' }),
         status: newStatus
       }
+    };
+    setAttendanceMap(updatedMap);
+
+    const nowTimeStr = new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit", second: "2-digit" });
+    setStudentSaveStatus(prev => ({
+      ...prev,
+      [studentId]: `✓ Ticked & Auto-Saved (${nowTimeStr})`
     }));
+
+    // Save to local cache immediately
+    try {
+      const savedKey = `gbs_attendance_${selectedClassId}_${attendanceDate}`;
+      const mapToSave = {};
+      Object.keys(updatedMap).forEach(k => {
+        if (updatedMap[k]?.status) mapToSave[k] = updatedMap[k].status;
+      });
+      localStorage.setItem(savedKey, JSON.stringify(mapToSave));
+    } catch {}
+
+    // Asynchronously commit single student attendance to database
+    axios.post(`${API_BASE}/attendance/single`, {
+      classId: parseInt(selectedClassId, 10) || 1,
+      studentId: typeof studentId === 'number' ? studentId : (parseInt(String(studentId).replace(/\D/g, ''), 10) || 1),
+      status: newStatus,
+      date: attendanceDate,
+      remarks: attendanceMap[studentId]?.remarks || ''
+    }, authHeaders).then(() => {
+      setStudentSaveStatus(prev => ({
+        ...prev,
+        [studentId]: `✓ Auto-Saved (${nowTimeStr})`
+      }));
+    }).catch(err => {
+      console.warn("Background single attendance sync fallback:", err?.message);
+    });
   };
 
   const handleRemarksChange = (studentId, remarks) => {
-    setAttendanceMap(prev => ({
-      ...prev,
+    const updatedMap = {
+      ...attendanceMap,
       [studentId]: {
-        ...(prev[studentId] || { status: 'PRESENT' }),
+        ...(attendanceMap[studentId] || { status: null }),
         remarks
       }
-    }));
+    };
+    setAttendanceMap(updatedMap);
+
+    try {
+      const remarksKey = `gbs_attendance_remarks_${selectedClassId}_${attendanceDate}`;
+      const remarksToSave = {};
+      Object.keys(updatedMap).forEach(k => {
+        if (updatedMap[k]?.remarks) remarksToSave[k] = updatedMap[k].remarks;
+      });
+      localStorage.setItem(remarksKey, JSON.stringify(remarksToSave));
+    } catch {}
+
+    const currentStatus = updatedMap[studentId]?.status || 'PRESENT';
+    axios.post(`${API_BASE}/attendance/single`, {
+      classId: parseInt(selectedClassId, 10) || 1,
+      studentId: typeof studentId === 'number' ? studentId : (parseInt(String(studentId).replace(/\D/g, ''), 10) || 1),
+      status: currentStatus,
+      date: attendanceDate,
+      remarks: remarks
+    }, authHeaders).catch(() => {});
   };
 
-  // Bulk actions
-  const markAllAs = (status) => {
-    const updated = {};
-    roster.forEach(s => {
-      updated[s.studentId] = {
-        status,
-        remarks: attendanceMap[s.studentId]?.remarks || ''
-      };
-    });
-    setAttendanceMap(updated);
-  };
-
-  // Submit Batch Attendance to PostgreSQL
+  // Submit Batch Attendance to PostgreSQL: Verifies all students are checked one by one
   const handleSubmitAttendance = async () => {
     try {
       setSavingAttendance(true);
       setErrorMessage('');
       setSaveSuccessMessage('');
+
+      const unmarked = roster.filter(s => !attendanceMap[s.studentId]?.status);
+      if (unmarked.length > 0) {
+        const unmarkedNames = unmarked.map(s => s.name || s.firstName).slice(0, 3).join(', ');
+        const extraCount = unmarked.length - 3;
+        setErrorMessage(`⚠️ Roll call incomplete: ${unmarked.length} student(s) (${unmarkedNames}${extraCount > 0 ? ` +${extraCount} more` : ''}) have not been ticked yet! A teacher must tick each student one by one to complete attendance.`);
+        setSavingAttendance(false);
+        return;
+      }
 
       const records = roster.map(s => ({
         studentId: s.studentId,
@@ -449,17 +516,17 @@ export default function AttendanceDashboard() {
               <p>Select attendance status for each enrolled student and click save to commit to PostgreSQL.</p>
             </div>
 
-            <div className="quick-marking-controls">
-              <span className="quick-label">Quick Actions:</span>
-              <button className="pill-btn green" onClick={() => markAllAs('PRESENT')}>All Present</button>
-              <button className="pill-btn yellow" onClick={() => markAllAs('LATE')}>All Late</button>
-              <button className="pill-btn red" onClick={() => markAllAs('ABSENT')}>All Absent</button>
+            <div className="quick-marking-controls" style={{ display: 'flex', alignItems: 'center', gap: '12px', flexWrap: 'wrap' }}>
+              <div style={{ background: 'rgba(56, 189, 248, 0.15)', border: '1px solid rgba(56, 189, 248, 0.4)', padding: '6px 14px', borderRadius: '8px', fontSize: '0.85rem', color: '#38bdf8', fontWeight: 800 }}>
+                📋 Roll Call Progress: {Object.values(attendanceMap).filter(v => Boolean(v?.status)).length} / {roster.length} Ticked
+              </div>
               <button 
                 className="save-attendance-btn" 
                 onClick={handleSubmitAttendance}
                 disabled={savingAttendance || roster.length === 0}
+                style={{ padding: '8px 20px', fontWeight: 800, background: 'linear-gradient(135deg, #10b981 0%, #059669 100%)', border: 'none', borderRadius: '8px', color: '#fff', cursor: 'pointer', boxShadow: '0 4px 12px rgba(16, 185, 129, 0.3)' }}
               >
-                {savingAttendance ? 'Saving...' : '💾 Save Attendance to DB'}
+                {savingAttendance ? 'Saving...' : '💾 Finalize & Lock Register'}
               </button>
             </div>
           </div>
@@ -484,18 +551,19 @@ export default function AttendanceDashboard() {
                     <th>Student Name</th>
                     <th>Email Address</th>
                     <th>Lifetime Rate</th>
-                    <th>Attendance Status</th>
+                    <th>One-by-One Roll Call Status (Click to Tick & Auto-Save)</th>
                     <th>Notes / Remarks</th>
                     <th>Actions</th>
                   </tr>
                 </thead>
                 <tbody>
                   {roster.map((student, idx) => {
-                    const currentStatus = attendanceMap[student.studentId]?.status || 'PRESENT';
+                    const currentStatus = attendanceMap[student.studentId]?.status || null;
                     const currentRemarks = attendanceMap[student.studentId]?.remarks || '';
+                    const saveStatus = studentSaveStatus[student.studentId] || (currentStatus ? '✓ Saved' : null);
 
                     return (
-                      <tr key={student.studentId} className={`status-row-${currentStatus.toLowerCase()}`}>
+                      <tr key={student.studentId} className={currentStatus ? `status-row-${currentStatus.toLowerCase()}` : 'status-row-pending'}>
                         <td className="index-col">{idx + 1}</td>
                         <td className="student-col">
                           <div className="avatar-chip">
@@ -504,6 +572,15 @@ export default function AttendanceDashboard() {
                           <div className="student-name-block">
                             <strong>{student.name}</strong>
                             <span className="student-id-sub">ID: #{student.studentId}</span>
+                            {saveStatus ? (
+                              <span style={{ fontSize: '0.72rem', color: '#10b981', fontWeight: 800, marginTop: '2px', display: 'block' }}>
+                                {saveStatus}
+                              </span>
+                            ) : (
+                              <span style={{ fontSize: '0.72rem', color: '#f59e0b', fontWeight: 600, marginTop: '2px', display: 'block' }}>
+                                ⚪ Pending Roll Call
+                              </span>
+                            )}
                           </div>
                         </td>
                         <td className="email-col">{student.email}</td>
@@ -518,29 +595,33 @@ export default function AttendanceDashboard() {
                               type="button"
                               className={`status-pill present ${currentStatus === 'PRESENT' ? 'selected' : ''}`}
                               onClick={() => handleStatusChange(student.studentId, 'PRESENT')}
+                              style={{ fontWeight: currentStatus === 'PRESENT' ? 800 : 600 }}
                             >
-                              Present
+                              {currentStatus === 'PRESENT' ? '✓ Present' : 'Present'}
                             </button>
                             <button 
                               type="button"
                               className={`status-pill late ${currentStatus === 'LATE' ? 'selected' : ''}`}
                               onClick={() => handleStatusChange(student.studentId, 'LATE')}
+                              style={{ fontWeight: currentStatus === 'LATE' ? 800 : 600 }}
                             >
-                              Late
+                              {currentStatus === 'LATE' ? '✓ Late' : 'Late'}
                             </button>
                             <button 
                               type="button"
                               className={`status-pill absent ${currentStatus === 'ABSENT' ? 'selected' : ''}`}
                               onClick={() => handleStatusChange(student.studentId, 'ABSENT')}
+                              style={{ fontWeight: currentStatus === 'ABSENT' ? 800 : 600 }}
                             >
-                              Absent
+                              {currentStatus === 'ABSENT' ? '✗ Absent' : 'Absent'}
                             </button>
                             <button 
                               type="button"
                               className={`status-pill excused ${currentStatus === 'EXCUSED' ? 'selected' : ''}`}
                               onClick={() => handleStatusChange(student.studentId, 'EXCUSED')}
+                              style={{ fontWeight: currentStatus === 'EXCUSED' ? 800 : 600 }}
                             >
-                              Excused
+                              {currentStatus === 'EXCUSED' ? '📝 Excused' : 'Excused'}
                             </button>
                           </div>
                         </td>

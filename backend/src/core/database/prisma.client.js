@@ -467,6 +467,10 @@ const matchesWhere = (row, where) => {
       if (!cond.every((sub) => matchesWhere(row, sub))) return false;
       continue;
     }
+    if (k.includes('_') && cond && typeof cond === 'object' && !(cond instanceof Date) && !Array.isArray(cond)) {
+      if (!matchesWhere(row, cond)) return false;
+      continue;
+    }
     const rowVal = row[k];
     if (cond && typeof cond === 'object' && !(cond instanceof Date) && !Array.isArray(cond)) {
       if (cond.in && Array.isArray(cond.in)) {
@@ -508,6 +512,9 @@ const matchesWhere = (row, where) => {
       if (d1 !== d2) return false;
       continue;
     }
+    if (k === 'status' && rowVal === undefined && String(cond).toUpperCase() === 'ACTIVE') {
+      continue;
+    }
     if (INT_ID_FIELDS.has(k)) {
       if (toSafeInt(rowVal, 1) !== toSafeInt(cond, 1)) return false;
     } else if (typeof cond === 'string' && typeof rowVal === 'string') {
@@ -541,7 +548,9 @@ const attachIncludes = (row, includeOrSelect, store) => {
   }
   if (inc.student || copy.studentId) {
     const users = getModelTable(store, 'User');
-    copy.student = copy.student || users.find((u) => u.role === 'STUDENT') || DEFAULT_USERS_LIST[2];
+    const targetSid = toSafeInt(copy.studentId, 0);
+    const matched = targetSid ? users.find((u) => u.id === targetSid) : null;
+    copy.student = copy.student || matched || users.find((u) => u.role === 'STUDENT') || DEFAULT_USERS_LIST[2];
   }
   if (inc.parent || copy.parentId) {
     const users = getModelTable(store, 'User');
@@ -689,7 +698,7 @@ const executeLocalPrismaQuery = ({ model, action, args = {} }) => {
 
   if (action === 'findMany') {
     let list = table.filter((r) => matchesWhere(r, args.where));
-    const strictModels = ['Tenant', 'Subscription', 'SystemLock', 'SystemAlert', 'SystemBackup', 'AuditLog', 'BroadcastAnnouncement'];
+    const strictModels = ['Tenant', 'Subscription', 'SystemLock', 'SystemAlert', 'SystemBackup', 'AuditLog', 'BroadcastAnnouncement', 'ClassEnrollment', 'AttendanceRecord', 'Class', 'User', 'Assignment'];
     if (list.length === 0 && table.length > 0 && !strictModels.includes(model) && !args.where?.email && !args.where?.code) {
       list = [...table];
     }

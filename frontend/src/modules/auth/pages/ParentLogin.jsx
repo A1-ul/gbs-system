@@ -33,7 +33,7 @@ export default function ParentLogin() {
     <div className="role-login-container">
       <div
         className="role-login-bg"
-        style={{ backgroundImage: `url('/images/parent_login_bg.jpg')` }}
+        style={{ backgroundImage: `url('/assets/school_campus_bg.jpg')` }}
       ></div>
       <div className="role-login-overlay"></div>
       <div className="role-login-card">

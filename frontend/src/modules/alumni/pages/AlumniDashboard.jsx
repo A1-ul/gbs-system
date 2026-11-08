@@ -48,8 +48,17 @@ export default function AlumniDashboard() {
   const [verificationInput, setVerificationInput] = useState({ indexNumber: "ALU-2024-0412", graduationYear: "2024" });
   const [verificationResult, setVerificationResult] = useState(null);
   const [showDonateModal, setShowDonateModal] = useState(false);
-  const [donationAmount, setDonationAmount] = useState("250.00");
-  const [donationFund, setDonationFund] = useState("STEM_LAB_EXPANSION");
+  const [alumniPledgeForm, setAlumniPledgeForm] = useState({
+    donorName: "Dr. Kwesi Appiah",
+    gradClass: "Class of 2018",
+    contact: "+233 24 555 8192",
+    email: "k.appiah@alumni.org",
+    campaign: "STEM & Robotics Laboratory Expansion",
+    pledgedAmount: "250.00",
+    redeemedAmount: "250.00",
+    paymentMethod: "MTN Mobile Money",
+    notes: "Dedicated to the 2018 Science & Engineering Cohort"
+  });
   const [donationSuccess, setDonationSuccess] = useState(false);
   
   // Forgot Credential & Archive Recovery State
@@ -478,18 +487,22 @@ export default function AlumniDashboard() {
   // Handle Donate Endowment: Records the gift in the institutional ledger for the Accountant Dashboard
   const handleDonateEndowment = (e) => {
     e.preventDefault();
-    const amount = parseFloat(donationAmount) || 100;
+    const pledged = parseFloat(alumniPledgeForm.pledgedAmount) || 100;
+    const redeemed = parseFloat(alumniPledgeForm.redeemedAmount || 0);
+    const status = redeemed >= pledged ? "FULFILLED" : redeemed > 0 ? "PARTIALLY_FULFILLED" : "PLEDGED";
+
     const newGift = {
       id: `ALM-PLG-${Date.now().toString().slice(-4)}`,
-      donorName: alumniProfile?.fullName || "Dr. Kwesi Appiah (Alumnus)",
-      gradClass: `Class of ${alumniProfile?.gradYear || "2018"}`,
-      contact: alumniProfile?.phone || "+233 24 555 8192",
-      email: alumniProfile?.email || "alumni@alumni.org",
-      campaign: donationFund ? donationFund.replace(/_/g, " ") : "General Campus Endowment",
-      pledgedAmount: amount,
-      redeemedAmount: amount,
-      fulfillmentStatus: "FULFILLED",
-      paymentMethod: "Online Card / Mobile Money",
+      donorName: alumniPledgeForm.donorName.trim() || alumniProfile?.fullName || "Alumnus Contributor",
+      gradClass: alumniPledgeForm.gradClass.trim() || `Class of ${alumniProfile?.gradYear || "2018"}`,
+      contact: alumniPledgeForm.contact.trim() || alumniProfile?.phone || "+233 24 555 8192",
+      email: alumniPledgeForm.email.trim() || alumniProfile?.email || "alumni@alumni.org",
+      campaign: alumniPledgeForm.campaign.trim(),
+      pledgedAmount: pledged,
+      redeemedAmount: redeemed,
+      fulfillmentStatus: status,
+      paymentMethod: alumniPledgeForm.paymentMethod,
+      notes: alumniPledgeForm.notes || "",
       date: new Date().toISOString().split("T")[0],
       receiptRef: `GBS-ALM-REC-${Math.floor(1000 + Math.random() * 9000)}`
     };
@@ -1875,41 +1888,142 @@ export default function AlumniDashboard() {
             {donationSuccess ? (
               <div style={{ textAlign: "center", padding: "1.5rem 0" }}>
                 <span style={{ fontSize: "3rem" }}>🎉</span>
-                <h4 style={{ color: "#34d399", margin: "10px 0 6px" }}>THANK YOU FOR YOUR GIFT!</h4>
+                <h4 style={{ color: "#34d399", margin: "10px 0 6px" }}>THANK YOU FOR YOUR PHILANTHROPIC GIFT!</h4>
                 <p style={{ color: "#cbd5e1", fontSize: "0.85rem" }}>
-                  Your contribution of ${donationAmount} has been registered to the {donationFund} fund. An official tax receipt has been emailed to {alumniProfile.email}.
+                  Your contribution of ${alumniPledgeForm.pledgedAmount} has been recorded to the institutional Bursar ledger. An official tax receipt has been generated and dispatched to {alumniPledgeForm.email}.
                 </p>
               </div>
             ) : (
-              <form onSubmit={handleDonateEndowment}>
-                <div style={{ marginBottom: "12px" }}>
-                  <label style={{ display: "block", fontSize: "0.8rem", color: "#94a3b8", marginBottom: "4px" }}>
-                    Gift Amount (USD)
+              <form onSubmit={handleDonateEndowment} style={{ maxHeight: "75vh", overflowY: "auto", paddingRight: "6px" }}>
+                <div style={{ marginBottom: "10px" }}>
+                  <label style={{ display: "block", fontSize: "0.78rem", color: "#cbd5e1", marginBottom: "4px", fontWeight: 700 }}>
+                    1. Donor Full Name *
                   </label>
                   <input
-                    type="number"
-                    step="10"
+                    type="text"
                     required
-                    value={donationAmount}
-                    onChange={(e) => setDonationAmount(e.target.value)}
-                    style={{ width: "100%", padding: "10px", background: "rgba(2, 6, 23, 0.6)", border: "1px solid rgba(255,255,255,0.15)", borderRadius: "8px", color: "#ffffff", fontSize: "1.1rem", fontWeight: "800" }}
+                    value={alumniPledgeForm.donorName}
+                    onChange={(e) => setAlumniPledgeForm({ ...alumniPledgeForm, donorName: e.target.value })}
+                    style={{ width: "100%", padding: "8px 12px", background: "rgba(2, 6, 23, 0.8)", border: "1px solid rgba(255,255,255,0.15)", borderRadius: "8px", color: "#fff", fontSize: "0.85rem" }}
                   />
                 </div>
-                <div style={{ marginBottom: "1.5rem" }}>
-                  <label style={{ display: "block", fontSize: "0.8rem", color: "#94a3b8", marginBottom: "4px" }}>
-                    Select Purpose Fund
+
+                <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "10px", marginBottom: "10px" }}>
+                  <div>
+                    <label style={{ display: "block", fontSize: "0.78rem", color: "#cbd5e1", marginBottom: "4px", fontWeight: 700 }}>
+                      2. Graduating Class / Batch *
+                    </label>
+                    <input
+                      type="text"
+                      required
+                      value={alumniPledgeForm.gradClass}
+                      onChange={(e) => setAlumniPledgeForm({ ...alumniPledgeForm, gradClass: e.target.value })}
+                      placeholder="e.g. Class of 2018"
+                      style={{ width: "100%", padding: "8px 12px", background: "rgba(2, 6, 23, 0.8)", border: "1px solid rgba(255,255,255,0.15)", borderRadius: "8px", color: "#fff", fontSize: "0.85rem" }}
+                    />
+                  </div>
+                  <div>
+                    <label style={{ display: "block", fontSize: "0.78rem", color: "#cbd5e1", marginBottom: "4px", fontWeight: 700 }}>
+                      3. Telephone Contact *
+                    </label>
+                    <input
+                      type="text"
+                      required
+                      value={alumniPledgeForm.contact}
+                      onChange={(e) => setAlumniPledgeForm({ ...alumniPledgeForm, contact: e.target.value })}
+                      placeholder="+233 24 555 8192"
+                      style={{ width: "100%", padding: "8px 12px", background: "rgba(2, 6, 23, 0.8)", border: "1px solid rgba(255,255,255,0.15)", borderRadius: "8px", color: "#fff", fontSize: "0.85rem" }}
+                    />
+                  </div>
+                </div>
+
+                <div style={{ marginBottom: "10px" }}>
+                  <label style={{ display: "block", fontSize: "0.78rem", color: "#cbd5e1", marginBottom: "4px", fontWeight: 700 }}>
+                    4. Email Address *
+                  </label>
+                  <input
+                    type="email"
+                    required
+                    value={alumniPledgeForm.email}
+                    onChange={(e) => setAlumniPledgeForm({ ...alumniPledgeForm, email: e.target.value })}
+                    style={{ width: "100%", padding: "8px 12px", background: "rgba(2, 6, 23, 0.8)", border: "1px solid rgba(255,255,255,0.15)", borderRadius: "8px", color: "#fff", fontSize: "0.85rem" }}
+                  />
+                </div>
+
+                <div style={{ marginBottom: "10px" }}>
+                  <label style={{ display: "block", fontSize: "0.78rem", color: "#cbd5e1", marginBottom: "4px", fontWeight: 700 }}>
+                    5. Purpose / Campaign / Scholarship Endowment *
                   </label>
                   <select
-                    value={donationFund}
-                    onChange={(e) => setDonationFund(e.target.value)}
-                    style={{ width: "100%", padding: "10px", background: "rgba(2, 6, 23, 0.6)", border: "1px solid rgba(255,255,255,0.15)", borderRadius: "8px", color: "#ffffff" }}
+                    value={alumniPledgeForm.campaign}
+                    onChange={(e) => setAlumniPledgeForm({ ...alumniPledgeForm, campaign: e.target.value })}
+                    style={{ width: "100%", padding: "8px 12px", background: "rgba(2, 6, 23, 0.8)", border: "1px solid rgba(255,255,255,0.15)", borderRadius: "8px", color: "#fff", fontSize: "0.85rem" }}
                   >
-                    <option value="STEM_LAB_EXPANSION">STEM & Robotics Laboratory Expansion</option>
-                    <option value="NEED_BASED_SCHOLARSHIP">Needy Student Tuition Bursary</option>
-                    <option value="AI_RESEARCH_FELLOWSHIP">Undergraduate AI Research Fellowship</option>
-                    <option value="GENERAL_CAMPUS_DEVELOPMENT">General Campus Endowment</option>
+                    <option value="STEM & Robotics Laboratory Expansion">STEM & Robotics Laboratory Expansion</option>
+                    <option value="Needy Student Tuition Bursary">Needy Student Tuition Bursary</option>
+                    <option value="Undergraduate AI Research Fellowship">Undergraduate AI Research Fellowship</option>
+                    <option value="General Campus Endowment">General Campus Endowment</option>
                   </select>
                 </div>
+
+                <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "10px", marginBottom: "10px" }}>
+                  <div>
+                    <label style={{ display: "block", fontSize: "0.78rem", color: "#cbd5e1", marginBottom: "4px", fontWeight: 700 }}>
+                      6. Pledged Amount ($ / GH₵) *
+                    </label>
+                    <input
+                      type="number"
+                      min="1"
+                      required
+                      value={alumniPledgeForm.pledgedAmount}
+                      onChange={(e) => setAlumniPledgeForm({ ...alumniPledgeForm, pledgedAmount: e.target.value })}
+                      style={{ width: "100%", padding: "8px 12px", background: "rgba(2, 6, 23, 0.8)", border: "1px solid rgba(255,255,255,0.15)", borderRadius: "8px", color: "#fbbf24", fontSize: "0.95rem", fontWeight: 800 }}
+                    />
+                  </div>
+                  <div>
+                    <label style={{ display: "block", fontSize: "0.78rem", color: "#cbd5e1", marginBottom: "4px", fontWeight: 700 }}>
+                      7. Amount Redeemed Today *
+                    </label>
+                    <input
+                      type="number"
+                      min="0"
+                      value={alumniPledgeForm.redeemedAmount}
+                      onChange={(e) => setAlumniPledgeForm({ ...alumniPledgeForm, redeemedAmount: e.target.value })}
+                      style={{ width: "100%", padding: "8px 12px", background: "rgba(2, 6, 23, 0.8)", border: "1px solid rgba(255,255,255,0.15)", borderRadius: "8px", color: "#34d399", fontSize: "0.95rem", fontWeight: 800 }}
+                    />
+                  </div>
+                </div>
+
+                <div style={{ marginBottom: "10px" }}>
+                  <label style={{ display: "block", fontSize: "0.78rem", color: "#cbd5e1", marginBottom: "4px", fontWeight: 700 }}>
+                    8. Official Payment Channel *
+                  </label>
+                  <select
+                    value={alumniPledgeForm.paymentMethod}
+                    onChange={(e) => setAlumniPledgeForm({ ...alumniPledgeForm, paymentMethod: e.target.value })}
+                    style={{ width: "100%", padding: "8px 12px", background: "rgba(2, 6, 23, 0.8)", border: "1px solid rgba(255,255,255,0.15)", borderRadius: "8px", color: "#fff", fontSize: "0.85rem" }}
+                  >
+                    <option value="MTN Mobile Money">MTN Mobile Money (🟡 MTN MoMo)</option>
+                    <option value="Telecel Cash">Telecel Cash (🔴 Telecel)</option>
+                    <option value="AT Money">AirtelTigo / AT Money (🔵 AT)</option>
+                    <option value="Visa / Mastercard">Visa / Mastercard 3DS</option>
+                    <option value="GhIPSS Instant Bank Transfer">GhIPSS Direct Bank Settlement</option>
+                  </select>
+                </div>
+
+                <div style={{ marginBottom: "16px" }}>
+                  <label style={{ display: "block", fontSize: "0.78rem", color: "#cbd5e1", marginBottom: "4px", fontWeight: 700 }}>
+                    9. Special Dedication / Notes
+                  </label>
+                  <input
+                    type="text"
+                    value={alumniPledgeForm.notes}
+                    onChange={(e) => setAlumniPledgeForm({ ...alumniPledgeForm, notes: e.target.value })}
+                    placeholder="e.g. In honor of Class of 2018 Faculty"
+                    style={{ width: "100%", padding: "8px 12px", background: "rgba(2, 6, 23, 0.8)", border: "1px solid rgba(255,255,255,0.15)", borderRadius: "8px", color: "#fff", fontSize: "0.85rem" }}
+                  />
+                </div>
+
                 <div style={{ display: "flex", gap: "10px", justifyContent: "flex-end" }}>
                   <button
                     type="button"
@@ -1920,9 +2034,9 @@ export default function AlumniDashboard() {
                   </button>
                   <button
                     type="submit"
-                    style={{ background: "#10b981", border: "none", color: "#ffffff", padding: "10px 20px", borderRadius: "8px", cursor: "pointer", fontWeight: "800" }}
+                    style={{ background: "linear-gradient(135deg, #10b981 0%, #059669 100%)", border: "none", color: "#ffffff", padding: "10px 22px", borderRadius: "8px", cursor: "pointer", fontWeight: "800", boxShadow: "0 4px 12px rgba(16, 185, 129, 0.4)" }}
                   >
-                    Confirm & Commit Gift
+                    Confirm & Commit Gift to Ledger
                   </button>
                 </div>
               </form>

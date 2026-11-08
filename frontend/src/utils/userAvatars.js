@@ -55,15 +55,15 @@ export const REAL_LIFE_AVATARS = {
 export const REAL_USER_AVATARS = REAL_LIFE_AVATARS;
 
 export const ROLE_BACKGROUND_IMAGES = {
-  ADMIN: "/assets/admin-dashboard-bg.jpg",
-  TEACHER: "/assets/virtual-classroom-bg.jpg",
-  STUDENT: "/assets/student-dashboard-bg.jpg",
-  PARENT: "/assets/parent-dashboard-bg.jpg",
-  ACCOUNTANT: "/assets/finance-hero-bg.jpg",
-  STAFF: "/assets/staff-dashboard-bg.jpg",
-  HR: "/assets/hr-bg.jpg",
-  DEVELOPER: "/assets/developer-command-center-bg.jpg",
-  ALUMNI: "/assets/graduation.jpg"
+  ADMIN: "/assets/school_campus_bg.jpg",
+  TEACHER: "/assets/school_campus_bg.jpg",
+  STUDENT: "/assets/school_campus_bg.jpg",
+  PARENT: "/assets/school_campus_bg.jpg",
+  ACCOUNTANT: "/assets/school_campus_bg.jpg",
+  STAFF: "/assets/school_campus_bg.jpg",
+  HR: "/assets/school_campus_bg.jpg",
+  DEVELOPER: "/assets/school_campus_bg.jpg",
+  ALUMNI: "/assets/school_campus_bg.jpg"
 };
 
 /**

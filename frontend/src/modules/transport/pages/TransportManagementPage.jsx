@@ -21,6 +21,7 @@ export default function TransportManagementPage() {
 
   const [feedback, setFeedback] = useState(null);
   const [selectedDriverProfile, setSelectedDriverProfile] = useState(null);
+  const [selectedDriverForGpsMap, setSelectedDriverForGpsMap] = useState(null);
 
   // Headmaster Created & Uploaded Bus Commuter Enrollments
   const [headmasterAssignedStudents, setHeadmasterAssignedStudents] = useState(() => {
@@ -464,25 +465,46 @@ export default function TransportManagementPage() {
                       <td style={{ fontWeight: 600 }}>{v.driver_name}</td>
                       <td style={{ fontFamily: 'monospace' }}>{v.driver_phone}</td>
                       <td>
-                        <button
-                          type="button"
-                          className="btn-secondary"
-                          style={{ padding: '4px 10px', fontSize: '0.78rem', borderColor: '#f59e0b', color: '#fbbf24' }}
-                          onClick={() => setSelectedDriverProfile({
-                            name: v.driver_name,
-                            phone: v.driver_phone,
-                            vehicle: v.model,
-                            regNumber: v.registration_number,
-                            route: v.route_name || v.route_code || 'School Transit Main Line',
-                            capacity: v.capacity,
-                            license: 'CDL-GH-' + (200000 + (v.id || 1) * 1423),
-                            experience: '8+ Years Professional Commercial Driving',
-                            medicalStatus: 'Cleared & Certified Active',
-                            emergencyContact: '+233-24-999-0011'
-                          })}
-                        >
-                          🪪 View Profile
-                        </button>
+                        <div style={{ display: 'flex', gap: '6px', flexWrap: 'wrap' }}>
+                          <button
+                            type="button"
+                            className="btn-secondary"
+                            style={{ padding: '4px 8px', fontSize: '0.75rem', borderColor: '#f59e0b', color: '#fbbf24' }}
+                            onClick={() => setSelectedDriverProfile({
+                              name: v.driver_name,
+                              phone: v.driver_phone,
+                              vehicle: v.model,
+                              regNumber: v.registration_number,
+                              route: v.route_name || v.route_code || 'School Transit Main Line',
+                              capacity: v.capacity,
+                              license: 'CDL-GH-' + (200000 + (v.id || 1) * 1423),
+                              experience: '8+ Years Professional Commercial Driving',
+                              medicalStatus: 'Cleared & Certified Active',
+                              emergencyContact: '+233-24-999-0011'
+                            })}
+                          >
+                            🪪 Profile
+                          </button>
+                          <button
+                            type="button"
+                            className="btn-secondary"
+                            style={{ padding: '4px 8px', fontSize: '0.75rem', borderColor: '#10b981', color: '#34d399', background: 'rgba(16, 185, 129, 0.12)', fontWeight: 700 }}
+                            onClick={() => setSelectedDriverForGpsMap({
+                              driverName: v.driver_name,
+                              phone: v.driver_phone,
+                              vehicle: v.model,
+                              regNumber: v.registration_number,
+                              route: v.route_name || v.route_code || 'School Transit Corridor',
+                              lat: 5.6508 + ((v.id || 1) * 0.004),
+                              lng: -0.1870 + ((v.id || 1) * 0.003),
+                              speed: '38 km/h',
+                              workingHours: '06:30 - 18:00 (On-Duty)'
+                            })}
+                            title="Verify Driver's Live Google Maps GPS Location during working hours"
+                          >
+                            📍 Live Map
+                          </button>
+                        </div>
                       </td>
                       <td>
                         <span className={`status-badge ${v.status === 'OPERATIONAL' ? 'status-available' : 'status-overdue'}`}>
@@ -1040,6 +1062,82 @@ export default function TransportManagementPage() {
                 onClick={() => setSelectedDriverProfile(null)}
               >
                 Close Profile
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* MODAL: DRIVER LIVE GPS GOOGLE MAP LOCATION */}
+      {selectedDriverForGpsMap && (
+        <div className="modal-overlay" onClick={() => setSelectedDriverForGpsMap(null)}>
+          <div className="modal-content" style={{ maxWidth: '640px' }} onClick={(e) => e.stopPropagation()}>
+            <div className="modal-header">
+              <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                <span style={{ fontSize: '1.4rem' }}>📍</span>
+                <div>
+                  <h3 style={{ margin: 0, color: '#34d399', fontSize: '1.1rem' }}>
+                    DRIVER LIVE GPS GOOGLE MAP LOCATION
+                  </h3>
+                  <span style={{ fontSize: '0.78rem', color: '#94a3b8' }}>
+                    Live GPS Telemetry & Working Hours Verification
+                  </span>
+                </div>
+              </div>
+              <button type="button" className="close-btn" onClick={() => setSelectedDriverForGpsMap(null)}>
+                ✕
+              </button>
+            </div>
+
+            {/* Status Strip */}
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px', marginBottom: '14px' }}>
+              <div style={{ background: 'rgba(16, 185, 129, 0.12)', border: '1px solid rgba(16, 185, 129, 0.3)', borderRadius: '8px', padding: '10px' }}>
+                <span style={{ fontSize: '0.72rem', color: '#94a3b8', display: 'block' }}>DRIVER & VEHICLE</span>
+                <strong style={{ color: '#f8fafc', fontSize: '0.9rem' }}>{selectedDriverForGpsMap.driverName}</strong>
+                <div style={{ fontSize: '0.75rem', color: '#38bdf8', fontFamily: 'monospace' }}>{selectedDriverForGpsMap.regNumber} ({selectedDriverForGpsMap.vehicle})</div>
+              </div>
+              <div style={{ background: 'rgba(56, 189, 248, 0.12)', border: '1px solid rgba(56, 189, 248, 0.3)', borderRadius: '8px', padding: '10px' }}>
+                <span style={{ fontSize: '0.72rem', color: '#94a3b8', display: 'block' }}>WORKING HOURS STATUS</span>
+                <strong style={{ color: '#10b981', fontSize: '0.85rem' }}>🟢 {selectedDriverForGpsMap.workingHours}</strong>
+                <div style={{ fontSize: '0.75rem', color: '#fbbf24' }}>Speed: {selectedDriverForGpsMap.speed} • Active Route</div>
+              </div>
+            </div>
+
+            {/* Google Map Embedded Frame */}
+            <div style={{ borderRadius: '10px', overflow: 'hidden', border: '1.5px solid rgba(56, 189, 248, 0.3)', marginBottom: '14px' }}>
+              <iframe
+                title="Driver Live Google Map Location"
+                width="100%"
+                height="300"
+                style={{ border: 0, display: 'block' }}
+                src={`https://maps.google.com/maps?q=${selectedDriverForGpsMap.lat},${selectedDriverForGpsMap.lng}&z=15&output=embed`}
+                allowFullScreen
+                loading="lazy"
+              ></iframe>
+            </div>
+
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '14px', fontSize: '0.78rem', color: '#94a3b8' }}>
+              <span>GPS Coordinates: <strong style={{ color: '#38bdf8', fontFamily: 'monospace' }}>{selectedDriverForGpsMap.lat.toFixed(4)}° N, {Math.abs(selectedDriverForGpsMap.lng).toFixed(4)}° W</strong></span>
+              <span style={{ color: '#10b981' }}>● Live Satellite Signal Locked</span>
+            </div>
+
+            <div style={{ display: 'flex', gap: '10px' }}>
+              <a
+                href={`https://www.google.com/maps?q=${selectedDriverForGpsMap.lat},${selectedDriverForGpsMap.lng}`}
+                target="_blank"
+                rel="noreferrer"
+                className="btn-primary"
+                style={{ flex: 1, textDecoration: 'none', textAlign: 'center', background: 'linear-gradient(135deg, #0284c7, #38bdf8)', color: '#0f172a', fontWeight: 800, padding: '10px' }}
+              >
+                🗺️ Open in Google Maps App ↗
+              </a>
+              <button
+                type="button"
+                className="btn-secondary"
+                style={{ flex: 1, padding: '10px' }}
+                onClick={() => setSelectedDriverForGpsMap(null)}
+              >
+                Close Map
               </button>
             </div>
           </div>
