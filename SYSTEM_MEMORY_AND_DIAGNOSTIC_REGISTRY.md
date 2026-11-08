@@ -212,15 +212,37 @@ flowchart TD
 
 ### A. Dedicated Individual Tick Auto-Save & Attendance Roll Completion
 - **Location:** [`TeacherDashboard.jsx`](file:///d:/version1/GBS_SYSTEM/frontend/src/modules/portal/pages/dashboards/teacher/TeacherDashboard.jsx) & [`attendance.service.js`](file:///d:/version1/GBS_SYSTEM/backend/src/modules/attendance/attendance.service.js).
-- **Individual Tick Checkbox & Status Actions:**
-  - Dedicated Quick Tick Checkbox column (`[✓] Present`) allows one-click ticking of each student as Present with instant auto-save.
-  - Dedicated status actions (`Present`, `Absent`, `Late`, `Excused`, `Reset`) firmly apply that specific status.
-  - Ticking or selecting any status immediately auto-saves to local cache (`gbs_attendance_${classId}_${date}`), dispatches live real-time sync (`gbs_attendance_updated`) to Student and Parent dashboards (`gbs_student_attendance_summary`), and persists asynchronously to backend `/attendance/single`.
-  - Permanent per-student status badge shows `✓ Auto-Saved at [HH:MM:SS]` so the teacher has 100% visual certainty of persistence before moving on to the next student.
-- **Backend Prisma Date Normalization Fix:**
+- **Unified One-by-One Student Roll Call Workflow:**
+  - In each student's row, a unified, prominent 4-button tick bar allows the teacher to tick each student one by one:
+    - `[ ☑ Tick Present ]` (green)
+    - `[ ☒ Tick Absent ]` (red)
+    - `[ ⏰ Tick Late ]` (amber)
+    - `[ 📝 Tick Excused ]` (blue)
+    - `[ ⚪ Reset ]` (subtle gray)
+  - Ticking any status immediately auto-saves to local cache (`gbs_attendance_${classId}_${date}`), dispatches live real-time sync (`gbs_attendance_updated`) to Student and Parent dashboards (`gbs_student_attendance_summary`), and persists asynchronously to backend `/attendance/single`.
+  - Permanent per-student status badge shows `✓ Ticked & Auto-Saved at [HH:MM:SS]` so the teacher has 100% visual certainty of persistence before moving on to the next student.
+- **Roll Call Completion Gate Enforcement:**
+  - Progress meter dynamically tracks: `Ticked: X / N Students`.
+  - If any students remain unticked, attempting to complete displays an explicit alert: *"⚠️ Roll call incomplete: X student(s) have not been ticked yet! A teacher must tick each single student one by one to complete attendance taking."*
+  - When all students are ticked, clicking `💾 COMPLETE ROLL CALL & WRAP INTO ARCHIVES` wraps the session into `gbs_daily_attendance_archives`, sends the batch to `/attendance/batch`, and presents the archive in the vault with 1-click full-page inspection via [`UniversalDetailPage.jsx`](file:///d:/version1/GBS_SYSTEM/frontend/src/components/common/UniversalDetailPage.jsx).
+- **Backend Prisma Date Normalization & Resilient Batch Sync:**
   - Resolved `Date` object vs ISO string comparison bug in [`prisma.client.js`](file:///d:/version1/GBS_SYSTEM/backend/src/core/database/prisma.client.js) where date matching was failing with strict reference equality. `matchesWhere` now compares ISO date strings (`YYYY-MM-DD`) and supports Prisma range filters (`gte`, `lte`, `gt`, `lt`), ensuring existing attendance records are accurately found and updated instead of creating duplicates.
-- **Step-by-Step Roll Call Completion:**
-  - Prominent `💾 COMPLETE ROLL CALL & WRAP INTO ARCHIVES` action finalizes the day's register, commits batch to backend `/attendance/batch`, archives session into `gbs_daily_attendance_archives`, and allows immediate one-click full-page inspection.
+  - In `attendance.service.js`, batch attendance gracefully handles any status without throwing transaction errors.
+
+---
+
+## 9. Master AI IDE Build Command & Hidden System Blueprint (Nov 2026)
+
+- **Hidden System Directive:** Stored at root [`.GBS_SYSTEM_AI_IDE_MASTER_BUILD_COMMAND.md`](file:///d:/version1/GBS_SYSTEM/.GBS_SYSTEM_AI_IDE_MASTER_BUILD_COMMAND.md) with Windows `HIDDEN` file attributes (`attrib +h`).
+- **Owner Credentials & Deployment Target:**
+  - GitHub & Render Account: `gabosei48@gmail.com`
+  - Master Security & Developer PIN: `0543294615Gab`
+  - Hosting: Render (`onrender.com`) via `render.yaml`
+  - Web Service: `gbs-school.onrender.com` (Node.js API + Static SPA fallback)
+  - Static CDN: `gbs-frontend.onrender.com` (Vite static build)
+  - Database: `gbs-db` (`gbs_production` PostgreSQL)
+- **Render Cross-Origin API Fix:** `apiConfig.js` automatically maps requests originating from `gbs-frontend.onrender.com` directly to `https://gbs-school.onrender.com/api/v1`, ensuring zero 404s or SPA rewrite issues on the cloud.
+- **Replication Prompt:** Contains a single, unified copy-paste prompt enabling any AI IDE to scaffold, build, compile, and deploy an exact replica of the GBS Enterprise System from zero to production.
 
 ### B. Universal Full-Page Navigation with Persistent Back Button
 - **Component:** [`UniversalDetailPage.jsx`](file:///d:/version1/GBS_SYSTEM/frontend/src/components/common/UniversalDetailPage.jsx) & [`universalNavigation.js`](file:///d:/version1/GBS_SYSTEM/frontend/src/utils/universalNavigation.js).

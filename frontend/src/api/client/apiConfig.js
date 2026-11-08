@@ -13,6 +13,10 @@ export const getServerHost = () => {
 
 export const getServerBaseUrl = () => {
   if (typeof window !== "undefined" && window.location) {
+    // If running on Render static frontend CDN (gbs-frontend.onrender.com), point to backend web service
+    if (window.location.hostname.includes("gbs-frontend.onrender.com")) {
+      return "https://gbs-school.onrender.com";
+    }
     // When running in production/cloud or served by backend (port is not local Vite dev 3000/5173)
     if (window.location.port !== "3000" && window.location.port !== "5173") {
       return window.location.origin;
@@ -27,6 +31,10 @@ export const getServerBaseUrl = () => {
 
 export const getApiBaseUrl = () => {
   if (typeof window !== "undefined" && window.location) {
+    // If running on Render static frontend CDN (gbs-frontend.onrender.com), point to backend API
+    if (window.location.hostname.includes("gbs-frontend.onrender.com")) {
+      return "https://gbs-school.onrender.com/api/v1";
+    }
     // When running in production/cloud or served by backend, use same-origin HTTPS /api/v1
     if (window.location.port !== "3000" && window.location.port !== "5173") {
       return `${window.location.origin}/api/v1`;
@@ -41,6 +49,9 @@ export const getApiBaseUrl = () => {
 
 export const getWebSocketUrl = () => {
   if (typeof window !== "undefined" && window.location) {
+    if (window.location.hostname.includes("gbs-frontend.onrender.com")) {
+      return "wss://gbs-school.onrender.com";
+    }
     const wsProto = window.location.protocol === "https:" ? "wss:" : "ws:";
     if (window.location.port !== "3000" && window.location.port !== "5173") {
       return `${wsProto}//${window.location.host}`;

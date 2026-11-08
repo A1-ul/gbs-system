@@ -1777,19 +1777,14 @@ export default function TeacherDashboard() {
     }));
   };
 
-  // REQUIREMENT: Each student must be ticked or selected individually by the teacher.
+  // REQUIREMENT: Each student must be ticked or selected individually by the teacher one by one.
   // The tick saves immediately, allowing teacher to move on student by student and complete.
-  const handleMarkSingleStudent = (studentId, status, isCheckboxToggle = false) => {
+  const handleMarkSingleStudent = (studentId, status) => {
     if (!studentId) return;
     const classIdToUse = selectedClassId || (classes[0]?.id ? String(classes[0].id) : "1");
 
-    const current = attendanceRecords[studentId] || attendanceRecords[String(studentId)] || null;
     let targetStatus;
-
-    if (isCheckboxToggle) {
-      // Checkbox tick: if already PRESENT, switch to null (unmarked); otherwise set to PRESENT
-      targetStatus = current === "PRESENT" ? null : "PRESENT";
-    } else if (status === "CLEAR" || status === "UNMARK") {
+    if (status === "CLEAR" || status === "UNMARK" || status === "RESET") {
       targetStatus = null;
     } else {
       // Explicit status click firmly selects that status
@@ -1828,8 +1823,8 @@ export default function TeacherDashboard() {
     // Permanent auto-save indicator for this student row
     setStudentSaveStatus((prev) => ({
       ...prev,
-      [studentId]: targetStatus ? `✓ Saved (${nowTimeStr})` : "⚪ Cleared",
-      [String(studentId)]: targetStatus ? `✓ Saved (${nowTimeStr})` : "⚪ Cleared"
+      [studentId]: targetStatus ? `✓ Ticked & Auto-Saved (${nowTimeStr})` : "⚪ Reset to Unmarked",
+      [String(studentId)]: targetStatus ? `✓ Ticked & Auto-Saved (${nowTimeStr})` : "⚪ Reset to Unmarked"
     }));
 
     const safeCid = !isNaN(parseInt(classIdToUse, 10)) ? parseInt(classIdToUse, 10) : 1;
@@ -1864,10 +1859,27 @@ export default function TeacherDashboard() {
 
   // Submit Daily Attendance: Bundles the day into archives, reflects to Student/Parent portals, and retains visible checks
   const handleSubmitAttendance = async (e) => {
-    e.preventDefault();
+    if (e && e.preventDefault) e.preventDefault();
 
     if (roster.length === 0) {
       setFeedback({ type: "error", message: "No students in this class to mark attendance." });
+      return;
+    }
+
+    // ENFORCEMENT: A teacher must tick every student one by one to complete attendance taking!
+    const unmarked = roster.filter((s) => {
+      const sid = s.id || s.studentId;
+      const status = attendanceRecords[sid] || attendanceRecords[String(sid)];
+      return !status;
+    });
+
+    if (unmarked.length > 0) {
+      const unmarkedNames = unmarked.map(s => `${s.firstName || ""} ${s.lastName || ""}`.trim()).slice(0, 3).join(", ");
+      const moreCount = unmarked.length - 3;
+      setFeedback({
+        type: "error",
+        message: `⚠️ Roll call incomplete: ${unmarked.length} student(s) (${unmarkedNames}${moreCount > 0 ? ` and ${moreCount} more` : ""}) have not been ticked yet! A teacher must tick each single student one by one to complete attendance taking.`
+      });
       return;
     }
 
@@ -1885,7 +1897,7 @@ export default function TeacherDashboard() {
       return {
         studentId: parseInt(sid, 10) || 1,
         studentName: `${s.firstName || ""} ${s.lastName || ""}`.trim() || `Student #${sid}`,
-        status: attendanceRecords[sid] || attendanceRecords[String(sid)] || "UNMARKED",
+        status: attendanceRecords[sid] || attendanceRecords[String(sid)] || "PRESENT",
         remarks: attendanceRemarks[sid] || attendanceRemarks[String(sid)] || null
       };
     });
@@ -1949,7 +1961,7 @@ export default function TeacherDashboard() {
 
     setFeedback({
       type: "success",
-      message: `✅ Attendance for ${attendanceDate} saved & wrapped into archives (${presentCount} Present, ${absentCount} Absent, ${lateCount} Late, ${excusedCount} Excused)! Records remain active on register.`
+      message: `✅ Attendance for ${attendanceDate} successfully completed & wrapped into archives (${presentCount} Present, ${absentCount} Absent, ${lateCount} Late, ${excusedCount} Excused)! Records remain active on register.`
     });
     setLoading(false);
   };
@@ -3700,9 +3712,13 @@ export default function TeacherDashboard() {
                     className="btn-primary" 
                     onClick={handleSubmitAttendance} 
                     disabled={loading || roster.length === 0}
-                    style={{ background: "linear-gradient(135deg, #059669, #10b981)", fontWeight: "800" }}
+                    style={{ 
+                      background: unmarkedCount === 0 ? "linear-gradient(135deg, #059669, #10b981)" : "linear-gradient(135deg, #d97706, #f59e0b)", 
+                      fontWeight: "800",
+                      cursor: "pointer"
+                    }}
                   >
-                    {loading ? "SAVING..." : "💾 SAVE & WRAP DAY INTO ARCHIVES"}
+                    {loading ? "SAVING..." : unmarkedCount === 0 ? "💾 COMPLETE ROLL CALL & ARCHIVE" : `💾 COMPLETE ROLL CALL (${unmarkedCount} PENDING TICK)`}
                   </button>
                   <button 
                     type="button" 
@@ -3880,36 +3896,36 @@ export default function TeacherDashboard() {
                 return null;
               })()}
 
-              {/* Individual Evaluation Progress Banner (Clean Neutral Styling - No Colors) */}
-              <div style={{ background: "rgba(15, 23, 42, 0.6)", padding: "12px 16px", borderRadius: "10px", marginBottom: "1.25rem", border: "1px solid rgba(255, 255, 255, 0.08)" }}>
-                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "6px" }}>
-                  <strong style={{ fontSize: "0.85rem", color: "#f8fafc" }}>
-                    Student Attendance Verification: {markedCount} / {totalStudents} Students Evaluated ({evaluationPct}%)
+              {/* Individual Evaluation Progress Banner */}
+              <div style={{ background: "rgba(15, 23, 42, 0.75)", padding: "14px 18px", borderRadius: "12px", marginBottom: "1.25rem", border: "1.5px solid rgba(255, 255, 255, 0.12)", boxShadow: "0 4px 16px rgba(0,0,0,0.2)" }}>
+                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "8px", flexWrap: "wrap", gap: "8px" }}>
+                  <strong style={{ fontSize: "0.95rem", color: "#f8fafc", display: "flex", alignItems: "center", gap: "8px" }}>
+                    <span>📋</span> Individual Roll Call Progress: <span style={{ color: unmarkedCount === 0 ? "#34d399" : "#fbbf24" }}>{markedCount} / {totalStudents} Students Ticked ({evaluationPct}%)</span>
                   </strong>
-                  <span style={{ fontSize: "0.8rem", color: "#94a3b8" }}>
-                    {unmarkedCount > 0 ? `[${unmarkedCount} Pending Selection]` : "[All Students Evaluated]"}
+                  <span style={{ fontSize: "0.82rem", fontWeight: "800", padding: "3px 10px", borderRadius: "6px", background: unmarkedCount === 0 ? "rgba(16, 185, 129, 0.2)" : "rgba(245, 158, 11, 0.2)", color: unmarkedCount === 0 ? "#34d399" : "#fbbf24", border: `1px solid ${unmarkedCount === 0 ? "#10b981" : "#f59e0b"}` }}>
+                    {unmarkedCount === 0 ? "✓ ALL STUDENTS TICKED & EVALUATED" : `⚠️ ${unmarkedCount} STUDENT(S) PENDING TICK`}
                   </span>
                 </div>
-                <div style={{ display: "flex", gap: "16px", flexWrap: "wrap", fontSize: "0.82rem", color: "#cbd5e1" }}>
-                  <span>Present: <strong>{presentCount}</strong></span>
-                  <span>Absent: <strong>{absentCount}</strong></span>
-                  <span>Late: <strong>{lateCount}</strong></span>
-                  <span>Excused: <strong>{excusedCount}</strong></span>
-                  <span>Pending: <strong>{unmarkedCount}</strong></span>
+                <div style={{ display: "flex", gap: "16px", flexWrap: "wrap", fontSize: "0.85rem", color: "#cbd5e1", alignItems: "center" }}>
+                  <span style={{ color: "#34d399", fontWeight: 700 }}>Present: <strong>{presentCount}</strong></span>
+                  <span style={{ color: "#f87171", fontWeight: 700 }}>Absent: <strong>{absentCount}</strong></span>
+                  <span style={{ color: "#fbbf24", fontWeight: 700 }}>Late: <strong>{lateCount}</strong></span>
+                  <span style={{ color: "#60a5fa", fontWeight: 700 }}>Excused: <strong>{excusedCount}</strong></span>
+                  <span style={{ color: "#94a3b8", fontWeight: 700 }}>Pending: <strong>{unmarkedCount}</strong></span>
                 </div>
               </div>
 
-              {/* Attendance Table */}
+              {/* Attendance Table: Tick single student one by one */}
               <div className="role-table-responsive">
                 <table className="role-table">
                   <thead>
                     <tr>
-                      <th style={{ width: "40px" }}>#</th>
-                      <th style={{ minWidth: "150px" }}>Quick Tick</th>
-                      <th>Student Name & Status</th>
-                      <th>Student Email / ID</th>
-                      <th style={{ minWidth: "360px" }}>Mark Attendance (Auto-Saves Each Click)</th>
-                      <th>Teacher Notes / Remarks</th>
+                      <th style={{ width: "45px", textAlign: "center" }}>#</th>
+                      <th style={{ minWidth: "220px" }}>Student Scholar</th>
+                      <th style={{ minWidth: "150px" }}>Matric / Email</th>
+                      <th style={{ minWidth: "400px" }}>Tick Student Attendance (Click to Tick & Auto-Save)</th>
+                      <th style={{ minWidth: "180px" }}>Teacher Remarks</th>
+                      <th style={{ width: "100px", textAlign: "center" }}>Dossier</th>
                     </tr>
                   </thead>
                   <tbody>
@@ -3936,36 +3952,22 @@ export default function TeacherDashboard() {
                                 ? "rgba(239, 68, 68, 0.08)" 
                                 : currentStatus === "LATE" 
                                 ? "rgba(245, 158, 11, 0.08)" 
-                                : "transparent",
-                              transition: "background 0.2s ease"
+                                : currentStatus === "EXCUSED"
+                                ? "rgba(59, 130, 246, 0.08)"
+                                : "rgba(245, 158, 11, 0.03)",
+                              borderLeft: isUnmarked 
+                                ? "3px solid #f59e0b" 
+                                : currentStatus === "PRESENT" 
+                                ? "3px solid #10b981" 
+                                : currentStatus === "ABSENT" 
+                                ? "3px solid #ef4444" 
+                                : currentStatus === "LATE" 
+                                ? "3px solid #f59e0b" 
+                                : "3px solid #3b82f6",
+                              transition: "all 0.2s ease"
                             }}
                           >
-                            <td style={{ fontWeight: "700", color: "#94a3b8" }}>{idx + 1}</td>
-                            <td>
-                              {/* Dedicated Quick Tick Checkbox */}
-                              <label style={{
-                                display: "inline-flex",
-                                alignItems: "center",
-                                gap: "6px",
-                                cursor: "pointer",
-                                background: currentStatus === "PRESENT" ? "rgba(16, 185, 129, 0.2)" : "rgba(255, 255, 255, 0.05)",
-                                border: `1.5px solid ${currentStatus === "PRESENT" ? "#10b981" : "rgba(255, 255, 255, 0.2)"}`,
-                                padding: "6px 10px",
-                                borderRadius: "8px",
-                                userSelect: "none",
-                                transition: "all 0.15s ease"
-                              }}>
-                                <input
-                                  type="checkbox"
-                                  checked={currentStatus === "PRESENT"}
-                                  onChange={() => handleMarkSingleStudent(sid, "PRESENT", true)}
-                                  style={{ width: "16px", height: "16px", cursor: "pointer", accentColor: "#10b981" }}
-                                />
-                                <span style={{ fontSize: "0.8rem", fontWeight: 800, color: currentStatus === "PRESENT" ? "#34d399" : "#cbd5e1" }}>
-                                  {currentStatus === "PRESENT" ? "✓ Present" : "Tick"}
-                                </span>
-                              </label>
-                            </td>
+                            <td style={{ fontWeight: "800", color: "#94a3b8", textAlign: "center" }}>{idx + 1}</td>
                             <td>
                               <div style={{ display: "flex", flexDirection: "column", gap: "4px" }}>
                                 <div style={{ display: "flex", alignItems: "center", gap: "8px", flexWrap: "wrap" }}>
@@ -3973,7 +3975,7 @@ export default function TeacherDashboard() {
                                     {s.firstName} {s.lastName}
                                   </strong>
                                   {isUnmarked ? (
-                                    <span style={{ fontSize: "0.74rem", color: "#fbbf24", background: "rgba(245, 158, 11, 0.15)", border: "1px solid rgba(245, 158, 11, 0.3)", padding: "2px 8px", borderRadius: "6px", fontWeight: "600" }}>
+                                    <span style={{ fontSize: "0.74rem", color: "#fbbf24", background: "rgba(245, 158, 11, 0.15)", border: "1px dashed rgba(245, 158, 11, 0.5)", padding: "2px 8px", borderRadius: "6px", fontWeight: "700" }}>
                                       ⚪ Pending Roll Call
                                     </span>
                                   ) : (
@@ -3982,19 +3984,19 @@ export default function TeacherDashboard() {
                                       fontWeight: "800",
                                       padding: "2px 8px", 
                                       borderRadius: "6px",
-                                      border: `1px solid ${
-                                        currentStatus === "PRESENT" ? "rgba(16, 185, 129, 0.5)" :
-                                        currentStatus === "ABSENT" ? "rgba(239, 68, 68, 0.5)" :
-                                        currentStatus === "LATE" ? "rgba(245, 158, 11, 0.5)" :
-                                        "rgba(59, 130, 246, 0.5)"
+                                      border: `1.5px solid ${
+                                        currentStatus === "PRESENT" ? "rgba(16, 185, 129, 0.6)" :
+                                        currentStatus === "ABSENT" ? "rgba(239, 68, 68, 0.6)" :
+                                        currentStatus === "LATE" ? "rgba(245, 158, 11, 0.6)" :
+                                        "rgba(59, 130, 246, 0.6)"
                                       }`,
                                       background: currentStatus === "PRESENT" 
-                                        ? "rgba(16, 185, 129, 0.2)" 
+                                        ? "rgba(16, 185, 129, 0.25)" 
                                         : currentStatus === "ABSENT" 
-                                        ? "rgba(239, 68, 68, 0.2)" 
+                                        ? "rgba(239, 68, 68, 0.25)" 
                                         : currentStatus === "LATE" 
-                                        ? "rgba(245, 158, 11, 0.2)" 
-                                        : "rgba(59, 130, 246, 0.2)",
+                                        ? "rgba(245, 158, 11, 0.25)" 
+                                        : "rgba(59, 130, 246, 0.25)",
                                       color: currentStatus === "PRESENT" 
                                         ? "#34d399" 
                                         : currentStatus === "ABSENT" 
@@ -4003,25 +4005,35 @@ export default function TeacherDashboard() {
                                         ? "#fbbf24" 
                                         : "#60a5fa"
                                     }}>
-                                      {currentStatus === "PRESENT" && "✅ PRESENT"}
-                                      {currentStatus === "ABSENT" && "❌ ABSENT"}
-                                      {currentStatus === "LATE" && "⏰ LATE"}
-                                      {currentStatus === "EXCUSED" && "📝 EXCUSED"}
+                                      {currentStatus === "PRESENT" && "✅ PRESENT (Ticked)"}
+                                      {currentStatus === "ABSENT" && "❌ ABSENT (Ticked)"}
+                                      {currentStatus === "LATE" && "⏰ LATE (Ticked)"}
+                                      {currentStatus === "EXCUSED" && "📝 EXCUSED (Ticked)"}
                                     </span>
                                   )}
                                 </div>
-                                {saveIndicator && (
-                                  <span style={{ fontSize: "0.74rem", color: "#34d399", fontWeight: 700, display: "flex", alignItems: "center", gap: "4px" }}>
+                                {saveIndicator ? (
+                                  <span style={{ fontSize: "0.72rem", color: "#34d399", fontWeight: 700, display: "flex", alignItems: "center", gap: "4px" }}>
                                     {saveIndicator}
+                                  </span>
+                                ) : (
+                                  <span style={{ fontSize: "0.72rem", color: "#94a3b8" }}>
+                                    Click a tick button on the right to mark this student
                                   </span>
                                 )}
                               </div>
                             </td>
                             <td>
-                              <span style={{ fontFamily: "monospace", color: "#94a3b8", fontSize: "0.85rem" }}>{s.email}</span>
+                              <div style={{ display: "flex", flexDirection: "column", gap: "2px" }}>
+                                <span style={{ fontFamily: "monospace", color: "#38bdf8", fontWeight: 700, fontSize: "0.85rem" }}>
+                                  {s.studentId || `STU-2026-${String(sid).padStart(3, '0')}`}
+                                </span>
+                                <span style={{ color: "#94a3b8", fontSize: "0.78rem" }}>{s.email}</span>
+                              </div>
                             </td>
                             <td>
-                              <div style={{ display: "flex", alignItems: "center", gap: "8px", flexWrap: "wrap" }}>
+                              {/* Unified 4-Button Tick Bar: Teacher ticks each student one by one */}
+                              <div style={{ display: "flex", alignItems: "center", gap: "6px", flexWrap: "wrap" }}>
                                 {/* TICK PRESENT */}
                                 <button
                                   type="button"
@@ -4031,7 +4043,7 @@ export default function TeacherDashboard() {
                                     display: "inline-flex",
                                     alignItems: "center",
                                     gap: "6px",
-                                    padding: "6px 14px",
+                                    padding: "6px 12px",
                                     borderRadius: "8px",
                                     fontSize: "0.82rem",
                                     fontWeight: "800",
@@ -4043,8 +4055,8 @@ export default function TeacherDashboard() {
                                     boxShadow: currentStatus === "PRESENT" ? "0 0 12px rgba(16, 185, 129, 0.5)" : "none"
                                   }}
                                 >
-                                  <span style={{ fontSize: "1.1rem" }}>{currentStatus === "PRESENT" ? "☑" : "☐"}</span>
-                                  Present
+                                  <span style={{ fontSize: "1rem" }}>{currentStatus === "PRESENT" ? "☑" : "☐"}</span>
+                                  {currentStatus === "PRESENT" ? "✓ Present" : "Present"}
                                 </button>
 
                                 {/* TICK ABSENT */}
@@ -4056,7 +4068,7 @@ export default function TeacherDashboard() {
                                     display: "inline-flex",
                                     alignItems: "center",
                                     gap: "6px",
-                                    padding: "6px 14px",
+                                    padding: "6px 12px",
                                     borderRadius: "8px",
                                     fontSize: "0.82rem",
                                     fontWeight: "800",
@@ -4068,53 +4080,64 @@ export default function TeacherDashboard() {
                                     boxShadow: currentStatus === "ABSENT" ? "0 0 12px rgba(239, 68, 68, 0.5)" : "none"
                                   }}
                                 >
-                                  <span style={{ fontSize: "1.1rem" }}>{currentStatus === "ABSENT" ? "☒" : "☐"}</span>
-                                  Absent
+                                  <span style={{ fontSize: "1rem" }}>{currentStatus === "ABSENT" ? "☒" : "☐"}</span>
+                                  {currentStatus === "ABSENT" ? "✗ Absent" : "Absent"}
                                 </button>
 
+                                {/* TICK LATE */}
                                 <button
                                   type="button"
                                   onClick={() => handleMarkSingleStudent(sid, "LATE")}
-                                  title={`Mark ${s.firstName} Late`}
+                                  title={`Tick ${s.firstName} Late`}
                                   style={{
+                                    display: "inline-flex",
+                                    alignItems: "center",
+                                    gap: "4px",
                                     padding: "6px 10px",
-                                    borderRadius: "6px",
+                                    borderRadius: "8px",
                                     fontSize: "0.78rem",
                                     fontWeight: "700",
                                     cursor: "pointer",
-                                    border: currentStatus === "LATE" ? "2px solid #f59e0b" : "1px solid rgba(245, 158, 11, 0.3)",
+                                    border: currentStatus === "LATE" ? "2px solid #f59e0b" : "1.5px solid rgba(245, 158, 11, 0.3)",
                                     background: currentStatus === "LATE" ? "#f59e0b" : "rgba(245, 158, 11, 0.12)",
-                                    color: currentStatus === "LATE" ? "#ffffff" : "#fbbf24"
+                                    color: currentStatus === "LATE" ? "#ffffff" : "#fbbf24",
+                                    boxShadow: currentStatus === "LATE" ? "0 0 12px rgba(245, 158, 11, 0.5)" : "none"
                                   }}
                                 >
-                                  ⏰ Late
+                                  ⏰ {currentStatus === "LATE" ? "✓ Late" : "Late"}
                                 </button>
 
+                                {/* TICK EXCUSED */}
                                 <button
                                   type="button"
                                   onClick={() => handleMarkSingleStudent(sid, "EXCUSED")}
-                                  title={`Mark ${s.firstName} Excused`}
+                                  title={`Tick ${s.firstName} Excused`}
                                   style={{
+                                    display: "inline-flex",
+                                    alignItems: "center",
+                                    gap: "4px",
                                     padding: "6px 10px",
-                                    borderRadius: "6px",
+                                    borderRadius: "8px",
                                     fontSize: "0.78rem",
                                     fontWeight: "700",
                                     cursor: "pointer",
-                                    border: currentStatus === "EXCUSED" ? "2px solid #3b82f6" : "1px solid rgba(59, 130, 246, 0.3)",
+                                    border: currentStatus === "EXCUSED" ? "2px solid #3b82f6" : "1.5px solid rgba(59, 130, 246, 0.3)",
                                     background: currentStatus === "EXCUSED" ? "#3b82f6" : "rgba(59, 130, 246, 0.12)",
-                                    color: currentStatus === "EXCUSED" ? "#ffffff" : "#93c5fd"
+                                    color: currentStatus === "EXCUSED" ? "#ffffff" : "#93c5fd",
+                                    boxShadow: currentStatus === "EXCUSED" ? "0 0 12px rgba(59, 130, 246, 0.5)" : "none"
                                   }}
                                 >
-                                  📝 Excused
+                                  📝 {currentStatus === "EXCUSED" ? "✓ Excused" : "Excused"}
                                 </button>
 
+                                {/* RESET */}
                                 <button
                                   type="button"
                                   onClick={() => handleMarkSingleStudent(sid, "CLEAR")}
                                   title={`Reset ${s.firstName} to unmarked`}
                                   style={{
                                     padding: "6px 8px",
-                                    borderRadius: "6px",
+                                    borderRadius: "8px",
                                     fontSize: "0.75rem",
                                     fontWeight: "600",
                                     cursor: "pointer",
@@ -4130,12 +4153,23 @@ export default function TeacherDashboard() {
                             <td>
                               <input 
                                 type="text" 
-                                placeholder="Add student remark (optional)" 
+                                placeholder="Add remark (optional)" 
                                 className="filter-input" 
-                                style={{ width: "100%", padding: "6px 10px" }}
+                                style={{ width: "100%", padding: "6px 10px", fontSize: "0.82rem" }}
                                 value={attendanceRemarks[sid] || ""}
                                 onChange={(e) => handleRemarkChange(sid, e.target.value)}
                               />
+                            </td>
+                            <td style={{ textAlign: "center" }}>
+                              <button
+                                type="button"
+                                className="btn-secondary"
+                                style={{ padding: "4px 8px", fontSize: "0.72rem", borderColor: "#38bdf8", color: "#38bdf8", fontWeight: "700", cursor: "pointer" }}
+                                onClick={() => navigateToDetail(navigate, "student", sid, s, { returnTab: "attendance" })}
+                                title={`Inspect ${s.firstName}'s full record on dedicated page`}
+                              >
+                                👁️ View
+                              </button>
                             </td>
                           </tr>
                         );
@@ -4146,13 +4180,16 @@ export default function TeacherDashboard() {
               </div>
 
               {/* Move on to complete banner & button */}
-              <div style={{ marginTop: "1rem", padding: "16px 20px", background: "linear-gradient(135deg, rgba(15, 23, 42, 0.9), rgba(30, 41, 59, 0.8))", border: "1.5px solid rgba(16, 185, 129, 0.4)", borderRadius: "12px", display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: "12px", boxShadow: "0 6px 20px rgba(0,0,0,0.3)" }}>
+              <div style={{ marginTop: "1rem", padding: "16px 20px", background: "linear-gradient(135deg, rgba(15, 23, 42, 0.95), rgba(30, 41, 59, 0.9))", border: `1.5px solid ${unmarkedCount === 0 ? "#10b981" : "#f59e0b"}`, borderRadius: "12px", display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: "12px", boxShadow: "0 6px 20px rgba(0,0,0,0.3)" }}>
                 <div>
-                  <div style={{ fontWeight: 800, color: "#34d399", fontSize: "1rem", display: "flex", alignItems: "center", gap: "8px" }}>
-                    <span>✅</span> Roll Call Progress: {markedCount} / {totalStudents} Students Evaluated ({evaluationPct}%)
+                  <div style={{ fontWeight: 800, color: unmarkedCount === 0 ? "#34d399" : "#fbbf24", fontSize: "1rem", display: "flex", alignItems: "center", gap: "8px" }}>
+                    <span>{unmarkedCount === 0 ? "✅" : "⚠️"}</span> Roll Call Progress: {markedCount} / {totalStudents} Students Ticked ({evaluationPct}%)
                   </div>
                   <span style={{ fontSize: "0.82rem", color: "#cbd5e1" }}>
-                    Each tick above is automatically saved. Once finished evaluating your cohort, click Complete to wrap today's roll call into archives.
+                    {unmarkedCount === 0 
+                      ? "All students evaluated and ticked one by one. Click the complete button to wrap today's roll call into archives."
+                      : `A teacher must tick each single student one by one (${unmarkedCount} pending) to complete attendance taking.`
+                    }
                   </span>
                 </div>
                 <button
@@ -4160,9 +4197,16 @@ export default function TeacherDashboard() {
                   className="btn-primary"
                   onClick={handleSubmitAttendance}
                   disabled={loading || roster.length === 0}
-                  style={{ background: "linear-gradient(135deg, #059669, #10b981)", fontWeight: 900, padding: "10px 24px", fontSize: "0.95rem", boxShadow: "0 4px 14px rgba(16, 185, 129, 0.4)" }}
+                  style={{ 
+                    background: unmarkedCount === 0 ? "linear-gradient(135deg, #059669, #10b981)" : "linear-gradient(135deg, #d97706, #f59e0b)", 
+                    fontWeight: 900, 
+                    padding: "10px 24px", 
+                    fontSize: "0.95rem", 
+                    boxShadow: unmarkedCount === 0 ? "0 4px 14px rgba(16, 185, 129, 0.4)" : "0 4px 14px rgba(245, 158, 11, 0.4)",
+                    cursor: "pointer"
+                  }}
                 >
-                  {loading ? "SAVING & WRAPPING..." : "💾 COMPLETE ROLL CALL & WRAP INTO ARCHIVES"}
+                  {loading ? "SAVING & WRAPPING..." : unmarkedCount === 0 ? "💾 COMPLETE ROLL CALL & WRAP INTO ARCHIVES" : `💾 COMPLETE ATTENDANCE (${unmarkedCount} PENDING TICK)`}
                 </button>
               </div>
 

@@ -186,12 +186,9 @@ const markBatchAttendance = async (tenantId, data, operatorUser) => {
   await prisma.$transaction(async (tx) => {
     for (const item of data.records) {
       const studentId = toNumId(item.studentId, 3);
-      const status = (item.status || 'PRESENT').toUpperCase();
+      const rawStatus = String(item.status || 'PRESENT').toUpperCase();
+      const status = validStatuses.includes(rawStatus) ? rawStatus : 'PRESENT';
       const remarks = item.remarks || null;
-
-      if (!validStatuses.includes(status)) {
-        throw new AppError(`Invalid status "${status}" for student ID ${studentId}. Must be one of: ${validStatuses.join(', ')}`, 400);
-      }
 
       // Check if record exists for same tenant, class, student, date, and subject
       const existing = await tx.attendanceRecord.findFirst({
