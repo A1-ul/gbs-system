@@ -25,6 +25,11 @@ router.post('/tenants/:id/action', devControlController.tenantAction);
 router.delete('/tenants/:id', devControlController.deleteTenant);
 router.post('/tenants/batch-delete', devControlController.batchDeleteTenants);
 
+// Deleted Institutions Archive Depot (Restoration & Purge)
+router.get('/tenants/deleted-archives', devControlController.getDeletedTenantArchives);
+router.post('/tenants/:id/restore', devControlController.restoreDeletedTenant);
+router.delete('/tenants/:id/purge', devControlController.purgeArchivedTenant);
+
 // 6. System Lock & Remote Management (Step 35)
 router.post('/toggle-lock', devControlController.toggleLock);
 router.post('/system-lock', devControlController.toggleLock);

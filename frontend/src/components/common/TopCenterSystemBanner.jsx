@@ -50,6 +50,14 @@ export default function TopCenterSystemBanner({
 
   const isDevMode = isDeveloper || roleTitle.toLowerCase().includes("developer");
 
+  let currentUserRole = "GUEST";
+  try {
+    const storedUser = JSON.parse(localStorage.getItem("gbs_user") || "{}");
+    currentUserRole = (storedUser?.role || localStorage.getItem("gbs_auth_role") || "GUEST").toUpperCase();
+  } catch {}
+  const isDeveloperUser = isDeveloper || isDevMode || currentUserRole === "DEVELOPER" || currentUserRole === "SUPER_ADMIN" || Boolean(localStorage.getItem("gbs_dev_token"));
+  const systemMode = typeof window !== "undefined" ? (localStorage.getItem("gbs_system_mode") || "LIVE_PRODUCTION") : "LIVE_PRODUCTION";
+
   useEffect(() => {
     const handleUpdate = () => {
       const updated = localStorage.getItem("gbs_report_school_name") || localStorage.getItem("gbs_tenant_name");
@@ -299,78 +307,130 @@ export default function TopCenterSystemBanner({
         </div>
       )}
 
-      {/* DASHBOARD-TO-DASHBOARD WALKTHROUGH & INSTANT PORTAL SWITCHER */}
-      <div style={{
-        marginTop: "12px",
-        paddingTop: "10px",
-        borderTop: "1px solid rgba(255, 255, 255, 0.12)",
-        width: "100%",
-        display: "flex",
-        flexDirection: "column",
-        alignItems: "center",
-        gap: "6px"
-      }}>
-        <div style={{ display: "flex", alignItems: "center", gap: "8px", fontSize: "0.72rem", color: "#94a3b8", fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.5px" }}>
-          <span>🧭 Dashboard-to-Dashboard Portal Navigation & Walkthrough:</span>
-        </div>
+      {systemMode === "DEMO_SANDBOX" && (
         <div style={{
+          margin: "6px 0 10px 0",
+          padding: "5px 16px",
+          borderRadius: "20px",
+          background: "rgba(245, 158, 11, 0.2)",
+          border: "1px solid rgba(245, 158, 11, 0.5)",
+          color: "#fbbf24",
+          fontSize: "0.78rem",
+          fontWeight: 800,
           display: "flex",
-          gap: "6px",
-          flexWrap: "wrap",
-          justifyContent: "center",
-          alignItems: "center"
+          alignItems: "center",
+          gap: "8px"
         }}>
-          {DASHBOARDS_LIST.map((dash) => {
-            const currentPath = typeof window !== "undefined" ? window.location.pathname : "";
-            const isActive = currentPath === dash.path;
-            return (
-              <button
-                key={dash.path}
-                type="button"
-                onClick={() => {
-                  if (dash.path === "/onboarding") {
-                    try {
-                      localStorage.removeItem("gbs_tenant_already_onboarded");
-                      localStorage.removeItem("gbs_walkthrough_completed");
-                    } catch {}
-                  }
-                  window.location.href = dash.path;
-                }}
-                style={{
-                  display: "inline-flex",
-                  alignItems: "center",
-                  gap: "5px",
-                  padding: "5px 11px",
-                  borderRadius: "18px",
-                  fontSize: "0.74rem",
-                  fontWeight: 800,
-                  cursor: "pointer",
-                  transition: "all 0.18s ease",
-                  border: isActive
-                    ? "1.5px solid #38bdf8"
-                    : dash.highlight
-                    ? "1.5px solid #10b981"
-                    : "1px solid rgba(255, 255, 255, 0.16)",
-                  background: isActive
-                    ? "linear-gradient(135deg, rgba(2, 132, 199, 0.45), rgba(56, 189, 248, 0.25))"
-                    : dash.highlight
-                    ? "linear-gradient(135deg, rgba(16, 185, 129, 0.28), rgba(5, 150, 105, 0.18))"
-                    : "rgba(15, 23, 42, 0.7)",
-                  color: isActive ? "#ffffff" : dash.highlight ? "#34d399" : "#cbd5e1",
-                  boxShadow: isActive ? "0 0 10px rgba(56, 189, 248, 0.4)" : "none"
-                }}
-                title={dash.tooltip}
-              >
-                <span>{dash.icon}</span>
-                <span>{dash.title}</span>
-                {isActive && (
-                  <span style={{ width: "6px", height: "6px", borderRadius: "50%", background: "#38bdf8", boxShadow: "0 0 6px #38bdf8" }} />
-                )}
-              </button>
-            );
-          })}
+          <span>🟡 DEMO SANDBOX PREVIEW</span>
+          <span>•</span>
+          <span style={{ fontWeight: 600 }}>Preloaded evaluation records. Switch to Live Production on Login page for genuine school records.</span>
         </div>
-      </div>
+      )}
+
+      {/* DASHBOARD-TO-DASHBOARD WALKTHROUGH (DEVELOPER-ONLY) OR ROLE CONFINEMENT (TENANT USERS) */}
+      {isDeveloperUser ? (
+        <div style={{
+          marginTop: "12px",
+          paddingTop: "10px",
+          borderTop: "1px solid rgba(255, 255, 255, 0.12)",
+          width: "100%",
+          display: "flex",
+          flexDirection: "column",
+          alignItems: "center",
+          gap: "6px"
+        }}>
+          <div style={{ display: "flex", alignItems: "center", gap: "8px", fontSize: "0.72rem", color: "#94a3b8", fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.5px" }}>
+            <span>🧭 Chief Developer Mission Walkthrough & Multi-Portal Switcher:</span>
+          </div>
+          <div style={{
+            display: "flex",
+            gap: "6px",
+            flexWrap: "wrap",
+            justifyContent: "center",
+            alignItems: "center"
+          }}>
+            {DASHBOARDS_LIST.map((dash) => {
+              const currentPath = typeof window !== "undefined" ? window.location.pathname : "";
+              const isActive = currentPath === dash.path;
+              return (
+                <button
+                  key={dash.path}
+                  type="button"
+                  onClick={() => {
+                    if (dash.path === "/onboarding") {
+                      try {
+                        localStorage.removeItem("gbs_tenant_already_onboarded");
+                        localStorage.removeItem("gbs_walkthrough_completed");
+                      } catch {}
+                    }
+                    window.location.href = dash.path;
+                  }}
+                  style={{
+                    display: "inline-flex",
+                    alignItems: "center",
+                    gap: "5px",
+                    padding: "5px 11px",
+                    borderRadius: "18px",
+                    fontSize: "0.74rem",
+                    fontWeight: 800,
+                    cursor: "pointer",
+                    transition: "all 0.18s ease",
+                    border: isActive
+                      ? "1.5px solid #38bdf8"
+                      : dash.highlight
+                      ? "1.5px solid #10b981"
+                      : "1px solid rgba(255, 255, 255, 0.16)",
+                    background: isActive
+                      ? "linear-gradient(135deg, rgba(2, 132, 199, 0.45), rgba(56, 189, 248, 0.25))"
+                      : dash.highlight
+                      ? "linear-gradient(135deg, rgba(16, 185, 129, 0.28), rgba(5, 150, 105, 0.18))"
+                      : "rgba(15, 23, 42, 0.7)",
+                    color: isActive ? "#ffffff" : dash.highlight ? "#34d399" : "#cbd5e1",
+                    boxShadow: isActive ? "0 0 10px rgba(56, 189, 248, 0.4)" : "none"
+                  }}
+                  title={dash.tooltip}
+                >
+                  <span>{dash.icon}</span>
+                  <span>{dash.title}</span>
+                  {isActive && (
+                    <span style={{ width: "6px", height: "6px", borderRadius: "50%", background: "#38bdf8", boxShadow: "0 0 6px #38bdf8" }} />
+                  )}
+                </button>
+              );
+            })}
+          </div>
+        </div>
+      ) : (
+        <div style={{
+          marginTop: "10px",
+          paddingTop: "8px",
+          borderTop: "1px solid rgba(255, 255, 255, 0.1)",
+          width: "100%",
+          display: "flex",
+          alignItems: "center",
+          justifyContent: "center",
+          gap: "10px",
+          flexWrap: "wrap",
+          fontSize: "0.78rem"
+        }}>
+          <span style={{
+            display: "inline-flex",
+            alignItems: "center",
+            gap: "6px",
+            padding: "4px 14px",
+            borderRadius: "20px",
+            background: "rgba(15, 23, 42, 0.75)",
+            border: "1px solid rgba(16, 185, 129, 0.4)",
+            color: "#34d399",
+            fontWeight: 800
+          }}>
+            🔒 Authorized Portal: {roleTitle}
+          </span>
+          <span style={{ color: "#94a3b8", fontSize: "0.74rem" }}>
+            Role-confined secure session. Direct cross-dashboard switching is locked to prevent unauthorized tampering.
+          </span>
+        </div>
+      )}
     </div>
   );
 }

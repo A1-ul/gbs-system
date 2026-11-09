@@ -97,8 +97,13 @@ export default function UniversalLanguageTranslator() {
       if (e.detail?.code) setSelectedLang(e.detail.code);
     };
     const handleOpenTranslator = (e) => {
-      if (e.detail?.text) {
-        setCustomTextToTranslate(e.detail.text);
+      const incomingText = e.detail?.text || "";
+      if (incomingText) {
+        setCustomTextToTranslate(incomingText);
+        // Automatically explain sentence immediately upon modal open
+        setTimeout(() => {
+          doTranslate(incomingText);
+        }, 50);
       }
       setShowTranslatorModal(true);
     };
@@ -113,7 +118,7 @@ export default function UniversalLanguageTranslator() {
       window.removeEventListener("gbs_language_changed", handleLangSync);
       window.removeEventListener("gbs_open_translator", handleOpenTranslator);
     };
-  }, []);
+  }, [selectedLang]);
 
   const handleSelectLanguage = (countryCode) => {
     setSelectedLang(countryCode);
@@ -124,13 +129,12 @@ export default function UniversalLanguageTranslator() {
     } catch { }
   };
 
-  const handleTranslateCustom = (e) => {
-    e?.preventDefault();
-    if (!customTextToTranslate.trim()) return;
+  const doTranslate = (textToProcess) => {
+    const text = (textToProcess || customTextToTranslate || "").trim();
+    if (!text) return;
     setIsTranslating(true);
 
     setTimeout(() => {
-      const text = customTextToTranslate.trim();
       const lower = text.toLowerCase();
       let translation = "";
       let explanation = "";
@@ -233,6 +237,11 @@ export default function UniversalLanguageTranslator() {
       setTranslatedResult({ original: text, translation, explanation, country: activeCountry });
       setIsTranslating(false);
     }, 400);
+  };
+
+  const handleTranslateCustom = (e) => {
+    e?.preventDefault();
+    doTranslate();
   };
 
   const handleSpeakText = (text) => {

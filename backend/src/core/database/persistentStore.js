@@ -52,6 +52,8 @@ function ensureStoreFile() {
         topicVideos: [],
         subscriptions: [],
         registeredUsers: [],
+        deletedTenantArchives: [],
+        usedTrialInstitutions: [],
         prismaModels: {},
         rawSqlTables: {},
         updatedAt: new Date().toISOString()
@@ -66,6 +68,8 @@ function ensureStoreFile() {
     if (!Array.isArray(parsed.users)) parsed.users = [];
     if (!Array.isArray(parsed.subscriptions)) parsed.subscriptions = [];
     if (!Array.isArray(parsed.registeredUsers)) parsed.registeredUsers = [];
+    if (!Array.isArray(parsed.deletedTenantArchives)) parsed.deletedTenantArchives = [];
+    if (!Array.isArray(parsed.usedTrialInstitutions)) parsed.usedTrialInstitutions = [];
     if (!parsed.prismaModels || typeof parsed.prismaModels !== 'object') parsed.prismaModels = {};
     if (!parsed.rawSqlTables || typeof parsed.rawSqlTables !== 'object') parsed.rawSqlTables = {};
     if (!parsed.systemEnvironment) parsed.systemEnvironment = getActiveEnvironment();

@@ -343,7 +343,7 @@
       "createdAt": "2026-11-02T21:55:25.367Z"
     }
   ],
-  "updatedAt": "2026-11-08T22:32:58.125Z",
+  "updatedAt": "2026-11-08T23:05:08.894Z",
   "registeredUsers": [
     {
       "id": "usr_12",
@@ -490,6 +490,391 @@
   ],
   "prismaModels": {
     "AuditLog": [
+      {
+        "id": 357,
+        "tenantId": 1,
+        "userId": 2,
+        "action": "SINGLE_STUDENT_ATTENDANCE_MARKED",
+        "module": "ATTENDANCE",
+        "details": "Marked student #18 as PRESENT for class #13 on Sun Nov 08 2026 00:00:00 GMT+0000 (Greenwich Mean Time).",
+        "isDeleted": false,
+        "createdAt": "2026-11-08T23:05:08.858Z",
+        "updatedAt": "2026-11-08T23:05:08.858Z"
+      },
+      {
+        "id": 356,
+        "tenantId": 1,
+        "userId": 2,
+        "action": "SINGLE_STUDENT_ATTENDANCE_MARKED",
+        "module": "ATTENDANCE",
+        "details": "Marked student #17 as PRESENT for class #13 on Sun Nov 08 2026 00:00:00 GMT+0000 (Greenwich Mean Time).",
+        "isDeleted": false,
+        "createdAt": "2026-11-08T23:05:07.685Z",
+        "updatedAt": "2026-11-08T23:05:07.685Z"
+      },
+      {
+        "id": 355,
+        "tenantId": 1,
+        "userId": 2,
+        "action": "SINGLE_STUDENT_ATTENDANCE_MARKED",
+        "module": "ATTENDANCE",
+        "details": "Marked student #16 as PRESENT for class #13 on Sun Nov 08 2026 00:00:00 GMT+0000 (Greenwich Mean Time).",
+        "isDeleted": false,
+        "createdAt": "2026-11-08T23:05:07.117Z",
+        "updatedAt": "2026-11-08T23:05:07.117Z"
+      },
+      {
+        "id": 354,
+        "tenantId": 1,
+        "userId": 2,
+        "action": "SINGLE_STUDENT_ATTENDANCE_MARKED",
+        "module": "ATTENDANCE",
+        "details": "Marked student #15 as PRESENT for class #13 on Sun Nov 08 2026 00:00:00 GMT+0000 (Greenwich Mean Time).",
+        "isDeleted": false,
+        "createdAt": "2026-11-08T23:05:06.176Z",
+        "updatedAt": "2026-11-08T23:05:06.176Z"
+      },
+      {
+        "id": 353,
+        "tenantId": 1,
+        "userId": 2,
+        "action": "SINGLE_STUDENT_ATTENDANCE_MARKED",
+        "module": "ATTENDANCE",
+        "details": "Marked student #13 as PRESENT for class #13 on Sun Nov 08 2026 00:00:00 GMT+0000 (Greenwich Mean Time).",
+        "isDeleted": false,
+        "createdAt": "2026-11-08T23:05:03.564Z",
+        "updatedAt": "2026-11-08T23:05:03.564Z"
+      },
+      {
+        "id": 352,
+        "tenantId": 1,
+        "userId": 2,
+        "action": "SINGLE_STUDENT_ATTENDANCE_MARKED",
+        "module": "ATTENDANCE",
+        "details": "Marked student #3 as PRESENT for class #13 on Sun Nov 08 2026 00:00:00 GMT+0000 (Greenwich Mean Time).",
+        "isDeleted": false,
+        "createdAt": "2026-11-08T23:05:01.684Z",
+        "updatedAt": "2026-11-08T23:05:01.684Z"
+      },
+      {
+        "id": 351,
+        "tenantId": 1,
+        "userId": 2,
+        "action": "SINGLE_STUDENT_ATTENDANCE_MARKED",
+        "module": "ATTENDANCE",
+        "details": "Marked student #101 as PRESENT for class #13 on Sun Nov 08 2026 00:00:00 GMT+0000 (Greenwich Mean Time).",
+        "isDeleted": false,
+        "createdAt": "2026-11-08T23:04:59.742Z",
+        "updatedAt": "2026-11-08T23:04:59.742Z"
+      },
+      {
+        "id": 350,
+        "tenantId": 1,
+        "userId": 2,
+        "action": "SINGLE_STUDENT_ATTENDANCE_MARKED",
+        "module": "ATTENDANCE",
+        "details": "Marked student #102 as PRESENT for class #13 on Sun Nov 08 2026 00:00:00 GMT+0000 (Greenwich Mean Time).",
+        "isDeleted": false,
+        "createdAt": "2026-11-08T23:04:58.816Z",
+        "updatedAt": "2026-11-08T23:04:58.816Z"
+      },
+      {
+        "id": 349,
+        "tenantId": 1,
+        "userId": 2,
+        "action": "SINGLE_STUDENT_ATTENDANCE_MARKED",
+        "module": "ATTENDANCE",
+        "details": "Marked student #104 as ABSENT for class #13 on Sun Nov 08 2026 00:00:00 GMT+0000 (Greenwich Mean Time).",
+        "isDeleted": false,
+        "createdAt": "2026-11-08T23:04:57.342Z",
+        "updatedAt": "2026-11-08T23:04:57.342Z"
+      },
+      {
+        "id": 348,
+        "tenantId": 1,
+        "userId": 2,
+        "action": "SINGLE_STUDENT_ATTENDANCE_MARKED",
+        "module": "ATTENDANCE",
+        "details": "Marked student #103 as ABSENT for class #13 on Sun Nov 08 2026 00:00:00 GMT+0000 (Greenwich Mean Time).",
+        "isDeleted": false,
+        "createdAt": "2026-11-08T23:04:56.717Z",
+        "updatedAt": "2026-11-08T23:04:56.717Z"
+      },
+      {
+        "id": 347,
+        "tenantId": 1,
+        "userId": 2,
+        "action": "SINGLE_STUDENT_ATTENDANCE_MARKED",
+        "module": "ATTENDANCE",
+        "details": "Marked student #105 as PRESENT for class #13 on Sun Nov 08 2026 00:00:00 GMT+0000 (Greenwich Mean Time).",
+        "isDeleted": false,
+        "createdAt": "2026-11-08T23:04:54.345Z",
+        "updatedAt": "2026-11-08T23:04:54.345Z"
+      },
+      {
+        "id": 346,
+        "tenantId": 1,
+        "userId": 2,
+        "action": "SINGLE_STUDENT_ATTENDANCE_MARKED",
+        "module": "ATTENDANCE",
+        "details": "Marked student #106 as PRESENT for class #13 on Sun Nov 08 2026 00:00:00 GMT+0000 (Greenwich Mean Time).",
+        "isDeleted": false,
+        "createdAt": "2026-11-08T23:04:52.986Z",
+        "updatedAt": "2026-11-08T23:04:52.986Z"
+      },
+      {
+        "id": 345,
+        "tenantId": 1,
+        "userId": 2,
+        "action": "SINGLE_STUDENT_ATTENDANCE_MARKED",
+        "module": "ATTENDANCE",
+        "details": "Marked student #108 as PRESENT for class #13 on Sun Nov 08 2026 00:00:00 GMT+0000 (Greenwich Mean Time).",
+        "isDeleted": false,
+        "createdAt": "2026-11-08T23:04:52.019Z",
+        "updatedAt": "2026-11-08T23:04:52.019Z"
+      },
+      {
+        "id": 344,
+        "tenantId": 1,
+        "userId": 2,
+        "action": "SINGLE_STUDENT_ATTENDANCE_MARKED",
+        "module": "ATTENDANCE",
+        "details": "Marked student #107 as PRESENT for class #13 on Sun Nov 08 2026 00:00:00 GMT+0000 (Greenwich Mean Time).",
+        "isDeleted": false,
+        "createdAt": "2026-11-08T23:04:50.755Z",
+        "updatedAt": "2026-11-08T23:04:50.755Z"
+      },
+      {
+        "id": 343,
+        "tenantId": 1,
+        "userId": 2,
+        "action": "SINGLE_STUDENT_ATTENDANCE_MARKED",
+        "module": "ATTENDANCE",
+        "details": "Marked student #108 as ABSENT for class #13 on Sun Nov 08 2026 00:00:00 GMT+0000 (Greenwich Mean Time).",
+        "isDeleted": false,
+        "createdAt": "2026-11-08T23:04:45.954Z",
+        "updatedAt": "2026-11-08T23:04:45.954Z"
+      },
+      {
+        "id": 342,
+        "tenantId": 1,
+        "userId": 2,
+        "action": "SINGLE_STUDENT_ATTENDANCE_MARKED",
+        "module": "ATTENDANCE",
+        "details": "Marked student #108 as PRESENT for class #13 on Sun Nov 08 2026 00:00:00 GMT+0000 (Greenwich Mean Time).",
+        "isDeleted": false,
+        "createdAt": "2026-11-08T22:59:57.696Z",
+        "updatedAt": "2026-11-08T22:59:57.696Z"
+      },
+      {
+        "id": 341,
+        "tenantId": 1,
+        "userId": 2,
+        "action": "SINGLE_STUDENT_ATTENDANCE_MARKED",
+        "module": "ATTENDANCE",
+        "details": "Marked student #106 as ABSENT for class #13 on Sun Nov 08 2026 00:00:00 GMT+0000 (Greenwich Mean Time).",
+        "isDeleted": false,
+        "createdAt": "2026-11-08T22:59:56.109Z",
+        "updatedAt": "2026-11-08T22:59:56.109Z"
+      },
+      {
+        "id": 340,
+        "tenantId": 1,
+        "userId": 2,
+        "action": "SINGLE_STUDENT_ATTENDANCE_MARKED",
+        "module": "ATTENDANCE",
+        "details": "Marked student #106 as PRESENT for class #13 on Sun Nov 08 2026 00:00:00 GMT+0000 (Greenwich Mean Time).",
+        "isDeleted": false,
+        "createdAt": "2026-11-08T22:59:55.239Z",
+        "updatedAt": "2026-11-08T22:59:55.239Z"
+      },
+      {
+        "id": 339,
+        "tenantId": 1,
+        "userId": 2,
+        "action": "SINGLE_STUDENT_ATTENDANCE_MARKED",
+        "module": "ATTENDANCE",
+        "details": "Marked student #107 as ABSENT for class #13 on Sun Nov 08 2026 00:00:00 GMT+0000 (Greenwich Mean Time).",
+        "isDeleted": false,
+        "createdAt": "2026-11-08T22:59:52.618Z",
+        "updatedAt": "2026-11-08T22:59:52.618Z"
+      },
+      {
+        "id": 338,
+        "tenantId": 1,
+        "userId": 2,
+        "action": "SINGLE_STUDENT_ATTENDANCE_MARKED",
+        "module": "ATTENDANCE",
+        "details": "Marked student #16 as LATE for class #4 on Sun Nov 08 2026 00:00:00 GMT+0000 (Greenwich Mean Time).",
+        "isDeleted": false,
+        "createdAt": "2026-11-08T22:59:32.804Z",
+        "updatedAt": "2026-11-08T22:59:32.804Z"
+      },
+      {
+        "id": 337,
+        "tenantId": 1,
+        "userId": 2,
+        "action": "SINGLE_STUDENT_ATTENDANCE_MARKED",
+        "module": "ATTENDANCE",
+        "details": "Marked student #17 as ABSENT for class #4 on Sun Nov 08 2026 00:00:00 GMT+0000 (Greenwich Mean Time).",
+        "isDeleted": false,
+        "createdAt": "2026-11-08T22:59:28.245Z",
+        "updatedAt": "2026-11-08T22:59:28.245Z"
+      },
+      {
+        "id": 336,
+        "tenantId": 1,
+        "userId": 2,
+        "action": "SINGLE_STUDENT_ATTENDANCE_MARKED",
+        "module": "ATTENDANCE",
+        "details": "Marked student #18 as PRESENT for class #4 on Sun Nov 08 2026 00:00:00 GMT+0000 (Greenwich Mean Time).",
+        "isDeleted": false,
+        "createdAt": "2026-11-08T22:59:23.458Z",
+        "updatedAt": "2026-11-08T22:59:23.458Z"
+      },
+      {
+        "id": 335,
+        "tenantId": 1,
+        "userId": 2,
+        "action": "SINGLE_STUDENT_ATTENDANCE_MARKED",
+        "module": "ATTENDANCE",
+        "details": "Marked student #17 as PRESENT for class #4 on Sun Nov 08 2026 00:00:00 GMT+0000 (Greenwich Mean Time).",
+        "isDeleted": false,
+        "createdAt": "2026-11-08T22:59:22.574Z",
+        "updatedAt": "2026-11-08T22:59:22.574Z"
+      },
+      {
+        "id": 334,
+        "tenantId": 1,
+        "userId": 2,
+        "action": "SINGLE_STUDENT_ATTENDANCE_MARKED",
+        "module": "ATTENDANCE",
+        "details": "Marked student #16 as PRESENT for class #4 on Sun Nov 08 2026 00:00:00 GMT+0000 (Greenwich Mean Time).",
+        "isDeleted": false,
+        "createdAt": "2026-11-08T22:59:21.682Z",
+        "updatedAt": "2026-11-08T22:59:21.682Z"
+      },
+      {
+        "id": 333,
+        "tenantId": 1,
+        "userId": 2,
+        "action": "SINGLE_STUDENT_ATTENDANCE_MARKED",
+        "module": "ATTENDANCE",
+        "details": "Marked student #15 as PRESENT for class #4 on Sun Nov 08 2026 00:00:00 GMT+0000 (Greenwich Mean Time).",
+        "isDeleted": false,
+        "createdAt": "2026-11-08T22:59:20.085Z",
+        "updatedAt": "2026-11-08T22:59:20.085Z"
+      },
+      {
+        "id": 332,
+        "tenantId": 1,
+        "userId": 2,
+        "action": "SINGLE_STUDENT_ATTENDANCE_MARKED",
+        "module": "ATTENDANCE",
+        "details": "Marked student #13 as ABSENT for class #4 on Sun Nov 08 2026 00:00:00 GMT+0000 (Greenwich Mean Time).",
+        "isDeleted": false,
+        "createdAt": "2026-11-08T22:59:18.187Z",
+        "updatedAt": "2026-11-08T22:59:18.187Z"
+      },
+      {
+        "id": 331,
+        "tenantId": 1,
+        "userId": 2,
+        "action": "SINGLE_STUDENT_ATTENDANCE_MARKED",
+        "module": "ATTENDANCE",
+        "details": "Marked student #101 as PRESENT for class #4 on Sun Nov 08 2026 00:00:00 GMT+0000 (Greenwich Mean Time).",
+        "isDeleted": false,
+        "createdAt": "2026-11-08T22:59:16.561Z",
+        "updatedAt": "2026-11-08T22:59:16.561Z"
+      },
+      {
+        "id": 330,
+        "tenantId": 1,
+        "userId": 2,
+        "action": "SINGLE_STUDENT_ATTENDANCE_MARKED",
+        "module": "ATTENDANCE",
+        "details": "Marked student #3 as PRESENT for class #4 on Sun Nov 08 2026 00:00:00 GMT+0000 (Greenwich Mean Time).",
+        "isDeleted": false,
+        "createdAt": "2026-11-08T22:59:15.757Z",
+        "updatedAt": "2026-11-08T22:59:15.757Z"
+      },
+      {
+        "id": 329,
+        "tenantId": 1,
+        "userId": 2,
+        "action": "SINGLE_STUDENT_ATTENDANCE_MARKED",
+        "module": "ATTENDANCE",
+        "details": "Marked student #102 as PRESENT for class #4 on Sun Nov 08 2026 00:00:00 GMT+0000 (Greenwich Mean Time).",
+        "isDeleted": false,
+        "createdAt": "2026-11-08T22:59:14.069Z",
+        "updatedAt": "2026-11-08T22:59:14.069Z"
+      },
+      {
+        "id": 328,
+        "tenantId": 1,
+        "userId": 2,
+        "action": "SINGLE_STUDENT_ATTENDANCE_MARKED",
+        "module": "ATTENDANCE",
+        "details": "Marked student #103 as PRESENT for class #4 on Sun Nov 08 2026 00:00:00 GMT+0000 (Greenwich Mean Time).",
+        "isDeleted": false,
+        "createdAt": "2026-11-08T22:59:12.523Z",
+        "updatedAt": "2026-11-08T22:59:12.523Z"
+      },
+      {
+        "id": 327,
+        "tenantId": 1,
+        "userId": 2,
+        "action": "SINGLE_STUDENT_ATTENDANCE_MARKED",
+        "module": "ATTENDANCE",
+        "details": "Marked student #104 as PRESENT for class #4 on Sun Nov 08 2026 00:00:00 GMT+0000 (Greenwich Mean Time).",
+        "isDeleted": false,
+        "createdAt": "2026-11-08T22:59:10.900Z",
+        "updatedAt": "2026-11-08T22:59:10.900Z"
+      },
+      {
+        "id": 326,
+        "tenantId": 1,
+        "userId": 2,
+        "action": "SINGLE_STUDENT_ATTENDANCE_MARKED",
+        "module": "ATTENDANCE",
+        "details": "Marked student #105 as ABSENT for class #4 on Sun Nov 08 2026 00:00:00 GMT+0000 (Greenwich Mean Time).",
+        "isDeleted": false,
+        "createdAt": "2026-11-08T22:59:09.355Z",
+        "updatedAt": "2026-11-08T22:59:09.355Z"
+      },
+      {
+        "id": 325,
+        "tenantId": 1,
+        "userId": 2,
+        "action": "SINGLE_STUDENT_ATTENDANCE_MARKED",
+        "module": "ATTENDANCE",
+        "details": "Marked student #106 as PRESENT for class #4 on Sun Nov 08 2026 00:00:00 GMT+0000 (Greenwich Mean Time).",
+        "isDeleted": false,
+        "createdAt": "2026-11-08T22:59:05.916Z",
+        "updatedAt": "2026-11-08T22:59:05.916Z"
+      },
+      {
+        "id": 324,
+        "tenantId": 1,
+        "userId": 2,
+        "action": "SINGLE_STUDENT_ATTENDANCE_MARKED",
+        "module": "ATTENDANCE",
+        "details": "Marked student #107 as PRESENT for class #4 on Sun Nov 08 2026 00:00:00 GMT+0000 (Greenwich Mean Time).",
+        "isDeleted": false,
+        "createdAt": "2026-11-08T22:59:02.574Z",
+        "updatedAt": "2026-11-08T22:59:02.574Z"
+      },
+      {
+        "id": 323,
+        "tenantId": 1,
+        "userId": 2,
+        "action": "SINGLE_STUDENT_ATTENDANCE_MARKED",
+        "module": "ATTENDANCE",
+        "details": "Marked student #108 as PRESENT for class #4 on Sun Nov 08 2026 00:00:00 GMT+0000 (Greenwich Mean Time).",
+        "isDeleted": false,
+        "createdAt": "2026-11-08T22:59:00.342Z",
+        "updatedAt": "2026-11-08T22:59:00.342Z"
+      },
       {
         "id": 322,
         "tenantId": 1,
@@ -5659,6 +6044,384 @@
     ],
     "AttendanceRecord": [
       {
+        "id": 69,
+        "tenantId": 1,
+        "classId": 13,
+        "studentId": 17,
+        "subjectId": null,
+        "date": "2026-11-08T00:00:00.000Z",
+        "status": "PRESENT",
+        "remarks": null,
+        "markedById": 2,
+        "isDeleted": false,
+        "createdAt": "2026-11-08T23:05:07.536Z",
+        "updatedAt": "2026-11-08T23:05:07.536Z"
+      },
+      {
+        "id": 68,
+        "tenantId": 1,
+        "classId": 13,
+        "studentId": 16,
+        "subjectId": null,
+        "date": "2026-11-08T00:00:00.000Z",
+        "status": "PRESENT",
+        "remarks": null,
+        "markedById": 2,
+        "isDeleted": false,
+        "createdAt": "2026-11-08T23:05:06.831Z",
+        "updatedAt": "2026-11-08T23:05:06.831Z"
+      },
+      {
+        "id": 67,
+        "tenantId": 1,
+        "classId": 13,
+        "studentId": 15,
+        "subjectId": null,
+        "date": "2026-11-08T00:00:00.000Z",
+        "status": "PRESENT",
+        "remarks": null,
+        "markedById": 2,
+        "isDeleted": false,
+        "createdAt": "2026-11-08T23:05:05.617Z",
+        "updatedAt": "2026-11-08T23:05:05.617Z"
+      },
+      {
+        "id": 66,
+        "tenantId": 1,
+        "classId": 13,
+        "studentId": 13,
+        "subjectId": null,
+        "date": "2026-11-08T00:00:00.000Z",
+        "status": "PRESENT",
+        "remarks": null,
+        "markedById": 2,
+        "isDeleted": false,
+        "createdAt": "2026-11-08T23:05:03.327Z",
+        "updatedAt": "2026-11-08T23:05:03.327Z"
+      },
+      {
+        "id": 65,
+        "tenantId": 1,
+        "classId": 13,
+        "studentId": 3,
+        "subjectId": null,
+        "date": "2026-11-08T00:00:00.000Z",
+        "status": "PRESENT",
+        "remarks": null,
+        "markedById": 2,
+        "isDeleted": false,
+        "createdAt": "2026-11-08T23:05:01.500Z",
+        "updatedAt": "2026-11-08T23:05:01.500Z"
+      },
+      {
+        "id": 64,
+        "tenantId": 1,
+        "classId": 13,
+        "studentId": 101,
+        "subjectId": null,
+        "date": "2026-11-08T00:00:00.000Z",
+        "status": "PRESENT",
+        "remarks": null,
+        "markedById": 2,
+        "isDeleted": false,
+        "createdAt": "2026-11-08T23:04:59.566Z",
+        "updatedAt": "2026-11-08T23:04:59.566Z"
+      },
+      {
+        "id": 63,
+        "tenantId": 1,
+        "classId": 13,
+        "studentId": 102,
+        "subjectId": null,
+        "date": "2026-11-08T00:00:00.000Z",
+        "status": "PRESENT",
+        "remarks": null,
+        "markedById": 2,
+        "isDeleted": false,
+        "createdAt": "2026-11-08T23:04:58.627Z",
+        "updatedAt": "2026-11-08T23:04:58.627Z"
+      },
+      {
+        "id": 62,
+        "tenantId": 1,
+        "classId": 13,
+        "studentId": 104,
+        "subjectId": null,
+        "date": "2026-11-08T00:00:00.000Z",
+        "status": "ABSENT",
+        "remarks": null,
+        "markedById": 2,
+        "isDeleted": false,
+        "createdAt": "2026-11-08T23:04:57.148Z",
+        "updatedAt": "2026-11-08T23:04:57.148Z"
+      },
+      {
+        "id": 61,
+        "tenantId": 1,
+        "classId": 13,
+        "studentId": 103,
+        "subjectId": null,
+        "date": "2026-11-08T00:00:00.000Z",
+        "status": "ABSENT",
+        "remarks": null,
+        "markedById": 2,
+        "isDeleted": false,
+        "createdAt": "2026-11-08T23:04:56.549Z",
+        "updatedAt": "2026-11-08T23:04:56.549Z"
+      },
+      {
+        "id": 60,
+        "tenantId": 1,
+        "classId": 13,
+        "studentId": 105,
+        "subjectId": null,
+        "date": "2026-11-08T00:00:00.000Z",
+        "status": "PRESENT",
+        "remarks": null,
+        "markedById": 2,
+        "isDeleted": false,
+        "createdAt": "2026-11-08T23:04:54.150Z",
+        "updatedAt": "2026-11-08T23:04:54.150Z"
+      },
+      {
+        "id": 59,
+        "tenantId": 1,
+        "classId": 13,
+        "studentId": 108,
+        "subjectId": null,
+        "date": "2026-11-08T00:00:00.000Z",
+        "status": "PRESENT",
+        "remarks": null,
+        "markedById": 2,
+        "isDeleted": false,
+        "createdAt": "2026-11-08T23:04:51.561Z",
+        "updatedAt": "2026-11-08T23:04:51.561Z"
+      },
+      {
+        "id": 58,
+        "tenantId": 1,
+        "classId": 13,
+        "studentId": 107,
+        "subjectId": null,
+        "date": "2026-11-08T00:00:00.000Z",
+        "status": "PRESENT",
+        "remarks": null,
+        "markedById": 2,
+        "isDeleted": false,
+        "createdAt": "2026-11-08T23:04:50.571Z",
+        "updatedAt": "2026-11-08T23:04:50.571Z"
+      },
+      {
+        "id": 57,
+        "tenantId": 1,
+        "classId": 13,
+        "studentId": 106,
+        "subjectId": null,
+        "date": "2026-11-08T00:00:00.000Z",
+        "status": "PRESENT",
+        "remarks": "",
+        "markedById": 2,
+        "isDeleted": false,
+        "createdAt": "2026-11-08T22:59:54.935Z",
+        "updatedAt": "2026-11-08T23:04:52.767Z"
+      },
+      {
+        "id": 55,
+        "tenantId": 1,
+        "classId": 4,
+        "studentId": 16,
+        "subjectId": null,
+        "date": "2026-11-08T00:00:00.000Z",
+        "status": "LATE",
+        "remarks": null,
+        "markedById": 2,
+        "isDeleted": false,
+        "createdAt": "2026-11-08T22:59:32.522Z",
+        "updatedAt": "2026-11-08T22:59:32.522Z"
+      },
+      {
+        "id": 54,
+        "tenantId": 1,
+        "classId": 4,
+        "studentId": 17,
+        "subjectId": null,
+        "date": "2026-11-08T00:00:00.000Z",
+        "status": "ABSENT",
+        "remarks": null,
+        "markedById": 2,
+        "isDeleted": false,
+        "createdAt": "2026-11-08T22:59:28.057Z",
+        "updatedAt": "2026-11-08T22:59:28.057Z"
+      },
+      {
+        "id": 53,
+        "tenantId": 1,
+        "classId": 4,
+        "studentId": 18,
+        "subjectId": null,
+        "date": "2026-11-08T00:00:00.000Z",
+        "status": "PRESENT",
+        "remarks": null,
+        "markedById": 2,
+        "isDeleted": false,
+        "createdAt": "2026-11-08T22:59:23.242Z",
+        "updatedAt": "2026-11-08T22:59:23.242Z"
+      },
+      {
+        "id": 50,
+        "tenantId": 1,
+        "classId": 4,
+        "studentId": 15,
+        "subjectId": null,
+        "date": "2026-11-08T00:00:00.000Z",
+        "status": "PRESENT",
+        "remarks": null,
+        "markedById": 2,
+        "isDeleted": false,
+        "createdAt": "2026-11-08T22:59:19.748Z",
+        "updatedAt": "2026-11-08T22:59:19.748Z"
+      },
+      {
+        "id": 49,
+        "tenantId": 1,
+        "classId": 4,
+        "studentId": 13,
+        "subjectId": null,
+        "date": "2026-11-08T00:00:00.000Z",
+        "status": "ABSENT",
+        "remarks": null,
+        "markedById": 2,
+        "isDeleted": false,
+        "createdAt": "2026-11-08T22:59:17.921Z",
+        "updatedAt": "2026-11-08T22:59:17.921Z"
+      },
+      {
+        "id": 48,
+        "tenantId": 1,
+        "classId": 4,
+        "studentId": 101,
+        "subjectId": null,
+        "date": "2026-11-08T00:00:00.000Z",
+        "status": "PRESENT",
+        "remarks": null,
+        "markedById": 2,
+        "isDeleted": false,
+        "createdAt": "2026-11-08T22:59:16.259Z",
+        "updatedAt": "2026-11-08T22:59:16.259Z"
+      },
+      {
+        "id": 47,
+        "tenantId": 1,
+        "classId": 4,
+        "studentId": 3,
+        "subjectId": null,
+        "date": "2026-11-08T00:00:00.000Z",
+        "status": "PRESENT",
+        "remarks": null,
+        "markedById": 2,
+        "isDeleted": false,
+        "createdAt": "2026-11-08T22:59:15.505Z",
+        "updatedAt": "2026-11-08T22:59:15.505Z"
+      },
+      {
+        "id": 46,
+        "tenantId": 1,
+        "classId": 4,
+        "studentId": 102,
+        "subjectId": null,
+        "date": "2026-11-08T00:00:00.000Z",
+        "status": "PRESENT",
+        "remarks": null,
+        "markedById": 2,
+        "isDeleted": false,
+        "createdAt": "2026-11-08T22:59:13.814Z",
+        "updatedAt": "2026-11-08T22:59:13.814Z"
+      },
+      {
+        "id": 45,
+        "tenantId": 1,
+        "classId": 4,
+        "studentId": 103,
+        "subjectId": null,
+        "date": "2026-11-08T00:00:00.000Z",
+        "status": "PRESENT",
+        "remarks": null,
+        "markedById": 2,
+        "isDeleted": false,
+        "createdAt": "2026-11-08T22:59:12.309Z",
+        "updatedAt": "2026-11-08T22:59:12.309Z"
+      },
+      {
+        "id": 44,
+        "tenantId": 1,
+        "classId": 4,
+        "studentId": 104,
+        "subjectId": null,
+        "date": "2026-11-08T00:00:00.000Z",
+        "status": "PRESENT",
+        "remarks": null,
+        "markedById": 2,
+        "isDeleted": false,
+        "createdAt": "2026-11-08T22:59:10.657Z",
+        "updatedAt": "2026-11-08T22:59:10.657Z"
+      },
+      {
+        "id": 43,
+        "tenantId": 1,
+        "classId": 4,
+        "studentId": 105,
+        "subjectId": null,
+        "date": "2026-11-08T00:00:00.000Z",
+        "status": "ABSENT",
+        "remarks": null,
+        "markedById": 2,
+        "isDeleted": false,
+        "createdAt": "2026-11-08T22:59:09.003Z",
+        "updatedAt": "2026-11-08T22:59:09.003Z"
+      },
+      {
+        "id": 42,
+        "tenantId": 1,
+        "classId": 4,
+        "studentId": 106,
+        "subjectId": null,
+        "date": "2026-11-08T00:00:00.000Z",
+        "status": "PRESENT",
+        "remarks": null,
+        "markedById": 2,
+        "isDeleted": false,
+        "createdAt": "2026-11-08T22:59:05.515Z",
+        "updatedAt": "2026-11-08T22:59:05.515Z"
+      },
+      {
+        "id": 41,
+        "tenantId": 1,
+        "classId": 4,
+        "studentId": 107,
+        "subjectId": null,
+        "date": "2026-11-08T00:00:00.000Z",
+        "status": "PRESENT",
+        "remarks": null,
+        "markedById": 2,
+        "isDeleted": false,
+        "createdAt": "2026-11-08T22:59:01.249Z",
+        "updatedAt": "2026-11-08T22:59:01.249Z"
+      },
+      {
+        "id": 40,
+        "tenantId": 1,
+        "classId": 4,
+        "studentId": 108,
+        "subjectId": null,
+        "date": "2026-11-08T00:00:00.000Z",
+        "status": "PRESENT",
+        "remarks": null,
+        "markedById": 2,
+        "isDeleted": false,
+        "createdAt": "2026-11-08T22:58:59.965Z",
+        "updatedAt": "2026-11-08T22:58:59.965Z"
+      },
+      {
         "id": 39,
         "tenantId": 1,
         "classId": 1,
@@ -5693,12 +6456,12 @@
         "studentId": 18,
         "subjectId": null,
         "date": "2026-11-08T00:00:00.000Z",
-        "status": "ABSENT",
+        "status": "PRESENT",
         "remarks": "",
         "markedById": 2,
         "isDeleted": false,
         "createdAt": "2026-11-08T17:58:57.676Z",
-        "updatedAt": "2026-11-08T19:39:04.650Z"
+        "updatedAt": "2026-11-08T23:05:08.716Z"
       },
       {
         "id": 36,
@@ -7137,6 +7900,370 @@
       }
     ],
     "ClassEnrollment": [
+      {
+        "id": 42,
+        "tenantId": 1,
+        "classId_studentId": {
+          "classId": 4,
+          "studentId": 108
+        },
+        "classId": 4,
+        "studentId": 108,
+        "status": "ACTIVE",
+        "createdAt": "2026-11-08T22:58:58.169Z",
+        "updatedAt": "2026-11-08T22:58:58.169Z"
+      },
+      {
+        "id": 41,
+        "tenantId": 1,
+        "classId_studentId": {
+          "classId": 4,
+          "studentId": 107
+        },
+        "classId": 4,
+        "studentId": 107,
+        "status": "ACTIVE",
+        "createdAt": "2026-11-08T22:58:57.850Z",
+        "updatedAt": "2026-11-08T22:58:57.850Z"
+      },
+      {
+        "id": 40,
+        "tenantId": 1,
+        "classId_studentId": {
+          "classId": 4,
+          "studentId": 106
+        },
+        "classId": 4,
+        "studentId": 106,
+        "status": "ACTIVE",
+        "createdAt": "2026-11-08T22:58:57.645Z",
+        "updatedAt": "2026-11-08T22:58:57.645Z"
+      },
+      {
+        "id": 39,
+        "tenantId": 1,
+        "classId_studentId": {
+          "classId": 4,
+          "studentId": 105
+        },
+        "classId": 4,
+        "studentId": 105,
+        "status": "ACTIVE",
+        "createdAt": "2026-11-08T22:58:57.453Z",
+        "updatedAt": "2026-11-08T22:58:57.453Z"
+      },
+      {
+        "id": 38,
+        "tenantId": 1,
+        "classId_studentId": {
+          "classId": 4,
+          "studentId": 104
+        },
+        "classId": 4,
+        "studentId": 104,
+        "status": "ACTIVE",
+        "createdAt": "2026-11-08T22:58:57.286Z",
+        "updatedAt": "2026-11-08T22:58:57.286Z"
+      },
+      {
+        "id": 37,
+        "tenantId": 1,
+        "classId_studentId": {
+          "classId": 4,
+          "studentId": 103
+        },
+        "classId": 4,
+        "studentId": 103,
+        "status": "ACTIVE",
+        "createdAt": "2026-11-08T22:58:57.107Z",
+        "updatedAt": "2026-11-08T22:58:57.107Z"
+      },
+      {
+        "id": 36,
+        "tenantId": 1,
+        "classId_studentId": {
+          "classId": 4,
+          "studentId": 102
+        },
+        "classId": 4,
+        "studentId": 102,
+        "status": "ACTIVE",
+        "createdAt": "2026-11-08T22:58:56.897Z",
+        "updatedAt": "2026-11-08T22:58:56.897Z"
+      },
+      {
+        "id": 35,
+        "tenantId": 1,
+        "classId_studentId": {
+          "classId": 4,
+          "studentId": 101
+        },
+        "classId": 4,
+        "studentId": 101,
+        "status": "ACTIVE",
+        "createdAt": "2026-11-08T22:58:56.685Z",
+        "updatedAt": "2026-11-08T22:58:56.685Z"
+      },
+      {
+        "id": 34,
+        "tenantId": 1,
+        "classId_studentId": {
+          "classId": 4,
+          "studentId": 3
+        },
+        "classId": 4,
+        "studentId": 3,
+        "status": "ACTIVE",
+        "createdAt": "2026-11-08T22:58:56.493Z",
+        "updatedAt": "2026-11-08T22:58:56.493Z"
+      },
+      {
+        "id": 33,
+        "tenantId": 1,
+        "classId_studentId": {
+          "classId": 4,
+          "studentId": 13
+        },
+        "classId": 4,
+        "studentId": 13,
+        "status": "ACTIVE",
+        "createdAt": "2026-11-08T22:58:56.310Z",
+        "updatedAt": "2026-11-08T22:58:56.310Z"
+      },
+      {
+        "id": 32,
+        "tenantId": 1,
+        "classId_studentId": {
+          "classId": 4,
+          "studentId": 15
+        },
+        "classId": 4,
+        "studentId": 15,
+        "status": "ACTIVE",
+        "createdAt": "2026-11-08T22:58:56.146Z",
+        "updatedAt": "2026-11-08T22:58:56.146Z"
+      },
+      {
+        "id": 31,
+        "tenantId": 1,
+        "classId_studentId": {
+          "classId": 4,
+          "studentId": 16
+        },
+        "classId": 4,
+        "studentId": 16,
+        "status": "ACTIVE",
+        "createdAt": "2026-11-08T22:58:55.958Z",
+        "updatedAt": "2026-11-08T22:58:55.958Z"
+      },
+      {
+        "id": 30,
+        "tenantId": 1,
+        "classId_studentId": {
+          "classId": 4,
+          "studentId": 17
+        },
+        "classId": 4,
+        "studentId": 17,
+        "status": "ACTIVE",
+        "createdAt": "2026-11-08T22:58:55.753Z",
+        "updatedAt": "2026-11-08T22:58:55.753Z"
+      },
+      {
+        "id": 29,
+        "tenantId": 1,
+        "classId_studentId": {
+          "classId": 4,
+          "studentId": 18
+        },
+        "classId": 4,
+        "studentId": 18,
+        "status": "ACTIVE",
+        "createdAt": "2026-11-08T22:58:55.594Z",
+        "updatedAt": "2026-11-08T22:58:55.594Z"
+      },
+      {
+        "id": 28,
+        "tenantId": 1,
+        "classId_studentId": {
+          "classId": 13,
+          "studentId": 108
+        },
+        "classId": 13,
+        "studentId": 108,
+        "status": "ACTIVE",
+        "createdAt": "2026-11-08T22:58:32.658Z",
+        "updatedAt": "2026-11-08T22:58:32.658Z"
+      },
+      {
+        "id": 27,
+        "tenantId": 1,
+        "classId_studentId": {
+          "classId": 13,
+          "studentId": 107
+        },
+        "classId": 13,
+        "studentId": 107,
+        "status": "ACTIVE",
+        "createdAt": "2026-11-08T22:58:32.458Z",
+        "updatedAt": "2026-11-08T22:58:32.458Z"
+      },
+      {
+        "id": 26,
+        "tenantId": 1,
+        "classId_studentId": {
+          "classId": 13,
+          "studentId": 106
+        },
+        "classId": 13,
+        "studentId": 106,
+        "status": "ACTIVE",
+        "createdAt": "2026-11-08T22:58:32.273Z",
+        "updatedAt": "2026-11-08T22:58:32.273Z"
+      },
+      {
+        "id": 25,
+        "tenantId": 1,
+        "classId_studentId": {
+          "classId": 13,
+          "studentId": 105
+        },
+        "classId": 13,
+        "studentId": 105,
+        "status": "ACTIVE",
+        "createdAt": "2026-11-08T22:58:32.068Z",
+        "updatedAt": "2026-11-08T22:58:32.068Z"
+      },
+      {
+        "id": 24,
+        "tenantId": 1,
+        "classId_studentId": {
+          "classId": 13,
+          "studentId": 104
+        },
+        "classId": 13,
+        "studentId": 104,
+        "status": "ACTIVE",
+        "createdAt": "2026-11-08T22:58:31.829Z",
+        "updatedAt": "2026-11-08T22:58:31.829Z"
+      },
+      {
+        "id": 23,
+        "tenantId": 1,
+        "classId_studentId": {
+          "classId": 13,
+          "studentId": 103
+        },
+        "classId": 13,
+        "studentId": 103,
+        "status": "ACTIVE",
+        "createdAt": "2026-11-08T22:58:31.655Z",
+        "updatedAt": "2026-11-08T22:58:31.655Z"
+      },
+      {
+        "id": 22,
+        "tenantId": 1,
+        "classId_studentId": {
+          "classId": 13,
+          "studentId": 102
+        },
+        "classId": 13,
+        "studentId": 102,
+        "status": "ACTIVE",
+        "createdAt": "2026-11-08T22:58:31.456Z",
+        "updatedAt": "2026-11-08T22:58:31.456Z"
+      },
+      {
+        "id": 21,
+        "tenantId": 1,
+        "classId_studentId": {
+          "classId": 13,
+          "studentId": 101
+        },
+        "classId": 13,
+        "studentId": 101,
+        "status": "ACTIVE",
+        "createdAt": "2026-11-08T22:58:31.124Z",
+        "updatedAt": "2026-11-08T22:58:31.124Z"
+      },
+      {
+        "id": 20,
+        "tenantId": 1,
+        "classId_studentId": {
+          "classId": 13,
+          "studentId": 3
+        },
+        "classId": 13,
+        "studentId": 3,
+        "status": "ACTIVE",
+        "createdAt": "2026-11-08T22:58:30.823Z",
+        "updatedAt": "2026-11-08T22:58:30.823Z"
+      },
+      {
+        "id": 19,
+        "tenantId": 1,
+        "classId_studentId": {
+          "classId": 13,
+          "studentId": 13
+        },
+        "classId": 13,
+        "studentId": 13,
+        "status": "ACTIVE",
+        "createdAt": "2026-11-08T22:58:30.673Z",
+        "updatedAt": "2026-11-08T22:58:30.673Z"
+      },
+      {
+        "id": 18,
+        "tenantId": 1,
+        "classId_studentId": {
+          "classId": 13,
+          "studentId": 15
+        },
+        "classId": 13,
+        "studentId": 15,
+        "status": "ACTIVE",
+        "createdAt": "2026-11-08T22:58:30.528Z",
+        "updatedAt": "2026-11-08T22:58:30.528Z"
+      },
+      {
+        "id": 17,
+        "tenantId": 1,
+        "classId_studentId": {
+          "classId": 13,
+          "studentId": 16
+        },
+        "classId": 13,
+        "studentId": 16,
+        "status": "ACTIVE",
+        "createdAt": "2026-11-08T22:58:30.391Z",
+        "updatedAt": "2026-11-08T22:58:30.391Z"
+      },
+      {
+        "id": 16,
+        "tenantId": 1,
+        "classId_studentId": {
+          "classId": 13,
+          "studentId": 17
+        },
+        "classId": 13,
+        "studentId": 17,
+        "status": "ACTIVE",
+        "createdAt": "2026-11-08T22:58:30.257Z",
+        "updatedAt": "2026-11-08T22:58:30.257Z"
+      },
+      {
+        "id": 15,
+        "tenantId": 1,
+        "classId_studentId": {
+          "classId": 13,
+          "studentId": 18
+        },
+        "classId": 13,
+        "studentId": 18,
+        "status": "ACTIVE",
+        "createdAt": "2026-11-08T22:58:30.037Z",
+        "updatedAt": "2026-11-08T22:58:30.037Z"
+      },
       {
         "id": 6,
         "tenantId": 1,

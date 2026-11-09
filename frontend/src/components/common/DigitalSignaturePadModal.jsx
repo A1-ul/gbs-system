@@ -238,3 +238,4 @@ export default function DigitalSignaturePadModal({
     </div>
   );
 }
+

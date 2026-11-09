@@ -557,6 +557,47 @@ const batchDeleteTenants = async (req, res, next) => {
   }
 };
 
+const getDeletedTenantArchives = async (req, res, next) => {
+  try {
+    const archives = await devControlService.getDeletedTenantArchives();
+    res.status(200).json({
+      status: 'success',
+      results: archives.length,
+      data: { archives }
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+
+const restoreDeletedTenant = async (req, res, next) => {
+  try {
+    const { id } = req.params;
+    const result = await devControlService.restoreDeletedTenant(id, req.user);
+    res.status(200).json({
+      status: 'success',
+      message: `Tenant #${id} restored and reactivated successfully.`,
+      data: { tenant: result }
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+
+const purgeArchivedTenant = async (req, res, next) => {
+  try {
+    const { id } = req.params;
+    const result = await devControlService.purgeArchivedTenant(id, req.user);
+    res.status(200).json({
+      status: 'success',
+      message: `Tenant #${id} permanently purged.`,
+      data: { tenant: result }
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+
 // 21. Archive & Delete Deployments
 const archiveDeployment = async (req, res, next) => {
   try {
@@ -717,7 +758,10 @@ module.exports = {
   getPendingOnboardings,
   approveOnboarding,
   rejectOnboarding,
-  sendHeadmasterSms
+  sendHeadmasterSms,
+  getDeletedTenantArchives,
+  restoreDeletedTenant,
+  purgeArchivedTenant
 };
 
 

@@ -7,6 +7,7 @@ const { AppError } = require('../../middleware/error.middleware');
 const socketServer = require('../../core/socket/socketServer');
 const smsService = require('../sms/sms.service');
 const authService = require('../auth/auth.service');
+const { readPersistentStore, writePersistentStore } = require('../../core/database/persistentStore');
 
 /**
  * Enterprise Developer Control Center & Real-Time Countdown Engine (Blueprint Box 9 & 10)
@@ -114,6 +115,11 @@ const syncDynamicInstitutionsToTenants = async () => {
   for (let idx = 0; idx < dynamicList.length; idx++) {
     const item = dynamicList[idx];
     if (!item || (!item.institutionName && !item.tenantCode)) continue;
+
+    // Strict Telemetry Gate: Unapproved, pending, or rejected institutions must NEVER be added to active tenants or telemetry
+    const isApproved = item.status === 'APPROVED' || item.status === 'ACTIVE' || item.isApproved === true;
+    if (!isApproved) continue;
+
     const detId =
       typeof item.tenantId === 'number' && item.tenantId > 0
         ? item.tenantId
@@ -856,24 +862,38 @@ const developerTenantAction = async (tenantId, action, params = {}, developer = 
 
     case 'DELETE':
     case 'DELETE_TENANT': {
-      await prisma.subscription.deleteMany({
-        where: { tenantId: safeTid }
-      }).catch(() => { });
-
-      await prisma.systemLock.deleteMany({
-        where: { tenantId: safeTid }
-      }).catch(() => { });
+      // 1. Snapshot the deleted institution and safely preserve into Deleted Archives Depot for future restoration
+      const archiveRecord = {
+        tenantId: safeTid,
+        tenantCode: tenant.code,
+        tenantName: tenant.name,
+        institutionType: tenant.institutionType || 'NURSERY_TO_JHS',
+        headmasterName: tenant.headmasterName || 'Headmaster',
+        headmasterEmail: tenant.headmasterEmail || 'admin@school.edu',
+        headmasterPhone: tenant.headmasterPhone || '+233-24-555-0199',
+        deletedAt: new Date().toISOString(),
+        archivedBy: 'Developer Gabriel (gabosei48@gmail.com)',
+        deletionReason: params.reason || 'Archived from active tenancy by Developer Gabriel',
+        status: 'ARCHIVED',
+        snapshotData: { ...tenant }
+      };
 
       try {
-        await prisma.tenant.delete({
-          where: { id: safeTid }
+        writePersistentStore((curr) => {
+          const prev = Array.isArray(curr.deletedTenantArchives) ? curr.deletedTenantArchives : [];
+          return {
+            ...curr,
+            deletedTenantArchives: [archiveRecord, ...prev.filter((a) => Number(a.tenantId) !== Number(safeTid))]
+          };
         });
-      } catch {
+      } catch { }
+
+      try {
         await prisma.tenant.update({
           where: { id: safeTid },
-          data: { isDeleted: true, isActive: false, status: 'DELETED' }
-        }).catch(() => { });
-      }
+          data: { isDeleted: true, isActive: false, status: 'ARCHIVED_DELETED' }
+        });
+      } catch { }
 
       if (authService.deleteDynamicInstitution) {
         authService.deleteDynamicInstitution(tenantId);
@@ -882,9 +902,72 @@ const developerTenantAction = async (tenantId, action, params = {}, developer = 
         if (tenant.name) authService.deleteDynamicInstitution(tenant.name);
       }
 
-      updatedTenant = { ...tenant, id: safeTid, isDeleted: true, deleted: true, status: 'DELETED' };
-      auditAction = 'TENANT_DELETED_BY_DEVELOPER';
-      auditDetails = `Developer permanently deleted Tenant '${tenant.name}' (${tenant.code || safeTid}).`;
+      updatedTenant = { ...tenant, id: safeTid, isDeleted: true, deleted: true, status: 'ARCHIVED_DELETED', archiveRecord };
+      auditAction = 'TENANT_ARCHIVED_TO_DEPOT';
+      auditDetails = `Developer archived Tenant '${tenant.name}' (${tenant.code || safeTid}) into Deleted Archives Depot for safe restoration.`;
+      break;
+    }
+
+    case 'RESTORE_TENANT':
+    case 'REACTIVATE_TENANT': {
+      try {
+        await prisma.tenant.update({
+          where: { id: safeTid },
+          data: { isDeleted: false, isActive: true, status: 'ACTIVE' }
+        });
+      } catch { }
+
+      if (authService.registerDynamicInstitution) {
+        authService.registerDynamicInstitution({
+          id: safeTid,
+          tenantId: safeTid,
+          tenantCode: tenant.code,
+          institutionName: tenant.name,
+          adminName: tenant.headmasterName,
+          adminEmail: tenant.headmasterEmail,
+          officialEmail: tenant.headmasterEmail,
+          adminPhone: tenant.headmasterPhone,
+          status: 'ACTIVE',
+          isApproved: true
+        });
+      }
+
+      try {
+        writePersistentStore((curr) => {
+          const prev = Array.isArray(curr.deletedTenantArchives) ? curr.deletedTenantArchives : [];
+          return {
+            ...curr,
+            deletedTenantArchives: prev.filter((a) => Number(a.tenantId) !== Number(safeTid))
+          };
+        });
+      } catch { }
+
+      updatedTenant = { ...tenant, id: safeTid, isDeleted: false, deleted: false, isActive: true, status: 'ACTIVE' };
+      auditAction = 'TENANT_RESTORED_BY_DEVELOPER';
+      auditDetails = `Developer restored and reactivated Tenant '${tenant.name}' (${tenant.code || safeTid}) back to live system.`;
+      break;
+    }
+
+    case 'PURGE_PERMANENT': {
+      await prisma.subscription.deleteMany({ where: { tenantId: safeTid } }).catch(() => { });
+      await prisma.systemLock.deleteMany({ where: { tenantId: safeTid } }).catch(() => { });
+      try {
+        await prisma.tenant.delete({ where: { id: safeTid } });
+      } catch { }
+
+      try {
+        writePersistentStore((curr) => {
+          const prev = Array.isArray(curr.deletedTenantArchives) ? curr.deletedTenantArchives : [];
+          return {
+            ...curr,
+            deletedTenantArchives: prev.filter((a) => Number(a.tenantId) !== Number(safeTid))
+          };
+        });
+      } catch { }
+
+      updatedTenant = { ...tenant, id: safeTid, isDeleted: true, status: 'PURGED' };
+      auditAction = 'TENANT_PERMANENTLY_PURGED';
+      auditDetails = `Developer permanently purged Tenant '${tenant.name}' (${tenant.code || safeTid}) from database.`;
       break;
     }
 
@@ -3204,6 +3287,20 @@ const getTenantSubscription = async (idOrCode) => {
   };
 };
 
+const getDeletedTenantArchives = async () => {
+  const store = readPersistentStore();
+  const archives = Array.isArray(store.deletedTenantArchives) ? store.deletedTenantArchives : [];
+  return archives;
+};
+
+const restoreDeletedTenant = async (tenantId, user = null) => {
+  return developerTenantAction(tenantId, 'RESTORE_TENANT', {}, user);
+};
+
+const purgeArchivedTenant = async (tenantId, user = null) => {
+  return developerTenantAction(tenantId, 'PURGE_PERMANENT', {}, user);
+};
+
 module.exports = {
   verifyDevPin,
   getSystemMetrics,
@@ -3212,6 +3309,9 @@ module.exports = {
   developerTenantAction,
   deleteTenantById,
   batchDeleteTenants,
+  getDeletedTenantArchives,
+  restoreDeletedTenant,
+  purgeArchivedTenant,
   executeAutoLockAndBackup,
   triggerSystemBackup,
   toggleSystemLock,

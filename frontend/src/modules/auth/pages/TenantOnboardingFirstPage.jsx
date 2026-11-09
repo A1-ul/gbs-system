@@ -159,6 +159,7 @@ export default function TenantOnboardingFirstPage() {
     momoTxnId: "",
     facePhoto: null,
     biometricFaceToken: null,
+    institutionalDocumentImage: null,
     termsAccepted: true
   });
 
@@ -169,14 +170,31 @@ export default function TenantOnboardingFirstPage() {
   // Pricing Engine Rates (Official Policy: Nursery–JHS = GH₵3, SHS = GH₵5, University = GH₵10)
   const activeRates = useMemo(() => getOnboardingRates(), []);
 
-  // Check if 1-Month Free Trial has already been used by this tenant
-  const [hasUsedTrial, setHasUsedTrial] = useState(() => {
+  // Check if 1-Month Free Trial has already been used by this tenant or contact
+  const isTrialLocked = useMemo(() => {
     try {
-      return localStorage.getItem("gbs_trial_used") === "true";
+      if (localStorage.getItem("gbs_trial_used") === "true") return true;
+      const usedTrials = JSON.parse(localStorage.getItem("gbs_used_trial_institutions") || "[]");
+      const normEmail = (form.adminEmail || "").trim().toLowerCase();
+      const normName = (form.institutionName || "").trim().toLowerCase();
+      const normPhone = (form.adminPhone || form.officialPhone || "").replace(/\D/g, "");
+
+      return usedTrials.some((item) => {
+        const itemEmail = (item.email || item.adminEmail || "").trim().toLowerCase();
+        const itemName = (item.name || item.institutionName || "").trim().toLowerCase();
+        const itemPhone = (item.phone || item.adminPhone || "").replace(/\D/g, "");
+        return (
+          (normEmail && itemEmail && normEmail === itemEmail) ||
+          (normName && itemName && normName === itemName) ||
+          (normPhone && itemPhone && normPhone.length > 6 && normPhone === itemPhone)
+        );
+      });
     } catch {
       return false;
     }
-  });
+  }, [form.adminEmail, form.institutionName, form.adminPhone, form.officialPhone]);
+
+  const hasUsedTrial = isTrialLocked;
 
   // Calculate Official Rate per Student per Month based on Institution Category
   // Nursery – JHS: GH₵ 3 | SHS: GH₵ 5 | University: GH₵ 10
@@ -281,6 +299,20 @@ export default function TenantOnboardingFirstPage() {
     }));
   };
 
+  // Institutional Verification Document / Campus Photo Handler
+  const handleDocumentFileChange = (e) => {
+    const file = e.target.files && e.target.files[0];
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = (event) => {
+      setForm((prev) => ({
+        ...prev,
+        institutionalDocumentImage: event.target.result
+      }));
+    };
+    reader.readAsDataURL(file);
+  };
+
   // Submission Handler
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -374,7 +406,16 @@ export default function TenantOnboardingFirstPage() {
     localStorage.setItem("gbs_tenant_already_onboarded", "true");
     if (form.subscriptionPlan === "1_MONTH_TRIAL") {
       localStorage.setItem("gbs_trial_used", "true");
-      setHasUsedTrial(true);
+      try {
+        const used = JSON.parse(localStorage.getItem("gbs_used_trial_institutions") || "[]");
+        used.push({
+          email: form.adminEmail,
+          name: form.institutionName,
+          phone: form.adminPhone,
+          usedAt: new Date().toISOString()
+        });
+        localStorage.setItem("gbs_used_trial_institutions", JSON.stringify(used));
+      } catch {}
     }
 
     setLoading(false);
@@ -741,6 +782,57 @@ export default function TenantOnboardingFirstPage() {
               )}
             </div>
 
+            {/* Institutional Accreditation Document / Campus Photo Verification Box */}
+            <div className="gbs-face-scanner-box" style={{ marginTop: "14px", border: "1.5px dashed #38bdf8", background: "rgba(15, 23, 42, 0.6)" }}>
+              <div className="gbs-face-scanner-info">
+                <h4>📄 Institutional License / GES Accreditation / Campus Photo</h4>
+                <p>
+                  Attach an official document, GES registration certificate, school crest, or campus entrance photo for Developer Control Center review and verification.
+                </p>
+              </div>
+
+              {form.institutionalDocumentImage ? (
+                <div className="gbs-captured-face-preview">
+                  <img
+                    src={form.institutionalDocumentImage}
+                    alt="Institutional Document Preview"
+                    className="gbs-captured-face-thumb"
+                    style={{ objectFit: "contain", background: "#020617" }}
+                  />
+                  <div>
+                    <span style={{ fontSize: "0.78rem", color: "#38bdf8", fontWeight: 800, display: "block" }}>
+                      ✓ DOCUMENT ATTACHED
+                    </span>
+                    <label
+                      className="btn-secondary"
+                      style={{ fontSize: "0.72rem", padding: "4px 8px", marginTop: "4px", display: "inline-block", cursor: "pointer" }}
+                    >
+                      🔄 Change Document
+                      <input
+                        type="file"
+                        accept="image/*"
+                        onChange={handleDocumentFileChange}
+                        style={{ display: "none" }}
+                      />
+                    </label>
+                  </div>
+                </div>
+              ) : (
+                <label
+                  className="gbs-btn-launch-scanner"
+                  style={{ cursor: "pointer", display: "inline-flex", alignItems: "center", gap: "8px", background: "rgba(56, 189, 248, 0.2)", border: "1px solid #38bdf8", color: "#38bdf8", padding: "10px 18px", borderRadius: "10px", fontWeight: 700 }}
+                >
+                  <span>📁 Upload Document / Campus Photo</span>
+                  <input
+                    type="file"
+                    accept="image/*"
+                    onChange={handleDocumentFileChange}
+                    style={{ display: "none" }}
+                  />
+                </label>
+              )}
+            </div>
+
             <div className="gbs-form-grid-2">
               <div className="gbs-field-group">
                 <label className="gbs-field-label">
@@ -944,19 +1036,26 @@ export default function TenantOnboardingFirstPage() {
 
               {/* 5 Official Subscription Periods Grid */}
               <div className="gbs-subscription-tier-grid">
-                {/* 1 Month (0% Discount) */}
+                {/* 1 Month (0% Discount) / 1-Month Free Institutional Trial */}
                 <div
-                  className={`gbs-tier-card ${form.subscriptionPlan === "1_MONTH" || form.subscriptionPlan === "1_MONTH_TRIAL" ? "selected" : ""}`}
-                  onClick={() => setForm((prev) => ({ ...prev, subscriptionPlan: "1_MONTH" }))}
+                  className={`gbs-tier-card ${form.subscriptionPlan === "1_MONTH" || form.subscriptionPlan === "1_MONTH_TRIAL" ? "selected" : ""} ${isTrialLocked ? "disabled-trial" : ""}`}
+                  onClick={() => {
+                    if (isTrialLocked) {
+                      setError("🔒 Free Trial Ineligible: This institution or registered contact has already utilized the 1-Month Free Trial. Please select an active paid tier (3, 6, 9, or 12 Months).");
+                      return;
+                    }
+                    setForm((prev) => ({ ...prev, subscriptionPlan: "1_MONTH" }));
+                  }}
+                  style={{ opacity: isTrialLocked ? 0.75 : 1, position: "relative" }}
                 >
                   <div>
-                    <span className="gbs-tier-badge" style={{ background: "#10b981", color: "#fff" }}>
-                      1 MONTH • 0% DISCOUNT
+                    <span className="gbs-tier-badge" style={{ background: isTrialLocked ? "#ef4444" : "#10b981", color: "#fff" }}>
+                      {isTrialLocked ? "🔒 TRIAL USED (INELIGIBLE)" : "1 MONTH • FREE TRIAL / STANDARD"}
                     </span>
-                    <div className="gbs-tier-name">1 Month Subscription</div>
+                    <div className="gbs-tier-name">1 Month {isTrialLocked ? "(Paid Only)" : "Evaluation"}</div>
                     <div className="gbs-tier-fee">GH₵ {calculation.oneMonthRate.toLocaleString()}</div>
                     <div className="gbs-tier-desc">
-                      {calculation.count} students × GH₵ {calculation.rate} × 1 month (0% discount).
+                      {isTrialLocked ? "Previous trial detected. Select a paid period to maintain records." : `${calculation.count} students × GH₵ ${calculation.rate} × 1 month (0% discount).`}
                     </div>
                   </div>
                 </div>

@@ -799,7 +799,7 @@ export default function AccountantDashboard() {
       if (Array.isArray(depotStock) && depotStock.length > 0) {
         campusInventoryValuation = depotStock.reduce((acc, item) => acc + ((item.quantity || 0) * (item.unitPrice || item.costPerUnit || 15)), 0);
       }
-    } catch {}
+    } catch { }
 
     const campusMaintenanceTotal = headmasterPurchases
       .filter(p => (p.category || "").toLowerCase().includes("maintenance") || (p.itemDescription || "").toLowerCase().includes("maintenance") || (p.itemDescription || "").toLowerCase().includes("repair"))

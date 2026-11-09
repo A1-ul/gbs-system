@@ -18,6 +18,9 @@ const ROLES = [
 
 export default function MainLoginPage() {
   const navigate = useNavigate();
+  const [loginMode, setLoginMode] = useState(() => {
+    return localStorage.getItem("gbs_system_mode") || "LIVE_PRODUCTION";
+  });
   const [selectedRole, setSelectedRole] = useState("ADMIN");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -156,6 +159,9 @@ export default function MainLoginPage() {
     setError(null);
 
     try {
+      localStorage.setItem("gbs_system_mode", loginMode);
+      localStorage.setItem("gbs_environment_mode", loginMode === "LIVE_PRODUCTION" ? "PRODUCTION" : "SANDBOX");
+
       const result = await login({
         email: email.trim(),
         password,
@@ -299,26 +305,94 @@ export default function MainLoginPage() {
           </div>
         </div>
 
+        {/* Environment Separation: Live Production vs Demo Sandbox Mode */}
+        <div style={{ display: "flex", gap: "8px", margin: "0 0 1.2rem", background: "rgba(15, 23, 42, 0.75)", padding: "6px", borderRadius: "12px", border: "1px solid rgba(255, 255, 255, 0.12)" }}>
+          <button
+            type="button"
+            onClick={() => {
+              setLoginMode("LIVE_PRODUCTION");
+              localStorage.setItem("gbs_system_mode", "LIVE_PRODUCTION");
+              localStorage.setItem("gbs_environment_mode", "PRODUCTION");
+              setEmail("");
+              setPassword("");
+              setError(null);
+            }}
+            style={{
+              flex: 1,
+              padding: "10px 14px",
+              borderRadius: "8px",
+              fontWeight: 800,
+              fontSize: "0.85rem",
+              cursor: "pointer",
+              border: loginMode === "LIVE_PRODUCTION" ? "1.5px solid #10b981" : "1px solid transparent",
+              background: loginMode === "LIVE_PRODUCTION" ? "linear-gradient(135deg, rgba(16, 185, 129, 0.35), rgba(5, 150, 105, 0.2))" : "transparent",
+              color: loginMode === "LIVE_PRODUCTION" ? "#34d399" : "#94a3b8",
+              boxShadow: loginMode === "LIVE_PRODUCTION" ? "0 4px 12px rgba(16, 185, 129, 0.25)" : "none",
+              transition: "all 0.2s"
+            }}
+          >
+            🟢 Live Production Login
+          </button>
+          <button
+            type="button"
+            onClick={() => {
+              setLoginMode("DEMO_SANDBOX");
+              localStorage.setItem("gbs_system_mode", "DEMO_SANDBOX");
+              localStorage.setItem("gbs_environment_mode", "SANDBOX");
+              handleFillCredentials(selectedRole);
+            }}
+            style={{
+              flex: 1,
+              padding: "10px 14px",
+              borderRadius: "8px",
+              fontWeight: 800,
+              fontSize: "0.85rem",
+              cursor: "pointer",
+              border: loginMode === "DEMO_SANDBOX" ? "1.5px solid #f59e0b" : "1px solid transparent",
+              background: loginMode === "DEMO_SANDBOX" ? "linear-gradient(135deg, rgba(245, 158, 11, 0.35), rgba(217, 119, 6, 0.2))" : "transparent",
+              color: loginMode === "DEMO_SANDBOX" ? "#fbbf24" : "#94a3b8",
+              boxShadow: loginMode === "DEMO_SANDBOX" ? "0 4px 12px rgba(245, 158, 11, 0.25)" : "none",
+              transition: "all 0.2s"
+            }}
+          >
+            🟡 Demo / Sandbox Mode
+          </button>
+        </div>
+
+        {loginMode === "LIVE_PRODUCTION" ? (
+          <div style={{ background: "rgba(16, 185, 129, 0.12)", border: "1px solid rgba(16, 185, 129, 0.3)", borderRadius: "8px", padding: "8px 12px", marginBottom: "1rem", fontSize: "0.78rem", color: "#34d399", display: "flex", alignItems: "center", gap: "8px" }}>
+            <span>🔒</span>
+            <span><strong>GENUINE PRODUCTION PORTAL:</strong> Log in with your registered school email/valid Gmail to access your actual real records, students, and attendance.</span>
+          </div>
+        ) : (
+          <div style={{ background: "rgba(245, 158, 11, 0.12)", border: "1px solid rgba(245, 158, 11, 0.35)", borderRadius: "8px", padding: "8px 12px", marginBottom: "1rem", fontSize: "0.78rem", color: "#fbbf24", display: "flex", alignItems: "center", gap: "8px" }}>
+            <span>⚠️</span>
+            <span><strong>DEMO / TRIAL SANDBOX:</strong> Preloaded with dummy test data for exploration and evaluation. Changes made in demo mode do not affect genuine production schools.</span>
+          </div>
+        )}
+
         {/* Real Login Form */}
         <form onSubmit={handleLogin} className="login-form">
           <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "8px" }}>
             <span style={{ fontSize: "0.75rem", color: "#94a3b8", fontWeight: "600" }}>CREDENTIALS ENTRY</span>
-            <button
-              type="button"
-              onClick={() => handleFillCredentials(selectedRole)}
-              style={{
-                background: "rgba(56, 189, 248, 0.15)",
-                border: "1px solid rgba(56, 189, 248, 0.4)",
-                color: "#38bdf8",
-                padding: "4px 12px",
-                borderRadius: "16px",
-                fontSize: "0.75rem",
-                fontWeight: "700",
-                cursor: "pointer"
-              }}
-            >
-              ⚡ Fill {selectedRole} Demo Login
-            </button>
+            {loginMode === "DEMO_SANDBOX" && (
+              <button
+                type="button"
+                onClick={() => handleFillCredentials(selectedRole)}
+                style={{
+                  background: "rgba(56, 189, 248, 0.15)",
+                  border: "1px solid rgba(56, 189, 248, 0.4)",
+                  color: "#38bdf8",
+                  padding: "4px 12px",
+                  borderRadius: "16px",
+                  fontSize: "0.75rem",
+                  fontWeight: "700",
+                  cursor: "pointer"
+                }}
+              >
+                ⚡ Fill {selectedRole} Demo Login
+              </button>
+            )}
           </div>
 
           <div className="form-group">

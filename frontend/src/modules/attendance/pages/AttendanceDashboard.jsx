@@ -104,7 +104,7 @@ export default function AttendanceDashboard() {
       try {
         cachedStatus = JSON.parse(localStorage.getItem(savedKey) || "{}");
         cachedRemarks = JSON.parse(localStorage.getItem(remarksKey) || "{}");
-      } catch {}
+      } catch { }
 
       const initialMap = {};
       const initialSaveStatus = {};
@@ -201,7 +201,7 @@ export default function AttendanceDashboard() {
         if (updatedMap[k]?.status) mapToSave[k] = updatedMap[k].status;
       });
       localStorage.setItem(savedKey, JSON.stringify(mapToSave));
-    } catch {}
+    } catch { }
 
     // Asynchronously commit single student attendance to database
     axios.post(`${API_BASE}/attendance/single`, {
@@ -237,7 +237,7 @@ export default function AttendanceDashboard() {
         if (updatedMap[k]?.remarks) remarksToSave[k] = updatedMap[k].remarks;
       });
       localStorage.setItem(remarksKey, JSON.stringify(remarksToSave));
-    } catch {}
+    } catch { }
 
     const currentStatus = updatedMap[studentId]?.status || 'PRESENT';
     axios.post(`${API_BASE}/attendance/single`, {
@@ -246,7 +246,7 @@ export default function AttendanceDashboard() {
       status: currentStatus,
       date: attendanceDate,
       remarks: remarks
-    }, authHeaders).catch(() => {});
+    }, authHeaders).catch(() => { });
   };
 
   // Submit Batch Attendance to PostgreSQL: Verifies all students are checked one by one
@@ -348,7 +348,7 @@ export default function AttendanceDashboard() {
           </button>
         </div>
       </header>
- 
+
       {/* REAL-LIFE DAYTIME PHOTOGRAPHIC HERO BANNER */}
       <section
         className="attendance-hero-banner"
@@ -386,8 +386,8 @@ export default function AttendanceDashboard() {
       <div className="filter-bar">
         <div className="filter-group">
           <label>Academic Class:</label>
-          <select 
-            value={selectedClassId} 
+          <select
+            value={selectedClassId}
             onChange={(e) => handleClassChange(e.target.value)}
             disabled={classes.length === 0}
           >
@@ -401,8 +401,8 @@ export default function AttendanceDashboard() {
 
         <div className="filter-group">
           <label>Curriculum Subject (Optional):</label>
-          <select 
-            value={selectedSubjectId} 
+          <select
+            value={selectedSubjectId}
             onChange={(e) => setSelectedSubjectId(e.target.value)}
           >
             <option value="">Homeroom / Daily Overall</option>
@@ -416,27 +416,27 @@ export default function AttendanceDashboard() {
 
         <div className="filter-group">
           <label>Session Date:</label>
-          <input 
-            type="date" 
-            value={attendanceDate} 
+          <input
+            type="date"
+            value={attendanceDate}
             onChange={(e) => setAttendanceDate(e.target.value)}
           />
         </div>
 
         <div className="tab-pills">
-          <button 
+          <button
             className={`tab-btn ${activeTab === 'mark' ? 'active' : ''}`}
             onClick={() => setActiveTab('mark')}
           >
             📝 Mark Attendance
           </button>
-          <button 
+          <button
             className={`tab-btn ${activeTab === 'records' ? 'active' : ''}`}
             onClick={() => setActiveTab('records')}
           >
             📋 Session History
           </button>
-          <button 
+          <button
             className={`tab-btn ${activeTab === 'analytics' ? 'active' : ''}`}
             onClick={() => setActiveTab('analytics')}
           >
@@ -520,8 +520,8 @@ export default function AttendanceDashboard() {
               <div style={{ background: 'rgba(56, 189, 248, 0.15)', border: '1px solid rgba(56, 189, 248, 0.4)', padding: '6px 14px', borderRadius: '8px', fontSize: '0.85rem', color: '#38bdf8', fontWeight: 800 }}>
                 📋 Roll Call Progress: {Object.values(attendanceMap).filter(v => Boolean(v?.status)).length} / {roster.length} Ticked
               </div>
-              <button 
-                className="save-attendance-btn" 
+              <button
+                className="save-attendance-btn"
                 onClick={handleSubmitAttendance}
                 disabled={savingAttendance || roster.length === 0}
                 style={{ padding: '8px 20px', fontWeight: 800, background: 'linear-gradient(135deg, #10b981 0%, #059669 100%)', border: 'none', borderRadius: '8px', color: '#fff', cursor: 'pointer', boxShadow: '0 4px 12px rgba(16, 185, 129, 0.3)' }}
@@ -591,7 +591,7 @@ export default function AttendanceDashboard() {
                         </td>
                         <td className="status-selector-col">
                           <div className="status-pill-group">
-                            <button 
+                            <button
                               type="button"
                               className={`status-pill present ${currentStatus === 'PRESENT' ? 'selected' : ''}`}
                               onClick={() => handleStatusChange(student.studentId, 'PRESENT')}
@@ -599,7 +599,7 @@ export default function AttendanceDashboard() {
                             >
                               {currentStatus === 'PRESENT' ? '✓ Present' : 'Present'}
                             </button>
-                            <button 
+                            <button
                               type="button"
                               className={`status-pill late ${currentStatus === 'LATE' ? 'selected' : ''}`}
                               onClick={() => handleStatusChange(student.studentId, 'LATE')}
@@ -607,7 +607,7 @@ export default function AttendanceDashboard() {
                             >
                               {currentStatus === 'LATE' ? '✓ Late' : 'Late'}
                             </button>
-                            <button 
+                            <button
                               type="button"
                               className={`status-pill absent ${currentStatus === 'ABSENT' ? 'selected' : ''}`}
                               onClick={() => handleStatusChange(student.studentId, 'ABSENT')}
@@ -615,7 +615,7 @@ export default function AttendanceDashboard() {
                             >
                               {currentStatus === 'ABSENT' ? '✗ Absent' : 'Absent'}
                             </button>
-                            <button 
+                            <button
                               type="button"
                               className={`status-pill excused ${currentStatus === 'EXCUSED' ? 'selected' : ''}`}
                               onClick={() => handleStatusChange(student.studentId, 'EXCUSED')}
@@ -626,8 +626,8 @@ export default function AttendanceDashboard() {
                           </div>
                         </td>
                         <td className="remarks-col">
-                          <input 
-                            type="text" 
+                          <input
+                            type="text"
                             placeholder="Optional remark..."
                             value={currentRemarks}
                             onChange={(e) => handleRemarksChange(student.studentId, e.target.value)}
@@ -635,7 +635,7 @@ export default function AttendanceDashboard() {
                           />
                         </td>
                         <td>
-                          <button 
+                          <button
                             className="inspect-btn"
                             onClick={() => openStudentModal(student)}
                           >

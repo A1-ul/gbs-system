@@ -238,28 +238,43 @@ const login = async ({ email, username, identifier, password, portalRole }) => {
         (inst.officialEmail && inst.officialEmail.toLowerCase() === cleanId) ||
         (inst.tenantCode && inst.tenantCode.toLowerCase() === cleanId)
     );
-    if (dynInst && dynInst.status !== 'REJECTED') {
-      user = {
-        id: `usr_hm_${dynInst.id || Date.now()}`,
-        tenantId: dynInst.tenantId || dynInst.tenantUid || 'tnt_master_default',
-        email: dynInst.adminEmail || dynInst.officialEmail,
-        username: (dynInst.adminEmail || dynInst.officialEmail || 'headmaster').split('@')[0].toLowerCase(),
-        password: dynInst.adminPasswordHash,
-        role: 'ADMIN',
-        firstName: dynInst.adminName || dynInst.repFullName || 'Headmaster',
-        lastName: '',
-        isActive: true,
-        isLocked: false,
-        permissions: ['*'],
-        facePhoto: dynInst.facePhoto || null,
-        tenant: {
-          id: dynInst.tenantId || dynInst.tenantUid || 'tnt_master_default',
-          name: dynInst.institutionName,
-          code: dynInst.tenantCode,
+    if (dynInst) {
+      const instStatus = String(dynInst.status || '').toUpperCase();
+      if (instStatus === 'REJECTED') {
+        throw new AppError(
+          `Your institution application for '${dynInst.institutionName || 'your institution'}' was not approved by the Developer Control Center. Reason: ${dynInst.rejectionReason || 'Institutional verification requirements not met'}. Please contact Developer Support (gabosei48@gmail.com).`,
+          403
+        );
+      }
+      if (instStatus === 'PENDING_APPROVAL' || instStatus === 'PENDING_DEVELOPER_APPROVAL' || instStatus === 'PENDING' || (!dynInst.isApproved && instStatus !== 'ACTIVE' && instStatus !== 'APPROVED')) {
+        throw new AppError(
+          `Your institution application for '${dynInst.institutionName || 'your institution'}' is pending developer verification and activation. Please wait for the Developer Control Center to approve your institution.`,
+          403
+        );
+      }
+      if (instStatus === 'APPROVED' || instStatus === 'ACTIVE' || dynInst.isApproved === true) {
+        user = {
+          id: `usr_hm_${dynInst.id || Date.now()}`,
+          tenantId: dynInst.tenantId || dynInst.tenantUid || 'tnt_master_default',
+          email: dynInst.adminEmail || dynInst.officialEmail,
+          username: (dynInst.adminEmail || dynInst.officialEmail || 'headmaster').split('@')[0].toLowerCase(),
+          password: dynInst.adminPasswordHash,
+          role: 'ADMIN',
+          firstName: dynInst.adminName || dynInst.repFullName || 'Headmaster',
+          lastName: '',
           isActive: true,
-          status: 'ACTIVE'
-        }
-      };
+          isLocked: false,
+          permissions: ['*'],
+          facePhoto: dynInst.facePhoto || null,
+          tenant: {
+            id: dynInst.tenantId || dynInst.tenantUid || 'tnt_master_default',
+            name: dynInst.institutionName,
+            code: dynInst.tenantCode,
+            isActive: true,
+            status: 'ACTIVE'
+          }
+        };
+      }
     }
   }
 
@@ -308,28 +323,43 @@ const login = async ({ email, username, identifier, password, portalRole }) => {
         }),
         1800
       );
-      if (reg && reg.status !== 'REJECTED') {
-        user = {
-          id: `usr_hm_${reg.id}`,
-          tenantId: reg.tenantId || reg.tenantUid || '1',
-          email: reg.adminEmail || reg.officialEmail,
-          username: (reg.adminEmail || reg.officialEmail || 'headmaster').split('@')[0].toLowerCase(),
-          password: reg.adminPasswordHash,
-          role: 'ADMIN',
-          firstName: reg.adminName || reg.repFullName || 'Headmaster',
-          lastName: '',
-          isActive: true,
-          isLocked: false,
-          permissions: ['*'],
-          facePhoto: reg.institutionLogo || null,
-          tenant: {
-            id: reg.tenantId || '1',
-            name: reg.institutionName,
-            code: reg.tenantCode,
+      if (reg) {
+        const regStatus = String(reg.status || '').toUpperCase();
+        if (regStatus === 'REJECTED') {
+          throw new AppError(
+            `Your institution application for '${reg.institutionName || 'your institution'}' was not approved by the Developer Control Center. Reason: ${reg.rejectionReason || 'Institutional verification requirements not met'}. Please contact Developer Support (gabosei48@gmail.com).`,
+            403
+          );
+        }
+        if (regStatus === 'PENDING_APPROVAL' || regStatus === 'PENDING_DEVELOPER_APPROVAL' || regStatus === 'PENDING' || (!reg.isApproved && regStatus !== 'ACTIVE' && regStatus !== 'APPROVED')) {
+          throw new AppError(
+            `Your institution application for '${reg.institutionName || 'your institution'}' is pending developer verification and activation. Please wait for the Developer Control Center to approve your institution.`,
+            403
+          );
+        }
+        if (regStatus === 'APPROVED' || regStatus === 'ACTIVE' || reg.isApproved === true) {
+          user = {
+            id: `usr_hm_${reg.id}`,
+            tenantId: reg.tenantId || reg.tenantUid || '1',
+            email: reg.adminEmail || reg.officialEmail,
+            username: (reg.adminEmail || reg.officialEmail || 'headmaster').split('@')[0].toLowerCase(),
+            password: reg.adminPasswordHash,
+            role: 'ADMIN',
+            firstName: reg.adminName || reg.repFullName || 'Headmaster',
+            lastName: '',
             isActive: true,
-            status: 'ACTIVE'
-          }
-        };
+            isLocked: false,
+            permissions: ['*'],
+            facePhoto: reg.institutionLogo || null,
+            tenant: {
+              id: reg.tenantId || '1',
+              name: reg.institutionName,
+              code: reg.tenantCode,
+              isActive: true,
+              status: 'ACTIVE'
+            }
+          };
+        }
       }
     } catch { }
   }
@@ -760,7 +790,12 @@ const registerInstitution = async (data) => {
       tenantCode: registration.tenantCode,
       facePhoto: data.facePhoto || data.scannedFacePhoto || data.headmasterPhoto || null,
       scannedFacePhoto: data.facePhoto || data.scannedFacePhoto || null,
-      biometricFaceToken: data.biometricFaceToken || null
+      biometricFaceToken: data.biometricFaceToken || null,
+      institutionalDocumentImage: data.institutionalDocumentImage || data.verificationDocument || data.campusPhoto || null,
+      campusPhoto: data.campusPhoto || data.institutionalDocumentImage || null,
+      verificationDocument: data.verificationDocument || data.institutionalDocumentImage || null,
+      adminMobile: data.adminPhone || data.phone || data.officialPhone || null,
+      gpsAddress: data.gpsAddress || data.address || data.location || null
     };
     const existingIdx = DYNAMIC_INSTITUTIONS.findIndex(
       (i) => i.adminEmail === effAdminEmail || i.tenantCode === registration.tenantCode
@@ -783,6 +818,7 @@ const registerInstitution = async (data) => {
         status: registration.status,
         adminEmail: registration.adminEmail,
         facePhoto: enrichedReg.facePhoto,
+        institutionalDocumentImage: enrichedReg.institutionalDocumentImage,
         monthlyFee: enrichedReg.monthlyFee,
         subscribedMonths: enrichedReg.subscribedMonths,
         totalTermFee: enrichedReg.totalTermFee,
@@ -796,7 +832,12 @@ const registerInstitution = async (data) => {
       ...regData,
       facePhoto: data.facePhoto || data.scannedFacePhoto || data.headmasterPhoto || null,
       scannedFacePhoto: data.facePhoto || data.scannedFacePhoto || null,
-      biometricFaceToken: data.biometricFaceToken || null
+      biometricFaceToken: data.biometricFaceToken || null,
+      institutionalDocumentImage: data.institutionalDocumentImage || data.verificationDocument || data.campusPhoto || null,
+      campusPhoto: data.campusPhoto || data.institutionalDocumentImage || null,
+      verificationDocument: data.verificationDocument || data.institutionalDocumentImage || null,
+      adminMobile: data.adminPhone || data.phone || data.officialPhone || null,
+      gpsAddress: data.gpsAddress || data.address || data.location || null
     };
     const existingIdx = DYNAMIC_INSTITUTIONS.findIndex(
       (i) => i.adminEmail === effAdminEmail || i.tenantCode === regData.tenantCode

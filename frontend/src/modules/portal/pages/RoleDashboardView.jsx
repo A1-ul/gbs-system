@@ -141,7 +141,106 @@ const ROLE_CONFIGS = {
 
 export default function RoleDashboardView() {
   const { role } = useParams();
+  const navigate = useNavigate();
   const normalizedRole = role ? role.toLowerCase() : "admin";
+
+  // Role Confinement Check: Ensure logged-in user can only access their authorized portal
+  let userRole = null;
+  let isDev = false;
+  try {
+    const storedUser = JSON.parse(localStorage.getItem("gbs_user") || "{}");
+    userRole = (storedUser?.role || localStorage.getItem("gbs_auth_role") || "").toUpperCase();
+    isDev = userRole === "DEVELOPER" || userRole === "SUPER_ADMIN" || Boolean(localStorage.getItem("gbs_dev_token"));
+  } catch {}
+
+  const roleRoleMap = {
+    teacher: ["TEACHER"],
+    student: ["STUDENT"],
+    parent: ["PARENT"],
+    accountant: ["ACCOUNTANT", "BURSAR"],
+    bursar: ["ACCOUNTANT", "BURSAR"],
+    staff: ["STAFF"],
+    hr: ["HR", "STAFF"],
+    alumni: ["ALUMNI"],
+    graduate: ["ALUMNI"],
+    admin: ["ADMIN", "SUPER_ADMIN", "HEADMASTER"],
+    headmaster: ["ADMIN", "SUPER_ADMIN", "HEADMASTER"]
+  };
+
+  const allowedRoles = roleRoleMap[normalizedRole] || [];
+  const isUnauthorized = userRole && !isDev && allowedRoles.length > 0 && !allowedRoles.includes(userRole);
+
+  if (isUnauthorized) {
+    const targetDashboardPath = `/portal/${userRole.toLowerCase()}/dashboard`;
+    return (
+      <div style={{
+        minHeight: "100vh",
+        display: "flex",
+        flexDirection: "column",
+        alignItems: "center",
+        justifyContent: "center",
+        background: "linear-gradient(135deg, #090d16 0%, #0f172a 100%)",
+        color: "#f8fafc",
+        padding: "24px",
+        textAlign: "center",
+        fontFamily: "'Times New Roman', Times, serif"
+      }}>
+        <div style={{
+          background: "rgba(15, 23, 42, 0.85)",
+          border: "2px solid #ef4444",
+          borderRadius: "16px",
+          padding: "36px",
+          maxWidth: "540px",
+          boxShadow: "0 20px 50px rgba(0, 0, 0, 0.7)"
+        }}>
+          <div style={{ fontSize: "3rem", marginBottom: "12px" }}>🔒</div>
+          <h2 style={{ fontFamily: "'Playfair Display', 'Times New Roman', serif", fontSize: "1.6rem", color: "#f87171", marginBottom: "10px" }}>
+            ACCESS RESTRICTED — ROLE CONFINEMENT ENFORCED
+          </h2>
+          <p style={{ color: "#cbd5e1", fontSize: "0.95rem", lineHeight: "1.6", marginBottom: "20px" }}>
+            You are signed in as <strong>{userRole}</strong>. You are strictly confined to your authorized workspace and cannot access the <strong>{normalizedRole.toUpperCase()}</strong> portal.
+          </p>
+          <div style={{ display: "flex", gap: "12px", justifyContent: "center" }}>
+            <button
+              type="button"
+              onClick={() => navigate(targetDashboardPath)}
+              style={{
+                background: "linear-gradient(135deg, #10b981 0%, #059669 100%)",
+                border: "none",
+                borderRadius: "8px",
+                color: "#fff",
+                padding: "10px 22px",
+                fontWeight: 800,
+                cursor: "pointer",
+                boxShadow: "0 4px 14px rgba(16, 185, 129, 0.4)"
+              }}
+            >
+              ← Return to My {userRole} Portal
+            </button>
+            <button
+              type="button"
+              onClick={() => {
+                localStorage.removeItem("gbs_token");
+                localStorage.removeItem("gbs_user");
+                navigate("/login");
+              }}
+              style={{
+                background: "rgba(239, 68, 68, 0.2)",
+                border: "1px solid #ef4444",
+                borderRadius: "8px",
+                color: "#fca5a5",
+                padding: "10px 18px",
+                fontWeight: 700,
+                cursor: "pointer"
+              }}
+            >
+              Sign Out
+            </button>
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   if (normalizedRole === "teacher") return <TeacherDashboard />;
   if (normalizedRole === "student") return <StudentDashboard />;
@@ -152,7 +251,6 @@ export default function RoleDashboardView() {
   if (normalizedRole === "alumni" || normalizedRole === "graduate") return <AlumniDashboard />;
   if (normalizedRole === "admin" || normalizedRole === "headmaster") return <AdminDashboard />;
 
-  const navigate = useNavigate();
   const roleKey = role ? role.toLowerCase() : "admin";
   const config = ROLE_CONFIGS[roleKey] || ROLE_CONFIGS.admin;
 
