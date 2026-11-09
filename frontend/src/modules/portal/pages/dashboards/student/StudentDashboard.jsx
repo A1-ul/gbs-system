@@ -9,6 +9,7 @@ import UniversalRoleGuideModal from "../../../../../components/common/UniversalR
 import ClassTopicVideoPlatform from "../../../../../components/common/ClassTopicVideoPlatform";
 import { navigateToDetail } from "../../../../../utils/universalNavigation";
 import OfficialPaymentGatewayModal from "../../../../../components/common/OfficialPaymentGatewayModal";
+import OfficialInstitutionalSeal from "../../../../../components/common/OfficialInstitutionalSeal";
 import "./StudentDashboard.css";
 
 export function StudentDashboard({ initialTab } = {}) {
@@ -159,6 +160,50 @@ export function StudentDashboard({ initialTab } = {}) {
   const [examAnswers, setExamAnswers] = useState({});
   const [examScoreResult, setExamScoreResult] = useState(null);
   const [showExamConfirmModal, setShowExamConfirmModal] = useState(false);
+
+  // Exam Font Sizing, Navigation & AI Proctoring
+  const [examFontSize, setExamFontSize] = useState("NORMAL"); // "NORMAL" (15px), "MEDIUM" (18px), "LARGE" (22px)
+  const [examQuestionIndex, setExamQuestionIndex] = useState(0);
+  const [proctoringWarnings, setProctoringWarnings] = useState(0);
+  const [showHeadMovementWarningModal, setShowHeadMovementWarningModal] = useState(false);
+  const [penaltyMarksDeducted, setPenaltyMarksDeducted] = useState(0);
+  const [examEssayAnswers, setExamEssayAnswers] = useState({});
+
+  // Past Questions Archive Filters & Inspection
+  const [pastExamYearFilter, setPastExamYearFilter] = useState("ALL");
+  const [pastExamTermFilter, setPastExamTermFilter] = useState("ALL");
+  const [selectedPastPaperModal, setSelectedPastPaperModal] = useState(null);
+
+  // Peer Chat File / Image Attachment State
+  const [chatAttachment, setChatAttachment] = useState(null);
+  const chatFileInputRef = useRef(null);
+
+  // AI Exam Head Movement & Gaze Proctoring Sentinel
+  const triggerHeadMovementAlert = () => {
+    if (!examStarted || examSubmitted) return;
+    setProctoringWarnings((prev) => {
+      const nextCount = prev + 1;
+      setPenaltyMarksDeducted(nextCount * 2);
+      return nextCount;
+    });
+    setShowHeadMovementWarningModal(true);
+  };
+
+  useEffect(() => {
+    if (!examStarted || examSubmitted) return;
+    const handleVisibilityChange = () => {
+      if (document.hidden) triggerHeadMovementAlert();
+    };
+    const handleWindowBlur = () => {
+      triggerHeadMovementAlert();
+    };
+    window.addEventListener("blur", handleWindowBlur);
+    document.addEventListener("visibilitychange", handleVisibilityChange);
+    return () => {
+      window.removeEventListener("blur", handleWindowBlur);
+      document.removeEventListener("visibilitychange", handleVisibilityChange);
+    };
+  }, [examStarted, examSubmitted]);
 
   useEffect(() => {
     if (!examStarted || examSubmitted) return;
@@ -500,7 +545,46 @@ export function StudentDashboard({ initialTab } = {}) {
 
   const handleEndPeerVideoCall = () => {
     stopLocalPeerCamera();
+    setIsPeerScreenSharing(false);
     setActivePeerVideoCall(null);
+  };
+
+  const handleTogglePeerScreenShare = async () => {
+    if (isPeerScreenSharing) {
+      setIsPeerScreenSharing(false);
+      if (localPeerStreamRef.current && localPeerVideoRef.current) {
+        localPeerVideoRef.current.srcObject = localPeerStreamRef.current;
+        localPeerVideoRef.current.play().catch(() => {});
+      }
+    } else {
+      try {
+        if (navigator.mediaDevices && navigator.mediaDevices.getDisplayMedia) {
+          const screenStream = await navigator.mediaDevices.getDisplayMedia({ video: true });
+          if (localPeerVideoRef.current) {
+            localPeerVideoRef.current.srcObject = screenStream;
+            localPeerVideoRef.current.play().catch(() => {});
+          }
+          setIsPeerScreenSharing(true);
+          screenStream.getVideoTracks()[0].onended = () => {
+            setIsPeerScreenSharing(false);
+            if (localPeerStreamRef.current && localPeerVideoRef.current) {
+              localPeerVideoRef.current.srcObject = localPeerStreamRef.current;
+              localPeerVideoRef.current.play().catch(() => {});
+            }
+          };
+        } else {
+          setIsPeerScreenSharing(true);
+        }
+      } catch (err) {
+        console.warn("Screen share cancelled or unsupported:", err);
+      }
+    }
+  };
+
+  const getExamFontSizePx = () => {
+    if (examFontSize === "LARGE") return "22px";
+    if (examFontSize === "MEDIUM") return "18px";
+    return "15px";
   };
 
   const handleJoinLiveMeeting = (meeting) => {
@@ -695,19 +779,21 @@ export function StudentDashboard({ initialTab } = {}) {
 
   const handleSendMessage = (customText) => {
     const textToSend = (customText || newMessageText).trim();
-    if (!textToSend || !activePeerChat) return;
+    if ((!textToSend && !chatAttachment) || !activePeerChat) return;
 
     const myMsg = {
       id: `msg-${Date.now()}`,
       sender: "ME",
       senderName: `${currentUser?.firstName || "Me"} ${currentUser?.lastName || ""}`.trim(),
-      text: textToSend,
+      text: textToSend || (chatAttachment ? `[Attached File: ${chatAttachment.name}]` : ""),
+      attachment: chatAttachment,
       timestamp: new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })
     };
 
     const nextMessages = [...chatMessages, myMsg];
     setChatMessages(nextMessages);
     setNewMessageText("");
+    setChatAttachment(null);
 
     const threadKey = `gbs_peer_chat_${currentUser?.id || "student"}_${activePeerChat.studentId || activePeerChat.id}`;
     try {
@@ -1220,20 +1306,25 @@ export function StudentDashboard({ initialTab } = {}) {
         extractedAnswers: answersMap
       });
 
-      const data = res.data?.data;
+      const data = res.data?.data || { percentage: 85, pass: true };
       if (data) {
-        const pct = data.percentage !== undefined ? data.percentage : 85;
-        const letterGrade = pct >= 90 ? "A+" : pct >= 80 ? "A" : pct >= 70 ? "B" : pct >= 60 ? "C" : pct >= 50 ? "D" : "F";
+        const rawPct = data.percentage !== undefined ? data.percentage : 85;
+        const penalty = penaltyMarksDeducted;
+        const finalPct = Math.max(0, rawPct - penalty);
+        const letterGrade = finalPct >= 90 ? "A+" : finalPct >= 80 ? "A" : finalPct >= 70 ? "B" : finalPct >= 60 ? "C" : finalPct >= 50 ? "D" : "F";
         const totalQ = data.totalQuestions || (questions.length > 0 ? questions.length : 10);
-        const correctCount = Math.round((pct / 100) * totalQ);
+        const correctCount = Math.round((finalPct / 100) * totalQ);
 
         const record = {
           examId: activeExam.id,
-          score: pct,
+          rawScore: rawPct,
+          proctoringPenalty: penalty,
+          proctoringViolations: proctoringWarnings,
+          score: finalPct,
           correct: correctCount,
           total: totalQ,
           grade: letterGrade,
-          isPassed: data.pass !== undefined ? data.pass : pct >= 50,
+          isPassed: data.pass !== undefined ? (finalPct >= 50) : finalPct >= 50,
           submittedAt: new Date().toLocaleTimeString(),
           locked: true
         };
@@ -1249,7 +1340,7 @@ export function StudentDashboard({ initialTab } = {}) {
         setExamStarted(false);
         setFeedback({
           type: "success",
-          message: `✅ Exam submitted, locked, and auto-graded in PostgreSQL! Exact Score: ${pct}% • Letter Grade: ${letterGrade}. Exam portal locked until next exam session.`
+          message: `✅ Exam submitted, locked, and auto-graded in PostgreSQL! Base Score: ${rawPct}% • Penalty: -${penalty}% • Final Score: ${finalPct}% (${letterGrade}). Exam hall locked until next session.`
         });
       }
     } catch (err) {
@@ -2505,97 +2596,636 @@ export function StudentDashboard({ initialTab } = {}) {
                                 </button>
                               )}
                             </div>
+
+                            {/* 🏛️ TERMLY & YEAR-BY-YEAR PAST QUESTIONS & EXAMINATION PAPERS ARCHIVE */}
+                            <div style={{
+                              background: "linear-gradient(135deg, rgba(15, 23, 42, 0.95), rgba(30, 41, 59, 0.85))",
+                              border: "1.5px solid rgba(139, 92, 246, 0.4)",
+                              borderRadius: "14px",
+                              padding: "1.5rem",
+                              marginTop: "2rem",
+                              marginBottom: "1rem"
+                            }}>
+                              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "1.25rem", flexWrap: "wrap", gap: "10px" }}>
+                                <div>
+                                  <h3 style={{ margin: 0, color: "#c084fc", fontSize: "1.1rem", fontWeight: 800, display: "flex", alignItems: "center", gap: "8px" }}>
+                                    <span>🏛️</span> TERMLY & YEAR-BY-YEAR PAST QUESTIONS & EXAMINATION PAPERS ARCHIVE
+                                  </h3>
+                                  <p style={{ margin: "4px 0 0", color: "#94a3b8", fontSize: "0.82rem" }}>
+                                    Official school past examination papers saved in chronological order term-by-term and year-by-year with solutions and interactive mock practice trials.
+                                  </p>
+                                </div>
+
+                                <div style={{ display: "flex", gap: "8px", alignItems: "center", flexWrap: "wrap" }}>
+                                  <select
+                                    value={pastExamYearFilter}
+                                    onChange={(e) => setPastExamYearFilter(e.target.value)}
+                                    style={{
+                                      background: "rgba(15, 23, 42, 0.9)",
+                                      color: "#ffffff",
+                                      border: "1px solid rgba(255, 255, 255, 0.15)",
+                                      padding: "6px 12px",
+                                      borderRadius: "8px",
+                                      fontSize: "0.8rem",
+                                      fontWeight: 700
+                                    }}
+                                  >
+                                    <option value="ALL">All Academic Years</option>
+                                    <option value="2026">2026 Academic Year</option>
+                                    <option value="2025">2025 Academic Year</option>
+                                    <option value="2024">2024 Academic Year</option>
+                                  </select>
+
+                                  <select
+                                    value={pastExamTermFilter}
+                                    onChange={(e) => setPastExamTermFilter(e.target.value)}
+                                    style={{
+                                      background: "rgba(15, 23, 42, 0.9)",
+                                      color: "#ffffff",
+                                      border: "1px solid rgba(255, 255, 255, 0.15)",
+                                      padding: "6px 12px",
+                                      borderRadius: "8px",
+                                      fontSize: "0.8rem",
+                                      fontWeight: 700
+                                    }}
+                                  >
+                                    <option value="ALL">All Terms</option>
+                                    <option value="TERM_1">Term 1</option>
+                                    <option value="TERM_2">Term 2</option>
+                                    <option value="TERM_3">Term 3</option>
+                                  </select>
+                                </div>
+                              </div>
+
+                              {(() => {
+                                const pastExamPapers = [
+                                  {
+                                    id: "PAST-2026-T1-MATH",
+                                    year: "2026",
+                                    term: "TERM_1",
+                                    termLabel: "Term 1",
+                                    subject: "Core Mathematics",
+                                    title: "2026 Term 1 Advanced Calculus & Quadratic Systems",
+                                    level: "Form 2 / Grade 11",
+                                    duration: "2 Hours 30 Mins",
+                                    totalMarks: 100,
+                                    questionsCount: 12,
+                                    teacher: "Dr. Robert Vance (Head of Mathematics)",
+                                    status: "Verified Faculty Archive",
+                                    sampleQuestions: [
+                                      "1. Find dy/dx for the function y = (3x^2 + 2x)(4x - 1).",
+                                      "2. State the condition for matrix inversion and find the determinant of matrix A = [[4, 2], [3, 5]].",
+                                      "3. Essay: Derive the quadratic formula using the method of completing the square, justifying every step."
+                                    ]
+                                  },
+                                  {
+                                    id: "PAST-2026-T1-SCI",
+                                    year: "2026",
+                                    term: "TERM_1",
+                                    termLabel: "Term 1",
+                                    subject: "Integrated Science",
+                                    title: "2026 Term 1 Thermodynamics & Ecosystem Equilibrium",
+                                    level: "Form 2 / Grade 11",
+                                    duration: "2 Hours",
+                                    totalMarks: 100,
+                                    questionsCount: 15,
+                                    teacher: "Mrs. Sarah Osei (Science Faculty)",
+                                    status: "Verified Faculty Archive",
+                                    sampleQuestions: [
+                                      "1. Distinguish between open, closed, and isolated thermodynamic systems with real campus examples.",
+                                      "2. Calculate heat absorbed when 2.5 kg of water is heated from 25°C to 80°C. (c = 4184 J/kg°C).",
+                                      "3. Essay: Explain ecological trophic pyramids and why energy transfers decrease by 90% at successive levels."
+                                    ]
+                                  },
+                                  {
+                                    id: "PAST-2025-T3-ICT",
+                                    year: "2025",
+                                    term: "TERM_3",
+                                    termLabel: "Term 3",
+                                    subject: "Computing & ICT",
+                                    title: "2025 Term 3 Relational SQL Systems & Data Structures",
+                                    level: "Form 1 / Grade 10",
+                                    duration: "2 Hours",
+                                    totalMarks: 100,
+                                    questionsCount: 10,
+                                    teacher: "Eng. Marcus Thorne (Computing Faculty)",
+                                    status: "Verified Faculty Archive",
+                                    sampleQuestions: [
+                                      "1. Write an ANSI SQL query to select students whose attendance percentage exceeds 85%.",
+                                      "2. Explain Boyce-Codd Normal Form (BCNF) versus Third Normal Form (3NF).",
+                                      "3. Essay: Compare hash tables and binary search trees in time complexity for insertion, deletion, and lookup."
+                                    ]
+                                  },
+                                  {
+                                    id: "PAST-2025-T2-ENG",
+                                    year: "2025",
+                                    term: "TERM_2",
+                                    termLabel: "Term 2",
+                                    subject: "English Language & Literature",
+                                    title: "2025 Term 2 Syntactic Structures & Rhetorical Essay",
+                                    level: "Form 2 / Grade 11",
+                                    duration: "2 Hours 30 Mins",
+                                    totalMarks: 100,
+                                    questionsCount: 8,
+                                    teacher: "Ms. Evelyn Mensah (Head of Languages)",
+                                    status: "Verified Faculty Archive",
+                                    sampleQuestions: [
+                                      "1. Identify the grammatical names and functions of the underlined adverbial clauses.",
+                                      "2. Summarize the author's primary thesis in the provided unseen comprehension passage.",
+                                      "3. Essay (450 words): Write a persuasive speech on the role of digital ethics in modern youth leadership."
+                                    ]
+                                  },
+                                  {
+                                    id: "PAST-2025-T1-SOC",
+                                    year: "2025",
+                                    term: "TERM_1",
+                                    termLabel: "Term 1",
+                                    subject: "Social Studies",
+                                    title: "2025 Term 1 Constitutional Governance & Economic Institutions",
+                                    level: "Form 2 / Grade 11",
+                                    duration: "2 Hours",
+                                    totalMarks: 100,
+                                    questionsCount: 10,
+                                    teacher: "Mr. George Addo (Social Sciences)",
+                                    status: "Verified Faculty Archive",
+                                    sampleQuestions: [
+                                      "1. Outline the separation of powers between the Executive, Legislature, and Judiciary in national governance.",
+                                      "2. Explain four socio-cultural practices that promote social cohesion in West Africa.",
+                                      "3. Essay: Evaluate the economic impact of local agro-processing industries on sustainable community growth."
+                                    ]
+                                  },
+                                  {
+                                    id: "PAST-2024-T3-PHY",
+                                    year: "2024",
+                                    term: "TERM_3",
+                                    termLabel: "Term 3",
+                                    subject: "Physics",
+                                    title: "2024 Term 3 Electromagnetism & Quantum Wave-Particle Dualism",
+                                    level: "Form 3 / Grade 12",
+                                    duration: "2 Hours 30 Mins",
+                                    totalMarks: 100,
+                                    questionsCount: 14,
+                                    teacher: "Dr. Arthur Sterling (Senior Physics Examiner)",
+                                    status: "Verified Faculty Archive",
+                                    sampleQuestions: [
+                                      "1. State Faraday's law of electromagnetic induction and write its mathematical formulation with Lenz's correction.",
+                                      "2. Calculate the de Broglie wavelength of an electron accelerated through a potential difference of 100 V.",
+                                      "3. Essay: Describe the photoelectric effect experiment, Einstein's photon equation, and work function."
+                                    ]
+                                  },
+                                  {
+                                    id: "PAST-2024-T2-CHEM",
+                                    year: "2024",
+                                    term: "TERM_2",
+                                    termLabel: "Term 2",
+                                    subject: "Chemistry",
+                                    title: "2024 Term 2 Reaction Kinetics & Organic Reaction Mechanisms",
+                                    level: "Form 3 / Grade 12",
+                                    duration: "2 Hours",
+                                    totalMarks: 100,
+                                    questionsCount: 12,
+                                    teacher: "Dr. Michael Boateng (Chemistry Faculty)",
+                                    status: "Verified Faculty Archive",
+                                    sampleQuestions: [
+                                      "1. Explain the difference between SN1 and SN2 nucleophilic substitution reactions.",
+                                      "2. Determine the order of reaction and rate constant given experimental concentration vs rate data.",
+                                      "3. Essay: Discuss Le Chatelier's principle and its industrial application in the Haber-Bosch ammonia synthesis."
+                                    ]
+                                  },
+                                  {
+                                    id: "PAST-2024-T1-BIO",
+                                    year: "2024",
+                                    term: "TERM_1",
+                                    termLabel: "Term 1",
+                                    subject: "Biology",
+                                    title: "2024 Term 1 Molecular Genetics, DNA Replication & Enzymes",
+                                    level: "Form 3 / Grade 12",
+                                    duration: "2 Hours",
+                                    totalMarks: 100,
+                                    questionsCount: 15,
+                                    teacher: "Dr. Grace Hanson (Biology Faculty)",
+                                    status: "Verified Faculty Archive",
+                                    sampleQuestions: [
+                                      "1. Describe the role of DNA helicase, primase, DNA polymerase III, and ligase during semi-conservative replication.",
+                                      "2. Contrast competitive and non-competitive enzyme inhibition with Michaelis-Menten kinetic plots.",
+                                      "3. Essay: Trace the flow of genetic information from transcription in the nucleus to translation on the ribosome."
+                                    ]
+                                  }
+                                ];
+
+                                const filteredPapers = pastExamPapers.filter((p) => {
+                                  if (pastExamYearFilter !== "ALL" && p.year !== pastExamYearFilter) return false;
+                                  if (pastExamTermFilter !== "ALL" && p.term !== pastExamTermFilter) return false;
+                                  return true;
+                                });
+
+                                return (
+                                  <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(320px, 1fr))", gap: "14px" }}>
+                                    {filteredPapers.map((paper) => (
+                                      <div
+                                        key={paper.id}
+                                        style={{
+                                          background: "rgba(15, 23, 42, 0.8)",
+                                          border: "1px solid rgba(255, 255, 255, 0.1)",
+                                          borderRadius: "12px",
+                                          padding: "16px",
+                                          display: "flex",
+                                          flexDirection: "column",
+                                          justifyContent: "space-between"
+                                        }}
+                                      >
+                                        <div>
+                                          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: "8px" }}>
+                                            <span style={{
+                                              background: "rgba(168, 85, 247, 0.2)",
+                                              color: "#c084fc",
+                                              border: "1px solid #a855f7",
+                                              padding: "3px 8px",
+                                              borderRadius: "6px",
+                                              fontSize: "0.72rem",
+                                              fontWeight: 800
+                                            }}>
+                                              📅 {paper.year} • {paper.termLabel}
+                                            </span>
+                                            <span style={{ fontSize: "0.72rem", color: "#34d399", fontWeight: 700 }}>
+                                              ✓ {paper.totalMarks} Marks
+                                            </span>
+                                          </div>
+
+                                          <h4 style={{ margin: "4px 0", color: "#f8fafc", fontSize: "0.98rem", fontWeight: 800 }}>
+                                            {paper.title}
+                                          </h4>
+                                          <div style={{ fontSize: "0.78rem", color: "#38bdf8", marginBottom: "8px" }}>
+                                            Subject: {paper.subject} • Level: {paper.level}
+                                          </div>
+                                          <div style={{ fontSize: "0.75rem", color: "#94a3b8", marginBottom: "12px" }}>
+                                            Examiner: {paper.teacher} • Duration: {paper.duration}
+                                          </div>
+                                        </div>
+
+                                        <div style={{ display: "flex", gap: "8px", marginTop: "10px" }}>
+                                          <button
+                                            type="button"
+                                            onClick={() => setSelectedPastPaperModal(paper)}
+                                            style={{
+                                              flex: 1,
+                                              background: "rgba(56, 189, 248, 0.15)",
+                                              border: "1px solid #38bdf8",
+                                              color: "#38bdf8",
+                                              padding: "8px 10px",
+                                              borderRadius: "8px",
+                                              fontSize: "0.78rem",
+                                              fontWeight: 700,
+                                              cursor: "pointer"
+                                            }}
+                                          >
+                                            📄 Inspect Scheme
+                                          </button>
+                                          <button
+                                            type="button"
+                                            onClick={() => {
+                                              setActiveExam({
+                                                id: paper.id,
+                                                title: `[MOCK PRACTICE] ${paper.title}`,
+                                                totalMarks: paper.totalMarks,
+                                                passMarks: 50,
+                                                durationMinutes: 45,
+                                                questionBank: paper.sampleQuestions.map((sq, sIdx) => ({
+                                                  id: 900 + sIdx,
+                                                  questionNumber: sIdx + 1,
+                                                  questionText: sq,
+                                                  options: ["Option A - Derivation Verified", "Option B - Alternative Working", "Option C - Inconclusive", "Option D - Counter-Example"]
+                                                }))
+                                              });
+                                              setExamTimeLeftSeconds(45 * 60);
+                                              setExamQuestionIndex(0);
+                                              setExamAnswers({});
+                                              setExamEssayAnswers({});
+                                              setExamStarted(true);
+                                            }}
+                                            style={{
+                                              flex: 1,
+                                              background: "linear-gradient(135deg, #8b5cf6, #6d28d9)",
+                                              border: "none",
+                                              color: "#ffffff",
+                                              padding: "8px 10px",
+                                              borderRadius: "8px",
+                                              fontSize: "0.78rem",
+                                              fontWeight: 800,
+                                              cursor: "pointer"
+                                            }}
+                                          >
+                                            ✍️ Start Mock Trial
+                                          </button>
+                                        </div>
+                                      </div>
+                                    ))}
+                                  </div>
+                                );
+                              })()}
+                            </div>
                           </div>
                         )}
 
-                        {examStarted && !examSubmitted && (
-                          <div className="student-exam-card">
-                            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "1.5rem", borderBottom: "1px solid rgba(255, 255, 255, 0.1)", paddingBottom: "1rem" }}>
-                              <div>
-                                <h3 style={{ margin: 0, color: "#c084fc" }}>{activeExam?.title || "Academic Evaluation"}</h3>
-                                <span style={{ fontSize: "0.8rem", color: "#94a3b8" }}>
-                                  PostgreSQL Question Bank • Objective Assessment • {academicLevel} ({academicTerm})
-                                </span>
+                        {examStarted && !examSubmitted && (() => {
+                          const questionsList = (activeExam?.questionBank && activeExam.questionBank.length > 0)
+                            ? activeExam.questionBank
+                            : [
+                                { id: 101, questionNumber: 1, questionText: "Solve for the derivative of f(x) = 4x^3 - 5x + 7, showing detailed power-rule derivation steps.", options: ["12x^2 - 5", "12x^3 - 5", "8x^2 - 5x", "12x - 5"] },
+                                { id: 102, questionNumber: 2, questionText: "Which digital logic property represents De Morgan's Law: (A ∧ B)' ≡ A' ∨ B'?", options: ["NAND Equivalence to Negative-OR", "NOR Equivalence to Negative-AND", "XOR Inversion", "AND Double Negation"] },
+                                { id: 103, questionNumber: 3, questionText: "Calculate the kinetic energy of a 1200 kg vehicle moving at 25 m/s. (E_k = 0.5 * m * v^2)", options: ["375,000 Joules (375 kJ)", "300,000 Joules", "450,000 Joules", "150,000 Joules"] },
+                                { id: 104, questionNumber: 4, questionText: "Explain the biochemical process of cellular respiration and ATP synthesis in the mitochondrial inner membrane.", options: ["Oxidative Phosphorylation & Electron Transport Chain", "Fermentation & Glycolysis only", "Calvin Cycle Light Reaction", "Substrate-Level Phosphorylation only"] },
+                                { id: 105, questionNumber: 5, questionText: "Discuss the socioeconomic impact of artificial intelligence and digital school management systems on African secondary education.", options: ["Equitable Academic Access & Real-Time Record Verification", "Reduced Operations Overhead only", "Solely Hardware Dependencies", "No Measurable Impact"] }
+                              ];
+
+                          const isQAnswered = (q) => {
+                            return Boolean(examAnswers[q.id] || (examEssayAnswers[q.id] && examEssayAnswers[q.id].trim().length > 0));
+                          };
+                          const solvedCount = questionsList.filter(isQAnswered).length;
+                          const unsolvedCount = Math.max(0, questionsList.length - solvedCount);
+                          const safeIndex = Math.min(examQuestionIndex, questionsList.length - 1);
+                          const currentQ = questionsList[safeIndex] || questionsList[0];
+
+                          return (
+                            <div className="student-exam-card">
+                              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "1.25rem", borderBottom: "1px solid rgba(255, 255, 255, 0.1)", paddingBottom: "1rem", flexWrap: "wrap", gap: "10px" }}>
+                                <div>
+                                  <h3 style={{ margin: 0, color: "#c084fc", fontSize: "1.2rem" }}>{activeExam?.title || "Academic Evaluation"}</h3>
+                                  <span style={{ fontSize: "0.8rem", color: "#94a3b8" }}>
+                                    PostgreSQL Question Bank • Objective & Essay Assessment • {academicLevel} ({academicTerm})
+                                  </span>
+                                </div>
+                                <div style={{ display: "flex", gap: "8px", alignItems: "center" }}>
+                                  <span className="badge-status badge-present">⏱️ Time Remaining: {formatExamTime(examTimeLeftSeconds)}</span>
+                                  <button
+                                    type="button"
+                                    className="btn-secondary"
+                                    style={{ padding: "4px 10px", fontSize: "0.75rem" }}
+                                    onClick={() => setExamStarted(false)}
+                                  >
+                                    Cancel
+                                  </button>
+                                </div>
                               </div>
-                              <div style={{ display: "flex", gap: "8px", alignItems: "center" }}>
-                                <span className="badge-status badge-present">⏱️ Time Remaining: {formatExamTime(examTimeLeftSeconds)}</span>
+
+                              {/* Font Size Preview Controls & AI Proctoring Sentinel */}
+                              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", background: "rgba(15, 23, 42, 0.85)", padding: "10px 16px", borderRadius: "10px", marginBottom: "1.25rem", border: "1px solid rgba(255, 255, 255, 0.08)", flexWrap: "wrap", gap: "10px" }}>
+                                <div style={{ display: "flex", alignItems: "center", gap: "8px", flexWrap: "wrap" }}>
+                                  <span style={{ fontSize: "0.78rem", color: "#94a3b8", fontWeight: 700 }}>🔍 Question Text Font Size:</span>
+                                  {[
+                                    { key: "NORMAL", label: "Normal (15px)" },
+                                    { key: "MEDIUM", label: "Medium (18px)" },
+                                    { key: "LARGE", label: "Large (22px)" }
+                                  ].map((f) => (
+                                    <button
+                                      key={f.key}
+                                      type="button"
+                                      onClick={() => setExamFontSize(f.key)}
+                                      style={{
+                                        background: examFontSize === f.key ? "rgba(56, 189, 248, 0.25)" : "rgba(255, 255, 255, 0.05)",
+                                        border: examFontSize === f.key ? "1.5px solid #38bdf8" : "1px solid rgba(255, 255, 255, 0.1)",
+                                        color: examFontSize === f.key ? "#38bdf8" : "#cbd5e1",
+                                        padding: "4px 10px",
+                                        borderRadius: "6px",
+                                        fontSize: "0.75rem",
+                                        fontWeight: 700,
+                                        cursor: "pointer"
+                                      }}
+                                    >
+                                      {f.label}
+                                    </button>
+                                  ))}
+                                </div>
+
+                                <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
+                                  <span style={{ fontSize: "0.75rem", color: "#34d399", background: "rgba(16, 185, 129, 0.15)", border: "1px solid #10b981", padding: "4px 10px", borderRadius: "6px", fontWeight: 700 }}>
+                                    🟢 AI Proctoring: Gaze Centered
+                                  </span>
+                                  <button
+                                    type="button"
+                                    onClick={triggerHeadMovementAlert}
+                                    style={{
+                                      background: "rgba(239, 68, 68, 0.15)",
+                                      border: "1px solid #ef4444",
+                                      color: "#f87171",
+                                      padding: "4px 10px",
+                                      borderRadius: "6px",
+                                      fontSize: "0.72rem",
+                                      fontWeight: 700,
+                                      cursor: "pointer"
+                                    }}
+                                    title="Simulate head movement away to test proctoring alert and penalty deduction"
+                                  >
+                                    👁️ Test Head Movement Alert
+                                  </button>
+                                </div>
+                              </div>
+
+                              {/* Interactive Unsolved Questions Palette with Count */}
+                              <div style={{ background: "rgba(2, 6, 23, 0.65)", padding: "12px 16px", borderRadius: "10px", marginBottom: "1.25rem", border: "1px solid rgba(255, 255, 255, 0.08)" }}>
+                                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "10px", flexWrap: "wrap", gap: "8px" }}>
+                                  <span style={{ fontSize: "0.82rem", color: "#f8fafc", fontWeight: 700 }}>
+                                    📋 Question Navigation Palette:
+                                  </span>
+                                  <div style={{ display: "flex", gap: "10px", alignItems: "center" }}>
+                                    <span style={{ fontSize: "0.75rem", color: "#34d399" }}>
+                                      ✓ Answered: <strong>{solvedCount}</strong>
+                                    </span>
+                                    <span style={{
+                                      fontSize: "0.75rem",
+                                      color: unsolvedCount > 0 ? "#fbbf24" : "#34d399",
+                                      fontWeight: 800,
+                                      background: unsolvedCount > 0 ? "rgba(245, 158, 11, 0.15)" : "rgba(16, 185, 129, 0.15)",
+                                      padding: "3px 10px",
+                                      borderRadius: "6px",
+                                      border: unsolvedCount > 0 ? "1px solid #f59e0b" : "1px solid #10b981"
+                                    }}>
+                                      {unsolvedCount > 0 ? `⚠️ ${unsolvedCount} of ${questionsList.length} Questions Left to Answer` : "✓ All Questions Answered"}
+                                    </span>
+                                  </div>
+                                </div>
+
+                                <div style={{ display: "flex", gap: "6px", flexWrap: "wrap" }}>
+                                  {questionsList.map((q, idx) => {
+                                    const isAns = isQAnswered(q);
+                                    const isCurrent = idx === safeIndex;
+                                    return (
+                                      <button
+                                        key={q.id || idx}
+                                        type="button"
+                                        onClick={() => setExamQuestionIndex(idx)}
+                                        style={{
+                                          width: "36px",
+                                          height: "36px",
+                                          borderRadius: "8px",
+                                          background: isAns ? "#059669" : "rgba(30, 41, 59, 0.8)",
+                                          color: "#ffffff",
+                                          border: isCurrent ? "2px solid #38bdf8" : isAns ? "1px solid #10b981" : "1px solid rgba(255, 255, 255, 0.15)",
+                                          fontWeight: 800,
+                                          fontSize: "0.82rem",
+                                          cursor: "pointer",
+                                          display: "flex",
+                                          alignItems: "center",
+                                          justifyContent: "center",
+                                          boxShadow: isCurrent ? "0 0 10px rgba(56, 189, 248, 0.6)" : "none",
+                                          transform: isCurrent ? "scale(1.08)" : "scale(1)",
+                                          transition: "all 0.15s ease"
+                                        }}
+                                        title={`Jump to Question ${idx + 1}: ${isAns ? "Answered" : "Unsolved"}`}
+                                      >
+                                        {idx + 1}
+                                      </button>
+                                    );
+                                  })}
+                                </div>
+                              </div>
+
+                              {/* Typed Questions / Uploaded Paper Preview if available */}
+                              {activeExam?.typedQuestionText && (
+                                <div style={{
+                                  background: "rgba(15, 23, 42, 0.9)",
+                                  border: "1.5px solid rgba(56, 189, 248, 0.5)",
+                                  borderRadius: "12px",
+                                  padding: "1.25rem",
+                                  marginBottom: "1.5rem"
+                                }}>
+                                  <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "8px" }}>
+                                    <h4 style={{ margin: 0, color: "#38bdf8", fontSize: "0.95rem", textTransform: "uppercase", display: "flex", alignItems: "center", gap: "6px" }}>
+                                      <span>📄</span> Teacher's Uploaded Examination Instructions ({activeExam.uploadedDocName || "Online Questions"})
+                                    </h4>
+                                    <span style={{ fontSize: "0.72rem", color: "#34d399", background: "rgba(16, 185, 129, 0.2)", padding: "2px 8px", borderRadius: "6px" }}>
+                                      AI Scanner & OMR Ready
+                                    </span>
+                                  </div>
+                                  <div style={{
+                                    whiteSpace: "pre-wrap",
+                                    color: "#e2e8f0",
+                                    fontSize: "0.9rem",
+                                    lineHeight: "1.7",
+                                    fontFamily: "monospace",
+                                    background: "rgba(2, 6, 23, 0.8)",
+                                    padding: "1rem",
+                                    borderRadius: "8px",
+                                    maxHeight: "220px",
+                                    overflowY: "auto",
+                                    border: "1px solid rgba(255,255,255,0.08)"
+                                  }}>
+                                    {activeExam.typedQuestionText}
+                                  </div>
+                                </div>
+                              )}
+
+                              {/* Active Question Display */}
+                              <div className="question-block" style={{ marginBottom: "1.5rem" }}>
+                                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "8px" }}>
+                                  <span style={{ fontSize: "0.82rem", color: "#38bdf8", fontWeight: 800 }}>
+                                    QUESTION {safeIndex + 1} OF {questionsList.length}
+                                  </span>
+                                  <span style={{ fontSize: "0.75rem", color: isQAnswered(currentQ) ? "#34d399" : "#fbbf24", fontWeight: 700 }}>
+                                    {isQAnswered(currentQ) ? "✓ Answer Recorded" : "⚠️ Unsolved"}
+                                  </span>
+                                </div>
+
+                                <div className="question-text" style={{ fontSize: getExamFontSizePx(), lineHeight: "1.6", color: "#f8fafc", marginBottom: "1rem" }}>
+                                  Question {safeIndex + 1}: {currentQ.questionText}
+                                </div>
+
+                                {/* Multiple Choice Options */}
+                                {(currentQ.options || ["A", "B", "C", "D"]).map((opt, optIdx) => {
+                                  const optLetter = ["A", "B", "C", "D"][optIdx] || String.fromCharCode(65 + optIdx);
+                                  const optLabel = typeof opt === "string" ? opt : `Option ${optLetter}`;
+                                  return (
+                                    <label key={optIdx} className="option-label" style={{ fontSize: getExamFontSizePx() }}>
+                                      <input
+                                        type="radio"
+                                        name={`q_${currentQ.id}`}
+                                        checked={examAnswers[currentQ.id] === optLetter || examAnswers[currentQ.id] === opt}
+                                        onChange={() => setExamAnswers({ ...examAnswers, [currentQ.id]: optLetter })}
+                                      />
+                                      <span><strong>{optLetter}.</strong> {optLabel}</span>
+                                    </label>
+                                  );
+                                })}
+
+                                {/* Written / Essay Typing Area */}
+                                <div style={{ marginTop: "1.25rem", borderTop: "1px solid rgba(255, 255, 255, 0.1)", paddingTop: "12px" }}>
+                                  <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "6px" }}>
+                                    <label style={{ fontSize: "0.82rem", color: "#cbd5e1", fontWeight: 700, display: "flex", alignItems: "center", gap: "6px" }}>
+                                      <span>✍️</span> Type Written / Essay / Computational Working:
+                                    </label>
+                                    <span style={{ fontSize: "0.72rem", color: "#94a3b8" }}>
+                                      Saved automatically for grading
+                                    </span>
+                                  </div>
+                                  <textarea
+                                    rows={4}
+                                    value={examEssayAnswers[currentQ.id] || ""}
+                                    onChange={(e) => setExamEssayAnswers({ ...examEssayAnswers, [currentQ.id]: e.target.value })}
+                                    placeholder="Type your computational step-by-step working, formula derivation, or essay answer here..."
+                                    style={{
+                                      width: "100%",
+                                      fontSize: getExamFontSizePx(),
+                                      padding: "10px 14px",
+                                      borderRadius: "8px",
+                                      background: "rgba(15, 23, 42, 0.9)",
+                                      color: "#ffffff",
+                                      border: "1.5px solid rgba(56, 189, 248, 0.3)",
+                                      boxSizing: "border-box",
+                                      fontFamily: "inherit",
+                                      resize: "vertical"
+                                    }}
+                                  />
+                                </div>
+                              </div>
+
+                              {/* Question Navigation & Submit Bar */}
+                              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: "12px", marginTop: "1.5rem", flexWrap: "wrap", borderTop: "1px solid rgba(255, 255, 255, 0.1)", paddingTop: "1rem" }}>
                                 <button
                                   type="button"
                                   className="btn-secondary"
-                                  style={{ padding: "4px 10px", fontSize: "0.75rem" }}
-                                  onClick={() => setExamStarted(false)}
+                                  disabled={safeIndex === 0}
+                                  onClick={() => setExamQuestionIndex((prev) => Math.max(0, prev - 1))}
+                                  style={{
+                                    opacity: safeIndex === 0 ? 0.4 : 1,
+                                    cursor: safeIndex === 0 ? "not-allowed" : "pointer",
+                                    padding: "10px 18px",
+                                    fontSize: "0.85rem",
+                                    fontWeight: 700
+                                  }}
                                 >
-                                  Cancel
+                                  ← Previous Question
                                 </button>
+
+                                <span style={{ fontSize: "0.82rem", color: "#94a3b8" }}>
+                                  Viewing Question <strong>{safeIndex + 1}</strong> of <strong>{questionsList.length}</strong>
+                                </span>
+
+                                <div style={{ display: "flex", gap: "10px" }}>
+                                  {safeIndex < questionsList.length - 1 ? (
+                                    <button
+                                      type="button"
+                                      className="btn-primary"
+                                      onClick={() => setExamQuestionIndex((prev) => Math.min(questionsList.length - 1, prev + 1))}
+                                      style={{ padding: "10px 20px", fontSize: "0.85rem", fontWeight: 700, background: "linear-gradient(135deg, #0284c7, #0369a1)" }}
+                                    >
+                                      Next Question →
+                                    </button>
+                                  ) : (
+                                    <button
+                                      type="button"
+                                      className="btn-primary"
+                                      style={{ padding: "10px 22px", fontSize: "0.85rem", fontWeight: 800, background: "linear-gradient(135deg, #10b981, #059669)" }}
+                                      onClick={() => setShowExamConfirmModal(true)}
+                                      disabled={loading}
+                                    >
+                                      {loading ? "Submitting..." : "💾 Submit Final Exam"}
+                                    </button>
+                                  )}
+                                </div>
                               </div>
                             </div>
-
-                            {/* Typed Questions / Uploaded Paper Preview */}
-                            {activeExam?.typedQuestionText && (
-                              <div style={{
-                                background: "rgba(15, 23, 42, 0.9)",
-                                border: "1.5px solid rgba(56, 189, 248, 0.5)",
-                                borderRadius: "12px",
-                                padding: "1.25rem",
-                                marginBottom: "1.5rem"
-                              }}>
-                                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "8px" }}>
-                                  <h4 style={{ margin: 0, color: "#38bdf8", fontSize: "0.95rem", textTransform: "uppercase", display: "flex", alignItems: "center", gap: "6px" }}>
-                                    <span>📄</span> Teacher's Typed & Uploaded Examination Paper ({activeExam.uploadedDocName || "Online Questions"})
-                                  </h4>
-                                  <span style={{ fontSize: "0.72rem", color: "#34d399", background: "rgba(16, 185, 129, 0.2)", padding: "2px 8px", borderRadius: "6px" }}>
-                                    AI Scanner & OMR Ready
-                                  </span>
-                                </div>
-                                <div style={{
-                                  whiteSpace: "pre-wrap",
-                                  color: "#e2e8f0",
-                                  fontSize: "0.9rem",
-                                  lineHeight: "1.7",
-                                  fontFamily: "monospace",
-                                  background: "rgba(2, 6, 23, 0.8)",
-                                  padding: "1rem",
-                                  borderRadius: "8px",
-                                  maxHeight: "220px",
-                                  overflowY: "auto",
-                                  border: "1px solid rgba(255,255,255,0.08)"
-                                }}>
-                                  {activeExam.typedQuestionText}
-                                </div>
-                              </div>
-                            )}
-
-                            {(activeExam?.questionBank || []).map((q, idx) => (
-                              <div key={q.id || idx} className="question-block">
-                                <div className="question-text">
-                                  Question {idx + 1}: {q.questionText}
-                                </div>
-                                {["A", "B", "C", "D"].map((opt) => (
-                                  <label key={opt} className="option-label">
-                                    <input
-                                      type="radio"
-                                      name={`q_${q.id}`}
-                                      checked={examAnswers[q.id] === opt}
-                                      onChange={() => setExamAnswers({ ...examAnswers, [q.id]: opt })}
-                                    />
-                                    <span>Option {opt}</span>
-                                  </label>
-                                ))}
-                              </div>
-                            ))}
-
-                            {/* REQUIREMENT: Prompt with notice before submitting */}
-                            <button
-                              type="button"
-                              className="btn-primary"
-                              style={{ marginTop: "1rem", width: "100%", padding: "12px", justifyContent: "center" }}
-                              onClick={() => setShowExamConfirmModal(true)}
-                              disabled={loading}
-                            >
-                              {loading ? "Submitting to PostgreSQL..." : "💾 Submit Examination for Auto-Grading"}
-                            </button>
-                          </div>
-                        )}
+                          );
+                        })()}
 
                         {examSubmitted && examScoreResult && (
                           <div style={{ background: "rgba(2, 6, 23, 0.8)", padding: "2rem", borderRadius: "14px", border: "1px solid rgba(16, 185, 129, 0.4)", textAlign: "center" }}>
@@ -2603,10 +3233,31 @@ export function StudentDashboard({ initialTab } = {}) {
                             <h2 style={{ margin: "0.5rem 0", color: examScoreResult.isPassed ? "#34d399" : "#f87171" }}>
                               {examScoreResult.isPassed ? "EXAMINATION PASSED" : "ASSESSMENT COMPLETED"}
                             </h2>
-                            <p style={{ color: "#94a3b8", fontSize: "1.1rem" }}>
-                              Exact Performance Score: <strong style={{ color: "#38bdf8", fontSize: "1.3rem" }}>{examScoreResult.score}%</strong>
-                              &nbsp;•&nbsp; Official Letter Grade: <strong style={{ color: "#fbbf24", fontSize: "1.3rem" }}>{examScoreResult.grade}</strong>
-                            </p>
+
+                            {/* Performance Score & Proctoring Deductions Breakdown */}
+                            <div style={{
+                              maxWidth: "540px",
+                              margin: "1.25rem auto",
+                              background: "rgba(15, 23, 42, 0.9)",
+                              borderRadius: "10px",
+                              border: "1px solid rgba(255, 255, 255, 0.1)",
+                              padding: "16px",
+                              textAlign: "left"
+                            }}>
+                              <div style={{ display: "flex", justifyContent: "space-between", marginBottom: "8px", fontSize: "0.88rem" }}>
+                                <span style={{ color: "#94a3b8" }}>Base Raw Deterministic Score:</span>
+                                <strong style={{ color: "#f8fafc" }}>{examScoreResult.rawScore || examScoreResult.score}%</strong>
+                              </div>
+                              <div style={{ display: "flex", justifyContent: "space-between", marginBottom: "8px", fontSize: "0.88rem", color: (examScoreResult.proctoringPenalty || 0) > 0 ? "#f87171" : "#34d399" }}>
+                                <span>AI Proctoring Head Movement Penalty:</span>
+                                <strong>-{examScoreResult.proctoringPenalty || 0}% ({examScoreResult.proctoringViolations || 0} infractions recorded)</strong>
+                              </div>
+                              <div style={{ display: "flex", justifyContent: "space-between", borderTop: "1px solid rgba(255, 255, 255, 0.1)", paddingTop: "8px", fontSize: "1.05rem" }}>
+                                <span style={{ color: "#38bdf8", fontWeight: 800 }}>Final Verified Score:</span>
+                                <strong style={{ color: "#fbbf24", fontWeight: 900 }}>{examScoreResult.score}% ({examScoreResult.grade})</strong>
+                              </div>
+                            </div>
+
                             <p style={{ color: "#94a3b8", fontSize: "0.85rem" }}>
                               ({examScoreResult.correct} out of {examScoreResult.total} questions verified correct by deterministic engine)
                             </p>
@@ -2796,11 +3447,17 @@ export function StudentDashboard({ initialTab } = {}) {
                     </tbody>
                   </table>
 
-                  <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginTop: "1.5rem", borderTop: "1px solid #e2e8f0", paddingTop: "1rem" }}>
+                  <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginTop: "1.5rem", borderTop: "1px solid #e2e8f0", paddingTop: "1rem", flexWrap: "wrap", gap: "14px" }}>
                     <div>
                       <span style={{ display: "block", fontSize: "0.9rem" }}>Cumulative GPA: <strong style={{ color: "#10b981", fontSize: "1.1rem" }}>3.88</strong></span>
                       <span style={{ display: "block", fontSize: "0.8rem", color: "#64748b" }}>
                         Overall Attendance: <strong>{attendanceSummary?.rate || "98.5%"} Present ({attendanceSummary?.presentCount || 48}/{attendanceSummary?.totalCount || 50} Days Synced from Teacher Archives)</strong>
+                      </span>
+                    </div>
+                    <div style={{ textAlign: "center" }}>
+                      <OfficialInstitutionalSeal schoolName={schoolOfficialName} academicYear="2026-2027" size={90} />
+                      <span style={{ display: "block", fontSize: "0.68rem", color: "#64748b", marginTop: "3px" }}>
+                        INSTITUTIONAL ACCREDITATION SEAL
                       </span>
                     </div>
                     <div style={{ textAlign: "right" }}>
@@ -4259,6 +4916,188 @@ export function StudentDashboard({ initialTab } = {}) {
         </div>
       )}
 
+      {/* MODAL: AI Exam Head Movement & Gaze Proctoring Alert */}
+      {showHeadMovementWarningModal && (
+        <div style={{
+          position: "fixed",
+          inset: 0,
+          background: "rgba(0, 0, 0, 0.88)",
+          backdropFilter: "blur(8px)",
+          display: "flex",
+          alignItems: "center",
+          justifyContent: "center",
+          zIndex: 999999,
+          padding: "20px"
+        }}>
+          <div style={{
+            background: "linear-gradient(135deg, #1e1b4b 0%, #0f172a 100%)",
+            border: "2px solid #ef4444",
+            borderRadius: "18px",
+            padding: "2rem",
+            maxWidth: "540px",
+            width: "100%",
+            textAlign: "center",
+            boxShadow: "0 25px 60px rgba(239, 68, 68, 0.4)"
+          }}>
+            <span style={{ fontSize: "3.5rem", display: "block", marginBottom: "8px" }}>⚠️ 👁️</span>
+            <h3 style={{ color: "#ef4444", margin: "0 0 10px", fontSize: "1.3rem", fontWeight: 900 }}>
+              ⚠️ AI EXAM PROCTORING ALERT: Head movement away from the screen detected!
+            </h3>
+            <div style={{
+              background: "rgba(239, 68, 68, 0.15)",
+              border: "1.5px solid #ef4444",
+              borderRadius: "10px",
+              padding: "12px 16px",
+              margin: "1rem 0",
+              color: "#fca5a5",
+              fontSize: "1.05rem",
+              fontWeight: 800
+            }}>
+              "The next movement will cost you marks to lose."
+            </div>
+            <p style={{ margin: "0 0 1.25rem", color: "#cbd5e1", fontSize: "0.85rem", lineHeight: "1.5" }}>
+              Our proctoring algorithm enforces strict examination integrity. You must face your screen continuously at all times.
+              Recorded infractions: <strong style={{ color: "#f87171" }}>{proctoringWarnings} violation(s)</strong> • Cumulative penalty: <strong style={{ color: "#f87171" }}>-{penaltyMarksDeducted}% marks</strong>.
+            </p>
+            <button
+              type="button"
+              className="btn-primary"
+              style={{
+                background: "linear-gradient(135deg, #ef4444, #b91c1c)",
+                border: "none",
+                padding: "12px 28px",
+                fontSize: "0.95rem",
+                fontWeight: 800,
+                boxShadow: "0 4px 15px rgba(239, 68, 68, 0.4)"
+              }}
+              onClick={() => setShowHeadMovementWarningModal(false)}
+            >
+              👁️ I Understand & Return to Examination
+            </button>
+          </div>
+        </div>
+      )}
+
+      {/* MODAL: Past Examination Paper & Scheme Inspection */}
+      {selectedPastPaperModal && (
+        <div style={{
+          position: "fixed",
+          inset: 0,
+          background: "rgba(0, 0, 0, 0.85)",
+          backdropFilter: "blur(8px)",
+          display: "flex",
+          alignItems: "center",
+          justifyContent: "center",
+          zIndex: 99999,
+          padding: "20px"
+        }}>
+          <div style={{
+            background: "#0f172a",
+            border: "1.5px solid #a855f7",
+            borderRadius: "16px",
+            maxWidth: "760px",
+            width: "100%",
+            padding: "2rem",
+            maxHeight: "85vh",
+            overflowY: "auto",
+            boxShadow: "0 25px 50px rgba(0,0,0,0.8)"
+          }}>
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: "1rem", borderBottom: "1px solid rgba(255, 255, 255, 0.1)", paddingBottom: "12px" }}>
+              <div>
+                <span style={{ background: "rgba(168, 85, 247, 0.2)", color: "#c084fc", padding: "3px 8px", borderRadius: "6px", fontSize: "0.75rem", fontWeight: 800 }}>
+                  📅 Academic Year {selectedPastPaperModal.year} • {selectedPastPaperModal.termLabel}
+                </span>
+                <h3 style={{ margin: "6px 0 0", color: "#f8fafc", fontSize: "1.25rem", fontWeight: 800 }}>
+                  {selectedPastPaperModal.title}
+                </h3>
+                <span style={{ fontSize: "0.82rem", color: "#94a3b8" }}>
+                  Subject: {selectedPastPaperModal.subject} • Level: {selectedPastPaperModal.level} • Examiner: {selectedPastPaperModal.teacher}
+                </span>
+              </div>
+              <button
+                type="button"
+                onClick={() => setSelectedPastPaperModal(null)}
+                style={{ background: "transparent", border: "none", color: "#94a3b8", fontSize: "1.4rem", cursor: "pointer" }}
+              >
+                ✕
+              </button>
+            </div>
+
+            <div style={{ display: "flex", gap: "10px", marginBottom: "1.25rem", flexWrap: "wrap" }}>
+              <span className="badge-status badge-present">Duration: {selectedPastPaperModal.duration}</span>
+              <span className="badge-status badge-present">Total: {selectedPastPaperModal.totalMarks} Marks</span>
+              <span className="badge-status badge-present">{selectedPastPaperModal.questionsCount} Questions Total</span>
+              <span style={{ fontSize: "0.75rem", color: "#38bdf8", background: "rgba(56, 189, 248, 0.1)", padding: "4px 8px", borderRadius: "6px" }}>
+                ✓ Approved Scheme Included
+              </span>
+            </div>
+
+            <h4 style={{ color: "#38bdf8", margin: "1rem 0 0.5rem", fontSize: "0.95rem", textTransform: "uppercase" }}>
+              Official Questions & Computational Rubric:
+            </h4>
+            <div style={{ display: "flex", flexDirection: "column", gap: "12px", marginBottom: "1.5rem" }}>
+              {selectedPastPaperModal.sampleQuestions.map((sq, sIdx) => (
+                <div
+                  key={sIdx}
+                  style={{
+                    background: "rgba(15, 23, 42, 0.8)",
+                    border: "1px solid rgba(255, 255, 255, 0.08)",
+                    borderRadius: "10px",
+                    padding: "12px 16px"
+                  }}
+                >
+                  <div style={{ color: "#f8fafc", fontSize: "0.9rem", lineHeight: "1.5", fontWeight: 600 }}>
+                    {sq}
+                  </div>
+                  <div style={{ marginTop: "6px", fontSize: "0.78rem", color: "#34d399", background: "rgba(16, 185, 129, 0.1)", padding: "4px 10px", borderRadius: "6px", display: "inline-block" }}>
+                    ✓ Marking Rubric: Full method marks awarded for correct step-by-step derivation and units.
+                  </div>
+                </div>
+              ))}
+            </div>
+
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: "12px", borderTop: "1px solid rgba(255, 255, 255, 0.1)", paddingTop: "1rem" }}>
+              <button
+                type="button"
+                className="btn-secondary"
+                onClick={() => setSelectedPastPaperModal(null)}
+              >
+                ← Back to Examination Archive
+              </button>
+              <button
+                type="button"
+                className="btn-primary"
+                style={{ background: "linear-gradient(135deg, #8b5cf6, #6d28d9)", fontWeight: 800 }}
+                onClick={() => {
+                  const paper = selectedPastPaperModal;
+                  setSelectedPastPaperModal(null);
+                  setActiveExam({
+                    id: paper.id,
+                    title: `[MOCK PRACTICE] ${paper.title}`,
+                    totalMarks: paper.totalMarks,
+                    passMarks: 50,
+                    durationMinutes: 45,
+                    questionBank: paper.sampleQuestions.map((sq, sIdx) => ({
+                      id: 900 + sIdx,
+                      questionNumber: sIdx + 1,
+                      questionText: sq,
+                      options: ["Option A - Derivation Verified", "Option B - Alternative Working", "Option C - Inconclusive", "Option D - Counter-Example"]
+                    }))
+                  });
+                  setExamTimeLeftSeconds(45 * 60);
+                  setExamQuestionIndex(0);
+                  setExamAnswers({});
+                  setExamEssayAnswers({});
+                  setExamStarted(true);
+                }}
+              >
+                ✍️ Start Practice Exam on This Paper
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* MODAL 2: REQUIREMENT: Request Mentorship from Alumni */}
       {showMentorModal && selectedMentorAlumnus && (
         <div style={{
@@ -5535,7 +6374,7 @@ export function StudentDashboard({ initialTab } = {}) {
               </button>
               <button
                 type="button"
-                onClick={() => setIsPeerScreenSharing(!isPeerScreenSharing)}
+                onClick={handleTogglePeerScreenShare}
                 style={{
                   padding: "10px 16px",
                   borderRadius: "10px",

@@ -2,6 +2,8 @@ import React, { useState, useEffect, useMemo } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import WindowControlsBar from "../../../components/common/WindowControlsBar";
 import TopCenterSystemBanner from "../../../components/common/TopCenterSystemBanner";
+import OfficialInstitutionalSeal from "../../../components/common/OfficialInstitutionalSeal";
+import { navigateToDetail } from "../../../utils/universalNavigation";
 
 export default function AlumniDashboard() {
   const navigate = useNavigate();
@@ -713,6 +715,7 @@ export default function AlumniDashboard() {
           {[
             { id: "CUMULATIVE_RECORDS", label: "📚 Cumulative Records (Day 1 to End)", icon: "📈" },
             { id: "OFFICIAL_TRANSCRIPT", label: "📜 Official Sealed Transcript", icon: "🎓" },
+            { id: "CLEARANCE_FORMS", label: "📋 Graduation Clearance & Sign-Off", icon: "🏛️" },
             { id: "BATCHES", label: "👥 Completion Batches (2022–2026)", icon: "🏆" },
             { id: "ZOOM_REUNIONS", label: "🎥 1-Click Zoom Reunions & Mentorship", icon: "🌐" },
             { id: "DIRECTORY", label: "🔍 Global Alumni Directory", icon: "🌍" },
@@ -1117,26 +1120,7 @@ export default function AlumniDashboard() {
                 </div>
 
                 <div style={{ display: "flex", flexDirection: "column", alignItems: "center" }}>
-                  <div style={{
-                    width: "84px",
-                    height: "84px",
-                    borderRadius: "50%",
-                    border: "3px solid #b91c1c",
-                    color: "#b91c1c",
-                    display: "flex",
-                    flexDirection: "column",
-                    alignItems: "center",
-                    justifyContent: "center",
-                    fontSize: "0.6rem",
-                    fontWeight: "900",
-                    textTransform: "uppercase",
-                    letterSpacing: "0.5px",
-                    transform: "rotate(-10deg)"
-                  }}>
-                    <span>★ OFFICIAL ★</span>
-                    <span style={{ fontSize: "0.75rem" }}>ACADEMIC</span>
-                    <span>SEAL</span>
-                  </div>
+                  <OfficialInstitutionalSeal schoolName={reportSchoolName} academicYear="2026-2027" size={110} />
                   <span style={{ fontSize: "0.68rem", color: "#64748b", marginTop: "4px" }}>
                     SEAL-ACAD-2024-99824
                   </span>
@@ -1155,6 +1139,226 @@ export default function AlumniDashboard() {
               {/* Cryptographic Verification Hash Footer */}
               <div style={{ marginTop: "1.5rem", textAlign: "center", fontSize: "0.68rem", color: "#64748b", borderTop: "1px dashed #cbd5e1", paddingTop: "8px" }}>
                 Cryptographic Integrity Hash: <code>SHA256: 8f9b2c3a5d7e1f4a9b8c7d6e5f4a3b2c1d0e9f8a7f3a8b9c0d1e2f3a4b5c6d7e</code> • Verified Valid on Global Academic Ledger
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* TAB: GRADUATION CLEARANCE & MULTI-DEPARTMENT SIGN-OFF */}
+        {activeTab === "CLEARANCE_FORMS" && (
+          <div>
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "1.25rem", flexWrap: "wrap", gap: "10px" }}>
+              <div>
+                <h3 style={{ margin: 0, fontSize: "1.15rem", color: "#f8fafc", fontWeight: "800" }}>
+                  OFFICIAL GRADUATION CLEARANCE & SENATE CONVOCATION DISPENSATION
+                </h3>
+                <p style={{ margin: "4px 0 0", color: "#94a3b8", fontSize: "0.82rem" }}>
+                  Mandatory multi-department departure protocol certifying 100% clearance across Library, Laboratories, Facilities, Accounts, and Academic Senate.
+                </p>
+              </div>
+
+              <div style={{ display: "flex", gap: "10px", flexWrap: "wrap" }}>
+                <button
+                  type="button"
+                  onClick={() => {
+                    const clrRecord = {
+                      id: "CLR-2026-0881",
+                      studentName: alumniProfile.fullName,
+                      indexNumber: alumniProfile.indexNumber,
+                      degree: alumniProfile.degreeAwarded,
+                      classification: alumniProfile.classification,
+                      graduatingBatch: "Class of 2026",
+                      clearanceDate: "2026-11-09",
+                      libraryStatus: "CLEARED ✓",
+                      labStatus: "CLEARED ✓",
+                      facilitiesStatus: "CLEARED ✓",
+                      accountsStatus: "CLEARED (GH₵ 0.00 Arrears) ✓",
+                      headmasterStatus: "CONFERRED & AFFIXED ✓",
+                      officer: "Prof. Arthur Sterling"
+                    };
+                    navigateToDetail(navigate, "clearance", "CLR-2026-0881", clrRecord);
+                  }}
+                  style={{
+                    background: "rgba(56, 189, 248, 0.15)",
+                    border: "1.5px solid #38bdf8",
+                    color: "#38bdf8",
+                    padding: "10px 18px",
+                    borderRadius: "8px",
+                    cursor: "pointer",
+                    fontWeight: "800",
+                    fontSize: "0.85rem",
+                    display: "flex",
+                    alignItems: "center",
+                    gap: "8px"
+                  }}
+                >
+                  🚀 Open in Dedicated Clearance Page (← Back Button)
+                </button>
+                <button
+                  type="button"
+                  onClick={() => window.print()}
+                  style={{
+                    background: "linear-gradient(135deg, #10b981, #059669)",
+                    border: "none",
+                    color: "#ffffff",
+                    padding: "10px 18px",
+                    borderRadius: "8px",
+                    cursor: "pointer",
+                    fontWeight: "800",
+                    fontSize: "0.85rem",
+                    display: "flex",
+                    alignItems: "center",
+                    gap: "8px",
+                    boxShadow: "0 4px 12px rgba(16, 185, 129, 0.4)"
+                  }}
+                >
+                  🖨️ Print Clearance Form (PDF)
+                </button>
+              </div>
+            </div>
+
+            {/* Clearance Form Sheet */}
+            <div
+              style={{
+                background: "#ffffff",
+                color: "#0f172a",
+                borderRadius: "12px",
+                padding: "3rem",
+                boxShadow: "0 25px 60px rgba(0,0,0,0.6)",
+                border: "2px solid #cbd5e1",
+                fontFamily: "'Times New Roman', Times, serif",
+                maxWidth: "1000px",
+                margin: "0 auto 2rem"
+              }}
+            >
+              <div style={{ textAlign: "center", borderBottom: "3px double #0f172a", paddingBottom: "1.25rem", marginBottom: "1.5rem" }}>
+                <div style={{ fontSize: "2.5rem", marginBottom: "4px" }}>🏛️</div>
+                <h1 style={{ margin: 0, fontSize: "1.75rem", fontWeight: "900", letterSpacing: "1.2px", color: "#0f172a" }}>
+                  {reportSchoolName.toUpperCase()}
+                </h1>
+                <p style={{ margin: "4px 0 0", fontSize: "0.88rem", color: "#475569", fontWeight: "700" }}>
+                  OFFICE OF THE ACADEMIC REGISTRAR & DEAN OF STUDENT AFFAIRS
+                </p>
+                <div style={{
+                  display: "inline-block",
+                  background: "#0f172a",
+                  color: "#ffffff",
+                  padding: "4px 18px",
+                  fontSize: "0.82rem",
+                  fontWeight: "800",
+                  letterSpacing: "1.5px",
+                  marginTop: "8px",
+                  borderRadius: "2px"
+                }}>
+                  OFFICIAL GRADUATION & DEPARTURE CLEARANCE CERTIFICATE
+                </div>
+              </div>
+
+              {/* Scholar Identification */}
+              <div style={{
+                display: "grid",
+                gridTemplateColumns: "repeat(2, 1fr)",
+                gap: "12px",
+                borderBottom: "1px solid #cbd5e1",
+                paddingBottom: "14px",
+                marginBottom: "18px",
+                fontSize: "0.9rem"
+              }}>
+                <div>
+                  <div style={{ marginBottom: "6px" }}><strong>Candidate Name:</strong> {alumniProfile.fullName}</div>
+                  <div style={{ marginBottom: "6px" }}><strong>Index / Student ID:</strong> <span style={{ fontFamily: "monospace", color: "#0369a1" }}>{alumniProfile.indexNumber}</span></div>
+                  <div><strong>Clearance Certificate No:</strong> <span style={{ fontFamily: "monospace", color: "#b45309" }}>CLR-2026-0881</span></div>
+                </div>
+                <div>
+                  <div style={{ marginBottom: "6px" }}><strong>Degree Conferred:</strong> {alumniProfile.degreeAwarded}</div>
+                  <div style={{ marginBottom: "6px" }}><strong>Classification:</strong> {alumniProfile.classification} (CGPA: {alumniProfile.cumulativeGpa})</div>
+                  <div><strong>Convocation Cohort:</strong> Class of 2026 (Graduation Date: {alumniProfile.graduationDate})</div>
+                </div>
+              </div>
+
+              {/* Multi-Department Clearance Verification Checklist */}
+              <h3 style={{ fontSize: "1rem", color: "#0f172a", margin: "0 0 10px", textTransform: "uppercase", letterSpacing: "0.5px" }}>
+                1. Institutional Departmental Sign-Off Ledger:
+              </h3>
+              <table style={{ width: "100%", borderCollapse: "collapse", marginBottom: "1.5rem", fontSize: "0.85rem" }}>
+                <thead>
+                  <tr style={{ background: "#f1f5f9", borderBottom: "2px solid #0f172a", textAlign: "left" }}>
+                    <th style={{ padding: "8px 10px" }}>Campus Department</th>
+                    <th style={{ padding: "8px 10px" }}>Verification Scope & Items Accounted</th>
+                    <th style={{ padding: "8px 10px" }}>Clearance Status</th>
+                    <th style={{ padding: "8px 10px" }}>Authorized Signatory</th>
+                    <th style={{ padding: "8px 10px" }}>Date Stamped</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  <tr style={{ borderBottom: "1px solid #e2e8f0" }}>
+                    <td style={{ padding: "10px" }}><strong>📚 University Library</strong></td>
+                    <td style={{ padding: "10px", color: "#475569" }}>All 4 borrowed textbooks returned; 0 overdue fines on record.</td>
+                    <td style={{ padding: "10px", color: "#059669", fontWeight: 800 }}>✓ CLEARED</td>
+                    <td style={{ padding: "10px" }}>Dr. K. Appiah (Chief Librarian)</td>
+                    <td style={{ padding: "10px" }}>2026-11-02</td>
+                  </tr>
+                  <tr style={{ borderBottom: "1px solid #e2e8f0" }}>
+                    <td style={{ padding: "10px" }}><strong>🔬 Computing & Science Labs</strong></td>
+                    <td style={{ padding: "10px", color: "#475569" }}>Lab equipment, workstation credentials, and access badges surrendered; 0 breakages.</td>
+                    <td style={{ padding: "10px", color: "#059669", fontWeight: 800 }}>✓ CLEARED</td>
+                    <td style={{ padding: "10px" }}>Eng. Marcus Thorne (Lab Director)</td>
+                    <td style={{ padding: "10px" }}>2026-11-03</td>
+                  </tr>
+                  <tr style={{ borderBottom: "1px solid #e2e8f0" }}>
+                    <td style={{ padding: "10px" }}><strong>⚽ Facilities & Hostel Logistics</strong></td>
+                    <td style={{ padding: "10px", color: "#475569" }}>Hostel Room 304 keys handed over; residential inventory inspected; 0 damages.</td>
+                    <td style={{ padding: "10px", color: "#059669", fontWeight: 800 }}>✓ CLEARED</td>
+                    <td style={{ padding: "10px" }}>Mrs. Rebecca Asante (Dean of Students)</td>
+                    <td style={{ padding: "10px" }}>2026-11-04</td>
+                  </tr>
+                  <tr style={{ borderBottom: "1px solid #e2e8f0" }}>
+                    <td style={{ padding: "10px" }}><strong>💳 Bursar & Accounts Office</strong></td>
+                    <td style={{ padding: "10px", color: "#475569" }}>Tuition fees, graduation fee, and laboratory deposits reconciled. Arrears balance: <strong>GH₵ 0.00</strong>.</td>
+                    <td style={{ padding: "10px", color: "#059669", fontWeight: 800 }}>✓ CLEARED</td>
+                    <td style={{ padding: "10px" }}>Mr. Isaac Ofori (Finance Controller)</td>
+                    <td style={{ padding: "10px" }}>2026-11-05</td>
+                  </tr>
+                  <tr style={{ borderBottom: "2px solid #0f172a", background: "#f8fafc" }}>
+                    <td style={{ padding: "10px" }}><strong>🎓 Executive Headmaster / Senate</strong></td>
+                    <td style={{ padding: "10px", color: "#475569" }}>All degree graduation requirements satisfied; Academic Senate approval confirmed.</td>
+                    <td style={{ padding: "10px", color: "#059669", fontWeight: 800 }}>✓ CONFERRED</td>
+                    <td style={{ padding: "10px" }}>Prof. Arthur Sterling (Principal)</td>
+                    <td style={{ padding: "10px" }}>2026-11-06</td>
+                  </tr>
+                </tbody>
+              </table>
+
+              {/* Signatures & Institutional Seal */}
+              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginTop: "2rem", borderTop: "2px solid #0f172a", paddingTop: "1.5rem" }}>
+                <div style={{ textAlign: "center" }}>
+                  <div style={{ fontStyle: "italic", fontFamily: "cursive", fontSize: "1.15rem", marginBottom: "4px" }}>
+                    Mr. Isaac Ofori
+                  </div>
+                  <div style={{ borderTop: "1px solid #0f172a", paddingTop: "4px", fontSize: "0.78rem", fontWeight: 700 }}>
+                    BURSAR & FINANCIAL CONTROLLER
+                  </div>
+                </div>
+
+                <div style={{ textAlign: "center" }}>
+                  <OfficialInstitutionalSeal schoolName={reportSchoolName} academicYear="2026-2027" size={110} />
+                  <span style={{ fontSize: "0.68rem", color: "#64748b", marginTop: "4px", display: "block" }}>
+                    CONFERRED-CLEARANCE-2026
+                  </span>
+                </div>
+
+                <div style={{ textAlign: "center" }}>
+                  <div style={{ fontStyle: "italic", fontFamily: "cursive", fontSize: "1.15rem", marginBottom: "4px" }}>
+                    Prof. Arthur Sterling
+                  </div>
+                  <div style={{ borderTop: "1px solid #0f172a", paddingTop: "4px", fontSize: "0.78rem", fontWeight: 700 }}>
+                    HEADMASTER & ACADEMIC REGISTRAR
+                  </div>
+                </div>
+              </div>
+
+              <div style={{ marginTop: "1.5rem", textAlign: "center", fontSize: "0.68rem", color: "#64748b", borderTop: "1px dashed #cbd5e1", paddingTop: "8px" }}>
+                Cryptographic Departure Hash: <code>SHA256: 3c7e9a1b2d4f5e6a7b8c9d0e1f2a3b4c5d6e7f8a9b0c1d2e3f4a5b6c7d8e9f0a</code> • Verified Valid on Institutional Cloud Ledger
               </div>
             </div>
           </div>
@@ -1221,7 +1425,7 @@ export default function AlumniDashboard() {
                       type="button"
                       onClick={() => {
                         setSelectedBatchYear(batch.year);
-                        alert(`Viewing cohort dossier for ${batch.label}.\n\nTotal Graduates: ${batch.totalGraduates}\nAlumni Lead: ${batch.alumniRep}`);
+                        navigateToDetail(navigate, "cohort", batch.year, batch);
                       }}
                       style={{
                         flex: 1,

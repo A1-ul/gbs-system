@@ -2780,25 +2780,142 @@ export default function ParentDashboard() {
                 />
               </div>
 
-              <div style={{ marginBottom: "1rem" }}>
-                <label style={{ display: "block", fontSize: "0.8rem", color: "#94a3b8", marginBottom: "4px" }}>Payment Gateway / Method *</label>
-                <select 
-                  className="filter-select" 
-                  style={{ width: "100%" }}
-                  value={paymentMethod}
-                  onChange={(e) => setPaymentMethod(e.target.value)}
-                >
-                  <option value="MOMO">📱 Mobile Money (MTN MoMo / Telecel Cash / AirtelTigo)</option>
-                  <option value="BANK_WIRE">🏦 Direct Institutional Bank Wire / Electronic Transfer</option>
-                  <option value="STRIPE">💳 International Visa / Mastercard Processing</option>
-                </select>
+              <div style={{ marginBottom: "1.25rem" }}>
+                <label style={{ display: "block", fontSize: "0.8rem", color: "#94a3b8", marginBottom: "8px", fontWeight: 700 }}>
+                  Select Verified Payment Gateway / Settlement Channel *
+                </label>
+                <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(130px, 1fr))", gap: "10px", marginBottom: "12px" }}>
+                  {/* MTN MoMo Option */}
+                  <div
+                    onClick={() => {
+                      setPaymentMethod("MOMO");
+                      setMomoNetwork("MTN_MOMO");
+                    }}
+                    style={{
+                      border: paymentMethod === "MOMO" && momoNetwork === "MTN_MOMO" ? "2px solid #ffcc00" : "1px solid rgba(255,255,255,0.1)",
+                      background: paymentMethod === "MOMO" && momoNetwork === "MTN_MOMO" ? "rgba(255, 204, 0, 0.15)" : "rgba(15, 23, 42, 0.8)",
+                      borderRadius: "10px",
+                      padding: "10px",
+                      textAlign: "center",
+                      cursor: "pointer",
+                      boxShadow: paymentMethod === "MOMO" && momoNetwork === "MTN_MOMO" ? "0 4px 14px rgba(255, 204, 0, 0.25)" : "none"
+                    }}
+                  >
+                    <div style={{ width: "42px", height: "42px", borderRadius: "50%", background: "#ffcc00", color: "#000", fontWeight: 900, display: "flex", alignItems: "center", justifyContent: "center", margin: "0 auto 6px", fontSize: "0.82rem", border: "2px solid #000" }}>
+                      MTN
+                    </div>
+                    <strong style={{ display: "block", fontSize: "0.78rem", color: "#ffcc00" }}>MTN MoMo</strong>
+                    <span style={{ fontSize: "0.68rem", color: "#94a3b8" }}>Instant Pay</span>
+                  </div>
+
+                  {/* Telecel Cash Option */}
+                  <div
+                    onClick={() => {
+                      setPaymentMethod("MOMO");
+                      setMomoNetwork("TELECEL_CASH");
+                    }}
+                    style={{
+                      border: paymentMethod === "MOMO" && momoNetwork === "TELECEL_CASH" ? "2px solid #ef4444" : "1px solid rgba(255,255,255,0.1)",
+                      background: paymentMethod === "MOMO" && momoNetwork === "TELECEL_CASH" ? "rgba(239, 68, 68, 0.15)" : "rgba(15, 23, 42, 0.8)",
+                      borderRadius: "10px",
+                      padding: "10px",
+                      textAlign: "center",
+                      cursor: "pointer",
+                      boxShadow: paymentMethod === "MOMO" && momoNetwork === "TELECEL_CASH" ? "0 4px 14px rgba(239, 68, 68, 0.25)" : "none"
+                    }}
+                  >
+                    <div style={{ width: "42px", height: "42px", borderRadius: "50%", background: "#e11d48", color: "#fff", fontWeight: 900, display: "flex", alignItems: "center", justifyContent: "center", margin: "0 auto 6px", fontSize: "0.75rem", border: "2px solid #fff" }}>
+                      telecel
+                    </div>
+                    <strong style={{ display: "block", fontSize: "0.78rem", color: "#f87171" }}>Telecel Cash</strong>
+                    <span style={{ fontSize: "0.68rem", color: "#94a3b8" }}>Vodafone Pay</span>
+                  </div>
+
+                  {/* AirtelTigo (AT Money) Option */}
+                  <div
+                    onClick={() => {
+                      setPaymentMethod("MOMO");
+                      setMomoNetwork("AT_MONEY");
+                    }}
+                    style={{
+                      border: paymentMethod === "MOMO" && momoNetwork === "AT_MONEY" ? "2px solid #38bdf8" : "1px solid rgba(255,255,255,0.1)",
+                      background: paymentMethod === "MOMO" && momoNetwork === "AT_MONEY" ? "rgba(56, 189, 248, 0.15)" : "rgba(15, 23, 42, 0.8)",
+                      borderRadius: "10px",
+                      padding: "10px",
+                      textAlign: "center",
+                      cursor: "pointer",
+                      boxShadow: paymentMethod === "MOMO" && momoNetwork === "AT_MONEY" ? "0 4px 14px rgba(56, 189, 248, 0.25)" : "none"
+                    }}
+                  >
+                    <div style={{ width: "42px", height: "42px", borderRadius: "50%", background: "linear-gradient(135deg, #0284c7, #e11d48)", color: "#fff", fontWeight: 900, display: "flex", alignItems: "center", justifyContent: "center", margin: "0 auto 6px", fontSize: "0.82rem", border: "2px solid #fff" }}>
+                      at
+                    </div>
+                    <strong style={{ display: "block", fontSize: "0.78rem", color: "#38bdf8" }}>AT Money</strong>
+                    <span style={{ fontSize: "0.68rem", color: "#94a3b8" }}>AirtelTigo Pay</span>
+                  </div>
+
+                  {/* Visa & Mastercard Option */}
+                  <div
+                    onClick={() => setPaymentMethod("STRIPE")}
+                    style={{
+                      border: paymentMethod === "STRIPE" ? "2px solid #a855f7" : "1px solid rgba(255,255,255,0.1)",
+                      background: paymentMethod === "STRIPE" ? "rgba(168, 85, 247, 0.15)" : "rgba(15, 23, 42, 0.8)",
+                      borderRadius: "10px",
+                      padding: "10px",
+                      textAlign: "center",
+                      cursor: "pointer",
+                      boxShadow: paymentMethod === "STRIPE" ? "0 4px 14px rgba(168, 85, 247, 0.25)" : "none"
+                    }}
+                  >
+                    <div style={{ width: "42px", height: "42px", borderRadius: "8px", background: "#1e1b4b", color: "#fbbf24", fontWeight: 900, display: "flex", alignItems: "center", justifyContent: "center", margin: "0 auto 6px", fontSize: "0.74rem", border: "1.5px solid #a855f7" }}>
+                      💳 VISA
+                    </div>
+                    <strong style={{ display: "block", fontSize: "0.78rem", color: "#c084fc" }}>Card Pay</strong>
+                    <span style={{ fontSize: "0.68rem", color: "#94a3b8" }}>Visa / Master</span>
+                  </div>
+
+                  {/* Direct Bank Wire Option */}
+                  <div
+                    onClick={() => setPaymentMethod("BANK_WIRE")}
+                    style={{
+                      border: paymentMethod === "BANK_WIRE" ? "2px solid #10b981" : "1px solid rgba(255,255,255,0.1)",
+                      background: paymentMethod === "BANK_WIRE" ? "rgba(16, 185, 129, 0.15)" : "rgba(15, 23, 42, 0.8)",
+                      borderRadius: "10px",
+                      padding: "10px",
+                      textAlign: "center",
+                      cursor: "pointer",
+                      boxShadow: paymentMethod === "BANK_WIRE" ? "0 4px 14px rgba(16, 185, 129, 0.25)" : "none"
+                    }}
+                  >
+                    <div style={{ width: "42px", height: "42px", borderRadius: "8px", background: "#064e3b", color: "#34d399", fontWeight: 900, display: "flex", alignItems: "center", justifyContent: "center", margin: "0 auto 6px", fontSize: "0.9rem", border: "1.5px solid #10b981" }}>
+                      🏛️
+                    </div>
+                    <strong style={{ display: "block", fontSize: "0.78rem", color: "#34d399" }}>Bank Wire</strong>
+                    <span style={{ fontSize: "0.68rem", color: "#94a3b8" }}>GHIPSS Direct</span>
+                  </div>
+                </div>
               </div>
 
-              {/* REQUIREMENT: Payment through MoMo requests for MoMo number */}
+              {/* Mobile Money Details Entry */}
               {paymentMethod === "MOMO" && (
-                <div style={{ marginBottom: "1rem", background: "rgba(245, 158, 11, 0.08)", padding: "12px", borderRadius: "8px", border: "1px solid rgba(245, 158, 11, 0.3)" }}>
+                <div style={{ marginBottom: "1rem", background: "rgba(245, 158, 11, 0.08)", padding: "14px", borderRadius: "10px", border: "1.5px solid rgba(245, 158, 11, 0.35)" }}>
+                  <div style={{ display: "flex", alignItems: "center", gap: "10px", marginBottom: "8px" }}>
+                    <div style={{
+                      padding: "4px 10px",
+                      borderRadius: "6px",
+                      background: momoNetwork === "MTN_MOMO" ? "#ffcc00" : momoNetwork === "TELECEL_CASH" ? "#e11d48" : "#0284c7",
+                      color: momoNetwork === "MTN_MOMO" ? "#000" : "#fff",
+                      fontWeight: 900,
+                      fontSize: "0.78rem"
+                    }}>
+                      {momoNetwork === "MTN_MOMO" ? "MTN MoMo" : momoNetwork === "TELECEL_CASH" ? "Telecel Cash" : "AT Money"}
+                    </div>
+                    <span style={{ fontSize: "0.78rem", color: "#34d399", fontWeight: 700 }}>
+                      ✓ Official Network Gateway Connected
+                    </span>
+                  </div>
                   <label style={{ display: "block", fontSize: "0.8rem", color: "#fbbf24", marginBottom: "4px", fontWeight: "700" }}>
-                    Mobile Money (MoMo) Number * (Required for Complete Transaction)
+                    Mobile Money (MoMo) Number * (Required for Transaction Settlement)
                   </label>
                   <input 
                     type="tel"
@@ -2809,19 +2926,9 @@ export default function ParentDashboard() {
                     value={momoNumber}
                     onChange={(e) => setMomoNumber(e.target.value)}
                   />
-                  <label style={{ display: "block", fontSize: "0.75rem", color: "#94a3b8", marginBottom: "4px" }}>
-                    Telecom MoMo Network:
-                  </label>
-                  <select
-                    className="filter-select"
-                    style={{ width: "100%" }}
-                    value={momoNetwork}
-                    onChange={(e) => setMomoNetwork(e.target.value)}
-                  >
-                    <option value="MTN_MOMO">MTN Mobile Money (MoMo Pay)</option>
-                    <option value="TELECEL_CASH">Telecel Cash (Vodafone Cash)</option>
-                    <option value="AT_MONEY">AirtelTigo (AT Money)</option>
-                  </select>
+                  <div style={{ fontSize: "0.72rem", color: "#94a3b8" }}>
+                    A direct network prompt will be dispatched to your phone to approve the transaction.
+                  </div>
                 </div>
               )}
 

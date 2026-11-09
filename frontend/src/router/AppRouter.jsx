@@ -49,6 +49,7 @@ import CommunicationDashboardPage from "../modules/communication/pages/Communica
 import LibraryManagementPage from "../modules/library/pages/LibraryManagementPage";
 import TransportManagementPage from "../modules/transport/pages/TransportManagementPage";
 import InventoryManagementPage from "../modules/inventory/pages/InventoryManagementPage";
+import InventoryDashboard from "../modules/inventory/pages/InventoryDashboard";
 import HRStaffManagementPage from "../modules/hr/pages/HRStaffManagementPage";
 import FacilityManagementPage from "../modules/facility/pages/FacilityManagementPage";
 import DigitalTwinCampusPage from "../modules/campus/pages/DigitalTwinCampusPage";
@@ -217,6 +218,7 @@ export default function AppRouter() {
         <Route path="/admin/transport" element={<TransportManagementPage />} />
 
         <Route path="/inventory" element={<InventoryManagementPage />} />
+        <Route path="/inventory/dashboard" element={<InventoryDashboard />} />
         <Route path="/inventory/stock" element={<InventoryManagementPage />} />
         <Route path="/procurement" element={<InventoryManagementPage />} />
         <Route path="/admin/inventory" element={<InventoryManagementPage />} />

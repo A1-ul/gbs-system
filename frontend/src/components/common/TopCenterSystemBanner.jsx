@@ -22,7 +22,7 @@ const DASHBOARDS_LIST = [
   { path: "/developer-control-center/dashboard", title: "Developer Center", icon: "🛡️", tooltip: "Chief Developer Mission Control & Security Sentinel" }
 ];
 
-export default function TopCenterSystemBanner({ 
+export default function TopCenterSystemBanner({
   roleTitle = "Enterprise Workspace",
   institutionName = null,
   isDeveloper = false
@@ -31,7 +31,7 @@ export default function TopCenterSystemBanner({
     let storedUser = null;
     try {
       storedUser = JSON.parse(localStorage.getItem("gbs_user") || "{}");
-    } catch {}
+    } catch { }
     return (
       institutionName ||
       localStorage.getItem("gbs_report_school_name") ||
@@ -54,7 +54,7 @@ export default function TopCenterSystemBanner({
   try {
     const storedUser = JSON.parse(localStorage.getItem("gbs_user") || "{}");
     currentUserRole = (storedUser?.role || localStorage.getItem("gbs_auth_role") || "GUEST").toUpperCase();
-  } catch {}
+  } catch { }
   const isDeveloperUser = isDeveloper || isDevMode || currentUserRole === "DEVELOPER" || currentUserRole === "SUPER_ADMIN" || Boolean(localStorage.getItem("gbs_dev_token"));
   const systemMode = typeof window !== "undefined" ? (localStorage.getItem("gbs_system_mode") || "LIVE_PRODUCTION") : "LIVE_PRODUCTION";
 
@@ -127,7 +127,7 @@ export default function TopCenterSystemBanner({
       localStorage.removeItem("gbs_dev_token");
       localStorage.removeItem("gbs_dev_authenticated");
       sessionStorage.clear();
-    } catch {}
+    } catch { }
     window.location.href = isDevMode ? "/developer-control-center/login" : "/login";
   };
 
@@ -361,7 +361,7 @@ export default function TopCenterSystemBanner({
                       try {
                         localStorage.removeItem("gbs_tenant_already_onboarded");
                         localStorage.removeItem("gbs_walkthrough_completed");
-                      } catch {}
+                      } catch { }
                     }
                     window.location.href = dash.path;
                   }}
@@ -378,13 +378,13 @@ export default function TopCenterSystemBanner({
                     border: isActive
                       ? "1.5px solid #38bdf8"
                       : dash.highlight
-                      ? "1.5px solid #10b981"
-                      : "1px solid rgba(255, 255, 255, 0.16)",
+                        ? "1.5px solid #10b981"
+                        : "1px solid rgba(255, 255, 255, 0.16)",
                     background: isActive
                       ? "linear-gradient(135deg, rgba(2, 132, 199, 0.45), rgba(56, 189, 248, 0.25))"
                       : dash.highlight
-                      ? "linear-gradient(135deg, rgba(16, 185, 129, 0.28), rgba(5, 150, 105, 0.18))"
-                      : "rgba(15, 23, 42, 0.7)",
+                        ? "linear-gradient(135deg, rgba(16, 185, 129, 0.28), rgba(5, 150, 105, 0.18))"
+                        : "rgba(15, 23, 42, 0.7)",
                     color: isActive ? "#ffffff" : dash.highlight ? "#34d399" : "#cbd5e1",
                     boxShadow: isActive ? "0 0 10px rgba(56, 189, 248, 0.4)" : "none"
                   }}

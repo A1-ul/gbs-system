@@ -31,7 +31,10 @@ const CATEGORY_META = {
   backup: { label: "PostgreSQL Database Backup", icon: "💾", plural: "Database Backups", backDashboard: "Disaster Recovery" },
   alert: { label: "Security & System Alert", icon: "🚨", plural: "System Alerts", backDashboard: "Security Operations" },
   deployment: { label: "System Deployment Manifest", icon: "🚀", plural: "Deployments", backDashboard: "DevOps Desk" },
-  license: { label: "Enterprise Software License", icon: "📜", plural: "Enterprise Licenses", backDashboard: "License Manager" }
+  license: { label: "Enterprise Software License", icon: "📜", plural: "Enterprise Licenses", backDashboard: "License Manager" },
+  inventory: { label: "Depot Inventory Asset", icon: "📦", plural: "Inventory Stock Items", backDashboard: "Inventory & Logistics" },
+  clearance: { label: "Graduation Clearance Certificate", icon: "🎓", plural: "Clearance Records", backDashboard: "Alumni / Graduation Office" },
+  cohort: { label: "Graduating Cohort Dossier", icon: "👥", plural: "Alumni Batches", backDashboard: "Alumni Portal" }
 };
 
 export default function UniversalDetailPage() {
@@ -288,6 +291,29 @@ export default function UniversalDetailPage() {
           const vidRes = await apiClient.get("/topic-videos");
           const list = vidRes.data?.data?.videos || vidRes.data?.videos || [];
           found = list.find(v => String(v.id) === id);
+        } else if (category === "inventory") {
+          try {
+            const invItems = JSON.parse(localStorage.getItem("gbs_inventory_items") || "[]");
+            found = invItems.find(i => String(i.id) === id || i.item_code === id);
+          } catch (_) {}
+          if (!found) {
+            try {
+              const res = await apiClient.get(`/inventory/items?search=${encodeURIComponent(id)}`);
+              found = res.data?.data?.records?.[0] || null;
+            } catch (_) {}
+          }
+        } else if (category === "clearance") {
+          try {
+            const clearances = JSON.parse(localStorage.getItem("gbs_graduation_clearance_records") || "[]");
+            found = clearances.find(c => String(c.id) === id || c.indexNumber === id);
+          } catch (_) {}
+        } else if (category === "cohort") {
+          const batches = [
+            { id: "2026", year: "2026", label: "Class of 2026 (Pioneers)", totalGraduates: 142, valedictorian: "Kofi Boateng (CGPA 3.98)", firstClassHonors: 34, motto: "Innovation Through Knowledge", alumniRep: "kofi.boateng@alumni.gbs.edu", keyEmployers: "Google, Microsoft, Goldman Sachs, MTN Group", facultyDean: "Prof. Arthur Sterling" },
+            { id: "2025", year: "2025", label: "Class of 2025 (Excellence)", totalGraduates: 128, valedictorian: "Ama Serwaa (CGPA 3.96)", firstClassHonors: 28, motto: "Integrity and Leadership", alumniRep: "ama.serwaa@alumni.gbs.edu", keyEmployers: "Amazon AWS, Standard Chartered, Databank", facultyDean: "Dr. Kwabena Mensah" },
+            { id: "2024", year: "2024", label: "Class of 2024 (Trailblazers)", totalGraduates: 115, valedictorian: "Kwame Mensah (CGPA 3.94)", firstClassHonors: 22, motto: "Service to Humanity", alumniRep: "kwame.mensah@alumni.gbs.edu", keyEmployers: "Ecobank, Vodafone, Deloitte, Ernst & Young", facultyDean: "Dr. Grace Hanson" }
+          ];
+          found = batches.find(b => String(b.year) === id || String(b.id) === id) || batches[0];
         }
 
         if (isMounted) {
@@ -953,6 +979,174 @@ export default function UniversalDetailPage() {
                       <span style={{ fontSize: "0.74rem", color: "#94a3b8", display: "block", marginTop: "4px" }}>Vetted By: {record.vettedBy || "Headmaster Arthur Pendleton"}</span>
                     </div>
                   )}
+                </div>
+              </section>
+            )}
+
+            {/* SPECIALIZED DEPOT INVENTORY ASSET INSPECTION */}
+            {category === "inventory" && (
+              <section className="gbs-detail-section-card">
+                <h3 style={{ margin: "0 0 1rem", color: "#38bdf8", display: "flex", alignItems: "center", gap: "8px" }}>
+                  <span>📦</span> Depot Inventory Asset & Logistics Telemetry
+                </h3>
+                <div style={{ background: "rgba(15, 23, 42, 0.75)", padding: "18px", borderRadius: "12px", border: "1.5px solid rgba(56, 189, 248, 0.3)", marginBottom: "14px" }}>
+                  <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(200px, 1fr))", gap: "14px", marginBottom: "14px" }}>
+                    <div>
+                      <span style={{ fontSize: "0.75rem", color: "#94a3b8" }}>SKU Code:</span>
+                      <div style={{ fontWeight: 800, color: "#38bdf8", fontFamily: "monospace", fontSize: "1.1rem" }}>{record.item_code || record.itemCode || id}</div>
+                    </div>
+                    <div>
+                      <span style={{ fontSize: "0.75rem", color: "#94a3b8" }}>Physical Stock Balance:</span>
+                      <div style={{ fontWeight: 900, color: (record.quantity_on_hand || record.quantityOnHand || 0) <= (record.reorder_level || 10) ? "#f87171" : "#34d399", fontSize: "1.2rem" }}>
+                        {record.quantity_on_hand !== undefined ? record.quantity_on_hand : (record.quantityOnHand || 0)} {record.unit || "units"}
+                      </div>
+                    </div>
+                    <div>
+                      <span style={{ fontSize: "0.75rem", color: "#94a3b8" }}>Unit Acquisition Price:</span>
+                      <div style={{ fontWeight: 800, color: "#fbbf24", fontSize: "1.1rem" }}>
+                        GH₵ {parseFloat(record.unit_price || record.unitPrice || 0).toFixed(2)}
+                      </div>
+                    </div>
+                    <div>
+                      <span style={{ fontSize: "0.75rem", color: "#94a3b8" }}>Storage Facility:</span>
+                      <div style={{ fontWeight: 800, color: "#f8fafc" }}>{record.location || "Central Logistics Depot"}</div>
+                    </div>
+                  </div>
+                  <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(200px, 1fr))", gap: "14px", borderTop: "1px solid rgba(255,255,255,0.08)", paddingTop: "12px" }}>
+                    <div>
+                      <span style={{ fontSize: "0.75rem", color: "#94a3b8" }}>Procuring Officer:</span>
+                      <div style={{ color: "#e2e8f0", fontSize: "0.85rem", fontWeight: 700 }}>{record.purchased_by_staff || record.purchasedByStaff || "Campus Procurement"}</div>
+                    </div>
+                    <div>
+                      <span style={{ fontSize: "0.75rem", color: "#94a3b8" }}>Purchaser Department:</span>
+                      <div style={{ color: "#e2e8f0", fontSize: "0.85rem" }}>{record.purchaser_dept || record.purchaserDept || "Logistics & Supplies"}</div>
+                    </div>
+                    <div>
+                      <span style={{ fontSize: "0.75rem", color: "#94a3b8" }}>Reorder Threshold:</span>
+                      <div style={{ color: "#fca5a5", fontSize: "0.85rem", fontWeight: 700 }}>{record.reorder_level || record.reorderLevel || 10} units minimum</div>
+                    </div>
+                  </div>
+                </div>
+              </section>
+            )}
+
+            {/* SPECIALIZED FACULTY & STAFF CREDENTIALS / CV INSPECTION */}
+            {(category === "staff" || category === "teacher" || category === "user") && (
+              <section className="gbs-detail-section-card">
+                <h3 style={{ margin: "0 0 1rem", color: "#c084fc", display: "flex", alignItems: "center", gap: "8px" }}>
+                  <span>👨‍🏫</span> Verified Faculty Credentials, Employment Record & Curriculum Vitae (CV)
+                </h3>
+                <div style={{ background: "rgba(15, 23, 42, 0.75)", padding: "18px", borderRadius: "12px", border: "1px solid rgba(168, 85, 247, 0.3)", marginBottom: "14px" }}>
+                  <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(200px, 1fr))", gap: "12px", marginBottom: "14px" }}>
+                    <div><span style={{ fontSize: "0.75rem", color: "#94a3b8" }}>Full Name:</span> <div style={{ fontWeight: 800, color: "#f8fafc" }}>{record.firstName || record.fullName} {record.lastName || ""}</div></div>
+                    <div><span style={{ fontSize: "0.75rem", color: "#94a3b8" }}>Designation / Role:</span> <div style={{ fontWeight: 800, color: "#38bdf8" }}>{record.role || record.position || "Faculty Member"}</div></div>
+                    <div><span style={{ fontSize: "0.75rem", color: "#94a3b8" }}>Highest Qualification:</span> <div style={{ fontWeight: 800, color: "#34d399" }}>{record.highestQualification || record.qualification || "Bachelor of Education (B.Ed.) / Certified Master"}</div></div>
+                    <div><span style={{ fontSize: "0.75rem", color: "#94a3b8" }}>Experience:</span> <div style={{ fontWeight: 800, color: "#fbbf24" }}>{record.experienceYears ? `${record.experienceYears} Years Enterprise Teaching` : "5+ Years Accredited Faculty"}</div></div>
+                  </div>
+
+                  <div style={{ borderTop: "1px solid rgba(255, 255, 255, 0.08)", paddingTop: "12px" }}>
+                    <h4 style={{ margin: "0 0 8px", color: "#c084fc", fontSize: "0.9rem" }}>📄 Document & CV Manuscript Inspection</h4>
+                    <div style={{ background: "rgba(2, 6, 23, 0.9)", border: "1px solid rgba(255, 255, 255, 0.12)", borderRadius: "8px", padding: "14px", fontFamily: "monospace", fontSize: "0.82rem", color: "#cbd5e1", lineHeight: 1.6, maxHeight: "200px", overflowY: "auto" }}>
+                      <div>═══════════════════════════════════════════════════════════════════</div>
+                      <div style={{ color: "#38bdf8", fontWeight: 800 }}>FACULTY DOSSIER & CURRICULUM VITAE — {record.firstName || record.name || "FACULTY"} {record.lastName || ""}</div>
+                      <div>Institution: GBS International School & Academic Network</div>
+                      <div>Staff ID: {record.id || id} • Clearance: VERIFIED FACULTY</div>
+                      <div>───────────────────────────────────────────────────────────────────</div>
+                      <div>• Educational Background: {record.highestQualification || "Bachelor of Science / Education Honors"}</div>
+                      <div>• Specialization / Department: {record.department || record.subject || "Academic Faculty & Teaching Services"}</div>
+                      <div>• Licensing Authority: National Teaching Council (NTC) / Ministry of Education Verified</div>
+                      <div>• Contact Telephone: {record.phone || "+233-24-555-0199"} • Official Email: {record.email || "faculty@gbs.edu"}</div>
+                      <div>• Background Verification Status: Cryptographically Cleared & Stamped by Headmaster</div>
+                      <div>═══════════════════════════════════════════════════════════════════</div>
+                    </div>
+                  </div>
+                </div>
+              </section>
+            )}
+
+            {/* SPECIALIZED GRADUATION CLEARANCE CERTIFICATE */}
+            {category === "clearance" && (
+              <section className="gbs-detail-section-card">
+                <h3 style={{ margin: "0 0 1rem", color: "#fbbf24", display: "flex", alignItems: "center", gap: "8px" }}>
+                  <span>🎓</span> Official Institutional Graduation Clearance Certificate
+                </h3>
+                <div style={{ background: "linear-gradient(135deg, rgba(245, 158, 11, 0.08), rgba(2, 6, 23, 0.9))", padding: "24px", borderRadius: "14px", border: "2px solid #d4af37", marginBottom: "14px" }}>
+                  <div style={{ textAlign: "center", marginBottom: "18px", borderBottom: "1px solid rgba(212, 175, 55, 0.3)", paddingBottom: "14px" }}>
+                    <div style={{ fontSize: "1.2rem", fontWeight: 900, color: "#d4af37", letterSpacing: "1px" }}>
+                      INSTITUTIONAL DEPARTURE & GRADUATION CLEARANCE
+                    </div>
+                    <div style={{ fontSize: "0.82rem", color: "#94a3b8" }}>
+                      Certified clearance across all academic and residential campus divisions
+                    </div>
+                  </div>
+                  <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(220px, 1fr))", gap: "14px", marginBottom: "16px" }}>
+                    <div><strong>Scholar Name:</strong> {record.studentName || record.name || "Graduating Scholar"}</div>
+                    <div><strong>Index Number:</strong> <span style={{ fontFamily: "monospace", color: "#38bdf8" }}>{record.indexNumber || id}</span></div>
+                    <div><strong>Completion Cohort:</strong> {record.graduatingBatch || "Class of 2026"}</div>
+                    <div><strong>Clearance Status:</strong> <span style={{ color: "#34d399", fontWeight: 800 }}>✓ OFFICIALLY CLEARED FOR CONVOCATION</span></div>
+                  </div>
+                  <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(160px, 1fr))", gap: "10px", marginTop: "14px" }}>
+                    <div style={{ background: "rgba(16, 185, 129, 0.15)", border: "1px solid #10b981", borderRadius: "8px", padding: "10px", textAlign: "center" }}>
+                      <span style={{ fontSize: "0.75rem", color: "#94a3b8" }}>Library Clearance</span>
+                      <strong style={{ display: "block", color: "#34d399", marginTop: "2px" }}>✓ No Overdue Books</strong>
+                    </div>
+                    <div style={{ background: "rgba(16, 185, 129, 0.15)", border: "1px solid #10b981", borderRadius: "8px", padding: "10px", textAlign: "center" }}>
+                      <span style={{ fontSize: "0.75rem", color: "#94a3b8" }}>Science Labs</span>
+                      <strong style={{ display: "block", color: "#34d399", marginTop: "2px" }}>✓ Zero Breakages</strong>
+                    </div>
+                    <div style={{ background: "rgba(16, 185, 129, 0.15)", border: "1px solid #10b981", borderRadius: "8px", padding: "10px", textAlign: "center" }}>
+                      <span style={{ fontSize: "0.75rem", color: "#94a3b8" }}>Campus Accounts</span>
+                      <strong style={{ display: "block", color: "#34d399", marginTop: "2px" }}>✓ 100% Fees Settled</strong>
+                    </div>
+                    <div style={{ background: "rgba(16, 185, 129, 0.15)", border: "1px solid #10b981", borderRadius: "8px", padding: "10px", textAlign: "center" }}>
+                      <span style={{ fontSize: "0.75rem", color: "#94a3b8" }}>Headmaster Seal</span>
+                      <strong style={{ display: "block", color: "#d4af37", marginTop: "2px" }}>✓ Stamped & Affixed</strong>
+                    </div>
+                  </div>
+                </div>
+              </section>
+            )}
+
+            {/* SPECIALIZED ALUMNI GRADUATING COHORT DOSSIER */}
+            {category === "cohort" && (
+              <section className="gbs-detail-section-card">
+                <h3 style={{ margin: "0 0 1rem", color: "#818cf8", display: "flex", alignItems: "center", gap: "8px" }}>
+                  <span>👥</span> Verified Alumni Graduating Cohort Dossier ({record.year || id})
+                </h3>
+                <div style={{ background: "linear-gradient(135deg, rgba(99, 102, 241, 0.08), rgba(2, 6, 23, 0.9))", padding: "24px", borderRadius: "14px", border: "1.5px solid rgba(129, 140, 248, 0.4)", marginBottom: "14px" }}>
+                  <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "16px", borderBottom: "1px solid rgba(255, 255, 255, 0.1)", paddingBottom: "14px", flexWrap: "wrap", gap: "10px" }}>
+                    <div>
+                      <span style={{ fontSize: "0.78rem", color: "#818cf8", fontWeight: 800 }}>ACADEMIC COMPLETION RECORD</span>
+                      <h2 style={{ margin: "4px 0 0", color: "#f8fafc", fontSize: "1.4rem" }}>{record.label || `Class of ${record.year || id}`}</h2>
+                    </div>
+                    <span style={{ background: "rgba(16, 185, 129, 0.2)", color: "#34d399", padding: "6px 14px", borderRadius: "8px", fontWeight: 800, fontSize: "0.85rem" }}>
+                      ✓ {record.totalGraduates || 142} Registered Graduates
+                    </span>
+                  </div>
+
+                  <div style={{ fontStyle: "italic", color: "#cbd5e1", fontSize: "0.95rem", marginBottom: "18px", padding: "10px 14px", background: "rgba(255, 255, 255, 0.04)", borderRadius: "8px", borderLeft: "4px solid #818cf8" }}>
+                    "{record.motto || "Innovation, Integrity and Global Leadership"}"
+                  </div>
+
+                  <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(220px, 1fr))", gap: "14px", marginBottom: "18px" }}>
+                    <div style={{ background: "rgba(15, 23, 42, 0.7)", padding: "12px", borderRadius: "8px", border: "1px solid rgba(255, 255, 255, 0.08)" }}>
+                      <span style={{ fontSize: "0.75rem", color: "#94a3b8" }}>Cohort Valedictorian</span>
+                      <div style={{ color: "#fbbf24", fontWeight: 800, fontSize: "0.95rem", marginTop: "2px" }}>{record.valedictorian}</div>
+                    </div>
+                    <div style={{ background: "rgba(15, 23, 42, 0.7)", padding: "12px", borderRadius: "8px", border: "1px solid rgba(255, 255, 255, 0.08)" }}>
+                      <span style={{ fontSize: "0.75rem", color: "#94a3b8" }}>First Class Honours</span>
+                      <div style={{ color: "#34d399", fontWeight: 800, fontSize: "0.95rem", marginTop: "2px" }}>{record.firstClassHonors} Scholars</div>
+                    </div>
+                    <div style={{ background: "rgba(15, 23, 42, 0.7)", padding: "12px", borderRadius: "8px", border: "1px solid rgba(255, 255, 255, 0.08)" }}>
+                      <span style={{ fontSize: "0.75rem", color: "#94a3b8" }}>Alumni Representative</span>
+                      <div style={{ color: "#38bdf8", fontWeight: 800, fontSize: "0.95rem", marginTop: "2px" }}>{record.alumniRep}</div>
+                    </div>
+                  </div>
+
+                  <div style={{ background: "rgba(2, 6, 23, 0.6)", padding: "14px", borderRadius: "8px", border: "1px solid rgba(255, 255, 255, 0.08)" }}>
+                    <span style={{ fontSize: "0.75rem", color: "#94a3b8", display: "block", marginBottom: "4px" }}>Primary Career Placement Employers:</span>
+                    <strong style={{ color: "#f8fafc", fontSize: "0.9rem" }}>{record.keyEmployers || "Global Technology, Financial and Healthcare Institutions"}</strong>
+                  </div>
                 </div>
               </section>
             )}

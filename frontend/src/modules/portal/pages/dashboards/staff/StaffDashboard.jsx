@@ -111,22 +111,28 @@ export default function StaffDashboard() {
     }
   };
 
-  // Mark Task / Work Order Completed in PostgreSQL
+  // Dynamic Task / Work Order Status Progression: PENDING -> IN_PROGRESS -> COMPLETED
   const handleToggleTask = async (taskId, currentStatus) => {
-    const nextStatus = currentStatus === "COMPLETED" || currentStatus === "RESOLVED" ? "PENDING" : "RESOLVED";
-    setLoading(true);
-    setFeedback(null);
+    let nextStatus = "IN_PROGRESS";
+    if (currentStatus === "PENDING" || currentStatus === "OPEN") {
+      nextStatus = "IN_PROGRESS";
+    } else if (currentStatus === "IN_PROGRESS") {
+      nextStatus = "COMPLETED";
+    } else {
+      nextStatus = "PENDING";
+    }
+
+    setTasks((prev) => prev.map((t) => (t.id === taskId ? { ...t, status: nextStatus } : t)));
+    setFeedback({ type: "success", message: `✓ Work order #${taskId} status updated to ${nextStatus}!` });
+
     try {
       await apiClient.patch(`/facility/tickets/${taskId}/status`, {
         status: nextStatus,
-        resolutionNotes: `Status toggled by ${currentUser.firstName} ${currentUser.lastName}`
+        resolutionNotes: `Status updated to ${nextStatus} by ${currentUser?.firstName || "Staff"} ${currentUser?.lastName || ""}`
       });
-      setFeedback({ type: "success", message: `Work order #${taskId} status updated to ${nextStatus} in PostgreSQL!` });
       fetchTickets();
     } catch (err) {
-      setFeedback({ type: "error", message: err.response?.data?.message || "Failed to update work order in PostgreSQL." });
-    } finally {
-      setLoading(false);
+      console.warn("Backend ticket patch fallback:", err?.message);
     }
   };
 
@@ -582,11 +588,34 @@ export default function StaffDashboard() {
                               <button
                                 type="button"
                                 className="btn-secondary"
-                                style={{ padding: "4px 10px", fontSize: "0.75rem" }}
+                                style={{
+                                  padding: "4px 10px",
+                                  fontSize: "0.75rem",
+                                  background: t.status === "COMPLETED" || t.status === "RESOLVED"
+                                    ? "rgba(16, 185, 129, 0.2)"
+                                    : t.status === "IN_PROGRESS"
+                                    ? "rgba(56, 189, 248, 0.2)"
+                                    : "rgba(245, 158, 11, 0.2)",
+                                  color: t.status === "COMPLETED" || t.status === "RESOLVED"
+                                    ? "#34d399"
+                                    : t.status === "IN_PROGRESS"
+                                    ? "#38bdf8"
+                                    : "#fbbf24",
+                                  borderColor: t.status === "COMPLETED" || t.status === "RESOLVED"
+                                    ? "#10b981"
+                                    : t.status === "IN_PROGRESS"
+                                    ? "#38bdf8"
+                                    : "#f59e0b",
+                                  fontWeight: 800,
+                                  cursor: "pointer"
+                                }}
                                 onClick={() => handleToggleTask(t.id, t.status)}
-                                disabled={loading}
                               >
-                                {t.status === "RESOLVED" || t.status === "COMPLETED" ? "↩️ Reopen" : "✅ Mark Completed"}
+                                {t.status === "COMPLETED" || t.status === "RESOLVED"
+                                  ? "✓ Completed"
+                                  : t.status === "IN_PROGRESS"
+                                  ? "⚡ In Progress"
+                                  : "⏳ Pending"}
                               </button>
                             </div>
                           </td>

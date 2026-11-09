@@ -126,6 +126,21 @@ function attemptLocalResilientLogin(payload = {}) {
 
   if (!rawIdentifier || !rawPassword) return null;
 
+  // Check if institution was permanently deleted by Developer
+  try {
+    const deletedLockouts = JSON.parse(localStorage.getItem("gbs_deleted_tenant_lockouts") || "[]");
+    const matchedLockout = deletedLockouts.find((l) => {
+      const emailMatches = Array.isArray(l.emails) && l.emails.some((e) => e === rawIdentifier || rawIdentifier.includes(e));
+      const codeMatches = l.tenantCode && rawIdentifier === String(l.tenantCode).toLowerCase();
+      return emailMatches || codeMatches;
+    });
+    if (matchedLockout) {
+      throw new Error("Your institution has been deleted from GBS SYSTEM. You are unable to access the system permanently until the institution is re-registered by the developer.");
+    }
+  } catch (lErr) {
+    if (lErr.message && lErr.message.includes("deleted from GBS SYSTEM")) throw lErr;
+  }
+
   // 1. Check gbs_local_registered_users (created during onboarding or member signup)
   try {
     const localUsers = JSON.parse(localStorage.getItem("gbs_local_registered_users") || "[]");
@@ -329,6 +344,27 @@ export const register = async (payload) => {
 };
 
 export const login = async (payload) => {
+  const rawIdentifier = String(payload.email || payload.username || "").trim().toLowerCase();
+
+  // Strict Permanent Lockout Check for Institutions Deleted by Developer
+  try {
+    const deletedLockouts = JSON.parse(localStorage.getItem("gbs_deleted_tenant_lockouts") || "[]");
+    const matchedLockout = deletedLockouts.find((l) => {
+      const emailMatches = Array.isArray(l.emails) && l.emails.some((e) => e === rawIdentifier || rawIdentifier.includes(e));
+      const codeMatches = l.tenantCode && rawIdentifier === String(l.tenantCode).toLowerCase();
+      const nameMatches = l.tenantName && rawIdentifier.includes(String(l.tenantName).toLowerCase());
+      return emailMatches || codeMatches || nameMatches;
+    });
+
+    if (matchedLockout) {
+      throw new Error("Your institution has been deleted from GBS SYSTEM. You are unable to access the system permanently until the institution is re-registered by the developer.");
+    }
+  } catch (err) {
+    if (err.message && err.message.includes("deleted from GBS SYSTEM")) {
+      throw err;
+    }
+  }
+
   try {
     const response = await apiClient.post("/auth/login", payload, { timeout: 6500 });
     const authData = extractAuthPayload(response.data);

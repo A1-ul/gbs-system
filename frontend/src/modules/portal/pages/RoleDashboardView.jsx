@@ -151,7 +151,7 @@ export default function RoleDashboardView() {
     const storedUser = JSON.parse(localStorage.getItem("gbs_user") || "{}");
     userRole = (storedUser?.role || localStorage.getItem("gbs_auth_role") || "").toUpperCase();
     isDev = userRole === "DEVELOPER" || userRole === "SUPER_ADMIN" || Boolean(localStorage.getItem("gbs_dev_token"));
-  } catch {}
+  } catch { }
 
   const roleRoleMap = {
     teacher: ["TEACHER"],
@@ -266,7 +266,7 @@ export default function RoleDashboardView() {
   return (
     <div className="dashboard-container">
       {/* Real photographic background matching the role */}
-      <div 
+      <div
         className="dashboard-bg-photo"
         style={{ backgroundImage: `url('${config.heroBg}')` }}
       ></div>
@@ -336,10 +336,10 @@ export default function RoleDashboardView() {
           {/* Prominent Clear Daytime Real-Life Photo Showcase */}
           <div className="hero-photo-showcase">
             <div className="photo-frame-inner">
-              <img 
-                src={config.heroBg} 
-                alt={`${config.title} Real Life Campus`} 
-                className="real-life-daytime-photo" 
+              <img
+                src={config.heroBg}
+                alt={`${config.title} Real Life Campus`}
+                className="real-life-daytime-photo"
               />
               <div className="photo-overlay-tag">
                 <span className="live-dot"></span>
@@ -371,9 +371,9 @@ export default function RoleDashboardView() {
 
           <div className="modules-card-grid">
             {config.quickLinks.map((mod, idx) => (
-              <Link 
-                key={idx} 
-                to={mod.path} 
+              <Link
+                key={idx}
+                to={mod.path}
                 className="module-card-link"
                 style={{ borderTopColor: mod.color }}
               >
