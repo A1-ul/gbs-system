@@ -29,14 +29,23 @@ export default function StaffDashboard() {
     description: ""
   });
 
+  const currentUser = JSON.parse(localStorage.getItem("gbs_user") || '{"firstName":"Staff","lastName":"Member","role":"STAFF"}');
+  const isDemoTenant =
+    localStorage.getItem("gbs_tenant_mode") !== "LIVE_PRODUCTION" &&
+    (!currentUser?.tenantCode || currentUser.tenantCode === "GBS-MAIN") &&
+    (Number(currentUser?.tenantId || 1) === 1);
+
   // Inventory Depot State
-  const [inventoryItems, setInventoryItems] = useState([
-    { id: 1, item_code: "INV-SCI-101", name: "Grade 11 Chemistry Reagents Set", category: "LAB_SUPPLIES", quantity_on_hand: 28, reorder_level: 10, unit: "KITS", location: "Science Block B - Room 2", status: "IN_STOCK", unit_price: 65.0 },
-    { id: 2, item_code: "INV-EXM-204", name: "Official WASSCE Continuous Assessment Answer Booklets", category: "STATIONERY", quantity_on_hand: 450, reorder_level: 100, unit: "PACKS", location: "Central Academic Archives Depot", status: "IN_STOCK", unit_price: 18.5 },
-    { id: 3, item_code: "INV-ICT-302", name: "Cat6 Shielded High-Speed Ethernet Cables (50m)", category: "IT_EQUIPMENT", quantity_on_hand: 14, reorder_level: 8, unit: "REELS", location: "Server Room Rack Bay 1", status: "IN_STOCK", unit_price: 85.0 },
-    { id: 4, item_code: "INV-MED-401", name: "Campus Infirmary First Aid Emergency Refill Packs", category: "MEDICAL_FIRST_AID", quantity_on_hand: 6, reorder_level: 10, unit: "BOXES", location: "Campus Clinic Dispensary", status: "LOW_STOCK", unit_price: 120.0 },
-    { id: 5, item_code: "INV-FAC-505", name: "Heavy-Duty LED Classroom Tube Bulbs (40W)", category: "ELECTRICAL", quantity_on_hand: 32, reorder_level: 15, unit: "UNITS", location: "Facility Workshop Locker", status: "IN_STOCK", unit_price: 14.0 }
-  ]);
+  const [inventoryItems, setInventoryItems] = useState(() => {
+    if (!isDemoTenant) return [];
+    return [
+      { id: 1, item_code: "INV-SCI-101", name: "Grade 11 Chemistry Reagents Set", category: "LAB_SUPPLIES", quantity_on_hand: 28, reorder_level: 10, unit: "KITS", location: "Science Block B - Room 2", status: "IN_STOCK", unit_price: 65.0 },
+      { id: 2, item_code: "INV-EXM-204", name: "Official WASSCE Continuous Assessment Answer Booklets", category: "STATIONERY", quantity_on_hand: 450, reorder_level: 100, unit: "PACKS", location: "Central Academic Archives Depot", status: "IN_STOCK", unit_price: 18.5 },
+      { id: 3, item_code: "INV-ICT-302", name: "Cat6 Shielded High-Speed Ethernet Cables (50m)", category: "IT_EQUIPMENT", quantity_on_hand: 14, reorder_level: 8, unit: "REELS", location: "Server Room Rack Bay 1", status: "IN_STOCK", unit_price: 85.0 },
+      { id: 4, item_code: "INV-MED-401", name: "Campus Infirmary First Aid Emergency Refill Packs", category: "MEDICAL_FIRST_AID", quantity_on_hand: 6, reorder_level: 10, unit: "BOXES", location: "Campus Clinic Dispensary", status: "LOW_STOCK", unit_price: 120.0 },
+      { id: 5, item_code: "INV-FAC-505", name: "Heavy-Duty LED Classroom Tube Bulbs (40W)", category: "ELECTRICAL", quantity_on_hand: 32, reorder_level: 15, unit: "UNITS", location: "Facility Workshop Locker", status: "IN_STOCK", unit_price: 14.0 }
+    ];
+  });
   const [newRequisitionItem, setNewRequisitionItem] = useState({ itemName: "", quantity: 1, department: "FACILITY_OPS", urgency: "MEDIUM", notes: "" });
   const [showReqForm, setShowReqForm] = useState(false);
 
@@ -51,8 +60,6 @@ export default function StaffDashboard() {
     location: "",
     details: ""
   });
-
-  const currentUser = JSON.parse(localStorage.getItem("gbs_user") || '{"firstName":"Staff","lastName":"Member","role":"STAFF"}');
 
   const [schoolName, setSchoolName] = useState(() => {
     let storedUser = null;
@@ -594,18 +601,18 @@ export default function StaffDashboard() {
                                   background: t.status === "COMPLETED" || t.status === "RESOLVED"
                                     ? "rgba(16, 185, 129, 0.2)"
                                     : t.status === "IN_PROGRESS"
-                                    ? "rgba(56, 189, 248, 0.2)"
-                                    : "rgba(245, 158, 11, 0.2)",
+                                      ? "rgba(56, 189, 248, 0.2)"
+                                      : "rgba(245, 158, 11, 0.2)",
                                   color: t.status === "COMPLETED" || t.status === "RESOLVED"
                                     ? "#34d399"
                                     : t.status === "IN_PROGRESS"
-                                    ? "#38bdf8"
-                                    : "#fbbf24",
+                                      ? "#38bdf8"
+                                      : "#fbbf24",
                                   borderColor: t.status === "COMPLETED" || t.status === "RESOLVED"
                                     ? "#10b981"
                                     : t.status === "IN_PROGRESS"
-                                    ? "#38bdf8"
-                                    : "#f59e0b",
+                                      ? "#38bdf8"
+                                      : "#f59e0b",
                                   fontWeight: 800,
                                   cursor: "pointer"
                                 }}
@@ -614,8 +621,8 @@ export default function StaffDashboard() {
                                 {t.status === "COMPLETED" || t.status === "RESOLVED"
                                   ? "✓ Completed"
                                   : t.status === "IN_PROGRESS"
-                                  ? "⚡ In Progress"
-                                  : "⏳ Pending"}
+                                    ? "⚡ In Progress"
+                                    : "⏳ Pending"}
                               </button>
                             </div>
                           </td>

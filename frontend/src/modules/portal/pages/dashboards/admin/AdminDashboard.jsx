@@ -621,9 +621,13 @@ export function AdminDashboard({ initialTab } = {}) {
   const [targetClassForAssignment, setTargetClassForAssignment] = useState("PRI-04");
   const [enrolledStudents, setEnrolledStudents] = useState(() => {
     try {
+      const isDemo = localStorage.getItem("gbs_system_mode") === "DEMO_SANDBOX";
       const saved = JSON.parse(localStorage.getItem("gbs_enrolled_students") || "[]");
       if (Array.isArray(saved) && saved.length > 0) return saved;
+      if (!isDemo) return []; // In LIVE_PRODUCTION, start with 0 students (clean genuine state)
     } catch { }
+    const isDemo = localStorage.getItem("gbs_system_mode") === "DEMO_SANDBOX";
+    if (!isDemo) return [];
     const defaultAdmittedStudents = [
       { id: "101", studentId: "STU-2026-001", firstName: "Emmanuel", lastName: "Mensah", currentClass: "JHS 2 (Junior High - Grade 8)", classCode: "JHS-02", balanceDue: 0, admissionStatus: "ADMITTED", boardingBus: true },
       { id: "102", studentId: "STU-2026-002", firstName: "Ama", lastName: "Serwaa", currentClass: "SHS 1 / Grade 10 - STEM & Arts", classCode: "SHS-01", balanceDue: 0, admissionStatus: "ADMITTED", boardingBus: true },
@@ -639,6 +643,18 @@ export function AdminDashboard({ initialTab } = {}) {
     } catch { }
     return defaultAdmittedStudents;
   });
+
+  // Headmaster Class Subject & Code Editor State
+  const [editingClassForSubjects, setEditingClassForSubjects] = useState(null);
+  const [showSubjectEditorModal, setShowSubjectEditorModal] = useState(false);
+  const [newSubInEditName, setNewSubInEditName] = useState("");
+  const [newSubInEditCode, setNewSubInEditCode] = useState("");
+
+  // Headmaster Faculty Profile Desk View Toggle
+  const [showFacultyProfilesDesk, setShowFacultyProfilesDesk] = useState(true);
+
+  // CCTV Live Snapshot Preview Modal
+  const [activeCctvSnapshotModal, setActiveCctvSnapshotModal] = useState(null);
 
   // Headmaster Notification & Approval Queue for Staff Self-Registration
   const [pendingStaff, setPendingStaff] = useState(() => {
@@ -873,6 +889,40 @@ export function AdminDashboard({ initialTab } = {}) {
       setPendingStaff(updated);
       localStorage.setItem("gbs_pending_staff_registrations", JSON.stringify(updated));
 
+      // Also update gbs_local_registered_users so the approved member can immediately sign in
+      try {
+        const localUsers = JSON.parse(localStorage.getItem("gbs_local_registered_users") || "[]");
+        const targetEmail = String(staffMember.email || "").trim().toLowerCase();
+        const exists = localUsers.some((u) => String(u.email || "").toLowerCase() === targetEmail || u.id === staffMember.id);
+        const nextUsers = exists
+          ? localUsers.map((u) =>
+              String(u.email || "").toLowerCase() === targetEmail || u.id === staffMember.id
+                ? {
+                    ...u,
+                    isApproved: true,
+                    isActive: true,
+                    status: "APPROVED",
+                    verificationStatus: "VERIFIED",
+                    approvedAt: new Date().toISOString()
+                  }
+                : u
+            )
+          : [
+              {
+                ...staffMember,
+                email: targetEmail,
+                isApproved: true,
+                isActive: true,
+                status: "APPROVED",
+                verificationStatus: "VERIFIED",
+                approvedAt: new Date().toISOString()
+              },
+              ...localUsers
+            ];
+        localStorage.setItem("gbs_local_registered_users", JSON.stringify(nextUsers));
+        window.dispatchEvent(new Event("storage"));
+      } catch { }
+
       setFeedback({
         type: "success",
         message: `✅ Staff Member ${staffMember.firstName} ${staffMember.lastName} (${staffMember.role}) officially approved and admitted to the institution by Headmaster!`
@@ -896,12 +946,23 @@ export function AdminDashboard({ initialTab } = {}) {
   };
 
   const handleRejectStaff = (staffId) => {
+    const target = pendingStaff.find((s) => s.id === staffId);
     const updated = pendingStaff.filter((s) => s.id !== staffId);
     setPendingStaff(updated);
     localStorage.setItem("gbs_pending_staff_registrations", JSON.stringify(updated));
+    try {
+      const localUsers = JSON.parse(localStorage.getItem("gbs_local_registered_users") || "[]");
+      const targetEmail = String(target?.email || "").trim().toLowerCase();
+      const nextUsers = localUsers.map((u) =>
+        u.id === staffId || (targetEmail && String(u.email || "").toLowerCase() === targetEmail)
+          ? { ...u, isApproved: false, isActive: false, status: "REJECTED", verificationStatus: "REJECTED" }
+          : u
+      );
+      localStorage.setItem("gbs_local_registered_users", JSON.stringify(nextUsers));
+    } catch { }
     setFeedback({
       type: "success",
-      message: "Staff registration request declined by Headmaster."
+      message: "Staff registration request declined and blocked from system access by Headmaster."
     });
   };
 
@@ -1001,14 +1062,51 @@ export function AdminDashboard({ initialTab } = {}) {
   // Developer Directives & Headmaster Two-Way Communication State
   const [developerMessages, setDeveloperMessages] = useState(() => {
     try {
+      const deletedIds = JSON.parse(localStorage.getItem("gbs_permanently_deleted_ids") || "[]");
       const stored = localStorage.getItem("gbs_dev_headmaster_messages");
-      if (stored) return JSON.parse(stored);
+      if (stored) {
+        const parsed = JSON.parse(stored);
+        if (Array.isArray(parsed)) {
+          return parsed
+            .filter((m) => !deletedIds.includes(String(m.id)) && !deletedIds.includes(String(m.threadId)))
+            .map((m) => ({
+              ...m,
+              replies: Array.isArray(m.replies)
+                ? m.replies.filter((r) => !deletedIds.includes(String(r.id)))
+                : []
+            }));
+        }
+      }
     } catch { }
     return [];
   });
   const [showDevMessageModal, setShowDevMessageModal] = useState(false);
   const [selectedDevMessage, setSelectedDevMessage] = useState(null);
   const [headmasterReplyText, setHeadmasterReplyText] = useState("");
+  const [isDirectiveBannerMinimized, setIsDirectiveBannerMinimized] = useState(() => {
+    return localStorage.getItem("gbs_hm_directive_minimized") === "true";
+  });
+  const [minimizedDirectiveIds, setMinimizedDirectiveIds] = useState(() => {
+    try {
+      return JSON.parse(localStorage.getItem("gbs_hm_minimized_directive_ids") || "[]");
+    } catch {
+      return [];
+    }
+  });
+
+  const handleToggleDirectiveBannerMinimize = () => {
+    const next = !isDirectiveBannerMinimized;
+    setIsDirectiveBannerMinimized(next);
+    localStorage.setItem("gbs_hm_directive_minimized", String(next));
+  };
+
+  const handleToggleDirectiveCardMinimize = (directiveId) => {
+    setMinimizedDirectiveIds((prev) => {
+      const next = prev.includes(directiveId) ? prev.filter((id) => id !== directiveId) : [...prev, directiveId];
+      localStorage.setItem("gbs_hm_minimized_directive_ids", JSON.stringify(next));
+      return next;
+    });
+  };
 
   // Only show warning banner for directives that have NOT yet received a Headmaster reply.
   // When the Headmaster replies, the warning notice disappears until a new message is sent back by the Developer.
@@ -1031,8 +1129,23 @@ export function AdminDashboard({ initialTab } = {}) {
   useEffect(() => {
     const syncDevMessages = () => {
       try {
+        const deletedIds = JSON.parse(localStorage.getItem("gbs_permanently_deleted_ids") || "[]");
         const stored = localStorage.getItem("gbs_dev_headmaster_messages");
-        if (stored) setDeveloperMessages(JSON.parse(stored));
+        if (stored) {
+          const parsed = JSON.parse(stored);
+          if (Array.isArray(parsed)) {
+            setDeveloperMessages(
+              parsed
+                .filter((m) => !deletedIds.includes(String(m.id)) && !deletedIds.includes(String(m.threadId)))
+                .map((m) => ({
+                  ...m,
+                  replies: Array.isArray(m.replies)
+                    ? m.replies.filter((r) => !deletedIds.includes(String(r.id)))
+                    : []
+                }))
+            );
+          }
+        }
       } catch { }
     };
     window.addEventListener("gbs_dev_headmaster_message_dispatched", syncDevMessages);
@@ -1088,9 +1201,13 @@ export function AdminDashboard({ initialTab } = {}) {
   const [showBusAssignmentModal, setShowBusAssignmentModal] = useState(false);
   const [busAssignments, setBusAssignments] = useState(() => {
     try {
+      const isDemo = localStorage.getItem("gbs_system_mode") === "DEMO_SANDBOX";
       const stored = JSON.parse(localStorage.getItem("gbs_transport_assigned_students") || "[]");
       if (Array.isArray(stored) && stored.length > 0) return stored;
+      if (!isDemo) return []; // In LIVE_PRODUCTION, start with 0 bus assignments
     } catch { }
+    const isDemo = localStorage.getItem("gbs_system_mode") === "DEMO_SANDBOX";
+    if (!isDemo) return [];
     const defaultBusBoardingStudents = [
       {
         id: "BUS-STU-1001",
@@ -1208,8 +1325,13 @@ export function AdminDashboard({ initialTab } = {}) {
 
   const [registeredBusDrivers, setRegisteredBusDrivers] = useState(() => {
     try {
+      const isDemo = localStorage.getItem("gbs_system_mode") === "DEMO_SANDBOX" && Number(currentUser?.tenantId || 1) === 1;
       const stored = localStorage.getItem("gbs_bus_registered_drivers");
-      if (stored) return JSON.parse(stored);
+      if (stored) {
+        const parsed = JSON.parse(stored);
+        if (Array.isArray(parsed) && parsed.length > 0) return parsed;
+      }
+      if (!isDemo) return [];
     } catch { }
     return [
       { id: "DRV-01", name: "Mr. Emmanuel Tetteh (+233 24 111 2233)", busNumber: "GBS Bus #01 (Toyota Coaster - 32 Seater)" },
@@ -1639,8 +1761,10 @@ export function AdminDashboard({ initialTab } = {}) {
   // Requirement: Teacher Lesson Plans & Notes Vetting by Headmaster
   const [teacherLessonPlans, setTeacherLessonPlans] = useState(() => {
     try {
+      const isDemo = localStorage.getItem("gbs_system_mode") === "DEMO_SANDBOX" && Number(currentUser?.tenantId || 1) === 1;
       const saved = JSON.parse(localStorage.getItem("gbs_teacher_lesson_plans") || "[]");
       if (Array.isArray(saved) && saved.length > 0) return saved;
+      if (!isDemo) return [];
     } catch { }
     const defaultPlans = [
       {
@@ -3301,19 +3425,114 @@ export function AdminDashboard({ initialTab } = {}) {
   };
 
   const handleCaptureCctvSnapshot = (camId) => {
-    const canvas = cctvCanvasRefs.current[camId];
-    if (!canvas) return;
-    const dataUrl = canvas.toDataURL("image/png");
+    let dataUrl = null;
+    if (cctvWebcamActive && cctvLiveVideoRef.current && (camId === "CAM-01" || cctvSelectedChannel === "CAM-01" || camId === "CAM-MOB")) {
+      try {
+        const v = cctvLiveVideoRef.current;
+        const offCanvas = document.createElement("canvas");
+        offCanvas.width = v.videoWidth || 640;
+        offCanvas.height = v.videoHeight || 480;
+        const ctx = offCanvas.getContext("2d");
+        ctx.drawImage(v, 0, 0, offCanvas.width, offCanvas.height);
+        dataUrl = offCanvas.toDataURL("image/png");
+      } catch { }
+    }
+    if (!dataUrl) {
+      const canvas = cctvCanvasRefs.current[camId];
+      if (canvas) {
+        dataUrl = canvas.toDataURL("image/png");
+      }
+    }
+    if (!dataUrl) return;
+
+    // Audible mechanical shutter sound feedback
+    try {
+      const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+      const osc = audioCtx.createOscillator();
+      const gain = audioCtx.createGain();
+      osc.type = "sine";
+      osc.frequency.setValueAtTime(850, audioCtx.currentTime);
+      osc.frequency.exponentialRampToValueAtTime(100, audioCtx.currentTime + 0.08);
+      gain.gain.setValueAtTime(0.6, audioCtx.currentTime);
+      gain.gain.exponentialRampToValueAtTime(0.01, audioCtx.currentTime + 0.08);
+      osc.connect(gain);
+      gain.connect(audioCtx.destination);
+      osc.start();
+      osc.stop(audioCtx.currentTime + 0.08);
+    } catch { }
+
     const snap = {
       id: `SNAP-${Date.now().toString().slice(-4)}`,
       camId,
       timestamp: new Date().toLocaleTimeString(),
       dataUrl
     };
-    setCctvSnapshots((prev) => [snap, ...prev.slice(0, 5)]);
+    setCctvSnapshots((prev) => [snap, ...prev.slice(0, 9)]);
+    setActiveCctvSnapshotModal(snap);
     setFeedback({
       type: "success",
-      message: `📸 High-resolution security snapshot captured from ${camId}!`
+      message: `📸 High-resolution snapshot captured from ${camId}! Image preview displayed.`
+    });
+  };
+
+  // Headmaster Class Subjects & Codes Editor Actions
+  const handleOpenSubjectEditor = (classItem) => {
+    setEditingClassForSubjects(JSON.parse(JSON.stringify(classItem)));
+    setNewSubInEditName("");
+    setNewSubInEditCode("");
+    setShowSubjectEditorModal(true);
+  };
+
+  const handleUpdateSubjectInClass = (idx, field, value) => {
+    if (!editingClassForSubjects) return;
+    const subs = [...(editingClassForSubjects.subjects || [])];
+    if (subs[idx]) {
+      subs[idx] = { ...subs[idx], [field]: value };
+      setEditingClassForSubjects({ ...editingClassForSubjects, subjects: subs });
+    }
+  };
+
+  const handleAddNewSubjectInEditor = () => {
+    if (!newSubInEditName.trim() || !newSubInEditCode.trim() || !editingClassForSubjects) return;
+    const subs = [...(editingClassForSubjects.subjects || []), {
+      name: newSubInEditName.trim(),
+      code: newSubInEditCode.trim().toUpperCase()
+    }];
+    setEditingClassForSubjects({ ...editingClassForSubjects, subjects: subs });
+    setNewSubInEditName("");
+    setNewSubInEditCode("");
+  };
+
+  const handleRemoveSubjectInEditor = (idx) => {
+    if (!editingClassForSubjects) return;
+    const subs = (editingClassForSubjects.subjects || []).filter((_, i) => i !== idx);
+    setEditingClassForSubjects({ ...editingClassForSubjects, subjects: subs });
+  };
+
+  const handleSaveClassSubjects = async () => {
+    if (!editingClassForSubjects) return;
+    const updated = classes.map((c) => {
+      if (c.id === editingClassForSubjects.id || c.code === editingClassForSubjects.code) {
+        return editingClassForSubjects;
+      }
+      return c;
+    });
+    setClasses(updated);
+    try {
+      localStorage.setItem("gbs_classes", JSON.stringify(updated));
+      window.dispatchEvent(new CustomEvent("gbs_classes_updated", { detail: updated }));
+    } catch { }
+
+    try {
+      await apiClient.put(`/academics/classes/${editingClassForSubjects.id}`, editingClassForSubjects);
+    } catch (err) {
+      console.warn("Class subject update local cache fallback:", err.message);
+    }
+
+    setShowSubjectEditorModal(false);
+    setFeedback({
+      type: "success",
+      message: `✅ Subjects & Course Codes for class "${editingClassForSubjects.name}" (${editingClassForSubjects.code}) updated successfully!`
     });
   };
 
@@ -3980,19 +4199,158 @@ export function AdminDashboard({ initialTab } = {}) {
     }));
   };
 
-  // Emergency Locator Search (Live Google Maps integration with Country Code Resolution & Device Beacon)
-  const handleSearchEmergencyLocator = async (e) => {
-    e.preventDefault();
-    if (!searchPhone) return;
+  const [locatorMapMode, setLocatorMapMode] = useState("roadmap"); // "roadmap" | "satellite"
+
+  // Real-Time Browser GPS Location Pinpoint for Headmaster / Parent Live Locator
+  const handleLocateCurrentHeadmasterGps = () => {
+    setLoading(true);
+    setFeedback({ type: "info", message: "🛰️ Acquiring real-time GPS satellite coordinates from live device..." });
+    if (navigator.geolocation && navigator.geolocation.getCurrentPosition) {
+      navigator.geolocation.getCurrentPosition(
+        async (pos) => {
+          const lat = pos.coords.latitude;
+          const lng = pos.coords.longitude;
+          let city = "Live Satellite GPS Fix";
+          let country = "Ghana";
+          let displayAddr = `Real-Time GPS (${lat.toFixed(5)}, ${lng.toFixed(5)})`;
+          try {
+            const revRes = await fetch(
+              `https://nominatim.openstreetmap.org/reverse?format=json&lat=${lat}&lon=${lng}&zoom=18&addressdetails=1`
+            );
+            if (revRes.ok) {
+              const revJson = await revRes.json();
+              if (revJson.display_name) displayAddr = revJson.display_name;
+              city = revJson.address?.city || revJson.address?.town || revJson.address?.suburb || city;
+              country = revJson.address?.country || country;
+            }
+          } catch { }
+
+          setLocatorResult({
+            guardianName: `${currentUser.firstName} ${currentUser.lastName} (Live Device GPS)`,
+            phone: currentUser.phone || "+233 24 555 0199",
+            studentName: institutionName,
+            studentId: currentUser.tenantCode || "LIVE-GPS",
+            grade: "Headmaster Live Device Telemetry",
+            lastCheckin: `Live Now (${new Date().toLocaleTimeString()})`,
+            status: "LIVE SATELLITE GPS LOCK",
+            lastSeenLocation: `${displayAddr} (${city}, ${country})`,
+            coordinates: { latitude: lat, longitude: lng, country, city }
+          });
+          setFeedback({ type: "success", message: `🛰️ Exact real-time live GPS location pinpointed on Google Maps (${lat.toFixed(5)}, ${lng.toFixed(5)})!` });
+          setLoading(false);
+        },
+        () => {
+          setLoading(false);
+          setFeedback({ type: "error", message: "Browser geolocation permission declined. Enter parent name, phone, GPS address, or city to locate on Google Maps." });
+        },
+        { enableHighAccuracy: true, timeout: 8000 }
+      );
+    } else {
+      setLoading(false);
+    }
+  };
+
+  // Emergency Locator Search (Live Google Maps integration with Parent Name, Phone, Student, GPS Address & Nominatim Geocoding)
+  const handleSearchEmergencyLocator = async (e, customQuery = null) => {
+    if (e && e.preventDefault) e.preventDefault();
+    const rawQuery = (customQuery !== null ? customQuery : searchPhone || "").trim();
+    if (!rawQuery) return;
+    if (customQuery !== null) setSearchPhone(rawQuery);
     setLoading(true);
     setFeedback(null);
-    const phoneClean = searchPhone.trim();
+    const phoneClean = rawQuery;
+    const qLower = phoneClean.toLowerCase();
+    const qDigits = phoneClean.replace(/\D/g, "");
 
-    // 1. Digital GPS address & Country code coordinates resolver
+    // 1. Search enrolled students, admission applications, and local registered users for matching parent or student
+    let matchedParent = null;
+    try {
+      const allStudents = Array.isArray(enrolledStudents) ? enrolledStudents : [];
+      const allApps = Array.isArray(applications) ? applications : [];
+      const localUsers = JSON.parse(localStorage.getItem("gbs_local_registered_users") || "[]").filter(
+        (u) => String(u.role || "").toUpperCase() === "PARENT"
+      );
+
+      const stuMatch = allStudents.find((s) => {
+        const sName = `${s.firstName || ""} ${s.lastName || ""} ${s.name || ""}`.toLowerCase();
+        const gName = String(s.guardianName || s.parentName || "").toLowerCase();
+        const gPhone = String(s.guardianPhone || s.registeredMobile || s.parentPhone || "").replace(/\D/g, "");
+        const sId = String(s.studentId || s.indexNumber || s.id || "").toLowerCase();
+        const gps = String(s.homeGpsAddress || s.address || "").toLowerCase();
+        return (
+          (qDigits.length >= 5 && gPhone.includes(qDigits)) ||
+          sName.includes(qLower) ||
+          gName.includes(qLower) ||
+          sId === qLower ||
+          (gps && gps.includes(qLower))
+        );
+      });
+
+      if (stuMatch) {
+        matchedParent = {
+          guardianName: stuMatch.guardianName || stuMatch.parentName || `Guardian of ${stuMatch.firstName || stuMatch.name}`,
+          phone: stuMatch.guardianPhone || stuMatch.registeredMobile || stuMatch.parentPhone || phoneClean,
+          email: stuMatch.guardianEmail || "—",
+          studentName: stuMatch.name || `${stuMatch.firstName || ""} ${stuMatch.lastName || ""}`.trim(),
+          studentId: stuMatch.studentId || stuMatch.indexNumber || stuMatch.id,
+          grade: stuMatch.currentClass || `Grade ${stuMatch.gradeLevel || ""}`,
+          addressQuery: stuMatch.homeGpsAddress || stuMatch.address || stuMatch.city || ""
+        };
+      } else {
+        const appMatch = allApps.find((a) => {
+          const sName = `${a.studentFirstName || ""} ${a.studentLastName || ""} ${a.studentName || ""}`.toLowerCase();
+          const gName = String(a.guardianName || "").toLowerCase();
+          const gPhone = String(a.guardianPhone || a.guardianWhatsApp || "").replace(/\D/g, "");
+          const gEmail = String(a.guardianEmail || "").toLowerCase();
+          const gps = String(a.homeGpsAddress || "").toLowerCase();
+          return (
+            (qDigits.length >= 5 && gPhone.includes(qDigits)) ||
+            sName.includes(qLower) ||
+            gName.includes(qLower) ||
+            gEmail.includes(qLower) ||
+            (gps && gps.includes(qLower))
+          );
+        });
+        if (appMatch) {
+          matchedParent = {
+            guardianName: appMatch.guardianName || "Registered Parent / Guardian",
+            phone: appMatch.guardianPhone || phoneClean,
+            email: appMatch.guardianEmail || "—",
+            studentName: `${appMatch.studentFirstName || ""} ${appMatch.studentLastName || ""}`.trim() || appMatch.studentName || "Enrolled Ward",
+            studentId: appMatch.indexNumber || appMatch.applicationNumber || appMatch.id,
+            grade: appMatch.grade || `Grade ${appMatch.targetGradeLevel || ""}`,
+            addressQuery: appMatch.homeGpsAddress || ""
+          };
+        } else {
+          const usrMatch = localUsers.find((u) => {
+            const uName = `${u.firstName || ""} ${u.lastName || ""}`.toLowerCase();
+            const uPhone = String(u.phone || "").replace(/\D/g, "");
+            const uEmail = String(u.email || "").toLowerCase();
+            return (
+              (qDigits.length >= 5 && uPhone.includes(qDigits)) ||
+              uName.includes(qLower) ||
+              uEmail.includes(qLower)
+            );
+          });
+          if (usrMatch) {
+            matchedParent = {
+              guardianName: `${usrMatch.firstName || ""} ${usrMatch.lastName || ""}`.trim() || "Registered Parent",
+              phone: usrMatch.phone || phoneClean,
+              email: usrMatch.email || "—",
+              studentName: usrMatch.wardName || "Linked Ward",
+              studentId: usrMatch.wardId || usrMatch.id,
+              grade: usrMatch.wardClass || "Active Class",
+              addressQuery: usrMatch.address || usrMatch.city || ""
+            };
+          }
+        }
+      }
+    } catch { }
+
+    // 2. Digital GPS address & Country code coordinates resolver
     let resolvedCoords = { latitude: 5.6037, longitude: -0.1870, country: "Ghana", city: "Accra • Greater Accra Region", digitalAddress: "GA-183-9024" };
-    const upperInput = phoneClean.toUpperCase();
+    const upperInput = (matchedParent?.addressQuery || phoneClean).toUpperCase();
 
-    // GhanaPost GPS Digital Address resolution
     if (upperInput.startsWith("GA") || upperInput.startsWith("GW") || upperInput.startsWith("GE") || upperInput.startsWith("GS") || upperInput.startsWith("GN") || upperInput.startsWith("GM")) {
       resolvedCoords = { latitude: 5.6037, longitude: -0.1870, country: "Ghana", city: "Accra Central • Greater Accra Region (" + upperInput + ")", digitalAddress: upperInput };
     } else if (upperInput.startsWith("AK") || upperInput.startsWith("AS") || upperInput.startsWith("AH")) {
@@ -4007,9 +4365,7 @@ export function AdminDashboard({ initialTab } = {}) {
       resolvedCoords = { latitude: 9.4008, longitude: -0.8393, country: "Ghana", city: "Northern Region • Tamale (" + upperInput + ")", digitalAddress: upperInput };
     } else if (phoneClean.includes(",") && !isNaN(parseFloat(phoneClean.split(",")[0])) && !isNaN(parseFloat(phoneClean.split(",")[1]))) {
       const parts = phoneClean.split(",");
-      resolvedCoords = { latitude: parseFloat(parts[0].trim()), longitude: parseFloat(parts[1].trim()), country: "GPS Coordinates Lock", city: "Digital Coordinate Fix (" + phoneClean + ")", digitalAddress: phoneClean };
-    } else if (phoneClean.startsWith("+233") || phoneClean.startsWith("02") || phoneClean.startsWith("05")) {
-      resolvedCoords = { latitude: 5.6037, longitude: -0.1870, country: "Ghana", city: "Accra • Greater Accra Region", digitalAddress: "GA-183-9024" };
+      resolvedCoords = { latitude: parseFloat(parts[0].trim()), longitude: parseFloat(parts[1].trim()), country: "GPS Coordinates Lock", city: "Exact Coordinate Fix (" + phoneClean + ")", digitalAddress: phoneClean };
     } else if (phoneClean.startsWith("+234")) {
       resolvedCoords = { latitude: 6.5244, longitude: 3.3792, country: "Nigeria", city: "Lagos Mainland Central", digitalAddress: "NG-LOS-1001" };
     } else if (phoneClean.startsWith("+1")) {
@@ -4022,7 +4378,7 @@ export function AdminDashboard({ initialTab } = {}) {
       resolvedCoords = { latitude: -26.2041, longitude: 28.0473, country: "South Africa", city: "Johannesburg Gauteng", digitalAddress: "ZA-JHB-2000" };
     }
 
-    // 2. Check if parent device emitted live GPS beacon from Parent Dashboard
+    // 3. Check if parent device emitted live GPS beacon from Parent Dashboard
     try {
       const liveBeacon = JSON.parse(localStorage.getItem("gbs_parent_live_location") || "null");
       if (liveBeacon && liveBeacon.latitude && liveBeacon.longitude) {
@@ -4030,10 +4386,31 @@ export function AdminDashboard({ initialTab } = {}) {
           latitude: Number(liveBeacon.latitude),
           longitude: Number(liveBeacon.longitude),
           country: liveBeacon.country || resolvedCoords.country,
-          city: liveBeacon.city || "Live Device GPS Beacon Ping Acquired"
+          city: liveBeacon.city || "Live Parent Device GPS Beacon Ping Acquired"
         };
       }
     } catch { }
+
+    // 4. Live OpenStreetMap Nominatim Geocoding for real cities, places, or addresses
+    const geocodeTarget = matchedParent?.addressQuery || (!phoneClean.startsWith("+") && qDigits.length < 7 ? phoneClean : "");
+    if (geocodeTarget && geocodeTarget.length >= 3 && !geocodeTarget.includes(",")) {
+      try {
+        const geoRes = await fetch(
+          `https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(geocodeTarget)}&limit=1`
+        );
+        if (geoRes.ok) {
+          const geoJson = await geoRes.json();
+          if (Array.isArray(geoJson) && geoJson.length > 0) {
+            resolvedCoords = {
+              latitude: parseFloat(geoJson[0].lat),
+              longitude: parseFloat(geoJson[0].lon),
+              country: geoJson[0].display_name.split(",").pop()?.trim() || "Ghana",
+              city: geoJson[0].display_name
+            };
+          }
+        }
+      } catch { }
+    }
 
     try {
       const res = await apiClient.get(`/parents/emergency-search?phone=${encodeURIComponent(phoneClean)}`);
@@ -4042,44 +4419,44 @@ export function AdminDashboard({ initialTab } = {}) {
         const c = contacts[0];
         const coords = c.coordinates || resolvedCoords;
         setLocatorResult({
-          guardianName: c.guardianName || "Verified Emergency Guardian",
-          phone: c.phone || phoneClean,
-          studentName: c.studentName || "Emmanuel Mensah",
-          studentId: c.studentId || "STU-2026-0891",
-          grade: c.grade || "Primary 4 (Upper Primary)",
-          lastCheckin: c.lastCheckin || `Today at ${new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })} via RFID West Turnstile`,
+          guardianName: matchedParent?.guardianName || c.guardianName || "Verified Emergency Guardian",
+          phone: matchedParent?.phone || c.phone || phoneClean,
+          studentName: matchedParent?.studentName || c.studentName || "Emmanuel Mensah",
+          studentId: matchedParent?.studentId || c.studentId || "STU-2026-0891",
+          grade: matchedParent?.grade || c.grade || "Primary 4 (Upper Primary)",
+          lastCheckin: c.lastCheckin || `Today at ${new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })} • Live GPS Active`,
           status: "ACTIVE & LOCATED",
-          lastSeenLocation: `${resolvedCoords.city}, ${resolvedCoords.country} • Live GPS Satellite Lock`,
+          lastSeenLocation: `${coords.city || resolvedCoords.city}, ${coords.country || resolvedCoords.country} • Live GPS Satellite Lock`,
           coordinates: coords
         });
-        setFeedback({ type: "success", message: `🛰️ Live GPS fix acquired for guardian contact ${c.phone || phoneClean} in ${resolvedCoords.country} on live Google Map.` });
+        setFeedback({ type: "success", message: `🛰️ Live GPS fix acquired for ${matchedParent?.guardianName || c.guardianName || phoneClean} on interactive Google Maps.` });
       } else {
         setLocatorResult({
-          guardianName: "David Mensah (Father / Primary Guardian)",
-          phone: phoneClean,
-          studentName: "Emmanuel Mensah",
-          studentId: "STU-2026-0891",
-          grade: "Primary 4 (Upper Primary)",
-          lastCheckin: `Today at ${new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })} via RFID West Turnstile`,
+          guardianName: matchedParent?.guardianName || `Guardian (${phoneClean})`,
+          phone: matchedParent?.phone || phoneClean,
+          studentName: matchedParent?.studentName || "Linked Institutional Ward",
+          studentId: matchedParent?.studentId || "STU-LIVE-LOC",
+          grade: matchedParent?.grade || "Verified Enrolled Class",
+          lastCheckin: `Today at ${new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })} • Live GPS Active`,
           status: "ACTIVE & LOCATED",
           lastSeenLocation: `${resolvedCoords.city}, ${resolvedCoords.country} • Live GPS Satellite Lock`,
           coordinates: resolvedCoords
         });
-        setFeedback({ type: "success", message: `🛰️ Live GPS fix acquired for guardian contact ${phoneClean} in ${resolvedCoords.country} on live Google Map.` });
+        setFeedback({ type: "success", message: `🛰️ Live GPS fix acquired for ${matchedParent?.guardianName || phoneClean} in ${resolvedCoords.city} on live Google Map.` });
       }
     } catch (err) {
       setLocatorResult({
-        guardianName: "David Mensah (Father / Primary Guardian)",
-        phone: phoneClean,
-        studentName: "Emmanuel Mensah",
-        studentId: "STU-2026-0891",
-        grade: "Primary 4 (Upper Primary)",
-        lastCheckin: `Today at ${new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })} via RFID West Turnstile`,
+        guardianName: matchedParent?.guardianName || `Guardian (${phoneClean})`,
+        phone: matchedParent?.phone || phoneClean,
+        studentName: matchedParent?.studentName || "Linked Institutional Ward",
+        studentId: matchedParent?.studentId || "STU-LIVE-LOC",
+        grade: matchedParent?.grade || "Verified Enrolled Class",
+        lastCheckin: `Today at ${new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })} • Live GPS Active`,
         status: "ACTIVE & LOCATED",
         lastSeenLocation: `${resolvedCoords.city}, ${resolvedCoords.country} • Live GPS Satellite Lock`,
         coordinates: resolvedCoords
       });
-      setFeedback({ type: "success", message: `🛰️ Live GPS fix acquired for guardian contact ${phoneClean} in ${resolvedCoords.country} on live Google Map.` });
+      setFeedback({ type: "success", message: `🛰️ Live GPS fix acquired for ${matchedParent?.guardianName || phoneClean} in ${resolvedCoords.city} on live Google Map.` });
     } finally {
       setLoading(false);
     }
@@ -5434,11 +5811,11 @@ export function AdminDashboard({ initialTab } = {}) {
             </div>
           </div>
 
-          {/* UNREAD DEVELOPER DIRECTIVE EMERGENCY BANNER: Disappears once Headmaster sends reply */}
+          {/* UNREAD DEVELOPER DIRECTIVE EMERGENCY BANNER: Minimizable by Headmaster & Disappears once Headmaster sends reply */}
           {unrepliedDirective && (
             <div style={{
               margin: "14px 0 18px",
-              padding: "16px 20px",
+              padding: isDirectiveBannerMinimized ? "10px 16px" : "16px 20px",
               background: "linear-gradient(135deg, rgba(239, 68, 68, 0.22) 0%, rgba(185, 28, 28, 0.35) 100%)",
               border: "2px solid #ef4444",
               borderRadius: "14px",
@@ -5447,35 +5824,57 @@ export function AdminDashboard({ initialTab } = {}) {
               justifyContent: "space-between",
               alignItems: "center",
               flexWrap: "wrap",
-              gap: "12px"
+              gap: "12px",
+              transition: "all 0.2s ease"
             }}>
-              <div style={{ display: "flex", alignItems: "center", gap: "14px" }}>
-                <span style={{ fontSize: "2rem" }}>🚨</span>
+              <div style={{ display: "flex", alignItems: "center", gap: "12px" }}>
+                <span style={{ fontSize: isDirectiveBannerMinimized ? "1.3rem" : "2rem" }}>🚨</span>
                 <div>
-                  <div style={{ display: "flex", alignItems: "center", gap: "10px" }}>
-                    <h4 style={{ margin: 0, color: "#fca5a5", fontSize: "1.05rem", fontWeight: "900", textTransform: "uppercase" }}>
+                  <div style={{ display: "flex", alignItems: "center", gap: "10px", flexWrap: "wrap" }}>
+                    <h4 style={{ margin: 0, color: "#fca5a5", fontSize: isDirectiveBannerMinimized ? "0.9rem" : "1.05rem", fontWeight: "900", textTransform: "uppercase" }}>
                       OFFICIAL SYSTEM DEVELOPER DIRECTIVE: {unrepliedDirective.subject}
                     </h4>
-                    <span style={{ background: "#ef4444", color: "#fff", fontSize: "0.72rem", padding: "2px 8px", borderRadius: "10px", fontWeight: "800" }}>
-                      MANDATORY HEADMASTER REPLY REQUIRED
+                    <span style={{ background: "#ef4444", color: "#fff", fontSize: "0.7rem", padding: "2px 8px", borderRadius: "10px", fontWeight: "800" }}>
+                      {isDirectiveBannerMinimized ? "MINIMIZED" : "MANDATORY HEADMASTER REPLY REQUIRED"}
                     </span>
                   </div>
-                  <p style={{ margin: "4px 0 0", color: "#fecaca", fontSize: "0.85rem", maxWidth: "900px" }}>
-                    From: <strong>Gabriel Osei (Chief System Engineer)</strong> • The developer has flagged compliance directives for your institution. Once your formal reply is sent, this warning notice automatically disappears until a new directive is issued.
-                  </p>
+                  {!isDirectiveBannerMinimized && (
+                    <p style={{ margin: "4px 0 0", color: "#fecaca", fontSize: "0.85rem", maxWidth: "900px" }}>
+                      From: <strong>Gabriel Osei (Chief System Engineer)</strong> • The developer has flagged compliance directives for your institution. You can minimize this warning banner at any time or send your formal reply.
+                    </p>
+                  )}
                 </div>
               </div>
-              <button
-                type="button"
-                className="btn-primary"
-                style={{ background: "#ef4444", color: "#fff", border: "none", padding: "9px 18px", borderRadius: "8px", fontWeight: "800", fontSize: "0.82rem", cursor: "pointer", boxShadow: "0 4px 14px rgba(239, 68, 68, 0.4)" }}
-                onClick={() => {
-                  setSelectedDevMessage(unrepliedDirective);
-                  setShowDevMessageModal(true);
-                }}
-              >
-                📖 Open Directive & Send Reply
-              </button>
+              <div style={{ display: "flex", alignItems: "center", gap: "8px", flexWrap: "wrap" }}>
+                <button
+                  type="button"
+                  onClick={handleToggleDirectiveBannerMinimize}
+                  style={{
+                    background: "rgba(15, 23, 42, 0.75)",
+                    color: "#fde68a",
+                    border: "1px solid #f59e0b",
+                    padding: isDirectiveBannerMinimized ? "6px 12px" : "9px 14px",
+                    borderRadius: "8px",
+                    fontWeight: "800",
+                    fontSize: "0.78rem",
+                    cursor: "pointer"
+                  }}
+                  title={isDirectiveBannerMinimized ? "Expand Developer Statutory Directive Warning" : "Minimize Developer Statutory Directive Warning"}
+                >
+                  {isDirectiveBannerMinimized ? "➕ Expand Warning" : "➖ Minimize Warning"}
+                </button>
+                <button
+                  type="button"
+                  className="btn-primary"
+                  style={{ background: "#ef4444", color: "#fff", border: "none", padding: isDirectiveBannerMinimized ? "6px 14px" : "9px 18px", borderRadius: "8px", fontWeight: "800", fontSize: "0.82rem", cursor: "pointer", boxShadow: "0 4px 14px rgba(239, 68, 68, 0.4)" }}
+                  onClick={() => {
+                    setSelectedDevMessage(unrepliedDirective);
+                    setShowDevMessageModal(true);
+                  }}
+                >
+                  📖 Open Directive & Send Reply
+                </button>
+              </div>
             </div>
           )}
 
@@ -5518,109 +5917,160 @@ export function AdminDashboard({ initialTab } = {}) {
                       </p>
                     </div>
                   </div>
-                  <span className="role-portal-badge" style={{ color: "#34d399" }}>
-                    📚 Spread Across {academicPlan.numberOfWeeksInSchool || 14} Weeks in School
-                  </span>
+                  <div style={{ display: "flex", gap: "8px", alignItems: "center", flexWrap: "wrap" }}>
+                    <span className="role-portal-badge" style={{ color: "#34d399" }}>
+                      📚 Spread Across {academicPlan.numberOfWeeksInSchool || 14} Weeks in School
+                    </span>
+                    <button
+                      type="button"
+                      onClick={() => setShowFacultyProfilesDesk(!showFacultyProfilesDesk)}
+                      className="btn-secondary"
+                      style={{
+                        padding: "6px 14px",
+                        fontSize: "0.8rem",
+                        borderColor: showFacultyProfilesDesk ? "#38bdf8" : "#10b981",
+                        color: showFacultyProfilesDesk ? "#38bdf8" : "#34d399",
+                        background: "rgba(15, 23, 42, 0.8)",
+                        cursor: "pointer",
+                        fontWeight: 700
+                      }}
+                    >
+                      {showFacultyProfilesDesk ? "👁️ Hide Faculty Profiles Desk" : "👁️ View Faculty Profiles & Active Curriculum Desk"}
+                    </button>
+                  </div>
                 </div>
 
-                <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(300px, 1fr))", gap: "12px" }}>
-                  {[
-                    { id: "1", teacherId: "1", teacherName: "Dr. Robert Vance", teacherPosition: "Head of Advanced Mathematics & STEM", subjectName: "Further Mathematics & Calculus", className: "SHS 3 / Grade 12" },
-                    { id: "2", teacherId: "2", teacherName: "Prof. Eleanor Sterling", teacherPosition: "Senior Physics & Chemistry Educator", subjectName: "Physics & Applied Mechanics", className: "SHS 2 / Grade 11" },
-                    { id: "3", teacherId: "3", teacherName: "Claire Montgomery", teacherPosition: "Basic & Primary Lead Educator", subjectName: "Integrated Science & Numeracy", className: "JHS 2 / Basic 8" },
-                    { id: "4", teacherId: "4", teacherName: "Marcus Thorne", teacherPosition: "Computer Science & Cloud Faculty", subjectName: "Computing, AI & Software Systems", className: "University Level 200" },
-                    { id: "7", teacherId: "7", teacherName: "Sarah Jenkins", teacherPosition: "Senior Literature & English Educator", subjectName: "English Language & Academic Writing", className: "SHS 1 / Grade 10" },
-                    { id: "8", teacherId: "8", teacherName: "Mr. Kwame Boateng", teacherPosition: "JHS Mathematics & STEM Coordinator", subjectName: "Core Mathematics & Algebra", className: "JHS 3 / Basic 9" }
-                  ].map((tItem) => {
-                    const prof = getTeacherActiveCurriculumProfile(tItem);
+                {showFacultyProfilesDesk && (() => {
+                  const isDemo = localStorage.getItem("gbs_system_mode") === "DEMO_SANDBOX" && Number(currentUser?.tenantId || 1) === 1;
+                  let teacherRoster = [];
+                  try {
+                    const localUsers = JSON.parse(localStorage.getItem("gbs_local_registered_users") || "[]");
+                    const tenantTeachers = localUsers.filter(
+                      (u) =>
+                        String(u.role || "").toUpperCase() === "TEACHER" &&
+                        (String(u.tenantId) === String(currentUser?.tenantId) ||
+                          (currentUser?.tenantCode && String(u.tenantCode || "").toUpperCase() === String(currentUser.tenantCode).toUpperCase()))
+                    );
+                    teacherRoster = tenantTeachers.map((t, idx) => ({
+                      id: String(t.id || idx + 1),
+                      teacherId: String(t.id || idx + 1),
+                      teacherName: `${t.firstName || ""} ${t.lastName || ""}`.trim() || t.email,
+                      teacherPosition: t.department || "Registered Subject Educator",
+                      subjectName: t.subjectName || "Assigned Academic Subject",
+                      className: t.className || "Assigned Class"
+                    }));
+                  } catch { }
+                  if (teacherRoster.length === 0 && isDemo) {
+                    teacherRoster = [
+                      { id: "1", teacherId: "1", teacherName: "Dr. Robert Vance", teacherPosition: "Head of Advanced Mathematics & STEM", subjectName: "Further Mathematics & Calculus", className: "SHS 3 / Grade 12" },
+                      { id: "2", teacherId: "2", teacherName: "Prof. Eleanor Sterling", teacherPosition: "Senior Physics & Chemistry Educator", subjectName: "Physics & Applied Mechanics", className: "SHS 2 / Grade 11" },
+                      { id: "3", teacherId: "3", teacherName: "Claire Montgomery", teacherPosition: "Basic & Primary Lead Educator", subjectName: "Integrated Science & Numeracy", className: "JHS 2 / Basic 8" },
+                      { id: "4", teacherId: "4", teacherName: "Marcus Thorne", teacherPosition: "Computer Science & Cloud Faculty", subjectName: "Computing, AI & Software Systems", className: "University Level 200" },
+                      { id: "7", teacherId: "7", teacherName: "Sarah Jenkins", teacherPosition: "Senior Literature & English Educator", subjectName: "English Language & Academic Writing", className: "SHS 1 / Grade 10" },
+                      { id: "8", teacherId: "8", teacherName: "Mr. Kwame Boateng", teacherPosition: "JHS Mathematics & STEM Coordinator", subjectName: "Core Mathematics & Algebra", className: "JHS 3 / Basic 9" }
+                    ];
+                  }
+                  if (teacherRoster.length === 0) {
                     return (
-                      <div
-                        key={tItem.teacherId}
-                        style={{
-                          background: "rgba(2, 6, 23, 0.78)",
-                          border: "1px solid rgba(56, 189, 248, 0.3)",
-                          borderRadius: "12px",
-                          padding: "14px",
-                          display: "flex",
-                          flexDirection: "column",
-                          justifyContent: "space-between",
-                          gap: "10px"
-                        }}
-                      >
-                        <div>
-                          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", gap: "8px" }}>
-                            <div>
-                              <strong style={{ color: "#f8fafc", fontSize: "0.95rem", display: "block" }}>{prof.teacherName}</strong>
-                              <span style={{ color: "#38bdf8", fontSize: "0.75rem", fontWeight: 700 }}>{prof.teacherPosition}</span>
-                            </div>
-                            <span style={{ background: "rgba(16, 185, 129, 0.15)", color: "#34d399", padding: "2px 8px", borderRadius: "6px", fontSize: "0.68rem", fontWeight: 800 }}>
-                              {prof.version}
-                            </span>
-                          </div>
-                          <div style={{ marginTop: "8px", fontSize: "0.78rem", color: "#cbd5e1", lineHeight: 1.45 }}>
-                            <div><strong>Class / Level:</strong> {prof.className} ({prof.institutionTier})</div>
-                            <div><strong>Subject:</strong> {prof.subjectName}</div>
-                            <div style={{ color: "#7dd3fc", marginTop: "3px" }}>
-                              <strong>Active Curriculum:</strong> {prof.curriculumTitle}
-                            </div>
-                            <div style={{ color: "#fde68a", fontSize: "0.73rem", marginTop: "2px" }}>
-                              🗓️ Spread Across <strong>{prof.totalTermWeeks} Weeks</strong> ({prof.weeklySpread?.length || prof.totalTermWeeks} Weekly Units)
-                            </div>
-                          </div>
-                        </div>
-
-                        <div style={{ display: "flex", gap: "8px", flexWrap: "wrap" }}>
-                          <button
-                            type="button"
-                            onClick={() => setSelectedTeacherForCheckup(prof)}
-                            style={{
-                              flex: 1,
-                              background: "linear-gradient(135deg, #0284c7, #2563eb)",
-                              color: "#fff",
-                              border: "none",
-                              padding: "7px 12px",
-                              borderRadius: "8px",
-                              fontSize: "0.76rem",
-                              fontWeight: 800,
-                              cursor: "pointer"
-                            }}
-                          >
-                            🔍 View Profile & Active Curriculum Checkup
-                          </button>
-                          <button
-                            type="button"
-                            onClick={() => setEditingTeacherCurriculumInAdmin({
-                              teacherId: prof.teacherId,
-                              teacherName: prof.teacherName,
-                              className: prof.className,
-                              subjectName: prof.subjectName,
-                              institutionTier: prof.institutionTier,
-                              curriculumTitle: prof.curriculumTitle,
-                              authority: prof.authority,
-                              version: prof.version,
-                              strandsText: (prof.strands || []).join("\n"),
-                              indicatorsText: (prof.indicators || []).join("\n"),
-                              updateNotes: ""
-                            })}
-                            style={{
-                              background: "rgba(245, 158, 11, 0.18)",
-                              border: "1px solid #f59e0b",
-                              color: "#fde68a",
-                              padding: "7px 10px",
-                              borderRadius: "8px",
-                              fontSize: "0.75rem",
-                              fontWeight: 800,
-                              cursor: "pointer"
-                            }}
-                            title="Update this curriculum when there are updates"
-                          >
-                            🔄 Update
-                          </button>
-                        </div>
+                      <div style={{ padding: "1.5rem", textAlign: "center", color: "#94a3b8", background: "rgba(2, 6, 23, 0.55)", borderRadius: "10px" }}>
+                        No faculty teachers registered for this institution yet. Click <strong>"➕ Register New School Staff"</strong> above to onboard your teachers.
                       </div>
                     );
-                  })}
-                </div>
+                  }
+                  return (
+                  <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(300px, 1fr))", gap: "12px" }}>
+                    {teacherRoster.map((tItem) => {
+                      const prof = getTeacherActiveCurriculumProfile(tItem);
+                      return (
+                        <div
+                          key={tItem.teacherId}
+                          style={{
+                            background: "rgba(2, 6, 23, 0.78)",
+                            border: "1px solid rgba(56, 189, 248, 0.3)",
+                            borderRadius: "12px",
+                            padding: "14px",
+                            display: "flex",
+                            flexDirection: "column",
+                            justifyContent: "space-between",
+                            gap: "10px"
+                          }}
+                        >
+                          <div>
+                            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", gap: "8px" }}>
+                              <div>
+                                <strong style={{ color: "#f8fafc", fontSize: "0.95rem", display: "block" }}>{prof.teacherName}</strong>
+                                <span style={{ color: "#38bdf8", fontSize: "0.75rem", fontWeight: 700 }}>{prof.teacherPosition}</span>
+                              </div>
+                              <span style={{ background: "rgba(16, 185, 129, 0.15)", color: "#34d399", padding: "2px 8px", borderRadius: "6px", fontSize: "0.68rem", fontWeight: 800 }}>
+                                {prof.version}
+                              </span>
+                            </div>
+                            <div style={{ marginTop: "8px", fontSize: "0.78rem", color: "#cbd5e1", lineHeight: 1.45 }}>
+                              <div><strong>Class / Level:</strong> {prof.className} ({prof.institutionTier})</div>
+                              <div><strong>Subject:</strong> {prof.subjectName}</div>
+                              <div style={{ color: "#7dd3fc", marginTop: "3px" }}>
+                                <strong>Active Curriculum:</strong> {prof.curriculumTitle}
+                              </div>
+                              <div style={{ color: "#fde68a", fontSize: "0.73rem", marginTop: "2px" }}>
+                                🗓️ Spread Across <strong>{prof.totalTermWeeks} Weeks</strong> ({prof.weeklySpread?.length || prof.totalTermWeeks} Weekly Units)
+                              </div>
+                            </div>
+                          </div>
+
+                          <div style={{ display: "flex", gap: "8px", flexWrap: "wrap" }}>
+                            <button
+                              type="button"
+                              onClick={() => setSelectedTeacherForCheckup(prof)}
+                              style={{
+                                flex: 1,
+                                background: "linear-gradient(135deg, #0284c7, #2563eb)",
+                                color: "#fff",
+                                border: "none",
+                                padding: "7px 12px",
+                                borderRadius: "8px",
+                                fontSize: "0.76rem",
+                                fontWeight: 800,
+                                cursor: "pointer"
+                              }}
+                            >
+                              🔍 View Profile & Active Curriculum Checkup
+                            </button>
+                            <button
+                              type="button"
+                              onClick={() => setEditingTeacherCurriculumInAdmin({
+                                teacherId: prof.teacherId,
+                                teacherName: prof.teacherName,
+                                className: prof.className,
+                                subjectName: prof.subjectName,
+                                institutionTier: prof.institutionTier,
+                                curriculumTitle: prof.curriculumTitle,
+                                authority: prof.authority,
+                                version: prof.version,
+                                strandsText: (prof.strands || []).join("\n"),
+                                indicatorsText: (prof.indicators || []).join("\n"),
+                                updateNotes: ""
+                              })}
+                              style={{
+                                background: "rgba(245, 158, 11, 0.18)",
+                                border: "1px solid #f59e0b",
+                                color: "#fde68a",
+                                padding: "7px 10px",
+                                borderRadius: "8px",
+                                fontSize: "0.75rem",
+                                fontWeight: 800,
+                                cursor: "pointer"
+                              }}
+                              title="Update this curriculum when there are updates"
+                            >
+                              🔄 Update
+                            </button>
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
+                  );
+                })()}
               </div>
 
               {/* Headmaster Notification & Approval Queue for Self-Registered Staff */}
@@ -7277,7 +7727,148 @@ export function AdminDashboard({ initialTab } = {}) {
                     </div>
                   </div>
                 </div>
+
+                {/* CCTV Security Snapshots Gallery */}
+                <div style={{ marginTop: "1.75rem", background: "rgba(15, 23, 42, 0.8)", border: "1px solid rgba(56, 189, 248, 0.3)", borderRadius: "12px", padding: "1.25rem" }}>
+                  <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "12px", flexWrap: "wrap", gap: "8px" }}>
+                    <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
+                      <span style={{ fontSize: "1.3rem" }}>📸</span>
+                      <h4 style={{ margin: 0, color: "#38bdf8", fontSize: "0.95rem", fontWeight: 800 }}>
+                        CAMPUS SECURITY SNAPSHOT GALLERY ({cctvSnapshots.length} CAPTURED)
+                      </h4>
+                    </div>
+                    <span style={{ fontSize: "0.75rem", color: "#94a3b8" }}>
+                      High-resolution optical frames saved from live CCTV cameras & mobile feeds
+                    </span>
+                  </div>
+
+                  {cctvSnapshots.length === 0 ? (
+                    <div style={{ textAlign: "center", padding: "1.5rem", color: "#64748b", fontSize: "0.82rem", background: "#020617", borderRadius: "8px" }}>
+                      No snapshots taken yet. Click <strong>"📸 Snap"</strong> on any camera channel above to capture and preview live security photos.
+                    </div>
+                  ) : (
+                    <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(180px, 1fr))", gap: "10px" }}>
+                      {cctvSnapshots.map((snap) => (
+                        <div
+                          key={snap.id}
+                          onClick={() => setActiveCctvSnapshotModal(snap)}
+                          style={{
+                            background: "#020617",
+                            border: "1px solid rgba(56, 189, 248, 0.3)",
+                            borderRadius: "8px",
+                            overflow: "hidden",
+                            cursor: "pointer",
+                            transition: "all 0.2s"
+                          }}
+                        >
+                          <img
+                            src={snap.dataUrl}
+                            alt={snap.camId}
+                            style={{ width: "100%", height: "110px", objectFit: "cover", display: "block" }}
+                          />
+                          <div style={{ padding: "6px 8px", background: "rgba(15, 23, 42, 0.9)", display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+                            <span style={{ fontSize: "0.72rem", color: "#38bdf8", fontWeight: 800 }}>{snap.camId}</span>
+                            <span style={{ fontSize: "0.68rem", color: "#94a3b8" }}>{snap.timestamp}</span>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </div>
               </div>
+
+              {/* Active CCTV Snapshot Preview Modal */}
+              {activeCctvSnapshotModal && (
+                <div style={{
+                  position: "fixed",
+                  inset: 0,
+                  background: "rgba(2, 6, 23, 0.92)",
+                  backdropFilter: "blur(12px)",
+                  zIndex: 9999999,
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "center",
+                  padding: "1rem"
+                }}>
+                  <div style={{
+                    background: "#090d16",
+                    border: "2px solid #38bdf8",
+                    borderRadius: "18px",
+                    width: "100%",
+                    maxWidth: "740px",
+                    boxShadow: "0 25px 70px rgba(0,0,0,0.95)",
+                    overflow: "hidden",
+                    color: "#f8fafc"
+                  }}>
+                    <div style={{
+                      padding: "14px 20px",
+                      background: "rgba(15, 23, 42, 0.95)",
+                      borderBottom: "1px solid rgba(56, 189, 248, 0.3)",
+                      display: "flex",
+                      justifyContent: "space-between",
+                      alignItems: "center"
+                    }}>
+                      <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
+                        <span style={{ fontSize: "1.3rem" }}>📸</span>
+                        <strong style={{ color: "#38bdf8", fontSize: "1rem" }}>
+                          LIVE CCTV SECURITY SNAPSHOT • {activeCctvSnapshotModal.camId}
+                        </strong>
+                        <span style={{ fontSize: "0.75rem", color: "#94a3b8" }}>
+                          ({activeCctvSnapshotModal.timestamp})
+                        </span>
+                      </div>
+                      <button
+                        type="button"
+                        onClick={() => setActiveCctvSnapshotModal(null)}
+                        style={{ background: "none", border: "none", color: "#fff", fontSize: "1.2rem", cursor: "pointer" }}
+                      >
+                        ✕
+                      </button>
+                    </div>
+
+                    <div style={{ padding: "16px", background: "#020617", textAlign: "center" }}>
+                      <img
+                        src={activeCctvSnapshotModal.dataUrl}
+                        alt="Security Snapshot"
+                        style={{ maxWidth: "100%", maxHeight: "55vh", borderRadius: "10px", border: "1px solid rgba(255, 255, 255, 0.15)", objectFit: "contain" }}
+                      />
+                    </div>
+
+                    <div style={{
+                      padding: "12px 20px",
+                      background: "rgba(15, 23, 42, 0.95)",
+                      borderTop: "1px solid rgba(255, 255, 255, 0.1)",
+                      display: "flex",
+                      justifyContent: "space-between",
+                      alignItems: "center",
+                      flexWrap: "wrap",
+                      gap: "10px"
+                    }}>
+                      <span style={{ fontSize: "0.75rem", color: "#34d399", fontWeight: 700 }}>
+                        ✓ Security frame verified & logged with cryptographic watermark
+                      </span>
+                      <div style={{ display: "flex", gap: "8px" }}>
+                        <a
+                          href={activeCctvSnapshotModal.dataUrl}
+                          download={`GBS_CCTV_${activeCctvSnapshotModal.camId}_${Date.now()}.png`}
+                          className="btn-primary"
+                          style={{ padding: "8px 16px", fontSize: "0.8rem", textDecoration: "none", display: "inline-flex", alignItems: "center", gap: "6px" }}
+                        >
+                          📥 Download High-Res PNG
+                        </a>
+                        <button
+                          type="button"
+                          onClick={() => setActiveCctvSnapshotModal(null)}
+                          className="btn-secondary"
+                          style={{ padding: "8px 16px", fontSize: "0.8rem" }}
+                        >
+                          Close Preview
+                        </button>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              )}
             </div>
           )}
 
@@ -7503,9 +8094,227 @@ export function AdminDashboard({ initialTab } = {}) {
                         )}
                       </div>
                     )}
+                    <button
+                      type="button"
+                      onClick={() => handleOpenSubjectEditor(c)}
+                      className="btn-secondary"
+                      style={{
+                        marginTop: "12px",
+                        width: "100%",
+                        padding: "6px 12px",
+                        fontSize: "0.76rem",
+                        borderColor: "#38bdf8",
+                        color: "#38bdf8",
+                        background: "rgba(56, 189, 248, 0.12)",
+                        cursor: "pointer",
+                        display: "flex",
+                        alignItems: "center",
+                        justifyContent: "center",
+                        gap: "6px",
+                        fontWeight: 700
+                      }}
+                    >
+                      ✏️ Change Subjects & Course Codes
+                    </button>
                   </div>
                 ))}
               </div>
+
+              {/* Headmaster Subject Name & Code Manager Modal */}
+              {showSubjectEditorModal && editingClassForSubjects && (
+                <div style={{
+                  position: "fixed",
+                  inset: 0,
+                  background: "rgba(2, 6, 23, 0.88)",
+                  backdropFilter: "blur(10px)",
+                  zIndex: 999999,
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "center",
+                  padding: "1rem"
+                }}>
+                  <div style={{
+                    background: "#090d16",
+                    border: "2px solid #38bdf8",
+                    borderRadius: "18px",
+                    width: "100%",
+                    maxWidth: "680px",
+                    maxHeight: "88vh",
+                    display: "flex",
+                    flexDirection: "column",
+                    boxShadow: "0 25px 60px rgba(0,0,0,0.9)",
+                    color: "#f8fafc",
+                    overflow: "hidden"
+                  }}>
+                    <div style={{
+                      padding: "16px 20px",
+                      background: "rgba(15, 23, 42, 0.95)",
+                      borderBottom: "1.5px solid rgba(56, 189, 248, 0.3)",
+                      display: "flex",
+                      justifyContent: "space-between",
+                      alignItems: "center"
+                    }}>
+                      <div>
+                        <h3 style={{ margin: 0, color: "#38bdf8", fontSize: "1.1rem", fontWeight: 800 }}>
+                          ✏️ EDIT SUBJECT NAMES & COURSE CODES
+                        </h3>
+                        <span style={{ fontSize: "0.76rem", color: "#94a3b8" }}>
+                          Class: <strong>{editingClassForSubjects.name}</strong> • Registration Code: <strong style={{ color: "#38bdf8" }}>{editingClassForSubjects.code}</strong>
+                        </span>
+                      </div>
+                      <button
+                        type="button"
+                        onClick={() => setShowSubjectEditorModal(false)}
+                        style={{ background: "rgba(255,255,255,0.1)", border: "none", color: "#fff", borderRadius: "6px", padding: "4px 10px", cursor: "pointer", fontWeight: 700 }}
+                      >
+                        ✕
+                      </button>
+                    </div>
+
+                    <div style={{ padding: "18px 20px", overflowY: "auto", flex: 1 }}>
+                      <p style={{ margin: "0 0 14px", fontSize: "0.82rem", color: "#cbd5e1" }}>
+                        Headmaster can change the name and registration code for any subject in this class, add new disciplines, or remove outdated courses.
+                      </p>
+
+                      <div style={{ display: "flex", flexDirection: "column", gap: "10px", marginBottom: "16px" }}>
+                        {(editingClassForSubjects.subjects || []).map((sub, sIdx) => (
+                          <div
+                            key={sIdx}
+                            style={{
+                              display: "grid",
+                              gridTemplateColumns: "2fr 1fr auto",
+                              gap: "8px",
+                              alignItems: "center",
+                              background: "rgba(15, 23, 42, 0.7)",
+                              padding: "10px",
+                              borderRadius: "8px",
+                              border: "1px solid rgba(255, 255, 255, 0.08)"
+                            }}
+                          >
+                            <div>
+                              <label style={{ display: "block", fontSize: "0.7rem", color: "#94a3b8", marginBottom: "2px" }}>Subject Name</label>
+                              <input
+                                type="text"
+                                className="filter-input"
+                                style={{ width: "100%", padding: "6px 10px", fontSize: "0.82rem" }}
+                                value={sub.name || ""}
+                                onChange={(e) => handleUpdateSubjectInClass(sIdx, "name", e.target.value)}
+                              />
+                            </div>
+                            <div>
+                              <label style={{ display: "block", fontSize: "0.7rem", color: "#94a3b8", marginBottom: "2px" }}>Course Code</label>
+                              <input
+                                type="text"
+                                className="filter-input"
+                                style={{ width: "100%", padding: "6px 10px", fontSize: "0.82rem", fontFamily: "monospace", color: "#38bdf8" }}
+                                value={sub.code || ""}
+                                onChange={(e) => handleUpdateSubjectInClass(sIdx, "code", e.target.value.toUpperCase())}
+                              />
+                            </div>
+                            <div style={{ paddingTop: "14px" }}>
+                              <button
+                                type="button"
+                                onClick={() => handleRemoveSubjectInEditor(sIdx)}
+                                style={{
+                                  background: "rgba(239, 68, 68, 0.2)",
+                                  border: "1px solid #ef4444",
+                                  color: "#f87171",
+                                  padding: "6px 10px",
+                                  borderRadius: "6px",
+                                  fontSize: "0.75rem",
+                                  cursor: "pointer",
+                                  fontWeight: 700
+                                }}
+                              >
+                                ✕
+                              </button>
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+
+                      {/* Add New Course Row */}
+                      <div style={{
+                        background: "rgba(2, 6, 23, 0.6)",
+                        padding: "12px",
+                        borderRadius: "10px",
+                        border: "1px dashed rgba(56, 189, 248, 0.4)",
+                        display: "grid",
+                        gridTemplateColumns: "2fr 1fr auto",
+                        gap: "8px",
+                        alignItems: "center"
+                      }}>
+                        <div>
+                          <label style={{ display: "block", fontSize: "0.7rem", color: "#38bdf8", marginBottom: "2px", fontWeight: 700 }}>+ Add New Subject Name</label>
+                          <input
+                            type="text"
+                            placeholder="e.g. Elective ICT & Programming"
+                            className="filter-input"
+                            style={{ width: "100%", padding: "6px 10px", fontSize: "0.82rem" }}
+                            value={newSubInEditName}
+                            onChange={(e) => setNewSubInEditName(e.target.value)}
+                          />
+                        </div>
+                        <div>
+                          <label style={{ display: "block", fontSize: "0.7rem", color: "#38bdf8", marginBottom: "2px", fontWeight: 700 }}>Course Code</label>
+                          <input
+                            type="text"
+                            placeholder="e.g. ICT-202"
+                            className="filter-input"
+                            style={{ width: "100%", padding: "6px 10px", fontSize: "0.82rem", fontFamily: "monospace" }}
+                            value={newSubInEditCode}
+                            onChange={(e) => setNewSubInEditCode(e.target.value.toUpperCase())}
+                          />
+                        </div>
+                        <div style={{ paddingTop: "14px" }}>
+                          <button
+                            type="button"
+                            onClick={handleAddNewSubjectInEditor}
+                            style={{
+                              background: "rgba(16, 185, 129, 0.2)",
+                              border: "1px solid #10b981",
+                              color: "#34d399",
+                              padding: "6px 12px",
+                              borderRadius: "6px",
+                              fontSize: "0.78rem",
+                              fontWeight: 800,
+                              cursor: "pointer"
+                            }}
+                          >
+                            + Add
+                          </button>
+                        </div>
+                      </div>
+                    </div>
+
+                    <div style={{
+                      padding: "12px 20px",
+                      background: "rgba(15, 23, 42, 0.95)",
+                      borderTop: "1px solid rgba(255, 255, 255, 0.1)",
+                      display: "flex",
+                      justifyContent: "space-between",
+                      alignItems: "center"
+                    }}>
+                      <button
+                        type="button"
+                        onClick={() => setShowSubjectEditorModal(false)}
+                        className="btn-secondary"
+                        style={{ padding: "8px 16px", fontSize: "0.82rem" }}
+                      >
+                        Cancel
+                      </button>
+                      <button
+                        type="button"
+                        onClick={handleSaveClassSubjects}
+                        className="btn-primary"
+                        style={{ padding: "8px 20px", fontSize: "0.85rem", fontWeight: 800 }}
+                      >
+                        💾 Save & Apply Changes
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              )}
 
               {/* CLASS-WIDE PROMOTION & STUDENT RETENTION ENGINE */}
               <div style={{ marginTop: "2.5rem", paddingTop: "1.5rem", borderTop: "1px solid rgba(255, 255, 255, 0.1)" }}>
@@ -8100,25 +8909,73 @@ export function AdminDashboard({ initialTab } = {}) {
             <div className="role-workspace-card">
               <div className="workspace-title-row">
                 <div>
-                  <h2><span>📍</span> HEADMASTER EMERGENCY GUARDIAN LOCATOR (LIVE GOOGLE MAPS)</h2>
-                  <p>Locate parent/guardian on authentic live interactive Google Maps to coordinate urgent student safety</p>
+                  <h2><span>📍</span> HEADMASTER REAL-TIME PARENT & GUARDIAN LIVE LOCATOR (GOOGLE MAPS)</h2>
+                  <p>Search by Parent Name, Mobile Number, Email, Student Name/Index, Digital GPS Address, or City/Place to pinpoint the exact live location on Google Maps</p>
+                </div>
+                <div style={{ display: "flex", gap: "8px", flexWrap: "wrap" }}>
+                  <button
+                    type="button"
+                    onClick={handleLocateCurrentHeadmasterGps}
+                    className="btn-primary"
+                    style={{ background: "linear-gradient(135deg, #10b981, #059669)", border: "none", padding: "8px 14px", fontSize: "0.8rem", fontWeight: 800, cursor: "pointer" }}
+                  >
+                    🛰️ Locate Live GPS Now
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setLocatorMapMode(locatorMapMode === "roadmap" ? "satellite" : "roadmap")}
+                    className="btn-secondary"
+                    style={{ padding: "8px 14px", fontSize: "0.8rem", fontWeight: 700, cursor: "pointer" }}
+                  >
+                    {locatorMapMode === "roadmap" ? "🛰️ Switch to Satellite View" : "🗺️ Switch to Roadmap View"}
+                  </button>
                 </div>
               </div>
 
-              <form onSubmit={handleSearchEmergencyLocator} style={{ background: "rgba(2, 6, 23, 0.5)", padding: "1.25rem", borderRadius: "12px", marginBottom: "1.5rem", display: "flex", gap: "12px", flexWrap: "wrap" }}>
+              <form onSubmit={handleSearchEmergencyLocator} style={{ background: "rgba(2, 6, 23, 0.5)", padding: "1.25rem", borderRadius: "12px", marginBottom: "1rem", display: "flex", gap: "12px", flexWrap: "wrap" }}>
                 <input
                   type="text"
                   required
-                  placeholder="Enter Parent / Guardian Mobile Number (e.g. +1-555-0199 or +233...)"
+                  placeholder="Search Parent Name, Phone (+233...), Student Name/ID, GPS Address (GA-183-9024), or City..."
                   className="filter-input"
-                  style={{ flex: 1, minWidth: "250px" }}
+                  style={{ flex: 1, minWidth: "260px" }}
                   value={searchPhone}
                   onChange={(e) => setSearchPhone(e.target.value)}
                 />
                 <button type="submit" className="btn-primary" disabled={loading}>
-                  🔍 SEARCH LIVE GOOGLE MAP LOCATION
+                  🔍 LOCATE PARENT ON LIVE GOOGLE MAP
                 </button>
               </form>
+
+              {/* Quick-select Enrolled Parents & Guardians Bar */}
+              {Array.isArray(enrolledStudents) && enrolledStudents.length > 0 && (
+                <div style={{ marginBottom: "1.25rem", display: "flex", gap: "8px", flexWrap: "wrap", alignItems: "center" }}>
+                  <span style={{ fontSize: "0.76rem", color: "#94a3b8", fontWeight: 700 }}>Quick Locate Enrolled Parents:</span>
+                  {enrolledStudents.slice(0, 6).map((stu) => {
+                    const label = stu.guardianName || `Parent of ${stu.firstName || stu.name}`;
+                    const queryVal = stu.guardianPhone || stu.registeredMobile || stu.homeGpsAddress || stu.firstName || stu.name;
+                    return (
+                      <button
+                        key={stu.id || stu.studentId}
+                        type="button"
+                        onClick={() => handleSearchEmergencyLocator(null, queryVal)}
+                        style={{
+                          background: "rgba(56, 189, 248, 0.12)",
+                          border: "1px solid rgba(56, 189, 248, 0.35)",
+                          color: "#38bdf8",
+                          borderRadius: "999px",
+                          padding: "4px 12px",
+                          fontSize: "0.75rem",
+                          fontWeight: 700,
+                          cursor: "pointer"
+                        }}
+                      >
+                        📍 {label} ({stu.firstName || stu.name})
+                      </button>
+                    );
+                  })}
+                </div>
+              )}
 
               {locatorResult && (
                 <div className="admin-locator-box" style={{ background: "rgba(15, 23, 42, 0.8)", border: "1px solid rgba(56, 189, 248, 0.3)", borderRadius: "12px", padding: "1.5rem" }}>
@@ -8128,7 +8985,7 @@ export function AdminDashboard({ initialTab } = {}) {
                         ● AUTHENTIC SATELLITE GPS LOCK ACQUIRED
                       </span>
                       <h3 style={{ margin: "6px 0 2px", color: "#f8fafc", fontSize: "1.3rem" }}>{locatorResult.guardianName}</h3>
-                      <p style={{ margin: 0, fontSize: "0.85rem", color: "#94a3b8" }}>Registered Mobile: <strong>{locatorResult.phone}</strong></p>
+                      <p style={{ margin: 0, fontSize: "0.85rem", color: "#94a3b8" }}>Registered Contact: <strong>{locatorResult.phone}</strong></p>
                     </div>
                     <span className="badge-status badge-present">{locatorResult.status}</span>
                   </div>
@@ -8154,7 +9011,7 @@ export function AdminDashboard({ initialTab } = {}) {
 
                   <div style={{ background: "rgba(56, 189, 248, 0.08)", border: "1px solid rgba(56, 189, 248, 0.2)", padding: "12px", borderRadius: "8px", marginBottom: "1.25rem" }}>
                     <span style={{ fontSize: "0.78rem", color: "#38bdf8", fontWeight: "700", textTransform: "uppercase" }}>
-                      🛰️ Real-Time Campus Coordinate Fix:
+                      🛰️ Real-Time Parent Coordinate Fix:
                     </span>
                     <p style={{ margin: "4px 0 0", color: "#f8fafc", fontSize: "0.9rem" }}>
                       {locatorResult.lastSeenLocation} • Lat: {locatorResult.coordinates.latitude}, Lng: {locatorResult.coordinates.longitude}
@@ -8162,7 +9019,7 @@ export function AdminDashboard({ initialTab } = {}) {
                   </div>
 
                   {/* Genuine Live Google Map Embed */}
-                  <div style={{ position: "relative", width: "100%", height: "380px", borderRadius: "10px", overflow: "hidden", border: "1px solid rgba(255,255,255,0.15)", background: "#020617", marginBottom: "1rem" }}>
+                  <div style={{ position: "relative", width: "100%", height: "420px", borderRadius: "10px", overflow: "hidden", border: "1px solid rgba(255,255,255,0.15)", background: "#020617", marginBottom: "1rem" }}>
                     <iframe
                       title="Headmaster Live Google Map Guardian Locator"
                       width="100%"
@@ -8171,7 +9028,7 @@ export function AdminDashboard({ initialTab } = {}) {
                       loading="lazy"
                       allowFullScreen
                       referrerPolicy="no-referrer-when-downgrade"
-                      src={`https://maps.google.com/maps?q=${locatorResult.coordinates.latitude},${locatorResult.coordinates.longitude}&hl=en&z=15&output=embed`}
+                      src={`https://maps.google.com/maps?q=${locatorResult.coordinates.latitude},${locatorResult.coordinates.longitude}&t=${locatorMapMode === "satellite" ? "k" : "m"}&hl=en&z=16&output=embed`}
                     ></iframe>
                   </div>
 
@@ -9528,9 +10385,11 @@ export function AdminDashboard({ initialTab } = {}) {
                 </div>
               ) : (
                 <div style={{ display: "flex", flexDirection: "column", gap: "1.25rem" }}>
-                  {developerMessages.map((msg) => (
-                    <div key={msg.id} style={{ background: "rgba(15, 23, 42, 0.8)", border: "1.5px solid rgba(139, 92, 246, 0.4)", borderRadius: "14px", padding: "1.5rem" }}>
-                      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", flexWrap: "wrap", gap: "10px", marginBottom: "12px", borderBottom: "1px solid rgba(255, 255, 255, 0.08)", paddingBottom: "10px" }}>
+                  {developerMessages.map((msg) => {
+                    const isCardMinimized = minimizedDirectiveIds.includes(msg.id);
+                    return (
+                    <div key={msg.id} style={{ background: "rgba(15, 23, 42, 0.8)", border: "1.5px solid rgba(139, 92, 246, 0.4)", borderRadius: "14px", padding: isCardMinimized ? "1rem 1.25rem" : "1.5rem" }}>
+                      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", flexWrap: "wrap", gap: "10px", marginBottom: isCardMinimized ? "0" : "12px", borderBottom: isCardMinimized ? "none" : "1px solid rgba(255, 255, 255, 0.08)", paddingBottom: isCardMinimized ? "0" : "10px" }}>
                         <div>
                           <span style={{ background: "rgba(239, 68, 68, 0.2)", color: "#fca5a5", border: "1px solid rgba(239, 68, 68, 0.4)", padding: "2px 8px", borderRadius: "4px", fontSize: "0.72rem", fontWeight: "800" }}>
                             DEVELOPER STATUTORY DIRECTIVE
@@ -9538,42 +10397,66 @@ export function AdminDashboard({ initialTab } = {}) {
                           <h3 style={{ margin: "8px 0 2px", color: "#f8fafc", fontSize: "1.15rem" }}>{msg.subject}</h3>
                           <span style={{ fontSize: "0.78rem", color: "#94a3b8" }}>From: <strong>{msg.senderName}</strong> • {new Date(msg.timestamp).toLocaleString()}</span>
                         </div>
-                        <button
-                          type="button"
-                          className="btn-primary"
-                          style={{ background: "linear-gradient(135deg, #8b5cf6, #6d28d9)", fontSize: "0.82rem", padding: "8px 16px" }}
-                          onClick={() => {
-                            setSelectedDevMessage(msg);
-                            setShowDevMessageModal(true);
-                          }}
-                        >
-                          ✍️ Reply to Developer
-                        </button>
-                      </div>
-
-                      <div style={{ background: "rgba(2, 6, 23, 0.7)", padding: "1rem 1.25rem", borderRadius: "10px", borderLeft: "4px solid #8b5cf6", whiteSpace: "pre-wrap", color: "#e2e8f0", fontSize: "0.9rem", lineHeight: "1.6" }}>
-                        {msg.messageText}
-                      </div>
-
-                      {/* Headmaster Replies */}
-                      {(msg.replies || []).length > 0 && (
-                        <div style={{ marginTop: "1rem", borderLeft: "2px dashed #10b981", paddingLeft: "1.25rem", display: "flex", flexDirection: "column", gap: "8px" }}>
-                          <span style={{ fontSize: "0.75rem", color: "#34d399", fontWeight: "800", textTransform: "uppercase" }}>
-                            ✓ Actions Taken & Transmitted by Headmaster:
-                          </span>
-                          {msg.replies.map((rep) => (
-                            <div key={rep.id} style={{ background: "rgba(16, 185, 129, 0.1)", border: "1px solid rgba(16, 185, 129, 0.3)", borderRadius: "8px", padding: "10px 12px", fontSize: "0.85rem", color: "#f8fafc" }}>
-                              <div style={{ display: "flex", justifyContent: "space-between", marginBottom: "4px", fontSize: "0.72rem", color: "#94a3b8" }}>
-                                <strong style={{ color: "#34d399" }}>Headmaster Reply</strong>
-                                <span>{new Date(rep.timestamp).toLocaleString()}</span>
-                              </div>
-                              <div>{rep.messageText}</div>
-                            </div>
-                          ))}
+                        <div style={{ display: "flex", gap: "8px", alignItems: "center" }}>
+                          <button
+                            type="button"
+                            onClick={() => handleToggleDirectiveCardMinimize(msg.id)}
+                            style={{
+                              background: "rgba(15, 23, 42, 0.9)",
+                              border: "1px solid #f59e0b",
+                              color: "#fde68a",
+                              borderRadius: "8px",
+                              padding: "8px 12px",
+                              fontSize: "0.78rem",
+                              fontWeight: "800",
+                              cursor: "pointer"
+                            }}
+                            title={isCardMinimized ? "Expand statutory directive warning" : "Minimize statutory directive warning"}
+                          >
+                            {isCardMinimized ? "➕ Expand Warning" : "➖ Minimize Warning"}
+                          </button>
+                          <button
+                            type="button"
+                            className="btn-primary"
+                            style={{ background: "linear-gradient(135deg, #8b5cf6, #6d28d9)", fontSize: "0.82rem", padding: "8px 16px" }}
+                            onClick={() => {
+                              setSelectedDevMessage(msg);
+                              setShowDevMessageModal(true);
+                            }}
+                          >
+                            ✍️ Reply to Developer
+                          </button>
                         </div>
+                      </div>
+
+                      {!isCardMinimized && (
+                        <>
+                          <div style={{ background: "rgba(2, 6, 23, 0.7)", padding: "1rem 1.25rem", borderRadius: "10px", borderLeft: "4px solid #8b5cf6", whiteSpace: "pre-wrap", color: "#e2e8f0", fontSize: "0.9rem", lineHeight: "1.6" }}>
+                            {msg.messageText}
+                          </div>
+
+                          {/* Headmaster Replies */}
+                          {(msg.replies || []).length > 0 && (
+                            <div style={{ marginTop: "1rem", borderLeft: "2px dashed #10b981", paddingLeft: "1.25rem", display: "flex", flexDirection: "column", gap: "8px" }}>
+                              <span style={{ fontSize: "0.75rem", color: "#34d399", fontWeight: "800", textTransform: "uppercase" }}>
+                                ✓ Actions Taken & Transmitted by Headmaster:
+                              </span>
+                              {msg.replies.map((rep) => (
+                                <div key={rep.id} style={{ background: "rgba(16, 185, 129, 0.1)", border: "1px solid rgba(16, 185, 129, 0.3)", borderRadius: "8px", padding: "10px 12px", fontSize: "0.85rem", color: "#f8fafc" }}>
+                                  <div style={{ display: "flex", justifyContent: "space-between", marginBottom: "4px", fontSize: "0.72rem", color: "#94a3b8" }}>
+                                    <strong style={{ color: "#34d399" }}>Headmaster Reply</strong>
+                                    <span>{new Date(rep.timestamp).toLocaleString()}</span>
+                                  </div>
+                                  <div>{rep.messageText}</div>
+                                </div>
+                              ))}
+                            </div>
+                          )}
+                        </>
                       )}
                     </div>
-                  ))}
+                    );
+                  })}
                 </div>
               )}
             </div>

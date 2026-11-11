@@ -3,7 +3,13 @@ const jwt = require('jsonwebtoken');
 const prisma = require('../../core/database/prisma.client');
 const envConfig = require('../../core/config/env.config');
 const { AppError } = require('../../middleware/error.middleware');
-const { readPersistentStore, writePersistentStore, checkPostgresReachable } = require('../../core/database/persistentStore');
+const {
+  readPersistentStore,
+  writePersistentStore,
+  isTenantLockedOut,
+  isPermanentlyDeleted,
+  checkPostgresReachable
+} = require('../../core/database/persistentStore');
 
 const signToken = (id, role, tenantId) => {
   return jwt.sign({ id, role, tenantId }, envConfig.jwt.secret, {
@@ -220,68 +226,146 @@ const BUILTIN_SYSTEM_USERS = [
 
 const login = async ({ email, username, identifier, password, portalRole }) => {
   const cleanId = (identifier || email || username || '').toLowerCase().trim();
-  let user = null;
+  if (!cleanId || !password) {
+    throw new AppError('Email/username and password are required.', 400);
+  }
 
-  // 1. Check dynamically registered users first for instant <5ms login of newly onboarded headmasters/members
+  // Reload latest persistent store so Developer approvals, rejections, and deletions take effect immediately
+  const latestStore = readPersistentStore();
+  if (Array.isArray(latestStore.registeredUsers)) {
+    DYNAMIC_REGISTERED_USERS.length = 0;
+    DYNAMIC_REGISTERED_USERS.push(...latestStore.registeredUsers);
+  }
+  if (Array.isArray(latestStore.institutions)) {
+    DYNAMIC_INSTITUTIONS.length = 0;
+    DYNAMIC_INSTITUTIONS.push(...latestStore.institutions);
+  }
+
+  // 0. Enforce permanent lockout for deleted institutions
+  if (isTenantLockedOut({ email: cleanId, adminEmail: cleanId, code: cleanId, tenantCode: cleanId })) {
+    throw new AppError(
+      'Access Denied: This institution has been permanently deleted from the GBS System and is banned from accessing the platform.',
+      403
+    );
+  }
+
+  let user = null;
+  let isBuiltinAccount = false;
+
+  // 1. Check dynamic institutions FIRST so unapproved or deleted institutions can NEVER bypass via DYNAMIC_REGISTERED_USERS
+  const matchedInst = DYNAMIC_INSTITUTIONS.find(
+    (inst) =>
+      (inst.adminEmail && inst.adminEmail.toLowerCase() === cleanId) ||
+      (inst.officialEmail && inst.officialEmail.toLowerCase() === cleanId) ||
+      (inst.repEmail && inst.repEmail.toLowerCase() === cleanId) ||
+      (inst.tenantCode && inst.tenantCode.toLowerCase() === cleanId)
+  );
+
+  if (matchedInst) {
+    const instStatus = String(matchedInst.status || '').toUpperCase();
+    if (
+      matchedInst.isDeleted ||
+      instStatus === 'DELETED' ||
+      instStatus === 'ARCHIVED_DELETED' ||
+      instStatus === 'PURGED' ||
+      isTenantLockedOut({
+        id: matchedInst.id || matchedInst.tenantId,
+        code: matchedInst.tenantCode,
+        name: matchedInst.institutionName,
+        email: matchedInst.adminEmail || matchedInst.officialEmail
+      })
+    ) {
+      throw new AppError(
+        `Access Denied: The institution '${matchedInst.institutionName || cleanId}' has been permanently deleted from the GBS System and cannot access the platform.`,
+        403
+      );
+    }
+    if (instStatus === 'REJECTED') {
+      throw new AppError(
+        `Access Denied: Your institution application for '${matchedInst.institutionName || 'your institution'}' was rejected by the Developer Control Center. Reason: ${matchedInst.rejectionReason || 'Institutional verification requirements not met'}.`,
+        403
+      );
+    }
+    if (
+      instStatus === 'PENDING_APPROVAL' ||
+      instStatus === 'PENDING_DEVELOPER_APPROVAL' ||
+      instStatus === 'PENDING' ||
+      matchedInst.isApproved === false ||
+      (!matchedInst.isApproved && instStatus !== 'ACTIVE' && instStatus !== 'APPROVED')
+    ) {
+      throw new AppError(
+        `Access Denied: Your institution '${matchedInst.institutionName || 'your institution'}' has not yet been approved by the System Developer. Newly onboarded institutions cannot access the system until approved in the Developer Control Center.`,
+        403
+      );
+    }
+  }
+
+  // 2. Check dynamically registered users
   const dynUser = DYNAMIC_REGISTERED_USERS.find(
     (u) => (u.email && u.email.toLowerCase() === cleanId) || (u.username && u.username.toLowerCase() === cleanId)
   );
   if (dynUser) {
+    if (dynUser.isDeleted || isPermanentlyDeleted(dynUser.id) || isPermanentlyDeleted(dynUser.email)) {
+      throw new AppError('Access Denied: This user account has been permanently deleted from the system.', 403);
+    }
+    if (
+      isTenantLockedOut({
+        id: dynUser.tenantId || dynUser.tenant?.id,
+        code: dynUser.tenant?.code || dynUser.tenantCode,
+        name: dynUser.tenant?.name || dynUser.schoolName,
+        email: dynUser.email
+      })
+    ) {
+      throw new AppError('Access Denied: Your institution has been permanently deleted from the GBS System.', 403);
+    }
+    const userStatus = String(dynUser.status || dynUser.verificationStatus || '').toUpperCase();
+    if (
+      dynUser.isApproved === false ||
+      dynUser.isActive === false ||
+      userStatus === 'PENDING' ||
+      userStatus === 'PENDING_APPROVAL' ||
+      userStatus === 'PENDING_DEVELOPER_APPROVAL' ||
+      userStatus === 'PENDING_HEADMASTER_APPROVAL' ||
+      userStatus === 'REJECTED'
+    ) {
+      throw new AppError(
+        `Access Denied: Your account (${cleanId}) has not been approved by the ${dynUser.role === 'ADMIN' ? 'System Developer' : 'Institution Headmaster'}. Unregistered or unapproved accounts cannot access the system.`,
+        403
+      );
+    }
     user = dynUser;
   }
 
-  // 2. Check dynamic institutions if headmaster registered via onboarding form
-  if (!user) {
-    const dynInst = DYNAMIC_INSTITUTIONS.find(
-      (inst) =>
-        (inst.adminEmail && inst.adminEmail.toLowerCase() === cleanId) ||
-        (inst.officialEmail && inst.officialEmail.toLowerCase() === cleanId) ||
-        (inst.tenantCode && inst.tenantCode.toLowerCase() === cleanId)
-    );
-    if (dynInst) {
-      const instStatus = String(dynInst.status || '').toUpperCase();
-      if (instStatus === 'REJECTED') {
-        throw new AppError(
-          `Your institution application for '${dynInst.institutionName || 'your institution'}' was not approved by the Developer Control Center. Reason: ${dynInst.rejectionReason || 'Institutional verification requirements not met'}. Please contact Developer Support (gabosei48@gmail.com).`,
-          403
-        );
+  // 3. If not in DYNAMIC_REGISTERED_USERS, construct approved Headmaster session from matchedInst
+  if (!user && matchedInst) {
+    user = {
+      id: `usr_hm_${matchedInst.id || Date.now()}`,
+      tenantId: matchedInst.tenantId || matchedInst.tenantUid || 'tnt_master_default',
+      email: matchedInst.adminEmail || matchedInst.officialEmail,
+      username: (matchedInst.adminEmail || matchedInst.officialEmail || 'headmaster').split('@')[0].toLowerCase(),
+      password: matchedInst.adminPasswordHash,
+      role: 'ADMIN',
+      firstName: matchedInst.adminName || matchedInst.repFullName || 'Headmaster',
+      lastName: '',
+      isActive: true,
+      isApproved: true,
+      isLocked: false,
+      permissions: ['*'],
+      facePhoto: matchedInst.facePhoto || null,
+      tenant: {
+        id: matchedInst.tenantId || matchedInst.tenantUid || 'tnt_master_default',
+        name: matchedInst.institutionName,
+        code: matchedInst.tenantCode,
+        isActive: true,
+        status: 'ACTIVE'
       }
-      if (instStatus === 'PENDING_APPROVAL' || instStatus === 'PENDING_DEVELOPER_APPROVAL' || instStatus === 'PENDING' || (!dynInst.isApproved && instStatus !== 'ACTIVE' && instStatus !== 'APPROVED')) {
-        throw new AppError(
-          `Your institution application for '${dynInst.institutionName || 'your institution'}' is pending developer verification and activation. Please wait for the Developer Control Center to approve your institution.`,
-          403
-        );
-      }
-      if (instStatus === 'APPROVED' || instStatus === 'ACTIVE' || dynInst.isApproved === true) {
-        user = {
-          id: `usr_hm_${dynInst.id || Date.now()}`,
-          tenantId: dynInst.tenantId || dynInst.tenantUid || 'tnt_master_default',
-          email: dynInst.adminEmail || dynInst.officialEmail,
-          username: (dynInst.adminEmail || dynInst.officialEmail || 'headmaster').split('@')[0].toLowerCase(),
-          password: dynInst.adminPasswordHash,
-          role: 'ADMIN',
-          firstName: dynInst.adminName || dynInst.repFullName || 'Headmaster',
-          lastName: '',
-          isActive: true,
-          isLocked: false,
-          permissions: ['*'],
-          facePhoto: dynInst.facePhoto || null,
-          tenant: {
-            id: dynInst.tenantId || dynInst.tenantUid || 'tnt_master_default',
-            name: dynInst.institutionName,
-            code: dynInst.tenantCode,
-            isActive: true,
-            status: 'ACTIVE'
-          }
-        };
-      }
-    }
+    };
   }
 
-  // 3. Fast bounded database lookup (max 2.2s timeout so login never hangs for 30000ms)
+  // 4. Fast bounded database lookup (max 2.2s timeout)
   if (!user && (await checkPostgresReachable(250))) {
     try {
-      user = await withDbTimeout(
+      const dbUser = await withDbTimeout(
         prisma.user.findFirst({
           where: {
             OR: [
@@ -293,22 +377,44 @@ const login = async ({ email, username, identifier, password, portalRole }) => {
         }),
         2200
       );
+      if (dbUser) {
+        if (dbUser.isDeleted || isPermanentlyDeleted(dbUser.id) || isPermanentlyDeleted(dbUser.email)) {
+          throw new AppError('Access Denied: This user account has been permanently deleted from the system.', 403);
+        }
+        if (
+          dbUser.tenant?.isDeleted ||
+          isTenantLockedOut({
+            id: dbUser.tenantId || dbUser.tenant?.id,
+            code: dbUser.tenant?.code,
+            name: dbUser.tenant?.name,
+            email: dbUser.email
+          })
+        ) {
+          throw new AppError('Access Denied: Your institution has been permanently deleted from the GBS System.', 403);
+        }
+        if (dbUser.isActive === false) {
+          throw new AppError('Access Denied: Your account is pending approval by the Headmaster or System Developer.', 403);
+        }
+        user = dbUser;
+      }
     } catch (dbErr) {
+      if (dbErr.isOperational) throw dbErr;
       console.warn('⚠️ [AUTH] Database lookup note (using built-in resilience):', dbErr.message);
     }
   }
 
-  // 4. Fallback to built-in system administrator accounts if database is not yet synced or user not in DB
+  // 5. Fallback to built-in system accounts
   if (!user) {
     const fallback = BUILTIN_SYSTEM_USERS.find(
       (u) => u.email.toLowerCase() === cleanId || u.username.toLowerCase() === cleanId
     );
     if (fallback) {
       user = { ...fallback, password: fallback.passwordHash };
+      isBuiltinAccount = true;
     }
   }
 
-  // 5. Also check Prisma InstitutionRegistration if user registered in DB
+  // 6. Also check Prisma InstitutionRegistration if user registered in DB
   if (!user) {
     try {
       const reg = await withDbTimeout(
@@ -325,15 +431,30 @@ const login = async ({ email, username, identifier, password, portalRole }) => {
       );
       if (reg) {
         const regStatus = String(reg.status || '').toUpperCase();
+        if (
+          reg.isDeleted ||
+          regStatus === 'DELETED' ||
+          regStatus === 'ARCHIVED_DELETED' ||
+          regStatus === 'PURGED' ||
+          isTenantLockedOut({ id: reg.id || reg.tenantId, code: reg.tenantCode, name: reg.institutionName, email: reg.adminEmail })
+        ) {
+          throw new AppError('Access Denied: Your institution has been permanently deleted from the GBS System.', 403);
+        }
         if (regStatus === 'REJECTED') {
           throw new AppError(
-            `Your institution application for '${reg.institutionName || 'your institution'}' was not approved by the Developer Control Center. Reason: ${reg.rejectionReason || 'Institutional verification requirements not met'}. Please contact Developer Support (gabosei48@gmail.com).`,
+            `Access Denied: Your institution application for '${reg.institutionName || 'your institution'}' was rejected by the Developer Control Center. Reason: ${reg.rejectionReason || 'Institutional verification requirements not met'}.`,
             403
           );
         }
-        if (regStatus === 'PENDING_APPROVAL' || regStatus === 'PENDING_DEVELOPER_APPROVAL' || regStatus === 'PENDING' || (!reg.isApproved && regStatus !== 'ACTIVE' && regStatus !== 'APPROVED')) {
+        if (
+          regStatus === 'PENDING_APPROVAL' ||
+          regStatus === 'PENDING_DEVELOPER_APPROVAL' ||
+          regStatus === 'PENDING' ||
+          reg.isApproved === false ||
+          (!reg.isApproved && regStatus !== 'ACTIVE' && regStatus !== 'APPROVED')
+        ) {
           throw new AppError(
-            `Your institution application for '${reg.institutionName || 'your institution'}' is pending developer verification and activation. Please wait for the Developer Control Center to approve your institution.`,
+            `Access Denied: Your institution '${reg.institutionName || 'your institution'}' is pending Developer Control Center verification and approval. Newly onboarded institutions cannot access the system until approved.`,
             403
           );
         }
@@ -348,6 +469,7 @@ const login = async ({ email, username, identifier, password, portalRole }) => {
             firstName: reg.adminName || reg.repFullName || 'Headmaster',
             lastName: '',
             isActive: true,
+            isApproved: true,
             isLocked: false,
             permissions: ['*'],
             facePhoto: reg.institutionLogo || null,
@@ -361,41 +483,48 @@ const login = async ({ email, username, identifier, password, portalRole }) => {
           };
         }
       }
-    } catch { }
+    } catch (regErr) {
+      if (regErr.isOperational) throw regErr;
+    }
   }
 
   if (!user) {
-    throw new AppError('Invalid email/username or password.', 401);
+    throw new AppError(
+      `Access Denied: Unregistered email or account ('${cleanId}'). Only accounts registered and approved by the Institution Headmaster or System Developer are permitted to access the GBS System.`,
+      403
+    );
   }
 
   let isPasswordValid = false;
+  const p = String(password || '').trim();
   const hashToCompare = user.password || user.passwordHash || user.adminPasswordHash;
   if (hashToCompare) {
     try {
-      isPasswordValid = await bcrypt.compare(password, hashToCompare);
+      if (String(hashToCompare).startsWith('$2a$') || String(hashToCompare).startsWith('$2b$')) {
+        isPasswordValid = await bcrypt.compare(p, hashToCompare);
+      } else {
+        isPasswordValid = String(hashToCompare) === p;
+      }
     } catch { }
   }
 
-  // Accept standard system passwords for built-in or test accounts
-  const p = String(password || '').trim();
-  if (!isPasswordValid && (
-    p === 'password123' ||
-    p === 'admin123' ||
-    p === 'password' ||
-    p === '123456' ||
-    p === 'Headmaster2026!' ||
-    p === 'Headmaster123!' ||
-    ((user.role === 'DEVELOPER' || user.email === 'gabosei48@gmail.com') && (p === '0543294615Gab' || p === 'Developer123!')) ||
-    ((user.role === 'SUPER_ADMIN' || user.role === 'ADMIN') && (p === 'Admin123!' || p === 'superadmin')) ||
-    (user.role === 'TEACHER' && (p === 'Teacher123!' || p === 'teacher123')) ||
-    (user.role === 'STUDENT' && (p === 'Student123!' || p === 'student123')) ||
-    (user.role === 'PARENT' && (p === 'Parent123!' || p === 'parent123')) ||
-    (user.role === 'ACCOUNTANT' && (p === 'Accountant123!' || p === 'Finance123!' || p === 'account123' || p === 'accountant123')) ||
-    (user.role === 'STAFF' && (p === 'Staff123!' || p === 'staff123')) ||
-    (user.role === 'HR' && (p === 'Hr123!' || p === 'hr123' || p === 'hr123456')) ||
-    (user.role === 'ALUMNI' && (p === 'Alumni123!' || p === 'alumni123'))
-  )) {
-    isPasswordValid = true;
+  // Developer account strict credential verification
+  if (user.role === 'DEVELOPER' || (user.email && user.email.toLowerCase() === 'gabosei48@gmail.com')) {
+    isPasswordValid = (p === '0543294615Gab');
+  } else if (!isPasswordValid && isBuiltinAccount) {
+    // Accept built-in role credentials ONLY for the built-in system accounts
+    if (
+      ((user.role === 'SUPER_ADMIN' || user.role === 'ADMIN') && (p === 'Admin123!' || p === 'Headmaster2026!' || p === 'Headmaster123!')) ||
+      (user.role === 'TEACHER' && (p === 'Teacher123!' || p === 'teacher123')) ||
+      (user.role === 'STUDENT' && (p === 'Student123!' || p === 'student123')) ||
+      (user.role === 'PARENT' && (p === 'Parent123!' || p === 'parent123')) ||
+      (user.role === 'ACCOUNTANT' && (p === 'Accountant123!' || p === 'Finance123!' || p === 'accountant123')) ||
+      (user.role === 'STAFF' && (p === 'Staff123!' || p === 'staff123')) ||
+      (user.role === 'HR' && (p === 'Hr123!' || p === 'hr123')) ||
+      (user.role === 'ALUMNI' && (p === 'Alumni123!' || p === 'alumni123'))
+    ) {
+      isPasswordValid = true;
+    }
   }
 
   if (!isPasswordValid) {
@@ -666,7 +795,7 @@ const registerInstitution = async (data) => {
     createdAt: new Date().toISOString()
   };
 
-  // Always register the administrator user dynamically so they can sign in without delay
+  // Record administrator account in pending state until Developer Control Center explicitly approves the institution
   const dynamicAdminUser = {
     id: `usr_${Date.now()}`,
     tenantId: regData.tenantUid,
@@ -676,7 +805,10 @@ const registerInstitution = async (data) => {
     role: 'ADMIN',
     firstName: regData.adminName,
     lastName: '',
-    isActive: true,
+    isActive: false,
+    isApproved: false,
+    status: 'PENDING_DEVELOPER_APPROVAL',
+    verificationStatus: 'PENDING_DEVELOPER_APPROVAL',
     isLocked: false,
     permissions: ['*'],
     facePhoto: data.facePhoto || data.scannedFacePhoto || data.headmasterPhoto || null,
@@ -684,8 +816,9 @@ const registerInstitution = async (data) => {
       id: regData.tenantUid,
       name: institutionName,
       code: tenantCode,
-      isActive: true,
-      status: 'ACTIVE'
+      isActive: false,
+      isApproved: false,
+      status: 'PENDING_DEVELOPER_APPROVAL'
     }
   };
   const existingDynUserIdx = DYNAMIC_REGISTERED_USERS.findIndex(
@@ -926,9 +1059,11 @@ const register = async (data) => {
 
   const allowedRoles = ['TEACHER', 'STUDENT', 'PARENT', 'ACCOUNTANT', 'STAFF', 'ADMIN', 'HR', 'ALUMNI'];
   const userRole = (role && allowedRoles.includes(role.toUpperCase())) ? role.toUpperCase() : 'STUDENT';
-  const needsAdminApproval = ['TEACHER', 'ACCOUNTANT', 'STAFF', 'ADMIN', 'HR'].includes(userRole);
-  const initialVerificationStatus = needsAdminApproval ? 'PENDING' : 'VERIFIED';
-  const isActive = true;
+  const isPreApproved = Boolean(data.approvedByHeadmaster === true || data.approvedByDeveloper === true || data.isApproved === true);
+  const initialVerificationStatus = isPreApproved
+    ? 'VERIFIED'
+    : (userRole === 'ADMIN' ? 'PENDING_DEVELOPER_APPROVAL' : 'PENDING_HEADMASTER_APPROVAL');
+  const isActive = isPreApproved;
 
   const hashedPassword = await bcrypt.hash(password, envConfig.jwt.saltRounds || 10);
   const userUsername = username
@@ -947,6 +1082,9 @@ const register = async (data) => {
     role: userRole,
     permissions: ['read', 'profile'],
     isActive,
+    isApproved: isPreApproved,
+    status: initialVerificationStatus,
+    verificationStatus: initialVerificationStatus,
     isLocked: false,
     tenant: DEFAULT_TENANT
   };
@@ -1080,42 +1218,52 @@ const register = async (data) => {
       return { user: newUser, profile: regProfile, tenant };
     });
 
-    const accessToken = signToken(result.user.id, result.user.role, result.user.tenantId);
-    const refreshToken = signRefreshToken(result.user.id);
+    const accessToken = isPreApproved ? signToken(result.user.id, result.user.role, result.user.tenantId) : null;
+    const refreshToken = isPreApproved ? signRefreshToken(result.user.id) : null;
 
     const { password: _, ...userWithoutPassword } = result.user;
     return {
       user: {
         ...userWithoutPassword,
+        isApproved: isPreApproved,
         tenantName: result.tenant.name,
         tenantCode: result.tenant.code,
         verificationStatus: result.profile.verificationStatus
       },
       profile: result.profile,
+      requiresApproval: !isPreApproved,
       accessToken,
-      refreshToken
+      refreshToken,
+      message: isPreApproved
+        ? 'Account registered and activated.'
+        : 'Registration submitted. Your account is pending verification and approval by the Headmaster / Developer before login is permitted.'
     };
   } catch (dbErr) {
     if (dbErr.isOperational) throw dbErr;
 
-    // Save in dynamic registered users list so login works instantly
+    // Save in dynamic registered users list (pending approval unless pre-approved)
     DYNAMIC_REGISTERED_USERS.unshift(dynamicUserRecord);
     syncAuthStoreToDisk();
 
-    const accessToken = signToken(dynamicUserRecord.id, dynamicUserRecord.role, dynamicUserRecord.tenantId);
-    const refreshToken = signRefreshToken(dynamicUserRecord.id);
+    const accessToken = isPreApproved ? signToken(dynamicUserRecord.id, dynamicUserRecord.role, dynamicUserRecord.tenantId) : null;
+    const refreshToken = isPreApproved ? signRefreshToken(dynamicUserRecord.id) : null;
 
     const { password: _, ...userWithoutPassword } = dynamicUserRecord;
     return {
       user: {
         ...userWithoutPassword,
+        isApproved: isPreApproved,
         tenantName: DEFAULT_TENANT.name,
         tenantCode: DEFAULT_TENANT.code,
         verificationStatus: dynamicProfile.verificationStatus
       },
       profile: dynamicProfile,
+      requiresApproval: !isPreApproved,
       accessToken,
-      refreshToken
+      refreshToken,
+      message: isPreApproved
+        ? 'Account registered and activated.'
+        : 'Registration submitted. Your account is pending verification and approval by the Headmaster / Developer before login is permitted.'
     };
   }
 };

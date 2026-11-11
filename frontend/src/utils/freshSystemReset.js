@@ -20,6 +20,10 @@ export const clearFakeDataEntries = () => {
     "gbs_parent_messages",
 
     // Academic & Submissions
+    "gbs_enrolled_students",
+    "gbs_transport_assigned_students",
+    "gbs_classes",
+    "gbs_subjects",
     "gbs_teacher_archived_weekly_attendance",
     "gbs_daily_attendance_archives",
     "gbs_teacher_lesson_plans",

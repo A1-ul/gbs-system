@@ -96,12 +96,53 @@ export default function LiveTrackingDashboard() {
   const [searchError, setSearchError] = useState(null);
   const [mapViewMode, setMapViewMode] = useState("roadmap"); // "roadmap" or "satellite"
 
-  // Search Tenant by Mobile Contact, School Name, or Campus Address
+  // Search Tenant or Parent by Mobile Contact, School Name, Parent Name, or Campus Address
+  const handleLocateMyDeviceGps = () => {
+    if (!navigator.geolocation) {
+      setSearchError("Browser geolocation is not supported on this device.");
+      return;
+    }
+    setSearching(true);
+    setSearchError(null);
+    navigator.geolocation.getCurrentPosition(
+      (pos) => {
+        const lat = Number(pos.coords.latitude.toFixed(6));
+        const lng = Number(pos.coords.longitude.toFixed(6));
+        const searchQueryParam = `${lat},${lng}`;
+        setSelectedTenantLocation({
+          tenantName: "Live Device GPS Transponder Lock",
+          tenantCode: "LIVE-GPS-BEACON",
+          headmasterName: "Verified Real-Time Device Coordinates",
+          headmasterPhone: phoneSearchQuery || "+233-24-555-0199",
+          headmasterEmail: "live.telemetry@gbs.edu",
+          branchName: `Accuracy ±${Math.round(pos.coords.accuracy || 5)}m`,
+          address: `Exact Device GPS (${lat}, ${lng})`,
+          city: "Live Satellite Geofix",
+          region: "Real-Time Telemetry",
+          country: "Global GPS",
+          latitude: lat,
+          longitude: lng,
+          activeStudents: selectedTenantLocation?.activeStudents || 0,
+          status: "ACTIVE",
+          googleMapsUrl: `https://www.google.com/maps/search/?api=1&query=${searchQueryParam}`,
+          googleMapsEmbedUrl: `https://maps.google.com/maps?q=${searchQueryParam}&hl=en&z=16&output=embed`,
+          satelliteEmbedUrl: `https://maps.google.com/maps?q=${searchQueryParam}&t=k&z=17&output=embed`
+        });
+        setSearching(false);
+      },
+      (err) => {
+        setSearching(false);
+        setSearchError(`Could not read device GPS (${err.message}). Please allow location permission or search by name/phone/address.`);
+      },
+      { enableHighAccuracy: true, timeout: 10000 }
+    );
+  };
+
   const handleSearchByHeadmasterPhone = async (e, directQuery = null) => {
     if (e) e.preventDefault();
     const query = String(directQuery || phoneSearchQuery).trim();
     if (!query) {
-      setSearchError("Please enter a School Name, Address, City, or Headmaster contact number.");
+      setSearchError("Please enter a School Name, Parent Name, Address, City, or Mobile Contact Number.");
       return;
     }
 
@@ -110,40 +151,134 @@ export default function LiveTrackingDashboard() {
 
     try {
       let resolvedData = null;
+      const q = query.toLowerCase();
+      const digitsOnly = query.replace(/\D/g, "");
 
-      // 1. Check local archived approved onboarding tenants first
+      // 1. Check local archived & active approved onboarding tenants first
       try {
         const archivedTenants = JSON.parse(localStorage.getItem("gbs_archived_onboarded_tenants") || "[]");
-        const matchArchived = archivedTenants.find((item) => {
-          const q = query.toLowerCase();
+        const incomingTenants = JSON.parse(localStorage.getItem("gbs_incoming_onboarding_applications") || "[]");
+        const allTenants = [...archivedTenants, ...incomingTenants];
+        const matchArchived = allTenants.find((item) => {
           return (
             (item.institutionName && item.institutionName.toLowerCase().includes(q)) ||
             (item.assignedTenantCode && item.assignedTenantCode.toLowerCase().includes(q)) ||
             (item.tenantCode && item.tenantCode.toLowerCase().includes(q)) ||
             (item.headmasterName && item.headmasterName.toLowerCase().includes(q)) ||
-            (item.headmasterPhone && item.headmasterPhone.includes(query))
+            (item.headmasterPhone && item.headmasterPhone.includes(query)) ||
+            (digitsOnly.length >= 5 && String(item.headmasterPhone || "").replace(/\D/g, "").includes(digitsOnly))
           );
         });
 
         if (matchArchived) {
           resolvedData = {
             tenantName: matchArchived.institutionName,
-            tenantCode: matchArchived.assignedTenantCode || matchArchived.tenantCode || "GBS-ARCHIVED",
+            tenantCode: matchArchived.assignedTenantCode || matchArchived.tenantCode || "GBS-TENANT",
             headmasterName: matchArchived.headmasterName,
             headmasterPhone: matchArchived.headmasterPhone,
             headmasterEmail: matchArchived.headmasterEmail,
             branchName: "Main Enclave Campus",
-            address: matchArchived.address || `${matchArchived.institutionName} Campus Grounds`,
+            address: matchArchived.address || matchArchived.campusLocation || `${matchArchived.institutionName} Campus Grounds`,
             city: matchArchived.city || "Accra",
             region: matchArchived.region || "Greater Accra",
             country: matchArchived.country || "Ghana",
-            latitude: matchArchived.latitude || 5.6037,
-            longitude: matchArchived.longitude || -0.1969,
-            activeStudents: matchArchived.totalStudentsEnrolled || 1200,
+            latitude: Number(matchArchived.latitude || 5.6037),
+            longitude: Number(matchArchived.longitude || -0.1969),
+            activeStudents: matchArchived.totalStudentsEnrolled || 0,
             status: "ACTIVE"
           };
         }
-      } catch (arcErr) {}
+      } catch (arcErr) { }
+
+      // 1B. Also check Registered Parents / Students & Live Parent Beacon so Developer can locate Parents too
+      if (!resolvedData) {
+        try {
+          const liveBeacon = JSON.parse(localStorage.getItem("gbs_parent_live_location") || "null");
+          const enrolled = JSON.parse(localStorage.getItem("gbs_enrolled_students") || "[]");
+          const admissions = JSON.parse(localStorage.getItem("gbs_submitted_admissions") || "[]");
+          const regUsers = JSON.parse(localStorage.getItem("gbs_local_registered_users") || "[]");
+
+          if (
+            liveBeacon &&
+            liveBeacon.latitude &&
+            liveBeacon.longitude &&
+            ((liveBeacon.guardianName && String(liveBeacon.guardianName).toLowerCase().includes(q)) ||
+              (digitsOnly.length >= 5 && String(liveBeacon.phone || "").replace(/\D/g, "").includes(digitsOnly)))
+          ) {
+            resolvedData = {
+              tenantName: `Parent Live GPS: ${liveBeacon.guardianName || "Registered Guardian"}`,
+              tenantCode: "PARENT-LIVE-GPS",
+              headmasterName: liveBeacon.guardianName || "Verified Parent / Guardian",
+              headmasterPhone: liveBeacon.phone || query,
+              headmasterEmail: liveBeacon.email || "guardian@gbs.edu",
+              branchName: "Live Parent Device GPS Transponder",
+              address: liveBeacon.address || `Lat ${liveBeacon.latitude}, Lng ${liveBeacon.longitude}`,
+              city: liveBeacon.city || "Accra",
+              region: "Live Parent Tracking",
+              country: liveBeacon.country || "Ghana",
+              latitude: Number(liveBeacon.latitude),
+              longitude: Number(liveBeacon.longitude),
+              activeStudents: 1,
+              status: "ACTIVE"
+            };
+          } else {
+            const studentHit = [...enrolled, ...admissions].find((s) => {
+              const sName = `${s.firstName || s.studentFirstName || ""} ${s.lastName || s.studentLastName || ""} ${s.fullName || ""}`.toLowerCase();
+              const gName = `${s.guardianName || s.parentName || ""}`.toLowerCase();
+              const gPhone = String(s.guardianPhone || s.parentPhone || s.emergencyPhone || "");
+              return (
+                (q.length >= 2 && (gName.includes(q) || sName.includes(q))) ||
+                (digitsOnly.length >= 5 && gPhone.replace(/\D/g, "").includes(digitsOnly))
+              );
+            });
+            if (studentHit) {
+              resolvedData = {
+                tenantName: `Parent / Guardian: ${studentHit.guardianName || studentHit.parentName || "Verified Guardian"}`,
+                tenantCode: studentHit.indexNumber || studentHit.studentId || "WARD-LOCATOR",
+                headmasterName: `Ward: ${studentHit.firstName || studentHit.studentFirstName || ""} ${studentHit.lastName || studentHit.studentLastName || ""}`.trim(),
+                headmasterPhone: studentHit.guardianPhone || studentHit.parentPhone || studentHit.emergencyPhone || query,
+                headmasterEmail: studentHit.guardianEmail || studentHit.email || "parent@gbs.edu",
+                branchName: studentHit.className || studentHit.assignedClass || "Enrolled Ward",
+                address: studentHit.residentialAddress || studentHit.address || "Accra, Ghana",
+                city: studentHit.city || "Accra",
+                region: "Guardian Residence",
+                country: "Ghana",
+                latitude: Number(studentHit.latitude || liveBeacon?.latitude || 5.6037),
+                longitude: Number(studentHit.longitude || liveBeacon?.longitude || -0.1870),
+                activeStudents: 1,
+                status: "ACTIVE"
+              };
+            } else {
+              const parentHit = regUsers.find((u) => {
+                const uName = `${u.firstName || ""} ${u.lastName || ""} ${u.fullName || ""}`.toLowerCase();
+                const uPhone = String(u.phone || "");
+                return (
+                  (q.length >= 2 && (uName.includes(q) || String(u.email || "").toLowerCase().includes(q))) ||
+                  (digitsOnly.length >= 5 && uPhone.replace(/\D/g, "").includes(digitsOnly))
+                );
+              });
+              if (parentHit) {
+                resolvedData = {
+                  tenantName: `${parentHit.role || "Member"}: ${parentHit.firstName || ""} ${parentHit.lastName || ""}`.trim(),
+                  tenantCode: parentHit.tenantCode || "GBS-MEMBER",
+                  headmasterName: `${parentHit.firstName || ""} ${parentHit.lastName || ""}`.trim(),
+                  headmasterPhone: parentHit.phone || query,
+                  headmasterEmail: parentHit.email || "",
+                  branchName: parentHit.institutionName || "Registered Campus",
+                  address: parentHit.address || parentHit.city || "Accra, Ghana",
+                  city: parentHit.city || "Accra",
+                  region: "Member Location",
+                  country: "Ghana",
+                  latitude: Number(parentHit.latitude || 5.6037),
+                  longitude: Number(parentHit.longitude || -0.1870),
+                  activeStudents: 1,
+                  status: "ACTIVE"
+                };
+              }
+            }
+          }
+        } catch { }
+      }
 
       // 2. Check default enclaves
       if (!resolvedData) {
@@ -192,7 +327,7 @@ export default function LiveTrackingDashboard() {
               status: "ACTIVE"
             };
           }
-        } catch (geoErr) {}
+        } catch (geoErr) { }
       }
 
       // 4. Default fallback with dynamic international coordinates if not matched
@@ -317,14 +452,14 @@ export default function LiveTrackingDashboard() {
           </div>
 
           <p style={{ color: "#94a3b8", fontSize: "0.85rem", margin: "0 0 1.25rem" }}>
-            Search by School Name, Campus Address, City, or Headmaster Mobile Number (e.g. <code>Achimota School</code>, <code>Cape Coast</code>, <code>+233-24-555-0199</code>). Powered by live Google Maps and global internet geocoding.
+            Search by School Name, Parent/Guardian Name, Campus Address, City, or Mobile Number (e.g. <code>Achimota School</code>, <code>David Mensah</code>, <code>Cape Coast</code>, <code>+233-24-555-0199</code>). Powered by live Google Maps and global internet geocoding.
           </p>
 
           <form onSubmit={handleSearchByHeadmasterPhone} className="search-form" style={{ display: "flex", gap: "10px", flexWrap: "wrap", marginBottom: "1rem" }}>
             <input
               type="text"
               required
-              placeholder="Search School Name, Campus Address, City, or Mobile Number (e.g. St. Augustine Science Academy, Cape Coast, +233...)..."
+              placeholder="Search School Name, Parent Name, Campus Address, City, or Mobile Number (e.g. St. Augustine Science Academy, Cape Coast, +233...)..."
               value={phoneSearchQuery}
               onChange={(e) => setPhoneSearchQuery(e.target.value)}
               style={{
@@ -354,7 +489,23 @@ export default function LiveTrackingDashboard() {
                 boxShadow: "0 4px 15px rgba(56, 189, 248, 0.4)"
               }}
             >
-              {searching ? "⏳ LOCATING EXACT GPS..." : "📍 LOCATE TENANT ON LIVE GOOGLE MAP"}
+              {searching ? "⏳ LOCATING EXACT GPS..." : "📍 LOCATE TENANT / PARENT ON LIVE GOOGLE MAP"}
+            </button>
+            <button
+              type="button"
+              onClick={handleLocateMyDeviceGps}
+              style={{
+                background: "rgba(16, 185, 129, 0.2)",
+                border: "1.5px solid #10b981",
+                color: "#34d399",
+                fontWeight: 800,
+                fontSize: "0.85rem",
+                borderRadius: "10px",
+                padding: "12px 18px",
+                cursor: "pointer"
+              }}
+            >
+              🛰️ My Live GPS
             </button>
           </form>
 

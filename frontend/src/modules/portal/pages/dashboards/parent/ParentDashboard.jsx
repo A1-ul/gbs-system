@@ -49,7 +49,7 @@ export default function ParentDashboard() {
       if (tabParam) return tabParam;
       const stored = sessionStorage.getItem("gbs_parent_active_tab");
       if (stored) return stored;
-    } catch {}
+    } catch { }
     return "children";
   });
 
@@ -62,7 +62,7 @@ export default function ParentDashboard() {
         url.searchParams.set("tab", activeTab);
         window.history.pushState({ tab: activeTab }, "", url.toString());
       }
-    } catch {}
+    } catch { }
   }, [activeTab]);
 
   useEffect(() => {
@@ -75,18 +75,18 @@ export default function ParentDashboard() {
         if (savedScroll) {
           setTimeout(() => window.scrollTo(0, parseInt(savedScroll, 10)), 100);
         }
-      } catch {}
+      } catch { }
     };
 
     const handleScroll = () => {
       try {
         sessionStorage.setItem("gbs_parent_scroll_pos", String(window.scrollY));
-      } catch {}
+      } catch { }
     };
 
     window.addEventListener("popstate", handlePopState);
     window.addEventListener("scroll", handleScroll, { passive: true });
-    
+
     // Initial scroll restore
     const savedScroll = sessionStorage.getItem("gbs_parent_scroll_pos");
     if (savedScroll) {
@@ -106,7 +106,7 @@ export default function ParentDashboard() {
     let storedUser = null;
     try {
       storedUser = JSON.parse(localStorage.getItem("gbs_user") || "{}");
-    } catch {}
+    } catch { }
     return (
       localStorage.getItem("gbs_report_school_name") ||
       localStorage.getItem("gbs_tenant_name") ||
@@ -173,7 +173,7 @@ export default function ParentDashboard() {
     try {
       const saved = JSON.parse(localStorage.getItem("gbs_parent_transcript_requests") || "[]");
       if (Array.isArray(saved) && saved.length > 0) return saved;
-    } catch {}
+    } catch { }
     return [];
   });
   const [transcriptForm, setTranscriptForm] = useState({
@@ -194,7 +194,7 @@ export default function ParentDashboard() {
     try {
       const saved = JSON.parse(localStorage.getItem("gbs_parent_teacher_messages") || "[]");
       if (Array.isArray(saved)) return saved;
-    } catch {}
+    } catch { }
     return [];
   });
 
@@ -214,7 +214,7 @@ export default function ParentDashboard() {
           setFacultyList(formatted);
           if (formatted.length > 0) setSelectedTeacherId(formatted[0].id);
         }
-      } catch {}
+      } catch { }
     };
     fetchTeachers();
   }, []);
@@ -238,7 +238,7 @@ export default function ParentDashboard() {
             : `Official Admission Notice: Application for ${found.studentFirstName} ${found.studentLastName} has been declined by the Headmaster. Remarks: ${found.rejectionReason || "Cohort capacity reached for current intake term."}`
         };
       }
-    } catch {}
+    } catch { }
     return null;
   });
 
@@ -300,8 +300,8 @@ export default function ParentDashboard() {
           };
           try {
             localStorage.setItem("gbs_parent_live_location", JSON.stringify(beaconData));
-          } catch {}
-          apiClient.post("/parents/live-location", beaconData).catch(() => {});
+          } catch { }
+          apiClient.post("/parents/live-location", beaconData).catch(() => { });
         },
         (err) => {
           console.warn("Live GPS beacon notice:", err.message);
@@ -319,7 +319,7 @@ export default function ParentDashboard() {
       try {
         const savedTranscripts = JSON.parse(localStorage.getItem("gbs_parent_transcript_requests") || "[]");
         setParentTranscriptRequests(savedTranscripts);
-      } catch {}
+      } catch { }
       try {
         const archives = JSON.parse(localStorage.getItem("gbs_daily_attendance_archives") || "[]");
         if (archives.length > 0) {
@@ -331,7 +331,7 @@ export default function ParentDashboard() {
           }));
           setChildAttendance(records);
         }
-      } catch {}
+      } catch { }
     };
 
     window.addEventListener("gbs_attendance_updated", handleStorageSync);
@@ -350,7 +350,7 @@ export default function ParentDashboard() {
       window.removeEventListener("gbs_attendance_updated", handleStorageSync);
       window.removeEventListener("gbs_school_name_updated", handleStorageSync);
       window.removeEventListener("gbs_transcript_released", handleStorageSync);
-      window.removeEventListener("gbs_admission_status_changed", () => {});
+      window.removeEventListener("gbs_admission_status_changed", () => { });
       window.removeEventListener("storage", handleStorageSync);
     };
   }, []);
@@ -376,7 +376,7 @@ export default function ParentDashboard() {
           });
         }
       }
-    } catch {}
+    } catch { }
   };
 
   const fetchParentApplications = async () => {
@@ -470,16 +470,32 @@ export default function ParentDashboard() {
     setGuardianCoords((prev) => ({ ...prev, isLocating: true }));
     navigator.geolocation.getCurrentPosition(
       (pos) => {
+        const lat = pos.coords.latitude;
+        const lng = pos.coords.longitude;
+        const addressText = `Live GPS Beacon: ${lat.toFixed(5)}° N, ${lng.toFixed(5)}° E (Accuracy: ±${Math.round(pos.coords.accuracy)}m)`;
         setGuardianCoords({
-          lat: pos.coords.latitude,
-          lng: pos.coords.longitude,
-          address: `Live GPS Beacon: ${pos.coords.latitude.toFixed(5)}° N, ${pos.coords.longitude.toFixed(5)}° E (Accuracy: ±${Math.round(pos.coords.accuracy)}m)`,
+          lat,
+          lng,
+          address: addressText,
           status: "AUTHENTIC LIVE DEVICE GPS BEACON ACQUIRED",
           isLocating: false
         });
+        const beaconData = {
+          phone: currentUser.phone || "+233-24-412-8990",
+          email: currentUser.email || "",
+          latitude: lat,
+          longitude: lng,
+          address: addressText,
+          guardianName: `${currentUser.firstName || "Parent"} ${currentUser.lastName || "Guardian"}`.trim(),
+          timestamp: Date.now()
+        };
+        try {
+          localStorage.setItem("gbs_parent_live_location", JSON.stringify(beaconData));
+        } catch { }
+        apiClient.post("/parents/live-location", beaconData).catch(() => { });
         setFeedback({
           type: "success",
-          message: `📍 Live Device GPS acquired (${pos.coords.latitude.toFixed(4)}, ${pos.coords.longitude.toFixed(4)}). Centered on authentic live Google Map!`
+          message: `📍 Live Device GPS acquired (${lat.toFixed(4)}, ${lng.toFixed(4)}). Centered on authentic live Google Map and synchronized with Headmaster & Developer locators!`
         });
       },
       (err) => {
@@ -521,7 +537,7 @@ export default function ParentDashboard() {
               metrics: { attendanceRate: 100, totalSessions: 0, presentCount: 0, pendingAssignments: 0 }
             }));
           }
-        } catch {}
+        } catch { }
       }
       setChildren(list);
       if (list.length > 0) {
@@ -553,7 +569,7 @@ export default function ParentDashboard() {
           loadChildDetails(list[0].id || list[0].studentId);
           return;
         }
-      } catch {}
+      } catch { }
       setChildren([]);
       setSelectedChild(null);
     }
@@ -614,9 +630,14 @@ export default function ParentDashboard() {
         }
       });
       list = combined;
-    } catch {}
+    } catch { }
 
-    if (list.length === 0) {
+    const isDemoTenant =
+      localStorage.getItem("gbs_tenant_mode") !== "LIVE_PRODUCTION" &&
+      (!currentUser?.tenantCode || currentUser.tenantCode === "GBS-MAIN") &&
+      (Number(currentUser?.tenantId || 1) === 1);
+
+    if (list.length === 0 && isDemoTenant) {
       list = [
         {
           id: 101,
@@ -670,7 +691,7 @@ export default function ParentDashboard() {
     try {
       localStorage.setItem("gbs_parent_meetings", JSON.stringify(updatedActive));
       localStorage.setItem("gbs_parent_archived_meetings", JSON.stringify(updatedArchived));
-    } catch {}
+    } catch { }
     setFeedback({ type: "success", message: `📁 Meeting "${meeting.title}" archived successfully to Concluded Meetings.` });
   };
 
@@ -682,7 +703,7 @@ export default function ParentDashboard() {
     try {
       localStorage.setItem("gbs_parent_meetings", JSON.stringify(updatedActive));
       localStorage.setItem("gbs_parent_archived_meetings", JSON.stringify(updatedArchived));
-    } catch {}
+    } catch { }
     setFeedback({ type: "success", message: `🔄 Meeting "${meeting.title}" restored to active schedule.` });
   };
 
@@ -707,10 +728,10 @@ export default function ParentDashboard() {
     const sName = `${selectedChild?.firstName || "Julian"} ${selectedChild?.lastName || "Doe"}`;
     const sClass = selectedChild?.grade || "Grade 10A Mathematics & Science";
     const sIndex = selectedChild?.indexNumber || selectedChild?.studentId || "GBS-UG-2026-0891";
-    const pMethod = paymentMethod === "MOMO" 
-      ? `Mobile Money (${momoNetwork === "MTN_MOMO" ? "MTN MoMo" : momoNetwork === "TELECEL_CASH" ? "Telecel Cash" : "AT Money"})` 
-      : paymentMethod === "BANK_WIRE" 
-        ? `Bank Wire (${bankName})` 
+    const pMethod = paymentMethod === "MOMO"
+      ? `Mobile Money (${momoNetwork === "MTN_MOMO" ? "MTN MoMo" : momoNetwork === "TELECEL_CASH" ? "Telecel Cash" : "AT Money"})`
+      : paymentMethod === "BANK_WIRE"
+        ? `Bank Wire (${bankName})`
         : "Stripe Visa/Mastercard";
 
     const totalInv = activeInvoiceToPay.netAmount || ((activeInvoiceToPay.paidAmount || 0) + (activeInvoiceToPay.balanceDue || 0));
@@ -752,7 +773,7 @@ export default function ParentDashboard() {
       try {
         const existingReconciled = JSON.parse(localStorage.getItem("gbs_reconciled_payments") || "[]");
         localStorage.setItem("gbs_reconciled_payments", JSON.stringify([paymentRecord, ...existingReconciled]));
-      } catch {}
+      } catch { }
 
       // 2. REQUIREMENT: Automatically grant academic clearance when paid by 70% or full
       if (is70OrFull) {
@@ -760,7 +781,7 @@ export default function ParentDashboard() {
           localStorage.setItem("gbs_student_fee_arrears", "0");
           localStorage.setItem("gbs_financial_clearance_status", "GRANTED");
           window.dispatchEvent(new Event("gbs_payment_made"));
-        } catch {}
+        } catch { }
       }
 
       // 3. Set active receipt for interactive print preview
@@ -839,7 +860,7 @@ export default function ParentDashboard() {
       } else {
         localStorage.setItem("gbs_parent_teacher_messages", JSON.stringify(updatedThread));
       }
-    } catch {}
+    } catch { }
 
     try {
       await apiClient.post("/communication/messages", {
@@ -890,7 +911,7 @@ export default function ParentDashboard() {
       }
       const universal = JSON.parse(localStorage.getItem("gbs_universal_voice_notes") || "[]");
       localStorage.setItem("gbs_universal_voice_notes", JSON.stringify([newMsgObj, ...universal]));
-    } catch {}
+    } catch { }
 
     setTeacherMsgSubject("");
     setFeedback({
@@ -907,8 +928,8 @@ export default function ParentDashboard() {
 
   return (
     <div className="role-dashboard-wrapper">
-      <div 
-        className="role-dashboard-bg" 
+      <div
+        className="role-dashboard-bg"
         style={{ backgroundImage: `url('/assets/parent-dashboard-bg.jpg')` }}
       ></div>
       <div className="role-dashboard-overlay"></div>
@@ -917,9 +938,9 @@ export default function ParentDashboard() {
         {/* Header */}
         <header className="role-header">
           <div className="role-header-brand" style={{ display: "flex", alignItems: "center", gap: "16px" }}>
-            <img 
-              src={customSchoolLogo || "/assets/gbs_crest_badge.jpg"} 
-              alt="School Crest" 
+            <img
+              src={customSchoolLogo || "/assets/gbs_crest_badge.jpg"}
+              alt="School Crest"
               style={{
                 width: "58px",
                 height: "58px",
@@ -996,9 +1017,9 @@ export default function ParentDashboard() {
               </p>
 
               <div className="role-kpi-row">
-                <div 
-                  className="role-kpi-box" 
-                  onClick={() => setActiveTab("children")} 
+                <div
+                  className="role-kpi-box"
+                  onClick={() => setActiveTab("children")}
                   style={{ cursor: "pointer", transition: "transform 0.15s, border-color 0.15s" }}
                   title="Click to view Child Profiles & Overview"
                   onMouseEnter={(e) => { e.currentTarget.style.transform = "translateY(-3px)"; e.currentTarget.style.borderColor = "#38bdf8"; }}
@@ -1010,9 +1031,9 @@ export default function ParentDashboard() {
                     <strong className="role-kpi-num">{children.length} Linked</strong>
                   </div>
                 </div>
-                <div 
-                  className="role-kpi-box" 
-                  onClick={() => setActiveTab("attendance")} 
+                <div
+                  className="role-kpi-box"
+                  onClick={() => setActiveTab("attendance")}
                   style={{ cursor: "pointer", transition: "transform 0.15s, border-color 0.15s" }}
                   title="Click to view Attendance & Punctuality"
                   onMouseEnter={(e) => { e.currentTarget.style.transform = "translateY(-3px)"; e.currentTarget.style.borderColor = "#38bdf8"; }}
@@ -1024,9 +1045,9 @@ export default function ParentDashboard() {
                     <strong className="role-kpi-num">98.5% Present</strong>
                   </div>
                 </div>
-                <div 
-                  className="role-kpi-box" 
-                  onClick={() => setActiveTab("fees")} 
+                <div
+                  className="role-kpi-box"
+                  onClick={() => setActiveTab("fees")}
                   style={{ cursor: "pointer", transition: "transform 0.15s, border-color 0.15s" }}
                   title="Click to view School Fees & Billing Portal"
                   onMouseEnter={(e) => { e.currentTarget.style.transform = "translateY(-3px)"; e.currentTarget.style.borderColor = "#38bdf8"; }}
@@ -1038,9 +1059,9 @@ export default function ParentDashboard() {
                     <strong className="role-kpi-num">$1,300 Due</strong>
                   </div>
                 </div>
-                <div 
-                  className="role-kpi-box" 
-                  onClick={() => setActiveTab("grades")} 
+                <div
+                  className="role-kpi-box"
+                  onClick={() => setActiveTab("grades")}
                   style={{ cursor: "pointer", transition: "transform 0.15s, border-color 0.15s" }}
                   title="Click to view Academic Grades & Report Cards"
                   onMouseEnter={(e) => { e.currentTarget.style.transform = "translateY(-3px)"; e.currentTarget.style.borderColor = "#38bdf8"; }}
@@ -1057,9 +1078,9 @@ export default function ParentDashboard() {
 
             {/* Clear Daytime Real-Life Photograph */}
             <div className="role-hero-photo-frame">
-              <img 
-                src="/assets/parent-dashboard-bg.jpg" 
-                alt="Parent Guardian Campus Life" 
+              <img
+                src="/assets/parent-dashboard-bg.jpg"
+                alt="Parent Guardian Campus Life"
               />
               <div className="photo-live-pill">
                 <span className="ticker-dot"></span>
@@ -1074,7 +1095,7 @@ export default function ParentDashboard() {
 
           {/* Feedback Alert */}
           {feedback && (
-            <div 
+            <div
               style={{
                 padding: "12px 18px",
                 borderRadius: "10px",
@@ -1096,7 +1117,7 @@ export default function ParentDashboard() {
 
           {/* Headmaster Official Admission Status Notice (Approved or Denied) */}
           {admissionStatusNotice && (
-            <div 
+            <div
               style={{
                 padding: "18px 24px",
                 borderRadius: "14px",
@@ -1106,8 +1127,8 @@ export default function ParentDashboard() {
                 display: "flex",
                 alignItems: "flex-start",
                 gap: "16px",
-                boxShadow: admissionStatusNotice.status === "APPROVED" 
-                  ? "0 4px 25px rgba(16, 185, 129, 0.25)" 
+                boxShadow: admissionStatusNotice.status === "APPROVED"
+                  ? "0 4px 25px rgba(16, 185, 129, 0.25)"
                   : "0 4px 25px rgba(239, 68, 68, 0.25)"
               }}
             >
@@ -1117,17 +1138,17 @@ export default function ParentDashboard() {
               <div style={{ flex: 1 }}>
                 <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "6px", flexWrap: "wrap", gap: "8px" }}>
                   <strong style={{ color: admissionStatusNotice.status === "APPROVED" ? "#34d399" : "#f87171", fontSize: "1.05rem", textTransform: "uppercase", letterSpacing: "0.5px" }}>
-                    {admissionStatusNotice.status === "APPROVED" 
-                      ? "HEADMASTER OFFICIAL NOTICE: APPLICATION APPROVED" 
+                    {admissionStatusNotice.status === "APPROVED"
+                      ? "HEADMASTER OFFICIAL NOTICE: APPLICATION APPROVED"
                       : "HEADMASTER OFFICIAL NOTICE: APPLICATION DECLINED"}
                   </strong>
-                  <span style={{ 
-                    fontSize: "0.75rem", 
-                    background: admissionStatusNotice.status === "APPROVED" ? "#10b981" : "#ef4444", 
-                    color: "#fff", 
-                    padding: "3px 10px", 
-                    borderRadius: "999px", 
-                    fontWeight: "800" 
+                  <span style={{
+                    fontSize: "0.75rem",
+                    background: admissionStatusNotice.status === "APPROVED" ? "#10b981" : "#ef4444",
+                    color: "#fff",
+                    padding: "3px 10px",
+                    borderRadius: "999px",
+                    fontWeight: "800"
                   }}>
                     {admissionStatusNotice.status === "APPROVED" ? "CAMPUS VERIFICATION REQUIRED" : "APPLICATION DECLINED"}
                   </span>
@@ -1139,7 +1160,7 @@ export default function ParentDashboard() {
                 </p>
                 <div style={{ marginTop: "12px", display: "flex", gap: "12px", alignItems: "center", flexWrap: "wrap" }}>
                   {admissionStatusNotice.status === "APPROVED" && (
-                    <button 
+                    <button
                       type="button"
                       onClick={() => {
                         const target = parentApplications.find((a) => a.status === "APPROVED") || {
@@ -1158,9 +1179,9 @@ export default function ParentDashboard() {
                       📄 Download Official Admission Letter
                     </button>
                   )}
-                  <button 
+                  <button
                     type="button"
-                    onClick={() => setActiveTab("admissions")} 
+                    onClick={() => setActiveTab("admissions")}
                     style={{ background: admissionStatusNotice.status === "APPROVED" ? "#10b981" : "rgba(255, 255, 255, 0.1)", color: admissionStatusNotice.status === "APPROVED" ? "#022c22" : "#cbd5e1", border: "1px solid rgba(255, 255, 255, 0.2)", padding: "7px 16px", borderRadius: "8px", fontWeight: "800", cursor: "pointer", fontSize: "0.85rem" }}
                   >
                     📋 View Applications & Intake Files
@@ -1182,8 +1203,8 @@ export default function ParentDashboard() {
               const chInitial = chFirst.charAt(0) || "S";
 
               return (
-                <div 
-                  key={ch.id || ch.studentId} 
+                <div
+                  key={ch.id || ch.studentId}
                   className={`child-selector-card ${selectedChild?.id === ch.id ? "active" : ""}`}
                   onClick={() => handleSelectChild(ch)}
                 >
@@ -1199,59 +1220,59 @@ export default function ParentDashboard() {
 
           {/* Workspace Tabs Navigation */}
           <nav className="role-tab-nav">
-            <button 
-              type="button" 
+            <button
+              type="button"
               className={`role-tab-btn ${activeTab === "admissions" ? "active" : ""}`}
               onClick={() => setActiveTab("admissions")}
               style={{ borderLeft: "3px solid #f59e0b" }}
             >
               📝 Admissions & Enquiries
             </button>
-            <button 
-              type="button" 
+            <button
+              type="button"
               className={`role-tab-btn ${activeTab === "locator" ? "active" : ""}`}
               onClick={() => setActiveTab("locator")}
               style={{ borderLeft: "3px solid #38bdf8" }}
             >
               📍 Live Google Map Locator
             </button>
-            <button 
-              type="button" 
+            <button
+              type="button"
               className={`role-tab-btn ${activeTab === "children" ? "active" : ""}`}
               onClick={() => setActiveTab("children")}
             >
               👨‍👩‍👧 Child Profile & Overview
             </button>
-            <button 
-              type="button" 
+            <button
+              type="button"
               className={`role-tab-btn ${activeTab === "attendance" ? "active" : ""}`}
               onClick={() => setActiveTab("attendance")}
             >
               📋 Attendance & Punctuality
             </button>
-            <button 
-              type="button" 
+            <button
+              type="button"
               className={`role-tab-btn ${activeTab === "grades" ? "active" : ""}`}
               onClick={() => setActiveTab("grades")}
             >
               📄 Academic Grades & Report Cards
             </button>
-            <button 
-              type="button" 
+            <button
+              type="button"
               className={`role-tab-btn ${activeTab === "fees" ? "active" : ""}`}
               onClick={() => setActiveTab("fees")}
             >
               💳 School Fees & Billing Portal
             </button>
-            <button 
-              type="button" 
+            <button
+              type="button"
               className={`role-tab-btn ${activeTab === "communications" ? "active" : ""}`}
               onClick={() => setActiveTab("communications")}
             >
               💬 Teacher Direct Chat
             </button>
-            <button 
-              type="button" 
+            <button
+              type="button"
               className={`role-tab-btn ${activeTab === "meetings" ? "active" : ""}`}
               onClick={() => setActiveTab("meetings")}
             >
@@ -1282,22 +1303,22 @@ export default function ParentDashboard() {
                   <h3 style={{ margin: 0, color: "#f59e0b", fontSize: "1.1rem" }}>🎓 Student Intake Application Form</h3>
                   <div style={{ display: "flex", gap: "8px" }}>
                     <label style={{ display: "inline-flex", alignItems: "center", gap: "6px", fontSize: "0.85rem", color: "#e2e8f0", cursor: "pointer" }}>
-                      <input 
-                        type="radio" 
-                        name="appType" 
-                        value="FULL_ADMISSION" 
-                        checked={admissionForm.applicationType === "FULL_ADMISSION"} 
-                        onChange={() => setAdmissionForm({ ...admissionForm, applicationType: "FULL_ADMISSION" })} 
+                      <input
+                        type="radio"
+                        name="appType"
+                        value="FULL_ADMISSION"
+                        checked={admissionForm.applicationType === "FULL_ADMISSION"}
+                        onChange={() => setAdmissionForm({ ...admissionForm, applicationType: "FULL_ADMISSION" })}
                       />
                       Full Admission Application
                     </label>
                     <label style={{ display: "inline-flex", alignItems: "center", gap: "6px", fontSize: "0.85rem", color: "#e2e8f0", cursor: "pointer", marginLeft: "12px" }}>
-                      <input 
-                        type="radio" 
-                        name="appType" 
-                        value="GENERAL_ENQUIRY" 
-                        checked={admissionForm.applicationType === "GENERAL_ENQUIRY"} 
-                        onChange={() => setAdmissionForm({ ...admissionForm, applicationType: "GENERAL_ENQUIRY" })} 
+                      <input
+                        type="radio"
+                        name="appType"
+                        value="GENERAL_ENQUIRY"
+                        checked={admissionForm.applicationType === "GENERAL_ENQUIRY"}
+                        onChange={() => setAdmissionForm({ ...admissionForm, applicationType: "GENERAL_ENQUIRY" })}
                       />
                       Admission Enquiry Only
                     </label>
@@ -1307,45 +1328,45 @@ export default function ParentDashboard() {
                 <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(220px, 1fr))", gap: "14px", marginBottom: "14px" }}>
                   <div>
                     <label style={{ display: "block", fontSize: "0.75rem", color: "#94a3b8", marginBottom: "4px" }}>Student First Name *</label>
-                    <input 
-                      type="text" 
-                      required 
-                      placeholder="e.g. Christian" 
-                      className="filter-input" 
+                    <input
+                      type="text"
+                      required
+                      placeholder="e.g. Christian"
+                      className="filter-input"
                       style={{ width: "100%" }}
-                      value={admissionForm.studentFirstName} 
-                      onChange={(e) => setAdmissionForm({ ...admissionForm, studentFirstName: e.target.value })} 
+                      value={admissionForm.studentFirstName}
+                      onChange={(e) => setAdmissionForm({ ...admissionForm, studentFirstName: e.target.value })}
                     />
                   </div>
                   <div>
                     <label style={{ display: "block", fontSize: "0.75rem", color: "#94a3b8", marginBottom: "4px" }}>Student Last Name *</label>
-                    <input 
-                      type="text" 
-                      required 
-                      placeholder="e.g. Doe" 
-                      className="filter-input" 
+                    <input
+                      type="text"
+                      required
+                      placeholder="e.g. Doe"
+                      className="filter-input"
                       style={{ width: "100%" }}
-                      value={admissionForm.studentLastName} 
-                      onChange={(e) => setAdmissionForm({ ...admissionForm, studentLastName: e.target.value })} 
+                      value={admissionForm.studentLastName}
+                      onChange={(e) => setAdmissionForm({ ...admissionForm, studentLastName: e.target.value })}
                     />
                   </div>
                   <div>
                     <label style={{ display: "block", fontSize: "0.75rem", color: "#94a3b8", marginBottom: "4px" }}>Date of Birth *</label>
-                    <input 
-                      type="date" 
-                      required 
-                      className="filter-input" 
+                    <input
+                      type="date"
+                      required
+                      className="filter-input"
                       style={{ width: "100%" }}
-                      value={admissionForm.dateOfBirth} 
-                      onChange={(e) => setAdmissionForm({ ...admissionForm, dateOfBirth: e.target.value })} 
+                      value={admissionForm.dateOfBirth}
+                      onChange={(e) => setAdmissionForm({ ...admissionForm, dateOfBirth: e.target.value })}
                     />
                   </div>
                   <div>
                     <label style={{ display: "block", fontSize: "0.75rem", color: "#94a3b8", marginBottom: "4px" }}>Gender *</label>
-                    <select 
-                      className="filter-select" 
+                    <select
+                      className="filter-select"
                       style={{ width: "100%" }}
-                      value={admissionForm.gender} 
+                      value={admissionForm.gender}
                       onChange={(e) => setAdmissionForm({ ...admissionForm, gender: e.target.value })}
                     >
                       <option value="MALE">Male</option>
@@ -1361,10 +1382,10 @@ export default function ParentDashboard() {
                     <label style={{ display: "block", fontSize: "0.75rem", color: "#38bdf8", fontWeight: "700", marginBottom: "4px" }}>
                       🎯 Target Class / Level (Lower Primary 1 to University Level 400) *
                     </label>
-                    <select 
-                      className="filter-select" 
+                    <select
+                      className="filter-select"
                       style={{ width: "100%", borderColor: "#38bdf8" }}
-                      value={admissionForm.targetClassTier} 
+                      value={admissionForm.targetClassTier}
                       onChange={(e) => {
                         const val = e.target.value;
                         let gradeLvl = 1;
@@ -1418,24 +1439,24 @@ export default function ParentDashboard() {
 
                   <div>
                     <label style={{ display: "block", fontSize: "0.75rem", color: "#94a3b8", marginBottom: "4px" }}>Previous School Attended</label>
-                    <input 
-                      type="text" 
-                      placeholder="e.g. St. Jude Preparatory Academy" 
-                      className="filter-input" 
+                    <input
+                      type="text"
+                      placeholder="e.g. St. Jude Preparatory Academy"
+                      className="filter-input"
                       style={{ width: "100%" }}
-                      value={admissionForm.previousSchool} 
-                      onChange={(e) => setAdmissionForm({ ...admissionForm, previousSchool: e.target.value })} 
+                      value={admissionForm.previousSchool}
+                      onChange={(e) => setAdmissionForm({ ...admissionForm, previousSchool: e.target.value })}
                     />
                   </div>
                   <div>
                     <label style={{ display: "block", fontSize: "0.75rem", color: "#94a3b8", marginBottom: "4px" }}>Previous Average GPA / Score</label>
-                    <input 
-                      type="text" 
-                      placeholder="e.g. 3.92 / 4.0 or 88%" 
-                      className="filter-input" 
+                    <input
+                      type="text"
+                      placeholder="e.g. 3.92 / 4.0 or 88%"
+                      className="filter-input"
                       style={{ width: "100%" }}
-                      value={admissionForm.previousGpa} 
-                      onChange={(e) => setAdmissionForm({ ...admissionForm, previousGpa: e.target.value })} 
+                      value={admissionForm.previousGpa}
+                      onChange={(e) => setAdmissionForm({ ...admissionForm, previousGpa: e.target.value })}
                     />
                   </div>
                 </div>
@@ -1443,42 +1464,42 @@ export default function ParentDashboard() {
                 <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(220px, 1fr))", gap: "14px", marginBottom: "14px" }}>
                   <div>
                     <label style={{ display: "block", fontSize: "0.75rem", color: "#94a3b8", marginBottom: "4px" }}>Guardian Full Name</label>
-                    <input 
-                      type="text" 
-                      className="filter-input" 
+                    <input
+                      type="text"
+                      className="filter-input"
                       style={{ width: "100%" }}
-                      value={admissionForm.guardianName} 
-                      onChange={(e) => setAdmissionForm({ ...admissionForm, guardianName: e.target.value })} 
+                      value={admissionForm.guardianName}
+                      onChange={(e) => setAdmissionForm({ ...admissionForm, guardianName: e.target.value })}
                     />
                   </div>
                   <div>
                     <label style={{ display: "block", fontSize: "0.75rem", color: "#94a3b8", marginBottom: "4px" }}>Guardian Phone Number</label>
-                    <input 
-                      type="text" 
-                      className="filter-input" 
+                    <input
+                      type="text"
+                      className="filter-input"
                       style={{ width: "100%" }}
-                      value={admissionForm.guardianPhone} 
-                      onChange={(e) => setAdmissionForm({ ...admissionForm, guardianPhone: e.target.value })} 
+                      value={admissionForm.guardianPhone}
+                      onChange={(e) => setAdmissionForm({ ...admissionForm, guardianPhone: e.target.value })}
                     />
                   </div>
                   <div>
                     <label style={{ display: "block", fontSize: "0.75rem", color: "#94a3b8", marginBottom: "4px" }}>Residential Home Address</label>
-                    <input 
-                      type="text" 
-                      className="filter-input" 
+                    <input
+                      type="text"
+                      className="filter-input"
                       style={{ width: "100%" }}
-                      value={admissionForm.residentialAddress} 
-                      onChange={(e) => setAdmissionForm({ ...admissionForm, residentialAddress: e.target.value })} 
+                      value={admissionForm.residentialAddress}
+                      onChange={(e) => setAdmissionForm({ ...admissionForm, residentialAddress: e.target.value })}
                     />
                   </div>
                   <div>
                     <label style={{ display: "block", fontSize: "0.75rem", color: "#94a3b8", marginBottom: "4px" }}>Emergency Contact</label>
-                    <input 
-                      type="text" 
-                      className="filter-input" 
+                    <input
+                      type="text"
+                      className="filter-input"
                       style={{ width: "100%" }}
-                      value={admissionForm.emergencyContact} 
-                      onChange={(e) => setAdmissionForm({ ...admissionForm, emergencyContact: e.target.value })} 
+                      value={admissionForm.emergencyContact}
+                      onChange={(e) => setAdmissionForm({ ...admissionForm, emergencyContact: e.target.value })}
                     />
                   </div>
                 </div>
@@ -1487,13 +1508,13 @@ export default function ParentDashboard() {
                   <label style={{ display: "block", fontSize: "0.75rem", color: "#94a3b8", marginBottom: "4px" }}>
                     Admission Statement, Specific Enquiries & Health / Dietary Notes
                   </label>
-                  <textarea 
-                    rows={3} 
-                    className="filter-input" 
+                  <textarea
+                    rows={3}
+                    className="filter-input"
                     style={{ width: "100%", lineHeight: "1.5" }}
                     placeholder="Enter any particular academic goals, sports preferences, medical conditions, or specific questions for the Headmaster..."
-                    value={admissionForm.notes} 
-                    onChange={(e) => setAdmissionForm({ ...admissionForm, notes: e.target.value })} 
+                    value={admissionForm.notes}
+                    onChange={(e) => setAdmissionForm({ ...admissionForm, notes: e.target.value })}
                   />
                 </div>
 
@@ -1502,9 +1523,9 @@ export default function ParentDashboard() {
                     <span>📎 Attached Portfolio:</span>
                     <strong style={{ color: "#38bdf8" }}>{admissionForm.documentAttached}</strong>
                   </div>
-                  <button 
-                    type="submit" 
-                    className="btn-primary" 
+                  <button
+                    type="submit"
+                    className="btn-primary"
                     disabled={admissionSubmitting}
                     style={{ padding: "10px 24px", fontSize: "0.95rem", background: "linear-gradient(135deg, #f59e0b, #d97706)" }}
                   >
@@ -1602,9 +1623,9 @@ export default function ParentDashboard() {
                                   📁 View Intake File
                                 </button>
                                 {isApproved ? (
-                                  <button 
-                                    type="button" 
-                                    className="btn-primary" 
+                                  <button
+                                    type="button"
+                                    className="btn-primary"
                                     style={{ padding: "4px 10px", fontSize: "0.72rem", background: "linear-gradient(135deg, #10b981, #059669)", fontWeight: "800" }}
                                     onClick={() => {
                                       setSelectedAdmissionForLetter(app);
@@ -1641,8 +1662,8 @@ export default function ParentDashboard() {
                   <p>Real-time authentic Google Map GPS coordinate tracking for emergency response and student safety.</p>
                 </div>
                 <div style={{ display: "flex", gap: "8px" }}>
-                  <button 
-                    type="button" 
+                  <button
+                    type="button"
                     className="role-action-btn"
                     style={{ background: "#38bdf8", color: "#0f172a", fontWeight: "700" }}
                     onClick={handleDetectLiveGPS}
@@ -1650,8 +1671,8 @@ export default function ParentDashboard() {
                   >
                     {guardianCoords.isLocating ? "📡 Acquiring GPS..." : "📡 Locate My Real GPS Beacon"}
                   </button>
-                  <button 
-                    type="button" 
+                  <button
+                    type="button"
                     className="role-action-btn logout"
                     onClick={handleTriggerEmergencyAlert}
                     disabled={emergencyAlertSent}
@@ -1691,18 +1712,18 @@ export default function ParentDashboard() {
                       Lat: <strong>{guardianCoords.lat.toFixed(4)}</strong>, Lng: <strong>{guardianCoords.lng.toFixed(4)}</strong>
                     </span>
                     <div style={{ display: "flex", gap: "8px" }}>
-                      <a 
-                        href={`https://www.google.com/maps/search/?api=1&query=${guardianCoords.lat},${guardianCoords.lng}`} 
-                        target="_blank" 
+                      <a
+                        href={`https://www.google.com/maps/search/?api=1&query=${guardianCoords.lat},${guardianCoords.lng}`}
+                        target="_blank"
                         rel="noreferrer"
                         className="btn-secondary"
                         style={{ padding: "4px 10px", fontSize: "0.75rem", textDecoration: "none" }}
                       >
                         🗺️ Open in Google Maps
                       </a>
-                      <a 
-                        href={`https://www.google.com/maps/dir/?api=1&destination=${guardianCoords.lat},${guardianCoords.lng}`} 
-                        target="_blank" 
+                      <a
+                        href={`https://www.google.com/maps/dir/?api=1&destination=${guardianCoords.lat},${guardianCoords.lng}`}
+                        target="_blank"
                         rel="noreferrer"
                         className="btn-secondary"
                         style={{ padding: "4px 10px", fontSize: "0.75rem", textDecoration: "none", borderColor: "#38bdf8", color: "#38bdf8" }}
@@ -1792,9 +1813,9 @@ export default function ParentDashboard() {
                   <h3 style={{ margin: "4px 0" }}>Dr. Robert Vance</h3>
                   <p style={{ fontSize: "0.85rem", color: "#94a3b8" }}>Designation: <strong>Head of Grade 10 Science</strong></p>
                   <p style={{ fontSize: "0.85rem", color: "#94a3b8" }}>Class Room: <strong>Hall 204</strong></p>
-                  <button 
-                    type="button" 
-                    className="btn-secondary" 
+                  <button
+                    type="button"
+                    className="btn-secondary"
                     style={{ marginTop: "auto" }}
                     onClick={() => setActiveTab("communications")}
                   >
@@ -1806,9 +1827,9 @@ export default function ParentDashboard() {
                   <span className="role-portal-badge" style={{ color: "#f59e0b" }}>Billing Snapshot</span>
                   <h3 style={{ margin: "4px 0" }}>Tuition: $1,300 Due</h3>
                   <p style={{ fontSize: "0.85rem", color: "#94a3b8" }}>Next Term Installment due on Nov 15</p>
-                  <button 
-                    type="button" 
-                    className="btn-primary" 
+                  <button
+                    type="button"
+                    className="btn-primary"
                     style={{ marginTop: "auto" }}
                     onClick={() => setActiveTab("fees")}
                   >
@@ -1876,17 +1897,17 @@ export default function ParentDashboard() {
                   <p>Official verified term grades, cumulative GPA, and authenticated results slip for {selectedChild?.firstName || selectedChild?.student?.firstName || "Julian"}</p>
                 </div>
                 <div style={{ display: "flex", gap: "10px", flexWrap: "wrap" }}>
-                  <button 
-                    type="button" 
-                    className="btn-primary" 
+                  <button
+                    type="button"
+                    className="btn-primary"
                     style={{ background: "linear-gradient(135deg, #10b981, #059669)", fontSize: "0.85rem", padding: "6px 14px" }}
                     onClick={() => setShowResultSlipModal(true)}
                   >
                     📥 Download Official Ward Results Slip (PDF/Print View)
                   </button>
-                  <button 
-                    type="button" 
-                    className="btn-secondary" 
+                  <button
+                    type="button"
+                    className="btn-secondary"
                     style={{ borderColor: "#8b5cf6", color: "#c084fc", fontSize: "0.85rem", padding: "6px 14px" }}
                     onClick={() => setShowTranscriptModal(true)}
                   >
@@ -2046,7 +2067,7 @@ export default function ParentDashboard() {
               </div>
 
               {/* Exact Unpaid Term / Semester Advisory Notice */}
-              <div 
+              <div
                 style={{
                   background: childInvoices.some((i) => i.status !== "PAID") ? "rgba(239, 68, 68, 0.12)" : "rgba(16, 185, 129, 0.1)",
                   border: `2px solid ${childInvoices.some((i) => i.status !== "PAID") ? "#ef4444" : "#10b981"}`,
@@ -2304,7 +2325,7 @@ export default function ParentDashboard() {
                   <h3 style={{ fontSize: "1rem", color: "#f8fafc", margin: 0, display: "flex", alignItems: "center", gap: "8px" }}>
                     <span>✉️</span> Compose Dispatch to Educator
                   </h3>
-                  
+
                   {/* Mode Selector Tabs */}
                   <div style={{ display: "flex", gap: "8px" }}>
                     <button
@@ -2390,11 +2411,11 @@ export default function ParentDashboard() {
                       <label style={{ display: "block", fontSize: "0.8rem", color: "#94a3b8", marginBottom: "4px" }}>
                         Message Content regarding {selectedChild?.firstName || "Julian"} *
                       </label>
-                      <textarea 
-                        rows={4} 
-                        required 
+                      <textarea
+                        rows={4}
+                        required
                         placeholder={`Write your inquiry or question for the educator regarding ${selectedChild?.firstName || "Julian"}...`}
-                        className="filter-input" 
+                        className="filter-input"
                         style={{ width: "100%", padding: "10px 14px", background: "rgba(15, 23, 42, 0.9)", border: "1px solid rgba(255, 255, 255, 0.15)", color: "#f8fafc", borderRadius: "8px", resize: "vertical" }}
                         value={teacherMsg}
                         onChange={(e) => setTeacherMsg(e.target.value)}
@@ -2454,8 +2475,8 @@ export default function ParentDashboard() {
                 ) : (
                   <div style={{ display: "flex", flexDirection: "column", gap: "1.25rem" }}>
                     {teacherThread.map((thread) => (
-                      <div 
-                        key={thread.id} 
+                      <div
+                        key={thread.id}
                         style={{
                           background: "rgba(15, 23, 42, 0.8)",
                           border: "1px solid rgba(255, 255, 255, 0.1)",
@@ -2478,11 +2499,11 @@ export default function ParentDashboard() {
                             </span>
                           </div>
 
-                          <span 
-                            style={{ 
-                              fontSize: "0.75rem", 
-                              fontWeight: "700", 
-                              padding: "4px 10px", 
+                          <span
+                            style={{
+                              fontSize: "0.75rem",
+                              fontWeight: "700",
+                              padding: "4px 10px",
                               borderRadius: "999px",
                               background: thread.replies && thread.replies.length > 0 ? "rgba(16, 185, 129, 0.2)" : "rgba(245, 158, 11, 0.2)",
                               color: thread.replies && thread.replies.length > 0 ? "#34d399" : "#fbbf24"
@@ -2598,13 +2619,13 @@ export default function ParentDashboard() {
                     {meetings.map((m) => {
                       const safeUrl = formatMeetingUrl(m.meetingUrl || "https://zoom.us/j/84939201849", m.passcode || "GBS2026", m.meetingId);
                       return (
-                        <div 
-                          key={m.id} 
-                          className="item-card" 
-                          style={{ 
-                            background: "rgba(15, 23, 42, 0.8)", 
-                            border: "1px solid rgba(56, 189, 248, 0.2)", 
-                            borderRadius: "12px", 
+                        <div
+                          key={m.id}
+                          className="item-card"
+                          style={{
+                            background: "rgba(15, 23, 42, 0.8)",
+                            border: "1px solid rgba(56, 189, 248, 0.2)",
+                            borderRadius: "12px",
                             padding: "1.25rem",
                             display: "flex",
                             flexDirection: "column",
@@ -2621,7 +2642,7 @@ export default function ParentDashboard() {
                           </div>
 
                           <h3 style={{ margin: "2px 0", fontSize: "1rem", color: "#f8fafc" }}>{m.title}</h3>
-                          
+
                           <div style={{ fontSize: "0.8rem", color: "#94a3b8" }}>
                             <div><strong>Host:</strong> {m.hostName || "Classroom Teacher"}</div>
                             <div><strong>Date & Time:</strong> {new Date(m.startTime).toLocaleString([], { dateStyle: 'medium', timeStyle: 'short' })}</div>
@@ -2640,16 +2661,16 @@ export default function ParentDashboard() {
                           </div>
 
                           <div style={{ display: "flex", gap: "8px", marginTop: "auto", paddingTop: "8px", flexWrap: "wrap" }}>
-                            <a 
-                              href={safeUrl} 
-                              target="_blank" 
-                              rel="noopener noreferrer" 
-                              className="btn-primary" 
-                              style={{ 
-                                flex: 1, 
-                                textDecoration: "none", 
-                                textAlign: "center", 
-                                padding: "8px 12px", 
+                            <a
+                              href={safeUrl}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              className="btn-primary"
+                              style={{
+                                flex: 1,
+                                textDecoration: "none",
+                                textAlign: "center",
+                                padding: "8px 12px",
                                 fontSize: "0.85rem",
                                 display: "flex",
                                 alignItems: "center",
@@ -2699,13 +2720,13 @@ export default function ParentDashboard() {
                 ) : (
                   <div className="card-grid-3">
                     {archivedMeetings.map((m) => (
-                      <div 
-                        key={m.id} 
-                        className="item-card" 
-                        style={{ 
-                          background: "rgba(15, 23, 42, 0.6)", 
-                          border: "1px solid rgba(255, 255, 255, 0.1)", 
-                          borderRadius: "12px", 
+                      <div
+                        key={m.id}
+                        className="item-card"
+                        style={{
+                          background: "rgba(15, 23, 42, 0.6)",
+                          border: "1px solid rgba(255, 255, 255, 0.1)",
+                          borderRadius: "12px",
                           padding: "1.25rem",
                           display: "flex",
                           flexDirection: "column",
@@ -2723,7 +2744,7 @@ export default function ParentDashboard() {
                         </div>
 
                         <h3 style={{ margin: "2px 0", fontSize: "1rem", color: "#e2e8f0" }}>{m.title}</h3>
-                        
+
                         <div style={{ fontSize: "0.8rem", color: "#94a3b8" }}>
                           <div><strong>Host:</strong> {m.hostName || "Classroom Teacher"}</div>
                           <div><strong>Conducted On:</strong> {new Date(m.startTime).toLocaleString([], { dateStyle: 'medium', timeStyle: 'short' })}</div>
@@ -2768,12 +2789,12 @@ export default function ParentDashboard() {
             <form onSubmit={handleProcessPayment}>
               <div style={{ marginBottom: "1rem" }}>
                 <label style={{ display: "block", fontSize: "0.8rem", color: "#94a3b8", marginBottom: "4px" }}>Payment Amount ({currencySymbol}) *</label>
-                <input 
-                  type="number" 
-                  step="0.01" 
-                  required 
+                <input
+                  type="number"
+                  step="0.01"
+                  required
                   max={activeInvoiceToPay.balanceDue}
-                  className="filter-input" 
+                  className="filter-input"
                   style={{ width: "100%" }}
                   value={payAmount}
                   onChange={(e) => setPayAmount(e.target.value)}
@@ -2917,7 +2938,7 @@ export default function ParentDashboard() {
                   <label style={{ display: "block", fontSize: "0.8rem", color: "#fbbf24", marginBottom: "4px", fontWeight: "700" }}>
                     Mobile Money (MoMo) Number * (Required for Transaction Settlement)
                   </label>
-                  <input 
+                  <input
                     type="tel"
                     required
                     placeholder="e.g. 0244123456 or +233 24 412 8990"
@@ -2938,7 +2959,7 @@ export default function ParentDashboard() {
                   <label style={{ display: "block", fontSize: "0.8rem", color: "#38bdf8", marginBottom: "4px", fontWeight: "700" }}>
                     Bank Account Number / IBAN * (Required for Complete Wire Transaction)
                   </label>
-                  <input 
+                  <input
                     type="text"
                     required
                     placeholder="e.g. 1048291048019 / GH89ECOB1048291048019"
@@ -2982,15 +3003,15 @@ export default function ParentDashboard() {
               </div>
 
               <div style={{ display: "flex", gap: "10px", justifyContent: "flex-end" }}>
-                <button 
-                  type="button" 
+                <button
+                  type="button"
                   className="btn-secondary"
                   onClick={() => setActiveInvoiceToPay(null)}
                 >
                   Cancel
                 </button>
-                <button 
-                  type="submit" 
+                <button
+                  type="submit"
                   className="btn-primary"
                   disabled={loading}
                 >
@@ -3043,16 +3064,16 @@ export default function ParentDashboard() {
                 Certified Official Electronic Receipt • Verified by Bursar's Office
               </span>
               <div style={{ display: "flex", gap: "10px" }}>
-                <button 
-                  type="button" 
-                  className="btn-secondary" 
+                <button
+                  type="button"
+                  className="btn-secondary"
                   onClick={() => setShowReceiptModal(false)}
                 >
                   Close
                 </button>
-                <button 
-                  type="button" 
-                  className="btn-primary" 
+                <button
+                  type="button"
+                  className="btn-primary"
                   style={{ background: "linear-gradient(135deg, #059669, #10b981)", fontWeight: "800" }}
                   onClick={() => window.print()}
                 >
@@ -3140,9 +3161,9 @@ export default function ParentDashboard() {
 
             <div style={{ display: "flex", justifyContent: "flex-end", gap: "10px" }}>
               <button type="button" className="btn-secondary" onClick={() => setShowResultSlipModal(false)}>Close</button>
-              <button 
-                type="button" 
-                className="btn-primary" 
+              <button
+                type="button"
+                className="btn-primary"
                 style={{ background: "linear-gradient(135deg, #10b981, #059669)" }}
                 onClick={() => window.print()}
               >
@@ -3202,10 +3223,10 @@ export default function ParentDashboard() {
             }}>
               <div style={{ marginBottom: "12px" }}>
                 <label style={{ display: "block", fontSize: "0.8rem", color: "#94a3b8", marginBottom: "4px" }}>Ward / Student Name</label>
-                <input 
-                  type="text" 
-                  disabled 
-                  className="filter-input" 
+                <input
+                  type="text"
+                  disabled
+                  className="filter-input"
                   style={{ width: "100%", opacity: 0.7 }}
                   value={`${selectedChild?.firstName} ${selectedChild?.lastName} (${selectedChild?.grade || "Grade 10"})`}
                 />
@@ -3213,8 +3234,8 @@ export default function ParentDashboard() {
 
               <div style={{ marginBottom: "12px" }}>
                 <label style={{ display: "block", fontSize: "0.8rem", color: "#94a3b8", marginBottom: "4px" }}>Purpose of Transcript *</label>
-                <select 
-                  className="filter-select" 
+                <select
+                  className="filter-select"
                   style={{ width: "100%" }}
                   value={transcriptForm.purpose}
                   onChange={(e) => setTranscriptForm({ ...transcriptForm, purpose: e.target.value })}
@@ -3228,11 +3249,11 @@ export default function ParentDashboard() {
 
               <div style={{ marginBottom: "12px" }}>
                 <label style={{ display: "block", fontSize: "0.8rem", color: "#94a3b8", marginBottom: "4px" }}>Recipient Institution / Address *</label>
-                <input 
-                  type="text" 
+                <input
+                  type="text"
                   required
-                  placeholder="e.g. University Admissions Office, Oxford / MIT" 
-                  className="filter-input" 
+                  placeholder="e.g. University Admissions Office, Oxford / MIT"
+                  className="filter-input"
                   style={{ width: "100%" }}
                   value={transcriptForm.institutionName}
                   onChange={(e) => setTranscriptForm({ ...transcriptForm, institutionName: e.target.value })}
@@ -3241,8 +3262,8 @@ export default function ParentDashboard() {
 
               <div style={{ marginBottom: "16px" }}>
                 <label style={{ display: "block", fontSize: "0.8rem", color: "#94a3b8", marginBottom: "4px" }}>Delivery Format</label>
-                <select 
-                  className="filter-select" 
+                <select
+                  className="filter-select"
                   style={{ width: "100%" }}
                   value={transcriptForm.deliveryType}
                   onChange={(e) => setTranscriptForm({ ...transcriptForm, deliveryType: e.target.value })}
@@ -3254,9 +3275,9 @@ export default function ParentDashboard() {
 
               <div style={{ display: "flex", justifyContent: "flex-end", gap: "10px" }}>
                 <button type="button" className="btn-secondary" onClick={() => setShowTranscriptModal(false)}>Cancel</button>
-                <button 
-                  type="submit" 
-                  className="btn-primary" 
+                <button
+                  type="submit"
+                  className="btn-primary"
                   style={{ background: "linear-gradient(135deg, #8b5cf6, #6d28d9)" }}
                   disabled={transcriptSubmitting}
                 >
@@ -3384,9 +3405,9 @@ export default function ParentDashboard() {
                   Directorate of Academic Admissions & Enrollment Governance • Accreditation Seal #GBS-ACCRED-2026
                 </span>
               </div>
-              <button 
-                type="button" 
-                className="btn-secondary" 
+              <button
+                type="button"
+                className="btn-secondary"
                 style={{ padding: "4px 10px", fontSize: "0.9rem" }}
                 onClick={() => setShowAdmissionLetterModal(false)}
               >
@@ -3426,7 +3447,7 @@ export default function ParentDashboard() {
                     <div style={{ background: "rgba(15, 23, 42, 0.8)", padding: "14px 20px", borderRadius: "8px", margin: "1rem 0", borderLeft: "4px solid #10b981", display: "grid", gridTemplateColumns: "1fr 1fr", gap: "8px" }}>
                       <div>Candidate Name: <strong style={{ color: "#f8fafc" }}>{selectedAdmissionForLetter.studentFirstName} {selectedAdmissionForLetter.studentLastName}</strong></div>
                       <div>Application Index: <strong style={{ color: "#38bdf8", fontFamily: "monospace" }}>{selectedAdmissionForLetter.applicationNumber || "GBS-ADM-2026-092"}</strong></div>
-                      
+
                       {isUniversity ? (
                         <>
                           <div>Faculty / School: <strong style={{ color: "#38bdf8" }}>School of Engineering & Applied Sciences</strong></div>
@@ -3472,16 +3493,16 @@ export default function ParentDashboard() {
             </div>
 
             <div style={{ display: "flex", justifyContent: "flex-end", gap: "10px" }}>
-              <button 
-                type="button" 
-                className="btn-secondary" 
+              <button
+                type="button"
+                className="btn-secondary"
                 onClick={() => setShowAdmissionLetterModal(false)}
               >
                 Close
               </button>
-              <button 
-                type="button" 
-                className="btn-primary" 
+              <button
+                type="button"
+                className="btn-primary"
                 style={{ background: "linear-gradient(135deg, #10b981, #059669)", padding: "10px 20px" }}
                 onClick={() => window.print()}
               >
@@ -3492,7 +3513,7 @@ export default function ParentDashboard() {
         </div>
       )}
       {/* Universal Floating Scroll Controls */}
-      <div 
+      <div
         style={{
           position: "fixed",
           bottom: "24px",

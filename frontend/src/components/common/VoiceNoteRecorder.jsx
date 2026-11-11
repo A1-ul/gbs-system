@@ -111,9 +111,13 @@ export default function VoiceNoteRecorder({ onSendVoiceNote, onCancel, role = "U
 
         mediaRecorder.onstop = () => {
           const blob = new Blob(audioChunksRef.current, { type: "audio/webm" });
-          const url = URL.createObjectURL(blob);
           setAudioBlob(blob);
-          setRecordedAudioUrl(url);
+          const reader = new FileReader();
+          reader.readAsDataURL(blob);
+          reader.onloadend = () => {
+            const base64data = reader.result;
+            setRecordedAudioUrl(base64data);
+          };
           stream.getTracks().forEach((track) => track.stop());
         };
 

@@ -73,6 +73,17 @@ export default function RoleCountGrid() {
     if (!window.confirm(`Permanently remove ${selectedUsers.length} selected accounts as unqualified?`)) return;
     try {
       const token = localStorage.getItem("gbs_token");
+      try {
+        const deletedIds = JSON.parse(localStorage.getItem("gbs_permanently_deleted_ids") || "[]");
+        const set = new Set(deletedIds.map((x) => String(x)));
+        selectedUsers.forEach((uid) => set.add(String(uid)));
+        localStorage.setItem("gbs_permanently_deleted_ids", JSON.stringify(Array.from(set)));
+        const localUsers = JSON.parse(localStorage.getItem("gbs_local_registered_users") || "[]");
+        localStorage.setItem(
+          "gbs_local_registered_users",
+          JSON.stringify(localUsers.filter((u) => !selectedUsers.includes(u.id)))
+        );
+      } catch { }
       for (const uid of selectedUsers) {
         await fetch(`${getApiBaseUrl()}/users/${uid}`, {
           method: "DELETE",
@@ -83,7 +94,7 @@ export default function RoleCountGrid() {
           body: JSON.stringify({ reason: "Headmaster batch account removal" })
         });
       }
-      setActionMessage(`✅ Successfully removed ${selectedUsers.length} accounts.`);
+      setActionMessage(`✅ Successfully removed ${selectedUsers.length} accounts permanently.`);
       setSelectedUsers([]);
       fetchRoleCounts();
       handleOpenCrossCheck(selectedRole);
@@ -218,6 +229,18 @@ export default function RoleCountGrid() {
       return;
     }
     try {
+      try {
+        const deletedIds = JSON.parse(localStorage.getItem("gbs_permanently_deleted_ids") || "[]");
+        const set = new Set(deletedIds.map((x) => String(x)));
+        set.add(String(userId));
+        if (email) set.add(String(email).toLowerCase().trim());
+        localStorage.setItem("gbs_permanently_deleted_ids", JSON.stringify(Array.from(set)));
+        const localUsers = JSON.parse(localStorage.getItem("gbs_local_registered_users") || "[]");
+        localStorage.setItem(
+          "gbs_local_registered_users",
+          JSON.stringify(localUsers.filter((u) => String(u.id) !== String(userId) && String(u.email || "").toLowerCase() !== String(email || "").toLowerCase()))
+        );
+      } catch { }
       const token = localStorage.getItem("gbs_token");
       const res = await fetch(`${getApiBaseUrl()}/users/${userId}`, {
         method: "DELETE",
@@ -229,7 +252,7 @@ export default function RoleCountGrid() {
       });
       const json = await res.json();
       if (json.status === "success") {
-        setActionMessage(`User ${email} removed from system.`);
+        setActionMessage(`User ${email} permanently removed from system.`);
         setInspectedUser(null);
         fetchRoleCounts();
         handleOpenCrossCheck(selectedRole);

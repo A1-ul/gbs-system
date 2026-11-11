@@ -21,8 +21,19 @@ export default function VoiceNotePlayer({
   };
 
   const togglePlay = () => {
-    if (!audioRef.current && voiceNote?.audioUrl) {
-      const audio = new Audio(voiceNote.audioUrl);
+    if (isPlaying) {
+      if (audioRef.current) {
+        audioRef.current.pause();
+      }
+      if (typeof window !== "undefined" && window.speechSynthesis) {
+        window.speechSynthesis.cancel();
+      }
+      setIsPlaying(false);
+      return;
+    }
+
+    if (voiceNote?.audioUrl && !voiceNote.audioUrl.includes("AAAAA")) {
+      const audio = audioRef.current || new Audio(voiceNote.audioUrl);
       audioRef.current = audio;
       audio.onended = () => {
         setIsPlaying(false);
@@ -31,19 +42,40 @@ export default function VoiceNotePlayer({
       audio.ontimeupdate = () => {
         setCurrentTime(audio.currentTime);
       };
-    }
-
-    if (audioRef.current) {
-      if (isPlaying) {
-        audioRef.current.pause();
-        setIsPlaying(false);
-      } else {
-        audioRef.current.play().catch(() => {});
+      audio.play().then(() => {
         setIsPlaying(true);
-      }
+      }).catch(() => {
+        playSpeechFallback();
+      });
     } else {
-      // Simulation toggle
-      setIsPlaying(!isPlaying);
+      playSpeechFallback();
+    }
+  };
+
+  const playSpeechFallback = () => {
+    try {
+      if (typeof window !== "undefined" && window.speechSynthesis) {
+        window.speechSynthesis.cancel();
+        const textToSpeak = voiceNote?.subject || voiceNote?.body || "Official institutional voice note dispatch from school administration.";
+        const cleanText = textToSpeak.replace(/[🎙️✓]/g, "").trim();
+        const utterance = new SpeechSynthesisUtterance(cleanText);
+        utterance.rate = 1.0;
+        utterance.onend = () => {
+          setIsPlaying(false);
+          setCurrentTime(0);
+        };
+        utterance.onerror = () => {
+          setIsPlaying(false);
+        };
+        window.speechSynthesis.speak(utterance);
+        setIsPlaying(true);
+      } else {
+        setIsPlaying(true);
+        setTimeout(() => setIsPlaying(false), (voiceNote?.duration || 3) * 1000);
+      }
+    } catch {
+      setIsPlaying(true);
+      setTimeout(() => setIsPlaying(false), (voiceNote?.duration || 3) * 1000);
     }
   };
 

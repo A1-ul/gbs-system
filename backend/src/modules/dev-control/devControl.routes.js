@@ -79,6 +79,12 @@ router.post('/deployments/batch-delete', devControlController.batchDeleteDeploym
 // 14. Enterprise Licensing & Subscription Controls
 router.get('/licenses', devControlController.getLicenses);
 router.post('/licenses', devControlController.issueLicense);
+router.delete('/licenses/:id', devControlController.deleteLicense);
+router.post('/licenses/batch-delete', devControlController.batchDeleteLicenses);
+router.delete('/subscriptions/:id', devControlController.deleteSubscriptionControl);
+router.delete('/headmaster-messages/:threadId', devControlController.deleteHeadmasterMessageThread);
+router.delete('/headmaster-messages/:threadId/replies/:replyId', devControlController.deleteHeadmasterMessageReply);
+router.delete('/intrusion-violations/:id', devControlController.deleteIntrusionViolation);
 
 // 15. Developer Tenant Onboarding & Mobile OTP Provisioning
 router.post('/tenants/onboard-otp', devControlController.initiateTenantOnboard);

@@ -24,7 +24,7 @@ function getActiveEnvironment() {
       const parsed = JSON.parse(raw);
       if (parsed.systemEnvironment) return parsed.systemEnvironment;
     }
-  } catch (_) {}
+  } catch (_) { }
   return (process.env.GBS_ENVIRONMENT || process.env.NODE_ENV || 'PRODUCTION').toUpperCase();
 }
 
@@ -53,6 +53,12 @@ function ensureStoreFile() {
         subscriptions: [],
         registeredUsers: [],
         deletedTenantArchives: [],
+        deletedTenantLockouts: [],
+        permanentlyDeletedIds: [],
+        enterpriseLicenses: [],
+        headmasterMessages: [],
+        intrusionViolations: [],
+        staffBreachTrials: [],
         usedTrialInstitutions: [],
         prismaModels: {},
         rawSqlTables: {},
@@ -69,6 +75,12 @@ function ensureStoreFile() {
     if (!Array.isArray(parsed.subscriptions)) parsed.subscriptions = [];
     if (!Array.isArray(parsed.registeredUsers)) parsed.registeredUsers = [];
     if (!Array.isArray(parsed.deletedTenantArchives)) parsed.deletedTenantArchives = [];
+    if (!Array.isArray(parsed.deletedTenantLockouts)) parsed.deletedTenantLockouts = [];
+    if (!Array.isArray(parsed.permanentlyDeletedIds)) parsed.permanentlyDeletedIds = [];
+    if (!Array.isArray(parsed.enterpriseLicenses)) parsed.enterpriseLicenses = [];
+    if (!Array.isArray(parsed.headmasterMessages)) parsed.headmasterMessages = [];
+    if (!Array.isArray(parsed.intrusionViolations)) parsed.intrusionViolations = [];
+    if (!Array.isArray(parsed.staffBreachTrials)) parsed.staffBreachTrials = [];
     if (!Array.isArray(parsed.usedTrialInstitutions)) parsed.usedTrialInstitutions = [];
     if (!parsed.prismaModels || typeof parsed.prismaModels !== 'object') parsed.prismaModels = {};
     if (!parsed.rawSqlTables || typeof parsed.rawSqlTables !== 'object') parsed.rawSqlTables = {};
@@ -82,6 +94,14 @@ function ensureStoreFile() {
       topicVideos: [],
       subscriptions: [],
       registeredUsers: [],
+      deletedTenantArchives: [],
+      deletedTenantLockouts: [],
+      permanentlyDeletedIds: [],
+      enterpriseLicenses: [],
+      headmasterMessages: [],
+      intrusionViolations: [],
+      staffBreachTrials: [],
+      usedTrialInstitutions: [],
       prismaModels: {},
       rawSqlTables: {}
     };
@@ -102,6 +122,108 @@ function writePersistentStore(updater) {
   } catch (err) {
     return ensureStoreFile();
   }
+}
+
+function addPermanentlyDeletedIds(ids) {
+  const list = Array.isArray(ids) ? ids : [ids];
+  const normalized = list
+    .filter((id) => id !== undefined && id !== null && String(id).trim() !== '')
+    .map((id) => String(id).trim());
+  if (normalized.length === 0) return;
+  writePersistentStore((current) => {
+    const set = new Set(Array.isArray(current.permanentlyDeletedIds) ? current.permanentlyDeletedIds.map(String) : []);
+    normalized.forEach((id) => set.add(id));
+    return {
+      ...current,
+      permanentlyDeletedIds: Array.from(set)
+    };
+  });
+}
+
+function isPermanentlyDeleted(id) {
+  if (id === undefined || id === null) return false;
+  const target = String(id).trim();
+  if (!target) return false;
+  const store = readPersistentStore();
+  const list = Array.isArray(store.permanentlyDeletedIds) ? store.permanentlyDeletedIds : [];
+  return list.some((item) => String(item).trim() === target);
+}
+
+function addDeletedTenantLockout(lockoutEntry) {
+  if (!lockoutEntry || typeof lockoutEntry !== 'object') return;
+  writePersistentStore((current) => {
+    const lockouts = Array.isArray(current.deletedTenantLockouts) ? [...current.deletedTenantLockouts] : [];
+    const targetId = String(lockoutEntry.id || lockoutEntry.tenantId || '').trim().toLowerCase();
+    const targetCode = String(lockoutEntry.code || lockoutEntry.tenantCode || '').trim().toLowerCase();
+    const targetEmail = String(lockoutEntry.email || lockoutEntry.adminEmail || '').trim().toLowerCase();
+    const exists = lockouts.some((l) => {
+      const lId = String(l.id || l.tenantId || '').trim().toLowerCase();
+      const lCode = String(l.code || l.tenantCode || '').trim().toLowerCase();
+      const lEmail = String(l.email || l.adminEmail || '').trim().toLowerCase();
+      return (targetId && lId === targetId) || (targetCode && lCode === targetCode) || (targetEmail && lEmail === targetEmail);
+    });
+    if (!exists) {
+      lockouts.unshift({
+        ...lockoutEntry,
+        lockedAt: lockoutEntry.lockedAt || new Date().toISOString(),
+        permanentAccessDenied: true
+      });
+    }
+    const deletedIds = new Set(Array.isArray(current.permanentlyDeletedIds) ? current.permanentlyDeletedIds.map(String) : []);
+    if (lockoutEntry.id) deletedIds.add(`Tenant:${lockoutEntry.id}`);
+    if (lockoutEntry.tenantId) deletedIds.add(`Tenant:${lockoutEntry.tenantId}`);
+    if (lockoutEntry.code) deletedIds.add(String(lockoutEntry.code));
+    if (lockoutEntry.email) deletedIds.add(String(lockoutEntry.email).toLowerCase());
+    if (lockoutEntry.adminEmail) deletedIds.add(String(lockoutEntry.adminEmail).toLowerCase());
+    return {
+      ...current,
+      deletedTenantLockouts: lockouts,
+      permanentlyDeletedIds: Array.from(deletedIds)
+    };
+  });
+}
+
+function isTenantLockedOut(criteria = {}) {
+  if (!criteria || typeof criteria !== 'object') return false;
+  const store = readPersistentStore();
+  const lockouts = [
+    ...(Array.isArray(store.deletedTenantLockouts) ? store.deletedTenantLockouts : []),
+    ...(Array.isArray(store.deletedTenantArchives) ? store.deletedTenantArchives : [])
+  ];
+  const deletedIds = new Set(Array.isArray(store.permanentlyDeletedIds) ? store.permanentlyDeletedIds.map((x) => String(x).toLowerCase()) : []);
+
+  const cId = String(criteria.id || criteria.tenantId || '').trim().toLowerCase();
+  const cCode = String(criteria.code || criteria.tenantCode || '').trim().toLowerCase();
+  const cName = String(criteria.name || criteria.schoolName || '').trim().toLowerCase();
+  const cEmail = String(criteria.email || criteria.adminEmail || '').trim().toLowerCase();
+
+  // Never lock out the primary demo sovereign tenant ID 1 unless explicitly deleted by exact email
+  if ((cId === '1' || cCode === 'gbs-accra-01') && lockouts.length === 0) {
+    return false;
+  }
+
+  if (cId && cId !== '1' && deletedIds.has(`tenant:${cId}`)) return true;
+  if (cCode && deletedIds.has(cCode)) return true;
+  if (cEmail && deletedIds.has(cEmail)) return true;
+
+  return lockouts.some((l) => {
+    const lId = String(l.id || l.tenantId || '').trim().toLowerCase();
+    const lCode = String(l.code || l.tenantCode || '').trim().toLowerCase();
+    const lName = String(l.name || l.schoolName || '').trim().toLowerCase();
+    const lEmail = String(l.email || l.adminEmail || '').trim().toLowerCase();
+
+    if (cCode && lCode) {
+      if (cCode === lCode) return true;
+      // If both have distinct tenant codes, do not match on a recycled numeric ID
+      if (cEmail && lEmail && cEmail === lEmail) return true;
+      return false;
+    }
+
+    if (cId && lId && cId === lId) return true;
+    if (cName && lName && cName.length > 3 && cName === lName) return true;
+    if (cEmail && lEmail && cEmail === lEmail) return true;
+    return false;
+  });
 }
 
 /**
@@ -130,7 +252,7 @@ function checkPostgresReachable(timeoutMs = 350) {
         settled = true;
         try {
           socket.destroy();
-        } catch {}
+        } catch { }
         resolve(ok);
       }
     };
@@ -228,6 +350,10 @@ function restoreDatabaseBackup(fileName) {
 module.exports = {
   readPersistentStore,
   writePersistentStore,
+  addPermanentlyDeletedIds,
+  isPermanentlyDeleted,
+  addDeletedTenantLockout,
+  isTenantLockedOut,
   checkPostgresReachable,
   tagRecordMetadata,
   getActiveEnvironment,

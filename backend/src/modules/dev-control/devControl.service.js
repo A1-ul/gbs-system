@@ -7,7 +7,14 @@ const { AppError } = require('../../middleware/error.middleware');
 const socketServer = require('../../core/socket/socketServer');
 const smsService = require('../sms/sms.service');
 const authService = require('../auth/auth.service');
-const { readPersistentStore, writePersistentStore } = require('../../core/database/persistentStore');
+const {
+  readPersistentStore,
+  writePersistentStore,
+  addPermanentlyDeletedIds,
+  isPermanentlyDeleted,
+  addDeletedTenantLockout,
+  isTenantLockedOut
+} = require('../../core/database/persistentStore');
 
 /**
  * Enterprise Developer Control Center & Real-Time Countdown Engine (Blueprint Box 9 & 10)
@@ -862,27 +869,51 @@ const developerTenantAction = async (tenantId, action, params = {}, developer = 
 
     case 'DELETE':
     case 'DELETE_TENANT': {
-      // 1. Snapshot the deleted institution and safely preserve into Deleted Archives Depot for future restoration
+      // 1. Snapshot the deleted institution and safely preserve into Deleted Archives Depot + Permanent Access Lockout
       const archiveRecord = {
+        id: safeTid,
         tenantId: safeTid,
+        code: tenant.code,
         tenantCode: tenant.code,
+        name: tenant.name,
         tenantName: tenant.name,
         institutionType: tenant.institutionType || 'NURSERY_TO_JHS',
         headmasterName: tenant.headmasterName || 'Headmaster',
+        email: tenant.headmasterEmail || 'admin@school.edu',
         headmasterEmail: tenant.headmasterEmail || 'admin@school.edu',
         headmasterPhone: tenant.headmasterPhone || '+233-24-555-0199',
         deletedAt: new Date().toISOString(),
         archivedBy: 'Developer Gabriel (gabosei48@gmail.com)',
-        deletionReason: params.reason || 'Archived from active tenancy by Developer Gabriel',
+        deletionReason: params.reason || 'Deleted from active tenancy by Developer Gabriel',
         status: 'ARCHIVED',
         snapshotData: { ...tenant }
       };
 
+      addDeletedTenantLockout({
+        id: safeTid,
+        tenantId: safeTid,
+        code: tenant.code,
+        tenantCode: tenant.code,
+        name: tenant.name,
+        schoolName: tenant.name,
+        email: tenant.headmasterEmail,
+        adminEmail: tenant.headmasterEmail
+      });
+
       try {
         writePersistentStore((curr) => {
           const prev = Array.isArray(curr.deletedTenantArchives) ? curr.deletedTenantArchives : [];
+          const regUsers = Array.isArray(curr.registeredUsers) ? curr.registeredUsers : [];
+          const updatedUsers = regUsers.map((u) => {
+            const matchesTenant =
+              String(u.tenantId) === String(safeTid) ||
+              (tenant.code && String(u.tenant?.code || u.tenantCode).toLowerCase() === String(tenant.code).toLowerCase()) ||
+              (tenant.headmasterEmail && String(u.email).toLowerCase() === String(tenant.headmasterEmail).toLowerCase());
+            return matchesTenant ? { ...u, isDeleted: true, isActive: false, status: 'ARCHIVED_DELETED' } : u;
+          });
           return {
             ...curr,
+            registeredUsers: updatedUsers,
             deletedTenantArchives: [archiveRecord, ...prev.filter((a) => Number(a.tenantId) !== Number(safeTid))]
           };
         });
@@ -904,7 +935,7 @@ const developerTenantAction = async (tenantId, action, params = {}, developer = 
 
       updatedTenant = { ...tenant, id: safeTid, isDeleted: true, deleted: true, status: 'ARCHIVED_DELETED', archiveRecord };
       auditAction = 'TENANT_ARCHIVED_TO_DEPOT';
-      auditDetails = `Developer archived Tenant '${tenant.name}' (${tenant.code || safeTid}) into Deleted Archives Depot for safe restoration.`;
+      auditDetails = `Developer deleted & locked out Tenant '${tenant.name}' (${tenant.code || safeTid}) into Deleted Archives Depot.`;
       break;
     }
 
@@ -935,9 +966,22 @@ const developerTenantAction = async (tenantId, action, params = {}, developer = 
       try {
         writePersistentStore((curr) => {
           const prev = Array.isArray(curr.deletedTenantArchives) ? curr.deletedTenantArchives : [];
+          const lockouts = Array.isArray(curr.deletedTenantLockouts) ? curr.deletedTenantLockouts : [];
+          const delIds = Array.isArray(curr.permanentlyDeletedIds) ? curr.permanentlyDeletedIds : [];
+          const regUsers = Array.isArray(curr.registeredUsers) ? curr.registeredUsers : [];
+          const updatedUsers = regUsers.map((u) => {
+            const matchesTenant =
+              String(u.tenantId) === String(safeTid) ||
+              (tenant.code && String(u.tenant?.code || u.tenantCode).toLowerCase() === String(tenant.code).toLowerCase()) ||
+              (tenant.headmasterEmail && String(u.email).toLowerCase() === String(tenant.headmasterEmail).toLowerCase());
+            return matchesTenant ? { ...u, isDeleted: false, isActive: true, isApproved: true, status: 'ACTIVE' } : u;
+          });
           return {
             ...curr,
-            deletedTenantArchives: prev.filter((a) => Number(a.tenantId) !== Number(safeTid))
+            registeredUsers: updatedUsers,
+            deletedTenantArchives: prev.filter((a) => Number(a.tenantId) !== Number(safeTid)),
+            deletedTenantLockouts: lockouts.filter((l) => Number(l.tenantId || l.id) !== Number(safeTid) && String(l.code || l.tenantCode) !== String(tenant.code)),
+            permanentlyDeletedIds: delIds.filter((id) => String(id) !== String(safeTid) && String(id) !== `Tenant:${safeTid}` && String(id) !== String(tenant.code))
           };
         });
       } catch { }
@@ -949,6 +993,18 @@ const developerTenantAction = async (tenantId, action, params = {}, developer = 
     }
 
     case 'PURGE_PERMANENT': {
+      addDeletedTenantLockout({
+        id: safeTid,
+        tenantId: safeTid,
+        code: tenant.code,
+        tenantCode: tenant.code,
+        name: tenant.name,
+        schoolName: tenant.name,
+        email: tenant.headmasterEmail,
+        adminEmail: tenant.headmasterEmail
+      });
+      addPermanentlyDeletedIds([safeTid, `Tenant:${safeTid}`, tenant.code].filter(Boolean));
+
       await prisma.subscription.deleteMany({ where: { tenantId: safeTid } }).catch(() => { });
       await prisma.systemLock.deleteMany({ where: { tenantId: safeTid } }).catch(() => { });
       try {
@@ -958,8 +1014,15 @@ const developerTenantAction = async (tenantId, action, params = {}, developer = 
       try {
         writePersistentStore((curr) => {
           const prev = Array.isArray(curr.deletedTenantArchives) ? curr.deletedTenantArchives : [];
+          const regUsers = Array.isArray(curr.registeredUsers) ? curr.registeredUsers : [];
           return {
             ...curr,
+            registeredUsers: regUsers.filter(
+              (u) =>
+                String(u.tenantId) !== String(safeTid) &&
+                (!tenant.code || String(u.tenant?.code || u.tenantCode).toLowerCase() !== String(tenant.code).toLowerCase()) &&
+                (!tenant.headmasterEmail || String(u.email).toLowerCase() !== String(tenant.headmasterEmail).toLowerCase())
+            ),
             deletedTenantArchives: prev.filter((a) => Number(a.tenantId) !== Number(safeTid))
           };
         });
@@ -967,7 +1030,7 @@ const developerTenantAction = async (tenantId, action, params = {}, developer = 
 
       updatedTenant = { ...tenant, id: safeTid, isDeleted: true, status: 'PURGED' };
       auditAction = 'TENANT_PERMANENTLY_PURGED';
-      auditDetails = `Developer permanently purged Tenant '${tenant.name}' (${tenant.code || safeTid}) from database.`;
+      auditDetails = `Developer permanently purged Tenant '${tenant.name}' (${tenant.code || safeTid}) from database and locked out access permanently.`;
       break;
     }
 
@@ -1675,6 +1738,9 @@ const verifyAndApproveInstitution = async (idOrTenantUid, developerNotes = 'Appr
       firstName: reg.adminName || 'Headmaster',
       lastName: '',
       isActive: true,
+      isApproved: true,
+      status: 'APPROVED',
+      verificationStatus: 'VERIFIED',
       isLocked: false,
       permissions: ['*'],
       tenant: {
@@ -1682,6 +1748,7 @@ const verifyAndApproveInstitution = async (idOrTenantUid, developerNotes = 'Appr
         name: reg.institutionName,
         code: reg.tenantCode,
         isActive: true,
+        isApproved: true,
         status: 'ACTIVE'
       }
     });
@@ -1770,6 +1837,30 @@ const rejectInstitutionRegistration = async (idOrTenantUid, reason = 'Applicatio
         }
       });
     }
+  } catch { }
+
+  try {
+    writePersistentStore((curr) => {
+      const insts = Array.isArray(curr.institutions) ? curr.institutions : [];
+      const regUsers = Array.isArray(curr.registeredUsers) ? curr.registeredUsers : [];
+      const targetEmail = String(reg.adminEmail || reg.officialEmail || '').toLowerCase().trim();
+      return {
+        ...curr,
+        institutions: insts.map((inst) =>
+          String(inst.id) === String(idOrTenantUid) ||
+          inst.tenantUid === String(idOrTenantUid) ||
+          inst.tenantCode === String(idOrTenantUid) ||
+          (targetEmail && String(inst.adminEmail || '').toLowerCase() === targetEmail)
+            ? { ...inst, status: 'REJECTED', isApproved: false, isActive: false, rejectionReason: reason }
+            : inst
+        ),
+        registeredUsers: regUsers.map((u) =>
+          targetEmail && String(u.email || '').toLowerCase() === targetEmail
+            ? { ...u, status: 'REJECTED', verificationStatus: 'REJECTED', isApproved: false, isActive: false }
+            : u
+        )
+      };
+    });
   } catch { }
 
   const hmPhone = reg.adminPhone || reg.officialPhone;
@@ -2178,7 +2269,7 @@ const triggerDeploymentRollback = async (targetVersion = 'v1.0.0-ENTERPRISE-PROD
 // 14. Enterprise Licensing & Subscription Controls
 const getLicenses = async () => {
   try {
-    return await prisma.license.findMany({
+    const rows = await prisma.license.findMany({
       include: {
         subscription: {
           include: {
@@ -2188,8 +2279,14 @@ const getLicenses = async () => {
       },
       orderBy: { createdAt: 'desc' }
     });
+    return (Array.isArray(rows) ? rows : []).filter(
+      (lic) => !isPermanentlyDeleted(lic.id) && !isPermanentlyDeleted(`License:${lic.id}`) && !isPermanentlyDeleted(lic.licenseKey)
+    );
   } catch (err) {
     console.warn('Licenses db lookup notice (resilience active):', err.message);
+    if (isPermanentlyDeleted(1) || isPermanentlyDeleted('License:1') || isPermanentlyDeleted('GBS-LIC-2026-ENTERPRISE-ROOT')) {
+      return [];
+    }
     return [
       {
         id: 1,
@@ -2205,6 +2302,120 @@ const getLicenses = async () => {
       }
     ];
   }
+};
+
+const deleteLicense = async (idOrKey) => {
+  const raw = String(idOrKey || '').trim();
+  const numId = parseInt(raw, 10);
+  addPermanentlyDeletedIds([raw, `License:${raw}`, !isNaN(numId) ? `License:${numId}` : null].filter(Boolean));
+  try {
+    if (!isNaN(numId) && String(numId) === raw) {
+      await prisma.license.delete({ where: { id: numId } });
+    } else {
+      await prisma.license.deleteMany({ where: { licenseKey: raw } });
+    }
+  } catch { }
+  try {
+    writePersistentStore((curr) => {
+      const entLics = Array.isArray(curr.enterpriseLicenses) ? curr.enterpriseLicenses : [];
+      const modelLics = Array.isArray(curr.prismaModels?.License) ? curr.prismaModels.License : [];
+      return {
+        ...curr,
+        enterpriseLicenses: entLics.filter((l) => String(l.id) !== raw && String(l.licenseKey) !== raw),
+        prismaModels: {
+          ...(curr.prismaModels || {}),
+          License: modelLics.filter((l) => String(l.id) !== raw && String(l.licenseKey) !== raw)
+        }
+      };
+    });
+  } catch { }
+  return { id: idOrKey, deleted: true, permanent: true };
+};
+
+const batchDeleteLicenses = async (ids = []) => {
+  const list = Array.isArray(ids) ? ids : [];
+  for (const id of list) {
+    await deleteLicense(id);
+  }
+  return { deletedCount: list.length, permanent: true };
+};
+
+const deleteSubscriptionControl = async (id) => {
+  const raw = String(id || '').trim();
+  const numId = parseInt(raw, 10);
+  addPermanentlyDeletedIds([raw, `Subscription:${raw}`, !isNaN(numId) ? `Subscription:${numId}` : null].filter(Boolean));
+  try {
+    if (!isNaN(numId)) {
+      await prisma.subscription.delete({ where: { id: numId } });
+    }
+  } catch { }
+  try {
+    writePersistentStore((curr) => {
+      const subs = Array.isArray(curr.subscriptions) ? curr.subscriptions : [];
+      const modelSubs = Array.isArray(curr.prismaModels?.Subscription) ? curr.prismaModels.Subscription : [];
+      return {
+        ...curr,
+        subscriptions: subs.filter((s) => String(s.id) !== raw && String(s.tenantId) !== raw && String(s.code) !== raw),
+        prismaModels: {
+          ...(curr.prismaModels || {}),
+          Subscription: modelSubs.filter((s) => String(s.id) !== raw && String(s.tenantId) !== raw)
+        }
+      };
+    });
+  } catch { }
+  return { id, deleted: true, permanent: true };
+};
+
+const deleteHeadmasterMessageThread = async (threadId) => {
+  const raw = String(threadId || '').trim();
+  addPermanentlyDeletedIds([raw, `HeadmasterMessage:${raw}`]);
+  try {
+    writePersistentStore((curr) => {
+      const msgs = Array.isArray(curr.headmasterMessages) ? curr.headmasterMessages : [];
+      return {
+        ...curr,
+        headmasterMessages: msgs.filter((m) => String(m.id) !== raw)
+      };
+    });
+  } catch { }
+  return { threadId: raw, deleted: true, permanent: true };
+};
+
+const deleteHeadmasterMessageReply = async (threadId, replyId) => {
+  const rawThread = String(threadId || '').trim();
+  const rawReply = String(replyId || '').trim();
+  addPermanentlyDeletedIds([rawReply, `HeadmasterReply:${rawThread}:${rawReply}`]);
+  try {
+    writePersistentStore((curr) => {
+      const msgs = Array.isArray(curr.headmasterMessages) ? curr.headmasterMessages : [];
+      return {
+        ...curr,
+        headmasterMessages: msgs.map((m) => {
+          if (String(m.id) !== rawThread) return m;
+          const replies = Array.isArray(m.replies) ? m.replies.filter((r) => String(r.id) !== rawReply) : [];
+          return { ...m, replies };
+        })
+      };
+    });
+  } catch { }
+  return { threadId: rawThread, replyId: rawReply, deleted: true, permanent: true };
+};
+
+const deleteIntrusionViolation = async (id) => {
+  const raw = String(id || '').trim();
+  addPermanentlyDeletedIds([raw, `Intrusion:${raw}`]);
+  try {
+    writePersistentStore((curr) => {
+      const violations = Array.isArray(curr.intrusionViolations) ? curr.intrusionViolations : [];
+      const trials = Array.isArray(curr.staffBreachTrials) ? curr.staffBreachTrials : [];
+      return {
+        ...curr,
+        intrusionViolations: violations.filter((v) => String(v.id) !== raw),
+        staffBreachTrials: trials.filter((t) => String(t.id) !== raw)
+      };
+    });
+  } catch { }
+  return { id: raw, deleted: true, permanent: true };
 };
 
 const issueLicense = async (data = {}) => {
@@ -3333,6 +3544,12 @@ module.exports = {
   triggerDeploymentRollback,
   getLicenses,
   issueLicense,
+  deleteLicense,
+  batchDeleteLicenses,
+  deleteSubscriptionControl,
+  deleteHeadmasterMessageThread,
+  deleteHeadmasterMessageReply,
+  deleteIntrusionViolation,
   initiateTenantOnboard,
   verifyAndProvisionTenant,
   getOnboardedTenants,

@@ -59,6 +59,72 @@ import VideoPresentationEngine from "../modules/presentation/pages/VideoPresenta
 import GBSCompanyWebsite from "../modules/website/pages/GBSCompanyWebsite";
 import UniversalDetailPage from "../components/common/UniversalDetailPage";
 
+function ProtectedPortalRoute({ children, loginPath = "/login" }) {
+  try {
+    const rawUser = localStorage.getItem("gbs_user");
+    const devToken = localStorage.getItem("gbs_dev_token");
+    if (devToken) {
+      return children;
+    }
+    if (!rawUser) {
+      return <Navigate to={loginPath} replace />;
+    }
+    const user = JSON.parse(rawUser);
+    const userEmail = String(user?.email || "").toLowerCase().trim();
+    const userCode = String(user?.tenantCode || user?.tenant?.code || "").toLowerCase().trim();
+    const userTenantId = String(user?.tenantId || user?.tenant?.id || "").toLowerCase().trim();
+
+    // Check permanent deletion lockouts
+    const deletedLockouts = JSON.parse(localStorage.getItem("gbs_deleted_tenant_lockouts") || "[]");
+    const deletedArchives = JSON.parse(localStorage.getItem("gbs_deleted_tenant_archives") || "[]");
+    const deletedIds = new Set(JSON.parse(localStorage.getItem("gbs_permanently_deleted_ids") || "[]").map((x) => String(x).toLowerCase()));
+
+    if ((userEmail && deletedIds.has(userEmail)) || (userTenantId && userTenantId !== "1" && deletedIds.has(userTenantId))) {
+      localStorage.removeItem("gbs_user");
+      localStorage.removeItem("gbs_access_token");
+      return <Navigate to={loginPath} replace />;
+    }
+
+    const isLockedOut = [...deletedLockouts, ...deletedArchives].some((l) => {
+      const emailHit =
+        (Array.isArray(l.emails) && l.emails.some((e) => e && String(e).toLowerCase() === userEmail)) ||
+        (l.headmasterEmail && String(l.headmasterEmail).toLowerCase() === userEmail) ||
+        (l.email && String(l.email).toLowerCase() === userEmail);
+      const codeHit =
+        (l.tenantCode && userCode && String(l.tenantCode).toLowerCase() === userCode) ||
+        (l.code && userCode && String(l.code).toLowerCase() === userCode);
+      const idHit = userTenantId && userTenantId !== "1" && String(l.tenantId || l.id || "").toLowerCase() === userTenantId;
+      return emailHit || codeHit || idHit;
+    });
+
+    if (isLockedOut) {
+      localStorage.removeItem("gbs_user");
+      localStorage.removeItem("gbs_access_token");
+      return <Navigate to={loginPath} replace />;
+    }
+
+    // Check if user or onboarding institution is still pending approval
+    const uStatus = String(user?.status || user?.verificationStatus || "").toUpperCase();
+    if (user?.isApproved === false || uStatus.includes("PENDING") || uStatus === "REJECTED") {
+      localStorage.removeItem("gbs_user");
+      localStorage.removeItem("gbs_access_token");
+      return <Navigate to={loginPath} replace />;
+    }
+
+    const incomingApps = JSON.parse(localStorage.getItem("gbs_incoming_onboarding_applications") || "[]");
+    const pendingApp = incomingApps.find((app) => {
+      const appEmails = [app.headmasterEmail, app.adminEmail, app.officialEmail].filter(Boolean).map((e) => String(e).toLowerCase().trim());
+      return (userEmail && appEmails.includes(userEmail)) || (userCode && userCode !== "gbs-main" && String(app.tenantCode || "").toLowerCase() === userCode);
+    });
+    if (pendingApp && pendingApp.isApproved !== true && String(pendingApp.status || "").toUpperCase() === "PENDING_DEVELOPER_APPROVAL") {
+      localStorage.removeItem("gbs_user");
+      localStorage.removeItem("gbs_access_token");
+      return <Navigate to={loginPath} replace />;
+    }
+  } catch { }
+  return children;
+}
+
 export default function AppRouter() {
   return (
     <BrowserRouter>
@@ -104,17 +170,17 @@ export default function AppRouter() {
         <Route path="/login/alumni" element={<StaffLogin defaultRole="ALUMNI" />} />
 
         {/* Master Blueprint Section 3: Dedicated Role-Based Interactive Workspaces */}
-        <Route path="/portal/admin/dashboard" element={<AdminDashboard />} />
+        <Route path="/portal/admin/dashboard" element={<ProtectedPortalRoute loginPath="/login/admin"><AdminDashboard /></ProtectedPortalRoute>} />
         <Route path="/portal/super_admin/dashboard" element={<Navigate to="/portal/admin/dashboard" replace />} />
-        <Route path="/portal/teacher/dashboard" element={<TeacherDashboard />} />
-        <Route path="/portal/student/dashboard" element={<StudentDashboard />} />
-        <Route path="/portal/parent/dashboard" element={<ParentDashboard />} />
-        <Route path="/portal/accountant/dashboard" element={<AccountantDashboard />} />
-        <Route path="/portal/staff/dashboard" element={<StaffDashboard />} />
-        <Route path="/portal/hr/dashboard" element={<HRDashboard />} />
-        <Route path="/portal/alumni/dashboard" element={<AlumniDashboard />} />
+        <Route path="/portal/teacher/dashboard" element={<ProtectedPortalRoute loginPath="/login/teacher"><TeacherDashboard /></ProtectedPortalRoute>} />
+        <Route path="/portal/student/dashboard" element={<ProtectedPortalRoute loginPath="/login/student"><StudentDashboard /></ProtectedPortalRoute>} />
+        <Route path="/portal/parent/dashboard" element={<ProtectedPortalRoute loginPath="/login/parent"><ParentDashboard /></ProtectedPortalRoute>} />
+        <Route path="/portal/accountant/dashboard" element={<ProtectedPortalRoute loginPath="/login/accountant"><AccountantDashboard /></ProtectedPortalRoute>} />
+        <Route path="/portal/staff/dashboard" element={<ProtectedPortalRoute loginPath="/login/staff"><StaffDashboard /></ProtectedPortalRoute>} />
+        <Route path="/portal/hr/dashboard" element={<ProtectedPortalRoute loginPath="/login/hr"><HRDashboard /></ProtectedPortalRoute>} />
+        <Route path="/portal/alumni/dashboard" element={<ProtectedPortalRoute loginPath="/login/alumni"><AlumniDashboard /></ProtectedPortalRoute>} />
         <Route path="/portal/developer/dashboard" element={<Navigate to="/developer-control-center/dashboard" replace />} />
-        <Route path="/portal/:role/dashboard" element={<RoleDashboardView />} />
+        <Route path="/portal/:role/dashboard" element={<ProtectedPortalRoute loginPath="/login"><RoleDashboardView /></ProtectedPortalRoute>} />
 
         {/* Hidden Enterprise Developer Control Center */}
         <Route path="/developer-control-center" element={<Navigate to="/developer-control-center/login" replace />} />

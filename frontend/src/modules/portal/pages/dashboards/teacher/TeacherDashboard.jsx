@@ -1341,9 +1341,13 @@ export default function TeacherDashboard() {
   // Student Homework Submissions to Verify & Mark
   const [studentSubmissions, setStudentSubmissions] = useState(() => {
     try {
+      const isDemo = localStorage.getItem("gbs_system_mode") === "DEMO_SANDBOX";
       const saved = JSON.parse(localStorage.getItem("gbs_student_submissions") || "[]");
       if (Array.isArray(saved) && saved.length > 0) return saved;
+      if (!isDemo) return []; // In LIVE_PRODUCTION, start clean with 0 fake submissions
     } catch { }
+    const isDemo = localStorage.getItem("gbs_system_mode") === "DEMO_SANDBOX";
+    if (!isDemo) return [];
     try {
       localStorage.setItem("gbs_student_submissions", JSON.stringify(CANONICAL_HOMEWORK_SUBMISSIONS));
     } catch { }
@@ -1728,11 +1732,14 @@ export default function TeacherDashboard() {
         } catch { }
       }
 
-      if (!Array.isArray(students) || students.length === 0) {
+      const isDemo = localStorage.getItem("gbs_system_mode") === "DEMO_SANDBOX";
+      if ((!Array.isArray(students) || students.length === 0) && isDemo) {
         students = CANONICAL_STUDENT_ROSTER;
         try {
           localStorage.setItem("gbs_enrolled_students", JSON.stringify(CANONICAL_STUDENT_ROSTER));
         } catch { }
+      } else if (!Array.isArray(students)) {
+        students = [];
       }
 
       // Deduplicate students by id or studentId to ensure 100% unique student entries
@@ -1745,7 +1752,7 @@ export default function TeacherDashboard() {
           uniqueStudents.push(s);
         }
       });
-      const finalRoster = uniqueStudents.length > 0 ? uniqueStudents : CANONICAL_STUDENT_ROSTER;
+      const finalRoster = uniqueStudents.length > 0 ? uniqueStudents : (isDemo ? CANONICAL_STUDENT_ROSTER : []);
 
       setRoster(finalRoster);
 
@@ -1809,7 +1816,8 @@ export default function TeacherDashboard() {
           fallbackStudents = stored;
         }
       } catch { }
-      if (fallbackStudents.length === 0) {
+      const isDemo = localStorage.getItem("gbs_system_mode") === "DEMO_SANDBOX";
+      if (fallbackStudents.length === 0 && isDemo) {
         fallbackStudents = CANONICAL_STUDENT_ROSTER;
       }
       setRoster(fallbackStudents);

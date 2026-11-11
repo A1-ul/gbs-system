@@ -126,38 +126,139 @@ function attemptLocalResilientLogin(payload = {}) {
 
   if (!rawIdentifier || !rawPassword) return null;
 
-  // Check if institution was permanently deleted by Developer
+  // 0. Check if institution or user was permanently deleted by Developer or Headmaster
   try {
     const deletedLockouts = JSON.parse(localStorage.getItem("gbs_deleted_tenant_lockouts") || "[]");
-    const matchedLockout = deletedLockouts.find((l) => {
-      const emailMatches = Array.isArray(l.emails) && l.emails.some((e) => e === rawIdentifier || rawIdentifier.includes(e));
-      const codeMatches = l.tenantCode && rawIdentifier === String(l.tenantCode).toLowerCase();
+    const deletedArchives = JSON.parse(localStorage.getItem("gbs_deleted_tenant_archives") || "[]");
+    const deletedIds = new Set(JSON.parse(localStorage.getItem("gbs_permanently_deleted_ids") || "[]").map((x) => String(x).toLowerCase()));
+
+    if (deletedIds.has(rawIdentifier)) {
+      throw new Error("Access Denied: This account or institution has been permanently deleted from the GBS System.");
+    }
+
+    const matchedLockout = [...deletedLockouts, ...deletedArchives].find((l) => {
+      const emailMatches =
+        (Array.isArray(l.emails) && l.emails.some((e) => e && (String(e).toLowerCase() === rawIdentifier || rawIdentifier.includes(String(e).toLowerCase())))) ||
+        (l.headmasterEmail && String(l.headmasterEmail).toLowerCase() === rawIdentifier) ||
+        (l.email && String(l.email).toLowerCase() === rawIdentifier) ||
+        (l.adminEmail && String(l.adminEmail).toLowerCase() === rawIdentifier);
+      const codeMatches =
+        (l.tenantCode && rawIdentifier === String(l.tenantCode).toLowerCase()) ||
+        (l.code && rawIdentifier === String(l.code).toLowerCase());
       return emailMatches || codeMatches;
     });
     if (matchedLockout) {
-      throw new Error("Your institution has been deleted from GBS SYSTEM. You are unable to access the system permanently until the institution is re-registered by the developer.");
+      throw new Error("Access Denied: Your institution has been permanently deleted from the GBS System. Deleted institutions are barred from accessing the platform.");
     }
   } catch (lErr) {
-    if (lErr.message && lErr.message.includes("deleted from GBS SYSTEM")) throw lErr;
+    if (lErr.message && lErr.message.startsWith("Access Denied:")) throw lErr;
   }
 
-  // 1. Check gbs_local_registered_users (created during onboarding or member signup)
+  // 1. Check gbs_incoming_onboarding_applications & gbs_archived_onboarded_tenants FIRST to block unapproved institutions
+  try {
+    const incomingApps = JSON.parse(localStorage.getItem("gbs_incoming_onboarding_applications") || "[]");
+    const archivedApps = JSON.parse(localStorage.getItem("gbs_archived_onboarded_tenants") || "[]");
+    const allApps = [...incomingApps, ...archivedApps];
+
+    const matchedAppByIdentity = allApps.find((app) => {
+      const candidates = [
+        app.headmasterEmail,
+        app.adminEmail,
+        app.officialEmail,
+        app.repEmail,
+        app.tenantCode,
+        app.assignedTenantCode
+      ]
+        .filter(Boolean)
+        .map((s) => String(s).trim().toLowerCase());
+
+      return candidates.includes(rawIdentifier);
+    });
+
+    if (matchedAppByIdentity) {
+      const appStatus = String(matchedAppByIdentity.status || "").toUpperCase();
+      if (appStatus === "DELETED" || appStatus === "ARCHIVED_DELETED" || appStatus === "PURGED" || matchedAppByIdentity.isDeleted) {
+        throw new Error("Access Denied: Your institution has been permanently deleted from the GBS System.");
+      }
+      if (appStatus === "REJECTED") {
+        throw new Error(`Access Denied: Your institution onboarding application for '${matchedAppByIdentity.institutionName || "your institution"}' was rejected by the Developer Control Center.`);
+      }
+      const isExplicitlyApproved =
+        matchedAppByIdentity.isApproved === true ||
+        appStatus === "APPROVED" ||
+        appStatus === "ACTIVE" ||
+        appStatus === "PROVISIONED";
+      if (!isExplicitlyApproved) {
+        throw new Error(`Access Denied: Your institution '${matchedAppByIdentity.institutionName || "your institution"}' has not yet been approved by the System Developer. Newly onboarded institutions cannot access the system until approved in the Developer Control Center.`);
+      }
+
+      if (!matchedAppByIdentity.password || matchedAppByIdentity.password !== rawPassword) {
+        throw new Error("Invalid email or password for this approved institution.");
+      }
+
+      const hmName = matchedAppByIdentity.headmasterName || matchedAppByIdentity.adminName || matchedAppByIdentity.repFullName || "Executive Headmaster";
+      const parts = hmName.split(" ");
+      const userObj = {
+        id: matchedAppByIdentity.id || `usr_hm_${Date.now()}`,
+        email: matchedAppByIdentity.headmasterEmail || matchedAppByIdentity.adminEmail || matchedAppByIdentity.officialEmail || rawIdentifier,
+        username: rawIdentifier.split("@")[0],
+        firstName: parts[0] || "Headmaster",
+        lastName: parts.slice(1).join(" ") || "",
+        role: "ADMIN",
+        isApproved: true,
+        tenantId: matchedAppByIdentity.assignedTenantId || matchedAppByIdentity.tenantUid || matchedAppByIdentity.id || "tnt_onboarded",
+        tenantCode: matchedAppByIdentity.assignedTenantCode || matchedAppByIdentity.tenantCode || "GBS-TENANT",
+        tenantName: matchedAppByIdentity.institutionName || "GBS Registered Institution",
+        facePhoto: matchedAppByIdentity.facePhoto || matchedAppByIdentity.headmasterPhoto || null
+      };
+      return {
+        user: userObj,
+        accessToken: `gbs_onboarded_jwt_${Date.now()}`,
+        refreshToken: `gbs_onboarded_refresh_${Date.now()}`
+      };
+    }
+  } catch (appErr) {
+    if (appErr.message && (appErr.message.startsWith("Access Denied:") || appErr.message.startsWith("Invalid email"))) {
+      throw appErr;
+    }
+  }
+
+  // 2. Check gbs_local_registered_users (must be explicitly approved by Headmaster or Developer)
   try {
     const localUsers = JSON.parse(localStorage.getItem("gbs_local_registered_users") || "[]");
     const matchedLocal = localUsers.find((u) => {
       const uEmail = String(u.email || "").trim().toLowerCase();
       const uName = String(u.username || "").trim().toLowerCase();
-      return (uEmail === rawIdentifier || uName === rawIdentifier) && (!u.password || u.password === rawPassword);
+      return uEmail === rawIdentifier || uName === rawIdentifier;
     });
 
     if (matchedLocal) {
+      if (matchedLocal.isDeleted) {
+        throw new Error("Access Denied: This account has been permanently deleted from the system.");
+      }
+      const uStatus = String(matchedLocal.status || matchedLocal.verificationStatus || "").toUpperCase();
+      if (
+        matchedLocal.isApproved === false ||
+        matchedLocal.isActive === false ||
+        uStatus.includes("PENDING") ||
+        uStatus === "REJECTED"
+      ) {
+        throw new Error(
+          `Access Denied: Your account (${rawIdentifier}) has not yet been approved by the ${matchedLocal.role === "ADMIN" ? "System Developer" : "Institution Headmaster"}. Unapproved accounts cannot access the system.`
+        );
+      }
+      if (!matchedLocal.password || matchedLocal.password !== rawPassword) {
+        throw new Error("Invalid email or password. Please verify your credentials.");
+      }
+
       const userObj = {
         id: matchedLocal.id || `usr_${Date.now()}`,
         email: matchedLocal.email,
         username: matchedLocal.username || matchedLocal.email.split("@")[0],
-        firstName: matchedLocal.firstName || "Executive",
-        lastName: matchedLocal.lastName || "Headmaster",
-        role: matchedLocal.role || requestedRole || "ADMIN",
+        firstName: matchedLocal.firstName || "Approved",
+        lastName: matchedLocal.lastName || "Member",
+        role: matchedLocal.role || requestedRole || "STUDENT",
+        isApproved: true,
         tenantId: matchedLocal.tenantId || "1",
         tenantCode: matchedLocal.tenantCode || "GBS-MAIN",
         tenantName: matchedLocal.tenantName || "GBS Registered Institution",
@@ -169,79 +270,13 @@ function attemptLocalResilientLogin(payload = {}) {
         refreshToken: `gbs_local_refresh_${Date.now()}`
       };
     }
-  } catch {}
-
-  // 2. Check gbs_incoming_onboarding_applications & gbs_archived_onboarded_tenants (Headmaster onboarding forms)
-  try {
-    const incomingApps = JSON.parse(localStorage.getItem("gbs_incoming_onboarding_applications") || "[]");
-    const archivedApps = JSON.parse(localStorage.getItem("gbs_archived_onboarded_tenants") || "[]");
-    const allApps = [...archivedApps, ...incomingApps];
-
-    const matchedApp = allApps.find((app) => {
-      const candidates = [
-        app.headmasterEmail,
-        app.adminEmail,
-        app.officialEmail,
-        app.repEmail,
-        app.tenantCode
-      ]
-        .filter(Boolean)
-        .map((s) => String(s).trim().toLowerCase());
-
-      const emailMatches = candidates.includes(rawIdentifier) || candidates.some((c) => c.split("@")[0] === rawIdentifier);
-      const passMatches = !app.password || app.password === rawPassword;
-      return emailMatches && passMatches;
-    });
-
-    if (matchedApp) {
-      const hmName = matchedApp.headmasterName || matchedApp.adminName || matchedApp.repFullName || "Executive Headmaster";
-      const parts = hmName.split(" ");
-      const userObj = {
-        id: matchedApp.id || `usr_hm_${Date.now()}`,
-        email: matchedApp.headmasterEmail || matchedApp.adminEmail || matchedApp.officialEmail || rawIdentifier,
-        username: rawIdentifier.split("@")[0],
-        firstName: parts[0] || "Headmaster",
-        lastName: parts.slice(1).join(" ") || "",
-        role: "ADMIN",
-        tenantId: matchedApp.assignedTenantId || matchedApp.id || "1",
-        tenantCode: matchedApp.assignedTenantCode || matchedApp.tenantCode || "GBS-MAIN",
-        tenantName: matchedApp.institutionName || "GBS Registered Institution",
-        facePhoto: matchedApp.facePhoto || matchedApp.headmasterPhoto || null
-      };
-      return {
-        user: userObj,
-        accessToken: `gbs_onboarded_jwt_${Date.now()}`,
-        refreshToken: `gbs_onboarded_refresh_${Date.now()}`
-      };
+  } catch (uErr) {
+    if (uErr.message && (uErr.message.startsWith("Access Denied:") || uErr.message.startsWith("Invalid email"))) {
+      throw uErr;
     }
-  } catch {}
+  }
 
-  // 3. Check gbs_headmaster_profile (created/updated via Developer Dashboard)
-  try {
-    const hmProfile = JSON.parse(localStorage.getItem("gbs_headmaster_profile") || "null");
-    if (hmProfile && hmProfile.email && String(hmProfile.email).trim().toLowerCase() === rawIdentifier) {
-      const parts = String(hmProfile.name || "Headmaster").split(" ");
-      const userObj = {
-        id: `usr_hm_prof_${Date.now()}`,
-        email: hmProfile.email,
-        username: hmProfile.email.split("@")[0],
-        firstName: parts[0] || "Headmaster",
-        lastName: parts.slice(1).join(" ") || "",
-        role: "ADMIN",
-        tenantId: "1",
-        tenantCode: localStorage.getItem("gbs_assigned_tenant_code") || "GBS-MAIN",
-        tenantName: hmProfile.institution || hmProfile.institutionName || "GBS International School",
-        facePhoto: hmProfile.photo || hmProfile.photoUrl || null
-      };
-      return {
-        user: userObj,
-        accessToken: `gbs_hm_jwt_${Date.now()}`,
-        refreshToken: `gbs_hm_refresh_${Date.now()}`
-      };
-    }
-  } catch {}
-
-  // 4. Check built-in offline accounts
+  // 3. Check built-in offline accounts
   const matchedBuiltin = BUILTIN_OFFLINE_USERS.find(
     (u) =>
       (u.email.toLowerCase() === rawIdentifier || u.username.toLowerCase() === rawIdentifier) &&
@@ -249,6 +284,9 @@ function attemptLocalResilientLogin(payload = {}) {
   );
 
   if (matchedBuiltin) {
+    if (matchedBuiltin.role === "DEVELOPER" && rawPassword !== "0543294615Gab") {
+      throw new Error("Invalid Master Developer credentials.");
+    }
     const userObj = {
       id: `usr_${matchedBuiltin.username}`,
       email: matchedBuiltin.email,
@@ -256,6 +294,7 @@ function attemptLocalResilientLogin(payload = {}) {
       firstName: matchedBuiltin.firstName,
       lastName: matchedBuiltin.lastName,
       role: matchedBuiltin.role,
+      isApproved: true,
       tenantId: matchedBuiltin.tenantId,
       tenantCode: matchedBuiltin.tenantCode,
       tenantName: matchedBuiltin.tenantName
@@ -271,15 +310,21 @@ function attemptLocalResilientLogin(payload = {}) {
 }
 
 export const register = async (payload) => {
+  const isPreApproved = Boolean(payload.isApproved === true || payload.approvedByHeadmaster === true || payload.approvedByDeveloper === true);
+  const roleUpper = String(payload.role || "STUDENT").toUpperCase();
+  const initialStatus = isPreApproved
+    ? "VERIFIED"
+    : (roleUpper === "ADMIN" ? "PENDING_DEVELOPER_APPROVAL" : "PENDING_HEADMASTER_APPROVAL");
+
   try {
     const response = await apiClient.post("/auth/register", payload, { timeout: 8000 });
     const authData = extractAuthPayload(response.data);
 
-    if (authData) {
+    if (isPreApproved && authData?.accessToken) {
       saveAuthSession(authData);
     }
 
-    // Also persist locally for instant offline login
+    // Record in local registered users (marked pending approval unless pre-approved by Headmaster/Developer)
     try {
       const localUsers = JSON.parse(localStorage.getItem("gbs_local_registered_users") || "[]");
       const cleanEmail = String(payload.email || "").trim().toLowerCase();
@@ -289,19 +334,22 @@ export const register = async (payload) => {
         email: cleanEmail,
         username: payload.username || cleanEmail.split("@")[0],
         password: payload.password,
-        role: String(payload.role || "STUDENT").toUpperCase(),
+        role: roleUpper,
         firstName: payload.firstName || "Member",
         lastName: payload.lastName || "",
-        tenantId: "1",
+        isApproved: isPreApproved,
+        isActive: isPreApproved,
+        status: initialStatus,
+        verificationStatus: initialStatus,
+        tenantId: payload.tenantId || "1",
         tenantCode: payload.tenantCode || "GBS-MAIN",
-        tenantName: "GBS International School"
+        tenantName: payload.tenantName || "GBS International School"
       });
       localStorage.setItem("gbs_local_registered_users", JSON.stringify(filtered));
     } catch {}
 
     return response.data;
   } catch (err) {
-    // Offline / timeout fallback for member registration
     const cleanEmail = String(payload.email || "").trim().toLowerCase();
     const fallbackUser = {
       id: `usr_${Date.now()}`,
@@ -309,13 +357,14 @@ export const register = async (payload) => {
       username: payload.username || cleanEmail.split("@")[0],
       firstName: payload.firstName || "Member",
       lastName: payload.lastName || "",
-      role: String(payload.role || "STUDENT").toUpperCase(),
-      tenantId: "1",
+      role: roleUpper,
+      isApproved: isPreApproved,
+      isActive: isPreApproved,
+      status: initialStatus,
+      tenantId: payload.tenantId || "1",
       tenantCode: payload.tenantCode || "GBS-MAIN",
-      tenantName: "GBS International School",
-      verificationStatus: ["TEACHER", "ACCOUNTANT", "STAFF", "HR"].includes(String(payload.role || "").toUpperCase())
-        ? "PENDING"
-        : "VERIFIED"
+      tenantName: payload.tenantName || "GBS International School",
+      verificationStatus: initialStatus
     };
 
     try {
@@ -325,19 +374,15 @@ export const register = async (payload) => {
       localStorage.setItem("gbs_local_registered_users", JSON.stringify(filtered));
     } catch {}
 
-    const authData = {
-      user: fallbackUser,
-      accessToken: `gbs_reg_jwt_${Date.now()}`,
-      refreshToken: `gbs_reg_refresh_${Date.now()}`
-    };
-    saveAuthSession(authData);
-
     return {
       status: "success",
-      message: "Account registered successfully.",
+      message: isPreApproved
+        ? "Account registered and approved."
+        : "Registration submitted. Your account awaits verification and approval by the Headmaster / Developer before you can sign in.",
       data: {
-        ...authData,
-        profile: { verificationStatus: fallbackUser.verificationStatus }
+        user: fallbackUser,
+        requiresApproval: !isPreApproved,
+        profile: { verificationStatus: initialStatus }
       }
     };
   }
@@ -349,18 +394,33 @@ export const login = async (payload) => {
   // Strict Permanent Lockout Check for Institutions Deleted by Developer
   try {
     const deletedLockouts = JSON.parse(localStorage.getItem("gbs_deleted_tenant_lockouts") || "[]");
-    const matchedLockout = deletedLockouts.find((l) => {
-      const emailMatches = Array.isArray(l.emails) && l.emails.some((e) => e === rawIdentifier || rawIdentifier.includes(e));
-      const codeMatches = l.tenantCode && rawIdentifier === String(l.tenantCode).toLowerCase();
-      const nameMatches = l.tenantName && rawIdentifier.includes(String(l.tenantName).toLowerCase());
+    const deletedArchives = JSON.parse(localStorage.getItem("gbs_deleted_tenant_archives") || "[]");
+    const deletedIds = new Set(JSON.parse(localStorage.getItem("gbs_permanently_deleted_ids") || "[]").map((x) => String(x).toLowerCase()));
+
+    if (deletedIds.has(rawIdentifier)) {
+      throw new Error("Access Denied: This account or institution has been permanently deleted from the GBS System.");
+    }
+
+    const matchedLockout = [...deletedLockouts, ...deletedArchives].find((l) => {
+      const emailMatches =
+        (Array.isArray(l.emails) && l.emails.some((e) => e && (String(e).toLowerCase() === rawIdentifier || rawIdentifier.includes(String(e).toLowerCase())))) ||
+        (l.headmasterEmail && String(l.headmasterEmail).toLowerCase() === rawIdentifier) ||
+        (l.email && String(l.email).toLowerCase() === rawIdentifier) ||
+        (l.adminEmail && String(l.adminEmail).toLowerCase() === rawIdentifier);
+      const codeMatches =
+        (l.tenantCode && rawIdentifier === String(l.tenantCode).toLowerCase()) ||
+        (l.code && rawIdentifier === String(l.code).toLowerCase());
+      const nameMatches =
+        (l.tenantName && rawIdentifier.length > 3 && rawIdentifier === String(l.tenantName).toLowerCase()) ||
+        (l.name && rawIdentifier.length > 3 && rawIdentifier === String(l.name).toLowerCase());
       return emailMatches || codeMatches || nameMatches;
     });
 
     if (matchedLockout) {
-      throw new Error("Your institution has been deleted from GBS SYSTEM. You are unable to access the system permanently until the institution is re-registered by the developer.");
+      throw new Error("Access Denied: Your institution has been permanently deleted from the GBS System. Deleted institutions are barred from accessing the platform.");
     }
   } catch (err) {
-    if (err.message && err.message.includes("deleted from GBS SYSTEM")) {
+    if (err.message && err.message.startsWith("Access Denied:")) {
       throw err;
     }
   }
@@ -369,6 +429,24 @@ export const login = async (payload) => {
     const response = await apiClient.post("/auth/login", payload, { timeout: 6500 });
     const authData = extractAuthPayload(response.data);
 
+    // Double-check that local onboarding queue hasn't marked this account as unapproved or deleted
+    try {
+      const incomingApps = JSON.parse(localStorage.getItem("gbs_incoming_onboarding_applications") || "[]");
+      const pendingLocalApp = incomingApps.find((app) => {
+        const candidates = [app.headmasterEmail, app.adminEmail, app.officialEmail, app.tenantCode]
+          .filter(Boolean)
+          .map((s) => String(s).trim().toLowerCase());
+        return candidates.includes(rawIdentifier);
+      });
+      if (pendingLocalApp && pendingLocalApp.isApproved !== true && String(pendingLocalApp.status || "").toUpperCase() === "PENDING_DEVELOPER_APPROVAL") {
+        throw new Error(`Access Denied: Your institution '${pendingLocalApp.institutionName || "your institution"}' is pending Developer Control Center approval.`);
+      }
+    } catch (localCheckErr) {
+      if (localCheckErr.message && localCheckErr.message.startsWith("Access Denied:")) {
+        throw localCheckErr;
+      }
+    }
+
     if (authData) {
       saveAuthSession(authData);
       localStorage.setItem("gbs_tenant_already_onboarded", "true");
@@ -376,22 +454,35 @@ export const login = async (payload) => {
 
     return response.data;
   } catch (err) {
-    // Check local resilient credentials (newly onboarded headmasters, registered members, or built-in accounts)
-    const fallbackAuth = attemptLocalResilientLogin(payload);
-    if (fallbackAuth) {
-      saveAuthSession(fallbackAuth);
-      localStorage.setItem("gbs_tenant_already_onboarded", "true");
-      return {
-        status: "success",
-        message: "Authenticated successfully",
-        data: fallbackAuth
-      };
+    if (err.message && err.message.startsWith("Access Denied:")) {
+      throw err;
+    }
+    const status = err?.response?.status;
+    const serverMsg = err?.response?.data?.message || "";
+
+    try {
+      const fallbackAuth = attemptLocalResilientLogin(payload);
+      if (fallbackAuth) {
+        saveAuthSession(fallbackAuth);
+        localStorage.setItem("gbs_tenant_already_onboarded", "true");
+        return {
+          status: "success",
+          message: "Authenticated successfully",
+          data: fallbackAuth
+        };
+      }
+    } catch (localSecErr) {
+      throw localSecErr;
+    }
+
+    if (status === 403 || status === 401) {
+      throw new Error(serverMsg || "Access Denied: Unregistered or unapproved account, or invalid credentials.");
     }
 
     const cleanMessage =
-      err?.response?.data?.message ||
+      serverMsg ||
       (err?.message && !err.message.includes("timeout") ? err.message : null) ||
-      "Invalid email or password. Please verify your credentials.";
+      "Access Denied: Unregistered or unapproved account, or invalid credentials.";
     throw new Error(cleanMessage);
   }
 };
@@ -438,7 +529,6 @@ export const validateSession = async () => {
 
 export const registerInstitution = async (payload) => {
   try {
-    // Avoid sending multi-megabyte raw base64 over slow connections if it exceeds 350KB; keep thumbnail or local copy
     const netPayload = { ...payload };
     if (netPayload.facePhoto && netPayload.facePhoto.length > 450000) {
       netPayload.facePhoto = netPayload.facePhoto.slice(0, 450000);
@@ -463,6 +553,7 @@ export const registerInstitution = async (payload) => {
           subscriptionId: `SUB-2026-${timestamp}`,
           institutionName: payload.institutionName,
           status: "PENDING_DEVELOPER_APPROVAL",
+          isApproved: false,
           adminEmail: payload.adminEmail || payload.officialEmail,
           facePhoto: payload.facePhoto || null,
           createdAt: new Date().toISOString()

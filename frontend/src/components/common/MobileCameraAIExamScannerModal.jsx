@@ -50,6 +50,10 @@ export default function MobileCameraAIExamScannerModal({
   });
   const [qrCodeDetected, setQrCodeDetected] = useState(true);
 
+  // Teacher Preferred Question Numbers Selection State
+  const [selectedQuestionNumbers, setSelectedQuestionNumbers] = useState([1, 2, 3, 4, 5]);
+  const [requiredQuestionCount, setRequiredQuestionCount] = useState(5);
+
   // Teacher Preferred Answer Key & Marking Scheme
   const [markingScheme, setMarkingScheme] = useState([
     {
@@ -142,7 +146,7 @@ export default function MobileCameraAIExamScannerModal({
       streamRef.current = stream;
       if (videoRef.current) {
         videoRef.current.srcObject = stream;
-        videoRef.current.play().catch(() => {});
+        videoRef.current.play().catch(() => { });
       }
       setCameraActive(true);
       setCameraFacing(facing);
@@ -154,7 +158,7 @@ export default function MobileCameraAIExamScannerModal({
         streamRef.current = fallbackStream;
         if (videoRef.current) {
           videoRef.current.srcObject = fallbackStream;
-          videoRef.current.play().catch(() => {});
+          videoRef.current.play().catch(() => { });
         }
         setCameraActive(true);
       } catch (e2) {
@@ -230,7 +234,7 @@ export default function MobileCameraAIExamScannerModal({
         d[i + 2] = enhanced;
       }
       ctx.putImageData(imgData, 0, 0);
-    } catch {}
+    } catch { }
 
     const photoUrl = canvas.toDataURL("image/jpeg", 0.9);
     const newPage = {
@@ -286,69 +290,33 @@ export default function MobileCameraAIExamScannerModal({
     }
     setIsAiGrading(true);
 
-    // Simulated OCR extraction from handwritten scripts & comparison with Teacher Marking Scheme
+    // Simulated OCR extraction from handwritten scripts & comparison with Teacher's Selected Preferred Questions
     setTimeout(() => {
-      const mockExtractedAnswers = [
-        {
-          qNum: 1,
-          extractedHandwriting: "Photosynthesis is the process where green plants make their food using sunlight, water and carbon dioxide. Occurs in the chloroplasts.",
-          ocrConfidence: 96,
-          awardedMarks: 5,
-          maxMarks: 5,
-          matchStatus: "CORRECT",
-          isUnclear: false,
-          teacherOverride: null,
-          remarks: "Complete answer matching master key and acceptable alternatives."
-        },
-        {
-          qNum: 2,
-          extractedHandwriting: "Newton's 2nd law says Force equals mass times acceleration. Formula is F = ma.",
-          ocrConfidence: 94,
-          awardedMarks: 5,
-          maxMarks: 5,
-          matchStatus: "CORRECT",
-          isUnclear: false,
-          teacherOverride: null,
-          remarks: "Accepted alternative recognized: 'F = ma'."
-        },
-        {
-          qNum: 3,
-          extractedHandwriting: "An atom has no charge because protons equal electrons. An ion is charged when an atom loses or gains electrons like Sodium Na+.",
-          ocrConfidence: 89,
-          awardedMarks: 5,
-          maxMarks: 5,
-          matchStatus: "CORRECT",
-          isUnclear: false,
-          teacherOverride: null,
-          remarks: "Clear differentiation and valid example given."
-        },
-        {
-          qNum: 4,
-          extractedHandwriting: "Left ventricle receives blood from atrium and contracts.",
-          ocrConfidence: 68,
-          awardedMarks: 2.5,
-          maxMarks: 5,
-          matchStatus: "PARTIAL",
-          isUnclear: true,
-          teacherOverride: null,
-          remarks: "⚠️ Incomplete answer: Omitted destination (systemic body via aorta) and pressure characteristics. Flagged for teacher review."
-        },
-        {
-          qNum: 5,
-          extractedHandwriting: "Ohm's Law: Voltage equals current times resistance (V = IR).",
-          ocrConfidence: 91,
-          awardedMarks: 5,
-          maxMarks: 5,
-          matchStatus: "CORRECT",
-          isUnclear: false,
-          teacherOverride: null,
-          remarks: "Correct statement and formula."
-        }
-      ];
+      const activeQuestions = markingScheme.filter((q) => selectedQuestionNumbers.includes(q.qNum));
+      const questionsToGrade = activeQuestions.length > 0 ? activeQuestions : markingScheme;
 
-      const sum = mockExtractedAnswers.reduce((acc, q) => acc + (q.awardedMarks || 0), 0);
-      const totalPossible = mockExtractedAnswers.reduce((acc, q) => acc + (q.maxMarks || 0), 0);
-      const pct = Math.round((sum / totalPossible) * 100);
+      const dynamicExtractedAnswers = questionsToGrade.map((q, idx) => {
+        const isPartial = idx === 3;
+        const awarded = isPartial ? Math.max(1, q.maxMarks - 1.5) : q.maxMarks;
+        return {
+          qNum: q.qNum,
+          question: q.question,
+          extractedHandwriting: q.modelAnswer || `Handwritten solution matching master criteria for Question #${q.qNum}.`,
+          ocrConfidence: isPartial ? 74 : 95,
+          awardedMarks: awarded,
+          maxMarks: q.maxMarks || 5,
+          matchStatus: isPartial ? "PARTIAL" : "CORRECT",
+          isUnclear: isPartial,
+          teacherOverride: null,
+          remarks: isPartial
+            ? "⚠️ Partially complete: Matched core principle; flagged for optional teacher review."
+            : "✓ Full match with teacher's preferred model answer and acceptable alternatives."
+        };
+      });
+
+      const sum = dynamicExtractedAnswers.reduce((acc, q) => acc + (q.awardedMarks || 0), 0);
+      const totalPossible = dynamicExtractedAnswers.reduce((acc, q) => acc + (q.maxMarks || 0), 0);
+      const pct = Math.round((sum / (totalPossible || 1)) * 100);
 
       let grade = "A";
       if (pct >= 80) grade = "A";
@@ -357,13 +325,13 @@ export default function MobileCameraAIExamScannerModal({
       else if (pct >= 50) grade = "D";
       else grade = "F";
 
-      setAiGradingResults(mockExtractedAnswers);
+      setAiGradingResults(dynamicExtractedAnswers);
       setOverallScore(sum);
       setMaxPossibleScore(totalPossible);
       setCalculatedGrade(grade);
       setIsAiGrading(false);
       setActiveStep("REVIEW_GRADE");
-    }, 450); // fast responsive 450ms
+    }, 450);
   };
 
   // Teacher Mark Override
@@ -474,7 +442,7 @@ export default function MobileCameraAIExamScannerModal({
         const offlineQueue = JSON.parse(localStorage.getItem("gbs_offline_scanned_exam_scripts") || "[]");
         localStorage.setItem("gbs_offline_scanned_exam_scripts", JSON.stringify([examRecord, ...offlineQueue]));
         setOfflineSaved(true);
-      } catch {}
+      } catch { }
     }
 
     if (onGradingComplete) {
@@ -616,11 +584,11 @@ export default function MobileCameraAIExamScannerModal({
 
       {/* Main Content Area */}
       <div style={{ flex: 1, overflowY: "auto", padding: "16px 20px", display: "flex", flexDirection: "column", gap: "16px" }}>
-        
+
         {/* STEP 1: MOBILE CAMERA SCANNER */}
         {activeStep === "CAMERA" && (
           <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(320px, 1fr))", gap: "20px" }}>
-            
+
             {/* Left: Viewfinder & Controls */}
             <div style={{ display: "flex", flexDirection: "column", gap: "12px" }}>
               <div
@@ -802,7 +770,7 @@ export default function MobileCameraAIExamScannerModal({
 
             {/* Right: Captured Multi-Page Strip & Student Recognition */}
             <div style={{ display: "flex", flexDirection: "column", gap: "16px" }}>
-              
+
               {/* QR / Student Auto-Identification Card */}
               <div
                 style={{
@@ -999,6 +967,107 @@ export default function MobileCameraAIExamScannerModal({
               </div>
             </div>
 
+            {/* TEACHER PREFERRED QUESTION NUMBERS SELECTOR */}
+            <div style={{
+              background: "rgba(15, 23, 42, 0.9)",
+              border: "1.5px solid #38bdf8",
+              borderRadius: "12px",
+              padding: "14px 18px",
+              display: "flex",
+              flexDirection: "column",
+              gap: "10px"
+            }}>
+              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: "8px" }}>
+                <div>
+                  <strong style={{ color: "#38bdf8", fontSize: "0.92rem", display: "flex", alignItems: "center", gap: "6px" }}>
+                    <span>🎯</span> CHOOSE PREFERRED QUESTION NUMBERS FOR STUDENTS TO ANSWER
+                  </strong>
+                  <span style={{ fontSize: "0.75rem", color: "#94a3b8" }}>
+                    Select specific question numbers to be graded by AI Scanner. Only ticked question numbers will be evaluated.
+                  </span>
+                </div>
+                <div style={{ display: "flex", alignItems: "center", gap: "6px", fontSize: "0.78rem", color: "#cbd5e1" }}>
+                  <span>Questions to Answer:</span>
+                  <input
+                    type="number"
+                    min="1"
+                    max={markingScheme.length}
+                    value={requiredQuestionCount}
+                    onChange={(e) => setRequiredQuestionCount(Math.max(1, parseInt(e.target.value) || 1))}
+                    style={{ width: "50px", padding: "3px 6px", borderRadius: "6px", background: "#020617", border: "1px solid #38bdf8", color: "#38bdf8", fontWeight: 800, textAlign: "center" }}
+                  />
+                </div>
+              </div>
+
+              {/* Question Number Pills */}
+              <div style={{ display: "flex", gap: "6px", flexWrap: "wrap", alignItems: "center" }}>
+                <span style={{ fontSize: "0.75rem", color: "#94a3b8", fontWeight: 700, marginRight: "4px" }}>ACTIVE QUESTIONS:</span>
+                {markingScheme.map((item) => {
+                  const isSelected = selectedQuestionNumbers.includes(item.qNum);
+                  return (
+                    <button
+                      key={item.qNum}
+                      type="button"
+                      onClick={() => {
+                        if (isSelected) {
+                          if (selectedQuestionNumbers.length > 1) {
+                            setSelectedQuestionNumbers(selectedQuestionNumbers.filter(n => n !== item.qNum));
+                          }
+                        } else {
+                          setSelectedQuestionNumbers([...selectedQuestionNumbers, item.qNum].sort((a, b) => a - b));
+                        }
+                      }}
+                      style={{
+                        padding: "5px 12px",
+                        borderRadius: "20px",
+                        border: isSelected ? "2px solid #10b981" : "1px solid rgba(255, 255, 255, 0.15)",
+                        background: isSelected ? "rgba(16, 185, 129, 0.25)" : "rgba(2, 6, 23, 0.6)",
+                        color: isSelected ? "#34d399" : "#94a3b8",
+                        fontWeight: 800,
+                        fontSize: "0.78rem",
+                        cursor: "pointer",
+                        transition: "all 0.15s"
+                      }}
+                    >
+                      {isSelected ? `✓ Q${item.qNum}` : `Q${item.qNum}`}
+                    </button>
+                  );
+                })}
+              </div>
+
+              {/* Quick Preset Buttons */}
+              <div style={{ display: "flex", gap: "8px", flexWrap: "wrap", borderTop: "1px solid rgba(255, 255, 255, 0.08)", paddingTop: "8px" }}>
+                <button
+                  type="button"
+                  onClick={() => setSelectedQuestionNumbers(markingScheme.map(m => m.qNum))}
+                  style={{ background: "rgba(56, 189, 248, 0.15)", border: "1px solid rgba(56, 189, 248, 0.3)", color: "#38bdf8", padding: "3px 10px", borderRadius: "6px", fontSize: "0.72rem", cursor: "pointer", fontWeight: 700 }}
+                >
+                  Select All ({markingScheme.length})
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setSelectedQuestionNumbers(markingScheme.filter((_, i) => i < 5).map(m => m.qNum))}
+                  style={{ background: "rgba(56, 189, 248, 0.15)", border: "1px solid rgba(56, 189, 248, 0.3)", color: "#38bdf8", padding: "3px 10px", borderRadius: "6px", fontSize: "0.72rem", cursor: "pointer", fontWeight: 700 }}
+                >
+                  First 5 Questions
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setSelectedQuestionNumbers(markingScheme.filter(m => m.qNum % 2 !== 0).map(m => m.qNum))}
+                  style={{ background: "rgba(56, 189, 248, 0.15)", border: "1px solid rgba(56, 189, 248, 0.3)", color: "#38bdf8", padding: "3px 10px", borderRadius: "6px", fontSize: "0.72rem", cursor: "pointer", fontWeight: 700 }}
+                >
+                  Odd Numbers Only
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setSelectedQuestionNumbers(markingScheme.filter(m => m.qNum % 2 === 0).map(m => m.qNum))}
+                  style={{ background: "rgba(56, 189, 248, 0.15)", border: "1px solid rgba(56, 189, 248, 0.3)", color: "#38bdf8", padding: "3px 10px", borderRadius: "6px", fontSize: "0.72rem", cursor: "pointer", fontWeight: 700 }}
+                >
+                  Even Numbers Only
+                </button>
+              </div>
+            </div>
+
             {/* Questions Table */}
             <div style={{ display: "flex", flexDirection: "column", gap: "12px" }}>
               {markingScheme.map((item, idx) => (
@@ -1019,6 +1088,31 @@ export default function MobileCameraAIExamScannerModal({
                       <span style={{ background: "#0284c7", color: "#fff", padding: "3px 10px", borderRadius: "6px", fontSize: "0.78rem", fontWeight: 900 }}>
                         QUESTION #{item.qNum}
                       </span>
+                      <button
+                        type="button"
+                        onClick={() => {
+                          const isSel = selectedQuestionNumbers.includes(item.qNum);
+                          if (isSel) {
+                            if (selectedQuestionNumbers.length > 1) {
+                              setSelectedQuestionNumbers(selectedQuestionNumbers.filter(n => n !== item.qNum));
+                            }
+                          } else {
+                            setSelectedQuestionNumbers([...selectedQuestionNumbers, item.qNum].sort((a, b) => a - b));
+                          }
+                        }}
+                        style={{
+                          background: selectedQuestionNumbers.includes(item.qNum) ? "rgba(16, 185, 129, 0.2)" : "rgba(239, 68, 68, 0.15)",
+                          border: `1px solid ${selectedQuestionNumbers.includes(item.qNum) ? "#10b981" : "#ef4444"}`,
+                          color: selectedQuestionNumbers.includes(item.qNum) ? "#34d399" : "#f87171",
+                          padding: "2px 8px",
+                          borderRadius: "4px",
+                          fontSize: "0.7rem",
+                          fontWeight: 800,
+                          cursor: "pointer"
+                        }}
+                      >
+                        {selectedQuestionNumbers.includes(item.qNum) ? "✓ Set for Students" : "✕ Omitted from Exam"}
+                      </button>
                       <strong style={{ color: "#f8fafc", fontSize: "0.92rem" }}>{item.question}</strong>
                     </div>
                     <div style={{ display: "flex", gap: "10px", alignItems: "center" }}>
@@ -1115,7 +1209,7 @@ export default function MobileCameraAIExamScannerModal({
         {/* STEP 3: AI REVIEW, OCR EXTRACTION & TEACHER OVERRIDE */}
         {activeStep === "REVIEW_GRADE" && (
           <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(320px, 1fr))", gap: "20px" }}>
-            
+
             {/* Left: Scanned Script Image Reference */}
             <div style={{ display: "flex", flexDirection: "column", gap: "10px" }}>
               <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
@@ -1137,7 +1231,7 @@ export default function MobileCameraAIExamScannerModal({
 
             {/* Right: AI OCR Extracted Answers & Marks Breakdown */}
             <div style={{ display: "flex", flexDirection: "column", gap: "12px" }}>
-              
+
               {/* Score Header Banner */}
               <div style={{ background: "linear-gradient(135deg, rgba(56, 189, 248, 0.15), rgba(16, 185, 129, 0.2))", border: "1px solid #10b981", borderRadius: "12px", padding: "14px 18px", display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: "10px" }}>
                 <div>
@@ -1228,7 +1322,7 @@ export default function MobileCameraAIExamScannerModal({
         {/* STEP 4: REPORT CARD & CLASS PERFORMANCE ANALYSIS */}
         {activeStep === "REPORT_ANALYSIS" && (
           <div style={{ display: "flex", flexDirection: "column", gap: "20px" }}>
-            
+
             {/* Success Banner */}
             <div style={{ background: "linear-gradient(135deg, rgba(16, 185, 129, 0.22), rgba(5, 150, 105, 0.35))", border: "2px solid #10b981", borderRadius: "14px", padding: "18px 24px", display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: "14px" }}>
               <div>

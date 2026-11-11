@@ -30,7 +30,7 @@ export default function AlumniDashboard() {
     try {
       const stored = localStorage.getItem("gbs_saved_meetings");
       if (stored) return JSON.parse(stored);
-    } catch {}
+    } catch { }
     return [];
   });
 
@@ -62,7 +62,7 @@ export default function AlumniDashboard() {
     notes: "Dedicated to the 2018 Science & Engineering Cohort"
   });
   const [donationSuccess, setDonationSuccess] = useState(false);
-  
+
   // Forgot Credential & Archive Recovery State
   const [showForgotCredential, setShowForgotCredential] = useState(false);
   const [recoveryQuery, setRecoveryQuery] = useState("");
@@ -94,7 +94,7 @@ export default function AlumniDashboard() {
           };
         }
       }
-    } catch {}
+    } catch { }
     return {
       fullName: "Graduated Scholar",
       indexNumber: `ALU-${new Date().getFullYear()}`,
@@ -340,7 +340,7 @@ export default function AlumniDashboard() {
     try {
       const stored = localStorage.getItem("gbs_alumni_directory");
       if (stored) return JSON.parse(stored);
-    } catch {}
+    } catch { }
     return [];
   }, []);
 
@@ -426,7 +426,7 @@ export default function AlumniDashboard() {
           });
           return;
         }
-      } catch {}
+      } catch { }
 
       setRecoveryError("No matching alumni archive record found for the provided name or email. Please check spelling or contact the Registrar's Office (registrar@gbs.edu).");
     }
@@ -480,7 +480,7 @@ export default function AlumniDashboard() {
     try {
       localStorage.setItem("gbs_saved_meetings", JSON.stringify(updated));
       window.dispatchEvent(new CustomEvent("gbs_meetings_updated", { detail: { meetings: updated } }));
-    } catch {}
+    } catch { }
 
     setShowScheduleMeetingModal(false);
     alert(`Zoom Reunion scheduled successfully!\n\nDirect 1-Click Join Link:\n${directUrl}\n\nAll alumni and attendees can join with ZERO prompt for meeting ID or password.`);
@@ -515,7 +515,7 @@ export default function AlumniDashboard() {
       localStorage.setItem("gbs_alumni_pledges_and_gifts", JSON.stringify(updated));
       window.dispatchEvent(new Event("gbs_alumni_gift_added"));
       window.dispatchEvent(new Event("storage"));
-    } catch {}
+    } catch { }
 
     setDonationSuccess(true);
     setTimeout(() => {
@@ -647,7 +647,7 @@ export default function AlumniDashboard() {
 
       {/* Main Container */}
       <div style={{ maxWidth: "1400px", margin: "0 auto", padding: "1.5rem 2rem" }}>
-        
+
         {/* Scholar Banner & Key Metric Highlights */}
         <div style={{
           background: "linear-gradient(135deg, rgba(30, 27, 75, 0.7) 0%, rgba(15, 23, 42, 0.9) 100%)",

@@ -473,11 +473,12 @@ export default function SignUpPage({ defaultRole }) {
         paymentRecipient: "0554594193 - GABRIELKUBI OSEI-APPIAH",
         facePhoto: instForm.facePhoto || "/assets/admin-dashboard-bg.jpg",
         biometricFaceToken: instForm.biometricFaceToken || `HM-BIO-${Date.now().toString(16).toUpperCase()}`,
+        isApproved: false,
         status: "PENDING_DEVELOPER_APPROVAL",
         submittedAt: new Date().toISOString()
       };
 
-      // Save into Developer's incoming onboarding queue and local registered users for resilient login
+      // Save into Developer's incoming onboarding queue (pending approval - cannot log in until Developer approves)
       const computedTenantCode = `GBS-${instForm.institutionName.replace(/[^A-Za-z0-9]/g, "").slice(0, 8).toUpperCase()}-${timestamp}`;
       appRecord.tenantCode = computedTenantCode;
       try {
@@ -496,15 +497,16 @@ export default function SignUpPage({ defaultRole }) {
           role: "ADMIN",
           firstName: instForm.adminName || instForm.repFullName || "Headmaster",
           lastName: "",
+          isApproved: false,
+          isActive: false,
+          status: "PENDING_DEVELOPER_APPROVAL",
+          verificationStatus: "PENDING_DEVELOPER_APPROVAL",
           tenantId: `TEN-2026-${timestamp}`,
           tenantCode: computedTenantCode,
           tenantName: instForm.institutionName,
           facePhoto: appRecord.facePhoto
         });
         localStorage.setItem("gbs_local_registered_users", JSON.stringify(filteredUsers));
-        localStorage.setItem("gbs_tenant_already_onboarded", "true");
-        localStorage.setItem("gbs_assigned_tenant_code", computedTenantCode);
-        localStorage.setItem("gbs_institution_name", instForm.institutionName);
         if (instForm.subscriptionPlan === "1_MONTH_TRIAL") {
           localStorage.setItem("gbs_trial_redeemed", "true");
         }
@@ -596,48 +598,44 @@ export default function SignUpPage({ defaultRole }) {
 
       const res = await register(payload);
       if (res?.status === "success") {
-        if (["TEACHER", "ACCOUNTANT", "STAFF", "HR"].includes(activeTrack)) {
-          try {
-            const currentPending = JSON.parse(localStorage.getItem("gbs_pending_staff_registrations") || "[]");
-            const newRequest = {
-              id: `STF-REQ-${Date.now().toString().slice(-4)}`,
-              firstName: memberForm.firstName,
-              lastName: memberForm.lastName,
-              email: memberForm.email,
-              phone: memberForm.phone || memberForm.whatsappPhone || "+233-24-000-0000",
-              role: activeTrack,
-              department: memberForm.department || (activeTrack === "HR" ? "Human Resources Directorate" : "Academic Instruction"),
-              highestQualification: memberForm.highestQualification || (activeTrack === "HR" ? "Master of Human Resource Management" : "Certified Professional"),
-              experienceYears: memberForm.experienceYears || 2,
-              requestedAt: new Date().toISOString(),
-              status: "PENDING_HEADMASTER_APPROVAL"
-            };
-            currentPending.unshift(newRequest);
-            localStorage.setItem("gbs_pending_staff_registrations", JSON.stringify(currentPending));
+        try {
+          const currentPending = JSON.parse(localStorage.getItem("gbs_pending_staff_registrations") || "[]");
+          const newRequest = {
+            id: `REG-REQ-${Date.now().toString().slice(-4)}`,
+            firstName: memberForm.firstName,
+            lastName: memberForm.lastName,
+            email: memberForm.email,
+            phone: memberForm.phone || memberForm.whatsappPhone || "+233-24-000-0000",
+            role: activeTrack,
+            department: memberForm.department || (activeTrack === "HR" ? "Human Resources Directorate" : activeTrack),
+            highestQualification: memberForm.highestQualification || "Submitted via Registration Portal",
+            experienceYears: memberForm.experienceYears || 0,
+            requestedAt: new Date().toISOString(),
+            status: "PENDING_HEADMASTER_APPROVAL"
+          };
+          currentPending.unshift(newRequest);
+          localStorage.setItem("gbs_pending_staff_registrations", JSON.stringify(currentPending));
 
-            // Dispatch Headmaster notification
-            const notifications = JSON.parse(localStorage.getItem("gbs_admin_notifications") || "[]");
-            notifications.unshift({
-              id: Date.now(),
-              title: "New Staff Registration Request",
-              message: `${memberForm.firstName} ${memberForm.lastName} has applied to join as ${activeTrack}. Headmaster review and approval required.`,
-              timestamp: new Date().toISOString(),
-              read: false
-            });
-            localStorage.setItem("gbs_admin_notifications", JSON.stringify(notifications));
-          } catch (e) {
-            console.warn("Could not save pending staff request:", e);
-          }
+          // Dispatch Headmaster notification
+          const notifications = JSON.parse(localStorage.getItem("gbs_admin_notifications") || "[]");
+          notifications.unshift({
+            id: Date.now(),
+            title: `New ${activeTrack} Registration Request`,
+            message: `${memberForm.firstName} ${memberForm.lastName || ""} (${memberForm.email}) has applied to register as ${activeTrack}. Headmaster review and approval required before login access is granted.`,
+            timestamp: new Date().toISOString(),
+            read: false
+          });
+          localStorage.setItem("gbs_admin_notifications", JSON.stringify(notifications));
+        } catch (e) {
+          console.warn("Could not save pending registration request:", e);
         }
 
         setSuccessData({
           type: "MEMBER",
           role: activeTrack,
           user: res.data?.user,
-          profile: res.data?.profile,
-          message: ["TEACHER", "ACCOUNTANT", "STAFF", "HR"].includes(activeTrack)
-            ? `Your registration request has been submitted to the Headmaster. A notification has been dispatched to the Headmaster for verification and official admission approval.`
-            : res.message
+          profile: res.data?.profile || { verificationStatus: "PENDING_HEADMASTER_APPROVAL" },
+          message: `Your ${activeTrack} registration request has been submitted to the Institution Headmaster for verification and approval. You will be able to sign in once the Headmaster approves your account.`
         });
       } else {
         throw new Error(res?.message || "Registration failed.");
@@ -651,6 +649,10 @@ export default function SignUpPage({ defaultRole }) {
         email: memberForm.email.toLowerCase().trim(),
         username: memberForm.username || memberForm.email.split("@")[0],
         role: activeTrack,
+        isApproved: false,
+        isActive: false,
+        status: "PENDING_HEADMASTER_APPROVAL",
+        verificationStatus: "PENDING_HEADMASTER_APPROVAL",
         tenantId: "1",
         tenantCode: memberForm.tenantCode || "GBS-MAIN",
         tenantName: "GBS International School (Main Branch)"
@@ -660,10 +662,8 @@ export default function SignUpPage({ defaultRole }) {
         type: "MEMBER",
         role: activeTrack,
         user: offlineUser,
-        profile: { verificationStatus: ["TEACHER", "ACCOUNTANT", "STAFF", "HR"].includes(activeTrack) ? "PENDING" : "VERIFIED" },
-        message: ["TEACHER", "ACCOUNTANT", "STAFF", "HR"].includes(activeTrack)
-          ? `Your ${activeTrack} registration has been submitted and queued for Headmaster review. You can proceed to test login with your credentials.`
-          : `Registration successful! Welcome to GBS System, ${offlineUser.firstName}.`
+        profile: { verificationStatus: "PENDING_HEADMASTER_APPROVAL" },
+        message: `Your ${activeTrack} registration has been submitted and queued for Headmaster review and approval. You will be able to sign in once approved by the Headmaster.`
       });
     } finally {
       setLoading(false);

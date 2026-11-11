@@ -386,12 +386,26 @@ export default function AccountantDashboard() {
     return [];
   });
 
+  const isDemoTenant = (() => {
+    try {
+      const u = JSON.parse(localStorage.getItem("gbs_user") || "{}");
+      return (
+        localStorage.getItem("gbs_tenant_mode") !== "LIVE_PRODUCTION" &&
+        (!u?.tenantCode || u.tenantCode === "GBS-MAIN") &&
+        Number(u?.tenantId || 1) === 1
+      );
+    } catch {
+      return false;
+    }
+  })();
+
   // 🎓 Alumni Pledges & Philanthropic Gifts State
   const [alumniPledges, setAlumniPledges] = useState(() => {
     try {
       const stored = JSON.parse(localStorage.getItem("gbs_alumni_pledges_and_gifts") || "[]");
       if (Array.isArray(stored) && stored.length > 0) return stored;
     } catch { }
+    if (!isDemoTenant) return [];
     return [
       {
         id: "ALM-PLG-001",
@@ -533,6 +547,7 @@ export default function AccountantDashboard() {
       const stored = JSON.parse(localStorage.getItem("gbs_headmaster_procurement_ledger") || "[]");
       if (Array.isArray(stored) && stored.length > 0) return stored;
     } catch { }
+    if (!isDemoTenant) return [];
     return [
       {
         id: "PO-HM-2026-001",
@@ -740,6 +755,7 @@ export default function AccountantDashboard() {
       const saved = JSON.parse(localStorage.getItem("gbs_accountant_increment_requests") || "[]");
       if (Array.isArray(saved) && saved.length > 0) return saved;
     } catch { }
+    if (!isDemoTenant) return [];
     return [
       {
         id: 101,

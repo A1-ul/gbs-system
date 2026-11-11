@@ -2,6 +2,7 @@ const { PrismaClient } = require('@prisma/client');
 const {
   readPersistentStore,
   writePersistentStore,
+  addPermanentlyDeletedIds,
   checkPostgresReachable
 } = require('./persistentStore');
 
@@ -40,12 +41,20 @@ const STRING_ID_MAP = {
 const toSafeInt = (val, fallback = 1) => {
   if (typeof val === 'number' && Number.isFinite(val)) return Math.trunc(val);
   if (typeof val === 'string') {
-    if (STRING_ID_MAP[val] !== undefined) return STRING_ID_MAP[val];
-    const parsed = parseInt(val, 10);
-    if (!Number.isNaN(parsed) && String(parsed) === val.trim()) return parsed;
-    const digits = val.replace(/\D/g, '');
+    const trimmed = val.trim();
+    if (STRING_ID_MAP[trimmed] !== undefined) return STRING_ID_MAP[trimmed];
+    const parsed = parseInt(trimmed, 10);
+    if (!Number.isNaN(parsed) && String(parsed) === trimmed) return parsed;
+    const digits = trimmed.replace(/\D/g, '');
     if (digits.length > 0) {
       return (parseInt(digits.slice(-7), 10) || fallback);
+    }
+    if (trimmed.length > 0) {
+      let hash = 0;
+      for (let i = 0; i < trimmed.length; i++) {
+        hash = ((hash << 5) - hash + trimmed.charCodeAt(i)) | 0;
+      }
+      return (Math.abs(hash) % 8900000) + 1000;
     }
   }
   return fallback;
@@ -447,10 +456,20 @@ const DEFAULT_MODEL_SEEDS = {
 
 const getModelTable = (store, model) => {
   if (!store.prismaModels) store.prismaModels = {};
+  const deletedSet = new Set(
+    Array.isArray(store.permanentlyDeletedIds) ? store.permanentlyDeletedIds.map((x) => String(x).trim()) : []
+  );
   if (!Array.isArray(store.prismaModels[model])) {
-    store.prismaModels[model] = DEFAULT_MODEL_SEEDS[model]
+    const seeds = DEFAULT_MODEL_SEEDS[model]
       ? JSON.parse(JSON.stringify(DEFAULT_MODEL_SEEDS[model]))
       : [];
+    store.prismaModels[model] = seeds.filter(
+      (r) => !r?.isDeleted && !deletedSet.has(String(r?.id)) && !deletedSet.has(`${model}:${r?.id}`) && (!r?.licenseKey || !deletedSet.has(String(r.licenseKey))) && (!r?.code || !deletedSet.has(String(r.code)))
+    );
+  } else if (deletedSet.size > 0) {
+    store.prismaModels[model] = store.prismaModels[model].filter(
+      (r) => !r?.isDeleted && !deletedSet.has(`${model}:${r?.id}`) && (!r?.licenseKey || !deletedSet.has(String(r.licenseKey)))
+    );
   }
   return store.prismaModels[model];
 };
@@ -668,40 +687,24 @@ const executeLocalPrismaQuery = ({ model, action, args = {} }) => {
 
   if (action === 'findUnique' || action === 'findUniqueOrThrow' || action === 'findFirst' || action === 'findFirstOrThrow') {
     let found = table.find((r) => matchesWhere(r, args.where));
+    const isNonDemoTenant = args.where?.tenantId !== undefined && toSafeInt(args.where.tenantId, 1) !== 1;
     if (!found && model === 'Tenant' && (!args.where || Object.keys(args.where).length === 0)) {
       found = table[0] || DEFAULT_TENANT_OBJ;
     }
-    if (!found && model === 'User' && args.where?.id !== undefined) {
+    if (!found && !isNonDemoTenant && model === 'User' && args.where?.id !== undefined) {
       const targetId = toSafeInt(args.where.id, 1);
-      found = table.find((u) => u.id === targetId) || {
-        ...DEFAULT_USERS_LIST[0],
-        id: targetId
-      };
+      found = table.find((u) => u.id === targetId);
     }
-    if (!found && (model === 'ClassRoom' || model === 'Class')) {
-      found = table[0];
-    }
-    if (!found && model === 'Subject') {
-      found = table[0];
-    }
-    if (!found && model === 'Exam') {
-      found = table[0];
-    }
-    if (!found && model === 'Assignment') {
-      found = table[0];
-    }
-    if (!found && model === 'Invoice') {
-      found = table[0];
+    if (!found && !isNonDemoTenant && (!args.where || Object.keys(args.where).length === 0)) {
+      if (model === 'ClassRoom' || model === 'Class' || model === 'Subject' || model === 'Exam' || model === 'Assignment' || model === 'Invoice') {
+        found = table[0];
+      }
     }
     return found ? attachIncludes(found, args.include || args.select, store) : null;
   }
 
   if (action === 'findMany') {
-    let list = table.filter((r) => matchesWhere(r, args.where));
-    const strictModels = ['Tenant', 'Subscription', 'SystemLock', 'SystemAlert', 'SystemBackup', 'AuditLog', 'BroadcastAnnouncement', 'ClassEnrollment', 'AttendanceRecord', 'Class', 'User', 'Assignment'];
-    if (list.length === 0 && table.length > 0 && !strictModels.includes(model) && !args.where?.email && !args.where?.code) {
-      list = [...table];
-    }
+    let list = table.filter((r) => !r?.isDeleted && matchesWhere(r, args.where));
     if (typeof args.take === 'number' && args.take > 0) {
       list = list.slice(0, args.take);
     }
@@ -740,7 +743,18 @@ const executeLocalPrismaQuery = ({ model, action, args = {} }) => {
         }
       }
     }
-    const nextId = table.reduce((max, r) => Math.max(max, typeof r.id === 'number' ? r.id : 0), 0) + 1;
+    let maxSeenId = table.reduce((max, r) => Math.max(max, typeof r.id === 'number' ? r.id : 0), 0);
+    if (model === 'Tenant' || model === 'InstitutionRegistration') {
+      const archived = [
+        ...(Array.isArray(store.deletedTenantArchives) ? store.deletedTenantArchives : []),
+        ...(Array.isArray(store.deletedTenantLockouts) ? store.deletedTenantLockouts : [])
+      ];
+      archived.forEach((a) => {
+        const aId = Number(a.id || a.tenantId || 0);
+        if (!isNaN(aId) && aId > maxSeenId) maxSeenId = aId;
+      });
+    }
+    const nextId = maxSeenId + 1;
     const nowIso = new Date().toISOString();
     const record = {
       id: rawData.id || nextId,
@@ -794,7 +808,18 @@ const executeLocalPrismaQuery = ({ model, action, args = {} }) => {
     if (model === 'Tenant' && !cleanPatch.name && !cleanPatch.code) {
       return null;
     }
-    const nextId = table.reduce((max, r) => Math.max(max, typeof r.id === 'number' ? r.id : 0), 0) + 1;
+    let maxSeenId = table.reduce((max, r) => Math.max(max, typeof r.id === 'number' ? r.id : 0), 0);
+    if (model === 'Tenant' || model === 'InstitutionRegistration') {
+      const archived = [
+        ...(Array.isArray(store.deletedTenantArchives) ? store.deletedTenantArchives : []),
+        ...(Array.isArray(store.deletedTenantLockouts) ? store.deletedTenantLockouts : [])
+      ];
+      archived.forEach((a) => {
+        const aId = Number(a.id || a.tenantId || 0);
+        if (!isNaN(aId) && aId > maxSeenId) maxSeenId = aId;
+      });
+    }
+    const nextId = maxSeenId + 1;
     const created = {
       id: toSafeInt(args.where?.id, nextId),
       tenantId: 1,
@@ -823,17 +848,44 @@ const executeLocalPrismaQuery = ({ model, action, args = {} }) => {
 
   if (action === 'delete') {
     const idx = table.findIndex((r) => matchesWhere(r, args.where));
+    const deletedSet = new Set(Array.isArray(store.permanentlyDeletedIds) ? store.permanentlyDeletedIds.map(String) : []);
+    if (args.where?.id !== undefined) {
+      deletedSet.add(`${model}:${args.where.id}`);
+      deletedSet.add(String(args.where.id));
+    }
     if (idx >= 0) {
       const [removed] = table.splice(idx, 1);
+      if (removed?.id !== undefined) {
+        deletedSet.add(`${model}:${removed.id}`);
+        deletedSet.add(String(removed.id));
+      }
+      if (removed?.licenseKey) deletedSet.add(String(removed.licenseKey));
+      if (removed?.code) deletedSet.add(String(removed.code));
+      store.permanentlyDeletedIds = Array.from(deletedSet);
       writePersistentStore(store);
       return removed;
     }
+    store.permanentlyDeletedIds = Array.from(deletedSet);
+    writePersistentStore(store);
     return { id: args.where?.id || 1 };
   }
 
   if (action === 'deleteMany') {
     const before = table.length;
-    store.prismaModels[model] = table.filter((r) => !matchesWhere(r, args.where));
+    const deletedSet = new Set(Array.isArray(store.permanentlyDeletedIds) ? store.permanentlyDeletedIds.map(String) : []);
+    store.prismaModels[model] = table.filter((r) => {
+      const match = matchesWhere(r, args.where);
+      if (match) {
+        if (r?.id !== undefined) {
+          deletedSet.add(`${model}:${r.id}`);
+          deletedSet.add(String(r.id));
+        }
+        if (r?.licenseKey) deletedSet.add(String(r.licenseKey));
+        if (r?.code) deletedSet.add(String(r.code));
+      }
+      return !match;
+    });
+    store.permanentlyDeletedIds = Array.from(deletedSet);
     writePersistentStore(store);
     return { count: Math.max(0, before - store.prismaModels[model].length) };
   }

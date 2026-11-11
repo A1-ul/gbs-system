@@ -139,11 +139,48 @@ export default function DeveloperDashboard() {
     return {};
   });
 
+  // Permanent Deletion Registry Helpers (Ensures any item deleted by Developer never reappears)
+  const recordPermanentDeletion = (ids) => {
+    try {
+      const rawIds = Array.isArray(ids) ? ids : [ids];
+      const existing = JSON.parse(localStorage.getItem("gbs_permanently_deleted_ids") || "[]");
+      const set = new Set(existing.map((x) => String(x).trim()));
+      rawIds.forEach((id) => {
+        if (id !== undefined && id !== null && String(id).trim() !== "") {
+          set.add(String(id).trim());
+        }
+      });
+      localStorage.setItem("gbs_permanently_deleted_ids", JSON.stringify(Array.from(set)));
+    } catch { }
+  };
+
+  const isIdPermanentlyDeleted = (id) => {
+    if (id === undefined || id === null) return false;
+    try {
+      const existing = JSON.parse(localStorage.getItem("gbs_permanently_deleted_ids") || "[]");
+      return existing.includes(String(id).trim());
+    } catch {
+      return false;
+    }
+  };
+
   // Developer <-> Headmaster Direct Messaging State
   const [headmasterMessages, setHeadmasterMessages] = useState(() => {
     try {
       const stored = localStorage.getItem("gbs_dev_headmaster_messages");
-      if (stored) return JSON.parse(stored);
+      if (stored) {
+        const parsed = JSON.parse(stored);
+        if (Array.isArray(parsed)) {
+          return parsed
+            .filter((m) => !isIdPermanentlyDeleted(m.id) && !isIdPermanentlyDeleted(m.threadId))
+            .map((m) => ({
+              ...m,
+              replies: Array.isArray(m.replies)
+                ? m.replies.filter((r) => !isIdPermanentlyDeleted(r.id))
+                : []
+            }));
+        }
+      }
     } catch { }
     return [];
   });
@@ -162,7 +199,21 @@ export default function DeveloperDashboard() {
     const syncHeadmasterMessages = () => {
       try {
         const stored = localStorage.getItem("gbs_dev_headmaster_messages");
-        if (stored) setHeadmasterMessages(JSON.parse(stored));
+        if (stored) {
+          const parsed = JSON.parse(stored);
+          if (Array.isArray(parsed)) {
+            setHeadmasterMessages(
+              parsed
+                .filter((m) => !isIdPermanentlyDeleted(m.id) && !isIdPermanentlyDeleted(m.threadId))
+                .map((m) => ({
+                  ...m,
+                  replies: Array.isArray(m.replies)
+                    ? m.replies.filter((r) => !isIdPermanentlyDeleted(r.id))
+                    : []
+                }))
+            );
+          }
+        }
       } catch { }
     };
     window.addEventListener("gbs_dev_headmaster_message_dispatched", syncHeadmasterMessages);
@@ -172,6 +223,44 @@ export default function DeveloperDashboard() {
       window.removeEventListener("storage", syncHeadmasterMessages);
     };
   }, []);
+
+  const handleDeleteHeadmasterMessageThread = async (threadOrMsgId) => {
+    if (!window.confirm("Permanently delete this Headmaster directive thread and all its replies from the system?")) return;
+    recordPermanentDeletion([threadOrMsgId]);
+    const updated = headmasterMessages.filter((m) => m.id !== threadOrMsgId && m.threadId !== threadOrMsgId);
+    setHeadmasterMessages(updated);
+    localStorage.setItem("gbs_dev_headmaster_messages", JSON.stringify(updated));
+    try {
+      await fetch(`${BASE_URL}/headmaster-messages/${encodeURIComponent(threadOrMsgId)}`, { method: "DELETE" });
+    } catch { }
+    window.dispatchEvent(new Event("storage"));
+    appendConsoleLog(`MSG_DELETE >> Headmaster message thread ${threadOrMsgId} permanently deleted.`);
+    showNotification(`🗑️ Headmaster message thread permanently deleted.`);
+  };
+
+  const handleDeleteHeadmasterReply = async (threadOrMsgId, replyId) => {
+    if (!window.confirm("Permanently delete this Headmaster reply message from the system?")) return;
+    recordPermanentDeletion([replyId]);
+    const updated = headmasterMessages.map((m) => {
+      if (m.id === threadOrMsgId || m.threadId === threadOrMsgId) {
+        return {
+          ...m,
+          replies: (m.replies || []).filter((r) => r.id !== replyId)
+        };
+      }
+      return m;
+    });
+    setHeadmasterMessages(updated);
+    localStorage.setItem("gbs_dev_headmaster_messages", JSON.stringify(updated));
+    try {
+      await fetch(`${BASE_URL}/headmaster-messages/${encodeURIComponent(threadOrMsgId)}/replies/${encodeURIComponent(replyId)}`, {
+        method: "DELETE"
+      });
+    } catch { }
+    window.dispatchEvent(new Event("storage"));
+    appendConsoleLog(`REPLY_DELETE >> Headmaster reply ${replyId} in thread ${threadOrMsgId} permanently deleted.`);
+    showNotification(`🗑️ Headmaster reply permanently deleted.`);
+  };
 
   const [showComposeMessageModal, setShowComposeMessageModal] = useState(false);
   const [composeMessageForm, setComposeMessageForm] = useState({
@@ -347,7 +436,12 @@ export default function DeveloperDashboard() {
   const [securityViolations, setSecurityViolations] = useState(() => {
     try {
       const stored = localStorage.getItem("gbs_dev_security_violations");
-      if (stored) return JSON.parse(stored);
+      if (stored) {
+        const parsed = JSON.parse(stored);
+        if (Array.isArray(parsed)) {
+          return parsed.filter((v) => !isIdPermanentlyDeleted(v.id));
+        }
+      }
     } catch { }
     return [];
   });
@@ -357,9 +451,23 @@ export default function DeveloperDashboard() {
   const [staffBreachTrials, setStaffBreachTrials] = useState(() => {
     try {
       const stored = localStorage.getItem("gbs_dev_staff_intrusion_trials");
-      if (stored) return JSON.parse(stored);
+      if (stored) {
+        const parsed = JSON.parse(stored);
+        if (parsed && typeof parsed === "object") {
+          const filtered = {};
+          Object.entries(parsed).forEach(([k, val]) => {
+            if (!isIdPermanentlyDeleted(k) && !isIdPermanentlyDeleted(val?.email)) {
+              filtered[k] = val;
+            }
+          });
+          return filtered;
+        }
+      }
+      if (localStorage.getItem("gbs_system_data_mode") === "LIVE_PRODUCTION") {
+        return {};
+      }
     } catch { }
-    return {
+    const defaults = {
       "mr.kofi.physics@staugustine.edu": {
         email: "mr.kofi.physics@staugustine.edu",
         staffName: "Kofi Owusu-Ansah (Senior Physics Tutor)",
@@ -381,15 +489,36 @@ export default function DeveloperDashboard() {
         notes: "Trial breach intercepted at developer login gateway."
       }
     };
+    const filteredDefaults = {};
+    Object.entries(defaults).forEach(([k, val]) => {
+      if (!isIdPermanentlyDeleted(k)) filteredDefaults[k] = val;
+    });
+    return filteredDefaults;
   });
 
   useEffect(() => {
     const syncViolations = () => {
       try {
         const stored = localStorage.getItem("gbs_dev_security_violations");
-        if (stored) setSecurityViolations(JSON.parse(stored));
+        if (stored) {
+          const parsed = JSON.parse(stored);
+          if (Array.isArray(parsed)) {
+            setSecurityViolations(parsed.filter((v) => !isIdPermanentlyDeleted(v.id)));
+          }
+        }
         const storedTrials = localStorage.getItem("gbs_dev_staff_intrusion_trials");
-        if (storedTrials) setStaffBreachTrials(JSON.parse(storedTrials));
+        if (storedTrials) {
+          const parsedTrials = JSON.parse(storedTrials);
+          if (parsedTrials && typeof parsedTrials === "object") {
+            const filtered = {};
+            Object.entries(parsedTrials).forEach(([k, val]) => {
+              if (!isIdPermanentlyDeleted(k) && !isIdPermanentlyDeleted(val?.email)) {
+                filtered[k] = val;
+              }
+            });
+            setStaffBreachTrials(filtered);
+          }
+        }
       } catch { }
     };
     window.addEventListener("gbs_dev_intrusion_alert", syncViolations);
@@ -430,12 +559,16 @@ export default function DeveloperDashboard() {
     localStorage.setItem("gbs_dev_staff_intrusion_trials", JSON.stringify(updated));
   };
 
-  const handleClearStaffBreach = (staffEmail) => {
+  const handleClearStaffBreach = async (staffEmail) => {
+    recordPermanentDeletion([staffEmail]);
     const updated = { ...staffBreachTrials };
     delete updated[staffEmail];
     setStaffBreachTrials(updated);
     localStorage.setItem("gbs_dev_staff_intrusion_trials", JSON.stringify(updated));
-    showNotification(`✓ Watchlist dossier for ${staffEmail} archived.`);
+    try {
+      await fetch(`${BASE_URL}/intrusion-violations/${encodeURIComponent(staffEmail)}`, { method: "DELETE" });
+    } catch { }
+    showNotification(`🗑️ Watchlist breach dossier for ${staffEmail} permanently deleted.`);
   };
 
   const handleNotifyHeadmaster = (id) => {
@@ -455,11 +588,15 @@ export default function DeveloperDashboard() {
     showNotification(`📨 Disciplinary dossier for intrusion ${id} successfully transmitted to the institution Headmaster!`);
   };
 
-  const handleResolveViolation = (id) => {
+  const handleResolveViolation = async (id) => {
+    recordPermanentDeletion([id]);
     const updated = securityViolations.filter((v) => v.id !== id);
     setSecurityViolations(updated);
     localStorage.setItem("gbs_dev_security_violations", JSON.stringify(updated));
-    showNotification(`✓ Security violation ${id} marked as resolved.`);
+    try {
+      await fetch(`${BASE_URL}/intrusion-violations/${encodeURIComponent(id)}`, { method: "DELETE" });
+    } catch { }
+    showNotification(`🗑️ Security violation ${id} permanently deleted.`);
   };
 
   const handleSimulateIntrusion = () => {
@@ -650,11 +787,13 @@ export default function DeveloperDashboard() {
       try {
         const localUsers = JSON.parse(localStorage.getItem("gbs_local_registered_users") || "[]");
         const targetEmailLower = String(app.headmasterEmail || app.adminEmail || app.officialEmail || "admin@gbs.edu").trim().toLowerCase();
+        const existingUser = localUsers.find((u) => String(u.email || "").toLowerCase() === targetEmailLower);
         const hmRecord = {
-          id: `usr_hm_${numericTenantId}`,
+          ...(existingUser || {}),
+          id: existingUser?.id || `usr_hm_${numericTenantId}`,
           email: targetEmailLower,
           username: targetEmailLower.split("@")[0],
-          password: app.adminPassword || "Headmaster123!",
+          password: app.password || app.adminPassword || existingUser?.password || "Headmaster123!",
           role: "ADMIN",
           firstName: (app.headmasterName || app.adminName || "Headmaster").split(" ")[0],
           lastName: (app.headmasterName || app.adminName || "").split(" ").slice(1).join(" "),
@@ -666,6 +805,8 @@ export default function DeveloperDashboard() {
           facePhoto: app.facePhoto || app.headmasterPhoto || null,
           isApproved: true,
           isActive: true,
+          status: "APPROVED",
+          verificationStatus: "VERIFIED",
           approvedAt: new Date().toISOString()
         };
         const mergedUsers = [
@@ -793,6 +934,18 @@ export default function DeveloperDashboard() {
       // Strictly ensure rejected institutions are NEVER added to approved countdowns, tenants, or telemetry
       setCountdowns((prev) => prev.filter((c) => c.tenantName !== app.institutionName && c.tenantCode !== app.tenantCode));
       setOnboardedTenants((prev) => prev.filter((t) => (t.name || t.institutionName) !== app.institutionName && (t.tenantCode || t.code) !== app.tenantCode));
+
+      // Also mark the rejected Headmaster user as REJECTED and unapproved in local registered users
+      try {
+        const localUsers = JSON.parse(localStorage.getItem("gbs_local_registered_users") || "[]");
+        const targetEmailLower = String(app.headmasterEmail || app.adminEmail || app.officialEmail || "").trim().toLowerCase();
+        const updatedUsers = localUsers.map((u) =>
+          String(u.email || "").toLowerCase() === targetEmailLower || (app.tenantCode && u.tenantCode === app.tenantCode)
+            ? { ...u, isApproved: false, isActive: false, status: "REJECTED", verificationStatus: "REJECTED" }
+            : u
+        );
+        localStorage.setItem("gbs_local_registered_users", JSON.stringify(updatedUsers));
+      } catch { }
 
       const targetPhone = app.headmasterPhone || app.adminPhone || app.officialPhone || "+233-24-555-0199";
       const targetEmail = app.headmasterEmail || app.adminEmail || "admin@school.edu";
@@ -951,7 +1104,12 @@ export default function DeveloperDashboard() {
   const [registeredMembersList, setRegisteredMembersList] = useState(() => {
     try {
       const stored = JSON.parse(localStorage.getItem("gbs_local_registered_users") || "[]");
-      if (Array.isArray(stored) && stored.length > 0) return stored;
+      if (Array.isArray(stored) && stored.length > 0) {
+        return stored.filter((m) => !isIdPermanentlyDeleted(m.id) && !isIdPermanentlyDeleted(m.email));
+      }
+      if (localStorage.getItem("gbs_system_data_mode") === "LIVE_PRODUCTION") {
+        return [];
+      }
     } catch { }
     return [
       {
@@ -964,6 +1122,9 @@ export default function DeveloperDashboard() {
         tenantCode: "GBS-MAIN",
         institutionName: "GBS International School (Main Branch)",
         verificationStatus: "VERIFIED",
+        isApproved: true,
+        isActive: true,
+        status: "APPROVED",
         registeredAt: new Date(Date.now() - 86400000).toISOString()
       },
       {
@@ -976,6 +1137,9 @@ export default function DeveloperDashboard() {
         tenantCode: "GBS-MAIN",
         institutionName: "GBS International School (Main Branch)",
         verificationStatus: "PENDING_DEVELOPER_APPROVAL",
+        isApproved: false,
+        isActive: false,
+        status: "PENDING_DEVELOPER_APPROVAL",
         registeredAt: new Date().toISOString()
       },
       {
@@ -988,6 +1152,9 @@ export default function DeveloperDashboard() {
         tenantCode: "GBS-MAIN",
         institutionName: "GBS International School (Main Branch)",
         verificationStatus: "VERIFIED",
+        isApproved: true,
+        isActive: true,
+        status: "APPROVED",
         registeredAt: new Date(Date.now() - 172800000).toISOString()
       },
       {
@@ -1000,14 +1167,19 @@ export default function DeveloperDashboard() {
         tenantCode: "GBS-MAIN",
         institutionName: "GBS International School (Main Branch)",
         verificationStatus: "PENDING_DEVELOPER_APPROVAL",
+        isApproved: false,
+        isActive: false,
+        status: "PENDING_DEVELOPER_APPROVAL",
         registeredAt: new Date().toISOString()
       }
-    ];
+    ].filter((m) => !isIdPermanentlyDeleted(m.id) && !isIdPermanentlyDeleted(m.email));
   });
 
   const handleApproveRegisteredMember = (userId) => {
     const updated = registeredMembersList.map((m) =>
-      m.id === userId ? { ...m, verificationStatus: "VERIFIED", approvedAt: new Date().toISOString() } : m
+      m.id === userId
+        ? { ...m, verificationStatus: "VERIFIED", status: "APPROVED", isApproved: true, isActive: true, approvedAt: new Date().toISOString() }
+        : m
     );
     setRegisteredMembersList(updated);
     try {
@@ -1020,7 +1192,7 @@ export default function DeveloperDashboard() {
 
   const handleRejectRegisteredMember = (userId) => {
     const updated = registeredMembersList.map((m) =>
-      m.id === userId ? { ...m, verificationStatus: "REJECTED" } : m
+      m.id === userId ? { ...m, verificationStatus: "REJECTED", status: "REJECTED", isApproved: false, isActive: false } : m
     );
     setRegisteredMembersList(updated);
     try {
@@ -1028,6 +1200,19 @@ export default function DeveloperDashboard() {
       window.dispatchEvent(new Event("storage"));
     } catch { }
     showNotification("Member registration rejected and de-provisioned.");
+  };
+
+  const handleDeleteRegisteredMember = (userId) => {
+    const target = registeredMembersList.find((m) => m.id === userId);
+    if (!window.confirm(`Permanently delete member "${target?.firstName || ""} ${target?.lastName || ""}" (${target?.email || userId}) from the system?`)) return;
+    recordPermanentDeletion([userId, target?.email]);
+    const updated = registeredMembersList.filter((m) => m.id !== userId);
+    setRegisteredMembersList(updated);
+    try {
+      localStorage.setItem("gbs_local_registered_users", JSON.stringify(updated));
+      window.dispatchEvent(new Event("storage"));
+    } catch { }
+    showNotification(`🗑️ Member ${target?.email || userId} permanently deleted.`);
   };
   const [showDevGuideModal, setShowDevGuideModal] = useState(false);
   const [archivedSearchQuery, setArchivedSearchQuery] = useState("");
@@ -1735,7 +1920,7 @@ export default function DeveloperDashboard() {
     const syncMomoPayments = () => {
       try {
         const list = JSON.parse(localStorage.getItem("gbs_momo_subscription_reconciliations") || "[]");
-        setMomoReconciliations(list);
+        setMomoReconciliations(Array.isArray(list) ? list.filter((r) => !isIdPermanentlyDeleted(r.id)) : []);
       } catch { }
       fetchOnboardingApplications();
     };
@@ -1787,42 +1972,60 @@ export default function DeveloperDashboard() {
       const cdRes = await fetch(`${BASE_URL}/countdowns`);
       if (cdRes.ok) {
         const cdData = await cdRes.json();
-        if (cdData.data?.countdowns) setCountdowns(cdData.data.countdowns);
+        if (cdData.data?.countdowns) {
+          setCountdowns(
+            cdData.data.countdowns.filter(
+              (c) => !isIdPermanentlyDeleted(c.tenantId) && !isIdPermanentlyDeleted(c.tenantCode) && !isIdPermanentlyDeleted(`sub_${c.tenantId}`)
+            )
+          );
+        }
       }
 
       // 4. Encrypted Backups
       const bRes = await fetch(`${BASE_URL}/backups`);
       if (bRes.ok) {
         const bData = await bRes.json();
-        if (bData.data?.backups) setBackups(bData.data.backups);
+        if (bData.data?.backups) {
+          setBackups(bData.data.backups.filter((b) => !isIdPermanentlyDeleted(b.id)));
+        }
       }
 
       // 5. System Alerts
       const aRes = await fetch(`${BASE_URL}/alerts`);
       if (aRes.ok) {
         const aData = await aRes.json();
-        if (aData.data?.alerts) setAlerts(aData.data.alerts);
+        if (aData.data?.alerts) {
+          setAlerts(aData.data.alerts.filter((a) => !isIdPermanentlyDeleted(a.id)));
+        }
       }
 
       // 6. Deployments
       const dRes = await fetch(`${BASE_URL}/deployments`);
       if (dRes.ok) {
         const dData = await dRes.json();
-        if (dData.data?.deployments) setDeployments(dData.data.deployments);
+        if (dData.data?.deployments) {
+          setDeployments(dData.data.deployments.filter((d) => !isIdPermanentlyDeleted(d.id)));
+        }
       }
 
       // 7. System Audit Logs
       const lRes = await fetch(`${BASE_URL}/audit-logs`);
       if (lRes.ok) {
         const lData = await lRes.json();
-        if (lData.data?.logs) setAuditLogs(lData.data.logs);
+        if (lData.data?.logs) {
+          setAuditLogs(lData.data.logs.filter((l) => !isIdPermanentlyDeleted(l.id)));
+        }
       }
 
       // 8. Licenses
       const licRes = await fetch(`${BASE_URL}/licenses`);
       if (licRes.ok) {
         const licData = await licRes.json();
-        if (licData.data?.licenses) setLicenses(licData.data.licenses);
+        if (licData.data?.licenses) {
+          setLicenses(
+            licData.data.licenses.filter((l) => !isIdPermanentlyDeleted(l.id) && !isIdPermanentlyDeleted(l.licenseKey))
+          );
+        }
       }
 
       // 9. Developer-Only Tenant Location Pins (Step 34)
@@ -1831,14 +2034,20 @@ export default function DeveloperDashboard() {
       });
       if (pinsRes.ok) {
         const pinsData = await pinsRes.json();
-        if (pinsData.locations) setTenantPins(pinsData.locations);
+        if (pinsData.locations) {
+          setTenantPins(pinsData.locations.filter((p) => !isIdPermanentlyDeleted(p.tenantId) && !isIdPermanentlyDeleted(p.tenantCode)));
+        }
       }
 
       // 10. Developer Tenant Onboarding & SMS Gateway Logs
       const tRes = await fetch(`${BASE_URL}/tenants/onboarded`, { headers: authHeaders });
       if (tRes.ok) {
         const tData = await tRes.json();
-        if (tData.data?.tenants) setOnboardedTenants(tData.data.tenants);
+        if (tData.data?.tenants) {
+          setOnboardedTenants(
+            tData.data.tenants.filter((t) => !isIdPermanentlyDeleted(t.id || t.tenantId) && !isIdPermanentlyDeleted(t.tenantCode || t.code))
+          );
+        }
       }
 
       // 10b. Deleted Tenant Archives Depot
@@ -2046,6 +2255,10 @@ export default function DeveloperDashboard() {
   };
 
   const handleBiometricGateUnlock = async () => {
+    if (!gatePasswordInput.trim() || gatePasswordInput.trim() !== "0543294615Gab") {
+      setGateError("Access Denied: Biometric clearance strictly requires entering your verified Developer Password above.");
+      return;
+    }
     setGateLoading(true);
     setGateError(null);
     showNotification("🧬 Engaging optical biometric scanner... Analyzing pupil reflection & 3D mesh");
@@ -2361,10 +2574,23 @@ export default function DeveloperDashboard() {
   };
 
   const handleRejectPayment = (reconId) => {
+    recordPermanentDeletion([reconId]);
     const updated = momoReconciliations.filter((r) => r.id !== reconId);
     setMomoReconciliations(updated);
     localStorage.setItem("gbs_momo_subscription_reconciliations", JSON.stringify(updated));
-    showNotification("MoMo transaction record dismissed from reconciliation queue.");
+    showNotification("🗑️ MoMo subscription payment record permanently deleted.");
+  };
+
+  const handleDeleteSubscriptionControl = async (subOrTenantId, label = "Subscription Record") => {
+    if (!window.confirm(`Permanently delete subscription control record for "${label}" (#${subOrTenantId}) from the system?`)) return;
+    recordPermanentDeletion([subOrTenantId, `sub_${subOrTenantId}`]);
+    try {
+      await fetch(`${BASE_URL}/subscriptions/${encodeURIComponent(subOrTenantId)}`, { method: "DELETE" });
+    } catch { }
+    setCountdowns((prev) => prev.filter((c) => c.tenantId !== subOrTenantId && c.tenantCode !== subOrTenantId));
+    setOnboardedTenants((prev) => prev.filter((t) => (t.id || t.tenantId) !== subOrTenantId && (t.tenantCode || t.code) !== subOrTenantId));
+    appendConsoleLog(`SUB_DELETE >> Subscription control record for "${label}" (#${subOrTenantId}) permanently deleted.`);
+    showNotification(`🗑️ Subscription control record for "${label}" permanently deleted.`);
   };
 
   const handleExecuteSubscriptionAutoLock = () => {
@@ -2927,7 +3153,7 @@ export default function DeveloperDashboard() {
           message: alertMsg,
           schoolName: label
         })
-      }).catch(() => {});
+      }).catch(() => { });
     } catch { }
 
     setCountdowns((prev) => prev.filter((c) => c.tenantId !== tenantId));
@@ -2974,7 +3200,43 @@ export default function DeveloperDashboard() {
       const lockouts = JSON.parse(localStorage.getItem("gbs_deleted_tenant_lockouts") || "[]");
       const cleared = lockouts.filter((l) => (l.tenantId || l.id) !== tid);
       localStorage.setItem("gbs_deleted_tenant_lockouts", JSON.stringify(cleared));
-    } catch (_) {}
+    } catch (_) { }
+
+    // Re-insert credentials into onboarding registry & registered members
+    try {
+      const incoming = JSON.parse(localStorage.getItem("gbs_incoming_onboarding_applications") || "[]");
+      const filteredIncoming = incoming.filter((a) => (a.assignedTenantId || a.id) !== tid);
+      filteredIncoming.unshift({
+        id: tid,
+        assignedTenantId: tid,
+        assignedTenantCode: archiveItem.tenantCode || `GBS-${tid}`,
+        institutionName: archiveItem.tenantName,
+        headmasterName: archiveItem.headmasterName || "Headmaster",
+        headmasterEmail: archiveItem.headmasterEmail,
+        officialEmail: archiveItem.headmasterEmail,
+        status: "APPROVED",
+        isActivated: true
+      });
+      localStorage.setItem("gbs_incoming_onboarding_applications", JSON.stringify(filteredIncoming));
+
+      const localUsers = JSON.parse(localStorage.getItem("gbs_local_registered_users") || "[]");
+      const cleanEmail = String(archiveItem.headmasterEmail || "").trim().toLowerCase();
+      const filteredUsers = localUsers.filter((u) => String(u.email || "").toLowerCase() !== cleanEmail);
+      if (cleanEmail) {
+        filteredUsers.unshift({
+          id: `usr_${tid}`,
+          email: cleanEmail,
+          username: cleanEmail.split("@")[0],
+          role: "ADMIN",
+          tenantId: tid,
+          tenantCode: archiveItem.tenantCode || `GBS-${tid}`,
+          tenantName: archiveItem.tenantName,
+          status: "ACTIVE"
+        });
+        localStorage.setItem("gbs_local_registered_users", JSON.stringify(filteredUsers));
+      }
+      window.dispatchEvent(new Event("storage"));
+    } catch { }
 
     const restoredData = archiveItem.snapshotData || {
       tenantId: tid,
@@ -3005,7 +3267,9 @@ export default function DeveloperDashboard() {
   const handlePurgeArchivedTenant = async (archiveItem) => {
     const tid = archiveItem.tenantId || archiveItem.id;
     const label = archiveItem.tenantName || `Tenant #${tid}`;
-    if (!window.confirm(`Are you sure you want to PERMANENTLY PURGE "${label}" and all its records? This cannot be undone.`)) return;
+    if (!window.confirm(`Are you sure you want to PERMANENTLY PURGE "${label}" and all its records? This cannot be undone and the institution will be permanently denied access.`)) return;
+
+    recordPermanentDeletion([tid, archiveItem.tenantCode, archiveItem.headmasterEmail, `sub_${tid}`]);
 
     try {
       await fetch(`${BASE_URL}/tenants/${tid}/purge`, { method: "DELETE" });
@@ -3015,21 +3279,62 @@ export default function DeveloperDashboard() {
     setDeletedTenantArchives(updatedArchives);
     localStorage.setItem("gbs_deleted_tenant_archives", JSON.stringify(updatedArchives));
 
-    // Clear deletion lockout upon developer reactivation
+    // Ensure permanent lockout stays enforced so purged tenant can NEVER access the system
     try {
       const lockouts = JSON.parse(localStorage.getItem("gbs_deleted_tenant_lockouts") || "[]");
-      const cleared = lockouts.filter((l) => (l.tenantId || l.id) !== tid);
-      localStorage.setItem("gbs_deleted_tenant_lockouts", JSON.stringify(cleared));
-    } catch (_) {}
+      const targetEmails = [archiveItem.headmasterEmail].filter(Boolean).map((e) => String(e).toLowerCase().trim());
+      const newLockout = {
+        tenantId: tid,
+        tenantName: label,
+        tenantCode: archiveItem.tenantCode,
+        emails: targetEmails,
+        deletionNotice: "Your institution has been permanently purged from GBS SYSTEM. You are denied access to the system.",
+        deletedAt: new Date().toISOString()
+      };
+      localStorage.setItem(
+        "gbs_deleted_tenant_lockouts",
+        JSON.stringify([newLockout, ...lockouts.filter((l) => (l.tenantId || l.id) !== tid)])
+      );
 
-    appendConsoleLog(`PURGE >> Institution "${label}" (#${tid}) permanently purged from system.`);
-    showNotification(`🗑️ Institution "${label}" permanently purged.`);
+      // Remove any local registered users belonging to the purged tenant
+      const localUsers = JSON.parse(localStorage.getItem("gbs_local_registered_users") || "[]");
+      const filteredUsers = localUsers.filter(
+        (u) =>
+          String(u.tenantId) !== String(tid) &&
+          (!archiveItem.tenantCode || String(u.tenantCode || "").toUpperCase() !== String(archiveItem.tenantCode).toUpperCase()) &&
+          !targetEmails.includes(String(u.email || "").toLowerCase().trim())
+      );
+      localStorage.setItem("gbs_local_registered_users", JSON.stringify(filteredUsers));
+    } catch (_) { }
+
+    appendConsoleLog(`PURGE >> Institution "${label}" (#${tid}) permanently purged and locked out from system.`);
+    showNotification(`🗑️ Institution "${label}" permanently purged and denied system access.`);
   };
 
   const handleBatchDeleteSelectedTenants = async () => {
     if (selectedTenants.length === 0) return;
     if (!window.confirm(`Permanently DELETE ${selectedTenants.length} selected tenant(s) from the GBS System?`)) return;
     const idsToDelete = [...selectedTenants];
+    recordPermanentDeletion(idsToDelete);
+    try {
+      const lockouts = JSON.parse(localStorage.getItem("gbs_deleted_tenant_lockouts") || "[]");
+      const newLockouts = idsToDelete.map((tid) => {
+        const target = countdowns.find((c) => c.tenantId === tid) || onboardedTenants.find((t) => (t.id || t.tenantId) === tid);
+        const hmEmail = target?.headmaster?.email || target?.headmasterEmail || target?.adminEmail;
+        return {
+          tenantId: tid,
+          tenantName: target?.tenantName || target?.name || `Tenant #${tid}`,
+          tenantCode: target?.tenantCode || target?.code,
+          emails: hmEmail ? [String(hmEmail).toLowerCase().trim()] : [],
+          deletionNotice: "Your institution has been deleted from GBS SYSTEM. You are unable to access the system permanently.",
+          deletedAt: new Date().toISOString()
+        };
+      });
+      localStorage.setItem(
+        "gbs_deleted_tenant_lockouts",
+        JSON.stringify([...newLockouts, ...lockouts.filter((l) => !idsToDelete.includes(l.tenantId || l.id))])
+      );
+    } catch { }
     setCountdowns((prev) => prev.filter((c) => !idsToDelete.includes(c.tenantId)));
     setOnboardedTenants((prev) => prev.filter((t) => !idsToDelete.includes(t.id || t.tenantId)));
     setSelectedTenants([]);
@@ -3041,10 +3346,10 @@ export default function DeveloperDashboard() {
         body: JSON.stringify({ ids: idsToDelete })
       });
       appendConsoleLog(`BATCH_DELETE >> ${idsToDelete.length} tenant(s) permanently deleted.`);
-      showNotification(`🗑️ ${idsToDelete.length} selected tenant(s) deleted from the platform.`);
+      showNotification(`🗑️ ${idsToDelete.length} selected tenant(s) permanently deleted from the platform.`);
       fetchData();
     } catch {
-      showNotification(`🗑️ ${idsToDelete.length} tenant(s) removed.`);
+      showNotification(`🗑️ ${idsToDelete.length} tenant(s) permanently removed.`);
     }
   };
 
@@ -3093,14 +3398,15 @@ export default function DeveloperDashboard() {
 
   const handleDeleteDeployment = async (depId, versionLabel = "") => {
     if (!window.confirm(`Delete deployment record ${versionLabel || `#${depId}`}?`)) return;
+    recordPermanentDeletion([depId]);
     setDeployments((prev) => prev.filter((d) => d.id !== depId));
     setSelectedDeploymentIds((prev) => prev.filter((id) => id !== depId));
     try {
       await fetch(`${BASE_URL}/deployments/${depId}`, { method: "DELETE" });
-      showNotification(`🗑️ Deployment ${versionLabel || `#${depId}`} deleted.`);
+      showNotification(`🗑️ Deployment ${versionLabel || `#${depId}`} permanently deleted.`);
       fetchData();
     } catch {
-      showNotification(`🗑️ Deployment ${versionLabel || `#${depId}`} removed.`);
+      showNotification(`🗑️ Deployment ${versionLabel || `#${depId}`} permanently removed.`);
     }
   };
 
@@ -3128,6 +3434,7 @@ export default function DeveloperDashboard() {
     if (selectedDeploymentIds.length === 0) return;
     if (!window.confirm(`Delete ${selectedDeploymentIds.length} selected deployment(s)?`)) return;
     const ids = [...selectedDeploymentIds];
+    recordPermanentDeletion(ids);
     setDeployments((prev) => prev.filter((d) => !ids.includes(d.id)));
     setSelectedDeploymentIds([]);
     try {
@@ -3136,7 +3443,7 @@ export default function DeveloperDashboard() {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ ids })
       });
-      showNotification(`🗑️ ${ids.length} deployment(s) deleted.`);
+      showNotification(`🗑️ ${ids.length} deployment(s) permanently deleted.`);
       fetchData();
     } catch { }
   };
@@ -3163,11 +3470,12 @@ export default function DeveloperDashboard() {
   };
 
   const handleDeleteAuditLog = async (logId) => {
+    recordPermanentDeletion([logId]);
     setAuditLogs((prev) => prev.filter((l) => l.id !== logId));
     setSelectedAuditLogIds((prev) => prev.filter((id) => id !== logId));
     try {
       await fetch(`${BASE_URL}/audit-logs/${logId}`, { method: "DELETE" });
-      showNotification(`🗑️ Audit log #${logId} deleted.`);
+      showNotification(`🗑️ Audit log #${logId} permanently deleted.`);
       fetchData();
     } catch { }
   };
@@ -3194,6 +3502,7 @@ export default function DeveloperDashboard() {
     if (selectedAuditLogIds.length === 0) return;
     if (!window.confirm(`Permanently delete ${selectedAuditLogIds.length} selected audit log(s)?`)) return;
     const ids = [...selectedAuditLogIds];
+    recordPermanentDeletion(ids);
     setAuditLogs((prev) => prev.filter((l) => !ids.includes(l.id)));
     setSelectedAuditLogIds([]);
     try {
@@ -3202,7 +3511,7 @@ export default function DeveloperDashboard() {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ ids })
       });
-      showNotification(`🗑️ ${ids.length} audit log(s) deleted.`);
+      showNotification(`🗑️ ${ids.length} audit log(s) permanently deleted.`);
       fetchData();
     } catch { }
   };
@@ -3225,6 +3534,19 @@ export default function DeveloperDashboard() {
     } catch (err) {
       showNotification("⚠ License creation error.");
     }
+  };
+
+  const handleDeleteLicense = async (licId) => {
+    if (!window.confirm(`Are you sure you want to permanently revoke and delete cryptographic license #${licId}?`)) return;
+    const targetLic = licenses.find((l) => l.id === licId);
+    recordPermanentDeletion([licId, targetLic?.licenseKey]);
+    try {
+      await fetch(`${BASE_URL}/licenses/${licId}`, { method: "DELETE" });
+    } catch { }
+    const updated = licenses.filter((l) => l.id !== licId);
+    setLicenses(updated);
+    appendConsoleLog(`LICENSE >> License #${licId} permanently revoked and deleted from registry.`);
+    showNotification(`🗑️ License #${licId} permanently revoked and deleted.`);
   };
 
   // Real-Time Browser GPS Location Pinpoint
@@ -3289,7 +3611,7 @@ export default function DeveloperDashboard() {
     }
   };
 
-  // Tenant Locator by Headmaster Mobile Contact, School Name, Tenant Code, City/Address, or Real-Life Place
+  // Tenant & Parent Locator by Headmaster/Parent Mobile Contact, School/Parent Name, Tenant Code, City/Address, or Real-Life Place
   const handleLocateTenant = async (e, directPhone = null) => {
     if (e) e.preventDefault();
     const query = String(directPhone || locatorPhoneQuery).trim();
@@ -3297,18 +3619,142 @@ export default function DeveloperDashboard() {
     setLocatorSearching(true);
     try {
       let data = null;
+      const qLower = query.toLowerCase();
       const digitsOnly = query.replace(/\D/g, "");
 
-      // 1. Query Backend Tenant Locator first
+      // 0. Check local onboarded tenants and registered Parents/Guardians first for instant exact lookup
       try {
-        const token = localStorage.getItem("gbs_dev_token") || localStorage.getItem("gbs_token");
-        const headers = token ? { Authorization: `Bearer ${token}` } : {};
-        const res = await fetch(`${BASE_URL}/tenant-locator?phone=${encodeURIComponent(query)}`, { headers });
-        if (res.ok) {
-          const json = await res.json();
-          if (json.data) data = json.data;
+        const archivedTenants = JSON.parse(localStorage.getItem("gbs_archived_onboarded_tenants") || "[]");
+        const incomingTenants = JSON.parse(localStorage.getItem("gbs_incoming_onboarding_applications") || "[]");
+        const tenantHit = [...archivedTenants, ...incomingTenants].find((t) => {
+          const tName = String(t.institutionName || t.name || "").toLowerCase();
+          const tCode = String(t.assignedTenantCode || t.tenantCode || "").toLowerCase();
+          const hmName = String(t.headmasterName || t.adminName || "").toLowerCase();
+          const hmPhone = String(t.headmasterPhone || t.adminPhone || t.phone || "");
+          return (
+            (qLower.length >= 2 && (tName.includes(qLower) || tCode.includes(qLower) || hmName.includes(qLower))) ||
+            (digitsOnly.length >= 5 && hmPhone.replace(/\D/g, "").includes(digitsOnly))
+          );
+        });
+
+        if (tenantHit) {
+          data = {
+            tenantId: tenantHit.id || tenantHit.assignedTenantId,
+            tenantName: tenantHit.institutionName || tenantHit.name,
+            tenantCode: tenantHit.assignedTenantCode || tenantHit.tenantCode || "GBS-TENANT",
+            headmasterName: tenantHit.headmasterName || tenantHit.adminName || "Headmaster",
+            headmasterPhone: tenantHit.headmasterPhone || tenantHit.adminPhone || tenantHit.phone || query,
+            headmasterEmail: tenantHit.headmasterEmail || tenantHit.adminEmail || tenantHit.email || "",
+            address: tenantHit.address || tenantHit.campusLocation || tenantHit.city || "Accra, Ghana",
+            city: tenantHit.city || "Accra",
+            region: tenantHit.stateRegion || tenantHit.region || "Greater Accra",
+            country: tenantHit.country || "Ghana",
+            latitude: Number(tenantHit.latitude || 5.60372),
+            longitude: Number(tenantHit.longitude || -0.18696),
+            activeStudents: Number(tenantHit.totalStudentsEnrolled || tenantHit.studentCount || 0),
+            status: "ACTIVE"
+          };
+        } else {
+          // Check Live Parent GPS Beacon & Registered Parents/Students
+          const liveBeacon = JSON.parse(localStorage.getItem("gbs_parent_live_location") || "null");
+          const enrolled = JSON.parse(localStorage.getItem("gbs_enrolled_students") || "[]");
+          const admissions = JSON.parse(localStorage.getItem("gbs_submitted_admissions") || "[]");
+          const regUsers = JSON.parse(localStorage.getItem("gbs_local_registered_users") || "[]");
+
+          if (
+            liveBeacon &&
+            liveBeacon.latitude &&
+            liveBeacon.longitude &&
+            ((liveBeacon.guardianName && String(liveBeacon.guardianName).toLowerCase().includes(qLower)) ||
+              (digitsOnly.length >= 5 && String(liveBeacon.phone || "").replace(/\D/g, "").includes(digitsOnly)))
+          ) {
+            data = {
+              tenantId: "PARENT-LIVE",
+              tenantName: `Parent Live GPS: ${liveBeacon.guardianName || "Registered Guardian"}`,
+              tenantCode: "PARENT-GPS-LOCK",
+              headmasterName: liveBeacon.guardianName || "Verified Parent / Guardian",
+              headmasterPhone: liveBeacon.phone || query,
+              headmasterEmail: liveBeacon.email || "guardian@gbs.edu",
+              address: liveBeacon.address || `Lat ${liveBeacon.latitude}, Lng ${liveBeacon.longitude}`,
+              city: liveBeacon.city || "Accra",
+              region: "Live Parent Telemetry",
+              country: liveBeacon.country || "Ghana",
+              latitude: Number(liveBeacon.latitude),
+              longitude: Number(liveBeacon.longitude),
+              activeStudents: 1,
+              status: "ACTIVE"
+            };
+          } else {
+            const studentHit = [...enrolled, ...admissions].find((s) => {
+              const sName = `${s.firstName || s.studentFirstName || ""} ${s.lastName || s.studentLastName || ""} ${s.fullName || ""}`.toLowerCase();
+              const gName = `${s.guardianName || s.parentName || ""}`.toLowerCase();
+              const gPhone = String(s.guardianPhone || s.parentPhone || s.emergencyPhone || "");
+              return (
+                (qLower.length >= 2 && (gName.includes(qLower) || sName.includes(qLower))) ||
+                (digitsOnly.length >= 5 && gPhone.replace(/\D/g, "").includes(digitsOnly))
+              );
+            });
+            if (studentHit) {
+              data = {
+                tenantId: studentHit.id || "WARD-PARENT",
+                tenantName: `Parent / Guardian: ${studentHit.guardianName || studentHit.parentName || "Verified Guardian"}`,
+                tenantCode: studentHit.indexNumber || studentHit.studentId || "PARENT-LOCATOR",
+                headmasterName: `Ward: ${studentHit.firstName || studentHit.studentFirstName || ""} ${studentHit.lastName || studentHit.studentLastName || ""}`.trim(),
+                headmasterPhone: studentHit.guardianPhone || studentHit.parentPhone || studentHit.emergencyPhone || query,
+                headmasterEmail: studentHit.guardianEmail || studentHit.email || "",
+                address: studentHit.residentialAddress || studentHit.address || "Accra, Ghana",
+                city: studentHit.city || "Accra",
+                region: "Guardian Residence",
+                country: "Ghana",
+                latitude: Number(studentHit.latitude || liveBeacon?.latitude || 5.60372),
+                longitude: Number(studentHit.longitude || liveBeacon?.longitude || -0.18696),
+                activeStudents: 1,
+                status: "ACTIVE"
+              };
+            } else {
+              const userHit = regUsers.find((u) => {
+                const uName = `${u.firstName || ""} ${u.lastName || ""} ${u.fullName || ""}`.toLowerCase();
+                const uPhone = String(u.phone || "");
+                return (
+                  (qLower.length >= 2 && (uName.includes(qLower) || String(u.email || "").toLowerCase().includes(qLower))) ||
+                  (digitsOnly.length >= 5 && uPhone.replace(/\D/g, "").includes(digitsOnly))
+                );
+              });
+              if (userHit) {
+                data = {
+                  tenantId: userHit.id || "REG-MEMBER",
+                  tenantName: `${userHit.role || "Member"}: ${userHit.firstName || ""} ${userHit.lastName || ""}`.trim(),
+                  tenantCode: userHit.tenantCode || "GBS-MEMBER",
+                  headmasterName: `${userHit.firstName || ""} ${userHit.lastName || ""}`.trim(),
+                  headmasterPhone: userHit.phone || query,
+                  headmasterEmail: userHit.email || "",
+                  address: userHit.address || userHit.city || "Accra, Ghana",
+                  city: userHit.city || "Accra",
+                  region: "Registered Member Location",
+                  country: "Ghana",
+                  latitude: Number(userHit.latitude || 5.60372),
+                  longitude: Number(userHit.longitude || -0.18696),
+                  activeStudents: 1,
+                  status: "ACTIVE"
+                };
+              }
+            }
+          }
         }
       } catch { }
+
+      // 1. Query Backend Tenant Locator if not yet matched
+      if (!data) {
+        try {
+          const token = localStorage.getItem("gbs_dev_token") || localStorage.getItem("gbs_token");
+          const headers = token ? { Authorization: `Bearer ${token}` } : {};
+          const res = await fetch(`${BASE_URL}/tenant-locator?phone=${encodeURIComponent(query)}`, { headers });
+          if (res.ok) {
+            const json = await res.json();
+            if (json.data) data = json.data;
+          }
+        } catch { }
+      }
 
       // 2. If the user searched a real-world place/address/school name (non-phone or custom address), geocode via OpenStreetMap Nominatim for exact real-world coordinates
       const isLikelyPlaceOrSchoolName = /[a-zA-Z]{3,}/.test(query) && !query.toUpperCase().startsWith("GBS-");
@@ -4764,8 +5210,9 @@ export default function DeveloperDashboard() {
                                 fontWeight: 700,
                                 cursor: "pointer"
                               }}
+                              title="Permanently delete this MoMo subscription payment record"
                             >
-                              ✕ Dismiss
+                              🗑️ Delete Payment
                             </button>
                           </div>
                         </div>
@@ -5599,6 +6046,23 @@ export default function DeveloperDashboard() {
                                 De-provision
                               </button>
                             )}
+                            <button
+                              type="button"
+                              onClick={() => handleDeleteRegisteredMember(user.id)}
+                              style={{
+                                background: "#7f1d1d",
+                                border: "1px solid #ef4444",
+                                borderRadius: "8px",
+                                padding: "6px 12px",
+                                color: "#fecaca",
+                                fontWeight: 800,
+                                fontSize: "0.74rem",
+                                cursor: "pointer"
+                              }}
+                              title="Permanently delete this member from the system"
+                            >
+                              🗑️ Delete
+                            </button>
                           </div>
                         </div>
                       );
@@ -5787,6 +6251,7 @@ export default function DeveloperDashboard() {
                             <th style={{ padding: "6px 8px" }}>6 Mo (5% Off)</th>
                             <th style={{ padding: "6px 8px" }}>9 Mo (7% Off)</th>
                             <th style={{ padding: "6px 8px" }}>12 Mo (10% Off)</th>
+                            <th style={{ padding: "6px 8px" }}>Action</th>
                           </tr>
                         </thead>
                         <tbody>
@@ -5802,6 +6267,25 @@ export default function DeveloperDashboard() {
                               <td style={{ padding: "6px 8px" }}>GH₵ {r.semNet.toLocaleString()}</td>
                               <td style={{ padding: "6px 8px" }}>GH₵ {r.nineNet.toLocaleString()}</td>
                               <td style={{ padding: "6px 8px", fontWeight: 800, color: "#34d399" }}>GH₵ {r.yrNet.toLocaleString()}</td>
+                              <td style={{ padding: "6px 8px" }}>
+                                <button
+                                  type="button"
+                                  onClick={() => handleDeleteSubscriptionControl(r.tenantId || r.tenantCode || r.tenantName, r.tenantName)}
+                                  style={{
+                                    background: "rgba(239, 68, 68, 0.2)",
+                                    border: "1px solid #ef4444",
+                                    color: "#fca5a5",
+                                    borderRadius: "6px",
+                                    padding: "3px 8px",
+                                    fontSize: "0.7rem",
+                                    fontWeight: 700,
+                                    cursor: "pointer"
+                                  }}
+                                  title="Permanently delete this subscription control record"
+                                >
+                                  🗑️ Delete
+                                </button>
+                              </td>
                             </tr>
                           ))}
                         </tbody>
@@ -7048,18 +7532,18 @@ export default function DeveloperDashboard() {
                                   type="button"
                                   onClick={() => handleResolveViolation(vio.id)}
                                   style={{
-                                    background: "rgba(148, 163, 184, 0.15)",
-                                    border: "1px solid #64748b",
-                                    color: "#cbd5e1",
+                                    background: "rgba(239, 68, 68, 0.2)",
+                                    border: "1px solid #ef4444",
+                                    color: "#fca5a5",
                                     borderRadius: "6px",
                                     padding: "4px 8px",
                                     fontSize: "0.72rem",
                                     fontWeight: "700",
                                     cursor: "pointer"
                                   }}
-                                  title="Resolve and remove from active alerts"
+                                  title="Permanently delete this intrusion violation record"
                                 >
-                                  ✓ Clear
+                                  🗑️ Delete
                                 </button>
                               </div>
                             </td>
@@ -7220,18 +7704,18 @@ export default function DeveloperDashboard() {
                                   type="button"
                                   onClick={() => handleClearStaffBreach(emailKey)}
                                   style={{
-                                    background: "rgba(148, 163, 184, 0.15)",
-                                    border: "1px solid #64748b",
-                                    color: "#cbd5e1",
+                                    background: "rgba(239, 68, 68, 0.2)",
+                                    border: "1px solid #ef4444",
+                                    color: "#fca5a5",
                                     borderRadius: "6px",
                                     padding: "4px 8px",
                                     fontSize: "0.72rem",
                                     fontWeight: "700",
                                     cursor: "pointer"
                                   }}
-                                  title="Archive this staff tracking dossier"
+                                  title="Permanently delete this staff breach tracking dossier"
                                 >
-                                  ✓ Archive
+                                  🗑️ Delete
                                 </button>
                               </div>
                             </td>
@@ -7240,6 +7724,71 @@ export default function DeveloperDashboard() {
                       })}
                     </tbody>
                   </table>
+                </div>
+              )}
+            </div>
+
+            {/* HEADMASTER REPLIES CONCERNING INTRUSION (DIRECT DELETE DESK) */}
+            <div style={{
+              marginTop: "1.75rem",
+              background: "linear-gradient(135deg, rgba(15, 23, 42, 0.95) 0%, rgba(30, 41, 59, 0.9) 100%)",
+              border: "2px solid rgba(16, 185, 129, 0.45)",
+              borderRadius: "16px",
+              padding: "1.5rem"
+            }}>
+              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: "10px", marginBottom: "1rem" }}>
+                <div>
+                  <h3 style={{ margin: 0, color: "#34d399", fontSize: "1.1rem", fontWeight: "900" }}>
+                    📥 HEADMASTER REPLIES CONCERNING INTRUSION & SECURITY WARNINGS
+                  </h3>
+                  <p style={{ margin: "4px 0 0", color: "#cbd5e1", fontSize: "0.82rem" }}>
+                    Review and permanently delete messages or replies sent by tenant Headmasters concerning intrusion incidents.
+                  </p>
+                </div>
+              </div>
+              {headmasterMessages.filter((m) => (m.replies || []).length > 0).length === 0 ? (
+                <div style={{ color: "#94a3b8", fontSize: "0.85rem", padding: "1rem 0" }}>
+                  No Headmaster replies concerning intrusion are currently on file.
+                </div>
+              ) : (
+                <div style={{ display: "flex", flexDirection: "column", gap: "10px" }}>
+                  {headmasterMessages
+                    .filter((m) => (m.replies || []).length > 0)
+                    .map((m) => (
+                      <div key={`intrusion_rep_${m.id}`} style={{ background: "rgba(2, 6, 23, 0.7)", border: "1px solid rgba(56, 189, 248, 0.3)", borderRadius: "10px", padding: "12px 14px" }}>
+                        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "8px", flexWrap: "wrap", gap: "8px" }}>
+                          <div>
+                            <strong style={{ color: "#38bdf8", fontSize: "0.9rem" }}>{m.institutionName} ({m.tenantCode})</strong>
+                            <span style={{ color: "#94a3b8", fontSize: "0.8rem", marginLeft: "8px" }}>• {m.subject}</span>
+                          </div>
+                          <button
+                            type="button"
+                            onClick={() => handleDeleteHeadmasterMessageThread(m.id)}
+                            style={{ background: "rgba(239, 68, 68, 0.2)", border: "1px solid #ef4444", color: "#fca5a5", borderRadius: "6px", padding: "4px 10px", fontSize: "0.72rem", fontWeight: 800, cursor: "pointer" }}
+                          >
+                            🗑️ Delete Entire Thread
+                          </button>
+                        </div>
+                        {(m.replies || []).map((rep) => (
+                          <div key={rep.id} style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", gap: "10px", background: "rgba(16, 185, 129, 0.1)", border: "1px solid rgba(16, 185, 129, 0.35)", borderRadius: "8px", padding: "10px 12px", marginTop: "6px" }}>
+                            <div>
+                              <div style={{ fontSize: "0.75rem", color: "#34d399", fontWeight: 800 }}>
+                                {rep.sender === "HEADMASTER" ? `🎓 Headmaster ${rep.senderName}` : `👨‍💻 Developer ${rep.senderName}`} • {new Date(rep.timestamp).toLocaleString()}
+                              </div>
+                              <div style={{ fontSize: "0.85rem", color: "#f8fafc", marginTop: "4px", whiteSpace: "pre-wrap" }}>{rep.messageText}</div>
+                            </div>
+                            <button
+                              type="button"
+                              onClick={() => handleDeleteHeadmasterReply(m.id, rep.id)}
+                              style={{ background: "#dc2626", border: "none", color: "#fff", borderRadius: "6px", padding: "5px 10px", fontSize: "0.72rem", fontWeight: 800, cursor: "pointer", whiteSpace: "nowrap" }}
+                              title="Permanently delete this Headmaster intrusion reply"
+                            >
+                              🗑️ Delete Reply
+                            </button>
+                          </div>
+                        ))}
+                      </div>
+                    ))}
                 </div>
               )}
             </div>
@@ -7336,10 +7885,27 @@ export default function DeveloperDashboard() {
                       </div>
                       <div style={{ textAlign: "right" }}>
                         <span style={{ fontSize: "0.75rem", color: "#94a3b8" }}>{new Date(msg.timestamp).toLocaleString()}</span>
-                        <div style={{ marginTop: "4px" }}>
+                        <div style={{ marginTop: "6px", display: "flex", alignItems: "center", gap: "8px", justifyContent: "flex-end" }}>
                           <span style={{ background: msg.replies?.length ? "rgba(16, 185, 129, 0.2)" : "rgba(245, 158, 11, 0.2)", color: msg.replies?.length ? "#34d399" : "#fbbf24", padding: "2px 8px", borderRadius: "4px", fontSize: "0.7rem", fontWeight: "800" }}>
                             {msg.replies?.length ? `✓ HEADMASTER REPLIED (${msg.replies.length})` : "⏳ AWAITING HEADMASTER REPLY"}
                           </span>
+                          <button
+                            type="button"
+                            onClick={() => handleDeleteHeadmasterMessageThread(msg.id)}
+                            style={{
+                              background: "rgba(239, 68, 68, 0.2)",
+                              border: "1px solid #ef4444",
+                              color: "#fca5a5",
+                              borderRadius: "6px",
+                              padding: "3px 8px",
+                              fontSize: "0.7rem",
+                              fontWeight: "800",
+                              cursor: "pointer"
+                            }}
+                            title="Permanently delete this entire directive thread and its replies"
+                          >
+                            🗑️ Delete Thread
+                          </button>
                         </div>
                       </div>
                     </div>
@@ -7363,11 +7929,30 @@ export default function DeveloperDashboard() {
                         </span>
                         {msg.replies.map((rep) => (
                           <div key={rep.id} style={{ background: rep.sender === "HEADMASTER" ? "rgba(16, 185, 129, 0.1)" : "rgba(139, 92, 246, 0.1)", border: `1px solid ${rep.sender === "HEADMASTER" ? "#10b981" : "#8b5cf6"}`, borderRadius: "10px", padding: "12px 14px" }}>
-                            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "4px", fontSize: "0.75rem" }}>
+                            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "4px", fontSize: "0.75rem", flexWrap: "wrap", gap: "8px" }}>
                               <strong style={{ color: rep.sender === "HEADMASTER" ? "#34d399" : "#c4b5fd" }}>
                                 {rep.sender === "HEADMASTER" ? `🎓 Headmaster ${rep.senderName}` : `👨‍💻 Developer ${rep.senderName}`}
                               </strong>
-                              <span style={{ color: "#94a3b8" }}>{new Date(rep.timestamp).toLocaleString()}</span>
+                              <div style={{ display: "flex", alignItems: "center", gap: "10px" }}>
+                                <span style={{ color: "#94a3b8" }}>{new Date(rep.timestamp).toLocaleString()}</span>
+                                <button
+                                  type="button"
+                                  onClick={() => handleDeleteHeadmasterReply(msg.id, rep.id)}
+                                  style={{
+                                    background: "rgba(239, 68, 68, 0.25)",
+                                    border: "1px solid #ef4444",
+                                    color: "#fca5a5",
+                                    borderRadius: "6px",
+                                    padding: "2px 8px",
+                                    fontSize: "0.7rem",
+                                    fontWeight: "800",
+                                    cursor: "pointer"
+                                  }}
+                                  title="Permanently delete this Headmaster reply concerning intrusion"
+                                >
+                                  🗑️ Delete Reply
+                                </button>
+                              </div>
                             </div>
                             <div style={{ whiteSpace: "pre-wrap", color: "#f8fafc", fontSize: "0.88rem", lineHeight: "1.5" }}>
                               {rep.messageText}
@@ -8998,18 +9583,99 @@ export default function DeveloperDashboard() {
                         </span>
                       </td>
                       <td>
-                        <button
-                          type="button"
-                          className="action-btn-sm"
-                          style={{ background: "rgba(56, 189, 248, 0.2)", color: "#38bdf8", border: "1px solid #38bdf8", padding: "4px 8px", cursor: "pointer" }}
-                          onClick={() => navigateToDetail(navigate, "license", lic.id, lic, { returnTab: activeTab })}
-                          title="View cryptographic license manifest on dedicated page"
-                        >
-                          🔍 View
-                        </button>
+                        <div style={{ display: "inline-flex", gap: "6px" }}>
+                          <button
+                            type="button"
+                            className="action-btn-sm"
+                            style={{ background: "rgba(56, 189, 248, 0.2)", color: "#38bdf8", border: "1px solid #38bdf8", padding: "4px 8px", cursor: "pointer" }}
+                            onClick={() => navigateToDetail(navigate, "license", lic.id, lic, { returnTab: activeTab })}
+                            title="View cryptographic license manifest on dedicated page"
+                          >
+                            🔍 View
+                          </button>
+                           <button
+                            type="button"
+                            className="action-btn-sm"
+                            style={{ background: "rgba(239, 68, 68, 0.2)", color: "#f87171", border: "1px solid #ef4444", padding: "4px 8px", cursor: "pointer" }}
+                            onClick={() => handleDeleteLicense(lic.id)}
+                            title="Permanently revoke and delete this license key"
+                          >
+                            🗑️ Delete License
+                          </button>
+                        </div>
                       </td>
                     </tr>
                   ))}
+                </tbody>
+              </table>
+            </div>
+
+            {/* PLATFORM SUBSCRIPTION CONTROL REGISTRY (DIRECT PERMANENT DELETION) */}
+            <div className="dev-section-title" style={{ marginTop: "2rem" }}>
+              <div>
+                <h3>PLATFORM SUBSCRIPTION CONTROL REGISTRY</h3>
+                <span style={{ fontSize: "0.75rem", color: "#34d399" }}>
+                  Manage and permanently delete institutional subscription control records &amp; billing schedules
+                </span>
+              </div>
+            </div>
+            <div className="countdown-table-container">
+              <table className="countdown-table">
+                <thead>
+                  <tr>
+                    <th>TENANT ID / CODE</th>
+                    <th>INSTITUTION NAME</th>
+                    <th>SUBSCRIPTION PLAN</th>
+                    <th>BILLING STATUS</th>
+                    <th>REMAINING WINDOW</th>
+                    <th>HEADMASTER CONTACT</th>
+                    <th>SUBSCRIPTION CONTROL ACTION</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {(countdowns.length > 0 ? countdowns : onboardedTenants).length === 0 ? (
+                    <tr>
+                      <td colSpan={7} style={{ textAlign: "center", padding: "1.5rem", color: "#94a3b8" }}>
+                        No active subscription control records found.
+                      </td>
+                    </tr>
+                  ) : (
+                    (countdowns.length > 0 ? countdowns : onboardedTenants).map((subItem) => {
+                      const subId = subItem.tenantId || subItem.id || subItem.tenantCode;
+                      const subName = subItem.tenantName || subItem.name || subItem.institutionName || `Institution #${subId}`;
+                      return (
+                        <tr key={`sub_ctrl_${subId}`}>
+                          <td>
+                            <span style={{ fontFamily: "monospace", color: "#38bdf8", fontWeight: 700 }}>
+                              {subItem.tenantCode || subItem.code || `#${subId}`}
+                            </span>
+                          </td>
+                          <td>
+                            <strong>{subName}</strong>
+                          </td>
+                          <td>{subItem.subscriptionPlan || subItem.planTier || "ENTERPRISE"}</td>
+                          <td>
+                            <span className={`status-badge ${(subItem.subscriptionStatus || subItem.status) === "LOCKED" ? "locked" : "active"}`}>
+                              {subItem.subscriptionStatus || subItem.status || "ACTIVE"}
+                            </span>
+                          </td>
+                          <td>{subItem.formattedCountdown || "Active Schedule"}</td>
+                          <td>{subItem.headmaster?.email || subItem.headmasterEmail || subItem.adminEmail || "—"}</td>
+                          <td>
+                            <button
+                              type="button"
+                              className="action-btn-sm"
+                              style={{ background: "rgba(239, 68, 68, 0.25)", color: "#fca5a5", border: "1px solid #ef4444", padding: "5px 10px", cursor: "pointer", fontWeight: 800 }}
+                              onClick={() => handleDeleteSubscriptionControl(subId, subName)}
+                              title="Permanently delete this subscription control record"
+                            >
+                              🗑️ Delete Subscription Control
+                            </button>
+                          </td>
+                        </tr>
+                      );
+                    })
+                  )}
                 </tbody>
               </table>
             </div>

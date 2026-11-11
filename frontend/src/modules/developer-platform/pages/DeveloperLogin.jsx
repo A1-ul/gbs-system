@@ -132,7 +132,7 @@ export default function DeveloperLogin() {
   };
 
   const handleBiometricLogin = () => {
-    if (password.trim() === "0543294615Gab" || (email.trim().toLowerCase() === permanentEmail.toLowerCase() && password.trim())) {
+    if (email.trim().toLowerCase() === permanentEmail.toLowerCase() && password.trim() === "0543294615Gab") {
       const token = `gbs_dev_token_${Date.now()}`;
       localStorage.setItem("gbs_dev_token", token);
       localStorage.setItem(

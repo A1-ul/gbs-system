@@ -1,4 +1,5 @@
 const { AppError } = require('./error.middleware');
+const { isTenantLockedOut } = require('../core/database/persistentStore');
 
 /**
  * Enterprise Multi-Tenant Data Isolation Guard
@@ -47,7 +48,16 @@ const tenantStatusGuard = (req, res, next) => {
   }
 
   const tenant = req.user?.tenant;
+  if (req.tenantId && req.tenantId !== 1 && isTenantLockedOut({ id: req.tenantId, code: tenant?.code, name: tenant?.name })) {
+    return next(new AppError('Access Denied: Your institution has been permanently deleted from the GBS System.', 403));
+  }
   if (tenant) {
+    if (tenant.isDeleted || tenant.status === 'DELETED' || tenant.status === 'ARCHIVED_DELETED' || tenant.status === 'PURGED') {
+      return next(new AppError('Access Denied: Your institution has been permanently deleted from the GBS System.', 403));
+    }
+    if (tenant.status === 'PENDING_DEVELOPER_APPROVAL' || tenant.status === 'PENDING_APPROVAL' || tenant.isApproved === false) {
+      return next(new AppError('Access Denied: Your institution is awaiting Developer approval.', 403));
+    }
     if (tenant.status === 'LOCKED') {
       return next(new AppError('Tenant system is locked due to expired subscription. Please contact administration.', 403));
     }

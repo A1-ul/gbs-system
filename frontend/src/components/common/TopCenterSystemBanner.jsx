@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from "react";
 import { clearFakeDataEntries } from "../../utils/freshSystemReset";
+import UniversalLanguageTranslatorModal from "./UniversalLanguageTranslatorModal";
 
 /**
  * TopCenterSystemBanner
@@ -47,6 +48,7 @@ export default function TopCenterSystemBanner({
   const [isOnline, setIsOnline] = useState(() => typeof navigator !== "undefined" ? navigator.onLine : true);
   const [syncingCloud, setSyncingCloud] = useState(false);
   const [syncFeedback, setSyncFeedback] = useState(null);
+  const [showTranslatorModal, setShowTranslatorModal] = useState(false);
 
   const isDevMode = isDeveloper || roleTitle.toLowerCase().includes("developer");
 
@@ -55,8 +57,19 @@ export default function TopCenterSystemBanner({
     const storedUser = JSON.parse(localStorage.getItem("gbs_user") || "{}");
     currentUserRole = (storedUser?.role || localStorage.getItem("gbs_auth_role") || "GUEST").toUpperCase();
   } catch { }
-  const isDeveloperUser = isDeveloper || isDevMode || currentUserRole === "DEVELOPER" || currentUserRole === "SUPER_ADMIN" || Boolean(localStorage.getItem("gbs_dev_token"));
+  const isTrueDeveloper = isDeveloper || isDevMode || currentUserRole === "DEVELOPER" || Boolean(localStorage.getItem("gbs_dev_token"));
   const systemMode = typeof window !== "undefined" ? (localStorage.getItem("gbs_system_mode") || "LIVE_PRODUCTION") : "LIVE_PRODUCTION";
+  const canAccessWalkthrough = isTrueDeveloper || systemMode === "DEMO_SANDBOX";
+
+  useEffect(() => {
+    const onOpenTrans = () => setShowTranslatorModal(true);
+    window.addEventListener("gbs_open_translator", onOpenTrans);
+    window.openGBSTranslator = () => setShowTranslatorModal(true);
+    return () => {
+      window.removeEventListener("gbs_open_translator", onOpenTrans);
+      delete window.openGBSTranslator;
+    };
+  }, []);
 
   useEffect(() => {
     const handleUpdate = () => {
@@ -103,11 +116,7 @@ export default function TopCenterSystemBanner({
   };
 
   const handleOpenLanguageExplainer = () => {
-    if (window.openGBSTranslator) {
-      window.openGBSTranslator();
-    } else {
-      window.dispatchEvent(new CustomEvent("gbs_open_translator"));
-    }
+    setShowTranslatorModal(true);
   };
 
   const handleCleanSlate = () => {
@@ -328,17 +337,18 @@ export default function TopCenterSystemBanner({
       )}
 
       {/* DASHBOARD-TO-DASHBOARD WALKTHROUGH (DEVELOPER-ONLY) OR ROLE CONFINEMENT (TENANT USERS) */}
-      {isDeveloperUser ? (
-        <div style={{
-          marginTop: "12px",
-          paddingTop: "10px",
-          borderTop: "1px solid rgba(255, 255, 255, 0.12)",
-          width: "100%",
-          display: "flex",
-          flexDirection: "column",
-          alignItems: "center",
-          gap: "6px"
-        }}>
+        {
+          canAccessWalkthrough?(
+        <div style = {{
+              marginTop: "12px",
+              paddingTop: "10px",
+              borderTop: "1px solid rgba(255, 255, 255, 0.12)",
+              width: "100%",
+              display: "flex",
+              flexDirection: "column",
+              alignItems: "center",
+              gap: "6px"
+        }} >
           <div style={{ display: "flex", alignItems: "center", gap: "8px", fontSize: "0.72rem", color: "#94a3b8", fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.5px" }}>
             <span>🧭 Chief Developer Mission Walkthrough & Multi-Portal Switcher:</span>
           </div>
@@ -400,37 +410,44 @@ export default function TopCenterSystemBanner({
             })}
           </div>
         </div>
-      ) : (
-        <div style={{
-          marginTop: "10px",
-          paddingTop: "8px",
-          borderTop: "1px solid rgba(255, 255, 255, 0.1)",
-          width: "100%",
-          display: "flex",
-          alignItems: "center",
-          justifyContent: "center",
-          gap: "10px",
-          flexWrap: "wrap",
-          fontSize: "0.78rem"
-        }}>
-          <span style={{
-            display: "inline-flex",
-            alignItems: "center",
-            gap: "6px",
-            padding: "4px 14px",
-            borderRadius: "20px",
-            background: "rgba(15, 23, 42, 0.75)",
-            border: "1px solid rgba(16, 185, 129, 0.4)",
-            color: "#34d399",
-            fontWeight: 800
-          }}>
-            🔒 Authorized Portal: {roleTitle}
-          </span>
-          <span style={{ color: "#94a3b8", fontSize: "0.74rem" }}>
-            Role-confined secure session. Direct cross-dashboard switching is locked to prevent unauthorized tampering.
-          </span>
-        </div>
-      )}
+  ) : (
+    <div style={{
+      marginTop: "10px",
+      paddingTop: "8px",
+      borderTop: "1px solid rgba(255, 255, 255, 0.1)",
+      width: "100%",
+      display: "flex",
+      alignItems: "center",
+      justifyContent: "center",
+      gap: "10px",
+      flexWrap: "wrap",
+      fontSize: "0.78rem"
+    }}>
+      <span style={{
+        display: "inline-flex",
+        alignItems: "center",
+        gap: "6px",
+        padding: "4px 14px",
+        borderRadius: "20px",
+        background: "rgba(15, 23, 42, 0.75)",
+        border: "1px solid rgba(16, 185, 129, 0.4)",
+        color: "#34d399",
+        fontWeight: 800
+      }}>
+        🔒 Authorized Portal: {roleTitle}
+      </span>
+      <span style={{ color: "#94a3b8", fontSize: "0.74rem" }}>
+        Role-confined secure session. Direct cross-dashboard switching is locked to prevent unauthorized tampering.
+      </span>
     </div>
+  )
+}
+
+{/* Universal Multi-Language Translator & Message Explainer Modal */ }
+<UniversalLanguageTranslatorModal
+  isOpen={showTranslatorModal}
+  onClose={() => setShowTranslatorModal(false)}
+/>
+    </div >
   );
 }

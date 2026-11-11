@@ -714,6 +714,90 @@ const batchDeleteAuditLogs = async (req, res, next) => {
   }
 };
 
+const deleteLicense = async (req, res, next) => {
+  try {
+    const { id } = req.params;
+    const result = await devControlService.deleteLicense(id);
+    res.status(200).json({
+      status: 'success',
+      message: `Enterprise license ${id} permanently deleted.`,
+      data: result
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+
+const batchDeleteLicenses = async (req, res, next) => {
+  try {
+    const { ids } = req.body || {};
+    const result = await devControlService.batchDeleteLicenses(Array.isArray(ids) ? ids : []);
+    res.status(200).json({
+      status: 'success',
+      message: `${result.deletedCount} enterprise license(s) permanently deleted.`,
+      data: result
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+
+const deleteSubscriptionControl = async (req, res, next) => {
+  try {
+    const { id } = req.params;
+    const result = await devControlService.deleteSubscriptionControl(id);
+    res.status(200).json({
+      status: 'success',
+      message: `Subscription control record ${id} permanently deleted.`,
+      data: result
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+
+const deleteHeadmasterMessageThread = async (req, res, next) => {
+  try {
+    const { threadId } = req.params;
+    const result = await devControlService.deleteHeadmasterMessageThread(threadId);
+    res.status(200).json({
+      status: 'success',
+      message: `Headmaster message thread ${threadId} permanently deleted.`,
+      data: result
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+
+const deleteHeadmasterMessageReply = async (req, res, next) => {
+  try {
+    const { threadId, replyId } = req.params;
+    const result = await devControlService.deleteHeadmasterMessageReply(threadId, replyId);
+    res.status(200).json({
+      status: 'success',
+      message: `Headmaster intrusion reply ${replyId} permanently deleted.`,
+      data: result
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+
+const deleteIntrusionViolation = async (req, res, next) => {
+  try {
+    const { id } = req.params;
+    const result = await devControlService.deleteIntrusionViolation(id);
+    res.status(200).json({
+      status: 'success',
+      message: `Intrusion violation record ${id} permanently deleted.`,
+      data: result
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+
 module.exports = {
   devLogin,
   verifyPin,
@@ -750,6 +834,12 @@ module.exports = {
   rollbackDeployment,
   getLicenses,
   issueLicense,
+  deleteLicense,
+  batchDeleteLicenses,
+  deleteSubscriptionControl,
+  deleteHeadmasterMessageThread,
+  deleteHeadmasterMessageReply,
+  deleteIntrusionViolation,
   initiateTenantOnboard,
   verifyTenantOnboard,
   getOnboardedTenants,

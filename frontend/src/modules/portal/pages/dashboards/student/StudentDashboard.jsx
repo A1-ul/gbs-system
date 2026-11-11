@@ -371,12 +371,26 @@ export function StudentDashboard({ initialTab } = {}) {
   const [showCourseFilesModal, setShowCourseFilesModal] = useState(false);
   const [viewingFilePreview, setViewingFilePreview] = useState(null);
 
+  const isDemoTenant = (() => {
+    try {
+      const u = JSON.parse(localStorage.getItem("gbs_user") || "{}");
+      return (
+        localStorage.getItem("gbs_tenant_mode") !== "LIVE_PRODUCTION" &&
+        (!u?.tenantCode || u.tenantCode === "GBS-MAIN") &&
+        Number(u?.tenantId || 1) === 1
+      );
+    } catch {
+      return false;
+    }
+  })();
+
   // Teacher-Authored Official Examination Timetable & Procedure Guide State
   const [examTimetableGuide, setExamTimetableGuide] = useState(() => {
     try {
       const stored = localStorage.getItem("gbs_examination_timetable");
       if (stored) return JSON.parse(stored);
     } catch { }
+    if (!isDemoTenant) return [];
     return [
       {
         id: "ET-01",
@@ -476,6 +490,7 @@ export function StudentDashboard({ initialTab } = {}) {
       const stored = JSON.parse(localStorage.getItem("gbs_concluded_class_notice") || "null");
       if (stored) return stored;
     } catch {}
+    if (!isDemoTenant) return { dismissed: true };
     return {
       id: "CLS-CONCL-902",
       subject: "Advanced Mathematics",
@@ -485,12 +500,14 @@ export function StudentDashboard({ initialTab } = {}) {
       duration: "1h 15m",
       instructor: "Mr. Kwame Mensah",
       endingTime: "10:15 AM",
-      recordingUrl: "https://www.youtube.com/embed/dQw4w9WgXcQ",
+      recordingUrl: "https://www.youtube.com/embed/WUvTyaaNkzM",
       notesFile: "Advanced_Calculus_Lesson_Notes_Week7.pdf",
       dismissed: false
     };
   });
   const [showCatchUpModal, setShowCatchUpModal] = useState(false);
+  const [catchUpViewMode, setCatchUpViewMode] = useState("VIDEO"); // "VIDEO" | "PDF_NOTES"
+  const [selectedCatchUpLecture, setSelectedCatchUpLecture] = useState(0);
 
   // Peer Live Video Calling State & Hardware Camera Stream Refs
   const localPeerVideoRef = useRef(null);
@@ -627,6 +644,7 @@ export function StudentDashboard({ initialTab } = {}) {
       const stored = JSON.parse(localStorage.getItem("gbs_library_borrowed_records") || "[]");
       if (Array.isArray(stored) && stored.length > 0) return stored;
     } catch {}
+    if (!isDemoTenant) return [];
     return [
       {
         id: "BK-01",
@@ -717,6 +735,7 @@ export function StudentDashboard({ initialTab } = {}) {
       const stored = JSON.parse(localStorage.getItem("gbs_enrolled_students") || "[]");
       if (Array.isArray(stored) && stored.length > 0) return stored;
     } catch { }
+    if (!isDemoTenant) return [];
     return [
       { id: "101", studentId: "STU-2026-001", indexNumber: "STU-2026-001", firstName: "Emmanuel", lastName: "Mensah", registeredMobile: "+233-24-411-9201", currentClass: "JHS 2 (Junior High - Grade 8)", classCode: "JHS-02", photo: "https://images.unsplash.com/photo-1539571696357-5a69c17a67c6?w=200&h=200&fit=crop" },
       { id: "102", studentId: "STU-2026-002", indexNumber: "STU-2026-002", firstName: "Ama", lastName: "Serwaa", registeredMobile: "+233-20-882-3490", currentClass: "SHS 1 / Grade 10 - STEM & Arts", classCode: "SHS-01", photo: "https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=200&h=200&fit=crop" },
@@ -6408,13 +6427,13 @@ export function StudentDashboard({ initialTab } = {}) {
         </div>
       )}
 
-      {/* CATCH-UP RECORDING VIDEO PLAYER MODAL */}
+      {/* CATCH-UP RECORDING VIDEO PLAYER & PDF NOTES MODAL */}
       {showCatchUpModal && (
         <div style={{
           position: "fixed",
           inset: 0,
-          background: "rgba(2, 6, 23, 0.9)",
-          backdropFilter: "blur(10px)",
+          background: "rgba(2, 6, 23, 0.92)",
+          backdropFilter: "blur(12px)",
           zIndex: 999999,
           display: "flex",
           alignItems: "center",
@@ -6426,42 +6445,243 @@ export function StudentDashboard({ initialTab } = {}) {
             border: "1.5px solid #38bdf8",
             borderRadius: "18px",
             width: "100%",
-            maxWidth: "760px",
-            padding: "1.5rem",
-            boxShadow: "0 25px 60px rgba(0, 0, 0, 0.9)",
-            color: "#fff"
+            maxWidth: "840px",
+            maxHeight: "90vh",
+            display: "flex",
+            flexDirection: "column",
+            boxShadow: "0 25px 70px rgba(0, 0, 0, 0.95)",
+            color: "#fff",
+            overflow: "hidden"
           }}>
-            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "1rem" }}>
+            {/* Modal Header */}
+            <div style={{
+              padding: "16px 20px",
+              background: "rgba(15, 23, 42, 0.95)",
+              borderBottom: "1.5px solid rgba(56, 189, 248, 0.3)",
+              display: "flex",
+              justifyContent: "space-between",
+              alignItems: "center",
+              flexWrap: "wrap",
+              gap: "10px"
+            }}>
               <div>
                 <h3 style={{ margin: 0, fontSize: "1.1rem", fontWeight: 800, color: "#38bdf8" }}>
-                  📹 CATCH-UP RECORDING: {concludedClassNotice.subject}
+                  📹 CONCLUDED LESSON CATCH-UP & SYLLABUS NOTES
                 </h3>
                 <span style={{ fontSize: "0.75rem", color: "#94a3b8" }}>
-                  Topic: {concludedClassNotice.topic} • Instructor: {concludedClassNotice.instructor}
+                  Subject: <strong>{concludedClassNotice.subject}</strong> • Topic: <strong>{concludedClassNotice.topic}</strong> • Instructor: <strong>{concludedClassNotice.instructor}</strong>
                 </span>
               </div>
-              <button
-                type="button"
-                onClick={() => setShowCatchUpModal(false)}
-                style={{ background: "rgba(255, 255, 255, 0.1)", border: "1px solid rgba(255, 255, 255, 0.2)", color: "#fff", borderRadius: "8px", padding: "4px 10px", cursor: "pointer", fontWeight: 800 }}
-              >
-                ← Back / Close
-              </button>
+              <div style={{ display: "flex", gap: "8px", alignItems: "center" }}>
+                <div style={{ display: "flex", background: "rgba(2, 6, 23, 0.7)", borderRadius: "8px", padding: "2px", border: "1px solid rgba(56, 189, 248, 0.3)" }}>
+                  <button
+                    type="button"
+                    onClick={() => setCatchUpViewMode("VIDEO")}
+                    style={{
+                      padding: "6px 12px",
+                      borderRadius: "6px",
+                      border: "none",
+                      background: catchUpViewMode === "VIDEO" ? "#0284c7" : "transparent",
+                      color: "#fff",
+                      fontSize: "0.76rem",
+                      fontWeight: 800,
+                      cursor: "pointer"
+                    }}
+                  >
+                    📹 Full Video Player
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setCatchUpViewMode("PDF_NOTES")}
+                    style={{
+                      padding: "6px 12px",
+                      borderRadius: "6px",
+                      border: "none",
+                      background: catchUpViewMode === "PDF_NOTES" ? "#10b981" : "transparent",
+                      color: "#fff",
+                      fontSize: "0.76rem",
+                      fontWeight: 800,
+                      cursor: "pointer"
+                    }}
+                  >
+                    📄 PDF Class Notes
+                  </button>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => setShowCatchUpModal(false)}
+                  style={{ background: "rgba(255, 255, 255, 0.1)", border: "1px solid rgba(255, 255, 255, 0.2)", color: "#fff", borderRadius: "8px", padding: "4px 10px", cursor: "pointer", fontWeight: 800 }}
+                >
+                  ✕
+                </button>
+              </div>
             </div>
 
-            <div style={{ position: "relative", width: "100%", height: "380px", background: "#000", borderRadius: "12px", overflow: "hidden", marginBottom: "1rem" }}>
-              <iframe
-                src="https://www.youtube.com/embed/dQw4w9WgXcQ?autoplay=1"
-                title="Concluded Lesson Catch-Up Video"
-                allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
-                allowFullScreen
-                style={{ width: "100%", height: "100%", border: "none" }}
-              />
+            {/* Modal Body */}
+            <div style={{ padding: "18px 20px", overflowY: "auto", flex: 1 }}>
+              {catchUpViewMode === "VIDEO" ? (
+                <div>
+                  {/* Topic Selector Row */}
+                  <div style={{ display: "flex", gap: "8px", marginBottom: "12px", flexWrap: "wrap" }}>
+                    {[
+                      { title: "Lesson 1: Differential Calculus & Rates of Change", embed: "https://www.youtube.com/embed/WUvTyaaNkzM" },
+                      { title: "Lesson 2: Limits, Continuity & Derivative Theorems", embed: "https://www.youtube.com/embed/1LGYfM3uFq4" },
+                      { title: "Lesson 3: Applied Physics & Thermodynamics Lab", embed: "https://www.youtube.com/embed/G6n8U-3pD_g" }
+                    ].map((lec, lIdx) => (
+                      <button
+                        key={lIdx}
+                        type="button"
+                        onClick={() => setSelectedCatchUpLecture(lIdx)}
+                        style={{
+                          padding: "6px 12px",
+                          borderRadius: "6px",
+                          border: selectedCatchUpLecture === lIdx ? "1.5px solid #38bdf8" : "1px solid rgba(255, 255, 255, 0.1)",
+                          background: selectedCatchUpLecture === lIdx ? "rgba(56, 189, 248, 0.2)" : "rgba(15, 23, 42, 0.6)",
+                          color: selectedCatchUpLecture === lIdx ? "#38bdf8" : "#cbd5e1",
+                          fontSize: "0.75rem",
+                          fontWeight: 700,
+                          cursor: "pointer"
+                        }}
+                      >
+                        {lec.title}
+                      </button>
+                    ))}
+                  </div>
+
+                  {/* Video Stage with Full Controls */}
+                  <div style={{ position: "relative", width: "100%", height: "420px", background: "#000", borderRadius: "12px", overflow: "hidden", border: "1px solid rgba(56, 189, 248, 0.3)" }}>
+                    <iframe
+                      src={[
+                        "https://www.youtube.com/embed/WUvTyaaNkzM?rel=0&modestbranding=1",
+                        "https://www.youtube.com/embed/1LGYfM3uFq4?rel=0&modestbranding=1",
+                        "https://www.youtube.com/embed/G6n8U-3pD_g?rel=0&modestbranding=1"
+                      ][selectedCatchUpLecture] || "https://www.youtube.com/embed/WUvTyaaNkzM"}
+                      title="Concluded Lesson Catch-Up Video"
+                      allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
+                      allowFullScreen
+                      style={{ width: "100%", height: "100%", border: "none" }}
+                    />
+                  </div>
+                  <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginTop: "10px", fontSize: "0.76rem", color: "#94a3b8" }}>
+                    <span>▶️ Full High-Definition Lecture Recording • Synced to Institutional Cloud CDN</span>
+                    <button
+                      type="button"
+                      onClick={() => setCatchUpViewMode("PDF_NOTES")}
+                      style={{ background: "none", border: "none", color: "#34d399", cursor: "pointer", fontWeight: 700, textDecoration: "underline" }}
+                    >
+                      📖 Open Accompanying Lecture Notes →
+                    </button>
+                  </div>
+                </div>
+              ) : (
+                /* PDF CLASS NOTES IN-MODAL VIEWER */
+                <div style={{
+                  background: "#020617",
+                  border: "1.5px solid rgba(16, 185, 129, 0.4)",
+                  borderRadius: "12px",
+                  padding: "1.5rem",
+                  color: "#f8fafc"
+                }}>
+                  <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", borderBottom: "1px solid rgba(255, 255, 255, 0.1)", paddingBottom: "12px", marginBottom: "16px" }}>
+                    <div>
+                      <span style={{ fontSize: "0.72rem", color: "#10b981", fontWeight: 800, textTransform: "uppercase", letterSpacing: "0.5px" }}>
+                        ● OFFICIAL ACADEMIC COURSE MATERIAL & CLASS NOTES
+                      </span>
+                      <h2 style={{ margin: "4px 0 2px", color: "#f8fafc", fontSize: "1.2rem" }}>
+                        {concludedClassNotice.subject}: {concludedClassNotice.topic}
+                      </h2>
+                      <span style={{ fontSize: "0.78rem", color: "#94a3b8" }}>
+                        Course Code: <strong>MATH-201 / SHS-CALC</strong> • Delivered: <strong>{concludedClassNotice.date}</strong> by <strong>{concludedClassNotice.instructor}</strong>
+                      </span>
+                    </div>
+                    <div style={{ display: "flex", gap: "8px" }}>
+                      <button
+                        type="button"
+                        onClick={() => window.print()}
+                        style={{
+                          background: "rgba(56, 189, 248, 0.15)",
+                          border: "1px solid #38bdf8",
+                          color: "#38bdf8",
+                          padding: "6px 12px",
+                          borderRadius: "6px",
+                          fontSize: "0.76rem",
+                          fontWeight: 800,
+                          cursor: "pointer"
+                        }}
+                      >
+                        🖨️ Print Notes
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setFeedback({
+                            type: "success",
+                            message: `📥 Downloading ${concludedClassNotice.notesFile} to local storage.`
+                          });
+                        }}
+                        style={{
+                          background: "linear-gradient(135deg, #10b981, #059669)",
+                          border: "none",
+                          color: "#fff",
+                          padding: "6px 14px",
+                          borderRadius: "6px",
+                          fontSize: "0.76rem",
+                          fontWeight: 800,
+                          cursor: "pointer"
+                        }}
+                      >
+                        📥 Download PDF
+                      </button>
+                    </div>
+                  </div>
+
+                  {/* Comprehensive Lecture Notes Content */}
+                  <div style={{ fontSize: "0.85rem", lineHeight: "1.7", color: "#cbd5e1" }}>
+                    <h4 style={{ color: "#38bdf8", margin: "14px 0 6px" }}>1. Learning Objectives:</h4>
+                    <ul style={{ margin: "0 0 14px", paddingLeft: "20px" }}>
+                      <li>Comprehend the limit definition of a derivative: <code>f'(x) = lim (h→0) [f(x+h) - f(x)] / h</code></li>
+                      <li>Master the Chain Rule for composite functions: <code>d/dx [f(g(x))] = f'(g(x)) · g'(x)</code></li>
+                      <li>Calculate instantaneous velocity and acceleration in dynamic kinematic systems.</li>
+                    </ul>
+
+                    <h4 style={{ color: "#38bdf8", margin: "14px 0 6px" }}>2. Core Mathematical Theorem:</h4>
+                    <div style={{ background: "rgba(15, 23, 42, 0.8)", padding: "12px 16px", borderRadius: "8px", borderLeft: "4px solid #38bdf8", fontFamily: "monospace", color: "#e2e8f0", margin: "10px 0" }}>
+                      If f(u) is differentiable at u = g(x) and g(x) is differentiable at x, then the composite function <br />
+                      F(x) = f(g(x)) is differentiable at x and its derivative is given by: <br />
+                      <strong>dF/dx = (df/du) · (du/dx)</strong>
+                    </div>
+
+                    <h4 style={{ color: "#38bdf8", margin: "14px 0 6px" }}>3. Worked Example & Proof:</h4>
+                    <p>
+                      <strong>Problem:</strong> Find the derivative of <code>y = (3x² - 5x + 2)⁴</code> with respect to x. <br />
+                      <strong>Step 1:</strong> Let inner function <code>u = 3x² - 5x + 2</code>. Thus <code>y = u⁴</code>. <br />
+                      <strong>Step 2:</strong> Differentiate outer function: <code>dy/du = 4u³</code>. <br />
+                      <strong>Step 3:</strong> Differentiate inner function: <code>du/dx = 6x - 5</code>. <br />
+                      <strong>Step 4:</strong> Multiply components: <code>dy/dx = 4(3x² - 5x + 2)³ · (6x - 5)</code>.
+                    </p>
+
+                    <h4 style={{ color: "#38bdf8", margin: "14px 0 6px" }}>4. Homework Practice Exercises (Due Next Session):</h4>
+                    <ol style={{ margin: "0 0 14px", paddingLeft: "20px" }}>
+                      <li>Differentiate <code>f(x) = sin(4x³ - 2x)</code>.</li>
+                      <li>Determine the critical points and intervals of increase for <code>g(x) = x³ - 6x² + 9x + 1</code>.</li>
+                      <li>A spherical weather balloon is inflated at a constant rate of <code>40 cm³/s</code>. Calculate the rate at which the radius is expanding when the radius is exactly <code>5 cm</code>.</li>
+                    </ol>
+                  </div>
+                </div>
+              )}
             </div>
 
-            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-              <span style={{ fontSize: "0.78rem", color: "#34d399" }}>
-                ✓ Synced to Institutional Video Archive
+            {/* Modal Footer */}
+            <div style={{
+              padding: "12px 20px",
+              background: "rgba(15, 23, 42, 0.95)",
+              borderTop: "1px solid rgba(255, 255, 255, 0.1)",
+              display: "flex",
+              justifyContent: "space-between",
+              alignItems: "center"
+            }}>
+              <span style={{ fontSize: "0.76rem", color: "#34d399" }}>
+                ✓ Synced to Institutional Academic Archive
               </span>
               <button
                 type="button"

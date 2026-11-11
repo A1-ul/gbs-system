@@ -51,7 +51,7 @@ export default function UniversalDetailPage() {
     try {
       const cached = sessionStorage.getItem(`gbs_detail_${category}_${id}`);
       if (cached) return JSON.parse(cached);
-    } catch (_) {}
+    } catch (_) { }
     return null;
   });
 
@@ -83,7 +83,7 @@ export default function UniversalDetailPage() {
     try {
       sessionStorage.setItem(`gbs_detail_${category}_${id}`, JSON.stringify(updatedRecord));
       localStorage.setItem(`gbs_verified_${category}_${id}`, JSON.stringify(updatedRecord));
-    } catch {}
+    } catch { }
     setActionFeedback({
       type: "success",
       message: `✅ Record #${id} officially VERIFIED & APPROVED. Institutional records updated.`
@@ -104,7 +104,7 @@ export default function UniversalDetailPage() {
     setRecord(updatedRecord);
     try {
       sessionStorage.setItem(`gbs_detail_${category}_${id}`, JSON.stringify(updatedRecord));
-    } catch {}
+    } catch { }
     setShowQueryModal(false);
     setActionFeedback({
       type: "warning",
@@ -122,7 +122,7 @@ export default function UniversalDetailPage() {
     setRecord(updatedRecord);
     try {
       sessionStorage.setItem(`gbs_detail_${category}_${id}`, JSON.stringify(updatedRecord));
-    } catch {}
+    } catch { }
     setActionFeedback({
       type: "success",
       message: `⚖️ Compliance Seal ${stamp} stamped to permanent regulatory file.`
@@ -151,7 +151,7 @@ export default function UniversalDetailPage() {
               setEnvironment(envJson.data.activeEnvironment);
             }
           }
-        } catch (_) {}
+        } catch (_) { }
 
         if (record) {
           setLoading(false);
@@ -175,7 +175,7 @@ export default function UniversalDetailPage() {
           try {
             const uRes = await apiClient.get(`/users/${encodeURIComponent(id)}/profile-verification`);
             found = uRes.data?.data?.user || uRes.data?.user;
-          } catch (_) {}
+          } catch (_) { }
           if (!found) {
             const listRes = await apiClient.get("/users");
             const users = listRes.data?.data?.users || listRes.data?.users || [];
@@ -199,18 +199,18 @@ export default function UniversalDetailPage() {
             const admRes = await apiClient.get("/admissions");
             const list = admRes.data?.data?.applications || admRes.data?.applications || [];
             found = list.find(a => String(a.id) === id || a.applicationNumber === id || a.appRef === id);
-          } catch (_) {}
+          } catch (_) { }
           if (!found) {
             try {
               const localAdmissions = JSON.parse(localStorage.getItem("gbs_admission_applications") || "[]");
               found = localAdmissions.find(a => String(a.id) === id || a.applicationNumber === id || a.appRef === id);
-            } catch (_) {}
+            } catch (_) { }
           }
           if (!found) {
             try {
               const localWalkins = JSON.parse(localStorage.getItem("gbs_walkin_admissions") || "[]");
               found = localWalkins.find(a => String(a.id) === id || a.applicationNumber === id);
-            } catch (_) {}
+            } catch (_) { }
           }
           if (!found) {
             const onbRes = await apiClient.get("/dev-control/onboarding-registrations");
@@ -221,52 +221,52 @@ export default function UniversalDetailPage() {
           try {
             const dailyArchives = JSON.parse(localStorage.getItem("gbs_daily_attendance_archives") || "[]");
             found = dailyArchives.find(a => String(a.id) === id || a.date === id);
-          } catch (_) {}
+          } catch (_) { }
           if (!found) {
             try {
               const weeklyReports = JSON.parse(localStorage.getItem("gbs_weekly_attendance_reports") || "[]");
               found = weeklyReports.find(w => String(w.id) === id);
-            } catch (_) {}
+            } catch (_) { }
           }
           if (!found) {
             try {
               const facultyArchives = JSON.parse(localStorage.getItem("gbs_faculty_weekly_attendance_archives") || "[]");
               found = facultyArchives.find(f => String(f.id) === id);
-            } catch (_) {}
+            } catch (_) { }
           }
           if (!found) {
             try {
               const wRes = await apiClient.get("/attendance/weekly-reports");
               const reports = wRes.data?.data?.reports || wRes.data?.reports || [];
               found = reports.find(r => String(r.id) === id);
-            } catch (_) {}
+            } catch (_) { }
           }
         } else if (category === "lesson-plan") {
           try {
             const plans = JSON.parse(localStorage.getItem("gbs_teacher_lesson_plans") || "[]");
             found = plans.find(p => String(p.id) === id);
-          } catch (_) {}
+          } catch (_) { }
         } else if (category === "exam") {
           try {
             const exams = JSON.parse(localStorage.getItem("gbs_published_exams") || "[]");
             found = exams.find(e => String(e.id) === id || e.title === id);
-          } catch (_) {}
+          } catch (_) { }
         } else if (category === "report" || category === "hr-report" || category === "audit") {
           try {
             const audits = JSON.parse(localStorage.getItem("gbs_account_audit_requests") || "[]");
             found = audits.find(a => String(a.id) === id);
-          } catch (_) {}
+          } catch (_) { }
           if (!found) {
             try {
               const hrAudits = JSON.parse(localStorage.getItem("gbs_hr_staff_appraisals") || "[]");
               found = hrAudits.find(h => String(h.id) === id);
-            } catch (_) {}
+            } catch (_) { }
           }
         } else if (category === "notification" || category === "circular") {
           try {
             const circs = JSON.parse(localStorage.getItem("gbs_distributed_circulars") || "[]");
             found = circs.find(c => String(c.id) === id);
-          } catch (_) {}
+          } catch (_) { }
         } else if (category === "backup") {
           const bRes = await apiClient.get("/dev-control/backups");
           const list = bRes.data?.data?.backups || bRes.data?.backups || [];
@@ -295,18 +295,18 @@ export default function UniversalDetailPage() {
           try {
             const invItems = JSON.parse(localStorage.getItem("gbs_inventory_items") || "[]");
             found = invItems.find(i => String(i.id) === id || i.item_code === id);
-          } catch (_) {}
+          } catch (_) { }
           if (!found) {
             try {
               const res = await apiClient.get(`/inventory/items?search=${encodeURIComponent(id)}`);
               found = res.data?.data?.records?.[0] || null;
-            } catch (_) {}
+            } catch (_) { }
           }
         } else if (category === "clearance") {
           try {
             const clearances = JSON.parse(localStorage.getItem("gbs_graduation_clearance_records") || "[]");
             found = clearances.find(c => String(c.id) === id || c.indexNumber === id);
-          } catch (_) {}
+          } catch (_) { }
         } else if (category === "cohort") {
           const batches = [
             { id: "2026", year: "2026", label: "Class of 2026 (Pioneers)", totalGraduates: 142, valedictorian: "Kofi Boateng (CGPA 3.98)", firstClassHonors: 34, motto: "Innovation Through Knowledge", alumniRep: "kofi.boateng@alumni.gbs.edu", keyEmployers: "Google, Microsoft, Goldman Sachs, MTN Group", facultyDean: "Prof. Arthur Sterling" },
@@ -396,10 +396,10 @@ export default function UniversalDetailPage() {
   // Filter raw fields to exclude huge objects or sensitive hashes
   const attributeEntries = record
     ? Object.entries(record).filter(([k, v]) => {
-        if (["facePhoto", "scannedFacePhoto", "headmasterPhoto", "adminPasswordHash", "password"].includes(k)) return false;
-        if (typeof v === "object" && v !== null && !Array.isArray(v)) return false;
-        return true;
-      })
+      if (["facePhoto", "scannedFacePhoto", "headmasterPhoto", "adminPasswordHash", "password"].includes(k)) return false;
+      if (typeof v === "object" && v !== null && !Array.isArray(v)) return false;
+      return true;
+    })
     : [];
 
   return (
@@ -593,13 +593,13 @@ export default function UniversalDetailPage() {
                     background: verificationStatus === "VERIFIED_AND_APPROVED" || verificationStatus === "APPROVED"
                       ? "rgba(16, 185, 129, 0.25)"
                       : verificationStatus === "REVISION_REQUIRED"
-                      ? "rgba(239, 68, 68, 0.25)"
-                      : "rgba(245, 158, 11, 0.25)",
+                        ? "rgba(239, 68, 68, 0.25)"
+                        : "rgba(245, 158, 11, 0.25)",
                     color: verificationStatus === "VERIFIED_AND_APPROVED" || verificationStatus === "APPROVED"
                       ? "#34d399"
                       : verificationStatus === "REVISION_REQUIRED"
-                      ? "#f87171"
-                      : "#fbbf24",
+                        ? "#f87171"
+                        : "#fbbf24",
                     border: `1px solid ${verificationStatus === "VERIFIED_AND_APPROVED" || verificationStatus === "APPROVED" ? "#10b981" : verificationStatus === "REVISION_REQUIRED" ? "#ef4444" : "#f59e0b"}`
                   }}>
                     ● {verificationStatus}
@@ -839,12 +839,12 @@ export default function UniversalDetailPage() {
                       {val === true
                         ? "YES / TRUE"
                         : val === false
-                        ? "NO / FALSE"
-                        : val === null || val === undefined || val === ""
-                        ? "—"
-                        : Array.isArray(val)
-                        ? `${val.length} item(s)`
-                        : String(val)}
+                          ? "NO / FALSE"
+                          : val === null || val === undefined || val === ""
+                            ? "—"
+                            : Array.isArray(val)
+                              ? `${val.length} item(s)`
+                              : String(val)}
                     </span>
                   </div>
                 ))}
