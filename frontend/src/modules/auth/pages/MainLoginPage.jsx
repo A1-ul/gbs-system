@@ -3,6 +3,7 @@ import { Link, useNavigate } from "react-router-dom";
 import { login } from "../api/auth.api";
 import { getServerBaseUrl } from "../../../api/client/apiConfig";
 import { getRoleBackgroundImage } from "../../../utils/userAvatars";
+import CartoonRoleVideoHubModal from "../../../components/common/CartoonRoleVideoHubModal";
 import "./MainLoginPage.css";
 
 const ROLES = [
@@ -39,6 +40,8 @@ export default function MainLoginPage() {
 
   // Online Admission Application Modal State
   const [showAdmissionModal, setShowAdmissionModal] = useState(false);
+  const [showCartoonVideoModal, setShowCartoonVideoModal] = useState(false);
+  const [cartoonVideoRole, setCartoonVideoRole] = useState("MASTER");
   const [admissionSubmitting, setAdmissionSubmitting] = useState(false);
   const [admissionSubmitted, setAdmissionSubmitted] = useState(false);
   const [submittedAppDetails, setSubmittedAppDetails] = useState(null);
@@ -271,6 +274,44 @@ export default function MainLoginPage() {
             </div>
             <span style={{ background: "#f59e0b", color: "#000", padding: "6px 14px", borderRadius: "999px", fontSize: "0.78rem", fontWeight: "900", whiteSpace: "nowrap" }}>
               APPLY NOW →
+            </span>
+          </button>
+
+          {/* Animated Cartoon Role Video Tour & MP4 Download Callout */}
+          <button
+            type="button"
+            onClick={() => {
+              setCartoonVideoRole("MASTER");
+              setShowCartoonVideoModal(true);
+            }}
+            style={{
+              width: "100%",
+              marginTop: "10px",
+              padding: "13px 18px",
+              borderRadius: "14px",
+              background: "linear-gradient(135deg, rgba(59, 130, 246, 0.25) 0%, rgba(139, 92, 246, 0.25) 100%)",
+              border: "2px solid #38bdf8",
+              color: "#ffffff",
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "space-between",
+              cursor: "pointer",
+              boxShadow: "0 6px 20px rgba(56, 189, 248, 0.22)"
+            }}
+          >
+            <div style={{ display: "flex", alignItems: "center", gap: "12px", textAlign: "left" }}>
+              <span style={{ fontSize: "2rem" }}>🎬</span>
+              <div>
+                <strong style={{ display: "block", fontSize: "0.93rem", color: "#38bdf8", letterSpacing: "0.3px" }}>
+                  WATCH 3D CARTOON SYSTEM TOUR (ALL 6 ROLES) & DOWNLOAD MP4s
+                </strong>
+                <span style={{ fontSize: "0.77rem", color: "#cbd5e1" }}>
+                  Narrated cartoon walkthroughs for Headmaster, Teacher, Student, Parent, Accountant & Staff
+                </span>
+              </div>
+            </div>
+            <span style={{ background: "#38bdf8", color: "#0f172a", padding: "6px 14px", borderRadius: "999px", fontSize: "0.76rem", fontWeight: "900", whiteSpace: "nowrap" }}>
+              WATCH / DOWNLOAD →
             </span>
           </button>
         </div>
@@ -881,6 +922,12 @@ export default function MainLoginPage() {
           </div>
         </div>
       )}
+
+      <CartoonRoleVideoHubModal
+        isOpen={showCartoonVideoModal}
+        onClose={() => setShowCartoonVideoModal(false)}
+        initialVideoId={cartoonVideoRole}
+      />
     </div>
   );
 }

@@ -2,6 +2,7 @@ import React, { useState, useEffect, useMemo } from "react";
 import { useNavigate, Link } from "react-router-dom";
 import { registerInstitution } from "../api/auth.api";
 import BiometricFaceScannerModal from "../components/BiometricFaceScannerModal";
+import CartoonRoleVideoHubModal from "../../../components/common/CartoonRoleVideoHubModal";
 import { getOnboardingRates } from "../../../utils/pricingEngine";
 import "./TenantOnboardingFirstPage.css";
 
@@ -134,6 +135,7 @@ export default function TenantOnboardingFirstPage() {
 
   // Biometric Face Scanner Modal State
   const [showFaceScanner, setShowFaceScanner] = useState(false);
+  const [showCartoonVideoModal, setShowCartoonVideoModal] = useState(false);
 
   // Form State
   const [form, setForm] = useState({
@@ -439,6 +441,26 @@ export default function TenantOnboardingFirstPage() {
             <span>ENTERPRISE ONBOARDING GATEWAY</span>
           </div>
           <span style={{ fontSize: "0.75rem", color: "#94a3b8" }}>Cloud Cluster Active</span>
+          <button
+            type="button"
+            onClick={() => setShowCartoonVideoModal(true)}
+            style={{
+              marginLeft: "10px",
+              padding: "6px 14px",
+              borderRadius: "999px",
+              background: "linear-gradient(135deg, #f59e0b, #38bdf8)",
+              border: "none",
+              color: "#0f172a",
+              fontWeight: 900,
+              fontSize: "0.76rem",
+              cursor: "pointer",
+              display: "inline-flex",
+              alignItems: "center",
+              gap: "6px"
+            }}
+          >
+            🎬 Watch Cartoon Role Videos & Download MP4s
+          </button>
         </div>
 
         {/* Top-Right "I am already in" Inscription Button */}
@@ -1335,6 +1357,12 @@ export default function TenantOnboardingFirstPage() {
         isOpen={showFaceScanner}
         onClose={() => setShowFaceScanner(false)}
         onScanComplete={handleFaceScanComplete}
+      />
+
+      <CartoonRoleVideoHubModal
+        isOpen={showCartoonVideoModal}
+        onClose={() => setShowCartoonVideoModal(false)}
+        initialVideoId="MASTER"
       />
 
       {/* Success Modal */}
