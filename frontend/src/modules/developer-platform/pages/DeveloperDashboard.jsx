@@ -4970,6 +4970,13 @@ export default function DeveloperDashboard() {
           <button onClick={() => navigate("/developer-control-center/ai-diagnostics")}>
             🤖 AI Diagnostics
           </button>
+          <button
+            type="button"
+            onClick={() => navigate("/presentation-engine")}
+            style={{ borderColor: "#f59e0b", color: "#fbbf24", fontWeight: 800 }}
+          >
+            🎬 Video Presentation Engine
+          </button>
           <button onClick={() => navigate("/infrastructure")} style={{ borderColor: "#38bdf8", color: "#7dd3fc" }}>
             ⚡ Multi-DB & DR
           </button>

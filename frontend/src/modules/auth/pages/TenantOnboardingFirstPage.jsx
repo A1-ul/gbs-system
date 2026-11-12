@@ -3,6 +3,7 @@ import { useNavigate, Link } from "react-router-dom";
 import { registerInstitution } from "../api/auth.api";
 import BiometricFaceScannerModal from "../components/BiometricFaceScannerModal";
 import { getOnboardingRates } from "../../../utils/pricingEngine";
+import CartoonRoleVideoHubModal from "../../../components/common/CartoonRoleVideoHubModal";
 import "./TenantOnboardingFirstPage.css";
 
 // 25+ Global Country Codes with Flags and Regional Identifiers
@@ -166,6 +167,7 @@ export default function TenantOnboardingFirstPage() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
   const [successData, setSuccessData] = useState(null);
+  const [showVideoHubModal, setShowVideoHubModal] = useState(false);
 
   // Pricing Engine Rates (Official Policy: Nursery–JHS = GH₵3, SHS = GH₵5, University = GH₵10)
   const activeRates = useMemo(() => getOnboardingRates(), []);
@@ -468,6 +470,25 @@ export default function TenantOnboardingFirstPage() {
             <span>ENTERPRISE ONBOARDING GATEWAY</span>
           </div>
           <span style={{ fontSize: "0.75rem", color: "#94a3b8" }}>Cloud Cluster Active</span>
+          <button
+            type="button"
+            onClick={() => setShowVideoHubModal(true)}
+            style={{
+              background: "linear-gradient(135deg, rgba(245, 158, 11, 0.22), rgba(56, 189, 248, 0.18))",
+              border: "1.5px solid #f59e0b",
+              color: "#fde68a",
+              padding: "6px 13px",
+              borderRadius: "999px",
+              fontWeight: 800,
+              fontSize: "0.74rem",
+              cursor: "pointer",
+              display: "inline-flex",
+              alignItems: "center",
+              gap: "6px"
+            }}
+          >
+            🎬 Watch Real-Life Action Videos (6 Roles) & Download MP4s
+          </button>
         </div>
 
         {/* Top-Right "I am already in" Inscription Button */}
@@ -1408,6 +1429,12 @@ export default function TenantOnboardingFirstPage() {
           </div>
         </div>
       )}
+
+      <CartoonRoleVideoHubModal
+        isOpen={showVideoHubModal}
+        onClose={() => setShowVideoHubModal(false)}
+        initialVideoId="MASTER"
+      />
     </div>
   );
 }

@@ -104,6 +104,7 @@ export default function GBSCompanyWebsite() {
           <span className="ticker-hotline">📞 Executive Hotline & Emergency Line: +233 54 329 4615</span>
         </div>
         <div className="ticker-actions">
+          <Link to="/presentation-engine" className="ticker-link presentation-btn">🎬 Watch Real-Life Action Videos</Link>
           <Link to="/signup/institution" className="ticker-link presentation-btn">🏫 Register Institution</Link>
           <Link to="/developer/login" className="ticker-link dev-btn">🛡️ Developer Control</Link>
         </div>
@@ -128,6 +129,9 @@ export default function GBSCompanyWebsite() {
           <div className="hero-cta-group">
             <Link to="/login" className="btn-hero-primary">
               🚀 Enter System Portals & Sign In
+            </Link>
+            <Link to="/presentation-engine" className="btn-hero-presentation">
+              🎬 Watch Real-Life Action Presentation (6 Roles)
             </Link>
             <a href="#pricing-calculator" className="btn-hero-secondary">
               📊 Per-Student Fee Calculator
@@ -597,6 +601,7 @@ export default function GBSCompanyWebsite() {
           <div className="footer-col">
             <h4 className="footer-heading">Enterprise Subsystems</h4>
             <ul className="footer-links">
+              <li><Link to="/presentation-engine">Real-Life Video Presentation Engine</Link></li>
               <li><Link to="/signup/institution">100% Remote Onboarding</Link></li>
               <li><Link to="/developer/login">Developer Control Sentinel</Link></li>
               <li><Link to="/cctv">Smart Campus CCTV Hub</Link></li>

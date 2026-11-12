@@ -3,6 +3,7 @@ import { Link, useNavigate } from "react-router-dom";
 import { login } from "../api/auth.api";
 import { getServerBaseUrl } from "../../../api/client/apiConfig";
 import { getRoleBackgroundImage } from "../../../utils/userAvatars";
+import CartoonRoleVideoHubModal from "../../../components/common/CartoonRoleVideoHubModal";
 import "./MainLoginPage.css";
 
 const ROLES = [
@@ -36,6 +37,10 @@ export default function MainLoginPage() {
     omrScanner: true,
     cdnStatus: true
   });
+
+  // Real-Life Action Video Tour Modal State
+  const [showVideoHubModal, setShowVideoHubModal] = useState(false);
+  const [videoHubRole, setVideoHubRole] = useState("MASTER");
 
   // Online Admission Application Modal State
   const [showAdmissionModal, setShowAdmissionModal] = useState(false);
@@ -272,6 +277,72 @@ export default function MainLoginPage() {
             <span style={{ background: "#f59e0b", color: "#000", padding: "6px 14px", borderRadius: "999px", fontSize: "0.78rem", fontWeight: "900", whiteSpace: "nowrap" }}>
               APPLY NOW →
             </span>
+          </button>
+        </div>
+
+        {/* Real-Life Action System Video Tour Callout (All 6 Roles + MP4 Downloads) */}
+        <div style={{ margin: "0 0 1.25rem", display: "flex", gap: "8px", flexWrap: "wrap" }}>
+          <button
+            type="button"
+            onClick={() => {
+              setVideoHubRole("MASTER");
+              setShowVideoHubModal(true);
+            }}
+            style={{
+              flex: "1 1 260px",
+              padding: "12px 16px",
+              borderRadius: "14px",
+              background: "linear-gradient(135deg, rgba(56, 189, 248, 0.2) 0%, rgba(15, 23, 42, 0.9) 100%)",
+              border: "1.5px solid #38bdf8",
+              color: "#ffffff",
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "space-between",
+              gap: "10px",
+              cursor: "pointer",
+              boxShadow: "0 4px 16px rgba(56, 189, 248, 0.2)"
+            }}
+          >
+            <div style={{ display: "flex", alignItems: "center", gap: "10px", textAlign: "left" }}>
+              <span style={{ fontSize: "1.65rem" }}>🎬</span>
+              <div>
+                <strong style={{ display: "block", fontSize: "0.86rem", color: "#7dd3fc" }}>
+                  WATCH REAL-LIFE SYSTEM ACTION VIDEOS (ALL 6 ROLES)
+                </strong>
+                <span style={{ fontSize: "0.73rem", color: "#cbd5e1" }}>
+                  See real-life campus footage + live actions & download MP4 guides before signing in
+                </span>
+              </div>
+            </div>
+            <span style={{ background: "#38bdf8", color: "#020617", padding: "5px 12px", borderRadius: "999px", fontSize: "0.74rem", fontWeight: 900, whiteSpace: "nowrap" }}>
+              ▶ WATCH VIDEOS
+            </span>
+          </button>
+
+          <button
+            type="button"
+            onClick={() => {
+              const targetRole = ["ADMIN", "TEACHER", "STUDENT", "PARENT", "ACCOUNTANT", "STAFF"].includes(selectedRole)
+                ? selectedRole
+                : selectedRole === "HR"
+                ? "STAFF"
+                : "MASTER";
+              setVideoHubRole(targetRole);
+              setShowVideoHubModal(true);
+            }}
+            style={{
+              padding: "12px 14px",
+              borderRadius: "14px",
+              background: "rgba(245, 158, 11, 0.16)",
+              border: "1.5px solid #f59e0b",
+              color: "#fde68a",
+              fontWeight: 800,
+              fontSize: "0.78rem",
+              cursor: "pointer",
+              whiteSpace: "nowrap"
+            }}
+          >
+            🎥 {selectedRole} Action Guide
           </button>
         </div>
 
@@ -881,6 +952,12 @@ export default function MainLoginPage() {
           </div>
         </div>
       )}
+
+      <CartoonRoleVideoHubModal
+        isOpen={showVideoHubModal}
+        onClose={() => setShowVideoHubModal(false)}
+        initialVideoId={videoHubRole}
+      />
     </div>
   );
 }

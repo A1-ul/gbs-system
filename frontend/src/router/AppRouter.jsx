@@ -56,6 +56,7 @@ import DigitalTwinCampusPage from "../modules/campus/pages/DigitalTwinCampusPage
 import CCTVSecurityHubPage from "../modules/cctv/pages/CCTVSecurityHubPage";
 import ShardingDrManagementPage from "../modules/infrastructure/pages/ShardingDrManagementPage";
 import GBSCompanyWebsite from "../modules/website/pages/GBSCompanyWebsite";
+import VideoPresentationEngine from "../modules/presentation/pages/VideoPresentationEngine";
 import UniversalDetailPage from "../components/common/UniversalDetailPage";
 
 function ProtectedPortalRoute({ children, loginPath = "/login" }) {
@@ -177,6 +178,9 @@ export default function AppRouter() {
         <Route path="/website" element={<GBSCompanyWebsite />} />
         <Route path="/company" element={<GBSCompanyWebsite />} />
         <Route path="/home" element={<GBSCompanyWebsite />} />
+        <Route path="/presentation-engine" element={<VideoPresentationEngine />} />
+        <Route path="/demo-hub" element={<VideoPresentationEngine />} />
+        <Route path="/presentation" element={<VideoPresentationEngine />} />
 
         {/* Main Portal & Role Authentication */}
         <Route path="/login" element={<MainLoginPage />} />

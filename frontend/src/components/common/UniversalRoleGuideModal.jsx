@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from "react";
+import CartoonRoleVideoHubModal from "./CartoonRoleVideoHubModal";
 
 const ROLE_GUIDES = {
   DEVELOPER: {
@@ -325,6 +326,14 @@ export default function UniversalRoleGuideModal({ role = "DEVELOPER", isOpen, on
     return localStorage.getItem(storageKey) || "";
   });
   const [savedFeedback, setSavedFeedback] = useState(false);
+  const [showRoleVideoModal, setShowRoleVideoModal] = useState(false);
+
+  const normalizedRoleVideoId = (() => {
+    const r = String(role || "").toUpperCase();
+    if (r === "HR") return "STAFF";
+    if (["ADMIN", "TEACHER", "STUDENT", "PARENT", "ACCOUNTANT", "STAFF"].includes(r)) return r;
+    return "MASTER";
+  })();
 
   useEffect(() => {
     setPersonalNotes(localStorage.getItem(storageKey) || "");
@@ -347,6 +356,7 @@ export default function UniversalRoleGuideModal({ role = "DEVELOPER", isOpen, on
   });
 
   return (
+    <>
     <div
       className="modal-backdrop"
       onClick={onClose}
@@ -641,24 +651,48 @@ export default function UniversalRoleGuideModal({ role = "DEVELOPER", isOpen, on
           }}
         >
           <span>GBS School Management System • Enterprise Operational Architecture</span>
-          <button
-            type="button"
-            onClick={() => window.print()}
-            style={{
-              background: "rgba(255, 255, 255, 0.08)",
-              border: "1px solid rgba(255, 255, 255, 0.2)",
-              color: "#cbd5e1",
-              padding: "5px 12px",
-              borderRadius: "6px",
-              fontSize: "0.75rem",
-              fontWeight: 700,
-              cursor: "pointer"
-            }}
-          >
-            🖨️ Print Operating Guide
-          </button>
+          <div style={{ display: "flex", gap: "8px", alignItems: "center", flexWrap: "wrap" }}>
+            <button
+              type="button"
+              onClick={() => setShowRoleVideoModal(true)}
+              style={{
+                background: "linear-gradient(135deg, #f59e0b, #d97706)",
+                border: "none",
+                color: "#020617",
+                padding: "6px 12px",
+                borderRadius: "6px",
+                fontSize: "0.75rem",
+                fontWeight: 900,
+                cursor: "pointer"
+              }}
+            >
+              🎬 Watch Real-Life Role Action Video
+            </button>
+            <button
+              type="button"
+              onClick={() => window.print()}
+              style={{
+                background: "rgba(255, 255, 255, 0.08)",
+                border: "1px solid rgba(255, 255, 255, 0.2)",
+                color: "#cbd5e1",
+                padding: "5px 12px",
+                borderRadius: "6px",
+                fontSize: "0.75rem",
+                fontWeight: 700,
+                cursor: "pointer"
+              }}
+            >
+              🖨️ Print Operating Guide
+            </button>
+          </div>
         </div>
       </div>
     </div>
+    <CartoonRoleVideoHubModal
+      isOpen={showRoleVideoModal}
+      onClose={() => setShowRoleVideoModal(false)}
+      initialVideoId={normalizedRoleVideoId}
+    />
+    </>
   );
 }
