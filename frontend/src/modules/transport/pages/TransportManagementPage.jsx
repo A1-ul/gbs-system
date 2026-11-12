@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import apiClient from '../../../api/client/apiClient';
+import { getActiveSchoolName } from '../../../utils/schoolBranding';
 import '../pages/TransportManagement.css';
 import '../../library/pages/LibraryManagement.css';
 
@@ -28,7 +29,7 @@ export default function TransportManagementPage() {
     try {
       const saved = localStorage.getItem('gbs_transport_assigned_students');
       if (saved) return JSON.parse(saved);
-    } catch {}
+    } catch { }
     return [
       {
         id: "BUS-ASN-101",
@@ -70,7 +71,7 @@ export default function TransportManagementPage() {
       try {
         const saved = localStorage.getItem('gbs_transport_assigned_students');
         if (saved) setHeadmasterAssignedStudents(JSON.parse(saved));
-      } catch {}
+      } catch { }
     };
 
     window.addEventListener('gbs_transport_student_assigned', handleSyncTransport);
@@ -266,7 +267,7 @@ export default function TransportManagementPage() {
           <span className="nav-brand-badge" style={{ background: 'linear-gradient(135deg, #f59e0b, #d97706)' }}>
             FLEET
           </span>
-          <span>GBS International Campus Transport & Fleet Management</span>
+          <span>{getActiveSchoolName()} • Transport &amp; Fleet Management</span>
         </div>
         <div className="nav-actions" style={{ display: 'flex', gap: '8px' }}>
           <button className="btn-secondary" onClick={() => navigate(-1)}>
@@ -537,9 +538,9 @@ export default function TransportManagementPage() {
                   <span style={{ background: '#064e3b', color: '#6ee7b7', border: '1px solid #059669', padding: '4px 12px', borderRadius: '999px', fontSize: '0.75rem', fontWeight: 800 }}>
                     HEADMASTER SYNCED ✓
                   </span>
-                  <button 
-                    type="button" 
-                    className="btn-secondary" 
+                  <button
+                    type="button"
+                    className="btn-secondary"
                     onClick={() => {
                       const sample = [
                         {
@@ -931,7 +932,7 @@ export default function TransportManagementPage() {
       )}
 
       {/* Universal Floating Scroll Controls */}
-      <div 
+      <div
         style={{
           position: "fixed",
           bottom: "24px",

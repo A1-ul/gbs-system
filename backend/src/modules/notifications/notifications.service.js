@@ -40,12 +40,17 @@ async function getStatus() {
  */
 async function seedDefaultTemplates(tenantId) {
   const tid = parseInt(tenantId, 10);
+  let schoolName = 'Registered School Institution';
+  try {
+    const t = await prisma.tenant.findUnique({ where: { id: tid } });
+    if (t?.name) schoolName = t.name;
+  } catch { }
   const defaults = [
     {
       templateCode: 'ADMISSION_WELCOME_SMS',
       name: 'Admission Welcome SMS',
       channel: 'SMS',
-      titleTemplate: 'GBS Admissions Update',
+      titleTemplate: `${schoolName} Admissions Update`,
       bodyTemplate: 'Dear {{guardianName}}, admission inquiry for {{studentName}} ({{applicationNumber}}) has been logged. Track status at {{portalUrl}}',
       variables: JSON.stringify(['guardianName', 'studentName', 'applicationNumber', 'portalUrl']),
       isSystem: true
@@ -54,8 +59,8 @@ async function seedDefaultTemplates(tenantId) {
       templateCode: 'ADMISSION_APPROVED_EMAIL',
       name: 'Official Admission Approval Letter',
       channel: 'EMAIL',
-      titleTemplate: 'Official Acceptance Notice: Welcome to GBS International School',
-      bodyTemplate: 'Dear {{guardianName}},\n\nWe are pleased to inform you that {{studentName}} has been granted admission to {{className}} for the upcoming academic session.\nStudent portal account has been provisioned.\n\nWarm regards,\nGBS Admissions Board',
+      titleTemplate: `Official Acceptance Notice: Welcome to ${schoolName}`,
+      bodyTemplate: `Dear {{guardianName}},\n\nWe are pleased to inform you that {{studentName}} has been granted admission to {{className}} for the upcoming academic session.\nStudent portal account has been provisioned.\n\nWarm regards,\n${schoolName} Admissions Board`,
       variables: JSON.stringify(['guardianName', 'studentName', 'className']),
       isSystem: true
     },

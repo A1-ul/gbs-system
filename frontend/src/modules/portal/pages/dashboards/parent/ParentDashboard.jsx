@@ -8,6 +8,7 @@ import VoiceNotePlayer from "../../../../../components/common/VoiceNotePlayer";
 import { getUserAvatar } from "../../../../../utils/userAvatars";
 import UniversalRoleGuideModal from "../../../../../components/common/UniversalRoleGuideModal";
 import { navigateToDetail } from "../../../../../utils/universalNavigation";
+import { getActiveSchoolName, getActiveSchoolLogo } from "../../../../../utils/schoolBranding";
 import "./ParentDashboard.css";
 
 export default function ParentDashboard() {
@@ -102,42 +103,25 @@ export default function ParentDashboard() {
   const [feedback, setFeedback] = useState(null);
 
   // Tenant School Branding & Official Crest
-  const [reportSchoolName, setReportSchoolName] = useState(() => {
-    let storedUser = null;
-    try {
-      storedUser = JSON.parse(localStorage.getItem("gbs_user") || "{}");
-    } catch { }
-    return (
-      localStorage.getItem("gbs_report_school_name") ||
-      localStorage.getItem("gbs_tenant_name") ||
-      storedUser?.tenant?.name ||
-      "GBS Educational Institution"
-    );
-  });
-  const [customSchoolLogo, setCustomSchoolLogo] = useState(() => {
-    return localStorage.getItem("gbs_custom_school_logo") || "/assets/gbs_crest_badge.jpg";
-  });
+  const [reportSchoolName, setReportSchoolName] = useState(() => getActiveSchoolName());
+  const [customSchoolLogo, setCustomSchoolLogo] = useState(() => getActiveSchoolLogo());
 
   useEffect(() => {
-    const handleSchoolNameSync = () => {
-      const name = localStorage.getItem("gbs_report_school_name");
-      if (name) setReportSchoolName(name);
+    const syncBranding = () => {
+      setReportSchoolName(getActiveSchoolName());
+      setCustomSchoolLogo(getActiveSchoolLogo());
     };
-    const handleSchoolLogoSync = () => {
-      const logo = localStorage.getItem("gbs_custom_school_logo");
-      if (logo) setCustomSchoolLogo(logo);
-    };
-
-    window.addEventListener("storage", handleSchoolNameSync);
-    window.addEventListener("gbs_school_name_updated", handleSchoolNameSync);
-    window.addEventListener("storage", handleSchoolLogoSync);
-    window.addEventListener("gbs_custom_logo_updated", handleSchoolLogoSync);
+    syncBranding();
+    window.addEventListener("storage", syncBranding);
+    window.addEventListener("gbs_school_name_updated", syncBranding);
+    window.addEventListener("gbs_school_logo_updated", syncBranding);
+    window.addEventListener("gbs_custom_logo_updated", syncBranding);
 
     return () => {
-      window.removeEventListener("storage", handleSchoolNameSync);
-      window.removeEventListener("gbs_school_name_updated", handleSchoolNameSync);
-      window.removeEventListener("storage", handleSchoolLogoSync);
-      window.removeEventListener("gbs_custom_logo_updated", handleSchoolLogoSync);
+      window.removeEventListener("storage", syncBranding);
+      window.removeEventListener("gbs_school_name_updated", syncBranding);
+      window.removeEventListener("gbs_school_logo_updated", syncBranding);
+      window.removeEventListener("gbs_custom_logo_updated", syncBranding);
     };
   }, []);
 
@@ -234,7 +218,7 @@ export default function ParentDashboard() {
           appNumber: found.applicationNumber || `ADM-2026-${found.id}`,
           studentName: `${found.studentFirstName} ${found.studentLastName}`,
           message: isApproved
-            ? `Congratulations! Your ward ${found.studentFirstName} ${found.studentLastName}'s application to GBS International School has been approved by the Headmaster. Please bring your ward to the campus Admissions Office with original birth certificates and academic transcripts for physical verification to finalize main admission.`
+            ? `Congratulations! Your ward ${found.studentFirstName} ${found.studentLastName}'s application to ${getActiveSchoolName()} has been approved by the Headmaster. Please bring your ward to the campus Admissions Office with original birth certificates and academic transcripts for physical verification to finalize main admission.`
             : `Official Admission Notice: Application for ${found.studentFirstName} ${found.studentLastName} has been declined by the Headmaster. Remarks: ${found.rejectionReason || "Cohort capacity reached for current intake term."}`
         };
       }
@@ -371,7 +355,7 @@ export default function ParentDashboard() {
             appNumber: found.applicationNumber || `ADM-2026-${found.id}`,
             studentName: `${found.studentFirstName} ${found.studentLastName}`,
             message: isApproved
-              ? `Congratulations! Your ward ${found.studentFirstName} ${found.studentLastName}'s application to GBS International School has been approved by the Headmaster. Please bring your ward to the campus Admissions Office with original birth certificates and academic transcripts for physical verification to finalize main admission.`
+              ? `Congratulations! Your ward ${found.studentFirstName} ${found.studentLastName}'s application to ${getActiveSchoolName()} has been approved by the Headmaster. Please bring your ward to the campus Admissions Office with original birth certificates and academic transcripts for physical verification to finalize main admission.`
               : `Official Admission Notice: Application for ${found.studentFirstName} ${found.studentLastName} has been declined by the Headmaster. Remarks: ${found.rejectionReason || "Cohort capacity reached for current intake term."}`
           });
         }
@@ -1155,7 +1139,7 @@ export default function ParentDashboard() {
                 </div>
                 <p style={{ margin: 0, color: "#f8fafc", fontSize: "0.95rem", lineHeight: "1.6" }}>
                   {admissionStatusNotice.message || (admissionStatusNotice.status === "APPROVED"
-                    ? `Congratulations! Your ward ${admissionStatusNotice.studentName || "student"}'s application to GBS International School has been approved by the Headmaster.`
+                    ? `Congratulations! Your ward ${admissionStatusNotice.studentName || "student"}'s application to ${reportSchoolName || getActiveSchoolName()} has been approved by the Headmaster.`
                     : `Your ward ${admissionStatusNotice.studentName || "student"}'s application has been declined by the Headmaster.`)}
                 </p>
                 <div style={{ marginTop: "12px", display: "flex", gap: "12px", alignItems: "center", flexWrap: "wrap" }}>

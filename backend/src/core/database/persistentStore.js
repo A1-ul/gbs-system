@@ -226,6 +226,53 @@ function isTenantLockedOut(criteria = {}) {
   });
 }
 
+function removeDeletedTenantLockout(criteria = {}) {
+  if (!criteria || typeof criteria !== 'object') return;
+  const cId = String(criteria.id || criteria.tenantId || '').trim().toLowerCase();
+  const cCode = String(criteria.code || criteria.tenantCode || '').trim().toLowerCase();
+  const cName = String(criteria.name || criteria.schoolName || criteria.institutionName || '').trim().toLowerCase();
+  const cEmail = String(criteria.email || criteria.adminEmail || criteria.officialEmail || '').trim().toLowerCase();
+
+  writePersistentStore((current) => {
+    const matches = (l) => {
+      const lId = String(l.id || l.tenantId || '').trim().toLowerCase();
+      const lCode = String(l.code || l.tenantCode || '').trim().toLowerCase();
+      const lName = String(l.name || l.schoolName || l.tenantName || '').trim().toLowerCase();
+      const lEmail = String(l.email || l.adminEmail || l.headmasterEmail || '').trim().toLowerCase();
+      return (
+        (cId && lId && cId === lId) ||
+        (cCode && lCode && cCode === lCode) ||
+        (cName && lName && cName.length > 3 && cName === lName) ||
+        (cEmail && lEmail && cEmail === lEmail)
+      );
+    };
+
+    const lockouts = Array.isArray(current.deletedTenantLockouts)
+      ? current.deletedTenantLockouts.filter((l) => !matches(l))
+      : [];
+    const archives = Array.isArray(current.deletedTenantArchives)
+      ? current.deletedTenantArchives.filter((a) => !matches(a))
+      : [];
+    const deletedIds = Array.isArray(current.permanentlyDeletedIds)
+      ? current.permanentlyDeletedIds.filter((x) => {
+          const val = String(x).trim().toLowerCase();
+          if (cId && (val === cId || val === `tenant:${cId}`)) return false;
+          if (cCode && val === cCode) return false;
+          if (cName && val === cName) return false;
+          if (cEmail && val === cEmail) return false;
+          return true;
+        })
+      : [];
+
+    return {
+      ...current,
+      deletedTenantLockouts: lockouts,
+      deletedTenantArchives: archives,
+      permanentlyDeletedIds: deletedIds
+    };
+  });
+}
+
 /**
  * Fast non-throwing TCP socket check to see if PostgreSQL is listening on the configured host & port.
  */
@@ -353,6 +400,7 @@ module.exports = {
   addPermanentlyDeletedIds,
   isPermanentlyDeleted,
   addDeletedTenantLockout,
+  removeDeletedTenantLockout,
   isTenantLockedOut,
   checkPostgresReachable,
   tagRecordMetadata,

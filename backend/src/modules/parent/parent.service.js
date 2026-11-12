@@ -540,7 +540,7 @@ async function searchEmergencyContact(tenantId, searchPhone, adminUser) {
         studentName: `${l.student.firstName} ${l.student.lastName}`,
         studentId: l.student.id,
         studentClass: enrollment?.class?.name || 'Class 10A (STEM)',
-        institutionName: tenant?.name || 'GBS International School',
+        institutionName: tenant?.name || 'Registered School Institution',
         address: liveFix?.address || l.address || geoData.address,
         coordinates: {
           latitude: liveFix ? liveFix.latitude : (l.latitude || geoData.latitude),
@@ -574,7 +574,7 @@ async function searchEmergencyContact(tenantId, searchPhone, adminUser) {
         studentName: `${admissionMatch.studentFirstName} ${admissionMatch.studentLastName}`,
         studentId: admissionMatch.applicationNumber,
         studentClass: `Grade ${admissionMatch.targetGradeLevel} (Applicant)`,
-        institutionName: tenant?.name || 'GBS International School',
+        institutionName: tenant?.name || 'Registered School Institution',
         address: geoData.address,
         coordinates: {
           latitude: geoData.latitude,
@@ -612,7 +612,7 @@ async function searchEmergencyContact(tenantId, searchPhone, adminUser) {
         studentName: 'Ward of ' + (prof.user?.firstName || 'Parent'),
         studentId: prof.userId,
         studentClass: 'Grade 10A - STEM & Arts',
-        institutionName: tenant?.name || 'GBS International School',
+        institutionName: tenant?.name || 'Registered School Institution',
         address: prof.address || geoData.address,
         coordinates: {
           latitude: prof.latitude || geoData.latitude,
@@ -635,7 +635,7 @@ async function searchEmergencyContact(tenantId, searchPhone, adminUser) {
       studentName: 'Julian Doe',
       studentId: 'STU-2026-0891',
       studentClass: 'Grade 10A Mathematics & Science',
-      institutionName: tenant?.name || 'GBS International School',
+      institutionName: tenant?.name || 'Registered School Institution',
       address: geoData.address,
       coordinates: {
         latitude: geoData.latitude,

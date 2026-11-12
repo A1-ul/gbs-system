@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from "react";
+import { getActiveSchoolName, getActiveSchoolLogo } from "../../utils/schoolBranding";
 
 export default function OfficialPaymentGatewayModal({
   isOpen,
@@ -507,11 +508,16 @@ export default function OfficialPaymentGatewayModal({
             >
               {/* Receipt Header */}
               <div style={{ textAlign: "center", borderBottom: "2px solid #0f172a", paddingBottom: "10px", marginBottom: "12px" }}>
+                <img
+                  src={getActiveSchoolLogo()}
+                  alt="School Crest"
+                  style={{ width: "44px", height: "44px", borderRadius: "8px", objectFit: "contain", marginBottom: "6px", border: "1px solid #cbd5e1" }}
+                />
                 <h2 style={{ margin: "0 0 2px", fontSize: "1.2rem", fontWeight: 900, textTransform: "uppercase" }}>
                   OFFICIAL INSTITUTIONAL RECEIPT
                 </h2>
-                <div style={{ fontSize: "0.75rem", color: "#475569", fontWeight: 700 }}>
-                  GBS INTERNATIONAL ACADEMY • OFFICE OF THE BURSAR
+                <div style={{ fontSize: "0.8rem", color: "#0f172a", fontWeight: 800, letterSpacing: "0.4px" }}>
+                  {getActiveSchoolName().toUpperCase()} • OFFICE OF THE BURSAR
                 </div>
                 <div style={{ display: "inline-block", background: "#10b981", color: "#fff", padding: "2px 8px", borderRadius: "4px", fontSize: "0.72rem", fontWeight: 900, marginTop: "6px" }}>
                   {settledReceipt.status}

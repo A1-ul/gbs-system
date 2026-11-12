@@ -133,7 +133,7 @@ function attemptLocalResilientLogin(payload = {}) {
     const deletedIds = new Set(JSON.parse(localStorage.getItem("gbs_permanently_deleted_ids") || "[]").map((x) => String(x).toLowerCase()));
 
     if (deletedIds.has(rawIdentifier)) {
-      throw new Error("Access Denied: This account or institution has been permanently deleted from the GBS System.");
+      throw new Error("Access Denied: Your institution has been deleted from the system, so you cannot access the system unless you re-register for approval.");
     }
 
     const matchedLockout = [...deletedLockouts, ...deletedArchives].find((l) => {
@@ -148,13 +148,36 @@ function attemptLocalResilientLogin(payload = {}) {
       return emailMatches || codeMatches;
     });
     if (matchedLockout) {
-      throw new Error("Access Denied: Your institution has been permanently deleted from the GBS System. Deleted institutions are barred from accessing the platform.");
+      throw new Error("Access Denied: Your institution has been deleted from the system, so you cannot access the system unless you re-register for approval.");
     }
   } catch (lErr) {
     if (lErr.message && lErr.message.startsWith("Access Denied:")) throw lErr;
   }
 
-  // 1. Check gbs_incoming_onboarding_applications & gbs_archived_onboarded_tenants FIRST to block unapproved institutions
+  // 0b. Check if system or tenant is LOCKED / SUSPENDED (except Developer root)
+  if (rawIdentifier !== "gabosei48@gmail.com" && rawIdentifier !== "developer") {
+    const sysLocked = localStorage.getItem("gbs_system_locked") === "true";
+    const tenantStatus = String(localStorage.getItem("gbs_tenant_status") || "").toUpperCase();
+    const lockedTenants = (() => {
+      try {
+        return JSON.parse(localStorage.getItem("gbs_locked_tenants") || "[]");
+      } catch {
+        return [];
+      }
+    })();
+    const isSpecificLocked = lockedTenants.some((lt) => {
+      const ltEmails = [lt.email, lt.headmasterEmail, lt.adminEmail].filter(Boolean).map((e) => String(e).toLowerCase().trim());
+      return (
+        ltEmails.includes(rawIdentifier) ||
+        (lt.tenantCode && String(lt.tenantCode).toLowerCase() === rawIdentifier)
+      );
+    });
+    if (sysLocked || tenantStatus === "LOCKED" || tenantStatus === "SUSPENDED" || isSpecificLocked) {
+      throw new Error("Access Denied: Your institution is currently LOCKED / SUSPENDED by the System Developer and cannot access the system.");
+    }
+  }
+
+  // 1. Check gbs_incoming_onboarding_applications & gbs_archived_onboarded_tenants FIRST to block unapproved or locked institutions
   try {
     const incomingApps = JSON.parse(localStorage.getItem("gbs_incoming_onboarding_applications") || "[]");
     const archivedApps = JSON.parse(localStorage.getItem("gbs_archived_onboarded_tenants") || "[]");
@@ -178,7 +201,10 @@ function attemptLocalResilientLogin(payload = {}) {
     if (matchedAppByIdentity) {
       const appStatus = String(matchedAppByIdentity.status || "").toUpperCase();
       if (appStatus === "DELETED" || appStatus === "ARCHIVED_DELETED" || appStatus === "PURGED" || matchedAppByIdentity.isDeleted) {
-        throw new Error("Access Denied: Your institution has been permanently deleted from the GBS System.");
+        throw new Error("Access Denied: Your institution has been deleted from the system, so you cannot access the system unless you re-register for approval.");
+      }
+      if (appStatus === "LOCKED" || appStatus === "SUSPENDED" || matchedAppByIdentity.isLocked === true) {
+        throw new Error(`Access Denied: Your institution '${matchedAppByIdentity.institutionName || "your institution"}' is currently LOCKED / SUSPENDED by the System Developer and cannot access the system.`);
       }
       if (appStatus === "REJECTED") {
         throw new Error(`Access Denied: Your institution onboarding application for '${matchedAppByIdentity.institutionName || "your institution"}' was rejected by the Developer Control Center.`);
@@ -186,6 +212,7 @@ function attemptLocalResilientLogin(payload = {}) {
       const isExplicitlyApproved =
         matchedAppByIdentity.isApproved === true ||
         appStatus === "APPROVED" ||
+        appStatus === "APPROVED_AND_ARCHIVED" ||
         appStatus === "ACTIVE" ||
         appStatus === "PROVISIONED";
       if (!isExplicitlyApproved) {
@@ -198,6 +225,8 @@ function attemptLocalResilientLogin(payload = {}) {
 
       const hmName = matchedAppByIdentity.headmasterName || matchedAppByIdentity.adminName || matchedAppByIdentity.repFullName || "Executive Headmaster";
       const parts = hmName.split(" ");
+      const exactSchoolName = matchedAppByIdentity.institutionName || "GBS Registered Institution";
+      const exactCode = matchedAppByIdentity.assignedTenantCode || matchedAppByIdentity.tenantCode || "GBS-TENANT";
       const userObj = {
         id: matchedAppByIdentity.id || `usr_hm_${Date.now()}`,
         email: matchedAppByIdentity.headmasterEmail || matchedAppByIdentity.adminEmail || matchedAppByIdentity.officialEmail || rawIdentifier,
@@ -207,8 +236,16 @@ function attemptLocalResilientLogin(payload = {}) {
         role: "ADMIN",
         isApproved: true,
         tenantId: matchedAppByIdentity.assignedTenantId || matchedAppByIdentity.tenantUid || matchedAppByIdentity.id || "tnt_onboarded",
-        tenantCode: matchedAppByIdentity.assignedTenantCode || matchedAppByIdentity.tenantCode || "GBS-TENANT",
-        tenantName: matchedAppByIdentity.institutionName || "GBS Registered Institution",
+        tenantCode: exactCode,
+        schoolName: exactSchoolName,
+        institutionName: exactSchoolName,
+        tenantName: exactSchoolName,
+        tenant: {
+          id: matchedAppByIdentity.assignedTenantId || matchedAppByIdentity.id || 1,
+          name: exactSchoolName,
+          code: exactCode,
+          status: "ACTIVE"
+        },
         facePhoto: matchedAppByIdentity.facePhoto || matchedAppByIdentity.headmasterPhoto || null
       };
       return {
@@ -234,9 +271,12 @@ function attemptLocalResilientLogin(payload = {}) {
 
     if (matchedLocal) {
       if (matchedLocal.isDeleted) {
-        throw new Error("Access Denied: This account has been permanently deleted from the system.");
+        throw new Error("Access Denied: Your institution has been deleted from the system, so you cannot access the system unless you re-register for approval.");
       }
       const uStatus = String(matchedLocal.status || matchedLocal.verificationStatus || "").toUpperCase();
+      if (uStatus === "LOCKED" || uStatus === "SUSPENDED" || matchedLocal.isLocked === true) {
+        throw new Error(`Access Denied: Your institution '${matchedLocal.institutionName || matchedLocal.schoolName || matchedLocal.tenantName || "your institution"}' is currently LOCKED / SUSPENDED by the System Developer and cannot access the system.`);
+      }
       if (
         matchedLocal.isApproved === false ||
         matchedLocal.isActive === false ||
@@ -251,6 +291,8 @@ function attemptLocalResilientLogin(payload = {}) {
         throw new Error("Invalid email or password. Please verify your credentials.");
       }
 
+      const exactSchoolName = matchedLocal.institutionName || matchedLocal.schoolName || matchedLocal.tenantName || "GBS Registered Institution";
+      const exactCode = matchedLocal.tenantCode || "GBS-MAIN";
       const userObj = {
         id: matchedLocal.id || `usr_${Date.now()}`,
         email: matchedLocal.email,
@@ -260,8 +302,16 @@ function attemptLocalResilientLogin(payload = {}) {
         role: matchedLocal.role || requestedRole || "STUDENT",
         isApproved: true,
         tenantId: matchedLocal.tenantId || "1",
-        tenantCode: matchedLocal.tenantCode || "GBS-MAIN",
-        tenantName: matchedLocal.tenantName || "GBS Registered Institution",
+        tenantCode: exactCode,
+        schoolName: exactSchoolName,
+        institutionName: exactSchoolName,
+        tenantName: exactSchoolName,
+        tenant: {
+          id: matchedLocal.tenantId || "1",
+          name: exactSchoolName,
+          code: exactCode,
+          status: "ACTIVE"
+        },
         facePhoto: matchedLocal.facePhoto || null
       };
       return {
@@ -398,7 +448,7 @@ export const login = async (payload) => {
     const deletedIds = new Set(JSON.parse(localStorage.getItem("gbs_permanently_deleted_ids") || "[]").map((x) => String(x).toLowerCase()));
 
     if (deletedIds.has(rawIdentifier)) {
-      throw new Error("Access Denied: This account or institution has been permanently deleted from the GBS System.");
+      throw new Error("Access Denied: Your institution has been deleted from the system, so you cannot access the system unless you re-register for approval.");
     }
 
     const matchedLockout = [...deletedLockouts, ...deletedArchives].find((l) => {
@@ -417,7 +467,7 @@ export const login = async (payload) => {
     });
 
     if (matchedLockout) {
-      throw new Error("Access Denied: Your institution has been permanently deleted from the GBS System. Deleted institutions are barred from accessing the platform.");
+      throw new Error("Access Denied: Your institution has been deleted from the system, so you cannot access the system unless you re-register for approval.");
     }
   } catch (err) {
     if (err.message && err.message.startsWith("Access Denied:")) {
@@ -425,11 +475,34 @@ export const login = async (payload) => {
     }
   }
 
+  // Strict Lock / Suspension Check before login (except Developer)
+  if (rawIdentifier !== "gabosei48@gmail.com" && rawIdentifier !== "developer") {
+    const sysLocked = localStorage.getItem("gbs_system_locked") === "true";
+    const tenantStatus = String(localStorage.getItem("gbs_tenant_status") || "").toUpperCase();
+    const lockedTenants = (() => {
+      try {
+        return JSON.parse(localStorage.getItem("gbs_locked_tenants") || "[]");
+      } catch {
+        return [];
+      }
+    })();
+    const isSpecificLocked = lockedTenants.some((lt) => {
+      const ltEmails = [lt.email, lt.headmasterEmail, lt.adminEmail].filter(Boolean).map((e) => String(e).toLowerCase().trim());
+      return (
+        ltEmails.includes(rawIdentifier) ||
+        (lt.tenantCode && String(lt.tenantCode).toLowerCase() === rawIdentifier)
+      );
+    });
+    if (sysLocked || tenantStatus === "LOCKED" || tenantStatus === "SUSPENDED" || isSpecificLocked) {
+      throw new Error("Access Denied: Your institution is currently LOCKED / SUSPENDED by the System Developer and cannot access the system.");
+    }
+  }
+
   try {
     const response = await apiClient.post("/auth/login", payload, { timeout: 6500 });
     const authData = extractAuthPayload(response.data);
 
-    // Double-check that local onboarding queue hasn't marked this account as unapproved or deleted
+    // Double-check that local onboarding queue hasn't marked this account as unapproved, locked, or deleted
     try {
       const incomingApps = JSON.parse(localStorage.getItem("gbs_incoming_onboarding_applications") || "[]");
       const pendingLocalApp = incomingApps.find((app) => {
@@ -438,8 +511,14 @@ export const login = async (payload) => {
           .map((s) => String(s).trim().toLowerCase());
         return candidates.includes(rawIdentifier);
       });
-      if (pendingLocalApp && pendingLocalApp.isApproved !== true && String(pendingLocalApp.status || "").toUpperCase() === "PENDING_DEVELOPER_APPROVAL") {
-        throw new Error(`Access Denied: Your institution '${pendingLocalApp.institutionName || "your institution"}' is pending Developer Control Center approval.`);
+      if (pendingLocalApp) {
+        const pStatus = String(pendingLocalApp.status || "").toUpperCase();
+        if (pStatus === "LOCKED" || pStatus === "SUSPENDED" || pendingLocalApp.isLocked === true) {
+          throw new Error(`Access Denied: Your institution '${pendingLocalApp.institutionName || "your institution"}' is currently LOCKED / SUSPENDED by the System Developer and cannot access the system.`);
+        }
+        if (pendingLocalApp.isApproved !== true && pStatus === "PENDING_DEVELOPER_APPROVAL") {
+          throw new Error(`Access Denied: Your institution '${pendingLocalApp.institutionName || "your institution"}' is pending Developer Control Center approval.`);
+        }
       }
     } catch (localCheckErr) {
       if (localCheckErr.message && localCheckErr.message.startsWith("Access Denied:")) {
@@ -459,6 +538,11 @@ export const login = async (payload) => {
     }
     const status = err?.response?.status;
     const serverMsg = err?.response?.data?.message || "";
+
+    // If the backend explicitly denied access (deleted, locked, suspended, or pending approval), never bypass with local fallback unless locally approved
+    if (status === 403 && serverMsg && (serverMsg.includes("deleted") || serverMsg.includes("LOCKED") || serverMsg.includes("SUSPENDED") || serverMsg.includes("rejected"))) {
+      throw new Error(serverMsg);
+    }
 
     try {
       const fallbackAuth = attemptLocalResilientLogin(payload);
@@ -528,6 +612,42 @@ export const validateSession = async () => {
 };
 
 export const registerInstitution = async (payload) => {
+  // When a deleted institution re-registers for approval, clear its previous deletion lockout in localStorage
+  try {
+    const instNameLower = String(payload.institutionName || "").trim().toLowerCase();
+    const adminEmailLower = String(payload.adminEmail || payload.officialEmail || payload.headmasterEmail || "").trim().toLowerCase();
+
+    const matchesReReg = (item) => {
+      const iName = String(item.tenantName || item.name || item.institutionName || "").trim().toLowerCase();
+      const iEmails = [
+        ...(Array.isArray(item.emails) ? item.emails : []),
+        item.email,
+        item.adminEmail,
+        item.headmasterEmail
+      ]
+        .filter(Boolean)
+        .map((e) => String(e).trim().toLowerCase());
+      return (instNameLower && iName === instNameLower) || (adminEmailLower && iEmails.includes(adminEmailLower));
+    };
+
+    const lockouts = JSON.parse(localStorage.getItem("gbs_deleted_tenant_lockouts") || "[]");
+    localStorage.setItem("gbs_deleted_tenant_lockouts", JSON.stringify(lockouts.filter((l) => !matchesReReg(l))));
+
+    const archives = JSON.parse(localStorage.getItem("gbs_deleted_tenant_archives") || "[]");
+    localStorage.setItem("gbs_deleted_tenant_archives", JSON.stringify(archives.filter((a) => !matchesReReg(a))));
+
+    const deletedIds = JSON.parse(localStorage.getItem("gbs_permanently_deleted_ids") || "[]");
+    localStorage.setItem(
+      "gbs_permanently_deleted_ids",
+      JSON.stringify(
+        deletedIds.filter((x) => {
+          const val = String(x).trim().toLowerCase();
+          return val !== instNameLower && val !== adminEmailLower;
+        })
+      )
+    );
+  } catch {}
+
   try {
     const netPayload = { ...payload };
     if (netPayload.facePhoto && netPayload.facePhoto.length > 450000) {

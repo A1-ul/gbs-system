@@ -3,7 +3,6 @@ import { Link, useNavigate } from "react-router-dom";
 import { login } from "../api/auth.api";
 import { getServerBaseUrl } from "../../../api/client/apiConfig";
 import { getRoleBackgroundImage } from "../../../utils/userAvatars";
-import CartoonRoleVideoHubModal from "../../../components/common/CartoonRoleVideoHubModal";
 import "./MainLoginPage.css";
 
 const ROLES = [
@@ -28,7 +27,7 @@ export default function MainLoginPage() {
   const [showPassword, setShowPassword] = useState(false);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
-  
+
   // Realtime System Checks state
   const [systemChecks, setSystemChecks] = useState({
     apiGateway: true,
@@ -40,8 +39,6 @@ export default function MainLoginPage() {
 
   // Online Admission Application Modal State
   const [showAdmissionModal, setShowAdmissionModal] = useState(false);
-  const [showCartoonVideoModal, setShowCartoonVideoModal] = useState(false);
-  const [cartoonVideoRole, setCartoonVideoRole] = useState("MASTER");
   const [admissionSubmitting, setAdmissionSubmitting] = useState(false);
   const [admissionSubmitted, setAdmissionSubmitted] = useState(false);
   const [submittedAppDetails, setSubmittedAppDetails] = useState(null);
@@ -105,7 +102,7 @@ export default function MainLoginPage() {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(newApplication)
-      }).catch(() => {});
+      }).catch(() => { });
 
       const existing = JSON.parse(localStorage.getItem("gbs_submitted_admissions") || "[]");
       localStorage.setItem("gbs_submitted_admissions", JSON.stringify([newApplication, ...existing]));
@@ -198,9 +195,9 @@ export default function MainLoginPage() {
   return (
     <div className="login-container">
       {/* Real School Campus Background Image - Dynamically switches by selected user role */}
-      <div 
+      <div
         className="login-campus-bg"
-        style={{ 
+        style={{
           backgroundImage: `url('${getRoleBackgroundImage(selectedRole)}')`,
           transition: "background-image 0.6s ease-in-out"
         }}
@@ -231,9 +228,9 @@ export default function MainLoginPage() {
         {/* Crest Logo & Brand Title */}
         <div className="brand-header">
           <div style={{ display: "flex", justifyContent: "center", alignItems: "center", marginBottom: "12px" }}>
-            <img 
-              src="/assets/gbs_crest_badge.jpg" 
-              alt="GBS Crest Badge" 
+            <img
+              src="/assets/gbs_crest_badge.jpg"
+              alt="GBS Crest Badge"
               className="brand-crest-logo"
             />
           </div>
@@ -274,44 +271,6 @@ export default function MainLoginPage() {
             </div>
             <span style={{ background: "#f59e0b", color: "#000", padding: "6px 14px", borderRadius: "999px", fontSize: "0.78rem", fontWeight: "900", whiteSpace: "nowrap" }}>
               APPLY NOW →
-            </span>
-          </button>
-
-          {/* Animated Cartoon Role Video Tour & MP4 Download Callout */}
-          <button
-            type="button"
-            onClick={() => {
-              setCartoonVideoRole("MASTER");
-              setShowCartoonVideoModal(true);
-            }}
-            style={{
-              width: "100%",
-              marginTop: "10px",
-              padding: "13px 18px",
-              borderRadius: "14px",
-              background: "linear-gradient(135deg, rgba(59, 130, 246, 0.25) 0%, rgba(139, 92, 246, 0.25) 100%)",
-              border: "2px solid #38bdf8",
-              color: "#ffffff",
-              display: "flex",
-              alignItems: "center",
-              justifyContent: "space-between",
-              cursor: "pointer",
-              boxShadow: "0 6px 20px rgba(56, 189, 248, 0.22)"
-            }}
-          >
-            <div style={{ display: "flex", alignItems: "center", gap: "12px", textAlign: "left" }}>
-              <span style={{ fontSize: "2rem" }}>🎬</span>
-              <div>
-                <strong style={{ display: "block", fontSize: "0.93rem", color: "#38bdf8", letterSpacing: "0.3px" }}>
-                  WATCH 3D CARTOON SYSTEM TOUR (ALL 6 ROLES) & DOWNLOAD MP4s
-                </strong>
-                <span style={{ fontSize: "0.77rem", color: "#cbd5e1" }}>
-                  Narrated cartoon walkthroughs for Headmaster, Teacher, Student, Parent, Accountant & Staff
-                </span>
-              </div>
-            </div>
-            <span style={{ background: "#38bdf8", color: "#0f172a", padding: "6px 14px", borderRadius: "999px", fontSize: "0.76rem", fontWeight: "900", whiteSpace: "nowrap" }}>
-              WATCH / DOWNLOAD →
             </span>
           </button>
         </div>
@@ -500,8 +459,8 @@ export default function MainLoginPage() {
 
           {/* Master Blueprint Section 5: Sign Up & Onboarding Actions */}
           <div className="signup-callouts-box" style={{ marginTop: "18px", display: "flex", flexDirection: "column", gap: "10px", textAlign: "center" }}>
-            <Link 
-              to={`/signup/${selectedRole.toLowerCase()}`} 
+            <Link
+              to={`/signup/${selectedRole.toLowerCase()}`}
               className="signup-member-btn"
               style={{
                 display: "block",
@@ -517,13 +476,13 @@ export default function MainLoginPage() {
             >
               ✨ New to GBS? Register as a {selectedRole} Member →
             </Link>
-            <Link 
-              to="/onboarding?force=true" 
+            <Link
+              to="/onboarding?force=true"
               className="signup-institution-btn"
               onClick={() => {
                 try {
                   localStorage.removeItem("gbs_tenant_already_onboarded");
-                } catch {}
+                } catch { }
               }}
               style={{
                 display: "block",
@@ -550,7 +509,7 @@ export default function MainLoginPage() {
 
       {/* Online Admission Application Modal */}
       {showAdmissionModal && (
-        <div 
+        <div
           style={{
             position: "fixed",
             inset: 0,
@@ -563,7 +522,7 @@ export default function MainLoginPage() {
             padding: "1rem"
           }}
         >
-          <div 
+          <div
             style={{
               maxHeight: "92vh",
               width: "100%",
@@ -591,7 +550,7 @@ export default function MainLoginPage() {
                   </p>
                 </div>
               </div>
-              <button 
+              <button
                 type="button"
                 onClick={() => setShowAdmissionModal(false)}
                 style={{
@@ -651,7 +610,7 @@ export default function MainLoginPage() {
                     When the Headmaster reviews and approves your application, the system will automatically send an SMS and portal notice to your contact (<strong>{submittedAppDetails?.guardianPhone}</strong>) saying:
                   </p>
                   <blockquote style={{ margin: "10px 0 0", background: "rgba(0, 0, 0, 0.25)", padding: "10px 14px", borderRadius: "8px", fontStyle: "italic", color: "#a7f3d0", fontSize: "0.85rem", borderLeft: "3px solid #10b981" }}>
-                    "Congratulations! Your ward {submittedAppDetails?.studentFirstName} {submittedAppDetails?.studentLastName}'s application to GBS International School has been approved by the Headmaster. Please bring your ward to the campus Admissions Office with original birth certificates and academic transcripts for physical verification to finalize main admission."
+                    "Congratulations! Your ward {submittedAppDetails?.studentFirstName} {submittedAppDetails?.studentLastName}'s application to {submittedAppDetails?.institutionName || "your school"} has been approved by the Headmaster. Please bring your ward to the campus Admissions Office with original birth certificates and academic transcripts for physical verification to finalize main admission."
                   </blockquote>
                 </div>
 
@@ -681,48 +640,48 @@ export default function MainLoginPage() {
                   <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(220px, 1fr))", gap: "1rem" }}>
                     <div>
                       <label style={{ display: "block", fontSize: "0.8rem", color: "#94a3b8", marginBottom: "4px" }}>Ward First Name *</label>
-                      <input 
-                        type="text" 
-                        required 
-                        placeholder="e.g. Julian" 
+                      <input
+                        type="text"
+                        required
+                        placeholder="e.g. Julian"
                         className="filter-input"
                         style={{ width: "100%", padding: "9px 12px", background: "rgba(15, 23, 42, 0.9)", border: "1px solid rgba(255, 255, 255, 0.15)", color: "#f8fafc", borderRadius: "8px" }}
-                        value={admissionForm.studentFirstName} 
-                        onChange={(e) => setAdmissionForm({ ...admissionForm, studentFirstName: e.target.value })} 
+                        value={admissionForm.studentFirstName}
+                        onChange={(e) => setAdmissionForm({ ...admissionForm, studentFirstName: e.target.value })}
                       />
                     </div>
 
                     <div>
                       <label style={{ display: "block", fontSize: "0.8rem", color: "#94a3b8", marginBottom: "4px" }}>Ward Last Name *</label>
-                      <input 
-                        type="text" 
-                        required 
-                        placeholder="e.g. Doe" 
+                      <input
+                        type="text"
+                        required
+                        placeholder="e.g. Doe"
                         className="filter-input"
                         style={{ width: "100%", padding: "9px 12px", background: "rgba(15, 23, 42, 0.9)", border: "1px solid rgba(255, 255, 255, 0.15)", color: "#f8fafc", borderRadius: "8px" }}
-                        value={admissionForm.studentLastName} 
-                        onChange={(e) => setAdmissionForm({ ...admissionForm, studentLastName: e.target.value })} 
+                        value={admissionForm.studentLastName}
+                        onChange={(e) => setAdmissionForm({ ...admissionForm, studentLastName: e.target.value })}
                       />
                     </div>
 
                     <div>
                       <label style={{ display: "block", fontSize: "0.8rem", color: "#94a3b8", marginBottom: "4px" }}>Date of Birth *</label>
-                      <input 
-                        type="date" 
-                        required 
+                      <input
+                        type="date"
+                        required
                         className="filter-input"
                         style={{ width: "100%", padding: "9px 12px", background: "rgba(15, 23, 42, 0.9)", border: "1px solid rgba(255, 255, 255, 0.15)", color: "#f8fafc", borderRadius: "8px" }}
-                        value={admissionForm.dateOfBirth} 
-                        onChange={(e) => setAdmissionForm({ ...admissionForm, dateOfBirth: e.target.value })} 
+                        value={admissionForm.dateOfBirth}
+                        onChange={(e) => setAdmissionForm({ ...admissionForm, dateOfBirth: e.target.value })}
                       />
                     </div>
 
                     <div>
                       <label style={{ display: "block", fontSize: "0.8rem", color: "#94a3b8", marginBottom: "4px" }}>Gender *</label>
-                      <select 
+                      <select
                         className="filter-select"
                         style={{ width: "100%", padding: "9px 12px", background: "rgba(15, 23, 42, 0.9)", border: "1px solid rgba(255, 255, 255, 0.15)", color: "#f8fafc", borderRadius: "8px" }}
-                        value={admissionForm.gender} 
+                        value={admissionForm.gender}
                         onChange={(e) => setAdmissionForm({ ...admissionForm, gender: e.target.value })}
                       >
                         <option value="MALE">Male</option>
@@ -732,10 +691,10 @@ export default function MainLoginPage() {
 
                     <div>
                       <label style={{ display: "block", fontSize: "0.8rem", color: "#94a3b8", marginBottom: "4px" }}>Target Class / Level *</label>
-                      <select 
+                      <select
                         className="filter-select"
                         style={{ width: "100%", padding: "9px 12px", background: "rgba(15, 23, 42, 0.9)", border: "1px solid rgba(255, 255, 255, 0.15)", color: "#f8fafc", borderRadius: "8px" }}
-                        value={admissionForm.targetClassTier} 
+                        value={admissionForm.targetClassTier}
                         onChange={(e) => setAdmissionForm({ ...admissionForm, targetClassTier: e.target.value })}
                       >
                         <option value="Nursery 1 (Early Years)">Nursery 1 (Early Years)</option>
@@ -761,13 +720,13 @@ export default function MainLoginPage() {
 
                     <div>
                       <label style={{ display: "block", fontSize: "0.8rem", color: "#94a3b8", marginBottom: "4px" }}>Previous School Name</label>
-                      <input 
-                        type="text" 
-                        placeholder="e.g. St. Jude Preparatory Academy" 
+                      <input
+                        type="text"
+                        placeholder="e.g. St. Jude Preparatory Academy"
                         className="filter-input"
                         style={{ width: "100%", padding: "9px 12px", background: "rgba(15, 23, 42, 0.9)", border: "1px solid rgba(255, 255, 255, 0.15)", color: "#f8fafc", borderRadius: "8px" }}
-                        value={admissionForm.previousSchool} 
-                        onChange={(e) => setAdmissionForm({ ...admissionForm, previousSchool: e.target.value })} 
+                        value={admissionForm.previousSchool}
+                        onChange={(e) => setAdmissionForm({ ...admissionForm, previousSchool: e.target.value })}
                       />
                     </div>
                   </div>
@@ -781,14 +740,14 @@ export default function MainLoginPage() {
                   <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(220px, 1fr))", gap: "1rem" }}>
                     <div>
                       <label style={{ display: "block", fontSize: "0.8rem", color: "#94a3b8", marginBottom: "4px" }}>Guardian Full Name *</label>
-                      <input 
-                        type="text" 
-                        required 
-                        placeholder="e.g. Marcus Doe" 
+                      <input
+                        type="text"
+                        required
+                        placeholder="e.g. Marcus Doe"
                         className="filter-input"
                         style={{ width: "100%", padding: "9px 12px", background: "rgba(15, 23, 42, 0.9)", border: "1px solid rgba(255, 255, 255, 0.15)", color: "#f8fafc", borderRadius: "8px" }}
-                        value={admissionForm.guardianName} 
-                        onChange={(e) => setAdmissionForm({ ...admissionForm, guardianName: e.target.value })} 
+                        value={admissionForm.guardianName}
+                        onChange={(e) => setAdmissionForm({ ...admissionForm, guardianName: e.target.value })}
                       />
                     </div>
 
@@ -796,35 +755,35 @@ export default function MainLoginPage() {
                       <label style={{ display: "block", fontSize: "0.8rem", color: "#34d399", fontWeight: "700", marginBottom: "4px" }}>
                         Phone Contact (For Approval SMS Notice) *
                       </label>
-                      <input 
-                        type="tel" 
-                        required 
-                        placeholder="e.g. +1-555-0199 or 0244123456" 
+                      <input
+                        type="tel"
+                        required
+                        placeholder="e.g. +1-555-0199 or 0244123456"
                         className="filter-input"
                         style={{ width: "100%", padding: "9px 12px", background: "rgba(15, 23, 42, 0.9)", border: "1.5px solid #10b981", color: "#f8fafc", borderRadius: "8px" }}
-                        value={admissionForm.guardianPhone} 
-                        onChange={(e) => setAdmissionForm({ ...admissionForm, guardianPhone: e.target.value })} 
+                        value={admissionForm.guardianPhone}
+                        onChange={(e) => setAdmissionForm({ ...admissionForm, guardianPhone: e.target.value })}
                       />
                     </div>
 
                     <div>
                       <label style={{ display: "block", fontSize: "0.8rem", color: "#94a3b8", marginBottom: "4px" }}>Email Address</label>
-                      <input 
-                        type="email" 
-                        placeholder="e.g. parent.marcus@gmail.com" 
+                      <input
+                        type="email"
+                        placeholder="e.g. parent.marcus@gmail.com"
                         className="filter-input"
                         style={{ width: "100%", padding: "9px 12px", background: "rgba(15, 23, 42, 0.9)", border: "1px solid rgba(255, 255, 255, 0.15)", color: "#f8fafc", borderRadius: "8px" }}
-                        value={admissionForm.guardianEmail} 
-                        onChange={(e) => setAdmissionForm({ ...admissionForm, guardianEmail: e.target.value })} 
+                        value={admissionForm.guardianEmail}
+                        onChange={(e) => setAdmissionForm({ ...admissionForm, guardianEmail: e.target.value })}
                       />
                     </div>
 
                     <div>
                       <label style={{ display: "block", fontSize: "0.8rem", color: "#94a3b8", marginBottom: "4px" }}>Relationship to Ward *</label>
-                      <select 
+                      <select
                         className="filter-select"
                         style={{ width: "100%", padding: "9px 12px", background: "rgba(15, 23, 42, 0.9)", border: "1px solid rgba(255, 255, 255, 0.15)", color: "#f8fafc", borderRadius: "8px" }}
-                        value={admissionForm.guardianRelationship} 
+                        value={admissionForm.guardianRelationship}
                         onChange={(e) => setAdmissionForm({ ...admissionForm, guardianRelationship: e.target.value })}
                       >
                         <option value="FATHER">Father</option>
@@ -836,13 +795,13 @@ export default function MainLoginPage() {
 
                     <div style={{ gridColumn: "span 2" }}>
                       <label style={{ display: "block", fontSize: "0.8rem", color: "#94a3b8", marginBottom: "4px" }}>Physical Residential Address</label>
-                      <input 
-                        type="text" 
-                        placeholder="e.g. 142 Oakridge Avenue, Silicon Valley / Greater Accra" 
+                      <input
+                        type="text"
+                        placeholder="e.g. 142 Oakridge Avenue, Silicon Valley / Greater Accra"
                         className="filter-input"
                         style={{ width: "100%", padding: "9px 12px", background: "rgba(15, 23, 42, 0.9)", border: "1px solid rgba(255, 255, 255, 0.15)", color: "#f8fafc", borderRadius: "8px" }}
-                        value={admissionForm.residentialAddress} 
-                        onChange={(e) => setAdmissionForm({ ...admissionForm, residentialAddress: e.target.value })} 
+                        value={admissionForm.residentialAddress}
+                        onChange={(e) => setAdmissionForm({ ...admissionForm, residentialAddress: e.target.value })}
                       />
                     </div>
                   </div>
@@ -856,10 +815,10 @@ export default function MainLoginPage() {
                   <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(220px, 1fr))", gap: "1rem" }}>
                     <div>
                       <label style={{ display: "block", fontSize: "0.8rem", color: "#94a3b8", marginBottom: "4px" }}>Campus Residency</label>
-                      <select 
+                      <select
                         className="filter-select"
                         style={{ width: "100%", padding: "9px 12px", background: "rgba(15, 23, 42, 0.9)", border: "1px solid rgba(255, 255, 255, 0.15)", color: "#f8fafc", borderRadius: "8px" }}
-                        value={admissionForm.residencyType} 
+                        value={admissionForm.residencyType}
                         onChange={(e) => setAdmissionForm({ ...admissionForm, residencyType: e.target.value })}
                       >
                         <option value="DAY_STUDENT">Day Student (Commuter)</option>
@@ -869,10 +828,10 @@ export default function MainLoginPage() {
 
                     <div>
                       <label style={{ display: "block", fontSize: "0.8rem", color: "#94a3b8", marginBottom: "4px" }}>Academic Program Focus</label>
-                      <select 
+                      <select
                         className="filter-select"
                         style={{ width: "100%", padding: "9px 12px", background: "rgba(15, 23, 42, 0.9)", border: "1px solid rgba(255, 255, 255, 0.15)", color: "#f8fafc", borderRadius: "8px" }}
-                        value={admissionForm.academicTrack} 
+                        value={admissionForm.academicTrack}
                         onChange={(e) => setAdmissionForm({ ...admissionForm, academicTrack: e.target.value })}
                       >
                         <option value="STEM & BILINGUAL">STEM & Bilingual Curriculum</option>
@@ -884,13 +843,13 @@ export default function MainLoginPage() {
 
                     <div style={{ gridColumn: "span 2" }}>
                       <label style={{ display: "block", fontSize: "0.8rem", color: "#94a3b8", marginBottom: "4px" }}>Additional Academic Notes or Special Requirements</label>
-                      <textarea 
-                        rows={2} 
-                        placeholder="e.g. Inquiring about scholarship considerations, athletic track, or dietary needs..." 
+                      <textarea
+                        rows={2}
+                        placeholder="e.g. Inquiring about scholarship considerations, athletic track, or dietary needs..."
                         className="filter-input"
                         style={{ width: "100%", padding: "9px 12px", background: "rgba(15, 23, 42, 0.9)", border: "1px solid rgba(255, 255, 255, 0.15)", color: "#f8fafc", borderRadius: "8px", resize: "vertical" }}
-                        value={admissionForm.notes} 
-                        onChange={(e) => setAdmissionForm({ ...admissionForm, notes: e.target.value })} 
+                        value={admissionForm.notes}
+                        onChange={(e) => setAdmissionForm({ ...admissionForm, notes: e.target.value })}
                       />
                     </div>
                   </div>
@@ -901,15 +860,15 @@ export default function MainLoginPage() {
                     🔒 Application will be held in <strong>PENDING</strong> status until Headmaster decision.
                   </span>
                   <div style={{ display: "flex", gap: "10px" }}>
-                    <button 
-                      type="button" 
+                    <button
+                      type="button"
                       onClick={() => setShowAdmissionModal(false)}
                       style={{ padding: "10px 18px", borderRadius: "8px", background: "rgba(255, 255, 255, 0.1)", border: "none", color: "#cbd5e1", cursor: "pointer", fontSize: "0.85rem" }}
                     >
                       Cancel
                     </button>
-                    <button 
-                      type="submit" 
+                    <button
+                      type="submit"
                       disabled={admissionSubmitting}
                       style={{ padding: "10px 24px", borderRadius: "8px", background: "linear-gradient(135deg, #f59e0b 0%, #10b981 100%)", border: "none", color: "#000", fontWeight: "800", cursor: "pointer", fontSize: "0.88rem" }}
                     >
@@ -922,12 +881,6 @@ export default function MainLoginPage() {
           </div>
         </div>
       )}
-
-      <CartoonRoleVideoHubModal
-        isOpen={showCartoonVideoModal}
-        onClose={() => setShowCartoonVideoModal(false)}
-        initialVideoId={cartoonVideoRole}
-      />
     </div>
   );
 }

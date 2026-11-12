@@ -53,14 +53,14 @@ function resolveRegisteredSchoolName(tenantId = null, customSchoolName = null) {
     }
   } catch (_) {}
 
-  return "WITHIN DE BRAIN ACADEMY";
+  return "GBS REGISTERED SCHOOL";
 }
 
 /**
  * Format any outgoing SMS with the registered school name prefix
  */
 function formatSMSWithSchoolHeader(rawContent, schoolName) {
-  const cleanSchool = schoolName || "WITHIN DE BRAIN ACADEMY";
+  const cleanSchool = schoolName || resolveRegisteredSchoolName();
   const text = String(rawContent || "").trim();
   const header = `[${cleanSchool}]`;
   if (text.startsWith(header) || text.toUpperCase().startsWith(`[${cleanSchool.toUpperCase()}]`)) {
@@ -244,7 +244,7 @@ async function getStatus() {
   return {
     module: "sms",
     status: "OPERATIONAL",
-    defaultSchoolName: "WITHIN DE BRAIN ACADEMY",
+    defaultSchoolName: resolveRegisteredSchoolName(),
     carriers: ["MTN", "Telecel", "AirtelTigo", "Global International (+233, +1, +44, +234, +254)"],
     uptime: process.uptime(),
     totalMessagesDispatched: smsLogs.length,

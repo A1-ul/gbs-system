@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useRef } from "react";
 import apiClient from "../../api/client/apiClient";
+import { getActiveSchoolName } from "../../utils/schoolBranding";
 
 /**
  * MobileCameraAIExamScannerModal.jsx
@@ -1361,7 +1362,7 @@ export default function MobileCameraAIExamScannerModal({
                   <h4 style={{ margin: 0, fontSize: "1.1rem", color: "#f8fafc" }}>
                     OFFICIAL STUDENT EXAMINATION REPORT
                   </h4>
-                  <span style={{ fontSize: "0.78rem", color: "#94a3b8" }}>GBS International School • Academic Evaluation Directorate</span>
+                  <span style={{ fontSize: "0.78rem", color: "#94a3b8" }}>{getActiveSchoolName(currentUser)} • Academic Evaluation Directorate</span>
                 </div>
                 <div style={{ textAlign: "right" }}>
                   <span style={{ background: "#38bdf8", color: "#0f172a", fontWeight: 900, padding: "3px 10px", borderRadius: "6px", fontSize: "0.82rem" }}>

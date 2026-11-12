@@ -55,7 +55,6 @@ import FacilityManagementPage from "../modules/facility/pages/FacilityManagement
 import DigitalTwinCampusPage from "../modules/campus/pages/DigitalTwinCampusPage";
 import CCTVSecurityHubPage from "../modules/cctv/pages/CCTVSecurityHubPage";
 import ShardingDrManagementPage from "../modules/infrastructure/pages/ShardingDrManagementPage";
-import VideoPresentationEngine from "../modules/presentation/pages/VideoPresentationEngine";
 import GBSCompanyWebsite from "../modules/website/pages/GBSCompanyWebsite";
 import UniversalDetailPage from "../components/common/UniversalDetailPage";
 
@@ -103,23 +102,65 @@ function ProtectedPortalRoute({ children, loginPath = "/login" }) {
       return <Navigate to={loginPath} replace />;
     }
 
-    // Check if user or onboarding institution is still pending approval
+    // Check if user or onboarding institution is still pending approval, rejected, or locked/suspended
     const uStatus = String(user?.status || user?.verificationStatus || "").toUpperCase();
-    if (user?.isApproved === false || uStatus.includes("PENDING") || uStatus === "REJECTED") {
+    if (
+      user?.isApproved === false ||
+      user?.isLocked === true ||
+      user?.isActive === false ||
+      uStatus.includes("PENDING") ||
+      uStatus === "REJECTED" ||
+      uStatus === "LOCKED" ||
+      uStatus === "SUSPENDED" ||
+      uStatus === "DELETED"
+    ) {
       localStorage.removeItem("gbs_user");
       localStorage.removeItem("gbs_access_token");
       return <Navigate to={loginPath} replace />;
     }
 
     const incomingApps = JSON.parse(localStorage.getItem("gbs_incoming_onboarding_applications") || "[]");
-    const pendingApp = incomingApps.find((app) => {
-      const appEmails = [app.headmasterEmail, app.adminEmail, app.officialEmail].filter(Boolean).map((e) => String(e).toLowerCase().trim());
-      return (userEmail && appEmails.includes(userEmail)) || (userCode && userCode !== "gbs-main" && String(app.tenantCode || "").toLowerCase() === userCode);
+    const archivedApps = JSON.parse(localStorage.getItem("gbs_archived_onboarded_tenants") || "[]");
+    const lockedTenantsList = JSON.parse(localStorage.getItem("gbs_locked_tenants_list") || "[]");
+
+    const isTenantExplicitlyLocked = lockedTenantsList.some((lt) => {
+      const ltId = String(lt.id || lt.tenantId || "").toLowerCase();
+      const ltCode = String(lt.tenantCode || lt.code || "").toLowerCase();
+      const ltEmail = String(lt.email || lt.headmasterEmail || "").toLowerCase();
+      return (
+        (userTenantId && userTenantId !== "1" && ltId === userTenantId) ||
+        (userCode && userCode !== "gbs-main" && ltCode === userCode) ||
+        (userEmail && ltEmail === userEmail)
+      );
     });
-    if (pendingApp && pendingApp.isApproved !== true && String(pendingApp.status || "").toUpperCase() === "PENDING_DEVELOPER_APPROVAL") {
+    if (isTenantExplicitlyLocked) {
       localStorage.removeItem("gbs_user");
       localStorage.removeItem("gbs_access_token");
       return <Navigate to={loginPath} replace />;
+    }
+
+    const matchingApp = [...incomingApps, ...archivedApps].find((app) => {
+      const appEmails = [app.headmasterEmail, app.adminEmail, app.officialEmail, app.email].filter(Boolean).map((e) => String(e).toLowerCase().trim());
+      return (
+        (userEmail && appEmails.includes(userEmail)) ||
+        (userCode && userCode !== "gbs-main" && String(app.tenantCode || app.code || "").toLowerCase() === userCode) ||
+        (userTenantId && userTenantId !== "1" && String(app.id || app.tenantId || "").toLowerCase() === userTenantId)
+      );
+    });
+    if (matchingApp) {
+      const mStatus = String(matchingApp.status || "").toUpperCase();
+      if (
+        (matchingApp.isApproved !== true && mStatus === "PENDING_DEVELOPER_APPROVAL") ||
+        matchingApp.isLocked === true ||
+        mStatus === "LOCKED" ||
+        mStatus === "SUSPENDED" ||
+        mStatus === "REJECTED" ||
+        mStatus === "DELETED"
+      ) {
+        localStorage.removeItem("gbs_user");
+        localStorage.removeItem("gbs_access_token");
+        return <Navigate to={loginPath} replace />;
+      }
     }
   } catch { }
   return children;
@@ -136,11 +177,6 @@ export default function AppRouter() {
         <Route path="/website" element={<GBSCompanyWebsite />} />
         <Route path="/company" element={<GBSCompanyWebsite />} />
         <Route path="/home" element={<GBSCompanyWebsite />} />
-
-        {/* Executive Video Presentation & Client Demo Showcase Engine */}
-        <Route path="/presentation-engine" element={<VideoPresentationEngine />} />
-        <Route path="/demo-hub" element={<VideoPresentationEngine />} />
-        <Route path="/presentation" element={<VideoPresentationEngine />} />
 
         {/* Main Portal & Role Authentication */}
         <Route path="/login" element={<MainLoginPage />} />
@@ -235,7 +271,7 @@ export default function AppRouter() {
         <Route path="/parents" element={<ParentPortalDashboard />} />
         <Route path="/emergency-locator" element={<EmergencyLocatorPage />} />
         <Route path="/admin/emergency-locator" element={<EmergencyLocatorPage />} />
-        
+
         {/* Phase 3: Admission Workflow Engine (Master Blueprint Box 6) */}
         <Route path="/admissions" element={<AdmissionWorkflowDashboard />} />
         <Route path="/admin/admissions" element={<AdmissionWorkflowDashboard />} />

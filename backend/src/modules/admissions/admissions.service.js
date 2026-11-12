@@ -627,6 +627,64 @@ async function getAnalytics(tenantId) {
 }
 
 /**
+ * Update / Amend Admission Application Record
+ */
+async function updateApplication(tenantId, applicationId, payload, adminUser) {
+  const tid = parseInt(tenantId, 10);
+  const aid = parseInt(applicationId, 10);
+
+  const existing = await prisma.admissionApplication.findFirst({
+    where: { id: aid, tenantId: tid }
+  });
+  if (!existing) {
+    throw new AppError(`Application ID ${applicationId} not found in this institution.`, 404);
+  }
+
+  const updates = {};
+  if (payload.studentFirstName !== undefined) updates.studentFirstName = String(payload.studentFirstName).trim();
+  if (payload.studentLastName !== undefined) updates.studentLastName = String(payload.studentLastName).trim();
+  if (payload.dateOfBirth !== undefined) {
+    const dob = new Date(payload.dateOfBirth);
+    if (!isNaN(dob.getTime())) updates.dateOfBirth = dob;
+  }
+  if (payload.targetGradeLevel !== undefined) {
+    const g = parseInt(payload.targetGradeLevel, 10);
+    if (!isNaN(g)) updates.targetGradeLevel = g;
+  }
+  if (payload.targetClassId !== undefined) {
+    const cid = payload.targetClassId ? parseInt(payload.targetClassId, 10) : null;
+    updates.targetClassId = cid;
+  }
+  if (payload.guardianName !== undefined) updates.guardianName = String(payload.guardianName).trim();
+  if (payload.guardianEmail !== undefined) updates.guardianEmail = String(payload.guardianEmail).trim().toLowerCase();
+  if (payload.guardianPhone !== undefined) updates.guardianPhone = String(payload.guardianPhone).trim();
+  if (payload.guardianRelationship !== undefined) updates.guardianRelationship = String(payload.guardianRelationship).trim();
+  if (payload.previousSchool !== undefined) updates.previousSchool = payload.previousSchool ? String(payload.previousSchool).trim() : null;
+  if (payload.reviewerNotes !== undefined || payload.notes !== undefined) {
+    updates.reviewerNotes = String(payload.reviewerNotes ?? payload.notes ?? '').trim();
+  }
+  if (payload.stage !== undefined) updates.stage = String(payload.stage).toUpperCase().trim();
+
+  const updated = await prisma.admissionApplication.update({
+    where: { id: aid },
+    data: updates,
+    include: { targetClass: true, documents: true }
+  });
+
+  await prisma.auditLog.create({
+    data: {
+      tenantId: tid,
+      userId: adminUser?.id || null,
+      module: 'ADMISSION',
+      action: 'ADMISSION_APPLICATION_UPDATED',
+      details: `Updated admission application ${updated.applicationNumber} (${updated.studentFirstName} ${updated.studentLastName}).`
+    }
+  }).catch(() => {});
+
+  return updated;
+}
+
+/**
  * Delete Application
  */
 async function deleteApplication(tenantId, applicationId, adminUser) {
@@ -701,6 +759,7 @@ module.exports = {
   scheduleInterview,
   approveApplication,
   rejectApplication,
+  updateApplication,
   deleteApplication,
   batchDeleteApplications,
   getApplications,

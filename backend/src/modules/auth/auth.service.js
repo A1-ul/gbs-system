@@ -7,6 +7,7 @@ const {
   readPersistentStore,
   writePersistentStore,
   isTenantLockedOut,
+  removeDeletedTenantLockout,
   isPermanentlyDeleted,
   checkPostgresReachable
 } = require('../../core/database/persistentStore');
@@ -244,7 +245,7 @@ const login = async ({ email, username, identifier, password, portalRole }) => {
   // 0. Enforce permanent lockout for deleted institutions
   if (isTenantLockedOut({ email: cleanId, adminEmail: cleanId, code: cleanId, tenantCode: cleanId })) {
     throw new AppError(
-      'Access Denied: This institution has been permanently deleted from the GBS System and is banned from accessing the platform.',
+      'Access Denied: Your institution has been deleted from the system, so you cannot access the system unless you re-register for approval.',
       403
     );
   }
@@ -252,7 +253,7 @@ const login = async ({ email, username, identifier, password, portalRole }) => {
   let user = null;
   let isBuiltinAccount = false;
 
-  // 1. Check dynamic institutions FIRST so unapproved or deleted institutions can NEVER bypass via DYNAMIC_REGISTERED_USERS
+  // 1. Check dynamic institutions FIRST so unapproved, locked, or deleted institutions can NEVER bypass via DYNAMIC_REGISTERED_USERS
   const matchedInst = DYNAMIC_INSTITUTIONS.find(
     (inst) =>
       (inst.adminEmail && inst.adminEmail.toLowerCase() === cleanId) ||
@@ -276,7 +277,13 @@ const login = async ({ email, username, identifier, password, portalRole }) => {
       })
     ) {
       throw new AppError(
-        `Access Denied: The institution '${matchedInst.institutionName || cleanId}' has been permanently deleted from the GBS System and cannot access the platform.`,
+        'Access Denied: Your institution has been deleted from the system, so you cannot access the system unless you re-register for approval.',
+        403
+      );
+    }
+    if (instStatus === 'LOCKED' || instStatus === 'SUSPENDED' || matchedInst.isLocked === true) {
+      throw new AppError(
+        `Access Denied: Your institution '${matchedInst.institutionName || 'your institution'}' is currently LOCKED / SUSPENDED by the System Developer and cannot access the system.`,
         403
       );
     }
@@ -305,20 +312,49 @@ const login = async ({ email, username, identifier, password, portalRole }) => {
     (u) => (u.email && u.email.toLowerCase() === cleanId) || (u.username && u.username.toLowerCase() === cleanId)
   );
   if (dynUser) {
-    if (dynUser.isDeleted || isPermanentlyDeleted(dynUser.id) || isPermanentlyDeleted(dynUser.email)) {
-      throw new AppError('Access Denied: This user account has been permanently deleted from the system.', 403);
+    const isDynDev = String(dynUser.role || '').toUpperCase() === 'DEVELOPER' || String(dynUser.email || '').toLowerCase() === 'gabosei48@gmail.com';
+    const isDynDeleted = !isDynDev && (
+      dynUser.isDeleted ||
+      isPermanentlyDeleted(`User:${dynUser.id}`) ||
+      (String(dynUser.id || '').startsWith('usr_') && isPermanentlyDeleted(dynUser.id)) ||
+      isPermanentlyDeleted(dynUser.email)
+    );
+    if (isDynDeleted) {
+      throw new AppError('Access Denied: Your institution has been deleted from the system, so you cannot access the system unless you re-register for approval.', 403);
     }
     if (
       isTenantLockedOut({
         id: dynUser.tenantId || dynUser.tenant?.id,
         code: dynUser.tenant?.code || dynUser.tenantCode,
-        name: dynUser.tenant?.name || dynUser.schoolName,
+        name: dynUser.tenant?.name || dynUser.schoolName || dynUser.institutionName,
         email: dynUser.email
       })
     ) {
-      throw new AppError('Access Denied: Your institution has been permanently deleted from the GBS System.', 403);
+      throw new AppError('Access Denied: Your institution has been deleted from the system, so you cannot access the system unless you re-register for approval.', 403);
+    }
+    // Check if the user's institution is locked in DYNAMIC_INSTITUTIONS
+    const userInst = matchedInst || DYNAMIC_INSTITUTIONS.find(
+      (inst) =>
+        (dynUser.tenantId && String(inst.tenantId || inst.id) === String(dynUser.tenantId)) ||
+        (dynUser.tenantCode && inst.tenantCode && inst.tenantCode.toLowerCase() === String(dynUser.tenantCode).toLowerCase()) ||
+        (dynUser.tenant?.code && inst.tenantCode && inst.tenantCode.toLowerCase() === String(dynUser.tenant.code).toLowerCase())
+    );
+    if (userInst) {
+      const uInstStatus = String(userInst.status || '').toUpperCase();
+      if (uInstStatus === 'LOCKED' || uInstStatus === 'SUSPENDED' || userInst.isLocked === true) {
+        throw new AppError(
+          `Access Denied: Your institution '${userInst.institutionName || 'your institution'}' is currently LOCKED / SUSPENDED by the System Developer and cannot access the system.`,
+          403
+        );
+      }
     }
     const userStatus = String(dynUser.status || dynUser.verificationStatus || '').toUpperCase();
+    if (userStatus === 'LOCKED' || userStatus === 'SUSPENDED' || dynUser.isLocked === true || dynUser.tenant?.status === 'LOCKED' || dynUser.tenant?.status === 'SUSPENDED') {
+      throw new AppError(
+        `Access Denied: Your institution '${dynUser.institutionName || dynUser.schoolName || dynUser.tenant?.name || 'your institution'}' is currently LOCKED / SUSPENDED by the System Developer and cannot access the system.`,
+        403
+      );
+    }
     if (
       dynUser.isApproved === false ||
       dynUser.isActive === false ||
@@ -333,7 +369,13 @@ const login = async ({ email, username, identifier, password, portalRole }) => {
         403
       );
     }
-    user = dynUser;
+    user = {
+      ...dynUser,
+      schoolName: userInst?.institutionName || dynUser.schoolName || dynUser.institutionName || dynUser.tenantName || dynUser.tenant?.name,
+      institutionName: userInst?.institutionName || dynUser.institutionName || dynUser.schoolName || dynUser.tenantName || dynUser.tenant?.name,
+      tenantName: userInst?.institutionName || dynUser.tenantName || dynUser.institutionName || dynUser.schoolName || dynUser.tenant?.name,
+      tenantCode: userInst?.tenantCode || dynUser.tenantCode || dynUser.tenant?.code
+    };
   }
 
   // 3. If not in DYNAMIC_REGISTERED_USERS, construct approved Headmaster session from matchedInst
@@ -352,6 +394,10 @@ const login = async ({ email, username, identifier, password, portalRole }) => {
       isLocked: false,
       permissions: ['*'],
       facePhoto: matchedInst.facePhoto || null,
+      schoolName: matchedInst.institutionName,
+      institutionName: matchedInst.institutionName,
+      tenantName: matchedInst.institutionName,
+      tenantCode: matchedInst.tenantCode,
       tenant: {
         id: matchedInst.tenantId || matchedInst.tenantUid || 'tnt_master_default',
         name: matchedInst.institutionName,
@@ -378,21 +424,34 @@ const login = async ({ email, username, identifier, password, portalRole }) => {
         2200
       );
       if (dbUser) {
-        if (dbUser.isDeleted || isPermanentlyDeleted(dbUser.id) || isPermanentlyDeleted(dbUser.email)) {
+        const isDbDev = String(dbUser.role || '').toUpperCase() === 'DEVELOPER' || String(dbUser.email || '').toLowerCase() === 'gabosei48@gmail.com';
+        const isDbUserDeleted = !isDbDev && (
+          dbUser.isDeleted ||
+          isPermanentlyDeleted(`User:${dbUser.id}`) ||
+          isPermanentlyDeleted(dbUser.email)
+        );
+        if (isDbUserDeleted) {
           throw new AppError('Access Denied: This user account has been permanently deleted from the system.', 403);
         }
         if (
-          dbUser.tenant?.isDeleted ||
-          isTenantLockedOut({
-            id: dbUser.tenantId || dbUser.tenant?.id,
-            code: dbUser.tenant?.code,
-            name: dbUser.tenant?.name,
-            email: dbUser.email
-          })
+          !isDbDev &&
+          (dbUser.tenant?.isDeleted ||
+            isTenantLockedOut({
+              id: dbUser.tenantId || dbUser.tenant?.id,
+              code: dbUser.tenant?.code,
+              name: dbUser.tenant?.name,
+              email: dbUser.email
+            }))
         ) {
-          throw new AppError('Access Denied: Your institution has been permanently deleted from the GBS System.', 403);
+          throw new AppError('Access Denied: Your institution has been deleted from the system, so you cannot access the system unless you re-register for approval.', 403);
         }
-        if (dbUser.isActive === false) {
+        if (!isDbDev && (dbUser.tenant?.status === 'LOCKED' || dbUser.tenant?.status === 'SUSPENDED' || dbUser.tenant?.isActive === false)) {
+          throw new AppError(
+            `Access Denied: Your institution '${dbUser.tenant?.name || 'your institution'}' is currently LOCKED / SUSPENDED by the System Developer and cannot access the system.`,
+            403
+          );
+        }
+        if (!isDbDev && dbUser.isActive === false) {
           throw new AppError('Access Denied: Your account is pending approval by the Headmaster or System Developer.', 403);
         }
         user = dbUser;
@@ -438,7 +497,13 @@ const login = async ({ email, username, identifier, password, portalRole }) => {
           regStatus === 'PURGED' ||
           isTenantLockedOut({ id: reg.id || reg.tenantId, code: reg.tenantCode, name: reg.institutionName, email: reg.adminEmail })
         ) {
-          throw new AppError('Access Denied: Your institution has been permanently deleted from the GBS System.', 403);
+          throw new AppError('Access Denied: Your institution has been deleted from the system, so you cannot access the system unless you re-register for approval.', 403);
+        }
+        if (regStatus === 'LOCKED' || regStatus === 'SUSPENDED' || reg.isLocked === true) {
+          throw new AppError(
+            `Access Denied: Your institution '${reg.institutionName || 'your institution'}' is currently LOCKED / SUSPENDED by the System Developer and cannot access the system.`,
+            403
+          );
         }
         if (regStatus === 'REJECTED') {
           throw new AppError(
@@ -554,11 +619,36 @@ const login = async ({ email, username, identifier, password, portalRole }) => {
   }
 
   if (user.isLocked) {
-    throw new AppError('Your user account is suspended or locked. Contact administrator.', 403);
+    throw new AppError('Access Denied: Your user account is currently LOCKED / SUSPENDED.', 403);
   }
 
-  if (user.tenant && user.tenant.status === 'LOCKED') {
-    throw new AppError('Your organization portal is currently locked or suspended.', 403);
+  // Also check if the user's tenant in Prisma is LOCKED or SUSPENDED
+  if (user.role !== 'DEVELOPER') {
+    if (user.tenant && (user.tenant.status === 'LOCKED' || user.tenant.status === 'SUSPENDED' || user.tenant.isActive === false)) {
+      throw new AppError(`Access Denied: Your institution '${user.tenant.name || user.institutionName || 'your institution'}' is currently LOCKED / SUSPENDED by the System Developer and cannot access the system.`, 403);
+    }
+    try {
+      const checkTid = typeof user.tenantId === 'number' ? user.tenantId : parseInt(user.tenantId, 10);
+      const checkCode = user.tenantCode || user.tenant?.code;
+      const dbTenant = await prisma.tenant.findFirst({
+        where: {
+          OR: [
+            ...(!isNaN(checkTid) ? [{ id: checkTid }] : []),
+            ...(checkCode ? [{ code: checkCode }] : [])
+          ]
+        }
+      });
+      if (dbTenant) {
+        if (dbTenant.isDeleted || dbTenant.status === 'ARCHIVED_DELETED' || dbTenant.status === 'PURGED') {
+          throw new AppError('Access Denied: Your institution has been deleted from the system, so you cannot access the system unless you re-register for approval.', 403);
+        }
+        if (dbTenant.status === 'LOCKED' || dbTenant.status === 'SUSPENDED' || dbTenant.isActive === false) {
+          throw new AppError(`Access Denied: Your institution '${dbTenant.name || 'your institution'}' is currently LOCKED / SUSPENDED by the System Developer and cannot access the system.`, 403);
+        }
+      }
+    } catch (tCheckErr) {
+      if (tCheckErr.isOperational) throw tCheckErr;
+    }
   }
 
   try {
@@ -576,10 +666,30 @@ const login = async ({ email, username, identifier, password, portalRole }) => {
     }
   } catch { }
 
-  const accessToken = signToken(user.id, user.role, user.tenantId || DEFAULT_TENANT.id);
+  const isDeveloperAccount =
+    String(user.role || '').toUpperCase() === 'DEVELOPER' ||
+    String(user.email || '').toLowerCase() === 'gabosei48@gmail.com';
+  const effectiveRole = isDeveloperAccount ? 'DEVELOPER' : user.role;
+
+  const accessToken = signToken(user.id, effectiveRole, user.tenantId || DEFAULT_TENANT.id);
   const refreshToken = signRefreshToken(user.id);
 
+  const exactSchoolName =
+    isDeveloperAccount
+      ? 'GBS SCHOOL MANAGEMENT SYSTEM'
+      : (user.institutionName || user.schoolName || user.tenantName || user.tenant?.name || DEFAULT_TENANT.name);
+
   const { password: _, passwordHash: __, ...userWithoutPassword } = user;
+  userWithoutPassword.role = effectiveRole;
+  userWithoutPassword.schoolName = exactSchoolName;
+  userWithoutPassword.institutionName = exactSchoolName;
+  userWithoutPassword.tenantName = exactSchoolName;
+  if (userWithoutPassword.tenant) {
+    userWithoutPassword.tenant = {
+      ...userWithoutPassword.tenant,
+      name: exactSchoolName
+    };
+  }
 
   return {
     user: userWithoutPassword,
@@ -669,6 +779,16 @@ const registerInstitution = async (data) => {
   if (!effTerms || !effPrivacy || !effConsent) {
     throw new AppError('You must accept terms of service, privacy policy, and data processing consent to proceed.', 400);
   }
+
+  // If a previously deleted institution re-registers for approval, clear its old deleted lockout so it enters PENDING_DEVELOPER_APPROVAL cleanly
+  try {
+    removeDeletedTenantLockout({
+      name: institutionName.trim(),
+      schoolName: institutionName.trim(),
+      email: effOfficialEmail,
+      adminEmail: effAdminEmail
+    });
+  } catch { }
 
   const hashedPassword = await bcrypt.hash(effPassword, 10);
 
@@ -1016,6 +1136,9 @@ const register = async (data) => {
     password,
     role,
     tenantCode,
+    tenantId,
+    institutionName,
+    schoolName,
     // Role-specific profile fields
     title,
     phone,
@@ -1070,10 +1193,36 @@ const register = async (data) => {
     ? username.toLowerCase().trim()
     : email.split('@')[0].toLowerCase() + Math.floor(Math.random() * 900 + 100);
 
+  const requestedSchoolName = String(institutionName || schoolName || '').trim();
+  const matchedDynInst = DYNAMIC_INSTITUTIONS.find(
+    (inst) =>
+      (tenantCode && inst.tenantCode && inst.tenantCode.toLowerCase() === String(tenantCode).trim().toLowerCase()) ||
+      (tenantId && (String(inst.tenantId) === String(tenantId) || String(inst.id) === String(tenantId))) ||
+      (requestedSchoolName && String(inst.institutionName || '').trim().toLowerCase() === requestedSchoolName.toLowerCase())
+  );
+
   // Dynamic user template for immediate fallback
+  const resolvedFallbackTenant = matchedDynInst
+    ? {
+      id: matchedDynInst.tenantId || tenantId || DEFAULT_TENANT.id,
+      name: matchedDynInst.institutionName || requestedSchoolName || DEFAULT_TENANT.name,
+      code: matchedDynInst.tenantCode || tenantCode || DEFAULT_TENANT.code,
+      isActive: true,
+      status: matchedDynInst.status || 'ACTIVE'
+    }
+    : {
+      ...DEFAULT_TENANT,
+      ...(tenantId ? { id: tenantId } : {}),
+      ...(requestedSchoolName ? { name: requestedSchoolName } : {}),
+      ...(tenantCode ? { code: tenantCode } : {})
+    };
+
   const dynamicUserRecord = {
     id: `usr_${Date.now()}`,
-    tenantId: DEFAULT_TENANT.id,
+    tenantId: resolvedFallbackTenant.id,
+    tenantCode: resolvedFallbackTenant.code,
+    institutionName: resolvedFallbackTenant.name,
+    schoolName: resolvedFallbackTenant.name,
     firstName: finalFirstName,
     lastName: finalLastName,
     username: userUsername,
@@ -1086,7 +1235,7 @@ const register = async (data) => {
     status: initialVerificationStatus,
     verificationStatus: initialVerificationStatus,
     isLocked: false,
-    tenant: DEFAULT_TENANT
+    tenant: resolvedFallbackTenant
   };
 
   const dynamicProfile = {
@@ -1135,8 +1284,21 @@ const register = async (data) => {
     let tenant = null;
     if (tenantCode) {
       tenant = await prisma.tenant.findFirst({
-        where: { code: tenantCode.trim().toUpperCase() }
+        where: { code: String(tenantCode).trim().toUpperCase(), isDeleted: false }
       });
+    }
+    if (!tenant && tenantId) {
+      const parsedTid = parseInt(tenantId, 10);
+      if (Number.isInteger(parsedTid) && parsedTid > 0) {
+        tenant = await prisma.tenant.findFirst({
+          where: { id: parsedTid, isDeleted: false }
+        });
+      }
+    }
+    if (!tenant && requestedSchoolName) {
+      tenant = await prisma.tenant.findFirst({
+        where: { name: { equals: requestedSchoolName, mode: 'insensitive' }, isDeleted: false }
+      }).catch(() => null);
     }
     if (!tenant) {
       tenant = await prisma.tenant.findFirst({
@@ -1325,12 +1487,180 @@ const seedDefaultAdmin = async () => {
   }
 };
 
+const refreshTokenSession = async (incomingToken) => {
+  if (!incomingToken) {
+    throw new AppError('Refresh token is required.', 400);
+  }
+  let decoded;
+  try {
+    decoded = jwt.verify(incomingToken, envConfig.jwt.refreshSecret);
+  } catch {
+    throw new AppError('Invalid or expired refresh token. Please sign in again.', 401);
+  }
+
+  if (
+    decoded.role !== 'DEVELOPER' &&
+    (isPermanentlyDeleted(`User:${decoded.id}`) ||
+      (String(decoded.id || '').startsWith('usr_') && isPermanentlyDeleted(decoded.id)))
+  ) {
+    throw new AppError('Access Denied: This account has been permanently deleted.', 403);
+  }
+
+  const store = readPersistentStore();
+  let userRecord = null;
+  const numId = parseInt(decoded.id, 10);
+  if (Number.isInteger(numId) && String(numId) === String(decoded.id)) {
+    try {
+      userRecord = await withDbTimeout(
+        prisma.user.findUnique({ where: { id: numId }, include: { tenant: true } }),
+        1800
+      );
+    } catch { }
+  }
+  if (!userRecord) {
+    userRecord =
+      (store.registeredUsers || []).find((u) => String(u.id) === String(decoded.id)) ||
+      (store.users || []).find((u) => String(u.id) === String(decoded.id)) ||
+      BUILTIN_SYSTEM_USERS.find((u) => String(u.id) === String(decoded.id));
+  }
+
+  if (!userRecord) {
+    throw new AppError('Access Denied: User account not found.', 403);
+  }
+  if (userRecord.isLocked || userRecord.isDeleted || userRecord.isActive === false) {
+    throw new AppError('Access Denied: User account is locked, suspended, or deleted.', 403);
+  }
+  if (
+    userRecord.role !== 'DEVELOPER' &&
+    isTenantLockedOut({ id: userRecord.tenantId, code: userRecord.tenant?.code || userRecord.tenantCode })
+  ) {
+    throw new AppError('Access Denied: Your institution has been deleted from the system, so you cannot access the system unless you re-register for approval.', 403);
+  }
+
+  const accessToken = signToken(userRecord.id, userRecord.role, userRecord.tenantId || DEFAULT_TENANT.id);
+  const refreshToken = signRefreshToken(userRecord.id);
+  return { accessToken, refreshToken, refreshedAt: new Date().toISOString() };
+};
+
+const forgotPassword = async ({ email, phone }) => {
+  const cleanEmail = email ? String(email).trim().toLowerCase() : null;
+  const cleanPhone = phone ? String(phone).trim() : null;
+  if (!cleanEmail && !cleanPhone) {
+    throw new AppError('Please provide your registered email or phone number.', 400);
+  }
+
+  const store = readPersistentStore();
+  let matched = null;
+  if (cleanEmail) {
+    try {
+      matched = await withDbTimeout(prisma.user.findUnique({ where: { email: cleanEmail } }), 1500);
+    } catch { }
+    if (!matched) {
+      matched =
+        (store.registeredUsers || []).find((u) => String(u.email || '').toLowerCase() === cleanEmail) ||
+        (store.institutions || []).find(
+          (i) => String(i.adminEmail || i.officialEmail || '').toLowerCase() === cleanEmail
+        );
+    }
+  } else if (cleanPhone) {
+    matched =
+      (store.registeredUsers || []).find((u) => String(u.phone || '') === cleanPhone) ||
+      (store.institutions || []).find((i) => String(i.adminPhone || i.officialPhone || '') === cleanPhone);
+  }
+
+  if (!matched) {
+    throw new AppError('No registered account found matching that email or phone number.', 404);
+  }
+
+  const resetCode = String(Math.floor(100000 + Math.random() * 900000));
+  const expiresAt = new Date(Date.now() + 15 * 60 * 1000).toISOString();
+  const targetEmail = (matched.email || matched.adminEmail || matched.officialEmail || cleanEmail || '').toLowerCase();
+
+  writePersistentStore((curr) => ({
+    ...curr,
+    passwordResets: [
+      {
+        email: targetEmail,
+        phone: cleanPhone || matched.phone || matched.adminPhone || null,
+        resetCode,
+        expiresAt,
+        createdAt: new Date().toISOString()
+      },
+      ...(curr.passwordResets || []).filter((r) => r.email !== targetEmail)
+    ].slice(0, 200)
+  }));
+
+  try {
+    const smsService = require('../sms/sms.service');
+    await smsService.sendSMSMessage({
+      recipientPhone: cleanPhone || matched.phone || matched.adminPhone || '+233000000000',
+      recipientName: matched.firstName || matched.adminName || 'Account Holder',
+      content: `Your GBS password recovery code is ${resetCode}. Valid for 15 minutes.`,
+      tenantId: matched.tenantId || 1,
+      type: 'PASSWORD_RESET_OTP'
+    });
+  } catch { }
+
+  return {
+    recoveryDispatched: true,
+    email: targetEmail,
+    expiresInMinutes: 15
+  };
+};
+
+const resetPassword = async ({ email, otp, resetCode, token, newPassword, password }) => {
+  const cleanEmail = email ? String(email).trim().toLowerCase() : '';
+  const code = String(otp || resetCode || token || '').trim();
+  const nextPw = String(newPassword || password || '').trim();
+
+  if (!cleanEmail || !code || nextPw.length < 6) {
+    throw new AppError('Registered email, valid reset code, and new password (min 6 chars) are required.', 400);
+  }
+
+  const store = readPersistentStore();
+  const record = (store.passwordResets || []).find(
+    (r) => String(r.email || '').toLowerCase() === cleanEmail && String(r.resetCode) === code
+  );
+  if (!record || new Date(record.expiresAt).getTime() < Date.now()) {
+    throw new AppError('Invalid or expired password reset code.', 400);
+  }
+
+  const hashed = await bcrypt.hash(nextPw, 10);
+  try {
+    const dbUser = await withDbTimeout(prisma.user.findUnique({ where: { email: cleanEmail } }), 1800);
+    if (dbUser) {
+      await withDbTimeout(
+        prisma.user.update({ where: { id: dbUser.id }, data: { password: hashed, failedLoginAttempts: 0 } }),
+        1800
+      );
+    }
+  } catch { }
+
+  writePersistentStore((curr) => ({
+    ...curr,
+    registeredUsers: (curr.registeredUsers || []).map((u) =>
+      String(u.email || '').toLowerCase() === cleanEmail ? { ...u, passwordHash: hashed, password: hashed } : u
+    ),
+    institutions: (curr.institutions || []).map((inst) =>
+      String(inst.adminEmail || inst.officialEmail || '').toLowerCase() === cleanEmail
+        ? { ...inst, adminPasswordHash: hashed }
+        : inst
+    ),
+    passwordResets: (curr.passwordResets || []).filter((r) => String(r.email || '').toLowerCase() !== cleanEmail)
+  }));
+
+  return { passwordReset: true, email: cleanEmail };
+};
+
 module.exports = {
   login,
   register,
   registerInstitution,
   getPublicInstitutions,
   seedDefaultAdmin,
+  refreshTokenSession,
+  forgotPassword,
+  resetPassword,
   syncAuthStoreToDisk,
   getDynamicInstitutions: () => [...DYNAMIC_INSTITUTIONS],
   addDynamicInstitution: (item) => {

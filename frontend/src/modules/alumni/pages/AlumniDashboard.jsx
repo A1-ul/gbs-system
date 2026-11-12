@@ -4,17 +4,14 @@ import WindowControlsBar from "../../../components/common/WindowControlsBar";
 import TopCenterSystemBanner from "../../../components/common/TopCenterSystemBanner";
 import OfficialInstitutionalSeal from "../../../components/common/OfficialInstitutionalSeal";
 import { navigateToDetail } from "../../../utils/universalNavigation";
+import { getActiveSchoolName, getActiveSchoolLogo } from "../../../utils/schoolBranding";
 
 export default function AlumniDashboard() {
   const navigate = useNavigate();
 
-  // Dynamic School Name & Crest (synced with Headmaster customization)
-  const [reportSchoolName, setReportSchoolName] = useState(() => {
-    return localStorage.getItem("gbs_report_school_name") || "St. Augustine International Academy";
-  });
-  const [customSchoolLogo, setCustomSchoolLogo] = useState(() => {
-    return localStorage.getItem("gbs_custom_school_logo") || "/assets/gbs_crest_badge.jpg";
-  });
+  // Dynamic School Name & Crest (synced with Headmaster customization & registered tenant)
+  const [reportSchoolName, setReportSchoolName] = useState(() => getActiveSchoolName());
+  const [customSchoolLogo, setCustomSchoolLogo] = useState(() => getActiveSchoolLogo());
 
   // Active Tab Navigation
   const [activeTab, setActiveTab] = useState("CUMULATIVE_RECORDS"); // CUMULATIVE_RECORDS | OFFICIAL_TRANSCRIPT | BATCHES | ZOOM_REUNIONS | DIRECTORY | ENDOWMENT
@@ -115,29 +112,21 @@ export default function AlumniDashboard() {
 
   // Listen for School Name and Crest changes from Headmaster
   useEffect(() => {
-    const handleSchoolNameSync = (e) => {
-      if (e?.detail?.schoolName) {
-        setReportSchoolName(e.detail.schoolName);
-      } else {
-        const stored = localStorage.getItem("gbs_report_school_name");
-        if (stored) setReportSchoolName(stored);
-      }
+    const syncBranding = () => {
+      setReportSchoolName(getActiveSchoolName());
+      setCustomSchoolLogo(getActiveSchoolLogo());
     };
-    const handleLogoSync = () => {
-      const logo = localStorage.getItem("gbs_custom_school_logo");
-      if (logo) setCustomSchoolLogo(logo);
-    };
-
-    window.addEventListener("gbs_school_name_updated", handleSchoolNameSync);
-    window.addEventListener("storage", handleSchoolNameSync);
-    window.addEventListener("gbs_custom_logo_updated", handleLogoSync);
-    window.addEventListener("storage", handleLogoSync);
+    syncBranding();
+    window.addEventListener("gbs_school_name_updated", syncBranding);
+    window.addEventListener("gbs_school_logo_updated", syncBranding);
+    window.addEventListener("gbs_custom_logo_updated", syncBranding);
+    window.addEventListener("storage", syncBranding);
 
     return () => {
-      window.removeEventListener("gbs_school_name_updated", handleSchoolNameSync);
-      window.removeEventListener("storage", handleSchoolNameSync);
-      window.removeEventListener("gbs_custom_logo_updated", handleLogoSync);
-      window.removeEventListener("storage", handleLogoSync);
+      window.removeEventListener("gbs_school_name_updated", syncBranding);
+      window.removeEventListener("gbs_school_logo_updated", syncBranding);
+      window.removeEventListener("gbs_custom_logo_updated", syncBranding);
+      window.removeEventListener("storage", syncBranding);
     };
   }, []);
 

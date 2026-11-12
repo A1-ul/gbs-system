@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from "react";
 import { useParams, Link, useNavigate } from "react-router-dom";
+import { getActiveSchoolName, getActiveSchoolLogo } from "../../../utils/schoolBranding";
 import RoleCountGrid from "../../user/components/RoleCountGrid";
 import AdminDashboard from "./dashboards/admin/AdminDashboard";
 import TeacherDashboard from "./dashboards/teacher/TeacherDashboard";
@@ -260,8 +261,8 @@ export default function RoleDashboardView() {
     navigate("/login");
   };
 
-  const tenantSchoolName = localStorage.getItem("gbs_report_school_name") || localStorage.getItem("gbs_tenant_name") || "St. Augustine Science & Arts Academy";
-  const customSchoolLogo = localStorage.getItem("gbs_custom_school_logo") || "/assets/gbs_crest_badge.jpg";
+  const tenantSchoolName = getActiveSchoolName();
+  const customSchoolLogo = getActiveSchoolLogo();
 
   return (
     <div className="dashboard-container">
@@ -346,7 +347,7 @@ export default function RoleDashboardView() {
                 <span>CLEAR REAL-LIFE DAYTIME PHOTO</span>
               </div>
               <div className="photo-caption-bar">
-                <strong>GBS International Campus</strong>
+                <strong>{tenantSchoolName}</strong>
                 <span>High-Resolution Infrastructure Facility</span>
               </div>
             </div>

@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import apiClient from '../../../api/client/apiClient';
+import { getActiveSchoolName } from '../../../utils/schoolBranding';
 import '../pages/HRStaffManagement.css';
 import '../../library/pages/LibraryManagement.css';
 
@@ -268,7 +269,7 @@ export default function HRStaffManagementPage() {
           <span className="nav-brand-badge" style={{ background: 'linear-gradient(135deg, #8b5cf6, #6d28d9)' }}>
             HUMAN CAPITAL
           </span>
-          <span>GBS International HR & Faculty Governance</span>
+          <span>{getActiveSchoolName()} • HR &amp; Faculty Governance</span>
         </div>
         <div className="nav-actions" style={{ display: 'flex', gap: '8px' }}>
           <button className="btn-secondary" onClick={() => navigate(-1)}>
@@ -830,15 +831,15 @@ export default function HRStaffManagementPage() {
                 </h3>
                 <div style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
                   {driverProfiles.map((driver) => (
-                    <div 
-                      key={driver.id} 
+                    <div
+                      key={driver.id}
                       className="table-card"
                       style={{ padding: '16px', display: 'flex', gap: '16px', alignItems: 'center', border: '1px solid rgba(255,255,255,0.08)' }}
                     >
-                      <img 
-                        src="/images/admin_login_bg.jpg" 
-                        alt={driver.fullName} 
-                        style={{ width: '64px', height: '64px', borderRadius: '10px', objectFit: 'cover', border: '2px solid #fbbf24' }} 
+                      <img
+                        src="/images/admin_login_bg.jpg"
+                        alt={driver.fullName}
+                        style={{ width: '64px', height: '64px', borderRadius: '10px', objectFit: 'cover', border: '2px solid #fbbf24' }}
                       />
                       <div style={{ flex: 1 }}>
                         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>

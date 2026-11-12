@@ -1,5 +1,6 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
+import { getActiveSchoolName, getActiveSchoolLogo } from "../../utils/schoolBranding";
 
 /**
  * Universal Navigation, Scroll & Window Expansion Controls
@@ -19,6 +20,23 @@ export default function WindowControlsBar({
 }) {
   const navigate = useNavigate();
   const [isExpanded, setIsExpanded] = useState(false);
+  const isDevContext = Boolean(title?.toLowerCase().includes("developer") || title?.toLowerCase().includes("control center"));
+  const [brandName, setBrandName] = useState(() => getActiveSchoolName({ isDeveloperContext: isDevContext }));
+  const [brandLogo, setBrandLogo] = useState(() => getActiveSchoolLogo({ isDeveloperContext: isDevContext }));
+
+  useEffect(() => {
+    const syncBranding = () => {
+      setBrandName(getActiveSchoolName({ isDeveloperContext: isDevContext }));
+      setBrandLogo(getActiveSchoolLogo({ isDeveloperContext: isDevContext }));
+    };
+    syncBranding();
+    window.addEventListener("gbs_school_branding_updated", syncBranding);
+    window.addEventListener("storage", syncBranding);
+    return () => {
+      window.removeEventListener("gbs_school_branding_updated", syncBranding);
+      window.removeEventListener("storage", syncBranding);
+    };
+  }, [isDevContext]);
 
   const handleBack = () => {
     if (onBack) {
@@ -132,16 +150,27 @@ export default function WindowControlsBar({
             fontSize: "0.88rem",
             fontWeight: "900",
             letterSpacing: "1.2px",
-            color: (title?.toLowerCase().includes("developer") || title?.toLowerCase().includes("control center")) ? "#38bdf8" : "#34d399",
-            textTransform: "uppercase"
+            color: isDevContext ? "#38bdf8" : "#34d399",
+            textTransform: "uppercase",
+            display: "inline-flex",
+            alignItems: "center",
+            gap: "6px"
           }}
         >
-          {(title?.toLowerCase().includes("developer") || title?.toLowerCase().includes("control center"))
-            ? "🏛️ GBS SCHOOL MANAGEMENT SYSTEM"
-            : `🏫 ${(localStorage.getItem("gbs_report_school_name") || "St. Augustine International Academy").toUpperCase()}`}
+          {brandLogo ? (
+            <img
+              src={brandLogo}
+              alt="Logo"
+              style={{ width: "20px", height: "20px", borderRadius: "4px", objectFit: "cover", border: "1px solid rgba(52,211,153,0.5)" }}
+              onError={(e) => { e.target.style.display = "none"; }}
+            />
+          ) : (
+            <span>{isDevContext ? "🏛️" : "🏫"}</span>
+          )}
+          <span>{isDevContext ? "GBS SCHOOL MANAGEMENT SYSTEM" : String(brandName || "").toUpperCase()}</span>
         </span>
         <span style={{ fontSize: "0.68rem", color: "#94a3b8" }}>
-          {(title?.toLowerCase().includes("developer") || title?.toLowerCase().includes("control center"))
+          {isDevContext
             ? "OFFICIAL DEVELOPER PLATFORM"
             : "OFFICIAL TENANT INSTITUTION"}
         </span>

@@ -20,6 +20,7 @@ import { navigateToDetail } from "../../../../../utils/universalNavigation";
 import MobileCameraAIExamScannerModal from "../../../../../components/common/MobileCameraAIExamScannerModal";
 import FileUploadVerificationCard from "../../../../../components/common/FileUploadVerificationCard";
 import DigitalSignaturePadModal from "../../../../../components/common/DigitalSignaturePadModal";
+import { getActiveSchoolName, getActiveSchoolLogo } from "../../../../../utils/schoolBranding";
 import "./TeacherDashboard.css";
 
 export default function TeacherDashboard() {
@@ -265,13 +266,9 @@ export default function TeacherDashboard() {
     return [];
   });
 
-  // Tenant School Branding (Reflects Headmaster Custom School Name & Logo)
-  const [reportSchoolName, setReportSchoolName] = useState(() => {
-    return localStorage.getItem("gbs_report_school_name") || "St. Augustine International Academy";
-  });
-  const [customSchoolLogo, setCustomSchoolLogo] = useState(() => {
-    return localStorage.getItem("gbs_custom_school_logo") || "/assets/gbs_crest_badge.jpg";
-  });
+  // Tenant School Branding (Reflects Exact Tenant School Name & Logo)
+  const [reportSchoolName, setReportSchoolName] = useState(() => getActiveSchoolName());
+  const [customSchoolLogo, setCustomSchoolLogo] = useState(() => getActiveSchoolLogo());
 
   // Archived Approved Weekly Attendances State
   const [archivedWeeklyAttendances, setArchivedWeeklyAttendances] = useState(() => {
@@ -924,17 +921,18 @@ export default function TeacherDashboard() {
 
   useEffect(() => {
     const handleBrandingSync = () => {
-      const savedName = localStorage.getItem("gbs_report_school_name");
-      const savedLogo = localStorage.getItem("gbs_custom_school_logo");
-      if (savedName) setReportSchoolName(savedName);
-      if (savedLogo) setCustomSchoolLogo(savedLogo);
+      setReportSchoolName(getActiveSchoolName());
+      setCustomSchoolLogo(getActiveSchoolLogo());
     };
+    handleBrandingSync();
     window.addEventListener("gbs_school_name_updated", handleBrandingSync);
     window.addEventListener("gbs_school_logo_updated", handleBrandingSync);
+    window.addEventListener("gbs_custom_logo_updated", handleBrandingSync);
     window.addEventListener("storage", handleBrandingSync);
     return () => {
       window.removeEventListener("gbs_school_name_updated", handleBrandingSync);
       window.removeEventListener("gbs_school_logo_updated", handleBrandingSync);
+      window.removeEventListener("gbs_custom_logo_updated", handleBrandingSync);
       window.removeEventListener("storage", handleBrandingSync);
     };
   }, []);
@@ -8016,7 +8014,7 @@ export default function TeacherDashboard() {
                                     type="button"
                                     onClick={() => navigateToDetail(navigate, "lesson-plan", plan.id, {
                                       ...plan,
-                                      institutionName: localStorage.getItem("gbs_report_school_name") || "St. Augustine International Academy"
+                                      institutionName: getActiveSchoolName()
                                     }, { returnTab: activeTab })}
                                     style={{
                                       background: "linear-gradient(135deg, rgba(2, 132, 199, 0.25), rgba(56, 189, 248, 0.15))",

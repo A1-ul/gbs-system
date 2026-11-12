@@ -224,7 +224,7 @@ const loadSystemMemory = () => {
     if (fs.existsSync(SYSTEM_MEMORY_FILE)) {
       return JSON.parse(fs.readFileSync(SYSTEM_MEMORY_FILE, 'utf8'));
     }
-  } catch (_) {}
+  } catch (_) { }
   return { diagnosticCauseAndFixKnowledgeBase: [], dashboardsAndRoutesMemory: [] };
 };
 
@@ -277,7 +277,7 @@ router.post('/system-memory', (req, res) => {
     memory.savedAt = new Date().toISOString();
     try {
       fs.writeFileSync(SYSTEM_MEMORY_FILE, JSON.stringify(memory, null, 2), 'utf8');
-    } catch (_) {}
+    } catch (_) { }
     return res.status(201).json({
       status: 'success',
       message: 'New diagnostic cause & resolution saved to GBS System Memory.',
@@ -296,11 +296,11 @@ router.post('/ai/analyze-crash', (req, res) => {
   const query = String(req.body?.errorLog || req.body?.symptom || req.body?.query || '').toLowerCase();
   const matched = query
     ? (memory.diagnosticCauseAndFixKnowledgeBase || []).find(
-        (item) =>
-          item.symptom.toLowerCase().includes(query) ||
-          item.rootCause.toLowerCase().includes(query) ||
-          item.issueCode.toLowerCase().includes(query)
-      )
+      (item) =>
+        item.symptom.toLowerCase().includes(query) ||
+        item.rootCause.toLowerCase().includes(query) ||
+        item.issueCode.toLowerCase().includes(query)
+    )
     : null;
 
   res.status(200).json({
@@ -366,7 +366,7 @@ router.post('/sync-to-cloud', async (req, res) => {
               }
             });
             syncedCount++;
-          } catch (_) {}
+          } catch (_) { }
         }
         syncedTables.push('AttendanceRecord');
       }
@@ -380,14 +380,14 @@ router.post('/sync-to-cloud', async (req, res) => {
               update: { name: inst.name || inst.institutionName, status: 'ACTIVE', updatedAt: new Date() },
               create: {
                 id: inst.id || 1,
-                name: inst.name || inst.institutionName || 'WITHIN DE BRAIN ACADEMY',
+                name: inst.name || inst.institutionName || 'GBS Registered Institution',
                 code: inst.tenantCode || inst.code || 'GBS-MAIN',
                 domain: inst.domain || 'gbs-school.onrender.com',
                 status: 'ACTIVE'
               }
             });
             syncedCount++;
-          } catch (_) {}
+          } catch (_) { }
         }
         syncedTables.push('Tenant');
       }

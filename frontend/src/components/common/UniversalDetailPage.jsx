@@ -2,6 +2,7 @@ import React, { useState, useEffect } from "react";
 import { useParams, useNavigate, useLocation, Link } from "react-router-dom";
 import apiClient from "../../api/client/apiClient";
 import { getApiBaseUrl } from "../../api/client/apiConfig";
+import { getActiveSchoolName } from "../../utils/schoolBranding";
 import "./UniversalDetailPage.css";
 
 const CATEGORY_META = {
@@ -68,14 +69,17 @@ export default function UniversalDetailPage() {
   const [queryInput, setQueryInput] = useState("");
   const [actionFeedback, setActionFeedback] = useState(null);
 
-  const handleVerifyAndApprove = () => {
-    const updatedStatus = "VERIFIED_AND_APPROVED";
+  const handleVerifyAndApprove = async () => {
+    const updatedStatus = "APPROVED";
     setVerificationStatus(updatedStatus);
     const updatedRecord = {
       ...record,
       status: updatedStatus,
-      verificationStatus: updatedStatus,
+      verificationStatus: "VERIFIED_AND_APPROVED",
+      isApproved: true,
       isVerified: true,
+      isLocked: false,
+      isActive: true,
       verifiedAt: new Date().toLocaleString(),
       verifier: "Headmaster & Chief Developer Verified Stamped"
     };
@@ -83,10 +87,62 @@ export default function UniversalDetailPage() {
     try {
       sessionStorage.setItem(`gbs_detail_${category}_${id}`, JSON.stringify(updatedRecord));
       localStorage.setItem(`gbs_verified_${category}_${id}`, JSON.stringify(updatedRecord));
+
+      // Also update gbs_incoming_onboarding_applications & gbs_local_registered_users so approval is real across the entire system
+      const targetEmail = String(record?.adminEmail || record?.headmasterEmail || record?.officialEmail || record?.email || "").toLowerCase().trim();
+      const targetCode = String(record?.tenantCode || record?.code || "").toLowerCase().trim();
+      const targetName = String(record?.institutionName || record?.schoolName || record?.name || "").trim();
+
+      const incomingApps = JSON.parse(localStorage.getItem("gbs_incoming_onboarding_applications") || "[]");
+      if (incomingApps.length > 0) {
+        const nextApps = incomingApps.map((app) => {
+          const isMatch =
+            String(app.id || app.appRef || "") === String(id) ||
+            (targetCode && String(app.tenantCode || app.code || "").toLowerCase() === targetCode) ||
+            (targetEmail && [app.adminEmail, app.headmasterEmail, app.officialEmail, app.email].some((e) => e && String(e).toLowerCase() === targetEmail)) ||
+            (targetName && String(app.institutionName || app.name || "").toLowerCase() === targetName.toLowerCase());
+          return isMatch
+            ? { ...app, status: "APPROVED", isApproved: true, isLocked: false, isActive: true, approvedAt: new Date().toISOString() }
+            : app;
+        });
+        localStorage.setItem("gbs_incoming_onboarding_applications", JSON.stringify(nextApps));
+      }
+
+      const localUsers = JSON.parse(localStorage.getItem("gbs_local_registered_users") || "[]");
+      const nextUsers = localUsers.map((u) => {
+        const isUserMatch =
+          String(u.id || "") === String(id) ||
+          (targetEmail && String(u.email || "").toLowerCase() === targetEmail) ||
+          (targetCode && String(u.tenantCode || "").toLowerCase() === targetCode);
+        return isUserMatch
+          ? {
+              ...u,
+              status: "APPROVED",
+              verificationStatus: "VERIFIED",
+              isApproved: true,
+              isLocked: false,
+              isActive: true,
+              schoolName: targetName || u.schoolName || u.institutionName,
+              institutionName: targetName || u.institutionName || u.schoolName
+            }
+          : u;
+      });
+      localStorage.setItem("gbs_local_registered_users", JSON.stringify(nextUsers));
+      window.dispatchEvent(new Event("storage"));
     } catch { }
+
+    // Call backend approval endpoint so backend database & memory state are also approved immediately
+    try {
+      const targetKey = record?.tenantCode || record?.id || id;
+      await apiClient.post(`/dev-control/onboarding/${encodeURIComponent(targetKey)}/approve`, {
+        notes: "Approved by Developer via Official Verification Dossier",
+        applicationData: record
+      });
+    } catch { }
+
     setActionFeedback({
       type: "success",
-      message: `✅ Record #${id} officially VERIFIED & APPROVED. Institutional records updated.`
+      message: `✅ Record #${id} (${record?.institutionName || record?.name || id}) officially VERIFIED & APPROVED. Institutional access is now active!`
     });
   };
 
@@ -1049,7 +1105,7 @@ export default function UniversalDetailPage() {
                     <div style={{ background: "rgba(2, 6, 23, 0.9)", border: "1px solid rgba(255, 255, 255, 0.12)", borderRadius: "8px", padding: "14px", fontFamily: "monospace", fontSize: "0.82rem", color: "#cbd5e1", lineHeight: 1.6, maxHeight: "200px", overflowY: "auto" }}>
                       <div>═══════════════════════════════════════════════════════════════════</div>
                       <div style={{ color: "#38bdf8", fontWeight: 800 }}>FACULTY DOSSIER & CURRICULUM VITAE — {record.firstName || record.name || "FACULTY"} {record.lastName || ""}</div>
-                      <div>Institution: GBS International School & Academic Network</div>
+                      <div>Institution: {record.institutionName || record.schoolName || getActiveSchoolName()}</div>
                       <div>Staff ID: {record.id || id} • Clearance: VERIFIED FACULTY</div>
                       <div>───────────────────────────────────────────────────────────────────</div>
                       <div>• Educational Background: {record.highestQualification || "Bachelor of Science / Education Honors"}</div>

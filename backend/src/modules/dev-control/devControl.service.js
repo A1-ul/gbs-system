@@ -13,6 +13,7 @@ const {
   addPermanentlyDeletedIds,
   isPermanentlyDeleted,
   addDeletedTenantLockout,
+  removeDeletedTenantLockout,
   isTenantLockedOut
 } = require('../../core/database/persistentStore');
 
@@ -447,6 +448,21 @@ const developerTenantAction = async (tenantId, action, params = {}, developer = 
     }
   }
 
+  if (!tenant && tenantId) {
+    try {
+      tenant = await prisma.tenant.findFirst({
+        where: {
+          OR: [
+            { code: String(tenantId) },
+            { name: String(tenantId) },
+            { headmasterEmail: String(tenantId).toLowerCase() }
+          ]
+        },
+        include: { subscriptions: true }
+      });
+    } catch { }
+  }
+
   const dynList = authService.getDynamicInstitutions ? authService.getDynamicInstitutions() : [];
   const dynMatch = dynList.find(
     (d) =>
@@ -454,30 +470,47 @@ const developerTenantAction = async (tenantId, action, params = {}, developer = 
       String(d.tenantId) === String(tenantId) ||
       d.tenantUid === String(tenantId) ||
       d.tenantCode === String(tenantId) ||
+      String(d.institutionName || '').toLowerCase() === String(tenantId || '').toLowerCase() ||
       (tenant && (d.tenantCode === tenant.code || d.institutionName === tenant.name))
   );
 
+  const pStore = readPersistentStore();
+  const archivedMatch = (Array.isArray(pStore.deletedTenantArchives) ? pStore.deletedTenantArchives : []).find(
+    (a) =>
+      String(a.id) === String(tenantId) ||
+      String(a.tenantId) === String(tenantId) ||
+      String(a.code || a.tenantCode || '').toLowerCase() === String(tenantId || '').toLowerCase() ||
+      String(a.name || a.tenantName || '').toLowerCase() === String(tenantId || '').toLowerCase()
+  );
+
+  const upperAct = String(action || 'ACTIVATE').toUpperCase();
+  const isDestructiveAction = ['DELETE', 'DELETE_TENANT', 'PURGE_PERMANENT', 'CLEAR_TENANT'].includes(upperAct);
+
   if (!tenant) {
-    const fallbackId = dynMatch?.tenantId || (!isNaN(tid) ? tid : 1);
+    const fallbackId = dynMatch?.tenantId || archivedMatch?.tenantId || (!isNaN(tid) ? tid : 1);
     tenant = {
       id: fallbackId,
-      name: dynMatch?.institutionName || params.tenantName || `Tenant Enclave #${tenantId}`,
-      code: dynMatch?.tenantCode || params.tenantCode || `GBS-TEN-${String(tenantId).slice(-4)}`,
+      name: dynMatch?.institutionName || archivedMatch?.name || archivedMatch?.tenantName || params.tenantName || params.institutionName || `Tenant Enclave #${tenantId}`,
+      code: dynMatch?.tenantCode || archivedMatch?.code || archivedMatch?.tenantCode || params.tenantCode || `GBS-TEN-${String(tenantId).slice(-4)}`,
+      headmasterEmail: dynMatch?.adminEmail || dynMatch?.officialEmail || archivedMatch?.headmasterEmail || archivedMatch?.email || params.headmasterEmail || params.adminEmail || '',
+      headmasterName: dynMatch?.adminName || archivedMatch?.headmasterName || params.headmasterName || 'Headmaster',
       status: 'ACTIVE',
       isActive: true,
       subscriptions: []
     };
-    try {
-      tenant = await prisma.tenant.create({
-        data: {
-          id: tenant.id,
-          name: tenant.name,
-          code: tenant.code,
-          status: 'ACTIVE',
-          isActive: true
-        }
-      });
-    } catch { }
+    if (!isDestructiveAction) {
+      try {
+        tenant = await prisma.tenant.create({
+          data: {
+            id: tenant.id,
+            name: tenant.name,
+            code: tenant.code,
+            status: 'ACTIVE',
+            isActive: true
+          }
+        });
+      } catch { }
+    }
   }
 
   const safeTid = typeof tenant.id === 'number' ? tenant.id : (!isNaN(tid) ? tid : 1);
@@ -529,7 +562,28 @@ const developerTenantAction = async (tenantId, action, params = {}, developer = 
         updatedTenant = { ...tenant, status: 'LOCKED', isActive: false };
       }
 
-      syncDynState({ status: 'LOCKED', isActive: false });
+      syncDynState({ status: 'LOCKED', isActive: false, isLocked: true });
+
+      await prisma.user.updateMany({
+        where: { tenantId: safeTid },
+        data: { isLocked: true, isActive: false }
+      }).catch(() => { });
+
+      try {
+        writePersistentStore((curr) => {
+          const regUsers = Array.isArray(curr.registeredUsers) ? curr.registeredUsers : [];
+          return {
+            ...curr,
+            registeredUsers: regUsers.map((u) => {
+              const matches =
+                (safeTid && safeTid !== 1 && String(u.tenantId) === String(safeTid)) ||
+                (tenant.code && String(u.tenant?.code || u.tenantCode || '').toLowerCase() === String(tenant.code).toLowerCase()) ||
+                (tenant.headmasterEmail && String(u.email || '').toLowerCase() === String(tenant.headmasterEmail).toLowerCase());
+              return matches ? { ...u, isLocked: true, isActive: false, status: 'LOCKED' } : u;
+            })
+          };
+        });
+      } catch { }
 
       await prisma.systemLock.create({
         data: {
@@ -564,7 +618,28 @@ const developerTenantAction = async (tenantId, action, params = {}, developer = 
         updatedTenant = { ...tenant, status: 'ACTIVE', isActive: true };
       }
 
-      syncDynState({ status: 'ACTIVE', isActive: true, isApproved: true });
+      syncDynState({ status: 'ACTIVE', isActive: true, isApproved: true, isLocked: false });
+
+      await prisma.user.updateMany({
+        where: { tenantId: safeTid },
+        data: { isLocked: false, isActive: true }
+      }).catch(() => { });
+
+      try {
+        writePersistentStore((curr) => {
+          const regUsers = Array.isArray(curr.registeredUsers) ? curr.registeredUsers : [];
+          return {
+            ...curr,
+            registeredUsers: regUsers.map((u) => {
+              const matches =
+                (safeTid && safeTid !== 1 && String(u.tenantId) === String(safeTid)) ||
+                (tenant.code && String(u.tenant?.code || u.tenantCode || '').toLowerCase() === String(tenant.code).toLowerCase()) ||
+                (tenant.headmasterEmail && String(u.email || '').toLowerCase() === String(tenant.headmasterEmail).toLowerCase());
+              return matches ? { ...u, isLocked: false, isActive: true, isApproved: true, status: 'ACTIVE' } : u;
+            })
+          };
+        });
+      } catch { }
 
       await prisma.systemLock.updateMany({
         where: { tenantId: safeTid, isLocked: true },
@@ -992,45 +1067,123 @@ const developerTenantAction = async (tenantId, action, params = {}, developer = 
       break;
     }
 
+    case 'CLEAR_TENANT':
     case 'PURGE_PERMANENT': {
+      const targetCode = String(tenant.code || dynMatch?.tenantCode || archivedMatch?.code || params.tenantCode || '').trim();
+      const targetName = String(tenant.name || dynMatch?.institutionName || archivedMatch?.name || params.institutionName || '').trim();
+      const targetEmail = String(tenant.headmasterEmail || dynMatch?.adminEmail || archivedMatch?.headmasterEmail || params.adminEmail || '').trim().toLowerCase();
+
       addDeletedTenantLockout({
         id: safeTid,
         tenantId: safeTid,
-        code: tenant.code,
-        tenantCode: tenant.code,
-        name: tenant.name,
-        schoolName: tenant.name,
-        email: tenant.headmasterEmail,
-        adminEmail: tenant.headmasterEmail
+        code: targetCode,
+        tenantCode: targetCode,
+        name: targetName,
+        schoolName: targetName,
+        email: targetEmail,
+        adminEmail: targetEmail
       });
-      addPermanentlyDeletedIds([safeTid, `Tenant:${safeTid}`, tenant.code].filter(Boolean));
+      addPermanentlyDeletedIds([`Tenant:${safeTid}`, targetCode, targetEmail].filter(Boolean));
 
-      await prisma.subscription.deleteMany({ where: { tenantId: safeTid } }).catch(() => { });
-      await prisma.systemLock.deleteMany({ where: { tenantId: safeTid } }).catch(() => { });
-      try {
-        await prisma.tenant.delete({ where: { id: safeTid } });
-      } catch { }
+      // Permanently delete all associated records from database
+      if (safeTid && safeTid !== 1) {
+        await prisma.feeInvoice.deleteMany({ where: { tenantId: safeTid } }).catch(() => { });
+        await prisma.admissionApplication.deleteMany({ where: { tenantId: safeTid } }).catch(() => { });
+        await prisma.student.deleteMany({ where: { tenantId: safeTid } }).catch(() => { });
+        await prisma.user.deleteMany({ where: { tenantId: safeTid } }).catch(() => { });
+        await prisma.institutionRegistration.deleteMany({ where: { tenantId: safeTid } }).catch(() => { });
+        await prisma.subscription.deleteMany({ where: { tenantId: safeTid } }).catch(() => { });
+        await prisma.systemLock.deleteMany({ where: { tenantId: safeTid } }).catch(() => { });
+        try {
+          await prisma.tenant.delete({ where: { id: safeTid } });
+        } catch { }
+      }
+      if (targetCode || targetName || targetEmail) {
+        await prisma.institutionRegistration.deleteMany({
+          where: {
+            OR: [
+              ...(targetCode ? [{ tenantCode: targetCode }] : []),
+              ...(targetName ? [{ institutionName: targetName }] : []),
+              ...(targetEmail ? [{ adminEmail: targetEmail }, { officialEmail: targetEmail }] : [])
+            ]
+          }
+        }).catch(() => { });
+        if (targetEmail) {
+          await prisma.user.deleteMany({ where: { email: targetEmail } }).catch(() => { });
+        }
+      }
+
+      if (authService.deleteDynamicInstitution) {
+        authService.deleteDynamicInstitution(tenantId);
+        authService.deleteDynamicInstitution(safeTid);
+        if (targetCode) authService.deleteDynamicInstitution(targetCode);
+        if (targetName) authService.deleteDynamicInstitution(targetName);
+        if (targetEmail) authService.deleteDynamicInstitution(targetEmail);
+        if (dynMatch?.id) authService.deleteDynamicInstitution(dynMatch.id);
+      }
 
       try {
         writePersistentStore((curr) => {
-          const prev = Array.isArray(curr.deletedTenantArchives) ? curr.deletedTenantArchives : [];
+          const prevArchives = Array.isArray(curr.deletedTenantArchives) ? curr.deletedTenantArchives : [];
           const regUsers = Array.isArray(curr.registeredUsers) ? curr.registeredUsers : [];
+          const storeUsers = Array.isArray(curr.users) ? curr.users : [];
+          const insts = Array.isArray(curr.institutions) ? curr.institutions : [];
+          const licenses = Array.isArray(curr.enterpriseLicenses) ? curr.enterpriseLicenses : [];
+          const hmMessages = Array.isArray(curr.headmasterMessages) ? curr.headmasterMessages : [];
+          const subs = Array.isArray(curr.subscriptions) ? curr.subscriptions : [];
+          const commMsgs = Array.isArray(curr.communicationMessages) ? curr.communicationMessages : [];
+          const emails = Array.isArray(curr.emailLogs) ? curr.emailLogs : [];
+
+          const matchesPurged = (item) => {
+            const iId = String(item.tenantId || item.id || '').toLowerCase();
+            const iCode = String(item.tenantCode || item.code || item.tenant?.code || '').toLowerCase();
+            const iName = String(item.institutionName || item.schoolName || item.tenantName || item.name || item.tenant?.name || '').toLowerCase();
+            const iEmail = String(item.email || item.adminEmail || item.headmasterEmail || item.officialEmail || '').toLowerCase();
+            return (
+              (safeTid && safeTid !== 1 && iId === String(safeTid).toLowerCase()) ||
+              (String(tenantId).toLowerCase() && iId === String(tenantId).toLowerCase()) ||
+              (targetCode && iCode === targetCode.toLowerCase()) ||
+              (targetName && iName === targetName.toLowerCase()) ||
+              (targetEmail && iEmail === targetEmail)
+            );
+          };
+
+          const purgedUserKeys = new Set(Array.isArray(curr.permanentlyDeletedIds) ? curr.permanentlyDeletedIds.map(String) : []);
+          [...regUsers, ...storeUsers].filter(matchesPurged).forEach((u) => {
+            if (u.id) {
+              purgedUserKeys.add(`User:${u.id}`);
+              if (String(u.id).startsWith('usr_')) purgedUserKeys.add(String(u.id));
+            }
+            if (u.email) purgedUserKeys.add(String(u.email).toLowerCase());
+          });
+
           return {
             ...curr,
-            registeredUsers: regUsers.filter(
-              (u) =>
-                String(u.tenantId) !== String(safeTid) &&
-                (!tenant.code || String(u.tenant?.code || u.tenantCode).toLowerCase() !== String(tenant.code).toLowerCase()) &&
-                (!tenant.headmasterEmail || String(u.email).toLowerCase() !== String(tenant.headmasterEmail).toLowerCase())
-            ),
-            deletedTenantArchives: prev.filter((a) => Number(a.tenantId) !== Number(safeTid))
+            permanentlyDeletedIds: Array.from(purgedUserKeys),
+            institutions: insts.filter((i) => !matchesPurged(i)),
+            registeredUsers: regUsers.filter((u) => !matchesPurged(u)),
+            users: storeUsers.filter((u) => !matchesPurged(u)),
+            deletedTenantArchives: prevArchives.filter((a) => !matchesPurged(a)),
+            enterpriseLicenses: licenses.filter((l) => !matchesPurged(l)),
+            headmasterMessages: hmMessages.filter((m) => !matchesPurged(m)),
+            subscriptions: subs.filter((s) => !matchesPurged(s)),
+            communicationMessages: commMsgs.filter((m) => !matchesPurged(m)),
+            emailLogs: emails.filter((e) => !matchesPurged(e))
           };
         });
       } catch { }
 
-      updatedTenant = { ...tenant, id: safeTid, isDeleted: true, status: 'PURGED' };
+      updatedTenant = {
+        ...tenant,
+        id: safeTid,
+        name: targetName || tenant.name,
+        code: targetCode || tenant.code,
+        isDeleted: true,
+        permanentlyDeleted: true,
+        status: 'PURGED'
+      };
       auditAction = 'TENANT_PERMANENTLY_PURGED';
-      auditDetails = `Developer permanently purged Tenant '${tenant.name}' (${tenant.code || safeTid}) from database and locked out access permanently.`;
+      auditDetails = `Developer permanently deleted and cleared all information for Tenant '${targetName || tenant.name}' (${targetCode || safeTid}) from the system.`;
       break;
     }
 
@@ -1702,29 +1855,40 @@ const verifyAndApproveInstitution = async (idOrTenantUid, developerNotes = 'Appr
       }
     }).catch(() => { });
   } catch { }
-  // Ensure in-memory dynamic state reflects immediate approval and headmaster login capability
-  if (authService.updateDynamicInstitution) {
-    const updatedInStore = authService.updateDynamicInstitution(reg.tenantCode || reg.id, {
-      ...updatedReg,
-      isApproved: true,
-      status: 'APPROVED',
-      tenantId: tenant?.id || reg.tenantUid
+  // Clear any previous deleted lockout if this institution re-registered and is now approved
+  try {
+    removeDeletedTenantLockout({
+      id: tenant?.id || reg.id,
+      tenantId: tenant?.id || reg.id,
+      code: reg.tenantCode,
+      tenantCode: reg.tenantCode,
+      name: reg.institutionName,
+      schoolName: reg.institutionName,
+      email: reg.adminEmail,
+      adminEmail: reg.adminEmail,
+      officialEmail: reg.officialEmail
     });
+  } catch { }
+
+  // Ensure in-memory dynamic state reflects immediate approval and headmaster login capability
+  const approvedPatch = {
+    ...updatedReg,
+    schoolName: reg.institutionName,
+    institutionName: reg.institutionName,
+    tenantName: reg.institutionName,
+    isApproved: true,
+    isActive: true,
+    isLocked: false,
+    status: 'APPROVED',
+    tenantId: tenant?.id || reg.tenantUid
+  };
+  if (authService.updateDynamicInstitution) {
+    const updatedInStore = authService.updateDynamicInstitution(reg.tenantCode || reg.id, approvedPatch);
     if (!updatedInStore && authService.addDynamicInstitution) {
-      authService.addDynamicInstitution({
-        ...updatedReg,
-        isApproved: true,
-        status: 'APPROVED',
-        tenantId: tenant?.id || reg.tenantUid
-      });
+      authService.addDynamicInstitution(approvedPatch);
     }
   } else if (authService.addDynamicInstitution) {
-    authService.addDynamicInstitution({
-      ...updatedReg,
-      isApproved: true,
-      status: 'APPROVED',
-      tenantId: tenant?.id || reg.tenantUid
-    });
+    authService.addDynamicInstitution(approvedPatch);
   }
   if (authService.addDynamicUser) {
     authService.addDynamicUser({
@@ -1737,6 +1901,10 @@ const verifyAndApproveInstitution = async (idOrTenantUid, developerNotes = 'Appr
       role: 'ADMIN',
       firstName: reg.adminName || 'Headmaster',
       lastName: '',
+      schoolName: reg.institutionName,
+      institutionName: reg.institutionName,
+      tenantName: reg.institutionName,
+      tenantCode: reg.tenantCode,
       isActive: true,
       isApproved: true,
       status: 'APPROVED',
@@ -1848,9 +2016,9 @@ const rejectInstitutionRegistration = async (idOrTenantUid, reason = 'Applicatio
         ...curr,
         institutions: insts.map((inst) =>
           String(inst.id) === String(idOrTenantUid) ||
-          inst.tenantUid === String(idOrTenantUid) ||
-          inst.tenantCode === String(idOrTenantUid) ||
-          (targetEmail && String(inst.adminEmail || '').toLowerCase() === targetEmail)
+            inst.tenantUid === String(idOrTenantUid) ||
+            inst.tenantCode === String(idOrTenantUid) ||
+            (targetEmail && String(inst.adminEmail || '').toLowerCase() === targetEmail)
             ? { ...inst, status: 'REJECTED', isApproved: false, isActive: false, rejectionReason: reason }
             : inst
         ),
@@ -1899,7 +2067,7 @@ const sendDeveloperSmsToHeadmaster = async (payload = {}) => {
     content: targetMessage,
     type: 'DEVELOPER_DIRECT_SMS',
     tenantId: payload.tenantId || null,
-    schoolName: payload.schoolName || payload.institutionName || 'WITHIN DE BRAIN ACADEMY'
+    schoolName: payload.schoolName || payload.institutionName || 'GBS Registered School'
   });
 
   return {

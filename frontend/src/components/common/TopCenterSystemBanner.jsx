@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from "react";
 import { clearFakeDataEntries } from "../../utils/freshSystemReset";
+import { getActiveSchoolName, getActiveSchoolLogo } from "../../utils/schoolBranding";
 import UniversalLanguageTranslatorModal from "./UniversalLanguageTranslatorModal";
 
 /**
@@ -28,29 +29,24 @@ export default function TopCenterSystemBanner({
   institutionName = null,
   isDeveloper = false
 }) {
+  const isDevMode = isDeveloper || roleTitle.toLowerCase().includes("developer");
+
   const [schoolName, setSchoolName] = useState(() => {
-    let storedUser = null;
-    try {
-      storedUser = JSON.parse(localStorage.getItem("gbs_user") || "{}");
-    } catch { }
-    return (
-      institutionName ||
-      localStorage.getItem("gbs_report_school_name") ||
-      localStorage.getItem("gbs_tenant_name") ||
-      storedUser?.tenant?.name ||
-      "WITHIN DE BRAIN ACADEMY"
-    );
+    if (isDevMode) return "GBS SCHOOL MANAGEMENT SYSTEM";
+    const resolved = getActiveSchoolName({ isDeveloperContext: false });
+    if (institutionName && !["WITHIN DE BRAIN ACADEMY", "ST. AUGUSTINE INTERNATIONAL ACADEMY", "GBS INTERNATIONAL SCHOOL"].includes(String(institutionName).trim().toUpperCase())) {
+      return institutionName;
+    }
+    return resolved;
   });
   const [customLogo, setCustomLogo] = useState(() => {
-    return localStorage.getItem("gbs_custom_school_logo") || "/assets/gbs_crest_badge.jpg";
+    return getActiveSchoolLogo({ isDeveloperContext: isDevMode }) || "/assets/gbs_crest_badge.jpg";
   });
   const [cleaned, setCleaned] = useState(false);
   const [isOnline, setIsOnline] = useState(() => typeof navigator !== "undefined" ? navigator.onLine : true);
   const [syncingCloud, setSyncingCloud] = useState(false);
   const [syncFeedback, setSyncFeedback] = useState(null);
   const [showTranslatorModal, setShowTranslatorModal] = useState(false);
-
-  const isDevMode = isDeveloper || roleTitle.toLowerCase().includes("developer");
 
   let currentUserRole = "GUEST";
   try {
@@ -73,28 +69,37 @@ export default function TopCenterSystemBanner({
 
   useEffect(() => {
     const handleUpdate = () => {
-      const updated = localStorage.getItem("gbs_report_school_name") || localStorage.getItem("gbs_tenant_name");
+      if (isDevMode) {
+        setSchoolName("GBS SCHOOL MANAGEMENT SYSTEM");
+        setCustomLogo("/assets/gbs_crest_badge.jpg");
+        return;
+      }
+      const updated = getActiveSchoolName({ isDeveloperContext: false });
       if (updated) setSchoolName(updated);
-      const updatedLogo = localStorage.getItem("gbs_custom_school_logo");
+      const updatedLogo = getActiveSchoolLogo({ isDeveloperContext: false });
       if (updatedLogo) setCustomLogo(updatedLogo);
     };
+
+    handleUpdate();
 
     const handleOnline = () => setIsOnline(true);
     const handleOffline = () => setIsOnline(false);
 
     window.addEventListener("online", handleOnline);
     window.addEventListener("offline", handleOffline);
+    window.addEventListener("gbs_school_branding_updated", handleUpdate);
     window.addEventListener("gbs_school_name_updated", handleUpdate);
     window.addEventListener("gbs_custom_logo_updated", handleUpdate);
     window.addEventListener("storage", handleUpdate);
     return () => {
       window.removeEventListener("online", handleOnline);
       window.removeEventListener("offline", handleOffline);
+      window.removeEventListener("gbs_school_branding_updated", handleUpdate);
       window.removeEventListener("gbs_school_name_updated", handleUpdate);
       window.removeEventListener("gbs_custom_logo_updated", handleUpdate);
       window.removeEventListener("storage", handleUpdate);
     };
-  }, []);
+  }, [isDevMode, institutionName]);
 
   const handleTriggerCloudSync = async () => {
     setSyncingCloud(true);

@@ -17,6 +17,7 @@ router.use(tenantIsolationGuard);
 
 // 2. Applications Pipeline Query & Analytics
 router.get('/analytics', controller.getAnalytics);
+router.post('/inquiry', controller.createInquiry);
 router.route('/')
   .get(controller.getApplications)
   .post(controller.createInquiry);
@@ -25,7 +26,9 @@ router.post('/batch-delete', restrictTo('ADMIN', 'DEVELOPER'), controller.batchD
 
 // 3. Application Lifecycle Actions
 router.route('/:id')
-  .get(controller.getApplicationById);
+  .get(controller.getApplicationById)
+  .patch(restrictTo('ADMIN', 'DEVELOPER'), controller.updateApplication)
+  .put(restrictTo('ADMIN', 'DEVELOPER'), controller.updateApplication);
 
 router.post('/:id/apply', controller.submitApplication);
 router.post('/:id/documents', controller.uploadDocument);

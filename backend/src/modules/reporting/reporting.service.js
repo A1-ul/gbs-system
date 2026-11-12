@@ -26,27 +26,68 @@ function generateVerificationHash(data) {
   return crypto.createHash('sha256').update(str).digest('hex');
 }
 
-let schoolBrandingStore = {
-  preferredSchoolName: 'GBS International School',
-  schoolAddress: 'Campus Hill, Academic Avenue, Greater Accra Enclave',
-  schoolPhone: '+233 24 412 8990',
-  motto: 'Excellence, Integrity & Leadership',
-  accreditation: 'Cambridge Assessment International Education & NEASC Accredited'
-};
+const { readPersistentStore } = require('../../core/database/persistentStore');
+
+const tenantBrandingStore = {};
+
+async function resolveTenantBranding(tenantId, payload = {}) {
+  const tidKey = String(tenantId || '1');
+  let tenantRecord = null;
+  try {
+    const tidNum = parseInt(tidKey, 10);
+    if (!Number.isNaN(tidNum)) {
+      tenantRecord = await prisma.tenant.findUnique({ where: { id: tidNum } }).catch(() => null);
+    }
+  } catch (_) { }
+
+  let instRecord = null;
+  try {
+    const store = readPersistentStore();
+    if (Array.isArray(store.institutions)) {
+      instRecord = store.institutions.find(
+        (i) => String(i.id) === tidKey || String(i.tenantId) === tidKey || String(i.tenantCode) === tidKey
+      );
+    }
+  } catch (_) { }
+
+  const existing = tenantBrandingStore[tidKey] || {};
+  const registeredName =
+    payload.preferredSchoolName ||
+    payload.schoolName ||
+    existing.preferredSchoolName ||
+    tenantRecord?.name ||
+    instRecord?.name ||
+    instRecord?.institutionName ||
+    'GBS Registered Institution';
+
+  return {
+    preferredSchoolName: String(registeredName).trim(),
+    schoolLogo: payload.schoolLogo || existing.schoolLogo || tenantRecord?.logoUrl || null,
+    schoolAddress: existing.schoolAddress || tenantRecord?.address || 'Academic Campus Enclave',
+    schoolPhone: existing.schoolPhone || tenantRecord?.officialPhone || '+233 24 412 8990',
+    motto: existing.motto || 'Excellence, Integrity & Leadership',
+    accreditation: existing.accreditation || 'Cambridge Assessment International Education & NEASC Accredited'
+  };
+}
 
 async function getSchoolBranding(tenantId) {
-  return schoolBrandingStore;
+  return resolveTenantBranding(tenantId);
 }
 
 async function updateSchoolBranding(tenantId, payload) {
-  if (payload.preferredSchoolName && payload.preferredSchoolName.trim()) {
-    schoolBrandingStore.preferredSchoolName = payload.preferredSchoolName.trim();
-  }
-  if (payload.schoolAddress) schoolBrandingStore.schoolAddress = payload.schoolAddress;
-  if (payload.schoolPhone) schoolBrandingStore.schoolPhone = payload.schoolPhone;
-  if (payload.motto) schoolBrandingStore.motto = payload.motto;
-  if (payload.accreditation) schoolBrandingStore.accreditation = payload.accreditation;
-  return schoolBrandingStore;
+  const tidKey = String(tenantId || '1');
+  const current = await resolveTenantBranding(tenantId);
+  const updatedName = (payload.preferredSchoolName || payload.schoolName || current.preferredSchoolName).trim();
+  tenantBrandingStore[tidKey] = {
+    ...current,
+    preferredSchoolName: updatedName,
+    ...(payload.schoolLogo ? { schoolLogo: payload.schoolLogo } : {}),
+    ...(payload.schoolAddress ? { schoolAddress: payload.schoolAddress } : {}),
+    ...(payload.schoolPhone ? { schoolPhone: payload.schoolPhone } : {}),
+    ...(payload.motto ? { motto: payload.motto } : {}),
+    ...(payload.accreditation ? { accreditation: payload.accreditation } : {})
+  };
+  return tenantBrandingStore[tidKey];
 }
 
 /**
@@ -225,9 +266,11 @@ async function generateStudentReportCard(tenantId, payload, user) {
   const totalCredits = subjectScores.reduce((acc, s) => acc + s.creditHours, 0);
   const termGPA = Number((totalPoints / totalCredits).toFixed(2));
   const docNumber = generateDocumentNumber('REPORT_CARD');
+  const branding = await resolveTenantBranding(tid, payload);
 
   const reportCardPayload = {
-    schoolName: payload.schoolName || schoolBrandingStore.preferredSchoolName || 'GBS International School',
+    schoolName: branding.preferredSchoolName,
+    schoolLogo: branding.schoolLogo,
     documentType: 'ACADEMIC_REPORT_CARD',
     documentNumber: docNumber,
     academicTerm,
@@ -313,9 +356,11 @@ async function generateOfficialTranscript(tenantId, payload, user) {
   if (!student) throw new AppError(`Student ID ${studentId} not found.`, 404);
 
   const docNumber = generateDocumentNumber('TRANSCRIPT');
+  const branding = await resolveTenantBranding(tid, payload);
   const transcriptPayload = {
-    schoolName: payload.schoolName || schoolBrandingStore.preferredSchoolName || 'GBS International School',
-    accreditationBody: schoolBrandingStore.accreditation || 'Cambridge Assessment International Education & NEASC Accredited',
+    schoolName: branding.preferredSchoolName,
+    schoolLogo: branding.schoolLogo,
+    accreditationBody: branding.accreditation || 'Cambridge Assessment International Education & NEASC Accredited',
     documentType: 'OFFICIAL_ACADEMIC_TRANSCRIPT',
     documentNumber: docNumber,
 
@@ -401,8 +446,11 @@ async function generateFeeReceipt(tenantId, payload, user) {
   } = payload;
 
   const docNumber = generateDocumentNumber('FEE_RECEIPT');
+  const receiptBranding = await resolveTenantBranding(tid, payload);
   const receiptPayload = {
-    institution: 'GBS International School Bursar Office',
+    institution: `${receiptBranding.preferredSchoolName} Bursar Office`,
+    schoolName: receiptBranding.preferredSchoolName,
+    schoolLogo: receiptBranding.schoolLogo,
     receiptNumber: docNumber,
     invoiceReference,
     paymentDate: new Date().toISOString(),
@@ -466,9 +514,12 @@ async function generateEnrollmentCertificate(tenantId, payload, user) {
   const { studentName = 'Sophia Chen', gradeLevel = 10, academicYear = '2025-2026' } = payload;
 
   const docNumber = generateDocumentNumber('ENROLLMENT_CERTIFICATE');
-  const schoolTitle = payload.schoolName || schoolBrandingStore.preferredSchoolName || 'GBS International School';
+  const certBranding = await resolveTenantBranding(tid, payload);
+  const schoolTitle = certBranding.preferredSchoolName;
   const certPayload = {
     institution: schoolTitle,
+    schoolName: schoolTitle,
+    schoolLogo: certBranding.schoolLogo,
     documentType: 'CERTIFICATE_OF_ENROLLMENT',
     certificateNumber: docNumber,
     issueDate: new Date().toISOString(),

@@ -45,6 +45,11 @@ const migrationRoutes = require('../modules/migration/migration.routes');
 const shardRoutes = require('../modules/infrastructure/shard.routes');
 const monitoringRoutes = require('../modules/monitoring/monitoring.routes');
 const smsRoutes = require('../modules/sms/sms.routes');
+const analyticsRoutes = require('../modules/analytics/analytics.routes');
+const { loanRoutes } = require('../modules/loans');
+const roleRoutes = require('../modules/role/role.routes');
+const permissionRoutes = require('../modules/permission/permission.routes');
+const { protect } = require('../middleware/auth.middleware');
 const { initializeSocket } = require('./socket/socketServer');
 
 // GBS Master Architecture - User Registration Count & Verification Engine mounted
@@ -142,6 +147,10 @@ app.use('/api/v1/hr', hrRoutes);
 app.use('/api/v1/staff-management', hrRoutes);
 app.use('/api/v1/ai/exam-scanner', aiExamRoutes);
 app.use('/api/v1/sms', smsRoutes);
+app.use('/api/v1/analytics', analyticsRoutes);
+app.use('/api/v1/loans', protect, loanRoutes);
+app.use('/api/v1/roles', protect, roleRoutes);
+app.use('/api/v1/permissions', protect, permissionRoutes);
 
 // Procedure 3: Enterprise Advanced Modules
 app.use('/api/v1/facility', facilityRoutes);

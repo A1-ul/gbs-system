@@ -127,6 +127,19 @@ async function getApplicationById(req, res, next) {
   }
 }
 
+async function updateApplication(req, res, next) {
+  try {
+    const application = await service.updateApplication(req.tenantId, req.params.id, req.body, req.user);
+    res.status(200).json({
+      status: 'success',
+      message: 'Admission application updated successfully.',
+      data: { application }
+    });
+  } catch (error) {
+    next(error);
+  }
+}
+
 async function deleteApplication(req, res, next) {
   try {
     const result = await service.deleteApplication(req.tenantId, req.params.id, req.user);
@@ -175,6 +188,7 @@ module.exports = {
   scheduleInterview,
   approveApplication,
   rejectApplication,
+  updateApplication,
   deleteApplication,
   batchDeleteApplications,
   getApplications,

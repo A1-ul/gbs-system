@@ -10,6 +10,7 @@ import ClassTopicVideoPlatform from "../../../../../components/common/ClassTopic
 import { navigateToDetail } from "../../../../../utils/universalNavigation";
 import OfficialPaymentGatewayModal from "../../../../../components/common/OfficialPaymentGatewayModal";
 import OfficialInstitutionalSeal from "../../../../../components/common/OfficialInstitutionalSeal";
+import { getActiveSchoolName, getActiveSchoolLogo } from "../../../../../utils/schoolBranding";
 import "./StudentDashboard.css";
 
 export function StudentDashboard({ initialTab } = {}) {
@@ -20,7 +21,7 @@ export function StudentDashboard({ initialTab } = {}) {
     try {
       const stored = localStorage.getItem("gbs_user");
       if (stored) return JSON.parse(stored);
-    } catch {}
+    } catch { }
     return { firstName: "Alex", lastName: "Mensah", role: "STUDENT", indexNumber: "STU-2026-001" };
   })();
 
@@ -489,7 +490,7 @@ export function StudentDashboard({ initialTab } = {}) {
     try {
       const stored = JSON.parse(localStorage.getItem("gbs_concluded_class_notice") || "null");
       if (stored) return stored;
-    } catch {}
+    } catch { }
     if (!isDemoTenant) return { dismissed: true };
     return {
       id: "CLS-CONCL-902",
@@ -536,7 +537,7 @@ export function StudentDashboard({ initialTab } = {}) {
         localPeerStreamRef.current = stream;
         if (localPeerVideoRef.current) {
           localPeerVideoRef.current.srcObject = stream;
-          localPeerVideoRef.current.play().catch(() => {});
+          localPeerVideoRef.current.play().catch(() => { });
         }
       }
     } catch (err) {
@@ -571,7 +572,7 @@ export function StudentDashboard({ initialTab } = {}) {
       setIsPeerScreenSharing(false);
       if (localPeerStreamRef.current && localPeerVideoRef.current) {
         localPeerVideoRef.current.srcObject = localPeerStreamRef.current;
-        localPeerVideoRef.current.play().catch(() => {});
+        localPeerVideoRef.current.play().catch(() => { });
       }
     } else {
       try {
@@ -579,14 +580,14 @@ export function StudentDashboard({ initialTab } = {}) {
           const screenStream = await navigator.mediaDevices.getDisplayMedia({ video: true });
           if (localPeerVideoRef.current) {
             localPeerVideoRef.current.srcObject = screenStream;
-            localPeerVideoRef.current.play().catch(() => {});
+            localPeerVideoRef.current.play().catch(() => { });
           }
           setIsPeerScreenSharing(true);
           screenStream.getVideoTracks()[0].onended = () => {
             setIsPeerScreenSharing(false);
             if (localPeerStreamRef.current && localPeerVideoRef.current) {
               localPeerVideoRef.current.srcObject = localPeerStreamRef.current;
-              localPeerVideoRef.current.play().catch(() => {});
+              localPeerVideoRef.current.play().catch(() => { });
             }
           };
         } else {
@@ -643,7 +644,7 @@ export function StudentDashboard({ initialTab } = {}) {
     try {
       const stored = JSON.parse(localStorage.getItem("gbs_library_borrowed_records") || "[]");
       if (Array.isArray(stored) && stored.length > 0) return stored;
-    } catch {}
+    } catch { }
     if (!isDemoTenant) return [];
     return [
       {
@@ -700,7 +701,7 @@ export function StudentDashboard({ initialTab } = {}) {
     setBorrowedBooks(updated);
     try {
       localStorage.setItem("gbs_library_borrowed_records", JSON.stringify(updated));
-    } catch {}
+    } catch { }
     setFeedback({ type: "success", message: '📖 Textbook "' + book.title + '" checked out successfully! Return due in 14 days.' });
   };
 
@@ -709,7 +710,7 @@ export function StudentDashboard({ initialTab } = {}) {
     setBorrowedBooks(updated);
     try {
       localStorage.setItem("gbs_library_borrowed_records", JSON.stringify(updated));
-    } catch {}
+    } catch { }
     setFeedback({ type: "success", message: "📥 Textbook returned to school library successfully." });
   };
 
@@ -962,13 +963,9 @@ export function StudentDashboard({ initialTab } = {}) {
     }
   });
 
-  // REQUIREMENT: School Official Name & Uploaded Crest from Headmaster Branding Settings
-  const [schoolOfficialName, setSchoolOfficialName] = useState(() => {
-    return localStorage.getItem("gbs_report_school_name") || "St. Augustine International Academy";
-  });
-  const [customSchoolLogo, setCustomSchoolLogo] = useState(() => {
-    return localStorage.getItem("gbs_custom_school_logo") || "/assets/gbs_crest_badge.jpg";
-  });
+  // REQUIREMENT: Exact Registered School Name & Uploaded Crest from Headmaster Branding Settings
+  const [schoolOfficialName, setSchoolOfficialName] = useState(() => getActiveSchoolName(studentProfile));
+  const [customSchoolLogo, setCustomSchoolLogo] = useState(() => getActiveSchoolLogo());
 
   // REQUIREMENT: Grades published by teachers reflect on Student Dashboard
   const [publishedGrades, setPublishedGrades] = useState(() => {
@@ -981,12 +978,10 @@ export function StudentDashboard({ initialTab } = {}) {
 
   useEffect(() => {
     const handleSchoolNameSync = () => {
-      const name = localStorage.getItem("gbs_report_school_name");
-      if (name) setSchoolOfficialName(name);
+      setSchoolOfficialName(getActiveSchoolName(studentProfile));
     };
     const handleSchoolLogoSync = () => {
-      const logo = localStorage.getItem("gbs_custom_school_logo");
-      if (logo) setCustomSchoolLogo(logo);
+      setCustomSchoolLogo(getActiveSchoolLogo());
     };
     const handleGradesSync = () => {
       try {
@@ -998,6 +993,7 @@ export function StudentDashboard({ initialTab } = {}) {
     window.addEventListener("storage", handleSchoolNameSync);
     window.addEventListener("gbs_school_name_updated", handleSchoolNameSync);
     window.addEventListener("storage", handleSchoolLogoSync);
+    window.addEventListener("gbs_school_logo_updated", handleSchoolLogoSync);
     window.addEventListener("gbs_custom_logo_updated", handleSchoolLogoSync);
     window.addEventListener("storage", handleGradesSync);
     window.addEventListener("gbs_grades_updated", handleGradesSync);
@@ -2950,12 +2946,12 @@ export function StudentDashboard({ initialTab } = {}) {
                           const questionsList = (activeExam?.questionBank && activeExam.questionBank.length > 0)
                             ? activeExam.questionBank
                             : [
-                                { id: 101, questionNumber: 1, questionText: "Solve for the derivative of f(x) = 4x^3 - 5x + 7, showing detailed power-rule derivation steps.", options: ["12x^2 - 5", "12x^3 - 5", "8x^2 - 5x", "12x - 5"] },
-                                { id: 102, questionNumber: 2, questionText: "Which digital logic property represents De Morgan's Law: (A ∧ B)' ≡ A' ∨ B'?", options: ["NAND Equivalence to Negative-OR", "NOR Equivalence to Negative-AND", "XOR Inversion", "AND Double Negation"] },
-                                { id: 103, questionNumber: 3, questionText: "Calculate the kinetic energy of a 1200 kg vehicle moving at 25 m/s. (E_k = 0.5 * m * v^2)", options: ["375,000 Joules (375 kJ)", "300,000 Joules", "450,000 Joules", "150,000 Joules"] },
-                                { id: 104, questionNumber: 4, questionText: "Explain the biochemical process of cellular respiration and ATP synthesis in the mitochondrial inner membrane.", options: ["Oxidative Phosphorylation & Electron Transport Chain", "Fermentation & Glycolysis only", "Calvin Cycle Light Reaction", "Substrate-Level Phosphorylation only"] },
-                                { id: 105, questionNumber: 5, questionText: "Discuss the socioeconomic impact of artificial intelligence and digital school management systems on African secondary education.", options: ["Equitable Academic Access & Real-Time Record Verification", "Reduced Operations Overhead only", "Solely Hardware Dependencies", "No Measurable Impact"] }
-                              ];
+                              { id: 101, questionNumber: 1, questionText: "Solve for the derivative of f(x) = 4x^3 - 5x + 7, showing detailed power-rule derivation steps.", options: ["12x^2 - 5", "12x^3 - 5", "8x^2 - 5x", "12x - 5"] },
+                              { id: 102, questionNumber: 2, questionText: "Which digital logic property represents De Morgan's Law: (A ∧ B)' ≡ A' ∨ B'?", options: ["NAND Equivalence to Negative-OR", "NOR Equivalence to Negative-AND", "XOR Inversion", "AND Double Negation"] },
+                              { id: 103, questionNumber: 3, questionText: "Calculate the kinetic energy of a 1200 kg vehicle moving at 25 m/s. (E_k = 0.5 * m * v^2)", options: ["375,000 Joules (375 kJ)", "300,000 Joules", "450,000 Joules", "150,000 Joules"] },
+                              { id: 104, questionNumber: 4, questionText: "Explain the biochemical process of cellular respiration and ATP synthesis in the mitochondrial inner membrane.", options: ["Oxidative Phosphorylation & Electron Transport Chain", "Fermentation & Glycolysis only", "Calvin Cycle Light Reaction", "Substrate-Level Phosphorylation only"] },
+                              { id: 105, questionNumber: 5, questionText: "Discuss the socioeconomic impact of artificial intelligence and digital school management systems on African secondary education.", options: ["Equitable Academic Access & Real-Time Record Verification", "Reduced Operations Overhead only", "Solely Hardware Dependencies", "No Measurable Impact"] }
+                            ];
 
                           const isQAnswered = (q) => {
                             return Boolean(examAnswers[q.id] || (examEssayAnswers[q.id] && examEssayAnswers[q.id].trim().length > 0));
@@ -3339,7 +3335,7 @@ export function StudentDashboard({ initialTab } = {}) {
                   </h2>
                   <p style={{ color: "#e2e8f0", maxWidth: "620px", margin: "0 auto 1.5rem", fontSize: "1rem", lineHeight: "1.6" }}>
                     Access to your verified report card and official transcript has been withheld due to outstanding tuition/hostel balance of <strong style={{ color: "#fca5a5" }}>${feeArrears.toFixed(2)}</strong>.
-                    Per GBS International School Financial Regulations, students in fee arrears cannot access academic results or register for new semester courses until cleared by the Accountant.
+                    Per {schoolOfficialName || getActiveSchoolName(studentProfile)} Financial Regulations, students in fee arrears cannot access academic results or register for new semester courses until cleared by the Accountant.
                   </p>
                   <div style={{ display: "flex", gap: "12px", justifyContent: "center" }}>
                     <button
@@ -3923,7 +3919,7 @@ export function StudentDashboard({ initialTab } = {}) {
                   🏛️ Complete Academic Journey: From Lower Primary to University Alumni
                 </h3>
                 <p style={{ margin: 0, fontSize: "0.85rem", color: "#cbd5e1", lineHeight: "1.5" }}>
-                  At GBS International School, every student progresses systematically through <strong>Nursery 1-2</strong>, <strong>Kindergarten 1-2</strong>,
+                  At <strong>{schoolOfficialName || getActiveSchoolName(studentProfile)}</strong>, every student progresses systematically through <strong>Nursery 1-2</strong>, <strong>Kindergarten 1-2</strong>,
                   <strong>Lower Primary (Primary 1-3)</strong>, <strong>Upper Primary (Primary 4-6)</strong>, <strong>Junior High (JHS 1-3)</strong>, <strong>Senior High (SHS 1-3)</strong>,
                   and <strong>University Undergraduate (Level 100 to Level 400 across Semesters 1 & 2)</strong>. Upon successful thesis and comprehensive examination completion,
                   scholars transition into the prestigious GBS Alumni Association with permanent verifiable cryptographic credentials.
@@ -5970,9 +5966,13 @@ export function StudentDashboard({ initialTab } = {}) {
             fontFamily: "serif"
           }}>
             <div style={{ borderBottom: "2px solid #0f172a", paddingBottom: "12px", marginBottom: "16px", textAlign: "center" }}>
-              <div style={{ fontSize: "1.8rem" }}>🎓 🏛️</div>
+              <img
+                src={customSchoolLogo || "/assets/gbs_crest_badge.jpg"}
+                alt="School Crest"
+                style={{ width: "44px", height: "44px", borderRadius: "8px", objectFit: "contain", marginBottom: "4px" }}
+              />
               <h2 style={{ margin: "4px 0", fontSize: "1.3rem", fontWeight: 900, textTransform: "uppercase", letterSpacing: "0.05em" }}>
-                ST. AUGUSTINE INTERNATIONAL ACADEMY
+                {(schoolOfficialName || getActiveSchoolName(studentProfile)).toUpperCase()}
               </h2>
               <span style={{ fontSize: "0.8rem", color: "#475569", fontWeight: 700 }}>
                 EXAMINATIONS COUNCIL & FINANCIAL CLEARANCE DIVISION
@@ -6161,7 +6161,7 @@ export function StudentDashboard({ initialTab } = {}) {
 
             {/* Main Stage: Left Video Presentation & Right Chat/Roster */}
             <div style={{ flex: 1, display: "grid", gridTemplateColumns: "1fr 300px", overflow: "hidden" }}>
-              
+
               {/* Left: Interactive Class Presentation & Teacher Feed */}
               <div style={{ background: "#020617", position: "relative", display: "flex", alignItems: "center", justifyContent: "center", overflow: "hidden" }}>
                 <img
@@ -6169,7 +6169,7 @@ export function StudentDashboard({ initialTab } = {}) {
                   alt="Teacher Live Presentation"
                   style={{ width: "100%", height: "100%", objectFit: "cover", opacity: 0.85 }}
                 />
-                
+
                 {/* Live Teacher Banner Overlay */}
                 <div style={{ position: "absolute", top: "16px", left: "16px", background: "rgba(2, 6, 23, 0.85)", border: "1px solid rgba(255, 255, 255, 0.15)", padding: "6px 12px", borderRadius: "8px", display: "flex", alignItems: "center", gap: "8px" }}>
                   <span style={{ width: "10px", height: "10px", borderRadius: "50%", background: "#ef4444", animation: "pulse 1.5s infinite" }}></span>

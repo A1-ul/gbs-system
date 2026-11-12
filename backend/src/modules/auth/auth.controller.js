@@ -100,11 +100,54 @@ const logout = async (req, res) => {
   });
 };
 
+const refreshToken = async (req, res, next) => {
+  try {
+    const token = req.body?.refreshToken || req.cookies?.refreshToken;
+    const result = await authService.refreshTokenSession(token);
+    res.status(200).json({
+      status: 'success',
+      message: 'Session token refreshed.',
+      data: result
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+
+const forgotPassword = async (req, res, next) => {
+  try {
+    const result = await authService.forgotPassword(req.body || {});
+    res.status(200).json({
+      status: 'success',
+      message: `Password recovery OTP dispatched to ${req.body?.email || req.body?.phone}.`,
+      data: result
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+
+const resetPassword = async (req, res, next) => {
+  try {
+    const result = await authService.resetPassword(req.body || {});
+    res.status(200).json({
+      status: 'success',
+      message: 'Password updated successfully. You may now sign in with your new credentials.',
+      data: result
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+
 module.exports = {
   login,
   register,
   registerInstitution,
   getInstitutions,
   getMe,
-  logout
+  logout,
+  refreshToken,
+  forgotPassword,
+  resetPassword
 };

@@ -748,19 +748,59 @@ export default function DeveloperDashboard() {
 
   const handleApproveIncomingApplication = async (app) => {
     try {
+      const rawIdStr = String(app.id || "").replace(/\D/g, "");
+      const numericTenantId = rawIdStr ? parseInt(rawIdStr.slice(-6), 10) : Math.floor(1000 + Math.random() * 9000);
+      const assignedTenantCode = app.tenantCode || `GBS-${(app.institutionName || "SCHOOL").replace(/[^A-Za-z0-9]/g, "").slice(0, 6).toUpperCase()}-${String(numericTenantId).slice(-4)}`;
+      const targetEmailLower = String(app.headmasterEmail || app.adminEmail || app.officialEmail || "admin@gbs.edu").trim().toLowerCase();
+
+      // Clear any previous deleted or locked state for this institution so approval works cleanly
+      try {
+        const deletedLockouts = JSON.parse(localStorage.getItem("gbs_deleted_tenant_lockouts") || "[]");
+        const cleanedLockouts = deletedLockouts.filter((l) => {
+          const sameCode = assignedTenantCode && String(l.tenantCode || "").toUpperCase() === assignedTenantCode.toUpperCase();
+          const sameName = app.institutionName && String(l.tenantName || "").toLowerCase() === String(app.institutionName).toLowerCase();
+          const sameEmail = targetEmailLower && Array.isArray(l.emails) && l.emails.some((e) => String(e).toLowerCase() === targetEmailLower);
+          return !(sameCode || sameName || sameEmail);
+        });
+        localStorage.setItem("gbs_deleted_tenant_lockouts", JSON.stringify(cleanedLockouts));
+
+        const lockedTenants = JSON.parse(localStorage.getItem("gbs_locked_tenants_list") || "[]");
+        localStorage.setItem(
+          "gbs_locked_tenants_list",
+          JSON.stringify(
+            lockedTenants.filter(
+              (item) =>
+                String(item).toUpperCase() !== assignedTenantCode.toUpperCase() &&
+                String(item).toLowerCase() !== String(app.institutionName || "").toLowerCase() &&
+                String(item) !== String(numericTenantId)
+            )
+          )
+        );
+      } catch { }
+
       const updated = incomingApplications.map((a) =>
         (a.tenantUid === app.tenantUid || a.institutionName === app.institutionName || a.id === app.id)
-          ? { ...a, status: "APPROVED", isApproved: true, approvedAt: new Date().toISOString() }
+          ? {
+            ...a,
+            status: "APPROVED",
+            isApproved: true,
+            isLocked: false,
+            assignedTenantCode,
+            assignedTenantId: numericTenantId,
+            approvedAt: new Date().toISOString()
+          }
           : a
       );
       setIncomingApplications(updated);
       localStorage.setItem("gbs_incoming_onboarding_applications", JSON.stringify(updated));
       localStorage.setItem("gbs_tenant_already_onboarded", "true");
       localStorage.setItem("gbs_tenant_registration_status", "APPROVED");
+      if (app.institutionName) {
+        localStorage.setItem(`gbs_school_name_${assignedTenantCode}`, app.institutionName);
+        localStorage.setItem("gbs_report_school_name", app.institutionName);
+        localStorage.setItem("gbs_tenant_name", app.institutionName);
+      }
 
-      const rawIdStr = String(app.id || "").replace(/\D/g, "");
-      const numericTenantId = rawIdStr ? parseInt(rawIdStr.slice(-6), 10) : Math.floor(1000 + Math.random() * 9000);
-      const assignedTenantCode = app.tenantCode || `GBS-${(app.institutionName || "SCHOOL").replace(/[^A-Za-z0-9]/g, "").slice(0, 6).toUpperCase()}-${String(numericTenantId).slice(-4)}`;
       const newCountdown = {
         tenantId: numericTenantId,
         tenantName: app.institutionName,
@@ -781,12 +821,32 @@ export default function DeveloperDashboard() {
         }
       };
       setCountdowns((prev) => [newCountdown, ...prev.filter((c) => c.tenantCode !== assignedTenantCode && c.tenantName !== app.institutionName)]);
+      setOnboardedTenants((prev) => [
+        {
+          id: numericTenantId,
+          tenantId: numericTenantId,
+          name: app.institutionName,
+          institutionName: app.institutionName,
+          tenantCode: assignedTenantCode,
+          code: assignedTenantCode,
+          domain: app.domain || `${assignedTenantCode.toLowerCase()}.gbs.edu`,
+          status: "ACTIVE",
+          headmaster: {
+            name: app.headmasterName || app.adminName || "Executive Headmaster",
+            email: targetEmailLower,
+            phone: app.headmasterPhone || app.adminPhone || app.officialPhone || "+233-24-555-0199"
+          },
+          subscription: { tier: app.subscriptionPlan || "ENTERPRISE", maxStudents: app.totalStudentsEnrolled || 2500 },
+          maxStudents: app.totalStudentsEnrolled || 2500,
+          createdAt: app.createdAt || new Date().toISOString()
+        },
+        ...prev.filter((t) => (t.tenantCode || t.code) !== assignedTenantCode && (t.name || t.institutionName) !== app.institutionName)
+      ]);
       localStorage.setItem("gbs_institution_type", app.institutionType || "NURSERY_TO_JHS");
 
-      // Ensure local registered users cache has this approved Headmaster so login is instant
+      // Ensure local registered users cache has this approved Headmaster with exact schoolName so login is instant
       try {
         const localUsers = JSON.parse(localStorage.getItem("gbs_local_registered_users") || "[]");
-        const targetEmailLower = String(app.headmasterEmail || app.adminEmail || app.officialEmail || "admin@gbs.edu").trim().toLowerCase();
         const existingUser = localUsers.find((u) => String(u.email || "").toLowerCase() === targetEmailLower);
         const hmRecord = {
           ...(existingUser || {}),
@@ -800,11 +860,14 @@ export default function DeveloperDashboard() {
           phone: app.headmasterPhone || app.adminPhone || app.officialPhone || "+233 54 329 4615",
           tenantId: numericTenantId,
           tenantCode: assignedTenantCode,
+          schoolName: app.institutionName,
           institutionName: app.institutionName,
+          tenantName: app.institutionName,
           institutionType: app.institutionType || "NURSERY_TO_JHS",
           facePhoto: app.facePhoto || app.headmasterPhoto || null,
           isApproved: true,
           isActive: true,
+          isLocked: false,
           status: "APPROVED",
           verificationStatus: "VERIFIED",
           approvedAt: new Date().toISOString()
@@ -915,6 +978,222 @@ export default function DeveloperDashboard() {
     } catch (err) {
       showNotification("⚠ Error approving institution onboarding.");
     }
+  };
+
+  // Developer Archive Already-Approved Institution (Moves to Archived Vault)
+  const handleArchiveApprovedInstitution = (inst) => {
+    const instName = inst.institutionName || inst.tenantName || inst.name || "Institution";
+    const instCode = inst.assignedTenantCode || inst.tenantCode || inst.code || `GBS-ARC-${Date.now().toString().slice(-4)}`;
+    const instId = inst.id || inst.assignedTenantId || inst.tenantId || Date.now();
+
+    const archiveRecord = {
+      ...inst,
+      id: instId,
+      tenantId: instId,
+      institutionName: instName,
+      tenantName: instName,
+      assignedTenantCode: instCode,
+      tenantCode: instCode,
+      status: "APPROVED_AND_ARCHIVED",
+      isApproved: true,
+      approvedAt: inst.approvedAt || new Date().toISOString(),
+      approvedBy: "GABRIEL OSEI (gabosei48@gmail.com)",
+      archiveRef: inst.archiveRef || `ARC-${Date.now().toString(36).toUpperCase()}`
+    };
+
+    try {
+      const existingArchives = JSON.parse(localStorage.getItem("gbs_archived_onboarded_tenants") || "[]");
+      const updatedArchives = [
+        archiveRecord,
+        ...existingArchives.filter(
+          (a) => a.id !== instId && a.assignedTenantCode !== instCode && a.institutionName !== instName
+        )
+      ];
+      localStorage.setItem("gbs_archived_onboarded_tenants", JSON.stringify(updatedArchives));
+      setArchivedTenants(updatedArchives);
+
+      // Remove from active incoming queue view so the queue stays clean while preserved in Archived Vault
+      const updatedIncoming = incomingApplications.filter(
+        (a) => a.id !== instId && a.tenantCode !== instCode && a.institutionName !== instName
+      );
+      setIncomingApplications(updatedIncoming);
+      localStorage.setItem("gbs_incoming_onboarding_applications", JSON.stringify(updatedIncoming));
+    } catch { }
+
+    showNotification(`📦 Approved institution "${instName}" (${instCode}) safely archived to the Approved Registrations Vault.`);
+  };
+
+  // Developer Permanently Delete & Clear All Information for Approved / Pending / Archived Institution
+  const handlePermanentlyDeleteAndClearInstitution = async (inst) => {
+    const instName = inst.institutionName || inst.tenantName || inst.name || "Institution";
+    const instCode = inst.assignedTenantCode || inst.tenantCode || inst.code || "";
+    const instId = inst.id || inst.assignedTenantId || inst.tenantId || instCode || instName;
+    const hmEmail = inst.headmasterEmail || inst.adminEmail || inst.officialEmail || inst.headmaster?.email || "";
+
+    if (
+      !window.confirm(
+        `PERMANENTLY DELETE & CLEAR ALL INFORMATION for "${instName}" (${instCode || instId})?\n\nThis will permanently delete the institution and clear ALL its records, users, and credentials. They will be denied login with notice that their institution has been deleted unless they re-register for approval.`
+      )
+    ) {
+      return;
+    }
+
+    recordPermanentDeletion([instId, instCode, instName, hmEmail, `sub_${instId}`].filter(Boolean));
+
+    // 1. Call Backend Permanent Purge Endpoint
+    try {
+      const token = localStorage.getItem("gbs_dev_token") || localStorage.getItem("gbs_token");
+      await fetch(`${BASE_URL}/tenants/${encodeURIComponent(instId)}/purge`, {
+        method: "DELETE",
+        headers: {
+          "Content-Type": "application/json",
+          ...(token ? { Authorization: `Bearer ${token}` } : {})
+        }
+      });
+    } catch { }
+
+    // 2. Clear from all local state arrays & localStorage keys
+    setIncomingApplications((prev) =>
+      prev.filter(
+        (a) =>
+          a.id !== instId &&
+          (!instCode || (a.tenantCode || a.assignedTenantCode) !== instCode) &&
+          String(a.institutionName || "").toLowerCase() !== String(instName).toLowerCase()
+      )
+    );
+    setArchivedTenants((prev) =>
+      prev.filter(
+        (a) =>
+          a.id !== instId &&
+          (!instCode || (a.tenantCode || a.assignedTenantCode) !== instCode) &&
+          String(a.institutionName || "").toLowerCase() !== String(instName).toLowerCase()
+      )
+    );
+    setDeletedTenantArchives((prev) =>
+      prev.filter(
+        (a) =>
+          (a.tenantId || a.id) !== instId &&
+          (!instCode || (a.tenantCode || a.code) !== instCode) &&
+          String(a.tenantName || a.institutionName || "").toLowerCase() !== String(instName).toLowerCase()
+      )
+    );
+    setCountdowns((prev) =>
+      prev.filter(
+        (c) =>
+          c.tenantId !== instId &&
+          (!instCode || c.tenantCode !== instCode) &&
+          String(c.tenantName || "").toLowerCase() !== String(instName).toLowerCase()
+      )
+    );
+    setOnboardedTenants((prev) =>
+      prev.filter(
+        (t) =>
+          (t.id || t.tenantId) !== instId &&
+          (!instCode || (t.tenantCode || t.code) !== instCode) &&
+          String(t.name || t.institutionName || "").toLowerCase() !== String(instName).toLowerCase()
+      )
+    );
+
+    try {
+      const incoming = JSON.parse(localStorage.getItem("gbs_incoming_onboarding_applications") || "[]");
+      localStorage.setItem(
+        "gbs_incoming_onboarding_applications",
+        JSON.stringify(
+          incoming.filter(
+            (a) =>
+              a.id !== instId &&
+              (!instCode || (a.tenantCode || a.assignedTenantCode) !== instCode) &&
+              String(a.institutionName || "").toLowerCase() !== String(instName).toLowerCase()
+          )
+        )
+      );
+
+      const archived = JSON.parse(localStorage.getItem("gbs_archived_onboarded_tenants") || "[]");
+      localStorage.setItem(
+        "gbs_archived_onboarded_tenants",
+        JSON.stringify(
+          archived.filter(
+            (a) =>
+              a.id !== instId &&
+              (!instCode || (a.tenantCode || a.assignedTenantCode) !== instCode) &&
+              String(a.institutionName || "").toLowerCase() !== String(instName).toLowerCase()
+          )
+        )
+      );
+
+      const delVault = JSON.parse(localStorage.getItem("gbs_deleted_tenant_archives") || "[]");
+      localStorage.setItem(
+        "gbs_deleted_tenant_archives",
+        JSON.stringify(
+          delVault.filter(
+            (a) =>
+              (a.tenantId || a.id) !== instId &&
+              (!instCode || (a.tenantCode || a.code) !== instCode) &&
+              String(a.tenantName || a.institutionName || "").toLowerCase() !== String(instName).toLowerCase()
+          )
+        )
+      );
+
+      // Clear all local registered users belonging to this deleted institution
+      const localUsers = JSON.parse(localStorage.getItem("gbs_local_registered_users") || "[]");
+      const targetEmailLower = String(hmEmail || "").toLowerCase().trim();
+      const memberEmails = localUsers
+        .filter(
+          (u) =>
+            String(u.tenantId) === String(instId) ||
+            (instCode && String(u.tenantCode || "").toUpperCase() === String(instCode).toUpperCase()) ||
+            String(u.institutionName || u.schoolName || "").toLowerCase() === String(instName).toLowerCase() ||
+            (targetEmailLower && String(u.email || "").toLowerCase() === targetEmailLower)
+        )
+        .map((u) => String(u.email || "").toLowerCase().trim())
+        .filter(Boolean);
+
+      const remainingUsers = localUsers.filter(
+        (u) =>
+          String(u.tenantId) !== String(instId) &&
+          (!instCode || String(u.tenantCode || "").toUpperCase() !== String(instCode).toUpperCase()) &&
+          String(u.institutionName || u.schoolName || "").toLowerCase() !== String(instName).toLowerCase() &&
+          (!targetEmailLower || String(u.email || "").toLowerCase() !== targetEmailLower)
+      );
+      localStorage.setItem("gbs_local_registered_users", JSON.stringify(remainingUsers));
+      setRegisteredMembersList(remainingUsers);
+
+      // Clear tenant branding keys
+      if (instCode) {
+        localStorage.removeItem(`gbs_school_name_${instCode.toUpperCase()}`);
+        localStorage.removeItem(`gbs_school_logo_${instCode.toUpperCase()}`);
+      }
+
+      // Record permanent deletion lockout with exact required message
+      const exactDeletionMessage =
+        "Access Denied: Your institution has been deleted from the system, so you cannot access the system unless you re-register for approval.";
+      const lockouts = JSON.parse(localStorage.getItem("gbs_deleted_tenant_lockouts") || "[]");
+      const allEmails = Array.from(new Set([targetEmailLower, ...memberEmails].filter(Boolean)));
+      const newLockout = {
+        tenantId: instId,
+        tenantName: instName,
+        tenantCode: instCode,
+        emails: allEmails,
+        deletionNotice: exactDeletionMessage,
+        deletedAt: new Date().toISOString(),
+        permanentlyCleared: true
+      };
+      localStorage.setItem(
+        "gbs_deleted_tenant_lockouts",
+        JSON.stringify([
+          newLockout,
+          ...lockouts.filter(
+            (l) =>
+              (l.tenantId || l.id) !== instId &&
+              String(l.tenantName || "").toLowerCase() !== String(instName).toLowerCase()
+          )
+        ])
+      );
+    } catch { }
+
+    appendConsoleLog(`PURGE_CLEAR >> Institution "${instName}" (${instCode || instId}) permanently deleted and all information cleared.`);
+    showNotification(`🗑️ Institution "${instName}" permanently deleted and all information cleared from the system.`);
+    fetchData();
   };
 
   const handleRejectIncomingApplication = async (app) => {
@@ -2403,7 +2682,7 @@ export default function DeveloperDashboard() {
         body: JSON.stringify({
           phone: targetPhone,
           message: alertMsg,
-          schoolName: "WITHIN DE BRAIN ACADEMY"
+          schoolName: showHeadmasterOfflineNoticeModal.tenantName || "Registered School"
         })
       }).catch(() => { });
     } catch { }
@@ -2629,15 +2908,46 @@ export default function DeveloperDashboard() {
   const handleTenantAction = async (tenantId, action, params = {}) => {
     try {
       const targetTenant = countdowns.find((c) => c.tenantId === tenantId) || onboardedTenants.find((t) => t.id === tenantId) || { tenantName: `Institutional Tenant #${tenantId}` };
-      const tName = targetTenant.tenantName || targetTenant.institutionName || `Tenant #${tenantId}`;
+      const tName = targetTenant.tenantName || targetTenant.name || targetTenant.institutionName || `Tenant #${tenantId}`;
+      const tCode = targetTenant.tenantCode || targetTenant.code || "";
 
       setActionLoadingMap((prev) => ({ ...prev, [tenantId]: true, [`${tenantId}-${action}`]: true }));
 
       // Optimistic instant response for zero UI delay
-      if (action === "LOCK") {
+      if (action === "LOCK" || action === "SUSPEND") {
         localStorage.setItem("gbs_tenant_status", "LOCKED");
         setMasterTenantLockStatus("LOCKED");
         window.dispatchEvent(new CustomEvent("gbs_tenant_status_updated", { detail: { status: "LOCKED" } }));
+
+        // Record in per-tenant locked list so locked institutions are strictly blocked from logging in
+        try {
+          const lockedList = JSON.parse(localStorage.getItem("gbs_locked_tenants_list") || "[]");
+          const additions = [String(tenantId), tCode ? String(tCode).toUpperCase() : null, tName ? String(tName).toLowerCase() : null].filter(Boolean);
+          localStorage.setItem("gbs_locked_tenants_list", JSON.stringify(Array.from(new Set([...lockedList, ...additions]))));
+
+          const incoming = JSON.parse(localStorage.getItem("gbs_incoming_onboarding_applications") || "[]");
+          const updatedInc = incoming.map((a) =>
+            a.id === tenantId ||
+              a.assignedTenantId === tenantId ||
+              (tCode && (a.tenantCode === tCode || a.assignedTenantCode === tCode)) ||
+              String(a.institutionName || "").toLowerCase() === String(tName).toLowerCase()
+              ? { ...a, status: "LOCKED", isLocked: true }
+              : a
+          );
+          localStorage.setItem("gbs_incoming_onboarding_applications", JSON.stringify(updatedInc));
+          setIncomingApplications(updatedInc);
+
+          const localUsers = JSON.parse(localStorage.getItem("gbs_local_registered_users") || "[]");
+          const updatedUsers = localUsers.map((u) =>
+            String(u.tenantId) === String(tenantId) ||
+              (tCode && String(u.tenantCode || "").toUpperCase() === String(tCode).toUpperCase()) ||
+              String(u.institutionName || u.schoolName || "").toLowerCase() === String(tName).toLowerCase()
+              ? { ...u, status: "LOCKED", isLocked: true, isActive: false }
+              : u
+          );
+          localStorage.setItem("gbs_local_registered_users", JSON.stringify(updatedUsers));
+        } catch { }
+
         setCountdowns((prev) =>
           prev.map((c) => c.tenantId === tenantId ? { ...c, subscriptionStatus: "LOCKED", warningLevel: "LOCKED_ADMIN" } : c)
         );
@@ -2656,10 +2966,44 @@ export default function DeveloperDashboard() {
           createdAt: new Date().toISOString()
         };
         setBackups((prev) => [snapshot, ...prev]);
-      } else if (action === "UNLOCK") {
+      } else if (action === "UNLOCK" || action === "ACTIVATE") {
         localStorage.setItem("gbs_tenant_status", "ACTIVE");
         setMasterTenantLockStatus("ACTIVE");
         window.dispatchEvent(new CustomEvent("gbs_tenant_status_updated", { detail: { status: "ACTIVE" } }));
+
+        try {
+          const lockedList = JSON.parse(localStorage.getItem("gbs_locked_tenants_list") || "[]");
+          const cleanedLocked = lockedList.filter(
+            (item) =>
+              String(item) !== String(tenantId) &&
+              (!tCode || String(item).toUpperCase() !== String(tCode).toUpperCase()) &&
+              String(item).toLowerCase() !== String(tName).toLowerCase()
+          );
+          localStorage.setItem("gbs_locked_tenants_list", JSON.stringify(cleanedLocked));
+
+          const incoming = JSON.parse(localStorage.getItem("gbs_incoming_onboarding_applications") || "[]");
+          const updatedInc = incoming.map((a) =>
+            a.id === tenantId ||
+              a.assignedTenantId === tenantId ||
+              (tCode && (a.tenantCode === tCode || a.assignedTenantCode === tCode)) ||
+              String(a.institutionName || "").toLowerCase() === String(tName).toLowerCase()
+              ? { ...a, status: "APPROVED", isApproved: true, isLocked: false }
+              : a
+          );
+          localStorage.setItem("gbs_incoming_onboarding_applications", JSON.stringify(updatedInc));
+          setIncomingApplications(updatedInc);
+
+          const localUsers = JSON.parse(localStorage.getItem("gbs_local_registered_users") || "[]");
+          const updatedUsers = localUsers.map((u) =>
+            String(u.tenantId) === String(tenantId) ||
+              (tCode && String(u.tenantCode || "").toUpperCase() === String(tCode).toUpperCase()) ||
+              String(u.institutionName || u.schoolName || "").toLowerCase() === String(tName).toLowerCase()
+              ? { ...u, status: "APPROVED", isApproved: true, isLocked: false, isActive: true }
+              : u
+          );
+          localStorage.setItem("gbs_local_registered_users", JSON.stringify(updatedUsers));
+        } catch { }
+
         setCountdowns((prev) =>
           prev.map((c) => c.tenantId === tenantId ? { ...c, subscriptionStatus: "ACTIVE", warningLevel: "OPERATIONAL_STABLE" } : c)
         );
@@ -3138,13 +3482,13 @@ export default function DeveloperDashboard() {
         tenantName: label,
         tenantCode: archiveRecord.tenantCode,
         emails: targetEmails,
-        deletionNotice: "Your institution has been deleted from GBS SYSTEM. You are unable to access the system permanently until the institution is re-registered by the developer.",
+        deletionNotice: "Access Denied: Your institution has been deleted from the system, so you cannot access the system unless you re-register for approval.",
         deletedAt: archiveRecord.deletedAt
       };
       localStorage.setItem("gbs_deleted_tenant_lockouts", JSON.stringify([newLockout, ...deletedLockouts.filter(l => l.tenantId !== tenantId)]));
 
       // Dispatch deletion notification SMS to tenant
-      const alertMsg = "Your institution has been deleted from GBS SYSTEM. You are unable to access the system permanently until the institution is re-registered by the developer.";
+      const alertMsg = "Access Denied: Your institution has been deleted from the system, so you cannot access the system unless you re-register for approval.";
       fetch(`${getApiBaseUrl()}/sms/send`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -3231,6 +3575,8 @@ export default function DeveloperDashboard() {
           tenantId: tid,
           tenantCode: archiveItem.tenantCode || `GBS-${tid}`,
           tenantName: archiveItem.tenantName,
+          schoolName: archiveItem.tenantName,
+          institutionName: archiveItem.tenantName,
           status: "ACTIVE"
         });
         localStorage.setItem("gbs_local_registered_users", JSON.stringify(filteredUsers));
@@ -3265,50 +3611,7 @@ export default function DeveloperDashboard() {
   };
 
   const handlePurgeArchivedTenant = async (archiveItem) => {
-    const tid = archiveItem.tenantId || archiveItem.id;
-    const label = archiveItem.tenantName || `Tenant #${tid}`;
-    if (!window.confirm(`Are you sure you want to PERMANENTLY PURGE "${label}" and all its records? This cannot be undone and the institution will be permanently denied access.`)) return;
-
-    recordPermanentDeletion([tid, archiveItem.tenantCode, archiveItem.headmasterEmail, `sub_${tid}`]);
-
-    try {
-      await fetch(`${BASE_URL}/tenants/${tid}/purge`, { method: "DELETE" });
-    } catch { }
-
-    const updatedArchives = deletedTenantArchives.filter((a) => (a.tenantId || a.id) !== tid);
-    setDeletedTenantArchives(updatedArchives);
-    localStorage.setItem("gbs_deleted_tenant_archives", JSON.stringify(updatedArchives));
-
-    // Ensure permanent lockout stays enforced so purged tenant can NEVER access the system
-    try {
-      const lockouts = JSON.parse(localStorage.getItem("gbs_deleted_tenant_lockouts") || "[]");
-      const targetEmails = [archiveItem.headmasterEmail].filter(Boolean).map((e) => String(e).toLowerCase().trim());
-      const newLockout = {
-        tenantId: tid,
-        tenantName: label,
-        tenantCode: archiveItem.tenantCode,
-        emails: targetEmails,
-        deletionNotice: "Your institution has been permanently purged from GBS SYSTEM. You are denied access to the system.",
-        deletedAt: new Date().toISOString()
-      };
-      localStorage.setItem(
-        "gbs_deleted_tenant_lockouts",
-        JSON.stringify([newLockout, ...lockouts.filter((l) => (l.tenantId || l.id) !== tid)])
-      );
-
-      // Remove any local registered users belonging to the purged tenant
-      const localUsers = JSON.parse(localStorage.getItem("gbs_local_registered_users") || "[]");
-      const filteredUsers = localUsers.filter(
-        (u) =>
-          String(u.tenantId) !== String(tid) &&
-          (!archiveItem.tenantCode || String(u.tenantCode || "").toUpperCase() !== String(archiveItem.tenantCode).toUpperCase()) &&
-          !targetEmails.includes(String(u.email || "").toLowerCase().trim())
-      );
-      localStorage.setItem("gbs_local_registered_users", JSON.stringify(filteredUsers));
-    } catch (_) { }
-
-    appendConsoleLog(`PURGE >> Institution "${label}" (#${tid}) permanently purged and locked out from system.`);
-    showNotification(`🗑️ Institution "${label}" permanently purged and denied system access.`);
+    await handlePermanentlyDeleteAndClearInstitution(archiveItem);
   };
 
   const handleBatchDeleteSelectedTenants = async () => {
@@ -3326,7 +3629,7 @@ export default function DeveloperDashboard() {
           tenantName: target?.tenantName || target?.name || `Tenant #${tid}`,
           tenantCode: target?.tenantCode || target?.code,
           emails: hmEmail ? [String(hmEmail).toLowerCase().trim()] : [],
-          deletionNotice: "Your institution has been deleted from GBS SYSTEM. You are unable to access the system permanently.",
+          deletionNotice: "Access Denied: Your institution has been deleted from the system, so you cannot access the system unless you re-register for approval.",
           deletedAt: new Date().toISOString()
         };
       });
@@ -4664,9 +4967,6 @@ export default function DeveloperDashboard() {
           >
             ⬅ Return to Portal Selection
           </button>
-          <button onClick={() => navigate("/presentation-engine")} style={{ borderColor: "#38bdf8", color: "#38bdf8", fontWeight: 800 }}>
-            🎬 Video Presentation Engine
-          </button>
           <button onClick={() => navigate("/developer-control-center/ai-diagnostics")}>
             🤖 AI Diagnostics
           </button>
@@ -5717,11 +6017,66 @@ export default function DeveloperDashboard() {
                                   >
                                     ✕ Reject
                                   </button>
+                                  <button
+                                    type="button"
+                                    onClick={() => handlePermanentlyDeleteAndClearInstitution(app)}
+                                    style={{
+                                      background: "rgba(127, 29, 29, 0.6)",
+                                      border: "1px solid #ef4444",
+                                      color: "#fecaca",
+                                      borderRadius: "8px",
+                                      padding: "8px 12px",
+                                      fontWeight: 700,
+                                      fontSize: "0.78rem",
+                                      cursor: "pointer"
+                                    }}
+                                    title="Permanently delete and clear all information"
+                                  >
+                                    🗑️ Delete Permanently
+                                  </button>
                                 </>
                               ) : (
-                                <span style={{ fontSize: "0.78rem", color: (app.status === "APPROVED" || app.isApproved) ? "#34d399" : "#f87171", fontWeight: 700 }}>
-                                  {(app.status === "APPROVED" || app.isApproved) ? "Enclave Provisioned" : "Rejected"}
-                                </span>
+                                <div style={{ display: "flex", alignItems: "center", gap: "8px", flexWrap: "wrap" }}>
+                                  <span style={{ fontSize: "0.78rem", color: (app.status === "APPROVED" || app.isApproved) ? "#34d399" : "#f87171", fontWeight: 700 }}>
+                                    {(app.status === "APPROVED" || app.isApproved) ? "Enclave Provisioned" : "Rejected"}
+                                  </span>
+                                  {(app.status === "APPROVED" || app.isApproved) && (
+                                    <button
+                                      type="button"
+                                      onClick={() => handleArchiveApprovedInstitution(app)}
+                                      style={{
+                                        background: "rgba(245, 158, 11, 0.2)",
+                                        border: "1px solid #f59e0b",
+                                        color: "#fcd34d",
+                                        borderRadius: "8px",
+                                        padding: "6px 10px",
+                                        fontWeight: 700,
+                                        fontSize: "0.75rem",
+                                        cursor: "pointer"
+                                      }}
+                                      title="Move approved institution to Archived Vault and clear queue"
+                                    >
+                                      📦 Archive Approved
+                                    </button>
+                                  )}
+                                  <button
+                                    type="button"
+                                    onClick={() => handlePermanentlyDeleteAndClearInstitution(app)}
+                                    style={{
+                                      background: "rgba(127, 29, 29, 0.75)",
+                                      border: "1px solid #ef4444",
+                                      color: "#fecaca",
+                                      borderRadius: "8px",
+                                      padding: "6px 10px",
+                                      fontWeight: 700,
+                                      fontSize: "0.75rem",
+                                      cursor: "pointer"
+                                    }}
+                                    title="Permanently delete institution and clear all stored data"
+                                  >
+                                    🗑️ Clear & Delete Permanently
+                                  </button>
+                                </div>
                               )}
                             </div>
                           </div>
@@ -5877,6 +6232,23 @@ export default function DeveloperDashboard() {
                                   }}
                                 >
                                   📋 Copy Details
+                                </button>
+                                <button
+                                  type="button"
+                                  onClick={() => handlePermanentlyDeleteAndClearInstitution(tenant)}
+                                  style={{
+                                    background: "rgba(127, 29, 29, 0.75)",
+                                    border: "1px solid #ef4444",
+                                    color: "#fecaca",
+                                    borderRadius: "8px",
+                                    padding: "7px 12px",
+                                    fontSize: "0.78rem",
+                                    fontWeight: 700,
+                                    cursor: "pointer"
+                                  }}
+                                  title="Permanently delete this approved institution and clear ALL its records"
+                                >
+                                  🗑️ Delete Permanently & Clear
                                 </button>
                               </div>
                             </div>
@@ -6768,11 +7140,20 @@ export default function DeveloperDashboard() {
                               <button
                                 type="button"
                                 className="action-btn-sm"
-                                style={{ flex: 1, padding: "6px 8px", fontSize: "0.78rem", background: "#7f1d1d", color: "#fecaca", border: "1px solid #ef4444", fontWeight: 700 }}
-                                onClick={() => handleDeleteTenant(t.id || t.tenantId, t.name || t.institutionName)}
-                                title="Permanently delete this tenant from the GBS System"
+                                style={{ flex: 1, padding: "6px 8px", fontSize: "0.78rem", background: "rgba(245, 158, 11, 0.25)", color: "#fcd34d", border: "1px solid #f59e0b", fontWeight: 700 }}
+                                onClick={() => handleArchiveApprovedInstitution(t)}
+                                title="Archive this approved institution to the Archived Vault"
                               >
-                                🗑️ Delete
+                                📦 Archive
+                              </button>
+                              <button
+                                type="button"
+                                className="action-btn-sm"
+                                style={{ flex: 1, padding: "6px 8px", fontSize: "0.78rem", background: "#7f1d1d", color: "#fecaca", border: "1px solid #ef4444", fontWeight: 700 }}
+                                onClick={() => handlePermanentlyDeleteAndClearInstitution(t)}
+                                title="Permanently delete this tenant and clear all information"
+                              >
+                                🗑️ Delete Permanently & Clear
                               </button>
                             </div>
                             <button
@@ -9593,7 +9974,7 @@ export default function DeveloperDashboard() {
                           >
                             🔍 View
                           </button>
-                           <button
+                          <button
                             type="button"
                             className="action-btn-sm"
                             style={{ background: "rgba(239, 68, 68, 0.2)", color: "#f87171", border: "1px solid #ef4444", padding: "4px 8px", cursor: "pointer" }}

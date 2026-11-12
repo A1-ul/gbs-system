@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import apiClient from '../../../api/client/apiClient';
+import { getActiveSchoolName } from '../../../utils/schoolBranding';
 import './LibraryManagement.css';
 
 const ALL_CLASS_LEVELS = [
@@ -309,7 +310,7 @@ export default function LibraryManagementPage() {
       <header className="library-top-nav">
         <div className="nav-brand">
           <span className="nav-brand-badge">LIBRARY</span>
-          <span>GBS International Resource & Media Center</span>
+          <span>{getActiveSchoolName()} • Resource &amp; Media Center</span>
         </div>
         <div className="nav-actions" style={{ display: 'flex', gap: '10px' }}>
           <button
@@ -932,7 +933,7 @@ export default function LibraryManagementPage() {
                   Chapter 1: Foundational Principles & Core Concepts
                 </h4>
                 <p>
-                  Welcome to the official study syllabus for {readingBook.subject_name || 'this course'}. This curriculum edition has been standardized for the GBS International Academic Network. Review each core module, practice sample problems, and consult your designated course instructor for grading checkpoints.
+                  Welcome to the official study syllabus for {readingBook.subject_name || 'this course'} at <strong>{getActiveSchoolName()}</strong>. This curriculum edition has been standardized for institutional excellence. Review each core module, practice sample problems, and consult your designated course instructor for grading checkpoints.
                 </p>
                 <h5 style={{ color: '#ffffff', marginTop: '16px' }}>Section 1.1 — Learning Objectives</h5>
                 <ul style={{ paddingLeft: '20px', color: '#cbd5e1' }}>

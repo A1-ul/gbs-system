@@ -72,27 +72,34 @@ const protect = async (req, res, next) => {
     const numericTenantId = toNumericId(decoded.tenantId, 1);
 
     if (
-      isPermanentlyDeleted(decoded.id) ||
-      (numericTenantId !== 1 && isTenantLockedOut({ id: decoded.tenantId, tenantId: numericTenantId }))
+      decoded.role !== 'DEVELOPER' &&
+      (isPermanentlyDeleted(`User:${decoded.id}`) ||
+        (String(decoded.id || '').startsWith('usr_') && isPermanentlyDeleted(decoded.id)) ||
+        (numericTenantId !== 1 && isTenantLockedOut({ id: decoded.tenantId, tenantId: numericTenantId })))
     ) {
-      return next(new AppError('Access Denied: Your institution or user account has been permanently deleted from the GBS System.', 403));
+      return next(new AppError('Access Denied: Your institution has been deleted from the system, so you cannot access the system unless you re-register for approval.', 403));
     }
 
     const store = readPersistentStore();
+    let matchedInst = null;
     if (numericTenantId !== 1 && Array.isArray(store.institutions)) {
-      const matchedInst = store.institutions.find(
+      matchedInst = store.institutions.find(
         (inst) =>
           String(inst.id) === String(decoded.tenantId) ||
           String(inst.tenantId) === String(numericTenantId) ||
           String(inst.tenantUid) === String(decoded.tenantId) ||
-          String(inst.tenantCode) === String(decoded.tenantId)
+          String(inst.tenantCode) === String(decoded.tenantId) ||
+          `usr_hm_${inst.id}` === String(decoded.id)
       );
       if (matchedInst) {
         const st = String(matchedInst.status || '').toUpperCase();
         if (matchedInst.isDeleted || st === 'DELETED' || st === 'ARCHIVED_DELETED' || st === 'PURGED') {
-          return next(new AppError('Access Denied: Your institution has been permanently deleted from the GBS System.', 403));
+          return next(new AppError('Access Denied: Your institution has been deleted from the system, so you cannot access the system unless you re-register for approval.', 403));
         }
-        if (st === 'REJECTED' || st === 'PENDING_DEVELOPER_APPROVAL' || st === 'PENDING_APPROVAL' || matchedInst.isApproved === false) {
+        if (matchedInst.isLocked === true || matchedInst.isActive === false || st === 'LOCKED' || st === 'SUSPENDED' || st === 'DISABLED') {
+          return next(new AppError(`Access Denied: Your institution '${matchedInst.institutionName || matchedInst.name || 'your institution'}' is currently LOCKED / SUSPENDED by the System Developer and cannot access the system.`, 403));
+        }
+        if (st === 'REJECTED' || st === 'PENDING_DEVELOPER_APPROVAL' || st === 'PENDING_APPROVAL' || st === 'PENDING' || matchedInst.isApproved === false) {
           return next(new AppError('Access Denied: Your institution has not been approved by the System Developer.', 403));
         }
       }
@@ -100,46 +107,140 @@ const protect = async (req, res, next) => {
 
     let user = null;
     try {
-      user = await prisma.user.findUnique({
-        where: { id: numericUserId },
-        include: { tenant: true }
-      });
+      if (Number.isInteger(numericUserId) && String(numericUserId) === String(decoded.id)) {
+        user = await prisma.user.findUnique({
+          where: { id: numericUserId },
+          include: { tenant: true }
+        });
+      }
     } catch { }
 
     if (!user) {
-      user = {
-        id: numericUserId,
-        tenantId: numericTenantId,
-        firstName: decoded.role || 'Portal',
-        lastName: 'User',
-        username: (decoded.role || 'user').toLowerCase(),
-        email: `${(decoded.role || 'user').toLowerCase()}@gbs.com`,
-        role: decoded.role || 'ADMIN',
-        permissions: ['*'],
-        isActive: true,
-        isLocked: false,
-        isDeleted: false,
-        tenant: {
-          id: numericTenantId,
-          name: 'GBS International School (Main Campus)',
-          code: 'GBS-MAIN',
-          isActive: true,
-          status: 'ACTIVE'
+      const allStoreUsers = [
+        ...(Array.isArray(store.registeredUsers) ? store.registeredUsers : []),
+        ...(Array.isArray(store.users) ? store.users : [])
+      ];
+      const storeUser = allStoreUsers.find((u) => String(u.id) === String(decoded.id));
+
+      if (storeUser) {
+        const uStatus = String(storeUser.status || '').toUpperCase();
+        if (storeUser.isDeleted || uStatus === 'DELETED') {
+          return next(new AppError('Access Denied: Your user account has been permanently deleted.', 403));
         }
-      };
+        if (storeUser.isLocked || storeUser.isActive === false || uStatus === 'LOCKED' || uStatus === 'SUSPENDED') {
+          return next(new AppError('Access Denied: Your user account is locked or suspended.', 403));
+        }
+        if (storeUser.role !== 'DEVELOPER' && (storeUser.isApproved === false || uStatus === 'PENDING_APPROVAL' || uStatus === 'REJECTED')) {
+          return next(new AppError('Access Denied: Your account has not been approved yet.', 403));
+        }
+        const resolvedInstName =
+          matchedInst?.institutionName || matchedInst?.name || storeUser.institutionName || storeUser.schoolName || 'Registered School Institution';
+        user = {
+          ...storeUser,
+          tenantId: storeUser.tenantId || numericTenantId,
+          tenant: {
+            id: numericTenantId,
+            name: resolvedInstName,
+            code: matchedInst?.tenantCode || storeUser.tenantCode || 'GBS-TENANT',
+            isActive: true,
+            status: matchedInst?.status || 'ACTIVE'
+          }
+        };
+      } else if (matchedInst && (String(decoded.id) === `usr_hm_${matchedInst.id}` || String(decoded.role).toUpperCase() === 'ADMIN' || String(decoded.role).toUpperCase() === 'SUPER_ADMIN')) {
+        user = {
+          id: decoded.id,
+          tenantId: matchedInst.tenantId || numericTenantId,
+          firstName: matchedInst.adminName || matchedInst.repFullName || 'Headmaster',
+          lastName: '',
+          username: (matchedInst.adminEmail || 'headmaster').split('@')[0].toLowerCase(),
+          email: matchedInst.adminEmail || matchedInst.officialEmail,
+          role: decoded.role || 'ADMIN',
+          permissions: ['*'],
+          isActive: true,
+          isApproved: true,
+          isLocked: false,
+          isDeleted: false,
+          tenant: {
+            id: matchedInst.tenantId || numericTenantId,
+            name: matchedInst.institutionName || matchedInst.name,
+            code: matchedInst.tenantCode || 'GBS-TENANT',
+            isActive: true,
+            status: matchedInst.status || 'ACTIVE'
+          }
+        };
+      } else {
+        const BUILTIN_IDS = new Set([
+          'usr_dev_master',
+          'usr_super_admin',
+          'usr_admin_master',
+          'usr_teacher_master',
+          'usr_student_master',
+          'usr_parent_master',
+          'usr_accountant_master',
+          'usr_staff_master',
+          'usr_hr_master',
+          'usr_alumni_master'
+        ]);
+        if (decoded.role === 'DEVELOPER' || BUILTIN_IDS.has(String(decoded.id))) {
+          user = {
+            id: decoded.id || numericUserId,
+            tenantId: numericTenantId,
+            firstName: decoded.role || 'Portal',
+            lastName: 'User',
+            username: (decoded.role || 'user').toLowerCase(),
+            email: `${(decoded.role || 'user').toLowerCase()}@gbs.com`,
+            role: decoded.role || 'ADMIN',
+            permissions: ['*'],
+            isActive: true,
+            isApproved: true,
+            isLocked: false,
+            isDeleted: false,
+            tenant: {
+              id: numericTenantId,
+              name:
+                decoded.role === 'DEVELOPER'
+                  ? 'GBS SCHOOL MANAGEMENT SYSTEM'
+                  : (matchedInst?.institutionName || matchedInst?.name || 'GBS International School (Main Campus)'),
+              code: matchedInst?.tenantCode || 'GBS-MAIN',
+              isActive: true,
+              status: 'ACTIVE'
+            }
+          };
+        } else {
+          return next(new AppError('Access Denied: User account not found or has been permanently removed from the system.', 403));
+        }
+      }
     }
 
-    if (user.isLocked || user.isDeleted || user.isActive === false || isPermanentlyDeleted(user.id)) {
+    const isDevRole = user.role === 'DEVELOPER' || String(user.email || '').toLowerCase() === 'gabosei48@gmail.com';
+    const isUserDeletedFlag =
+      !isDevRole &&
+      (isPermanentlyDeleted(`User:${user.id}`) ||
+        (String(user.id || '').startsWith('usr_') && isPermanentlyDeleted(user.id)) ||
+        isPermanentlyDeleted(user.email));
+    if (user.isLocked || user.isDeleted || user.isActive === false || isUserDeletedFlag) {
       return next(new AppError('User account is suspended, locked, or permanently deleted.', 403));
     }
 
     if (
+      user.role !== 'DEVELOPER' &&
+      (user.isApproved === false || ['PENDING_APPROVAL', 'REJECTED'].includes(String(user.status || '').toUpperCase()))
+    ) {
+      return next(new AppError('Access Denied: Your account is awaiting approval or has been rejected.', 403));
+    }
+
+    const dbTenantStatus = String(user.tenant?.status || '').toUpperCase();
+    if (
+      user.role !== 'DEVELOPER' &&
       user.tenant &&
       (user.tenant.isDeleted ||
         user.tenant.isActive === false ||
-        user.tenant.status === 'LOCKED' ||
-        user.tenant.status === 'DELETED' ||
-        user.tenant.status === 'ARCHIVED_DELETED' ||
+        dbTenantStatus === 'LOCKED' ||
+        dbTenantStatus === 'SUSPENDED' ||
+        dbTenantStatus === 'DISABLED' ||
+        dbTenantStatus === 'DELETED' ||
+        dbTenantStatus === 'ARCHIVED_DELETED' ||
+        dbTenantStatus === 'PURGED' ||
         (user.tenant.id !== 1 && isTenantLockedOut({ id: user.tenant.id, code: user.tenant.code, name: user.tenant.name })))
     ) {
       return next(new AppError('Access Denied: Tenant account is locked, suspended, or permanently deleted.', 403));

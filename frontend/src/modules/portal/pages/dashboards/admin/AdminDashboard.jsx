@@ -12,6 +12,12 @@ import UniversalRoleGuideModal from "../../../../../components/common/UniversalR
 import { navigateToDetail } from "../../../../../utils/universalNavigation";
 import FileUploadVerificationCard from "../../../../../components/common/FileUploadVerificationCard";
 import DigitalSignaturePadModal from "../../../../../components/common/DigitalSignaturePadModal";
+import {
+  getActiveSchoolName,
+  getActiveSchoolLogo,
+  saveActiveSchoolBranding,
+  getSchoolBrandingNotificationState
+} from "../../../../../utils/schoolBranding";
 import "./AdminDashboard.css";
 
 export function AdminDashboard({ initialTab } = {}) {
@@ -484,7 +490,7 @@ export function AdminDashboard({ initialTab } = {}) {
       role: "ADMIN"
     };
   }, []);
-  const institutionName = currentUser?.schoolName || currentUser?.institutionName || currentUser?.tenantName || "St. Augustine Science Academy";
+  const institutionName = getActiveSchoolName(currentUser);
   const [copiedRef, setCopiedRef] = useState(false);
   const [showMomoSubmitModal, setShowMomoSubmitModal] = useState(false);
   const [momoTxnId, setMomoTxnId] = useState("");
@@ -671,7 +677,7 @@ export function AdminDashboard({ initialTab } = {}) {
   const [commCustomNumber, setCommCustomNumber] = useState("+233-24-555-0199");
   const [commCustomEmail, setCommCustomEmail] = useState("");
   const [commRecipientName, setCommRecipientName] = useState("");
-  const [commSubject, setCommSubject] = useState("Official Headmaster Notice • GBS International School");
+  const [commSubject, setCommSubject] = useState(() => `Official Headmaster Notice • ${getActiveSchoolName()}`);
   const [commMessage, setCommMessage] = useState("");
   const [commSending, setCommSending] = useState(false);
   const [commHistory, setCommHistory] = useState(() => {
@@ -966,18 +972,42 @@ export function AdminDashboard({ initialTab } = {}) {
     });
   };
 
-  // Requirement: Preferred School Name & Custom School Logo / Crest Attached (Exclusive Headmaster Permit)
-  const [reportSchoolName, setReportSchoolName] = useState(() => {
-    return localStorage.getItem("gbs_report_school_name") || "St. Augustine International Academy";
-  });
-  const [customSchoolLogo, setCustomSchoolLogo] = useState(() => {
-    return localStorage.getItem("gbs_custom_school_logo") || "/assets/gbs_crest_badge.jpg";
-  });
+  // Requirement: Exact Registered Tenant School Name & Custom School Logo / Crest Attached (Exclusive Headmaster Permit)
+  const schoolBrandingSectionRef = useRef(null);
+  const [reportSchoolName, setReportSchoolName] = useState(() => getActiveSchoolName());
+  const [customSchoolLogo, setCustomSchoolLogo] = useState(() => getActiveSchoolLogo());
   const [isEditingSchoolName, setIsEditingSchoolName] = useState(false);
-  const [newSchoolNameInput, setNewSchoolNameInput] = useState(() => {
-    return localStorage.getItem("gbs_report_school_name") || "St. Augustine International Academy";
-  });
+  const [newSchoolNameInput, setNewSchoolNameInput] = useState(() => getActiveSchoolName());
   const [tempLogoPreview, setTempLogoPreview] = useState(null);
+  const [schoolBrandingNotice, setSchoolBrandingNotice] = useState(() => getSchoolBrandingNotificationState());
+
+  useEffect(() => {
+    const syncBranding = () => {
+      setReportSchoolName(getActiveSchoolName());
+      setCustomSchoolLogo(getActiveSchoolLogo());
+      setSchoolBrandingNotice(getSchoolBrandingNotificationState());
+    };
+    syncBranding();
+    window.addEventListener("gbs_school_name_updated", syncBranding);
+    window.addEventListener("gbs_school_logo_updated", syncBranding);
+    window.addEventListener("storage", syncBranding);
+    return () => {
+      window.removeEventListener("gbs_school_name_updated", syncBranding);
+      window.removeEventListener("gbs_school_logo_updated", syncBranding);
+      window.removeEventListener("storage", syncBranding);
+    };
+  }, []);
+
+  const handleOpenBrandingSetup = () => {
+    setNewSchoolNameInput(reportSchoolName || getActiveSchoolName());
+    setTempLogoPreview(customSchoolLogo || getActiveSchoolLogo());
+    setIsEditingSchoolName(true);
+    setTimeout(() => {
+      if (schoolBrandingSectionRef.current) {
+        schoolBrandingSectionRef.current.scrollIntoView({ behavior: "smooth", block: "center" });
+      }
+    }, 60);
+  };
 
   const handleUploadSchoolLogoFile = (e) => {
     const file = e.target.files?.[0];
@@ -994,22 +1024,22 @@ export function AdminDashboard({ initialTab } = {}) {
     e.preventDefault();
     if (!newSchoolNameInput.trim()) return;
     const trimmed = newSchoolNameInput.trim();
+    const resolvedLogo = tempLogoPreview || customSchoolLogo;
+
+    saveActiveSchoolBranding({
+      schoolName: trimmed,
+      schoolLogo: resolvedLogo,
+      markConfirmed: true
+    });
     setReportSchoolName(trimmed);
-    localStorage.setItem("gbs_report_school_name", trimmed);
-
-    if (tempLogoPreview) {
-      setCustomSchoolLogo(tempLogoPreview);
-      localStorage.setItem("gbs_custom_school_logo", tempLogoPreview);
-      window.dispatchEvent(new CustomEvent("gbs_school_logo_updated", { detail: { logo: tempLogoPreview } }));
-    }
-
-    window.dispatchEvent(new Event("gbs_school_name_updated"));
-    window.dispatchEvent(new Event("storage"));
+    setCustomSchoolLogo(resolvedLogo);
+    setSchoolBrandingNotice(getSchoolBrandingNotificationState());
 
     try {
       await apiClient.put("/reporting/school-branding", {
         preferredSchoolName: trimmed,
-        schoolLogo: tempLogoPreview || customSchoolLogo
+        schoolName: trimmed,
+        schoolLogo: resolvedLogo
       });
     } catch (e) {
       console.warn("Backend branding sync:", e?.message);
@@ -1017,7 +1047,7 @@ export function AdminDashboard({ initialTab } = {}) {
     setIsEditingSchoolName(false);
     setFeedback({
       type: "success",
-      message: `🏫 Official School Name ("${trimmed}") and Custom School Logo/Crest successfully updated and attached! Main ecosystem identity "GBS SCHOOL MANAGEMENT SYSTEM" remains preserved on all portals.`
+      message: `🏫 Exact School Name ("${trimmed}") and School Logo/Crest successfully saved! "${trimmed}" is now active across your Headmaster, Staff, Teacher, Student, Parent & Accountant dashboards and all official documents.`
     });
   };
 
@@ -1491,8 +1521,8 @@ export function AdminDashboard({ initialTab } = {}) {
       email: replacementForm.email.trim(),
       phone: replacementForm.phone.trim(),
       qualification: replacementForm.qualification.trim() || "Ph.D. in Educational Leadership",
-      tenantCode: "GBS-ROYALOAK",
-      institutionName: reportSchoolName || "St. Augustine Science Academy",
+      tenantCode: currentUser?.tenantCode || localStorage.getItem("gbs_tenant_code") || "GBS-TENANT",
+      institutionName: reportSchoolName || getActiveSchoolName(currentUser),
       appointmentResolutionNumber: replacementForm.handoverReason || "GOV-BOARD-RES-2026-099",
       reasonForReplacement: replacementForm.handoverReason || "Executive Leadership Succession",
       pictureBase64: replacementForm.photoUrl,
@@ -1542,8 +1572,8 @@ export function AdminDashboard({ initialTab } = {}) {
         online: true,
         lastSeen: Date.now(),
         headmasterName: headmasterProfile?.name || "Dr. Arthur Sterling",
-        institutionName: reportSchoolName || "St. Augustine International Academy",
-        tenantId: "TENANT-001"
+        institutionName: reportSchoolName || getActiveSchoolName(currentUser),
+        tenantId: currentUser?.tenantId || "TENANT-001"
       };
       try {
         localStorage.setItem("gbs_headmaster_online_status", JSON.stringify(statusData));
@@ -1595,8 +1625,8 @@ export function AdminDashboard({ initialTab } = {}) {
           online: false,
           lastSeen: Date.now(),
           headmasterName: headmasterProfile?.name || "Dr. Arthur Sterling",
-          institutionName: reportSchoolName || "St. Augustine International Academy",
-          tenantId: "TENANT-001"
+          institutionName: reportSchoolName || getActiveSchoolName(currentUser),
+          tenantId: currentUser?.tenantId || "TENANT-001"
         };
         localStorage.setItem("gbs_headmaster_online_status", JSON.stringify(offlineData));
       } catch { }
@@ -4470,6 +4500,7 @@ export function AdminDashboard({ initialTab } = {}) {
     const parentContact = targetApp?.guardianPhone || targetApp?.guardianEmail || targetApp?.guardianName || "Parent Contact";
     const appNum = targetApp?.applicationNumber || `ADM-${targetApp?.id || "2026"}`;
 
+    const targetSchoolName = reportSchoolName || getActiveSchoolName(currentUser);
     const noticeObj = {
       id: Date.now() + Math.floor(Math.random() * 1000),
       applicationId: targetApp?.id,
@@ -4480,7 +4511,7 @@ export function AdminDashboard({ initialTab } = {}) {
       type: "ADMISSION_VERIFICATION_REQUIRED",
       status: "APPROVED",
       timestamp: new Date().toLocaleString(),
-      message: `Congratulations! Your ward ${wardName}'s application to GBS International School has been approved by the Headmaster. Please bring your ward to the campus Admissions Office with original birth certificates and academic transcripts for physical verification to finalize main admission.`
+      message: `Congratulations! Your ward ${wardName}'s application to ${targetSchoolName} has been approved by the Headmaster. Please bring your ward to the campus Admissions Office with original birth certificates and academic transcripts for physical verification to finalize main admission.`
     };
 
     try {
@@ -4501,7 +4532,7 @@ export function AdminDashboard({ initialTab } = {}) {
       await apiClient.post("/communication/messages", {
         recipientType: "PARENT",
         recipientId: targetApp?.guardianPhone || "ADMISSIONS_PARENT",
-        content: `[GBS HEADMASTER NOTICE]: ${noticeObj.message}`,
+        content: `[${targetSchoolName.toUpperCase()} — HEADMASTER NOTICE]: ${noticeObj.message}`,
         priority: "HIGH"
       }).catch(() => { });
     } catch (e) {
@@ -4930,7 +4961,7 @@ export function AdminDashboard({ initialTab } = {}) {
               />
               <div className="role-brand-text">
                 <span className="role-portal-badge" style={{ color: "#38bdf8", fontSize: "0.95rem", fontWeight: "900", letterSpacing: "0.8px" }}>
-                  🎓 HEADMASTER COMMAND CENTER • OFFICIAL TENANT
+                  🏫 {(reportSchoolName || getActiveSchoolName(currentUser)).toUpperCase()} • HEADMASTER COMMAND CENTER
                 </span>
               </div>
             </div>
@@ -4938,8 +4969,9 @@ export function AdminDashboard({ initialTab } = {}) {
 
           <div className="role-status-ticker">
             <span className="ticker-dot"></span>
+            <span>School: <strong>{reportSchoolName || getActiveSchoolName(currentUser)}</strong></span>
             <span>Headmaster: <strong>{currentUser.firstName} {currentUser.lastName}</strong></span>
-            <span>Tenancy: <strong>GBS-ROYALOAK</strong></span>
+            <span>Tenancy: <strong>{currentUser?.tenantCode || localStorage.getItem("gbs_tenant_code") || "ACTIVE"}</strong></span>
             <span>Security: <strong>VOICE & RBAC ACTIVE</strong></span>
           </div>
 
@@ -5016,15 +5048,49 @@ export function AdminDashboard({ initialTab } = {}) {
           </div>
         )}
 
+        {/* Headmaster Action Notification: Change School Logo & Confirm Exact School Name */}
+        {(!schoolBrandingNotice?.confirmed || schoolBrandingNotice?.needsLogo || schoolBrandingNotice?.needsNameConfirmation) && (
+          <div style={{ background: "linear-gradient(135deg, rgba(245, 158, 11, 0.2), rgba(217, 119, 6, 0.16))", border: "2px solid #f59e0b", borderRadius: "12px", padding: "14px 20px", margin: "14px 2rem 0", display: "flex", alignItems: "center", justifyContent: "space-between", flexWrap: "wrap", gap: "12px", boxShadow: "0 4px 20px rgba(245, 158, 11, 0.25)" }}>
+            <div style={{ display: "flex", alignItems: "center", gap: "14px", flex: 1 }}>
+              <span style={{ fontSize: "1.9rem" }}>📢</span>
+              <div>
+                <strong style={{ fontSize: "0.95rem", color: "#fde68a", display: "block", letterSpacing: "0.3px" }}>
+                  HEADMASTER SETUP NOTICE: CHANGE YOUR SCHOOL LOGO &amp; CONFIRM EXACT SCHOOL NAME
+                </strong>
+                <span style={{ fontSize: "0.82rem", color: "#fef3c7", display: "block", marginTop: "2px" }}>
+                  Please upload your official school logo/crest and type the <strong>EXACT name of your school</strong> (currently <strong>{reportSchoolName || getActiveSchoolName(currentUser)}</strong>) in the <strong>Change School Name &amp; Upload Logo</strong> section so it reflects on all staff, teacher, student, parent, and accountant dashboards and every official document.
+                </span>
+              </div>
+            </div>
+            <button
+              type="button"
+              onClick={handleOpenBrandingSetup}
+              style={{
+                background: "linear-gradient(135deg, #f59e0b, #d97706)",
+                color: "#020617",
+                border: "none",
+                borderRadius: "8px",
+                padding: "9px 16px",
+                fontWeight: 900,
+                fontSize: "0.82rem",
+                cursor: "pointer",
+                boxShadow: "0 2px 10px rgba(245, 158, 11, 0.45)"
+              }}
+            >
+              ✏️ Change School Name &amp; Upload Logo
+            </button>
+          </div>
+        )}
+
         {/* Main Content */}
         <main className="role-main">
           {/* Hero Banner with Clear Daytime Real-Life Campus Photo */}
           <section className="role-hero-banner">
             <div className="role-hero-text">
               <span className="role-portal-badge" style={{ color: "#38bdf8" }}>
-                INSTITUTIONAL GOVERNANCE • HEADMASTER EXECUTIVE SUITE
+                INSTITUTIONAL GOVERNANCE • {(reportSchoolName || getActiveSchoolName(currentUser)).toUpperCase()}
               </span>
-              <h1>HEADMASTER COMMAND CENTER</h1>
+              <h1>{(reportSchoolName || getActiveSchoolName(currentUser)).toUpperCase()} — HEADMASTER COMMAND CENTER</h1>
               <p className="role-hero-sub">
                 Oversee school operations, inspect drop-list user registration counts, verify faculty and student
                 credentials, govern academic schedules, process admissions, and locate guardians in emergencies.
@@ -5418,103 +5484,101 @@ export function AdminDashboard({ initialTab } = {}) {
             </div>
           )}
 
-          {/* Requirement 7: Institutional School Name for Report Cards & Transcripts (GBS International School is protected as platform name) */}
-          <div style={{
-            background: "linear-gradient(135deg, rgba(15, 23, 42, 0.95), rgba(30, 41, 59, 0.95))",
-            border: "1.5px solid rgba(56, 189, 248, 0.4)",
-            borderRadius: "14px",
-            padding: "14px 20px",
-            marginBottom: "1.5rem",
-            display: "flex",
-            justifyContent: "space-between",
-            alignItems: "center",
-            flexWrap: "wrap",
-            gap: "12px",
-            boxShadow: "0 6px 20px rgba(0,0,0,0.3)"
-          }}>
-            <div style={{ display: "flex", alignItems: "center", gap: "12px" }}>
-              <div style={{ fontSize: "1.8rem" }}>🏫</div>
-              <div>
+          {/* Requirement 7: Exact Institutional School Name & Custom Logo/Crest for All Tenant Dashboards & Official Documents */}
+          <div
+            ref={schoolBrandingSectionRef}
+            style={{
+              background: "linear-gradient(135deg, rgba(15, 23, 42, 0.96), rgba(30, 41, 59, 0.96))",
+              border: "2px solid #38bdf8",
+              borderRadius: "14px",
+              padding: "16px 20px",
+              marginBottom: "1.5rem",
+              display: "flex",
+              justifyContent: "space-between",
+              alignItems: "center",
+              flexWrap: "wrap",
+              gap: "12px",
+              boxShadow: "0 6px 24px rgba(56, 189, 248, 0.18)"
+            }}
+          >
+            <div style={{ display: "flex", alignItems: "flex-start", gap: "12px", width: "100%" }}>
+              <div style={{ fontSize: "1.9rem" }}>🏫</div>
+              <div style={{ flex: 1 }}>
                 <div style={{ display: "flex", alignItems: "center", gap: "8px", flexWrap: "wrap" }}>
-                  <span style={{ fontSize: "0.82rem", fontWeight: 800, color: "#38bdf8", textTransform: "uppercase", letterSpacing: "1px" }}>
-                    OFFICIAL INSTITUTION NAME ON REPORT CARDS, TRANSCRIPTS & ADMISSIONS
+                  <span style={{ fontSize: "0.84rem", fontWeight: 800, color: "#38bdf8", textTransform: "uppercase", letterSpacing: "0.8px" }}>
+                    CHANGE SCHOOL NAME &amp; UPLOAD OFFICIAL SCHOOL LOGO
                   </span>
-                  {/* Contract Marker: GBS INTERNATIONAL SCHOOL */}
-                  <span style={{ background: "rgba(16, 185, 129, 0.15)", color: "#34d399", padding: "2px 8px", borderRadius: "6px", fontSize: "0.72rem", fontWeight: 800 }}>
-                    ACTIVE TENANT INSTITUTION
+                  <span style={{ background: "rgba(16, 185, 129, 0.18)", color: "#34d399", padding: "2px 8px", borderRadius: "6px", fontSize: "0.72rem", fontWeight: 800 }}>
+                    ACTIVE INSTITUTION BRANDING
+                  </span>
+                  <span style={{ background: "rgba(245, 158, 11, 0.2)", color: "#fde68a", padding: "2px 8px", borderRadius: "6px", fontSize: "0.72rem", fontWeight: 800 }}>
+                    🔔 HEADMASTER ACTION NOTICE: UPLOAD LOGO &amp; TYPE EXACT SCHOOL NAME
                   </span>
                 </div>
                 {!isEditingSchoolName ? (
-                  <div style={{ marginTop: "6px", display: "flex", alignItems: "center", gap: "12px", flexWrap: "wrap" }}>
-                    {customSchoolLogo ? (
-                      <img
-                        src={customSchoolLogo}
-                        alt="School Crest"
-                        style={{ width: "42px", height: "42px", borderRadius: "8px", objectFit: "cover", border: "2px solid #38bdf8", boxShadow: "0 0 10px rgba(56, 189, 248, 0.4)" }}
-                      />
-                    ) : (
-                      <div style={{ width: "42px", height: "42px", borderRadius: "8px", background: "rgba(56, 189, 248, 0.15)", border: "1.5px dashed #38bdf8", display: "flex", alignItems: "center", justifyContent: "center", fontSize: "1.3rem" }}>
-                        🏫
-                      </div>
-                    )}
+                  <div style={{ marginTop: "8px", display: "flex", alignItems: "center", gap: "14px", flexWrap: "wrap" }}>
+                    <img
+                      src={customSchoolLogo || "/assets/gbs_crest_badge.jpg"}
+                      alt="School Crest"
+                      style={{ width: "48px", height: "48px", borderRadius: "10px", objectFit: "cover", border: "2px solid #38bdf8", boxShadow: "0 0 12px rgba(56, 189, 248, 0.4)" }}
+                    />
                     <div>
-                      <span style={{ fontSize: "1.15rem", fontWeight: 900, color: "#f8fafc", display: "block" }}>
-                        "{reportSchoolName}"
+                      <span style={{ fontSize: "1.2rem", fontWeight: 900, color: "#f8fafc", display: "block" }}>
+                        {reportSchoolName || getActiveSchoolName(currentUser)}
                       </span>
-                      <span style={{ fontSize: "0.72rem", color: "#67e8f9" }}>
-                        Official School Crest & Custom Identity Attached
+                      <span style={{ fontSize: "0.74rem", color: "#67e8f9" }}>
+                        Please upload your custom School Logo and verify/type the exact name of your school so it displays across all school dashboards &amp; official documents.
                       </span>
                     </div>
                     <button
                       type="button"
-                      onClick={() => {
-                        setNewSchoolNameInput(reportSchoolName);
-                        setTempLogoPreview(customSchoolLogo);
-                        setIsEditingSchoolName(true);
-                      }}
+                      onClick={handleOpenBrandingSetup}
                       style={{
-                        background: "rgba(56, 189, 248, 0.15)",
+                        background: "linear-gradient(135deg, #0284c7, #0369a1)",
                         border: "1px solid #38bdf8",
-                        color: "#38bdf8",
-                        padding: "5px 12px",
-                        borderRadius: "6px",
-                        fontSize: "0.78rem",
-                        fontWeight: 700,
+                        color: "#fff",
+                        padding: "8px 14px",
+                        borderRadius: "8px",
+                        fontSize: "0.8rem",
+                        fontWeight: 800,
                         cursor: "pointer"
                       }}
                     >
-                      ✏️ Change School Name & Upload Logo
+                      ✏️ Change School Name &amp; Upload Logo
                     </button>
                   </div>
                 ) : (
-                  <form onSubmit={handleUpdateReportSchoolName} style={{ display: "flex", flexDirection: "column", gap: "10px", marginTop: "10px", background: "rgba(15, 23, 42, 0.85)", padding: "14px", borderRadius: "10px", border: "1.5px solid #38bdf8" }}>
-                    <div style={{ display: "flex", gap: "10px", flexWrap: "wrap", alignItems: "center" }}>
+                  <form onSubmit={handleUpdateReportSchoolName} style={{ display: "flex", flexDirection: "column", gap: "10px", marginTop: "10px", background: "rgba(15, 23, 42, 0.9)", padding: "14px", borderRadius: "10px", border: "1.5px solid #38bdf8" }}>
+                    <div style={{ background: "rgba(245, 158, 11, 0.14)", border: "1px solid rgba(245, 158, 11, 0.45)", borderRadius: "8px", padding: "8px 12px", fontSize: "0.78rem", color: "#fde68a", fontWeight: 600 }}>
+                      📢 <strong>Required Setup:</strong> Upload your school's custom logo/crest and type the <strong>EXACT registered name of your school</strong> (e.g., <em>BEST KIDS</em>) below. This exact name will automatically display on the Headmaster, Staff, Teacher, Student, Parent &amp; Accountant dashboards and on every official document (Receipts, Report Cards, Admission Letters, Payslips &amp; Transcripts).
+                    </div>
+                    <div style={{ display: "flex", gap: "12px", flexWrap: "wrap", alignItems: "center" }}>
                       <div style={{ flex: 1, minWidth: "280px" }}>
-                        <label style={{ display: "block", fontSize: "0.75rem", color: "#94a3b8", marginBottom: "4px", fontWeight: "700" }}>
-                          Custom School Name (Only Headmaster Permitted to Change) *
+                        <label style={{ display: "block", fontSize: "0.76rem", color: "#93c5fd", marginBottom: "4px", fontWeight: "800" }}>
+                          Type Exact Official School Name (Headmaster Permit Only) *
                         </label>
                         <input
                           type="text"
                           required
                           value={newSchoolNameInput}
                           onChange={(e) => setNewSchoolNameInput(e.target.value)}
-                          placeholder="Enter your institution's official name..."
+                          placeholder="Type the exact name of your school..."
                           style={{
                             width: "100%",
-                            padding: "8px 12px",
+                            padding: "9px 12px",
                             borderRadius: "6px",
-                            background: "rgba(2, 6, 23, 0.9)",
+                            background: "rgba(2, 6, 23, 0.95)",
                             border: "1.5px solid #38bdf8",
                             color: "#fff",
                             fontSize: "0.95rem",
-                            fontWeight: 700
+                            fontWeight: 800
                           }}
                         />
                       </div>
 
                       <div>
-                        <label style={{ display: "block", fontSize: "0.75rem", color: "#94a3b8", marginBottom: "4px", fontWeight: "700" }}>
-                          Upload School Crest / Logo *
+                        <label style={{ display: "block", fontSize: "0.76rem", color: "#93c5fd", marginBottom: "4px", fontWeight: "800" }}>
+                          Change / Upload School Logo (Crest) *
                         </label>
                         <input
                           type="file"
@@ -5523,7 +5587,7 @@ export function AdminDashboard({ initialTab } = {}) {
                           style={{
                             padding: "6px",
                             borderRadius: "6px",
-                            background: "rgba(2, 6, 23, 0.9)",
+                            background: "rgba(2, 6, 23, 0.95)",
                             border: "1px solid #475569",
                             color: "#cbd5e1",
                             fontSize: "0.8rem"
@@ -5536,9 +5600,9 @@ export function AdminDashboard({ initialTab } = {}) {
                           <img
                             src={tempLogoPreview || customSchoolLogo}
                             alt="Crest Preview"
-                            style={{ width: "42px", height: "42px", borderRadius: "8px", objectFit: "cover", border: "2px solid #10b981" }}
+                            style={{ width: "44px", height: "44px", borderRadius: "8px", objectFit: "cover", border: "2px solid #10b981" }}
                           />
-                          <span style={{ fontSize: "0.7rem", color: "#34d399", fontWeight: "700" }}>Logo Ready</span>
+                          <span style={{ fontSize: "0.72rem", color: "#34d399", fontWeight: "700" }}>Logo Preview</span>
                         </div>
                       )}
                     </div>
@@ -5568,7 +5632,7 @@ export function AdminDashboard({ initialTab } = {}) {
                           background: "linear-gradient(135deg, #10b981, #059669)",
                           border: "none",
                           color: "#fff",
-                          padding: "6px 18px",
+                          padding: "7px 18px",
                           borderRadius: "6px",
                           fontSize: "0.82rem",
                           fontWeight: 800,
@@ -5576,13 +5640,13 @@ export function AdminDashboard({ initialTab } = {}) {
                           boxShadow: "0 4px 12px rgba(16, 185, 129, 0.4)"
                         }}
                       >
-                        💾 Save School Name & Logo
+                        💾 Save Exact School Name &amp; Logo
                       </button>
                     </div>
                   </form>
                 )}
                 <span style={{ fontSize: "0.74rem", color: "#94a3b8", display: "block", marginTop: "6px" }}>
-                  ℹ️ Only the Headmaster has the permit to change the school name and upload their custom school logo/crest. The main system logo <strong>(GBS SCHOOL MANAGEMENT SYSTEM)</strong> remains permanently protected across the entire platform. {/* GBS INTERNATIONAL SCHOOL */}
+                  ℹ️ Every dashboard for your institution (Headmaster, Staff, Teachers, Students, Parents &amp; Accountant) and every printed/downloaded official document uses <strong>{reportSchoolName || getActiveSchoolName(currentUser)}</strong>. Only the Developer Control Center displays <strong>GBS SCHOOL MANAGEMENT SYSTEM</strong>.
                 </span>
               </div>
             </div>
@@ -9462,12 +9526,14 @@ export function AdminDashboard({ initialTab } = {}) {
 
                     {/* App Header */}
                     <div style={{ display: "flex", alignItems: "center", gap: "10px", marginBottom: "16px" }}>
-                      <div style={{ width: "36px", height: "36px", borderRadius: "50%", background: "#2563eb", display: "flex", alignItems: "center", justifyContent: "center", color: "#fff", fontWeight: 800, fontSize: "0.85rem" }}>
-                        GBS
-                      </div>
+                      <img
+                        src={customSchoolLogo || "/assets/gbs_crest_badge.jpg"}
+                        alt="School Crest"
+                        style={{ width: "36px", height: "36px", borderRadius: "50%", objectFit: "cover", border: "1.5px solid #38bdf8" }}
+                      />
                       <div>
                         <div style={{ fontSize: "0.88rem", fontWeight: 800, color: "#f8fafc" }}>
-                          {reportSchoolName || "GBS International School"}
+                          {reportSchoolName || getActiveSchoolName(currentUser)}
                         </div>
                         <div style={{ fontSize: "0.7rem", color: "#10b981" }}>
                           {commChannel === "WHATSAPP" ? "Official Business Account ✓" : commChannel === "SMS" ? "Verified Carrier Sender" : "Authenticated Mail Server"}
@@ -12571,10 +12637,22 @@ export function AdminDashboard({ initialTab } = {}) {
               overflowY: "auto",
               boxShadow: "0 25px 50px -12px rgba(0,0,0,0.9)"
             }}>
-              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "1rem" }}>
-                <h3 style={{ margin: 0, color: "#34d399", fontSize: "1.2rem", display: "flex", alignItems: "center", gap: "8px" }}>
-                  <span>📜</span> CERTIFIED ANNUAL ACCOUNT AUDIT REPORT
-                </h3>
+              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "1rem", borderBottom: "1px solid rgba(56, 189, 248, 0.25)", paddingBottom: "12px" }}>
+                <div style={{ display: "flex", alignItems: "center", gap: "12px" }}>
+                  <img
+                    src={customSchoolLogo || "/assets/gbs_crest_badge.jpg"}
+                    alt="School Crest"
+                    style={{ width: "44px", height: "44px", borderRadius: "8px", objectFit: "contain", border: "1.5px solid #38bdf8", background: "#020617" }}
+                  />
+                  <div>
+                    <div style={{ fontSize: "0.78rem", color: "#38bdf8", fontWeight: 900, textTransform: "uppercase", letterSpacing: "0.6px" }}>
+                      {reportSchoolName || getActiveSchoolName(currentUser)}
+                    </div>
+                    <h3 style={{ margin: 0, color: "#34d399", fontSize: "1.15rem", display: "flex", alignItems: "center", gap: "8px" }}>
+                      <span>📜</span> CERTIFIED ANNUAL ACCOUNT AUDIT REPORT
+                    </h3>
+                  </div>
+                </div>
                 <button
                   type="button"
                   onClick={() => setSelectedAuditReportForView(null)}

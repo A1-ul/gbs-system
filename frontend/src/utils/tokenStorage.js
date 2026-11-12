@@ -36,21 +36,39 @@ export function saveAuthSession(data = {}) {
   }
 
   if (user) {
+    // Exact school name propagation to all dashboards, reports, and banners
+    const schoolName =
+      user.institutionName ||
+      user.schoolName ||
+      user.tenantName ||
+      user.tenant?.name ||
+      user.institution;
+    const isDeveloper = String(user.role || "").toUpperCase() === "DEVELOPER";
+
+    if (schoolName && String(schoolName).trim() && !isDeveloper) {
+      const cleanName = String(schoolName).trim();
+      user.schoolName = cleanName;
+      user.institutionName = cleanName;
+      user.tenantName = cleanName;
+      user.tenant = {
+        ...(user.tenant || {}),
+        name: cleanName
+      };
+      localStorage.setItem("gbs_report_school_name", cleanName);
+      localStorage.setItem("gbs_tenant_name", cleanName);
+      const tCode = String(user.tenantCode || user.tenant?.code || "").trim().toUpperCase();
+      if (tCode) {
+        localStorage.setItem(`gbs_school_name_${tCode}`, cleanName);
+      }
+      if (typeof window !== "undefined") {
+        window.dispatchEvent(new CustomEvent("gbs_school_name_updated", { detail: cleanName }));
+      }
+    }
+
     localStorage.setItem("gbs_user", JSON.stringify(user));
 
     if (user.role) {
       localStorage.setItem("gbs_auth_role", user.role);
-    }
-
-    // Exact school name propagation to all dashboards, reports, and banners
-    const schoolName = user.institutionName || user.tenantName || user.institution || user.schoolName;
-    if (schoolName && String(schoolName).trim()) {
-      const cleanName = String(schoolName).trim();
-      localStorage.setItem("gbs_report_school_name", cleanName);
-      localStorage.setItem("gbs_tenant_name", cleanName);
-      if (typeof window !== "undefined") {
-        window.dispatchEvent(new CustomEvent("gbs_school_name_updated", { detail: cleanName }));
-      }
     }
 
     // Determine and enforce system mode

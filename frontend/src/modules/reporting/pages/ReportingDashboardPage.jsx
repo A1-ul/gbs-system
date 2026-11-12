@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { getApiBaseUrl } from '../../../api/client/apiConfig';
+import { getActiveSchoolName, getActiveSchoolLogo } from '../../../utils/schoolBranding';
 import './ReportingDashboardPage.css';
 
 const API_BASE = getApiBaseUrl();
@@ -794,8 +795,8 @@ export default function ReportingDashboardPage() {
             {/* Formal Document Layout */}
             <div className="printable-document-preview">
               <div className="preview-crest-header">
-                <img src="/assets/gbs_crest_badge.jpg" alt="GBS Crest" />
-                <h3 className="preview-school-title">GBS SCHOOL MANAGEMENT SYSTEM</h3>
+                <img src={getActiveSchoolLogo()} alt="School Crest" />
+                <h3 className="preview-school-title">{(selectedDoc.schoolName || getActiveSchoolName()).toUpperCase()}</h3>
                 <div className="preview-doc-type">{selectedDoc.documentType.replace('_', ' ')}</div>
                 <div style={{ fontSize: '0.75rem', color: '#64748b' }}>
                   Document Ref: <strong>{selectedDoc.documentNumber}</strong> | Term: <strong>{selectedDoc.academicTerm}</strong>

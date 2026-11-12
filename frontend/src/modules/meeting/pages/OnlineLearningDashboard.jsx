@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import { getApiBaseUrl } from '../../../api/client/apiConfig';
+import { getActiveSchoolName } from '../../../utils/schoolBranding';
 import './OnlineLearningDashboard.css';
 
 const API_BASE = getApiBaseUrl();
@@ -141,7 +142,7 @@ export default function OnlineLearningDashboard() {
           method: 'POST',
           headers: getHeaders()
         });
-      } catch {}
+      } catch { }
 
       setActiveVirtualClassroom(meeting);
       if (meeting.status !== 'LIVE') {
@@ -183,7 +184,7 @@ export default function OnlineLearningDashboard() {
           const stream = await navigator.mediaDevices.getDisplayMedia({ video: true, audio: true });
           if (classroomVideoRef.current) {
             classroomVideoRef.current.srcObject = stream;
-            classroomVideoRef.current.play().catch(() => {});
+            classroomVideoRef.current.play().catch(() => { });
           }
           const videoTrack = stream.getVideoTracks()[0];
           if (videoTrack) {
@@ -218,7 +219,7 @@ export default function OnlineLearningDashboard() {
     if (!parentPhone) return;
     const cleanPhone = parentPhone.replace(/\D/g, "");
     const inviteText = encodeURIComponent(
-      `🏛️ GBS International School Notice:\nDear Parent/Guardian,\nYou are invited to an official virtual academic review meeting regarding your scholar's progress.\nPlease connect here: https://meet.google.com/gbs-parent-review\nThank you.\n- Academic Directorate`
+      `🏛️ ${getActiveSchoolName()} Notice:\nDear Parent/Guardian,\nYou are invited to an official virtual academic review meeting regarding your scholar's progress.\nPlease connect here: https://meet.google.com/gbs-parent-review\nThank you.\n- Academic Directorate`
     );
     window.open(`https://api.whatsapp.com/send?phone=${cleanPhone}&text=${inviteText}`, "_blank");
   };

@@ -431,7 +431,7 @@ const initiateStaffRegistration = async (data, adminUser, currentTenantId) => {
   });
 
   const headmasterPhone = tenant?.institutionRegistrations?.[0]?.adminPhone || adminUser?.phone || '+1-555-019-8877';
-  const schoolName = tenant?.name || 'GBS International School';
+  const schoolName = tenant?.name || 'Registered School Institution';
 
   const generatedOtp = String(Math.floor(100000 + Math.random() * 900000));
   const cleanPhone = String(phone).trim();

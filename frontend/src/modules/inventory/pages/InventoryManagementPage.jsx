@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import apiClient from '../../../api/client/apiClient';
+import { getActiveSchoolName } from '../../../utils/schoolBranding';
 import '../pages/InventoryManagement.css';
 import '../../library/pages/LibraryManagement.css';
 
@@ -202,7 +203,7 @@ export default function InventoryManagementPage() {
           <span className="nav-brand-badge" style={{ background: 'linear-gradient(135deg, #059669, #10b981)' }}>
             LOGISTICS
           </span>
-          <span>GBS International Inventory & Procurement Depot</span>
+          <span>{getActiveSchoolName()} • Inventory &amp; Procurement Depot</span>
         </div>
         <div className="nav-actions" style={{ display: 'flex', gap: '10px' }}>
           <button

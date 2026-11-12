@@ -2,7 +2,6 @@ import React, { useState, useEffect, useMemo } from "react";
 import { useNavigate, Link } from "react-router-dom";
 import { registerInstitution } from "../api/auth.api";
 import BiometricFaceScannerModal from "../components/BiometricFaceScannerModal";
-import CartoonRoleVideoHubModal from "../../../components/common/CartoonRoleVideoHubModal";
 import { getOnboardingRates } from "../../../utils/pricingEngine";
 import "./TenantOnboardingFirstPage.css";
 
@@ -135,7 +134,6 @@ export default function TenantOnboardingFirstPage() {
 
   // Biometric Face Scanner Modal State
   const [showFaceScanner, setShowFaceScanner] = useState(false);
-  const [showCartoonVideoModal, setShowCartoonVideoModal] = useState(false);
 
   // Form State
   const [form, setForm] = useState({
@@ -397,8 +395,37 @@ export default function TenantOnboardingFirstPage() {
 
     // Save into Developer's incoming applications queue in localStorage for live immediate viewing
     try {
+      // Clear any previous permanent deletion lockouts if this deleted institution is re-registering for approval
+      const normName = String(form.institutionName || "").trim().toLowerCase();
+      const normEmails = [form.adminEmail, form.officialEmail].filter(Boolean).map((e) => String(e).trim().toLowerCase());
+      const filterNotReRegistered = (l) => {
+        const lName = String(l.institutionName || l.name || "").trim().toLowerCase();
+        const lEmails = [
+          ...(Array.isArray(l.emails) ? l.emails : []),
+          l.headmasterEmail,
+          l.adminEmail,
+          l.officialEmail,
+          l.email
+        ].filter(Boolean).map((e) => String(e).trim().toLowerCase());
+        const nameHit = normName && lName && normName === lName;
+        const emailHit = normEmails.some((ne) => lEmails.includes(ne));
+        return !(nameHit || emailHit);
+      };
+      const oldLockouts = JSON.parse(localStorage.getItem("gbs_deleted_tenant_lockouts") || "[]");
+      localStorage.setItem("gbs_deleted_tenant_lockouts", JSON.stringify(oldLockouts.filter(filterNotReRegistered)));
+      const oldArchives = JSON.parse(localStorage.getItem("gbs_deleted_tenant_archives") || "[]");
+      localStorage.setItem("gbs_deleted_tenant_archives", JSON.stringify(oldArchives.filter(filterNotReRegistered)));
+      const oldDeletedIds = JSON.parse(localStorage.getItem("gbs_permanently_deleted_ids") || "[]");
+      localStorage.setItem("gbs_permanently_deleted_ids", JSON.stringify(oldDeletedIds.filter((id) => !normEmails.includes(String(id).toLowerCase()))));
+
+      // Store tenant-scoped exact school name
+      const exactSchoolName = String(form.institutionName || "").trim();
+      if (exactSchoolName) {
+        localStorage.setItem(`gbs_school_name_${String(tenantCode).toLowerCase()}`, exactSchoolName);
+      }
+
       const existing = JSON.parse(localStorage.getItem("gbs_incoming_onboarding_applications") || "[]");
-      const updated = [submissionPayload, ...existing.filter((a) => a.institutionName !== form.institutionName)];
+      const updated = [submissionPayload, ...existing.filter((a) => String(a.institutionName || "").trim().toLowerCase() !== normName)];
       localStorage.setItem("gbs_incoming_onboarding_applications", JSON.stringify(updated));
       window.dispatchEvent(new CustomEvent("gbs_new_onboarding_application", { detail: submissionPayload }));
       window.dispatchEvent(new Event("storage"));
@@ -441,26 +468,6 @@ export default function TenantOnboardingFirstPage() {
             <span>ENTERPRISE ONBOARDING GATEWAY</span>
           </div>
           <span style={{ fontSize: "0.75rem", color: "#94a3b8" }}>Cloud Cluster Active</span>
-          <button
-            type="button"
-            onClick={() => setShowCartoonVideoModal(true)}
-            style={{
-              marginLeft: "10px",
-              padding: "6px 14px",
-              borderRadius: "999px",
-              background: "linear-gradient(135deg, #f59e0b, #38bdf8)",
-              border: "none",
-              color: "#0f172a",
-              fontWeight: 900,
-              fontSize: "0.76rem",
-              cursor: "pointer",
-              display: "inline-flex",
-              alignItems: "center",
-              gap: "6px"
-            }}
-          >
-            🎬 Watch Cartoon Role Videos & Download MP4s
-          </button>
         </div>
 
         {/* Top-Right "I am already in" Inscription Button */}
@@ -1357,12 +1364,6 @@ export default function TenantOnboardingFirstPage() {
         isOpen={showFaceScanner}
         onClose={() => setShowFaceScanner(false)}
         onScanComplete={handleFaceScanComplete}
-      />
-
-      <CartoonRoleVideoHubModal
-        isOpen={showCartoonVideoModal}
-        onClose={() => setShowCartoonVideoModal(false)}
-        initialVideoId="MASTER"
       />
 
       {/* Success Modal */}

@@ -5,6 +5,7 @@ import WindowControlsBar from "../../../../../components/common/WindowControlsBa
 import TopCenterSystemBanner from "../../../../../components/common/TopCenterSystemBanner";
 import UniversalRoleGuideModal from "../../../../../components/common/UniversalRoleGuideModal";
 import { navigateToDetail } from "../../../../../utils/universalNavigation";
+import { getActiveSchoolName, getActiveSchoolLogo } from "../../../../../utils/schoolBranding";
 import "./StaffDashboard.css";
 
 export default function StaffDashboard() {
@@ -61,34 +62,22 @@ export default function StaffDashboard() {
     details: ""
   });
 
-  const [schoolName, setSchoolName] = useState(() => {
-    let storedUser = null;
-    try {
-      storedUser = JSON.parse(localStorage.getItem("gbs_user") || "{}");
-    } catch { }
-    return (
-      localStorage.getItem("gbs_report_school_name") ||
-      localStorage.getItem("gbs_tenant_name") ||
-      storedUser?.tenant?.name ||
-      "GBS Educational Institution"
-    );
-  });
-  const [customSchoolLogo, setCustomSchoolLogo] = useState(() => {
-    return localStorage.getItem("gbs_custom_school_logo") || "/assets/gbs_crest_badge.jpg";
-  });
+  const [schoolName, setSchoolName] = useState(() => getActiveSchoolName(currentUser));
+  const [customSchoolLogo, setCustomSchoolLogo] = useState(() => getActiveSchoolLogo());
 
   useEffect(() => {
     const handleUpdate = () => {
-      const updated = localStorage.getItem("gbs_report_school_name") || localStorage.getItem("gbs_tenant_name");
-      if (updated) setSchoolName(updated);
-      const updatedLogo = localStorage.getItem("gbs_custom_school_logo");
-      if (updatedLogo) setCustomSchoolLogo(updatedLogo);
+      setSchoolName(getActiveSchoolName(currentUser));
+      setCustomSchoolLogo(getActiveSchoolLogo());
     };
+    handleUpdate();
     window.addEventListener("gbs_school_name_updated", handleUpdate);
+    window.addEventListener("gbs_school_logo_updated", handleUpdate);
     window.addEventListener("gbs_custom_logo_updated", handleUpdate);
     window.addEventListener("storage", handleUpdate);
     return () => {
       window.removeEventListener("gbs_school_name_updated", handleUpdate);
+      window.removeEventListener("gbs_school_logo_updated", handleUpdate);
       window.removeEventListener("gbs_custom_logo_updated", handleUpdate);
       window.removeEventListener("storage", handleUpdate);
     };

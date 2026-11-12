@@ -1,4 +1,5 @@
 import React from 'react';
+import { getActiveSchoolName } from '../../utils/schoolBranding';
 
 /**
  * OfficialInstitutionalSeal Component
@@ -7,11 +8,12 @@ import React from 'react';
  * and certified report cards.
  */
 export default function OfficialInstitutionalSeal({
-  schoolName = "GBS INTERNATIONAL ACADEMY",
+  schoolName,
   academicYear = "2026-2027",
   certifiedBy = "Executive Headmaster",
   size = 140
 }) {
+  const effectiveSchoolName = (schoolName || getActiveSchoolName() || "OFFICIAL INSTITUTION").toUpperCase();
   return (
     <div
       style={{
@@ -29,7 +31,7 @@ export default function OfficialInstitutionalSeal({
         userSelect: 'none',
         flexShrink: 0
       }}
-      title={`Official Conferred Seal • ${schoolName}`}
+      title={`Official Conferred Seal • ${effectiveSchoolName}`}
     >
       {/* Outer Golden Starburst Ring */}
       <div
@@ -74,7 +76,7 @@ export default function OfficialInstitutionalSeal({
           textAnchor="middle"
         >
           <textPath href="#sealTopPath" startOffset="50%">
-            {String(schoolName).slice(0, 32).toUpperCase()}
+            {String(effectiveSchoolName).slice(0, 32).toUpperCase()}
           </textPath>
         </text>
 

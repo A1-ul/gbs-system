@@ -5,6 +5,7 @@ import TopCenterSystemBanner from "../../../../../components/common/TopCenterSys
 import { getUserAvatar } from "../../../../../utils/userAvatars";
 import UniversalRoleGuideModal from "../../../../../components/common/UniversalRoleGuideModal";
 import { navigateToDetail } from "../../../../../utils/universalNavigation";
+import { getActiveSchoolName, getActiveSchoolLogo } from "../../../../../utils/schoolBranding";
 
 export default function HRDashboard() {
   const navigate = useNavigate();
@@ -53,40 +54,24 @@ export default function HRDashboard() {
   };
 
   // Dynamic School Name & Crest
-  const [schoolName, setSchoolName] = useState(() => {
-    let storedUser = null;
-    try {
-      storedUser = JSON.parse(localStorage.getItem("gbs_user") || "{}");
-    } catch { }
-    return (
-      localStorage.getItem("gbs_report_school_name") ||
-      localStorage.getItem("gbs_tenant_name") ||
-      storedUser?.tenant?.name ||
-      "GBS Educational Institution"
-    );
-  });
-  const [customSchoolLogo, setCustomSchoolLogo] = useState(() => {
-    return localStorage.getItem("gbs_custom_school_logo") || "/assets/gbs_crest_badge.jpg";
-  });
+  const [schoolName, setSchoolName] = useState(() => getActiveSchoolName());
+  const [customSchoolLogo, setCustomSchoolLogo] = useState(() => getActiveSchoolLogo());
 
   useEffect(() => {
-    const syncName = () => {
-      const stored = localStorage.getItem("gbs_report_school_name");
-      if (stored) setSchoolName(stored);
+    const syncBranding = () => {
+      setSchoolName(getActiveSchoolName());
+      setCustomSchoolLogo(getActiveSchoolLogo());
     };
-    const syncLogo = () => {
-      const logo = localStorage.getItem("gbs_custom_school_logo");
-      if (logo) setCustomSchoolLogo(logo);
-    };
-    window.addEventListener("gbs_school_name_updated", syncName);
-    window.addEventListener("storage", syncName);
-    window.addEventListener("gbs_custom_logo_updated", syncLogo);
-    window.addEventListener("storage", syncLogo);
+    syncBranding();
+    window.addEventListener("gbs_school_name_updated", syncBranding);
+    window.addEventListener("gbs_school_logo_updated", syncBranding);
+    window.addEventListener("gbs_custom_logo_updated", syncBranding);
+    window.addEventListener("storage", syncBranding);
     return () => {
-      window.removeEventListener("gbs_school_name_updated", syncName);
-      window.removeEventListener("storage", syncName);
-      window.removeEventListener("gbs_custom_logo_updated", syncLogo);
-      window.removeEventListener("storage", syncLogo);
+      window.removeEventListener("gbs_school_name_updated", syncBranding);
+      window.removeEventListener("gbs_school_logo_updated", syncBranding);
+      window.removeEventListener("gbs_custom_logo_updated", syncBranding);
+      window.removeEventListener("storage", syncBranding);
     };
   }, []);
 
