@@ -375,7 +375,7 @@ async function updateLiveLocation(tenantId, parentUser, locationData = {}) {
         longitude: parseFloat(longitude) || undefined,
         address: address || undefined
       }
-    }).catch(() => {});
+    }).catch(() => { });
   }
 
   return entry;
@@ -529,7 +529,7 @@ async function searchEmergencyContact(tenantId, searchPhone, adminUser) {
 
       // Check live beacon
       const liveFix = liveParentLocations.get(String(l.emergencyPhone || '').replace(/[^0-9]/g, '')) ||
-                      liveParentLocations.get(String(l.parent.id));
+        liveParentLocations.get(String(l.parent.id));
 
       return {
         linkId: l.id,
@@ -657,7 +657,7 @@ async function searchEmergencyContact(tenantId, searchPhone, adminUser) {
       action: 'ADMIN_EMERGENCY_LOCATOR_SEARCH',
       details: `Emergency search for mobile/student: "${rawTerm}". Coordinates: ${geoData.latitude}, ${geoData.longitude}. Matches found: ${results.length}`
     }
-  }).catch(() => {});
+  }).catch(() => { });
 
   return results;
 }

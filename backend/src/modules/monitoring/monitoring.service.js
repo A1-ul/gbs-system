@@ -7,14 +7,14 @@ async function getSystemHealth() {
   const pgLive = typeof prisma.getPostgresLiveStatus === 'function'
     ? await prisma.getPostgresLiveStatus(true)
     : await (async () => {
-        const pingStart = Date.now();
-        try {
-          await prisma.$queryRawUnsafe('SELECT 1;');
-          return { active: true, latencyMs: Date.now() - pingStart, engine: 'PostgreSQL Primary', poolActiveConnections: 1, poolMaxConnections: 20 };
-        } catch {
-          return { active: false, latencyMs: Date.now() - pingStart, engine: 'PostgreSQL', poolActiveConnections: 0, poolMaxConnections: 20 };
-        }
-      })();
+      const pingStart = Date.now();
+      try {
+        await prisma.$queryRawUnsafe('SELECT 1;');
+        return { active: true, latencyMs: Date.now() - pingStart, engine: 'PostgreSQL Primary', poolActiveConnections: 1, poolMaxConnections: 20 };
+      } catch {
+        return { active: false, latencyMs: Date.now() - pingStart, engine: 'PostgreSQL', poolActiveConnections: 0, poolMaxConnections: 20 };
+      }
+    })();
 
   const dbStatus = pgLive.active ? 'ACTIVE • CONNECTED' : 'ERROR';
   const dbLatencyMs = pgLive.latencyMs ?? 0;
