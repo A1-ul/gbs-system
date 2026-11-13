@@ -18,7 +18,7 @@ const controller =
     require("./permission.controller");
 
 const asyncHandler =
-    require("../../middlewares/asynchandler.middleware");
+    require("../../middlewares/asyncHandler.middleware");
 
 /*
 =========================================

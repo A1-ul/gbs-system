@@ -21,7 +21,7 @@ const validators =
     require("./student.validator");
 
 const asyncHandler =
-    require("../../middlewares/asynchandler.middleware");
+    require("../../middlewares/asyncHandler.middleware");
 
 /*
 ====================================

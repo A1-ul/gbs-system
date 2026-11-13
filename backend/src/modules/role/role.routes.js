@@ -22,7 +22,7 @@ const validate =
     require("../../middlewares/validate.middleware");
 
 const asyncHandler =
-    require("../../middlewares/asynchandler.middleware");
+    require("../../middlewares/asyncHandler.middleware");
 
 /*
 =========================================

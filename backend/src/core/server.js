@@ -176,6 +176,7 @@ const {
   writePersistentStore,
   checkPostgresReachable
 } = require('./database/persistentStore');
+const prisma = require('./database/prisma.client');
 
 app.get('/api/v1/audit/logs', async (req, res) => {
   try {
@@ -449,8 +450,12 @@ const server = app.listen(PORT, HOST, async () => {
           END $$;
         `).catch(() => { });
 
-        const { execSync } = require('child_process');
-        execSync('npx prisma db push --skip-generate --accept-data-loss', { stdio: ['ignore', 'pipe', 'pipe'] });
+        const { exec } = require('child_process');
+        const { promisify } = require('util');
+        await promisify(exec)('npx --no-install prisma db push --skip-generate --accept-data-loss', {
+          timeout: 25000,
+          windowsHide: true
+        });
         console.log('✅ [DATABASE] PostgreSQL schema tables verified.');
         const defaultData = await authService.seedDefaultAdmin();
         console.log(`✅ [DATABASE] Default Tenant '${defaultData.tenant.code}' & Super Admin seeded.`);

@@ -1,4 +1,4 @@
-import React from "react";
+import React, { Suspense, lazy } from "react";
 import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
 
 import MainLoginPage from "../modules/auth/pages/MainLoginPage";
@@ -10,54 +10,55 @@ import StudentLogin from "../modules/auth/pages/StudentLogin";
 import ParentLogin from "../modules/auth/pages/ParentLogin";
 import AccountantLogin from "../modules/auth/pages/AccountantLogin";
 import StaffLogin from "../modules/auth/pages/StaffLogin";
-import RoleDashboardView from "../modules/portal/pages/RoleDashboardView";
-import AdminDashboard from "../modules/portal/pages/dashboards/admin/AdminDashboard";
-import TeacherDashboard from "../modules/portal/pages/dashboards/teacher/TeacherDashboard";
-import StudentDashboard from "../modules/portal/pages/dashboards/student/StudentDashboard";
-import ParentDashboard from "../modules/portal/pages/dashboards/parent/ParentDashboard";
-import AccountantDashboard from "../modules/portal/pages/dashboards/accountant/AccountantDashboard";
-import StaffDashboard from "../modules/portal/pages/dashboards/staff/StaffDashboard";
-import AlumniDashboard from "../modules/alumni/pages/AlumniDashboard";
-import HRDashboard from "../modules/portal/pages/dashboards/hr/HRDashboard";
 
-import DeveloperLogin from "../modules/developer-platform/pages/DeveloperLogin";
-import DeveloperDashboard from "../modules/developer-platform/pages/DeveloperDashboard";
-import DeveloperAIDiagnostics from "../modules/developer-platform/pages/DeveloperAIDiagnostics";
+const RoleDashboardView = lazy(() => import("../modules/portal/pages/RoleDashboardView"));
+const AdminDashboard = lazy(() => import("../modules/portal/pages/dashboards/admin/AdminDashboard"));
+const TeacherDashboard = lazy(() => import("../modules/portal/pages/dashboards/teacher/TeacherDashboard"));
+const StudentDashboard = lazy(() => import("../modules/portal/pages/dashboards/student/StudentDashboard"));
+const ParentDashboard = lazy(() => import("../modules/portal/pages/dashboards/parent/ParentDashboard"));
+const AccountantDashboard = lazy(() => import("../modules/portal/pages/dashboards/accountant/AccountantDashboard"));
+const StaffDashboard = lazy(() => import("../modules/portal/pages/dashboards/staff/StaffDashboard"));
+const AlumniDashboard = lazy(() => import("../modules/alumni/pages/AlumniDashboard"));
+const HRDashboard = lazy(() => import("../modules/portal/pages/dashboards/hr/HRDashboard"));
 
-import VoiceAuthModal from "../modules/security/components/VoiceAuthModal";
-import LiveTrackingDashboard from "../modules/live-tracking/pages/LiveTrackingDashboard";
-import ExamScannerDashboard from "../modules/exam-scanner/pages/ExamScannerDashboard";
-import DataMigrationDashboard from "../modules/migration/pages/DataMigrationDashboard";
+const DeveloperLogin = lazy(() => import("../modules/developer-platform/pages/DeveloperLogin"));
+const DeveloperDashboard = lazy(() => import("../modules/developer-platform/pages/DeveloperDashboard"));
+const DeveloperAIDiagnostics = lazy(() => import("../modules/developer-platform/pages/DeveloperAIDiagnostics"));
 
-import LoanApplicationForm from "../modules/loans/pages/LoanApplicationForm";
-import LoanDashboard from "../modules/loans/pages/LoanDashboard";
-import HRSalaryGroupingDashboard from "../modules/hr/pages/HRSalaryGroupingDashboard";
-import TenantManagementPage from "../modules/tenant/pages/TenantManagementPage";
-import AcademicManagementPage from "../modules/academic/pages/AcademicManagementPage";
-import TimetableDashboard from "../modules/timetable/pages/TimetableDashboard";
-import AttendanceDashboard from "../modules/attendance/pages/AttendanceDashboard";
-import AssignmentDashboard from "../modules/assignment/pages/AssignmentDashboard";
-import OnlineLearningDashboard from "../modules/meeting/pages/OnlineLearningDashboard";
-import ParentPortalDashboard from "../modules/parent/pages/ParentPortalDashboard";
-import EmergencyLocatorPage from "../modules/emergency/pages/EmergencyLocatorPage";
-import AdmissionWorkflowDashboard from "../modules/admission/pages/AdmissionWorkflowDashboard";
-import WorkflowDashboard from "../modules/workflow/pages/WorkflowDashboard";
-import ReportingDashboardPage from "../modules/reporting/pages/ReportingDashboardPage";
-import AIDiagnosticsDashboard from "../modules/learning/pages/AIDiagnosticsDashboard";
-import FinanceDashboardPage from "../modules/finance/pages/FinanceDashboardPage";
-import CommunicationDashboardPage from "../modules/communication/pages/CommunicationDashboardPage";
-import LibraryManagementPage from "../modules/library/pages/LibraryManagementPage";
-import TransportManagementPage from "../modules/transport/pages/TransportManagementPage";
-import InventoryManagementPage from "../modules/inventory/pages/InventoryManagementPage";
-import InventoryDashboard from "../modules/inventory/pages/InventoryDashboard";
-import HRStaffManagementPage from "../modules/hr/pages/HRStaffManagementPage";
-import FacilityManagementPage from "../modules/facility/pages/FacilityManagementPage";
-import DigitalTwinCampusPage from "../modules/campus/pages/DigitalTwinCampusPage";
-import CCTVSecurityHubPage from "../modules/cctv/pages/CCTVSecurityHubPage";
-import ShardingDrManagementPage from "../modules/infrastructure/pages/ShardingDrManagementPage";
-import GBSCompanyWebsite from "../modules/website/pages/GBSCompanyWebsite";
-import VideoPresentationEngine from "../modules/presentation/pages/VideoPresentationEngine";
-import UniversalDetailPage from "../components/common/UniversalDetailPage";
+const VoiceAuthModal = lazy(() => import("../modules/security/components/VoiceAuthModal"));
+const LiveTrackingDashboard = lazy(() => import("../modules/live-tracking/pages/LiveTrackingDashboard"));
+const ExamScannerDashboard = lazy(() => import("../modules/exam-scanner/pages/ExamScannerDashboard"));
+const DataMigrationDashboard = lazy(() => import("../modules/migration/pages/DataMigrationDashboard"));
+
+const LoanApplicationForm = lazy(() => import("../modules/loans/pages/LoanApplicationForm"));
+const LoanDashboard = lazy(() => import("../modules/loans/pages/LoanDashboard"));
+const HRSalaryGroupingDashboard = lazy(() => import("../modules/hr/pages/HRSalaryGroupingDashboard"));
+const TenantManagementPage = lazy(() => import("../modules/tenant/pages/TenantManagementPage"));
+const AcademicManagementPage = lazy(() => import("../modules/academic/pages/AcademicManagementPage"));
+const TimetableDashboard = lazy(() => import("../modules/timetable/pages/TimetableDashboard"));
+const AttendanceDashboard = lazy(() => import("../modules/attendance/pages/AttendanceDashboard"));
+const AssignmentDashboard = lazy(() => import("../modules/assignment/pages/AssignmentDashboard"));
+const OnlineLearningDashboard = lazy(() => import("../modules/meeting/pages/OnlineLearningDashboard"));
+const ParentPortalDashboard = lazy(() => import("../modules/parent/pages/ParentPortalDashboard"));
+const EmergencyLocatorPage = lazy(() => import("../modules/emergency/pages/EmergencyLocatorPage"));
+const AdmissionWorkflowDashboard = lazy(() => import("../modules/admission/pages/AdmissionWorkflowDashboard"));
+const WorkflowDashboard = lazy(() => import("../modules/workflow/pages/WorkflowDashboard"));
+const ReportingDashboardPage = lazy(() => import("../modules/reporting/pages/ReportingDashboardPage"));
+const AIDiagnosticsDashboard = lazy(() => import("../modules/learning/pages/AIDiagnosticsDashboard"));
+const FinanceDashboardPage = lazy(() => import("../modules/finance/pages/FinanceDashboardPage"));
+const CommunicationDashboardPage = lazy(() => import("../modules/communication/pages/CommunicationDashboardPage"));
+const LibraryManagementPage = lazy(() => import("../modules/library/pages/LibraryManagementPage"));
+const TransportManagementPage = lazy(() => import("../modules/transport/pages/TransportManagementPage"));
+const InventoryManagementPage = lazy(() => import("../modules/inventory/pages/InventoryManagementPage"));
+const InventoryDashboard = lazy(() => import("../modules/inventory/pages/InventoryDashboard"));
+const HRStaffManagementPage = lazy(() => import("../modules/hr/pages/HRStaffManagementPage"));
+const FacilityManagementPage = lazy(() => import("../modules/facility/pages/FacilityManagementPage"));
+const DigitalTwinCampusPage = lazy(() => import("../modules/campus/pages/DigitalTwinCampusPage"));
+const CCTVSecurityHubPage = lazy(() => import("../modules/cctv/pages/CCTVSecurityHubPage"));
+const ShardingDrManagementPage = lazy(() => import("../modules/infrastructure/pages/ShardingDrManagementPage"));
+const GBSCompanyWebsite = lazy(() => import("../modules/website/pages/GBSCompanyWebsite"));
+const VideoPresentationEngine = lazy(() => import("../modules/presentation/pages/VideoPresentationEngine"));
+const UniversalDetailPage = lazy(() => import("../components/common/UniversalDetailPage"));
 
 function ProtectedPortalRoute({ children, loginPath = "/login" }) {
   try {
@@ -170,6 +171,7 @@ function ProtectedPortalRoute({ children, loginPath = "/login" }) {
 export default function AppRouter() {
   return (
     <BrowserRouter>
+      <Suspense fallback={<div style={{minHeight:"100vh",display:"flex",alignItems:"center",justifyContent:"center",background:"#020617",color:"#f8fafc",fontWeight:800,fontFamily:"system-ui,sans-serif"}}>Loading GBS System Portal...</div>}>
       <Routes>
         {/* Master First Page of the System: Tenant Onboarding Forms with Auto-Redirect */}
         <Route path="/" element={<TenantOnboardingFirstPage />} />
@@ -368,6 +370,7 @@ export default function AppRouter() {
         {/* Fallback */}
         <Route path="*" element={<Navigate to="/login" replace />} />
       </Routes>
+      </Suspense>
     </BrowserRouter>
   );
 }

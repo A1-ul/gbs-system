@@ -19,7 +19,7 @@ const academicController =
     require("./accounts.controller");
 
 const asyncHandler =
-    require("../../middlewares/asynchandler.middleware");
+    require("../../middlewares/asyncHandler.middleware");
 
 /*
 =========================================

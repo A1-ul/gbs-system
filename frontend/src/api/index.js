@@ -1,14 +1,14 @@
 export {
     default as apiClient
 }
-from "./apiClient";
+    from "./ApiClient";
 
 export {
     default as queryClient
 }
-from "./queryClient";
+    from "./queryClient";
 
 export {
     default as axiosInstance
 }
-from "./axios";
+    from "./axios";
