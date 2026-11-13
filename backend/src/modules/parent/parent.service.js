@@ -590,10 +590,12 @@ async function searchEmergencyContact(tenantId, searchPhone, adminUser) {
   if (results.length === 0 && rawTerm) {
     const matchingProfiles = await prisma.userRegistrationProfile.findMany({
       where: {
-        tenantId: tid,
+        user: { tenantId: tid },
         OR: [
-          { phoneNumber: { contains: rawTerm } },
-          ...(digitsOnly.length >= 4 ? [{ phoneNumber: { contains: digitsOnly } }] : [])
+          { phone: { contains: rawTerm } },
+          { whatsappPhone: { contains: rawTerm } },
+          { emergencyContactPhone: { contains: rawTerm } },
+          ...(digitsOnly.length >= 4 ? [{ phone: { contains: digitsOnly } }, { emergencyContactPhone: { contains: digitsOnly } }] : [])
         ]
       },
       include: {
@@ -608,7 +610,7 @@ async function searchEmergencyContact(tenantId, searchPhone, adminUser) {
         guardianName: `${prof.user?.firstName || 'Registered'} ${prof.user?.lastName || 'Parent'}`,
         guardianEmail: prof.user?.email || 'guardian@gbs.edu',
         guardianRole: 'GUARDIAN / PARENT',
-        emergencyPhone: prof.phoneNumber || rawTerm,
+        emergencyPhone: prof.phone || prof.whatsappPhone || prof.emergencyContactPhone || rawTerm,
         studentName: 'Ward of ' + (prof.user?.firstName || 'Parent'),
         studentId: prof.userId,
         studentClass: 'Grade 10A - STEM & Arts',

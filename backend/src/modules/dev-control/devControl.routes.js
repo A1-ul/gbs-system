@@ -119,22 +119,46 @@ const {
   createDatabaseBackup,
   listDatabaseBackups,
   restoreDatabaseBackup,
-  checkPostgresReachable
+  checkPostgresReachable,
+  getPostgresTargetInfo
 } = require('../../core/database/persistentStore');
+const prisma = require('../../core/database/prisma.client');
 
 // 21. GBS Production & Development Environment Management & Live Provenance
 router.get('/environment', async (req, res) => {
   const store = readPersistentStore();
-  const isPgOnline = await checkPostgresReachable(250);
+  const pgStatus = typeof prisma.getPostgresLiveStatus === 'function'
+    ? await prisma.getPostgresLiveStatus()
+    : { active: await checkPostgresReachable(2000), ...getPostgresTargetInfo(), latencyMs: 0, engine: 'PostgreSQL', role: 'PRIMARY_ACTIVE' };
   const activeEnv = store.systemEnvironment || getActiveEnvironment();
   const backups = listDatabaseBackups();
 
-  const institutions = store.institutions || [];
-  const registeredUsers = store.registeredUsers || [];
-  const subscriptions = store.subscriptions || [];
+  const storeInstitutions = store.institutions || [];
+  const storeUsers = store.registeredUsers || [];
+  const storeSubs = store.subscriptions || [];
 
-  const productionInstitutions = institutions.filter(i => (i.environment || 'PRODUCTION') === 'PRODUCTION');
-  const devInstitutions = institutions.filter(i => (i.environment || 'PRODUCTION') === 'DEVELOPMENT');
+  let totalInstitutions = storeInstitutions.length;
+  let totalRegisteredUsers = storeUsers.length;
+  let totalSubscriptions = storeSubs.length;
+  let pgTenantsCount = 0;
+
+  if (pgStatus.active) {
+    try {
+      const [tCount, regCount, uCount, sCount] = await Promise.all([
+        prisma.tenant.count({ where: { isDeleted: false } }),
+        prisma.institutionRegistration.count(),
+        prisma.user.count({ where: { isDeleted: false } }),
+        prisma.subscription.count()
+      ]);
+      pgTenantsCount = tCount || 0;
+      totalInstitutions = Math.max(tCount || 0, regCount || 0, storeInstitutions.length);
+      totalRegisteredUsers = Math.max(uCount || 0, storeUsers.length);
+      totalSubscriptions = Math.max(sCount || 0, storeSubs.length);
+    } catch { }
+  }
+
+  const productionInstitutions = storeInstitutions.filter(i => (i.environment || 'PRODUCTION') === 'PRODUCTION');
+  const devInstitutions = storeInstitutions.filter(i => (i.environment || 'PRODUCTION') === 'DEVELOPMENT');
 
   res.status(200).json({
     status: 'success',
@@ -142,14 +166,20 @@ router.get('/environment', async (req, res) => {
       activeEnvironment: activeEnv,
       isProduction: activeEnv === 'PRODUCTION',
       isDevelopment: activeEnv === 'DEVELOPMENT',
-      databaseMode: isPgOnline ? 'POSTGRESQL_LIVE' : 'HYBRID_PERSISTENT_ENGINE',
-      databaseHost: process.env.DATABASE_URL ? (new URL(process.env.DATABASE_URL)).host : 'localhost:5432',
+      databaseActive: pgStatus.active,
+      databaseRole: pgStatus.role || (pgStatus.active ? 'PRIMARY_ACTIVE' : 'STANDBY_FALLBACK'),
+      databaseMode: pgStatus.active ? 'POSTGRESQL_LIVE' : 'HYBRID_PERSISTENT_ENGINE',
+      databaseEngine: pgStatus.engine || 'PostgreSQL',
+      databaseLatencyMs: pgStatus.latencyMs ?? null,
+      databaseHost: `${pgStatus.host || 'localhost'}:${pgStatus.port || 5432}`,
+      databaseName: pgStatus.database || 'gbs_system',
       liveDatabaseStatistics: {
-        totalInstitutions: institutions.length,
-        productionInstitutionsCount: productionInstitutions.length,
+        totalInstitutions,
+        activeTenantsInPostgres: pgTenantsCount,
+        productionInstitutionsCount: productionInstitutions.length || pgTenantsCount,
         developmentInstitutionsCount: devInstitutions.length,
-        totalRegisteredUsers: registeredUsers.length,
-        totalSubscriptions: subscriptions.length,
+        totalRegisteredUsers,
+        totalSubscriptions,
         totalTopicVideos: (store.topicVideos || []).length,
         totalBackupsAvailable: backups.length,
         latestBackupAt: backups[0]?.createdAt || null
@@ -338,7 +368,10 @@ router.get('/ai/verify-blueprint', (req, res) => {
 // 22. Cloud Host Data Synchronization & Offline-to-Cloud Backup Engine
 router.post('/sync-to-cloud', async (req, res) => {
   try {
-    const isPgOnline = await checkPostgresReachable(400);
+    const pgStatus = typeof prisma.getPostgresLiveStatus === 'function'
+      ? await prisma.getPostgresLiveStatus(true)
+      : { active: await checkPostgresReachable(2000), ...getPostgresTargetInfo() };
+    const isPgOnline = Boolean(pgStatus.active);
     const backupSnapshot = createDatabaseBackup('cloud_sync_point_in_time');
     const store = readPersistentStore();
 
@@ -346,13 +379,12 @@ router.post('/sync-to-cloud', async (req, res) => {
     let syncedCount = 0;
 
     if (isPgOnline && process.env.DATABASE_URL) {
-      const prismaClient = require('../../core/database/prisma.client');
       // Sync AttendanceRecords
       const attendanceList = store.prismaModels?.AttendanceRecord || [];
       if (attendanceList.length > 0) {
         for (const rec of attendanceList) {
           try {
-            await prismaClient.attendanceRecord.upsert({
+            await prisma.attendanceRecord.upsert({
               where: { id: rec.id },
               update: { status: rec.status, remarks: rec.remarks, updatedAt: new Date() },
               create: {
@@ -375,7 +407,7 @@ router.post('/sync-to-cloud', async (req, res) => {
       if (Array.isArray(store.institutions) && store.institutions.length > 0) {
         for (const inst of store.institutions) {
           try {
-            await prismaClient.tenant.upsert({
+            await prisma.tenant.upsert({
               where: { id: inst.id || 1 },
               update: { name: inst.name || inst.institutionName, status: 'ACTIVE', updatedAt: new Date() },
               create: {
@@ -396,11 +428,14 @@ router.post('/sync-to-cloud', async (req, res) => {
     res.status(200).json({
       status: 'success',
       message: isPgOnline
-        ? `Cloud synchronization complete! ${syncedCount} records reconciled with cloud database. Automated backup snapshot saved.`
-        : `Offline Mode Active: All local records safely retained in persistent store. Automated local backup snapshot created (${backupSnapshot.fileName}). Sync will resume when cloud host connects.`,
+        ? `PostgreSQL synchronization complete! ${syncedCount} records reconciled with active PostgreSQL (${pgStatus.database}). Automated backup snapshot saved.`
+        : `Offline Mode Active: All local records safely retained in persistent store. Automated local backup snapshot created (${backupSnapshot.fileName}). Sync will resume when PostgreSQL connects.`,
       data: {
         cloudConnected: isPgOnline,
-        cloudHost: process.env.DATABASE_URL ? 'Connected Cloud PostgreSQL' : 'gbs-school.onrender.com (Standby)',
+        databaseActive: isPgOnline,
+        cloudHost: isPgOnline
+          ? `${pgStatus.host}:${pgStatus.port}/${pgStatus.database} (PostgreSQL Active)`
+          : 'PostgreSQL Standby (Reconnect Pending)',
         syncedCount,
         syncedTables,
         backupSnapshot: {
@@ -409,28 +444,37 @@ router.post('/sync-to-cloud', async (req, res) => {
           timestamp: backupSnapshot.timestamp
         },
         localStoreUpdated: store.updatedAt,
-        syncStatus: isPgOnline ? 'SYNCED_WITH_CLOUD' : 'OFFLINE_PERSISTED_SAFELY'
+        syncStatus: isPgOnline ? 'SYNCED_WITH_POSTGRESQL_ACTIVE' : 'OFFLINE_PERSISTED_SAFELY'
       }
     });
   } catch (err) {
     res.status(200).json({
       status: 'success',
       message: 'Local persistence intact. Changes preserved in persistent store.',
-      data: { cloudConnected: false, syncStatus: 'OFFLINE_STANDBY', error: err.message }
+      data: { cloudConnected: false, databaseActive: false, syncStatus: 'OFFLINE_STANDBY', error: err.message }
     });
   }
 });
 
 router.get('/cloud-sync-status', async (req, res) => {
-  const isPgOnline = await checkPostgresReachable(300);
+  const pgStatus = typeof prisma.getPostgresLiveStatus === 'function'
+    ? await prisma.getPostgresLiveStatus()
+    : { active: await checkPostgresReachable(2000), ...getPostgresTargetInfo() };
+  const isPgOnline = Boolean(pgStatus.active);
   const store = readPersistentStore();
   const backups = listDatabaseBackups();
   res.status(200).json({
     status: 'success',
     data: {
       cloudConnected: isPgOnline,
-      cloudHost: 'gbs-school.onrender.com (Render Cloud PostgreSQL)',
+      databaseActive: isPgOnline,
+      databaseRole: pgStatus.role || (isPgOnline ? 'PRIMARY_ACTIVE' : 'STANDBY_FALLBACK'),
+      cloudHost: isPgOnline
+        ? `${pgStatus.host}:${pgStatus.port}/${pgStatus.database} (PostgreSQL Active)`
+        : `${pgStatus.host || 'localhost'}:${pgStatus.port || 5432} (PostgreSQL Offline)`,
       databaseMode: isPgOnline ? 'CLOUD_POSTGRESQL_LIVE' : 'LOCAL_PERSISTENT_ENGINE_OFFLINE',
+      latencyMs: pgStatus.latencyMs ?? null,
+      version: pgStatus.versionShort || 'PostgreSQL',
       totalBackups: backups.length,
       latestBackup: backups[0] || null,
       lastStoreUpdate: store.updatedAt,

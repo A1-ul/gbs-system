@@ -3,21 +3,42 @@ const {
   readPersistentStore,
   writePersistentStore,
   addPermanentlyDeletedIds,
-  checkPostgresReachable
+  checkPostgresReachable,
+  getPostgresTargetInfo
 } = require('./persistentStore');
 
 let cachedPgOnline = null;
 let lastPgCheckAt = 0;
+let lastPgError = null;
+let probePromise = null;
 
-const isPostgresOnline = async () => {
-  const now = Date.now();
-  const cacheTtl = cachedPgOnline === true ? 15000 : 45000;
-  if (cachedPgOnline !== null && now - lastPgCheckAt < cacheTtl) {
-    return cachedPgOnline;
-  }
-  cachedPgOnline = await checkPostgresReachable(150);
+const PG_CONNECT_ERROR_CODES = new Set(['P1000', 'P1001', 'P1002', 'P1003', 'P1008', 'P1011', 'P1017', '57P01', '57P02', '57P03']);
+
+const isPostgresConnectivityError = (err) => {
+  if (!err) return false;
+  if (err.code && PG_CONNECT_ERROR_CODES.has(String(err.code))) return true;
+  const msg = String(err.message || '');
+  return /ECONNREFUSED|ECONNRESET|ETIMEDOUT|ENOTFOUND|Can't reach database server|Connection terminated|database system is starting up|DB_PROBE_TIMEOUT|Server has closed the connection/i.test(msg);
+};
+
+const markPostgresState = (online, errorMsg = null) => {
+  cachedPgOnline = Boolean(online);
   lastPgCheckAt = Date.now();
-  return cachedPgOnline;
+  lastPgError = online ? null : (errorMsg || lastPgError);
+};
+
+const resetPostgresCache = () => {
+  cachedPgOnline = null;
+  lastPgCheckAt = 0;
+  lastPgError = null;
+};
+
+const withProbeTimeout = (promise, ms = 2500) => {
+  let timer;
+  const timeoutPromise = new Promise((_, reject) => {
+    timer = setTimeout(() => reject(new Error('DB_PROBE_TIMEOUT')), ms);
+  });
+  return Promise.race([promise, timeoutPromise]).finally(() => clearTimeout(timer));
 };
 
 const STRING_ID_MAP = {
@@ -80,15 +101,17 @@ const INT_ID_FIELDS = new Set([
   'gradedById'
 ]);
 
-const sanitizeIdsForPrisma = (obj) => {
+const sanitizeIdsForPrisma = (obj, modelName = null) => {
   if (!obj || typeof obj !== 'object') return obj;
-  if (Array.isArray(obj)) return obj.map(sanitizeIdsForPrisma);
+  if (Array.isArray(obj)) return obj.map((item) => sanitizeIdsForPrisma(item, modelName));
   const out = {};
   for (const [k, v] of Object.entries(obj)) {
-    if (INT_ID_FIELDS.has(k) && typeof v === 'string') {
+    // InstitutionRegistration.subscriptionId is a String identifier (e.g. "SUB-2026-001"), not a numeric FK
+    const skipSubscriptionInt = k === 'subscriptionId' && modelName === 'InstitutionRegistration';
+    if (INT_ID_FIELDS.has(k) && typeof v === 'string' && !skipSubscriptionInt) {
       out[k] = toSafeInt(v, 1);
     } else if (v && typeof v === 'object' && !(v instanceof Date)) {
-      out[k] = sanitizeIdsForPrisma(v);
+      out[k] = sanitizeIdsForPrisma(v, modelName);
     } else {
       out[k] = v;
     }
@@ -998,26 +1021,170 @@ const handleRawSqlOffline = (sql, values = []) => {
 };
 
 const createResilientPrismaClient = () => {
-  const client = new PrismaClient({ log: [] });
+  const client = new PrismaClient({ log: ['error'] });
+
+  const origTransaction = client.$transaction.bind(client);
+  const origExecuteRawUnsafe = client.$executeRawUnsafe.bind(client);
+  const origQueryRawUnsafe = client.$queryRawUnsafe.bind(client);
+
+  // Proactively warm up Prisma query engine & PostgreSQL pool on initialization when configured
+  if (process.env.DATABASE_URL) {
+    client.$connect().catch(() => { });
+  }
+
+  const isPostgresOnline = async (forceRefresh = false) => {
+    if (!process.env.DATABASE_URL) {
+      markPostgresState(false, 'DATABASE_URL not configured');
+      return false;
+    }
+    const now = Date.now();
+    const cacheTtl = cachedPgOnline === true ? 30000 : 4000;
+    if (!forceRefresh && cachedPgOnline !== null && now - lastPgCheckAt < cacheTtl) {
+      return cachedPgOnline;
+    }
+    if (probePromise) return probePromise;
+    probePromise = (async () => {
+      try {
+        const probeTimeout = cachedPgOnline === null || forceRefresh ? 8000 : 5000;
+        await withProbeTimeout(origQueryRawUnsafe('SELECT 1 AS ok'), probeTimeout);
+        markPostgresState(true);
+        return true;
+      } catch (err) {
+        markPostgresState(false, err?.message || 'PostgreSQL probe failed');
+        return false;
+      } finally {
+        probePromise = null;
+      }
+    })();
+    return probePromise;
+  };
+
+  const getPostgresLiveStatus = async (forceRefresh = false) => {
+    const targetInfo = getPostgresTargetInfo();
+    if (!process.env.DATABASE_URL) {
+      return {
+        active: false,
+        connected: false,
+        status: 'STANDBY',
+        mode: 'LOCAL_PERSISTENT_STANDBY',
+        role: 'STANDBY_FALLBACK',
+        engine: 'PostgreSQL',
+        version: 'Not configured',
+        database: targetInfo.database,
+        host: targetInfo.host,
+        port: targetInfo.port,
+        latencyMs: null,
+        poolActiveConnections: 0,
+        poolMaxConnections: 20,
+        error: 'DATABASE_URL not set',
+        checkedAt: new Date().toISOString()
+      };
+    }
+
+    const start = Date.now();
+    try {
+      if (forceRefresh) resetPostgresCache();
+      const rows = await withProbeTimeout(
+        origQueryRawUnsafe(
+          "SELECT current_database() AS db, version() AS pg_version"
+        ),
+        8000
+      );
+      let activeConnCount = 1;
+      try {
+        const connRows = await withProbeTimeout(
+          origQueryRawUnsafe("SELECT count(*)::int AS connections FROM pg_stat_activity WHERE datname = current_database()"),
+          3000
+        );
+        if (Array.isArray(connRows) && connRows[0]?.connections !== undefined) {
+          activeConnCount = Number(connRows[0].connections) || 1;
+        }
+      } catch { }
+      const latencyMs = Date.now() - start;
+      const info = Array.isArray(rows) && rows[0] ? rows[0] : {};
+      const fullVersion = String(info.pg_version || info.version || 'PostgreSQL');
+      const shortMatch = fullVersion.match(/PostgreSQL\s+[\d.]+/i);
+      const versionShort = shortMatch ? shortMatch[0] : 'PostgreSQL';
+      markPostgresState(true);
+
+      return {
+        active: true,
+        connected: true,
+        status: 'ACTIVE',
+        mode: 'POSTGRESQL_LIVE',
+        role: 'PRIMARY_ACTIVE',
+        engine: `${versionShort} Primary`,
+        versionShort,
+        version: fullVersion,
+        database: info.db || targetInfo.database,
+        host: targetInfo.host,
+        port: targetInfo.port,
+        latencyMs,
+        poolActiveConnections: activeConnCount,
+        poolMaxConnections: 20,
+        error: null,
+        checkedAt: new Date().toISOString()
+      };
+    } catch (err) {
+      const msg = err?.message || 'PostgreSQL connection unavailable';
+      if (isPostgresConnectivityError(err)) {
+        markPostgresState(false, msg);
+      }
+      return {
+        active: false,
+        connected: false,
+        status: 'STANDBY',
+        mode: 'STANDBY_FALLBACK',
+        role: 'STANDBY_FALLBACK',
+        engine: 'PostgreSQL (Standby)',
+        versionShort: 'PostgreSQL',
+        version: msg,
+        database: targetInfo.database,
+        host: targetInfo.host,
+        port: targetInfo.port,
+        latencyMs: Date.now() - start,
+        poolActiveConnections: 0,
+        poolMaxConnections: 20,
+        error: msg,
+        checkedAt: new Date().toISOString()
+      };
+    }
+  };
+
+  client.isPostgresOnline = isPostgresOnline;
+  client.getPostgresLiveStatus = getPostgresLiveStatus;
+  client.resetPostgresCache = resetPostgresCache;
+  client.getLastPostgresError = () => lastPgError;
 
   if (typeof client.$use === 'function') {
     client.$use(async (params, next) => {
+      // Raw SQL ($queryRawUnsafe/$executeRawUnsafe) has no model and handles probe/online checks outside $use to prevent probe re-entrancy deadlocks.
+      if (!params.model || params.action === 'queryRaw' || params.action === 'executeRaw' || params.action === 'runCommandRaw') {
+        return next(params);
+      }
       const online = await isPostgresOnline();
       if (!online) {
         return executeLocalPrismaQuery(params);
       }
       try {
         if (params.args) {
-          params.args = sanitizeIdsForPrisma(params.args);
+          params.args = sanitizeIdsForPrisma(params.args, params.model);
         }
-        return await next(params);
-      } catch {
+        const res = await next(params);
+        markPostgresState(true);
+        return res;
+      } catch (err) {
+        if (isPostgresConnectivityError(err)) {
+          markPostgresState(false, err.message);
+          console.warn(`⚠️ [POSTGRES] Connectivity fallback for ${params.model}.${params.action}:`, err.code || err.message);
+        } else if (process.env.NODE_ENV !== 'production') {
+          console.warn(`⚠️ [PRISMA] Query notice (${params.model}.${params.action}):`, err.code || '', String(err.message || '').split('\n').pop());
+        }
         return executeLocalPrismaQuery(params);
       }
     });
   }
 
-  const origTransaction = client.$transaction.bind(client);
   client.$transaction = async (arg, options) => {
     const online = await isPostgresOnline();
     if (!online) {
@@ -1030,8 +1197,13 @@ const createResilientPrismaClient = () => {
       return [];
     }
     try {
-      return await origTransaction(arg, options);
-    } catch {
+      const res = await origTransaction(arg, options);
+      markPostgresState(true);
+      return res;
+    } catch (err) {
+      if (isPostgresConnectivityError(err)) {
+        markPostgresState(false, err.message);
+      }
       if (typeof arg === 'function') {
         return arg(client);
       }
@@ -1042,7 +1214,6 @@ const createResilientPrismaClient = () => {
     }
   };
 
-  const origExecuteRawUnsafe = client.$executeRawUnsafe.bind(client);
   client.$executeRawUnsafe = async (sql, ...values) => {
     const online = await isPostgresOnline();
     if (!online) {
@@ -1050,22 +1221,31 @@ const createResilientPrismaClient = () => {
       return 1;
     }
     try {
-      return await origExecuteRawUnsafe(sql, ...values);
-    } catch {
+      const res = await origExecuteRawUnsafe(sql, ...values);
+      markPostgresState(true);
+      return res;
+    } catch (err) {
+      if (isPostgresConnectivityError(err)) {
+        markPostgresState(false, err.message);
+      }
       handleRawSqlOffline(sql, values);
       return 1;
     }
   };
 
-  const origQueryRawUnsafe = client.$queryRawUnsafe.bind(client);
   client.$queryRawUnsafe = async (sql, ...values) => {
     const online = await isPostgresOnline();
     if (!online) {
       return handleRawSqlOffline(sql, values);
     }
     try {
-      return await origQueryRawUnsafe(sql, ...values);
-    } catch {
+      const res = await origQueryRawUnsafe(sql, ...values);
+      markPostgresState(true);
+      return res;
+    } catch (err) {
+      if (isPostgresConnectivityError(err)) {
+        markPostgresState(false, err.message);
+      }
       return handleRawSqlOffline(sql, values);
     }
   };

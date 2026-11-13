@@ -24,7 +24,7 @@ const signRefreshToken = (id) => {
   });
 };
 
-const withDbTimeout = (promise, ms = 2200) => {
+const withDbTimeout = (promise, ms = 5000) => {
   let timer;
   const timeoutPromise = new Promise((_, reject) => {
     timer = setTimeout(() => reject(new Error('DB_QUERY_TIMEOUT')), ms);
@@ -408,8 +408,8 @@ const login = async ({ email, username, identifier, password, portalRole }) => {
     };
   }
 
-  // 4. Fast bounded database lookup (max 2.2s timeout)
-  if (!user && (await checkPostgresReachable(250))) {
+  // 4. Fast bounded database lookup (max 4s timeout for local + cloud PostgreSQL)
+  if (!user && (typeof prisma.isPostgresOnline === 'function' ? await prisma.isPostgresOnline() : await checkPostgresReachable(2000))) {
     try {
       const dbUser = await withDbTimeout(
         prisma.user.findFirst({
@@ -421,7 +421,7 @@ const login = async ({ email, username, identifier, password, portalRole }) => {
           },
           include: { tenant: true }
         }),
-        2200
+        4000
       );
       if (dbUser) {
         const isDbDev = String(dbUser.role || '').toUpperCase() === 'DEVELOPER' || String(dbUser.email || '').toLowerCase() === 'gabosei48@gmail.com';
@@ -951,7 +951,7 @@ const registerInstitution = async (data) => {
   }
 
   try {
-    if (!(await checkPostgresReachable(250))) {
+    if (!(typeof prisma.isPostgresOnline === 'function' ? await prisma.isPostgresOnline() : await checkPostgresReachable(2000))) {
       throw new Error('PG_OFFLINE_PERSISTENT_FALLBACK');
     }
     const existingReg = await withDbTimeout(
@@ -964,7 +964,7 @@ const registerInstitution = async (data) => {
           ]
         }
       }),
-      2200
+      4000
     );
 
     const prismaData = {
@@ -1271,7 +1271,7 @@ const register = async (data) => {
   };
 
   try {
-    if (!(await checkPostgresReachable(250))) {
+    if (!(typeof prisma.isPostgresOnline === 'function' ? await prisma.isPostgresOnline() : await checkPostgresReachable(2000))) {
       throw new Error('PG_OFFLINE_PERSISTENT_FALLBACK');
     }
     const existingEmail = await prisma.user.findUnique({
@@ -1431,7 +1431,10 @@ const register = async (data) => {
 };
 
 const seedDefaultAdmin = async () => {
-  if (!(await checkPostgresReachable(250))) {
+  const pgOnline = typeof prisma.isPostgresOnline === 'function'
+    ? await prisma.isPostgresOnline(true)
+    : await checkPostgresReachable(2000);
+  if (!pgOnline) {
     return { tenant: DEFAULT_TENANT, mode: 'PERSISTENT_STORE_READY' };
   }
   try {
@@ -1481,8 +1484,9 @@ const seedDefaultAdmin = async () => {
       }
     }
 
-    return { tenant };
-  } catch {
+    return { tenant, mode: 'POSTGRESQL_ACTIVE' };
+  } catch (seedErr) {
+    console.warn('⚠️ [AUTH SEED] Default admin seeding notice:', seedErr.message);
     return { tenant: DEFAULT_TENANT, mode: 'PERSISTENT_STORE_READY' };
   }
 };
@@ -1513,7 +1517,7 @@ const refreshTokenSession = async (incomingToken) => {
     try {
       userRecord = await withDbTimeout(
         prisma.user.findUnique({ where: { id: numId }, include: { tenant: true } }),
-        1800
+        5000
       );
     } catch { }
   }
@@ -1665,7 +1669,20 @@ module.exports = {
   getDynamicInstitutions: () => [...DYNAMIC_INSTITUTIONS],
   addDynamicInstitution: (item) => {
     const tenantId = deriveDeterministicTenantId(item, DYNAMIC_INSTITUTIONS.length + 1);
-    DYNAMIC_INSTITUTIONS.unshift({ ...item, tenantId });
+    const nextEntry = { ...item, tenantId };
+    const codeKey = String(item?.tenantCode || '').trim().toLowerCase();
+    const uidKey = String(item?.tenantUid || '').trim().toLowerCase();
+    const emailKey = String(item?.adminEmail || '').trim().toLowerCase();
+    const existingIdx = DYNAMIC_INSTITUTIONS.findIndex((i) =>
+      (codeKey && String(i.tenantCode || '').trim().toLowerCase() === codeKey) ||
+      (uidKey && String(i.tenantUid || '').trim().toLowerCase() === uidKey) ||
+      (emailKey && String(i.adminEmail || '').trim().toLowerCase() === emailKey && String(i.institutionName || '').trim().toLowerCase() === String(item?.institutionName || '').trim().toLowerCase())
+    );
+    if (existingIdx >= 0) {
+      DYNAMIC_INSTITUTIONS[existingIdx] = { ...DYNAMIC_INSTITUTIONS[existingIdx], ...nextEntry };
+    } else {
+      DYNAMIC_INSTITUTIONS.unshift(nextEntry);
+    }
     syncAuthStoreToDisk();
   },
   updateDynamicInstitution: (idOrCode, updates) => {
@@ -1704,7 +1721,9 @@ module.exports = {
         String(inst.tenantId ?? '').toLowerCase() === target ||
         String(inst.tenantCode ?? '').toLowerCase() === target ||
         String(inst.tenantUid ?? '').toLowerCase() === target ||
-        String(inst.institutionName ?? '').toLowerCase() === target
+        String(inst.institutionName ?? '').toLowerCase() === target ||
+        String(inst.adminEmail ?? '').toLowerCase() === target ||
+        String(inst.officialEmail ?? '').toLowerCase() === target
       ) {
         DYNAMIC_INSTITUTIONS.splice(i, 1);
         removed = true;

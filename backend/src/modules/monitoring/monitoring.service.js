@@ -4,17 +4,20 @@ const os = require('os');
 const prisma = require('../../core/database/prisma.client');
 
 async function getSystemHealth() {
-  const startTime = Date.now();
-  let dbStatus = 'CONNECTED';
-  let dbLatencyMs = 0;
+  const pgLive = typeof prisma.getPostgresLiveStatus === 'function'
+    ? await prisma.getPostgresLiveStatus(true)
+    : await (async () => {
+        const pingStart = Date.now();
+        try {
+          await prisma.$queryRawUnsafe('SELECT 1;');
+          return { active: true, latencyMs: Date.now() - pingStart, engine: 'PostgreSQL Primary', poolActiveConnections: 1, poolMaxConnections: 20 };
+        } catch {
+          return { active: false, latencyMs: Date.now() - pingStart, engine: 'PostgreSQL', poolActiveConnections: 0, poolMaxConnections: 20 };
+        }
+      })();
 
-  try {
-    const pingStart = Date.now();
-    await prisma.$queryRawUnsafe('SELECT 1;');
-    dbLatencyMs = Date.now() - pingStart;
-  } catch (err) {
-    dbStatus = 'ERROR';
-  }
+  const dbStatus = pgLive.active ? 'ACTIVE • CONNECTED' : 'ERROR';
+  const dbLatencyMs = pgLive.latencyMs ?? 0;
 
   const memUsage = process.memoryUsage();
   const totalMem = os.totalmem();
@@ -22,16 +25,18 @@ async function getSystemHealth() {
   const uptimeSeconds = process.uptime();
 
   return {
-    status: dbStatus === 'CONNECTED' ? 'HEALTHY' : 'DEGRADED',
+    status: pgLive.active ? 'HEALTHY' : 'DEGRADED',
     timestamp: new Date().toISOString(),
     uptimeSeconds: Math.floor(uptimeSeconds),
     database: {
-      engine: 'PostgreSQL 16 Enterprise',
+      engine: pgLive.engine || 'PostgreSQL Primary',
+      role: pgLive.role || (pgLive.active ? 'PRIMARY_ACTIVE' : 'STANDBY_FALLBACK'),
+      database: pgLive.database || 'gbs_system',
       status: dbStatus,
-      connected: dbStatus === 'CONNECTED',
+      connected: Boolean(pgLive.active),
       latencyMs: dbLatencyMs,
-      poolActiveConnections: 5,
-      poolMaxConnections: 20
+      poolActiveConnections: pgLive.poolActiveConnections || 1,
+      poolMaxConnections: pgLive.poolMaxConnections || 20
     },
     system: {
       platform: os.platform(),

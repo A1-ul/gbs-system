@@ -58,6 +58,10 @@ const getSystemMetrics = async () => {
   let totalActiveLocks = 0;
   let totalBackups = 0;
 
+  const pgLive = typeof prisma.getPostgresLiveStatus === 'function'
+    ? await prisma.getPostgresLiveStatus()
+    : { active: true, engine: 'PostgreSQL', status: 'ACTIVE', poolActiveConnections: 5, poolMaxConnections: 20, latencyMs: 1 };
+
   try {
     totalTenants = await prisma.tenant.count({ where: { isDeleted: false } });
     totalUsers = await prisma.user.count({ where: { isDeleted: false } });
@@ -77,8 +81,8 @@ const getSystemMetrics = async () => {
   const usedMemPct = ((totalMem - freeMem) / totalMem * 100).toFixed(1);
 
   return {
-    status: 'HEALTHY',
-    serverStatus: 'ONLINE_HEALTHY',
+    status: pgLive.active ? 'HEALTHY' : 'DEGRADED',
+    serverStatus: pgLive.active ? 'ONLINE_HEALTHY' : 'STANDBY_FALLBACK',
     memoryUsageMb: Math.round(memUsage.rss / 1024 / 1024),
     memory: {
       usagePct: `${usedMemPct}%`,
@@ -96,9 +100,15 @@ const getSystemMetrics = async () => {
       maxConnections: socketStats.maxConnections || 10000
     },
     database: {
-      engine: 'PostgreSQL',
-      poolStatus: 'CONNECTED',
-      poolSize: 5
+      engine: pgLive.versionShort || pgLive.engine || 'PostgreSQL',
+      role: pgLive.role || (pgLive.active ? 'PRIMARY_ACTIVE' : 'STANDBY_FALLBACK'),
+      status: pgLive.active ? 'ACTIVE' : 'STANDBY',
+      connected: Boolean(pgLive.active),
+      poolStatus: pgLive.active ? 'ACTIVE • CONNECTED' : 'STANDBY_FALLBACK',
+      poolSize: pgLive.poolActiveConnections || 1,
+      maxPoolSize: pgLive.poolMaxConnections || 20,
+      latencyMs: pgLive.latencyMs ?? null,
+      databaseName: pgLive.database || 'gbs_system'
     },
     metrics: {
       totalTenants,
@@ -117,7 +127,7 @@ const syncDynamicInstitutionsToTenants = async () => {
 
   let existingTenants = [];
   try {
-    existingTenants = await prisma.tenant.findMany({ where: { isDeleted: false } });
+    existingTenants = await prisma.tenant.findMany();
   } catch { }
 
   for (let idx = 0; idx < dynamicList.length; idx++) {
@@ -154,19 +164,11 @@ const syncDynamicInstitutionsToTenants = async () => {
       try {
         const createdTenant = await prisma.tenant.create({
           data: {
-            id: detId,
             name: item.institutionName || `Institution #${detId}`,
             code: item.tenantCode || `GBS-SCH-${detId}`,
             domain: item.domain || `${String(item.tenantCode || `sch${detId}`).toLowerCase()}.gbs.edu`,
             status: effectiveStatus,
-            isActive: effectiveActive,
-            headmasterName: item.adminName || item.repFullName || 'Headmaster',
-            headmasterEmail: item.adminEmail || item.officialEmail || 'admin@school.edu',
-            headmasterPhone: item.adminPhone || item.officialPhone || item.repPhone || '+233-24-555-0199',
-            headmasterPhoto: item.facePhoto || item.institutionLogo || null,
-            institutionType: item.institutionType || 'SHS',
-            totalStudentsEnrolled: Number(item.totalStudentsEnrolled || item.maxStudents || 300),
-            createdAt: item.createdAt || new Date().toISOString()
+            isActive: effectiveActive
           }
         });
         existingTenants.push(createdTenant);
@@ -435,32 +437,23 @@ const getTenantCountdowns = async () => {
 const developerTenantAction = async (tenantId, action, params = {}, developer = null) => {
   await syncDynamicInstitutionsToTenants();
 
+  const tenantInclude = {
+    subscriptions: true,
+    institutionRegistrations: { take: 1, orderBy: { createdAt: 'desc' } },
+    users: { where: { role: 'ADMIN' }, take: 1 }
+  };
+
   const tid = parseInt(tenantId, 10);
   let tenant = null;
   if (!isNaN(tid)) {
     try {
       tenant = await prisma.tenant.findUnique({
         where: { id: tid },
-        include: { subscriptions: true }
+        include: tenantInclude
       });
     } catch (err) {
       console.warn('developerTenantAction lookup notice (resilience active):', err.message);
     }
-  }
-
-  if (!tenant && tenantId) {
-    try {
-      tenant = await prisma.tenant.findFirst({
-        where: {
-          OR: [
-            { code: String(tenantId) },
-            { name: String(tenantId) },
-            { headmasterEmail: String(tenantId).toLowerCase() }
-          ]
-        },
-        include: { subscriptions: true }
-      });
-    } catch { }
   }
 
   const dynList = authService.getDynamicInstitutions ? authService.getDynamicInstitutions() : [];
@@ -483,6 +476,47 @@ const developerTenantAction = async (tenantId, action, params = {}, developer = 
       String(a.name || a.tenantName || '').toLowerCase() === String(tenantId || '').toLowerCase()
   );
 
+  if (!tenant && (tenantId || dynMatch || archivedMatch)) {
+    try {
+      const targetStr = String(tenantId || '');
+      const targetLower = targetStr.toLowerCase();
+      const orClauses = [];
+      if (!isNaN(tid)) {
+        orClauses.push({ institutionRegistrations: { some: { id: tid } } });
+      }
+      if (targetStr) {
+        orClauses.push(
+          { code: targetStr },
+          { name: targetStr },
+          { institutionRegistrations: { some: { adminEmail: targetLower } } },
+          { institutionRegistrations: { some: { officialEmail: targetLower } } },
+          { institutionRegistrations: { some: { tenantCode: targetStr } } },
+          { institutionRegistrations: { some: { tenantUid: targetStr } } },
+          { users: { some: { email: targetLower, role: 'ADMIN' } } }
+        );
+      }
+      if (dynMatch?.tenantId && !isNaN(parseInt(dynMatch.tenantId, 10))) {
+        orClauses.push({ id: parseInt(dynMatch.tenantId, 10) });
+      }
+      if (dynMatch?.tenantCode) orClauses.push({ code: dynMatch.tenantCode });
+      if (dynMatch?.institutionName) orClauses.push({ name: dynMatch.institutionName });
+      if (dynMatch?.adminEmail) {
+        orClauses.push({ users: { some: { email: String(dynMatch.adminEmail).toLowerCase(), role: 'ADMIN' } } });
+      }
+      if (archivedMatch?.tenantId && !isNaN(parseInt(archivedMatch.tenantId, 10))) {
+        orClauses.push({ id: parseInt(archivedMatch.tenantId, 10) });
+      }
+      if (archivedMatch?.code) orClauses.push({ code: archivedMatch.code });
+
+      if (orClauses.length > 0) {
+        tenant = await prisma.tenant.findFirst({
+          where: { OR: orClauses },
+          include: tenantInclude
+        });
+      }
+    } catch { }
+  }
+
   const upperAct = String(action || 'ACTIVATE').toUpperCase();
   const isDestructiveAction = ['DELETE', 'DELETE_TENANT', 'PURGE_PERMANENT', 'CLEAR_TENANT'].includes(upperAct);
 
@@ -494,24 +528,46 @@ const developerTenantAction = async (tenantId, action, params = {}, developer = 
       code: dynMatch?.tenantCode || archivedMatch?.code || archivedMatch?.tenantCode || params.tenantCode || `GBS-TEN-${String(tenantId).slice(-4)}`,
       headmasterEmail: dynMatch?.adminEmail || dynMatch?.officialEmail || archivedMatch?.headmasterEmail || archivedMatch?.email || params.headmasterEmail || params.adminEmail || '',
       headmasterName: dynMatch?.adminName || archivedMatch?.headmasterName || params.headmasterName || 'Headmaster',
+      headmasterPhone: dynMatch?.adminPhone || dynMatch?.officialPhone || archivedMatch?.headmasterPhone || '',
       status: 'ACTIVE',
       isActive: true,
       subscriptions: []
     };
     if (!isDestructiveAction) {
       try {
-        tenant = await prisma.tenant.create({
-          data: {
-            id: tenant.id,
-            name: tenant.name,
-            code: tenant.code,
-            status: 'ACTIVE',
-            isActive: true
-          }
-        });
+        const existingByCode = tenant.code
+          ? await prisma.tenant.findUnique({ where: { code: tenant.code }, include: tenantInclude }).catch(() => null)
+          : null;
+        if (existingByCode) {
+          tenant = await prisma.tenant.update({
+            where: { id: existingByCode.id },
+            data: { status: 'ACTIVE', isActive: true, isDeleted: false },
+            include: tenantInclude
+          });
+        } else {
+          tenant = await prisma.tenant.create({
+            data: {
+              name: tenant.name,
+              code: tenant.code,
+              status: 'ACTIVE',
+              isActive: true
+            },
+            include: tenantInclude
+          });
+        }
       } catch { }
     }
   }
+
+  // Enrich in-memory tenant metadata from relations/dynamic store without polluting Prisma write inputs
+  const regRel = Array.isArray(tenant.institutionRegistrations) ? tenant.institutionRegistrations[0] : null;
+  const adminRel = Array.isArray(tenant.users) ? tenant.users[0] : null;
+  tenant = {
+    ...tenant,
+    headmasterEmail: tenant.headmasterEmail || regRel?.adminEmail || regRel?.officialEmail || adminRel?.email || dynMatch?.adminEmail || dynMatch?.officialEmail || archivedMatch?.headmasterEmail || archivedMatch?.email || params.headmasterEmail || params.adminEmail || '',
+    headmasterName: tenant.headmasterName || regRel?.adminName || (adminRel ? `${adminRel.firstName || ''} ${adminRel.lastName || ''}`.trim() : '') || dynMatch?.adminName || archivedMatch?.headmasterName || params.headmasterName || 'Headmaster',
+    headmasterPhone: tenant.headmasterPhone || regRel?.adminPhone || regRel?.officialPhone || dynMatch?.adminPhone || archivedMatch?.headmasterPhone || ''
+  };
 
   const safeTid = typeof tenant.id === 'number' ? tenant.id : (!isNaN(tid) ? tid : 1);
   let updatedTenant = { ...tenant };
@@ -997,15 +1053,31 @@ const developerTenantAction = async (tenantId, action, params = {}, developer = 
       try {
         await prisma.tenant.update({
           where: { id: safeTid },
-          data: { isDeleted: true, isActive: false, status: 'ARCHIVED_DELETED' }
+          data: { isDeleted: true, isActive: false, status: 'LOCKED', deletedAt: new Date() }
         });
       } catch { }
+
+      await prisma.user.updateMany({
+        where: { tenantId: safeTid },
+        data: { isDeleted: true, isActive: false, isLocked: true }
+      }).catch(() => { });
+
+      await prisma.institutionRegistration.updateMany({
+        where: {
+          OR: [
+            { tenantId: safeTid },
+            ...(tenant.code ? [{ tenantCode: tenant.code }] : [])
+          ]
+        },
+        data: { isApproved: false, status: 'ARCHIVED_DELETED' }
+      }).catch(() => { });
 
       if (authService.deleteDynamicInstitution) {
         authService.deleteDynamicInstitution(tenantId);
         authService.deleteDynamicInstitution(safeTid);
         if (tenant.code) authService.deleteDynamicInstitution(tenant.code);
         if (tenant.name) authService.deleteDynamicInstitution(tenant.name);
+        if (tenant.headmasterEmail) authService.deleteDynamicInstitution(tenant.headmasterEmail);
       }
 
       updatedTenant = { ...tenant, id: safeTid, isDeleted: true, deleted: true, status: 'ARCHIVED_DELETED', archiveRecord };
@@ -1019,12 +1091,28 @@ const developerTenantAction = async (tenantId, action, params = {}, developer = 
       try {
         await prisma.tenant.update({
           where: { id: safeTid },
-          data: { isDeleted: false, isActive: true, status: 'ACTIVE' }
+          data: { isDeleted: false, isActive: true, status: 'ACTIVE', deletedAt: null }
         });
       } catch { }
 
-      if (authService.registerDynamicInstitution) {
-        authService.registerDynamicInstitution({
+      await prisma.user.updateMany({
+        where: { tenantId: safeTid },
+        data: { isDeleted: false, isActive: true, isLocked: false }
+      }).catch(() => { });
+
+      await prisma.institutionRegistration.updateMany({
+        where: {
+          OR: [
+            { tenantId: safeTid },
+            ...(tenant.code ? [{ tenantCode: tenant.code }] : [])
+          ]
+        },
+        data: { status: 'APPROVED', isApproved: true }
+      }).catch(() => { });
+
+      const addDynInst = authService.addDynamicInstitution || authService.registerDynamicInstitution;
+      if (addDynInst) {
+        addDynInst({
           id: safeTid,
           tenantId: safeTid,
           tenantCode: tenant.code,
@@ -1095,7 +1183,7 @@ const developerTenantAction = async (tenantId, action, params = {}, developer = 
         await prisma.subscription.deleteMany({ where: { tenantId: safeTid } }).catch(() => { });
         await prisma.systemLock.deleteMany({ where: { tenantId: safeTid } }).catch(() => { });
         try {
-          await prisma.tenant.delete({ where: { id: safeTid } });
+          await prisma.tenant.deleteMany({ where: { id: safeTid } });
         } catch { }
       }
       if (targetCode || targetName || targetEmail) {

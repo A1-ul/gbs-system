@@ -274,23 +274,39 @@ function removeDeletedTenantLockout(criteria = {}) {
 }
 
 /**
- * Fast non-throwing TCP socket check to see if PostgreSQL is listening on the configured host & port.
+ * Extract safe PostgreSQL host, port, and database metadata without exposing credentials.
  */
-function checkPostgresReachable(timeoutMs = 350) {
+function getPostgresTargetInfo() {
+  const dbUrl = process.env.DATABASE_URL || '';
+  if (!dbUrl) {
+    return { configured: false, host: 'localhost', port: 5432, database: 'gbs_system', ssl: false };
+  }
+  try {
+    const parsed = new URL(dbUrl);
+    return {
+      configured: true,
+      host: parsed.hostname || 'localhost',
+      port: parseInt(parsed.port || '5432', 10),
+      database: (parsed.pathname || '/gbs_system').replace(/^\//, '') || 'gbs_system',
+      ssl: parsed.searchParams.get('sslmode') === 'require' || /ssl=true/i.test(dbUrl)
+    };
+  } catch {
+    return { configured: Boolean(dbUrl), host: 'localhost', port: 5432, database: 'gbs_system', ssl: false };
+  }
+}
+
+/**
+ * Non-throwing TCP socket check to see if PostgreSQL is listening on the configured host & port.
+ * TCP connect returns in <5ms when reachable; timeout floor prevents false-negative cloud latency blackouts.
+ */
+function checkPostgresReachable(timeoutMs = 2000) {
   return new Promise((resolve) => {
     const dbUrl = process.env.DATABASE_URL || '';
     if (!dbUrl) {
       return resolve(false);
     }
-    let host = 'localhost';
-    let port = 5432;
-    try {
-      const parsed = new URL(dbUrl);
-      host = parsed.hostname || 'localhost';
-      port = parseInt(parsed.port || '5432', 10);
-    } catch {
-      // keep defaults
-    }
+    const { host, port } = getPostgresTargetInfo();
+    const effectiveTimeout = Math.max(Number(timeoutMs) || 2000, 1200);
 
     const socket = new net.Socket();
     let settled = false;
@@ -304,7 +320,7 @@ function checkPostgresReachable(timeoutMs = 350) {
       }
     };
 
-    socket.setTimeout(timeoutMs);
+    socket.setTimeout(effectiveTimeout);
     socket.once('connect', () => finish(true));
     socket.once('timeout', () => finish(false));
     socket.once('error', () => finish(false));
@@ -403,6 +419,7 @@ module.exports = {
   removeDeletedTenantLockout,
   isTenantLockedOut,
   checkPostgresReachable,
+  getPostgresTargetInfo,
   tagRecordMetadata,
   getActiveEnvironment,
   createDatabaseBackup,

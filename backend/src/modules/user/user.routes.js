@@ -110,12 +110,13 @@ router.post(
               where: { id: found.id },
               data: { isActive: true, isLocked: false, isDeleted: false }
             });
+            const verifierIdNum = Number(req.user?.id);
             await prisma.userRegistrationProfile.updateMany({
               where: { userId: found.id },
               data: {
                 verificationStatus: 'VERIFIED',
                 verifiedAt: new Date(),
-                verifiedById: req.user?.id || null
+                verifiedBy: Number.isInteger(verifierIdNum) && verifierIdNum > 0 ? verifierIdNum : null
               }
             }).catch(() => { });
           }

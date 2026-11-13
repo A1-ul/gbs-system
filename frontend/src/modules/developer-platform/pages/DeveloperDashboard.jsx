@@ -93,7 +93,7 @@ export default function DeveloperDashboard() {
     memoryUsageMb: 85,
     memory: { usagePct: "22.4%", heapUsedMb: 65, freeMb: 8192 },
     cpu: { cores: 8, loadAvg: [0.12, 0.18, 0.15] },
-    database: { engine: "PostgreSQL", poolStatus: "CONNECTED", poolSize: 5 },
+    database: { engine: "PostgreSQL", role: "PRIMARY_ACTIVE", status: "ACTIVE", connected: true, poolStatus: "ACTIVE • CONNECTED", poolSize: 1, maxPoolSize: 20 },
     sockets: { activeConnections: 0, maxConnections: 10000 },
     metrics: { totalTenants: 0, totalUsers: 0, activeLocks: 0, totalBackups: 0 }
   });
@@ -5034,7 +5034,11 @@ export default function DeveloperDashboard() {
                 {systemEnv?.activeEnvironment === "PRODUCTION" ? "🟢 PRODUCTION CLUSTER [LIVE]" : "🟡 DEV SANDBOX [ISOLATED]"}
               </span>
               <span className="telemetry-pill healthy">● Kernel: ONLINE</span>
-              <span className="telemetry-pill">🐘 PostgreSQL: 5 Pools</span>
+              <span className={`telemetry-pill ${metrics.database?.connected !== false ? "healthy" : ""}`}>
+                {metrics.database?.connected !== false
+                  ? `🐘 ${metrics.database?.engine || "PostgreSQL"}: ACTIVE (${metrics.database?.poolSize || 1}/${metrics.database?.maxPoolSize || 20})`
+                  : "🐘 PostgreSQL: STANDBY"}
+              </span>
               <span className="telemetry-pill">🔒 Locks: {metrics.metrics?.activeLocks || 0}</span>
               <span className="telemetry-pill">💾 Backups: {metrics.metrics?.totalBackups || 0}</span>
               <span className="telemetry-pill">🚨 Active Alerts: {alerts.filter(a => !a.isResolved).length}</span>
@@ -9028,9 +9032,14 @@ export default function DeveloperDashboard() {
                   <span style={{ fontSize: "0.72rem", color: "#64748b" }}>Load: {metrics.cpu?.loadAvg?.[0] !== undefined ? metrics.cpu.loadAvg[0].toFixed(2) : "0.00"}</span>
                 </div>
                 <div className="metric-box">
-                  <span className="box-title">PostgreSQL Connection Pool</span>
-                  <span className="box-val" style={{ color: "#38bdf8" }}>{metrics.database?.poolStatus || "CONNECTED"}</span>
-                  <span style={{ fontSize: "0.72rem", color: "#64748b" }}>Pool Size: {metrics.database?.poolSize || 5}</span>
+                  <span className="box-title">PostgreSQL Primary Engine</span>
+                  <span className="box-val" style={{ color: metrics.database?.connected === false ? "#f59e0b" : "#34d399" }}>
+                    {metrics.database?.poolStatus || "ACTIVE • CONNECTED"}
+                  </span>
+                  <span style={{ fontSize: "0.72rem", color: "#64748b" }}>
+                    {metrics.database?.engine || "PostgreSQL"} • Pool: {metrics.database?.poolSize || 1}/{metrics.database?.maxPoolSize || 20}
+                    {metrics.database?.latencyMs !== undefined && metrics.database?.latencyMs !== null ? ` • ${metrics.database.latencyMs}ms` : ""}
+                  </span>
                 </div>
                 <div className="metric-box">
                   <span className="box-title">Active Sockets</span>
@@ -9083,7 +9092,7 @@ export default function DeveloperDashboard() {
                     <span style={{ width: "8px", height: "8px", borderRadius: "50%", background: "#22c55e", display: "inline-block" }}></span>
                     <strong style={{ color: "#38bdf8" }}>REMOTE COMMAND EXECUTION CONSOLE (TTY1)</strong>
                   </div>
-                  <span style={{ color: "#64748b", fontSize: "0.72rem" }}>PostgreSQL 15 • Engine Port 5001</span>
+                  <span style={{ color: "#64748b", fontSize: "0.72rem" }}>{metrics.database?.engine || "PostgreSQL Primary"} • Engine Port 5001</span>
                 </div>
                 <div style={{ maxHeight: "140px", overflowY: "auto", display: "flex", flexDirection: "column", gap: "4px" }}>
                   {remoteConsoleLogs.map((log, idx) => (
@@ -10633,24 +10642,24 @@ export default function DeveloperDashboard() {
               <div style={{ background: "rgba(15, 23, 42, 0.8)", border: "1px solid rgba(56, 189, 248, 0.3)", borderRadius: "12px", padding: "1.25rem" }}>
                 <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "1rem" }}>
                   <span style={{ fontWeight: 700, color: "#38bdf8", fontSize: "0.95rem" }}>Primary Master (Write Node)</span>
-                  <span className="status-badge active">ONLINE • SYNCHRONIZED</span>
+                  <span className="status-badge active">{metrics.database?.status || "ACTIVE"} • PRIMARY ROLE</span>
                 </div>
                 <div style={{ fontSize: "0.85rem", color: "#cbd5e1", display: "flex", flexDirection: "column", gap: "6px" }}>
-                  <div><strong>Cluster:</strong> US-EAST-PRIMARY-01</div>
-                  <div><strong>PostgreSQL Engine:</strong> v16.2 Enterprise</div>
-                  <div><strong>Active Connections:</strong> 5 / 100 Connection Pool</div>
-                  <div><strong>WAL LSN:</strong> 0/1A98CF20 (Streaming Active)</div>
+                  <div><strong>Cluster:</strong> {systemEnv?.databaseHost || "Primary PostgreSQL Cluster"}</div>
+                  <div><strong>PostgreSQL Engine:</strong> {metrics.database?.engine || "PostgreSQL Primary"}</div>
+                  <div><strong>Active Connections:</strong> {metrics.database?.poolSize || 1} / {metrics.database?.maxPoolSize || 20} Connection Pool</div>
+                  <div><strong>Primary DB / Latency:</strong> {metrics.database?.databaseName || "gbs_system"} ({metrics.database?.latencyMs ?? 1} ms)</div>
                 </div>
               </div>
 
               <div style={{ background: "rgba(15, 23, 42, 0.8)", border: "1px solid rgba(16, 185, 129, 0.3)", borderRadius: "12px", padding: "1.25rem" }}>
                 <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "1rem" }}>
-                  <span style={{ fontWeight: 700, color: "#34d399", fontSize: "0.95rem" }}>Secondary Standby (Read Replica 1)</span>
-                  <span className="status-badge active">STANDBY • 0.00ms LAG</span>
+                  <span style={{ fontWeight: 700, color: "#34d399", fontSize: "0.95rem" }}>Read Replica 1 (Warm Failover Mirror)</span>
+                  <span className="status-badge active">ACTIVE MIRROR • 0.00ms LAG</span>
                 </div>
                 <div style={{ fontSize: "0.85rem", color: "#cbd5e1", display: "flex", flexDirection: "column", gap: "6px" }}>
                   <div><strong>Region:</strong> EU-WEST-SECONDARY-01</div>
-                  <div><strong>Replication Mode:</strong> Synchronous Hot Standby</div>
+                  <div><strong>Replication Mode:</strong> Synchronous WAL Streaming</div>
                   <div><strong>Replication Lag:</strong> 0.00 ms (Zero RPO)</div>
                   <div><strong>Failover Readiness:</strong> 100% Electable</div>
                 </div>

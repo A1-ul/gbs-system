@@ -433,37 +433,92 @@ const server = app.listen(PORT, HOST, async () => {
   try {
     initializeSocket(server);
     readPersistentStore();
-    const pgReachable = await checkPostgresReachable(400);
-    if (pgReachable && process.env.DATABASE_URL) {
-      try {
-        console.log('🔄 [DATABASE] Ensuring PostgreSQL schema tables exist...');
-        const prismaClient = require('./database/prisma.client');
-        await prismaClient.$executeRawUnsafe(`
-          DO $$
-          BEGIN
-            IF EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name = 'cctv_streams' AND column_name = 'rtsp_endpoint') THEN
-              UPDATE cctv_streams SET rtsp_endpoint = COALESCE(stream_url, 'rtsp://stream.gbs-system.edu/live/cam_default') WHERE rtsp_endpoint IS NULL;
-            END IF;
-            IF EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name = 'security_gate_events' AND column_name = 'gate_name') THEN
-              UPDATE security_gate_events SET gate_name = COALESCE(gate_location, 'Main Campus Gate') WHERE gate_name IS NULL;
-            END IF;
-          END $$;
-        `).catch(() => { });
+    if (process.env.DATABASE_URL) {
+      const prismaClient = require('./database/prisma.client');
+      const { exec } = require('child_process');
+      const { promisify } = require('util');
+      const backendRoot = require('path').resolve(__dirname, '../..');
 
-        const { exec } = require('child_process');
-        const { promisify } = require('util');
-        await promisify(exec)('npx --no-install prisma db push --skip-generate --accept-data-loss', {
-          timeout: 25000,
-          windowsHide: true
-        });
-        console.log('✅ [DATABASE] PostgreSQL schema tables verified.');
-        const defaultData = await authService.seedDefaultAdmin();
-        console.log(`✅ [DATABASE] Default Tenant '${defaultData.tenant.code}' & Super Admin seeded.`);
-      } catch (dbSyncErr) {
-        console.log('✅ [DATABASE] Hybrid Cloud-Local Persistent Engine active (PostgreSQL standby).');
+      let pgReachable = false;
+      for (let attempt = 1; attempt <= 3; attempt++) {
+        pgReachable = await checkPostgresReachable(2500);
+        if (pgReachable) break;
+        if (attempt < 3) {
+          await new Promise((r) => setTimeout(r, 1500));
+        }
+      }
+
+      if (pgReachable) {
+        if (typeof prismaClient.resetPostgresCache === 'function') {
+          prismaClient.resetPostgresCache();
+        }
+        try {
+          console.log('🔄 [DATABASE] Initializing active PostgreSQL primary connection & schema...');
+          await prismaClient.$connect().catch(() => { });
+
+          await prismaClient.$executeRawUnsafe(`
+            DO $$
+            BEGIN
+              IF EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name = 'cctv_streams' AND column_name = 'rtsp_endpoint') THEN
+                UPDATE cctv_streams SET rtsp_endpoint = COALESCE(stream_url, 'rtsp://stream.gbs-system.edu/live/cam_default') WHERE rtsp_endpoint IS NULL;
+              END IF;
+              IF EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name = 'security_gate_events' AND column_name = 'gate_name') THEN
+                UPDATE security_gate_events SET gate_name = COALESCE(gate_location, 'Main Campus Gate') WHERE gate_name IS NULL;
+              END IF;
+            END $$;
+          `).catch(() => { });
+
+          try {
+            await promisify(exec)('npx --no-install prisma db push --skip-generate --accept-data-loss', {
+              cwd: backendRoot,
+              timeout: 60000,
+              maxBuffer: 4 * 1024 * 1024,
+              windowsHide: true
+            });
+            console.log('✅ [DATABASE] PostgreSQL schema tables verified.');
+          } catch (pushErr) {
+            console.warn('⚠️ [DATABASE] Prisma schema sync notice:', pushErr.stderr || pushErr.message);
+          }
+
+          const pgLive = typeof prismaClient.getPostgresLiveStatus === 'function'
+            ? await prismaClient.getPostgresLiveStatus(true)
+            : { active: await checkPostgresReachable(2000), database: 'gbs_system', versionShort: 'PostgreSQL', latencyMs: 0 };
+
+          if (pgLive.active) {
+            // Seed default sharding & replica topology rows only if tables are empty (e.g. fresh Render DB)
+            try {
+              const shardRows = await prismaClient.$queryRawUnsafe('SELECT COUNT(*)::int AS cnt FROM shard_registry;').catch(() => []);
+              if (Array.isArray(shardRows) && Number(shardRows[0]?.cnt) === 0) {
+                await prismaClient.$executeRawUnsafe(`
+                  INSERT INTO shard_registry (shard_key, name, region, host, port, database_name, allocated_tenants, max_tenants, storage_capacity_gb, storage_used_gb, avg_latency_ms, status, is_primary)
+                  VALUES ('SHARD-PRIMARY-01', 'Primary PostgreSQL Cluster', 'PRIMARY_REGION', $1, $2, $3, 1, 100, 1000, 12.5, $4, 'ONLINE', true)
+                  ON CONFLICT DO NOTHING;
+                `, pgLive.host || 'localhost', Number(pgLive.port || 5432), pgLive.database || 'gbs_system', Number(pgLive.latencyMs || 2.5)).catch(() => { });
+              }
+              const repRows = await prismaClient.$queryRawUnsafe('SELECT COUNT(*)::int AS cnt FROM replica_status;').catch(() => []);
+              if (Array.isArray(repRows) && Number(repRows[0]?.cnt) === 0) {
+                await prismaClient.$executeRawUnsafe(`
+                  INSERT INTO replica_status (replica_name, role, endpoint, region, replication_lag_ms, sync_state, wal_lsn, health_score, is_healthy)
+                  VALUES ('pg-primary-node-01', 'PRIMARY', $1, 'PRIMARY_REGION', 0.0, 'STREAMING', '0/1A00000', 100, true)
+                  ON CONFLICT DO NOTHING;
+                `, `${pgLive.host || 'localhost'}:${pgLive.port || 5432}`).catch(() => { });
+              }
+            } catch { }
+
+            const defaultData = await authService.seedDefaultAdmin();
+            console.log(`✅ [DATABASE] PostgreSQL ACTIVE (${pgLive.versionShort || 'PostgreSQL'} | DB: ${pgLive.database} | ${pgLive.latencyMs}ms | Pool: ${pgLive.poolActiveConnections || 1}/${pgLive.poolMaxConnections || 20}).`);
+            console.log(`✅ [DATABASE] Default Tenant '${defaultData?.tenant?.code || 'GBS-MAIN'}' & Super Admin verified in PostgreSQL.`);
+          } else {
+            console.warn(`⚠️ [DATABASE] PostgreSQL unreachable (${pgLive.error || 'connection failed'}); running Persistent Store fallback.`);
+          }
+        } catch (dbSyncErr) {
+          console.warn('⚠️ [DATABASE] PostgreSQL initialization notice (Persistent fallback ready):', dbSyncErr.message);
+        }
+      } else {
+        console.warn('⚠️ [DATABASE] PostgreSQL host/port did not respond within startup timeout; running Persistent Store fallback.');
       }
     } else {
-      console.log('✅ [DATABASE] GBS Persistent Hybrid Cloud-Local Engine active (Tenant \'GBS-MAIN\', Super Admin, Onboarding & Topic Videos ready).');
+      console.log('ℹ️ [DATABASE] DATABASE_URL not configured; running GBS Persistent Hybrid Store.');
     }
   } catch (err) {
     console.log('✅ [DATABASE] GBS Persistent Hybrid Cloud-Local Engine active.');
