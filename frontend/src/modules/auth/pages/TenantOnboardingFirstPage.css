@@ -8,17 +8,17 @@
   --gbs-gold: #d4af37;
   --gbs-gold-light: #fbbf24;
   --gbs-gold-glow: rgba(212, 175, 55, 0.35);
-  
+
   --gbs-wine: #4a151b;
   --gbs-wine-dark: #2a0b10;
   --gbs-wine-light: #6e2029;
-  
+
   --gbs-grey-900: #0f172a;
   --gbs-grey-800: #1e293b;
   --gbs-grey-700: #334155;
   --gbs-grey-400: #94a3b8;
   --gbs-grey-200: #e2e8f0;
-  
+
   --gbs-sky: #38bdf8;
   --gbs-sky-glow: rgba(56, 189, 248, 0.35);
   --gbs-emerald: #10b981;
@@ -27,7 +27,7 @@
 .gbs-onboarding-first-page {
   min-height: 100vh;
   width: 100%;
-  background: 
+  background:
     radial-gradient(ellipse at top, rgba(110, 32, 41, 0.85) 0%, rgba(62, 31, 20, 0.9) 48%, rgba(39, 39, 42, 0.96) 100%),
     linear-gradient(135deg, rgba(212, 175, 55, 0.22) 0%, rgba(74, 21, 27, 0.78) 45%, rgba(62, 31, 20, 0.82) 75%, rgba(51, 65, 85, 0.9) 100%),
     url('/assets/school_campus_bg.jpg') center/cover no-repeat fixed;
@@ -100,9 +100,20 @@
 }
 
 @keyframes pulse {
-  0% { transform: scale(0.95); opacity: 0.8; }
-  50% { transform: scale(1.25); opacity: 1; }
-  100% { transform: scale(0.95); opacity: 0.8; }
+  0% {
+    transform: scale(0.95);
+    opacity: 0.8;
+  }
+
+  50% {
+    transform: scale(1.25);
+    opacity: 1;
+  }
+
+  100% {
+    transform: scale(0.95);
+    opacity: 0.8;
+  }
 }
 
 /* Center Logo on Page */
@@ -174,10 +185,21 @@
   border-radius: 2px;
 }
 
-.gbs-bar-gold { background: var(--gbs-gold); }
-.gbs-bar-wine { background: var(--gbs-wine-light); }
-.gbs-bar-grey { background: var(--gbs-grey-700); }
-.gbs-bar-sky { background: var(--gbs-sky); }
+.gbs-bar-gold {
+  background: var(--gbs-gold);
+}
+
+.gbs-bar-wine {
+  background: var(--gbs-wine-light);
+}
+
+.gbs-bar-grey {
+  background: var(--gbs-grey-700);
+}
+
+.gbs-bar-sky {
+  background: var(--gbs-sky);
+}
 
 /* Inscription "I am already in" Button & Dropdown Actions */
 .gbs-inscription-anchor-container {
@@ -229,8 +251,15 @@
 }
 
 @keyframes fadeInDown {
-  from { opacity: 0; transform: translateY(-8px); }
-  to { opacity: 1; transform: translateY(0); }
+  from {
+    opacity: 0;
+    transform: translateY(-8px);
+  }
+
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
 }
 
 .gbs-inscription-dropdown-header {
@@ -327,7 +356,7 @@
   background: rgba(30, 41, 59, 0.72);
   border: 1px solid rgba(212, 175, 55, 0.35);
   border-radius: 24px;
-  box-shadow: 
+  box-shadow:
     0 24px 60px rgba(0, 0, 0, 0.65),
     0 0 25px rgba(212, 175, 55, 0.15),
     inset 0 1px 0 rgba(255, 255, 255, 0.15);
@@ -340,6 +369,7 @@
   .gbs-glass-form-card {
     padding: 24px 18px;
   }
+
   .gbs-main-system-title {
     font-size: 1.75rem;
   }
@@ -387,7 +417,9 @@
 }
 
 @media (max-width: 820px) {
-  .gbs-form-grid-2, .gbs-form-grid-3 {
+
+  .gbs-form-grid-2,
+  .gbs-form-grid-3 {
     grid-template-columns: 1fr;
   }
 }
@@ -504,10 +536,25 @@
   margin-top: 4px;
 }
 
-.carrier-mtn { background: #facc15; color: #713f12; }
-.carrier-telecel { background: #ef4444; color: #ffffff; }
-.carrier-airtel { background: #3b82f6; color: #ffffff; }
-.carrier-global { background: #64748b; color: #ffffff; }
+.carrier-mtn {
+  background: #facc15;
+  color: #713f12;
+}
+
+.carrier-telecel {
+  background: #ef4444;
+  color: #ffffff;
+}
+
+.carrier-airtel {
+  background: #3b82f6;
+  color: #ffffff;
+}
+
+.carrier-global {
+  background: #64748b;
+  color: #ffffff;
+}
 
 /* Face Scanner Section */
 .gbs-face-scanner-box {
@@ -782,8 +829,15 @@
 }
 
 @keyframes scaleUp {
-  from { opacity: 0; transform: scale(0.92); }
-  to { opacity: 1; transform: scale(1); }
+  from {
+    opacity: 0;
+    transform: scale(0.92);
+  }
+
+  to {
+    opacity: 1;
+    transform: scale(1);
+  }
 }
 
 .gbs-success-icon-badge {

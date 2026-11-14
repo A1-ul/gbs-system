@@ -584,13 +584,16 @@
   .track-selector-nav {
     grid-template-columns: repeat(3, 1fr);
   }
+
   .form-grid-3,
   .form-grid-4 {
     grid-template-columns: repeat(2, 1fr);
   }
+
   .institution-identifiers-grid {
     grid-template-columns: repeat(2, 1fr);
   }
+
   .identifier-card.full-width {
     grid-column: span 2;
   }
@@ -600,23 +603,29 @@
   .signup-glass-wrapper {
     padding: 24px 16px;
   }
+
   .track-selector-nav {
     grid-template-columns: repeat(2, 1fr);
   }
+
   .form-grid-2,
   .form-grid-3,
   .form-grid-4 {
     grid-template-columns: 1fr;
   }
+
   .col-2 {
     grid-column: span 1;
   }
+
   .institution-identifiers-grid {
     grid-template-columns: 1fr;
   }
+
   .identifier-card.full-width {
     grid-column: span 1;
   }
+
   .topbar-telemetry {
     display: none;
   }
