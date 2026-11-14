@@ -48,6 +48,7 @@ export default function TopCenterSystemBanner({
   const [syncingCloud, setSyncingCloud] = useState(false);
   const [syncFeedback, setSyncFeedback] = useState(null);
   const [showTranslatorModal, setShowTranslatorModal] = useState(false);
+  const [translatorInitialText, setTranslatorInitialText] = useState("");
 
   let currentUserRole = "GUEST";
   try {
@@ -59,16 +60,6 @@ export default function TopCenterSystemBanner({
     ? (isDemoSandboxMode() ? "DEMO_SANDBOX" : "LIVE_PRODUCTION")
     : "LIVE_PRODUCTION";
   const canAccessWalkthrough = isTrueDeveloper || systemMode === "DEMO_SANDBOX";
-
-  useEffect(() => {
-    const onOpenTrans = () => setShowTranslatorModal(true);
-    window.addEventListener("gbs_open_translator", onOpenTrans);
-    window.openGBSTranslator = () => setShowTranslatorModal(true);
-    return () => {
-      window.removeEventListener("gbs_open_translator", onOpenTrans);
-      delete window.openGBSTranslator;
-    };
-  }, []);
 
   useEffect(() => {
     const handleUpdate = () => {
@@ -137,9 +128,10 @@ export default function TopCenterSystemBanner({
         ? window.getSelection().toString().trim()
         : "";
     if (typeof window !== "undefined" && typeof window.openGBSTranslator === "function") {
-      window.openGBSTranslator({ text: selectedText });
+      window.openGBSTranslator({ text: selectedText, contextTitle: roleTitle });
       return;
     }
+    setTranslatorInitialText(selectedText);
     setShowTranslatorModal(true);
   };
 
@@ -510,6 +502,8 @@ export default function TopCenterSystemBanner({
       <UniversalLanguageTranslatorModal
         isOpen={showTranslatorModal}
         onClose={() => setShowTranslatorModal(false)}
+        initialText={translatorInitialText}
+        initialContextTitle={roleTitle}
       />
     </div >
   );

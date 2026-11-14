@@ -1101,10 +1101,13 @@ function translateWithLocalLexicon(text, langCode) {
  * Real Server-Proxied + Live Neural + Offline Lexicon Translator for any word, phrase, sentence, or paragraph
  * into the exact target language chosen by the user.
  */
-export async function translateTextToLanguage(text, targetLangCode) {
+export async function translateTextToLanguage(text, targetLangCode, options = {}) {
+  const { forceTargetLang = false } = options || {};
   const parsed = parseTranslationCommand(text, targetLangCode);
   const cleanText = String(parsed.cleanText || text || "").trim();
-  const effectiveLangCode = parsed.targetLangCode || targetLangCode;
+  const effectiveLangCode = forceTargetLang
+    ? targetLangCode || parsed.targetLangCode
+    : parsed.targetLangCode || targetLangCode;
   if (!cleanText) return "";
 
   const langObj =
@@ -1251,17 +1254,20 @@ export async function translateTextToLanguage(text, targetLangCode) {
 /**
  * Full Combined Translation + Meaning Analysis + Natural-Language Command Resolution
  */
-export async function performFullTranslationAndMeaning(inputText, targetLangCode) {
+export async function performFullTranslationAndMeaning(inputText, targetLangCode, options = {}) {
+  const { forceTargetLang = false } = options || {};
   const parsed = parseTranslationCommand(inputText, targetLangCode);
   const clean = String(parsed.cleanText || inputText || "").trim();
-  const effectiveLangCode = parsed.targetLangCode || targetLangCode;
+  const effectiveLangCode = forceTargetLang
+    ? targetLangCode || parsed.targetLangCode
+    : parsed.targetLangCode || targetLangCode;
 
   const langObj =
     SUPPORTED_TRANSLATION_LANGUAGES.find((l) => l.code === effectiveLangCode) ||
     SUPPORTED_TRANSLATION_LANGUAGES[0];
 
   const [translatedText, meaningData] = await Promise.all([
-    translateTextToLanguage(clean, langObj.code),
+    translateTextToLanguage(clean, langObj.code, { forceTargetLang: true }),
     lookupWordOrStatementMeaning(clean)
   ]);
 
@@ -1347,11 +1353,14 @@ export async function sendTranslatedMessageToReceiver({
   receiverContact = "",
   originalMessage = "",
   translatedMessage = "",
-  targetLanguageCode = "TWI"
+  targetLanguageCode = "TWI",
+  forceTargetLang = false
 }) {
   const parsed = parseTranslationCommand(originalMessage, targetLanguageCode, "SEND_TRANSLATED_MESSAGE");
   const cleanOriginal = String(parsed.cleanText || originalMessage || "").trim();
-  const effectiveLangCode = parsed.targetLangCode || targetLanguageCode;
+  const effectiveLangCode = forceTargetLang
+    ? targetLanguageCode || parsed.targetLangCode
+    : parsed.targetLangCode || targetLanguageCode;
   const effectiveReceiverRole = parsed.receiverRole || receiverRole;
 
   const langObj =
@@ -1360,7 +1369,7 @@ export async function sendTranslatedMessageToReceiver({
   const roleObj = RECEIVER_ROLES.find((r) => r.id === effectiveReceiverRole) || RECEIVER_ROLES[0];
 
   const finalTranslated =
-    translatedMessage || (await translateTextToLanguage(cleanOriginal, langObj.code));
+    translatedMessage || (await translateTextToLanguage(cleanOriginal, langObj.code, { forceTargetLang: true }));
 
   const messageRecord = {
     id: `TR-MSG-${Date.now()}`,
@@ -1368,6 +1377,7 @@ export async function sendTranslatedMessageToReceiver({
     senderRole,
     receiverRole: roleObj.id,
     receiverRoleLabel: roleObj.label,
+    receiverLabel: roleObj.label,
     receiverName: receiverName.trim() || `All ${roleObj.label}s`,
     receiverContact: receiverContact.trim() || roleObj.defaultChannel,
     originalMessage: cleanOriginal,
@@ -1451,13 +1461,14 @@ export async function sendTranslatedMessageToReceiver({
       });
     } catch { }
 
-    if (receiverContact && /\d{7,}/.test(receiverContact)) {
+    const phoneMatch = String(receiverContact || "").replace(/[\s()-]+/g, " ").match(/\+?\d[\d ]{6,16}\d/);
+    if (phoneMatch) {
       try {
         await fetch("/api/v1/sms/send", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({
-            to: receiverContact.trim(),
+            to: phoneMatch[0].replace(/\s+/g, ""),
             message: `[${langObj.name}] ${finalTranslated}\n---\n[Original] ${cleanOriginal}`
           })
         });

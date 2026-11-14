@@ -1,6 +1,39 @@
 import React, { useState, useEffect } from "react";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useInRouterContext } from "react-router-dom";
 import { getActiveSchoolName, getActiveSchoolLogo } from "../../utils/schoolBranding";
+
+function OnboardActionButton({ onNavigate }) {
+  return (
+    <button
+      type="button"
+      className="btn-window-control btn-onboard-school"
+      onClick={() => {
+        try {
+          localStorage.removeItem("gbs_tenant_already_onboarded");
+        } catch { }
+        onNavigate("/onboarding?force=true");
+      }}
+      style={{
+        padding: "5px 11px",
+        background: "rgba(16, 185, 129, 0.18)",
+        border: "1px solid rgba(16, 185, 129, 0.55)",
+        borderRadius: "6px",
+        color: "#34d399",
+        cursor: "pointer",
+        fontSize: "0.75rem",
+        fontWeight: "800"
+      }}
+      title="Open the Official Onboarding Form to register your Educational Institution / School"
+    >
+      🏫 Onboard Your Educational Institution / School
+    </button>
+  );
+}
+
+function RouterOnboardActionButton() {
+  const navigate = useNavigate();
+  return <OnboardActionButton onNavigate={navigate} />;
+}
 
 /**
  * Universal Navigation, Scroll & Window Expansion Controls
@@ -18,7 +51,7 @@ export default function WindowControlsBar({
   customBackLabel = "← Back",
   className = ""
 }) {
-  const navigate = useNavigate();
+  const inRouter = useInRouterContext();
   const [isExpanded, setIsExpanded] = useState(() => {
     try {
       return typeof window !== "undefined" && new URLSearchParams(window.location.search).get("full") === "1";
@@ -232,31 +265,12 @@ export default function WindowControlsBar({
       </div>
 
       <div style={{ display: "flex", alignItems: "center", gap: "6px", flexWrap: "wrap" }}>
-        {!isModal && (
-          <button
-            type="button"
-            className="btn-window-control btn-onboard-school"
-            onClick={() => {
-              try {
-                localStorage.removeItem("gbs_tenant_already_onboarded");
-              } catch { }
-              navigate("/onboarding?force=true");
-            }}
-            style={{
-              padding: "5px 11px",
-              background: "rgba(16, 185, 129, 0.18)",
-              border: "1px solid rgba(16, 185, 129, 0.55)",
-              borderRadius: "6px",
-              color: "#34d399",
-              cursor: "pointer",
-              fontSize: "0.75rem",
-              fontWeight: "800"
-            }}
-            title="Open the Official Onboarding Form to register your Educational Institution / School"
-          >
-            🏫 Onboard Your Educational Institution / School
-          </button>
-        )}
+        {!isModal &&
+          (inRouter ? (
+            <RouterOnboardActionButton />
+          ) : (
+            <OnboardActionButton onNavigate={(url) => window.location.assign(url)} />
+          ))}
         {/* Scroll Buttons */}
         <button
           type="button"

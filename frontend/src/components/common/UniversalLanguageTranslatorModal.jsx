@@ -25,18 +25,27 @@ export default function UniversalLanguageTranslatorModal({
   isOpen,
   onClose,
   initialText = "",
+  initialLang = "",
+  initialMode = "",
   initialContextTitle = "",
 }) {
-  const [translatorMode, setTranslatorMode] = useState("TRANSLATE_WORD_OR_STATEMENT");
-  const [selectedLang, setSelectedLang] = useState(
-    () => localStorage.getItem("gbs_preferred_language") || "TWI"
+  const [translatorMode, setTranslatorMode] = useState(
+    () => initialMode || "TRANSLATE_WORD_OR_STATEMENT"
   );
+  const [selectedLang, setSelectedLang] = useState(() => {
+    try {
+      return initialLang || localStorage.getItem("gbs_preferred_language") || "TWI";
+    } catch {
+      return initialLang || "TWI";
+    }
+  });
   const [sourceText, setSourceText] = useState(
     initialText ||
     "Welcome to our school. Please pay your school fees on time."
   );
   const [result, setResult] = useState(null);
   const [isTranslating, setIsTranslating] = useState(false);
+  const [sendingMsg, setSendingMsg] = useState(false);
   const [copiedFlag, setCopiedFlag] = useState(false);
   const [lastCommandAction, setLastCommandAction] = useState("");
   const [isListeningCommand, setIsListeningCommand] = useState(false);
@@ -53,28 +62,106 @@ export default function UniversalLanguageTranslatorModal({
   });
   const [sendSuccessBanner, setSendSuccessBanner] = useState("");
   const recognitionRef = useRef(null);
+  const requestSeqRef = useRef(0);
+  const textareaRef = useRef(null);
 
   useEffect(() => {
+    if (!isOpen) {
+      if (recognitionRef.current) {
+        try {
+          recognitionRef.current.stop();
+        } catch { }
+        setIsListeningCommand(false);
+      }
+      return;
+    }
     if (initialText && initialText.trim()) {
       setSourceText(initialText.trim());
     }
-  }, [initialText]);
+    if (initialLang && initialLang.trim()) {
+      setSelectedLang(initialLang.trim());
+      try {
+        localStorage.setItem("gbs_preferred_language", initialLang.trim());
+      } catch { }
+    }
+    if (initialMode && initialMode.trim()) {
+      setTranslatorMode(initialMode.trim());
+    }
+  }, [isOpen, initialText, initialLang, initialMode]);
 
-  const executeTranslationCommand = async (rawText, langOverride, isExplicitCommand = false) => {
+  // Keep preferred language and sent message log synced across root screen translator & dashboard instances
+  useEffect(() => {
+    const syncLang = (e) => {
+      const next = e?.detail || (() => {
+        try {
+          return localStorage.getItem("gbs_preferred_language");
+        } catch {
+          return null;
+        }
+      })();
+      if (next && next !== selectedLang) {
+        setSelectedLang(next);
+      }
+    };
+    const syncInbox = () => {
+      try {
+        setSentMessagesHistory(
+          JSON.parse(localStorage.getItem("gbs_translated_messages_inbox") || "[]").slice(0, 10)
+        );
+      } catch { }
+    };
+    window.addEventListener("gbs_preferred_language_changed", syncLang);
+    window.addEventListener("gbs_translated_message_sent", syncInbox);
+    window.addEventListener("storage", syncLang);
+    window.addEventListener("storage", syncInbox);
+    return () => {
+      window.removeEventListener("gbs_preferred_language_changed", syncLang);
+      window.removeEventListener("gbs_translated_message_sent", syncInbox);
+      window.removeEventListener("storage", syncLang);
+      window.removeEventListener("storage", syncInbox);
+    };
+  }, [selectedLang]);
+
+  // Escape key closes modal cleanly
+  useEffect(() => {
+    if (!isOpen) return;
+    const onEsc = (e) => {
+      if (e.key === "Escape") {
+        onClose?.();
+      }
+    };
+    window.addEventListener("keydown", onEsc);
+    return () => window.removeEventListener("keydown", onEsc);
+  }, [isOpen, onClose]);
+
+  const executeTranslationCommand = async (
+    rawText,
+    langOverride,
+    isExplicitCommand = false,
+    options = {}
+  ) => {
+    const { forceTargetLang = false } = options || {};
     const inputToProcess = rawText !== undefined ? rawText : sourceText;
     const activeLang = langOverride || selectedLang;
     if (!inputToProcess || !inputToProcess.trim()) {
+      requestSeqRef.current += 1;
       setResult(null);
+      setIsTranslating(false);
       return null;
     }
 
     const parsed = parseTranslationCommand(inputToProcess, activeLang, translatorMode);
-    const effectiveLang = parsed.targetLangCode || activeLang;
+    const effectiveLang = forceTargetLang ? activeLang : (parsed.targetLangCode || activeLang);
 
     if (parsed.wasCommandParsed && isExplicitCommand) {
-      if (parsed.targetLangCode && parsed.targetLangCode !== selectedLang) {
+      if (!forceTargetLang && parsed.targetLangCode && parsed.targetLangCode !== selectedLang) {
         setSelectedLang(parsed.targetLangCode);
-        localStorage.setItem("gbs_preferred_language", parsed.targetLangCode);
+        try {
+          localStorage.setItem("gbs_preferred_language", parsed.targetLangCode);
+          window.dispatchEvent(
+            new CustomEvent("gbs_preferred_language_changed", { detail: parsed.targetLangCode })
+          );
+        } catch { }
       }
       if (parsed.mode && parsed.mode !== translatorMode) {
         setTranslatorMode(parsed.mode);
@@ -87,9 +174,13 @@ export default function UniversalLanguageTranslatorModal({
       setLastCommandAction("");
     }
 
+    const reqId = ++requestSeqRef.current;
     setIsTranslating(true);
     try {
-      const res = await performFullTranslationAndMeaning(inputToProcess, effectiveLang);
+      const res = await performFullTranslationAndMeaning(inputToProcess, effectiveLang, {
+        forceTargetLang
+      });
+      if (reqId !== requestSeqRef.current) return null;
       setResult(res);
       if (isExplicitCommand && typeof window !== "undefined" && typeof window.showGBSOpenNotice === "function") {
         window.showGBSOpenNotice(
@@ -102,7 +193,9 @@ export default function UniversalLanguageTranslatorModal({
     } catch {
       return null;
     } finally {
-      setIsTranslating(false);
+      if (reqId === requestSeqRef.current) {
+        setIsTranslating(false);
+      }
     }
   };
 
@@ -112,7 +205,7 @@ export default function UniversalLanguageTranslatorModal({
     const timer = setTimeout(async () => {
       if (!isMounted) return;
       await executeTranslationCommand(sourceText, selectedLang, false);
-    }, 180);
+    }, 220);
     return () => {
       isMounted = false;
       clearTimeout(timer);
@@ -123,8 +216,11 @@ export default function UniversalLanguageTranslatorModal({
 
   const handleLanguageChange = (code) => {
     setSelectedLang(code);
-    localStorage.setItem("gbs_preferred_language", code);
-    executeTranslationCommand(sourceText, code, true);
+    try {
+      localStorage.setItem("gbs_preferred_language", code);
+      window.dispatchEvent(new CustomEvent("gbs_preferred_language_changed", { detail: code }));
+    } catch { }
+    executeTranslationCommand(sourceText, code, true, { forceTargetLang: true });
   };
 
   const handlePasteAndTranslate = async (e) => {
@@ -193,10 +289,27 @@ export default function UniversalLanguageTranslatorModal({
     speakTranslationAloud(result.translatedText, result.language?.code || selectedLang);
   };
 
-  const handleCopyResult = () => {
+  const handleCopyResult = async () => {
     if (!result) return;
     const textToCopy = `[${result.language?.name || selectedLang} Translation]\n${result.translatedText}\n\n[Exact Meaning & Breakdown]\n${result.meaning?.definition || ""}`;
-    navigator.clipboard?.writeText(textToCopy);
+    try {
+      if (navigator.clipboard && navigator.clipboard.writeText) {
+        await navigator.clipboard.writeText(textToCopy);
+      } else {
+        throw new Error("Clipboard API unavailable");
+      }
+    } catch {
+      try {
+        const ta = document.createElement("textarea");
+        ta.value = textToCopy;
+        ta.style.position = "fixed";
+        ta.style.opacity = "0";
+        document.body.appendChild(ta);
+        ta.select();
+        document.execCommand("copy");
+        document.body.removeChild(ta);
+      } catch { }
+    }
     setCopiedFlag(true);
     if (typeof window !== "undefined" && typeof window.showGBSOpenNotice === "function") {
       window.showGBSOpenNotice(
@@ -210,31 +323,50 @@ export default function UniversalLanguageTranslatorModal({
 
   const handleSendTranslatedMessage = async (e) => {
     if (e) e.preventDefault();
-    if (!sourceText.trim()) return;
+    if (sendingMsg || !sourceText.trim()) return;
 
-    const currentRes =
-      result || (await executeTranslationCommand(sourceText, selectedLang, true));
-    if (!currentRes) return;
+    setSendingMsg(true);
+    setSendSuccessBanner("");
+    try {
+      let currentUser = {};
+      try {
+        currentUser = JSON.parse(localStorage.getItem("gbs_user") || "{}");
+      } catch { }
 
-    const record = await sendTranslatedMessageToReceiver({
-      senderName: "School Portal User",
-      senderRole: "USER",
-      receiverRole,
-      receiverName: receiverNameOrContact.trim(),
-      receiverContact: receiverNameOrContact.trim(),
-      originalMessage: currentRes.originalText || sourceText.trim(),
-      translatedMessage: currentRes.translatedText,
-      targetLanguageCode: currentRes.language?.code || selectedLang,
-    });
+      const needsFreshTranslation =
+        !result ||
+        result.rawInput !== sourceText.trim() ||
+        result.language?.code !== selectedLang;
+      const currentRes = needsFreshTranslation
+        ? await executeTranslationCommand(sourceText, selectedLang, true, { forceTargetLang: true })
+        : result;
+      if (!currentRes) return;
 
-    setSentMessagesHistory((prev) => [record, ...prev].slice(0, 10));
-    const confirmMsg = `✅ Translated message dispatched to ${record.receiverName} (${record.receiverLabel}) in ${record.languageName}!`;
-    setSendSuccessBanner(confirmMsg);
-    setTimeout(() => setSendSuccessBanner(""), 5000);
+      const record = await sendTranslatedMessageToReceiver({
+        senderName: currentUser.fullName || currentUser.name || currentUser.email || "School Portal User",
+        senderRole: currentUser.role || "USER",
+        receiverRole,
+        receiverName: receiverNameOrContact.trim(),
+        receiverContact: receiverNameOrContact.trim(),
+        originalMessage: currentRes.originalText || sourceText.trim(),
+        translatedMessage: currentRes.translatedText,
+        targetLanguageCode: currentRes.language?.code || selectedLang,
+        forceTargetLang: true
+      });
+
+      setSentMessagesHistory((prev) => [record, ...prev.filter((m) => m.id !== record.id)].slice(0, 10));
+      const roleLabel = record.receiverRoleLabel || record.receiverLabel || record.receiverRole;
+      const confirmMsg = `✅ Translated message dispatched to ${record.receiverName} (${roleLabel}) in ${record.languageName}!`;
+      setSendSuccessBanner(confirmMsg);
+      setTimeout(() => setSendSuccessBanner(""), 5000);
+    } finally {
+      setSendingMsg(false);
+    }
   };
 
   const modalMarkup = (
     <div
+      data-gbs-translator-modal="true"
       style={{
         position: "fixed",
         inset: 0,
@@ -318,6 +450,7 @@ export default function UniversalLanguageTranslatorModal({
           </div>
           <button
             type="button"
+            data-no-hud-notice="true"
             onClick={onClose}
             style={{
               background: "rgba(110, 32, 41, 0.65)",
@@ -356,9 +489,10 @@ export default function UniversalLanguageTranslatorModal({
           >
             🎯 Specify Action: Do you want to translate a statement/word OR send a translated message to a receiver?
           </div>
-          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "10px" }}>
+          <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(240px, 1fr))", gap: "10px" }}>
             <button
               type="button"
+              data-no-hud-notice="true"
               onClick={() => setTranslatorMode("TRANSLATE_WORD_OR_STATEMENT")}
               style={{
                 padding: "12px 14px",
@@ -386,6 +520,7 @@ export default function UniversalLanguageTranslatorModal({
 
             <button
               type="button"
+              data-no-hud-notice="true"
               onClick={() => setTranslatorMode("SEND_TRANSLATED_MESSAGE")}
               style={{
                 padding: "12px 14px",
@@ -513,6 +648,7 @@ export default function UniversalLanguageTranslatorModal({
                 <button
                   key={lang.code}
                   type="button"
+                  data-no-hud-notice="true"
                   onClick={() => handleLanguageChange(lang.code)}
                   style={{
                     padding: "7px 12px",
@@ -561,6 +697,7 @@ export default function UniversalLanguageTranslatorModal({
             <div style={{ display: "flex", gap: "6px", flexWrap: "wrap" }}>
               <button
                 type="button"
+                data-no-hud-notice="true"
                 onClick={handleVoiceCommand}
                 style={{
                   background: isListeningCommand
@@ -579,15 +716,25 @@ export default function UniversalLanguageTranslatorModal({
               </button>
               <button
                 type="button"
+                data-no-hud-notice="true"
                 onClick={async () => {
                   try {
                     const clip = await navigator.clipboard.readText();
                     if (clip && clip.trim()) {
                       setSourceText(clip.trim());
                       await executeTranslationCommand(clip.trim(), selectedLang, true);
+                      return;
                     }
                   } catch {
                     // user can use Ctrl+V
+                  }
+                  textareaRef.current?.focus();
+                  if (typeof window !== "undefined" && typeof window.showGBSOpenNotice === "function") {
+                    window.showGBSOpenNotice(
+                      "Press Ctrl+V (or long-press Paste) inside the text box to paste and translate immediately.",
+                      "info",
+                      "CLIPBOARD PASTE READY"
+                    );
                   }
                 }}
                 style={{
@@ -605,10 +752,12 @@ export default function UniversalLanguageTranslatorModal({
               </button>
               <button
                 type="button"
+                data-no-hud-notice="true"
                 onClick={() => {
                   setSourceText("");
                   setResult(null);
                   setLastCommandAction("");
+                  textareaRef.current?.focus();
                 }}
                 style={{
                   background: "rgba(110, 32, 41, 0.55)",
@@ -627,6 +776,7 @@ export default function UniversalLanguageTranslatorModal({
           </div>
 
           <textarea
+            ref={textareaRef}
             rows={3}
             value={sourceText}
             onChange={(e) => setSourceText(e.target.value)}
@@ -658,6 +808,7 @@ export default function UniversalLanguageTranslatorModal({
               <button
                 key={idx}
                 type="button"
+                data-no-hud-notice="true"
                 onClick={() => {
                   setSourceText(sample.cmd);
                   executeTranslationCommand(sample.cmd, selectedLang, true);
@@ -754,13 +905,39 @@ export default function UniversalLanguageTranslatorModal({
             }}
           >
             <strong style={{ color: "#fbbf24", display: "block", marginBottom: "4px" }}>
-              💡 Exact Word / Statement Meaning & Dictionary Breakdown:
+              💡 Exact Word / Statement Meaning & Dictionary Breakdown
+              {result?.meaning?.partOfSpeech ? ` (${result.meaning.partOfSpeech})` : ""}:
             </strong>
             <div>{result?.meaning?.definition || "Meaning & word-by-word explanation will appear here."}</div>
+            {result?.meaning?.secondaryDefinition && (
+              <div style={{ marginTop: "5px", color: "#d6d3d1" }}>
+                <strong>Additional Meaning:</strong> {result.meaning.secondaryDefinition}
+              </div>
+            )}
             {result?.meaning?.translatedDefinition &&
               result.meaning.translatedDefinition !== result.meaning.definition && (
                 <div style={{ marginTop: "6px", color: "#fde68a", fontWeight: 700 }}>
                   • In {result?.language?.name}: {result.meaning.translatedDefinition}
+                </div>
+              )}
+            {result?.meaning?.example && (
+              <div style={{ marginTop: "5px", color: "#cbd5e1", fontStyle: "italic", fontSize: "12px" }}>
+                Example: &ldquo;{result.meaning.example}&rdquo;
+              </div>
+            )}
+            {Array.isArray(result?.meaning?.keyTermsBreakdown) &&
+              result.meaning.keyTermsBreakdown.length > 0 && (
+                <div style={{ marginTop: "8px", paddingTop: "8px", borderTop: "1px solid rgba(212, 175, 55, 0.25)" }}>
+                  <div style={{ fontSize: "11px", fontWeight: 800, color: "#fbbf24", marginBottom: "4px" }}>
+                    Key Words Defined in Your Statement:
+                  </div>
+                  <div style={{ display: "grid", gap: "4px" }}>
+                    {result.meaning.keyTermsBreakdown.map((item, idx) => (
+                      <div key={idx} style={{ fontSize: "12px", color: "#e5e7eb" }}>
+                        • <strong style={{ color: "#fbbf24" }}>{item.term}</strong> <em>({item.partOfSpeech})</em>: {item.meaning}
+                      </div>
+                    ))}
+                  </div>
                 </div>
               )}
           </div>
@@ -787,6 +964,8 @@ export default function UniversalLanguageTranslatorModal({
         <div style={{ display: "flex", gap: "10px", flexWrap: "wrap" }}>
           <button
             type="button"
+            data-no-hud-notice="true"
+            disabled={isTranslating || !sourceText.trim()}
             onClick={() => executeTranslationCommand(sourceText, selectedLang, true)}
             style={{
               background: "linear-gradient(135deg, #d4af37, #b45309)",
@@ -796,14 +975,16 @@ export default function UniversalLanguageTranslatorModal({
               padding: "10px 18px",
               fontWeight: 900,
               fontSize: "13px",
-              cursor: "pointer",
+              cursor: isTranslating || !sourceText.trim() ? "not-allowed" : "pointer",
             }}
           >
-            🔄 Translate & Get Exact Meaning
+            {isTranslating ? "⏳ Translating..." : "🔄 Translate & Get Exact Meaning"}
           </button>
 
           <button
             type="button"
+            data-no-hud-notice="true"
+            disabled={!result?.translatedText}
             onClick={handleSpeakAloud}
             style={{
               background: "linear-gradient(135deg, #6e2029, #4a151b)",
@@ -813,7 +994,7 @@ export default function UniversalLanguageTranslatorModal({
               padding: "10px 16px",
               fontWeight: 800,
               fontSize: "13px",
-              cursor: "pointer",
+              cursor: result?.translatedText ? "pointer" : "not-allowed",
             }}
           >
             🔊 Read Aloud ({result?.language?.name || selectedLang})
@@ -821,6 +1002,8 @@ export default function UniversalLanguageTranslatorModal({
 
           <button
             type="button"
+            data-no-hud-notice="true"
+            disabled={!result}
             onClick={handleCopyResult}
             style={{
               background: "rgba(62, 31, 20, 0.85)",
@@ -830,15 +1013,37 @@ export default function UniversalLanguageTranslatorModal({
               padding: "10px 16px",
               fontWeight: 800,
               fontSize: "13px",
-              cursor: "pointer",
+              cursor: result ? "pointer" : "not-allowed",
             }}
           >
             {copiedFlag ? "✅ Copied Translation & Meaning!" : "📋 Copy Translation & Meaning"}
           </button>
 
+          {translatorMode !== "SEND_TRANSLATED_MESSAGE" && (
+            <button
+              type="button"
+              data-no-hud-notice="true"
+              onClick={() => setTranslatorMode("SEND_TRANSLATED_MESSAGE")}
+              style={{
+                background: "rgba(16, 185, 129, 0.2)",
+                border: "1px solid #10b981",
+                color: "#6ee7b7",
+                borderRadius: "10px",
+                padding: "10px 16px",
+                fontWeight: 800,
+                fontSize: "13px",
+                cursor: "pointer",
+              }}
+            >
+              📨 Send to a Receiver
+            </button>
+          )}
+
           {translatorMode === "SEND_TRANSLATED_MESSAGE" && (
             <button
               type="button"
+              data-no-hud-notice="true"
+              disabled={sendingMsg || !sourceText.trim()}
               onClick={handleSendTranslatedMessage}
               style={{
                 background: "linear-gradient(135deg, #f59e0b, #92400e)",
@@ -848,10 +1053,10 @@ export default function UniversalLanguageTranslatorModal({
                 padding: "10px 18px",
                 fontWeight: 900,
                 fontSize: "13px",
-                cursor: "pointer",
+                cursor: sendingMsg || !sourceText.trim() ? "not-allowed" : "pointer",
               }}
             >
-              📨 Translate & Send to Receiver Now
+              {sendingMsg ? "📤 Sending..." : "📨 Translate & Send to Receiver Now"}
             </button>
           )}
         </div>
@@ -897,7 +1102,7 @@ export default function UniversalLanguageTranslatorModal({
                 >
                   <div style={{ display: "flex", justifyContent: "space-between", color: "#fde68a" }}>
                     <strong>
-                      To: {m.receiverName} ({m.receiverLabel} • {m.languageName})
+                      To: {m.receiverName} ({m.receiverRoleLabel || m.receiverLabel || m.receiverRole} • {m.languageName})
                     </strong>
                     <span>{new Date(m.sentAt || Date.now()).toLocaleTimeString()}</span>
                   </div>
