@@ -1453,7 +1453,7 @@ export default function AccountantDashboard() {
   });
 
   return (
-    <div className="role-dashboard-wrapper">
+    <div className="role-dashboard-wrapper role-theme-accountant">
       <div
         className="role-dashboard-bg"
         style={{ backgroundImage: `url('/assets/finance-hero-bg.jpg')` }}

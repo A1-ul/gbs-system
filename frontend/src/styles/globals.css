@@ -59,20 +59,43 @@ p, h1, h2, h3, h4, h5, h6 {
 }
 
 /* ============================================================================
-   UNIFIED ROYAL HARMONY (#1E2A44) BACKGROUNDS ACROSS ALL PORTALS
+   CRYSTAL-CLEAR REAL-LIFE PHOTOGRAPHY & DISTINCT BLENDED COLOURS PER DASHBOARD
    ============================================================================ */
-.teacher-portal-wrapper,
-.admin-portal-wrapper,
-.student-portal-wrapper,
-.parent-portal-wrapper,
-.accountant-portal-wrapper,
-.staff-portal-wrapper,
-.hr-portal-wrapper,
-.dev-platform-wrapper,
-.dev-dashboard-layout,
-.dev-login-wrapper,
-.role-dashboard-wrapper,
-.dashboard-container,
+
+/* 1. Crystal-Clear Real-Life Background Images Across All Dashboards */
+.role-dashboard-bg,
+.dev-dashboard-real-bg {
+  position: fixed !important;
+  inset: 0 !important;
+  background-size: cover !important;
+  background-position: center top !important;
+  background-repeat: no-repeat !important;
+  filter: brightness(0.88) contrast(1.08) saturate(1.22) !important;
+  opacity: 1 !important;
+  z-index: 0 !important;
+  pointer-events: none !important;
+}
+
+.role-hero-photo-frame img,
+.real-life-dashboard-photo {
+  filter: brightness(1.03) contrast(1.06) saturate(1.18) !important;
+}
+
+/* Global Modal Overlay Guarantee */
+.invoice-pay-modal-overlay {
+  position: fixed !important;
+  inset: 0 !important;
+  background: rgba(2, 6, 23, 0.82) !important;
+  backdrop-filter: blur(10px) !important;
+  display: flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  z-index: 99999 !important;
+  padding: 1.25rem !important;
+  overflow-y: auto !important;
+}
+
+/* Base Fallback for Login & Onboarding Pages */
 .main-login-wrapper,
 .login-container,
 .role-login-wrapper,
@@ -81,138 +104,311 @@ p, h1, h2, h3, h4, h5, h6 {
 .signup-portal-container,
 .onboarding-first-page-wrapper,
 .gbs-onboarding-first-page {
-  background-color: #1E2A44 !important;
+  background-color: #1E2A44;
   background-image:
-    radial-gradient(circle at 15% 15%, rgba(43, 60, 96, 0.72) 0%, transparent 48%),
-    radial-gradient(circle at 85% 18%, rgba(212, 175, 55, 0.22) 0%, transparent 46%),
-    radial-gradient(circle at 50% 85%, rgba(56, 189, 248, 0.18) 0%, transparent 55%),
-    linear-gradient(135deg, #141D30 0%, #1E2A44 45%, #243352 78%, #1E2A44 100%) !important;
-  background-attachment: fixed !important;
+    radial-gradient(circle at 15% 15%, rgba(43, 60, 96, 0.65) 0%, transparent 48%),
+    radial-gradient(circle at 85% 18%, rgba(212, 175, 55, 0.25) 0%, transparent 46%),
+    linear-gradient(135deg, #141D30 0%, #1E2A44 50%, #243352 100%);
   color: #f8fafc;
 }
 
-/* Unified Overlays (Royal Harmony #1E2A44) */
-.role-dashboard-overlay,
-.dashboard-bg-overlay,
-.login-overlay,
-.role-login-overlay,
-.signup-backdrop-overlay {
+/* ============================================================================
+   ROLE 1: HEADMASTER / SUPER ADMIN DASHBOARD (role-theme-admin)
+   Blended Palette: Imperial Gold (#D4AF37) + Wine Burgundy (#6B1426) + Sovereign Bronze (#92400E)
+   Real-Life Background: /images/admin_login_bg.jpg
+   ============================================================================ */
+.role-dashboard-wrapper.role-theme-admin .role-dashboard-overlay {
   background:
-    radial-gradient(circle at 18% 18%, rgba(212, 175, 55, 0.18) 0%, transparent 46%),
-    radial-gradient(circle at 82% 22%, rgba(59, 89, 152, 0.45) 0%, transparent 50%),
-    linear-gradient(135deg, rgba(20, 29, 48, 0.88) 0%, rgba(30, 42, 68, 0.9) 52%, rgba(36, 51, 82, 0.92) 100%) !important;
+    radial-gradient(circle at 15% 15%, rgba(212, 175, 55, 0.34) 0%, transparent 46%),
+    radial-gradient(circle at 85% 22%, rgba(136, 19, 55, 0.45) 0%, transparent 50%),
+    linear-gradient(135deg, rgba(88, 18, 32, 0.54) 0%, rgba(120, 53, 15, 0.48) 50%, rgba(30, 42, 68, 0.58) 100%) !important;
 }
 
-/* Unified Royal Harmony Top Headers & Bars */
-.teacher-top-header,
-.admin-top-header,
-.dev-top-header,
-.dev-header,
-.role-top-header,
-.role-header,
-.dashboard-header,
-.signup-topbar,
-.gbs-top-header,
-.onboarding-top-bar {
-  background: linear-gradient(90deg, rgba(20, 29, 48, 0.96) 0%, rgba(30, 42, 68, 0.97) 50%, rgba(36, 51, 82, 0.96) 100%) !important;
-  border-bottom: 2px solid var(--gbs-gold, #d4af37) !important;
-  box-shadow: 0 6px 25px rgba(10, 16, 29, 0.65), 0 0 20px rgba(30, 42, 68, 0.5) !important;
+.role-dashboard-wrapper.role-theme-admin .role-header {
+  background: linear-gradient(90deg, rgba(88, 18, 32, 0.88) 0%, rgba(120, 53, 15, 0.86) 50%, rgba(30, 42, 68, 0.90) 100%) !important;
+  border-bottom: 2px solid #f59e0b !important;
+  box-shadow: 0 6px 25px rgba(88, 18, 32, 0.55), 0 0 20px rgba(245, 158, 11, 0.25) !important;
   backdrop-filter: blur(16px);
 }
 
-/* Unified Royal Harmony Hero Banners across All Dashboards */
-.teacher-hero-banner,
-.admin-hero-banner,
-.student-hero-banner,
-.parent-hero-banner,
-.accountant-hero-banner,
-.staff-hero-banner,
-.role-hero-banner,
-.dev-hero-banner,
-.dev-hero-showcase-banner,
-.onboarding-hero-header {
-  background: linear-gradient(135deg, rgba(30, 42, 68, 0.96) 0%, rgba(43, 60, 96, 0.92) 52%, rgba(20, 29, 48, 0.96) 100%) !important;
-  border: 1.5px solid rgba(212, 175, 55, 0.52) !important;
-  box-shadow: 0 20px 50px rgba(10, 16, 29, 0.65), inset 0 1px 0 rgba(255, 255, 255, 0.16), 0 0 28px rgba(30, 42, 68, 0.45) !important;
+.role-dashboard-wrapper.role-theme-admin .role-hero-banner {
+  background: linear-gradient(135deg, rgba(107, 20, 38, 0.82) 0%, rgba(120, 53, 15, 0.78) 52%, rgba(30, 42, 68, 0.84) 100%) !important;
+  border: 1.5px solid rgba(245, 158, 11, 0.65) !important;
+  box-shadow: 0 20px 50px rgba(0, 0, 0, 0.5), inset 0 1px 0 rgba(255, 255, 255, 0.2) !important;
+  backdrop-filter: blur(14px);
 }
 
-/* Unified Glass Panels, Cards & Containers (Royal Harmony #1E2A44) */
-.glass-panel,
-.card-glass,
-.dev-panel-card,
-.role-workspace-card,
-.role-kpi-box,
-.console-stat-card,
-.dev-inscription-box,
-.countdown-table-container,
-.kpi-card,
-.stat-card,
-.onboarding-card,
-.role-card,
-.login-glass-card,
-.role-login-card,
-.admin-locator-box {
-  background: linear-gradient(145deg, rgba(30, 42, 68, 0.94) 0%, rgba(36, 51, 82, 0.9) 50%, rgba(20, 29, 48, 0.94) 100%) !important;
-  border: 1.5px solid rgba(212, 175, 55, 0.4) !important;
-  box-shadow: 0 14px 34px rgba(10, 16, 29, 0.55), inset 0 1px 0 rgba(255, 255, 255, 0.12) !important;
+.role-dashboard-wrapper.role-theme-admin .role-workspace-card,
+.role-dashboard-wrapper.role-theme-admin .role-kpi-box,
+.role-dashboard-wrapper.role-theme-admin .admin-locator-box {
+  background: linear-gradient(145deg, rgba(76, 17, 30, 0.82) 0%, rgba(92, 45, 18, 0.78) 52%, rgba(20, 29, 48, 0.85) 100%) !important;
+  border: 1.5px solid rgba(245, 158, 11, 0.48) !important;
+  backdrop-filter: blur(14px);
+}
+
+.role-dashboard-wrapper.role-theme-admin .role-tab-nav .role-tab-btn {
+  background: linear-gradient(135deg, rgba(88, 18, 32, 0.85), rgba(120, 53, 15, 0.80));
+  border: 1px solid rgba(245, 158, 11, 0.45);
+  color: #fef3c7;
+}
+
+.role-dashboard-wrapper.role-theme-admin .role-tab-nav .role-tab-btn.active {
+  background: linear-gradient(135deg, #be123c 0%, #b45309 50%, #d97706 100%) !important;
+  color: #ffffff !important;
+  border-color: #fde68a !important;
+  box-shadow: 0 8px 22px rgba(190, 18, 60, 0.45) !important;
+}
+
+/* ============================================================================
+   ROLE 2: TEACHER ACADEMIC SUITE (role-theme-teacher)
+   Blended Palette: Emerald Teal (#047857) + Ocean Sapphire (#0369A1) + Warm Amber-Gold (#D97706)
+   Real-Life Background: /images/teacher_login_bg.jpg
+   ============================================================================ */
+.role-dashboard-wrapper.role-theme-teacher .role-dashboard-overlay {
+  background:
+    radial-gradient(circle at 18% 18%, rgba(16, 185, 129, 0.36) 0%, transparent 48%),
+    radial-gradient(circle at 82% 22%, rgba(2, 132, 199, 0.42) 0%, transparent 48%),
+    linear-gradient(135deg, rgba(6, 78, 59, 0.52) 0%, rgba(15, 118, 110, 0.48) 50%, rgba(12, 74, 110, 0.56) 100%) !important;
+}
+
+.role-dashboard-wrapper.role-theme-teacher .role-header {
+  background: linear-gradient(90deg, rgba(6, 78, 59, 0.88) 0%, rgba(15, 118, 110, 0.86) 50%, rgba(12, 74, 110, 0.90) 100%) !important;
+  border-bottom: 2px solid #34d399 !important;
+  box-shadow: 0 6px 25px rgba(6, 78, 59, 0.55), 0 0 20px rgba(52, 211, 153, 0.25) !important;
   backdrop-filter: blur(16px);
 }
 
-/* Transform inline boxes across all dashboards into Royal Harmony (#1E2A44) */
-.gbs-first-page-royal-theme div[style*="rgba(15, 23, 42"],
-.gbs-first-page-royal-theme section[style*="rgba(15, 23, 42"],
-.gbs-first-page-royal-theme div[style*="#0f172a"],
-.gbs-first-page-royal-theme section[style*="#0f172a"],
-.gbs-first-page-royal-theme div[style*="#030712"],
-.gbs-first-page-royal-theme div[style*="#090d16"],
-.gbs-first-page-royal-theme div[style*="rgba(2, 6, 23"] {
-  background: linear-gradient(145deg, rgba(30, 42, 68, 0.92) 0%, rgba(36, 51, 82, 0.88) 50%, rgba(20, 29, 48, 0.94) 100%) !important;
-  border-color: rgba(212, 175, 55, 0.38) !important;
+.role-dashboard-wrapper.role-theme-teacher .role-hero-banner {
+  background: linear-gradient(135deg, rgba(6, 95, 70, 0.82) 0%, rgba(13, 148, 136, 0.76) 50%, rgba(3, 105, 161, 0.82) 100%) !important;
+  border: 1.5px solid rgba(52, 211, 153, 0.65) !important;
+  box-shadow: 0 20px 50px rgba(0, 0, 0, 0.5), inset 0 1px 0 rgba(255, 255, 255, 0.2) !important;
+  backdrop-filter: blur(14px);
 }
 
-.glass-panel:hover,
-.dev-panel-card:hover,
-.role-kpi-box:hover,
-.console-stat-card:hover,
-.dev-inscription-box:hover,
-.kpi-card:hover,
-.stat-card:hover {
-  border-color: rgba(251, 191, 36, 0.78) !important;
-  box-shadow: 0 18px 40px rgba(10, 16, 29, 0.7), 0 0 24px rgba(212, 175, 55, 0.25) !important;
+.role-dashboard-wrapper.role-theme-teacher .role-workspace-card,
+.role-dashboard-wrapper.role-theme-teacher .role-kpi-box {
+  background: linear-gradient(145deg, rgba(6, 78, 59, 0.82) 0%, rgba(17, 94, 89, 0.78) 52%, rgba(12, 74, 110, 0.84) 100%) !important;
+  border: 1.5px solid rgba(52, 211, 153, 0.45) !important;
+  backdrop-filter: blur(14px);
 }
 
-/* Unified Navigation Tabs (Royal Harmony #1E2A44) */
-.teacher-tabs-nav .tab-btn,
-.role-tab-nav .role-tab-btn,
-.dev-tabs-nav .dev-tab-btn,
-.dev-nav button,
-.portal-tabs .tab-btn {
-  background: linear-gradient(135deg, rgba(30, 42, 68, 0.92), rgba(36, 51, 82, 0.88), rgba(20, 29, 48, 0.94));
-  border: 1px solid rgba(212, 175, 55, 0.36);
-  color: #f1f5f9;
-  transition: all 0.22s ease;
+.role-dashboard-wrapper.role-theme-teacher .role-tab-nav .role-tab-btn {
+  background: linear-gradient(135deg, rgba(6, 78, 59, 0.85), rgba(12, 74, 110, 0.82));
+  border: 1px solid rgba(52, 211, 153, 0.42);
+  color: #ecfdf5;
 }
 
-.teacher-tabs-nav .tab-btn:hover,
-.role-tab-nav .role-tab-btn:hover,
-.dev-tabs-nav .dev-tab-btn:hover,
-.dev-nav button:hover,
-.portal-tabs .tab-btn:hover {
-  border-color: #fbbf24 !important;
-  color: #fbbf24 !important;
-  transform: translateY(-2px);
-  box-shadow: 0 8px 20px rgba(30, 42, 68, 0.55);
+.role-dashboard-wrapper.role-theme-teacher .role-tab-nav .role-tab-btn.active {
+  background: linear-gradient(135deg, #059669 0%, #0284c7 55%, #d97706 100%) !important;
+  color: #ffffff !important;
+  border-color: #6ee7b7 !important;
+  box-shadow: 0 8px 22px rgba(16, 185, 129, 0.45) !important;
 }
 
-.teacher-tabs-nav .tab-btn.active,
-.role-tab-nav .role-tab-btn.active,
-.dev-tabs-nav .dev-tab-btn.active,
-.portal-tabs .tab-btn.active {
-  background: linear-gradient(135deg, #2B3C60 0%, #1E2A44 48%, #d4af37 100%) !important;
+/* ============================================================================
+   ROLE 3: STUDENT LEARNING PORTAL (role-theme-student)
+   Blended Palette: Royal Violet (#6D28D9) + Electric Indigo (#3730A3) + Celestial Sky Cyan (#0284C7)
+   Real-Life Background: /images/student_login_bg.jpg
+   ============================================================================ */
+.role-dashboard-wrapper.role-theme-student .role-dashboard-overlay {
+  background:
+    radial-gradient(circle at 18% 18%, rgba(139, 92, 246, 0.40) 0%, transparent 48%),
+    radial-gradient(circle at 82% 22%, rgba(56, 189, 248, 0.38) 0%, transparent 48%),
+    linear-gradient(135deg, rgba(76, 29, 149, 0.52) 0%, rgba(49, 46, 129, 0.48) 50%, rgba(12, 74, 110, 0.56) 100%) !important;
+}
+
+.role-dashboard-wrapper.role-theme-student .role-header {
+  background: linear-gradient(90deg, rgba(76, 29, 149, 0.88) 0%, rgba(49, 46, 129, 0.86) 50%, rgba(3, 105, 161, 0.88) 100%) !important;
+  border-bottom: 2px solid #c084fc !important;
+  box-shadow: 0 6px 25px rgba(76, 29, 149, 0.55), 0 0 20px rgba(192, 132, 252, 0.28) !important;
+  backdrop-filter: blur(16px);
+}
+
+.role-dashboard-wrapper.role-theme-student .role-hero-banner {
+  background: linear-gradient(135deg, rgba(91, 33, 182, 0.82) 0%, rgba(55, 48, 163, 0.78) 52%, rgba(2, 132, 199, 0.82) 100%) !important;
+  border: 1.5px solid rgba(192, 132, 252, 0.65) !important;
+  box-shadow: 0 20px 50px rgba(0, 0, 0, 0.5), inset 0 1px 0 rgba(255, 255, 255, 0.2) !important;
+  backdrop-filter: blur(14px);
+}
+
+.role-dashboard-wrapper.role-theme-student .role-workspace-card,
+.role-dashboard-wrapper.role-theme-student .role-kpi-box {
+  background: linear-gradient(145deg, rgba(67, 20, 130, 0.82) 0%, rgba(49, 46, 129, 0.78) 52%, rgba(12, 74, 110, 0.84) 100%) !important;
+  border: 1.5px solid rgba(168, 85, 247, 0.45) !important;
+  backdrop-filter: blur(14px);
+}
+
+.role-dashboard-wrapper.role-theme-student .role-tab-nav .role-tab-btn {
+  background: linear-gradient(135deg, rgba(76, 29, 149, 0.85), rgba(30, 58, 138, 0.82));
+  border: 1px solid rgba(192, 132, 252, 0.45);
+  color: #f3e8ff;
+}
+
+.role-dashboard-wrapper.role-theme-student .role-tab-nav .role-tab-btn.active {
+  background: linear-gradient(135deg, #7c3aed 0%, #4f46e5 50%, #0284c7 100%) !important;
+  color: #ffffff !important;
+  border-color: #e9d5ff !important;
+  box-shadow: 0 8px 22px rgba(124, 58, 237, 0.48) !important;
+}
+
+/* ============================================================================
+   ROLE 4: PARENT & GUARDIAN PORTAL (role-theme-parent)
+   Blended Palette: Warm Sunset Amber (#B45309) + Terracotta Rose (#BE123C) + Deep Plum-Gold (#78350F)
+   Real-Life Background: /assets/parent-dashboard-bg.jpg
+   ============================================================================ */
+.role-dashboard-wrapper.role-theme-parent .role-dashboard-overlay {
+  background:
+    radial-gradient(circle at 18% 18%, rgba(245, 158, 11, 0.36) 0%, transparent 48%),
+    radial-gradient(circle at 82% 22%, rgba(225, 29, 72, 0.38) 0%, transparent 48%),
+    linear-gradient(135deg, rgba(120, 53, 15, 0.52) 0%, rgba(136, 19, 55, 0.48) 50%, rgba(67, 20, 7, 0.56) 100%) !important;
+}
+
+.role-dashboard-wrapper.role-theme-parent .role-header {
+  background: linear-gradient(90deg, rgba(120, 53, 15, 0.88) 0%, rgba(136, 19, 55, 0.86) 50%, rgba(67, 20, 7, 0.90) 100%) !important;
+  border-bottom: 2px solid #fbbf24 !important;
+  box-shadow: 0 6px 25px rgba(120, 53, 15, 0.55), 0 0 20px rgba(251, 191, 36, 0.25) !important;
+  backdrop-filter: blur(16px);
+}
+
+.role-dashboard-wrapper.role-theme-parent .role-hero-banner {
+  background: linear-gradient(135deg, rgba(146, 64, 14, 0.82) 0%, rgba(159, 18, 57, 0.78) 52%, rgba(88, 28, 135, 0.82) 100%) !important;
+  border: 1.5px solid rgba(251, 191, 36, 0.65) !important;
+  box-shadow: 0 20px 50px rgba(0, 0, 0, 0.5), inset 0 1px 0 rgba(255, 255, 255, 0.2) !important;
+  backdrop-filter: blur(14px);
+}
+
+.role-dashboard-wrapper.role-theme-parent .role-workspace-card,
+.role-dashboard-wrapper.role-theme-parent .role-kpi-box {
+  background: linear-gradient(145deg, rgba(92, 40, 12, 0.82) 0%, rgba(112, 18, 46, 0.78) 52%, rgba(59, 7, 100, 0.84) 100%) !important;
+  border: 1.5px solid rgba(251, 191, 36, 0.45) !important;
+  backdrop-filter: blur(14px);
+}
+
+.role-dashboard-wrapper.role-theme-parent .role-tab-nav .role-tab-btn {
+  background: linear-gradient(135deg, rgba(120, 53, 15, 0.85), rgba(136, 19, 55, 0.82));
+  border: 1px solid rgba(251, 191, 36, 0.45);
+  color: #fef3c7;
+}
+
+.role-dashboard-wrapper.role-theme-parent .role-tab-nav .role-tab-btn.active {
+  background: linear-gradient(135deg, #d97706 0%, #e11d48 52%, #9333ea 100%) !important;
+  color: #ffffff !important;
+  border-color: #fde68a !important;
+  box-shadow: 0 8px 22px rgba(217, 119, 6, 0.48) !important;
+}
+
+/* ============================================================================
+   ROLE 5: ACCOUNTANT & BURSAR PORTAL (role-theme-accountant)
+   Blended Palette: Treasury Jade Green (#15803D) + Bullion Gold (#CA8A04) + Forest Teal (#115E59)
+   Real-Life Background: /assets/finance-hero-bg.jpg
+   ============================================================================ */
+.role-dashboard-wrapper.role-theme-accountant .role-dashboard-overlay {
+  background:
+    radial-gradient(circle at 18% 18%, rgba(34, 197, 94, 0.36) 0%, transparent 48%),
+    radial-gradient(circle at 82% 22%, rgba(234, 179, 8, 0.36) 0%, transparent 48%),
+    linear-gradient(135deg, rgba(20, 83, 45, 0.54) 0%, rgba(113, 63, 18, 0.48) 50%, rgba(19, 78, 74, 0.56) 100%) !important;
+}
+
+.role-dashboard-wrapper.role-theme-accountant .role-header {
+  background: linear-gradient(90deg, rgba(20, 83, 45, 0.88) 0%, rgba(113, 63, 18, 0.86) 50%, rgba(19, 78, 74, 0.90) 100%) !important;
+  border-bottom: 2px solid #eab308 !important;
+  box-shadow: 0 6px 25px rgba(20, 83, 45, 0.55), 0 0 20px rgba(234, 179, 8, 0.25) !important;
+  backdrop-filter: blur(16px);
+}
+
+.role-dashboard-wrapper.role-theme-accountant .role-hero-banner {
+  background: linear-gradient(135deg, rgba(22, 101, 52, 0.82) 0%, rgba(133, 77, 14, 0.78) 52%, rgba(17, 94, 89, 0.82) 100%) !important;
+  border: 1.5px solid rgba(250, 204, 21, 0.65) !important;
+  box-shadow: 0 20px 50px rgba(0, 0, 0, 0.5), inset 0 1px 0 rgba(255, 255, 255, 0.2) !important;
+  backdrop-filter: blur(14px);
+}
+
+.role-dashboard-wrapper.role-theme-accountant .role-workspace-card,
+.role-dashboard-wrapper.role-theme-accountant .role-kpi-box {
+  background: linear-gradient(145deg, rgba(20, 83, 45, 0.82) 0%, rgba(92, 55, 14, 0.78) 52%, rgba(19, 78, 74, 0.84) 100%) !important;
+  border: 1.5px solid rgba(234, 179, 8, 0.45) !important;
+  backdrop-filter: blur(14px);
+}
+
+.role-dashboard-wrapper.role-theme-accountant .role-tab-nav .role-tab-btn {
+  background: linear-gradient(135deg, rgba(20, 83, 45, 0.85), rgba(113, 63, 18, 0.82));
+  border: 1px solid rgba(250, 204, 21, 0.45);
+  color: #fefce8;
+}
+
+.role-dashboard-wrapper.role-theme-accountant .role-tab-nav .role-tab-btn.active {
+  background: linear-gradient(135deg, #16a34a 0%, #ca8a04 52%, #0d9488 100%) !important;
+  color: #ffffff !important;
+  border-color: #fef08a !important;
+  box-shadow: 0 8px 22px rgba(22, 163, 74, 0.48) !important;
+}
+
+/* ============================================================================
+   ROLE 6: CAMPUS OPERATIONS & STAFF PORTAL (role-theme-staff)
+   Blended Palette: Cobalt Ocean Blue (#1D4ED8) + Turquoise Cyan (#0E7490) + Copper Amber (#C2410C)
+   Real-Life Background: /assets/login-staff.jpg
+   ============================================================================ */
+.role-dashboard-wrapper.role-theme-staff .role-dashboard-overlay {
+  background:
+    radial-gradient(circle at 18% 18%, rgba(56, 189, 248, 0.38) 0%, transparent 48%),
+    radial-gradient(circle at 82% 22%, rgba(234, 88, 12, 0.34) 0%, transparent 48%),
+    linear-gradient(135deg, rgba(30, 58, 138, 0.52) 0%, rgba(14, 116, 144, 0.48) 50%, rgba(124, 45, 18, 0.54) 100%) !important;
+}
+
+.role-dashboard-wrapper.role-theme-staff .role-header {
+  background: linear-gradient(90deg, rgba(30, 58, 138, 0.88) 0%, rgba(14, 116, 144, 0.86) 50%, rgba(124, 45, 18, 0.88) 100%) !important;
+  border-bottom: 2px solid #38bdf8 !important;
+  box-shadow: 0 6px 25px rgba(30, 58, 138, 0.55), 0 0 20px rgba(56, 189, 248, 0.25) !important;
+  backdrop-filter: blur(16px);
+}
+
+.role-dashboard-wrapper.role-theme-staff .role-hero-banner {
+  background: linear-gradient(135deg, rgba(29, 78, 216, 0.82) 0%, rgba(14, 116, 144, 0.78) 52%, rgba(154, 52, 18, 0.82) 100%) !important;
+  border: 1.5px solid rgba(56, 189, 248, 0.65) !important;
+  box-shadow: 0 20px 50px rgba(0, 0, 0, 0.5), inset 0 1px 0 rgba(255, 255, 255, 0.2) !important;
+  backdrop-filter: blur(14px);
+}
+
+.role-dashboard-wrapper.role-theme-staff .role-workspace-card,
+.role-dashboard-wrapper.role-theme-staff .role-kpi-box {
+  background: linear-gradient(145deg, rgba(30, 58, 138, 0.82) 0%, rgba(14, 116, 144, 0.78) 52%, rgba(92, 38, 16, 0.84) 100%) !important;
+  border: 1.5px solid rgba(56, 189, 248, 0.45) !important;
+  backdrop-filter: blur(14px);
+}
+
+.role-dashboard-wrapper.role-theme-staff .role-tab-nav .role-tab-btn {
+  background: linear-gradient(135deg, rgba(30, 58, 138, 0.85), rgba(14, 116, 144, 0.82));
+  border: 1px solid rgba(56, 189, 248, 0.45);
+  color: #e0f2fe;
+}
+
+.role-dashboard-wrapper.role-theme-staff .role-tab-nav .role-tab-btn.active {
+  background: linear-gradient(135deg, #2563eb 0%, #0891b2 52%, #ea580c 100%) !important;
+  color: #ffffff !important;
+  border-color: #7dd3fc !important;
+  box-shadow: 0 8px 22px rgba(37, 99, 235, 0.48) !important;
+}
+
+/* ============================================================================
+   ROLE 7: DEVELOPER MISSION CONTROL (role-theme-developer / .dev-dashboard-layout)
+   Blended Palette: Royal Harmony (#1E2A44) + Cyber Magenta-Violet (#6B21A8) + Sovereign Gold (#D4AF37)
+   Real-Life Background: /assets/developer-command-center-bg.jpg
+   ============================================================================ */
+.dev-dashboard-layout .dev-panel-card,
+.dev-dashboard-layout .console-stat-card,
+.dev-dashboard-layout .dev-inscription-box,
+.dev-dashboard-layout .countdown-table-container {
+  background: linear-gradient(145deg, rgba(30, 42, 68, 0.84) 0%, rgba(76, 29, 149, 0.78) 52%, rgba(12, 74, 110, 0.84) 100%) !important;
+  border: 1.5px solid rgba(212, 175, 55, 0.48) !important;
+  box-shadow: 0 14px 34px rgba(10, 16, 29, 0.55), inset 0 1px 0 rgba(255, 255, 255, 0.14) !important;
+  backdrop-filter: blur(14px);
+}
+
+.dev-dashboard-layout .dev-tabs-nav .dev-tab-btn.active {
+  background: linear-gradient(135deg, #1E2A44 0%, #7e22ce 50%, #d4af37 100%) !important;
   color: #ffffff !important;
   border-color: #fbbf24 !important;
-  box-shadow: 0 8px 24px rgba(30, 42, 68, 0.65), 0 0 16px rgba(212, 175, 55, 0.34) !important;
-  font-weight: 800;
+  box-shadow: 0 8px 24px rgba(126, 34, 206, 0.5), 0 0 16px rgba(212, 175, 55, 0.35) !important;
 }
 
 /* Floating/Sticky Action & Feedback Banners so Users Always See Command Feedback */

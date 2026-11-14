@@ -970,37 +970,113 @@ export default function TeacherDashboard() {
     });
   };
 
+  const handleOpenAuthorExamModal = () => {
+    if (!newExamForm.title) {
+      setNewExamForm((prev) => ({
+        ...prev,
+        title: `End of Term ${prev.subjectName || "Academic"} Examination`,
+        className: activeClassObj?.name || prev.className || "Assigned Class Cohort"
+      }));
+    }
+    if (examQuestionsList.length === 0) {
+      setExamQuestionsList([
+        {
+          id: Date.now(),
+          questionNumber: 1,
+          questionText: "Solve for the primary variable and select the correct answer below:",
+          optionA: "First answer choice (A)",
+          optionB: "Second answer choice (B)",
+          optionC: "Third answer choice (C)",
+          optionD: "Fourth answer choice (D)",
+          correctOption: "A",
+          marks: 10
+        }
+      ]);
+    }
+    setShowAuthorExamModal(true);
+  };
+
+  const handleOpenExamTimetableModal = () => {
+    if (examTimetableList.length === 0) {
+      const starterList = [
+        {
+          id: `ET-${Date.now()}-1`,
+          courseCode: newExamForm.subjectCode || "CORE 101",
+          subject: newExamForm.subjectName || "Core Mathematics",
+          className: activeClassObj?.name || "All Assigned Classes",
+          examDate: new Date().toISOString().split("T")[0],
+          startTime: "09:00 AM",
+          endTime: "11:30 AM",
+          hall: "Main Examination Hall A",
+          invigilator: teacherProfile?.fullName || "Assigned Invigilator",
+          permittedTools: "Blue/Black Pen, Mathematical Set, Non-Programmable Calculator",
+          syllabusScope: "Units 1 - 5 Complete Term Syllabus",
+          instructions: "Candidates must be seated 15 minutes before start time."
+        }
+      ];
+      setExamTimetableList(starterList);
+    }
+    setShowExamTimetableModal(true);
+  };
+
+  const buildCreatedExamObject = () => ({
+    id: `exam-${Date.now()}`,
+    title: (newExamForm.title || `Scheduled ${newExamForm.subjectName || "Course"} Exam`).trim(),
+    subjectCode: newExamForm.subjectCode || "SUBJ-101",
+    subjectName: newExamForm.subjectName || newExamForm.subjectCode || "General Subject",
+    class: {
+      name: newExamForm.className || activeClassObj?.name || "Assigned Class Cohort",
+      code: activeClassObj?.code || "CLS-EXAM"
+    },
+    examDate: newExamForm.examDate || new Date().toISOString().split("T")[0],
+    startTime: newExamForm.startTime || "09:00 AM",
+    endTime: newExamForm.endTime || "11:30 AM",
+    durationMinutes: Number(newExamForm.durationMinutes) || 120,
+    totalMarks: Number(newExamForm.totalMarks) || 100,
+    passMarks: Number(newExamForm.passMarks) || 50,
+    examMode: newExamForm.examMode || "HYBRID",
+    restrictBeforeStart: Boolean(newExamForm.restrictBeforeStart),
+    questionBank: examQuestionsList,
+    typedQuestionText: newExamForm.typedQuestionText,
+    uploadedDocName: newExamForm.uploadedDocName,
+    status: "PUBLISHED_ACTIVE",
+    publishedAt: new Date().toISOString()
+  });
+
+  const handleDirectPublishTimedExam = () => {
+    if (!newExamForm.title.trim()) {
+      setFeedback({ type: "error", message: "Please provide an Examination Paper Title before scheduling." });
+      return;
+    }
+    const createdExam = buildCreatedExamObject();
+    const updated = [createdExam, ...exams];
+    setExams(updated);
+    setSelectedExamId(createdExam.id);
+    localStorage.setItem("gbs_published_exams", JSON.stringify(updated));
+    localStorage.setItem("gbs_teacher_published_exams", JSON.stringify(updated));
+    localStorage.setItem("gbs_new_exam_published", "true");
+    apiClient.post("/exams", createdExam).catch(() => {});
+    window.dispatchEvent(new Event("gbs_exams_updated"));
+    window.dispatchEvent(new Event("storage"));
+    setShowQuestionVerificationModal(false);
+    setShowAuthorExamModal(false);
+    setPendingPublishExam(null);
+    const msg = `✓ Timed Examination '${createdExam.title}' (${createdExam.questionBank?.length || 0} questions, ${createdExam.examDate} ${createdExam.startTime}–${createdExam.endTime}) scheduled & published to Student Dashboards!`;
+    setFeedback({ type: "success", message: msg });
+    if (typeof window !== "undefined" && typeof window.showGBSOpenNotice === "function") {
+      window.showGBSOpenNotice(msg, "success", "TIMED EXAM SCHEDULED & PUBLISHED");
+    }
+  };
+
   const handleInitiatePublishVerification = (e) => {
     e?.preventDefault();
     if (!newExamForm.title.trim()) {
       setFeedback({ type: "error", message: "Please provide an Examination Title." });
       return;
     }
-    const createdExam = {
-      id: `exam-${Date.now()}`,
-      title: newExamForm.title.trim(),
-      subjectCode: newExamForm.subjectCode,
-      subjectName: newExamForm.subjectName,
-      class: {
-        name: newExamForm.className,
-        code: "CLS-EXAM"
-      },
-      examDate: newExamForm.examDate,
-      startTime: newExamForm.startTime,
-      endTime: newExamForm.endTime,
-      durationMinutes: newExamForm.durationMinutes,
-      totalMarks: Number(newExamForm.totalMarks) || 100,
-      passMarks: Number(newExamForm.passMarks) || 50,
-      examMode: newExamForm.examMode,
-      restrictBeforeStart: newExamForm.restrictBeforeStart,
-      questionBank: examQuestionsList,
-      typedQuestionText: newExamForm.typedQuestionText,
-      uploadedDocName: newExamForm.uploadedDocName,
-      status: "PUBLISHED_ACTIVE",
-      publishedAt: new Date().toISOString()
-    };
+    const createdExam = buildCreatedExamObject();
     setPendingPublishExam(createdExam);
-    setQuestionsVerifiedCheck(false);
+    setQuestionsVerifiedCheck(true);
     setShowQuestionVerificationModal(true);
   };
 
@@ -1010,7 +1086,9 @@ export default function TeacherDashboard() {
     setExams(updated);
     setSelectedExamId(pendingPublishExam.id);
     localStorage.setItem("gbs_published_exams", JSON.stringify(updated));
+    localStorage.setItem("gbs_teacher_published_exams", JSON.stringify(updated));
     localStorage.setItem("gbs_new_exam_published", "true");
+    apiClient.post("/exams", pendingPublishExam).catch(() => {});
     window.dispatchEvent(new Event("gbs_exams_updated"));
     window.dispatchEvent(new Event("storage"));
 
@@ -1018,10 +1096,14 @@ export default function TeacherDashboard() {
     setShowAuthorExamModal(false);
     const publishedTitle = pendingPublishExam.title;
     setPendingPublishExam(null);
+    const msg = `✓ Examination '${publishedTitle}' officially verified and published to Student Examination Dashboards!`;
     setFeedback({
       type: "success",
-      message: `✓ Examination '${publishedTitle}' officially verified and published to Student Examination Dashboards!`
+      message: msg
     });
+    if (typeof window !== "undefined" && typeof window.showGBSOpenNotice === "function") {
+      window.showGBSOpenNotice(msg, "success", "TIMED EXAM VERIFIED & PUBLISHED");
+    }
   };
 
   const handlePublishNewExam = (e) => {
@@ -1029,15 +1111,40 @@ export default function TeacherDashboard() {
   };
 
   const handleSaveExamTimetable = (e) => {
-    e.preventDefault();
-    localStorage.setItem("gbs_examination_timetable", JSON.stringify(examTimetableList));
+    if (e?.preventDefault) e.preventDefault();
+    const finalTimetable =
+      examTimetableList.length > 0
+        ? examTimetableList
+        : [
+            {
+              id: `ET-${Date.now()}`,
+              courseCode: newExamForm.subjectCode || "CORE 101",
+              subject: newExamForm.subjectName || "Core Subject",
+              className: activeClassObj?.name || "Assigned Class",
+              examDate: new Date().toISOString().split("T")[0],
+              startTime: "09:00 AM",
+              endTime: "11:30 AM",
+              hall: "Main Examination Hall A",
+              invigilator: teacherProfile?.fullName || "Faculty Invigilator",
+              permittedTools: "Pens, Mathematical Set, Standard Calculator",
+              syllabusScope: "Complete Term Syllabus",
+              instructions: "Arrive 15 minutes before start time."
+            }
+          ];
+    setExamTimetableList(finalTimetable);
+    localStorage.setItem("gbs_examination_timetable", JSON.stringify(finalTimetable));
+    apiClient.post("/timetables", { type: "EXAMINATION_TIMETABLE", entries: finalTimetable }).catch(() => {});
     window.dispatchEvent(new Event("gbs_exam_timetable_updated"));
     window.dispatchEvent(new Event("storage"));
     setShowExamTimetableModal(false);
+    const msg = `✓ Official Examination Timetable Guide (${finalTimetable.length} session${finalTimetable.length === 1 ? "" : "s"}) saved and published to all Student & Headmaster Dashboards!`;
     setFeedback({
       type: "success",
-      message: "✓ Official Examination Timetable & Procedure Guide published to all student dashboards!"
+      message: msg
     });
+    if (typeof window !== "undefined" && typeof window.showGBSOpenNotice === "function") {
+      window.showGBSOpenNotice(msg, "success", "EXAMINATION TIMETABLE PUBLISHED");
+    }
   };
   const [selectedExamId, setSelectedExamId] = useState("");
   const [examScores, setExamScores] = useState({});
@@ -3327,7 +3434,7 @@ export default function TeacherDashboard() {
   };
 
   return (
-    <div className="role-dashboard-wrapper">
+    <div className="role-dashboard-wrapper role-theme-teacher">
       <div
         className="role-dashboard-bg"
         style={{ backgroundImage: `url('/images/teacher_login_bg.jpg')` }}
@@ -5233,7 +5340,7 @@ export default function TeacherDashboard() {
                     type="button"
                     className="btn-primary"
                     style={{ background: "linear-gradient(135deg, #8b5cf6, #6d28d9)", fontWeight: "800", boxShadow: "0 4px 14px rgba(139, 92, 246, 0.4)", display: "inline-flex", alignItems: "center", gap: "6px" }}
-                    onClick={() => setShowAuthorExamModal(true)}
+                    onClick={handleOpenAuthorExamModal}
                   >
                     ➕ Set Questions & Schedule Timed Exam
                   </button>
@@ -5242,7 +5349,7 @@ export default function TeacherDashboard() {
                     type="button"
                     className="btn-secondary"
                     style={{ borderColor: "#38bdf8", color: "#38bdf8", fontWeight: "800", display: "inline-flex", alignItems: "center", gap: "6px" }}
-                    onClick={() => setShowExamTimetableModal(true)}
+                    onClick={handleOpenExamTimetableModal}
                   >
                     📅 Create Examination Timetable Guide
                   </button>
@@ -5322,6 +5429,183 @@ export default function TeacherDashboard() {
                       ))
                     )}
                   </select>
+                </div>
+              </div>
+
+              {/* LIVE SCHEDULED TIMED EXAMS & PUBLISHED EXAMINATION TIMETABLE GUIDE OVERVIEW */}
+              <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(380px, 1fr))", gap: "16px", marginBottom: "1.25rem" }}>
+                {/* Card 1: Scheduled Timed Exams & Question Banks */}
+                <div style={{ background: "rgba(15, 23, 42, 0.78)", border: "1.5px solid rgba(139, 92, 246, 0.45)", borderRadius: "12px", padding: "14px" }}>
+                  <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "10px", flexWrap: "wrap", gap: "8px" }}>
+                    <div>
+                      <strong style={{ color: "#c084fc", fontSize: "0.88rem", display: "block" }}>
+                        ⏱️ Scheduled Timed Exams & Question Banks ({exams.length})
+                      </strong>
+                      <span style={{ fontSize: "0.75rem", color: "#cbd5e1" }}>
+                        Online CBT & OMR timed assessments published to Student Dashboards
+                      </span>
+                    </div>
+                    <button
+                      type="button"
+                      className="btn-primary"
+                      style={{ background: "linear-gradient(135deg, #8b5cf6, #6d28d9)", padding: "6px 12px", fontSize: "0.76rem", fontWeight: 800 }}
+                      onClick={handleOpenAuthorExamModal}
+                    >
+                      ➕ Set Questions & Schedule Timed Exam
+                    </button>
+                  </div>
+                  {exams.length === 0 ? (
+                    <div style={{ padding: "12px", background: "rgba(2, 6, 23, 0.5)", borderRadius: "8px", border: "1px dashed rgba(139, 92, 246, 0.35)", fontSize: "0.78rem", color: "#cbd5e1" }}>
+                      No timed exams scheduled yet. Click <strong>➕ Set Questions & Schedule Timed Exam</strong> to create questions and schedule an exam window.
+                    </div>
+                  ) : (
+                    <div style={{ display: "flex", flexDirection: "column", gap: "8px", maxHeight: "190px", overflowY: "auto" }}>
+                      {exams.map((ex) => (
+                        <div
+                          key={ex.id}
+                          style={{
+                            display: "flex",
+                            justifyContent: "space-between",
+                            alignItems: "center",
+                            gap: "10px",
+                            padding: "8px 12px",
+                            borderRadius: "8px",
+                            background: selectedExamId === ex.id ? "rgba(139, 92, 246, 0.22)" : "rgba(2, 6, 23, 0.65)",
+                            border: selectedExamId === ex.id ? "1px solid #c084fc" : "1px solid rgba(255,255,255,0.08)"
+                          }}
+                        >
+                          <div>
+                            <div style={{ fontWeight: 800, fontSize: "0.82rem", color: "#f8fafc" }}>
+                              {ex.title} <span style={{ color: "#38bdf8", fontSize: "0.74rem" }}>({ex.subjectCode || ex.subjectName})</span>
+                            </div>
+                            <div style={{ fontSize: "0.72rem", color: "#cbd5e1" }}>
+                              📅 {ex.examDate || "Scheduled"} • ⏰ {ex.startTime || "09:00 AM"} – {ex.endTime || "11:00 AM"} ({ex.durationMinutes || 120} mins) • 📝 {ex.questionBank?.length || 0} Qs
+                            </div>
+                          </div>
+                          <div style={{ display: "flex", gap: "6px", flexShrink: 0 }}>
+                            <button
+                              type="button"
+                              onClick={() => {
+                                setSelectedExamId(ex.id);
+                                setNewExamForm({
+                                  title: ex.title || "",
+                                  subjectCode: ex.subjectCode || "MATH 205",
+                                  subjectName: ex.subjectName || "Subject",
+                                  className: ex.class?.name || "Assigned Class",
+                                  classId: "",
+                                  examDate: ex.examDate || new Date().toISOString().split("T")[0],
+                                  startTime: ex.startTime || "09:00 AM",
+                                  endTime: ex.endTime || "11:30 AM",
+                                  durationMinutes: ex.durationMinutes || 120,
+                                  totalMarks: ex.totalMarks || 100,
+                                  passMarks: ex.passMarks || 50,
+                                  examMode: ex.examMode || "HYBRID",
+                                  restrictBeforeStart: ex.restrictBeforeStart !== false,
+                                  typedQuestionText: ex.typedQuestionText || "",
+                                  uploadedDocName: ex.uploadedDocName || null
+                                });
+                                if (Array.isArray(ex.questionBank) && ex.questionBank.length > 0) {
+                                  setExamQuestionsList(ex.questionBank);
+                                }
+                                setShowAuthorExamModal(true);
+                              }}
+                              style={{ background: "rgba(56, 189, 248, 0.2)", border: "1px solid #38bdf8", color: "#38bdf8", borderRadius: "6px", padding: "4px 8px", fontSize: "0.72rem", fontWeight: 700, cursor: "pointer" }}
+                            >
+                              ✏️ Edit Qs
+                            </button>
+                            <button
+                              type="button"
+                              onClick={() => {
+                                const filtered = exams.filter((item) => item.id !== ex.id);
+                                setExams(filtered);
+                                localStorage.setItem("gbs_published_exams", JSON.stringify(filtered));
+                                localStorage.setItem("gbs_teacher_published_exams", JSON.stringify(filtered));
+                                setFeedback({ type: "info", message: `Removed scheduled exam '${ex.title}'.` });
+                              }}
+                              style={{ background: "rgba(239, 68, 68, 0.2)", border: "1px solid #ef4444", color: "#fca5a5", borderRadius: "6px", padding: "4px 8px", fontSize: "0.72rem", fontWeight: 700, cursor: "pointer" }}
+                            >
+                              🗑️
+                            </button>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </div>
+
+                {/* Card 2: Published Examination Timetable Guide */}
+                <div style={{ background: "rgba(15, 23, 42, 0.78)", border: "1.5px solid rgba(56, 189, 248, 0.45)", borderRadius: "12px", padding: "14px" }}>
+                  <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "10px", flexWrap: "wrap", gap: "8px" }}>
+                    <div>
+                      <strong style={{ color: "#38bdf8", fontSize: "0.88rem", display: "block" }}>
+                        📅 Official Examination Timetable Guide ({examTimetableList.length} Sessions)
+                      </strong>
+                      <span style={{ fontSize: "0.75rem", color: "#cbd5e1" }}>
+                        Published examination schedule, halls, invigilators & permitted tools
+                      </span>
+                    </div>
+                    <button
+                      type="button"
+                      className="btn-primary"
+                      style={{ background: "linear-gradient(135deg, #0284c7, #38bdf8)", padding: "6px 12px", fontSize: "0.76rem", fontWeight: 800 }}
+                      onClick={handleOpenExamTimetableModal}
+                    >
+                      📅 Create / Edit Timetable Guide
+                    </button>
+                  </div>
+                  {examTimetableList.length === 0 ? (
+                    <div style={{ padding: "12px", background: "rgba(2, 6, 23, 0.5)", borderRadius: "8px", border: "1px dashed rgba(56, 189, 248, 0.35)", fontSize: "0.78rem", color: "#cbd5e1" }}>
+                      No examination timetable sessions published yet. Click <strong>📅 Create / Edit Timetable Guide</strong> to build and publish the exam timetable.
+                    </div>
+                  ) : (
+                    <div style={{ display: "flex", flexDirection: "column", gap: "8px", maxHeight: "190px", overflowY: "auto" }}>
+                      {examTimetableList.map((entry, idx) => (
+                        <div
+                          key={entry.id || idx}
+                          style={{
+                            display: "flex",
+                            justifyContent: "space-between",
+                            alignItems: "center",
+                            gap: "10px",
+                            padding: "8px 12px",
+                            borderRadius: "8px",
+                            background: "rgba(2, 6, 23, 0.65)",
+                            border: "1px solid rgba(56, 189, 248, 0.22)"
+                          }}
+                        >
+                          <div>
+                            <div style={{ fontWeight: 800, fontSize: "0.82rem", color: "#f8fafc" }}>
+                              {entry.courseCode} — {entry.subject} <span style={{ color: "#fbbf24", fontSize: "0.72rem" }}>({entry.className || activeClassObj?.name || "All Cohort"})</span>
+                            </div>
+                            <div style={{ fontSize: "0.72rem", color: "#cbd5e1" }}>
+                              📅 {entry.examDate} • ⏰ {entry.startTime} – {entry.endTime} • 🏛️ {entry.hall} ({entry.invigilator})
+                            </div>
+                          </div>
+                          <div style={{ display: "flex", gap: "6px", flexShrink: 0 }}>
+                            <button
+                              type="button"
+                              onClick={handleOpenExamTimetableModal}
+                              style={{ background: "rgba(56, 189, 248, 0.2)", border: "1px solid #38bdf8", color: "#38bdf8", borderRadius: "6px", padding: "4px 8px", fontSize: "0.72rem", fontWeight: 700, cursor: "pointer" }}
+                            >
+                              ✏️ Edit
+                            </button>
+                            <button
+                              type="button"
+                              onClick={() => {
+                                const updated = examTimetableList.filter((_, i) => i !== idx);
+                                setExamTimetableList(updated);
+                                localStorage.setItem("gbs_examination_timetable", JSON.stringify(updated));
+                                window.dispatchEvent(new Event("gbs_exam_timetable_updated"));
+                              }}
+                              style={{ background: "rgba(239, 68, 68, 0.2)", border: "1px solid #ef4444", color: "#fca5a5", borderRadius: "6px", padding: "4px 8px", fontSize: "0.72rem", fontWeight: 700, cursor: "pointer" }}
+                            >
+                              🗑️
+                            </button>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  )}
                 </div>
               </div>
 
@@ -9817,8 +10101,22 @@ export default function TeacherDashboard() {
       )}
       {/* MODAL: AUTHOR EXAMINATION & SCHEDULE TIMED ACCESS */}
       {showAuthorExamModal && (
-        <div className="invoice-pay-modal-overlay">
-          <div className="invoice-pay-modal" style={{ maxWidth: "850px", background: "#0b1329", border: "2px solid #8b5cf6", borderRadius: "16px", padding: "2rem", maxHeight: "90vh", overflowY: "auto" }}>
+        <div
+          className="modal-backdrop invoice-pay-modal-overlay"
+          style={{
+            position: "fixed",
+            inset: 0,
+            zIndex: 99999,
+            background: "rgba(2, 6, 23, 0.82)",
+            backdropFilter: "blur(10px)",
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+            padding: "1.25rem",
+            overflowY: "auto"
+          }}
+        >
+          <div className="invoice-pay-modal" style={{ width: "100%", maxWidth: "900px", background: "#0b1329", border: "2px solid #8b5cf6", borderRadius: "16px", padding: "2rem", maxHeight: "90vh", overflowY: "auto", boxShadow: "0 25px 60px rgba(0,0,0,0.65)" }}>
             <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", borderBottom: "1.5px solid rgba(139, 92, 246, 0.3)", paddingBottom: "1.25rem", marginBottom: "1.5rem" }}>
               <div>
                 <span className="role-portal-badge" style={{ color: "#c084fc", marginBottom: "4px", display: "inline-block" }}>
@@ -9836,7 +10134,7 @@ export default function TeacherDashboard() {
 
             <form onSubmit={handlePublishNewExam}>
               {/* Basic Info Grid */}
-              <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(240px, 1fr))", gap: "1rem", marginBottom: "1.25rem" }}>
+              <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(220px, 1fr))", gap: "1rem", marginBottom: "1.25rem" }}>
                 <div>
                   <label style={{ display: "block", fontSize: "0.8rem", color: "#94a3b8", marginBottom: "4px" }}>Exam Paper Title *</label>
                   <input
@@ -9940,7 +10238,7 @@ export default function TeacherDashboard() {
               </div>
 
               {/* Mode Selector Tabs: Interactive Builder vs Typed Upload vs OMR Sheet */}
-              <div style={{ display: "flex", gap: "8px", marginBottom: "1rem" }}>
+              <div style={{ display: "flex", gap: "8px", marginBottom: "1rem", flexWrap: "wrap" }}>
                 <button
                   type="button"
                   onClick={() => setExamAuthorMode("BUILDER")}
@@ -9998,24 +10296,26 @@ export default function TeacherDashboard() {
               {examAuthorMode === "BUILDER" && (
                 <div style={{ background: "rgba(15, 23, 42, 0.6)", padding: "12px", borderRadius: "10px", marginBottom: "1.25rem" }}>
                   <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "10px" }}>
-                    <strong style={{ fontSize: "0.85rem", color: "#f8fafc" }}>Question Bank Configuration</strong>
+                    <strong style={{ fontSize: "0.85rem", color: "#f8fafc" }}>
+                      Question Bank Configuration ({examQuestionsList.length} Questions • {examQuestionsList.reduce((acc, q) => acc + (Number(q.marks) || 0), 0)} Total Marks)
+                    </strong>
                     <button
                       type="button"
                       onClick={() => {
                         const newQ = {
-                          id: Date.now(),
+                          id: Date.now() + Math.floor(Math.random() * 1000),
                           questionNumber: examQuestionsList.length + 1,
-                          questionText: "New question prompt...",
-                          optionA: "Option A",
-                          optionB: "Option B",
-                          optionC: "Option C",
-                          optionD: "Option D",
+                          questionText: `Question ${examQuestionsList.length + 1}: Enter question prompt here...`,
+                          optionA: "Option A choice",
+                          optionB: "Option B choice",
+                          optionC: "Option C choice",
+                          optionD: "Option D choice",
                           correctOption: "A",
                           marks: 10
                         };
                         setExamQuestionsList([...examQuestionsList, newQ]);
                       }}
-                      style={{ background: "#8b5cf6", color: "#fff", border: "none", padding: "4px 10px", borderRadius: "6px", fontSize: "0.75rem", fontWeight: 700, cursor: "pointer" }}
+                      style={{ background: "linear-gradient(135deg, #8b5cf6, #6d28d9)", color: "#fff", border: "none", padding: "6px 14px", borderRadius: "6px", fontSize: "0.78rem", fontWeight: 800, cursor: "pointer" }}
                     >
                       + Add Question
                     </button>
@@ -10025,37 +10325,106 @@ export default function TeacherDashboard() {
                       📝 No questions added yet. Click <strong>+ Add Question</strong> above to author question options and marks.
                     </div>
                   ) : (
-                    examQuestionsList.map((q, qIdx) => (
-                      <div key={q.id} style={{ background: "rgba(2, 6, 23, 0.7)", padding: "10px", borderRadius: "8px", marginBottom: "8px", border: "1px solid rgba(255,255,255,0.06)" }}>
-                        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "4px" }}>
-                          <span style={{ color: "#38bdf8", fontWeight: 700, fontSize: "0.8rem" }}>Q{qIdx + 1} ({q.marks} Marks)</span>
-                          <select
-                            value={q.correctOption}
+                    <div style={{ maxHeight: "340px", overflowY: "auto", paddingRight: "4px" }}>
+                      {examQuestionsList.map((q, qIdx) => (
+                        <div key={q.id || qIdx} style={{ background: "rgba(2, 6, 23, 0.78)", padding: "12px", borderRadius: "8px", marginBottom: "10px", border: "1px solid rgba(139, 92, 246, 0.25)" }}>
+                          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "8px", flexWrap: "wrap", gap: "8px" }}>
+                            <span style={{ color: "#38bdf8", fontWeight: 800, fontSize: "0.82rem" }}>
+                              Question #{qIdx + 1}
+                            </span>
+                            <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
+                              <label style={{ fontSize: "0.74rem", color: "#94a3b8" }}>Marks:</label>
+                              <input
+                                type="number"
+                                min="1"
+                                max="100"
+                                value={q.marks || 10}
+                                onChange={(e) => {
+                                  const updated = examQuestionsList.map((item, idx) => idx === qIdx ? { ...item, marks: Number(e.target.value) || 1 } : item);
+                                  setExamQuestionsList(updated);
+                                }}
+                                className="filter-input"
+                                style={{ width: "64px", padding: "2px 6px", fontSize: "0.75rem", color: "#fbbf24", fontWeight: 700 }}
+                              />
+                              <select
+                                value={q.correctOption || "A"}
+                                onChange={(e) => {
+                                  const updated = examQuestionsList.map((item, idx) => idx === qIdx ? { ...item, correctOption: e.target.value } : item);
+                                  setExamQuestionsList(updated);
+                                }}
+                                className="filter-select"
+                                style={{ padding: "3px 8px", fontSize: "0.75rem", color: "#34d399", fontWeight: 700 }}
+                              >
+                                <option value="A">✓ Correct: Option A</option>
+                                <option value="B">✓ Correct: Option B</option>
+                                <option value="C">✓ Correct: Option C</option>
+                                <option value="D">✓ Correct: Option D</option>
+                              </select>
+                              <button
+                                type="button"
+                                onClick={() => {
+                                  setExamQuestionsList(examQuestionsList.filter((_, idx) => idx !== qIdx));
+                                }}
+                                style={{ background: "rgba(239, 68, 68, 0.18)", border: "1px solid rgba(239, 68, 68, 0.45)", color: "#f87171", padding: "3px 8px", borderRadius: "5px", fontSize: "0.72rem", fontWeight: 700, cursor: "pointer" }}
+                              >
+                                🗑️ Remove
+                              </button>
+                            </div>
+                          </div>
+                          <input
+                            type="text"
+                            placeholder="Type the examination question prompt here..."
+                            value={q.questionText || ""}
                             onChange={(e) => {
-                              const updated = examQuestionsList.map((item, idx) => idx === qIdx ? { ...item, correctOption: e.target.value } : item);
+                              const updated = examQuestionsList.map((item, idx) => idx === qIdx ? { ...item, questionText: e.target.value } : item);
                               setExamQuestionsList(updated);
                             }}
-                            className="filter-select"
-                            style={{ padding: "2px 8px", fontSize: "0.75rem", color: "#34d399" }}
-                          >
-                            <option value="A">Correct: Option A</option>
-                            <option value="B">Correct: Option B</option>
-                            <option value="C">Correct: Option C</option>
-                            <option value="D">Correct: Option D</option>
-                          </select>
+                            className="filter-input"
+                            style={{ width: "100%", marginBottom: "8px", fontSize: "0.82rem", fontWeight: 600 }}
+                          />
+                          <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(180px, 1fr))", gap: "8px" }}>
+                            {["A", "B", "C", "D"].map((optKey) => {
+                              const fieldName = `option${optKey}`;
+                              const isCorrect = (q.correctOption || "A") === optKey;
+                              return (
+                                <div key={optKey} style={{ display: "flex", alignItems: "center", gap: "6px" }}>
+                                  <span style={{
+                                    minWidth: "24px",
+                                    height: "24px",
+                                    borderRadius: "6px",
+                                    display: "inline-flex",
+                                    alignItems: "center",
+                                    justifyContent: "center",
+                                    fontSize: "0.74rem",
+                                    fontWeight: 800,
+                                    background: isCorrect ? "#059669" : "rgba(51, 65, 85, 0.7)",
+                                    color: "#fff"
+                                  }}>
+                                    {optKey}
+                                  </span>
+                                  <input
+                                    type="text"
+                                    placeholder={`Option ${optKey}`}
+                                    value={q[fieldName] || ""}
+                                    onChange={(e) => {
+                                      const updated = examQuestionsList.map((item, idx) => idx === qIdx ? { ...item, [fieldName]: e.target.value } : item);
+                                      setExamQuestionsList(updated);
+                                    }}
+                                    className="filter-input"
+                                    style={{
+                                      width: "100%",
+                                      fontSize: "0.76rem",
+                                      padding: "4px 8px",
+                                      borderColor: isCorrect ? "rgba(16, 185, 129, 0.6)" : undefined
+                                    }}
+                                  />
+                                </div>
+                              );
+                            })}
+                          </div>
                         </div>
-                        <input
-                          type="text"
-                          value={q.questionText}
-                          onChange={(e) => {
-                            const updated = examQuestionsList.map((item, idx) => idx === qIdx ? { ...item, questionText: e.target.value } : item);
-                            setExamQuestionsList(updated);
-                          }}
-                          className="filter-input"
-                          style={{ width: "100%", marginBottom: "6px", fontSize: "0.8rem" }}
-                        />
-                      </div>
-                    ))
+                      ))}
+                    </div>
                   )}
                 </div>
               )}
@@ -10174,8 +10543,16 @@ export default function TeacherDashboard() {
                 </div>
               )}
 
-              <div style={{ display: "flex", justifyContent: "flex-end", gap: "10px", marginTop: "1rem" }}>
+              <div style={{ display: "flex", justifyContent: "flex-end", gap: "10px", marginTop: "1rem", flexWrap: "wrap" }}>
                 <button type="button" className="btn-secondary" onClick={() => setShowAuthorExamModal(false)}>Cancel</button>
+                <button
+                  type="button"
+                  className="btn-primary"
+                  onClick={handleDirectPublishTimedExam}
+                  style={{ background: "linear-gradient(135deg, #10b981, #059669)", padding: "10px 18px", fontWeight: 800 }}
+                >
+                  🚀 Save & Schedule Timed Exam Now
+                </button>
                 <button type="submit" className="btn-primary" style={{ background: "linear-gradient(135deg, #8b5cf6, #6d28d9)", padding: "10px 20px", fontWeight: 800 }}>
                   🔍 Verify Questions & Proceed to Publish
                 </button>
@@ -10187,8 +10564,22 @@ export default function TeacherDashboard() {
 
       {/* MODAL: PRE-PUBLICATION EXAM QUESTION VERIFICATION & AUDIT */}
       {showQuestionVerificationModal && pendingPublishExam && (
-        <div className="invoice-pay-modal-overlay">
-          <div className="invoice-pay-modal" style={{ maxWidth: "860px", background: "#0b1329", border: "2px solid #8b5cf6", borderRadius: "16px", padding: "2rem", maxHeight: "90vh", overflowY: "auto", boxShadow: "0 0 30px rgba(139, 92, 246, 0.4)" }}>
+        <div
+          className="modal-backdrop invoice-pay-modal-overlay"
+          style={{
+            position: "fixed",
+            inset: 0,
+            zIndex: 99999,
+            background: "rgba(2, 6, 23, 0.84)",
+            backdropFilter: "blur(10px)",
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+            padding: "1.25rem",
+            overflowY: "auto"
+          }}
+        >
+          <div className="invoice-pay-modal" style={{ width: "100%", maxWidth: "860px", background: "#0b1329", border: "2px solid #8b5cf6", borderRadius: "16px", padding: "2rem", maxHeight: "90vh", overflowY: "auto", boxShadow: "0 0 30px rgba(139, 92, 246, 0.4)" }}>
             <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", borderBottom: "1.5px solid rgba(139, 92, 246, 0.4)", paddingBottom: "1rem", marginBottom: "1.25rem" }}>
               <div>
                 <span className="role-portal-badge" style={{ color: "#c084fc", marginBottom: "4px", display: "inline-block" }}>
@@ -10334,8 +10725,22 @@ export default function TeacherDashboard() {
 
       {/* MODAL: ARCHIVED APPROVED WEEKLY ATTENDANCE REGISTERS */}
       {showArchivedAttendanceModal && (
-        <div className="invoice-pay-modal-overlay">
-          <div className="invoice-pay-modal" style={{ maxWidth: "860px", background: "#0b1329", border: "2px solid #38bdf8", borderRadius: "16px", padding: "2rem", maxHeight: "90vh", overflowY: "auto" }}>
+        <div
+          className="modal-backdrop invoice-pay-modal-overlay"
+          style={{
+            position: "fixed",
+            inset: 0,
+            zIndex: 99999,
+            background: "rgba(2, 6, 23, 0.82)",
+            backdropFilter: "blur(10px)",
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+            padding: "1.25rem",
+            overflowY: "auto"
+          }}
+        >
+          <div className="invoice-pay-modal" style={{ width: "100%", maxWidth: "860px", background: "#0b1329", border: "2px solid #38bdf8", borderRadius: "16px", padding: "2rem", maxHeight: "90vh", overflowY: "auto", boxShadow: "0 25px 60px rgba(0,0,0,0.65)" }}>
             <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", borderBottom: "1.5px solid rgba(56, 189, 248, 0.3)", paddingBottom: "1rem", marginBottom: "1.25rem" }}>
               <div>
                 <span className="role-portal-badge" style={{ color: "#38bdf8", marginBottom: "4px", display: "inline-block" }}>
@@ -10416,8 +10821,22 @@ export default function TeacherDashboard() {
 
       {/* MODAL: CREATE / PUBLISH EXAMINATION TIMETABLE GUIDE */}
       {showExamTimetableModal && (
-        <div className="invoice-pay-modal-overlay">
-          <div className="invoice-pay-modal" style={{ maxWidth: "850px", background: "#0b1329", border: "2px solid #38bdf8", borderRadius: "16px", padding: "2rem", maxHeight: "90vh", overflowY: "auto" }}>
+        <div
+          className="modal-backdrop invoice-pay-modal-overlay"
+          style={{
+            position: "fixed",
+            inset: 0,
+            zIndex: 99999,
+            background: "rgba(2, 6, 23, 0.82)",
+            backdropFilter: "blur(10px)",
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+            padding: "1.25rem",
+            overflowY: "auto"
+          }}
+        >
+          <div className="invoice-pay-modal" style={{ width: "100%", maxWidth: "960px", background: "#0b1329", border: "2px solid #38bdf8", borderRadius: "16px", padding: "2rem", maxHeight: "90vh", overflowY: "auto", boxShadow: "0 25px 60px rgba(0,0,0,0.65)" }}>
             <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", borderBottom: "1.5px solid rgba(56, 189, 248, 0.3)", paddingBottom: "1.25rem", marginBottom: "1.5rem" }}>
               <div>
                 <span className="role-portal-badge" style={{ color: "#38bdf8", marginBottom: "4px", display: "inline-block" }}>
@@ -10434,36 +10853,52 @@ export default function TeacherDashboard() {
             </div>
 
             <form onSubmit={handleSaveExamTimetable}>
-              <div style={{ marginBottom: "1.25rem", display: "flex", justifyContent: "flex-end" }}>
-                <button
-                  type="button"
-                  onClick={() => {
-                    const newEntry = {
-                      id: `ET-${Date.now()}`,
-                      courseCode: "COURSE 101",
-                      subject: "Subject Name",
-                      examDate: new Date().toISOString().split("T")[0],
-                      startTime: "09:00 AM",
-                      endTime: "11:30 AM",
-                      hall: "Hall 1",
-                      invigilator: "Faculty Member",
-                      permittedTools: "Pens, Standard Calculator",
-                      syllabusScope: "Key topics...",
-                      instructions: "Arrive 15 minutes before time."
-                    };
-                    setExamTimetableList([...examTimetableList, newEntry]);
-                  }}
-                  style={{ background: "#0284c7", color: "#fff", border: "none", padding: "6px 14px", borderRadius: "6px", fontSize: "0.78rem", fontWeight: 700, cursor: "pointer" }}
-                >
-                  + Add Timetable Entry
-                </button>
+              <div style={{ marginBottom: "1.25rem", display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: "10px" }}>
+                <span style={{ fontSize: "0.82rem", color: "#cbd5e1" }}>
+                  📋 <strong>{examTimetableList.length}</strong> Examination Sessions Configured
+                </span>
+                <div style={{ display: "flex", gap: "8px" }}>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      const newEntry = {
+                        id: `ET-${Date.now()}`,
+                        courseCode: `COURSE ${101 + examTimetableList.length}`,
+                        subject: "New Examination Paper",
+                        className: selectedClass || "Grade 10A / SHS 1",
+                        examDate: new Date().toISOString().split("T")[0],
+                        startTime: "09:00 AM",
+                        endTime: "11:30 AM",
+                        hall: "Main Examination Hall A",
+                        invigilator: teacherProfile?.fullName || "Faculty Invigilator",
+                        permittedTools: "Pens, Mathematical Set, Non-Programmable Calculator",
+                        syllabusScope: "Units 1 - 5 Comprehensive Assessment",
+                        instructions: "Arrive 15 minutes before start time with Student ID."
+                      };
+                      setExamTimetableList([...examTimetableList, newEntry]);
+                    }}
+                    style={{ background: "linear-gradient(135deg, #0284c7, #0369a1)", color: "#fff", border: "none", padding: "7px 14px", borderRadius: "6px", fontSize: "0.78rem", fontWeight: 800, cursor: "pointer" }}
+                  >
+                    + Add Timetable Entry
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      window.print();
+                      setFeedback({ type: "success", message: "🖨️ Official Examination Timetable Guide formatted for printing." });
+                    }}
+                    style={{ background: "rgba(16, 185, 129, 0.2)", border: "1px solid #10b981", color: "#34d399", padding: "7px 14px", borderRadius: "6px", fontSize: "0.78rem", fontWeight: 700, cursor: "pointer" }}
+                  >
+                    🖨️ Print Timetable Guide
+                  </button>
+                </div>
               </div>
 
               <div className="role-table-responsive" style={{ maxHeight: "360px", overflowY: "auto", marginBottom: "1.5rem" }}>
                 <table className="role-table" style={{ fontSize: "0.78rem" }}>
                   <thead>
                     <tr>
-                      <th>Course Code</th>
+                      <th>Course & Class</th>
                       <th>Subject Name</th>
                       <th>Date</th>
                       <th>Start Time</th>
@@ -10477,40 +10912,53 @@ export default function TeacherDashboard() {
                     {examTimetableList.length === 0 ? (
                       <tr>
                         <td colSpan="8" style={{ textAlign: "center", padding: "28px", color: "#94a3b8" }}>
-                          📅 No examination timetable entries registered yet. Click <strong>+ Add Exam Session</strong> above to schedule exams.
+                          📅 No examination timetable entries registered yet. Click <strong>+ Add Timetable Entry</strong> above to schedule exams.
                         </td>
                       </tr>
                     ) : (
                       examTimetableList.map((entry, idx) => (
-                        <tr key={entry.id}>
+                        <tr key={entry.id || idx}>
                           <td>
                             <input
                               type="text"
-                              value={entry.courseCode}
+                              value={entry.courseCode || ""}
+                              placeholder="Course Code"
                               onChange={(e) => {
                                 const updated = examTimetableList.map((item, i) => i === idx ? { ...item, courseCode: e.target.value } : item);
                                 setExamTimetableList(updated);
                               }}
                               className="filter-input"
-                              style={{ width: "90px", fontSize: "0.78rem" }}
+                              style={{ width: "95px", fontSize: "0.76rem", marginBottom: "2px", fontWeight: 700 }}
+                            />
+                            <input
+                              type="text"
+                              value={entry.className || ""}
+                              placeholder="Class / Cohort"
+                              onChange={(e) => {
+                                const updated = examTimetableList.map((item, i) => i === idx ? { ...item, className: e.target.value } : item);
+                                setExamTimetableList(updated);
+                              }}
+                              className="filter-input"
+                              style={{ width: "95px", fontSize: "0.72rem" }}
                             />
                           </td>
                           <td>
                             <input
                               type="text"
-                              value={entry.subject}
+                              value={entry.subject || ""}
+                              placeholder="Subject Name"
                               onChange={(e) => {
                                 const updated = examTimetableList.map((item, i) => i === idx ? { ...item, subject: e.target.value } : item);
                                 setExamTimetableList(updated);
                               }}
                               className="filter-input"
-                              style={{ width: "130px", fontSize: "0.78rem" }}
+                              style={{ width: "135px", fontSize: "0.78rem" }}
                             />
                           </td>
                           <td>
                             <input
                               type="date"
-                              value={entry.examDate}
+                              value={entry.examDate || ""}
                               onChange={(e) => {
                                 const updated = examTimetableList.map((item, i) => i === idx ? { ...item, examDate: e.target.value } : item);
                                 setExamTimetableList(updated);
@@ -10522,7 +10970,7 @@ export default function TeacherDashboard() {
                           <td>
                             <input
                               type="text"
-                              value={entry.startTime}
+                              value={entry.startTime || ""}
                               onChange={(e) => {
                                 const updated = examTimetableList.map((item, i) => i === idx ? { ...item, startTime: e.target.value } : item);
                                 setExamTimetableList(updated);
@@ -10534,7 +10982,7 @@ export default function TeacherDashboard() {
                           <td>
                             <input
                               type="text"
-                              value={entry.endTime}
+                              value={entry.endTime || ""}
                               onChange={(e) => {
                                 const updated = examTimetableList.map((item, i) => i === idx ? { ...item, endTime: e.target.value } : item);
                                 setExamTimetableList(updated);
@@ -10546,7 +10994,7 @@ export default function TeacherDashboard() {
                           <td>
                             <input
                               type="text"
-                              value={entry.hall}
+                              value={entry.hall || ""}
                               placeholder="Hall"
                               onChange={(e) => {
                                 const updated = examTimetableList.map((item, i) => i === idx ? { ...item, hall: e.target.value } : item);
@@ -10557,7 +11005,7 @@ export default function TeacherDashboard() {
                             />
                             <input
                               type="text"
-                              value={entry.invigilator}
+                              value={entry.invigilator || ""}
                               placeholder="Invigilator"
                               onChange={(e) => {
                                 const updated = examTimetableList.map((item, i) => i === idx ? { ...item, invigilator: e.target.value } : item);
@@ -10570,7 +11018,7 @@ export default function TeacherDashboard() {
                           <td>
                             <input
                               type="text"
-                              value={entry.permittedTools}
+                              value={entry.permittedTools || ""}
                               placeholder="Tools"
                               onChange={(e) => {
                                 const updated = examTimetableList.map((item, i) => i === idx ? { ...item, permittedTools: e.target.value } : item);
@@ -10581,7 +11029,7 @@ export default function TeacherDashboard() {
                             />
                             <input
                               type="text"
-                              value={entry.syllabusScope}
+                              value={entry.syllabusScope || ""}
                               placeholder="Syllabus focus"
                               onChange={(e) => {
                                 const updated = examTimetableList.map((item, i) => i === idx ? { ...item, syllabusScope: e.target.value } : item);
@@ -10609,7 +11057,7 @@ export default function TeacherDashboard() {
                 </table>
               </div>
 
-              <div style={{ display: "flex", justifyContent: "flex-end", gap: "10px" }}>
+              <div style={{ display: "flex", justifyContent: "flex-end", gap: "10px", flexWrap: "wrap" }}>
                 <button type="button" className="btn-secondary" onClick={() => setShowExamTimetableModal(false)} style={{ display: "inline-flex", alignItems: "center", gap: "6px" }}>
                   ⬅️ Back
                 </button>

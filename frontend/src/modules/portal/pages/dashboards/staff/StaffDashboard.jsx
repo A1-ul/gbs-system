@@ -242,7 +242,7 @@ export default function StaffDashboard() {
   };
 
   return (
-    <div className="role-dashboard-wrapper">
+    <div className="role-dashboard-wrapper role-theme-staff">
       <div
         className="role-dashboard-bg"
         style={{ backgroundImage: `url('/assets/login-staff.jpg')` }}

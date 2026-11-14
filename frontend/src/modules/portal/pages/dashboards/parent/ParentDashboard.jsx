@@ -921,7 +921,7 @@ export default function ParentDashboard() {
   };
 
   return (
-    <div className="role-dashboard-wrapper">
+    <div className="role-dashboard-wrapper role-theme-parent">
       <div
         className="role-dashboard-bg"
         style={{ backgroundImage: `url('/assets/parent-dashboard-bg.jpg')` }}

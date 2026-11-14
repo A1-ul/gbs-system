@@ -30,10 +30,10 @@
   background-size: cover;
   background-position: center;
   background-repeat: no-repeat;
-  opacity: 0.22;
+  opacity: 1;
   z-index: 0;
   pointer-events: none;
-  filter: saturate(1.25) contrast(1.1);
+  filter: brightness(0.88) saturate(1.22) contrast(1.08);
   transform: scale(1.02);
   transition: opacity 0.5s ease-in-out;
 }
@@ -45,9 +45,9 @@
   width: 100vw;
   height: 100vh;
   background:
-    radial-gradient(circle at 18% 18%, rgba(43, 60, 96, 0.75) 0%, transparent 48%),
-    radial-gradient(circle at 82% 22%, rgba(212, 175, 55, 0.18) 0%, transparent 45%),
-    linear-gradient(135deg, rgba(20, 29, 48, 0.88) 0%, rgba(30, 42, 68, 0.9) 50%, rgba(36, 51, 82, 0.92) 100%);
+    radial-gradient(circle at 18% 18%, rgba(43, 60, 96, 0.45) 0%, transparent 48%),
+    radial-gradient(circle at 82% 22%, rgba(212, 175, 55, 0.24) 0%, transparent 45%),
+    linear-gradient(135deg, rgba(20, 29, 48, 0.54) 0%, rgba(30, 42, 68, 0.52) 50%, rgba(36, 51, 82, 0.58) 100%);
   z-index: 1;
   pointer-events: none;
 }

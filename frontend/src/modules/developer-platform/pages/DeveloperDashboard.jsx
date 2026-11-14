@@ -4797,7 +4797,12 @@ export default function DeveloperDashboard() {
   const pendingAppsCount = pendingIncomingList.length;
 
   return (
-    <div className="dev-dashboard-layout">
+    <div className="dev-dashboard-layout role-theme-developer">
+      <div
+        className="dev-dashboard-real-bg"
+        style={{ backgroundImage: `url('/assets/developer-command-center-bg.jpg')` }}
+      ></div>
+      <div className="dev-dashboard-real-overlay"></div>
       {/* Universal Navigation & Scroll Controls */}
       <WindowControlsBar title="Developer Mission Control" />
 
@@ -5029,7 +5034,7 @@ export default function DeveloperDashboard() {
         <section
           className="dev-hero-showcase-banner"
           style={{
-            backgroundImage: `linear-gradient(135deg, rgba(15, 23, 42, 0.70), rgba(15, 23, 42, 0.88)), url('/assets/developer-dashboard-hero.jpg')`
+            backgroundImage: `linear-gradient(135deg, rgba(30, 42, 68, 0.56) 0%, rgba(88, 28, 135, 0.50) 50%, rgba(15, 23, 42, 0.62) 100%), url('/assets/developer-dashboard-hero.jpg')`
           }}
         >
           <div className="hero-text-block">

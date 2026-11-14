@@ -4936,7 +4936,7 @@ export function AdminDashboard({ initialTab } = {}) {
   };
 
   return (
-    <div className="role-dashboard-wrapper">
+    <div className="role-dashboard-wrapper role-theme-admin">
       <div
         className="role-dashboard-bg"
         style={{ backgroundImage: `url('/images/admin_login_bg.jpg')` }}
