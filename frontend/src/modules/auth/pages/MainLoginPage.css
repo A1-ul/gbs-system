@@ -28,8 +28,12 @@
 .login-overlay {
   position: absolute;
   inset: 0;
-  background: radial-gradient(circle at 50% 30%, rgba(15, 23, 42, 0.4) 0%, rgba(15, 23, 42, 0.78) 100%);
-  backdrop-filter: blur(2px);
+  background:
+    radial-gradient(circle at 18% 18%, rgba(74, 21, 27, 0.84) 0%, transparent 48%),
+    radial-gradient(circle at 82% 22%, rgba(212, 175, 55, 0.22) 0%, transparent 45%),
+    radial-gradient(circle at 50% 85%, rgba(56, 189, 248, 0.18) 0%, transparent 52%),
+    linear-gradient(135deg, rgba(15, 23, 42, 0.85) 0%, rgba(42, 11, 16, 0.88) 50%, rgba(30, 41, 59, 0.9) 100%);
+  backdrop-filter: blur(4px);
 }
 
 .system-live-bar {
@@ -39,15 +43,15 @@
   flex-wrap: wrap;
   gap: 1.25rem;
   justify-content: center;
-  background: rgba(15, 23, 42, 0.75);
-  backdrop-filter: blur(12px);
-  border: 1px solid rgba(255, 255, 255, 0.1);
+  background: linear-gradient(90deg, rgba(42, 11, 16, 0.94) 0%, rgba(15, 23, 42, 0.94) 50%, rgba(74, 21, 27, 0.94) 100%);
+  backdrop-filter: blur(14px);
+  border: 1.5px solid rgba(212, 175, 55, 0.45);
   border-radius: 30px;
   padding: 0.5rem 1.25rem;
   margin-bottom: 1.5rem;
   font-size: 0.75rem;
-  color: #94a3b8;
-  box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.5);
+  color: #e2e8f0;
+  box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.6), 0 0 18px rgba(212, 175, 55, 0.2);
 }
 
 .live-status-item {
@@ -57,7 +61,7 @@
 }
 
 .live-status-item strong {
-  color: #38bdf8;
+  color: #fbbf24;
 }
 
 .status-dot {
@@ -82,12 +86,12 @@
   z-index: 10;
   width: 100%;
   max-width: 520px;
-  background: rgba(15, 23, 42, 0.82);
-  backdrop-filter: blur(20px);
-  border: 1px solid rgba(255, 255, 255, 0.15);
+  background: linear-gradient(145deg, rgba(30, 41, 59, 0.9) 0%, rgba(42, 11, 16, 0.86) 55%, rgba(15, 23, 42, 0.94) 100%);
+  backdrop-filter: blur(22px);
+  border: 1.5px solid rgba(212, 175, 55, 0.45);
   border-radius: 24px;
   padding: 2.25rem;
-  box-shadow: 0 25px 60px -15px rgba(0, 0, 0, 0.7);
+  box-shadow: 0 25px 60px -15px rgba(0, 0, 0, 0.75), 0 0 28px rgba(212, 175, 55, 0.2);
 }
 
 .brand-header {

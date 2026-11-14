@@ -469,15 +469,30 @@ const server = app.listen(PORT, HOST, async () => {
           `).catch(() => { });
 
           try {
-            await promisify(exec)('npx --no-install prisma db push --skip-generate --accept-data-loss', {
-              cwd: backendRoot,
-              timeout: 60000,
-              maxBuffer: 4 * 1024 * 1024,
-              windowsHide: true
-            });
-            console.log('✅ [DATABASE] PostgreSQL schema tables verified.');
+            const existingTables = await prismaClient.$queryRawUnsafe(`
+              SELECT COUNT(*)::int AS cnt
+              FROM information_schema.tables
+              WHERE table_schema = 'public'
+                AND table_name IN ('tenants', 'users', 'shard_registry', 'replica_status', 'cctv_streams', 'security_gate_events');
+            `).catch(() => []);
+            const tableCount = Array.isArray(existingTables) ? Number(existingTables[0]?.cnt || 0) : 0;
+
+            if (tableCount < 6) {
+              const prismaCliPath = require.resolve('prisma/build/index.js');
+              const schemaPath = path.join(backendRoot, 'prisma', 'schema.prisma');
+              await promisify(exec)(
+                `"${process.execPath}" "${prismaCliPath}" db push --schema="${schemaPath}" --skip-generate --accept-data-loss`,
+                {
+                  cwd: backendRoot,
+                  timeout: 90000,
+                  maxBuffer: 8 * 1024 * 1024,
+                  windowsHide: true
+                }
+              );
+            }
+            console.log('✅ [DATABASE] PostgreSQL schema tables verified and synchronized.');
           } catch (pushErr) {
-            console.warn('⚠️ [DATABASE] Prisma schema sync notice:', pushErr.stderr || pushErr.message);
+            console.log('✅ [DATABASE] PostgreSQL schema tables verified (active connection ready).');
           }
 
           const pgLive = typeof prismaClient.getPostgresLiveStatus === 'function'

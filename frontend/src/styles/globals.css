@@ -1,294 +1,436 @@
-@import url('https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,600;0,700;0,800;0,900;1,600;1,700&display=swap');
+/* ============================================================================
+   GBS SYSTEM — GLOBAL STYLES & GOLDEN BLEND + WINE + BROWN + GREY THEME
+   Applies the Golden Blended Colour (#d4af37 / #fbbf24 / #b45309) with
+   Wine (#4a151b / #6e2029), Warm Brown (#3e1f14 / #5c2d16), and Grey (#27272a / #334155)
+   across ALL pages, logins, role dashboards, developer control center, and sub-modules.
+   ============================================================================ */
 
-* {
-    margin: 0;
-    padding: 0;
-    box-sizing: border-box;
+*, *::before, *::after {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
 }
 
-html,
-body,
-#root {
-    width: 100%;
-    height: 100%;
+html {
+  font-size: 16px;
+  scroll-behavior: smooth;
+  -webkit-text-size-adjust: 100%;
+  background-color: #2a0b10;
 }
 
 body {
-    font-family:
-        'Times New Roman',
-        Times,
-        'Liberation Serif',
-        Georgia,
-        serif;
-
-    background:
-        var(--color-background);
-
-    color:
-        var(--color-text);
-
-    line-height: 1.5;
+  font-family: 'Plus Jakarta Sans', 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+  background: var(--gbs-bg-master);
+  background-attachment: fixed;
+  color: var(--color-text);
+  line-height: 1.6;
+  overflow-x: hidden;
+  min-height: 100vh;
+  width: 100%;
+  position: relative;
 }
 
-/* Regal, Elegant Serif Headings Across All Dashboards */
-h1, h2, h3, h4, h5, h6,
-.role-header-title,
-.dev-header-title,
-.workspace-title-row h2,
-.gbs-card-section-title,
-.dash-header-title,
-.brand-header h2,
-.panel-title,
-.cert-header h1 {
-    font-family: 'Playfair Display', 'Times New Roman', Georgia, serif !important;
-    letter-spacing: 0.5px !important;
-    font-weight: 700 !important;
+img, picture, video, canvas, svg {
+  display: block;
+  max-width: 100%;
+  height: auto;
 }
 
-a {
-
-    color: inherit;
-
-    text-decoration: none;
+input, button, textarea, select {
+  font: inherit;
+  max-width: 100%;
 }
 
-img {
-
-    max-width: 100%;
-
-    display: block;
+p, h1, h2, h3, h4, h5, h6 {
+  overflow-wrap: break-word;
 }
 
-button,
-input,
-select,
-textarea,
-table,
-th,
-td {
-    font-family: 'Times New Roman', Times, 'Liberation Serif', Georgia, serif;
+#root,
+.gbs-app-container {
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+  width: 100%;
+  overflow-x: hidden;
+  background: var(--gbs-bg-master);
+  background-attachment: fixed;
 }
 
-/* ==========================================================================
-   UNIVERSAL HIGH-VISIBILITY FORM FIELD STYLING (PLAIN & CRISP FOR ALL USERS)
-   Fixes dark/hidden text: White crisp background with dark text and solid border
-   ========================================================================== */
-input:not([type="checkbox"]):not([type="radio"]):not([type="range"]):not([type="submit"]):not([type="button"]):not([type="reset"]):not([type="file"]),
+/* ============================================================================
+   UNIFIED GOLDEN BLEND + WINE + BROWN + GREY BACKGROUNDS ACROSS ALL PORTALS
+   ============================================================================ */
+.teacher-portal-wrapper,
+.admin-portal-wrapper,
+.student-portal-wrapper,
+.parent-portal-wrapper,
+.accountant-portal-wrapper,
+.staff-portal-wrapper,
+.hr-portal-wrapper,
+.dev-platform-wrapper,
+.dev-dashboard-layout,
+.dev-login-wrapper,
+.role-dashboard-wrapper,
+.dashboard-container,
+.main-login-wrapper,
+.login-container,
+.role-login-wrapper,
+.role-login-container,
+.signup-wrapper,
+.signup-portal-container,
+.onboarding-first-page-wrapper,
+.gbs-onboarding-first-page {
+  background:
+    radial-gradient(circle at 15% 15%, rgba(110, 32, 41, 0.88) 0%, transparent 48%),
+    radial-gradient(circle at 85% 18%, rgba(212, 175, 55, 0.34) 0%, transparent 46%),
+    radial-gradient(circle at 50% 85%, rgba(92, 45, 22, 0.78) 0%, transparent 55%),
+    linear-gradient(135deg, #2a0b10 0%, #3e1f14 38%, #27272a 72%, #4a151b 100%) !important;
+  background-attachment: fixed !important;
+  color: #f8fafc;
+}
+
+/* Unified Overlays (Golden Blend + Wine + Brown + Grey) */
+.role-dashboard-overlay,
+.dashboard-bg-overlay,
+.login-overlay,
+.role-login-overlay,
+.signup-backdrop-overlay {
+  background:
+    radial-gradient(circle at 18% 18%, rgba(212, 175, 55, 0.24) 0%, transparent 46%),
+    radial-gradient(circle at 82% 22%, rgba(110, 32, 41, 0.75) 0%, transparent 50%),
+    linear-gradient(135deg, rgba(74, 21, 27, 0.86) 0%, rgba(62, 31, 20, 0.84) 48%, rgba(39, 39, 42, 0.9) 100%) !important;
+}
+
+/* Unified Royal Top Headers & Bars */
+.teacher-top-header,
+.admin-top-header,
+.dev-top-header,
+.dev-header,
+.role-top-header,
+.role-header,
+.dashboard-header,
+.signup-topbar,
+.gbs-top-header,
+.onboarding-top-bar {
+  background: linear-gradient(90deg, rgba(74, 21, 27, 0.96) 0%, rgba(62, 31, 20, 0.95) 50%, rgba(39, 39, 42, 0.96) 100%) !important;
+  border-bottom: 2px solid var(--gbs-gold, #d4af37) !important;
+  box-shadow: 0 6px 25px rgba(0, 0, 0, 0.6), 0 0 20px rgba(212, 175, 55, 0.22) !important;
+  backdrop-filter: blur(16px);
+}
+
+/* Unified Royal Hero Banners across All Dashboards */
+.teacher-hero-banner,
+.admin-hero-banner,
+.student-hero-banner,
+.parent-hero-banner,
+.accountant-hero-banner,
+.staff-hero-banner,
+.role-hero-banner,
+.dev-hero-banner,
+.dev-hero-showcase-banner,
+.onboarding-hero-header {
+  background: linear-gradient(135deg, rgba(110, 32, 41, 0.94) 0%, rgba(92, 45, 22, 0.9) 50%, rgba(51, 65, 85, 0.94) 100%) !important;
+  border: 1.5px solid rgba(212, 175, 55, 0.55) !important;
+  box-shadow: 0 20px 50px rgba(0, 0, 0, 0.6), inset 0 1px 0 rgba(255, 255, 255, 0.16), 0 0 28px rgba(212, 175, 55, 0.22) !important;
+}
+
+/* Unified Glass Panels, Cards & Containers (Golden Blend + Wine + Brown + Grey) */
+.glass-panel,
+.card-glass,
+.dev-panel-card,
+.role-workspace-card,
+.role-kpi-box,
+.console-stat-card,
+.dev-inscription-box,
+.countdown-table-container,
+.kpi-card,
+.stat-card,
+.onboarding-card,
+.role-card,
+.login-glass-card,
+.role-login-card,
+.admin-locator-box {
+  background: linear-gradient(145deg, rgba(74, 21, 27, 0.9) 0%, rgba(62, 31, 20, 0.86) 48%, rgba(39, 39, 42, 0.92) 100%) !important;
+  border: 1.5px solid rgba(212, 175, 55, 0.42) !important;
+  box-shadow: 0 14px 34px rgba(0, 0, 0, 0.52), inset 0 1px 0 rgba(255, 255, 255, 0.12) !important;
+  backdrop-filter: blur(16px);
+}
+
+/* Transform inline dark-navy boxes across all dashboards into Golden Blend + Wine + Brown + Grey */
+.gbs-first-page-royal-theme div[style*="rgba(15, 23, 42"],
+.gbs-first-page-royal-theme section[style*="rgba(15, 23, 42"],
+.gbs-first-page-royal-theme div[style*="#0f172a"],
+.gbs-first-page-royal-theme section[style*="#0f172a"],
+.gbs-first-page-royal-theme div[style*="#030712"],
+.gbs-first-page-royal-theme div[style*="#090d16"],
+.gbs-first-page-royal-theme div[style*="rgba(2, 6, 23"] {
+  background: linear-gradient(145deg, rgba(74, 21, 27, 0.88) 0%, rgba(62, 31, 20, 0.84) 48%, rgba(39, 39, 42, 0.9) 100%) !important;
+  border-color: rgba(212, 175, 55, 0.4) !important;
+}
+
+.glass-panel:hover,
+.dev-panel-card:hover,
+.role-kpi-box:hover,
+.console-stat-card:hover,
+.dev-inscription-box:hover,
+.kpi-card:hover,
+.stat-card:hover {
+  border-color: rgba(251, 191, 36, 0.78) !important;
+  box-shadow: 0 18px 40px rgba(0, 0, 0, 0.65), 0 0 24px rgba(212, 175, 55, 0.28) !important;
+}
+
+/* Unified Navigation Tabs (Golden Blend + Wine + Brown + Grey) */
+.teacher-tabs-nav .tab-btn,
+.role-tab-nav .role-tab-btn,
+.dev-tabs-nav .dev-tab-btn,
+.dev-nav button,
+.portal-tabs .tab-btn {
+  background: linear-gradient(135deg, rgba(74, 21, 27, 0.88), rgba(62, 31, 20, 0.84), rgba(39, 39, 42, 0.9));
+  border: 1px solid rgba(212, 175, 55, 0.36);
+  color: #f1f5f9;
+  transition: all 0.22s ease;
+}
+
+.teacher-tabs-nav .tab-btn:hover,
+.role-tab-nav .role-tab-btn:hover,
+.dev-tabs-nav .dev-tab-btn:hover,
+.dev-nav button:hover,
+.portal-tabs .tab-btn:hover {
+  border-color: #fbbf24 !important;
+  color: #fbbf24 !important;
+  transform: translateY(-2px);
+  box-shadow: 0 8px 20px rgba(212, 175, 55, 0.28);
+}
+
+.teacher-tabs-nav .tab-btn.active,
+.role-tab-nav .role-tab-btn.active,
+.dev-tabs-nav .dev-tab-btn.active,
+.portal-tabs .tab-btn.active {
+  background: linear-gradient(135deg, #d4af37 0%, #b45309 48%, #6e2029 100%) !important;
+  color: #ffffff !important;
+  border-color: #fbbf24 !important;
+  box-shadow: 0 8px 24px rgba(212, 175, 55, 0.45), 0 0 16px rgba(212, 175, 55, 0.34) !important;
+  font-weight: 800;
+}
+
+/* Floating/Sticky Action & Feedback Banners so Users Always See Command Feedback */
+.feedback-banner,
+.action-notification,
+.toast-notification-banner {
+  position: sticky !important;
+  top: 72px !important;
+  z-index: 9990 !important;
+  background: linear-gradient(135deg, rgba(110, 32, 41, 0.96) 0%, rgba(92, 45, 22, 0.95) 52%, rgba(39, 39, 42, 0.98) 100%) !important;
+  border: 2px solid #d4af37 !important;
+  color: #ffffff !important;
+  border-radius: 14px !important;
+  padding: 14px 20px !important;
+  box-shadow: 0 18px 40px rgba(0, 0, 0, 0.78), 0 0 26px rgba(212, 175, 55, 0.36) !important;
+  font-weight: 700 !important;
+  backdrop-filter: blur(16px);
+}
+
+/* Unified Tables with Golden-Wine-Brown Headers */
+table thead th,
+.data-table th,
+.dev-table th,
+.roster-table th {
+  background: linear-gradient(90deg, rgba(110, 32, 41, 0.95), rgba(92, 45, 22, 0.92), rgba(39, 39, 42, 0.95)) !important;
+  color: #fbbf24 !important;
+  border-bottom: 1.5px solid rgba(212, 175, 55, 0.55) !important;
+  text-transform: uppercase;
+  letter-spacing: 0.6px;
+}
+
+/* Unified Inputs & Selects */
+input:not([type="checkbox"]):not([type="radio"]):not([type="range"]):not([type="color"]),
 select,
 textarea {
-    background-color: #ffffff !important;
-    color: #0f172a !important;
-    border: 1.5px solid #94a3b8 !important;
-    border-radius: 8px !important;
-    padding: 10px 14px !important;
-    font-size: 0.95rem !important;
-    font-weight: 500 !important;
-    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.08) inset !important;
-    transition: border-color 0.2s, box-shadow 0.2s, background-color 0.2s !important;
-    -webkit-text-fill-color: #0f172a !important;
-    opacity: 1 !important;
-    outline: none !important;
-    box-sizing: border-box !important;
+  border-color: rgba(212, 175, 55, 0.38);
 }
 
-input:not([type="checkbox"]):not([type="radio"]):not([type="range"]):not([type="submit"]):not([type="button"]):not([type="reset"]):not([type="file"]):focus,
+input:not([type="checkbox"]):not([type="radio"]):focus,
 select:focus,
 textarea:focus {
-    background-color: #ffffff !important;
-    color: #000000 !important;
-    border-color: #2563eb !important;
-    box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.25), 0 1px 3px rgba(0, 0, 0, 0.1) inset !important;
+  outline: none;
+  border-color: #fbbf24 !important;
+  box-shadow: 0 0 0 3px rgba(212, 175, 55, 0.25), 0 0 14px rgba(110, 32, 41, 0.35) !important;
 }
 
-input::placeholder,
-textarea::placeholder {
-    color: #64748b !important;
-    opacity: 0.85 !important;
-    -webkit-text-fill-color: #64748b !important;
+/* Responsive Utilities */
+.container {
+  width: 100%;
+  max-width: 1440px;
+  margin-left: auto;
+  margin-right: auto;
+  padding-left: 1rem;
+  padding-right: 1rem;
 }
 
-select option {
-    background-color: #ffffff !important;
-    color: #0f172a !important;
-    padding: 8px 12px !important;
+@media (min-width: 640px) {
+  .container {
+    padding-left: 1.5rem;
+    padding-right: 1.5rem;
+  }
 }
 
-/* ==========================================================================
-   EQUAL SIZED METRIC / STAT / ACTION BOXES ACROSS ALL DASHBOARDS
-   Ensures consistent, symmetrical dimensions for all dashboard tiles and cards
-   ========================================================================== */
-.kpi-card,
-.console-stat-card,
-.stat-card,
-.metric-card,
-.stat-box,
-.dashboard-card-item {
-    min-height: 110px !important;
-    height: 100% !important;
-    display: flex !important;
-    flex-direction: column !important;
-    justify-content: center !important;
-    align-items: flex-start !important;
-    box-sizing: border-box !important;
+@media (min-width: 1024px) {
+  .container {
+    padding-left: 2rem;
+    padding-right: 2rem;
+  }
 }
 
-.stats-kpi-grid,
-.stat-grid,
-.metrics-grid {
-    display: grid !important;
-    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)) !important;
-    align-items: stretch !important;
-    gap: 1rem !important;
+.grid-responsive {
+  display: grid;
+  grid-template-columns: repeat(1, minmax(0, 1fr));
+  gap: 1rem;
 }
 
-/* Developer & Admin Tenant Console Grid: Exactly 4 Equal Sized Columns (4 in row 1, 4 in row 2) */
-.tenant-console-grid {
-    display: grid !important;
-    grid-template-columns: repeat(4, 1fr) !important;
-    align-items: stretch !important;
-    gap: 14px !important;
-    width: 100% !important;
-    margin-bottom: 2rem !important;
+@media (min-width: 640px) {
+  .grid-responsive {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 1.25rem;
+  }
 }
 
-@media (max-width: 1100px) {
-    .tenant-console-grid {
-        grid-template-columns: repeat(2, 1fr) !important;
-    }
+@media (min-width: 1024px) {
+  .grid-responsive {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 1.5rem;
+  }
 }
 
-@media (max-width: 580px) {
-    .tenant-console-grid {
-        grid-template-columns: 1fr !important;
-    }
+@media (min-width: 1280px) {
+  .grid-responsive {
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+  }
 }
 
-ul,
-ol {
-
-    list-style: none;
+.table-responsive {
+  width: 100%;
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+  margin-bottom: 1rem;
+  border-radius: var(--radius-md);
 }
 
-/* Button Action Signs & Interactive Feedback */
-button,
-.role-action-btn,
-.role-tab-btn,
-.dev-tab-btn,
-.btn-primary,
-.btn-secondary,
-.filter-btn {
-    transition: transform 0.12s cubic-bezier(0.4, 0, 0.2, 1), box-shadow 0.15s ease, filter 0.15s ease, opacity 0.15s ease;
-    cursor: pointer;
-    position: relative;
-    user-select: none;
+.flex-responsive {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
 }
 
-button:hover,
-.role-action-btn:hover,
-.role-tab-btn:hover,
+@media (min-width: 768px) {
+  .flex-responsive {
+    flex-direction: row;
+    align-items: center;
+  }
+}
+
+.card-responsive {
+  background: var(--gbs-card-gradient);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-md);
+  padding: 1rem;
+  border: 1px solid var(--color-border);
+  width: 100%;
+}
+
+@media (min-width: 768px) {
+  .card-responsive {
+    padding: 1.5rem;
+  }
+}
+
+.text-h1 {
+  font-size: clamp(1.5rem, 3vw + 1rem, 2.5rem);
+  font-weight: 800;
+  line-height: 1.2;
+}
+
+.text-h2 {
+  font-size: clamp(1.25rem, 2vw + 0.75rem, 2rem);
+  font-weight: 700;
+  line-height: 1.25;
+}
+
+.text-h3 {
+  font-size: clamp(1.1rem, 1.5vw + 0.5rem, 1.5rem);
+  font-weight: 600;
+  line-height: 1.3;
+}
+
+.text-body {
+  font-size: clamp(0.875rem, 0.5vw + 0.75rem, 1rem);
+}
+
+.btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0.625rem 1.25rem;
+  font-weight: 700;
+  border-radius: var(--radius-md);
+  border: 1px solid rgba(212, 175, 55, 0.45);
+  cursor: pointer;
+  transition: all 0.2s ease-in-out;
+  text-decoration: none;
+  gap: 0.5rem;
+  min-height: 44px;
+}
+
+.btn-primary {
+  background: var(--gbs-btn-gold-wine);
+  color: #ffffff;
+}
+
 .btn-primary:hover {
-    filter: brightness(1.08);
+  background: linear-gradient(135deg, #fbbf24 0%, #d4af37 50%, #7f1d1d 100%);
+  box-shadow: 0 8px 20px rgba(212, 175, 55, 0.35);
 }
 
-button:active,
-.role-action-btn:active,
-.role-tab-btn:active,
-.dev-tab-btn:active,
-.btn-primary:active,
-.btn-secondary:active,
-.filter-btn:active {
-    transform: scale(0.96) translateY(1px) !important;
-    filter: brightness(0.92) contrast(1.1) !important;
-    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.4) !important;
+.sidebar-layout {
+  display: flex;
+  flex-direction: column;
+  min-height: 100vh;
+  width: 100%;
 }
 
-button:focus-visible,
-.role-action-btn:focus-visible {
-    outline: 2px solid #38bdf8;
-    outline-offset: 2px;
+@media (min-width: 1024px) {
+  .sidebar-layout {
+    flex-direction: row;
+  }
 }
 
-/* Global High-Assurance Delivery Notification Toasts */
-.gbs-toast-container {
-    position: fixed;
-    top: 20px;
-    right: 20px;
-    z-index: 999999;
-    max-width: 440px;
-    pointer-events: none;
-    display: flex;
-    flex-direction: column;
-    gap: 12px;
+.sidebar-content {
+  flex: 1;
+  width: 100%;
+  min-width: 0;
+  padding: 1rem;
 }
 
-.gbs-toast-card {
-    pointer-events: auto;
-    background: #0f172a;
-    border-radius: 12px;
-    padding: 14px 18px;
-    box-shadow: 0 12px 30px rgba(0, 0, 0, 0.5), 0 0 0 1px rgba(255, 255, 255, 0.1);
-    display: flex;
-    align-items: flex-start;
-    gap: 12px;
-    animation: slideInDown 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+@media (min-width: 768px) {
+  .sidebar-content {
+    padding: 1.5rem 2rem;
+  }
 }
 
-.gbs-toast-card.success {
-    border-left: 4px solid #10b981;
+.hide-on-mobile {
+  display: none !important;
 }
 
-.gbs-toast-card.error {
-    border-left: 4px solid #ef4444;
+@media (min-width: 768px) {
+  .hide-on-mobile {
+    display: initial !important;
+  }
 }
 
-.gbs-toast-card.warning {
-    border-left: 4px solid #f59e0b;
+.show-only-mobile {
+  display: initial !important;
 }
 
-.gbs-toast-card.info {
-    border-left: 4px solid #38bdf8;
+@media (min-width: 768px) {
+  .show-only-mobile {
+    display: none !important;
+  }
 }
-
-/* ==========================================================================
-   UNIVERSAL SIGN OUT / LOGOUT BUTTON DISPLAY SPECIFICATION
-   Ensures Sign Out displays cleanly, prominently, and distinctly across all dashboards
-   ========================================================================== */
-.role-action-btn.logout,
-.quick-btn.logout,
-.dev-logout-btn {
-    display: inline-flex !important;
-    align-items: center !important;
-    justify-content: center !important;
-    gap: 8px !important;
-    background: linear-gradient(135deg, #ef4444 0%, #b91c1c 100%) !important;
-    color: #ffffff !important;
-    border: 1.5px solid rgba(254, 202, 202, 0.6) !important;
-    border-radius: 9px !important;
-    padding: 8px 18px !important;
-    font-size: 0.88rem !important;
-    font-weight: 800 !important;
-    letter-spacing: 0.3px !important;
-    cursor: pointer !important;
-    box-shadow: 0 4px 14px rgba(239, 68, 68, 0.45) !important;
-    transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1) !important;
-    white-space: nowrap !important;
-    flex-shrink: 0 !important;
-}
-
-.role-action-btn.logout:hover,
-.quick-btn.logout:hover,
-.dev-logout-btn:hover {
-    background: linear-gradient(135deg, #dc2626 0%, #991b1b 100%) !important;
-    transform: translateY(-2px) scale(1.02) !important;
-    box-shadow: 0 6px 18px rgba(239, 68, 68, 0.6) !important;
-    border-color: #ffffff !important;
-}
-
-.role-header-actions,
-.role-header-right,
-.dev-header-actions {
-    display: flex !important;
-    align-items: center !important;
-    gap: 12px !important;
-    flex-wrap: wrap !important;
-}

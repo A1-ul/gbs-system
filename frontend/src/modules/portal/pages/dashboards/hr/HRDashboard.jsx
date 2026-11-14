@@ -50,6 +50,9 @@ export default function HRDashboard() {
   const [notification, setNotification] = useState(null);
   const showToast = (type, title, message) => {
     setNotification({ type, title, message, timestamp: new Date().toLocaleTimeString() });
+    if (message && typeof window !== "undefined" && typeof window.showGBSOpenNotice === "function") {
+      window.showGBSOpenNotice(message, type || "success", title || "HR COMMAND RESPONSE");
+    }
     setTimeout(() => setNotification(null), 5000);
   };
 

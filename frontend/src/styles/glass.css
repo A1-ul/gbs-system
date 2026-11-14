@@ -1,17 +1,11 @@
 .glass {
-
-    backdrop-filter:
-        blur(12px);
-
-    -webkit-backdrop-filter:
-        blur(12px);
-
-    background:
-        rgba(255,255,255,0.15);
-
-    border:
-        1px solid rgba(255,255,255,0.2);
-
-    border-radius:
-        12px;
+  backdrop-filter: blur(14px);
+  -webkit-backdrop-filter: blur(14px);
+  background: linear-gradient(145deg,
+      rgba(74, 21, 27, 0.88) 0%,
+      rgba(62, 31, 20, 0.84) 48%,
+      rgba(39, 39, 42, 0.9) 100%);
+  border: 1.5px solid rgba(212, 175, 55, 0.45);
+  border-radius: 14px;
+  box-shadow: 0 14px 34px rgba(0, 0, 0, 0.5), 0 0 18px rgba(212, 175, 55, 0.16);
 }

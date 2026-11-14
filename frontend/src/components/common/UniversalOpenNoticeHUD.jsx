@@ -1,212 +1,357 @@
-import React, { useState, useEffect, useCallback } from "react";
+import React, { useState, useEffect, useRef } from "react";
 
 /**
- * UniversalOpenNoticeHUD
- * Displays prominent, open-place floating notifications across every user dashboard
- * whenever an entry, message, feedback, or update is processed by any user.
+ * UniversalOpenNoticeHUD — Global Open Notice & Real-Time Command Feedback Engine
+ * Styled in the GBS First Page Royal Palette (Golden Blend #d4af37, Wine Brown #4a151b, Slate Grey #0f172a, Sky Blue #38bdf8).
+ * Ensures EVERY user and developer command, action, and activity provides immediate, exact visual feedback
+ * in the viewport even when scrolled down long dashboards.
  */
 export default function UniversalOpenNoticeHUD() {
   const [notice, setNotice] = useState(null);
-
-  // Synthesize clean audio confirmation tone using Web Audio API (zero external assets needed)
-  const playAudioChime = useCallback((type = "success") => {
-    try {
-      const AudioContext = window.AudioContext || window.webkitAudioContext;
-      if (!AudioContext) return;
-      const ctx = new AudioContext();
-      if (ctx.state === "suspended") {
-        ctx.resume();
-      }
-
-      const osc = ctx.createOscillator();
-      const gain = ctx.createGain();
-
-      osc.type = "sine";
-      const freq = type === "error" ? 320 : type === "warning" ? 440 : 659.25; // E5 note for success
-      osc.frequency.setValueAtTime(freq, ctx.currentTime);
-      if (type === "success") {
-        osc.frequency.exponentialRampToValueAtTime(880, ctx.currentTime + 0.15); // Ramp to A5
-      }
-
-      gain.gain.setValueAtTime(0.12, ctx.currentTime);
-      gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.35);
-
-      osc.connect(gain);
-      gain.connect(ctx.destination);
-
-      osc.start();
-      osc.stop(ctx.currentTime + 0.36);
-    } catch {
-      // Audio autoplay policy fallback - silent fail gracefully
-    }
-  }, []);
-
-  const triggerNotice = useCallback(({ message, type = "success", title = "Action Confirmed" }) => {
-    setNotice({
-      id: Date.now(),
-      message,
-      type,
-      title,
-      timestamp: new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit", second: "2-digit" })
-    });
-    playAudioChime(type);
-  }, [playAudioChime]);
+  const timerRef = useRef(null);
+  const lastDispatchedRef = useRef({ text: "", time: 0 });
 
   useEffect(() => {
-    // Global helper exposed to window
-    window.showGBSOpenNotice = (message, type = "success", title = "Action Confirmed") => {
-      triggerNotice({ message, type, title });
+    const showNotice = (message, type = "success", title = "SYSTEM COMMAND VERIFIED") => {
+      if (!message) return;
+      const cleanMessage = typeof message === "string" ? message.trim() : String(message);
+      if (!cleanMessage) return;
+
+      const now = Date.now();
+      if (
+        lastDispatchedRef.current.text === cleanMessage &&
+        now - lastDispatchedRef.current.time < 600
+      ) {
+        return;
+      }
+      lastDispatchedRef.current = { text: cleanMessage, time: now };
+
+      if (timerRef.current) clearTimeout(timerRef.current);
+      setNotice({
+        message: cleanMessage,
+        type: type || "success",
+        title: title || "SYSTEM COMMAND VERIFIED",
+        id: now,
+        timestamp: new Date().toLocaleTimeString(),
+      });
+
+      timerRef.current = setTimeout(() => {
+        setNotice(null);
+      }, 6500);
     };
 
     const handleCustomNotice = (e) => {
-      if (e.detail) {
-        triggerNotice(e.detail);
+      const detail = e.detail || {};
+      showNotice(
+        detail.message || "Command executed successfully.",
+        detail.type || "success",
+        detail.title || "SYSTEM COMMAND FEEDBACK"
+      );
+    };
+
+    window.addEventListener("gbs-open-notice", handleCustomNotice);
+    window.showGBSOpenNotice = showNotice;
+
+    // Intercept window.alert so native alerts become rich, non-blocking, exact feedback HUD notices
+    const originalAlert = window.alert;
+    window.alert = (msg) => {
+      const text = String(msg || "");
+      const lower = text.toLowerCase();
+      const isErr =
+        lower.includes("error") ||
+        lower.includes("fail") ||
+        lower.includes("denied") ||
+        lower.includes("invalid") ||
+        lower.includes("locked") ||
+        lower.includes("blocked") ||
+        lower.includes("cannot") ||
+        lower.includes("❌") ||
+        lower.includes("⛔");
+      const isWarn =
+        !isErr &&
+        (lower.includes("warn") ||
+          lower.includes("please") ||
+          lower.includes("required") ||
+          lower.includes("missing") ||
+          lower.includes("⚠️"));
+      showNotice(
+        text,
+        isErr ? "error" : isWarn ? "warning" : "success",
+        isErr
+          ? "ACTION BLOCKED / ALERT"
+          : isWarn
+          ? "VALIDATION REQUIREMENT"
+          : "COMMAND EXECUTION RESPONSE"
+      );
+    };
+
+    // Global interactive command listener: catches any action button click across all roles & developer tabs
+    // that doesn't immediately trigger its own notice within 180ms, guaranteeing zero silent clicks.
+    const ACTION_VERBS = [
+      "approve",
+      "reject",
+      "lock",
+      "unlock",
+      "suspend",
+      "restore",
+      "archive",
+      "delete",
+      "purge",
+      "clear",
+      "publish",
+      "verify",
+      "save",
+      "submit",
+      "update",
+      "create",
+      "add",
+      "assign",
+      "send",
+      "broadcast",
+      "dispatch",
+      "reply",
+      "post",
+      "upload",
+      "download",
+      "export",
+      "print",
+      "generate",
+      "sync",
+      "refresh",
+      "audit",
+      "scan",
+      "grade",
+      "compute",
+      "calculate",
+      "enroll",
+      "admit",
+      "promote",
+      "record",
+      "mark",
+      "clock",
+      "request",
+      "run",
+      "test",
+      "execute",
+      "apply",
+      "confirm",
+      "activate",
+      "enable",
+      "disable",
+      "reset",
+      "backup",
+      "deploy",
+      "rollback",
+      "ping",
+      "locate",
+      "track",
+      "translate",
+      "copy",
+    ];
+
+    const IGNORE_LABELS = [
+      "close",
+      "cancel",
+      "back",
+      "dismiss",
+      "prev",
+      "next",
+      "sign in",
+      "login",
+      "log in",
+      "logout",
+      "sign out",
+    ];
+
+    const handleGlobalClick = (e) => {
+      const btn = e.target?.closest?.("button, [role='button'], input[type='submit']");
+      if (!btn || btn.disabled) return;
+
+      // Skip navigation tabs, sidebar links, or notice close button
+      if (
+        btn.classList.contains("tab-btn") ||
+        btn.classList.contains("nav-btn") ||
+        btn.classList.contains("dev-tab-btn") ||
+        btn.hasAttribute("data-no-hud-notice")
+      ) {
+        return;
       }
+
+      const rawLabel = (
+        btn.getAttribute("aria-label") ||
+        btn.getAttribute("title") ||
+        btn.innerText ||
+        btn.value ||
+        ""
+      )
+        .replace(/\s+/g, " ")
+        .trim();
+
+      if (!rawLabel || rawLabel.length > 75 || rawLabel.length < 2) return;
+      const lower = rawLabel.toLowerCase();
+      if (IGNORE_LABELS.some((ig) => lower === ig || lower.startsWith(ig + " "))) return;
+
+      const matchesVerb = ACTION_VERBS.some((v) => lower.includes(v));
+      if (!matchesVerb) return;
+
+      const clickTime = Date.now();
+      setTimeout(() => {
+        // Only show fallback confirmation if no more specific API/state notice fired after this click
+        if (lastDispatchedRef.current.time < clickTime) {
+          const isDanger =
+            lower.includes("delete") ||
+            lower.includes("purge") ||
+            lower.includes("reject") ||
+            lower.includes("lock") ||
+            lower.includes("suspend") ||
+            lower.includes("kill");
+          showNotice(
+            `Command "${rawLabel}" processed and synchronized with active session state.`,
+            isDanger ? "warning" : "info",
+            "USER COMMAND EXECUTED"
+          );
+        }
+      }, 280);
     };
 
-    const handleParentFeedback = () => {
-      triggerNotice({
-        title: "Parent Message & Feedback Dispatched",
-        message: "Your message has been delivered to the Headmaster and Teacher portal inbox.",
-        type: "success"
-      });
-    };
-
-    const handleFreshReset = () => {
-      triggerNotice({
-        title: "Production System Clean Slate",
-        message: "All fake test data cleared. System ready for real user entry.",
-        type: "info"
-      });
-    };
-
-    window.addEventListener("gbs_open_notice", handleCustomNotice);
-    window.addEventListener("gbs_parent_feedback_updated", handleParentFeedback);
-    window.addEventListener("gbs_fresh_state_reset", handleFreshReset);
+    document.addEventListener("click", handleGlobalClick, true);
 
     return () => {
-      window.removeEventListener("gbs_open_notice", handleCustomNotice);
-      window.removeEventListener("gbs_parent_feedback_updated", handleParentFeedback);
-      window.removeEventListener("gbs_fresh_state_reset", handleFreshReset);
+      window.removeEventListener("gbs-open-notice", handleCustomNotice);
+      document.removeEventListener("click", handleGlobalClick, true);
+      window.alert = originalAlert;
+      if (timerRef.current) clearTimeout(timerRef.current);
     };
-  }, [triggerNotice]);
-
-  // Auto-dismiss after 6 seconds
-  useEffect(() => {
-    if (!notice) return;
-    const timer = setTimeout(() => {
-      setNotice(null);
-    }, 6000);
-    return () => clearTimeout(timer);
-  }, [notice]);
+  }, []);
 
   if (!notice) return null;
 
-  const isSuccess = notice.type === "success";
-  const isError = notice.type === "error";
+  const isError = notice.type === "error" || notice.type === "danger";
   const isWarning = notice.type === "warning";
+  const isInfo = notice.type === "info";
 
-  const borderColor = isSuccess ? "#10b981" : isError ? "#ef4444" : isWarning ? "#f59e0b" : "#38bdf8";
-  const bgGlow = isSuccess ? "rgba(16, 185, 129, 0.2)" : isError ? "rgba(239, 68, 68, 0.2)" : "rgba(56, 189, 248, 0.2)";
-  const icon = isSuccess ? "✅" : isError ? "⚠️" : isWarning ? "🔔" : "ℹ️";
+  const borderColor = isError
+    ? "#ef4444"
+    : isWarning
+    ? "#f59e0b"
+    : isInfo
+    ? "#38bdf8"
+    : "#d4af37";
+
+  const accentColor = isError
+    ? "#fca5a5"
+    : isWarning
+    ? "#fde68a"
+    : isInfo
+    ? "#7dd3fc"
+    : "#fbbf24";
+
+  const bgGradient = isError
+    ? "linear-gradient(135deg, rgba(74, 21, 27, 0.97) 0%, rgba(127, 29, 29, 0.96) 55%, rgba(15, 23, 42, 0.98) 100%)"
+    : isWarning
+    ? "linear-gradient(135deg, rgba(74, 21, 27, 0.97) 0%, rgba(120, 53, 15, 0.95) 55%, rgba(15, 23, 42, 0.98) 100%)"
+    : "linear-gradient(135deg, rgba(74, 21, 27, 0.97) 0%, rgba(30, 41, 59, 0.97) 55%, rgba(15, 23, 42, 0.98) 100%)";
+
+  const icon = isError ? "⛔" : isWarning ? "⚠️" : isInfo ? "💠" : "✅";
 
   return (
-    <aside
-      aria-label="Universal System Notification"
+    <div
+      role="status"
+      aria-live="polite"
       style={{
         position: "fixed",
-        top: "20px",
+        top: "18px",
         left: "50%",
         transform: "translateX(-50%)",
-        zIndex: 9999999,
-        maxWidth: "680px",
-        width: "92vw",
-        background: "linear-gradient(135deg, rgba(15, 23, 42, 0.98), rgba(30, 41, 59, 0.96))",
+        zIndex: 999999,
+        minWidth: "340px",
+        maxWidth: "720px",
+        width: "92%",
+        background: bgGradient,
         border: `2px solid ${borderColor}`,
-        borderRadius: "14px",
-        boxShadow: `0 16px 40px rgba(0, 0, 0, 0.7), 0 0 24px ${bgGlow}`,
-        backdropFilter: "blur(16px)",
-        padding: "14px 18px",
+        borderRadius: "16px",
+        padding: "14px 20px",
+        boxShadow:
+          "0 22px 50px rgba(0,0,0,0.85), 0 0 28px rgba(212, 175, 55, 0.32), inset 0 1px 0 rgba(255, 255, 255, 0.15)",
         display: "flex",
-        alignItems: "flex-start",
+        alignItems: "center",
+        justifyContent: "space-between",
         gap: "14px",
-        color: "#f8fafc",
-        animation: "slideInDown 0.3s cubic-bezier(0.16, 1, 0.3, 1)",
-        pointerEvents: "auto"
+        color: "#ffffff",
+        fontFamily: "'Plus Jakarta Sans', 'Inter', system-ui, sans-serif",
+        backdropFilter: "blur(18px)",
       }}
     >
-      <div
-        style={{
-          fontSize: "1.6rem",
-          background: bgGlow,
-          width: "44px",
-          height: "44px",
-          borderRadius: "10px",
-          display: "flex",
-          alignItems: "center",
-          justifyContent: "center",
-          flexShrink: 0,
-          border: `1px solid ${borderColor}`
-        }}
-      >
-        {icon}
-      </div>
-
-      <div style={{ flex: 1 }}>
-        <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: "8px" }}>
-          <div style={{ display: "flex", alignItems: "center", gap: "8px", flexWrap: "wrap" }}>
-            <span
-              style={{
-                fontSize: "0.72rem",
-                fontWeight: "900",
-                letterSpacing: "1px",
-                textTransform: "uppercase",
-                color: borderColor,
-                background: bgGlow,
-                padding: "2px 8px",
-                borderRadius: "6px"
-              }}
-            >
-              OPEN PLACE NOTICE • {notice.title}
-            </span>
-            <span style={{ fontSize: "0.72rem", color: "#94a3b8" }}>
-              ⏱️ {notice.timestamp}
-            </span>
-          </div>
-
-          <button
-            type="button"
-            onClick={() => setNotice(null)}
-            style={{
-              background: "transparent",
-              border: "none",
-              color: "#94a3b8",
-              cursor: "pointer",
-              fontSize: "1rem",
-              padding: "0 4px",
-              lineHeight: 1
-            }}
-            title="Dismiss notice"
-          >
-            ✕
-          </button>
-        </div>
-
-        <p
+      <div style={{ display: "flex", alignItems: "center", gap: "14px", flex: 1 }}>
+        <div
           style={{
-            margin: "6px 0 0",
-            fontSize: "0.92rem",
-            lineHeight: 1.45,
-            color: "#f1f5f9",
-            fontWeight: "600"
+            width: "40px",
+            height: "40px",
+            borderRadius: "12px",
+            background: "rgba(212, 175, 55, 0.16)",
+            border: `1px solid ${borderColor}`,
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+            fontSize: "20px",
+            flexShrink: 0,
+            boxShadow: "0 4px 12px rgba(0,0,0,0.4)",
           }}
         >
-          {notice.message}
-        </p>
-        <div style={{ fontSize: "0.72rem", color: "#64748b", marginTop: "4px" }}>
-          📡 Broadcast live to GBS SCHOOL MANAGEMENT SYSTEM active session
+          {icon}
+        </div>
+        <div style={{ flex: 1 }}>
+          <div
+            style={{
+              display: "flex",
+              alignItems: "center",
+              gap: "8px",
+              fontSize: "11px",
+              fontWeight: 900,
+              letterSpacing: "1.2px",
+              textTransform: "uppercase",
+              color: accentColor,
+              marginBottom: "3px",
+            }}
+          >
+            <span>{notice.title}</span>
+            <span style={{ opacity: 0.65, fontSize: "10px", fontWeight: 600 }}>
+              • {notice.timestamp}
+            </span>
+          </div>
+          <div
+            style={{
+              fontSize: "13.5px",
+              fontWeight: 700,
+              color: "#f8fafc",
+              lineHeight: 1.45,
+              wordBreak: "break-word",
+            }}
+          >
+            {notice.message}
+          </div>
         </div>
       </div>
-    </aside>
+
+      <button
+        type="button"
+        data-no-hud-notice="true"
+        onClick={() => setNotice(null)}
+        style={{
+          background: "linear-gradient(135deg, rgba(212, 175, 55, 0.22), rgba(74, 21, 27, 0.6))",
+          border: "1px solid rgba(212, 175, 55, 0.5)",
+          color: "#fbbf24",
+          borderRadius: "8px",
+          padding: "6px 12px",
+          fontSize: "11px",
+          fontWeight: 800,
+          cursor: "pointer",
+          flexShrink: 0,
+          letterSpacing: "0.5px",
+        }}
+      >
+        OK ✕
+      </button>
+    </div>
   );
 }

@@ -2224,7 +2224,18 @@ export default function DeveloperDashboard() {
 
   const showNotification = (msg) => {
     setActionStatus(msg);
-    setTimeout(() => setActionStatus(null), 5000);
+    if (msg && typeof window !== "undefined" && typeof window.showGBSOpenNotice === "function") {
+      const text = String(msg);
+      const lower = text.toLowerCase();
+      const isErr = lower.includes("❌") || lower.includes("⛔") || lower.includes("error") || lower.includes("fail") || lower.includes("denied");
+      const isWarn = !isErr && (lower.includes("⚠️") || lower.includes("🔒") || lower.includes("🗑️") || lower.includes("please") || lower.includes("locked") || lower.includes("deleted") || lower.includes("rejected"));
+      window.showGBSOpenNotice(
+        text,
+        isErr ? "error" : isWarn ? "warning" : "success",
+        "DEVELOPER COMMAND EXECUTED"
+      );
+    }
+    setTimeout(() => setActionStatus(null), 5500);
   };
 
   // 1. Fetch All Telemetry & Operations Data

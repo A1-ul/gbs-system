@@ -110,10 +110,18 @@ export default function TopCenterSystemBanner({
         headers: { "Content-Type": "application/json" }
       });
       const data = await res.json();
-      setSyncFeedback(data?.message || "✓ Local data safely synced and point-in-time backup created!");
+      const msg = data?.message || "✓ Local data safely synced and point-in-time backup created!";
+      setSyncFeedback(msg);
+      if (window.showGBSOpenNotice) {
+        window.showGBSOpenNotice(msg, "success", "CLOUD & POSTGRESQL SYNC");
+      }
       setTimeout(() => setSyncFeedback(null), 5000);
     } catch {
-      setSyncFeedback("✓ Local data preserved safely in offline storage. Backup created.");
+      const fallbackMsg = "✓ Local data preserved safely in offline storage. Backup created.";
+      setSyncFeedback(fallbackMsg);
+      if (window.showGBSOpenNotice) {
+        window.showGBSOpenNotice(fallbackMsg, "info", "LOCAL BACKUP PRESERVED");
+      }
       setTimeout(() => setSyncFeedback(null), 5000);
     } finally {
       setSyncingCloud(false);
@@ -156,10 +164,10 @@ export default function TopCenterSystemBanner({
         margin: "0 auto 18px auto",
         textAlign: "center",
         padding: "12px 32px",
-        background: "linear-gradient(135deg, rgba(15, 23, 42, 0.98), rgba(30, 41, 59, 0.96))",
-        border: isDevMode ? "2.5px solid rgba(56, 189, 248, 0.6)" : "2.5px solid rgba(16, 185, 129, 0.5)",
+        background: "linear-gradient(135deg, rgba(74, 21, 27, 0.96) 0%, rgba(15, 23, 42, 0.96) 50%, rgba(42, 11, 16, 0.96) 100%)",
+        border: "2.5px solid rgba(212, 175, 55, 0.65)",
         borderRadius: "36px",
-        boxShadow: isDevMode ? "0 12px 36px rgba(0, 0, 0, 0.7), 0 0 25px rgba(56, 189, 248, 0.25)" : "0 12px 36px rgba(0, 0, 0, 0.7), 0 0 25px rgba(16, 185, 129, 0.25)",
+        boxShadow: "0 14px 40px rgba(0, 0, 0, 0.75), 0 0 28px rgba(212, 175, 55, 0.28), inset 0 1px 0 rgba(255, 255, 255, 0.14)",
         width: "fit-content",
         maxWidth: "95vw",
         zIndex: 20
@@ -170,7 +178,7 @@ export default function TopCenterSystemBanner({
           fontSize: "2.1rem",
           fontWeight: "900",
           letterSpacing: "1.2px",
-          color: isDevMode ? "#38bdf8" : "#ffffff",
+          color: isDevMode ? "#fbbf24" : "#ffffff",
           textTransform: "uppercase",
           display: "flex",
           alignItems: "center",
@@ -188,10 +196,10 @@ export default function TopCenterSystemBanner({
             height: "58px",
             borderRadius: "14px",
             objectFit: "contain",
-            border: isDevMode ? "2.5px solid #38bdf8" : "2.5px solid #10b981",
+            border: "2.5px solid #d4af37",
             background: "rgba(15, 23, 42, 0.95)",
             padding: "4px",
-            boxShadow: isDevMode ? "0 4px 18px rgba(56, 189, 248, 0.45)" : "0 4px 18px rgba(16, 185, 129, 0.4)"
+            boxShadow: "0 4px 18px rgba(212, 175, 55, 0.45)"
           }}
         />
         <span style={{ textShadow: "0 3px 20px rgba(0, 0, 0, 0.85)", filter: "drop-shadow(0 2px 8px rgba(0,0,0,0.6))" }}>
@@ -342,117 +350,117 @@ export default function TopCenterSystemBanner({
       )}
 
       {/* DASHBOARD-TO-DASHBOARD WALKTHROUGH (DEVELOPER-ONLY) OR ROLE CONFINEMENT (TENANT USERS) */}
-        {
-          canAccessWalkthrough?(
-        <div style = {{
-              marginTop: "12px",
-              paddingTop: "10px",
-              borderTop: "1px solid rgba(255, 255, 255, 0.12)",
-              width: "100%",
-              display: "flex",
-              flexDirection: "column",
-              alignItems: "center",
-              gap: "6px"
-        }} >
-          <div style={{ display: "flex", alignItems: "center", gap: "8px", fontSize: "0.72rem", color: "#94a3b8", fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.5px" }}>
-            <span>🧭 Chief Developer Mission Walkthrough & Multi-Portal Switcher:</span>
-          </div>
+      {
+        canAccessWalkthrough ? (
           <div style={{
+            marginTop: "12px",
+            paddingTop: "10px",
+            borderTop: "1px solid rgba(255, 255, 255, 0.12)",
+            width: "100%",
             display: "flex",
-            gap: "6px",
-            flexWrap: "wrap",
-            justifyContent: "center",
-            alignItems: "center"
-          }}>
-            {DASHBOARDS_LIST.map((dash) => {
-              const currentPath = typeof window !== "undefined" ? window.location.pathname : "";
-              const isActive = currentPath === dash.path;
-              return (
-                <button
-                  key={dash.path}
-                  type="button"
-                  onClick={() => {
-                    if (dash.path === "/onboarding") {
-                      try {
-                        localStorage.removeItem("gbs_tenant_already_onboarded");
-                        localStorage.removeItem("gbs_walkthrough_completed");
-                      } catch { }
-                    }
-                    window.location.href = dash.path;
-                  }}
-                  style={{
-                    display: "inline-flex",
-                    alignItems: "center",
-                    gap: "5px",
-                    padding: "5px 11px",
-                    borderRadius: "18px",
-                    fontSize: "0.74rem",
-                    fontWeight: 800,
-                    cursor: "pointer",
-                    transition: "all 0.18s ease",
-                    border: isActive
-                      ? "1.5px solid #38bdf8"
-                      : dash.highlight
-                        ? "1.5px solid #10b981"
-                        : "1px solid rgba(255, 255, 255, 0.16)",
-                    background: isActive
-                      ? "linear-gradient(135deg, rgba(2, 132, 199, 0.45), rgba(56, 189, 248, 0.25))"
-                      : dash.highlight
-                        ? "linear-gradient(135deg, rgba(16, 185, 129, 0.28), rgba(5, 150, 105, 0.18))"
-                        : "rgba(15, 23, 42, 0.7)",
-                    color: isActive ? "#ffffff" : dash.highlight ? "#34d399" : "#cbd5e1",
-                    boxShadow: isActive ? "0 0 10px rgba(56, 189, 248, 0.4)" : "none"
-                  }}
-                  title={dash.tooltip}
-                >
-                  <span>{dash.icon}</span>
-                  <span>{dash.title}</span>
-                  {isActive && (
-                    <span style={{ width: "6px", height: "6px", borderRadius: "50%", background: "#38bdf8", boxShadow: "0 0 6px #38bdf8" }} />
-                  )}
-                </button>
-              );
-            })}
+            flexDirection: "column",
+            alignItems: "center",
+            gap: "6px"
+          }} >
+            <div style={{ display: "flex", alignItems: "center", gap: "8px", fontSize: "0.72rem", color: "#94a3b8", fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.5px" }}>
+              <span>🧭 Chief Developer Mission Walkthrough & Multi-Portal Switcher:</span>
+            </div>
+            <div style={{
+              display: "flex",
+              gap: "6px",
+              flexWrap: "wrap",
+              justifyContent: "center",
+              alignItems: "center"
+            }}>
+              {DASHBOARDS_LIST.map((dash) => {
+                const currentPath = typeof window !== "undefined" ? window.location.pathname : "";
+                const isActive = currentPath === dash.path;
+                return (
+                  <button
+                    key={dash.path}
+                    type="button"
+                    onClick={() => {
+                      if (dash.path === "/onboarding") {
+                        try {
+                          localStorage.removeItem("gbs_tenant_already_onboarded");
+                          localStorage.removeItem("gbs_walkthrough_completed");
+                        } catch { }
+                      }
+                      window.location.href = dash.path;
+                    }}
+                    style={{
+                      display: "inline-flex",
+                      alignItems: "center",
+                      gap: "5px",
+                      padding: "5px 11px",
+                      borderRadius: "18px",
+                      fontSize: "0.74rem",
+                      fontWeight: 800,
+                      cursor: "pointer",
+                      transition: "all 0.18s ease",
+                      border: isActive
+                        ? "1.5px solid #38bdf8"
+                        : dash.highlight
+                          ? "1.5px solid #10b981"
+                          : "1px solid rgba(255, 255, 255, 0.16)",
+                      background: isActive
+                        ? "linear-gradient(135deg, rgba(2, 132, 199, 0.45), rgba(56, 189, 248, 0.25))"
+                        : dash.highlight
+                          ? "linear-gradient(135deg, rgba(16, 185, 129, 0.28), rgba(5, 150, 105, 0.18))"
+                          : "rgba(15, 23, 42, 0.7)",
+                      color: isActive ? "#ffffff" : dash.highlight ? "#34d399" : "#cbd5e1",
+                      boxShadow: isActive ? "0 0 10px rgba(56, 189, 248, 0.4)" : "none"
+                    }}
+                    title={dash.tooltip}
+                  >
+                    <span>{dash.icon}</span>
+                    <span>{dash.title}</span>
+                    {isActive && (
+                      <span style={{ width: "6px", height: "6px", borderRadius: "50%", background: "#38bdf8", boxShadow: "0 0 6px #38bdf8" }} />
+                    )}
+                  </button>
+                );
+              })}
+            </div>
           </div>
-        </div>
-  ) : (
-    <div style={{
-      marginTop: "10px",
-      paddingTop: "8px",
-      borderTop: "1px solid rgba(255, 255, 255, 0.1)",
-      width: "100%",
-      display: "flex",
-      alignItems: "center",
-      justifyContent: "center",
-      gap: "10px",
-      flexWrap: "wrap",
-      fontSize: "0.78rem"
-    }}>
-      <span style={{
-        display: "inline-flex",
-        alignItems: "center",
-        gap: "6px",
-        padding: "4px 14px",
-        borderRadius: "20px",
-        background: "rgba(15, 23, 42, 0.75)",
-        border: "1px solid rgba(16, 185, 129, 0.4)",
-        color: "#34d399",
-        fontWeight: 800
-      }}>
-        🔒 Authorized Portal: {roleTitle}
-      </span>
-      <span style={{ color: "#94a3b8", fontSize: "0.74rem" }}>
-        Role-confined secure session. Direct cross-dashboard switching is locked to prevent unauthorized tampering.
-      </span>
-    </div>
-  )
-}
+        ) : (
+          <div style={{
+            marginTop: "10px",
+            paddingTop: "8px",
+            borderTop: "1px solid rgba(255, 255, 255, 0.1)",
+            width: "100%",
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+            gap: "10px",
+            flexWrap: "wrap",
+            fontSize: "0.78rem"
+          }}>
+            <span style={{
+              display: "inline-flex",
+              alignItems: "center",
+              gap: "6px",
+              padding: "4px 14px",
+              borderRadius: "20px",
+              background: "rgba(15, 23, 42, 0.75)",
+              border: "1px solid rgba(16, 185, 129, 0.4)",
+              color: "#34d399",
+              fontWeight: 800
+            }}>
+              🔒 Authorized Portal: {roleTitle}
+            </span>
+            <span style={{ color: "#94a3b8", fontSize: "0.74rem" }}>
+              Role-confined secure session. Direct cross-dashboard switching is locked to prevent unauthorized tampering.
+            </span>
+          </div>
+        )
+      }
 
-{/* Universal Multi-Language Translator & Message Explainer Modal */ }
-<UniversalLanguageTranslatorModal
-  isOpen={showTranslatorModal}
-  onClose={() => setShowTranslatorModal(false)}
-/>
+      {/* Universal Multi-Language Translator & Message Explainer Modal */}
+      <UniversalLanguageTranslatorModal
+        isOpen={showTranslatorModal}
+        onClose={() => setShowTranslatorModal(false)}
+      />
     </div >
   );
 }

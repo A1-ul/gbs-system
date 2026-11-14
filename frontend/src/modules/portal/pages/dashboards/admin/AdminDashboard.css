@@ -6,17 +6,18 @@
 @import "../teacher/TeacherDashboard.css";
 
 .admin-locator-box {
-  background: rgba(2, 6, 23, 0.7);
-  border: 1px solid rgba(59, 130, 246, 0.3);
-  border-radius: 12px;
+  background: linear-gradient(145deg, rgba(30, 41, 59, 0.92) 0%, rgba(42, 11, 16, 0.86) 55%, rgba(15, 23, 42, 0.95) 100%);
+  border: 1.5px solid rgba(212, 175, 55, 0.45);
+  border-radius: 14px;
   padding: 1.5rem;
   margin-bottom: 1.5rem;
+  box-shadow: 0 12px 32px rgba(0, 0, 0, 0.48), 0 0 20px rgba(212, 175, 55, 0.15);
 }
 
 .admin-stat-highlight {
   font-size: 1.6rem;
   font-weight: 900;
-  color: #38bdf8;
+  color: #fbbf24;
 }
 
 /* Batch Operations Bar */
@@ -26,12 +27,12 @@
   justify-content: space-between;
   flex-wrap: wrap;
   gap: 12px;
-  background: linear-gradient(135deg, rgba(30, 41, 59, 0.9), rgba(15, 23, 42, 0.95));
-  border: 1px solid rgba(56, 189, 248, 0.4);
-  border-radius: 10px;
+  background: linear-gradient(135deg, rgba(74, 21, 27, 0.94), rgba(30, 41, 59, 0.94), rgba(15, 23, 42, 0.96));
+  border: 1.5px solid rgba(212, 175, 55, 0.5);
+  border-radius: 12px;
   padding: 10px 16px;
   margin-bottom: 1rem;
-  box-shadow: 0 4px 15px rgba(0, 0, 0, 0.3);
+  box-shadow: 0 8px 22px rgba(0, 0, 0, 0.45), 0 0 16px rgba(212, 175, 55, 0.2);
 }
 
 .batch-info {
@@ -40,7 +41,7 @@
   gap: 10px;
   font-size: 0.88rem;
   font-weight: 700;
-  color: #38bdf8;
+  color: #fbbf24;
 }
 
 .batch-btn-group {

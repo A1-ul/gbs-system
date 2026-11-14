@@ -7,7 +7,11 @@
   align-items: center;
   justify-content: center;
   padding: 24px;
-  background-color: #030712;
+  background:
+    radial-gradient(circle at 15% 15%, rgba(110, 32, 41, 0.88) 0%, transparent 48%),
+    radial-gradient(circle at 85% 20%, rgba(212, 175, 55, 0.35) 0%, transparent 48%),
+    radial-gradient(circle at 50% 85%, rgba(92, 45, 22, 0.75) 0%, transparent 55%),
+    linear-gradient(135deg, #2a0b10 0%, #3e1f14 38%, #1e293b 72%, #4a151b 100%);
   font-family: 'Plus Jakarta Sans', system-ui, -apple-system, sans-serif;
   overflow-x: hidden;
   overflow-y: auto;
@@ -22,7 +26,7 @@
   bottom: 0;
   background-size: cover;
   background-position: center;
-  filter: brightness(0.7) contrast(1.08) saturate(1.15);
+  filter: brightness(0.62) contrast(1.08) saturate(1.15) sepia(0.18);
   transform: scale(1.02);
   z-index: 1;
   transition: transform 10s ease;
@@ -34,8 +38,10 @@
   left: 0;
   right: 0;
   bottom: 0;
-  background: radial-gradient(circle at center, rgba(15, 23, 42, 0.42) 0%, rgba(3, 7, 18, 0.76) 100%);
-  backdrop-filter: blur(2px);
+  background:
+    radial-gradient(circle at 20% 20%, rgba(212, 175, 55, 0.25) 0%, transparent 45%),
+    linear-gradient(135deg, rgba(74, 21, 27, 0.84) 0%, rgba(62, 31, 20, 0.82) 48%, rgba(30, 41, 59, 0.88) 100%);
+  backdrop-filter: blur(3px);
   z-index: 2;
 }
 
@@ -44,11 +50,11 @@
   z-index: 10;
   width: 100%;
   max-width: 440px;
-  background: rgba(15, 23, 42, 0.84);
-  border: 1px solid rgba(255, 255, 255, 0.16);
+  background: linear-gradient(145deg, rgba(74, 21, 27, 0.92) 0%, rgba(62, 31, 20, 0.88) 48%, rgba(39, 39, 42, 0.92) 100%);
+  border: 1.5px solid rgba(212, 175, 55, 0.55);
   border-radius: 24px;
   padding: 36px 32px;
-  box-shadow: 0 25px 60px -12px rgba(0, 0, 0, 0.8), 0 0 35px rgba(59, 130, 246, 0.2);
+  box-shadow: 0 25px 60px -12px rgba(0, 0, 0, 0.85), 0 0 35px rgba(212, 175, 55, 0.28);
   backdrop-filter: blur(20px);
 }
 

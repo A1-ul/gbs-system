@@ -15,6 +15,16 @@ export default function StaffDashboard() {
   const [loading, setLoading] = useState(false);
   const [feedback, setFeedback] = useState(null);
 
+  useEffect(() => {
+    if (feedback && typeof window !== "undefined" && typeof window.showGBSOpenNotice === "function") {
+      const msg = typeof feedback === "string" ? feedback : feedback.message || feedback.text || "";
+      const type = (typeof feedback === "object" && feedback.type) || "success";
+      if (msg) {
+        window.showGBSOpenNotice(msg, type, "STAFF OPERATIONS RESPONSE");
+      }
+    }
+  }, [feedback]);
+
   // Operational Duties State
   const [tasks, setTasks] = useState([]);
 

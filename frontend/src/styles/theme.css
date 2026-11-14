@@ -1,47 +1,73 @@
+/* ============================================================================
+   GBS SYSTEM — UNIFIED GOLDEN BLEND, WINE, BROWN & GREY ROYAL THEME
+   Palette: Golden Blend (#d4af37 / #fbbf24 / #b45309),
+            Wine (#4a151b / #6e2029 / #2a0b10),
+            Warm Brown (#3e1f14 / #5c2d16 / #451a03),
+            Slate & Charcoal Grey (#27272a / #334155 / #1e293b / #94a3b8)
+   ============================================================================ */
+
 :root {
+  /* Core Golden Blend, Wine, Brown & Grey Tokens */
+  --gbs-gold: #d4af37;
+  --gbs-gold-light: #fbbf24;
+  --gbs-gold-glow: rgba(212, 175, 55, 0.38);
+  --gbs-wine: #4a151b;
+  --gbs-wine-dark: #2a0b10;
+  --gbs-wine-light: #6e2029;
+  --gbs-brown: #3e1f14;
+  --gbs-brown-light: #5c2d16;
+  --gbs-brown-deep: #29130b;
+  --gbs-grey-900: #1f242d;
+  --gbs-grey-800: #27272a;
+  --gbs-grey-700: #334155;
+  --gbs-grey-400: #cbd5e1;
+  --gbs-grey-200: #f1f5f9;
+  --gbs-sky: #38bdf8;
+  --gbs-sky-glow: rgba(56, 189, 248, 0.32);
+  --gbs-emerald: #10b981;
 
-    --color-primary: #2563eb;
-    --color-primary-dark: #1d4ed8;
+  /* Unified System Surface & Brand Variables */
+  --color-primary: #d4af37;
+  --color-primary-hover: #fbbf24;
+  --color-secondary: #6e2029;
+  --color-wine: #4a151b;
+  --color-wine-light: #6e2029;
+  --color-brown: #3e1f14;
+  --color-background: #2a0b10;
+  --color-surface: rgba(62, 31, 20, 0.88);
+  --color-text: #f8fafc;
+  --color-text-muted: #e2e8f0;
+  --color-border: rgba(212, 175, 55, 0.45);
+  --color-success: #10b981;
+  --color-warning: #fbbf24;
+  --color-danger: #ef4444;
 
-    --color-success: #16a34a;
-    --color-warning: #f59e0b;
-    --color-danger: #dc2626;
+  /* Signature Golden Blend + Wine + Brown + Grey Gradients */
+  --gbs-bg-master:
+    radial-gradient(circle at 15% 15%, rgba(110, 32, 41, 0.88) 0%, transparent 48%),
+    radial-gradient(circle at 85% 18%, rgba(212, 175, 55, 0.34) 0%, transparent 46%),
+    radial-gradient(circle at 50% 85%, rgba(92, 45, 22, 0.78) 0%, transparent 55%),
+    linear-gradient(135deg, #2a0b10 0%, #3e1f14 38%, #27272a 72%, #4a151b 100%);
 
-    --color-background: #f8fafc;
-    --color-surface: #ffffff;
+  --gbs-header-gradient:
+    linear-gradient(90deg, rgba(74, 21, 27, 0.96) 0%, rgba(62, 31, 20, 0.95) 50%, rgba(39, 39, 42, 0.96) 100%);
 
-    --color-text: #111827;
-    --color-text-secondary: #6b7280;
+  --gbs-card-gradient:
+    linear-gradient(145deg, rgba(74, 21, 27, 0.9) 0%, rgba(62, 31, 20, 0.86) 48%, rgba(39, 39, 42, 0.92) 100%);
 
-    --color-border: #e5e7eb;
+  --gbs-hero-gradient:
+    linear-gradient(135deg, rgba(110, 32, 41, 0.94) 0%, rgba(92, 45, 22, 0.9) 50%, rgba(51, 65, 85, 0.94) 100%);
 
-    --sidebar-width: 260px;
-    --topbar-height: 70px;
+  --gbs-btn-gold-wine:
+    linear-gradient(135deg, #d4af37 0%, #b45309 48%, #6e2029 100%);
 
-    --radius-sm: 6px;
-    --radius-md: 10px;
-    --radius-lg: 16px;
+  /* Shadows & Radius */
+  --shadow-sm: 0 4px 12px rgba(0, 0, 0, 0.4);
+  --shadow-md: 0 12px 28px rgba(0, 0, 0, 0.5), 0 0 18px rgba(212, 175, 55, 0.18);
+  --shadow-lg: 0 20px 45px rgba(0, 0, 0, 0.68), 0 0 28px rgba(212, 175, 55, 0.26);
 
-    --shadow-sm:
-        0 1px 3px rgba(0,0,0,0.08);
-
-    --shadow-md:
-        0 6px 18px rgba(0,0,0,0.10);
-
-    --shadow-lg:
-        0 10px 30px rgba(0,0,0,0.15);
-
-    --transition:
-        all 0.25s ease;
-}
-
-[data-theme="dark"] {
-
-    --color-background: #0f172a;
-    --color-surface: #1e293b;
-
-    --color-text: #f8fafc;
-    --color-text-secondary: #cbd5e1;
-
-    --color-border: #334155;
+  --radius-sm: 0.375rem;
+  --radius-md: 0.625rem;
+  --radius-lg: 0.875rem;
+  --radius-xl: 1.25rem;
 }
