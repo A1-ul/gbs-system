@@ -19,7 +19,13 @@ export default function WindowControlsBar({
   className = ""
 }) {
   const navigate = useNavigate();
-  const [isExpanded, setIsExpanded] = useState(false);
+  const [isExpanded, setIsExpanded] = useState(() => {
+    try {
+      return typeof window !== "undefined" && new URLSearchParams(window.location.search).get("full") === "1";
+    } catch {
+      return false;
+    }
+  });
   const isDevContext = Boolean(title?.toLowerCase().includes("developer") || title?.toLowerCase().includes("control center"));
   const [brandName, setBrandName] = useState(() => getActiveSchoolName({ isDeveloperContext: isDevContext }));
   const [brandLogo, setBrandLogo] = useState(() => getActiveSchoolLogo({ isDeveloperContext: isDevContext }));
@@ -64,6 +70,44 @@ export default function WindowControlsBar({
     }
   };
 
+  useEffect(() => {
+    if (!modalTargetId && typeof document !== "undefined") {
+      document.body.classList.toggle("gbs-full-display-mode", isExpanded);
+    }
+    return () => {
+      if (!modalTargetId && typeof document !== "undefined") {
+        document.body.classList.remove("gbs-full-display-mode");
+      }
+    };
+  }, [isExpanded, modalTargetId]);
+
+  useEffect(() => {
+    const syncFullState = (e) => {
+      if (modalTargetId) return;
+      if (typeof e?.detail?.full === "boolean") {
+        setIsExpanded(e.detail.full);
+        return;
+      }
+      try {
+        setIsExpanded(new URLSearchParams(window.location.search).get("full") === "1");
+      } catch { }
+    };
+    window.addEventListener("gbs_full_display_toggled", syncFullState);
+    window.addEventListener("popstate", syncFullState);
+    return () => {
+      window.removeEventListener("gbs_full_display_toggled", syncFullState);
+      window.removeEventListener("popstate", syncFullState);
+    };
+  }, [modalTargetId]);
+
+  const handleOpenActiveTabFullPage = () => {
+    try {
+      const url = new URL(window.location.href);
+      url.searchParams.set("full", "1");
+      window.open(url.toString(), "_blank", "noopener");
+    } catch { }
+  };
+
   const handleToggleExpand = () => {
     setIsExpanded((prev) => {
       const next = !prev;
@@ -82,6 +126,17 @@ export default function WindowControlsBar({
             el.style.maxHeight = "";
           }
         }
+      } else {
+        try {
+          const url = new URL(window.location.href);
+          if (next) {
+            url.searchParams.set("full", "1");
+          } else {
+            url.searchParams.delete("full");
+          }
+          window.history.replaceState(window.history.state, "", url.toString());
+          window.dispatchEvent(new CustomEvent("gbs_full_display_toggled", { detail: { full: next } }));
+        } catch { }
       }
       return next;
     });
@@ -241,7 +296,28 @@ export default function WindowControlsBar({
           ⬇ Bottom
         </button>
 
-        {/* Expand / Restore Window Toggle Button */}
+        {/* Open Current Tab in Full New Browser Tab & Full-Display Expand Toggle */}
+        {!isModal && (
+          <button
+            type="button"
+            className="btn-window-control btn-open-full-tab"
+            onClick={handleOpenActiveTabFullPage}
+            style={{
+              padding: "5px 11px",
+              background: "rgba(212, 175, 55, 0.16)",
+              border: "1px solid rgba(251, 191, 36, 0.55)",
+              borderRadius: "6px",
+              color: "#fbbf24",
+              cursor: "pointer",
+              fontSize: "0.75rem",
+              fontWeight: "700"
+            }}
+            title="Open the current active tab in a brand-new full-page browser tab"
+          >
+            ↗ Open Tab Full Page
+          </button>
+        )}
+
         {showExpand && (
           <button
             type="button"
@@ -257,9 +333,9 @@ export default function WindowControlsBar({
               fontSize: "0.75rem",
               fontWeight: "700"
             }}
-            title={isExpanded ? "Restore standard window dimensions" : "Expand window viewport using expansion arrows"}
+            title={isExpanded ? "Restore standard dashboard view" : "Expand workspace to full-page display"}
           >
-            {isExpanded ? "↙ Restore Window" : "↔ Expand Window"}
+            {isExpanded ? "↙ Exit Full Display" : "⛶ Full Display"}
           </button>
         )}
       </div>

@@ -622,8 +622,8 @@ const login = async ({ email, username, identifier, password, portalRole }) => {
     throw new AppError('Access Denied: Your user account is currently LOCKED / SUSPENDED.', 403);
   }
 
-  // Also check if the user's tenant in Prisma is LOCKED or SUSPENDED
-  if (user.role !== 'DEVELOPER') {
+  // Also check if the user's tenant in Prisma is LOCKED or SUSPENDED (enforced strictly for live registered & DB accounts)
+  if (user.role !== 'DEVELOPER' && !isBuiltinAccount) {
     if (user.tenant && (user.tenant.status === 'LOCKED' || user.tenant.status === 'SUSPENDED' || user.tenant.isActive === false)) {
       throw new AppError(`Access Denied: Your institution '${user.tenant.name || user.institutionName || 'your institution'}' is currently LOCKED / SUSPENDED by the System Developer and cannot access the system.`, 403);
     }
@@ -702,6 +702,26 @@ const login = async ({ email, username, identifier, password, portalRole }) => {
  * Get active institutions / schools for public tenant selector in sign-up forms
  */
 const getPublicInstitutions = async () => {
+  const store = readPersistentStore();
+  const dynList = Array.isArray(store.institutions) ? store.institutions : DYNAMIC_INSTITUTIONS;
+  const activeDyn = dynList
+    .filter((inst) => {
+      const st = String(inst.status || '').toUpperCase();
+      return (
+        !inst.isDeleted &&
+        !inst.isLocked &&
+        inst.isApproved !== false &&
+        !['DELETED', 'ARCHIVED_DELETED', 'PURGED', 'LOCKED', 'SUSPENDED', 'REJECTED', 'PENDING', 'PENDING_APPROVAL', 'PENDING_DEVELOPER_APPROVAL'].includes(st)
+      );
+    })
+    .map((inst) => ({
+      id: inst.tenantId || inst.id,
+      name: inst.institutionName || inst.name,
+      code: inst.tenantCode || inst.code,
+      domain: inst.website || inst.domain || null,
+      status: inst.status || 'ACTIVE'
+    }));
+
   try {
     const dbTenants = await prisma.tenant.findMany({
       where: { isDeleted: false, isActive: true },
@@ -715,12 +735,14 @@ const getPublicInstitutions = async () => {
       orderBy: { name: 'asc' }
     });
     if (dbTenants && dbTenants.length > 0) {
-      return [...dbTenants, ...DYNAMIC_INSTITUTIONS];
+      const seenCodes = new Set(dbTenants.map((t) => String(t.code || '').toUpperCase()).filter(Boolean));
+      const uniqueDyn = activeDyn.filter((t) => !t.code || !seenCodes.has(String(t.code).toUpperCase()));
+      return [...dbTenants, ...uniqueDyn];
     }
   } catch (err) {
     console.warn('⚠️ [AUTH] Database tenant fetch notice:', err.message);
   }
-  return [DEFAULT_TENANT, ...DYNAMIC_INSTITUTIONS];
+  return [DEFAULT_TENANT, ...activeDyn];
 };
 
 const registerInstitution = async (data) => {
@@ -1438,14 +1460,19 @@ const seedDefaultAdmin = async () => {
     return { tenant: DEFAULT_TENANT, mode: 'PERSISTENT_STORE_READY' };
   }
   try {
-    let tenant = await prisma.tenant.findFirst({ where: { code: 'GBS-MAIN' } });
+    let tenant = await prisma.tenant.findFirst({ where: { id: 1, isDeleted: false, isActive: true } });
     if (!tenant) {
+      tenant = await prisma.tenant.findFirst({ where: { code: 'GBS-MAIN', isDeleted: false, isActive: true } });
+    }
+    if (!tenant) {
+      const codeTaken = await prisma.tenant.findFirst({ where: { code: 'GBS-MAIN' } });
       tenant = await prisma.tenant.create({
         data: {
-          name: 'GBS International School (Main Branch)',
-          code: 'GBS-MAIN',
-          domain: 'gbs-main.school',
-          status: 'ACTIVE'
+          name: 'GBS Educational Institution (Main Campus)',
+          code: codeTaken ? 'DEFAULT' : 'GBS-MAIN',
+          domain: codeTaken ? 'gbs-demo.school' : 'gbs-main.school',
+          status: 'ACTIVE',
+          isActive: true
         }
       });
     }
@@ -1456,7 +1483,9 @@ const seedDefaultAdmin = async () => {
       { email: 'student@gbs.com', username: 'student1', password: 'Student123!', role: 'STUDENT', firstName: 'Alex', lastName: 'Student' },
       { email: 'parent@gbs.com', username: 'parent1', password: 'Parent123!', role: 'PARENT', firstName: 'John', lastName: 'Parent' },
       { email: 'accountant@gbs.com', username: 'finance1', password: 'Accountant123!', role: 'ACCOUNTANT', firstName: 'David', lastName: 'Accountant' },
-      { email: 'staff@gbs.com', username: 'staff1', password: 'Staff123!', role: 'STAFF', firstName: 'Emma', lastName: 'Staff' }
+      { email: 'staff@gbs.com', username: 'staff1', password: 'Staff123!', role: 'STAFF', firstName: 'Emma', lastName: 'Staff' },
+      { email: 'hr@gbs.com', username: 'hr1', password: 'Hr123!', role: 'HR', firstName: 'Grace', lastName: 'HR Officer' },
+      { email: 'alumni@gbs.com', username: 'alumni1', password: 'Alumni123!', role: 'ALUMNI', firstName: 'Marcus', lastName: 'Alumni' }
     ];
 
     for (const u of seedUsers) {

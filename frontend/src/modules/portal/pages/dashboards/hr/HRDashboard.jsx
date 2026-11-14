@@ -1,11 +1,14 @@
 import React, { useState, useEffect } from "react";
 import { Link, useNavigate } from "react-router-dom";
+import apiClient from "../../../../../api/client/apiClient";
 import WindowControlsBar from "../../../../../components/common/WindowControlsBar";
 import TopCenterSystemBanner from "../../../../../components/common/TopCenterSystemBanner";
 import { getUserAvatar } from "../../../../../utils/userAvatars";
 import UniversalRoleGuideModal from "../../../../../components/common/UniversalRoleGuideModal";
 import { navigateToDetail } from "../../../../../utils/universalNavigation";
 import { getActiveSchoolName, getActiveSchoolLogo } from "../../../../../utils/schoolBranding";
+import { isDemoSandboxMode, clearAuthStorage } from "../../../../../utils/tokenStorage";
+import { useDashboardTabSync } from "../../../../../hooks/useDashboardTabSync";
 
 export default function HRDashboard() {
   const navigate = useNavigate();
@@ -22,29 +25,9 @@ export default function HRDashboard() {
     return () => window.removeEventListener("gbs_user_avatar_changed", handleAvatarChange);
   }, []);
 
-  // Tab & Scroll Preservation
-  const [activeTab, setActiveTabState] = useState(() => {
-    const urlTab = new URLSearchParams(window.location.search).get("tab");
-    if (urlTab) return urlTab;
-    return sessionStorage.getItem("gbs_hr_active_tab") || "staff_roster";
-  });
-
-  const setActiveTab = (tab) => {
-    setActiveTabState(tab);
-    sessionStorage.setItem("gbs_hr_active_tab", tab);
-    const url = new URL(window.location);
-    url.searchParams.set("tab", tab);
-    window.history.replaceState({ tab }, "", url);
-  };
-
-  useEffect(() => {
-    const handlePopState = () => {
-      const tab = new URLSearchParams(window.location.search).get("tab") || sessionStorage.getItem("gbs_hr_active_tab");
-      if (tab) setActiveTabState(tab);
-    };
-    window.addEventListener("popstate", handlePopState);
-    return () => window.removeEventListener("popstate", handlePopState);
-  }, []);
+  // Tab & Full-Page Display Preservation
+  const { activeTab, setActiveTab } = useDashboardTabSync("staff_roster", "gbs_hr_active_tab");
+  const isDemoMode = isDemoSandboxMode();
 
   // Toast Notification System
   const [notification, setNotification] = useState(null);
@@ -105,8 +88,62 @@ export default function HRDashboard() {
     return [];
   });
 
-  // Sync Audit Requests from Headmaster
+  // Sync Staff, Leaves, and Headmaster Audit Directives from Backend APIs
   useEffect(() => {
+    const fetchHRBackend = async () => {
+      try {
+        const [staffRes, leaveRes] = await Promise.all([
+          apiClient.get("/hr/staff").catch(() => null),
+          apiClient.get("/hr/leaves").catch(() => null)
+        ]);
+        const backendStaff = staffRes?.data?.data?.staff || staffRes?.data?.data?.records || staffRes?.data?.data || [];
+        if (Array.isArray(backendStaff) && backendStaff.length > 0) {
+          const normalized = backendStaff.map((s) => ({
+            id: s.id || s.staffId || `EMP-${Date.now()}`,
+            name: s.name || `${s.firstName || ""} ${s.lastName || ""}`.trim() || s.email || "Staff Member",
+            role: s.role || "STAFF",
+            department: s.department || "Faculty & Operations",
+            email: s.email || "",
+            phone: s.phone || "On File",
+            salary: Number(s.baseSalary || s.salary || 3200),
+            status: s.isActive === false ? "INACTIVE" : "ACTIVE",
+            compliance: "100%",
+            hireDate: s.createdAt ? String(s.createdAt).split("T")[0] : new Date().toISOString().split("T")[0]
+          }));
+          setEmployees(normalized);
+          localStorage.setItem("gbs_hr_employees", JSON.stringify(normalized));
+        } else if (isDemoMode && employees.length === 0) {
+          const demoStaff = [
+            { id: "EMP-1001", name: "Dr. Robert Vance", role: "Head of Academics", department: "Academic Directorate", email: "robert.vance@gbs.edu", phone: "+233 24 100 1001", salary: 5200, status: "ACTIVE", compliance: "100%", hireDate: "2024-09-01" },
+            { id: "EMP-1002", name: "Prof. Eleanor Sterling", role: "Senior Science Teacher", department: "Science Faculty", email: "eleanor.s@gbs.edu", phone: "+233 24 100 1002", salary: 3900, status: "ACTIVE", compliance: "100%", hireDate: "2025-01-12" }
+          ];
+          setEmployees(demoStaff);
+        }
+
+        const backendLeaves = leaveRes?.data?.data?.records || leaveRes?.data?.data || [];
+        if (Array.isArray(backendLeaves) && backendLeaves.length > 0) {
+          const mappedLeaves = backendLeaves.map((lv) => ({
+            id: lv.id,
+            employeeName: lv.staff_name || lv.employeeName || "Faculty Member",
+            type: lv.leave_type || lv.type || "ANNUAL",
+            days: Number(lv.days_count || lv.days || 1),
+            from: lv.start_date ? String(lv.start_date).split("T")[0] : (lv.from || ""),
+            to: lv.end_date ? String(lv.end_date).split("T")[0] : (lv.to || ""),
+            status: lv.status || "PENDING"
+          }));
+          setLeaveRequests(mappedLeaves);
+          localStorage.setItem("gbs_hr_leave_requests", JSON.stringify(mappedLeaves));
+        } else if (isDemoMode && leaveRequests.length === 0) {
+          setLeaveRequests([
+            { id: "LV-DEMO-1", employeeName: "Prof. Eleanor Sterling", type: "RESEARCH_CONFERENCE", days: 3, from: "2026-11-18", to: "2026-11-20", status: "PENDING" }
+          ]);
+        }
+      } catch (err) {
+        console.warn("HR backend hydration warning:", err?.message || err);
+      }
+    };
+    fetchHRBackend();
+
     const handleSync = () => {
       try {
         const stored = localStorage.getItem("gbs_hr_audit_requests");
@@ -119,7 +156,7 @@ export default function HRDashboard() {
       window.removeEventListener("gbs_hr_audit_request_updated", handleSync);
       window.removeEventListener("storage", handleSync);
     };
-  }, []);
+  }, [isDemoMode]);
 
   // Form for New Staff Onboarding
   const [showAddStaffModal, setShowAddStaffModal] = useState(false);
@@ -132,9 +169,12 @@ export default function HRDashboard() {
     salary: "3000"
   });
 
-  const handleCreateStaff = (e) => {
+  const handleCreateStaff = async (e) => {
     e.preventDefault();
-    const created = {
+    const parts = newStaff.name.trim().split(/\s+/);
+    const firstName = parts[0] || "Staff";
+    const lastName = parts.slice(1).join(" ") || "Member";
+    const localRecord = {
       id: `EMP-${Date.now().toString().slice(-4)}`,
       name: newStaff.name.trim(),
       role: newStaff.role,
@@ -146,20 +186,58 @@ export default function HRDashboard() {
       compliance: "100%",
       hireDate: new Date().toISOString().split("T")[0]
     };
-    const updated = [created, ...employees];
-    setEmployees(updated);
-    localStorage.setItem("gbs_hr_employees", JSON.stringify(updated));
-    setShowAddStaffModal(false);
-    setNewStaff({ name: "", role: "Subject Teacher", department: "Academic Faculty", email: "", phone: "", salary: "3000" });
-    showToast("success", "Staff Member Activated", `Successfully onboarded and activated ${created.name} (${created.role}).`);
+
+    try {
+      const res = await apiClient.post("/users/register-staff-direct", {
+        firstName,
+        lastName,
+        email: localRecord.email,
+        phone: localRecord.phone,
+        role: String(newStaff.role || "").toUpperCase().includes("TEACH") ? "TEACHER" : "STAFF",
+        department: localRecord.department,
+        baseSalary: localRecord.salary,
+        jobTitle: localRecord.role
+      });
+      const createdFromApi = res.data?.data?.user || res.data?.data;
+      const finalRecord = createdFromApi?.id ? { ...localRecord, id: createdFromApi.id } : localRecord;
+      const updated = [finalRecord, ...employees];
+      setEmployees(updated);
+      localStorage.setItem("gbs_hr_employees", JSON.stringify(updated));
+      setShowAddStaffModal(false);
+      setNewStaff({ name: "", role: "Subject Teacher", department: "Academic Faculty", email: "", phone: "", salary: "3000" });
+      showToast("success", "Staff Member Activated", `Successfully onboarded and committed ${finalRecord.name} (${finalRecord.role}) to PostgreSQL.`);
+    } catch (err) {
+      if (!isDemoMode) {
+        showToast("error", "Staff Onboarding Error", err.response?.data?.message || "Failed to register staff member to institutional database.");
+        return;
+      }
+      const updated = [localRecord, ...employees];
+      setEmployees(updated);
+      localStorage.setItem("gbs_hr_employees", JSON.stringify(updated));
+      setShowAddStaffModal(false);
+      setNewStaff({ name: "", role: "Subject Teacher", department: "Academic Faculty", email: "", phone: "", salary: "3000" });
+      showToast("success", "Staff Member Activated (Demo Sandbox)", `Successfully onboarded ${localRecord.name} (${localRecord.role}) in Demo Sandbox.`);
+    }
   };
 
   // Handle Leave Approval
-  const handleApproveLeave = (id) => {
-    const updated = leaveRequests.map(l => l.id === id ? { ...l, status: "APPROVED" } : l);
-    setLeaveRequests(updated);
-    localStorage.setItem("gbs_hr_leave_requests", JSON.stringify(updated));
-    showToast("success", "Leave Request Approved", `Leave request ${id} has been vetted and granted.`);
+  const handleApproveLeave = async (id) => {
+    try {
+      await apiClient.patch(`/hr/leaves/${encodeURIComponent(id)}/status`, { status: "APPROVED" });
+      const updated = leaveRequests.map(l => l.id === id ? { ...l, status: "APPROVED" } : l);
+      setLeaveRequests(updated);
+      localStorage.setItem("gbs_hr_leave_requests", JSON.stringify(updated));
+      showToast("success", "Leave Request Approved", `Leave request ${id} has been approved in the institutional HR ledger.`);
+    } catch (err) {
+      if (!isDemoMode) {
+        showToast("error", "Leave Approval Error", err.response?.data?.message || "Could not approve leave request on server.");
+        return;
+      }
+      const updated = leaveRequests.map(l => l.id === id ? { ...l, status: "APPROVED" } : l);
+      setLeaveRequests(updated);
+      localStorage.setItem("gbs_hr_leave_requests", JSON.stringify(updated));
+      showToast("success", "Leave Request Approved (Demo)", `Leave request ${id} has been granted in Demo Sandbox.`);
+    }
   };
 
   // Compile & Send Official HR Audit Report to Headmaster
@@ -326,7 +404,10 @@ export default function HRDashboard() {
           <button
             type="button"
             className="role-action-btn logout"
-            onClick={() => navigate("/login")}
+            onClick={() => {
+              clearAuthStorage();
+              navigate("/login/hr");
+            }}
             style={{
               background: "linear-gradient(135deg, #ef4444 0%, #b91c1c 100%)",
               border: "1.5px solid rgba(254, 202, 202, 0.6)",
@@ -357,7 +438,7 @@ export default function HRDashboard() {
         <TopCenterSystemBanner roleTitle="Human Resources & Faculty Affairs" />
 
         {/* Interactive KPI Inscription Cards */}
-        <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(220px, 1fr))", gap: "1rem", marginBottom: "1.5rem" }}>
+        <div className="gbs-kpi-summary-strip" style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(220px, 1fr))", gap: "1rem", marginBottom: "1.5rem" }}>
           <div
             onClick={() => setActiveTab("staff_roster")}
             style={{
@@ -466,6 +547,7 @@ export default function HRDashboard() {
             <button
               key={tab.id}
               type="button"
+              className={`role-tab-btn ${activeTab === tab.id ? "active" : ""}`}
               onClick={() => setActiveTab(tab.id)}
               style={{
                 background: activeTab === tab.id ? "rgba(139, 92, 246, 0.2)" : "transparent",
@@ -768,10 +850,30 @@ export default function HRDashboard() {
             </div>
             <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(280px, 1fr))", gap: "1rem" }}>
               {[
-                { tier: "Tier 1: Executive & Directorate", base: "$4,500 - $6,000", count: "3 Staff", allowance: "+15% Medical & Transit" },
-                { tier: "Tier 2: Senior Faculty Educators", base: "$3,500 - $4,200", count: "12 Teachers", allowance: "+10% STEM Research" },
-                { tier: "Tier 3: Form Masters & Teachers", base: "$2,800 - $3,400", count: "24 Teachers", allowance: "+8% Academic Bonus" },
-                { tier: "Tier 4: Administrative & Logistics", base: "$2,000 - $2,700", count: "8 Officers", allowance: "+5% Transport" }
+                {
+                  tier: "Tier 1: Executive & Directorate",
+                  base: "$4,500+",
+                  count: `${employees.filter((e) => Number(e.salary) >= 4500).length} Active Staff`,
+                  allowance: "+15% Medical & Transit"
+                },
+                {
+                  tier: "Tier 2: Senior Faculty Educators",
+                  base: "$3,500 - $4,499",
+                  count: `${employees.filter((e) => Number(e.salary) >= 3500 && Number(e.salary) < 4500).length} Active Staff`,
+                  allowance: "+10% STEM Research"
+                },
+                {
+                  tier: "Tier 3: Form Masters & Teachers",
+                  base: "$2,800 - $3,499",
+                  count: `${employees.filter((e) => Number(e.salary) >= 2800 && Number(e.salary) < 3500).length} Active Staff`,
+                  allowance: "+8% Academic Bonus"
+                },
+                {
+                  tier: "Tier 4: Administrative & Logistics",
+                  base: "Under $2,800",
+                  count: `${employees.filter((e) => Number(e.salary) < 2800).length} Active Staff`,
+                  allowance: "+5% Transport"
+                }
               ].map((tier, idx) => (
                 <div key={idx} style={{ background: "rgba(15, 23, 42, 0.7)", border: "1px solid rgba(255,255,255,0.08)", borderRadius: "12px", padding: "1.25rem" }}>
                   <h4 style={{ margin: "0 0 6px", color: "#c084fc", fontSize: "0.95rem" }}>{tier.tier}</h4>

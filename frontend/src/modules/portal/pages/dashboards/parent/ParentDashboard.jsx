@@ -9,6 +9,7 @@ import { getUserAvatar } from "../../../../../utils/userAvatars";
 import UniversalRoleGuideModal from "../../../../../components/common/UniversalRoleGuideModal";
 import { navigateToDetail } from "../../../../../utils/universalNavigation";
 import { getActiveSchoolName, getActiveSchoolLogo } from "../../../../../utils/schoolBranding";
+import { isDemoSandboxMode } from "../../../../../utils/tokenStorage";
 import "./ParentDashboard.css";
 
 export default function ParentDashboard() {
@@ -458,7 +459,7 @@ export default function ParentDashboard() {
   // Live HTML5 Geolocation to acquire genuine physical coordinates on Google Maps
   const handleDetectLiveGPS = () => {
     if (!navigator.geolocation) {
-      alert("Geolocation is not supported by your browser.");
+      setFeedback({ type: "error", message: "Geolocation is not supported by your browser." });
       return;
     }
     setGuardianCoords((prev) => ({ ...prev, isLocating: true }));
@@ -495,7 +496,7 @@ export default function ParentDashboard() {
       (err) => {
         console.warn("GPS error:", err.message);
         setGuardianCoords((prev) => ({ ...prev, isLocating: false }));
-        alert(`Could not acquire GPS: ${err.message}. Using registered residential location on Google Maps.`);
+        setFeedback({ type: "info", message: `Could not acquire GPS (${err.message}). Using registered residential location on Google Maps.` });
       },
       { enableHighAccuracy: true, timeout: 10000, maximumAge: 0 }
     );
@@ -626,10 +627,7 @@ export default function ParentDashboard() {
       list = combined;
     } catch { }
 
-    const isDemoTenant =
-      localStorage.getItem("gbs_tenant_mode") !== "LIVE_PRODUCTION" &&
-      (!currentUser?.tenantCode || currentUser.tenantCode === "GBS-MAIN") &&
-      (Number(currentUser?.tenantId || 1) === 1);
+    const isDemoTenant = isDemoSandboxMode(currentUser);
 
     if (list.length === 0 && isDemoTenant) {
       list = [

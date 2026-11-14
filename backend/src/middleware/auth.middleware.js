@@ -209,15 +209,26 @@ const protect = async (req, res, next) => {
       } else {
         const BUILTIN_IDS = new Set([
           'usr_dev_master',
+          'usr_developer_master',
           'usr_super_admin',
+          'usr_superadmin',
+          'usr_admin',
           'usr_admin_master',
           'usr_teacher_master',
+          'usr_teacher1',
           'usr_student_master',
+          'usr_student1',
           'usr_parent_master',
+          'usr_parent1',
           'usr_accountant_master',
+          'usr_accountant_alt',
+          'usr_finance1',
           'usr_staff_master',
+          'usr_staff1',
           'usr_hr_master',
-          'usr_alumni_master'
+          'usr_hr1',
+          'usr_alumni_master',
+          'usr_alumni1'
         ]);
         if (decoded.role === 'DEVELOPER' || BUILTIN_IDS.has(String(decoded.id))) {
           user = {

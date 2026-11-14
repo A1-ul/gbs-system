@@ -7,6 +7,7 @@ import { getUserAvatar } from "../../../../../utils/userAvatars";
 import UniversalRoleGuideModal from "../../../../../components/common/UniversalRoleGuideModal";
 import { navigateToDetail } from "../../../../../utils/universalNavigation";
 import { getActiveSchoolName, getActiveSchoolLogo } from "../../../../../utils/schoolBranding";
+import { isDemoSandboxMode } from "../../../../../utils/tokenStorage";
 import "./AccountantDashboard.css";
 
 export default function AccountantDashboard() {
@@ -380,18 +381,7 @@ export default function AccountantDashboard() {
     return [];
   });
 
-  const isDemoTenant = (() => {
-    try {
-      const u = JSON.parse(localStorage.getItem("gbs_user") || "{}");
-      return (
-        localStorage.getItem("gbs_tenant_mode") !== "LIVE_PRODUCTION" &&
-        (!u?.tenantCode || u.tenantCode === "GBS-MAIN") &&
-        Number(u?.tenantId || 1) === 1
-      );
-    } catch {
-      return false;
-    }
-  })();
+  const isDemoTenant = isDemoSandboxMode();
 
   // 🎓 Alumni Pledges & Philanthropic Gifts State
   const [alumniPledges, setAlumniPledges] = useState(() => {
@@ -3953,7 +3943,11 @@ export default function AccountantDashboard() {
                                 <button
                                   type="button"
                                   onClick={() => {
-                                    alert(`Official Philanthropic Donor Receipt\n--------------------------------\nDonor: ${p.donorName}\nCohort: ${p.gradClass}\nReceipt Ref: ${p.receiptRef}\nAmount: ${currencySymbol}${p.redeemedAmount.toLocaleString()}\nProject: ${p.campaign}\nStatus: Verified & Audited by GBS Chief Accountant`);
+                                    const receiptMsg = `Official Philanthropic Donor Receipt — Donor: ${p.donorName} (${p.gradClass}) | Ref: ${p.receiptRef} | Amount: ${currencySymbol}${p.redeemedAmount.toLocaleString()} | Project: ${p.campaign} | Verified & Audited by GBS Chief Accountant`;
+                                    setFeedback({ type: "success", message: receiptMsg });
+                                    if (typeof window !== "undefined" && typeof window.showGBSOpenNotice === "function") {
+                                      window.showGBSOpenNotice(receiptMsg, "success", "PHILANTHROPIC DONOR RECEIPT");
+                                    }
                                   }}
                                   style={{
                                     background: "rgba(16, 185, 129, 0.15)",

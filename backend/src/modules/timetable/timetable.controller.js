@@ -39,6 +39,15 @@ const checkConflicts = async (req, res, next) => {
 
 const createSlot = async (req, res, next) => {
   try {
+    if (req.body?.type === 'EXAMINATION_TIMETABLE' || Array.isArray(req.body?.entries)) {
+      const entries = await timetableService.saveExamTimetableGuide(req.tenantId, req.body?.entries || [], req.user);
+      return res.status(201).json({
+        status: 'success',
+        message: `Official Examination Timetable Guide (${entries.length} session(s)) saved successfully.`,
+        results: entries.length,
+        data: { entries }
+      });
+    }
     const slot = await timetableService.createTimetableSlot(req.tenantId, req.body, req.user);
     res.status(201).json({
       status: 'success',
@@ -104,6 +113,33 @@ const seedWeekly = async (req, res, next) => {
   }
 };
 
+const getExamTimetableGuide = async (req, res, next) => {
+  try {
+    const entries = await timetableService.getExamTimetableGuide(req.tenantId);
+    res.status(200).json({
+      status: 'success',
+      results: entries.length,
+      data: { entries }
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+
+const saveExamTimetableGuide = async (req, res, next) => {
+  try {
+    const entries = await timetableService.saveExamTimetableGuide(req.tenantId, req.body?.entries || req.body, req.user);
+    res.status(201).json({
+      status: 'success',
+      message: `Official Examination Timetable Guide (${entries.length} session(s)) published successfully.`,
+      results: entries.length,
+      data: { entries }
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+
 module.exports = {
   getSlots,
   getSlotById,
@@ -111,5 +147,7 @@ module.exports = {
   createSlot,
   updateSlot,
   deleteSlot,
-  seedWeekly
+  seedWeekly,
+  getExamTimetableGuide,
+  saveExamTimetableGuide
 };

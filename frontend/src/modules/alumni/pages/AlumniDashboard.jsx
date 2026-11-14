@@ -1,20 +1,25 @@
 import React, { useState, useEffect, useMemo } from "react";
 import { Link, useNavigate } from "react-router-dom";
+import apiClient from "../../../api/client/apiClient";
 import WindowControlsBar from "../../../components/common/WindowControlsBar";
 import TopCenterSystemBanner from "../../../components/common/TopCenterSystemBanner";
 import OfficialInstitutionalSeal from "../../../components/common/OfficialInstitutionalSeal";
 import { navigateToDetail } from "../../../utils/universalNavigation";
 import { getActiveSchoolName, getActiveSchoolLogo } from "../../../utils/schoolBranding";
+import { isDemoSandboxMode, clearAuthStorage } from "../../../utils/tokenStorage";
+import { useDashboardTabSync } from "../../../hooks/useDashboardTabSync";
 
 export default function AlumniDashboard() {
   const navigate = useNavigate();
+  const isDemoMode = isDemoSandboxMode();
+  const [alumniNotice, setAlumniNotice] = useState(null);
 
   // Dynamic School Name & Crest (synced with Headmaster customization & registered tenant)
   const [reportSchoolName, setReportSchoolName] = useState(() => getActiveSchoolName());
   const [customSchoolLogo, setCustomSchoolLogo] = useState(() => getActiveSchoolLogo());
 
-  // Active Tab Navigation
-  const [activeTab, setActiveTab] = useState("CUMULATIVE_RECORDS"); // CUMULATIVE_RECORDS | OFFICIAL_TRANSCRIPT | BATCHES | ZOOM_REUNIONS | DIRECTORY | ENDOWMENT
+  // Active Tab + Full-Page Tab Display Sync
+  const { activeTab, setActiveTab } = useDashboardTabSync("CUMULATIVE_RECORDS", "gbs_alumni_active_tab");
 
   // Completion Batches State
   const [selectedBatchYear, setSelectedBatchYear] = useState("2024");
@@ -110,22 +115,35 @@ export default function AlumniDashboard() {
     };
   });
 
-  // Listen for School Name and Crest changes from Headmaster
+  // Sync School Branding & Live Reunions / Meetings from Backend
   useEffect(() => {
     const syncBranding = () => {
       setReportSchoolName(getActiveSchoolName());
       setCustomSchoolLogo(getActiveSchoolLogo());
     };
+    const fetchReunions = async () => {
+      try {
+        const res = await apiClient.get("/meetings");
+        const apiMeetings = res.data?.data?.meetings || res.data?.data || [];
+        if (Array.isArray(apiMeetings) && apiMeetings.length > 0) {
+          setSavedMeetings(apiMeetings);
+          localStorage.setItem("gbs_saved_meetings", JSON.stringify(apiMeetings));
+        }
+      } catch { }
+    };
     syncBranding();
+    fetchReunions();
     window.addEventListener("gbs_school_name_updated", syncBranding);
     window.addEventListener("gbs_school_logo_updated", syncBranding);
     window.addEventListener("gbs_custom_logo_updated", syncBranding);
+    window.addEventListener("gbs_meetings_updated", fetchReunions);
     window.addEventListener("storage", syncBranding);
 
     return () => {
       window.removeEventListener("gbs_school_name_updated", syncBranding);
       window.removeEventListener("gbs_school_logo_updated", syncBranding);
       window.removeEventListener("gbs_custom_logo_updated", syncBranding);
+      window.removeEventListener("gbs_meetings_updated", fetchReunions);
       window.removeEventListener("storage", syncBranding);
     };
   }, []);
@@ -138,8 +156,13 @@ export default function AlumniDashboard() {
     return `https://zoom.us/wc/${cleanId}/join?prefer=1&pwd=${encodeURIComponent(cleanPass)}&uname=${encodeURIComponent(attendeeName)}`;
   };
 
-  // Complete 4-Year (8 Semesters) Academic Journey from Day 1 of Enrollment to Graduation
+  // Complete Academic Journey: Demo mode shows showcase 4-year records; Live mode reads institutional transcript store
   const cumulativeAcademicHistory = useMemo(() => {
+    try {
+      const customTranscripts = JSON.parse(localStorage.getItem("gbs_alumni_transcripts") || "[]");
+      if (Array.isArray(customTranscripts) && customTranscripts.length > 0) return customTranscripts;
+    } catch { }
+    if (!isDemoMode) return [];
     return [
       {
         yearName: "Year 1 (Level 100) — Freshman Academic Year (2020–2021)",
@@ -264,59 +287,79 @@ export default function AlumniDashboard() {
     ];
   }, []);
 
-  // Completion Batches Directory
-  const batchesData = [
-    {
-      year: "2026",
-      label: "Class of 2026 (Recent Graduating Cohort)",
-      totalGraduates: 312,
-      firstClassHonors: 48,
-      valedictorian: "Eunice Serwaa Mensah (B.Sc. Biomedical Eng.)",
-      keyEmployers: "Microsoft, Johns Hopkins, Deloitte, MTN Group",
-      motto: "Pioneering the Quantum Frontier",
-      alumniRep: "eunice.mensah.alumni@gbs.edu"
-    },
-    {
-      year: "2025",
-      label: "Class of 2025 (Global Innovation Cohort)",
-      totalGraduates: 295,
-      firstClassHonors: 42,
-      valedictorian: "Kofi Owusu Asante (B.Sc. Data Science)",
-      keyEmployers: "Amazon AWS, Google, Goldman Sachs, PwC",
-      motto: "Intelligence Driven by Compassion",
-      alumniRep: "kofi.asante.alumni@gbs.edu"
-    },
-    {
-      year: "2024",
-      label: "Class of 2024 (Excellence Cohort — Your Batch)",
-      totalGraduates: 284,
-      firstClassHonors: 40,
-      valedictorian: "David Kwesi Boateng (B.Sc. Computer Science)",
-      keyEmployers: "Google EMEA, Morgan Stanley, Palantir, Stanbic",
-      motto: "Architects of Tomorrow's Africa",
-      alumniRep: "david.boateng.alumni@gbs.edu"
-    },
-    {
-      year: "2023",
-      label: "Class of 2023 (Resilience Cohort)",
-      totalGraduates: 260,
-      firstClassHonors: 35,
-      valedictorian: "Akosua Adobea Danquah (B.Sc. Architecture)",
-      keyEmployers: "Arup Engineering, Foster+Partners, McKinsey",
-      motto: "Building Enduring Legacies",
-      alumniRep: "akosua.danquah.alumni@gbs.edu"
-    },
-    {
-      year: "2022",
-      label: "Class of 2022 (Foundation Cohort)",
-      totalGraduates: 245,
-      firstClassHonors: 30,
-      valedictorian: "Emmanuel Nii Lante (B.Sc. Mechanical Eng.)",
-      keyEmployers: "Tesla Motors, TotalEnergies, GE Healthcare",
-      motto: "Courage to Transform",
-      alumniRep: "emmanuel.lante.alumni@gbs.edu"
+  // Completion Batches Directory (Demo showcase vs real institutional cohorts)
+  const batchesData = useMemo(() => {
+    if (!isDemoMode) {
+      try {
+        const storedBatches = JSON.parse(localStorage.getItem("gbs_alumni_batches") || "[]");
+        if (Array.isArray(storedBatches) && storedBatches.length > 0) return storedBatches;
+      } catch { }
+      return [
+        {
+          year: String(new Date().getFullYear()),
+          label: `${reportSchoolName} — Class of ${new Date().getFullYear()}`,
+          totalGraduates: ALUMNI_LEDGER_DIRECTORY?.length || 1,
+          firstClassHonors: 0,
+          valedictorian: alumniProfile.fullName,
+          keyEmployers: "Verified Institutional Alumni Network",
+          motto: "Excellence & Integrity",
+          alumniRep: alumniProfile.email
+        }
+      ];
     }
-  ];
+    return [
+      {
+        year: "2026",
+        label: "Class of 2026 (Recent Graduating Cohort)",
+        totalGraduates: 312,
+        firstClassHonors: 48,
+        valedictorian: "Eunice Serwaa Mensah (B.Sc. Biomedical Eng.)",
+        keyEmployers: "Microsoft, Johns Hopkins, Deloitte, MTN Group",
+        motto: "Pioneering the Quantum Frontier",
+        alumniRep: "eunice.mensah.alumni@gbs.edu"
+      },
+      {
+        year: "2025",
+        label: "Class of 2025 (Global Innovation Cohort)",
+        totalGraduates: 295,
+        firstClassHonors: 42,
+        valedictorian: "Kofi Owusu Asante (B.Sc. Data Science)",
+        keyEmployers: "Amazon AWS, Google, Goldman Sachs, PwC",
+        motto: "Intelligence Driven by Compassion",
+        alumniRep: "kofi.asante.alumni@gbs.edu"
+      },
+      {
+        year: "2024",
+        label: "Class of 2024 (Excellence Cohort — Your Batch)",
+        totalGraduates: 284,
+        firstClassHonors: 40,
+        valedictorian: "David Kwesi Boateng (B.Sc. Computer Science)",
+        keyEmployers: "Google EMEA, Morgan Stanley, Palantir, Stanbic",
+        motto: "Architects of Tomorrow's Africa",
+        alumniRep: "david.boateng.alumni@gbs.edu"
+      },
+      {
+        year: "2023",
+        label: "Class of 2023 (Resilience Cohort)",
+        totalGraduates: 260,
+        firstClassHonors: 35,
+        valedictorian: "Akosua Adobea Danquah (B.Sc. Architecture)",
+        keyEmployers: "Arup Engineering, Foster+Partners, McKinsey",
+        motto: "Building Enduring Legacies",
+        alumniRep: "akosua.danquah.alumni@gbs.edu"
+      },
+      {
+        year: "2022",
+        label: "Class of 2022 (Foundation Cohort)",
+        totalGraduates: 245,
+        firstClassHonors: 30,
+        valedictorian: "Emmanuel Nii Lante (B.Sc. Mechanical Eng.)",
+        keyEmployers: "Tesla Motors, TotalEnergies, GE Healthcare",
+        motto: "Courage to Transform",
+        alumniRep: "emmanuel.lante.alumni@gbs.edu"
+      }
+    ];
+  }, [isDemoMode, reportSchoolName, alumniProfile]);
 
   // Filtered Cumulative Academic Journey
   const filteredJourney = useMemo(() => {
@@ -446,23 +489,38 @@ export default function AlumniDashboard() {
   };
 
   // Handle Schedule Zoom Meeting
-  const handleScheduleZoomMeeting = (e) => {
+  const handleScheduleZoomMeeting = async (e) => {
     e.preventDefault();
     const cleanId = newMeeting.meetingId.replace(/[^0-9]/g, "");
     const directUrl = formatOneClickZoomUrl(cleanId, newMeeting.passcode);
 
     const meetingRecord = {
       id: Date.now(),
+      title: newMeeting.topic,
       topic: newMeeting.topic,
       meetingId: cleanId,
       passcode: newMeeting.passcode,
       startTime: newMeeting.startTime,
       duration: parseInt(newMeeting.duration, 10),
+      durationMinutes: parseInt(newMeeting.duration, 10),
       category: newMeeting.category,
+      platform: "ZOOM",
+      meetingUrl: directUrl,
       joinUrl: directUrl,
       scheduledBy: `${alumniProfile.fullName} (${alumniProfile.completionBatch})`,
       createdAt: new Date().toISOString()
     };
+
+    try {
+      await apiClient.post("/meetings/schedule", {
+        title: meetingRecord.topic,
+        platform: "ZOOM",
+        startTime: meetingRecord.startTime,
+        durationMinutes: meetingRecord.duration,
+        meetingUrl: directUrl,
+        passcode: meetingRecord.passcode
+      });
+    } catch { }
 
     const updated = [meetingRecord, ...savedMeetings];
     setSavedMeetings(updated);
@@ -472,7 +530,11 @@ export default function AlumniDashboard() {
     } catch { }
 
     setShowScheduleMeetingModal(false);
-    alert(`Zoom Reunion scheduled successfully!\n\nDirect 1-Click Join Link:\n${directUrl}\n\nAll alumni and attendees can join with ZERO prompt for meeting ID or password.`);
+    const successMsg = `Zoom Reunion "${meetingRecord.topic}" scheduled! Direct 1-Click Join Link ready (${directUrl}).`;
+    setAlumniNotice({ type: "success", message: successMsg });
+    if (typeof window !== "undefined" && typeof window.showGBSOpenNotice === "function") {
+      window.showGBSOpenNotice(successMsg, "success", "ALUMNI REUNION SCHEDULED");
+    }
   };
 
   // Handle Donate Endowment: Records the gift in the institutional ledger for the Accountant Dashboard
@@ -617,7 +679,10 @@ export default function AlumniDashboard() {
 
           <button
             type="button"
-            onClick={() => navigate("/login")}
+            onClick={() => {
+              clearAuthStorage();
+              navigate("/login/alumni");
+            }}
             style={{
               background: "rgba(239, 68, 68, 0.15)",
               border: "1px solid rgba(239, 68, 68, 0.3)",
@@ -636,9 +701,26 @@ export default function AlumniDashboard() {
 
       {/* Main Container */}
       <div style={{ maxWidth: "1400px", margin: "0 auto", padding: "1.5rem 2rem" }}>
+        {alumniNotice && (
+          <div style={{
+            marginBottom: "1rem",
+            padding: "12px 16px",
+            borderRadius: "10px",
+            background: alumniNotice.type === "error" ? "rgba(239, 68, 68, 0.18)" : "rgba(16, 185, 129, 0.18)",
+            border: `1px solid ${alumniNotice.type === "error" ? "#ef4444" : "#10b981"}`,
+            color: alumniNotice.type === "error" ? "#fca5a5" : "#34d399",
+            fontWeight: 700,
+            display: "flex",
+            justifyContent: "space-between",
+            alignItems: "center"
+          }}>
+            <span>{alumniNotice.type === "error" ? "⚠️" : "✅"} {alumniNotice.message}</span>
+            <button type="button" onClick={() => setAlumniNotice(null)} style={{ background: "transparent", border: "none", color: "inherit", cursor: "pointer", fontWeight: 800 }}>✕</button>
+          </div>
+        )}
 
         {/* Scholar Banner & Key Metric Highlights */}
-        <div style={{
+        <div className="gbs-kpi-summary-strip" style={{
           background: "linear-gradient(135deg, rgba(30, 27, 75, 0.7) 0%, rgba(15, 23, 42, 0.9) 100%)",
           border: "1px solid rgba(129, 140, 248, 0.25)",
           borderRadius: "16px",
@@ -713,6 +795,7 @@ export default function AlumniDashboard() {
             <button
               key={tab.id}
               type="button"
+              className={`role-tab-btn ${activeTab === tab.id ? "active" : ""}`}
               onClick={() => setActiveTab(tab.id)}
               style={{
                 background: activeTab === tab.id ? "rgba(99, 102, 241, 0.25)" : "transparent",
@@ -810,7 +893,24 @@ export default function AlumniDashboard() {
 
             {/* Academic Years & Semesters Loop */}
             <div style={{ display: "flex", flexDirection: "column", gap: "1.5rem" }}>
-              {filteredJourney.map((yearObj, yearIdx) => (
+              {filteredJourney.length === 0 ? (
+                <div style={{
+                  background: "rgba(15, 23, 42, 0.78)",
+                  border: "1px dashed rgba(99, 102, 241, 0.45)",
+                  borderRadius: "14px",
+                  padding: "2rem",
+                  textAlign: "center",
+                  color: "#cbd5e1"
+                }}>
+                  <div style={{ fontSize: "2rem", marginBottom: "8px" }}>📜</div>
+                  <h4 style={{ margin: "0 0 6px", color: "#f8fafc", fontSize: "1.05rem" }}>
+                    No Archived Course Transcripts Uploaded Yet ({reportSchoolName})
+                  </h4>
+                  <p style={{ margin: 0, color: "#94a3b8", fontSize: "0.86rem", maxWidth: "600px", marginInline: "auto" }}>
+                    Your authenticated Live Production alumni profile is verified. Ask your institution&apos;s Registrar or Headmaster to publish your academic transcript ledger, or use the Official Sealed Transcript tab and Verify Graduate Registry tool.
+                  </p>
+                </div>
+              ) : filteredJourney.map((yearObj, yearIdx) => (
                 <div
                   key={yearIdx}
                   style={{
@@ -1612,8 +1712,12 @@ export default function AlumniDashboard() {
                       <button
                         type="button"
                         onClick={() => {
-                          navigator.clipboard.writeText(joinUrl);
-                          alert(`Direct 1-Click Zoom Link copied to clipboard:\n${joinUrl}\n\nRecipients can join directly with NO prompt for password.`);
+                          navigator.clipboard?.writeText(joinUrl).catch(() => { });
+                          const msg = `Direct 1-Click Zoom Link copied to clipboard: ${joinUrl}`;
+                          setAlumniNotice({ type: "success", message: msg });
+                          if (typeof window !== "undefined" && typeof window.showGBSOpenNotice === "function") {
+                            window.showGBSOpenNotice(msg, "success", "1-CLICK ZOOM LINK COPIED");
+                          }
                         }}
                         style={{
                           background: "rgba(255, 255, 255, 0.08)",
@@ -1688,7 +1792,13 @@ export default function AlumniDashboard() {
                   </div>
                   <button
                     type="button"
-                    onClick={() => alert(`Connection request sent to ${member.name} (${member.org})!`)}
+                    onClick={() => {
+                      const msg = `Connection request sent to ${member.name} (${member.org})!`;
+                      setAlumniNotice({ type: "success", message: msg });
+                      if (typeof window !== "undefined" && typeof window.showGBSOpenNotice === "function") {
+                        window.showGBSOpenNotice(msg, "success", "ALUMNI CONNECTION SENT");
+                      }
+                    }}
                     style={{
                       background: "rgba(56, 189, 248, 0.15)",
                       border: "1px solid rgba(56, 189, 248, 0.3)",

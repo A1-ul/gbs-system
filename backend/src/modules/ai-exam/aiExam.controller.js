@@ -1,8 +1,11 @@
+'use strict';
+
 const aiExamService = require('./aiExam.service');
+const { resolveTenantId } = require('../../utils/resolveTenantId');
 
 const getExams = async (req, res, next) => {
   try {
-    const tenantId = req.user?.tenantId || req.query.tenantId || 1;
+    const tenantId = resolveTenantId(req, 1);
     const exams = await aiExamService.getExams(tenantId);
     res.status(200).json({
       status: 'success',
@@ -14,9 +17,28 @@ const getExams = async (req, res, next) => {
   }
 };
 
+const createExam = async (req, res, next) => {
+  try {
+    const tenantId = resolveTenantId(req, 1);
+    const exam = await aiExamService.createExam(tenantId, req.body, req.user);
+    res.status(201).json({
+      status: 'success',
+      message: `Examination '${exam.title}' published and saved successfully.`,
+      data: { exam }
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+
 const submitAnswerSheet = async (req, res, next) => {
   try {
-    const result = await aiExamService.submitAnswerSheet(req.body);
+    const tenantId = resolveTenantId(req, 1);
+    const payload = {
+      ...req.body,
+      studentId: req.body?.studentId || req.user?.id
+    };
+    const result = await aiExamService.submitAnswerSheet(payload, tenantId);
     res.status(201).json({
       status: 'success',
       data: result
@@ -28,7 +50,8 @@ const submitAnswerSheet = async (req, res, next) => {
 
 const getAnswerSheets = async (req, res, next) => {
   try {
-    const sheets = await aiExamService.getAnswerSheets(req.query.examId);
+    const tenantId = resolveTenantId(req, 1);
+    const sheets = await aiExamService.getAnswerSheets(req.query.examId, tenantId);
     res.status(200).json({
       status: 'success',
       results: sheets.length,
@@ -41,6 +64,7 @@ const getAnswerSheets = async (req, res, next) => {
 
 module.exports = {
   getExams,
+  createExam,
   submitAnswerSheet,
   getAnswerSheets
 };

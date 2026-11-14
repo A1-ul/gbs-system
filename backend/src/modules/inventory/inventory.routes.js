@@ -3,8 +3,10 @@
 const express = require('express');
 const router = express.Router();
 const controller = require('./inventory.controller');
+const { optionalProtect } = require('../../utils/resolveTenantId');
 
 router.get('/status', controller.getStatus);
+router.use(optionalProtect);
 router.get('/stats', controller.getStats);
 
 // Items & Stock

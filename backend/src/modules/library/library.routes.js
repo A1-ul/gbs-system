@@ -3,6 +3,9 @@
 const express = require('express');
 const router = express.Router();
 const controller = require('./library.controller');
+const { optionalProtect } = require('../../utils/resolveTenantId');
+
+router.use(optionalProtect);
 
 // Telemetry & stats
 router.get('/stats', controller.getStats);

@@ -113,45 +113,102 @@ async function calculateSalaryGrouping(payload) {
   }
 }
 
-async function getLeaveRequests(tenantId = 1) {
-  try {
-    const tid = parseInt(tenantId, 10) || 1;
-    const requests = await prisma.$queryRawUnsafe(`
-      SELECT * FROM staff_leave_requests
-      WHERE tenant_id = $1
-      ORDER BY id DESC;
-    `, tid);
+function readTenantLeavesFromStore(tid) {
+  const { readPersistentStore } = require('../../core/database/persistentStore');
+  const store = readPersistentStore();
+  const list = store.hrLeaveRequests?.[String(tid)];
+  return Array.isArray(list) ? list : [];
+}
 
-    return success({ count: requests.length, records: requests });
+function writeTenantLeavesToStore(tid, nextList) {
+  const { writePersistentStore } = require('../../core/database/persistentStore');
+  writePersistentStore((curr) => ({
+    ...curr,
+    hrLeaveRequests: {
+      ...(curr.hrLeaveRequests || {}),
+      [String(tid)]: nextList
+    }
+  }));
+}
+
+async function getLeaveRequests(tenantId = 1) {
+  const tid = parseInt(tenantId, 10) || 1;
+  try {
+    let pgRows = [];
+    try {
+      pgRows = await prisma.$queryRawUnsafe(`
+        SELECT * FROM staff_leave_requests
+        WHERE tenant_id = $1
+        ORDER BY id DESC;
+      `, tid);
+    } catch (_) {
+      pgRows = [];
+    }
+
+    const storeRows = readTenantLeavesFromStore(tid);
+    const seen = new Set((pgRows || []).map((r) => String(r.id)));
+    const merged = [...(pgRows || []), ...storeRows.filter((r) => !seen.has(String(r.id)))];
+
+    return success({ count: merged.length, records: merged });
   } catch (error) {
     if (logger.error) logger.error('HR_GET_LEAVE_REQUESTS_ERROR', { error: error.message });
-    return failure('Failed to retrieve leave requests');
+    const fallback = readTenantLeavesFromStore(tid);
+    return success({ count: fallback.length, records: fallback });
   }
 }
 
 async function createLeaveRequest(payload, tenantId = 1) {
+  const tid = parseInt(tenantId, 10) || 1;
   try {
-    const tid = parseInt(tenantId, 10) || 1;
     const { staffId, staffName, staffRole, leaveType, startDate, endDate, daysCount, reason } = payload;
-    let sid = staffId ? parseInt(staffId, 10) : null;
-    if (sid) {
-      const userExists = await prisma.user.findUnique({ where: { id: sid } });
-      if (!userExists) sid = null;
-    }
-
     if (!leaveType || !startDate || !endDate || !reason) {
       return failure('Leave type, start date, end date, and reason are required');
     }
 
+    let sid = staffId ? parseInt(staffId, 10) : null;
+    if (sid) {
+      try {
+        const userExists = await prisma.user.findUnique({ where: { id: sid } });
+        if (!userExists) sid = null;
+      } catch (_) {
+        sid = null;
+      }
+    }
+
     const days = parseInt(daysCount, 10) || 1;
+    let created = null;
+    try {
+      const result = await prisma.$queryRawUnsafe(`
+        INSERT INTO staff_leave_requests (tenant_id, staff_id, staff_name, staff_role, leave_type, start_date, end_date, days_count, reason, status)
+        VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, 'PENDING')
+        RETURNING *;
+      `, tid, sid, staffName || 'Staff Member', staffRole || 'STAFF', leaveType, new Date(startDate), new Date(endDate), days, reason);
+      if (result && result[0]) created = result[0];
+    } catch (_) {
+      created = null;
+    }
 
-    const result = await prisma.$queryRawUnsafe(`
-      INSERT INTO staff_leave_requests (tenant_id, staff_id, staff_name, staff_role, leave_type, start_date, end_date, days_count, reason, status)
-      VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, 'PENDING')
-      RETURNING *;
-    `, tid, sid, staffName || 'Staff Member', staffRole || 'STAFF', leaveType, new Date(startDate), new Date(endDate), days, reason);
+    if (!created) {
+      created = {
+        id: Date.now(),
+        tenant_id: tid,
+        tenantId: tid,
+        staff_id: sid,
+        staff_name: staffName || 'Staff Member',
+        staff_role: staffRole || 'STAFF',
+        leave_type: leaveType,
+        start_date: startDate,
+        end_date: endDate,
+        days_count: days,
+        reason,
+        status: 'PENDING',
+        created_at: new Date().toISOString()
+      };
+      const existing = readTenantLeavesFromStore(tid);
+      writeTenantLeavesToStore(tid, [created, ...existing]);
+    }
 
-    return success(result[0], 'Leave request submitted successfully for administrative review');
+    return success(created, 'Leave request submitted successfully for administrative review');
   } catch (error) {
     if (logger.error) logger.error('HR_CREATE_LEAVE_REQUEST_ERROR', { error: error.message });
     return failure('Failed to submit leave request');
@@ -159,9 +216,9 @@ async function createLeaveRequest(payload, tenantId = 1) {
 }
 
 async function updateLeaveStatus(requestId, payload, tenantId = 1) {
+  const tid = parseInt(tenantId, 10) || 1;
   try {
-    const tid = parseInt(tenantId, 10) || 1;
-    const rid = parseInt(requestId, 10);
+    const ridNum = parseInt(requestId, 10);
     const { status, reviewedBy, rejectionReason } = payload;
 
     const valid = ['PENDING', 'APPROVED', 'REJECTED'];
@@ -169,22 +226,46 @@ async function updateLeaveStatus(requestId, payload, tenantId = 1) {
       return failure('Invalid leave status');
     }
 
-    const updated = await prisma.$queryRawUnsafe(`
-      UPDATE staff_leave_requests
-      SET status = $1,
-          reviewed_by = $2,
-          reviewed_at = NOW(),
-          rejection_reason = $3,
-          updated_at = NOW()
-      WHERE id = $4 AND tenant_id = $5
-      RETURNING *;
-    `, status, reviewedBy ? parseInt(reviewedBy, 10) : null, rejectionReason || null, rid, tid);
+    let updatedRow = null;
+    if (!Number.isNaN(ridNum)) {
+      try {
+        const updated = await prisma.$queryRawUnsafe(`
+          UPDATE staff_leave_requests
+          SET status = $1,
+              reviewed_by = $2,
+              reviewed_at = NOW(),
+              rejection_reason = $3,
+              updated_at = NOW()
+          WHERE id = $4 AND tenant_id = $5
+          RETURNING *;
+        `, status, reviewedBy ? (parseInt(reviewedBy, 10) || null) : null, rejectionReason || null, ridNum, tid);
+        if (updated && updated.length > 0) updatedRow = updated[0];
+      } catch (_) {
+        updatedRow = null;
+      }
+    }
 
-    if (!updated || updated.length === 0) {
+    // Update persistent store if stored in fallback or synchronize store record
+    const existingStore = readTenantLeavesFromStore(tid);
+    const storeIdx = existingStore.findIndex((r) => String(r.id) === String(requestId));
+    if (storeIdx >= 0) {
+      existingStore[storeIdx] = {
+        ...existingStore[storeIdx],
+        status,
+        reviewed_by: reviewedBy || null,
+        rejection_reason: rejectionReason || null,
+        reviewed_at: new Date().toISOString(),
+        updated_at: new Date().toISOString()
+      };
+      writeTenantLeavesToStore(tid, existingStore);
+      if (!updatedRow) updatedRow = existingStore[storeIdx];
+    }
+
+    if (!updatedRow) {
       return failure('Leave request not found');
     }
 
-    return success(updated[0], `Leave request status updated to ${status}`);
+    return success(updatedRow, `Leave request status updated to ${status}`);
   } catch (error) {
     if (logger.error) logger.error('HR_UPDATE_LEAVE_STATUS_ERROR', { error: error.message });
     return failure('Failed to update leave request status');
@@ -192,32 +273,44 @@ async function updateLeaveStatus(requestId, payload, tenantId = 1) {
 }
 
 async function getStats(tenantId = 1) {
+  const tid = parseInt(tenantId, 10) || 1;
   try {
-    const tid = parseInt(tenantId, 10) || 1;
-    const staffCount = await prisma.user.count({
-      where: {
-        tenantId: tid,
-        role: { in: ['TEACHER', 'ACCOUNTANT', 'STAFF', 'ADMIN', 'HR'] }
-      }
-    });
+    let staffCount = 0;
+    try {
+      staffCount = await prisma.user.count({
+        where: {
+          tenantId: tid,
+          role: { in: ['TEACHER', 'ACCOUNTANT', 'STAFF', 'ADMIN', 'HR'] }
+        }
+      });
+    } catch (_) {
+      staffCount = 0;
+    }
 
-    const leaveStats = await prisma.$queryRawUnsafe(`
-      SELECT 
-        COUNT(CASE WHEN status = 'APPROVED' AND start_date <= CURRENT_DATE AND end_date >= CURRENT_DATE THEN 1 END)::int as on_leave_now,
-        COUNT(CASE WHEN status = 'PENDING' THEN 1 END)::int as pending_leaves,
-        COUNT(CASE WHEN status = 'APPROVED' THEN 1 END)::int as approved_leaves
-      FROM staff_leave_requests
-      WHERE tenant_id = $1;
-    `, tid);
+    let leaveStats = [];
+    try {
+      leaveStats = await prisma.$queryRawUnsafe(`
+        SELECT 
+          COUNT(CASE WHEN status = 'APPROVED' AND start_date <= CURRENT_DATE AND end_date >= CURRENT_DATE THEN 1 END)::int as on_leave_now,
+          COUNT(CASE WHEN status = 'PENDING' THEN 1 END)::int as pending_leaves,
+          COUNT(CASE WHEN status = 'APPROVED' THEN 1 END)::int as approved_leaves
+        FROM staff_leave_requests
+        WHERE tenant_id = $1;
+      `, tid);
+    } catch (_) {
+      leaveStats = [];
+    }
 
-    // Approximate monthly payroll obligation based on active staff
+    const storeRows = readTenantLeavesFromStore(tid);
+    const pendingStore = storeRows.filter((r) => r.status === 'PENDING').length;
+    const approvedStore = storeRows.filter((r) => r.status === 'APPROVED').length;
     const estimatedPayroll = staffCount * 4750.00;
 
     return success({
       totalStaff: staffCount,
       onLeaveCount: leaveStats[0]?.on_leave_now || 0,
-      pendingLeaveRequests: leaveStats[0]?.pending_leaves || 0,
-      approvedLeavesTotal: leaveStats[0]?.approved_leaves || 0,
+      pendingLeaveRequests: (leaveStats[0]?.pending_leaves || 0) + pendingStore,
+      approvedLeavesTotal: (leaveStats[0]?.approved_leaves || 0) + approvedStore,
       monthlyPayrollObligation: estimatedPayroll
     });
   } catch (error) {
@@ -226,8 +319,8 @@ async function getStats(tenantId = 1) {
   }
 }
 
-// In-memory persistent positions store with realistic defaults across school tiers
-let customPositionsStore = [
+// Default positions template for Demo Sovereign Tenant (#1) or initial governance setup
+const DEFAULT_POSITIONS_TEMPLATE = [
   { id: 'pos-1', title: 'Head of Academics', department: 'Academic Directorate', schoolTier: 'ALL', tierLabel: 'Institution-Wide', responsibilities: 'Curriculum oversight, academic quality audits, and syllabus delivery across all tiers.' },
   { id: 'pos-2', title: 'Vice Chancellor', department: 'Executive Governance', schoolTier: 'UNIVERSITY', tierLabel: 'University', responsibilities: 'Executive oversight of university academic planning, research governance, and collegiate boards.' },
   { id: 'pos-3', title: 'Assistant Headmaster (Academics)', department: 'Academic Administration', schoolTier: 'SHS', tierLabel: 'Senior High School', responsibilities: 'Timetable coordination, academic evaluations, faculty syllabus reviews, and teacher schedules.' },
@@ -242,7 +335,7 @@ let customPositionsStore = [
   { id: 'pos-12', title: 'Registrar', department: 'Registry & Records', schoolTier: 'UNIVERSITY', tierLabel: 'University', responsibilities: 'Academic transcripts, matriculation, congregation, student records custody, and council minutes.' }
 ];
 
-let staffAssignmentsStore = [
+const DEMO_ASSIGNMENTS_TEMPLATE = [
   { staffId: 1, staffName: 'Dr. Robert Vance', staffEmail: 'robert.vance@gbs.edu', positionTitle: 'Head of Academics', schoolTier: 'ALL', department: 'Academic Directorate', assignedDate: '2026-01-15' },
   { staffId: 2, staffName: 'Prof. Eleanor Sterling', staffEmail: 'eleanor.sterling@gbs.edu', positionTitle: 'Head of Department (Science & STEM)', schoolTier: 'SHS', department: 'Faculty of Natural Sciences', assignedDate: '2026-02-01' },
   { staffId: 3, staffName: 'Claire Montgomery', staffEmail: 'claire.m@gbs.edu', positionTitle: 'Head of Basic School', schoolTier: 'BASIC', department: 'Primary Directorate', assignedDate: '2026-02-10' }
@@ -250,7 +343,15 @@ let staffAssignmentsStore = [
 
 async function getPositions(tenantId = 1) {
   try {
-    return success({ count: customPositionsStore.length, positions: customPositionsStore });
+    const tid = parseInt(tenantId, 10) || 1;
+    const { readPersistentStore } = require('../../core/database/persistentStore');
+    const store = readPersistentStore();
+    const byTenant = store.hrPositions?.[String(tid)];
+    if (Array.isArray(byTenant)) {
+      return success({ count: byTenant.length, positions: byTenant });
+    }
+    const seed = tid === 1 ? [...DEFAULT_POSITIONS_TEMPLATE] : DEFAULT_POSITIONS_TEMPLATE.slice(0, 4).map((p) => ({ ...p, id: `${p.id}-t${tid}`, tenantId: tid }));
+    return success({ count: seed.length, positions: seed });
   } catch (error) {
     return failure('Failed to fetch positions');
   }
@@ -258,6 +359,7 @@ async function getPositions(tenantId = 1) {
 
 async function createPosition(payload, tenantId = 1) {
   try {
+    const tid = parseInt(tenantId, 10) || 1;
     const { title, department = 'General Faculty', schoolTier = 'ALL', responsibilities = '' } = payload;
     if (!title || !title.trim()) {
       return failure('Position title is required.');
@@ -271,6 +373,7 @@ async function createPosition(payload, tenantId = 1) {
     };
     const newPos = {
       id: `pos-${Date.now()}`,
+      tenantId: tid,
       title: title.trim(),
       department: department.trim(),
       schoolTier: schoolTier.toUpperCase(),
@@ -278,20 +381,34 @@ async function createPosition(payload, tenantId = 1) {
       responsibilities: responsibilities.trim(),
       createdAt: new Date().toISOString()
     };
-    customPositionsStore.unshift(newPos);
+    const { readPersistentStore, writePersistentStore } = require('../../core/database/persistentStore');
+    const existingRes = await getPositions(tid);
+    const currentList = existingRes.success ? existingRes.data.positions : [];
+    const updated = [newPos, ...currentList];
+    writePersistentStore((curr) => ({
+      ...curr,
+      hrPositions: { ...(curr.hrPositions || {}), [String(tid)]: updated }
+    }));
     return success(newPos, `Position '${newPos.title}' created successfully for ${newPos.tierLabel}.`);
   } catch (error) {
     return failure('Failed to create staff position');
   }
 }
 
-async function deletePosition(positionId) {
+async function deletePosition(positionId, tenantId = 1) {
   try {
-    const beforeLen = customPositionsStore.length;
-    customPositionsStore = customPositionsStore.filter(p => String(p.id) !== String(positionId));
-    if (customPositionsStore.length === beforeLen) {
+    const tid = parseInt(tenantId, 10) || 1;
+    const { writePersistentStore } = require('../../core/database/persistentStore');
+    const existingRes = await getPositions(tid);
+    const currentList = existingRes.success ? existingRes.data.positions : [];
+    const filtered = currentList.filter((p) => String(p.id) !== String(positionId));
+    if (filtered.length === currentList.length) {
       return failure('Position not found');
     }
+    writePersistentStore((curr) => ({
+      ...curr,
+      hrPositions: { ...(curr.hrPositions || {}), [String(tid)]: filtered }
+    }));
     return success(null, 'Position deleted successfully');
   } catch (error) {
     return failure('Failed to delete position');
@@ -300,7 +417,15 @@ async function deletePosition(positionId) {
 
 async function getStaffAssignments(tenantId = 1) {
   try {
-    return success({ count: staffAssignmentsStore.length, assignments: staffAssignmentsStore });
+    const tid = parseInt(tenantId, 10) || 1;
+    const { readPersistentStore } = require('../../core/database/persistentStore');
+    const store = readPersistentStore();
+    const byTenant = store.hrAssignments?.[String(tid)];
+    if (Array.isArray(byTenant)) {
+      return success({ count: byTenant.length, assignments: byTenant });
+    }
+    const seed = tid === 1 ? [...DEMO_ASSIGNMENTS_TEMPLATE] : [];
+    return success({ count: seed.length, assignments: seed });
   } catch (error) {
     return failure('Failed to fetch staff assignments');
   }
@@ -308,13 +433,18 @@ async function getStaffAssignments(tenantId = 1) {
 
 async function assignStaffPosition(payload, tenantId = 1) {
   try {
+    const tid = parseInt(tenantId, 10) || 1;
     const { staffId, staffName, staffEmail, positionTitle, schoolTier = 'ALL', department = 'Academics', notes = '' } = payload;
     const effStaffId = staffId || (staffName ? Date.now() : null);
     if (!effStaffId || !positionTitle) {
       return failure('staffId and positionTitle are required.');
     }
-    const existingIdx = staffAssignmentsStore.findIndex(a => String(a.staffId) === String(effStaffId));
+    const { writePersistentStore } = require('../../core/database/persistentStore');
+    const existingRes = await getStaffAssignments(tid);
+    const list = existingRes.success ? [...existingRes.data.assignments] : [];
+    const existingIdx = list.findIndex((a) => String(a.staffId) === String(effStaffId));
     const record = {
+      tenantId: tid,
       staffId: parseInt(effStaffId, 10) || effStaffId,
       staffName: staffName || `Staff Member #${effStaffId}`,
       staffEmail: staffEmail || '',
@@ -325,10 +455,14 @@ async function assignStaffPosition(payload, tenantId = 1) {
       notes
     };
     if (existingIdx >= 0) {
-      staffAssignmentsStore[existingIdx] = record;
+      list[existingIdx] = record;
     } else {
-      staffAssignmentsStore.unshift(record);
+      list.unshift(record);
     }
+    writePersistentStore((curr) => ({
+      ...curr,
+      hrAssignments: { ...(curr.hrAssignments || {}), [String(tid)]: list }
+    }));
     return success(record, `Staff member '${record.staffName}' successfully assigned to '${positionTitle}' (${schoolTier})!`);
   } catch (error) {
     return failure('Failed to assign staff position');

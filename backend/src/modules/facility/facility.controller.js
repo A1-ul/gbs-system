@@ -1,9 +1,10 @@
 const facilityService = require('./facility.service');
+const { resolveTenantId } = require('../../utils/resolveTenantId');
 
 class FacilityController {
   async getTickets(req, res) {
     try {
-      const tenantId = req.user?.tenantId || parseInt(req.query.tenantId) || 1;
+      const tenantId = resolveTenantId(req, 1);
       const filters = {
         status: req.query.status,
         category: req.query.category
@@ -17,7 +18,7 @@ class FacilityController {
 
   async createTicket(req, res) {
     try {
-      const tenantId = req.user?.tenantId || parseInt(req.body.tenantId) || 1;
+      const tenantId = resolveTenantId(req, 1);
       const ticket = await facilityService.createTicket(tenantId, req.body);
       res.status(201).json({ success: true, message: 'Facility ticket created successfully.', data: ticket });
     } catch (err) {
@@ -27,7 +28,7 @@ class FacilityController {
 
   async updateTicketStatus(req, res) {
     try {
-      const tenantId = req.user?.tenantId || parseInt(req.body.tenantId) || 1;
+      const tenantId = resolveTenantId(req, 1);
       const updated = await facilityService.updateTicketStatus(req.params.id, tenantId, req.body);
       res.status(200).json({ success: true, message: 'Ticket status updated.', data: updated });
     } catch (err) {
@@ -37,7 +38,7 @@ class FacilityController {
 
   async getStats(req, res) {
     try {
-      const tenantId = req.user?.tenantId || parseInt(req.query.tenantId) || 1;
+      const tenantId = resolveTenantId(req, 1);
       const stats = await facilityService.getStats(tenantId);
       res.status(200).json({ success: true, data: stats });
     } catch (err) {

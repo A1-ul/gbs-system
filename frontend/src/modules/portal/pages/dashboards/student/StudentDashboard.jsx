@@ -11,6 +11,7 @@ import { navigateToDetail } from "../../../../../utils/universalNavigation";
 import OfficialPaymentGatewayModal from "../../../../../components/common/OfficialPaymentGatewayModal";
 import OfficialInstitutionalSeal from "../../../../../components/common/OfficialInstitutionalSeal";
 import { getActiveSchoolName, getActiveSchoolLogo } from "../../../../../utils/schoolBranding";
+import { isDemoSandboxMode } from "../../../../../utils/tokenStorage";
 import "./StudentDashboard.css";
 
 export function StudentDashboard({ initialTab } = {}) {
@@ -382,18 +383,7 @@ export function StudentDashboard({ initialTab } = {}) {
   const [showCourseFilesModal, setShowCourseFilesModal] = useState(false);
   const [viewingFilePreview, setViewingFilePreview] = useState(null);
 
-  const isDemoTenant = (() => {
-    try {
-      const u = JSON.parse(localStorage.getItem("gbs_user") || "{}");
-      return (
-        localStorage.getItem("gbs_tenant_mode") !== "LIVE_PRODUCTION" &&
-        (!u?.tenantCode || u.tenantCode === "GBS-MAIN") &&
-        Number(u?.tenantId || 1) === 1
-      );
-    } catch {
-      return false;
-    }
-  })();
+  const isDemoTenant = isDemoSandboxMode();
 
   // Teacher-Authored Official Examination Timetable & Procedure Guide State
   const [examTimetableGuide, setExamTimetableGuide] = useState(() => {
@@ -693,7 +683,7 @@ export function StudentDashboard({ initialTab } = {}) {
 
   const handleBorrowBook = (book) => {
     if (borrowedBooks.some((b) => b.title === book.title)) {
-      alert("You have already borrowed this textbook.");
+      setFeedback({ type: "info", message: `You have already borrowed "${book.title}".` });
       return;
     }
     const newRecord = {
@@ -1225,9 +1215,21 @@ export function StudentDashboard({ initialTab } = {}) {
 
   const fetchTimetable = async () => {
     try {
-      const res = await apiClient.get("/timetables/grid");
-      const slots = res.data?.data?.slots || res.data?.data || [];
-      setTimetableSlots(slots);
+      const [gridRes, guideRes] = await Promise.all([
+        apiClient.get("/timetables/grid").catch(() => null),
+        apiClient.get("/timetables/examination-guide").catch(() => null)
+      ]);
+      if (gridRes) {
+        const slots = gridRes.data?.data?.slots || gridRes.data?.data || [];
+        setTimetableSlots(slots);
+      }
+      if (guideRes) {
+        const guideEntries = guideRes.data?.data?.entries || guideRes.data?.data || [];
+        if (Array.isArray(guideEntries) && guideEntries.length > 0) {
+          setExamTimetableGuide(guideEntries);
+          localStorage.setItem("gbs_examination_timetable", JSON.stringify(guideEntries));
+        }
+      }
     } catch (err) {
       console.warn("Could not load timetable:", err);
     }
@@ -1331,14 +1333,40 @@ export function StudentDashboard({ initialTab } = {}) {
         extractedAnswers: answersMap
       });
 
-      const data = res.data?.data || { percentage: 85, pass: true };
+      let data = res.data?.data;
+      if (!data) {
+        // Compute authentic score from local question bank rather than a static placeholder
+        const totalLocalQ = questions.length > 0 ? questions.length : 1;
+        let matchedLocal = 0;
+        questions.forEach((q, idx) => {
+          const qKey = q.id || `q${idx + 1}`;
+          const given = answersMap[qKey] ?? answersMap[String(q.id)] ?? "";
+          const expected = q.correctOption ?? q.correctAnswer ?? "";
+          if (given && expected && String(given).trim().toUpperCase() === String(expected).trim().toUpperCase()) {
+            matchedLocal += 1;
+          }
+        });
+        const computedPct = Math.round((matchedLocal / totalLocalQ) * 100);
+        data = {
+          percentage: computedPct,
+          totalQuestions: questions.length,
+          matchedAnswers: matchedLocal,
+          pass: computedPct >= 50
+        };
+      }
       if (data) {
-        const rawPct = data.percentage !== undefined ? data.percentage : 85;
+        const computedRaw =
+          data.percentage !== undefined
+            ? Number(data.percentage)
+            : data.totalMarks
+              ? Math.round((Number(data.scoreObtained || 0) / Math.max(1, Number(data.totalMarks))) * 100)
+              : 0;
+        const rawPct = Math.max(0, Math.min(100, computedRaw));
         const penalty = penaltyMarksDeducted;
         const finalPct = Math.max(0, rawPct - penalty);
         const letterGrade = finalPct >= 90 ? "A+" : finalPct >= 80 ? "A" : finalPct >= 70 ? "B" : finalPct >= 60 ? "C" : finalPct >= 50 ? "D" : "F";
         const totalQ = data.totalQuestions || (questions.length > 0 ? questions.length : 10);
-        const correctCount = Math.round((finalPct / 100) * totalQ);
+        const correctCount = data.matchedAnswers !== undefined ? data.matchedAnswers : Math.round((finalPct / 100) * totalQ);
 
         const record = {
           examId: activeExam.id,
@@ -1817,7 +1845,7 @@ export function StudentDashboard({ initialTab } = {}) {
                 <button
                   type="button"
                   onClick={() => {
-                    alert("Class notes for " + concludedClassNotice.topic + " downloaded.");
+                    setFeedback({ type: "success", message: `Class notes for "${concludedClassNotice.topic}" downloaded and saved.` });
                   }}
                   style={{
                     background: "rgba(255, 255, 255, 0.1)",

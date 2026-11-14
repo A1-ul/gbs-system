@@ -1,9 +1,10 @@
 'use strict';
 
 const hrService = require('./hr.service');
+const { resolveTenantId } = require('../../utils/resolveTenantId');
 
 function extractTenantId(req) {
-  return req.user?.tenantId || req.query.tenantId || req.headers['x-tenant-id'] || 1;
+  return resolveTenantId(req, 1);
 }
 
 async function getStatus(req, res, next) {
@@ -96,7 +97,8 @@ async function createPosition(req, res, next) {
 
 async function deletePosition(req, res, next) {
   try {
-    const result = await hrService.deletePosition(req.params.id);
+    const tenantId = extractTenantId(req);
+    const result = await hrService.deletePosition(req.params.id, tenantId);
     return res.status(result.success ? 200 : 404).json(result);
   } catch (error) {
     return next(error);

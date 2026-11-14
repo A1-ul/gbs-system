@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from "react";
 import { clearFakeDataEntries } from "../../utils/freshSystemReset";
 import { getActiveSchoolName, getActiveSchoolLogo } from "../../utils/schoolBranding";
+import { isDemoSandboxMode, resetDemoSandboxData } from "../../utils/tokenStorage";
 import UniversalLanguageTranslatorModal from "./UniversalLanguageTranslatorModal";
 
 /**
@@ -54,7 +55,9 @@ export default function TopCenterSystemBanner({
     currentUserRole = (storedUser?.role || localStorage.getItem("gbs_auth_role") || "GUEST").toUpperCase();
   } catch { }
   const isTrueDeveloper = isDeveloper || isDevMode || currentUserRole === "DEVELOPER" || Boolean(localStorage.getItem("gbs_dev_token"));
-  const systemMode = typeof window !== "undefined" ? (localStorage.getItem("gbs_system_mode") || "LIVE_PRODUCTION") : "LIVE_PRODUCTION";
+  const systemMode = typeof window !== "undefined"
+    ? (isDemoSandboxMode() ? "DEMO_SANDBOX" : "LIVE_PRODUCTION")
+    : "LIVE_PRODUCTION";
   const canAccessWalkthrough = isTrueDeveloper || systemMode === "DEMO_SANDBOX";
 
   useEffect(() => {
@@ -337,23 +340,62 @@ export default function TopCenterSystemBanner({
         </div>
       )}
 
-      {systemMode === "DEMO_SANDBOX" && (
+      {systemMode === "DEMO_SANDBOX" ? (
         <div style={{
           margin: "6px 0 10px 0",
-          padding: "5px 16px",
+          padding: "6px 16px",
           borderRadius: "20px",
           background: "rgba(245, 158, 11, 0.2)",
-          border: "1px solid rgba(245, 158, 11, 0.5)",
+          border: "1px solid rgba(245, 158, 11, 0.55)",
           color: "#fbbf24",
           fontSize: "0.78rem",
           fontWeight: 800,
           display: "flex",
           alignItems: "center",
+          flexWrap: "wrap",
+          justifyContent: "center",
           gap: "8px"
         }}>
-          <span>🟡 DEMO SANDBOX PREVIEW</span>
+          <span>🟡 DEMO SANDBOX MODE</span>
           <span>•</span>
-          <span style={{ fontWeight: 600 }}>Preloaded evaluation records. Switch to Live Production on Login page for genuine school records.</span>
+          <span style={{ fontWeight: 600 }}>Identical live workflow trainer. Actions save inside the Demo Sandbox.</span>
+          <button
+            type="button"
+            onClick={() => {
+              resetDemoSandboxData({ reloadPage: true });
+            }}
+            style={{
+              background: "rgba(251, 191, 36, 0.22)",
+              border: "1px solid #fbbf24",
+              color: "#fef3c7",
+              borderRadius: "14px",
+              padding: "3px 10px",
+              fontSize: "0.72rem",
+              fontWeight: 800,
+              cursor: "pointer"
+            }}
+            title="Restore fresh Demo Sandbox training data"
+          >
+            🔄 Reset Demo Data
+          </button>
+        </div>
+      ) : (
+        <div style={{
+          margin: "6px 0 10px 0",
+          padding: "5px 14px",
+          borderRadius: "20px",
+          background: "rgba(16, 185, 129, 0.16)",
+          border: "1px solid rgba(16, 185, 129, 0.45)",
+          color: "#34d399",
+          fontSize: "0.74rem",
+          fontWeight: 800,
+          display: "inline-flex",
+          alignItems: "center",
+          gap: "8px"
+        }}>
+          <span>🟢 LIVE PRODUCTION WORKSPACE</span>
+          <span>•</span>
+          <span style={{ fontWeight: 600 }}>Isolated real-time institutional ledger &amp; database active.</span>
         </div>
       )}
 

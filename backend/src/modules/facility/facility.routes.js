@@ -1,6 +1,9 @@
 const express = require('express');
 const router = express.Router();
 const facilityController = require('./facility.controller');
+const { optionalProtect } = require('../../utils/resolveTenantId');
+
+router.use(optionalProtect);
 
 router.get('/tickets', facilityController.getTickets);
 router.post('/tickets', facilityController.createTicket);

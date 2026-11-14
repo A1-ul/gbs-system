@@ -3,6 +3,7 @@ import { Link, useNavigate } from "react-router-dom";
 import { login } from "../api/auth.api";
 import { getServerBaseUrl } from "../../../api/client/apiConfig";
 import { getRoleBackgroundImage } from "../../../utils/userAvatars";
+import { syncSystemModeFlags, clearWorkspaceMutableKeys } from "../../../utils/tokenStorage";
 import CartoonRoleVideoHubModal from "../../../components/common/CartoonRoleVideoHubModal";
 import "./MainLoginPage.css";
 
@@ -33,10 +34,15 @@ export default function MainLoginPage() {
   const [systemChecks, setSystemChecks] = useState({
     apiGateway: true,
     postgresDb: true,
+    postgresRole: "CHECKING",
     voiceSecurity: true,
     omrScanner: true,
     cdnStatus: true
   });
+
+  // Public approved institutions list for Online Admissions routing
+  const [publicInstitutions, setPublicInstitutions] = useState([]);
+  const [selectedTenantId, setSelectedTenantId] = useState("");
 
   // Real-Life Action Video Tour Modal State
   const [showVideoHubModal, setShowVideoHubModal] = useState(false);
@@ -77,9 +83,14 @@ export default function MainLoginPage() {
     setAdmissionSubmitting(true);
     setAdmissionError(null);
 
+    const matchedInst = publicInstitutions.find((inst) => String(inst.id) === String(selectedTenantId)) || publicInstitutions[0] || null;
+    const effectiveTenantId = loginMode === "DEMO_SANDBOX" ? 1 : (Number(selectedTenantId || matchedInst?.id) || 1);
     const trackingNumber = `ADM-2026-${Math.floor(1000 + Math.random() * 9000)}`;
     const newApplication = {
       id: Date.now(),
+      tenantId: effectiveTenantId,
+      tenantCode: matchedInst?.code || (effectiveTenantId === 1 ? "GBS-MAIN" : undefined),
+      institutionName: matchedInst?.name || "GBS International School (Sovereign Campus)",
       applicationNumber: trackingNumber,
       studentFirstName: admissionForm.studentFirstName.trim(),
       studentLastName: admissionForm.studentLastName.trim(),
@@ -103,16 +114,29 @@ export default function MainLoginPage() {
     };
 
     try {
-      await fetch(`${getServerBaseUrl()}/api/v1/admissions`, {
+      const response = await fetch(`${getServerBaseUrl()}/api/v1/admissions`, {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: {
+          "Content-Type": "application/json",
+          "x-tenant-id": String(effectiveTenantId)
+        },
         body: JSON.stringify(newApplication)
-      }).catch(() => { });
+      });
+      const payload = await response.json().catch(() => ({}));
+      if (!response.ok || payload?.success === false) {
+        if (loginMode === "LIVE_PRODUCTION") {
+          throw new Error(payload?.message || `Server rejected admission (${response.status}).`);
+        }
+      }
 
+      const savedRecord = {
+        ...newApplication,
+        ...(payload?.data && typeof payload.data === "object" ? payload.data : {})
+      };
       const existing = JSON.parse(localStorage.getItem("gbs_submitted_admissions") || "[]");
-      localStorage.setItem("gbs_submitted_admissions", JSON.stringify([newApplication, ...existing]));
+      localStorage.setItem("gbs_submitted_admissions", JSON.stringify([savedRecord, ...existing]));
 
-      setSubmittedAppDetails(newApplication);
+      setSubmittedAppDetails(savedRecord);
       setAdmissionSubmitted(true);
     } catch (err) {
       setAdmissionError(err.message || "Failed to submit admission application.");
@@ -122,17 +146,40 @@ export default function MainLoginPage() {
   };
 
   useEffect(() => {
-    // Quick ping to check real backend health
+    // Quick ping to check real backend & database health
     fetch(`${getServerBaseUrl()}/health`)
       .then((res) => res.json())
       .then((data) => {
         if (data.status === "success") {
-          setSystemChecks((prev) => ({ ...prev, apiGateway: true, postgresDb: true }));
+          setSystemChecks((prev) => ({
+            ...prev,
+            apiGateway: true,
+            postgresDb: Boolean(data?.databaseActive),
+            postgresRole: data?.databaseRole || (data?.databaseActive ? "ACTIVE PRIMARY" : "STANDBY_LOCAL")
+          }));
         }
       })
       .catch(() => {
-        setSystemChecks((prev) => ({ ...prev, apiGateway: false }));
+        setSystemChecks((prev) => ({ ...prev, apiGateway: false, postgresDb: false, postgresRole: "OFFLINE" }));
       });
+
+    // Hydrate approved schools list so public applicants select their real institution
+    fetch(`${getServerBaseUrl()}/api/v1/auth/public-institutions`)
+      .then((res) => res.json())
+      .then((json) => {
+        const list = Array.isArray(json?.data)
+          ? json.data
+          : Array.isArray(json?.data?.institutions)
+            ? json.data.institutions
+            : Array.isArray(json)
+              ? json
+              : [];
+        if (list.length > 0) {
+          setPublicInstitutions(list);
+          setSelectedTenantId((prev) => prev || String(list[0].id));
+        }
+      })
+      .catch(() => { });
   }, []);
 
   const ROLE_CREDENTIALS = {
@@ -213,11 +260,11 @@ export default function MainLoginPage() {
       <div className="system-live-bar">
         <div className="live-status-item">
           <span className={`status-dot ${systemChecks.apiGateway ? "online" : "offline"}`}></span>
-          API Gateway: <strong>ONLINE (Port 5001)</strong>
+          API Gateway: <strong>{systemChecks.apiGateway ? "ONLINE (API v1)" : "RECONNECTING"}</strong>
         </div>
         <div className="live-status-item">
           <span className={`status-dot ${systemChecks.postgresDb ? "online" : "offline"}`}></span>
-          PostgreSQL DB Layer: <strong>HEALTHY (34 Tables)</strong>
+          PostgreSQL DB Layer: <strong>{systemChecks.postgresDb ? "ACTIVE PRIMARY (82 Tables)" : `STANDBY (${systemChecks.postgresRole})`}</strong>
         </div>
         <div className="live-status-item">
           <span className="status-dot online"></span>
@@ -325,8 +372,8 @@ export default function MainLoginPage() {
               const targetRole = ["ADMIN", "TEACHER", "STUDENT", "PARENT", "ACCOUNTANT", "STAFF"].includes(selectedRole)
                 ? selectedRole
                 : selectedRole === "HR"
-                ? "STAFF"
-                : "MASTER";
+                  ? "STAFF"
+                  : "MASTER";
               setVideoHubRole(targetRole);
               setShowVideoHubModal(true);
             }}
@@ -382,8 +429,8 @@ export default function MainLoginPage() {
             type="button"
             onClick={() => {
               setLoginMode("LIVE_PRODUCTION");
-              localStorage.setItem("gbs_system_mode", "LIVE_PRODUCTION");
-              localStorage.setItem("gbs_environment_mode", "PRODUCTION");
+              syncSystemModeFlags("LIVE_PRODUCTION");
+              clearWorkspaceMutableKeys({ clearBranding: true });
               setEmail("");
               setPassword("");
               setError(null);
@@ -408,8 +455,8 @@ export default function MainLoginPage() {
             type="button"
             onClick={() => {
               setLoginMode("DEMO_SANDBOX");
-              localStorage.setItem("gbs_system_mode", "DEMO_SANDBOX");
-              localStorage.setItem("gbs_environment_mode", "SANDBOX");
+              syncSystemModeFlags("DEMO_SANDBOX");
+              clearWorkspaceMutableKeys({ clearBranding: true });
               handleFillCredentials(selectedRole);
             }}
             style={{
@@ -702,6 +749,33 @@ export default function MainLoginPage() {
                     ⚠️ {admissionError}
                   </div>
                 )}
+
+                {/* Target Educational Institution Selector (Routes Live Applications Directly to School Tenant) */}
+                <div style={{ marginBottom: "1.25rem", background: "rgba(56, 189, 248, 0.08)", border: "1px solid rgba(56, 189, 248, 0.3)", borderRadius: "10px", padding: "12px" }}>
+                  <label style={{ display: "block", fontSize: "0.82rem", color: "#38bdf8", fontWeight: "700", marginBottom: "6px" }}>
+                    🏫 Select Target Institution / School Campus *
+                  </label>
+                  {publicInstitutions.length > 0 && loginMode !== "DEMO_SANDBOX" ? (
+                    <select
+                      className="filter-input"
+                      style={{ width: "100%", padding: "9px 12px", background: "rgba(15, 23, 42, 0.95)", border: "1px solid rgba(56, 189, 248, 0.45)", color: "#f8fafc", borderRadius: "8px", fontWeight: "600" }}
+                      value={selectedTenantId}
+                      onChange={(e) => setSelectedTenantId(e.target.value)}
+                    >
+                      {publicInstitutions.map((inst) => (
+                        <option key={inst.id} value={String(inst.id)}>
+                          {inst.name} ({inst.code || `TENANT-${inst.id}`})
+                        </option>
+                      ))}
+                    </select>
+                  ) : (
+                    <div style={{ fontSize: "0.82rem", color: "#cbd5e1", fontWeight: "600" }}>
+                      {loginMode === "DEMO_SANDBOX"
+                        ? "🟡 Demo Sandbox Academy (Sovereign Evaluation Campus #1)"
+                        : "🏫 GBS Primary Campus (Default Routing — Approved institutions appear automatically once active)"}
+                    </div>
+                  )}
+                </div>
 
                 {/* Section 1: Ward / Student Information */}
                 <div style={{ marginBottom: "1.5rem" }}>

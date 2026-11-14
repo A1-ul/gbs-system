@@ -7,6 +7,7 @@ import { offlineSyncEngine } from "../../../utils/offlineSync";
 import { getOnboardingRates, updateOnboardingRates } from "../../../utils/pricingEngine";
 import UniversalRoleGuideModal from "../../../components/common/UniversalRoleGuideModal";
 import { navigateToDetail } from "../../../utils/universalNavigation";
+import { syncSystemModeFlags } from "../../../utils/tokenStorage";
 import "./DeveloperPlatform.css";
 
 const BASE_URL = `${getApiBaseUrl()}/dev-control`;
@@ -2399,6 +2400,7 @@ export default function DeveloperDashboard() {
       const data = await res.json();
       if (res.ok) {
         localStorage.setItem("gbs_system_environment", nextEnv);
+        syncSystemModeFlags(nextEnv === "PRODUCTION" ? "LIVE_PRODUCTION" : "DEMO_SANDBOX");
         showNotification(`✓ System active environment switched to ${nextEnv}`);
         fetchData();
       } else {

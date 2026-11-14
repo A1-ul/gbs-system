@@ -17,6 +17,10 @@ router.post('/check-conflicts', timetableController.checkConflicts);
 router.post('/seed-weekly/:classId', restrictTo('SUPER_ADMIN', 'ADMIN', 'DEVELOPER', 'TEACHER'), timetableController.seedWeekly);
 router.post('/seed-weekly', restrictTo('SUPER_ADMIN', 'ADMIN', 'DEVELOPER', 'TEACHER'), timetableController.seedWeekly);
 
+// 2b. Examination Timetable Guide CRUD (Cross-Dashboard Teacher -> Student & Headmaster)
+router.get('/examination-guide', timetableController.getExamTimetableGuide);
+router.post('/examination-guide', restrictTo('SUPER_ADMIN', 'ADMIN', 'DEVELOPER', 'TEACHER'), timetableController.saveExamTimetableGuide);
+
 // 3. Timetable Slots CRUD
 router.get('/slots', timetableController.getSlots);
 router.get('/slots/:id', timetableController.getSlotById);

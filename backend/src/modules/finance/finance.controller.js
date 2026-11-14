@@ -19,7 +19,7 @@ const getStatus = async (req, res, next) => {
 // 2. Fee Structures
 const getFeeStructures = async (req, res, next) => {
   try {
-    const tenantId = req.user?.tenantId || req.headers['x-tenant-id'] || 1;
+    const tenantId = req.tenantId || req.user?.tenantId || req.headers['x-tenant-id'] || 1;
     const feeStructures = await financeService.getFeeStructures(tenantId);
     res.status(200).json({
       status: 'success',
@@ -33,7 +33,7 @@ const getFeeStructures = async (req, res, next) => {
 
 const createFeeStructure = async (req, res, next) => {
   try {
-    const tenantId = req.user?.tenantId || req.headers['x-tenant-id'] || 1;
+    const tenantId = req.tenantId || req.user?.tenantId || req.headers['x-tenant-id'] || 1;
     const fee = await financeService.createFeeStructure(tenantId, req.body, req.user?.id);
     res.status(201).json({
       status: 'success',
@@ -48,7 +48,7 @@ const createFeeStructure = async (req, res, next) => {
 // 3. Invoices
 const generateInvoice = async (req, res, next) => {
   try {
-    const tenantId = req.user?.tenantId || req.headers['x-tenant-id'] || 1;
+    const tenantId = req.tenantId || req.user?.tenantId || req.headers['x-tenant-id'] || 1;
     const effAmount = req.body.amount !== undefined ? req.body.amount : req.body.grossAmount;
     const effStudentId = req.body.studentId || 3;
     if (effAmount === undefined) {
@@ -71,7 +71,7 @@ const generateInvoice = async (req, res, next) => {
 
 const getInvoices = async (req, res, next) => {
   try {
-    const tenantId = req.user?.tenantId || req.headers['x-tenant-id'] || 1;
+    const tenantId = req.tenantId || req.user?.tenantId || req.headers['x-tenant-id'] || 1;
     const filters = {
       status: req.query.status,
       studentId: req.query.studentId,
@@ -90,7 +90,7 @@ const getInvoices = async (req, res, next) => {
 
 const getInvoiceById = async (req, res, next) => {
   try {
-    const tenantId = req.user?.tenantId || req.headers['x-tenant-id'] || 1;
+    const tenantId = req.tenantId || req.user?.tenantId || req.headers['x-tenant-id'] || 1;
     const invoice = await financeService.getInvoiceById(tenantId, req.params.id);
     res.status(200).json({
       status: 'success',
@@ -104,7 +104,7 @@ const getInvoiceById = async (req, res, next) => {
 // 4. Payments
 const recordPayment = async (req, res, next) => {
   try {
-    const tenantId = req.user?.tenantId || req.headers['x-tenant-id'] || 1;
+    const tenantId = req.tenantId || req.user?.tenantId || req.headers['x-tenant-id'] || 1;
     const effAmountPaid = req.body.amountPaid !== undefined ? req.body.amountPaid : req.body.amount;
     if (!req.body.invoiceId || effAmountPaid === undefined) {
       return res.status(400).json({
@@ -125,7 +125,7 @@ const recordPayment = async (req, res, next) => {
 
 const getPayments = async (req, res, next) => {
   try {
-    const tenantId = req.user?.tenantId || req.headers['x-tenant-id'] || 1;
+    const tenantId = req.tenantId || req.user?.tenantId || req.headers['x-tenant-id'] || 1;
     const filters = {
       gatewayStatus: req.query.gatewayStatus,
       paymentMethod: req.query.paymentMethod
@@ -144,7 +144,7 @@ const getPayments = async (req, res, next) => {
 // 5. Operating Expenses
 const createExpense = async (req, res, next) => {
   try {
-    const tenantId = req.user?.tenantId || req.headers['x-tenant-id'] || 1;
+    const tenantId = req.tenantId || req.user?.tenantId || req.headers['x-tenant-id'] || 1;
     const effTitle = req.body.title || req.body.category || req.body.description || 'Operating Expense';
     if (req.body.amount === undefined) {
       return res.status(400).json({
@@ -165,7 +165,7 @@ const createExpense = async (req, res, next) => {
 
 const getExpenses = async (req, res, next) => {
   try {
-    const tenantId = req.user?.tenantId || req.headers['x-tenant-id'] || 1;
+    const tenantId = req.tenantId || req.user?.tenantId || req.headers['x-tenant-id'] || 1;
     const filters = {
       category: req.query.category,
       paymentStatus: req.query.paymentStatus
@@ -184,7 +184,7 @@ const getExpenses = async (req, res, next) => {
 // 6. Telemetry
 const getFinancialTelemetry = async (req, res, next) => {
   try {
-    const tenantId = req.user?.tenantId || req.headers['x-tenant-id'] || 1;
+    const tenantId = req.tenantId || req.user?.tenantId || req.headers['x-tenant-id'] || 1;
     const telemetry = await financeService.getFinancialTelemetry(tenantId);
     res.status(200).json({
       status: 'success',
@@ -261,7 +261,7 @@ const createLoanApplication = async (req, res, next) => {
 
 const getClassFeeMatrix = async (req, res, next) => {
   try {
-    const tenantId = req.user?.tenantId || req.headers['x-tenant-id'] || 1;
+    const tenantId = req.tenantId || req.user?.tenantId || req.headers['x-tenant-id'] || 1;
     const data = await financeService.getClassFeeMatrix(tenantId);
     res.status(200).json({
       status: 'success',
@@ -274,7 +274,7 @@ const getClassFeeMatrix = async (req, res, next) => {
 
 const updateClassFeeIncrement = async (req, res, next) => {
   try {
-    const tenantId = req.user?.tenantId || req.headers['x-tenant-id'] || 1;
+    const tenantId = req.tenantId || req.user?.tenantId || req.headers['x-tenant-id'] || 1;
     const data = await financeService.updateClassFeeIncrement(tenantId, req.body);
     res.status(200).json({
       status: 'success',

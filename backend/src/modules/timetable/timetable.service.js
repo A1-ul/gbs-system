@@ -415,6 +415,46 @@ const seedWeeklyTimetable = async (tenantId, classId, operatorUser) => {
   return getTimetableSlots(tid, { classId: targetClass.id });
 };
 
+const getExamTimetableGuide = async (tenantId = 1) => {
+  const tid = parseInt(tenantId, 10) || 1;
+  const { readPersistentStore } = require('../../core/database/persistentStore');
+  const store = readPersistentStore();
+  const saved = store.examinationTimetables?.[String(tid)];
+  if (Array.isArray(saved)) return saved;
+  return [];
+};
+
+const saveExamTimetableGuide = async (tenantId = 1, entriesInput = [], operatorUser = null) => {
+  const tid = parseInt(tenantId, 10) || 1;
+  const { writePersistentStore } = require('../../core/database/persistentStore');
+  const entries = Array.isArray(entriesInput) ? entriesInput : [];
+
+  writePersistentStore((curr) => {
+    const examinationTimetables = { ...(curr.examinationTimetables || {}) };
+    examinationTimetables[String(tid)] = entries.map((e, idx) => ({
+      ...e,
+      id: e.id || `ET-${Date.now()}-${idx + 1}`,
+      tenantId: tid,
+      updatedAt: new Date().toISOString()
+    }));
+    return { ...curr, examinationTimetables };
+  });
+
+  if (operatorUser) {
+    await prisma.auditLog.create({
+      data: {
+        tenantId: tid,
+        userId: operatorUser.id,
+        action: 'EXAM_TIMETABLE_PUBLISHED',
+        module: 'TIMETABLE',
+        details: `Published ${entries.length} examination timetable session(s) for institution #${tid}.`
+      }
+    }).catch(() => { });
+  }
+
+  return getExamTimetableGuide(tid);
+};
+
 module.exports = {
   detectConflicts,
   getTimetableSlots,
@@ -422,5 +462,7 @@ module.exports = {
   createTimetableSlot,
   updateTimetableSlot,
   deleteTimetableSlot,
-  seedWeeklyTimetable
+  seedWeeklyTimetable,
+  getExamTimetableGuide,
+  saveExamTimetableGuide
 };

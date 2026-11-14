@@ -6,12 +6,14 @@ import TopCenterSystemBanner from "../../../../../components/common/TopCenterSys
 import UniversalRoleGuideModal from "../../../../../components/common/UniversalRoleGuideModal";
 import { navigateToDetail } from "../../../../../utils/universalNavigation";
 import { getActiveSchoolName, getActiveSchoolLogo } from "../../../../../utils/schoolBranding";
+import { isDemoSandboxMode, clearAuthStorage } from "../../../../../utils/tokenStorage";
+import { useDashboardTabSync } from "../../../../../hooks/useDashboardTabSync";
 import "./StaffDashboard.css";
 
 export default function StaffDashboard() {
   const navigate = useNavigate();
   const [showStaffGuideModal, setShowStaffGuideModal] = useState(false);
-  const [activeTab, setActiveTab] = useState("duties");
+  const { activeTab, setActiveTab } = useDashboardTabSync("duties", "gbs_staff_active_tab");
   const [loading, setLoading] = useState(false);
   const [feedback, setFeedback] = useState(null);
 
@@ -41,10 +43,7 @@ export default function StaffDashboard() {
   });
 
   const currentUser = JSON.parse(localStorage.getItem("gbs_user") || '{"firstName":"Staff","lastName":"Member","role":"STAFF"}');
-  const isDemoTenant =
-    localStorage.getItem("gbs_tenant_mode") !== "LIVE_PRODUCTION" &&
-    (!currentUser?.tenantCode || currentUser.tenantCode === "GBS-MAIN") &&
-    (Number(currentUser?.tenantId || 1) === 1);
+  const isDemoTenant = isDemoSandboxMode(currentUser);
 
   // Inventory Depot State
   const [inventoryItems, setInventoryItems] = useState(() => {
@@ -96,7 +95,20 @@ export default function StaffDashboard() {
   useEffect(() => {
     fetchTickets();
     fetchApplications();
+    fetchInventory();
   }, []);
+
+  const fetchInventory = async () => {
+    try {
+      const res = await apiClient.get("/inventory/items");
+      const items = res.data?.data?.items || res.data?.data || [];
+      if (Array.isArray(items) && items.length > 0) {
+        setInventoryItems(items);
+      }
+    } catch (err) {
+      console.warn("Could not fetch inventory items:", err?.message || err);
+    }
+  };
 
   const fetchTickets = async () => {
     try {
@@ -150,7 +162,7 @@ export default function StaffDashboard() {
     setFeedback(null);
     try {
       const res = await apiClient.post("/facility/tickets", {
-        tenantId: 1,
+        tenantId: currentUser?.tenantId || 1,
         title: newTicket.title,
         category: newTicket.category,
         location: newTicket.location,
@@ -188,10 +200,10 @@ export default function StaffDashboard() {
     }
   };
 
-  const handleCreateNewTask = (e) => {
+  const handleCreateNewTask = async (e) => {
     e.preventDefault();
     if (!newTaskInput.title) return;
-    const taskObj = {
+    const optimisticObj = {
       id: Date.now(),
       title: newTaskInput.title,
       ticket_number: `DUTY-${Date.now().toString().slice(-5)}`,
@@ -201,43 +213,92 @@ export default function StaffDashboard() {
       location: newTaskInput.location,
       assigned_staff: newTaskInput.assignedUnit
     };
-    setTasks((prev) => [taskObj, ...prev]);
-    setFeedback({ type: "success", message: `✓ Operational Task "${taskObj.title}" successfully added to Campus Roster!` });
+    try {
+      const res = await apiClient.post("/facility/tickets", {
+        tenantId: currentUser?.tenantId || 1,
+        title: newTaskInput.title,
+        category: newTaskInput.category,
+        priority: newTaskInput.priority,
+        location: newTaskInput.location,
+        assignedStaff: newTaskInput.assignedUnit,
+        reportedBy: `${currentUser?.firstName || "Staff"} ${currentUser?.lastName || ""}`.trim()
+      });
+      const saved = res.data?.data || optimisticObj;
+      setTasks((prev) => [saved, ...prev]);
+      setFeedback({ type: "success", message: `✓ Operational Task "${saved.title}" saved to Campus Operations Ledger!` });
+    } catch (err) {
+      if (!isDemoTenant) {
+        setFeedback({ type: "error", message: err.response?.data?.message || "Failed to save operational task to server." });
+        return;
+      }
+      setTasks((prev) => [optimisticObj, ...prev]);
+      setFeedback({ type: "success", message: `✓ Operational Task "${optimisticObj.title}" added in Demo Sandbox!` });
+    }
     setNewTaskInput({ title: "", category: "DAILY_INSPECTION", priority: "HIGH", assignedUnit: "Morning Patrol Team", location: "Main Gate & Assembly Grounds" });
     setShowNewTaskForm(false);
   };
 
-  const handleQuickRestock = (itemId, addQty) => {
+  const handleQuickRestock = async (itemId, addQty) => {
     setInventoryItems((prev) =>
       prev.map((it) => {
         if (it.id === itemId) {
-          const newQty = it.quantity_on_hand + addQty;
+          const newQty = Number(it.quantity_on_hand || 0) + addQty;
           return {
             ...it,
             quantity_on_hand: newQty,
-            status: newQty <= it.reorder_level ? "LOW_STOCK" : "IN_STOCK"
+            status: newQty <= Number(it.reorder_level || 10) ? "LOW_STOCK" : "IN_STOCK"
           };
         }
         return it;
       })
     );
-    setFeedback({ type: "success", message: `✓ Stock replenishment recorded! Updated on hand balance.` });
+    try {
+      await apiClient.post(`/inventory/items/${itemId}/adjust`, {
+        adjustment: addQty,
+        type: "RESTOCK",
+        reason: `Quick restock +${addQty} by Staff Operations`
+      });
+      setFeedback({ type: "success", message: `✓ Stock replenishment (+${addQty}) recorded to institution inventory ledger.` });
+    } catch (err) {
+      if (!isDemoTenant) {
+        setFeedback({ type: "error", message: err.response?.data?.message || "Failed to commit stock replenishment." });
+        return;
+      }
+      setFeedback({ type: "success", message: `✓ Stock replenishment recorded in Demo Sandbox.` });
+    }
   };
 
-  const handleRequisitionSubmit = (e) => {
+  const handleRequisitionSubmit = async (e) => {
     e.preventDefault();
     if (!newRequisitionItem.itemName) return;
-    setFeedback({
-      type: "success",
-      message: `✓ Requisition for "${newRequisitionItem.itemName}" (${newRequisitionItem.quantity} units) logged and forwarded to Bursar & Procurement Desk!`
-    });
+    try {
+      await apiClient.post("/inventory/requests", {
+        itemName: newRequisitionItem.itemName,
+        quantity: Number(newRequisitionItem.quantity) || 1,
+        department: newRequisitionItem.department,
+        urgency: newRequisitionItem.urgency,
+        notes: newRequisitionItem.notes
+      });
+      setFeedback({
+        type: "success",
+        message: `✓ Requisition for "${newRequisitionItem.itemName}" (${newRequisitionItem.quantity} units) committed and routed to Bursar & Procurement Desk!`
+      });
+    } catch (err) {
+      if (!isDemoTenant) {
+        setFeedback({ type: "error", message: err.response?.data?.message || "Failed to submit requisition request." });
+        return;
+      }
+      setFeedback({
+        type: "success",
+        message: `✓ Requisition for "${newRequisitionItem.itemName}" (${newRequisitionItem.quantity} units) logged in Demo Sandbox!`
+      });
+    }
     setNewRequisitionItem({ itemName: "", quantity: 1, department: "FACILITY_OPS", urgency: "MEDIUM", notes: "" });
     setShowReqForm(false);
   };
 
   const handleLogout = () => {
-    localStorage.removeItem("gbs_token");
-    localStorage.removeItem("gbs_user");
+    clearAuthStorage();
     navigate("/login/staff");
   };
 

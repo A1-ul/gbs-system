@@ -6,21 +6,21 @@ const controller = require('./admissions.controller');
 const { protect } = require('../../middleware/auth.middleware');
 const { restrictTo } = require('../../middleware/rbac.middleware');
 const { tenantStatusGuard, tenantIsolationGuard } = require('../../middleware/tenant.middleware');
+const { optionalProtect } = require('../../utils/resolveTenantId');
 
-// 1. Public or Prospective Inquiry Endpoints
+// 1. Public or Prospective Inquiry Endpoints (Unauthenticated families OR Authenticated users)
 router.get('/status', controller.getStatus);
+router.post('/inquiry', optionalProtect, controller.createInquiry);
+router.post('/', optionalProtect, controller.createInquiry);
 
-// All operational routes require authentication and tenant isolation
+// All operational & read routes require authentication and tenant isolation
 router.use(protect);
 router.use(tenantStatusGuard);
 router.use(tenantIsolationGuard);
 
 // 2. Applications Pipeline Query & Analytics
 router.get('/analytics', controller.getAnalytics);
-router.post('/inquiry', controller.createInquiry);
-router.route('/')
-  .get(controller.getApplications)
-  .post(controller.createInquiry);
+router.get('/', controller.getApplications);
 
 router.post('/batch-delete', restrictTo('ADMIN', 'DEVELOPER'), controller.batchDeleteApplications);
 

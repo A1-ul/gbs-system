@@ -101,17 +101,22 @@ const INT_ID_FIELDS = new Set([
   'gradedById'
 ]);
 
-const sanitizeIdsForPrisma = (obj, modelName = null) => {
+const SKIP_INT_CONTAINERS = new Set(['orderBy', 'select', 'include', 'omit', 'distinct', 'by']);
+const SORT_DIRECTIONS = new Set(['asc', 'desc']);
+
+const sanitizeIdsForPrisma = (obj, modelName = null, parentKey = null) => {
   if (!obj || typeof obj !== 'object') return obj;
-  if (Array.isArray(obj)) return obj.map((item) => sanitizeIdsForPrisma(item, modelName));
+  if (Array.isArray(obj)) return obj.map((item) => sanitizeIdsForPrisma(item, modelName, parentKey));
   const out = {};
   for (const [k, v] of Object.entries(obj)) {
     // InstitutionRegistration.subscriptionId is a String identifier (e.g. "SUB-2026-001"), not a numeric FK
     const skipSubscriptionInt = k === 'subscriptionId' && modelName === 'InstitutionRegistration';
-    if (INT_ID_FIELDS.has(k) && typeof v === 'string' && !skipSubscriptionInt) {
+    const inNonIdValueContainer = SKIP_INT_CONTAINERS.has(parentKey);
+    const isSortOrderValue = typeof v === 'string' && SORT_DIRECTIONS.has(v.trim().toLowerCase());
+    if (INT_ID_FIELDS.has(k) && typeof v === 'string' && !skipSubscriptionInt && !inNonIdValueContainer && !isSortOrderValue) {
       out[k] = toSafeInt(v, 1);
     } else if (v && typeof v === 'object' && !(v instanceof Date)) {
-      out[k] = sanitizeIdsForPrisma(v, modelName);
+      out[k] = sanitizeIdsForPrisma(v, modelName, k);
     } else {
       out[k] = v;
     }
@@ -687,7 +692,7 @@ const attachIncludes = (row, includeOrSelect, store) => {
       }
     ];
   }
-  if (inc. _count) {
+  if (inc._count) {
     copy._count = copy._count || { enrollments: 28, students: 28, users: 12, submissions: 15 };
   }
   return copy;

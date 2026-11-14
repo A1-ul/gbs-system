@@ -912,29 +912,29 @@ export function AdminDashboard({ initialTab } = {}) {
         const exists = localUsers.some((u) => String(u.email || "").toLowerCase() === targetEmail || u.id === staffMember.id);
         const nextUsers = exists
           ? localUsers.map((u) =>
-              String(u.email || "").toLowerCase() === targetEmail || u.id === staffMember.id
-                ? {
-                    ...u,
-                    isApproved: true,
-                    isActive: true,
-                    status: "APPROVED",
-                    verificationStatus: "VERIFIED",
-                    approvedAt: new Date().toISOString()
-                  }
-                : u
-            )
-          : [
-              {
-                ...staffMember,
-                email: targetEmail,
+            String(u.email || "").toLowerCase() === targetEmail || u.id === staffMember.id
+              ? {
+                ...u,
                 isApproved: true,
                 isActive: true,
                 status: "APPROVED",
                 verificationStatus: "VERIFIED",
                 approvedAt: new Date().toISOString()
-              },
-              ...localUsers
-            ];
+              }
+              : u
+          )
+          : [
+            {
+              ...staffMember,
+              email: targetEmail,
+              isApproved: true,
+              isActive: true,
+              status: "APPROVED",
+              verificationStatus: "VERIFIED",
+              approvedAt: new Date().toISOString()
+            },
+            ...localUsers
+          ];
         localStorage.setItem("gbs_local_registered_users", JSON.stringify(nextUsers));
         window.dispatchEvent(new Event("storage"));
       } catch { }
@@ -2595,7 +2595,7 @@ export function AdminDashboard({ initialTab } = {}) {
   const handleSaveWalkInAdmission = (e) => {
     e.preventDefault();
     if (!walkInForm.studentFirstName.trim() || !walkInForm.studentLastName.trim()) {
-      alert("Please provide the student first and last name.");
+      setFeedback({ type: "error", message: "Please provide the student first and last name." });
       return;
     }
 
@@ -4872,7 +4872,7 @@ export function AdminDashboard({ initialTab } = {}) {
   const handleSendParentFeedback = (inquiryId) => {
     const replyText = replyTextMap[inquiryId]?.trim();
     if (!replyText) {
-      alert("Please write feedback content before sending.");
+      setFeedback({ type: "error", message: "Please write feedback content before sending." });
       return;
     }
     const updated = parentInquiries.map((inq) => {
@@ -6052,97 +6052,97 @@ export function AdminDashboard({ initialTab } = {}) {
                     );
                   }
                   return (
-                  <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(300px, 1fr))", gap: "12px" }}>
-                    {teacherRoster.map((tItem) => {
-                      const prof = getTeacherActiveCurriculumProfile(tItem);
-                      return (
-                        <div
-                          key={tItem.teacherId}
-                          style={{
-                            background: "rgba(2, 6, 23, 0.78)",
-                            border: "1px solid rgba(56, 189, 248, 0.3)",
-                            borderRadius: "12px",
-                            padding: "14px",
-                            display: "flex",
-                            flexDirection: "column",
-                            justifyContent: "space-between",
-                            gap: "10px"
-                          }}
-                        >
-                          <div>
-                            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", gap: "8px" }}>
-                              <div>
-                                <strong style={{ color: "#f8fafc", fontSize: "0.95rem", display: "block" }}>{prof.teacherName}</strong>
-                                <span style={{ color: "#38bdf8", fontSize: "0.75rem", fontWeight: 700 }}>{prof.teacherPosition}</span>
+                    <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(300px, 1fr))", gap: "12px" }}>
+                      {teacherRoster.map((tItem) => {
+                        const prof = getTeacherActiveCurriculumProfile(tItem);
+                        return (
+                          <div
+                            key={tItem.teacherId}
+                            style={{
+                              background: "rgba(2, 6, 23, 0.78)",
+                              border: "1px solid rgba(56, 189, 248, 0.3)",
+                              borderRadius: "12px",
+                              padding: "14px",
+                              display: "flex",
+                              flexDirection: "column",
+                              justifyContent: "space-between",
+                              gap: "10px"
+                            }}
+                          >
+                            <div>
+                              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", gap: "8px" }}>
+                                <div>
+                                  <strong style={{ color: "#f8fafc", fontSize: "0.95rem", display: "block" }}>{prof.teacherName}</strong>
+                                  <span style={{ color: "#38bdf8", fontSize: "0.75rem", fontWeight: 700 }}>{prof.teacherPosition}</span>
+                                </div>
+                                <span style={{ background: "rgba(16, 185, 129, 0.15)", color: "#34d399", padding: "2px 8px", borderRadius: "6px", fontSize: "0.68rem", fontWeight: 800 }}>
+                                  {prof.version}
+                                </span>
                               </div>
-                              <span style={{ background: "rgba(16, 185, 129, 0.15)", color: "#34d399", padding: "2px 8px", borderRadius: "6px", fontSize: "0.68rem", fontWeight: 800 }}>
-                                {prof.version}
-                              </span>
+                              <div style={{ marginTop: "8px", fontSize: "0.78rem", color: "#cbd5e1", lineHeight: 1.45 }}>
+                                <div><strong>Class / Level:</strong> {prof.className} ({prof.institutionTier})</div>
+                                <div><strong>Subject:</strong> {prof.subjectName}</div>
+                                <div style={{ color: "#7dd3fc", marginTop: "3px" }}>
+                                  <strong>Active Curriculum:</strong> {prof.curriculumTitle}
+                                </div>
+                                <div style={{ color: "#fde68a", fontSize: "0.73rem", marginTop: "2px" }}>
+                                  🗓️ Spread Across <strong>{prof.totalTermWeeks} Weeks</strong> ({prof.weeklySpread?.length || prof.totalTermWeeks} Weekly Units)
+                                </div>
+                              </div>
                             </div>
-                            <div style={{ marginTop: "8px", fontSize: "0.78rem", color: "#cbd5e1", lineHeight: 1.45 }}>
-                              <div><strong>Class / Level:</strong> {prof.className} ({prof.institutionTier})</div>
-                              <div><strong>Subject:</strong> {prof.subjectName}</div>
-                              <div style={{ color: "#7dd3fc", marginTop: "3px" }}>
-                                <strong>Active Curriculum:</strong> {prof.curriculumTitle}
-                              </div>
-                              <div style={{ color: "#fde68a", fontSize: "0.73rem", marginTop: "2px" }}>
-                                🗓️ Spread Across <strong>{prof.totalTermWeeks} Weeks</strong> ({prof.weeklySpread?.length || prof.totalTermWeeks} Weekly Units)
-                              </div>
-                            </div>
-                          </div>
 
-                          <div style={{ display: "flex", gap: "8px", flexWrap: "wrap" }}>
-                            <button
-                              type="button"
-                              onClick={() => setSelectedTeacherForCheckup(prof)}
-                              style={{
-                                flex: 1,
-                                background: "linear-gradient(135deg, #0284c7, #2563eb)",
-                                color: "#fff",
-                                border: "none",
-                                padding: "7px 12px",
-                                borderRadius: "8px",
-                                fontSize: "0.76rem",
-                                fontWeight: 800,
-                                cursor: "pointer"
-                              }}
-                            >
-                              🔍 View Profile & Active Curriculum Checkup
-                            </button>
-                            <button
-                              type="button"
-                              onClick={() => setEditingTeacherCurriculumInAdmin({
-                                teacherId: prof.teacherId,
-                                teacherName: prof.teacherName,
-                                className: prof.className,
-                                subjectName: prof.subjectName,
-                                institutionTier: prof.institutionTier,
-                                curriculumTitle: prof.curriculumTitle,
-                                authority: prof.authority,
-                                version: prof.version,
-                                strandsText: (prof.strands || []).join("\n"),
-                                indicatorsText: (prof.indicators || []).join("\n"),
-                                updateNotes: ""
-                              })}
-                              style={{
-                                background: "rgba(245, 158, 11, 0.18)",
-                                border: "1px solid #f59e0b",
-                                color: "#fde68a",
-                                padding: "7px 10px",
-                                borderRadius: "8px",
-                                fontSize: "0.75rem",
-                                fontWeight: 800,
-                                cursor: "pointer"
-                              }}
-                              title="Update this curriculum when there are updates"
-                            >
-                              🔄 Update
-                            </button>
+                            <div style={{ display: "flex", gap: "8px", flexWrap: "wrap" }}>
+                              <button
+                                type="button"
+                                onClick={() => setSelectedTeacherForCheckup(prof)}
+                                style={{
+                                  flex: 1,
+                                  background: "linear-gradient(135deg, #0284c7, #2563eb)",
+                                  color: "#fff",
+                                  border: "none",
+                                  padding: "7px 12px",
+                                  borderRadius: "8px",
+                                  fontSize: "0.76rem",
+                                  fontWeight: 800,
+                                  cursor: "pointer"
+                                }}
+                              >
+                                🔍 View Profile & Active Curriculum Checkup
+                              </button>
+                              <button
+                                type="button"
+                                onClick={() => setEditingTeacherCurriculumInAdmin({
+                                  teacherId: prof.teacherId,
+                                  teacherName: prof.teacherName,
+                                  className: prof.className,
+                                  subjectName: prof.subjectName,
+                                  institutionTier: prof.institutionTier,
+                                  curriculumTitle: prof.curriculumTitle,
+                                  authority: prof.authority,
+                                  version: prof.version,
+                                  strandsText: (prof.strands || []).join("\n"),
+                                  indicatorsText: (prof.indicators || []).join("\n"),
+                                  updateNotes: ""
+                                })}
+                                style={{
+                                  background: "rgba(245, 158, 11, 0.18)",
+                                  border: "1px solid #f59e0b",
+                                  color: "#fde68a",
+                                  padding: "7px 10px",
+                                  borderRadius: "8px",
+                                  fontSize: "0.75rem",
+                                  fontWeight: 800,
+                                  cursor: "pointer"
+                                }}
+                                title="Update this curriculum when there are updates"
+                              >
+                                🔄 Update
+                              </button>
+                            </div>
                           </div>
-                        </div>
-                      );
-                    })}
-                  </div>
+                        );
+                      })}
+                    </div>
                   );
                 })()}
               </div>
@@ -10464,73 +10464,73 @@ export function AdminDashboard({ initialTab } = {}) {
                   {developerMessages.map((msg) => {
                     const isCardMinimized = minimizedDirectiveIds.includes(msg.id);
                     return (
-                    <div key={msg.id} style={{ background: "rgba(15, 23, 42, 0.8)", border: "1.5px solid rgba(139, 92, 246, 0.4)", borderRadius: "14px", padding: isCardMinimized ? "1rem 1.25rem" : "1.5rem" }}>
-                      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", flexWrap: "wrap", gap: "10px", marginBottom: isCardMinimized ? "0" : "12px", borderBottom: isCardMinimized ? "none" : "1px solid rgba(255, 255, 255, 0.08)", paddingBottom: isCardMinimized ? "0" : "10px" }}>
-                        <div>
-                          <span style={{ background: "rgba(239, 68, 68, 0.2)", color: "#fca5a5", border: "1px solid rgba(239, 68, 68, 0.4)", padding: "2px 8px", borderRadius: "4px", fontSize: "0.72rem", fontWeight: "800" }}>
-                            DEVELOPER STATUTORY DIRECTIVE
-                          </span>
-                          <h3 style={{ margin: "8px 0 2px", color: "#f8fafc", fontSize: "1.15rem" }}>{msg.subject}</h3>
-                          <span style={{ fontSize: "0.78rem", color: "#94a3b8" }}>From: <strong>{msg.senderName}</strong> • {new Date(msg.timestamp).toLocaleString()}</span>
-                        </div>
-                        <div style={{ display: "flex", gap: "8px", alignItems: "center" }}>
-                          <button
-                            type="button"
-                            onClick={() => handleToggleDirectiveCardMinimize(msg.id)}
-                            style={{
-                              background: "rgba(15, 23, 42, 0.9)",
-                              border: "1px solid #f59e0b",
-                              color: "#fde68a",
-                              borderRadius: "8px",
-                              padding: "8px 12px",
-                              fontSize: "0.78rem",
-                              fontWeight: "800",
-                              cursor: "pointer"
-                            }}
-                            title={isCardMinimized ? "Expand statutory directive warning" : "Minimize statutory directive warning"}
-                          >
-                            {isCardMinimized ? "➕ Expand Warning" : "➖ Minimize Warning"}
-                          </button>
-                          <button
-                            type="button"
-                            className="btn-primary"
-                            style={{ background: "linear-gradient(135deg, #8b5cf6, #6d28d9)", fontSize: "0.82rem", padding: "8px 16px" }}
-                            onClick={() => {
-                              setSelectedDevMessage(msg);
-                              setShowDevMessageModal(true);
-                            }}
-                          >
-                            ✍️ Reply to Developer
-                          </button>
-                        </div>
-                      </div>
-
-                      {!isCardMinimized && (
-                        <>
-                          <div style={{ background: "rgba(2, 6, 23, 0.7)", padding: "1rem 1.25rem", borderRadius: "10px", borderLeft: "4px solid #8b5cf6", whiteSpace: "pre-wrap", color: "#e2e8f0", fontSize: "0.9rem", lineHeight: "1.6" }}>
-                            {msg.messageText}
+                      <div key={msg.id} style={{ background: "rgba(15, 23, 42, 0.8)", border: "1.5px solid rgba(139, 92, 246, 0.4)", borderRadius: "14px", padding: isCardMinimized ? "1rem 1.25rem" : "1.5rem" }}>
+                        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", flexWrap: "wrap", gap: "10px", marginBottom: isCardMinimized ? "0" : "12px", borderBottom: isCardMinimized ? "none" : "1px solid rgba(255, 255, 255, 0.08)", paddingBottom: isCardMinimized ? "0" : "10px" }}>
+                          <div>
+                            <span style={{ background: "rgba(239, 68, 68, 0.2)", color: "#fca5a5", border: "1px solid rgba(239, 68, 68, 0.4)", padding: "2px 8px", borderRadius: "4px", fontSize: "0.72rem", fontWeight: "800" }}>
+                              DEVELOPER STATUTORY DIRECTIVE
+                            </span>
+                            <h3 style={{ margin: "8px 0 2px", color: "#f8fafc", fontSize: "1.15rem" }}>{msg.subject}</h3>
+                            <span style={{ fontSize: "0.78rem", color: "#94a3b8" }}>From: <strong>{msg.senderName}</strong> • {new Date(msg.timestamp).toLocaleString()}</span>
                           </div>
+                          <div style={{ display: "flex", gap: "8px", alignItems: "center" }}>
+                            <button
+                              type="button"
+                              onClick={() => handleToggleDirectiveCardMinimize(msg.id)}
+                              style={{
+                                background: "rgba(15, 23, 42, 0.9)",
+                                border: "1px solid #f59e0b",
+                                color: "#fde68a",
+                                borderRadius: "8px",
+                                padding: "8px 12px",
+                                fontSize: "0.78rem",
+                                fontWeight: "800",
+                                cursor: "pointer"
+                              }}
+                              title={isCardMinimized ? "Expand statutory directive warning" : "Minimize statutory directive warning"}
+                            >
+                              {isCardMinimized ? "➕ Expand Warning" : "➖ Minimize Warning"}
+                            </button>
+                            <button
+                              type="button"
+                              className="btn-primary"
+                              style={{ background: "linear-gradient(135deg, #8b5cf6, #6d28d9)", fontSize: "0.82rem", padding: "8px 16px" }}
+                              onClick={() => {
+                                setSelectedDevMessage(msg);
+                                setShowDevMessageModal(true);
+                              }}
+                            >
+                              ✍️ Reply to Developer
+                            </button>
+                          </div>
+                        </div>
 
-                          {/* Headmaster Replies */}
-                          {(msg.replies || []).length > 0 && (
-                            <div style={{ marginTop: "1rem", borderLeft: "2px dashed #10b981", paddingLeft: "1.25rem", display: "flex", flexDirection: "column", gap: "8px" }}>
-                              <span style={{ fontSize: "0.75rem", color: "#34d399", fontWeight: "800", textTransform: "uppercase" }}>
-                                ✓ Actions Taken & Transmitted by Headmaster:
-                              </span>
-                              {msg.replies.map((rep) => (
-                                <div key={rep.id} style={{ background: "rgba(16, 185, 129, 0.1)", border: "1px solid rgba(16, 185, 129, 0.3)", borderRadius: "8px", padding: "10px 12px", fontSize: "0.85rem", color: "#f8fafc" }}>
-                                  <div style={{ display: "flex", justifyContent: "space-between", marginBottom: "4px", fontSize: "0.72rem", color: "#94a3b8" }}>
-                                    <strong style={{ color: "#34d399" }}>Headmaster Reply</strong>
-                                    <span>{new Date(rep.timestamp).toLocaleString()}</span>
-                                  </div>
-                                  <div>{rep.messageText}</div>
-                                </div>
-                              ))}
+                        {!isCardMinimized && (
+                          <>
+                            <div style={{ background: "rgba(2, 6, 23, 0.7)", padding: "1rem 1.25rem", borderRadius: "10px", borderLeft: "4px solid #8b5cf6", whiteSpace: "pre-wrap", color: "#e2e8f0", fontSize: "0.9rem", lineHeight: "1.6" }}>
+                              {msg.messageText}
                             </div>
-                          )}
-                        </>
-                      )}
-                    </div>
+
+                            {/* Headmaster Replies */}
+                            {(msg.replies || []).length > 0 && (
+                              <div style={{ marginTop: "1rem", borderLeft: "2px dashed #10b981", paddingLeft: "1.25rem", display: "flex", flexDirection: "column", gap: "8px" }}>
+                                <span style={{ fontSize: "0.75rem", color: "#34d399", fontWeight: "800", textTransform: "uppercase" }}>
+                                  ✓ Actions Taken & Transmitted by Headmaster:
+                                </span>
+                                {msg.replies.map((rep) => (
+                                  <div key={rep.id} style={{ background: "rgba(16, 185, 129, 0.1)", border: "1px solid rgba(16, 185, 129, 0.3)", borderRadius: "8px", padding: "10px 12px", fontSize: "0.85rem", color: "#f8fafc" }}>
+                                    <div style={{ display: "flex", justifyContent: "space-between", marginBottom: "4px", fontSize: "0.72rem", color: "#94a3b8" }}>
+                                      <strong style={{ color: "#34d399" }}>Headmaster Reply</strong>
+                                      <span>{new Date(rep.timestamp).toLocaleString()}</span>
+                                    </div>
+                                    <div>{rep.messageText}</div>
+                                  </div>
+                                ))}
+                              </div>
+                            )}
+                          </>
+                        )}
+                      </div>
                     );
                   })}
                 </div>
@@ -15363,7 +15363,7 @@ export function AdminDashboard({ initialTab } = {}) {
         signatoryTitle="Headmaster & Chief Academic Chancellor"
         onSave={(sigData) => {
           setHeadmasterSignature(sigData);
-          alert(`✍️ Headmaster digital signature verified and registered! Token: ${sigData.hash}`);
+          setFeedback({ type: "success", message: `✍️ Headmaster digital signature verified and registered! Token: ${sigData.hash}` });
         }}
       />
 

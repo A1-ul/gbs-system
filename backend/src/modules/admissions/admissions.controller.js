@@ -1,6 +1,7 @@
 'use strict';
 
 const service = require('./admissions.service');
+const { resolveTenantId } = require('../../utils/resolveTenantId');
 
 async function getStatus(req, res, next) {
   try {
@@ -13,7 +14,8 @@ async function getStatus(req, res, next) {
 
 async function createInquiry(req, res, next) {
   try {
-    const application = await service.createInquiry(req.tenantId, req.body, req.user);
+    const tenantId = resolveTenantId(req, 1);
+    const application = await service.createInquiry(tenantId, req.body, req.user);
     res.status(201).json({
       status: 'success',
       message: 'Admission inquiry submitted successfully.',

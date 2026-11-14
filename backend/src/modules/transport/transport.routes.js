@@ -3,6 +3,9 @@
 const express = require('express');
 const router = express.Router();
 const controller = require('./transport.controller');
+const { optionalProtect } = require('../../utils/resolveTenantId');
+
+router.use(optionalProtect);
 
 router.get('/status', controller.getStatus);
 router.get('/stats', controller.getStats);

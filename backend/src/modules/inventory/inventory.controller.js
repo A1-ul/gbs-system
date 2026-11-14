@@ -1,9 +1,10 @@
 'use strict';
 
 const inventoryService = require('./inventory.service');
+const { resolveTenantId } = require('../../utils/resolveTenantId');
 
 function extractTenantId(req) {
-  return req.user?.tenantId || req.query.tenantId || req.headers['x-tenant-id'] || 1;
+  return resolveTenantId(req, 1);
 }
 
 async function getStatus(req, res, next) {

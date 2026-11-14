@@ -5,7 +5,9 @@
    role dashboards, developer control center, and sub-modules.
    ============================================================================ */
 
-*, *::before, *::after {
+*,
+*::before,
+*::after {
   box-sizing: border-box;
   margin: 0;
   padding: 0;
@@ -31,18 +33,31 @@ body {
   position: relative;
 }
 
-img, picture, video, canvas, svg {
+img,
+picture,
+video,
+canvas,
+svg {
   display: block;
   max-width: 100%;
   height: auto;
 }
 
-input, button, textarea, select {
+input,
+button,
+textarea,
+select {
   font: inherit;
   max-width: 100%;
 }
 
-p, h1, h2, h3, h4, h5, h6 {
+p,
+h1,
+h2,
+h3,
+h4,
+h5,
+h6 {
   overflow-wrap: break-word;
 }
 
@@ -632,4 +647,75 @@ textarea:focus {
   .show-only-mobile {
     display: none !important;
   }
+}
+
+/* ============================================================================
+   INTERACTIVE HOVER, TAB RESPONSE & FULL-PAGE TAB DISPLAY POLISH
+   Applies crisp visual feedback to every button, tab, action card, and
+   dedicated full-display tab view across all 9 role dashboards.
+   ============================================================================ */
+.role-tab-btn,
+.role-action-btn,
+.btn-window-control,
+.action-btn-sm,
+.btn-secondary,
+.role-kpi-box,
+.dev-tab-btn {
+  transition: transform 0.16s ease, box-shadow 0.2s ease, border-color 0.2s ease, background-color 0.2s ease, filter 0.18s ease;
+}
+
+.role-tab-btn:hover,
+.dev-tab-btn:hover,
+.btn-window-control:hover,
+.action-btn-sm:hover,
+.role-action-btn:hover,
+.btn-secondary:hover,
+.role-kpi-box:hover {
+  transform: translateY(-2px);
+  filter: brightness(1.1);
+  box-shadow: 0 6px 18px rgba(15, 23, 42, 0.45), 0 0 12px rgba(56, 189, 248, 0.22);
+}
+
+.role-tab-btn:active,
+.dev-tab-btn:active,
+.btn-window-control:active,
+.action-btn-sm:active,
+.role-action-btn:active,
+.btn-primary:active,
+.btn-secondary:active,
+.role-kpi-box:active {
+  transform: translateY(0px) scale(0.985);
+}
+
+.role-tab-btn:focus-visible,
+.dev-tab-btn:focus-visible,
+.btn-window-control:focus-visible,
+.role-kpi-box:focus-visible,
+button:focus-visible {
+  outline: 2px solid #fbbf24;
+  outline-offset: 2px;
+}
+
+/* Full-Page Tab Display Mode (?full=1 or Full Display toggle) */
+body.gbs-full-display-mode .role-kpi-grid,
+body.gbs-full-display-mode .role-kpi-row,
+body.gbs-full-display-mode .gbs-kpi-summary-strip,
+body.gbs-full-display-mode .top-center-system-hero,
+body.gbs-full-display-mode .dev-kpi-grid {
+  display: none !important;
+}
+
+body.gbs-full-display-mode .role-main-content,
+body.gbs-full-display-mode .dashboard-main,
+body.gbs-full-display-mode .dev-main-content,
+body.gbs-full-display-mode main {
+  max-width: 100% !important;
+  width: 100% !important;
+  padding-left: clamp(0.75rem, 2vw, 1.5rem) !important;
+  padding-right: clamp(0.75rem, 2vw, 1.5rem) !important;
+}
+
+body.gbs-full-display-mode .role-workspace-card,
+body.gbs-full-display-mode .dev-workspace-panel {
+  min-height: calc(100vh - 150px);
 }

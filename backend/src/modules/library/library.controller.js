@@ -1,9 +1,10 @@
 'use strict';
 
 const libraryService = require('./library.service');
+const { resolveTenantId } = require('../../utils/resolveTenantId');
 
 function extractTenantId(req) {
-  return req.user?.tenantId || req.query.tenantId || req.headers['x-tenant-id'] || 1;
+  return resolveTenantId(req, 1);
 }
 
 async function getAll(req, res, next) {
