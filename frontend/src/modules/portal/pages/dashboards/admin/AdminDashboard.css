@@ -6,12 +6,12 @@
 @import "../teacher/TeacherDashboard.css";
 
 .admin-locator-box {
-  background: linear-gradient(145deg, rgba(30, 42, 68, 0.94) 0%, rgba(36, 51, 82, 0.9) 55%, rgba(20, 29, 48, 0.95) 100%);
-  border: 1.5px solid rgba(212, 175, 55, 0.45);
+  background: linear-gradient(145deg, rgba(74, 18, 25, 0.90) 0%, rgba(75, 44, 27, 0.88) 55%, rgba(39, 39, 42, 0.92) 100%);
+  border: 1.5px solid rgba(212, 175, 55, 0.50);
   border-radius: 14px;
   padding: 1.5rem;
   margin-bottom: 1.5rem;
-  box-shadow: 0 12px 32px rgba(10, 16, 29, 0.55), 0 0 20px rgba(30, 42, 68, 0.35);
+  box-shadow: 0 12px 32px rgba(24, 10, 8, 0.58), 0 0 20px rgba(92, 24, 34, 0.35);
 }
 
 .admin-stat-highlight {
@@ -27,12 +27,12 @@
   justify-content: space-between;
   flex-wrap: wrap;
   gap: 12px;
-  background: linear-gradient(135deg, rgba(30, 42, 68, 0.95), rgba(36, 51, 82, 0.94), rgba(20, 29, 48, 0.96));
-  border: 1.5px solid rgba(212, 175, 55, 0.5);
+  background: linear-gradient(135deg, rgba(74, 18, 25, 0.92), rgba(75, 44, 27, 0.90), rgba(39, 39, 42, 0.94));
+  border: 1.5px solid rgba(212, 175, 55, 0.55);
   border-radius: 12px;
   padding: 10px 16px;
   margin-bottom: 1rem;
-  box-shadow: 0 8px 22px rgba(0, 0, 0, 0.45), 0 0 16px rgba(212, 175, 55, 0.2);
+  box-shadow: 0 8px 22px rgba(18, 8, 6, 0.5), 0 0 16px rgba(212, 175, 55, 0.22);
 }
 
 .batch-info {

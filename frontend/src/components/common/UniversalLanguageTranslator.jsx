@@ -164,13 +164,13 @@ export default function UniversalLanguageTranslator() {
           gap: "8px",
           padding: "9px 16px",
           borderRadius: "999px",
-          background: "linear-gradient(135deg, #141D30 0%, #1E2A44 52%, #243352 100%)",
+          background: "linear-gradient(135deg, #380E14 0%, #5C1822 44%, #4B2C1B 76%, #27272A 100%)",
           border: "1.5px solid #d4af37",
-          color: "#fbbf24",
+          color: "#fde68a",
           fontWeight: "800",
           fontSize: "0.78rem",
           cursor: "pointer",
-          boxShadow: "0 8px 24px rgba(10, 16, 29, 0.78), 0 0 18px rgba(30, 42, 68, 0.48)",
+          boxShadow: "0 8px 24px rgba(24, 10, 8, 0.82), 0 0 18px rgba(212, 175, 55, 0.35)",
         }}
         title="Translate any word or copied statement into your exact chosen language, or send a translated message to a receiver"
       >

@@ -62,9 +62,29 @@ const getAnswerSheets = async (req, res, next) => {
   }
 };
 
+const gradeAnswerSheet = async (req, res, next) => {
+  try {
+    const tenantId = resolveTenantId(req, 1);
+    const updated = await aiExamService.gradeAnswerSheet(
+      req.params.id,
+      req.body || {},
+      tenantId,
+      req.user
+    );
+    res.status(200).json({
+      status: 'success',
+      message: 'Examination script graded and published successfully.',
+      data: { answerSheet: updated, ...updated }
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+
 module.exports = {
   getExams,
   createExam,
   submitAnswerSheet,
-  getAnswerSheets
+  getAnswerSheets,
+  gradeAnswerSheet
 };

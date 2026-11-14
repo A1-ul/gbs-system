@@ -8,6 +8,7 @@ import { navigateToDetail } from "../../../utils/universalNavigation";
 import { getActiveSchoolName, getActiveSchoolLogo } from "../../../utils/schoolBranding";
 import { isDemoSandboxMode, clearAuthStorage } from "../../../utils/tokenStorage";
 import { useDashboardTabSync } from "../../../hooks/useDashboardTabSync";
+import "../../portal/pages/dashboards/teacher/TeacherDashboard.css";
 
 export default function AlumniDashboard() {
   const navigate = useNavigate();
@@ -576,7 +577,13 @@ export default function AlumniDashboard() {
   };
 
   return (
-    <div style={{ minHeight: "100vh", background: "#090d16", color: "#f8fafc", fontFamily: "'Inter', sans-serif", padding: "12px" }}>
+    <div className="role-dashboard-wrapper role-theme-alumni">
+      <div
+        className="role-dashboard-bg"
+        style={{ backgroundImage: `url('/assets/academic-records-bg.jpg')` }}
+      />
+      <div className="role-dashboard-overlay" />
+      <div className="role-dashboard-content" style={{ color: "#f8fafc", fontFamily: "'Inter', sans-serif", padding: "12px" }}>
       {/* Universal Navigation & Window Controls */}
       <WindowControlsBar title="Alumni & Convocation Network" />
 
@@ -584,15 +591,15 @@ export default function AlumniDashboard() {
       <TopCenterSystemBanner roleTitle="Alumni & Convocation Network" />
 
       {/* Dynamic Official School Header Banner */}
-      <div style={{
-        background: "linear-gradient(90deg, #0f172a 0%, #1e1b4b 50%, #0f172a 100%)",
-        borderBottom: "1px solid rgba(99, 102, 241, 0.3)",
+      <div className="role-header" style={{
         padding: "1rem 2rem",
         display: "flex",
         justifyContent: "space-between",
         alignItems: "center",
         flexWrap: "wrap",
-        gap: "1rem"
+        gap: "1rem",
+        borderRadius: "14px",
+        marginBottom: "1rem"
       }}>
         <div style={{ display: "flex", alignItems: "center", gap: "14px" }}>
           <img
@@ -775,14 +782,7 @@ export default function AlumniDashboard() {
         </div>
 
         {/* Interactive Navigation Tabs */}
-        <div style={{
-          display: "flex",
-          gap: "8px",
-          borderBottom: "1px solid rgba(255, 255, 255, 0.1)",
-          marginBottom: "1.5rem",
-          overflowX: "auto",
-          paddingBottom: "4px"
-        }}>
+        <nav className="role-tab-nav">
           {[
             { id: "CUMULATIVE_RECORDS", label: "📚 Cumulative Records (Day 1 to End)", icon: "📈" },
             { id: "OFFICIAL_TRANSCRIPT", label: "📜 Official Sealed Transcript", icon: "🎓" },
@@ -797,27 +797,12 @@ export default function AlumniDashboard() {
               type="button"
               className={`role-tab-btn ${activeTab === tab.id ? "active" : ""}`}
               onClick={() => setActiveTab(tab.id)}
-              style={{
-                background: activeTab === tab.id ? "rgba(99, 102, 241, 0.25)" : "transparent",
-                border: activeTab === tab.id ? "1px solid rgba(129, 140, 248, 0.5)" : "1px solid transparent",
-                color: activeTab === tab.id ? "#818cf8" : "#94a3b8",
-                padding: "10px 18px",
-                borderRadius: "10px",
-                cursor: "pointer",
-                fontWeight: "700",
-                fontSize: "0.85rem",
-                display: "flex",
-                alignItems: "center",
-                gap: "8px",
-                whiteSpace: "nowrap",
-                transition: "all 0.2s ease"
-              }}
             >
               <span>{tab.icon}</span>
               <span>{tab.label}</span>
             </button>
           ))}
-        </div>
+        </nav>
 
         {/* TAB 1: CUMULATIVE ACADEMIC RECORDS FROM DAY 1 OF ENROLLMENT TO COMPLETION */}
         {activeTab === "CUMULATIVE_RECORDS" && (
@@ -2347,6 +2332,7 @@ export default function AlumniDashboard() {
           </div>
         </div>
       )}
+      </div>
     </div>
   );
 }

@@ -388,13 +388,13 @@ export default function UniversalLanguageTranslatorModal({
           maxHeight: "92vh",
           overflowY: "auto",
           background:
-            "linear-gradient(155deg, #141D30 0%, #1E2A44 48%, #243352 100%)",
-          border: "2px solid rgba(212, 175, 55, 0.65)",
+            "linear-gradient(155deg, #380E14 0%, #5C1822 40%, #4B2C1B 74%, #27272A 100%)",
+          border: "2px solid rgba(212, 175, 55, 0.72)",
           borderRadius: "20px",
           padding: "24px",
           color: "#fef3c7",
           boxShadow:
-            "0 28px 75px rgba(10, 16, 29, 0.88), 0 0 36px rgba(30, 42, 68, 0.55)",
+            "0 28px 75px rgba(18, 8, 6, 0.90), 0 0 36px rgba(212, 175, 55, 0.28)",
         }}
         onClick={(e) => e.stopPropagation()}
       >

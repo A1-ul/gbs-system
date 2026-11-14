@@ -1098,6 +1098,15 @@ export function StudentDashboard({ initialTab } = {}) {
       setNewExamPublished(localStorage.getItem("gbs_new_exam_published") === "true");
     };
 
+    const handleExamGradesSync = () => {
+      try {
+        const stored = JSON.parse(localStorage.getItem("gbs_student_submitted_exams") || "{}");
+        if (stored && typeof stored === "object") {
+          setSubmittedExams(stored);
+        }
+      } catch { }
+    };
+
     const handleLiveClassSync = () => {
       try {
         const list = JSON.parse(localStorage.getItem("gbs_active_live_classes") || "[]");
@@ -1109,18 +1118,21 @@ export function StudentDashboard({ initialTab } = {}) {
     handleSubmissionsSync();
     handleAttendanceSync();
     handleLiveClassSync();
+    handleExamGradesSync();
 
     window.addEventListener("gbs_payment_made", handlePaymentUpdate);
     window.addEventListener("gbs_grades_updated", handleGradesUpdate);
     window.addEventListener("gbs_submission_updated", handleSubmissionsSync);
     window.addEventListener("gbs_attendance_updated", handleAttendanceSync);
     window.addEventListener("gbs_new_exam_published", handleExamPublishedSync);
+    window.addEventListener("gbs_exam_grades_updated", handleExamGradesSync);
     window.addEventListener("gbs_live_class_broadcast", handleLiveClassSync);
     window.addEventListener("storage", handlePaymentUpdate);
     window.addEventListener("storage", handleGradesUpdate);
     window.addEventListener("storage", handleSubmissionsSync);
     window.addEventListener("storage", handleAttendanceSync);
     window.addEventListener("storage", handleExamPublishedSync);
+    window.addEventListener("storage", handleExamGradesSync);
     window.addEventListener("storage", handleLiveClassSync);
     return () => {
       window.removeEventListener("gbs_payment_made", handlePaymentUpdate);
@@ -1128,12 +1140,14 @@ export function StudentDashboard({ initialTab } = {}) {
       window.removeEventListener("gbs_submission_updated", handleSubmissionsSync);
       window.removeEventListener("gbs_attendance_updated", handleAttendanceSync);
       window.removeEventListener("gbs_new_exam_published", handleExamPublishedSync);
+      window.removeEventListener("gbs_exam_grades_updated", handleExamGradesSync);
       window.removeEventListener("gbs_live_class_broadcast", handleLiveClassSync);
       window.removeEventListener("storage", handlePaymentUpdate);
       window.removeEventListener("storage", handleGradesUpdate);
       window.removeEventListener("storage", handleSubmissionsSync);
       window.removeEventListener("storage", handleAttendanceSync);
       window.removeEventListener("storage", handleExamPublishedSync);
+      window.removeEventListener("storage", handleExamGradesSync);
       window.removeEventListener("storage", handleLiveClassSync);
     };
   }, []);
@@ -1181,15 +1195,100 @@ export function StudentDashboard({ initialTab } = {}) {
     localStorage.setItem("gbs_student_saved_meetings", JSON.stringify(updated));
   };
 
+  const WRITTEN_QUESTION_TYPES = ["THEORY_ESSAY", "SHORT_ANSWER", "CASE_STUDY"];
+
+  const resolveExamQuestionType = (q) => {
+    if (!q) return "MULTIPLE_CHOICE";
+    if (q.questionType) return String(q.questionType).toUpperCase();
+    const hasOpts = (Array.isArray(q.options) && q.options.length > 0) || Boolean(q.optionA || q.optionB || q.optionC || q.optionD);
+    if (hasOpts) return "MULTIPLE_CHOICE";
+    return "THEORY_ESSAY";
+  };
+
+  const resolveQuestionOptions = (q) => {
+    if (!q) return [];
+    if (Array.isArray(q.options) && q.options.length > 0) return q.options;
+    const built = [q.optionA, q.optionB, q.optionC, q.optionD].filter((x) => x !== undefined && x !== null && String(x).trim() !== "");
+    if (built.length > 0) return built;
+    if (resolveExamQuestionType(q) === "TRUE_FALSE") return ["True", "False"];
+    return [];
+  };
+
+  const getQuestionTypeBadge = (qType) => {
+    const map = {
+      MULTIPLE_CHOICE: { label: "Multiple Choice", color: "#38bdf8" },
+      THEORY_ESSAY: { label: "Theory / Essay (Typed)", color: "#d4af37" },
+      SHORT_ANSWER: { label: "Short Answer (Typed)", color: "#a855f7" },
+      TRUE_FALSE: { label: "True / False", color: "#10b981" },
+      FILL_IN_BLANK: { label: "Fill in the Blank", color: "#f97316" },
+      CASE_STUDY: { label: "Practical / Case Study (Typed)", color: "#ec4899" }
+    };
+    return map[qType] || { label: "Exam Question", color: "#38bdf8" };
+  };
+
   const fetchExams = async () => {
     try {
-      const res = await apiClient.get("/ai-exam/exams");
-      const list = res.data?.data?.exams || res.data?.data || [];
+      const [examsRes, sheetsRes] = await Promise.all([
+        apiClient.get("/ai-exam/exams"),
+        apiClient.get("/ai-exam/answer-sheets").catch(() => null)
+      ]);
+      const list = examsRes.data?.data?.exams || examsRes.data?.data || [];
       const teacherExams = JSON.parse(localStorage.getItem("gbs_teacher_published_exams") || "[]");
-      const combined = [...teacherExams, ...list];
+      const seenIds = new Set();
+      const combined = [];
+      [...teacherExams, ...list].forEach((ex) => {
+        if (!seenIds.has(String(ex.id))) {
+          seenIds.add(String(ex.id));
+          combined.push(ex);
+        }
+      });
       setExams(combined);
       if (combined.length > 0 && !activeExam) {
         setActiveExam(combined[0]);
+      }
+
+      const sheets = sheetsRes?.data?.data?.answerSheets || [];
+      if (Array.isArray(sheets) && sheets.length > 0) {
+        const stored = JSON.parse(localStorage.getItem("gbs_student_submitted_exams") || "{}");
+        let changed = false;
+        sheets.forEach((sheet) => {
+          const sameStudent =
+            String(sheet.studentId || "") === String(currentUser.id || 10) ||
+            (currentUser.email && sheet.studentEmail && sheet.studentEmail.toLowerCase() === currentUser.email.toLowerCase());
+          if (!sameStudent || !sheet.examId) return;
+          const prev = stored[sheet.examId];
+          if (!prev || sheet.gradingStatus === "TEACHER_GRADED") {
+            const pct = Number(sheet.percentage || 0);
+            const penalty = prev?.proctoringPenalty || 0;
+            const finalPct = Math.max(0, pct - penalty);
+            const letter = sheet.gradingStatus === "PENDING_TEACHER_REVIEW"
+              ? "Pending Review"
+              : (finalPct >= 90 ? "A+" : finalPct >= 80 ? "A" : finalPct >= 70 ? "B" : finalPct >= 60 ? "C" : finalPct >= 50 ? "D" : "F");
+            stored[sheet.examId] = {
+              ...(prev || {}),
+              examId: sheet.examId,
+              answerSheetId: sheet.id,
+              rawScore: pct,
+              score: finalPct,
+              scoreObtained: sheet.scoreObtained,
+              objectiveMarksObtained: sheet.objectiveMarksObtained,
+              totalMarks: sheet.totalMarks || 100,
+              grade: letter,
+              isPassed: sheet.gradingStatus === "PENDING_TEACHER_REVIEW" ? null : finalPct >= 50,
+              gradingStatus: sheet.gradingStatus || "AUTO_GRADED",
+              needsManualReview: sheet.gradingStatus === "PENDING_TEACHER_REVIEW",
+              teacherFeedback: sheet.teacherFeedback || "",
+              perQuestionBreakdown: sheet.perQuestionBreakdown || prev?.perQuestionBreakdown || [],
+              submittedAt: prev?.submittedAt || (sheet.submittedAt ? new Date(sheet.submittedAt).toLocaleTimeString() : new Date().toLocaleTimeString()),
+              locked: true
+            };
+            changed = true;
+          }
+        });
+        if (changed) {
+          setSubmittedExams(stored);
+          localStorage.setItem("gbs_student_submitted_exams", JSON.stringify(stored));
+        }
       }
     } catch (err) {
       console.warn("Could not load exams from PostgreSQL:", err);
@@ -1322,63 +1421,172 @@ export function StudentDashboard({ initialTab } = {}) {
     setShowExamConfirmModal(false);
     try {
       const answersMap = {};
+      const writtenMap = {};
       const questions = activeExam.questionBank || [];
-      questions.forEach((q) => {
-        answersMap[String(q.questionNumber)] = examAnswers[q.id] || "A";
+      questions.forEach((q, idx) => {
+        const qNumKey = String(q.questionNumber || idx + 1);
+        const qType = resolveExamQuestionType(q);
+        const selectedChoice = examAnswers[q.id];
+        const typedText = examEssayAnswers[q.id] || "";
+        if (selectedChoice !== undefined && selectedChoice !== "") {
+          answersMap[qNumKey] = selectedChoice;
+        }
+        if (typedText.trim().length > 0 || WRITTEN_QUESTION_TYPES.includes(qType) || qType === "FILL_IN_BLANK") {
+          writtenMap[qNumKey] = typedText;
+        }
       });
 
+      const studentDisplayName = `${currentUser.firstName || "Student"} ${currentUser.lastName || ""}`.trim();
       const res = await apiClient.post("/ai-exam/scan-grade", {
         examId: activeExam.id,
         studentId: currentUser.id || 10,
-        extractedAnswers: answersMap
-      });
+        studentName: studentDisplayName,
+        studentEmail: currentUser.email || "",
+        extractedAnswers: answersMap,
+        writtenAnswers: writtenMap
+      }).catch(() => null);
 
-      let data = res.data?.data;
+      let data = res?.data?.data;
       if (!data) {
-        // Compute authentic score from local question bank rather than a static placeholder
-        const totalLocalQ = questions.length > 0 ? questions.length : 1;
+        // Compute authentic mixed score (auto-grade objective + queue Theory/Written items for Teacher review)
+        const totalLocalMarks = questions.reduce((sum, q) => sum + (Number(q.marks) || 10), 0) || 100;
+        let objectiveObtained = 0;
         let matchedLocal = 0;
-        questions.forEach((q, idx) => {
-          const qKey = q.id || `q${idx + 1}`;
-          const given = answersMap[qKey] ?? answersMap[String(q.id)] ?? "";
-          const expected = q.correctOption ?? q.correctAnswer ?? "";
-          if (given && expected && String(given).trim().toUpperCase() === String(expected).trim().toUpperCase()) {
+        let writtenCount = 0;
+        const breakdown = questions.map((q, idx) => {
+          const qNum = q.questionNumber || idx + 1;
+          const qKey = String(qNum);
+          const qType = resolveExamQuestionType(q);
+          const qMarks = Number(q.marks) || 10;
+          const isWritten = WRITTEN_QUESTION_TYPES.includes(qType);
+          const studentWritten = String(writtenMap[qKey] ?? examEssayAnswers[q.id] ?? "").trim();
+          const studentObj = String(answersMap[qKey] ?? examAnswers[q.id] ?? "").trim();
+
+          if (isWritten) {
+            writtenCount += 1;
+            return {
+              questionId: q.id || idx + 1,
+              questionNumber: qNum,
+              questionType: qType,
+              questionText: q.questionText || `Question ${qNum}`,
+              maxMarks: qMarks,
+              studentAnswer: studentWritten,
+              markingGuide: q.markingGuide || "",
+              autoSuggestedMarks: 0,
+              marksAwarded: null,
+              status: "PENDING_TEACHER_REVIEW"
+            };
+          }
+
+          if (qType === "FILL_IN_BLANK") {
+            const expectedBlank = String(q.acceptedAnswer || q.correctOption || "").trim().toLowerCase();
+            const alts = String(q.acceptedKeywords || "").split(",").map((k) => k.trim().toLowerCase()).filter(Boolean);
+            const givenBlank = studentWritten.toLowerCase();
+            const isRight = Boolean(givenBlank && ((expectedBlank && givenBlank === expectedBlank) || alts.includes(givenBlank)));
+            if (isRight) {
+              objectiveObtained += qMarks;
+              matchedLocal += 1;
+            }
+            return {
+              questionId: q.id || idx + 1,
+              questionNumber: qNum,
+              questionType: qType,
+              questionText: q.questionText || `Question ${qNum}`,
+              maxMarks: qMarks,
+              studentAnswer: studentWritten,
+              expectedAnswer: q.acceptedAnswer || "",
+              marksAwarded: isRight ? qMarks : 0,
+              status: "AUTO_GRADED"
+            };
+          }
+
+          const expected = String(q.correctOption ?? q.correctAnswer ?? "").trim().toUpperCase();
+          const isRight = Boolean(studentObj && expected && studentObj.toUpperCase() === expected);
+          if (isRight) {
+            objectiveObtained += qMarks;
             matchedLocal += 1;
           }
+          return {
+            questionId: q.id || idx + 1,
+            questionNumber: qNum,
+            questionType: qType,
+            questionText: q.questionText || `Question ${qNum}`,
+            maxMarks: qMarks,
+            studentAnswer: studentObj,
+            expectedAnswer: expected,
+            marksAwarded: isRight ? qMarks : 0,
+            status: "AUTO_GRADED"
+          };
         });
-        const computedPct = Math.round((matchedLocal / totalLocalQ) * 100);
+
+        const computedPct = Math.round((objectiveObtained / Math.max(1, totalLocalMarks)) * 100);
+        const hasWritten = writtenCount > 0;
         data = {
+          answerSheetId: Date.now(),
+          examId: activeExam.id,
+          examTitle: activeExam.title,
+          scoreObtained: objectiveObtained,
+          objectiveMarksObtained: objectiveObtained,
+          totalMarks: totalLocalMarks,
           percentage: computedPct,
           totalQuestions: questions.length,
+          writtenQuestionsCount: writtenCount,
           matchedAnswers: matchedLocal,
-          pass: computedPct >= 50
+          needsManualReview: hasWritten,
+          gradingStatus: hasWritten ? "PENDING_TEACHER_REVIEW" : "AUTO_GRADED",
+          pass: hasWritten ? null : computedPct >= 50,
+          perQuestionBreakdown: breakdown
         };
       }
       if (data) {
+        const totalMarks = Number(data.totalMarks || activeExam.totalMarks || 100);
         const computedRaw =
           data.percentage !== undefined
             ? Number(data.percentage)
-            : data.totalMarks
-              ? Math.round((Number(data.scoreObtained || 0) / Math.max(1, Number(data.totalMarks))) * 100)
+            : totalMarks
+              ? Math.round((Number(data.scoreObtained || 0) / Math.max(1, totalMarks)) * 100)
               : 0;
         const rawPct = Math.max(0, Math.min(100, computedRaw));
         const penalty = penaltyMarksDeducted;
         const finalPct = Math.max(0, rawPct - penalty);
-        const letterGrade = finalPct >= 90 ? "A+" : finalPct >= 80 ? "A" : finalPct >= 70 ? "B" : finalPct >= 60 ? "C" : finalPct >= 50 ? "D" : "F";
+        const needsManualReview = Boolean(
+          data.needsManualReview ||
+          data.gradingStatus === "PENDING_TEACHER_REVIEW" ||
+          questions.some((q) => WRITTEN_QUESTION_TYPES.includes(resolveExamQuestionType(q)))
+        );
+        const letterGrade = needsManualReview
+          ? "Pending Review"
+          : (finalPct >= 90 ? "A+" : finalPct >= 80 ? "A" : finalPct >= 70 ? "B" : finalPct >= 60 ? "C" : finalPct >= 50 ? "D" : "F");
         const totalQ = data.totalQuestions || (questions.length > 0 ? questions.length : 10);
         const correctCount = data.matchedAnswers !== undefined ? data.matchedAnswers : Math.round((finalPct / 100) * totalQ);
 
         const record = {
           examId: activeExam.id,
+          examTitle: activeExam.title || data.examTitle || "Examination",
+          answerSheetId: data.answerSheetId || Date.now(),
+          studentId: currentUser.id || 10,
+          studentName: studentDisplayName,
+          studentEmail: currentUser.email || "",
           rawScore: rawPct,
+          scoreObtained: data.scoreObtained ?? 0,
+          objectiveMarksObtained: data.objectiveMarksObtained ?? data.scoreObtained ?? 0,
+          totalMarks,
           proctoringPenalty: penalty,
           proctoringViolations: proctoringWarnings,
           score: finalPct,
           correct: correctCount,
           total: totalQ,
+          writtenQuestionsCount: data.writtenQuestionsCount ?? questions.filter((q) => WRITTEN_QUESTION_TYPES.includes(resolveExamQuestionType(q))).length,
           grade: letterGrade,
-          isPassed: data.pass !== undefined ? (finalPct >= 50) : finalPct >= 50,
+          isPassed: needsManualReview ? null : finalPct >= 50,
+          needsManualReview,
+          gradingStatus: needsManualReview ? "PENDING_TEACHER_REVIEW" : (data.gradingStatus || "AUTO_GRADED"),
+          extractedAnswers: answersMap,
+          writtenAnswers: writtenMap,
+          perQuestionBreakdown: data.perQuestionBreakdown || [],
+          teacherFeedback: data.teacherFeedback || "",
           submittedAt: new Date().toLocaleTimeString(),
+          submittedAtIso: new Date().toISOString(),
           locked: true
         };
 
@@ -1386,6 +1594,34 @@ export function StudentDashboard({ initialTab } = {}) {
         const updatedSubmitted = { ...submittedExams, [activeExam.id]: record };
         setSubmittedExams(updatedSubmitted);
         localStorage.setItem("gbs_student_submitted_exams", JSON.stringify(updatedSubmitted));
+
+        // Sync submitted script to Demo Teacher feed immediately
+        try {
+          const feed = JSON.parse(localStorage.getItem("gbs_submitted_exam_scripts_feed") || "[]");
+          const scriptItem = {
+            id: record.answerSheetId,
+            examId: record.examId,
+            examTitle: record.examTitle,
+            studentId: record.studentId,
+            studentName: record.studentName,
+            studentEmail: record.studentEmail,
+            scoreObtained: record.scoreObtained,
+            objectiveMarksObtained: record.objectiveMarksObtained,
+            totalMarks: record.totalMarks,
+            percentage: record.rawScore,
+            gradingStatus: record.gradingStatus,
+            extractedAnswers: record.extractedAnswers,
+            writtenAnswers: record.writtenAnswers,
+            perQuestionBreakdown: record.perQuestionBreakdown,
+            submittedAt: record.submittedAtIso
+          };
+          const filteredFeed = (Array.isArray(feed) ? feed : []).filter(
+            (s) => !(String(s.examId) === String(record.examId) && String(s.studentId) === String(record.studentId))
+          );
+          localStorage.setItem("gbs_submitted_exam_scripts_feed", JSON.stringify([scriptItem, ...filteredFeed]));
+          window.dispatchEvent(new Event("gbs_exam_submitted_to_teacher"));
+        } catch { }
+
         localStorage.removeItem("gbs_new_exam_published");
         setNewExamPublished(false);
 
@@ -1393,7 +1629,9 @@ export function StudentDashboard({ initialTab } = {}) {
         setExamStarted(false);
         setFeedback({
           type: "success",
-          message: `✅ Exam submitted, locked, and auto-graded in PostgreSQL! Base Score: ${rawPct}% • Penalty: -${penalty}% • Final Score: ${finalPct}% (${letterGrade}). Exam hall locked until next session.`
+          message: needsManualReview
+            ? `✅ Exam & Typed Theory Script submitted! Objective Auto-Score: ${record.objectiveMarksObtained}/${record.totalMarks} marks. Your ${record.writtenQuestionsCount} Theory/Written question(s) are queued for Teacher marking.`
+            : `✅ Exam submitted, locked, and auto-graded! Base Score: ${rawPct}% • Penalty: -${penalty}% • Final Score: ${finalPct}% (${letterGrade}). Exam hall locked until next session.`
         });
       }
     } catch (err) {
@@ -2520,16 +2758,22 @@ export function StudentDashboard({ initialTab } = {}) {
                                                 className="btn-primary"
                                                 style={{ padding: "6px 14px", fontSize: "0.8rem", background: "linear-gradient(135deg, #10b981, #059669)", boxShadow: "0 4px 12px rgba(16, 185, 129, 0.4)" }}
                                                 onClick={() => {
+                                                  setExamAnswers({});
+                                                  setExamEssayAnswers({});
+                                                  setExamQuestionIndex(0);
+                                                  setExamSubmitted(false);
+                                                  setExamScoreResult(null);
                                                   setActiveExam({
                                                     ...ex,
                                                     id: examId,
                                                     title: ex.title || fallbackTitle,
                                                     totalMarks: ex.totalMarks || 100,
                                                     passMarks: ex.passMarks || 50,
-                                                    questionBank: ex.questionBank || [
-                                                      { id: 101, questionNumber: 1, questionText: "Solve for the derivative of f(x) = 4x^3 - 5x + 7." },
-                                                      { id: 102, questionNumber: 2, questionText: "Which logic gate represents the proposition: (A ∧ B)' ≡ A' ∨ B'?" },
-                                                      { id: 103, questionNumber: 3, questionText: "What is the limit of (sin x) / x as x approaches 0?" }
+                                                    questionBank: (ex.questionBank && ex.questionBank.length > 0) ? ex.questionBank : [
+                                                      { id: 101, questionNumber: 1, questionType: "MULTIPLE_CHOICE", questionText: "Which logic gate represents De Morgan's Law: (A ∧ B)' ≡ A' ∨ B'?", options: ["NAND Equivalence to Negative-OR", "NOR Equivalence to Negative-AND", "XOR Inversion", "AND Double Negation"], correctOption: "A", marks: 10 },
+                                                      { id: 102, questionNumber: 2, questionType: "THEORY_ESSAY", questionText: "Solve for the derivative of f(x) = 4x^3 - 5x + 7 and explain each power-rule step clearly.", markingGuide: "Apply power rule: d/dx(4x^3)=12x^2, d/dx(-5x)=-5, constant=0. Final answer: 12x^2 - 5.", wordLimit: 120, marks: 20 },
+                                                      { id: 103, questionNumber: 3, questionType: "TRUE_FALSE", questionText: "The limit of (sin x) / x as x approaches 0 is equal to 1.", options: ["True", "False"], correctOption: "A", marks: 10 },
+                                                      { id: 104, questionNumber: 4, questionType: "FILL_IN_BLANK", questionText: "The powerhouse organelle responsible for ATP synthesis during aerobic cellular respiration is the ____.", acceptedAnswer: "Mitochondria", acceptedKeywords: "mitochondria,mitochondrion", marks: 10 }
                                                     ]
                                                   });
                                                   setExamTimeLeftSeconds(ex.durationMinutes ? ex.durationMinutes * 60 : 900);
@@ -2984,11 +3228,11 @@ export function StudentDashboard({ initialTab } = {}) {
                           const questionsList = (activeExam?.questionBank && activeExam.questionBank.length > 0)
                             ? activeExam.questionBank
                             : [
-                              { id: 101, questionNumber: 1, questionText: "Solve for the derivative of f(x) = 4x^3 - 5x + 7, showing detailed power-rule derivation steps.", options: ["12x^2 - 5", "12x^3 - 5", "8x^2 - 5x", "12x - 5"] },
-                              { id: 102, questionNumber: 2, questionText: "Which digital logic property represents De Morgan's Law: (A ∧ B)' ≡ A' ∨ B'?", options: ["NAND Equivalence to Negative-OR", "NOR Equivalence to Negative-AND", "XOR Inversion", "AND Double Negation"] },
-                              { id: 103, questionNumber: 3, questionText: "Calculate the kinetic energy of a 1200 kg vehicle moving at 25 m/s. (E_k = 0.5 * m * v^2)", options: ["375,000 Joules (375 kJ)", "300,000 Joules", "450,000 Joules", "150,000 Joules"] },
-                              { id: 104, questionNumber: 4, questionText: "Explain the biochemical process of cellular respiration and ATP synthesis in the mitochondrial inner membrane.", options: ["Oxidative Phosphorylation & Electron Transport Chain", "Fermentation & Glycolysis only", "Calvin Cycle Light Reaction", "Substrate-Level Phosphorylation only"] },
-                              { id: 105, questionNumber: 5, questionText: "Discuss the socioeconomic impact of artificial intelligence and digital school management systems on African secondary education.", options: ["Equitable Academic Access & Real-Time Record Verification", "Reduced Operations Overhead only", "Solely Hardware Dependencies", "No Measurable Impact"] }
+                              { id: 101, questionNumber: 1, questionType: "MULTIPLE_CHOICE", questionText: "Which digital logic property represents De Morgan's Law: (A ∧ B)' ≡ A' ∨ B'?", options: ["NAND Equivalence to Negative-OR", "NOR Equivalence to Negative-AND", "XOR Inversion", "AND Double Negation"], correctOption: "A", marks: 15 },
+                              { id: 102, questionNumber: 2, questionType: "THEORY_ESSAY", questionText: "Explain the biochemical process of cellular respiration and ATP synthesis in the mitochondrial inner membrane, highlighting electron transport and chemiosmosis.", markingGuide: "Glycolysis -> Krebs Cycle -> Electron Transport Chain -> Chemiosmosis / ATP Synthase.", wordLimit: 250, marks: 25 },
+                              { id: 103, questionNumber: 3, questionType: "TRUE_FALSE", questionText: "A 1200 kg vehicle moving at 25 m/s has a kinetic energy of 375,000 Joules (375 kJ).", options: ["True", "False"], correctOption: "A", marks: 15 },
+                              { id: 104, questionNumber: 4, questionType: "FILL_IN_BLANK", questionText: "In calculus, the first derivative of f(x) = 4x^3 - 5x + 7 is ____.", acceptedAnswer: "12x^2 - 5", acceptedKeywords: "12x^2-5,12x^2 - 5", marks: 15 },
+                              { id: 105, questionNumber: 5, questionType: "CASE_STUDY", questionText: "Discuss how digital school management systems improve equitable academic access, exam integrity, and real-time parent-teacher collaboration in secondary schools.", markingGuide: "Access, attendance/assessment transparency, anti-malpractice verification, parent communication.", wordLimit: 250, marks: 30 }
                             ];
 
                           const isQAnswered = (q) => {
@@ -3169,67 +3413,164 @@ export function StudentDashboard({ initialTab } = {}) {
                               )}
 
                               {/* Active Question Display */}
-                              <div className="question-block" style={{ marginBottom: "1.5rem" }}>
-                                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "8px" }}>
-                                  <span style={{ fontSize: "0.82rem", color: "#38bdf8", fontWeight: 800 }}>
-                                    QUESTION {safeIndex + 1} OF {questionsList.length}
-                                  </span>
-                                  <span style={{ fontSize: "0.75rem", color: isQAnswered(currentQ) ? "#34d399" : "#fbbf24", fontWeight: 700 }}>
-                                    {isQAnswered(currentQ) ? "✓ Answer Recorded" : "⚠️ Unsolved"}
-                                  </span>
-                                </div>
+                              {(() => {
+                                const qType = resolveExamQuestionType(currentQ);
+                                const qBadge = getQuestionTypeBadge(qType);
+                                const qOptions = resolveQuestionOptions(currentQ);
+                                const isWrittenType = WRITTEN_QUESTION_TYPES.includes(qType);
+                                const typedValue = examEssayAnswers[currentQ.id] || "";
+                                const wordCount = typedValue.trim() ? typedValue.trim().split(/\s+/).length : 0;
+                                return (
+                                  <div className="question-block" style={{ marginBottom: "1.5rem" }}>
+                                    <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "10px", flexWrap: "wrap", gap: "8px" }}>
+                                      <div style={{ display: "flex", alignItems: "center", gap: "8px", flexWrap: "wrap" }}>
+                                        <span style={{ fontSize: "0.82rem", color: "#38bdf8", fontWeight: 800 }}>
+                                          QUESTION {safeIndex + 1} OF {questionsList.length}
+                                        </span>
+                                        <span style={{
+                                          fontSize: "0.72rem",
+                                          fontWeight: 800,
+                                          padding: "3px 9px",
+                                          borderRadius: "999px",
+                                          background: `${qBadge.color}22`,
+                                          border: `1px solid ${qBadge.color}88`,
+                                          color: qBadge.color
+                                        }}>
+                                          {qBadge.label}
+                                        </span>
+                                        <span style={{
+                                          fontSize: "0.72rem",
+                                          fontWeight: 800,
+                                          padding: "3px 9px",
+                                          borderRadius: "999px",
+                                          background: "rgba(212, 175, 55, 0.16)",
+                                          border: "1px solid rgba(212, 175, 55, 0.55)",
+                                          color: "#fde68a"
+                                        }}>
+                                          [{currentQ.marks || 10} Marks]
+                                        </span>
+                                      </div>
+                                      <span style={{ fontSize: "0.75rem", color: isQAnswered(currentQ) ? "#34d399" : "#fbbf24", fontWeight: 700 }}>
+                                        {isQAnswered(currentQ) ? "✓ Answer Recorded" : "⚠️ Unsolved"}
+                                      </span>
+                                    </div>
 
-                                <div className="question-text" style={{ fontSize: getExamFontSizePx(), lineHeight: "1.6", color: "#f8fafc", marginBottom: "1rem" }}>
-                                  Question {safeIndex + 1}: {currentQ.questionText}
-                                </div>
+                                    <div className="question-text" style={{ fontSize: getExamFontSizePx(), lineHeight: "1.65", color: "#f8fafc", marginBottom: "1rem", whiteSpace: "pre-line" }}>
+                                      Question {safeIndex + 1}: {currentQ.questionText}
+                                    </div>
 
-                                {/* Multiple Choice Options */}
-                                {(currentQ.options || ["A", "B", "C", "D"]).map((opt, optIdx) => {
-                                  const optLetter = ["A", "B", "C", "D"][optIdx] || String.fromCharCode(65 + optIdx);
-                                  const optLabel = typeof opt === "string" ? opt : `Option ${optLetter}`;
-                                  return (
-                                    <label key={optIdx} className="option-label" style={{ fontSize: getExamFontSizePx() }}>
-                                      <input
-                                        type="radio"
-                                        name={`q_${currentQ.id}`}
-                                        checked={examAnswers[currentQ.id] === optLetter || examAnswers[currentQ.id] === opt}
-                                        onChange={() => setExamAnswers({ ...examAnswers, [currentQ.id]: optLetter })}
-                                      />
-                                      <span><strong>{optLetter}.</strong> {optLabel}</span>
-                                    </label>
-                                  );
-                                })}
+                                    {/* Multiple Choice & True/False Options */}
+                                    {(qType === "MULTIPLE_CHOICE" || qType === "TRUE_FALSE") && qOptions.length > 0 && (
+                                      <div style={{ display: "flex", flexDirection: "column", gap: "8px" }}>
+                                        {qOptions.map((opt, optIdx) => {
+                                          const optLetter = ["A", "B", "C", "D"][optIdx] || String.fromCharCode(65 + optIdx);
+                                          const optLabel = typeof opt === "string" ? opt : `Option ${optLetter}`;
+                                          return (
+                                            <label key={optIdx} className="option-label" style={{ fontSize: getExamFontSizePx() }}>
+                                              <input
+                                                type="radio"
+                                                name={`q_${currentQ.id}`}
+                                                checked={examAnswers[currentQ.id] === optLetter || examAnswers[currentQ.id] === opt}
+                                                onChange={() => setExamAnswers({ ...examAnswers, [currentQ.id]: optLetter })}
+                                              />
+                                              <span><strong>{optLetter}.</strong> {optLabel}</span>
+                                            </label>
+                                          );
+                                        })}
+                                        <details style={{ marginTop: "8px" }}>
+                                          <summary style={{ fontSize: "0.76rem", color: "#94a3b8", cursor: "pointer" }}>
+                                            ✍️ Optional Computational Scratchpad / Working Notes
+                                          </summary>
+                                          <textarea
+                                            rows={2}
+                                            value={typedValue}
+                                            onChange={(e) => setExamEssayAnswers({ ...examEssayAnswers, [currentQ.id]: e.target.value })}
+                                            placeholder="Optional working steps or notes..."
+                                            style={{
+                                              width: "100%",
+                                              marginTop: "6px",
+                                              fontSize: getExamFontSizePx(),
+                                              padding: "8px 12px",
+                                              borderRadius: "8px",
+                                              background: "rgba(15, 23, 42, 0.9)",
+                                              color: "#ffffff",
+                                              border: "1px solid rgba(56, 189, 248, 0.3)",
+                                              boxSizing: "border-box"
+                                            }}
+                                          />
+                                        </details>
+                                      </div>
+                                    )}
 
-                                {/* Written / Essay Typing Area */}
-                                <div style={{ marginTop: "1.25rem", borderTop: "1px solid rgba(255, 255, 255, 0.1)", paddingTop: "12px" }}>
-                                  <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "6px" }}>
-                                    <label style={{ fontSize: "0.82rem", color: "#cbd5e1", fontWeight: 700, display: "flex", alignItems: "center", gap: "6px" }}>
-                                      <span>✍️</span> Type Written / Essay / Computational Working:
-                                    </label>
-                                    <span style={{ fontSize: "0.72rem", color: "#94a3b8" }}>
-                                      Saved automatically for grading
-                                    </span>
+                                    {/* Fill in the Blank Input */}
+                                    {qType === "FILL_IN_BLANK" && (
+                                      <div style={{ marginTop: "0.75rem", background: "rgba(15, 23, 42, 0.85)", padding: "14px", borderRadius: "10px", border: "1px solid rgba(249, 115, 22, 0.45)" }}>
+                                        <label style={{ display: "block", fontSize: "0.84rem", color: "#fdba74", fontWeight: 700, marginBottom: "8px" }}>
+                                          ✏️ Type the exact missing word, term, or formula:
+                                        </label>
+                                        <input
+                                          type="text"
+                                          value={typedValue}
+                                          onChange={(e) => setExamEssayAnswers({ ...examEssayAnswers, [currentQ.id]: e.target.value })}
+                                          placeholder="Type your exact answer for the blank here..."
+                                          style={{
+                                            width: "100%",
+                                            fontSize: getExamFontSizePx(),
+                                            padding: "10px 14px",
+                                            borderRadius: "8px",
+                                            background: "rgba(2, 6, 23, 0.95)",
+                                            color: "#ffffff",
+                                            border: "1.5px solid rgba(249, 115, 22, 0.6)",
+                                            boxSizing: "border-box",
+                                            fontWeight: 700
+                                          }}
+                                        />
+                                      </div>
+                                    )}
+
+                                    {/* Theory / Essay / Short Answer / Case Study Typing Editor */}
+                                    {(isWrittenType || (qType === "MULTIPLE_CHOICE" && qOptions.length === 0)) && (
+                                      <div style={{ marginTop: "0.75rem", background: "rgba(15, 23, 42, 0.88)", padding: "14px", borderRadius: "10px", border: `1.5px solid ${qBadge.color}66` }}>
+                                        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "8px", flexWrap: "wrap", gap: "8px" }}>
+                                          <label style={{ fontSize: "0.85rem", color: "#fde68a", fontWeight: 800, display: "flex", alignItems: "center", gap: "6px" }}>
+                                            <span>✍️</span> Type Your Complete Written / Theory Answer Below:
+                                          </label>
+                                          <div style={{ display: "flex", gap: "10px", alignItems: "center", fontSize: "0.74rem" }}>
+                                            <span style={{ color: "#38bdf8", fontWeight: 700 }}>
+                                              {wordCount} words typed {currentQ.wordLimit ? `• Target ~${currentQ.wordLimit} words` : ""}
+                                            </span>
+                                            <span style={{ color: "#34d399" }}>✓ Saved automatically</span>
+                                          </div>
+                                        </div>
+                                        <textarea
+                                          rows={qType === "SHORT_ANSWER" ? 4 : 9}
+                                          value={typedValue}
+                                          onChange={(e) => setExamEssayAnswers({ ...examEssayAnswers, [currentQ.id]: e.target.value })}
+                                          placeholder={
+                                            qType === "SHORT_ANSWER"
+                                              ? "Write a concise, clear response (2–4 sentences or direct steps)..."
+                                              : "Write your detailed Theory / Essay explanation, definitions, equations, and structured points here. Your script goes directly to your Teacher for marking..."
+                                          }
+                                          style={{
+                                            width: "100%",
+                                            minHeight: qType === "SHORT_ANSWER" ? "110px" : "220px",
+                                            fontSize: getExamFontSizePx(),
+                                            lineHeight: "1.65",
+                                            padding: "12px 14px",
+                                            borderRadius: "8px",
+                                            background: "rgba(2, 6, 23, 0.94)",
+                                            color: "#ffffff",
+                                            border: `1.5px solid ${qBadge.color}77`,
+                                            boxSizing: "border-box",
+                                            fontFamily: "inherit",
+                                            resize: "vertical"
+                                          }}
+                                        />
+                                      </div>
+                                    )}
                                   </div>
-                                  <textarea
-                                    rows={4}
-                                    value={examEssayAnswers[currentQ.id] || ""}
-                                    onChange={(e) => setExamEssayAnswers({ ...examEssayAnswers, [currentQ.id]: e.target.value })}
-                                    placeholder="Type your computational step-by-step working, formula derivation, or essay answer here..."
-                                    style={{
-                                      width: "100%",
-                                      fontSize: getExamFontSizePx(),
-                                      padding: "10px 14px",
-                                      borderRadius: "8px",
-                                      background: "rgba(15, 23, 42, 0.9)",
-                                      color: "#ffffff",
-                                      border: "1.5px solid rgba(56, 189, 248, 0.3)",
-                                      boxSizing: "border-box",
-                                      fontFamily: "inherit",
-                                      resize: "vertical"
-                                    }}
-                                  />
-                                </div>
-                              </div>
+                                );
+                              })()}
 
                               {/* Question Navigation & Submit Bar */}
                               <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: "12px", marginTop: "1.5rem", flexWrap: "wrap", borderTop: "1px solid rgba(255, 255, 255, 0.1)", paddingTop: "1rem" }}>
@@ -3281,15 +3622,19 @@ export function StudentDashboard({ initialTab } = {}) {
                         })()}
 
                         {examSubmitted && examScoreResult && (
-                          <div style={{ background: "rgba(2, 6, 23, 0.8)", padding: "2rem", borderRadius: "14px", border: "1px solid rgba(16, 185, 129, 0.4)", textAlign: "center" }}>
-                            <span style={{ fontSize: "3rem" }}>{examScoreResult.isPassed ? "🎉" : "📚"}</span>
-                            <h2 style={{ margin: "0.5rem 0", color: examScoreResult.isPassed ? "#34d399" : "#f87171" }}>
-                              {examScoreResult.isPassed ? "EXAMINATION PASSED" : "ASSESSMENT COMPLETED"}
+                          <div style={{ background: "rgba(2, 6, 23, 0.85)", padding: "2rem", borderRadius: "14px", border: examScoreResult.needsManualReview ? "1px solid rgba(212, 175, 55, 0.5)" : "1px solid rgba(16, 185, 129, 0.4)", textAlign: "center" }}>
+                            <span style={{ fontSize: "3rem" }}>{examScoreResult.needsManualReview ? "📝" : examScoreResult.isPassed ? "🎉" : "📚"}</span>
+                            <h2 style={{ margin: "0.5rem 0", color: examScoreResult.needsManualReview ? "#fde68a" : examScoreResult.isPassed ? "#34d399" : "#f87171" }}>
+                              {examScoreResult.needsManualReview
+                                ? "SCRIPT SUBMITTED • THEORY PENDING TEACHER MARKING"
+                                : examScoreResult.isPassed
+                                  ? "EXAMINATION PASSED"
+                                  : "ASSESSMENT COMPLETED"}
                             </h2>
 
                             {/* Performance Score & Proctoring Deductions Breakdown */}
                             <div style={{
-                              maxWidth: "540px",
+                              maxWidth: "560px",
                               margin: "1.25rem auto",
                               background: "rgba(15, 23, 42, 0.9)",
                               borderRadius: "10px",
@@ -3298,32 +3643,53 @@ export function StudentDashboard({ initialTab } = {}) {
                               textAlign: "left"
                             }}>
                               <div style={{ display: "flex", justifyContent: "space-between", marginBottom: "8px", fontSize: "0.88rem" }}>
-                                <span style={{ color: "#94a3b8" }}>Base Raw Deterministic Score:</span>
-                                <strong style={{ color: "#f8fafc" }}>{examScoreResult.rawScore || examScoreResult.score}%</strong>
+                                <span style={{ color: "#94a3b8" }}>
+                                  {examScoreResult.needsManualReview ? "Provisional Objective Section Score:" : "Base Raw Deterministic Score:"}
+                                </span>
+                                <strong style={{ color: "#f8fafc" }}>
+                                  {examScoreResult.objectiveMarksObtained !== undefined && examScoreResult.totalMarks
+                                    ? `${examScoreResult.objectiveMarksObtained} / ${examScoreResult.totalMarks} Marks (${examScoreResult.rawScore ?? examScoreResult.score}%)`
+                                    : `${examScoreResult.rawScore ?? examScoreResult.score}%`}
+                                </strong>
                               </div>
+                              {examScoreResult.needsManualReview && (
+                                <div style={{ display: "flex", justifyContent: "space-between", marginBottom: "8px", fontSize: "0.88rem", color: "#fde68a" }}>
+                                  <span>Typed Theory / Written Questions Queued:</span>
+                                  <strong>{examScoreResult.writtenQuestionsCount || 1} section(s) awaiting Teacher marking</strong>
+                                </div>
+                              )}
                               <div style={{ display: "flex", justifyContent: "space-between", marginBottom: "8px", fontSize: "0.88rem", color: (examScoreResult.proctoringPenalty || 0) > 0 ? "#f87171" : "#34d399" }}>
                                 <span>AI Proctoring Head Movement Penalty:</span>
                                 <strong>-{examScoreResult.proctoringPenalty || 0}% ({examScoreResult.proctoringViolations || 0} infractions recorded)</strong>
                               </div>
                               <div style={{ display: "flex", justifyContent: "space-between", borderTop: "1px solid rgba(255, 255, 255, 0.1)", paddingTop: "8px", fontSize: "1.05rem" }}>
-                                <span style={{ color: "#38bdf8", fontWeight: 800 }}>Final Verified Score:</span>
-                                <strong style={{ color: "#fbbf24", fontWeight: 900 }}>{examScoreResult.score}% ({examScoreResult.grade})</strong>
+                                <span style={{ color: "#38bdf8", fontWeight: 800 }}>
+                                  {examScoreResult.needsManualReview ? "Current Status:" : "Final Verified Score:"}
+                                </span>
+                                <strong style={{ color: "#fbbf24", fontWeight: 900 }}>
+                                  {examScoreResult.needsManualReview ? `Pending Review (Obj: ${examScoreResult.score}%)` : `${examScoreResult.score}% (${examScoreResult.grade})`}
+                                </strong>
                               </div>
+                              {examScoreResult.teacherFeedback && (
+                                <div style={{ marginTop: "10px", paddingTop: "8px", borderTop: "1px dashed rgba(255,255,255,0.12)", fontSize: "0.84rem", color: "#a7f3d0" }}>
+                                  <strong>Teacher Examiner Comment:</strong> {examScoreResult.teacherFeedback}
+                                </div>
+                              )}
                             </div>
 
                             <p style={{ color: "#94a3b8", fontSize: "0.85rem" }}>
-                              ({examScoreResult.correct} out of {examScoreResult.total} questions verified correct by deterministic engine)
+                              ({examScoreResult.correct} objective question(s) auto-verified out of {examScoreResult.total} total questions)
                             </p>
                             <div style={{ display: "inline-block", background: "rgba(255, 255, 255, 0.05)", padding: "10px 20px", borderRadius: "8px", margin: "1rem 0" }}>
                               <span style={{ color: "#cbd5e1" }}>
-                                🔒 Recorded & Permanently Locked in Database: <strong>VERIFIED DETERMINISTIC RESULT FOR {academicTerm.toUpperCase()}</strong>
+                                🔒 Recorded & Permanently Locked: <strong>{examScoreResult.needsManualReview ? "TYPED SCRIPT DELIVERED TO TEACHER DESK" : `VERIFIED DETERMINISTIC RESULT FOR ${academicTerm.toUpperCase()}`}</strong>
                               </span>
                             </div>
                             <div>
                               <button
                                 type="button"
                                 className="btn-secondary"
-                                onClick={() => { setExamSubmitted(false); setExamAnswers({}); }}
+                                onClick={() => { setExamSubmitted(false); setExamAnswers({}); setExamEssayAnswers({}); }}
                               >
                                 ← Back to Examination Schedule
                               </button>

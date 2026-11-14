@@ -84,21 +84,81 @@ const ensureSampleExam = async (tenantId = 1) => {
   return exam;
 };
 
+const WRITTEN_QUESTION_TYPES = new Set([
+  'THEORY_ESSAY',
+  'SHORT_ANSWER',
+  'FILL_IN_BLANK',
+  'CASE_STUDY'
+]);
+
+const normalizeQuestionItem = (q = {}, idx = 0, allowTemplateFallback = true) => {
+  const tpl = STARTER_QUESTION_TEMPLATES[idx % STARTER_QUESTION_TEMPLATES.length];
+  const rawType = String(q.questionType || q.type || 'MULTIPLE_CHOICE').trim().toUpperCase();
+  const questionType =
+    rawType === 'THEORY' || rawType === 'ESSAY'
+      ? 'THEORY_ESSAY'
+      : rawType === 'MCQ'
+        ? 'MULTIPLE_CHOICE'
+        : rawType;
+
+  const isTrueFalse = questionType === 'TRUE_FALSE';
+  const isWritten = WRITTEN_QUESTION_TYPES.has(questionType);
+
+  let optionA = '';
+  let optionB = '';
+  let optionC = '';
+  let optionD = '';
+  let options = [];
+
+  if (isTrueFalse) {
+    optionA = 'True';
+    optionB = 'False';
+    options = ['True', 'False'];
+  } else if (!isWritten) {
+    const srcOpts = Array.isArray(q.options) ? q.options : [];
+    optionA = q.optionA || srcOpts[0] || (allowTemplateFallback ? tpl.optionA : 'Option A');
+    optionB = q.optionB || srcOpts[1] || (allowTemplateFallback ? tpl.optionB : 'Option B');
+    optionC = q.optionC || srcOpts[2] || (allowTemplateFallback ? tpl.optionC : 'Option C');
+    optionD = q.optionD || srcOpts[3] || (allowTemplateFallback ? tpl.optionD : 'Option D');
+    options = [optionA, optionB, optionC, optionD];
+  }
+
+  let normalizedCorrect = String(q.correctOption || q.correctAnswer || (isTrueFalse ? 'A' : isWritten ? '' : 'A')).trim();
+  if (isTrueFalse) {
+    const up = normalizedCorrect.toUpperCase();
+    normalizedCorrect = up === 'FALSE' || up === 'B' ? 'B' : 'A';
+  } else if (!isWritten) {
+    normalizedCorrect = (normalizedCorrect || 'A').toUpperCase();
+  }
+
+  const acceptedAnswer = String(q.acceptedAnswer ?? (isWritten ? (q.correctAnswer || '') : '')).trim();
+  const markingGuide = String(q.markingGuide || '').trim();
+  const acceptedKeywords = String(q.acceptedKeywords || '').trim();
+
+  return {
+    ...q,
+    id: q.id || `q-${Date.now()}-${idx + 1}`,
+    questionNumber: Number(q.questionNumber) || idx + 1,
+    questionType,
+    questionText: String(q.questionText || '').trim() || `Question ${idx + 1}`,
+    optionA,
+    optionB,
+    optionC,
+    optionD,
+    options,
+    correctOption: isWritten ? '' : normalizedCorrect,
+    correctAnswer: isWritten ? (acceptedAnswer || markingGuide || 'THEORY_RUBRIC') : normalizedCorrect,
+    acceptedAnswer,
+    markingGuide,
+    acceptedKeywords,
+    wordLimit: Number(q.wordLimit) || (questionType === 'THEORY_ESSAY' || questionType === 'CASE_STUDY' ? 250 : questionType === 'SHORT_ANSWER' ? 60 : 0),
+    marks: Number(q.marks) || 10,
+    negativeMarks: Number(q.negativeMarks) || 0
+  };
+};
+
 const enrichQuestionsWithOptions = (qb = []) =>
-  (qb || []).map((q, idx) => {
-    const tpl = STARTER_QUESTION_TEMPLATES[idx % STARTER_QUESTION_TEMPLATES.length];
-    return {
-      ...q,
-      questionNumber: q.questionNumber || idx + 1,
-      optionA: q.optionA || tpl.optionA,
-      optionB: q.optionB || tpl.optionB,
-      optionC: q.optionC || tpl.optionC,
-      optionD: q.optionD || tpl.optionD,
-      correctOption: q.correctOption || q.correctAnswer || 'A',
-      correctAnswer: q.correctAnswer || q.correctOption || 'A',
-      marks: Number(q.marks) || 10
-    };
-  });
+  (qb || []).map((q, idx) => normalizeQuestionItem(q, idx, true));
 
 const getExams = async (tenantId = 1) => {
   const tid = parseInt(tenantId, 10) || 1;
@@ -152,19 +212,11 @@ const createExam = async (tenantId = 1, payload = {}, user = null) => {
   }
 
   const questionBankInput = Array.isArray(payload.questionBank) ? payload.questionBank : [];
-  const normalizedQuestions = questionBankInput.map((q, idx) => ({
-    id: q.id || `q-${Date.now()}-${idx + 1}`,
-    questionNumber: Number(q.questionNumber) || idx + 1,
-    questionText: String(q.questionText || '').trim() || `Question ${idx + 1}`,
-    optionA: q.optionA || 'Option A',
-    optionB: q.optionB || 'Option B',
-    optionC: q.optionC || 'Option C',
-    optionD: q.optionD || 'Option D',
-    correctOption: String(q.correctOption || q.correctAnswer || 'A').toUpperCase(),
-    correctAnswer: String(q.correctAnswer || q.correctOption || 'A').toUpperCase(),
-    marks: Number(q.marks) || 10,
-    negativeMarks: Number(q.negativeMarks) || 0
-  }));
+  const normalizedQuestions = questionBankInput.map((q, idx) => normalizeQuestionItem(q, idx, false));
+  const computedTotalMarks =
+    Number(payload.totalMarks) ||
+    normalizedQuestions.reduce((sum, q) => sum + (Number(q.marks) || 0), 0) ||
+    100;
 
   // Optionally mirror into Prisma Exam + QuestionBank for relational integrity
   let prismaExamId = null;
@@ -190,7 +242,7 @@ const createExam = async (tenantId = 1, payload = {}, user = null) => {
         data: {
           classId: targetClass.id,
           title: String(payload.title).trim(),
-          totalMarks: Number(payload.totalMarks) || 100,
+          totalMarks: computedTotalMarks,
           passMarks: Number(payload.passMarks) || 50,
           examDate: payload.examDate ? new Date(payload.examDate) : new Date()
         }
@@ -202,7 +254,7 @@ const createExam = async (tenantId = 1, payload = {}, user = null) => {
             examId: created.id,
             questionNumber: q.questionNumber,
             questionText: q.questionText,
-            correctAnswer: q.correctOption,
+            correctAnswer: String(q.correctOption || q.acceptedAnswer || 'THEORY').slice(0, 190),
             marks: q.marks,
             negativeMarks: q.negativeMarks
           }
@@ -223,7 +275,7 @@ const createExam = async (tenantId = 1, payload = {}, user = null) => {
     startTime: payload.startTime || '09:00 AM',
     endTime: payload.endTime || '11:30 AM',
     durationMinutes: Number(payload.durationMinutes) || 120,
-    totalMarks: Number(payload.totalMarks) || 100,
+    totalMarks: computedTotalMarks,
     passMarks: Number(payload.passMarks) || 50,
     examMode: payload.examMode || 'HYBRID',
     restrictBeforeStart: Boolean(payload.restrictBeforeStart),
@@ -246,7 +298,13 @@ const createExam = async (tenantId = 1, payload = {}, user = null) => {
   return storedExam;
 };
 
-const submitAnswerSheet = async ({ examId, studentId, classId, imageUrl, extractedAnswers, teacherAnswerKey }, tenantId = 1) => {
+const computeLetterGrade = (pct) =>
+  pct >= 90 ? 'A+' : pct >= 80 ? 'A' : pct >= 70 ? 'B' : pct >= 60 ? 'C' : pct >= 50 ? 'D' : 'F';
+
+const submitAnswerSheet = async (
+  { examId, studentId, studentName, studentEmail, classId, imageUrl, extractedAnswers, writtenAnswers, essayAnswers, teacherAnswerKey },
+  tenantId = 1
+) => {
   const tid = parseInt(tenantId, 10) || 1;
   const store = readPersistentStore();
   const customList = Array.isArray(store.publishedExams?.[String(tid)]) ? store.publishedExams[String(tid)] : [];
@@ -323,26 +381,134 @@ const submitAnswerSheet = async ({ examId, studentId, classId, imageUrl, extract
   const totalQuestions = questions.length || 10;
   let matchedAnswers = 0;
   let calculatedScore = 0;
+  let objectiveMarksObtained = 0;
   let maxPossibleMarks = 0;
+  let writtenQuestionsCount = 0;
+  let hasManualTheoryReview = false;
+  const combinedWritten = {
+    ...(essayAnswers && typeof essayAnswers === 'object' ? essayAnswers : {}),
+    ...(writtenAnswers && typeof writtenAnswers === 'object' ? writtenAnswers : {})
+  };
+  const perQuestionBreakdown = [];
 
-  if (questions.length > 0 && extractedAnswers && typeof extractedAnswers === 'object') {
+  if (questions.length > 0 && ((extractedAnswers && typeof extractedAnswers === 'object') || Object.keys(combinedWritten).length > 0)) {
     questions.forEach((q, idx) => {
       const qMarks = Number(q.marks) || 10;
+      const qType = String(q.questionType || 'MULTIPLE_CHOICE').toUpperCase();
       maxPossibleMarks += qMarks;
-      const correctTarget = String((teacherAnswerKey && teacherAnswerKey[q.questionNumber]) || q.correctAnswer || q.correctOption || 'A').trim().toUpperCase();
-      const studentAnsRaw = extractedAnswers[q.questionNumber] ?? extractedAnswers[String(idx + 1)] ?? extractedAnswers[q.id];
-      const studentAns = studentAnsRaw ? String(studentAnsRaw).trim().toUpperCase() : '';
-      if (studentAns && studentAns === correctTarget) {
-        matchedAnswers++;
-        calculatedScore += qMarks;
-      } else if (studentAns && Number(q.negativeMarks) > 0) {
-        calculatedScore -= Number(q.negativeMarks);
+
+      const lookupKeys = [String(q.questionNumber), String(idx + 1), String(q.id)].filter(Boolean);
+      const rawWritten = lookupKeys.map((k) => combinedWritten[k]).find((v) => v !== undefined && String(v).trim() !== '');
+      const rawObj = extractedAnswers ? lookupKeys.map((k) => extractedAnswers[k]).find((v) => v !== undefined && String(v).trim() !== '') : undefined;
+
+      if (qType === 'THEORY_ESSAY' || qType === 'SHORT_ANSWER' || qType === 'CASE_STUDY') {
+        writtenQuestionsCount++;
+        hasManualTheoryReview = true;
+        const studentResponse = String(rawWritten ?? rawObj ?? '').trim();
+        const keywords = String(q.acceptedKeywords || '')
+          .split(',')
+          .map((s) => s.trim().toLowerCase())
+          .filter(Boolean);
+        let autoSuggestedMarks = 0;
+        if (studentResponse && keywords.length > 0) {
+          const lowerResp = studentResponse.toLowerCase();
+          const matchedKw = keywords.filter((kw) => lowerResp.includes(kw)).length;
+          autoSuggestedMarks = Math.round((matchedKw / keywords.length) * qMarks * 10) / 10;
+        }
+        perQuestionBreakdown.push({
+          questionNumber: q.questionNumber || idx + 1,
+          id: q.id,
+          questionType: qType,
+          questionText: q.questionText,
+          maxMarks: qMarks,
+          studentAnswer: studentResponse,
+          correctAnswer: q.markingGuide || q.acceptedKeywords || 'Teacher Rubric Grading',
+          markingGuide: q.markingGuide || '',
+          acceptedKeywords: q.acceptedKeywords || '',
+          awardedMarks: 0,
+          autoSuggestedMarks,
+          isCorrect: null,
+          requiresTeacherReview: true,
+          teacherComment: ''
+        });
+      } else if (qType === 'FILL_IN_BLANK') {
+        writtenQuestionsCount++;
+        const studentText = String(rawWritten ?? rawObj ?? '').trim();
+        const rawAccepted = String(q.acceptedAnswer || q.correctAnswer || '').trim();
+        const acceptedVariants = rawAccepted
+          .split(',')
+          .map((s) => s.trim().toLowerCase())
+          .filter(Boolean);
+        const normAns = studentText.toLowerCase();
+        const matched = Boolean(normAns && acceptedVariants.some((v) => v === normAns));
+        const awarded = matched ? qMarks : 0;
+        if (matched) {
+          matchedAnswers++;
+          calculatedScore += awarded;
+          objectiveMarksObtained += awarded;
+        }
+        if (!acceptedVariants.length) {
+          hasManualTheoryReview = true;
+        }
+        perQuestionBreakdown.push({
+          questionNumber: q.questionNumber || idx + 1,
+          id: q.id,
+          questionType: qType,
+          questionText: q.questionText,
+          maxMarks: qMarks,
+          studentAnswer: studentText,
+          correctAnswer: rawAccepted,
+          markingGuide: q.markingGuide || '',
+          acceptedKeywords: q.acceptedKeywords || '',
+          awardedMarks: awarded,
+          autoSuggestedMarks: awarded,
+          isCorrect: acceptedVariants.length ? matched : null,
+          requiresTeacherReview: acceptedVariants.length === 0,
+          teacherComment: ''
+        });
+      } else {
+        // MULTIPLE_CHOICE or TRUE_FALSE
+        let correctTarget = String((teacherAnswerKey && teacherAnswerKey[q.questionNumber]) || q.correctOption || q.correctAnswer || 'A').trim().toUpperCase();
+        if (qType === 'TRUE_FALSE') {
+          correctTarget = correctTarget === 'FALSE' || correctTarget === 'B' ? 'B' : 'A';
+        }
+        let studentAns = rawObj !== undefined ? String(rawObj).trim().toUpperCase() : '';
+        if (qType === 'TRUE_FALSE' && (studentAns === 'TRUE' || studentAns === 'FALSE')) {
+          studentAns = studentAns === 'FALSE' ? 'B' : 'A';
+        }
+        const isCorrect = Boolean(studentAns && studentAns === correctTarget);
+        let awarded = 0;
+        if (isCorrect) {
+          matchedAnswers++;
+          awarded = qMarks;
+          calculatedScore += qMarks;
+          objectiveMarksObtained += qMarks;
+        } else if (studentAns && Number(q.negativeMarks) > 0) {
+          calculatedScore -= Number(q.negativeMarks);
+          objectiveMarksObtained -= Number(q.negativeMarks);
+          awarded = -Number(q.negativeMarks);
+        }
+        perQuestionBreakdown.push({
+          questionNumber: q.questionNumber || idx + 1,
+          id: q.id,
+          questionType: qType,
+          questionText: q.questionText,
+          maxMarks: qMarks,
+          studentAnswer: studentAns,
+          correctAnswer: correctTarget,
+          awardedMarks: Math.max(0, awarded),
+          autoSuggestedMarks: Math.max(0, awarded),
+          isCorrect,
+          requiresTeacherReview: false,
+          teacherComment: ''
+        });
       }
     });
   } else {
     maxPossibleMarks = Number(exam.totalMarks) || 100;
     matchedAnswers = Math.round(totalQuestions * 0.8);
     calculatedScore = Math.round(maxPossibleMarks * 0.8);
+    objectiveMarksObtained = calculatedScore;
   }
 
   calculatedScore = Math.max(0, Math.round(calculatedScore * 10) / 10);
@@ -351,8 +517,9 @@ const submitAnswerSheet = async ({ examId, studentId, classId, imageUrl, extract
   const passThreshold = Number(exam.passMarks) || 50;
   const isPassed = percentage >= (denom === 100 ? passThreshold : 50);
   const confidencePct = Math.round((Math.random() * 5 + 94) * 10) / 10;
-  const needsManualReview = confidencePct < 85;
-  const grade = percentage >= 90 ? 'A+' : (percentage >= 80 ? 'A' : (percentage >= 70 ? 'B' : (percentage >= 60 ? 'C' : (percentage >= 50 ? 'D' : 'F'))));
+  const needsManualReview = hasManualTheoryReview || confidencePct < 85;
+  const gradingStatus = hasManualTheoryReview ? 'PENDING_TEACHER_REVIEW' : 'GRADED';
+  const grade = computeLetterGrade(percentage);
 
   let answerSheetRecord = null;
   let gradingResult = null;
@@ -370,7 +537,7 @@ const submitAnswerSheet = async ({ examId, studentId, classId, imageUrl, extract
           examId: numericExamId,
           studentId: sid,
           imageUrl: imageUrl || 'https://gbs.edu/scans/sample_sheet.jpg',
-          status: 'GRADED',
+          status: hasManualTheoryReview ? 'MANUAL_REVIEW' : 'GRADED',
           scoreObtained: calculatedScore,
           isPassed,
           gradedAt: new Date()
@@ -390,21 +557,30 @@ const submitAnswerSheet = async ({ examId, studentId, classId, imageUrl, extract
 
   const submissionEntry = {
     id: answerSheetRecord?.id || `sheet-${Date.now()}`,
+    prismaAnswerSheetId: answerSheetRecord?.id || null,
     tenantId: tid,
     examId: exam.id,
     examTitle: exam.title,
     studentId: studentId || sid,
+    studentName: studentName || '',
+    studentEmail: studentEmail || '',
     scoreObtained: calculatedScore,
+    objectiveMarksObtained,
     totalMarks: denom,
     percentage,
     totalQuestions,
+    writtenQuestionsCount,
     matchedAnswers,
     grade,
     isPassed,
     pass: isPassed,
     confidencePct,
     needsManualReview,
+    gradingStatus,
     extractedAnswers: extractedAnswers || {},
+    writtenAnswers: combinedWritten,
+    perQuestionBreakdown,
+    teacherFeedback: '',
     submittedAt: new Date().toISOString()
   };
 
@@ -420,18 +596,130 @@ const submitAnswerSheet = async ({ examId, studentId, classId, imageUrl, extract
     examId: exam.id,
     examTitle: exam.title,
     scoreObtained: calculatedScore,
+    objectiveMarksObtained,
     totalMarks: denom,
     percentage,
     totalQuestions,
+    writtenQuestionsCount,
     matchedAnswers,
     grade,
     isPassed,
     pass: isPassed,
     confidencePct,
     needsManualReview,
+    gradingStatus,
     extractedAnswers: submissionEntry.extractedAnswers,
+    writtenAnswers: submissionEntry.writtenAnswers,
+    perQuestionBreakdown: submissionEntry.perQuestionBreakdown,
     gradingResult
   };
+};
+
+const gradeAnswerSheet = async (submissionId, payload = {}, tenantId = 1, user = null) => {
+  const tid = parseInt(tenantId, 10) || 1;
+  const store = readPersistentStore();
+  const prevList = Array.isArray(store.examSubmissions?.[String(tid)]) ? store.examSubmissions[String(tid)] : [];
+  const idx = prevList.findIndex((s) => String(s.id) === String(submissionId) || String(s.prismaAnswerSheetId) === String(submissionId));
+
+  if (idx === -1) {
+    const numericId = parseInt(submissionId, 10);
+    if (!isNaN(numericId)) {
+      const sheet = await prisma.answerSheet.findFirst({
+        where: { id: numericId, exam: { class: { tenantId: tid } } },
+        include: { exam: true }
+      }).catch(() => null);
+      if (sheet) {
+        const totalM = Number(sheet.exam?.totalMarks) || 100;
+        const nextScore = Math.max(0, Math.min(totalM, Number(payload.scoreObtained ?? payload.overrideTotalScore ?? sheet.scoreObtained) || 0));
+        const pct = Math.max(0, Math.min(100, Math.round((nextScore / totalM) * 100)));
+        const isPassed = pct >= (Number(sheet.exam?.passMarks) || 50);
+        const updatedPrisma = await prisma.answerSheet.update({
+          where: { id: sheet.id },
+          data: { scoreObtained: nextScore, isPassed, status: 'GRADED', gradedAt: new Date() }
+        });
+        return {
+          ...updatedPrisma,
+          tenantId: tid,
+          totalMarks: totalM,
+          percentage: pct,
+          grade: computeLetterGrade(pct),
+          gradingStatus: 'TEACHER_GRADED',
+          teacherFeedback: payload.teacherFeedback || ''
+        };
+      }
+    }
+    throw new AppError('Answer sheet submission not found for your institution.', 404);
+  }
+
+  const target = { ...prevList[idx] };
+  const perQuestionMarks = payload.perQuestionMarks && typeof payload.perQuestionMarks === 'object' ? payload.perQuestionMarks : {};
+  const perQuestionComments = payload.perQuestionComments && typeof payload.perQuestionComments === 'object' ? payload.perQuestionComments : {};
+  const breakdown = Array.isArray(target.perQuestionBreakdown) ? [...target.perQuestionBreakdown] : [];
+
+  let updatedBreakdown = breakdown.map((item) => {
+    const markOverride = perQuestionMarks[String(item.questionNumber)] ?? perQuestionMarks[String(item.id)];
+    const commentOverride = perQuestionComments[String(item.questionNumber)] ?? perQuestionComments[String(item.id)];
+    const maxM = Number(item.maxMarks) || 10;
+    const awardedMarks = markOverride !== undefined && markOverride !== ''
+      ? Math.max(0, Math.min(maxM, Number(markOverride) || 0))
+      : Number(item.awardedMarks) || 0;
+    return {
+      ...item,
+      awardedMarks,
+      requiresTeacherReview: false,
+      teacherComment: commentOverride !== undefined ? String(commentOverride) : (item.teacherComment || '')
+    };
+  });
+
+  const denom = Number(target.totalMarks) || updatedBreakdown.reduce((s, i) => s + (Number(i.maxMarks) || 0), 0) || 100;
+  let totalScore = updatedBreakdown.length > 0
+    ? updatedBreakdown.reduce((sum, item) => sum + (Number(item.awardedMarks) || 0), 0)
+    : Number(target.scoreObtained) || 0;
+
+  if (payload.overrideTotalScore !== undefined && payload.overrideTotalScore !== '') {
+    totalScore = Math.max(0, Math.min(denom, Number(payload.overrideTotalScore) || 0));
+  }
+
+  totalScore = Math.round(totalScore * 10) / 10;
+  const percentage = Math.max(0, Math.min(100, Math.round((totalScore / denom) * 100)));
+  const grade = computeLetterGrade(percentage);
+  const isPassed = percentage >= 50;
+
+  const updatedEntry = {
+    ...target,
+    perQuestionBreakdown: updatedBreakdown,
+    scoreObtained: totalScore,
+    totalMarks: denom,
+    percentage,
+    grade,
+    isPassed,
+    pass: isPassed,
+    needsManualReview: false,
+    gradingStatus: 'TEACHER_GRADED',
+    teacherFeedback: payload.teacherFeedback !== undefined ? String(payload.teacherFeedback) : (target.teacherFeedback || ''),
+    gradedBy: user?.email || 'TEACHER',
+    gradedAt: new Date().toISOString()
+  };
+
+  writePersistentStore((curr) => {
+    const examSubmissions = { ...(curr.examSubmissions || {}) };
+    const list = Array.isArray(examSubmissions[String(tid)]) ? [...examSubmissions[String(tid)]] : [];
+    const hitIdx = list.findIndex((s) => String(s.id) === String(target.id));
+    if (hitIdx !== -1) list[hitIdx] = updatedEntry;
+    else list.unshift(updatedEntry);
+    examSubmissions[String(tid)] = list;
+    return { ...curr, examSubmissions };
+  });
+
+  const numericPrismaId = Number(target.prismaAnswerSheetId || target.id);
+  if (Number.isInteger(numericPrismaId) && numericPrismaId > 0) {
+    await prisma.answerSheet.update({
+      where: { id: numericPrismaId },
+      data: { scoreObtained: totalScore, isPassed, status: 'GRADED', gradedAt: new Date() }
+    }).catch(() => { });
+  }
+
+  return updatedEntry;
 };
 
 const getAnswerSheets = async (examId, tenantId = 1) => {
@@ -465,6 +753,7 @@ module.exports = {
   getExams,
   createExam,
   submitAnswerSheet,
+  gradeAnswerSheet,
   getAnswerSheets,
   ensureSampleExam,
   ensureQuestionBank

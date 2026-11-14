@@ -1,83 +1,73 @@
-/* ============================================================================
-   GBS SYSTEM — ROYAL HARMONY THEME (#1E2A44)
-   Primary System Colour: #1E2A44 (Royal Harmony Navy - rgb(30, 42, 68))
-   Harmonized Accents:
-   - Deep Royal Base: #141D30 / #182238
-   - Elevated Royal Surface: #243352 / #2B3C60
-   - Royal Crest Gold: #D4AF37 / #FBBF24
-   - Royal Sapphire Highlight: #3B5998 / #60A5FA / #38BDF8
-   ============================================================================ */
+/* ==========================================================================
+   GBS SCHOOL SYSTEM — MASTER BLUEPRINT BLENDED THEME
+   Exact Blueprint Blend (media_1794691725468_6db6b091):
+   Deep Wine Burgundy (#5C1822 / #380E14) + Espresso Brown (#4B2C1B / #2B1810)
+   + Charcoal Grey (#1C1917 / #27272A / #3F3F46) + Imperial Gold (#D4AF37 / #F5C451)
+   ========================================================================== */
 
 :root {
-  /* Core Royal Harmony (#1E2A44) Tokens */
-  --gbs-royal: #1E2A44;
-  --gbs-royal-dark: #141D30;
-  --gbs-royal-deep: #182238;
-  --gbs-royal-surface: #243352;
-  --gbs-royal-elevated: #2B3C60;
-  --gbs-royal-accent: #3B5998;
-  --gbs-royal-glow: rgba(30, 42, 68, 0.85);
+  /* Core GBS Blueprint Blended Wine / Brown / Grey Tokens */
+  --gbs-wine: #5C1822;
+  --gbs-wine-dark: #380E14;
+  --gbs-wine-light: #7F1D2B;
+  --gbs-brown: #4B2C1B;
+  --gbs-brown-light: #6E432C;
+  --gbs-brown-deep: #24140D;
+  --gbs-grey-900: #1C1917;
+  --gbs-grey-800: #27272A;
+  --gbs-grey-700: #3F3F46;
+  --gbs-grey-400: #D6D3D1;
+  --gbs-grey-200: #FEF3C7;
 
-  --gbs-gold: #d4af37;
-  --gbs-gold-light: #fbbf24;
-  --gbs-gold-glow: rgba(212, 175, 55, 0.35);
+  /* Imperial Gold & Accent Tokens */
+  --gbs-gold: #D4AF37;
+  --gbs-gold-light: #F5C451;
+  --gbs-gold-pale: #FDE68A;
+  --gbs-gold-glow: rgba(212, 175, 55, 0.38);
+  --gbs-sky: #38BDF8;
+  --gbs-sky-glow: rgba(56, 189, 248, 0.30);
+  --gbs-emerald: #10B981;
 
-  --gbs-wine: #1E2A44;
-  --gbs-wine-dark: #141D30;
-  --gbs-wine-light: #2B3C60;
-  --gbs-brown: #182238;
-  --gbs-brown-light: #243352;
-  --gbs-brown-deep: #141D30;
+  /* Legacy Variable Compatibility Aliases -> Blueprint Wine/Brown/Grey */
+  --gbs-royal: #5C1822;
+  --gbs-royal-dark: #380E14;
+  --gbs-royal-deep: #24140D;
+  --gbs-royal-surface: #4B2C1B;
+  --gbs-royal-elevated: #3F3F46;
+  --gbs-royal-accent: #D4AF37;
+  --gbs-royal-glow: rgba(92, 24, 34, 0.85);
 
-  --gbs-grey-900: #141D30;
-  --gbs-grey-800: #1E2A44;
-  --gbs-grey-700: #2B3C60;
-  --gbs-grey-400: #cbd5e1;
-  --gbs-grey-200: #f1f5f9;
-  --gbs-sky: #38bdf8;
-  --gbs-sky-glow: rgba(56, 189, 248, 0.32);
-  --gbs-emerald: #10b981;
+  /* Unified System Surface & Brand Variables */
+  --color-primary: #5C1822;
+  --color-primary-hover: #7F1D2B;
+  --color-secondary: #D4AF37;
+  --color-wine: #5C1822;
+  --color-wine-light: #7F1D2B;
+  --color-brown: #4B2C1B;
+  --color-background: #24140D;
+  --color-surface: rgba(43, 24, 16, 0.90);
+  --color-text: #FFFBEB;
+  --color-text-muted: #E7E5E4;
+  --color-border: rgba(212, 175, 55, 0.45);
+  --color-success: #10B981;
+  --color-warning: #F5C451;
+  --color-danger: #EF4444;
 
-  /* Unified System Surface & Brand Variables (#1E2A44 Royal Harmony) */
-  --color-primary: #1E2A44;
-  --color-primary-hover: #2B3C60;
-  --color-secondary: #d4af37;
-  --color-wine: #1E2A44;
-  --color-wine-light: #2B3C60;
-  --color-brown: #182238;
-  --color-background: #1E2A44;
-  --color-surface: rgba(30, 42, 68, 0.92);
-  --color-text: #f8fafc;
-  --color-text-muted: #e2e8f0;
-  --color-border: rgba(212, 175, 55, 0.42);
-  --color-success: #10b981;
-  --color-warning: #fbbf24;
-  --color-danger: #ef4444;
-
-  /* Signature Royal Harmony (#1E2A44) Gradients */
+  /* Signature GBS Blueprint Blended Gradients (Wine + Brown + Grey + Gold) */
   --gbs-bg-master:
-    radial-gradient(circle at 15% 15%, rgba(43, 60, 96, 0.72) 0%, transparent 48%),
-    radial-gradient(circle at 85% 18%, rgba(212, 175, 55, 0.22) 0%, transparent 46%),
-    radial-gradient(circle at 50% 85%, rgba(56, 189, 248, 0.18) 0%, transparent 55%),
-    linear-gradient(135deg, #141D30 0%, #1E2A44 45%, #243352 78%, #1E2A44 100%);
+    radial-gradient(circle at 14% 16%, rgba(92, 24, 34, 0.72) 0%, transparent 46%),
+    radial-gradient(circle at 86% 18%, rgba(212, 175, 55, 0.24) 0%, transparent 44%),
+    radial-gradient(circle at 50% 88%, rgba(75, 44, 27, 0.65) 0%, transparent 52%),
+    linear-gradient(135deg, #24140D 0%, #4A1219 36%, #3A2014 70%, #27272A 100%);
+  --gbs-header-gradient: linear-gradient(90deg, rgba(56, 14, 20, 0.96) 0%, rgba(75, 44, 27, 0.95) 50%, rgba(39, 39, 42, 0.96) 100%);
+  --gbs-card-gradient: linear-gradient(145deg, rgba(56, 14, 20, 0.88) 0%, rgba(43, 24, 16, 0.90) 55%, rgba(28, 25, 23, 0.92) 100%);
+  --gbs-hero-gradient: linear-gradient(135deg, rgba(74, 18, 25, 0.88) 0%, rgba(75, 44, 27, 0.88) 55%, rgba(39, 39, 42, 0.90) 100%);
+  --gbs-btn-gold-wine: linear-gradient(135deg, #7F1D2B 0%, #5C3824 52%, #D4AF37 100%);
 
-  --gbs-header-gradient:
-    linear-gradient(90deg, rgba(20, 29, 48, 0.96) 0%, rgba(30, 42, 68, 0.96) 50%, rgba(36, 51, 82, 0.96) 100%);
-
-  --gbs-card-gradient:
-    linear-gradient(145deg, rgba(30, 42, 68, 0.94) 0%, rgba(36, 51, 82, 0.9) 52%, rgba(24, 34, 56, 0.94) 100%);
-
-  --gbs-hero-gradient:
-    linear-gradient(135deg, rgba(30, 42, 68, 0.96) 0%, rgba(43, 60, 96, 0.92) 52%, rgba(20, 29, 48, 0.96) 100%);
-
-  --gbs-btn-gold-wine:
-    linear-gradient(135deg, #2B3C60 0%, #1E2A44 52%, #d4af37 100%);
-
-  /* Shadows & Radius */
-  --shadow-sm: 0 4px 12px rgba(10, 16, 29, 0.45);
-  --shadow-md: 0 12px 28px rgba(10, 16, 29, 0.55), 0 0 18px rgba(30, 42, 68, 0.4);
-  --shadow-lg: 0 20px 45px rgba(10, 16, 29, 0.72), 0 0 28px rgba(212, 175, 55, 0.22);
-
+  /* Architectural Shadows */
+  --shadow-sm: 0 4px 12px rgba(24, 10, 8, 0.45);
+  --shadow-md: 0 12px 28px rgba(24, 10, 8, 0.58), 0 0 18px rgba(92, 24, 34, 0.38);
+  --shadow-lg: 0 20px 45px rgba(18, 8, 6, 0.72), 0 0 28px rgba(212, 175, 55, 0.24);
   --radius-sm: 0.375rem;
   --radius-md: 0.625rem;
   --radius-lg: 0.875rem;

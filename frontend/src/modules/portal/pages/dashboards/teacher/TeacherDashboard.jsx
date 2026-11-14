@@ -295,6 +295,101 @@ export default function TeacherDashboard() {
   const [pendingPublishExam, setPendingPublishExam] = useState(null);
   const [questionsVerifiedCheck, setQuestionsVerifiedCheck] = useState(false);
 
+  // Multi-Format Exam Authoring & Submitted Theory Script Grading State
+  const EXAM_QUESTION_TYPES = [
+    { id: "MULTIPLE_CHOICE", label: "📘 Multiple Choice (MCQ)", badge: "MCQ", defaultMarks: 10 },
+    { id: "THEORY_ESSAY", label: "✍️ Theory / Long Essay (Typed)", badge: "THEORY", defaultMarks: 20 },
+    { id: "SHORT_ANSWER", label: "📝 Short Answer (Typed)", badge: "SHORT ANSWER", defaultMarks: 10 },
+    { id: "TRUE_FALSE", label: "☑️ True / False", badge: "TRUE / FALSE", defaultMarks: 5 },
+    { id: "FILL_IN_BLANK", label: "🔤 Fill in the Blank (Typed)", badge: "FILL IN BLANK", defaultMarks: 5 },
+    { id: "CASE_STUDY", label: "🧪 Practical / Case Study (Typed)", badge: "CASE STUDY", defaultMarks: 25 }
+  ];
+
+  const createDefaultQuestionByType = (questionType = "MULTIPLE_CHOICE", number = 1) => {
+    const base = {
+      id: Date.now() + Math.floor(Math.random() * 10000),
+      questionNumber: number,
+      questionType
+    };
+    if (questionType === "THEORY_ESSAY") {
+      return {
+        ...base,
+        questionText: `Question ${number} (Theory): Explain and critically analyze the core principles with clear examples.`,
+        markingGuide: "Award marks for accurate definition, real-world example, and logical conclusion.",
+        acceptedKeywords: "principle, analysis, example, conclusion",
+        wordLimit: 250,
+        optionA: "", optionB: "", optionC: "", optionD: "", options: [], correctOption: "",
+        marks: 20
+      };
+    }
+    if (questionType === "SHORT_ANSWER") {
+      return {
+        ...base,
+        questionText: `Question ${number} (Short Answer): Briefly define or state two key points.`,
+        markingGuide: "Two concise accurate points at 5 marks each.",
+        acceptedKeywords: "",
+        wordLimit: 60,
+        optionA: "", optionB: "", optionC: "", optionD: "", options: [], correctOption: "",
+        marks: 10
+      };
+    }
+    if (questionType === "TRUE_FALSE") {
+      return {
+        ...base,
+        questionText: `Question ${number} (True / False): State whether this statement is True or False.`,
+        optionA: "True", optionB: "False", optionC: "", optionD: "", options: ["True", "False"],
+        correctOption: "A",
+        marks: 5
+      };
+    }
+    if (questionType === "FILL_IN_BLANK") {
+      return {
+        ...base,
+        questionText: `Question ${number}: Complete the statement by typing the exact term in ____ .`,
+        acceptedAnswer: "",
+        acceptedKeywords: "",
+        optionA: "", optionB: "", optionC: "", optionD: "", options: [], correctOption: "",
+        marks: 5
+      };
+    }
+    if (questionType === "CASE_STUDY") {
+      return {
+        ...base,
+        questionText: `Question ${number} (Practical / Case Study): Read the scenario carefully and type your full solution steps and final recommendation.`,
+        markingGuide: "Check problem diagnosis, step-by-step working, and final recommendation.",
+        acceptedKeywords: "diagnosis, steps, solution, recommendation",
+        wordLimit: 300,
+        optionA: "", optionB: "", optionC: "", optionD: "", options: [], correctOption: "",
+        marks: 25
+      };
+    }
+    return {
+      ...base,
+      questionText: `Question ${number}: Enter multiple-choice question prompt here...`,
+      optionA: "First answer choice (A)",
+      optionB: "Second answer choice (B)",
+      optionC: "Third answer choice (C)",
+      optionD: "Fourth answer choice (D)",
+      options: ["First answer choice (A)", "Second answer choice (B)", "Third answer choice (C)", "Fourth answer choice (D)"],
+      correctOption: "A",
+      marks: 10
+    };
+  };
+
+  const [submittedExamScripts, setSubmittedExamScripts] = useState(() => {
+    try {
+      const local = JSON.parse(localStorage.getItem("gbs_submitted_exam_scripts_feed") || "[]");
+      return Array.isArray(local) ? local : [];
+    } catch {
+      return [];
+    }
+  });
+  const [activeGradingScript, setActiveGradingScript] = useState(null);
+  const [scriptQuestionMarks, setScriptQuestionMarks] = useState({});
+  const [scriptQuestionComments, setScriptQuestionComments] = useState({});
+  const [scriptOverallFeedback, setScriptOverallFeedback] = useState("");
+  const [savingScriptGrade, setSavingScriptGrade] = useState(false);
+
   // ============================================================================
   // OFFICIAL INSTITUTIONAL CURRICULUM & TEACHING GUIDE DOWNLOAD CENTER STATE
   // Automatically scoped to the registered institution category (Nursery-JHS, SHS, University)
@@ -980,17 +1075,8 @@ export default function TeacherDashboard() {
     }
     if (examQuestionsList.length === 0) {
       setExamQuestionsList([
-        {
-          id: Date.now(),
-          questionNumber: 1,
-          questionText: "Solve for the primary variable and select the correct answer below:",
-          optionA: "First answer choice (A)",
-          optionB: "Second answer choice (B)",
-          optionC: "Third answer choice (C)",
-          optionD: "Fourth answer choice (D)",
-          correctOption: "A",
-          marks: 10
-        }
+        createDefaultQuestionByType("MULTIPLE_CHOICE", 1),
+        createDefaultQuestionByType("THEORY_ESSAY", 2)
       ]);
     }
     setShowAuthorExamModal(true);
@@ -1019,29 +1105,66 @@ export default function TeacherDashboard() {
     setShowExamTimetableModal(true);
   };
 
-  const buildCreatedExamObject = () => ({
-    id: `exam-${Date.now()}`,
-    title: (newExamForm.title || `Scheduled ${newExamForm.subjectName || "Course"} Exam`).trim(),
-    subjectCode: newExamForm.subjectCode || "SUBJ-101",
-    subjectName: newExamForm.subjectName || newExamForm.subjectCode || "General Subject",
-    class: {
-      name: newExamForm.className || activeClassObj?.name || "Assigned Class Cohort",
-      code: activeClassObj?.code || "CLS-EXAM"
-    },
-    examDate: newExamForm.examDate || new Date().toISOString().split("T")[0],
-    startTime: newExamForm.startTime || "09:00 AM",
-    endTime: newExamForm.endTime || "11:30 AM",
-    durationMinutes: Number(newExamForm.durationMinutes) || 120,
-    totalMarks: Number(newExamForm.totalMarks) || 100,
-    passMarks: Number(newExamForm.passMarks) || 50,
-    examMode: newExamForm.examMode || "HYBRID",
-    restrictBeforeStart: Boolean(newExamForm.restrictBeforeStart),
-    questionBank: examQuestionsList,
-    typedQuestionText: newExamForm.typedQuestionText,
-    uploadedDocName: newExamForm.uploadedDocName,
-    status: "PUBLISHED_ACTIVE",
-    publishedAt: new Date().toISOString()
-  });
+  const buildCreatedExamObject = () => {
+    const preparedQuestions = examQuestionsList.map((q, idx) => {
+      const qType = q.questionType || "MULTIPLE_CHOICE";
+      if (qType === "TRUE_FALSE") {
+        return {
+          ...q,
+          questionNumber: idx + 1,
+          questionType: qType,
+          optionA: "True",
+          optionB: "False",
+          optionC: "",
+          optionD: "",
+          options: ["True", "False"],
+          correctOption: q.correctOption === "B" ? "B" : "A"
+        };
+      }
+      if (qType === "MULTIPLE_CHOICE") {
+        const opts = [q.optionA || "Option A", q.optionB || "Option B", q.optionC || "Option C", q.optionD || "Option D"];
+        return {
+          ...q,
+          questionNumber: idx + 1,
+          questionType: qType,
+          options: opts,
+          correctOption: q.correctOption || "A"
+        };
+      }
+      return {
+        ...q,
+        questionNumber: idx + 1,
+        questionType: qType,
+        options: [],
+        correctAnswer: q.acceptedAnswer || q.markingGuide || "THEORY_RUBRIC"
+      };
+    });
+
+    const summedMarks = preparedQuestions.reduce((acc, q) => acc + (Number(q.marks) || 0), 0);
+    return {
+      id: selectedExamId && String(selectedExamId).startsWith("exam-") ? selectedExamId : `exam-${Date.now()}`,
+      title: (newExamForm.title || `Scheduled ${newExamForm.subjectName || "Course"} Exam`).trim(),
+      subjectCode: newExamForm.subjectCode || "SUBJ-101",
+      subjectName: newExamForm.subjectName || newExamForm.subjectCode || "General Subject",
+      class: {
+        name: newExamForm.className || activeClassObj?.name || "Assigned Class Cohort",
+        code: activeClassObj?.code || "CLS-EXAM"
+      },
+      examDate: newExamForm.examDate || new Date().toISOString().split("T")[0],
+      startTime: newExamForm.startTime || "09:00 AM",
+      endTime: newExamForm.endTime || "11:30 AM",
+      durationMinutes: Number(newExamForm.durationMinutes) || 120,
+      totalMarks: summedMarks > 0 ? summedMarks : (Number(newExamForm.totalMarks) || 100),
+      passMarks: Number(newExamForm.passMarks) || 50,
+      examMode: newExamForm.examMode || "HYBRID",
+      restrictBeforeStart: Boolean(newExamForm.restrictBeforeStart),
+      questionBank: preparedQuestions,
+      typedQuestionText: newExamForm.typedQuestionText,
+      uploadedDocName: newExamForm.uploadedDocName,
+      status: "PUBLISHED_ACTIVE",
+      publishedAt: new Date().toISOString()
+    };
+  };
 
   const handleDirectPublishTimedExam = () => {
     if (!newExamForm.title.trim()) {
@@ -1643,12 +1766,14 @@ const handleSaveExamTimetable = (e) => {
     window.addEventListener("gbs_weekly_attendance_updated", handleWeeklySync);
     window.addEventListener("gbs_teacher_assigned", handleTeacherAssignmentsSync);
     window.addEventListener("gbs_meetings_updated", fetchMeetings);
+    window.addEventListener("gbs_exam_submitted_to_teacher", fetchScannedSheets);
 
     return () => {
       window.removeEventListener("storage", handleStorage);
       window.removeEventListener("gbs_weekly_attendance_updated", handleWeeklySync);
       window.removeEventListener("gbs_teacher_assigned", handleTeacherAssignmentsSync);
       window.removeEventListener("gbs_meetings_updated", fetchMeetings);
+      window.removeEventListener("gbs_exam_submitted_to_teacher", fetchScannedSheets);
     };
   }, []);
 
@@ -3056,12 +3181,134 @@ const handleSaveExamTimetable = (e) => {
 
   // AI Exam Scanner Fetch and Grade Handlers
   const fetchScannedSheets = async () => {
+    let remoteList = [];
     try {
       const res = await apiClient.get("/ai-exam/answer-sheets");
-      const list = res.data?.data?.answerSheets || res.data?.data || [];
-      setScannedSheets(list);
+      remoteList = res.data?.data?.answerSheets || res.data?.data || [];
     } catch (err) {
       console.warn("Could not fetch answer sheets:", err.message);
+    }
+    let localFeed = [];
+    try {
+      localFeed = JSON.parse(localStorage.getItem("gbs_submitted_exam_scripts_feed") || "[]");
+      if (!Array.isArray(localFeed)) localFeed = [];
+    } catch {
+      localFeed = [];
+    }
+    const mergedMap = new Map();
+    [...remoteList, ...localFeed].forEach((s) => {
+      if (s && s.id !== undefined) mergedMap.set(String(s.id), s);
+    });
+    const combined = Array.from(mergedMap.values());
+    setScannedSheets(combined);
+    setSubmittedExamScripts(combined);
+  };
+
+  const handleOpenGradeScript = (script) => {
+    setActiveGradingScript(script);
+    const marksInit = {};
+    const commentsInit = {};
+    (script.perQuestionBreakdown || []).forEach((item) => {
+      const qKey = String(item.questionNumber || item.id);
+      marksInit[qKey] = item.requiresTeacherReview && item.awardedMarks === 0 && item.autoSuggestedMarks > 0
+        ? item.autoSuggestedMarks
+        : (item.awardedMarks ?? 0);
+      commentsInit[qKey] = item.teacherComment || "";
+    });
+    setScriptQuestionMarks(marksInit);
+    setScriptQuestionComments(commentsInit);
+    setScriptOverallFeedback(script.teacherFeedback || "");
+  };
+
+  const handleCommitScriptGrade = async () => {
+    if (!activeGradingScript) return;
+    setSavingScriptGrade(true);
+    try {
+      let updatedScript = null;
+      try {
+        const res = await apiClient.post(`/ai-exam/answer-sheets/${activeGradingScript.id}/grade`, {
+          perQuestionMarks: scriptQuestionMarks,
+          perQuestionComments: scriptQuestionComments,
+          teacherFeedback: scriptOverallFeedback
+        });
+        updatedScript = res.data?.data?.answerSheet || res.data?.data;
+      } catch (err) {
+        console.warn("Offline fallback script grade commit:", err?.message || err);
+      }
+
+      if (!updatedScript) {
+        const breakdown = (activeGradingScript.perQuestionBreakdown || []).map((item) => {
+          const qKey = String(item.questionNumber || item.id);
+          const maxM = Number(item.maxMarks) || 10;
+          const m = Math.max(0, Math.min(maxM, Number(scriptQuestionMarks[qKey]) || 0));
+          return {
+            ...item,
+            awardedMarks: m,
+            requiresTeacherReview: false,
+            teacherComment: scriptQuestionComments[qKey] || ""
+          };
+        });
+        const denom = Number(activeGradingScript.totalMarks) || breakdown.reduce((s, i) => s + (Number(i.maxMarks) || 0), 0) || 100;
+        const totalScore = Math.round(breakdown.reduce((s, i) => s + (Number(i.awardedMarks) || 0), 0) * 10) / 10;
+        const pct = Math.max(0, Math.min(100, Math.round((totalScore / denom) * 100)));
+        updatedScript = {
+          ...activeGradingScript,
+          perQuestionBreakdown: breakdown,
+          scoreObtained: totalScore,
+          totalMarks: denom,
+          percentage: pct,
+          grade: computeGrade(pct, activeGradingScript.studentId),
+          isPassed: pct >= 50,
+          needsManualReview: false,
+          gradingStatus: "TEACHER_GRADED",
+          teacherFeedback: scriptOverallFeedback,
+          gradedAt: new Date().toISOString()
+        };
+      }
+
+      const nextList = submittedExamScripts.map((s) => (String(s.id) === String(updatedScript.id) ? updatedScript : s));
+      setSubmittedExamScripts(nextList);
+      setScannedSheets(nextList);
+      try {
+        localStorage.setItem("gbs_submitted_exam_scripts_feed", JSON.stringify(nextList));
+      } catch { }
+
+      // Reflect graded score in Teacher's Class Gradebook & Student's submitted exam record
+      const sid = updatedScript.studentId;
+      if (sid !== undefined) {
+        setExamScores((prev) => ({ ...prev, [sid]: updatedScript.percentage, [String(sid)]: updatedScript.percentage }));
+        if (updatedScript.teacherFeedback) {
+          setStudentRemarks((prev) => ({ ...prev, [sid]: updatedScript.teacherFeedback, [String(sid)]: updatedScript.teacherFeedback }));
+        }
+        setCustomStudentGrades((prev) => ({ ...prev, [sid]: updatedScript.grade, [String(sid)]: updatedScript.grade }));
+      }
+      try {
+        const studentSubmitted = JSON.parse(localStorage.getItem("gbs_student_submitted_exams") || "{}");
+        const exIdKey = String(updatedScript.examId);
+        if (studentSubmitted[exIdKey]) {
+          studentSubmitted[exIdKey] = {
+            ...studentSubmitted[exIdKey],
+            score: updatedScript.percentage,
+            rawScore: updatedScript.percentage,
+            grade: updatedScript.grade,
+            isPassed: updatedScript.isPassed,
+            gradingStatus: "TEACHER_GRADED",
+            teacherFeedback: updatedScript.teacherFeedback || "",
+            perQuestionBreakdown: updatedScript.perQuestionBreakdown || []
+          };
+          localStorage.setItem("gbs_student_submitted_exams", JSON.stringify(studentSubmitted));
+          window.dispatchEvent(new Event("gbs_exam_grades_updated"));
+          window.dispatchEvent(new Event("storage"));
+        }
+      } catch { }
+
+      setActiveGradingScript(null);
+      setFeedback({
+        type: "success",
+        message: `✅ Theory & Exam Script graded for ${updatedScript.studentName || `Student #${updatedScript.studentId}`}: ${updatedScript.scoreObtained}/${updatedScript.totalMarks} (${updatedScript.percentage}% • Grade ${updatedScript.grade}). Published to Student Dashboard!`
+      });
+    } finally {
+      setSavingScriptGrade(false);
     }
   };
 
@@ -5629,6 +5876,91 @@ const handleSaveExamTimetable = (e) => {
                     </div>
                   )}
                 </div>
+              </div>
+
+              {/* LIVE SCHEDULED TIMED EXAMS & PUBLISHED EXAMINATION TIMETABLE GUIDE OVERVIEW */}
+              {/* Card 3: Submitted Student Online & Typed Theory Scripts Grading Desk */}
+              <div style={{ background: "rgba(15, 23, 42, 0.82)", border: "1.5px solid rgba(245, 158, 11, 0.45)", borderRadius: "12px", padding: "14px", marginBottom: "1.25rem" }}>
+                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: "8px", marginBottom: "10px" }}>
+                  <div>
+                    <strong style={{ color: "#fbbf24", fontSize: "0.9rem", display: "block" }}>
+                      ✍️ Submitted Student Online CBT &amp; Typed Theory Answers ({submittedExamScripts.length})
+                    </strong>
+                    <span style={{ fontSize: "0.75rem", color: "#cbd5e1" }}>
+                      Read students&apos; typed Theory / Essay / Short / Fill-in-Blank answers, assign marks against your marking scheme, and publish grades to students.
+                    </span>
+                  </div>
+                  <button
+                    type="button"
+                    className="btn-secondary"
+                    style={{ borderColor: "#fbbf24", color: "#fbbf24", padding: "5px 12px", fontSize: "0.75rem", fontWeight: 700 }}
+                    onClick={fetchScannedSheets}
+                  >
+                    🔄 Refresh Submissions
+                  </button>
+                </div>
+
+                {submittedExamScripts.length === 0 ? (
+                  <div style={{ padding: "10px 12px", background: "rgba(2, 6, 23, 0.55)", borderRadius: "8px", border: "1px dashed rgba(245, 158, 11, 0.35)", fontSize: "0.78rem", color: "#cbd5e1" }}>
+                    No student CBT or written Theory exam scripts submitted yet for this session. Once a student submits on their dashboard, their script appears here for inspection &amp; grading.
+                  </div>
+                ) : (
+                  <div style={{ display: "flex", flexDirection: "column", gap: "8px", maxHeight: "230px", overflowY: "auto" }}>
+                    {submittedExamScripts.map((sub, idx) => {
+                      const breakdown = Array.isArray(sub.perQuestionBreakdown) ? sub.perQuestionBreakdown : [];
+                      const writtenCnt = breakdown.filter((b) => ["THEORY_ESSAY", "SHORT_ANSWER", "FILL_IN_BLANK", "CASE_STUDY"].includes(b.questionType)).length || sub.writtenQuestionsCount || 0;
+                      const isPendingReview = sub.gradingStatus === "PENDING_TEACHER_REVIEW" || sub.needsManualReview;
+                      return (
+                        <div
+                          key={sub.id || idx}
+                          style={{
+                            display: "flex",
+                            justifyContent: "space-between",
+                            alignItems: "center",
+                            flexWrap: "wrap",
+                            gap: "10px",
+                            padding: "10px 12px",
+                            borderRadius: "8px",
+                            background: "rgba(2, 6, 23, 0.72)",
+                            border: isPendingReview ? "1px solid rgba(245, 158, 11, 0.55)" : "1px solid rgba(16, 185, 129, 0.35)"
+                          }}
+                        >
+                          <div>
+                            <div style={{ fontWeight: 800, fontSize: "0.84rem", color: "#f8fafc" }}>
+                              {sub.studentName || `Student ID #${sub.studentId || "—"}`}
+                              {sub.studentEmail ? <span style={{ color: "#94a3b8", fontSize: "0.74rem", marginLeft: "6px" }}>({sub.studentEmail})</span> : null}
+                              {" • "}
+                              <span style={{ color: "#38bdf8" }}>{sub.examTitle || `Exam #${sub.examId}`}</span>
+                            </div>
+                            <div style={{ fontSize: "0.74rem", color: "#cbd5e1", marginTop: "2px" }}>
+                              Score: <strong style={{ color: "#fbbf24" }}>{sub.scoreObtained ?? 0}/{sub.totalMarks ?? 100} ({sub.percentage ?? 0}% • Grade {sub.grade || "—"})</strong>
+                              {" • "}
+                              Written/Theory Items: <strong style={{ color: "#c084fc" }}>{writtenCnt}</strong>
+                              {" • "}
+                              Status:{" "}
+                              <span style={{ color: isPendingReview ? "#fbbf24" : "#34d399", fontWeight: 800 }}>
+                                {isPendingReview ? "⏳ Pending Teacher Theory Marking" : "✅ Fully Graded"}
+                              </span>
+                            </div>
+                          </div>
+                          <button
+                            type="button"
+                            className="btn-primary"
+                            onClick={() => handleOpenGradeScript(sub)}
+                            style={{
+                              background: isPendingReview ? "linear-gradient(135deg, #d97706, #f59e0b)" : "linear-gradient(135deg, #059669, #10b981)",
+                              padding: "6px 14px",
+                              fontSize: "0.76rem",
+                              fontWeight: 800
+                            }}
+                          >
+                            {isPendingReview ? "✍️ Inspect & Mark Theory Answers" : "👁️ Review / Adjust Marks"}
+                          </button>
+                        </div>
+                      );
+                    })}
+                  </div>
+                )}
               </div>
 
               {/* Real-time Individual Grade Entry Table (Student-by-Student) */}
@@ -10316,136 +10648,324 @@ const handleSaveExamTimetable = (e) => {
 
               {/* Mode A: Interactive Builder */}
               {examAuthorMode === "BUILDER" && (
-                <div style={{ background: "rgba(15, 23, 42, 0.6)", padding: "12px", borderRadius: "10px", marginBottom: "1.25rem" }}>
-                  <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "10px" }}>
-                    <strong style={{ fontSize: "0.85rem", color: "#f8fafc" }}>
-                      Question Bank Configuration ({examQuestionsList.length} Questions • {examQuestionsList.reduce((acc, q) => acc + (Number(q.marks) || 0), 0)} Total Marks)
-                    </strong>
-                    <button
-                      type="button"
-                      onClick={() => {
-                        const newQ = {
-                          id: Date.now() + Math.floor(Math.random() * 1000),
-                          questionNumber: examQuestionsList.length + 1,
-                          questionText: `Question ${examQuestionsList.length + 1}: Enter question prompt here...`,
-                          optionA: "Option A choice",
-                          optionB: "Option B choice",
-                          optionC: "Option C choice",
-                          optionD: "Option D choice",
-                          correctOption: "A",
-                          marks: 10
-                        };
-                        setExamQuestionsList([...examQuestionsList, newQ]);
-                      }}
-                      style={{ background: "linear-gradient(135deg, #8b5cf6, #6d28d9)", color: "#fff", border: "none", padding: "6px 14px", borderRadius: "6px", fontSize: "0.78rem", fontWeight: 800, cursor: "pointer" }}
-                    >
-                      + Add Question
-                    </button>
+                <div style={{ background: "rgba(15, 23, 42, 0.72)", padding: "14px", borderRadius: "10px", marginBottom: "1.25rem", border: "1px solid rgba(212, 175, 55, 0.25)" }}>
+                  <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "10px", flexWrap: "wrap", gap: "8px" }}>
+                    <div>
+                      <strong style={{ fontSize: "0.88rem", color: "#f8fafc", display: "block" }}>
+                        Multi-Format Question Bank ({examQuestionsList.length} Questions • {examQuestionsList.reduce((acc, q) => acc + (Number(q.marks) || 0), 0)} Total Marks)
+                      </strong>
+                      <span style={{ fontSize: "0.74rem", color: "#94a3b8" }}>
+                        Mix Theory / Essay (students type long answers), Multiple Choice, Short Answer, True/False, Fill-in-Blank, and Case Study items in one paper.
+                      </span>
+                    </div>
                   </div>
+
+                  {/* Quick-Add Question Format Toolbar */}
+                  <div style={{ display: "flex", flexWrap: "wrap", gap: "6px", marginBottom: "12px", padding: "8px", borderRadius: "8px", background: "rgba(2, 6, 23, 0.55)", border: "1px solid rgba(148, 163, 184, 0.16)" }}>
+                    {EXAM_QUESTION_TYPES.map((qType) => (
+                      <button
+                        key={qType.value}
+                        type="button"
+                        onClick={() => {
+                          const created = createDefaultQuestionByType(qType.value, examQuestionsList.length + 1);
+                          setExamQuestionsList([...examQuestionsList, created]);
+                        }}
+                        style={{
+                          background: `linear-gradient(135deg, ${qType.color}, #1e293b)`,
+                          color: "#fff",
+                          border: `1px solid ${qType.color}`,
+                          padding: "6px 11px",
+                          borderRadius: "6px",
+                          fontSize: "0.74rem",
+                          fontWeight: 800,
+                          cursor: "pointer"
+                        }}
+                      >
+                        + {qType.label}
+                      </button>
+                    ))}
+                  </div>
+
                   {examQuestionsList.length === 0 ? (
-                    <div style={{ textAlign: "center", padding: "16px", color: "#94a3b8", background: "rgba(2, 6, 23, 0.4)", borderRadius: "8px", border: "1px dashed #334155", fontSize: "0.82rem" }}>
-                      📝 No questions added yet. Click <strong>+ Add Question</strong> above to author question options and marks.
+                    <div style={{ textAlign: "center", padding: "18px", color: "#94a3b8", background: "rgba(2, 6, 23, 0.45)", borderRadius: "8px", border: "1px dashed #475569", fontSize: "0.82rem" }}>
+                      📝 No questions added yet. Click any format button above (e.g., <strong>+ Multiple Choice</strong> or <strong>+ Theory / Essay</strong>) to build your exam.
                     </div>
                   ) : (
-                    <div style={{ maxHeight: "340px", overflowY: "auto", paddingRight: "4px" }}>
-                      {examQuestionsList.map((q, qIdx) => (
-                        <div key={q.id || qIdx} style={{ background: "rgba(2, 6, 23, 0.78)", padding: "12px", borderRadius: "8px", marginBottom: "10px", border: "1px solid rgba(139, 92, 246, 0.25)" }}>
-                          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "8px", flexWrap: "wrap", gap: "8px" }}>
-                            <span style={{ color: "#38bdf8", fontWeight: 800, fontSize: "0.82rem" }}>
-                              Question #{qIdx + 1}
-                            </span>
-                            <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
-                              <label style={{ fontSize: "0.74rem", color: "#94a3b8" }}>Marks:</label>
-                              <input
-                                type="number"
-                                min="1"
-                                max="100"
-                                value={q.marks || 10}
+                    <div style={{ maxHeight: "380px", overflowY: "auto", paddingRight: "4px" }}>
+                      {examQuestionsList.map((q, qIdx) => {
+                        const qType = (q.questionType || "MULTIPLE_CHOICE").toUpperCase();
+                        const typeMeta = EXAM_QUESTION_TYPES.find((t) => t.value === qType) || EXAM_QUESTION_TYPES[0];
+                        const isWrittenType = ["THEORY_ESSAY", "SHORT_ANSWER", "CASE_STUDY"].includes(qType);
+                        return (
+                          <div key={q.id || qIdx} style={{ background: "rgba(2, 6, 23, 0.82)", padding: "12px", borderRadius: "8px", marginBottom: "10px", border: `1px solid ${typeMeta.color}55` }}>
+                            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "8px", flexWrap: "wrap", gap: "8px" }}>
+                              <div style={{ display: "flex", alignItems: "center", gap: "8px", flexWrap: "wrap" }}>
+                                <span style={{ color: typeMeta.color, fontWeight: 800, fontSize: "0.82rem" }}>
+                                  Question #{qIdx + 1}
+                                </span>
+                                <select
+                                  value={qType}
+                                  onChange={(e) => {
+                                    const nextType = e.target.value;
+                                    const template = createDefaultQuestionByType(nextType, qIdx + 1);
+                                    const updated = examQuestionsList.map((item, idx) => {
+                                      if (idx !== qIdx) return item;
+                                      return {
+                                        ...template,
+                                        id: item.id || template.id,
+                                        questionNumber: qIdx + 1,
+                                        questionText: item.questionText || template.questionText,
+                                        marks: item.marks || template.marks
+                                      };
+                                    });
+                                    setExamQuestionsList(updated);
+                                  }}
+                                  className="filter-select"
+                                  style={{ padding: "3px 8px", fontSize: "0.75rem", fontWeight: 700, color: "#f8fafc", borderColor: `${typeMeta.color}88` }}
+                                >
+                                  {EXAM_QUESTION_TYPES.map((t) => (
+                                    <option key={t.value} value={t.value}>{t.label}</option>
+                                  ))}
+                                </select>
+                              </div>
+                              <div style={{ display: "flex", alignItems: "center", gap: "6px", flexWrap: "wrap" }}>
+                                <label style={{ fontSize: "0.74rem", color: "#94a3b8" }}>Marks:</label>
+                                <input
+                                  type="number"
+                                  min="1"
+                                  max="100"
+                                  value={q.marks || 10}
+                                  onChange={(e) => {
+                                    const updated = examQuestionsList.map((item, idx) => idx === qIdx ? { ...item, marks: Math.max(1, Number(e.target.value) || 1) } : item);
+                                    setExamQuestionsList(updated);
+                                  }}
+                                  className="filter-input"
+                                  style={{ width: "62px", padding: "2px 6px", fontSize: "0.75rem", color: "#fbbf24", fontWeight: 700 }}
+                                />
+                                {qType === "MULTIPLE_CHOICE" && (
+                                  <select
+                                    value={q.correctOption || "A"}
+                                    onChange={(e) => {
+                                      const updated = examQuestionsList.map((item, idx) => idx === qIdx ? { ...item, correctOption: e.target.value } : item);
+                                      setExamQuestionsList(updated);
+                                    }}
+                                    className="filter-select"
+                                    style={{ padding: "3px 8px", fontSize: "0.75rem", color: "#34d399", fontWeight: 700 }}
+                                  >
+                                    <option value="A">✓ Correct: Option A</option>
+                                    <option value="B">✓ Correct: Option B</option>
+                                    <option value="C">✓ Correct: Option C</option>
+                                    <option value="D">✓ Correct: Option D</option>
+                                  </select>
+                                )}
+                                {qType === "TRUE_FALSE" && (
+                                  <select
+                                    value={q.correctOption || "A"}
+                                    onChange={(e) => {
+                                      const updated = examQuestionsList.map((item, idx) => idx === qIdx ? { ...item, correctOption: e.target.value, options: ["True", "False"], optionA: "True", optionB: "False" } : item);
+                                      setExamQuestionsList(updated);
+                                    }}
+                                    className="filter-select"
+                                    style={{ padding: "3px 8px", fontSize: "0.75rem", color: "#34d399", fontWeight: 700 }}
+                                  >
+                                    <option value="A">✓ Correct: True (A)</option>
+                                    <option value="B">✓ Correct: False (B)</option>
+                                  </select>
+                                )}
+                                <button
+                                  type="button"
+                                  onClick={() => {
+                                    const remaining = examQuestionsList.filter((_, idx) => idx !== qIdx).map((item, idx) => ({ ...item, questionNumber: idx + 1 }));
+                                    setExamQuestionsList(remaining);
+                                  }}
+                                  style={{ background: "rgba(239, 68, 68, 0.18)", border: "1px solid rgba(239, 68, 68, 0.45)", color: "#f87171", padding: "3px 8px", borderRadius: "5px", fontSize: "0.72rem", fontWeight: 700, cursor: "pointer" }}
+                                >
+                                  🗑️ Remove
+                                </button>
+                              </div>
+                            </div>
+
+                            {isWrittenType ? (
+                              <textarea
+                                rows={3}
+                                placeholder="Write the full Theory / Essay, Short Answer, or Case Study prompt..."
+                                value={q.questionText || ""}
                                 onChange={(e) => {
-                                  const updated = examQuestionsList.map((item, idx) => idx === qIdx ? { ...item, marks: Number(e.target.value) || 1 } : item);
+                                  const updated = examQuestionsList.map((item, idx) => idx === qIdx ? { ...item, questionText: e.target.value } : item);
                                   setExamQuestionsList(updated);
                                 }}
                                 className="filter-input"
-                                style={{ width: "64px", padding: "2px 6px", fontSize: "0.75rem", color: "#fbbf24", fontWeight: 700 }}
+                                style={{ width: "100%", marginBottom: "8px", fontSize: "0.82rem", fontWeight: 600 }}
                               />
-                              <select
-                                value={q.correctOption || "A"}
+                            ) : (
+                              <input
+                                type="text"
+                                placeholder={qType === "FILL_IN_BLANK" ? "Type prompt using ____ for the blank (e.g., The powerhouse of the cell is the ____.)" : "Type the examination question prompt here..."}
+                                value={q.questionText || ""}
                                 onChange={(e) => {
-                                  const updated = examQuestionsList.map((item, idx) => idx === qIdx ? { ...item, correctOption: e.target.value } : item);
+                                  const updated = examQuestionsList.map((item, idx) => idx === qIdx ? { ...item, questionText: e.target.value } : item);
                                   setExamQuestionsList(updated);
                                 }}
-                                className="filter-select"
-                                style={{ padding: "3px 8px", fontSize: "0.75rem", color: "#34d399", fontWeight: 700 }}
-                              >
-                                <option value="A">✓ Correct: Option A</option>
-                                <option value="B">✓ Correct: Option B</option>
-                                <option value="C">✓ Correct: Option C</option>
-                                <option value="D">✓ Correct: Option D</option>
-                              </select>
-                              <button
-                                type="button"
-                                onClick={() => {
-                                  setExamQuestionsList(examQuestionsList.filter((_, idx) => idx !== qIdx));
-                                }}
-                                style={{ background: "rgba(239, 68, 68, 0.18)", border: "1px solid rgba(239, 68, 68, 0.45)", color: "#f87171", padding: "3px 8px", borderRadius: "5px", fontSize: "0.72rem", fontWeight: 700, cursor: "pointer" }}
-                              >
-                                🗑️ Remove
-                              </button>
-                            </div>
-                          </div>
-                          <input
-                            type="text"
-                            placeholder="Type the examination question prompt here..."
-                            value={q.questionText || ""}
-                            onChange={(e) => {
-                              const updated = examQuestionsList.map((item, idx) => idx === qIdx ? { ...item, questionText: e.target.value } : item);
-                              setExamQuestionsList(updated);
-                            }}
-                            className="filter-input"
-                            style={{ width: "100%", marginBottom: "8px", fontSize: "0.82rem", fontWeight: 600 }}
-                          />
-                          <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(180px, 1fr))", gap: "8px" }}>
-                            {["A", "B", "C", "D"].map((optKey) => {
-                              const fieldName = `option${optKey}`;
-                              const isCorrect = (q.correctOption || "A") === optKey;
-                              return (
-                                <div key={optKey} style={{ display: "flex", alignItems: "center", gap: "6px" }}>
-                                  <span style={{
-                                    minWidth: "24px",
-                                    height: "24px",
-                                    borderRadius: "6px",
-                                    display: "inline-flex",
-                                    alignItems: "center",
-                                    justifyContent: "center",
-                                    fontSize: "0.74rem",
-                                    fontWeight: 800,
-                                    background: isCorrect ? "#059669" : "rgba(51, 65, 85, 0.7)",
-                                    color: "#fff"
-                                  }}>
-                                    {optKey}
-                                  </span>
+                                className="filter-input"
+                                style={{ width: "100%", marginBottom: "8px", fontSize: "0.82rem", fontWeight: 600 }}
+                              />
+                            )}
+
+                            {qType === "MULTIPLE_CHOICE" && (
+                              <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(180px, 1fr))", gap: "8px" }}>
+                                {["A", "B", "C", "D"].map((optKey, oIdx) => {
+                                  const fieldName = `option${optKey}`;
+                                  const optVal = q[fieldName] ?? (Array.isArray(q.options) ? q.options[oIdx] : "") ?? "";
+                                  const isCorrect = (q.correctOption || "A") === optKey;
+                                  return (
+                                    <div key={optKey} style={{ display: "flex", alignItems: "center", gap: "6px" }}>
+                                      <span style={{
+                                        minWidth: "24px",
+                                        height: "24px",
+                                        borderRadius: "6px",
+                                        display: "inline-flex",
+                                        alignItems: "center",
+                                        justifyContent: "center",
+                                        fontSize: "0.74rem",
+                                        fontWeight: 800,
+                                        background: isCorrect ? "#059669" : "rgba(51, 65, 85, 0.7)",
+                                        color: "#fff"
+                                      }}>
+                                        {optKey}
+                                      </span>
+                                      <input
+                                        type="text"
+                                        placeholder={`Option ${optKey}`}
+                                        value={optVal}
+                                        onChange={(e) => {
+                                          const newVal = e.target.value;
+                                          const updated = examQuestionsList.map((item, idx) => {
+                                            if (idx !== qIdx) return item;
+                                            const nextItem = { ...item, [fieldName]: newVal };
+                                            nextItem.options = [
+                                              nextItem.optionA || "",
+                                              nextItem.optionB || "",
+                                              nextItem.optionC || "",
+                                              nextItem.optionD || ""
+                                            ];
+                                            return nextItem;
+                                          });
+                                          setExamQuestionsList(updated);
+                                        }}
+                                        className="filter-input"
+                                        style={{
+                                          width: "100%",
+                                          fontSize: "0.76rem",
+                                          padding: "4px 8px",
+                                          borderColor: isCorrect ? "rgba(16, 185, 129, 0.6)" : undefined
+                                        }}
+                                      />
+                                    </div>
+                                  );
+                                })}
+                              </div>
+                            )}
+
+                            {qType === "TRUE_FALSE" && (
+                              <div style={{ display: "flex", gap: "10px", fontSize: "0.76rem", color: "#cbd5e1" }}>
+                                <span style={{ padding: "4px 10px", borderRadius: "6px", background: (q.correctOption || "A") === "A" ? "rgba(5, 150, 105, 0.25)" : "rgba(30, 41, 59, 0.7)", border: (q.correctOption || "A") === "A" ? "1px solid #10b981" : "1px solid #334155" }}>
+                                  A. True {(q.correctOption || "A") === "A" ? "✓" : ""}
+                                </span>
+                                <span style={{ padding: "4px 10px", borderRadius: "6px", background: q.correctOption === "B" ? "rgba(5, 150, 105, 0.25)" : "rgba(30, 41, 59, 0.7)", border: q.correctOption === "B" ? "1px solid #10b981" : "1px solid #334155" }}>
+                                  B. False {q.correctOption === "B" ? "✓" : ""}
+                                </span>
+                              </div>
+                            )}
+
+                            {qType === "FILL_IN_BLANK" && (
+                              <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(210px, 1fr))", gap: "8px" }}>
+                                <div>
+                                  <label style={{ fontSize: "0.72rem", color: "#34d399", fontWeight: 700, display: "block", marginBottom: "3px" }}>Accepted Exact Answer (Auto-Graded):</label>
                                   <input
                                     type="text"
-                                    placeholder={`Option ${optKey}`}
-                                    value={q[fieldName] || ""}
+                                    placeholder="e.g., Mitochondria"
+                                    value={q.acceptedAnswer || ""}
                                     onChange={(e) => {
-                                      const updated = examQuestionsList.map((item, idx) => idx === qIdx ? { ...item, [fieldName]: e.target.value } : item);
+                                      const updated = examQuestionsList.map((item, idx) => idx === qIdx ? { ...item, acceptedAnswer: e.target.value } : item);
                                       setExamQuestionsList(updated);
                                     }}
                                     className="filter-input"
-                                    style={{
-                                      width: "100%",
-                                      fontSize: "0.76rem",
-                                      padding: "4px 8px",
-                                      borderColor: isCorrect ? "rgba(16, 185, 129, 0.6)" : undefined
-                                    }}
+                                    style={{ width: "100%", fontSize: "0.76rem" }}
                                   />
                                 </div>
-                              );
-                            })}
+                                <div>
+                                  <label style={{ fontSize: "0.72rem", color: "#94a3b8", display: "block", marginBottom: "3px" }}>Alternate Keywords (comma-separated):</label>
+                                  <input
+                                    type="text"
+                                    placeholder="e.g., mitochondria, mitochondrion"
+                                    value={q.acceptedKeywords || ""}
+                                    onChange={(e) => {
+                                      const updated = examQuestionsList.map((item, idx) => idx === qIdx ? { ...item, acceptedKeywords: e.target.value } : item);
+                                      setExamQuestionsList(updated);
+                                    }}
+                                    className="filter-input"
+                                    style={{ width: "100%", fontSize: "0.76rem" }}
+                                  />
+                                </div>
+                              </div>
+                            )}
+
+                            {isWrittenType && (
+                              <div style={{ display: "grid", gridTemplateColumns: "2fr 1fr 1fr", gap: "8px", marginTop: "4px" }}>
+                                <div>
+                                  <label style={{ fontSize: "0.72rem", color: "#f5c451", fontWeight: 700, display: "block", marginBottom: "3px" }}>
+                                    Marking Guide / Expected Key Points (Examiner Rubric):
+                                  </label>
+                                  <textarea
+                                    rows={2}
+                                    placeholder="Key definitions, steps, or points students must explain..."
+                                    value={q.markingGuide || ""}
+                                    onChange={(e) => {
+                                      const updated = examQuestionsList.map((item, idx) => idx === qIdx ? { ...item, markingGuide: e.target.value } : item);
+                                      setExamQuestionsList(updated);
+                                    }}
+                                    className="filter-input"
+                                    style={{ width: "100%", fontSize: "0.75rem" }}
+                                  />
+                                </div>
+                                <div>
+                                  <label style={{ fontSize: "0.72rem", color: "#94a3b8", display: "block", marginBottom: "3px" }}>
+                                    Keywords (auto-hint):
+                                  </label>
+                                  <input
+                                    type="text"
+                                    placeholder="e.g., osmosis, semi-permeable"
+                                    value={q.acceptedKeywords || ""}
+                                    onChange={(e) => {
+                                      const updated = examQuestionsList.map((item, idx) => idx === qIdx ? { ...item, acceptedKeywords: e.target.value } : item);
+                                      setExamQuestionsList(updated);
+                                    }}
+                                    className="filter-input"
+                                    style={{ width: "100%", fontSize: "0.75rem" }}
+                                  />
+                                </div>
+                                <div>
+                                  <label style={{ fontSize: "0.72rem", color: "#94a3b8", display: "block", marginBottom: "3px" }}>
+                                    Word Guide:
+                                  </label>
+                                  <input
+                                    type="number"
+                                    min="20"
+                                    max="3000"
+                                    value={q.wordLimit || (qType === "SHORT_ANSWER" ? 60 : 250)}
+                                    onChange={(e) => {
+                                      const updated = examQuestionsList.map((item, idx) => idx === qIdx ? { ...item, wordLimit: Number(e.target.value) || 150 } : item);
+                                      setExamQuestionsList(updated);
+                                    }}
+                                    className="filter-input"
+                                    style={{ width: "100%", fontSize: "0.75rem" }}
+                                  />
+                                </div>
+                              </div>
+                            )}
                           </div>
-                        </div>
-                      ))}
+                        );
+                      })}
                     </div>
                   )}
                 </div>
@@ -10649,32 +11169,66 @@ const handleSaveExamTimetable = (e) => {
               </div>
 
               {pendingPublishExam.questionBank && pendingPublishExam.questionBank.length > 0 ? (
-                <div style={{ display: "flex", flexDirection: "column", gap: "8px", maxHeight: "260px", overflowY: "auto", paddingRight: "4px" }}>
-                  {pendingPublishExam.questionBank.map((q, idx) => (
-                    <div key={q.id || idx} style={{ background: "rgba(2, 6, 23, 0.7)", border: "1px solid rgba(255,255,255,0.06)", borderRadius: "8px", padding: "10px 14px" }}>
-                      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "4px" }}>
-                        <strong style={{ color: "#38bdf8", fontSize: "0.82rem" }}>Question {idx + 1} ({q.marks || 10} Marks)</strong>
-                        <span style={{ background: "#065f46", color: "#34d399", padding: "2px 8px", borderRadius: "4px", fontSize: "0.72rem", fontWeight: 800 }}>
-                          Correct Answer: Option {q.correctOption || "A"}
-                        </span>
+                <div style={{ display: "flex", flexDirection: "column", gap: "8px", maxHeight: "280px", overflowY: "auto", paddingRight: "4px" }}>
+                  {pendingPublishExam.questionBank.map((q, idx) => {
+                    const qType = q.questionType || "MULTIPLE_CHOICE";
+                    const isMCQ = qType === "MULTIPLE_CHOICE";
+                    const isTF = qType === "TRUE_FALSE";
+                    const isFill = qType === "FILL_IN_BLANK";
+                    const isWritten = !isMCQ && !isTF && !isFill;
+                    return (
+                      <div key={q.id || idx} style={{ background: "rgba(2, 6, 23, 0.7)", border: "1px solid rgba(255,255,255,0.08)", borderRadius: "8px", padding: "10px 14px" }}>
+                        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: "6px", marginBottom: "4px" }}>
+                          <strong style={{ color: "#38bdf8", fontSize: "0.82rem" }}>
+                            Question {idx + 1} • [{qType.replace(/_/g, " ")}] ({q.marks || 10} Marks)
+                          </strong>
+                          {isMCQ && (
+                            <span style={{ background: "#065f46", color: "#34d399", padding: "2px 8px", borderRadius: "4px", fontSize: "0.72rem", fontWeight: 800 }}>
+                              Correct: Option {q.correctOption || "A"}
+                            </span>
+                          )}
+                          {isTF && (
+                            <span style={{ background: "#065f46", color: "#34d399", padding: "2px 8px", borderRadius: "4px", fontSize: "0.72rem", fontWeight: 800 }}>
+                              Correct: {q.correctOption === "B" ? "False" : "True"}
+                            </span>
+                          )}
+                          {isFill && (
+                            <span style={{ background: "rgba(217, 119, 6, 0.25)", color: "#fbbf24", padding: "2px 8px", borderRadius: "4px", fontSize: "0.72rem", fontWeight: 800 }}>
+                              Accepted: {q.acceptedAnswer || "Teacher Verified"}
+                            </span>
+                          )}
+                          {isWritten && (
+                            <span style={{ background: "rgba(139, 92, 246, 0.25)", color: "#c084fc", padding: "2px 8px", borderRadius: "4px", fontSize: "0.72rem", fontWeight: 800 }}>
+                              ✍️ Student Typed Written Answer {q.wordLimit ? `• ~${q.wordLimit} words` : ""}
+                            </span>
+                          )}
+                        </div>
+                        <p style={{ margin: "2px 0 6px", color: "#f8fafc", fontSize: "0.85rem", whiteSpace: "pre-wrap" }}>{q.questionText}</p>
+                        {isMCQ && (
+                          <div style={{ display: "grid", gridTemplateColumns: "repeat(2, 1fr)", gap: "6px", fontSize: "0.78rem" }}>
+                            <div style={{ color: q.correctOption === "A" ? "#34d399" : "#94a3b8", fontWeight: q.correctOption === "A" ? 700 : 400 }}>
+                              A) {q.optionA || "Option A"} {q.correctOption === "A" && "✓"}
+                            </div>
+                            <div style={{ color: q.correctOption === "B" ? "#34d399" : "#94a3b8", fontWeight: q.correctOption === "B" ? 700 : 400 }}>
+                              B) {q.optionB || "Option B"} {q.correctOption === "B" && "✓"}
+                            </div>
+                            <div style={{ color: q.correctOption === "C" ? "#34d399" : "#94a3b8", fontWeight: q.correctOption === "C" ? 700 : 400 }}>
+                              C) {q.optionC || "Option C"} {q.correctOption === "C" && "✓"}
+                            </div>
+                            <div style={{ color: q.correctOption === "D" ? "#34d399" : "#94a3b8", fontWeight: q.correctOption === "D" ? 700 : 400 }}>
+                              D) {q.optionD || "Option D"} {q.correctOption === "D" && "✓"}
+                            </div>
+                          </div>
+                        )}
+                        {isWritten && (q.markingGuide || q.acceptedKeywords) && (
+                          <div style={{ fontSize: "0.75rem", color: "#cbd5e1", background: "rgba(15, 23, 42, 0.7)", padding: "6px 8px", borderRadius: "6px" }}>
+                            {q.markingGuide && <div><strong>Marking Guide:</strong> {q.markingGuide}</div>}
+                            {q.acceptedKeywords && <div style={{ color: "#fbbf24" }}><strong>Keywords:</strong> {q.acceptedKeywords}</div>}
+                          </div>
+                        )}
                       </div>
-                      <p style={{ margin: "2px 0 6px", color: "#f8fafc", fontSize: "0.85rem" }}>{q.questionText}</p>
-                      <div style={{ display: "grid", gridTemplateColumns: "repeat(2, 1fr)", gap: "6px", fontSize: "0.78rem" }}>
-                        <div style={{ color: q.correctOption === "A" ? "#34d399" : "#94a3b8", fontWeight: q.correctOption === "A" ? 700 : 400 }}>
-                          A) {q.optionA || "Option A"} {q.correctOption === "A" && "✓"}
-                        </div>
-                        <div style={{ color: q.correctOption === "B" ? "#34d399" : "#94a3b8", fontWeight: q.correctOption === "B" ? 700 : 400 }}>
-                          B) {q.optionB || "Option B"} {q.correctOption === "B" && "✓"}
-                        </div>
-                        <div style={{ color: q.correctOption === "C" ? "#34d399" : "#94a3b8", fontWeight: q.correctOption === "C" ? 700 : 400 }}>
-                          C) {q.optionC || "Option C"} {q.correctOption === "C" && "✓"}
-                        </div>
-                        <div style={{ color: q.correctOption === "D" ? "#34d399" : "#94a3b8", fontWeight: q.correctOption === "D" ? 700 : 400 }}>
-                          D) {q.optionD || "Option D"} {q.correctOption === "D" && "✓"}
-                        </div>
-                      </div>
-                    </div>
-                  ))}
+                    );
+                  })}
                 </div>
               ) : (
                 <div style={{ background: "rgba(2, 6, 23, 0.7)", border: "1px dashed #334155", borderRadius: "8px", padding: "14px", textAlign: "center", color: "#94a3b8", fontSize: "0.82rem" }}>
@@ -11393,6 +11947,159 @@ const handleSaveExamTimetable = (e) => {
                   📢 Save & Publish to Students & Parents Portal
                 </button>
               </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* MODAL: TEACHER THEORY & MULTI-FORMAT SUBMITTED EXAM SCRIPT GRADING */}
+      {activeGradingScript && (
+        <div
+          className="modal-backdrop invoice-pay-modal-overlay"
+          style={{
+            position: "fixed",
+            inset: 0,
+            zIndex: 99999,
+            background: "rgba(2, 6, 23, 0.86)",
+            backdropFilter: "blur(10px)",
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+            padding: "1.25rem",
+            overflowY: "auto"
+          }}
+        >
+          <div className="invoice-pay-modal" style={{ width: "100%", maxWidth: "900px", background: "#0b1329", border: "2px solid #f59e0b", borderRadius: "16px", padding: "1.75rem", maxHeight: "90vh", overflowY: "auto", boxShadow: "0 0 36px rgba(245, 158, 11, 0.35)" }}>
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", borderBottom: "1px solid rgba(255,255,255,0.12)", paddingBottom: "12px", marginBottom: "14px", gap: "12px" }}>
+              <div>
+                <span style={{ fontSize: "0.72rem", fontWeight: 800, color: "#fbbf24", textTransform: "uppercase", letterSpacing: "0.7px" }}>
+                  FACULTY SCRIPT INSPECTION &amp; THEORY MARKING DESK
+                </span>
+                <h2 style={{ margin: "2px 0", color: "#f8fafc", fontSize: "1.25rem", fontWeight: 900 }}>
+                  {activeGradingScript.studentName || `Student #${activeGradingScript.studentId}`} — {activeGradingScript.examTitle}
+                </h2>
+                <p style={{ margin: 0, fontSize: "0.8rem", color: "#94a3b8" }}>
+                  Live Earned Total:{" "}
+                  <strong style={{ color: "#34d399" }}>
+                    {Object.values(scriptQuestionMarks).reduce((sum, val) => sum + (Number(val) || 0), 0)} / {activeGradingScript.totalMarks || 100}
+                  </strong>
+                </p>
+              </div>
+              <button type="button" className="btn-secondary" onClick={() => setActiveGradingScript(null)}>✕</button>
+            </div>
+
+            <div style={{ display: "flex", flexDirection: "column", gap: "12px", marginBottom: "14px" }}>
+              {(activeGradingScript.perQuestionBreakdown || []).length === 0 ? (
+                <div style={{ padding: "14px", background: "rgba(2, 6, 23, 0.65)", borderRadius: "8px", color: "#cbd5e1", fontSize: "0.85rem" }}>
+                  Objective score recorded ({activeGradingScript.scoreObtained}/{activeGradingScript.totalMarks}). No separate typed theory breakdown attached.
+                </div>
+              ) : (
+                (activeGradingScript.perQuestionBreakdown || []).map((item, idx) => {
+                  const qKey = String(item.questionNumber || item.id);
+                  const isWritten = ["THEORY_ESSAY", "SHORT_ANSWER", "FILL_IN_BLANK", "CASE_STUDY"].includes(item.questionType);
+                  return (
+                    <div
+                      key={qKey + idx}
+                      style={{
+                        background: "rgba(15, 23, 42, 0.85)",
+                        border: isWritten ? "1.5px solid rgba(245, 158, 11, 0.45)" : "1px solid rgba(255,255,255,0.1)",
+                        borderRadius: "10px",
+                        padding: "12px"
+                      }}
+                    >
+                      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: "8px", marginBottom: "6px" }}>
+                        <strong style={{ color: isWritten ? "#fbbf24" : "#38bdf8", fontSize: "0.84rem" }}>
+                          Question {item.questionNumber} • [{String(item.questionType || "MCQ").replace(/_/g, " ")}] • Max {item.maxMarks} Marks
+                        </strong>
+                        {!isWritten && (
+                          <span style={{ fontSize: "0.75rem", fontWeight: 800, color: item.isCorrect ? "#34d399" : "#f87171" }}>
+                            {item.isCorrect ? "✓ Correct Choice" : `✗ Incorrect (Expected ${item.correctAnswer})`}
+                          </span>
+                        )}
+                      </div>
+
+                      <div style={{ fontSize: "0.85rem", color: "#f8fafc", marginBottom: "8px", whiteSpace: "pre-wrap" }}>
+                        {item.questionText}
+                      </div>
+
+                      <div style={{ background: "rgba(2, 6, 23, 0.78)", border: "1px solid rgba(56, 189, 248, 0.25)", borderRadius: "8px", padding: "10px", marginBottom: "8px" }}>
+                        <span style={{ display: "block", fontSize: "0.72rem", color: "#38bdf8", fontWeight: 800, marginBottom: "4px" }}>
+                          STUDENT&apos;S SUBMITTED ANSWER:
+                        </span>
+                        <div style={{ color: item.studentAnswer ? "#fef3c7" : "#94a3b8", fontSize: "0.84rem", whiteSpace: "pre-wrap", lineHeight: 1.5 }}>
+                          {item.studentAnswer || "(No answer submitted for this question)"}
+                        </div>
+                      </div>
+
+                      {(item.markingGuide || item.acceptedKeywords) && (
+                        <div style={{ fontSize: "0.75rem", color: "#cbd5e1", background: "rgba(6, 78, 59, 0.22)", border: "1px solid rgba(16, 185, 129, 0.28)", borderRadius: "6px", padding: "6px 10px", marginBottom: "8px" }}>
+                          {item.markingGuide && <div><strong style={{ color: "#34d399" }}>Marking Scheme:</strong> {item.markingGuide}</div>}
+                          {item.acceptedKeywords && <div><strong style={{ color: "#fbbf24" }}>Key Concepts:</strong> {item.acceptedKeywords}</div>}
+                          {item.autoSuggestedMarks > 0 && <div style={{ color: "#6ee7b7" }}>Keyword Match Assist: Suggested {item.autoSuggestedMarks} / {item.maxMarks} Marks</div>}
+                        </div>
+                      )}
+
+                      <div style={{ display: "grid", gridTemplateColumns: "150px 1fr", gap: "10px", alignItems: "center" }}>
+                        <div>
+                          <label style={{ display: "block", fontSize: "0.72rem", color: "#94a3b8", marginBottom: "2px" }}>
+                            Marks Awarded (0–{item.maxMarks})
+                          </label>
+                          <input
+                            type="number"
+                            min="0"
+                            max={item.maxMarks}
+                            step="0.5"
+                            className="filter-input"
+                            style={{ width: "100%", fontWeight: 800, color: "#fbbf24" }}
+                            value={scriptQuestionMarks[qKey] ?? 0}
+                            onChange={(e) => setScriptQuestionMarks({ ...scriptQuestionMarks, [qKey]: e.target.value })}
+                          />
+                        </div>
+                        <div>
+                          <label style={{ display: "block", fontSize: "0.72rem", color: "#94a3b8", marginBottom: "2px" }}>
+                            Teacher Comment on Q{item.questionNumber}
+                          </label>
+                          <input
+                            type="text"
+                            placeholder="Optional marking remark..."
+                            className="filter-input"
+                            style={{ width: "100%" }}
+                            value={scriptQuestionComments[qKey] || ""}
+                            onChange={(e) => setScriptQuestionComments({ ...scriptQuestionComments, [qKey]: e.target.value })}
+                          />
+                        </div>
+                      </div>
+                    </div>
+                  );
+                })
+              )}
+            </div>
+
+            <div style={{ marginBottom: "14px" }}>
+              <label style={{ display: "block", fontSize: "0.78rem", color: "#cbd5e1", fontWeight: 700, marginBottom: "4px" }}>
+                Overall Examiner Feedback to Student
+              </label>
+              <textarea
+                rows={2}
+                className="filter-input"
+                style={{ width: "100%" }}
+                placeholder="e.g. Strong theoretical explanations in Section B; minor calculation slip in Q1."
+                value={scriptOverallFeedback}
+                onChange={(e) => setScriptOverallFeedback(e.target.value)}
+              />
+            </div>
+
+            <div style={{ display: "flex", justifyContent: "flex-end", gap: "10px" }}>
+              <button type="button" className="btn-secondary" onClick={() => setActiveGradingScript(null)}>Cancel</button>
+              <button
+                type="button"
+                className="btn-primary"
+                disabled={savingScriptGrade}
+                onClick={handleCommitScriptGrade}
+                style={{ background: "linear-gradient(135deg, #10b981, #059669)", fontWeight: 800, padding: "10px 20px" }}
+              >
+                {savingScriptGrade ? "⏳ Publishing Grade..." : "💾 Save & Publish Graded Script"}
+              </button>
             </div>
           </div>
         </div>

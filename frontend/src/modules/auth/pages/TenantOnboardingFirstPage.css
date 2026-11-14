@@ -1,23 +1,22 @@
 /* ==========================================================================
    GBS MANAGEMENT SYSTEM - TENANT ONBOARDING FIRST PAGE
-   Palette: Royal Harmony (#1E2A44, #243352, #141D30) + Royal Gold (#d4af37, #fbbf24)
-            + Sky Blue (#38bdf8, #0ea5e9)
+   Palette: GBS Blueprint Blended Palette (Wine #5C1822, Espresso Brown #4B2C1B, Charcoal Grey #27272A, Imperial Gold #D4AF37)
    ========================================================================== */
 
 :root {
   --gbs-gold: #d4af37;
-  --gbs-gold-light: #fbbf24;
+  --gbs-gold-light: #f5c451;
   --gbs-gold-glow: rgba(212, 175, 55, 0.35);
 
-  --gbs-wine: #1E2A44;
-  --gbs-wine-dark: #141D30;
-  --gbs-wine-light: #2B3C60;
+  --gbs-wine: #5C1822;
+  --gbs-wine-dark: #380E14;
+  --gbs-wine-light: #7F1D2B;
 
-  --gbs-grey-900: #141D30;
-  --gbs-grey-800: #1E2A44;
-  --gbs-grey-700: #243352;
-  --gbs-grey-400: #cbd5e1;
-  --gbs-grey-200: #e2e8f0;
+  --gbs-grey-900: #1C1917;
+  --gbs-grey-800: #27272A;
+  --gbs-grey-700: #3F3F46;
+  --gbs-grey-400: #d6d3d1;
+  --gbs-grey-200: #fef3c7;
 
   --gbs-sky: #38bdf8;
   --gbs-sky-glow: rgba(56, 189, 248, 0.35);
@@ -28,10 +27,10 @@
   min-height: 100vh;
   width: 100%;
   background:
-    radial-gradient(ellipse at top, rgba(30, 42, 68, 0.9) 0%, rgba(36, 51, 82, 0.92) 48%, rgba(20, 29, 48, 0.96) 100%),
-    linear-gradient(135deg, rgba(20, 29, 48, 0.92) 0%, rgba(30, 42, 68, 0.94) 50%, rgba(36, 51, 82, 0.94) 100%),
+    radial-gradient(ellipse at top, rgba(92, 24, 34, 0.85) 0%, rgba(75, 44, 27, 0.86) 48%, rgba(28, 25, 23, 0.92) 100%),
+    linear-gradient(135deg, rgba(36, 20, 13, 0.86) 0%, rgba(74, 18, 25, 0.88) 50%, rgba(39, 39, 42, 0.90) 100%),
     url('/assets/school_campus_bg.jpg') center/cover no-repeat fixed;
-  color: #f8fafc;
+  color: #fffbeb;
   font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
   position: relative;
   overflow-x: hidden;
@@ -47,7 +46,7 @@
   left: 20%;
   width: 60%;
   height: 380px;
-  background: radial-gradient(circle, rgba(212, 175, 55, 0.22) 0%, rgba(30, 42, 68, 0.45) 45%, transparent 70%);
+  background: radial-gradient(circle, rgba(212, 175, 55, 0.24) 0%, rgba(92, 24, 34, 0.45) 45%, transparent 70%);
   filter: blur(60px);
   pointer-events: none;
   z-index: 0;
@@ -58,15 +57,15 @@
   position: sticky;
   top: 0;
   z-index: 50;
-  background: linear-gradient(90deg, rgba(20, 29, 48, 0.96) 0%, rgba(30, 42, 68, 0.96) 50%, rgba(36, 51, 82, 0.96) 100%);
+  background: linear-gradient(90deg, rgba(56, 14, 20, 0.96) 0%, rgba(75, 44, 27, 0.95) 50%, rgba(39, 39, 42, 0.96) 100%);
   backdrop-filter: blur(16px);
   -webkit-backdrop-filter: blur(16px);
-  border-bottom: 2px solid rgba(212, 175, 55, 0.55);
+  border-bottom: 2px solid rgba(212, 175, 55, 0.6);
   padding: 12px 28px;
   display: flex;
   align-items: center;
   justify-content: space-between;
-  box-shadow: 0 4px 24px rgba(0, 0, 0, 0.6), 0 0 18px rgba(212, 175, 55, 0.2);
+  box-shadow: 0 4px 24px rgba(18, 8, 6, 0.65), 0 0 18px rgba(212, 175, 55, 0.22);
 }
 
 .gbs-top-header-left {

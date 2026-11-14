@@ -8,10 +8,10 @@
   justify-content: center;
   padding: 24px;
   background:
-    radial-gradient(circle at 15% 15%, rgba(43, 60, 96, 0.72) 0%, transparent 48%),
-    radial-gradient(circle at 85% 20%, rgba(212, 175, 55, 0.24) 0%, transparent 48%),
-    radial-gradient(circle at 50% 85%, rgba(56, 189, 248, 0.18) 0%, transparent 55%),
-    linear-gradient(135deg, #141D30 0%, #1E2A44 45%, #243352 78%, #1E2A44 100%);
+    radial-gradient(circle at 15% 15%, rgba(92, 24, 34, 0.74) 0%, transparent 48%),
+    radial-gradient(circle at 85% 20%, rgba(212, 175, 55, 0.26) 0%, transparent 48%),
+    radial-gradient(circle at 50% 85%, rgba(75, 44, 27, 0.65) 0%, transparent 55%),
+    linear-gradient(135deg, #24140D 0%, #4A1219 42%, #3A2014 75%, #27272A 100%);
   font-family: 'Plus Jakarta Sans', system-ui, -apple-system, sans-serif;
   overflow-x: hidden;
   overflow-y: auto;
@@ -26,7 +26,7 @@
   bottom: 0;
   background-size: cover;
   background-position: center;
-  filter: brightness(0.62) contrast(1.08) saturate(1.15);
+  filter: brightness(0.68) contrast(1.08) saturate(1.15);
   transform: scale(1.02);
   z-index: 1;
   transition: transform 10s ease;
@@ -39,8 +39,8 @@
   right: 0;
   bottom: 0;
   background:
-    radial-gradient(circle at 20% 20%, rgba(212, 175, 55, 0.2) 0%, transparent 45%),
-    linear-gradient(135deg, rgba(20, 29, 48, 0.88) 0%, rgba(30, 42, 68, 0.9) 50%, rgba(36, 51, 82, 0.92) 100%);
+    radial-gradient(circle at 20% 20%, rgba(212, 175, 55, 0.22) 0%, transparent 45%),
+    linear-gradient(135deg, rgba(36, 20, 13, 0.82) 0%, rgba(74, 18, 25, 0.84) 50%, rgba(39, 39, 42, 0.86) 100%);
   backdrop-filter: blur(3px);
   z-index: 2;
 }

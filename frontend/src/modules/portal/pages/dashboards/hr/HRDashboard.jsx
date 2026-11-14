@@ -9,6 +9,7 @@ import { navigateToDetail } from "../../../../../utils/universalNavigation";
 import { getActiveSchoolName, getActiveSchoolLogo } from "../../../../../utils/schoolBranding";
 import { isDemoSandboxMode, clearAuthStorage } from "../../../../../utils/tokenStorage";
 import { useDashboardTabSync } from "../../../../../hooks/useDashboardTabSync";
+import "../teacher/TeacherDashboard.css";
 
 export default function HRDashboard() {
   const navigate = useNavigate();
@@ -286,7 +287,13 @@ export default function HRDashboard() {
   };
 
   return (
-    <div style={{ minHeight: "100vh", background: "#0b1120", color: "#f8fafc", fontFamily: "'Inter', sans-serif" }}>
+    <div className="role-dashboard-wrapper role-theme-hr">
+      <div
+        className="role-dashboard-bg"
+        style={{ backgroundImage: `url('/assets/hr-bg.jpg')` }}
+      />
+      <div className="role-dashboard-overlay" />
+      <div className="role-dashboard-content" style={{ color: "#f8fafc", fontFamily: "'Inter', sans-serif" }}>
       {/* Toast Notification Popup */}
       {notification && (
         <div style={{
@@ -315,9 +322,7 @@ export default function HRDashboard() {
       )}
 
       {/* Header Bar */}
-      <header style={{
-        background: "linear-gradient(90deg, #1e1b4b 0%, #0f172a 50%, #1e1b4b 100%)",
-        borderBottom: "1px solid rgba(139, 92, 246, 0.3)",
+      <header className="role-header" style={{
         padding: "1rem 2rem",
         display: "flex",
         justifyContent: "space-between",
@@ -537,7 +542,7 @@ export default function HRDashboard() {
         </div>
 
         {/* Navigation Tabs */}
-        <div style={{ display: "flex", gap: "8px", borderBottom: "1px solid rgba(255,255,255,0.1)", marginBottom: "1.5rem", overflowX: "auto", paddingBottom: "4px" }}>
+        <nav className="role-tab-nav">
           {[
             { id: "staff_roster", label: "👥 Staff & Faculty Directory", icon: "👨‍🏫", count: employees.length },
             { id: "hr_audits", label: "⚖️ Headmaster Audit Directives", icon: "📋", count: hrAuditRequests.filter(r => r.status === "PENDING_HR_SUBMISSION").length, highlight: true },
@@ -549,26 +554,12 @@ export default function HRDashboard() {
               type="button"
               className={`role-tab-btn ${activeTab === tab.id ? "active" : ""}`}
               onClick={() => setActiveTab(tab.id)}
-              style={{
-                background: activeTab === tab.id ? "rgba(139, 92, 246, 0.2)" : "transparent",
-                border: activeTab === tab.id ? "1px solid rgba(168, 85, 247, 0.5)" : "1px solid transparent",
-                color: activeTab === tab.id ? "#c084fc" : "#94a3b8",
-                padding: "10px 18px",
-                borderRadius: "10px",
-                cursor: "pointer",
-                fontWeight: "700",
-                fontSize: "0.85rem",
-                display: "flex",
-                alignItems: "center",
-                gap: "8px",
-                whiteSpace: "nowrap"
-              }}
             >
               <span>{tab.icon}</span>
               <span>{tab.label}</span>
               {tab.count !== undefined && tab.count > 0 && (
                 <span style={{
-                  background: tab.highlight ? "#ef4444" : "#8b5cf6",
+                  background: tab.highlight ? "#ef4444" : "#a855f7",
                   color: "#ffffff",
                   fontSize: "0.7rem",
                   padding: "2px 6px",
@@ -580,7 +571,7 @@ export default function HRDashboard() {
               )}
             </button>
           ))}
-        </div>
+        </nav>
 
         {/* TAB 1: STAFF DIRECTORY */}
         {activeTab === "staff_roster" && (
@@ -992,6 +983,7 @@ export default function HRDashboard() {
         isOpen={showHRGuideModal}
         onClose={() => setShowHRGuideModal(false)}
       />
+      </div>
     </div>
   );
 }
