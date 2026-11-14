@@ -238,7 +238,7 @@ export default function UniversalLanguageTranslatorModal({
       style={{
         position: "fixed",
         inset: 0,
-        background: "rgba(18, 9, 12, 0.88)",
+        background: "rgba(10, 16, 29, 0.88)",
         backdropFilter: "blur(12px)",
         zIndex: 999999,
         display: "flex",
@@ -256,13 +256,13 @@ export default function UniversalLanguageTranslatorModal({
           maxHeight: "92vh",
           overflowY: "auto",
           background:
-            "linear-gradient(155deg, #27272a 0%, #4a151b 42%, #3e1f14 78%, #1f242d 100%)",
+            "linear-gradient(155deg, #141D30 0%, #1E2A44 48%, #243352 100%)",
           border: "2px solid rgba(212, 175, 55, 0.65)",
           borderRadius: "20px",
           padding: "24px",
           color: "#fef3c7",
           boxShadow:
-            "0 28px 75px rgba(0, 0, 0, 0.88), 0 0 36px rgba(212, 175, 55, 0.22)",
+            "0 28px 75px rgba(10, 16, 29, 0.88), 0 0 36px rgba(30, 42, 68, 0.55)",
         }}
         onClick={(e) => e.stopPropagation()}
       >

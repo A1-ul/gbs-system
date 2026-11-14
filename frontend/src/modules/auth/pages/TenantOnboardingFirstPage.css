@@ -1,7 +1,7 @@
 /* ==========================================================================
    GBS MANAGEMENT SYSTEM - TENANT ONBOARDING FIRST PAGE
-   Palette: Golden Blend (#d4af37, #f59e0b) + Wine Brown (#4a151b, #5c1d25)
-            + Slate Grey (#1e293b, #0f172a) + Sky Blue (#38bdf8, #0ea5e9)
+   Palette: Royal Harmony (#1E2A44, #243352, #141D30) + Royal Gold (#d4af37, #fbbf24)
+            + Sky Blue (#38bdf8, #0ea5e9)
    ========================================================================== */
 
 :root {
@@ -9,14 +9,14 @@
   --gbs-gold-light: #fbbf24;
   --gbs-gold-glow: rgba(212, 175, 55, 0.35);
 
-  --gbs-wine: #4a151b;
-  --gbs-wine-dark: #2a0b10;
-  --gbs-wine-light: #6e2029;
+  --gbs-wine: #1E2A44;
+  --gbs-wine-dark: #141D30;
+  --gbs-wine-light: #2B3C60;
 
-  --gbs-grey-900: #0f172a;
-  --gbs-grey-800: #1e293b;
-  --gbs-grey-700: #334155;
-  --gbs-grey-400: #94a3b8;
+  --gbs-grey-900: #141D30;
+  --gbs-grey-800: #1E2A44;
+  --gbs-grey-700: #243352;
+  --gbs-grey-400: #cbd5e1;
   --gbs-grey-200: #e2e8f0;
 
   --gbs-sky: #38bdf8;
@@ -28,8 +28,8 @@
   min-height: 100vh;
   width: 100%;
   background:
-    radial-gradient(ellipse at top, rgba(110, 32, 41, 0.85) 0%, rgba(62, 31, 20, 0.9) 48%, rgba(39, 39, 42, 0.96) 100%),
-    linear-gradient(135deg, rgba(212, 175, 55, 0.22) 0%, rgba(74, 21, 27, 0.78) 45%, rgba(62, 31, 20, 0.82) 75%, rgba(51, 65, 85, 0.9) 100%),
+    radial-gradient(ellipse at top, rgba(30, 42, 68, 0.9) 0%, rgba(36, 51, 82, 0.92) 48%, rgba(20, 29, 48, 0.96) 100%),
+    linear-gradient(135deg, rgba(20, 29, 48, 0.92) 0%, rgba(30, 42, 68, 0.94) 50%, rgba(36, 51, 82, 0.94) 100%),
     url('/assets/school_campus_bg.jpg') center/cover no-repeat fixed;
   color: #f8fafc;
   font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
@@ -47,7 +47,7 @@
   left: 20%;
   width: 60%;
   height: 380px;
-  background: radial-gradient(circle, rgba(212, 175, 55, 0.28) 0%, rgba(110, 32, 41, 0.22) 45%, transparent 70%);
+  background: radial-gradient(circle, rgba(212, 175, 55, 0.22) 0%, rgba(30, 42, 68, 0.45) 45%, transparent 70%);
   filter: blur(60px);
   pointer-events: none;
   z-index: 0;
@@ -58,7 +58,7 @@
   position: sticky;
   top: 0;
   z-index: 50;
-  background: linear-gradient(90deg, rgba(74, 21, 27, 0.95) 0%, rgba(62, 31, 20, 0.94) 50%, rgba(39, 39, 42, 0.95) 100%);
+  background: linear-gradient(90deg, rgba(20, 29, 48, 0.96) 0%, rgba(30, 42, 68, 0.96) 50%, rgba(36, 51, 82, 0.96) 100%);
   backdrop-filter: blur(16px);
   -webkit-backdrop-filter: blur(16px);
   border-bottom: 2px solid rgba(212, 175, 55, 0.55);

@@ -80,8 +80,8 @@ export default function UniversalOpenNoticeHUD() {
         isErr
           ? "ACTION BLOCKED / ALERT"
           : isWarn
-          ? "VALIDATION REQUIREMENT"
-          : "COMMAND EXECUTION RESPONSE"
+            ? "VALIDATION REQUIREMENT"
+            : "COMMAND EXECUTION RESPONSE"
       );
     };
 
@@ -233,24 +233,24 @@ export default function UniversalOpenNoticeHUD() {
   const borderColor = isError
     ? "#ef4444"
     : isWarning
-    ? "#f59e0b"
-    : isInfo
-    ? "#38bdf8"
-    : "#d4af37";
+      ? "#f59e0b"
+      : isInfo
+        ? "#38bdf8"
+        : "#d4af37";
 
   const accentColor = isError
     ? "#fca5a5"
     : isWarning
-    ? "#fde68a"
-    : isInfo
-    ? "#7dd3fc"
-    : "#fbbf24";
+      ? "#fde68a"
+      : isInfo
+        ? "#7dd3fc"
+        : "#fbbf24";
 
   const bgGradient = isError
-    ? "linear-gradient(135deg, rgba(74, 21, 27, 0.97) 0%, rgba(127, 29, 29, 0.96) 55%, rgba(15, 23, 42, 0.98) 100%)"
+    ? "linear-gradient(135deg, rgba(30, 42, 68, 0.97) 0%, rgba(127, 29, 29, 0.96) 55%, rgba(20, 29, 48, 0.98) 100%)"
     : isWarning
-    ? "linear-gradient(135deg, rgba(74, 21, 27, 0.97) 0%, rgba(120, 53, 15, 0.95) 55%, rgba(15, 23, 42, 0.98) 100%)"
-    : "linear-gradient(135deg, rgba(74, 21, 27, 0.97) 0%, rgba(30, 41, 59, 0.97) 55%, rgba(15, 23, 42, 0.98) 100%)";
+      ? "linear-gradient(135deg, rgba(30, 42, 68, 0.97) 0%, rgba(120, 53, 15, 0.95) 55%, rgba(20, 29, 48, 0.98) 100%)"
+      : "linear-gradient(135deg, rgba(20, 29, 48, 0.97) 0%, rgba(30, 42, 68, 0.98) 55%, rgba(36, 51, 82, 0.98) 100%)";
 
   const icon = isError ? "⛔" : isWarning ? "⚠️" : isInfo ? "💠" : "✅";
 

@@ -2,10 +2,10 @@
   backdrop-filter: blur(14px);
   -webkit-backdrop-filter: blur(14px);
   background: linear-gradient(145deg,
-      rgba(74, 21, 27, 0.88) 0%,
-      rgba(62, 31, 20, 0.84) 48%,
-      rgba(39, 39, 42, 0.9) 100%);
-  border: 1.5px solid rgba(212, 175, 55, 0.45);
+      rgba(30, 42, 68, 0.92) 0%,
+      rgba(36, 51, 82, 0.88) 48%,
+      rgba(20, 29, 48, 0.94) 100%);
+  border: 1.5px solid rgba(212, 175, 55, 0.42);
   border-radius: 14px;
-  box-shadow: 0 14px 34px rgba(0, 0, 0, 0.5), 0 0 18px rgba(212, 175, 55, 0.16);
+  box-shadow: 0 14px 34px rgba(10, 16, 29, 0.55), 0 0 18px rgba(30, 42, 68, 0.35);
 }

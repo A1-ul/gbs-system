@@ -172,10 +172,10 @@ export default function TopCenterSystemBanner({
         margin: "0 auto 18px auto",
         textAlign: "center",
         padding: "12px 32px",
-        background: "linear-gradient(135deg, rgba(74, 21, 27, 0.96) 0%, rgba(15, 23, 42, 0.96) 50%, rgba(42, 11, 16, 0.96) 100%)",
+        background: "linear-gradient(135deg, rgba(20, 29, 48, 0.96) 0%, rgba(30, 42, 68, 0.98) 50%, rgba(36, 51, 82, 0.96) 100%)",
         border: "2.5px solid rgba(212, 175, 55, 0.65)",
         borderRadius: "36px",
-        boxShadow: "0 14px 40px rgba(0, 0, 0, 0.75), 0 0 28px rgba(212, 175, 55, 0.28), inset 0 1px 0 rgba(255, 255, 255, 0.14)",
+        boxShadow: "0 14px 40px rgba(10, 16, 29, 0.78), 0 0 28px rgba(30, 42, 68, 0.55), inset 0 1px 0 rgba(255, 255, 255, 0.14)",
         width: "fit-content",
         maxWidth: "95vw",
         zIndex: 20

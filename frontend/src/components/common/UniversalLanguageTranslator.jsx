@@ -290,13 +290,13 @@ export default function UniversalLanguageTranslator() {
             gap: "8px",
             padding: "9px 16px",
             borderRadius: "999px",
-            background: "linear-gradient(135deg, #4a151b 0%, #3e1f14 52%, #27272a 100%)",
+            background: "linear-gradient(135deg, #141D30 0%, #1E2A44 52%, #243352 100%)",
             border: "1.5px solid #d4af37",
             color: "#fbbf24",
             fontWeight: "800",
             fontSize: "0.78rem",
             cursor: "pointer",
-            boxShadow: "0 8px 24px rgba(0, 0, 0, 0.75), 0 0 18px rgba(212, 175, 55, 0.28)"
+            boxShadow: "0 8px 24px rgba(10, 16, 29, 0.78), 0 0 18px rgba(30, 42, 68, 0.48)"
           }}
           title="Translate any word or copied statement into your exact chosen language, or send a translated message to a receiver"
         >
@@ -311,7 +311,7 @@ export default function UniversalLanguageTranslator() {
           style={{
             position: "fixed",
             inset: 0,
-            background: "rgba(15, 10, 12, 0.85)",
+            background: "rgba(10, 16, 29, 0.85)",
             backdropFilter: "blur(10px)",
             zIndex: 999990,
             display: "flex",
@@ -327,12 +327,12 @@ export default function UniversalLanguageTranslator() {
               maxWidth: "850px",
               maxHeight: "92vh",
               overflowY: "auto",
-              background: "linear-gradient(145deg, #4a151b 0%, #3e1f14 48%, #27272a 100%)",
+              background: "linear-gradient(145deg, #141D30 0%, #1E2A44 48%, #243352 100%)",
               border: "2px solid #d4af37",
               borderRadius: "20px",
               padding: "22px",
               color: "#f8fafc",
-              boxShadow: "0 25px 60px rgba(0, 0, 0, 0.88), 0 0 32px rgba(212, 175, 55, 0.3)"
+              boxShadow: "0 25px 60px rgba(10, 16, 29, 0.88), 0 0 32px rgba(30, 42, 68, 0.55)"
             }}
           >
             <WindowControlsBar
