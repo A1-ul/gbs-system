@@ -129,6 +129,14 @@ export default function TopCenterSystemBanner({
   };
 
   const handleOpenLanguageExplainer = () => {
+    const selectedText =
+      typeof window !== "undefined" && window.getSelection
+        ? window.getSelection().toString().trim()
+        : "";
+    if (typeof window !== "undefined" && typeof window.openGBSTranslator === "function") {
+      window.openGBSTranslator({ text: selectedText });
+      return;
+    }
     setShowTranslatorModal(true);
   };
 
