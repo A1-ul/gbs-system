@@ -313,6 +313,53 @@ const ROLE_GUIDES = {
         ]
       }
     ]
+  },
+  ALUMNI: {
+    title: "Alumni & Convocation Network Operating Guide",
+    subtitle: "Cumulative Transcripts, Completion Batches, Graduate Verification & Institutional Pledges",
+    badgeColor: "#818cf8",
+    sections: [
+      {
+        id: "transcripts",
+        title: "1. Cumulative Academic Transcripts & Verification",
+        steps: [
+          "Select your graduation batch year and level filter to inspect verified historical course records.",
+          "Download or print official stamped Alumni Transcripts bearing the school's institutional seal.",
+          "Use 'Verify Graduate Registry' to validate alumni index numbers for employers or universities."
+        ]
+      },
+      {
+        id: "giving",
+        title: "2. Alumni Giving, Pledges & Mentorship",
+        steps: [
+          "Submit financial pledges or project donations directly synced to the Accountant's Institutional Ledger.",
+          "RSVP or schedule virtual Alumni Homecoming & Zoom mentorship sessions."
+        ]
+      }
+    ]
+  },
+  INVENTORY: {
+    title: "Inventory Depot & Procurement Operations Guide",
+    subtitle: "Stock Ledger, Category Audits, Purchase Requisitions & Department Allocations",
+    badgeColor: "#38bdf8",
+    sections: [
+      {
+        id: "catalog",
+        title: "1. Real-Time Depot Catalog & Stock Alerts",
+        steps: [
+          "Filter consumables and fixed assets across Science Lab, Stationery, Textbooks, ICT, and Sports.",
+          "Monitor low-stock indicators and register new inventory items via '+ Register New Stock Item'."
+        ]
+      },
+      {
+        id: "requisitions",
+        title: "2. Purchase Requisitions & Headmaster/Accountant Approval",
+        steps: [
+          "Click 'Submit Purchase Requisition' to request restocking quantities with academic justification.",
+          "Track approval decisions pushed in real time from the Headmaster and Accountant desks."
+        ]
+      }
+    ]
   }
 };
 
@@ -378,7 +425,7 @@ export default function UniversalRoleGuideModal({ role = "DEVELOPER", isOpen, on
         style={{
           width: "100%",
           maxWidth: "880px",
-          maxHeight: "90vh",
+          maxHeight: "92dvh",
           background: "linear-gradient(145deg, #0f172a 0%, #020617 100%)",
           border: `2px solid ${guideData.badgeColor}`,
           borderRadius: "16px",

@@ -10,6 +10,7 @@ import UniversalRoleGuideModal from "../../../../../components/common/UniversalR
 import { navigateToDetail } from "../../../../../utils/universalNavigation";
 import { getActiveSchoolName, getActiveSchoolLogo } from "../../../../../utils/schoolBranding";
 import { isDemoSandboxMode } from "../../../../../utils/tokenStorage";
+import { copyTextSafely } from "../../../../../utils/safeWindow";
 import "./ParentDashboard.css";
 
 export default function ParentDashboard() {
@@ -2679,7 +2680,7 @@ export default function ParentDashboard() {
                               style={{ padding: "8px 12px", fontSize: "0.8rem" }}
                               title="Copy Direct Zoom Link"
                               onClick={() => {
-                                navigator.clipboard.writeText(safeUrl);
+                                copyTextSafely(safeUrl);
                                 setFeedback({ type: "success", message: `📋 Zoom URL copied to clipboard: ${safeUrl}` });
                               }}
                             >

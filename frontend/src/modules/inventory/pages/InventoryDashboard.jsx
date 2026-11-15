@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import apiClient from '../../../api/client/apiClient';
 import WindowControlsBar from '../../../components/common/WindowControlsBar';
 import TopCenterSystemBanner from '../../../components/common/TopCenterSystemBanner';
+import UniversalRoleGuideModal from '../../../components/common/UniversalRoleGuideModal';
 import { navigateToDetail } from '../../../utils/universalNavigation';
 import './InventoryManagement.css';
 import '../../library/pages/LibraryManagement.css';
@@ -22,6 +23,7 @@ export default function InventoryDashboard() {
   const navigate = useNavigate();
 
   const [activeTab, setActiveTab] = useState('inventory'); // 'inventory', 'requisitions', 'newItem', 'audits'
+  const [showRoleGuide, setShowRoleGuide] = useState(false);
   const [selectedCategory, setSelectedCategory] = useState('ALL');
   const [items, setItems] = useState([]);
   const [requests, setRequests] = useState([]);
@@ -306,6 +308,13 @@ export default function InventoryDashboard() {
             style={{ background: 'linear-gradient(135deg, #10b981, #059669)', fontWeight: 800 }}
           >
             ➕ Register New Stock Item
+          </button>
+          <button
+            type="button"
+            onClick={() => setShowRoleGuide(true)}
+            style={{ background: 'rgba(245, 158, 11, 0.18)', border: '1.5px solid #fbbf24', color: '#fde68a', padding: '8px 14px', borderRadius: '8px', fontWeight: 800, cursor: 'pointer' }}
+          >
+            📖 Operating Guide
           </button>
         </div>
       </header>
@@ -1137,6 +1146,11 @@ export default function InventoryDashboard() {
           </div>
         </div>
       )}
+      <UniversalRoleGuideModal
+        role="INVENTORY"
+        isOpen={showRoleGuide}
+        onClose={() => setShowRoleGuide(false)}
+      />
     </div>
   );
 }

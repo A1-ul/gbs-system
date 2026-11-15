@@ -1,8 +1,11 @@
 import React, { useState, useEffect } from 'react';
 import axios from 'axios';
+import { getApiBaseUrl } from '../../../api/client/apiConfig';
+import WindowControlsBar from '../../../components/common/WindowControlsBar';
+import TopCenterSystemBanner from '../../../components/common/TopCenterSystemBanner';
 import './AIDiagnosticsDashboard.css';
 
-const API_BASE = '/api/v1';
+const API_BASE = getApiBaseUrl();
 
 export default function AIDiagnosticsDashboard() {
   const [activeTab, setActiveTab] = useState('radar'); // 'radar', 'study-plans', 'interventions', 'developer'
@@ -287,6 +290,8 @@ export default function AIDiagnosticsDashboard() {
 
   return (
     <div className="ai-diagnostics-dashboard">
+      <WindowControlsBar title="AI Academic Diagnostics" />
+      <TopCenterSystemBanner roleTitle="AI Academic Diagnostics & Sentinel" />
       {/* Hero Header */}
       <div className="ai-hero-card">
         <div className="ai-hero-overlay"></div>

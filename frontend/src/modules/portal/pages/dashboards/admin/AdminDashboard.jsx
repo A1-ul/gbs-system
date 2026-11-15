@@ -12,12 +12,8 @@ import UniversalRoleGuideModal from "../../../../../components/common/UniversalR
 import { navigateToDetail } from "../../../../../utils/universalNavigation";
 import FileUploadVerificationCard from "../../../../../components/common/FileUploadVerificationCard";
 import DigitalSignaturePadModal from "../../../../../components/common/DigitalSignaturePadModal";
-import {
-  getActiveSchoolName,
-  getActiveSchoolLogo,
-  saveActiveSchoolBranding,
-  getSchoolBrandingNotificationState
-} from "../../../../../utils/schoolBranding";
+import { getActiveSchoolName, getActiveSchoolLogo, saveActiveSchoolBranding, getSchoolBrandingNotificationState } from "../../../../../utils/schoolBranding";
+import { openUrlSafely } from "../../../../../utils/safeWindow";
 import "./AdminDashboard.css";
 
 export function AdminDashboard({ initialTab } = {}) {
@@ -814,7 +810,7 @@ export function AdminDashboard({ initialTab } = {}) {
         const emailBody = `Dear ${recipientDisplayName},\n\n${commMessage}\n\n---\nOffice of the Headmaster\n${reportSchoolName}\n${headmasterProfile.name}\n${headmasterProfile.email} | ${headmasterProfile.phone}`;
         const mailtoUrl = `mailto:${targetEmail}?subject=${encodeURIComponent(commSubject)}&body=${encodeURIComponent(emailBody)}`;
 
-        window.open(mailtoUrl, "_blank");
+        openUrlSafely(mailtoUrl, { fallbackSameTab: false, title: "Email Client" });
 
         try {
           await apiClient.post("/communication/email", {

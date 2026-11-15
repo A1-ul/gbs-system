@@ -54,17 +54,34 @@ export const REAL_LIFE_AVATARS = {
 
 export const REAL_USER_AVATARS = REAL_LIFE_AVATARS;
 
-export const ROLE_BACKGROUND_IMAGES = {
-  ADMIN: "/assets/school_campus_bg.jpg",
-  TEACHER: "/assets/school_campus_bg.jpg",
-  STUDENT: "/assets/school_campus_bg.jpg",
-  PARENT: "/assets/school_campus_bg.jpg",
-  ACCOUNTANT: "/assets/school_campus_bg.jpg",
-  STAFF: "/assets/school_campus_bg.jpg",
-  HR: "/assets/school_campus_bg.jpg",
-  DEVELOPER: "/assets/school_campus_bg.jpg",
-  ALUMNI: "/assets/school_campus_bg.jpg"
+export const LOCAL_FALLBACK_AVATARS = {
+  ADMIN: "/assets/headmaster-photo.jpg",
+  TEACHER: "/assets/real/teacher_scanner.jpg",
+  STUDENT: "/assets/real/student_elearning.jpg",
+  PARENT: "/assets/real/parent_mobile.jpg",
+  ACCOUNTANT: "/assets/real/accountant_finance.jpg",
+  STAFF: "/assets/real/staff_gate_turnstile.jpg",
+  HR: "/assets/hr-bg.jpg",
+  DEVELOPER: "/assets/admin-avatar.jpg",
+  ALUMNI: "/assets/images/graduation.jpg"
 };
+
+export const ROLE_BACKGROUND_IMAGES = {
+  ADMIN: "/assets/admin-dashboard-bg.jpg",
+  TEACHER: "/assets/teacher-dashboard-bg.jpg",
+  STUDENT: "/assets/student-dashboard-bg.jpg",
+  PARENT: "/assets/parent-dashboard-bg.jpg",
+  ACCOUNTANT: "/assets/finance-hero-bg.jpg",
+  STAFF: "/assets/staff-dashboard-bg.jpg",
+  HR: "/assets/hr-bg.jpg",
+  DEVELOPER: "/assets/developer-dashboard-hero.jpg",
+  ALUMNI: "/assets/academic-records-bg.jpg"
+};
+
+export function getLocalFallbackAvatar(role = "ADMIN") {
+  const normRole = (role || "ADMIN").toUpperCase();
+  return LOCAL_FALLBACK_AVATARS[normRole] || LOCAL_FALLBACK_AVATARS.ADMIN;
+}
 
 /**
  * Get the current active real-life avatar for a given role

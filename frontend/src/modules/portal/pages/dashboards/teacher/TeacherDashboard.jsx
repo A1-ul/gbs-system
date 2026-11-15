@@ -21,6 +21,7 @@ import MobileCameraAIExamScannerModal from "../../../../../components/common/Mob
 import FileUploadVerificationCard from "../../../../../components/common/FileUploadVerificationCard";
 import DigitalSignaturePadModal from "../../../../../components/common/DigitalSignaturePadModal";
 import { getActiveSchoolName, getActiveSchoolLogo } from "../../../../../utils/schoolBranding";
+import { printHtmlSafely, copyTextSafely } from "../../../../../utils/safeWindow";
 import "./TeacherDashboard.css";
 
 export default function TeacherDashboard() {
@@ -902,13 +903,7 @@ export default function TeacherDashboard() {
 </html>`;
 
     if (openPrintPreview) {
-      const printWin = window.open("", "_blank", "width=1020,height=800");
-      if (printWin) {
-        printWin.document.write(htmlContent);
-        printWin.document.close();
-        printWin.focus();
-        setTimeout(() => printWin.print(), 350);
-      }
+      printHtmlSafely(htmlContent, { title: `Curriculum_${blueprint.subjectName}` });
       setFeedback({
         type: "success",
         message: `🖨️ Opened printable curriculum guide for "${blueprint.subjectName}" (${blueprint.className}).`
@@ -1181,102 +1176,102 @@ export default function TeacherDashboard() {
     apiClient.post("/ai-exam/exams", createdExam).catch((err) => {
       console.warn("Exam publish backend sync warning:", err?.message || err);
     });
-  window.dispatchEvent(new Event("gbs_exams_updated"));
-  window.dispatchEvent(new CustomEvent("gbs_teacher_exam_published", { detail: { exam: createdExam } }));
-  window.dispatchEvent(new Event("storage"));
-  setShowQuestionVerificationModal(false);
-  setShowAuthorExamModal(false);
-  setPendingPublishExam(null);
-  const msg = `✓ Timed Examination '${createdExam.title}' (${createdExam.questionBank?.length || 0} questions, ${createdExam.examDate} ${createdExam.startTime}–${createdExam.endTime}) scheduled & published to Student Dashboards!`;
-  setFeedback({ type: "success", message: msg });
-  if (typeof window !== "undefined" && typeof window.showGBSOpenNotice === "function") {
-    window.showGBSOpenNotice(msg, "success", "TIMED EXAM SCHEDULED & PUBLISHED");
-  }
-};
+    window.dispatchEvent(new Event("gbs_exams_updated"));
+    window.dispatchEvent(new CustomEvent("gbs_teacher_exam_published", { detail: { exam: createdExam } }));
+    window.dispatchEvent(new Event("storage"));
+    setShowQuestionVerificationModal(false);
+    setShowAuthorExamModal(false);
+    setPendingPublishExam(null);
+    const msg = `✓ Timed Examination '${createdExam.title}' (${createdExam.questionBank?.length || 0} questions, ${createdExam.examDate} ${createdExam.startTime}–${createdExam.endTime}) scheduled & published to Student Dashboards!`;
+    setFeedback({ type: "success", message: msg });
+    if (typeof window !== "undefined" && typeof window.showGBSOpenNotice === "function") {
+      window.showGBSOpenNotice(msg, "success", "TIMED EXAM SCHEDULED & PUBLISHED");
+    }
+  };
 
-const handleInitiatePublishVerification = (e) => {
-  e?.preventDefault();
-  if (!newExamForm.title.trim()) {
-    setFeedback({ type: "error", message: "Please provide an Examination Title." });
-    return;
-  }
-  const createdExam = buildCreatedExamObject();
-  setPendingPublishExam(createdExam);
-  setQuestionsVerifiedCheck(true);
-  setShowQuestionVerificationModal(true);
-};
+  const handleInitiatePublishVerification = (e) => {
+    e?.preventDefault();
+    if (!newExamForm.title.trim()) {
+      setFeedback({ type: "error", message: "Please provide an Examination Title." });
+      return;
+    }
+    const createdExam = buildCreatedExamObject();
+    setPendingPublishExam(createdExam);
+    setQuestionsVerifiedCheck(true);
+    setShowQuestionVerificationModal(true);
+  };
 
-const handleConfirmPublishVerifiedExam = () => {
-  if (!pendingPublishExam) return;
-  const updated = [pendingPublishExam, ...exams];
-  setExams(updated);
-  setSelectedExamId(pendingPublishExam.id);
-  localStorage.setItem("gbs_published_exams", JSON.stringify(updated));
-  localStorage.setItem("gbs_teacher_published_exams", JSON.stringify(updated));
-  localStorage.setItem("gbs_new_exam_published", "true");
-  apiClient.post("/ai-exam/exams", pendingPublishExam).catch((err) => {
-    console.warn("Exam publish backend sync warning:", err?.message || err);
-  });
-  window.dispatchEvent(new Event("gbs_exams_updated"));
-  window.dispatchEvent(new CustomEvent("gbs_teacher_exam_published", { detail: { exam: pendingPublishExam } }));
-  window.dispatchEvent(new Event("storage"));
+  const handleConfirmPublishVerifiedExam = () => {
+    if (!pendingPublishExam) return;
+    const updated = [pendingPublishExam, ...exams];
+    setExams(updated);
+    setSelectedExamId(pendingPublishExam.id);
+    localStorage.setItem("gbs_published_exams", JSON.stringify(updated));
+    localStorage.setItem("gbs_teacher_published_exams", JSON.stringify(updated));
+    localStorage.setItem("gbs_new_exam_published", "true");
+    apiClient.post("/ai-exam/exams", pendingPublishExam).catch((err) => {
+      console.warn("Exam publish backend sync warning:", err?.message || err);
+    });
+    window.dispatchEvent(new Event("gbs_exams_updated"));
+    window.dispatchEvent(new CustomEvent("gbs_teacher_exam_published", { detail: { exam: pendingPublishExam } }));
+    window.dispatchEvent(new Event("storage"));
 
-  setShowQuestionVerificationModal(false);
-  setShowAuthorExamModal(false);
-  const publishedTitle = pendingPublishExam.title;
-  setPendingPublishExam(null);
-  const msg = `✓ Examination '${publishedTitle}' officially verified and published to Student Examination Dashboards!`;
-  setFeedback({
-    type: "success",
-    message: msg
-  });
-  if (typeof window !== "undefined" && typeof window.showGBSOpenNotice === "function") {
-    window.showGBSOpenNotice(msg, "success", "TIMED EXAM VERIFIED & PUBLISHED");
-  }
-};
+    setShowQuestionVerificationModal(false);
+    setShowAuthorExamModal(false);
+    const publishedTitle = pendingPublishExam.title;
+    setPendingPublishExam(null);
+    const msg = `✓ Examination '${publishedTitle}' officially verified and published to Student Examination Dashboards!`;
+    setFeedback({
+      type: "success",
+      message: msg
+    });
+    if (typeof window !== "undefined" && typeof window.showGBSOpenNotice === "function") {
+      window.showGBSOpenNotice(msg, "success", "TIMED EXAM VERIFIED & PUBLISHED");
+    }
+  };
 
-const handlePublishNewExam = (e) => {
-  handleInitiatePublishVerification(e);
-};
+  const handlePublishNewExam = (e) => {
+    handleInitiatePublishVerification(e);
+  };
 
-const handleSaveExamTimetable = (e) => {
-  if (e?.preventDefault) e.preventDefault();
-  const finalTimetable =
-    examTimetableList.length > 0
-      ? examTimetableList
-      : [
-        {
-          id: `ET-${Date.now()}`,
-          courseCode: newExamForm.subjectCode || "CORE 101",
-          subject: newExamForm.subjectName || "Core Subject",
-          className: activeClassObj?.name || "Assigned Class",
-          examDate: new Date().toISOString().split("T")[0],
-          startTime: "09:00 AM",
-          endTime: "11:30 AM",
-          hall: "Main Examination Hall A",
-          invigilator: teacherProfile?.fullName || "Faculty Invigilator",
-          permittedTools: "Pens, Mathematical Set, Standard Calculator",
-          syllabusScope: "Complete Term Syllabus",
-          instructions: "Arrive 15 minutes before start time."
-        }
-      ];
-  setExamTimetableList(finalTimetable);
-  localStorage.setItem("gbs_examination_timetable", JSON.stringify(finalTimetable));
-  apiClient.post("/timetables/examination-guide", { type: "EXAMINATION_TIMETABLE", entries: finalTimetable }).catch((err) => {
-    console.warn("Exam timetable guide sync warning:", err?.message || err);
-  });
-  window.dispatchEvent(new Event("gbs_exam_timetable_updated"));
-  window.dispatchEvent(new Event("storage"));
-  setShowExamTimetableModal(false);
-  const msg = `✓ Official Examination Timetable Guide (${finalTimetable.length} session${finalTimetable.length === 1 ? "" : "s"}) saved and published to all Student & Headmaster Dashboards!`;
-  setFeedback({
-    type: "success",
-    message: msg
-  });
-  if (typeof window !== "undefined" && typeof window.showGBSOpenNotice === "function") {
-    window.showGBSOpenNotice(msg, "success", "EXAMINATION TIMETABLE PUBLISHED");
-  }
-};
+  const handleSaveExamTimetable = (e) => {
+    if (e?.preventDefault) e.preventDefault();
+    const finalTimetable =
+      examTimetableList.length > 0
+        ? examTimetableList
+        : [
+          {
+            id: `ET-${Date.now()}`,
+            courseCode: newExamForm.subjectCode || "CORE 101",
+            subject: newExamForm.subjectName || "Core Subject",
+            className: activeClassObj?.name || "Assigned Class",
+            examDate: new Date().toISOString().split("T")[0],
+            startTime: "09:00 AM",
+            endTime: "11:30 AM",
+            hall: "Main Examination Hall A",
+            invigilator: teacherProfile?.fullName || "Faculty Invigilator",
+            permittedTools: "Pens, Mathematical Set, Standard Calculator",
+            syllabusScope: "Complete Term Syllabus",
+            instructions: "Arrive 15 minutes before start time."
+          }
+        ];
+    setExamTimetableList(finalTimetable);
+    localStorage.setItem("gbs_examination_timetable", JSON.stringify(finalTimetable));
+    apiClient.post("/timetables/examination-guide", { type: "EXAMINATION_TIMETABLE", entries: finalTimetable }).catch((err) => {
+      console.warn("Exam timetable guide sync warning:", err?.message || err);
+    });
+    window.dispatchEvent(new Event("gbs_exam_timetable_updated"));
+    window.dispatchEvent(new Event("storage"));
+    setShowExamTimetableModal(false);
+    const msg = `✓ Official Examination Timetable Guide (${finalTimetable.length} session${finalTimetable.length === 1 ? "" : "s"}) saved and published to all Student & Headmaster Dashboards!`;
+    setFeedback({
+      type: "success",
+      message: msg
+    });
+    if (typeof window !== "undefined" && typeof window.showGBSOpenNotice === "function") {
+      window.showGBSOpenNotice(msg, "success", "EXAMINATION TIMETABLE PUBLISHED");
+    }
+  };
   const [selectedExamId, setSelectedExamId] = useState("");
   const [examScores, setExamScores] = useState({});
   const [studentRemarks, setStudentRemarks] = useState({});
@@ -7955,7 +7950,7 @@ const handleSaveExamTimetable = (e) => {
                               className="btn-secondary"
                               onClick={() => {
                                 const shareBundle = `${m.title} (${m.platform}) — In-App Studio: ${workingInAppLink} | Direct Link: ${safeMeetingUrl}`;
-                                navigator.clipboard.writeText(shareBundle);
+                                copyTextSafely(shareBundle);
                                 setFeedback({ type: "success", message: `📋 Working Meeting Link copied to clipboard! Share with students/parents anytime.` });
                               }}
                               title="Copy working meeting link"

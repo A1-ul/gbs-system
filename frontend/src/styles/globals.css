@@ -416,12 +416,14 @@ h6 {
     radial-gradient(circle at 50% 85%, rgba(180, 83, 9, 0.32) 0%, transparent 52%),
     linear-gradient(135deg, rgba(59, 7, 100, 0.50) 0%, rgba(112, 26, 117, 0.44) 52%, rgba(24, 24, 38, 0.56) 100%) !important;
 }
+
 .role-dashboard-wrapper.role-theme-hr .role-header {
   background: linear-gradient(90deg, rgba(59, 7, 100, 0.92) 0%, rgba(112, 26, 117, 0.90) 52%, rgba(30, 27, 75, 0.94) 100%) !important;
   border-bottom: 2px solid #c084fc !important;
   box-shadow: 0 6px 24px rgba(17, 7, 36, 0.65), 0 0 18px rgba(192, 132, 252, 0.25) !important;
   backdrop-filter: blur(16px);
 }
+
 .role-dashboard-wrapper.role-theme-hr .role-hero-banner,
 .role-dashboard-wrapper.role-theme-hr .role-workspace-card,
 .role-dashboard-wrapper.role-theme-hr .role-kpi-box {
@@ -429,11 +431,13 @@ h6 {
   border: 1.5px solid rgba(192, 132, 252, 0.48) !important;
   backdrop-filter: blur(14px);
 }
+
 .role-dashboard-wrapper.role-theme-hr .role-tab-nav .role-tab-btn {
   background: linear-gradient(135deg, rgba(76, 29, 149, 0.86), rgba(112, 26, 117, 0.82));
   border: 1px solid rgba(192, 132, 252, 0.45);
   color: #f3e8ff;
 }
+
 .role-dashboard-wrapper.role-theme-hr .role-tab-nav .role-tab-btn.active {
   background: linear-gradient(135deg, #9333ea 0%, #c026d3 52%, #d97706 100%) !important;
   color: #ffffff !important;
@@ -453,12 +457,14 @@ h6 {
     radial-gradient(circle at 50% 85%, rgba(154, 52, 18, 0.38) 0%, transparent 52%),
     linear-gradient(135deg, rgba(15, 23, 42, 0.52) 0%, rgba(30, 58, 138, 0.44) 50%, rgba(120, 53, 15, 0.48) 100%) !important;
 }
+
 .role-dashboard-wrapper.role-theme-alumni .role-header {
   background: linear-gradient(90deg, rgba(23, 37, 84, 0.94) 0%, rgba(30, 64, 175, 0.88) 50%, rgba(120, 53, 15, 0.92) 100%) !important;
   border-bottom: 2px solid #fbbf24 !important;
   box-shadow: 0 6px 24px rgba(10, 15, 34, 0.65), 0 0 18px rgba(251, 191, 36, 0.25) !important;
   backdrop-filter: blur(16px);
 }
+
 .role-dashboard-wrapper.role-theme-alumni .role-hero-banner,
 .role-dashboard-wrapper.role-theme-alumni .role-workspace-card,
 .role-dashboard-wrapper.role-theme-alumni .role-kpi-box {
@@ -466,11 +472,13 @@ h6 {
   border: 1.5px solid rgba(251, 191, 36, 0.48) !important;
   backdrop-filter: blur(14px);
 }
+
 .role-dashboard-wrapper.role-theme-alumni .role-tab-nav .role-tab-btn {
   background: linear-gradient(135deg, rgba(30, 58, 138, 0.86), rgba(120, 53, 15, 0.82));
   border: 1px solid rgba(251, 191, 36, 0.45);
   color: #fef3c7;
 }
+
 .role-dashboard-wrapper.role-theme-alumni .role-tab-nav .role-tab-btn.active {
   background: linear-gradient(135deg, #1d4ed8 0%, #b45309 55%, #f59e0b 100%) !important;
   color: #ffffff !important;
@@ -576,7 +584,7 @@ select:focus,
 textarea:focus {
   outline: none;
   border-color: #fbbf24 !important;
-  box-shadow: 0 0 0 3px rgba(212, 175, 55, 0.25), 0 0 14px rgba(30, 42, 68, 0.55) !important;
+  box-shadow: 0 0 0 3px rgba(212, 175, 55, 0.25), 0 0 14px rgba(92, 26, 46, 0.55) !important;
 }
 
 /* Responsive Utilities */
@@ -826,5 +834,120 @@ body.gbs-full-display-mode main {
 
 body.gbs-full-display-mode .role-workspace-card,
 body.gbs-full-display-mode .dev-workspace-panel {
-  min-height: calc(100vh - 150px);
+  min-height: calc(100dvh - 150px);
+}
+
+/* ============================================================================
+   CROSS-DEVICE MOBILE, TABLET & TOUCH ACCESSIBILITY GUARANTEES
+   ============================================================================ */
+html, body {
+  max-width: 100%;
+  overflow-x: clip;
+  -webkit-tap-highlight-color: rgba(212, 175, 55, 0.2);
+}
+
+.role-workspace-card,
+.dev-workspace-panel,
+.card-body,
+.table-responsive {
+  max-width: 100%;
+}
+
+.table-responsive,
+.dev-table-container,
+.gbs-table-scroll {
+  width: 100%;
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+}
+
+.role-workspace-card table,
+.dev-workspace-panel table {
+  min-width: 560px;
+}
+
+/* Mobile-safe modal sizing using dvh so iOS/Android address bars never clip bottom buttons */
+@media (max-width: 768px) {
+  .window-controls-bar {
+    padding: 8px 10px !important;
+    gap: 6px !important;
+  }
+
+  .btn-window-control {
+    padding: 6px 9px !important;
+    font-size: 0.72rem !important;
+    min-height: 34px;
+  }
+
+  .role-tab-nav,
+  .dev-tab-navigation {
+    display: flex !important;
+    flex-wrap: wrap !important;
+    gap: 6px !important;
+    padding: 8px !important;
+  }
+
+  .role-tab-btn,
+  .dev-tab-btn {
+    flex: 1 1 calc(50% - 6px);
+    min-width: 132px;
+    text-align: center;
+    padding: 9px 10px !important;
+    font-size: 0.78rem !important;
+  }
+
+  .role-main-content,
+  .dev-main-content,
+  .dashboard-main {
+    padding: 12px 10px calc(84px + env(safe-area-inset-bottom, 0px)) !important;
+  }
+
+  .role-workspace-card,
+  .dev-workspace-panel {
+    padding: 12px !important;
+    border-radius: 12px !important;
+    overflow-x: auto;
+  }
+
+  .role-kpi-grid,
+  .dev-kpi-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
+    gap: 8px !important;
+  }
+
+  .modal-box,
+  [role="dialog"] > div {
+    width: 96vw !important;
+    max-width: 96vw !important;
+    max-height: 92dvh !important;
+    overflow-y: auto !important;
+  }
+}
+
+/* Prevent sticky mobile hover lift and ensure touch devices expose actionable states cleanly */
+@media (hover: none) {
+  .role-tab-btn:hover,
+  .dev-tab-btn:hover,
+  .btn-window-control:hover,
+  .action-btn-sm:hover,
+  .role-action-btn:hover,
+  .btn-secondary:hover,
+  .role-kpi-box:hover {
+    transform: none;
+  }
+}
+
+@media print {
+  .window-controls-bar,
+  .top-center-system-banner,
+  .role-tab-nav,
+  .dev-tab-navigation,
+  .universal-ai-hud,
+  .btn-window-control {
+    display: none !important;
+  }
+  body {
+    background: #ffffff !important;
+    color: #0f172a !important;
+  }
 }

@@ -1,6 +1,8 @@
 import React, { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import axiosInstance from "../../../api/client/axios";
+import WindowControlsBar from "../../../components/common/WindowControlsBar";
+import TopCenterSystemBanner from "../../../components/common/TopCenterSystemBanner";
 import "./TimetableDashboard.css";
 
 const DAYS_OF_WEEK = ["MONDAY", "TUESDAY", "WEDNESDAY", "THURSDAY", "FRIDAY"];
@@ -232,6 +234,8 @@ export default function TimetableDashboard() {
 
   return (
     <div className="timetable-dashboard-page">
+      <WindowControlsBar title="Timetable & Scheduling Engine" />
+      <TopCenterSystemBanner roleTitle="Academic Timetable & Scheduling" />
       {/* Top Header */}
       <header className="timetable-header-bar">
         <div className="nav-brand-container">

@@ -1,6 +1,8 @@
 import React, { useState, useEffect, useRef } from "react";
 import { useNavigate } from "react-router-dom";
 import { getApiBaseUrl, getWebSocketUrl } from "../../../api/client/apiConfig";
+import WindowControlsBar from "../../../components/common/WindowControlsBar";
+import TopCenterSystemBanner from "../../../components/common/TopCenterSystemBanner";
 import "./CommunicationDashboardPage.css";
 
 const BASE_URL = getApiBaseUrl();
@@ -284,6 +286,8 @@ export default function CommunicationDashboardPage() {
 
   return (
     <div className="comm-container">
+      <WindowControlsBar title="Communication & Messaging Engine" />
+      <TopCenterSystemBanner roleTitle="Communication & Messaging Hub" />
       {/* Toast Feedback */}
       {feedback && (
         <div className={`comm-toast ${feedback.type}`}>

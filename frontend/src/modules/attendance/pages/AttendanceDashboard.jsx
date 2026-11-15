@@ -1,9 +1,10 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import axios from 'axios';
+import { getApiBaseUrl } from '../../../api/client/apiConfig';
 import './AttendanceDashboard.css';
 
-const API_BASE = '/api/v1';
+const API_BASE = getApiBaseUrl();
 
 export default function AttendanceDashboard() {
   const navigate = useNavigate();

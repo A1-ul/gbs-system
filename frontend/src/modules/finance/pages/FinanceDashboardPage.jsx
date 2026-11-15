@@ -1,8 +1,11 @@
 import React, { useState, useEffect } from 'react';
 import axios from 'axios';
+import { getApiBaseUrl } from '../../../api/client/apiConfig';
+import WindowControlsBar from '../../../components/common/WindowControlsBar';
+import TopCenterSystemBanner from '../../../components/common/TopCenterSystemBanner';
 import './FinanceDashboardPage.css';
 
-const API_BASE = '/api/v1';
+const API_BASE = getApiBaseUrl();
 
 export default function FinanceDashboardPage() {
   const [activeTab, setActiveTab] = useState('invoices'); // 'invoices', 'payments', 'fee-schedules', 'expenses'
@@ -234,6 +237,8 @@ export default function FinanceDashboardPage() {
 
   return (
     <div className="finance-dashboard-page">
+      <WindowControlsBar title="Bursar's Office & Revenue Engine" />
+      <TopCenterSystemBanner roleTitle="Finance & Treasury Management" />
       {/* Hero Header */}
       <div className="finance-hero-card">
         <div className="finance-hero-overlay"></div>

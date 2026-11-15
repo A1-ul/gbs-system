@@ -1,3 +1,5 @@
+import { resolveApiUrl } from "../api/client/apiConfig";
+
 /**
  * GBS Enterprise Offline Engine & Bidirectional Database Synchronization
  * Enables uninterrupted offline usage for all users & developer
@@ -19,11 +21,11 @@ class OfflineSyncEngine {
   handleConnectivityChange(isOnline) {
     this.isOnline = isOnline;
     console.log(`[GBS Offline Sync Engine] Connectivity status changed: ${isOnline ? "ONLINE 🟢" : "OFFLINE 🔴"}`);
-    
+
     if (isOnline) {
       this.syncPendingMutations();
     }
-    
+
     this.notifyListeners();
   }
 
@@ -91,7 +93,7 @@ class OfflineSyncEngine {
 
     for (const item of queue) {
       try {
-        const response = await fetch(item.endpoint, {
+        const response = await fetch(resolveApiUrl(item.endpoint), {
           method: item.method,
           headers: {
             "Content-Type": "application/json",

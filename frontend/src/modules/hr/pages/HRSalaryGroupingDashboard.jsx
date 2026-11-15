@@ -1,6 +1,8 @@
 import React, { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import apiClient from "../../../api/client/apiClient";
+import WindowControlsBar from "../../../components/common/WindowControlsBar";
+import TopCenterSystemBanner from "../../../components/common/TopCenterSystemBanner";
 import "./HRSalaryGrouping.css";
 
 export default function HRSalaryGroupingDashboard() {
@@ -43,11 +45,14 @@ export default function HRSalaryGroupingDashboard() {
 
   return (
     <div className="hr-page-container">
+      <WindowControlsBar title="HR Salary Grouping & Progression" />
+      <TopCenterSystemBanner roleTitle="HR Salary Grouping & Progression" />
       <header className="hr-header">
         <div>
           <h2>👔 HR EMPLOYEE SALARY GROUPING & PROGRESSION</h2>
           <p>AUTOMATIC LONG SERVICE BANDING & GROSS SALARY EVALUATOR</p>
         </div>
+        <button type="button" onClick={() => navigate(-1)}>← Back</button>
       </header>
 
       {/* Real-Life HR & Faculty Progression Hero Banner */}

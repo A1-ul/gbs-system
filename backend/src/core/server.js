@@ -54,6 +54,7 @@ const { initializeSocket } = require('./socket/socketServer');
 
 // GBS Master Architecture - User Registration Count & Verification Engine mounted
 const app = express();
+app.set('trust proxy', 1);
 
 // Security Middlewares (CSP disabled so live translation, dictionary, audio & media streams never get blocked in browser)
 app.use(helmet({
@@ -125,6 +126,41 @@ app.get('/health', async (req, res) => {
   app.get('/api/v1/health', async (req, res) => {
     const payload = await buildHealthPayload();
     res.status(200).json(payload);
+  });
+
+  app.get('/api/v1/network-info', (req, res) => {
+    const os = require('os');
+    const interfaces = os.networkInterfaces();
+    const lanAddresses = [];
+    for (const [name, addrs] of Object.entries(interfaces || {})) {
+      for (const addr of addrs || []) {
+        const isIPv4 = addr.family === 'IPv4' || addr.family === 4;
+        if (isIPv4 && !addr.internal && !addr.address.startsWith('169.254.')) {
+          lanAddresses.push({ interface: name, ip: addr.address });
+        }
+      }
+    }
+    const activePort = Number(envConfig.port || process.env.PORT || 5001);
+    const proto = String(req.headers['x-forwarded-proto'] || req.protocol || 'http').split(',')[0].trim();
+    const hostHeader = req.get('host') || `localhost:${activePort}`;
+    res.status(200).json({
+      status: 'success',
+      data: {
+        protocol: proto,
+        host: hostHeader,
+        backendPort: activePort,
+        frontendDevPort: 3000,
+        lanUrls: lanAddresses.map((a) => ({
+          interface: a.interface,
+          ip: a.ip,
+          frontendUrl: `http://${a.ip}:3000`,
+          backendUrl: `http://${a.ip}:${activePort}`,
+        })),
+        recommendedMobileUrl: lanAddresses[0] && proto !== 'https'
+          ? `http://${lanAddresses[0].ip}:3000`
+          : `${proto}://${hostHeader}`,
+      },
+    });
   });
 
   // Universal Server-Side Language Translator & Dictionary Meaning Engine

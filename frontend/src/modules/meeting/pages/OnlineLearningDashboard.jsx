@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import { getApiBaseUrl } from '../../../api/client/apiConfig';
 import { getActiveSchoolName } from '../../../utils/schoolBranding';
+import { copyTextSafely } from '../../../utils/safeWindow';
 import './OnlineLearningDashboard.css';
 
 const API_BASE = getApiBaseUrl();
@@ -331,7 +332,7 @@ export default function OnlineLearningDashboard() {
   // Copy credentials helper
   const handleCopyLink = (meeting) => {
     const text = `GBS Virtual Classroom: ${meeting.title}\nPlatform: ${meeting.platform}\nJoin URL: ${meeting.meetingUrl}\nMeeting ID: ${meeting.meetingId || 'N/A'}\nPasscode: ${meeting.passcode || 'N/A'}`;
-    navigator.clipboard.writeText(text);
+    copyTextSafely(text);
     setActionNotice({ type: 'success', text: `📋 Copied ${meeting.platform} credentials to clipboard!` });
   };
 

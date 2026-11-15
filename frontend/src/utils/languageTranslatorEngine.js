@@ -1,3 +1,5 @@
+import { resolveApiUrl } from "../api/client/apiConfig";
+
 /**
  * Universal Language Translator, Command Parser, Word/Statement Meaning Dictionary & Receiver Messaging Engine
  *
@@ -1131,7 +1133,7 @@ export async function translateTextToLanguage(text, targetLangCode, options = {}
     // Try backend /api/v1/translate first when in browser
     if (typeof window !== "undefined") {
       try {
-        const res = await fetch("/api/v1/translate", {
+        const res = await fetch(resolveApiUrl("/api/v1/translate"), {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({ text: cleanText, targetLang: "ENGLISH" })
@@ -1171,12 +1173,12 @@ export async function translateTextToLanguage(text, targetLangCode, options = {}
     return MULTILINGUAL_LEXICON[langObj.code][lowerClean];
   }
 
-  // 2. When running in browser, try same-origin backend proxy /api/v1/translate first (zero CORS / zero CSP issues)
+  // 2. When running in browser, try configured backend proxy /api/v1/translate first (zero CORS / zero CSP issues)
   if (typeof window !== "undefined") {
     try {
       const controller = new AbortController();
       const timeoutId = setTimeout(() => controller.abort(), 5500);
-      const res = await fetch("/api/v1/translate", {
+      const res = await fetch(resolveApiUrl("/api/v1/translate"), {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ text: cleanText, targetLang: langObj.code }),
@@ -1454,7 +1456,7 @@ export async function sendTranslatedMessageToReceiver({
   // 3. Persist to backend /api/v1/translate/send-message and /api/v1/sms/send when in browser
   if (typeof window !== "undefined") {
     try {
-      await fetch("/api/v1/translate/send-message", {
+      await fetch(resolveApiUrl("/api/v1/translate/send-message"), {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(messageRecord)
@@ -1464,7 +1466,7 @@ export async function sendTranslatedMessageToReceiver({
     const phoneMatch = String(receiverContact || "").replace(/[\s()-]+/g, " ").match(/\+?\d[\d ]{6,16}\d/);
     if (phoneMatch) {
       try {
-        await fetch("/api/v1/sms/send", {
+        await fetch(resolveApiUrl("/api/v1/sms/send"), {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({

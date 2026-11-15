@@ -3,6 +3,7 @@ import { useParams, useNavigate, useLocation, Link } from "react-router-dom";
 import apiClient from "../../api/client/apiClient";
 import { getApiBaseUrl } from "../../api/client/apiConfig";
 import { getActiveSchoolName } from "../../utils/schoolBranding";
+import { copyTextSafely } from "../../utils/safeWindow";
 import "./UniversalDetailPage.css";
 
 const CATEGORY_META = {
@@ -399,9 +400,9 @@ export default function UniversalDetailPage() {
     }
   };
 
-  const handleCopyId = () => {
-    if (navigator.clipboard) {
-      navigator.clipboard.writeText(id);
+  const handleCopyId = async () => {
+    const ok = await copyTextSafely(id);
+    if (ok) {
       setCopiedId(true);
       setTimeout(() => setCopiedId(false), 2500);
     }

@@ -4,6 +4,7 @@ import { login } from "../api/auth.api";
 import { getServerBaseUrl } from "../../../api/client/apiConfig";
 import { getRoleBackgroundImage } from "../../../utils/userAvatars";
 import { syncSystemModeFlags, clearWorkspaceMutableKeys } from "../../../utils/tokenStorage";
+import { copyTextSafely } from "../../../utils/safeWindow";
 import CartoonRoleVideoHubModal from "../../../components/common/CartoonRoleVideoHubModal";
 import "./MainLoginPage.css";
 
@@ -43,6 +44,8 @@ export default function MainLoginPage() {
   // Public approved institutions list for Online Admissions routing
   const [publicInstitutions, setPublicInstitutions] = useState([]);
   const [selectedTenantId, setSelectedTenantId] = useState("");
+  const [mobileLanUrl, setMobileLanUrl] = useState("");
+  const [copiedLanUrl, setCopiedLanUrl] = useState(false);
 
   // Real-Life Action Video Tour Modal State
   const [showVideoHubModal, setShowVideoHubModal] = useState(false);
@@ -180,6 +183,16 @@ export default function MainLoginPage() {
         }
       })
       .catch(() => { });
+
+    if (typeof window !== "undefined" && (window.location.hostname === "localhost" || window.location.hostname === "127.0.0.1")) {
+      fetch(`${getServerBaseUrl()}/api/v1/network-info`)
+        .then((res) => res.json())
+        .then((json) => {
+          const url = json?.data?.lanUrls?.[0]?.frontendUrl || "";
+          if (url) setMobileLanUrl(url);
+        })
+        .catch(() => { });
+    }
   }, []);
 
   const ROLE_CREDENTIALS = {
@@ -211,8 +224,7 @@ export default function MainLoginPage() {
     setError(null);
 
     try {
-      localStorage.setItem("gbs_system_mode", loginMode);
-      localStorage.setItem("gbs_environment_mode", loginMode === "LIVE_PRODUCTION" ? "PRODUCTION" : "SANDBOX");
+      syncSystemModeFlags(loginMode);
 
       const result = await login({
         email: email.trim(),
@@ -623,6 +635,25 @@ export default function MainLoginPage() {
         <div className="blueprint-badge">
           <span>SECURE</span> • <span>MULTI-TENANT</span> • <span>VOICE PROTECTED</span> • <span>REAL-TIME</span>
         </div>
+
+        {mobileLanUrl && (
+          <div style={{ marginTop: "10px", padding: "8px 12px", borderRadius: "10px", background: "rgba(15, 23, 42, 0.72)", border: "1px solid rgba(56, 189, 248, 0.35)", display: "flex", alignItems: "center", justifyContent: "space-between", gap: "8px", flexWrap: "wrap", fontSize: "0.74rem", color: "#cbd5e1" }}>
+            <span>📱 Mobile Phone Wi-Fi URL: <strong style={{ color: "#38bdf8" }}>{mobileLanUrl}</strong></span>
+            <button
+              type="button"
+              onClick={async () => {
+                const ok = await copyTextSafely(mobileLanUrl);
+                if (ok) {
+                  setCopiedLanUrl(true);
+                  setTimeout(() => setCopiedLanUrl(false), 2500);
+                }
+              }}
+              style={{ padding: "4px 10px", borderRadius: "6px", border: "1px solid rgba(56, 189, 248, 0.5)", background: "rgba(56, 189, 248, 0.16)", color: "#7dd3fc", cursor: "pointer", fontWeight: 700, fontSize: "0.72rem" }}
+            >
+              {copiedLanUrl ? "✓ Copied!" : "📋 Copy URL"}
+            </button>
+          </div>
+        )}
       </div>
 
       {/* Online Admission Application Modal */}
@@ -642,7 +673,7 @@ export default function MainLoginPage() {
         >
           <div
             style={{
-              maxHeight: "92vh",
+              maxHeight: "92dvh",
               width: "100%",
               maxWidth: "800px",
               background: "linear-gradient(145deg, #0f172a 0%, #1e293b 100%)",
@@ -938,7 +969,7 @@ export default function MainLoginPage() {
                       </select>
                     </div>
 
-                    <div style={{ gridColumn: "span 2" }}>
+                    <div style={{ gridColumn: "1 / -1" }}>
                       <label style={{ display: "block", fontSize: "0.8rem", color: "#94a3b8", marginBottom: "4px" }}>Physical Residential Address</label>
                       <input
                         type="text"
@@ -986,7 +1017,7 @@ export default function MainLoginPage() {
                       </select>
                     </div>
 
-                    <div style={{ gridColumn: "span 2" }}>
+                    <div style={{ gridColumn: "1 / -1" }}>
                       <label style={{ display: "block", fontSize: "0.8rem", color: "#94a3b8", marginBottom: "4px" }}>Additional Academic Notes or Special Requirements</label>
                       <textarea
                         rows={2}

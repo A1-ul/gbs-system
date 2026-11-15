@@ -1,9 +1,12 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import axios from 'axios';
+import { getApiBaseUrl } from '../../../api/client/apiConfig';
+import WindowControlsBar from '../../../components/common/WindowControlsBar';
+import TopCenterSystemBanner from '../../../components/common/TopCenterSystemBanner';
 import './AssignmentDashboard.css';
 
-const API_BASE = '/api/v1';
+const API_BASE = getApiBaseUrl();
 
 export default function AssignmentDashboard() {
   const navigate = useNavigate();
@@ -270,6 +273,8 @@ export default function AssignmentDashboard() {
 
   return (
     <div className="assignments-page">
+      <WindowControlsBar title="Student Assignments & Homework" />
+      <TopCenterSystemBanner roleTitle="Student Assignments & Homework" />
       {/* HEADER */}
       <header className="assignments-header">
         <div className="header-left">

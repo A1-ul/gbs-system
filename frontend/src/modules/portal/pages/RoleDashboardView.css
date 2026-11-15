@@ -481,4 +481,13 @@
   .dashboard-main-content {
     padding: 1.5rem 1rem;
   }
+  .dashboard-container {
+    background-attachment: scroll;
+    overflow-x: clip;
+  }
+  .dashboard-header {
+    padding: 0.75rem 1rem;
+    flex-wrap: wrap;
+    gap: 0.5rem;
+  }
 }

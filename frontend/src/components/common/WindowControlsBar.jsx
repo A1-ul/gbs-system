@@ -137,7 +137,12 @@ export default function WindowControlsBar({
     try {
       const url = new URL(window.location.href);
       url.searchParams.set("full", "1");
-      window.open(url.toString(), "_blank", "noopener");
+      const opened = window.open(url.toString(), "_blank", "noopener");
+      if (!opened) {
+        window.history.replaceState(window.history.state, "", url.toString());
+        window.dispatchEvent(new CustomEvent("gbs_full_display_toggled", { detail: { full: true } }));
+        setIsExpanded(true);
+      }
     } catch { }
   };
 
@@ -150,8 +155,8 @@ export default function WindowControlsBar({
           if (next) {
             el.style.maxWidth = "98vw";
             el.style.width = "98vw";
-            el.style.height = "96vh";
-            el.style.maxHeight = "96vh";
+            el.style.height = "94dvh";
+            el.style.maxHeight = "94dvh";
           } else {
             el.style.maxWidth = "";
             el.style.width = "";

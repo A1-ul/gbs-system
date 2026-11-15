@@ -146,6 +146,7 @@ export default function DeveloperLogin() {
       }
       localStorage.setItem("gbs_dev_token", token);
       localStorage.setItem("gbs_token", token);
+      sessionStorage.setItem("gbs_dev_gate_unlocked", "true");
       localStorage.setItem(
         "gbs_developer",
         JSON.stringify({
@@ -193,6 +194,7 @@ export default function DeveloperLogin() {
       }
       localStorage.setItem("gbs_dev_token", token);
       localStorage.setItem("gbs_token", token);
+      sessionStorage.setItem("gbs_dev_gate_unlocked", "true");
       localStorage.setItem(
         "gbs_developer",
         JSON.stringify({
@@ -223,6 +225,8 @@ export default function DeveloperLogin() {
       });
       if (response.data?.token) {
         localStorage.setItem("gbs_dev_token", response.data.token);
+        localStorage.setItem("gbs_token", response.data.token);
+        sessionStorage.setItem("gbs_dev_gate_unlocked", "true");
         localStorage.setItem(
           "gbs_developer",
           JSON.stringify({

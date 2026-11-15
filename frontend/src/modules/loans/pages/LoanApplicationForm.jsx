@@ -1,6 +1,8 @@
 import React, { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import apiClient from "../../../api/client/apiClient";
+import WindowControlsBar from "../../../components/common/WindowControlsBar";
+import TopCenterSystemBanner from "../../../components/common/TopCenterSystemBanner";
 import "./LoanManagement.css";
 
 export default function LoanApplicationForm() {
@@ -11,48 +13,84 @@ export default function LoanApplicationForm() {
   const [monthlyIncome, setMonthlyIncome] = useState(5000);
   const [monthlyDebt, setMonthlyDebt] = useState(1000);
   const [purpose, setPurpose] = useState("Business Expansion");
-  
+
   const [creditEvaluation, setCreditEvaluation] = useState(null);
   const [applicationResult, setApplicationResult] = useState(null);
+  const [errorMessage, setErrorMessage] = useState(null);
   const [loading, setLoading] = useState(false);
 
   const handleEvaluateCredit = async () => {
+    setErrorMessage(null);
+    const income = parseFloat(monthlyIncome);
+    const debt = parseFloat(monthlyDebt);
+    if (!Number.isFinite(income) || income <= 0 || !Number.isFinite(debt) || debt < 0) {
+      setErrorMessage("Please enter a valid positive monthly gross income and non-negative monthly debt.");
+      return;
+    }
     try {
       const res = await apiClient.post("/loans/credit-score", {
-        monthlyIncome: parseFloat(monthlyIncome),
-        monthlyDebt: parseFloat(monthlyDebt)
+        monthlyIncome: income,
+        monthlyDebt: debt
       });
-      setCreditEvaluation(res.data?.evaluation);
+      const evaluation = res.data?.evaluation;
+      if (!evaluation) throw new Error("Credit scoring engine did not return an evaluation.");
+      setCreditEvaluation(evaluation);
     } catch (err) {
-      setCreditEvaluation({
-        creditScore: 750,
-        riskLevel: "LOW",
-        debtToIncomeRatio: 0.2,
-        approvedForLoan: true
-      });
+      setErrorMessage(
+        err?.response?.data?.error ||
+        err?.response?.data?.message ||
+        err?.message ||
+        "Unable to evaluate credit score from backend server. Please verify connection and retry."
+      );
     }
   };
 
   const handleSubmitApplication = async (e) => {
     e.preventDefault();
     setLoading(true);
+    setErrorMessage(null);
+    const amount = parseFloat(amountRequested);
+    const term = parseInt(termMonths, 10);
+    const income = parseFloat(monthlyIncome);
+    const debt = parseFloat(monthlyDebt);
+
+    if (!Number.isFinite(amount) || amount <= 0 || !Number.isFinite(term) || term <= 0) {
+      setErrorMessage("Loan amount and duration must be positive numbers.");
+      setLoading(false);
+      return;
+    }
+
     try {
       const res = await apiClient.post("/loans/apply", {
         borrowerId: 101,
         loanType,
-        amountRequested: parseFloat(amountRequested),
-        termMonths: parseInt(termMonths),
-        monthlyIncome: parseFloat(monthlyIncome),
-        monthlyDebt: parseFloat(monthlyDebt),
+        amountRequested: amount,
+        termMonths: term,
+        monthlyIncome: income,
+        monthlyDebt: debt,
         purpose
       });
       setApplicationResult(res.data);
+      if (res.data?.creditEvaluation) {
+        setCreditEvaluation(res.data.creditEvaluation);
+      }
+      try {
+        localStorage.setItem("gbs_latest_loan_application", JSON.stringify({
+          applicationId: res.data?.applicationId,
+          principal: amount,
+          termMonths: term,
+          creditScore: res.data?.creditEvaluation?.creditScore ?? creditEvaluation?.creditScore ?? null,
+          status: res.data?.status,
+          estimatedMonthlyInstallment: res.data?.estimatedMonthlyInstallment
+        }));
+      } catch { }
     } catch (err) {
-      setApplicationResult({
-        applicationId: `LOAN-APP-${Date.now()}`,
-        status: "APPROVED_PENDING_DISBURSEMENT",
-        estimatedMonthlyInstallment: 885.50
-      });
+      setErrorMessage(
+        err?.response?.data?.error ||
+        err?.response?.data?.message ||
+        err?.message ||
+        "Unable to submit loan application to server. Please check connection and retry."
+      );
     } finally {
       setLoading(false);
     }
@@ -60,15 +98,22 @@ export default function LoanApplicationForm() {
 
   return (
     <div className="loan-page-container">
+      <WindowControlsBar title="Loan Application" />
+      <TopCenterSystemBanner roleTitle="Loan Origination & Credit Assessment" />
       <header className="loan-header">
         <div>
           <h2>💳 ONLINE LOAN APPLICATION</h2>
           <p>GBS LOAN MANAGEMENT SYSTEM — SMART LOANS, SECURE FUTURE</p>
         </div>
-        <button onClick={() => navigate("/loans/dashboard")}>Loan Dashboard</button>
+        <button type="button" onClick={() => navigate("/loans/dashboard")}>Loan Dashboard</button>
       </header>
 
       <main className="loan-main">
+        {errorMessage && (
+          <div style={{ marginBottom: "14px", padding: "12px 16px", borderRadius: "10px", background: "rgba(239, 68, 68, 0.16)", border: "1px solid #ef4444", color: "#fecaca", fontWeight: 700 }}>
+            ⚠️ {errorMessage}
+          </div>
+        )}
         <div className="loan-card">
           <h3>APPLICATION DETAILS</h3>
 

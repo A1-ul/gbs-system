@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from "react";
+import { resolveApiUrl } from "../../api/client/apiConfig";
 import { clearFakeDataEntries } from "../../utils/freshSystemReset";
 import { getActiveSchoolName, getActiveSchoolLogo } from "../../utils/schoolBranding";
 import { isDemoSandboxMode, resetDemoSandboxData } from "../../utils/tokenStorage";
@@ -99,9 +100,13 @@ export default function TopCenterSystemBanner({
     setSyncingCloud(true);
     setSyncFeedback(null);
     try {
-      const res = await fetch("/api/v1/dev-control/sync-to-cloud", {
+      const token = localStorage.getItem("gbs_dev_token") || localStorage.getItem("gbs_token") || "";
+      const res = await fetch(resolveApiUrl("/api/v1/dev-control/sync-to-cloud"), {
         method: "POST",
-        headers: { "Content-Type": "application/json" }
+        headers: {
+          "Content-Type": "application/json",
+          ...(token ? { Authorization: `Bearer ${token}` } : {})
+        }
       });
       const data = await res.json();
       const msg = data?.message || "✓ Local data safely synced and point-in-time backup created!";

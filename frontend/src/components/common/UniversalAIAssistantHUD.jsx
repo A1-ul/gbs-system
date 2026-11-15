@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from "react";
+import { resolveApiUrl } from "../../api/client/apiConfig";
 import { clearFakeDataEntries } from "../../utils/freshSystemReset";
 
 /**
@@ -93,7 +94,7 @@ export default function UniversalAIAssistantHUD() {
     window.addEventListener("gbs_system_error", handleCustomApiError);
 
     // Initial Health Check Ping
-    fetch("/api/v1/health")
+    fetch(resolveApiUrl("/api/v1/health"))
       .then((r) => r.json())
       .then((data) => {
         if (data.status !== "success") {
@@ -110,7 +111,7 @@ export default function UniversalAIAssistantHUD() {
       window.removeEventListener("unhandledrejection", handleRejection);
       window.removeEventListener("gbs_system_error", handleCustomApiError);
     };
-  }, []);
+  }, [isDeveloper]);
 
   const addIssue = (title, details) => {
     const newIssue = {
@@ -139,7 +140,7 @@ export default function UniversalAIAssistantHUD() {
     setRepairLog((prev) => [...prev, "⚡ Reconnecting memory resilience cache & PostgreSQL pool fallbacks..."]);
 
     try {
-      await fetch("/api/v1/health");
+      await fetch(resolveApiUrl("/api/v1/health"));
     } catch {}
 
     await new Promise((r) => setTimeout(r, 600));

@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useRef } from "react";
 import { useNavigate } from "react-router-dom";
 import { getApiBaseUrl } from "../../../api/client/apiConfig";
+import { printHtmlSafely, copyTextSafely } from "../../../utils/safeWindow";
 import WindowControlsBar from "../../../components/common/WindowControlsBar";
 import TopCenterSystemBanner from "../../../components/common/TopCenterSystemBanner";
 import { offlineSyncEngine } from "../../../utils/offlineSync";
@@ -1279,12 +1280,7 @@ export default function DeveloperDashboard() {
   };
 
   const handlePrintAcceptanceCertificate = (tenant) => {
-    const win = window.open("", "_blank");
-    if (!win) {
-      showNotification("⚠ Popup blocked! Please allow popups to print acceptance certificate.");
-      return;
-    }
-    win.document.write(`
+    const html = `
       <!DOCTYPE html>
       <html>
         <head>
@@ -1366,11 +1362,13 @@ export default function DeveloperDashboard() {
               Printed from GBS Platform Registry on: ${new Date().toLocaleString()}
             </div>
           </div>
-          <script>window.onload = function() { window.print(); };</script>
         </body>
       </html>
-    `);
-    win.document.close();
+    `;
+    const ok = printHtmlSafely(html, { title: `Acceptance-${tenant.assignedTenantCode || tenant.tenantCode || "GBS"}` });
+    if (!ok) {
+      showNotification("⚠ Unable to print acceptance certificate on this device.");
+    }
   };
 
   const [archivedTenants, setArchivedTenants] = useState(() => {
@@ -2689,7 +2687,7 @@ export default function DeveloperDashboard() {
     const targetPhone = showHeadmasterOfflineNoticeModal.phone || "+233-24-555-0199";
     try {
       // Dispatches real SMS with registered school name [WITHIN DE BRAIN ACADEMY]
-      fetch("/api/v1/sms/send-school-sms", {
+      fetch(`${getApiBaseUrl()}/sms/send-school-sms`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
@@ -6244,10 +6242,11 @@ export default function DeveloperDashboard() {
                                 <button
                                   type="button"
                                   onClick={() => {
-                                    navigator.clipboard.writeText(
-                                      `GBS Onboarded Tenant: ${tenant.institutionName}\nTenant Code: ${tenant.assignedTenantCode || tenant.tenantCode}\nHeadmaster: ${tenant.headmasterName} (${tenant.headmasterPhone})\nLogin URL: http://localhost:3000/login`
+                                    const liveLoginUrl = typeof window !== "undefined" ? `${window.location.origin}/login` : "/login";
+                                    copyTextSafely(
+                                      `GBS Onboarded Tenant: ${tenant.institutionName}\nTenant Code: ${tenant.assignedTenantCode || tenant.tenantCode}\nHeadmaster: ${tenant.headmasterName} (${tenant.headmasterPhone})\nLogin URL: ${liveLoginUrl}`
                                     );
-                                    showNotification(`✓ Tenant credentials copied to clipboard!`);
+                                    showNotification(`✓ Tenant credentials & live login URL copied to clipboard!`);
                                   }}
                                   style={{
                                     background: "rgba(56, 189, 248, 0.15)",

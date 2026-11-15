@@ -90,7 +90,12 @@ export function useDashboardTabSync(defaultTab, storageKey, normalizeTab = null)
         const url = new URL(window.location.href);
         url.searchParams.set("tab", cleanTab);
         url.searchParams.set("full", "1");
-        window.open(url.toString(), "_blank", "noopener");
+        const opened = window.open(url.toString(), "_blank", "noopener");
+        if (!opened) {
+          window.history.replaceState(window.history.state, "", url.toString());
+          setIsFullPageMode(true);
+          window.dispatchEvent(new CustomEvent("gbs_full_display_toggled", { detail: { full: true } }));
+        }
       } catch { }
     },
     [activeTab, resolveNormalized]
