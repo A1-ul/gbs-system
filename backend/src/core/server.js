@@ -688,13 +688,52 @@ const candidateDistPaths = [
 ];
 const frontendDistPath = candidateDistPaths.find(p => fs.existsSync(p));
 if (frontendDistPath) {
-  app.use(express.static(frontendDistPath));
+  app.use(express.static(frontendDistPath, {
+    etag: false,
+    lastModified: false,
+    setHeaders: (res, filePath) => {
+      if (filePath.endsWith('.html')) {
+        res.setHeader('Cache-Control', 'no-store, no-cache, must-revalidate, proxy-revalidate');
+        res.setHeader('Pragma', 'no-cache');
+        res.setHeader('Expires', '0');
+      } else {
+        res.setHeader('Cache-Control', 'public, max-age=0, must-revalidate');
+      }
+    }
+  }));
+
+  // Graceful fallback for hashed /assets/* requests from older open browser tabs during live deployments
+  app.get('/assets/:assetFile', (req, res, next) => {
+    const requested = req.params.assetFile || '';
+    const assetsDir = path.join(frontendDistPath, 'assets');
+    const exactPath = path.join(assetsDir, requested);
+    if (fs.existsSync(exactPath)) {
+      res.setHeader('Cache-Control', 'no-store, no-cache, must-revalidate');
+      return res.sendFile(exactPath);
+    }
+    const match = requested.match(/^([A-Za-z0-9_]+)-[A-Za-z0-9_-]+\.(js|css)$/);
+    if (match && fs.existsSync(assetsDir)) {
+      const prefix = `${match[1]}-`;
+      const ext = `.${match[2]}`;
+      const replacement = fs.readdirSync(assetsDir).find(f => f.startsWith(prefix) && f.endsWith(ext));
+      if (replacement) {
+        res.setHeader('Cache-Control', 'no-store, no-cache, must-revalidate');
+        return res.sendFile(path.join(assetsDir, replacement));
+      }
+    }
+    return res.status(404).end();
+  });
+
   app.get('*', (req, res, next) => {
     if (req.path.startsWith('/api') || req.path.startsWith('/health')) {
       return next();
     }
     const indexHtml = path.join(frontendDistPath, 'index.html');
     if (fs.existsSync(indexHtml)) {
+      res.setHeader('Cache-Control', 'no-store, no-cache, must-revalidate, proxy-revalidate');
+      res.setHeader('Pragma', 'no-cache');
+      res.setHeader('Expires', '0');
+      res.setHeader('Surrogate-Control', 'no-store');
       return res.sendFile(indexHtml);
     }
     next();

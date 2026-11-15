@@ -18,7 +18,7 @@
     "start": "npm run start --prefix backend",
     "build:frontend": "npm run build --prefix frontend",
     "build:backend": "npm run prisma:generate --prefix backend",
-    "build": "npm run prisma:generate --prefix backend && npm run build --prefix frontend"
+    "build": "npm run prisma:generate --prefix backend && npm run build --prefix frontend && node -e \"const fs=require('fs'); if(fs.existsSync('frontend/dist')){fs.cpSync('frontend/dist','backend/public',{recursive:true,force:true});}\""
   },
   "keywords": [
     "gbs",
