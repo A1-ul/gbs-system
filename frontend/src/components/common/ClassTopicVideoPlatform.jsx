@@ -11,7 +11,7 @@ const DEFAULT_TOPIC_VIDEOS = [
     teacherEmail: "teacher@gbs.com",
     absenceNote:
       "Dear students, I am away attending the Regional STEM Curriculum Workshop today. Please play and watch this complete topic introduction video carefully, take notes in your exercise books, and complete Practice Exercise 4A before our next class.",
-    videoUrl: "https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/ForBiggerBlazes.mp4",
+    videoUrl: "/videos/video2_teacher_role_guide.mp4",
     videoSourceType: "UPLOADED_VIDEO",
     fileName: "Quadratic_Equations_Topic_Intro.mp4",
     durationLabel: "14 mins",
@@ -36,7 +36,7 @@ const DEFAULT_TOPIC_VIDEOS = [
     teacherEmail: "teacher@gbs.com",
     absenceNote:
       "Class, please watch this visual topic introduction in my absence to understand how chlorophyll traps light energy during the light-dependent stage of photosynthesis.",
-    videoUrl: "https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/BigBuckBunny.mp4",
+    videoUrl: "/videos/video3_student_role_guide.mp4",
     videoSourceType: "UPLOADED_VIDEO",
     fileName: "Photosynthesis_Class_Topic_Intro.mp4",
     durationLabel: "10 mins",
@@ -93,7 +93,7 @@ export default function ClassTopicVideoPlatform({
     try {
       const saved = JSON.parse(localStorage.getItem("gbs_teacher_saved_recordings") || "[]");
       if (Array.isArray(saved)) return saved;
-    } catch {}
+    } catch { }
     return [];
   });
   const [pendingPermissionRecording, setPendingPermissionRecording] = useState(null);
@@ -289,7 +289,7 @@ export default function ClassTopicVideoPlatform({
 
     if (liveCamVideoRef.current) {
       liveCamVideoRef.current.srcObject = stream;
-      liveCamVideoRef.current.play().catch(() => {});
+      liveCamVideoRef.current.play().catch(() => { });
     }
 
     recordedChunksRef.current = [];
@@ -301,8 +301,8 @@ export default function ClassTopicVideoPlatform({
         typeof MediaRecorder !== "undefined" && MediaRecorder.isTypeSupported?.("video/webm;codecs=vp8")
           ? "video/webm;codecs=vp8"
           : typeof MediaRecorder !== "undefined" && MediaRecorder.isTypeSupported?.("video/webm")
-          ? "video/webm"
-          : "";
+            ? "video/webm"
+            : "";
       const recorder = mimeType ? new MediaRecorder(stream, { mimeType }) : new MediaRecorder(stream);
       mediaRecorderRef.current = recorder;
 
@@ -344,7 +344,7 @@ export default function ClassTopicVideoPlatform({
             const next = [savedRecordItem, ...prev].slice(0, 15);
             try {
               localStorage.setItem("gbs_teacher_saved_recordings", JSON.stringify(next));
-            } catch {}
+            } catch { }
             return next;
           });
 
@@ -451,7 +451,7 @@ export default function ClassTopicVideoPlatform({
       const next = prev.map((r) => (r.id === recItem.id ? { ...r, status: "PUBLISHED_WITH_PERMISSION" } : r));
       try {
         localStorage.setItem("gbs_teacher_saved_recordings", JSON.stringify(next));
-      } catch {}
+      } catch { }
       return next;
     });
 
@@ -478,8 +478,8 @@ export default function ClassTopicVideoPlatform({
 
     const finalVideoUrl =
       uploadMethod === "URL"
-        ? customVideoUrl.trim() || "https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/ForBiggerBlazes.mp4"
-        : videoDataUrl || "https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/ForBiggerBlazes.mp4";
+        ? customVideoUrl.trim() || "/videos/video2_teacher_role_guide.mp4"
+        : videoDataUrl || "/videos/video2_teacher_role_guide.mp4";
 
     setUploading(true);
     setStatusMessage({

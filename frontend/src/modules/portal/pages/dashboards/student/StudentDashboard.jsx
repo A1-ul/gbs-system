@@ -2833,20 +2833,23 @@ export function StudentDashboard({ initialTab } = {}) {
                                 <table className="role-table" style={{ fontSize: "0.82rem" }}>
                                   <thead>
                                     <tr>
-                                      <th>Course / Paper</th>
-                                      <th>Date & Time Window</th>
-                                      <th>Exam Hall & Invigilator</th>
-                                      <th>Permitted Tools & Equipment</th>
-                                      <th>Syllabus Scope & Focus</th>
+                                      <th>Course / Paper &amp; Format</th>
+                                      <th>Date &amp; Time Window</th>
+                                      <th>Exam Hall &amp; Invigilator</th>
+                                      <th>Permitted Tools &amp; Equipment</th>
+                                      <th>Syllabus Scope &amp; Focus</th>
                                       <th>Special Instructions</th>
                                     </tr>
                                   </thead>
                                   <tbody>
-                                    {examTimetableGuide.map((t) => (
-                                      <tr key={t.id}>
+                                    {examTimetableGuide.map((t, idx) => (
+                                      <tr key={t.id || idx}>
                                         <td>
                                           <strong style={{ color: "#38bdf8", display: "block" }}>{t.courseCode}</strong>
-                                          <span style={{ color: "#f8fafc" }}>{t.subject}</span>
+                                          <span style={{ color: "#f8fafc", display: "block" }}>{t.subject}</span>
+                                          <span style={{ display: "inline-block", marginTop: "3px", background: "rgba(56, 189, 248, 0.18)", border: "1px solid rgba(56, 189, 248, 0.45)", color: "#7dd3fc", padding: "1px 7px", borderRadius: "4px", fontSize: "0.68rem", fontWeight: 800 }}>
+                                            {t.examFormat || "Mixed Format (MCQ + Theory)"}
+                                          </span>
                                         </td>
                                         <td>
                                           <div style={{ color: "#34d399", fontWeight: 700 }}>{t.examDate}</div>
@@ -3342,35 +3345,77 @@ export function StudentDashboard({ initialTab } = {}) {
                                   </div>
                                 </div>
 
+                                {/* Multi-Format Question Bank Section Navigator for Easy Answering */}
+                                <div style={{ display: "flex", gap: "6px", flexWrap: "wrap", marginBottom: "10px", paddingBottom: "8px", borderBottom: "1px solid rgba(148, 163, 184, 0.16)" }}>
+                                  {[
+                                    { type: "MULTIPLE_CHOICE", label: "📘 Multiple Choice", color: "#0284c7" },
+                                    { type: "THEORY_ESSAY", label: "✍️ Theory / Essay", color: "#d97706" },
+                                    { type: "TRUE_FALSE", label: "☑️ True / False", color: "#059669" },
+                                    { type: "SHORT_ANSWER", label: "📝 Short Answer", color: "#7c3aed" },
+                                    { type: "FILL_IN_BLANK", label: "🔤 Fill in Blank", color: "#ea580c" },
+                                    { type: "CASE_STUDY", label: "🧪 Case Study", color: "#db2777" }
+                                  ].map((fmt) => {
+                                    const matchingIndices = questionsList
+                                      .map((qItem, idx) => (resolveExamQuestionType(qItem) === fmt.type ? idx : -1))
+                                      .filter((idx) => idx >= 0);
+                                    if (matchingIndices.length === 0) return null;
+                                    const isActiveFormat = resolveExamQuestionType(currentQ) === fmt.type;
+                                    return (
+                                      <button
+                                        key={fmt.type}
+                                        type="button"
+                                        onClick={() => setExamQuestionIndex(matchingIndices[0])}
+                                        style={{
+                                          background: isActiveFormat ? fmt.color : "rgba(15, 23, 42, 0.9)",
+                                          color: "#ffffff",
+                                          border: isActiveFormat ? "2px solid #fbbf24" : `1px solid ${fmt.color}`,
+                                          padding: "5px 11px",
+                                          borderRadius: "6px",
+                                          fontSize: "0.73rem",
+                                          fontWeight: 800,
+                                          cursor: "pointer"
+                                        }}
+                                      >
+                                        {fmt.label} ({matchingIndices.length})
+                                      </button>
+                                    );
+                                  })}
+                                </div>
+
                                 <div style={{ display: "flex", gap: "6px", flexWrap: "wrap" }}>
                                   {questionsList.map((q, idx) => {
                                     const isAns = isQAnswered(q);
                                     const isCurrent = idx === safeIndex;
+                                    const qTypeShort = resolveExamQuestionType(q);
+                                    const shortBadge = qTypeShort === "THEORY_ESSAY" ? "TH" : qTypeShort === "TRUE_FALSE" ? "TF" : qTypeShort === "SHORT_ANSWER" ? "SA" : qTypeShort === "FILL_IN_BLANK" ? "FB" : qTypeShort === "CASE_STUDY" ? "CS" : "MC";
                                     return (
                                       <button
                                         key={q.id || idx}
                                         type="button"
                                         onClick={() => setExamQuestionIndex(idx)}
                                         style={{
-                                          width: "36px",
+                                          minWidth: "44px",
                                           height: "36px",
+                                          padding: "0 6px",
                                           borderRadius: "8px",
-                                          background: isAns ? "#059669" : "rgba(30, 41, 59, 0.8)",
+                                          background: isAns ? "#059669" : "rgba(30, 41, 59, 0.9)",
                                           color: "#ffffff",
-                                          border: isCurrent ? "2px solid #38bdf8" : isAns ? "1px solid #10b981" : "1px solid rgba(255, 255, 255, 0.15)",
+                                          border: isCurrent ? "2px solid #38bdf8" : isAns ? "1px solid #10b981" : "1px solid rgba(255, 255, 255, 0.2)",
                                           fontWeight: 800,
-                                          fontSize: "0.82rem",
+                                          fontSize: "0.76rem",
                                           cursor: "pointer",
                                           display: "flex",
                                           alignItems: "center",
                                           justifyContent: "center",
+                                          gap: "3px",
                                           boxShadow: isCurrent ? "0 0 10px rgba(56, 189, 248, 0.6)" : "none",
-                                          transform: isCurrent ? "scale(1.08)" : "scale(1)",
+                                          transform: isCurrent ? "scale(1.06)" : "scale(1)",
                                           transition: "all 0.15s ease"
                                         }}
-                                        title={`Jump to Question ${idx + 1}: ${isAns ? "Answered" : "Unsolved"}`}
+                                        title={`Jump to Question ${idx + 1} (${shortBadge}): ${isAns ? "Answered" : "Unsolved"}`}
                                       >
-                                        {idx + 1}
+                                        <span>{idx + 1}</span>
+                                        <span style={{ fontSize: "0.62rem", color: "#fde68a", fontWeight: 900 }}>{shortBadge}</span>
                                       </button>
                                     );
                                   })}

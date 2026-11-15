@@ -1,390 +1,384 @@
 import React, { useState, useEffect } from "react";
-import CartoonRoleVideoHubModal from "./CartoonRoleVideoHubModal";
+import CartoonRoleVideoHubModal, { REAL_ACTION_ROLE_VIDEOS } from "./CartoonRoleVideoHubModal";
 
 const ROLE_GUIDES = {
-  DEVELOPER: {
-    title: "Developer Mission Control & Root Operations Guide",
-    subtitle: "Enterprise Infrastructure, Tenant Onboarding, Subscription Sentinel & SMS Gateway",
+  ADMIN: {
+    title: "Headmaster / Principal Command Center — Exact Operating Guide",
+    subtitle: "Voice Biometrics, Branding, Admissions, Bus Transport, Inbuilt CCTV Mobile Link, Teacher Checkup & Sign Out",
     badgeColor: "#38bdf8",
+    dashboardRoute: "/portal/admin/dashboard",
     sections: [
       {
-        id: "onboarding",
-        title: "1. Tenant Onboarding & Mobile OTP Verification",
+        id: "header-signout",
+        title: "1. Top Header Controls, School Branding, Video Guide & Sign Out (🚪 Sign Out)",
         steps: [
-          "Navigate to the 'Tenant Onboarding' tab to view incoming institutional registration submissions.",
-          "Inspect the prospective Headmaster's identity, school tier (Basic/SHS/Tertiary), and declared student enrollment.",
-          "Verify the MoMo registration payment reference sent to merchant account 0554594193 (GABRIEL KUBI OSEI-APPIAH).",
-          "Click '✓ Approve & Provision Enclave' to commit the tenant to PostgreSQL and generate their unique tenant code.",
-          "Upon approval, an official SMS acceptance notification is automatically dispatched to the Headmaster's registered mobile number.",
-          "The approved registration is permanently archived in the 'Archived Registrations Vault' for audit and reference."
+          "Click the red '🚪 Sign Out' button in the Top Window Control Bar or the Headmaster Header at any time to securely end your session and return to '/login'.",
+          "Click '📖 Operating Guide' or '🎬 Presentation Video' in the top header to open this step-by-step manual or the full 10-Role Video Presentation Theatre.",
+          "Click '✏️ Change School Name & Upload Logo' on the gold setup banner to upload your official school crest and confirm your exact institution name across all 10 portals and printable reports."
         ]
       },
       {
-        id: "subscription",
-        title: "2. Platform Subscription & Auto-Lockout Engine",
+        id: "cockpit-kpis",
+        title: "2. Institutional Governance KPIs & User Registration Drop-List Counts",
         steps: [
-          "Check the 4 telemetry inscription boxes: Registration Start Date, Subscription End Date, Days Remaining Countdown, and Auto-Lock Policy.",
-          "Click 'Adjust Dates' to extend or modify the statutory license period for any tenant.",
-          "Click 'Broadcast Renewal Reminder' to send advance SMS notices to Headmasters before their subscription expires.",
-          "If a tenant defaults on payment, click 'Enforce Auto-Lock Pipeline' or toggle the Photographic Padlock to engage statutory suspension.",
-          "Review incoming MoMo renewal transactions under 'Incoming Institutional MoMo Payments' and click 'Verify & Restore' for instant 1-click reinstatement."
+          "Inspect the User Registration Drop-List to verify live headcount across Teachers, Students, Parents, Accountants, HR Officers, Non-Teaching Staff, Alumni, and Inventory Managers.",
+          "Click '🎓 Students Admitted ↗' or '📂 Admissions Intake ↗' to review applicant biodata and click '✅ Approve Admission' to auto-issue Student IDs and acceptance letters.",
+          "Click '🚌 Students Boarding Bus ↗' to create bus destination routes, set termly fares, and assign registered drivers to students."
         ]
       },
       {
-        id: "tracking",
-        title: "3. Live Geospatial Tenant Tracking & Google Maps",
+        id: "cctv-emergency",
+        title: "3. Exclusive Inbuilt Campus CCTV & Mobile Link + Emergency Parent GPS",
         steps: [
-          "Open '🗺️ Live Tenant Map' or the 'Campus Locations' tab.",
-          "Type any Headmaster contact number, school name, city, or regional address into the search bar.",
-          "The system geocodes the location and embeds high-precision Google Maps (Roadmap & Satellite view).",
-          "Click 'Open in Google Maps' for full turn-by-turn driving directions to the physical school campus."
+          "Click '📹 Inbuilt CCTV & Mobile' in the header to view live encrypted campus camera feeds (Main Gate, Exam Hall, Administration, Science Block) and pair with the Headmaster's smartphone.",
+          "Open the '🚨 Emergency Parent Locator' tab to look up any student's guardian phone number and launch live Google Maps GPS directions to their home/workplace.",
+          "Monitor security status ('VOICE & RBAC ACTIVE') and review audit logs for any unauthorized deletion attempts."
         ]
       },
       {
-        id: "infra",
-        title: "4. Multi-DB Replication, Sharding & Security Sentinel",
+        id: "academic-checkup",
+        title: "4. Teacher Lesson Notes, Weekly Attendance Checkup, Fee Approvals & Subscription",
         steps: [
-          "Monitor live telemetry in the 'Mission Telemetry' tab: CPU Load, Active Connections, Heap Memory, and PostgreSQL pools.",
-          "Check the 'Intrusion Sentinel' tab to review unauthorized login attempts and inspect blocked intruder IP addresses.",
-          "Use the remote execution console to clear caches, force database sync, or backup cluster WAL logs."
+          "Open the '📚 Teacher Lesson Notes & Weekly Attendance Checkup Desk' to inspect submitted teacher registers and click '✅ Approve & Sign Off'.",
+          "Publish the official Academic Term Schedule (14-week calendar, exam windows, and vacation dates) to Teacher, Student, and Parent portals.",
+          "Review Accountant fee structures under '💳 Fee Approvals' and remit platform subscription dues via MoMo (0554594193) for 1-click Developer verification."
         ]
       }
     ]
   },
   TEACHER: {
-    title: "Teacher Academic Suite Operating Guide",
-    subtitle: "Attendance Registers, Syllabus Tracking, AI Exam Scanner & Gradebook Management",
-    badgeColor: "#34d399",
+    title: "Teacher & Academic Faculty Suite — Exact Operating Guide",
+    subtitle: "Multi-Format Question Bank (MCQ/Theory/True-False/Short Answer/Fill-in-Blank/Case Study), Exam Timetable Guide, Theory Grading & AI OMR Scanner",
+    badgeColor: "#10b981",
+    dashboardRoute: "/portal/teacher/dashboard",
     sections: [
       {
-        id: "attendance",
-        title: "1. Daily Student Attendance Register",
+        id: "multi-format-qbank",
+        title: "1. Multi-Format Question Bank & Scheduled Timed Examinations",
         steps: [
-          "Select your assigned class and active academic term from the workspace header.",
-          "Mark each student as Present (P), Absent (A), or Excused (E). Use 'Mark All Present' for fast bulk registration.",
-          "Click 'Save Attendance Register' to commit records to the institutional database.",
-          "Attendance percentages automatically update on Student and Parent dashboards in real-time."
+          "In the Examination & Grading Center, click '➕ Set Questions & Schedule Timed Exam' (or click any format pill directly on Card 1: '📘 Multiple Choice (MCQ)', '✍️ Theory / Essay', '☑️ True or False', '📝 Short Answer', '🔤 Fill in Blank', '🧪 Case Study / Practical').",
+          "Inside the Multi-Format Question Bank, click any high-contrast format tab ('🌐 All Formats / Mixed Bank', '📘 Multiple Choice (MCQ)', '✍️ Theory / Essay', '☑️ True or False', '📝 Short Answer', '🔤 Fill in Blank', or '🧪 Case Study / Practical') — all inscriptions are displayed in bright white/gold on dark colored buttons.",
+          "When you select a format tab, the workspace filters to that format (and automatically adds a starter question if none exists). Click '➕ Add [Format] Question' to add more questions of that format, or click '🎯 Set Entire Exam to [Format] Only' to make the entire paper pure MCQ, pure Theory, or pure True/False.",
+          "For Multiple Choice: enter options A, B, C, D and click the A/B/C/D badge (or dropdown) to mark the correct option. For True/False: click 'A. True ✓' or 'B. False ✓'. For Theory/Short Answer/Case Study: enter the prompt, Examiner Marking Guide rubric, keywords, and word limit. For Fill-in-Blank: click '➕ Insert Blank (____)' and enter the Accepted Exact Answer.",
+          "Set the Exam Date, Start Time, End Time, and Duration, then click '📢 Schedule & Publish Timed Exam Now' (or verify & publish). The exam immediately syncs to the Student Dashboard and the Official Examination Timetable Guide."
         ]
       },
       {
-        id: "scanner",
-        title: "2. AI Exam Scanner & Auto-Grading Suite",
+        id: "exam-timetable-guide",
+        title: "2. Official Examination Timetable Guide (Add Timetable Entries Anytime)",
         steps: [
-          "Click on the '🤖 AI Exam Scanner' tab to access objective optical paper grading.",
-          "Select the target class cohort and upload the student's optical answer sheet (PDF or image).",
-          "Click 'Verify Exam Sheet Quality' to inspect document clarity and unlock the AI evaluation engine.",
-          "Set your Teacher Master Answer Key (defining correct options A, B, C, D for each question).",
-          "Click 'Run AI OMR Scan & Grade Sheet' to evaluate the student's submission sequentially.",
-          "Switch between 'Marked Scripts' and 'Unmarked Scripts' tabs to review cohort progress.",
-          "For marked scripts, inspect question breakdowns and use 'Teacher Manual Override' to adjust any AI mistakes.",
-          "Click 'Publish Scores & Grades to All Enrolled Students' when the batch is complete."
+          "On Card 2 ('📅 Official Examination Timetable Guide'), click '➕ Add Timetable Entry' to immediately append a new exam time slot even when there are already existing exam sessions on the guide.",
+          "Click '🔄 Sync Exam Times' to automatically import all scheduled timed exams (with their dates, start/end times, and question formats) into the Examination Timetable Guide.",
+          "Click '📅 Create / Edit Timetable Guide' to open the full timetable editor modal. Use the '➕ Add Examination Timetable Entry for Students' top form bar to enter Course Code, Subject, Class/Cohort, Exam Date, Start Time, End Time, Exam Format (MCQ, Theory, True/False, Mixed, etc.), and Hall, then click '➕ Add Timetable Entry' or '⚡ + Add Another Timetable Row'.",
+          "Click '📢 Publish Examination Timetable to Students' to broadcast the updated timetable guide to all Student and Headmaster dashboards."
         ]
       },
       {
-        id: "gradebook",
-        title: "3. Continuous Assessment & Terminal Reports",
+        id: "theory-grading-scanner",
+        title: "3. Grading Student Typed Theory Scripts & AI OMR Optical Scanner",
         steps: [
-          "Input Class Work (30%), Mid-Term Exams (20%), and End-of-Term Examinations (50%).",
-          "The system automatically computes total percentages, STANINE/WASSCE/BECE grades, and class positions.",
-          "Enter personalized teacher remarks (e.g. 'Excellent analytical reasoning') for each student.",
-          "Submit terminal gradebooks to the Headmaster for final authorization."
+          "On Card 3 ('✍️ Submitted Student Online CBT & Typed Theory Answers'), click '👁️ Open & Grade Script' on any student submission to read their typed Theory/Essay, Short Answer, Case Study, and Fill-in-Blank answers.",
+          "Award marks per question against your marking rubric, add teacher feedback comments, and click '💾 Save & Publish Graded Script' to update the student's final score.",
+          "For paper-based objective exams, open '🤖 AI Exam Scanner', upload the scanned OMR sheet, set your A/B/C/D Master Answer Key, and click 'Run AI OMR Scan & Grade Sheet'."
         ]
       },
       {
-        id: "calendar",
-        title: "4. Academic Term Activities & Weekly Breakdown",
+        id: "attendance-curriculum",
+        title: "4. Daily/Weekly Attendance Registers, Archives, Lesson Notes & Curriculum",
         steps: [
-          "Click on the 'NUMBER OF WEEKS IN SCHOOL' inscription box to open the full 14-week curriculum schedule.",
-          "Filter by 'All 14 Weeks', 'Weeks 1–7', or 'Weeks 8–14' to review weekly focuses and required deliverables.",
-          "Review mid-term assessments, revision periods, and official vacation dates."
-        ]
-      }
-    ]
-  },
-  ADMIN: {
-    title: "Headmaster & Executive Command Cockpit Guide",
-    subtitle: "Institutional Governance, Admissions, Staffing, Facility Management & Compliance",
-    badgeColor: "#38bdf8",
-    sections: [
-      {
-        id: "cockpit",
-        title: "1. Institutional Overview & Strategic KPIs",
-        steps: [
-          "Monitor active student enrollment, total fees collected, faculty attendance, and term completion progress.",
-          "Click any KPI card to jump directly to its detailed management ledger.",
-          "Check system security status, voice authentication engine, and institutional backup health."
-        ]
-      },
-      {
-        id: "admissions",
-        title: "2. Student Admissions & Prospective Parent Reviews",
-        steps: [
-          "Navigate to the Admissions portal to view online applications submitted by prospective parents.",
-          "Review applicant biodata, previous school transcripts, and guardian contact details.",
-          "Approve admissions to automatically provision student index numbers and issue admission acceptance letters."
-        ]
-      },
-      {
-        id: "curriculum",
-        title: "3. Academic Schedule & Calendar Publication",
-        steps: [
-          "Publish official academic terms, number of weeks to spend in school (e.g. 14 weeks), and official vacation dates.",
-          "Your published term schedule automatically populates on Teacher, Student, and Parent dashboards.",
-          "Authorize terminal report cards and sign off on promotion lists at the end of each academic year."
-        ]
-      },
-      {
-        id: "subscription",
-        title: "4. Platform License & MoMo Continuation Dues",
-        steps: [
-          "Check the institution's active license expiration countdown.",
-          "Remit continuation dues via MoMo to merchant number 0554594193 (GABRIEL KUBI OSEI-APPIAH).",
-          "Submit your transaction reference directly from the dashboard for instant 1-click verification by the Developer."
-        ]
-      }
-    ]
-  },
-  ACCOUNTANT: {
-    title: "Finance & Bursar Desk Operating Guide",
-    subtitle: "Billing Schedules, Fee Collection, MoMo Reconciliation & GAAP Financial Statements",
-    badgeColor: "#f472b6",
-    sections: [
-      {
-        id: "billing",
-        title: "1. Term Fee Billing & Student Invoicing",
-        steps: [
-          "Generate term fee invoices categorized by class levels (Tuition, Feeding, ICT, PTA, Uniform).",
-          "Invoices automatically sync to Parent and Student dashboards with itemized breakdown.",
-          "Select institutional currency (GH₵, $, €, £) from the header currency switcher."
-        ]
-      },
-      {
-        id: "payments",
-        title: "2. Mobile Money & Bank Fee Collection",
-        steps: [
-          "Record incoming student fee payments via Mobile Money, Bank Deposit Slip, or Cash.",
-          "Issue digital receipts with unique receipt codes and print official fee clearance slips.",
-          "Monitor outstanding debtor lists and send automated fee reminder notices to guardians."
-        ]
-      },
-      {
-        id: "reports",
-        title: "3. Financial Ledgers & Audits",
-        steps: [
-          "Click 'GAAP / IFRS Audit' to review income statements, expense ledgers, and cash flow balance sheets.",
-          "Export financial statements to Excel or PDF for Board of Governors audits.",
-          "Track campus operational expenditure and staff petty cash disbursements."
+          "Mark daily student roll-call (Present, Absent, Late/Excused) and submit Weekly Attendance Registers to the Headmaster Checkup Desk.",
+          "Once approved by the Headmaster, click '📁 Archive Register' to store it permanently in 'View Archives'.",
+          "Upload weekly Lesson Notes, download GES/Cambridge/Tertiary curriculum guides, and host live class topic video sessions."
         ]
       }
     ]
   },
   STUDENT: {
-    title: "Student Academic & Learning Portal Guide",
-    subtitle: "Course Timetables, Examination Results, Transcripts & Virtual Classrooms",
+    title: "Student E-Learning & Online CBT Examination Portal Guide",
+    subtitle: "Official Examination Timetable Guide, Multi-Format Exam Answering (MCQ/Theory/True-False), Video Classroom & Transcripts",
     badgeColor: "#c084fc",
+    dashboardRoute: "/portal/student/dashboard",
     sections: [
       {
-        id: "academics",
-        title: "1. Course Materials & Timetables",
+        id: "timetable-guide",
+        title: "1. Official Examination Timetable & Revision Procedure Guide",
         steps: [
-          "View your active semester/term schedule and daily lecture timetable.",
-          "Download syllabi, assignments, and reading materials uploaded by your subject teachers.",
-          "Upload your solved assignment files and track submission deadlines."
+          "Open the '📝 Examination & Testing Center' tab to view the '📚 OFFICIAL EXAMINATION TIMETABLE & REVISION PROCEDURE GUIDE' published by your teachers.",
+          "Check each paper's Course Code, Subject Name, Exam Format badge (Multiple Choice, Theory / Essay, True/False, Mixed), Date, Start–End Time Window, Hall, Invigilator, Permitted Tools, and Syllabus Scope."
         ]
       },
       {
-        id: "results",
-        title: "2. Examination Results & Terminal Report Cards",
+        id: "multi-format-exam",
+        title: "2. Answering Multi-Format Online Examinations (MCQ, True/False, Fill-in-Blank & Theory)",
         steps: [
-          "Check your scores immediately once the teacher publishes AI-scanned exam batches.",
-          "Download your official terminal report card complete with letter grades, STANINE ratings, and teacher remarks.",
-          "Verify the authenticity of your transcript using the embedded cryptographic security QR code."
+          "Click '🚀 Begin Active Examination Now' when your scheduled exam window opens.",
+          "Use the Multi-Format Question Bank Section Navigator strip ('📘 Multiple Choice', '✍️ Theory / Essay', '☑️ True / False', '📝 Short Answer', '🔤 Fill in Blank', '🧪 Case Study') or the numbered buttons (tagged MC, TH, TF, SA, FB, CS) to jump directly to any question.",
+          "For Multiple Choice and True/False questions: click your chosen radio option (A, B, C, D or True/False).",
+          "For Fill-in-the-Blank questions: type the exact missing word, term, or formula in the answer box.",
+          "For Theory / Essay, Short Answer, and Case Study questions: type your complete written response in the multi-line essay editor (live word counter and auto-save are enabled).",
+          "Click '✅ Submit Final Examination' when finished. Objective questions are auto-graded immediately and typed Theory scripts are delivered to your Teacher's Grading Desk."
         ]
       },
       {
-        id: "fees",
-        title: "3. Fee Statements & Attendance Audit",
+        id: "elearning-reports",
+        title: "3. Video Classroom, Homework Submissions & Terminal Report Cards",
         steps: [
-          "View your term billing breakdown, payments made, and current outstanding balance.",
-          "Check your official attendance percentage to ensure exam eligibility compliance."
+          "Watch recorded topic lectures and join live virtual classes in the E-Learning Video Classroom.",
+          "Download reading materials, upload completed assignments, and download official QR-verified Terminal Report Cards."
         ]
       }
     ]
   },
   PARENT: {
-    title: "Parent & Guardian Portal Operating Guide",
-    subtitle: "Ward Academic Monitoring, Instant MoMo Fee Payments & Direct School Inquiries",
+    title: "Parent & Guardian Mobile Hub Operating Guide",
+    subtitle: "Multi-Child Academic Monitoring, Instant MoMo/Card Tuition Payment, Live School Bus GPS & Teacher Voice Notes",
     badgeColor: "#fbbf24",
+    dashboardRoute: "/portal/parent/dashboard",
     sections: [
       {
-        id: "wards",
-        title: "1. Ward Academic Progression & Attendance",
+        id: "ward-monitoring",
+        title: "1. Multi-Child Selector, Daily Attendance & Terminal Reports",
         steps: [
-          "Switch between your enrolled children using the child selector tab.",
-          "Monitor real-time daily attendance: receive instant alert if your child is marked absent.",
-          "Inspect terminal report cards, class rankings, and teacher feedback comments."
+          "Use the Ward Selector at the top of the Parent Dashboard to switch between your enrolled children.",
+          "Check real-time daily gate check-in/check-out attendance timestamps and subject performance trends.",
+          "View and print official Terminal Report Cards once published by faculty and approved by the Headmaster."
         ]
       },
       {
-        id: "momo",
-        title: "2. Instant School Fee Payments via Mobile Money",
+        id: "momo-tuition",
+        title: "2. Instant Tuition & Bus Fee Payment via Mobile Money / Bank Card",
         steps: [
-          "View your ward's fee statement and outstanding balance.",
-          "Click 'Pay School Fees via MoMo' to initiate payment directly from MTN Mobile Money, Telecel Cash, or AT Money.",
-          "Enter your mobile money number to authorize the prompt on your phone.",
-          "Upon approval, an official digital receipt is instantly generated and saved to your portal."
+          "Open the '💳 Fee Invoices & Payments' section to view itemized term bills and outstanding balances.",
+          "Click '💳 Pay School Fees via MoMo / Card', choose MTN MoMo, Telecel Cash, AirtelTigo Money, or Visa/Mastercard, and authorize payment.",
+          "Download your cryptographic digital receipt immediately — your payment automatically reconciles on the Accountant and Headmaster ledgers."
         ]
       },
       {
-        id: "communication",
-        title: "3. Teacher Inquiries & Voice Notes",
+        id: "bus-gps-voice",
+        title: "3. Live School Bus GPS Tracking & Teacher Voice Notes",
         steps: [
-          "Send direct inquiries to your ward's class teacher or the school Headmaster.",
-          "Record high-clarity voice notes using the Voice Note Recorder for urgent concerns.",
-          "Receive official school circulars, mid-term notices, and vacation announcements."
+          "Open '🚌 School Bus GPS Tracker' to view your child's assigned bus route, driver phone number, and real-time transit status.",
+          "Listen to recorded teacher voice notes and send direct WhatsApp/portal inquiries to teachers or the Headmaster."
+        ]
+      }
+    ]
+  },
+  ACCOUNTANT: {
+    title: "Accountant & Bursar Treasury Operating Guide",
+    subtitle: "Term Fee Invoicing, MoMo/Bank Auto-Reconciliation, Payroll Disbursement & GAAP Financial Statements",
+    badgeColor: "#f472b6",
+    dashboardRoute: "/portal/accountant/dashboard",
+    sections: [
+      {
+        id: "billing-invoices",
+        title: "1. Term Fee Billing & Multi-Currency Invoicing",
+        steps: [
+          "Click '➕ Generate Term Fee Invoice' to bill classes or individual students across Tuition, Boarding, Bus Transport, ICT, and Lab fees.",
+          "Switch display and reporting currency (GHS ₵, USD $, EUR €, GBP £, NGN ₦) anytime from the treasury bar.",
+          "Submit new fee schedules to the Headmaster for executive approval."
+        ]
+      },
+      {
+        id: "reconciliation-arrears",
+        title: "2. Mobile Money / Bank Reconciliation & Arrears Reminders",
+        steps: [
+          "Inspect live incoming MoMo, Bank Deposit, and Cash payments and click '🔄 Reconcile Ledger' to verify daily cash closing.",
+          "Issue official numbered receipts and fee clearance certificates for examination eligibility.",
+          "Click '📢 Send Arrears Reminder' to notify parents with overdue balances via SMS/WhatsApp."
+        ]
+      },
+      {
+        id: "payroll-gaap",
+        title: "3. Staff Payroll Disbursement & GAAP / IFRS Financial Statements",
+        steps: [
+          "Process monthly faculty and staff payroll synced from HR salary tiers (computing basic pay, allowances, SSNIT, and PAYE).",
+          "Open '📊 GAAP Financial Reports' to generate and export the Trial Balance, Income Statement, and Balance Sheet."
         ]
       }
     ]
   },
   HR: {
-    title: "Directorate of Human Resources Operating Guide",
-    subtitle: "Faculty Directory, Biometric Attendance, Leave Approvals & Payroll Processing",
-    badgeColor: "#a855f7",
+    title: "Human Resources (HR) & Personnel Portal Operating Guide",
+    subtitle: "Staff Recruitment, Biometric Clock-In Audit, Leave Approvals, Salary Grouping & Appraisals",
+    badgeColor: "#f97316",
+    dashboardRoute: "/portal/hr/dashboard",
     sections: [
       {
-        id: "staff",
-        title: "1. Employee Records & Contracts",
+        id: "staff-onboarding",
+        title: "1. Staff Recruitment, Directory & Department Assignment",
         steps: [
-          "Maintain comprehensive personnel profiles for teaching and non-teaching staff.",
-          "Track qualification certificates, appointment letters, and emergency contacts.",
-          "Issue new faculty onboarding credentials and departmental role assignments."
+          "Click '➕ Register New Staff / Faculty' to onboard teachers, accountants, security, drivers, and administrative staff.",
+          "Assign staff IDs, academic departments, employment contracts, and qualification records."
         ]
       },
       {
-        id: "attendance",
-        title: "2. Biometric Shift Attendance & Leave Approvals",
+        id: "biometric-leave",
+        title: "2. Biometric Attendance Audit & Leave Adjudication",
         steps: [
-          "Inspect daily biometric facial clock-ins and clock-outs across all departments.",
-          "Review incoming staff leave requests (Maternity, Sick, Annual, Study).",
-          "Approve or deny leave applications with formal HR rationale."
+          "Monitor daily staff biometric clock-in and clock-out timestamps and lateness flags.",
+          "Review pending staff leave applications (Annual, Sick, Maternity, Study) and click '✅ Approve Leave' or '❌ Decline'."
         ]
       },
       {
-        id: "payroll",
-        title: "3. Monthly Payroll & Salary Computation",
+        id: "salary-appraisal",
+        title: "3. Salary Tier Grouping & Performance Appraisals",
         steps: [
-          "Compute basic salaries, teaching allowances, SSNIT contributions, and PAYE tax deductions.",
-          "Generate individual staff payslips and disburse bank payroll schedules.",
-          "Export institutional payroll summary reports for bursar reconciliation."
+          "Configure salary grade tiers, base pay, and allowances under '💰 Salary Grouping' (automatically synced to the Accountant Payroll).",
+          "Record termly staff KPI appraisals and print official HR letters."
         ]
       }
     ]
   },
   STAFF: {
-    title: "Campus Operations & Support Staff Guide",
-    subtitle: "Facilities Maintenance, CCTV Security, Fleet Transport & Inventory Depot",
-    badgeColor: "#64748b",
+    title: "Non-Teaching & Campus Operations Staff Operating Guide",
+    subtitle: "Campus Gate QR Turnstile Security, Bus Fleet Dispatch, Sickbay Logs & Facility Maintenance",
+    badgeColor: "#38bdf8",
+    dashboardRoute: "/portal/staff/dashboard",
     sections: [
       {
-        id: "facilities",
-        title: "1. Facility Work Orders & Maintenance",
+        id: "gate-security",
+        title: "1. Campus Gate QR Security & Visitor Turnstile Logging",
         steps: [
-          "Inspect pending maintenance requests from teachers and administration.",
-          "Update work order statuses (In Progress, Resolved, Needs Inspection).",
-          "Log utility readings (power, water reservoirs, generator diesel levels)."
+          "Use '🛡️ Gate QR Scanner' to verify student and staff digital ID cards at campus entry/exit turnstiles.",
+          "Register campus visitors, issue temporary visitor passes, and escalate security alerts to the Headmaster."
         ]
       },
       {
-        id: "security",
-        title: "2. CCTV Surveillance & Campus Security",
+        id: "fleet-facility",
+        title: "2. School Bus Fleet Dispatch, Sickbay & Facility Work Orders",
         steps: [
-          "Monitor live camera feeds across primary campus gates, classrooms, and perimeters.",
-          "Log campus visitors, vehicular access, and gate passes.",
-          "Report security incidents directly to the Headmaster and Developer Sentinel."
-        ]
-      },
-      {
-        id: "logistics",
-        title: "3. Transport Fleet & Inventory Depot",
-        steps: [
-          "Track school buses on daily student pickup and drop-off routes.",
-          "Log vehicle maintenance schedules, fuel consumption, and driver logs.",
-          "Manage textbook depot, stationery distribution, and science lab apparatus supplies."
+          "Log daily school bus departure and arrival status so Parents and the Headmaster see live transit updates.",
+          "Submit and update facility maintenance work orders (electrical, plumbing, furniture, generator fuel) and sickbay clinic logs."
         ]
       }
     ]
   },
   ALUMNI: {
     title: "Alumni & Convocation Network Operating Guide",
-    subtitle: "Cumulative Transcripts, Completion Batches, Graduate Verification & Institutional Pledges",
-    badgeColor: "#818cf8",
+    subtitle: "Official Academic Transcripts, Employer Credential Verification, Endowment Pledges & Mentorship",
+    badgeColor: "#eab308",
+    dashboardRoute: "/portal/alumni/dashboard",
     sections: [
       {
-        id: "transcripts",
-        title: "1. Cumulative Academic Transcripts & Verification",
+        id: "transcripts-verify",
+        title: "1. Official Transcript Requests & Cryptographic Degree Verification",
         steps: [
-          "Select your graduation batch year and level filter to inspect verified historical course records.",
-          "Download or print official stamped Alumni Transcripts bearing the school's institutional seal.",
-          "Use 'Verify Graduate Registry' to validate alumni index numbers for employers or universities."
+          "Select your graduation cohort year and click '📜 Request Official Transcript' to download or order stamped academic transcripts.",
+          "Use '🔍 Verify Graduate Registry' with your Alumni Verification Code so employers and universities can validate credentials instantly."
         ]
       },
       {
-        id: "giving",
-        title: "2. Alumni Giving, Pledges & Mentorship",
+        id: "endowment-mentorship",
+        title: "2. Alma Mater Endowment Pledges & Career Mentorship",
         steps: [
-          "Submit financial pledges or project donations directly synced to the Accountant's Institutional Ledger.",
-          "RSVP or schedule virtual Alumni Homecoming & Zoom mentorship sessions."
+          "Contribute to campus infrastructure and scholarship endowment funds via Mobile Money or Bank Card (synced to the Accountant Ledger).",
+          "Post internship and career opportunities and mentor graduating students."
         ]
       }
     ]
   },
   INVENTORY: {
-    title: "Inventory Depot & Procurement Operations Guide",
-    subtitle: "Stock Ledger, Category Audits, Purchase Requisitions & Department Allocations",
-    badgeColor: "#38bdf8",
+    title: "Inventory, Stores & Procurement Depot Operating Guide",
+    subtitle: "Real-Time Stock Ledger, Low-Stock Alerts, Departmental Requisitions & Supplier Purchase Orders",
+    badgeColor: "#84cc16",
+    dashboardRoute: "/portal/inventory/dashboard",
     sections: [
       {
-        id: "catalog",
-        title: "1. Real-Time Depot Catalog & Stock Alerts",
+        id: "stock-catalog",
+        title: "1. Real-Time Depot Catalog, Low-Stock Alerts & Batch Quarantine",
         steps: [
-          "Filter consumables and fixed assets across Science Lab, Stationery, Textbooks, ICT, and Sports.",
-          "Monitor low-stock indicators and register new inventory items via '+ Register New Stock Item'."
+          "Click '➕ Register New Stock Item' to log textbooks, science lab chemicals, ICT equipment, uniforms, and stationery.",
+          "Monitor automatic low-stock reorder flags and quarantine damaged or expired stock batches."
         ]
       },
       {
-        id: "requisitions",
-        title: "2. Purchase Requisitions & Headmaster/Accountant Approval",
+        id: "requisitions-po",
+        title: "2. Departmental Requisitions & Supplier Purchase Orders",
         steps: [
-          "Click 'Submit Purchase Requisition' to request restocking quantities with academic justification.",
-          "Track approval decisions pushed in real time from the Headmaster and Accountant desks."
+          "Review resource requisitions submitted by academic departments and click '✅ Approve & Issue Stock'.",
+          "Generate Supplier Purchase Orders and Goods Received Notes (GRN) synced with the Headmaster and Accountant desks."
+        ]
+      }
+    ]
+  },
+  DEVELOPER: {
+    title: "Platform Developer & Global Sovereignty Console Guide",
+    subtitle: "Multi-Tenant Onboarding, 7-Day Grace Auto-Lock, Live Schools GPS Map, Intrusion Sentinel & DB Sharding",
+    badgeColor: "#38bdf8",
+    dashboardRoute: "/developer",
+    sections: [
+      {
+        id: "onboarding-lock",
+        title: "1. Tenant Onboarding, Per-Student Subscription Billing & 7-Day Grace Auto-Lock",
+        steps: [
+          "Inspect onboarded institutions in the Tenant Registry, verify MoMo payments (0554594193), and click '✓ Approve & Provision Enclave'.",
+          "Monitor automated per-student subscription rates ($3 Basic / $5 SHS / $10 Tertiary) and the 14-day pre-expiry reminder + 7-day grace period auto-lock engine.",
+          "Use the 1-click Padlock toggle to manually Lock or Unlock any school tenant."
+        ]
+      },
+      {
+        id: "gps-sentinel-video",
+        title: "2. Live Registered Schools GPS Map, Intrusion Sentinel & Remote Video Support",
+        steps: [
+          "Open '🗺️ Live Tenant Map' to view GPS coordinates of every registered school and launch turn-by-turn Google Maps navigation.",
+          "Inspect '🛡️ Intrusion Sentinel' to review and block unauthorized login IPs.",
+          "Launch WebRTC Live Video Support calls with Headmasters and manage PostgreSQL database shards."
         ]
       }
     ]
   }
 };
 
-export default function UniversalRoleGuideModal({ role = "DEVELOPER", isOpen, onClose }) {
-  const guideData = ROLE_GUIDES[role.toUpperCase()] || ROLE_GUIDES.DEVELOPER;
-  const storageKey = `gbs_user_personal_guide_notes_${role.toLowerCase()}`;
+const ROLE_ORDER = [
+  { key: "ADMIN", label: "👔 Headmaster" },
+  { key: "TEACHER", label: "👩‍🏫 Teacher" },
+  { key: "STUDENT", label: "🎓 Student" },
+  { key: "PARENT", label: "👨‍👩‍👧 Parent" },
+  { key: "ACCOUNTANT", label: "💳 Accountant" },
+  { key: "HR", label: "👥 HR Officer" },
+  { key: "STAFF", label: "🛠️ Staff" },
+  { key: "ALUMNI", label: "🎖️ Alumni" },
+  { key: "INVENTORY", label: "📦 Inventory" },
+  { key: "DEVELOPER", label: "🛡️ Developer" }
+];
 
-  const [activeTab, setActiveTab] = useState("SOP");
+export default function UniversalRoleGuideModal({ role = "DEVELOPER", isOpen, onClose }) {
+  const normalizeRoleKey = (rInput) => {
+    const clean = String(rInput || "DEVELOPER").toUpperCase().trim();
+    if (ROLE_GUIDES[clean]) return clean;
+    if (clean.includes("HEADMASTER") || clean.includes("PRINCIPAL") || clean.includes("ADMIN")) return "ADMIN";
+    if (clean.includes("TEACH")) return "TEACHER";
+    if (clean.includes("STUD")) return "STUDENT";
+    if (clean.includes("PAREN")) return "PARENT";
+    if (clean.includes("ACCOUNT") || clean.includes("BURSAR")) return "ACCOUNTANT";
+    if (clean.includes("HR")) return "HR";
+    if (clean.includes("ALUMN")) return "ALUMNI";
+    if (clean.includes("INVENT")) return "INVENTORY";
+    if (clean.includes("STAFF")) return "STAFF";
+    return "DEVELOPER";
+  };
+
+  const [selectedRoleKey, setSelectedRoleKey] = useState(() => normalizeRoleKey(role));
+  const [activeTab, setActiveTab] = useState("SOP"); // "SOP" | "VIDEO" | "NOTES"
   const [searchQuery, setSearchQuery] = useState("");
-  const [personalNotes, setPersonalNotes] = useState(() => {
-    return localStorage.getItem(storageKey) || "";
-  });
   const [savedFeedback, setSavedFeedback] = useState(false);
   const [showRoleVideoModal, setShowRoleVideoModal] = useState(false);
+  const [isSpeaking, setIsSpeaking] = useState(false);
 
-  const normalizedRoleVideoId = (() => {
-    const r = String(role || "").toUpperCase();
-    if (r === "HR") return "STAFF";
-    if (["ADMIN", "TEACHER", "STUDENT", "PARENT", "ACCOUNTANT", "STAFF"].includes(r)) return r;
-    return "MASTER";
-  })();
+  useEffect(() => {
+    setSelectedRoleKey(normalizeRoleKey(role));
+  }, [role]);
+
+  const guideData = ROLE_GUIDES[selectedRoleKey] || ROLE_GUIDES.ADMIN;
+  const storageKey = `gbs_user_personal_guide_notes_${selectedRoleKey.toLowerCase()}`;
+  const [personalNotes, setPersonalNotes] = useState(() => localStorage.getItem(storageKey) || "");
 
   useEffect(() => {
     setPersonalNotes(localStorage.getItem(storageKey) || "");
-  }, [role, storageKey]);
+  }, [selectedRoleKey, storageKey]);
+
+  const matchedVideoMeta =
+    REAL_ACTION_ROLE_VIDEOS.find((v) => v.id === selectedRoleKey) || REAL_ACTION_ROLE_VIDEOS[0];
 
   if (!isOpen) return null;
 
@@ -392,6 +386,23 @@ export default function UniversalRoleGuideModal({ role = "DEVELOPER", isOpen, on
     localStorage.setItem(storageKey, personalNotes);
     setSavedFeedback(true);
     setTimeout(() => setSavedFeedback(false), 3000);
+  };
+
+  const handleSpeakGuide = () => {
+    if (typeof window === "undefined" || !("speechSynthesis" in window)) return;
+    if (isSpeaking) {
+      window.speechSynthesis.cancel();
+      setIsSpeaking(false);
+      return;
+    }
+    window.speechSynthesis.cancel();
+    const fullText = `${guideData.title}. ${guideData.sections.map((s) => `${s.title}. ${s.steps.join(" ")}`).join(" ")}`;
+    const utter = new SpeechSynthesisUtterance(fullText);
+    utter.rate = 0.98;
+    utter.onend = () => setIsSpeaking(false);
+    utter.onerror = () => setIsSpeaking(false);
+    setIsSpeaking(true);
+    window.speechSynthesis.speak(utter);
   };
 
   const filteredSections = guideData.sections.filter((s) => {
@@ -404,342 +415,547 @@ export default function UniversalRoleGuideModal({ role = "DEVELOPER", isOpen, on
 
   return (
     <>
-    <div
-      className="modal-backdrop"
-      onClick={onClose}
-      style={{
-        position: "fixed",
-        inset: 0,
-        background: "rgba(2, 6, 23, 0.85)",
-        backdropFilter: "blur(8px)",
-        display: "flex",
-        alignItems: "center",
-        justifyContent: "center",
-        zIndex: 9999,
-        padding: "1rem"
-      }}
-    >
       <div
-        className="modal-window"
-        onClick={(e) => e.stopPropagation()}
+        className="modal-backdrop"
+        onClick={onClose}
         style={{
-          width: "100%",
-          maxWidth: "880px",
-          maxHeight: "92dvh",
-          background: "linear-gradient(145deg, #0f172a 0%, #020617 100%)",
-          border: `2px solid ${guideData.badgeColor}`,
-          borderRadius: "16px",
-          boxShadow: `0 20px 50px rgba(0, 0, 0, 0.8), 0 0 30px ${guideData.badgeColor}33`,
+          position: "fixed",
+          inset: 0,
+          background: "rgba(2, 6, 23, 0.88)",
+          backdropFilter: "blur(10px)",
           display: "flex",
-          flexDirection: "column",
-          overflow: "hidden",
-          color: "#f8fafc"
+          alignItems: "center",
+          justifyContent: "center",
+          zIndex: 99999,
+          padding: "1rem"
         }}
       >
-        {/* Header */}
         <div
+          className="modal-window"
+          onClick={(e) => e.stopPropagation()}
           style={{
-            padding: "18px 24px",
-            borderBottom: "1px solid rgba(255, 255, 255, 0.1)",
-            background: "rgba(15, 23, 42, 0.95)",
+            width: "100%",
+            maxWidth: "980px",
+            maxHeight: "93dvh",
+            background: "linear-gradient(145deg, #0f172a 0%, #020617 100%)",
+            border: `2px solid ${guideData.badgeColor}`,
+            borderRadius: "16px",
+            boxShadow: `0 20px 50px rgba(0, 0, 0, 0.85), 0 0 30px ${guideData.badgeColor}33`,
             display: "flex",
-            justifyContent: "space-between",
-            alignItems: "center",
-            flexWrap: "wrap",
-            gap: "10px"
+            flexDirection: "column",
+            overflow: "hidden",
+            color: "#f8fafc"
           }}
         >
-          <div style={{ display: "flex", alignItems: "center", gap: "12px" }}>
-            <span style={{ fontSize: "2rem" }}>📖</span>
-            <div>
-              <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
-                <h3 style={{ margin: 0, fontSize: "1.15rem", fontWeight: 900, color: "#f8fafc" }}>
-                  {guideData.title}
-                </h3>
-                <span
-                  style={{
-                    background: `${guideData.badgeColor}25`,
-                    color: guideData.badgeColor,
-                    border: `1px solid ${guideData.badgeColor}`,
-                    fontSize: "0.7rem",
-                    fontWeight: 800,
-                    padding: "2px 8px",
-                    borderRadius: "999px"
-                  }}
-                >
-                  OFFICIAL SOP
-                </span>
-              </div>
-              <span style={{ fontSize: "0.8rem", color: "#94a3b8", display: "block", marginTop: "2px" }}>
-                {guideData.subtitle}
-              </span>
-            </div>
-          </div>
-
-          <button
-            type="button"
-            onClick={onClose}
+          {/* Header */}
+          <div
             style={{
-              background: "rgba(255, 255, 255, 0.08)",
-              border: "1px solid rgba(255, 255, 255, 0.2)",
-              color: "#cbd5e1",
-              borderRadius: "8px",
-              width: "36px",
-              height: "36px",
+              padding: "16px 22px",
+              borderBottom: "1px solid rgba(255, 255, 255, 0.1)",
+              background: "rgba(15, 23, 42, 0.96)",
               display: "flex",
+              justifyContent: "space-between",
               alignItems: "center",
-              justifyContent: "center",
-              fontSize: "1.1rem",
-              fontWeight: 800,
-              cursor: "pointer"
+              flexWrap: "wrap",
+              gap: "10px"
             }}
           >
-            ✕
-          </button>
-        </div>
-
-        {/* Navigation Tabs & Search */}
-        <div
-          style={{
-            padding: "12px 24px",
-            background: "rgba(2, 6, 23, 0.6)",
-            borderBottom: "1px solid rgba(255, 255, 255, 0.08)",
-            display: "flex",
-            justifyContent: "space-between",
-            alignItems: "center",
-            flexWrap: "wrap",
-            gap: "12px"
-          }}
-        >
-          <div style={{ display: "flex", gap: "10px" }}>
-            <button
-              type="button"
-              onClick={() => setActiveTab("SOP")}
-              style={{
-                padding: "8px 16px",
-                borderRadius: "8px",
-                border: activeTab === "SOP" ? `2px solid ${guideData.badgeColor}` : "1px solid rgba(255, 255, 255, 0.15)",
-                background: activeTab === "SOP" ? `${guideData.badgeColor}25` : "rgba(255, 255, 255, 0.05)",
-                color: activeTab === "SOP" ? "#ffffff" : "#94a3b8",
-                fontWeight: 800,
-                fontSize: "0.84rem",
-                cursor: "pointer"
-              }}
-            >
-              📋 Step-by-Step Operating Guide
-            </button>
-            <button
-              type="button"
-              onClick={() => setActiveTab("NOTES")}
-              style={{
-                padding: "8px 16px",
-                borderRadius: "8px",
-                border: activeTab === "NOTES" ? "2px solid #f59e0b" : "1px solid rgba(255, 255, 255, 0.15)",
-                background: activeTab === "NOTES" ? "rgba(245, 158, 11, 0.2)" : "rgba(255, 255, 255, 0.05)",
-                color: activeTab === "NOTES" ? "#fde68a" : "#94a3b8",
-                fontWeight: 800,
-                fontSize: "0.84rem",
-                cursor: "pointer"
-              }}
-            >
-              ✍️ My Custom Instructions & Notes
-            </button>
-          </div>
-
-          {activeTab === "SOP" && (
-            <input
-              type="text"
-              placeholder="🔍 Search instructions..."
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-              style={{
-                padding: "8px 14px",
-                background: "rgba(15, 23, 42, 0.8)",
-                border: "1px solid rgba(255, 255, 255, 0.2)",
-                borderRadius: "8px",
-                color: "#ffffff",
-                fontSize: "0.82rem",
-                width: "220px",
-                outline: "none"
-              }}
-            />
-          )}
-        </div>
-
-        {/* Modal Body */}
-        <div style={{ flex: 1, overflowY: "auto", padding: "20px 24px" }}>
-          {activeTab === "SOP" ? (
-            <div>
-              {filteredSections.length === 0 ? (
-                <div style={{ textAlign: "center", padding: "2.5rem", color: "#94a3b8" }}>
-                  <span style={{ fontSize: "2rem", display: "block", marginBottom: "8px" }}>🔍</span>
-                  No instructions matching "{searchQuery}". Try searching for another operational term.
-                </div>
-              ) : (
-                filteredSections.map((sec, idx) => (
-                  <div
-                    key={sec.id || idx}
+            <div style={{ display: "flex", alignItems: "center", gap: "12px" }}>
+              <span style={{ fontSize: "1.9rem" }}>📖</span>
+              <div>
+                <div style={{ display: "flex", alignItems: "center", gap: "8px", flexWrap: "wrap" }}>
+                  <h3 style={{ margin: 0, fontSize: "1.12rem", fontWeight: 900, color: "#f8fafc" }}>
+                    {guideData.title}
+                  </h3>
+                  <span
                     style={{
-                      background: "rgba(15, 23, 42, 0.75)",
-                      border: "1.5px solid rgba(255, 255, 255, 0.1)",
-                      borderRadius: "12px",
-                      padding: "16px 20px",
-                      marginBottom: "16px",
-                      boxShadow: "0 4px 14px rgba(0, 0, 0, 0.3)"
+                      background: `${guideData.badgeColor}25`,
+                      color: guideData.badgeColor,
+                      border: `1px solid ${guideData.badgeColor}`,
+                      fontSize: "0.7rem",
+                      fontWeight: 800,
+                      padding: "2px 8px",
+                      borderRadius: "999px"
                     }}
                   >
-                    <h4
-                      style={{
-                        margin: "0 0 12px 0",
-                        color: guideData.badgeColor,
-                        fontSize: "1rem",
-                        fontWeight: 800,
-                        display: "flex",
-                        alignItems: "center",
-                        gap: "8px"
-                      }}
-                    >
-                      <span>⚡</span> {sec.title}
-                    </h4>
-                    <ol style={{ margin: 0, paddingLeft: "20px", display: "flex", flexDirection: "column", gap: "8px" }}>
-                      {sec.steps.map((step, sIdx) => (
-                        <li key={sIdx} style={{ fontSize: "0.88rem", color: "#e2e8f0", lineHeight: "1.5" }}>
-                          {step}
-                        </li>
-                      ))}
-                    </ol>
-                  </div>
-                ))
-              )}
-            </div>
-          ) : (
-            <div style={{ display: "flex", flexDirection: "column", gap: "14px" }}>
-              <div
-                style={{
-                  background: "rgba(245, 158, 11, 0.15)",
-                  border: "1px solid #f59e0b",
-                  borderRadius: "10px",
-                  padding: "12px 16px",
-                  display: "flex",
-                  alignItems: "center",
-                  gap: "10px"
-                }}
-              >
-                <span style={{ fontSize: "1.4rem" }}>💡</span>
-                <span style={{ fontSize: "0.85rem", color: "#fef3c7", lineHeight: "1.4" }}>
-                  <strong>Personalize Your Workflow:</strong> Type custom instructions, departmental reminders, or standard operating notes for your role. Everything you save here is stored permanently in your browser and available every time you sign in.
+                    EXACT ROLE SOP • {selectedRoleKey}
+                  </span>
+                </div>
+                <span style={{ fontSize: "0.78rem", color: "#cbd5e1", display: "block", marginTop: "2px" }}>
+                  {guideData.subtitle}
                 </span>
               </div>
+            </div>
 
-              <textarea
-                rows={12}
-                value={personalNotes}
-                onChange={(e) => setPersonalNotes(e.target.value)}
-                placeholder={`Type your custom ${role} guidelines, daily checklist, or procedural instructions here...`}
+            <div style={{ display: "flex", gap: "8px", alignItems: "center", flexWrap: "wrap" }}>
+              <button
+                type="button"
+                onClick={handleSpeakGuide}
                 style={{
-                  width: "100%",
-                  padding: "14px",
-                  borderRadius: "10px",
-                  background: "rgba(2, 6, 23, 0.8)",
-                  border: "1.5px solid rgba(56, 189, 248, 0.3)",
-                  color: "#f8fafc",
-                  fontSize: "0.9rem",
-                  lineHeight: "1.6",
-                  fontFamily: "inherit",
-                  boxSizing: "border-box",
+                  background: isSpeaking ? "linear-gradient(135deg, #ef4444, #b91c1c)" : "linear-gradient(135deg, #059669, #047857)",
+                  border: "1px solid #34d399",
+                  color: "#ffffff",
+                  padding: "7px 12px",
+                  borderRadius: "8px",
+                  fontSize: "0.76rem",
+                  fontWeight: 800,
+                  cursor: "pointer"
+                }}
+              >
+                {isSpeaking ? "⏹ Stop Reading" : "🔊 Read Operating Guide Aloud"}
+              </button>
+              <button
+                type="button"
+                onClick={() => setShowRoleVideoModal(true)}
+                style={{
+                  background: "linear-gradient(135deg, #f59e0b, #d97706)",
+                  border: "1px solid #fde68a",
+                  color: "#020617",
+                  padding: "7px 12px",
+                  borderRadius: "8px",
+                  fontSize: "0.76rem",
+                  fontWeight: 900,
+                  cursor: "pointer"
+                }}
+              >
+                🎬 Full 10-Role Video Theatre
+              </button>
+              <button
+                type="button"
+                onClick={onClose}
+                style={{
+                  background: "rgba(239, 68, 68, 0.2)",
+                  border: "1px solid #ef4444",
+                  color: "#fca5a5",
+                  borderRadius: "8px",
+                  width: "36px",
+                  height: "36px",
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "center",
+                  fontSize: "1.05rem",
+                  fontWeight: 800,
+                  cursor: "pointer"
+                }}
+              >
+                ✕
+              </button>
+            </div>
+          </div>
+
+          {/* All 10 Roles Switcher Bar */}
+          <div
+            style={{
+              padding: "8px 20px",
+              background: "#020617",
+              borderBottom: "1px solid rgba(148, 163, 184, 0.2)",
+              display: "flex",
+              gap: "6px",
+              flexWrap: "wrap",
+              alignItems: "center"
+            }}
+          >
+            <span style={{ fontSize: "0.7rem", color: "#fde68a", fontWeight: 800, marginRight: "4px" }}>
+              SWITCH ROLE GUIDE:
+            </span>
+            {ROLE_ORDER.map((rItem) => {
+              const isAct = selectedRoleKey === rItem.key;
+              return (
+                <button
+                  key={rItem.key}
+                  type="button"
+                  onClick={() => setSelectedRoleKey(rItem.key)}
+                  style={{
+                    background: isAct ? "linear-gradient(135deg, #0284c7, #0369a1)" : "rgba(30, 41, 59, 0.85)",
+                    color: "#ffffff",
+                    border: isAct ? "1.5px solid #fbbf24" : "1px solid rgba(148, 163, 184, 0.3)",
+                    padding: "4px 9px",
+                    borderRadius: "6px",
+                    fontSize: "0.72rem",
+                    fontWeight: 800,
+                    cursor: "pointer"
+                  }}
+                >
+                  {rItem.label}
+                </button>
+              );
+            })}
+          </div>
+
+          {/* Navigation Tabs & Search */}
+          <div
+            style={{
+              padding: "10px 22px",
+              background: "rgba(2, 6, 23, 0.65)",
+              borderBottom: "1px solid rgba(255, 255, 255, 0.08)",
+              display: "flex",
+              justifyContent: "space-between",
+              alignItems: "center",
+              flexWrap: "wrap",
+              gap: "10px"
+            }}
+          >
+            <div style={{ display: "flex", gap: "8px", flexWrap: "wrap" }}>
+              <button
+                type="button"
+                onClick={() => setActiveTab("SOP")}
+                style={{
+                  padding: "7px 14px",
+                  borderRadius: "8px",
+                  border: activeTab === "SOP" ? `2px solid ${guideData.badgeColor}` : "1px solid rgba(255, 255, 255, 0.15)",
+                  background: activeTab === "SOP" ? "rgba(15, 23, 42, 0.95)" : "rgba(30, 41, 59, 0.6)",
+                  color: "#ffffff",
+                  fontWeight: 800,
+                  fontSize: "0.8rem",
+                  cursor: "pointer"
+                }}
+              >
+                📋 Step-by-Step Operating Guide &amp; Exact Commands
+              </button>
+              <button
+                type="button"
+                onClick={() => setActiveTab("VIDEO")}
+                style={{
+                  padding: "7px 14px",
+                  borderRadius: "8px",
+                  border: activeTab === "VIDEO" ? "2px solid #fbbf24" : "1px solid rgba(251, 191, 36, 0.4)",
+                  background: activeTab === "VIDEO" ? "linear-gradient(135deg, #d97706, #b45309)" : "rgba(120, 53, 15, 0.45)",
+                  color: "#ffffff",
+                  fontWeight: 800,
+                  fontSize: "0.8rem",
+                  cursor: "pointer"
+                }}
+              >
+                🎬 Watch Role Presentation Video
+              </button>
+              <button
+                type="button"
+                onClick={() => setActiveTab("NOTES")}
+                style={{
+                  padding: "7px 14px",
+                  borderRadius: "8px",
+                  border: activeTab === "NOTES" ? "2px solid #10b981" : "1px solid rgba(255, 255, 255, 0.15)",
+                  background: activeTab === "NOTES" ? "rgba(5, 150, 105, 0.3)" : "rgba(30, 41, 59, 0.6)",
+                  color: "#ffffff",
+                  fontWeight: 800,
+                  fontSize: "0.8rem",
+                  cursor: "pointer"
+                }}
+              >
+                ✍️ My Custom Instructions &amp; Notes
+              </button>
+            </div>
+
+            {activeTab === "SOP" && (
+              <input
+                type="text"
+                placeholder="🔍 Search role commands..."
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                style={{
+                  padding: "7px 12px",
+                  background: "rgba(15, 23, 42, 0.9)",
+                  border: "1px solid rgba(255, 255, 255, 0.25)",
+                  borderRadius: "8px",
+                  color: "#ffffff",
+                  fontSize: "0.8rem",
+                  width: "210px",
                   outline: "none"
                 }}
               />
+            )}
+          </div>
 
-              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-                <div>
-                  {savedFeedback && (
-                    <span style={{ color: "#34d399", fontWeight: 800, fontSize: "0.85rem", display: "flex", alignItems: "center", gap: "6px" }}>
-                      ✓ Your custom guidelines have been saved successfully!
-                    </span>
-                  )}
-                </div>
-                <button
-                  type="button"
-                  onClick={handleSaveNotes}
+          {/* Modal Body */}
+          <div style={{ flex: 1, overflowY: "auto", padding: "18px 22px" }}>
+            {activeTab === "SOP" && (
+              <div>
+                {/* Embedded Quick Video Presentation Banner at top of Operating Guide */}
+                <div
                   style={{
-                    padding: "10px 22px",
-                    background: "linear-gradient(135deg, #10b981 0%, #059669 100%)",
-                    color: "#ffffff",
-                    border: "none",
-                    borderRadius: "8px",
-                    fontWeight: 900,
-                    fontSize: "0.88rem",
-                    cursor: "pointer",
-                    boxShadow: "0 4px 14px rgba(16, 185, 129, 0.4)",
-                    display: "inline-flex",
+                    background: "linear-gradient(135deg, rgba(30, 41, 59, 0.95), rgba(15, 23, 42, 0.95))",
+                    border: "1.5px solid rgba(245, 158, 11, 0.55)",
+                    borderRadius: "12px",
+                    padding: "12px 16px",
+                    marginBottom: "16px",
+                    display: "flex",
+                    justifyContent: "space-between",
                     alignItems: "center",
-                    gap: "6px"
+                    flexWrap: "wrap",
+                    gap: "12px"
                   }}
                 >
-                  💾 Save My Guide
-                </button>
-              </div>
-            </div>
-          )}
-        </div>
+                  <div style={{ display: "flex", alignItems: "center", gap: "12px" }}>
+                    <img
+                      src={matchedVideoMeta.poster}
+                      alt={matchedVideoMeta.title}
+                      style={{ width: "72px", height: "48px", borderRadius: "8px", objectFit: "cover", border: "1.5px solid #fbbf24" }}
+                    />
+                    <div>
+                      <strong style={{ color: "#fde68a", fontSize: "0.86rem", display: "block" }}>
+                        🎬 {matchedVideoMeta.title}
+                      </strong>
+                      <span style={{ color: "#cbd5e1", fontSize: "0.76rem" }}>
+                        Watch the visual presentation of every command, tab, and action for {selectedRoleKey}.
+                      </span>
+                    </div>
+                  </div>
+                  <div style={{ display: "flex", gap: "8px" }}>
+                    <button
+                      type="button"
+                      onClick={() => setActiveTab("VIDEO")}
+                      style={{
+                        background: "linear-gradient(135deg, #0284c7, #0369a1)",
+                        color: "#ffffff",
+                        border: "1px solid #38bdf8",
+                        padding: "7px 12px",
+                        borderRadius: "8px",
+                        fontSize: "0.75rem",
+                        fontWeight: 800,
+                        cursor: "pointer"
+                      }}
+                    >
+                      ▶ Play Embedded Video Here
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setShowRoleVideoModal(true)}
+                      style={{
+                        background: "linear-gradient(135deg, #f59e0b, #d97706)",
+                        color: "#020617",
+                        border: "none",
+                        padding: "7px 12px",
+                        borderRadius: "8px",
+                        fontSize: "0.75rem",
+                        fontWeight: 900,
+                        cursor: "pointer"
+                      }}
+                    >
+                      ⛶ Open Full Cinema Theatre
+                    </button>
+                  </div>
+                </div>
 
-        {/* Footer */}
-        <div
-          style={{
-            padding: "12px 24px",
-            background: "rgba(15, 23, 42, 0.95)",
-            borderTop: "1px solid rgba(255, 255, 255, 0.1)",
-            display: "flex",
-            justifyContent: "space-between",
-            alignItems: "center",
-            fontSize: "0.78rem",
-            color: "#94a3b8"
-          }}
-        >
-          <span>GBS School Management System • Enterprise Operational Architecture</span>
-          <div style={{ display: "flex", gap: "8px", alignItems: "center", flexWrap: "wrap" }}>
-            <button
-              type="button"
-              onClick={() => setShowRoleVideoModal(true)}
-              style={{
-                background: "linear-gradient(135deg, #f59e0b, #d97706)",
-                border: "none",
-                color: "#020617",
-                padding: "6px 12px",
-                borderRadius: "6px",
-                fontSize: "0.75rem",
-                fontWeight: 900,
-                cursor: "pointer"
-              }}
-            >
-              🎬 Watch Real-Life Role Action Video
-            </button>
-            <button
-              type="button"
-              onClick={() => window.print()}
-              style={{
-                background: "rgba(255, 255, 255, 0.08)",
-                border: "1px solid rgba(255, 255, 255, 0.2)",
-                color: "#cbd5e1",
-                padding: "5px 12px",
-                borderRadius: "6px",
-                fontSize: "0.75rem",
-                fontWeight: 700,
-                cursor: "pointer"
-              }}
-            >
-              🖨️ Print Operating Guide
-            </button>
+                {filteredSections.length === 0 ? (
+                  <div style={{ textAlign: "center", padding: "2.5rem", color: "#94a3b8" }}>
+                    <span style={{ fontSize: "2rem", display: "block", marginBottom: "8px" }}>🔍</span>
+                    No instructions matching &ldquo;{searchQuery}&rdquo;. Try searching for another operational term.
+                  </div>
+                ) : (
+                  filteredSections.map((sec, idx) => (
+                    <div
+                      key={sec.id || idx}
+                      style={{
+                        background: "rgba(15, 23, 42, 0.78)",
+                        border: "1.5px solid rgba(255, 255, 255, 0.12)",
+                        borderRadius: "12px",
+                        padding: "16px 20px",
+                        marginBottom: "14px",
+                        boxShadow: "0 4px 14px rgba(0, 0, 0, 0.3)"
+                      }}
+                    >
+                      <h4
+                        style={{
+                          margin: "0 0 10px 0",
+                          color: guideData.badgeColor,
+                          fontSize: "0.96rem",
+                          fontWeight: 800,
+                          display: "flex",
+                          alignItems: "center",
+                          gap: "8px"
+                        }}
+                      >
+                        <span>⚡</span> {sec.title}
+                      </h4>
+                      <ol style={{ margin: 0, paddingLeft: "20px", display: "flex", flexDirection: "column", gap: "8px" }}>
+                        {sec.steps.map((step, sIdx) => (
+                          <li key={sIdx} style={{ fontSize: "0.85rem", color: "#e2e8f0", lineHeight: "1.55" }}>
+                            {step}
+                          </li>
+                        ))}
+                      </ol>
+                    </div>
+                  ))
+                )}
+              </div>
+            )}
+
+            {activeTab === "VIDEO" && (
+              <div style={{ display: "flex", flexDirection: "column", gap: "14px" }}>
+                <div
+                  style={{
+                    background: "#000000",
+                    borderRadius: "12px",
+                    overflow: "hidden",
+                    border: `2px solid ${matchedVideoMeta.accent}`
+                  }}
+                >
+                  <video
+                    key={matchedVideoMeta.videoSrc}
+                    src={matchedVideoMeta.videoSrc}
+                    poster={matchedVideoMeta.poster}
+                    controls
+                    autoPlay
+                    muted
+                    playsInline
+                    preload="auto"
+                    style={{ width: "100%", maxHeight: "360px", display: "block", background: "#000" }}
+                  />
+                </div>
+
+                <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(250px, 1fr))", gap: "10px" }}>
+                  {(matchedVideoMeta.scenes || []).map((sc, sIdx) => (
+                    <div
+                      key={sIdx}
+                      style={{
+                        background: "rgba(15, 23, 42, 0.88)",
+                        border: `1px solid ${matchedVideoMeta.accent}66`,
+                        borderRadius: "10px",
+                        padding: "12px"
+                      }}
+                    >
+                      <div style={{ fontSize: "0.7rem", fontWeight: 900, color: matchedVideoMeta.accent, marginBottom: "4px" }}>
+                        {sc.step}
+                      </div>
+                      <div style={{ fontSize: "0.76rem", fontWeight: 800, color: "#34d399", marginBottom: "6px", fontFamily: "monospace" }}>
+                        ⚡ {sc.command}
+                      </div>
+                      <div style={{ fontSize: "0.78rem", color: "#e2e8f0", lineHeight: 1.45 }}>
+                        {sc.action}
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {activeTab === "NOTES" && (
+              <div style={{ display: "flex", flexDirection: "column", gap: "14px" }}>
+                <div
+                  style={{
+                    background: "rgba(245, 158, 11, 0.15)",
+                    border: "1px solid #f59e0b",
+                    borderRadius: "10px",
+                    padding: "12px 16px",
+                    display: "flex",
+                    alignItems: "center",
+                    gap: "10px"
+                  }}
+                >
+                  <span style={{ fontSize: "1.4rem" }}>💡</span>
+                  <span style={{ fontSize: "0.84rem", color: "#fef3c7", lineHeight: "1.4" }}>
+                    <strong>Personalize Your Workflow:</strong> Type custom instructions, departmental reminders, or standard operating notes for {selectedRoleKey}. Saved permanently in your browser.
+                  </span>
+                </div>
+
+                <textarea
+                  rows={10}
+                  value={personalNotes}
+                  onChange={(e) => setPersonalNotes(e.target.value)}
+                  placeholder={`Type your custom ${selectedRoleKey} guidelines, daily checklist, or procedural instructions here...`}
+                  style={{
+                    width: "100%",
+                    padding: "14px",
+                    borderRadius: "10px",
+                    background: "rgba(2, 6, 23, 0.85)",
+                    border: "1.5px solid rgba(56, 189, 248, 0.35)",
+                    color: "#f8fafc",
+                    fontSize: "0.88rem",
+                    lineHeight: "1.6",
+                    fontFamily: "inherit",
+                    boxSizing: "border-box",
+                    outline: "none"
+                  }}
+                />
+
+                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+                  <div>
+                    {savedFeedback && (
+                      <span style={{ color: "#34d399", fontWeight: 800, fontSize: "0.84rem" }}>
+                        ✓ Your custom guidelines have been saved!
+                      </span>
+                    )}
+                  </div>
+                  <button
+                    type="button"
+                    onClick={handleSaveNotes}
+                    style={{
+                      padding: "10px 22px",
+                      background: "linear-gradient(135deg, #10b981 0%, #059669 100%)",
+                      color: "#ffffff",
+                      border: "none",
+                      borderRadius: "8px",
+                      fontWeight: 900,
+                      fontSize: "0.86rem",
+                      cursor: "pointer"
+                    }}
+                  >
+                    💾 Save My Guide
+                  </button>
+                </div>
+              </div>
+            )}
+          </div>
+
+          {/* Footer */}
+          <div
+            style={{
+              padding: "12px 22px",
+              background: "rgba(15, 23, 42, 0.96)",
+              borderTop: "1px solid rgba(255, 255, 255, 0.1)",
+              display: "flex",
+              justifyContent: "space-between",
+              alignItems: "center",
+              flexWrap: "wrap",
+              gap: "8px",
+              fontSize: "0.76rem",
+              color: "#94a3b8"
+            }}
+          >
+            <span>GBS School Management System • Exact 10-Role Operational Guide</span>
+            <div style={{ display: "flex", gap: "8px", alignItems: "center", flexWrap: "wrap" }}>
+              <button
+                type="button"
+                onClick={() => setShowRoleVideoModal(true)}
+                style={{
+                  background: "linear-gradient(135deg, #f59e0b, #d97706)",
+                  border: "none",
+                  color: "#020617",
+                  padding: "6px 12px",
+                  borderRadius: "6px",
+                  fontSize: "0.75rem",
+                  fontWeight: 900,
+                  cursor: "pointer"
+                }}
+              >
+                🎬 Watch Real-Life Role Action Video
+              </button>
+              <button
+                type="button"
+                onClick={() => window.print()}
+                style={{
+                  background: "rgba(255, 255, 255, 0.08)",
+                  border: "1px solid rgba(255, 255, 255, 0.2)",
+                  color: "#cbd5e1",
+                  padding: "5px 12px",
+                  borderRadius: "6px",
+                  fontSize: "0.75rem",
+                  fontWeight: 700,
+                  cursor: "pointer"
+                }}
+              >
+                🖨️ Print Operating Guide
+              </button>
+            </div>
           </div>
         </div>
       </div>
-    </div>
-    <CartoonRoleVideoHubModal
-      isOpen={showRoleVideoModal}
-      onClose={() => setShowRoleVideoModal(false)}
-      initialVideoId={normalizedRoleVideoId}
-    />
+
+      <CartoonRoleVideoHubModal
+        isOpen={showRoleVideoModal}
+        onClose={() => setShowRoleVideoModal(false)}
+        initialRole={selectedRoleKey}
+      />
     </>
   );
 }

@@ -5,6 +5,7 @@ import {
   getOnboardingRates
 } from "../../../utils/pricingEngine";
 import { REAL_ACTION_ROLE_VIDEOS } from "../../../components/common/CartoonRoleVideoHubModal";
+import WindowControlsBar from "../../../components/common/WindowControlsBar";
 import "../styles/VideoPresentationEngine.css";
 
 const ROLE_MODULES = [
@@ -134,21 +135,26 @@ const ROLE_MODULES = [
         duration: "0:24 – 0:37"
       },
       {
-        title: "Step 4: Mobile AI OMR Exam Scanner & Override",
+        title: "Step 4: Multi-Format Question Bank (MCQ, Theory, True/False) & Exam Timetable Guide",
         narration:
-          "Point any camera over OMR multiple-choice bubble sheets for instant deterministic AI scoring (e.g., 38/40), with full teacher manual override control.",
-        actionLabel: "AI_OMR_SCAN_SHEET & TEACHER_VERIFY",
+          "Select any exam format tab in the high-contrast Multi-Format Question Bank (Multiple Choice, Theory Essay, True or False, Short Answer, Fill-in-Blank, or Case Study), add Examination Timetable Guide entries whenever there are exam times for students, and grade typed Theory scripts.",
+        actionLabel: "MULTI_FORMAT_QBANK & EXAM_TIMETABLE_GUIDE",
         duration: "0:37 – 0:50"
       },
       {
-        title: "Step 5: Branded Terminal Gradebook Submission",
+        title: "Step 5: Mobile AI OMR Exam Scanner & Branded Terminal Gradebook",
         narration:
-          "Approve continuous assessment scores and publish official terminal report cards stamped automatically with the exact BEST KIDS identity.",
-        actionLabel: "PUBLISH_TERMINAL_REPORT_CARDS",
+          "Scan physical OMR bubble sheets via camera for instant grading, verify scores, and publish official terminal report cards stamped with the exact school identity.",
+        actionLabel: "AI_OMR_SCAN_&_PUBLISH_TERMINAL_REPORT_CARDS",
         duration: "0:50 – 1:02"
       }
     ],
     actions: [
+      {
+        title: "Set Multi-Format Exam & Add Timetable Entry",
+        desc: "Configure MCQ, Theory & True/False questions + add Exam Timetable Guide slot",
+        cmd: "Multi-Format Exam (MCQ + Theory + True/False) scheduled & added to Student Examination Timetable Guide."
+      },
       {
         title: "Mark Sample JHS 2B Attendance Register",
         desc: "Record Present / Absent ticks and emit absent guardian alert",
@@ -158,11 +164,6 @@ const ROLE_MODULES = [
         title: "Run Mobile AI OMR Exam Laser Scan",
         desc: "Auto-grade bubble sheet #408 with manual review check",
         cmd: "OMR Scanner matched 38/40 answers (95% A1) in 0.84s. Ready for manual verify."
-      },
-      {
-        title: "Publish Topic Explanation Video",
-        desc: "Attach HD lesson video + audio note to Physics Week 4",
-        cmd: "Topic Video 'Projectile Motion Lab' published to JHS 2 & SHS Science feed."
       }
     ],
     demoPortalRoute: "/login/teacher",
@@ -487,6 +488,190 @@ const ROLE_MODULES = [
     ],
     demoPortalRoute: "/login/staff",
     demoCreds: "Approved Staff / HR Email + Password"
+  },
+  {
+    id: "HR",
+    role: "HR & Personnel Directorate",
+    badge: "BIOMETRIC & PAYROLL TIERS",
+    icon: "👥",
+    color: "#f97316",
+    videoFile: "/videos/video6_staff_hr_role_guide.mp4",
+    downloadName: "GBS_Video7_HR_Action_Guide.mp4",
+    photos: [
+      "/assets/real_scene6_staff_gate_turnstile.jpg",
+      "/assets/real_scene5_accountant_finance.jpg",
+      "/assets/real_scene1_headmaster_desk.jpg"
+    ],
+    targetAudience: "HR Directors, Personnel Officers & Payroll Administrators",
+    description:
+      "Complete personnel lifecycle: staff recruitment, biometric clock-in audits, leave approvals, salary grade grouping, and automated payroll sync with the Accountant portal.",
+    metrics: [
+      { label: "Biometric Clock-In", val: "Real-Time Audit" },
+      { label: "Leave Workflow", val: "1-Click Approve" },
+      { label: "Salary Tiers", val: "Auto-Synced" }
+    ],
+    closingHook: "Every approved staff member and salary grade syncs directly with the Accountant Payroll and Headmaster Registry.",
+    steps: [
+      {
+        title: "Step 1: Staff Onboarding & Biometric Attendance Audit",
+        narration: "Register teaching and non-teaching staff, assign departments, and inspect daily biometric turnstile clock-in timestamps.",
+        actionLabel: "HR_ONBOARD_STAFF & BIOMETRIC_AUDIT",
+        duration: "0:00 – 0:20"
+      },
+      {
+        title: "Step 2: Leave Adjudication & Salary Tier Grouping",
+        narration: "Approve or decline staff leave requests and configure salary grade tiers synced directly to the Accountant Payroll.",
+        actionLabel: "HR_LEAVE_APPROVAL & SALARY_TIERS",
+        duration: "0:20 – 0:45"
+      }
+    ],
+    actions: [
+      {
+        title: "Approve Staff Medical Leave & Sync Salary Tier",
+        desc: "Authorize leave request and update Senior Faculty salary tier",
+        cmd: "HR Leave #LV-209 approved -> Payroll tier synced to Accountant Treasury."
+      }
+    ],
+    demoPortalRoute: "/portal/hr/dashboard",
+    demoCreds: "hr@gbs.com / password123"
+  },
+  {
+    id: "ALUMNI",
+    role: "Alumni & Convocation Network",
+    badge: "TRANSCRIPTS & ENDOWMENT",
+    icon: "🎖️",
+    color: "#eab308",
+    videoFile: "/videos/gbs_complete_system_roles_master_guide.mp4",
+    downloadName: "GBS_Video8_Alumni_Action_Guide.mp4",
+    photos: [
+      "/assets/real_scene3_student_elearning.jpg",
+      "/assets/real_scene1_headmaster_desk.jpg",
+      "/assets/real_scene5_accountant_finance.jpg"
+    ],
+    targetAudience: "Graduates, Alumni Associations, Employers & Universities",
+    description:
+      "Official academic transcript ordering, cryptographic certificate verification for employers, alma mater endowment pledges, and career mentorship.",
+    metrics: [
+      { label: "Transcript Verify", val: "QR Cryptographic" },
+      { label: "Endowment Giving", val: "MoMo & Card" },
+      { label: "Mentorship", val: "Cohort Network" }
+    ],
+    closingHook: "Graduates stay connected for life with instant credential verification and transparent endowment contributions.",
+    steps: [
+      {
+        title: "Step 1: Official Transcript Request & Employer Verification",
+        narration: "Request stamped academic transcripts and validate graduation credentials using cryptographic verification codes.",
+        actionLabel: "REQUEST_TRANSCRIPT & VERIFY_DEGREE",
+        duration: "0:00 – 0:25"
+      },
+      {
+        title: "Step 2: Endowment Pledges & Career Mentorship",
+        narration: "Contribute to school infrastructure projects via Mobile Money or Card and mentor current students.",
+        actionLabel: "ALUMNI_ENDOWMENT_PLEDGE",
+        duration: "0:25 – 0:45"
+      }
+    ],
+    actions: [
+      {
+        title: "Verify Alumni Credential & Log Endowment Pledge",
+        desc: "Validate graduate certificate code and record project donation",
+        cmd: "Alumni Credential #ALM-2026 verified -> Endowment pledge synced to Treasury."
+      }
+    ],
+    demoPortalRoute: "/portal/alumni/dashboard",
+    demoCreds: "alumni@gbs.com / password123"
+  },
+  {
+    id: "INVENTORY",
+    role: "Inventory & Procurement Stores",
+    badge: "STOCK LEDGER & REQUISITIONS",
+    icon: "📦",
+    color: "#84cc16",
+    videoFile: "/videos/video6_staff_hr_role_guide.mp4",
+    downloadName: "GBS_Video9_Inventory_Action_Guide.mp4",
+    photos: [
+      "/assets/real_scene5_accountant_finance.jpg",
+      "/assets/real_scene6_staff_gate_turnstile.jpg",
+      "/assets/real_scene2_teacher_scanner.jpg"
+    ],
+    targetAudience: "Storekeepers, Procurement Officers, Science Lab Technicians & Matrons",
+    description:
+      "Real-time campus stock ledger, low-stock reorder alerts, batch quarantine, departmental requisition approvals, and supplier purchase orders.",
+    metrics: [
+      { label: "Stock Tracking", val: "FEFO & Live Qty" },
+      { label: "Requisitions", val: "Dept Approval" },
+      { label: "Supplier POs", val: "GRN Verified" }
+    ],
+    closingHook: "Complete visibility over textbooks, science lab apparatus, uniforms, ICT assets, and kitchen stores.",
+    steps: [
+      {
+        title: "Step 1: Stock Ledger Audit & Low-Stock Alerts",
+        narration: "Register campus stock items, monitor low-stock reorder thresholds, and quarantine damaged or expired batches.",
+        actionLabel: "AUDIT_STOCK_LEDGER & LOW_STOCK_ALERT",
+        duration: "0:00 – 0:25"
+      },
+      {
+        title: "Step 2: Departmental Requisitions & Supplier Purchase Orders",
+        narration: "Approve resource requisitions from academic departments and issue Supplier Purchase Orders.",
+        actionLabel: "APPROVE_DEPT_REQUISITION & ISSUE_PO",
+        duration: "0:25 – 0:45"
+      }
+    ],
+    actions: [
+      {
+        title: "Issue Science Lab Requisition & Update Stock",
+        desc: "Approve microscope & reagent allocation and deduct stock balance",
+        cmd: "Requisition #REQ-404 issued -> Science Lab stock ledger updated."
+      }
+    ],
+    demoPortalRoute: "/portal/inventory/dashboard",
+    demoCreds: "inventory@gbs.com / password123"
+  },
+  {
+    id: "DEVELOPER",
+    role: "Platform Developer Console",
+    badge: "GLOBAL SOVEREIGNTY & AUTO-LOCK",
+    icon: "🛡️",
+    color: "#38bdf8",
+    videoFile: "/videos/gbs_complete_system_roles_master_guide.mp4",
+    downloadName: "GBS_Video10_Developer_Action_Guide.mp4",
+    photos: [
+      "/assets/real_scene1_headmaster_desk.jpg",
+      "/assets/real_scene2_teacher_scanner.jpg",
+      "/assets/real_scene6_staff_gate_turnstile.jpg"
+    ],
+    targetAudience: "System Founder, Platform Engineers & Global Operations Command",
+    description:
+      "Multi-tenant school onboarding, per-student subscription billing ($3/$5/$10), 7-day grace auto-lock engine, Live Registered Schools GPS Map, Intrusion Sentinel, and WebRTC Video Support.",
+    metrics: [
+      { label: "Auto-Lock Policy", val: "14d Notice + 7d Grace" },
+      { label: "Live School Map", val: "GPS Turn-by-Turn" },
+      { label: "Intrusion Sentinel", val: "24/7 IP Shield" }
+    ],
+    closingHook: "Total command over every onboarded educational institution, live production/demo switching, and automated subscription enforcement.",
+    steps: [
+      {
+        title: "Step 1: Multi-Tenant Approval & 7-Day Grace Auto-Lock Engine",
+        narration: "Approve newly onboarded schools, monitor per-student subscription tiers ($3/$5/$10), and enforce the 7-day grace period auto-lock.",
+        actionLabel: "DEV_TENANT_REGISTRY & AUTO_LOCK_ENGINE",
+        duration: "0:00 – 0:25"
+      },
+      {
+        title: "Step 2: Live Schools GPS Map, Intrusion Sentinel & Video Support",
+        narration: "Locate any registered school on the interactive GPS map, block unauthorized intruder IPs, and launch live WebRTC video support.",
+        actionLabel: "LIVE_GPS_MAP & INTRUSION_SENTINEL",
+        duration: "0:25 – 0:50"
+      }
+    ],
+    actions: [
+      {
+        title: "Verify Tenant Subscription & Run Sentinel Scan",
+        desc: "Confirm MoMo renewal and audit global tenant security status",
+        cmd: "Tenant #1 verified active -> Intrusion Sentinel reports 0 unblocked threats."
+      }
+    ],
+    demoPortalRoute: "/developer",
+    demoCreds: "developer@gbs.com / password123"
   }
 ];
 
@@ -496,7 +681,7 @@ export default function VideoPresentationEngine() {
   const [activeStepIdx, setActiveStepIdx] = useState(0);
   const [isPlayingScript, setIsPlayingScript] = useState(false);
   const [actionLog, setActionLog] = useState([
-    { time: "Ready", msg: "Real-Life Action Cinema & Interactive Walkthrough Engine initialized." }
+    { time: "Ready", msg: "Real-Life Action Cinema & Interactive Walkthrough Engine initialized across all 10 roles." }
   ]);
 
   // Interactive Per-Student Subscription Calculator
@@ -567,6 +752,7 @@ export default function VideoPresentationEngine() {
 
   return (
     <div className="gbs-presentation-engine-root">
+      <WindowControlsBar title="GBS 10-Role Video Presentation Engine" />
       {/* Top Executive Header */}
       <header className="gbs-pres-header">
         <div className="gbs-pres-brand">
@@ -574,7 +760,7 @@ export default function VideoPresentationEngine() {
           <div>
             <h1>GBS REAL-LIFE ACTION VIDEO PRESENTATION ENGINE</h1>
             <span className="gbs-pres-sub">
-              Real School Documentary Photography + Live UI Action Movies Across All 6 Roles
+              Real School Documentary Photography + Live UI Action Movies Across All 10 Roles
             </span>
           </div>
         </div>
@@ -595,12 +781,12 @@ export default function VideoPresentationEngine() {
             🌐 Company Website
           </button>
           <a
-            href={masterVideo.file}
-            download={masterVideo.downloadName}
+            href={masterVideo.videoSrc || "/videos/gbs_complete_system_roles_master_guide.mp4"}
+            download="GBS_Complete_10_Role_Master_Guide.mp4"
             className="gbs-btn-pres-primary"
             style={{ textDecoration: "none" }}
           >
-            ⬇️ Download Complete 6-Role Movie (53.99 MB)
+            ⬇️ Download Complete 10-Role Movie
           </a>
         </div>
       </header>
@@ -631,8 +817,10 @@ export default function VideoPresentationEngine() {
             src={activeModule.videoFile}
             poster={activeModule.photos[0]}
             controls
+            autoPlay
+            muted
             playsInline
-            preload="metadata"
+            preload="auto"
           />
         </div>
 
@@ -641,7 +829,7 @@ export default function VideoPresentationEngine() {
             className="gbs-pres-tag"
             style={{ background: activeModule.color, color: "#020617" }}
           >
-            REAL-LIFE ACTION MOVIE • VIDEO {activeRoleIdx + 1} OF 6
+            REAL-LIFE ACTION MOVIE • ROLE {activeRoleIdx + 1} OF {ROLE_MODULES.length}
           </span>
           <h3>
             {activeModule.icon} {activeModule.role} — Live Action Walkthrough
@@ -663,11 +851,11 @@ export default function VideoPresentationEngine() {
               ⬇️ Download Role {activeRoleIdx + 1} Action MP4
             </a>
             <a
-              href={masterVideo.file}
-              download={masterVideo.downloadName}
+              href={masterVideo.videoSrc || "/videos/gbs_complete_system_roles_master_guide.mp4"}
+              download="GBS_Complete_10_Role_Master_Guide.mp4"
               className="gbs-btn-mp4-download master"
             >
-              🎬 Download Master All-6-Roles MP4
+              🎬 Download Master All-10-Roles MP4
             </a>
           </div>
         </div>

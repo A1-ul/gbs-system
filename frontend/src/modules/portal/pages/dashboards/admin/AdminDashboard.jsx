@@ -4948,9 +4948,9 @@ export function AdminDashboard({ initialTab } = {}) {
 
         {/* Header */}
         <header className="role-header">
-          <div className="role-header-brand" style={{ display: "flex", alignItems: "center", gap: "16px", flexWrap: "wrap" }}>
+          <div className="role-header-brand" style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: "16px", flexWrap: "wrap", width: "100%" }}>
             {/* Registered Institution Logo (Increased Design Size on Left) */}
-            <div style={{ display: "flex", alignItems: "center", gap: "14px" }}>
+            <div style={{ display: "flex", alignItems: "center", gap: "14px", flexWrap: "wrap" }}>
               <img
                 src={customSchoolLogo || "/assets/gbs_crest_badge.jpg"}
                 alt="School Crest"
@@ -4971,6 +4971,53 @@ export function AdminDashboard({ initialTab } = {}) {
                 </span>
               </div>
             </div>
+
+            {/* Always-Visible Primary Headmaster Top-Right Controls: Operating Guide, Presentation Video & Sign Out */}
+            <div style={{ display: "flex", alignItems: "center", gap: "8px", flexWrap: "wrap" }}>
+              <button
+                type="button"
+                className="role-action-btn"
+                onClick={() => setShowAdminGuideModal(true)}
+                style={{
+                  borderColor: "#10b981",
+                  color: "#ffffff",
+                  fontWeight: 800,
+                  background: "linear-gradient(135deg, #059669, #047857)",
+                  boxShadow: "0 2px 10px rgba(16, 185, 129, 0.35)"
+                }}
+              >
+                📖 Operating Guide
+              </button>
+              <Link
+                to="/presentation"
+                className="role-action-btn"
+                style={{
+                  borderColor: "#f59e0b",
+                  color: "#0f172a",
+                  fontWeight: 900,
+                  background: "linear-gradient(135deg, #fbbf24, #d97706)",
+                  boxShadow: "0 2px 10px rgba(245, 158, 11, 0.35)"
+                }}
+              >
+                🎬 Presentation Video
+              </Link>
+              <button
+                type="button"
+                className="role-action-btn logout"
+                onClick={handleLogout}
+                style={{
+                  background: "linear-gradient(135deg, #ef4444, #b91c1c)",
+                  border: "2px solid #fca5a5",
+                  color: "#ffffff",
+                  fontWeight: 900,
+                  padding: "8px 18px",
+                  borderRadius: "8px",
+                  boxShadow: "0 4px 14px rgba(239, 68, 68, 0.55)"
+                }}
+              >
+                🚪 Sign Out
+              </button>
+            </div>
           </div>
 
           <div className="role-status-ticker">
@@ -4978,7 +5025,7 @@ export function AdminDashboard({ initialTab } = {}) {
             <span>School: <strong>{reportSchoolName || getActiveSchoolName(currentUser)}</strong></span>
             <span>Headmaster: <strong>{currentUser.firstName} {currentUser.lastName}</strong></span>
             <span>Tenancy: <strong>{currentUser?.tenantCode || localStorage.getItem("gbs_tenant_code") || "ACTIVE"}</strong></span>
-            <span>Security: <strong>VOICE & RBAC ACTIVE</strong></span>
+            <span>Security: <strong>VOICE &amp; RBAC ACTIVE</strong></span>
           </div>
 
           <div className="role-header-actions">
@@ -5003,7 +5050,7 @@ export function AdminDashboard({ initialTab } = {}) {
               }}
               title="Open Headmaster Exclusive Inbuilt Campus CCTV & Mobile Device Link"
             >
-              📹 Inbuilt CCTV & Mobile
+              📹 Inbuilt CCTV &amp; Mobile
             </button>
             <Link to="/migration" className="role-action-btn">
               📦 Migration

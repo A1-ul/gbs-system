@@ -1,6 +1,8 @@
 import React, { useState, useEffect } from "react";
 import { useNavigate, useInRouterContext } from "react-router-dom";
 import { getActiveSchoolName, getActiveSchoolLogo } from "../../utils/schoolBranding";
+import CartoonRoleVideoHubModal from "./CartoonRoleVideoHubModal";
+import UniversalRoleGuideModal from "./UniversalRoleGuideModal";
 
 function OnboardActionButton({ onNavigate }) {
   return (
@@ -62,6 +64,48 @@ export default function WindowControlsBar({
   const isDevContext = Boolean(title?.toLowerCase().includes("developer") || title?.toLowerCase().includes("control center"));
   const [brandName, setBrandName] = useState(() => getActiveSchoolName({ isDeveloperContext: isDevContext }));
   const [brandLogo, setBrandLogo] = useState(() => getActiveSchoolLogo({ isDeveloperContext: isDevContext }));
+  const [showRoleVideoHub, setShowRoleVideoHub] = useState(false);
+  const [showOperatingGuide, setShowOperatingGuide] = useState(false);
+
+  const resolveCurrentRoleKey = () => {
+    try {
+      const path = (typeof window !== "undefined" ? window.location.pathname : "").toLowerCase();
+      if (isDevContext || path.includes("/developer")) return "DEVELOPER";
+      if (path.includes("/portal/admin")) return "ADMIN";
+      if (path.includes("/portal/teacher")) return "TEACHER";
+      if (path.includes("/portal/student")) return "STUDENT";
+      if (path.includes("/portal/parent")) return "PARENT";
+      if (path.includes("/portal/accountant")) return "ACCOUNTANT";
+      if (path.includes("/portal/hr") || path === "/hr") return "HR";
+      if (path.includes("/portal/staff")) return "STAFF";
+      if (path.includes("/portal/alumni")) return "ALUMNI";
+      if (path.includes("/portal/inventory") || path === "/inventory") return "INVENTORY";
+      const storedUser = JSON.parse(localStorage.getItem("gbs_user") || "{}");
+      if (storedUser?.role) return String(storedUser.role).toUpperCase();
+    } catch { }
+    return "ADMIN";
+  };
+
+  const isSignedInSession = () => {
+    try {
+      const path = (typeof window !== "undefined" ? window.location.pathname : "").toLowerCase();
+      if (path.includes("/portal/") || path.includes("/developer")) return true;
+      return Boolean(localStorage.getItem("gbs_token") || localStorage.getItem("gbs_dev_token") || localStorage.getItem("gbs_user"));
+    } catch {
+      return false;
+    }
+  };
+
+  const handleUniversalSignOut = () => {
+    try {
+      localStorage.removeItem("gbs_token");
+      localStorage.removeItem("gbs_user");
+      localStorage.removeItem("gbs_dev_token");
+      localStorage.removeItem("gbs_dev_user");
+      sessionStorage.removeItem("gbs_headmaster_voice_verified");
+    } catch { }
+    window.location.assign("/login");
+  };
 
   useEffect(() => {
     const syncBranding = () => {
@@ -276,6 +320,49 @@ export default function WindowControlsBar({
           ) : (
             <OnboardActionButton onNavigate={(url) => window.location.assign(url)} />
           ))}
+
+        {!isModal && (
+          <>
+            <button
+              type="button"
+              className="btn-window-control btn-presentation-video"
+              onClick={() => setShowRoleVideoHub(true)}
+              style={{
+                padding: "5px 11px",
+                background: "linear-gradient(135deg, #d97706, #b45309)",
+                border: "1px solid #fbbf24",
+                borderRadius: "6px",
+                color: "#ffffff",
+                cursor: "pointer",
+                fontSize: "0.75rem",
+                fontWeight: "800"
+              }}
+              title="Watch the Complete Role Presentation Video & Live Action Walkthrough"
+            >
+              🎬 Presentation Video
+            </button>
+
+            <button
+              type="button"
+              className="btn-window-control btn-operating-guide"
+              onClick={() => setShowOperatingGuide(true)}
+              style={{
+                padding: "5px 11px",
+                background: "rgba(16, 185, 129, 0.22)",
+                border: "1px solid #10b981",
+                borderRadius: "6px",
+                color: "#34d399",
+                cursor: "pointer",
+                fontSize: "0.75rem",
+                fontWeight: "800"
+              }}
+              title="Open the Exact Role Operating Guide & Voice Assistant"
+            >
+              📖 Operating Guide
+            </button>
+          </>
+        )}
+
         {/* Scroll Buttons */}
         <button
           type="button"
@@ -357,7 +444,45 @@ export default function WindowControlsBar({
             {isExpanded ? "↙ Exit Full Display" : "⛶ Full Display"}
           </button>
         )}
+
+        {!isModal && isSignedInSession() && (
+          <button
+            type="button"
+            className="btn-window-control btn-universal-signout"
+            onClick={handleUniversalSignOut}
+            style={{
+              padding: "5px 13px",
+              background: "linear-gradient(135deg, #ef4444, #b91c1c)",
+              border: "1.5px solid #fca5a5",
+              borderRadius: "6px",
+              color: "#ffffff",
+              cursor: "pointer",
+              fontSize: "0.75rem",
+              fontWeight: "900",
+              boxShadow: "0 2px 8px rgba(239, 68, 68, 0.45)"
+            }}
+            title="Sign Out of the current Dashboard and return to Login"
+          >
+            🚪 Sign Out
+          </button>
+        )}
       </div>
+
+      {!isModal && showRoleVideoHub && (
+        <CartoonRoleVideoHubModal
+          isOpen={showRoleVideoHub}
+          onClose={() => setShowRoleVideoHub(false)}
+          initialRole={resolveCurrentRoleKey()}
+        />
+      )}
+
+      {!isModal && showOperatingGuide && (
+        <UniversalRoleGuideModal
+          isOpen={showOperatingGuide}
+          onClose={() => setShowOperatingGuide(false)}
+          role={resolveCurrentRoleKey()}
+        />
+      )}
     </div>
   );
 }
