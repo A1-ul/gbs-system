@@ -2,6 +2,7 @@ import React, { useState, useEffect, useMemo } from 'react';
 import { getApiBaseUrl } from '../../../api/client/apiConfig';
 import { getActiveSchoolName } from '../../../utils/schoolBranding';
 import { copyTextSafely } from '../../../utils/safeWindow';
+import StudentCooperativeConferenceModal from '../../../components/common/StudentCooperativeConferenceModal';
 import './OnlineLearningDashboard.css';
 
 const API_BASE = getApiBaseUrl();
@@ -11,6 +12,7 @@ export default function OnlineLearningDashboard() {
   const [classes, setClasses] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
+  const [showStudentCoopModal, setShowStudentCoopModal] = useState(false);
 
   // Filters
   const [platformFilter, setPlatformFilter] = useState('ALL');
@@ -474,6 +476,27 @@ export default function OnlineLearningDashboard() {
               title="Organize / Invite Parents to Virtual Meeting via WhatsApp"
             >
               <span>💬</span> Organize WhatsApp Meeting
+            </button>
+            <button
+              type="button"
+              onClick={() => setShowStudentCoopModal(true)}
+              style={{
+                background: "linear-gradient(135deg, #8b5cf6, #7c3aed)",
+                color: "#ffffff",
+                border: "none",
+                borderRadius: "8px",
+                padding: "8px 16px",
+                fontWeight: 800,
+                fontSize: "0.82rem",
+                display: "inline-flex",
+                alignItems: "center",
+                gap: "6px",
+                cursor: "pointer",
+                boxShadow: "0 4px 12px rgba(139, 92, 246, 0.35)"
+              }}
+              title="Launch Student Cooperative Conferencing & Social Lounge"
+            >
+              <span>🎙️</span> Student Cooperative Lounge
             </button>
             <button
               type="button"
@@ -1028,6 +1051,11 @@ export default function OnlineLearningDashboard() {
           </div>
         </div>
       )}
+
+      <StudentCooperativeConferenceModal
+        isOpen={showStudentCoopModal}
+        onClose={() => setShowStudentCoopModal(false)}
+      />
     </div>
   );
 }

@@ -130,7 +130,7 @@ export default function EmergencyLocatorPage() {
           };
         }
       }
-    } catch {}
+    } catch { }
 
     // 2. Universal Unrestricted Worldwide Geocoding & Digital GPS Resolver
     const globalGeo = resolveWorldwideLocation(clean);
@@ -160,7 +160,7 @@ export default function EmergencyLocatorPage() {
           };
         }
       }
-    } catch {}
+    } catch { }
 
     // 4. Live OpenStreetMap Nominatim Geocoding for real street addresses / locations
     const geocodeTarget = matchedLocal?.address || (qDigits.length < 7 && clean.length >= 3 ? clean : '');
@@ -181,7 +181,7 @@ export default function EmergencyLocatorPage() {
             digitalAddress: resolvedCoords.digitalAddress
           };
         }
-      } catch {}
+      } catch { }
     }
 
     const fallbackRecord = {
@@ -248,10 +248,10 @@ export default function EmergencyLocatorPage() {
               <button type="button" className="em-back-btn" onClick={() => window.history.back()}>
                 ← Return / Back
               </button>
-              <button 
-                type="button" 
-                className="em-back-btn" 
-                style={{ background: "#ef4444", borderColor: "#dc2626" }} 
+              <button
+                type="button"
+                className="em-back-btn"
+                style={{ background: "#ef4444", borderColor: "#dc2626" }}
                 onClick={() => {
                   localStorage.removeItem("gbs_token");
                   localStorage.removeItem("gbs_user");

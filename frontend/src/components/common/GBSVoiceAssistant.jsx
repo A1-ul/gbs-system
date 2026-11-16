@@ -326,6 +326,32 @@ export default function GBSVoiceAssistant() {
       responseText = "Opening the Chief Developer Control Center login gateway.";
       navigate("/developer-control-center/login");
       actionExecuted = true;
+    } else if (
+      cleanCmd.includes("conference") ||
+      cleanCmd.includes("cooperative learning") ||
+      cleanCmd.includes("social lounge") ||
+      cleanCmd.includes("student voice call") ||
+      cleanCmd.includes("student video call") ||
+      cleanCmd.includes("study group") ||
+      cleanCmd.includes("study circle") ||
+      cleanCmd.includes("peer call") ||
+      cleanCmd.includes("group meeting")
+    ) {
+      responseText = "Opening the Student Cooperative Conferencing Hub and Social Lounge for live voice and video collaboration.";
+      navigate("/student/conference");
+      actionExecuted = true;
+    } else if (
+      cleanCmd.includes("role presentation") ||
+      cleanCmd.includes("user role") ||
+      cleanCmd.includes("role video") ||
+      cleanCmd.includes("dashboard video") ||
+      cleanCmd.includes("video presentation") ||
+      cleanCmd.includes("system presentation") ||
+      cleanCmd.includes("how the system works")
+    ) {
+      responseText = "Opening the Comprehensive GBS User Roles Video Presentation Engine and Dashboard Guides.";
+      navigate("/presentation-engine");
+      actionExecuted = true;
     }
 
     // STRICT DEVELOPER PRIVACY SHIELD (Zero developer identity disclosure)

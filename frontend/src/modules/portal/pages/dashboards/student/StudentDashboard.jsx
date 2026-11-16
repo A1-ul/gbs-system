@@ -10,6 +10,7 @@ import ClassTopicVideoPlatform from "../../../../../components/common/ClassTopic
 import { navigateToDetail } from "../../../../../utils/universalNavigation";
 import OfficialPaymentGatewayModal from "../../../../../components/common/OfficialPaymentGatewayModal";
 import OfficialInstitutionalSeal from "../../../../../components/common/OfficialInstitutionalSeal";
+import StudentCooperativeConferenceModal from "../../../../../components/common/StudentCooperativeConferenceModal";
 import { getActiveSchoolName, getActiveSchoolLogo } from "../../../../../utils/schoolBranding";
 import { isDemoSandboxMode } from "../../../../../utils/tokenStorage";
 import "./StudentDashboard.css";
@@ -17,6 +18,15 @@ import "./StudentDashboard.css";
 export function StudentDashboard({ initialTab } = {}) {
   const navigate = useNavigate();
   const [showStudentGuideModal, setShowStudentGuideModal] = useState(false);
+  const [showCoopModal, setShowCoopModal] = useState(false);
+  const [selectedCoopRoom, setSelectedCoopRoom] = useState(null);
+  const [coopCallMode, setCoopCallMode] = useState("VIDEO");
+
+  const handleOpenCoopConferencing = (room = null, mode = "VIDEO") => {
+    setSelectedCoopRoom(room);
+    setCoopCallMode(mode);
+    setShowCoopModal(true);
+  };
 
   const studentProfile = (() => {
     try {
@@ -2244,6 +2254,14 @@ export function StudentDashboard({ initialTab } = {}) {
             >
               💬 Peer Chat & Study Circle
             </button>
+            <button
+              type="button"
+              className={`role-tab-btn ${activeTab === "cooperative-conferencing" ? "active" : ""}`}
+              onClick={() => setActiveTab("cooperative-conferencing")}
+              style={{ borderLeft: "3px solid #8b5cf6", color: activeTab === "cooperative-conferencing" ? "#c084fc" : undefined, fontWeight: 800 }}
+            >
+              🎙️ Cooperative Voice & Video Conferencing
+            </button>
           </nav>
 
           {/* TAB 1: TIMETABLE */}
@@ -3949,6 +3967,66 @@ export function StudentDashboard({ initialTab } = {}) {
                 </span>
               </div>
 
+              {/* High-Visibility Cooperative Learning & Social Lounge Banner */}
+              <div style={{
+                background: "linear-gradient(135deg, rgba(139, 92, 246, 0.2) 0%, rgba(59, 130, 246, 0.15) 100%)",
+                border: "1.5px solid rgba(139, 92, 246, 0.35)",
+                borderRadius: "12px",
+                padding: "1rem 1.25rem",
+                marginBottom: "1.5rem",
+                display: "flex",
+                justifyContent: "space-between",
+                alignItems: "center",
+                flexWrap: "wrap",
+                gap: "1rem"
+              }}>
+                <div>
+                  <div style={{ display: "flex", alignItems: "center", gap: "8px", marginBottom: "4px" }}>
+                    <span style={{ fontSize: "1.2rem" }}>🎙️</span>
+                    <strong style={{ color: "#c084fc", fontSize: "1rem" }}>STUDENT COOPERATIVE CONFERENCING & SOCIAL LOUNGE</strong>
+                    <span style={{ background: "#8b5cf6", color: "#fff", fontSize: "0.68rem", fontWeight: 800, padding: "2px 6px", borderRadius: "4px" }}>ACTIVE WEBRTC</span>
+                  </div>
+                  <p style={{ margin: 0, fontSize: "0.85rem", color: "#cbd5e1" }}>
+                    Collaborate with fellow scholars across classes in live audio and video conference rooms for STEM circles, debate, coding, or social common room socializing.
+                  </p>
+                </div>
+                <div style={{ display: "flex", gap: "8px" }}>
+                  <button
+                    type="button"
+                    onClick={() => handleOpenCoopConferencing(null, "VOICE")}
+                    style={{
+                      background: "rgba(139, 92, 246, 0.25)",
+                      border: "1px solid #8b5cf6",
+                      color: "#e9d5ff",
+                      borderRadius: "8px",
+                      padding: "8px 14px",
+                      fontWeight: 700,
+                      fontSize: "0.82rem",
+                      cursor: "pointer"
+                    }}
+                  >
+                    🎙️ Voice Call Lounge
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => handleOpenCoopConferencing(null, "VIDEO")}
+                    style={{
+                      background: "#8b5cf6",
+                      border: "none",
+                      color: "#ffffff",
+                      borderRadius: "8px",
+                      padding: "8px 14px",
+                      fontWeight: 800,
+                      fontSize: "0.82rem",
+                      cursor: "pointer",
+                      boxShadow: "0 4px 12px rgba(139, 92, 246, 0.4)"
+                    }}
+                  >
+                    📹 Video Conference
+                  </button>
+                </div>
+              </div>
+
               {/* Teacher Topic Videos for Class Playback in Teacher's Absence */}
               <div style={{ marginBottom: "2rem" }}>
                 <ClassTopicVideoPlatform mode="STUDENT" currentUser={currentUser} />
@@ -4903,6 +4981,26 @@ export function StudentDashboard({ initialTab } = {}) {
                 <div style={{ display: "flex", gap: "10px", alignItems: "center", flexWrap: "wrap" }}>
                   <button
                     type="button"
+                    onClick={() => setActiveTab("cooperative-conferencing")}
+                    style={{
+                      background: "linear-gradient(135deg, #8b5cf6, #7c3aed)",
+                      border: "none",
+                      color: "#ffffff",
+                      borderRadius: "8px",
+                      padding: "8px 14px",
+                      fontSize: "0.82rem",
+                      fontWeight: 800,
+                      cursor: "pointer",
+                      display: "inline-flex",
+                      alignItems: "center",
+                      gap: "6px",
+                      boxShadow: "0 4px 12px rgba(139, 92, 246, 0.4)"
+                    }}
+                  >
+                    <span>🎙️</span> Group Voice & Video Conferencing
+                  </button>
+                  <button
+                    type="button"
                     onClick={() => setShowArchivedChatsModal(true)}
                     style={{
                       background: "rgba(148, 163, 184, 0.15)",
@@ -5305,6 +5403,320 @@ export function StudentDashboard({ initialTab } = {}) {
                   </div>
                 </div>
               )}
+            </div>
+          )}
+
+          {/* TAB: COOPERATIVE CONFERENCING & SOCIAL LOUNGE */}
+          {activeTab === "cooperative-conferencing" && (
+            <div className="role-workspace-card">
+              <div className="workspace-title-row">
+                <div>
+                  <h2><span>🎙️</span> STUDENT COOPERATIVE CONFERENCING & SOCIAL LOUNGE</h2>
+                  <p>
+                    Live Voice Calling & HD WebRTC Video Calling for Cooperative Study Circles, Group Projects, Debates, and Student Socializing
+                  </p>
+                </div>
+                <div style={{ display: "flex", gap: "10px", alignItems: "center", flexWrap: "wrap" }}>
+                  <span className="badge-status badge-present">
+                    ● WebRTC Low-Latency Online Conferencing
+                  </span>
+                  <button
+                    type="button"
+                    onClick={() => handleOpenCoopConferencing(null, "VIDEO")}
+                    style={{
+                      background: "linear-gradient(135deg, #8b5cf6, #6d28d9)",
+                      border: "none",
+                      color: "#ffffff",
+                      borderRadius: "8px",
+                      padding: "8px 16px",
+                      fontSize: "0.85rem",
+                      fontWeight: 800,
+                      cursor: "pointer",
+                      display: "inline-flex",
+                      alignItems: "center",
+                      gap: "6px",
+                      boxShadow: "0 4px 14px rgba(139, 92, 246, 0.45)"
+                    }}
+                  >
+                    <span>🚀</span> Open Global Conference Hub
+                  </button>
+                </div>
+              </div>
+
+              {/* Cooperative Mode Explanation Banner */}
+              <div style={{
+                background: "linear-gradient(135deg, rgba(139, 92, 246, 0.15) 0%, rgba(30, 41, 59, 0.7) 100%)",
+                border: "1.5px solid rgba(139, 92, 246, 0.35)",
+                borderRadius: "14px",
+                padding: "1.25rem 1.5rem",
+                marginBottom: "2rem"
+              }}>
+                <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(280px, 1fr))", gap: "1.25rem" }}>
+                  <div style={{ display: "flex", gap: "12px" }}>
+                    <div style={{
+                      background: "rgba(139, 92, 246, 0.25)",
+                      border: "1px solid #8b5cf6",
+                      borderRadius: "10px",
+                      width: "48px",
+                      height: "48px",
+                      display: "flex",
+                      alignItems: "center",
+                      justifyContent: "center",
+                      fontSize: "1.5rem",
+                      flexShrink: 0
+                    }}>
+                      🎙️
+                    </div>
+                    <div>
+                      <strong style={{ color: "#c084fc", fontSize: "0.95rem" }}>Voice Calling Mode (Low Bandwidth)</strong>
+                      <p style={{ margin: "4px 0 0", fontSize: "0.82rem", color: "#cbd5e1", lineHeight: 1.5 }}>
+                        High-fidelity audio calling with dynamic voice waveforms, active speaker glow, mic mute/unmute, and background noise suppression. Ideal for quick study reviews, debates, and multi-peer group discussions.
+                      </p>
+                    </div>
+                  </div>
+
+                  <div style={{ display: "flex", gap: "12px" }}>
+                    <div style={{
+                      background: "rgba(6, 182, 212, 0.25)",
+                      border: "1px solid #06b6d4",
+                      borderRadius: "10px",
+                      width: "48px",
+                      height: "48px",
+                      display: "flex",
+                      alignItems: "center",
+                      justifyContent: "center",
+                      fontSize: "1.5rem",
+                      flexShrink: 0
+                    }}>
+                      📹
+                    </div>
+                    <div>
+                      <strong style={{ color: "#38bdf8", fontSize: "0.95rem" }}>HD Video Calling & Screen Sharing</strong>
+                      <p style={{ margin: "4px 0 0", fontSize: "0.82rem", color: "#cbd5e1", lineHeight: 1.5 }}>
+                        Multi-peer WebRTC video matrix with local camera previews, screen sharing for reviewing slides or code solutions, collaborative study scratchpad, and live interactive emojis.
+                      </p>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              {/* Study Rooms Grid */}
+              <div style={{ marginBottom: "1.25rem", display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+                <h3 style={{ margin: 0, fontSize: "1.1rem", color: "#f8fafc", fontWeight: 800, display: "flex", alignItems: "center", gap: "8px" }}>
+                  <span>🏫</span> Active Cooperative Study Rooms & Student Social Lounges
+                </h3>
+                <span style={{ fontSize: "0.78rem", color: "#94a3b8" }}>
+                  Select any room below to enter via Voice Call or Video Call
+                </span>
+              </div>
+
+              <div style={{
+                display: "grid",
+                gridTemplateColumns: "repeat(auto-fit, minmax(320px, 1fr))",
+                gap: "1.25rem",
+                marginBottom: "2.5rem"
+              }}>
+                {[
+                  {
+                    id: "STEM-101",
+                    name: "🔬 STEM & Mathematics Problem Solving Circle",
+                    category: "Cooperative Learning",
+                    categoryColor: "#8b5cf6",
+                    subject: "Calculus, Physics & Chemistry",
+                    activePeers: 5,
+                    host: "Kwame Mensah (Grade 10 STEM)",
+                    description: "Collaborative homework breakdown, quadratic equations, lab reports, and physics mechanics discussions.",
+                    roomCode: "STEM-8021"
+                  },
+                  {
+                    id: "DEBATE-202",
+                    name: "📖 Literature, Essay Writing & Debate Forum",
+                    category: "Cooperative Learning",
+                    categoryColor: "#8b5cf6",
+                    subject: "English Language & World Literature",
+                    activePeers: 4,
+                    host: "Amina Yusuf (Grade 10 Arts)",
+                    description: "Peer essay review, historical debates, poetry analysis, and grammar collaboration.",
+                    roomCode: "LIT-3940"
+                  },
+                  {
+                    id: "CODING-303",
+                    name: "💻 Computer Science & Coding Workshop",
+                    category: "Cooperative Learning",
+                    categoryColor: "#8b5cf6",
+                    subject: "Algorithms, Web Design & Python",
+                    activePeers: 6,
+                    host: "Alex Osei (Grade 11 Tech)",
+                    description: "Pair programming, HTML/CSS project peer review, logic algorithms, and robotics project planning.",
+                    roomCode: "CODE-5512"
+                  },
+                  {
+                    id: "SOCIAL-404",
+                    name: "☕ Student After-School Social Lounge",
+                    category: "Socializing & Community",
+                    categoryColor: "#f59e0b",
+                    subject: "Student Common Room & Casual Chat",
+                    activePeers: 8,
+                    host: "Kofi Boateng (Student Council)",
+                    description: "Relaxed social lounge to meet fellow scholars across classes, discuss sports, music, art, and school events.",
+                    roomCode: "LOUNGE-9910"
+                  },
+                  {
+                    id: "FRENCH-505",
+                    name: "🌍 Foreign Language & Culture Exchange",
+                    category: "Cooperative Learning",
+                    categoryColor: "#8b5cf6",
+                    subject: "French, Spanish & Twi Conversation",
+                    activePeers: 3,
+                    host: "Marie Dubois (Grade 10)",
+                    description: "Interactive voice conversational practice, vocabulary drills, and cultural storytelling in foreign languages.",
+                    roomCode: "LANG-7214"
+                  }
+                ].map((room) => (
+                  <div
+                    key={room.id}
+                    style={{
+                      background: "rgba(15, 23, 42, 0.8)",
+                      border: "1px solid rgba(255, 255, 255, 0.12)",
+                      borderRadius: "14px",
+                      padding: "1.25rem",
+                      display: "flex",
+                      flexDirection: "column",
+                      justifyContent: "space-between",
+                      transition: "all 0.2s ease"
+                    }}
+                  >
+                    <div>
+                      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: "8px" }}>
+                        <span style={{
+                          background: `${room.categoryColor}22`,
+                          border: `1px solid ${room.categoryColor}66`,
+                          color: room.categoryColor,
+                          fontSize: "0.7rem",
+                          fontWeight: 800,
+                          padding: "3px 8px",
+                          borderRadius: "6px"
+                        }}>
+                          {room.category}
+                        </span>
+                        <span style={{
+                          background: "rgba(16, 185, 129, 0.15)",
+                          color: "#34d399",
+                          fontSize: "0.72rem",
+                          fontWeight: 700,
+                          padding: "3px 8px",
+                          borderRadius: "6px"
+                        }}>
+                          ● {room.activePeers} Active Scholars
+                        </span>
+                      </div>
+
+                      <h4 style={{ margin: "6px 0 4px", fontSize: "1rem", color: "#f8fafc", fontWeight: 800 }}>
+                        {room.name}
+                      </h4>
+                      <div style={{ fontSize: "0.78rem", color: "#38bdf8", marginBottom: "8px", fontWeight: 700 }}>
+                        📚 {room.subject}
+                      </div>
+                      <p style={{ fontSize: "0.8rem", color: "#cbd5e1", margin: "0 0 12px", lineHeight: 1.4 }}>
+                        {room.description}
+                      </p>
+
+                      <div style={{
+                        background: "rgba(0, 0, 0, 0.3)",
+                        padding: "6px 10px",
+                        borderRadius: "6px",
+                        fontSize: "0.74rem",
+                        color: "#94a3b8",
+                        marginBottom: "14px"
+                      }}>
+                        Hosted by: <strong style={{ color: "#e2e8f0" }}>{room.host}</strong> • Room: <code style={{ color: "#a78bfa" }}>{room.roomCode}</code>
+                      </div>
+                    </div>
+
+                    <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "8px" }}>
+                      <button
+                        type="button"
+                        onClick={() => handleOpenCoopConferencing(room, "VOICE")}
+                        style={{
+                          background: "rgba(139, 92, 246, 0.18)",
+                          border: "1px solid #8b5cf6",
+                          color: "#c084fc",
+                          borderRadius: "8px",
+                          padding: "8px 10px",
+                          fontSize: "0.8rem",
+                          fontWeight: 700,
+                          cursor: "pointer",
+                          display: "inline-flex",
+                          alignItems: "center",
+                          justifyContent: "center",
+                          gap: "4px"
+                        }}
+                      >
+                        <span>🎙️</span> Voice Call
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => handleOpenCoopConferencing(room, "VIDEO")}
+                        style={{
+                          background: "linear-gradient(135deg, #8b5cf6, #7c3aed)",
+                          border: "none",
+                          color: "#ffffff",
+                          borderRadius: "8px",
+                          padding: "8px 10px",
+                          fontSize: "0.8rem",
+                          fontWeight: 800,
+                          cursor: "pointer",
+                          display: "inline-flex",
+                          alignItems: "center",
+                          justifyContent: "center",
+                          gap: "4px",
+                          boxShadow: "0 3px 10px rgba(139, 92, 246, 0.35)"
+                        }}
+                      >
+                        <span>📹</span> Video Call
+                      </button>
+                    </div>
+                  </div>
+                ))}
+              </div>
+
+              {/* Collaborative Features Banner */}
+              <div style={{
+                background: "rgba(15, 23, 42, 0.6)",
+                border: "1px solid rgba(255, 255, 255, 0.08)",
+                borderRadius: "14px",
+                padding: "1.5rem"
+              }}>
+                <h4 style={{ margin: "0 0 1rem", fontSize: "0.95rem", color: "#e2e8f0", fontWeight: 800 }}>
+                  💡 Cooperative Learning & Peer Socializing Tools Included:
+                </h4>
+                <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(220px, 1fr))", gap: "1rem" }}>
+                  <div style={{ borderLeft: "3px solid #8b5cf6", paddingLeft: "10px" }}>
+                    <strong style={{ color: "#c084fc", fontSize: "0.88rem" }}>📝 Live Scratchpad & Notes</strong>
+                    <p style={{ margin: "4px 0 0", fontSize: "0.78rem", color: "#94a3b8" }}>
+                      Take joint notes during group study sessions and copy the entire text to your clipboard with one click.
+                    </p>
+                  </div>
+                  <div style={{ borderLeft: "3px solid #38bdf8", paddingLeft: "10px" }}>
+                    <strong style={{ color: "#38bdf8", fontSize: "0.88rem" }}>💬 Group Chat & Reactions</strong>
+                    <p style={{ margin: "4px 0 0", fontSize: "0.78rem", color: "#94a3b8" }}>
+                      Share quick questions and emojis (👍, ❤️, 💡, 👏, 🙋‍♂️) without interrupting whoever is speaking.
+                    </p>
+                  </div>
+                  <div style={{ borderLeft: "3px solid #10b981", paddingLeft: "10px" }}>
+                    <strong style={{ color: "#34d399", fontSize: "0.88rem" }}>🖥️ Instant Screen Sharing</strong>
+                    <p style={{ margin: "4px 0 0", fontSize: "0.78rem", color: "#94a3b8" }}>
+                      Present homework diagrams, slides, or code directly to your fellow study circle members.
+                    </p>
+                  </div>
+                  <div style={{ borderLeft: "3px solid #f59e0b", paddingLeft: "10px" }}>
+                    <strong style={{ color: "#fbbf24", fontSize: "0.88rem" }}>🔒 Scholar Safe Space</strong>
+                    <p style={{ margin: "4px 0 0", fontSize: "0.78rem", color: "#94a3b8" }}>
+                      Restricted to verified students in your institution with automated room security and peer reporting.
+                    </p>
+                  </div>
+                </div>
+              </div>
             </div>
           )}
         </main>
@@ -7357,6 +7769,13 @@ export function StudentDashboard({ initialTab } = {}) {
         role="STUDENT"
         isOpen={showStudentGuideModal}
         onClose={() => setShowStudentGuideModal(false)}
+      />
+
+      <StudentCooperativeConferenceModal
+        isOpen={showCoopModal}
+        onClose={() => setShowCoopModal(false)}
+        initialRoom={selectedCoopRoom}
+        initialMode={coopCallMode}
       />
     </div>
   );

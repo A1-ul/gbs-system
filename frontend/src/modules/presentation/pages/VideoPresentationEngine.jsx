@@ -6,6 +6,8 @@ import {
 } from "../../../utils/pricingEngine";
 import { REAL_ACTION_ROLE_VIDEOS } from "../../../components/common/CartoonRoleVideoHubModal";
 import WindowControlsBar from "../../../components/common/WindowControlsBar";
+import StudentCooperativeConferenceModal from "../../../components/common/StudentCooperativeConferenceModal";
+import { ROLE_DASHBOARD_DETAILS } from "../data/roleDashboardDetails";
 import "../styles/VideoPresentationEngine.css";
 
 const ROLE_MODULES = [
@@ -684,6 +686,12 @@ export default function VideoPresentationEngine() {
     { time: "Ready", msg: "Real-Life Action Cinema & Interactive Walkthrough Engine initialized across all 10 roles." }
   ]);
 
+  const [presViewMode, setPresViewMode] = useState("SCENE"); // 'SCENE' | 'ARCHITECTURE' | 'CHECKLIST' | 'RCCE' | 'CONFERENCE'
+  const [showLiveConferenceModal, setShowLiveConferenceModal] = useState(false);
+  const [selectedLiveRoom, setSelectedLiveRoom] = useState(null);
+  const [liveConferenceMode, setLiveConferenceMode] = useState("VIDEO");
+  const [activeArchTabIdx, setActiveArchTabIdx] = useState(0);
+
   // Interactive Per-Student Subscription Calculator
   const [rates] = useState(() => getOnboardingRates());
   const [calcTier, setCalcTier] = useState("SHS");
@@ -692,6 +700,7 @@ export default function VideoPresentationEngine() {
 
   const activeModule = ROLE_MODULES[activeRoleIdx] || ROLE_MODULES[0];
   const activeStep = activeModule.steps[activeStepIdx] || activeModule.steps[0];
+  const activeRoleDetails = ROLE_DASHBOARD_DETAILS[activeModule.id] || ROLE_DASHBOARD_DETAILS.ADMIN;
   const masterVideo = REAL_ACTION_ROLE_VIDEOS[0];
 
   const speechRef = useRef(null);
@@ -719,6 +728,7 @@ export default function VideoPresentationEngine() {
     setIsPlayingScript(false);
     setActiveRoleIdx(idx);
     setActiveStepIdx(0);
+    setActiveArchTabIdx(0);
     appendLog(`Loaded Role ${idx + 1}: ${ROLE_MODULES[idx].role}`);
   };
 
@@ -944,9 +954,84 @@ export default function VideoPresentationEngine() {
         </div>
       </section>
 
+      {/* Interactive Presentation Mode / Deep-Dive Navigation */}
+      <div style={{
+        margin: "0 10px 16px",
+        padding: "8px 12px",
+        background: "rgba(15, 23, 42, 0.8)",
+        border: "1px solid rgba(255, 255, 255, 0.12)",
+        borderRadius: "12px",
+        display: "flex",
+        gap: "8px",
+        flexWrap: "wrap",
+        alignItems: "center",
+        justifyContent: "space-between"
+      }}>
+        <div style={{ display: "flex", gap: "8px", flexWrap: "wrap", alignItems: "center" }}>
+          <span style={{ fontSize: "0.78rem", color: "#94a3b8", fontWeight: 700, marginRight: "4px" }}>
+            PRESENTATION MODE:
+          </span>
+          {[
+            { id: "SCENE", label: "🎬 Action Movie & Script", desc: "Scene-by-scene video and verbatim narration" },
+            { id: "ARCHITECTURE", label: "🖥️ Dashboard Architecture & Every Button Guide", desc: "Complete guide to all menus, buttons & actions" },
+            { id: "CHECKLIST", label: "📋 SOP & Daily Routine Checklist", desc: "Daily, weekly and termly procedures" },
+            { id: "RCCE", label: "⚡ GBS-RCCE Central Linkage", desc: "API, business rules & audit trails" },
+            { id: "CONFERENCE", label: "🎙️ Student Cooperative Conferencing Guide", desc: "Voice & video study circles" }
+          ].map((mode) => (
+            <button
+              key={mode.id}
+              type="button"
+              onClick={() => {
+                setPresViewMode(mode.id);
+                appendLog(`Switched presentation view to ${mode.label}`);
+              }}
+              style={{
+                background: presViewMode === mode.id ? (activeModule.color || "#38bdf8") : "rgba(30, 41, 59, 0.7)",
+                color: presViewMode === mode.id ? "#020617" : "#cbd5e1",
+                border: presViewMode === mode.id ? "none" : "1px solid rgba(255, 255, 255, 0.1)",
+                borderRadius: "8px",
+                padding: "8px 14px",
+                fontWeight: 800,
+                fontSize: "0.82rem",
+                cursor: "pointer",
+                transition: "all 0.2s ease"
+              }}
+              title={mode.desc}
+            >
+              {mode.label}
+            </button>
+          ))}
+        </div>
+
+        <button
+          type="button"
+          onClick={() => {
+            setShowLiveConferenceModal(true);
+            setLiveConferenceMode("VIDEO");
+            appendLog("Launched Live Student Cooperative Conference Simulator.");
+          }}
+          style={{
+            background: "linear-gradient(135deg, #8b5cf6, #7c3aed)",
+            border: "none",
+            color: "#ffffff",
+            borderRadius: "8px",
+            padding: "8px 14px",
+            fontWeight: 800,
+            fontSize: "0.82rem",
+            cursor: "pointer",
+            display: "inline-flex",
+            alignItems: "center",
+            gap: "6px",
+            boxShadow: "0 4px 12px rgba(139, 92, 246, 0.4)"
+          }}
+        >
+          <span>🎙️</span> Test Student Conference Hub
+        </button>
+      </div>
+
       {/* Main Split Arena */}
       <main className="gbs-pres-arena">
-        {/* Left Column: Scene Narration & Verbatim Steps */}
+        {/* Left Column: Scene Narration, Dashboard Architecture & SOP Guides */}
         <div>
           <section className="gbs-pres-card">
             <div className="gbs-pres-role-header">
@@ -979,50 +1064,421 @@ export default function VideoPresentationEngine() {
               ))}
             </div>
 
-            <div className="gbs-pres-section-title">SCENE-BY-SCENE ACTION BREAKDOWN</div>
+            {/* VIEW 1: SCENE-BY-SCENE ACTION BREAKDOWN */}
+            {presViewMode === "SCENE" && (
+              <div>
+                <div className="gbs-pres-section-title">SCENE-BY-SCENE ACTION BREAKDOWN</div>
 
-            <div className="gbs-pres-step-tabs">
-              {activeModule.steps.map((st, sIdx) => (
-                <button
-                  key={st.title}
-                  type="button"
-                  className={`gbs-pres-step-tab-btn ${sIdx === activeStepIdx ? "active" : ""}`}
-                  onClick={() => setActiveStepIdx(sIdx)}
-                >
-                  Scene {sIdx + 1} ({st.duration})
-                </button>
-              ))}
-            </div>
+                <div className="gbs-pres-step-tabs">
+                  {activeModule.steps.map((st, sIdx) => (
+                    <button
+                      key={st.title}
+                      type="button"
+                      className={`gbs-pres-step-tab-btn ${sIdx === activeStepIdx ? "active" : ""}`}
+                      onClick={() => setActiveStepIdx(sIdx)}
+                    >
+                      Scene {sIdx + 1} ({st.duration})
+                    </button>
+                  ))}
+                </div>
 
-            <div className="gbs-pres-step-content">
-              <h4>{activeStep.title}</h4>
-              <p className="gbs-pres-narration">{activeStep.narration}</p>
-              <div className="gbs-pres-action-indicator">
-                <span className="gbs-badge-live">ON-SCREEN ACTION</span>
-                <code>{activeStep.actionLabel}</code>
+                <div className="gbs-pres-step-content">
+                  <h4>{activeStep.title}</h4>
+                  <p className="gbs-pres-narration">{activeStep.narration}</p>
+                  <div className="gbs-pres-action-indicator">
+                    <span className="gbs-badge-live">ON-SCREEN ACTION</span>
+                    <code>{activeStep.actionLabel}</code>
+                  </div>
+
+                  <div style={{ display: "flex", gap: "0.75rem", marginTop: "1rem", flexWrap: "wrap" }}>
+                    <button
+                      type="button"
+                      className="gbs-btn-pres-primary"
+                      onClick={handleSpeakStep}
+                    >
+                      {isPlayingScript ? "⏹ Stop Voice Readout" : "🔊 Read Scene Narration Aloud"}
+                    </button>
+                    <button
+                      type="button"
+                      className="gbs-btn-pres-outline"
+                      onClick={handleCopyNarration}
+                    >
+                      📋 Copy Narration Text
+                    </button>
+                  </div>
+                </div>
+
+                <div className="gbs-pres-closing-quote" style={{ marginTop: "1.25rem" }}>
+                  💡 <strong>Key Takeaway:</strong> {activeModule.closingHook}
+                </div>
               </div>
+            )}
 
-              <div style={{ display: "flex", gap: "0.75rem", marginTop: "1rem", flexWrap: "wrap" }}>
-                <button
-                  type="button"
-                  className="gbs-btn-pres-primary"
-                  onClick={handleSpeakStep}
-                >
-                  {isPlayingScript ? "⏹ Stop Voice Readout" : "🔊 Read Scene Narration Aloud"}
-                </button>
-                <button
-                  type="button"
-                  className="gbs-btn-pres-outline"
-                  onClick={handleCopyNarration}
-                >
-                  📋 Copy Narration Text
-                </button>
+            {/* VIEW 2: COMPLETE DASHBOARD ARCHITECTURE & BUTTON GUIDE */}
+            {presViewMode === "ARCHITECTURE" && (
+              <div>
+                <div className="gbs-pres-section-title" style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+                  <span>DASHBOARD ARCHITECTURE & MENU / BUTTON BREAKDOWN</span>
+                  <span style={{ fontSize: "0.75rem", color: "#38bdf8", textTransform: "none", fontWeight: 700 }}>
+                    Portal: <code>{activeRoleDetails.dashboardPath}</code>
+                  </span>
+                </div>
+
+                <p style={{ fontSize: "0.86rem", color: "#cbd5e1", lineHeight: 1.5, marginBottom: "1rem" }}>
+                  {activeRoleDetails.summary}
+                </p>
+
+                {/* Tab Selector on Dashboard */}
+                <div style={{ display: "flex", gap: "6px", flexWrap: "wrap", marginBottom: "1.25rem" }}>
+                  {activeRoleDetails.keyTabs.map((tab, tIdx) => (
+                    <button
+                      key={tab.tabId}
+                      type="button"
+                      onClick={() => setActiveArchTabIdx(tIdx)}
+                      style={{
+                        background: activeArchTabIdx === tIdx ? "rgba(56, 189, 248, 0.2)" : "rgba(15, 23, 42, 0.6)",
+                        border: activeArchTabIdx === tIdx ? "1.5px solid #38bdf8" : "1px solid rgba(255, 255, 255, 0.1)",
+                        color: activeArchTabIdx === tIdx ? "#38bdf8" : "#cbd5e1",
+                        borderRadius: "8px",
+                        padding: "6px 12px",
+                        fontSize: "0.8rem",
+                        fontWeight: 800,
+                        cursor: "pointer"
+                      }}
+                    >
+                      {tab.tabName}
+                    </button>
+                  ))}
+                </div>
+
+                {/* Active Tab Deep Breakdown */}
+                {(() => {
+                  const curTab = activeRoleDetails.keyTabs[activeArchTabIdx] || activeRoleDetails.keyTabs[0];
+                  return (
+                    <div style={{
+                      background: "rgba(15, 23, 42, 0.8)",
+                      border: "1px solid rgba(255, 255, 255, 0.12)",
+                      borderRadius: "12px",
+                      padding: "1.25rem"
+                    }}>
+                      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "8px", flexWrap: "wrap", gap: "6px" }}>
+                        <h4 style={{ margin: 0, fontSize: "1.05rem", color: "#f8fafc", fontWeight: 800 }}>
+                          {curTab.tabName}
+                        </h4>
+                        <span style={{ background: "rgba(56, 189, 248, 0.15)", color: "#38bdf8", padding: "3px 8px", borderRadius: "6px", fontSize: "0.72rem", fontWeight: 800 }}>
+                          TAB ID: {curTab.tabId.toUpperCase()}
+                        </span>
+                      </div>
+
+                      <p style={{ fontSize: "0.84rem", color: "#94a3b8", lineHeight: 1.5, margin: "0 0 1rem" }}>
+                        <strong>Operational Purpose:</strong> {curTab.tabPurpose}
+                      </p>
+
+                      {/* Action Buttons & Feedback Matrix */}
+                      <div style={{ marginBottom: "1rem" }}>
+                        <span style={{ fontSize: "0.75rem", color: "#38bdf8", fontWeight: 800, display: "block", marginBottom: "6px", letterSpacing: "0.5px" }}>
+                          COMMAND BUTTONS, CLICKS & SYSTEM RESPONSES:
+                        </span>
+                        <div style={{ display: "flex", flexDirection: "column", gap: "8px" }}>
+                          {curTab.actionButtons.map((btn, bIdx) => (
+                            <div
+                              key={bIdx}
+                              style={{
+                                background: "rgba(30, 41, 59, 0.6)",
+                                border: "1px solid rgba(255, 255, 255, 0.08)",
+                                borderRadius: "8px",
+                                padding: "8px 12px"
+                              }}
+                            >
+                              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "3px" }}>
+                                <strong style={{ color: "#f8fafc", fontSize: "0.85rem" }}>
+                                  🔘 {btn.name}
+                                </strong>
+                                <span style={{ fontSize: "0.72rem", color: "#34d399", fontWeight: 700 }}>
+                                  ⚡ Immediate Action
+                                </span>
+                              </div>
+                              <div style={{ fontSize: "0.8rem", color: "#cbd5e1", marginBottom: "3px" }}>
+                                <strong>Action:</strong> {btn.action}
+                              </div>
+                              <div style={{ fontSize: "0.78rem", color: "#a5f3fc" }}>
+                                <strong>Feedback / Response:</strong> {btn.feedback}
+                              </div>
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+
+                      {/* Inputs & Forms */}
+                      {curTab.formsAndInputs && curTab.formsAndInputs.length > 0 && (
+                        <div style={{ marginBottom: "1rem" }}>
+                          <span style={{ fontSize: "0.75rem", color: "#f59e0b", fontWeight: 800, display: "block", marginBottom: "4px" }}>
+                            USER INPUTS, SELECTORS & CONTROLS:
+                          </span>
+                          <div style={{ display: "flex", gap: "6px", flexWrap: "wrap" }}>
+                            {curTab.formsAndInputs.map((formItem, fIdx) => (
+                              <span
+                                key={fIdx}
+                                style={{
+                                  background: "rgba(245, 158, 11, 0.12)",
+                                  border: "1px solid rgba(245, 158, 11, 0.3)",
+                                  color: "#fbbf24",
+                                  fontSize: "0.74rem",
+                                  fontWeight: 700,
+                                  padding: "3px 8px",
+                                  borderRadius: "6px"
+                                }}
+                              >
+                                📝 {formItem}
+                              </span>
+                            ))}
+                          </div>
+                        </div>
+                      )}
+
+                      {/* System Feedback */}
+                      <div style={{
+                        background: "rgba(16, 185, 129, 0.12)",
+                        border: "1px solid rgba(16, 185, 129, 0.3)",
+                        borderRadius: "8px",
+                        padding: "8px 12px",
+                        fontSize: "0.8rem",
+                        color: "#6ee7b7"
+                      }}>
+                        <strong>Central System State Impact:</strong> {curTab.systemFeedback}
+                      </div>
+                    </div>
+                  );
+                })()}
               </div>
-            </div>
+            )}
 
-            <div className="gbs-pres-closing-quote" style={{ marginTop: "1.25rem" }}>
-              💡 <strong>Key Takeaway:</strong> {activeModule.closingHook}
-            </div>
+            {/* VIEW 3: SOP & DAILY ROUTINE CHECKLIST */}
+            {presViewMode === "CHECKLIST" && (
+              <div>
+                <div className="gbs-pres-section-title">
+                  STANDARD OPERATING PROCEDURES (SOP) & DUTIES CHECKLIST
+                </div>
+                <p style={{ fontSize: "0.86rem", color: "#cbd5e1", lineHeight: 1.5, marginBottom: "1rem" }}>
+                  Operational daily routines, weekly closeouts, and termly responsibilities for <strong>{activeRoleDetails.role}</strong>.
+                </p>
+
+                <div style={{ marginBottom: "1.5rem" }}>
+                  <h4 style={{ margin: "0 0 8px", fontSize: "0.95rem", color: "#38bdf8", fontWeight: 800 }}>
+                    ☀️ Morning & Daily Operating Checklist:
+                  </h4>
+                  <div style={{ display: "flex", flexDirection: "column", gap: "6px" }}>
+                    {activeRoleDetails.dailyChecklist.map((task, dIdx) => (
+                      <div
+                        key={dIdx}
+                        style={{
+                          background: "rgba(15, 23, 42, 0.7)",
+                          border: "1px solid rgba(255, 255, 255, 0.08)",
+                          borderRadius: "8px",
+                          padding: "10px 14px",
+                          display: "flex",
+                          alignItems: "center",
+                          gap: "10px"
+                        }}
+                      >
+                        <span style={{ fontSize: "1.1rem", color: "#34d399" }}>☑️</span>
+                        <span style={{ fontSize: "0.85rem", color: "#f1f5f9" }}>{task}</span>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+
+                <div>
+                  <h4 style={{ margin: "0 0 8px", fontSize: "0.95rem", color: "#f59e0b", fontWeight: 800 }}>
+                    🗓️ Weekly & Termly Governance Checklist:
+                  </h4>
+                  <div style={{ display: "flex", flexDirection: "column", gap: "6px" }}>
+                    {activeRoleDetails.weeklyAndTermlyChecklist.map((task, wIdx) => (
+                      <div
+                        key={wIdx}
+                        style={{
+                          background: "rgba(15, 23, 42, 0.7)",
+                          border: "1px solid rgba(255, 255, 255, 0.08)",
+                          borderRadius: "8px",
+                          padding: "10px 14px",
+                          display: "flex",
+                          alignItems: "center",
+                          gap: "10px"
+                        }}
+                      >
+                        <span style={{ fontSize: "1.1rem", color: "#fbbf24" }}>📋</span>
+                        <span style={{ fontSize: "0.85rem", color: "#f1f5f9" }}>{task}</span>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {/* VIEW 4: GBS-RCCE CENTRAL LINKAGE */}
+            {presViewMode === "RCCE" && (
+              <div>
+                <div className="gbs-pres-section-title">
+                  GBS-RCCE CENTRAL SYSTEM RESPONSE, CONTROL & COMMUNICATION ENGINE LINKAGE
+                </div>
+                <p style={{ fontSize: "0.86rem", color: "#cbd5e1", lineHeight: 1.5, marginBottom: "1rem" }}>
+                  Every button click and action executed on the <strong>{activeRoleDetails.role}</strong> dashboard connects directly through the centralized GBS-RCCE architecture.
+                </p>
+
+                <div style={{ display: "flex", flexDirection: "column", gap: "12px" }}>
+                  <div style={{ background: "rgba(15, 23, 42, 0.8)", border: "1px solid #38bdf8", borderRadius: "10px", padding: "1rem" }}>
+                    <div style={{ display: "flex", alignItems: "center", gap: "8px", marginBottom: "6px" }}>
+                      <span style={{ fontSize: "1.2rem" }}>🌐</span>
+                      <strong style={{ color: "#38bdf8", fontSize: "0.95rem" }}>Central API Architecture & Endpoints:</strong>
+                    </div>
+                    <p style={{ margin: "0 0 8px", fontSize: "0.82rem", color: "#94a3b8" }}>
+                      All requests route through authorized backend endpoints with JWT/Session bearer validation:
+                    </p>
+                    <div style={{ display: "flex", gap: "6px", flexWrap: "wrap" }}>
+                      {activeRoleDetails.rcceCentralLinkage.centralEndpoints.map((ep, eIdx) => (
+                        <code key={eIdx} style={{ background: "#020617", border: "1px solid #334155", color: "#38bdf8", padding: "3px 8px", borderRadius: "6px", fontSize: "0.78rem" }}>
+                          {ep}
+                        </code>
+                      ))}
+                    </div>
+                  </div>
+
+                  <div style={{ background: "rgba(15, 23, 42, 0.8)", border: "1px solid #f59e0b", borderRadius: "10px", padding: "1rem" }}>
+                    <div style={{ display: "flex", alignItems: "center", gap: "8px", marginBottom: "6px" }}>
+                      <span style={{ fontSize: "1.2rem" }}>⚖️</span>
+                      <strong style={{ color: "#fbbf24", fontSize: "0.95rem" }}>Business Rules Engine Guardrails:</strong>
+                    </div>
+                    <p style={{ margin: 0, fontSize: "0.84rem", color: "#cbd5e1", lineHeight: 1.5 }}>
+                      {activeRoleDetails.rcceCentralLinkage.businessRules}
+                    </p>
+                  </div>
+
+                  <div style={{ background: "rgba(15, 23, 42, 0.8)", border: "1px solid #10b981", borderRadius: "10px", padding: "1rem" }}>
+                    <div style={{ display: "flex", alignItems: "center", gap: "8px", marginBottom: "6px" }}>
+                      <span style={{ fontSize: "1.2rem" }}>📜</span>
+                      <strong style={{ color: "#34d399", fontSize: "0.95rem" }}>Audit and Activity Tracking Vault:</strong>
+                    </div>
+                    <p style={{ margin: 0, fontSize: "0.84rem", color: "#cbd5e1", lineHeight: 1.5 }}>
+                      {activeRoleDetails.rcceCentralLinkage.auditTrail}
+                    </p>
+                  </div>
+
+                  <div style={{ background: "rgba(15, 23, 42, 0.8)", border: "1px solid #8b5cf6", borderRadius: "10px", padding: "1rem" }}>
+                    <div style={{ display: "flex", alignItems: "center", gap: "8px", marginBottom: "6px" }}>
+                      <span style={{ fontSize: "1.2rem" }}>📡</span>
+                      <strong style={{ color: "#c084fc", fontSize: "0.95rem" }}>Event and Notification Dispatches:</strong>
+                    </div>
+                    <p style={{ margin: 0, fontSize: "0.84rem", color: "#cbd5e1", lineHeight: 1.5 }}>
+                      {activeRoleDetails.rcceCentralLinkage.downstreamEvents}
+                    </p>
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {/* VIEW 5: STUDENT COOPERATIVE CONFERENCING GUIDE */}
+            {presViewMode === "CONFERENCE" && (
+              <div>
+                <div className="gbs-pres-section-title" style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+                  <span>STUDENT COOPERATIVE VOICE & VIDEO CONFERENCING & SOCIAL LOUNGE</span>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setShowLiveConferenceModal(true);
+                      setLiveConferenceMode("VIDEO");
+                    }}
+                    style={{
+                      background: "linear-gradient(135deg, #8b5cf6, #6d28d9)",
+                      border: "none",
+                      color: "#fff",
+                      borderRadius: "6px",
+                      padding: "4px 10px",
+                      fontSize: "0.75rem",
+                      fontWeight: 800,
+                      cursor: "pointer"
+                    }}
+                  >
+                    🚀 Launch Live Hub
+                  </button>
+                </div>
+
+                <p style={{ fontSize: "0.86rem", color: "#cbd5e1", lineHeight: 1.5, marginBottom: "1rem" }}>
+                  The Student Cooperative Conferencing Hub allows scholars to meet in voice and video conference rooms for collaborative study circles, homework review, and student socializing.
+                </p>
+
+                <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "10px", marginBottom: "1.25rem" }}>
+                  <div style={{ background: "rgba(139, 92, 246, 0.15)", border: "1px solid #8b5cf6", borderRadius: "10px", padding: "10px 14px" }}>
+                    <div style={{ display: "flex", alignItems: "center", gap: "6px", marginBottom: "4px" }}>
+                      <span style={{ fontSize: "1.1rem" }}>🎙️</span>
+                      <strong style={{ color: "#c084fc", fontSize: "0.9rem" }}>Voice Calling Mode:</strong>
+                    </div>
+                    <p style={{ margin: 0, fontSize: "0.78rem", color: "#cbd5e1", lineHeight: 1.4 }}>
+                      Lightweight audio calling with voice waveforms, active speaker glowing indicators, and background noise suppression. Perfect for low data usage and quick study questions.
+                    </p>
+                  </div>
+
+                  <div style={{ background: "rgba(6, 182, 212, 0.15)", border: "1px solid #06b6d4", borderRadius: "10px", padding: "10px 14px" }}>
+                    <div style={{ display: "flex", alignItems: "center", gap: "6px", marginBottom: "4px" }}>
+                      <span style={{ fontSize: "1.1rem" }}>📹</span>
+                      <strong style={{ color: "#38bdf8", fontSize: "0.9rem" }}>HD Video Calling Mode:</strong>
+                    </div>
+                    <p style={{ margin: 0, fontSize: "0.78rem", color: "#cbd5e1", lineHeight: 1.4 }}>
+                      Multi-peer WebRTC video stream, camera toggle, screen sharing for sharing slides/diagrams/code, raise hand indicator, and active duration timer.
+                    </p>
+                  </div>
+                </div>
+
+                <h4 style={{ margin: "0 0 8px", fontSize: "0.95rem", color: "#f8fafc", fontWeight: 800 }}>
+                  Active Preset Study Lounges & Social Rooms:
+                </h4>
+
+                <div style={{ display: "flex", flexDirection: "column", gap: "8px", marginBottom: "1rem" }}>
+                  {[
+                    { name: "🔬 STEM & Mathematics Circle", cat: "Cooperative Learning", code: "STEM-8021", peers: 5, desc: "Calculus, Physics, quadratic equations & lab report collaboration." },
+                    { name: "📖 Literature, Essay & Debate", cat: "Cooperative Learning", code: "LIT-3940", peers: 4, desc: "Essay peer review, grammar drills, philosophy & history debates." },
+                    { name: "💻 CS & Coding Workshop", cat: "Cooperative Learning", code: "CODE-5512", peers: 6, desc: "Pair programming, HTML/CSS review, Python logic & robotics." },
+                    { name: "☕ Student After-School Social Lounge", cat: "Socializing & Community", code: "LOUNGE-9910", peers: 8, desc: "Meet peers across classes, discuss sports, art, music & school life." },
+                    { name: "🌍 Foreign Language Exchange", cat: "Cooperative Learning", code: "LANG-7214", peers: 3, desc: "Voice conversation drills in French, Spanish, Twi & Hausa." }
+                  ].map((room, rIdx) => (
+                    <div key={rIdx} style={{ background: "rgba(15, 23, 42, 0.7)", border: "1px solid rgba(255, 255, 255, 0.08)", borderRadius: "8px", padding: "8px 12px", display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: "8px" }}>
+                      <div>
+                        <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
+                          <strong style={{ color: "#f8fafc", fontSize: "0.88rem" }}>{room.name}</strong>
+                          <span style={{ background: "rgba(16, 185, 129, 0.15)", color: "#34d399", fontSize: "0.7rem", fontWeight: 700, padding: "2px 6px", borderRadius: "4px" }}>
+                            ● {room.peers} Active
+                          </span>
+                        </div>
+                        <p style={{ margin: "2px 0 0", fontSize: "0.76rem", color: "#94a3b8" }}>{room.desc}</p>
+                      </div>
+                      <div style={{ display: "flex", gap: "6px" }}>
+                        <button
+                          type="button"
+                          onClick={() => {
+                            setSelectedLiveRoom({ id: room.code, name: room.name, roomCode: room.code, category: room.cat, description: room.desc });
+                            setLiveConferenceMode("VOICE");
+                            setShowLiveConferenceModal(true);
+                          }}
+                          style={{ background: "rgba(139, 92, 246, 0.2)", border: "1px solid #8b5cf6", color: "#c084fc", borderRadius: "6px", padding: "5px 10px", fontSize: "0.75rem", fontWeight: 700, cursor: "pointer" }}
+                        >
+                          🎙️ Voice
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => {
+                            setSelectedLiveRoom({ id: room.code, name: room.name, roomCode: room.code, category: room.cat, description: room.desc });
+                            setLiveConferenceMode("VIDEO");
+                            setShowLiveConferenceModal(true);
+                          }}
+                          style={{ background: "#8b5cf6", border: "none", color: "#fff", borderRadius: "6px", padding: "5px 10px", fontSize: "0.75rem", fontWeight: 800, cursor: "pointer" }}
+                        >
+                          📹 Video
+                        </button>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
           </section>
         </div>
 
@@ -1126,6 +1582,13 @@ export default function VideoPresentationEngine() {
           </section>
         </div>
       </main>
+
+      <StudentCooperativeConferenceModal
+        isOpen={showLiveConferenceModal}
+        onClose={() => setShowLiveConferenceModal(false)}
+        initialRoom={selectedLiveRoom}
+        initialMode={liveConferenceMode}
+      />
     </div>
   );
 }
