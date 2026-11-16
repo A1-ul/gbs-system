@@ -307,6 +307,49 @@ export default function MainLoginPage() {
           </p>
         </div>
 
+        {/* Siri-Style AI Voice Assistant Quick Trigger Banner for Accessibility & Remote Voice Operation */}
+        <div style={{ margin: "0 0 1rem" }}>
+          <button
+            type="button"
+            onClick={() => {
+              if (window.gbsVoiceAssistant) {
+                window.gbsVoiceAssistant.open();
+              } else {
+                window.dispatchEvent(new CustomEvent("gbs_open_voice_assistant"));
+              }
+            }}
+            style={{
+              width: "100%",
+              padding: "12px 16px",
+              borderRadius: "14px",
+              background: "linear-gradient(135deg, rgba(56, 189, 248, 0.2) 0%, rgba(212, 175, 55, 0.25) 100%)",
+              border: "2px solid #38bdf8",
+              color: "#ffffff",
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "space-between",
+              cursor: "pointer",
+              boxShadow: "0 6px 20px rgba(56, 189, 248, 0.2)",
+              transition: "transform 0.2s ease, box-shadow 0.2s ease"
+            }}
+          >
+            <div style={{ display: "flex", alignItems: "center", gap: "10px", textAlign: "left" }}>
+              <span style={{ fontSize: "1.6rem" }}>🎙️</span>
+              <div>
+                <strong style={{ display: "block", fontSize: "0.88rem", letterSpacing: "0.5px", color: "#38bdf8" }}>
+                  GBS AI VOICE ASSISTANT (SIRI REMOTE)
+                </strong>
+                <span style={{ fontSize: "0.74rem", color: "#e2e8f0" }}>
+                  Tap to speak or call "Hey GBS" • Accessibility & Hands-Free Control
+                </span>
+              </div>
+            </div>
+            <span style={{ background: "#38bdf8", color: "#020617", fontSize: "0.72rem", fontWeight: 800, padding: "5px 10px", borderRadius: "20px" }}>
+              SPEAK NOW
+            </span>
+          </button>
+        </div>
+
         {/* Online Admissions Quick Portal Callout for Prospective Parents */}
         <div style={{ margin: "0 0 1.25rem" }}>
           <button

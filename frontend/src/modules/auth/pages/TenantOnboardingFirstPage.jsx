@@ -446,7 +446,7 @@ export default function TenantOnboardingFirstPage() {
           usedAt: new Date().toISOString()
         });
         localStorage.setItem("gbs_used_trial_institutions", JSON.stringify(used));
-      } catch {}
+      } catch { }
     }
 
     setLoading(false);

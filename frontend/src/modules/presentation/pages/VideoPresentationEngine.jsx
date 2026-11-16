@@ -695,6 +695,9 @@ export default function VideoPresentationEngine() {
   const masterVideo = REAL_ACTION_ROLE_VIDEOS[0];
 
   const speechRef = useRef(null);
+  const videoRef = useRef(null);
+  const [isVideoMuted, setIsVideoMuted] = useState(false);
+  const [videoSourceMode, setVideoSourceMode] = useState("ROLE"); // 'ROLE' | 'MASTER'
 
   useEffect(() => {
     return () => {
@@ -809,16 +812,96 @@ export default function VideoPresentationEngine() {
         ))}
       </nav>
 
+      {/* Video Source Switcher & Audio Controls Bar */}
+      <div style={{ display: "flex", gap: "10px", justifyContent: "space-between", alignItems: "center", margin: "14px 0", flexWrap: "wrap", padding: "0 10px" }}>
+        <div style={{ display: "flex", gap: "8px", flexWrap: "wrap" }}>
+          <button
+            type="button"
+            onClick={() => setVideoSourceMode("ROLE")}
+            style={{
+              background: videoSourceMode === "ROLE" ? (activeModule.color || "#38bdf8") : "#1e293b",
+              color: videoSourceMode === "ROLE" ? "#020617" : "#cbd5e1",
+              border: "1px solid #334155",
+              borderRadius: "8px",
+              padding: "8px 14px",
+              fontWeight: 700,
+              fontSize: "13px",
+              cursor: "pointer"
+            }}
+          >
+            🎬 Role {activeRoleIdx + 1}: {activeModule.role} Action Video
+          </button>
+          <button
+            type="button"
+            onClick={() => setVideoSourceMode("MASTER")}
+            style={{
+              background: videoSourceMode === "MASTER" ? "#f59e0b" : "#1e293b",
+              color: videoSourceMode === "MASTER" ? "#020617" : "#cbd5e1",
+              border: "1px solid #334155",
+              borderRadius: "8px",
+              padding: "8px 14px",
+              fontWeight: 700,
+              fontSize: "13px",
+              cursor: "pointer"
+            }}
+          >
+            🌟 Complete All-10-Roles Master Film (56 MB)
+          </button>
+        </div>
+
+        <div style={{ display: "flex", gap: "8px", flexWrap: "wrap" }}>
+          <button
+            type="button"
+            onClick={() => {
+              if (videoRef.current) {
+                videoRef.current.muted = !videoRef.current.muted;
+                setIsVideoMuted(videoRef.current.muted);
+              }
+            }}
+            style={{
+              background: isVideoMuted ? "#ef4444" : "#10b981",
+              color: "#ffffff",
+              border: "none",
+              borderRadius: "8px",
+              padding: "8px 14px",
+              fontWeight: 700,
+              fontSize: "13px",
+              cursor: "pointer"
+            }}
+          >
+            {isVideoMuted ? "🔇 Unmute Video Audio" : "🔊 Sound ON (Mute Audio)"}
+          </button>
+
+          <button
+            type="button"
+            onClick={handleSpeakStep}
+            style={{
+              background: isPlayingScript ? "#dc2626" : "#38bdf8",
+              color: isPlayingScript ? "#ffffff" : "#020617",
+              border: "none",
+              borderRadius: "8px",
+              padding: "8px 14px",
+              fontWeight: 700,
+              fontSize: "13px",
+              cursor: "pointer"
+            }}
+          >
+            {isPlayingScript ? "⏹️ Stop Narration" : "🗣️ Listen to Scene Narration Aloud"}
+          </button>
+        </div>
+      </div>
+
       {/* Embedded Real-Life Action MP4 Cinema Banner */}
       <section className="gbs-pres-cinema-banner">
         <div className="gbs-pres-cinema-player-wrap">
           <video
-            key={activeModule.videoFile}
-            src={activeModule.videoFile}
+            ref={videoRef}
+            key={videoSourceMode === "MASTER" ? "/videos/gbs_complete_system_roles_master_guide.mp4" : activeModule.videoFile}
+            src={videoSourceMode === "MASTER" ? "/videos/gbs_complete_system_roles_master_guide.mp4" : activeModule.videoFile}
             poster={activeModule.photos[0]}
             controls
             autoPlay
-            muted
+            muted={isVideoMuted}
             playsInline
             preload="auto"
           />

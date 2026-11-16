@@ -189,7 +189,7 @@ export default function GBSCompanyWebsite() {
               </div>
               <h3 className="system-name">{sys.name}</h3>
               <p className="system-tagline">{sys.tagline}</p>
-              
+
               <div className="system-features-preview">
                 <div className="preview-label">Core Capabilities:</div>
                 <ul>
@@ -379,8 +379,8 @@ export default function GBSCompanyWebsite() {
                   calcTier === "BASIC"
                     ? rates.BASIC_PER_STUDENT
                     : calcTier === "SHS"
-                    ? rates.SHS_PER_STUDENT
-                    : rates.UNIVERSITY_PER_STUDENT
+                      ? rates.SHS_PER_STUDENT
+                      : rates.UNIVERSITY_PER_STUDENT
                 )}
               </div>
 
