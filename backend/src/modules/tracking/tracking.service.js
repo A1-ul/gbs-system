@@ -1,4 +1,5 @@
 const prisma = require('../../core/database/prisma.client');
+const { resolveWorldwideLocation } = require('../../utils/globalLocationResolver');
 
 const updateStudentLocation = async (tenantId, { studentId, latitude, longitude, speed, batteryPct }) => {
   try {
@@ -134,8 +135,9 @@ const locateEmergency = async (tenantId, query) => {
     console.warn("Emergency locator lookup notice:", err.message);
   }
 
-  const finalLat = location?.latitude || branch.latitude;
-  const finalLng = location?.longitude || branch.longitude;
+  const geoFallback = resolveWorldwideLocation(searchTerm);
+  const finalLat = location?.latitude || (user ? branch.latitude : geoFallback.latitude);
+  const finalLng = location?.longitude || (user ? branch.longitude : geoFallback.longitude);
 
   return {
     query: searchTerm,
@@ -146,13 +148,16 @@ const locateEmergency = async (tenantId, query) => {
       email: user.email,
       phone: searchTerm || "+233-24-455-0199"
     } : {
-      name: "John Doe (Parent/Guardian)",
+      name: `Parent / Guardian (${searchTerm || 'Global'})`,
       phone: searchTerm || "+233-24-455-0199",
-      role: "PARENT"
+      role: "PARENT",
+      address: geoFallback.address,
+      country: geoFallback.country,
+      city: geoFallback.city
     },
     matchedStudent: {
       name: user?.role === 'STUDENT' ? `${user.firstName} ${user.lastName}` : "Alex Student (Grade 10-A)",
-      schoolBranch: branch.branchName,
+      schoolBranch: user ? branch.branchName : `${geoFallback.city} International Campus Enclave`,
       coordinates: { latitude: finalLat, longitude: finalLng },
       batteryPct: location?.batteryPct || 92,
       lastDetected: location?.updatedAt || new Date().toISOString()

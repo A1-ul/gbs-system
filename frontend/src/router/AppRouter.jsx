@@ -171,7 +171,7 @@ function ProtectedPortalRoute({ children, loginPath = "/login" }) {
 export default function AppRouter() {
   return (
     <BrowserRouter>
-      <Suspense fallback={<div style={{minHeight:"100vh",display:"flex",alignItems:"center",justifyContent:"center",background:"#020617",color:"#f8fafc",fontWeight:800,fontFamily:"system-ui,sans-serif"}}>Loading GBS System Portal...</div>}>
+      <Suspense fallback={<div style={{minHeight:"100vh",display:"flex",alignItems:"center",justifyContent:"center",background:"#020617",color:"#f8fafc",fontWeight:800,fontFamily:"'Times New Roman', Times, Georgia, serif"}}>Loading GBS System Portal...</div>}>
       <Routes>
         {/* Master First Page of the System: Tenant Onboarding Forms with Auto-Redirect */}
         <Route path="/" element={<TenantOnboardingFirstPage />} />

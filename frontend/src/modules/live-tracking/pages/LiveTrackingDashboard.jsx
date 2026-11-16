@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import apiClient from "../../../api/client/apiClient";
+import { resolveWorldwideLocation } from "../../../utils/globalLocationResolver";
 import "./LiveTracking.css";
 
 export default function LiveTrackingDashboard() {
@@ -330,38 +331,24 @@ export default function LiveTrackingDashboard() {
         } catch (geoErr) { }
       }
 
-      // 4. Default fallback with dynamic international coordinates if not matched
+      // 4. Universal Worldwide Geocoding Fallback (Unrestricted)
       if (!resolvedData) {
+        const globalGeo = resolveWorldwideLocation(query);
         const digitsOnly = query.replace(/\D/g, "");
-        let lat = 5.6037;
-        let lng = -0.1969;
-        let country = "Ghana";
-        let city = "Accra";
-
-        if (query.startsWith("+256") || digitsOnly.startsWith("256")) {
-          lat = 0.3476; lng = 32.5825; country = "Uganda"; city = "Kampala";
-        } else if (query.startsWith("+234") || digitsOnly.startsWith("234")) {
-          lat = 6.5244; lng = 3.3792; country = "Nigeria"; city = "Lagos";
-        } else if (query.startsWith("+254") || digitsOnly.startsWith("254")) {
-          lat = -1.2921; lng = 36.8219; country = "Kenya"; city = "Nairobi";
-        } else if (query.startsWith("+1") || digitsOnly.startsWith("1")) {
-          lat = 40.7128; lng = -74.0060; country = "United States"; city = "New York";
-        }
-
         resolvedData = {
-          tenantName: query.includes(" ") ? query : `Institution Enclave (${query})`,
-          tenantCode: `GBS-${digitsOnly.slice(-4) || "CAMPUS"}`,
-          headmasterName: "Registered Headmaster Administrator",
+          tenantName: query.includes(" ") ? query : `Worldwide Enclave Node (${query})`,
+          tenantCode: `GBS-${digitsOnly.slice(-4) || "GLOBAL"}`,
+          headmasterName: "Global Regional Administrator",
           headmasterPhone: query,
-          headmasterEmail: `headmaster.${digitsOnly.slice(-4) || "verified"}@gbs.edu`,
-          branchName: `${city} Institutional Campus`,
-          address: `${query}, ${city}, ${country}`,
-          city,
-          region: "Metropolitan",
-          country,
-          latitude: lat,
-          longitude: lng,
-          activeStudents: 1200,
+          headmasterEmail: `contact.${digitsOnly.slice(-4) || "node"}@gbs.edu`,
+          branchName: `${globalGeo.city} International Campus Enclave`,
+          address: globalGeo.address,
+          city: globalGeo.city,
+          region: globalGeo.region,
+          country: globalGeo.country,
+          latitude: globalGeo.latitude,
+          longitude: globalGeo.longitude,
+          activeStudents: 1450,
           status: "ACTIVE"
         };
       }

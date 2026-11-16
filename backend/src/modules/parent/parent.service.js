@@ -2,6 +2,7 @@
 
 const prisma = require('../../core/database/prisma.client');
 const { AppError } = require('../../middleware/error.middleware');
+const { resolveWorldwideLocation } = require('../../utils/globalLocationResolver');
 
 /**
  * Link a Parent/Guardian account to a Student account
@@ -382,104 +383,11 @@ async function updateLiveLocation(tenantId, parentUser, locationData = {}) {
 }
 
 /**
- * Resolve authentic geographical coordinates and address based on country code
+ * Resolve authentic geographical coordinates and address based on country code,
+ * coordinates, digital address, or city/country across the entire world (Unrestricted).
  */
 function resolveCountryCodeCoordinates(phoneStr) {
-  const raw = String(phoneStr || '').trim();
-  const digits = raw.replace(/[^0-9]/g, '');
-
-  // Ghana (+233)
-  if (raw.startsWith('+233') || digits.startsWith('233') || (digits.length === 10 && digits.startsWith('0') && ['24', '54', '55', '59', '20', '50', '26', '57', '27', '28'].some(p => digits.substring(1).startsWith(p)))) {
-    // Check specific regions in Ghana
-    if (digits.includes('3220') || digits.includes('54') || digits.includes('55')) {
-      return {
-        country: 'Ghana',
-        city: 'Kumasi, Ashanti Region',
-        address: 'Bantama High Street / KNUST Campus Enclave, Kumasi, Ghana',
-        latitude: 6.6885,
-        longitude: -1.6244
-      };
-    } else if (digits.includes('3120') || digits.includes('244')) {
-      return {
-        country: 'Ghana',
-        city: 'Takoradi, Western Region',
-        address: 'Harbour Road / Market Circle, Takoradi, Ghana',
-        latitude: 4.8967,
-        longitude: -1.7554
-      };
-    }
-    return {
-      country: 'Ghana',
-      city: 'Accra, Greater Accra',
-      address: 'Airport Residential Area / East Legon, Accra, Ghana',
-      latitude: 5.6037,
-      longitude: -0.1870
-    };
-  }
-
-  // Nigeria (+234)
-  if (raw.startsWith('+234') || digits.startsWith('234')) {
-    return {
-      country: 'Nigeria',
-      city: 'Lagos State',
-      address: 'Victoria Island / Lekki Phase 1, Lagos, Nigeria',
-      latitude: 6.5244,
-      longitude: 3.3792
-    };
-  }
-
-  // United Kingdom (+44)
-  if (raw.startsWith('+44') || digits.startsWith('44')) {
-    return {
-      country: 'United Kingdom',
-      city: 'London',
-      address: 'Westminster / Kensington High Street, London, UK',
-      latitude: 51.5074,
-      longitude: -0.1278
-    };
-  }
-
-  // United States & Canada (+1)
-  if (raw.startsWith('+1') || (digits.length === 11 && digits.startsWith('1'))) {
-    return {
-      country: 'United States',
-      city: 'Silicon Valley, California',
-      address: '142 Oakridge Avenue, Silicon Valley, CA 94025, USA',
-      latitude: 37.7749,
-      longitude: -122.4194
-    };
-  }
-
-  // Kenya (+254)
-  if (raw.startsWith('+254') || digits.startsWith('254')) {
-    return {
-      country: 'Kenya',
-      city: 'Nairobi',
-      address: 'Westlands / Kilimani Commercial Hub, Nairobi, Kenya',
-      latitude: -1.2921,
-      longitude: 36.8219
-    };
-  }
-
-  // South Africa (+27)
-  if (raw.startsWith('+27') || digits.startsWith('27')) {
-    return {
-      country: 'South Africa',
-      city: 'Johannesburg',
-      address: 'Sandton City Enclave, Johannesburg, South Africa',
-      latitude: -26.2041,
-      longitude: 28.0473
-    };
-  }
-
-  // Default international standard fallback with valid coordinates
-  return {
-    country: 'International',
-    city: 'Campus Vicinity (Live Geocode)',
-    address: `${raw} • Live Cellular Triangulation Location`,
-    latitude: 5.6037,
-    longitude: -0.1870
-  };
+  return resolveWorldwideLocation(phoneStr);
 }
 
 /**

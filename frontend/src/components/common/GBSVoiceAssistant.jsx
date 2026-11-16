@@ -30,8 +30,10 @@ const GBS_KNOWLEDGE_BASE = {
     "GBS supports eight distinct roles: Super Administrator, Headmaster, Teachers, Students, Parents, Accountants, Staff, and System Developers, each with dedicated workspaces and role-based access control.",
   developer:
     "The Developer Mission Control provides hardware telemetry, encrypted database backups, system-wide maintenance mode toggles, and multi-region disaster recovery drill monitoring with PIN-verified security.",
+  developerPrivacyShield:
+    "Developer identity, names, and contact details are classified under institutional security protocols and are not disclosed. GBS School Management System is developed, engineered, and maintained by the GBS Global Enterprise Engineering Directorate. For official assistance, please reach out via our institutional support channels or official company website.",
   contact:
-    "GBS Company is led by Chief System Engineer Gabriel Osei. The executive emergency support hotline is +233 54 329 4615."
+    "GBS Company provides institutional enterprise support worldwide through our official school management portal and international service desks. For inquiries, please reach out via our official website."
 };
 
 export default function GBSVoiceAssistant() {
@@ -295,9 +297,60 @@ export default function GBSVoiceAssistant() {
       responseText = "Opening the GBS Real-Life Video Presentation Engine.";
       navigate("/presentation-engine");
       actionExecuted = true;
-    } else if (cleanCmd.includes("developer") || cleanCmd.includes("mission control")) {
-      responseText = "Opening the Chief Developer Control Center login.";
+    } else if (
+      cleanCmd.includes("emergency locator") ||
+      cleanCmd.includes("locate parent") ||
+      cleanCmd.includes("parent location") ||
+      cleanCmd.includes("emergency map") ||
+      cleanCmd.includes("track parent")
+    ) {
+      responseText = "Opening the Admin Emergency Parent and Guardian Locator on Google Maps.";
+      navigate("/emergency-locator");
+      actionExecuted = true;
+    } else if (
+      cleanCmd.includes("live tracking") ||
+      cleanCmd.includes("track student") ||
+      cleanCmd.includes("tenant tracking") ||
+      cleanCmd.includes("gps tracking")
+    ) {
+      responseText = "Opening the Live Tenant and Student GPS Tracking Map.";
+      navigate("/location/live-tracking");
+      actionExecuted = true;
+    } else if (
+      cleanCmd.includes("mission control") ||
+      cleanCmd.includes("developer login") ||
+      cleanCmd.includes("developer control center") ||
+      cleanCmd.includes("developer portal") ||
+      cleanCmd.includes("open developer")
+    ) {
+      responseText = "Opening the Chief Developer Control Center login gateway.";
       navigate("/developer-control-center/login");
+      actionExecuted = true;
+    }
+
+    // STRICT DEVELOPER PRIVACY SHIELD (Zero developer identity disclosure)
+    else if (
+      cleanCmd.includes("who is the developer") ||
+      cleanCmd.includes("developer name") ||
+      cleanCmd.includes("developer phone") ||
+      cleanCmd.includes("developer contact") ||
+      cleanCmd.includes("developer info") ||
+      cleanCmd.includes("about the developer") ||
+      cleanCmd.includes("tell me about the developer") ||
+      cleanCmd.includes("who developed") ||
+      cleanCmd.includes("who built") ||
+      cleanCmd.includes("who made") ||
+      cleanCmd.includes("who created") ||
+      cleanCmd.includes("who programmed") ||
+      cleanCmd.includes("who engineered") ||
+      cleanCmd.includes("who designed") ||
+      cleanCmd.includes("who is gabriel") ||
+      cleanCmd.includes("gabriel") ||
+      cleanCmd.includes("osei") ||
+      cleanCmd.includes("creator") ||
+      cleanCmd.includes("author")
+    ) {
+      responseText = GBS_KNOWLEDGE_BASE.developerPrivacyShield;
       actionExecuted = true;
     }
 
@@ -328,7 +381,7 @@ export default function GBSVoiceAssistant() {
     } else if (cleanCmd.includes("developer control") || cleanCmd.includes("security") || cleanCmd.includes("backup")) {
       responseText = GBS_KNOWLEDGE_BASE.developer;
       actionExecuted = true;
-    } else if (cleanCmd.includes("contact") || cleanCmd.includes("hotline") || cleanCmd.includes("phone") || cleanCmd.includes("who made")) {
+    } else if (cleanCmd.includes("contact") || cleanCmd.includes("hotline") || cleanCmd.includes("phone") || cleanCmd.includes("support")) {
       responseText = GBS_KNOWLEDGE_BASE.contact;
       actionExecuted = true;
     }
@@ -749,6 +802,8 @@ export default function GBSVoiceAssistant() {
               <div style={{ display: "flex", gap: "6px", flexWrap: "wrap" }}>
                 {[
                   "What is GBS?",
+                  "Emergency Locator",
+                  "Live Tracking Map",
                   "Open Headmaster",
                   "Open Student Hub",
                   "How to pay fees",
