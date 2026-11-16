@@ -118,9 +118,19 @@ const protect = async (req, res, next) => {
       return next(new AppError('Access Denied: Your institution has been deleted from the system, so you cannot access the system unless you re-register for approval.', 403));
     }
 
+    let user = null;
+    try {
+      if (Number.isInteger(numericUserId) && String(numericUserId) === String(decoded.id)) {
+        user = await prisma.user.findUnique({
+          where: { id: numericUserId },
+          include: { tenant: true }
+        });
+      }
+    } catch { }
+
     const store = readPersistentStore();
     let matchedInst = null;
-    if (numericTenantId !== 1 && Array.isArray(store.institutions)) {
+    if (!user && numericTenantId !== 1 && Array.isArray(store.institutions)) {
       matchedInst = store.institutions.find(
         (inst) =>
           String(inst.id) === String(decoded.tenantId) ||
@@ -142,16 +152,6 @@ const protect = async (req, res, next) => {
         }
       }
     }
-
-    let user = null;
-    try {
-      if (Number.isInteger(numericUserId) && String(numericUserId) === String(decoded.id)) {
-        user = await prisma.user.findUnique({
-          where: { id: numericUserId },
-          include: { tenant: true }
-        });
-      }
-    } catch { }
 
     if (!user) {
       const allStoreUsers = [

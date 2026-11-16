@@ -79,11 +79,32 @@ axiosInstance.interceptors.response.use(
           response?.data?.message ||
           response?.data?.data?.message ||
           response?.data?.notice;
+        const code = response?.data?.code;
+
+        let title = "SERVER COMMAND CONFIRMED";
+        if (code) {
+          const prefix = code.split("_")[0];
+          const titles = {
+            AUTH: "AUTHENTICATION VERIFIED",
+            VALIDATION: "INPUT VALIDATED",
+            TENANT: "TENANT ENCLAVE CONFIRMED",
+            ADMISSION: "ADMISSION DESK CONFIRMED",
+            ACADEMIC: "ACADEMIC OPERATION CONFIRMED",
+            FINANCE: "FINANCIAL TRANSACTION CONFIRMED",
+            DEV: "DEVELOPER CONTROL EXECUTED",
+            RECORD: "DATABASE RECORD UPDATED",
+            NOTIFICATION: "COMMUNICATION DISPATCHED",
+            SYSTEM: "SYSTEM CORE CONFIRMED",
+            IDEMPOTENCY: "IDEMPOTENCY KEY LOCKED"
+          };
+          if (titles[prefix]) title = titles[prefix];
+        }
+
         if (serverMsg && typeof serverMsg === "string") {
           window.showGBSOpenNotice(
             serverMsg,
             "success",
-            "SERVER COMMAND CONFIRMED"
+            title
           );
         }
       }
@@ -94,29 +115,51 @@ axiosInstance.interceptors.response.use(
   },
   (error) => {
     const status = error.response?.status;
-    const method = String(error.config?.method || "get").toLowerCase();
-    const isMutating = ["post", "put", "patch", "delete"].includes(method);
-    const serverErrMsg =
+    const rcceCode = error.response?.data?.code;
+    let serverErrMsg =
       error.response?.data?.message ||
       error.response?.data?.error ||
       error.message;
+
+    // Handle offline / network disconnect natively with RCCE standard notice
+    if (!error.response) {
+      serverErrMsg = "System offline: Unable to reach the GBS Central Engine. Check network connection.";
+    }
 
     if (status === 401) {
       console.warn("Unauthorized request - session may have expired.");
     }
 
     if (
-      isMutating &&
-      serverErrMsg &&
       typeof window !== "undefined" &&
       typeof window.showGBSOpenNotice === "function"
     ) {
       const url = String(error.config?.url || "");
-      if (!url.includes("/auth/login")) {
+      if (!url.includes("/auth/login") && !url.includes("/health")) {
+        let title = "COMMAND FEEDBACK NOTICE";
+        if (status === 403) title = "SECURITY / ACCESS RESTRICTION";
+        else if (status === 503 || rcceCode === "SYSTEM_MAINTENANCE_MODE") title = "SYSTEM MAINTENANCE ACTIVE";
+        else if (!error.response) title = "NETWORK OFFLINE WARNING";
+        else if (rcceCode) {
+          const prefix = rcceCode.split("_")[0];
+          const titles = {
+            AUTH: "AUTHENTICATION RESTRICTION",
+            VALIDATION: "INPUT VALIDATION NOTICE",
+            TENANT: "TENANT ISOLATION BARRIER",
+            ADMISSION: "ADMISSION REGISTRATION NOTICE",
+            ACADEMIC: "ACADEMIC SYSTEM NOTICE",
+            FINANCE: "FINANCIAL TRANSACTION NOTICE",
+            DEV: "DEVELOPER ACCESS RESTRICTION",
+            RECORD: "RECORD INTEGRITY NOTICE",
+            IDEMPOTENCY: "DUPLICATE SUBMISSION PREVENTED"
+          };
+          if (titles[prefix]) title = titles[prefix];
+        }
+
         window.showGBSOpenNotice(
           String(serverErrMsg),
-          status === 403 ? "error" : "warning",
-          status === 403 ? "SECURITY / ACCESS RESTRICTION" : "COMMAND FEEDBACK NOTICE"
+          status === 403 || status === 503 ? "error" : "warning",
+          title
         );
       }
     }

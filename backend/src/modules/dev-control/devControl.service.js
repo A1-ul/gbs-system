@@ -788,11 +788,17 @@ const developerTenantAction = async (tenantId, action, params = {}, developer = 
       try {
         updatedTenant = await prisma.tenant.update({
           where: { id: safeTid },
-          data: { status: 'ACTIVE', isActive: true, trialEndDate: newEndDate.toISOString() }
+          data: { status: 'ACTIVE', isActive: true }
         });
       } catch {
         updatedTenant = { ...tenant, status: 'ACTIVE', isActive: true };
       }
+      if (!updatedTenant) {
+        updatedTenant = { ...tenant, status: 'ACTIVE', isActive: true };
+      }
+      updatedTenant.trialEndDate = newEndDate.toISOString();
+      updatedTenant.status = 'ACTIVE';
+      updatedTenant.isActive = true;
       syncDynState({ status: 'ACTIVE', isActive: true, isApproved: true, trialEndDate: newEndDate.toISOString() });
       auditDetails += ` (Extended by ${daysToAdd} days)`;
       break;
@@ -892,15 +898,20 @@ const developerTenantAction = async (tenantId, action, params = {}, developer = 
           where: { id: safeTid },
           data: {
             status: 'ACTIVE',
-            isActive: true,
-            planName,
-            trialStartDate: newStartDate.toISOString(),
-            trialEndDate: newEndDate.toISOString()
+            isActive: true
           }
         });
       } catch {
-        updatedTenant = { ...tenant, status: 'ACTIVE', isActive: true, planName };
+        updatedTenant = { ...tenant, status: 'ACTIVE', isActive: true };
       }
+      if (!updatedTenant) {
+        updatedTenant = { ...tenant, status: 'ACTIVE', isActive: true };
+      }
+      updatedTenant.planName = planName;
+      updatedTenant.trialStartDate = newStartDate.toISOString();
+      updatedTenant.trialEndDate = newEndDate.toISOString();
+      updatedTenant.status = 'ACTIVE';
+      updatedTenant.isActive = true;
 
       syncDynState({
         status: 'ACTIVE',
@@ -2168,6 +2179,10 @@ const sendDeveloperSmsToHeadmaster = async (payload = {}) => {
 
 // 10. Facial Liveness Detection & Biometric Verification (Blueprint Box 11, Step 1b & 2b)
 const verifyFacialLiveness = async (payload = {}, clientIp = '127.0.0.1') => {
+  if (!payload || Object.keys(payload).length === 0 || (!payload.imageBase64 && !payload.videoBase64 && !payload.biometricData && !payload.photo && !payload.isSimulatedSpoof)) {
+    throw new AppError('Biometric verification payload is required. Please provide imageBase64 or biometricData.', 400);
+  }
+
   const { isSimulatedSpoof } = payload;
 
   // Presentation attack check (screen spoof / printed photo rejection)

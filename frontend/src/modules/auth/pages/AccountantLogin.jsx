@@ -45,6 +45,9 @@ export default function AccountantLogin() {
           />
           <span className="role-login-brand-name">GBS SCHOOL MANAGEMENT SYSTEM</span>
         </div>
+        <div style={{ color: "#d4af37", fontWeight: 800, fontSize: "0.82rem", letterSpacing: "2px", textTransform: "uppercase", marginBottom: "8px", textAlign: "center" }}>
+          INTELLIGENCE TALKS TO WISDOM
+        </div>
         <div className="role-badge-pill" style={{ borderColor: "rgba(236, 72, 153, 0.4)", color: "#f472b6", background: "rgba(236, 72, 153, 0.15)" }}>
           📊 FINANCE & BILLING PORTAL
         </div>

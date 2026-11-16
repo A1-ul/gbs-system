@@ -13,10 +13,7 @@ const optionalProtect = (req, res, next) => {
   if (!authHeader || !authHeader.startsWith('Bearer ')) {
     return next();
   }
-  protect(req, res, (err) => {
-    // Even if token expired or dev token used, proceed gracefully
-    next();
-  });
+  protect(req, res, next);
 };
 
 // 1. Live role count aggregations (Master Blueprint Mandatory Requirement)

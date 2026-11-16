@@ -467,7 +467,7 @@ export default function TenantOnboardingFirstPage() {
         <div className="gbs-top-header-left">
           <div className="gbs-header-brand-badge">
             <span className="gbs-live-pulse-dot"></span>
-            <span>ENTERPRISE ONBOARDING GATEWAY</span>
+            <span>GBS COMPANY — INTELLIGENCE TALKS TO WISDOM</span>
           </div>
           <span style={{ fontSize: "0.75rem", color: "#94a3b8" }}>Cloud Cluster Active</span>
           <button

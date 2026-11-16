@@ -9,6 +9,7 @@ import { getOnboardingRates, updateOnboardingRates } from "../../../utils/pricin
 import UniversalRoleGuideModal from "../../../components/common/UniversalRoleGuideModal";
 import { navigateToDetail } from "../../../utils/universalNavigation";
 import { syncSystemModeFlags } from "../../../utils/tokenStorage";
+import RcceControlHub from "../components/RcceControlHub";
 import "./DeveloperPlatform.css";
 
 const BASE_URL = `${getApiBaseUrl()}/dev-control`;
@@ -5733,6 +5734,19 @@ export default function DeveloperDashboard() {
           </button>
 
           <button
+            className={`dev-tab-btn ${activeTab === "rcce" ? "active" : ""}`}
+            onClick={() => setActiveTab("rcce")}
+            style={{
+              borderColor: "#d4af37",
+              background: activeTab === "rcce" ? "linear-gradient(135deg, rgba(212, 175, 55, 0.3) 0%, rgba(180, 83, 9, 0.4) 100%)" : "rgba(212, 175, 55, 0.1)",
+              color: activeTab === "rcce" ? "#ffffff" : "#fbbf24",
+              fontWeight: 800
+            }}
+          >
+            ⚡ GBS-RCCE Central Engine
+          </button>
+
+          <button
             className={`dev-tab-btn ${activeTab === "telemetry" ? "active" : ""}`}
             onClick={() => setActiveTab("telemetry")}
           >
@@ -8403,6 +8417,13 @@ export default function DeveloperDashboard() {
                 ))
               )}
             </div>
+          </div>
+        )}
+
+        {/* TAB GBS-RCCE CENTRAL RESPONSE & CONTROL ENGINE */}
+        {activeTab === "rcce" && (
+          <div className="tab-pane-content">
+            <RcceControlHub />
           </div>
         )}
 

@@ -2,6 +2,37 @@ const userService = require('./user.service');
 
 const getUsers = async (req, res, next) => {
   try {
+    if (req.user && req.user.role !== 'SUPER_ADMIN' && req.user.role !== 'DEVELOPER') {
+      const userTenantId = req.user.tenantId || req.tenantId;
+      if (userTenantId) {
+        const prismaClient = require('../../core/database/prisma.client');
+        const tenantRecord = await prismaClient.tenant.findUnique({
+          where: { id: Number(userTenantId) }
+        }).catch(() => null);
+        if (tenantRecord && (tenantRecord.status === 'LOCKED' || tenantRecord.status === 'SUSPENDED' || tenantRecord.isLocked === true)) {
+          return res.status(403).json({
+            success: false,
+            status: 'fail',
+            code: 'AUTH_ACCOUNT_LOCKED',
+            message: `Access Denied: Your institutional enclave '${tenantRecord.name}' is currently LOCKED or SUSPENDED.`
+          });
+        }
+      }
+
+      if (req.query.tenantId) {
+        const userTid = String(req.user.tenantId || req.tenantId || '');
+        const queryTid = String(req.query.tenantId);
+        if (userTid && queryTid && userTid !== queryTid) {
+          return res.status(403).json({
+            success: false,
+            status: 'fail',
+            code: 'TENANT_CROSS_ACCESS_FORBIDDEN',
+            message: 'Access denied: Cross-tenant data querying or manipulation is strictly forbidden.'
+          });
+        }
+      }
+    }
+
     const tenantId = req.user && (req.user.role === 'SUPER_ADMIN' || req.user.role === 'DEVELOPER') 
       ? req.query.tenantId 
       : (req.tenantId || req.user?.tenantId);

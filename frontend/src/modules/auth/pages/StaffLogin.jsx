@@ -58,6 +58,9 @@ export default function StaffLogin({ defaultRole = "STAFF" }) {
           </div>
           <span className="role-login-brand-name">GBS SCHOOL MANAGEMENT SYSTEM</span>
         </div>
+        <div style={{ color: "#d4af37", fontWeight: 800, fontSize: "0.82rem", letterSpacing: "2px", textTransform: "uppercase", marginBottom: "8px", textAlign: "center" }}>
+          INTELLIGENCE TALKS TO WISDOM
+        </div>
         <div 
           className="role-badge-pill" 
           style={{ 

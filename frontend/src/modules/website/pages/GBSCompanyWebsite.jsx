@@ -118,7 +118,12 @@ export default function GBSCompanyWebsite() {
           </div>
           <h1 className="hero-title">
             GBS COMPANY
-            <span className="hero-subtitle">Industrial-Grade Institutional & Enterprise Operating Systems</span>
+            <span className="hero-subtitle" style={{ color: "#d4af37", fontWeight: 900, letterSpacing: "2.5px", textTransform: "uppercase", fontSize: "1.2rem", display: "block", marginTop: "8px" }}>
+              INTELLIGENCE TALKS TO WISDOM
+            </span>
+            <span className="hero-subtitle" style={{ fontSize: "1rem", color: "#94a3b8", display: "block", marginTop: "4px" }}>
+              Industrial-Grade Institutional & Enterprise Operating Systems
+            </span>
           </h1>
           <p className="hero-lead">
             Replace fragmented software and physical paperwork with an interconnected, 100% remote-deployable cloud ecosystem.
@@ -577,6 +582,9 @@ export default function GBSCompanyWebsite() {
         <div className="footer-container">
           <div className="footer-col brand-col">
             <h3 className="footer-brand">GBS COMPANY</h3>
+            <p className="footer-tagline" style={{ color: "#d4af37", fontWeight: 800, letterSpacing: "1.5px" }}>
+              INTELLIGENCE TALKS TO WISDOM
+            </p>
             <p className="footer-tagline">
               Enterprise Institutional Management & Autonomous Cloud Solutions.
             </p>

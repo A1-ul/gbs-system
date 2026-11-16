@@ -45,6 +45,9 @@ export default function StudentLogin() {
           />
           <span className="role-login-brand-name">GBS SCHOOL MANAGEMENT SYSTEM</span>
         </div>
+        <div style={{ color: "#d4af37", fontWeight: 800, fontSize: "0.82rem", letterSpacing: "2px", textTransform: "uppercase", marginBottom: "8px", textAlign: "center" }}>
+          INTELLIGENCE TALKS TO WISDOM
+        </div>
         <div className="role-badge-pill" style={{ borderColor: "rgba(139, 92, 246, 0.4)", color: "#c084fc", background: "rgba(139, 92, 246, 0.15)" }}>
           🎓 STUDENT LEARNING PORTAL
         </div>

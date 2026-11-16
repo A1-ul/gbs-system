@@ -45,6 +45,9 @@ export default function ParentLogin() {
           />
           <span className="role-login-brand-name">GBS SCHOOL MANAGEMENT SYSTEM</span>
         </div>
+        <div style={{ color: "#d4af37", fontWeight: 800, fontSize: "0.82rem", letterSpacing: "2px", textTransform: "uppercase", marginBottom: "8px", textAlign: "center" }}>
+          INTELLIGENCE TALKS TO WISDOM
+        </div>
         <div className="role-badge-pill" style={{ borderColor: "rgba(245, 158, 11, 0.4)", color: "#fbbf24", background: "rgba(245, 158, 11, 0.15)" }}>
           👨‍👩‍👧 PARENT & GUARDIAN PORTAL
         </div>

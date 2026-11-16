@@ -1207,7 +1207,7 @@ const register = async (data) => {
   const isPreApproved = Boolean(data.approvedByHeadmaster === true || data.approvedByDeveloper === true || data.isApproved === true);
   const initialVerificationStatus = isPreApproved
     ? 'VERIFIED'
-    : (userRole === 'ADMIN' ? 'PENDING_DEVELOPER_APPROVAL' : 'PENDING_HEADMASTER_APPROVAL');
+    : (userRole === 'ADMIN' ? 'PENDING_DEVELOPER_APPROVAL' : 'PENDING');
   const isActive = isPreApproved;
 
   const hashedPassword = await bcrypt.hash(password, envConfig.jwt.saltRounds || 10);

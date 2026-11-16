@@ -45,6 +45,9 @@ export default function AdminLogin() {
           />
           <span className="role-login-brand-name">GBS SCHOOL MANAGEMENT SYSTEM</span>
         </div>
+        <div style={{ color: "#d4af37", fontWeight: 800, fontSize: "0.82rem", letterSpacing: "2px", textTransform: "uppercase", marginBottom: "8px", textAlign: "center" }}>
+          INTELLIGENCE TALKS TO WISDOM
+        </div>
         <div className="role-badge-pill">🎓 HEADMASTER EXECUTIVE PORTAL</div>
         <h2 className="role-login-title">HEADMASTER SIGN IN</h2>
         <p className="role-login-sub">GBS School Management System Enterprise Executive Suite</p>

@@ -82,6 +82,10 @@ app.use(express.urlencoded({ extended: true, limit: '50mb' }));
 app.use(cookieParser());
 app.use(compression());
 
+// GBS Central System Response, Control and Communication Engine (GBS-RCCE)
+const { setupRcce, rcceCentralErrorHandler } = require('../rcce');
+setupRcce(app);
+
 if (envConfig.env === 'development') {
   app.use(morgan('dev'));
 }
@@ -745,7 +749,8 @@ app.all('*', (req, res, next) => {
   next(new AppError(`Can't find ${req.originalUrl} on this server!`, 404));
 });
 
-// Central Error Handler
+// Central Error Handler (GBS-RCCE Normalized)
+app.use(rcceCentralErrorHandler);
 app.use(errorHandler);
 
 const PORT = envConfig.port || 5000;

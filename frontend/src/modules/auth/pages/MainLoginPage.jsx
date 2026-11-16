@@ -299,7 +299,12 @@ export default function MainLoginPage() {
             />
           </div>
           <h2>GBS SCHOOL MANAGEMENT SYSTEM</h2>
-          <p className="brand-sub">ENTERPRISE MANAGEMENT SYSTEM — MASTER BLUEPRINT</p>
+          <p className="brand-sub" style={{ fontSize: "0.95rem", fontWeight: "800", color: "#d4af37", letterSpacing: "2.5px", textTransform: "uppercase", margin: "6px 0 0 0" }}>
+            INTELLIGENCE TALKS TO WISDOM
+          </p>
+          <p style={{ fontSize: "0.75rem", color: "#94a3b8", letterSpacing: "1px", textTransform: "uppercase", marginTop: "2px" }}>
+            ENTERPRISE MANAGEMENT SYSTEM — MASTER BLUEPRINT
+          </p>
         </div>
 
         {/* Online Admissions Quick Portal Callout for Prospective Parents */}

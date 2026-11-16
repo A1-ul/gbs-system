@@ -42,13 +42,24 @@ const tenantIsolationGuard = (req, res, next) => {
  * Tenant Subscription Status Guard
  * Validates tenant active / trial / grace period status
  */
-const tenantStatusGuard = (req, res, next) => {
-  if (req.user && req.user.role === 'DEVELOPER') {
-    return next(); // Developer always has access for management and recovery
+const tenantStatusGuard = async (req, res, next) => {
+  if (req.user && (req.user.role === 'DEVELOPER' || req.user.role === 'SUPER_ADMIN')) {
+    return next(); // Developer and Super Admin always have access for management and recovery
   }
 
-  const tenant = req.user?.tenant;
-  if (req.tenantId && req.tenantId !== 1 && isTenantLockedOut({ id: req.tenantId, code: tenant?.code, name: tenant?.name })) {
+  const tid = req.user?.tenantId || req.tenantId;
+  let tenant = req.user?.tenant;
+
+  if (!tenant && tid && tid !== 1) {
+    try {
+      const prisma = require('../core/database/prisma.client');
+      tenant = await prisma.tenant.findUnique({
+        where: { id: Number(tid) }
+      });
+    } catch (_) { }
+  }
+
+  if (tid && tid !== 1 && isTenantLockedOut({ id: tid, code: tenant?.code, name: tenant?.name })) {
     return next(new AppError('Access Denied: Your institution has been permanently deleted from the GBS System.', 403));
   }
   if (tenant) {
@@ -58,7 +69,7 @@ const tenantStatusGuard = (req, res, next) => {
     if (tenant.status === 'PENDING_DEVELOPER_APPROVAL' || tenant.status === 'PENDING_APPROVAL' || tenant.isApproved === false) {
       return next(new AppError('Access Denied: Your institution is awaiting Developer approval.', 403));
     }
-    if (tenant.status === 'LOCKED') {
+    if (tenant.status === 'LOCKED' || tenant.isLocked === true) {
       return next(new AppError('Tenant system is locked due to expired subscription. Please contact administration.', 403));
     }
     if (tenant.status === 'SUSPENDED') {

@@ -211,7 +211,7 @@ async function testProcedure15DevControl() {
   const devAuditLogs = await prisma.auditLog.findMany({
     where: { module: 'DEV_CONTROL' },
     orderBy: { createdAt: 'desc' },
-    take: 8
+    take: 20
   });
   console.log(`✅ Verified ${devAuditLogs.length} audit log entries in PostgreSQL for module 'DEV_CONTROL':`);
   devAuditLogs.forEach(log => {

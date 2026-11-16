@@ -231,6 +231,20 @@ export default function TopCenterSystemBanner({
 
       <div
         style={{
+          fontSize: "0.8rem",
+          fontWeight: "800",
+          color: "#d4af37",
+          letterSpacing: "2.2px",
+          textTransform: "uppercase",
+          marginTop: "4px",
+          textShadow: "0 2px 8px rgba(0,0,0,0.8)"
+        }}
+      >
+        INTELLIGENCE TALKS TO WISDOM
+      </div>
+
+      <div
+        style={{
           display: "flex",
           alignItems: "center",
           gap: "12px",
