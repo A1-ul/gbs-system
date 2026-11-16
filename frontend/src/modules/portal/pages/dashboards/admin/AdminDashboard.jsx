@@ -6017,6 +6017,40 @@ export function AdminDashboard({ initialTab } = {}) {
                 </button>
               </div>
 
+              {/* HEADMASTER VIEW-ONLY GOVERNANCE & EXCLUSIVE STAFF APPROVALS BANNER */}
+              <div style={{
+                marginBottom: "1.5rem",
+                background: "linear-gradient(135deg, rgba(30, 58, 138, 0.45) 0%, rgba(15, 23, 42, 0.95) 100%)",
+                border: "2px solid rgba(56, 189, 248, 0.5)",
+                borderRadius: "14px",
+                padding: "1.25rem 1.5rem",
+                display: "flex",
+                alignItems: "center",
+                gap: "14px",
+                fontFamily: "'Times New Roman', Times, Georgia, serif",
+                boxShadow: "0 8px 25px rgba(0,0,0,0.4)"
+              }}>
+                <span style={{ fontSize: "2.2rem" }}>🔒</span>
+                <div>
+                  <div style={{ display: "flex", alignItems: "center", gap: "8px", flexWrap: "wrap", marginBottom: "4px" }}>
+                    <h3 style={{ margin: 0, color: "#38bdf8", fontSize: "1.05rem", fontWeight: "900", letterSpacing: "0.5px" }}>
+                      HEADMASTER VIEW-ONLY GOVERNANCE & SOVEREIGN ADMINISTRATIVE ROSTER
+                    </h3>
+                    <span style={{ background: "rgba(16, 185, 129, 0.2)", color: "#34d399", border: "1px solid #10b981", padding: "1px 8px", borderRadius: "4px", fontSize: "0.72rem", fontWeight: "800" }}>
+                      VIEW-ONLY INSPECTION ACTIVE
+                    </span>
+                    <span style={{ background: "rgba(56, 189, 248, 0.2)", color: "#7dd3fc", border: "1px solid #38bdf8", padding: "1px 8px", borderRadius: "4px", fontSize: "0.72rem", fontWeight: "800" }}>
+                      STAFF APPROVAL QUEUE ENFORCED
+                    </span>
+                  </div>
+                  <p style={{ margin: 0, color: "#cbd5e1", fontSize: "0.85rem", lineHeight: "1.5" }}>
+                    <strong>View-Only Administrative Authority:</strong> The Headmaster has full institutional clearance to inspect faculty and user directories, qualifications, and active curricula for educational checkups, but <em>cannot modify or tamper with any user's personal dashboard</em>.
+                    <br />
+                    <strong>Staff Approvals Exclusive to Headmaster:</strong> All faculty and staff admissions/approvals are strictly executed on this Headmaster Dashboard (via the queue below), <em>never on the Developer Dashboard</em>.
+                  </p>
+                </div>
+              </div>
+
               {/* Mounted Drop-List User Registration Counter Component */}
               <RoleCountGrid />
 

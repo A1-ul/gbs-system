@@ -4,6 +4,7 @@ import { clearFakeDataEntries } from "../../utils/freshSystemReset";
 import { getActiveSchoolName, getActiveSchoolLogo } from "../../utils/schoolBranding";
 import { isDemoSandboxMode, resetDemoSandboxData } from "../../utils/tokenStorage";
 import UniversalLanguageTranslatorModal from "./UniversalLanguageTranslatorModal";
+import DirectSMSMessengerModal from "./DirectSMSMessengerModal";
 
 /**
  * TopCenterSystemBanner
@@ -50,6 +51,7 @@ export default function TopCenterSystemBanner({
   const [syncFeedback, setSyncFeedback] = useState(null);
   const [showTranslatorModal, setShowTranslatorModal] = useState(false);
   const [translatorInitialText, setTranslatorInitialText] = useState("");
+  const [showDirectSMSModal, setShowDirectSMSModal] = useState(false);
 
   let currentUserRole = "GUEST";
   try {
@@ -318,6 +320,44 @@ export default function TopCenterSystemBanner({
         <span style={{ color: "#475569" }}>•</span>
         <button
           type="button"
+          onClick={() => setShowDirectSMSModal(true)}
+          style={{
+            background: "linear-gradient(135deg, rgba(14, 165, 233, 0.25), rgba(2, 132, 199, 0.35))",
+            border: "1px solid rgba(56, 189, 248, 0.5)",
+            color: "#38bdf8",
+            fontSize: "0.76rem",
+            padding: "4px 12px",
+            borderRadius: "8px",
+            cursor: "pointer",
+            fontWeight: "700",
+            transition: "all 0.2s"
+          }}
+          title="Send direct SMS messages between users or to any mobile contact network number"
+        >
+          📱 Direct Mobile SMS
+        </button>
+        <span style={{ color: "#475569" }}>•</span>
+        <button
+          type="button"
+          onClick={() => window.location.href = "/educational-news"}
+          style={{
+            background: "linear-gradient(135deg, rgba(16, 185, 129, 0.2), rgba(5, 150, 105, 0.3))",
+            border: "1px solid rgba(16, 185, 129, 0.5)",
+            color: "#34d399",
+            fontSize: "0.76rem",
+            padding: "4px 12px",
+            borderRadius: "8px",
+            cursor: "pointer",
+            fontWeight: "700",
+            transition: "all 0.2s"
+          }}
+          title="Display educational news and video insights from across the world"
+        >
+          🌍 Global Educational News
+        </button>
+        <span style={{ color: "#475569" }}>•</span>
+        <button
+          type="button"
           onClick={handleCleanSlate}
           style={{
             background: cleaned ? "rgba(16, 185, 129, 0.25)" : "rgba(239, 68, 68, 0.18)",
@@ -523,6 +563,12 @@ export default function TopCenterSystemBanner({
         onClose={() => setShowTranslatorModal(false)}
         initialText={translatorInitialText}
         initialContextTitle={roleTitle}
+      />
+
+      {/* Direct Mobile SMS Messenger Modal (Accessible Across All Portals) */}
+      <DirectSMSMessengerModal
+        isOpen={showDirectSMSModal}
+        onClose={() => setShowDirectSMSModal(false)}
       />
     </div >
   );

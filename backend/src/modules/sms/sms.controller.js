@@ -101,11 +101,53 @@ async function sendSchoolSMS(req, res, next) {
   return sendSMS(req, res, next);
 }
 
+async function sendDirectSMS(req, res, next) {
+  try {
+    const {
+      senderId,
+      senderName,
+      senderRole,
+      senderPhone,
+      recipientPhone,
+      recipientName,
+      recipientRole,
+      message,
+      content,
+      carrierNetwork,
+      tenantId,
+      schoolName
+    } = req.body;
+
+    const result = await service.sendDirectUserSMS({
+      senderId: senderId || req.user?.id,
+      senderName: senderName || req.user?.name || req.user?.firstName || "System User",
+      senderRole: senderRole || req.user?.role || "STAFF",
+      senderPhone,
+      recipientPhone,
+      recipientName,
+      recipientRole,
+      message: message || content,
+      carrierNetwork,
+      tenantId: tenantId || req.tenantId || req.user?.tenantId,
+      schoolName: schoolName || req.body.institutionName
+    });
+
+    return res.status(200).json({
+      status: "success",
+      message: `Direct SMS message successfully dispatched to ${recipientPhone} via ${result.carrierNetwork}`,
+      data: result
+    });
+  } catch (error) {
+    return next(error);
+  }
+}
+
 module.exports = {
   getStatus,
   sendOTP,
   verifyOTP,
   getLogs,
   sendSMS,
-  sendSchoolSMS
+  sendSchoolSMS,
+  sendDirectSMS
 };

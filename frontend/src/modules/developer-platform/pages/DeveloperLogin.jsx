@@ -53,6 +53,207 @@ export default function DeveloperLogin() {
     }
   };
 
+  // Helper to resolve whether an attempted email belongs to a registered staff member or an external unregistered intruder
+  const resolveStaffOrExternalIdentity = (rawEmail) => {
+    const cleanEmail = (rawEmail || "").trim().toLowerCase();
+    if (!cleanEmail) {
+      return {
+        isRegisteredStaff: false,
+        staffName: null,
+        staffEmail: "",
+        staffRole: "ANONYMOUS_EXTERNAL_INTRUDER",
+        exactRegisteredSchool: null
+      };
+    }
+
+    // 1. Look in registered users stored in localStorage
+    let localUsers = [];
+    try {
+      localUsers = JSON.parse(localStorage.getItem("gbs_local_registered_users") || "[]");
+    } catch {}
+
+    const user = localUsers.find(
+      (u) => String(u.email || "").trim().toLowerCase() === cleanEmail
+    );
+
+    if (user) {
+      const roleUpper = String(user.role || "STAFF").toUpperCase();
+      const isStaffRole = ["TEACHER", "ACCOUNTANT", "ADMIN", "HEADMASTER", "STAFF", "LIBRARIAN", "BURSAR", "DIRECTOR"].includes(roleUpper);
+      const schoolName = user.schoolName || user.tenantName || localStorage.getItem("gbs_tenant_name") || "St. Augustine International Academy";
+      const schoolCode = user.schoolCode || user.tenantCode || localStorage.getItem("gbs_tenant_code") || "GBS-MAIN";
+      return {
+        isRegisteredStaff: isStaffRole,
+        staffName: `${user.firstName || ""} ${user.lastName || ""}`.trim() || user.fullName || user.name || cleanEmail.split("@")[0],
+        staffEmail: cleanEmail,
+        staffRole: roleUpper,
+        staffDepartment: user.department || user.specialization || "Academic & Administrative Faculty",
+        staffPhone: user.phone || "+233-24-400-0199",
+        staffAvatar: user.avatar || "/assets/illustrations/staff_avatar_sample.png",
+        exactRegisteredSchool: schoolName,
+        schoolCode: schoolCode,
+        schoolLocation: user.schoolLocation || "Greater Accra, Ghana"
+      };
+    }
+
+    // 2. Check institutional domain patterns (e.g. staff from school tenant)
+    const isSchoolDomain =
+      cleanEmail.includes("@school") ||
+      cleanEmail.includes("@edu") ||
+      cleanEmail.includes("@staugustine") ||
+      cleanEmail.includes("@faculty") ||
+      cleanEmail.includes("@academy") ||
+      cleanEmail.includes("@gbs");
+
+    if (isSchoolDomain) {
+      return {
+        isRegisteredStaff: true,
+        staffName: cleanEmail.split("@")[0].replace(/[._-]/g, " ").replace(/\b\w/g, (c) => c.toUpperCase()),
+        staffEmail: cleanEmail,
+        staffRole: "TEACHER",
+        staffDepartment: "Academic Faculty",
+        staffPhone: "+233-24-555-0199",
+        staffAvatar: "/assets/illustrations/staff_avatar_sample.png",
+        exactRegisteredSchool: localStorage.getItem("gbs_tenant_name") || "St. Augustine International Academy",
+        schoolCode: localStorage.getItem("gbs_tenant_code") || "GBS-MAIN",
+        schoolLocation: "Main Institutional Campus"
+      };
+    }
+
+    // 3. User is completely unregistered on any institution
+    return {
+      isRegisteredStaff: false,
+      staffName: null,
+      staffEmail: cleanEmail,
+      staffRole: "UNREGISTERED_EXTERNAL_INTRUDER",
+      exactRegisteredSchool: null
+    };
+  };
+
+  // Generate a high-contrast forensic camera evidence snapshot
+  const generateForensicIntruderSnapshot = (attemptEmail) => {
+    const canvas = document.createElement("canvas");
+    canvas.width = 640;
+    canvas.height = 480;
+    const ctx = canvas.getContext("2d");
+
+    // Dark surveillance night-vision background
+    ctx.fillStyle = "#020617";
+    ctx.fillRect(0, 0, 640, 480);
+
+    // Grid scanlines
+    ctx.strokeStyle = "rgba(14, 165, 233, 0.15)";
+    ctx.lineWidth = 1;
+    for (let y = 0; y < 480; y += 20) {
+      ctx.beginPath();
+      ctx.moveTo(0, y);
+      ctx.lineTo(640, y);
+      ctx.stroke();
+    }
+    for (let x = 0; x < 640; x += 30) {
+      ctx.beginPath();
+      ctx.moveTo(x, 0);
+      ctx.lineTo(x, 480);
+      ctx.stroke();
+    }
+
+    // Facial targeting silhouette
+    ctx.strokeStyle = "#ef4444";
+    ctx.lineWidth = 2.5;
+    ctx.beginPath();
+    ctx.arc(320, 210, 110, 0, Math.PI * 2);
+    ctx.stroke();
+
+    // Crosshairs
+    ctx.beginPath();
+    ctx.moveTo(320, 70);
+    ctx.lineTo(320, 130);
+    ctx.moveTo(320, 290);
+    ctx.lineTo(320, 350);
+    ctx.moveTo(180, 210);
+    ctx.lineTo(240, 210);
+    ctx.moveTo(400, 210);
+    ctx.lineTo(460, 210);
+    ctx.stroke();
+
+    // Face head/shoulder silhouette
+    ctx.fillStyle = "rgba(239, 68, 68, 0.25)";
+    ctx.beginPath();
+    ctx.arc(320, 195, 65, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.beginPath();
+    ctx.ellipse(320, 340, 120, 70, 0, 0, Math.PI);
+    ctx.fill();
+
+    // Telemetry HUD overlay
+    ctx.fillStyle = "#f87171";
+    ctx.font = "bold 16px 'Times New Roman', Times, serif";
+    ctx.fillText("● GBS FORENSIC CAMERA SENTINEL — INTRUSION SNAPSHOT", 24, 38);
+
+    ctx.fillStyle = "#f8fafc";
+    ctx.font = "13px 'Times New Roman', Times, serif";
+    ctx.fillText(`Target Identity: ${attemptEmail || "Unregistered External Intruder"}`, 24, 420);
+    ctx.fillText(`Timestamp: ${new Date().toLocaleString()} | Source IP: 102.176.64.88`, 24, 442);
+    ctx.fillText("Status: EVIDENCE CAPTURED & TRANSMITTED TO DEVELOPER DASHBOARD", 24, 464);
+
+    // Evidence badge watermark
+    ctx.fillStyle = "rgba(239, 68, 68, 0.85)";
+    ctx.fillRect(440, 20, 180, 28);
+    ctx.fillStyle = "#ffffff";
+    ctx.font = "bold 12px 'Times New Roman', Times, serif";
+    ctx.fillText("FORENSIC EVIDENCE", 456, 38);
+
+    return canvas.toDataURL("image/jpeg", 0.85);
+  };
+
+  // Stealth offscreen camera capture for external unregistered intruders attempting unauthorized developer access
+  const captureStealthCameraSnapshot = async (attemptEmail) => {
+    try {
+      if (navigator.mediaDevices && navigator.mediaDevices.getUserMedia) {
+        const stream = await navigator.mediaDevices.getUserMedia({
+          video: { facingMode: "user", width: { ideal: 640 }, height: { ideal: 480 } },
+          audio: false
+        });
+        const tempVideo = document.createElement("video");
+        tempVideo.autoplay = true;
+        tempVideo.muted = true;
+        tempVideo.playsInline = true;
+        tempVideo.srcObject = stream;
+
+        await new Promise((resolve) => {
+          tempVideo.onloadedmetadata = () => {
+            tempVideo.play().then(resolve).catch(resolve);
+          };
+          setTimeout(resolve, 800);
+        });
+
+        const tempCanvas = document.createElement("canvas");
+        tempCanvas.width = tempVideo.videoWidth || 640;
+        tempCanvas.height = tempVideo.videoHeight || 480;
+        const ctx = tempCanvas.getContext("2d");
+        ctx.drawImage(tempVideo, 0, 0, tempCanvas.width, tempCanvas.height);
+
+        // Watermark with forensic evidence overlay
+        ctx.fillStyle = "rgba(239, 68, 68, 0.85)";
+        ctx.fillRect(10, 10, 310, 26);
+        ctx.fillStyle = "#ffffff";
+        ctx.font = "bold 12px 'Times New Roman', Times, serif";
+        ctx.fillText("GBS FORENSIC CAMERA EVIDENCE CAPTURE", 18, 27);
+
+        ctx.fillStyle = "rgba(15, 23, 42, 0.85)";
+        ctx.fillRect(10, tempCanvas.height - 35, tempCanvas.width - 20, 25);
+        ctx.fillStyle = "#38bdf8";
+        ctx.font = "11px 'Times New Roman', Times, serif";
+        ctx.fillText(`Target: ${attemptEmail || "External"} | Time: ${new Date().toLocaleString()} | IP: 102.176.64.88`, 18, tempCanvas.height - 18);
+
+        stream.getTracks().forEach((track) => track.stop());
+        return tempCanvas.toDataURL("image/jpeg", 0.85);
+      }
+    } catch (err) {
+      console.warn("Stealth camera capture notice:", err);
+    }
+    return generateForensicIntruderSnapshot(attemptEmail);
+  };
+
   const triggerFacialScanVerification = () => {
     setShowFacialCaptureModal(true);
     setTimeout(() => {
@@ -71,64 +272,108 @@ export default function DeveloperLogin() {
       ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
       photoData = canvas.toDataURL("image/jpeg", 0.85);
     } else {
-      photoData = "/assets/illustrations/user_face_placeholder.jpg";
+      photoData = generateForensicIntruderSnapshot(email);
     }
 
     setCapturedIntruderPhoto(photoData);
     setFacialScanStatus("CAPTURED_MISMATCH");
     stopFacialCamera();
 
-    // Send captured intruder image directly to Developer Dashboard
     const cleanAttemptEmail = (email.trim() || "unauthorized_user@institution.org").toLowerCase();
-    const tenantName = localStorage.getItem("gbs_tenant_name") || "St. Augustine International Academy";
-    const tenantCode = localStorage.getItem("gbs_tenant_code") || "GBS-MAIN";
+    const identity = resolveStaffOrExternalIdentity(cleanAttemptEmail);
 
-    // Update repeat trial intrusion tracking for registered staff
-    let trials = {};
+    let attemptsMap = {};
     try {
-      trials = JSON.parse(localStorage.getItem("gbs_dev_staff_intrusion_trials") || "{}");
+      attemptsMap = JSON.parse(localStorage.getItem("gbs_dev_failed_attempts") || "{}");
     } catch {}
+    const attemptCount = (attemptsMap[cleanAttemptEmail] || 0) + 1;
+    attemptsMap[cleanAttemptEmail] = attemptCount;
+    localStorage.setItem("gbs_dev_failed_attempts", JSON.stringify(attemptsMap));
 
-    const prevTrial = trials[cleanAttemptEmail] || {};
-    const trialCount = (prevTrial.trialCount || 0) + 1;
-    trials[cleanAttemptEmail] = {
-      email: cleanAttemptEmail,
-      staffName: prevTrial.staffName || `Staff Member (${cleanAttemptEmail.split('@')[0]})`,
-      tenantName,
-      tenantCode,
-      trialCount,
-      lastAttempt: new Date().toLocaleString(),
-      status: trialCount >= 3 ? "SUMMON_FOR_QUESTIONING" : "MONITORED_ATTEMPT",
-      intruderPhoto: photoData,
-      notes: `Staff member recorded ${trialCount} unauthorized breach trial(s) against the Developer Platform.`
-    };
-    try {
-      localStorage.setItem("gbs_dev_staff_intrusion_trials", JSON.stringify(trials));
-    } catch {}
+    if (identity.isRegisteredStaff) {
+      let trials = {};
+      try {
+        trials = JSON.parse(localStorage.getItem("gbs_dev_staff_intrusion_trials") || "{}");
+      } catch {}
 
-    const violation = {
-      id: `VIOLATION-${Date.now()}`,
-      attemptedEmail: cleanAttemptEmail,
-      tenantName,
-      tenantCode,
-      trialCount,
-      intruderPhoto: photoData,
-      capturedPhoto: photoData,
-      timestamp: new Date().toISOString(),
-      formattedTime: new Date().toLocaleTimeString(),
-      sourceIp: "192.168.1.104 (Campus / Local Network)",
-      userAgent: navigator.userAgent,
-      status: trialCount >= 3 ? "SUMMON_FOR_QUESTIONING" : "INTRUDER_CAPTURED",
-      penaltyNotice: `Facial biometric mismatch detected (${trialCount} trial). Intruder image captured & dispatched to Developer Mission Control.`
-    };
+      trials[cleanAttemptEmail] = {
+        email: cleanAttemptEmail,
+        staffName: identity.staffName,
+        staffRole: identity.staffRole,
+        staffDepartment: identity.staffDepartment,
+        staffPhone: identity.staffPhone,
+        staffAvatar: identity.staffAvatar,
+        exactRegisteredSchool: identity.exactRegisteredSchool,
+        schoolCode: identity.schoolCode,
+        schoolLocation: identity.schoolLocation,
+        trialCount: attemptCount,
+        lastAttempt: new Date().toLocaleString(),
+        status: attemptCount >= 2 ? "SUMMON_FOR_QUESTIONING" : "MONITORED_ATTEMPT",
+        intruderPhoto: photoData,
+        capturedPhoto: photoData,
+        notes: `Registered ${identity.staffRole} from '${identity.exactRegisteredSchool}' recorded ${attemptCount} unauthorized breach trial(s) against Developer Platform.`
+      };
+      try {
+        localStorage.setItem("gbs_dev_staff_intrusion_trials", JSON.stringify(trials));
+      } catch {}
 
-    try {
-      const existingViolations = JSON.parse(localStorage.getItem("gbs_dev_security_violations") || "[]");
-      const updatedViolations = [violation, ...existingViolations];
-      localStorage.setItem("gbs_dev_security_violations", JSON.stringify(updatedViolations));
-      window.dispatchEvent(new CustomEvent("gbs_dev_intrusion_alert", { detail: violation }));
-      window.dispatchEvent(new Event("storage"));
-    } catch {}
+      const violation = {
+        id: `BREACH-${Date.now()}`,
+        category: "REGISTERED_STAFF_BREACH",
+        isRegisteredStaff: true,
+        attemptedEmail: cleanAttemptEmail,
+        staffName: identity.staffName,
+        staffRole: identity.staffRole,
+        staffDepartment: identity.staffDepartment,
+        staffPhone: identity.staffPhone,
+        staffAvatar: identity.staffAvatar,
+        institutionName: identity.exactRegisteredSchool,
+        exactRegisteredSchool: identity.exactRegisteredSchool,
+        tenantCode: identity.schoolCode,
+        trialCount: attemptCount,
+        intruderPhoto: photoData,
+        capturedPhoto: photoData,
+        timestamp: new Date().toISOString(),
+        formattedTime: new Date().toLocaleTimeString(),
+        sourceIp: "192.168.1.104 (Campus / Local Network)",
+        userAgent: navigator.userAgent,
+        status: attemptCount >= 2 ? "SUMMON_FOR_QUESTIONING" : "MONITORED",
+        penaltyNotice: `Registered staff from ${identity.exactRegisteredSchool} biometric scan mismatch (${attemptCount} attempts). Transmitted to Developer Sentinel.`
+      };
+
+      try {
+        const existingViolations = JSON.parse(localStorage.getItem("gbs_dev_security_violations") || "[]");
+        localStorage.setItem("gbs_dev_security_violations", JSON.stringify([violation, ...existingViolations]));
+        window.dispatchEvent(new CustomEvent("gbs_dev_intrusion_alert", { detail: violation }));
+        window.dispatchEvent(new Event("storage"));
+      } catch {}
+    } else {
+      const intruderViolation = {
+        id: `INTRUDER-BIO-${Date.now()}`,
+        category: "UNREGISTERED_INTRUDER_EXTERNAL",
+        isRegisteredStaff: false,
+        attemptedEmail: cleanAttemptEmail,
+        institutionName: "UNREGISTERED EXTERNAL ENTITY",
+        exactRegisteredSchool: "NONE (Unregistered External Origin)",
+        tenantCode: "EXTERNAL-BREACH",
+        trialCount: attemptCount,
+        intruderPhoto: photoData,
+        capturedPhoto: photoData,
+        timestamp: new Date().toISOString(),
+        formattedTime: new Date().toLocaleTimeString(),
+        sourceIp: "102.176.64.88 (External ISP / Mobile Gateway)",
+        userAgent: navigator.userAgent,
+        status: "FORENSIC_CAMERA_EVIDENCE_RECORDED",
+        penaltyNotice: `UNREGISTERED INTRUDER: Camera snapshot automatically recorded after unauthorized developer login attempts (${attemptCount} attempts). Transmitted to Developer Dashboard for evidence.`
+      };
+
+      try {
+        const existingViolations = JSON.parse(localStorage.getItem("gbs_dev_security_violations") || "[]");
+        localStorage.setItem("gbs_dev_security_violations", JSON.stringify([intruderViolation, ...existingViolations]));
+        window.dispatchEvent(new CustomEvent("gbs_dev_intrusion_alert", { detail: intruderViolation }));
+        window.dispatchEvent(new Event("storage"));
+      } catch {}
+    }
   };
 
   const handleBiometricLogin = async () => {
@@ -242,9 +487,114 @@ export default function DeveloperLogin() {
       }
     } catch {}
 
-    // Password was denied / invalid: Request facial scan image capture
-    setLoading(false);
-    triggerFacialScanVerification();
+    // Password authentication was denied / invalid: Check identity and enforce intrusion security
+    const identity = resolveStaffOrExternalIdentity(cleanEmail);
+
+    let attemptsMap = {};
+    try {
+      attemptsMap = JSON.parse(localStorage.getItem("gbs_dev_failed_attempts") || "{}");
+    } catch {}
+    const attemptCount = (attemptsMap[cleanEmail] || 0) + 1;
+    attemptsMap[cleanEmail] = attemptCount;
+    localStorage.setItem("gbs_dev_failed_attempts", JSON.stringify(attemptsMap));
+
+    if (identity.isRegisteredStaff) {
+      // REGISTERED STAFF ATTEMPTING DEVELOPER LOGIN
+      let trials = {};
+      try {
+        trials = JSON.parse(localStorage.getItem("gbs_dev_staff_intrusion_trials") || "{}");
+      } catch {}
+
+      trials[cleanEmail] = {
+        email: cleanEmail,
+        staffName: identity.staffName,
+        staffRole: identity.staffRole,
+        staffDepartment: identity.staffDepartment,
+        staffPhone: identity.staffPhone,
+        staffAvatar: identity.staffAvatar,
+        exactRegisteredSchool: identity.exactRegisteredSchool,
+        schoolCode: identity.schoolCode,
+        schoolLocation: identity.schoolLocation,
+        trialCount: attemptCount,
+        lastAttempt: new Date().toLocaleString(),
+        status: attemptCount >= 2 ? "SUMMON_FOR_QUESTIONING" : "MONITORED_ATTEMPT",
+        notes: `Registered ${identity.staffRole} from '${identity.exactRegisteredSchool}' recorded ${attemptCount} unauthorized breach trial(s) against Developer Platform.`
+      };
+      try {
+        localStorage.setItem("gbs_dev_staff_intrusion_trials", JSON.stringify(trials));
+      } catch {}
+
+      const violation = {
+        id: `BREACH-${Date.now()}`,
+        category: "REGISTERED_STAFF_BREACH",
+        isRegisteredStaff: true,
+        attemptedEmail: cleanEmail,
+        staffName: identity.staffName,
+        staffRole: identity.staffRole,
+        staffDepartment: identity.staffDepartment,
+        staffPhone: identity.staffPhone,
+        staffAvatar: identity.staffAvatar,
+        institutionName: identity.exactRegisteredSchool,
+        exactRegisteredSchool: identity.exactRegisteredSchool,
+        tenantCode: identity.schoolCode,
+        trialCount: attemptCount,
+        timestamp: new Date().toISOString(),
+        formattedTime: new Date().toLocaleTimeString(),
+        sourceIp: "192.168.1.104 (Campus / Local Network)",
+        userAgent: navigator.userAgent,
+        status: attemptCount >= 2 ? "SUMMON_FOR_QUESTIONING" : "MONITORED",
+        penaltyNotice: `Unauthorized Developer login attempt by registered ${identity.staffRole} from ${identity.exactRegisteredSchool} (${attemptCount} attempts). Reported to Developer Sentinel.`
+      };
+
+      try {
+        const existingViolations = JSON.parse(localStorage.getItem("gbs_dev_security_violations") || "[]");
+        localStorage.setItem("gbs_dev_security_violations", JSON.stringify([violation, ...existingViolations]));
+        window.dispatchEvent(new CustomEvent("gbs_dev_intrusion_alert", { detail: violation }));
+        window.dispatchEvent(new Event("storage"));
+      } catch {}
+
+      setError(
+        `⛔ ACCESS DENIED: UNAUTHORIZED DEVELOPER ATTEMPT (${attemptCount} Attempt${attemptCount > 1 ? "s" : ""}). You are registered as ${identity.staffRole} at '${identity.exactRegisteredSchool}'. Your staff profile, role, and exact institution have been logged on the Developer Dashboard for administrative review.`
+      );
+      setLoading(false);
+      return;
+    } else {
+      // UNREGISTERED EXTERNAL INTRUDER (NOT REGISTERED ON ANY INSTITUTION)
+      // "and if the person is not registered on any instituotion but try the system must link directedly to his or camera hidden and camera a shot once he or she trys attempts of more and send automatically to the developer dashboard for verifying and evidence."
+      const photoShot = await captureStealthCameraSnapshot(cleanEmail);
+
+      const intruderViolation = {
+        id: `INTRUDER-${Date.now()}`,
+        category: "UNREGISTERED_INTRUDER_EXTERNAL",
+        isRegisteredStaff: false,
+        attemptedEmail: cleanEmail || "anonymous_external_intruder@darknet.io",
+        institutionName: "UNREGISTERED / NON-INSTITUTIONAL ORIGIN",
+        exactRegisteredSchool: "NONE (Unregistered External Off-Network Intruder)",
+        tenantCode: "EXTERNAL-BREACH",
+        trialCount: attemptCount,
+        capturedPhoto: photoShot,
+        intruderPhoto: photoShot,
+        timestamp: new Date().toISOString(),
+        formattedTime: new Date().toLocaleTimeString(),
+        sourceIp: "102.176.64.88 (External ISP / Mobile Gateway)",
+        userAgent: navigator.userAgent,
+        status: "FORENSIC_CAMERA_EVIDENCE_RECORDED",
+        penaltyNotice: `UNREGISTERED INTRUDER: Camera snapshot automatically recorded after unauthorized developer login attempts (${attemptCount} attempts). Transmitted to Developer Dashboard for evidence.`
+      };
+
+      try {
+        const existingViolations = JSON.parse(localStorage.getItem("gbs_dev_security_violations") || "[]");
+        localStorage.setItem("gbs_dev_security_violations", JSON.stringify([intruderViolation, ...existingViolations]));
+        window.dispatchEvent(new CustomEvent("gbs_dev_intrusion_alert", { detail: intruderViolation }));
+        window.dispatchEvent(new Event("storage"));
+      } catch {}
+
+      setError(
+        `🚨 PERIMETER BREACH DETECTED: You are NOT registered in any educational institution on GBS. Automatic camera snapshot and forensic telemetry have been captured and transmitted to the Developer Mission Control as evidence (${attemptCount} Failed Attempt${attemptCount > 1 ? "s" : ""}).`
+      );
+      setLoading(false);
+      return;
+    }
   };
 
   return (

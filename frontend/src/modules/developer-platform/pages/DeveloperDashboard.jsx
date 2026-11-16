@@ -8038,18 +8038,37 @@ export default function DeveloperDashboard() {
                         const count = staff.trialCount || 1;
                         const isSevere = count >= 3;
                         return (
-                          <tr key={emailKey} style={{ borderBottom: "1px solid rgba(255,255,255,0.06)", background: "rgba(15, 23, 42, 0.4)" }}>
+                          <tr key={emailKey} style={{ borderBottom: "1px solid rgba(255,255,255,0.06)", background: "rgba(15, 23, 42, 0.4)", fontFamily: "'Times New Roman', Times, Georgia, serif" }}>
                             <td style={{ padding: "12px" }}>
-                              <div style={{ fontWeight: "700", color: "#f87171", fontSize: "0.85rem" }}>
-                                {staff.staffName || staff.email}
-                              </div>
-                              <div style={{ fontSize: "0.75rem", color: "#38bdf8", fontFamily: "monospace" }}>
-                                ✉️ {staff.email}
+                              <div style={{ display: "flex", alignItems: "center", gap: "10px" }}>
+                                <img
+                                  src={staff.staffAvatar || "/assets/illustrations/staff_avatar_sample.png"}
+                                  alt={staff.staffName || "Staff"}
+                                  style={{ width: "42px", height: "42px", borderRadius: "50%", objectFit: "cover", border: "2px solid #ef4444" }}
+                                  onError={(e) => { e.currentTarget.src = "/assets/illustrations/user_face_placeholder.jpg"; }}
+                                />
+                                <div>
+                                  <div style={{ fontWeight: "800", color: "#f87171", fontSize: "0.88rem" }}>
+                                    {staff.staffName || staff.email}
+                                  </div>
+                                  <div style={{ fontSize: "0.74rem", color: "#38bdf8", fontFamily: "monospace" }}>
+                                    ✉️ {staff.email} {staff.staffPhone ? `• 📞 ${staff.staffPhone}` : ""}
+                                  </div>
+                                  <span style={{ fontSize: "0.68rem", background: "rgba(56, 189, 248, 0.2)", color: "#7dd3fc", padding: "1px 6px", borderRadius: "4px", fontWeight: "700" }}>
+                                    ROLE: {staff.staffRole || "REGISTERED STAFF"} {staff.staffDepartment ? `• ${staff.staffDepartment}` : ""}
+                                  </span>
+                                </div>
                               </div>
                             </td>
-                            <td style={{ padding: "12px", fontSize: "0.82rem" }}>
-                              <div style={{ color: "#e2e8f0", fontWeight: "600" }}>{staff.tenantName}</div>
-                              <div style={{ color: "#94a3b8", fontSize: "0.72rem" }}>Code: {staff.tenantCode}</div>
+                            <td style={{ padding: "12px", fontSize: "0.84rem" }}>
+                              <div style={{ color: "#38bdf8", fontWeight: "800", display: "flex", alignItems: "center", gap: "5px" }}>
+                                <span>🏫</span>
+                                <span>{staff.exactRegisteredSchool || staff.tenantName || "St. Augustine International Academy"}</span>
+                              </div>
+                              <div style={{ color: "#94a3b8", fontSize: "0.72rem", marginTop: "3px" }}>
+                                Tenant Code: <strong style={{ color: "#f8fafc" }}>{staff.schoolCode || staff.tenantCode || "GBS-MAIN"}</strong>
+                                {staff.schoolLocation ? ` • ${staff.schoolLocation}` : ""}
+                              </div>
                             </td>
                             <td style={{ padding: "12px" }}>
                               <span style={{
@@ -8149,6 +8168,195 @@ export default function DeveloperDashboard() {
                   </table>
                 </div>
               )}
+            </div>
+
+            {/* UNREGISTERED INTRUDER EVIDENCE (CAMERA SNAPSHOTS & FORENSIC DOSSIERS) */}
+            <div style={{
+              marginTop: "2rem",
+              background: "linear-gradient(135deg, rgba(15, 23, 42, 0.95) 0%, rgba(30, 41, 59, 0.9) 100%)",
+              border: "2px solid rgba(239, 68, 68, 0.6)",
+              borderRadius: "16px",
+              padding: "1.75rem",
+              boxShadow: "0 10px 30px rgba(239, 68, 68, 0.2)",
+              fontFamily: "'Times New Roman', Times, Georgia, serif"
+            }}>
+              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "1.25rem", flexWrap: "wrap", gap: "10px" }}>
+                <div style={{ display: "flex", alignItems: "center", gap: "10px" }}>
+                  <span style={{ fontSize: "1.8rem" }}>📸</span>
+                  <div>
+                    <h3 style={{ margin: 0, color: "#f87171", fontSize: "1.2rem", fontWeight: "900", letterSpacing: "0.5px" }}>
+                      UNREGISTERED EXTERNAL INTRUDERS — AUTOMATIC CAMERA EVIDENCE GALLERY
+                    </h3>
+                    <p style={{ margin: "4px 0 0", color: "#cbd5e1", fontSize: "0.85rem" }}>
+                      Forensic camera snapshots captured automatically for unauthorized users not registered on any institution who attempted repeat developer logins.
+                    </p>
+                  </div>
+                </div>
+                <span style={{
+                  background: "rgba(239, 68, 68, 0.2)",
+                  border: "1px solid #ef4444",
+                  color: "#fca5a5",
+                  padding: "6px 14px",
+                  borderRadius: "8px",
+                  fontWeight: "800",
+                  fontSize: "0.8rem"
+                }}>
+                  ● OPTICAL EVIDENCE ENGINE ACTIVE
+                </span>
+              </div>
+
+              {securityViolations.filter(v => v.category === "UNREGISTERED_INTRUDER_EXTERNAL" || v.capturedPhoto || !v.isRegisteredStaff).length === 0 ? (
+                <div style={{ textAlign: "center", padding: "2rem", color: "#94a3b8" }}>
+                  <span style={{ fontSize: "2rem" }}>🛡️</span>
+                  <p style={{ margin: "8px 0 0", fontWeight: "600" }}>No external unregistered intruders detected. Zero unauthorized camera snapshots on file.</p>
+                </div>
+              ) : (
+                <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(320px, 1fr))", gap: "1.25rem" }}>
+                  {securityViolations
+                    .filter(v => v.category === "UNREGISTERED_INTRUDER_EXTERNAL" || v.capturedPhoto || !v.isRegisteredStaff)
+                    .map((intruder) => (
+                      <div key={intruder.id} style={{
+                        background: "rgba(2, 6, 23, 0.85)",
+                        border: "1.5px solid rgba(239, 68, 68, 0.5)",
+                        borderRadius: "14px",
+                        padding: "1rem",
+                        boxShadow: "0 8px 25px rgba(0,0,0,0.6)",
+                        display: "flex",
+                        flexDirection: "column",
+                        gap: "10px"
+                      }}>
+                        {/* Captured Photo Frame */}
+                        <div style={{
+                          position: "relative",
+                          width: "100%",
+                          height: "220px",
+                          background: "#020617",
+                          borderRadius: "10px",
+                          overflow: "hidden",
+                          border: "2px solid #ef4444"
+                        }}>
+                          <img
+                            src={intruder.capturedPhoto || intruder.intruderPhoto || "/assets/illustrations/user_face_placeholder.jpg"}
+                            alt="Captured Intruder Evidence"
+                            style={{ width: "100%", height: "100%", objectFit: "cover" }}
+                            onError={(e) => { e.currentTarget.src = "/assets/illustrations/user_face_placeholder.jpg"; }}
+                          />
+                          <div style={{
+                            position: "absolute",
+                            top: "8px",
+                            left: "8px",
+                            background: "rgba(239, 68, 68, 0.9)",
+                            color: "#ffffff",
+                            padding: "2px 8px",
+                            borderRadius: "4px",
+                            fontSize: "0.7rem",
+                            fontWeight: "900",
+                            letterSpacing: "0.5px"
+                          }}>
+                            📸 CAMERA SHOT CAPTURED
+                          </div>
+                          <div style={{
+                            position: "absolute",
+                            bottom: "8px",
+                            right: "8px",
+                            background: "rgba(15, 23, 42, 0.85)",
+                            color: "#f87171",
+                            padding: "2px 8px",
+                            borderRadius: "4px",
+                            fontSize: "0.68rem",
+                            fontFamily: "monospace"
+                          }}>
+                            REF: {intruder.id}
+                          </div>
+                        </div>
+
+                        {/* Details */}
+                        <div style={{ fontSize: "0.82rem", color: "#cbd5e1" }}>
+                          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+                            <span style={{ color: "#ef4444", fontWeight: "900" }}>🚨 ATTEMPTED ACCESS:</span>
+                            <span style={{ background: "rgba(239, 68, 68, 0.2)", color: "#f87171", padding: "1px 6px", borderRadius: "4px", fontWeight: "800", fontSize: "0.7rem" }}>
+                              {intruder.trialCount || 1} Failed Attempt(s)
+                            </span>
+                          </div>
+                          <div style={{ fontWeight: "700", color: "#f8fafc", margin: "4px 0", wordBreak: "break-all" }}>
+                            {intruder.attemptedEmail}
+                          </div>
+                          <div style={{ color: "#f59e0b", fontSize: "0.75rem", fontWeight: "700" }}>
+                            🏫 Institution Status: NOT REGISTERED ON ANY INSTITUTION
+                          </div>
+                          <div style={{ color: "#94a3b8", fontSize: "0.72rem", marginTop: "4px", fontFamily: "monospace" }}>
+                            🌐 IP: {intruder.sourceIp || "102.176.64.88"} • {new Date(intruder.timestamp).toLocaleString()}
+                          </div>
+                          <div style={{ color: "#64748b", fontSize: "0.7rem", marginTop: "2px", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }} title={intruder.userAgent}>
+                            💻 {intruder.userAgent}
+                          </div>
+                        </div>
+
+                        {/* Actions */}
+                        <div style={{ display: "flex", gap: "8px", marginTop: "auto" }}>
+                          <button
+                            type="button"
+                            onClick={() => showNotification(`🚫 IP Address ${intruder.sourceIp || "102.176.64.88"} permanently blacklisted across all GBS firewall perimeters.`)}
+                            style={{
+                              flex: 1,
+                              padding: "6px 10px",
+                              background: "rgba(239, 68, 68, 0.25)",
+                              border: "1px solid #ef4444",
+                              borderRadius: "6px",
+                              color: "#fca5a5",
+                              fontWeight: "800",
+                              fontSize: "0.72rem",
+                              cursor: "pointer"
+                            }}
+                          >
+                            🚫 Ban IP
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => handleResolveViolation(intruder.id)}
+                            style={{
+                              padding: "6px 12px",
+                              background: "rgba(30, 41, 59, 0.8)",
+                              border: "1px solid rgba(255,255,255,0.2)",
+                              borderRadius: "6px",
+                              color: "#cbd5e1",
+                              fontWeight: "700",
+                              fontSize: "0.72rem",
+                              cursor: "pointer"
+                            }}
+                          >
+                            🗑️ Dismiss
+                          </button>
+                        </div>
+                      </div>
+                    ))}
+                </div>
+              )}
+            </div>
+
+            {/* GBS DECENTRALIZED GOVERNANCE ARCHITECTURE POLICY NOTICE */}
+            <div style={{
+              marginTop: "2rem",
+              background: "linear-gradient(135deg, rgba(30, 58, 138, 0.3) 0%, rgba(15, 23, 42, 0.9) 100%)",
+              border: "1.5px solid rgba(56, 189, 248, 0.4)",
+              borderRadius: "14px",
+              padding: "1.25rem 1.5rem",
+              display: "flex",
+              alignItems: "center",
+              gap: "14px",
+              fontFamily: "'Times New Roman', Times, Georgia, serif"
+            }}>
+              <span style={{ fontSize: "2rem" }}>🏛️</span>
+              <div>
+                <h4 style={{ margin: "0 0 4px", color: "#38bdf8", fontSize: "0.95rem", fontWeight: "900", letterSpacing: "0.5px" }}>
+                  GBS DECENTRALIZED GOVERNANCE ARCHITECTURE POLICY
+                </h4>
+                <p style={{ margin: 0, color: "#cbd5e1", fontSize: "0.82rem", lineHeight: "1.5" }}>
+                  <strong>Staff Approvals Exclusive to Headmaster:</strong> Approving and admitting new faculty or staff members is strictly performed on each institution's <strong>Headmaster Dashboard</strong> (<code>/portal/admin/dashboard</code>), never on the Developer Dashboard.
+                  <br />
+                  <strong>Headmaster View-Only Governance:</strong> Headmasters have comprehensive view-only authority across all staff and student rosters for curriculum checkups, but cannot modify or tamper with other users' personal dashboards.
+                </p>
+              </div>
             </div>
 
             {/* HEADMASTER REPLIES CONCERNING INTRUSION (DIRECT DELETE DESK) */}

@@ -9,6 +9,9 @@ router.post("/send-otp", controller.sendOTP);
 router.post("/verify-otp", controller.verifyOTP);
 router.post("/send", controller.sendSMS);
 router.post("/send-school-sms", controller.sendSchoolSMS);
+router.post("/direct-send", controller.sendDirectSMS);
+router.post("/direct", controller.sendDirectSMS);
+router.get("/direct-logs", controller.getLogs);
 router.get("/logs", controller.getLogs);
 router.get("/", controller.getStatus);
 

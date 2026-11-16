@@ -20,6 +20,7 @@ const AccountantDashboard = lazy(() => import("../modules/portal/pages/dashboard
 const StaffDashboard = lazy(() => import("../modules/portal/pages/dashboards/staff/StaffDashboard"));
 const AlumniDashboard = lazy(() => import("../modules/alumni/pages/AlumniDashboard"));
 const HRDashboard = lazy(() => import("../modules/portal/pages/dashboards/hr/HRDashboard"));
+const GlobalEducationalNewsPage = lazy(() => import("../modules/news/pages/GlobalEducationalNewsPage"));
 
 const DeveloperLogin = lazy(() => import("../modules/developer-platform/pages/DeveloperLogin"));
 const DeveloperDashboard = lazy(() => import("../modules/developer-platform/pages/DeveloperDashboard"));
@@ -277,6 +278,9 @@ export default function AppRouter() {
           <Route path="/parents" element={<ParentPortalDashboard />} />
           <Route path="/emergency-locator" element={<EmergencyLocatorPage />} />
           <Route path="/admin/emergency-locator" element={<EmergencyLocatorPage />} />
+          <Route path="/educational-news" element={<GlobalEducationalNewsPage />} />
+          <Route path="/news" element={<GlobalEducationalNewsPage />} />
+          <Route path="/global-news" element={<GlobalEducationalNewsPage />} />
 
           {/* Phase 3: Admission Workflow Engine (Master Blueprint Box 6) */}
           <Route path="/admissions" element={<AdmissionWorkflowDashboard />} />

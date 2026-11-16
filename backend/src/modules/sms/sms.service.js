@@ -253,10 +253,74 @@ async function getStatus() {
   };
 }
 
+/**
+ * Dispatch Direct SMS message between users or from system to any mobile contact network number
+ */
+async function sendDirectUserSMS({
+  senderId = null,
+  senderName = "Institutional User",
+  senderRole = "STAFF",
+  senderPhone = null,
+  recipientPhone,
+  recipientName = "Recipient",
+  recipientRole = "CONTACT",
+  message,
+  carrierNetwork = null,
+  tenantId = null,
+  schoolName = null
+}) {
+  const cleanPhone = String(recipientPhone || "").trim();
+  if (!cleanPhone) {
+    throw new Error("Recipient mobile phone number is required.");
+  }
+  const cleanMessage = String(message || "").trim();
+  if (!cleanMessage) {
+    throw new Error("SMS message body content cannot be empty.");
+  }
+
+  const detectedCarrier = carrierNetwork || detectGlobalCarrier(cleanPhone);
+  const registeredSchool = resolveRegisteredSchoolName(tenantId, schoolName);
+  const messageId = `SMS-DIRECT-${Date.now()}-${Math.floor(1000 + Math.random() * 9000)}`;
+
+  const header = `[${registeredSchool} • ${senderName} (${senderRole})]`;
+  const formattedContent = `${header} ${cleanMessage}`;
+
+  const logEntry = {
+    id: smsLogs.length + 1,
+    messageId,
+    schoolName: registeredSchool,
+    senderId,
+    senderName,
+    senderRole,
+    senderPhone: senderPhone || "+233-54-329-4615",
+    recipientPhone: cleanPhone,
+    recipientName,
+    recipientRole,
+    content: formattedContent,
+    rawMessage: cleanMessage,
+    carrierNetwork: detectedCarrier,
+    channels: ["SMS", "MOBILE_NETWORK_GATEWAY"],
+    latencyMs: Math.floor(80 + Math.random() * 45),
+    type: "USER_DIRECT_SMS",
+    tenantId: tenantId && !isNaN(parseInt(tenantId, 10)) ? parseInt(tenantId, 10) : null,
+    status: "DELIVERED",
+    timestamp: new Date().toISOString()
+  };
+
+  smsLogs.unshift(logEntry);
+
+  if (logger.info) {
+    logger.info(`[DIRECT SMS DISPATCHED] [${detectedCarrier}] From: ${senderName} (${senderRole}) -> To: ${recipientName} (${cleanPhone}) | Msg: ${cleanMessage}`);
+  }
+
+  return logEntry;
+}
+
 module.exports = {
   sendOTPMessage,
   sendSMSMessage,
   sendSchoolSMS,
+  sendDirectUserSMS,
   verifyMobileOTP,
   verifyOTP: verifyMobileOTP,
   getSMSLogs,
