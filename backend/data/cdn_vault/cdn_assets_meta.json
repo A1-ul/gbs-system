@@ -1,0 +1,62 @@
+[
+  {
+    "id": "CDN-884877",
+    "fileName": "WAEC_National_Merit_Report_2026.pdf",
+    "category": "report-cards",
+    "tenantCode": "GBS-MAIN",
+    "mimeType": "application/pdf",
+    "fileSizeBytes": 1048576,
+    "formattedSize": "1024.0 KB",
+    "s3Bucket": "gbs-report-cards-vault",
+    "cdnUrl": "https://cdn.gbs-system.org/vault/GBS-MAIN/report-cards/WAEC_National_Merit_Report_2026.pdf",
+    "sha256": "e391abb8e222cd5566c525d2abc743096c8685c9bafc1b6bad8450dbee1c5622",
+    "cacheControl": "public, max-age=31536000, immutable",
+    "uploadedAt": "2026-11-17T00:04:44.877Z",
+    "viewsCount": 1
+  },
+  {
+    "id": "CDN-RPT-001",
+    "fileName": "Term3_Terminal_Report_Kwesi_Mensah.pdf",
+    "category": "report-cards",
+    "tenantCode": "GBS-MAIN",
+    "mimeType": "application/pdf",
+    "fileSizeBytes": 2450890,
+    "formattedSize": "2.34 MB",
+    "s3Bucket": "gbs-report-cards-vault",
+    "cdnUrl": "https://cdn.gbs-system.org/vault/GBS-MAIN/report-cards/Term3_Terminal_Report_Kwesi_Mensah.pdf",
+    "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "cacheControl": "public, max-age=31536000, immutable",
+    "uploadedAt": "2026-11-16T00:04:44.877Z",
+    "viewsCount": 142
+  },
+  {
+    "id": "CDN-VID-002",
+    "fileName": "Physics_Quantum_Electrodynamics_Lecture_4K.mp4",
+    "category": "videos",
+    "tenantCode": "GBS-MAIN",
+    "mimeType": "video/mp4",
+    "fileSizeBytes": 184549200,
+    "formattedSize": "176.00 MB",
+    "s3Bucket": "gbs-classroom-videos-vault",
+    "cdnUrl": "https://cdn.gbs-system.org/vault/GBS-MAIN/videos/Physics_Quantum_Electrodynamics_Lecture_4K.mp4",
+    "sha256": "ca978112ca1bbdcafac231b39a23dc4da786eff8147c4e72b9807785afee48bb",
+    "cacheControl": "public, max-age=31536000, immutable",
+    "uploadedAt": "2026-11-16T12:04:44.877Z",
+    "viewsCount": 890
+  },
+  {
+    "id": "CDN-SEC-003",
+    "fileName": "Perimeter_Camera_Gate_North_Snapshot.jpg",
+    "category": "cctv-snapshots",
+    "tenantCode": "GBS-MAIN",
+    "mimeType": "image/jpeg",
+    "fileSizeBytes": 1250440,
+    "formattedSize": "1.19 MB",
+    "s3Bucket": "gbs-security-cctv-vault",
+    "cdnUrl": "https://cdn.gbs-system.org/vault/GBS-MAIN/cctv-snapshots/Perimeter_Camera_Gate_North_Snapshot.jpg",
+    "sha256": "3e23e8160039594a33894f6564e1b1348bbd7a0088d42c4acb73eeaed59c009d",
+    "cacheControl": "public, max-age=31536000, immutable",
+    "uploadedAt": "2026-11-17T00:04:44.877Z",
+    "viewsCount": 45
+  }
+]

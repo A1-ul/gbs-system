@@ -1,0 +1,98 @@
+/* ==============================================================================
+   GBS ENTERPRISE CLOUD CDN & S3 OBJECT STORAGE VAULT
+   Universal Styling: Times New Roman, Times, Georgia, serif !important
+============================================================================== */
+
+.gbs-cdn-modal-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(2, 6, 23, 0.88);
+  backdrop-filter: blur(14px);
+  -webkit-backdrop-filter: blur(14px);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 999999;
+  padding: 1.25rem;
+  font-family: "Times New Roman", Times, Georgia, serif !important;
+}
+
+.gbs-cdn-modal-card {
+  width: 100%;
+  max-width: 860px;
+  max-height: 90vh;
+  overflow-y: auto;
+  background: linear-gradient(135deg, rgba(15, 23, 42, 0.98) 0%, rgba(30, 41, 59, 0.95) 100%);
+  border: 2px solid rgba(56, 189, 248, 0.45);
+  border-radius: 20px;
+  box-shadow: 0 25px 60px rgba(0, 0, 0, 0.9), 0 0 30px rgba(56, 189, 248, 0.2);
+  color: #f8fafc;
+  font-family: "Times New Roman", Times, Georgia, serif !important;
+  display: flex;
+  flex-direction: column;
+}
+
+.gbs-cdn-modal-header {
+  padding: 1.5rem 1.75rem;
+  border-bottom: 1.5px solid rgba(255, 255, 255, 0.1);
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  background: rgba(15, 23, 42, 0.6);
+}
+
+.gbs-cdn-modal-body {
+  padding: 1.75rem;
+  flex: 1;
+}
+
+.gbs-cdn-stat-grid {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 12px;
+  margin-bottom: 1.5rem;
+}
+
+.gbs-cdn-stat-card {
+  background: rgba(2, 6, 23, 0.7);
+  border: 1px solid rgba(56, 189, 248, 0.25);
+  border-radius: 12px;
+  padding: 1rem;
+  text-align: center;
+}
+
+.gbs-cdn-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.82rem;
+  text-align: left;
+}
+
+.gbs-cdn-table th {
+  padding: 10px 12px;
+  background: rgba(30, 41, 59, 0.6);
+  color: #94a3b8;
+  font-weight: 800;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.gbs-cdn-table td {
+  padding: 10px 12px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+}
+
+.gbs-cdn-action-btn {
+  background: rgba(56, 189, 248, 0.2);
+  border: 1px solid #38bdf8;
+  color: #7dd3fc;
+  padding: 4px 10px;
+  border-radius: 6px;
+  font-size: 0.74rem;
+  font-weight: 700;
+  cursor: pointer;
+  font-family: "Times New Roman", Times, Georgia, serif !important;
+}
+
+.gbs-cdn-action-btn:hover {
+  background: rgba(56, 189, 248, 0.35);
+}

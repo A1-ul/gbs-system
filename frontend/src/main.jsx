@@ -11,24 +11,25 @@ import "./styles/animations.css";
 import "./styles/glass.css";
 
 // Live Internet Cache-Busting & Stale ServiceWorker/Chunk Recovery
-const GBS_BUILD_RELEASE_ID = "2026-11-15-LIVE-V3";
+const GBS_BUILD_RELEASE_ID = "2026-11-16-LIVE-V4";
 if (typeof window !== "undefined") {
   try {
     const prevRelease = localStorage.getItem("gbs_live_release_id");
     if (prevRelease !== GBS_BUILD_RELEASE_ID) {
       localStorage.setItem("gbs_live_release_id", GBS_BUILD_RELEASE_ID);
-      if ("serviceWorker" in navigator) {
-        navigator.serviceWorker.getRegistrations().then((regs) => {
-          regs.forEach((r) => r.unregister());
-        }).catch(() => {});
-      }
-      if ("caches" in window) {
-        caches.keys().then((keys) => {
-          keys.forEach((k) => caches.delete(k));
-        }).catch(() => {});
-      }
     }
   } catch { }
+
+  // Register Native Mobile & Lock Screen Push Service Worker
+  if ("serviceWorker" in navigator) {
+    window.addEventListener("load", () => {
+      navigator.serviceWorker.register("/sw.js").then((reg) => {
+        console.log("[GBS PWA] Service Worker registered for Native Mobile & Push Alerts:", reg.scope);
+      }).catch((err) => {
+        console.warn("[GBS PWA] Service Worker registration:", err);
+      });
+    });
+  }
 
   window.addEventListener("vite:preloadError", () => {
     window.location.reload();

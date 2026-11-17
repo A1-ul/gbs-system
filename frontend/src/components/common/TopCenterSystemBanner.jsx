@@ -5,6 +5,8 @@ import { getActiveSchoolName, getActiveSchoolLogo } from "../../utils/schoolBran
 import { isDemoSandboxMode, resetDemoSandboxData } from "../../utils/tokenStorage";
 import UniversalLanguageTranslatorModal from "./UniversalLanguageTranslatorModal";
 import DirectSMSMessengerModal from "./DirectSMSMessengerModal";
+import MobileAppPushHubModal from "./MobileAppPushHubModal";
+import CloudCDNMediaHubModal from "./CloudCDNMediaHubModal";
 
 /**
  * TopCenterSystemBanner
@@ -52,6 +54,8 @@ export default function TopCenterSystemBanner({
   const [showTranslatorModal, setShowTranslatorModal] = useState(false);
   const [translatorInitialText, setTranslatorInitialText] = useState("");
   const [showDirectSMSModal, setShowDirectSMSModal] = useState(false);
+  const [showMobileAppModal, setShowMobileAppModal] = useState(false);
+  const [showCloudCDNModal, setShowCloudCDNModal] = useState(false);
 
   let currentUserRole = "GUEST";
   try {
@@ -358,6 +362,44 @@ export default function TopCenterSystemBanner({
         <span style={{ color: "#475569" }}>•</span>
         <button
           type="button"
+          onClick={() => setShowMobileAppModal(true)}
+          style={{
+            background: "linear-gradient(135deg, rgba(168, 85, 247, 0.25), rgba(126, 34, 206, 0.35))",
+            border: "1px solid rgba(168, 85, 247, 0.5)",
+            color: "#c084fc",
+            fontSize: "0.76rem",
+            padding: "4px 12px",
+            borderRadius: "8px",
+            cursor: "pointer",
+            fontWeight: "700",
+            transition: "all 0.2s"
+          }}
+          title="Install native Android APK or Apple iOS app & activate lock screen push notifications"
+        >
+          📲 Mobile App & Push
+        </button>
+        <span style={{ color: "#475569" }}>•</span>
+        <button
+          type="button"
+          onClick={() => setShowCloudCDNModal(true)}
+          style={{
+            background: "linear-gradient(135deg, rgba(59, 130, 246, 0.2), rgba(29, 78, 216, 0.3))",
+            border: "1px solid rgba(59, 130, 246, 0.5)",
+            color: "#93c5fd",
+            fontSize: "0.76rem",
+            padding: "4px 12px",
+            borderRadius: "8px",
+            cursor: "pointer",
+            fontWeight: "700",
+            transition: "all 0.2s"
+          }}
+          title="Open S3 Cloud Object Storage Vault & Global Edge CDN Management Desk"
+        >
+          ☁️ Cloud CDN & S3 Vault
+        </button>
+        <span style={{ color: "#475569" }}>•</span>
+        <button
+          type="button"
           onClick={handleCleanSlate}
           style={{
             background: cleaned ? "rgba(16, 185, 129, 0.25)" : "rgba(239, 68, 68, 0.18)",
@@ -569,6 +611,18 @@ export default function TopCenterSystemBanner({
       <DirectSMSMessengerModal
         isOpen={showDirectSMSModal}
         onClose={() => setShowDirectSMSModal(false)}
+      />
+
+      {/* Native Mobile App (APK / iOS) & Lock Screen Push Hub Modal */}
+      <MobileAppPushHubModal
+        isOpen={showMobileAppModal}
+        onClose={() => setShowMobileAppModal(false)}
+      />
+
+      {/* S3-Compatible Cloud Object Store & Edge CDN Modal */}
+      <CloudCDNMediaHubModal
+        isOpen={showCloudCDNModal}
+        onClose={() => setShowCloudCDNModal(false)}
       />
     </div >
   );

@@ -192,6 +192,8 @@ const { migrationRoutes } = require("../services/migration");
 const { salaryGroupingRoutes } = require("../modules/hr/salary-grouping");
 const { loanRoutes } = require("../modules/loans");
 const assignmentRoutes = require("../modules/assignment/assignment.routes");
+const cdnRoutes = require("../modules/cdn/cdn.routes");
+const pushRoutes = require("../modules/push/push.routes");
 
 app.use("/api/v1/developer-control-center", developerRoutes);
 app.use("/api/v1/security/voice", voiceRoutes);
@@ -202,6 +204,8 @@ app.use("/api/v1/hr/salary-grouping", salaryGroupingRoutes);
 app.use("/api/v1/loans", loanRoutes);
 app.use("/api/v1/assignments", assignmentRoutes);
 app.use("/api/v1/assignment", assignmentRoutes);
+app.use("/api/v1/cdn", cdnRoutes);
+app.use("/api/v1/push", pushRoutes);
 
 /*
 ====================================================

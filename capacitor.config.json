@@ -1,0 +1,20 @@
+{
+  "appId": "com.gbs.enterprise.school",
+  "appName": "GBS International School Management",
+  "webDir": "frontend/dist",
+  "bundledWebRuntime": false,
+  "server": {
+    "androidScheme": "https",
+    "cleartext": true
+  },
+  "plugins": {
+    "PushNotifications": {
+      "presentationOptions": ["badge", "sound", "alert"]
+    },
+    "LocalNotifications": {
+      "smallIcon": "ic_stat_icon_config_sample",
+      "iconColor": "#0284c7",
+      "sound": "beep.wav"
+    }
+  }
+}
