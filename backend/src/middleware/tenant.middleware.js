@@ -1,5 +1,15 @@
 const { AppError } = require('./error.middleware');
 const { isTenantLockedOut } = require('../core/database/persistentStore');
+const { isDemoSandboxRequest } = require('./demoLimit.middleware');
+
+const normalizeTenantNumeric = (val) => {
+  if (val === undefined || val === null || val === '') return null;
+  const trimmed = String(val).trim();
+  if (!trimmed) return null;
+  if (trimmed === 'tnt_master_default') return 1;
+  const n = parseInt(trimmed, 10);
+  return Number.isNaN(n) ? trimmed : n;
+};
 
 /**
  * Enterprise Multi-Tenant Data Isolation Guard
@@ -11,21 +21,33 @@ const tenantIsolationGuard = (req, res, next) => {
     return next(new AppError('Authentication required for tenant isolation verification.', 401));
   }
 
-  // Developer and platform super admin may access global management endpoints
-  if (req.user.role === 'DEVELOPER' || req.user.role === 'SUPER_ADMIN') {
-    req.tenantId = req.query?.tenantId ? parseInt(req.query.tenantId, 10) : (req.user.tenantId || 1);
+  const userRole = String(req.user.role || '').trim().toUpperCase();
+  const isHeadmasterAdmin = ['DEVELOPER', 'SUPER_ADMIN', 'ADMIN', 'HEADMASTER', 'PRINCIPAL'].includes(userRole);
+
+  // Demo Headmaster/Admin walkthroughs explore tenant 1 freely without false isolation locks
+  if (isHeadmasterAdmin && isDemoSandboxRequest(req)) {
+    req.tenantId = normalizeTenantNumeric(req.query?.tenantId) || 1;
     return next();
   }
 
-  const userTenantId = req.user.tenantId;
+  // Developer, Headmaster/Admin, and Super Admin may access institutional management endpoints
+  if (isHeadmasterAdmin) {
+    const qTid = normalizeTenantNumeric(req.query?.tenantId);
+    req.tenantId = typeof qTid === 'number' ? qTid : (normalizeTenantNumeric(req.user.tenantId) || 1);
+    return next();
+  }
+
+  const userTenantId = normalizeTenantNumeric(req.user.tenantId);
   if (!userTenantId) {
     return next(new AppError('User is not associated with an authorized tenant.', 403));
   }
 
   // Check if client attempted to tamper with tenantId in params, query, or body
-  const requestedTenantId = req.params.tenantId || req.query.tenantId || req.body.tenantId;
+  const requestedTenantId = normalizeTenantNumeric(
+    req.params.tenantId || req.query.tenantId || req.body?.tenantId
+  );
 
-  if (requestedTenantId && parseInt(requestedTenantId, 10) !== userTenantId) {
+  if (requestedTenantId !== null && String(requestedTenantId) !== String(userTenantId)) {
     return next(new AppError('Cross-tenant access forbidden. You cannot query or modify data belonging to another tenant.', 403));
   }
 
@@ -43,8 +65,12 @@ const tenantIsolationGuard = (req, res, next) => {
  * Validates tenant active / trial / grace period status
  */
 const tenantStatusGuard = async (req, res, next) => {
-  if (req.user && (req.user.role === 'DEVELOPER' || req.user.role === 'SUPER_ADMIN')) {
-    return next(); // Developer and Super Admin always have access for management and recovery
+  const userRole = String(req.user?.role || '').trim().toUpperCase();
+  if (
+    isDemoSandboxRequest(req) ||
+    (req.user && ['DEVELOPER', 'SUPER_ADMIN', 'ADMIN', 'HEADMASTER'].includes(userRole))
+  ) {
+    return next(); // Demo Sandbox, Developer, and Headmaster/Admin remain accessible for management and recovery
   }
 
   const tid = req.user?.tenantId || req.tenantId;

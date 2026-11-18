@@ -15,6 +15,20 @@
     <link rel="icon" type="image/png" sizes="192x192" href="/icons/icon-192.png" />
     <link rel="apple-touch-icon" sizes="192x192" href="/icons/icon-192.png" />
     <title>GBS SCHOOL MANAGEMENT SYSTEM — INTELLIGENCE TALKS TO WISDOM</title>
+    <script>
+      window.__gbsDeferredInstallPrompt = window.__gbsDeferredInstallPrompt || null;
+      window.__gbsAppInstalled = window.__gbsAppInstalled || false;
+      window.addEventListener("beforeinstallprompt", function (e) {
+        e.preventDefault();
+        window.__gbsDeferredInstallPrompt = e;
+        window.dispatchEvent(new CustomEvent("gbs_pwa_install_ready"));
+      });
+      window.addEventListener("appinstalled", function () {
+        window.__gbsDeferredInstallPrompt = null;
+        window.__gbsAppInstalled = true;
+        window.dispatchEvent(new CustomEvent("gbs_pwa_installed"));
+      });
+    </script>
 </head>
 
 <body>

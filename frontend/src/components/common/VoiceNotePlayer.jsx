@@ -211,7 +211,8 @@ export default function VoiceNotePlayer({
             })}
           </div>
 
-          <style dangerouslySetInnerHTML={{ __html: `
+          <style dangerouslySetInnerHTML={{
+            __html: `
             @keyframes wavePulse {
               0% { transform: scaleY(0.5); }
               50% { transform: scaleY(1.2); }

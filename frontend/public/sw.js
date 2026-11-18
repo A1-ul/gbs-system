@@ -5,12 +5,13 @@
 ================================================================================
 */
 
-const CACHE_NAME = "gbs-cache-v2026.11";
+const CACHE_NAME = "gbs-cache-v2026.12";
 const OFFLINE_URL = "/offline.html";
 
-// Assets to pre-cache for instant offline startup
+// Assets to pre-cache for instant offline startup & PWA installability
 const PRECACHE_ASSETS = [
   "/",
+  "/offline.html",
   "/manifest.json",
   "/icons/icon-192.png",
   "/icons/icon-512.png",
@@ -22,7 +23,7 @@ self.addEventListener("install", (event) => {
   self.skipWaiting();
   event.waitUntil(
     caches.open(CACHE_NAME).then((cache) => {
-      return cache.addAll(PRECACHE_ASSETS).catch(() => {});
+      return cache.addAll(PRECACHE_ASSETS).catch(() => { });
     })
   );
 });

@@ -6,6 +6,8 @@ import {
   parseTranslationCommand,
   performFullTranslationAndMeaning,
   sendTranslatedMessageToReceiver,
+  fetchTranslatedMessagesInbox,
+  markTranslatedMessageRead,
   speakTranslationAloud,
 } from "../../utils/languageTranslatorEngine";
 
@@ -50,12 +52,13 @@ export default function UniversalLanguageTranslatorModal({
   const [lastCommandAction, setLastCommandAction] = useState("");
   const [isListeningCommand, setIsListeningCommand] = useState(false);
 
-  // Receiver Messaging State
+  // Receiver Messaging & Inbox State
   const [receiverRole, setReceiverRole] = useState("PARENT");
   const [receiverNameOrContact, setReceiverNameOrContact] = useState("");
+  const [inboxFilterRole, setInboxFilterRole] = useState("ALL");
   const [sentMessagesHistory, setSentMessagesHistory] = useState(() => {
     try {
-      return JSON.parse(localStorage.getItem("gbs_translated_messages_inbox") || "[]").slice(0, 10);
+      return JSON.parse(localStorage.getItem("gbs_translated_messages_inbox") || "[]").slice(0, 100);
     } catch {
       return [];
     }
@@ -64,6 +67,16 @@ export default function UniversalLanguageTranslatorModal({
   const recognitionRef = useRef(null);
   const requestSeqRef = useRef(0);
   const textareaRef = useRef(null);
+
+  const loadInboxMessages = async (roleOverride = inboxFilterRole) => {
+    try {
+      const merged = await fetchTranslatedMessagesInbox({
+        receiverRole: roleOverride === "ALL" ? "" : roleOverride,
+        limit: 100,
+      });
+      setSentMessagesHistory(merged);
+    } catch { }
+  };
 
   useEffect(() => {
     if (!isOpen) {
@@ -75,6 +88,7 @@ export default function UniversalLanguageTranslatorModal({
       }
       return;
     }
+    loadInboxMessages(inboxFilterRole);
     if (initialText && initialText.trim()) {
       setSourceText(initialText.trim());
     }
@@ -89,7 +103,7 @@ export default function UniversalLanguageTranslatorModal({
     }
   }, [isOpen, initialText, initialLang, initialMode]);
 
-  // Keep preferred language and sent message log synced across root screen translator & dashboard instances
+  // Keep preferred language and inbox synced across root screen translator & dashboard instances
   useEffect(() => {
     const syncLang = (e) => {
       const next = e?.detail || (() => {
@@ -104,23 +118,21 @@ export default function UniversalLanguageTranslatorModal({
       }
     };
     const syncInbox = () => {
-      try {
-        setSentMessagesHistory(
-          JSON.parse(localStorage.getItem("gbs_translated_messages_inbox") || "[]").slice(0, 10)
-        );
-      } catch { }
+      loadInboxMessages(inboxFilterRole);
     };
     window.addEventListener("gbs_preferred_language_changed", syncLang);
     window.addEventListener("gbs_translated_message_sent", syncInbox);
+    window.addEventListener("gbs_translated_message_read", syncInbox);
     window.addEventListener("storage", syncLang);
     window.addEventListener("storage", syncInbox);
     return () => {
       window.removeEventListener("gbs_preferred_language_changed", syncLang);
       window.removeEventListener("gbs_translated_message_sent", syncInbox);
+      window.removeEventListener("gbs_translated_message_read", syncInbox);
       window.removeEventListener("storage", syncLang);
       window.removeEventListener("storage", syncInbox);
     };
-  }, [selectedLang]);
+  }, [selectedLang, inboxFilterRole]);
 
   // Escape key closes modal cleanly
   useEffect(() => {
@@ -200,17 +212,17 @@ export default function UniversalLanguageTranslatorModal({
   };
 
   useEffect(() => {
-    if (!isOpen) return;
+    if (!isOpen || translatorMode === "RECEIVED_MESSAGES_INBOX") return;
     let isMounted = true;
     const timer = setTimeout(async () => {
       if (!isMounted) return;
       await executeTranslationCommand(sourceText, selectedLang, false);
-    }, 220);
+    }, 550);
     return () => {
       isMounted = false;
       clearTimeout(timer);
     };
-  }, [isOpen, sourceText, selectedLang]);
+  }, [isOpen, sourceText, selectedLang, translatorMode]);
 
   if (!isOpen) return null;
 
@@ -342,21 +354,31 @@ export default function UniversalLanguageTranslatorModal({
         : result;
       if (!currentRes) return;
 
+      const fullSenderName =
+        currentUser.fullName ||
+        currentUser.name ||
+        `${currentUser.firstName || ""} ${currentUser.lastName || ""}`.trim() ||
+        currentUser.email ||
+        "School Portal User";
       const record = await sendTranslatedMessageToReceiver({
-        senderName: currentUser.fullName || currentUser.name || currentUser.email || "School Portal User",
-        senderRole: currentUser.role || "USER",
+        senderId: currentUser.id || null,
+        senderName: fullSenderName,
+        senderRole: currentUser.role || localStorage.getItem("gbs_auth_role") || "USER",
+        senderEmail: currentUser.email || "",
+        tenantId: currentUser.tenantId || localStorage.getItem("gbs_tenant_id") || 1,
         receiverRole,
         receiverName: receiverNameOrContact.trim(),
         receiverContact: receiverNameOrContact.trim(),
         originalMessage: currentRes.originalText || sourceText.trim(),
         translatedMessage: currentRes.translatedText,
+        meaningSummary: currentRes.meaning?.definition || currentRes.backTranslation || "",
         targetLanguageCode: currentRes.language?.code || selectedLang,
         forceTargetLang: true
       });
 
-      setSentMessagesHistory((prev) => [record, ...prev.filter((m) => m.id !== record.id)].slice(0, 10));
+      setSentMessagesHistory((prev) => [record, ...prev.filter((m) => m.id !== record.id)].slice(0, 100));
       const roleLabel = record.receiverRoleLabel || record.receiverLabel || record.receiverRole;
-      const confirmMsg = `✅ Translated message dispatched to ${record.receiverName} (${roleLabel}) in ${record.languageName}!`;
+      const confirmMsg = `✅ Translated message from ${record.senderName} (${record.senderRole}) delivered to ${record.receiverName} (${roleLabel}) in ${record.languageName}!`;
       setSendSuccessBanner(confirmMsg);
       setTimeout(() => setSendSuccessBanner(""), 5000);
     } finally {
@@ -489,7 +511,7 @@ export default function UniversalLanguageTranslatorModal({
           >
             🎯 Specify Action: Do you want to translate a statement/word OR send a translated message to a receiver?
           </div>
-          <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(240px, 1fr))", gap: "10px" }}>
+          <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(210px, 1fr))", gap: "10px" }}>
             <button
               type="button"
               data-no-hud-notice="true"
@@ -545,8 +567,207 @@ export default function UniversalLanguageTranslatorModal({
                 Translate your statement into the receiver's language and dispatch immediately
               </div>
             </button>
+
+            <button
+              type="button"
+              data-no-hud-notice="true"
+              onClick={() => {
+                setTranslatorMode("RECEIVED_MESSAGES_INBOX");
+                loadInboxMessages(inboxFilterRole);
+              }}
+              style={{
+                padding: "12px 14px",
+                borderRadius: "10px",
+                cursor: "pointer",
+                textAlign: "left",
+                border:
+                  translatorMode === "RECEIVED_MESSAGES_INBOX"
+                    ? "2px solid #34d399"
+                    : "1px solid rgba(52, 211, 153, 0.35)",
+                background:
+                  translatorMode === "RECEIVED_MESSAGES_INBOX"
+                    ? "linear-gradient(135deg, rgba(16, 185, 129, 0.28), rgba(20, 83, 45, 0.55))"
+                    : "rgba(39, 39, 42, 0.65)",
+                color: "#fffbeb",
+              }}
+            >
+              <div style={{ fontWeight: 900, fontSize: "13px", color: "#6ee7b7" }}>
+                📥 3. Received Messages Inbox ({sentMessagesHistory.filter((m) => !m.read).length} Unread / {sentMessagesHistory.length})
+              </div>
+              <div style={{ fontSize: "11px", color: "#d6d3d1", marginTop: "3px" }}>
+                Read incoming translated messages with full sender details & audio readout
+              </div>
+            </button>
           </div>
         </div>
+
+        {/* INBOX VIEW: RECEIVED TRANSLATED MESSAGES WITH SENDER DETAILS */}
+        {translatorMode === "RECEIVED_MESSAGES_INBOX" && (
+          <div
+            style={{
+              background: "rgba(24, 15, 14, 0.92)",
+              border: "1.5px solid rgba(52, 211, 153, 0.55)",
+              borderRadius: "14px",
+              padding: "16px",
+              marginBottom: "16px",
+            }}
+          >
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: "10px", marginBottom: "12px" }}>
+              <div>
+                <h3 style={{ margin: 0, fontSize: "15px", fontWeight: 900, color: "#6ee7b7" }}>
+                  📥 Translated Messages Inbox (With Sender Details)
+                </h3>
+                <div style={{ fontSize: "11px", color: "#cbd5e1", marginTop: "2px" }}>
+                  Messages translated and sent to school portal users appear here with complete sender identity.
+                </div>
+              </div>
+              <div style={{ display: "flex", gap: "8px", alignItems: "center", flexWrap: "wrap" }}>
+                <select
+                  value={inboxFilterRole}
+                  onChange={(e) => {
+                    const nextRole = e.target.value;
+                    setInboxFilterRole(nextRole);
+                    loadInboxMessages(nextRole);
+                  }}
+                  style={{
+                    padding: "6px 10px",
+                    borderRadius: "8px",
+                    background: "rgba(28, 16, 12, 0.95)",
+                    border: "1px solid rgba(212, 175, 55, 0.5)",
+                    color: "#fef3c7",
+                    fontSize: "12px",
+                    fontWeight: 700,
+                  }}
+                >
+                  <option value="ALL">All Portal Roles</option>
+                  {RECEIVER_ROLES.map((r) => (
+                    <option key={r.id} value={r.id}>{r.icon} {r.label}</option>
+                  ))}
+                </select>
+                <button
+                  type="button"
+                  data-no-hud-notice="true"
+                  onClick={() => loadInboxMessages(inboxFilterRole)}
+                  style={{
+                    padding: "6px 12px",
+                    borderRadius: "8px",
+                    background: "rgba(16, 185, 129, 0.2)",
+                    border: "1px solid #10b981",
+                    color: "#6ee7b7",
+                    fontWeight: 800,
+                    fontSize: "12px",
+                    cursor: "pointer",
+                  }}
+                >
+                  🔄 Refresh Inbox
+                </button>
+              </div>
+            </div>
+
+            {sentMessagesHistory.length === 0 ? (
+              <div style={{ padding: "24px", textAlign: "center", color: "#cbd5e1", background: "rgba(39, 39, 42, 0.55)", borderRadius: "10px", fontSize: "13px" }}>
+                No translated messages received yet for this filter. Use <strong>Send a Translated Message</strong> to dispatch one now!
+              </div>
+            ) : (
+              <div style={{ display: "flex", flexDirection: "column", gap: "10px", maxHeight: "380px", overflowY: "auto" }}>
+                {sentMessagesHistory.map((m) => (
+                  <div
+                    key={m.id}
+                    style={{
+                      background: m.read ? "rgba(39, 39, 42, 0.65)" : "rgba(16, 185, 129, 0.12)",
+                      border: m.read ? "1px solid rgba(212, 175, 55, 0.28)" : "1.5px solid #34d399",
+                      borderRadius: "12px",
+                      padding: "12px 14px",
+                    }}
+                  >
+                    {/* Sender & Recipient Metadata Bar */}
+                    <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", flexWrap: "wrap", gap: "8px", borderBottom: "1px solid rgba(255,255,255,0.1)", paddingBottom: "8px", marginBottom: "8px" }}>
+                      <div style={{ fontSize: "12px", lineHeight: 1.5 }}>
+                        <div>
+                          <span style={{ background: m.read ? "rgba(148,163,184,0.22)" : "#10b981", color: m.read ? "#cbd5e1" : "#022c22", padding: "2px 7px", borderRadius: "999px", fontSize: "10px", fontWeight: 900, marginRight: "6px" }}>
+                            {m.read ? "✓ READ" : "● NEW MESSAGE"}
+                          </span>
+                          <strong style={{ color: "#fbbf24" }}>From: {m.senderName || "School Portal User"}</strong>
+                          {m.senderRole && (
+                            <span style={{ marginLeft: "6px", background: "rgba(212,175,55,0.22)", border: "1px solid rgba(212,175,55,0.45)", color: "#fde68a", padding: "1px 7px", borderRadius: "6px", fontSize: "10px", fontWeight: 800 }}>
+                              {m.senderRole}
+                            </span>
+                          )}
+                          {m.senderEmail && (
+                            <span style={{ marginLeft: "6px", color: "#cbd5e1", fontSize: "11px" }}>({m.senderEmail})</span>
+                          )}
+                        </div>
+                        <div style={{ color: "#d6d3d1", fontSize: "11px", marginTop: "2px" }}>
+                          To: <strong style={{ color: "#f8fafc" }}>{m.receiverName || "Recipient"}</strong> ({m.receiverRoleLabel || m.receiverLabel || m.receiverRole}) • {m.languageFlag || "🌐"} {m.languageName}
+                        </div>
+                      </div>
+                      <div style={{ fontSize: "11px", color: "#cbd5e1", textAlign: "right" }}>
+                        {m.sentAt ? new Date(m.sentAt).toLocaleString() : ""}
+                      </div>
+                    </div>
+
+                    {/* Translated Content */}
+                    <div style={{ background: "rgba(74, 21, 27, 0.48)", borderLeft: "4px solid #d4af37", borderRadius: "8px", padding: "9px 12px", color: "#fffbeb", fontWeight: 800, fontSize: "14px", marginBottom: "8px" }}>
+                      {m.translatedMessage}
+                    </div>
+
+                    {/* Original Message & Meaning */}
+                    <div style={{ fontSize: "12px", color: "#e5e7eb", lineHeight: 1.5 }}>
+                      <div><strong style={{ color: "#fde68a" }}>Original Message:</strong> {m.originalMessage}</div>
+                      {m.meaningSummary && (
+                        <div style={{ marginTop: "3px", color: "#bae6fd" }}><strong>Meaning:</strong> {m.meaningSummary}</div>
+                      )}
+                    </div>
+
+                    {/* Inbox Card Actions */}
+                    <div style={{ display: "flex", gap: "8px", flexWrap: "wrap", marginTop: "10px" }}>
+                      <button
+                        type="button"
+                        data-no-hud-notice="true"
+                        onClick={() => speakTranslationAloud(m.translatedMessage, m.languageCode || "TWI")}
+                        style={{ padding: "5px 11px", borderRadius: "7px", background: "rgba(110, 32, 41, 0.7)", border: "1px solid rgba(212,175,55,0.5)", color: "#fef3c7", fontSize: "11px", fontWeight: 800, cursor: "pointer" }}
+                      >
+                        🔊 Read Aloud
+                      </button>
+                      {!m.read && (
+                        <button
+                          type="button"
+                          data-no-hud-notice="true"
+                          onClick={async () => {
+                            let reader = "Recipient";
+                            try {
+                              const u = JSON.parse(localStorage.getItem("gbs_user") || "{}");
+                              reader = u.fullName || u.name || u.email || u.role || "Recipient";
+                            } catch { }
+                            await markTranslatedMessageRead(m.id, reader);
+                            setSentMessagesHistory((prev) => prev.map((x) => (x.id === m.id ? { ...x, read: true } : x)));
+                          }}
+                          style={{ padding: "5px 11px", borderRadius: "7px", background: "rgba(16, 185, 129, 0.22)", border: "1px solid #10b981", color: "#6ee7b7", fontSize: "11px", fontWeight: 800, cursor: "pointer" }}
+                        >
+                          ✓ Mark as Read
+                        </button>
+                      )}
+                      <button
+                        type="button"
+                        data-no-hud-notice="true"
+                        onClick={() => {
+                          setTranslatorMode("SEND_TRANSLATED_MESSAGE");
+                          setReceiverRole(m.senderRole && RECEIVER_ROLES.some((r) => r.id === m.senderRole) ? m.senderRole : "PARENT");
+                          setReceiverNameOrContact(m.senderName || "");
+                          if (m.languageCode) setSelectedLang(m.languageCode);
+                          setSourceText("");
+                        }}
+                        style={{ padding: "5px 11px", borderRadius: "7px", background: "rgba(56, 189, 248, 0.18)", border: "1px solid #38bdf8", color: "#bae6fd", fontSize: "11px", fontWeight: 800, cursor: "pointer" }}
+                      >
+                        ↩️ Reply in {m.languageName || m.languageCode}
+                      </button>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+        )}
 
         {/* Receiver Selector when in SEND_TRANSLATED_MESSAGE mode */}
         {translatorMode === "SEND_TRANSLATED_MESSAGE" && (
@@ -627,439 +848,454 @@ export default function UniversalLanguageTranslatorModal({
           </div>
         )}
 
-        {/* Language Grid */}
-        <div style={{ marginBottom: "14px" }}>
-          <label
-            style={{
-              fontSize: "11px",
-              fontWeight: 800,
-              color: "#fbbf24",
-              textTransform: "uppercase",
-              display: "block",
-              marginBottom: "8px",
-            }}
-          >
-            1. Choose Exact Target Language ({SUPPORTED_TRANSLATION_LANGUAGES.length} Languages Active):
-          </label>
-          <div style={{ display: "flex", flexWrap: "wrap", gap: "7px" }}>
-            {SUPPORTED_TRANSLATION_LANGUAGES.map((lang) => {
-              const active = selectedLang === lang.code;
-              return (
+        {translatorMode !== "RECEIVED_MESSAGES_INBOX" && (
+          <>
+            {/* Language Grid */}
+            <div style={{ marginBottom: "14px" }}>
+              <label
+                style={{
+                  fontSize: "11px",
+                  fontWeight: 800,
+                  color: "#fbbf24",
+                  textTransform: "uppercase",
+                  display: "block",
+                  marginBottom: "8px",
+                }}
+              >
+                1. Choose Exact Target Language ({SUPPORTED_TRANSLATION_LANGUAGES.length} Languages Active):
+              </label>
+              <div style={{ display: "flex", flexWrap: "wrap", gap: "7px" }}>
+                {SUPPORTED_TRANSLATION_LANGUAGES.map((lang) => {
+                  const active = selectedLang === lang.code;
+                  return (
+                    <button
+                      key={lang.code}
+                      type="button"
+                      data-no-hud-notice="true"
+                      onClick={() => handleLanguageChange(lang.code)}
+                      style={{
+                        padding: "7px 12px",
+                        borderRadius: "10px",
+                        border: active
+                          ? "2px solid #fbbf24"
+                          : "1px solid rgba(212, 175, 55, 0.28)",
+                        background: active
+                          ? "linear-gradient(135deg, #d4af37, #92400e)"
+                          : "rgba(39, 39, 42, 0.72)",
+                        color: active ? "#1c1008" : "#f3f4f6",
+                        fontSize: "12px",
+                        fontWeight: active ? 900 : 700,
+                        cursor: "pointer",
+                      }}
+                    >
+                      {lang.flag} {lang.name}
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
+
+            {/* Input Box */}
+            <div style={{ marginBottom: "16px" }}>
+              <div
+                style={{
+                  display: "flex",
+                  justifyContent: "space-between",
+                  alignItems: "center",
+                  marginBottom: "6px",
+                  flexWrap: "wrap",
+                  gap: "8px",
+                }}
+              >
+                <label
+                  style={{
+                    fontSize: "11px",
+                    fontWeight: 800,
+                    color: "#fbbf24",
+                    textTransform: "uppercase",
+                  }}
+                >
+                  2. Type or Paste Word, Sentence, or Command (Press Enter to Translate):
+                </label>
+                <div style={{ display: "flex", gap: "6px", flexWrap: "wrap" }}>
+                  <button
+                    type="button"
+                    data-no-hud-notice="true"
+                    onClick={handleVoiceCommand}
+                    style={{
+                      background: isListeningCommand
+                        ? "linear-gradient(135deg, #dc2626, #991b1b)"
+                        : "rgba(212, 175, 55, 0.2)",
+                      border: "1px solid rgba(212, 175, 55, 0.6)",
+                      color: "#fef3c7",
+                      borderRadius: "6px",
+                      padding: "4px 10px",
+                      fontSize: "11px",
+                      fontWeight: 800,
+                      cursor: "pointer",
+                    }}
+                  >
+                    {isListeningCommand ? "🛑 Listening..." : "🎤 Voice Command"}
+                  </button>
+                  <button
+                    type="button"
+                    data-no-hud-notice="true"
+                    onClick={async () => {
+                      try {
+                        const clip = await navigator.clipboard.readText();
+                        if (clip && clip.trim()) {
+                          setSourceText(clip.trim());
+                          await executeTranslationCommand(clip.trim(), selectedLang, true);
+                          return;
+                        }
+                      } catch {
+                        // user can use Ctrl+V
+                      }
+                      textareaRef.current?.focus();
+                      if (typeof window !== "undefined" && typeof window.showGBSOpenNotice === "function") {
+                        window.showGBSOpenNotice(
+                          "Press Ctrl+V (or long-press Paste) inside the text box to paste and translate immediately.",
+                          "info",
+                          "CLIPBOARD PASTE READY"
+                        );
+                      }
+                    }}
+                    style={{
+                      background: "rgba(212, 175, 55, 0.18)",
+                      border: "1px solid rgba(212, 175, 55, 0.55)",
+                      color: "#fde68a",
+                      borderRadius: "6px",
+                      padding: "4px 10px",
+                      fontSize: "11px",
+                      fontWeight: 800,
+                      cursor: "pointer",
+                    }}
+                  >
+                    📋 Paste & Translate Now
+                  </button>
+                  <button
+                    type="button"
+                    data-no-hud-notice="true"
+                    onClick={() => {
+                      setSourceText("");
+                      setResult(null);
+                      setLastCommandAction("");
+                      textareaRef.current?.focus();
+                    }}
+                    style={{
+                      background: "rgba(110, 32, 41, 0.55)",
+                      border: "1px solid rgba(212, 175, 55, 0.35)",
+                      color: "#fecdd3",
+                      borderRadius: "6px",
+                      padding: "4px 10px",
+                      fontSize: "11px",
+                      fontWeight: 700,
+                      cursor: "pointer",
+                    }}
+                  >
+                    Clear
+                  </button>
+                </div>
+              </div>
+
+              <textarea
+                ref={textareaRef}
+                rows={3}
+                value={sourceText}
+                onChange={(e) => setSourceText(e.target.value)}
+                onPaste={handlePasteAndTranslate}
+                onKeyDown={handleKeyDown}
+                placeholder="Type any word (e.g. 'scholarship'), sentence, or command (e.g. 'Translate Please pay school fees to French')..."
+                style={{
+                  width: "100%",
+                  borderRadius: "12px",
+                  background: "rgba(20, 12, 10, 0.92)",
+                  border: "1.5px solid rgba(212, 175, 55, 0.55)",
+                  color: "#fffbeb",
+                  padding: "12px",
+                  fontSize: "14px",
+                  lineHeight: 1.5,
+                  boxSizing: "border-box",
+                }}
+              />
+
+              {/* Quick Command Chips */}
+              <div style={{ display: "flex", flexWrap: "wrap", gap: "6px", marginTop: "8px" }}>
+                {[
+                  { label: "🇬🇭 Greeting → Twi", cmd: "Translate Good morning, welcome to our school to Twi" },
+                  { label: "🇬🇭 Fee Notice → Ga", cmd: "Translate Please pay your school fees receipt to Ga" },
+                  { label: "🇫🇷 Exam Notice → French", cmd: "Translate Examination results have been published to French" },
+                  { label: "📖 Define 'scholarship'", cmd: "What is the meaning of scholarship" },
+                  { label: "📖 Define 'arrears' in Hausa", cmd: "What is the meaning of arrears in Hausa" },
+                ].map((sample, idx) => (
+                  <button
+                    key={idx}
+                    type="button"
+                    data-no-hud-notice="true"
+                    onClick={() => {
+                      setSourceText(sample.cmd);
+                      executeTranslationCommand(sample.cmd, selectedLang, true);
+                    }}
+                    style={{
+                      background: "rgba(62, 31, 20, 0.72)",
+                      border: "1px solid rgba(212, 175, 55, 0.38)",
+                      color: "#fde68a",
+                      borderRadius: "999px",
+                      padding: "4px 10px",
+                      fontSize: "11px",
+                      fontWeight: 700,
+                      cursor: "pointer",
+                    }}
+                  >
+                    ⚡ {sample.label}
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            {/* Command Recognition Banner */}
+            {lastCommandAction && (
+              <div
+                style={{
+                  background: "rgba(212, 175, 55, 0.16)",
+                  border: "1px solid rgba(212, 175, 55, 0.55)",
+                  borderRadius: "10px",
+                  padding: "8px 12px",
+                  marginBottom: "12px",
+                  fontSize: "12px",
+                  fontWeight: 800,
+                  color: "#fef08a",
+                }}
+              >
+                ⚡ Command Executed: {lastCommandAction}
+              </div>
+            )}
+
+            {/* Output Panel */}
+            <div
+              style={{
+                background: "rgba(24, 15, 14, 0.9)",
+                border: "1.5px solid rgba(212, 175, 55, 0.55)",
+                borderRadius: "14px",
+                padding: "16px",
+                marginBottom: "16px",
+              }}
+            >
+              <div
+                style={{
+                  display: "flex",
+                  justifyContent: "space-between",
+                  alignItems: "center",
+                  marginBottom: "10px",
+                  flexWrap: "wrap",
+                  gap: "8px",
+                }}
+              >
+                <span style={{ fontSize: "12px", fontWeight: 900, color: "#fbbf24" }}>
+                  {isTranslating
+                    ? "⏳ Translating & Looking Up Exact Meaning..."
+                    : `✅ ${result?.language?.flag || "🌐"} ${result?.language?.name || selectedLang} Translation & Meaning:`}
+                </span>
+              </div>
+
+              <div
+                style={{
+                  fontSize: "16px",
+                  fontWeight: 800,
+                  color: "#fffbeb",
+                  lineHeight: 1.6,
+                  padding: "12px 14px",
+                  background: "rgba(74, 21, 27, 0.48)",
+                  borderRadius: "10px",
+                  borderLeft: "4px solid #d4af37",
+                  marginBottom: "12px",
+                  whiteSpace: "pre-wrap",
+                }}
+              >
+                {result?.translatedText || "Type or paste a word or statement above to translate."}
+              </div>
+
+              <div
+                style={{
+                  fontSize: "13px",
+                  color: "#f3f4f6",
+                  lineHeight: 1.65,
+                  padding: "12px 14px",
+                  background: "rgba(39, 39, 42, 0.78)",
+                  borderRadius: "10px",
+                  borderLeft: "4px solid #f59e0b",
+                  whiteSpace: "pre-wrap",
+                }}
+              >
+                <strong style={{ color: "#fbbf24", display: "block", marginBottom: "4px" }}>
+                  💡 Exact Word / Statement Meaning &amp; Dictionary Breakdown
+                  {result?.meaning?.partOfSpeech ? ` (${result.meaning.partOfSpeech})` : ""}
+                  {result?.meaning?.phonetic ? ` • ${result.meaning.phonetic}` : ""}:
+                </strong>
+                <div>{result?.meaning?.definition || (result?.backTranslation ? `Verified English meaning: "${result.backTranslation}"` : "Exact dictionary meaning will appear here once translated.")}</div>
+                {result?.backTranslation && result?.meaning?.definition && !result.meaning.definition.includes(result.backTranslation) && (
+                  <div style={{ marginTop: "5px", color: "#6ee7b7", fontSize: "12px", fontWeight: 700 }}>
+                    ✓ Verified Back-Translation Check: &ldquo;{result.backTranslation}&rdquo;
+                  </div>
+                )}
+                {result?.meaning?.secondaryDefinition && (
+                  <div style={{ marginTop: "5px", color: "#d6d3d1" }}>
+                    <strong>Additional Meaning:</strong> {result.meaning.secondaryDefinition}
+                  </div>
+                )}
+                {result?.meaning?.translatedDefinition &&
+                  result.meaning.translatedDefinition !== result.meaning.definition && (
+                    <div style={{ marginTop: "6px", color: "#fde68a", fontWeight: 700 }}>
+                      • In {result?.language?.name}: {result.meaning.translatedDefinition}
+                    </div>
+                  )}
+                {result?.meaning?.example && (
+                  <div style={{ marginTop: "5px", color: "#cbd5e1", fontStyle: "italic", fontSize: "12px" }}>
+                    Example: &ldquo;{result.meaning.example}&rdquo;
+                  </div>
+                )}
+                {Array.isArray(result?.meaning?.synonyms) && result.meaning.synonyms.length > 0 && (
+                  <div style={{ marginTop: "6px", fontSize: "12px", color: "#bae6fd" }}>
+                    <strong>Synonyms:</strong> {result.meaning.synonyms.join(", ")}
+                  </div>
+                )}
+                {Array.isArray(result?.meaning?.keyTermsBreakdown) &&
+                  result.meaning.keyTermsBreakdown.length > 0 && (
+                    <div style={{ marginTop: "8px", paddingTop: "8px", borderTop: "1px solid rgba(212, 175, 55, 0.25)" }}>
+                      <div style={{ fontSize: "11px", fontWeight: 800, color: "#fbbf24", marginBottom: "4px" }}>
+                        Key Words Defined in Your Statement:
+                      </div>
+                      <div style={{ display: "grid", gap: "4px" }}>
+                        {result.meaning.keyTermsBreakdown.map((item, idx) => (
+                          <div key={idx} style={{ fontSize: "12px", color: "#e5e7eb" }}>
+                            • <strong style={{ color: "#fbbf24" }}>{item.term}</strong> <em>({item.partOfSpeech})</em>: {item.meaning}
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+              </div>
+            </div>
+
+            {sendSuccessBanner && (
+              <div
+                style={{
+                  background: "rgba(212, 175, 55, 0.22)",
+                  border: "1px solid #fbbf24",
+                  color: "#fef3c7",
+                  padding: "10px 14px",
+                  borderRadius: "10px",
+                  marginBottom: "14px",
+                  fontSize: "12px",
+                  fontWeight: 800,
+                }}
+              >
+                {sendSuccessBanner}
+              </div>
+            )}
+
+            {/* Action Buttons */}
+            <div style={{ display: "flex", gap: "10px", flexWrap: "wrap" }}>
+              <button
+                type="button"
+                data-no-hud-notice="true"
+                disabled={isTranslating || !sourceText.trim()}
+                onClick={() => executeTranslationCommand(sourceText, selectedLang, true)}
+                style={{
+                  background: "linear-gradient(135deg, #d4af37, #b45309)",
+                  border: "1px solid #fde68a",
+                  color: "#1c1008",
+                  borderRadius: "10px",
+                  padding: "10px 18px",
+                  fontWeight: 900,
+                  fontSize: "13px",
+                  cursor: isTranslating || !sourceText.trim() ? "not-allowed" : "pointer",
+                }}
+              >
+                {isTranslating ? "⏳ Translating..." : "🔄 Translate & Get Exact Meaning"}
+              </button>
+
+              <button
+                type="button"
+                data-no-hud-notice="true"
+                disabled={!result?.translatedText}
+                onClick={handleSpeakAloud}
+                style={{
+                  background: "linear-gradient(135deg, #6e2029, #4a151b)",
+                  border: "1px solid rgba(212, 175, 55, 0.6)",
+                  color: "#fef3c7",
+                  borderRadius: "10px",
+                  padding: "10px 16px",
+                  fontWeight: 800,
+                  fontSize: "13px",
+                  cursor: result?.translatedText ? "pointer" : "not-allowed",
+                }}
+              >
+                🔊 Read Aloud ({result?.language?.name || selectedLang})
+              </button>
+
+              <button
+                type="button"
+                data-no-hud-notice="true"
+                disabled={!result}
+                onClick={handleCopyResult}
+                style={{
+                  background: "rgba(62, 31, 20, 0.85)",
+                  border: "1px solid rgba(212, 175, 55, 0.5)",
+                  color: "#fde68a",
+                  borderRadius: "10px",
+                  padding: "10px 16px",
+                  fontWeight: 800,
+                  fontSize: "13px",
+                  cursor: result ? "pointer" : "not-allowed",
+                }}
+              >
+                {copiedFlag ? "✅ Copied Translation & Meaning!" : "📋 Copy Translation & Meaning"}
+              </button>
+
+              {translatorMode !== "SEND_TRANSLATED_MESSAGE" && (
                 <button
-                  key={lang.code}
                   type="button"
                   data-no-hud-notice="true"
-                  onClick={() => handleLanguageChange(lang.code)}
+                  onClick={() => setTranslatorMode("SEND_TRANSLATED_MESSAGE")}
                   style={{
-                    padding: "7px 12px",
+                    background: "rgba(16, 185, 129, 0.2)",
+                    border: "1px solid #10b981",
+                    color: "#6ee7b7",
                     borderRadius: "10px",
-                    border: active
-                      ? "2px solid #fbbf24"
-                      : "1px solid rgba(212, 175, 55, 0.28)",
-                    background: active
-                      ? "linear-gradient(135deg, #d4af37, #92400e)"
-                      : "rgba(39, 39, 42, 0.72)",
-                    color: active ? "#1c1008" : "#f3f4f6",
-                    fontSize: "12px",
-                    fontWeight: active ? 900 : 700,
+                    padding: "10px 16px",
+                    fontWeight: 800,
+                    fontSize: "13px",
                     cursor: "pointer",
                   }}
                 >
-                  {lang.flag} {lang.name}
+                  📨 Send to a Receiver
                 </button>
-              );
-            })}
-          </div>
-        </div>
+              )}
 
-        {/* Input Box */}
-        <div style={{ marginBottom: "16px" }}>
-          <div
-            style={{
-              display: "flex",
-              justifyContent: "space-between",
-              alignItems: "center",
-              marginBottom: "6px",
-              flexWrap: "wrap",
-              gap: "8px",
-            }}
-          >
-            <label
-              style={{
-                fontSize: "11px",
-                fontWeight: 800,
-                color: "#fbbf24",
-                textTransform: "uppercase",
-              }}
-            >
-              2. Type or Paste Word, Sentence, or Command (Press Enter to Translate):
-            </label>
-            <div style={{ display: "flex", gap: "6px", flexWrap: "wrap" }}>
-              <button
-                type="button"
-                data-no-hud-notice="true"
-                onClick={handleVoiceCommand}
-                style={{
-                  background: isListeningCommand
-                    ? "linear-gradient(135deg, #dc2626, #991b1b)"
-                    : "rgba(212, 175, 55, 0.2)",
-                  border: "1px solid rgba(212, 175, 55, 0.6)",
-                  color: "#fef3c7",
-                  borderRadius: "6px",
-                  padding: "4px 10px",
-                  fontSize: "11px",
-                  fontWeight: 800,
-                  cursor: "pointer",
-                }}
-              >
-                {isListeningCommand ? "🛑 Listening..." : "🎤 Voice Command"}
-              </button>
-              <button
-                type="button"
-                data-no-hud-notice="true"
-                onClick={async () => {
-                  try {
-                    const clip = await navigator.clipboard.readText();
-                    if (clip && clip.trim()) {
-                      setSourceText(clip.trim());
-                      await executeTranslationCommand(clip.trim(), selectedLang, true);
-                      return;
-                    }
-                  } catch {
-                    // user can use Ctrl+V
-                  }
-                  textareaRef.current?.focus();
-                  if (typeof window !== "undefined" && typeof window.showGBSOpenNotice === "function") {
-                    window.showGBSOpenNotice(
-                      "Press Ctrl+V (or long-press Paste) inside the text box to paste and translate immediately.",
-                      "info",
-                      "CLIPBOARD PASTE READY"
-                    );
-                  }
-                }}
-                style={{
-                  background: "rgba(212, 175, 55, 0.18)",
-                  border: "1px solid rgba(212, 175, 55, 0.55)",
-                  color: "#fde68a",
-                  borderRadius: "6px",
-                  padding: "4px 10px",
-                  fontSize: "11px",
-                  fontWeight: 800,
-                  cursor: "pointer",
-                }}
-              >
-                📋 Paste & Translate Now
-              </button>
-              <button
-                type="button"
-                data-no-hud-notice="true"
-                onClick={() => {
-                  setSourceText("");
-                  setResult(null);
-                  setLastCommandAction("");
-                  textareaRef.current?.focus();
-                }}
-                style={{
-                  background: "rgba(110, 32, 41, 0.55)",
-                  border: "1px solid rgba(212, 175, 55, 0.35)",
-                  color: "#fecdd3",
-                  borderRadius: "6px",
-                  padding: "4px 10px",
-                  fontSize: "11px",
-                  fontWeight: 700,
-                  cursor: "pointer",
-                }}
-              >
-                Clear
-              </button>
+              {translatorMode === "SEND_TRANSLATED_MESSAGE" && (
+                <button
+                  type="button"
+                  data-no-hud-notice="true"
+                  disabled={sendingMsg || !sourceText.trim()}
+                  onClick={handleSendTranslatedMessage}
+                  style={{
+                    background: "linear-gradient(135deg, #f59e0b, #92400e)",
+                    border: "1px solid #fef08a",
+                    color: "#1c1008",
+                    borderRadius: "10px",
+                    padding: "10px 18px",
+                    fontWeight: 900,
+                    fontSize: "13px",
+                    cursor: sendingMsg || !sourceText.trim() ? "not-allowed" : "pointer",
+                  }}
+                >
+                  {sendingMsg ? "📤 Sending..." : "📨 Translate & Send to Receiver Now"}
+                </button>
+              )}
             </div>
-          </div>
-
-          <textarea
-            ref={textareaRef}
-            rows={3}
-            value={sourceText}
-            onChange={(e) => setSourceText(e.target.value)}
-            onPaste={handlePasteAndTranslate}
-            onKeyDown={handleKeyDown}
-            placeholder="Type any word (e.g. 'scholarship'), sentence, or command (e.g. 'Translate Please pay school fees to French')..."
-            style={{
-              width: "100%",
-              borderRadius: "12px",
-              background: "rgba(20, 12, 10, 0.92)",
-              border: "1.5px solid rgba(212, 175, 55, 0.55)",
-              color: "#fffbeb",
-              padding: "12px",
-              fontSize: "14px",
-              lineHeight: 1.5,
-              boxSizing: "border-box",
-            }}
-          />
-
-          {/* Quick Command Chips */}
-          <div style={{ display: "flex", flexWrap: "wrap", gap: "6px", marginTop: "8px" }}>
-            {[
-              { label: "🇬🇭 Greeting → Twi", cmd: "Translate Good morning, welcome to our school to Twi" },
-              { label: "🇬🇭 Fee Notice → Ga", cmd: "Translate Please pay your school fees receipt to Ga" },
-              { label: "🇫🇷 Exam Notice → French", cmd: "Translate Examination results have been published to French" },
-              { label: "📖 Define 'scholarship'", cmd: "What is the meaning of scholarship" },
-              { label: "📖 Define 'arrears' in Hausa", cmd: "What is the meaning of arrears in Hausa" },
-            ].map((sample, idx) => (
-              <button
-                key={idx}
-                type="button"
-                data-no-hud-notice="true"
-                onClick={() => {
-                  setSourceText(sample.cmd);
-                  executeTranslationCommand(sample.cmd, selectedLang, true);
-                }}
-                style={{
-                  background: "rgba(62, 31, 20, 0.72)",
-                  border: "1px solid rgba(212, 175, 55, 0.38)",
-                  color: "#fde68a",
-                  borderRadius: "999px",
-                  padding: "4px 10px",
-                  fontSize: "11px",
-                  fontWeight: 700,
-                  cursor: "pointer",
-                }}
-              >
-                ⚡ {sample.label}
-              </button>
-            ))}
-          </div>
-        </div>
-
-        {/* Command Recognition Banner */}
-        {lastCommandAction && (
-          <div
-            style={{
-              background: "rgba(212, 175, 55, 0.16)",
-              border: "1px solid rgba(212, 175, 55, 0.55)",
-              borderRadius: "10px",
-              padding: "8px 12px",
-              marginBottom: "12px",
-              fontSize: "12px",
-              fontWeight: 800,
-              color: "#fef08a",
-            }}
-          >
-            ⚡ Command Executed: {lastCommandAction}
-          </div>
+          </>
         )}
-
-        {/* Output Panel */}
-        <div
-          style={{
-            background: "rgba(24, 15, 14, 0.9)",
-            border: "1.5px solid rgba(212, 175, 55, 0.55)",
-            borderRadius: "14px",
-            padding: "16px",
-            marginBottom: "16px",
-          }}
-        >
-          <div
-            style={{
-              display: "flex",
-              justifyContent: "space-between",
-              alignItems: "center",
-              marginBottom: "10px",
-              flexWrap: "wrap",
-              gap: "8px",
-            }}
-          >
-            <span style={{ fontSize: "12px", fontWeight: 900, color: "#fbbf24" }}>
-              {isTranslating
-                ? "⏳ Translating & Looking Up Exact Meaning..."
-                : `✅ ${result?.language?.flag || "🌐"} ${result?.language?.name || selectedLang} Translation & Meaning:`}
-            </span>
-          </div>
-
-          <div
-            style={{
-              fontSize: "16px",
-              fontWeight: 800,
-              color: "#fffbeb",
-              lineHeight: 1.6,
-              padding: "12px 14px",
-              background: "rgba(74, 21, 27, 0.48)",
-              borderRadius: "10px",
-              borderLeft: "4px solid #d4af37",
-              marginBottom: "12px",
-              whiteSpace: "pre-wrap",
-            }}
-          >
-            {result?.translatedText || "Type or paste a word or statement above to translate."}
-          </div>
-
-          <div
-            style={{
-              fontSize: "13px",
-              color: "#f3f4f6",
-              lineHeight: 1.65,
-              padding: "12px 14px",
-              background: "rgba(39, 39, 42, 0.78)",
-              borderRadius: "10px",
-              borderLeft: "4px solid #f59e0b",
-              whiteSpace: "pre-wrap",
-            }}
-          >
-            <strong style={{ color: "#fbbf24", display: "block", marginBottom: "4px" }}>
-              💡 Exact Word / Statement Meaning & Dictionary Breakdown
-              {result?.meaning?.partOfSpeech ? ` (${result.meaning.partOfSpeech})` : ""}:
-            </strong>
-            <div>{result?.meaning?.definition || "Meaning & word-by-word explanation will appear here."}</div>
-            {result?.meaning?.secondaryDefinition && (
-              <div style={{ marginTop: "5px", color: "#d6d3d1" }}>
-                <strong>Additional Meaning:</strong> {result.meaning.secondaryDefinition}
-              </div>
-            )}
-            {result?.meaning?.translatedDefinition &&
-              result.meaning.translatedDefinition !== result.meaning.definition && (
-                <div style={{ marginTop: "6px", color: "#fde68a", fontWeight: 700 }}>
-                  • In {result?.language?.name}: {result.meaning.translatedDefinition}
-                </div>
-              )}
-            {result?.meaning?.example && (
-              <div style={{ marginTop: "5px", color: "#cbd5e1", fontStyle: "italic", fontSize: "12px" }}>
-                Example: &ldquo;{result.meaning.example}&rdquo;
-              </div>
-            )}
-            {Array.isArray(result?.meaning?.keyTermsBreakdown) &&
-              result.meaning.keyTermsBreakdown.length > 0 && (
-                <div style={{ marginTop: "8px", paddingTop: "8px", borderTop: "1px solid rgba(212, 175, 55, 0.25)" }}>
-                  <div style={{ fontSize: "11px", fontWeight: 800, color: "#fbbf24", marginBottom: "4px" }}>
-                    Key Words Defined in Your Statement:
-                  </div>
-                  <div style={{ display: "grid", gap: "4px" }}>
-                    {result.meaning.keyTermsBreakdown.map((item, idx) => (
-                      <div key={idx} style={{ fontSize: "12px", color: "#e5e7eb" }}>
-                        • <strong style={{ color: "#fbbf24" }}>{item.term}</strong> <em>({item.partOfSpeech})</em>: {item.meaning}
-                      </div>
-                    ))}
-                  </div>
-                </div>
-              )}
-          </div>
-        </div>
-
-        {sendSuccessBanner && (
-          <div
-            style={{
-              background: "rgba(212, 175, 55, 0.22)",
-              border: "1px solid #fbbf24",
-              color: "#fef3c7",
-              padding: "10px 14px",
-              borderRadius: "10px",
-              marginBottom: "14px",
-              fontSize: "12px",
-              fontWeight: 800,
-            }}
-          >
-            {sendSuccessBanner}
-          </div>
-        )}
-
-        {/* Action Buttons */}
-        <div style={{ display: "flex", gap: "10px", flexWrap: "wrap" }}>
-          <button
-            type="button"
-            data-no-hud-notice="true"
-            disabled={isTranslating || !sourceText.trim()}
-            onClick={() => executeTranslationCommand(sourceText, selectedLang, true)}
-            style={{
-              background: "linear-gradient(135deg, #d4af37, #b45309)",
-              border: "1px solid #fde68a",
-              color: "#1c1008",
-              borderRadius: "10px",
-              padding: "10px 18px",
-              fontWeight: 900,
-              fontSize: "13px",
-              cursor: isTranslating || !sourceText.trim() ? "not-allowed" : "pointer",
-            }}
-          >
-            {isTranslating ? "⏳ Translating..." : "🔄 Translate & Get Exact Meaning"}
-          </button>
-
-          <button
-            type="button"
-            data-no-hud-notice="true"
-            disabled={!result?.translatedText}
-            onClick={handleSpeakAloud}
-            style={{
-              background: "linear-gradient(135deg, #6e2029, #4a151b)",
-              border: "1px solid rgba(212, 175, 55, 0.6)",
-              color: "#fef3c7",
-              borderRadius: "10px",
-              padding: "10px 16px",
-              fontWeight: 800,
-              fontSize: "13px",
-              cursor: result?.translatedText ? "pointer" : "not-allowed",
-            }}
-          >
-            🔊 Read Aloud ({result?.language?.name || selectedLang})
-          </button>
-
-          <button
-            type="button"
-            data-no-hud-notice="true"
-            disabled={!result}
-            onClick={handleCopyResult}
-            style={{
-              background: "rgba(62, 31, 20, 0.85)",
-              border: "1px solid rgba(212, 175, 55, 0.5)",
-              color: "#fde68a",
-              borderRadius: "10px",
-              padding: "10px 16px",
-              fontWeight: 800,
-              fontSize: "13px",
-              cursor: result ? "pointer" : "not-allowed",
-            }}
-          >
-            {copiedFlag ? "✅ Copied Translation & Meaning!" : "📋 Copy Translation & Meaning"}
-          </button>
-
-          {translatorMode !== "SEND_TRANSLATED_MESSAGE" && (
-            <button
-              type="button"
-              data-no-hud-notice="true"
-              onClick={() => setTranslatorMode("SEND_TRANSLATED_MESSAGE")}
-              style={{
-                background: "rgba(16, 185, 129, 0.2)",
-                border: "1px solid #10b981",
-                color: "#6ee7b7",
-                borderRadius: "10px",
-                padding: "10px 16px",
-                fontWeight: 800,
-                fontSize: "13px",
-                cursor: "pointer",
-              }}
-            >
-              📨 Send to a Receiver
-            </button>
-          )}
-
-          {translatorMode === "SEND_TRANSLATED_MESSAGE" && (
-            <button
-              type="button"
-              data-no-hud-notice="true"
-              disabled={sendingMsg || !sourceText.trim()}
-              onClick={handleSendTranslatedMessage}
-              style={{
-                background: "linear-gradient(135deg, #f59e0b, #92400e)",
-                border: "1px solid #fef08a",
-                color: "#1c1008",
-                borderRadius: "10px",
-                padding: "10px 18px",
-                fontWeight: 900,
-                fontSize: "13px",
-                cursor: sendingMsg || !sourceText.trim() ? "not-allowed" : "pointer",
-              }}
-            >
-              {sendingMsg ? "📤 Sending..." : "📨 Translate & Send to Receiver Now"}
-            </button>
-          )}
-        </div>
 
         {/* Sent Translated Messages Log */}
         {translatorMode === "SEND_TRANSLATED_MESSAGE" && sentMessagesHistory.length > 0 && (
@@ -1100,15 +1336,20 @@ export default function UniversalLanguageTranslatorModal({
                     fontSize: "11px",
                   }}
                 >
-                  <div style={{ display: "flex", justifyContent: "space-between", color: "#fde68a" }}>
+                  <div style={{ display: "flex", justifyContent: "space-between", color: "#fde68a", flexWrap: "wrap", gap: "4px" }}>
                     <strong>
-                      To: {m.receiverName} ({m.receiverRoleLabel || m.receiverLabel || m.receiverRole} • {m.languageName})
+                      From: {m.senderName || "School Portal User"} ({m.senderRole || "USER"}) → To: {m.receiverName} ({m.receiverRoleLabel || m.receiverLabel || m.receiverRole} • {m.languageName})
                     </strong>
                     <span>{new Date(m.sentAt || Date.now()).toLocaleTimeString()}</span>
                   </div>
                   <div style={{ color: "#fffbeb", fontWeight: 700, marginTop: "3px" }}>
                     "{m.translatedMessage}"
                   </div>
+                  {m.originalMessage && (
+                    <div style={{ color: "#cbd5e1", fontSize: "10px", marginTop: "2px" }}>
+                      Original: {m.originalMessage}
+                    </div>
+                  )}
                 </div>
               ))}
             </div>

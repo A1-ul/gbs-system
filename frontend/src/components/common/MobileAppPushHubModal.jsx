@@ -72,6 +72,66 @@ export default function MobileAppPushHubModal({ isOpen, onClose }) {
     return "DESKTOP";
   };
 
+  const handleOpenStandaloneAppWindow = () => {
+    if (typeof window === "undefined") return;
+    const targetUrl = `${window.location.origin}/login`;
+    const popup = window.open(
+      targetUrl,
+      "GBS_Standalone_App",
+      "popup=yes,width=1280,height=840,menubar=no,toolbar=no,location=no,status=no"
+    );
+    if (popup) {
+      setPushFeedback({
+        type: "success",
+        text: "✅ Opened GBS System in a standalone app window! To pin the icon directly onto your taskbar / desktop / home screen, use the browser Install icon (⊕) or Menu → Install app."
+      });
+    } else {
+      setPushFeedback({
+        type: "info",
+        text: "Popup blocked by browser. Allow popups or tap your browser menu → Install App / Add to Home Screen."
+      });
+    }
+  };
+
+  const handleDownloadWebAppLauncher = () => {
+    if (typeof window === "undefined" || typeof document === "undefined") return;
+    const liveOrigin = window.location.origin;
+    const launcherHtml = `<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta http-equiv="refresh" content="0;url=${liveOrigin}" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>GBS School Management System — App Launcher</title>
+  <link rel="icon" href="${liveOrigin}/icons/icon-192.png" />
+  <style>
+    body { margin: 0; min-height: 100vh; display: flex; align-items: center; justify-content: center; background: #020617; color: #f8fafc; font-family: system-ui, sans-serif; text-align: center; padding: 24px; }
+    a { display: inline-block; margin-top: 14px; padding: 12px 24px; border-radius: 10px; background: #0284c7; color: #fff; font-weight: 800; text-decoration: none; }
+  </style>
+</head>
+<body>
+  <div>
+    <h2>Launching GBS School Management System...</h2>
+    <p>Redirecting to <a href="${liveOrigin}">${liveOrigin}</a></p>
+    <script>window.location.replace(${JSON.stringify(liveOrigin)});</script>
+  </div>
+</body>
+</html>`;
+    const blob = new Blob([launcherHtml], { type: "text/html;charset=utf-8" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = "GBS-School-System-Launcher.html";
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    setTimeout(() => URL.revokeObjectURL(url), 4000);
+    setPushFeedback({
+      type: "success",
+      text: "⬇️ Downloaded 'GBS-School-System-Launcher.html'! Move it to your Desktop / Home Screen folder and double-click or tap it anytime to open the live GBS System immediately."
+    });
+  };
+
   const handleInstallPWA = async () => {
     setPushFeedback(null);
     const activePrompt = deferredPrompt || (typeof window !== "undefined" ? window.__gbsDeferredInstallPrompt : null);
@@ -84,9 +144,16 @@ export default function MobileAppPushHubModal({ isOpen, onClose }) {
       return;
     }
 
+    // Ensure Service Worker is active so Chrome/Edge exposes native installability when eligible
+    if (typeof navigator !== "undefined" && "serviceWorker" in navigator) {
+      try {
+        await navigator.serviceWorker.register("/sw.js");
+      } catch { }
+    }
+
     if (activePrompt) {
       try {
-        activePrompt.prompt();
+        await activePrompt.prompt();
         const { outcome } = await activePrompt.userChoice;
         if (outcome === "accepted") {
           window.__gbsDeferredInstallPrompt = null;
@@ -95,7 +162,7 @@ export default function MobileAppPushHubModal({ isOpen, onClose }) {
           setDeferredPrompt(null);
           setPushFeedback({
             type: "success",
-            text: "✅ Installation accepted! GBS App has been added to your device home screen / apps."
+            text: "✅ Installation accepted! GBS App has been installed onto your device Home Screen / App Launcher."
           });
           return;
         } else {
@@ -110,7 +177,6 @@ export default function MobileAppPushHubModal({ isOpen, onClose }) {
       }
     }
 
-    // Check if an APK is available on Android when beforeinstallprompt hasn't fired
     const device = detectDeviceType();
     if (device === "ANDROID") {
       try {
@@ -133,17 +199,17 @@ export default function MobileAppPushHubModal({ isOpen, onClose }) {
       } catch { }
       setPushFeedback({
         type: "info",
-        text: "📱 Android One-Tap Install: Tap the browser menu (⋮ at top-right in Chrome/Edge) and select 'Install app' or 'Add to Home screen' to place GBS on your phone home screen immediately."
+        text: "📱 Android Browser Menu Install Required: Your browser has not auto-triggered its native banner in this session yet. Tap Chrome/Edge ⋮ (top right) → 'Install app' / 'Add to Home screen', OR click 'Save App Launcher (.html)' below right now!"
       });
     } else if (device === "IOS") {
       setPushFeedback({
         type: "info",
-        text: "🍎 iPhone / iPad Safari Install: Tap the Share button (⎋) at the bottom bar of Safari, scroll down, and tap 'Add to Home Screen' (➕) -> 'Add'."
+        text: "🍎 iPhone / iPad Safari: Apple iOS requires installing PWAs from Safari's Share button (⎋) → 'Add to Home Screen' (➕) → 'Add'. Use the guided steps below!"
       });
     } else {
       setPushFeedback({
         type: "info",
-        text: "💻 Desktop Install (Windows / Mac / Chromebook): Click the Install icon (⊕ or computer screen arrow) in your browser address bar, or open Chrome/Edge menu (⋮) -> 'Install GBS System' / 'Apps -> Install this site as an app'."
+        text: "💻 Desktop Install: Click the ⊕ Install icon in Chrome/Edge's address bar (or Menu ⋮ → Cast, save, and share / Apps → Install GBS System), OR click 'Save App Launcher (.html)' / 'Open Standalone App Window' below!"
       });
     }
   };
@@ -354,28 +420,62 @@ export default function MobileAppPushHubModal({ isOpen, onClose }) {
                     </p>
                   </div>
                 </div>
-                <button
-                  type="button"
-                  className="gbs-install-btn"
-                  onClick={handleInstallPWA}
-                >
-                  📲 {installSuccess ? "✓ App Installed Successfully" : "Install App on This Device"}
-                </button>
+                <div style={{ display: "flex", gap: "8px", flexWrap: "wrap", alignItems: "center" }}>
+                  <button
+                    type="button"
+                    className="gbs-install-btn"
+                    onClick={handleInstallPWA}
+                  >
+                    📲 {installSuccess ? "✓ App Installed Successfully" : deferredPrompt ? "⚡ Install App Now (1-Tap)" : "Install App on This Device"}
+                  </button>
+                  <button
+                    type="button"
+                    onClick={handleDownloadWebAppLauncher}
+                    style={{
+                      background: "rgba(16, 185, 129, 0.2)",
+                      border: "1px solid #10b981",
+                      color: "#6ee7b7",
+                      borderRadius: "10px",
+                      padding: "10px 14px",
+                      fontWeight: 800,
+                      fontSize: "0.82rem",
+                      cursor: "pointer"
+                    }}
+                  >
+                    ⬇️ Save App Launcher (.html)
+                  </button>
+                  <button
+                    type="button"
+                    onClick={handleOpenStandaloneAppWindow}
+                    style={{
+                      background: "rgba(56, 189, 248, 0.16)",
+                      border: "1px solid #38bdf8",
+                      color: "#bae6fd",
+                      borderRadius: "10px",
+                      padding: "10px 14px",
+                      fontWeight: 800,
+                      fontSize: "0.82rem",
+                      cursor: "pointer"
+                    }}
+                  >
+                    🪟 Open Standalone App Window
+                  </button>
+                </div>
               </div>
 
               {/* Platform Guides Grid */}
-              <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "1rem", marginTop: "1rem" }}>
+              <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(210px, 1fr))", gap: "1rem", marginTop: "1rem" }}>
                 {/* Android Guide */}
                 <div className="gbs-app-card">
                   <div style={{ display: "flex", alignItems: "center", gap: "8px", marginBottom: "8px" }}>
                     <span style={{ fontSize: "1.4rem" }}>🤖</span>
-                    <strong style={{ color: "#34d399", fontSize: "0.95rem" }}>Android Instructions</strong>
+                    <strong style={{ color: "#34d399", fontSize: "0.95rem" }}>Android Phones &amp; Tablets</strong>
                   </div>
                   <ol style={{ margin: 0, paddingLeft: "1.2rem", fontSize: "0.82rem", color: "#cbd5e1", lineHeight: "1.6" }}>
-                    <li>Open this page in Google Chrome on your Android phone.</li>
-                    <li>Tap the <strong>three dots (⋮)</strong> at top right.</li>
+                    <li>Open this page in <strong>Google Chrome</strong> or <strong>Edge</strong> on Android.</li>
+                    <li>Click <strong>Install App on This Device</strong> above — or tap the browser <strong>(⋮)</strong> menu.</li>
                     <li>Select <strong>"Install app"</strong> or <strong>"Add to Home screen"</strong>.</li>
-                    <li>The GBS Crest app icon will appear on your phone home screen!</li>
+                    <li>The GBS Crest app icon installs onto your Android app drawer &amp; home screen!</li>
                   </ol>
                 </div>
 
@@ -383,13 +483,25 @@ export default function MobileAppPushHubModal({ isOpen, onClose }) {
                 <div className="gbs-app-card">
                   <div style={{ display: "flex", alignItems: "center", gap: "8px", marginBottom: "8px" }}>
                     <span style={{ fontSize: "1.4rem" }}>🍎</span>
-                    <strong style={{ color: "#38bdf8", fontSize: "0.95rem" }}>Apple iOS (iPhone / iPad)</strong>
+                    <strong style={{ color: "#38bdf8", fontSize: "0.95rem" }}>Apple iPhone &amp; iPad</strong>
                   </div>
                   <ol style={{ margin: 0, paddingLeft: "1.2rem", fontSize: "0.82rem", color: "#cbd5e1", lineHeight: "1.6" }}>
-                    <li>Open this page in <strong>Safari</strong> on your iPhone or iPad.</li>
+                    <li>Open this link in <strong>Safari</strong> on your iPhone or iPad.</li>
                     <li>Tap the <strong>Share button (⎋)</strong> at the bottom bar.</li>
                     <li>Scroll down and tap <strong>"Add to Home Screen" (➕)</strong>.</li>
-                    <li>Tap <strong>"Add"</strong> at the top right to complete installation!</li>
+                    <li>Tap <strong>"Add"</strong> at the top right to launch GBS fullscreen!</li>
+                  </ol>
+                </div>
+
+                {/* Desktop Windows / Mac Guide */}
+                <div className="gbs-app-card">
+                  <div style={{ display: "flex", alignItems: "center", gap: "8px", marginBottom: "8px" }}>
+                    <span style={{ fontSize: "1.4rem" }}>💻</span>
+                    <strong style={{ color: "#fbbf24", fontSize: "0.95rem" }}>Windows, Mac &amp; Chromebook</strong>
+                  </div>
+                  <ol style={{ margin: 0, paddingLeft: "1.2rem", fontSize: "0.82rem", color: "#cbd5e1", lineHeight: "1.6" }}>
+                    <li>In Chrome or Microsoft Edge, click the <strong>Install icon (⊕)</strong> in the top-right URL bar (or Menu ⋮ → <strong>Install GBS System</strong>).</li>
+                    <li>Or click <strong>Save App Launcher (.html)</strong> above to place a desktop launcher on any computer.</li>
                   </ol>
                 </div>
               </div>

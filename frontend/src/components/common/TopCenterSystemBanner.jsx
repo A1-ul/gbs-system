@@ -3,6 +3,7 @@ import { resolveApiUrl } from "../../api/client/apiConfig";
 import { clearFakeDataEntries } from "../../utils/freshSystemReset";
 import { getActiveSchoolName, getActiveSchoolLogo } from "../../utils/schoolBranding";
 import { isDemoSandboxMode, resetDemoSandboxData } from "../../utils/tokenStorage";
+import { fetchTranslatedMessagesInbox } from "../../utils/languageTranslatorEngine";
 import UniversalLanguageTranslatorModal from "./UniversalLanguageTranslatorModal";
 import DirectSMSMessengerModal from "./DirectSMSMessengerModal";
 import MobileAppPushHubModal from "./MobileAppPushHubModal";
@@ -57,6 +58,10 @@ export default function TopCenterSystemBanner({
   const [showMobileAppModal, setShowMobileAppModal] = useState(false);
   const [showCloudCDNModal, setShowCloudCDNModal] = useState(false);
   const [demoTrialUsage, setDemoTrialUsage] = useState({ maxPerModule: 10, totalUsed: 0 });
+  const [unreadTranslatedCount, setUnreadTranslatedCount] = useState(0);
+  const [pwaPromptReady, setPwaPromptReady] = useState(
+    typeof window !== "undefined" && Boolean(window.__gbsDeferredInstallPrompt)
+  );
 
   let currentUserRole = "GUEST";
   try {
@@ -102,6 +107,51 @@ export default function TopCenterSystemBanner({
       window.removeEventListener("storage", handleUpdate);
     };
   }, [isDevMode, institutionName]);
+
+  useEffect(() => {
+    const syncTranslatedBadge = async () => {
+      try {
+        const list = await fetchTranslatedMessagesInbox({ receiverRole: currentUserRole, limit: 40 });
+        setUnreadTranslatedCount(list.filter((m) => !m.read).length);
+      } catch { }
+    };
+    const onPromptReady = () => setPwaPromptReady(Boolean(window.__gbsDeferredInstallPrompt));
+    const onInstalled = () => setPwaPromptReady(false);
+
+    syncTranslatedBadge();
+    window.addEventListener("gbs_translated_message_sent", syncTranslatedBadge);
+    window.addEventListener("gbs_translated_message_read", syncTranslatedBadge);
+    window.addEventListener("gbs_pwa_install_ready", onPromptReady);
+    window.addEventListener("gbs_pwa_installed", onInstalled);
+    const inboxPoll = setInterval(syncTranslatedBadge, 25000);
+    return () => {
+      window.removeEventListener("gbs_translated_message_sent", syncTranslatedBadge);
+      window.removeEventListener("gbs_translated_message_read", syncTranslatedBadge);
+      window.removeEventListener("gbs_pwa_install_ready", onPromptReady);
+      window.removeEventListener("gbs_pwa_installed", onInstalled);
+      clearInterval(inboxPoll);
+    };
+  }, [currentUserRole]);
+
+  const handleDirectOrModalAppInstall = async () => {
+    const promptObj = typeof window !== "undefined" ? window.__gbsDeferredInstallPrompt : null;
+    if (promptObj) {
+      try {
+        await promptObj.prompt();
+        const { outcome } = await promptObj.userChoice;
+        if (outcome === "accepted") {
+          window.__gbsDeferredInstallPrompt = null;
+          window.__gbsAppInstalled = true;
+          setPwaPromptReady(false);
+          if (window.showGBSOpenNotice) {
+            window.showGBSOpenNotice("✅ GBS App installed onto your device Home Screen / Apps!", "success", "MOBILE APP INSTALLED");
+          }
+          return;
+        }
+      } catch { }
+    }
+    setShowMobileAppModal(true);
+  };
 
   useEffect(() => {
     if (systemMode !== "DEMO_SANDBOX") return;
@@ -345,9 +395,22 @@ export default function TopCenterSystemBanner({
             fontWeight: "700",
             transition: "all 0.2s"
           }}
-          title="Open Language Translator & Message Explainer for all languages & SMS notifications"
+          title="Open Language Translator, Exact Word Meaning & Received Translated Messages Inbox"
         >
-          🌐 Universal Language & Message Explainer
+          🌐 Language Translator &amp; Inbox
+          {unreadTranslatedCount > 0 && (
+            <span style={{
+              marginLeft: "6px",
+              background: "#10b981",
+              color: "#022c22",
+              padding: "1px 6px",
+              borderRadius: "999px",
+              fontSize: "0.7rem",
+              fontWeight: 900
+            }}>
+              {unreadTranslatedCount} New
+            </span>
+          )}
         </button>
         <span style={{ color: "#475569" }}>•</span>
         <button
@@ -390,11 +453,13 @@ export default function TopCenterSystemBanner({
         <span style={{ color: "#475569" }}>•</span>
         <button
           type="button"
-          onClick={() => setShowMobileAppModal(true)}
+          onClick={handleDirectOrModalAppInstall}
           style={{
-            background: "linear-gradient(135deg, rgba(168, 85, 247, 0.25), rgba(126, 34, 206, 0.35))",
-            border: "1px solid rgba(168, 85, 247, 0.5)",
-            color: "#c084fc",
+            background: pwaPromptReady
+              ? "linear-gradient(135deg, rgba(16, 185, 129, 0.3), rgba(5, 150, 105, 0.42))"
+              : "linear-gradient(135deg, rgba(168, 85, 247, 0.25), rgba(126, 34, 206, 0.35))",
+            border: pwaPromptReady ? "1.5px solid #10b981" : "1px solid rgba(168, 85, 247, 0.5)",
+            color: pwaPromptReady ? "#6ee7b7" : "#c084fc",
             fontSize: "0.76rem",
             padding: "4px 12px",
             borderRadius: "8px",
@@ -402,9 +467,9 @@ export default function TopCenterSystemBanner({
             fontWeight: "700",
             transition: "all 0.2s"
           }}
-          title="Install native Android APK or Apple iOS app & activate lock screen push notifications"
+          title="Install GBS App on your phone or computer & configure lock screen push alerts"
         >
-          📲 Mobile App & Push
+          {pwaPromptReady ? "⚡ Install App Now" : "📲 Mobile App & Push"}
         </button>
         <span style={{ color: "#475569" }}>•</span>
         <button

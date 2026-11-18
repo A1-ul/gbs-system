@@ -57,6 +57,7 @@ function ensureStoreFile() {
         permanentlyDeletedIds: [],
         enterpriseLicenses: [],
         headmasterMessages: [],
+        translatedMessages: [],
         intrusionViolations: [],
         staffBreachTrials: [],
         usedTrialInstitutions: [],
@@ -79,6 +80,7 @@ function ensureStoreFile() {
     if (!Array.isArray(parsed.permanentlyDeletedIds)) parsed.permanentlyDeletedIds = [];
     if (!Array.isArray(parsed.enterpriseLicenses)) parsed.enterpriseLicenses = [];
     if (!Array.isArray(parsed.headmasterMessages)) parsed.headmasterMessages = [];
+    if (!Array.isArray(parsed.translatedMessages)) parsed.translatedMessages = [];
     if (!Array.isArray(parsed.intrusionViolations)) parsed.intrusionViolations = [];
     if (!Array.isArray(parsed.staffBreachTrials)) parsed.staffBreachTrials = [];
     if (!Array.isArray(parsed.usedTrialInstitutions)) parsed.usedTrialInstitutions = [];

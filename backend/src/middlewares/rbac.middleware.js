@@ -52,7 +52,9 @@ function allowRoles(...allowedRoles) {
             */
             if (
                 userRole === "ADMIN" ||
-                userRole === "SUPER_ADMIN"
+                userRole === "SUPER_ADMIN" ||
+                userRole === "HEADMASTER" ||
+                userRole === "DEVELOPER"
             ) {
                 return next();
             }

@@ -36,6 +36,13 @@ export function saveAuthSession(data = {}) {
   }
 
   if (user) {
+    // Clear any stale Developer token when signing into a non-Developer school portal
+    if (String(user.role || "").toUpperCase() !== "DEVELOPER") {
+      try {
+        localStorage.removeItem("gbs_dev_token");
+        localStorage.removeItem("gbs_developer");
+      } catch { }
+    }
     // Exact school name propagation to all dashboards, reports, and banners
     const schoolName =
       user.institutionName ||

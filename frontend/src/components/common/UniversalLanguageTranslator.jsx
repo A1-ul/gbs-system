@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useRef, useCallback } from "react";
 import { createPortal } from "react-dom";
 import UniversalLanguageTranslatorModal from "./UniversalLanguageTranslatorModal";
+import { fetchTranslatedMessagesInbox } from "../../utils/languageTranslatorEngine";
 
 const TRANSLATOR_POS_KEY = "gbs_translator_floating_pos";
 const TRANSLATOR_MIN_KEY = "gbs_translator_minimized";
@@ -58,6 +59,7 @@ export default function UniversalLanguageTranslator() {
     }
   });
   const [isDragging, setIsDragging] = useState(false);
+  const [unreadInboxCount, setUnreadInboxCount] = useState(0);
   const [position, setPosition] = useState(() => {
     const fallbackY = typeof window !== "undefined" ? Math.max(16, window.innerHeight - 64) : 600;
     try {
@@ -85,6 +87,32 @@ export default function UniversalLanguageTranslator() {
     origX: 0,
     origY: 0,
   });
+
+  useEffect(() => {
+    const syncUnreadCount = async () => {
+      try {
+        let role = "";
+        try {
+          const u = JSON.parse(localStorage.getItem("gbs_user") || "{}");
+          role = String(u.role || localStorage.getItem("gbs_auth_role") || "").toUpperCase();
+        } catch { }
+        const list = await fetchTranslatedMessagesInbox({ receiverRole: role, limit: 50 });
+        setUnreadInboxCount(list.filter((m) => !m.read).length);
+      } catch { }
+    };
+    syncUnreadCount();
+    const onSentOrRead = () => syncUnreadCount();
+    window.addEventListener("gbs_translated_message_sent", onSentOrRead);
+    window.addEventListener("gbs_translated_message_read", onSentOrRead);
+    window.addEventListener("storage", onSentOrRead);
+    const poll = setInterval(syncUnreadCount, 20000);
+    return () => {
+      window.removeEventListener("gbs_translated_message_sent", onSentOrRead);
+      window.removeEventListener("gbs_translated_message_read", onSentOrRead);
+      window.removeEventListener("storage", onSentOrRead);
+      clearInterval(poll);
+    };
+  }, []);
 
   // Keep widget inside viewport bounds whenever device orientation or window size changes
   useEffect(() => {
@@ -361,6 +389,21 @@ export default function UniversalLanguageTranslator() {
           >
             <span style={{ fontSize: "0.88rem" }}>🌐</span>
             <span>Translate</span>
+            {unreadInboxCount > 0 && (
+              <span
+                style={{
+                  background: "#10b981",
+                  color: "#022c22",
+                  borderRadius: "999px",
+                  padding: "0 5px",
+                  fontSize: "0.65rem",
+                  fontWeight: 900,
+                }}
+                title={`${unreadInboxCount} unread translated message(s)`}
+              >
+                {unreadInboxCount}
+              </span>
+            )}
           </button>
           <button
             type="button"

@@ -120,7 +120,9 @@ router.get('/audit-trail', async (req, res, next) => {
   try {
     const { tenantId, module: mod, action, outcome, limit, offset } = req.query;
     const trail = await auditTracker.getAuditTrail({
-      tenantId: req.user?.role === 'SUPER_ADMIN' || req.user?.role === 'DEVELOPER' ? tenantId : (req.user?.tenantId || 1),
+      tenantId: ['SUPER_ADMIN', 'DEVELOPER', 'ADMIN', 'HEADMASTER'].includes(String(req.user?.role || '').toUpperCase())
+        ? tenantId
+        : (req.user?.tenantId || 1),
       module: mod,
       action,
       outcome,

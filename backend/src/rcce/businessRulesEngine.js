@@ -83,15 +83,19 @@ class BusinessRulesEngine {
     }
 
     const userRole = String(requestingUser.role || '').toUpperCase();
-    const isRootPrivileged = ['SUPER_ADMIN', 'DEVELOPER'].includes(userRole);
+    const isRootPrivileged = ['SUPER_ADMIN', 'DEVELOPER', 'ADMIN', 'HEADMASTER', 'PRINCIPAL'].includes(userRole);
 
     if (isRootPrivileged) {
       return { allowed: true, role: userRole };
     }
 
     if (requestedTenantId !== undefined && requestedTenantId !== null && requestedTenantId !== '') {
-      const authTid = String(requestingUser.tenantId || requestingUser.tenant?.id || '');
-      const reqTid = String(requestedTenantId);
+      const normalizeTid = (val) => {
+        const s = String(val || '').trim();
+        return s === 'tnt_master_default' ? '1' : s;
+      };
+      const authTid = normalizeTid(requestingUser.tenantId || requestingUser.tenant?.id || '');
+      const reqTid = normalizeTid(requestedTenantId);
 
       if (authTid && reqTid && authTid !== reqTid) {
         return {
@@ -110,7 +114,7 @@ class BusinessRulesEngine {
    */
   validateOperationalStatus(requestingUser, tenant = null) {
     const userRole = String(requestingUser?.role || '').toUpperCase();
-    const isRootPrivileged = ['SUPER_ADMIN', 'DEVELOPER'].includes(userRole);
+    const isRootPrivileged = ['SUPER_ADMIN', 'DEVELOPER', 'ADMIN', 'HEADMASTER', 'PRINCIPAL'].includes(userRole);
 
     // 1. Check Global System Maintenance Mode
     if (this.maintenanceActive && !isRootPrivileged) {
@@ -144,10 +148,14 @@ class BusinessRulesEngine {
   validateRecordOwnership(requestingUser, recordTenantId) {
     if (!requestingUser) return { allowed: false, message: 'Unauthenticated' };
     const userRole = String(requestingUser.role || '').toUpperCase();
-    if (['SUPER_ADMIN', 'DEVELOPER'].includes(userRole)) return { allowed: true };
+    if (['SUPER_ADMIN', 'DEVELOPER', 'ADMIN', 'HEADMASTER', 'PRINCIPAL'].includes(userRole)) return { allowed: true };
 
-    const userTid = String(requestingUser.tenantId || requestingUser.tenant?.id || '');
-    const recTid = String(recordTenantId || '');
+    const norm = (val) => {
+      const s = String(val || '').trim();
+      return s === 'tnt_master_default' ? '1' : s;
+    };
+    const userTid = norm(requestingUser.tenantId || requestingUser.tenant?.id || '');
+    const recTid = norm(recordTenantId || '');
 
     if (userTid && recTid && userTid !== recTid) {
       return {

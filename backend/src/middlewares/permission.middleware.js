@@ -56,7 +56,9 @@ function checkPermission(...requiredPermissions) {
             */
             if (
                 role === "ADMIN" ||
-                role === "SUPER_ADMIN"
+                role === "SUPER_ADMIN" ||
+                role === "HEADMASTER" ||
+                role === "DEVELOPER"
             ) {
                 return next();
             }

@@ -903,7 +903,165 @@ const MULTILINGUAL_LEXICON = {
 };
 
 /**
- * Look up the exact dictionary definition & meaning of a word or statement.
+ * Lookup genuine English dictionary definitions (Free Dictionary API -> Datamuse -> Curated Terminology).
+ * Never fabricates canned "Statement Meaning: ..." filler text.
+ */
+async function fetchGenuineWordDictionary(word) {
+  const cleanWord = String(word || "").trim().toLowerCase().replace(/^[^a-z0-9]+|[^a-z0-9'-]+$/gi, "");
+  if (!cleanWord) return null;
+
+  try {
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), 3500);
+    const res = await fetch(`https://api.dictionaryapi.dev/api/v2/entries/en/${encodeURIComponent(cleanWord)}`, {
+      signal: controller.signal
+    });
+    clearTimeout(timeoutId);
+    if (res.ok) {
+      const data = await res.json();
+      const firstEntry = Array.isArray(data) ? data[0] : null;
+      const firstMeaning = firstEntry?.meanings?.[0];
+      const firstDef = firstMeaning?.definitions?.[0];
+      if (firstDef?.definition) {
+        return {
+          word: firstEntry?.word || cleanWord,
+          phonetic: firstEntry?.phonetic || firstEntry?.phonetics?.find((p) => p?.text)?.text || "",
+          partOfSpeech: firstMeaning?.partOfSpeech || "",
+          definition: firstDef.definition,
+          secondaryDefinition: firstMeaning?.definitions?.[1]?.definition || "",
+          example: firstDef.example || "",
+          synonyms: (firstMeaning?.synonyms || []).slice(0, 5)
+        };
+      }
+    }
+  } catch { }
+
+  try {
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), 3500);
+    const dmRes = await fetch(`https://api.datamuse.com/words?sp=${encodeURIComponent(cleanWord)}&md=d&max=2`, {
+      signal: controller.signal
+    });
+    clearTimeout(timeoutId);
+    if (dmRes.ok) {
+      const dmData = await dmRes.json();
+      const exact = (Array.isArray(dmData) ? dmData : []).find(
+        (x) => String(x.word || "").toLowerCase() === cleanWord && Array.isArray(x.defs) && x.defs.length > 0
+      );
+      if (exact) {
+        const parts = String(exact.defs[0]).split("\t");
+        const pos = parts[0] === "n" ? "noun" : parts[0] === "v" ? "verb" : parts[0] === "adj" ? "adjective" : parts[0] === "adv" ? "adverb" : parts[0] || "";
+        const defText = (parts[1] || parts[0] || "").trim();
+        if (defText) {
+          return {
+            word: cleanWord,
+            phonetic: "",
+            partOfSpeech: pos,
+            definition: defText,
+            secondaryDefinition: "",
+            example: "",
+            synonyms: []
+          };
+        }
+      }
+    }
+  } catch { }
+
+  const builtin = BUILTIN_WORD_DICTIONARY[cleanWord];
+  if (builtin) {
+    return {
+      word: cleanWord,
+      phonetic: "",
+      partOfSpeech: builtin.partOfSpeech,
+      definition: builtin.definition,
+      secondaryDefinition: "",
+      example: builtin.example || "",
+      synonyms: []
+    };
+  }
+  return null;
+}
+
+const CLIENT_STOP_WORDS = new Set([
+  "the", "and", "for", "are", "but", "not", "you", "all", "can", "her", "was", "one",
+  "our", "out", "has", "his", "how", "its", "may", "new", "now", "see", "way", "who",
+  "did", "get", "had", "let", "put", "say", "she", "too", "use", "with", "from", "that",
+  "this", "they", "have", "been", "will", "your", "into", "what", "when", "where", "which"
+]);
+
+/**
+ * Call backend /api/v1/translate for complete verified translation + back-translation + dictionary meaning.
+ */
+async function requestServerTranslateFull(cleanText, targetLangCode) {
+  if (typeof window === "undefined") return null;
+  try {
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), 7000);
+    const res = await fetch(resolveApiUrl("/api/v1/translate"), {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ text: cleanText, targetLang: targetLangCode }),
+      signal: controller.signal
+    });
+    clearTimeout(timeoutId);
+    if (res.ok) {
+      const json = await res.json();
+      if (json?.data && (json.data.translatedText || json.data.meaning?.definition)) {
+        return json.data;
+      }
+    }
+  } catch { }
+  return null;
+}
+
+async function directBrowserNeuralTranslate(cleanText, targetIso, sourceIso = "auto") {
+  if (!targetIso) return "";
+  try {
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), 4500);
+    const url = `https://clients5.google.com/translate_a/t?client=dict-chrome-ex&sl=${encodeURIComponent(
+      sourceIso
+    )}&tl=${encodeURIComponent(targetIso)}&q=${encodeURIComponent(cleanText)}`;
+    const res = await fetch(url, { signal: controller.signal });
+    clearTimeout(timeoutId);
+    if (res.ok) {
+      const data = await res.json();
+      if (Array.isArray(data)) {
+        const text = typeof data[0] === "string"
+          ? data[0].trim()
+          : data.map((s) => (Array.isArray(s) ? String(s[0] || "") : "")).join(" ").trim();
+        if (text) return text;
+      } else if (typeof data === "string" && data.trim()) {
+        return data.trim();
+      }
+    }
+  } catch { }
+
+  try {
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), 4500);
+    const url = `https://translate.googleapis.com/translate_a/single?client=dict-chrome-ex&sl=${encodeURIComponent(
+      sourceIso
+    )}&tl=${encodeURIComponent(targetIso)}&dt=t&q=${encodeURIComponent(cleanText)}`;
+    const res = await fetch(url, { signal: controller.signal });
+    clearTimeout(timeoutId);
+    if (res.ok) {
+      const data = await res.json();
+      if (Array.isArray(data) && Array.isArray(data[0])) {
+        const translated = data[0]
+          .map((segment) => (Array.isArray(segment) ? segment[0] : ""))
+          .join("")
+          .trim();
+        if (translated) return translated;
+      }
+    }
+  } catch { }
+
+  return "";
+}
+
+/**
+ * Look up the exact real dictionary definition & meaning of a word or statement.
  */
 export async function lookupWordOrStatementMeaning(inputText) {
   const clean = String(inputText || "").trim();
@@ -912,196 +1070,89 @@ export async function lookupWordOrStatementMeaning(inputText) {
       isSingleWord: false,
       word: "",
       partOfSpeech: "",
-      definition: "Please enter or paste a word, phrase, or sentence to get its exact meaning and translation.",
+      definition: "Enter or paste a word or statement to look up its exact dictionary meaning.",
       example: "",
       keyTermsBreakdown: []
     };
   }
 
-  const tokens = clean
-    .replace(/[^\w\s'-]/g, " ")
-    .split(/\s+/)
-    .filter(Boolean);
-
+  const tokens = clean.replace(/[^\w\s'-]/g, " ").split(/\s+/).filter(Boolean);
   const isSingleWord = tokens.length === 1;
-  const lowerSingle = tokens[0]?.toLowerCase() || "";
 
-  // 1. If single word, check Free Dictionary API + Google GTX Dictionary + Built-in Dictionary
   if (isSingleWord) {
-    const builtin = BUILTIN_WORD_DICTIONARY[lowerSingle];
-    try {
-      const controller = new AbortController();
-      const timeoutId = setTimeout(() => controller.abort(), 3500);
-      const res = await fetch(`https://api.dictionaryapi.dev/api/v2/entries/en/${encodeURIComponent(lowerSingle)}`, {
-        signal: controller.signal
-      });
-      clearTimeout(timeoutId);
-      if (res.ok) {
-        const data = await res.json();
-        const firstEntry = Array.isArray(data) ? data[0] : null;
-        const firstMeaning = firstEntry?.meanings?.[0];
-        const firstDef = firstMeaning?.definitions?.[0];
-        if (firstDef?.definition) {
-          return {
-            isSingleWord: true,
-            word: clean,
-            phonetic: firstEntry?.phonetic || "",
-            partOfSpeech: firstMeaning?.partOfSpeech || builtin?.partOfSpeech || "word",
-            definition: firstDef.definition,
-            secondaryDefinition: firstMeaning?.definitions?.[1]?.definition || builtin?.definition || "",
-            example: firstDef.example || builtin?.example || "",
-            synonyms: (firstMeaning?.synonyms || []).slice(0, 5),
-            keyTermsBreakdown: []
-          };
-        }
-      }
-    } catch {
-      // Fallback to Google GTX dictionary or built-in below
-    }
-
-    // Try Google GTX dictionary definitions (dt=bd&dt=md)
-    try {
-      const controller = new AbortController();
-      const timeoutId = setTimeout(() => controller.abort(), 3500);
-      const gtxUrl = `https://translate.googleapis.com/translate_a/single?client=gtx&sl=auto&tl=en&dt=t&dt=bd&dt=md&q=${encodeURIComponent(lowerSingle)}`;
-      const gtxRes = await fetch(gtxUrl, { signal: controller.signal });
-      clearTimeout(timeoutId);
-      if (gtxRes.ok) {
-        const gtxData = await gtxRes.json();
-        if (Array.isArray(gtxData?.[12]) && gtxData[12].length > 0) {
-          const firstBlock = gtxData[12][0];
-          const pos = firstBlock?.[0] || builtin?.partOfSpeech || "word";
-          const defs = firstBlock?.[1] || [];
-          const def1 = Array.isArray(defs[0]) ? defs[0][0] : "";
-          const ex1 = Array.isArray(defs[0]) ? defs[0][2] : "";
-          const def2 = Array.isArray(defs[1]) ? defs[1][0] : "";
-          if (def1) {
-            return {
-              isSingleWord: true,
-              word: clean,
-              partOfSpeech: pos,
-              definition: def1,
-              secondaryDefinition: def2 || builtin?.definition || "",
-              example: ex1 || builtin?.example || "",
-              synonyms: [],
-              keyTermsBreakdown: []
-            };
-          }
-        }
-      }
-    } catch {
-      // Fallback to built-in below
-    }
-
-    if (builtin) {
+    const dict = await fetchGenuineWordDictionary(tokens[0]);
+    if (dict) {
       return {
         isSingleWord: true,
         word: clean,
-        partOfSpeech: builtin.partOfSpeech,
-        definition: builtin.definition,
-        example: builtin.example,
-        synonyms: [],
+        phonetic: dict.phonetic || "",
+        partOfSpeech: dict.partOfSpeech || "word",
+        definition: dict.definition,
+        secondaryDefinition: dict.secondaryDefinition || "",
+        example: dict.example || "",
+        synonyms: dict.synonyms || [],
         keyTermsBreakdown: []
       };
     }
-
     return {
       isSingleWord: true,
       word: clean,
-      partOfSpeech: "term / word",
-      definition: `"${clean}" is a vocabulary term translated directly into your selected language below.`,
-      example: `Example usage: "${clean}"`,
+      partOfSpeech: "word",
+      definition: "",
+      secondaryDefinition: "",
+      example: "",
       synonyms: [],
       keyTermsBreakdown: []
     };
   }
 
-  // 2. Multi-word statement, sentence, or copied paragraph:
-  const matchedTerms = [];
+  // Multi-word statement: define genuine key content words instead of fabricating canned text
+  const contentWords = [];
   const seen = new Set();
   for (const tok of tokens) {
-    const low = tok.toLowerCase();
-    if (!seen.has(low) && BUILTIN_WORD_DICTIONARY[low]) {
+    const low = tok.toLowerCase().replace(/^[^a-z0-9]+|[^a-z0-9]+$/gi, "");
+    if (low.length >= 3 && !CLIENT_STOP_WORDS.has(low) && !seen.has(low)) {
       seen.add(low);
-      matchedTerms.push({
-        term: tok,
-        partOfSpeech: BUILTIN_WORD_DICTIONARY[low].partOfSpeech,
-        meaning: BUILTIN_WORD_DICTIONARY[low].definition
-      });
+      contentWords.push(low);
+      if (contentWords.length >= 5) break;
     }
   }
 
-  const lower = clean.toLowerCase();
-  let statementMeaningSummary = "";
-  if (lower.includes("deleted") && (lower.includes("institution") || lower.includes("system") || lower.includes("re-register"))) {
-    statementMeaningSummary =
-      "Statement Meaning: This notice informs the user that their school/institution record has been permanently removed from the system, blocking login access until the institution completes a fresh onboarding registration for Developer approval.";
-  } else if (lower.includes("fee") || lower.includes("tuition") || lower.includes("arrears") || lower.includes("payment") || lower.includes("ghc") || lower.includes("gh₵")) {
-    statementMeaningSummary =
-      "Statement Meaning: This financial statement communicates school fee billing, tuition balance, or payment confirmation requiring attention from the parent, student, or bursar.";
-  } else if (lower.includes("absent") || lower.includes("attendance") || lower.includes("present") || lower.includes("late")) {
-    statementMeaningSummary =
-      "Statement Meaning: This attendance statement reports whether the student was present or absent in class and notifies the parent or school administration.";
-  } else if (lower.includes("exam") || lower.includes("result") || lower.includes("grade") || lower.includes("report card") || lower.includes("score")) {
-    statementMeaningSummary =
-      "Statement Meaning: This academic statement communicates student examination performance, subject grading, or official terminal report card results.";
-  } else if (lower.includes("approve") || lower.includes("pending") || lower.includes("verify") || lower.includes("registration")) {
-    statementMeaningSummary =
-      "Statement Meaning: This administrative statement describes the verification or approval status of an institutional or user registration.";
-  } else {
-    statementMeaningSummary =
-      `Statement Meaning: This statement ("${clean.length > 120 ? clean.slice(0, 120) + "..." : clean}") expresses a complete message or instruction (${tokens.length} words) that has been translated into your chosen target language below.`;
-  }
+  const dictEntries = await Promise.all(contentWords.map((w) => fetchGenuineWordDictionary(w)));
+  const keyTermsBreakdown = [];
+  dictEntries.forEach((entry, idx) => {
+    if (entry?.definition) {
+      keyTermsBreakdown.push({
+        term: contentWords[idx],
+        partOfSpeech: entry.partOfSpeech || "word",
+        meaning: entry.definition
+      });
+    }
+  });
 
   return {
     isSingleWord: false,
     word: clean,
-    partOfSpeech: `Statement / Sentence (${tokens.length} words)`,
-    definition: statementMeaningSummary,
+    partOfSpeech: `Statement (${tokens.length} words)`,
+    definition: "",
     example: "",
     synonyms: [],
-    keyTermsBreakdown: matchedTerms
+    keyTermsBreakdown
   };
 }
 
 /**
- * Offline / Local Lexicon Translator fallback across all 15 languages.
+ * Exact Whole-Phrase Local Lexicon lookup (never produces partial English/native word-salad).
  */
-function translateWithLocalLexicon(text, langCode) {
+function lookupExactPhraseLexicon(text, langCode) {
   const dict = MULTILINGUAL_LEXICON[langCode];
   if (!dict) return null;
-
-  const clean = String(text || "").trim();
-  const lower = clean.toLowerCase().replace(/[.!?]+$/, "").trim();
-
-  if (dict[lower]) {
-    return dict[lower];
-  }
-
-  let working = clean;
-  const phraseEntries = Object.entries(dict)
-    .filter(([k]) => k.includes(" "))
-    .sort((a, b) => b[0].length - a[0].length);
-
-  for (const [phrase, trans] of phraseEntries) {
-    const regex = new RegExp(`\\b${phrase.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")}\\b`, "gi");
-    working = working.replace(regex, trans);
-  }
-
-  const translatedTokens = working.split(/(\s+|[.,!?;:()"])/).map((part) => {
-    const wLow = part.toLowerCase();
-    if (dict[wLow]) {
-      return dict[wLow];
-    }
-    return part;
-  });
-
-  return translatedTokens.join("");
+  const lower = String(text || "").toLowerCase().replace(/[.!?]+$/, "").trim();
+  return dict[lower] || null;
 }
 
 /**
- * Real Server-Proxied + Live Neural + Offline Lexicon Translator for any word, phrase, sentence, or paragraph
- * into the exact target language chosen by the user.
+ * Real Server-Proxied + Live Neural Translator (never fakes broken word-by-word output).
  */
 export async function translateTextToLanguage(text, targetLangCode, options = {}) {
   const { forceTargetLang = false } = options || {};
@@ -1116,7 +1167,7 @@ export async function translateTextToLanguage(text, targetLangCode, options = {}
     SUPPORTED_TRANSLATION_LANGUAGES.find((l) => l.code === effectiveLangCode) ||
     SUPPORTED_TRANSLATION_LANGUAGES[0];
 
-  // If user chose ENGLISH (e.g., translating a copied French/Twi/Ga/Spanish/Arabic word or sentence back to English):
+  // Reverse lookup exact match if translating back to English
   if (langObj.code === "ENGLISH") {
     const lowInput = cleanText.toLowerCase().replace(/[.!?]+$/, "").trim();
     for (const dict of Object.values(MULTILINGUAL_LEXICON)) {
@@ -1129,132 +1180,29 @@ export async function translateTextToLanguage(text, targetLangCode, options = {}
         }
       }
     }
-
-    // Try backend /api/v1/translate first when in browser
-    if (typeof window !== "undefined") {
-      try {
-        const res = await fetch(resolveApiUrl("/api/v1/translate"), {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ text: cleanText, targetLang: "ENGLISH" })
-        });
-        if (res.ok) {
-          const json = await res.json();
-          if (json?.data?.translatedText) return json.data.translatedText;
-        }
-      } catch { }
-    }
-
-    try {
-      const controller = new AbortController();
-      const timeoutId = setTimeout(() => controller.abort(), 5000);
-      const url = `https://translate.googleapis.com/translate_a/single?client=gtx&sl=auto&tl=en&dt=t&q=${encodeURIComponent(
-        cleanText
-      )}`;
-      const res = await fetch(url, { signal: controller.signal });
-      clearTimeout(timeoutId);
-      if (res.ok) {
-        const data = await res.json();
-        if (Array.isArray(data) && Array.isArray(data[0])) {
-          const translated = data[0]
-            .map((segment) => (Array.isArray(segment) ? segment[0] : ""))
-            .join("")
-            .trim();
-          if (translated) return translated;
-        }
-      }
-    } catch { }
-    return cleanText;
   }
 
-  // 1. Check if exact phrase/word exists in our curated native lexicon first for short greetings/terms
-  const lowerClean = cleanText.toLowerCase().replace(/[.!?]+$/, "").trim();
-  if (MULTILINGUAL_LEXICON[langObj.code] && MULTILINGUAL_LEXICON[langObj.code][lowerClean]) {
-    return MULTILINGUAL_LEXICON[langObj.code][lowerClean];
+  // 1. Live Server-Side Multi-Provider Neural Translation
+  const serverData = await requestServerTranslateFull(cleanText, langObj.code);
+  if (serverData?.translatedText) {
+    return String(serverData.translatedText).trim();
   }
 
-  // 2. When running in browser, try configured backend proxy /api/v1/translate first (zero CORS / zero CSP issues)
-  if (typeof window !== "undefined") {
-    try {
-      const controller = new AbortController();
-      const timeoutId = setTimeout(() => controller.abort(), 5500);
-      const res = await fetch(resolveApiUrl("/api/v1/translate"), {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ text: cleanText, targetLang: langObj.code }),
-        signal: controller.signal
-      });
-      clearTimeout(timeoutId);
-      if (res.ok) {
-        const json = await res.json();
-        const serverTranslated = json?.data?.translatedText;
-        if (serverTranslated && serverTranslated.trim().toLowerCase() !== cleanText.toLowerCase()) {
-          return serverTranslated.trim();
-        }
-      }
-    } catch { }
+  // 2. Direct Browser Neural Translation fallback
+  const direct = await directBrowserNeuralTranslate(cleanText, langObj.iso, "auto");
+  if (direct && (langObj.code === "ENGLISH" || direct.toLowerCase() !== cleanText.toLowerCase())) {
+    return direct;
   }
 
-  // 3. Direct Live Neural Translation via Google GTX API (supports ALL 15 languages including Twi 'ak', Ga 'gaa', Ewe 'ee', Hausa 'ha', French 'fr', Spanish 'es', etc.)
-  if (langObj.iso) {
-    try {
-      const controller = new AbortController();
-      const timeoutId = setTimeout(() => controller.abort(), 5000);
-      const url = `https://translate.googleapis.com/translate_a/single?client=gtx&sl=auto&tl=${encodeURIComponent(
-        langObj.iso
-      )}&dt=t&q=${encodeURIComponent(cleanText)}`;
-      const res = await fetch(url, { signal: controller.signal });
-      clearTimeout(timeoutId);
-      if (res.ok) {
-        const data = await res.json();
-        if (Array.isArray(data) && Array.isArray(data[0])) {
-          const translated = data[0]
-            .map((segment) => (Array.isArray(segment) ? segment[0] : ""))
-            .join("")
-            .trim();
-          if (translated && translated.toLowerCase() !== cleanText.toLowerCase()) {
-            return translated;
-          }
-        }
-      }
-    } catch { }
-  }
-
-  // 4. Secondary Live Translation via MyMemory API
-  try {
-    const controller = new AbortController();
-    const timeoutId = setTimeout(() => controller.abort(), 4500);
-    const pair = `en|${langObj.iso}`;
-    const url = `https://api.mymemory.translated.net/get?q=${encodeURIComponent(
-      cleanText.slice(0, 480)
-    )}&langpair=${encodeURIComponent(pair)}`;
-    const res = await fetch(url, { signal: controller.signal });
-    clearTimeout(timeoutId);
-    if (res.ok) {
-      const data = await res.json();
-      const match = data?.responseData?.translatedText;
-      if (
-        match &&
-        !String(match).includes("MYMEMORY WARNING") &&
-        !String(match).includes("INVALID LANGUAGE") &&
-        String(match).trim().toLowerCase() !== cleanText.toLowerCase()
-      ) {
-        return String(match).trim();
-      }
-    }
-  } catch { }
-
-  // 5. Local Lexicon Phrase & Word-by-Word Translation (guaranteed offline resilience across all 15 languages)
-  const localTranslated = translateWithLocalLexicon(cleanText, langObj.code);
-  if (localTranslated && localTranslated.trim()) {
-    return localTranslated;
-  }
+  // 3. Verified exact whole-phrase match from curated offline glossary
+  const exactPhrase = lookupExactPhraseLexicon(cleanText, langObj.code);
+  if (exactPhrase) return exactPhrase;
 
   return cleanText;
 }
 
 /**
- * Full Combined Translation + Meaning Analysis + Natural-Language Command Resolution
+ * Full Combined Translation + Exact Meaning + Back-Translation Verification + Natural Command Resolution
  */
 export async function performFullTranslationAndMeaning(inputText, targetLangCode, options = {}) {
   const { forceTargetLang = false } = options || {};
@@ -1268,18 +1216,100 @@ export async function performFullTranslationAndMeaning(inputText, targetLangCode
     SUPPORTED_TRANSLATION_LANGUAGES.find((l) => l.code === effectiveLangCode) ||
     SUPPORTED_TRANSLATION_LANGUAGES[0];
 
-  const [translatedText, meaningData] = await Promise.all([
-    translateTextToLanguage(clean, langObj.code, { forceTargetLang: true }),
-    lookupWordOrStatementMeaning(clean)
-  ]);
+  if (!clean) {
+    return {
+      originalText: "",
+      rawInput: "",
+      wasCommandParsed: parsed.wasCommandParsed,
+      detectedMode: parsed.mode,
+      detectedReceiverRole: parsed.receiverRole,
+      language: langObj,
+      translatedText: "",
+      verified: false,
+      provider: "none",
+      backTranslation: "",
+      meaning: {
+        partOfSpeech: "",
+        definition: "Please enter or paste a word or statement to translate.",
+        translatedDefinition: "",
+        keyTermsBreakdown: []
+      },
+      timestamp: new Date().toISOString()
+    };
+  }
 
-  let translatedDefinition = meaningData.definition;
-  if (langObj.code !== "ENGLISH" && meaningData.definition) {
-    try {
-      translatedDefinition = await translateTextToLanguage(meaningData.definition, langObj.code);
-    } catch {
-      translatedDefinition = meaningData.definition;
+  // Prefer single authoritative backend call returning live translation + backTranslation + real dictionary meaning
+  const serverData = await requestServerTranslateFull(clean, langObj.code);
+  if (serverData && serverData.translatedText) {
+    const serverMeaning = serverData.meaning || {};
+    let defText = serverMeaning.definition || "";
+    if (!defText && serverData.backTranslation) {
+      defText = `Verified English meaning: "${serverData.backTranslation}"`;
+    } else if (!defText && langObj.code === "ENGLISH") {
+      defText = `Exact English translation: "${serverData.translatedText}"`;
     }
+
+    return {
+      originalText: clean,
+      rawInput: String(inputText || "").trim(),
+      wasCommandParsed: parsed.wasCommandParsed,
+      detectedMode: parsed.mode,
+      detectedReceiverRole: parsed.receiverRole,
+      language: langObj,
+      translatedText: serverData.translatedText,
+      verified: serverData.verified !== false,
+      provider: serverData.provider || "server",
+      backTranslation: serverData.backTranslation || "",
+      meaning: {
+        isSingleWord: !clean.includes(" "),
+        word: clean,
+        phonetic: serverMeaning.phonetic || "",
+        partOfSpeech: serverMeaning.partOfSpeech || (!clean.includes(" ") ? "word" : "Statement"),
+        definition: defText,
+        secondaryDefinition: serverMeaning.secondaryDefinition || "",
+        translatedDefinition: serverMeaning.translatedDefinition || "",
+        example: serverMeaning.example || "",
+        synonyms: Array.isArray(serverMeaning.synonyms) ? serverMeaning.synonyms : [],
+        keyTermsBreakdown: Array.isArray(serverMeaning.keyTermsBreakdown) ? serverMeaning.keyTermsBreakdown : []
+      },
+      timestamp: new Date().toISOString()
+    };
+  }
+
+  // Browser-direct fallback when server proxy is offline
+  let translatedText = await directBrowserNeuralTranslate(clean, langObj.iso, "auto");
+  let provider = translatedText ? "browser_neural" : "none";
+  if (!translatedText) {
+    const exactPhrase = lookupExactPhraseLexicon(clean, langObj.code);
+    if (exactPhrase) {
+      translatedText = exactPhrase;
+      provider = "verified_phrase_glossary";
+    }
+  }
+
+  const meaningData = await lookupWordOrStatementMeaning(
+    langObj.code === "ENGLISH" && translatedText && !translatedText.includes(" ") ? translatedText : clean
+  );
+
+  let backTranslation = "";
+  if (translatedText && langObj.code !== "ENGLISH") {
+    backTranslation = await directBrowserNeuralTranslate(translatedText, "en", langObj.iso);
+  }
+
+  if (!meaningData.definition) {
+    if (backTranslation) {
+      meaningData.definition = `Verified English meaning: "${backTranslation}"`;
+    } else if (translatedText && langObj.code === "ENGLISH") {
+      meaningData.definition = `Exact English translation: "${translatedText}"`;
+    } else if (!translatedText) {
+      meaningData.definition =
+        "Live translation server is currently unreachable. Reconnect to the internet and press Translate again for a verified translation.";
+    }
+  }
+
+  let translatedDefinition = "";
+  if (langObj.code !== "ENGLISH" && meaningData.definition && translatedText) {
+    translatedDefinition = await directBrowserNeuralTranslate(meaningData.definition, langObj.iso, "en");
   }
 
   return {
@@ -1289,7 +1319,10 @@ export async function performFullTranslationAndMeaning(inputText, targetLangCode
     detectedMode: parsed.mode,
     detectedReceiverRole: parsed.receiverRole,
     language: langObj,
-    translatedText,
+    translatedText: translatedText || "[Translation unavailable offline — reconnect and click Translate]",
+    verified: Boolean(translatedText),
+    provider,
+    backTranslation,
     meaning: {
       ...meaningData,
       translatedDefinition
@@ -1345,16 +1378,100 @@ export function speakTranslationAloud(textToSpeak, langCode = "TWI") {
 }
 
 /**
- * Dispatch a Translated Message to a Selected Receiver (Parent, Teacher, Student, Headmaster, Accountant, Staff, Developer)
+ * Fetch Translated Messages Inbox from backend + localStorage so receivers across all portals see sender details.
+ */
+export async function fetchTranslatedMessagesInbox({ receiverRole = "", limit = 100 } = {}) {
+  let localList = [];
+  try {
+    localList = JSON.parse(localStorage.getItem("gbs_translated_messages_inbox") || "[]");
+    if (!Array.isArray(localList)) localList = [];
+  } catch {
+    localList = [];
+  }
+
+  let serverList = [];
+  if (typeof window !== "undefined") {
+    try {
+      const qs = new URLSearchParams();
+      if (receiverRole) qs.set("receiverRole", receiverRole);
+      qs.set("limit", String(limit));
+      const res = await fetch(resolveApiUrl(`/api/v1/translate/messages?${qs.toString()}`));
+      if (res.ok) {
+        const json = await res.json();
+        serverList = Array.isArray(json?.data?.messages) ? json.data.messages : [];
+      }
+    } catch { }
+  }
+
+  const byId = new Map();
+  [...serverList, ...localList].forEach((m) => {
+    if (m && m.id) {
+      const prev = byId.get(m.id);
+      if (!prev || (!prev.read && m.read)) {
+        byId.set(m.id, { ...(prev || {}), ...m });
+      }
+    }
+  });
+
+  const merged = Array.from(byId.values()).sort(
+    (a, b) => new Date(b.sentAt || 0).getTime() - new Date(a.sentAt || 0).getTime()
+  );
+
+  try {
+    if (typeof localStorage !== "undefined") {
+      localStorage.setItem("gbs_translated_messages_inbox", JSON.stringify(merged.slice(0, 250)));
+    }
+  } catch { }
+
+  return merged;
+}
+
+export async function markTranslatedMessageRead(messageId, readerName = "Recipient") {
+  if (!messageId) return null;
+  let updated = null;
+  try {
+    if (typeof localStorage !== "undefined") {
+      const list = JSON.parse(localStorage.getItem("gbs_translated_messages_inbox") || "[]");
+      const nextList = list.map((m) => {
+        if (String(m.id) === String(messageId)) {
+          updated = { ...m, read: true, readAt: new Date().toISOString(), readBy: readerName };
+          return updated;
+        }
+        return m;
+      });
+      localStorage.setItem("gbs_translated_messages_inbox", JSON.stringify(nextList));
+    }
+  } catch { }
+
+  if (typeof window !== "undefined") {
+    try {
+      await fetch(resolveApiUrl(`/api/v1/translate/messages/${encodeURIComponent(messageId)}/read`), {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ readerName })
+      });
+    } catch { }
+    window.dispatchEvent(new CustomEvent("gbs_translated_message_read", { detail: { id: messageId } }));
+  }
+
+  return updated;
+}
+
+/**
+ * Dispatch a Translated Message with Full Sender Details to a Selected Receiver
  */
 export async function sendTranslatedMessageToReceiver({
+  senderId = null,
   senderName = "School Portal User",
   senderRole = "USER",
+  senderEmail = "",
+  tenantId = 1,
   receiverRole = "PARENT",
   receiverName = "",
   receiverContact = "",
   originalMessage = "",
   translatedMessage = "",
+  meaningSummary = "",
   targetLanguageCode = "TWI",
   forceTargetLang = false
 }) {
@@ -1362,7 +1479,7 @@ export async function sendTranslatedMessageToReceiver({
   const cleanOriginal = String(parsed.cleanText || originalMessage || "").trim();
   const effectiveLangCode = forceTargetLang
     ? targetLanguageCode || parsed.targetLangCode
-    : parsed.targetLangCode || targetLanguageCode;
+    : parsed.targetLangCode || targetLangCode;
   const effectiveReceiverRole = parsed.receiverRole || receiverRole;
 
   const langObj =
@@ -1373,10 +1490,13 @@ export async function sendTranslatedMessageToReceiver({
   const finalTranslated =
     translatedMessage || (await translateTextToLanguage(cleanOriginal, langObj.code, { forceTargetLang: true }));
 
-  const messageRecord = {
-    id: `TR-MSG-${Date.now()}`,
+  let messageRecord = {
+    id: `TR-MSG-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`,
+    tenantId: String(tenantId || "1"),
+    senderId,
     senderName,
-    senderRole,
+    senderRole: String(senderRole || "USER").toUpperCase(),
+    senderEmail: String(senderEmail || "").trim(),
     receiverRole: roleObj.id,
     receiverRoleLabel: roleObj.label,
     receiverLabel: roleObj.label,
@@ -1384,27 +1504,61 @@ export async function sendTranslatedMessageToReceiver({
     receiverContact: receiverContact.trim() || roleObj.defaultChannel,
     originalMessage: cleanOriginal,
     translatedMessage: finalTranslated,
+    meaningSummary: String(meaningSummary || "").trim(),
     languageCode: langObj.code,
     languageName: langObj.name,
     languageFlag: langObj.flag,
     status: "DELIVERED",
+    read: false,
     sentAt: new Date().toISOString()
   };
 
+  // Persist to backend first so all devices/portals see the authoritative message & sender details
+  if (typeof window !== "undefined") {
+    try {
+      const postRes = await fetch(resolveApiUrl("/api/v1/translate/send-message"), {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(messageRecord)
+      });
+      if (postRes.ok) {
+        const postJson = await postRes.json();
+        if (postJson?.data?.id) {
+          messageRecord = { ...messageRecord, ...postJson.data };
+        }
+      }
+    } catch { }
+
+    const phoneMatch = String(receiverContact || "").replace(/[\s()-]+/g, " ").match(/\+?\d[\d ]{6,16}\d/);
+    if (phoneMatch) {
+      try {
+        await fetch(resolveApiUrl("/api/v1/sms/send"), {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            to: phoneMatch[0].replace(/\s+/g, ""),
+            message: `[From ${senderName} (${senderRole}) • ${langObj.name}] ${finalTranslated}\n---\n[Original] ${cleanOriginal}`
+          })
+        });
+      } catch { }
+    }
+  }
+
   try {
     if (typeof localStorage !== "undefined") {
-      // 1. Save in universal translated messages inbox
       const existingInbox = JSON.parse(localStorage.getItem("gbs_translated_messages_inbox") || "[]");
       localStorage.setItem(
         "gbs_translated_messages_inbox",
-        JSON.stringify([messageRecord, ...existingInbox].slice(0, 200))
+        JSON.stringify([messageRecord, ...existingInbox.filter((m) => m.id !== messageRecord.id)].slice(0, 250))
       );
 
-      // 2. Route to role-specific notification queues so the receiver sees it on their dashboard
       const notificationEntry = {
         id: messageRecord.id,
-        title: `🌐 Translated Message (${langObj.name}) from ${senderName}`,
-        message: `${finalTranslated} [Original: "${cleanOriginal}"]`,
+        title: `🌐 Translated Message (${langObj.name}) from ${senderName} (${roleObj.label})`,
+        message: `${finalTranslated} [Original: "${cleanOriginal}"] — Sent by ${senderName} (${messageRecord.senderRole}${messageRecord.senderEmail ? `, ${messageRecord.senderEmail}` : ""})`,
+        senderName: messageRecord.senderName,
+        senderRole: messageRecord.senderRole,
+        senderEmail: messageRecord.senderEmail,
         recipientRole: roleObj.id,
         recipientName: messageRecord.receiverName,
         contact: messageRecord.receiverContact,
@@ -1426,6 +1580,7 @@ export async function sendTranslatedMessageToReceiver({
           [
             {
               id: messageRecord.id,
+              sender: `${senderName} (${messageRecord.senderRole})`,
               recipient: `${messageRecord.receiverName} (${messageRecord.receiverContact})`,
               role: roleObj.label,
               language: langObj.name,
@@ -1445,38 +1600,13 @@ export async function sendTranslatedMessageToReceiver({
       window.dispatchEvent(new Event("storage"));
       if (typeof window.showGBSOpenNotice === "function") {
         window.showGBSOpenNotice(
-          `📨 Translated message in ${langObj.flag} ${langObj.name} delivered to ${messageRecord.receiverName} (${roleObj.label}): "${finalTranslated}"`,
+          `📨 Translated message in ${langObj.flag} ${langObj.name} delivered to ${messageRecord.receiverName} (${roleObj.label}) from ${senderName}.`,
           "success",
           "TRANSLATED MESSAGE DELIVERED"
         );
       }
     }
   } catch { }
-
-  // 3. Persist to backend /api/v1/translate/send-message and /api/v1/sms/send when in browser
-  if (typeof window !== "undefined") {
-    try {
-      await fetch(resolveApiUrl("/api/v1/translate/send-message"), {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(messageRecord)
-      });
-    } catch { }
-
-    const phoneMatch = String(receiverContact || "").replace(/[\s()-]+/g, " ").match(/\+?\d[\d ]{6,16}\d/);
-    if (phoneMatch) {
-      try {
-        await fetch(resolveApiUrl("/api/v1/sms/send"), {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
-            to: phoneMatch[0].replace(/\s+/g, ""),
-            message: `[${langObj.name}] ${finalTranslated}\n---\n[Original] ${cleanOriginal}`
-          })
-        });
-      } catch { }
-    }
-  }
 
   return messageRecord;
 }

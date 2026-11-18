@@ -20,9 +20,9 @@ if (typeof window !== "undefined") {
     }
   } catch { }
 
-  // Capture native browser install prompt globally at boot so Install works whenever clicked
-  window.__gbsDeferredInstallPrompt = null;
-  window.__gbsAppInstalled = false;
+  // Preserve native browser install prompt captured early in index.html <head>
+  window.__gbsDeferredInstallPrompt = window.__gbsDeferredInstallPrompt || null;
+  window.__gbsAppInstalled = Boolean(window.__gbsAppInstalled);
   window.addEventListener("beforeinstallprompt", (e) => {
     e.preventDefault();
     window.__gbsDeferredInstallPrompt = e;
