@@ -92,35 +92,12 @@ async function translateNeuralText(text, targetIso, sourceIso = 'auto') {
   let provider = 'none';
   let dictMeta = null;
 
-  // 1. Primary Google dict-chrome-ex batch RPC
-  try {
-    const url = `https://clients5.google.com/translate_a/t?client=dict-chrome-ex&sl=${encodeURIComponent(sourceIso)}&tl=${encodeURIComponent(targetIso)}&q=${encodeURIComponent(clean)}`;
-    const res = await fetchWithTimeout(url, {}, 4500);
-    if (res.ok) {
-      const data = await res.json();
-      if (Array.isArray(data)) {
-        if (typeof data[0] === 'string') {
-          translatedText = data[0].trim();
-        } else if (Array.isArray(data[0])) {
-          translatedText = data
-            .map((seg) => (Array.isArray(seg) ? String(seg[0] || '') : typeof seg === 'string' ? seg : ''))
-            .join(' ')
-            .trim();
-          if (data[0]?.[1]) detectedSourceLang = String(data[0][1]);
-        }
-      } else if (typeof data === 'string') {
-        translatedText = data.trim();
-      }
-      if (translatedText) provider = 'google_dict_rpc';
-    }
-  } catch { }
-
-  // 2. Google translate_a/single (dict-chrome-ex -> gtx fallback; retrieves POS & dictionary definitions)
+  // 1. Google translate_a/single (dict-chrome-ex -> gtx fallback; retrieves translations, source detection & dict definitions)
   for (const clientTag of ['dict-chrome-ex', 'gtx']) {
     if (translatedText && dictMeta) break;
     try {
       const singleUrl = `https://translate.googleapis.com/translate_a/single?client=${clientTag}&sl=${encodeURIComponent(sourceIso)}&tl=${encodeURIComponent(targetIso)}&dt=t&dt=bd&dt=md&dt=ex&q=${encodeURIComponent(clean)}`;
-      const res = await fetchWithTimeout(singleUrl, {}, 4200);
+      const res = await fetchWithTimeout(singleUrl, {}, 2500);
       if (res.ok) {
         const gtxData = await res.json();
         if (!translatedText && Array.isArray(gtxData?.[0])) {
@@ -147,13 +124,68 @@ async function translateNeuralText(text, targetIso, sourceIso = 'auto') {
     } catch { }
   }
 
-  // 3. Secondary fallback via MyMemory API
+  // 2. Wikimedia MinT NLLB Neural Translator (reliable on cloud datacenter IPs; skip 'gaa' because MinT 'ga' is Irish)
+  const mintSrc = sourceIso === 'auto' ? 'en' : (sourceIso === 'zh-CN' ? 'zh' : sourceIso);
+  const mintDst = targetIso === 'zh-CN' ? 'zh' : targetIso;
+  if (!translatedText && mintDst !== 'gaa' && mintSrc !== 'gaa' && mintSrc !== mintDst) {
+    try {
+      const mintRes = await fetchWithTimeout(
+        'https://translate.wmcloud.org/api/translate',
+        {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            source_language: mintSrc,
+            target_language: mintDst,
+            content: clean,
+            format: 'text'
+          })
+        },
+        5000
+      );
+      if (mintRes.ok) {
+        const mintData = await mintRes.json();
+        if (mintData?.translation && String(mintData.translation).trim()) {
+          translatedText = String(mintData.translation).trim();
+          provider = `wikimedia_mint_${mintData.model || 'nllb'}`;
+        }
+      }
+    } catch { }
+  }
+
+  // 3. Google clients5 RPC fallback (non-blocked IPs; handles gaa too)
   if (!translatedText) {
     try {
+      const url = `https://clients5.google.com/translate_a/t?client=dict-chrome-ex&sl=${encodeURIComponent(sourceIso)}&tl=${encodeURIComponent(targetIso)}&q=${encodeURIComponent(clean)}`;
+      const res = await fetchWithTimeout(url, {}, 2500);
+      if (res.ok) {
+        const data = await res.json();
+        if (Array.isArray(data)) {
+          if (typeof data[0] === 'string') {
+            translatedText = data[0].trim();
+          } else if (Array.isArray(data[0])) {
+            translatedText = data
+              .map((seg) => (Array.isArray(seg) ? String(seg[0] || '') : typeof seg === 'string' ? seg : ''))
+              .join(' ')
+              .trim();
+            if (data[0]?.[1]) detectedSourceLang = String(data[0][1]);
+          }
+        } else if (typeof data === 'string') {
+          translatedText = data.trim();
+        }
+        if (translatedText) provider = 'google_dict_rpc';
+      }
+    } catch { }
+  }
+
+  // 4. MyMemory fallback with institutional identifier (never use gaa as MyMemory lacks Ga)
+  if (!translatedText && targetIso !== 'gaa') {
+    try {
       const srcPair = sourceIso === 'auto' ? 'en' : sourceIso;
-      if (srcPair !== targetIso) {
-        const mmUrl = `https://api.mymemory.translated.net/get?q=${encodeURIComponent(clean.slice(0, 480))}&langpair=${encodeURIComponent(`${srcPair}|${targetIso}`)}`;
-        const mmRes = await fetchWithTimeout(mmUrl, {}, 4200);
+      const mmDst = targetIso === 'ak' ? 'tw' : targetIso;
+      if (srcPair !== mmDst) {
+        const mmUrl = `https://api.mymemory.translated.net/get?q=${encodeURIComponent(clean.slice(0, 480))}&langpair=${encodeURIComponent(`${srcPair}|${mmDst}`)}&de=support@gbssystem.org`;
+        const mmRes = await fetchWithTimeout(mmUrl, {}, 3800);
         if (mmRes.ok) {
           const mmData = await mmRes.json();
           const match = mmData?.responseData?.translatedText;

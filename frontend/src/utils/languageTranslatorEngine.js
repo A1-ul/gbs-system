@@ -1016,46 +1016,85 @@ async function requestServerTranslateFull(cleanText, targetLangCode) {
 
 async function directBrowserNeuralTranslate(cleanText, targetIso, sourceIso = "auto") {
   if (!targetIso) return "";
-  try {
-    const controller = new AbortController();
-    const timeoutId = setTimeout(() => controller.abort(), 4500);
-    const url = `https://clients5.google.com/translate_a/t?client=dict-chrome-ex&sl=${encodeURIComponent(
-      sourceIso
-    )}&tl=${encodeURIComponent(targetIso)}&q=${encodeURIComponent(cleanText)}`;
-    const res = await fetch(url, { signal: controller.signal });
-    clearTimeout(timeoutId);
-    if (res.ok) {
-      const data = await res.json();
-      if (Array.isArray(data)) {
-        const text = typeof data[0] === "string"
-          ? data[0].trim()
-          : data.map((s) => (Array.isArray(s) ? String(s[0] || "") : "")).join(" ").trim();
-        if (text) return text;
-      } else if (typeof data === "string" && data.trim()) {
-        return data.trim();
-      }
-    }
-  } catch { }
 
-  try {
-    const controller = new AbortController();
-    const timeoutId = setTimeout(() => controller.abort(), 4500);
-    const url = `https://translate.googleapis.com/translate_a/single?client=dict-chrome-ex&sl=${encodeURIComponent(
-      sourceIso
-    )}&tl=${encodeURIComponent(targetIso)}&dt=t&q=${encodeURIComponent(cleanText)}`;
-    const res = await fetch(url, { signal: controller.signal });
-    clearTimeout(timeoutId);
-    if (res.ok) {
-      const data = await res.json();
-      if (Array.isArray(data) && Array.isArray(data[0])) {
-        const translated = data[0]
-          .map((segment) => (Array.isArray(segment) ? segment[0] : ""))
-          .join("")
-          .trim();
-        if (translated) return translated;
+  // 1. CORS-enabled Google translate_a/single (runs from user's own browser IP, supports ALL 15 languages including Twi 'ak' & Ga 'gaa')
+  for (const clientTag of ["dict-chrome-ex", "gtx"]) {
+    try {
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => controller.abort(), 4000);
+      const url = `https://translate.googleapis.com/translate_a/single?client=${clientTag}&sl=${encodeURIComponent(
+        sourceIso
+      )}&tl=${encodeURIComponent(targetIso)}&dt=t&q=${encodeURIComponent(cleanText)}`;
+      const res = await fetch(url, { signal: controller.signal });
+      clearTimeout(timeoutId);
+      if (res.ok) {
+        const data = await res.json();
+        if (Array.isArray(data) && Array.isArray(data[0])) {
+          const translated = data[0]
+            .map((segment) => (Array.isArray(segment) ? segment[0] : ""))
+            .join("")
+            .trim();
+          if (translated) return translated;
+        }
       }
-    }
-  } catch { }
+    } catch { }
+  }
+
+  // 2. CORS-enabled Wikimedia MinT Neural Translator (skip 'gaa' because MinT uses 'ga' for Irish)
+  const mintSrc = sourceIso === "auto" ? "en" : (sourceIso === "zh-CN" ? "zh" : sourceIso);
+  const mintDst = targetIso === "zh-CN" ? "zh" : targetIso;
+  if (mintDst !== "gaa" && mintSrc !== "gaa" && mintSrc !== mintDst) {
+    try {
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => controller.abort(), 4500);
+      const res = await fetch("https://translate.wmcloud.org/api/translate", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          source_language: mintSrc,
+          target_language: mintDst,
+          content: cleanText,
+          format: "text"
+        }),
+        signal: controller.signal
+      });
+      clearTimeout(timeoutId);
+      if (res.ok) {
+        const json = await res.json();
+        if (json?.translation && String(json.translation).trim()) {
+          return String(json.translation).trim();
+        }
+      }
+    } catch { }
+  }
+
+  // 3. CORS-enabled MyMemory API fallback
+  if (targetIso !== "gaa") {
+    try {
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => controller.abort(), 4000);
+      const srcPair = sourceIso === "auto" ? "en" : sourceIso;
+      const mmDst = targetIso === "ak" ? "tw" : targetIso;
+      if (srcPair !== mmDst) {
+        const url = `https://api.mymemory.translated.net/get?q=${encodeURIComponent(
+          cleanText.slice(0, 480)
+        )}&langpair=${encodeURIComponent(`${srcPair}|${mmDst}`)}&de=support@gbssystem.org`;
+        const res = await fetch(url, { signal: controller.signal });
+        clearTimeout(timeoutId);
+        if (res.ok) {
+          const data = await res.json();
+          const match = data?.responseData?.translatedText;
+          if (
+            match &&
+            !String(match).includes("MYMEMORY WARNING") &&
+            !String(match).includes("INVALID LANGUAGE")
+          ) {
+            return String(match).trim();
+          }
+        }
+      }
+    } catch { }
+  }
 
   return "";
 }
@@ -1287,9 +1326,28 @@ export async function performFullTranslationAndMeaning(inputText, targetLangCode
     }
   }
 
-  const meaningData = await lookupWordOrStatementMeaning(
-    langObj.code === "ENGLISH" && translatedText && !translatedText.includes(" ") ? translatedText : clean
+  const serverMeaningFallback = serverData?.meaning || null;
+  const hasServerDict = Boolean(
+    serverMeaningFallback &&
+    (serverMeaningFallback.definition ||
+      (Array.isArray(serverMeaningFallback.keyTermsBreakdown) && serverMeaningFallback.keyTermsBreakdown.length > 0))
   );
+
+  const meaningData = hasServerDict
+    ? {
+        isSingleWord: !clean.includes(" "),
+        word: clean,
+        phonetic: serverMeaningFallback.phonetic || "",
+        partOfSpeech: serverMeaningFallback.partOfSpeech || (!clean.includes(" ") ? "word" : "Statement"),
+        definition: serverMeaningFallback.definition || "",
+        secondaryDefinition: serverMeaningFallback.secondaryDefinition || "",
+        example: serverMeaningFallback.example || "",
+        synonyms: Array.isArray(serverMeaningFallback.synonyms) ? serverMeaningFallback.synonyms : [],
+        keyTermsBreakdown: Array.isArray(serverMeaningFallback.keyTermsBreakdown) ? serverMeaningFallback.keyTermsBreakdown : []
+      }
+    : await lookupWordOrStatementMeaning(
+        langObj.code === "ENGLISH" && translatedText && !translatedText.includes(" ") ? translatedText : clean
+      );
 
   let backTranslation = "";
   if (translatedText && langObj.code !== "ENGLISH") {

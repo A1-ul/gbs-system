@@ -10,7 +10,7 @@ router.use(protect);
 router.get('/stats', restrictTo('SUPER_ADMIN', 'DEVELOPER'), async (req, res, next) => {
   try {
     const devControlService = require('../dev-control/devControl.service');
-    const metrics = await devControlService.getRealMetrics();
+    const metrics = await devControlService.getSystemMetrics();
     res.status(200).json({ status: 'success', data: metrics });
   } catch (err) {
     next(err);
