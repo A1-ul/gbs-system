@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import apiClient from '../../../api/client/apiClient';
 import { getActiveSchoolName } from '../../../utils/schoolBranding';
+import { isDemoSandboxMode } from '../../../utils/tokenStorage';
 import '../pages/TransportManagement.css';
 import '../../library/pages/LibraryManagement.css';
 
@@ -12,6 +13,7 @@ export default function TransportManagementPage() {
   const [routes, setRoutes] = useState([]);
   const [vehicles, setVehicles] = useState([]);
   const [assignments, setAssignments] = useState([]);
+  const [students, setStudents] = useState([]);
   const [stats, setStats] = useState({
     totalRoutes: 0,
     totalVehicles: 0,
@@ -28,8 +30,12 @@ export default function TransportManagementPage() {
   const [headmasterAssignedStudents, setHeadmasterAssignedStudents] = useState(() => {
     try {
       const saved = localStorage.getItem('gbs_transport_assigned_students');
-      if (saved) return JSON.parse(saved);
+      if (saved) {
+        const parsed = JSON.parse(saved);
+        if (Array.isArray(parsed)) return parsed;
+      }
     } catch { }
+    if (!isDemoSandboxMode()) return [];
     return [
       {
         id: "BUS-ASN-101",
@@ -111,16 +117,52 @@ export default function TransportManagementPage() {
   // Assign Student Modal
   const [assignModalOpen, setAssignModalOpen] = useState(false);
   const [assignForm, setAssignForm] = useState({
-    studentId: '1',
-    studentName: 'Julian Thorne',
+    studentId: '',
+    studentName: '',
     routeId: '',
-    pickupStop: 'Central Station Terminal',
+    pickupStop: '',
     dropoffStop: 'GBS Main Campus'
   });
 
   const showToast = (message, type = 'success') => {
     setFeedback({ message, type });
     setTimeout(() => setFeedback(null), 5000);
+  };
+
+  const getDefaultRouteStop = (routeObj) => {
+    if (!routeObj) return '';
+    if (Array.isArray(routeObj.stops) && routeObj.stops.length > 0) {
+      const first = routeObj.stops[0];
+      return typeof first === 'string' ? first : (first?.name || routeObj.start_location || '');
+    }
+    return routeObj.start_location || '';
+  };
+
+  const openAssignModal = (preselectedRouteId = '') => {
+    const chosenId = preselectedRouteId
+      ? String(preselectedRouteId)
+      : (assignForm.routeId && routes.some((r) => String(r.id) === String(assignForm.routeId))
+          ? String(assignForm.routeId)
+          : (routes[0]?.id ? String(routes[0].id) : ''));
+    const routeObj = routes.find((r) => String(r.id) === chosenId) || routes[0] || null;
+    setAssignForm({
+      studentId: students[0]?.id ? String(students[0].id) : '',
+      studentName: students[0]?.fullName || '',
+      routeId: chosenId,
+      pickupStop: getDefaultRouteStop(routeObj),
+      dropoffStop: routeObj?.end_location || 'GBS Main Campus'
+    });
+    setAssignModalOpen(true);
+  };
+
+  const handleSelectCommuterRoute = (nextRouteId) => {
+    const matched = routes.find((r) => String(r.id) === String(nextRouteId));
+    setAssignForm((prev) => ({
+      ...prev,
+      routeId: String(nextRouteId || ''),
+      pickupStop: getDefaultRouteStop(matched) || prev.pickupStop,
+      dropoffStop: matched?.end_location || prev.dropoffStop || 'GBS Main Campus'
+    }));
   };
 
   const fetchStats = async () => {
@@ -136,9 +178,21 @@ export default function TransportManagementPage() {
     try {
       const res = await apiClient.get('/transport/routes');
       if (res.data?.success) {
-        setRoutes(res.data.data.records || []);
-        if (res.data.data.records?.length > 0 && !assignForm.routeId) {
-          setAssignForm(prev => ({ ...prev, routeId: String(res.data.data.records[0].id) }));
+        const list = res.data.data.records || [];
+        setRoutes(list);
+        if (list.length > 0) {
+          setAssignForm((prev) => {
+            if (prev.routeId && list.some((r) => String(r.id) === String(prev.routeId))) {
+              return prev;
+            }
+            const first = list[0];
+            return {
+              ...prev,
+              routeId: String(first.id),
+              pickupStop: prev.pickupStop || getDefaultRouteStop(first),
+              dropoffStop: prev.dropoffStop || first.end_location || 'GBS Main Campus'
+            };
+          });
         }
       }
     } catch (err) {
@@ -164,11 +218,21 @@ export default function TransportManagementPage() {
     }
   };
 
+  const fetchStudents = async () => {
+    try {
+      const res = await apiClient.get('/transport/students');
+      if (res.data?.success) setStudents(res.data.data.records || []);
+    } catch (err) {
+      console.warn('Failed to load enrolled students list:', err.message);
+    }
+  };
+
   useEffect(() => {
     fetchStats();
     fetchRoutes();
     fetchVehicles();
     fetchAssignments();
+    fetchStudents();
   }, []);
 
   const handleCreateRoute = async (e) => {
@@ -243,10 +307,18 @@ export default function TransportManagementPage() {
 
   const handleAssignStudent = async (e) => {
     e.preventDefault();
+    if (!assignForm.routeId) {
+      showToast('Please select a commuter bus route first.', 'error');
+      return;
+    }
+    if (!assignForm.studentName?.trim() && !assignForm.studentId?.trim()) {
+      showToast('Please select or enter a student.', 'error');
+      return;
+    }
     try {
       const res = await apiClient.post('/transport/assignments', assignForm);
       if (res.data?.success) {
-        showToast(`Student ${assignForm.studentName} assigned to route!`, 'success');
+        showToast(res.data?.message || `Student ${assignForm.studentName} assigned to route!`, 'success');
         setAssignModalOpen(false);
         fetchAssignments();
         fetchRoutes();
@@ -255,7 +327,23 @@ export default function TransportManagementPage() {
         showToast(res.data?.message || 'Assignment failed', 'error');
       }
     } catch (err) {
-      showToast(err.response?.data?.message || 'Error assigning student', 'error');
+      showToast(err.response?.data?.message || 'Error assigning student to commuter route', 'error');
+    }
+  };
+
+  const handleRemoveAssignment = async (assignment) => {
+    try {
+      const res = await apiClient.delete(`/transport/assignments/${assignment.id}`);
+      if (res.data?.success) {
+        showToast(res.data?.message || `Removed ${assignment.student_name} from bus roster.`, 'success');
+        fetchAssignments();
+        fetchRoutes();
+        fetchStats();
+      } else {
+        showToast(res.data?.message || 'Failed to remove bus assignment', 'error');
+      }
+    } catch (err) {
+      showToast(err.response?.data?.message || 'Error removing bus assignment', 'error');
     }
   };
 
@@ -368,7 +456,7 @@ export default function TransportManagementPage() {
           <div>
             <div className="controls-bar">
               <span style={{ fontWeight: 600, color: '#94a3b8' }}>Designated School Commuter Routes</span>
-              <button className="btn-primary" onClick={() => setAssignModalOpen(true)}>
+              <button className="btn-primary" onClick={() => openAssignModal()}>
                 🎒 Assign Student to Bus Route
               </button>
             </div>
@@ -416,7 +504,7 @@ export default function TransportManagementPage() {
                         </td>
                         <td style={{ fontWeight: 700, textAlign: 'center' }}>{r.vehicles_count || 0}</td>
                         <td style={{ fontWeight: 700, textAlign: 'center', color: '#34d399' }}>{r.enrolled_students || 0}</td>
-                        <td style={{ fontWeight: 700 }}>${parseFloat(r.monthly_fare || 0).toFixed(2)}</td>
+                        <td style={{ fontWeight: 700 }}>GHS {parseFloat(r.monthly_fare || 0).toFixed(2)}</td>
                         <td>
                           <span className="status-badge status-available">{r.status}</span>
                         </td>
@@ -541,33 +629,10 @@ export default function TransportManagementPage() {
                   <button
                     type="button"
                     className="btn-secondary"
-                    onClick={() => {
-                      const sample = [
-                        {
-                          id: `BUS-ASN-${Date.now()}`,
-                          studentId: "STU-003",
-                          studentName: "Kofi Boateng",
-                          gradeLevel: "Grade 9 (JHS 3)",
-                          pickupLocation: "Spintex Coastal Junction",
-                          destinationZone: "Spintex Corridor (Zone C)",
-                          busRoute: "Route 03 - Spintex Road & Junction Mall",
-                          assignedBus: "Bus #03 (Toyota HiAce 16-Seater, GC-1092-20)",
-                          driverName: "Joseph Adjei",
-                          driverPhone: "+233 27 771 9900",
-                          termlyFare: 380,
-                          status: "APPROVED_AND_UPLOADED",
-                          assignedBy: "Arthur Pendleton (Headmaster)",
-                          assignedAt: new Date().toISOString()
-                        },
-                        ...headmasterAssignedStudents
-                      ];
-                      setHeadmasterAssignedStudents(sample);
-                      localStorage.setItem('gbs_transport_assigned_students', JSON.stringify(sample));
-                      showToast('✓ Sample student bus assignment added to Transport Portal queue!');
-                    }}
+                    onClick={() => openAssignModal()}
                     style={{ fontSize: '0.75rem', padding: '6px 12px' }}
                   >
-                    + Add Bus Commuter
+                    + Assign Student Commuter
                   </button>
                 </div>
               </div>
@@ -653,7 +718,7 @@ export default function TransportManagementPage() {
                 <h4 style={{ margin: 0, color: '#f8fafc', fontSize: '0.95rem' }}>
                   Central Database Transit Allocations ({assignments.length})
                 </h4>
-                <button className="btn-primary" onClick={() => setAssignModalOpen(true)} style={{ fontSize: '0.78rem', padding: '6px 14px' }}>
+                <button className="btn-primary" onClick={() => openAssignModal()} style={{ fontSize: '0.78rem', padding: '6px 14px' }}>
                   + Allocate Route Manually
                 </button>
               </div>
@@ -668,12 +733,13 @@ export default function TransportManagementPage() {
                     <th>Dropoff Stop</th>
                     <th>Monthly Fare</th>
                     <th>Status</th>
+                    <th>Actions</th>
                   </tr>
                 </thead>
                 <tbody>
                   {assignments.length === 0 ? (
                     <tr>
-                      <td colSpan="7" style={{ textAlign: 'center', padding: '30px' }}>
+                      <td colSpan="8" style={{ textAlign: 'center', padding: '30px' }}>
                         No additional system allocations recorded yet.
                       </td>
                     </tr>
@@ -687,9 +753,19 @@ export default function TransportManagementPage() {
                         </td>
                         <td>📍 {a.pickup_stop}</td>
                         <td>🏫 {a.dropoff_stop}</td>
-                        <td style={{ fontWeight: 700 }}>${parseFloat(a.monthly_fare || 0).toFixed(2)}</td>
+                        <td style={{ fontWeight: 700 }}>GHS {parseFloat(a.monthly_fare || 0).toFixed(2)}</td>
                         <td>
                           <span className="status-badge status-available">{a.status}</span>
+                        </td>
+                        <td>
+                          <button
+                            type="button"
+                            className="btn-secondary"
+                            onClick={() => handleRemoveAssignment(a)}
+                            style={{ padding: '4px 10px', fontSize: '0.74rem', borderColor: '#ef4444', color: '#f87171' }}
+                          >
+                            Unassign
+                          </button>
                         </td>
                       </tr>
                     ))
@@ -760,7 +836,7 @@ export default function TransportManagementPage() {
                   />
                 </div>
                 <div className="form-group">
-                  <label className="form-label">Monthly Fare (USD)</label>
+                  <label className="form-label">Monthly Fare (GHS)</label>
                   <input
                     type="number"
                     className="form-control"
@@ -855,81 +931,153 @@ export default function TransportManagementPage() {
       </div>
 
       {/* Assign Student Modal */}
-      {assignModalOpen && (
-        <div className="modal-overlay">
-          <div className="modal-content">
-            <div className="modal-header">
-              <h3 className="modal-title">Assign Student to Bus Route</h3>
-              <button className="close-btn" onClick={() => setAssignModalOpen(false)}>×</button>
-            </div>
-            <form onSubmit={handleAssignStudent}>
-              <div className="form-group">
-                <label className="form-label">Student Full Name *</label>
-                <input
-                  type="text"
-                  className="form-control"
-                  value={assignForm.studentName}
-                  onChange={(e) => setAssignForm({ ...assignForm, studentName: e.target.value })}
-                  required
-                />
+      {assignModalOpen && (() => {
+        const selectedRouteObj = routes.find((r) => String(r.id) === String(assignForm.routeId));
+        const availableStops = Array.isArray(selectedRouteObj?.stops) ? selectedRouteObj.stops : [];
+        return (
+          <div className="modal-overlay">
+            <div className="modal-content">
+              <div className="modal-header">
+                <h3 className="modal-title">Assign Student to Bus Route</h3>
+                <button className="close-btn" onClick={() => setAssignModalOpen(false)}>×</button>
               </div>
-              <div className="form-group">
-                <label className="form-label">Student User ID</label>
-                <input
-                  type="number"
-                  className="form-control"
-                  value={assignForm.studentId}
-                  onChange={(e) => setAssignForm({ ...assignForm, studentId: e.target.value })}
-                  required
-                />
-              </div>
-              <div className="form-group">
-                <label className="form-label">Select Commuter Route *</label>
-                <select
-                  className="form-control"
-                  value={assignForm.routeId}
-                  onChange={(e) => setAssignForm({ ...assignForm, routeId: e.target.value })}
-                  required
-                >
-                  {routes.map(r => (
-                    <option key={r.id} value={r.id}>{r.route_code} - {r.name} (${r.monthly_fare}/mo)</option>
-                  ))}
-                </select>
-              </div>
-              <div className="form-group">
-                <label className="form-label">Pickup Stop Location *</label>
-                <input
-                  type="text"
-                  className="form-control"
-                  placeholder="e.g. Central Station Terminal"
-                  value={assignForm.pickupStop}
-                  onChange={(e) => setAssignForm({ ...assignForm, pickupStop: e.target.value })}
-                  required
-                />
-              </div>
-              <div className="form-group">
-                <label className="form-label">Dropoff Stop Location *</label>
-                <input
-                  type="text"
-                  className="form-control"
-                  value={assignForm.dropoffStop}
-                  onChange={(e) => setAssignForm({ ...assignForm, dropoffStop: e.target.value })}
-                  required
-                />
-              </div>
+              <form onSubmit={handleAssignStudent}>
+                {students.length > 0 && (
+                  <div className="form-group">
+                    <label className="form-label">Quick-Pick Enrolled Student (Optional)</label>
+                    <select
+                      className="form-control"
+                      value={assignForm.studentId}
+                      onChange={(e) => {
+                        const matched = students.find((s) => String(s.id) === String(e.target.value));
+                        if (matched) {
+                          setAssignForm((prev) => ({
+                            ...prev,
+                            studentId: String(matched.id),
+                            studentName: matched.fullName
+                          }));
+                        } else {
+                          setAssignForm((prev) => ({ ...prev, studentId: e.target.value }));
+                        }
+                      }}
+                    >
+                      <option value="">-- Enter manually or select a student --</option>
+                      {students.map((s) => (
+                        <option key={s.id} value={s.id}>
+                          {s.fullName} ({s.studentCode})
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+                )}
+                <div className="form-group">
+                  <label className="form-label">Student Full Name *</label>
+                  <input
+                    type="text"
+                    className="form-control"
+                    placeholder="e.g. Kwame Boateng"
+                    value={assignForm.studentName}
+                    onChange={(e) => setAssignForm({ ...assignForm, studentName: e.target.value })}
+                    required
+                  />
+                </div>
+                <div className="form-group">
+                  <label className="form-label">Student ID / Index Number *</label>
+                  <input
+                    type="text"
+                    className="form-control"
+                    placeholder="e.g. 3 or STU-2026-001"
+                    value={assignForm.studentId}
+                    onChange={(e) => setAssignForm({ ...assignForm, studentId: e.target.value })}
+                    required
+                  />
+                </div>
+                <div className="form-group">
+                  <label className="form-label">Select Commuter Route *</label>
+                  <select
+                    className="form-control"
+                    value={assignForm.routeId}
+                    onChange={(e) => handleSelectCommuterRoute(e.target.value)}
+                    required
+                  >
+                    <option value="">-- Select a Bus Route --</option>
+                    {routes.map(r => (
+                      <option key={r.id} value={String(r.id)}>
+                        {r.route_code} - {r.name} (GHS {Number(r.monthly_fare || 0).toFixed(2)}/mo)
+                      </option>
+                    ))}
+                  </select>
+                  {routes.length === 0 && (
+                    <div style={{ marginTop: '8px', padding: '8px 10px', borderRadius: '8px', background: 'rgba(245, 158, 11, 0.14)', border: '1px solid rgba(245, 158, 11, 0.45)', color: '#fcd34d', fontSize: '0.78rem', display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: '8px' }}>
+                      <span>No bus routes exist yet for this school.</span>
+                      <button
+                        type="button"
+                        className="btn-secondary"
+                        style={{ padding: '4px 10px', fontSize: '0.74rem' }}
+                        onClick={() => {
+                          setAssignModalOpen(false);
+                          setActiveTab('newRoute');
+                        }}
+                      >
+                        + Create Route
+                      </button>
+                    </div>
+                  )}
+                </div>
+                <div className="form-group">
+                  <label className="form-label">Pickup Stop Location *</label>
+                  <input
+                    type="text"
+                    className="form-control"
+                    placeholder="e.g. American House Junction"
+                    value={assignForm.pickupStop}
+                    onChange={(e) => setAssignForm({ ...assignForm, pickupStop: e.target.value })}
+                    required
+                  />
+                  {availableStops.length > 0 && (
+                    <div style={{ display: 'flex', flexWrap: 'wrap', gap: '6px', marginTop: '6px' }}>
+                      {availableStops.map((stop, idx) => {
+                        const stopName = typeof stop === 'string' ? stop : (stop?.name || '');
+                        if (!stopName) return null;
+                        return (
+                          <button
+                            key={idx}
+                            type="button"
+                            className="stop-pill"
+                            style={{ cursor: 'pointer', border: '1px solid rgba(245, 158, 11, 0.4)' }}
+                            onClick={() => setAssignForm((prev) => ({ ...prev, pickupStop: stopName }))}
+                          >
+                            {stopName}
+                          </button>
+                        );
+                      })}
+                    </div>
+                  )}
+                </div>
+                <div className="form-group">
+                  <label className="form-label">Dropoff Stop Location *</label>
+                  <input
+                    type="text"
+                    className="form-control"
+                    value={assignForm.dropoffStop}
+                    onChange={(e) => setAssignForm({ ...assignForm, dropoffStop: e.target.value })}
+                    required
+                  />
+                </div>
 
-              <div style={{ marginTop: '24px', display: 'flex', gap: '12px' }}>
-                <button type="submit" className="btn-primary" style={{ flex: 1 }}>
-                  Confirm Transit Allocation
-                </button>
-                <button type="button" className="btn-secondary" onClick={() => setAssignModalOpen(false)}>
-                  Cancel
-                </button>
-              </div>
-            </form>
+                <div style={{ marginTop: '24px', display: 'flex', gap: '12px' }}>
+                  <button type="submit" className="btn-primary" style={{ flex: 1 }}>
+                    Confirm Transit Allocation
+                  </button>
+                  <button type="button" className="btn-secondary" onClick={() => setAssignModalOpen(false)}>
+                    Cancel
+                  </button>
+                </div>
+              </form>
+            </div>
           </div>
-        </div>
-      )}
+        );
+      })()}
 
       {/* Universal Floating Scroll Controls */}
       <div

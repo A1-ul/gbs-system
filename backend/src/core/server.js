@@ -11,6 +11,7 @@ const rateLimit = require('express-rate-limit');
 
 const envConfig = require('./config/env.config');
 const { errorHandler, AppError } = require('../middleware/error.middleware');
+const { demoLimitMiddleware } = require('../middleware/demoLimit.middleware');
 const authService = require('../modules/auth/auth.service');
 
 // Route Imports
@@ -390,6 +391,9 @@ app.post('/api/v1/translate/send-message', async (req, res) => {
     return res.status(500).json({ status: 'error', message: err.message });
   }
 });
+
+// Enforce 10-entry trial cap per module in Demo Sandbox sessions while preserving identical production flows
+app.use('/api/v1', demoLimitMiddleware);
 
 // API Routes
 app.use('/api/v1/auth', authRoutes);

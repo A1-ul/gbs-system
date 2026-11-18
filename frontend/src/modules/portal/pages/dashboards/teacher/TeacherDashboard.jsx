@@ -22,6 +22,7 @@ import FileUploadVerificationCard from "../../../../../components/common/FileUpl
 import DigitalSignaturePadModal from "../../../../../components/common/DigitalSignaturePadModal";
 import { getActiveSchoolName, getActiveSchoolLogo } from "../../../../../utils/schoolBranding";
 import { printHtmlSafely, copyTextSafely } from "../../../../../utils/safeWindow";
+import { checkDemoEntryLimit, trackDemoEntryCreated } from "../../../../../utils/demoLimitGuard";
 import "./TeacherDashboard.css";
 
 export default function TeacherDashboard() {
@@ -2857,6 +2858,12 @@ export default function TeacherDashboard() {
       return;
     }
 
+    const demoCheck = checkDemoEntryLimit("assignments", "Assignments & Homework", assignments.length);
+    if (!demoCheck.allowed) {
+      setFeedback({ type: "error", message: demoCheck.message });
+      return;
+    }
+
     const classesToPublish = selectedClassIds.length > 0
       ? selectedClassIds
       : selectedClassId ? [selectedClassId] : classes.length > 0 ? [classes[0].id] : [44];
@@ -2883,18 +2890,8 @@ export default function TeacherDashboard() {
       createdAt: new Date().toISOString()
     };
 
-    // Prepend to active state immediately so the table reflects it with 0 lag
-    setAssignments((prev) => [newAssignmentObj, ...prev]);
-
-    // Persist immediately to localStorage
     try {
-      const existing = JSON.parse(localStorage.getItem("gbs_published_assignments") || "[]");
-      localStorage.setItem("gbs_published_assignments", JSON.stringify([newAssignmentObj, ...existing]));
-    } catch (e) { }
-
-    // Dispatch to backend API
-    try {
-      await apiClient.post("/assignments", {
+      const apiRes = await apiClient.post("/assignments", {
         title: newAssignmentObj.title,
         description: newAssignmentObj.description,
         classIds: newAssignmentObj.classIds,
@@ -2904,9 +2901,25 @@ export default function TeacherDashboard() {
         attachmentUrl: newAssignmentObj.attachmentUrl,
         fileName: newAssignmentObj.fileName
       });
+      if (apiRes?.data?.data?.id) {
+        newAssignmentObj.id = apiRes.data.data.id;
+      }
+      trackDemoEntryCreated("assignments");
     } catch (err) {
+      if (err.response?.status === 403 || err.response?.data?.code === "DEMO_TRIAL_LIMIT_REACHED") {
+        setFeedback({ type: "error", message: err.response?.data?.message || "Demo Trial Limit Reached (10/10)." });
+        setLoading(false);
+        return;
+      }
       console.warn("Assignment post to backend API:", err?.message || err);
     }
+
+    setAssignments((prev) => [newAssignmentObj, ...prev]);
+
+    try {
+      const existing = JSON.parse(localStorage.getItem("gbs_published_assignments") || "[]");
+      localStorage.setItem("gbs_published_assignments", JSON.stringify([newAssignmentObj, ...existing]));
+    } catch (e) { }
 
     setFeedback({
       type: "success",

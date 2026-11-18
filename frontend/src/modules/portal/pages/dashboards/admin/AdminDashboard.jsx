@@ -15,6 +15,8 @@ import FileUploadVerificationCard from "../../../../../components/common/FileUpl
 import DigitalSignaturePadModal from "../../../../../components/common/DigitalSignaturePadModal";
 import { getActiveSchoolName, getActiveSchoolLogo, saveActiveSchoolBranding, getSchoolBrandingNotificationState } from "../../../../../utils/schoolBranding";
 import { openUrlSafely } from "../../../../../utils/safeWindow";
+import { isDemoSandboxMode } from "../../../../../utils/tokenStorage";
+import { checkDemoEntryLimit, trackDemoEntryCreated } from "../../../../../utils/demoLimitGuard";
 import "./AdminDashboard.css";
 
 export function AdminDashboard({ initialTab } = {}) {
@@ -1343,11 +1345,13 @@ export function AdminDashboard({ initialTab } = {}) {
     parentPhone: "+233 24 555 0199"
   });
 
+  const [backendTransportRoutes, setBackendTransportRoutes] = useState([]);
   const [busRouteFares, setBusRouteFares] = useState(() => {
     try {
       const stored = localStorage.getItem("gbs_bus_route_fares");
       if (stored) return JSON.parse(stored);
     } catch { }
+    if (!isDemoSandboxMode()) return {};
     return {
       "East Legon Enclave (Zone 1)": 450.0,
       "Airport Residential & Ridge (Zone 2)": 550.0,
@@ -1362,50 +1366,192 @@ export function AdminDashboard({ initialTab } = {}) {
 
   const [registeredBusDrivers, setRegisteredBusDrivers] = useState(() => {
     try {
-      const isDemo = localStorage.getItem("gbs_system_mode") === "DEMO_SANDBOX" && Number(currentUser?.tenantId || 1) === 1;
+      const isDemo = isDemoSandboxMode() && Number(currentUser?.tenantId || 1) === 1;
       const stored = localStorage.getItem("gbs_bus_registered_drivers");
       if (stored) {
         const parsed = JSON.parse(stored);
-        if (Array.isArray(parsed) && parsed.length > 0) return parsed;
+        if (Array.isArray(parsed) && parsed.length > 0) {
+          return parsed.map((d, i) => ({
+            id: d.id || `DRV-0${i + 1}`,
+            driverName: d.driverName || d.name || "Assigned Driver",
+            driverPhone: d.driverPhone || "+233 24 000 0000",
+            busNumber: d.busNumber || `GBS Bus #0${i + 1}`
+          }));
+        }
       }
       if (!isDemo) return [];
     } catch { }
     return [
-      { id: "DRV-01", name: "Mr. Emmanuel Tetteh (+233 24 111 2233)", busNumber: "GBS Bus #01 (Toyota Coaster - 32 Seater)" },
-      { id: "DRV-02", name: "Mr. Isaac Mensah (+233 20 222 3344)", busNumber: "GBS Bus #02 (Nissan Civilian - 28 Seater)" },
-      { id: "DRV-03", name: "Mr. Samuel Darko (+233 24 999 0011)", busNumber: "GBS Bus #03 (Mercedes Sprinter - 22 Seater)" }
+      { id: "DRV-01", driverName: "Mr. Emmanuel Tetteh", driverPhone: "+233 24 111 2233", busNumber: "GBS Bus #01 (Toyota Coaster - 32 Seater)" },
+      { id: "DRV-02", driverName: "Mr. Isaac Mensah", driverPhone: "+233 20 222 3344", busNumber: "GBS Bus #02 (Nissan Civilian - 28 Seater)" },
+      { id: "DRV-03", driverName: "Mr. Samuel Darko", driverPhone: "+233 24 999 0011", busNumber: "GBS Bus #03 (Mercedes Sprinter - 22 Seater)" }
     ];
   });
+
+  useEffect(() => {
+    let active = true;
+    const syncTransportFromBackend = async () => {
+      try {
+        const [rRes, vRes, aRes] = await Promise.all([
+          apiClient.get("/transport/routes").catch(() => null),
+          apiClient.get("/transport/vehicles").catch(() => null),
+          apiClient.get("/transport/assignments").catch(() => null)
+        ]);
+        if (!active) return;
+
+        const apiRoutes = rRes?.data?.data?.records || [];
+        if (Array.isArray(apiRoutes) && apiRoutes.length > 0) {
+          setBackendTransportRoutes(apiRoutes);
+          setBusRouteFares((prev) => {
+            const next = { ...prev };
+            apiRoutes.forEach((rt) => {
+              if (rt?.name) next[rt.name] = Number(rt.monthly_fare || 450);
+            });
+            try { localStorage.setItem("gbs_bus_route_fares", JSON.stringify(next)); } catch { }
+            return next;
+          });
+        }
+
+        const apiVehicles = vRes?.data?.data?.records || [];
+        if (Array.isArray(apiVehicles) && apiVehicles.length > 0) {
+          const mappedDrivers = apiVehicles.map((v) => ({
+            id: `VEH-${v.id}`,
+            driverName: v.driver_name || "Assigned Driver",
+            driverPhone: v.driver_phone || "+233 24 000 0000",
+            busNumber: `${v.registration_number} (${v.model})`
+          }));
+          setRegisteredBusDrivers(mappedDrivers);
+          try { localStorage.setItem("gbs_bus_registered_drivers", JSON.stringify(mappedDrivers)); } catch { }
+        }
+
+        const apiAssignments = aRes?.data?.data?.records || [];
+        if (Array.isArray(apiAssignments) && apiAssignments.length > 0) {
+          setBusAssignments((prev) => {
+            const existingByBackendId = new Set(prev.map((p) => String(p.backendAssignmentId || "")));
+            const merged = [...prev];
+            apiAssignments.forEach((a) => {
+              if (!existingByBackendId.has(String(a.id)) && !prev.some((p) => p.studentName === a.student_name && p.pickupStop === a.pickup_stop)) {
+                merged.push({
+                  id: `BUS-DB-${a.id}`,
+                  backendAssignmentId: a.id,
+                  studentId: String(a.student_id || a.id),
+                  studentName: a.student_name,
+                  className: "Enrolled Student",
+                  destinationZone: a.route_name || a.route_code || "School Transit",
+                  termlyFareGhs: Number(a.monthly_fare || 450),
+                  busNumber: "Assigned School Bus",
+                  driverName: "Transport Dispatch",
+                  pickupStop: a.pickup_stop,
+                  parentPhone: "On File",
+                  status: "UPLOADED_TO_TRANSPORT"
+                });
+              }
+            });
+            return merged;
+          });
+        }
+      } catch {
+        // fallback silently if backend unavailable during initial mount
+      }
+    };
+    syncTransportFromBackend();
+    return () => { active = false; };
+  }, []);
 
   const [showCreateRouteModal, setShowCreateRouteModal] = useState(false);
   const [newRouteForm, setNewRouteForm] = useState({ name: "", fare: 500, pickupStop: "" });
   const [showAssignDriverModal, setShowAssignDriverModal] = useState(false);
   const [newDriverForm, setNewDriverForm] = useState({ name: "", phone: "", busNumber: "" });
 
-  const handleCreateNewDestination = (e) => {
+  const handleCreateNewDestination = async (e) => {
     e.preventDefault();
-    if (!newRouteForm.name.trim()) return;
+    const cleanName = newRouteForm.name.trim();
+    if (!cleanName) return;
+
+    const demoCheck = checkDemoEntryLimit("transport_routes", "Bus Commuter Routes", backendTransportRoutes.length);
+    if (!demoCheck.allowed) {
+      setFeedback({ type: "error", message: demoCheck.message });
+      return;
+    }
+
+    const fareVal = parseFloat(newRouteForm.fare) || 500.0;
+    const stopVal = newRouteForm.pickupStop.trim() || cleanName;
+    const routeCode = `RT-${cleanName.replace(/[^A-Za-z0-9]/g, "").toUpperCase().slice(0, 6) || "BUS"}-${String(backendTransportRoutes.length + 1).padStart(2, "0")}`;
+
+    try {
+      const res = await apiClient.post("/transport/routes", {
+        routeCode,
+        name: cleanName,
+        startLocation: stopVal,
+        endLocation: "GBS Main Campus",
+        stops: [{ name: stopVal, time: "06:30 AM" }],
+        monthlyFare: fareVal
+      });
+      if (!res.data?.success) {
+        setFeedback({ type: "error", message: res.data?.message || "Failed to save route." });
+        return;
+      }
+      if (res.data?.data) {
+        setBackendTransportRoutes((prev) => [...prev, res.data.data]);
+      }
+      trackDemoEntryCreated("transport_routes");
+    } catch (err) {
+      setFeedback({ type: "error", message: err.response?.data?.message || "Could not create route in backend." });
+      return;
+    }
+
     const updated = {
       ...busRouteFares,
-      [newRouteForm.name.trim()]: parseFloat(newRouteForm.fare) || 500.0
+      [cleanName]: fareVal
     };
     setBusRouteFares(updated);
     localStorage.setItem("gbs_bus_route_fares", JSON.stringify(updated));
     setShowCreateRouteModal(false);
     setFeedback({
       type: "success",
-      message: `🚌 Destination route "${newRouteForm.name}" with termly fare GHS ${newRouteForm.fare} created and uploaded to Transport Portal!`
+      message: `🚌 Destination route "${cleanName}" (${routeCode}, GHS ${fareVal.toFixed(2)}) created and uploaded to Transport Portal!`
     });
     setNewRouteForm({ name: "", fare: 500, pickupStop: "" });
   };
 
-  const handleAssignNewDriver = (e) => {
+  const handleAssignNewDriver = async (e) => {
     e.preventDefault();
     if (!newDriverForm.name.trim() || !newDriverForm.busNumber.trim()) return;
+
+    const demoCheck = checkDemoEntryLimit("transport_vehicles", "Fleet Vehicles & Drivers", registeredBusDrivers.length);
+    if (!demoCheck.allowed) {
+      setFeedback({ type: "error", message: demoCheck.message });
+      return;
+    }
+
+    const driverNameClean = newDriverForm.name.trim();
+    const driverPhoneClean = newDriverForm.phone.trim() || "+233 24 000 0000";
+    const busTextClean = newDriverForm.busNumber.trim();
+    const regNum = `GBS-BUS-${String(registeredBusDrivers.length + 1).padStart(2, "0")}-${Date.now().toString().slice(-3)}`;
+
+    try {
+      const res = await apiClient.post("/transport/vehicles", {
+        registrationNumber: regNum,
+        model: busTextClean,
+        capacity: 32,
+        driverName: driverNameClean,
+        driverPhone: driverPhoneClean
+      });
+      if (!res.data?.success) {
+        setFeedback({ type: "error", message: res.data?.message || "Failed to register bus driver." });
+        return;
+      }
+      trackDemoEntryCreated("transport_vehicles");
+    } catch (err) {
+      setFeedback({ type: "error", message: err.response?.data?.message || "Could not register vehicle & driver." });
+      return;
+    }
+
     const newDrv = {
       id: `DRV-${Date.now().toString().slice(-4)}`,
-      name: `${newDriverForm.name.trim()} (${newDriverForm.phone.trim() || "+233 24 000 0000"})`,
-      busNumber: newDriverForm.busNumber.trim()
+      driverName: driverNameClean,
+      driverPhone: driverPhoneClean,
+      busNumber: busTextClean
     };
     const updated = [...registeredBusDrivers, newDrv];
     setRegisteredBusDrivers(updated);
@@ -1413,19 +1559,60 @@ export function AdminDashboard({ initialTab } = {}) {
     setShowAssignDriverModal(false);
     setFeedback({
       type: "success",
-      message: `👤 Driver "${newDriverForm.name}" officially assigned to ${newDriverForm.busNumber} and synchronized to Transport Hub!`
+      message: `👤 Driver "${driverNameClean}" officially assigned to ${busTextClean} and synchronized to Transport Hub!`
     });
     setNewDriverForm({ name: "", phone: "", busNumber: "" });
   };
 
-  const handleSaveAndUploadBusStudent = (e) => {
+  const handleSaveAndUploadBusStudent = async (e) => {
     e?.preventDefault();
     if (!newBusStudentForm.studentName.trim()) {
       setFeedback({ type: "error", message: "Please provide the student's name." });
       return;
     }
+    if (!newBusStudentForm.destinationZone) {
+      setFeedback({ type: "error", message: "Please select a commuter destination route." });
+      return;
+    }
+
+    const demoCheck = checkDemoEntryLimit("transport_assignments", "Student Bus Assignments", busAssignments.length);
+    if (!demoCheck.allowed) {
+      setFeedback({ type: "error", message: demoCheck.message });
+      return;
+    }
+
+    const matchedRoute = backendTransportRoutes.find(
+      (r) => String(r.name || "").trim().toLowerCase() === String(newBusStudentForm.destinationZone || "").trim().toLowerCase()
+    );
+
+    let backendAssignment = null;
+    try {
+      const res = await apiClient.post("/transport/assignments", {
+        studentId: newBusStudentForm.studentId || newBusStudentForm.studentName.trim(),
+        studentName: newBusStudentForm.studentName.trim(),
+        routeId: matchedRoute?.id || undefined,
+        destinationZone: newBusStudentForm.destinationZone,
+        termlyFareGhs: Number(newBusStudentForm.termlyFareGhs) || 450.0,
+        pickupStop: newBusStudentForm.pickupStop || newBusStudentForm.destinationZone,
+        dropoffStop: "GBS Main Campus"
+      });
+      if (!res.data?.success) {
+        setFeedback({ type: "error", message: res.data?.message || "Failed to upload bus assignment." });
+        return;
+      }
+      backendAssignment = res.data.data;
+      trackDemoEntryCreated("transport_assignments");
+    } catch (err) {
+      setFeedback({
+        type: "error",
+        message: err.response?.data?.message || "Failed to assign student to bus route."
+      });
+      return;
+    }
+
     const created = {
-      id: `BUS-STU-${Date.now().toString().slice(-4)}`,
+      id: `BUS-STU-${backendAssignment?.id || Date.now().toString().slice(-4)}`,
+      backendAssignmentId: backendAssignment?.id || null,
       ...newBusStudentForm,
       studentId: newBusStudentForm.studentId || `STU-${Date.now().toString().slice(-4)}`,
       termlyFareGhs: Number(newBusStudentForm.termlyFareGhs) || 450.0,
@@ -1442,10 +1629,12 @@ export function AdminDashboard({ initialTab } = {}) {
       studentName: "",
       studentId: "",
       className: "Class 4B",
-      destinationZone: "East Legon Enclave (Zone 1)",
-      termlyFareGhs: 450.0,
-      busNumber: "GBS Bus #01 (Toyota Coaster - 32 Seater)",
-      driverName: "Mr. Emmanuel Tetteh (+233 24 111 2233)",
+      destinationZone: Object.keys(busRouteFares)[0] || "East Legon Enclave (Zone 1)",
+      termlyFareGhs: Number(Object.values(busRouteFares)[0]) || 450.0,
+      busNumber: registeredBusDrivers[0]?.busNumber || "GBS Bus #01 (Toyota Coaster - 32 Seater)",
+      driverName: registeredBusDrivers[0]
+        ? `${registeredBusDrivers[0].driverName} (${registeredBusDrivers[0].driverPhone})`
+        : "Mr. Emmanuel Tetteh (+233 24 111 2233)",
       pickupStop: "Main Gate / Shell Station (06:30 AM)",
       parentPhone: "+233 24 555 0199"
     });
@@ -10671,8 +10860,8 @@ export function AdminDashboard({ initialTab } = {}) {
                 </div>
                 <div style={{ background: "rgba(15, 23, 42, 0.7)", border: "1px solid rgba(245, 158, 11, 0.3)", borderRadius: "10px", padding: "1rem" }}>
                   <span style={{ fontSize: "0.75rem", color: "#94a3b8", textTransform: "uppercase", fontWeight: "700" }}>Active School Buses</span>
-                  <div style={{ fontSize: "1.6rem", fontWeight: "800", color: "#fbbf24", marginTop: "4px" }}>3 Fleet Vehicles</div>
-                  <span style={{ fontSize: "0.72rem", color: "#fef08a" }}>Toyota Coaster & Nissan Civilian</span>
+                  <div style={{ fontSize: "1.6rem", fontWeight: "800", color: "#fbbf24", marginTop: "4px" }}>{registeredBusDrivers.length} Fleet Vehicles</div>
+                  <span style={{ fontSize: "0.72rem", color: "#fef08a" }}>Synced with Transport Hub</span>
                 </div>
               </div>
 
@@ -10731,7 +10920,10 @@ export function AdminDashboard({ initialTab } = {}) {
                               type="button"
                               className="btn-secondary"
                               style={{ padding: "4px 8px", fontSize: "0.72rem", color: "#f87171", borderColor: "#ef4444" }}
-                              onClick={() => {
+                              onClick={async () => {
+                                if (bus.backendAssignmentId) {
+                                  await apiClient.delete(`/transport/assignments/${bus.backendAssignmentId}`).catch(() => null);
+                                }
                                 const updated = busAssignments.filter(b => b.id !== bus.id);
                                 setBusAssignments(updated);
                                 localStorage.setItem("gbs_transport_assigned_students", JSON.stringify(updated));
@@ -14511,24 +14703,31 @@ export function AdminDashboard({ initialTab } = {}) {
                   />
                 </div>
                 <div className="staff-field">
-                  <label>Destination Location & Zone *</label>
+                  <label>Select Commuter Route & Destination Zone *</label>
                   <select
                     className="filter-select"
                     style={{ width: "100%", padding: "10px", background: "#020617", border: "1px solid #334155", borderRadius: "8px", color: "#fff" }}
                     value={newBusStudentForm.destinationZone}
                     onChange={(e) => {
                       const zone = e.target.value;
-                      const fare = busRouteFares[zone] || 450.0;
+                      const fare = busRouteFares[zone] ?? 450.0;
+                      const matchedRt = backendTransportRoutes.find((r) => r.name === zone);
+                      const firstStop = Array.isArray(matchedRt?.stops) && matchedRt.stops[0]
+                        ? (matchedRt.stops[0].name || matchedRt.stops[0])
+                        : "";
                       setNewBusStudentForm({
                         ...newBusStudentForm,
                         destinationZone: zone,
-                        termlyFareGhs: fare
+                        termlyFareGhs: fare,
+                        pickupStop: firstStop || newBusStudentForm.pickupStop
                       });
                     }}
+                    required
                   >
+                    <option value="">-- Select a Bus Commuter Route --</option>
                     {Object.keys(busRouteFares).map((zone) => (
                       <option key={zone} value={zone}>
-                        {zone} — GHS {busRouteFares[zone]}
+                        {zone} — GHS {Number(busRouteFares[zone] || 0).toFixed(2)}
                       </option>
                     ))}
                   </select>
@@ -14552,11 +14751,22 @@ export function AdminDashboard({ initialTab } = {}) {
                     className="filter-select"
                     style={{ width: "100%", padding: "10px", background: "#020617", border: "1px solid #334155", borderRadius: "8px", color: "#fff" }}
                     value={newBusStudentForm.busNumber}
-                    onChange={(e) => setNewBusStudentForm({ ...newBusStudentForm, busNumber: e.target.value })}
+                    onChange={(e) => {
+                      const selectedBus = e.target.value;
+                      const matchedDrv = registeredBusDrivers.find((d) => d.busNumber === selectedBus);
+                      setNewBusStudentForm({
+                        ...newBusStudentForm,
+                        busNumber: selectedBus,
+                        driverName: matchedDrv
+                          ? `${matchedDrv.driverName || matchedDrv.name} (${matchedDrv.driverPhone || "+233 24 000 0000"})`
+                          : newBusStudentForm.driverName
+                      });
+                    }}
                   >
+                    <option value="">-- Select Assigned Bus & Driver --</option>
                     {registeredBusDrivers.map((d, i) => (
-                      <option key={i} value={`${d.busNumber} (${d.driverName})`}>
-                        {d.busNumber} — {d.driverName} ({d.driverPhone})
+                      <option key={d.id || i} value={d.busNumber}>
+                        {d.busNumber} — {d.driverName || d.name} ({d.driverPhone || "+233 24 000 0000"})
                       </option>
                     ))}
                   </select>

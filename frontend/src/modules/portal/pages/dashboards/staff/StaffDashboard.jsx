@@ -7,6 +7,7 @@ import UniversalRoleGuideModal from "../../../../../components/common/UniversalR
 import { navigateToDetail } from "../../../../../utils/universalNavigation";
 import { getActiveSchoolName, getActiveSchoolLogo } from "../../../../../utils/schoolBranding";
 import { isDemoSandboxMode, clearAuthStorage } from "../../../../../utils/tokenStorage";
+import { checkDemoEntryLimit, trackDemoEntryCreated } from "../../../../../utils/demoLimitGuard";
 import { useDashboardTabSync } from "../../../../../hooks/useDashboardTabSync";
 import "./StaffDashboard.css";
 
@@ -171,11 +172,11 @@ export default function StaffDashboard() {
         reportedBy: `${currentUser.firstName} ${currentUser.lastName}`
       });
       const ticketNumber = res.data?.data?.ticket_number || "TKT-2026-NEW";
-      setFeedback({ type: "success", message: `Work Order ${ticketNumber} logged and committed directly to PostgreSQL facility ledger.` });
+      setFeedback({ type: "success", message: `Work Order ${ticketNumber} logged and committed directly to facility ledger.` });
       setNewTicket({ title: "", location: "Main Academic Building", category: "PLUMBING", priority: "HIGH", description: "" });
       fetchTickets();
     } catch (err) {
-      setFeedback({ type: "error", message: "Failed to log work order to PostgreSQL." });
+      setFeedback({ type: "error", message: err.response?.data?.message || "Failed to log work order to facility ledger." });
     } finally {
       setLoading(false);
     }
@@ -194,7 +195,7 @@ export default function StaffDashboard() {
       setFeedback({ type: "success", message: "Emergency incident report escalated directly to Headmaster & School Safety Officers." });
       setIncident({ title: "", severity: "HIGH", location: "", details: "" });
     } catch (err) {
-      setFeedback({ type: "error", message: "Failed to dispatch incident report." });
+      setFeedback({ type: "error", message: err.response?.data?.message || "Failed to dispatch incident report." });
     } finally {
       setLoading(false);
     }
@@ -203,6 +204,11 @@ export default function StaffDashboard() {
   const handleCreateNewTask = async (e) => {
     e.preventDefault();
     if (!newTaskInput.title) return;
+    const demoCheck = checkDemoEntryLimit("facility", "Facility Tasks & Work Orders", tasks.length);
+    if (!demoCheck.allowed) {
+      setFeedback({ type: "error", message: demoCheck.message });
+      return;
+    }
     const optimisticObj = {
       id: Date.now(),
       title: newTaskInput.title,
@@ -225,13 +231,16 @@ export default function StaffDashboard() {
       });
       const saved = res.data?.data || optimisticObj;
       setTasks((prev) => [saved, ...prev]);
+      trackDemoEntryCreated("facility");
       setFeedback({ type: "success", message: `✓ Operational Task "${saved.title}" saved to Campus Operations Ledger!` });
     } catch (err) {
-      if (!isDemoTenant) {
+      const errCode = err.response?.data?.code;
+      if (!isDemoTenant || err.response?.status === 403 || errCode === "DEMO_TRIAL_LIMIT_REACHED") {
         setFeedback({ type: "error", message: err.response?.data?.message || "Failed to save operational task to server." });
         return;
       }
       setTasks((prev) => [optimisticObj, ...prev]);
+      trackDemoEntryCreated("facility");
       setFeedback({ type: "success", message: `✓ Operational Task "${optimisticObj.title}" added in Demo Sandbox!` });
     }
     setNewTaskInput({ title: "", category: "DAILY_INSPECTION", priority: "HIGH", assignedUnit: "Morning Patrol Team", location: "Main Gate & Assembly Grounds" });

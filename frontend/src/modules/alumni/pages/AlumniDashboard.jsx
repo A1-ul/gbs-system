@@ -8,6 +8,7 @@ import UniversalRoleGuideModal from "../../../components/common/UniversalRoleGui
 import { navigateToDetail } from "../../../utils/universalNavigation";
 import { getActiveSchoolName, getActiveSchoolLogo } from "../../../utils/schoolBranding";
 import { isDemoSandboxMode, clearAuthStorage } from "../../../utils/tokenStorage";
+import { checkDemoEntryLimit, trackDemoEntryCreated } from "../../../utils/demoLimitGuard";
 import { useDashboardTabSync } from "../../../hooks/useDashboardTabSync";
 import "../../portal/pages/dashboards/teacher/TeacherDashboard.css";
 
@@ -494,6 +495,11 @@ export default function AlumniDashboard() {
   // Handle Schedule Zoom Meeting
   const handleScheduleZoomMeeting = async (e) => {
     e.preventDefault();
+    const demoCheck = checkDemoEntryLimit("meetings", "Online Reunions & Meetings", savedMeetings.length);
+    if (!demoCheck.allowed) {
+      setAlumniNotice({ type: "error", message: demoCheck.message });
+      return;
+    }
     const cleanId = newMeeting.meetingId.replace(/[^0-9]/g, "");
     const directUrl = formatOneClickZoomUrl(cleanId, newMeeting.passcode);
 
@@ -523,7 +529,17 @@ export default function AlumniDashboard() {
         meetingUrl: directUrl,
         passcode: meetingRecord.passcode
       });
-    } catch { }
+      trackDemoEntryCreated("meetings");
+    } catch (err) {
+      if (err.response?.status === 403 || err.response?.data?.code === "DEMO_TRIAL_LIMIT_REACHED") {
+        setAlumniNotice({ type: "error", message: err.response?.data?.message || "Demo Trial Limit Reached (10/10)." });
+        return;
+      }
+      if (!isDemoMode) {
+        setAlumniNotice({ type: "error", message: err.response?.data?.message || "Failed to schedule meeting in backend." });
+        return;
+      }
+    }
 
     const updated = [meetingRecord, ...savedMeetings];
     setSavedMeetings(updated);
@@ -543,6 +559,11 @@ export default function AlumniDashboard() {
   // Handle Donate Endowment: Records the gift in the institutional ledger for the Accountant Dashboard
   const handleDonateEndowment = (e) => {
     e.preventDefault();
+    const demoCheck = checkDemoEntryLimit("alumni_pledges", "Alumni Endowment Pledges");
+    if (!demoCheck.allowed) {
+      setAlumniNotice({ type: "error", message: demoCheck.message });
+      return;
+    }
     const pledged = parseFloat(alumniPledgeForm.pledgedAmount) || 100;
     const redeemed = parseFloat(alumniPledgeForm.redeemedAmount || 0);
     const status = redeemed >= pledged ? "FULFILLED" : redeemed > 0 ? "PARTIALLY_FULFILLED" : "PLEDGED";
@@ -567,6 +588,7 @@ export default function AlumniDashboard() {
       const existing = JSON.parse(localStorage.getItem("gbs_alumni_pledges_and_gifts") || "[]");
       const updated = [newGift, ...existing];
       localStorage.setItem("gbs_alumni_pledges_and_gifts", JSON.stringify(updated));
+      trackDemoEntryCreated("alumni_pledges");
       window.dispatchEvent(new Event("gbs_alumni_gift_added"));
       window.dispatchEvent(new Event("storage"));
     } catch { }

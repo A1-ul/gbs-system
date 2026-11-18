@@ -36,6 +36,16 @@ async function createRoute(req, res, next) {
   }
 }
 
+async function deleteRoute(req, res, next) {
+  try {
+    const tenantId = extractTenantId(req);
+    const result = await transportService.deleteRoute(req.params.id, tenantId);
+    return res.status(result.success ? 200 : 400).json(result);
+  } catch (error) {
+    return next(error);
+  }
+}
+
 async function getVehicles(req, res, next) {
   try {
     const tenantId = extractTenantId(req);
@@ -76,6 +86,26 @@ async function assignStudent(req, res, next) {
   }
 }
 
+async function removeAssignment(req, res, next) {
+  try {
+    const tenantId = extractTenantId(req);
+    const result = await transportService.removeAssignment(req.params.id, tenantId);
+    return res.status(result.success ? 200 : 400).json(result);
+  } catch (error) {
+    return next(error);
+  }
+}
+
+async function getStudents(req, res, next) {
+  try {
+    const tenantId = extractTenantId(req);
+    const result = await transportService.getStudents(tenantId);
+    return res.status(result.success ? 200 : 500).json(result);
+  } catch (error) {
+    return next(error);
+  }
+}
+
 async function getStats(req, res, next) {
   try {
     const tenantId = extractTenantId(req);
@@ -90,9 +120,12 @@ module.exports = {
   getStatus,
   getRoutes,
   createRoute,
+  deleteRoute,
   getVehicles,
   createVehicle,
   getAssignments,
   assignStudent,
+  removeAssignment,
+  getStudents,
   getStats
 };

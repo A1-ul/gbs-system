@@ -167,7 +167,8 @@ export const WORKSPACE_MUTABLE_KEYS = [
   "gbs_accountant_increment_requests",
   "gbs_facility_tasks",
   "gbs_pending_staff_registrations",
-  "gbs_offline_mutation_queue"
+  "gbs_offline_mutation_queue",
+  "gbs_demo_entry_counters"
 ];
 
 export function isBuiltInDemoUser(userOverride = null) {
@@ -227,10 +228,17 @@ export function clearWorkspaceMutableKeys({ clearBranding = false } = {}) {
   }
 }
 
-export function resetDemoSandboxData({ reloadPage = true } = {}) {
+export async function resetDemoSandboxData({ reloadPage = true } = {}) {
   clearWorkspaceMutableKeys({ clearBranding: false });
   syncSystemModeFlags("DEMO_SANDBOX");
+  try {
+    const base = typeof window !== "undefined"
+      ? (window.location.origin.includes("localhost") ? "http://localhost:5000/api/v1" : `${window.location.origin}/api/v1`)
+      : "/api/v1";
+    await fetch(`${base}/auth/demo-reset`, { method: "POST" }).catch(() => {});
+  } catch { }
   window.dispatchEvent(new CustomEvent("gbs_demo_reset"));
+  window.dispatchEvent(new CustomEvent("gbs_demo_usage_updated"));
   if (reloadPage && typeof window !== "undefined") {
     window.location.reload();
   }

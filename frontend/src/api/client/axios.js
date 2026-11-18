@@ -1,5 +1,6 @@
 import axios from "axios";
 import { getApiBaseUrl } from "./apiConfig";
+import { isDemoSandboxMode } from "../../utils/tokenStorage";
 
 const axiosInstance = axios.create({
   baseURL: getApiBaseUrl(),
@@ -24,6 +25,8 @@ axiosInstance.interceptors.request.use(
     if (token) {
       config.headers.Authorization = `Bearer ${token}`;
     }
+
+    config.headers["X-GBS-Mode"] = isDemoSandboxMode() ? "DEMO_SANDBOX" : "LIVE_PRODUCTION";
 
     const tenantId =
       localStorage.getItem("gbs_tenant_id") ||
@@ -108,6 +111,10 @@ axiosInstance.interceptors.response.use(
           );
         }
       }
+
+      if (isMutating && typeof window !== "undefined") {
+        window.dispatchEvent(new CustomEvent("gbs_demo_usage_updated"));
+      }
     } catch {
       // ignore HUD notification errors
     }
@@ -137,7 +144,8 @@ axiosInstance.interceptors.response.use(
       const url = String(error.config?.url || "");
       if (!url.includes("/auth/login") && !url.includes("/health")) {
         let title = "COMMAND FEEDBACK NOTICE";
-        if (status === 403) title = "SECURITY / ACCESS RESTRICTION";
+        if (rcceCode === "DEMO_TRIAL_LIMIT_REACHED") title = "DEMO TRIAL LIMIT REACHED (10/10)";
+        else if (status === 403) title = "SECURITY / ACCESS RESTRICTION";
         else if (status === 503 || rcceCode === "SYSTEM_MAINTENANCE_MODE") title = "SYSTEM MAINTENANCE ACTIVE";
         else if (!error.response) title = "NETWORK OFFLINE WARNING";
         else if (rcceCode) {
@@ -150,6 +158,7 @@ axiosInstance.interceptors.response.use(
             ACADEMIC: "ACADEMIC SYSTEM NOTICE",
             FINANCE: "FINANCIAL TRANSACTION NOTICE",
             DEV: "DEVELOPER ACCESS RESTRICTION",
+            DEMO: "DEMO TRIAL LIMIT NOTICE",
             RECORD: "RECORD INTEGRITY NOTICE",
             IDEMPOTENCY: "DUPLICATE SUBMISSION PREVENTED"
           };

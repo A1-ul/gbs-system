@@ -127,6 +127,12 @@ const forgotPassword = async (req, res, next) => {
   }
 };
 
+const {
+  isDemoSandboxRequest,
+  getDemoUsageSummary,
+  resetDemoUsageCounters
+} = require('../../middleware/demoLimit.middleware');
+
 const resetPassword = async (req, res, next) => {
   try {
     const result = await authService.resetPassword(req.body || {});
@@ -140,6 +146,29 @@ const resetPassword = async (req, res, next) => {
   }
 };
 
+const getDemoUsage = async (req, res) => {
+  const isDemo = isDemoSandboxRequest(req);
+  const summary = getDemoUsageSummary();
+  res.status(200).json({
+    success: true,
+    status: 'success',
+    data: {
+      isDemo,
+      ...summary
+    }
+  });
+};
+
+const resetDemoUsage = async (req, res) => {
+  const summary = resetDemoUsageCounters();
+  res.status(200).json({
+    success: true,
+    status: 'success',
+    message: 'Demo Sandbox trial counters restored to 0/10 per module.',
+    data: summary
+  });
+};
+
 module.exports = {
   login,
   register,
@@ -149,5 +178,7 @@ module.exports = {
   logout,
   refreshToken,
   forgotPassword,
-  resetPassword
+  resetPassword,
+  getDemoUsage,
+  resetDemoUsage
 };

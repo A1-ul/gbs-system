@@ -16,5 +16,7 @@ router.get('/me', protect, authController.getMe);
 router.post('/refresh-token', authController.refreshToken);
 router.post('/forgot-password', authController.forgotPassword);
 router.post('/reset-password', authController.resetPassword);
+router.get('/demo-usage', authController.getDemoUsage);
+router.post('/demo-reset', authController.resetDemoUsage);
 
 module.exports = router;

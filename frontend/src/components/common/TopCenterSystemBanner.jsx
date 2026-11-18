@@ -56,6 +56,7 @@ export default function TopCenterSystemBanner({
   const [showDirectSMSModal, setShowDirectSMSModal] = useState(false);
   const [showMobileAppModal, setShowMobileAppModal] = useState(false);
   const [showCloudCDNModal, setShowCloudCDNModal] = useState(false);
+  const [demoTrialUsage, setDemoTrialUsage] = useState({ maxPerModule: 10, totalUsed: 0 });
 
   let currentUserRole = "GUEST";
   try {
@@ -101,6 +102,33 @@ export default function TopCenterSystemBanner({
       window.removeEventListener("storage", handleUpdate);
     };
   }, [isDevMode, institutionName]);
+
+  useEffect(() => {
+    if (systemMode !== "DEMO_SANDBOX") return;
+    const loadUsage = async () => {
+      let localTotal = 0;
+      try {
+        const localCounters = JSON.parse(localStorage.getItem("gbs_demo_entry_counters") || "{}");
+        localTotal = Object.values(localCounters).reduce((s, n) => s + (Number(n) || 0), 0);
+      } catch { }
+      try {
+        const res = await fetch(resolveApiUrl("/api/v1/auth/demo-usage"));
+        if (res.ok) {
+          const json = await res.json();
+          const serverTotal = Number(json?.data?.totalUsed || 0);
+          setDemoTrialUsage({
+            maxPerModule: Number(json?.data?.maxPerModule || 10),
+            totalUsed: Math.max(serverTotal, localTotal)
+          });
+          return;
+        }
+      } catch { }
+      setDemoTrialUsage((prev) => ({ ...prev, totalUsed: localTotal }));
+    };
+    loadUsage();
+    window.addEventListener("gbs_demo_usage_updated", loadUsage);
+    return () => window.removeEventListener("gbs_demo_usage_updated", loadUsage);
+  }, [systemMode]);
 
   const handleTriggerCloudSync = async () => {
     setSyncingCloud(true);
@@ -451,7 +479,7 @@ export default function TopCenterSystemBanner({
         }}>
           <span>🟡 DEMO SANDBOX MODE</span>
           <span>•</span>
-          <span style={{ fontWeight: 600 }}>Identical live workflow trainer. Actions save inside the Demo Sandbox.</span>
+          <span style={{ fontWeight: 600 }}>Identical live workflow trainer — up to {demoTrialUsage.maxPerModule} trial entries per module ({demoTrialUsage.totalUsed} created).</span>
           <button
             type="button"
             onClick={() => {

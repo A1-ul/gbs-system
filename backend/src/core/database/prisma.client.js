@@ -98,7 +98,13 @@ const INT_ID_FIELDS = new Set([
   'markedById',
   'hostId',
   'createdBy',
-  'gradedById'
+  'gradedById',
+  'tenant_id',
+  'route_id',
+  'assigned_route_id',
+  'student_id',
+  'book_id',
+  'borrower_id'
 ]);
 
 const SKIP_INT_CONTAINERS = new Set(['orderBy', 'select', 'include', 'omit', 'distinct', 'by']);

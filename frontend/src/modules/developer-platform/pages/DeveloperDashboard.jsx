@@ -93,14 +93,16 @@ export default function DeveloperDashboard() {
 
   // State Management (100% Zero-Mock, Live Database Records)
   const [metrics, setMetrics] = useState({
-    status: "HEALTHY",
-    memoryUsageMb: 85,
-    memory: { usagePct: "22.4%", heapUsedMb: 65, freeMb: 8192 },
-    cpu: { cores: 8, loadAvg: [0.12, 0.18, 0.15] },
-    database: { engine: "PostgreSQL", role: "PRIMARY_ACTIVE", status: "ACTIVE", connected: true, poolStatus: "ACTIVE • CONNECTED", poolSize: 1, maxPoolSize: 20 },
+    status: "CHECKING",
+    memoryUsageMb: 0,
+    memory: { usagePct: "0%", heapUsedMb: 0, freeMb: 0 },
+    cpu: { cores: 0, loadAvg: [0, 0, 0] },
+    database: { engine: "PostgreSQL", role: "PROBING", status: "CHECKING", connected: null, poolStatus: "CHECKING CLUSTER...", poolSize: 0, maxPoolSize: 20 },
     sockets: { activeConnections: 0, maxConnections: 10000 },
     metrics: { totalTenants: 0, totalUsers: 0, activeLocks: 0, totalBackups: 0 }
   });
+  const [demoUsageSummary, setDemoUsageSummary] = useState({ maxPerModule: 10, totalUsed: 0, modules: {} });
+  const [paymentStatusSummary, setPaymentStatusSummary] = useState({ configuredProviders: [], sandboxOnly: true });
 
   const [consoleStats, setConsoleStats] = useState({
     totalTenants: 0,
@@ -126,7 +128,7 @@ export default function DeveloperDashboard() {
   // Enterprise Environment & Provenance Status State
   const [systemEnv, setSystemEnv] = useState({
     activeEnvironment: localStorage.getItem("gbs_system_environment") || "PRODUCTION",
-    database: { engine: "PostgreSQL", host: "localhost", port: 5432, database: "gbs_system", isConnected: true },
+    database: { engine: "PostgreSQL", host: "localhost", port: 5432, database: "gbs_system", isConnected: null },
     provenanceBreakdown: { GENUINE_ONBOARDING: 0, LIVE_USER_REGISTRATION: 0, SEEDED_BASELINE: 0, DEV_TEST: 0 },
     stats: { totalUsers: 0, totalTenants: 0, totalBackups: 0, totalAuditLogs: 0 }
   });
@@ -2381,10 +2383,49 @@ export default function DeveloperDashboard() {
       } catch (envErr) {
         console.warn("Could not query dev-control environment telemetry:", envErr);
       }
+
+      // 13. Real Demo Trial Quota & Payment Gateway Readiness Truth
+      try {
+        const [demoRes, payRes] = await Promise.all([
+          fetch(`${getApiBaseUrl()}/auth/demo-usage`, { headers: authHeaders }).catch(() => null),
+          fetch(`${getApiBaseUrl()}/payments/status`, { headers: authHeaders }).catch(() => null)
+        ]);
+        if (demoRes?.ok) {
+          const dJson = await demoRes.json();
+          if (dJson?.data) setDemoUsageSummary(dJson.data);
+        }
+        if (payRes?.ok) {
+          const pJson = await payRes.json();
+          if (pJson?.data) {
+            const cfg = pJson.data.configuredGateways || pJson.data.providers || [];
+            setPaymentStatusSummary({
+              configuredProviders: Array.isArray(cfg) ? cfg : [],
+              sandboxOnly: pJson.data.liveCredentialsConfigured === false || (Array.isArray(cfg) && !cfg.some((g) => g === "PAYSTACK" || g === "HUBTEL"))
+            });
+          }
+        }
+      } catch { }
     } catch (err) {
       console.error("Developer dashboard telemetry error:", err);
     } finally {
       setLoading(false);
+    }
+  };
+
+  const handleResetDemoCountersFromDev = async () => {
+    try {
+      const res = await fetch(`${getApiBaseUrl()}/auth/demo-reset`, { method: "POST" });
+      if (res.ok) {
+        const json = await res.json();
+        if (json?.data) setDemoUsageSummary(json.data);
+        localStorage.removeItem("gbs_demo_entry_counters");
+        window.dispatchEvent(new CustomEvent("gbs_demo_usage_updated"));
+        showNotification("✓ Demo Sandbox 10-entry trial counters reset to 0/10 across all modules.");
+      } else {
+        showNotification("⚠ Could not reset Demo Sandbox trial counters.");
+      }
+    } catch (err) {
+      showNotification(`⚠ Error resetting demo trial counters: ${err.message}`);
     }
   };
 
@@ -5052,10 +5093,12 @@ export default function DeveloperDashboard() {
                 {systemEnv?.activeEnvironment === "PRODUCTION" ? "🟢 PRODUCTION CLUSTER [LIVE]" : "🟡 DEV SANDBOX [ISOLATED]"}
               </span>
               <span className="telemetry-pill healthy">● Kernel: ONLINE</span>
-              <span className={`telemetry-pill ${metrics.database?.connected !== false ? "healthy" : ""}`}>
-                {metrics.database?.connected !== false
+              <span className={`telemetry-pill ${metrics.database?.connected === true ? "healthy" : ""}`}>
+                {metrics.database?.connected === true
                   ? `🐘 ${metrics.database?.engine || "PostgreSQL"}: ACTIVE (${metrics.database?.poolSize || 1}/${metrics.database?.maxPoolSize || 20})`
-                  : "🐘 PostgreSQL: STANDBY"}
+                  : metrics.database?.connected === false
+                    ? "🐘 PostgreSQL: STANDBY (Persistent Fallback Active)"
+                    : "🐘 PostgreSQL: CHECKING..."}
               </span>
               <span className="telemetry-pill">🔒 Locks: {metrics.metrics?.activeLocks || 0}</span>
               <span className="telemetry-pill">💾 Backups: {metrics.metrics?.totalBackups || 0}</span>
@@ -9274,17 +9317,25 @@ export default function DeveloperDashboard() {
             <section>
               <div className="dev-section-title">
                 <h3>LIVE SYSTEM TELEMETRY (HARDWARE & ENGINE NODES)</h3>
-                <span style={{ fontSize: "0.75rem", color: "#10b981" }}>● Engine Healthy</span>
+                <span style={{ fontSize: "0.75rem", color: metrics.database?.connected === true ? "#10b981" : metrics.database?.connected === false ? "#f59e0b" : "#94a3b8", fontWeight: 700 }}>
+                  {metrics.database?.connected === true
+                    ? "● Engine Healthy & PostgreSQL Connected"
+                    : metrics.database?.connected === false
+                      ? "● Standby Persistent Fallback Active (PostgreSQL Offline — Set DATABASE_URL in Render)"
+                      : "● Probing System Telemetry..."}
+                </span>
               </div>
 
               <div className="telemetry-grid">
                 <div className="metric-box">
                   <span className="box-title">System Status</span>
-                  <span className="box-val healthy">{metrics.status}</span>
+                  <span className={`box-val ${metrics.status === "HEALTHY" ? "healthy" : ""}`} style={{ color: metrics.status === "HEALTHY" ? "#34d399" : "#fbbf24" }}>
+                    {metrics.status}
+                  </span>
                 </div>
                 <div className="metric-box">
                   <span className="box-title">Memory Allocation</span>
-                  <span className="box-val">{metrics.memory?.usagePct || "24.5%"}</span>
+                  <span className="box-val">{metrics.memory?.usagePct || "0%"}</span>
                   <span style={{ fontSize: "0.72rem", color: "#64748b" }}>RSS: {metrics.memoryUsageMb} MB</span>
                 </div>
                 <div className="metric-box">
@@ -9294,11 +9345,11 @@ export default function DeveloperDashboard() {
                 </div>
                 <div className="metric-box">
                   <span className="box-title">PostgreSQL Primary Engine</span>
-                  <span className="box-val" style={{ color: metrics.database?.connected === false ? "#f59e0b" : "#34d399" }}>
-                    {metrics.database?.poolStatus || "ACTIVE • CONNECTED"}
+                  <span className="box-val" style={{ color: metrics.database?.connected === true ? "#34d399" : "#f59e0b" }}>
+                    {metrics.database?.poolStatus || (metrics.database?.connected === false ? "STANDBY_FALLBACK" : "CHECKING...")}
                   </span>
                   <span style={{ fontSize: "0.72rem", color: "#64748b" }}>
-                    {metrics.database?.engine || "PostgreSQL"} • Pool: {metrics.database?.poolSize || 1}/{metrics.database?.maxPoolSize || 20}
+                    {metrics.database?.engine || "PostgreSQL"} • Pool: {metrics.database?.poolSize || 0}/{metrics.database?.maxPoolSize || 20}
                     {metrics.database?.latencyMs !== undefined && metrics.database?.latencyMs !== null ? ` • ${metrics.database.latencyMs}ms` : ""}
                   </span>
                 </div>
@@ -9308,11 +9359,26 @@ export default function DeveloperDashboard() {
                   <span style={{ fontSize: "0.72rem", color: "#64748b" }}>Max: {metrics.sockets?.maxConnections || 10000}</span>
                 </div>
                 <div className="metric-box">
-                  <span className="box-title">Encrypted Backups</span>
-                  <span className="box-val">{metrics.metrics?.totalBackups || 0}</span>
-                  <span style={{ fontSize: "0.72rem", color: "#64748b" }}>Active Locks: {metrics.metrics?.activeLocks || 0}</span>
+                  <span className="box-title">Demo Trial Mode Quota</span>
+                  <span className="box-val" style={{ color: "#fbbf24" }}>
+                    {demoUsageSummary.totalUsed || 0} Entries (Max {demoUsageSummary.maxPerModule || 10}/Module)
+                  </span>
+                  <button
+                    type="button"
+                    onClick={handleResetDemoCountersFromDev}
+                    style={{ marginTop: "6px", background: "rgba(245, 158, 11, 0.16)", border: "1px solid #f59e0b", color: "#fcd34d", borderRadius: "6px", padding: "3px 8px", fontSize: "0.72rem", fontWeight: 700, cursor: "pointer" }}
+                  >
+                    🔄 Reset Demo Quota
+                  </button>
                 </div>
               </div>
+
+              {metrics.database?.connected === false && (
+                <div style={{ marginTop: "12px", padding: "10px 14px", borderRadius: "8px", background: "rgba(245, 158, 11, 0.12)", border: "1px solid rgba(245, 158, 11, 0.45)", color: "#fcd34d", fontSize: "0.8rem" }}>
+                  <strong>Database Truth Notice:</strong> `DATABASE_URL` is currently unset or unreachable (`STANDBY_FALLBACK`). Operations currently save to the local persistent store until PostgreSQL is attached in Render Environment Variables.
+                  {paymentStatusSummary.sandboxOnly && " Payment gateways are running with Test/Sandbox fallback until live PAYSTACK_SECRET_KEY / HUBTEL credentials are set."}
+                </div>
+              )}
             </section>
 
             {/* 4. Remote System Management Controls (Step 35) */}

@@ -8,6 +8,7 @@ import UniversalRoleGuideModal from "../../../../../components/common/UniversalR
 import { navigateToDetail } from "../../../../../utils/universalNavigation";
 import { getActiveSchoolName, getActiveSchoolLogo } from "../../../../../utils/schoolBranding";
 import { isDemoSandboxMode, clearAuthStorage } from "../../../../../utils/tokenStorage";
+import { checkDemoEntryLimit, trackDemoEntryCreated } from "../../../../../utils/demoLimitGuard";
 import { useDashboardTabSync } from "../../../../../hooks/useDashboardTabSync";
 import "../teacher/TeacherDashboard.css";
 
@@ -172,6 +173,11 @@ export default function HRDashboard() {
 
   const handleCreateStaff = async (e) => {
     e.preventDefault();
+    const demoCheck = checkDemoEntryLimit("users", "HR Staff Onboarding", employees.length);
+    if (!demoCheck.allowed) {
+      showToast("error", "Demo Trial Limit (10/10)", demoCheck.message);
+      return;
+    }
     const parts = newStaff.name.trim().split(/\s+/);
     const firstName = parts[0] || "Staff";
     const lastName = parts.slice(1).join(" ") || "Member";
@@ -204,17 +210,20 @@ export default function HRDashboard() {
       const updated = [finalRecord, ...employees];
       setEmployees(updated);
       localStorage.setItem("gbs_hr_employees", JSON.stringify(updated));
+      trackDemoEntryCreated("users");
       setShowAddStaffModal(false);
       setNewStaff({ name: "", role: "Subject Teacher", department: "Academic Faculty", email: "", phone: "", salary: "3000" });
-      showToast("success", "Staff Member Activated", `Successfully onboarded and committed ${finalRecord.name} (${finalRecord.role}) to PostgreSQL.`);
+      showToast("success", "Staff Member Activated", `Successfully onboarded and committed ${finalRecord.name} (${finalRecord.role}) to system ledger.`);
     } catch (err) {
-      if (!isDemoMode) {
-        showToast("error", "Staff Onboarding Error", err.response?.data?.message || "Failed to register staff member to institutional database.");
+      const errCode = err.response?.data?.code;
+      if (!isDemoMode || err.response?.status === 403 || errCode === "DEMO_TRIAL_LIMIT_REACHED") {
+        showToast("error", errCode === "DEMO_TRIAL_LIMIT_REACHED" ? "Demo Trial Limit (10/10)" : "Staff Onboarding Error", err.response?.data?.message || "Failed to register staff member to institutional database.");
         return;
       }
       const updated = [localRecord, ...employees];
       setEmployees(updated);
       localStorage.setItem("gbs_hr_employees", JSON.stringify(updated));
+      trackDemoEntryCreated("users");
       setShowAddStaffModal(false);
       setNewStaff({ name: "", role: "Subject Teacher", department: "Academic Faculty", email: "", phone: "", salary: "3000" });
       showToast("success", "Staff Member Activated (Demo Sandbox)", `Successfully onboarded ${localRecord.name} (${localRecord.role}) in Demo Sandbox.`);
