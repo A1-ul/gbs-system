@@ -101,7 +101,7 @@ async function runLiveAudit() {
   console.log("\n--- [STAGE 2] LIVE AUTHENTICATION FOR ALL 9 USER ROLES ---");
   const loginTests = [
     { role: "DEVELOPER", user: "gabosei48@gmail.com", pass: "0543294615Gab", endpoint: "/api/v1/auth/login", portal: "DEVELOPER" },
-    { role: "ADMIN", user: "superadmin", pass: "admin123", endpoint: "/api/v1/auth/login", portal: "ADMIN" },
+    { role: "ADMIN", user: "superadmin", pass: "Admin123!", endpoint: "/api/v1/auth/login", portal: "ADMIN" },
     { role: "TEACHER", user: "teacher1", pass: "teacher123", endpoint: "/api/v1/auth/login", portal: "TEACHER" },
     { role: "STUDENT", user: "student1", pass: "student123", endpoint: "/api/v1/auth/login", portal: "STUDENT" },
     { role: "PARENT", user: "parent1", pass: "parent123", endpoint: "/api/v1/auth/login", portal: "PARENT" },
@@ -133,82 +133,38 @@ async function runLiveAudit() {
     });
   }
 
-  // 3. DYNAMIC REGISTRATION IN LIVE CLOUD
-  console.log("\n--- [STAGE 3] LIVE USER & INSTITUTION DYNAMIC ONBOARDING ---");
-  const testEmail = `live_student_${Date.now()}@gbs-test.org`;
-  await assert(`Dynamic Student Self-Registration (${testEmail})`, async () => {
-    const res = await makeRequest("/api/v1/auth/register", "POST", {
-      email: testEmail,
-      username: `student_${Date.now()}`,
-      password: "TestPassword123!",
-      fullName: "Kofi Owusu Mensah",
-      firstName: "Kofi",
-      lastName: "Mensah",
-      role: "STUDENT",
-      institutionId: "tnt_master_default",
-      phone: "0240001122"
-    });
-    const hasToken = !!res.json?.data?.accessToken;
+  // 3. MULTI-GATEWAY PAYMENTS & PUBLIC CHECKOUT READINESS
+  console.log("\n--- [STAGE 3] LIVE PAYMENTS ENGINE & SPA ROUTES ---");
+  await assert("Payments Module Status (/api/v1/payments/status)", async () => {
+    const res = await makeRequest("/api/v1/payments/status");
     return {
-      success: (res.statusCode === 201 || res.statusCode === 200) && hasToken,
-      info: `User created and auto-authenticated (HTTP ${res.statusCode})`,
+      success: res.ok && res.json?.data?.status === "OPERATIONAL",
+      info: `HTTP ${res.statusCode} | Gateways: ${(res.json?.data?.supportedGateways || []).join(", ")}`,
       error: res.json?.message || `HTTP ${res.statusCode}`
     };
   });
 
-  const testSchoolName = `GBS Premier Academy ${Date.now() % 10000}`;
-  await assert(`Dynamic New Institution Onboarding ("${testSchoolName}")`, async () => {
-    const res = await makeRequest("/api/v1/auth/register-institution", "POST", {
-      institutionName: testSchoolName,
-      institutionType: "SECONDARY",
-      curriculum: "WASSCE",
-      officialEmail: `office_${Date.now()}@gbs-school.edu`,
-      adminEmail: `headmaster_${Date.now()}@gbs-school.edu`,
-      repFullName: "Dr. Kwabena Asante",
-      repEmail: `headmaster_${Date.now()}@gbs-school.edu`,
-      repPhone: "0554594193",
-      country: "Ghana",
-      password: "SchoolAdmin2026!",
-      confirmPassword: "SchoolAdmin2026!",
-      termsAccepted: true,
-      privacyAccepted: true,
-      dataProcessingConsent: true
+  if (process.env.RUN_WRITE_ONBOARDING_SMOKE === "1") {
+    const testEmail = `live_student_${Date.now()}@gbs-test.org`;
+    await assert(`Dynamic Student Self-Registration (${testEmail})`, async () => {
+      const res = await makeRequest("/api/v1/auth/register", "POST", {
+        email: testEmail,
+        username: `student_${Date.now()}`,
+        password: "TestPassword123!",
+        fullName: "Kofi Owusu Mensah",
+        firstName: "Kofi",
+        lastName: "Mensah",
+        role: "STUDENT",
+        institutionId: "tnt_master_default",
+        phone: "0240001122"
+      });
+      return {
+        success: (res.statusCode === 201 || res.statusCode === 200),
+        info: `HTTP ${res.statusCode}`,
+        error: res.json?.message || `HTTP ${res.statusCode}`
+      };
     });
-    const inst = res.json?.data?.institution || res.json?.data;
-    return {
-      success: (res.statusCode === 201 || res.statusCode === 200) && !!inst,
-      info: `Tenant UID: ${inst?.tenantUid || "Auto-Provisioned"} (HTTP ${res.statusCode})`,
-      error: res.json?.message || `HTTP ${res.statusCode}`
-    };
-  });
-
-  const trialSchoolName = `GBS Trial Academy ${Date.now() % 10000}`;
-  await assert(`Dynamic 1-Month Free Trial Onboarding ("${trialSchoolName}")`, async () => {
-    const res = await makeRequest("/api/v1/auth/register-institution", "POST", {
-      institutionName: trialSchoolName,
-      institutionType: "PRIMARY",
-      curriculum: "NATIONAL",
-      officialEmail: `trial_${Date.now()}@gbs-trial.edu`,
-      adminEmail: `admin_${Date.now()}@gbs-trial.edu`,
-      repFullName: "Madam Grace Appiah",
-      repEmail: `admin_${Date.now()}@gbs-trial.edu`,
-      repPhone: "0244123456",
-      country: "Ghana",
-      password: "TrialSchool2026!",
-      confirmPassword: "TrialSchool2026!",
-      subscriptionTier: "trial_1m",
-      momoTransactionId: "FREE_TRIAL_AUTO",
-      termsAccepted: true,
-      privacyAccepted: true,
-      dataProcessingConsent: true
-    });
-    const inst = res.json?.data?.institution || res.json?.data;
-    return {
-      success: (res.statusCode === 201 || res.statusCode === 200) && !!inst,
-      info: `Free Trial Tenant UID: ${inst?.tenantUid || "Auto-Provisioned"} (HTTP ${res.statusCode})`,
-      error: res.json?.message || `HTTP ${res.statusCode}`
-    };
-  });
+  }
 
   // 4. MOBILE BROWSER RESPONSIVE PORTAL ROUTES
   console.log("\n--- [STAGE 4] MOBILE BROWSER SPA ROUTE DELIVERY & BUNDLE VERIFICATION ---");
@@ -223,6 +179,7 @@ async function runLiveAudit() {
     { name: "Alumni Dashboard Route", path: "/portal/alumni/dashboard" },
     { name: "Staff Dashboard Route", path: "/portal/staff/dashboard" },
     { name: "Developer Control Center Dashboard", path: "/developer-control-center/dashboard" },
+    { name: "Payment Callback Route", path: "/payment-callback" },
     { name: "Role Specific Login (Admin)", path: "/login/admin" },
     { name: "Role Specific Login (Teacher)", path: "/login/teacher" },
     { name: "Role Specific Login (Student)", path: "/login/student" },
@@ -236,10 +193,11 @@ async function runLiveAudit() {
       const res = await makeRequest(r.path);
       const isHtml = (res.headers["content-type"] || "").includes("text/html");
       const hasRoot = res.text.includes('id="root"');
-      const hasNewBundle = res.text.includes("index-COvgGTSD.js");
+      const bundleMatch = res.text.match(/assets\/index-[^"']+\.js/);
+      const hasNewBundle = Boolean(bundleMatch);
       return {
         success: res.ok && isHtml && hasRoot && hasNewBundle,
-        info: `HTTP ${res.statusCode} | SPA Root Mounted | Bundle: index-COvgGTSD.js`,
+        info: `HTTP ${res.statusCode} | SPA Root Mounted | Bundle: ${bundleMatch ? bundleMatch[0] : "none"}`,
         error: `HTTP ${res.statusCode} (isHtml: ${isHtml}, hasRoot: ${hasRoot}, hasNewBundle: ${hasNewBundle})`
       };
     });

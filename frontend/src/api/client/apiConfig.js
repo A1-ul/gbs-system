@@ -28,7 +28,7 @@ export const getServerHost = () => {
 export const getServerBaseUrl = () => {
   if (typeof window !== "undefined" && window.location) {
     if (window.location.hostname.includes("gbs-frontend.onrender.com")) {
-      return "https://gbs-school.onrender.com";
+      return "https://gbs-system.onrender.com";
     }
     if (isViteProxyOrigin()) {
       return window.location.origin;
@@ -53,7 +53,7 @@ export const getServerBaseUrl = () => {
 export const getApiBaseUrl = () => {
   if (typeof window !== "undefined" && window.location) {
     if (window.location.hostname.includes("gbs-frontend.onrender.com")) {
-      return "https://gbs-school.onrender.com/api/v1";
+      return "https://gbs-system.onrender.com/api/v1";
     }
     if (isViteProxyOrigin()) {
       return `${window.location.origin}/api/v1`;
@@ -73,7 +73,7 @@ export const getWebSocketUrl = () => {
   const configuredSocket = sanitizeConfiguredUrl(import.meta.env.VITE_SOCKET_URL);
   if (typeof window !== "undefined" && window.location) {
     if (window.location.hostname.includes("gbs-frontend.onrender.com")) {
-      return "wss://gbs-school.onrender.com";
+      return "wss://gbs-system.onrender.com";
     }
     const wsProto = window.location.protocol === "https:" ? "wss:" : "ws:";
     if (isViteProxyOrigin()) {

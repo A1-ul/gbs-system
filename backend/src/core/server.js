@@ -833,6 +833,13 @@ const server = app.listen(PORT, HOST, async () => {
             console.log('✅ [DATABASE] PostgreSQL schema tables verified (active connection ready).');
           }
 
+          try {
+            const { ensurePaymentTables } = require('./database/ensurePaymentTables');
+            await ensurePaymentTables();
+          } catch (paySchemaErr) {
+            console.warn('⚠️ [PAYMENTS] Startup DDL sync notice:', paySchemaErr.message);
+          }
+
           const pgLive = typeof prismaClient.getPostgresLiveStatus === 'function'
             ? await prismaClient.getPostgresLiveStatus(true)
             : { active: await checkPostgresReachable(2000), database: 'gbs_system', versionShort: 'PostgreSQL', latencyMs: 0 };

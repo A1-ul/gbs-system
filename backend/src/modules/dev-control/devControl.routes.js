@@ -414,7 +414,7 @@ router.post('/sync-to-cloud', async (req, res) => {
                 id: inst.id || 1,
                 name: inst.name || inst.institutionName || 'GBS Registered Institution',
                 code: inst.tenantCode || inst.code || 'GBS-MAIN',
-                domain: inst.domain || 'gbs-school.onrender.com',
+                domain: inst.domain || 'gbs-system.onrender.com',
                 status: 'ACTIVE'
               }
             });

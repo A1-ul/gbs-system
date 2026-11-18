@@ -2,19 +2,20 @@
 # GBS ENTERPRISE ECOSYSTEM - RENDER BLUEPRINT (render.yaml)
 # Hosting Platform: Render (https://render.com)
 # Central Account Email: gabosei48@gmail.com
-# Primary Web Service Domain: gbs-school.onrender.com
+# Primary Web Service Domain: gbs-system.onrender.com
 # ==============================================================================
 
 services:
   # 1. GBS Unified Enterprise Web Service & API Engine (Node.js + WebSockets + Static SPA)
   - type: web
-    name: gbs-school
+    name: gbs-system
     env: node
     rootDir: backend
     buildCommand: npm install && npm run build
     startCommand: npm start
     plan: free
     autoDeploy: true
+    healthCheckPath: /api/v1/health
     envVars:
       - key: NODE_ENV
         value: production
@@ -23,13 +24,31 @@ services:
       - key: HOST
         value: 0.0.0.0
       - key: CORS_ORIGIN
-        value: https://gbs-school.onrender.com,https://gbs-frontend.onrender.com,https://gbs-schools.com,https://www.gbs-schools.com
+        value: https://gbs-system.onrender.com,https://gbs-school.onrender.com,https://gbs-frontend.onrender.com,https://gbs-schools.com,https://www.gbs-schools.com
+      - key: JWT_SECRET
+        generateValue: true
+      - key: JWT_REFRESH_SECRET
+        generateValue: true
+      - key: PAYSTACK_SECRET_KEY
+        sync: false
+      - key: PAYSTACK_PUBLIC_KEY
+        sync: false
+      - key: HUBTEL_CLIENT_ID
+        sync: false
+      - key: HUBTEL_CLIENT_SECRET
+        sync: false
+      - key: HUBTEL_MERCHANT_ACCOUNT_NUMBER
+        sync: false
+      - key: HUBTEL_WEBHOOK_SECRET
+        sync: false
+      - key: HUBTEL_MODE
+        value: TEST
       - fromDatabase:
           name: gbs-db
           property: connectionString
         key: DATABASE_URL
 
-  # 2. GBS High-Performance Static Frontend CDN Service
+  # 2. GBS High-Performance Static Frontend CDN Service (Optional Separate CDN)
   - type: web
     name: gbs-frontend
     env: static
@@ -40,9 +59,9 @@ services:
     autoDeploy: true
     envVars:
       - key: VITE_API_BASE_URL
-        value: https://gbs-school.onrender.com/api/v1
+        value: https://gbs-system.onrender.com/api/v1
       - key: VITE_SOCKET_URL
-        value: wss://gbs-school.onrender.com
+        value: wss://gbs-system.onrender.com
     routes:
       - type: rewrite
         source: /*
