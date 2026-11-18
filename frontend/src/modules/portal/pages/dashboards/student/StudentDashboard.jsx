@@ -183,13 +183,25 @@ export function StudentDashboard({ initialTab } = {}) {
   const [examScoreResult, setExamScoreResult] = useState(null);
   const [showExamConfirmModal, setShowExamConfirmModal] = useState(false);
 
-  // Exam Font Sizing, Navigation & AI Proctoring
+  // Exam Font Sizing, Navigation & Continuous AI Proctoring
   const [examFontSize, setExamFontSize] = useState("NORMAL"); // "NORMAL" (15px), "MEDIUM" (18px), "LARGE" (22px)
   const [examQuestionIndex, setExamQuestionIndex] = useState(0);
   const [proctoringWarnings, setProctoringWarnings] = useState(0);
   const [showHeadMovementWarningModal, setShowHeadMovementWarningModal] = useState(false);
   const [penaltyMarksDeducted, setPenaltyMarksDeducted] = useState(0);
   const [examEssayAnswers, setExamEssayAnswers] = useState({});
+  const [proctoringStatus, setProctoringStatus] = useState("IDLE"); // "IDLE" | "INITIALIZING" | "CAMERA_ACTIVE" | "FOCUS_ONLY_ACTIVE" | "WARNING_DETECTED" | "STOPPED"
+  const [proctoringDetail, setProctoringDetail] = useState("AI proctoring activates automatically when you click Start Exam.");
+  const [proctoringEvents, setProctoringEvents] = useState([]);
+  const [lastAlertReason, setLastAlertReason] = useState("Head movement or focus shift away from the exam screen detected.");
+
+  const proctorVideoRef = useRef(null);
+  const proctorStreamRef = useRef(null);
+  const proctorCanvasRef = useRef(null);
+  const proctorPrevFrameRef = useRef(null);
+  const proctorIntervalRef = useRef(null);
+  const proctorOffFrameStreakRef = useRef(0);
+  const lastProctorAlertAtRef = useRef(0);
 
   // Past Questions Archive Filters & Inspection
   const [pastExamYearFilter, setPastExamYearFilter] = useState("ALL");
@@ -200,30 +212,230 @@ export function StudentDashboard({ initialTab } = {}) {
   const [chatAttachment, setChatAttachment] = useState(null);
   const chatFileInputRef = useRef(null);
 
-  // AI Exam Head Movement & Gaze Proctoring Sentinel
-  const triggerHeadMovementAlert = () => {
+  const stopProctoringSession = () => {
+    if (proctorIntervalRef.current) {
+      clearInterval(proctorIntervalRef.current);
+      proctorIntervalRef.current = null;
+    }
+    if (proctorStreamRef.current) {
+      try {
+        proctorStreamRef.current.getTracks().forEach((track) => track.stop());
+      } catch { }
+      proctorStreamRef.current = null;
+    }
+    if (proctorVideoRef.current) {
+      try {
+        proctorVideoRef.current.srcObject = null;
+      } catch { }
+    }
+    proctorPrevFrameRef.current = null;
+    proctorOffFrameStreakRef.current = 0;
+    setProctoringStatus("STOPPED");
+    setProctoringDetail("Exam session ended. AI proctoring camera and monitors stopped.");
+  };
+
+  // AI Exam Head Movement & Integrity Proctoring Sentinel
+  const triggerHeadMovementAlert = (reason = "Head movement or focus shift away from the exam screen detected!") => {
     if (!examStarted || examSubmitted) return;
+    const now = Date.now();
+    if (now - lastProctorAlertAtRef.current < 4500) return;
+    lastProctorAlertAtRef.current = now;
+
+    const cleanReason = typeof reason === "string" && reason.trim()
+      ? reason.trim()
+      : "Head movement or focus shift away from the exam screen detected!";
+
+    setLastAlertReason(cleanReason);
+    setProctoringStatus("WARNING_DETECTED");
     setProctoringWarnings((prev) => {
       const nextCount = prev + 1;
       setPenaltyMarksDeducted(nextCount * 2);
+      setProctoringEvents((logs) => [
+        {
+          id: `PROC-${now}`,
+          time: new Date().toLocaleTimeString(),
+          reason: cleanReason,
+          warningNumber: nextCount,
+          penaltyPct: nextCount * 2
+        },
+        ...logs.slice(0, 49)
+      ]);
       return nextCount;
     });
     setShowHeadMovementWarningModal(true);
   };
 
+  const beginProctoredExam = (examObj, durationSeconds) => {
+    setProctoringWarnings(0);
+    setPenaltyMarksDeducted(0);
+    setProctoringEvents([]);
+    setLastAlertReason("");
+    lastProctorAlertAtRef.current = 0;
+    proctorOffFrameStreakRef.current = 0;
+    if (examObj) setActiveExam(examObj);
+    if (typeof durationSeconds === "number" && durationSeconds > 0) {
+      setExamTimeLeftSeconds(durationSeconds);
+    }
+    setExamStarted(true);
+  };
+
   useEffect(() => {
-    if (!examStarted || examSubmitted) return;
+    if (!examStarted || examSubmitted) {
+      stopProctoringSession();
+      return;
+    }
+
+    let cancelled = false;
+    setProctoringStatus("INITIALIZING");
+    setProctoringDetail("Starting camera, face-centering, tab-lock & integrity monitor...");
+
     const handleVisibilityChange = () => {
-      if (document.hidden) triggerHeadMovementAlert();
+      if (document.hidden) {
+        triggerHeadMovementAlert("Switched away from active examination tab!");
+      }
     };
     const handleWindowBlur = () => {
-      triggerHeadMovementAlert();
+      triggerHeadMovementAlert("Left examination window or switched applications!");
     };
+    const handleClipboardBlock = (e) => {
+      e.preventDefault();
+      triggerHeadMovementAlert("Clipboard copy/cut/paste action blocked during examination!");
+    };
+
     window.addEventListener("blur", handleWindowBlur);
     document.addEventListener("visibilitychange", handleVisibilityChange);
+    document.addEventListener("copy", handleClipboardBlock);
+    document.addEventListener("cut", handleClipboardBlock);
+
+    const startCameraAndVisionMonitor = async () => {
+      if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
+        setProctoringStatus("FOCUS_ONLY_ACTIVE");
+        setProctoringDetail("Focus, Tab-Switch & Anti-Copy Monitor Active (No device webcam API)");
+        return;
+      }
+
+      try {
+        const stream = await navigator.mediaDevices.getUserMedia({
+          video: { facingMode: "user", width: { ideal: 320 }, height: { ideal: 240 } },
+          audio: false
+        });
+        if (cancelled) {
+          stream.getTracks().forEach((t) => t.stop());
+          return;
+        }
+        proctorStreamRef.current = stream;
+        if (proctorVideoRef.current) {
+          proctorVideoRef.current.srcObject = stream;
+          proctorVideoRef.current.play().catch(() => { });
+        }
+        setProctoringStatus("CAMERA_ACTIVE");
+        setProctoringDetail("Live Webcam Face Monitor, Gaze & Tab-Lock Active");
+
+        const faceDetector = typeof window !== "undefined" && "FaceDetector" in window
+          ? new window.FaceDetector({ fastMode: true, maxDetectedFaces: 3 })
+          : null;
+
+        proctorIntervalRef.current = setInterval(async () => {
+          if (cancelled || !proctorVideoRef.current || proctorVideoRef.current.readyState < 2) return;
+          const video = proctorVideoRef.current;
+          const width = 96;
+          const height = 72;
+          const canvas = proctorCanvasRef.current || document.createElement("canvas");
+          canvas.width = width;
+          canvas.height = height;
+          proctorCanvasRef.current = canvas;
+          const ctx = canvas.getContext("2d", { willReadFrequently: true });
+          if (!ctx) return;
+          ctx.drawImage(video, 0, 0, width, height);
+
+          if (faceDetector) {
+            try {
+              const faces = await faceDetector.detect(canvas);
+              if (faces.length === 0) {
+                proctorOffFrameStreakRef.current += 1;
+                if (proctorOffFrameStreakRef.current >= 3) {
+                  proctorOffFrameStreakRef.current = 0;
+                  triggerHeadMovementAlert("No student face detected in front of examination camera!");
+                }
+                return;
+              }
+              if (faces.length > 1) {
+                proctorOffFrameStreakRef.current = 0;
+                triggerHeadMovementAlert("Multiple faces detected inside examination frame!");
+                return;
+              }
+              const box = faces[0].boundingBox;
+              const centerX = (box.x + box.width / 2) / width;
+              if (centerX < 0.18 || centerX > 0.82) {
+                proctorOffFrameStreakRef.current += 1;
+                if (proctorOffFrameStreakRef.current >= 2) {
+                  proctorOffFrameStreakRef.current = 0;
+                  triggerHeadMovementAlert("Head moved off-center away from examination screen!");
+                }
+                return;
+              }
+              proctorOffFrameStreakRef.current = 0;
+              setProctoringStatus("CAMERA_ACTIVE");
+              return;
+            } catch {
+              // Fall back cleanly to pixel luminance/motion monitor
+            }
+          }
+
+          try {
+            const imgData = ctx.getImageData(0, 0, width, height).data;
+            let totalLum = 0;
+            let diffSum = 0;
+            const prev = proctorPrevFrameRef.current;
+            const currLum = new Uint8Array(width * height);
+            for (let i = 0, p = 0; i < imgData.length; i += 4, p++) {
+              const lum = (imgData[i] * 3 + imgData[i + 1] * 6 + imgData[i + 2]) / 10;
+              currLum[p] = lum;
+              totalLum += lum;
+              if (prev) {
+                diffSum += Math.abs(lum - prev[p]);
+              }
+            }
+            const pixelCount = width * height;
+            const avgBrightness = totalLum / pixelCount;
+            const avgMotion = prev ? diffSum / pixelCount : 0;
+            proctorPrevFrameRef.current = currLum;
+
+            if (avgBrightness < 14) {
+              proctorOffFrameStreakRef.current += 1;
+              if (proctorOffFrameStreakRef.current >= 3) {
+                proctorOffFrameStreakRef.current = 0;
+                triggerHeadMovementAlert("Webcam lens covered or lighting too dark during exam!");
+              }
+            } else if (prev && avgMotion > 42) {
+              proctorOffFrameStreakRef.current += 1;
+              if (proctorOffFrameStreakRef.current >= 2) {
+                proctorOffFrameStreakRef.current = 0;
+                triggerHeadMovementAlert("Excessive head or background movement detected on webcam!");
+              }
+            } else {
+              proctorOffFrameStreakRef.current = 0;
+              setProctoringStatus("CAMERA_ACTIVE");
+            }
+          } catch { }
+        }, 900);
+      } catch {
+        if (!cancelled) {
+          setProctoringStatus("FOCUS_ONLY_ACTIVE");
+          setProctoringDetail("Camera denied/unavailable — Focus, Tab-Switch & Anti-Copy Guard Active");
+        }
+      }
+    };
+
+    startCameraAndVisionMonitor();
+
     return () => {
+      cancelled = true;
       window.removeEventListener("blur", handleWindowBlur);
       document.removeEventListener("visibilitychange", handleVisibilityChange);
+      document.removeEventListener("copy", handleClipboardBlock);
+      document.removeEventListener("cut", handleClipboardBlock);
+      stopProctoringSession();
     };
   }, [examStarted, examSubmitted]);
 
@@ -233,10 +445,12 @@ export function StudentDashboard({ initialTab } = {}) {
       setExamTimeLeftSeconds((prev) => {
         if (prev <= 1) {
           clearInterval(timer);
+          stopProctoringSession();
           setFeedback({
             type: "warning",
-            message: "⏱️ Examination time expired! Your written responses are auto-saved and locked for grading."
+            message: "⏱️ Examination time expired! Your written responses are saved and proctoring session closed."
           });
+          setExamStarted(false);
           return 0;
         }
         return prev - 1;
@@ -1608,6 +1822,7 @@ export function StudentDashboard({ initialTab } = {}) {
           totalMarks,
           proctoringPenalty: penalty,
           proctoringViolations: proctoringWarnings,
+          proctoringLog: proctoringEvents,
           score: finalPct,
           correct: correctCount,
           total: totalQ,
@@ -1660,6 +1875,7 @@ export function StudentDashboard({ initialTab } = {}) {
         localStorage.removeItem("gbs_new_exam_published");
         setNewExamPublished(false);
 
+        stopProctoringSession();
         setExamSubmitted(true);
         setExamStarted(false);
         setFeedback({
@@ -2806,7 +3022,7 @@ export function StudentDashboard({ initialTab } = {}) {
                                                   setExamQuestionIndex(0);
                                                   setExamSubmitted(false);
                                                   setExamScoreResult(null);
-                                                  setActiveExam({
+                                                  const preparedExam = {
                                                     ...ex,
                                                     id: examId,
                                                     title: ex.title || fallbackTitle,
@@ -2818,9 +3034,8 @@ export function StudentDashboard({ initialTab } = {}) {
                                                       { id: 103, questionNumber: 3, questionType: "TRUE_FALSE", questionText: "The limit of (sin x) / x as x approaches 0 is equal to 1.", options: ["True", "False"], correctOption: "A", marks: 10 },
                                                       { id: 104, questionNumber: 4, questionType: "FILL_IN_BLANK", questionText: "The powerhouse organelle responsible for ATP synthesis during aerobic cellular respiration is the ____.", acceptedAnswer: "Mitochondria", acceptedKeywords: "mitochondria,mitochondrion", marks: 10 }
                                                     ]
-                                                  });
-                                                  setExamTimeLeftSeconds(ex.durationMinutes ? ex.durationMinutes * 60 : 900);
-                                                  setExamStarted(true);
+                                                  };
+                                                  beginProctoredExam(preparedExam, ex.durationMinutes ? ex.durationMinutes * 60 : 900);
                                                 }}
                                               >
                                                 🚀 Portal Ready: Launch Exam
@@ -2931,8 +3146,7 @@ export function StudentDashboard({ initialTab } = {}) {
                                   className="btn-primary"
                                   style={{ fontSize: "1rem", padding: "12px 28px", background: "linear-gradient(135deg, #8b5cf6, #6d28d9)" }}
                                   onClick={() => {
-                                    setExamTimeLeftSeconds(activeExam?.durationMinutes ? activeExam.durationMinutes * 60 : 900);
-                                    setExamStarted(true);
+                                    beginProctoredExam(null, activeExam?.durationMinutes ? activeExam.durationMinutes * 60 : 900);
                                   }}
                                 >
                                   🚀 Begin Active Examination Now
@@ -3227,7 +3441,10 @@ export function StudentDashboard({ initialTab } = {}) {
                                           <button
                                             type="button"
                                             onClick={() => {
-                                              setActiveExam({
+                                              setExamQuestionIndex(0);
+                                              setExamAnswers({});
+                                              setExamEssayAnswers({});
+                                              beginProctoredExam({
                                                 id: paper.id,
                                                 title: `[MOCK PRACTICE] ${paper.title}`,
                                                 totalMarks: paper.totalMarks,
@@ -3239,12 +3456,7 @@ export function StudentDashboard({ initialTab } = {}) {
                                                   questionText: sq,
                                                   options: ["Option A - Derivation Verified", "Option B - Alternative Working", "Option C - Inconclusive", "Option D - Counter-Example"]
                                                 }))
-                                              });
-                                              setExamTimeLeftSeconds(45 * 60);
-                                              setExamQuestionIndex(0);
-                                              setExamAnswers({});
-                                              setExamEssayAnswers({});
-                                              setExamStarted(true);
+                                              }, 45 * 60);
                                             }}
                                             style={{
                                               flex: 1,
@@ -3340,13 +3552,45 @@ export function StudentDashboard({ initialTab } = {}) {
                                   ))}
                                 </div>
 
-                                <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
-                                  <span style={{ fontSize: "0.75rem", color: "#34d399", background: "rgba(16, 185, 129, 0.15)", border: "1px solid #10b981", padding: "4px 10px", borderRadius: "6px", fontWeight: 700 }}>
-                                    🟢 AI Proctoring: Gaze Centered
+                                <div style={{ display: "flex", alignItems: "center", gap: "10px", flexWrap: "wrap" }}>
+                                  <video
+                                    ref={proctorVideoRef}
+                                    autoPlay
+                                    muted
+                                    playsInline
+                                    style={{
+                                      width: proctoringStatus === "CAMERA_ACTIVE" || proctoringStatus === "WARNING_DETECTED" ? "64px" : "0px",
+                                      height: proctoringStatus === "CAMERA_ACTIVE" || proctoringStatus === "WARNING_DETECTED" ? "46px" : "0px",
+                                      borderRadius: "8px",
+                                      objectFit: "cover",
+                                      border: proctoringStatus === "WARNING_DETECTED" ? "2px solid #ef4444" : "2px solid #10b981",
+                                      transform: "scaleX(-1)",
+                                      display: proctoringStatus === "CAMERA_ACTIVE" || proctoringStatus === "WARNING_DETECTED" ? "block" : "none"
+                                    }}
+                                  />
+                                  <span
+                                    style={{
+                                      fontSize: "0.75rem",
+                                      color: proctoringStatus === "WARNING_DETECTED" ? "#fca5a5" : proctoringStatus === "FOCUS_ONLY_ACTIVE" ? "#fbbf24" : "#34d399",
+                                      background: proctoringStatus === "WARNING_DETECTED" ? "rgba(239, 68, 68, 0.2)" : proctoringStatus === "FOCUS_ONLY_ACTIVE" ? "rgba(245, 158, 11, 0.16)" : "rgba(16, 185, 129, 0.15)",
+                                      border: proctoringStatus === "WARNING_DETECTED" ? "1px solid #ef4444" : proctoringStatus === "FOCUS_ONLY_ACTIVE" ? "1px solid #f59e0b" : "1px solid #10b981",
+                                      padding: "5px 10px",
+                                      borderRadius: "6px",
+                                      fontWeight: 700
+                                    }}
+                                    title={proctoringDetail}
+                                  >
+                                    {proctoringStatus === "CAMERA_ACTIVE"
+                                      ? "📹 AI Proctoring Live • Webcam & Focus Active"
+                                      : proctoringStatus === "WARNING_DETECTED"
+                                        ? `🚨 AI Proctoring Alert (${proctoringWarnings} Warning${proctoringWarnings === 1 ? "" : "s"})`
+                                        : proctoringStatus === "FOCUS_ONLY_ACTIVE"
+                                          ? "🛡️ AI Proctoring Active (Tab & Anti-Copy Lock)"
+                                          : "⏳ Starting AI Proctoring..."}
                                   </span>
                                   <button
                                     type="button"
-                                    onClick={triggerHeadMovementAlert}
+                                    onClick={() => triggerHeadMovementAlert("Manual test: Head movement alert verified.")}
                                     style={{
                                       background: "rgba(239, 68, 68, 0.15)",
                                       border: "1px solid #ef4444",
@@ -3359,7 +3603,7 @@ export function StudentDashboard({ initialTab } = {}) {
                                     }}
                                     title="Simulate head movement away to test proctoring alert and penalty deduction"
                                   >
-                                    👁️ Test Head Movement Alert
+                                    👁️ Test Proctoring Alert
                                   </button>
                                 </div>
                               </div>
@@ -5842,7 +6086,7 @@ export function StudentDashboard({ initialTab } = {}) {
           }}>
             <span style={{ fontSize: "3.5rem", display: "block", marginBottom: "8px" }}>⚠️ 👁️</span>
             <h3 style={{ color: "#ef4444", margin: "0 0 10px", fontSize: "1.3rem", fontWeight: 900 }}>
-              ⚠️ AI EXAM PROCTORING ALERT: Head movement away from the screen detected!
+              ⚠️ AI EXAM PROCTORING ALERT
             </h3>
             <div style={{
               background: "rgba(239, 68, 68, 0.15)",
@@ -5851,10 +6095,10 @@ export function StudentDashboard({ initialTab } = {}) {
               padding: "12px 16px",
               margin: "1rem 0",
               color: "#fca5a5",
-              fontSize: "1.05rem",
+              fontSize: "1.02rem",
               fontWeight: 800
             }}>
-              "The next movement will cost you marks to lose."
+              {lastAlertReason || "Head movement or focus shift away from the exam screen detected! Next infraction deducts marks."}
             </div>
             <p style={{ margin: "0 0 1.25rem", color: "#cbd5e1", fontSize: "0.85rem", lineHeight: "1.5" }}>
               Our proctoring algorithm enforces strict examination integrity. You must face your screen continuously at all times.
@@ -5972,7 +6216,10 @@ export function StudentDashboard({ initialTab } = {}) {
                 onClick={() => {
                   const paper = selectedPastPaperModal;
                   setSelectedPastPaperModal(null);
-                  setActiveExam({
+                  setExamQuestionIndex(0);
+                  setExamAnswers({});
+                  setExamEssayAnswers({});
+                  beginProctoredExam({
                     id: paper.id,
                     title: `[MOCK PRACTICE] ${paper.title}`,
                     totalMarks: paper.totalMarks,
@@ -5984,12 +6231,7 @@ export function StudentDashboard({ initialTab } = {}) {
                       questionText: sq,
                       options: ["Option A - Derivation Verified", "Option B - Alternative Working", "Option C - Inconclusive", "Option D - Counter-Example"]
                     }))
-                  });
-                  setExamTimeLeftSeconds(45 * 60);
-                  setExamQuestionIndex(0);
-                  setExamAnswers({});
-                  setExamEssayAnswers({});
-                  setExamStarted(true);
+                  }, 45 * 60);
                 }}
               >
                 ✍️ Start Practice Exam on This Paper

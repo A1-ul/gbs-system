@@ -1,58 +1,68 @@
 import React, { useState, useEffect, useRef } from "react";
-import { useNavigate, useLocation } from "react-router-dom";
+import { useNavigate } from "react-router-dom";
 
 /**
- * GBS AI Voice Assistant (Siri-style Voice & Accessibility Remote Engine)
- * 
- * Provides complete hands-free and accessibility remote voice control for GBS System:
- * 1. Listens for speech commands via Web Speech API (webkitSpeechRecognition / SpeechRecognition).
- * 2. Hotword / Wake word detection: "Hey GBS", "Hello GBS", "GBS".
- * 3. Speaks responses aloud with natural speech synthesis (SpeechSynthesisUtterance).
- * 4. Customizable sound and tone: Pitch, rate, and voice accents.
- * 5. Explains GBS School Management System to any user who asks questions.
- * 6. Executes remote navigation (Portals, Login, Onboarding, Website, Presentation).
- * 7. Interacts with active forms (enters names, emails, amounts/figures, submits forms, and fills demo logins).
- * 8. Visual Siri-style fluid animated orb with pulsing sound waves.
+ * GBS AI Voice Assistant (Continuous Conversational Siri-Style Remote)
+ *
+ * Keeps an active continuous voice + chat conversation open when clicked:
+ * - Answers questions, performs portal navigation, autofills forms, and handles commands.
+ * - After every answer, asks: "Are we done with what you want, or is there another?
+ *   If there is another, tell me for the answer."
+ * - Re-arms microphone automatically after speaking until the user says they are done
+ *   (or clicks Done / Sleep), then politely says goodbye and goes to sleep.
  */
-
 const GBS_KNOWLEDGE_BASE = {
   overview:
-    "GBS School Management System is an enterprise institutional operating platform designed to digitize every aspect of school governance. It connects eight user roles with automated admissions, weekly timetables, attendance tracking, tuition billing, exam grading, and parent emergency GPS tracking. How can I guide you today?",
+    "GBS School Management System connects Headmaster, Teachers, Students, Parents, Accountants, HR, Staff, Alumni, and Developers with admissions, attendance, timetables, exam grading, transport routing, and official mobile-money fee payments.",
   motto:
-    "Intelligence Talks to Wisdom is the founding motto of GBS Company, symbolizing the union of advanced digital intelligence with deep institutional wisdom and bank-grade data security.",
+    "Intelligence Talks to Wisdom is the founding motto of GBS Company, uniting modern digital tools with sound educational leadership.",
   onboarding:
-    "Educational institutions can onboard 100% remotely through the First Page gateway without requiring any developer travel. Enter your institution name, select your tier, and your isolated multi-tenant database enclave is provisioned immediately with a 30-day trial.",
+    "Schools can onboard remotely from the First Page by entering institution details, selecting a plan tier, and activating either Demo Sandbox (10 trial entries per module) or Live Production.",
   admissions:
-    "Prospective parents can submit inquiries and applications online. School administrators verify uploaded birth certificates and transcripts, schedule entrance interviews, and approve applications, which automatically provisions student credentials.",
+    "Parents and prospective students submit admissions online; school administrators review uploaded documents, approve applications, and issue student login credentials.",
   payments:
-    "Parents can pay school fees directly via Mobile Money or Bank Card. Tuition invoices are atomically updated in the finance general ledger, and official stamped receipts are generated instantly.",
+    "Parents and students can pay school fees securely using MTN Mobile Money, Telecel Cash, AT Money, Visa, Mastercard, or Bank Transfer through Paystack and Hubtel. GBS never asks for or stores MoMo PINs or raw card CVVs.",
+  transport:
+    "Administrators assign students to commuter bus routes from the Headmaster Dashboard or Transport Fleet Portal by selecting the student, picking a commuter route, and confirming pickup stops.",
+  proctoring:
+    "When a student clicks Start Exam, live camera focus monitoring, tab-switch guards, and anti-copy protection run continuously until the exam is submitted or ended.",
+  translator:
+    "Use the movable Language Translator floating pill anywhere on the screen to drag it out of the way, translate text into multiple languages, or send translated messages.",
+  mobileApp:
+    "Open the Mobile App Hub from the top bar and click Install App on This Device to install GBS cleanly onto Android, iPhone, iPad, Windows, or Mac.",
   roles:
-    "GBS supports eight distinct roles: Super Administrator, Headmaster, Teachers, Students, Parents, Accountants, Staff, and System Developers, each with dedicated workspaces and role-based access control.",
+    "GBS supports Headmaster/Admin, Teacher, Student, Parent, Accountant, HR Manager, General Staff, Alumni, Inventory/Store, and Developer roles.",
   developer:
-    "The Developer Mission Control provides hardware telemetry, encrypted database backups, system-wide maintenance mode toggles, and multi-region disaster recovery drill monitoring with PIN-verified security.",
+    "The Developer Control Center tracks real PostgreSQL vs fallback database status, encrypted backups, system locks, tenant approvals, and Demo trial quotas.",
   developerPrivacyShield:
-    "Developer identity, names, and contact details are classified under institutional security protocols and are not disclosed. GBS School Management System is developed, engineered, and maintained by the GBS Global Enterprise Engineering Directorate. For official assistance, please reach out via our institutional support channels or official company website.",
+    "Developer identity and personal contact details are protected by institutional security policy. Please use official GBS institutional support channels.",
   contact:
-    "GBS Company provides institutional enterprise support worldwide through our official school management portal and international service desks. For inquiries, please reach out via our official website."
+    "For institutional support, reach out through the official GBS portal communication desk."
 };
+
+const DONE_INTENT_REGEX = /\b(we are done|i am done|i'm done|yes done|done now|all done|finished|nothing else|no more|no other|that's all|that is all|conversation is over|go to sleep|go off|sleep now|goodbye|bye bye|stop listening|turn off)\b/i;
+const ANOTHER_INTENT_REGEX = /\b(there is another|another question|another one|one more|not done|not yet|have another|more help|still here)\b/i;
+const FOLLOWUP_PROMPT = "Are we done with what you want, or is there another? If there is another, tell me for the answer.";
 
 export default function GBSVoiceAssistant() {
   const navigate = useNavigate();
-  const location = useLocation();
 
-  // Assistant UI State
+  // Assistant UI & Continuous Conversation State
   const [isOpen, setIsOpen] = useState(false);
+  const [isSleeping, setIsSleeping] = useState(true);
   const [isListening, setIsListening] = useState(false);
   const [isSpeaking, setIsSpeaking] = useState(false);
   const [transcript, setTranscript] = useState("");
+  const [typedInput, setTypedInput] = useState("");
   const [assistantResponse, setAssistantResponse] = useState(
-    "Hello! I am your GBS Voice Assistant. You can speak commands to navigate, enter names or figures, make payments, or ask me about the system."
+    "Hello! Click me anytime to start a continuous conversation."
   );
+  const [conversationMessages, setConversationMessages] = useState([]);
   const [continuousListening, setContinuousListening] = useState(true);
 
   // Tone & Sound Customization
-  const [voiceRate, setVoiceRate] = useState(1.0); // 0.8 to 1.3
-  const [voicePitch, setVoicePitch] = useState(1.0); // 0.8 to 1.4
+  const [voiceRate, setVoiceRate] = useState(1.0);
+  const [voicePitch, setVoicePitch] = useState(1.0);
   const [selectedVoiceIndex, setSelectedVoiceIndex] = useState(0);
   const [availableVoices, setAvailableVoices] = useState([]);
   const [speechSupported, setSpeechSupported] = useState(true);
@@ -60,8 +70,31 @@ export default function GBSVoiceAssistant() {
   const recognitionRef = useRef(null);
   const synthRef = useRef(typeof window !== "undefined" ? window.speechSynthesis : null);
   const isSpeakingRef = useRef(false);
+  const isOpenRef = useRef(false);
+  const isSleepingRef = useRef(true);
+  const continuousRef = useRef(true);
+  const processCommandRef = useRef(null);
+  const chatEndRef = useRef(null);
 
-  // Load available system voices
+  useEffect(() => {
+    isOpenRef.current = isOpen;
+  }, [isOpen]);
+
+  useEffect(() => {
+    isSleepingRef.current = isSleeping;
+  }, [isSleeping]);
+
+  useEffect(() => {
+    continuousRef.current = continuousListening;
+  }, [continuousListening]);
+
+  useEffect(() => {
+    if (chatEndRef.current) {
+      chatEndRef.current.scrollIntoView({ behavior: "smooth" });
+    }
+  }, [conversationMessages, isOpen]);
+
+  // Load available English voices
   useEffect(() => {
     if (typeof window === "undefined" || !("speechSynthesis" in window)) {
       setSpeechSupported(false);
@@ -71,7 +104,6 @@ export default function GBSVoiceAssistant() {
     const loadVoices = () => {
       const voices = window.speechSynthesis.getVoices();
       if (voices && voices.length > 0) {
-        // Prioritize English natural voices
         const englishVoices = voices.filter((v) => v.lang.startsWith("en"));
         setAvailableVoices(englishVoices.length > 0 ? englishVoices : voices);
       }
@@ -83,13 +115,34 @@ export default function GBSVoiceAssistant() {
     }
   }, []);
 
-  // Initialize Web Speech Recognition
+  const appendMessage = (sender, text) => {
+    const time = new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" });
+    setConversationMessages((prev) => [...prev.slice(-24), { sender, text, time }]);
+  };
+
+  const safelyStartRecognition = () => {
+    if (
+      !recognitionRef.current ||
+      !isOpenRef.current ||
+      isSleepingRef.current ||
+      !continuousRef.current ||
+      isSpeakingRef.current
+    ) {
+      return;
+    }
+    try {
+      recognitionRef.current.start();
+    } catch {
+      // recognition already started
+    }
+  };
+
+  // Initialize continuous Web Speech Recognition once cleanly using refs
   useEffect(() => {
     if (typeof window === "undefined") return;
     const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
 
     if (!SpeechRecognition) {
-      console.warn("Web SpeechRecognition is not supported in this browser.");
       setSpeechSupported(false);
       return;
     }
@@ -110,31 +163,24 @@ export default function GBSVoiceAssistant() {
       }
       setTranscript(currentTranscript);
 
-      // If sentence finalized, process command
       const lastResult = event.results[event.results.length - 1];
-      if (lastResult.isFinal) {
+      if (lastResult?.isFinal) {
         const finalClean = currentTranscript.trim();
-        if (finalClean) {
-          processVoiceCommand(finalClean);
+        if (finalClean && processCommandRef.current) {
+          processCommandRef.current(finalClean);
         }
       }
     };
 
     recognition.onerror = (event) => {
-      if (event.error !== "no-speech") {
-        console.warn("GBS Voice Assistant recognition error:", event.error);
-      }
-      if (event.error === "not-allowed") {
+      if (event.error === "not-allowed" || event.error === "service-not-allowed") {
         setIsListening(false);
       }
     };
 
     recognition.onend = () => {
-      // If continuous listening is enabled and assistant is open, restart unless speaking
-      if (isOpen && continuousListening && !isSpeakingRef.current) {
-        try {
-          recognition.start();
-        } catch { }
+      if (isOpenRef.current && !isSleepingRef.current && continuousRef.current && !isSpeakingRef.current) {
+        setTimeout(() => safelyStartRecognition(), 180);
       } else {
         setIsListening(false);
       }
@@ -147,14 +193,16 @@ export default function GBSVoiceAssistant() {
         recognition.stop();
       } catch { }
     };
-  }, [isOpen, continuousListening]);
+  }, []);
 
-  // Speak text aloud like Siri
   const speakAloud = (text, onComplete = null) => {
-    if (!synthRef.current || !("speechSynthesis" in window)) return;
+    if (!synthRef.current || !("speechSynthesis" in window)) {
+      if (onComplete) onComplete();
+      return;
+    }
 
     try {
-      synthRef.current.cancel(); // Cancel any ongoing speech
+      synthRef.current.cancel();
     } catch { }
 
     const utterance = new SpeechSynthesisUtterance(text);
@@ -168,69 +216,101 @@ export default function GBSVoiceAssistant() {
     utterance.onstart = () => {
       setIsSpeaking(true);
       isSpeakingRef.current = true;
-      // Temporarily pause recognition while assistant is speaking to avoid feedback echo
       if (recognitionRef.current) {
-        try { recognitionRef.current.stop(); } catch { }
+        try {
+          recognitionRef.current.stop();
+        } catch { }
       }
     };
 
-    utterance.onend = () => {
+    const finishSpeech = () => {
       setIsSpeaking(false);
       isSpeakingRef.current = false;
-      if (onComplete) onComplete();
-      // Resume listening if still open
-      if (isOpen && continuousListening && recognitionRef.current) {
-        try { recognitionRef.current.start(); } catch { }
+      if (onComplete) {
+        onComplete();
+      } else {
+        setTimeout(() => safelyStartRecognition(), 200);
       }
     };
 
-    utterance.onerror = () => {
-      setIsSpeaking(false);
-      isSpeakingRef.current = false;
-      if (isOpen && continuousListening && recognitionRef.current) {
-        try { recognitionRef.current.start(); } catch { }
-      }
-    };
-
+    utterance.onend = finishSpeech;
+    utterance.onerror = finishSpeech;
     synthRef.current.speak(utterance);
   };
 
-  // Toggle Assistant
-  const toggleAssistant = () => {
-    if (!isOpen) {
-      setIsOpen(true);
-      speakAloud("I'm listening. How can I help you in GBS System?");
-      if (recognitionRef.current) {
-        try { recognitionRef.current.start(); } catch { }
-      }
-    } else {
-      setIsOpen(false);
-      if (synthRef.current) {
-        try { synthRef.current.cancel(); } catch { }
-      }
-      if (recognitionRef.current) {
-        try { recognitionRef.current.stop(); } catch { }
-      }
+  const enterSleepMode = (
+    goodbyeText = "Alright, we are done. I am going off to sleep now. Click me anytime you want more help!"
+  ) => {
+    isSleepingRef.current = true;
+    setIsSleeping(true);
+    setIsListening(false);
+    setTranscript("");
+    setAssistantResponse(goodbyeText);
+    appendMessage("assistant", goodbyeText);
+
+    if (recognitionRef.current) {
+      try {
+        recognitionRef.current.stop();
+      } catch { }
+    }
+
+    speakAloud(goodbyeText, () => {
+      setTimeout(() => {
+        isOpenRef.current = false;
+        setIsOpen(false);
+      }, 450);
+    });
+
+    if (!synthRef.current || !("speechSynthesis" in window)) {
+      setTimeout(() => {
+        isOpenRef.current = false;
+        setIsOpen(false);
+      }, 900);
     }
   };
 
-  // Listen for global wake hotword or trigger event
+  const wakeAndStartConversation = () => {
+    isSleepingRef.current = false;
+    isOpenRef.current = true;
+    setIsSleeping(false);
+    setIsOpen(true);
+    setContinuousListening(true);
+    continuousRef.current = true;
+    const greeting =
+      "Hello! I am listening continuously. Tell me what you want to do or ask, and I will stay with you until we are done.";
+    setAssistantResponse(greeting);
+    appendMessage("assistant", greeting);
+    speakAloud(greeting);
+  };
+
+  const toggleAssistant = () => {
+    if (!isOpen || isSleeping) {
+      wakeAndStartConversation();
+    } else {
+      enterSleepMode("Going off to sleep now. Click me anytime you need help!");
+    }
+  };
+
   useEffect(() => {
     const handleVoiceTrigger = (e) => {
+      isSleepingRef.current = false;
+      isOpenRef.current = true;
+      setIsSleeping(false);
       setIsOpen(true);
-      if (e?.detail?.query) {
-        processVoiceCommand(e.detail.query);
+      if (e?.detail?.query && processCommandRef.current) {
+        processCommandRef.current(e.detail.query);
       } else {
-        speakAloud("GBS Voice Assistant active. Please give your command.");
+        wakeAndStartConversation();
       }
     };
 
     window.addEventListener("gbs_open_voice_assistant", handleVoiceTrigger);
     window.gbsVoiceAssistant = {
-      open: () => setIsOpen(true),
-      close: () => setIsOpen(false),
+      open: wakeAndStartConversation,
+      close: () => enterSleepMode(),
+      sleep: () => enterSleepMode(),
       speak: (text) => speakAloud(text),
-      command: (cmd) => processVoiceCommand(cmd)
+      command: (cmd) => processCommandRef.current && processCommandRef.current(cmd)
     };
 
     return () => {
@@ -239,62 +319,92 @@ export default function GBSVoiceAssistant() {
     };
   }, []);
 
-  // Process and Obey Commands
   const processVoiceCommand = (rawText) => {
-    const text = rawText.toLowerCase().trim();
+    const raw = String(rawText || "").trim();
+    const text = raw.toLowerCase();
     if (!text) return;
+
+    appendMessage("user", raw);
+    setTranscript("");
+
+    const cleanCmd = text.replace(/^(hey|hello|hi|ok|okay)?\s*gbs\s*/i, "").trim();
+
+    // Check explicit conversation end -> go off and sleep
+    if (DONE_INTENT_REGEX.test(cleanCmd) || cleanCmd === "done" || cleanCmd === "sleep" || cleanCmd === "no") {
+      enterSleepMode();
+      return;
+    }
+
+    // Check explicit "there is another" continuation prompt
+    if (ANOTHER_INTENT_REGEX.test(cleanCmd)) {
+      const promptMore = "Yes, I am wide awake and listening. Please tell me your next question or command for the answer.";
+      setAssistantResponse(promptMore);
+      appendMessage("assistant", promptMore);
+      speakAloud(promptMore);
+      return;
+    }
 
     let responseText = "";
     let actionExecuted = false;
 
-    // 1. Wake word filtering ("Hey GBS", "GBS", etc.)
-    const cleanCmd = text.replace(/^(hey|hello|hi|ok|okay)?\s*gbs\s*/i, "").trim();
-
-    // 2. Navigation / Location Commands
-    if (
-      cleanCmd.includes("login") ||
-      cleanCmd.includes("main login") ||
-      cleanCmd.includes("sign in")
-    ) {
+    // Navigation Commands
+    if (cleanCmd.includes("login") || cleanCmd.includes("main login") || cleanCmd.includes("sign in")) {
       if (cleanCmd.includes("admin") || cleanCmd.includes("headmaster")) {
         responseText = "Opening the Headmaster Executive Portal now.";
         navigate("/login/admin");
-        actionExecuted = true;
       } else if (cleanCmd.includes("teacher")) {
         responseText = "Opening the Teacher Academic Portal.";
         navigate("/login/teacher");
-        actionExecuted = true;
       } else if (cleanCmd.includes("student")) {
         responseText = "Navigating to the Student Learning Hub.";
         navigate("/login/student");
-        actionExecuted = true;
       } else if (cleanCmd.includes("parent") || cleanCmd.includes("guardian")) {
         responseText = "Opening the Parent and Guardian Portal.";
         navigate("/login/parent");
-        actionExecuted = true;
       } else if (cleanCmd.includes("accountant") || cleanCmd.includes("finance")) {
         responseText = "Opening the Accountant and Finance Desk.";
         navigate("/login/accountant");
-        actionExecuted = true;
       } else if (cleanCmd.includes("staff") || cleanCmd.includes("hr")) {
         responseText = "Opening the Staff and HR Portal.";
         navigate("/login/staff");
-        actionExecuted = true;
       } else {
         responseText = "Navigating to the Main GBS Login Gateway.";
         navigate("/login");
-        actionExecuted = true;
       }
+      actionExecuted = true;
+    } else if (cleanCmd.includes("open headmaster") || cleanCmd.includes("headmaster portal")) {
+      responseText = "Opening the Headmaster Executive Portal.";
+      navigate("/login/admin");
+      actionExecuted = true;
+    } else if (cleanCmd.includes("open student")) {
+      responseText = "Opening the Student Hub login.";
+      navigate("/login/student");
+      actionExecuted = true;
+    } else if (cleanCmd.includes("transport") || cleanCmd.includes("bus")) {
+      responseText = `${GBS_KNOWLEDGE_BASE.transport}`;
+      actionExecuted = true;
+    } else if (cleanCmd.includes("proctor") || cleanCmd.includes("exam monitor") || cleanCmd.includes("start exam")) {
+      responseText = GBS_KNOWLEDGE_BASE.proctoring;
+      actionExecuted = true;
+    } else if (cleanCmd.includes("translat")) {
+      responseText = GBS_KNOWLEDGE_BASE.translator;
+      if (typeof window.openGBSScreenTranslator === "function") {
+        window.openGBSScreenTranslator();
+      }
+      actionExecuted = true;
+    } else if (cleanCmd.includes("install") || cleanCmd.includes("mobile app") || cleanCmd.includes("apk")) {
+      responseText = GBS_KNOWLEDGE_BASE.mobileApp;
+      actionExecuted = true;
     } else if (cleanCmd.includes("onboard") || cleanCmd.includes("register school") || cleanCmd.includes("first page")) {
-      responseText = "Opening the Enterprise Tenant Onboarding First Page.";
+      responseText = "Opening the School Onboarding First Page.";
       navigate("/onboarding");
       actionExecuted = true;
     } else if (cleanCmd.includes("website") || cleanCmd.includes("company")) {
-      responseText = "Navigating to the GBS Company Website.";
+      responseText = "Opening the GBS Company Website.";
       navigate("/company");
       actionExecuted = true;
     } else if (cleanCmd.includes("video") || cleanCmd.includes("presentation") || cleanCmd.includes("movie")) {
-      responseText = "Opening the GBS Real-Life Video Presentation Engine.";
+      responseText = "Opening the Role Guide Video Presentation Engine.";
       navigate("/presentation-engine");
       actionExecuted = true;
     } else if (
@@ -304,7 +414,7 @@ export default function GBSVoiceAssistant() {
       cleanCmd.includes("emergency map") ||
       cleanCmd.includes("track parent")
     ) {
-      responseText = "Opening the Admin Emergency Parent and Guardian Locator on Google Maps.";
+      responseText = "Opening the Emergency Parent Locator map.";
       navigate("/emergency-locator");
       actionExecuted = true;
     } else if (
@@ -313,7 +423,7 @@ export default function GBSVoiceAssistant() {
       cleanCmd.includes("tenant tracking") ||
       cleanCmd.includes("gps tracking")
     ) {
-      responseText = "Opening the Live Tenant and Student GPS Tracking Map.";
+      responseText = "Opening Live Campus GPS Tracking.";
       navigate("/location/live-tracking");
       actionExecuted = true;
     } else if (
@@ -323,65 +433,32 @@ export default function GBSVoiceAssistant() {
       cleanCmd.includes("developer portal") ||
       cleanCmd.includes("open developer")
     ) {
-      responseText = "Opening the Chief Developer Control Center login gateway.";
+      responseText = "Opening the Developer Control Center login.";
       navigate("/developer-control-center/login");
       actionExecuted = true;
     } else if (
       cleanCmd.includes("conference") ||
-      cleanCmd.includes("cooperative learning") ||
-      cleanCmd.includes("social lounge") ||
-      cleanCmd.includes("student voice call") ||
-      cleanCmd.includes("student video call") ||
       cleanCmd.includes("study group") ||
-      cleanCmd.includes("study circle") ||
-      cleanCmd.includes("peer call") ||
-      cleanCmd.includes("group meeting")
+      cleanCmd.includes("peer call")
     ) {
-      responseText = "Opening the Student Cooperative Conferencing Hub and Social Lounge for live voice and video collaboration.";
+      responseText = "Opening the Student Cooperative Conferencing Hub.";
       navigate("/student/conference");
       actionExecuted = true;
     } else if (
-      cleanCmd.includes("role presentation") ||
-      cleanCmd.includes("user role") ||
-      cleanCmd.includes("role video") ||
-      cleanCmd.includes("dashboard video") ||
-      cleanCmd.includes("video presentation") ||
-      cleanCmd.includes("system presentation") ||
-      cleanCmd.includes("how the system works")
-    ) {
-      responseText = "Opening the Comprehensive GBS User Roles Video Presentation Engine and Dashboard Guides.";
-      navigate("/presentation-engine");
-      actionExecuted = true;
-    }
-
-    // STRICT DEVELOPER PRIVACY SHIELD (Zero developer identity disclosure)
-    else if (
       cleanCmd.includes("who is the developer") ||
       cleanCmd.includes("developer name") ||
       cleanCmd.includes("developer phone") ||
       cleanCmd.includes("developer contact") ||
-      cleanCmd.includes("developer info") ||
-      cleanCmd.includes("about the developer") ||
-      cleanCmd.includes("tell me about the developer") ||
       cleanCmd.includes("who developed") ||
       cleanCmd.includes("who built") ||
       cleanCmd.includes("who made") ||
       cleanCmd.includes("who created") ||
-      cleanCmd.includes("who programmed") ||
-      cleanCmd.includes("who engineered") ||
-      cleanCmd.includes("who designed") ||
-      cleanCmd.includes("who is gabriel") ||
       cleanCmd.includes("gabriel") ||
-      cleanCmd.includes("osei") ||
-      cleanCmd.includes("creator") ||
-      cleanCmd.includes("author")
+      cleanCmd.includes("osei")
     ) {
       responseText = GBS_KNOWLEDGE_BASE.developerPrivacyShield;
       actionExecuted = true;
-    }
-
-    // 3. System Inquiries & Explanations (Questions about GBS)
-    else if (
+    } else if (
       cleanCmd.includes("what is gbs") ||
       cleanCmd.includes("tell me about gbs") ||
       cleanCmd.includes("about the system") ||
@@ -389,13 +466,13 @@ export default function GBSVoiceAssistant() {
     ) {
       responseText = GBS_KNOWLEDGE_BASE.overview;
       actionExecuted = true;
-    } else if (cleanCmd.includes("motto") || cleanCmd.includes("intelligence talks to wisdom") || cleanCmd.includes("sentence")) {
+    } else if (cleanCmd.includes("motto") || cleanCmd.includes("intelligence talks to wisdom")) {
       responseText = GBS_KNOWLEDGE_BASE.motto;
       actionExecuted = true;
     } else if (cleanCmd.includes("how to onboard") || cleanCmd.includes("register an institution") || cleanCmd.includes("trial")) {
       responseText = GBS_KNOWLEDGE_BASE.onboarding;
       actionExecuted = true;
-    } else if (cleanCmd.includes("admission") || cleanCmd.includes("apply") || cleanCmd.includes("prospective")) {
+    } else if (cleanCmd.includes("admission") || cleanCmd.includes("apply")) {
       responseText = GBS_KNOWLEDGE_BASE.admissions;
       actionExecuted = true;
     } else if (cleanCmd.includes("pay") || cleanCmd.includes("fee") || cleanCmd.includes("payment") || cleanCmd.includes("momo")) {
@@ -407,21 +484,18 @@ export default function GBSVoiceAssistant() {
     } else if (cleanCmd.includes("developer control") || cleanCmd.includes("security") || cleanCmd.includes("backup")) {
       responseText = GBS_KNOWLEDGE_BASE.developer;
       actionExecuted = true;
-    } else if (cleanCmd.includes("contact") || cleanCmd.includes("hotline") || cleanCmd.includes("phone") || cleanCmd.includes("support")) {
+    } else if (cleanCmd.includes("contact") || cleanCmd.includes("hotline") || cleanCmd.includes("support")) {
       responseText = GBS_KNOWLEDGE_BASE.contact;
       actionExecuted = true;
-    }
-
-    // 4. Form Autofill & Input Commands (Accessibility Assist)
-    else if (cleanCmd.startsWith("enter my name") || cleanCmd.startsWith("my name is") || cleanCmd.startsWith("enter name")) {
+    } else if (cleanCmd.startsWith("enter my name") || cleanCmd.startsWith("my name is") || cleanCmd.startsWith("enter name")) {
       const nameVal = cleanCmd.replace(/^(enter my name|my name is|enter name)\s*(is|to)?\s*/i, "").trim();
       const inputEl = document.querySelector('input[name*="name" i], input[id*="name" i], input[placeholder*="name" i]');
       if (inputEl && nameVal) {
         inputEl.value = nameVal;
         inputEl.dispatchEvent(new Event("input", { bubbles: true }));
-        responseText = `Entered name ${nameVal} into the form.`;
+        responseText = `Entered name ${nameVal} into the active form.`;
       } else {
-        responseText = `Noted name ${nameVal}. Please open a form to enter it automatically.`;
+        responseText = `Noted name ${nameVal}. Open a form first if you want me to fill it automatically.`;
       }
       actionExecuted = true;
     } else if (cleanCmd.startsWith("enter email") || cleanCmd.startsWith("my email is")) {
@@ -436,7 +510,7 @@ export default function GBSVoiceAssistant() {
       }
       actionExecuted = true;
     } else if (cleanCmd.startsWith("enter amount") || cleanCmd.startsWith("enter figure") || cleanCmd.startsWith("figure is")) {
-      const match = cleanCmd.match(/\d+([\.,]\d+)?/);
+      const match = cleanCmd.match(/\d+([.,]\d+)?/);
       if (match) {
         const figure = match[0];
         const inputEl = document.querySelector('input[type="number"], input[name*="amount" i], input[name*="fee" i], input[id*="figure" i]');
@@ -448,13 +522,10 @@ export default function GBSVoiceAssistant() {
           responseText = `Noted figure ${figure}.`;
         }
       } else {
-        responseText = "I did not detect a numerical figure. Please specify the amount.";
+        responseText = "I did not hear a numeric amount.";
       }
       actionExecuted = true;
-    }
-
-    // 5. Quick Demo Login Shortcuts (Hands-Free Access)
-    else if (cleanCmd.includes("demo admin") || cleanCmd.includes("fill admin")) {
+    } else if (cleanCmd.includes("demo admin") || cleanCmd.includes("fill admin")) {
       const emailInput = document.querySelector('input[type="email"], input[name="email"], input[id="email"]');
       const passInput = document.querySelector('input[type="password"]');
       if (emailInput && passInput) {
@@ -465,59 +536,62 @@ export default function GBSVoiceAssistant() {
         responseText = "Filled administrator demo credentials.";
       } else {
         navigate("/login/admin");
-        responseText = "Opening Headmaster portal with administrator credentials.";
+        responseText = "Opening the Headmaster login page for demo sign-in.";
       }
       actionExecuted = true;
-    } else if (cleanCmd.includes("submit") || cleanCmd.includes("click submit") || cleanCmd.includes("press enter")) {
+    } else if (cleanCmd.includes("submit") || cleanCmd.includes("click submit")) {
       const submitBtn = document.querySelector('button[type="submit"], .role-login-submit, .btn-submit, .gbs-btn-primary');
       if (submitBtn) {
         submitBtn.click();
-        responseText = "Submitting the form now.";
+        responseText = "Submitted the active form.";
       } else {
-        responseText = "No active submit button found on this view.";
+        responseText = "No active submit button was found on this view.";
       }
       actionExecuted = true;
     }
 
-    // 6. Dismiss / Goodbye
-    else if (cleanCmd.includes("goodbye") || cleanCmd.includes("stop") || cleanCmd.includes("exit") || cleanCmd.includes("close")) {
-      responseText = "Goodbye! I am always here whenever you say Hey GBS.";
-      setIsOpen(false);
-      speakAloud(responseText);
-      return;
-    }
-
-    // Fallback response
     if (!actionExecuted) {
-      responseText = `I heard: "${rawText}". You can ask me to open a portal like Headmaster or Student, ask what is GBS, enter a name, or say Goodbye.`;
+      responseText = `I heard "${raw}". I can explain fees/payments, bus transport routes, exam proctoring, mobile app install, or open any portal for you.`;
     }
 
-    setAssistantResponse(responseText);
-    speakAloud(responseText);
+    // Continuous conversational loop: ALWAYS ask whether we are done or there is another question
+    const fullTurnReply = `${responseText} ${FOLLOWUP_PROMPT}`;
+    setAssistantResponse(fullTurnReply);
+    appendMessage("assistant", fullTurnReply);
+    speakAloud(fullTurnReply);
 
-    if (window.showGBSOpenNotice) {
-      window.showGBSOpenNotice(responseText, "info", "GBS VOICE ASSISTANT (SIRI REMOTE)");
+    if (typeof window !== "undefined" && typeof window.showGBSOpenNotice === "function") {
+      window.showGBSOpenNotice(responseText, "info", "GBS ASSISTANT");
     }
+  };
+
+  processCommandRef.current = processVoiceCommand;
+
+  const handleTypedSubmit = (e) => {
+    e.preventDefault();
+    if (!typedInput.trim()) return;
+    const msg = typedInput.trim();
+    setTypedInput("");
+    processVoiceCommand(msg);
   };
 
   return (
     <>
-      {/* Floating Siri-Style Animated Orb Button (Persistent Bottom-Right) */}
+      {/* Floating Launcher (Bottom-Right) */}
       <div
         className="gbs-voice-assistant-launcher"
         style={{
           position: "fixed",
-          bottom: "24px",
-          right: "24px",
+          bottom: "20px",
+          right: "20px",
           zIndex: 99999,
           display: "flex",
           alignItems: "center",
-          gap: "12px",
+          gap: "10px",
           userSelect: "none"
         }}
       >
-        {/* Floating Label / Prompt */}
-        {!isOpen && (
+        {(!isOpen || isSleeping) && (
           <div
             onClick={toggleAssistant}
             style={{
@@ -525,7 +599,7 @@ export default function GBSVoiceAssistant() {
               color: "#f8fafc",
               border: "1px solid rgba(212, 175, 55, 0.6)",
               borderRadius: "20px",
-              padding: "6px 14px",
+              padding: "6px 12px",
               fontSize: "12px",
               fontWeight: 700,
               boxShadow: "0 6px 20px rgba(0, 0, 0, 0.5)",
@@ -537,24 +611,23 @@ export default function GBSVoiceAssistant() {
             }}
           >
             <span style={{ color: "#38bdf8" }}>🎙️</span>
-            <span>Say "Hey GBS" or Tap</span>
+            <span>GBS Assistant</span>
           </div>
         )}
 
-        {/* Siri Glowing Orb Trigger Button */}
         <button
           type="button"
           onClick={toggleAssistant}
-          title="GBS AI Voice Assistant (Siri-Style Remote Accessibility)"
+          title={isOpen && !isSleeping ? "Click to put GBS Assistant to sleep" : "Click to wake GBS Assistant"}
           style={{
-            width: "60px",
-            height: "60px",
+            width: "56px",
+            height: "56px",
             borderRadius: "50%",
-            border: isOpen ? "2.5px solid #d4af37" : "2px solid #38bdf8",
-            background: isOpen
+            border: isOpen && !isSleeping ? "2.5px solid #d4af37" : "2px solid #38bdf8",
+            background: isOpen && !isSleeping
               ? "radial-gradient(circle at 35% 35%, #38bdf8 0%, #d4af37 50%, #991b1b 100%)"
               : "radial-gradient(circle at 35% 35%, #1e293b 0%, #0f172a 70%, #020617 100%)",
-            boxShadow: isOpen
+            boxShadow: isOpen && !isSleeping
               ? "0 0 30px rgba(56, 189, 248, 0.8), 0 0 50px rgba(212, 175, 55, 0.6)"
               : "0 6px 20px rgba(0, 0, 0, 0.6), 0 0 15px rgba(56, 189, 248, 0.3)",
             display: "flex",
@@ -563,32 +636,32 @@ export default function GBSVoiceAssistant() {
             cursor: "pointer",
             outline: "none",
             transition: "all 0.3s cubic-bezier(0.4, 0, 0.2, 1)",
-            transform: isOpen ? "scale(1.08)" : "scale(1)"
+            transform: isOpen && !isSleeping ? "scale(1.08)" : "scale(1)"
           }}
         >
           {isSpeaking ? (
-            <span style={{ fontSize: "24px", animation: "pulse 1s infinite" }}>🔊</span>
+            <span style={{ fontSize: "22px" }}>🔊</span>
           ) : isListening ? (
-            <span style={{ fontSize: "24px", animation: "pulse 0.8s infinite" }}>🎙️</span>
+            <span style={{ fontSize: "22px" }}>🎙️</span>
           ) : (
-            <span style={{ fontSize: "22px" }}>⚡</span>
+            <span style={{ fontSize: "20px" }}>{isSleeping ? "😴" : "⚡"}</span>
           )}
         </button>
       </div>
 
-      {/* Expanded Siri-Style Interactive Voice Modal */}
+      {/* Continuous Conversation Window */}
       {isOpen && (
         <div
           style={{
             position: "fixed",
-            bottom: "95px",
-            right: "24px",
-            width: "380px",
-            maxWidth: "calc(100vw - 36px)",
-            maxHeight: "85vh",
-            background: "rgba(10, 16, 29, 0.96)",
+            bottom: "86px",
+            right: "20px",
+            width: "390px",
+            maxWidth: "calc(100vw - 32px)",
+            maxHeight: "82vh",
+            background: "rgba(10, 16, 29, 0.97)",
             border: "1.5px solid #d4af37",
-            borderRadius: "24px",
+            borderRadius: "20px",
             boxShadow: "0 25px 60px rgba(0, 0, 0, 0.85), 0 0 35px rgba(212, 175, 55, 0.35)",
             backdropFilter: "blur(20px)",
             zIndex: 99998,
@@ -602,8 +675,8 @@ export default function GBSVoiceAssistant() {
           {/* Header */}
           <div
             style={{
-              padding: "16px 20px",
-              background: "linear-gradient(135deg, rgba(30, 41, 59, 0.8) 0%, rgba(15, 23, 42, 0.95) 100%)",
+              padding: "14px 18px",
+              background: "linear-gradient(135deg, rgba(30, 41, 59, 0.9) 0%, rgba(15, 23, 42, 0.98) 100%)",
               borderBottom: "1px solid rgba(212, 175, 55, 0.3)",
               display: "flex",
               justifyContent: "space-between",
@@ -611,303 +684,193 @@ export default function GBSVoiceAssistant() {
             }}
           >
             <div style={{ display: "flex", alignItems: "center", gap: "10px" }}>
-              <span style={{ fontSize: "20px" }}>🎙️</span>
+              <span style={{ fontSize: "18px" }}>{isSleeping ? "😴" : isListening ? "🎙️" : "🔊"}</span>
               <div>
-                <strong style={{ fontSize: "14px", letterSpacing: "0.5px", color: "#fbbf24" }}>
-                  GBS AI VOICE ASSISTANT
+                <strong style={{ fontSize: "13.5px", color: "#fbbf24", display: "block" }}>
+                  GBS CONVERSATIONAL ASSISTANT
                 </strong>
-                <span style={{ fontSize: "10px", display: "block", color: "#94a3b8" }}>
-                  INTELLIGENCE TALKS TO WISDOM • SIRI REMOTE
+                <span style={{ fontSize: "10.5px", color: isSleeping ? "#94a3b8" : "#34d399", fontWeight: 700 }}>
+                  {isSleeping
+                    ? "Sleeping • Click orb to wake"
+                    : isSpeaking
+                      ? "Speaking answer & waiting for reply..."
+                      : isListening
+                        ? "● Continuous Listening Active"
+                        : "● Active Session (Ask or say Done)"}
                 </span>
               </div>
             </div>
 
             <button
               type="button"
-              onClick={toggleAssistant}
+              onClick={() => enterSleepMode()}
               style={{
-                background: "transparent",
-                border: "none",
-                color: "#94a3b8",
-                fontSize: "18px",
-                cursor: "pointer",
-                padding: "4px"
-              }}
-            >
-              ✕
-            </button>
-          </div>
-
-          {/* Siri Visualizer Orb & Sound Waves */}
-          <div
-            style={{
-              padding: "24px 20px",
-              display: "flex",
-              flexDirection: "column",
-              alignItems: "center",
-              justifyContent: "center",
-              background: "radial-gradient(circle at 50% 50%, rgba(56, 189, 248, 0.08) 0%, transparent 70%)"
-            }}
-          >
-            {/* Animated Siri Multi-Ring Orb */}
-            <div
-              style={{
-                width: "90px",
-                height: "90px",
-                borderRadius: "50%",
-                background: isSpeaking
-                  ? "radial-gradient(circle at 35% 35%, #38bdf8 0%, #d4af37 40%, #ef4444 80%, #8b5cf6 100%)"
-                  : isListening
-                  ? "radial-gradient(circle at 35% 35%, #10b981 0%, #38bdf8 50%, #d4af37 100%)"
-                  : "radial-gradient(circle at 35% 35%, #334155 0%, #0f172a 100%)",
-                boxShadow: isSpeaking
-                  ? "0 0 45px rgba(212, 175, 55, 0.9), 0 0 25px rgba(56, 189, 248, 0.7)"
-                  : isListening
-                  ? "0 0 35px rgba(16, 185, 129, 0.8), 0 0 20px rgba(56, 189, 248, 0.6)"
-                  : "0 0 15px rgba(0, 0, 0, 0.5)",
-                display: "flex",
-                alignItems: "center",
-                justifyContent: "center",
-                marginBottom: "16px",
-                transition: "all 0.3s ease"
-              }}
-            >
-              <div
-                style={{
-                  width: "70px",
-                  height: "70px",
-                  borderRadius: "50%",
-                  background: "rgba(2, 6, 23, 0.7)",
-                  backdropFilter: "blur(6px)",
-                  display: "flex",
-                  alignItems: "center",
-                  justifyContent: "center",
-                  color: "#ffffff",
-                  fontSize: "26px"
-                }}
-              >
-                {isSpeaking ? "🔊" : isListening ? "🎙️" : "⚡"}
-              </div>
-            </div>
-
-            {/* Status indicator */}
-            <div
-              style={{
-                fontSize: "12px",
+                background: "rgba(239, 68, 68, 0.16)",
+                border: "1px solid rgba(239, 68, 68, 0.45)",
+                color: "#fca5a5",
+                fontSize: "11px",
                 fontWeight: 800,
-                letterSpacing: "1px",
-                color: isSpeaking ? "#fbbf24" : isListening ? "#34d399" : "#94a3b8",
-                textTransform: "uppercase",
-                marginBottom: "10px"
+                cursor: "pointer",
+                padding: "4px 10px",
+                borderRadius: "999px"
               }}
+              title="Finish conversation and put assistant to sleep"
             >
-              {isSpeaking ? "Speaking Aloud..." : isListening ? "Listening for your voice..." : "Assistant Ready"}
-            </div>
-
-            {/* Sound Wave Bars Animation */}
-            {(isListening || isSpeaking) && (
-              <div style={{ display: "flex", gap: "4px", alignItems: "center", height: "24px" }}>
-                {[16, 22, 12, 24, 18, 10, 20, 14, 24].map((h, i) => (
-                  <div
-                    key={i}
-                    style={{
-                      width: "3px",
-                      height: `${h}px`,
-                      background: isSpeaking ? "#d4af37" : "#38bdf8",
-                      borderRadius: "2px",
-                      opacity: 0.85
-                    }}
-                  />
-                ))}
-              </div>
-            )}
+              😴 Done / Sleep
+            </button>
           </div>
 
-          {/* Transcript / Spoken Output Display */}
-          <div style={{ padding: "0 20px 16px 20px", flex: 1, overflowY: "auto" }}>
-            {transcript && (
+          {/* Continuous Multi-Turn Thread */}
+          <div style={{ padding: "14px 16px", flex: 1, overflowY: "auto", display: "flex", flexDirection: "column", gap: "10px" }}>
+            {conversationMessages.map((m, idx) => (
               <div
+                key={idx}
                 style={{
-                  background: "rgba(30, 41, 59, 0.7)",
-                  border: "1px solid #334155",
+                  alignSelf: m.sender === "user" ? "flex-end" : "flex-start",
+                  maxWidth: "88%",
+                  background: m.sender === "user" ? "rgba(2, 132, 199, 0.28)" : "rgba(15, 23, 42, 0.88)",
+                  border: m.sender === "user" ? "1px solid rgba(56, 189, 248, 0.5)" : "1px solid rgba(212, 175, 55, 0.35)",
                   borderRadius: "12px",
-                  padding: "10px 14px",
-                  fontSize: "13px",
-                  color: "#7dd3fc",
-                  marginBottom: "12px",
-                  fontStyle: "italic"
+                  padding: "9px 12px",
+                  fontSize: "12.5px",
+                  lineHeight: 1.45,
+                  color: m.sender === "user" ? "#e0f2fe" : "#f8fafc"
                 }}
               >
-                🗣️ "{transcript}"
+                <div style={{ fontSize: "10px", color: m.sender === "user" ? "#7dd3fc" : "#fbbf24", fontWeight: 800, marginBottom: "3px" }}>
+                  {m.sender === "user" ? "You" : "GBS Assistant"} • {m.time}
+                </div>
+                <div>{m.text}</div>
+              </div>
+            ))}
+
+            {transcript && (
+              <div style={{ fontSize: "12px", color: "#7dd3fc", fontStyle: "italic", padding: "4px 8px" }}>
+                🎙️ Listening: "{transcript}"
               </div>
             )}
-
-            <div
-              style={{
-                background: "rgba(15, 23, 42, 0.8)",
-                border: "1px solid rgba(212, 175, 55, 0.4)",
-                borderRadius: "14px",
-                padding: "12px 14px",
-                fontSize: "13px",
-                color: "#f8fafc",
-                lineHeight: "1.5"
-              }}
-            >
-              {assistantResponse}
-            </div>
-
-            {/* Tone, Sound & Voice Settings Accordion */}
-            <div style={{ marginTop: "14px", borderTop: "1px solid #1e293b", paddingTop: "10px" }}>
-              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "8px" }}>
-                <span style={{ fontSize: "11px", color: "#94a3b8", fontWeight: 700 }}>
-                  VOICE SOUND & TONE ADJUSTMENT
-                </span>
-                <span style={{ fontSize: "11px", color: "#d4af37" }}>
-                  {voiceRate}x speed • {voicePitch}x pitch
-                </span>
-              </div>
-
-              <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "8px" }}>
-                <div>
-                  <label style={{ fontSize: "10px", color: "#64748b", display: "block" }}>Speech Speed:</label>
-                  <input
-                    type="range"
-                    min="0.8"
-                    max="1.4"
-                    step="0.1"
-                    value={voiceRate}
-                    onChange={(e) => setVoiceRate(parseFloat(e.target.value))}
-                    style={{ width: "100%" }}
-                  />
-                </div>
-                <div>
-                  <label style={{ fontSize: "10px", color: "#64748b", display: "block" }}>Tone / Pitch:</label>
-                  <input
-                    type="range"
-                    min="0.8"
-                    max="1.3"
-                    step="0.1"
-                    value={voicePitch}
-                    onChange={(e) => setVoicePitch(parseFloat(e.target.value))}
-                    style={{ width: "100%" }}
-                  />
-                </div>
-              </div>
-
-              {availableVoices.length > 0 && (
-                <div style={{ marginTop: "6px" }}>
-                  <label style={{ fontSize: "10px", color: "#64748b", display: "block" }}>Assistant Voice Accent:</label>
-                  <select
-                    value={selectedVoiceIndex}
-                    onChange={(e) => setSelectedVoiceIndex(parseInt(e.target.value, 10))}
-                    style={{
-                      width: "100%",
-                      background: "#020617",
-                      color: "#f8fafc",
-                      border: "1px solid #334155",
-                      borderRadius: "6px",
-                      padding: "4px 8px",
-                      fontSize: "11px"
-                    }}
-                  >
-                    {availableVoices.slice(0, 8).map((v, idx) => (
-                      <option key={idx} value={idx}>
-                        {v.name} ({v.lang})
-                      </option>
-                    ))}
-                  </select>
-                </div>
-              )}
-            </div>
-
-            {/* Suggested Voice Commands for Quick Access */}
-            <div style={{ marginTop: "14px" }}>
-              <span style={{ fontSize: "11px", color: "#94a3b8", fontWeight: 700, display: "block", marginBottom: "6px" }}>
-                ACCESSIBILITY QUICK COMMANDS:
-              </span>
-              <div style={{ display: "flex", gap: "6px", flexWrap: "wrap" }}>
-                {[
-                  "What is GBS?",
-                  "Emergency Locator",
-                  "Live Tracking Map",
-                  "Open Headmaster",
-                  "Open Student Hub",
-                  "How to pay fees",
-                  "Fill Demo Admin",
-                  "Open Videos",
-                  "Goodbye"
-                ].map((cmd) => (
-                  <button
-                    key={cmd}
-                    type="button"
-                    onClick={() => processVoiceCommand(cmd)}
-                    style={{
-                      background: "#1e293b",
-                      border: "1px solid #334155",
-                      color: "#cbd5e1",
-                      borderRadius: "14px",
-                      padding: "4px 10px",
-                      fontSize: "11px",
-                      cursor: "pointer"
-                    }}
-                  >
-                    "{cmd}"
-                  </button>
-                ))}
-              </div>
-            </div>
+            <div ref={chatEndRef} />
           </div>
 
-          {/* Footer Controls */}
-          <div
-            style={{
-              padding: "12px 20px",
-              background: "#020617",
-              borderTop: "1px solid #1e293b",
-              display: "flex",
-              justifyContent: "space-between",
-              alignItems: "center"
-            }}
-          >
-            <button
-              type="button"
-              onClick={() => {
-                if (isListening && recognitionRef.current) {
-                  recognitionRef.current.stop();
-                } else if (recognitionRef.current) {
-                  recognitionRef.current.start();
-                }
-              }}
-              style={{
-                background: isListening ? "#dc2626" : "#2563eb",
-                color: "#ffffff",
-                border: "none",
-                borderRadius: "8px",
-                padding: "8px 14px",
-                fontSize: "12px",
-                fontWeight: 700,
-                cursor: "pointer"
-              }}
-            >
-              {isListening ? "⏹️ Pause Mic" : "🎙️ Start Listening"}
-            </button>
+          {/* Interactive Continuous Reply Bar + Quick Actions */}
+          <div style={{ padding: "10px 14px", borderTop: "1px solid #1e293b", background: "rgba(2, 6, 23, 0.9)" }}>
+            <div style={{ display: "flex", gap: "6px", flexWrap: "wrap", marginBottom: "8px" }}>
+              <button
+                type="button"
+                onClick={() => processVoiceCommand("Yes, there is another question")}
+                style={{
+                  background: "rgba(16, 185, 129, 0.16)",
+                  border: "1px solid #10b981",
+                  color: "#6ee7b7",
+                  borderRadius: "999px",
+                  padding: "4px 10px",
+                  fontSize: "11px",
+                  fontWeight: 700,
+                  cursor: "pointer"
+                }}
+              >
+                ➕ Yes, There Is Another
+              </button>
+              <button
+                type="button"
+                onClick={() => processVoiceCommand("We are done")}
+                style={{
+                  background: "rgba(245, 158, 11, 0.16)",
+                  border: "1px solid #f59e0b",
+                  color: "#fde68a",
+                  borderRadius: "999px",
+                  padding: "4px 10px",
+                  fontSize: "11px",
+                  fontWeight: 700,
+                  cursor: "pointer"
+                }}
+              >
+                ✅ Yes, We Are Done (Sleep)
+              </button>
+            </div>
 
-            <button
-              type="button"
-              onClick={() => speakAloud(assistantResponse)}
-              style={{
-                background: "#1e293b",
-                color: "#fbbf24",
-                border: "1px solid #334155",
-                borderRadius: "8px",
-                padding: "8px 12px",
-                fontSize: "12px",
-                fontWeight: 700,
-                cursor: "pointer"
-              }}
-            >
-              🔊 Replay Speech
-            </button>
+            <form onSubmit={handleTypedSubmit} style={{ display: "flex", gap: "6px" }}>
+              <input
+                type="text"
+                placeholder="Ask next question or type 'done'..."
+                value={typedInput}
+                onChange={(e) => setTypedInput(e.target.value)}
+                style={{
+                  flex: 1,
+                  background: "#0f172a",
+                  color: "#f8fafc",
+                  border: "1px solid #334155",
+                  borderRadius: "8px",
+                  padding: "8px 10px",
+                  fontSize: "12.5px",
+                  outline: "none"
+                }}
+              />
+              <button
+                type="submit"
+                style={{
+                  background: "#0284c7",
+                  color: "#ffffff",
+                  border: "none",
+                  borderRadius: "8px",
+                  padding: "8px 12px",
+                  fontSize: "12px",
+                  fontWeight: 800,
+                  cursor: "pointer"
+                }}
+              >
+                Ask
+              </button>
+            </form>
+
+            {/* Footer Controls */}
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginTop: "8px" }}>
+              <button
+                type="button"
+                onClick={() => {
+                  if (!speechSupported) return;
+                  if (isListening && recognitionRef.current) {
+                    continuousRef.current = false;
+                    setContinuousListening(false);
+                    try { recognitionRef.current.stop(); } catch { }
+                  } else {
+                    continuousRef.current = true;
+                    setContinuousListening(true);
+                    safelyStartRecognition();
+                  }
+                }}
+                style={{
+                  background: isListening ? "#dc2626" : "#2563eb",
+                  color: "#ffffff",
+                  border: "none",
+                  borderRadius: "8px",
+                  padding: "6px 12px",
+                  fontSize: "11.5px",
+                  fontWeight: 700,
+                  cursor: speechSupported ? "pointer" : "not-allowed",
+                  opacity: speechSupported ? 1 : 0.6
+                }}
+              >
+                {isListening ? "⏹️ Pause Mic" : "🎙️ Keep Listening"}
+              </button>
+
+              <button
+                type="button"
+                onClick={() => speakAloud(assistantResponse)}
+                style={{
+                  background: "#1e293b",
+                  color: "#fbbf24",
+                  border: "1px solid #334155",
+                  borderRadius: "8px",
+                  padding: "6px 12px",
+                  fontSize: "11.5px",
+                  fontWeight: 700,
+                  cursor: "pointer"
+                }}
+              >
+                🔊 Replay
+              </button>
+            </div>
           </div>
         </div>
       )}

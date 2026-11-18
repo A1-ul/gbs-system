@@ -6,22 +6,35 @@
   "id": "/",
   "scope": "/",
   "display": "standalone",
+  "display_override": ["window-controls-overlay", "standalone"],
   "orientation": "any",
   "background_color": "#020617",
   "theme_color": "#0284c7",
   "prefer_related_applications": false,
   "icons": [
     {
-      "src": "/assets/gbs_crest_badge.jpg",
-      "type": "image/jpeg",
+      "src": "/icons/icon-192.png",
+      "type": "image/png",
       "sizes": "192x192",
-      "purpose": "any maskable"
+      "purpose": "any"
     },
     {
-      "src": "/assets/gbs_crest_badge.jpg",
-      "type": "image/jpeg",
+      "src": "/icons/icon-192.png",
+      "type": "image/png",
+      "sizes": "192x192",
+      "purpose": "maskable"
+    },
+    {
+      "src": "/icons/icon-512.png",
+      "type": "image/png",
       "sizes": "512x512",
-      "purpose": "any maskable"
+      "purpose": "any"
+    },
+    {
+      "src": "/icons/icon-512.png",
+      "type": "image/png",
+      "sizes": "512x512",
+      "purpose": "maskable"
     }
   ],
   "shortcuts": [
@@ -32,7 +45,8 @@
       "url": "/login?role=admin",
       "icons": [
         {
-          "src": "/assets/gbs_crest_badge.jpg",
+          "src": "/icons/icon-192.png",
+          "type": "image/png",
           "sizes": "192x192"
         }
       ]
@@ -44,7 +58,8 @@
       "url": "/login?role=teacher",
       "icons": [
         {
-          "src": "/assets/gbs_crest_badge.jpg",
+          "src": "/icons/icon-192.png",
+          "type": "image/png",
           "sizes": "192x192"
         }
       ]
@@ -56,7 +71,8 @@
       "url": "/login?role=parent",
       "icons": [
         {
-          "src": "/assets/gbs_crest_badge.jpg",
+          "src": "/icons/icon-192.png",
+          "type": "image/png",
           "sizes": "192x192"
         }
       ]
@@ -68,7 +84,8 @@
       "url": "/login?role=student",
       "icons": [
         {
-          "src": "/assets/gbs_crest_badge.jpg",
+          "src": "/icons/icon-192.png",
+          "type": "image/png",
           "sizes": "192x192"
         }
       ]

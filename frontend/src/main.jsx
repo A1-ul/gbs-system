@@ -20,6 +20,20 @@ if (typeof window !== "undefined") {
     }
   } catch { }
 
+  // Capture native browser install prompt globally at boot so Install works whenever clicked
+  window.__gbsDeferredInstallPrompt = null;
+  window.__gbsAppInstalled = false;
+  window.addEventListener("beforeinstallprompt", (e) => {
+    e.preventDefault();
+    window.__gbsDeferredInstallPrompt = e;
+    window.dispatchEvent(new CustomEvent("gbs_pwa_install_ready"));
+  });
+  window.addEventListener("appinstalled", () => {
+    window.__gbsDeferredInstallPrompt = null;
+    window.__gbsAppInstalled = true;
+    window.dispatchEvent(new CustomEvent("gbs_pwa_installed"));
+  });
+
   // Register Native Mobile & Lock Screen Push Service Worker
   if ("serviceWorker" in navigator) {
     window.addEventListener("load", () => {

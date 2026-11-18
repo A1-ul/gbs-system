@@ -11,9 +11,10 @@ const OFFLINE_URL = "/offline.html";
 // Assets to pre-cache for instant offline startup
 const PRECACHE_ASSETS = [
   "/",
-  "/offline.html",
-  "/assets/gbs_crest_badge.jpg",
-  "/favicon.ico"
+  "/manifest.json",
+  "/icons/icon-192.png",
+  "/icons/icon-512.png",
+  "/assets/gbs_crest_badge.jpg"
 ];
 
 // Service Worker Installation

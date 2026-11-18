@@ -14,33 +14,137 @@ export default function MobileAppPushHubModal({ isOpen, onClose }) {
     busSentinel: true,
     emergencies: true
   });
-  const [deferredPrompt, setDeferredPrompt] = useState(null);
-  const [installSuccess, setInstallSuccess] = useState(false);
+  const [deferredPrompt, setDeferredPrompt] = useState(() =>
+    typeof window !== "undefined" ? window.__gbsDeferredInstallPrompt || null : null
+  );
+  const [installSuccess, setInstallSuccess] = useState(() =>
+    typeof window !== "undefined" &&
+    (Boolean(window.__gbsAppInstalled) ||
+      window.matchMedia?.("(display-mode: standalone)")?.matches ||
+      window.navigator?.standalone === true)
+  );
+  const [pushFeedback, setPushFeedback] = useState(null);
 
   useEffect(() => {
+    if (typeof window === "undefined") return;
+    if (window.__gbsDeferredInstallPrompt) {
+      setDeferredPrompt(window.__gbsDeferredInstallPrompt);
+    }
     const handleBeforeInstall = (e) => {
       e.preventDefault();
+      window.__gbsDeferredInstallPrompt = e;
       setDeferredPrompt(e);
     };
+    const handleGlobalReady = () => {
+      if (window.__gbsDeferredInstallPrompt) {
+        setDeferredPrompt(window.__gbsDeferredInstallPrompt);
+      }
+    };
+    const handleInstalled = () => {
+      setInstallSuccess(true);
+      setDeferredPrompt(null);
+      setPushFeedback({
+        type: "success",
+        text: "✅ GBS App installed successfully! Look for the GBS icon on your Home Screen / App Launcher."
+      });
+    };
     window.addEventListener("beforeinstallprompt", handleBeforeInstall);
-    return () => window.removeEventListener("beforeinstallprompt", handleBeforeInstall);
+    window.addEventListener("gbs_pwa_install_ready", handleGlobalReady);
+    window.addEventListener("gbs_pwa_installed", handleInstalled);
+    window.addEventListener("appinstalled", handleInstalled);
+    return () => {
+      window.removeEventListener("beforeinstallprompt", handleBeforeInstall);
+      window.removeEventListener("gbs_pwa_install_ready", handleGlobalReady);
+      window.removeEventListener("gbs_pwa_installed", handleInstalled);
+      window.removeEventListener("appinstalled", handleInstalled);
+    };
   }, []);
 
   if (!isOpen) return null;
 
+  const detectDeviceType = () => {
+    if (typeof navigator === "undefined") return "DESKTOP";
+    const ua = navigator.userAgent || "";
+    if (/iPad|iPhone|iPod/i.test(ua) || (navigator.platform === "MacIntel" && navigator.maxTouchPoints > 1)) {
+      return "IOS";
+    }
+    if (/Android/i.test(ua)) return "ANDROID";
+    return "DESKTOP";
+  };
+
   const handleInstallPWA = async () => {
-    if (deferredPrompt) {
-      deferredPrompt.prompt();
-      const { outcome } = await deferredPrompt.userChoice;
-      if (outcome === "accepted") {
-        setInstallSuccess(true);
-        setDeferredPrompt(null);
+    setPushFeedback(null);
+    const activePrompt = deferredPrompt || (typeof window !== "undefined" ? window.__gbsDeferredInstallPrompt : null);
+
+    if (installSuccess) {
+      setPushFeedback({
+        type: "success",
+        text: "✅ GBS App is already installed on this device! Launch it directly from your Home Screen or Start Menu / Applications."
+      });
+      return;
+    }
+
+    if (activePrompt) {
+      try {
+        activePrompt.prompt();
+        const { outcome } = await activePrompt.userChoice;
+        if (outcome === "accepted") {
+          window.__gbsDeferredInstallPrompt = null;
+          window.__gbsAppInstalled = true;
+          setInstallSuccess(true);
+          setDeferredPrompt(null);
+          setPushFeedback({
+            type: "success",
+            text: "✅ Installation accepted! GBS App has been added to your device home screen / apps."
+          });
+          return;
+        } else {
+          setPushFeedback({
+            type: "info",
+            text: "Installation prompt was dismissed. Click 'Install App on This Device' again anytime to install."
+          });
+          return;
+        }
+      } catch (err) {
+        console.warn("Native install prompt fallback:", err);
       }
+    }
+
+    // Check if an APK is available on Android when beforeinstallprompt hasn't fired
+    const device = detectDeviceType();
+    if (device === "ANDROID") {
+      try {
+        const configuredUrl = import.meta.env.VITE_ANDROID_APK_URL || "/downloads/GBS-School-Enterprise.apk";
+        const checkRes = await fetch(configuredUrl, { method: "HEAD" });
+        const contentType = (checkRes.headers.get("content-type") || "").toLowerCase();
+        if (checkRes.ok && (contentType.includes("android.package-archive") || contentType.includes("octet-stream"))) {
+          const a = document.createElement("a");
+          a.href = configuredUrl;
+          a.download = "GBS-School-Enterprise.apk";
+          document.body.appendChild(a);
+          a.click();
+          document.body.removeChild(a);
+          setPushFeedback({
+            type: "success",
+            text: "📦 Android APK download started! Open the downloaded APK from Notifications to install."
+          });
+          return;
+        }
+      } catch { }
+      setPushFeedback({
+        type: "info",
+        text: "📱 Android One-Tap Install: Tap the browser menu (⋮ at top-right in Chrome/Edge) and select 'Install app' or 'Add to Home screen' to place GBS on your phone home screen immediately."
+      });
+    } else if (device === "IOS") {
+      setPushFeedback({
+        type: "info",
+        text: "🍎 iPhone / iPad Safari Install: Tap the Share button (⎋) at the bottom bar of Safari, scroll down, and tap 'Add to Home Screen' (➕) -> 'Add'."
+      });
     } else {
-      // Guide user to standard browser installation
-      alert(
-        "📱 To install the GBS School App:\n\n• On Android Chrome: Tap the three dots (⋮) at top right and select 'Install app' or 'Add to Home screen'.\n• On Apple iPhone / iPad: Tap the Share button (⎋) at the bottom and select 'Add to Home Screen' (➕)."
-      );
+      setPushFeedback({
+        type: "info",
+        text: "💻 Desktop Install (Windows / Mac / Chromebook): Click the Install icon (⊕ or computer screen arrow) in your browser address bar, or open Chrome/Edge menu (⋮) -> 'Install GBS System' / 'Apps -> Install this site as an app'."
+      });
     }
   };
 
@@ -151,14 +255,7 @@ export default function MobileAppPushHubModal({ isOpen, onClose }) {
     }
 
     setActiveTab("MOBILE_APP");
-    if (deferredPrompt) {
-      await handleInstallPWA();
-    } else {
-      setPushFeedback({
-        type: "info",
-        text: "Install directly onto your Android or iPhone home screen: tap Chrome menu (⋮) -> 'Install app' (Android) or Safari Share -> 'Add to Home Screen' (iPhone)."
-      });
-    }
+    await handleInstallPWA();
   };
 
   return (
@@ -177,7 +274,7 @@ export default function MobileAppPushHubModal({ isOpen, onClose }) {
                 GBS NATIVE MOBILE APP & LOCK SCREEN PUSH ENGINE
               </h2>
               <div style={{ fontSize: "0.82rem", color: "#38bdf8", marginTop: "2px" }}>
-                Intelligence Talks to Wisdom • Android APK, Apple iOS & Direct Lock Screen Notifications
+                Intelligence Talks to Wisdom • Android, Apple iOS, Windows &amp; Mac Install Ready
               </div>
             </div>
           </div>
@@ -217,6 +314,21 @@ export default function MobileAppPushHubModal({ isOpen, onClose }) {
 
         {/* Body */}
         <div className="gbs-mobile-modal-body">
+          {pushFeedback && (
+            <div style={{
+              marginBottom: "1rem",
+              padding: "12px 14px",
+              borderRadius: "10px",
+              background: pushFeedback.type === "success" ? "rgba(16, 185, 129, 0.16)" : "rgba(56, 189, 248, 0.14)",
+              border: pushFeedback.type === "success" ? "1.5px solid #10b981" : "1.5px solid #38bdf8",
+              color: pushFeedback.type === "success" ? "#6ee7b7" : "#bae6fd",
+              fontSize: "0.86rem",
+              fontWeight: 700,
+              lineHeight: 1.5
+            }}>
+              {pushFeedback.text}
+            </div>
+          )}
           {/* TAB 1: NATIVE MOBILE APP (INSTALL & OVERVIEW) */}
           {activeTab === "MOBILE_APP" && (
             <div>

@@ -263,6 +263,8 @@ export default function TeacherDashboard() {
     passMarks: 50,
     examMode: "HYBRID", // "ONLINE_CBT" | "PRINTABLE_OMR_SCANNER" | "HYBRID"
     restrictBeforeStart: true,
+    enableProctoring: true,
+    instructions: "Read every question carefully before answering. Answer all required sections within the scheduled time.",
     typedQuestionText: "",
     uploadedDocName: null
   });
@@ -1429,6 +1431,8 @@ export default function TeacherDashboard() {
       examMode: newExamForm.examMode || "HYBRID",
       examFormatSummary: describeExamFormatSummary(preparedQuestions),
       restrictBeforeStart: Boolean(newExamForm.restrictBeforeStart),
+      enableProctoring: newExamForm.enableProctoring !== false,
+      instructions: (newExamForm.instructions || "Answer all questions clearly within the allocated time.").trim(),
       questionBank: preparedQuestions,
       typedQuestionText: newExamForm.typedQuestionText,
       uploadedDocName: newExamForm.uploadedDocName,
@@ -10817,82 +10821,131 @@ export default function TeacherDashboard() {
           }}
         >
           <div className="invoice-pay-modal" style={{ width: "100%", maxWidth: "900px", background: "#0b1329", border: "2px solid #8b5cf6", borderRadius: "16px", padding: "2rem", maxHeight: "90vh", overflowY: "auto", boxShadow: "0 25px 60px rgba(0,0,0,0.65)" }}>
-            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", borderBottom: "1.5px solid rgba(139, 92, 246, 0.3)", paddingBottom: "1.25rem", marginBottom: "1.5rem" }}>
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", borderBottom: "1.5px solid rgba(139, 92, 246, 0.3)", paddingBottom: "1.1rem", marginBottom: "1.25rem" }}>
               <div>
                 <span className="role-portal-badge" style={{ color: "#c084fc", marginBottom: "4px", display: "inline-block" }}>
-                  EXAMINATION AUTHORING • TIMED RESTRICTION & AI OMR SCANNER READY
+                  CLEAR STEP-BY-STEP EXAM SETTING &amp; PAPER FORMAT BUILDER
                 </span>
-                <h2 style={{ margin: "2px 0 0", color: "#f8fafc", fontSize: "1.35rem", fontWeight: "900" }}>
-                  SET EXAMINATION QUESTIONS & TIMED SCHEDULE
+                <h2 style={{ margin: "2px 0 0", color: "#f8fafc", fontSize: "1.3rem", fontWeight: "900" }}>
+                  Exam Settings, Questions &amp; Schedule
                 </h2>
-                <p style={{ margin: "4px 0 0", color: "#94a3b8", fontSize: "0.82rem" }}>
-                  Set questions online, upload typed question papers, generate printable AI scanner bubble sheets, and schedule start and end times to restrict students until ready.
+                <p style={{ margin: "4px 0 0", color: "#cbd5e1", fontSize: "0.84rem", lineHeight: 1.45 }}>
+                  Follow the 3 simple steps below to set up your exam clearly: (1) Exam Details &amp; Instructions, (2) Marks, Time &amp; Proctoring Rules, and (3) Question Format &amp; Paper Content.
                 </p>
               </div>
-              <button type="button" className="btn-secondary" onClick={() => setShowAuthorExamModal(false)}>✕</button>
+              <button type="button" className="btn-secondary" onClick={() => setShowAuthorExamModal(false)}>✕ Close</button>
             </div>
 
             <form onSubmit={handlePublishNewExam}>
-              {/* Basic Info Grid */}
-              <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(220px, 1fr))", gap: "1rem", marginBottom: "1.25rem" }}>
-                <div>
-                  <label style={{ display: "block", fontSize: "0.8rem", color: "#94a3b8", marginBottom: "4px" }}>Exam Paper Title *</label>
-                  <input
-                    type="text"
-                    required
-                    placeholder="e.g. End of Semester Calculus & Differential Logic"
-                    value={newExamForm.title}
-                    onChange={(e) => setNewExamForm({ ...newExamForm, title: e.target.value })}
-                    className="filter-input"
-                    style={{ width: "100%" }}
-                  />
+              {/* STEP 1: EXAM DETAILS & CANDIDATE INSTRUCTIONS */}
+              <div style={{ background: "rgba(15, 23, 42, 0.72)", padding: "14px 16px", borderRadius: "10px", border: "1px solid rgba(56, 189, 248, 0.28)", marginBottom: "1rem" }}>
+                <div style={{ fontSize: "0.82rem", fontWeight: 800, color: "#38bdf8", marginBottom: "10px", textTransform: "uppercase", letterSpacing: "0.03em" }}>
+                  Step 1 — Exam Details, Class &amp; Student Instructions
+                </div>
+                <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(210px, 1fr))", gap: "0.85rem", marginBottom: "0.85rem" }}>
+                  <div>
+                    <label style={{ display: "block", fontSize: "0.8rem", color: "#e2e8f0", fontWeight: 700, marginBottom: "4px" }}>Exam Title *</label>
+                    <input
+                      type="text"
+                      required
+                      placeholder="e.g. End of Term 1 Mathematics Exam"
+                      value={newExamForm.title}
+                      onChange={(e) => setNewExamForm({ ...newExamForm, title: e.target.value })}
+                      className="filter-input"
+                      style={{ width: "100%" }}
+                    />
+                  </div>
+                  <div>
+                    <label style={{ display: "block", fontSize: "0.8rem", color: "#e2e8f0", fontWeight: 700, marginBottom: "4px" }}>Subject / Course Code *</label>
+                    <input
+                      type="text"
+                      required
+                      placeholder="e.g. MATH 205"
+                      value={newExamForm.subjectCode}
+                      onChange={(e) => setNewExamForm({ ...newExamForm, subjectCode: e.target.value })}
+                      className="filter-input"
+                      style={{ width: "100%" }}
+                    />
+                  </div>
+                  <div>
+                    <label style={{ display: "block", fontSize: "0.8rem", color: "#e2e8f0", fontWeight: 700, marginBottom: "4px" }}>Subject Name *</label>
+                    <input
+                      type="text"
+                      required
+                      placeholder="e.g. Core Mathematics"
+                      value={newExamForm.subjectName || ""}
+                      onChange={(e) => setNewExamForm({ ...newExamForm, subjectName: e.target.value })}
+                      className="filter-input"
+                      style={{ width: "100%" }}
+                    />
+                  </div>
+                  <div>
+                    <label style={{ display: "block", fontSize: "0.8rem", color: "#e2e8f0", fontWeight: 700, marginBottom: "4px" }}>Target Class / Level *</label>
+                    <input
+                      type="text"
+                      required
+                      placeholder="e.g. Grade 10A or JHS 3"
+                      value={newExamForm.className}
+                      onChange={(e) => setNewExamForm({ ...newExamForm, className: e.target.value })}
+                      className="filter-input"
+                      style={{ width: "100%" }}
+                    />
+                  </div>
+                  <div>
+                    <label style={{ display: "block", fontSize: "0.8rem", color: "#e2e8f0", fontWeight: 700, marginBottom: "4px" }}>Exam Date *</label>
+                    <input
+                      type="date"
+                      required
+                      value={newExamForm.examDate}
+                      onChange={(e) => setNewExamForm({ ...newExamForm, examDate: e.target.value })}
+                      className="filter-input"
+                      style={{ width: "100%" }}
+                    />
+                  </div>
                 </div>
                 <div>
-                  <label style={{ display: "block", fontSize: "0.8rem", color: "#94a3b8", marginBottom: "4px" }}>Subject / Course Code *</label>
-                  <input
-                    type="text"
-                    required
-                    placeholder="e.g. MATH 205"
-                    value={newExamForm.subjectCode}
-                    onChange={(e) => setNewExamForm({ ...newExamForm, subjectCode: e.target.value })}
+                  <label style={{ display: "block", fontSize: "0.8rem", color: "#e2e8f0", fontWeight: 700, marginBottom: "4px" }}>
+                    Instructions Shown to Students Before Starting
+                  </label>
+                  <textarea
+                    rows={2}
+                    placeholder="e.g. Section A carries 40 marks (Objective) and Section B carries 60 marks (Theory). Keep your camera facing forward throughout."
+                    value={newExamForm.instructions || ""}
+                    onChange={(e) => setNewExamForm({ ...newExamForm, instructions: e.target.value })}
                     className="filter-input"
-                    style={{ width: "100%" }}
-                  />
-                </div>
-                <div>
-                  <label style={{ display: "block", fontSize: "0.8rem", color: "#94a3b8", marginBottom: "4px" }}>Target Class Cohort *</label>
-                  <input
-                    type="text"
-                    required
-                    placeholder="e.g. Grade 10A / Level 200"
-                    value={newExamForm.className}
-                    onChange={(e) => setNewExamForm({ ...newExamForm, className: e.target.value })}
-                    className="filter-input"
-                    style={{ width: "100%" }}
-                  />
-                </div>
-                <div>
-                  <label style={{ display: "block", fontSize: "0.8rem", color: "#94a3b8", marginBottom: "4px" }}>Exam Date *</label>
-                  <input
-                    type="date"
-                    required
-                    value={newExamForm.examDate}
-                    onChange={(e) => setNewExamForm({ ...newExamForm, examDate: e.target.value })}
-                    className="filter-input"
-                    style={{ width: "100%" }}
+                    style={{ width: "100%", fontFamily: "inherit", resize: "vertical" }}
                   />
                 </div>
               </div>
 
-              {/* Timing & Restriction Controls */}
-              <div style={{ background: "rgba(15, 23, 42, 0.8)", padding: "14px", borderRadius: "10px", border: "1.5px solid rgba(245, 158, 11, 0.3)", marginBottom: "1.5rem" }}>
-                <div style={{ display: "flex", alignItems: "center", gap: "8px", marginBottom: "8px" }}>
-                  <span style={{ fontSize: "1.2rem" }}>⏱️</span>
-                  <strong style={{ color: "#fbbf24", fontSize: "0.9rem" }}>EXAMINATION TIMED ACCESS GATING & RESTRICTION</strong>
+              {/* STEP 2: TIMING, MARKS, PASSING SCORE & PROCTORING RULES */}
+              <div style={{ background: "rgba(15, 23, 42, 0.8)", padding: "14px 16px", borderRadius: "10px", border: "1.5px solid rgba(245, 158, 11, 0.35)", marginBottom: "1rem" }}>
+                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: "8px", marginBottom: "10px" }}>
+                  <div style={{ fontSize: "0.82rem", fontWeight: 800, color: "#fbbf24", textTransform: "uppercase", letterSpacing: "0.03em" }}>
+                    Step 2 — Timing, Total Marks, Pass Mark &amp; Exam Rules
+                  </div>
+                  {(() => {
+                    const allocated = examQuestionsList.reduce((acc, q) => acc + (Number(q.marks) || 0), 0);
+                    const target = Number(newExamForm.totalMarks) || 100;
+                    const matches = allocated === 0 || allocated === target;
+                    return (
+                      <span style={{
+                        fontSize: "0.75rem",
+                        fontWeight: 800,
+                        padding: "3px 10px",
+                        borderRadius: "999px",
+                        background: matches ? "rgba(16, 185, 129, 0.16)" : "rgba(245, 158, 11, 0.16)",
+                        color: matches ? "#34d399" : "#fcd34d",
+                        border: matches ? "1px solid #10b981" : "1px solid #f59e0b"
+                      }}>
+                        Questions Sum: {allocated} / {target} Total Marks
+                      </span>
+                    );
+                  })()}
                 </div>
-                <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(180px, 1fr))", gap: "1rem" }}>
+                <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(150px, 1fr))", gap: "0.85rem", marginBottom: "0.85rem" }}>
                   <div>
-                    <label style={{ display: "block", fontSize: "0.78rem", color: "#94a3b8", marginBottom: "4px" }}>Start Time (Students Unlocked) *</label>
+                    <label style={{ display: "block", fontSize: "0.78rem", color: "#cbd5e1", fontWeight: 700, marginBottom: "4px" }}>Start Time (Opens)</label>
                     <input
                       type="text"
                       placeholder="09:00 AM"
@@ -10903,7 +10956,7 @@ export default function TeacherDashboard() {
                     />
                   </div>
                   <div>
-                    <label style={{ display: "block", fontSize: "0.78rem", color: "#94a3b8", marginBottom: "4px" }}>End Time (Session Concluded) *</label>
+                    <label style={{ display: "block", fontSize: "0.78rem", color: "#cbd5e1", fontWeight: 700, marginBottom: "4px" }}>End Time (Closes)</label>
                     <input
                       type="text"
                       placeholder="11:30 AM"
@@ -10914,30 +10967,65 @@ export default function TeacherDashboard() {
                     />
                   </div>
                   <div>
-                    <label style={{ display: "block", fontSize: "0.78rem", color: "#94a3b8", marginBottom: "4px" }}>Duration (Minutes)</label>
+                    <label style={{ display: "block", fontSize: "0.78rem", color: "#cbd5e1", fontWeight: 700, marginBottom: "4px" }}>Duration (Minutes)</label>
                     <input
                       type="number"
+                      min="5"
                       value={newExamForm.durationMinutes}
                       onChange={(e) => setNewExamForm({ ...newExamForm, durationMinutes: Number(e.target.value) })}
                       className="filter-input"
                       style={{ width: "100%" }}
                     />
                   </div>
-                  <div style={{ display: "flex", alignItems: "center", gap: "8px", marginTop: "18px" }}>
+                  <div>
+                    <label style={{ display: "block", fontSize: "0.78rem", color: "#cbd5e1", fontWeight: 700, marginBottom: "4px" }}>Total Exam Marks</label>
+                    <input
+                      type="number"
+                      min="1"
+                      value={newExamForm.totalMarks}
+                      onChange={(e) => setNewExamForm({ ...newExamForm, totalMarks: Number(e.target.value) || 100 })}
+                      className="filter-input"
+                      style={{ width: "100%" }}
+                    />
+                  </div>
+                  <div>
+                    <label style={{ display: "block", fontSize: "0.78rem", color: "#cbd5e1", fontWeight: 700, marginBottom: "4px" }}>Pass Mark</label>
+                    <input
+                      type="number"
+                      min="1"
+                      value={newExamForm.passMarks}
+                      onChange={(e) => setNewExamForm({ ...newExamForm, passMarks: Number(e.target.value) || 50 })}
+                      className="filter-input"
+                      style={{ width: "100%" }}
+                    />
+                  </div>
+                </div>
+                <div style={{ display: "flex", gap: "18px", flexWrap: "wrap", paddingTop: "6px" }}>
+                  <label style={{ fontSize: "0.8rem", color: "#e2e8f0", cursor: "pointer", display: "flex", alignItems: "center", gap: "8px" }}>
                     <input
                       type="checkbox"
                       id="chkRestrict"
                       checked={newExamForm.restrictBeforeStart}
                       onChange={(e) => setNewExamForm({ ...newExamForm, restrictBeforeStart: e.target.checked })}
                     />
-                    <label htmlFor="chkRestrict" style={{ fontSize: "0.78rem", color: "#cbd5e1", cursor: "pointer" }}>
-                      Strict Timed Lock (Portal opens ONLY when time is ready)
-                    </label>
-                  </div>
+                    <span>🔒 Lock portal before Start Time (students cannot open questions early)</span>
+                  </label>
+                  <label style={{ fontSize: "0.8rem", color: "#e2e8f0", cursor: "pointer", display: "flex", alignItems: "center", gap: "8px" }}>
+                    <input
+                      type="checkbox"
+                      id="chkProctoring"
+                      checked={newExamForm.enableProctoring !== false}
+                      onChange={(e) => setNewExamForm({ ...newExamForm, enableProctoring: e.target.checked })}
+                    />
+                    <span>📹 Active AI Proctoring (camera gaze &amp; tab-switch monitoring from Start until End)</span>
+                  </label>
                 </div>
               </div>
 
-              {/* Mode Selector Tabs: Interactive Builder vs Typed Upload vs OMR Sheet */}
+              {/* STEP 3: QUESTION FORMAT & PAPER CREATION */}
+              <div style={{ fontSize: "0.82rem", fontWeight: 800, color: "#c084fc", marginBottom: "8px", textTransform: "uppercase", letterSpacing: "0.03em" }}>
+                Step 3 — Choose Paper Creation Method &amp; Question Format
+              </div>
               <div style={{ display: "flex", gap: "8px", marginBottom: "1rem", flexWrap: "wrap" }}>
                 <button
                   type="button"
