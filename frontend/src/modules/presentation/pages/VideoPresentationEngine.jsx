@@ -313,9 +313,9 @@ const ROLE_MODULES = [
     ],
     actions: [
       {
-        title: "Simulate MTN MoMo Tuition Payment",
-        desc: "Settle GH₵ 1,250 termly invoice & print BEST KIDS receipt",
-        cmd: "MoMo Tx #MM-884122 settled -> Official BEST KIDS receipt #RCP-2026-091 generated."
+        title: "Verify Fee Settlement Flow",
+        desc: "Confirm database fee lookup, Paystack/Hubtel checkout & official printable receipt",
+        cmd: "Fee Checkout: DB balance retrieved -> Gateway webhook signed -> Receipt #RCP-XXXX & Student ledger updated."
       },
       {
         title: "Update Guardian Google Maps GPS Pin",
@@ -635,8 +635,8 @@ const ROLE_MODULES = [
     badge: "GLOBAL SOVEREIGNTY & AUTO-LOCK",
     icon: "🛡️",
     color: "#38bdf8",
-    videoFile: "/videos/gbs_complete_system_roles_master_guide.mp4",
-    downloadName: "GBS_Video10_Developer_Action_Guide.mp4",
+    videoFile: "/videos/video7_developer_role_guide.mp4",
+    downloadName: "GBS_Video7_Developer_Action_Guide.mp4",
     photos: [
       "/assets/real_scene1_headmaster_desk.jpg",
       "/assets/real_scene2_teacher_scanner.jpg",
@@ -644,24 +644,24 @@ const ROLE_MODULES = [
     ],
     targetAudience: "System Founder, Platform Engineers & Global Operations Command",
     description:
-      "Multi-tenant school onboarding, per-student subscription billing ($3/$5/$10), 7-day grace auto-lock engine, Live Registered Schools GPS Map, Intrusion Sentinel, and WebRTC Video Support.",
+      "Multi-tenant school onboarding, per-student subscription billing (GH₵ 3 / 5 / 10), Payment Gateways & Webhook Administration, 7-day grace auto-lock engine, School GPS Map, and Security Alerts.",
     metrics: [
       { label: "Auto-Lock Policy", val: "14d Notice + 7d Grace" },
-      { label: "Live School Map", val: "GPS Turn-by-Turn" },
-      { label: "Intrusion Sentinel", val: "24/7 IP Shield" }
+      { label: "Payment Control", val: "Paystack & Hubtel" },
+      { label: "Live School Map", val: "GPS Turn-by-Turn" }
     ],
-    closingHook: "Total command over every onboarded educational institution, live production/demo switching, and automated subscription enforcement.",
+    closingHook: "Total command over every onboarded school, verified subscription & fee payment gateways, encrypted backups, and live/demo mode controls.",
     steps: [
       {
-        title: "Step 1: Multi-Tenant Approval & 7-Day Grace Auto-Lock Engine",
-        narration: "Approve newly onboarded schools, monitor per-student subscription tiers ($3/$5/$10), and enforce the 7-day grace period auto-lock.",
+        title: "Step 1: Multi-Tenant Approval & Subscription Auto-Lock Engine",
+        narration: "Approve newly onboarded schools, verify MoMo continuation payments (0554594193) and GH₵ 3/5/10 per-student tiers, and lock/unlock tenants safely.",
         actionLabel: "DEV_TENANT_REGISTRY & AUTO_LOCK_ENGINE",
         duration: "0:00 – 0:25"
       },
       {
-        title: "Step 2: Live Schools GPS Map, Intrusion Sentinel & Video Support",
-        narration: "Locate any registered school on the interactive GPS map, block unauthorized intruder IPs, and launch live WebRTC video support.",
-        actionLabel: "LIVE_GPS_MAP & INTRUSION_SENTINEL",
+        title: "Step 2: Payment Gateways, Webhooks, Backups & GPS Map",
+        narration: "Open Payment Gateways to set school subaccounts and retry webhooks, inspect security alerts, download encrypted backups, and view school GPS locations.",
+        actionLabel: "PAYMENT_GATEWAYS & SECURITY_CONTROLS",
         duration: "0:25 – 0:50"
       }
     ],

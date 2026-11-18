@@ -128,27 +128,37 @@ export default function MobileAppPushHubModal({ isOpen, onClose }) {
     setTimeout(() => setTestPushStatus(null), 4000);
   };
 
-  const handleDownloadAPK = () => {
-    // Generate simulated high-security signed APK package manifest download
-    const apkBlob = new Blob(
-      [
-        "GBS_ENTERPRISE_ANDROID_PACKAGE_V2.4\n" +
-        "PackageName: com.gbs.enterprise.school\n" +
-        "VersionCode: 20261116\n" +
-        "BuildType: Release-Signed\n" +
-        "CertificateSHA256: 4C:9D:E8:22:B1:05:7F:A3:C0:92:44:88:12:F6:EA:41\n" +
-        "Features: Full Offline Cache, Lock Screen Push Notifications, Biometric Camera Access, GPS Bus Tracking.\n"
-      ],
-      { type: "application/vnd.android.package-archive" }
-    );
-    const url = URL.createObjectURL(apkBlob);
-    const a = document.createElement("a");
-    a.href = url;
-    a.download = "GBS_Enterprise_School_v2.4.apk";
-    document.body.appendChild(a);
-    a.click();
-    document.body.removeChild(a);
-    URL.revokeObjectURL(url);
+  const handleDownloadAPK = async () => {
+    const configuredUrl = import.meta.env.VITE_ANDROID_APK_URL || "/downloads/GBS-School-Enterprise.apk";
+    try {
+      const checkRes = await fetch(configuredUrl, { method: "HEAD" });
+      const contentType = (checkRes.headers.get("content-type") || "").toLowerCase();
+      if (checkRes.ok && (contentType.includes("android.package-archive") || contentType.includes("octet-stream"))) {
+        const a = document.createElement("a");
+        a.href = configuredUrl;
+        a.download = "GBS-School-Enterprise.apk";
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+        setPushFeedback({
+          type: "success",
+          text: "Android APK download started! Open the downloaded file from your Notifications or Downloads folder to install."
+        });
+        return;
+      }
+    } catch {
+      // No standalone APK binary hosted on this origin — fall back cleanly to genuine PWA home-screen install
+    }
+
+    setActiveTab("MOBILE_APP");
+    if (deferredPrompt) {
+      await handleInstallPWA();
+    } else {
+      setPushFeedback({
+        type: "info",
+        text: "Install directly onto your Android or iPhone home screen: tap Chrome menu (⋮) -> 'Install app' (Android) or Safari Share -> 'Add to Home Screen' (iPhone)."
+      });
+    }
   };
 
   return (
@@ -425,31 +435,27 @@ export default function MobileAppPushHubModal({ isOpen, onClose }) {
                     className="gbs-install-btn"
                     onClick={handleDownloadAPK}
                   >
-                    📦 Download Android APK (18.4 MB)
+                    📲 Check &amp; Install Android / Phone App
                   </button>
                 </div>
 
-                <div style={{ marginTop: "1.25rem", borderTop: "1px solid rgba(255, 255, 255, 0.1)", paddingTop: "1rem", display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: "10px", fontSize: "0.78rem", color: "#94a3b8" }}>
-                  <div>Package: <strong style={{ color: "#cbd5e1" }}>com.gbs.enterprise.school</strong></div>
-                  <div>Target SDK: <strong style={{ color: "#cbd5e1" }}>Android 14 (API 34)</strong></div>
-                  <div>Min SDK: <strong style={{ color: "#cbd5e1" }}>Android 8.0 (API 26)</strong></div>
-                  <div>Build Signature: <strong style={{ color: "#34d399" }}>SHA-256 Verified</strong></div>
-                  <div>Permissions: <strong style={{ color: "#cbd5e1" }}>Camera, Push, GPS Bus Tracking</strong></div>
-                  <div>Architecture: <strong style={{ color: "#cbd5e1" }}>Universal (arm64, x86_64)</strong></div>
+                <div style={{ marginTop: "1.25rem", borderTop: "1px solid rgba(255, 255, 255, 0.1)", paddingTop: "1rem", display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(150px, 1fr))", gap: "10px", fontSize: "0.78rem", color: "#94a3b8" }}>
+                  <div>Package ID: <strong style={{ color: "#cbd5e1" }}>com.gbs.enterprise.school</strong></div>
+                  <div>Install Type: <strong style={{ color: "#34d399" }}>PWA Home-Screen App + APK Check</strong></div>
+                  <div>Supported Phones: <strong style={{ color: "#cbd5e1" }}>Android Chrome &amp; Apple iPhone</strong></div>
+                  <div>Features: <strong style={{ color: "#cbd5e1" }}>Camera, Alerts, School Fees &amp; Offline Ready</strong></div>
                 </div>
               </div>
 
-              {/* Sideload Installation Steps */}
+              {/* Simple Installation Steps */}
               <div className="gbs-app-card" style={{ marginTop: "1rem" }}>
                 <h4 style={{ margin: "0 0 8px", color: "#f59e0b", fontSize: "0.92rem", fontWeight: "900" }}>
-                  📌 How to Sideload & Install the APK on Android:
+                  📌 How to Install &amp; Use GBS Easily on Your Phone:
                 </h4>
                 <ol style={{ margin: 0, paddingLeft: "1.2rem", fontSize: "0.82rem", color: "#cbd5e1", lineHeight: "1.6" }}>
-                  <li>Tap the <strong>Download Android APK</strong> button above.</li>
-                  <li>When prompted, tap <strong>"Download anyway"</strong> (standard warning for external enterprise APKs).</li>
-                  <li>Once downloaded, open your notifications or Downloads folder and tap <code>GBS_Enterprise_School_v2.4.apk</code>.</li>
-                  <li>If prompted, toggle <strong>"Allow from this source"</strong> in Settings.</li>
-                  <li>Tap <strong>"Install"</strong>. The GBS Enterprise app will appear on your phone home screen!</li>
+                  <li>If an organization-signed <code>.apk</code> file is hosted on the server, tapping the button above downloads it automatically.</li>
+                  <li>Otherwise, use instant <strong>Install App</strong>: on Android Chrome tap <strong>⋮ Menu → Install app</strong>; on iPhone Safari tap <strong>Share (⎋) → Add to Home Screen</strong>.</li>
+                  <li>An icon appears on your phone home screen just like any store app, with no Play Store wait or sideload warning.</li>
                 </ol>
               </div>
             </div>

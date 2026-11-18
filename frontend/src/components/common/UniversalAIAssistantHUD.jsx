@@ -204,7 +204,7 @@ export default function UniversalAIAssistantHUD() {
             padding: 0,
             transition: "all 0.2s ease"
           }}
-          title="Expand Antigravity AI IDE Assistant"
+          title="Expand System Health Monitor"
         >
           <span>{systemStatus === "ANOMALY" ? "⚠️" : "🤖"}</span>
           {unreadCount > 0 && (
@@ -266,17 +266,17 @@ export default function UniversalAIAssistantHUD() {
             transition: "all 0.2s ease",
             userSelect: "none"
           }}
-          title="Antigravity AI IDE Assistant • Click to open, or click '—' to minimize"
+          title="GBS System Monitor • Click to open, or click '—' to minimize"
         >
           <span style={{ fontSize: "0.85rem" }}>
             {systemStatus === "ANOMALY" ? "⚠️" : systemStatus === "REPAIRING" ? "⚙️" : "🤖"}
           </span>
           <span>
             {systemStatus === "ANOMALY"
-              ? `Antigravity AI (${detectedIssues.length})`
+              ? `System Monitor (${detectedIssues.length})`
               : systemStatus === "REPAIRING"
-              ? "AI Repairing..."
-              : "Antigravity AI"}
+              ? "Checking..."
+              : "System Monitor"}
           </span>
           {unreadCount > 0 && (
             <span
@@ -319,7 +319,7 @@ export default function UniversalAIAssistantHUD() {
               marginLeft: "2px",
               padding: 0
             }}
-            title="Minimize Antigravity AI IDE Assistant"
+            title="Minimize System Health Monitor"
           >
             —
           </button>
@@ -362,13 +362,13 @@ export default function UniversalAIAssistantHUD() {
             }}
           >
             <div style={{ display: "flex", alignItems: "center", gap: "6px" }}>
-              <span style={{ fontSize: "1rem" }}>🤖</span>
+              <span style={{ fontSize: "1rem" }}>🛡️</span>
               <div>
                 <strong style={{ fontSize: "0.76rem", color: "#38bdf8", display: "block" }}>
-                  ANTIGRAVITY AI IDE ASSISTANT
+                  GBS SYSTEM HEALTH MONITOR
                 </strong>
                 <span style={{ fontSize: "0.62rem", color: "#94a3b8" }}>
-                  Autonomous Diagnostics & Repair
+                  Live Diagnostics &amp; Troubleshooting
                 </span>
               </div>
             </div>

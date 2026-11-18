@@ -1245,25 +1245,145 @@ model StudentInvoice {
 }
 
 model PaymentTransaction {
-  id             Int            @id @default(autoincrement())
-  tenantId       Int
-  invoiceId      Int
-  invoice        StudentInvoice @relation(fields: [invoiceId], references: [id], onDelete: Cascade)
-  receiptNumber  String         // RCP-2026-XXXXX
-  amountPaid     Float
-  paymentMethod  String         @default("BANK_TRANSFER") // STRIPE, PAYPAL, BANK_TRANSFER, CASH, CHEQUE
-  transactionRef String?
-  gatewayStatus  String         @default("SUCCESS") // SUCCESS, PENDING, FAILED, REFUNDED
-  paidAt         DateTime       @default(now())
-  receivedById   Int?
-  notes          String?        @db.Text
-  createdAt      DateTime       @default(now())
+  id                    Int            @id @default(autoincrement())
+  tenantId              Int
+  invoiceId             Int?
+  invoice               StudentInvoice? @relation(fields: [invoiceId], references: [id], onDelete: SetNull)
+  receiptNumber         String         // RCP-2026-XXXXX
+  reference             String?        @unique
+  providerReference     String?
+  gateway               String         @default("MANUAL") // PAYSTACK, HUBTEL, BANK_DIRECT, SANDBOX_PSP, MANUAL
+  channel               String?        // MTN_MOMO, TELECEL_CASH, AT_MONEY, VISA, MASTERCARD, CARD, BANK_TRANSFER
+  paymentScope          String         @default("SCHOOL_FEES") // SCHOOL_FEES, SUBSCRIPTION
+  studentId             Int?
+  studentCode           String?
+  payerUserId           Int?
+  payerPhone            String?
+  payerEmail            String?
+  academicYear          String?
+  term                  String?
+  feeAccount            String?
+  expectedAmount        Float?
+  amountPaid            Float
+  currency              String         @default("GHS")
+  paymentMethod         String         @default("BANK_TRANSFER") // STRIPE, PAYPAL, BANK_TRANSFER, CASH, CHEQUE, MTN_MOMO, TELECEL_CASH, AT_MONEY, VISA, MASTERCARD
+  transactionRef        String?
+  gatewayStatus         String         @default("CREATED") // CREATED, PENDING, REQUIRES_CUSTOMER_ACTION, PROCESSING, SUCCESSFUL, FAILED, CANCELLED, EXPIRED, REVERSED, REFUNDED, UNDER_REVIEW
+  authorizationType     String?        // REDIRECT, PHONE_PROMPT, USSD, OTP, BANK_REFERENCE, NONE
+  authorizationUrl      String?        @db.Text
+  ussdInstruction       String?        @db.Text
+  displayMessage        String?        @db.Text
+  idempotencyKey        String?        @unique
+  subaccountCode        String?
+  merchantAccountNumber String?
+  reconciledAt          DateTime?
+  accountingPosted      Boolean        @default(false)
+  failureReason         String?        @db.Text
+  expiresAt             DateTime?
+  metadataJson          String?        @db.Text
+  paidAt                DateTime       @default(now())
+  receivedById          Int?
+  notes                 String?        @db.Text
+  createdAt             DateTime       @default(now())
+  updatedAt             DateTime       @default(now()) @updatedAt
 
   @@unique([tenantId, receiptNumber])
   @@index([tenantId])
   @@index([invoiceId])
+  @@index([studentId])
+  @@index([gateway])
   @@index([gatewayStatus])
+  @@index([providerReference])
+  @@index([accountingPosted])
   @@map("payment_transactions")
+}
+
+model PaymentGatewayConfig {
+  id                    Int      @id @default(autoincrement())
+  tenantId              Int      // 0 = global platform defaults, >=1 = school institution config
+  gateway               String   // PAYSTACK, HUBTEL, BANK_DIRECT, SANDBOX_PSP
+  mode                  String   @default("TEST") // TEST, LIVE
+  isEnabled             Boolean  @default(false)
+  supportsMtnMomo       Boolean  @default(false)
+  supportsTelecelCash   Boolean  @default(false)
+  supportsAtMoney       Boolean  @default(false)
+  supportsVisa          Boolean  @default(false)
+  supportsMastercard    Boolean  @default(false)
+  supportsBankTransfer  Boolean  @default(false)
+  paystackSubaccountCode String?
+  hubtelMerchantAccount String?
+  bankName              String?
+  bankAccountNumber     String?
+  bankAccountName       String?
+  bankBranch            String?
+  settlementLabel       String?
+  allowPartialPayments  Boolean  @default(true)
+  minPartialPercent     Float    @default(20.0)
+  publicKeyPreview      String?
+  updatedById           Int?
+  createdAt             DateTime @default(now())
+  updatedAt             DateTime @updatedAt
+
+  @@unique([tenantId, gateway])
+  @@index([tenantId])
+  @@index([gateway])
+  @@map("payment_gateway_configs")
+}
+
+model PaymentWebhookEvent {
+  id                Int       @id @default(autoincrement())
+  gateway           String
+  eventId           String?
+  eventType         String
+  transactionRef    String?
+  providerReference String?
+  signatureValid    Boolean   @default(false)
+  processingStatus  String    @default("RECEIVED") // RECEIVED, PROCESSED, IGNORED_DUPLICATE, FAILED, RETRYING
+  retryCount        Int       @default(0)
+  nextRetryAt       DateTime?
+  errorMessage      String?   @db.Text
+  payloadHash       String?
+  rawPayload        String?   @db.Text
+  processedAt       DateTime?
+  createdAt         DateTime  @default(now())
+
+  @@index([gateway])
+  @@index([eventId])
+  @@index([transactionRef])
+  @@index([providerReference])
+  @@index([processingStatus])
+  @@map("payment_webhook_events")
+}
+
+model PaymentReceipt {
+  id                   Int      @id @default(autoincrement())
+  tenantId             Int
+  paymentTransactionId Int      @unique
+  invoiceId            Int?
+  studentId            Int?
+  studentCode          String?
+  studentName          String
+  institutionName      String
+  receiptNumber        String
+  transactionRef       String
+  providerReference    String?
+  gateway              String
+  channel              String
+  amountPaid           Float
+  currency             String   @default("GHS")
+  balanceBefore        Float    @default(0.0)
+  balanceAfter         Float    @default(0.0)
+  academicYear         String?
+  term                 String?
+  feeDescription       String?
+  issuedAt             DateTime @default(now())
+  metadataJson         String?  @db.Text
+
+  @@unique([tenantId, receiptNumber])
+  @@index([tenantId])
+  @@index([studentId])
+  @@index([transactionRef])
+  @@map("payment_receipts")
 }
 
 model SchoolExpense {

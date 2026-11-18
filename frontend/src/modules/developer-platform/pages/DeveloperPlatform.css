@@ -1643,3 +1643,64 @@
 .dev-padlock-quick-widget:hover {
   transform: scale(1.03);
 }
+
+/* Cross-Device Responsive Modern Polish for Developer Console */
+@media (max-width: 1024px) {
+  .dev-header {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 12px;
+    padding: 14px 16px;
+  }
+  .dev-nav {
+    width: 100%;
+    flex-wrap: wrap;
+    gap: 8px;
+  }
+  .dev-hero-showcase-banner {
+    flex-direction: column;
+    padding: 1.25rem;
+  }
+}
+
+@media (max-width: 768px) {
+  .dev-main {
+    padding: 12px 10px 84px;
+  }
+  .dev-tabs {
+    display: flex;
+    flex-wrap: nowrap;
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+    gap: 8px;
+    padding-bottom: 6px;
+  }
+  .dev-tab-btn {
+    flex: 0 0 auto;
+    white-space: nowrap;
+    min-height: 40px;
+    font-size: 0.78rem;
+  }
+  .dev-section-title {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 10px;
+  }
+  .telemetry-grid,
+  .dev-kpi-grid {
+    grid-template-columns: 1fr 1fr;
+    gap: 10px;
+  }
+  .otp-modal-content,
+  .dev-modal-content {
+    width: 95vw;
+    padding: 1.15rem;
+  }
+}
+
+@media (max-width: 480px) {
+  .telemetry-grid,
+  .dev-kpi-grid {
+    grid-template-columns: 1fr;
+  }
+}

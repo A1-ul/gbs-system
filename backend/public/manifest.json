@@ -1,20 +1,77 @@
 {
-  "short_name": "GBS Enterprise",
+  "short_name": "GBS System",
   "name": "GBS International School Management System",
+  "description": "GBS Enterprise School Management Platform — Intelligence Talks to Wisdom",
+  "start_url": "/",
+  "id": "/",
+  "scope": "/",
+  "display": "standalone",
+  "orientation": "any",
+  "background_color": "#020617",
+  "theme_color": "#0284c7",
+  "prefer_related_applications": false,
   "icons": [
     {
-      "src": "/icons/icon-192.png",
-      "type": "image/png",
-      "sizes": "192x192"
+      "src": "/assets/gbs_crest_badge.jpg",
+      "type": "image/jpeg",
+      "sizes": "192x192",
+      "purpose": "any maskable"
     },
     {
-      "src": "/icons/icon-512.png",
-      "type": "image/png",
-      "sizes": "512x512"
+      "src": "/assets/gbs_crest_badge.jpg",
+      "type": "image/jpeg",
+      "sizes": "512x512",
+      "purpose": "any maskable"
     }
   ],
-  "start_url": "/",
-  "background_color": "#0f172a",
-  "theme_color": "#1e3a8a",
-  "display": "standalone"
+  "shortcuts": [
+    {
+      "name": "Admin & Headmaster Portal",
+      "short_name": "Headmaster",
+      "description": "Access School Administration Roster & Curricula",
+      "url": "/login?role=admin",
+      "icons": [
+        {
+          "src": "/assets/gbs_crest_badge.jpg",
+          "sizes": "192x192"
+        }
+      ]
+    },
+    {
+      "name": "Teacher Academic Portal",
+      "short_name": "Teacher",
+      "description": "Access Grading, Timetables & Curricula",
+      "url": "/login?role=teacher",
+      "icons": [
+        {
+          "src": "/assets/gbs_crest_badge.jpg",
+          "sizes": "192x192"
+        }
+      ]
+    },
+    {
+      "name": "Parent Financial & Academic Hub",
+      "short_name": "Parent",
+      "description": "View Fees Invoices, Attendance & Grades",
+      "url": "/login?role=parent",
+      "icons": [
+        {
+          "src": "/assets/gbs_crest_badge.jpg",
+          "sizes": "192x192"
+        }
+      ]
+    },
+    {
+      "name": "Student Learning & Conference Hub",
+      "short_name": "Student",
+      "description": "Access Online Classes, Conferencing & Assignments",
+      "url": "/login?role=student",
+      "icons": [
+        {
+          "src": "/assets/gbs_crest_badge.jpg",
+          "sizes": "192x192"
+        }
+      ]
+    }
+  ]
 }

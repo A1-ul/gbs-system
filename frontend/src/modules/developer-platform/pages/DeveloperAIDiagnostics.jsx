@@ -49,21 +49,21 @@ export default function DeveloperAIDiagnostics() {
     <div className="dev-dashboard-layout">
       <header className="dev-header">
         <div className="dev-title">
-          <span className="dev-badge-nav">AI ASSISTANT</span>
-          <h2>AI DEVELOPER ASSISTANT & BLUEPRINT VERIFIER</h2>
+          <span className="dev-badge-nav">SYSTEM DIAGNOSTICS</span>
+          <h2>CRASH LOG &amp; MODULE HEALTH CHECKER</h2>
         </div>
         <div className="dev-nav">
           <button onClick={() => navigate(-1)} style={{ borderColor: "#38bdf8", color: "#38bdf8", fontWeight: "700" }}>
             ⬅ Return / Back
           </button>
           <button onClick={() => navigate("/developer-control-center/dashboard")} style={{ borderColor: "#a855f7", color: "#c084fc", fontWeight: "700" }}>
-            ⚙️ Developer Mission Control
+            ⚙️ Developer Control Center
           </button>
         </div>
       </header>
 
       <main className="dev-main">
-        {/* Real-Life AI Engineering Laboratory Showcase Banner */}
+        {/* System Diagnostics Overview Banner */}
         <section
           className="dev-hero-showcase-banner"
           style={{
@@ -71,10 +71,10 @@ export default function DeveloperAIDiagnostics() {
           }}
         >
           <div className="hero-text-block">
-            <div className="hero-pill-badge">DEVELOPER AI LABORATORY</div>
-            <h2>Neural Crash Intelligence & Architectural Verifier</h2>
+            <div className="hero-pill-badge">PLATFORM HEALTH &amp; LOGS</div>
+            <h2>Error Log Analyzer &amp; System Module Verifier</h2>
             <p>
-              Autonomous parsing of exception stack traces, predictive patch synthesis, and deterministic validation of enterprise architectural compliance against the Master Blueprint.
+              Inspect application error stack traces, review recommended code checks, and verify that every school module is connected and healthy.
             </p>
           </div>
 
@@ -82,16 +82,16 @@ export default function DeveloperAIDiagnostics() {
             <div className="showcase-photo-wrapper">
               <img
                 src="/assets/ai-diagnostics-bg.jpg"
-                alt="AI Robotics & Cognitive Computing Laboratory"
+                alt="GBS Server Operations Laboratory"
                 className="real-life-dashboard-photo"
               />
               <div className="showcase-verified-badge">
                 <span className="live-camera-pulse"></span>
-                <span>REAL-LIFE CAMPUS VIEW</span>
+                <span>SYSTEM OPERATIONS</span>
               </div>
             </div>
             <div className="showcase-photo-caption">
-              <span>📍 Cognitive AI Research & Robotics Laboratory • Real-Life Operations View</span>
+              <span>📍 GBS Server Diagnostics &amp; Module Verification Center</span>
             </div>
           </div>
         </section>

@@ -5,6 +5,8 @@ import WindowControlsBar from "../../../../../components/common/WindowControlsBa
 import TopCenterSystemBanner from "../../../../../components/common/TopCenterSystemBanner";
 import { getUserAvatar } from "../../../../../utils/userAvatars";
 import UniversalRoleGuideModal from "../../../../../components/common/UniversalRoleGuideModal";
+import PaymentGatewayAdminPanel from "../../../../../components/common/PaymentGatewayAdminPanel";
+import FinancialReportsPanel from "../../../../../components/common/FinancialReportsPanel";
 import { navigateToDetail } from "../../../../../utils/universalNavigation";
 import { getActiveSchoolName, getActiveSchoolLogo } from "../../../../../utils/schoolBranding";
 import { isDemoSandboxMode } from "../../../../../utils/tokenStorage";
@@ -2536,6 +2538,17 @@ export default function AccountantDashboard() {
           {/* TAB: INSTITUTIONAL PAYMENT GATEWAYS DIRECTORY & REFERENCE VERIFICATION */}
           {activeTab === "gateways" && (
             <div className="role-workspace-card">
+              <PaymentGatewayAdminPanel
+                tenantId={currentUser?.tenantId || 1}
+                currencySymbol={currencySymbol === "$" ? "GHS" : (currencySymbol || "GHS")}
+                allowConfigEdit={true}
+                title="Institutional Payment Gateways & Reference Verification"
+              />
+            </div>
+          )}
+
+          {false && activeTab === "gateways_legacy_disabled" && (
+            <div className="role-workspace-card">
               <div className="workspace-title-row" style={{ flexWrap: "wrap", gap: "12px" }}>
                 <div>
                   <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
@@ -3130,6 +3143,9 @@ export default function AccountantDashboard() {
                   </button>
                 </div>
               </div>
+
+              {/* Live Database Multi-Gateway & Period Financial Report */}
+              <FinancialReportsPanel currencySymbol={currencySymbol === "$" ? "GHS" : (currencySymbol || "GHS")} />
 
               {/* Financial Telemetry Cards */}
               <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(260px, 1fr))", gap: "1rem", marginBottom: "2rem" }}>

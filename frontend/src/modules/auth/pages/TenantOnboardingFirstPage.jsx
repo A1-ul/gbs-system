@@ -4,6 +4,7 @@ import { registerInstitution } from "../api/auth.api";
 import BiometricFaceScannerModal from "../components/BiometricFaceScannerModal";
 import { getOnboardingRates } from "../../../utils/pricingEngine";
 import CartoonRoleVideoHubModal from "../../../components/common/CartoonRoleVideoHubModal";
+import OfficialPaymentGatewayModal from "../../../components/common/OfficialPaymentGatewayModal";
 import "./TenantOnboardingFirstPage.css";
 
 // 25+ Global Country Codes with Flags and Regional Identifiers
@@ -168,6 +169,7 @@ export default function TenantOnboardingFirstPage() {
   const [error, setError] = useState(null);
   const [successData, setSuccessData] = useState(null);
   const [showVideoHubModal, setShowVideoHubModal] = useState(false);
+  const [showOnboardingCheckout, setShowOnboardingCheckout] = useState(false);
 
   // Pricing Engine Rates (Official Policy: Nursery–JHS = GH₵3, SHS = GH₵5, University = GH₵10)
   const activeRates = useMemo(() => getOnboardingRates(), []);
@@ -1318,7 +1320,25 @@ export default function TenantOnboardingFirstPage() {
                     💳 Mobile Money / Bank Payment Remittance ({form.paymentScheduleMode === "BULK_FULL_TERM" ? `Bulk Full Term — ${calculation.subscribedMonths} Months` : "First Month of Monthly Spread"})
                   </div>
                   <div style={{ fontSize: "0.78rem", color: "#cbd5e1", marginBottom: "8px" }}>
-                    Please remit <strong>GH₵ {calculation.payableAmount.toLocaleString()}</strong> ({form.paymentScheduleMode === "BULK_FULL_TERM" ? `Bulk payment for ${calculation.subscribedMonths} months` : `Monthly installment 1 of ${calculation.subscribedMonths} at GH₵ ${calculation.monthlyRate.toLocaleString()}/month`}) to MTN MoMo: <strong>0554594193</strong> (GABRIELKUBI OSEI-APPIAH) and enter your MoMo Transaction ID below:
+                    Please remit <strong>GH₵ {calculation.payableAmount.toLocaleString()}</strong> ({form.paymentScheduleMode === "BULK_FULL_TERM" ? `Bulk payment for ${calculation.subscribedMonths} months` : `Monthly installment 1 of ${calculation.subscribedMonths} at GH₵ ${calculation.monthlyRate.toLocaleString()}/month`}) to MTN MoMo: <strong>0554594193</strong> (GABRIELKUBI OSEI-APPIAH) and enter your MoMo Transaction ID below, or pay directly via verified online checkout:
+                  </div>
+                  <div style={{ marginBottom: "10px" }}>
+                    <button
+                      type="button"
+                      onClick={() => setShowOnboardingCheckout(true)}
+                      style={{
+                        background: "linear-gradient(135deg, #059669, #10b981)",
+                        color: "#fff",
+                        border: "none",
+                        borderRadius: "8px",
+                        padding: "9px 14px",
+                        fontWeight: 800,
+                        cursor: "pointer",
+                        fontSize: "0.82rem"
+                      }}
+                    >
+                      Pay Online via Official Checkout (MoMo / Card)
+                    </button>
                   </div>
                   <input
                     type="text"
@@ -1328,6 +1348,22 @@ export default function TenantOnboardingFirstPage() {
                     value={form.momoTxnId}
                     onChange={handleChange}
                     required
+                  />
+                  <OfficialPaymentGatewayModal
+                    isOpen={showOnboardingCheckout}
+                    onClose={() => setShowOnboardingCheckout(false)}
+                    tenantId={1}
+                    paymentScope="SUBSCRIPTION"
+                    allowPublicOnboarding={true}
+                    amount={calculation.payableAmount}
+                    currency="GHS"
+                    title={`Platform Subscription (${form.institutionName || "New School"})`}
+                    subscriptionMetadata={{ planLabel: form.subscriptionPlan }}
+                    onSuccess={({ transaction }) => {
+                      if (transaction?.reference) {
+                        setForm((prev) => ({ ...prev, momoTxnId: transaction.reference }));
+                      }
+                    }}
                   />
                 </div>
               )}

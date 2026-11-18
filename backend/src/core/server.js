@@ -78,8 +78,13 @@ const limiter = rateLimit({
 });
 app.use('/api', limiter);
 
-// Request Parsing & Compression
-app.use(express.json({ limit: '50mb' }));
+// Request Parsing & Compression (capture rawBody for cryptographic webhook signature verification)
+app.use(express.json({
+  limit: '50mb',
+  verify: (req, _res, buf) => {
+    req.rawBody = buf;
+  }
+}));
 app.use(express.urlencoded({ extended: true, limit: '50mb' }));
 app.use(cookieParser());
 app.use(compression());
@@ -394,6 +399,7 @@ app.use('/api/v1/academics', academicRoutes);
 app.use('/api/v1/academic', academicRoutes);
 app.use('/api/v1/finance', financeRoutes);
 app.use('/api/v1/fees', financeRoutes);
+app.use('/api/v1/payments', require('../modules/payments/payments.routes'));
 app.use('/api/v1/voice-auth', voiceAuthRoutes);
 app.use('/api/v1/security/voice', voiceAuthRoutes);
 app.use('/api/v1/ai-exam', aiExamRoutes);

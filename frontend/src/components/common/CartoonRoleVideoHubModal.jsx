@@ -116,8 +116,8 @@ export const REAL_ACTION_ROLE_VIDEOS = [
     id: "TEACHER",
     roleKey: "TEACHER",
     badge: "ROLE 2 • TEACHER & ACADEMIC FACULTY",
-    title: "Teacher Portal — Multi-Format Question Bank, Exam Timetable & AI Grading",
-    subtitle: "MCQ / Theory / True-False / Short Answer / Fill-in-Blank / Case Study • Add Exam Timetable Entries • Theory Grading • AI OMR Scanner",
+    title: "Teacher Portal — Question Bank, Exam Timetable & Script Scanner",
+    subtitle: "MCQ / Theory / True-False / Short Answer / Fill-in-Blank / Case Study • Exam Timetable Guide • Theory Grading • Script Scanner",
     videoSrc: "/videos/video2_teacher_role_guide.mp4",
     poster: "/assets/real_scene2_teacher_scanner.jpg",
     accent: "#10b981",
@@ -238,31 +238,31 @@ export const REAL_ACTION_ROLE_VIDEOS = [
     id: "ACCOUNTANT",
     roleKey: "ACCOUNTANT",
     badge: "ROLE 5 • ACCOUNTANT & BURSAR TREASURY",
-    title: "Accountant Dashboard — Tuition Billing, Auto-Reconciliation & GAAP Ledger",
-    subtitle: "Invoice Generation • MoMo/Bank Reconciliation • Defaulter Reminders • Payroll Disbursement • GAAP Financial Statements",
+    title: "Accountant Dashboard — Multi-Gateway Receipts, Reports & Payroll",
+    subtitle: "Invoices • Debtors • Fee Structures • Class Matrix • Payment Gateways (Paystack/Hubtel) • Financial Reports • Payroll",
     videoSrc: "/videos/video5_accountant_role_guide.mp4",
     poster: "/assets/real_scene5_accountant_finance.jpg",
     accent: "#14b8a6",
     route: "/portal/accountant/dashboard",
     durationLabel: "Accountant Role Guide",
     exactCommands: [
-      "🧾 Create & Dispatch Term Invoices: Click '➕ Generate Term Fee Invoice' to bill classes or individual students",
-      "🔄 Auto-Reconcile MoMo & Bank Settlements: Click '🔄 Reconcile Payments' to match incoming parent payments against student ledgers",
-      "📢 Defaulter Arrears Reminder: Click '📢 Send Arrears SMS / WhatsApp Alert' to notify guardians with outstanding balances",
-      "💵 Staff Payroll & Payslip Engine: Click '💵 Process Monthly Payroll' to compute basic salary, SSNIT/tax deductions, and net take-home pay",
-      "📊 GAAP Financial Statements: Click '📊 Export Income Statement & Balance Sheet' for audit-ready institutional accounting reports"
+      "🧾 Create & Dispatch Term Invoices: Click 'Invoices' -> 'Generate Term Fee Invoice' to bill classes or students from the database",
+      "🌐 Multi-Gateway Verification & Reconciliation: Open 'Payment Gateways' tab, inspect Paystack/Hubtel/Bank settlements, click 'Verify with Provider' or 'Sync Pending Transactions'",
+      "📊 Daily, Weekly, Monthly & Termly Reports: Open 'Statements & Audits' tab to view real-time period collections, unpaid balances, failed/cancelled attempts, and refunds",
+      "📢 Defaulter Arrears Reminder: Open 'Debtors' tab and send overdue reminders to parents/guardians",
+      "💵 Procurement & Alumni Gifts: Track Headmaster procurement approvals and Alumni endowment disbursements in one linked ledger"
     ],
     scenes: [
       {
-        step: "STEP 1 • GENERATE INVOICES & AUTO-RECONCILE MOMO PAYMENTS",
-        command: "Click '🧾 Billing & Invoices' → '➕ Create Invoice' → Click '🔄 Auto-Reconcile Ledger'",
-        action: "Accountant issues term fee bills, verifies real-time Mobile Money and bank deposits, and issues cryptographic receipts.",
+        step: "STEP 1 • VERIFY GATEWAY TRANSACTIONS & RECONCILE PENDING RECORDS",
+        command: "Click 'Payment Gateways' → Enter Reference (GBS-FEE-...) → Click 'Verify with Provider' or 'Sync Pending Transactions'",
+        action: "Accountant verifies incoming MTN MoMo, Telecel Cash, AT Money, Visa, Mastercard, and Bank Direct transactions server-to-server, confirms bank slips, or processes refunds cleanly.",
         image: "/assets/real_scene5_accountant_finance.jpg"
       },
       {
-        step: "STEP 2 • DISBURSE STAFF PAYROLL & EXPORT GAAP BALANCE SHEET",
-        command: "Click '💵 Payroll & Vouchers' → '✅ Authorize Payroll' → Click '📊 GAAP Financial Reports'",
-        action: "Accountant processes monthly faculty and staff salaries synced from HR tiers and exports the institutional Balance Sheet and Cashflow Statement.",
+        step: "STEP 2 • REVIEW DAILY/MONTHLY/TERMLY REPORTS & AUDIT YEAR-END LEDGER",
+        command: "Click 'Statements & Audits' → Switch 'DAILY / WEEKLY / MONTHLY / TERMLY' → Click 'Run Full GAAP / IFRS Audit'",
+        action: "Accountant reviews live database collection totals per gateway and outstanding student balances, and closes/archives completed financial years.",
         image: "/assets/real_scene1_headmaster_desk.jpg"
       }
     ],
@@ -424,39 +424,39 @@ export const REAL_ACTION_ROLE_VIDEOS = [
   {
     id: "DEVELOPER",
     roleKey: "DEVELOPER",
-    badge: "ROLE 10 • PLATFORM DEVELOPER & GLOBAL SOVEREIGNTY CONSOLE",
-    title: "Developer Console — Multi-Tenant Governance, Auto-Lock, Live Map & Sentinel",
-    subtitle: "Tenant Onboarding • 7-Day Grace Auto-Lock • Live School GPS Map • Intrusion Sentinel • Live Video Call • Database Sharding",
-    videoSrc: "/videos/gbs_complete_system_roles_master_guide.mp4",
+    badge: "ROLE 10 • PLATFORM DEVELOPER CONTROL CENTER",
+    title: "Developer Console — School Approvals, Subscriptions, Gateways & Security",
+    subtitle: "School Signups • Headmaster Photo Checks • Security Alerts • Subscriptions & Auto-Lock • Payment Gateways • Backups • Maps",
+    videoSrc: "/videos/video7_developer_role_guide.mp4",
     poster: "/assets/real_scene1_headmaster_desk.jpg",
     accent: "#38bdf8",
     route: "/developer",
     durationLabel: "Developer Role Guide",
     exactCommands: [
-      "🏫 Tenant Registry & Instant Lock/Unlock: Inspect all onboarded schools, switch between Live Production & Demo Sandbox, or lock/unlock any tenant",
-      "⏳ 7-Day Grace Period & Auto-Lock Engine: Automated subscription countdown that notifies schools 14 days prior, grants a 7-day grace window, and auto-locks unpaid tenants",
-      "🗺️ Live Registered Schools GPS Map & Navigation: View exact GPS coordinates of every onboarded school and launch turn-by-turn road directions",
-      "🛡️ Unregistered Intrusion Sentinel & Audit Trail: Detect unauthorized access attempts, capture intruder IP/device telemetry, and block hostile IPs",
-      "📹 Live Video Call & Remote Maintenance: Initiate WebRTC video support calls with Headmasters, push zero-downtime CI/CD updates, and manage DB shards"
+      "🏫 School Signups & Photo Checks: Open 'School Signups & Approvals' -> Inspect registration, verify Headmaster photo & OTP, click 'Approve Institution'",
+      "💳 Payment Gateways & Subscriptions: Open 'Payment Gateways' tab to configure Paystack/Hubtel subaccounts, TEST vs LIVE mode, retry webhooks, and verify 0554594193 platform renewals",
+      "📊 Server Health & Auto-Lock Controls: Open 'Server Health & Subscriptions' -> Monitor 14-day notices, 7-day grace countdowns, Lock/Unlock tenants, or run 'Auto-Lock Delinquent Tenants'",
+      "🛡️ Security, Backups & Activity Log: Inspect 'Login & Security Alerts', download 'Database Backups', check 'School Locations' GPS map, and review full 'Activity History'",
+      "⚡ System Navigation & Multi-DB: Switch cleanly between all 16 Developer tabs with plain-English controls, Demo/Live mode toggle, and WebRTC Headmaster calls"
     ],
     scenes: [
       {
-        step: "STEP 1 • MULTI-TENANT REGISTRY, SUBSCRIPTION BILLING & AUTO-LOCK",
-        command: "Open '/developer' → Click '🏫 Tenant Registry & Billing' → Toggle '🔒 Lock / 🔓 Unlock Tenant'",
-        action: "Developer monitors all onboarded educational institutions, recalculates per-student subscription tiers ($3 / $5 / $10), and enforces the 7-day grace auto-lock policy.",
+        step: "STEP 1 • APPROVE ONBOARDED SCHOOLS & MANAGE SUBSCRIPTIONS",
+        command: "Login '/developer-control-center/login' → Click 'School Signups & Approvals' → Approve School → Check 'Server Health & Subscriptions' (MoMo 0554594193)",
+        action: "Developer reviews newly registered schools, activates school portals with exact branding, checks GH₵ 3/5/10 per-student subscription countdowns, and locks/restores access safely.",
         image: "/assets/real_scene1_headmaster_desk.jpg"
       },
       {
-        step: "STEP 2 • LIVE SCHOOLS GPS MAP, INTRUSION SENTINEL & REMOTE VIDEO CALL",
-        command: "Click '🗺️ Live Schools GPS Map' → Click '🛡️ Intrusion Sentinel' → Click '📹 Live Video Support'",
-        action: "Developer tracks every registered school on the interactive satellite/street map, blocks unauthorized intruder IPs, and provides live video technical support.",
+        step: "STEP 2 • CONFIGURE PAYMENT GATEWAYS, WEBHOOKS & MONITOR INFRASTRUCTURE",
+        command: "Click 'Payment Gateways' → Configure Paystack/Hubtel Subaccounts → Click 'Sync Pending Transactions' / 'Retry Failed Webhooks' → Inspect 'Database Backups' & 'Login Alerts'",
+        action: "Developer configures multi-school gateway routing (with server-masked keys), reconciles missing webhooks, checks intrusion alerts, and opens school GPS locations.",
         image: "/assets/real_scene2_teacher_scanner.jpg"
       }
     ],
     highlights: [
-      "Complete sovereignty over multi-tenant onboarding, per-student subscription billing, and auto-lock",
-      "Real-time Intrusion Sentinel, Live Registered Schools GPS Map, and WebRTC Video Support",
-      "One-click toggle between Live Production Mode and Interactive Demo Sandbox Mode"
+      "Complete 16-tab Developer Console written in clear everyday English",
+      "Central Payment Gateways & Webhook Monitor with school subaccount routing and masked secrets",
+      "School signup approval, GH₵ 3/5/10 billing, auto-lock restoration, encrypted backups, and GPS map"
     ]
   }
 ];

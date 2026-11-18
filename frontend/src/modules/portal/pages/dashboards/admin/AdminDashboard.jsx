@@ -9,6 +9,7 @@ import VoiceNotePlayer from "../../../../../components/common/VoiceNotePlayer";
 import { getUserAvatar } from "../../../../../utils/userAvatars";
 import { offlineSyncEngine } from "../../../../../utils/offlineSync";
 import UniversalRoleGuideModal from "../../../../../components/common/UniversalRoleGuideModal";
+import FinancialReportsPanel from "../../../../../components/common/FinancialReportsPanel";
 import { navigateToDetail } from "../../../../../utils/universalNavigation";
 import FileUploadVerificationCard from "../../../../../components/common/FileUploadVerificationCard";
 import DigitalSignaturePadModal from "../../../../../components/common/DigitalSignaturePadModal";
@@ -10327,6 +10328,9 @@ export function AdminDashboard({ initialTab } = {}) {
                   </p>
                 </div>
               </div>
+
+              {/* Live Database Fee Collections & Outstanding Summary */}
+              <FinancialReportsPanel currencySymbol="GHS" />
 
               {/* Pending Requests Section */}
               <div style={{ marginBottom: "2rem" }}>

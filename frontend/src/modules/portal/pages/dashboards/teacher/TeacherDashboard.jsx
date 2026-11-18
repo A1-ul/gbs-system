@@ -4058,7 +4058,7 @@ export default function TeacherDashboard() {
               onClick={() => setActiveTab("scanner")}
               style={{ borderColor: "#a855f7", color: "#c084fc" }}
             >
-              🤖 AI Exam Scanner
+              📱 Exam Script Scanner
             </button>
             <button
               type="button"
@@ -4417,7 +4417,7 @@ export default function TeacherDashboard() {
               onClick={() => setActiveTab("scanner")}
               style={{ borderLeft: "3px solid #a855f7" }}
             >
-              🤖 AI Exam Scanner & Auto-Grading
+              📱 Exam Script Scanner &amp; Marking
             </button>
             <button
               type="button"
@@ -6688,7 +6688,7 @@ export default function TeacherDashboard() {
 
               <div className="workspace-title-row">
                 <div>
-                  <h2><span>🤖</span> AI EXAM SCANNER & OBJECTIVE AUTO-GRADING SUITE</h2>
+                  <h2><span>📱</span> EXAM SCRIPT SCANNER &amp; MARKING ASSISTANT</h2>
                   <p>Teachers set custom master answer keys, select class cohort, and sequentially auto-grade student scripts. Once all scripts are marked, publish grades to all enrolled students.</p>
                 </div>
                 <div style={{ display: "flex", gap: "10px" }}>
@@ -6714,7 +6714,7 @@ export default function TeacherDashboard() {
                     }}
                     disabled={loading || !scannerExamFile || !isExamSheetVerified}
                   >
-                    {loading ? "⚡ SCANNING & GRADING..." : `⚡ RUN AI OMR SCAN & GRADE SHEET #${currentScriptIndex}`}
+                    {loading ? "⚡ SCANNING & GRADING..." : `⚡ SCAN & MARK EXAM SHEET #${currentScriptIndex}`}
                   </button>
                 </div>
               </div>
@@ -7056,7 +7056,7 @@ export default function TeacherDashboard() {
                             setFeedback({ type: "success", message: "✓ Exam Sheet inspected and certified legibility! AI Scanner is now unlocked to evaluate." });
                           }}
                         >
-                          ✓ Verify Exam Sheet Quality & Unlock AI Scanner
+                          ✓ Verify Exam Sheet Quality &amp; Unlock Script Scanner
                         </button>
                       ) : (
                         <div style={{ display: "flex", alignItems: "center", gap: "8px", background: "rgba(16, 185, 129, 0.2)", padding: "6px 14px", borderRadius: "999px", border: "1px solid #10b981" }}>
@@ -7242,7 +7242,7 @@ export default function TeacherDashboard() {
                   ) : (
                     <div style={{ background: "rgba(15, 23, 42, 0.5)", padding: "2rem", borderRadius: "14px", border: "1px dashed rgba(255, 255, 255, 0.15)", height: "100%", display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", textAlign: "center" }}>
                       <span style={{ fontSize: "3rem", marginBottom: "10px" }}>🤖</span>
-                      <strong style={{ color: "#f8fafc", fontSize: "1.05rem" }}>AI Scanner Ready for Input</strong>
+                      <strong style={{ color: "#f8fafc", fontSize: "1.05rem" }}>Exam Script Scanner Ready</strong>
                       <p style={{ color: "#94a3b8", fontSize: "0.85rem", maxWidth: "280px", margin: "6px 0 16px" }}>
                         Select the target class, set your Teacher Master Answer Key, mark the optical bubbles, and click Run AI OMR Scan to auto-grade.
                       </p>

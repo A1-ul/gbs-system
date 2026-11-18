@@ -47,6 +47,7 @@ const WorkflowDashboard = lazy(() => import("../modules/workflow/pages/WorkflowD
 const ReportingDashboardPage = lazy(() => import("../modules/reporting/pages/ReportingDashboardPage"));
 const AIDiagnosticsDashboard = lazy(() => import("../modules/learning/pages/AIDiagnosticsDashboard"));
 const FinanceDashboardPage = lazy(() => import("../modules/finance/pages/FinanceDashboardPage"));
+const PaymentCallbackPage = lazy(() => import("../modules/finance/pages/PaymentCallbackPage"));
 const CommunicationDashboardPage = lazy(() => import("../modules/communication/pages/CommunicationDashboardPage"));
 const LibraryManagementPage = lazy(() => import("../modules/library/pages/LibraryManagementPage"));
 const TransportManagementPage = lazy(() => import("../modules/transport/pages/TransportManagementPage"));
@@ -312,6 +313,7 @@ export default function AppRouter() {
           <Route path="/fees" element={<FinanceDashboardPage />} />
           <Route path="/accounting" element={<FinanceDashboardPage />} />
           <Route path="/admin/finance" element={<FinanceDashboardPage />} />
+          <Route path="/payment-callback" element={<PaymentCallbackPage />} />
 
           {/* Phase 4: Communication, Messaging & Live Real-Time Chat Engine (Master Blueprint Box 13) */}
           <Route path="/communication" element={<CommunicationDashboardPage />} />

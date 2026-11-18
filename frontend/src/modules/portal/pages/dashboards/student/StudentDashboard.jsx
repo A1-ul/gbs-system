@@ -483,6 +483,13 @@ export function StudentDashboard({ initialTab } = {}) {
 
   // Fee Payment & Rescheduled Late Exam Writing Slip State
   const [showFeePaymentModal, setShowFeePaymentModal] = useState(false);
+
+  useEffect(() => {
+    if (showFeePaymentModal) {
+      setShowFeePaymentModal(false);
+      setShowOfficialPaymentModal(true);
+    }
+  }, [showFeePaymentModal]);
   const [showRescheduledExamSlipModal, setShowRescheduledExamSlipModal] = useState(false);
   const [paymentAmount, setPaymentAmount] = useState("500");
   const [paymentChannel, setPaymentChannel] = useState("MTN_MOMO");
@@ -491,9 +498,27 @@ export function StudentDashboard({ initialTab } = {}) {
 
   // Official Payment Gateway Modal State
   const [showOfficialPaymentModal, setShowOfficialPaymentModal] = useState(false);
-  const [feeBalance, setFeeBalance] = useState(() => {
-    return Number(localStorage.getItem("gbs_student_fee_STU-2026-0891") || "400");
-  });
+  const [feeBalance, setFeeBalance] = useState(0);
+  const [studentFeeStatement, setStudentFeeStatement] = useState(null);
+
+  const loadVerifiedStudentFees = async () => {
+    try {
+      const res = await apiClient.get("/payments/student-statement");
+      const stmt = res.data?.data;
+      if (stmt) {
+        setStudentFeeStatement(stmt);
+        const verifiedOutstanding = Number(stmt.feeSummary?.outstandingBalance || 0);
+        setFeeBalance(verifiedOutstanding);
+        setFeeArrears(verifiedOutstanding);
+      }
+    } catch {
+      // Keep UI safe without fabricating paid states on error
+    }
+  };
+
+  useEffect(() => {
+    loadVerifiedStudentFees();
+  }, []);
 
   // Live Online Class Concluded Notice & Catch-Up Video State
   const [concludedClassNotice, setConcludedClassNotice] = useState(() => {
@@ -7568,15 +7593,18 @@ export function StudentDashboard({ initialTab } = {}) {
       <OfficialPaymentGatewayModal
         isOpen={showOfficialPaymentModal}
         onClose={() => setShowOfficialPaymentModal(false)}
-        amount={feeBalance}
+        amount={feeBalance > 0 ? feeBalance : null}
         currency="GHS"
-        title="Term 2 School Tuition Arrears"
-        studentId="STU-2026-0891"
-        studentName="Emmanuel Mensah"
-        onSuccess={() => {
-          setFeeBalance(0);
-          localStorage.setItem("gbs_student_fee_STU-2026-0891", "0");
-          setFeedback({ type: "success", message: "🎉 Payment settled officially! Your fee balance is now GHS 0.00." });
+        title={studentFeeStatement?.feeSummary?.feeDescription || "School Fees Payment"}
+        studentId={studentFeeStatement?.student?.id || currentUser?.id || "3"}
+        studentIdentifier={studentFeeStatement?.student?.studentCode || currentUser?.username || "STU-2026-0891"}
+        studentName={studentFeeStatement?.student?.fullName || `${currentUser?.firstName || ""} ${currentUser?.lastName || ""}`.trim() || "Student"}
+        onSuccess={({ transaction, receipt }) => {
+          loadVerifiedStudentFees();
+          setFeedback({
+            type: "success",
+            message: `Payment verified by provider! Receipt ${receipt?.receiptNumber || transaction?.receiptNumber} issued. Remaining balance: ${receipt?.currency || "GHS"} ${Number(receipt?.balanceAfter ?? 0).toFixed(2)}.`
+          });
         }}
       />
 

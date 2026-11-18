@@ -25,11 +25,8 @@ export default function MobileExperienceNoticeModal() {
     const isSmallScreen = window.innerWidth <= 860;
 
     if (isMobileDevice || isSmallScreen) {
-      // Delay slightly for smooth page entrance
-      const timer = setTimeout(() => {
-        setIsOpen(true);
-      }, 700);
-      return () => clearTimeout(timer);
+      // System layout adapts natively to mobile viewports; never block phone users with a modal popup.
+      setIsOpen(false);
     }
   }, []);
 

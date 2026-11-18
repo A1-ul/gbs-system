@@ -10,6 +10,7 @@ import UniversalRoleGuideModal from "../../../components/common/UniversalRoleGui
 import { navigateToDetail } from "../../../utils/universalNavigation";
 import { syncSystemModeFlags } from "../../../utils/tokenStorage";
 import RcceControlHub from "../components/RcceControlHub";
+import PaymentGatewayAdminPanel from "../../../components/common/PaymentGatewayAdminPanel";
 import "./DeveloperPlatform.css";
 
 const BASE_URL = `${getApiBaseUrl()}/dev-control`;
@@ -5423,6 +5424,13 @@ export default function DeveloperDashboard() {
                   <span style={{ fontSize: "0.7rem", color: "#94a3b8", display: "block" }}>Subscription Payment MoMo</span>
                   <strong style={{ color: "#34d399", fontSize: "1.2rem", fontFamily: "monospace" }}>0554594193</strong>
                   <span style={{ fontSize: "0.75rem", color: "#38bdf8", fontWeight: 700, display: "block" }}>GABRIEL KUBI OSEI-APPIAH</span>
+                  <button
+                    type="button"
+                    onClick={() => setActiveTab("payment_admin")}
+                    style={{ marginTop: "6px", background: "#059669", color: "#fff", border: "none", borderRadius: "6px", padding: "5px 10px", fontSize: "0.72rem", fontWeight: 700, cursor: "pointer" }}
+                  >
+                    Open Payment Gateways & Webhook Console ↗
+                  </button>
                 </div>
               </div>
 
@@ -5743,70 +5751,77 @@ export default function DeveloperDashboard() {
               fontWeight: 800
             }}
           >
-            ⚡ GBS-RCCE Central Engine
+            ⚡ Network &amp; Server Control
           </button>
 
           <button
             className={`dev-tab-btn ${activeTab === "telemetry" ? "active" : ""}`}
             onClick={() => setActiveTab("telemetry")}
           >
-            🛰️ Mission Telemetry & Countdowns
+            📊 Server Health &amp; Subscriptions
           </button>
           <button
             className={`dev-tab-btn ${activeTab === "backups" ? "active" : ""}`}
             onClick={() => setActiveTab("backups")}
           >
-            💾 Encrypted Backups ({backups.length})
+            💾 Database Backups ({backups.length})
           </button>
           <button
             className={`dev-tab-btn ${activeTab === "alerts" ? "active" : ""}`}
             onClick={() => setActiveTab("alerts")}
           >
-            🚨 Infrastructure Alerts ({alerts.filter(a => !a.isResolved).length})
+            🚨 System Alerts ({alerts.filter(a => !a.isResolved).length})
           </button>
           <button
             className={`dev-tab-btn ${activeTab === "deployments" ? "active" : ""}`}
             onClick={() => setActiveTab("deployments")}
           >
-            🚀 Deployments ({deployments.length})
+            🚀 App Releases ({deployments.length})
           </button>
           <button
             className={`dev-tab-btn ${activeTab === "audit-logs" ? "active" : ""}`}
             onClick={() => setActiveTab("audit-logs")}
           >
-            📜 Audit Trail ({auditLogs.length})
+            📜 Activity History ({auditLogs.length})
           </button>
           <button
             className={`dev-tab-btn ${activeTab === "licenses" ? "active" : ""}`}
             onClick={() => setActiveTab("licenses")}
           >
-            🔑 Licensing Controls ({licenses.length})
+            🔑 School Licenses ({licenses.length})
           </button>
           <button
             className={`dev-tab-btn ${activeTab === "biometrics" ? "active" : ""}`}
             onClick={() => setActiveTab("biometrics")}
           >
-            🛡️ Biometric Security
+            🛡️ Security &amp; Face Access
           </button>
           <button
             className={`dev-tab-btn ${activeTab === "locations" ? "active" : ""}`}
             onClick={() => setActiveTab("locations")}
           >
-            🗺️ Tenant Enclaves ({tenantPins.length})
+            🗺️ School Locations ({tenantPins.length})
           </button>
           <button
             className={`dev-tab-btn ${activeTab === "multidb" ? "active" : ""}`}
             onClick={() => setActiveTab("multidb")}
             style={{ borderColor: "#38bdf8", color: activeTab === "multidb" ? "#fff" : "#7dd3fc" }}
           >
-            ⚡ Multi-DB & DR Engine
+            ⚡ Database &amp; Recovery
           </button>
           <button
             className={`dev-tab-btn ${activeTab === "digitaltwin" ? "active" : ""}`}
             onClick={() => setActiveTab("digitaltwin")}
             style={{ borderColor: "#818cf8", color: activeTab === "digitaltwin" ? "#fff" : "#c7d2fe" }}
           >
-            🌐 Campus Digital Twin
+            🌐 Campus Map &amp; Sensors
+          </button>
+          <button
+            className={`dev-tab-btn ${activeTab === "payment_admin" ? "active" : ""}`}
+            onClick={() => setActiveTab("payment_admin")}
+            style={{ borderColor: "#10b981", color: activeTab === "payment_admin" ? "#fff" : "#6ee7b7" }}
+          >
+            💳 Payment Gateways
           </button>
         </div>
 
@@ -10994,6 +11009,18 @@ export default function DeveloperDashboard() {
                   🚀 Open Full Interactive 3D Canvas
                 </button>
               </div>
+            </div>
+          </div>
+        )}
+
+        {activeTab === "payment_admin" && (
+          <div className="tab-pane-content">
+            <div style={{ background: "rgba(15, 23, 42, 0.85)", border: "1.5px solid rgba(16, 185, 129, 0.4)", borderRadius: "14px", padding: "1.5rem" }}>
+              <PaymentGatewayAdminPanel
+                currencySymbol="GHS"
+                allowConfigEdit={true}
+                title="Developer Payment Gateway Administration & Webhook Console"
+              />
             </div>
           </div>
         )}

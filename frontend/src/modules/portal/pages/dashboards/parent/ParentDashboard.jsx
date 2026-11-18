@@ -5,6 +5,7 @@ import WindowControlsBar from "../../../../../components/common/WindowControlsBa
 import TopCenterSystemBanner from "../../../../../components/common/TopCenterSystemBanner";
 import VoiceNoteRecorder from "../../../../../components/common/VoiceNoteRecorder";
 import VoiceNotePlayer from "../../../../../components/common/VoiceNotePlayer";
+import OfficialPaymentGatewayModal from "../../../../../components/common/OfficialPaymentGatewayModal";
 import { getUserAvatar } from "../../../../../utils/userAvatars";
 import UniversalRoleGuideModal from "../../../../../components/common/UniversalRoleGuideModal";
 import { navigateToDetail } from "../../../../../utils/universalNavigation";
@@ -148,7 +149,15 @@ export default function ParentDashboard() {
 
   // Payment Modal State
   const [activeInvoiceToPay, setActiveInvoiceToPay] = useState(null);
+  const [gatewayPaymentTarget, setGatewayPaymentTarget] = useState(null);
   const [payAmount, setPayAmount] = useState("");
+
+  useEffect(() => {
+    if (activeInvoiceToPay) {
+      setGatewayPaymentTarget(activeInvoiceToPay);
+      setActiveInvoiceToPay(null);
+    }
+  }, [activeInvoiceToPay]);
   const [paymentMethod, setPaymentMethod] = useState("MOMO");
   const [momoNumber, setMomoNumber] = useState("");
   const [momoNetwork, setMomoNetwork] = useState("MTN_MOMO");
@@ -3015,6 +3024,30 @@ export default function ParentDashboard() {
           </div>
         </div>
       )}
+
+      <OfficialPaymentGatewayModal
+        isOpen={Boolean(gatewayPaymentTarget)}
+        onClose={() => setGatewayPaymentTarget(null)}
+        tenantId={currentUser?.tenantId || 1}
+        studentId={selectedChild?.id || selectedChild?.studentId || "3"}
+        studentIdentifier={selectedChild?.studentCode || selectedChild?.id || "3"}
+        studentName={selectedChild ? `${selectedChild.firstName || ""} ${selectedChild.lastName || ""}`.trim() : "Ward"}
+        invoiceId={gatewayPaymentTarget?.id || null}
+        amount={gatewayPaymentTarget?.balanceDue || null}
+        currency={currencySymbol === "$" ? "GHS" : (currencySymbol || "GHS")}
+        title={gatewayPaymentTarget?.title || "School Tuition & Fee Settlement"}
+        onSuccess={({ transaction, receipt }) => {
+          if (selectedChild?.id) {
+            apiClient.get(`/finance/invoices?studentId=${selectedChild.id}`).then((r) => {
+              setChildInvoices(r.data?.data?.invoices || r.data?.data || []);
+            }).catch(() => {});
+          }
+          setFeedback({
+            type: "success",
+            message: `Payment confirmed by provider! Official Receipt ${receipt?.receiptNumber || transaction?.receiptNumber} issued for ${transaction?.currency || "GHS"} ${Number(transaction?.amountPaid || 0).toFixed(2)}.`
+          });
+        }}
+      />
 
       {/* REQUIREMENT: Parent must be able to print receipt if needed from the portal */}
       {showReceiptModal && currentReceipt && (

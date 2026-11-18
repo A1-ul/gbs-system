@@ -1038,8 +1038,8 @@ const createResilientPrismaClient = () => {
   }
 
   const isPostgresOnline = async (forceRefresh = false) => {
-    if (!process.env.DATABASE_URL) {
-      markPostgresState(false, 'DATABASE_URL not configured');
+    if (!process.env.DATABASE_URL || process.env.GBS_TEST_OFFLINE === '1') {
+      markPostgresState(false, process.env.GBS_TEST_OFFLINE === '1' ? 'Test offline isolation enabled' : 'DATABASE_URL not configured');
       return false;
     }
     const now = Date.now();
@@ -1206,6 +1206,9 @@ const createResilientPrismaClient = () => {
       markPostgresState(true);
       return res;
     } catch (err) {
+      if (err && (err.isOperational || err.name === 'AppError' || err.code === 'P2002')) {
+        throw err;
+      }
       if (isPostgresConnectivityError(err)) {
         markPostgresState(false, err.message);
       }

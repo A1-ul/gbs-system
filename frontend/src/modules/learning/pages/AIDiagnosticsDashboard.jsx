@@ -301,9 +301,9 @@ export default function AIDiagnosticsDashboard() {
               <span className="pulse-indicator"></span>
               MASTER BLUEPRINT BOX 9 & 10 • AI ACADEMIC DIAGNOSTICS & SYSTEM SENTINEL
             </div>
-            <h1 className="hero-title">Intelligent Diagnostics & Adaptive Recommendations</h1>
+            <h1 className="hero-title">Academic Progress &amp; Early Support Tracker</h1>
             <p className="hero-subtitle">
-              Autonomous performance risk scoring, predictive GPA trajectories, adaptive personalized study plans,
+              Track student grade trends, identify subjects needing extra help early, manage custom study schedules,
               early learning intervention alerts, and live architectural sentinel monitoring.
             </p>
 

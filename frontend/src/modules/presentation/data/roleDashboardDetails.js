@@ -299,14 +299,14 @@ export const ROLE_DASHBOARD_DETAILS = {
       },
       {
         tabId: "fees",
-        tabName: "💳 Mobile Money & Card Tuition Desk",
-        tabPurpose: "Settle school fees, ICT levies, and meal dues via MTN MoMo, Telecel Cash, or Card with instant stamped receipts.",
+        tabName: "💳 Official Multi-Gateway School Fees Checkout",
+        tabPurpose: "Inspect verified student balance from the school database and settle tuition or hostel fees safely via Paystack or Hubtel (MTN MoMo, Telecel Cash, AT Money, Visa, Mastercard, or Bank Transfer) with hosted-checkout fallback.",
         actionButtons: [
-          { name: "📱 Pay via MTN Mobile Money", action: "Prompts USSD approval on guardian's phone", feedback: "Auto-reconciles student balance and generates receipt #RCP-XXXX" },
-          { name: "🧾 Download Official Receipt", action: "Renders printable PDF stamped with school crest", feedback: "Tamper-evident receipt saved to payment vault" }
+          { name: "💳 Pay Tuition / Hostel Arrears", action: "Loads real student fee balance from database, starts provider checkout without ever asking for your MoMo PIN or CVV inside GBS, and verifies payment server-to-server", feedback: "Issues official printable Receipt #RCP-XXXX only after verified provider confirmation" },
+          { name: "🔄 Re-Check / Switch Method", action: "Supports hosted browser checkout if no payment app is installed or switches smoothly between MoMo, Card, and Bank reference", feedback: "Cancels previous open prompt safely before opening alternative channel" }
         ],
-        formsAndInputs: ["Amount to pay input", "Payment method radio (MTN MoMo, Telecel, Card)", "Mobile wallet number"],
-        systemFeedback: "Zero financial leakage: Funds clear directly to school treasury account."
+        formsAndInputs: ["Amount (Full or policy-allowed Partial)", "Payment method selector", "Ghanaian Mobile Money phone number (10-digit)"],
+        systemFeedback: "Balances update atomically across Parent, Student, Accountant, and Headmaster portals only after provider webhook verification."
       },
       {
         tabId: "reports",
@@ -377,15 +377,15 @@ export const ROLE_DASHBOARD_DETAILS = {
         systemFeedback: "Student ledgers initialized with accurate debit balances."
       },
       {
-        tabId: "reconciliation",
-        tabName: "🧾 Payment Reconciliation & Receipts",
-        tabPurpose: "Verify incoming Mobile Money transactions, bank deposits, and cash collections; issue official stamped receipts.",
+        tabId: "gateways",
+        tabName: "🌐 Payment Gateways & Provider Verification",
+        tabPurpose: "Verify Paystack, Hubtel, and Bank Transfer transaction references server-to-server, inspect webhook logs, confirm bank deposits, manage refunds/reversals, and configure school merchant subaccounts.",
         actionButtons: [
-          { name: "✅ Reconcile Transaction", action: "Matches transaction ID against bank/MoMo webhook", feedback: "Clears student debt and generates receipt #RCP-XXXX" },
-          { name: "🖨️ Print Stamped Receipt", action: "Renders branded school receipt PDF", feedback: "Receipt carries official tenant crest and payment breakdown" }
+          { name: "Verify with Provider", action: "Calls official Paystack or Hubtel verification API using transaction reference GBS-FEE-...", feedback: "Confirms true status, posts receipt if missing, or flags amount mismatches UNDER_REVIEW" },
+          { name: "Sync Pending Transactions / Confirm Bank Slip", action: "Reconciles open transactions with missing webhook notifications or confirms verified commercial bank deposits", feedback: "Updates StudentInvoice balance and Financial Reports immediately" }
         ],
-        formsAndInputs: ["Transaction reference search", "Student Index search", "Payment channel filter"],
-        systemFeedback: "Real-time ledger reconciliation with zero cash leakage."
+        formsAndInputs: ["Transaction Reference lookup", "Gateway config (Subaccount, Hubtel Merchant Account, Bank details)"],
+        systemFeedback: "Strict double-credit prevention and immutable audit trail on every receipt and refund."
       },
       {
         tabId: "arrears",
@@ -675,21 +675,32 @@ export const ROLE_DASHBOARD_DETAILS = {
     role: "Platform Chief Developer Command",
     portalRoute: "/developer-control-center/login",
     dashboardPath: "/developer-control-center/dashboard",
-    badge: "GLOBAL PLATFORM SOVEREIGNTY",
-    tagline: "Multi-Tenant Approvals, 7-Day Grace Auto-Lock, Live Schools GPS & Intrusion Sentinel",
-    summary: "The Chief Developer Control Center is the top-tier command console for GBS International School Management System. It governs multi-tenant school onboarding, student-based subscription billing ($3/$5/$10), automated 7-day grace period lockouts, live worldwide registered schools GPS mapping, Intrusion Sentinel shields, and WebRTC live video support.",
+    badge: "PLATFORM CONTROL & GOVERNANCE",
+    tagline: "School Signups, Photo Checks, Subscriptions & Auto-Lock, Payment Gateways, Backups & GPS Map",
+    summary: "The Developer Control Center governs all schools across 16 clear tabs: School Signups & Approvals, Headmaster Photo Checks, Login & Security Alerts, Headmaster Messages, Network & Server Control, Server Health & Subscriptions (GH₵ 3/5/10 tiers + MoMo 0554594193 renewals), Database Backups, System Alerts, App Releases, Activity History, School Licenses, Security & Face Access, School Locations GPS Map, Database & Recovery, Campus Map & Sensors, and Payment Gateways Administration.",
     keyTabs: [
       {
-        tabId: "tenants",
-        tabName: "🏫 Multi-Tenant Registry & School Approvals",
-        tabPurpose: "Approve newly registered institutions, confirm official legal names (e.g. BEST KIDS), allocate subdomains, and monitor per-student subscription tiers.",
+        tabId: "onboarding",
+        tabName: "🏫 School Signups & Approvals",
+        tabPurpose: "Inspect newly registered schools, verify Headmaster credentials/photo & OTP, approve to brand all dashboards to the exact registered school name, or manage Demo/Live mode.",
         actionButtons: [
-          { name: "✅ Approve Institution", action: "Provisions school database, activates portals, and brands all dashboards to legal name", feedback: "Headmaster notified to upload school crest and confirm credentials" },
-          { name: "🔒 Lock / Suspend Institution", action: "Enforces immediate access lock for defaulting schools", feedback: "Blocks user logins while preserving institutional data intact" },
-          { name: "🗑️ Permanent Delete (Strict Security)", action: "Performs complete data wipe and permanently revokes access", feedback: "Tenant completely unlinked; users immediately rejected at login" }
+          { name: "✅ Approve Institution", action: "Provisions school tenant, activates portals, and brands dashboards to official school name", feedback: "Headmaster alerted with verified tenant code" },
+          { name: "🔒 Lock / Suspend Institution", action: "Enforces immediate access lock for unpaid or suspended schools while preserving records", feedback: "Blocks user logins safely without deleting institutional data" },
+          { name: "🗑️ Permanent Delete", action: "Removes revoked institution records under strict developer authorization", feedback: "Tenant unlinked and audit logged" }
         ],
-        formsAndInputs: ["School Name", "Subdomain Slug", "Country", "Subscription Tier (JHS $3 / SHS $5 / University $10)", "Student Count"],
-        systemFeedback: "The moment Developer approves, all 10 dashboards reflect the exact registered school branding."
+        formsAndInputs: ["School Name", "Tenant Code", "Country", "Subscription Tier (Basic/JHS GH₵3 / SHS GH₵5 / Tertiary GH₵10)", "Student Count"],
+        systemFeedback: "Approved institutions gain immediate branded access across all portals."
+      },
+      {
+        tabId: "payment_admin",
+        tabName: "💳 Payment Gateways & Webhook Administration",
+        tabPurpose: "Configure Paystack/Hubtel subaccount routing and TEST/LIVE modes per school (secret keys remain masked in server env), inspect transaction audit logs, retry failed webhooks, and reconcile pending payments.",
+        actionButtons: [
+          { name: "Sync Pending Transactions / Retry Failed Webhooks", action: "Triggers server-to-server reconciliation for delayed notifications and reprocesses queued webhooks", feedback: "Updates pending transactions atomically without double-crediting" },
+          { name: "Verify with Provider", action: "Validates any reference directly against Paystack or Hubtel APIs", feedback: "Displays verified status, receipt number, and masked channel telemetry" }
+        ],
+        formsAndInputs: ["Gateway Mode (TEST / LIVE)", "Paystack Subaccount / Hubtel Merchant Account / Bank Details", "Enabled Channels"],
+        systemFeedback: "Full multi-school payment isolation with zero frontend secret exposure."
       },
       {
         tabId: "auto-lock",

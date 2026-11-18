@@ -399,7 +399,7 @@ export default function DeveloperLogin() {
           fullName: "Gabriel Osei",
           role: "DEVELOPER",
           title: "CHIEF_SYSTEM_ENGINEER",
-          aiAssistant: "Antigravity AI Sentinel"
+          aiAssistant: "GBS System Operations Monitor"
         })
       );
       sessionStorage.setItem("gbs_dev_gate_unlocked", "true");
@@ -447,7 +447,7 @@ export default function DeveloperLogin() {
           fullName: "Gabriel Osei",
           role: "DEVELOPER",
           title: "CHIEF_SYSTEM_ENGINEER",
-          aiAssistant: "Antigravity AI Sentinel"
+          aiAssistant: "GBS System Operations Monitor"
         })
       );
       if (typeof window.showGBSOpenNotice === "function") {
@@ -478,7 +478,7 @@ export default function DeveloperLogin() {
             email: permanentEmail,
             fullName: "Gabriel Osei",
             role: "CHIEF_SYSTEM_ENGINEER",
-            aiAssistant: "Antigravity AI Sentinel"
+            aiAssistant: "GBS System Operations Monitor"
           })
         );
         navigate("/developer-control-center/dashboard");
@@ -659,7 +659,7 @@ export default function DeveloperLogin() {
             borderRadius: "999px",
             fontWeight: "700"
           }}>
-            🛡️ POWERED BY ANTIGRAVITY AI ARCHITECTURE
+            🛡️ GBS ENTERPRISE SCHOOL MANAGEMENT PLATFORM
           </span>
         </div>
 
