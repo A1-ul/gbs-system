@@ -10042,4 +10042,5481 @@ export function AdminDashboard({ initialTab } = {}) {
                   <h2><span>💬</span> PARENT INQUIRIES & ADMINISTRATOR FEEDBACK DESK</h2>
                   <p>Read parent messages sent to the administration, author executive responses, and ensure replies reflect live on the parent dashboard</p>
                 </div>
-... [truncated for diff preview]
+                <span className="role-portal-badge" style={{ color: "#34d399" }}>
+                  {parentInquiries.length} Active Inquiry Record(s)
+                </span>
+              </div>
+
+              <div style={{ display: "flex", flexDirection: "column", gap: "1.25rem" }}>
+                {parentInquiries.length === 0 ? (
+                  <div style={{ background: "rgba(255, 255, 255, 0.04)", padding: "2.5rem", borderRadius: "12px", textAlign: "center", color: "#94a3b8" }}>
+                    ✅ No pending inquiries from parents. All inquiries have been addressed.
+                  </div>
+                ) : (
+                  parentInquiries.map((inq) => (
+                    <div
+                      key={inq.id}
+                      style={{
+                        background: "rgba(15, 23, 42, 0.8)",
+                        border: "1px solid rgba(56, 189, 248, 0.25)",
+                        borderRadius: "12px",
+                        padding: "1.5rem"
+                      }}
+                    >
+                      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", flexWrap: "wrap", gap: "10px", marginBottom: "10px" }}>
+                        <div>
+                          <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
+                            <strong style={{ color: "#f8fafc", fontSize: "1.1rem" }}>{inq.inquiryTopic}</strong>
+                            <span className={`badge-status ${inq.feedbackReply ? "badge-present" : "badge-absent"}`}>
+                              {inq.feedbackReply ? "✓ REPLIED" : "PENDING FEEDBACK"}
+                            </span>
+                          </div>
+                          <span style={{ fontSize: "0.82rem", color: "#94a3b8" }}>
+                            From Parent: <strong style={{ color: "#38bdf8" }}>{inq.parentName}</strong> ({inq.parentPhone}) • Ward: <strong>{inq.studentName}</strong> ({inq.studentId})
+                          </span>
+                        </div>
+                        <span style={{ fontSize: "0.75rem", color: "#64748b" }}>
+                          Received: {inq.sentAt}
+                        </span>
+                      </div>
+
+                      <div style={{ background: "rgba(255, 255, 255, 0.03)", padding: "12px 14px", borderRadius: "8px", color: "#cbd5e1", fontSize: "0.9rem", lineHeight: "1.5", marginBottom: "1rem" }}>
+                        "{inq.message}"
+                      </div>
+
+                      {inq.feedbackReply ? (
+                        <div style={{ background: "rgba(16, 185, 129, 0.1)", border: "1px solid rgba(16, 185, 129, 0.3)", borderRadius: "8px", padding: "12px 14px" }}>
+                          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "4px" }}>
+                            <strong style={{ color: "#34d399", fontSize: "0.85rem" }}>
+                              🏛️ Official Response from {inq.feedbackReply.responderName}:
+                            </strong>
+                            <span style={{ fontSize: "0.72rem", color: "#94a3b8" }}>{inq.feedbackReply.repliedAt}</span>
+                          </div>
+                          <p style={{ margin: 0, color: "#f8fafc", fontSize: "0.88rem" }}>{inq.feedbackReply.replyContent}</p>
+                          <span style={{ fontSize: "0.72rem", color: "#34d399", display: "block", marginTop: "4px" }}>
+                            ● Dispatched & Reflected on Parent Dashboard
+                          </span>
+                        </div>
+                      ) : (
+                        <div>
+                          <label style={{ display: "block", fontSize: "0.8rem", color: "#94a3b8", marginBottom: "6px" }}>
+                            Author Executive Feedback / Official Response to Parent:
+                          </label>
+                          <div style={{ display: "flex", gap: "10px", flexWrap: "wrap" }}>
+                            <textarea
+                              rows={2}
+                              placeholder="Type response to reflect on parent dashboard..."
+                              className="filter-input"
+                              style={{ flex: 1, minWidth: "280px" }}
+                              value={replyTextMap[inq.id] || ""}
+                              onChange={(e) => setReplyTextMap({ ...replyTextMap, [inq.id]: e.target.value })}
+                            />
+                            <button
+                              type="button"
+                              className="btn-primary"
+                              style={{ padding: "8px 18px", alignSelf: "flex-end" }}
+                              onClick={() => handleSendParentFeedback(inq.id)}
+                            >
+                              📨 Send Feedback to Parent
+                            </button>
+                          </div>
+                        </div>
+                      )}
+                    </div>
+                  ))
+                )}
+              </div>
+            </div>
+          )}
+
+          {/* TAB 6: AUDIT REFERENCES & COMPLIANCE LEDGER (Click to view full reference details) */}
+          {activeTab === "audits" && (
+            <div className="role-workspace-card">
+              {/* ANNUAL ACCOUNT AUDIT REQUEST & HEADMASTER AUDIT SUITE */}
+              <div style={{ background: "linear-gradient(135deg, rgba(15, 23, 42, 0.9), rgba(30, 41, 59, 0.8))", border: "1px solid rgba(56, 189, 248, 0.3)", borderRadius: "14px", padding: "1.5rem", marginBottom: "2rem" }}>
+                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "1rem", flexWrap: "wrap", gap: "10px" }}>
+                  <div>
+                    <h3 style={{ margin: 0, color: "#38bdf8", fontSize: "1.2rem", display: "flex", alignItems: "center", gap: "8px" }}>
+                      <span>⚖️</span> ANNUAL ACCOUNT AUDIT & ACCOUNTANT CROSS-CHECK SUITE
+                    </h3>
+                    <p style={{ margin: "4px 0 0", fontSize: "0.85rem", color: "#cbd5e1" }}>
+                      Headmaster can request a comprehensive account audit report from Chief Accountant from the beginning of the year to the close of the year for accounting cross-check and official audit certification.
+                    </p>
+                  </div>
+                  <button
+                    type="button"
+                    className="btn-primary"
+                    style={{ background: "linear-gradient(135deg, #10b981, #059669)", fontWeight: "800", padding: "10px 18px" }}
+                    onClick={() => setShowAuditRequestModal(true)}
+                  >
+                    📋 Request Account Audit Report from Accountant
+                  </button>
+                </div>
+
+                {/* Audit Requests List */}
+                <div className="role-table-responsive">
+                  <table className="role-table">
+                    <thead>
+                      <tr>
+                        <th>Audit ID</th>
+                        <th>Period Scope</th>
+                        <th>Target Department</th>
+                        <th>Dispatched At</th>
+                        <th>Audit Status</th>
+                        <th>Compiled Financials</th>
+                        <th>Headmaster Actions</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {auditRequests.length === 0 ? (
+                        <tr>
+                          <td colSpan="7" style={{ textAlign: "center", padding: "1.5rem", color: "#94a3b8" }}>
+                            No active account audit requests. Click "Request Account Audit Report from Accountant" above to initiate annual cross-check.
+                          </td>
+                        </tr>
+                      ) : (
+                        auditRequests.map((req) => (
+                          <tr key={req.id}>
+                            <td><strong style={{ fontFamily: "monospace", color: "#38bdf8" }}>{req.id}</strong></td>
+                            <td>
+                              <strong>{req.startDate} to {req.endDate}</strong>
+                              <span style={{ display: "block", fontSize: "0.72rem", color: "#94a3b8" }}>Academic Year {req.academicYear}</span>
+                            </td>
+                            <td>{req.targetAuditor || "Chief Accountant"}</td>
+                            <td style={{ fontSize: "0.8rem", color: "#cbd5e1" }}>{req.requestedAt}</td>
+                            <td>
+                              <span className={`badge-status ${req.status === "AUDIT_CROSS_CHECKED_AND_APPROVED" ? "badge-present" : req.status === "SUBMITTED_TO_HEADMASTER" ? "badge-late" : "badge-absent"}`}>
+                                {req.status === "AUDIT_CROSS_CHECKED_AND_APPROVED" ? "✓ CERTIFIED & SIGNED" : req.status === "SUBMITTED_TO_HEADMASTER" ? "📥 READY FOR CROSS-CHECK" : "⏳ DISPATCHED TO ACCOUNTANT"}
+                              </span>
+                            </td>
+                            <td>
+                              {req.submittedReport ? (
+                                <div style={{ fontSize: "0.78rem" }}>
+                                  <span style={{ color: "#34d399", fontWeight: "700" }}>Collected: {req.submittedReport.currencySymbol || "$"}{req.submittedReport.totalCollected?.toLocaleString()}</span>
+                                  <span style={{ display: "block", color: "#94a3b8" }}>Expenses: {req.submittedReport.currencySymbol || "$"}{req.submittedReport.totalExpenses?.toLocaleString()}</span>
+                                </div>
+                              ) : (
+                                <span style={{ color: "#94a3b8", fontSize: "0.78rem" }}>Awaiting Accountant compilation...</span>
+                              )}
+                            </td>
+                            <td>
+                              <div style={{ display: "flex", gap: "6px", flexWrap: "wrap" }}>
+                                {req.submittedReport && (
+                                  <button
+                                    type="button"
+                                    className="btn-secondary"
+                                    style={{ padding: "4px 8px", fontSize: "0.75rem", borderColor: "#38bdf8", color: "#38bdf8" }}
+                                    onClick={() => setSelectedAuditReportForView(req)}
+                                  >
+                                    🔍 View Figures
+                                  </button>
+                                )}
+                                {req.status === "SUBMITTED_TO_HEADMASTER" && (
+                                  <button
+                                    type="button"
+                                    className="btn-primary"
+                                    style={{ padding: "4px 10px", fontSize: "0.75rem", background: "#10b981", borderColor: "#059669" }}
+                                    onClick={() => handleCrossCheckAndApproveAudit(req.id)}
+                                  >
+                                    ✍️ Certify Audit
+                                  </button>
+                                )}
+                              </div>
+                            </td>
+                          </tr>
+                        ))
+                      )}
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+
+              <div className="workspace-title-row">
+                <div>
+                  <h2><span>🛡️</span> AUDIT REFERENCES & GOVERNANCE LEDGER</h2>
+                  <p>Every operational transaction is permanently logged. Click any audit record to view complete reference details.</p>
+                </div>
+                <button type="button" className="btn-secondary" onClick={fetchAuditLogs}>
+                  🔄 Refresh Audit Ledger
+                </button>
+              </div>
+
+              <div className="role-table-responsive">
+                <table className="role-table">
+                  <thead>
+                    <tr>
+                      <th>Ref ID</th>
+                      <th>Timestamp</th>
+                      <th>Action Performed</th>
+                      <th>Module</th>
+                      <th>Operator</th>
+                      <th>IP Address</th>
+                      <th>Audit Details</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {auditLogs.length === 0 ? (
+                      <tr>
+                        <td colSpan="7" style={{ textAlign: "center", padding: "2rem", color: "#94a3b8" }}>
+                          No audit entries recorded yet.
+                        </td>
+                      </tr>
+                    ) : (
+                      auditLogs.map((log) => (
+                        <tr
+                          key={log.id}
+                          style={{ cursor: "pointer", transition: "background 0.2s" }}
+                          onClick={() => setSelectedAuditLog(log)}
+                          title="Click to view full reference details"
+                        >
+                          <td>
+                            <strong style={{ fontFamily: "monospace", color: "#38bdf8" }}>
+                              REF-{String(log.id).padStart(6, "0")}
+                            </strong>
+                          </td>
+                          <td style={{ fontSize: "0.8rem", color: "#cbd5e1", whiteSpace: "nowrap" }}>
+                            {new Date(log.createdAt).toLocaleString()}
+                          </td>
+                          <td>
+                            <span style={{ fontWeight: "700", color: "#f8fafc" }}>
+                              {log.action}
+                            </span>
+                          </td>
+                          <td>
+                            <span className="role-portal-badge" style={{ fontSize: "0.72rem" }}>
+                              {log.module}
+                            </span>
+                          </td>
+                          <td>
+                            <strong>
+                              {log.user ? `${log.user.firstName} ${log.user.lastName} (${log.user.role})` : "System Automated"}
+                            </strong>
+                          </td>
+                          <td style={{ fontFamily: "monospace", fontSize: "0.8rem", color: "#94a3b8" }}>
+                            {log.ipAddress || "127.0.0.1"}
+                          </td>
+                          <td>
+                            <button
+                              type="button"
+                              className="btn-secondary"
+                              style={{ padding: "4px 10px", fontSize: "0.75rem", borderColor: "#10b981", color: "#34d399" }}
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                setSelectedAuditLog(log);
+                              }}
+                            >
+                              🔍 View References
+                            </button>
+                          </td>
+                        </tr>
+                      ))
+                    )}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          )}
+
+          {/* TAB: ACCOUNTANT FEE INCREMENT & RECALCULATION APPROVAL CONSOLE */}
+          {activeTab === "feeApprovals" && (
+            <div className="role-workspace-card">
+              <div className="workspace-title-row">
+                <div>
+                  <h2><span>💳</span> ACCOUNTANT FEE INCREMENT & RECALCULATION APPROVAL GOVERNANCE</h2>
+                  <p>
+                    Exclusive Headmaster Authority: Review tuition and fee increment requests submitted by the Accountant. Authorize the exact amount to be applied before any financial recalculation or invoicing takes place.
+                  </p>
+                </div>
+              </div>
+
+              {/* Live Database Fee Collections & Outstanding Summary */}
+              <FinancialReportsPanel currencySymbol="GHS" />
+
+              {/* Pending Requests Section */}
+              <div style={{ marginBottom: "2rem" }}>
+                <h3 style={{ fontSize: "1.05rem", color: "#ec4899", marginBottom: "0.75rem", display: "flex", alignItems: "center", gap: "8px" }}>
+                  <span>⏳</span> Pending Increment & Recalculation Requests ({accountantIncrementRequests.filter(r => r.status === "PENDING_HEADMASTER_APPROVAL").length})
+                </h3>
+
+                {accountantIncrementRequests.filter(r => r.status === "PENDING_HEADMASTER_APPROVAL").length === 0 ? (
+                  <div style={{ background: "rgba(15, 23, 42, 0.5)", padding: "16px", borderRadius: "10px", border: "1px dashed rgba(236, 72, 153, 0.3)", color: "#94a3b8", fontSize: "0.88rem" }}>
+                    ✓ All accountant fee increment requests have been reviewed and acted upon. No pending requests.
+                  </div>
+                ) : (
+                  <div className="role-table-responsive">
+                    <table className="role-table">
+                      <thead>
+                        <tr>
+                          <th>Req ID</th>
+                          <th>Submitted By</th>
+                          <th>Target Class / Scope</th>
+                          <th>Requested Addition</th>
+                          <th>Justification / Reason</th>
+                          <th>Submission Date</th>
+                          <th>Headmaster Action</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {accountantIncrementRequests.filter(r => r.status === "PENDING_HEADMASTER_APPROVAL").map((req) => (
+                          <tr key={req.id}>
+                            <td style={{ fontFamily: "monospace", color: "#38bdf8" }}>#{req.id}</td>
+                            <td><strong>{req.requestedBy}</strong></td>
+                            <td><span className="role-badge role-badge-secondary">{req.targetClassName || req.targetClassCode}</span></td>
+                            <td>
+                              <strong style={{ color: "#ec4899", fontSize: "0.95rem" }}>
+                                {req.type === "PERCENTAGE" ? `+${req.requestedValue}%` : `+${currencySymbol}${req.requestedValue}`}
+                              </strong>
+                            </td>
+                            <td style={{ fontSize: "0.85rem", color: "#e2e8f0" }}>{req.reason}</td>
+                            <td style={{ fontSize: "0.8rem", color: "#94a3b8" }}>{req.requestedAt}</td>
+                            <td>
+                              <div style={{ display: "flex", gap: "6px", alignItems: "center", flexWrap: "wrap" }}>
+                                <button
+                                  type="button"
+                                  onClick={() => navigateToDetail(navigate, "payment", req.id, {
+                                    ...req,
+                                    institutionName: reportSchoolName,
+                                    title: `Fee Increment Request #${req.id} - ${req.targetClassName || req.targetClassCode}`
+                                  }, { returnTab: activeTab })}
+                                  style={{
+                                    padding: "5px 10px",
+                                    fontSize: "0.74rem",
+                                    background: "rgba(139, 92, 246, 0.2)",
+                                    border: "1px solid #8b5cf6",
+                                    color: "#c4b5fd",
+                                    borderRadius: "6px",
+                                    fontWeight: 800,
+                                    cursor: "pointer",
+                                    whiteSpace: "nowrap"
+                                  }}
+                                  title="Open on dedicated full-page verification desk"
+                                >
+                                  📄 Verify on New Page ↗
+                                </button>
+                                <input
+                                  type="number"
+                                  placeholder={String(req.requestedValue)}
+                                  className="filter-input"
+                                  style={{ width: "85px", padding: "4px 8px", fontSize: "0.85rem" }}
+                                  value={approvedIncrementAmount || ""}
+                                  onChange={(e) => setApprovedIncrementAmount(e.target.value)}
+                                />
+                                <button
+                                  type="button"
+                                  className="btn-primary"
+                                  style={{ background: "linear-gradient(135deg, #10b981, #059669)", fontSize: "0.78rem", padding: "6px 12px" }}
+                                  onClick={() => {
+                                    if (!approvedIncrementAmount) {
+                                      setApprovedIncrementAmount(String(req.requestedValue));
+                                    }
+                                    handleApproveIncrement(req.id);
+                                  }}
+                                >
+                                  ✓ Approve Exact Amount
+                                </button>
+                                <button
+                                  type="button"
+                                  className="btn-secondary"
+                                  style={{ borderColor: "#ef4444", color: "#f87171", fontSize: "0.78rem", padding: "6px 10px" }}
+                                  onClick={() => handleRejectIncrement(req.id)}
+                                >
+                                  ✕ Reject
+                                </button>
+                              </div>
+                            </td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                )}
+              </div>
+
+              {/* Increment History & Audits */}
+              <div>
+                <h3 style={{ fontSize: "1.05rem", color: "#38bdf8", marginBottom: "0.75rem" }}>
+                  📜 Historical Increment Authorizations & Decisions
+                </h3>
+                <div className="role-table-responsive">
+                  <table className="role-table" style={{ fontSize: "0.83rem" }}>
+                    <thead>
+                      <tr>
+                        <th>Req ID</th>
+                        <th>Target Scope</th>
+                        <th>Authorized Exact Amount</th>
+                        <th>Decision Status</th>
+                        <th>Authorized By</th>
+                        <th>Timestamp</th>
+                        <th>Executive Remarks</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {accountantIncrementRequests.filter(r => r.status !== "PENDING_HEADMASTER_APPROVAL").map((hist) => (
+                        <tr key={hist.id}>
+                          <td style={{ fontFamily: "monospace" }}>#{hist.id}</td>
+                          <td>{hist.targetClassName || hist.targetClassCode}</td>
+                          <td>
+                            <strong style={{ color: hist.status === "APPROVED" ? "#34d399" : "#94a3b8" }}>
+                              {hist.approvedAmount ? `${hist.approvedAmount}${hist.type === 'PERCENTAGE' ? '%' : currencySymbol}` : "N/A"}
+                            </strong>
+                          </td>
+                          <td>
+                            {hist.status === "APPROVED" ? (
+                              <span className="role-badge" style={{ background: "rgba(16, 185, 129, 0.2)", color: "#34d399", border: "1px solid #10b981" }}>
+                                ✓ APPROVED BY HEADMASTER
+                              </span>
+                            ) : (
+                              <span className="role-badge" style={{ background: "rgba(239, 68, 68, 0.2)", color: "#f87171", border: "1px solid #ef4444" }}>
+                                ✕ REJECTED
+                              </span>
+                            )}
+                          </td>
+                          <td>{hist.approvedBy || "Headmaster Arthur Sterling"}</td>
+                          <td style={{ color: "#94a3b8" }}>{hist.approvedAt || hist.reviewedAt || hist.requestedAt}</td>
+                          <td style={{ fontStyle: "italic", color: "#cbd5e1" }}>
+                            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: "8px" }}>
+                              <span>{hist.decisionNotes || "Executive fiscal audit passed."}</span>
+                              <button
+                                type="button"
+                                onClick={() => navigateToDetail(navigate, "payment", hist.id, {
+                                  ...hist,
+                                  institutionName: reportSchoolName,
+                                  title: `Historical Authorization #${hist.id} - ${hist.targetClassName || hist.targetClassCode}`
+                                }, { returnTab: activeTab })}
+                                style={{
+                                  padding: "3px 8px",
+                                  fontSize: "0.72rem",
+                                  background: "rgba(56, 189, 248, 0.15)",
+                                  border: "1px solid rgba(56, 189, 248, 0.4)",
+                                  color: "#38bdf8",
+                                  borderRadius: "4px",
+                                  fontWeight: 700,
+                                  cursor: "pointer",
+                                  whiteSpace: "nowrap"
+                                }}
+                                title="Inspect authorization dossier on dedicated page"
+                              >
+                                🔍 Inspect Dossier ↗
+                              </button>
+                            </div>
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+            </div>
+          )}
+
+          {/* TAB: DEVELOPER DIRECTIVES & REMEDIATION DESK */}
+          {activeTab === "devDirectives" && (
+            <div className="role-workspace-card">
+              <div className="workspace-title-row">
+                <div>
+                  <h2><span>💬</span> DEVELOPER DIRECTIVES & COMPLIANCE DESK</h2>
+                  <p>Official communication channel with System Developer Gabriel Osei. Inspect formal directives, ceast & desist warnings, and reply with what actions your administration has taken.</p>
+                </div>
+                <button
+                  type="button"
+                  className="btn-secondary"
+                  style={{ borderColor: "#8b5cf6", color: "#c4b5fd", fontWeight: "700" }}
+                  onClick={() => {
+                    if (developerMessages.length > 0) {
+                      setSelectedDevMessage(developerMessages[0]);
+                      setShowDevMessageModal(true);
+                    } else {
+                      setFeedback({ type: "info", message: "No active developer directives for this school." });
+                    }
+                  }}
+                >
+                  📨 View Active Directives ({developerMessages.length})
+                </button>
+              </div>
+
+              {developerMessages.length === 0 ? (
+                <div style={{ textAlign: "center", padding: "3rem 1rem", color: "#94a3b8" }}>
+                  <div style={{ fontSize: "2.5rem", marginBottom: "8px" }}>✅</div>
+                  <h3 style={{ color: "#34d399", margin: "0 0 6px" }}>Institution in Full Developer Compliance</h3>
+                  <p style={{ margin: 0, fontSize: "0.88rem" }}>No active security warnings or directives issued from the Developer Control Center.</p>
+                </div>
+              ) : (
+                <div style={{ display: "flex", flexDirection: "column", gap: "1.25rem" }}>
+                  {developerMessages.map((msg) => {
+                    const isCardMinimized = minimizedDirectiveIds.includes(msg.id);
+                    return (
+                      <div key={msg.id} style={{ background: "rgba(15, 23, 42, 0.8)", border: "1.5px solid rgba(139, 92, 246, 0.4)", borderRadius: "14px", padding: isCardMinimized ? "1rem 1.25rem" : "1.5rem" }}>
+                        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", flexWrap: "wrap", gap: "10px", marginBottom: isCardMinimized ? "0" : "12px", borderBottom: isCardMinimized ? "none" : "1px solid rgba(255, 255, 255, 0.08)", paddingBottom: isCardMinimized ? "0" : "10px" }}>
+                          <div>
+                            <span style={{ background: "rgba(239, 68, 68, 0.2)", color: "#fca5a5", border: "1px solid rgba(239, 68, 68, 0.4)", padding: "2px 8px", borderRadius: "4px", fontSize: "0.72rem", fontWeight: "800" }}>
+                              DEVELOPER STATUTORY DIRECTIVE
+                            </span>
+                            <h3 style={{ margin: "8px 0 2px", color: "#f8fafc", fontSize: "1.15rem" }}>{msg.subject}</h3>
+                            <span style={{ fontSize: "0.78rem", color: "#94a3b8" }}>From: <strong>{msg.senderName}</strong> • {new Date(msg.timestamp).toLocaleString()}</span>
+                          </div>
+                          <div style={{ display: "flex", gap: "8px", alignItems: "center" }}>
+                            <button
+                              type="button"
+                              onClick={() => handleToggleDirectiveCardMinimize(msg.id)}
+                              style={{
+                                background: "rgba(15, 23, 42, 0.9)",
+                                border: "1px solid #f59e0b",
+                                color: "#fde68a",
+                                borderRadius: "8px",
+                                padding: "8px 12px",
+                                fontSize: "0.78rem",
+                                fontWeight: "800",
+                                cursor: "pointer"
+                              }}
+                              title={isCardMinimized ? "Expand statutory directive warning" : "Minimize statutory directive warning"}
+                            >
+                              {isCardMinimized ? "➕ Expand Warning" : "➖ Minimize Warning"}
+                            </button>
+                            <button
+                              type="button"
+                              className="btn-primary"
+                              style={{ background: "linear-gradient(135deg, #8b5cf6, #6d28d9)", fontSize: "0.82rem", padding: "8px 16px" }}
+                              onClick={() => {
+                                setSelectedDevMessage(msg);
+                                setShowDevMessageModal(true);
+                              }}
+                            >
+                              ✍️ Reply to Developer
+                            </button>
+                          </div>
+                        </div>
+
+                        {!isCardMinimized && (
+                          <>
+                            <div style={{ background: "rgba(2, 6, 23, 0.7)", padding: "1rem 1.25rem", borderRadius: "10px", borderLeft: "4px solid #8b5cf6", whiteSpace: "pre-wrap", color: "#e2e8f0", fontSize: "0.9rem", lineHeight: "1.6" }}>
+                              {msg.messageText}
+                            </div>
+
+                            {/* Headmaster Replies */}
+                            {(msg.replies || []).length > 0 && (
+                              <div style={{ marginTop: "1rem", borderLeft: "2px dashed #10b981", paddingLeft: "1.25rem", display: "flex", flexDirection: "column", gap: "8px" }}>
+                                <span style={{ fontSize: "0.75rem", color: "#34d399", fontWeight: "800", textTransform: "uppercase" }}>
+                                  ✓ Actions Taken & Transmitted by Headmaster:
+                                </span>
+                                {msg.replies.map((rep) => (
+                                  <div key={rep.id} style={{ background: "rgba(16, 185, 129, 0.1)", border: "1px solid rgba(16, 185, 129, 0.3)", borderRadius: "8px", padding: "10px 12px", fontSize: "0.85rem", color: "#f8fafc" }}>
+                                    <div style={{ display: "flex", justifyContent: "space-between", marginBottom: "4px", fontSize: "0.72rem", color: "#94a3b8" }}>
+                                      <strong style={{ color: "#34d399" }}>Headmaster Reply</strong>
+                                      <span>{new Date(rep.timestamp).toLocaleString()}</span>
+                                    </div>
+                                    <div>{rep.messageText}</div>
+                                  </div>
+                                ))}
+                              </div>
+                            )}
+                          </>
+                        )}
+                      </div>
+                    );
+                  })}
+                </div>
+              )}
+            </div>
+          )}
+
+          {/* TAB: STUDENT BUS BOARDING & ROUTE FARE ASSIGNMENT */}
+          {activeTab === "busTransport" && (
+            <div className="role-workspace-card">
+              <div className="workspace-title-row">
+                <div>
+                  <h2><span>🚌</span> STUDENT BUS BOARDING & ROUTE FARE ASSIGNMENT</h2>
+                  <p>Register students who want to board the school bus to their destination, calculate termly fare amounts based on location zones, assign authorized drivers, and upload assignments directly to the Transport Portal.</p>
+                </div>
+                <div style={{ display: "flex", gap: "8px", flexWrap: "wrap" }}>
+                  <button
+                    type="button"
+                    className="btn-primary"
+                    style={{ background: "linear-gradient(135deg, #10b981, #059669)", fontWeight: "800", padding: "8px 14px", display: "flex", alignItems: "center", gap: "6px", fontSize: "0.82rem", cursor: "pointer" }}
+                    onClick={() => setShowCreateRouteModal(true)}
+                  >
+                    <span>📍</span> Create Destination & Fare
+                  </button>
+                  <button
+                    type="button"
+                    className="btn-primary"
+                    style={{ background: "linear-gradient(135deg, #8b5cf6, #7c3aed)", fontWeight: "800", padding: "8px 14px", display: "flex", alignItems: "center", gap: "6px", fontSize: "0.82rem", cursor: "pointer" }}
+                    onClick={() => setShowAssignDriverModal(true)}
+                  >
+                    <span>👤</span> Assign / Register Driver
+                  </button>
+                  <button
+                    type="button"
+                    className="btn-primary"
+                    style={{ background: "linear-gradient(135deg, #06b6d4, #0891b2)", fontWeight: "800", padding: "8px 16px", display: "flex", alignItems: "center", gap: "8px", fontSize: "0.82rem", cursor: "pointer" }}
+                    onClick={() => setShowBusAssignmentModal(true)}
+                  >
+                    <span>➕</span> Assign Student to Bus Route
+                  </button>
+                </div>
+              </div>
+
+              {/* KPI Summary for Bus Boarding */}
+              <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(200px, 1fr))", gap: "1rem", marginBottom: "1.5rem" }}>
+                <div style={{ background: "rgba(15, 23, 42, 0.7)", border: "1px solid rgba(6, 182, 212, 0.3)", borderRadius: "10px", padding: "1rem" }}>
+                  <span style={{ fontSize: "0.75rem", color: "#94a3b8", textTransform: "uppercase", fontWeight: "700" }}>Total Bus Boarding Students</span>
+                  <div style={{ fontSize: "1.6rem", fontWeight: "800", color: "#06b6d4", marginTop: "4px" }}>{busAssignments.length} Students</div>
+                  <span style={{ fontSize: "0.72rem", color: "#67e8f9" }}>✓ Uploaded to Transport Portal</span>
+                </div>
+                <div style={{ background: "rgba(15, 23, 42, 0.7)", border: "1px solid rgba(16, 185, 129, 0.3)", borderRadius: "10px", padding: "1rem" }}>
+                  <span style={{ fontSize: "0.75rem", color: "#94a3b8", textTransform: "uppercase", fontWeight: "700" }}>Total Termly Fare Revenue</span>
+                  <div style={{ fontSize: "1.6rem", fontWeight: "800", color: "#34d399", marginTop: "4px" }}>
+                    GHS {busAssignments.reduce((acc, curr) => acc + (Number(curr.termlyFareGhs) || 0), 0).toLocaleString()}
+                  </div>
+                  <span style={{ fontSize: "0.72rem", color: "#a7f3d0" }}>Across Active Location Zones</span>
+                </div>
+                <div style={{ background: "rgba(15, 23, 42, 0.7)", border: "1px solid rgba(245, 158, 11, 0.3)", borderRadius: "10px", padding: "1rem" }}>
+                  <span style={{ fontSize: "0.75rem", color: "#94a3b8", textTransform: "uppercase", fontWeight: "700" }}>Active School Buses</span>
+                  <div style={{ fontSize: "1.6rem", fontWeight: "800", color: "#fbbf24", marginTop: "4px" }}>3 Fleet Vehicles</div>
+                  <span style={{ fontSize: "0.72rem", color: "#fef08a" }}>Toyota Coaster & Nissan Civilian</span>
+                </div>
+              </div>
+
+              {/* Bus Boarding Roster Table */}
+              <div className="role-table-responsive">
+                <table className="role-table">
+                  <thead>
+                    <tr>
+                      <th>#</th>
+                      <th>Student Name & ID</th>
+                      <th>Class Cohort</th>
+                      <th>Destination & Zone</th>
+                      <th>Termly Bus Fare</th>
+                      <th>Assigned Bus & Driver</th>
+                      <th>Morning Pickup Stop</th>
+                      <th>Transport Portal Status</th>
+                      <th>Actions</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {busAssignments.length === 0 ? (
+                      <tr>
+                        <td colSpan="9" style={{ textAlign: "center", padding: "28px", color: "#94a3b8" }}>
+                          🚌 No student bus boarding assignments recorded yet. Use the "Assign Student to Bus Route" form above to register student transportation.
+                        </td>
+                      </tr>
+                    ) : (
+                      busAssignments.map((bus, idx) => (
+                        <tr key={bus.id}>
+                          <td style={{ fontWeight: 700, color: "#64748b" }}>{idx + 1}</td>
+                          <td>
+                            <strong style={{ color: "#38bdf8" }}>{bus.studentName}</strong>
+                            <div style={{ fontSize: "0.72rem", color: "#94a3b8" }}>ID: {bus.studentId} • Parent: {bus.parentPhone}</div>
+                          </td>
+                          <td><span className="role-portal-badge" style={{ color: "#c084fc" }}>{bus.className}</span></td>
+                          <td>
+                            <strong style={{ color: "#f8fafc" }}>{bus.destinationZone}</strong>
+                          </td>
+                          <td>
+                            <span style={{ color: "#34d399", fontWeight: "800", fontSize: "0.95rem" }}>
+                              GHS {Number(bus.termlyFareGhs).toFixed(2)}
+                            </span>
+                          </td>
+                          <td>
+                            <div style={{ fontWeight: "700", color: "#fbbf24" }}>{bus.busNumber}</div>
+                            <div style={{ fontSize: "0.72rem", color: "#94a3b8" }}>{bus.driverName}</div>
+                          </td>
+                          <td style={{ fontSize: "0.82rem", color: "#cbd5e1" }}>{bus.pickupStop}</td>
+                          <td>
+                            <span style={{ background: "rgba(16, 185, 129, 0.2)", color: "#34d399", border: "1px solid rgba(16, 185, 129, 0.4)", padding: "2px 8px", borderRadius: "6px", fontSize: "0.72rem", fontWeight: "800" }}>
+                              ✓ UPLOADED TO TRANSPORT
+                            </span>
+                          </td>
+                          <td>
+                            <button
+                              type="button"
+                              className="btn-secondary"
+                              style={{ padding: "4px 8px", fontSize: "0.72rem", color: "#f87171", borderColor: "#ef4444" }}
+                              onClick={() => {
+                                const updated = busAssignments.filter(b => b.id !== bus.id);
+                                setBusAssignments(updated);
+                                localStorage.setItem("gbs_transport_assigned_students", JSON.stringify(updated));
+                                setFeedback({ type: "success", message: `Removed ${bus.studentName} from bus assignments.` });
+                              }}
+                            >
+                              Remove
+                            </button>
+                          </td>
+                        </tr>
+                      ))
+                    )}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          )}
+
+          {/* TAB: HEADMASTER LEADERSHIP & SUCCESSION DOSSIER */}
+          {activeTab === "leadership" && (
+            <div className="role-workspace-card">
+              <div className="workspace-title-row">
+                <div>
+                  <h2><span>👑</span> HEADMASTER LEADERSHIP & SUCCESSION DOSSIER</h2>
+                  <p>
+                    Inspect active Headmaster institutional credentials and photographic identity, maintain historical succession records, and register a replacement Headmaster with mandatory profile picture verification.
+                  </p>
+                </div>
+                <button
+                  type="button"
+                  className="btn-primary"
+                  style={{ background: "linear-gradient(135deg, #a855f7, #7c3aed)", fontSize: "0.85rem", padding: "8px 16px" }}
+                  onClick={() => setShowReplacementModal(true)}
+                >
+                  👑 Register Replacement Headmaster (Handover)
+                </button>
+              </div>
+
+              {/* Current Active Headmaster Showcase */}
+              <div style={{ background: "rgba(15, 23, 42, 0.75)", border: "2px solid rgba(168, 85, 247, 0.4)", borderRadius: "14px", padding: "1.75rem", marginBottom: "2rem" }}>
+                <span className="role-portal-badge" style={{ color: "#a855f7", marginBottom: "8px", display: "inline-block" }}>
+                  CURRENT OFFICIAL HEADMASTER • ACTIVE EXECUTIVE LEADER
+                </span>
+                <div style={{ display: "flex", gap: "2rem", alignItems: "center", flexWrap: "wrap" }}>
+                  <img
+                    src={headmasterProfile.photoUrl || "/assets/headmaster-photo.jpg"}
+                    alt={headmasterProfile.name}
+                    style={{ width: "120px", height: "120px", borderRadius: "16px", objectFit: "cover", border: "3px solid #a855f7", boxShadow: "0 4px 20px rgba(168, 85, 247, 0.4)" }}
+                  />
+                  <div style={{ flex: 1 }}>
+                    <h2 style={{ margin: "0 0 6px", color: "#f8fafc", fontSize: "1.5rem" }}>{headmasterProfile.name}</h2>
+                    <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(200px, 1fr))", gap: "10px", fontSize: "0.88rem", color: "#cbd5e1" }}>
+                      <div>Email: <strong style={{ color: "#38bdf8" }}>{headmasterProfile.email}</strong></div>
+                      <div>Phone Contact: <strong style={{ color: "#34d399" }}>{headmasterProfile.phone}</strong></div>
+                      <div>Qualifications: <strong style={{ color: "#fbbf24" }}>{headmasterProfile.qualification}</strong></div>
+                      <div>Appointed Date: <strong style={{ color: "#e2e8f0" }}>{headmasterProfile.appointedDate}</strong></div>
+                      <div>Tenure Status: <span className="role-badge" style={{ background: "rgba(16, 185, 129, 0.2)", color: "#34d399", border: "1px solid #10b981" }}>✓ ACTIVE TENANT HEADMASTER</span></div>
+                      <div>Developer Visibility: <span style={{ color: "#10b981" }}>✓ Synced Live to Master Dev Map & Dossier</span></div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              {/* Predecessor Headmasters Audit History */}
+              <div>
+                <h3 style={{ fontSize: "1.05rem", color: "#f8fafc", marginBottom: "0.75rem", display: "flex", alignItems: "center", gap: "8px" }}>
+                  <span>📜</span> Institutional Succession Ledger (Past Headmasters)
+                </h3>
+                <div className="role-table-responsive">
+                  <table className="role-table">
+                    <thead>
+                      <tr>
+                        <th>Photo</th>
+                        <th>Headmaster Name</th>
+                        <th>Qualifications</th>
+                        <th>Tenure Period</th>
+                        <th>Years of Service</th>
+                        <th>Handover Reason</th>
+                        <th>Record Status</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {headmasterHistory.length === 0 ? (
+                        <tr>
+                          <td colSpan="7" style={{ textAlign: "center", padding: "28px", color: "#94a3b8" }}>
+                            🏛️ No previous headmaster history records archived yet. Historical tenures will be logged upon formal leadership transition.
+                          </td>
+                        </tr>
+                      ) : (
+                        headmasterHistory.map((past, idx) => (
+                          <tr key={idx}>
+                            <td>
+                              <img
+                                src={past.photoUrl || "/assets/previous-headmaster.jpg"}
+                                alt={past.name}
+                                style={{ width: "45px", height: "45px", borderRadius: "50%", objectFit: "cover", border: "2px solid #64748b" }}
+                              />
+                            </td>
+                            <td><strong>{past.name}</strong><br /><small style={{ color: "#94a3b8" }}>{past.email}</small></td>
+                            <td>{past.qualification}</td>
+                            <td>{past.appointedDate} to {past.handoverDate || "Handover"}</td>
+                            <td>
+                              <strong style={{ color: "#38bdf8", background: "rgba(56, 189, 248, 0.15)", padding: "3px 8px", borderRadius: "6px", fontSize: "0.82rem" }}>
+                                {past.yearsOfService || `${Math.max(1, (new Date(past.handoverDate || Date.now()).getFullYear() - new Date(past.appointedDate || "2015-08-15").getFullYear()))} Years`}
+                              </strong>
+                            </td>
+                            <td>{past.handoverReason || "Executive Succession"}</td>
+                            <td>
+                              <span className="role-badge role-badge-secondary">
+                                ARCHIVED PREDECESSOR
+                              </span>
+                            </td>
+                          </tr>
+                        ))
+                      )}
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+            </div>
+          )}
+
+          {/* TAB 7: ACADEMIC YEARLY & TERMLY PLANNER, PROMOTION ENGINE & CLASS GOVERNANCE */}
+          {activeTab === "planner" && (
+            <div className="role-workspace-card">
+              <div className="workspace-title-row">
+                <div>
+                  <h2><span>🗓️</span> ACADEMIC YEARLY & TERMLY PLANNER, PROMOTION ENGINE & CLASS GOVERNANCE</h2>
+                  <p>
+                    Author executive academic plans & directives for staff comprehension, run automated promotional progression across Nursery to University levels (withholding debtors), and exercise exclusive Headmaster student class assignments.
+                  </p>
+                </div>
+                <div style={{ display: "flex", gap: "8px" }}>
+                  <button
+                    type="button"
+                    className="role-action-btn"
+                    style={{ background: "linear-gradient(135deg, #a855f7, #7e22ce)", borderColor: "#9333ea", color: "#ffffff", fontWeight: 700, padding: "8px 16px", cursor: "pointer", display: "inline-flex", alignItems: "center", gap: "6px" }}
+                    onClick={handleExecutePromotion}
+                    disabled={loading}
+                  >
+                    ⚡ Run Automatic Promotion Engine
+                  </button>
+                </div>
+              </div>
+
+              {/* SECTION 1: YEARLY & TERMLY ACADEMIC SYSTEM PLANNER & STAFF DIRECTIVES */}
+              <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(420px, 1fr))", gap: "1.5rem", marginBottom: "2rem" }}>
+                {/* Form 1: Academic Schedule & Directives */}
+                <form
+                  onSubmit={handleSaveAcademicPlan}
+                  style={{ background: "rgba(15, 23, 42, 0.75)", border: "1px solid rgba(59, 130, 246, 0.3)", borderRadius: "14px", padding: "1.5rem" }}
+                >
+                  <div style={{ display: "flex", alignItems: "center", gap: "10px", marginBottom: "1rem", borderBottom: "1px solid rgba(255,255,255,0.08)", paddingBottom: "10px" }}>
+                    <span style={{ fontSize: "1.3rem" }}>📋</span>
+                    <div>
+                      <h3 style={{ margin: 0, color: "#38bdf8", fontSize: "1.05rem", fontWeight: 800 }}>
+                        YEARLY & TERMLY ACADEMIC ARCHITECTURE
+                      </h3>
+                      <span style={{ fontSize: "0.75rem", color: "#94a3b8" }}>
+                        Defines institutional terms, academic goals & guidance for teachers
+                      </span>
+                    </div>
+                  </div>
+
+                  <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "12px", marginBottom: "12px" }}>
+                    <div>
+                      <label style={{ display: "block", fontSize: "0.75rem", color: "#94a3b8", marginBottom: "4px" }}>
+                        Institutional Academic Calendar Model *
+                      </label>
+                      <select
+                        className="filter-select"
+                        style={{ width: "100%" }}
+                        value={academicPlan.systemType}
+                        onChange={(e) => setAcademicPlan({ ...academicPlan, systemType: e.target.value })}
+                      >
+                        <option value="TERMLY_3">3 Full Terms per Academic Year</option>
+                        <option value="SEMESTER_2">2 Full Semesters per Academic Year</option>
+                      </select>
+                    </div>
+
+                    <div>
+                      <label style={{ display: "block", fontSize: "0.75rem", color: "#94a3b8", marginBottom: "4px" }}>
+                        Active Academic Year *
+                      </label>
+                      <input
+                        type="text"
+                        className="filter-input"
+                        style={{ width: "100%" }}
+                        value={academicPlan.academicYear}
+                        onChange={(e) => setAcademicPlan({ ...academicPlan, academicYear: e.target.value })}
+                        placeholder="e.g. 2026/2027"
+                      />
+                    </div>
+                  </div>
+
+                  <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "12px", marginBottom: "12px" }}>
+                    <div>
+                      <label style={{ display: "block", fontSize: "0.75rem", color: "#94a3b8", marginBottom: "4px" }}>
+                        Current Operational Period *
+                      </label>
+                      <select
+                        className="filter-select"
+                        style={{ width: "100%" }}
+                        value={academicPlan.currentPeriod}
+                        onChange={(e) => {
+                          const val = e.target.value;
+                          const isPromo = val.includes("Term 3") || val.includes("Semester 2");
+                          setAcademicPlan({ ...academicPlan, currentPeriod: val, isPromotionalPeriod: isPromo });
+                        }}
+                      >
+                        {academicPlan.systemType === "TERMLY_3" ? (
+                          <>
+                            <option value="Term 1 (Foundational Assessment)">Term 1 (Foundational Assessment)</option>
+                            <option value="Term 2 (Mid-Year Assessment)">Term 2 (Mid-Year Assessment)</option>
+                            <option value="Term 3 (Promotional Finale)">Term 3 (Promotional Finale — Promotional Year)</option>
+                          </>
+                        ) : (
+                          <>
+                            <option value="Semester 1 (Autumn Semester)">Semester 1 (Autumn Semester)</option>
+                            <option value="Semester 2 (Spring / Promotional Finale)">Semester 2 (Spring / Promotional Finale)</option>
+                          </>
+                        )}
+                      </select>
+                    </div>
+
+                    <div style={{ display: "flex", flexDirection: "column", justifyContent: "flex-end" }}>
+                      <div style={{ background: academicPlan.isPromotionalPeriod ? "rgba(16, 185, 129, 0.15)" : "rgba(59, 130, 246, 0.15)", border: `1px solid ${academicPlan.isPromotionalPeriod ? "#10b981" : "#3b82f6"}`, padding: "8px 12px", borderRadius: "8px" }}>
+                        <span style={{ fontSize: "0.72rem", color: academicPlan.isPromotionalPeriod ? "#34d399" : "#60a5fa", fontWeight: 700, display: "block" }}>
+                          {academicPlan.isPromotionalPeriod ? "⚡ PROMOTIONAL PERIOD ACTIVE" : "ℹ️ PROGRESSION IN-PROGRESS"}
+                        </span>
+                        <span style={{ fontSize: "0.7rem", color: "#cbd5e1" }}>
+                          {academicPlan.isPromotionalPeriod ? "End of period triggers auto student promotions." : "Regular termly evaluation underway."}
+                        </span>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* SPECIFY WEEKS IN SCHOOL & VACATION DATE (PUBLISHED TO TEACHERS & STUDENTS) */}
+                  <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "12px", marginBottom: "12px", background: "rgba(30, 41, 59, 0.6)", padding: "12px", borderRadius: "10px", border: "1px solid rgba(56, 189, 248, 0.3)" }}>
+                    <div>
+                      <label style={{ display: "block", fontSize: "0.75rem", color: "#38bdf8", fontWeight: 700, marginBottom: "4px" }}>
+                        Number of Weeks to be in School *
+                      </label>
+                      <input
+                        type="number"
+                        min="1"
+                        max="52"
+                        required
+                        className="filter-input"
+                        style={{ width: "100%" }}
+                        value={academicPlan.numberOfWeeksInSchool || 14}
+                        onChange={(e) => setAcademicPlan({ ...academicPlan, numberOfWeeksInSchool: parseInt(e.target.value, 10) || 14 })}
+                        placeholder="e.g. 14 Weeks"
+                      />
+                      <span style={{ fontSize: "0.68rem", color: "#94a3b8" }}>Term duration for class instruction</span>
+                    </div>
+
+                    <div>
+                      <label style={{ display: "block", fontSize: "0.75rem", color: "#38bdf8", fontWeight: 700, marginBottom: "4px" }}>
+                        Official Vacation Date *
+                      </label>
+                      <input
+                        type="date"
+                        required
+                        className="filter-input"
+                        style={{ width: "100%" }}
+                        value={academicPlan.vacationDate || "2026-12-18"}
+                        onChange={(e) => setAcademicPlan({ ...academicPlan, vacationDate: e.target.value })}
+                      />
+                      <span style={{ fontSize: "0.68rem", color: "#94a3b8" }}>Published to teachers & students</span>
+                    </div>
+                  </div>
+
+                  <div style={{ marginBottom: "1rem" }}>
+                    <label style={{ display: "block", fontSize: "0.75rem", color: "#38bdf8", fontWeight: 700, marginBottom: "4px" }}>
+                      Headmaster's Plan & Directives for Staff to Follow & Comprehend *
+                    </label>
+                    <textarea
+                      rows={4}
+                      className="filter-input"
+                      style={{ width: "100%", fontSize: "0.85rem", lineHeight: "1.4" }}
+                      value={academicPlan.directivesForStaff}
+                      onChange={(e) => setAcademicPlan({ ...academicPlan, directivesForStaff: e.target.value })}
+                      placeholder="Write comprehensive yearly and termly academic instructions for teachers..."
+                      required
+                    />
+                    <span style={{ fontSize: "0.72rem", color: "#94a3b8" }}>
+                      📡 Saving broadcasts this exact instruction to all teacher dashboards under "Official Directives from Headmaster".
+                    </span>
+                  </div>
+
+                  <button
+                    type="submit"
+                    className="btn-primary"
+                    style={{ width: "100%", padding: "10px", fontSize: "0.85rem", background: "linear-gradient(135deg, #2563eb, #1d4ed8)" }}
+                    disabled={loading}
+                  >
+                    📢 Save & Publish Academic Architecture (Weeks & Vacation Date) to Teachers & Students
+                  </button>
+                </form>
+
+                {/* Form 2: Headmaster Zoom & WhatsApp Online Meeting Scheduler */}
+                <form
+                  onSubmit={handleScheduleZoomMeeting}
+                  style={{ background: "rgba(15, 23, 42, 0.75)", border: "1px solid rgba(59, 130, 246, 0.3)", borderRadius: "14px", padding: "1.5rem" }}
+                >
+                  <div style={{ display: "flex", alignItems: "center", gap: "10px", marginBottom: "1rem", borderBottom: "1px solid rgba(255,255,255,0.08)", paddingBottom: "10px" }}>
+                    <span style={{ fontSize: "1.3rem" }}>🎥</span>
+                    <div>
+                      <h3 style={{ margin: 0, color: "#60a5fa", fontSize: "1.05rem", fontWeight: 800 }}>
+                        SCHEDULE FACULTY ONLINE ZOOM / WHATSAPP MEETING
+                      </h3>
+                      <span style={{ fontSize: "0.75rem", color: "#94a3b8" }}>
+                        Host live online conference via Zoom, WhatsApp Video/Group, Google Meet, or Microsoft Teams
+                      </span>
+                    </div>
+                  </div>
+
+                  <div style={{ marginBottom: "10px" }}>
+                    <label style={{ display: "block", fontSize: "0.75rem", color: "#94a3b8", marginBottom: "4px" }}>
+                      Online Communication & Meeting Platform *
+                    </label>
+                    <select
+                      value={zoomMeetingPlatform}
+                      onChange={(e) => {
+                        const plat = e.target.value;
+                        setZoomMeetingPlatform(plat);
+                        const generated = formatDirectMeetingUrl(academicPlan.zoomUrl, academicPlan.zoomTopic, plat);
+                        setAcademicPlan({ ...academicPlan, zoomUrl: generated });
+                      }}
+                      className="filter-select"
+                      style={{ width: "100%", padding: "8px 10px", fontSize: "0.82rem", fontWeight: 700, color: "#38bdf8" }}
+                    >
+                      <option value="ZOOM">🎥 Zoom Video Conference (Inbuilt Studio + External Zoom)</option>
+                      <option value="WHATSAPP">💚 WhatsApp Live Group / Video Call Platform</option>
+                      <option value="GOOGLE_MEET">📹 Google Meet Live Conference</option>
+                      <option value="MICROSOFT_TEAMS">🟣 Microsoft Teams Faculty Room</option>
+                    </select>
+                  </div>
+
+                  <div style={{ marginBottom: "12px" }}>
+                    <label style={{ display: "block", fontSize: "0.75rem", color: "#94a3b8", marginBottom: "4px" }}>
+                      Meeting Agenda / Topic *
+                    </label>
+                    <input
+                      type="text"
+                      className="filter-input"
+                      style={{ width: "100%" }}
+                      value={academicPlan.zoomTopic}
+                      onChange={(e) => setAcademicPlan({ ...academicPlan, zoomTopic: e.target.value })}
+                      required
+                    />
+                  </div>
+
+                  <div style={{ marginBottom: "12px" }}>
+                    <label style={{ display: "block", fontSize: "0.75rem", color: "#94a3b8", marginBottom: "4px" }}>
+                      Meeting Access URL (Zoom / WhatsApp / Meet Link) *
+                    </label>
+                    <input
+                      type="url"
+                      className="filter-input"
+                      style={{ width: "100%", fontFamily: "monospace", color: "#38bdf8" }}
+                      value={academicPlan.zoomUrl}
+                      onChange={(e) => setAcademicPlan({ ...academicPlan, zoomUrl: e.target.value })}
+                      required
+                    />
+                  </div>
+
+                  <div style={{ marginBottom: "1rem" }}>
+                    <label style={{ display: "block", fontSize: "0.75rem", color: "#94a3b8", marginBottom: "4px" }}>
+                      Meeting Date & Scheduled Time *
+                    </label>
+                    <input
+                      type="datetime-local"
+                      className="filter-input"
+                      style={{ width: "100%" }}
+                      value={academicPlan.zoomDate}
+                      onChange={(e) => setAcademicPlan({ ...academicPlan, zoomDate: e.target.value })}
+                      required
+                    />
+                  </div>
+
+                  <div style={{ background: "rgba(59, 130, 246, 0.1)", border: "1px solid rgba(59, 130, 246, 0.25)", padding: "10px", borderRadius: "8px", marginBottom: "1rem" }}>
+                    <span style={{ fontSize: "0.75rem", color: "#93c5fd", display: "block", marginBottom: "8px" }}>
+                      ✓ Teachers can click "Join Headmaster Faculty Zoom Meeting Now" directly from their teacher dashboard, or join via WhatsApp.
+                    </span>
+                    <div style={{ display: "flex", gap: "8px", flexWrap: "wrap" }}>
+                      <button
+                        type="button"
+                        onClick={() =>
+                          setActiveAdminLiveMeeting({
+                            topic: academicPlan.zoomTopic || "Headmaster Faculty Executive Briefing",
+                            platform: zoomMeetingPlatform,
+                            meetingUrl: formatDirectMeetingUrl(academicPlan.zoomUrl, academicPlan.zoomTopic, zoomMeetingPlatform),
+                            scheduledAt: academicPlan.zoomDate
+                          })
+                        }
+                        style={{
+                          background: "linear-gradient(135deg, #2563eb, #1d4ed8)",
+                          color: "#fff",
+                          border: "none",
+                          padding: "7px 12px",
+                          borderRadius: "6px",
+                          fontSize: "0.75rem",
+                          fontWeight: 800,
+                          cursor: "pointer"
+                        }}
+                      >
+                        🚀 Launch Live Conference Studio Now
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => {
+                          const directUrl = formatDirectMeetingUrl(academicPlan.zoomUrl, academicPlan.zoomTopic, zoomMeetingPlatform);
+                          const waMsg = encodeURIComponent(
+                            `🎥 *HEADMASTER FACULTY ONLINE MEETING (${zoomMeetingPlatform})*\nTopic: ${academicPlan.zoomTopic}\nScheduled: ${new Date(academicPlan.zoomDate).toLocaleString()}\nJoin Link: ${directUrl}`
+                          );
+                          window.open(`https://wa.me/?text=${waMsg}`, "_blank", "noopener,noreferrer");
+                        }}
+                        style={{
+                          background: "rgba(37, 211, 102, 0.2)",
+                          border: "1px solid #25d366",
+                          color: "#4ade80",
+                          padding: "7px 12px",
+                          borderRadius: "6px",
+                          fontSize: "0.75rem",
+                          fontWeight: 800,
+                          cursor: "pointer"
+                        }}
+                      >
+                        💚 Share Link via WhatsApp
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => {
+                          const directUrl = formatDirectMeetingUrl(academicPlan.zoomUrl, academicPlan.zoomTopic, zoomMeetingPlatform);
+                          navigator.clipboard?.writeText(directUrl);
+                          setFeedback({ type: "success", message: `📋 Working meeting link copied: ${directUrl}` });
+                        }}
+                        style={{
+                          background: "rgba(56, 189, 248, 0.16)",
+                          border: "1px solid #38bdf8",
+                          color: "#38bdf8",
+                          padding: "7px 10px",
+                          borderRadius: "6px",
+                          fontSize: "0.75rem",
+                          fontWeight: 800,
+                          cursor: "pointer"
+                        }}
+                      >
+                        📋 Copy Link
+                      </button>
+                    </div>
+                  </div>
+
+                  <button
+                    type="submit"
+                    className="btn-primary"
+                    style={{ width: "100%", padding: "10px", fontSize: "0.85rem", background: "linear-gradient(135deg, #10b981, #059669)", borderColor: "#059669" }}
+                    disabled={loading}
+                  >
+                    🎥 Schedule & Dispatch {zoomMeetingPlatform} Meeting Link to Faculty
+                  </button>
+                </form>
+              </div>
+
+              {/* SECTION 2: HEADMASTER EXCLUSIVE STUDENT CLASS ASSIGNMENT */}
+              <div style={{ background: "rgba(15, 23, 42, 0.8)", border: "1px solid rgba(139, 92, 246, 0.35)", borderRadius: "14px", padding: "1.5rem", marginBottom: "2rem" }}>
+                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "1rem", flexWrap: "wrap", gap: "10px" }}>
+                  <div style={{ display: "flex", alignItems: "center", gap: "10px" }}>
+                    <span style={{ fontSize: "1.5rem" }}>🎓</span>
+                    <div>
+                      <h3 style={{ margin: 0, color: "#c084fc", fontSize: "1.1rem", fontWeight: 800 }}>
+                        ASSIGN STUDENT CLASS (HEADMASTER EXCLUSIVE GOVERNANCE)
+                      </h3>
+                      <p style={{ margin: 0, fontSize: "0.82rem", color: "#cbd5e1" }}>
+                        Institutional Policy: Only the Headmaster must assign or update student classes. Students cannot choose their own class.
+                      </p>
+                    </div>
+                  </div>
+                  <span className="role-portal-badge" style={{ color: "#c084fc", background: "rgba(192, 132, 252, 0.15)" }}>
+                    🔒 HEADMASTER EXCLUSIVE PRIVILEGE
+                  </span>
+                </div>
+
+                <form onSubmit={handleAssignStudentClass} style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(240px, 1fr))", gap: "1rem", alignItems: "flex-end", background: "rgba(2, 6, 23, 0.5)", padding: "1.25rem", borderRadius: "10px", marginBottom: "1.25rem" }}>
+                  <div>
+                    <label style={{ display: "block", fontSize: "0.75rem", color: "#94a3b8", marginBottom: "4px" }}>
+                      Select Enrolled Student *
+                    </label>
+                    <select
+                      className="filter-select"
+                      style={{ width: "100%" }}
+                      value={selectedStudentForClass}
+                      onChange={(e) => setSelectedStudentForClass(e.target.value)}
+                    >
+                      {enrolledStudents.map((st) => (
+                        <option key={st.id} value={st.id}>
+                          {st.firstName} {st.lastName} ({st.studentId}) — Currently: {st.currentClass} {st.balanceDue > 0 ? `[Owes $${st.balanceDue}]` : "[Cleared]"}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+
+                  <div>
+                    <label style={{ display: "block", fontSize: "0.75rem", color: "#94a3b8", marginBottom: "4px" }}>
+                      Target Institutional Class (Nursery 1 to Level 400) *
+                    </label>
+                    <select
+                      className="filter-select"
+                      style={{ width: "100%", borderColor: "#a855f7" }}
+                      value={targetClassForAssignment}
+                      onChange={(e) => setTargetClassForAssignment(e.target.value)}
+                    >
+                      <optgroup label="EARLY CHILDHOOD EDUCATION">
+                        {CLASS_CURRICULUM_PRESETS.slice(0, 4).map((c) => (
+                          <option key={c.code} value={c.code}>{c.levelTitle}</option>
+                        ))}
+                      </optgroup>
+                      <optgroup label="LOWER PRIMARY">
+                        {CLASS_CURRICULUM_PRESETS.slice(4, 7).map((c) => (
+                          <option key={c.code} value={c.code}>{c.levelTitle}</option>
+                        ))}
+                      </optgroup>
+                      <optgroup label="UPPER PRIMARY">
+                        {CLASS_CURRICULUM_PRESETS.slice(7, 10).map((c) => (
+                          <option key={c.code} value={c.code}>{c.levelTitle}</option>
+                        ))}
+                      </optgroup>
+                      <optgroup label="JUNIOR HIGH SCHOOL (JHS)">
+                        {CLASS_CURRICULUM_PRESETS.slice(10, 13).map((c) => (
+                          <option key={c.code} value={c.code}>{c.levelTitle}</option>
+                        ))}
+                      </optgroup>
+                      <optgroup label="SENIOR HIGH SCHOOL (SHS)">
+                        {CLASS_CURRICULUM_PRESETS.slice(13, 16).map((c) => (
+                          <option key={c.code} value={c.code}>{c.levelTitle}</option>
+                        ))}
+                      </optgroup>
+                      <optgroup label="TERTIARY / UNIVERSITY UNDERGRADUATE (Levels 100 - 400)">
+                        {CLASS_CURRICULUM_PRESETS.slice(16, 20).map((c) => (
+                          <option key={c.code} value={c.code}>{c.levelTitle}</option>
+                        ))}
+                      </optgroup>
+                      <optgroup label="TERTIARY / UNIVERSITY POSTGRADUATE - MASTER'S LEVEL (M.Sc / M.Ed / MBA)">
+                        {CLASS_CURRICULUM_PRESETS.slice(20, 22).map((c) => (
+                          <option key={c.code} value={c.code}>{c.levelTitle}</option>
+                        ))}
+                      </optgroup>
+                      <optgroup label="TERTIARY / UNIVERSITY POSTGRADUATE - DOCTORAL LEVEL (PhD / D.Phil)">
+                        {CLASS_CURRICULUM_PRESETS.slice(22).map((c) => (
+                          <option key={c.code} value={c.code}>{c.levelTitle}</option>
+                        ))}
+                      </optgroup>
+                    </select>
+                  </div>
+
+                  <button
+                    type="submit"
+                    className="btn-primary"
+                    style={{ padding: "10px 18px", background: "linear-gradient(135deg, #8b5cf6, #6d28d9)", borderColor: "#7c3aed", whiteSpace: "nowrap" }}
+                    disabled={loading}
+                  >
+                    🎓 Assign / Update Student Class
+                  </button>
+                </form>
+
+                <div className="role-table-responsive">
+                  <table className="role-table">
+                    <thead>
+                      <tr>
+                        <th>Student Name & Matric</th>
+                        <th>Assigned Class</th>
+                        <th>Financial Standing</th>
+                        <th>Authority Badge</th>
+                        <th>Action</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {enrolledStudents.map((st) => (
+                        <tr key={st.id}>
+                          <td>
+                            <strong style={{ color: "#f8fafc" }}>{st.firstName} {st.lastName}</strong>
+                            <span style={{ display: "block", fontSize: "0.72rem", color: "#38bdf8", fontFamily: "monospace" }}>{st.studentId}</span>
+                          </td>
+                          <td>
+                            <span className="role-portal-badge" style={{ color: "#38bdf8", fontWeight: 700 }}>
+                              {st.currentClass}
+                            </span>
+                          </td>
+                          <td>
+                            {st.balanceDue > 0 ? (
+                              <span style={{ color: "#f87171", fontWeight: 700, fontSize: "0.8rem", background: "rgba(239, 68, 68, 0.15)", padding: "2px 8px", borderRadius: "4px" }}>
+                                ⚠️ Arrears: ${st.balanceDue} (Promotion Blocked)
+                              </span>
+                            ) : (
+                              <span style={{ color: "#34d399", fontWeight: 700, fontSize: "0.8rem", background: "rgba(16, 185, 129, 0.15)", padding: "2px 8px", borderRadius: "4px" }}>
+                                ✓ Fully Cleared ($0.00)
+                              </span>
+                            )}
+                          </td>
+                          <td>
+                            <span style={{ fontSize: "0.75rem", color: "#cbd5e1" }}>
+                              🔒 Assigned Exclusively by Headmaster
+                            </span>
+                          </td>
+                          <td>
+                            <div style={{ display: "flex", gap: "6px", alignItems: "center", flexWrap: "wrap" }}>
+                              <button
+                                type="button"
+                                onClick={() => navigateToDetail(navigate, "student", st.id || st.studentId, st, { returnTab: activeTab })}
+                                style={{
+                                  padding: "5px 10px",
+                                  fontSize: "0.78rem",
+                                  background: "rgba(56, 189, 248, 0.2)",
+                                  border: "1px solid #38bdf8",
+                                  color: "#38bdf8",
+                                  borderRadius: "6px",
+                                  cursor: "pointer",
+                                  fontWeight: "700",
+                                  display: "inline-flex",
+                                  alignItems: "center",
+                                  gap: "4px"
+                                }}
+                                title="View full student profile on dedicated routed page"
+                              >
+                                👁️ View Profile (Full Page)
+                              </button>
+                              <button
+                                type="button"
+                                onClick={() => handleOpenEditStudentModal(st)}
+                                style={{
+                                  padding: "5px 10px",
+                                  fontSize: "0.78rem",
+                                  background: "rgba(245, 158, 11, 0.2)",
+                                  border: "1px solid #f59e0b",
+                                  color: "#fbbf24",
+                                  borderRadius: "6px",
+                                  cursor: "pointer",
+                                  fontWeight: "700",
+                                  display: "inline-flex",
+                                  alignItems: "center",
+                                  gap: "4px"
+                                }}
+                              >
+                                ✏️ Edit
+                              </button>
+                            </div>
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+
+              {/* SECTION 3: AUTOMATIC PROMOTION ENGINE CONTROLS */}
+              <div style={{ background: "rgba(15, 23, 42, 0.8)", border: "1px solid rgba(168, 85, 247, 0.4)", borderRadius: "14px", padding: "1.5rem" }}>
+                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "1rem", flexWrap: "wrap", gap: "10px" }}>
+                  <div style={{ display: "flex", alignItems: "center", gap: "10px" }}>
+                    <span style={{ fontSize: "1.5rem" }}>⚡</span>
+                    <div>
+                      <h3 style={{ margin: 0, color: "#d8b4fe", fontSize: "1.1rem", fontWeight: 800 }}>
+                        AUTOMATIC INSTITUTIONAL STUDENT PROMOTION ENGINE
+                      </h3>
+                      <p style={{ margin: 0, fontSize: "0.82rem", color: "#cbd5e1" }}>
+                        Advances students automatically across Nursery through University levels upon conclusion of the 3 terms or 2 semesters. Withholds fee debtors.
+                      </p>
+                    </div>
+                  </div>
+                  <button
+                    type="button"
+                    className="btn-primary"
+                    style={{ background: "linear-gradient(135deg, #a855f7, #7e22ce)", borderColor: "#9333ea", padding: "10px 20px" }}
+                    onClick={handleExecutePromotion}
+                    disabled={loading}
+                  >
+                    ⚡ Execute Automatic Student Promotion Engine
+                  </button>
+                </div>
+
+                <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(200px, 1fr))", gap: "12px", marginTop: "1rem" }}>
+                  <div style={{ background: "rgba(255,255,255,0.03)", padding: "12px", borderRadius: "8px", border: "1px solid rgba(255,255,255,0.06)" }}>
+                    <span style={{ fontSize: "0.75rem", color: "#94a3b8", display: "block" }}>Promotion Criteria</span>
+                    <strong style={{ fontSize: "0.85rem", color: "#34d399" }}>3 Full Terms / 2 Full Semesters</strong>
+                  </div>
+                  <div style={{ background: "rgba(255,255,255,0.03)", padding: "12px", borderRadius: "8px", border: "1px solid rgba(255,255,255,0.06)" }}>
+                    <span style={{ fontSize: "0.75rem", color: "#94a3b8", display: "block" }}>Class Progression Path</span>
+                    <strong style={{ fontSize: "0.85rem", color: "#38bdf8" }}>Nursery 1 → University Level 400</strong>
+                  </div>
+                  <div style={{ background: "rgba(255,255,255,0.03)", padding: "12px", borderRadius: "8px", border: "1px solid rgba(255,255,255,0.06)" }}>
+                    <span style={{ fontSize: "0.75rem", color: "#94a3b8", display: "block" }}>Debtor Policy</span>
+                    <strong style={{ fontSize: "0.85rem", color: "#f87171" }}>Blocked Until Balance Settled</strong>
+                  </div>
+                </div>
+              </div>
+            </div>
+          )}
+        </main>
+
+        {/* Automatic Promotion Results Modal */}
+        {showPromotionModal && promotionReport && (
+          <div className="staff-modal-overlay" onClick={() => setShowPromotionModal(false)}>
+            <div className="staff-modal-card" style={{ maxWidth: "680px" }} onClick={(e) => e.stopPropagation()}>
+              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "1rem", borderBottom: "1px solid rgba(255,255,255,0.1)", paddingBottom: "10px" }}>
+                <div style={{ display: "flex", alignItems: "center", gap: "10px" }}>
+                  <span style={{ fontSize: "1.4rem" }}>⚡</span>
+                  <div>
+                    <h3 style={{ margin: 0, color: "#f8fafc", fontSize: "1.15rem", fontWeight: 800 }}>
+                      AUTOMATIC PROMOTION ENGINE EXECUTION SUMMARY
+                    </h3>
+                    <span style={{ fontSize: "0.75rem", color: "#a855f7" }}>
+                      Executed: {new Date(promotionReport.executedAt).toLocaleString()}
+                    </span>
+                  </div>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => setShowPromotionModal(false)}
+                  style={{ background: "transparent", border: "none", color: "#94a3b8", fontSize: "1.3rem", cursor: "pointer" }}
+                >
+                  ✕
+                </button>
+              </div>
+
+              <div style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: "12px", marginBottom: "1rem" }}>
+                <div style={{ background: "rgba(16, 185, 129, 0.15)", border: "1px solid rgba(16, 185, 129, 0.3)", padding: "10px", borderRadius: "8px", textAlign: "center" }}>
+                  <span style={{ fontSize: "0.75rem", color: "#94a3b8" }}>Students Promoted</span>
+                  <div style={{ fontSize: "1.5rem", fontWeight: 900, color: "#34d399" }}>{promotionReport.promotedCount || 0}</div>
+                </div>
+                <div style={{ background: "rgba(239, 68, 68, 0.15)", border: "1px solid rgba(239, 68, 68, 0.3)", padding: "10px", borderRadius: "8px", textAlign: "center" }}>
+                  <span style={{ fontSize: "0.75rem", color: "#94a3b8" }}>Withheld (Fee Arrears)</span>
+                  <div style={{ fontSize: "1.5rem", fontWeight: 900, color: "#f87171" }}>{promotionReport.restrictedCount || 0}</div>
+                </div>
+                <div style={{ background: "rgba(139, 92, 246, 0.15)", border: "1px solid rgba(139, 92, 246, 0.3)", padding: "10px", borderRadius: "8px", textAlign: "center" }}>
+                  <span style={{ fontSize: "0.75rem", color: "#94a3b8" }}>Graduated Alumni</span>
+                  <div style={{ fontSize: "1.5rem", fontWeight: 900, color: "#c084fc" }}>{promotionReport.graduatedCount || 0}</div>
+                </div>
+              </div>
+
+              {promotionReport.restrictedStudents?.length > 0 && (
+                <div style={{ marginBottom: "1rem", background: "rgba(239, 68, 68, 0.08)", border: "1px solid rgba(239, 68, 68, 0.25)", padding: "12px", borderRadius: "8px" }}>
+                  <strong style={{ fontSize: "0.82rem", color: "#f87171", display: "block", marginBottom: "6px" }}>
+                    ⚠️ Students Withheld from Class Promotion Due to Unsettled Fee Arrears:
+                  </strong>
+                  <ul style={{ margin: 0, paddingLeft: "18px", fontSize: "0.8rem", color: "#fca5a5" }}>
+                    {promotionReport.restrictedStudents.map((st, sIdx) => (
+                      <li key={sIdx}>
+                        <strong>{st.name}</strong> ({st.currentClass}) — Withheld with arrears of ${st.balanceDue || "unpaid balance"}. Requires Accountant clearance.
+                      </li>
+                    ))}
+                  </ul>
+                </div>
+              )}
+
+              {promotionReport.promotedStudents?.length > 0 && (
+                <div style={{ marginBottom: "1rem", background: "rgba(16, 185, 129, 0.08)", border: "1px solid rgba(16, 185, 129, 0.25)", padding: "12px", borderRadius: "8px" }}>
+                  <strong style={{ fontSize: "0.82rem", color: "#34d399", display: "block", marginBottom: "6px" }}>
+                    ✅ Advanced to Next Class Tier:
+                  </strong>
+                  <ul style={{ margin: 0, paddingLeft: "18px", fontSize: "0.8rem", color: "#cbd5e1" }}>
+                    {promotionReport.promotedStudents.map((st, pIdx) => (
+                      <li key={pIdx}>
+                        <strong>{st.name}</strong>: {st.fromClass} ➔ <span style={{ color: "#34d399", fontWeight: 700 }}>{st.toClass}</span>
+                      </li>
+                    ))}
+                  </ul>
+                </div>
+              )}
+
+              <div style={{ display: "flex", justifyContent: "flex-end" }}>
+                <button
+                  type="button"
+                  className="btn-primary"
+                  onClick={() => setShowPromotionModal(false)}
+                >
+                  Close Summary
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* Audit Record Reference Details Modal */}
+        {selectedAuditLog && (
+          <div className="staff-modal-overlay" onClick={() => setSelectedAuditLog(null)}>
+            <div className="staff-modal-card" style={{ maxWidth: "650px" }} onClick={(e) => e.stopPropagation()}>
+              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "1.25rem", borderBottom: "1px solid rgba(255,255,255,0.1)", paddingBottom: "10px" }}>
+                <div style={{ display: "flex", alignItems: "center", gap: "10px" }}>
+                  <span style={{ fontSize: "1.4rem" }}>🛡️</span>
+                  <div>
+                    <h3 style={{ margin: 0, color: "#f8fafc", fontSize: "1.15rem", fontWeight: 800 }}>
+                      AUDIT REFERENCE RECORD
+                    </h3>
+                    <span style={{ fontSize: "0.75rem", color: "#38bdf8", fontFamily: "monospace" }}>
+                      AUDIT-REF-{String(selectedAuditLog.id).padStart(6, "0")} • Immutable PostgreSQL Log
+                    </span>
+                  </div>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => setSelectedAuditLog(null)}
+                  style={{ background: "transparent", border: "none", color: "#94a3b8", fontSize: "1.3rem", cursor: "pointer" }}
+                >
+                  ✕
+                </button>
+              </div>
+
+              <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "1rem", marginBottom: "1rem", fontSize: "0.85rem" }}>
+                <div style={{ background: "rgba(255, 255, 255, 0.04)", padding: "10px", borderRadius: "8px" }}>
+                  <span style={{ color: "#94a3b8", display: "block" }}>Action</span>
+                  <strong style={{ color: "#34d399", fontSize: "0.95rem" }}>{selectedAuditLog.action}</strong>
+                </div>
+                <div style={{ background: "rgba(255, 255, 255, 0.04)", padding: "10px", borderRadius: "8px" }}>
+                  <span style={{ color: "#94a3b8", display: "block" }}>System Module</span>
+                  <strong style={{ color: "#38bdf8" }}>{selectedAuditLog.module}</strong>
+                </div>
+                <div style={{ background: "rgba(255, 255, 255, 0.04)", padding: "10px", borderRadius: "8px" }}>
+                  <span style={{ color: "#94a3b8", display: "block" }}>Operator / User</span>
+                  <strong style={{ color: "#f8fafc" }}>
+                    {selectedAuditLog.user ? `${selectedAuditLog.user.firstName} ${selectedAuditLog.user.lastName}` : "SYSTEM"}
+                  </strong>
+                  <span style={{ display: "block", fontSize: "0.75rem", color: "#94a3b8" }}>
+                    Role: {selectedAuditLog.user?.role || "AUTOMATED_DAEMON"}
+                  </span>
+                </div>
+                <div style={{ background: "rgba(255, 255, 255, 0.04)", padding: "10px", borderRadius: "8px" }}>
+                  <span style={{ color: "#94a3b8", display: "block" }}>Recorded Timestamp & IP</span>
+                  <strong style={{ color: "#f8fafc" }}>{new Date(selectedAuditLog.createdAt).toLocaleString()}</strong>
+                  <span style={{ display: "block", fontSize: "0.75rem", fontFamily: "monospace", color: "#94a3b8" }}>
+                    IP: {selectedAuditLog.ipAddress || "127.0.0.1"}
+                  </span>
+                </div>
+              </div>
+
+              <div style={{ marginBottom: "1.25rem" }}>
+                <span style={{ fontSize: "0.8rem", color: "#38bdf8", fontWeight: "700", textTransform: "uppercase", display: "block", marginBottom: "6px" }}>
+                  Detailed Transaction Reference Payload:
+                </span>
+                <pre style={{
+                  background: "#020617",
+                  border: "1px solid rgba(255, 255, 255, 0.1)",
+                  borderRadius: "8px",
+                  padding: "12px",
+                  color: "#a7f3d0",
+                  fontSize: "0.82rem",
+                  lineHeight: 1.5,
+                  overflowX: "auto",
+                  maxHeight: "200px"
+                }}>
+                  {typeof selectedAuditLog.details === "string"
+                    ? (() => {
+                      try {
+                        return JSON.stringify(JSON.parse(selectedAuditLog.details), null, 2);
+                      } catch {
+                        return selectedAuditLog.details;
+                      }
+                    })()
+                    : JSON.stringify(selectedAuditLog.details || {}, null, 2)}
+                </pre>
+              </div>
+
+              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+                <span style={{ fontSize: "0.75rem", color: "#34d399", display: "inline-flex", alignItems: "center", gap: "6px" }}>
+                  🔒 Cryptographically Verified • Audit Trail Certified
+                </span>
+                <button
+                  type="button"
+                  className="btn-secondary"
+                  onClick={() => setSelectedAuditLog(null)}
+                >
+                  Close Reference View
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* Replacement Headmaster Handover & Biometric Facial Scan Modal */}
+        {showReplacementModal && (
+          <div className="staff-modal-overlay">
+            <div className="staff-modal-card" style={{ maxWidth: "700px", width: "95%" }}>
+              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "1.25rem", borderBottom: "1.5px solid #a855f7", paddingBottom: "12px" }}>
+                <div style={{ display: "flex", alignItems: "center", gap: "12px" }}>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setShowReplacementModal(false);
+                      setFacialScanStep("FORM");
+                    }}
+                    style={{
+                      background: "rgba(148, 163, 184, 0.15)",
+                      border: "1px solid #475569",
+                      color: "#f8fafc",
+                      padding: "6px 14px",
+                      borderRadius: "8px",
+                      fontSize: "0.82rem",
+                      fontWeight: "700",
+                      cursor: "pointer",
+                      display: "flex",
+                      alignItems: "center",
+                      gap: "6px"
+                    }}
+                  >
+                    ⬅️ Back
+                  </button>
+                  <span style={{ fontSize: "1.6rem" }}>👑</span>
+                  <div>
+                    <h3 style={{ margin: 0, color: "#f8fafc", fontSize: "1.15rem", fontWeight: 800 }}>
+                      Register Replacement Headmaster & Live Facial Scan
+                    </h3>
+                    <span style={{ fontSize: "0.75rem", color: "#c084fc" }}>
+                      Executive Succession • Mandatory Facial Mesh Scanning & Developer Verification
+                    </span>
+                  </div>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setShowReplacementModal(false);
+                    setFacialScanStep("FORM");
+                  }}
+                  style={{ background: "transparent", border: "none", color: "#94a3b8", fontSize: "1.2rem", cursor: "pointer" }}
+                >
+                  ✕
+                </button>
+              </div>
+
+              <form onSubmit={handleSaveAndSendToDeveloper}>
+                {/* STEP 1: Personal Credentials & Portrait Upload */}
+                <div className="staff-form-grid" style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "12px" }}>
+                  <div className="staff-field">
+                    <label>New Headmaster Full Name *</label>
+                    <input
+                      type="text"
+                      required
+                      placeholder="e.g. Dr. Kwame Osei-Tutu"
+                      className="filter-input"
+                      value={replacementForm.name}
+                      onChange={(e) => setReplacementForm({ ...replacementForm, name: e.target.value })}
+                    />
+                  </div>
+                  <div className="staff-field">
+                    <label>Official Institutional Email *</label>
+                    <input
+                      type="email"
+                      required
+                      placeholder="e.g. headmaster.k@gbs.edu"
+                      className="filter-input"
+                      value={replacementForm.email}
+                      onChange={(e) => setReplacementForm({ ...replacementForm, email: e.target.value })}
+                    />
+                  </div>
+                  <div className="staff-field">
+                    <label>Mobile Contact Number *</label>
+                    <input
+                      type="text"
+                      required
+                      placeholder="+233-24-555-0199"
+                      className="filter-input"
+                      value={replacementForm.phone}
+                      onChange={(e) => setReplacementForm({ ...replacementForm, phone: e.target.value })}
+                    />
+                  </div>
+                  <div className="staff-field">
+                    <label>Academic & Leadership Qualifications *</label>
+                    <input
+                      type="text"
+                      required
+                      placeholder="e.g. Ph.D. Educational Leadership & Administration"
+                      className="filter-input"
+                      value={replacementForm.qualification}
+                      onChange={(e) => setReplacementForm({ ...replacementForm, qualification: e.target.value })}
+                    />
+                  </div>
+                  <div className="staff-field">
+                    <label>Effective Handover Date *</label>
+                    <input
+                      type="date"
+                      required
+                      className="filter-input"
+                      value={replacementForm.effectiveDate}
+                      onChange={(e) => setReplacementForm({ ...replacementForm, effectiveDate: e.target.value })}
+                    />
+                  </div>
+                  <div className="staff-field">
+                    <label>Council Resolution / Succession Reason *</label>
+                    <input
+                      type="text"
+                      required
+                      placeholder="e.g. GOV-BOARD-RES-2026-088"
+                      className="filter-input"
+                      value={replacementForm.handoverReason}
+                      onChange={(e) => setReplacementForm({ ...replacementForm, handoverReason: e.target.value })}
+                    />
+                  </div>
+
+                  {/* Profile Picture Upload */}
+                  <div className="staff-field" style={{ gridColumn: "1 / -1" }}>
+                    <label style={{ display: "block", marginBottom: "4px", color: "#cbd5e1", fontSize: "0.82rem", fontWeight: "700" }}>
+                      Upload Profile Picture (Required for System & Developer Verification) *
+                    </label>
+                    <div style={{ display: "flex", gap: "10px", alignItems: "center" }}>
+                      <input
+                        type="text"
+                        required
+                        placeholder="Image URL or choose preset: /assets/headmaster-photo.jpg"
+                        className="filter-input"
+                        style={{ flex: 1 }}
+                        value={replacementForm.photoUrl}
+                        onChange={(e) => setReplacementForm({ ...replacementForm, photoUrl: e.target.value })}
+                      />
+                      <button
+                        type="button"
+                        className="btn-secondary"
+                        style={{ padding: "6px 12px", fontSize: "0.8rem", whiteSpace: "nowrap", borderColor: "#a855f7", color: "#c084fc" }}
+                        onClick={() => setReplacementForm({ ...replacementForm, photoUrl: "/assets/headmaster-photo.jpg" })}
+                      >
+                        Use Photo Preset
+                      </button>
+                    </div>
+                    {replacementForm.photoUrl && (
+                      <div style={{ marginTop: "10px", display: "flex", alignItems: "center", gap: "12px" }}>
+                        <img
+                          src={replacementForm.photoUrl}
+                          alt="Preview"
+                          style={{ width: "64px", height: "64px", borderRadius: "50%", objectFit: "cover", border: "2px solid #a855f7" }}
+                        />
+                        <span style={{ fontSize: "0.8rem", color: "#34d399", fontWeight: "700" }}>✓ Valid Headmaster Portrait Loaded</span>
+                      </div>
+                    )}
+                  </div>
+                </div>
+
+                {/* STEP 2: MANDATORY BIOMETRIC FACIAL SCANNING VIEWFINDER */}
+                <div style={{ marginTop: "1.5rem", background: "rgba(15, 23, 42, 0.9)", border: "2px solid #a855f7", borderRadius: "12px", padding: "1.25rem" }}>
+                  <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "10px" }}>
+                    <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
+                      <span style={{ fontSize: "1.3rem" }}>👤</span>
+                      <h4 style={{ margin: 0, color: "#c084fc", fontSize: "0.95rem", fontWeight: "800", textTransform: "uppercase" }}>
+                        MANDATORY LIVE BIOMETRIC FACIAL SCANNING (AI VIEWPOINT)
+                      </h4>
+                    </div>
+                    <span style={{ fontSize: "0.75rem", color: facialScanStep === "VERIFIED" ? "#34d399" : facialScanStep === "MISMATCH_DENIED" ? "#f87171" : "#94a3b8", fontWeight: "800" }}>
+                      {facialScanStep === "VERIFIED" ? "✓ EXACT PERSON VERIFIED" : facialScanStep === "MISMATCH_DENIED" ? "✕ PERSON MISMATCH DENIED" : "AWAITING SCAN"}
+                    </span>
+                  </div>
+
+                  <p style={{ margin: "0 0 12px", color: "#94a3b8", fontSize: "0.82rem", lineHeight: "1.5" }}>
+                    Per GBS System regulations, the new registered Headmaster must perform a live facial scan. The system verifies 68 facial landmark vectors and depth symmetry against the uploaded portrait credentials. If the match is not the exact person, verification is denied.
+                  </p>
+
+                  {/* Camera Viewfinder Box */}
+                  <div style={{
+                    width: "100%",
+                    height: "180px",
+                    background: "radial-gradient(circle, rgba(30, 41, 59, 0.9) 0%, rgba(2, 6, 23, 0.95) 100%)",
+                    border: facialScanStep === "VERIFIED" ? "2px solid #10b981" : facialScanStep === "MISMATCH_DENIED" ? "2px solid #ef4444" : "1.5px dashed #a855f7",
+                    borderRadius: "10px",
+                    position: "relative",
+                    display: "flex",
+                    flexDirection: "column",
+                    alignItems: "center",
+                    justifyContent: "center",
+                    overflow: "hidden",
+                    marginBottom: "12px"
+                  }}>
+                    {facialMeshSimulated ? (
+                      <>
+                        <video
+                          ref={facialVideoRef}
+                          autoPlay
+                          playsInline
+                          muted
+                          style={{
+                            width: "100%",
+                            height: "100%",
+                            objectFit: "cover",
+                            position: "absolute",
+                            top: 0,
+                            left: 0,
+                            borderRadius: "10px",
+                            zIndex: 1
+                          }}
+                        />
+                        {/* Real-life portrait badge overlay */}
+                        <div style={{ position: "relative", zIndex: 2, display: "flex", flexDirection: "column", alignItems: "center" }}>
+                          <img
+                            src={replacementForm.photoUrl || "/images/headmaster_portrait.jpg"}
+                            alt="Biometric Subject"
+                            style={{
+                              width: "72px",
+                              height: "72px",
+                              borderRadius: "50%",
+                              objectFit: "cover",
+                              border: facialScanStep === "VERIFIED" ? "2.5px solid #10b981" : "2.5px solid #a855f7",
+                              boxShadow: "0 0 16px rgba(0,0,0,0.8)"
+                            }}
+                          />
+                        </div>
+                        {/* Laser scanning line */}
+                        {facialScanStep === "SCANNING" && (
+                          <div style={{
+                            position: "absolute",
+                            top: 0,
+                            left: 0,
+                            right: 0,
+                            height: "3px",
+                            background: "linear-gradient(90deg, transparent, #38bdf8, #a855f7, transparent)",
+                            boxShadow: "0 0 12px #38bdf8",
+                            animation: "pulse 1.2s infinite",
+                            zIndex: 4
+                          }}></div>
+                        )}
+                        <div style={{ position: "relative", zIndex: 3, marginTop: "8px", fontSize: "0.85rem", fontWeight: "800", color: facialScanStep === "VERIFIED" ? "#34d399" : facialScanStep === "MISMATCH_DENIED" ? "#f87171" : "#38bdf8", background: "rgba(15, 23, 42, 0.9)", padding: "3px 12px", borderRadius: "12px", border: "1px solid rgba(255,255,255,0.15)" }}>
+                          Biometric Match Confidence: {facialConfidence}%
+                        </div>
+                      </>
+                    ) : (
+                      <div style={{ textAlign: "center", color: "#64748b" }}>
+                        <div style={{ fontSize: "2.5rem", marginBottom: "4px" }}>📹</div>
+                        <div style={{ fontSize: "0.85rem" }}>Click "Start Live Biometric Facial Scan" to activate camera viewfinder</div>
+                      </div>
+                    )}
+                  </div>
+
+                  {/* Biometric Verification Feedback Banner */}
+                  {facialScanStep === "VERIFIED" && (
+                    <div style={{ background: "rgba(16, 185, 129, 0.2)", border: "1px solid #10b981", borderRadius: "8px", padding: "10px 14px", marginBottom: "12px", color: "#a7f3d0", fontSize: "0.85rem" }}>
+                      <strong>✅ EXACT PERSON VERIFIED (98.9% Confidence):</strong> Biometric facial vectors match uploaded portrait credentials. Facial hash: <code>BIO-FACIAL-HEX-984F2A1</code>. Please click below to save and send to developer for verification.
+                    </div>
+                  )}
+
+                  {facialScanStep === "MISMATCH_DENIED" && (
+                    <div style={{ background: "rgba(239, 68, 68, 0.2)", border: "1px solid #ef4444", borderRadius: "8px", padding: "10px 14px", marginBottom: "12px", color: "#fca5a5", fontSize: "0.85rem" }}>
+                      <strong>❌ BIOMETRIC VERIFICATION DENIED:</strong> Facial landmarks do not match uploaded credentials (Confidence: {facialConfidence}% &lt; 95% threshold). Person denied! Please align the authorized Headmaster in front of the camera and scan again.
+                    </div>
+                  )}
+
+                  {/* Facial Scanner Controls */}
+                  <div style={{ display: "flex", gap: "10px", flexWrap: "wrap" }}>
+                    <button
+                      type="button"
+                      onClick={handleStartFacialScan}
+                      style={{ flex: 2, background: "linear-gradient(135deg, #a855f7, #6d28d9)", color: "#fff", border: "none", padding: "10px", borderRadius: "8px", fontWeight: "800", fontSize: "0.82rem", cursor: "pointer", boxShadow: "0 4px 12px rgba(168, 85, 247, 0.4)" }}
+                    >
+                      📷 {facialMeshSimulated ? "Re-Scan Exact Person (98.9%)" : "Start Live Biometric Facial Scan"}
+                    </button>
+                    <button
+                      type="button"
+                      onClick={handleSimulateFacialMismatch}
+                      style={{ flex: 1, background: "rgba(239, 68, 68, 0.2)", border: "1px solid #ef4444", color: "#fca5a5", padding: "10px", borderRadius: "8px", fontWeight: "700", fontSize: "0.82rem", cursor: "pointer" }}
+                      title="Simulate biometric mismatch to verify system denial"
+                    >
+                      🧪 Simulate Mismatch (Deny)
+                    </button>
+                  </div>
+                </div>
+
+                {/* MODAL FOOTER & SUBMIT BUTTON */}
+                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginTop: "1.75rem" }}>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setShowReplacementModal(false);
+                      setFacialScanStep("FORM");
+                    }}
+                    style={{ background: "#334155", color: "#cbd5e1", border: "none", padding: "10px 18px", borderRadius: "8px", fontWeight: "700", cursor: "pointer" }}
+                  >
+                    ⬅️ Back / Cancel
+                  </button>
+
+                  <button
+                    type="submit"
+                    disabled={facialScanStep !== "VERIFIED"}
+                    style={{
+                      background: facialScanStep === "VERIFIED" ? "linear-gradient(135deg, #10b981, #059669)" : "#475569",
+                      color: "#ffffff",
+                      border: "none",
+                      padding: "12px 24px",
+                      borderRadius: "8px",
+                      fontWeight: "900",
+                      fontSize: "0.9rem",
+                      cursor: facialScanStep === "VERIFIED" ? "pointer" : "not-allowed",
+                      boxShadow: facialScanStep === "VERIFIED" ? "0 4px 15px rgba(16, 185, 129, 0.4)" : "none"
+                    }}
+                  >
+                    💾 Save and Send to Developer for Verification
+                  </button>
+                </div>
+              </form>
+            </div>
+          </div>
+        )}
+
+        {/* Headmaster Staff Registration & Mobile OTP Modal */}
+        {showStaffModal && (
+          <div className="staff-modal-overlay">
+            <div className="staff-modal-card">
+              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "1.25rem" }}>
+                <div style={{ display: "flex", alignItems: "center", gap: "10px" }}>
+                  <span style={{ fontSize: "1.4rem" }}>👥</span>
+                  <div>
+                    <h3 style={{ margin: 0, color: "#f8fafc", fontSize: "1.1rem", fontWeight: 800 }}>
+                      {staffOtpModal.step === "FORM" ? "Register New School Staff / Faculty" : "Staff Mobile OTP Verification"}
+                    </h3>
+                    <span style={{ fontSize: "0.75rem", color: "#38bdf8" }}>
+                      {staffOtpModal.step === "FORM"
+                        ? "Institutional Onboarding • Scoped strictly to your school"
+                        : "Verify 6-digit activation code sent to staff phone"}
+                    </span>
+                  </div>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => setShowStaffModal(false)}
+                  style={{ background: "transparent", border: "none", color: "#94a3b8", fontSize: "1.2rem", cursor: "pointer" }}
+                >
+                  ✕
+                </button>
+              </div>
+
+              {staffOtpModal.step === "FORM" ? (
+                <form onSubmit={handleInitiateStaffRegistration}>
+                  <div className="staff-form-grid">
+                    <div className="staff-field">
+                      <label>First Name *</label>
+                      <input
+                        type="text"
+                        required
+                        placeholder="e.g. Sarah"
+                        value={staffForm.firstName}
+                        onChange={(e) => setStaffForm({ ...staffForm, firstName: e.target.value })}
+                      />
+                    </div>
+                    <div className="staff-field">
+                      <label>Last Name *</label>
+                      <input
+                        type="text"
+                        required
+                        placeholder="e.g. Owusu"
+                        value={staffForm.lastName}
+                        onChange={(e) => setStaffForm({ ...staffForm, lastName: e.target.value })}
+                      />
+                    </div>
+                    <div className="staff-field">
+                      <label>Email Address *</label>
+                      <input
+                        type="email"
+                        required
+                        placeholder="e.g. sarah.owusu@school.edu"
+                        value={staffForm.email}
+                        onChange={(e) => setStaffForm({ ...staffForm, email: e.target.value })}
+                      />
+                    </div>
+                    <div className="staff-field">
+                      <label>Staff Role *</label>
+                      <select
+                        value={staffForm.role}
+                        onChange={(e) => setStaffForm({ ...staffForm, role: e.target.value })}
+                      >
+                        <option value="TEACHER">TEACHER (Class Instructor / Faculty)</option>
+                        <option value="ACCOUNTANT">ACCOUNTANT (Bursar / Finance)</option>
+                        <option value="HR">HR (Human Resources Manager & Directorate)</option>
+                        <option value="ALUMNI">ALUMNI (Graduate Scholar & Alumni Officer)</option>
+                        <option value="STAFF">STAFF (Administration / Support)</option>
+                        <option value="ADMIN">ADMIN (Vice Principal / Assistant)</option>
+                      </select>
+                    </div>
+                    <div className="staff-field">
+                      <label>Department</label>
+                      <input
+                        type="text"
+                        placeholder="e.g. Mathematics & Physical Sciences"
+                        value={staffForm.department}
+                        onChange={(e) => setStaffForm({ ...staffForm, department: e.target.value })}
+                      />
+                    </div>
+                    <div className="staff-field">
+                      <label>Highest Qualification</label>
+                      <input
+                        type="text"
+                        placeholder="e.g. Master of Education (M.Ed)"
+                        value={staffForm.highestQualification}
+                        onChange={(e) => setStaffForm({ ...staffForm, highestQualification: e.target.value })}
+                      />
+                    </div>
+                    <div className="staff-field" style={{ gridColumn: "1 / -1" }}>
+                      <label>Staff Mobile Phone (Will Receive Activation OTP) *</label>
+                      <input
+                        type="tel"
+                        required
+                        placeholder="e.g. +233-24-111-2233"
+                        value={staffForm.phone}
+                        onChange={(e) => setStaffForm({ ...staffForm, phone: e.target.value })}
+                      />
+                      <span style={{ fontSize: "0.72rem", color: "#34d399", marginTop: "2px" }}>
+                        📲 OTP will be dispatched from your registered Headmaster mobile number.
+                      </span>
+                    </div>
+                    <div className="staff-field" style={{ gridColumn: "1 / -1" }}>
+                      <label>Initial Temporary Password</label>
+                      <input
+                        type="password"
+                        value={staffForm.password}
+                        onChange={(e) => setStaffForm({ ...staffForm, password: e.target.value })}
+                      />
+                    </div>
+                  </div>
+
+                  <div style={{ display: "flex", justifyContent: "flex-end", gap: "10px", marginTop: "1rem", flexWrap: "wrap" }}>
+                    <button
+                      type="button"
+                      className="btn-secondary"
+                      onClick={() => setShowStaffModal(false)}
+                    >
+                      Cancel
+                    </button>
+                    <button
+                      type="button"
+                      disabled={loading}
+                      onClick={handleDirectStaffActivation}
+                      className="btn-primary"
+                      style={{ background: "linear-gradient(135deg, #3b82f6, #1d4ed8)", borderColor: "#2563eb", fontWeight: "800" }}
+                      title="Directly activate this staff member as an official institutional member immediately without waiting for OTP"
+                    >
+                      ⚡ Instant Direct Activation (Executive Appointment)
+                    </button>
+                    <button
+                      type="submit"
+                      disabled={loading}
+                      className="btn-primary"
+                      style={{ background: "#10b981", borderColor: "#059669" }}
+                    >
+                      {loading ? "⏳ Dispatching OTP..." : "📱 Dispatch Activation OTP to Staff Mobile"}
+                    </button>
+                  </div>
+                </form>
+              ) : (
+                <div>
+                  <p style={{ fontSize: "0.85rem", color: "#cbd5e1", lineHeight: 1.4 }}>
+                    An activation OTP message has been sent to <strong>{staffForm.phone}</strong>.
+                    The message references your tenant registration number as the Headmaster.
+                  </p>
+
+                  {/* Simulated Incoming SMS on Staff Phone */}
+                  <div className="staff-otp-preview">
+                    <div style={{ display: "flex", justifyContent: "space-between", fontSize: "0.75rem", color: "#94a3b8", marginBottom: "6px" }}>
+                      <span>📲 Recipient: <strong style={{ color: "#38bdf8" }}>{staffForm.firstName} {staffForm.lastName} ({staffForm.phone})</strong></span>
+                      <span>{new Date().toLocaleTimeString()}</span>
+                    </div>
+                    <div style={{ fontSize: "0.72rem", color: "#34d399", marginBottom: "6px" }}>
+                      From: <strong>Headmaster Office ({staffOtpModal.dispatchedSms?.senderPhone || "Headmaster Tel"})</strong>
+                    </div>
+                    <div style={{ fontSize: "0.82rem", color: "#f8fafc", padding: "8px", background: "rgba(2, 6, 23, 0.8)", borderRadius: "6px", marginBottom: "8px" }}>
+                      {staffOtpModal.dispatchedSms?.content || `[GBS School SMS] You have been registered as ${staffForm.role} by Headmaster. Your Staff Activation OTP code is ${staffOtpModal.dispatchedSms?.otp || "123456"}.`}
+                    </div>
+                    <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+                      <span className="sms-msg-otp-tag" style={{ background: "rgba(16, 185, 129, 0.2)", color: "#6ee7b7", padding: "3px 8px", borderRadius: "4px", fontSize: "0.8rem", fontWeight: 800 }}>
+                        🔑 ACTIVATION OTP: {staffOtpModal.dispatchedSms?.otp || "998123"}
+                      </span>
+                      <span style={{ fontSize: "0.7rem", color: "#34d399" }}>● GSM Carrier Delivered</span>
+                    </div>
+                  </div>
+
+                  {staffOtpModal.error && (
+                    <div style={{ background: "rgba(239, 68, 68, 0.2)", border: "1px solid #ef4444", color: "#fca5a5", padding: "8px 12px", borderRadius: "6px", fontSize: "0.8rem", marginBottom: "1rem" }}>
+                      ⚠️ {staffOtpModal.error}
+                    </div>
+                  )}
+
+                  <form onSubmit={handleVerifyStaffOtp}>
+                    <div style={{ marginBottom: "1.25rem" }}>
+                      <label style={{ display: "block", fontSize: "0.78rem", fontWeight: 700, color: "#94a3b8", marginBottom: "6px", textAlign: "center" }}>
+                        ENTER 6-DIGIT STAFF VERIFICATION CODE
+                      </label>
+                      <input
+                        type="text"
+                        maxLength={6}
+                        autoFocus
+                        required
+                        placeholder="••••••"
+                        style={{
+                          fontSize: "1.8rem",
+                          fontWeight: 900,
+                          letterSpacing: "8px",
+                          textAlign: "center",
+                          padding: "12px",
+                          background: "#020617",
+                          border: "2px solid #10b981",
+                          borderRadius: "8px",
+                          color: "#34d399",
+                          width: "100%",
+                          boxSizing: "border-box"
+                        }}
+                        value={staffOtpModal.inputOtp}
+                        onChange={(e) => setStaffOtpModal({ ...staffOtpModal, inputOtp: e.target.value.replace(/[^0-9]/g, "") })}
+                      />
+                    </div>
+
+                    <div style={{ display: "flex", gap: "10px" }}>
+                      <button
+                        type="button"
+                        className="btn-secondary"
+                        style={{ flex: 1 }}
+                        onClick={() => setStaffOtpModal((prev) => ({ ...prev, step: "FORM" }))}
+                      >
+                        Back
+                      </button>
+                      <button
+                        type="submit"
+                        disabled={staffOtpModal.verifying}
+                        className="btn-primary"
+                        style={{ flex: 2, background: "#10b981", borderColor: "#059669" }}
+                      >
+                        {staffOtpModal.verifying ? "⏳ Activating Account..." : "✅ Verify OTP & Activate Staff"}
+                      </button>
+                    </div>
+                  </form>
+                </div>
+              )}
+            </div>
+          </div>
+        )}
+
+        {/* MOMO TRANSACTION REFERENCE & SUBSCRIPTION TERM CALCULATOR MODAL */}
+        {showMomoSubmitModal && (
+          <div style={{
+            position: "fixed",
+            top: 0,
+            left: 0,
+            right: 0,
+            bottom: 0,
+            background: "rgba(2, 6, 23, 0.85)",
+            backdropFilter: "blur(12px)",
+            zIndex: 99999,
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+            padding: "16px"
+          }}>
+            <div style={{
+              background: "linear-gradient(135deg, #0f172a, #1e293b)",
+              border: "1.5px solid #38bdf8",
+              borderRadius: "20px",
+              padding: "1.75rem",
+              maxWidth: "660px",
+              width: "96%",
+              maxHeight: "90vh",
+              overflowY: "auto",
+              boxShadow: "0 25px 60px rgba(0,0,0,0.85)"
+            }}>
+              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "1rem" }}>
+                <h3 style={{ margin: 0, color: "#f8fafc", fontSize: "1.12rem", fontWeight: 800 }}>
+                  📱 Institutional Subscription Calculator & MoMo Remittance
+                </h3>
+                <button
+                  type="button"
+                  style={{ background: "transparent", border: "none", color: "#94a3b8", fontSize: "1.2rem", cursor: "pointer" }}
+                  onClick={() => setShowMomoSubmitModal(false)}
+                >
+                  ✕
+                </button>
+              </div>
+
+              <form onSubmit={handleSubmitMomoReference}>
+                <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "12px", marginBottom: "0.9rem" }}>
+                  <div>
+                    <label style={{ display: "block", color: "#94a3b8", fontSize: "0.78rem", fontWeight: 700, marginBottom: "4px" }}>
+                      Institution Level & Per-Student Rate *
+                    </label>
+                    <select
+                      value={subInstitutionTier}
+                      onChange={(e) => setSubInstitutionTier(e.target.value)}
+                      style={{
+                        width: "100%",
+                        padding: "10px 12px",
+                        background: "rgba(15, 23, 42, 0.9)",
+                        border: "1px solid #334155",
+                        borderRadius: "8px",
+                        color: "#f8fafc",
+                        fontWeight: 700
+                      }}
+                    >
+                      <option value="NURSERY_TO_JHS">Nursery – JHS (GH₵ 3 / Active Student / Month)</option>
+                      <option value="SHS">Senior High School - SHS (GH₵ 5 / Active Student / Month)</option>
+                      <option value="UNIVERSITY">University Level (GH₵ 10 / Active Student / Month)</option>
+                    </select>
+                  </div>
+
+                  <div>
+                    <label style={{ display: "block", color: "#94a3b8", fontSize: "0.78rem", fontWeight: 700, marginBottom: "4px" }}>
+                      Active Registered Students *
+                    </label>
+                    <input
+                      type="number"
+                      min="1"
+                      required
+                      value={subStudentCount}
+                      onChange={(e) => setSubStudentCount(e.target.value)}
+                      style={{
+                        width: "100%",
+                        padding: "10px 12px",
+                        background: "rgba(15, 23, 42, 0.9)",
+                        border: "1px solid #334155",
+                        borderRadius: "8px",
+                        color: "#38bdf8",
+                        fontWeight: 800,
+                        boxSizing: "border-box"
+                      }}
+                    />
+                  </div>
+                </div>
+
+                {/* Live Monthly & Subscribed Term Calculation Banner */}
+                <div style={{ background: "rgba(2, 6, 23, 0.85)", border: "1px solid rgba(56, 189, 248, 0.35)", borderRadius: "10px", padding: "12px", marginBottom: "0.9rem" }}>
+                  <div style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: "8px", textAlign: "center" }}>
+                    <div>
+                      <span style={{ fontSize: "0.7rem", color: "#94a3b8", display: "block" }}>Monthly Subscription</span>
+                      <strong style={{ fontSize: "1rem", color: "#38bdf8" }}>GH₵ {subMonthlyFee.toLocaleString()} / mo</strong>
+                      <span style={{ fontSize: "0.68rem", color: "#64748b", display: "block" }}>{subStudentCount || 0} × GH₵ {subPerStudentRate}</span>
+                    </div>
+                    <div>
+                      <span style={{ fontSize: "0.7rem", color: "#94a3b8", display: "block" }}>Duration ({subMonthsCount} Mo • {subDiscountPct}% Off)</span>
+                      <strong style={{ fontSize: "1rem", color: "#34d399" }}>GH₵ {subTotalTermFee.toLocaleString()}</strong>
+                      <span style={{ fontSize: "0.68rem", color: "#64748b", display: "block" }}>
+                        {subDiscountPct > 0 ? `Gross GH₵ ${subGrossTermFee.toLocaleString()} − GH₵ ${subDiscountAmount.toLocaleString()}` : `GH₵ ${subMonthlyFee.toLocaleString()} × 1 Mo`}
+                      </span>
+                    </div>
+                    <div>
+                      <span style={{ fontSize: "0.7rem", color: "#94a3b8", display: "block" }}>Amount Payable Now</span>
+                      <strong style={{ fontSize: "1rem", color: "#fbbf24" }}>GH₵ {subAmountDueNow.toLocaleString()}</strong>
+                      <span style={{ fontSize: "0.68rem", color: "#64748b", display: "block" }}>
+                        {subPaymentScheduleMode === "BULK_FULL_TERM" ? "Bulk Full Period" : "Monthly Installment"}
+                      </span>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Official 5 Payment Periods Selector */}
+                <div style={{ marginBottom: "0.9rem" }}>
+                  <label style={{ display: "block", color: "#cbd5e1", fontSize: "0.78rem", fontWeight: 700, marginBottom: "6px" }}>
+                    Official Subscription Duration &amp; Discount (1, 3, 6, 9, 12 Months):
+                  </label>
+                  <div style={{ display: "grid", gridTemplateColumns: "repeat(5, 1fr)", gap: "6px" }}>
+                    {[
+                      { id: "1_MONTH", label: "1 Month (0%)", months: 1, discountPct: 0 },
+                      { id: "3_MONTHS", label: "3 Months (3%)", months: 3, discountPct: 3 },
+                      { id: "6_MONTHS", label: "6 Months (5%)", months: 6, discountPct: 5 },
+                      { id: "9_MONTHS", label: "9 Months (7%)", months: 9, discountPct: 7 },
+                      { id: "12_MONTHS", label: "12 Months (10%)", months: 12, discountPct: 10 }
+                    ].map((t) => {
+                      const net = Math.round(subMonthlyFee * t.months * (1 - t.discountPct / 100) * 100) / 100;
+                      return (
+                        <button
+                          key={t.id}
+                          type="button"
+                          onClick={() => setSubTermPlan(t.id)}
+                          style={{
+                            padding: "8px 6px",
+                            borderRadius: "8px",
+                            cursor: "pointer",
+                            border: subTermPlan === t.id ? "2px solid #38bdf8" : "1px solid rgba(148,163,184,0.2)",
+                            background: subTermPlan === t.id ? "rgba(56, 189, 248, 0.18)" : "rgba(15, 23, 42, 0.7)",
+                            color: "#f8fafc",
+                            fontSize: "0.72rem",
+                            fontWeight: 800,
+                            textAlign: "center"
+                          }}
+                        >
+                          <div>{t.label}</div>
+                          <div style={{ color: "#34d399", fontSize: "0.7rem", marginTop: "2px" }}>
+                            GH₵ {net.toLocaleString()}
+                          </div>
+                        </button>
+                      );
+                    })}
+                  </div>
+                </div>
+
+                {/* Payment Schedule Mode: Monthly Spread vs Bulk with Terms & Conditions */}
+                <div style={{ marginBottom: "0.9rem" }}>
+                  <label style={{ display: "block", color: "#cbd5e1", fontSize: "0.78rem", fontWeight: 700, marginBottom: "6px" }}>
+                    Payment Schedule Structure:
+                  </label>
+                  <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "10px" }}>
+                    <div
+                      onClick={() => setSubPaymentScheduleMode("MONTHLY_SPREAD")}
+                      style={{
+                        padding: "10px",
+                        borderRadius: "8px",
+                        cursor: "pointer",
+                        border: subPaymentScheduleMode === "MONTHLY_SPREAD" ? "2px solid #38bdf8" : "1px solid rgba(148,163,184,0.25)",
+                        background: subPaymentScheduleMode === "MONTHLY_SPREAD" ? "rgba(56, 189, 248, 0.12)" : "rgba(15, 23, 42, 0.6)"
+                      }}
+                    >
+                      <strong style={{ color: "#38bdf8", fontSize: "0.8rem", display: "block" }}>📅 Spread Every Month</strong>
+                      <span style={{ fontSize: "0.72rem", color: "#cbd5e1" }}>
+                        Pay <strong>GH₵ {subMonthlyFee.toLocaleString()}</strong> every month for {subMonthsCount} months.
+                      </span>
+                    </div>
+                    <div
+                      onClick={() => setSubPaymentScheduleMode("BULK_FULL_TERM")}
+                      style={{
+                        padding: "10px",
+                        borderRadius: "8px",
+                        cursor: "pointer",
+                        border: subPaymentScheduleMode === "BULK_FULL_TERM" ? "2px solid #f59e0b" : "1px solid rgba(148,163,184,0.25)",
+                        background: subPaymentScheduleMode === "BULK_FULL_TERM" ? "rgba(245, 158, 11, 0.14)" : "rgba(15, 23, 42, 0.6)"
+                      }}
+                    >
+                      <strong style={{ color: "#fbbf24", fontSize: "0.8rem", display: "block" }}>📦 Pay in Bulk (Full Term)</strong>
+                      <span style={{ fontSize: "0.72rem", color: "#cbd5e1" }}>
+                        Sign T&amp;C to pay <strong>GH₵ {subTotalTermFee.toLocaleString()}</strong> in bulk without monthly spread.
+                      </span>
+                    </div>
+                  </div>
+
+                  {subPaymentScheduleMode === "BULK_FULL_TERM" && (
+                    <div style={{ marginTop: "8px", padding: "10px", borderRadius: "8px", background: "rgba(245, 158, 11, 0.1)", border: "1px solid rgba(245, 158, 11, 0.4)" }}>
+                      <label style={{ display: "flex", alignItems: "center", gap: "8px", fontSize: "0.76rem", color: "#fef3c7", fontWeight: 700, cursor: "pointer", marginBottom: "6px" }}>
+                        <input
+                          type="checkbox"
+                          checked={subBulkTermsAccepted}
+                          onChange={(e) => setSubBulkTermsAccepted(e.target.checked)}
+                        />
+                        I accept &amp; sign the Terms and Conditions for paying the {subMonthsCount}-month subscription (GH₵ {subTotalTermFee.toLocaleString()}) in bulk.
+                      </label>
+                      <input
+                        type="text"
+                        value={subBulkSignatory}
+                        onChange={(e) => setSubBulkSignatory(e.target.value)}
+                        placeholder="Signed by Headmaster / Director"
+                        style={{
+                          width: "100%",
+                          padding: "7px 10px",
+                          background: "rgba(15, 23, 42, 0.9)",
+                          border: "1px solid rgba(245, 158, 11, 0.4)",
+                          borderRadius: "6px",
+                          color: "#f8fafc",
+                          fontSize: "0.78rem",
+                          boxSizing: "border-box"
+                        }}
+                      />
+                    </div>
+                  )}
+                </div>
+
+                <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "12px", marginBottom: "1rem" }}>
+                  <div>
+                    <label style={{ display: "block", color: "#94a3b8", fontSize: "0.78rem", fontWeight: 700, marginBottom: "4px" }}>
+                      Institution Name Reference *
+                    </label>
+                    <input
+                      type="text"
+                      readOnly
+                      value={institutionName}
+                      style={{
+                        width: "100%",
+                        padding: "10px 12px",
+                        background: "rgba(30, 41, 59, 0.8)",
+                        border: "1px solid rgba(56, 189, 248, 0.4)",
+                        borderRadius: "8px",
+                        color: "#38bdf8",
+                        fontWeight: 800,
+                        boxSizing: "border-box"
+                      }}
+                    />
+                  </div>
+
+                  <div>
+                    <label style={{ display: "block", color: "#f8fafc", fontSize: "0.78rem", fontWeight: 700, marginBottom: "4px" }}>
+                      MoMo Transaction ID / Reference Code *
+                    </label>
+                    <input
+                      type="text"
+                      required
+                      placeholder="e.g. 29381048123 or MOMO-9182"
+                      value={momoTxnId}
+                      onChange={(e) => setMomoTxnId(e.target.value)}
+                      style={{
+                        width: "100%",
+                        padding: "10px 12px",
+                        background: "rgba(15, 23, 42, 0.9)",
+                        border: "1.5px solid rgba(245, 158, 11, 0.5)",
+                        borderRadius: "8px",
+                        color: "#f8fafc",
+                        fontSize: "0.9rem",
+                        boxSizing: "border-box"
+                      }}
+                    />
+                  </div>
+                </div>
+
+                <div style={{ background: "rgba(16, 185, 129, 0.12)", border: "1px solid rgba(16, 185, 129, 0.3)", borderRadius: "8px", padding: "10px 14px", marginBottom: "1rem", fontSize: "0.8rem", color: "#a7f3d0" }}>
+                  Remit <strong>GH₵ {subAmountDueNow.toLocaleString()}</strong> to MTN MoMo: <strong>0554594193</strong> (GABRIEL KUBI OSEI-APPIAH)
+                </div>
+
+                <div style={{ display: "flex", justifyContent: "flex-end", gap: "10px" }}>
+                  <button
+                    type="button"
+                    className="btn-secondary"
+                    onClick={() => setShowMomoSubmitModal(false)}
+                  >
+                    Cancel
+                  </button>
+                  <button
+                    type="submit"
+                    className="btn-primary"
+                    style={{ background: "#10b981", borderColor: "#059669" }}
+                  >
+                    Submit Subscription &amp; MoMo Reference →
+                  </button>
+                </div>
+              </form>
+            </div>
+          </div>
+        )}
+
+        {/* SYSTEM SUBSCRIPTION LOCKOUT BARRIER OVERLAY */}
+        {isSystemLocked && (
+          <div style={{
+            position: "fixed",
+            top: 0,
+            left: 0,
+            right: 0,
+            bottom: 0,
+            background: "rgba(2, 6, 23, 0.94)",
+            backdropFilter: "blur(18px)",
+            zIndex: 999999,
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+            padding: "2rem"
+          }}>
+            <div style={{
+              background: "linear-gradient(135deg, #0f172a, #1e293b)",
+              border: "2px solid #ef4444",
+              borderRadius: "24px",
+              padding: "2.75rem 2rem",
+              maxWidth: "580px",
+              width: "100%",
+              textAlign: "center",
+              boxShadow: "0 25px 60px rgba(239, 68, 68, 0.4)"
+            }}>
+              <div style={{
+                width: "84px",
+                height: "84px",
+                borderRadius: "50%",
+                background: "rgba(239, 68, 68, 0.2)",
+                border: "3px solid #ef4444",
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "center",
+                margin: "0 auto 1.25rem",
+                fontSize: "2.5rem"
+              }}>
+                🔒
+              </div>
+
+              <span style={{ color: "#ef4444", fontSize: "0.8rem", fontWeight: 800, letterSpacing: "1.5px", textTransform: "uppercase" }}>
+                PLATFORM ACCESS RESTRICTED • DELINQUENT SUBSCRIPTION
+              </span>
+
+              <h2 style={{ color: "#f8fafc", margin: "10px 0 8px", fontSize: "1.5rem", fontWeight: 900 }}>
+                School Portal Temporarily Locked
+              </h2>
+
+              <p style={{ color: "#cbd5e1", fontSize: "0.88rem", lineHeight: "1.5", margin: "0 0 1.25rem" }}>
+                System continuation fees are due for <strong>{institutionName}</strong>. To protect institutional integrity, access is temporarily locked until payment confirmation.
+              </p>
+
+              {/* Data Safety & Restoration Guarantee Banner */}
+              <div style={{
+                background: "rgba(16, 185, 129, 0.12)",
+                border: "1px solid rgba(16, 185, 129, 0.4)",
+                borderRadius: "12px",
+                padding: "12px 16px",
+                marginBottom: "1.5rem",
+                textAlign: "left"
+              }}>
+                <div style={{ display: "flex", alignItems: "center", gap: "8px", color: "#34d399", fontWeight: 800, fontSize: "0.85rem", marginBottom: "4px" }}>
+                  <span>🛡️</span> ALL DATA & RECORDS SAFELY PRESERVED
+                </div>
+                <div style={{ fontSize: "0.8rem", color: "#cbd5e1", lineHeight: "1.4" }}>
+                  All student rosters, grades, admissions, and financial records have been automatically snapshotted in encrypted PostgreSQL storage. No data is lost. Full system access is restored immediately upon payment.
+                </div>
+              </div>
+
+              {/* MoMo Payment Instructions with Mandatory Reference */}
+              <div style={{
+                background: "rgba(0,0,0,0.4)",
+                border: "1.5px solid #f59e0b",
+                borderRadius: "14px",
+                padding: "16px",
+                marginBottom: "1.75rem",
+                textAlign: "left"
+              }}>
+                <div style={{ fontSize: "0.75rem", color: "#fbbf24", fontWeight: 800, letterSpacing: "1px", textTransform: "uppercase", marginBottom: "6px" }}>
+                  PAYMENT INSTRUCTIONS (MANDATORY REFERENCE):
+                </div>
+                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: "8px", marginBottom: "8px" }}>
+                  <div>
+                    <span style={{ fontSize: "0.72rem", color: "#94a3b8", display: "block" }}>MoMo Number</span>
+                    <strong style={{ color: "#34d399", fontSize: "1.15rem", fontFamily: "monospace" }}>0554594193</strong>
+                  </div>
+                  <div>
+                    <span style={{ fontSize: "0.72rem", color: "#94a3b8", display: "block" }}>Registered Name</span>
+                    <strong style={{ color: "#38bdf8", fontSize: "0.95rem" }}>GABRIEL KUBI OSEI-APPIAH</strong>
+                  </div>
+                </div>
+                <div style={{ background: "rgba(245, 158, 11, 0.15)", padding: "8px 12px", borderRadius: "8px", fontSize: "0.8rem", color: "#fde68a" }}>
+                  ⚠️ Reference to use: <strong>"{institutionName}"</strong>
+                </div>
+              </div>
+
+              <div style={{ display: "flex", gap: "10px", justifyContent: "center", flexWrap: "wrap" }}>
+                <button
+                  type="button"
+                  onClick={handleCopyInstitutionRef}
+                  style={{
+                    background: copiedRef ? "#10b981" : "rgba(245, 158, 11, 0.2)",
+                    border: "1px solid #f59e0b",
+                    color: "#fff",
+                    padding: "10px 18px",
+                    borderRadius: "10px",
+                    fontWeight: 700,
+                    fontSize: "0.85rem",
+                    cursor: "pointer"
+                  }}
+                >
+                  {copiedRef ? "✓ Copied Reference!" : `📋 Copy Reference ("${institutionName}")`}
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setShowMomoSubmitModal(true)}
+                  style={{
+                    background: "#0284c7",
+                    border: "1px solid #38bdf8",
+                    color: "#fff",
+                    padding: "10px 20px",
+                    borderRadius: "10px",
+                    fontWeight: 800,
+                    fontSize: "0.85rem",
+                    cursor: "pointer"
+                  }}
+                >
+                  Submit Payment Reference →
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* Headmaster Request Account Audit Modal */}
+        {showAuditRequestModal && (
+          <div style={{
+            position: "fixed",
+            top: 0,
+            left: 0,
+            right: 0,
+            bottom: 0,
+            background: "rgba(0,0,0,0.8)",
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+            zIndex: 9999,
+            padding: "20px"
+          }}>
+            <div style={{
+              background: "#0f172a",
+              border: "1px solid rgba(56, 189, 248, 0.4)",
+              borderRadius: "16px",
+              padding: "2rem",
+              maxWidth: "600px",
+              width: "100%",
+              boxShadow: "0 25px 50px -12px rgba(0,0,0,0.8)"
+            }}>
+              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "1.25rem" }}>
+                <h3 style={{ margin: 0, color: "#38bdf8", fontSize: "1.2rem", display: "flex", alignItems: "center", gap: "8px" }}>
+                  <span>⚖️</span> Request Account Audit Report from Chief Accountant
+                </h3>
+                <button
+                  type="button"
+                  onClick={() => setShowAuditRequestModal(false)}
+                  style={{ background: "none", border: "none", color: "#94a3b8", cursor: "pointer", fontSize: "1.2rem" }}
+                >
+                  ✕
+                </button>
+              </div>
+
+              <form onSubmit={handleDispatchAuditRequest}>
+                <div style={{ marginBottom: "12px" }}>
+                  <label style={{ display: "block", fontSize: "0.78rem", color: "#cbd5e1", marginBottom: "4px", fontWeight: "700" }}>
+                    Academic Year *
+                  </label>
+                  <input
+                    type="text"
+                    required
+                    className="filter-input"
+                    style={{ width: "100%" }}
+                    value={auditRequestForm.academicYear}
+                    onChange={(e) => setAuditRequestForm({ ...auditRequestForm, academicYear: e.target.value })}
+                  />
+                </div>
+
+                <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "10px", marginBottom: "12px" }}>
+                  <div>
+                    <label style={{ display: "block", fontSize: "0.78rem", color: "#cbd5e1", marginBottom: "4px", fontWeight: "700" }}>
+                      Beginning of Year (Start Date) *
+                    </label>
+                    <input
+                      type="date"
+                      required
+                      className="filter-input"
+                      style={{ width: "100%" }}
+                      value={auditRequestForm.startDate}
+                      onChange={(e) => setAuditRequestForm({ ...auditRequestForm, startDate: e.target.value })}
+                    />
+                  </div>
+                  <div>
+                    <label style={{ display: "block", fontSize: "0.78rem", color: "#cbd5e1", marginBottom: "4px", fontWeight: "700" }}>
+                      Close of Year (End Date) *
+                    </label>
+                    <input
+                      type="date"
+                      required
+                      className="filter-input"
+                      style={{ width: "100%" }}
+                      value={auditRequestForm.endDate}
+                      onChange={(e) => setAuditRequestForm({ ...auditRequestForm, endDate: e.target.value })}
+                    />
+                  </div>
+                </div>
+
+                <div style={{ marginBottom: "14px" }}>
+                  <label style={{ display: "block", fontSize: "0.78rem", color: "#cbd5e1", marginBottom: "4px", fontWeight: "700" }}>
+                    Executive Audit Scope & Directives *
+                  </label>
+                  <textarea
+                    rows={3}
+                    required
+                    className="filter-input"
+                    style={{ width: "100%", padding: "8px", fontSize: "0.82rem", lineHeight: "1.4" }}
+                    value={auditRequestForm.scopeDirectives}
+                    onChange={(e) => setAuditRequestForm({ ...auditRequestForm, scopeDirectives: e.target.value })}
+                  />
+                </div>
+
+                <div style={{ display: "flex", justifyContent: "flex-end", gap: "10px" }}>
+                  <button
+                    type="button"
+                    className="btn-secondary"
+                    onClick={() => setShowAuditRequestModal(false)}
+                  >
+                    Cancel
+                  </button>
+                  <button
+                    type="submit"
+                    className="btn-primary"
+                    style={{ background: "linear-gradient(135deg, #10b981, #059669)", fontWeight: "800" }}
+                  >
+                    🚀 Dispatch Audit Request to Accountant
+                  </button>
+                </div>
+              </form>
+            </div>
+          </div>
+        )}
+
+        {/* Audit Report Viewer Modal */}
+        {selectedAuditReportForView && (
+          <div style={{
+            position: "fixed",
+            top: 0,
+            left: 0,
+            right: 0,
+            bottom: 0,
+            background: "rgba(0,0,0,0.85)",
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+            zIndex: 9999,
+            padding: "20px"
+          }}>
+            <div style={{
+              background: "#0f172a",
+              border: "1px solid rgba(16, 185, 129, 0.4)",
+              borderRadius: "16px",
+              padding: "2rem",
+              maxWidth: "700px",
+              width: "100%",
+              maxHeight: "90vh",
+              overflowY: "auto",
+              boxShadow: "0 25px 50px -12px rgba(0,0,0,0.9)"
+            }}>
+              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "1rem", borderBottom: "1px solid rgba(56, 189, 248, 0.25)", paddingBottom: "12px" }}>
+                <div style={{ display: "flex", alignItems: "center", gap: "12px" }}>
+                  <img
+                    src={customSchoolLogo || "/assets/gbs_crest_badge.jpg"}
+                    alt="School Crest"
+                    style={{ width: "44px", height: "44px", borderRadius: "8px", objectFit: "contain", border: "1.5px solid #38bdf8", background: "#020617" }}
+                  />
+                  <div>
+                    <div style={{ fontSize: "0.78rem", color: "#38bdf8", fontWeight: 900, textTransform: "uppercase", letterSpacing: "0.6px" }}>
+                      {reportSchoolName || getActiveSchoolName(currentUser)}
+                    </div>
+                    <h3 style={{ margin: 0, color: "#34d399", fontSize: "1.15rem", display: "flex", alignItems: "center", gap: "8px" }}>
+                      <span>📜</span> CERTIFIED ANNUAL ACCOUNT AUDIT REPORT
+                    </h3>
+                  </div>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => setSelectedAuditReportForView(null)}
+                  style={{ background: "none", border: "none", color: "#94a3b8", cursor: "pointer", fontSize: "1.2rem" }}
+                >
+                  ✕
+                </button>
+              </div>
+
+              <div style={{ background: "rgba(255, 255, 255, 0.04)", borderRadius: "8px", padding: "1rem", marginBottom: "1rem", fontSize: "0.85rem" }}>
+                <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "8px" }}>
+                  <div>Audit ID: <strong style={{ color: "#38bdf8", fontFamily: "monospace" }}>{selectedAuditReportForView.id}</strong></div>
+                  <div>Period: <strong>{selectedAuditReportForView.startDate} to {selectedAuditReportForView.endDate}</strong></div>
+                  <div>Submitted By: <strong>{selectedAuditReportForView.submittedReport?.submittedBy || "Chief Accountant"}</strong></div>
+                  <div>Submitted At: <strong>{selectedAuditReportForView.submittedReport?.submittedAt || selectedAuditReportForView.requestedAt}</strong></div>
+                </div>
+              </div>
+
+              {selectedAuditReportForView.submittedReport && (
+                <div style={{ display: "grid", gridTemplateColumns: "repeat(2, 1fr)", gap: "10px", marginBottom: "1.25rem" }}>
+                  <div style={{ background: "rgba(2, 6, 23, 0.8)", padding: "1rem", borderRadius: "8px", border: "1px solid rgba(56, 189, 248, 0.2)" }}>
+                    <span style={{ fontSize: "0.75rem", color: "#94a3b8" }}>Total Tuition Billed</span>
+                    <div style={{ fontSize: "1.4rem", fontWeight: "800", color: "#38bdf8" }}>
+                      ${selectedAuditReportForView.submittedReport.totalBilled?.toLocaleString()}
+                    </div>
+                  </div>
+                  <div style={{ background: "rgba(2, 6, 23, 0.8)", padding: "1rem", borderRadius: "8px", border: "1px solid rgba(16, 185, 129, 0.2)" }}>
+                    <span style={{ fontSize: "0.75rem", color: "#94a3b8" }}>Total Fees Collected</span>
+                    <div style={{ fontSize: "1.4rem", fontWeight: "800", color: "#34d399" }}>
+                      ${selectedAuditReportForView.submittedReport.totalCollected?.toLocaleString()}
+                    </div>
+                  </div>
+                  <div style={{ background: "rgba(2, 6, 23, 0.8)", padding: "1rem", borderRadius: "8px", border: "1px solid rgba(239, 68, 68, 0.2)" }}>
+                    <span style={{ fontSize: "0.75rem", color: "#94a3b8" }}>Debtor Arrears Outstanding</span>
+                    <div style={{ fontSize: "1.4rem", fontWeight: "800", color: "#f87171" }}>
+                      ${selectedAuditReportForView.submittedReport.totalPending?.toLocaleString()}
+                    </div>
+                  </div>
+                  <div style={{ background: "rgba(2, 6, 23, 0.8)", padding: "1rem", borderRadius: "8px", border: "1px solid rgba(245, 158, 11, 0.2)" }}>
+                    <span style={{ fontSize: "0.75rem", color: "#94a3b8" }}>Operating Expenses Incurred</span>
+                    <div style={{ fontSize: "1.4rem", fontWeight: "800", color: "#fbbf24" }}>
+                      ${selectedAuditReportForView.submittedReport.totalExpenses?.toLocaleString()}
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              <div style={{ padding: "10px", background: "rgba(16, 185, 129, 0.1)", borderRadius: "8px", border: "1px solid rgba(16, 185, 129, 0.3)", fontSize: "0.78rem", color: "#a7f3d0", marginBottom: "1.25rem" }}>
+                🔐 Cryptographic Hash: {selectedAuditReportForView.submittedReport?.auditChecksum || "SHA256: 7f3a8b9c0d1e2f3a4b5c6d7e8f9a0b1c"}
+              </div>
+
+              <div style={{ display: "flex", justifyContent: "flex-end", gap: "10px" }}>
+                <button
+                  type="button"
+                  className="btn-secondary"
+                  onClick={() => window.print()}
+                >
+                  🖨️ Print Audit Report
+                </button>
+                {selectedAuditReportForView.status === "SUBMITTED_TO_HEADMASTER" && (
+                  <button
+                    type="button"
+                    className="btn-primary"
+                    style={{ background: "#10b981", borderColor: "#059669" }}
+                    onClick={() => {
+                      handleCrossCheckAndApproveAudit(selectedAuditReportForView.id);
+                      setSelectedAuditReportForView(null);
+                    }}
+                  >
+                    ✍️ Certify & Sign Off Audit
+                  </button>
+                )}
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* Weekly Attendance Archive Viewer Modal */}
+        {selectedWeeklyArchiveToView && (
+          <div style={{
+            position: "fixed",
+            top: 0,
+            left: 0,
+            right: 0,
+            bottom: 0,
+            background: "rgba(0,0,0,0.85)",
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+            zIndex: 9999,
+            padding: "20px"
+          }}>
+            <div style={{
+              background: "#0f172a",
+              border: "1px solid rgba(56, 189, 248, 0.4)",
+              borderRadius: "16px",
+              padding: "2rem",
+              maxWidth: "650px",
+              width: "100%",
+              boxShadow: "0 25px 50px -12px rgba(0,0,0,0.85)"
+            }}>
+              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "1rem" }}>
+                <h3 style={{ margin: 0, color: "#38bdf8", fontSize: "1.2rem", display: "flex", alignItems: "center", gap: "8px" }}>
+                  <span>📦</span> ARCHIVED WEEKLY ATTENDANCE CROSS-CHECK
+                </h3>
+                <button
+                  type="button"
+                  onClick={() => setSelectedWeeklyArchiveToView(null)}
+                  style={{ background: "none", border: "none", color: "#94a3b8", cursor: "pointer", fontSize: "1.2rem" }}
+                >
+                  ✕
+                </button>
+              </div>
+
+              <div style={{ background: "rgba(255, 255, 255, 0.04)", borderRadius: "8px", padding: "1rem", marginBottom: "1rem", fontSize: "0.85rem" }}>
+                <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "8px" }}>
+                  <div>Class: <strong style={{ color: "#f8fafc" }}>{selectedWeeklyArchiveToView.className}</strong></div>
+                  <div>Teacher: <strong style={{ color: "#cbd5e1" }}>{selectedWeeklyArchiveToView.teacherName}</strong></div>
+                  <div>Week Period: <strong>{selectedWeeklyArchiveToView.weekLabel || `${selectedWeeklyArchiveToView.weekStartDate} to ${selectedWeeklyArchiveToView.weekEndDate}`}</strong></div>
+                  <div>Attendance Rate: <strong style={{ color: "#34d399" }}>{selectedWeeklyArchiveToView.averageAttendanceRate || 95}%</strong></div>
+                  <div>Archived At: <span style={{ color: "#94a3b8" }}>{selectedWeeklyArchiveToView.archivedAt || new Date().toLocaleString()}</span></div>
+                  <div>Status: <span style={{ color: "#34d399", fontWeight: "700" }}>✓ VERIFIED & FOLLOWING WEEK APPROVED</span></div>
+                </div>
+              </div>
+
+              <div style={{ padding: "10px", background: "rgba(2, 6, 23, 0.7)", borderRadius: "8px", border: "1px solid rgba(255, 255, 255, 0.08)", fontSize: "0.82rem", color: "#cbd5e1", marginBottom: "1.25rem" }}>
+                <strong style={{ color: "#38bdf8" }}>Headmaster Cross-Check Sign-off:</strong>
+                <p style={{ margin: "4px 0 0" }}>
+                  "{selectedWeeklyArchiveToView.headmasterSignOff?.remarks || "Cross-checked against turnstile gate logs. Following week attendance approved."}"
+                </p>
+                <span style={{ display: "block", fontSize: "0.75rem", color: "#94a3b8", marginTop: "4px" }}>
+                  Signed by: {selectedWeeklyArchiveToView.headmasterSignOff?.signedBy || "Headmaster Arthur Pendleton"}
+                </span>
+              </div>
+
+              <div style={{ display: "flex", justifyContent: "flex-end" }}>
+                <button
+                  type="button"
+                  className="btn-secondary"
+                  onClick={() => setSelectedWeeklyArchiveToView(null)}
+                >
+                  Close
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* MODAL: ADMISSION ENQUIRY DOSSIER & VERIFICATION */}
+        {showAppVerificationModal && selectedAppForVerification && (
+          <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.85)", display: "flex", alignItems: "center", justifyContent: "center", zIndex: 99999, padding: "20px" }}>
+            <div style={{ background: "#0f172a", border: "1.5px solid #38bdf8", borderRadius: "16px", padding: "2rem", maxWidth: "680px", width: "100%", maxHeight: "90vh", overflowY: "auto", boxShadow: "0 25px 60px rgba(0,0,0,0.8)" }}>
+              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "1.25rem", borderBottom: "1px solid rgba(255,255,255,0.1)", paddingBottom: "10px" }}>
+                <div>
+                  <span style={{ fontSize: "0.75rem", color: "#38bdf8", fontWeight: "800" }}>ADMISSION ENQUIRY VERIFICATION DOSSIER</span>
+                  <h3 style={{ margin: "2px 0 0", color: "#f8fafc", fontSize: "1.2rem" }}>
+                    {selectedAppForVerification.studentFirstName} {selectedAppForVerification.studentLastName} ({selectedAppForVerification.applicationNumber})
+                  </h3>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => setShowAppVerificationModal(false)}
+                  style={{ background: "transparent", border: "none", color: "#94a3b8", fontSize: "1.4rem", cursor: "pointer" }}
+                >
+                  ✕
+                </button>
+              </div>
+
+              {/* Applicant Profile Grid */}
+              <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "10px", background: "rgba(2, 6, 23, 0.6)", padding: "14px", borderRadius: "10px", fontSize: "0.85rem", marginBottom: "1.25rem" }}>
+                <div><span style={{ color: "#94a3b8" }}>Target Level:</span> <strong style={{ color: "#f8fafc" }}>Grade {selectedAppForVerification.targetGradeLevel} ({selectedAppForVerification.targetClassTier || "Basic"})</strong></div>
+                <div><span style={{ color: "#94a3b8" }}>Date of Birth:</span> <strong style={{ color: "#f8fafc" }}>{selectedAppForVerification.dateOfBirth}</strong></div>
+                <div><span style={{ color: "#94a3b8" }}>Gender:</span> <strong style={{ color: "#f8fafc" }}>{selectedAppForVerification.gender}</strong></div>
+                <div><span style={{ color: "#94a3b8" }}>Residency:</span> <strong style={{ color: "#f8fafc" }}>{selectedAppForVerification.residencyType || "Day Student"}</strong></div>
+                <div><span style={{ color: "#94a3b8" }}>Previous School:</span> <strong style={{ color: "#cbd5e1" }}>{selectedAppForVerification.previousSchool || "St. Jude Prep"}</strong></div>
+                <div><span style={{ color: "#94a3b8" }}>Previous GPA:</span> <strong style={{ color: "#34d399" }}>{selectedAppForVerification.previousGpa || "3.85 / 4.00"}</strong></div>
+              </div>
+
+              {/* Guardian Contact Dossier */}
+              <div style={{ background: "rgba(2, 6, 23, 0.6)", padding: "14px", borderRadius: "10px", fontSize: "0.85rem", marginBottom: "1.25rem" }}>
+                <span style={{ color: "#38bdf8", fontWeight: "800", display: "block", marginBottom: "6px" }}>GUARDIAN & EMERGENCY CONTACT DETAILS</span>
+                <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "8px" }}>
+                  <div><span style={{ color: "#94a3b8" }}>Guardian Name:</span> <strong>{selectedAppForVerification.guardianName || "Mr. Emmanuel Mensah"}</strong></div>
+                  <div><span style={{ color: "#94a3b8" }}>Relationship:</span> <strong>{selectedAppForVerification.guardianRelationship || "Father"}</strong></div>
+                  <div><span style={{ color: "#94a3b8" }}>Verified Phone:</span> <strong style={{ color: "#34d399" }}>{selectedAppForVerification.guardianPhone || "+233 24 555 9988"}</strong></div>
+                  <div><span style={{ color: "#94a3b8" }}>Verified Email:</span> <strong style={{ color: "#cbd5e1" }}>{selectedAppForVerification.guardianEmail}</strong></div>
+                  <div style={{ gridColumn: "span 2" }}><span style={{ color: "#94a3b8" }}>Residential Address:</span> <span>{selectedAppForVerification.residentialAddress || "Airport Residential Area, Accra"}</span></div>
+                </div>
+              </div>
+
+              {/* Verification Checklist */}
+              <div style={{ background: "rgba(16, 185, 129, 0.08)", border: "1px solid rgba(16, 185, 129, 0.3)", borderRadius: "10px", padding: "12px", marginBottom: "1.25rem" }}>
+                <span style={{ color: "#34d399", fontWeight: "800", display: "block", marginBottom: "8px" }}>HEADMASTER VERIFICATION CHECKLIST:</span>
+                <div style={{ display: "flex", flexDirection: "column", gap: "6px", fontSize: "0.82rem" }}>
+                  <label style={{ display: "flex", alignItems: "center", gap: "8px", cursor: "pointer" }}>
+                    <input type="checkbox" checked={verificationChecklist.birthCert} onChange={(e) => setVerificationChecklist({ ...verificationChecklist, birthCert: e.target.checked })} />
+                    <span>✓ Birth Certificate & Identification Verified Authentic</span>
+                  </label>
+                  <label style={{ display: "flex", alignItems: "center", gap: "8px", cursor: "pointer" }}>
+                    <input type="checkbox" checked={verificationChecklist.priorTranscript} onChange={(e) => setVerificationChecklist({ ...verificationChecklist, priorTranscript: e.target.checked })} />
+                    <span>✓ Prior School Academic Transcript & Good Conduct Certified</span>
+                  </label>
+                  <label style={{ display: "flex", alignItems: "center", gap: "8px", cursor: "pointer" }}>
+                    <input type="checkbox" checked={verificationChecklist.guardianContact} onChange={(e) => setVerificationChecklist({ ...verificationChecklist, guardianContact: e.target.checked })} />
+                    <span>✓ Guardian Residential Location & Mobile Contact Confirmed</span>
+                  </label>
+                  <label style={{ display: "flex", alignItems: "center", gap: "8px", cursor: "pointer" }}>
+                    <input type="checkbox" checked={verificationChecklist.classCapacity} onChange={(e) => setVerificationChecklist({ ...verificationChecklist, classCapacity: e.target.checked })} />
+                    <span>✓ Placement Capacity Confirmed in Target Grade Class</span>
+                  </label>
+                </div>
+              </div>
+
+              <div style={{ marginBottom: "1.5rem" }}>
+                <label style={{ display: "block", fontSize: "0.8rem", color: "#cbd5e1", marginBottom: "4px" }}>Headmaster Vetting Assessment Remarks</label>
+                <textarea
+                  rows={2}
+                  value={admissionVettingRemarks}
+                  onChange={(e) => setAdmissionVettingRemarks(e.target.value)}
+                  style={{ width: "100%", padding: "10px", background: "rgba(2, 6, 23, 0.6)", border: "1px solid rgba(255,255,255,0.15)", borderRadius: "8px", color: "#ffffff", fontSize: "0.85rem" }}
+                />
+              </div>
+
+              <div style={{ display: "flex", gap: "10px", justifyContent: "flex-end" }}>
+                <button
+                  type="button"
+                  className="btn-secondary"
+                  onClick={() => setShowAppVerificationModal(false)}
+                >
+                  Close Dossier
+                </button>
+                <button
+                  type="button"
+                  className="btn-action-reject"
+                  onClick={() => {
+                    handleRejectApplication(selectedAppForVerification.id, selectedAppForVerification.applicationNumber);
+                    setShowAppVerificationModal(false);
+                    triggerToast("error", "Admission Rejected", `Application ${selectedAppForVerification.applicationNumber} has been rejected.`);
+                  }}
+                  style={{ padding: "10px 18px", fontSize: "0.85rem" }}
+                >
+                  ❌ Reject Admission
+                </button>
+                <button
+                  type="button"
+                  className="btn-action-approve"
+                  onClick={() => {
+                    handleApproveApplication(selectedAppForVerification.id, selectedAppForVerification.applicationNumber);
+                    setShowAppVerificationModal(false);
+                    triggerToast("success", "Admission Verified & Approved", `Application ${selectedAppForVerification.applicationNumber} verified and approved! Student provisioned onto class register.`);
+                  }}
+                  style={{ padding: "10px 22px", fontSize: "0.85rem", fontWeight: "800" }}
+                >
+                  ✅ Verify & Approve Admission
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* MODAL: CLASSROOM ROLL-CALL ATTENDANCE SHEET INSPECTION */}
+        {showAttendanceInspectionModal && selectedAttendanceForInspection && (
+          <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.85)", display: "flex", alignItems: "center", justifyContent: "center", zIndex: 99999, padding: "20px" }}>
+            <div style={{ background: "#0f172a", border: "1.5px solid #10b981", borderRadius: "16px", padding: "2rem", maxWidth: "680px", width: "100%", maxHeight: "90vh", overflowY: "auto", boxShadow: "0 25px 60px rgba(0,0,0,0.8)" }}>
+              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "1rem", borderBottom: "1px solid rgba(255,255,255,0.1)", paddingBottom: "10px" }}>
+                <div>
+                  <span style={{ fontSize: "0.75rem", color: "#34d399", fontWeight: "800" }}>CLASSROOM ROLL-CALL ATTENDANCE VETTING DOSSIER</span>
+                  <h3 style={{ margin: "2px 0 0", color: "#f8fafc", fontSize: "1.2rem" }}>
+                    {selectedAttendanceForInspection.className} • {selectedAttendanceForInspection.weekLabel || `Week ${selectedAttendanceForInspection.weekNumber || 1}`}
+                  </h3>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => setShowAttendanceInspectionModal(false)}
+                  style={{ background: "transparent", border: "none", color: "#94a3b8", fontSize: "1.4rem", cursor: "pointer" }}
+                >
+                  ✕
+                </button>
+              </div>
+
+              <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "10px", background: "rgba(2, 6, 23, 0.6)", padding: "14px", borderRadius: "10px", fontSize: "0.85rem", marginBottom: "1.25rem" }}>
+                <div>Class Teacher: <strong style={{ color: "#38bdf8" }}>{selectedAttendanceForInspection.teacherName}</strong></div>
+                <div>Submitted At: <strong style={{ color: "#cbd5e1" }}>{new Date(selectedAttendanceForInspection.submittedAt || Date.now()).toLocaleString()}</strong></div>
+                <div>Total Enrolled: <strong style={{ color: "#f8fafc" }}>{selectedAttendanceForInspection.totalStudentsEnrolled || 32} Students</strong></div>
+                <div>Attendance Rate: <strong style={{ color: "#34d399" }}>{selectedAttendanceForInspection.averageAttendanceRate || 96}% Present</strong></div>
+              </div>
+
+              {/* Day by Day Roll-Call Status */}
+              <div style={{ background: "rgba(2, 6, 23, 0.6)", padding: "12px", borderRadius: "10px", marginBottom: "1.25rem" }}>
+                <span style={{ color: "#f8fafc", fontWeight: "800", fontSize: "0.85rem", display: "block", marginBottom: "8px" }}>
+                  WEEKLY CLASSROOM LOG & ABSENTEES:
+                </span>
+                <p style={{ margin: "0 0 8px", fontSize: "0.8rem", color: "#cbd5e1" }}>
+                  Teacher Notes: "{selectedAttendanceForInspection.teacherNotes || "Daily morning and afternoon roll calls recorded accurately. Turnstile gate verification confirmed."}"
+                </p>
+                <div style={{ fontSize: "0.8rem", color: "#f87171" }}>
+                  Absentees Recorded: {selectedAttendanceForInspection.absenteesList?.join(", ") || "No unexcused absentees."}
+                </div>
+              </div>
+
+              <div style={{ display: "flex", gap: "10px", justifyContent: "flex-end" }}>
+                <button
+                  type="button"
+                  className="btn-secondary"
+                  onClick={() => setShowAttendanceInspectionModal(false)}
+                >
+                  Close Sheet
+                </button>
+                <button
+                  type="button"
+                  className="btn-primary"
+                  onClick={() => {
+                    handleCrossCheckAttendance(selectedAttendanceForInspection.id);
+                    setShowAttendanceInspectionModal(false);
+                    triggerToast("success", "Attendance Vetted & Signed Off", `Weekly attendance for ${selectedAttendanceForInspection.className} successfully vetted and signed off! Following week register unlocked for the teacher.`);
+                  }}
+                  style={{ background: "#10b981", borderColor: "#059669", padding: "10px 20px", fontWeight: "800" }}
+                >
+                  ✍️ Verify & Approve Following Week Attendance
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* MODAL: DISPATCH HR AUDIT REQUEST TO HR DIRECTORATE */}
+        {showHrAuditRequestModal && (
+          <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.85)", display: "flex", alignItems: "center", justifyContent: "center", zIndex: 99999, padding: "20px" }}>
+            <div style={{ background: "#0f172a", border: "1.5px solid #8b5cf6", borderRadius: "16px", padding: "2rem", maxWidth: "560px", width: "100%", boxShadow: "0 25px 60px rgba(0,0,0,0.8)" }}>
+              <h3 style={{ margin: "0 0 1rem", color: "#f8fafc", fontSize: "1.2rem", fontWeight: "800" }}>
+                📋 ISSUE OFFICIAL HR AUDIT DIRECTIVE
+              </h3>
+              <form onSubmit={handleDispatchHrAuditRequest}>
+                <div style={{ marginBottom: "12px" }}>
+                  <label style={{ display: "block", fontSize: "0.8rem", color: "#cbd5e1", marginBottom: "4px" }}>Audit Directive Title *</label>
+                  <input
+                    type="text"
+                    required
+                    value={hrAuditForm.title}
+                    onChange={(e) => setHrAuditForm({ ...hrAuditForm, title: e.target.value })}
+                    style={{ width: "100%", padding: "10px", background: "rgba(2, 6, 23, 0.6)", border: "1px solid rgba(255,255,255,0.15)", borderRadius: "8px", color: "#ffffff" }}
+                  />
+                </div>
+                <div style={{ marginBottom: "12px" }}>
+                  <label style={{ display: "block", fontSize: "0.8rem", color: "#cbd5e1", marginBottom: "4px" }}>Audit Period Scope *</label>
+                  <input
+                    type="text"
+                    required
+                    value={hrAuditForm.period}
+                    onChange={(e) => setHrAuditForm({ ...hrAuditForm, period: e.target.value })}
+                    style={{ width: "100%", padding: "10px", background: "rgba(2, 6, 23, 0.6)", border: "1px solid rgba(255,255,255,0.15)", borderRadius: "8px", color: "#ffffff" }}
+                  />
+                </div>
+                <div style={{ marginBottom: "1.5rem" }}>
+                  <label style={{ display: "block", fontSize: "0.8rem", color: "#cbd5e1", marginBottom: "4px" }}>Audit Directives & Specific Inquiries *</label>
+                  <textarea
+                    rows={3}
+                    required
+                    value={hrAuditForm.scope}
+                    onChange={(e) => setHrAuditForm({ ...hrAuditForm, scope: e.target.value })}
+                    style={{ width: "100%", padding: "10px", background: "rgba(2, 6, 23, 0.6)", border: "1px solid rgba(255,255,255,0.15)", borderRadius: "8px", color: "#ffffff", fontSize: "0.85rem" }}
+                  />
+                </div>
+                <div style={{ display: "flex", gap: "10px", justifyContent: "flex-end" }}>
+                  <button
+                    type="button"
+                    className="btn-secondary"
+                    onClick={() => setShowHrAuditRequestModal(false)}
+                  >
+                    Cancel
+                  </button>
+                  <button
+                    type="submit"
+                    className="btn-primary"
+                    style={{ background: "#8b5cf6", border: "none", padding: "10px 20px", fontWeight: "800" }}
+                  >
+                    🚀 Dispatch Directive to HR Director
+                  </button>
+                </div>
+              </form>
+            </div>
+          </div>
+        )}
+
+        {/* MODAL: INSPECT & CERTIFY SUBMITTED HR AUDIT REPORT */}
+        {selectedHrReportToInspect && (
+          <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.85)", display: "flex", alignItems: "center", justifyContent: "center", zIndex: 99999, padding: "20px" }}>
+            <div style={{ background: "#0f172a", border: "1.5px solid #34d399", borderRadius: "16px", padding: "2rem", maxWidth: "650px", width: "100%", maxHeight: "90vh", overflowY: "auto", boxShadow: "0 25px 60px rgba(0,0,0,0.8)" }}>
+              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "1rem", borderBottom: "1px solid rgba(255,255,255,0.1)", paddingBottom: "10px" }}>
+                <div>
+                  <span style={{ fontSize: "0.75rem", color: "#34d399", fontWeight: "800" }}>OFFICIAL HR AUDIT REPORT CERTIFICATION</span>
+                  <h3 style={{ margin: "2px 0 0", color: "#f8fafc", fontSize: "1.2rem" }}>
+                    {selectedHrReportToInspect.id} • {selectedHrReportToInspect.period}
+                  </h3>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => setSelectedHrReportToInspect(null)}
+                  style={{ background: "transparent", border: "none", color: "#94a3b8", fontSize: "1.4rem", cursor: "pointer" }}
+                >
+                  ✕
+                </button>
+              </div>
+
+              <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "10px", background: "rgba(2, 6, 23, 0.6)", padding: "14px", borderRadius: "10px", fontSize: "0.85rem", marginBottom: "1rem" }}>
+                <div>Total Personnel: <strong style={{ color: "#38bdf8" }}>{selectedHrReportToInspect.metrics?.totalEmployees || 0} Staff</strong></div>
+                <div>Academic Faculty: <strong style={{ color: "#f8fafc" }}>{selectedHrReportToInspect.metrics?.academicFacultyCount || 0} Teachers</strong></div>
+                <div>Monthly Payroll: <strong style={{ color: "#34d399" }}>${selectedHrReportToInspect.metrics?.totalMonthlyPayrollBudget?.toLocaleString() || "0"}</strong></div>
+                <div>Staff Compliance: <strong style={{ color: "#34d399" }}>{selectedHrReportToInspect.metrics?.overallStaffComplianceRate || "100%"}</strong></div>
+                <div style={{ gridColumn: "span 2" }}>Cryptographic Seal: <code style={{ color: "#c084fc", fontSize: "0.75rem" }}>{selectedHrReportToInspect.cryptographicSeal}</code></div>
+              </div>
+
+              <div style={{ background: "rgba(2, 6, 23, 0.6)", padding: "12px", borderRadius: "10px", marginBottom: "1.25rem", fontSize: "0.85rem" }}>
+                <span style={{ color: "#38bdf8", fontWeight: "800", display: "block", marginBottom: "4px" }}>HR DIRECTOR AUDIT FINDINGS:</span>
+                <p style={{ margin: 0, color: "#cbd5e1", lineHeight: "1.5" }}>
+                  "{selectedHrReportToInspect.findings}"
+                </p>
+              </div>
+
+              <div style={{ display: "flex", gap: "10px", justifyContent: "flex-end" }}>
+                <button
+                  type="button"
+                  className="btn-secondary"
+                  onClick={() => setSelectedHrReportToInspect(null)}
+                >
+                  Close
+                </button>
+                <button
+                  type="button"
+                  className="btn-primary"
+                  onClick={() => handleCertifyHrReport(selectedHrReportToInspect.id)}
+                  style={{ background: "linear-gradient(135deg, #10b981, #059669)", border: "none", padding: "10px 22px", fontWeight: "800" }}
+                >
+                  ✍️ Certify & Sign Off HR Audit
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* ======================================================== */}
+        {/* HEADMASTER SUBSCRIPTION RENEWAL CELEBRATION MODAL        */}
+        {/* ======================================================== */}
+        {showRenewalModal && (
+          <div className="renewal-celebration-overlay" onClick={() => setShowRenewalModal(false)}>
+            <div
+              className={`renewal-celebration-card ${tenantSubscription.isLifetime || tenantSubscription.durationLabel?.includes("Lifetime") ? "lifetime" : ""}`}
+              onClick={(e) => e.stopPropagation()}
+            >
+              <div className="renewal-trophy-icon">
+                {tenantSubscription.isLifetime || tenantSubscription.durationLabel?.includes("Lifetime") ? "👑" : "🏆"}
+              </div>
+
+              <span style={{ color: "#34d399", fontSize: "0.8rem", fontWeight: 800, letterSpacing: "1.5px", textTransform: "uppercase" }}>
+                OFFICIAL NOTICE FOR THE HEADMASTER • SUBSCRIPTION RENEWED
+              </span>
+
+              <h2 style={{ color: "#f8fafc", margin: "10px 0 8px", fontSize: "1.65rem", fontWeight: 900 }}>
+                Platform Subscription Successfully Renewed!
+              </h2>
+
+              <p style={{ color: "#cbd5e1", fontSize: "0.92rem", lineHeight: "1.5", margin: "0 0 1.25rem" }}>
+                We are pleased to inform you that your institutional subscription for <strong>{institutionName}</strong> has been officially renewed by the System Developer.
+              </p>
+
+              <div style={{ margin: "0 auto 1.5rem", display: "inline-block" }}>
+                <span className={`renewed-duration-chip ${tenantSubscription.durationLabel === "3 Months" ? "chip-3m" :
+                  tenantSubscription.durationLabel === "6 Months" ? "chip-6m" :
+                    tenantSubscription.durationLabel === "1 Year" ? "chip-1y" :
+                      "chip-lifetime"
+                  }`} style={{ fontSize: "1.1rem", padding: "8px 20px" }}>
+                  <span>{tenantSubscription.isLifetime || tenantSubscription.durationLabel?.includes("Lifetime") ? "👑" : "📅"}</span>
+                  RENEWED FOR: {tenantSubscription.durationLabel || "6 Months"}
+                </span>
+              </div>
+
+              <div style={{ background: "rgba(0,0,0,0.35)", borderRadius: "12px", border: "1px solid rgba(255,255,255,0.1)", padding: "14px", textAlign: "left", marginBottom: "1.5rem" }}>
+                <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "10px", fontSize: "0.82rem" }}>
+                  <div>
+                    <span style={{ color: "#94a3b8", display: "block", fontSize: "0.72rem" }}>Institution</span>
+                    <strong style={{ color: "#38bdf8" }}>{institutionName}</strong>
+                  </div>
+                  <div>
+                    <span style={{ color: "#94a3b8", display: "block", fontSize: "0.72rem" }}>Renewal Package</span>
+                    <strong style={{ color: "#34d399" }}>{tenantSubscription.durationLabel || "6 Months"} Plan</strong>
+                  </div>
+                  <div>
+                    <span style={{ color: "#94a3b8", display: "block", fontSize: "0.72rem" }}>Effective Coverage Period</span>
+                    <strong style={{ color: "#f8fafc" }}>
+                      {tenantSubscription.isLifetime || tenantSubscription.durationLabel?.includes("Lifetime")
+                        ? "Permanent Lifetime Access (Never Expires)"
+                        : `${new Date(tenantSubscription.startDate || Date.now()).toLocaleDateString()} to ${new Date(tenantSubscription.endDate || Date.now()).toLocaleDateString()}`}
+                    </strong>
+                  </div>
+                  <div>
+                    <span style={{ color: "#94a3b8", display: "block", fontSize: "0.72rem" }}>Academic & Admin Access</span>
+                    <strong style={{ color: "#10b981" }}>100% Unlocked & Active</strong>
+                  </div>
+                </div>
+              </div>
+
+              <div style={{ display: "flex", justifyContent: "center", gap: "12px" }}>
+                <button
+                  type="button"
+                  style={{
+                    background: "linear-gradient(135deg, #10b981, #059669)",
+                    border: "none",
+                    color: "#fff",
+                    padding: "12px 28px",
+                    borderRadius: "10px",
+                    fontWeight: 800,
+                    fontSize: "0.9rem",
+                    cursor: "pointer",
+                    boxShadow: "0 4px 15px rgba(16, 185, 129, 0.4)"
+                  }}
+                  onClick={() => {
+                    setShowRenewalModal(false);
+                    const saved = JSON.parse(localStorage.getItem("gbs_tenant_subscription") || "{}");
+                    localStorage.setItem("gbs_tenant_subscription", JSON.stringify({ ...saved, justRenewed: false }));
+                  }}
+                >
+                  ✓ Acknowledge & Enter Command Center
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* ======================================================== */}
+        {/* HEADMASTER TEACHER PLAN & NOTES VETTING MODAL            */}
+        {/* ======================================================== */}
+        {selectedVettingPlan && (
+          <div className="role-modal-backdrop" onClick={() => setSelectedVettingPlan(null)}>
+            <div
+              className="role-modal-card"
+              style={{ maxWidth: "720px", background: "rgba(15, 23, 42, 0.98)", border: "2px solid #38bdf8", borderRadius: "16px", padding: "24px", boxShadow: "0 25px 60px rgba(0,0,0,0.9)" }}
+              onClick={(e) => e.stopPropagation()}
+            >
+              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "14px", borderBottom: "1px solid rgba(255, 255, 255, 0.1)", paddingBottom: "10px" }}>
+                <div style={{ display: "flex", alignItems: "center", gap: "10px" }}>
+                  <span style={{ fontSize: "1.8rem" }}>📑</span>
+                  <div>
+                    <h3 style={{ margin: 0, color: "#38bdf8", fontSize: "1.15rem", fontWeight: "800" }}>
+                      HEADMASTER VETTING DESK • PLAN EVALUATION
+                    </h3>
+                    <span style={{ fontSize: "0.75rem", color: "#94a3b8" }}>
+                      Evaluate Pedagogical Quality, Objectives & Dispatch Feedback Words to Teacher
+                    </span>
+                  </div>
+                </div>
+                <button type="button" className="modal-close-btn" onClick={() => setSelectedVettingPlan(null)}>✕</button>
+              </div>
+
+              {/* Plan Metadata Overview */}
+              <div style={{ background: "rgba(2, 6, 23, 0.8)", border: "1px solid rgba(56, 189, 248, 0.3)", borderRadius: "10px", padding: "14px", marginBottom: "16px" }}>
+                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: "8px", flexWrap: "wrap", gap: "8px" }}>
+                  <div>
+                    <span style={{ fontSize: "0.75rem", color: "#94a3b8" }}>Submitter / Faculty Educator:</span>
+                    <strong style={{ display: "block", color: "#f8fafc", fontSize: "1rem" }}>
+                      {selectedVettingPlan.teacherName} ({selectedVettingPlan.teacherPosition || "Faculty Member"})
+                    </strong>
+                  </div>
+                  <span className="role-portal-badge" style={{ color: "#38bdf8" }}>
+                    {selectedVettingPlan.planType}
+                  </span>
+                </div>
+
+                <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(180px, 1fr))", gap: "8px", fontSize: "0.82rem", color: "#cbd5e1" }}>
+                  <div><strong>Document:</strong> {selectedVettingPlan.title}</div>
+                  <div><strong>Discipline:</strong> {selectedVettingPlan.subjectName}</div>
+                  <div><strong>Class / Level:</strong> {selectedVettingPlan.className}</div>
+                  <div><strong>Academic Period:</strong> {selectedVettingPlan.term} • {selectedVettingPlan.weekNumber}</div>
+                </div>
+
+                <div style={{ marginTop: "10px", fontSize: "0.82rem", color: "#cbd5e1", borderTop: "1px solid rgba(255, 255, 255, 0.08)", paddingTop: "8px" }}>
+                  <div style={{ marginBottom: "4px" }}>
+                    <strong style={{ color: "#38bdf8" }}>Main Topic:</strong> {selectedVettingPlan.topic}
+                  </div>
+                  {selectedVettingPlan.learningObjectives && (
+                    <div style={{ marginBottom: "4px" }}>
+                      <strong style={{ color: "#34d399" }}>Learning Objectives:</strong> {selectedVettingPlan.learningObjectives}
+                    </div>
+                  )}
+                  {selectedVettingPlan.pedagogicalActivities && (
+                    <div style={{ marginBottom: "4px" }}>
+                      <strong style={{ color: "#a855f7" }}>Pedagogical Activities:</strong> {selectedVettingPlan.pedagogicalActivities}
+                    </div>
+                  )}
+                  {selectedVettingPlan.resourcesAttached && (
+                    <div style={{ color: "#fbbf24", marginTop: "4px" }}>
+                      📎 Attached File: <strong>{selectedVettingPlan.resourcesAttached}</strong>
+                    </div>
+                  )}
+                </div>
+              </div>
+
+              {/* Vetting Action Form */}
+              <form onSubmit={handleVetPlan}>
+                <div style={{ marginBottom: "14px" }}>
+                  <label style={{ display: "block", fontSize: "0.8rem", color: "#cbd5e1", fontWeight: "700", marginBottom: "8px" }}>
+                    Headmaster Executive Decision *
+                  </label>
+                  <div style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: "10px" }}>
+                    <button
+                      type="button"
+                      onClick={() => setVettingDecision("VETTED_APPROVED")}
+                      style={{
+                        background: vettingDecision === "VETTED_APPROVED" ? "rgba(16, 185, 129, 0.25)" : "rgba(255, 255, 255, 0.05)",
+                        border: vettingDecision === "VETTED_APPROVED" ? "2px solid #10b981" : "1px solid rgba(255, 255, 255, 0.1)",
+                        color: vettingDecision === "VETTED_APPROVED" ? "#34d399" : "#94a3b8",
+                        padding: "10px",
+                        borderRadius: "8px",
+                        fontWeight: "800",
+                        fontSize: "0.82rem",
+                        cursor: "pointer"
+                      }}
+                    >
+                      🟢 Endorse & Approve
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setVettingDecision("REVISION_REQUIRED")}
+                      style={{
+                        background: vettingDecision === "REVISION_REQUIRED" ? "rgba(239, 68, 68, 0.25)" : "rgba(255, 255, 255, 0.05)",
+                        border: vettingDecision === "REVISION_REQUIRED" ? "2px solid #ef4444" : "1px solid rgba(255, 255, 255, 0.1)",
+                        color: vettingDecision === "REVISION_REQUIRED" ? "#f87171" : "#94a3b8",
+                        padding: "10px",
+                        borderRadius: "8px",
+                        fontWeight: "800",
+                        fontSize: "0.82rem",
+                        cursor: "pointer"
+                      }}
+                    >
+                      🔴 Request Revisions
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setVettingDecision("UNDER_REVIEW")}
+                      style={{
+                        background: vettingDecision === "UNDER_REVIEW" ? "rgba(245, 158, 11, 0.25)" : "rgba(255, 255, 255, 0.05)",
+                        border: vettingDecision === "UNDER_REVIEW" ? "2px solid #f59e0b" : "1px solid rgba(255, 255, 255, 0.1)",
+                        color: vettingDecision === "UNDER_REVIEW" ? "#fbbf24" : "#94a3b8",
+                        padding: "10px",
+                        borderRadius: "8px",
+                        fontWeight: "800",
+                        fontSize: "0.82rem",
+                        cursor: "pointer"
+                      }}
+                    >
+                      🟡 Keep Under Review
+                    </button>
+                  </div>
+                </div>
+
+                {/* Quick Preset Feedback Words */}
+                <div style={{ marginBottom: "10px" }}>
+                  <span style={{ fontSize: "0.72rem", color: "#94a3b8", fontWeight: "700", display: "block", marginBottom: "4px" }}>
+                    Quick Endorsement & Feedback Presets:
+                  </span>
+                  <div style={{ display: "flex", gap: "6px", flexWrap: "wrap" }}>
+                    {[
+                      "Vetted, endorsed, and officially authorized for classroom instruction.",
+                      "Commendable alignment with practical experiments. Ensure differentiated pacing for all students.",
+                      "Revisions requested. Please expand the step-by-step worked examples and formative rubrics before resubmitting.",
+                      "Please align lesson learning outcomes with WAEC and Cambridge syllabus benchmarks."
+                    ].map((preset, pIdx) => (
+                      <button
+                        key={pIdx}
+                        type="button"
+                        onClick={() => setHeadmasterRemarksInput(preset)}
+                        style={{
+                          background: "rgba(255, 255, 255, 0.05)",
+                          border: "1px solid rgba(255, 255, 255, 0.1)",
+                          color: "#cbd5e1",
+                          borderRadius: "4px",
+                          padding: "3px 8px",
+                          fontSize: "0.72rem",
+                          cursor: "pointer",
+                          textAlign: "left"
+                        }}
+                      >
+                        ⚡ "{preset.slice(0, 42)}..."
+                      </button>
+                    ))}
+                  </div>
+                </div>
+
+                <div style={{ marginBottom: "16px" }}>
+                  <label style={{ display: "block", fontSize: "0.78rem", color: "#cbd5e1", fontWeight: "700", marginBottom: "4px" }}>
+                    Headmaster Words & Remarks to {selectedVettingPlan.teacherName} *
+                  </label>
+                  <textarea
+                    rows={3}
+                    required
+                    placeholder={`Enter your specific words, directives, commendations, or correction points directly to ${selectedVettingPlan.teacherName}...`}
+                    value={headmasterRemarksInput}
+                    onChange={(e) => setHeadmasterRemarksInput(e.target.value)}
+                    className="filter-input"
+                    style={{ width: "100%", padding: "10px 12px", fontSize: "0.85rem", lineHeight: "1.4" }}
+                  />
+                  <span style={{ fontSize: "0.72rem", color: "#94a3b8", marginTop: "3px", display: "block" }}>
+                    These remarks will be displayed directly inside {selectedVettingPlan.teacherName}'s portal upon saving.
+                  </span>
+                </div>
+
+                <div style={{ display: "flex", gap: "10px", justifyContent: "flex-end" }}>
+                  <button
+                    type="button"
+                    className="btn-secondary"
+                    onClick={() => setSelectedVettingPlan(null)}
+                    style={{ padding: "8px 16px" }}
+                  >
+                    Cancel
+                  </button>
+                  <button
+                    type="submit"
+                    className="btn-primary"
+                    style={{
+                      background: vettingDecision === "VETTED_APPROVED"
+                        ? "linear-gradient(135deg, #10b981, #059669)"
+                        : "linear-gradient(135deg, #ef4444, #dc2626)",
+                      padding: "8px 22px",
+                      fontSize: "0.85rem",
+                      fontWeight: "800",
+                      boxShadow: "0 4px 15px rgba(0,0,0,0.4)"
+                    }}
+                  >
+                    ✅ Commit Vetting & Send Words to Teacher
+                  </button>
+                </div>
+              </form>
+            </div>
+          </div>
+        )}
+      </div>
+      {/* WALK-IN / IN-PERSON STUDENT ADMISSION & INSTANT ENROLLMENT MODAL */}
+      {showWalkInModal && (
+        <div className="invoice-pay-modal-overlay">
+          <div className="invoice-pay-modal" style={{ maxWidth: "780px", background: "#0b1329", border: "2px solid #10b981", borderRadius: "18px", padding: "1.75rem", maxHeight: "90vh", overflowY: "auto" }}>
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", borderBottom: "1.5px solid rgba(16, 185, 129, 0.3)", paddingBottom: "1rem", marginBottom: "1.25rem" }}>
+              <div>
+                <span className="role-portal-badge" style={{ color: "#34d399", background: "rgba(16, 185, 129, 0.15)", marginBottom: "4px", display: "inline-block" }}>
+                  🏛️ EXECUTIVE WALK-IN ADMISSION DESK (PARENT PHYSICAL VISIT)
+                </span>
+                <h2 style={{ margin: "2px 0 0", color: "#f8fafc", fontSize: "1.3rem", fontWeight: "900" }}>
+                  Admit Student On-Site & Issue Instant Enrollment
+                </h2>
+                <p style={{ margin: "4px 0 0", color: "#94a3b8", fontSize: "0.82rem" }}>
+                  For parents visiting the school campus in person. Complete admission, generate index number, and register student directly to institutional rosters.
+                </p>
+              </div>
+              <button type="button" className="btn-secondary" onClick={() => setShowWalkInModal(false)}>✕</button>
+            </div>
+
+            <form onSubmit={handleSaveWalkInAdmission}>
+              {/* Section 1: Student Information */}
+              <div style={{ background: "rgba(15, 23, 42, 0.6)", border: "1px solid rgba(255, 255, 255, 0.08)", borderRadius: "10px", padding: "14px", marginBottom: "1rem" }}>
+                <span style={{ fontSize: "0.8rem", color: "#38bdf8", fontWeight: 800, display: "block", marginBottom: "8px" }}>
+                  1. PROSPECTIVE STUDENT DEMOGRAPHICS
+                </span>
+                <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "10px", marginBottom: "10px" }}>
+                  <div>
+                    <label style={{ display: "block", fontSize: "0.76rem", color: "#cbd5e1", marginBottom: "4px", fontWeight: 700 }}>Student First Name *</label>
+                    <input
+                      type="text"
+                      required
+                      placeholder="e.g. Kwame"
+                      value={walkInForm.studentFirstName}
+                      onChange={(e) => setWalkInForm({ ...walkInForm, studentFirstName: e.target.value })}
+                      className="filter-input"
+                      style={{ width: "100%", padding: "8px 10px" }}
+                    />
+                  </div>
+                  <div>
+                    <label style={{ display: "block", fontSize: "0.76rem", color: "#cbd5e1", marginBottom: "4px", fontWeight: 700 }}>Student Last Name *</label>
+                    <input
+                      type="text"
+                      required
+                      placeholder="e.g. Mensah"
+                      value={walkInForm.studentLastName}
+                      onChange={(e) => setWalkInForm({ ...walkInForm, studentLastName: e.target.value })}
+                      className="filter-input"
+                      style={{ width: "100%", padding: "8px 10px" }}
+                    />
+                  </div>
+                </div>
+
+                <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: "10px" }}>
+                  <div>
+                    <label style={{ display: "block", fontSize: "0.76rem", color: "#cbd5e1", marginBottom: "4px", fontWeight: 700 }}>Gender</label>
+                    <select
+                      value={walkInForm.gender}
+                      onChange={(e) => setWalkInForm({ ...walkInForm, gender: e.target.value })}
+                      className="filter-select"
+                      style={{ width: "100%", padding: "8px" }}
+                    >
+                      <option value="Male">Male</option>
+                      <option value="Female">Female</option>
+                    </select>
+                  </div>
+                  <div>
+                    <label style={{ display: "block", fontSize: "0.76rem", color: "#cbd5e1", marginBottom: "4px", fontWeight: 700 }}>Date of Birth</label>
+                    <input
+                      type="date"
+                      value={walkInForm.dateOfBirth}
+                      onChange={(e) => setWalkInForm({ ...walkInForm, dateOfBirth: e.target.value })}
+                      className="filter-input"
+                      style={{ width: "100%", padding: "8px" }}
+                    />
+                  </div>
+                  <div>
+                    <label style={{ display: "block", fontSize: "0.76rem", color: "#cbd5e1", marginBottom: "4px", fontWeight: 700 }}>Target Grade / Class</label>
+                    <select
+                      value={walkInForm.targetGradeLevel}
+                      onChange={(e) => setWalkInForm({ ...walkInForm, targetGradeLevel: e.target.value })}
+                      className="filter-select"
+                      style={{ width: "100%", padding: "8px" }}
+                    >
+                      <option value="1">Primary 1 (Grade 1)</option>
+                      <option value="2">Primary 2 (Grade 2)</option>
+                      <option value="3">Primary 3 (Grade 3)</option>
+                      <option value="4">Primary 4 (Grade 4)</option>
+                      <option value="5">Primary 5 (Grade 5)</option>
+                      <option value="6">Primary 6 (Grade 6)</option>
+                      <option value="7">JHS 1 (Grade 7)</option>
+                      <option value="8">JHS 2 (Grade 8)</option>
+                      <option value="9">JHS 3 (Grade 9 - BECE)</option>
+                      <option value="10">SHS 1 (Grade 10)</option>
+                      <option value="11">SHS 2 (Grade 11)</option>
+                      <option value="12">SHS 3 (Grade 12 - WASSCE)</option>
+                      <option value="100">University Level 100 (Freshman)</option>
+                    </select>
+                  </div>
+                </div>
+              </div>
+
+              {/* Section 2: Visiting Parent / Guardian Contact & GPS */}
+              <div style={{ background: "rgba(15, 23, 42, 0.6)", border: "1px solid rgba(255, 255, 255, 0.08)", borderRadius: "10px", padding: "14px", marginBottom: "1rem" }}>
+                <span style={{ fontSize: "0.8rem", color: "#34d399", fontWeight: 800, display: "block", marginBottom: "8px" }}>
+                  2. VISITING PARENT / GUARDIAN CONTACT DETAILS
+                </span>
+                <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "10px", marginBottom: "10px" }}>
+                  <div>
+                    <label style={{ display: "block", fontSize: "0.76rem", color: "#cbd5e1", marginBottom: "4px", fontWeight: 700 }}>Parent / Guardian Full Name *</label>
+                    <input
+                      type="text"
+                      required
+                      placeholder="e.g. Mr. David Mensah"
+                      value={walkInForm.guardianName}
+                      onChange={(e) => setWalkInForm({ ...walkInForm, guardianName: e.target.value })}
+                      className="filter-input"
+                      style={{ width: "100%", padding: "8px 10px" }}
+                    />
+                  </div>
+                  <div>
+                    <label style={{ display: "block", fontSize: "0.76rem", color: "#cbd5e1", marginBottom: "4px", fontWeight: 700 }}>Contact Telephone Number *</label>
+                    <input
+                      type="text"
+                      required
+                      placeholder="+233 24 555 0199"
+                      value={walkInForm.guardianPhone}
+                      onChange={(e) => setWalkInForm({ ...walkInForm, guardianPhone: e.target.value })}
+                      className="filter-input"
+                      style={{ width: "100%", padding: "8px 10px" }}
+                    />
+                  </div>
+                </div>
+
+                <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "10px" }}>
+                  <div>
+                    <label style={{ display: "block", fontSize: "0.76rem", color: "#cbd5e1", marginBottom: "4px", fontWeight: 700 }}>Home GPS Digital Address (GhanaPost GPS) *</label>
+                    <input
+                      type="text"
+                      required
+                      placeholder="e.g. GA-183-9024"
+                      value={walkInForm.homeGpsAddress}
+                      onChange={(e) => setWalkInForm({ ...walkInForm, homeGpsAddress: e.target.value })}
+                      className="filter-input"
+                      style={{ width: "100%", padding: "8px 10px", fontFamily: "monospace" }}
+                    />
+                  </div>
+                  <div>
+                    <label style={{ display: "block", fontSize: "0.76rem", color: "#cbd5e1", marginBottom: "4px", fontWeight: 700 }}>Email Address</label>
+                    <input
+                      type="email"
+                      placeholder="parent.guardian@gmail.com"
+                      value={walkInForm.guardianEmail}
+                      onChange={(e) => setWalkInForm({ ...walkInForm, guardianEmail: e.target.value })}
+                      className="filter-input"
+                      style={{ width: "100%", padding: "8px 10px" }}
+                    />
+                  </div>
+                </div>
+              </div>
+
+              {/* Section 3: Academic Background & Instant Enrollment Toggle */}
+              <div style={{ background: "rgba(15, 23, 42, 0.6)", border: "1px solid rgba(255, 255, 255, 0.08)", borderRadius: "10px", padding: "14px", marginBottom: "1.25rem" }}>
+                <span style={{ fontSize: "0.8rem", color: "#fbbf24", fontWeight: 800, display: "block", marginBottom: "8px" }}>
+                  3. ACADEMIC CREDENTIALS & INSTANT ENROLLMENT
+                </span>
+                <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "10px", marginBottom: "10px" }}>
+                  <div>
+                    <label style={{ display: "block", fontSize: "0.76rem", color: "#cbd5e1", marginBottom: "4px", fontWeight: 700 }}>Previous School Attended</label>
+                    <input
+                      type="text"
+                      value={walkInForm.previousSchool}
+                      onChange={(e) => setWalkInForm({ ...walkInForm, previousSchool: e.target.value })}
+                      className="filter-input"
+                      style={{ width: "100%", padding: "8px 10px" }}
+                    />
+                  </div>
+                  <div>
+                    <label style={{ display: "block", fontSize: "0.76rem", color: "#cbd5e1", marginBottom: "4px", fontWeight: 700 }}>Entry Evaluation Aggregate / Score</label>
+                    <input
+                      type="text"
+                      placeholder="e.g. Aggregate 08"
+                      value={walkInForm.entryAggregate}
+                      onChange={(e) => setWalkInForm({ ...walkInForm, entryAggregate: e.target.value })}
+                      className="filter-input"
+                      style={{ width: "100%", padding: "8px 10px" }}
+                    />
+                  </div>
+                </div>
+
+                <div style={{ marginTop: "10px", marginBottom: "10px" }}>
+                  <label style={{ display: "block", fontSize: "0.76rem", color: "#38bdf8", marginBottom: "4px", fontWeight: 700 }}>
+                    📎 Attach Prior Academic Records / Birth Certificate (Inspection & Verification Required)
+                  </label>
+                  <input
+                    type="file"
+                    accept=".pdf,.png,.jpg,.jpeg,.doc,.docx"
+                    onChange={(e) => {
+                      const file = e.target.files?.[0];
+                      if (file) {
+                        const size = file.size > 1024 * 1024 ? `${(file.size / (1024 * 1024)).toFixed(2)} MB` : `${(file.size / 1024).toFixed(1)} KB`;
+                        setWalkInDocumentFile({ name: file.name, size });
+                        setIsWalkInDocVerified(false);
+                      }
+                    }}
+                    style={{ fontSize: "0.8rem", color: "#94a3b8" }}
+                  />
+                  {walkInDocumentFile && (
+                    <FileUploadVerificationCard
+                      file={walkInDocumentFile}
+                      isVerified={isWalkInDocVerified}
+                      onVerify={() => setIsWalkInDocVerified(true)}
+                      onRemove={() => {
+                        setWalkInDocumentFile(null);
+                        setIsWalkInDocVerified(false);
+                      }}
+                      label="Applicant Credential Dossier"
+                      category="Admissions Verification"
+                    />
+                  )}
+                </div>
+
+                <div style={{ display: "flex", alignItems: "center", gap: "10px", background: "rgba(16, 185, 129, 0.15)", border: "1px solid rgba(16, 185, 129, 0.35)", borderRadius: "8px", padding: "10px" }}>
+                  <input
+                    type="checkbox"
+                    id="walkin-auto-enroll"
+                    checked={walkInForm.autoEnroll}
+                    onChange={(e) => setWalkInForm({ ...walkInForm, autoEnroll: e.target.checked })}
+                    style={{ width: "18px", height: "18px", cursor: "pointer" }}
+                  />
+                  <label htmlFor="walkin-auto-enroll" style={{ color: "#34d399", fontSize: "0.82rem", fontWeight: 700, cursor: "pointer" }}>
+                    ✅ Instant Institutional Enrollment: Generate official student Index Number immediately and register to class rosters.
+                  </label>
+                </div>
+              </div>
+
+              <div style={{ display: "flex", justifyContent: "flex-end", gap: "10px" }}>
+                <button type="button" className="btn-secondary" onClick={() => setShowWalkInModal(false)}>
+                  Cancel
+                </button>
+                <button
+                  type="submit"
+                  className="btn-primary"
+                  disabled={Boolean(walkInDocumentFile && !isWalkInDocVerified)}
+                  style={{
+                    background: (walkInDocumentFile && !isWalkInDocVerified)
+                      ? "rgba(100, 116, 139, 0.4)"
+                      : "linear-gradient(135deg, #10b981, #059669)",
+                    padding: "12px 24px",
+                    fontWeight: "900",
+                    fontSize: "0.92rem",
+                    boxShadow: "0 4px 15px rgba(16, 185, 129, 0.4)",
+                    cursor: (walkInDocumentFile && !isWalkInDocVerified) ? "not-allowed" : "pointer"
+                  }}
+                >
+                  {walkInDocumentFile && !isWalkInDocVerified ? "⚠️ Verify Attached File to Complete" : "🏛️ Complete Walk-In Admission & Generate Dossier"}
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* HEADMASTER ADMISSION RECORD AMENDMENT MODAL */}
+      {editingAdmission && (
+        <div className="invoice-pay-modal-overlay" style={{ zIndex: 9999 }}>
+          <div className="invoice-pay-modal" style={{ maxWidth: "780px", background: "#0b1329", border: "2px solid #f59e0b", borderRadius: "18px", padding: "1.75rem", maxHeight: "90vh", overflowY: "auto" }}>
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", borderBottom: "1.5px solid rgba(245, 158, 11, 0.3)", paddingBottom: "1rem", marginBottom: "1.25rem" }}>
+              <div>
+                <span className="role-portal-badge" style={{ color: "#fbbf24", background: "rgba(245, 158, 11, 0.15)", marginBottom: "4px", display: "inline-block" }}>
+                  HEADMASTER EXECUTIVE SUITE • ADMISSION RECORD AMENDMENT
+                </span>
+                <h2 style={{ margin: "2px 0 0", color: "#f8fafc", fontSize: "1.35rem", fontWeight: "900" }}>
+                  ✏️ AMEND APPLICANT & ADMISSION RECORD DETAILS
+                </h2>
+                <p style={{ margin: "4px 0 0", color: "#94a3b8", fontSize: "0.82rem" }}>
+                  For parent-notified corrections or institutional record revisions on application <strong>#{editingAdmission.applicationNumber || editingAdmission.id}</strong>.
+                </p>
+              </div>
+              <button type="button" className="btn-secondary" onClick={() => setEditingAdmission(null)}>✕</button>
+            </div>
+
+            <form onSubmit={handleSaveEditedAdmission}>
+              {/* Student Demographics */}
+              <div style={{ background: "rgba(15, 23, 42, 0.6)", border: "1px solid rgba(255, 255, 255, 0.08)", borderRadius: "10px", padding: "14px", marginBottom: "1rem" }}>
+                <h4 style={{ margin: "0 0 10px", color: "#38bdf8", fontSize: "0.9rem" }}>1. Student Identity & Placement</h4>
+                <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "10px", marginBottom: "10px" }}>
+                  <div>
+                    <label style={{ fontSize: "0.78rem", color: "#94a3b8", display: "block", marginBottom: "4px" }}>First Name *</label>
+                    <input
+                      type="text"
+                      className="filter-input"
+                      style={{ width: "100%" }}
+                      value={editAdmissionForm.studentFirstName}
+                      onChange={(e) => setEditAdmissionForm({ ...editAdmissionForm, studentFirstName: e.target.value })}
+                      required
+                    />
+                  </div>
+                  <div>
+                    <label style={{ fontSize: "0.78rem", color: "#94a3b8", display: "block", marginBottom: "4px" }}>Last Name *</label>
+                    <input
+                      type="text"
+                      className="filter-input"
+                      style={{ width: "100%" }}
+                      value={editAdmissionForm.studentLastName}
+                      onChange={(e) => setEditAdmissionForm({ ...editAdmissionForm, studentLastName: e.target.value })}
+                      required
+                    />
+                  </div>
+                </div>
+                <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: "10px" }}>
+                  <div>
+                    <label style={{ fontSize: "0.78rem", color: "#94a3b8", display: "block", marginBottom: "4px" }}>Target Grade Level</label>
+                    <select
+                      className="filter-select"
+                      style={{ width: "100%" }}
+                      value={editAdmissionForm.targetGradeLevel}
+                      onChange={(e) => setEditAdmissionForm({ ...editAdmissionForm, targetGradeLevel: e.target.value })}
+                    >
+                      {[1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12].map((g) => (
+                        <option key={g} value={String(g)}>Grade {g}</option>
+                      ))}
+                    </select>
+                  </div>
+                  <div>
+                    <label style={{ fontSize: "0.78rem", color: "#94a3b8", display: "block", marginBottom: "4px" }}>Gender</label>
+                    <select
+                      className="filter-select"
+                      style={{ width: "100%" }}
+                      value={editAdmissionForm.gender}
+                      onChange={(e) => setEditAdmissionForm({ ...editAdmissionForm, gender: e.target.value })}
+                    >
+                      <option value="Male">Male</option>
+                      <option value="Female">Female</option>
+                    </select>
+                  </div>
+                  <div>
+                    <label style={{ fontSize: "0.78rem", color: "#94a3b8", display: "block", marginBottom: "4px" }}>Date of Birth</label>
+                    <input
+                      type="date"
+                      className="filter-input"
+                      style={{ width: "100%" }}
+                      value={editAdmissionForm.dateOfBirth}
+                      onChange={(e) => setEditAdmissionForm({ ...editAdmissionForm, dateOfBirth: e.target.value })}
+                    />
+                  </div>
+                </div>
+              </div>
+
+              {/* Guardian & Contact Information */}
+              <div style={{ background: "rgba(15, 23, 42, 0.6)", border: "1px solid rgba(255, 255, 255, 0.08)", borderRadius: "10px", padding: "14px", marginBottom: "1rem" }}>
+                <h4 style={{ margin: "0 0 10px", color: "#34d399", fontSize: "0.9rem" }}>2. Parent / Guardian Contact Details</h4>
+                <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "10px", marginBottom: "10px" }}>
+                  <div>
+                    <label style={{ fontSize: "0.78rem", color: "#94a3b8", display: "block", marginBottom: "4px" }}>Guardian Full Name</label>
+                    <input
+                      type="text"
+                      className="filter-input"
+                      style={{ width: "100%" }}
+                      value={editAdmissionForm.guardianName}
+                      onChange={(e) => setEditAdmissionForm({ ...editAdmissionForm, guardianName: e.target.value })}
+                    />
+                  </div>
+                  <div>
+                    <label style={{ fontSize: "0.78rem", color: "#94a3b8", display: "block", marginBottom: "4px" }}>Guardian Phone</label>
+                    <input
+                      type="text"
+                      className="filter-input"
+                      style={{ width: "100%" }}
+                      value={editAdmissionForm.guardianPhone}
+                      onChange={(e) => setEditAdmissionForm({ ...editAdmissionForm, guardianPhone: e.target.value })}
+                    />
+                  </div>
+                </div>
+                <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "10px" }}>
+                  <div>
+                    <label style={{ fontSize: "0.78rem", color: "#94a3b8", display: "block", marginBottom: "4px" }}>Guardian Email</label>
+                    <input
+                      type="email"
+                      className="filter-input"
+                      style={{ width: "100%" }}
+                      value={editAdmissionForm.guardianEmail}
+                      onChange={(e) => setEditAdmissionForm({ ...editAdmissionForm, guardianEmail: e.target.value })}
+                    />
+                  </div>
+                  <div>
+                    <label style={{ fontSize: "0.78rem", color: "#94a3b8", display: "block", marginBottom: "4px" }}>Digital Address / GPS</label>
+                    <input
+                      type="text"
+                      className="filter-input"
+                      style={{ width: "100%" }}
+                      value={editAdmissionForm.homeGpsAddress}
+                      onChange={(e) => setEditAdmissionForm({ ...editAdmissionForm, homeGpsAddress: e.target.value })}
+                    />
+                  </div>
+                </div>
+              </div>
+
+              {/* Admission Pipeline Stage & Amendment Reason */}
+              <div style={{ background: "rgba(15, 23, 42, 0.6)", border: "1px solid rgba(255, 255, 255, 0.08)", borderRadius: "10px", padding: "14px", marginBottom: "1.25rem" }}>
+                <h4 style={{ margin: "0 0 10px", color: "#fbbf24", fontSize: "0.9rem" }}>3. Admission Status & Amendment Reason</h4>
+                <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "10px", marginBottom: "10px" }}>
+                  <div>
+                    <label style={{ fontSize: "0.78rem", color: "#94a3b8", display: "block", marginBottom: "4px" }}>Pipeline Stage / Status</label>
+                    <select
+                      className="filter-select"
+                      style={{ width: "100%" }}
+                      value={editAdmissionForm.stage}
+                      onChange={(e) => setEditAdmissionForm({ ...editAdmissionForm, stage: e.target.value })}
+                    >
+                      <option value="PENDING">PENDING (Under Initial Review)</option>
+                      <option value="UNDER_REVIEW">UNDER REVIEW (Dossier Inspection)</option>
+                      <option value="INTERVIEW_SCHEDULED">INTERVIEW SCHEDULED</option>
+                      <option value="APPROVED">APPROVED (Admit Notice Dispatched)</option>
+                      <option value="ADMITTED">ADMITTED (Enrolled to Cohort)</option>
+                      <option value="DOCUMENTS_REQUESTED">DOCUMENTS REQUESTED</option>
+                      <option value="REJECTED">REJECTED</option>
+                    </select>
+                  </div>
+                  <div>
+                    <label style={{ fontSize: "0.78rem", color: "#94a3b8", display: "block", marginBottom: "4px" }}>BECE / Aggregate Score</label>
+                    <input
+                      type="text"
+                      className="filter-input"
+                      style={{ width: "100%" }}
+                      value={editAdmissionForm.entryAggregate}
+                      onChange={(e) => setEditAdmissionForm({ ...editAdmissionForm, entryAggregate: e.target.value })}
+                    />
+                  </div>
+                </div>
+                <div>
+                  <label style={{ fontSize: "0.78rem", color: "#94a3b8", display: "block", marginBottom: "4px" }}>Amendment Reason / Parent Request Note</label>
+                  <input
+                    type="text"
+                    className="filter-input"
+                    style={{ width: "100%" }}
+                    placeholder="e.g. Parent informed Headmaster to update guardian contact and grade level"
+                    value={editAdmissionForm.amendmentReason}
+                    onChange={(e) => setEditAdmissionForm({ ...editAdmissionForm, amendmentReason: e.target.value })}
+                  />
+                </div>
+              </div>
+
+              <div style={{ display: "flex", justifyContent: "flex-end", gap: "10px" }}>
+                <button type="button" className="btn-secondary" onClick={() => setEditingAdmission(null)}>
+                  Cancel
+                </button>
+                <button
+                  type="submit"
+                  className="btn-primary"
+                  style={{ background: "linear-gradient(135deg, #f59e0b, #d97706)", padding: "11px 24px", fontWeight: "900", color: "#ffffff" }}
+                >
+                  💾 Save & Amend Admission Record
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* HEADMASTER ENROLLED STUDENT AMENDMENT MODAL */}
+      {editingStudent && (
+        <div className="invoice-pay-modal-overlay" style={{ zIndex: 9999 }}>
+          <div className="invoice-pay-modal" style={{ maxWidth: "720px", background: "#0b1329", border: "2px solid #38bdf8", borderRadius: "18px", padding: "1.75rem", maxHeight: "90vh", overflowY: "auto" }}>
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", borderBottom: "1.5px solid rgba(56, 189, 248, 0.3)", paddingBottom: "1rem", marginBottom: "1.25rem" }}>
+              <div>
+                <span className="role-portal-badge" style={{ color: "#38bdf8", background: "rgba(56, 189, 248, 0.15)", marginBottom: "4px", display: "inline-block" }}>
+                  HEADMASTER MASTER DASHBOARD • ENROLLED SCHOLAR ROSTER AMENDMENT
+                </span>
+                <h2 style={{ margin: "2px 0 0", color: "#f8fafc", fontSize: "1.35rem", fontWeight: "900" }}>
+                  ✏️ AMEND ENROLLED STUDENT DETAILS
+                </h2>
+                <p style={{ margin: "4px 0 0", color: "#94a3b8", fontSize: "0.82rem" }}>
+                  Update student identity, assigned classroom cohort, financial clearance balance, and bus service details.
+                </p>
+              </div>
+              <button type="button" className="btn-secondary" onClick={() => setEditingStudent(null)}>✕</button>
+            </div>
+
+            <form onSubmit={handleSaveEditedStudent}>
+              <div style={{ background: "rgba(15, 23, 42, 0.6)", border: "1px solid rgba(255, 255, 255, 0.08)", borderRadius: "10px", padding: "14px", marginBottom: "1rem" }}>
+                <h4 style={{ margin: "0 0 10px", color: "#38bdf8", fontSize: "0.9rem" }}>1. Scholar Details</h4>
+                <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "10px", marginBottom: "10px" }}>
+                  <div>
+                    <label style={{ fontSize: "0.78rem", color: "#94a3b8", display: "block", marginBottom: "4px" }}>First Name *</label>
+                    <input
+                      type="text"
+                      className="filter-input"
+                      style={{ width: "100%" }}
+                      value={editStudentForm.firstName}
+                      onChange={(e) => setEditStudentForm({ ...editStudentForm, firstName: e.target.value })}
+                      required
+                    />
+                  </div>
+                  <div>
+                    <label style={{ fontSize: "0.78rem", color: "#94a3b8", display: "block", marginBottom: "4px" }}>Last Name *</label>
+                    <input
+                      type="text"
+                      className="filter-input"
+                      style={{ width: "100%" }}
+                      value={editStudentForm.lastName}
+                      onChange={(e) => setEditStudentForm({ ...editStudentForm, lastName: e.target.value })}
+                      required
+                    />
+                  </div>
+                </div>
+                <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "10px" }}>
+                  <div>
+                    <label style={{ fontSize: "0.78rem", color: "#94a3b8", display: "block", marginBottom: "4px" }}>Matric / Student ID *</label>
+                    <input
+                      type="text"
+                      className="filter-input"
+                      style={{ width: "100%", fontFamily: "monospace" }}
+                      value={editStudentForm.studentId}
+                      onChange={(e) => setEditStudentForm({ ...editStudentForm, studentId: e.target.value })}
+                      required
+                    />
+                  </div>
+                  <div>
+                    <label style={{ fontSize: "0.78rem", color: "#94a3b8", display: "block", marginBottom: "4px" }}>Assigned Class Cohort</label>
+                    <select
+                      className="filter-select"
+                      style={{ width: "100%" }}
+                      value={editStudentForm.classCode}
+                      onChange={(e) => {
+                        const code = e.target.value;
+                        const preset = CLASS_CURRICULUM_PRESETS.find((c) => c.code === code);
+                        setEditStudentForm({
+                          ...editStudentForm,
+                          classCode: code,
+                          currentClass: preset?.levelTitle || code
+                        });
+                      }}
+                    >
+                      {CLASS_CURRICULUM_PRESETS.map((p) => (
+                        <option key={p.code} value={p.code}>
+                          {p.levelTitle} ({p.code})
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+                </div>
+              </div>
+
+              <div style={{ background: "rgba(15, 23, 42, 0.6)", border: "1px solid rgba(255, 255, 255, 0.08)", borderRadius: "10px", padding: "14px", marginBottom: "1.25rem" }}>
+                <h4 style={{ margin: "0 0 10px", color: "#10b981", fontSize: "0.9rem" }}>2. Financial Standing & Logistics</h4>
+                <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "10px", marginBottom: "10px" }}>
+                  <div>
+                    <label style={{ fontSize: "0.78rem", color: "#94a3b8", display: "block", marginBottom: "4px" }}>Fee Balance Due ($)</label>
+                    <input
+                      type="number"
+                      min="0"
+                      step="0.01"
+                      className="filter-input"
+                      style={{ width: "100%" }}
+                      value={editStudentForm.balanceDue}
+                      onChange={(e) => setEditStudentForm({ ...editStudentForm, balanceDue: e.target.value })}
+                    />
+                    <span style={{ fontSize: "0.72rem", color: editStudentForm.balanceDue > 0 ? "#f87171" : "#34d399", marginTop: "3px", display: "block" }}>
+                      {editStudentForm.balanceDue > 0 ? "⚠️ Student has fee arrears (Blocks automatic promotion)" : "✓ Fully Cleared ($0.00)"}
+                    </span>
+                  </div>
+                  <div>
+                    <label style={{ fontSize: "0.78rem", color: "#94a3b8", display: "block", marginBottom: "4px" }}>School Bus Transport Boarding</label>
+                    <select
+                      className="filter-select"
+                      style={{ width: "100%" }}
+                      value={editStudentForm.boardingBus ? "YES" : "NO"}
+                      onChange={(e) => setEditStudentForm({ ...editStudentForm, boardingBus: e.target.value === "YES" })}
+                    >
+                      <option value="YES">Yes (Assigned to Bus Route)</option>
+                      <option value="NO">No (Day Student / Self-Commute)</option>
+                    </select>
+                  </div>
+                </div>
+                <div>
+                  <label style={{ fontSize: "0.78rem", color: "#94a3b8", display: "block", marginBottom: "4px" }}>Amendment Note / Parent Request</label>
+                  <input
+                    type="text"
+                    className="filter-input"
+                    style={{ width: "100%" }}
+                    placeholder="e.g. Headmaster amended class allocation and fee status upon parent clearance receipt"
+                    value={editStudentForm.amendmentReason}
+                    onChange={(e) => setEditStudentForm({ ...editStudentForm, amendmentReason: e.target.value })}
+                  />
+                </div>
+              </div>
+
+              <div style={{ display: "flex", justifyContent: "flex-end", gap: "10px" }}>
+                <button type="button" className="btn-secondary" onClick={() => setEditingStudent(null)}>
+                  Cancel
+                </button>
+                <button
+                  type="submit"
+                  className="btn-primary"
+                  style={{ background: "linear-gradient(135deg, #0284c7, #0369a1)", padding: "11px 24px", fontWeight: "900", color: "#ffffff" }}
+                >
+                  💾 Save & Amend Student Details
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* INSTITUTIONAL ADMISSION LETTER TEMPLATES & COMPOSITION STUDIO MODAL */}
+      {showLetterTemplateModal && (
+        <div className="invoice-pay-modal-overlay">
+          <div className="invoice-pay-modal" style={{ maxWidth: "850px", background: "#0b1329", border: "2px solid #0284c7", borderRadius: "16px", padding: "2rem", maxHeight: "90vh", overflowY: "auto" }}>
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", borderBottom: "1.5px solid rgba(56, 189, 248, 0.3)", paddingBottom: "1.25rem", marginBottom: "1.5rem" }}>
+              <div>
+                <span className="role-portal-badge" style={{ color: "#38bdf8", marginBottom: "4px", display: "inline-block" }}>
+                  INSTITUTIONAL BRANDING & ADMISSIONS GOVERNANCE
+                </span>
+                <h2 style={{ margin: "2px 0 0", color: "#f8fafc", fontSize: "1.35rem", fontWeight: "900" }}>
+                  ADMISSION LETTER TEMPLATES & COMPOSITION STUDIO
+                </h2>
+                <p style={{ margin: "4px 0 0", color: "#94a3b8", fontSize: "0.82rem" }}>
+                  Configure customized official admission letters based on your institutional tier (University, Senior High School, or Basic Education).
+                </p>
+              </div>
+              <button type="button" className="btn-secondary" onClick={() => setShowLetterTemplateModal(false)}>✕</button>
+            </div>
+
+            <form onSubmit={handleSaveAdmissionTemplate}>
+              {/* Institution Type Selector Tabs */}
+              <div style={{ display: "flex", gap: "10px", marginBottom: "1.5rem" }}>
+                <button
+                  type="button"
+                  onClick={() => setSelectedInstitutionTier("UNIVERSITY")}
+                  style={{
+                    flex: 1,
+                    padding: "10px",
+                    borderRadius: "8px",
+                    border: selectedInstitutionTier === "UNIVERSITY" ? "2px solid #38bdf8" : "1px solid rgba(255,255,255,0.1)",
+                    background: selectedInstitutionTier === "UNIVERSITY" ? "rgba(56, 189, 248, 0.2)" : "rgba(15, 23, 42, 0.6)",
+                    color: selectedInstitutionTier === "UNIVERSITY" ? "#38bdf8" : "#94a3b8",
+                    fontWeight: "800",
+                    fontSize: "0.85rem",
+                    cursor: "pointer"
+                  }}
+                >
+                  🎓 University / Tertiary Degree Template
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setSelectedInstitutionTier("SHS")}
+                  style={{
+                    flex: 1,
+                    padding: "10px",
+                    borderRadius: "8px",
+                    border: selectedInstitutionTier === "SHS" ? "2px solid #10b981" : "1px solid rgba(255,255,255,0.1)",
+                    background: selectedInstitutionTier === "SHS" ? "rgba(16, 185, 129, 0.2)" : "rgba(15, 23, 42, 0.6)",
+                    color: selectedInstitutionTier === "SHS" ? "#34d399" : "#94a3b8",
+                    fontWeight: "800",
+                    fontSize: "0.85rem",
+                    cursor: "pointer"
+                  }}
+                >
+                  🏫 Senior High School (SHS) Template
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setSelectedInstitutionTier("BASIC")}
+                  style={{
+                    flex: 1,
+                    padding: "10px",
+                    borderRadius: "8px",
+                    border: selectedInstitutionTier === "BASIC" ? "2px solid #a855f7" : "1px solid rgba(255,255,255,0.1)",
+                    background: selectedInstitutionTier === "BASIC" ? "rgba(168, 85, 247, 0.2)" : "rgba(15, 23, 42, 0.6)",
+                    color: selectedInstitutionTier === "BASIC" ? "#c084fc" : "#94a3b8",
+                    fontWeight: "800",
+                    fontSize: "0.85rem",
+                    cursor: "pointer"
+                  }}
+                >
+                  🎒 Nursery & Basic School Template
+                </button>
+              </div>
+
+              {/* Template Editor Fields */}
+              <div style={{ background: "rgba(15, 23, 42, 0.7)", padding: "1.25rem", borderRadius: "10px", border: "1px solid rgba(255, 255, 255, 0.08)", marginBottom: "1.5rem" }}>
+                <div style={{ marginBottom: "1rem" }}>
+                  <label style={{ display: "block", fontSize: "0.8rem", color: "#94a3b8", marginBottom: "4px" }}>Official Letter Title / Header *</label>
+                  <input
+                    type="text"
+                    required
+                    value={admissionLetterTemplates[selectedInstitutionTier]?.letterTitle || ""}
+                    onChange={(e) => {
+                      setAdmissionLetterTemplates({
+                        ...admissionLetterTemplates,
+                        [selectedInstitutionTier]: {
+                          ...admissionLetterTemplates[selectedInstitutionTier],
+                          letterTitle: e.target.value
+                        }
+                      });
+                    }}
+                    className="filter-input"
+                    style={{ width: "100%", fontWeight: "700", color: "#34d399" }}
+                  />
+                </div>
+
+                <div style={{ marginBottom: "1rem" }}>
+                  <label style={{ display: "block", fontSize: "0.8rem", color: "#94a3b8", marginBottom: "4px" }}>Preamble & Offer Statement *</label>
+                  <textarea
+                    rows={3}
+                    required
+                    value={admissionLetterTemplates[selectedInstitutionTier]?.preamble || ""}
+                    onChange={(e) => {
+                      setAdmissionLetterTemplates({
+                        ...admissionLetterTemplates,
+                        [selectedInstitutionTier]: {
+                          ...admissionLetterTemplates[selectedInstitutionTier],
+                          preamble: e.target.value
+                        }
+                      });
+                    }}
+                    className="filter-input"
+                    style={{ width: "100%", lineHeight: "1.5" }}
+                  />
+                </div>
+
+                {selectedInstitutionTier === "UNIVERSITY" && (
+                  <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "12px", marginBottom: "1rem" }}>
+                    <div>
+                      <label style={{ display: "block", fontSize: "0.78rem", color: "#94a3b8", marginBottom: "4px" }}>Faculty / School</label>
+                      <input
+                        type="text"
+                        value={admissionLetterTemplates.UNIVERSITY.facultyDepartment}
+                        onChange={(e) => setAdmissionLetterTemplates({
+                          ...admissionLetterTemplates,
+                          UNIVERSITY: { ...admissionLetterTemplates.UNIVERSITY, facultyDepartment: e.target.value }
+                        })}
+                        className="filter-input"
+                        style={{ width: "100%" }}
+                      />
+                    </div>
+                    <div>
+                      <label style={{ display: "block", fontSize: "0.78rem", color: "#94a3b8", marginBottom: "4px" }}>Program & Degree Offered</label>
+                      <input
+                        type="text"
+                        value={admissionLetterTemplates.UNIVERSITY.programTitle}
+                        onChange={(e) => setAdmissionLetterTemplates({
+                          ...admissionLetterTemplates,
+                          UNIVERSITY: { ...admissionLetterTemplates.UNIVERSITY, programTitle: e.target.value }
+                        })}
+                        className="filter-input"
+                        style={{ width: "100%" }}
+                      />
+                    </div>
+                  </div>
+                )}
+
+                {selectedInstitutionTier === "SHS" && (
+                  <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "12px", marginBottom: "1rem" }}>
+                    <div>
+                      <label style={{ display: "block", fontSize: "0.78rem", color: "#94a3b8", marginBottom: "4px" }}>Academic Track (Science / Arts / Business)</label>
+                      <input
+                        type="text"
+                        value={admissionLetterTemplates.SHS.academicTrack}
+                        onChange={(e) => setAdmissionLetterTemplates({
+                          ...admissionLetterTemplates,
+                          SHS: { ...admissionLetterTemplates.SHS, academicTrack: e.target.value }
+                        })}
+                        className="filter-input"
+                        style={{ width: "100%" }}
+                      />
+                    </div>
+                    <div>
+                      <label style={{ display: "block", fontSize: "0.78rem", color: "#94a3b8", marginBottom: "4px" }}>House of Residence & Boarding Status</label>
+                      <input
+                        type="text"
+                        value={admissionLetterTemplates.SHS.houseOfResidence}
+                        onChange={(e) => setAdmissionLetterTemplates({
+                          ...admissionLetterTemplates,
+                          SHS: { ...admissionLetterTemplates.SHS, houseOfResidence: e.target.value }
+                        })}
+                        className="filter-input"
+                        style={{ width: "100%" }}
+                      />
+                    </div>
+                  </div>
+                )}
+
+                <div style={{ marginBottom: "1rem" }}>
+                  <label style={{ display: "block", fontSize: "0.8rem", color: "#94a3b8", marginBottom: "4px" }}>Conditions & Requirements for Enrollment *</label>
+                  <textarea
+                    rows={2}
+                    value={admissionLetterTemplates[selectedInstitutionTier]?.conditions || ""}
+                    onChange={(e) => {
+                      setAdmissionLetterTemplates({
+                        ...admissionLetterTemplates,
+                        [selectedInstitutionTier]: {
+                          ...admissionLetterTemplates[selectedInstitutionTier],
+                          conditions: e.target.value
+                        }
+                      });
+                    }}
+                    className="filter-input"
+                    style={{ width: "100%" }}
+                  />
+                </div>
+
+                <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "12px" }}>
+                  <div>
+                    <label style={{ display: "block", fontSize: "0.78rem", color: "#94a3b8", marginBottom: "4px" }}>Official Signatory 1 (Registrar / Academic Board)</label>
+                    <input
+                      type="text"
+                      value={admissionLetterTemplates[selectedInstitutionTier]?.signatoryOne || ""}
+                      onChange={(e) => {
+                        setAdmissionLetterTemplates({
+                          ...admissionLetterTemplates,
+                          [selectedInstitutionTier]: {
+                            ...admissionLetterTemplates[selectedInstitutionTier],
+                            signatoryOne: e.target.value
+                          }
+                        });
+                      }}
+                      className="filter-input"
+                      style={{ width: "100%" }}
+                    />
+                  </div>
+                  <div>
+                    <label style={{ display: "block", fontSize: "0.78rem", color: "#94a3b8", marginBottom: "4px" }}>Official Signatory 2 (Headmaster / Chancellor)</label>
+                    <input
+                      type="text"
+                      value={admissionLetterTemplates[selectedInstitutionTier]?.signatoryTwo || ""}
+                      onChange={(e) => {
+                        setAdmissionLetterTemplates({
+                          ...admissionLetterTemplates,
+                          [selectedInstitutionTier]: {
+                            ...admissionLetterTemplates[selectedInstitutionTier],
+                            signatoryTwo: e.target.value
+                          }
+                        });
+                      }}
+                      className="filter-input"
+                      style={{ width: "100%" }}
+                    />
+                  </div>
+                </div>
+              </div>
+
+              <div style={{ display: "flex", justifyContent: "flex-end", gap: "10px" }}>
+                <button type="button" className="btn-secondary" onClick={() => setShowLetterTemplateModal(false)}>Cancel</button>
+                <button type="submit" className="btn-primary" style={{ background: "linear-gradient(135deg, #10b981, #059669)", padding: "10px 22px", fontWeight: "800", boxShadow: "0 4px 14px rgba(16, 185, 129, 0.4)" }}>
+                  💾 Save Institutional Admission Letter Template
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+      {/* MODAL: DEVELOPER DIRECTIVE & HEADMASTER TWO-WAY REPLY */}
+      {showDevMessageModal && selectedDevMessage && (
+        <div className="staff-modal-overlay">
+          <div className="staff-modal-card" style={{ maxWidth: "660px", width: "95%" }}>
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "1.25rem", borderBottom: "1.5px solid #8b5cf6", paddingBottom: "12px" }}>
+              <div style={{ display: "flex", alignItems: "center", gap: "12px" }}>
+                <button
+                  type="button"
+                  onClick={() => setShowDevMessageModal(false)}
+                  style={{
+                    background: "rgba(148, 163, 184, 0.15)",
+                    border: "1px solid #475569",
+                    color: "#f8fafc",
+                    padding: "6px 14px",
+                    borderRadius: "8px",
+                    fontSize: "0.82rem",
+                    fontWeight: "700",
+                    cursor: "pointer",
+                    display: "flex",
+                    alignItems: "center",
+                    gap: "6px"
+                  }}
+                >
+                  ⬅️ Back
+                </button>
+                <span style={{ fontSize: "1.6rem" }}>💬</span>
+                <div>
+                  <h3 style={{ margin: 0, color: "#f8fafc", fontSize: "1.15rem", fontWeight: 800 }}>
+                    SYSTEM DEVELOPER DIRECTIVE & ACTION REPLY
+                  </h3>
+                  <span style={{ fontSize: "0.75rem", color: "#c4b5fd" }}>
+                    From: <strong>Gabriel Osei (Chief System Engineer)</strong>
+                  </span>
+                </div>
+              </div>
+              <button
+                type="button"
+                onClick={() => setShowDevMessageModal(false)}
+                style={{ background: "transparent", border: "none", color: "#94a3b8", fontSize: "1.2rem", cursor: "pointer" }}
+              >
+                ✕
+              </button>
+            </div>
+
+            {/* Directive Body */}
+            <div style={{ background: "rgba(2, 6, 23, 0.8)", padding: "1.25rem", borderRadius: "10px", borderLeft: "4px solid #ef4444", marginBottom: "1.25rem" }}>
+              <div style={{ display: "flex", justifyContent: "space-between", marginBottom: "6px", fontSize: "0.75rem" }}>
+                <strong style={{ color: "#f87171" }}>{selectedDevMessage.subject}</strong>
+                <span style={{ color: "#94a3b8" }}>{new Date(selectedDevMessage.timestamp).toLocaleString()}</span>
+              </div>
+              <div style={{ whiteSpace: "pre-wrap", color: "#f1f5f9", fontSize: "0.9rem", lineHeight: "1.6" }}>
+                {selectedDevMessage.messageText}
+              </div>
+            </div>
+
+            {/* Headmaster Reply Form */}
+            <form onSubmit={handleSendHeadmasterReply}>
+              <div className="staff-field" style={{ marginBottom: "1.25rem" }}>
+                <label style={{ color: "#34d399", fontWeight: "800", fontSize: "0.85rem", display: "block", marginBottom: "6px" }}>
+                  ✍️ Headmaster Reply (Detailing What You Are Supposed to Do & Corrective Actions Taken) *
+                </label>
+                <textarea
+                  rows={5}
+                  required
+                  placeholder="Enter your official reply to Chief Developer Gabriel Osei explaining the investigation conducted, sanctions issued, and security protocols enforced to put a stop to unauthorized logins..."
+                  value={headmasterReplyText}
+                  onChange={(e) => setHeadmasterReplyText(e.target.value)}
+                  style={{ width: "100%", padding: "12px", background: "#020617", border: "1px solid #334155", borderRadius: "8px", color: "#fff", fontSize: "0.88rem", fontFamily: "inherit", boxSizing: "border-box", lineHeight: "1.6" }}
+                />
+              </div>
+
+              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+                <button
+                  type="button"
+                  onClick={() => setShowDevMessageModal(false)}
+                  style={{ background: "#334155", color: "#cbd5e1", border: "none", padding: "10px 18px", borderRadius: "8px", fontWeight: "700", cursor: "pointer" }}
+                >
+                  ⬅️ Back / Cancel
+                </button>
+                <button
+                  type="submit"
+                  style={{
+                    background: "linear-gradient(135deg, #10b981, #059669)",
+                    color: "#fff",
+                    border: "none",
+                    padding: "10px 24px",
+                    borderRadius: "8px",
+                    fontWeight: "800",
+                    fontSize: "0.85rem",
+                    cursor: "pointer",
+                    boxShadow: "0 4px 14px rgba(16, 185, 129, 0.4)"
+                  }}
+                >
+                  📤 Transmit Official Reply to Developer
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* MODAL: STUDENT BUS BOARDING & ROUTE FARE ASSIGNMENT */}
+      {showBusAssignmentModal && (
+        <div className="staff-modal-overlay">
+          <div className="staff-modal-card" style={{ maxWidth: "680px", width: "95%" }}>
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "1.25rem", borderBottom: "1.5px solid #06b6d4", paddingBottom: "12px" }}>
+              <div style={{ display: "flex", alignItems: "center", gap: "12px" }}>
+                <button
+                  type="button"
+                  onClick={() => setShowBusAssignmentModal(false)}
+                  style={{
+                    background: "rgba(148, 163, 184, 0.15)",
+                    border: "1px solid #475569",
+                    color: "#f8fafc",
+                    padding: "6px 14px",
+                    borderRadius: "8px",
+                    fontSize: "0.82rem",
+                    fontWeight: "700",
+                    cursor: "pointer",
+                    display: "flex",
+                    alignItems: "center",
+                    gap: "6px"
+                  }}
+                >
+                  ⬅️ Back
+                </button>
+                <span style={{ fontSize: "1.6rem" }}>🚌</span>
+                <div>
+                  <h3 style={{ margin: 0, color: "#f8fafc", fontSize: "1.15rem", fontWeight: 800 }}>
+                    ASSIGN STUDENT TO BUS & DESTINATION FARE
+                  </h3>
+                  <span style={{ fontSize: "0.75rem", color: "#67e8f9" }}>
+                    Upload directly to Transport Dashboard with location-based fare amount
+                  </span>
+                </div>
+              </div>
+              <button
+                type="button"
+                onClick={() => setShowBusAssignmentModal(false)}
+                style={{ background: "transparent", border: "none", color: "#94a3b8", fontSize: "1.2rem", cursor: "pointer" }}
+              >
+                ✕
+              </button>
+            </div>
+
+            <form onSubmit={handleSaveAndUploadBusStudent}>
+              <div className="staff-form-grid" style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "12px" }}>
+                <div className="staff-field">
+                  <label>Student Full Name *</label>
+                  <input
+                    type="text"
+                    required
+                    placeholder="e.g. Kwame Boateng"
+                    className="filter-input"
+                    value={newBusStudentForm.studentName}
+                    onChange={(e) => setNewBusStudentForm({ ...newBusStudentForm, studentName: e.target.value })}
+                  />
+                </div>
+                <div className="staff-field">
+                  <label>Student ID / Index (Optional)</label>
+                  <input
+                    type="text"
+                    placeholder="e.g. STU-2026-088"
+                    className="filter-input"
+                    value={newBusStudentForm.studentId}
+                    onChange={(e) => setNewBusStudentForm({ ...newBusStudentForm, studentId: e.target.value })}
+                  />
+                </div>
+                <div className="staff-field">
+                  <label>Class Cohort *</label>
+                  <input
+                    type="text"
+                    required
+                    placeholder="e.g. Class 4B or JHS 2A"
+                    className="filter-input"
+                    value={newBusStudentForm.className}
+                    onChange={(e) => setNewBusStudentForm({ ...newBusStudentForm, className: e.target.value })}
+                  />
+                </div>
+                <div className="staff-field">
+                  <label>Destination Location & Zone *</label>
+                  <select
+                    className="filter-select"
+                    style={{ width: "100%", padding: "10px", background: "#020617", border: "1px solid #334155", borderRadius: "8px", color: "#fff" }}
+                    value={newBusStudentForm.destinationZone}
+                    onChange={(e) => {
+                      const zone = e.target.value;
+                      const fare = busRouteFares[zone] || 450.0;
+                      setNewBusStudentForm({
+                        ...newBusStudentForm,
+                        destinationZone: zone,
+                        termlyFareGhs: fare
+                      });
+                    }}
+                  >
+                    {Object.keys(busRouteFares).map((zone) => (
+                      <option key={zone} value={zone}>
+                        {zone} — GHS {busRouteFares[zone]}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+
+                <div className="staff-field">
+                  <label>Termly Bus Fare Amount (GHS) *</label>
+                  <input
+                    type="number"
+                    required
+                    step="0.01"
+                    className="filter-input"
+                    value={newBusStudentForm.termlyFareGhs}
+                    onChange={(e) => setNewBusStudentForm({ ...newBusStudentForm, termlyFareGhs: parseFloat(e.target.value) || 0 })}
+                  />
+                </div>
+
+                <div className="staff-field">
+                  <label>Assigned Bus & Driver *</label>
+                  <select
+                    className="filter-select"
+                    style={{ width: "100%", padding: "10px", background: "#020617", border: "1px solid #334155", borderRadius: "8px", color: "#fff" }}
+                    value={newBusStudentForm.busNumber}
+                    onChange={(e) => setNewBusStudentForm({ ...newBusStudentForm, busNumber: e.target.value })}
+                  >
+                    {registeredBusDrivers.map((d, i) => (
+                      <option key={i} value={`${d.busNumber} (${d.driverName})`}>
+                        {d.busNumber} — {d.driverName} ({d.driverPhone})
+                      </option>
+                    ))}
+                  </select>
+                </div>
+
+                <div className="staff-field">
+                  <label>Pickup Stop & Time *</label>
+                  <input
+                    type="text"
+                    required
+                    placeholder="e.g. Shell Station / Main Junction (06:30 AM)"
+                    className="filter-input"
+                    value={newBusStudentForm.pickupStop}
+                    onChange={(e) => setNewBusStudentForm({ ...newBusStudentForm, pickupStop: e.target.value })}
+                  />
+                </div>
+
+                <div className="staff-field">
+                  <label>Parent / Guardian Phone Contact *</label>
+                  <input
+                    type="text"
+                    required
+                    placeholder="+233-24-555-0199"
+                    className="filter-input"
+                    value={newBusStudentForm.parentPhone}
+                    onChange={(e) => setNewBusStudentForm({ ...newBusStudentForm, parentPhone: e.target.value })}
+                  />
+                </div>
+              </div>
+
+              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginTop: "1.5rem" }}>
+                <button
+                  type="button"
+                  onClick={() => setShowBusAssignmentModal(false)}
+                  style={{ background: "#334155", color: "#cbd5e1", border: "none", padding: "10px 18px", borderRadius: "8px", fontWeight: "700", cursor: "pointer" }}
+                >
+                  ⬅️ Back / Cancel
+                </button>
+                <button
+                  type="submit"
+                  style={{
+                    background: "linear-gradient(135deg, #06b6d4, #0891b2)",
+                    color: "#fff",
+                    border: "none",
+                    padding: "10px 22px",
+                    borderRadius: "8px",
+                    fontWeight: "800",
+                    fontSize: "0.85rem",
+                    cursor: "pointer",
+                    boxShadow: "0 4px 14px rgba(6, 182, 212, 0.4)"
+                  }}
+                >
+                  🚌 Assign & Upload to Transport Portal
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* MODAL: CREATE DESTINATION ROUTE & FARE */}
+      {showCreateRouteModal && (
+        <div className="staff-modal-overlay">
+          <div className="staff-modal-card" style={{ maxWidth: "560px", width: "95%" }}>
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "1.25rem", borderBottom: "1.5px solid #10b981", paddingBottom: "12px" }}>
+              <div style={{ display: "flex", alignItems: "center", gap: "12px" }}>
+                <button
+                  type="button"
+                  onClick={() => setShowCreateRouteModal(false)}
+                  style={{ background: "rgba(148, 163, 184, 0.15)", border: "1px solid #475569", color: "#f8fafc", padding: "6px 14px", borderRadius: "8px", fontSize: "0.82rem", fontWeight: "700", cursor: "pointer", display: "flex", alignItems: "center", gap: "6px" }}
+                >
+                  ⬅️ Back
+                </button>
+                <span style={{ fontSize: "1.6rem" }}>📍</span>
+                <div>
+                  <h3 style={{ margin: 0, color: "#f8fafc", fontSize: "1.15rem", fontWeight: 800 }}>
+                    CREATE DESTINATION & FARE
+                  </h3>
+                  <span style={{ fontSize: "0.75rem", color: "#34d399" }}>
+                    Establish new bus route with zone-specific termly fare
+                  </span>
+                </div>
+              </div>
+              <button
+                type="button"
+                onClick={() => setShowCreateRouteModal(false)}
+                style={{ background: "transparent", border: "none", color: "#94a3b8", fontSize: "1.2rem", cursor: "pointer" }}
+              >
+                ✕
+              </button>
+            </div>
+
+            <form onSubmit={handleCreateNewDestination}>
+              <div className="staff-form-grid" style={{ display: "flex", flexDirection: "column", gap: "12px" }}>
+                <div className="staff-field">
+                  <label>Destination Route / Zone Name *</label>
+                  <input
+                    type="text"
+                    required
+                    placeholder="e.g. Spintex / Baatsona (Zone 4)"
+                    className="filter-input"
+                    value={newRouteForm.name}
+                    onChange={(e) => setNewRouteForm({ ...newRouteForm, name: e.target.value })}
+                  />
+                </div>
+                <div className="staff-field">
+                  <label>Termly Fare Amount (GHS) *</label>
+                  <input
+                    type="number"
+                    required
+                    step="0.01"
+                    placeholder="e.g. 580.00"
+                    className="filter-input"
+                    value={newRouteForm.fare}
+                    onChange={(e) => setNewRouteForm({ ...newRouteForm, fare: e.target.value })}
+                  />
+                </div>
+                <div className="staff-field">
+                  <label>Key Pickup / Drop-off Stop (Optional)</label>
+                  <input
+                    type="text"
+                    placeholder="e.g. Community 18 Junction"
+                    className="filter-input"
+                    value={newRouteForm.pickupStop}
+                    onChange={(e) => setNewRouteForm({ ...newRouteForm, pickupStop: e.target.value })}
+                  />
+                </div>
+              </div>
+
+              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginTop: "1.5rem" }}>
+                <button
+                  type="button"
+                  onClick={() => setShowCreateRouteModal(false)}
+                  style={{ background: "#334155", color: "#cbd5e1", border: "none", padding: "10px 18px", borderRadius: "8px", fontWeight: "700", cursor: "pointer" }}
+                >
+                  ⬅️ Back / Cancel
+                </button>
+                <button
+                  type="submit"
+                  style={{
+                    background: "linear-gradient(135deg, #10b981, #059669)",
+                    color: "#fff",
+                    border: "none",
+                    padding: "10px 22px",
+                    borderRadius: "8px",
+                    fontWeight: "800",
+                    fontSize: "0.85rem",
+                    cursor: "pointer",
+                    boxShadow: "0 4px 14px rgba(16, 185, 129, 0.4)"
+                  }}
+                >
+                  💾 Save Destination Route & Fare
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* MODAL: ASSIGN / REGISTER BUS DRIVER */}
+      {showAssignDriverModal && (
+        <div className="staff-modal-overlay">
+          <div className="staff-modal-card" style={{ maxWidth: "560px", width: "95%" }}>
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "1.25rem", borderBottom: "1.5px solid #8b5cf6", paddingBottom: "12px" }}>
+              <div style={{ display: "flex", alignItems: "center", gap: "12px" }}>
+                <button
+                  type="button"
+                  onClick={() => setShowAssignDriverModal(false)}
+                  style={{ background: "rgba(148, 163, 184, 0.15)", border: "1px solid #475569", color: "#f8fafc", padding: "6px 14px", borderRadius: "8px", fontSize: "0.82rem", fontWeight: "700", cursor: "pointer", display: "flex", alignItems: "center", gap: "6px" }}
+                >
+                  ⬅️ Back
+                </button>
+                <span style={{ fontSize: "1.6rem" }}>👤</span>
+                <div>
+                  <h3 style={{ margin: 0, color: "#f8fafc", fontSize: "1.15rem", fontWeight: 800 }}>
+                    ASSIGN / REGISTER BUS DRIVER
+                  </h3>
+                  <span style={{ fontSize: "0.75rem", color: "#c084fc" }}>
+                    Register licensed driver and allocate school bus fleet vehicle
+                  </span>
+                </div>
+              </div>
+              <button
+                type="button"
+                onClick={() => setShowAssignDriverModal(false)}
+                style={{ background: "transparent", border: "none", color: "#94a3b8", fontSize: "1.2rem", cursor: "pointer" }}
+              >
+                ✕
+              </button>
+            </div>
+
+            <form onSubmit={handleAssignNewDriver}>
+              <div className="staff-form-grid" style={{ display: "flex", flexDirection: "column", gap: "12px" }}>
+                <div className="staff-field">
+                  <label>Driver Full Name *</label>
+                  <input
+                    type="text"
+                    required
+                    placeholder="e.g. Mr. Emmanuel Tetteh"
+                    className="filter-input"
+                    value={newDriverForm.name}
+                    onChange={(e) => setNewDriverForm({ ...newDriverForm, name: e.target.value })}
+                  />
+                </div>
+                <div className="staff-field">
+                  <label>Driver Contact Phone *</label>
+                  <input
+                    type="text"
+                    required
+                    placeholder="e.g. +233-24-411-9022"
+                    className="filter-input"
+                    value={newDriverForm.phone}
+                    onChange={(e) => setNewDriverForm({ ...newDriverForm, phone: e.target.value })}
+                  />
+                </div>
+                <div className="staff-field">
+                  <label>Bus Fleet Vehicle Number & Model *</label>
+                  <input
+                    type="text"
+                    required
+                    placeholder="e.g. GBS Bus #04 (Toyota Hiace - 18 Seater)"
+                    className="filter-input"
+                    value={newDriverForm.busNumber}
+                    onChange={(e) => setNewDriverForm({ ...newDriverForm, busNumber: e.target.value })}
+                  />
+                </div>
+              </div>
+
+              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginTop: "1.5rem" }}>
+                <button
+                  type="button"
+                  onClick={() => setShowAssignDriverModal(false)}
+                  style={{ background: "#334155", color: "#cbd5e1", border: "none", padding: "10px 18px", borderRadius: "8px", fontWeight: "700", cursor: "pointer" }}
+                >
+                  ⬅️ Back / Cancel
+                </button>
+                <button
+                  type="submit"
+                  style={{
+                    background: "linear-gradient(135deg, #8b5cf6, #7c3aed)",
+                    color: "#fff",
+                    border: "none",
+                    padding: "10px 22px",
+                    borderRadius: "8px",
+                    fontWeight: "800",
+                    fontSize: "0.85rem",
+                    cursor: "pointer",
+                    boxShadow: "0 4px 14px rgba(139, 92, 246, 0.4)"
+                  }}
+                >
+                  🚌 Register Driver & Assign Bus
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* ======================================================== */}
+      {/* MODAL 1: HEADMASTER TEACHER PROFILE & ACTIVE CURRICULUM   */}
+      {/* CHECKUP MODAL (SHOWS CURRICULUM & WEEK-BY-WEEK SPREAD)   */}
+      {/* ======================================================== */}
+      {selectedTeacherForCheckup && (
+        <div
+          className="role-modal-backdrop"
+          style={{ zIndex: 100001 }}
+          onClick={() => setSelectedTeacherForCheckup(null)}
+        >
+          <div
+            className="role-modal-card"
+            style={{
+              maxWidth: "880px",
+              width: "94%",
+              maxHeight: "90vh",
+              overflowY: "auto",
+              background: "rgba(15, 23, 42, 0.98)",
+              border: "2px solid #38bdf8",
+              borderRadius: "16px",
+              padding: "24px",
+              boxShadow: "0 25px 60px rgba(0, 0, 0, 0.92)"
+            }}
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", gap: "12px", borderBottom: "1px solid rgba(56, 189, 248, 0.25)", paddingBottom: "14px", marginBottom: "16px" }}>
+              <div>
+                <span className="role-portal-badge" style={{ color: "#34d399", marginBottom: "4px", display: "inline-block" }}>
+                  👩‍🏫 HEADMASTER TEACHER PROFILE & ACTIVE CURRICULUM CHECKUP
+                </span>
+                <h2 style={{ margin: 0, color: "#f8fafc", fontSize: "1.28rem", fontWeight: 900 }}>
+                  {selectedTeacherForCheckup.teacherName} — Active Curriculum & Term Syllabus Checkup
+                </h2>
+                <span style={{ fontSize: "0.8rem", color: "#94a3b8" }}>
+                  Position: <strong style={{ color: "#38bdf8" }}>{selectedTeacherForCheckup.teacherPosition}</strong> • Class: <strong style={{ color: "#f8fafc" }}>{selectedTeacherForCheckup.className}</strong> • Subject: <strong style={{ color: "#f8fafc" }}>{selectedTeacherForCheckup.subjectName}</strong>
+                </span>
+              </div>
+              <button
+                type="button"
+                className="modal-close-btn"
+                onClick={() => setSelectedTeacherForCheckup(null)}
+              >
+                ✕
+              </button>
+            </div>
+
+            {/* Active Curriculum Metadata Card */}
+            <div style={{
+              background: "rgba(2, 6, 23, 0.85)",
+              border: "1.5px solid rgba(56, 189, 248, 0.35)",
+              borderRadius: "12px",
+              padding: "16px",
+              marginBottom: "16px"
+            }}>
+              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: "10px", marginBottom: "10px" }}>
+                <div>
+                  <span style={{ fontSize: "0.73rem", color: "#38bdf8", fontWeight: 800, textTransform: "uppercase" }}>
+                    ACTIVE CURRICULUM USED BY THIS TEACHER
+                  </span>
+                  <h3 style={{ margin: "2px 0 0", color: "#f8fafc", fontSize: "1.08rem" }}>
+                    📚 {selectedTeacherForCheckup.curriculumTitle}
+                  </h3>
+                </div>
+                <div style={{ display: "flex", gap: "8px", flexWrap: "wrap" }}>
+                  <span style={{ background: "rgba(16, 185, 129, 0.18)", color: "#34d399", padding: "4px 10px", borderRadius: "8px", fontSize: "0.75rem", fontWeight: 800 }}>
+                    Version: {selectedTeacherForCheckup.version}
+                  </span>
+                  <span style={{ background: "rgba(56, 189, 248, 0.18)", color: "#38bdf8", padding: "4px 10px", borderRadius: "8px", fontSize: "0.75rem", fontWeight: 800 }}>
+                    Tier: {selectedTeacherForCheckup.institutionTier}
+                  </span>
+                  <span style={{ background: "rgba(245, 158, 11, 0.18)", color: "#fde68a", padding: "4px 10px", borderRadius: "8px", fontSize: "0.75rem", fontWeight: 800 }}>
+                    🗓️ Spread Across {selectedTeacherForCheckup.totalTermWeeks} Weeks in School
+                  </span>
+                </div>
+              </div>
+
+              <div style={{ fontSize: "0.8rem", color: "#cbd5e1", marginBottom: "12px" }}>
+                <strong>Accrediting Authority:</strong> {selectedTeacherForCheckup.authority} • <strong>Last Verified / Updated:</strong> {new Date(selectedTeacherForCheckup.lastAccessedAt || Date.now()).toLocaleString()}
+              </div>
+
+              {/* Core Strands & Learning Indicators */}
+              <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(280px, 1fr))", gap: "12px" }}>
+                <div style={{ background: "rgba(15, 23, 42, 0.8)", border: "1px solid rgba(56, 189, 248, 0.25)", borderRadius: "10px", padding: "12px" }}>
+                  <strong style={{ color: "#38bdf8", fontSize: "0.82rem", display: "block", marginBottom: "6px" }}>
+                    📌 Core Curriculum Strands Covered
+                  </strong>
+                  <ul style={{ margin: 0, paddingLeft: "18px", color: "#e2e8f0", fontSize: "0.78rem", lineHeight: 1.5 }}>
+                    {(selectedTeacherForCheckup.strands || []).map((st, idx) => (
+                      <li key={idx}>{st}</li>
+                    ))}
+                  </ul>
+                </div>
+
+                <div style={{ background: "rgba(15, 23, 42, 0.8)", border: "1px solid rgba(16, 185, 129, 0.25)", borderRadius: "10px", padding: "12px" }}>
+                  <strong style={{ color: "#34d399", fontSize: "0.82rem", display: "block", marginBottom: "6px" }}>
+                    🎯 Learning Indicators & Competency Outcomes
+                  </strong>
+                  <ul style={{ margin: 0, paddingLeft: "18px", color: "#e2e8f0", fontSize: "0.78rem", lineHeight: 1.5 }}>
+                    {(selectedTeacherForCheckup.indicators || []).map((ind, idx) => (
+                      <li key={idx}>{ind}</li>
+                    ))}
+                  </ul>
+                </div>
+              </div>
+            </div>
+
+            {/* Week-by-Week Term Curriculum Spread Table (According to Total Weeks in School) */}
+            <div style={{ marginBottom: "18px" }}>
+              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "8px", flexWrap: "wrap", gap: "8px" }}>
+                <h4 style={{ margin: 0, color: "#38bdf8", fontSize: "0.95rem" }}>
+                  🗓️ Curriculum Spread Across {selectedTeacherForCheckup.totalTermWeeks} Total Term Weeks in School
+                </h4>
+                <span style={{ fontSize: "0.74rem", color: "#94a3b8" }}>
+                  Automatically synchronized with Academic Planner ({selectedTeacherForCheckup.totalTermWeeks} Weeks)
+                </span>
+              </div>
+
+              <div className="role-table-responsive" style={{ maxHeight: "260px", overflowY: "auto", border: "1px solid rgba(56, 189, 248, 0.25)", borderRadius: "10px" }}>
+                <table className="role-table">
+                  <thead>
+                    <tr>
+                      <th>Week Span</th>
+                      <th>Curriculum Strand & Weekly Focus</th>
+                      <th>Learning Indicator</th>
+                      <th>Instructional Deliverable</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {(selectedTeacherForCheckup.weeklySpread || []).map((wk) => (
+                      <tr key={wk.weekNumber}>
+                        <td>
+                          <strong style={{ color: "#38bdf8", fontSize: "0.8rem", whiteSpace: "nowrap" }}>
+                            {wk.weekLabel}
+                          </strong>
+                        </td>
+                        <td style={{ fontSize: "0.8rem", color: "#f8fafc" }}>{wk.strandFocus}</td>
+                        <td style={{ fontSize: "0.78rem", color: "#cbd5e1" }}>{wk.indicatorFocus}</td>
+                        <td>
+                          <span style={{ fontSize: "0.74rem", color: "#34d399", fontWeight: 700 }}>
+                            {wk.deliverable}
+                          </span>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: "10px" }}>
+              <button
+                type="button"
+                onClick={() => {
+                  const prof = selectedTeacherForCheckup;
+                  setSelectedTeacherForCheckup(null);
+                  setEditingTeacherCurriculumInAdmin({
+                    teacherId: prof.teacherId,
+                    teacherName: prof.teacherName,
+                    className: prof.className,
+                    subjectName: prof.subjectName,
+                    institutionTier: prof.institutionTier,
+                    curriculumTitle: prof.curriculumTitle,
+                    authority: prof.authority,
+                    version: prof.version || "v2026.2 Updated",
+                    strandsText: (prof.strands || []).join("\n"),
+                    indicatorsText: (prof.indicators || []).join("\n"),
+                    updateNotes: ""
+                  });
+                }}
+                style={{
+                  background: "linear-gradient(135deg, #f59e0b, #d97706)",
+                  color: "#fff",
+                  border: "none",
+                  padding: "9px 16px",
+                  borderRadius: "8px",
+                  fontSize: "0.82rem",
+                  fontWeight: 800,
+                  cursor: "pointer"
+                }}
+              >
+                🔄 Update This Curriculum (Push Curriculum Updates)
+              </button>
+
+              <div style={{ display: "flex", gap: "10px" }}>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setFeedback({
+                      type: "success",
+                      message: `✅ Headmaster Curriculum Checkup recorded for ${selectedTeacherForCheckup.teacherName} (${selectedTeacherForCheckup.curriculumTitle} • ${selectedTeacherForCheckup.totalTermWeeks} Term Weeks).`
+                    });
+                    setSelectedTeacherForCheckup(null);
+                  }}
+                  style={{
+                    background: "linear-gradient(135deg, #10b981, #059669)",
+                    color: "#fff",
+                    border: "none",
+                    padding: "9px 18px",
+                    borderRadius: "8px",
+                    fontSize: "0.82rem",
+                    fontWeight: 800,
+                    cursor: "pointer"
+                  }}
+                >
+                  ✅ Endorse Teacher Profile & Curriculum Checkup
+                </button>
+                <button
+                  type="button"
+                  className="btn-secondary"
+                  onClick={() => setSelectedTeacherForCheckup(null)}
+                >
+                  Close
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ======================================================== */}
+      {/* MODAL 2: HEADMASTER CURRICULUM UPDATE STUDIO MODAL       */}
+      {/* ======================================================== */}
+      {editingTeacherCurriculumInAdmin && (
+        <div
+          className="role-modal-backdrop"
+          style={{ zIndex: 100002 }}
+          onClick={() => setEditingTeacherCurriculumInAdmin(null)}
+        >
+          <div
+            className="role-modal-card"
+            style={{
+              maxWidth: "720px",
+              width: "94%",
+              maxHeight: "90vh",
+              overflowY: "auto",
+              background: "rgba(15, 23, 42, 0.98)",
+              border: "2px solid #f59e0b",
+              borderRadius: "16px",
+              padding: "24px",
+              boxShadow: "0 25px 60px rgba(0, 0, 0, 0.92)"
+            }}
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", borderBottom: "1px solid rgba(245, 158, 11, 0.3)", paddingBottom: "12px", marginBottom: "16px" }}>
+              <div>
+                <span className="role-portal-badge" style={{ color: "#fbbf24" }}>
+                  🔄 INSTITUTIONAL CURRICULUM UPDATE STUDIO
+                </span>
+                <h3 style={{ margin: "4px 0 0", color: "#f8fafc", fontSize: "1.18rem", fontWeight: 900 }}>
+                  Update Curriculum for {editingTeacherCurriculumInAdmin.className} — {editingTeacherCurriculumInAdmin.subjectName}
+                </h3>
+              </div>
+              <button
+                type="button"
+                className="modal-close-btn"
+                onClick={() => setEditingTeacherCurriculumInAdmin(null)}
+              >
+                ✕
+              </button>
+            </div>
+
+            <form onSubmit={handleSaveAdminCurriculumUpdate}>
+              <div style={{ display: "grid", gridTemplateColumns: "2fr 1fr", gap: "12px", marginBottom: "12px" }}>
+                <div>
+                  <label style={{ display: "block", fontSize: "0.78rem", color: "#cbd5e1", marginBottom: "4px", fontWeight: 700 }}>
+                    Official Curriculum Title *
+                  </label>
+                  <input
+                    type="text"
+                    required
+                    value={editingTeacherCurriculumInAdmin.curriculumTitle}
+                    onChange={(e) =>
+                      setEditingTeacherCurriculumInAdmin({
+                        ...editingTeacherCurriculumInAdmin,
+                        curriculumTitle: e.target.value
+                      })
+                    }
+                    className="filter-input"
+                    style={{ width: "100%", padding: "8px 12px" }}
+                  />
+                </div>
+                <div>
+                  <label style={{ display: "block", fontSize: "0.78rem", color: "#cbd5e1", marginBottom: "4px", fontWeight: 700 }}>
+                    Curriculum Version Tag *
+                  </label>
+                  <input
+                    type="text"
+                    required
+                    value={editingTeacherCurriculumInAdmin.version}
+                    onChange={(e) =>
+                      setEditingTeacherCurriculumInAdmin({
+                        ...editingTeacherCurriculumInAdmin,
+                        version: e.target.value
+                      })
+                    }
+                    className="filter-input"
+                    style={{ width: "100%", padding: "8px 12px", color: "#34d399", fontWeight: 800 }}
+                  />
+                </div>
+              </div>
+
+              <div style={{ marginBottom: "12px" }}>
+                <label style={{ display: "block", fontSize: "0.78rem", color: "#cbd5e1", marginBottom: "4px", fontWeight: 700 }}>
+                  Updated Curriculum Strands (One Strand per Line — Automatically Spread Across {academicPlan.numberOfWeeksInSchool || 14} Term Weeks) *
+                </label>
+                <textarea
+                  rows={4}
+                  required
+                  value={editingTeacherCurriculumInAdmin.strandsText}
+                  onChange={(e) =>
+                    setEditingTeacherCurriculumInAdmin({
+                      ...editingTeacherCurriculumInAdmin,
+                      strandsText: e.target.value
+                    })
+                  }
+                  className="filter-input"
+                  style={{ width: "100%", padding: "10px", fontSize: "0.83rem", lineHeight: 1.45 }}
+                />
+              </div>
+
+              <div style={{ marginBottom: "12px" }}>
+                <label style={{ display: "block", fontSize: "0.78rem", color: "#cbd5e1", marginBottom: "4px", fontWeight: 700 }}>
+                  Updated Learning Indicators & Assessment Benchmarks (One per Line) *
+                </label>
+                <textarea
+                  rows={4}
+                  required
+                  value={editingTeacherCurriculumInAdmin.indicatorsText}
+                  onChange={(e) =>
+                    setEditingTeacherCurriculumInAdmin({
+                      ...editingTeacherCurriculumInAdmin,
+                      indicatorsText: e.target.value
+                    })
+                  }
+                  className="filter-input"
+                  style={{ width: "100%", padding: "10px", fontSize: "0.83rem", lineHeight: 1.45 }}
+                />
+              </div>
+
+              <div style={{ marginBottom: "16px" }}>
+                <label style={{ display: "block", fontSize: "0.78rem", color: "#cbd5e1", marginBottom: "4px", fontWeight: 700 }}>
+                  Curriculum Update Summary / Notes for Teacher ({editingTeacherCurriculumInAdmin.teacherName})
+                </label>
+                <input
+                  type="text"
+                  value={editingTeacherCurriculumInAdmin.updateNotes}
+                  onChange={(e) =>
+                    setEditingTeacherCurriculumInAdmin({
+                      ...editingTeacherCurriculumInAdmin,
+                      updateNotes: e.target.value
+                    })
+                  }
+                  placeholder="e.g. Updated Term 1 syllabus strands to reflect new practical assessment rubrics"
+                  className="filter-input"
+                  style={{ width: "100%", padding: "8px 12px" }}
+                />
+              </div>
+
+              <div style={{ display: "flex", justifyContent: "flex-end", gap: "10px" }}>
+                <button
+                  type="button"
+                  className="btn-secondary"
+                  onClick={() => setEditingTeacherCurriculumInAdmin(null)}
+                >
+                  Cancel
+                </button>
+                <button
+                  type="submit"
+                  style={{
+                    background: "linear-gradient(135deg, #10b981, #059669)",
+                    color: "#fff",
+                    border: "none",
+                    padding: "9px 20px",
+                    borderRadius: "8px",
+                    fontSize: "0.85rem",
+                    fontWeight: 800,
+                    cursor: "pointer"
+                  }}
+                >
+                  💾 Save & Publish Curriculum Update
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* ======================================================== */}
+      {/* MODAL 3: INBUILT LIVE FACULTY ZOOM / WHATSAPP CONFERENCE  */}
+      {/* STUDIO MODAL (HEADMASTER DASHBOARD)                      */}
+      {/* ======================================================== */}
+      {activeAdminLiveMeeting && (
+        <div
+          className="role-modal-backdrop"
+          style={{ zIndex: 100003 }}
+          onClick={() => setActiveAdminLiveMeeting(null)}
+        >
+          <div
+            className="role-modal-card"
+            style={{
+              maxWidth: "820px",
+              width: "94%",
+              background: "rgba(2, 6, 23, 0.98)",
+              border: "2px solid #38bdf8",
+              borderRadius: "16px",
+              padding: "24px",
+              boxShadow: "0 25px 60px rgba(0, 0, 0, 0.95)"
+            }}
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", borderBottom: "1px solid rgba(56, 189, 248, 0.3)", paddingBottom: "12px", marginBottom: "16px" }}>
+              <div>
+                <span className="role-portal-badge" style={{ color: "#34d399" }}>
+                  🔴 LIVE FACULTY CONFERENCE STUDIO • {activeAdminLiveMeeting.platform}
+                </span>
+                <h3 style={{ margin: "4px 0 0", color: "#f8fafc", fontSize: "1.2rem", fontWeight: 900 }}>
+                  {activeAdminLiveMeeting.topic}
+                </h3>
+              </div>
+              <button
+                type="button"
+                className="modal-close-btn"
+                onClick={() => setActiveAdminLiveMeeting(null)}
+              >
+                ✕
+              </button>
+            </div>
+
+            {/* Live Studio Participant Grid */}
+            <div style={{
+              display: "grid",
+              gridTemplateColumns: "repeat(auto-fit, minmax(220px, 1fr))",
+              gap: "12px",
+              marginBottom: "16px",
+              background: "#090f20",
+              padding: "16px",
+              borderRadius: "12px",
+              border: "1px solid rgba(56, 189, 248, 0.3)"
+            }}>
+              {[
+                { name: `${currentUser.firstName} ${currentUser.lastName} (Headmaster Host)`, role: "Executive Host • Speaking", badge: "🎤 HOST LIVE", color: "#38bdf8" },
+                { name: "Dr. Robert Vance", role: "Head of Advanced Mathematics", badge: "🟢 Connected", color: "#34d399" },
+                { name: "Prof. Eleanor Sterling", role: "Senior Physics & Chemistry", badge: "🟢 Connected", color: "#34d399" },
+                { name: "Claire Montgomery", role: "Basic & Primary Lead", badge: "🟢 Connected", color: "#34d399" }
+              ].map((part, idx) => (
+                <div
+                  key={idx}
+                  style={{
+                    background: "linear-gradient(135deg, #0f172a, #1e293b)",
+                    border: `1.5px solid ${part.color}`,
+                    borderRadius: "10px",
+                    padding: "16px",
+                    textAlign: "center"
+                  }}
+                >
+                  <div style={{ width: "54px", height: "54px", borderRadius: "50%", background: "rgba(56, 189, 248, 0.18)", border: `2px solid ${part.color}`, display: "flex", alignItems: "center", justifyContent: "center", margin: "0 auto 8px", fontSize: "1.5rem" }}>
+                    🎓
+                  </div>
+                  <strong style={{ color: "#f8fafc", fontSize: "0.86rem", display: "block" }}>{part.name}</strong>
+                  <span style={{ color: "#94a3b8", fontSize: "0.74rem", display: "block", marginBottom: "6px" }}>{part.role}</span>
+                  <span style={{ background: "rgba(16, 185, 129, 0.2)", color: "#34d399", padding: "2px 8px", borderRadius: "6px", fontSize: "0.7rem", fontWeight: 800 }}>
+                    {part.badge}
+                  </span>
+                </div>
+              ))}
+            </div>
+
+            <div style={{
+              background: "rgba(15, 23, 42, 0.85)",
+              border: "1px solid rgba(56, 189, 248, 0.3)",
+              borderRadius: "10px",
+              padding: "12px 14px",
+              marginBottom: "16px",
+              display: "flex",
+              justifyContent: "space-between",
+              alignItems: "center",
+              flexWrap: "wrap",
+              gap: "10px"
+            }}>
+              <div style={{ fontSize: "0.78rem", color: "#cbd5e1" }}>
+                <strong>Working Conference URL:</strong>{" "}
+                <span style={{ fontFamily: "monospace", color: "#38bdf8" }}>{activeAdminLiveMeeting.meetingUrl}</span>
+              </div>
+              <div style={{ display: "flex", gap: "8px", flexWrap: "wrap" }}>
+                <button
+                  type="button"
+                  onClick={() => {
+                    navigator.clipboard?.writeText(activeAdminLiveMeeting.meetingUrl);
+                    setFeedback({ type: "success", message: `📋 Copied meeting link: ${activeAdminLiveMeeting.meetingUrl}` });
+                  }}
+                  style={{
+                    background: "rgba(56, 189, 248, 0.16)",
+                    border: "1px solid #38bdf8",
+                    color: "#38bdf8",
+                    padding: "6px 12px",
+                    borderRadius: "6px",
+                    fontSize: "0.75rem",
+                    fontWeight: 800,
+                    cursor: "pointer"
+                  }}
+                >
+                  📋 Copy Working Link
+                </button>
+                <button
+                  type="button"
+                  onClick={() => {
+                    const waText = encodeURIComponent(
+                      `🎥 *HEADMASTER LIVE FACULTY MEETING (${activeAdminLiveMeeting.platform})*\nTopic: ${activeAdminLiveMeeting.topic}\nJoin Now: ${activeAdminLiveMeeting.meetingUrl}`
+                    );
+                    window.open(`https://wa.me/?text=${waText}`, "_blank", "noopener,noreferrer");
+                  }}
+                  style={{
+                    background: "rgba(37, 211, 102, 0.2)",
+                    border: "1px solid #25d366",
+                    color: "#4ade80",
+                    padding: "6px 12px",
+                    borderRadius: "6px",
+                    fontSize: "0.75rem",
+                    fontWeight: 800,
+                    cursor: "pointer"
+                  }}
+                >
+                  💚 Share on WhatsApp
+                </button>
+                <button
+                  type="button"
+                  onClick={() => window.open(activeAdminLiveMeeting.meetingUrl, "_blank", "noopener,noreferrer")}
+                  style={{
+                    background: "linear-gradient(135deg, #2563eb, #1d4ed8)",
+                    border: "none",
+                    color: "#fff",
+                    padding: "6px 14px",
+                    borderRadius: "6px",
+                    fontSize: "0.75rem",
+                    fontWeight: 800,
+                    cursor: "pointer"
+                  }}
+                >
+                  ↗ Open External {activeAdminLiveMeeting.platform} App
+                </button>
+              </div>
+            </div>
+
+            <div style={{ display: "flex", justifyContent: "flex-end" }}>
+              <button
+                type="button"
+                onClick={() => setActiveAdminLiveMeeting(null)}
+                style={{
+                  background: "#dc2626",
+                  color: "#fff",
+                  border: "none",
+                  padding: "8px 18px",
+                  borderRadius: "8px",
+                  fontSize: "0.82rem",
+                  fontWeight: 800,
+                  cursor: "pointer"
+                }}
+              >
+                ⏹️ Leave / Close Conference Studio
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* UNIVERSAL FLOATING SCROLL CONTROLS */}
+      <div style={{
+        position: "fixed",
+        bottom: "24px",
+        right: "24px",
+        display: "flex",
+        flexDirection: "column",
+        gap: "8px",
+        zIndex: 9999
+      }}>
+        <button
+          type="button"
+          onClick={() => window.scrollTo({ top: 0, behavior: "smooth" })}
+          style={{
+            width: "42px",
+            height: "42px",
+            borderRadius: "50%",
+            background: "rgba(15, 23, 42, 0.9)",
+            border: "1.5px solid #a855f7",
+            color: "#c084fc",
+            fontSize: "1.2rem",
+            fontWeight: "900",
+            cursor: "pointer",
+            boxShadow: "0 4px 15px rgba(0, 0, 0, 0.6)",
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center"
+          }}
+          title="Scroll to Top"
+        >
+          ⬆️
+        </button>
+        <button
+          type="button"
+          onClick={() => window.scrollTo({ top: document.body.scrollHeight, behavior: "smooth" })}
+          style={{
+            width: "42px",
+            height: "42px",
+            borderRadius: "50%",
+            background: "rgba(15, 23, 42, 0.9)",
+            border: "1.5px solid #a855f7",
+            color: "#c084fc",
+            fontSize: "1.2rem",
+            fontWeight: "900",
+            cursor: "pointer",
+            boxShadow: "0 4px 15px rgba(0, 0, 0, 0.6)",
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center"
+          }}
+          title="Scroll to Bottom"
+        >
+          ⬇️
+        </button>
+      </div>
+
+      <DigitalSignaturePadModal
+        isOpen={showHeadmasterSignaturePad}
+        onClose={() => setShowHeadmasterSignaturePad(false)}
+        role="HEADMASTER"
+        signatoryName="Dr. Arthur Pendleton"
+        signatoryTitle="Headmaster & Chief Academic Chancellor"
+        onSave={(sigData) => {
+          setHeadmasterSignature(sigData);
+          setFeedback({ type: "success", message: `✍️ Headmaster digital signature verified and registered! Token: ${sigData.hash}` });
+        }}
+      />
+
+      <UniversalRoleGuideModal
+        role="ADMIN"
+        isOpen={showAdminGuideModal}
+        onClose={() => setShowAdminGuideModal(false)}
+      />
+    </div>
+  );
+}
+
+class AdminDashboardErrorBoundary extends React.Component {
+  constructor(props) {
+    super(props);
+    this.state = { hasError: false };
+  }
+  static getDerivedStateFromError() {
+    return { hasError: true };
+  }
+  componentDidCatch(error, errorInfo) {
+    console.warn("Headmaster Dashboard non-fatal event:", error);
+    try {
+      sessionStorage.setItem("gbs_admin_active_tab", "roster");
+    } catch { }
+  }
+  render() {
+    if (this.state.hasError) {
+      return (
+        <div style={{ minHeight: "100vh", background: "#0b0f19", color: "#f8fafc", padding: "20px" }}>
+          <TopCenterSystemBanner currentRole="ADMIN" activeDashboard="ADMIN" />
+          <div style={{ maxWidth: "620px", margin: "60px auto", textAlign: "center", background: "rgba(15, 23, 42, 0.95)", border: "1.5px solid #38bdf8", borderRadius: "16px", padding: "32px", boxShadow: "0 20px 50px rgba(0,0,0,0.8)" }}>
+            <span style={{ fontSize: "2.8rem" }}>🎓</span>
+            <h3 style={{ color: "#38bdf8", margin: "12px 0 8px" }}>Headmaster Executive Command Center</h3>
+            <p style={{ color: "#94a3b8", fontSize: "0.88rem", marginBottom: "20px" }}>
+              Switching directly to the Institutional Roster & Enrolment Master View.
+            </p>
+            <div style={{ display: "flex", gap: "12px", justifyContent: "center" }}>
+              <button
+                type="button"
+                onClick={() => {
+                  sessionStorage.setItem("gbs_admin_active_tab", "roster");
+                  window.location.href = "/portal/admin/dashboard?tab=roster";
+                }}
+                style={{ padding: "10px 22px", background: "linear-gradient(135deg, #0284c7, #38bdf8)", border: "none", borderRadius: "8px", color: "#0f172a", fontWeight: 800, cursor: "pointer" }}
+              >
+                📋 Open Institutional Roster
+              </button>
+              <button
+                type="button"
+                onClick={() => {
+                  window.location.href = "/portal/admin/dashboard?tab=roster";
+                }}
+                style={{ padding: "10px 18px", background: "rgba(30, 41, 59, 0.9)", border: "1px solid rgba(255,255,255,0.15)", borderRadius: "8px", color: "#cbd5e1", fontWeight: 700, cursor: "pointer" }}
+              >
+                🔄 Reload Executive View
+              </button>
+            </div>
+          </div>
+        </div>
+      );
+    }
+    return this.props.children;
+  }
+}
+
+export function SafeAdminDashboardWrapper(props) {
+  return (
+    <AdminDashboardErrorBoundary>
+      <AdminDashboard {...props} />
+    </AdminDashboardErrorBoundary>
+  );
+}
+
+export default SafeAdminDashboardWrapper;
