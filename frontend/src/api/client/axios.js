@@ -10,6 +10,57 @@ const axiosInstance = axios.create({
   },
 });
 
+let refreshInFlightPromise = null;
+let lastAuthRedirectNoticeAt = 0;
+
+function readCleanToken(key) {
+  try {
+    const val = localStorage.getItem(key);
+    if (!val || val === "null" || val === "undefined") return null;
+    return val;
+  } catch {
+    return null;
+  }
+}
+
+async function refreshSessionTokenOnce() {
+  if (refreshInFlightPromise) return refreshInFlightPromise;
+
+  const refreshToken = readCleanToken("gbs_refresh_token");
+  if (!refreshToken || refreshToken.startsWith("gbs_local_refresh_") || refreshToken.startsWith("gbs_builtin_refresh_")) {
+    return null;
+  }
+
+  refreshInFlightPromise = axios
+    .post(
+      `${getApiBaseUrl()}/auth/refresh-token`,
+      { refreshToken },
+      { headers: { "Content-Type": "application/json" }, timeout: 10000 }
+    )
+    .then((res) => {
+      const nextAccess = res.data?.data?.accessToken || res.data?.accessToken;
+      const nextRefresh = res.data?.data?.refreshToken || res.data?.refreshToken;
+      if (nextAccess) {
+        localStorage.setItem("gbs_token", nextAccess);
+        localStorage.setItem("gbs_access_token", nextAccess);
+        if (localStorage.getItem("gbs_dev_token")) {
+          localStorage.setItem("gbs_dev_token", nextAccess);
+        }
+        if (nextRefresh) {
+          localStorage.setItem("gbs_refresh_token", nextRefresh);
+        }
+        return nextAccess;
+      }
+      return null;
+    })
+    .catch(() => null)
+    .finally(() => {
+      refreshInFlightPromise = null;
+    });
+
+  return refreshInFlightPromise;
+}
+
 axiosInstance.interceptors.request.use(
   (config) => {
     const isDevRoute =
@@ -19,8 +70,8 @@ axiosInstance.interceptors.request.use(
       String(config.url || "").includes("/developer");
 
     const token = isDevRoute
-      ? localStorage.getItem("gbs_dev_token") || localStorage.getItem("gbs_token")
-      : localStorage.getItem("gbs_token") || localStorage.getItem("gbs_dev_token");
+      ? readCleanToken("gbs_dev_token") || readCleanToken("gbs_token")
+      : readCleanToken("gbs_token") || readCleanToken("gbs_dev_token");
 
     if (token) {
       config.headers.Authorization = `Bearer ${token}`;
@@ -29,8 +80,8 @@ axiosInstance.interceptors.request.use(
     config.headers["X-GBS-Mode"] = isDemoSandboxMode() ? "DEMO_SANDBOX" : "LIVE_PRODUCTION";
 
     const tenantId =
-      localStorage.getItem("gbs_tenant_id") ||
-      localStorage.getItem("gbs_active_tenant");
+      readCleanToken("gbs_tenant_id") ||
+      readCleanToken("gbs_active_tenant");
     if (tenantId && !config.headers["X-Tenant-Id"]) {
       config.headers["X-Tenant-Id"] = tenantId;
     }
@@ -69,6 +120,7 @@ axiosInstance.interceptors.response.use(
       const isSilentEndpoint =
         url.includes("/health") ||
         url.includes("/auth/login") ||
+        url.includes("/auth/refresh-token") ||
         url.includes("/auth/verify") ||
         url.includes("/translate");
 
@@ -120,28 +172,67 @@ axiosInstance.interceptors.response.use(
     }
     return response;
   },
-  (error) => {
+  async (error) => {
     const status = error.response?.status;
+    const originalRequest = error.config || {};
+    const url = String(originalRequest.url || "");
+    const isAuthAttempt =
+      url.includes("/auth/login") ||
+      url.includes("/auth/register") ||
+      url.includes("/auth/refresh-token") ||
+      url.includes("/dev-control/auth/login") ||
+      url.includes("/developer-control-center/auth/login");
+
+    // Seamless automatic token refresh and retry on expired JWT (401)
+    if (status === 401 && !originalRequest._retry && !isAuthAttempt) {
+      originalRequest._retry = true;
+      const freshAccessToken = await refreshSessionTokenOnce();
+      if (freshAccessToken) {
+        originalRequest.headers = {
+          ...(originalRequest.headers || {}),
+          Authorization: `Bearer ${freshAccessToken}`
+        };
+        return axiosInstance(originalRequest);
+      }
+
+      // Refresh failed or absent: clear stale broken tokens cleanly instead of looping 401 popups
+      try {
+        localStorage.removeItem("gbs_token");
+        localStorage.removeItem("gbs_access_token");
+        localStorage.removeItem("gbs_refresh_token");
+        if (typeof window !== "undefined" && window.location?.pathname?.startsWith("/developer")) {
+          localStorage.removeItem("gbs_dev_token");
+        }
+      } catch { }
+    }
+
     const rcceCode = error.response?.data?.code;
     let serverErrMsg =
       error.response?.data?.message ||
       error.response?.data?.error ||
       error.message;
 
-    // Handle offline / network disconnect natively with RCCE standard notice
     if (!error.response) {
       serverErrMsg = "System offline: Unable to reach the GBS Central Engine. Check network connection.";
     }
 
-    if (status === 401) {
-      console.warn("Unauthorized request - session may have expired.");
+    if (status === 401 && !isAuthAttempt) {
+      const now = Date.now();
+      if (now - lastAuthRedirectNoticeAt > 8000 && typeof window !== "undefined" && typeof window.showGBSOpenNotice === "function") {
+        lastAuthRedirectNoticeAt = now;
+        window.showGBSOpenNotice(
+          "Your authentication session expired. Please sign in again to get a fresh token.",
+          "warning",
+          "SESSION RENEWAL REQUIRED"
+        );
+      }
+      return Promise.reject(error);
     }
 
     if (
       typeof window !== "undefined" &&
       typeof window.showGBSOpenNotice === "function"
     ) {
-      const url = String(error.config?.url || "");
       if (!url.includes("/auth/login") && !url.includes("/health")) {
         let title = "COMMAND FEEDBACK NOTICE";
         if (rcceCode === "DEMO_TRIAL_LIMIT_REACHED") title = "DEMO TRIAL LIMIT REACHED (10/10)";

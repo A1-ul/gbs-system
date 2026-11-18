@@ -901,19 +901,21 @@ export default function ParentDashboard() {
       replies: []
     };
 
-    const updatedThread = [newMsgObj, ...teacherThread];
+    const updatedThread = [newMsgObj, ...teacherThread].slice(0, 20);
     setTeacherThread(updatedThread);
 
     try {
       if (isToAdmin) {
         const existingAdmin = JSON.parse(localStorage.getItem("gbs_parent_admin_messages") || "[]");
-        localStorage.setItem("gbs_parent_admin_messages", JSON.stringify([newMsgObj, ...existingAdmin]));
+        localStorage.setItem("gbs_parent_admin_messages", JSON.stringify([newMsgObj, ...existingAdmin].slice(0, 15)));
       } else {
         localStorage.setItem("gbs_parent_teacher_messages", JSON.stringify(updatedThread));
       }
       const universal = JSON.parse(localStorage.getItem("gbs_universal_voice_notes") || "[]");
-      localStorage.setItem("gbs_universal_voice_notes", JSON.stringify([newMsgObj, ...universal]));
+      localStorage.setItem("gbs_universal_voice_notes", JSON.stringify([newMsgObj, ...universal].slice(0, 15)));
     } catch { }
+
+    apiClient.post("/communication/voice-notes", newMsgObj).catch(() => { });
 
     setTeacherMsgSubject("");
     setFeedback({

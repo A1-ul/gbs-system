@@ -876,13 +876,15 @@ export function AdminDashboard({ initialTab } = {}) {
       sentAt: new Date().toISOString()
     };
 
-    const updated = [record, ...commHistory];
+    const updated = [record, ...commHistory].slice(0, 20);
     setCommHistory(updated);
     try {
       localStorage.setItem("gbs_headmaster_sent_messages", JSON.stringify(updated));
       const publicNotes = JSON.parse(localStorage.getItem("gbs_universal_voice_notes") || "[]");
-      localStorage.setItem("gbs_universal_voice_notes", JSON.stringify([record, ...publicNotes]));
+      localStorage.setItem("gbs_universal_voice_notes", JSON.stringify([record, ...publicNotes].slice(0, 15)));
     } catch { }
+
+    apiClient.post("/communication/voice-notes", record).catch(() => { });
 
     triggerToast("success", "Voice Note Dispatched", `Voice note (${voiceNoteData.durationLabel}) successfully sent to ${recipientDisplayName}!`);
     setFeedback({

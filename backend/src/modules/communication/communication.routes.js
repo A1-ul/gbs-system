@@ -176,6 +176,71 @@ router.post('/email', (req, res) => {
 });
 router.get('/direct-messages', communicationController.getDirectConversations);
 
+// 4b. Recorded Voice Notes Persistence & Retrieval (Exact audio payload)
+router.get('/voice-notes', (req, res) => {
+  const store = readPersistentStore();
+  const tid = String(req.tenantId || req.user?.tenantId || '1');
+  const notes = (store.voiceNotes || []).filter(
+    (v) => String(v.tenantId || '1') === tid
+  );
+  res.status(200).json({
+    success: true,
+    status: 'success',
+    results: notes.length,
+    data: { voiceNotes: notes }
+  });
+});
+
+router.post('/voice-notes', (req, res) => {
+  const body = req.body || {};
+  const vn = body.voiceNote || body;
+  const audioUrl = String(vn?.audioUrl || '').trim();
+  if (!audioUrl || audioUrl.length < 100 || audioUrl.includes('UklGRiQAAABXQVZFZm10IBAAAAABAAEAQB8AAEAfAAABAAgAZGF0YQAAAAA=')) {
+    return res.status(400).json({
+      success: false,
+      status: 'fail',
+      message: 'Valid recorded microphone audio is required.'
+    });
+  }
+
+  const record = {
+    id: body.id || vn.id || `VN-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`,
+    tenantId: req.tenantId || req.user?.tenantId || 1,
+    senderId: req.user?.id || 1,
+    senderName: body.senderName || `${req.user?.firstName || ''} ${req.user?.lastName || ''}`.trim() || req.user?.role || 'Portal User',
+    senderRole: body.senderRole || vn.senderRole || req.user?.role || 'USER',
+    recipient: body.recipient || body.recipientTeacher || 'School Community',
+    subject: body.subject || 'Recorded Voice Note',
+    content: body.content || body.body || `🎙️ Voice Note (${vn.durationLabel || `${vn.duration || 1}s`})`,
+    voiceNote: {
+      ...vn,
+      audioUrl,
+      isGenuineRecording: true
+    },
+    timestamp: body.timestamp || vn.timestamp || new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+    sentAt: new Date().toISOString()
+  };
+
+  writePersistentStore((curr) => ({
+    ...curr,
+    voiceNotes: [record, ...(curr.voiceNotes || [])].slice(0, 60)
+  }));
+
+  if (socketServer && typeof socketServer.emit === 'function') {
+    socketServer.emit('chat:voice-note:global', {
+      tenantId: record.tenantId,
+      voiceNoteRecord: record
+    });
+  }
+
+  return res.status(201).json({
+    success: true,
+    status: 'success',
+    message: 'Exact recorded voice note saved and dispatched.',
+    data: record
+  });
+});
+
 // 5. Broadcast Announcements
 router.get('/announcements', communicationController.getAnnouncements);
 router.post('/announcements', restrictTo('SUPER_ADMIN', 'ADMIN', 'STAFF', 'DEVELOPER'), communicationController.publishAnnouncement);

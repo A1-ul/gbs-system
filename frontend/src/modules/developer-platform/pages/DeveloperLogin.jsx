@@ -385,7 +385,9 @@ export default function DeveloperLogin() {
           password: password.trim(),
         });
         const realJwt = res.data?.data?.accessToken || res.data?.accessToken || res.data?.token;
+        const realRefresh = res.data?.data?.refreshToken || res.data?.refreshToken;
         if (realJwt) token = realJwt;
+        if (realRefresh) localStorage.setItem("gbs_refresh_token", realRefresh);
       } catch {
         // fallback to resilient developer token
       }
@@ -433,7 +435,9 @@ export default function DeveloperLogin() {
           password: cleanPass,
         });
         const realJwt = res.data?.data?.accessToken || res.data?.accessToken || res.data?.token;
+        const realRefresh = res.data?.data?.refreshToken || res.data?.refreshToken;
         if (realJwt) token = realJwt;
+        if (realRefresh) localStorage.setItem("gbs_refresh_token", realRefresh);
       } catch {
         // fallback to resilient developer token
       }
@@ -471,6 +475,9 @@ export default function DeveloperLogin() {
       if (response.data?.token) {
         localStorage.setItem("gbs_dev_token", response.data.token);
         localStorage.setItem("gbs_token", response.data.token);
+        if (response.data?.refreshToken) {
+          localStorage.setItem("gbs_refresh_token", response.data.refreshToken);
+        }
         sessionStorage.setItem("gbs_dev_gate_unlocked", "true");
         localStorage.setItem(
           "gbs_developer",

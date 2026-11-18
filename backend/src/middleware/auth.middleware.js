@@ -44,8 +44,12 @@ const protect = async (req, res, next) => {
   try {
     let token;
     if (req.headers.authorization && req.headers.authorization.startsWith('Bearer')) {
-      token = req.headers.authorization.split(' ')[1];
-    } else if (req.cookies && req.cookies.jwt) {
+      const bearerVal = req.headers.authorization.split(' ')[1];
+      if (bearerVal && bearerVal !== 'null' && bearerVal !== 'undefined') {
+        token = bearerVal;
+      }
+    }
+    if (!token && req.cookies && req.cookies.jwt && req.cookies.jwt !== 'null' && req.cookies.jwt !== 'undefined') {
       token = req.cookies.jwt;
     }
 

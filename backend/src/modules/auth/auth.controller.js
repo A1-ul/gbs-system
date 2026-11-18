@@ -21,7 +21,7 @@ const login = async (req, res, next) => {
       httpOnly: true,
       secure: process.env.NODE_ENV === 'production',
       sameSite: 'strict',
-      maxAge: 3600000
+      maxAge: 24 * 60 * 60 * 1000
     });
 
     res.status(200).json({
@@ -41,7 +41,7 @@ const register = async (req, res, next) => {
       httpOnly: true,
       secure: process.env.NODE_ENV === 'production',
       sameSite: 'strict',
-      maxAge: 3600000
+      maxAge: 24 * 60 * 60 * 1000
     });
 
     res.status(201).json({

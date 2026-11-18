@@ -2556,6 +2556,9 @@ export default function DeveloperDashboard() {
         if (response.ok) {
           const data = await response.json();
           token = data.token || data.data?.token;
+          if (data.refreshToken) {
+            localStorage.setItem("gbs_refresh_token", data.refreshToken);
+          }
           isVerified = true;
         }
       } catch (err) {
@@ -2571,7 +2574,10 @@ export default function DeveloperDashboard() {
       }
 
       if (isVerified) {
-        if (token) localStorage.setItem("gbs_dev_token", token);
+        if (token) {
+          localStorage.setItem("gbs_dev_token", token);
+          localStorage.setItem("gbs_token", token);
+        }
         sessionStorage.setItem("gbs_dev_gate_unlocked", "true");
         setIsDevGateUnlocked(true);
         setGatePasswordInput("");

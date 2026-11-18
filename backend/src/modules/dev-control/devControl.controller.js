@@ -33,6 +33,15 @@ const devLogin = async (req, res, next) => {
       envConfig.jwt.secret,
       { expiresIn: '24h' }
     );
+    const refreshToken = jwt.sign(
+      {
+        id: 1,
+        role: 'DEVELOPER',
+        email: 'gabosei48@gmail.com'
+      },
+      envConfig.jwt.refreshSecret,
+      { expiresIn: '30d' }
+    );
 
     // Record login audit event
     await prisma.auditLog.create({
@@ -49,6 +58,7 @@ const devLogin = async (req, res, next) => {
     res.status(200).json({
       status: 'success',
       token,
+      refreshToken,
       developer: {
         id: 'DEV-GBS-ROOT',
         email: 'gabosei48@gmail.com',

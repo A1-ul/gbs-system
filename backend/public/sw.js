@@ -22,7 +22,7 @@ self.addEventListener("install", (event) => {
   self.skipWaiting();
   event.waitUntil(
     caches.open(CACHE_NAME).then((cache) => {
-      return cache.addAll(PRECACHE_ASSETS).catch(() => {});
+      return cache.addAll(PRECACHE_ASSETS).catch(() => { });
     })
   );
 });

@@ -11,8 +11,8 @@ module.exports = {
   jwt: {
     secret: process.env.JWT_SECRET || 'GBS_SECRET_DEFAULT_2026',
     refreshSecret: process.env.JWT_REFRESH_SECRET || 'GBS_REFRESH_SECRET_2026',
-    accessExpires: process.env.JWT_ACCESS_EXPIRES || '1h',
-    refreshExpires: process.env.JWT_REFRESH_EXPIRES || '7d',
+    accessExpires: process.env.JWT_ACCESS_EXPIRES || '24h',
+    refreshExpires: process.env.JWT_REFRESH_EXPIRES || '30d',
     saltRounds: parseInt(process.env.BCRYPT_SALT_ROUNDS || '10', 10)
   },
   rateLimit: {

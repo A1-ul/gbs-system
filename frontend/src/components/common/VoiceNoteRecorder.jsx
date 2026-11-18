@@ -1,20 +1,43 @@
 import React, { useState, useRef, useEffect } from "react";
 
+const SIMULATED_EMPTY_WAV =
+  "data:audio/wav;base64,UklGRiQAAABXQVZFZm10IBAAAAABAAEAQB8AAEAfAAABAAgAZGF0YQAAAAA=";
+
+function pickSupportedAudioMimeType() {
+  if (typeof window === "undefined" || typeof window.MediaRecorder === "undefined") {
+    return "";
+  }
+  const candidates = [
+    "audio/webm;codecs=opus",
+    "audio/webm",
+    "audio/ogg;codecs=opus",
+    "audio/mp4",
+    "audio/aac"
+  ];
+  if (typeof window.MediaRecorder.isTypeSupported !== "function") {
+    return "";
+  }
+  return candidates.find((type) => window.MediaRecorder.isTypeSupported(type)) || "";
+}
+
 /**
- * GBS Enterprise Voice Note Recording & Messaging Engine
- * Supports Headmaster, Parents, and Teachers voice note communication.
- * Uses browser MediaRecorder API with automatic fallback simulation if mic is blocked.
+ * GBS Real Microphone Voice Note Recorder
+ * Always captures, previews, and dispatches the sender's exact recorded microphone audio.
+ * Never fabricates sample audio tones or simulated recordings when mic access is denied.
  */
 export default function VoiceNoteRecorder({ onSendVoiceNote, onCancel, role = "USER" }) {
   const [isRecording, setIsRecording] = useState(false);
+  const [isProcessingAudio, setIsProcessingAudio] = useState(false);
   const [recordingDuration, setRecordingDuration] = useState(0);
   const [recordedAudioUrl, setRecordedAudioUrl] = useState(null);
   const [audioBlob, setAudioBlob] = useState(null);
+  const [recordedMimeType, setRecordedMimeType] = useState("audio/webm");
   const [isPlaying, setIsPlaying] = useState(false);
   const [playbackTime, setPlaybackTime] = useState(0);
   const [permissionError, setPermissionError] = useState(null);
 
   const mediaRecorderRef = useRef(null);
+  const mediaStreamRef = useRef(null);
   const audioChunksRef = useRef([]);
   const timerRef = useRef(null);
   const audioElementRef = useRef(null);
@@ -23,14 +46,34 @@ export default function VoiceNoteRecorder({ onSendVoiceNote, onCancel, role = "U
   const analyserRef = useRef(null);
   const animationFrameRef = useRef(null);
 
-  // Format seconds into MM:SS
   const formatTime = (secs) => {
-    const m = Math.floor(secs / 60);
-    const s = secs % 60;
+    const safe = Math.max(0, Math.floor(Number(secs) || 0));
+    const m = Math.floor(safe / 60);
+    const s = safe % 60;
     return `${m.toString().padStart(2, "0")}:${s.toString().padStart(2, "0")}`;
   };
 
-  // Live Oscillating Waveform Renderer
+  const cleanupPreviewAudio = () => {
+    if (audioElementRef.current) {
+      try {
+        audioElementRef.current.pause();
+        audioElementRef.current.src = "";
+      } catch { }
+      audioElementRef.current = null;
+    }
+    setIsPlaying(false);
+    setPlaybackTime(0);
+  };
+
+  const stopMediaTracks = () => {
+    if (mediaStreamRef.current) {
+      try {
+        mediaStreamRef.current.getTracks().forEach((track) => track.stop());
+      } catch { }
+      mediaStreamRef.current = null;
+    }
+  };
+
   const startWaveformAnimation = (analyser) => {
     const render = () => {
       animationFrameRef.current = requestAnimationFrame(render);
@@ -47,14 +90,8 @@ export default function VoiceNoteRecorder({ onSendVoiceNote, onCancel, role = "U
 
       if (analyser) {
         analyser.getByteFrequencyData(dataArray);
-      } else {
-        const now = Date.now() / 150;
-        for (let i = 0; i < bufferLength; i++) {
-          dataArray[i] = Math.abs(Math.sin(now + i * 0.25) * 160 + Math.cos(now * 0.8 + i * 0.15) * 75);
-        }
       }
 
-      // Draw real oscillating wave bars with gradient
       const barWidth = (width / bufferLength) * 1.6;
       let x = 0;
       const gradient = ctx.createLinearGradient(0, 0, width, 0);
@@ -75,75 +112,119 @@ export default function VoiceNoteRecorder({ onSendVoiceNote, onCancel, role = "U
     render();
   };
 
-  // Start Voice Recording
   const startRecording = async () => {
     setPermissionError(null);
+    cleanupPreviewAudio();
     audioChunksRef.current = [];
     setRecordedAudioUrl(null);
     setAudioBlob(null);
+    setIsProcessingAudio(false);
+
+    if (
+      typeof navigator === "undefined" ||
+      !navigator.mediaDevices ||
+      !navigator.mediaDevices.getUserMedia ||
+      typeof window.MediaRecorder === "undefined"
+    ) {
+      setPermissionError(
+        "Microphone audio recording is not supported on this browser. Please use Chrome, Edge, or Safari with microphone permission."
+      );
+      return;
+    }
 
     try {
-      if (navigator.mediaDevices && navigator.mediaDevices.getUserMedia) {
-        const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
-        const mediaRecorder = new MediaRecorder(stream);
-        mediaRecorderRef.current = mediaRecorder;
+      const stream = await navigator.mediaDevices.getUserMedia({
+        audio: {
+          echoCancellation: true,
+          noiseSuppression: true,
+          autoGainControl: true
+        }
+      });
+      mediaStreamRef.current = stream;
 
-        // Initialize real Web Audio API Analyser
-        try {
-          const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
-          audioContextRef.current = audioCtx;
-          const analyser = audioCtx.createAnalyser();
-          analyser.fftSize = 128;
-          analyserRef.current = analyser;
-          const source = audioCtx.createMediaStreamSource(stream);
-          source.connect(analyser);
-          startWaveformAnimation(analyser);
-        } catch (webaudioErr) {
-          console.warn("Web Audio API analyser fallback:", webaudioErr);
-          startWaveformAnimation(null);
+      const preferredMime = pickSupportedAudioMimeType();
+      const mediaRecorder = preferredMime
+        ? new MediaRecorder(stream, { mimeType: preferredMime })
+        : new MediaRecorder(stream);
+      mediaRecorderRef.current = mediaRecorder;
+      const resolvedMime = mediaRecorder.mimeType || preferredMime || "audio/webm";
+      setRecordedMimeType(resolvedMime);
+
+      try {
+        const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+        audioContextRef.current = audioCtx;
+        const analyser = audioCtx.createAnalyser();
+        analyser.fftSize = 128;
+        analyserRef.current = analyser;
+        const source = audioCtx.createMediaStreamSource(stream);
+        source.connect(analyser);
+        startWaveformAnimation(analyser);
+      } catch (webaudioErr) {
+        console.warn("Web Audio analyser notice:", webaudioErr);
+        startWaveformAnimation(null);
+      }
+
+      mediaRecorder.ondataavailable = (e) => {
+        if (e.data && e.data.size > 0) {
+          audioChunksRef.current.push(e.data);
+        }
+      };
+
+      mediaRecorder.onstop = () => {
+        stopMediaTracks();
+        const chunks = audioChunksRef.current.slice();
+        if (chunks.length === 0) {
+          setIsProcessingAudio(false);
+          setPermissionError("No audio was captured by your microphone. Please try recording again and speak into the mic.");
+          return;
         }
 
-        mediaRecorder.ondataavailable = (e) => {
-          if (e.data.size > 0) {
-            audioChunksRef.current.push(e.data);
+        const mime = mediaRecorder.mimeType || resolvedMime || "audio/webm";
+        const blob = new Blob(chunks, { type: mime });
+        if (!blob || blob.size < 64) {
+          setIsProcessingAudio(false);
+          setPermissionError("Recording was too short or empty. Please record for at least 1 second.");
+          return;
+        }
+
+        setAudioBlob(blob);
+        setRecordedMimeType(mime);
+        const reader = new FileReader();
+        reader.onloadend = () => {
+          const base64data = reader.result;
+          setIsProcessingAudio(false);
+          if (typeof base64data === "string" && base64data !== SIMULATED_EMPTY_WAV && base64data.length > 100) {
+            setRecordedAudioUrl(base64data);
+          } else {
+            setPermissionError("Could not encode recorded audio cleanly. Please try again.");
           }
         };
-
-        mediaRecorder.onstop = () => {
-          const blob = new Blob(audioChunksRef.current, { type: "audio/webm" });
-          setAudioBlob(blob);
-          const reader = new FileReader();
-          reader.readAsDataURL(blob);
-          reader.onloadend = () => {
-            const base64data = reader.result;
-            setRecordedAudioUrl(base64data);
-          };
-          stream.getTracks().forEach((track) => track.stop());
+        reader.onerror = () => {
+          setIsProcessingAudio(false);
+          setPermissionError("Failed to read microphone audio buffer.");
         };
+        reader.readAsDataURL(blob);
+      };
 
-        mediaRecorder.start();
-        setIsRecording(true);
-        setRecordingDuration(0);
-
-        timerRef.current = setInterval(() => {
-          setRecordingDuration((prev) => prev + 1);
-        }, 1000);
-      } else {
-        throw new Error("MediaDevices API not supported in this browser environment.");
-      }
-    } catch (err) {
-      console.warn("Microphone access unavailable or denied. Starting simulated voice recording:", err);
-      // Fallback high-fidelity voice note simulation
+      mediaRecorder.start(250);
       setIsRecording(true);
       setRecordingDuration(0);
-      startWaveformAnimation(null);
+
       timerRef.current = setInterval(() => {
         setRecordingDuration((prev) => prev + 1);
       }, 1000);
+    } catch (err) {
+      stopMediaTracks();
+      const errName = err?.name || "";
+      setPermissionError(
+        errName === "NotAllowedError" || errName === "PermissionDeniedError"
+          ? "Microphone permission was denied. Click the browser address bar lock/mic icon to allow microphone access so your real voice can be recorded."
+          : "No working microphone was detected or it is busy in another app. Connect/allow your microphone to record your exact voice note."
+      );
+      setIsRecording(false);
     }
   };
 
-  // Stop Recording
   const stopRecording = () => {
     if (timerRef.current) clearInterval(timerRef.current);
     if (animationFrameRef.current) cancelAnimationFrame(animationFrameRef.current);
@@ -153,28 +234,20 @@ export default function VoiceNoteRecorder({ onSendVoiceNote, onCancel, role = "U
     setIsRecording(false);
 
     if (mediaRecorderRef.current && mediaRecorderRef.current.state !== "inactive") {
+      setIsProcessingAudio(true);
+      try {
+        mediaRecorderRef.current.requestData?.();
+      } catch { }
       mediaRecorderRef.current.stop();
     } else {
-      // Handle simulated fallback audio blob
-      const durationSecs = Math.max(recordingDuration, 2);
-      const simulatedBlob = new Blob(["GBS_AUDIO_VOICE_MEMO_SIMULATION"], { type: "audio/webm" });
-      setAudioBlob(simulatedBlob);
-      // Synthesize audio tone using Web Audio API if possible
-      try {
-        const ctx = new (window.AudioContext || window.webkitAudioContext)();
-        const osc = ctx.createOscillator();
-        const dst = ctx.createMediaStreamDestination();
-        osc.connect(dst);
-        osc.start();
-        osc.stop(ctx.currentTime + 0.1);
-      } catch {}
-      setRecordedAudioUrl("data:audio/wav;base64,UklGRiQAAABXQVZFZm10IBAAAAABAAEAQB8AAEAfAAABAAgAZGF0YQAAAAA=");
+      stopMediaTracks();
     }
   };
 
-  // Play / Pause Preview
   const togglePlayback = () => {
-    if (!audioElementRef.current && recordedAudioUrl) {
+    if (!recordedAudioUrl) return;
+    if (!audioElementRef.current || audioElementRef.current.src !== recordedAudioUrl) {
+      cleanupPreviewAudio();
       const audio = new Audio(recordedAudioUrl);
       audioElementRef.current = audio;
       audio.onended = () => {
@@ -182,7 +255,11 @@ export default function VoiceNoteRecorder({ onSendVoiceNote, onCancel, role = "U
         setPlaybackTime(0);
       };
       audio.ontimeupdate = () => {
-        setPlaybackTime(Math.floor(audio.currentTime));
+        setPlaybackTime(Math.floor(audio.currentTime || 0));
+      };
+      audio.onerror = () => {
+        setIsPlaying(false);
+        setPermissionError("Browser could not play back this recording preview.");
       };
     }
 
@@ -191,13 +268,16 @@ export default function VoiceNoteRecorder({ onSendVoiceNote, onCancel, role = "U
         audioElementRef.current.pause();
         setIsPlaying(false);
       } else {
-        audioElementRef.current.play().catch(() => {});
-        setIsPlaying(true);
+        audioElementRef.current.play().then(() => {
+          setIsPlaying(true);
+        }).catch(() => {
+          setIsPlaying(false);
+          setPermissionError("Tap Play again to start audio playback.");
+        });
       }
     }
   };
 
-  // Cleanup on unmount
   useEffect(() => {
     return () => {
       if (timerRef.current) clearInterval(timerRef.current);
@@ -205,29 +285,38 @@ export default function VoiceNoteRecorder({ onSendVoiceNote, onCancel, role = "U
       if (audioContextRef.current && audioContextRef.current.state !== "closed") {
         audioContextRef.current.close().catch(() => {});
       }
-      if (audioElementRef.current) {
-        audioElementRef.current.pause();
-      }
+      cleanupPreviewAudio();
+      stopMediaTracks();
     };
   }, []);
 
-  // Handle Send Voice Note
   const handleSend = () => {
+    if (isRecording || isProcessingAudio || !recordedAudioUrl || !audioBlob || audioBlob.size < 64) {
+      setPermissionError("Please finish recording your real voice note before sending.");
+      return;
+    }
+
+    cleanupPreviewAudio();
     const finalDuration = Math.max(recordingDuration, 1);
     const voiceNoteData = {
-      id: `vn_${Date.now()}_${Math.random().toString(36).substr(2, 6)}`,
+      id: `vn_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`,
       audioUrl: recordedAudioUrl,
+      mimeType: recordedMimeType,
       duration: finalDuration,
       durationLabel: formatTime(finalDuration),
       timestamp: new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }),
       date: new Date().toLocaleDateString(),
       senderRole: role,
-      sizeBytes: audioBlob ? audioBlob.size : 14200
+      sizeBytes: audioBlob.size,
+      isGenuineRecording: true
     };
 
     if (onSendVoiceNote) {
       onSendVoiceNote(voiceNoteData);
     }
+    setRecordedAudioUrl(null);
+    setAudioBlob(null);
+    setRecordingDuration(0);
   };
 
   return (
@@ -246,7 +335,7 @@ export default function VoiceNoteRecorder({ onSendVoiceNote, onCancel, role = "U
         <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
           <span style={{ fontSize: "1.2rem" }}>🎙️</span>
           <span style={{ fontWeight: 800, fontSize: "0.95rem", color: "#60a5fa" }}>
-            GBS Voice Note Messenger
+            GBS Real Voice Note Recorder
           </span>
           <span style={{
             fontSize: "0.7rem",
@@ -261,7 +350,12 @@ export default function VoiceNoteRecorder({ onSendVoiceNote, onCancel, role = "U
         </div>
         {onCancel && (
           <button
-            onClick={onCancel}
+            type="button"
+            onClick={() => {
+              cleanupPreviewAudio();
+              stopMediaTracks();
+              onCancel();
+            }}
             style={{
               background: "transparent",
               border: "none",
@@ -277,17 +371,17 @@ export default function VoiceNoteRecorder({ onSendVoiceNote, onCancel, role = "U
       </div>
 
       {permissionError && (
-        <div style={{ fontSize: "0.8rem", color: "#f87171", background: "rgba(239, 68, 68, 0.15)", padding: "6px 10px", borderRadius: "8px" }}>
+        <div style={{ fontSize: "0.8rem", color: "#fca5a5", background: "rgba(239, 68, 68, 0.16)", border: "1px solid rgba(239, 68, 68, 0.45)", padding: "8px 10px", borderRadius: "8px", lineHeight: 1.45 }}>
           ⚠️ {permissionError}
         </div>
       )}
 
-      {/* Recording State Controls */}
       {!recordedAudioUrl ? (
         <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: "16px", flexWrap: "wrap" }}>
           <div style={{ display: "flex", alignItems: "center", gap: "12px" }}>
             {isRecording ? (
               <button
+                type="button"
                 onClick={stopRecording}
                 style={{
                   background: "#ef4444",
@@ -309,6 +403,8 @@ export default function VoiceNoteRecorder({ onSendVoiceNote, onCancel, role = "U
               </button>
             ) : (
               <button
+                type="button"
+                disabled={isProcessingAudio}
                 onClick={startRecording}
                 style={{
                   background: "linear-gradient(135deg, #1e293b, #0f172a)",
@@ -317,39 +413,18 @@ export default function VoiceNoteRecorder({ onSendVoiceNote, onCancel, role = "U
                   borderRadius: "50%",
                   width: "52px",
                   height: "52px",
-                  cursor: "pointer",
+                  cursor: isProcessingAudio ? "wait" : "pointer",
                   display: "flex",
                   alignItems: "center",
                   justifyContent: "center",
-                  boxShadow: "0 0 16px rgba(56, 189, 248, 0.4)",
-                  transition: "all 0.2s ease"
+                  boxShadow: "0 0 16px rgba(56, 189, 248, 0.4)"
                 }}
-                title="Start Recording with Studio Microphone"
+                title="Start Recording Your Exact Voice"
               >
-                {/* Real-Life Studio Condenser Microphone */}
                 <svg width="26" height="26" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-                  <defs>
-                    <linearGradient id="studioMicMetal" x1="0%" y1="0%" x2="100%" y2="100%">
-                      <stop offset="0%" stopColor="#f1f5f9" />
-                      <stop offset="50%" stopColor="#94a3b8" />
-                      <stop offset="100%" stopColor="#334155" />
-                    </linearGradient>
-                    <linearGradient id="studioMicGold" x1="0%" y1="0%" x2="100%" y2="0%">
-                      <stop offset="0%" stopColor="#f59e0b" />
-                      <stop offset="100%" stopColor="#fde047" />
-                    </linearGradient>
-                  </defs>
-                  {/* Condenser Capsule */}
-                  <rect x="8" y="2" width="8" height="11" rx="4" fill="url(#studioMicMetal)" stroke="#38bdf8" strokeWidth="1" />
-                  {/* Fine Mesh Grill Lines */}
-                  <line x1="8.5" y1="5" x2="15.5" y2="5" stroke="#1e293b" strokeWidth="0.8" />
-                  <line x1="8.5" y1="7.5" x2="15.5" y2="7.5" stroke="url(#studioMicGold)" strokeWidth="1" />
-                  <line x1="8.5" y1="10" x2="15.5" y2="10" stroke="#1e293b" strokeWidth="0.8" />
-                  {/* Live Recording Indicator Dot */}
-                  <circle cx="12" cy="7.5" r="1.3" fill="#ef4444" />
-                  {/* Shock Mount U-Bracket */}
+                  <rect x="8" y="2" width="8" height="11" rx="4" fill="#e2e8f0" stroke="#38bdf8" strokeWidth="1.2" />
+                  <circle cx="12" cy="7.5" r="1.4" fill="#ef4444" />
                   <path d="M5 9v2a7 7 0 0014 0V9" stroke="#cbd5e1" strokeWidth="1.8" strokeLinecap="round" />
-                  {/* Stem & Desktop Stand */}
                   <line x1="12" y1="18" x2="12" y2="22" stroke="#94a3b8" strokeWidth="2" strokeLinecap="round" />
                   <line x1="7" y1="22" x2="17" y2="22" stroke="#e2e8f0" strokeWidth="2.2" strokeLinecap="round" />
                 </svg>
@@ -361,12 +436,15 @@ export default function VoiceNoteRecorder({ onSendVoiceNote, onCancel, role = "U
                 {formatTime(recordingDuration)}
               </div>
               <div style={{ fontSize: "0.75rem", color: "#94a3b8" }}>
-                {isRecording ? "🔴 Studio microphone live: speak clearly" : "Click studio mic to speak"}
+                {isProcessingAudio
+                  ? "⏳ Saving your exact recorded audio..."
+                  : isRecording
+                    ? "🔴 Microphone live: speak clearly, then press Stop"
+                    : "Click microphone to record your real voice"}
               </div>
             </div>
           </div>
 
-          {/* Real Live Canvas Sound Wave Visualizer */}
           {isRecording && (
             <div style={{
               display: "flex",
@@ -377,7 +455,7 @@ export default function VoiceNoteRecorder({ onSendVoiceNote, onCancel, role = "U
               borderRadius: "8px",
               border: "1px solid rgba(56, 189, 248, 0.3)"
             }}>
-              <span style={{ fontSize: "0.68rem", color: "#38bdf8", fontWeight: 800, letterSpacing: "1px" }}>LIVE WAVE:</span>
+              <span style={{ fontSize: "0.68rem", color: "#38bdf8", fontWeight: 800, letterSpacing: "1px" }}>LIVE MIC:</span>
               <canvas
                 ref={canvasRef}
                 width={200}
@@ -388,7 +466,6 @@ export default function VoiceNoteRecorder({ onSendVoiceNote, onCancel, role = "U
           )}
         </div>
       ) : (
-        /* Preview & Send State */
         <div style={{ display: "flex", flexDirection: "column", gap: "10px" }}>
           <div style={{
             display: "flex",
@@ -400,6 +477,7 @@ export default function VoiceNoteRecorder({ onSendVoiceNote, onCancel, role = "U
             border: "1px solid rgba(59, 130, 246, 0.3)"
           }}>
             <button
+              type="button"
               onClick={togglePlayback}
               style={{
                 background: "#3b82f6",
@@ -413,12 +491,11 @@ export default function VoiceNoteRecorder({ onSendVoiceNote, onCancel, role = "U
                 alignItems: "center",
                 justifyContent: "center"
               }}
-              title={isPlaying ? "Pause" : "Play Preview"}
+              title={isPlaying ? "Pause Preview" : "Play Exact Recording Preview"}
             >
               {isPlaying ? "⏸" : "▶"}
             </button>
 
-            {/* Waveform graphic for recorded audio */}
             <div style={{ display: "flex", alignItems: "center", gap: "3px", flex: 1, margin: "0 14px" }}>
               {[12, 24, 18, 30, 16, 26, 20, 32, 14, 28, 22, 15, 25, 19, 29].map((h, i) => (
                 <div
@@ -438,44 +515,54 @@ export default function VoiceNoteRecorder({ onSendVoiceNote, onCancel, role = "U
             </span>
           </div>
 
-          <div style={{ display: "flex", justifyContent: "flex-end", gap: "10px" }}>
-            <button
-              onClick={() => {
-                setRecordedAudioUrl(null);
-                setRecordingDuration(0);
-              }}
-              style={{
-                background: "rgba(239, 68, 68, 0.2)",
-                color: "#f87171",
-                border: "1px solid rgba(239, 68, 68, 0.4)",
-                padding: "8px 14px",
-                borderRadius: "8px",
-                fontSize: "0.85rem",
-                fontWeight: 700,
-                cursor: "pointer"
-              }}
-            >
-              🗑️ Re-record
-            </button>
-            <button
-              onClick={handleSend}
-              style={{
-                background: "linear-gradient(135deg, #10b981, #059669)",
-                color: "#fff",
-                border: "none",
-                padding: "8px 18px",
-                borderRadius: "8px",
-                fontSize: "0.85rem",
-                fontWeight: 800,
-                cursor: "pointer",
-                display: "flex",
-                alignItems: "center",
-                gap: "6px",
-                boxShadow: "0 4px 12px rgba(16, 185, 129, 0.4)"
-              }}
-            >
-              🚀 Send Voice Note ({formatTime(recordingDuration)})
-            </button>
+          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: "10px" }}>
+            <span style={{ fontSize: "0.75rem", color: "#34d399", fontWeight: 700 }}>
+              ✓ Real voice captured ({Math.max(1, Math.round((audioBlob?.size || 0) / 1024))} KB)
+            </span>
+            <div style={{ display: "flex", gap: "10px" }}>
+              <button
+                type="button"
+                onClick={() => {
+                  cleanupPreviewAudio();
+                  setRecordedAudioUrl(null);
+                  setAudioBlob(null);
+                  setRecordingDuration(0);
+                }}
+                style={{
+                  background: "rgba(239, 68, 68, 0.2)",
+                  color: "#f87171",
+                  border: "1px solid rgba(239, 68, 68, 0.4)",
+                  padding: "8px 14px",
+                  borderRadius: "8px",
+                  fontSize: "0.85rem",
+                  fontWeight: 700,
+                  cursor: "pointer"
+                }}
+              >
+                🗑️ Re-record
+              </button>
+              <button
+                type="button"
+                disabled={isProcessingAudio || !recordedAudioUrl}
+                onClick={handleSend}
+                style={{
+                  background: "linear-gradient(135deg, #10b981, #059669)",
+                  color: "#fff",
+                  border: "none",
+                  padding: "8px 18px",
+                  borderRadius: "8px",
+                  fontSize: "0.85rem",
+                  fontWeight: 800,
+                  cursor: "pointer",
+                  display: "flex",
+                  alignItems: "center",
+                  gap: "6px",
+                  boxShadow: "0 4px 12px rgba(16, 185, 129, 0.4)"
+                }}
+              >
+                🚀 Send Exact Voice Note ({formatTime(recordingDuration)})
+              </button>
+            </div>
           </div>
         </div>
       )}
