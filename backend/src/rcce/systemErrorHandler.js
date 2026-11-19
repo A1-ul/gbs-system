@@ -35,9 +35,20 @@ function rcceCentralErrorHandler(err, req, res, next) {
   // 3. Permission & Access Rejections (403)
   else if (statusCode === 403 || lowerMsg.includes('forbidden') || lowerMsg.includes('permission') || lowerMsg.includes('unauthorized')) {
     code = code || (lowerMsg.includes('cross-tenant') ? 'TENANT_CROSS_ACCESS_FORBIDDEN' : 'AUTH_FORBIDDEN');
+    const isDescriptiveAuthMsg =
+      lowerMsg.includes('permission') ||
+      lowerMsg.includes('denied') ||
+      lowerMsg.includes('pending') ||
+      lowerMsg.includes('approval') ||
+      lowerMsg.includes('approved') ||
+      lowerMsg.includes('rejected') ||
+      lowerMsg.includes('declined') ||
+      lowerMsg.includes('locked') ||
+      lowerMsg.includes('suspended') ||
+      lowerMsg.includes('deleted');
     userFacingMessage = lowerMsg.includes('cross-tenant')
       ? 'Access denied: Cross-tenant data querying or manipulation is strictly forbidden.'
-      : (rawMessage.includes('permission') || rawMessage.includes('denied') ? rawMessage : 'You do not have permission to perform this operation.');
+      : (isDescriptiveAuthMsg ? rawMessage : 'You do not have permission to perform this operation.');
   }
   // 4. Record Not Found (404)
   else if (statusCode === 404 || lowerMsg.includes('not found') || lowerMsg.includes('does not exist')) {

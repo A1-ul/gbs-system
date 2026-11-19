@@ -21,6 +21,7 @@ const smsRoutes = require('../src/modules/sms/sms.routes');
 const communicationRoutes = require('../src/modules/communication/communication.routes');
 const devControlRoutes = require('../src/modules/dev-control/devControl.routes');
 const errorMiddleware = require('../src/middleware/error.middleware');
+const { rcceCentralErrorHandler } = require('../src/rcce/systemErrorHandler');
 
 function buildApp() {
   const app = express();
@@ -30,9 +31,7 @@ function buildApp() {
   app.use('/api/v1/sms', smsRoutes);
   app.use('/api/v1/communication', communicationRoutes);
   app.use('/api/v1/dev-control', devControlRoutes);
-  app.use(errorMiddleware.globalErrorHandler || errorMiddleware.errorHandler || ((err, _req, res, _next) => {
-    res.status(err.statusCode || 500).json({ status: 'error', message: err.message });
-  }));
+  app.use(rcceCentralErrorHandler);
   return app;
 }
 
