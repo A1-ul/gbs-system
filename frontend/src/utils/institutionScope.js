@@ -213,6 +213,9 @@ export function getInstitutionRoleProfile(institutionType = getActiveInstitution
   const tier = INSTITUTION_TIERS[key] || INSTITUTION_TIERS.NURSERY_TO_JHS;
   const defaultProfiles = {
     NURSERY_TO_JHS: {
+      shortName: "Nursery - JHS",
+      name: "Basic School (Nursery to JHS Institution)",
+      icon: "🏫",
       leadershipRoleTitle: "Headmaster / Headmistress",
       facultyRoleTitle: "Class & Subject Teacher",
       studentRoleTitle: "Pupil / JHS Student",
@@ -221,6 +224,9 @@ export function getInstitutionRoleProfile(institutionType = getActiveInstitution
       features: { universityOnlyFeatures: false, internshipsPortal: false, universityStreams: false, universitySRC: false, lecturerGraduationToAlumni: false, technicalPracticals: false, prefectsSystem: true }
     },
     SENIOR_HIGH_SCHOOL: {
+      shortName: "Senior High (SHS)",
+      name: "Senior High School (SHS Institution)",
+      icon: "📚",
       leadershipRoleTitle: "Headmaster / Principal",
       facultyRoleTitle: "Subject Tutor / Housemaster",
       studentRoleTitle: "SHS Student",
@@ -229,23 +235,33 @@ export function getInstitutionRoleProfile(institutionType = getActiveInstitution
       features: { universityOnlyFeatures: false, internshipsPortal: false, universityStreams: false, universitySRC: false, lecturerGraduationToAlumni: false, technicalPracticals: false, prefectsSystem: true }
     },
     TECHNICAL: {
-      leadershipRoleTitle: tier.leadershipRoleTitle,
-      facultyRoleTitle: tier.facultyRoleTitle,
-      studentRoleTitle: tier.studentRoleTitle,
-      academicTermLabel: tier.academicTermLabel,
-      studentGovernanceTitle: tier.studentGovernanceTitle,
+      shortName: "Technical / TVET",
+      name: "Technical & Vocational Institute (TVET)",
+      icon: "🛠️",
+      leadershipRoleTitle: tier.leadershipRoleTitle || "Principal / TVET Rector",
+      facultyRoleTitle: tier.facultyRoleTitle || "Workshop Instructor / Trade Lecturer",
+      studentRoleTitle: tier.studentRoleTitle || "Technical Trainee / Apprentice",
+      academicTermLabel: tier.academicTermLabel || "Trade Module / CBT Level 1 – 3",
+      studentGovernanceTitle: tier.studentGovernanceTitle || "Workshop Captains & Trainee Representatives",
       features: tier.features
     },
     UNIVERSITY: {
-      leadershipRoleTitle: tier.leadershipRoleTitle,
-      facultyRoleTitle: tier.facultyRoleTitle,
-      studentRoleTitle: tier.studentRoleTitle,
-      academicTermLabel: tier.academicTermLabel,
-      studentGovernanceTitle: tier.studentGovernanceTitle,
+      shortName: "University / Tertiary",
+      name: "University / Tertiary Institution",
+      icon: "🎓",
+      leadershipRoleTitle: tier.leadershipRoleTitle || "Vice Chancellor / Registrar / Provost",
+      facultyRoleTitle: tier.facultyRoleTitle || "University Lecturer / Professor",
+      studentRoleTitle: tier.studentRoleTitle || "Undergraduate / Postgraduate Student",
+      academicTermLabel: tier.academicTermLabel || "Semester • Credits • Level 100 – 400+",
+      studentGovernanceTitle: tier.studentGovernanceTitle || "SRC Representatives & Manifestos",
       features: tier.features
     }
   };
-  return { ...tier, ...defaultProfiles[key], id: key };
+  const resolved = { ...tier, ...defaultProfiles[key], id: key };
+  resolved.shortName = resolved.shortName || resolved.shortLabel || "Institution";
+  resolved.name = resolved.name || resolved.title || resolved.shortName;
+  resolved.icon = resolved.icon || "🏫";
+  return resolved;
 }
 
 /**

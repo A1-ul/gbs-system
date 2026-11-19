@@ -7,6 +7,7 @@ import { getUserAvatar } from "../../../../../utils/userAvatars";
 import UniversalRoleGuideModal from "../../../../../components/common/UniversalRoleGuideModal";
 import PaymentGatewayAdminPanel from "../../../../../components/common/PaymentGatewayAdminPanel";
 import FinancialReportsPanel from "../../../../../components/common/FinancialReportsPanel";
+import SchoolClinicHubPanel from "../../../../../components/common/SchoolClinicHubPanel";
 import { navigateToDetail } from "../../../../../utils/universalNavigation";
 import { getActiveSchoolName, getActiveSchoolLogo } from "../../../../../utils/schoolBranding";
 import { isDemoSandboxMode } from "../../../../../utils/tokenStorage";
@@ -23,8 +24,13 @@ export default function AccountantDashboard() {
         setAccountantAvatar(e.detail.avatar);
       }
     };
+    const onVoiceTab = (e) => { if (e?.detail?.tab) setActiveTab(e.detail.tab); };
     window.addEventListener("gbs_user_avatar_changed", handleAvatarChange);
-    return () => window.removeEventListener("gbs_user_avatar_changed", handleAvatarChange);
+    window.addEventListener("gbs_open_dashboard_tab", onVoiceTab);
+    return () => {
+      window.removeEventListener("gbs_user_avatar_changed", handleAvatarChange);
+      window.removeEventListener("gbs_open_dashboard_tab", onVoiceTab);
+    };
   }, []);
 
   const [activeTab, setActiveTab] = useState(() => {
@@ -1734,6 +1740,14 @@ export default function AccountantDashboard() {
               style={{ borderLeft: "3px solid #f59e0b", color: activeTab === "headmaster-procurement" ? "#fbbf24" : undefined, fontWeight: 800 }}
             >
               🏛️ Headmaster Purchases & Procurement Audit Ledger
+            </button>
+            <button
+              type="button"
+              className={`role-tab-btn ${activeTab === "clinic" ? "active" : ""}`}
+              onClick={() => setActiveTab("clinic")}
+              style={{ borderLeft: "3px solid #10b981", color: activeTab === "clinic" ? "#ffffff" : "#6ee7b7", fontWeight: 800 }}
+            >
+              🏥 School Clinic &amp; Health Billing Ledger
             </button>
           </nav>
 
@@ -4184,6 +4198,13 @@ export default function AccountantDashboard() {
               </div>
             );
           })()}
+
+          {activeTab === "clinic" && (
+            <SchoolClinicHubPanel
+              mode="STAFF"
+              onFeedback={(msg) => setFeedback({ type: "success", message: msg })}
+            />
+          )}
         </main>
       </div>
 

@@ -4048,7 +4048,7 @@ export default function TeacherDashboard() {
             />
             <div className="role-brand-text">
               <span className="role-portal-badge" style={{ color: "#34d399", fontSize: "0.95rem", fontWeight: "900", letterSpacing: "0.8px" }}>
-                👨‍🏫 {institutionProfile.facultyRoleTitle.toUpperCase()} SUITE • {institutionProfile.shortName.toUpperCase()}
+                👨‍🏫 {String(institutionProfile?.facultyRoleTitle || "TEACHER").toUpperCase()} SUITE • {String(institutionProfile?.shortName || institutionProfile?.shortLabel || "INSTITUTION").toUpperCase()}
               </span>
             </div>
           </div>

@@ -11,6 +11,9 @@ import { navigateToDetail } from "../../../utils/universalNavigation";
 import { syncSystemModeFlags } from "../../../utils/tokenStorage";
 import RcceControlHub from "../components/RcceControlHub";
 import PaymentGatewayAdminPanel from "../../../components/common/PaymentGatewayAdminPanel";
+import SchoolClinicHubPanel from "../../../components/common/SchoolClinicHubPanel";
+import UniversityOperationsPanel from "../../../components/common/UniversityOperationsPanel";
+import StudentDefaultersCompliancePanel from "../../../components/common/StudentDefaultersCompliancePanel";
 import "./DeveloperPlatform.css";
 
 const BASE_URL = `${getApiBaseUrl()}/dev-control`;
@@ -76,8 +79,10 @@ export default function DeveloperDashboard() {
       } catch { }
     };
 
+    const onVoiceTab = (e) => { if (e?.detail?.tab) setActiveTab(e.detail.tab); };
     window.addEventListener("popstate", handlePopState);
     window.addEventListener("scroll", handleScroll, { passive: true });
+    window.addEventListener("gbs_open_dashboard_tab", onVoiceTab);
 
     // Initial scroll restore
     const savedScroll = sessionStorage.getItem("gbs_dev_scroll_pos");
@@ -88,6 +93,7 @@ export default function DeveloperDashboard() {
     return () => {
       window.removeEventListener("popstate", handlePopState);
       window.removeEventListener("scroll", handleScroll);
+      window.removeEventListener("gbs_open_dashboard_tab", onVoiceTab);
     };
   }, []);
 
@@ -5872,6 +5878,27 @@ export default function DeveloperDashboard() {
           >
             💳 Payment Gateways
           </button>
+          <button
+            className={`dev-tab-btn ${activeTab === "clinic" ? "active" : ""}`}
+            onClick={() => setActiveTab("clinic")}
+            style={{ borderColor: "#10b981", color: activeTab === "clinic" ? "#fff" : "#6ee7b7" }}
+          >
+            🏥 School Clinic Oversight
+          </button>
+          <button
+            className={`dev-tab-btn ${activeTab === "university" ? "active" : ""}`}
+            onClick={() => setActiveTab("university")}
+            style={{ borderColor: "#d4af37", color: activeTab === "university" ? "#fff" : "#f5d061" }}
+          >
+            🎓 University Operations Hub
+          </button>
+          <button
+            className={`dev-tab-btn ${activeTab === "defaulters" ? "active" : ""}`}
+            onClick={() => setActiveTab("defaulters")}
+            style={{ borderColor: "#f59e0b", color: activeTab === "defaulters" ? "#fff" : "#fcd34d" }}
+          >
+            📋 Defaulters Compliance
+          </button>
         </div>
 
         {/* TAB 0: TENANT ONBOARDING & SYSTEM REGISTRATION (DEVELOPER EXCLUSIVE) */}
@@ -9861,37 +9888,6 @@ export default function DeveloperDashboard() {
                       <input
                         type="checkbox"
                         className="dev-checkbox"
-                        checked={selectedDeploymentIds.length > 0 && selectedDeploymentIds.length === deployments.length}
-                        onChange={() =>
-                          setSelectedDeploymentIds(
-                            selectedDeploymentIds.length === deployments.length ? [] : deployments.map((d) => d.id)
-                          )
-                        }
-                      />
-                    </th>
-                    <th>RELEASE VERSION</th>
-                    <th>GIT COMMIT SHA</th>
-                    <th>BRANCH</th>
-                    <th>ENVIRONMENT</th>
-                    <th>BUILD #</th>
-                    <th>STATUS</th>
-                    <th>DEPLOYED AT</th>
-                    <th>RELEASE ACTIONS (ARCHIVE / DELETE / ROLLBACK)</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {(() => {
-                    const filteredDeps = deployments.filter((d) => {
-                      if (deploymentFilter === "ACTIVE") return !d.isArchived;
-                      if (deploymentFilter === "ARCHIVED") return Boolean(d.isArchived);
-                      return true;
-                    });
-                    if (filteredDeps.length === 0) {
-                      return (
-                        <tr>
-                          <td colSpan="9" style={{ textAlign: "center", padding: "2rem", color: "#64748b" }}>
-                            No deployment records in this view ({deploymentFilter}).
-                          </td>
                         </tr>
                       );
                     }
@@ -11094,6 +11090,30 @@ export default function DeveloperDashboard() {
                 title="Developer Payment Gateway Administration & Webhook Console"
               />
             </div>
+          </div>
+        )}
+
+        {activeTab === "clinic" && (
+          <div className="tab-pane-content">
+            <SchoolClinicHubPanel
+              mode="ADMIN"
+              currentUser={{ firstName: "Gabriel", lastName: "Osei", role: "DEVELOPER" }}
+            />
+          </div>
+        )}
+
+        {activeTab === "university" && (
+          <div className="tab-pane-content">
+            <UniversityOperationsPanel
+              mode="ADMIN"
+              currentUser={{ firstName: "Gabriel", lastName: "Osei", role: "DEVELOPER" }}
+            />
+          </div>
+        )}
+
+        {activeTab === "defaulters" && (
+          <div className="tab-pane-content">
+            <StudentDefaultersCompliancePanel />
           </div>
         )}
 

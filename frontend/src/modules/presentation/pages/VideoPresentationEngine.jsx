@@ -500,9 +500,9 @@ const ROLE_MODULES = [
     videoFile: "/videos/video6_staff_hr_role_guide.mp4",
     downloadName: "GBS_Video7_HR_Action_Guide.mp4",
     photos: [
-      "/assets/real_scene6_staff_gate_turnstile.jpg",
-      "/assets/real_scene5_accountant_finance.jpg",
-      "/assets/real_scene1_headmaster_desk.jpg"
+      "/assets/real/staff_gate_turnstile.jpg",
+      "/assets/real/accountant_finance.jpg",
+      "/assets/real/headmaster_desk.jpg"
     ],
     targetAudience: "HR Directors, Personnel Officers & Payroll Administrators",
     description:
@@ -546,9 +546,9 @@ const ROLE_MODULES = [
     videoFile: "/videos/gbs_complete_system_roles_master_guide.mp4",
     downloadName: "GBS_Video8_Alumni_Action_Guide.mp4",
     photos: [
-      "/assets/real_scene3_student_elearning.jpg",
-      "/assets/real_scene1_headmaster_desk.jpg",
-      "/assets/real_scene5_accountant_finance.jpg"
+      "/assets/real/student_elearning.jpg",
+      "/assets/real/headmaster_desk.jpg",
+      "/assets/real/accountant_finance.jpg"
     ],
     targetAudience: "Graduates, Alumni Associations, Employers & Universities",
     description:
@@ -592,9 +592,9 @@ const ROLE_MODULES = [
     videoFile: "/videos/video6_staff_hr_role_guide.mp4",
     downloadName: "GBS_Video9_Inventory_Action_Guide.mp4",
     photos: [
-      "/assets/real_scene5_accountant_finance.jpg",
-      "/assets/real_scene6_staff_gate_turnstile.jpg",
-      "/assets/real_scene2_teacher_scanner.jpg"
+      "/assets/real/accountant_finance.jpg",
+      "/assets/real/staff_gate_turnstile.jpg",
+      "/assets/real/teacher_scanner.jpg"
     ],
     targetAudience: "Storekeepers, Procurement Officers, Science Lab Technicians & Matrons",
     description:
@@ -638,9 +638,9 @@ const ROLE_MODULES = [
     videoFile: "/videos/video7_developer_role_guide.mp4",
     downloadName: "GBS_Video7_Developer_Action_Guide.mp4",
     photos: [
-      "/assets/real_scene1_headmaster_desk.jpg",
-      "/assets/real_scene2_teacher_scanner.jpg",
-      "/assets/real_scene6_staff_gate_turnstile.jpg"
+      "/assets/real/headmaster_desk.jpg",
+      "/assets/real/teacher_scanner.jpg",
+      "/assets/real/staff_gate_turnstile.jpg"
     ],
     targetAudience: "System Founder, Platform Engineers & Global Operations Command",
     description:

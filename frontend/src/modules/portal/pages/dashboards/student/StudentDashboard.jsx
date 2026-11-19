@@ -1962,7 +1962,7 @@ export function StudentDashboard({ initialTab } = {}) {
             />
             <div className="role-brand-text">
               <span className="role-portal-badge" style={{ color: "#38bdf8", fontSize: "0.95rem", fontWeight: "900", letterSpacing: "0.8px" }}>
-                🎓 {institutionProfile.studentRoleTitle.toUpperCase()} PORTAL • {institutionProfile.shortName.toUpperCase()}
+                🎓 {String(institutionProfile?.studentRoleTitle || "STUDENT").toUpperCase()} PORTAL • {String(institutionProfile?.shortName || institutionProfile?.shortLabel || "INSTITUTION").toUpperCase()}
               </span>
             </div>
           </div>

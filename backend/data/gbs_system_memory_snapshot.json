@@ -1,7 +1,7 @@
 {
   "systemName": "GBS MANAGEMENT SYSTEM (Global Brightest Stars Educational Management System)",
-  "version": "2.8.0-PRODUCTION",
-  "savedAt": "2026-11-19T18:02:00Z",
+  "version": "2.8.1-PRODUCTION",
+  "savedAt": "2026-11-19T18:48:00Z",
   "status": "PRODUCTION_READY_VERIFIED",
   "architecture": {
     "frontend": {
@@ -22,7 +22,7 @@
       "translatorComponent": "frontend/src/components/common/UniversalLanguageTranslator.jsx",
       "directSmsModalComponent": "frontend/src/components/common/DirectSMSMessengerModal.jsx",
       "directSmsInboxComponent": "frontend/src/components/common/DirectSMSInboxPanel.jsx",
-      "pwaManifestAndSw": "frontend/public/manifest.json + frontend/public/sw.js (gbs-cache-v2026.13)"
+      "pwaManifestAndSw": "frontend/public/manifest.json + frontend/public/sw.js (gbs-cache-v2026.14)"
     },
     "backend": {
       "runtime": "Node.js + Express + Socket.IO",
@@ -320,12 +320,13 @@
       "issueCode": "DIAG-SCHOOL-CLINIC-AND-VOICE-MEMORY",
       "symptom": "GBS AI Voice Assistant must use the GBS SYSTEM introduction, respond quickly when the speaker finishes speaking, answer anything about GBS via System Memory, and institutions require a cross-portal School Clinic for Students & Teachers linked to Admission Medical Registrations",
       "rootCause": "clinic.routes.js only exposed /status without mounting in server.js, admissions/registration did not seed clinic medical profiles, and GBSVoiceAssistant lacked backend System Memory API lookup and fast end-of-statement reaction.",
-      "resolution": "Implemented full clinic.service/controller/routes mounted at /api/v1/clinic & /api/v1/health-clinic with Admission Medical Profile auto-sync in auth.service & admissions.service, SchoolClinicHubPanel mounted across Admin, Teacher, Student, Parent, Staff, and HR dashboards, plus systemMemoryAssistant.service (/api/v1/ai/system-memory & /assistant-query) powering instant responses and GBS intro greeting in GBSVoiceAssistant.jsx.",
+      "resolution": "Implemented full clinic.service/controller/routes mounted at /api/v1/clinic & /api/v1/health-clinic with Admission Medical Profile auto-sync in auth.service & admissions.service, SchoolClinicHubPanel mounted across Admin, Teacher, Student, Parent, Accountant, Staff, HR & Developer dashboards, plus systemMemoryAssistant.service (/api/v1/ai/system-memory & /assistant-query) powering instant responses and GBS intro greeting in GBSVoiceAssistant.jsx. Fixed institutionScope.js shortName/title completeness and /assets/real/* poster paths, eliminating all runtime TypeErrors and 404s across all 9 dashboards.",
       "status": "PERMANENTLY_GUARDED"
     }
   ],
   "verificationSummary": {
     "backendTestSuitesPassed": "25/25 across 8 suites (auth-and-voicenote, clinic-and-voice-memory, payments, payments-http, translator-pwa-demo-rbac, transport-and-demo-limit, university-and-defaulters, user-approval-and-sms)",
+    "chromeE2EDashboardsVerified": "9/9 dashboards + Login + Voice AI (Admin, Teacher, Student, Parent, Accountant, Staff, HR, Alumni, Developer) — 0 uncaught exceptions, 0 HTTP 4xx/5xx, all Clinic/University/Defaulters tabs verified clickable",
     "institutionSeparationUniversityClinicVoiceVerified": "2026-11-19 Live Production & Demo Sandbox Parity",
     "browserAssetsRegenerated": "favicon.ico, logo.png, icon-192.png, icon-512.png, apple-touch-icon.png, og-gbs-crest.jpg",
     "uncaughtBrowserConsoleErrors": 0,

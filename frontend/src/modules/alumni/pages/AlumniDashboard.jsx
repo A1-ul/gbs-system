@@ -25,6 +25,12 @@ export default function AlumniDashboard() {
   // Active Tab + Full-Page Tab Display Sync
   const { activeTab, setActiveTab } = useDashboardTabSync("CUMULATIVE_RECORDS", "gbs_alumni_active_tab");
 
+  useEffect(() => {
+    const onVoiceTab = (e) => { if (e?.detail?.tab) setActiveTab(e.detail.tab); };
+    window.addEventListener("gbs_open_dashboard_tab", onVoiceTab);
+    return () => window.removeEventListener("gbs_open_dashboard_tab", onVoiceTab);
+  }, [setActiveTab]);
+
   // Completion Batches State
   const [selectedBatchYear, setSelectedBatchYear] = useState("2024");
 

@@ -45,7 +45,7 @@ Proprietors, Headmasters, and education directors across all regions are encoura
     readTime: "5 min read",
     videoDuration: "02:45",
     videoUrl: "/videos/video3_student_learning_guide.mp4",
-    posterImage: "/assets/real_scene3_student_elearning.jpg",
+    posterImage: "/assets/real/student_elearning.jpg",
     summary: "Primary and secondary schools across Kenya are achieving outstanding milestones under the Competency-Based Curriculum. Students collaborate in interactive coding clubs, pair programming workshops, and peer-to-peer study conferences to build real-world digital tools.",
     fullContent: `NAIROBI, KENYA — In a landmark educational showcase at the Kenya Institute of Curriculum Development (KICD), young scholars from public and private institutions presented innovative computing solutions created during peer study circles.
 
@@ -97,7 +97,7 @@ Educational institutions worldwide are adopting these principles through modern 
     readTime: "5 min read",
     videoDuration: "03:40",
     videoUrl: "/videos/gbs_complete_system_roles_master_guide.mp4",
-    posterImage: "/assets/real_scene5_accountant_finance.jpg",
+    posterImage: "/assets/real/accountant_finance.jpg",
     summary: "International university consortia have launched the 2026/2027 scholarship portal. Applicants with verified cryptographic transcripts, strong continuous assessment averages, and verified community contributions are eligible for 100% tuition, boarding, and research grants.",
     fullContent: `CAMBRIDGE, MA — The International Higher Education Consortium has officially opened nominations for the 2026/2027 Global Scholar Scholarships. Over 1,200 full scholarships are designated for students from Africa, Asia, and Latin America entering STEM and leadership programs.
 

@@ -17,7 +17,7 @@ export const REAL_ACTION_ROLE_VIDEOS = [
     title: "Complete System Walkthrough (All 10 Roles, Commands & Activities)",
     subtitle: "Headmaster • Teacher • Student • Parent • Accountant • HR • Staff • Alumni • Inventory • Developer",
     videoSrc: "/videos/gbs_complete_system_roles_master_guide.mp4",
-    poster: "/assets/real_scene1_headmaster_desk.jpg",
+    poster: "/assets/real/headmaster_desk.jpg",
     accent: "#f59e0b",
     route: "/login",
     durationLabel: "Full 10-Role Master Walkthrough",
@@ -34,31 +34,31 @@ export const REAL_ACTION_ROLE_VIDEOS = [
         step: "SCENE 1 • HEADMASTER & EXECUTIVE GOVERNANCE",
         command: "Click '📹 Inbuilt CCTV & Mobile' → '🎓 Admissions' → '💳 Fee Approvals' → '🚪 Sign Out'",
         action: "Headmaster verifies voice biometrics, inspects drop-list user registration counts, approves student admissions & teacher lesson notes, links campus CCTV to mobile, and signs out cleanly.",
-        image: "/assets/real_scene1_headmaster_desk.jpg"
+        image: "/assets/real/headmaster_desk.jpg"
       },
       {
         step: "SCENE 2 • TEACHER MULTI-FORMAT QUESTION BANK & EXAM TIMETABLE",
         command: "Click '➕ Set Questions & Schedule Timed Exam' → Select MCQ / Theory / True-False Tab → Click '➕ Add Timetable Entry'",
         action: "Teacher chooses any exam format from the high-contrast Multi-Format Question Bank, adds Examination Timetable Guide entries when exam times are scheduled, grades typed theory scripts, and runs the AI OMR Scanner.",
-        image: "/assets/real_scene2_teacher_scanner.jpg"
+        image: "/assets/real/teacher_scanner.jpg"
       },
       {
         step: "SCENE 3 • STUDENT ONLINE EXAM & E-LEARNING ARENA",
         command: "Click '🚀 Begin Active Examination Now' → Answer MCQ, True/False & Typed Theory → Click '✅ Submit Exam'",
         action: "Student checks the Official Examination Timetable & Revision Procedure Guide, jumps between Multiple Choice, True/False, Fill-in-Blank, and Theory Essay questions, and downloads AI-proctored transcripts.",
-        image: "/assets/real_scene3_student_elearning.jpg"
+        image: "/assets/real/student_elearning.jpg"
       },
       {
         step: "SCENE 4 • PARENT MOBILE HUB & ACCOUNTANT TREASURY",
         command: "Parent clicks '💳 Pay Tuition (MoMo)' • Accountant clicks '🧾 Issue Invoice' & '⚖️ Run GAAP Audit'",
         action: "Parent pays school fees via Mobile Money/Bank Card and tracks the school bus live on GPS; Accountant reconciles ledger payments in real time and authorizes payroll.",
-        image: "/assets/real_scene4_parent_mobile.jpg"
+        image: "/assets/real/parent_mobile.jpg"
       },
       {
         step: "SCENE 5 • HR, STAFF, ALUMNI, INVENTORY & DEVELOPER CONTROL",
         command: "HR '📋 Biometric Roster' • Staff '🛡️ Gate QR' • Alumni '📜 Transcript' • Inventory '📦 Stock' • Dev '🛡️ Sentinel'",
         action: "HR processes staff leave & salary tiers; Staff logs facility maintenance & gate security; Alumni verifies digital degrees; Inventory tracks lab stock; Developer oversees all tenants, live GPS map, and 7-day grace billing lock.",
-        image: "/assets/real_scene6_staff_gate_turnstile.jpg"
+        image: "/assets/real/staff_gate_turnstile.jpg"
       }
     ],
     highlights: [
@@ -74,7 +74,7 @@ export const REAL_ACTION_ROLE_VIDEOS = [
     title: "Headmaster Command Center — Exact Commands, Controls & Sign Out",
     subtitle: "Voice Biometric Gate • User Registration Counts • Admissions • CCTV Mobile Link • Timetable & Lesson Approval • Sign Out",
     videoSrc: "/videos/video1_headmaster_role_guide.mp4",
-    poster: "/assets/real_scene1_headmaster_desk.jpg",
+    poster: "/assets/real/headmaster_desk.jpg",
     accent: "#38bdf8",
     route: "/portal/admin/dashboard",
     durationLabel: "Headmaster Role Guide",
@@ -91,19 +91,19 @@ export const REAL_ACTION_ROLE_VIDEOS = [
         step: "STEP 1 • VOICE BIOMETRIC LOGIN & SCHOOL BRANDING",
         command: "Speak passphrase or click ' Verify Voice Biometrics' → Click '✏️ Change School Name & Upload Logo'",
         action: "Headmaster authenticates into /portal/admin/dashboard, confirms the exact institution name and logo crest, and reviews live KPI counters.",
-        image: "/assets/real_scene1_headmaster_desk.jpg"
+        image: "/assets/real/headmaster_desk.jpg"
       },
       {
         step: "STEP 2 • ADMISSIONS, TIMETABLE & TEACHER CHECKUP DESK",
         command: "Click '📂 Admissions' → '✅ Approve Admission' → Click '📚 Lesson & Attendance Checkup'",
         action: "Headmaster approves new student admissions, inspects teacher weekly attendance registers and lesson notes, and publishes official academic calendars.",
-        image: "/assets/real_scene2_teacher_scanner.jpg"
+        image: "/assets/real/teacher_scanner.jpg"
       },
       {
         step: "STEP 3 • EXCLUSIVE CCTV MOBILE LINK, BUS ROUTES & SIGN OUT",
         command: "Click '📹 Inbuilt CCTV & Mobile' → Click '🚌 Bus Transport' → Click '🚪 Sign Out'",
         action: "Headmaster monitors live campus CCTV cameras, assigns bus fares and drivers, locates parents via Emergency GPS, and clicks the red '🚪 Sign Out' button when finished.",
-        image: "/assets/real_scene6_staff_gate_turnstile.jpg"
+        image: "/assets/real/staff_gate_turnstile.jpg"
       }
     ],
     highlights: [
@@ -119,7 +119,7 @@ export const REAL_ACTION_ROLE_VIDEOS = [
     title: "Teacher Portal — Question Bank, Exam Timetable & Script Scanner",
     subtitle: "MCQ / Theory / True-False / Short Answer / Fill-in-Blank / Case Study • Exam Timetable Guide • Theory Grading • Script Scanner",
     videoSrc: "/videos/video2_teacher_role_guide.mp4",
-    poster: "/assets/real_scene2_teacher_scanner.jpg",
+    poster: "/assets/real/teacher_scanner.jpg",
     accent: "#10b981",
     route: "/portal/teacher/dashboard",
     durationLabel: "Teacher Role Guide",
@@ -136,19 +136,19 @@ export const REAL_ACTION_ROLE_VIDEOS = [
         step: "STEP 1 • SELECT FORMAT IN MULTI-FORMAT QUESTION BANK",
         command: "Click '➕ Set Questions & Schedule Timed Exam' → Click '📘 Multiple Choice', '✍️ Theory / Essay', or '☑️ True or False'",
         action: "Teacher sees high-contrast dark/colored Question Bank tabs with clear white & gold inscriptions, selects any question format (or mixed formats), and configures questions, options, or marking rubrics.",
-        image: "/assets/real_scene2_teacher_scanner.jpg"
+        image: "/assets/real/teacher_scanner.jpg"
       },
       {
         step: "STEP 2 • ADD TIMETABLE ENTRY ON EXAMINATION TIMETABLE GUIDE",
         command: "Click '➕ Add Timetable Entry' or '📅 Create / Edit Timetable Guide' → Enter Date, Start/End Time, Format & Hall → Click '📢 Publish Examination Timetable to Students'",
         action: "Teacher adds examination timetable entries whenever there are exam times for students, syncs scheduled timed exams with one click, and publishes the guide to all Student Dashboards.",
-        image: "/assets/real_scene3_student_elearning.jpg"
+        image: "/assets/real/student_elearning.jpg"
       },
       {
         step: "STEP 3 • GRADE TYPED THEORY SCRIPTS, SCAN OMR & ARCHIVE ATTENDANCE",
         command: "Click '👁️ Open & Grade Script' → Award Marks & Save → Click '🖨️ AI Exam Scanner' → Click '📋 Attendance & Lesson Notes'",
         action: "Teacher grades students' typed Theory/Essay/Short-Answer responses, scans physical OMR sheets, submits weekly attendance to the Headmaster, and archives approved registers.",
-        image: "/assets/real_scene1_headmaster_desk.jpg"
+        image: "/assets/real/headmaster_desk.jpg"
       }
     ],
     highlights: [
@@ -164,7 +164,7 @@ export const REAL_ACTION_ROLE_VIDEOS = [
     title: "Student Portal — Multi-Format Online Exams, Timetable Guide & E-Learning",
     subtitle: "Official Examination Timetable Guide • Answer MCQ, True/False, Fill-in-Blank & Theory • AI Tutor • Transcripts",
     videoSrc: "/videos/video3_student_role_guide.mp4",
-    poster: "/assets/real_scene3_student_elearning.jpg",
+    poster: "/assets/real/student_elearning.jpg",
     accent: "#8b5cf6",
     route: "/portal/student/dashboard",
     durationLabel: "Student Role Guide",
@@ -181,13 +181,13 @@ export const REAL_ACTION_ROLE_VIDEOS = [
         step: "STEP 1 • REVIEW OFFICIAL EXAMINATION TIMETABLE GUIDE",
         command: "Open '📝 Examination & Testing Center' → Review 'OFFICIAL EXAMINATION TIMETABLE & REVISION PROCEDURE GUIDE'",
         action: "Student inspects every scheduled paper, its question format badge, date, start/end time window, examination hall, invigilator, permitted tools, and syllabus scope.",
-        image: "/assets/real_scene3_student_elearning.jpg"
+        image: "/assets/real/student_elearning.jpg"
       },
       {
         step: "STEP 2 • ANSWER MULTI-FORMAT QUESTIONS (MCQ, TRUE/FALSE, THEORY)",
         command: "Click '🚀 Begin Active Examination Now' → Use Format Navigator ('📘 Multiple Choice', '✍️ Theory / Essay', '☑️ True / False') → Click '✅ Submit'",
         action: "Student easily answers every question according to the exact format set by the teacher—clicking options for MCQ/True-False or typing structured answers for Theory, Short Answer, Fill-in-Blank, and Case Study.",
-        image: "/assets/real_scene2_teacher_scanner.jpg"
+        image: "/assets/real/teacher_scanner.jpg"
       }
     ],
     highlights: [
@@ -203,7 +203,7 @@ export const REAL_ACTION_ROLE_VIDEOS = [
     title: "Parent & Guardian Portal — MoMo Tuition Payment, Live Bus GPS & Reports",
     subtitle: "Multi-Child Selector • Instant Mobile Money / Card Fee Payment • Live School Bus GPS • Teacher Voice Notes & Academic Reports",
     videoSrc: "/videos/video4_parent_role_guide.mp4",
-    poster: "/assets/real_scene4_parent_mobile.jpg",
+    poster: "/assets/real/parent_mobile.jpg",
     accent: "#ec4899",
     route: "/portal/parent/dashboard",
     durationLabel: "Parent Role Guide",
@@ -219,13 +219,13 @@ export const REAL_ACTION_ROLE_VIDEOS = [
         step: "STEP 1 • PAY TUITION VIA MOBILE MONEY & DOWNLOAD RECEIPT",
         command: "Click '💳 Fee Invoices & MoMo Payment' → Enter Amount & MoMo Number → Click '✅ Authorize Payment'",
         action: "Parent settles ward tuition fees from any mobile phone or computer, automatically updating the Accountant's ledger and generating a verifiable digital receipt.",
-        image: "/assets/real_scene4_parent_mobile.jpg"
+        image: "/assets/real/parent_mobile.jpg"
       },
       {
         step: "STEP 2 • TRACK SCHOOL BUS GPS & REVIEW WARD EXAM RESULTS",
         command: "Click '🚌 Bus GPS & Safety' → Click '📊 Academic Reports & Voice Notes'",
         action: "Parent monitors the child's school bus location in real time, checks daily gate check-in timestamps, and reviews published exam scores.",
-        image: "/assets/real_scene5_accountant_finance.jpg"
+        image: "/assets/real/accountant_finance.jpg"
       }
     ],
     highlights: [
@@ -241,7 +241,7 @@ export const REAL_ACTION_ROLE_VIDEOS = [
     title: "Accountant Dashboard — Multi-Gateway Receipts, Reports & Payroll",
     subtitle: "Invoices • Debtors • Fee Structures • Class Matrix • Payment Gateways (Paystack/Hubtel) • Financial Reports • Payroll",
     videoSrc: "/videos/video5_accountant_role_guide.mp4",
-    poster: "/assets/real_scene5_accountant_finance.jpg",
+    poster: "/assets/real/accountant_finance.jpg",
     accent: "#14b8a6",
     route: "/portal/accountant/dashboard",
     durationLabel: "Accountant Role Guide",
@@ -257,13 +257,13 @@ export const REAL_ACTION_ROLE_VIDEOS = [
         step: "STEP 1 • VERIFY GATEWAY TRANSACTIONS & RECONCILE PENDING RECORDS",
         command: "Click 'Payment Gateways' → Enter Reference (GBS-FEE-...) → Click 'Verify with Provider' or 'Sync Pending Transactions'",
         action: "Accountant verifies incoming MTN MoMo, Telecel Cash, AT Money, Visa, Mastercard, and Bank Direct transactions server-to-server, confirms bank slips, or processes refunds cleanly.",
-        image: "/assets/real_scene5_accountant_finance.jpg"
+        image: "/assets/real/accountant_finance.jpg"
       },
       {
         step: "STEP 2 • REVIEW DAILY/MONTHLY/TERMLY REPORTS & AUDIT YEAR-END LEDGER",
         command: "Click 'Statements & Audits' → Switch 'DAILY / WEEKLY / MONTHLY / TERMLY' → Click 'Run Full GAAP / IFRS Audit'",
         action: "Accountant reviews live database collection totals per gateway and outstanding student balances, and closes/archives completed financial years.",
-        image: "/assets/real_scene1_headmaster_desk.jpg"
+        image: "/assets/real/headmaster_desk.jpg"
       }
     ],
     highlights: [
@@ -279,7 +279,7 @@ export const REAL_ACTION_ROLE_VIDEOS = [
     title: "HR Management Portal — Staff Recruitment, Biometric Clock-In & Salary Tiers",
     subtitle: "Staff Directory • Biometric Attendance • Leave Approvals • Salary Grouping • Performance Appraisals",
     videoSrc: "/videos/video6_staff_hr_role_guide.mp4",
-    poster: "/assets/real_scene6_staff_gate_turnstile.jpg",
+    poster: "/assets/real/staff_gate_turnstile.jpg",
     accent: "#f97316",
     route: "/portal/hr/dashboard",
     durationLabel: "HR Role Guide",
@@ -295,13 +295,13 @@ export const REAL_ACTION_ROLE_VIDEOS = [
         step: "STEP 1 • STAFF ONBOARDING & BIOMETRIC ATTENDANCE AUDIT",
         command: "Click '👥 Staff Directory' → '➕ Add Staff' → Click '⏱️ Biometric Attendance'",
         action: "HR Officer registers teaching and non-teaching personnel, assigns departments, and audits daily biometric turnstile clock-in logs.",
-        image: "/assets/real_scene6_staff_gate_turnstile.jpg"
+        image: "/assets/real/staff_gate_turnstile.jpg"
       },
       {
         step: "STEP 2 • LEAVE APPROVALS & SALARY TIER CONFIGURATION",
         command: "Click '🏖️ Leave Desk' → '✅ Approve' → Click '💰 Salary Grouping'",
         action: "HR Officer approves staff leave requests, updates salary grade structures, and syncs approved payroll rosters to the Accountant Treasury.",
-        image: "/assets/real_scene5_accountant_finance.jpg"
+        image: "/assets/real/accountant_finance.jpg"
       }
     ],
     highlights: [
@@ -317,7 +317,7 @@ export const REAL_ACTION_ROLE_VIDEOS = [
     title: "Staff Operations Portal — Gate QR Security, Transport Fleet & Facility Logs",
     subtitle: "Campus Gate QR Turnstile • Bus Fleet Dispatch • Sickbay & Hostel Logs • Facility Maintenance Tickets",
     videoSrc: "/videos/video6_staff_hr_role_guide.mp4",
-    poster: "/assets/real_scene6_staff_gate_turnstile.jpg",
+    poster: "/assets/real/staff_gate_turnstile.jpg",
     accent: "#06b6d4",
     route: "/portal/staff/dashboard",
     durationLabel: "Staff Role Guide",
@@ -332,13 +332,13 @@ export const REAL_ACTION_ROLE_VIDEOS = [
         step: "STEP 1 • CAMPUS GATE QR SCANNING & VISITOR SECURITY",
         command: "Click '🛡️ Gate Security & QR Scanner' → Scan Student/Visitor Pass → Log Entry",
         action: "Security and operations staff verify digital ID badges at the turnstile, triggering instant parent attendance notifications.",
-        image: "/assets/real_scene6_staff_gate_turnstile.jpg"
+        image: "/assets/real/staff_gate_turnstile.jpg"
       },
       {
         step: "STEP 2 • FACILITY MAINTENANCE TICKETS & FLEET DISPATCH",
         command: "Click '🛠️ Facility Tickets' → '➕ Submit Repair Log' → Click '🚌 Bus Dispatch'",
         action: "Operations staff log campus maintenance work orders and update daily school bus dispatch telemetry.",
-        image: "/assets/real_scene1_headmaster_desk.jpg"
+        image: "/assets/real/headmaster_desk.jpg"
       }
     ],
     highlights: [
@@ -354,7 +354,7 @@ export const REAL_ACTION_ROLE_VIDEOS = [
     title: "Alumni Portal — Official Transcripts, Degree Verification & Endowment Pledges",
     subtitle: "Digital Transcript Requests • Employer Certificate Verification • Endowment Donations • Mentorship & Job Board",
     videoSrc: "/videos/gbs_complete_system_roles_master_guide.mp4",
-    poster: "/assets/real_scene3_student_elearning.jpg",
+    poster: "/assets/real/student_elearning.jpg",
     accent: "#eab308",
     route: "/portal/alumni/dashboard",
     durationLabel: "Alumni Role Guide",
@@ -369,13 +369,13 @@ export const REAL_ACTION_ROLE_VIDEOS = [
         step: "STEP 1 • OFFICIAL TRANSCRIPT REQUEST & CREDENTIAL VERIFICATION",
         command: "Click '📜 Transcripts & Certificates' → '➕ Request Transcript' → Download Verified PDF",
         action: "Alumni graduate requests an official watermarked academic transcript or shares a cryptographic verification code with employers and universities.",
-        image: "/assets/real_scene3_student_elearning.jpg"
+        image: "/assets/real/student_elearning.jpg"
       },
       {
         step: "STEP 2 • ALMA MATER ENDOWMENT PLEDGES & MENTORSHIP",
         command: "Click '💝 Endowment & Donations' → '🤝 Career Mentorship Board'",
         action: "Alumni contribute to school infrastructure projects and mentor current students.",
-        image: "/assets/real_scene1_headmaster_desk.jpg"
+        image: "/assets/real/headmaster_desk.jpg"
       }
     ],
     highlights: [
@@ -391,7 +391,7 @@ export const REAL_ACTION_ROLE_VIDEOS = [
     title: "Inventory Portal — Stock Ledger, Low-Stock Alerts & Department Requisitions",
     subtitle: "Real-Time Stock Quantities • FEFO Batch & Expiry Tracking • Department Requisition Approval • Supplier Purchase Orders",
     videoSrc: "/videos/video6_staff_hr_role_guide.mp4",
-    poster: "/assets/real_scene5_accountant_finance.jpg",
+    poster: "/assets/real/accountant_finance.jpg",
     accent: "#84cc16",
     route: "/portal/inventory/dashboard",
     durationLabel: "Inventory Role Guide",
@@ -406,13 +406,13 @@ export const REAL_ACTION_ROLE_VIDEOS = [
         step: "STEP 1 • STOCK LEDGER AUDIT & LOW-STOCK REORDER ALERTS",
         command: "Click '📦 Stock Inventory Ledger' → '➕ Add Stock Item' → Check '⚠️ Low Stock Alerts'",
         action: "Inventory Officer tracks real-time quantities across textbooks, laboratory equipment, ICT assets, and infirmary supplies.",
-        image: "/assets/real_scene5_accountant_finance.jpg"
+        image: "/assets/real/accountant_finance.jpg"
       },
       {
         step: "STEP 2 • DEPARTMENT REQUISITION ISSUANCE & SUPPLIER GRN",
         command: "Click '📋 Department Requisitions' → '✅ Approve & Issue' → Click '🚚 Suppliers & POs'",
         action: "Inventory Officer fulfills faculty resource requests and logs supplier Goods Received Notes synced with the Accountant.",
-        image: "/assets/real_scene6_staff_gate_turnstile.jpg"
+        image: "/assets/real/staff_gate_turnstile.jpg"
       }
     ],
     highlights: [
@@ -428,7 +428,7 @@ export const REAL_ACTION_ROLE_VIDEOS = [
     title: "Developer Console — School Approvals, Subscriptions, Gateways & Security",
     subtitle: "School Signups • Headmaster Photo Checks • Security Alerts • Subscriptions & Auto-Lock • Payment Gateways • Backups • Maps",
     videoSrc: "/videos/video7_developer_role_guide.mp4",
-    poster: "/assets/real_scene1_headmaster_desk.jpg",
+    poster: "/assets/real/headmaster_desk.jpg",
     accent: "#38bdf8",
     route: "/developer",
     durationLabel: "Developer Role Guide",
@@ -444,13 +444,13 @@ export const REAL_ACTION_ROLE_VIDEOS = [
         step: "STEP 1 • APPROVE ONBOARDED SCHOOLS & MANAGE SUBSCRIPTIONS",
         command: "Login '/developer-control-center/login' → Click 'School Signups & Approvals' → Approve School → Check 'Server Health & Subscriptions' (MoMo 0554594193)",
         action: "Developer reviews newly registered schools, activates school portals with exact branding, checks GH₵ 3/5/10 per-student subscription countdowns, and locks/restores access safely.",
-        image: "/assets/real_scene1_headmaster_desk.jpg"
+        image: "/assets/real/headmaster_desk.jpg"
       },
       {
         step: "STEP 2 • CONFIGURE PAYMENT GATEWAYS, WEBHOOKS & MONITOR INFRASTRUCTURE",
         command: "Click 'Payment Gateways' → Configure Paystack/Hubtel Subaccounts → Click 'Sync Pending Transactions' / 'Retry Failed Webhooks' → Inspect 'Database Backups' & 'Login Alerts'",
         action: "Developer configures multi-school gateway routing (with server-masked keys), reconciles missing webhooks, checks intrusion alerts, and opens school GPS locations.",
-        image: "/assets/real_scene2_teacher_scanner.jpg"
+        image: "/assets/real/teacher_scanner.jpg"
       }
     ],
     highlights: [
