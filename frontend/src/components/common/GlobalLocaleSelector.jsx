@@ -2,6 +2,9 @@ import React, { useState, useEffect } from "react";
 import {
   GLOBAL_COUNTRIES,
   GLOBAL_LANGUAGES,
+  HEADMASTER_ROLES,
+  isDeveloperPortalContext,
+  resolveCurrentUserRole,
   getPreferredCountryCode,
   getPreferredLanguageCode,
   getCountryProfile,
@@ -12,24 +15,56 @@ import {
 
 /**
  * Compact Global Country & System Language Switcher
- * Works identically on Login, Onboarding, Developer Mission Control, and all 9 Portal Banners.
+ * - On Tenant Portals: Headmaster sets the institution-wide language across the entire school (Staff, Teachers, Students, Parents, Bursar, HR, Alumni).
+ * - On Developer Dashboard: Strictly locked to Standard English (excluded from institution translation).
  */
-export default function GlobalLocaleSelector({ compact = true }) {
-  const [countryCode, setCountryCode] = useState(() => getPreferredCountryCode());
-  const [languageCode, setLanguageCode] = useState(() => getPreferredLanguageCode());
+export default function GlobalLocaleSelector({ compact = true, lockedDeveloperEnglish = false }) {
+  const isDevLocked = lockedDeveloperEnglish || isDeveloperPortalContext();
+  const [countryCode, setCountryCode] = useState(() => (isDevLocked ? "GH" : getPreferredCountryCode()));
+  const [languageCode, setLanguageCode] = useState(() => (isDevLocked ? "en" : getPreferredLanguageCode()));
 
   useEffect(() => {
+    if (isDevLocked) {
+      applyDocumentLocale("en", "GH");
+      return;
+    }
     applyDocumentLocale(languageCode, countryCode);
     const onLocaleEvent = (e) => {
+      if (isDeveloperPortalContext()) return;
       if (e?.detail?.country?.code) setCountryCode(e.detail.country.code);
       if (e?.detail?.language?.code) setLanguageCode(e.detail.language.code);
     };
     window.addEventListener("gbs_locale_changed", onLocaleEvent);
     return () => window.removeEventListener("gbs_locale_changed", onLocaleEvent);
-  }, []);
+  }, [isDevLocked]);
+
+  if (isDevLocked) {
+    return (
+      <div
+        data-gbs-no-translate="true"
+        style={{
+          display: "inline-flex",
+          alignItems: "center",
+          gap: "6px",
+          padding: compact ? "4px 10px" : "6px 12px",
+          borderRadius: "10px",
+          background: "#081833",
+          color: "#93c5fd",
+          border: "1px solid rgba(56, 189, 248, 0.45)",
+          fontSize: compact ? "0.73rem" : "0.8rem",
+          fontWeight: 800
+        }}
+        title="Developer Control Center always operates in Standard System English regardless of tenant language choices"
+      >
+        <span>🌐 English (Developer Standard • Immutable)</span>
+      </div>
+    );
+  }
 
   const country = getCountryProfile(countryCode);
   const lang = getLanguageProfile(languageCode);
+  const role = resolveCurrentUserRole();
+  const isHeadmaster = HEADMASTER_ROLES.has(role);
 
   const handleCountryChange = async (e) => {
     const nextCountryCode = e.target.value;
@@ -49,12 +84,17 @@ export default function GlobalLocaleSelector({ compact = true }) {
     const nextLangCode = e.target.value;
     const nextLang = getLanguageProfile(nextLangCode);
     setLanguageCode(nextLang.code);
-    await setGlobalLocalePreferences({ languageCode: nextLang.code });
+    await setGlobalLocalePreferences({
+      languageCode: nextLang.code,
+      scope: isHeadmaster ? "TENANT" : "USER"
+    });
     if (window.showGBSOpenNotice) {
       window.showGBSOpenNotice(
-        `🌐 System language updated to ${nextLang.label} (${nextLang.rtl ? "RTL layout enabled" : "LTR layout active"}).`,
+        isHeadmaster
+          ? `🌐 Institution-wide system language updated to ${nextLang.label} (${nextLang.rtl ? "RTL layout enabled" : "LTR layout active"}). All staff, teachers, students, parents, accountant & HR dashboards for this school now follow this language (Developer Dashboard unchanged).`
+          : `🌐 System language updated to ${nextLang.label} (${nextLang.rtl ? "RTL layout enabled" : "LTR layout active"}).`,
         "success",
-        "SYSTEM LANGUAGE UPDATED"
+        isHeadmaster ? "INSTITUTION LANGUAGE UPDATED" : "SYSTEM LANGUAGE UPDATED"
       );
     }
   };
@@ -73,6 +113,7 @@ export default function GlobalLocaleSelector({ compact = true }) {
 
   return (
     <div
+      data-gbs-no-translate="true"
       style={{
         display: "inline-flex",
         alignItems: "center",
@@ -80,7 +121,11 @@ export default function GlobalLocaleSelector({ compact = true }) {
         flexWrap: "wrap",
         justifyContent: "center"
       }}
-      title={`Active Regional Norms: ${country.flag} ${country.name} | Currency: ${country.currencyCode} | Academic: ${country.termSystem} | Language: ${lang.label}`}
+      title={
+        isHeadmaster
+          ? `Headmaster Institution Language Control | Active Norms: ${country.flag} ${country.name} | Language: ${lang.label} (Applies to entire school; Developer excluded)`
+          : `Active Regional Norms: ${country.flag} ${country.name} | Currency: ${country.currencyCode} | Academic: ${country.termSystem} | Language: ${lang.label}`
+      }
     >
       <select
         aria-label="Select Country and Educational Norms"

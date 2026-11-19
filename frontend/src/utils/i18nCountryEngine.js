@@ -5,9 +5,45 @@
  */
 
 import axiosInstance from "../api/client/axios";
+import {
+  isDeveloperRouteOrDomActive as isDeveloperPortalContext,
+  setDomTranslationLanguage,
+  stopAndRestoreEnglishForDeveloper
+} from "./domTranslator";
+
+export { isDeveloperPortalContext };
 
 export const PREFERRED_COUNTRY_KEY = "gbs_preferred_country";
 export const PREFERRED_LANGUAGE_KEY = "gbs_preferred_language";
+export const HEADMASTER_ROLES = new Set(["ADMIN", "SUPER_ADMIN", "HEADMASTER"]);
+
+export function resolveActiveTenantId() {
+  try {
+    const rawUser = JSON.parse(localStorage.getItem("gbs_user") || "{}");
+    const uTid = parseInt(rawUser?.tenantId || rawUser?.tenant?.id, 10);
+    if (Number.isInteger(uTid) && uTid > 0) return uTid;
+    const rawTid = parseInt(localStorage.getItem("gbs_tenant_id") || localStorage.getItem("gbs_active_tenant"), 10);
+    if (Number.isInteger(rawTid) && rawTid > 0) return rawTid;
+  } catch { }
+  return 1;
+}
+
+export function resolveCurrentUserRole() {
+  try {
+    const rawUser = JSON.parse(localStorage.getItem("gbs_user") || "{}");
+    return String(rawUser?.role || localStorage.getItem("gbs_auth_role") || "").trim().toUpperCase();
+  } catch {
+    return "";
+  }
+}
+
+export function getTenantLanguageStorageKey(tenantId = resolveActiveTenantId()) {
+  return `${PREFERRED_LANGUAGE_KEY}_t_${tenantId}`;
+}
+
+export function getTenantCountryStorageKey(tenantId = resolveActiveTenantId()) {
+  return `${PREFERRED_COUNTRY_KEY}_t_${tenantId}`;
+}
 
 export const GLOBAL_COUNTRIES = [
   { code: "GH", name: "Ghana", flag: "🇬🇭", currencyCode: "GHS", currencySymbol: "GH₵", dialCode: "+233", termSystem: "3-Term Academic Year", gradingNorm: "WAEC / GES (A1–F9)", dateFormat: "DD/MM/YYYY", defaultLanguage: "en" },
@@ -348,7 +384,14 @@ const UI_TRANSLATIONS = {
 };
 
 export function getPreferredCountryCode() {
+  if (isDeveloperPortalContext()) return "GH";
   try {
+    const tid = resolveActiveTenantId();
+    const hasAuthSession = Boolean(localStorage.getItem("gbs_user") && (localStorage.getItem("gbs_token") || localStorage.getItem("gbs_access_token")));
+    if (hasAuthSession) {
+      const tenantScoped = localStorage.getItem(getTenantCountryStorageKey(tid));
+      if (tenantScoped) return tenantScoped;
+    }
     return localStorage.getItem(PREFERRED_COUNTRY_KEY) || "GH";
   } catch {
     return "GH";
@@ -361,7 +404,15 @@ export function getCountryProfile(code = null) {
 }
 
 export function getPreferredLanguageCode() {
+  // Developer Dashboard & Control Center are permanently excluded and stay Standard English
+  if (isDeveloperPortalContext()) return "en";
   try {
+    const tid = resolveActiveTenantId();
+    const hasAuthSession = Boolean(localStorage.getItem("gbs_user") && (localStorage.getItem("gbs_token") || localStorage.getItem("gbs_access_token")));
+    if (hasAuthSession) {
+      const tenantScoped = localStorage.getItem(getTenantLanguageStorageKey(tid));
+      if (tenantScoped) return tenantScoped;
+    }
     return localStorage.getItem(PREFERRED_LANGUAGE_KEY) || "en";
   } catch {
     return "en";
@@ -375,12 +426,19 @@ export function getLanguageProfile(code = null) {
 
 export function applyDocumentLocale(langCode = getPreferredLanguageCode(), countryCode = getPreferredCountryCode()) {
   if (typeof document === "undefined") return;
+  if (isDeveloperPortalContext()) {
+    stopAndRestoreEnglishForDeveloper();
+    document.documentElement.setAttribute("data-gbs-country", "GH");
+    document.documentElement.setAttribute("data-gbs-currency", "GHS");
+    return;
+  }
   const lang = getLanguageProfile(langCode);
   const country = getCountryProfile(countryCode);
   document.documentElement.lang = lang.code;
   document.documentElement.dir = lang.rtl ? "rtl" : "ltr";
   document.documentElement.setAttribute("data-gbs-country", country.code);
   document.documentElement.setAttribute("data-gbs-currency", country.currencyCode);
+  setDomTranslationLanguage(lang.code);
 }
 
 export function getActiveCurrencySymbol() {
@@ -399,14 +457,25 @@ export function getUiLabel(key, langCode = null) {
   return pack[key] || UI_TRANSLATIONS.en[key] || key;
 }
 
-export async function setGlobalLocalePreferences({ countryCode = null, languageCode = null, syncServer = true } = {}) {
+export async function setGlobalLocalePreferences({ countryCode = null, languageCode = null, syncServer = true, scope = null } = {}) {
+  if (isDeveloperPortalContext()) {
+    stopAndRestoreEnglishForDeveloper();
+    return { country: GLOBAL_COUNTRIES[0], language: GLOBAL_LANGUAGES[0], lockedDeveloperEnglish: true };
+  }
+
+  const tid = resolveActiveTenantId();
+  const role = resolveCurrentUserRole();
+  const isHeadmasterScope = scope === "TENANT" || HEADMASTER_ROLES.has(role);
+
   try {
     if (countryCode) {
       const c = getCountryProfile(countryCode);
+      localStorage.setItem(getTenantCountryStorageKey(tid), c.code);
       localStorage.setItem(PREFERRED_COUNTRY_KEY, c.code);
     }
     if (languageCode) {
       const l = getLanguageProfile(languageCode);
+      localStorage.setItem(getTenantLanguageStorageKey(tid), l.code);
       localStorage.setItem(PREFERRED_LANGUAGE_KEY, l.code);
     }
   } catch { }
@@ -416,14 +485,18 @@ export async function setGlobalLocalePreferences({ countryCode = null, languageC
   applyDocumentLocale(activeLang.code, activeCountry.code);
 
   if (typeof window !== "undefined") {
-    window.dispatchEvent(new CustomEvent("gbs_locale_changed", { detail: { country: activeCountry, language: activeLang } }));
+    window.dispatchEvent(new CustomEvent("gbs_locale_changed", {
+      detail: { country: activeCountry, language: activeLang, tenantId: tid, isInstitutionWide: isHeadmasterScope }
+    }));
   }
 
   if (syncServer) {
     try {
-      const token = localStorage.getItem("gbs_token");
-      if (token) {
-        await axiosInstance.patch("/users/locale-preferences", {
+      const token = localStorage.getItem("gbs_token") || localStorage.getItem("gbs_access_token");
+      if (token && !token.startsWith("gbs_dev_token_") && role !== "DEVELOPER") {
+        const endpoint = isHeadmasterScope ? "/locale/tenant-preference" : "/users/locale-preferences";
+        await axiosInstance.patch(endpoint, {
+          tenantId: tid,
           countryCode: activeCountry.code,
           languageCode: activeLang.code
         });
@@ -431,5 +504,84 @@ export async function setGlobalLocalePreferences({ countryCode = null, languageC
     } catch { }
   }
 
-  return { country: activeCountry, language: activeLang };
+  return { country: activeCountry, language: activeLang, tenantId: tid, isInstitutionWide: isHeadmasterScope };
+}
+
+export async function syncTenantLocaleFromServer() {
+  if (typeof window === "undefined") return null;
+  if (isDeveloperPortalContext()) {
+    stopAndRestoreEnglishForDeveloper();
+    return { countryCode: "GH", languageCode: "en", lockedDeveloperEnglish: true };
+  }
+
+  const role = resolveCurrentUserRole();
+  if (role === "DEVELOPER") {
+    return null;
+  }
+
+  const token = localStorage.getItem("gbs_token") || localStorage.getItem("gbs_access_token");
+  if (!token || token.startsWith("gbs_dev_token_")) return null;
+
+  const tid = resolveActiveTenantId();
+  try {
+    const res = await axiosInstance.get("/locale/tenant-preference", { params: { tenantId: tid } });
+    const data = res?.data?.data;
+    if (!data || data.lockedDeveloperEnglish) return null;
+
+    const nextLang = getLanguageProfile(data.languageCode || "en");
+    const nextCountry = getCountryProfile(data.countryCode || "GH");
+
+    const prevLang = localStorage.getItem(getTenantLanguageStorageKey(tid));
+    const prevCountry = localStorage.getItem(getTenantCountryStorageKey(tid));
+    const changed = prevLang !== nextLang.code || prevCountry !== nextCountry.code || document.documentElement.lang !== nextLang.code;
+
+    localStorage.setItem(getTenantLanguageStorageKey(tid), nextLang.code);
+    localStorage.setItem(getTenantCountryStorageKey(tid), nextCountry.code);
+    localStorage.setItem(PREFERRED_LANGUAGE_KEY, nextLang.code);
+    localStorage.setItem(PREFERRED_COUNTRY_KEY, nextCountry.code);
+
+    applyDocumentLocale(nextLang.code, nextCountry.code);
+
+    if (changed) {
+      window.dispatchEvent(new CustomEvent("gbs_locale_changed", {
+        detail: {
+          country: nextCountry,
+          language: nextLang,
+          tenantId: tid,
+          isInstitutionWide: Boolean(data.inheritedFromInstitution)
+        }
+      }));
+    }
+    return data;
+  } catch {
+    return null;
+  }
+}
+
+export function hydrateLocaleFromLoginUser(user) {
+  if (!user || isDeveloperPortalContext()) return;
+  const role = String(user.role || "").trim().toUpperCase();
+  if (role === "DEVELOPER") {
+    stopAndRestoreEnglishForDeveloper();
+    return;
+  }
+  const tid = parseInt(user.tenantId || user.tenant?.id || 1, 10) || 1;
+  const pref = user.localePreferences;
+  if (!pref) return;
+
+  const nextLang = getLanguageProfile(pref.languageCode || "en");
+  const nextCountry = getCountryProfile(pref.countryCode || "GH");
+  try {
+    localStorage.setItem("gbs_tenant_id", String(tid));
+    localStorage.setItem(getTenantLanguageStorageKey(tid), nextLang.code);
+    localStorage.setItem(getTenantCountryStorageKey(tid), nextCountry.code);
+    localStorage.setItem(PREFERRED_LANGUAGE_KEY, nextLang.code);
+    localStorage.setItem(PREFERRED_COUNTRY_KEY, nextCountry.code);
+  } catch { }
+  applyDocumentLocale(nextLang.code, nextCountry.code);
+  if (typeof window !== "undefined") {
+    window.dispatchEvent(new CustomEvent("gbs_locale_changed", {
+      detail: { country: nextCountry, language: nextLang, tenantId: tid }
+    }));
+  }
 }

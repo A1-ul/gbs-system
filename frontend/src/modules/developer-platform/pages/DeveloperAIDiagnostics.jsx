@@ -46,7 +46,7 @@ export default function DeveloperAIDiagnostics() {
   };
 
   return (
-    <div className="dev-dashboard-layout">
+    <div className="dev-dashboard-layout" data-gbs-developer-portal="true" data-gbs-no-translate="true">
       <header className="dev-header">
         <div className="dev-title">
           <span className="dev-badge-nav">SYSTEM DIAGNOSTICS</span>

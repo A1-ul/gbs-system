@@ -2,11 +2,13 @@ const prisma = require('../../core/database/prisma.client');
 const { AppError } = require('../../middleware/error.middleware');
 const authService = require('./auth.service');
 const { resolveTenantInstitutionType, getInstitutionProfile } = require('../../utils/institutionProfiles');
+const localeService = require('../locale/locale.service');
 
 const attachInstitutionMetadata = async (userObj, req) => {
   if (!userObj) return null;
+  const resolvedTenantId = userObj.tenantId || userObj.tenant?.id || 1;
   const resolvedInstType = await resolveTenantInstitutionType({
-    tenantId: userObj.tenantId || userObj.tenant?.id,
+    tenantId: resolvedTenantId,
     tenantCode: userObj.tenantCode || userObj.tenant?.code,
     user: userObj,
     req
@@ -17,6 +19,11 @@ const attachInstitutionMetadata = async (userObj, req) => {
     ...(userObj.tenant || {}),
     institutionType: resolvedInstType
   };
+  userObj.localePreferences = localeService.resolveEffectiveLocaleForUser({
+    tenantId: resolvedTenantId,
+    userKey: localeService.normalizeUserKey(userObj, resolvedTenantId),
+    role: userObj.role
+  });
   return resolvedInstType;
 };
 

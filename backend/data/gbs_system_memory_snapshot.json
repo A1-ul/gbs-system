@@ -348,6 +348,13 @@
       "rootCause": "Student proctoring did not stream camera frames/events to TeacherDashboard or subtract penaltyMarksDeducted on backend scoring, renewal cards used trophy icons instead of GBS crest, GBSVoiceAssistant had fixed position without minimize, Navy Mode needed uniform role rules, and Student/Accountant tab switches needed full alignment.",
       "resolution": "Added /api/v1/ai-exam/proctor/* endpoints and exact penalty deduction in aiExam.service.js, mounted TeacherLiveProctoringPanel inside TeacherDashboard exams tab, synced live heartbeats/snapshots/messages/deductions in StudentDashboard, replaced renewal trophies with /assets/gbs_crest_badge.jpg, made GBSVoiceAssistant draggable & minimizable, unified gbs-theme-navy in globals.css, and aligned Student/Accountant tab targets.",
       "status": "PERMANENTLY_GUARDED"
+    },
+    {
+      "issueCode": "DIAG-INSTITUTION-WIDE-TENANT-LOCALE-DEV-LOCK",
+      "symptom": "Changing System Language must translate the entire institution workspace per tenant across Headmaster, Staff, Teacher, Student, Parent, Accountant, HR & Alumni dashboards while defaulting to English and strictly keeping the Developer Dashboard unchanged in English",
+      "rootCause": "Previous locale selector only updated a small label helper and per-user object without persisting tenant-wide Headmaster institution language or translating the React DOM across all portals, and rendered active language controls on Developer Control Center.",
+      "resolution": "Created locale.service.js & locale.routes.js (/api/v1/locale/tenant-preference, /norms) with strict per-tenant isolation and Developer role immutability, uiBatchTranslator.service.js (/api/v1/translate/batch with cached + neural translation), React-safe domTranslator.js, TenantLocaleTranslatorController.jsx, login hydration in auth.controller.js & auth.api.js, and data-gbs-developer-portal English lock on DeveloperDashboard/DeveloperLogin/DeveloperAIDiagnostics/TopCenterSystemBanner.",
+      "status": "PERMANENTLY_GUARDED"
     }
   ],
   "verificationSummary": {

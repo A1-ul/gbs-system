@@ -268,51 +268,42 @@ const rejectStaff = async (req, res, next) => {
   }
 };
 
-const { resolveCountryNorm, resolveLanguageSpec } = require('../../utils/countryLanguageNorms');
-const { readPersistentStore, writePersistentStore } = require('../../core/database/persistentStore');
+const localeService = require('../locale/locale.service');
 
 const getLocalePreferences = async (req, res) => {
-  const store = readPersistentStore();
-  const prefs = store.userLocalePreferences || {};
-  const userKey = String(req.user?.email || req.user?.id || `tenant_${req.tenantId || 1}`).toLowerCase();
-  const saved = prefs[userKey] || { countryCode: 'GH', languageCode: 'en' };
-  const country = resolveCountryNorm(saved.countryCode);
-  const language = resolveLanguageSpec(saved.languageCode);
+  const tenantId = req.tenantId || req.user?.tenantId || 1;
+  const userKey = localeService.normalizeUserKey(req.user || {}, tenantId);
+  const role = String(req.user?.role || '').toUpperCase();
+  const resolved = localeService.resolveEffectiveLocaleForUser({ tenantId, userKey, role });
   res.status(200).json({
     status: 'success',
     data: {
-      country,
-      language,
-      preferences: saved,
-      ...saved
+      ...resolved,
+      preferences: resolved
     }
   });
 };
 
 const updateLocalePreferences = async (req, res) => {
-  const country = resolveCountryNorm(req.body?.countryCode || req.body?.country || 'GH');
-  const language = resolveLanguageSpec(req.body?.languageCode || req.body?.language || country.defaultLanguage || 'en');
-  const userKey = String(req.user?.email || req.user?.id || `tenant_${req.tenantId || 1}`).toLowerCase();
-  const record = {
-    countryCode: country.code,
-    languageCode: language.code,
-    currencyCode: country.currencyCode,
-    currencySymbol: country.currencySymbol,
-    updatedAt: new Date().toISOString()
-  };
-
-  writePersistentStore((curr) => ({
-    ...curr,
-    userLocalePreferences: {
-      ...(curr.userLocalePreferences && typeof curr.userLocalePreferences === 'object' ? curr.userLocalePreferences : {}),
-      [userKey]: record
-    }
-  }));
+  const tenantId = req.tenantId || req.user?.tenantId || 1;
+  const userKey = localeService.normalizeUserKey(req.user || {}, tenantId);
+  const role = String(req.user?.role || '').toUpperCase();
+  const resolved = localeService.updateUserLocalePreference({
+    tenantId,
+    userKey,
+    countryCode: req.body?.countryCode || req.body?.country || null,
+    languageCode: req.body?.languageCode || req.body?.language || null,
+    actor: req.user || { role }
+  });
 
   res.status(200).json({
     status: 'success',
-    message: `Locale updated cleanly to ${country.flag} ${country.name} (${country.currencyCode}) • Language: ${language.nativeName}.`,
-    data: { country, language, preferences: record, ...record }
+    message: resolved.lockedDeveloperEnglish
+      ? 'Developer Control Center remains locked to Standard English.'
+      : localeService.HEADMASTER_ROLES.has(role)
+        ? `Institution-wide language updated to ${resolved.language.nativeName} (${resolved.country.flag} ${resolved.country.name}) across all staff, student, parent & bursar portals.`
+        : `Personal portal language updated to ${resolved.language.nativeName} (${resolved.country.flag} ${resolved.country.name}).`,
+    data: { ...resolved, preferences: resolved }
   });
 };
 

@@ -1125,3 +1125,9 @@ html, body {
     color: #0f172a !important;
   }
 }
+
+/* Strictly lock Developer Control Center & Login to Standard English LTR regardless of tenant language choices */
+[data-gbs-developer-portal="true"] {
+  direction: ltr !important;
+  unicode-bidi: isolate;
+}

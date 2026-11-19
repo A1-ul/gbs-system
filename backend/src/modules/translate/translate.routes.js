@@ -5,9 +5,11 @@ const { readPersistentStore, writePersistentStore } = require('../../core/databa
 const socketServer = require('../../core/socket/socketServer');
 
 const router = express.Router();
+const { translateBatchTexts } = require('./uiBatchTranslator.service');
 
 const TRANSLATION_LANG_MAP = {
   TWI: 'ak',
+  TW: 'ak',
   AKAN: 'ak',
   AK: 'ak',
   GA: 'gaa',
@@ -38,7 +40,9 @@ const TRANSLATION_LANG_MAP = {
   HINDI: 'hi',
   HI: 'hi',
   ZULU: 'zu',
-  ZU: 'zu'
+  ZU: 'zu',
+  JAPANESE: 'ja',
+  JA: 'ja'
 };
 
 const STOP_WORDS_FOR_BREAKDOWN = new Set([
@@ -448,6 +452,29 @@ async function handleServerTranslation(req, res) {
 router.post('/', handleServerTranslation);
 router.get('/', handleServerTranslation);
 
+router.post('/batch', async (req, res) => {
+  try {
+    const texts = Array.isArray(req.body?.texts) ? req.body.texts : [];
+    const rawLang = String(req.body?.targetLang || req.body?.languageCode || req.body?.tl || 'en').trim();
+    const upperLang = rawLang.toUpperCase();
+    const targetIso = TRANSLATION_LANG_MAP[upperLang] || rawLang.toLowerCase() || 'en';
+    const result = await translateBatchTexts(texts, targetIso, translateNeuralText);
+    return res.status(200).json({
+      status: 'success',
+      data: {
+        targetLang: rawLang,
+        iso: targetIso,
+        ...result
+      }
+    });
+  } catch (err) {
+    return res.status(200).json({
+      status: 'fallback',
+      data: { translations: {}, cachedCount: 0, translatedCount: 0 }
+    });
+  }
+});
+
 router.post('/send-message', async (req, res) => {
   try {
     const {
@@ -529,10 +556,10 @@ router.get('/messages', (req, res) => {
 
     const filtered = roleFilter && !['ALL', 'DEVELOPER', 'ADMIN', 'SUPER_ADMIN', 'HEADMASTER'].includes(roleFilter)
       ? all.filter((m) => {
-          const rRole = String(m.receiverRole || '').toUpperCase();
-          const sRole = String(m.senderRole || '').toUpperCase();
-          return rRole === roleFilter || rRole === 'ALL' || sRole === roleFilter;
-        })
+        const rRole = String(m.receiverRole || '').toUpperCase();
+        const sRole = String(m.senderRole || '').toUpperCase();
+        return rRole === roleFilter || rRole === 'ALL' || sRole === roleFilter;
+      })
       : all;
 
     const sliced = filtered.slice(0, limit);

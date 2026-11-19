@@ -1,6 +1,7 @@
 import React, { Suspense, lazy } from "react";
 import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
 import GBSVoiceAssistant from "../components/common/GBSVoiceAssistant";
+import TenantLocaleTranslatorController from "../components/common/TenantLocaleTranslatorController";
 import { isDemoSandboxMode } from "../utils/tokenStorage";
 
 import MainLoginPage from "../modules/auth/pages/MainLoginPage";
@@ -397,6 +398,7 @@ export default function AppRouter() {
           <Route path="*" element={<Navigate to="/login" replace />} />
         </Routes>
       </Suspense>
+      <TenantLocaleTranslatorController />
       <GBSVoiceAssistant />
     </BrowserRouter>
   );

@@ -1,5 +1,6 @@
 import apiClient from "../../../api/client/apiClient";
 import { saveAuthSession } from "../../../utils/tokenStorage";
+import { hydrateLocaleFromLoginUser } from "../../../utils/i18nCountryEngine";
 
 function extractAuthPayload(responseData) {
   if (!responseData) {
@@ -529,6 +530,7 @@ export const login = async (payload) => {
     if (authData) {
       saveAuthSession(authData);
       localStorage.setItem("gbs_tenant_already_onboarded", "true");
+      hydrateLocaleFromLoginUser(authData.user);
     }
 
     return response.data;
@@ -549,6 +551,7 @@ export const login = async (payload) => {
       if (fallbackAuth) {
         saveAuthSession(fallbackAuth);
         localStorage.setItem("gbs_tenant_already_onboarded", "true");
+        hydrateLocaleFromLoginUser(fallbackAuth.user);
         return {
           status: "success",
           message: "Authenticated successfully",

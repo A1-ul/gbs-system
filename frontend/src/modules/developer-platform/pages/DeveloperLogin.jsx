@@ -605,7 +605,7 @@ export default function DeveloperLogin() {
   };
 
   return (
-    <div className="role-login-container">
+    <div className="role-login-container" data-gbs-developer-portal="true" data-gbs-no-translate="true">
       {/* Real-Life Authentic High-Tech Command Center Background Image */}
       <div 
         className="role-login-bg" 

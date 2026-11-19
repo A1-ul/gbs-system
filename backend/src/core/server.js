@@ -141,22 +141,7 @@ app.get('/api/v1/health', async (req, res) => {
   res.status(200).json(payload);
 });
 
-const { COUNTRY_NORMS, LANGUAGE_DEFINITIONS, resolveCountryNorm, resolveLanguageSpec } = require('../utils/countryLanguageNorms');
-
-app.get('/api/v1/locale/norms', (req, res) => {
-  const country = req.query.country ? resolveCountryNorm(req.query.country) : null;
-  const language = req.query.language ? resolveLanguageSpec(req.query.language) : null;
-  res.setHeader('Cache-Control', 'no-store');
-  res.status(200).json({
-    status: 'success',
-    data: {
-      countries: Object.values(COUNTRY_NORMS),
-      languages: Object.values(LANGUAGE_DEFINITIONS),
-      activeCountry: country,
-      activeLanguage: language
-    }
-  });
-});
+app.use('/api/v1/locale', require('../modules/locale/locale.routes'));
 
 app.get('/api/v1/app-version', (req, res) => {
   res.setHeader('Cache-Control', 'no-store, no-cache, must-revalidate');

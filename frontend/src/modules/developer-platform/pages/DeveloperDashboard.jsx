@@ -14,6 +14,7 @@ import PaymentGatewayAdminPanel from "../../../components/common/PaymentGatewayA
 import SchoolClinicHubPanel from "../../../components/common/SchoolClinicHubPanel";
 import UniversityOperationsPanel from "../../../components/common/UniversityOperationsPanel";
 import StudentDefaultersCompliancePanel from "../../../components/common/StudentDefaultersCompliancePanel";
+import { stopAndRestoreEnglishForDeveloper } from "../../../utils/domTranslator";
 import "./DeveloperPlatform.css";
 
 const BASE_URL = `${getApiBaseUrl()}/dev-control`;
@@ -21,8 +22,9 @@ const BASE_URL = `${getApiBaseUrl()}/dev-control`;
 export default function DeveloperDashboard() {
   const navigate = useNavigate();
 
-  // IRONCLAD DEVELOPER ACCESS GUARD: Strictly only the authorized developer can view this dashboard
+  // IRONCLAD DEVELOPER ACCESS GUARD + IMMUTABLE SYSTEM ENGLISH LOCK
   useEffect(() => {
+    stopAndRestoreEnglishForDeveloper();
     const devToken = localStorage.getItem("gbs_dev_token");
     let devProfile = null;
     try {
@@ -4645,7 +4647,7 @@ export default function DeveloperDashboard() {
   // Verified password must always be typed to gain entry. The password NEVER appears on the dashboard.
   if (!isDevGateUnlocked) {
     return (
-      <div className="role-login-container" style={{ minHeight: "100vh", display: "flex", alignItems: "center", justifyContent: "center", position: "relative" }}>
+      <div className="role-login-container" data-gbs-developer-portal="true" data-gbs-no-translate="true" style={{ minHeight: "100vh", display: "flex", alignItems: "center", justifyContent: "center", position: "relative" }}>
         <div
           className="role-login-bg"
           style={{
@@ -4854,7 +4856,7 @@ export default function DeveloperDashboard() {
   const pendingAppsCount = pendingIncomingList.length;
 
   return (
-    <div className="dev-dashboard-layout role-theme-developer">
+    <div className="dev-dashboard-layout role-theme-developer" data-gbs-developer-portal="true" data-gbs-no-translate="true">
       <div
         className="dev-dashboard-real-bg"
         style={{ backgroundImage: `url('/assets/developer-command-center-bg.jpg')` }}

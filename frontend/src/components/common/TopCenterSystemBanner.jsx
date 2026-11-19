@@ -339,6 +339,8 @@ export default function TopCenterSystemBanner({
   return (
     <div
       className="gbs-system-top-center-banner"
+      data-gbs-developer-portal={isDevMode ? "true" : undefined}
+      data-gbs-no-translate={isDevMode ? "true" : undefined}
       style={{
         display: "flex",
         flexDirection: "column",
@@ -452,7 +454,11 @@ export default function TopCenterSystemBanner({
           {institutionProfile.icon} Tier: {institutionProfile.shortName}
         </span>
         <span style={{ color: "#475569" }}>•</span>
-        <GlobalLocaleSelector compact onLocaleChange={() => setLocaleVersion((v) => v + 1)} />
+        <GlobalLocaleSelector
+          compact
+          lockedDeveloperEnglish={isDevMode}
+          onLocaleChange={() => setLocaleVersion((v) => v + 1)}
+        />
         <button
           type="button"
           onClick={handleToggleUiTheme}

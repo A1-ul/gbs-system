@@ -66,8 +66,8 @@ const CORE_TOPICS = [
   },
   {
     id: 'translator',
-    keywords: ['translat', 'language', 'twi', 'ga', 'french', 'ewe', 'hausa', 'meaning', 'inbox'],
-    speech: 'The movable GBS Language Translator lets you translate messages accurately across Twi, Ga, Ewe, Fante, Hausa, French, Spanish, Arabic, and English with exact dictionary meaning, and delivers translated messages straight to the recipient inbox with sender details.',
+    keywords: ['translat', 'language', 'twi', 'ga', 'french', 'ewe', 'hausa', 'meaning', 'inbox', 'institution language', 'switch language'],
+    speech: 'When a Headmaster changes the preferred System Language, GBS translates the entire institution workspace—Headmaster, Staff, Teacher, Student, Parent, Bursar, HR, and Alumni dashboards—for that tenant while leaving the Developer Dashboard completely unchanged in Standard English. You can switch back to default English anytime, and the floating Translator translates custom messages with exact dictionary meanings.',
     action: { trigger: 'openTranslator' }
   },
   {
