@@ -10,6 +10,7 @@ import { getActiveSchoolName, getActiveSchoolLogo } from "../../../../../utils/s
 import { isDemoSandboxMode, clearAuthStorage } from "../../../../../utils/tokenStorage";
 import { checkDemoEntryLimit, trackDemoEntryCreated } from "../../../../../utils/demoLimitGuard";
 import { useDashboardTabSync } from "../../../../../hooks/useDashboardTabSync";
+import SchoolClinicHubPanel from "../../../../../components/common/SchoolClinicHubPanel";
 import "../teacher/TeacherDashboard.css";
 
 export default function HRDashboard() {
@@ -23,8 +24,13 @@ export default function HRDashboard() {
         setHrAvatar(e.detail.avatar);
       }
     };
+    const onVoiceTab = (e) => { if (e?.detail?.tab) setActiveTab(e.detail.tab); };
     window.addEventListener("gbs_user_avatar_changed", handleAvatarChange);
-    return () => window.removeEventListener("gbs_user_avatar_changed", handleAvatarChange);
+    window.addEventListener("gbs_open_dashboard_tab", onVoiceTab);
+    return () => {
+      window.removeEventListener("gbs_user_avatar_changed", handleAvatarChange);
+      window.removeEventListener("gbs_open_dashboard_tab", onVoiceTab);
+    };
   }, []);
 
   // Tab & Full-Page Display Preservation
@@ -556,7 +562,8 @@ export default function HRDashboard() {
             { id: "staff_roster", label: "👥 Staff & Faculty Directory", icon: "👨‍🏫", count: employees.length },
             { id: "hr_audits", label: "⚖️ Headmaster Audit Directives", icon: "📋", count: hrAuditRequests.filter(r => r.status === "PENDING_HR_SUBMISSION").length, highlight: true },
             { id: "leaves", label: "🏖️ Leave & Absence Management", icon: "📅", count: leaveRequests.filter(l => l.status === "PENDING").length },
-            { id: "payroll_structure", label: "💳 Payroll & Salary Tiers", icon: "📊" }
+            { id: "payroll_structure", label: "💳 Payroll & Salary Tiers", icon: "📊" },
+            { id: "clinic", label: "🏥 School Clinic & Teacher Health", icon: "🩺" }
           ].map(tab => (
             <button
               key={tab.id}
@@ -884,6 +891,13 @@ export default function HRDashboard() {
               ))}
             </div>
           </div>
+        )}
+
+        {activeTab === "clinic" && (
+          <SchoolClinicHubPanel
+            mode="HR"
+            onFeedback={(msg) => showToast("success", "SCHOOL CLINIC", msg)}
+          />
         )}
       </main>
 

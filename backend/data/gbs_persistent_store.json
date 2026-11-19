@@ -70,7 +70,8 @@
       "verificationDocument": null,
       "adminMobile": "+44 1865 270005",
       "gpsAddress": null,
-      "updatedAt": "2026-11-17T00:05:26.875Z"
+      "updatedAt": "2026-11-17T00:05:26.875Z",
+      "tenantId": 56
     },
     {
       "id": 55,
@@ -911,7 +912,7 @@
     "UserRegistrationProfile": []
   },
   "rawSqlTables": {},
-  "updatedAt": "2026-11-17T00:05:29.546Z",
+  "updatedAt": "2026-11-19T18:14:12.953Z",
   "auditTrail": [
     {
       "id": "AUD-1794873929544-28SK",
@@ -2233,5 +2234,6 @@
       "requestId": "REQ-mwjob482-7799967f",
       "createdAt": "2026-11-16T19:45:31.696Z"
     }
-  ]
+  ],
+  "translatedMessages": []
 }

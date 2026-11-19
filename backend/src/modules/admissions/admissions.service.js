@@ -109,6 +109,27 @@ async function createInquiry(tenantId, payload, user) {
     return app;
   });
 
+  try {
+    const clinicService = require('../clinic/clinic.service');
+    clinicService.syncAdmissionMedicalProfile(tid, {
+      personId: application.applicationNumber,
+      personRole: 'STUDENT',
+      firstName: application.studentFirstName,
+      lastName: application.studentLastName,
+      email: application.guardianEmail,
+      phone: application.guardianPhone,
+      admissionNumber: application.applicationNumber,
+      classOrDepartment: `Grade ${application.targetGradeLevel || 10}`,
+      bloodGroup: payload.bloodGroup,
+      genotype: payload.genotype,
+      allergies: payload.allergies,
+      medicalNotes: payload.medicalNotes || notes,
+      emergencyContactName: application.guardianName,
+      emergencyContactPhone: application.guardianPhone,
+      sourceSystem: 'ADMISSION_INQUIRY'
+    });
+  } catch { }
+
   return application;
 }
 
@@ -494,6 +515,23 @@ async function approveApplication(tenantId, applicationId, payload, adminUser) {
       }
     };
   });
+
+  try {
+    const clinicService = require('../clinic/clinic.service');
+    clinicService.syncAdmissionMedicalProfile(tid, {
+      personId: result.studentUser.id,
+      personRole: 'STUDENT',
+      firstName: result.studentUser.firstName,
+      lastName: result.studentUser.lastName,
+      email: result.studentUser.email,
+      phone: result.application.guardianPhone,
+      admissionNumber: result.application.applicationNumber,
+      classOrDepartment: result.application.targetClass?.name || `Grade ${result.application.targetGradeLevel || 10}`,
+      emergencyContactName: result.parentUser?.name,
+      emergencyContactPhone: result.application.guardianPhone,
+      sourceSystem: 'ADMISSION_ENROLLED'
+    });
+  } catch { }
 
   return result;
 }

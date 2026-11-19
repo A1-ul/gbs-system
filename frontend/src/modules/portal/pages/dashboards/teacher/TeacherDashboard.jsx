@@ -17,6 +17,7 @@ import {
 } from "../../../../../utils/institutionScope";
 import UniversityOperationsPanel from "../../../../../components/common/UniversityOperationsPanel";
 import StudentDefaultersCompliancePanel from "../../../../../components/common/StudentDefaultersCompliancePanel";
+import SchoolClinicHubPanel from "../../../../../components/common/SchoolClinicHubPanel";
 import UniversalRoleGuideModal from "../../../../../components/common/UniversalRoleGuideModal";
 import ClassTopicVideoPlatform from "../../../../../components/common/ClassTopicVideoPlatform";
 import { navigateToDetail } from "../../../../../utils/universalNavigation";
@@ -190,11 +191,14 @@ export default function TeacherDashboard() {
 
   useEffect(() => {
     const syncTier = () => setInstitutionType(getActiveInstitutionType());
+    const onVoiceTab = (e) => { if (e?.detail?.tab) setActiveTab(e.detail.tab); };
     window.addEventListener("gbs_institution_type_changed", syncTier);
     window.addEventListener("storage", syncTier);
+    window.addEventListener("gbs_open_dashboard_tab", onVoiceTab);
     return () => {
       window.removeEventListener("gbs_institution_type_changed", syncTier);
       window.removeEventListener("storage", syncTier);
+      window.removeEventListener("gbs_open_dashboard_tab", onVoiceTab);
     };
   }, []);
 
@@ -4515,6 +4519,14 @@ export default function TeacherDashboard() {
               style={{ borderLeft: "3px solid #f59e0b", color: activeTab === "defaulters" ? "#fde68a" : "#fcd34d", fontWeight: 800 }}
             >
               📋 Defaulters (Exams / Assignments / Attendance)
+            </button>
+            <button
+              type="button"
+              className={`role-tab-btn ${activeTab === "clinic" ? "active" : ""}`}
+              onClick={() => setActiveTab("clinic")}
+              style={{ borderLeft: "3px solid #10b981", color: activeTab === "clinic" ? "#ffffff" : "#6ee7b7", fontWeight: 800 }}
+            >
+              🏥 School Clinic &amp; Sickbay
             </button>
             {institutionType === "UNIVERSITY" && (
               <button
@@ -9771,6 +9783,41 @@ export default function TeacherDashboard() {
                                   fontWeight: 800
                                 }}
                               >
+                                📌 {bp.versionTag || "v2026.1 Official"} • {bp.numberOfWeeks} Weeks Spread
+                              </span>
+                            </div>
+                            <h3 style={{ margin: 0, color: "#f8fafc", fontSize: "1.08rem", fontWeight: 800 }}>
+                              📘 {bp.subjectName}
+                            </h3>
+                            <span style={{ fontSize: "0.74rem", color: "#94a3b8" }}>
+                              {bp.frameworkAuthority}
+                            </span>
+                          </div>
+
+                          <div style={{ display: "flex", gap: "6px", flexWrap: "wrap" }}>
+                            <button
+                              type="button"
+                              onClick={() => handleDownloadSubjectCurriculum(bp, false)}
+                              style={{
+                                background: "linear-gradient(135deg, #059669, #10b981)",
+                                color: "#ffffff",
+                                border: "none",
+                                borderRadius: "8px",
+                                padding: "7px 13px",
+                                fontSize: "0.78rem",
+                                fontWeight: 800,
+                                cursor: "pointer",
+                                display: "inline-flex",
+                                alignItems: "center",
+                                gap: "5px",
+                                boxShadow: "0 4px 12px rgba(16, 185, 129, 0.3)"
+                              }}
+                              title="Download official curriculum file to guide teaching"
+                            >
+                              📥 Download Curriculum
+                            </button>
+                            <button
+                              type="button"
                               onClick={() => handleDownloadSubjectCurriculum(bp, true)}
                               style={{
                                 background: "rgba(56, 189, 248, 0.15)",
@@ -9962,6 +10009,14 @@ export default function TeacherDashboard() {
           {activeTab === "university" && (
             <UniversityOperationsPanel
               mode="LECTURER"
+              currentUser={currentUser}
+              onFeedback={(msg) => setFeedback({ type: "success", message: msg })}
+            />
+          )}
+
+          {activeTab === "clinic" && (
+            <SchoolClinicHubPanel
+              mode="TEACHER"
               currentUser={currentUser}
               onFeedback={(msg) => setFeedback({ type: "success", message: msg })}
             />

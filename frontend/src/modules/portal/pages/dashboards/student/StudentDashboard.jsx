@@ -14,6 +14,7 @@ import StudentCooperativeConferenceModal from "../../../../../components/common/
 import { getActiveSchoolName, getActiveSchoolLogo } from "../../../../../utils/schoolBranding";
 import { getActiveInstitutionType, getInstitutionRoleProfile } from "../../../../../utils/institutionScope";
 import UniversityOperationsPanel from "../../../../../components/common/UniversityOperationsPanel";
+import SchoolClinicHubPanel from "../../../../../components/common/SchoolClinicHubPanel";
 import { isDemoSandboxMode } from "../../../../../utils/tokenStorage";
 import "./StudentDashboard.css";
 
@@ -142,11 +143,14 @@ export function StudentDashboard({ initialTab } = {}) {
 
   useEffect(() => {
     const syncTier = () => setInstitutionType(getActiveInstitutionType());
+    const onVoiceTab = (e) => { if (e?.detail?.tab) setActiveTab(e.detail.tab); };
     window.addEventListener("gbs_institution_type_changed", syncTier);
     window.addEventListener("storage", syncTier);
+    window.addEventListener("gbs_open_dashboard_tab", onVoiceTab);
     return () => {
       window.removeEventListener("gbs_institution_type_changed", syncTier);
       window.removeEventListener("storage", syncTier);
+      window.removeEventListener("gbs_open_dashboard_tab", onVoiceTab);
     };
   }, []);
 
@@ -2516,6 +2520,14 @@ export function StudentDashboard({ initialTab } = {}) {
               style={{ borderLeft: "3px solid #8b5cf6", color: activeTab === "cooperative-conferencing" ? "#c084fc" : undefined, fontWeight: 800 }}
             >
               🎙️ Cooperative Voice & Video Conferencing
+            </button>
+            <button
+              type="button"
+              className={`role-tab-btn ${activeTab === "clinic" ? "active" : ""}`}
+              onClick={() => setActiveTab("clinic")}
+              style={{ borderLeft: "3px solid #10b981", color: activeTab === "clinic" ? "#ffffff" : "#6ee7b7", fontWeight: 800 }}
+            >
+              🏥 School Clinic &amp; Medical File
             </button>
             {institutionType === "UNIVERSITY" && (
               <button
@@ -6015,6 +6027,14 @@ export function StudentDashboard({ initialTab } = {}) {
 
           {activeTab === "university" && (
             <UniversityOperationsPanel
+              mode="STUDENT"
+              currentUser={studentProfile}
+              onFeedback={(msg) => setFeedback({ type: "success", message: msg })}
+            />
+          )}
+
+          {activeTab === "clinic" && (
+            <SchoolClinicHubPanel
               mode="STUDENT"
               currentUser={studentProfile}
               onFeedback={(msg) => setFeedback({ type: "success", message: msg })}

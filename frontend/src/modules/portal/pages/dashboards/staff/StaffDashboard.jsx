@@ -9,6 +9,7 @@ import { getActiveSchoolName, getActiveSchoolLogo } from "../../../../../utils/s
 import { isDemoSandboxMode, clearAuthStorage } from "../../../../../utils/tokenStorage";
 import { checkDemoEntryLimit, trackDemoEntryCreated } from "../../../../../utils/demoLimitGuard";
 import { useDashboardTabSync } from "../../../../../hooks/useDashboardTabSync";
+import SchoolClinicHubPanel from "../../../../../components/common/SchoolClinicHubPanel";
 import "./StaffDashboard.css";
 
 export default function StaffDashboard() {
@@ -17,6 +18,12 @@ export default function StaffDashboard() {
   const { activeTab, setActiveTab } = useDashboardTabSync("duties", "gbs_staff_active_tab");
   const [loading, setLoading] = useState(false);
   const [feedback, setFeedback] = useState(null);
+
+  useEffect(() => {
+    const onVoiceTab = (e) => { if (e?.detail?.tab) setActiveTab(e.detail.tab); };
+    window.addEventListener("gbs_open_dashboard_tab", onVoiceTab);
+    return () => window.removeEventListener("gbs_open_dashboard_tab", onVoiceTab);
+  }, [setActiveTab]);
 
   useEffect(() => {
     if (feedback && typeof window !== "undefined" && typeof window.showGBSOpenNotice === "function") {
@@ -545,6 +552,14 @@ export default function StaffDashboard() {
             >
               🚨 Incident & Safety Escalation
             </button>
+            <button
+              type="button"
+              className={`role-tab-btn ${activeTab === "clinic" ? "active" : ""}`}
+              onClick={() => setActiveTab("clinic")}
+              style={{ borderLeft: "3px solid #10b981", color: activeTab === "clinic" ? "#ffffff" : "#6ee7b7", fontWeight: 800 }}
+            >
+              🏥 School Clinic &amp; Medical Desk
+            </button>
           </nav>
 
           {/* TAB 1: OPERATIONAL DUTIES */}
@@ -1035,6 +1050,14 @@ export default function StaffDashboard() {
                 </table>
               </div>
             </div>
+          )}
+
+          {activeTab === "clinic" && (
+            <SchoolClinicHubPanel
+              mode="STAFF"
+              currentUser={currentUser}
+              onFeedback={(msg) => setFeedback({ type: "success", message: msg })}
+            />
           )}
         </main>
       </div>

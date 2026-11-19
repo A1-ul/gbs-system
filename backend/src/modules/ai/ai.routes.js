@@ -6,9 +6,12 @@ const controller = require("./ai.controller");
 const { protect } = require("../../middleware/auth.middleware");
 const { restrictTo } = require("../../middleware/rbac.middleware");
 const { tenantStatusGuard, tenantIsolationGuard } = require("../../middleware/tenant.middleware");
+const { optionalProtect } = require("../../utils/resolveTenantId");
 
-// 1. Status endpoint
+// 1. Status & Real-Time System Memory Voice Assistant Link (Works cleanly across Login, Onboarding & All Portals)
 router.get("/status", controller.getStatus);
+router.get("/system-memory", optionalProtect, controller.getSystemMemory);
+router.post("/assistant-query", optionalProtect, controller.queryVoiceAssistant);
 
 // All subsequent routes require authentication and tenant guard
 router.use(protect);

@@ -1,6 +1,7 @@
 "use strict";
 
 const service = require("./ai.service");
+const systemMemoryAssistant = require("./systemMemoryAssistant.service");
 const logger = require("../../utils/logger") || console;
 
 /**
@@ -222,8 +223,29 @@ async function getTelemetry(req, res, next) {
     }
 }
 
+async function getSystemMemory(req, res, next) {
+    try {
+        const catalog = systemMemoryAssistant.getSystemMemoryCatalog(req);
+        return res.status(200).json({ status: "success", data: catalog });
+    } catch (error) {
+        return next(error);
+    }
+}
+
+async function queryVoiceAssistant(req, res, next) {
+    try {
+        const query = req.body?.query || req.query?.q || "";
+        const result = systemMemoryAssistant.answerUserQuery(req, query);
+        return res.status(200).json({ status: "success", data: result });
+    } catch (error) {
+        return next(error);
+    }
+}
+
 module.exports = {
     getStatus,
+    getSystemMemory,
+    queryVoiceAssistant,
     diagnoseStudent,
     diagnoseCohort,
     generateStudyPlan,

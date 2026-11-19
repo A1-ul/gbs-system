@@ -12,6 +12,7 @@ import { navigateToDetail } from "../../../../../utils/universalNavigation";
 import { getActiveSchoolName, getActiveSchoolLogo } from "../../../../../utils/schoolBranding";
 import { isDemoSandboxMode } from "../../../../../utils/tokenStorage";
 import { copyTextSafely } from "../../../../../utils/safeWindow";
+import SchoolClinicHubPanel from "../../../../../components/common/SchoolClinicHubPanel";
 import "./ParentDashboard.css";
 
 export default function ParentDashboard() {
@@ -42,8 +43,13 @@ export default function ParentDashboard() {
         setParentAvatar(e.detail.avatar);
       }
     };
+    const onVoiceTab = (e) => { if (e?.detail?.tab) setActiveTab(e.detail.tab); };
     window.addEventListener("gbs_user_avatar_changed", handleAvatarChange);
-    return () => window.removeEventListener("gbs_user_avatar_changed", handleAvatarChange);
+    window.addEventListener("gbs_open_dashboard_tab", onVoiceTab);
+    return () => {
+      window.removeEventListener("gbs_user_avatar_changed", handleAvatarChange);
+      window.removeEventListener("gbs_open_dashboard_tab", onVoiceTab);
+    };
   }, []);
 
   const [activeTab, setActiveTab] = useState(() => {
@@ -1281,6 +1287,14 @@ export default function ParentDashboard() {
               onClick={() => setActiveTab("meetings")}
             >
               💻 Parent-Teacher Meetings
+            </button>
+            <button
+              type="button"
+              className={`role-tab-btn ${activeTab === "clinic" ? "active" : ""}`}
+              onClick={() => setActiveTab("clinic")}
+              style={{ borderLeft: "3px solid #10b981", color: activeTab === "clinic" ? "#ffffff" : "#6ee7b7", fontWeight: 800 }}
+            >
+              🏥 Child Health &amp; School Clinic Alerts
             </button>
           </nav>
 
@@ -2777,6 +2791,13 @@ export default function ParentDashboard() {
                 )
               )}
             </div>
+          )}
+
+          {activeTab === "clinic" && (
+            <SchoolClinicHubPanel
+              mode="PARENT"
+              onFeedback={(msg) => setFeedback({ type: "success", message: msg })}
+            />
           )}
         </main>
       </div>

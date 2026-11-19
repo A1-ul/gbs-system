@@ -1405,6 +1405,27 @@ const register = async (data) => {
     const accessToken = isPreApproved ? signToken(result.user.id, result.user.role, result.user.tenantId) : null;
     const refreshToken = isPreApproved ? signRefreshToken(result.user.id) : null;
 
+    if (['STUDENT', 'TEACHER', 'STAFF', 'HR', 'ACCOUNTANT'].includes(userRole)) {
+      try {
+        const clinicService = require('../clinic/clinic.service');
+        clinicService.syncAdmissionMedicalProfile(result.tenant.id, {
+          personId: result.user.id,
+          personRole: userRole,
+          firstName: finalFirstName,
+          lastName: finalLastName,
+          email: result.user.email,
+          phone: phone || whatsappPhone,
+          admissionNumber: employeeId || undefined,
+          classOrDepartment: department || targetGrade || undefined,
+          bloodGroup,
+          medicalNotes,
+          emergencyContactName,
+          emergencyContactPhone,
+          sourceSystem: 'USER_REGISTRATION'
+        });
+      } catch { }
+    }
+
     const { password: _, ...userWithoutPassword } = result.user;
     return {
       user: {
@@ -1428,6 +1449,27 @@ const register = async (data) => {
     // Save in dynamic registered users list (pending approval unless pre-approved)
     DYNAMIC_REGISTERED_USERS.unshift(dynamicUserRecord);
     syncAuthStoreToDisk();
+
+    if (['STUDENT', 'TEACHER', 'STAFF', 'HR', 'ACCOUNTANT'].includes(userRole)) {
+      try {
+        const clinicService = require('../clinic/clinic.service');
+        clinicService.syncAdmissionMedicalProfile(dynamicUserRecord.tenantId, {
+          personId: dynamicUserRecord.id,
+          personRole: userRole,
+          firstName: finalFirstName,
+          lastName: finalLastName,
+          email: dynamicUserRecord.email,
+          phone: phone || whatsappPhone,
+          admissionNumber: employeeId || undefined,
+          classOrDepartment: department || targetGrade || undefined,
+          bloodGroup,
+          medicalNotes,
+          emergencyContactName,
+          emergencyContactPhone,
+          sourceSystem: 'USER_REGISTRATION'
+        });
+      } catch { }
+    }
 
     const accessToken = isPreApproved ? signToken(dynamicUserRecord.id, dynamicUserRecord.role, dynamicUserRecord.tenantId) : null;
     const refreshToken = isPreApproved ? signRefreshToken(dynamicUserRecord.id) : null;

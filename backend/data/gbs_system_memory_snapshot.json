@@ -1,7 +1,7 @@
 {
   "systemName": "GBS MANAGEMENT SYSTEM (Global Brightest Stars Educational Management System)",
-  "version": "2.7.0-PRODUCTION",
-  "savedAt": "2026-11-19T17:40:00Z",
+  "version": "2.8.0-PRODUCTION",
+  "savedAt": "2026-11-19T18:02:00Z",
   "status": "PRODUCTION_READY_VERIFIED",
   "architecture": {
     "frontend": {
@@ -16,8 +16,9 @@
       "topicVideoComponent": "frontend/src/components/common/ClassTopicVideoPlatform.jsx",
       "universityOperationsComponent": "frontend/src/components/common/UniversityOperationsPanel.jsx",
       "defaultersComplianceComponent": "frontend/src/components/common/StudentDefaultersCompliancePanel.jsx",
+      "schoolClinicComponent": "frontend/src/components/common/SchoolClinicHubPanel.jsx (linked across Headmaster, Teacher, Student, Parent, Staff & HR portals)",
       "movableAiComponent": "frontend/src/modules/developer-platform/components/DeveloperMovableAIAssistant.jsx",
-      "voiceAssistantComponent": "frontend/src/components/common/GBSVoiceAssistant.jsx",
+      "voiceAssistantComponent": "frontend/src/components/common/GBSVoiceAssistant.jsx (real-time 550ms silence detection + System Memory link)",
       "translatorComponent": "frontend/src/components/common/UniversalLanguageTranslator.jsx",
       "directSmsModalComponent": "frontend/src/components/common/DirectSMSMessengerModal.jsx",
       "directSmsInboxComponent": "frontend/src/components/common/DirectSMSInboxPanel.jsx",
@@ -33,6 +34,8 @@
       "rcceErrorHandler": "backend/src/rcce/systemErrorHandler.js",
       "institutionProfilesUtil": "backend/src/utils/institutionProfiles.js",
       "universityRoutes": "backend/src/modules/university/university.routes.js (/internships, /streams, /governance, /exams, /results, /advance-student — strictly UNIVERSITY only)",
+      "schoolClinicRoutes": "backend/src/modules/clinic/clinic.routes.js (/profiles, /visits, /pull-record, /inventory — auto-linked to Auth registration & Admissions)",
+      "systemMemoryVoiceAiRoutes": "backend/src/modules/ai/ai.routes.js (GET /system-memory, POST /assistant-query linked directly to gbs_system_memory_snapshot.json & live store)",
       "defaultersComplianceRoutes": "backend/src/modules/academic/academic.routes.js (/defaulters-report, /defaulters-report/sync)",
       "staffApprovalRoutes": "backend/src/modules/user/user.routes.js (/pending-staff, /approve-staff, /reject-staff)",
       "smsGatewayAndInboxService": "backend/src/modules/sms/sms.service.js (Arkesel/Hubtel/mNotify/Twilio + persistent /api/v1/sms/inbox)",
@@ -312,12 +315,18 @@
       "rootCause": "Institutions lacked strict backend tier separation for JHS/SHS/Technical vs University, dashboards mixed brown/clashing colors, and favicons used old placeholder cross/DB assets.",
       "resolution": "Created institutionProfiles.js + /api/v1/university/* (strictly 403 for JHS/SHS/TECHNICAL), /api/v1/academic/defaulters-report, UniversityOperationsPanel.jsx & StudentDefaultersCompliancePanel.jsx across Student/Teacher/Headmaster dashboards, unified Royal Navy (#081428/#0f2347) + Regal Gold (#d4af37) palette with Light Canvas & Full View toggles, Demo Institution switcher, and regenerated GBS Crest favicons + OpenGraph og-gbs-crest.jpg banner.",
       "status": "PERMANENTLY_GUARDED"
+    },
+    {
+      "issueCode": "DIAG-SCHOOL-CLINIC-AND-VOICE-MEMORY",
+      "symptom": "GBS AI Voice Assistant must use the GBS SYSTEM introduction, respond quickly when the speaker finishes speaking, answer anything about GBS via System Memory, and institutions require a cross-portal School Clinic for Students & Teachers linked to Admission Medical Registrations",
+      "rootCause": "clinic.routes.js only exposed /status without mounting in server.js, admissions/registration did not seed clinic medical profiles, and GBSVoiceAssistant lacked backend System Memory API lookup and fast end-of-statement reaction.",
+      "resolution": "Implemented full clinic.service/controller/routes mounted at /api/v1/clinic & /api/v1/health-clinic with Admission Medical Profile auto-sync in auth.service & admissions.service, SchoolClinicHubPanel mounted across Admin, Teacher, Student, Parent, Staff, and HR dashboards, plus systemMemoryAssistant.service (/api/v1/ai/system-memory & /assistant-query) powering instant responses and GBS intro greeting in GBSVoiceAssistant.jsx.",
+      "status": "PERMANENTLY_GUARDED"
     }
   ],
   "verificationSummary": {
-    "backendTestSuitesPassed": "23/23 across 7 suites (auth-and-voicenote, payments, payments-http, translator-pwa-demo-rbac, transport-and-demo-limit, university-and-defaulters, user-approval-and-sms)",
-    "frontendBuildStatus": "vite build passed (index-CKpfQu_Q.js synced to backend/public)",
-    "institutionSeparationAndUniversityVerified": "2026-11-19 Live Production & Demo Sandbox Parity",
+    "backendTestSuitesPassed": "25/25 across 8 suites (auth-and-voicenote, clinic-and-voice-memory, payments, payments-http, translator-pwa-demo-rbac, transport-and-demo-limit, university-and-defaulters, user-approval-and-sms)",
+    "institutionSeparationUniversityClinicVoiceVerified": "2026-11-19 Live Production & Demo Sandbox Parity",
     "browserAssetsRegenerated": "favicon.ico, logo.png, icon-192.png, icon-512.png, apple-touch-icon.png, og-gbs-crest.jpg",
     "uncaughtBrowserConsoleErrors": 0,
     "astUndeclaredErrors": 0

@@ -1,71 +1,144 @@
 import React, { useState, useEffect, useRef } from "react";
 import { useNavigate } from "react-router-dom";
+import apiClient from "../../api/client/apiClient";
 
 /**
- * GBS AI Voice Assistant (Continuous Conversational Siri-Style Remote)
+ * GBS AI Voice Assistant (Real-Time System-Memory Linked Continuous Assistant)
  *
- * Keeps an active continuous voice + chat conversation open when clicked:
- * - Answers questions, performs portal navigation, autofills forms, and handles commands.
- * - After every answer, asks: "Are we done with what you want, or is there another?
- *   If there is another, tell me for the answer."
- * - Re-arms microphone automatically after speaking until the user says they are done
- *   (or clicks Done / Sleep), then politely says goodbye and goes to sleep.
+ * Linked directly to backend System Memory (/api/v1/ai/system-memory & /assistant-query):
+ * - Speaks introduction asking what action, command, activity, or information the user wants on GBS SYSTEM.
+ * - Responds immediately (<600ms) when the user finishes speaking a statement.
+ * - Explains any GBS module, pricing, Clinic, University Hub, Institution Separation, Defaulters, SMS, Translator, etc.
+ * - Keeps continuous listening loop asking whether we are done or there is another until user confirms done/sleep.
  */
-const GBS_KNOWLEDGE_BASE = {
-  overview:
-    "GBS School Management System connects Headmaster, Teachers, Students, Parents, Accountants, HR, Staff, Alumni, and Developers with admissions, attendance, timetables, exam grading, transport routing, and official mobile-money fee payments.",
-  motto:
-    "Intelligence Talks to Wisdom is the founding motto of GBS Company, uniting modern digital tools with sound educational leadership.",
-  onboarding:
-    "Schools can onboard remotely from the First Page by entering institution details, selecting a plan tier, and activating either Demo Sandbox (10 trial entries per module) or Live Production.",
-  admissions:
-    "Parents and prospective students submit admissions online; school administrators review uploaded documents, approve applications, and issue student login credentials.",
-  payments:
-    "Parents and students can pay school fees securely using MTN Mobile Money, Telecel Cash, AT Money, Visa, Mastercard, or Bank Transfer through Paystack and Hubtel. GBS never asks for or stores MoMo PINs or raw card CVVs.",
-  transport:
-    "Administrators assign students to commuter bus routes from the Headmaster Dashboard or Transport Fleet Portal by selecting the student, picking a commuter route, and confirming pickup stops.",
-  proctoring:
-    "When a student clicks Start Exam, live camera focus monitoring, tab-switch guards, and anti-copy protection run continuously until the exam is submitted or ended.",
-  translator:
-    "Use the movable Language Translator floating pill anywhere on the screen to drag it out of the way, translate text into multiple languages, or send translated messages.",
-  mobileApp:
-    "Open the Mobile App Hub from the top bar and click Install App on This Device to install GBS cleanly onto Android, iPhone, iPad, Windows, or Mac.",
-  roles:
-    "GBS supports Headmaster/Admin, Teacher, Student, Parent, Accountant, HR Manager, General Staff, Alumni, Inventory/Store, and Developer roles.",
-  developer:
-    "The Developer Control Center tracks real PostgreSQL vs fallback database status, encrypted backups, system locks, tenant approvals, and Demo trial quotas.",
-  developerPrivacyShield:
-    "Developer identity and personal contact details are protected by institutional security policy. Please use official GBS institutional support channels.",
-  contact:
-    "For institutional support, reach out through the official GBS portal communication desk."
-};
+const LOCAL_MEMORY_TOPICS = [
+  {
+    id: "clinic",
+    keywords: ["clinic", "sickbay", "medical", "health", "doctor", "nurse", "sick", "hospital", "medicine", "blood", "genotype", "allergy"],
+    answer:
+      "The GBS School Clinic lets institutions treat and admit both Students and Teachers into Sickbay, maintains an Admission Medical Registration record from day one of enrollment, tracks pharmacy supplies, dispatches parent/emergency SMS alerts, and links across Headmaster, Teacher, Student, Parent, Staff, and HR portals for instant record pull.",
+    tab: "clinic"
+  },
+  {
+    id: "university",
+    keywords: ["university", "internship", "attachment", "src", "stream", "evening", "weekend", "sandwich", "regular", "lecturer", "graduate", "alumni", "cgpa"],
+    answer:
+      "University Hub is strictly gated for University institutions: students submit Internship and Attachment forms, lecturers grade both coursework and internship performance, set exams to promote passing students across levels up to Alumni graduation, manage Regular, Evening, Sandwich, and Weekend streams, and list SRC leadership positions with duties and school action plans.",
+    tab: "university"
+  },
+  {
+    id: "institutions",
+    keywords: ["jhs", "shs", "technical", "tvet", "separate", "institution type", "nursery", "difference"],
+    answer:
+      "GBS strictly separates operational logic across Nursery to JHS, Senior High School, Technical TVET, and University tiers. Role titles, classes, and permitted modules adjust per institution type so JHS, SHS, and Technical portals cannot access University-only modules."
+  },
+  {
+    id: "defaulters",
+    keywords: ["defaulter", "absent", "not coming", "missed exam", "partake", "assignment", "unsubmitted", "compliance"],
+    answer:
+      "The Compliance and Defaulters Monitor calculates exact student counts and clickable rosters for students who did not partake in exams, did not submit assignments, or have not been coming to school, with direct warning alerts.",
+    tab: "defaulters"
+  },
+  {
+    id: "pricing",
+    keywords: ["price", "pricing", "cost", "fee rate", "subscription", "discount", "how much"],
+    answer:
+      "GBS pricing is 100 percent active-student based with zero fixed tenant fees: 3 Cedis monthly per student for Nursery to JHS, 5 Cedis for SHS and Technical institutes, and 10 Cedis for Universities, with 3, 5, 7, and 12 percent multi-month discounts.",
+    route: "/onboarding"
+  },
+  {
+    id: "staff_approval",
+    keywords: ["approve", "approval", "pending", "new staff", "register", "rejected", "cannot login"],
+    answer:
+      "All new Teachers, Accountants, HR, and Staff remain pending until the Headmaster approves them in the Headmaster Pending Staff desk; once approved, their role dashboard unlocks immediately.",
+    tab: "roster"
+  },
+  {
+    id: "payments",
+    keywords: ["pay", "payment", "momo", "mobile money", "paystack", "hubtel", "telecel", "visa", "card", "receipt"],
+    answer:
+      "Parents and students pay fees via MTN Mobile Money, Telecel Cash, AT Money, Visa, Mastercard, or Bank Transfer through Paystack and Hubtel. Receipts update instantly across Student, Parent, and Accountant ledgers without ever storing MoMo PINs or CVVs.",
+    tab: "fees"
+  },
+  {
+    id: "proctoring",
+    keywords: ["proctor", "exam monitor", "cheat", "start exam", "camera"],
+    answer:
+      "When a student clicks Start Exam, live AI camera focus monitoring, tab-switch guards, and anti-copy protection run continuously until submission or exam completion.",
+    tab: "exams"
+  },
+  {
+    id: "translator",
+    keywords: ["translat", "language", "twi", "ga", "french", "ewe", "hausa", "meaning"],
+    answer:
+      "The movable Language Translator pill drags anywhere on screen, translates with exact dictionary meaning across Twi, Ga, Ewe, Fante, Hausa, French, Spanish, Arabic, and English, and sends translated messages directly to recipient inboxes with full sender details."
+  },
+  {
+    id: "sms",
+    keywords: ["sms", "text message", "inbox", "dispatch", "phone message"],
+    answer:
+      "Direct Mobile SMS dispatches through Arkesel, Hubtel, mNotify, or Twilio while storing every message and sender metadata in the recipient's live Direct SMS Inbox."
+  },
+  {
+    id: "mobileApp",
+    keywords: ["install", "mobile app", "apk", "pwa", "android", "iphone", "ipad"],
+    answer:
+      "Open Mobile App and Push in the top system banner and click Install App Now to install GBS cleanly onto Android, iPhone, iPad, Windows, or Mac with offline caching."
+  },
+  {
+    id: "transport",
+    keywords: ["bus", "transport", "route", "boarding", "pickup"],
+    answer:
+      "Administrators assign students to commuter bus routes in Headmaster Command Center or Transport Hub, syncing pickup stops and fares to Student and Parent portals.",
+    tab: "busTransport"
+  },
+  {
+    id: "admissions",
+    keywords: ["admission", "enroll", "enrol", "prospective", "apply"],
+    answer:
+      "Admissions tracks student inquiries, documents, interviews, and final approval, automatically creating Student and Parent logins alongside an Admission Medical Registration record in the School Clinic.",
+    tab: "admissions"
+  },
+  {
+    id: "demoVsLive",
+    keywords: ["demo", "sandbox", "live", "production", "trial"],
+    answer:
+      "Demo Sandbox lets users practice every workflow (up to 10 trial entries per module) and switch institution types freely, while Live Production enforces strict tenant data isolation and unlimited real institutional records."
+  },
+  {
+    id: "overview",
+    keywords: ["what is gbs", "about gbs", "about the system", "how does gbs work", "everything", "explain gbs", "roles", "dashboards", "motto", "intelligence talks to wisdom"],
+    answer:
+      "GBS School Management System (motto: Intelligence Talks to Wisdom) unifies Headmaster, Teacher or Lecturer, Student, Parent, Accountant, Staff, HR, Alumni, School Clinic, University Hub, Defaulters Monitor, Language Translator, Direct SMS, Payments, Bus Transport, AI Proctoring, and Developer Control into one connected platform."
+  }
+];
+
+const INTRO_GREETING =
+  "Hello! Welcome to GBS SYSTEM. What action, what command, what activities, or what information do you want to know and learn on GBS SYSTEM? We are ready to answer you!";
 
 const DONE_INTENT_REGEX = /\b(we are done|i am done|i'm done|yes done|done now|all done|finished|nothing else|no more|no other|that's all|that is all|conversation is over|go to sleep|go off|sleep now|goodbye|bye bye|stop listening|turn off)\b/i;
 const ANOTHER_INTENT_REGEX = /\b(there is another|another question|another one|one more|not done|not yet|have another|more help|still here)\b/i;
-const FOLLOWUP_PROMPT = "Are we done with what you want, or is there another? If there is another, tell me for the answer.";
+const FOLLOWUP_PROMPT = "Are we done with what you want, or is there another? Tell me if there is another, or say we are done.";
 
 export default function GBSVoiceAssistant() {
   const navigate = useNavigate();
 
-  // Assistant UI & Continuous Conversation State
   const [isOpen, setIsOpen] = useState(false);
   const [isSleeping, setIsSleeping] = useState(true);
   const [isListening, setIsListening] = useState(false);
   const [isSpeaking, setIsSpeaking] = useState(false);
   const [transcript, setTranscript] = useState("");
   const [typedInput, setTypedInput] = useState("");
-  const [assistantResponse, setAssistantResponse] = useState(
-    "Hello! Click me anytime to start a continuous conversation."
-  );
+  const [assistantResponse, setAssistantResponse] = useState(INTRO_GREETING);
   const [conversationMessages, setConversationMessages] = useState([]);
   const [continuousListening, setContinuousListening] = useState(true);
+  const [speechSupported, setSpeechSupported] = useState(true);
+  const [memorySyncedVersion, setMemorySyncedVersion] = useState("2.7.0");
 
-  // Tone & Sound Customization
-  const [voiceRate, setVoiceRate] = useState(1.0);
+  const [voiceRate, setVoiceRate] = useState(1.04);
   const [voicePitch, setVoicePitch] = useState(1.0);
   const [selectedVoiceIndex, setSelectedVoiceIndex] = useState(0);
   const [availableVoices, setAvailableVoices] = useState([]);
-  const [speechSupported, setSpeechSupported] = useState(true);
 
   const recognitionRef = useRef(null);
   const synthRef = useRef(typeof window !== "undefined" ? window.speechSynthesis : null);
@@ -74,6 +147,10 @@ export default function GBSVoiceAssistant() {
   const isSleepingRef = useRef(true);
   const continuousRef = useRef(true);
   const processCommandRef = useRef(null);
+  const silenceTimerRef = useRef(null);
+  const lastTranscriptRef = useRef("");
+  const lastProcessedRef = useRef({ text: "", time: 0 });
+  const memoryCatalogRef = useRef(null);
   const chatEndRef = useRef(null);
 
   useEffect(() => {
@@ -94,13 +171,27 @@ export default function GBSVoiceAssistant() {
     }
   }, [conversationMessages, isOpen]);
 
-  // Load available English voices
+  // Preload System Memory from backend for sub-50ms instant voice answers
+  const refreshSystemMemory = async () => {
+    try {
+      const res = await apiClient.get("/ai/system-memory");
+      const data = res?.data?.data;
+      if (data) {
+        memoryCatalogRef.current = data;
+        if (data.version) setMemorySyncedVersion(data.version);
+      }
+    } catch { }
+  };
+
+  useEffect(() => {
+    refreshSystemMemory();
+  }, []);
+
   useEffect(() => {
     if (typeof window === "undefined" || !("speechSynthesis" in window)) {
       setSpeechSupported(false);
       return;
     }
-
     const loadVoices = () => {
       const voices = window.speechSynthesis.getVoices();
       if (voices && voices.length > 0) {
@@ -108,7 +199,6 @@ export default function GBSVoiceAssistant() {
         setAvailableVoices(englishVoices.length > 0 ? englishVoices : voices);
       }
     };
-
     loadVoices();
     if (window.speechSynthesis.onvoiceschanged !== undefined) {
       window.speechSynthesis.onvoiceschanged = loadVoices;
@@ -117,7 +207,7 @@ export default function GBSVoiceAssistant() {
 
   const appendMessage = (sender, text) => {
     const time = new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" });
-    setConversationMessages((prev) => [...prev.slice(-24), { sender, text, time }]);
+    setConversationMessages((prev) => [...prev.slice(-28), { sender, text, time }]);
   };
 
   const safelyStartRecognition = () => {
@@ -137,7 +227,14 @@ export default function GBSVoiceAssistant() {
     }
   };
 
-  // Initialize continuous Web Speech Recognition once cleanly using refs
+  const clearSilenceTimer = () => {
+    if (silenceTimerRef.current) {
+      clearTimeout(silenceTimerRef.current);
+      silenceTimerRef.current = null;
+    }
+  };
+
+  // Continuous speech recognizer with instant 550ms end-of-statement reaction
   useEffect(() => {
     if (typeof window === "undefined") return;
     const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
@@ -156,19 +253,42 @@ export default function GBSVoiceAssistant() {
       setIsListening(true);
     };
 
+    const dispatchCapturedStatement = (phrase) => {
+      const clean = String(phrase || "").trim();
+      if (!clean) return;
+      const now = Date.now();
+      const prev = lastProcessedRef.current;
+      if (prev.text === clean.toLowerCase() && now - prev.time < 2600) {
+        return; // Deduplicate identical interim+final firing
+      }
+      lastProcessedRef.current = { text: clean.toLowerCase(), time: now };
+      clearSilenceTimer();
+      lastTranscriptRef.current = "";
+      if (processCommandRef.current) {
+        processCommandRef.current(clean);
+      }
+    };
+
     recognition.onresult = (event) => {
       let currentTranscript = "";
       for (let i = event.resultIndex; i < event.results.length; i++) {
         currentTranscript += event.results[i][0].transcript;
       }
-      setTranscript(currentTranscript);
+      const trimmed = currentTranscript.trim();
+      setTranscript(trimmed);
+      lastTranscriptRef.current = trimmed;
 
       const lastResult = event.results[event.results.length - 1];
-      if (lastResult?.isFinal) {
-        const finalClean = currentTranscript.trim();
-        if (finalClean && processCommandRef.current) {
-          processCommandRef.current(finalClean);
-        }
+      if (lastResult?.isFinal && trimmed) {
+        dispatchCapturedStatement(trimmed);
+      } else if (trimmed.length >= 2) {
+        // Fast end-of-statement trigger: fires 550ms after speaker finishes sentence without waiting 2-3s
+        clearSilenceTimer();
+        silenceTimerRef.current = setTimeout(() => {
+          if (lastTranscriptRef.current === trimmed && !isSpeakingRef.current && isOpenRef.current && !isSleepingRef.current) {
+            dispatchCapturedStatement(trimmed);
+          }
+        }, 550);
       }
     };
 
@@ -179,8 +299,9 @@ export default function GBSVoiceAssistant() {
     };
 
     recognition.onend = () => {
+      clearSilenceTimer();
       if (isOpenRef.current && !isSleepingRef.current && continuousRef.current && !isSpeakingRef.current) {
-        setTimeout(() => safelyStartRecognition(), 180);
+        setTimeout(() => safelyStartRecognition(), 140);
       } else {
         setIsListening(false);
       }
@@ -189,6 +310,7 @@ export default function GBSVoiceAssistant() {
     recognitionRef.current = recognition;
 
     return () => {
+      clearSilenceTimer();
       try {
         recognition.stop();
       } catch { }
@@ -216,6 +338,7 @@ export default function GBSVoiceAssistant() {
     utterance.onstart = () => {
       setIsSpeaking(true);
       isSpeakingRef.current = true;
+      clearSilenceTimer();
       if (recognitionRef.current) {
         try {
           recognitionRef.current.stop();
@@ -229,7 +352,7 @@ export default function GBSVoiceAssistant() {
       if (onComplete) {
         onComplete();
       } else {
-        setTimeout(() => safelyStartRecognition(), 200);
+        setTimeout(() => safelyStartRecognition(), 120);
       }
     };
 
@@ -239,8 +362,9 @@ export default function GBSVoiceAssistant() {
   };
 
   const enterSleepMode = (
-    goodbyeText = "Alright, we are done. I am going off to sleep now. Click me anytime you want more help!"
+    goodbyeText = "Alright, we are done. I am going off to sleep now. Click me anytime you need help on GBS SYSTEM!"
   ) => {
+    clearSilenceTimer();
     isSleepingRef.current = true;
     setIsSleeping(true);
     setIsListening(false);
@@ -258,14 +382,14 @@ export default function GBSVoiceAssistant() {
       setTimeout(() => {
         isOpenRef.current = false;
         setIsOpen(false);
-      }, 450);
+      }, 380);
     });
 
     if (!synthRef.current || !("speechSynthesis" in window)) {
       setTimeout(() => {
         isOpenRef.current = false;
         setIsOpen(false);
-      }, 900);
+      }, 750);
     }
   };
 
@@ -276,18 +400,18 @@ export default function GBSVoiceAssistant() {
     setIsOpen(true);
     setContinuousListening(true);
     continuousRef.current = true;
-    const greeting =
-      "Hello! I am listening continuously. Tell me what you want to do or ask, and I will stay with you until we are done.";
-    setAssistantResponse(greeting);
-    appendMessage("assistant", greeting);
-    speakAloud(greeting);
+    refreshSystemMemory();
+
+    setAssistantResponse(INTRO_GREETING);
+    appendMessage("assistant", INTRO_GREETING);
+    speakAloud(INTRO_GREETING);
   };
 
   const toggleAssistant = () => {
     if (!isOpen || isSleeping) {
       wakeAndStartConversation();
     } else {
-      enterSleepMode("Going off to sleep now. Click me anytime you need help!");
+      enterSleepMode("Going off to sleep now. Click me anytime you need help on GBS SYSTEM!");
     }
   };
 
@@ -319,7 +443,45 @@ export default function GBSVoiceAssistant() {
     };
   }, []);
 
-  const processVoiceCommand = (rawText) => {
+  const triggerDashboardTab = (tabName) => {
+    if (!tabName) return;
+    window.dispatchEvent(new CustomEvent("gbs_open_dashboard_tab", { detail: { tab: tabName } }));
+  };
+
+  const matchInstantLocalMemory = (cleanCmd) => {
+    let best = null;
+    let bestScore = 0;
+    for (const item of LOCAL_MEMORY_TOPICS) {
+      let score = 0;
+      for (const kw of item.keywords) {
+        if (cleanCmd.includes(kw)) score += kw.includes(" ") ? 3 : 2;
+      }
+      if (score > bestScore) {
+        bestScore = score;
+        best = item;
+      }
+    }
+    return bestScore > 0 ? best : null;
+  };
+
+  const executeReply = (replyCore, extraAction = null) => {
+    if (extraAction?.openTab) triggerDashboardTab(extraAction.openTab);
+    if (extraAction?.navigateTo) navigate(extraAction.navigateTo);
+    if (extraAction?.trigger === "openTranslator" && typeof window.openGBSScreenTranslator === "function") {
+      window.openGBSScreenTranslator();
+    }
+
+    const fullTurnReply = `${replyCore} ${FOLLOWUP_PROMPT}`;
+    setAssistantResponse(fullTurnReply);
+    appendMessage("assistant", fullTurnReply);
+    speakAloud(fullTurnReply);
+
+    if (typeof window !== "undefined" && typeof window.showGBSOpenNotice === "function") {
+      window.showGBSOpenNotice(replyCore, "info", "GBS SYSTEM ASSISTANT");
+    }
+  };
+
+  const processVoiceCommand = async (rawText) => {
     const raw = String(rawText || "").trim();
     const text = raw.toLowerCase();
     if (!text) return;
@@ -329,240 +491,125 @@ export default function GBSVoiceAssistant() {
 
     const cleanCmd = text.replace(/^(hey|hello|hi|ok|okay)?\s*gbs\s*/i, "").trim();
 
-    // Check explicit conversation end -> go off and sleep
     if (DONE_INTENT_REGEX.test(cleanCmd) || cleanCmd === "done" || cleanCmd === "sleep" || cleanCmd === "no") {
       enterSleepMode();
       return;
     }
 
-    // Check explicit "there is another" continuation prompt
     if (ANOTHER_INTENT_REGEX.test(cleanCmd)) {
-      const promptMore = "Yes, I am wide awake and listening. Please tell me your next question or command for the answer.";
+      const promptMore = "Yes, I am listening! Tell me your next action, command, activity, or question on GBS SYSTEM.";
       setAssistantResponse(promptMore);
       appendMessage("assistant", promptMore);
       speakAloud(promptMore);
       return;
     }
 
-    let responseText = "";
-    let actionExecuted = false;
+    // 1. Direct Portal Navigation & Form Automation Commands
+    if (cleanCmd.includes("open clinic") || cleanCmd.includes("go to clinic") || cleanCmd.includes("school clinic") || cleanCmd.includes("open sickbay")) {
+      triggerDashboardTab("clinic");
+      const stats = memoryCatalogRef.current?.liveStats;
+      const statLine = stats
+        ? ` Active Clinic Ledger shows ${stats.clinicProfilesCount} registered medical profiles, ${stats.clinicVisitsCount} total consultations, and ${stats.activeSickbayCount} active Sickbay admission.`
+        : "";
+      executeReply(`Opening the School Clinic & Admission Medical Registry now.${statLine}`, { openTab: "clinic" });
+      return;
+    }
 
-    // Navigation Commands
-    if (cleanCmd.includes("login") || cleanCmd.includes("main login") || cleanCmd.includes("sign in")) {
+    if (cleanCmd.includes("login") || cleanCmd.includes("sign in") || cleanCmd.includes("open headmaster") || cleanCmd.includes("open student") || cleanCmd.includes("open teacher") || cleanCmd.includes("open parent") || cleanCmd.includes("open accountant") || cleanCmd.includes("open staff")) {
       if (cleanCmd.includes("admin") || cleanCmd.includes("headmaster")) {
-        responseText = "Opening the Headmaster Executive Portal now.";
-        navigate("/login/admin");
-      } else if (cleanCmd.includes("teacher")) {
-        responseText = "Opening the Teacher Academic Portal.";
-        navigate("/login/teacher");
-      } else if (cleanCmd.includes("student")) {
-        responseText = "Navigating to the Student Learning Hub.";
-        navigate("/login/student");
-      } else if (cleanCmd.includes("parent") || cleanCmd.includes("guardian")) {
-        responseText = "Opening the Parent and Guardian Portal.";
-        navigate("/login/parent");
-      } else if (cleanCmd.includes("accountant") || cleanCmd.includes("finance")) {
-        responseText = "Opening the Accountant and Finance Desk.";
-        navigate("/login/accountant");
-      } else if (cleanCmd.includes("staff") || cleanCmd.includes("hr")) {
-        responseText = "Opening the Staff and HR Portal.";
-        navigate("/login/staff");
-      } else {
-        responseText = "Navigating to the Main GBS Login Gateway.";
-        navigate("/login");
+        executeReply("Opening the Headmaster Executive Command Portal now.", { navigateTo: "/login/admin" });
+        return;
       }
-      actionExecuted = true;
-    } else if (cleanCmd.includes("open headmaster") || cleanCmd.includes("headmaster portal")) {
-      responseText = "Opening the Headmaster Executive Portal.";
-      navigate("/login/admin");
-      actionExecuted = true;
-    } else if (cleanCmd.includes("open student")) {
-      responseText = "Opening the Student Hub login.";
-      navigate("/login/student");
-      actionExecuted = true;
-    } else if (cleanCmd.includes("transport") || cleanCmd.includes("bus")) {
-      responseText = `${GBS_KNOWLEDGE_BASE.transport}`;
-      actionExecuted = true;
-    } else if (cleanCmd.includes("proctor") || cleanCmd.includes("exam monitor") || cleanCmd.includes("start exam")) {
-      responseText = GBS_KNOWLEDGE_BASE.proctoring;
-      actionExecuted = true;
-    } else if (cleanCmd.includes("translat")) {
-      responseText = GBS_KNOWLEDGE_BASE.translator;
-      if (typeof window.openGBSScreenTranslator === "function") {
-        window.openGBSScreenTranslator();
+      if (cleanCmd.includes("teacher") || cleanCmd.includes("lecturer")) {
+        executeReply("Opening the Teacher & Lecturer Portal now.", { navigateTo: "/login/teacher" });
+        return;
       }
-      actionExecuted = true;
-    } else if (cleanCmd.includes("install") || cleanCmd.includes("mobile app") || cleanCmd.includes("apk")) {
-      responseText = GBS_KNOWLEDGE_BASE.mobileApp;
-      actionExecuted = true;
-    } else if (cleanCmd.includes("onboard") || cleanCmd.includes("register school") || cleanCmd.includes("first page")) {
-      responseText = "Opening the School Onboarding First Page.";
-      navigate("/onboarding");
-      actionExecuted = true;
-    } else if (cleanCmd.includes("website") || cleanCmd.includes("company")) {
-      responseText = "Opening the GBS Company Website.";
-      navigate("/company");
-      actionExecuted = true;
-    } else if (cleanCmd.includes("video") || cleanCmd.includes("presentation") || cleanCmd.includes("movie")) {
-      responseText = "Opening the Role Guide Video Presentation Engine.";
-      navigate("/presentation-engine");
-      actionExecuted = true;
-    } else if (
-      cleanCmd.includes("emergency locator") ||
-      cleanCmd.includes("locate parent") ||
-      cleanCmd.includes("parent location") ||
-      cleanCmd.includes("emergency map") ||
-      cleanCmd.includes("track parent")
-    ) {
-      responseText = "Opening the Emergency Parent Locator map.";
-      navigate("/emergency-locator");
-      actionExecuted = true;
-    } else if (
-      cleanCmd.includes("live tracking") ||
-      cleanCmd.includes("track student") ||
-      cleanCmd.includes("tenant tracking") ||
-      cleanCmd.includes("gps tracking")
-    ) {
-      responseText = "Opening Live Campus GPS Tracking.";
-      navigate("/location/live-tracking");
-      actionExecuted = true;
-    } else if (
-      cleanCmd.includes("mission control") ||
-      cleanCmd.includes("developer login") ||
-      cleanCmd.includes("developer control center") ||
-      cleanCmd.includes("developer portal") ||
-      cleanCmd.includes("open developer")
-    ) {
-      responseText = "Opening the Developer Control Center login.";
-      navigate("/developer-control-center/login");
-      actionExecuted = true;
-    } else if (
-      cleanCmd.includes("conference") ||
-      cleanCmd.includes("study group") ||
-      cleanCmd.includes("peer call")
-    ) {
-      responseText = "Opening the Student Cooperative Conferencing Hub.";
-      navigate("/student/conference");
-      actionExecuted = true;
-    } else if (
-      cleanCmd.includes("who is the developer") ||
-      cleanCmd.includes("developer name") ||
-      cleanCmd.includes("developer phone") ||
-      cleanCmd.includes("developer contact") ||
-      cleanCmd.includes("who developed") ||
-      cleanCmd.includes("who built") ||
-      cleanCmd.includes("who made") ||
-      cleanCmd.includes("who created") ||
-      cleanCmd.includes("gabriel") ||
-      cleanCmd.includes("osei")
-    ) {
-      responseText = GBS_KNOWLEDGE_BASE.developerPrivacyShield;
-      actionExecuted = true;
-    } else if (
-      cleanCmd.includes("what is gbs") ||
-      cleanCmd.includes("tell me about gbs") ||
-      cleanCmd.includes("about the system") ||
-      cleanCmd.includes("how does gbs work")
-    ) {
-      responseText = GBS_KNOWLEDGE_BASE.overview;
-      actionExecuted = true;
-    } else if (cleanCmd.includes("motto") || cleanCmd.includes("intelligence talks to wisdom")) {
-      responseText = GBS_KNOWLEDGE_BASE.motto;
-      actionExecuted = true;
-    } else if (cleanCmd.includes("how to onboard") || cleanCmd.includes("register an institution") || cleanCmd.includes("trial")) {
-      responseText = GBS_KNOWLEDGE_BASE.onboarding;
-      actionExecuted = true;
-    } else if (cleanCmd.includes("admission") || cleanCmd.includes("apply")) {
-      responseText = GBS_KNOWLEDGE_BASE.admissions;
-      actionExecuted = true;
-    } else if (cleanCmd.includes("pay") || cleanCmd.includes("fee") || cleanCmd.includes("payment") || cleanCmd.includes("momo")) {
-      responseText = GBS_KNOWLEDGE_BASE.payments;
-      actionExecuted = true;
-    } else if (cleanCmd.includes("roles") || cleanCmd.includes("who can use") || cleanCmd.includes("dashboards")) {
-      responseText = GBS_KNOWLEDGE_BASE.roles;
-      actionExecuted = true;
-    } else if (cleanCmd.includes("developer control") || cleanCmd.includes("security") || cleanCmd.includes("backup")) {
-      responseText = GBS_KNOWLEDGE_BASE.developer;
-      actionExecuted = true;
-    } else if (cleanCmd.includes("contact") || cleanCmd.includes("hotline") || cleanCmd.includes("support")) {
-      responseText = GBS_KNOWLEDGE_BASE.contact;
-      actionExecuted = true;
-    } else if (cleanCmd.startsWith("enter my name") || cleanCmd.startsWith("my name is") || cleanCmd.startsWith("enter name")) {
+      if (cleanCmd.includes("student")) {
+        executeReply("Navigating to the Student Learning Hub now.", { navigateTo: "/login/student" });
+        return;
+      }
+      if (cleanCmd.includes("parent") || cleanCmd.includes("guardian")) {
+        executeReply("Opening the Parent & Guardian Portal now.", { navigateTo: "/login/parent" });
+        return;
+      }
+      if (cleanCmd.includes("accountant") || cleanCmd.includes("finance")) {
+        executeReply("Opening the Accountant & Treasury Portal now.", { navigateTo: "/login/accountant" });
+        return;
+      }
+      if (cleanCmd.includes("staff") || cleanCmd.includes("hr")) {
+        executeReply("Opening the Staff & HR Portal now.", { navigateTo: "/login/staff" });
+        return;
+      }
+      if (cleanCmd.includes("main login") || cleanCmd.includes("login")) {
+        executeReply("Opening the Main GBS Login Gateway.", { navigateTo: "/login" });
+        return;
+      }
+    }
+
+    if (cleanCmd.includes("onboard") || cleanCmd.includes("register school") || cleanCmd.includes("first page")) {
+      executeReply("Opening the School Onboarding First Page.", { navigateTo: "/onboarding" });
+      return;
+    }
+
+    if (cleanCmd.includes("developer portal") || cleanCmd.includes("mission control") || cleanCmd.includes("developer login")) {
+      executeReply("Opening the Developer Control Center Login.", { navigateTo: "/developer-control-center/login" });
+      return;
+    }
+
+    if (cleanCmd.startsWith("enter my name") || cleanCmd.startsWith("my name is") || cleanCmd.startsWith("enter name")) {
       const nameVal = cleanCmd.replace(/^(enter my name|my name is|enter name)\s*(is|to)?\s*/i, "").trim();
       const inputEl = document.querySelector('input[name*="name" i], input[id*="name" i], input[placeholder*="name" i]');
       if (inputEl && nameVal) {
         inputEl.value = nameVal;
         inputEl.dispatchEvent(new Event("input", { bubbles: true }));
-        responseText = `Entered name ${nameVal} into the active form.`;
+        executeReply(`Entered name ${nameVal} into the active form.`);
       } else {
-        responseText = `Noted name ${nameVal}. Open a form first if you want me to fill it automatically.`;
+        executeReply(`Noted name ${nameVal}. Open a form first if you want me to fill it automatically.`);
       }
-      actionExecuted = true;
-    } else if (cleanCmd.startsWith("enter email") || cleanCmd.startsWith("my email is")) {
-      const emailVal = cleanCmd.replace(/^(enter email|my email is)\s*(is|to)?\s*/i, "").trim().replace(/\sat\s/g, "@").replace(/\sdot\s/g, ".").replace(/\s+/g, "");
-      const inputEl = document.querySelector('input[type="email"], input[name*="email" i], input[id*="email" i], input[placeholder*="email" i]');
-      if (inputEl && emailVal) {
-        inputEl.value = emailVal;
-        inputEl.dispatchEvent(new Event("input", { bubbles: true }));
-        responseText = `Entered email ${emailVal} into the active form.`;
-      } else {
-        responseText = `Recognized email ${emailVal}.`;
-      }
-      actionExecuted = true;
-    } else if (cleanCmd.startsWith("enter amount") || cleanCmd.startsWith("enter figure") || cleanCmd.startsWith("figure is")) {
-      const match = cleanCmd.match(/\d+([.,]\d+)?/);
-      if (match) {
-        const figure = match[0];
-        const inputEl = document.querySelector('input[type="number"], input[name*="amount" i], input[name*="fee" i], input[id*="figure" i]');
-        if (inputEl) {
-          inputEl.value = figure;
-          inputEl.dispatchEvent(new Event("input", { bubbles: true }));
-          responseText = `Entered figure ${figure} into the amount field.`;
-        } else {
-          responseText = `Noted figure ${figure}.`;
-        }
-      } else {
-        responseText = "I did not hear a numeric amount.";
-      }
-      actionExecuted = true;
-    } else if (cleanCmd.includes("demo admin") || cleanCmd.includes("fill admin")) {
-      const emailInput = document.querySelector('input[type="email"], input[name="email"], input[id="email"]');
-      const passInput = document.querySelector('input[type="password"]');
-      if (emailInput && passInput) {
-        emailInput.value = "admin@gbs.com";
-        passInput.value = "Admin123!";
-        emailInput.dispatchEvent(new Event("input", { bubbles: true }));
-        passInput.dispatchEvent(new Event("input", { bubbles: true }));
-        responseText = "Filled administrator demo credentials.";
-      } else {
-        navigate("/login/admin");
-        responseText = "Opening the Headmaster login page for demo sign-in.";
-      }
-      actionExecuted = true;
-    } else if (cleanCmd.includes("submit") || cleanCmd.includes("click submit")) {
+      return;
+    }
+
+    if (cleanCmd.includes("submit") || cleanCmd.includes("click submit")) {
       const submitBtn = document.querySelector('button[type="submit"], .role-login-submit, .btn-submit, .gbs-btn-primary');
       if (submitBtn) {
         submitBtn.click();
-        responseText = "Submitted the active form.";
+        executeReply("Submitted the active form cleanly.");
       } else {
-        responseText = "No active submit button was found on this view.";
+        executeReply("No active submit button was found on this view.");
       }
-      actionExecuted = true;
+      return;
     }
 
-    if (!actionExecuted) {
-      responseText = `I heard "${raw}". I can explain fees/payments, bus transport routes, exam proctoring, mobile app install, or open any portal for you.`;
+    // 2. Live Backend System Memory Query (raced quickly so spoken feedback never stalls)
+    try {
+      const controller = new AbortController();
+      const timer = setTimeout(() => controller.abort(), 950);
+      const res = await apiClient.post("/ai/assistant-query", { query: raw }, { signal: controller.signal });
+      clearTimeout(timer);
+      const result = res?.data?.data;
+      if (result?.speechText) {
+        if (result.liveStats) {
+          memoryCatalogRef.current = { ...(memoryCatalogRef.current || {}), liveStats: result.liveStats };
+        }
+        executeReply(result.speechText, result.action || null);
+        return;
+      }
+    } catch { }
+
+    // 3. Instant Local System Memory Fallback (<5ms offline-capable explanation)
+    const localHit = matchInstantLocalMemory(cleanCmd);
+    if (localHit) {
+      executeReply(localHit.answer, { openTab: localHit.tab, navigateTo: localHit.route });
+      return;
     }
 
-    // Continuous conversational loop: ALWAYS ask whether we are done or there is another question
-    const fullTurnReply = `${responseText} ${FOLLOWUP_PROMPT}`;
-    setAssistantResponse(fullTurnReply);
-    appendMessage("assistant", fullTurnReply);
-    speakAloud(fullTurnReply);
-
-    if (typeof window !== "undefined" && typeof window.showGBSOpenNotice === "function") {
-      window.showGBSOpenNotice(responseText, "info", "GBS ASSISTANT");
-    }
+    const stats = memoryCatalogRef.current?.liveStats;
+    const statsNote = stats
+      ? ` Live workspace summary: ${stats.clinicProfilesCount} medical registrations, ${stats.clinicVisitsCount} clinic visits (${stats.activeSickbayCount} active in Sickbay), and ${stats.pendingStaffApprovalsCount} pending staff approvals.`
+      : "";
+    executeReply(
+      `On GBS SYSTEM (v${memorySyncedVersion}), you can manage Admissions, School Clinic & Sickbay records, University Internships/SRC/Streams/Graduation, JHS/SHS/Technical separation, Defaulters Compliance, Staff Approvals, Language Translation, Direct SMS, Payments, Bus Transport, and AI Exam Proctoring.${statsNote}`
+    );
   };
 
   processCommandRef.current = processVoiceCommand;
@@ -595,14 +642,14 @@ export default function GBSVoiceAssistant() {
           <div
             onClick={toggleAssistant}
             style={{
-              background: "rgba(15, 23, 42, 0.92)",
-              color: "#f8fafc",
-              border: "1px solid rgba(212, 175, 55, 0.6)",
+              background: "linear-gradient(135deg, #060f1e, #0f2347)",
+              color: "#f5d061",
+              border: "1.5px solid #d4af37",
               borderRadius: "20px",
-              padding: "6px 12px",
+              padding: "7px 14px",
               fontSize: "12px",
-              fontWeight: 700,
-              boxShadow: "0 6px 20px rgba(0, 0, 0, 0.5)",
+              fontWeight: 800,
+              boxShadow: "0 6px 20px rgba(0, 0, 0, 0.55)",
               cursor: "pointer",
               display: "flex",
               alignItems: "center",
@@ -610,32 +657,32 @@ export default function GBSVoiceAssistant() {
               backdropFilter: "blur(10px)"
             }}
           >
-            <span style={{ color: "#38bdf8" }}>🎙️</span>
-            <span>GBS Assistant</span>
+            <span>🎙️</span>
+            <span>GBS AI Assistant (Memory Linked)</span>
           </div>
         )}
 
         <button
           type="button"
           onClick={toggleAssistant}
-          title={isOpen && !isSleeping ? "Click to put GBS Assistant to sleep" : "Click to wake GBS Assistant"}
+          title={isOpen && !isSleeping ? "Click to put GBS AI Assistant to sleep" : "Click to wake GBS AI Assistant"}
           style={{
-            width: "56px",
-            height: "56px",
+            width: "58px",
+            height: "58px",
             borderRadius: "50%",
-            border: isOpen && !isSleeping ? "2.5px solid #d4af37" : "2px solid #38bdf8",
+            border: isOpen && !isSleeping ? "2.5px solid #f5d061" : "2px solid #d4af37",
             background: isOpen && !isSleeping
-              ? "radial-gradient(circle at 35% 35%, #38bdf8 0%, #d4af37 50%, #991b1b 100%)"
-              : "radial-gradient(circle at 35% 35%, #1e293b 0%, #0f172a 70%, #020617 100%)",
+              ? "radial-gradient(circle at 35% 35%, #d4af37 0%, #0f2347 55%, #060f1e 100%)"
+              : "radial-gradient(circle at 35% 35%, #0f2347 0%, #081428 70%, #060f1e 100%)",
             boxShadow: isOpen && !isSleeping
-              ? "0 0 30px rgba(56, 189, 248, 0.8), 0 0 50px rgba(212, 175, 55, 0.6)"
-              : "0 6px 20px rgba(0, 0, 0, 0.6), 0 0 15px rgba(56, 189, 248, 0.3)",
+              ? "0 0 30px rgba(212, 175, 55, 0.75), 0 0 50px rgba(56, 189, 248, 0.45)"
+              : "0 6px 20px rgba(0, 0, 0, 0.65), 0 0 15px rgba(212, 175, 55, 0.35)",
             display: "flex",
             alignItems: "center",
             justifyContent: "center",
             cursor: "pointer",
             outline: "none",
-            transition: "all 0.3s cubic-bezier(0.4, 0, 0.2, 1)",
+            transition: "all 0.25s ease",
             transform: isOpen && !isSleeping ? "scale(1.08)" : "scale(1)"
           }}
         >
@@ -644,7 +691,7 @@ export default function GBSVoiceAssistant() {
           ) : isListening ? (
             <span style={{ fontSize: "22px" }}>🎙️</span>
           ) : (
-            <span style={{ fontSize: "20px" }}>{isSleeping ? "😴" : "⚡"}</span>
+            <span style={{ fontSize: "20px" }}>{isSleeping ? "🧠" : "⚡"}</span>
           )}
         </button>
       </div>
@@ -656,11 +703,11 @@ export default function GBSVoiceAssistant() {
             position: "fixed",
             bottom: "86px",
             right: "20px",
-            width: "390px",
+            width: "410px",
             maxWidth: "calc(100vw - 32px)",
             maxHeight: "82vh",
-            background: "rgba(10, 16, 29, 0.97)",
-            border: "1.5px solid #d4af37",
+            background: "linear-gradient(155deg, rgba(6, 15, 30, 0.98) 0%, rgba(10, 25, 47, 0.98) 100%)",
+            border: "2px solid #d4af37",
             borderRadius: "20px",
             boxShadow: "0 25px 60px rgba(0, 0, 0, 0.85), 0 0 35px rgba(212, 175, 55, 0.35)",
             backdropFilter: "blur(20px)",
@@ -676,27 +723,27 @@ export default function GBSVoiceAssistant() {
           <div
             style={{
               padding: "14px 18px",
-              background: "linear-gradient(135deg, rgba(30, 41, 59, 0.9) 0%, rgba(15, 23, 42, 0.98) 100%)",
-              borderBottom: "1px solid rgba(212, 175, 55, 0.3)",
+              background: "linear-gradient(135deg, #060f1e 0%, #0f2347 100%)",
+              borderBottom: "1px solid rgba(212, 175, 55, 0.45)",
               display: "flex",
               justifyContent: "space-between",
               alignItems: "center"
             }}
           >
             <div style={{ display: "flex", alignItems: "center", gap: "10px" }}>
-              <span style={{ fontSize: "18px" }}>{isSleeping ? "😴" : isListening ? "🎙️" : "🔊"}</span>
+              <span style={{ fontSize: "18px" }}>{isSleeping ? "😴" : isListening ? "🎙️" : "🧠"}</span>
               <div>
-                <strong style={{ fontSize: "13.5px", color: "#fbbf24", display: "block" }}>
-                  GBS CONVERSATIONAL ASSISTANT
+                <strong style={{ fontSize: "13px", color: "#f5d061", display: "block" }}>
+                  GBS SYSTEM MEMORY AI ASSISTANT
                 </strong>
                 <span style={{ fontSize: "10.5px", color: isSleeping ? "#94a3b8" : "#34d399", fontWeight: 700 }}>
                   {isSleeping
                     ? "Sleeping • Click orb to wake"
                     : isSpeaking
-                      ? "Speaking answer & waiting for reply..."
+                      ? "🔊 Answering live from System Memory..."
                       : isListening
-                        ? "● Continuous Listening Active"
-                        : "● Active Session (Ask or say Done)"}
+                        ? `● Instant Listening Active • Memory v${memorySyncedVersion}`
+                        : `● Ready • Memory v${memorySyncedVersion} Linked`}
                 </span>
               </div>
             </div>
@@ -705,8 +752,8 @@ export default function GBSVoiceAssistant() {
               type="button"
               onClick={() => enterSleepMode()}
               style={{
-                background: "rgba(239, 68, 68, 0.16)",
-                border: "1px solid rgba(239, 68, 68, 0.45)",
+                background: "rgba(239, 68, 68, 0.18)",
+                border: "1px solid rgba(239, 68, 68, 0.5)",
                 color: "#fca5a5",
                 fontSize: "11px",
                 fontWeight: 800,
@@ -720,7 +767,7 @@ export default function GBSVoiceAssistant() {
             </button>
           </div>
 
-          {/* Continuous Multi-Turn Thread */}
+          {/* Multi-Turn Thread */}
           <div style={{ padding: "14px 16px", flex: 1, overflowY: "auto", display: "flex", flexDirection: "column", gap: "10px" }}>
             {conversationMessages.map((m, idx) => (
               <div
@@ -728,8 +775,8 @@ export default function GBSVoiceAssistant() {
                 style={{
                   alignSelf: m.sender === "user" ? "flex-end" : "flex-start",
                   maxWidth: "88%",
-                  background: m.sender === "user" ? "rgba(2, 132, 199, 0.28)" : "rgba(15, 23, 42, 0.88)",
-                  border: m.sender === "user" ? "1px solid rgba(56, 189, 248, 0.5)" : "1px solid rgba(212, 175, 55, 0.35)",
+                  background: m.sender === "user" ? "rgba(37, 99, 235, 0.35)" : "rgba(8, 20, 40, 0.92)",
+                  border: m.sender === "user" ? "1px solid rgba(56, 189, 248, 0.55)" : "1px solid rgba(212, 175, 55, 0.42)",
                   borderRadius: "12px",
                   padding: "9px 12px",
                   fontSize: "12.5px",
@@ -737,8 +784,8 @@ export default function GBSVoiceAssistant() {
                   color: m.sender === "user" ? "#e0f2fe" : "#f8fafc"
                 }}
               >
-                <div style={{ fontSize: "10px", color: m.sender === "user" ? "#7dd3fc" : "#fbbf24", fontWeight: 800, marginBottom: "3px" }}>
-                  {m.sender === "user" ? "You" : "GBS Assistant"} • {m.time}
+                <div style={{ fontSize: "10px", color: m.sender === "user" ? "#7dd3fc" : "#f5d061", fontWeight: 800, marginBottom: "3px" }}>
+                  {m.sender === "user" ? "You" : "GBS System Memory AI"} • {m.time}
                 </div>
                 <div>{m.text}</div>
               </div>
@@ -746,60 +793,52 @@ export default function GBSVoiceAssistant() {
 
             {transcript && (
               <div style={{ fontSize: "12px", color: "#7dd3fc", fontStyle: "italic", padding: "4px 8px" }}>
-                🎙️ Listening: "{transcript}"
+                🎙️ Hearing live: "{transcript}"
               </div>
             )}
             <div ref={chatEndRef} />
           </div>
 
-          {/* Interactive Continuous Reply Bar + Quick Actions */}
-          <div style={{ padding: "10px 14px", borderTop: "1px solid #1e293b", background: "rgba(2, 6, 23, 0.9)" }}>
-            <div style={{ display: "flex", gap: "6px", flexWrap: "wrap", marginBottom: "8px" }}>
-              <button
-                type="button"
-                onClick={() => processVoiceCommand("Yes, there is another question")}
-                style={{
-                  background: "rgba(16, 185, 129, 0.16)",
-                  border: "1px solid #10b981",
-                  color: "#6ee7b7",
-                  borderRadius: "999px",
-                  padding: "4px 10px",
-                  fontSize: "11px",
-                  fontWeight: 700,
-                  cursor: "pointer"
-                }}
-              >
-                ➕ Yes, There Is Another
-              </button>
-              <button
-                type="button"
-                onClick={() => processVoiceCommand("We are done")}
-                style={{
-                  background: "rgba(245, 158, 11, 0.16)",
-                  border: "1px solid #f59e0b",
-                  color: "#fde68a",
-                  borderRadius: "999px",
-                  padding: "4px 10px",
-                  fontSize: "11px",
-                  fontWeight: 700,
-                  cursor: "pointer"
-                }}
-              >
-                ✅ Yes, We Are Done (Sleep)
-              </button>
+          {/* Quick Memory Queries + Continuous Reply Bar */}
+          <div style={{ padding: "10px 14px", borderTop: "1px solid rgba(212, 175, 55, 0.25)", background: "rgba(4, 10, 22, 0.95)" }}>
+            <div style={{ display: "flex", gap: "5px", flexWrap: "wrap", marginBottom: "8px" }}>
+              {[
+                { label: "🏥 School Clinic", cmd: "Explain School Clinic and pull medical records" },
+                { label: "🎓 University Hub", cmd: "How does University Internship, Streams, SRC & Graduation work?" },
+                { label: "📋 Defaulters", cmd: "How does the missed exam and absenteeism tracker work?" },
+                { label: "✅ Done (Sleep)", cmd: "We are done" }
+              ].map((chip) => (
+                <button
+                  key={chip.label}
+                  type="button"
+                  onClick={() => processVoiceCommand(chip.cmd)}
+                  style={{
+                    background: chip.label.includes("Done") ? "rgba(245, 158, 11, 0.18)" : "rgba(15, 35, 71, 0.9)",
+                    border: chip.label.includes("Done") ? "1px solid #f59e0b" : "1px solid rgba(212, 175, 55, 0.45)",
+                    color: chip.label.includes("Done") ? "#fde68a" : "#f5d061",
+                    borderRadius: "999px",
+                    padding: "4px 9px",
+                    fontSize: "10.8px",
+                    fontWeight: 700,
+                    cursor: "pointer"
+                  }}
+                >
+                  {chip.label}
+                </button>
+              ))}
             </div>
 
             <form onSubmit={handleTypedSubmit} style={{ display: "flex", gap: "6px" }}>
               <input
                 type="text"
-                placeholder="Ask next question or type 'done'..."
+                placeholder="Ask anything about GBS SYSTEM or say command..."
                 value={typedInput}
                 onChange={(e) => setTypedInput(e.target.value)}
                 style={{
                   flex: 1,
-                  background: "#0f172a",
+                  background: "#081428",
                   color: "#f8fafc",
-                  border: "1px solid #334155",
+                  border: "1px solid rgba(212, 175, 55, 0.45)",
                   borderRadius: "8px",
                   padding: "8px 10px",
                   fontSize: "12.5px",
@@ -809,11 +848,11 @@ export default function GBSVoiceAssistant() {
               <button
                 type="submit"
                 style={{
-                  background: "#0284c7",
+                  background: "linear-gradient(135deg, #0f2347, #d4af37)",
                   color: "#ffffff",
-                  border: "none",
+                  border: "1px solid #f5d061",
                   borderRadius: "8px",
-                  padding: "8px 12px",
+                  padding: "8px 14px",
                   fontSize: "12px",
                   fontWeight: 800,
                   cursor: "pointer"
@@ -823,7 +862,6 @@ export default function GBSVoiceAssistant() {
               </button>
             </form>
 
-            {/* Footer Controls */}
             <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginTop: "8px" }}>
               <button
                 type="button"
@@ -840,7 +878,7 @@ export default function GBSVoiceAssistant() {
                   }
                 }}
                 style={{
-                  background: isListening ? "#dc2626" : "#2563eb",
+                  background: isListening ? "#b91c1c" : "#1d4ed8",
                   color: "#ffffff",
                   border: "none",
                   borderRadius: "8px",
@@ -858,9 +896,9 @@ export default function GBSVoiceAssistant() {
                 type="button"
                 onClick={() => speakAloud(assistantResponse)}
                 style={{
-                  background: "#1e293b",
-                  color: "#fbbf24",
-                  border: "1px solid #334155",
+                  background: "#0f2347",
+                  color: "#f5d061",
+                  border: "1px solid rgba(212, 175, 55, 0.45)",
                   borderRadius: "8px",
                   padding: "6px 12px",
                   fontSize: "11.5px",
