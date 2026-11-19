@@ -19,7 +19,7 @@ const ONBOARDING_TRACKS = [
 export const getStudentRate = (instType) => {
   const norm = String(instType || "NURSERY_TO_JHS").toUpperCase();
   if (norm.includes("UNI") || norm.includes("COLLEGE") || norm.includes("TERTIARY")) return 10; // GH₵ 10 for University
-  if (norm.includes("SHS") || norm.includes("SENIOR") || norm.includes("SECONDARY")) return 5; // GH₵ 5 for SHS
+  if (norm.includes("SHS") || norm.includes("SENIOR") || norm.includes("SECONDARY") || norm.includes("TECH") || norm.includes("TVET")) return 5; // GH₵ 5 for SHS & Technical/TVET
   return 3; // GH₵ 3 for Nursery – JHS
 };
 
@@ -910,9 +910,10 @@ export default function SignUpPage({ defaultRole }) {
                       value={instForm.institutionType}
                       onChange={handleInstChange}
                     >
-                      <option value="NURSERY_TO_JHS">🏫 Basic School / JHS (JHS: 5 Cedis per student)</option>
-                      <option value="SENIOR_HIGH_SCHOOL">🎓 Senior High School (SHS: 10 Cedis per student)</option>
-                      <option value="UNIVERSITY">🏛️ University & Tertiary (University: 20 Cedis per student)</option>
+                      <option value="NURSERY_TO_JHS">🏫 Basic School / JHS (GH₵ 3 per student)</option>
+                      <option value="SENIOR_HIGH_SCHOOL">🎓 Senior High School / SHS (GH₵ 5 per student)</option>
+                      <option value="TECHNICAL">🔧 Technical &amp; Vocational / TVET (GH₵ 5 per student)</option>
+                      <option value="UNIVERSITY">🏛️ University &amp; Tertiary (GH₵ 10 per student)</option>
                     </select>
                   </div>
                   <div className="form-field">
@@ -1291,10 +1292,10 @@ export default function SignUpPage({ defaultRole }) {
                           </span>
                           <div style={{ display: "flex", alignItems: "center", gap: "8px", marginTop: "4px" }}>
                             <span style={{ fontSize: "1.2rem" }}>
-                              {instForm.institutionType === "UNIVERSITY" ? "🏛️" : (instForm.institutionType === "SENIOR_HIGH_SCHOOL" ? "🎓" : "🏫")}
+                              {instForm.institutionType === "UNIVERSITY" ? "🏛️" : instForm.institutionType === "TECHNICAL" ? "🔧" : instForm.institutionType === "SENIOR_HIGH_SCHOOL" ? "🎓" : "🏫"}
                             </span>
                             <strong style={{ color: "#38bdf8", fontSize: "0.98rem" }}>
-                              {instForm.institutionType === "UNIVERSITY" ? "University / Tertiary (20 Cedis per student)" : (instForm.institutionType === "SENIOR_HIGH_SCHOOL" ? "Senior High School (10 Cedis per student)" : "Basic School / JHS (5 Cedis per student)")}
+                              {instForm.institutionType === "UNIVERSITY" ? "University / Tertiary (GH₵ 10 / student)" : instForm.institutionType === "TECHNICAL" ? "Technical & Vocational / TVET (GH₵ 5 / student)" : instForm.institutionType === "SENIOR_HIGH_SCHOOL" ? "Senior High School / SHS (GH₵ 5 / student)" : "Basic School / JHS (GH₵ 3 / student)"}
                             </strong>
                           </div>
                           <span style={{ fontSize: "0.82rem", color: "#cbd5e1", marginTop: "4px", display: "block" }}>

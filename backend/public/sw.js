@@ -5,7 +5,7 @@
 ================================================================================
 */
 
-const CACHE_NAME = "gbs-cache-v2026.12";
+const CACHE_NAME = "gbs-cache-v2026.13";
 const OFFLINE_URL = "/offline.html";
 
 // Assets to pre-cache for instant offline startup & PWA installability

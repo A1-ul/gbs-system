@@ -100,8 +100,22 @@ export const INSTITUTION_TIERS = {
     code: "TERTIARY",
     title: "University / Tertiary Institution",
     shortLabel: "University / College",
-    badgeColor: "#a855f7",
-    description: "Undergraduate & Postgraduate Degree / Diploma programmes. Levels 100, 200, 300, 400+, Semester-based course enrollment. Basic and secondary school curricula are restricted.",
+    badgeColor: "#2563eb",
+    leadershipRoleTitle: "Vice Chancellor / Registrar / Provost",
+    facultyRoleTitle: "University Lecturer / Professor",
+    studentRoleTitle: "Undergraduate / Postgraduate Student",
+    academicTermLabel: "Semester • Credits • Level 100 – 400+",
+    studentGovernanceTitle: "SRC Representatives & Manifestos",
+    features: {
+      universityOnlyFeatures: true,
+      internshipsPortal: true,
+      universityStreams: true,
+      universitySRC: true,
+      lecturerGraduationToAlumni: true,
+      technicalPracticals: false,
+      prefectsSystem: false
+    },
+    description: "Undergraduate & Postgraduate Degree / Diploma programmes. Levels 100, 200, 300, 400+, Regular/Evening/Sandwich/Weekend streams, SRC governance, Internships & Graduation to Alumni.",
     classes: [
       { id: "LEVEL_100_SEM_1", name: "Level 100 - First Year (Semester 1)", level: 100 },
       { id: "LEVEL_100_SEM_2", name: "Level 100 - First Year (Semester 2)", level: 100 },
@@ -122,6 +136,12 @@ export const INSTITUTION_TIERS = {
       "School of Law & Governance",
       "College of Health & Allied Medical Sciences"
     ],
+    streams: [
+      "Regular Students",
+      "Evening Students",
+      "Sandwich Students",
+      "Weekend Students"
+    ],
     subjects: [
       "CSC 101 - Introduction to Computer Science & Algorithms",
       "MAT 105 - Calculus & Analytical Geometry",
@@ -133,8 +153,100 @@ export const INSTITUTION_TIERS = {
       "MED 202 - Human Anatomy & Physiology",
       "RES 401 - Undergraduate Thesis & Research Methodology"
     ]
+  },
+
+  TECHNICAL: {
+    id: "TECHNICAL",
+    code: "TECHNICAL_TVET",
+    title: "Technical & Vocational Institute (TVET)",
+    shortLabel: "Technical / TVET",
+    badgeColor: "#d97706",
+    leadershipRoleTitle: "Principal / TVET Rector",
+    facultyRoleTitle: "Workshop Instructor / Trade Lecturer",
+    studentRoleTitle: "Technical Trainee / Apprentice",
+    academicTermLabel: "Trade Module / CBT Level 1 – 3",
+    studentGovernanceTitle: "Workshop Captains & Trainee Representatives",
+    features: {
+      universityOnlyFeatures: false,
+      internshipsPortal: false,
+      universityStreams: false,
+      universitySRC: false,
+      lecturerGraduationToAlumni: false,
+      technicalPracticals: true,
+      prefectsSystem: true
+    },
+    description: "CBT Competency & Technical/Vocational Trade programmes (Electrical, Mechanical, ICT, Building & Construction, Welding, Catering & Fashion). University-only SRC and Degree features are restricted.",
+    classes: [
+      { id: "TVET_LVL_1_ELEC", name: "Technical Level 1 - Electrical & Electronics", programme: "Electrical Engineering" },
+      { id: "TVET_LVL_2_ELEC", name: "Technical Level 2 - Electrical Installation & Power", programme: "Electrical Engineering" },
+      { id: "TVET_LVL_1_MECH", name: "Technical Level 1 - Mechanical & Auto Technology", programme: "Mechanical Engineering" },
+      { id: "TVET_LVL_2_MECH", name: "Technical Level 2 - Automotive Diagnostics", programme: "Mechanical Engineering" },
+      { id: "TVET_LVL_1_ICT", name: "Technical Level 1 - Computer Hardware & Networking", programme: "ICT & Networking" },
+      { id: "TVET_LVL_2_BUILD", name: "Technical Level 2 - Building, Masonry & Carpentry", programme: "Construction" },
+      { id: "TVET_LVL_3_WELD", name: "Technical Level 3 - Welding & Metal Fabrication", programme: "Welding & Fabrication" },
+      { id: "TVET_LVL_2_HOSP", name: "Vocational Level 2 - Catering, Hospitality & Fashion", programme: "Hospitality & Fashion" }
+    ],
+    subjects: [
+      "Technical Drawing & CAD Fundamentals",
+      "Workshop Safety & Industrial Standards",
+      "Applied Engineering Mathematics",
+      "Electrical Circuit Installation & Testing",
+      "Motor Vehicle & Mechanical Systems",
+      "Computer Hardware Diagnostics & Networking",
+      "Welding, Metalwork & Fabrication Practice",
+      "Entrepreneurship & Trade Management"
+    ]
   }
 };
+
+export function normalizeInstitutionTierKey(rawType) {
+  const s = String(rawType || "").trim().toUpperCase();
+  if (!s) return "NURSERY_TO_JHS";
+  if (s.includes("UNIV") || s.includes("TERTIARY") || s.includes("COLLEGE")) return "UNIVERSITY";
+  if (s.includes("TECH") || s.includes("TVET") || s.includes("VOCAT") || s.includes("POLYTECH")) return "TECHNICAL";
+  if (s.includes("SHS") || s.includes("SENIOR") || s.includes("SECONDARY")) return "SENIOR_HIGH_SCHOOL";
+  return "NURSERY_TO_JHS";
+}
+
+export function getInstitutionRoleProfile(institutionType = getActiveInstitutionType()) {
+  const key = normalizeInstitutionTierKey(institutionType);
+  const tier = INSTITUTION_TIERS[key] || INSTITUTION_TIERS.NURSERY_TO_JHS;
+  const defaultProfiles = {
+    NURSERY_TO_JHS: {
+      leadershipRoleTitle: "Headmaster / Headmistress",
+      facultyRoleTitle: "Class & Subject Teacher",
+      studentRoleTitle: "Pupil / JHS Student",
+      academicTermLabel: "Term (Term 1 – 3)",
+      studentGovernanceTitle: "Class Captains & School Prefects",
+      features: { universityOnlyFeatures: false, internshipsPortal: false, universityStreams: false, universitySRC: false, lecturerGraduationToAlumni: false, technicalPracticals: false, prefectsSystem: true }
+    },
+    SENIOR_HIGH_SCHOOL: {
+      leadershipRoleTitle: "Headmaster / Principal",
+      facultyRoleTitle: "Subject Tutor / Housemaster",
+      studentRoleTitle: "SHS Student",
+      academicTermLabel: "SHS Form / Semester (WASSCE)",
+      studentGovernanceTitle: "Student Prefect Council",
+      features: { universityOnlyFeatures: false, internshipsPortal: false, universityStreams: false, universitySRC: false, lecturerGraduationToAlumni: false, technicalPracticals: false, prefectsSystem: true }
+    },
+    TECHNICAL: {
+      leadershipRoleTitle: tier.leadershipRoleTitle,
+      facultyRoleTitle: tier.facultyRoleTitle,
+      studentRoleTitle: tier.studentRoleTitle,
+      academicTermLabel: tier.academicTermLabel,
+      studentGovernanceTitle: tier.studentGovernanceTitle,
+      features: tier.features
+    },
+    UNIVERSITY: {
+      leadershipRoleTitle: tier.leadershipRoleTitle,
+      facultyRoleTitle: tier.facultyRoleTitle,
+      studentRoleTitle: tier.studentRoleTitle,
+      academicTermLabel: tier.academicTermLabel,
+      studentGovernanceTitle: tier.studentGovernanceTitle,
+      features: tier.features
+    }
+  };
+  return { ...tier, ...defaultProfiles[key], id: key };
+}
 
 /**
  * Gets the current active tenant identifier

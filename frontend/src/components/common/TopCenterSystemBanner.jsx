@@ -4,6 +4,12 @@ import { resolveApiUrl } from "../../api/client/apiConfig";
 import { clearFakeDataEntries } from "../../utils/freshSystemReset";
 import { getActiveSchoolName, getActiveSchoolLogo } from "../../utils/schoolBranding";
 import { isDemoSandboxMode, resetDemoSandboxData } from "../../utils/tokenStorage";
+import {
+  getActiveInstitutionType,
+  setActiveInstitutionType,
+  getInstitutionRoleProfile,
+  INSTITUTION_TIERS
+} from "../../utils/institutionScope";
 import { fetchTranslatedMessagesInbox } from "../../utils/languageTranslatorEngine";
 import UniversalLanguageTranslatorModal from "./UniversalLanguageTranslatorModal";
 import DirectSMSMessengerModal from "./DirectSMSMessengerModal";
@@ -64,6 +70,16 @@ export default function TopCenterSystemBanner({
   const [pwaPromptReady, setPwaPromptReady] = useState(
     typeof window !== "undefined" && Boolean(window.__gbsDeferredInstallPrompt)
   );
+  const [uiTheme, setUiTheme] = useState(() => {
+    try {
+      return localStorage.getItem("gbs_ui_theme") === "light" ? "light" : "navy";
+    } catch {
+      return "navy";
+    }
+  });
+  const [fullDisplayMode, setFullDisplayMode] = useState(false);
+  const [institutionType, setInstitutionTypeState] = useState(() => getActiveInstitutionType());
+  const institutionProfile = getInstitutionRoleProfile(institutionType);
 
   let currentUserRole = "GUEST";
   try {
@@ -93,22 +109,49 @@ export default function TopCenterSystemBanner({
 
     const handleOnline = () => setIsOnline(true);
     const handleOffline = () => setIsOnline(false);
+    const handleInstitutionChanged = () => setInstitutionTypeState(getActiveInstitutionType());
+
+    try {
+      document.body.classList.toggle("gbs-theme-light", uiTheme === "light");
+    } catch { }
 
     window.addEventListener("online", handleOnline);
     window.addEventListener("offline", handleOffline);
     window.addEventListener("gbs_school_branding_updated", handleUpdate);
     window.addEventListener("gbs_school_name_updated", handleUpdate);
     window.addEventListener("gbs_custom_logo_updated", handleUpdate);
+    window.addEventListener("gbs_institution_type_changed", handleInstitutionChanged);
     window.addEventListener("storage", handleUpdate);
+    window.addEventListener("storage", handleInstitutionChanged);
     return () => {
       window.removeEventListener("online", handleOnline);
       window.removeEventListener("offline", handleOffline);
       window.removeEventListener("gbs_school_branding_updated", handleUpdate);
       window.removeEventListener("gbs_school_name_updated", handleUpdate);
       window.removeEventListener("gbs_custom_logo_updated", handleUpdate);
+      window.removeEventListener("gbs_institution_type_changed", handleInstitutionChanged);
       window.removeEventListener("storage", handleUpdate);
+      window.removeEventListener("storage", handleInstitutionChanged);
     };
-  }, [isDevMode, institutionName]);
+  }, [isDevMode, institutionName, uiTheme]);
+
+  const handleToggleUiTheme = () => {
+    const next = uiTheme === "light" ? "navy" : "light";
+    setUiTheme(next);
+    try {
+      localStorage.setItem("gbs_ui_theme", next);
+      document.body.classList.toggle("gbs-theme-light", next === "light");
+      window.dispatchEvent(new CustomEvent("gbs_ui_theme_changed", { detail: { theme: next } }));
+    } catch { }
+  };
+
+  const handleToggleFullDisplay = () => {
+    const next = !fullDisplayMode;
+    setFullDisplayMode(next);
+    try {
+      document.body.classList.toggle("gbs-full-display-mode", next);
+    } catch { }
+  };
 
   useEffect(() => {
     const syncTranslatedBadge = async () => {
@@ -278,10 +321,10 @@ export default function TopCenterSystemBanner({
         margin: "0 auto 18px auto",
         textAlign: "center",
         padding: "12px 32px",
-        background: "linear-gradient(135deg, rgba(20, 29, 48, 0.96) 0%, rgba(30, 42, 68, 0.98) 50%, rgba(36, 51, 82, 0.96) 100%)",
-        border: "2.5px solid rgba(212, 175, 55, 0.65)",
+        background: "linear-gradient(135deg, rgba(6, 15, 30, 0.97) 0%, rgba(10, 25, 47, 0.98) 50%, rgba(15, 35, 71, 0.97) 100%)",
+        border: "2.5px solid rgba(212, 175, 55, 0.72)",
         borderRadius: "36px",
-        boxShadow: "0 14px 40px rgba(10, 16, 29, 0.78), 0 0 28px rgba(30, 42, 68, 0.55), inset 0 1px 0 rgba(255, 255, 255, 0.14)",
+        boxShadow: "0 14px 40px rgba(4, 10, 22, 0.78), 0 0 28px rgba(212, 175, 55, 0.16), inset 0 1px 0 rgba(255, 255, 255, 0.14)",
         width: "fit-content",
         maxWidth: "95vw",
         zIndex: 20
@@ -365,6 +408,58 @@ export default function TopCenterSystemBanner({
         <span style={{ color: isDevMode ? "#38bdf8" : "#34d399", fontWeight: "700" }}>
           {roleTitle}
         </span>
+        <span style={{ color: "#475569" }}>•</span>
+        <span
+          style={{
+            display: "inline-flex",
+            alignItems: "center",
+            gap: "5px",
+            padding: "3px 10px",
+            borderRadius: "12px",
+            background: "rgba(212, 175, 55, 0.16)",
+            border: "1px solid rgba(212, 175, 55, 0.45)",
+            color: "#f5d061",
+            fontWeight: "800"
+          }}
+          title={`Institution Operating Tier: ${institutionProfile.name}`}
+        >
+          {institutionProfile.icon} Tier: {institutionProfile.shortName}
+        </span>
+        <span style={{ color: "#475569" }}>•</span>
+        <button
+          type="button"
+          onClick={handleToggleUiTheme}
+          style={{
+            background: uiTheme === "light" ? "rgba(254, 243, 199, 0.22)" : "rgba(15, 35, 71, 0.85)",
+            border: "1px solid rgba(212, 175, 55, 0.55)",
+            color: "#f5d061",
+            fontSize: "0.75rem",
+            padding: "4px 12px",
+            borderRadius: "12px",
+            cursor: "pointer",
+            fontWeight: 800
+          }}
+          title="Switch between Light Canvas Mode and Deep Royal Navy Mode"
+        >
+          {uiTheme === "light" ? "☀️ Light Mode" : "🌙 Navy Mode"}
+        </button>
+        <button
+          type="button"
+          onClick={handleToggleFullDisplay}
+          style={{
+            background: fullDisplayMode ? "rgba(16, 185, 129, 0.24)" : "rgba(15, 35, 71, 0.75)",
+            border: `1px solid ${fullDisplayMode ? "#10b981" : "rgba(56, 189, 248, 0.45)"}`,
+            color: fullDisplayMode ? "#6ee7b7" : "#bae6fd",
+            fontSize: "0.75rem",
+            padding: "4px 10px",
+            borderRadius: "12px",
+            cursor: "pointer",
+            fontWeight: 800
+          }}
+          title="Expand dashboard workspace to full screen width"
+        >
+          {fullDisplayMode ? "↙ Standard View" : "↗ Full View"}
+        </button>
         <span style={{ color: "#475569" }}>•</span>
         <span
           style={{
@@ -580,6 +675,35 @@ export default function TopCenterSystemBanner({
           <span>🟡 DEMO SANDBOX MODE</span>
           <span>•</span>
           <span style={{ fontWeight: 600 }}>Identical live workflow trainer — up to {demoTrialUsage.maxPerModule} trial entries per module ({demoTrialUsage.totalUsed} created).</span>
+          <label style={{ display: "inline-flex", alignItems: "center", gap: "6px", fontSize: "0.74rem", fontWeight: 800, color: "#fef3c7" }}>
+            <span>🏫 Demo Institution:</span>
+            <select
+              aria-label="Demo Institution Tier Switcher"
+              value={institutionType}
+              onChange={(e) => {
+                const nextType = e.target.value;
+                setActiveInstitutionType(nextType);
+                setInstitutionTypeState(nextType);
+                setSyncFeedback(`🏫 Switched Demo Institution profile to ${INSTITUTION_TIERS[nextType]?.shortName || nextType}.`);
+                setTimeout(() => setSyncFeedback(null), 4000);
+              }}
+              style={{
+                background: "#081428",
+                color: "#f5d061",
+                border: "1px solid #d4af37",
+                borderRadius: "10px",
+                padding: "3px 8px",
+                fontSize: "0.73rem",
+                fontWeight: 800,
+                cursor: "pointer"
+              }}
+            >
+              <option value="NURSERY_TO_JHS">Nursery – JHS</option>
+              <option value="SENIOR_HIGH_SCHOOL">Senior High (SHS)</option>
+              <option value="TECHNICAL">Technical / TVET</option>
+              <option value="UNIVERSITY">University / Tertiary</option>
+            </select>
+          </label>
           <button
             type="button"
             onClick={() => {

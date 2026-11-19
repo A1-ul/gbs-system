@@ -1,6 +1,24 @@
 const prisma = require('../../core/database/prisma.client');
 const { AppError } = require('../../middleware/error.middleware');
 const authService = require('./auth.service');
+const { resolveTenantInstitutionType, getInstitutionProfile } = require('../../utils/institutionProfiles');
+
+const attachInstitutionMetadata = async (userObj, req) => {
+  if (!userObj) return null;
+  const resolvedInstType = await resolveTenantInstitutionType({
+    tenantId: userObj.tenantId || userObj.tenant?.id,
+    tenantCode: userObj.tenantCode || userObj.tenant?.code,
+    user: userObj,
+    req
+  });
+  userObj.institutionType = resolvedInstType;
+  userObj.institutionProfile = getInstitutionProfile(resolvedInstType);
+  userObj.tenant = {
+    ...(userObj.tenant || {}),
+    institutionType: resolvedInstType
+  };
+  return resolvedInstType;
+};
 
 const login = async (req, res, next) => {
   try {
@@ -57,6 +75,8 @@ const login = async (req, res, next) => {
       }
     }
 
+    await attachInstitutionMetadata(result?.user, req);
+
     res.cookie('jwt', result.accessToken, {
       httpOnly: true,
       secure: process.env.NODE_ENV === 'production',
@@ -85,6 +105,7 @@ const register = async (req, res, next) => {
     };
 
     const result = await authService.register(sanitizedBody);
+    await attachInstitutionMetadata(result?.user, req);
 
     if (result?.accessToken && !result?.requiresApproval) {
       res.cookie('jwt', result.accessToken, {
@@ -134,6 +155,7 @@ const getInstitutions = async (req, res, next) => {
 };
 
 const getMe = async (req, res) => {
+  await attachInstitutionMetadata(req.user, req);
   res.status(200).json({
     status: 'success',
     data: {

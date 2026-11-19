@@ -1212,6 +1212,251 @@ const getFacultyDirectives = async (tenantId, query = {}) => {
   return directives;
 };
 
+const { readPersistentStore, writePersistentStore } = require('../../core/database/persistentStore');
+const { resolveTenantInstitutionType } = require('../../utils/institutionProfiles');
+
+/**
+ * Computes exact per-tenant lists and counts of:
+ *  1) Students who did not take scheduled exams
+ *  2) Students who did not submit assignments
+ *  3) Students who have not been coming to school (absent / chronically absent)
+ */
+const getDefaultersReport = async (tenantId, query = {}, req = null) => {
+  const tidNum = parseInt(tenantId, 10) || 1;
+  const tidStr = String(tidNum);
+  const store = readPersistentStore();
+  const institutionType = await resolveTenantInstitutionType({ tenantId: tidNum, user: req?.user, req });
+
+  // 1. Gather enrolled students for this tenant
+  const studentMap = new Map();
+  const addStudent = (s) => {
+    if (!s) return;
+    const key = String(s.email || s.studentNumber || s.id || s.name || '').trim().toLowerCase();
+    if (!key) return;
+    const prev = studentMap.get(key) || {};
+    studentMap.set(key, {
+      id: prev.id || s.id || key,
+      name: s.name || prev.name || `${s.firstName || ''} ${s.lastName || ''}`.trim() || 'Enrolled Student',
+      email: s.email || prev.email || null,
+      phone: s.phone || prev.phone || null,
+      classOrLevel: s.classOrLevel || prev.classOrLevel || 'Enrolled Class'
+    });
+  };
+
+  try {
+    const dbStudents = await prisma.student.findMany({
+      where: { tenantId: tidNum },
+      include: { user: { select: { id: true, firstName: true, lastName: true, email: true } } }
+    });
+    dbStudents.forEach((st) =>
+      addStudent({
+        id: st.userId || st.id,
+        studentNumber: st.studentNumber || st.admissionNumber,
+        name: st.user ? `${st.user.firstName || ''} ${st.user.lastName || ''}`.trim() : st.fullName || `Student #${st.id}`,
+        email: st.user?.email || st.email,
+        classOrLevel: st.gradeLevel || st.className || 'Assigned Class'
+      })
+    );
+  } catch { }
+
+  try {
+    const dbStudentUsers = await prisma.user.findMany({
+      where: { tenantId: tidNum, role: 'STUDENT', isDeleted: false },
+      include: { registrationProfile: { select: { phone: true } } }
+    });
+    dbStudentUsers.forEach((u) =>
+      addStudent({
+        id: u.id,
+        name: `${u.firstName || ''} ${u.lastName || ''}`.trim(),
+        email: u.email,
+        phone: u.registrationProfile?.phone || null
+      })
+    );
+  } catch { }
+
+  [...(store.registeredUsers || []), ...(store.users || [])]
+    .filter((u) => u && String(u.role || '').toUpperCase() === 'STUDENT' && String(u.tenantId || '1') === tidStr && !u.isDeleted)
+    .forEach((u) =>
+      addStudent({
+        id: u.id,
+        name: `${u.firstName || ''} ${u.lastName || ''}`.trim(),
+        email: u.email,
+        phone: u.phone || null,
+        classOrLevel: u.targetGrade || u.level || 'Registered Student'
+      })
+    );
+
+  // Merge any persisted teacher/client compliance roster items for this tenant
+  const customSnap = (store.studentComplianceRecords || {})[tidStr] || null;
+  if (customSnap && Array.isArray(customSnap.students)) {
+    customSnap.students.forEach(addStudent);
+  }
+
+  const allStudents = Array.from(studentMap.values());
+
+  // 2. Exam Non-Participants
+  let didNotTakeExam = [];
+  if (customSnap && Array.isArray(customSnap.examNonParticipants) && customSnap.examNonParticipants.length > 0) {
+    didNotTakeExam = customSnap.examNonParticipants;
+  } else {
+    try {
+      const scheduledExams = [
+        ...(await prisma.exam.findMany({ where: { tenantId: tidNum } }).catch(() => [])),
+        ...((store.universityExams || []).filter((e) => String(e.tenantId || '1') === tidStr))
+      ];
+      const examSheets = [
+        ...(await prisma.examResult?.findMany({ where: { tenantId: tidNum } }).catch(() => []) || []),
+        ...((store.examAnswerSheets || []).filter((s) => String(s.tenantId || '1') === tidStr)),
+        ...((store.universityCourseResults || []).filter((r) => String(r.tenantId || '1') === tidStr))
+      ];
+      if (scheduledExams.length > 0 && allStudents.length > 0) {
+        const participants = new Set(
+          examSheets
+            .map((s) => String(s.studentEmail || s.studentName || s.studentId || '').trim().toLowerCase())
+            .filter(Boolean)
+        );
+        const latestExamTitle = scheduledExams[0]?.title || scheduledExams[0]?.courseTitle || scheduledExams[0]?.courseCode || 'Scheduled Examination';
+        didNotTakeExam = allStudents
+          .filter(
+            (st) =>
+              !participants.has(String(st.email || '').toLowerCase()) &&
+              !participants.has(String(st.name || '').toLowerCase()) &&
+              !participants.has(String(st.id || '').toLowerCase())
+          )
+          .map((st) => ({
+            studentId: st.id,
+            studentName: st.name,
+            email: st.email,
+            phone: st.phone,
+            classOrLevel: st.classOrLevel,
+            missedExamTitle: latestExamTitle,
+            status: 'DID_NOT_TAKE_EXAM'
+          }));
+      }
+    } catch { }
+  }
+
+  // 3. Assignment Non-Submitters
+  let didNotSubmitAssignment = [];
+  if (customSnap && Array.isArray(customSnap.assignmentNonSubmitters) && customSnap.assignmentNonSubmitters.length > 0) {
+    didNotSubmitAssignment = customSnap.assignmentNonSubmitters;
+  } else {
+    try {
+      const assignments = await prisma.assignment.findMany({
+        where: { tenantId: tidNum },
+        include: { submissions: true }
+      }).catch(() => []);
+      if (assignments.length > 0 && allStudents.length > 0) {
+        const submitterIds = new Set();
+        assignments.forEach((a) => {
+          (a.submissions || []).forEach((sub) => {
+            if (sub.studentId != null) submitterIds.add(String(sub.studentId).toLowerCase());
+            if (sub.studentEmail) submitterIds.add(String(sub.studentEmail).toLowerCase());
+            if (sub.studentName) submitterIds.add(String(sub.studentName).toLowerCase());
+          });
+        });
+        const latestAssignTitle = assignments[0]?.title || 'Term Homework / Assignment';
+        didNotSubmitAssignment = allStudents
+          .filter(
+            (st) =>
+              !submitterIds.has(String(st.id || '').toLowerCase()) &&
+              !submitterIds.has(String(st.email || '').toLowerCase()) &&
+              !submitterIds.has(String(st.name || '').toLowerCase())
+          )
+          .map((st) => ({
+            studentId: st.id,
+            studentName: st.name,
+            email: st.email,
+            phone: st.phone,
+            classOrLevel: st.classOrLevel,
+            missingAssignmentTitle: latestAssignTitle,
+            dueDate: assignments[0]?.dueDate || null,
+            status: 'MISSING_ASSIGNMENT'
+          }));
+      }
+    } catch { }
+  }
+
+  // 4. Chronic Absentees / Students Not Coming to School
+  let notAttendingSchool = [];
+  if (customSnap && Array.isArray(customSnap.chronicAbsentees) && customSnap.chronicAbsentees.length > 0) {
+    notAttendingSchool = customSnap.chronicAbsentees;
+  } else {
+    try {
+      const attendanceLogs = await prisma.attendanceRecord.findMany({
+        where: { tenantId: tidNum },
+        orderBy: { date: 'desc' }
+      }).catch(() => []);
+      const absentMap = new Map();
+      attendanceLogs.forEach((rec) => {
+        const sKey = String(rec.studentId || '');
+        if (!sKey) return;
+        const curr = absentMap.get(sKey) || { absentDays: 0, presentDays: 0, lastSeenDate: null };
+        if (String(rec.status || '').toUpperCase() === 'ABSENT') {
+          curr.absentDays += 1;
+        } else if (['PRESENT', 'LATE'].includes(String(rec.status || '').toUpperCase())) {
+          curr.presentDays += 1;
+          if (!curr.lastSeenDate) curr.lastSeenDate = rec.date;
+        }
+        absentMap.set(sKey, curr);
+      });
+      allStudents.forEach((st) => {
+        const stats = absentMap.get(String(st.id || ''));
+        if (stats && stats.absentDays > 0 && stats.absentDays >= stats.presentDays) {
+          notAttendingSchool.push({
+            studentId: st.id,
+            studentName: st.name,
+            email: st.email,
+            phone: st.phone,
+            classOrLevel: st.classOrLevel,
+            absentDays: stats.absentDays,
+            presentDays: stats.presentDays,
+            lastSeenDate: stats.lastSeenDate,
+            status: 'NOT_ATTENDING_SCHOOL'
+          });
+        }
+      });
+    } catch { }
+  }
+
+  return {
+    institutionType,
+    tenantId: tidNum,
+    totalStudentsEvaluated: allStudents.length,
+    didNotTakeExam: {
+      count: didNotTakeExam.length,
+      students: didNotTakeExam
+    },
+    didNotSubmitAssignment: {
+      count: didNotSubmitAssignment.length,
+      students: didNotSubmitAssignment
+    },
+    notAttendingSchool: {
+      count: notAttendingSchool.length,
+      students: notAttendingSchool
+    },
+    generatedAt: new Date().toISOString()
+  };
+};
+
+const syncDefaultersSnapshot = async (tenantId, payload = {}) => {
+  const tidStr = String(parseInt(tenantId, 10) || 1);
+  writePersistentStore((curr) => ({
+    ...curr,
+    studentComplianceRecords: {
+      ...(curr.studentComplianceRecords || {}),
+      [tidStr]: {
+        students: Array.isArray(payload.students) ? payload.students : [],
+        examNonParticipants: Array.isArray(payload.examNonParticipants) ? payload.examNonParticipants : [],
+        assignmentNonSubmitters: Array.isArray(payload.assignmentNonSubmitters) ? payload.assignmentNonSubmitters : [],
+        chronicAbsentees: Array.isArray(payload.chronicAbsentees) ? payload.chronicAbsentees : [],
+        updatedAt: new Date().toISOString()
+      }
+    }
+  }));
+  return await getDefaultersReport(tenantId);
+};
+
 module.exports = {
   getClasses,
   getClassById,
@@ -1234,5 +1479,7 @@ module.exports = {
   submitTeacherLessonPlan,
   vetTeacherLessonPlan,
   broadcastFacultyDirective,
-  getFacultyDirectives
+  getFacultyDirectives,
+  getDefaultersReport,
+  syncDefaultersSnapshot
 };

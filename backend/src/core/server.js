@@ -188,6 +188,7 @@ app.use('/api/v1/tenants', tenantRoutes);
 app.use('/api/v1/users', userRoutes);
 app.use('/api/v1/academics', academicRoutes);
 app.use('/api/v1/academic', academicRoutes);
+app.use('/api/v1/university', require('../modules/university/university.routes'));
 app.use('/api/v1/finance', financeRoutes);
 app.use('/api/v1/fees', financeRoutes);
 app.use('/api/v1/payments', require('../modules/payments/payments.routes'));

@@ -6,12 +6,12 @@
 .dashboard-container {
   min-height: 100vh;
   position: relative;
-  background-color: #24140D;
+  background-color: #081428;
   background-image:
-    radial-gradient(circle at 15% 15%, rgba(92, 24, 34, 0.72) 0%, transparent 45%),
-    radial-gradient(circle at 85% 20%, rgba(212, 175, 55, 0.24) 0%, transparent 45%),
-    radial-gradient(circle at 50% 85%, rgba(75, 44, 27, 0.62) 0%, transparent 50%),
-    linear-gradient(135deg, #24140D 0%, #4A1219 44%, #3A2014 75%, #27272A 100%);
+    radial-gradient(circle at 15% 15%, rgba(212, 175, 55, 0.18) 0%, transparent 45%),
+    radial-gradient(circle at 85% 20%, rgba(107, 29, 47, 0.22) 0%, transparent 45%),
+    radial-gradient(circle at 50% 85%, rgba(15, 35, 71, 0.62) 0%, transparent 50%),
+    linear-gradient(135deg, #060f1e 0%, #081428 44%, #0f2347 75%, #0a192f 100%);
   background-attachment: fixed;
   color: #f8fafc;
   font-family: 'Plus Jakarta Sans', 'Inter', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;

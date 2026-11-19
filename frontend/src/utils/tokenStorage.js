@@ -78,6 +78,22 @@ export function saveAuthSession(data = {}) {
       localStorage.setItem("gbs_auth_role", user.role);
     }
 
+    const rawInstType = user.institutionType || user.tenant?.institutionType;
+    if (rawInstType) {
+      const upperInst = String(rawInstType).trim().toUpperCase();
+      const normInst = upperInst.includes("UNIV") || upperInst.includes("TERTIARY")
+        ? "UNIVERSITY"
+        : upperInst.includes("TECH") || upperInst.includes("TVET") || upperInst.includes("VOCAT")
+          ? "TECHNICAL"
+          : upperInst.includes("SHS") || upperInst.includes("SENIOR")
+            ? "SENIOR_HIGH_SCHOOL"
+            : "NURSERY_TO_JHS";
+      localStorage.setItem("gbs_institution_type", normInst);
+      if (typeof window !== "undefined") {
+        window.dispatchEvent(new CustomEvent("gbs_institution_type_changed", { detail: { type: normInst } }));
+      }
+    }
+
     // Determine and enforce unified system mode across all mode keys
     const previousMode = localStorage.getItem("gbs_system_mode") || localStorage.getItem("gbs_tenant_mode") || "";
     const isDemoUser = isBuiltInDemoUser(user);

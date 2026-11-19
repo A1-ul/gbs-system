@@ -204,7 +204,7 @@ export default function TenantOnboardingFirstPage() {
   // Nursery – JHS: GH₵ 3 | SHS: GH₵ 5 | University: GH₵ 10
   const currentRatePerStudent = useMemo(() => {
     if (form.institutionType === "UNIVERSITY") return activeRates.UNIVERSITY || 10;
-    if (form.institutionType === "SENIOR_HIGH_SCHOOL") return activeRates.SHS || 5;
+    if (form.institutionType === "SENIOR_HIGH_SCHOOL" || form.institutionType === "TECHNICAL") return activeRates.SHS || 5;
     return activeRates.JHS || 3;
   }, [form.institutionType, activeRates]);
 
@@ -661,7 +661,8 @@ export default function TenantOnboardingFirstPage() {
                   required
                 >
                   <option value="NURSERY_TO_JHS">Nursery / Primary / Junior High School (JHS)</option>
-                  <option value="SENIOR_HIGH_SCHOOL">Senior High School (SHS) / Technical Institute</option>
+                  <option value="SENIOR_HIGH_SCHOOL">Senior High School (SHS)</option>
+                  <option value="TECHNICAL">Technical &amp; Vocational Institute (TVET)</option>
                   <option value="UNIVERSITY">University / Tertiary College / Postgraduate</option>
                 </select>
               </div>

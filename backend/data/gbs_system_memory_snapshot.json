@@ -1,7 +1,7 @@
 {
   "systemName": "GBS MANAGEMENT SYSTEM (Global Brightest Stars Educational Management System)",
-  "version": "2.6.1-PRODUCTION",
-  "savedAt": "2026-11-19T00:46:00Z",
+  "version": "2.7.0-PRODUCTION",
+  "savedAt": "2026-11-19T17:40:00Z",
   "status": "PRODUCTION_READY_VERIFIED",
   "architecture": {
     "frontend": {
@@ -10,13 +10,18 @@
       "apiClientFile": "frontend/src/api/client/apiClient.js",
       "offlineSyncFile": "frontend/src/utils/offlineSync.js",
       "pricingEngineFile": "frontend/src/utils/pricingEngine.js",
+      "institutionScopeFile": "frontend/src/utils/institutionScope.js (NURSERY_TO_JHS, SENIOR_HIGH_SCHOOL, TECHNICAL, UNIVERSITY profiles & Demo Switcher)",
+      "uniformCrestPalette": "Royal Navy (#081428 / #0f2347) + Regal Gold (#d4af37) + Light Canvas (gbs-theme-light) & Full View (gbs-full-display-mode)",
+      "socialAndFaviconBranding": "frontend/public/og-gbs-crest.jpg + favicon.ico + logo.png + icons/icon-*.png generated from official GBS Crest",
       "topicVideoComponent": "frontend/src/components/common/ClassTopicVideoPlatform.jsx",
+      "universityOperationsComponent": "frontend/src/components/common/UniversityOperationsPanel.jsx",
+      "defaultersComplianceComponent": "frontend/src/components/common/StudentDefaultersCompliancePanel.jsx",
       "movableAiComponent": "frontend/src/modules/developer-platform/components/DeveloperMovableAIAssistant.jsx",
       "voiceAssistantComponent": "frontend/src/components/common/GBSVoiceAssistant.jsx",
       "translatorComponent": "frontend/src/components/common/UniversalLanguageTranslator.jsx",
       "directSmsModalComponent": "frontend/src/components/common/DirectSMSMessengerModal.jsx",
       "directSmsInboxComponent": "frontend/src/components/common/DirectSMSInboxPanel.jsx",
-      "pwaManifestAndSw": "frontend/public/manifest.webmanifest + frontend/public/sw.js"
+      "pwaManifestAndSw": "frontend/public/manifest.json + frontend/public/sw.js (gbs-cache-v2026.13)"
     },
     "backend": {
       "runtime": "Node.js + Express + Socket.IO",
@@ -26,6 +31,9 @@
       "systemMemorySnapshotPath": "backend/data/gbs_system_memory_snapshot.json",
       "authMiddleware": "backend/src/middleware/auth.middleware.js",
       "rcceErrorHandler": "backend/src/rcce/systemErrorHandler.js",
+      "institutionProfilesUtil": "backend/src/utils/institutionProfiles.js",
+      "universityRoutes": "backend/src/modules/university/university.routes.js (/internships, /streams, /governance, /exams, /results, /advance-student — strictly UNIVERSITY only)",
+      "defaultersComplianceRoutes": "backend/src/modules/academic/academic.routes.js (/defaulters-report, /defaulters-report/sync)",
       "staffApprovalRoutes": "backend/src/modules/user/user.routes.js (/pending-staff, /approve-staff, /reject-staff)",
       "smsGatewayAndInboxService": "backend/src/modules/sms/sms.service.js (Arkesel/Hubtel/mNotify/Twilio + persistent /api/v1/sms/inbox)",
       "paymentGatewaysModule": "backend/src/modules/finance/payments/ (Paystack, Hubtel, MTN MoMo, Telecel Cash, AT Money, Visa/Mastercard, Bank Transfer)",
@@ -51,6 +59,7 @@
     "ratesPerStudentPerMonthGHS": {
       "NURSERY_TO_JHS": 3,
       "SHS": 5,
+      "TECHNICAL": 5,
       "UNIVERSITY": 10
     },
     "formula": "monthlyCharge = activeStudents * ratePerStudent; grossTotal = monthlyCharge * months; discountAmount = grossTotal * (discountPct / 100); netTotalPayment = grossTotal - discountAmount",
@@ -296,15 +305,20 @@
       "rootCause": "systemErrorHandler.js performed case-sensitive rawMessage.includes('denied') and excluded 'pending', 'approval', 'approved', 'rejected', 'locked', 'suspended', and 'deleted' keywords.",
       "resolution": "Updated backend/src/rcce/systemErrorHandler.js to match case-insensitively across all descriptive auth/approval/lockout phrases so users always see the exact reason and action required.",
       "status": "PERMANENTLY_GUARDED"
+    },
+    {
+      "issueCode": "DIAG-INSTITUTION-SEPARATION-UNIVERSITY",
+      "symptom": "University workflows (Internships, SRC Manifestos, Regular/Evening/Sandwich/Weekend Streams, Exam-Pass Graduation to Alumni), Student Defaulters Monitor, Crest Link Logo, and Uniform Navy/Gold Palette required across Live & Demo",
+      "rootCause": "Institutions lacked strict backend tier separation for JHS/SHS/Technical vs University, dashboards mixed brown/clashing colors, and favicons used old placeholder cross/DB assets.",
+      "resolution": "Created institutionProfiles.js + /api/v1/university/* (strictly 403 for JHS/SHS/TECHNICAL), /api/v1/academic/defaulters-report, UniversityOperationsPanel.jsx & StudentDefaultersCompliancePanel.jsx across Student/Teacher/Headmaster dashboards, unified Royal Navy (#081428/#0f2347) + Regal Gold (#d4af37) palette with Light Canvas & Full View toggles, Demo Institution switcher, and regenerated GBS Crest favicons + OpenGraph og-gbs-crest.jpg banner.",
+      "status": "PERMANENTLY_GUARDED"
     }
   ],
   "verificationSummary": {
-    "backendTestSuitesPassed": "19/19 across 6 suites (user-approval-and-sms, auth-and-voicenote, translator-pwa-demo-rbac, transport-and-demo-limit, payments, payments-http)",
-    "frontendBuildStatus": "vite build passed (index-Y_HUwTjQ.js synced to backend/public)",
-    "roleAndPortalEndpointsPassed": "62/62",
-    "devControlAndAuthEndpointsPassed": "33/33",
-    "staffApprovalSmsAndTranslatorVerified": "2026-11-19 Live Production & Hybrid Parity",
-    "browserRoutesWalkedThrough": "9/9",
+    "backendTestSuitesPassed": "23/23 across 7 suites (auth-and-voicenote, payments, payments-http, translator-pwa-demo-rbac, transport-and-demo-limit, university-and-defaulters, user-approval-and-sms)",
+    "frontendBuildStatus": "vite build passed (index-CKpfQu_Q.js synced to backend/public)",
+    "institutionSeparationAndUniversityVerified": "2026-11-19 Live Production & Demo Sandbox Parity",
+    "browserAssetsRegenerated": "favicon.ico, logo.png, icon-192.png, icon-512.png, apple-touch-icon.png, og-gbs-crest.jpg",
     "uncaughtBrowserConsoleErrors": 0,
     "astUndeclaredErrors": 0
   }

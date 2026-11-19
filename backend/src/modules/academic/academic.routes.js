@@ -44,4 +44,8 @@ router.put('/lesson-plans/:id/vet', restrictTo('SUPER_ADMIN', 'ADMIN', 'DEVELOPE
 router.post('/lesson-plans/directive', restrictTo('SUPER_ADMIN', 'ADMIN', 'DEVELOPER'), academicController.broadcastFacultyDirective);
 router.get('/lesson-plans/directives', academicController.getFacultyDirectives);
 
+// 6. Student Compliance & Non-Participants Ledger (Missed Exams, Missing Assignments, Chronic Absentees)
+router.get('/defaulters-report', restrictTo('SUPER_ADMIN', 'ADMIN', 'TEACHER', 'HR', 'DEVELOPER'), academicController.getDefaultersReport);
+router.post('/defaulters-report/sync', restrictTo('SUPER_ADMIN', 'ADMIN', 'TEACHER', 'DEVELOPER'), academicController.syncDefaultersReport);
+
 module.exports = router;

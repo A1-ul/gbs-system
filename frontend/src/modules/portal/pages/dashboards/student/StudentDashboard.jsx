@@ -12,6 +12,8 @@ import OfficialPaymentGatewayModal from "../../../../../components/common/Offici
 import OfficialInstitutionalSeal from "../../../../../components/common/OfficialInstitutionalSeal";
 import StudentCooperativeConferenceModal from "../../../../../components/common/StudentCooperativeConferenceModal";
 import { getActiveSchoolName, getActiveSchoolLogo } from "../../../../../utils/schoolBranding";
+import { getActiveInstitutionType, getInstitutionRoleProfile } from "../../../../../utils/institutionScope";
+import UniversityOperationsPanel from "../../../../../components/common/UniversityOperationsPanel";
 import { isDemoSandboxMode } from "../../../../../utils/tokenStorage";
 import "./StudentDashboard.css";
 
@@ -135,6 +137,18 @@ export function StudentDashboard({ initialTab } = {}) {
   }, []);
   const [loading, setLoading] = useState(false);
   const [feedback, setFeedback] = useState(null);
+  const [institutionType, setInstitutionType] = useState(() => getActiveInstitutionType());
+  const institutionProfile = getInstitutionRoleProfile(institutionType);
+
+  useEffect(() => {
+    const syncTier = () => setInstitutionType(getActiveInstitutionType());
+    window.addEventListener("gbs_institution_type_changed", syncTier);
+    window.addEventListener("storage", syncTier);
+    return () => {
+      window.removeEventListener("gbs_institution_type_changed", syncTier);
+      window.removeEventListener("storage", syncTier);
+    };
+  }, []);
 
   useEffect(() => {
     if (feedback && typeof window !== "undefined" && typeof window.showGBSOpenNotice === "function") {
@@ -1943,8 +1957,8 @@ export function StudentDashboard({ initialTab } = {}) {
               }}
             />
             <div className="role-brand-text">
-              <span className="role-portal-badge" style={{ color: "#a855f7", fontSize: "0.95rem", fontWeight: "900", letterSpacing: "0.8px" }}>
-                🎓 STUDENT LEARNING PORTAL • OFFICIAL TENANT
+              <span className="role-portal-badge" style={{ color: "#38bdf8", fontSize: "0.95rem", fontWeight: "900", letterSpacing: "0.8px" }}>
+                🎓 {institutionProfile.studentRoleTitle.toUpperCase()} PORTAL • {institutionProfile.shortName.toUpperCase()}
               </span>
             </div>
           </div>
@@ -2503,6 +2517,16 @@ export function StudentDashboard({ initialTab } = {}) {
             >
               🎙️ Cooperative Voice & Video Conferencing
             </button>
+            {institutionType === "UNIVERSITY" && (
+              <button
+                type="button"
+                className={`role-tab-btn ${activeTab === "university" ? "active" : ""}`}
+                onClick={() => setActiveTab("university")}
+                style={{ borderLeft: "3px solid #d4af37", color: activeTab === "university" ? "#ffffff" : "#f5d061", fontWeight: 800 }}
+              >
+                💼 University Internships, Streams &amp; SRC
+              </button>
+            )}
           </nav>
 
           {/* TAB 1: TIMETABLE */}
@@ -5987,6 +6011,14 @@ export function StudentDashboard({ initialTab } = {}) {
                 </div>
               </div>
             </div>
+          )}
+
+          {activeTab === "university" && (
+            <UniversityOperationsPanel
+              mode="STUDENT"
+              currentUser={studentProfile}
+              onFeedback={(msg) => setFeedback({ type: "success", message: msg })}
+            />
           )}
         </main>
       </div>

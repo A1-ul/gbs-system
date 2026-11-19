@@ -14,6 +14,9 @@ import { navigateToDetail } from "../../../../../utils/universalNavigation";
 import FileUploadVerificationCard from "../../../../../components/common/FileUploadVerificationCard";
 import DigitalSignaturePadModal from "../../../../../components/common/DigitalSignaturePadModal";
 import { getActiveSchoolName, getActiveSchoolLogo, saveActiveSchoolBranding, getSchoolBrandingNotificationState } from "../../../../../utils/schoolBranding";
+import { getActiveInstitutionType, getInstitutionRoleProfile } from "../../../../../utils/institutionScope";
+import UniversityOperationsPanel from "../../../../../components/common/UniversityOperationsPanel";
+import StudentDefaultersCompliancePanel from "../../../../../components/common/StudentDefaultersCompliancePanel";
 import { openUrlSafely } from "../../../../../utils/safeWindow";
 import { isDemoSandboxMode } from "../../../../../utils/tokenStorage";
 import { checkDemoEntryLimit, trackDemoEntryCreated } from "../../../../../utils/demoLimitGuard";
@@ -104,6 +107,18 @@ export function AdminDashboard({ initialTab } = {}) {
   };
   const [loading, setLoading] = useState(false);
   const [feedback, setFeedback] = useState(null);
+  const [institutionType, setInstitutionType] = useState(() => getActiveInstitutionType());
+  const institutionProfile = getInstitutionRoleProfile(institutionType);
+
+  useEffect(() => {
+    const syncTier = () => setInstitutionType(getActiveInstitutionType());
+    window.addEventListener("gbs_institution_type_changed", syncTier);
+    window.addEventListener("storage", syncTier);
+    return () => {
+      window.removeEventListener("gbs_institution_type_changed", syncTier);
+      window.removeEventListener("storage", syncTier);
+    };
+  }, []);
 
   useEffect(() => {
     if (feedback && typeof window !== "undefined" && typeof window.showGBSOpenNotice === "function") {
@@ -5307,8 +5322,8 @@ export function AdminDashboard({ initialTab } = {}) {
                 }}
               />
               <div className="role-brand-text">
-                <span className="role-portal-badge" style={{ color: "#38bdf8", fontSize: "0.95rem", fontWeight: "900", letterSpacing: "0.8px" }}>
-                  🏫 {(reportSchoolName || getActiveSchoolName(currentUser)).toUpperCase()} • HEADMASTER COMMAND CENTER
+                <span className="role-portal-badge" style={{ color: "#f5d061", fontSize: "0.95rem", fontWeight: "900", letterSpacing: "0.8px" }}>
+                  🏫 {(reportSchoolName || getActiveSchoolName(currentUser)).toUpperCase()} • {institutionProfile.leadershipRoleTitle.toUpperCase()} ({institutionProfile.shortName.toUpperCase()})
                 </span>
               </div>
             </div>
@@ -6179,6 +6194,24 @@ export function AdminDashboard({ initialTab } = {}) {
             >
               📹 Inbuilt Campus CCTV & Mobile Link (Headmaster Only)
             </button>
+            <button
+              type="button"
+              className={`role-tab-btn ${activeTab === "defaulters" ? "active" : ""}`}
+              onClick={() => setActiveTab("defaulters")}
+              style={{ borderLeft: "3px solid #f59e0b", color: activeTab === "defaulters" ? "#fde68a" : "#fcd34d", fontWeight: 800 }}
+            >
+              📋 Missed Exams, Unsubmitted Assignments &amp; Absentees
+            </button>
+            {institutionType === "UNIVERSITY" && (
+              <button
+                type="button"
+                className={`role-tab-btn ${activeTab === "university" ? "active" : ""}`}
+                onClick={() => setActiveTab("university")}
+                style={{ borderLeft: "3px solid #d4af37", color: activeTab === "university" ? "#ffffff" : "#f5d061", fontWeight: 800 }}
+              >
+                🎓 University Hub (Internships, Streams, SRC &amp; Graduation)
+              </button>
+            )}
           </nav>
 
           {/* HEADMASTER EXECUTIVE LIVE METRICS BAR: Students Admitted, Students Boarding Bus, Vetting Desk & Inbuilt CCTV */}
@@ -9907,49 +9940,6 @@ export function AdminDashboard({ initialTab } = {}) {
                             setCommRecipientName("");
                           }}
                           className="btn-secondary"
-                          style={{ padding: "12px 16px", fontSize: "0.85rem" }}
-                        >
-                          Reset Form
-                        </button>
-                      </div>
-                    </>
-                  )}
-                </form>
-
-                {/* Right: Real-Time Mobile Device Preview Mockup */}
-                <div
-                  style={{
-                    background: "#090d16",
-                    border: "1px solid rgba(255, 255, 255, 0.08)",
-                    borderRadius: "14px",
-                    padding: "1.5rem",
-                    display: "flex",
-                    flexDirection: "column"
-                  }}
-                >
-                  <h3 style={{ margin: "0 0 1rem", fontSize: "1.1rem", color: "#f8fafc", display: "flex", alignItems: "center", gap: "8px" }}>
-                    <span>📲</span> Live Recipient Screen Preview
-                  </h3>
-
-                  {/* Smartphone Frame */}
-                  <div
-                    style={{
-                      flex: 1,
-                      background: commChannel === "WHATSAPP" ? "#0b141a" : "#0f172a",
-                      border: "3px solid #334155",
-                      borderRadius: "24px",
-                      padding: "16px",
-                      position: "relative",
-                      boxShadow: "0 10px 25px rgba(0, 0, 0, 0.5)",
-                      display: "flex",
-                      flexDirection: "column",
-                      justifyContent: "space-between"
-                    }}
-                  >
-                    {/* Device Status Bar */}
-                    <div style={{ display: "flex", justifyContent: "space-between", fontSize: "0.7rem", color: "#94a3b8", borderBottom: "1px solid rgba(255, 255, 255, 0.08)", paddingBottom: "8px", marginBottom: "12px" }}>
-                      <span>09:41</span>
-                      <span>LTE • 5G • 100%</span>
                     </div>
 
                     {/* App Header */}
@@ -11784,6 +11774,20 @@ export function AdminDashboard({ initialTab } = {}) {
                 </div>
               </div>
             </div>
+          )}
+
+          {activeTab === "defaulters" && (
+            <StudentDefaultersCompliancePanel
+              onFeedback={(msg) => setFeedback({ type: "success", message: msg })}
+            />
+          )}
+
+          {activeTab === "university" && (
+            <UniversityOperationsPanel
+              mode="ADMIN"
+              currentUser={currentUser}
+              onFeedback={(msg) => setFeedback({ type: "success", message: msg })}
+            />
           )}
         </main>
 

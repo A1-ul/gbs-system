@@ -9,11 +9,14 @@ import { getUserAvatar } from "../../../../../utils/userAvatars";
 import { offlineSyncEngine } from "../../../../../utils/offlineSync";
 import {
   getActiveInstitutionType,
+  getInstitutionRoleProfile,
   getAllowedClassesForCurrentTier,
   getAllowedSubjectsForCurrentTier,
   isLevelPermitted,
   INSTITUTION_TIERS
 } from "../../../../../utils/institutionScope";
+import UniversityOperationsPanel from "../../../../../components/common/UniversityOperationsPanel";
+import StudentDefaultersCompliancePanel from "../../../../../components/common/StudentDefaultersCompliancePanel";
 import UniversalRoleGuideModal from "../../../../../components/common/UniversalRoleGuideModal";
 import ClassTopicVideoPlatform from "../../../../../components/common/ClassTopicVideoPlatform";
 import { navigateToDetail } from "../../../../../utils/universalNavigation";
@@ -182,6 +185,18 @@ export default function TeacherDashboard() {
   }, []);
   const [loading, setLoading] = useState(false);
   const [feedback, setFeedback] = useState(null);
+  const [institutionType, setInstitutionType] = useState(() => getActiveInstitutionType());
+  const institutionProfile = getInstitutionRoleProfile(institutionType);
+
+  useEffect(() => {
+    const syncTier = () => setInstitutionType(getActiveInstitutionType());
+    window.addEventListener("gbs_institution_type_changed", syncTier);
+    window.addEventListener("storage", syncTier);
+    return () => {
+      window.removeEventListener("gbs_institution_type_changed", syncTier);
+      window.removeEventListener("storage", syncTier);
+    };
+  }, []);
 
   useEffect(() => {
     if (feedback && typeof window !== "undefined" && typeof window.showGBSOpenNotice === "function") {
@@ -4029,7 +4044,7 @@ export default function TeacherDashboard() {
             />
             <div className="role-brand-text">
               <span className="role-portal-badge" style={{ color: "#34d399", fontSize: "0.95rem", fontWeight: "900", letterSpacing: "0.8px" }}>
-                👨‍🏫 TEACHER ACADEMIC SUITE • OFFICIAL TENANT
+                👨‍🏫 {institutionProfile.facultyRoleTitle.toUpperCase()} SUITE • {institutionProfile.shortName.toUpperCase()}
               </span>
             </div>
           </div>
@@ -4493,6 +4508,24 @@ export default function TeacherDashboard() {
             >
               👤 Faculty Profile
             </button>
+            <button
+              type="button"
+              className={`role-tab-btn ${activeTab === "defaulters" ? "active" : ""}`}
+              onClick={() => setActiveTab("defaulters")}
+              style={{ borderLeft: "3px solid #f59e0b", color: activeTab === "defaulters" ? "#fde68a" : "#fcd34d", fontWeight: 800 }}
+            >
+              📋 Defaulters (Exams / Assignments / Attendance)
+            </button>
+            {institutionType === "UNIVERSITY" && (
+              <button
+                type="button"
+                className={`role-tab-btn ${activeTab === "university" ? "active" : ""}`}
+                onClick={() => setActiveTab("university")}
+                style={{ borderLeft: "3px solid #d4af37", color: activeTab === "university" ? "#ffffff" : "#f5d061", fontWeight: 800 }}
+              >
+                🎓 University Lecturer (Internships, Exams &amp; Graduation)
+              </button>
+            )}
           </nav>
 
           {/* ======================================================== */}
@@ -9738,41 +9771,6 @@ export default function TeacherDashboard() {
                                   fontWeight: 800
                                 }}
                               >
-                                📌 {bp.versionTag || "v2026.1 Official"} • {bp.numberOfWeeks} Weeks Spread
-                              </span>
-                            </div>
-                            <h3 style={{ margin: 0, color: "#f8fafc", fontSize: "1.08rem", fontWeight: 800 }}>
-                              📘 {bp.subjectName}
-                            </h3>
-                            <span style={{ fontSize: "0.74rem", color: "#94a3b8" }}>
-                              {bp.frameworkAuthority}
-                            </span>
-                          </div>
-
-                          <div style={{ display: "flex", gap: "6px", flexWrap: "wrap" }}>
-                            <button
-                              type="button"
-                              onClick={() => handleDownloadSubjectCurriculum(bp, false)}
-                              style={{
-                                background: "linear-gradient(135deg, #059669, #10b981)",
-                                color: "#ffffff",
-                                border: "none",
-                                borderRadius: "8px",
-                                padding: "7px 13px",
-                                fontSize: "0.78rem",
-                                fontWeight: 800,
-                                cursor: "pointer",
-                                display: "inline-flex",
-                                alignItems: "center",
-                                gap: "5px",
-                                boxShadow: "0 4px 12px rgba(16, 185, 129, 0.3)"
-                              }}
-                              title="Download official curriculum file to guide teaching"
-                            >
-                              📥 Download Curriculum
-                            </button>
-                            <button
-                              type="button"
                               onClick={() => handleDownloadSubjectCurriculum(bp, true)}
                               style={{
                                 background: "rgba(56, 189, 248, 0.15)",
@@ -9954,6 +9952,20 @@ export default function TeacherDashboard() {
               </div>
       );
           })()}
+
+          {activeTab === "defaulters" && (
+            <StudentDefaultersCompliancePanel
+              onFeedback={(msg) => setFeedback({ type: "success", message: msg })}
+            />
+          )}
+
+          {activeTab === "university" && (
+            <UniversityOperationsPanel
+              mode="LECTURER"
+              currentUser={currentUser}
+              onFeedback={(msg) => setFeedback({ type: "success", message: msg })}
+            />
+          )}
     </main>
       </div >
 

@@ -78,6 +78,12 @@ axiosInstance.interceptors.request.use(
     }
 
     config.headers["X-GBS-Mode"] = isDemoSandboxMode() ? "DEMO_SANDBOX" : "LIVE_PRODUCTION";
+    config.headers["X-System-Mode"] = config.headers["X-GBS-Mode"];
+
+    const instTypeHeader = readCleanToken("gbs_institution_type");
+    if (instTypeHeader && !config.headers["X-Demo-Institution-Type"]) {
+      config.headers["X-Demo-Institution-Type"] = instTypeHeader;
+    }
 
     const tenantId =
       readCleanToken("gbs_tenant_id") ||

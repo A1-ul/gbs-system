@@ -287,6 +287,31 @@ const getFacultyDirectives = async (req, res, next) => {
   }
 };
 
+const getDefaultersReport = async (req, res, next) => {
+  try {
+    const report = await academicService.getDefaultersReport(req.tenantId, req.query, req);
+    res.status(200).json({
+      status: 'success',
+      data: report
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+
+const syncDefaultersReport = async (req, res, next) => {
+  try {
+    const report = await academicService.syncDefaultersSnapshot(req.tenantId, req.body || {});
+    res.status(200).json({
+      status: 'success',
+      message: 'Student non-participants & attendance compliance ledger synchronized.',
+      data: report
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+
 module.exports = {
   getClasses,
   getClassById,
@@ -309,5 +334,7 @@ module.exports = {
   submitTeacherLessonPlan,
   vetTeacherLessonPlan,
   broadcastFacultyDirective,
-  getFacultyDirectives
+  getFacultyDirectives,
+  getDefaultersReport,
+  syncDefaultersReport
 };

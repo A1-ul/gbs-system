@@ -24,8 +24,8 @@
 
 /* Top Announcement Ticker */
 .gbs-website-ticker {
-  background: linear-gradient(90deg, #380E14 0%, #4B2C1B 52%, #27272A 100%);
-  border-bottom: 1.5px solid rgba(212, 175, 55, 0.45);
+  background: linear-gradient(90deg, #060f1e 0%, #081428 52%, #0f2347 100%);
+  border-bottom: 1.5px solid rgba(212, 175, 55, 0.55);
   padding: 10px 24px;
   display: flex;
   align-items: center;

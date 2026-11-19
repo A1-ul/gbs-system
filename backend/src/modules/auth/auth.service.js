@@ -832,8 +832,8 @@ const registerInstitution = async (data) => {
   const typeUpper = (institutionType || '').toUpperCase();
   if (typeUpper.includes('UNIVERSITY') || typeUpper.includes('TERTIARY')) {
     perStudentRate = 10; // Official Policy: University = GH₵ 10 per active student per month
-  } else if (typeUpper.includes('SENIOR') || typeUpper.includes('SHS') || typeUpper.includes('SECONDARY')) {
-    perStudentRate = 5; // Official Policy: SHS = GH₵ 5 per active student per month
+  } else if (typeUpper.includes('SENIOR') || typeUpper.includes('SHS') || typeUpper.includes('SECONDARY') || typeUpper.includes('TECH') || typeUpper.includes('TVET') || typeUpper.includes('VOCAT')) {
+    perStudentRate = 5; // Official Policy: SHS & Technical/TVET = GH₵ 5 per active student per month
   } else {
     perStudentRate = 3; // Official Policy: Nursery – JHS = GH₵ 3 per active student per month
   }

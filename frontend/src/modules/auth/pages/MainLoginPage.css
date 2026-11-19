@@ -29,10 +29,9 @@
   position: absolute;
   inset: 0;
   background:
-    radial-gradient(circle at 18% 18%, rgba(92, 24, 34, 0.78) 0%, transparent 48%),
-    radial-gradient(circle at 82% 22%, rgba(212, 175, 55, 0.24) 0%, transparent 45%),
-    radial-gradient(circle at 50% 85%, rgba(75, 44, 27, 0.68) 0%, transparent 52%),
-    linear-gradient(135deg, rgba(36, 20, 13, 0.86) 0%, rgba(74, 18, 25, 0.88) 50%, rgba(39, 39, 42, 0.90) 100%);
+    radial-gradient(circle at 18% 18%, rgba(212, 175, 55, 0.16) 0%, transparent 48%),
+    radial-gradient(circle at 82% 22%, rgba(56, 189, 248, 0.16) 0%, transparent 45%),
+    linear-gradient(135deg, rgba(5, 13, 26, 0.88) 0%, rgba(8, 20, 40, 0.88) 50%, rgba(15, 35, 71, 0.92) 100%);
   backdrop-filter: blur(4px);
 }
 
