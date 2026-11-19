@@ -5806,7 +5806,7 @@ export default function DeveloperDashboard() {
               fontWeight: 800
             }}
           >
-            ⚡ Network &amp; Server Control
+            ⚡ GBS-RCCE Engine &amp; Server Control
           </button>
 
           <button
@@ -9888,6 +9888,37 @@ export default function DeveloperDashboard() {
                       <input
                         type="checkbox"
                         className="dev-checkbox"
+                        checked={selectedDeploymentIds.length > 0 && selectedDeploymentIds.length === deployments.length}
+                        onChange={() =>
+                          setSelectedDeploymentIds(
+                            selectedDeploymentIds.length === deployments.length ? [] : deployments.map((d) => d.id)
+                          )
+                        }
+                      />
+                    </th>
+                    <th>RELEASE VERSION</th>
+                    <th>GIT COMMIT SHA</th>
+                    <th>BRANCH</th>
+                    <th>ENVIRONMENT</th>
+                    <th>BUILD #</th>
+                    <th>STATUS</th>
+                    <th>DEPLOYED AT</th>
+                    <th>RELEASE ACTIONS (ARCHIVE / DELETE / ROLLBACK)</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {(() => {
+                    const filteredDeps = deployments.filter((d) => {
+                      if (deploymentFilter === "ACTIVE") return !d.isArchived;
+                      if (deploymentFilter === "ARCHIVED") return Boolean(d.isArchived);
+                      return true;
+                    });
+                    if (filteredDeps.length === 0) {
+                      return (
+                        <tr>
+                          <td colSpan="9" style={{ textAlign: "center", padding: "2rem", color: "#64748b" }}>
+                            No deployment records in this view ({deploymentFilter}).
+                          </td>
                         </tr>
                       );
                     }

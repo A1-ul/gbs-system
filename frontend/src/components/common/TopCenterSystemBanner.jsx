@@ -32,7 +32,8 @@ const DASHBOARDS_LIST = [
   { path: "/portal/student/dashboard", title: "Student Hub", icon: "🎒", tooltip: "Examinations, Peer Chat, Video Lessons & Schedule" },
   { path: "/portal/parent/dashboard", title: "Parent Portal", icon: "👨‍👩‍👧", tooltip: "Ward Performance, Fees, Bus Tracking" },
   { path: "/portal/accountant/dashboard", title: "Accountant Desk", icon: "💰", tooltip: "Fee Ledgers, Alumni Gifts & Procurement Audit" },
-  { path: "/portal/staff/dashboard", title: "Staff & HR", icon: "👔", tooltip: "Staff Directory, Appraisals, Campus Operations" },
+  { path: "/portal/staff/dashboard", title: "Staff Ops", icon: "👔", tooltip: "Campus Staff Operations, Library, Logistics & Clinic" },
+  { path: "/portal/hr/dashboard", title: "HR Portal", icon: "📋", tooltip: "Human Resources, Contracts, Leave & Staff Health" },
   { path: "/portal/alumni/dashboard", title: "Alumni Hub", icon: "🏛️", tooltip: "Alumni Pledges, Networking & Institutional Gifts" },
   { path: "/developer-control-center/dashboard", title: "Developer Center", icon: "🛡️", tooltip: "Chief Developer Mission Control & Security Sentinel" }
 ];
@@ -459,6 +460,27 @@ export default function TopCenterSystemBanner({
           title="Expand dashboard workspace to full screen width"
         >
           {fullDisplayMode ? "↙ Standard View" : "↗ Full View"}
+        </button>
+        <button
+          type="button"
+          onClick={() => {
+            if (typeof window !== "undefined") {
+              window.open(window.location.href, "_blank", "noopener,noreferrer");
+            }
+          }}
+          style={{
+            background: "rgba(15, 35, 71, 0.85)",
+            border: "1px solid rgba(212, 175, 55, 0.55)",
+            color: "#f5d061",
+            fontSize: "0.75rem",
+            padding: "4px 10px",
+            borderRadius: "12px",
+            cursor: "pointer",
+            fontWeight: 800
+          }}
+          title="Open the current dashboard tab in a dedicated full-page browser tab"
+        >
+          🗗 Open New Tab
         </button>
         <span style={{ color: "#475569" }}>•</span>
         <span

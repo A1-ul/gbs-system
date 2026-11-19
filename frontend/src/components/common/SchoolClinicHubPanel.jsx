@@ -2,6 +2,7 @@ import React, { useState, useEffect, useCallback } from "react";
 import apiClient from "../../api/client/apiClient";
 import { getTenantScopedRecord, setTenantScopedRecord } from "../../utils/institutionScope";
 import { isDemoSandboxMode } from "../../utils/tokenStorage";
+import { checkDemoEntryLimit, trackDemoEntryCreated } from "../../utils/demoLimitGuard";
 
 const BLOOD_GROUPS = ["O+", "O-", "A+", "A-", "B+", "B-", "AB+", "AB-", "Pending Screening"];
 const GENOTYPES = ["AA", "AS", "SS", "AC", "SC", "Pending Screening"];
@@ -152,20 +153,26 @@ export default function SchoolClinicHubPanel({
     if (!visitForm.patientName || !visitForm.chiefComplaint) {
       return notify("Patient Name and Symptoms / Chief Complaint are required.", true);
     }
+    const demoCheck = checkDemoEntryLimit("clinic", "School Clinic Records", visits.length);
+    if (!demoCheck.allowed) {
+      return notify(demoCheck.message, true);
+    }
     try {
       const res = await apiClient.post("/clinic/visits", visitForm);
       const created = res?.data?.data?.visit;
+      trackDemoEntryCreated("clinic");
       await loadClinicData();
       setTenantScopedRecord("clinic_visits", [created, ...visits]);
       setVisitForm((prev) => ({ ...prev, chiefComplaint: "", diagnosis: "", treatmentGiven: "" }));
-      notify(`🏥 Recorded ${created.patientRole} '${created.patientName}' in School Clinic (${created.disposition}).`);
+      notify(res?.data?.message || `🏥 Recorded ${created.patientRole} '${created.patientName}' in School Clinic (${created.disposition}).`);
     } catch (err) {
-      if (isDemo) {
+      if (isDemo && !err?.response) {
+        trackDemoEntryCreated("clinic");
         const localRec = { id: `CLV-${Date.now()}`, ...visitForm, vitals: { temperatureC: visitForm.temperatureC, bloodPressure: visitForm.bloodPressure, pulseBpm: visitForm.pulseBpm }, createdAt: new Date().toISOString() };
         const nextV = [localRec, ...visits];
         setVisits(nextV);
         setTenantScopedRecord("clinic_visits", nextV);
-        return notify(`✅ [Demo] Clinic consultation recorded for ${localRec.patientName}.`);
+        return notify(`✅ [Offline Demo] Clinic consultation queued for ${localRec.patientName}.`);
       }
       notify(err?.response?.data?.message || err.message || "Failed to record Clinic visit.", true);
     }
@@ -173,9 +180,9 @@ export default function SchoolClinicHubPanel({
 
   const handleDischargeFromSickbay = async (visitId, nextDisposition = "TREATED_AND_RETURNED_TO_CLASS") => {
     try {
-      await apiClient.patch(`/clinic/visits/${visitId}`, { disposition: nextDisposition, discharge: true });
+      const res = await apiClient.patch(`/clinic/visits/${visitId}`, { disposition: nextDisposition, discharge: true });
       await loadClinicData();
-      notify(`✅ Patient cleared from Sickbay (${nextDisposition}).`);
+      notify(res?.data?.message || `✅ Patient cleared from Sickbay (${nextDisposition}).`);
     } catch (err) {
       notify(err?.response?.data?.message || "Failed to update disposition.", true);
     }
@@ -186,13 +193,18 @@ export default function SchoolClinicHubPanel({
     if (!profileForm.fullName && !profileForm.email) {
       return notify("Full Name or Email is required for Admission Medical Registration.", true);
     }
+    const demoCheck = checkDemoEntryLimit("clinic", "School Clinic Medical Profiles", profiles.length);
+    if (!demoCheck.allowed) {
+      return notify(demoCheck.message, true);
+    }
     try {
       const res = await apiClient.post("/clinic/profiles", profileForm);
       const saved = res?.data?.data?.profile;
+      trackDemoEntryCreated("clinic");
       await loadClinicData();
       setTenantScopedRecord("clinic_profiles", [saved, ...profiles]);
       setProfileForm((prev) => ({ ...prev, fullName: "", email: "", phone: "", admissionNumber: "", nhisNumber: "" }));
-      notify(`📋 Admission Medical Registration synced for ${saved.fullName} across School Clinic & Portal Directory.`);
+      notify(res?.data?.message || `📋 Admission Medical Registration synced for ${saved.fullName} across School Clinic & Portal Directory.`);
     } catch (err) {
       notify(err?.response?.data?.message || "Failed to save Admission Medical Record.", true);
     }
@@ -201,11 +213,16 @@ export default function SchoolClinicHubPanel({
   const handleAddInventory = async (e) => {
     e.preventDefault();
     if (!medForm.itemName.trim()) return notify("Medicine name is required.", true);
+    const demoCheck = checkDemoEntryLimit("clinic", "School Clinic Pharmacy Items", inventory.length);
+    if (!demoCheck.allowed) {
+      return notify(demoCheck.message, true);
+    }
     try {
-      await apiClient.post("/clinic/inventory", medForm);
+      const res = await apiClient.post("/clinic/inventory", medForm);
+      trackDemoEntryCreated("clinic");
       await loadClinicData();
       setMedForm({ itemName: "", category: "ANALGESIC", quantity: 50, reorderLevel: 15, unit: "tablets" });
-      notify(`💊 Updated School Clinic pharmacy stock cleanly.`);
+      notify(res?.data?.message || `💊 Updated School Clinic pharmacy stock cleanly.`);
     } catch (err) {
       notify(err?.response?.data?.message || "Failed to update clinic stock.", true);
     }

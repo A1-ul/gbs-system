@@ -4,14 +4,78 @@ const os = require('os');
 const prisma = require('../core/database/prisma.client');
 const { readPersistentStore } = require('../core/database/persistentStore');
 const { businessRulesEngine } = require('./businessRulesEngine');
+const { auditTracker } = require('./auditTracker');
+const { getDemoUsageSummary } = require('../middleware/demoLimit.middleware');
 
 /**
  * GBS USER AND DEVELOPER CONTROL ENGINE (GBS-RCCE)
- * Connects all users according to their assigned permissions and roles.
- * Provides authorized management interfaces for the developer
- * to monitor system operations, manage system configurations, review audit trails,
- * and enforce strict role boundaries with privacy protections.
+ * Connects all users according to strict RBAC and institutional boundaries.
+ * Provides authorized management telemetry, permission matrices, error monitoring,
+ * and audited privacy masking so developers see diagnostics without exposing raw user secrets.
  */
+
+const ROLE_PERMISSION_MATRIX = Object.freeze({
+  DEVELOPER: {
+    label: 'Chief Developer / System Architect',
+    scope: 'GLOBAL_SYSTEM_CONTROL',
+    canApproveInstitutions: true,
+    canToggleMaintenance: true,
+    canViewSystemTelemetry: true,
+    canInspectPrivateUserFieldsUnmasked: false,
+    privacyRule: 'Explicit diagnostic reason required; credentials & card tokens strictly redacted.',
+    allowedActions: ['System Telemetry', 'Maintenance Mode', 'Tenant Provision/Lock', 'Audit Trail', 'Database Backup/Restore', 'Permitted Diagnostics']
+  },
+  ADMIN: {
+    label: 'Headmaster / Principal / School Admin',
+    scope: 'TENANT_INSTITUTION_EXECUTIVE',
+    canApproveStaff: true,
+    canAdmitStudents: true,
+    canManageClinic: true,
+    canPublishExams: true,
+    allowedActions: ['Approve Pending Staff', 'Admissions & Clinic Sync', 'Fees & Billing Governance', 'Defaulters Compliance', 'Direct SMS Dispatch', 'Academic Supervision']
+  },
+  TEACHER: {
+    label: 'Educator / University Lecturer',
+    scope: 'ACADEMIC_CLASSROOM_INSTRUCTION',
+    allowedActions: ['Roll Call Attendance', 'Lesson Plans & Topic Videos', 'Exams & Grading', 'University Course Grading & Progression', 'Clinic Sickbay Referral']
+  },
+  STUDENT: {
+    label: 'Enrolled Scholar / University Student',
+    scope: 'SCHOLAR_LEARNING_PORTAL',
+    allowedActions: ['View Results & Transcript', 'Submit Assignments & Exams', 'Submit University Internship Form', 'School Clinic Medical Self-View', 'Online Learning & Peer Hub']
+  },
+  PARENT: {
+    label: 'Parent / Legal Guardian',
+    scope: 'WARD_OVERSIGHT_PORTAL',
+    allowedActions: ['Track Ward Attendance & Results', 'Pay Fees (MoMo / Card / Bank)', 'Emergency Locator', 'View Ward Clinic Visits & Notices', 'Direct SMS with Teachers/Headmaster']
+  },
+  ACCOUNTANT: {
+    label: 'School Bursar / Financial Controller',
+    scope: 'FINANCE_TREASURY_LEDGER',
+    allowedActions: ['Verify & Reconcile Payments', 'Generate Student Invoices', 'School Clinic Billing Ledger', 'Payroll & Loan Disbursements', 'Alumni Endowment Tracking']
+  },
+  STAFF: {
+    label: 'Non-Teaching Campus & Clinic Operations Staff',
+    scope: 'CAMPUS_OPERATIONS',
+    allowedActions: ['Library Loans', 'Inventory & Stores', 'School Clinic First-Aid & Pharmacy Desk', 'Transport Route Dispatch', 'Gate Check-in']
+  },
+  HR: {
+    label: 'Human Resources & Payroll Director',
+    scope: 'STAFF_GOVERNANCE',
+    allowedActions: ['Staff Recruitment & Contracts', 'Leave Approval', 'Performance Appraisals', 'Clinic Employee Health Profiles', 'Salary Grouping']
+  },
+  ALUMNI: {
+    label: 'Graduated Alumni Network Member',
+    scope: 'ALUMNI_RELATIONSHIP_HUB',
+    allowedActions: ['Download Verified Transcript / Clearance', 'Event Invitations', 'Endowment Pledges & Gifts', 'Mentorship Opportunities']
+  }
+});
+
+function maskPhoneValue(phone) {
+  const s = String(phone || '').trim();
+  if (!s || s.length < 5) return '••••';
+  return `${s.slice(0, 4)}${'*'.repeat(Math.max(2, s.length - 6))}${s.slice(-2)}`;
+}
 
 class UserDeveloperControlEngine {
   constructor() {
@@ -19,15 +83,15 @@ class UserDeveloperControlEngine {
   }
 
   /**
-   * Get complete system operational telemetry & status
+   * Get live, un-fabricated operational telemetry & status across all subsystems
    */
   async getSystemTelemetry() {
     const memory = process.memoryUsage();
     const cpus = os.cpus();
     const uptimeSec = Math.floor((Date.now() - this.systemStartTime) / 1000);
+    const maint = businessRulesEngine.getMaintenanceState();
 
-    // Database telemetry
-    let dbStatus = { active: false, role: 'UNKNOWN', mode: 'STANDBY_LOCAL' };
+    let dbStatus = { active: false, connected: false, status: 'STANDBY', role: 'STANDBY_LOCAL', mode: 'LOCAL_PERSISTENT_STANDBY', engine: 'PostgreSQL', version: 'Not configured', poolActiveConnections: 0, poolMaxConnections: 20 };
     try {
       if (typeof prisma.getPostgresLiveStatus === 'function') {
         dbStatus = await prisma.getPostgresLiveStatus(false);
@@ -35,14 +99,19 @@ class UserDeveloperControlEngine {
     } catch (_) { }
 
     const store = readPersistentStore();
-    const totalTenants = (store.institutions || []).length;
-    const totalUsers = (store.users || []).length;
-    const totalSubscriptions = (store.subscriptions || []).length;
+    const institutions = Array.isArray(store.institutions) ? store.institutions : [];
+    const users = Array.isArray(store.users) ? store.users : [];
+    const registeredUsers = Array.isArray(store.registeredUsers) ? store.registeredUsers : [];
+    const subscriptions = Array.isArray(store.subscriptions) ? store.subscriptions : [];
+    const auditTrail = Array.isArray(store.auditTrail) ? store.auditTrail : [];
+    const notifications = Array.isArray(store.notificationQueue) ? store.notificationQueue : [];
+    const recentErrorsCount = auditTrail.filter((a) => ['FAILED', 'BLOCKED'].includes(String(a.outcome || '').toUpperCase())).length;
 
     return {
-      status: businessRulesEngine.isMaintenanceMode() ? 'MAINTENANCE' : 'HEALTHY',
-      maintenanceMode: businessRulesEngine.isMaintenanceMode(),
-      maintenanceReason: businessRulesEngine.maintenanceReason,
+      status: maint.active ? 'MAINTENANCE' : 'HEALTHY',
+      maintenance: maint,
+      maintenanceMode: maint.active,
+      maintenanceReason: maint.reason,
       systemUptimeSeconds: uptimeSec,
       environment: process.env.NODE_ENV || 'production',
       server: {
@@ -59,10 +128,15 @@ class UserDeveloperControlEngine {
       },
       database: dbStatus,
       tenancy: {
-        totalTenants,
-        totalUsers,
-        totalSubscriptions
+        totalTenants: institutions.length,
+        totalUsers: Math.max(users.length, registeredUsers.length),
+        totalRegisteredUsers: registeredUsers.length,
+        totalSubscriptions: subscriptions.length,
+        totalAuditRecords: auditTrail.length,
+        totalQueuedNotifications: notifications.length,
+        recentErrorsCount
       },
+      demoUsage: getDemoUsageSummary(),
       engines: {
         responseEngine: 'ONLINE',
         businessRulesEngine: 'ONLINE',
@@ -76,10 +150,9 @@ class UserDeveloperControlEngine {
 
   /**
    * Developer privacy filter:
-   * Masks sensitive credentials, personal phone numbers, and raw payment secrets
-   * before developer monitoring inspection.
+   * Strictly redacts credentials & tokens and masks private contact details unless explicitly masked-bypassed.
    */
-  sanitizeRecordForDeveloper(record) {
+  sanitizeRecordForDeveloper(record, { maskedContact = true } = {}) {
     if (!record || typeof record !== 'object') return record;
     const sanitized = { ...record };
 
@@ -90,7 +163,9 @@ class UserDeveloperControlEngine {
       'creditCardNumber',
       'cvv',
       'cardToken',
-      'salt'
+      'salt',
+      'refreshToken',
+      'accessToken'
     ];
 
     for (const key of SENSITIVE_KEYS) {
@@ -99,26 +174,49 @@ class UserDeveloperControlEngine {
       }
     }
 
+    if (maskedContact) {
+      for (const pKey of ['phone', 'whatsappPhone', 'guardianPhone', 'emergencyContact']) {
+        if (sanitized[pKey]) {
+          sanitized[pKey] = maskPhoneValue(sanitized[pKey]);
+        }
+      }
+    }
+
     return sanitized;
   }
 
   /**
-   * Developer Privacy-Audited Access Gate
-   * Logs whenever a developer inspects a sensitive user record
+   * Returns canonical permission definitions across all roles and institutional types
    */
-  async logDeveloperSensitiveAccess(devUser, targetModule, targetRecordId, reason = 'Administrative Diagnostic Review') {
-    try {
-      await prisma.auditLog.create({
-        data: {
-          tenantId: 1,
-          userId: null,
-          module: 'DEVELOPER_PRIVACY_GUARD',
-          action: 'SENSITIVE_RECORD_INSPECTED',
-          details: `Developer '${devUser?.email || 'gabosei48@gmail.com'}' inspected sensitive record #${targetRecordId} in module '${targetModule}'. Reason: ${reason}. Privacy protection seal active.`,
-          ipAddress: '127.0.0.1'
-        }
-      }).catch(() => { });
-    } catch (_) { }
+  getPermissionMatrix() {
+    return {
+      roles: ROLE_PERMISSION_MATRIX,
+      institutionTiers: ['NURSERY_TO_JHS', 'SENIOR_HIGH_SCHOOL', 'TECHNICAL', 'UNIVERSITY'],
+      privacyPolicy: {
+        developerAutoFullPrivateAccess: false,
+        requiresExplicitDiagnosticReason: true,
+        credentialsRedactedAlways: true
+      }
+    };
+  }
+
+  /**
+   * Developer Privacy-Audited Access Gate:
+   * Records every privacy-protected developer lookup into immutable AuditTracker & DB.
+   */
+  async logDeveloperSensitiveAccess(devUser, targetModule, targetRecordId, reason = 'Administrative Diagnostic Review', requestId = null) {
+    return auditTracker.logActivity({
+      userId: devUser?.id || 1,
+      userRole: 'DEVELOPER',
+      tenantId: 1,
+      action: 'SENSITIVE_RECORD_INSPECTED',
+      module: 'DEVELOPER_PRIVACY_GUARD',
+      affectedRecord: `${targetModule}:${targetRecordId}`,
+      outcome: 'SUCCESS',
+      details: `Developer '${devUser?.email || 'gabosei48@gmail.com'}' inspected privacy-masked record #${targetRecordId} in '${targetModule}'. Reason: ${reason}.`,
+      ipAddress: '127.0.0.1',
+      requestId
+    });
   }
 
   /**
@@ -136,5 +234,6 @@ const userDeveloperControlEngine = new UserDeveloperControlEngine();
 
 module.exports = {
   UserDeveloperControlEngine,
-  userDeveloperControlEngine
+  userDeveloperControlEngine,
+  ROLE_PERMISSION_MATRIX
 };

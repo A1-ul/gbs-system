@@ -2,6 +2,7 @@ import React from "react";
 import AppRouter from "../router/AppRouter";
 import UniversalAIAssistantHUD from "../components/common/UniversalAIAssistantHUD";
 import UniversalOpenNoticeHUD from "../components/common/UniversalOpenNoticeHUD";
+import UniversalHeadingTooltipHUD from "../components/common/UniversalHeadingTooltipHUD";
 import MobileExperienceNoticeModal from "../components/common/MobileExperienceNoticeModal";
 import UniversalLanguageTranslator from "../components/common/UniversalLanguageTranslator";
 
@@ -10,6 +11,7 @@ export default function App() {
     <div className="gbs-app-container gbs-first-page-royal-theme">
       <MobileExperienceNoticeModal />
       <UniversalOpenNoticeHUD />
+      <UniversalHeadingTooltipHUD />
       <AppRouter />
       <UniversalLanguageTranslator />
       <UniversalAIAssistantHUD />

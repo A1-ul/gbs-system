@@ -57,6 +57,7 @@ const EXEMPT_PATH_PREFIXES = [
   '/network-info',
   '/translate',
   '/auth/',
+  '/rcce/',
   '/dev-control/',
   '/developer-control-center/',
   '/tenants/register',
@@ -64,7 +65,7 @@ const EXEMPT_PATH_PREFIXES = [
   '/sms/'
 ];
 
-const NON_CREATE_ACTION_REGEX = /\/(login|logout|refresh-token|verify|verify-pin|webhook|reconcile|calculate|scan|grade|sync|heartbeat|live-location|location|watch|export|status|forgot-password|reset-password|reset-demo|demo-reset|approve|reject|vet|voice|batch-delete|batch-archive|batch-resolve|restore|purge|recalculate-population)(\/|$)/i;
+const NON_CREATE_ACTION_REGEX = /\/(login|logout|refresh-token|verify|verify-pin|webhook|reconcile|calculate|scan|grade|sync|heartbeat|live-location|location|watch|export|status|forgot-password|reset-password|reset-demo|demo-reset|approve|reject|vet|voice|batch-delete|batch-archive|batch-resolve|restore|purge|recalculate-population|advance-student|pull-record)(\/|$)/i;
 
 const RESOURCE_BUCKETS = [
   { prefix: '/transport/routes', bucket: 'transport_routes', label: 'Bus Commuter Routes' },
@@ -73,6 +74,9 @@ const RESOURCE_BUCKETS = [
   { prefix: '/transports/vehicles', bucket: 'transport_vehicles', label: 'Fleet Vehicles & Drivers' },
   { prefix: '/transport/assignments', bucket: 'transport_assignments', label: 'Student Bus Assignments' },
   { prefix: '/transports/assignments', bucket: 'transport_assignments', label: 'Student Bus Assignments' },
+  { prefix: '/university', bucket: 'university', label: 'University Internships, Exams & Streams' },
+  { prefix: '/clinic', bucket: 'clinic', label: 'School Clinic & Medical Records' },
+  { prefix: '/health-clinic', bucket: 'clinic', label: 'School Clinic & Medical Records' },
   { prefix: '/users', bucket: 'users', label: 'User & Staff Records' },
   { prefix: '/academics', bucket: 'academics', label: 'Academic Classes & Records' },
   { prefix: '/academic', bucket: 'academics', label: 'Academic Classes & Records' },
@@ -85,6 +89,8 @@ const RESOURCE_BUCKETS = [
   { prefix: '/exams', bucket: 'exams', label: 'Exams & Question Papers' },
   { prefix: '/admissions', bucket: 'admissions', label: 'Admission Applications' },
   { prefix: '/admission', bucket: 'admissions', label: 'Admission Applications' },
+  { prefix: '/parents', bucket: 'parents', label: 'Parent & Guardian Requests' },
+  { prefix: '/parent-portal', bucket: 'parents', label: 'Parent & Guardian Requests' },
   { prefix: '/library', bucket: 'library', label: 'Library Books & Loans' },
   { prefix: '/libraries', bucket: 'library', label: 'Library Books & Loans' },
   { prefix: '/inventory', bucket: 'inventory', label: 'Inventory & Store Requests' },
@@ -98,6 +104,13 @@ const RESOURCE_BUCKETS = [
   { prefix: '/communication', bucket: 'communication', label: 'Messages & Announcements' },
   { prefix: '/chat', bucket: 'communication', label: 'Messages & Announcements' },
   { prefix: '/messages', bucket: 'communication', label: 'Messages & Announcements' },
+  { prefix: '/workflows', bucket: 'workflows', label: 'Institutional Approval Workflows' },
+  { prefix: '/workflow', bucket: 'workflows', label: 'Institutional Approval Workflows' },
+  { prefix: '/reporting', bucket: 'reports', label: 'Academic & Audit Reports' },
+  { prefix: '/reports', bucket: 'reports', label: 'Academic & Audit Reports' },
+  { prefix: '/documents', bucket: 'reports', label: 'Official Institutional Documents' },
+  { prefix: '/notifications', bucket: 'notifications', label: 'Portal Notifications' },
+  { prefix: '/notification', bucket: 'notifications', label: 'Portal Notifications' },
   { prefix: '/loans', bucket: 'loans', label: 'Staff Loan Applications' },
   { prefix: '/timetables', bucket: 'timetables', label: 'Timetable Schedule Slots' },
   { prefix: '/timetable', bucket: 'timetables', label: 'Timetable Schedule Slots' },
@@ -256,18 +269,22 @@ function demoLimitMiddleware(req, res, next) {
   res.setHeader('X-GBS-Demo-Remaining', String(Math.max(0, MAX_DEMO_ENTRIES - used)));
 
   if (used >= MAX_DEMO_ENTRIES) {
+    const limitMsg = `Demo Trial Limit Reached (${used}/${MAX_DEMO_ENTRIES} entries used for ${label}). Demo Sandbox runs the full real workflow for learning up to ${MAX_DEMO_ENTRIES} entries per module. Switch to a Live School account for unlimited records, or click "Reset Demo Data" in the top banner to practice again.`;
     return res.status(403).json({
       success: false,
       status: 'error',
       code: 'DEMO_TRIAL_LIMIT_REACHED',
-      message: `Demo Trial Limit Reached (${used}/${MAX_DEMO_ENTRIES} entries used for ${label}). Demo Sandbox runs the full real workflow for learning up to ${MAX_DEMO_ENTRIES} entries per module. Switch to a Live School account for unlimited records, or click "Reset Demo Data" in the top banner to practice again.`,
+      message: limitMsg,
       data: {
         limit: MAX_DEMO_ENTRIES,
         used,
         remaining: 0,
         module: bucket,
         label
-      }
+      },
+      errors: [{ message: limitMsg, code: 'DEMO_TRIAL_LIMIT_REACHED' }],
+      timestamp: new Date().toISOString(),
+      requestId: req.requestId || 'REQ-DEMO-LIMIT'
     });
   }
 

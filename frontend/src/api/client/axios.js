@@ -130,6 +130,22 @@ axiosInstance.interceptors.response.use(
         url.includes("/auth/verify") ||
         url.includes("/translate");
 
+      if (typeof window !== "undefined") {
+        const hist = Array.isArray(window.__gbsRcceResponseHistory) ? window.__gbsRcceResponseHistory : [];
+        hist.unshift({
+          method: method.toUpperCase(),
+          url,
+          status: response.status,
+          success: true,
+          code: response?.data?.code || "RECORD_FOUND_SUCCESS",
+          message: response?.data?.message || "OK",
+          requestId: response?.data?.requestId || response?.headers?.["x-request-id"] || null,
+          timestamp: response?.data?.timestamp || new Date().toISOString()
+        });
+        window.__gbsRcceResponseHistory = hist.slice(0, 25);
+        window.dispatchEvent(new CustomEvent("gbs_rcce_response_logged", { detail: window.__gbsRcceResponseHistory[0] }));
+      }
+
       if (
         isMutating &&
         !isSilentEndpoint &&
@@ -152,11 +168,16 @@ axiosInstance.interceptors.response.use(
             ADMISSION: "ADMISSION DESK CONFIRMED",
             ACADEMIC: "ACADEMIC OPERATION CONFIRMED",
             FINANCE: "FINANCIAL TRANSACTION CONFIRMED",
+            CLINIC: "SCHOOL CLINIC CONFIRMED",
+            UNIVERSITY: "UNIVERSITY SYSTEM CONFIRMED",
+            SMS: "DIRECT SMS DISPATCHED",
+            STAFF: "STAFF ACCESS UPDATED",
             DEV: "DEVELOPER CONTROL EXECUTED",
             RECORD: "DATABASE RECORD UPDATED",
             NOTIFICATION: "COMMUNICATION DISPATCHED",
             SYSTEM: "SYSTEM CORE CONFIRMED",
-            IDEMPOTENCY: "IDEMPOTENCY KEY LOCKED"
+            IDEMPOTENCY: "IDEMPOTENCY KEY LOCKED",
+            REQUEST: "REQUEST SUBMITTED"
           };
           if (titles[prefix]) title = titles[prefix];
         }
@@ -235,7 +256,30 @@ axiosInstance.interceptors.response.use(
       return Promise.reject(error);
     }
 
-    const suppressDemoPermissionNotice = status === 403 && isDemoSandboxMode() && rcceCode !== "DEMO_TRIAL_LIMIT_REACHED";
+    const reqMethod = String(originalRequest.method || "get").toLowerCase();
+    const suppressDemoPermissionNotice =
+      status === 403 &&
+      reqMethod === "get" &&
+      isDemoSandboxMode() &&
+      rcceCode !== "DEMO_TRIAL_LIMIT_REACHED";
+
+    if (typeof window !== "undefined") {
+      try {
+        const hist = Array.isArray(window.__gbsRcceResponseHistory) ? window.__gbsRcceResponseHistory : [];
+        hist.unshift({
+          method: reqMethod.toUpperCase(),
+          url,
+          status: status || 0,
+          success: false,
+          code: rcceCode || "SYSTEM_ERROR_INTERNAL",
+          message: String(serverErrMsg || "Request failed"),
+          requestId: error.response?.data?.requestId || error.response?.headers?.["x-request-id"] || null,
+          timestamp: error.response?.data?.timestamp || new Date().toISOString()
+        });
+        window.__gbsRcceResponseHistory = hist.slice(0, 25);
+        window.dispatchEvent(new CustomEvent("gbs_rcce_response_logged", { detail: window.__gbsRcceResponseHistory[0] }));
+      } catch { }
+    }
 
     if (
       !suppressDemoPermissionNotice &&
@@ -246,7 +290,7 @@ axiosInstance.interceptors.response.use(
         let title = "COMMAND FEEDBACK NOTICE";
         if (rcceCode === "DEMO_TRIAL_LIMIT_REACHED") title = "DEMO TRIAL LIMIT REACHED (10/10)";
         else if (status === 403) title = "SECURITY / ACCESS RESTRICTION";
-        else if (status === 503 || rcceCode === "SYSTEM_MAINTENANCE_MODE") title = "SYSTEM MAINTENANCE ACTIVE";
+        else if (status === 503 || rcceCode === "SYSTEM_MAINTENANCE_ACTIVE") title = "SYSTEM MAINTENANCE ACTIVE";
         else if (!error.response) title = "NETWORK OFFLINE WARNING";
         else if (rcceCode) {
           const prefix = rcceCode.split("_")[0];
@@ -257,6 +301,10 @@ axiosInstance.interceptors.response.use(
             ADMISSION: "ADMISSION REGISTRATION NOTICE",
             ACADEMIC: "ACADEMIC SYSTEM NOTICE",
             FINANCE: "FINANCIAL TRANSACTION NOTICE",
+            CLINIC: "SCHOOL CLINIC RESTRICTION",
+            UNIVERSITY: "UNIVERSITY TIER RESTRICTION",
+            SMS: "SMS DELIVERY NOTICE",
+            STAFF: "STAFF APPROVAL REQUIRED",
             DEV: "DEVELOPER ACCESS RESTRICTION",
             DEMO: "DEMO TRIAL LIMIT NOTICE",
             RECORD: "RECORD INTEGRITY NOTICE",

@@ -9997,7 +9997,6 @@ export function AdminDashboard({ initialTab } = {}) {
                       <span>LTE • 5G • 100%</span>
                     </div>
 
-                    ... [truncated for diff preview]
                     {/* App Header */}
                     <div style={{ display: "flex", alignItems: "center", gap: "10px", marginBottom: "16px" }}>
                       <img

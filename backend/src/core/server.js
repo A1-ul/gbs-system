@@ -91,8 +91,8 @@ app.use(cookieParser());
 app.use(compression());
 
 // GBS Central System Response, Control and Communication Engine (GBS-RCCE)
-const { setupRcce, rcceCentralErrorHandler } = require('../rcce');
-setupRcce(app);
+const { setupRcce, rcceCentralErrorHandler, idempotencyProtection } = require('../rcce');
+setupRcce(app, { productId: 'GBS_SCHOOL', productName: 'GBS School Management System' });
 
 if (envConfig.env === 'development') {
   app.use(morgan('dev'));
@@ -181,6 +181,16 @@ app.use('/api/v1/translate', require('../modules/translate/translate.routes'));
 
 // Enforce 10-entry trial cap per module in Demo Sandbox sessions while preserving identical production flows
 app.use('/api/v1', demoLimitMiddleware);
+
+// GBS-RCCE Duplicate Operation & Idempotency Guards on sensitive transactions
+app.post('/api/v1/auth/register', idempotencyProtection.guard('USER_REGISTRATION'));
+app.post('/api/v1/auth/signup', idempotencyProtection.guard('USER_REGISTRATION'));
+app.post('/api/v1/payments/initiate', idempotencyProtection.guard('FEE_PAYMENT'));
+app.post('/api/v1/subscriptions/calculate-and-subscribe', idempotencyProtection.guard('SUBSCRIPTION_BILLING'));
+app.post('/api/v1/admissions', idempotencyProtection.guard('ADMISSION_SUBMISSION'));
+app.post('/api/v1/admissions/inquiries', idempotencyProtection.guard('ADMISSION_INQUIRY'));
+app.post('/api/v1/clinic/visits', idempotencyProtection.guard('CLINIC_ENCOUNTER'));
+app.post('/api/v1/university/internships', idempotencyProtection.guard('UNIVERSITY_INTERNSHIP'));
 
 // API Routes
 app.use('/api/v1/auth', authRoutes);

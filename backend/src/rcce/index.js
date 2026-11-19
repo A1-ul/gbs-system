@@ -4,42 +4,61 @@
  * GBS CENTRAL SYSTEM RESPONSE, CONTROL AND COMMUNICATION ENGINE (GBS-RCCE)
  * Master Reusable Architecture Package
  *
- * Applicable across all GBS products:
- * - GBS International School Management System
- * - GBS Computer-Based Examination System
+ * Designed as a pluggable enterprise engine across every GBS product:
+ * - GBS School Management System
+ * - GBS Examination System
  * - GBS Real Estate Management System
  * - GBS Company Management System
- * - All future GBS enterprise products
+ * - Future GBS software products
  */
 
-const { RESPONSE_CATALOGUE, getOperationResponse } = require('./responseCatalogue');
-const { ResponseEngine, rcceResponseMiddleware } = require('./responseEngine');
+const { RESPONSE_CATALOGUE, getOperationResponse, inferOperationResponse } = require('./responseCatalogue');
+const { ResponseEngine, rcceResponseMiddleware, normalizeApiPayload } = require('./responseEngine');
 const { BusinessRulesEngine, businessRulesEngine } = require('./businessRulesEngine');
 const { RCCE_EVENTS, EventNotificationEngine, eventNotificationEngine } = require('./eventNotificationEngine');
-const { UserDeveloperControlEngine, userDeveloperControlEngine } = require('./userDeveloperControlEngine');
+const { UserDeveloperControlEngine, userDeveloperControlEngine, ROLE_PERMISSION_MATRIX } = require('./userDeveloperControlEngine');
 const { AuditTracker, auditTracker } = require('./auditTracker');
 const { IdempotencyProtection, idempotencyProtection } = require('./idempotencyProtection');
 const { rcceCentralErrorHandler } = require('./systemErrorHandler');
 const rcceRoutes = require('./rcceRoutes');
 
+const SUPPORTED_GBS_PRODUCTS = Object.freeze([
+  { id: 'GBS_SCHOOL', name: 'GBS School Management System', defaultMount: '/api/v1/rcce' },
+  { id: 'GBS_EXAM', name: 'GBS Examination System', defaultMount: '/api/v1/rcce' },
+  { id: 'GBS_REAL_ESTATE', name: 'GBS Real Estate Management System', defaultMount: '/api/v1/rcce' },
+  { id: 'GBS_COMPANY', name: 'GBS Company Management System', defaultMount: '/api/v1/rcce' }
+]);
+
 /**
- * Attach and initialize GBS-RCCE into an Express application
- * @param {import('express').Application} app - The Express application instance
+ * Attach and initialize GBS-RCCE into any GBS Express application
+ * @param {import('express').Application} app - Express application instance
+ * @param {object} [options] - Optional reusable product configuration
  */
-function setupRcce(app) {
+function setupRcce(app, options = {}) {
   if (!app) throw new Error('Express application instance is required to setup GBS-RCCE.');
 
-  // 1. Mount response formatter and requestId tracking middleware
+  const mountPath = options.mountPath || '/api/v1/rcce';
+  app.locals.gbsRcceConfig = {
+    productId: options.productId || 'GBS_SCHOOL',
+    productName: options.productName || 'GBS School Management System',
+    version: '2.0.0-ENTERPRISE',
+    supportedProducts: SUPPORTED_GBS_PRODUCTS
+  };
+
+  // 1. Canonical Response Formatter, requestId tracer, automatic Audit & Event hook
   app.use(rcceResponseMiddleware);
 
-  // 2. Mount business rules guard middleware (maintenance and tenant isolation)
+  // 2. Central Business Rules Guard (Maintenance & Multi-Tenant boundary guard)
   app.use(businessRulesEngine.middleware());
 
-  // 3. Mount central RCCE API routes
-  app.use('/api/v1/rcce', rcceRoutes);
+  // 3. Central RCCE Control, Catalogue, Audit, Event & Privacy APIs
+  app.use(mountPath, rcceRoutes);
 
   return {
+    config: app.locals.gbsRcceConfig,
     RESPONSE_CATALOGUE,
+    getOperationResponse,
+    inferOperationResponse,
     businessRulesEngine,
     eventNotificationEngine,
     userDeveloperControlEngine,
@@ -50,39 +69,26 @@ function setupRcce(app) {
 }
 
 module.exports = {
-  // Main Setup
   setupRcce,
-
-  // Response Engine & Catalogue
+  SUPPORTED_GBS_PRODUCTS,
   RESPONSE_CATALOGUE,
   getOperationResponse,
+  inferOperationResponse,
   ResponseEngine,
   rcceResponseMiddleware,
-
-  // Business Rules Engine
+  normalizeApiPayload,
   BusinessRulesEngine,
   businessRulesEngine,
-
-  // Event & Notification Engine
   RCCE_EVENTS,
   EventNotificationEngine,
   eventNotificationEngine,
-
-  // User & Developer Control Engine
   UserDeveloperControlEngine,
   userDeveloperControlEngine,
-
-  // Activity Tracking & Audit
+  ROLE_PERMISSION_MATRIX,
   AuditTracker,
   auditTracker,
-
-  // Duplicate Operation & Idempotency Sentinel
   IdempotencyProtection,
   idempotencyProtection,
-
-  // Central Error Handler
   rcceCentralErrorHandler,
-
-  // Router
   rcceRoutes
 };

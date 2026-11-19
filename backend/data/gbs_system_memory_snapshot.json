@@ -1,7 +1,7 @@
 {
   "systemName": "GBS MANAGEMENT SYSTEM (Global Brightest Stars Educational Management System)",
-  "version": "2.8.1-PRODUCTION",
-  "savedAt": "2026-11-19T18:48:00Z",
+  "version": "2.9.0-PRODUCTION-RCCE",
+  "savedAt": "2026-11-19T19:40:00Z",
   "status": "PRODUCTION_READY_VERIFIED",
   "architecture": {
     "frontend": {
@@ -22,7 +22,8 @@
       "translatorComponent": "frontend/src/components/common/UniversalLanguageTranslator.jsx",
       "directSmsModalComponent": "frontend/src/components/common/DirectSMSMessengerModal.jsx",
       "directSmsInboxComponent": "frontend/src/components/common/DirectSMSInboxPanel.jsx",
-      "pwaManifestAndSw": "frontend/public/manifest.json + frontend/public/sw.js (gbs-cache-v2026.14)"
+      "rcceClientAndControlHub": "frontend/src/utils/rcceClient.js + frontend/src/modules/developer-platform/components/RcceControlHub.jsx + frontend/src/components/common/UniversalHeadingTooltipHUD.jsx + TopCenterSystemBanner Open New Tab",
+      "pwaManifestAndSw": "frontend/public/manifest.json + frontend/public/sw.js (gbs-cache-v2026.15)"
     },
     "backend": {
       "runtime": "Node.js + Express + Socket.IO",
@@ -30,6 +31,8 @@
       "hybridPrismaEngine": "backend/src/core/database/prisma.client.js",
       "persistentStorePath": "backend/data/gbs_persistent_store.json",
       "systemMemorySnapshotPath": "backend/data/gbs_system_memory_snapshot.json",
+      "rcceCentralEngine": "backend/src/rcce/ (responseEngine, responseCatalogue, businessRulesEngine, eventNotificationEngine, userDeveloperControlEngine, auditTracker, idempotencyProtection, systemErrorHandler, rcceRoutes) — reusable across GBS School, Exam, Real Estate & Company systems",
+      "demoSandboxParityMiddleware": "backend/src/middleware/demoLimit.middleware.js (10-entry trial cap per module with full production behavior Parity & /api/v1/auth/demo-reset)",
       "authMiddleware": "backend/src/middleware/auth.middleware.js",
       "rcceErrorHandler": "backend/src/rcce/systemErrorHandler.js",
       "institutionProfilesUtil": "backend/src/utils/institutionProfiles.js",
@@ -322,11 +325,18 @@
       "rootCause": "clinic.routes.js only exposed /status without mounting in server.js, admissions/registration did not seed clinic medical profiles, and GBSVoiceAssistant lacked backend System Memory API lookup and fast end-of-statement reaction.",
       "resolution": "Implemented full clinic.service/controller/routes mounted at /api/v1/clinic & /api/v1/health-clinic with Admission Medical Profile auto-sync in auth.service & admissions.service, SchoolClinicHubPanel mounted across Admin, Teacher, Student, Parent, Accountant, Staff, HR & Developer dashboards, plus systemMemoryAssistant.service (/api/v1/ai/system-memory & /assistant-query) powering instant responses and GBS intro greeting in GBSVoiceAssistant.jsx. Fixed institutionScope.js shortName/title completeness and /assets/real/* poster paths, eliminating all runtime TypeErrors and 404s across all 9 dashboards.",
       "status": "PERMANENTLY_GUARDED"
+    },
+    {
+      "issueCode": "DIAG-UNIFIED-GBS-RCCE-V2",
+      "symptom": "Centralized Response, Control and Communication Engine (GBS-RCCE) needed complete enforcement across all modules, Developer privacy gate, error monitor, idempotency protection, hover & new-tab full display UX, and full Demo 10-entry module parity",
+      "rootCause": "Existing rcce files had isolated route coverage without global envelope normalization, mismatches between rcceClient.js and rcceRoutes.js (/catalogue vs /response-catalogue, enabled vs active, logs vs auditLogs), unauthenticated RCCE routes, and missing Demo 10-entry server/client buckets for University & Clinic.",
+      "resolution": "Upgraded backend/src/rcce/* with automatic /api/v1/* canonical envelope normalization ({ success, code, message, data, errors, timestamp, requestId }), deterministic inferOperationResponse, auto-audit & domain event hooks, idempotencyProtection.guard on sensitive transactions, strict Developer Privacy Gate (/privacy-inspect) & Error Monitor (/error-monitor), Demo 10-entry coverage on all active modules, non-blocking UniversalHeadingTooltipHUD, Open New Tab full-page control in TopCenterSystemBanner, and full Developer RcceControlHub visibility.",
+      "status": "PERMANENTLY_GUARDED"
     }
   ],
   "verificationSummary": {
-    "backendTestSuitesPassed": "25/25 across 8 suites (auth-and-voicenote, clinic-and-voice-memory, payments, payments-http, translator-pwa-demo-rbac, transport-and-demo-limit, university-and-defaulters, user-approval-and-sms)",
-    "chromeE2EDashboardsVerified": "9/9 dashboards + Login + Voice AI (Admin, Teacher, Student, Parent, Accountant, Staff, HR, Alumni, Developer) — 0 uncaught exceptions, 0 HTTP 4xx/5xx, all Clinic/University/Defaulters tabs verified clickable",
+    "backendTestSuitesPassed": "28/28 across 9 suites (auth-and-voicenote, clinic-and-voice-memory, payments, payments-http, rcce-engine, translator-pwa-demo-rbac, transport-and-demo-limit, university-and-defaulters, user-approval-and-sms)",
+    "chromeE2EDashboardsVerified": "9/9 dashboards + Login + Voice AI + RCCE Control Hub + Hover Tooltip + Open New Tab + Demo 10-Entry Parity",
     "institutionSeparationUniversityClinicVoiceVerified": "2026-11-19 Live Production & Demo Sandbox Parity",
     "browserAssetsRegenerated": "favicon.ico, logo.png, icon-192.png, icon-512.png, apple-touch-icon.png, og-gbs-crest.jpg",
     "uncaughtBrowserConsoleErrors": 0,

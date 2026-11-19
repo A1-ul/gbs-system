@@ -1,3 +1,5 @@
+import { getApiBaseUrl } from "../api/client/apiConfig";
+
 export function getAccessToken() {
   return localStorage.getItem("gbs_token") || null;
 }
@@ -255,10 +257,8 @@ export async function resetDemoSandboxData({ reloadPage = true } = {}) {
   clearWorkspaceMutableKeys({ clearBranding: false });
   syncSystemModeFlags("DEMO_SANDBOX");
   try {
-    const base = typeof window !== "undefined"
-      ? (window.location.origin.includes("localhost") ? "http://localhost:5000/api/v1" : `${window.location.origin}/api/v1`)
-      : "/api/v1";
-    await fetch(`${base}/auth/demo-reset`, { method: "POST" }).catch(() => {});
+    const base = getApiBaseUrl();
+    await fetch(`${base}/auth/demo-reset`, { method: "POST" }).catch(() => { });
   } catch { }
   window.dispatchEvent(new CustomEvent("gbs_demo_reset"));
   window.dispatchEvent(new CustomEvent("gbs_demo_usage_updated"));

@@ -4,16 +4,23 @@ const crypto = require('crypto');
 
 /**
  * GBS DUPLICATE OPERATION & IDEMPOTENCY SENTINEL (GBS-RCCE)
- * Prevents accidental duplicate submissions for financial transactions,
- * student admissions, credential registrations, and grade submissions.
- * Guarantees that repeating the same action within the idempotency window
- * returns the confirmed result without duplicate database mutations or double charges.
+ * Prevents duplicate financial transactions, admissions, registrations, and critical writes.
+ * - Explicit `X-Idempotency-Key` / `Idempotency-Key`: Full sliding-window replay of confirmed result.
+ * - Concurrent identical in-flight submission (even without header): Blocked immediately with 409.
  */
 
 class IdempotencyProtection {
   constructor(windowMs = 60000) {
-    this.windowMs = windowMs; // 60 seconds sliding window
+    this.windowMs = windowMs;
     this.cache = new Map();
+  }
+
+  /**
+   * Read explicit client-supplied idempotency key if present
+   */
+  getExplicitKey(req) {
+    const headerKey = req.headers?.['x-idempotency-key'] || req.headers?.['idempotency-key'];
+    return headerKey && String(headerKey).trim() ? `EXPLICIT:${String(headerKey).trim()}` : null;
   }
 
   /**
@@ -21,21 +28,19 @@ class IdempotencyProtection {
    */
   generateKey(req, customKey = null) {
     if (customKey) return String(customKey);
-    const headerKey = req.headers['x-idempotency-key'] || req.headers['idempotency-key'];
-    if (headerKey) return String(headerKey).trim();
+    const explicit = this.getExplicitKey(req);
+    if (explicit) return explicit;
 
-    // Compute deterministic fingerprint from path, method, user, and body
     const bodyStr = JSON.stringify(req.body || {});
     const userId = req.user?.id || req.user?.email || 'anon';
-    const tenantId = req.user?.tenantId || req.tenantId || req.headers['x-tenant-id'] || '1';
-    const hash = crypto.createHash('sha256').update(`${req.method}:${req.path}:${userId}:${tenantId}:${bodyStr}`).digest('hex');
+    const tenantId = req.user?.tenantId || req.tenantId || req.headers?.['x-tenant-id'] || '1';
+    const targetPath = req.originalUrl || req.path || '/';
+    const hash = crypto.createHash('sha256').update(`${req.method}:${targetPath}:${userId}:${tenantId}:${bodyStr}`).digest('hex');
     return `IDEM-${hash.slice(0, 24)}`;
   }
 
   /**
    * Check idempotency status before executing transaction
-   * @param {string} key - Idempotency key
-   * @returns {{ isDuplicate: boolean, isProcessing: boolean, record: object|null }}
    */
   check(key) {
     this._cleanExpired();
@@ -52,7 +57,7 @@ class IdempotencyProtection {
   }
 
   /**
-   * Mark transaction as starting
+   * Mark transaction as currently executing
    */
   start(key, metadata = {}) {
     this.cache.set(key, {
@@ -63,18 +68,19 @@ class IdempotencyProtection {
   }
 
   /**
-   * Commit finished transaction result
+   * Commit confirmed transaction payload for safe idempotent replay
    */
-  complete(key, responseData) {
+  complete(key, responsePayload, statusCode = 200) {
     this.cache.set(key, {
       status: 'COMPLETED',
       completedAt: Date.now(),
-      responseData
+      statusCode,
+      responseData: responsePayload
     });
   }
 
   /**
-   * Release key if operation failed so user can safely retry
+   * Release key if operation failed so user can correct errors and retry cleanly
    */
   release(key) {
     this.cache.delete(key);
@@ -91,21 +97,29 @@ class IdempotencyProtection {
   }
 
   /**
-   * Express Middleware to guard sensitive endpoints
-   * @param {string} operationName - Name of transaction (e.g. 'FEE_PAYMENT', 'ADMISSION_SUBMIT')
+   * Express Middleware to guard sensitive mutating endpoints.
+   * @param {string} operationName - Descriptive name (e.g. 'FEE_PAYMENT', 'ADMISSION_SUBMISSION')
    */
   guard(operationName = 'SENSITIVE_TRANSACTION') {
     return (req, res, next) => {
-      // Only protect mutating HTTP requests
-      if (!['POST', 'PUT', 'PATCH'].includes(req.method)) {
+      if (!['POST', 'PUT', 'PATCH'].includes(String(req.method || '').toUpperCase())) {
         return next();
       }
 
-      const key = this.generateKey(req);
+      const explicitKey = this.getExplicitKey(req);
+      const key = explicitKey || this.generateKey(req);
       const checkResult = this.check(key);
 
       if (checkResult.isDuplicate) {
         if (checkResult.isProcessing) {
+          if (typeof res.rcceError === 'function') {
+            return res.rcceError(
+              'DUPLICATE_SUBMISSION_DETECTED',
+              [{ message: `This ${operationName} is currently processing. Please wait a moment for confirmation.` }],
+              `This ${operationName} is currently processing. Please wait a moment for confirmation.`,
+              409
+            );
+          }
           return res.status(409).json({
             success: false,
             status: 'fail',
@@ -115,30 +129,47 @@ class IdempotencyProtection {
           });
         }
 
-        // Return cached confirmed result
-        return res.status(200).json({
-          success: true,
-          status: 'success',
-          code: 'IDEMPOTENT_TRANSACTION_REPLAYED',
-          message: `Transaction already verified and completed successfully. Replaying confirmed record.`,
-          data: checkResult.record?.responseData || null,
-          requestId: req.requestId || 'REQ-IDEMP'
-        });
+        // Only replay completed response automatically when client supplied an explicit X-Idempotency-Key
+        if (explicitKey) {
+          const cachedData = checkResult.record?.responseData?.data ?? checkResult.record?.responseData ?? null;
+          if (typeof res.rcceSuccess === 'function') {
+            return res.rcceSuccess(
+              'IDEMPOTENT_TRANSACTION_REPLAYED',
+              cachedData,
+              `Duplicate ${operationName} safely prevented. Returning confirmed transaction record.`,
+              { idempotentReplay: true, idempotencyKey: explicitKey },
+              200
+            );
+          }
+          return res.status(200).json({
+            success: true,
+            status: 'success',
+            code: 'IDEMPOTENT_TRANSACTION_REPLAYED',
+            message: `Duplicate ${operationName} safely prevented. Returning confirmed transaction record.`,
+            data: cachedData,
+            requestId: req.requestId || 'REQ-IDEMP'
+          });
+        }
       }
 
-      // Mark as processing
-      this.start(key, { operationName, path: req.path });
+      this.start(key, { operationName, path: req.originalUrl || req.path });
 
-      // Intercept res.json to capture outcome
       const originalJson = res.json.bind(res);
       res.json = (body) => {
         if (res.statusCode >= 200 && res.statusCode < 300) {
-          this.complete(key, body?.data || body);
+          this.complete(key, body, res.statusCode);
         } else {
           this.release(key);
         }
         return originalJson(body);
       };
+
+      res.once('close', () => {
+        const entry = this.cache.get(key);
+        if (entry && entry.status === 'PROCESSING') {
+          this.release(key);
+        }
+      });
 
       next();
     };

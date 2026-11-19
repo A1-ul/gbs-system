@@ -7,6 +7,7 @@ import {
   setTenantScopedRecord
 } from "../../utils/institutionScope";
 import { isDemoSandboxMode } from "../../utils/tokenStorage";
+import { checkDemoEntryLimit, trackDemoEntryCreated } from "../../utils/demoLimitGuard";
 
 const DEFAULT_STREAMS = [
   {
@@ -249,21 +250,25 @@ export default function UniversityOperationsPanel({
     if (!internForm.companyName || !internForm.supervisorName || !internForm.startDate || !internForm.endDate) {
       return notify("Please fill Company Name, Supervisor Name, Start Date, and End Date.", true);
     }
+    const demoCheck = checkDemoEntryLimit("university", "University Records", internships.length);
+    if (!demoCheck.allowed) return notify(demoCheck.message, true);
     try {
       const res = await apiClient.post("/university/internships", internForm);
       const created = res?.data?.data?.internship;
+      trackDemoEntryCreated("university");
       const updated = [created, ...internships];
       setInternships(updated);
       setTenantScopedRecord("uni_internships", updated);
       setInternForm((prev) => ({ ...prev, companyName: "", companyAddress: "", supervisorName: "", supervisorPhone: "", objectives: "" }));
-      notify("✅ University Internship / Attachment form submitted & recorded cleanly.");
+      notify(res?.data?.message || "✅ University Internship / Attachment form submitted & recorded cleanly.");
     } catch (err) {
-      if (isDemo) {
+      if (isDemo && !err?.response) {
+        trackDemoEntryCreated("university");
         const localRec = { id: `INT-${Date.now()}`, ...internForm, status: "SUBMITTED", createdAt: new Date().toISOString() };
         const updated = [localRec, ...internships];
         setInternships(updated);
         setTenantScopedRecord("uni_internships", updated);
-        return notify("✅ [Demo] University Internship form submitted cleanly.");
+        return notify("✅ [Offline Demo] University Internship form queued cleanly.");
       }
       notify(err?.response?.data?.message || err.message || "Failed to submit internship form.", true);
     }
@@ -279,16 +284,16 @@ export default function UniversityOperationsPanel({
       setInternships(updated);
       setTenantScopedRecord("uni_internships", updated);
       setGradeTargetId("");
-      notify(`✅ Internship & attachment graded (${graded.letterGrade}, Score ${graded.finalScore}%) cleanly.`);
+      notify(res?.data?.message || `✅ Internship & attachment graded (${graded.letterGrade}, Score ${graded.finalScore}%) cleanly.`);
     } catch (err) {
-      if (isDemo) {
+      if (isDemo && !err?.response) {
         const avg = Math.round(((Number(internGradeForm.supervisorScore) * 0.4) + (Number(internGradeForm.reportScore) * 0.4) + (Number(internGradeForm.courseGradeScore) * 0.2)) * 10) / 10;
         const letter = avg >= 80 ? "A" : avg >= 70 ? "B" : avg >= 60 ? "C" : "D";
         const updated = internships.map((i) => String(i.id) === String(gradeTargetId) ? { ...i, ...internGradeForm, finalScore: avg, letterGrade: letter, status: "GRADED" } : i);
         setInternships(updated);
         setTenantScopedRecord("uni_internships", updated);
         setGradeTargetId("");
-        return notify(`✅ [Demo] Internship graded (${letter}, ${avg}%).`);
+        return notify(`✅ [Offline Demo] Internship graded (${letter}, ${avg}%).`);
       }
       notify(err?.response?.data?.message || err.message || "Failed to grade internship.", true);
     }
@@ -297,22 +302,26 @@ export default function UniversityOperationsPanel({
   const handleAddStream = async (e) => {
     e.preventDefault();
     if (!streamForm.streamName.trim()) return notify("Stream name is required.", true);
+    const demoCheck = checkDemoEntryLimit("university", "University Records", streams.length);
+    if (!demoCheck.allowed) return notify(demoCheck.message, true);
     try {
       const res = await apiClient.post("/university/streams", streamForm);
       const created = res?.data?.data?.stream;
+      trackDemoEntryCreated("university");
       const updated = [created, ...streams];
       setStreams(updated);
       setTenantScopedRecord("uni_streams", updated);
       setStreamForm({ streamCode: "", streamName: "", scheduleSummary: "", coordinator: "", feePolicyNote: "" });
-      notify(`✅ University Stream '${created.streamName}' registered cleanly.`);
+      notify(res?.data?.message || `✅ University Stream '${created.streamName}' registered cleanly.`);
     } catch (err) {
-      if (isDemo) {
+      if (isDemo && !err?.response) {
+        trackDemoEntryCreated("university");
         const rec = { id: `stream_${Date.now()}`, ...streamForm, status: "ACTIVE" };
         const updated = [rec, ...streams];
         setStreams(updated);
         setTenantScopedRecord("uni_streams", updated);
         setStreamForm({ streamCode: "", streamName: "", scheduleSummary: "", coordinator: "", feePolicyNote: "" });
-        return notify(`✅ [Demo] University Stream '${rec.streamName}' added.`);
+        return notify(`✅ [Offline Demo] University Stream '${rec.streamName}' added.`);
       }
       notify(err?.response?.data?.message || err.message || "Failed to add stream.", true);
     }
@@ -323,21 +332,25 @@ export default function UniversityOperationsPanel({
     if (!govForm.positionTitle || !govForm.holderName || !govForm.duties) {
       return notify("Position Title, Student Holder Name, and Duties are required.", true);
     }
+    const demoCheck = checkDemoEntryLimit("university", "University Records", governanceRoles.length);
+    if (!demoCheck.allowed) return notify(demoCheck.message, true);
     try {
       const res = await apiClient.post("/university/governance", govForm);
       const created = res?.data?.data?.governanceRole;
+      trackDemoEntryCreated("university");
       const updated = [created, ...governanceRoles];
       setGovernanceRoles(updated);
       setTenantScopedRecord("uni_governance", updated);
       setGovForm({ positionTitle: "", holderName: "", studentId: "", level: "Level 300", stream: "Regular Students", duties: "", strategicPlan: "", howToHelpSchool: "" });
-      notify(`✅ Student Governance role '${created.positionTitle}' & school improvement plan saved.`);
+      notify(res?.data?.message || `✅ Student Governance role '${created.positionTitle}' & school improvement plan saved.`);
     } catch (err) {
-      if (isDemo) {
+      if (isDemo && !err?.response) {
+        trackDemoEntryCreated("university");
         const rec = { id: `src_${Date.now()}`, ...govForm, status: "ACTIVE" };
         const updated = [rec, ...governanceRoles];
         setGovernanceRoles(updated);
         setTenantScopedRecord("uni_governance", updated);
-        return notify(`✅ [Demo] SRC Role '${rec.positionTitle}' added.`);
+        return notify(`✅ [Offline Demo] SRC Role '${rec.positionTitle}' added.`);
       }
       notify(err?.response?.data?.message || err.message || "Failed to save SRC governance role.", true);
     }
@@ -346,14 +359,17 @@ export default function UniversityOperationsPanel({
   const handleSetUniExam = async (e) => {
     e.preventDefault();
     if (!examForm.courseCode || !examForm.courseTitle) return notify("Course Code & Title are required.", true);
+    const demoCheck = checkDemoEntryLimit("university", "University Examinations", exams.length);
+    if (!demoCheck.allowed) return notify(demoCheck.message, true);
     try {
       const res = await apiClient.post("/university/exams", examForm);
       const exam = res?.data?.data?.exam;
+      trackDemoEntryCreated("university");
       const updated = [exam, ...exams];
       setExams(updated);
       setTenantScopedRecord("uni_exams", updated);
       setExamForm((prev) => ({ ...prev, courseCode: "", courseTitle: "" }));
-      notify(`✅ University Exam '${exam.courseCode}' published for ${exam.targetLevel}.`);
+      notify(res?.data?.message || `✅ University Exam '${exam.courseCode}' published for ${exam.targetLevel}.`);
     } catch (err) {
       notify(err?.response?.data?.message || err.message || "Failed to publish University exam.", true);
     }

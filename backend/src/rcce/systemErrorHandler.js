@@ -28,8 +28,19 @@ function rcceCentralErrorHandler(err, req, res, next) {
     userFacingMessage = 'The database service is synchronizing. Operational fallback engine has safely preserved your session.';
   }
   // 2. Authentication Failures (401)
-  else if (statusCode === 401 || lowerMsg.includes('authentication required') || lowerMsg.includes('please log in') || lowerMsg.includes('invalid email or password')) {
-    code = code || (lowerMsg.includes('invalid email or password') ? 'AUTH_LOGIN_FAILED' : 'AUTH_UNAUTHORIZED');
+  else if (
+    statusCode === 401 ||
+    lowerMsg.includes('authentication required') ||
+    lowerMsg.includes('please log in') ||
+    lowerMsg.includes('invalid email') ||
+    lowerMsg.includes('invalid password') ||
+    lowerMsg.includes('invalid credential')
+  ) {
+    code = code || (
+      (lowerMsg.includes('invalid email') || lowerMsg.includes('invalid username') || lowerMsg.includes('invalid password') || lowerMsg.includes('invalid credential'))
+        ? 'AUTH_LOGIN_FAILED'
+        : 'AUTH_UNAUTHORIZED'
+    );
     userFacingMessage = rawMessage;
   }
   // 3. Permission & Access Rejections (403)
@@ -81,14 +92,9 @@ function rcceCentralErrorHandler(err, req, res, next) {
     ? statusCode
     : (catalogueSpec.statusCode || 500);
 
-  // Determine if requesting client is authorized developer or super admin
-  const isDevClient = Boolean(
-    req.user?.role === 'DEVELOPER' ||
-    req.user?.role === 'SUPER_ADMIN' ||
-    req.headers['x-developer-token'] ||
-    req.path?.startsWith('/api/v1/dev-control') ||
-    req.path?.startsWith('/api/v1/developer')
-  );
+  // Determine if requesting client is verified authorized developer or super admin
+  const actorRole = String(req.user?.role || '').toUpperCase();
+  const isDevClient = actorRole === 'DEVELOPER' || actorRole === 'SUPER_ADMIN';
 
   const payload = {
     success: false,
@@ -113,6 +119,7 @@ function rcceCentralErrorHandler(err, req, res, next) {
   }
 
   // Record error to audit trail asynchronously
+  req.__rcceAuditLogged = true;
   try {
     auditTracker.logActivity({
       userId: req.user?.id || null,
