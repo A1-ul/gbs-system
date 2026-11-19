@@ -101,6 +101,10 @@ const protect = async (req, res, next) => {
       req.user = {
         id: 1,
         role: 'DEVELOPER',
+        firstName: 'Gabriel',
+        lastName: 'Osei-Appiah',
+        email: 'gabosei48@gmail.com',
+        phone: process.env.GBS_DEVELOPER_PHONE || '+233-54-329-4615',
         username: decoded.devId || decoded.username || 'gbs_developer',
         permissions: ['*'],
         tenantId: 1
@@ -127,8 +131,21 @@ const protect = async (req, res, next) => {
       if (Number.isInteger(numericUserId) && String(numericUserId) === String(decoded.id)) {
         user = await prisma.user.findUnique({
           where: { id: numericUserId },
-          include: { tenant: true }
+          include: {
+            tenant: true,
+            registrationProfile: {
+              select: {
+                verificationStatus: true,
+                phone: true,
+                whatsappPhone: true
+              }
+            }
+          }
         });
+        if (user && user.registrationProfile) {
+          user.verificationStatus = user.registrationProfile.verificationStatus;
+          user.phone = user.phone || user.registrationProfile.phone || user.registrationProfile.whatsappPhone || null;
+        }
       }
     } catch { }
 
@@ -275,11 +292,15 @@ const protect = async (req, res, next) => {
       return next(new AppError('User account is suspended, locked, or permanently deleted.', 403));
     }
 
+    const userStatusStr = String(user.status || '').toUpperCase();
+    const profileVerifyStr = String(user.verificationStatus || user.registrationProfile?.verificationStatus || '').toUpperCase();
     if (
       user.role !== 'DEVELOPER' &&
-      (user.isApproved === false || ['PENDING_APPROVAL', 'REJECTED'].includes(String(user.status || '').toUpperCase()))
+      (user.isApproved === false ||
+        ['PENDING', 'PENDING_APPROVAL', 'PENDING_HEADMASTER_APPROVAL', 'PENDING_DEVELOPER_APPROVAL', 'REJECTED'].includes(userStatusStr) ||
+        ['PENDING', 'PENDING_APPROVAL', 'PENDING_HEADMASTER_APPROVAL', 'PENDING_DEVELOPER_APPROVAL', 'REJECTED'].includes(profileVerifyStr))
     ) {
-      return next(new AppError('Access Denied: Your account is awaiting approval or has been rejected.', 403));
+      return next(new AppError('Access Denied: Your account is awaiting Headmaster approval or has been rejected.', 403));
     }
 
     const dbTenantStatus = String(user.tenant?.status || '').toUpperCase();

@@ -184,8 +184,8 @@ export default function UniversalAIAssistantHUD() {
           onClick={() => toggleMinimize(false)}
           style={{
             position: "fixed",
-            bottom: "14px",
-            right: "72px",
+            bottom: "16px",
+            right: "94px",
             zIndex: 99990,
             width: "32px",
             height: "32px",
@@ -239,8 +239,8 @@ export default function UniversalAIAssistantHUD() {
           }}
           style={{
             position: "fixed",
-            bottom: "14px",
-            right: "72px",
+            bottom: "16px",
+            right: "94px",
             zIndex: 99990,
             display: "flex",
             alignItems: "center",

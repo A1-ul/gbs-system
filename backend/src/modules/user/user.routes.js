@@ -22,6 +22,16 @@ router.get('/counts-by-role', optionalProtect, userController.getUserCounts);
 // 2. Cross-check registered user list by role
 router.get('/by-role/:role', optionalProtect, userController.getUsersByRole);
 
+// 2b. Headmaster Pending Staff Applications Queue (must sit BEFORE /:id routes)
+router.get(
+  '/pending-staff',
+  protect,
+  tenantStatusGuard,
+  tenantIsolationGuard,
+  restrictTo('SUPER_ADMIN', 'ADMIN', 'DEVELOPER'),
+  userController.getPendingStaff
+);
+
 // 3. User profile verification & qualification inspection
 router.get('/:id/profile-verification', optionalProtect, userController.getProfileVerification);
 
@@ -182,6 +192,12 @@ router.post(
       return next(err);
     }
   }
+);
+
+router.post(
+  '/reject-staff',
+  restrictTo('SUPER_ADMIN', 'ADMIN', 'DEVELOPER'),
+  userController.rejectStaff
 );
 
 router.post(

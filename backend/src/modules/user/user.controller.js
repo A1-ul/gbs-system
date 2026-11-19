@@ -216,6 +216,58 @@ const verifyStaffRegistration = async (req, res, next) => {
   }
 };
 
+/**
+ * GET /api/v1/users/pending-staff
+ * Retrieve pending staff & role registrations awaiting Headmaster approval
+ */
+const getPendingStaff = async (req, res, next) => {
+  try {
+    const requestedTenantId = req.query.tenantId || req.tenantId || req.user?.tenantId;
+    const pending = await userService.getPendingStaff(req.user, requestedTenantId);
+    res.status(200).json({
+      status: 'success',
+      results: pending.length,
+      data: { pendingStaff: pending }
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+
+/**
+ * POST /api/v1/users/approve-staff
+ * Headmaster approves pending staff registration across PostgreSQL & persistent store
+ */
+const approveStaff = async (req, res, next) => {
+  try {
+    const result = await userService.approveStaffAccount(req.body || {}, req.user);
+    res.status(200).json({
+      status: 'success',
+      message: `Staff member ${result.name || result.email || result.staffId} approved and activated for ${result.role} dashboard access.`,
+      data: result
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+
+/**
+ * POST /api/v1/users/reject-staff
+ * Headmaster declines pending staff registration
+ */
+const rejectStaff = async (req, res, next) => {
+  try {
+    const result = await userService.rejectStaffAccount(req.body || {}, req.user);
+    res.status(200).json({
+      status: 'success',
+      message: 'Staff registration request declined and blocked from system access by Headmaster.',
+      data: result
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+
 module.exports = {
   getUsers,
   getUserCounts,
@@ -226,5 +278,8 @@ module.exports = {
   removeUser,
   createUser,
   initiateStaffRegistration,
-  verifyStaffRegistration
+  verifyStaffRegistration,
+  getPendingStaff,
+  approveStaff,
+  rejectStaff
 };

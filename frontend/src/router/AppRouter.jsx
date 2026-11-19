@@ -1,5 +1,7 @@
 import React, { Suspense, lazy } from "react";
 import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
+import GBSVoiceAssistant from "../components/common/GBSVoiceAssistant";
+import { isDemoSandboxMode } from "../utils/tokenStorage";
 
 import MainLoginPage from "../modules/auth/pages/MainLoginPage";
 import TenantOnboardingFirstPage from "../modules/auth/pages/TenantOnboardingFirstPage";
@@ -62,7 +64,7 @@ const GBSCompanyWebsite = lazy(() => import("../modules/website/pages/GBSCompany
 const VideoPresentationEngine = lazy(() => import("../modules/presentation/pages/VideoPresentationEngine"));
 const UniversalDetailPage = lazy(() => import("../components/common/UniversalDetailPage"));
 
-function ProtectedPortalRoute({ children, loginPath = "/login" }) {
+function ProtectedPortalRoute({ children, loginPath = "/login", allowedRoles = null }) {
   try {
     const rawUser = localStorage.getItem("gbs_user");
     const devToken = localStorage.getItem("gbs_dev_token");
@@ -73,6 +75,7 @@ function ProtectedPortalRoute({ children, loginPath = "/login" }) {
       return <Navigate to={loginPath} replace />;
     }
     const user = JSON.parse(rawUser);
+    const userRole = String(user?.role || localStorage.getItem("gbs_auth_role") || "").toUpperCase();
     const userEmail = String(user?.email || "").toLowerCase().trim();
     const userCode = String(user?.tenantCode || user?.tenant?.code || "").toLowerCase().trim();
     const userTenantId = String(user?.tenantId || user?.tenant?.id || "").toLowerCase().trim();
@@ -166,6 +169,23 @@ function ProtectedPortalRoute({ children, loginPath = "/login" }) {
         return <Navigate to={loginPath} replace />;
       }
     }
+    // Strict Live Production Role Confinement:
+    // Approved staff can ONLY access their own assigned role dashboard in Live Production.
+    // (Demo Sandbox walkthrough & Developer inspection remain free to walk through portals.)
+    const isWalkthroughSession = isDemoSandboxMode() || userRole === "DEVELOPER";
+    if (
+      !isWalkthroughSession &&
+      Array.isArray(allowedRoles) &&
+      allowedRoles.length > 0 &&
+      userRole &&
+      !allowedRoles.includes(userRole)
+    ) {
+      const ownPortal =
+        userRole === "ADMIN" || userRole === "SUPER_ADMIN"
+          ? "/portal/admin/dashboard"
+          : `/portal/${userRole.toLowerCase()}/dashboard`;
+      return <Navigate to={ownPortal} replace />;
+    }
   } catch { }
   return children;
 }
@@ -214,15 +234,15 @@ export default function AppRouter() {
           <Route path="/login/alumni" element={<StaffLogin defaultRole="ALUMNI" />} />
 
           {/* Master Blueprint Section 3: Dedicated Role-Based Interactive Workspaces */}
-          <Route path="/portal/admin/dashboard" element={<ProtectedPortalRoute loginPath="/login/admin"><AdminDashboard /></ProtectedPortalRoute>} />
+          <Route path="/portal/admin/dashboard" element={<ProtectedPortalRoute loginPath="/login/admin" allowedRoles={["ADMIN", "SUPER_ADMIN"]}><AdminDashboard /></ProtectedPortalRoute>} />
           <Route path="/portal/super_admin/dashboard" element={<Navigate to="/portal/admin/dashboard" replace />} />
-          <Route path="/portal/teacher/dashboard" element={<ProtectedPortalRoute loginPath="/login/teacher"><TeacherDashboard /></ProtectedPortalRoute>} />
-          <Route path="/portal/student/dashboard" element={<ProtectedPortalRoute loginPath="/login/student"><StudentDashboard /></ProtectedPortalRoute>} />
-          <Route path="/portal/parent/dashboard" element={<ProtectedPortalRoute loginPath="/login/parent"><ParentDashboard /></ProtectedPortalRoute>} />
-          <Route path="/portal/accountant/dashboard" element={<ProtectedPortalRoute loginPath="/login/accountant"><AccountantDashboard /></ProtectedPortalRoute>} />
-          <Route path="/portal/staff/dashboard" element={<ProtectedPortalRoute loginPath="/login/staff"><StaffDashboard /></ProtectedPortalRoute>} />
-          <Route path="/portal/hr/dashboard" element={<ProtectedPortalRoute loginPath="/login/hr"><HRDashboard /></ProtectedPortalRoute>} />
-          <Route path="/portal/alumni/dashboard" element={<ProtectedPortalRoute loginPath="/login/alumni"><AlumniDashboard /></ProtectedPortalRoute>} />
+          <Route path="/portal/teacher/dashboard" element={<ProtectedPortalRoute loginPath="/login/teacher" allowedRoles={["TEACHER"]}><TeacherDashboard /></ProtectedPortalRoute>} />
+          <Route path="/portal/student/dashboard" element={<ProtectedPortalRoute loginPath="/login/student" allowedRoles={["STUDENT"]}><StudentDashboard /></ProtectedPortalRoute>} />
+          <Route path="/portal/parent/dashboard" element={<ProtectedPortalRoute loginPath="/login/parent" allowedRoles={["PARENT"]}><ParentDashboard /></ProtectedPortalRoute>} />
+          <Route path="/portal/accountant/dashboard" element={<ProtectedPortalRoute loginPath="/login/accountant" allowedRoles={["ACCOUNTANT"]}><AccountantDashboard /></ProtectedPortalRoute>} />
+          <Route path="/portal/staff/dashboard" element={<ProtectedPortalRoute loginPath="/login/staff" allowedRoles={["STAFF"]}><StaffDashboard /></ProtectedPortalRoute>} />
+          <Route path="/portal/hr/dashboard" element={<ProtectedPortalRoute loginPath="/login/hr" allowedRoles={["HR"]}><HRDashboard /></ProtectedPortalRoute>} />
+          <Route path="/portal/alumni/dashboard" element={<ProtectedPortalRoute loginPath="/login/alumni" allowedRoles={["ALUMNI"]}><AlumniDashboard /></ProtectedPortalRoute>} />
           <Route path="/portal/developer/dashboard" element={<Navigate to="/developer-control-center/dashboard" replace />} />
           <Route path="/portal/:role/dashboard" element={<ProtectedPortalRoute loginPath="/login"><RoleDashboardView /></ProtectedPortalRoute>} />
 
@@ -377,6 +397,7 @@ export default function AppRouter() {
           <Route path="*" element={<Navigate to="/login" replace />} />
         </Routes>
       </Suspense>
+      <GBSVoiceAssistant />
     </BrowserRouter>
   );
 }

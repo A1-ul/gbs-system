@@ -149,5 +149,99 @@ module.exports = {
   getLogs,
   sendSMS,
   sendSchoolSMS,
-  sendDirectSMS
+  sendDirectSMS: async (req, res) => {
+    try {
+      const body = req.body || {};
+      const senderName =
+        body.senderName ||
+        (req.user ? `${req.user.firstName || ''} ${req.user.lastName || ''}`.trim() || req.user.role : null) ||
+        'Institutional User';
+      const data = await service.sendDirectUserSMS({
+        senderId: req.user?.id || body.senderId || null,
+        senderName,
+        senderRole: body.senderRole || req.user?.role || 'STAFF',
+        senderPhone: body.senderPhone || req.user?.phone || null,
+        senderEmail: body.senderEmail || req.user?.email || null,
+        recipientId: body.recipientId || null,
+        recipientPhone: body.recipientPhone || body.phone || body.phoneNumber,
+        recipientName: body.recipientName || 'Recipient',
+        recipientRole: body.recipientRole || 'CONTACT',
+        recipientEmail: body.recipientEmail || null,
+        recipientAudience: body.recipientAudience || 'CUSTOM',
+        subject: body.subject || null,
+        message: body.message || body.content,
+        carrierNetwork: body.carrierNetwork || null,
+        tenantId: body.tenantId || req.tenantId || req.user?.tenantId || 1,
+        schoolName: body.schoolName || null,
+        channel: body.channel || 'SMS'
+      });
+      return res.status(200).json({
+        success: true,
+        status: 'success',
+        message: data.carrierNote || `Message processed for ${data.recipientPhone || data.recipientEmail}.`,
+        data: { sms: data, messageRecord: data }
+      });
+    } catch (error) {
+      return res.status(400).json({
+        success: false,
+        status: 'fail',
+        message: error.message || 'Failed to dispatch SMS message.'
+      });
+    }
+  },
+  getInbox: (req, res) => {
+    try {
+      const q = req.query || {};
+      const phone = q.phone || req.user?.phone || null;
+      const email = q.email || req.user?.email || null;
+      const userId = q.userId || req.user?.id || null;
+      const role = q.role || req.user?.role || null;
+      const tenantId = q.tenantId || req.tenantId || req.user?.tenantId || null;
+      const messages = service.getInboxMessages({
+        phone,
+        email,
+        userId,
+        role,
+        tenantId,
+        limit: q.limit
+      });
+      const unreadCount = messages.filter((m) => !m.read).length;
+      return res.status(200).json({
+        success: true,
+        status: 'success',
+        results: messages.length,
+        unreadCount,
+        data: { messages, unreadCount }
+      });
+    } catch (error) {
+      return res.status(400).json({
+        success: false,
+        status: 'fail',
+        message: error.message || 'Failed to load SMS inbox.'
+      });
+    }
+  },
+  markInboxRead: (req, res) => {
+    try {
+      const updated = service.markInboxMessageRead(req.params.id);
+      if (!updated) {
+        return res.status(404).json({
+          success: false,
+          status: 'fail',
+          message: 'Message not found in SMS inbox.'
+        });
+      }
+      return res.status(200).json({
+        success: true,
+        status: 'success',
+        data: { message: updated }
+      });
+    } catch (error) {
+      return res.status(400).json({
+        success: false,
+        status: 'fail',
+        message: error.message
+      });
+    }
+  }
 };

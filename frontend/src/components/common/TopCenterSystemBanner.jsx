@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from "react";
+import apiClient from "../../api/client/apiClient";
 import { resolveApiUrl } from "../../api/client/apiConfig";
 import { clearFakeDataEntries } from "../../utils/freshSystemReset";
 import { getActiveSchoolName, getActiveSchoolLogo } from "../../utils/schoolBranding";
@@ -59,6 +60,7 @@ export default function TopCenterSystemBanner({
   const [showCloudCDNModal, setShowCloudCDNModal] = useState(false);
   const [demoTrialUsage, setDemoTrialUsage] = useState({ maxPerModule: 10, totalUsed: 0 });
   const [unreadTranslatedCount, setUnreadTranslatedCount] = useState(0);
+  const [unreadSmsCount, setUnreadSmsCount] = useState(0);
   const [pwaPromptReady, setPwaPromptReady] = useState(
     typeof window !== "undefined" && Boolean(window.__gbsDeferredInstallPrompt)
   );
@@ -115,18 +117,38 @@ export default function TopCenterSystemBanner({
         setUnreadTranslatedCount(list.filter((m) => !m.read).length);
       } catch { }
     };
+    const syncSmsInboxBadge = async () => {
+      try {
+        const u = JSON.parse(localStorage.getItem("gbs_user") || "{}");
+        const params = new URLSearchParams();
+        if (u.phone) params.set("phone", u.phone);
+        if (u.email) params.set("email", u.email);
+        if (u.id) params.set("userId", String(u.id));
+        if (currentUserRole && currentUserRole !== "GUEST") params.set("role", currentUserRole);
+        if (!params.toString()) return;
+        const res = await apiClient.get(`/sms/inbox?${params.toString()}`);
+        const count = Number(res?.data?.unreadCount ?? res?.data?.data?.unreadCount ?? 0);
+        setUnreadSmsCount(Number.isFinite(count) ? count : 0);
+      } catch { }
+    };
     const onPromptReady = () => setPwaPromptReady(Boolean(window.__gbsDeferredInstallPrompt));
     const onInstalled = () => setPwaPromptReady(false);
 
     syncTranslatedBadge();
+    syncSmsInboxBadge();
     window.addEventListener("gbs_translated_message_sent", syncTranslatedBadge);
     window.addEventListener("gbs_translated_message_read", syncTranslatedBadge);
+    window.addEventListener("gbs_direct_sms_updated", syncSmsInboxBadge);
     window.addEventListener("gbs_pwa_install_ready", onPromptReady);
     window.addEventListener("gbs_pwa_installed", onInstalled);
-    const inboxPoll = setInterval(syncTranslatedBadge, 25000);
+    const inboxPoll = setInterval(() => {
+      syncTranslatedBadge();
+      syncSmsInboxBadge();
+    }, 25000);
     return () => {
       window.removeEventListener("gbs_translated_message_sent", syncTranslatedBadge);
       window.removeEventListener("gbs_translated_message_read", syncTranslatedBadge);
+      window.removeEventListener("gbs_direct_sms_updated", syncSmsInboxBadge);
       window.removeEventListener("gbs_pwa_install_ready", onPromptReady);
       window.removeEventListener("gbs_pwa_installed", onInstalled);
       clearInterval(inboxPoll);
@@ -430,6 +452,19 @@ export default function TopCenterSystemBanner({
           title="Send direct SMS messages between users or to any mobile contact network number"
         >
           📱 Direct Mobile SMS
+          {unreadSmsCount > 0 && (
+            <span style={{
+              marginLeft: "6px",
+              background: "#10b981",
+              color: "#022c22",
+              padding: "1px 6px",
+              borderRadius: "999px",
+              fontSize: "0.7rem",
+              fontWeight: 900
+            }}>
+              {unreadSmsCount} New
+            </span>
+          )}
         </button>
         <span style={{ color: "#475569" }}>•</span>
         <button

@@ -680,6 +680,44 @@ export function AdminDashboard({ initialTab } = {}) {
     return [];
   });
 
+  const fetchPendingStaff = async () => {
+    try {
+      const res = await apiClient.get("/users/pending-staff");
+      const remoteList = res?.data?.data?.pendingStaff || [];
+      let localList = [];
+      try {
+        localList = JSON.parse(localStorage.getItem("gbs_pending_staff_registrations") || "[]");
+      } catch { }
+      const mergedMap = new Map();
+      remoteList.forEach((s) => {
+        const k = String(s.email || s.id).toLowerCase().trim();
+        mergedMap.set(k, s);
+      });
+      localList.forEach((s) => {
+        const k = String(s.email || s.id).toLowerCase().trim();
+        if (!mergedMap.has(k) && !String(s.status || "").includes("APPROVED") && s.status !== "REJECTED") {
+          mergedMap.set(k, s);
+        }
+      });
+      const merged = Array.from(mergedMap.values());
+      setPendingStaff(merged);
+      try {
+        localStorage.setItem("gbs_pending_staff_registrations", JSON.stringify(merged));
+      } catch { }
+    } catch {
+      try {
+        const saved = JSON.parse(localStorage.getItem("gbs_pending_staff_registrations") || "[]");
+        if (Array.isArray(saved)) setPendingStaff(saved);
+      } catch { }
+    }
+  };
+
+  useEffect(() => {
+    if (activeTab === "staff") {
+      fetchPendingStaff();
+    }
+  }, [activeTab]);
+
   // Multi-Channel Communications Suite (SMS • WhatsApp • Email)
   const [commChannel, setCommChannel] = useState("WHATSAPP"); // "WHATSAPP" | "SMS" | "EMAIL"
   const [commRecipientMode, setCommRecipientMode] = useState("CUSTOM"); // "CUSTOM" | "PARENT" | "STAFF" | "ALL_PARENTS" | "ALL_STAFF"
@@ -775,33 +813,87 @@ export function AdminDashboard({ initialTab } = {}) {
         }
 
         const smsContent = `[${reportSchoolName}] ${commSubject}: ${commMessage} - Headmaster ${headmasterProfile.name}`;
+        let smsData = null;
 
         try {
-          await apiClient.post("/communication/sms", {
+          const smsRes = await apiClient.post("/communication/sms", {
+            recipientPhone: targetPhone,
             phoneNumber: targetPhone,
-            message: smsContent,
-            senderId: "GBS-HEADMASTER"
+            recipientEmail: targetEmail || null,
+            recipientName: recipientDisplayName,
+            recipientRole:
+              commRecipientMode === "ALL_PARENTS"
+                ? "PARENT"
+                : commRecipientMode === "ALL_STAFF"
+                  ? "STAFF"
+                  : "CONTACT",
+            recipientAudience: commRecipientMode,
+            subject: commSubject,
+            content: commMessage,
+            message: commMessage,
+            senderName: headmasterProfile.name,
+            senderRole: "ADMIN",
+            senderPhone: headmasterProfile.phone,
+            senderEmail: headmasterProfile.email,
+            schoolName: reportSchoolName
           });
-        } catch { }
+          smsData = smsRes?.data?.data || smsRes?.data || null;
+        } catch (smsErr) {
+          if (smsErr?.response) {
+            setFeedback({
+              type: "error",
+              message: smsErr.response?.data?.message || smsErr.message || "SMS dispatch rejected by server."
+            });
+            setCommSending(false);
+            return;
+          }
+        }
+
+        const carrierStatus = smsData?.carrierStatus || "LOCAL_QUEUED";
+        const isCarrierSent = carrierStatus === "CARRIER_SMS_SENT";
+        const statusLabel = isCarrierSent
+          ? `SENT VIA ${smsData.carrierProvider || "CARRIER"} TELECOM SMS ✓`
+          : carrierStatus === "CARRIER_SMS_FAILED"
+            ? `TELECOM FAILED (${smsData?.providerError || "Error"}) • SAVED TO INBOX`
+            : "DELIVERED TO GBS INBOX (CARRIER SIM READY)";
 
         const record = {
-          id: `MSG-SMS-${Date.now()}`,
+          id: smsData?.messageId || `MSG-SMS-${Date.now()}`,
           channel: "SMS",
           recipient: recipientDisplayName,
           contact: targetPhone,
           subject: commSubject,
           body: smsContent,
-          status: "DELIVERED VIA SMS GATEWAY ✓",
-          sentAt: new Date().toISOString()
+          senderName: headmasterProfile.name,
+          senderRole: "ADMIN",
+          senderPhone: headmasterProfile.phone,
+          senderEmail: headmasterProfile.email,
+          carrierStatus,
+          deviceSmsUri: smsData?.deviceSmsUri || `sms:${targetPhone.replace(/[^+\d]/g, "")}?body=${encodeURIComponent(smsContent)}`,
+          status: statusLabel,
+          sentAt: smsData?.sentAt || new Date().toISOString()
         };
 
         const updated = [record, ...commHistory];
         setCommHistory(updated);
         localStorage.setItem("gbs_headmaster_sent_messages", JSON.stringify(updated));
+        try {
+          if (commRecipientMode === "ALL_PARENTS" || commRecipientMode === "CUSTOM") {
+            const parentInbox = JSON.parse(localStorage.getItem("gbs_parent_received_messages") || "[]");
+            localStorage.setItem("gbs_parent_received_messages", JSON.stringify([record, ...parentInbox].slice(0, 50)));
+          }
+          if (commRecipientMode === "ALL_STAFF" || commRecipientMode === "CUSTOM") {
+            const staffInbox = JSON.parse(localStorage.getItem("gbs_staff_received_messages") || "[]");
+            localStorage.setItem("gbs_staff_received_messages", JSON.stringify([record, ...staffInbox].slice(0, 50)));
+          }
+          window.dispatchEvent(new CustomEvent("gbs_direct_sms_updated"));
+        } catch { }
 
         setFeedback({
-          type: "success",
-          message: `✓ Instant SMS dispatched to ${targetPhone}! Carrier message ID: SMS-GW-2026-${Math.floor(1000 + Math.random() * 9000)}.`
+          type: isCarrierSent ? "success" : carrierStatus === "CARRIER_SMS_FAILED" ? "error" : "success",
+          message: smsData?.carrierNote
+            ? `✓ ${smsData.carrierNote} (ID: ${record.id})`
+            : `Message recorded for ${targetPhone} (offline mode).`
         });
       } else if (commChannel === "EMAIL") {
         if (!targetEmail) {
@@ -896,20 +988,22 @@ export function AdminDashboard({ initialTab } = {}) {
   const handleApproveStaff = async (staffMember) => {
     setLoading(true);
     try {
-      try {
-        await apiClient.post("/users/approve-staff", { staffId: staffMember.id, email: staffMember.email });
-      } catch (e) {
-        console.warn("Backend staff approval fallback:", e.message);
-      }
+      await apiClient.post("/users/approve-staff", {
+        staffId: staffMember.id,
+        email: staffMember.email,
+        name: `${staffMember.firstName || ""} ${staffMember.lastName || ""}`.trim()
+      });
 
-      const updated = pendingStaff.filter((s) => s.id !== staffMember.id);
+      const targetEmail = String(staffMember.email || "").trim().toLowerCase();
+      const updated = pendingStaff.filter(
+        (s) => s.id !== staffMember.id && (!targetEmail || String(s.email || "").toLowerCase().trim() !== targetEmail)
+      );
       setPendingStaff(updated);
       localStorage.setItem("gbs_pending_staff_registrations", JSON.stringify(updated));
 
-      // Also update gbs_local_registered_users so the approved member can immediately sign in
+      // Also update gbs_local_registered_users so the approved member can immediately sign in locally if needed
       try {
         const localUsers = JSON.parse(localStorage.getItem("gbs_local_registered_users") || "[]");
-        const targetEmail = String(staffMember.email || "").trim().toLowerCase();
         const exists = localUsers.some((u) => String(u.email || "").toLowerCase() === targetEmail || u.id === staffMember.id);
         const nextUsers = exists
           ? localUsers.map((u) =>
@@ -940,9 +1034,30 @@ export function AdminDashboard({ initialTab } = {}) {
         window.dispatchEvent(new Event("storage"));
       } catch { }
 
+      // Notify approved staff via persistent SMS / Inbox with Headmaster sender details
+      const staffFullName = `${staffMember.firstName || ""} ${staffMember.lastName || ""}`.trim() || targetEmail;
+      if (staffMember.phone || targetEmail) {
+        apiClient.post("/sms/direct-send", {
+          senderName: headmasterProfile.name,
+          senderRole: "ADMIN",
+          senderPhone: headmasterProfile.phone,
+          senderEmail: headmasterProfile.email,
+          recipientId: staffMember.id,
+          recipientPhone: staffMember.phone || "INBOX_ONLY",
+          recipientEmail: targetEmail || null,
+          recipientName: staffFullName,
+          recipientRole: staffMember.role || "STAFF",
+          subject: "Staff Account Approved by Headmaster",
+          message: `Congratulations ${staffFullName}! Your ${staffMember.role || "STAFF"} account has been approved by the Headmaster. You can now sign in and access your ${staffMember.role || "STAFF"} dashboard.`,
+          schoolName: reportSchoolName
+        }).catch(() => {});
+      }
+
+      fetchPendingStaff();
+
       setFeedback({
         type: "success",
-        message: `✅ Staff Member ${staffMember.firstName} ${staffMember.lastName} (${staffMember.role}) officially approved and admitted to the institution by Headmaster!`
+        message: `✅ Staff Member ${staffFullName} (${staffMember.role}) officially approved and admitted to the institution by Headmaster!`
       });
 
       setAuditLogs((prev) => [
@@ -950,26 +1065,59 @@ export function AdminDashboard({ initialTab } = {}) {
           id: Date.now(),
           action: "APPROVE_STAFF_MEMBERSHIP",
           module: "STAFF_HR",
-          details: JSON.stringify({ staffName: `${staffMember.firstName} ${staffMember.lastName}`, role: staffMember.role, approvedBy: "Headmaster Arthur Pendleton" }),
-          ipAddress: "192.168.1.10",
+          details: JSON.stringify({ staffName: staffFullName, role: staffMember.role, approvedBy: headmasterProfile.name }),
+          ipAddress: "PORTAL",
           createdAt: new Date().toISOString(),
           user: currentUser
         },
         ...prev
       ]);
+    } catch (err) {
+      if (!err?.response) {
+        const targetEmail = String(staffMember.email || "").trim().toLowerCase();
+        const updated = pendingStaff.filter(
+          (s) => s.id !== staffMember.id && (!targetEmail || String(s.email || "").toLowerCase().trim() !== targetEmail)
+        );
+        setPendingStaff(updated);
+        localStorage.setItem("gbs_pending_staff_registrations", JSON.stringify(updated));
+        setFeedback({
+          type: "success",
+          message: `✅ Staff Member ${staffMember.firstName} ${staffMember.lastName || ""} marked approved locally.`
+        });
+      } else {
+        setFeedback({
+          type: "error",
+          message: err.response?.data?.message || err.message || "Failed to approve staff member."
+        });
+      }
     } finally {
       setLoading(false);
     }
   };
 
-  const handleRejectStaff = (staffId) => {
+  const handleRejectStaff = async (staffId) => {
     const target = pendingStaff.find((s) => s.id === staffId);
-    const updated = pendingStaff.filter((s) => s.id !== staffId);
+    const targetEmail = String(target?.email || "").trim().toLowerCase();
+    try {
+      await apiClient.post("/users/reject-staff", {
+        staffId,
+        email: targetEmail
+      });
+    } catch (err) {
+      if (err?.response) {
+        setFeedback({
+          type: "error",
+          message: err.response?.data?.message || err.message || "Failed to decline staff registration."
+        });
+        return;
+      }
+    }
+
+    const updated = pendingStaff.filter((s) => s.id !== staffId && (!targetEmail || String(s.email || "").toLowerCase() !== targetEmail));
     setPendingStaff(updated);
     localStorage.setItem("gbs_pending_staff_registrations", JSON.stringify(updated));
     try {
       const localUsers = JSON.parse(localStorage.getItem("gbs_local_registered_users") || "[]");
-      const targetEmail = String(target?.email || "").trim().toLowerCase();
       const nextUsers = localUsers.map((u) =>
         u.id === staffId || (targetEmail && String(u.email || "").toLowerCase() === targetEmail)
           ? { ...u, isApproved: false, isActive: false, status: "REJECTED", verificationStatus: "REJECTED" }
@@ -4137,6 +4285,7 @@ export function AdminDashboard({ initialTab } = {}) {
     fetchAuditLogs();
     fetchTeacherPlans();
     fetchFacultyDirectives();
+    fetchPendingStaff();
 
     // Check for active or incoming in-system video calls from Developer
     const checkVideoCallSession = () => {
@@ -10070,6 +10219,18 @@ export function AdminDashboard({ initialTab } = {}) {
                                     }}
                                   >
                                     Re-Open Chat ↗
+                                  </a>
+                                ) : item.deviceSmsUri ? (
+                                  <a
+                                    href={item.deviceSmsUri}
+                                    style={{
+                                      fontSize: "0.75rem",
+                                      color: "#38bdf8",
+                                      textDecoration: "underline",
+                                      fontWeight: 700
+                                    }}
+                                  >
+                                    📲 Send via Phone SMS
                                   </a>
                                 ) : (
                                   <button

@@ -120,21 +120,38 @@ const smsService = require('../sms/sms.service');
 
 router.post('/sms', async (req, res, next) => {
   try {
-    const { recipientPhone, phone, recipientName, content, message, schoolName, tenantId } = req.body || {};
-    const targetPhone = recipientPhone || phone;
-    const targetContent = content || message || "Notification from school system.";
-    const result = await smsService.sendSMSMessage({
+    const body = req.body || {};
+    const targetPhone = body.recipientPhone || body.phone || body.phoneNumber;
+    const targetEmail = body.recipientEmail || body.email || null;
+    const targetContent = body.content || body.message || "Notification from school system.";
+    const senderName =
+      body.senderName ||
+      `${req.user?.firstName || ''} ${req.user?.lastName || ''}`.trim() ||
+      req.user?.role ||
+      'Headmaster Office';
+
+    const result = await smsService.sendDirectUserSMS({
+      senderId: req.user?.id || body.senderId || null,
+      senderName,
+      senderRole: body.senderRole || req.user?.role || 'ADMIN',
+      senderPhone: body.senderPhone || req.user?.phone || null,
+      senderEmail: body.senderEmail || req.user?.email || null,
+      recipientId: body.recipientId || null,
       recipientPhone: targetPhone,
-      recipientName: recipientName || "Subscriber",
-      content: targetContent,
-      schoolName: schoolName || smsService.resolveRegisteredSchoolName(tenantId || req.tenantId),
-      tenantId: tenantId || req.tenantId,
-      type: "COMMUNICATION_SMS"
+      recipientEmail: targetEmail,
+      recipientName: body.recipientName || 'Subscriber',
+      recipientRole: body.recipientRole || 'CONTACT',
+      recipientAudience: body.recipientAudience || 'CUSTOM',
+      subject: body.subject || null,
+      message: targetContent,
+      schoolName: body.schoolName || smsService.resolveRegisteredSchoolName(body.tenantId || req.tenantId),
+      tenantId: body.tenantId || req.tenantId,
+      channel: 'SMS'
     });
 
     res.status(200).json({
       status: 'success',
-      message: `Direct SMS dispatched to ${targetPhone} via global carrier gateway.`,
+      message: result.carrierNote || `Message processed for ${targetPhone || targetEmail}.`,
       data: result
     });
   } catch (err) {

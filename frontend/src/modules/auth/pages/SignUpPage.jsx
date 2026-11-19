@@ -598,30 +598,61 @@ export default function SignUpPage({ defaultRole }) {
 
       const res = await register(payload);
       if (res?.status === "success") {
+        const regUser = res.data?.user || {};
         try {
           const currentPending = JSON.parse(localStorage.getItem("gbs_pending_staff_registrations") || "[]");
+          const cleanEmail = memberForm.email.toLowerCase().trim();
           const newRequest = {
-            id: `REG-REQ-${Date.now().toString().slice(-4)}`,
-            firstName: memberForm.firstName,
-            lastName: memberForm.lastName,
-            email: memberForm.email,
+            id: regUser.id || `REG-REQ-${Date.now().toString().slice(-4)}`,
+            firstName: memberForm.firstName.trim(),
+            lastName: memberForm.lastName ? memberForm.lastName.trim() : "",
+            email: cleanEmail,
             phone: memberForm.phone || memberForm.whatsappPhone || "+233-24-000-0000",
             role: activeTrack,
             department: memberForm.department || (activeTrack === "HR" ? "Human Resources Directorate" : activeTrack),
             highestQualification: memberForm.highestQualification || "Submitted via Registration Portal",
             experienceYears: memberForm.experienceYears || 0,
+            tenantCode: regUser.tenantCode || memberForm.tenantCode || "GBS-MAIN",
+            tenantName: regUser.tenantName || "Registered School Institution",
             requestedAt: new Date().toISOString(),
             status: "PENDING_HEADMASTER_APPROVAL"
           };
-          currentPending.unshift(newRequest);
-          localStorage.setItem("gbs_pending_staff_registrations", JSON.stringify(currentPending));
+          const filteredPending = currentPending.filter(
+            (p) => String(p.email || "").toLowerCase().trim() !== cleanEmail
+          );
+          filteredPending.unshift(newRequest);
+          localStorage.setItem("gbs_pending_staff_registrations", JSON.stringify(filteredPending));
+
+          // Ensure local resilient login strictly keeps this member blocked until Headmaster approves
+          const localUsers = JSON.parse(localStorage.getItem("gbs_local_registered_users") || "[]").filter(
+            (u) => String(u.email || "").toLowerCase().trim() !== cleanEmail
+          );
+          localUsers.unshift({
+            ...regUser,
+            id: regUser.id || newRequest.id,
+            firstName: newRequest.firstName,
+            lastName: newRequest.lastName,
+            email: cleanEmail,
+            username: regUser.username || memberForm.username || cleanEmail.split("@")[0],
+            password: memberForm.password,
+            role: activeTrack,
+            phone: newRequest.phone,
+            isApproved: false,
+            isActive: false,
+            status: "PENDING_HEADMASTER_APPROVAL",
+            verificationStatus: "PENDING_HEADMASTER_APPROVAL",
+            tenantId: regUser.tenantId || "1",
+            tenantCode: newRequest.tenantCode,
+            tenantName: newRequest.tenantName
+          });
+          localStorage.setItem("gbs_local_registered_users", JSON.stringify(localUsers));
 
           // Dispatch Headmaster notification
           const notifications = JSON.parse(localStorage.getItem("gbs_admin_notifications") || "[]");
           notifications.unshift({
             id: Date.now(),
             title: `New ${activeTrack} Registration Request`,
-            message: `${memberForm.firstName} ${memberForm.lastName || ""} (${memberForm.email}) has applied to register as ${activeTrack}. Headmaster review and approval required before login access is granted.`,
+            message: `${memberForm.firstName} ${memberForm.lastName || ""} (${cleanEmail}) has applied to register as ${activeTrack}. Headmaster review and approval required before login access is granted.`,
             timestamp: new Date().toISOString(),
             read: false
           });
@@ -633,21 +664,33 @@ export default function SignUpPage({ defaultRole }) {
         setSuccessData({
           type: "MEMBER",
           role: activeTrack,
-          user: res.data?.user,
+          user: regUser,
           profile: res.data?.profile || { verificationStatus: "PENDING_HEADMASTER_APPROVAL" },
-          message: `Your ${activeTrack} registration request has been submitted to the Institution Headmaster for verification and approval. You will be able to sign in once the Headmaster approves your account.`
+          message: `Your ${activeTrack} registration request has been submitted to the Institution Headmaster for verification and approval. You will be able to sign in and access your ${activeTrack} Dashboard only after the Headmaster approves your account.`
         });
       } else {
         throw new Error(res?.message || "Registration failed.");
       }
     } catch (err) {
-      console.warn("API registration note, activating resilient offline-ready registration fallback:", err);
+      if (err?.response) {
+        setError(
+          err.response?.data?.message ||
+          err.message ||
+          "Registration could not be completed. Please verify your details and try again."
+        );
+        return;
+      }
+
+      console.warn("Network offline during registration, activating resilient offline queue fallback:", err);
+      const cleanEmail = memberForm.email.toLowerCase().trim();
       const offlineUser = {
         id: `usr_${Date.now()}`,
         firstName: memberForm.firstName.trim(),
         lastName: memberForm.lastName ? memberForm.lastName.trim() : "",
-        email: memberForm.email.toLowerCase().trim(),
-        username: memberForm.username || memberForm.email.split("@")[0],
+        email: cleanEmail,
+        username: memberForm.username || cleanEmail.split("@")[0],
+        password: memberForm.password,
+        phone: memberForm.phone || memberForm.whatsappPhone || "",
         role: activeTrack,
         isApproved: false,
         isActive: false,
@@ -657,13 +700,32 @@ export default function SignUpPage({ defaultRole }) {
         tenantCode: memberForm.tenantCode || "GBS-MAIN",
         tenantName: "GBS International School (Main Branch)"
       };
+      try {
+        const localUsers = JSON.parse(localStorage.getItem("gbs_local_registered_users") || "[]").filter(
+          (u) => String(u.email || "").toLowerCase().trim() !== cleanEmail
+        );
+        localUsers.unshift(offlineUser);
+        localStorage.setItem("gbs_local_registered_users", JSON.stringify(localUsers));
+
+        const currentPending = JSON.parse(localStorage.getItem("gbs_pending_staff_registrations") || "[]").filter(
+          (p) => String(p.email || "").toLowerCase().trim() !== cleanEmail
+        );
+        currentPending.unshift({
+          ...offlineUser,
+          department: memberForm.department || activeTrack,
+          highestQualification: memberForm.highestQualification || "Submitted via Registration Portal",
+          experienceYears: memberForm.experienceYears || 0,
+          requestedAt: new Date().toISOString()
+        });
+        localStorage.setItem("gbs_pending_staff_registrations", JSON.stringify(currentPending));
+      } catch { }
 
       setSuccessData({
         type: "MEMBER",
         role: activeTrack,
         user: offlineUser,
         profile: { verificationStatus: "PENDING_HEADMASTER_APPROVAL" },
-        message: `Your ${activeTrack} registration has been submitted and queued for Headmaster review and approval. You will be able to sign in once approved by the Headmaster.`
+        message: `Your ${activeTrack} registration has been queued locally for Headmaster review and approval (network reconnect pending).`
       });
     } finally {
       setLoading(false);

@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from "react";
 import apiClient from "../../api/client/apiClient";
 import "./DirectSMSMessengerModal.css";
+import DirectSMSInboxPanel from "./DirectSMSInboxPanel";
 
 const PRESET_SCHOOL_CONTACTS = [
   { id: "HM-01", name: "Dr. Kwabena Frimpong", role: "HEADMASTER", phone: "+233-54-329-4615", department: "Executive Directorate" },
@@ -149,7 +150,8 @@ export default function DirectSMSMessengerModal({ isOpen, onClose, defaultRecipi
         recipientRole: currentRecipient.role,
         message: messageText.trim(),
         carrierNetwork: detectedCarrier,
-        status: "DELIVERED",
+        carrierStatus: "DISPATCH_FAILED",
+        status: "FAILED (SERVER UNREACHABLE)",
         timestamp: new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }),
         date: new Date().toLocaleDateString()
       };
@@ -159,11 +161,16 @@ export default function DirectSMSMessengerModal({ isOpen, onClose, defaultRecipi
         localStorage.setItem("gbs_user_direct_sms_history", JSON.stringify(updatedHistory));
       } catch {}
 
+      const cleanTarget = String(recipientMode === "CUSTOM" ? customPhone : "").replace(/[^+\d]/g, "");
+      const handoffUri = cleanTarget
+        ? `sms:${cleanTarget}?body=${encodeURIComponent(messageText.trim())}`
+        : null;
+
       setSentNotice({
-        status: "success",
-        text: `SMS Sent via ${detectedCarrier} Local Gateway! Message ID: ${fallbackRecord.id}`
+        status: "error",
+        text: "Server SMS gateway could not be reached. Do not mark as sent — retry or send directly from your device SMS app.",
+        deviceSmsUri: handoffUri
       });
-      setMessageText("");
     } finally {
       setSending(false);
     }
@@ -202,6 +209,13 @@ export default function DirectSMSMessengerModal({ isOpen, onClose, defaultRecipi
           </button>
           <button
             type="button"
+            className={`gbs-sms-tab-btn ${activeTab === "INBOX" ? "active" : ""}`}
+            onClick={() => setActiveTab("INBOX")}
+          >
+            📥 Received Inbox
+          </button>
+          <button
+            type="button"
             className={`gbs-sms-tab-btn ${activeTab === "HISTORY" ? "active" : ""}`}
             onClick={() => setActiveTab("HISTORY")}
           >
@@ -209,7 +223,17 @@ export default function DirectSMSMessengerModal({ isOpen, onClose, defaultRecipi
           </button>
         </div>
 
-        {activeTab === "COMPOSE" ? (
+        {activeTab === "INBOX" ? (
+          <DirectSMSInboxPanel
+            currentUser={currentUser}
+            onReplyToSender={(item) => {
+              setRecipientMode("CUSTOM");
+              setCustomName(item.senderName || "");
+              setCustomPhone(item.senderPhone || "");
+              setActiveTab("COMPOSE");
+            }}
+          />
+        ) : activeTab === "COMPOSE" ? (
           <form onSubmit={handleSendDirectSMS} className="gbs-sms-form">
             {/* Sender Badge */}
             <div className="gbs-sms-sender-banner">
@@ -350,8 +374,25 @@ export default function DirectSMSMessengerModal({ isOpen, onClose, defaultRecipi
 
             {/* Feedback Alert */}
             {sentNotice && (
-              <div className={`gbs-sms-notice ${sentNotice.status}`}>
+              <div className={`gbs-sms-notice ${sentNotice.status}`} style={{ flexWrap: "wrap", gap: "8px" }}>
                 <span>{sentNotice.text}</span>
+                {sentNotice.deviceSmsUri && (
+                  <a
+                    href={sentNotice.deviceSmsUri}
+                    style={{
+                      background: "rgba(56, 189, 248, 0.25)",
+                      border: "1px solid #38bdf8",
+                      color: "#38bdf8",
+                      padding: "3px 10px",
+                      borderRadius: "6px",
+                      fontSize: "0.75rem",
+                      fontWeight: 800,
+                      textDecoration: "none"
+                    }}
+                  >
+                    📲 Send via Phone SMS App
+                  </a>
+                )}
                 <button type="button" onClick={() => setSentNotice(null)}>✕</button>
               </div>
             )}
@@ -385,10 +426,20 @@ export default function DirectSMSMessengerModal({ isOpen, onClose, defaultRecipi
                     <p style={{ margin: "2px 0 6px", fontSize: "0.82rem", color: "#cbd5e1" }}>
                       "{item.message}"
                     </p>
-                    <div style={{ display: "flex", justifyContent: "space-between", fontSize: "0.72rem", color: "#94a3b8" }}>
+                    <div style={{ display: "flex", justifyContent: "space-between", fontSize: "0.72rem", color: "#94a3b8", flexWrap: "wrap", gap: "6px" }}>
                       <span>Network: {item.carrierNetwork}</span>
                       <span>{item.date} • {item.timestamp} • ID: {item.id}</span>
                     </div>
+                    {item.deviceSmsUri && (
+                      <div style={{ marginTop: "6px" }}>
+                        <a
+                          href={item.deviceSmsUri}
+                          style={{ color: "#38bdf8", fontSize: "0.74rem", fontWeight: 700, textDecoration: "underline" }}
+                        >
+                          📲 Send via Phone SMS App
+                        </a>
+                      </div>
+                    )}
                   </div>
                 ))}
               </div>

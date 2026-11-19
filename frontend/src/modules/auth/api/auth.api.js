@@ -539,8 +539,8 @@ export const login = async (payload) => {
     const status = err?.response?.status;
     const serverMsg = err?.response?.data?.message || "";
 
-    // If the backend explicitly denied access (deleted, locked, suspended, or pending approval), never bypass with local fallback unless locally approved
-    if (status === 403 && serverMsg && (serverMsg.includes("deleted") || serverMsg.includes("LOCKED") || serverMsg.includes("SUSPENDED") || serverMsg.includes("rejected"))) {
+    // If the backend explicitly denied access (403: pending approval, rejected, deleted, locked, suspended), never bypass with local storage fallback
+    if (status === 403 && serverMsg) {
       throw new Error(serverMsg);
     }
 

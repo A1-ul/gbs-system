@@ -1,17 +1,22 @@
 {
   "systemName": "GBS MANAGEMENT SYSTEM (Global Brightest Stars Educational Management System)",
-  "version": "2.5.0-PRODUCTION",
-  "savedAt": "2026-11-02T22:41:30Z",
+  "version": "2.6.0-PRODUCTION",
+  "savedAt": "2026-11-19T00:12:00Z",
   "status": "PRODUCTION_READY_VERIFIED",
   "architecture": {
     "frontend": {
       "framework": "React 18 + Vite 7",
-      "routerFile": "frontend/src/router/AppRouter.jsx",
+      "entryPoint": "frontend/src/main.jsx -> frontend/src/app/App.jsx -> frontend/src/router/AppRouter.jsx",
       "apiClientFile": "frontend/src/api/client/apiClient.js",
       "offlineSyncFile": "frontend/src/utils/offlineSync.js",
       "pricingEngineFile": "frontend/src/utils/pricingEngine.js",
       "topicVideoComponent": "frontend/src/components/common/ClassTopicVideoPlatform.jsx",
-      "movableAiComponent": "frontend/src/modules/developer-platform/components/DeveloperMovableAIAssistant.jsx"
+      "movableAiComponent": "frontend/src/modules/developer-platform/components/DeveloperMovableAIAssistant.jsx",
+      "voiceAssistantComponent": "frontend/src/components/common/GBSVoiceAssistant.jsx",
+      "translatorComponent": "frontend/src/components/common/UniversalLanguageTranslator.jsx",
+      "directSmsModalComponent": "frontend/src/components/common/DirectSMSMessengerModal.jsx",
+      "directSmsInboxComponent": "frontend/src/components/common/DirectSMSInboxPanel.jsx",
+      "pwaManifestAndSw": "frontend/public/manifest.webmanifest + frontend/public/sw.js"
     },
     "backend": {
       "runtime": "Node.js + Express + Socket.IO",
@@ -19,7 +24,12 @@
       "hybridPrismaEngine": "backend/src/core/database/prisma.client.js",
       "persistentStorePath": "backend/data/gbs_persistent_store.json",
       "systemMemorySnapshotPath": "backend/data/gbs_system_memory_snapshot.json",
-      "authMiddleware": "backend/src/middleware/auth.middleware.js"
+      "authMiddleware": "backend/src/middleware/auth.middleware.js",
+      "staffApprovalRoutes": "backend/src/modules/user/user.routes.js (/pending-staff, /approve-staff, /reject-staff)",
+      "smsGatewayAndInboxService": "backend/src/modules/sms/sms.service.js (Arkesel/Hubtel/mNotify/Twilio + persistent /api/v1/sms/inbox)",
+      "paymentGatewaysModule": "backend/src/modules/finance/payments/ (Paystack, Hubtel, MTN MoMo, Telecel Cash, AT Money, Visa/Mastercard, Bank Transfer)",
+      "translatorModule": "backend/src/modules/translator/translator.routes.js",
+      "transportModule": "backend/src/modules/transport/transport.routes.js"
     }
   },
   "subscriptionPricingMemory": {
@@ -245,12 +255,33 @@
       "rootCause": "Non-developer staff attempting developer logins required automated breach auditing and trial aggregation.",
       "resolution": "DeveloperLogin.jsx tracks Gmail, IP, and trial count in gbs_dev_staff_intrusion_trials; automatically elevates status to SUMMON_FOR_QUESTIONING after 3 attempts.",
       "status": "PERMANENTLY_GUARDED"
+    },
+    {
+      "issueCode": "DIAG-STAFF-HEADMASTER-APPROVAL",
+      "symptom": "Newly signed-up staff need strict block until Headmaster approval, cross-device visibility in Headmaster Dashboard, and instant role dashboard access once approved",
+      "rootCause": "AdminDashboard only read pendingStaff from localStorage and lacked GET /api/v1/users/pending-staff & POST /api/v1/users/reject-staff; auth.controller register did not strip client-side approvedByHeadmaster flags, and auth.api swallowed non-rejection 403 errors into local fallback.",
+      "resolution": "Added GET /api/v1/users/pending-staff (merging PostgreSQL + persistentStore) and POST /api/v1/users/reject-staff; hardened auth.controller + auth.middleware (checking UserRegistrationProfile.verificationStatus) and AppRouter ProtectedPortalRoute role confinement in Live Production; AdminDashboard syncs pendingStaff from backend and unlocks staff login upon approval.",
+      "status": "PERMANENTLY_GUARDED"
+    },
+    {
+      "issueCode": "DIAG-AI-ASSISTANT-MOUNT",
+      "symptom": "GBS AI Assistant (Siri Remote / Continuous Assistant) did nothing when clicked on Login or Dashboards",
+      "rootCause": "frontend/src/main.jsx loaded frontend/src/app/App.jsx which rendered UniversalAIAssistantHUD (developer-only) instead of GBSVoiceAssistant, while only unused frontend/src/App.jsx had GBSVoiceAssistant.",
+      "resolution": "Mounted GBSVoiceAssistant directly inside BrowserRouter in frontend/src/router/AppRouter.jsx so useNavigate() works everywhere and window.gbsVoiceAssistant + floating assistant orb respond on all portals; offset UniversalAIAssistantHUD (right: 94px) to prevent overlap.",
+      "status": "PERMANENTLY_GUARDED"
+    },
+    {
+      "issueCode": "DIAG-SMS-CARRIER-INBOX-SYNC",
+      "symptom": "Dispatched SMS/Messages reported fake DELIVERED gateway receipts, failed parameter alignment (phoneNumber vs recipientPhone), and lacked receiver inbox with full sender details",
+      "rootCause": "sms.service.js pushed to in-memory smsLogs and hardcoded status DELIVERED without telecom API integration or persistent inbox; AdminDashboard sent phoneNumber which /communication/sms ignored.",
+      "resolution": "Upgraded sms.service.js with genuine Arkesel/Hubtel/mNotify/Twilio HTTP adapters, E.164 normalization, honest carrierStatus (CARRIER_SMS_SENT vs IN_APP_DELIVERED vs CARRIER_SMS_FAILED) + sms: device handoff URI, persistent dispatchedSmsMessages store, GET /api/v1/sms/inbox & PATCH /api/v1/sms/inbox/:id/read endpoints, fixed communication/sms field mapping, and built DirectSMSInboxPanel across all portal top banners.",
+      "status": "PERMANENTLY_GUARDED"
     }
   ],
   "verificationSummary": {
     "roleAndPortalEndpointsPassed": "62/62",
     "devControlAndAuthEndpointsPassed": "33/33",
-    "totalEndpointsVerified": "95/95",
+    "staffApprovalSmsAndTranslatorVerified": "2026-11-19 Live Production & Hybrid Parity",
     "browserRoutesWalkedThrough": "9/9",
     "uncaughtBrowserConsoleErrors": 0,
     "astUndeclaredErrors": 0
