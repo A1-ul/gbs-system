@@ -1596,7 +1596,7 @@ export default function AccountantDashboard() {
                   <span className="role-kpi-icon">💳</span>
                   <div className="role-kpi-data">
                     <span className="role-kpi-title">Collected ↗</span>
-                    <strong className="role-kpi-num" style={{ color: "#34d399" }}>{currencySymbol}{(telemetry.totalCollected || 124200).toLocaleString()}</strong>
+                    <strong className="role-kpi-num" style={{ color: "#34d399" }}>{currencySymbol}{(telemetry.totalCollected ?? (isDemoTenant ? 124200 : 0)).toLocaleString()}</strong>
                   </div>
                 </div>
                 <div
@@ -1608,19 +1608,19 @@ export default function AccountantDashboard() {
                   <span className="role-kpi-icon">⏳</span>
                   <div className="role-kpi-data">
                     <span className="role-kpi-title">Arrears Due ↗</span>
-                    <strong className="role-kpi-num" style={{ color: "#f87171" }}>{currencySymbol}{(telemetry.totalPending || 24300).toLocaleString()}</strong>
+                    <strong className="role-kpi-num" style={{ color: "#f87171" }}>{currencySymbol}{(telemetry.totalPending ?? (isDemoTenant ? 24300 : 0)).toLocaleString()}</strong>
                   </div>
                 </div>
                 <div
                   className="role-kpi-box"
-                  onClick={() => setActiveTab("reports")}
+                  onClick={() => setActiveTab("statements")}
                   style={{ cursor: "pointer", transition: "transform 0.15s" }}
                   title="Click to generate balance sheet and collection reports"
                 >
                   <span className="role-kpi-icon">📈</span>
                   <div className="role-kpi-data">
                     <span className="role-kpi-title">Collection Rate ↗</span>
-                    <strong className="role-kpi-num">{telemetry.collectionRate || 83.6}%</strong>
+                    <strong className="role-kpi-num">{telemetry.collectionRate ?? (isDemoTenant ? 83.6 : 0)}%</strong>
                   </div>
                 </div>
               </div>

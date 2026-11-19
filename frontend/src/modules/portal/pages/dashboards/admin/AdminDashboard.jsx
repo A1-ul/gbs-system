@@ -13642,8 +13642,12 @@ export function AdminDashboard({ initialTab } = {}) {
                 className={`renewal-celebration-card ${tenantSubscription.isLifetime || tenantSubscription.durationLabel?.includes("Lifetime") ? "lifetime" : ""}`}
                 onClick={(e) => e.stopPropagation()}
               >
-                <div className="renewal-trophy-icon">
-                  {tenantSubscription.isLifetime || tenantSubscription.durationLabel?.includes("Lifetime") ? "👑" : "🏆"}
+                <div className="renewal-trophy-icon" title="GBS Official Subscription Crest">
+                  <img
+                    src="/assets/gbs_crest_badge.jpg"
+                    alt="GBS Official Logo"
+                    style={{ width: "100%", height: "100%", borderRadius: "50%", objectFit: "cover" }}
+                  />
                 </div>
 
                 <span style={{ color: "#34d399", fontSize: "0.8rem", fontWeight: 800, letterSpacing: "1.5px", textTransform: "uppercase" }}>

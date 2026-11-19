@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from "react";
 import apiClient from "../../api/client/apiClient";
+import { getActiveSchoolName } from "../../utils/schoolBranding";
 import "./MobileAppPushHubModal.css";
 
 export default function MobileAppPushHubModal({ isOpen, onClose }) {
@@ -24,6 +25,35 @@ export default function MobileAppPushHubModal({ isOpen, onClose }) {
       window.navigator?.standalone === true)
   );
   const [pushFeedback, setPushFeedback] = useState(null);
+  const [pwaDiagnostics, setPwaDiagnostics] = useState({
+    swRegistered: false,
+    swActive: false,
+    manifestOk: false
+  });
+
+  const inspectPwaInstallReadiness = async () => {
+    try {
+      let swRegistered = false;
+      let swActive = false;
+      if (typeof navigator !== "undefined" && "serviceWorker" in navigator) {
+        const reg = await navigator.serviceWorker.getRegistration();
+        swRegistered = Boolean(reg);
+        swActive = Boolean(reg?.active || navigator.serviceWorker.controller);
+      }
+      let manifestOk = false;
+      try {
+        const mRes = await fetch("/manifest.json", { cache: "no-store" });
+        manifestOk = mRes.ok;
+      } catch { }
+      setPwaDiagnostics({ swRegistered, swActive, manifestOk });
+    } catch { }
+  };
+
+  useEffect(() => {
+    if (isOpen) {
+      inspectPwaInstallReadiness();
+    }
+  }, [isOpen]);
 
   useEffect(() => {
     if (typeof window === "undefined") return;
@@ -244,21 +274,22 @@ export default function MobileAppPushHubModal({ isOpen, onClose }) {
   const handleSendTestPushNotification = async (type = "FEES") => {
     setTestPushStatus("DISPATCHING");
 
-    let title = "💰 GBS Fees Receipt Acknowledged";
-    let body = "Payment of GH₵ 2,400 confirmed for Kwesi Mensah. Official receipt #REC-8842 issued.";
+    const activeSchool = getActiveSchoolName() || "GBS School Management System";
+    let title = `💰 ${activeSchool} Fees Receipt`;
+    let body = `Your fee payment confirmation and digital ledger receipt for ${activeSchool} is ready.`;
     let category = "FEES_RECEIPT";
 
     if (type === "ASSIGNMENT") {
-      title = "📝 New Academic Assignment Posted";
-      body = "Mathematics: Quadratic Differential Calculus posted by Mr. Osei. Due Friday 4:00 PM.";
+      title = `📝 ${activeSchool} Assessment Notice`;
+      body = `A new coursework or exam timetable update has been posted on ${activeSchool}.`;
       category = "ASSIGNMENT_POSTED";
     } else if (type === "BUS") {
-      title = "🚌 School Bus GPS Sentinel Alert";
-      body = "Transit Bus 4 is 3 minutes away from pickup point (East Legon Junction).";
+      title = `🚌 ${activeSchool} Bus Transit Alert`;
+      body = "Campus commuter shuttle route GPS telemetry has been updated cleanly.";
       category = "SCHOOL_BUS_ALERT";
     } else if (type === "EMERGENCY") {
-      title = "🚨 Headmaster Statutory Directive";
-      body = "All faculty, students and parents: Tomorrow morning assembly begins promptly at 8:00 AM.";
+      title = `🚨 ${activeSchool} Directive`;
+      body = "Institutional administrative directive published. Open your GBS Portal to review.";
       category = "EMERGENCY_BROADCAST";
     }
 
@@ -410,13 +441,19 @@ export default function MobileAppPushHubModal({ isOpen, onClose }) {
               {/* Install Card */}
               <div className="gbs-app-card" style={{ display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: "1rem" }}>
                 <div style={{ display: "flex", alignItems: "center", gap: "14px" }}>
-                  <span style={{ fontSize: "2.4rem" }}>⚡</span>
+                  <img
+                    src="/assets/gbs_crest_badge.jpg"
+                    alt="GBS Mobile App Logo"
+                    style={{ width: "48px", height: "48px", borderRadius: "12px", border: "2px solid #d4af37", objectFit: "cover" }}
+                  />
                   <div>
                     <h4 style={{ margin: 0, color: "#f8fafc", fontSize: "1rem", fontWeight: "900" }}>
-                      Instant Install to Phone Home Screen
+                      Instant Install to Device Home Screen
                     </h4>
                     <p style={{ margin: "4px 0 0", fontSize: "0.82rem", color: "#94a3b8" }}>
-                      Works seamlessly on Android (Samsung, Pixel, Xiaomi) and Apple iOS (iPhone & iPad).
+                      SW Ready: <strong style={{ color: pwaDiagnostics.swActive ? "#34d399" : "#fbbf24" }}>{pwaDiagnostics.swActive ? "Active" : pwaDiagnostics.swRegistered ? "Registered" : "Pending"}</strong>
+                      {" • "}Manifest: <strong style={{ color: pwaDiagnostics.manifestOk ? "#34d399" : "#fbbf24" }}>{pwaDiagnostics.manifestOk ? "Verified" : "Checking"}</strong>
+                      {" • "}Native Prompt: <strong style={{ color: deferredPrompt ? "#34d399" : "#38bdf8" }}>{installSuccess ? "Installed" : deferredPrompt ? "Ready (1-Tap)" : "Use Browser Menu / Launcher"}</strong>
                     </p>
                   </div>
                 </div>

@@ -12234,7 +12234,11 @@ export default function DeveloperDashboard() {
                   >
                     <div>
                       <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "6px" }}>
-                        <span style={{ fontSize: "1.2rem" }}>🏆</span>
+                        <img
+                          src="/assets/gbs_crest_badge.jpg"
+                          alt="GBS Crest Logo"
+                          style={{ width: "26px", height: "26px", borderRadius: "50%", objectFit: "cover", border: "1.5px solid #d4af37" }}
+                        />
                         <span className="renew-plan-badge emerald">Full Calendar</span>
                       </div>
                       <strong style={{ color: "#fff", fontSize: "0.95rem", display: "block" }}>12 Months (1 Year)</strong>

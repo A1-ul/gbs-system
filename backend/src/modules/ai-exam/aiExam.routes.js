@@ -15,6 +15,17 @@ router.post('/scan-sheet', aiExamController.submitAnswerSheet);
 router.get('/answer-sheets', aiExamController.getAnswerSheets);
 router.post('/answer-sheets/:id/grade', aiExamController.gradeAnswerSheet);
 router.patch('/answer-sheets/:id/grade', aiExamController.gradeAnswerSheet);
+
+// Live AI Exam Proctoring: Camera Feed Heartbeat, Broadcast/Search Messaging & Reference Evidence Vault
+router.post('/proctor/heartbeat', aiExamController.postProctorHeartbeat);
+router.get('/proctor/live', aiExamController.getLiveProctorSessions);
+router.post('/proctor/message', aiExamController.sendProctorMessage);
+router.get('/proctor/messages', aiExamController.getStudentProctorMessages);
+router.post('/proctor/messages/:id/ack', aiExamController.ackProctorMessage);
+router.post('/proctor/save-evidence', aiExamController.saveProctorEvidence);
+router.get('/proctor/evidence', aiExamController.getProctorEvidence);
+router.delete('/proctor/evidence/:id', aiExamController.deleteProctorEvidence);
+
 router.get('/', aiExamController.getExams);
 router.post('/', aiExamController.createExam);
 

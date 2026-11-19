@@ -341,6 +341,13 @@
       "rootCause": "gbs_theme_light defaulted to navy, sw.js cached legacy index HTML without /api/v1/app-version auto-polling, Voice AI omitted question-formation diagnostics, several modules showed hardcoded fallback sample names in Live mode, and global country/language selection was not wired end-to-end.",
       "resolution": "Implemented exact Blueprint theme in theme.css + globals.css with Blueprint Light Canvas default, AutoAppUpdater + sw.js (gbs-cache-v2026.16) + GET /api/v1/app-version, analyzeAndExplainQuestionFormation in backend & frontend Voice AI, stripped all hardcoded live fallbacks across devControl/Accountant/Teacher/Alumni/OnlineLearning/LiveTracking/MainLogin, and added GlobalLocaleSelector + /api/v1/locale/norms + /api/v1/users/locale-preferences.",
       "status": "PERMANENTLY_GUARDED"
+    },
+    {
+      "issueCode": "DIAG-LIVE-PROCTORING-EVIDENCE-AND-POLISH",
+      "symptom": "Teachers need live student exam cameras, student name search/selected list/ALL messaging, saveable reference evidence, exact lost-marks subtraction, movable + minimizable AI Voice Assistant, consistent Navy Mode, GBS logo on renewals, and full Mobile App install feedback",
+      "rootCause": "Student proctoring did not stream camera frames/events to TeacherDashboard or subtract penaltyMarksDeducted on backend scoring, renewal cards used trophy icons instead of GBS crest, GBSVoiceAssistant had fixed position without minimize, Navy Mode needed uniform role rules, and Student/Accountant tab switches needed full alignment.",
+      "resolution": "Added /api/v1/ai-exam/proctor/* endpoints and exact penalty deduction in aiExam.service.js, mounted TeacherLiveProctoringPanel inside TeacherDashboard exams tab, synced live heartbeats/snapshots/messages/deductions in StudentDashboard, replaced renewal trophies with /assets/gbs_crest_badge.jpg, made GBSVoiceAssistant draggable & minimizable, unified gbs-theme-navy in globals.css, and aligned Student/Accountant tab targets.",
+      "status": "PERMANENTLY_GUARDED"
     }
   ],
   "verificationSummary": {

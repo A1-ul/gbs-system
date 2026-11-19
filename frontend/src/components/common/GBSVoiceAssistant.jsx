@@ -188,7 +188,18 @@ export default function GBSVoiceAssistant() {
   const navigate = useNavigate();
 
   const [isOpen, setIsOpen] = useState(false);
+  const [isMinimized, setIsMinimized] = useState(false);
   const [isSleeping, setIsSleeping] = useState(true);
+  const [assistantPos, setAssistantPos] = useState(() => {
+    try {
+      const saved = JSON.parse(localStorage.getItem("gbs_voice_assistant_pos") || "null");
+      if (saved && typeof saved.right === "number" && typeof saved.bottom === "number") {
+        return saved;
+      }
+    } catch { }
+    return { right: 20, bottom: 20 };
+  });
+  const dragStateRef = useRef({ active: false, startX: 0, startY: 0, startRight: 20, startBottom: 20, moved: false });
   const [isListening, setIsListening] = useState(false);
   const [isSpeaking, setIsSpeaking] = useState(false);
   const [transcript, setTranscript] = useState("");
@@ -476,6 +487,7 @@ export default function GBSVoiceAssistant() {
     isSleepingRef.current = false;
     isOpenRef.current = true;
     setIsSleeping(false);
+    setIsMinimized(false);
     setIsOpen(true);
     setContinuousListening(true);
     continuousRef.current = true;
@@ -486,9 +498,66 @@ export default function GBSVoiceAssistant() {
     speakAloud(INTRO_GREETING);
   };
 
+  const handleDragStart = (e) => {
+    if (e.target.closest("button[data-no-drag='true']")) return;
+    const clientX = e.touches ? e.touches[0].clientX : e.clientX;
+    const clientY = e.touches ? e.touches[0].clientY : e.clientY;
+    dragStateRef.current = {
+      active: true,
+      startX: clientX,
+      startY: clientY,
+      startRight: assistantPos.right,
+      startBottom: assistantPos.bottom,
+      moved: false
+    };
+  };
+
+  useEffect(() => {
+    const onMove = (e) => {
+      if (!dragStateRef.current.active) return;
+      const clientX = e.touches ? e.touches[0].clientX : e.clientX;
+      const clientY = e.touches ? e.touches[0].clientY : e.clientY;
+      const dx = clientX - dragStateRef.current.startX;
+      const dy = clientY - dragStateRef.current.startY;
+      if (Math.abs(dx) > 4 || Math.abs(dy) > 4) {
+        dragStateRef.current.moved = true;
+      }
+      const maxRight = Math.max(20, (typeof window !== "undefined" ? window.innerWidth : 1200) - 90);
+      const maxBottom = Math.max(20, (typeof window !== "undefined" ? window.innerHeight : 800) - 80);
+      const nextRight = Math.max(8, Math.min(maxRight, dragStateRef.current.startRight - dx));
+      const nextBottom = Math.max(8, Math.min(maxBottom, dragStateRef.current.startBottom - dy));
+      const nextPos = { right: nextRight, bottom: nextBottom };
+      setAssistantPos(nextPos);
+      try {
+        localStorage.setItem("gbs_voice_assistant_pos", JSON.stringify(nextPos));
+      } catch { }
+    };
+    const onUp = () => {
+      if (dragStateRef.current.active) {
+        setTimeout(() => {
+          dragStateRef.current.active = false;
+          dragStateRef.current.moved = false;
+        }, 60);
+      }
+    };
+    window.addEventListener("mousemove", onMove);
+    window.addEventListener("mouseup", onUp);
+    window.addEventListener("touchmove", onMove, { passive: true });
+    window.addEventListener("touchend", onUp);
+    return () => {
+      window.removeEventListener("mousemove", onMove);
+      window.removeEventListener("mouseup", onUp);
+      window.removeEventListener("touchmove", onMove);
+      window.removeEventListener("touchend", onUp);
+    };
+  }, []);
+
   const toggleAssistant = () => {
+    if (dragStateRef.current.moved) return;
     if (!isOpen || isSleeping) {
       wakeAndStartConversation();
+    } else if (isMinimized) {
+      setIsMinimized(false);
     } else {
       enterSleepMode("Going off to sleep now. Click me anytime you need help on GBS SYSTEM!");
     }
@@ -717,25 +786,28 @@ export default function GBSVoiceAssistant() {
 
   return (
     <>
-      {/* Floating Launcher (Bottom-Right) */}
+      {/* Floating Movable Launcher (Drags anywhere across screen) */}
       <div
         className="gbs-voice-assistant-launcher"
+        onMouseDown={handleDragStart}
+        onTouchStart={handleDragStart}
         style={{
           position: "fixed",
-          bottom: "20px",
-          right: "20px",
+          bottom: `${assistantPos.bottom}px`,
+          right: `${assistantPos.right}px`,
           zIndex: 99999,
           display: "flex",
           alignItems: "center",
           gap: "10px",
-          userSelect: "none"
+          userSelect: "none",
+          cursor: "grab"
         }}
       >
         {(!isOpen || isSleeping) && (
           <div
             onClick={toggleAssistant}
             style={{
-              background: "linear-gradient(135deg, #060f1e, #0f2347)",
+              background: "linear-gradient(135deg, #081833, #0d2247)",
               color: "#f5d061",
               border: "1.5px solid #d4af37",
               borderRadius: "20px",
@@ -743,13 +815,15 @@ export default function GBSVoiceAssistant() {
               fontSize: "12px",
               fontWeight: 800,
               boxShadow: "0 6px 20px rgba(0, 0, 0, 0.55)",
-              cursor: "pointer",
+              cursor: "grab",
               display: "flex",
               alignItems: "center",
               gap: "6px",
               backdropFilter: "blur(10px)"
             }}
+            title="Drag to move anywhere • Click to open GBS AI Assistant"
           >
+            <span style={{ opacity: 0.75 }}>⠿</span>
             <span>🎙️</span>
             <span>GBS AI Assistant (Memory Linked)</span>
           </div>
@@ -789,17 +863,23 @@ export default function GBSVoiceAssistant() {
         </button>
       </div>
 
-      {/* Continuous Conversation Window */}
+      {/* Continuous Movable & Minimizable Conversation Window */}
       {isOpen && (
         <div
           style={{
             position: "fixed",
-            bottom: "86px",
-            right: "20px",
-            width: "410px",
-            maxWidth: "calc(100vw - 32px)",
-            maxHeight: "82vh",
-            background: "linear-gradient(155deg, rgba(6, 15, 30, 0.98) 0%, rgba(10, 25, 47, 0.98) 100%)",
+            bottom: `${Math.min(
+              Math.max(12, (typeof window !== "undefined" ? window.innerHeight : 800) - (isMinimized ? 80 : 520)),
+              assistantPos.bottom + 66
+            )}px`,
+            right: `${Math.min(
+              Math.max(12, (typeof window !== "undefined" ? window.innerWidth : 1200) - (isMinimized ? 350 : 420)),
+              assistantPos.right
+            )}px`,
+            width: isMinimized ? "340px" : "410px",
+            maxWidth: "calc(100vw - 24px)",
+            maxHeight: isMinimized ? "62px" : "80vh",
+            background: "linear-gradient(155deg, rgba(8, 24, 51, 0.98) 0%, rgba(13, 34, 71, 0.98) 100%)",
             border: "2px solid #d4af37",
             borderRadius: "20px",
             boxShadow: "0 25px 60px rgba(0, 0, 0, 0.85), 0 0 35px rgba(212, 175, 55, 0.35)",
@@ -812,53 +892,85 @@ export default function GBSVoiceAssistant() {
             fontFamily: "system-ui, -apple-system, sans-serif"
           }}
         >
-          {/* Header */}
+          {/* Draggable Header with Minimize & Sleep Controls */}
           <div
+            onMouseDown={handleDragStart}
+            onTouchStart={handleDragStart}
+            title="Drag header to move Voice Assistant anywhere on screen"
             style={{
-              padding: "14px 18px",
-              background: "linear-gradient(135deg, #060f1e 0%, #0f2347 100%)",
-              borderBottom: "1px solid rgba(212, 175, 55, 0.45)",
+              padding: "12px 14px",
+              background: "linear-gradient(135deg, #050f23 0%, #0d2247 100%)",
+              borderBottom: isMinimized ? "none" : "1px solid rgba(212, 175, 55, 0.45)",
               display: "flex",
               justifyContent: "space-between",
-              alignItems: "center"
+              alignItems: "center",
+              cursor: "grab",
+              gap: "8px"
             }}
           >
-            <div style={{ display: "flex", alignItems: "center", gap: "10px" }}>
-              <span style={{ fontSize: "18px" }}>{isSleeping ? "😴" : isListening ? "🎙️" : "🧠"}</span>
-              <div>
-                <strong style={{ fontSize: "13px", color: "#f5d061", display: "block" }}>
+            <div style={{ display: "flex", alignItems: "center", gap: "8px", minWidth: 0 }}>
+              <span style={{ color: "#d4af37", fontSize: "14px" }}>⠿</span>
+              <span style={{ fontSize: "17px" }}>{isSleeping ? "😴" : isListening ? "🎙️" : "🧠"}</span>
+              <div style={{ minWidth: 0 }}>
+                <strong style={{ fontSize: "12px", color: "#f6dd84", display: "block", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
                   GBS SYSTEM MEMORY AI ASSISTANT
                 </strong>
-                <span style={{ fontSize: "10.5px", color: isSleeping ? "#94a3b8" : "#34d399", fontWeight: 700 }}>
-                  {isSleeping
-                    ? "Sleeping • Click orb to wake"
-                    : isSpeaking
-                      ? "🔊 Answering live from System Memory..."
-                      : isListening
-                        ? `● Instant Listening Active • Memory v${memorySyncedVersion}`
-                        : `● Ready • Memory v${memorySyncedVersion} Linked`}
+                <span style={{ fontSize: "10px", color: isSleeping ? "#94a3b8" : "#34d399", fontWeight: 700, display: "block" }}>
+                  {isMinimized
+                    ? "Minimized • Click Expand to view chat"
+                    : isSleeping
+                      ? "Sleeping • Click orb to wake"
+                      : isSpeaking
+                        ? "🔊 Answering live from System Memory..."
+                        : isListening
+                          ? `● Listening Active • Memory v${memorySyncedVersion}`
+                          : `● Ready • Memory v${memorySyncedVersion} Linked`}
                 </span>
               </div>
             </div>
 
-            <button
-              type="button"
-              onClick={() => enterSleepMode()}
-              style={{
-                background: "rgba(239, 68, 68, 0.18)",
-                border: "1px solid rgba(239, 68, 68, 0.5)",
-                color: "#fca5a5",
-                fontSize: "11px",
-                fontWeight: 800,
-                cursor: "pointer",
-                padding: "4px 10px",
-                borderRadius: "999px"
-              }}
-              title="Finish conversation and put assistant to sleep"
-            >
-              😴 Done / Sleep
-            </button>
+            <div style={{ display: "flex", alignItems: "center", gap: "5px", flexShrink: 0 }}>
+              <button
+                type="button"
+                data-no-drag="true"
+                onClick={() => setIsMinimized((m) => !m)}
+                style={{
+                  background: "rgba(212, 175, 55, 0.18)",
+                  border: "1px solid rgba(212, 175, 55, 0.6)",
+                  color: "#f6dd84",
+                  fontSize: "11px",
+                  fontWeight: 800,
+                  cursor: "pointer",
+                  padding: "4px 9px",
+                  borderRadius: "999px"
+                }}
+                title={isMinimized ? "Expand GBS AI Assistant window" : "Minimize GBS AI Assistant window"}
+              >
+                {isMinimized ? "🗖 Expand" : "🗕 Minimize"}
+              </button>
+              <button
+                type="button"
+                data-no-drag="true"
+                onClick={() => enterSleepMode()}
+                style={{
+                  background: "rgba(239, 68, 68, 0.18)",
+                  border: "1px solid rgba(239, 68, 68, 0.5)",
+                  color: "#fca5a5",
+                  fontSize: "11px",
+                  fontWeight: 800,
+                  cursor: "pointer",
+                  padding: "4px 9px",
+                  borderRadius: "999px"
+                }}
+                title="Finish conversation and put assistant to sleep"
+              >
+                😴 Done / Sleep
+              </button>
+            </div>
           </div>
+
+          {!isMinimized && (
+            <>
 
           {/* Multi-Turn Thread */}
           <div style={{ padding: "14px 16px", flex: 1, overflowY: "auto", display: "flex", flexDirection: "column", gap: "10px" }}>
@@ -1025,6 +1137,8 @@ export default function GBSVoiceAssistant() {
               </button>
             </div>
           </div>
+            </>
+          )}
         </div>
       )}
     </>

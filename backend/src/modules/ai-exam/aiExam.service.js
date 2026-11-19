@@ -302,7 +302,23 @@ const computeLetterGrade = (pct) =>
   pct >= 90 ? 'A+' : pct >= 80 ? 'A' : pct >= 70 ? 'B' : pct >= 60 ? 'C' : pct >= 50 ? 'D' : 'F';
 
 const submitAnswerSheet = async (
-  { examId, studentId, studentName, studentEmail, classId, imageUrl, extractedAnswers, writtenAnswers, essayAnswers, teacherAnswerKey },
+  {
+    examId,
+    studentId,
+    studentName,
+    studentEmail,
+    classId,
+    imageUrl,
+    extractedAnswers,
+    writtenAnswers,
+    essayAnswers,
+    teacherAnswerKey,
+    penaltyMarksDeducted = 0,
+    proctoringWarnings = 0,
+    proctoringLog = [],
+    proctoringSnapshots = [],
+    marksPerWarning = 2
+  },
   tenantId = 1
 ) => {
   const tid = parseInt(tenantId, 10) || 1;
@@ -511,8 +527,41 @@ const submitAnswerSheet = async (
     objectiveMarksObtained = calculatedScore;
   }
 
-  calculatedScore = Math.max(0, Math.round(calculatedScore * 10) / 10);
   const denom = maxPossibleMarks > 0 ? maxPossibleMarks : (Number(exam.totalMarks) || 100);
+  const rawScoreObtained = Math.max(0, Math.round(calculatedScore * 10) / 10);
+  const rawPercentage = Math.max(0, Math.min(100, Math.round((rawScoreObtained / denom) * 100)));
+
+  const liveSessionsMap = store.activeProctoringSessions?.[String(tid)] || {};
+  const matchingLiveSess = Object.values(liveSessionsMap).find((sess) => {
+    const sameExam = !examId || String(sess.examId || '') === String(exam.id || examId);
+    const sameStudent =
+      (studentId && String(sess.studentId) === String(studentId)) ||
+      (studentEmail && String(sess.studentEmail || '').toLowerCase() === String(studentEmail).toLowerCase()) ||
+      (studentName && String(sess.studentName || '').toLowerCase() === String(studentName).toLowerCase());
+    return sameExam && sameStudent;
+  });
+
+  const effectiveWarnings = Math.max(
+    Number(proctoringWarnings) || 0,
+    Number(matchingLiveSess?.warningsCount) || 0,
+    Array.isArray(proctoringLog) ? proctoringLog.length : 0
+  );
+  const effectivePerWarning = Math.max(0, Number(marksPerWarning) || 2);
+  const finalPenaltyMarks = Math.max(
+    0,
+    Math.round(
+      Math.max(
+        Number(penaltyMarksDeducted) || 0,
+        Number(matchingLiveSess?.penaltyMarksDeducted) || 0,
+        effectiveWarnings > 0 && Number(penaltyMarksDeducted) === 0 && !matchingLiveSess
+          ? effectiveWarnings * effectivePerWarning
+          : 0
+      ) * 10
+    ) / 10
+  );
+
+  // Subtract exact lost proctoring marks from student's overall score
+  calculatedScore = Math.max(0, Math.round((rawScoreObtained - finalPenaltyMarks) * 10) / 10);
   const percentage = Math.max(0, Math.min(100, Math.round((calculatedScore / denom) * 100)));
   const passThreshold = Number(exam.passMarks) || 50;
   const isPassed = percentage >= (denom === 100 ? passThreshold : 50);
@@ -555,6 +604,10 @@ const submitAnswerSheet = async (
     } catch (_) { }
   }
 
+  const mergedEvents = Array.isArray(proctoringLog) && proctoringLog.length > 0
+    ? proctoringLog
+    : (Array.isArray(matchingLiveSess?.events) ? matchingLiveSess.events : []);
+
   const submissionEntry = {
     id: answerSheetRecord?.id || `sheet-${Date.now()}`,
     prismaAnswerSheetId: answerSheetRecord?.id || null,
@@ -564,6 +617,11 @@ const submitAnswerSheet = async (
     studentId: studentId || sid,
     studentName: studentName || '',
     studentEmail: studentEmail || '',
+    rawScoreObtained,
+    rawPercentage,
+    proctoringPenaltyMarks: finalPenaltyMarks,
+    proctoringWarnings: effectiveWarnings,
+    proctoringEvidence: mergedEvents,
     scoreObtained: calculatedScore,
     objectiveMarksObtained,
     totalMarks: denom,
@@ -588,13 +646,62 @@ const submitAnswerSheet = async (
     const examSubmissions = { ...(curr.examSubmissions || {}) };
     const prevList = Array.isArray(examSubmissions[String(tid)]) ? examSubmissions[String(tid)] : [];
     examSubmissions[String(tid)] = [submissionEntry, ...prevList];
-    return { ...curr, examSubmissions };
+
+    const activeProctoringSessions = { ...(curr.activeProctoringSessions || {}) };
+    const tenantSessMap = { ...(activeProctoringSessions[String(tid)] || {}) };
+    if (matchingLiveSess?.sessionKey && tenantSessMap[matchingLiveSess.sessionKey]) {
+      tenantSessMap[matchingLiveSess.sessionKey] = {
+        ...tenantSessMap[matchingLiveSess.sessionKey],
+        status: 'SUBMITTED',
+        finalScoreObtained: calculatedScore,
+        rawScoreObtained,
+        penaltyMarksDeducted: finalPenaltyMarks,
+        submittedAt: submissionEntry.submittedAt
+      };
+      activeProctoringSessions[String(tid)] = tenantSessMap;
+    }
+
+    const proctoringEvidenceArchive = { ...(curr.proctoringEvidenceArchive || {}) };
+    if (effectiveWarnings > 0 || finalPenaltyMarks > 0 || (Array.isArray(proctoringSnapshots) && proctoringSnapshots.length > 0)) {
+      const prevEv = Array.isArray(proctoringEvidenceArchive[String(tid)]) ? proctoringEvidenceArchive[String(tid)] : [];
+      const latestSnap =
+        (Array.isArray(proctoringSnapshots) && proctoringSnapshots[0]) ||
+        matchingLiveSess?.snapshotDataUrl ||
+        null;
+      const autoEv = {
+        id: `EVID-${Date.now()}-${Math.floor(Math.random() * 900 + 100)}`,
+        tenantId: tid,
+        examId: exam.id,
+        examTitle: exam.title,
+        studentId: submissionEntry.studentId,
+        studentName: submissionEntry.studentName || `Student #${submissionEntry.studentId}`,
+        studentEmail: submissionEntry.studentEmail || '',
+        snapshotDataUrl: latestSnap,
+        movementStatus: matchingLiveSess?.movementStatus || (effectiveWarnings > 0 ? 'WARNING_DETECTED' : 'CAMERA_ACTIVE'),
+        warningsCount: effectiveWarnings,
+        penaltyMarksDeducted: finalPenaltyMarks,
+        rawScoreObtained,
+        finalScoreObtained: calculatedScore,
+        events: mergedEvents.slice(0, 30),
+        teacherNote: 'Auto-archived upon examination submission.',
+        savedBy: 'AI_PROCTORING_ENGINE',
+        savedAt: submissionEntry.submittedAt
+      };
+      proctoringEvidenceArchive[String(tid)] = [autoEv, ...prevEv.slice(0, 199)];
+    }
+
+    return { ...curr, examSubmissions, activeProctoringSessions, proctoringEvidenceArchive };
   });
 
   return {
     answerSheetId: submissionEntry.id,
     examId: exam.id,
     examTitle: exam.title,
+    rawScoreObtained,
+    rawPercentage,
+    proctoringPenaltyMarks: finalPenaltyMarks,
+    proctoringWarnings: effectiveWarnings,
+    proctoringEvidence: submissionEntry.proctoringEvidence,
     scoreObtained: calculatedScore,
     objectiveMarksObtained,
     totalMarks: denom,
@@ -680,7 +787,11 @@ const gradeAnswerSheet = async (submissionId, payload = {}, tenantId = 1, user =
     totalScore = Math.max(0, Math.min(denom, Number(payload.overrideTotalScore) || 0));
   }
 
-  totalScore = Math.round(totalScore * 10) / 10;
+  const penaltyApplied = payload.waiveProctoringPenalty === true
+    ? 0
+    : Math.max(0, Number(target.proctoringPenaltyMarks) || 0);
+  const rawScoreObtained = Math.round(totalScore * 10) / 10;
+  totalScore = Math.max(0, Math.round((rawScoreObtained - penaltyApplied) * 10) / 10);
   const percentage = Math.max(0, Math.min(100, Math.round((totalScore / denom) * 100)));
   const grade = computeLetterGrade(percentage);
   const isPassed = percentage >= 50;
@@ -688,6 +799,8 @@ const gradeAnswerSheet = async (submissionId, payload = {}, tenantId = 1, user =
   const updatedEntry = {
     ...target,
     perQuestionBreakdown: updatedBreakdown,
+    rawScoreObtained,
+    proctoringPenaltyMarks: penaltyApplied,
     scoreObtained: totalScore,
     totalMarks: denom,
     percentage,
@@ -749,6 +862,404 @@ const getAnswerSheets = async (examId, tenantId = 1) => {
   return combined;
 };
 
+// ============================================================================
+// REAL-TIME ONLINE EXAM PROCTORING: CAMERAS, BROADCAST MESSAGES & EVIDENCE VAULT
+// ============================================================================
+
+const normalizeSessionKey = (examId, studentId, studentEmail, studentName) => {
+  const ePart = String(examId || 'ACTIVE_EXAM').trim();
+  const sPart = String(studentId || studentEmail || studentName || 'STUDENT').trim().toLowerCase();
+  return `${ePart}::${sPart}`;
+};
+
+const recordProctorHeartbeat = async (tenantId = 1, payload = {}) => {
+  const tid = parseInt(tenantId, 10) || 1;
+  const studentId = payload.studentId || payload.userId || null;
+  const studentName = String(payload.studentName || 'Student Examinee').trim();
+  const studentEmail = String(payload.studentEmail || '').trim();
+  const examId = payload.examId || 'EXAM-ACTIVE';
+  const examTitle = String(payload.examTitle || 'Active Online Examination').trim();
+  const sessionKey = normalizeSessionKey(examId, studentId, studentEmail, studentName);
+  const nowIso = new Date().toISOString();
+
+  let updatedSession = null;
+
+  writePersistentStore((curr) => {
+    const activeProctoringSessions = { ...(curr.activeProctoringSessions || {}) };
+    const tenantSessions = { ...(activeProctoringSessions[String(tid)] || {}) };
+    const existing = tenantSessions[sessionKey] || {};
+
+    const existingEvents = Array.isArray(existing.events) ? existing.events : [];
+    const nextEvents = [...existingEvents];
+    if (payload.eventLogItem && typeof payload.eventLogItem === 'object') {
+      const evId = String(payload.eventLogItem.id || `EV-${Date.now()}`);
+      if (!nextEvents.some((ev) => String(ev.id) === evId)) {
+        nextEvents.unshift({
+          ...payload.eventLogItem,
+          id: evId,
+          timeIso: payload.eventLogItem.timeIso || nowIso
+        });
+      }
+    } else if (payload.latestReason && payload.status === 'WARNING_DETECTED') {
+      nextEvents.unshift({
+        id: `EV-${Date.now()}`,
+        time: new Date().toLocaleTimeString(),
+        timeIso: nowIso,
+        reason: payload.latestReason,
+        warningNumber: Number(payload.warningsCount) || (existingEvents.length + 1)
+      });
+    }
+
+    const teacherAddedMarks = Number(existing.teacherDeductedMarks || 0);
+    const clientWarnings = Number(payload.warningsCount ?? existing.selfWarningsCount ?? 0);
+    const marksPerWarn = Math.max(0, Number(payload.marksPerWarning) || 2);
+    const computedClientPenalty = Math.max(
+      Number(payload.penaltyMarksDeducted || 0),
+      clientWarnings * marksPerWarn
+    );
+    const totalWarnings = Math.max(clientWarnings, Number(existing.teacherWarningsCount || 0) + clientWarnings);
+    const totalDeductedMarks = Math.max(
+      computedClientPenalty + teacherAddedMarks,
+      Number(existing.penaltyMarksDeducted || 0)
+    );
+
+    updatedSession = {
+      sessionKey,
+      tenantId: tid,
+      examId,
+      examTitle,
+      studentId: studentId || existing.studentId || sessionKey,
+      studentName: studentName || existing.studentName,
+      studentEmail: studentEmail || existing.studentEmail || '',
+      status: payload.status || existing.status || 'CAMERA_ACTIVE',
+      movementStatus: payload.movementStatus || payload.status || 'NORMAL',
+      movementDelta: payload.movementDelta !== undefined ? Number(payload.movementDelta) : (existing.movementDelta || 0),
+      cameraActive: Boolean(payload.cameraActive ?? payload.snapshotDataUrl ?? existing.cameraActive),
+      snapshotDataUrl: payload.snapshotDataUrl || existing.snapshotDataUrl || null,
+      latestReason: payload.latestReason || existing.latestReason || 'Continuous webcam & focus monitoring active.',
+      selfWarningsCount: clientWarnings,
+      teacherWarningsCount: Number(existing.teacherWarningsCount || 0),
+      warningsCount: totalWarnings,
+      teacherDeductedMarks: teacherAddedMarks,
+      penaltyMarksDeducted: totalDeductedMarks,
+      marksPerWarning: marksPerWarn,
+      events: nextEvents.slice(0, 60),
+      startedAt: existing.startedAt || nowIso,
+      lastHeartbeatAt: nowIso
+    };
+
+    tenantSessions[sessionKey] = updatedSession;
+    activeProctoringSessions[String(tid)] = tenantSessions;
+    return { ...curr, activeProctoringSessions };
+  });
+
+  return updatedSession;
+};
+
+const getLiveProctorSessions = async (tenantId = 1, filters = {}) => {
+  const tid = parseInt(tenantId, 10) || 1;
+  const store = readPersistentStore();
+  const sessMap = store.activeProctoringSessions?.[String(tid)] || {};
+  const q = String(filters.search || '').trim().toLowerCase();
+  const examFilter = String(filters.examId || '').trim();
+
+  const sessions = Object.values(sessMap)
+    .filter((s) => {
+      if (examFilter && String(s.examId || '') !== examFilter) return false;
+      if (q) {
+        const hay = `${s.studentName || ''} ${s.studentEmail || ''} ${s.studentId || ''}`.toLowerCase();
+        if (!hay.includes(q)) return false;
+      }
+      return true;
+    })
+    .sort((a, b) => String(b.lastHeartbeatAt || '').localeCompare(String(a.lastHeartbeatAt || '')));
+
+  return sessions;
+};
+
+const sendProctorMessage = async (tenantId = 1, payload = {}, user = null) => {
+  const tid = parseInt(tenantId, 10) || 1;
+  const message = String(payload.message || '').trim();
+  if (!message) {
+    throw new AppError('Please enter an examination message or warning before sending.', 400);
+  }
+
+  const targetMode = String(payload.targetMode || 'ALL').trim().toUpperCase();
+  const examId = payload.examId || null;
+  const searchQuery = String(payload.recipientQuery || '').trim().toLowerCase();
+  const explicitIds = Array.isArray(payload.recipientStudentIds)
+    ? payload.recipientStudentIds.map((id) => String(id))
+    : [];
+  const deductMarks = Math.max(0, Number(payload.deductMarks || 0));
+  const severity = String(payload.severity || (deductMarks > 0 ? 'WARNING' : 'INFO')).toUpperCase();
+
+  const store = readPersistentStore();
+  const liveSessions = Object.values(store.activeProctoringSessions?.[String(tid)] || {});
+  const rosterUsers = (store.registeredUsers || []).filter(
+    (u) => String(u.tenantId || '1') === String(tid) && String(u.role || '').toUpperCase() === 'STUDENT'
+  );
+
+  let matchedRecipients = [];
+  if (targetMode === 'ALL') {
+    matchedRecipients = liveSessions
+      .filter((s) => !examId || String(s.examId) === String(examId))
+      .map((s) => ({
+        studentId: String(s.studentId),
+        studentName: s.studentName,
+        studentEmail: s.studentEmail || ''
+      }));
+  } else if (targetMode === 'SELECTED' || targetMode === 'SINGLE') {
+    const idSet = new Set(explicitIds);
+    const fromSess = liveSessions
+      .filter((s) => idSet.has(String(s.studentId)) || idSet.has(String(s.sessionKey)))
+      .map((s) => ({
+        studentId: String(s.studentId),
+        studentName: s.studentName,
+        studentEmail: s.studentEmail || ''
+      }));
+    const foundIds = new Set(fromSess.map((x) => x.studentId));
+    const fromRoster = rosterUsers
+      .filter((u) => idSet.has(String(u.id)) && !foundIds.has(String(u.id)))
+      .map((u) => ({
+        studentId: String(u.id),
+        studentName: `${u.firstName || ''} ${u.lastName || ''}`.trim() || u.email,
+        studentEmail: u.email || ''
+      }));
+    matchedRecipients = [...fromSess, ...fromRoster];
+  } else if (targetMode === 'SEARCH') {
+    if (!searchQuery) {
+      throw new AppError('Enter a student name in the search box to target a specific examinee.', 400);
+    }
+    const fromSess = liveSessions
+      .filter((s) => `${s.studentName || ''} ${s.studentEmail || ''} ${s.studentId || ''}`.toLowerCase().includes(searchQuery))
+      .map((s) => ({
+        studentId: String(s.studentId),
+        studentName: s.studentName,
+        studentEmail: s.studentEmail || ''
+      }));
+    const seen = new Set(fromSess.map((x) => x.studentId));
+    const fromRoster = rosterUsers
+      .filter((u) => {
+        const nm = `${u.firstName || ''} ${u.lastName || ''} ${u.email || ''} ${u.id || ''}`.toLowerCase();
+        return nm.includes(searchQuery) && !seen.has(String(u.id));
+      })
+      .map((u) => ({
+        studentId: String(u.id),
+        studentName: `${u.firstName || ''} ${u.lastName || ''}`.trim() || u.email,
+        studentEmail: u.email || ''
+      }));
+    matchedRecipients = [...fromSess, ...fromRoster];
+  }
+
+  const nowIso = new Date().toISOString();
+  const msgEntry = {
+    id: `PMSG-${Date.now()}-${Math.floor(Math.random() * 900 + 100)}`,
+    tenantId: tid,
+    examId,
+    targetMode,
+    recipientQuery: payload.recipientQuery || '',
+    recipientStudentIds: matchedRecipients.map((r) => String(r.studentId)),
+    recipientNames: matchedRecipients.map((r) => r.studentName),
+    targetSummary:
+      targetMode === 'ALL'
+        ? `All Online Exam Students (${matchedRecipients.length} live feeds)`
+        : matchedRecipients.length > 0
+          ? matchedRecipients.map((r) => r.studentName).join(', ')
+          : payload.recipientQuery || 'Selected Students',
+    message,
+    severity,
+    deductMarks,
+    senderName: user?.firstName
+      ? `${user.firstName} ${user.lastName || ''}`.trim()
+      : (payload.senderName || 'Examination Invigilator'),
+    senderRole: user?.role || 'TEACHER',
+    createdAt: nowIso,
+    acknowledgedBy: []
+  };
+
+  writePersistentStore((curr) => {
+    const proctorMessages = { ...(curr.proctorMessages || {}) };
+    const prevMsgs = Array.isArray(proctorMessages[String(tid)]) ? proctorMessages[String(tid)] : [];
+    proctorMessages[String(tid)] = [msgEntry, ...prevMsgs.slice(0, 199)];
+
+    const activeProctoringSessions = { ...(curr.activeProctoringSessions || {}) };
+    const tenantSessMap = { ...(activeProctoringSessions[String(tid)] || {}) };
+
+    if (deductMarks > 0 || severity === 'WARNING') {
+      const targetIdSet = new Set(msgEntry.recipientStudentIds);
+      Object.keys(tenantSessMap).forEach((sKey) => {
+        const s = tenantSessMap[sKey];
+        const hit =
+          targetMode === 'ALL'
+            ? (!examId || String(s.examId) === String(examId))
+            : targetIdSet.has(String(s.studentId)) || targetIdSet.has(String(s.sessionKey));
+        if (hit) {
+          const nextTeacherMarks = (Number(s.teacherDeductedMarks) || 0) + deductMarks;
+          const nextTeacherWarnCount = (Number(s.teacherWarningsCount) || 0) + 1;
+          const nextWarnTotal = (Number(s.warningsCount) || 0) + 1;
+          const nextPenaltyTotal = (Number(s.penaltyMarksDeducted) || 0) + deductMarks;
+          const warnEvent = {
+            id: `TWARN-${Date.now()}-${Math.floor(Math.random() * 999)}`,
+            time: new Date().toLocaleTimeString(),
+            timeIso: nowIso,
+            reason: `[Teacher Invigilator Warning${deductMarks > 0 ? ` • -${deductMarks} Marks` : ''}] ${message}`,
+            warningNumber: nextWarnTotal,
+            penaltyMarks: deductMarks,
+            source: 'TEACHER_INVIGILATOR'
+          };
+          tenantSessMap[sKey] = {
+            ...s,
+            status: 'WARNING_DETECTED',
+            latestReason: warnEvent.reason,
+            teacherWarningsCount: nextTeacherWarnCount,
+            warningsCount: nextWarnTotal,
+            teacherDeductedMarks: nextTeacherMarks,
+            penaltyMarksDeducted: nextPenaltyTotal,
+            events: [warnEvent, ...(Array.isArray(s.events) ? s.events : [])].slice(0, 60)
+          };
+        }
+      });
+      activeProctoringSessions[String(tid)] = tenantSessMap;
+    }
+
+    return { ...curr, proctorMessages, activeProctoringSessions };
+  });
+
+  try {
+    const socketServer = require('../../core/socket/socketServer');
+    if (socketServer && typeof socketServer.emitToTenant === 'function') {
+      socketServer.emitToTenant(tid, 'proctor_message_broadcast', msgEntry);
+    }
+  } catch { }
+
+  return msgEntry;
+};
+
+const getStudentProctorMessages = async (tenantId = 1, query = {}) => {
+  const tid = parseInt(tenantId, 10) || 1;
+  const store = readPersistentStore();
+  const list = Array.isArray(store.proctorMessages?.[String(tid)]) ? store.proctorMessages[String(tid)] : [];
+
+  const sid = query.studentId ? String(query.studentId) : '';
+  const sName = String(query.studentName || '').trim().toLowerCase();
+  const examFilter = query.examId ? String(query.examId) : '';
+  const isTeacherView = String(query.view || '').toUpperCase() === 'TEACHER';
+
+  const matchingMsgs = isTeacherView
+    ? list.filter((m) => !examFilter || !m.examId || String(m.examId) === examFilter)
+    : list.filter((m) => {
+      if (examFilter && m.examId && String(m.examId) !== examFilter) return false;
+      if (m.targetMode === 'ALL') return true;
+      if (sid && Array.isArray(m.recipientStudentIds) && m.recipientStudentIds.includes(sid)) return true;
+      if (sName && Array.isArray(m.recipientNames) && m.recipientNames.some((n) => String(n || '').toLowerCase().includes(sName) || sName.includes(String(n || '').toLowerCase()))) {
+        return true;
+      }
+      if (sName && m.recipientQuery && sName.includes(String(m.recipientQuery).toLowerCase())) return true;
+      return false;
+    });
+
+  // Also fetch live session penalty total so student exam screen reflects exact teacher mark deductions
+  const sessMap = store.activeProctoringSessions?.[String(tid)] || {};
+  const liveSess = Object.values(sessMap).find((s) => {
+    const sameExam = !examFilter || String(s.examId) === examFilter;
+    const sameStudent =
+      (sid && String(s.studentId) === sid) ||
+      (sName && String(s.studentName || '').toLowerCase() === sName);
+    return sameExam && sameStudent;
+  });
+
+  return {
+    messages: matchingMsgs.slice(0, 40),
+    teacherDeductedMarks: Number(liveSess?.teacherDeductedMarks || 0),
+    totalSessionPenaltyMarks: Number(liveSess?.penaltyMarksDeducted || 0),
+    totalSessionWarnings: Number(liveSess?.warningsCount || 0)
+  };
+};
+
+const ackProctorMessage = async (tenantId = 1, messageId, payload = {}) => {
+  const tid = parseInt(tenantId, 10) || 1;
+  const sid = String(payload.studentId || 'STUDENT');
+  let updatedMsg = null;
+
+  writePersistentStore((curr) => {
+    const proctorMessages = { ...(curr.proctorMessages || {}) };
+    const list = Array.isArray(proctorMessages[String(tid)]) ? [...proctorMessages[String(tid)]] : [];
+    const idx = list.findIndex((m) => String(m.id) === String(messageId));
+    if (idx !== -1) {
+      const acks = Array.isArray(list[idx].acknowledgedBy) ? list[idx].acknowledgedBy : [];
+      if (!acks.includes(sid)) acks.push(sid);
+      list[idx] = { ...list[idx], acknowledgedBy: acks };
+      updatedMsg = list[idx];
+      proctorMessages[String(tid)] = list;
+    }
+    return { ...curr, proctorMessages };
+  });
+
+  return updatedMsg;
+};
+
+const saveProctorEvidence = async (tenantId = 1, payload = {}, user = null) => {
+  const tid = parseInt(tenantId, 10) || 1;
+  const nowIso = new Date().toISOString();
+
+  const evidenceItem = {
+    id: `EVID-${Date.now()}-${Math.floor(Math.random() * 900 + 100)}`,
+    tenantId: tid,
+    examId: payload.examId || 'EXAM-ACTIVE',
+    examTitle: payload.examTitle || 'Online Examination',
+    studentId: payload.studentId || 'UNKNOWN',
+    studentName: payload.studentName || 'Student Examinee',
+    studentEmail: payload.studentEmail || '',
+    snapshotDataUrl: payload.snapshotDataUrl || null,
+    movementStatus: payload.movementStatus || 'WARNING_DETECTED',
+    warningsCount: Number(payload.warningsCount || 0),
+    penaltyMarksDeducted: Number(payload.penaltyMarksDeducted || 0),
+    events: Array.isArray(payload.events) ? payload.events.slice(0, 30) : [],
+    teacherNote: String(payload.teacherNote || 'Saved manually from Teacher Live Proctoring Camera Desk.').trim(),
+    savedBy: user?.email || user?.firstName || 'TEACHER',
+    savedAt: nowIso
+  };
+
+  writePersistentStore((curr) => {
+    const proctoringEvidenceArchive = { ...(curr.proctoringEvidenceArchive || {}) };
+    const prev = Array.isArray(proctoringEvidenceArchive[String(tid)]) ? proctoringEvidenceArchive[String(tid)] : [];
+    proctoringEvidenceArchive[String(tid)] = [evidenceItem, ...prev.slice(0, 199)];
+    return { ...curr, proctoringEvidenceArchive };
+  });
+
+  return evidenceItem;
+};
+
+const getProctorEvidence = async (tenantId = 1, filters = {}) => {
+  const tid = parseInt(tenantId, 10) || 1;
+  const store = readPersistentStore();
+  const prev = Array.isArray(store.proctoringEvidenceArchive?.[String(tid)])
+    ? store.proctoringEvidenceArchive[String(tid)]
+    : [];
+  const q = String(filters.studentName || filters.search || '').trim().toLowerCase();
+  const examFilter = String(filters.examId || '').trim();
+
+  return prev.filter((item) => {
+    if (examFilter && String(item.examId) !== examFilter) return false;
+    if (q) {
+      const hay = `${item.studentName || ''} ${item.studentEmail || ''} ${item.examTitle || ''} ${item.teacherNote || ''}`.toLowerCase();
+      if (!hay.includes(q)) return false;
+    }
+    return true;
+  });
+};
+
+const deleteProctorEvidence = async (tenantId = 1, evidenceId) => {
+  const tid = parseInt(tenantId, 10) || 1;
+  writePersistentStore((curr) => {
+    const proctoringEvidenceArchive = { ...(curr.proctoringEvidenceArchive || {}) };
+    const prev = Array.isArray(proctoringEvidenceArchive[String(tid)]) ? proctoringEvidenceArchive[String(tid)] : [];
+    proctoringEvidenceArchive[String(tid)] = prev.filter((item) => String(item.id) !== String(evidenceId));
+    return { ...curr, proctoringEvidenceArchive };
+  });
+  return { deleted: true, id: evidenceId };
+};
+
 module.exports = {
   getExams,
   createExam,
@@ -756,5 +1267,13 @@ module.exports = {
   gradeAnswerSheet,
   getAnswerSheets,
   ensureSampleExam,
-  ensureQuestionBank
+  ensureQuestionBank,
+  recordProctorHeartbeat,
+  getLiveProctorSessions,
+  sendProctorMessage,
+  getStudentProctorMessages,
+  ackProctorMessage,
+  saveProctorEvidence,
+  getProctorEvidence,
+  deleteProctorEvidence
 };

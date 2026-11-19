@@ -18,6 +18,7 @@ import {
 import UniversityOperationsPanel from "../../../../../components/common/UniversityOperationsPanel";
 import StudentDefaultersCompliancePanel from "../../../../../components/common/StudentDefaultersCompliancePanel";
 import SchoolClinicHubPanel from "../../../../../components/common/SchoolClinicHubPanel";
+import TeacherLiveProctoringPanel from "../../../../../components/common/TeacherLiveProctoringPanel";
 import UniversalRoleGuideModal from "../../../../../components/common/UniversalRoleGuideModal";
 import ClassTopicVideoPlatform from "../../../../../components/common/ClassTopicVideoPlatform";
 import { navigateToDetail } from "../../../../../utils/universalNavigation";
@@ -6276,7 +6277,14 @@ export default function TeacherDashboard() {
                 </div>
               </div>
 
-              {/* LIVE SCHEDULED TIMED EXAMS & PUBLISHED EXAMINATION TIMETABLE GUIDE OVERVIEW */}
+              {/* LIVE AI PROCTORING CAMERA WALL, MESSAGING BY SEARCH/SELECTED/ALL & EVIDENCE VAULT */}
+              <TeacherLiveProctoringPanel
+                exams={exams}
+                roster={roster}
+                selectedExamId={selectedExamId}
+                onNotice={(notice) => setFeedback(notice)}
+              />
+
               {/* Card 3: Submitted Student Online & Typed Theory Scripts Grading Desk */}
               <div style={{ background: "rgba(15, 23, 42, 0.82)", border: "1.5px solid rgba(245, 158, 11, 0.45)", borderRadius: "12px", padding: "14px", marginBottom: "1.25rem" }}>
                 <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: "8px", marginBottom: "10px" }}>
@@ -6332,6 +6340,11 @@ export default function TeacherDashboard() {
                             </div>
                             <div style={{ fontSize: "0.74rem", color: "#cbd5e1", marginTop: "2px" }}>
                               Score: <strong style={{ color: "#fbbf24" }}>{sub.scoreObtained ?? 0}/{sub.totalMarks ?? 100} ({sub.percentage ?? 0}% • Grade {sub.grade || "—"})</strong>
+                              {(sub.proctoringPenaltyMarks || 0) > 0 && (
+                                <span style={{ color: "#fca5a5", marginLeft: "6px", fontWeight: 700 }}>
+                                  (Raw {sub.rawScoreObtained ?? sub.scoreObtained} − {sub.proctoringPenaltyMarks} Proctoring Lost Marks • {sub.proctoringWarnings || 0} warn)
+                                </span>
+                              )}
                               {" • "}
                               Written/Theory Items: <strong style={{ color: "#c084fc" }}>{writtenCnt}</strong>
                               {" • "}

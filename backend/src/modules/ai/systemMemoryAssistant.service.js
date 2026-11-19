@@ -84,8 +84,8 @@ const CORE_TOPICS = [
   },
   {
     id: 'proctoring',
-    keywords: ['proctor', 'exam', 'cheat', 'camera', 'test monitor', 'start exam'],
-    speech: 'When a student clicks Start Exam, GBS AI Proctoring activates live camera focus monitoring, tab-switch blocking, and anti-copy protection continuously until the exam is submitted.',
+    keywords: ['proctor', 'exam', 'cheat', 'camera', 'test monitor', 'start exam', 'evidence', 'deduct', 'lost marks'],
+    speech: 'When students click Start Exam, live webcam snapshots and movement monitoring stream to the Teacher Dashboard Camera Wall. Teachers can search students by name, select camera feeds, or broadcast to all examinees, archive snapshots as permanent reference evidence, and exact lost proctoring marks subtract automatically from final exam scores.',
     action: { openTab: 'exams' }
   },
   {

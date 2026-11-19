@@ -11,11 +11,13 @@ import "./styles/responsive.css";
 import "./styles/animations.css";
 import "./styles/glass.css";
 
-// Apply Global Country/Language norms & Blueprint Light Theme default immediately on boot
+// Apply Global Country/Language norms & Blueprint Light / Royal Navy theme classes immediately on boot
 if (typeof window !== "undefined") {
   try {
     const savedTheme = localStorage.getItem("gbs_ui_theme");
-    document.body.classList.toggle("gbs-theme-light", savedTheme !== "navy");
+    const isNavy = savedTheme === "navy";
+    document.body.classList.toggle("gbs-theme-light", !isNavy);
+    document.body.classList.toggle("gbs-theme-navy", isNavy);
     applyDocumentLocale();
   } catch { }
 }

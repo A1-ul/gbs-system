@@ -36,7 +36,7 @@ export function StudentDashboard({ initialTab } = {}) {
       const stored = localStorage.getItem("gbs_user");
       if (stored) return JSON.parse(stored);
     } catch { }
-    return { firstName: "Alex", lastName: "Mensah", role: "STUDENT", indexNumber: "STU-2026-001" };
+    return { firstName: "Enrolled", lastName: "Student", role: "STUDENT", indexNumber: "STU-ACTIVE" };
   })();
 
   // Real-Life Scholar Portrait
@@ -207,6 +207,9 @@ export function StudentDashboard({ initialTab } = {}) {
   const [proctoringWarnings, setProctoringWarnings] = useState(0);
   const [showHeadMovementWarningModal, setShowHeadMovementWarningModal] = useState(false);
   const [penaltyMarksDeducted, setPenaltyMarksDeducted] = useState(0);
+  const [teacherPenaltyMarks, setTeacherPenaltyMarks] = useState(0);
+  const [liveProctorMessages, setLiveProctorMessages] = useState([]);
+  const [dismissedProctorMsgIds, setDismissedProctorMsgIds] = useState([]);
   const [examEssayAnswers, setExamEssayAnswers] = useState({});
   const [proctoringStatus, setProctoringStatus] = useState("IDLE"); // "IDLE" | "INITIALIZING" | "CAMERA_ACTIVE" | "FOCUS_ONLY_ACTIVE" | "WARNING_DETECTED" | "STOPPED"
   const [proctoringDetail, setProctoringDetail] = useState("AI proctoring activates automatically when you click Start Exam.");
@@ -220,6 +223,8 @@ export function StudentDashboard({ initialTab } = {}) {
   const proctorIntervalRef = useRef(null);
   const proctorOffFrameStreakRef = useRef(0);
   const lastProctorAlertAtRef = useRef(0);
+  const proctorSnapshotsRef = useRef([]);
+  const proctorSyncCountRef = useRef({ warnings: 0, penalty: 0, teacherMarks: 0, status: "IDLE", events: [] });
 
   // Past Questions Archive Filters & Inspection
   const [pastExamYearFilter, setPastExamYearFilter] = useState("ALL");
@@ -252,6 +257,22 @@ export function StudentDashboard({ initialTab } = {}) {
     setProctoringDetail("Exam session ended. AI proctoring camera and monitors stopped.");
   };
 
+  const captureWebcamSnapshotDataUrl = () => {
+    try {
+      const video = proctorVideoRef.current;
+      if (!video || video.readyState < 2) return null;
+      const snapCanvas = document.createElement("canvas");
+      snapCanvas.width = 160;
+      snapCanvas.height = 120;
+      const sCtx = snapCanvas.getContext("2d");
+      if (!sCtx) return null;
+      sCtx.drawImage(video, 0, 0, 160, 120);
+      return snapCanvas.toDataURL("image/jpeg", 0.55);
+    } catch {
+      return null;
+    }
+  };
+
   // AI Exam Head Movement & Integrity Proctoring Sentinel
   const triggerHeadMovementAlert = (reason = "Head movement or focus shift away from the exam screen detected!") => {
     if (!examStarted || examSubmitted) return;
@@ -263,21 +284,57 @@ export function StudentDashboard({ initialTab } = {}) {
       ? reason.trim()
       : "Head movement or focus shift away from the exam screen detected!";
 
+    const capturedSnap = captureWebcamSnapshotDataUrl();
+    if (capturedSnap) {
+      proctorSnapshotsRef.current = [capturedSnap, ...proctorSnapshotsRef.current.slice(0, 7)];
+    }
+
     setLastAlertReason(cleanReason);
     setProctoringStatus("WARNING_DETECTED");
     setProctoringWarnings((prev) => {
       const nextCount = prev + 1;
-      setPenaltyMarksDeducted(nextCount * 2);
-      setProctoringEvents((logs) => [
-        {
-          id: `PROC-${now}`,
-          time: new Date().toLocaleTimeString(),
-          reason: cleanReason,
-          warningNumber: nextCount,
-          penaltyPct: nextCount * 2
-        },
-        ...logs.slice(0, 49)
-      ]);
+      const totalPenalty = nextCount * 2 + (proctorSyncCountRef.current.teacherMarks || 0);
+      setPenaltyMarksDeducted(totalPenalty);
+      const newEv = {
+        id: `PROC-${now}`,
+        time: new Date().toLocaleTimeString(),
+        timeIso: new Date().toISOString(),
+        reason: cleanReason,
+        warningNumber: nextCount,
+        penaltyMarks: 2,
+        penaltyPct: totalPenalty
+      };
+      setProctoringEvents((logs) => {
+        const nextLogs = [newEv, ...logs.slice(0, 49)];
+        proctorSyncCountRef.current = {
+          ...proctorSyncCountRef.current,
+          warnings: nextCount,
+          penalty: totalPenalty,
+          status: "WARNING_DETECTED",
+          events: nextLogs
+        };
+        return nextLogs;
+      });
+      // Immediately notify Teacher Dashboard Live Proctoring Camera Wall
+      try {
+        const stuName = `${studentProfile?.firstName || "Student"} ${studentProfile?.lastName || ""}`.trim();
+        apiClient.post("/ai-exam/proctor/heartbeat", {
+          examId: activeExam?.id || "EXAM-ACTIVE",
+          examTitle: activeExam?.title || "Active Examination",
+          studentId: studentProfile?.id || 10,
+          studentName: stuName,
+          studentEmail: studentProfile?.email || "",
+          status: "WARNING_DETECTED",
+          movementStatus: "WARNING_DETECTED",
+          cameraActive: Boolean(proctorStreamRef.current),
+          snapshotDataUrl: capturedSnap,
+          latestReason: cleanReason,
+          warningsCount: nextCount,
+          penaltyMarksDeducted: totalPenalty,
+          marksPerWarning: 2,
+          eventLogItem: newEv
+        }).catch(() => { });
+      } catch { }
       return nextCount;
     });
     setShowHeadMovementWarningModal(true);
@@ -286,7 +343,12 @@ export function StudentDashboard({ initialTab } = {}) {
   const beginProctoredExam = (examObj, durationSeconds) => {
     setProctoringWarnings(0);
     setPenaltyMarksDeducted(0);
+    setTeacherPenaltyMarks(0);
     setProctoringEvents([]);
+    setLiveProctorMessages([]);
+    setDismissedProctorMsgIds([]);
+    proctorSnapshotsRef.current = [];
+    proctorSyncCountRef.current = { warnings: 0, penalty: 0, teacherMarks: 0, status: "INITIALIZING", events: [] };
     setLastAlertReason("");
     lastProctorAlertAtRef.current = 0;
     proctorOffFrameStreakRef.current = 0;
@@ -456,6 +518,66 @@ export function StudentDashboard({ initialTab } = {}) {
       stopProctoringSession();
     };
   }, [examStarted, examSubmitted]);
+
+  // Stream periodic live camera snapshot frames & poll Teacher Invigilator messages/penalties every 3.5s
+  useEffect(() => {
+    if (!examStarted || examSubmitted) return;
+    let active = true;
+
+    const syncHeartbeatAndMessages = async () => {
+      if (!active) return;
+      const stuName = `${studentProfile?.firstName || "Student"} ${studentProfile?.lastName || ""}`.trim();
+      const snap = captureWebcamSnapshotDataUrl();
+      if (snap && proctorSnapshotsRef.current.length === 0) {
+        proctorSnapshotsRef.current = [snap];
+      }
+      try {
+        await apiClient.post("/ai-exam/proctor/heartbeat", {
+          examId: activeExam?.id || "EXAM-ACTIVE",
+          examTitle: activeExam?.title || "Active Examination",
+          studentId: studentProfile?.id || 10,
+          studentName: stuName,
+          studentEmail: studentProfile?.email || "",
+          status: proctorStreamRef.current ? "CAMERA_ACTIVE" : "FOCUS_ONLY_ACTIVE",
+          movementStatus: proctorSyncCountRef.current.status || (proctorStreamRef.current ? "CAMERA_ACTIVE" : "FOCUS_ONLY_ACTIVE"),
+          cameraActive: Boolean(proctorStreamRef.current),
+          snapshotDataUrl: snap,
+          warningsCount: proctorSyncCountRef.current.warnings || 0,
+          penaltyMarksDeducted: proctorSyncCountRef.current.penalty || 0,
+          marksPerWarning: 2
+        });
+      } catch { }
+
+      try {
+        const msgRes = await apiClient.get("/ai-exam/proctor/messages", {
+          params: {
+            examId: activeExam?.id || "",
+            studentId: studentProfile?.id || 10,
+            studentName: stuName
+          }
+        });
+        const payload = msgRes?.data?.data;
+        if (active && payload) {
+          if (Array.isArray(payload.messages)) {
+            setLiveProctorMessages(payload.messages);
+          }
+          const tMarks = Number(payload.teacherDeductedMarks || 0);
+          if (tMarks > proctorSyncCountRef.current.teacherMarks) {
+            proctorSyncCountRef.current.teacherMarks = tMarks;
+            setTeacherPenaltyMarks(tMarks);
+            setPenaltyMarksDeducted((prev) => Math.max(prev, (proctorSyncCountRef.current.warnings * 2) + tMarks));
+          }
+        }
+      } catch { }
+    };
+
+    syncHeartbeatAndMessages();
+    const hbInterval = setInterval(syncHeartbeatAndMessages, 3500);
+    return () => {
+      active = false;
+      clearInterval(hbInterval);
+    };
+  }, [examStarted, examSubmitted, activeExam?.id]);
 
   useEffect(() => {
     if (!examStarted || examSubmitted) return;
@@ -1703,6 +1825,7 @@ export function StudentDashboard({ initialTab } = {}) {
         }
       });
 
+      const effectivePenalty = Math.max(penaltyMarksDeducted, (proctoringWarnings * 2) + teacherPenaltyMarks);
       const studentDisplayName = `${currentUser.firstName || "Student"} ${currentUser.lastName || ""}`.trim();
       const res = await apiClient.post("/ai-exam/scan-grade", {
         examId: activeExam.id,
@@ -1710,7 +1833,12 @@ export function StudentDashboard({ initialTab } = {}) {
         studentName: studentDisplayName,
         studentEmail: currentUser.email || "",
         extractedAnswers: answersMap,
-        writtenAnswers: writtenMap
+        writtenAnswers: writtenMap,
+        penaltyMarksDeducted: effectivePenalty,
+        proctoringWarnings,
+        proctoringLog: proctoringEvents,
+        proctoringSnapshots: proctorSnapshotsRef.current,
+        marksPerWarning: 2
       }).catch(() => null);
 
       let data = res?.data?.data;
@@ -1786,13 +1914,16 @@ export function StudentDashboard({ initialTab } = {}) {
           };
         });
 
-        const computedPct = Math.round((objectiveObtained / Math.max(1, totalLocalMarks)) * 100);
+        const netOfflineScore = Math.max(0, Math.round((objectiveObtained - effectivePenalty) * 10) / 10);
+        const computedPct = Math.max(0, Math.round((netOfflineScore / Math.max(1, totalLocalMarks)) * 100));
         const hasWritten = writtenCount > 0;
         data = {
           answerSheetId: Date.now(),
           examId: activeExam.id,
           examTitle: activeExam.title,
-          scoreObtained: objectiveObtained,
+          rawScoreObtained: objectiveObtained,
+          proctoringPenaltyMarks: effectivePenalty,
+          scoreObtained: netOfflineScore,
           objectiveMarksObtained: objectiveObtained,
           totalMarks: totalLocalMarks,
           percentage: computedPct,
@@ -1807,15 +1938,19 @@ export function StudentDashboard({ initialTab } = {}) {
       }
       if (data) {
         const totalMarks = Number(data.totalMarks || activeExam.totalMarks || 100);
-        const computedRaw =
-          data.percentage !== undefined
-            ? Number(data.percentage)
-            : totalMarks
-              ? Math.round((Number(data.scoreObtained || 0) / Math.max(1, totalMarks)) * 100)
-              : 0;
-        const rawPct = Math.max(0, Math.min(100, computedRaw));
-        const penalty = penaltyMarksDeducted;
-        const finalPct = Math.max(0, rawPct - penalty);
+        const rawMarksVal = data.rawScoreObtained !== undefined
+          ? Number(data.rawScoreObtained)
+          : Number(data.objectiveMarksObtained ?? data.scoreObtained ?? 0);
+        const penalty = Number(data.proctoringPenaltyMarks ?? effectivePenalty);
+        const finalMarksVal = data.proctoringPenaltyMarks !== undefined
+          ? Number(data.scoreObtained ?? 0)
+          : Math.max(0, rawMarksVal - penalty);
+        const rawPct = data.rawPercentage !== undefined
+          ? Number(data.rawPercentage)
+          : Math.max(0, Math.min(100, Math.round((rawMarksVal / Math.max(1, totalMarks)) * 100)));
+        const finalPct = data.proctoringPenaltyMarks !== undefined && data.percentage !== undefined
+          ? Number(data.percentage)
+          : Math.max(0, Math.min(100, Math.round((finalMarksVal / Math.max(1, totalMarks)) * 100)));
         const needsManualReview = Boolean(
           data.needsManualReview ||
           data.gradingStatus === "PENDING_TEACHER_REVIEW" ||
@@ -1835,7 +1970,9 @@ export function StudentDashboard({ initialTab } = {}) {
           studentName: studentDisplayName,
           studentEmail: currentUser.email || "",
           rawScore: rawPct,
-          scoreObtained: data.scoreObtained ?? 0,
+          rawScoreObtained: rawMarksVal,
+          proctoringPenaltyMarks: penalty,
+          scoreObtained: finalMarksVal,
           objectiveMarksObtained: data.objectiveMarksObtained ?? data.scoreObtained ?? 0,
           totalMarks,
           proctoringPenalty: penalty,
@@ -1873,10 +2010,13 @@ export function StudentDashboard({ initialTab } = {}) {
             studentId: record.studentId,
             studentName: record.studentName,
             studentEmail: record.studentEmail,
+            rawScoreObtained: record.rawScoreObtained,
+            proctoringPenaltyMarks: record.proctoringPenaltyMarks,
+            proctoringWarnings: record.proctoringViolations,
             scoreObtained: record.scoreObtained,
             objectiveMarksObtained: record.objectiveMarksObtained,
             totalMarks: record.totalMarks,
-            percentage: record.rawScore,
+            percentage: record.score,
             gradingStatus: record.gradingStatus,
             extractedAnswers: record.extractedAnswers,
             writtenAnswers: record.writtenAnswers,
@@ -2211,7 +2351,7 @@ export function StudentDashboard({ initialTab } = {}) {
               <div className="role-kpi-row">
                 <div
                   className="role-kpi-box"
-                  onClick={() => setActiveTab("grades")}
+                  onClick={() => setActiveTab("report-card")}
                   style={{ cursor: "pointer", transition: "transform 0.15s" }}
                   title="Click to view term report card and GPA analytics"
                 >
@@ -3559,6 +3699,65 @@ export function StudentDashboard({ initialTab } = {}) {
                                 </div>
                               </div>
 
+                              {/* Live Teacher / Invigilator Messages & Official Warnings Bar */}
+                              {(() => {
+                                const visibleTeacherMsgs = liveProctorMessages.filter(
+                                  (m) => !dismissedProctorMsgIds.includes(m.id) && !(Array.isArray(m.acknowledgedBy) && m.acknowledgedBy.includes(String(studentProfile?.id || 10)))
+                                );
+                                if (visibleTeacherMsgs.length === 0) return null;
+                                return (
+                                  <div style={{ display: "flex", flexDirection: "column", gap: "8px", marginBottom: "1rem" }}>
+                                    {visibleTeacherMsgs.slice(0, 3).map((m) => (
+                                      <div
+                                        key={m.id}
+                                        style={{
+                                          background: m.severity === "WARNING" ? "rgba(185, 28, 28, 0.25)" : "rgba(8, 24, 51, 0.92)",
+                                          border: m.severity === "WARNING" ? "2px solid #ef4444" : "2px solid #d4af37",
+                                          borderRadius: "10px",
+                                          padding: "10px 14px",
+                                          display: "flex",
+                                          justifyContent: "space-between",
+                                          alignItems: "center",
+                                          gap: "12px",
+                                          flexWrap: "wrap"
+                                        }}
+                                      >
+                                        <div>
+                                          <div style={{ fontSize: "0.74rem", fontWeight: 900, color: m.severity === "WARNING" ? "#fca5a5" : "#f6dd84", textTransform: "uppercase" }}>
+                                            {m.severity === "WARNING" ? "⚠️ OFFICIAL INVIGILATOR WARNING" : "📢 MESSAGE FROM EXAMINATION TEACHER"} • {m.senderName}
+                                            {m.deductMarks > 0 ? ` • -${m.deductMarks} MARKS SUBTRACTED` : ""}
+                                          </div>
+                                          <div style={{ fontSize: "0.9rem", color: "#ffffff", fontWeight: 700, marginTop: "2px" }}>
+                                            {m.message}
+                                          </div>
+                                        </div>
+                                        <button
+                                          type="button"
+                                          onClick={() => {
+                                            setDismissedProctorMsgIds((prev) => [...prev, m.id]);
+                                            apiClient.post(`/ai-exam/proctor/messages/${encodeURIComponent(m.id)}/ack`, {
+                                              studentId: studentProfile?.id || 10
+                                            }).catch(() => { });
+                                          }}
+                                          style={{
+                                            background: "linear-gradient(135deg, #f6dd84, #cfa028)",
+                                            color: "#081833",
+                                            border: "none",
+                                            borderRadius: "6px",
+                                            padding: "5px 12px",
+                                            fontSize: "0.76rem",
+                                            fontWeight: 800,
+                                            cursor: "pointer"
+                                          }}
+                                        >
+                                          ✓ Acknowledge
+                                        </button>
+                                      </div>
+                                    ))}
+                                  </div>
+                                );
+                              })()}
+
                               {/* Font Size Preview Controls & AI Proctoring Sentinel */}
                               <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", background: "rgba(15, 23, 42, 0.85)", padding: "10px 16px", borderRadius: "10px", marginBottom: "1.25rem", border: "1px solid rgba(255, 255, 255, 0.08)", flexWrap: "wrap", gap: "10px" }}>
                                 <div style={{ display: "flex", alignItems: "center", gap: "8px", flexWrap: "wrap" }}>
@@ -4027,15 +4226,17 @@ export function StudentDashboard({ initialTab } = {}) {
                                 </div>
                               )}
                               <div style={{ display: "flex", justifyContent: "space-between", marginBottom: "8px", fontSize: "0.88rem", color: (examScoreResult.proctoringPenalty || 0) > 0 ? "#f87171" : "#34d399" }}>
-                                <span>AI Proctoring Head Movement Penalty:</span>
-                                <strong>-{examScoreResult.proctoringPenalty || 0}% ({examScoreResult.proctoringViolations || 0} infractions recorded)</strong>
+                                <span>AI Proctoring Lost Marks Subtracted:</span>
+                                <strong>-{examScoreResult.proctoringPenalty || 0} Marks ({examScoreResult.proctoringViolations || 0} warning(s) logged)</strong>
                               </div>
                               <div style={{ display: "flex", justifyContent: "space-between", borderTop: "1px solid rgba(255, 255, 255, 0.1)", paddingTop: "8px", fontSize: "1.05rem" }}>
                                 <span style={{ color: "#38bdf8", fontWeight: 800 }}>
-                                  {examScoreResult.needsManualReview ? "Current Status:" : "Final Verified Score:"}
+                                  {examScoreResult.needsManualReview ? "Current Status:" : "Final Verified Score (After Deductions):"}
                                 </span>
                                 <strong style={{ color: "#fbbf24", fontWeight: 900 }}>
-                                  {examScoreResult.needsManualReview ? `Pending Review (Obj: ${examScoreResult.score}%)` : `${examScoreResult.score}% (${examScoreResult.grade})`}
+                                  {examScoreResult.needsManualReview
+                                    ? `Pending Review (${examScoreResult.scoreObtained ?? 0}/${examScoreResult.totalMarks ?? 100} • ${examScoreResult.score}%)`
+                                    : `${examScoreResult.scoreObtained ?? 0}/${examScoreResult.totalMarks ?? 100} (${examScoreResult.score}% • ${examScoreResult.grade})`}
                                 </strong>
                               </div>
                               {examScoreResult.teacherFeedback && (
@@ -4071,6 +4272,45 @@ export function StudentDashboard({ initialTab } = {}) {
               </div>
             );
           })()}
+
+          {/* TAB: STUDENT ATTENDANCE RECORD SUMMARY */}
+          {activeTab === "attendance" && (
+            <div className="role-workspace-card">
+              <div className="workspace-title-row">
+                <div>
+                  <h2><span>🎯</span> PERSONAL DAILY ATTENDANCE RECORD &amp; PRESENCE RATE</h2>
+                  <p>Live attendance roll-call status synced directly from Faculty &amp; Institutional Attendance Registry.</p>
+                </div>
+                <button
+                  type="button"
+                  className="btn-secondary"
+                  onClick={() => setActiveTab("schedule")}
+                >
+                  ← Back to Timetable
+                </button>
+              </div>
+              <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(220px, 1fr))", gap: "14px", marginTop: "12px" }}>
+                <div style={{ background: "rgba(5, 15, 35, 0.78)", border: "1.5px solid #d4af37", borderRadius: "12px", padding: "16px" }}>
+                  <span style={{ fontSize: "0.75rem", color: "#f6dd84", fontWeight: 800 }}>OVERALL ATTENDANCE RATE</span>
+                  <div style={{ fontSize: "1.8rem", fontWeight: 900, color: "#34d399", marginTop: "4px" }}>
+                    {attendanceSummary?.rate || "0.0%"}
+                  </div>
+                </div>
+                <div style={{ background: "rgba(5, 15, 35, 0.78)", border: "1.5px solid #38bdf8", borderRadius: "12px", padding: "16px" }}>
+                  <span style={{ fontSize: "0.75rem", color: "#bae6fd", fontWeight: 800 }}>SESSIONS PRESENT / TOTAL</span>
+                  <div style={{ fontSize: "1.8rem", fontWeight: 900, color: "#f8fafc", marginTop: "4px" }}>
+                    {attendanceSummary?.presentCount || 0} / {attendanceSummary?.totalCount || 0}
+                  </div>
+                </div>
+                <div style={{ background: "rgba(5, 15, 35, 0.78)", border: "1.5px solid rgba(255,255,255,0.2)", borderRadius: "12px", padding: "16px" }}>
+                  <span style={{ fontSize: "0.75rem", color: "#cbd5e1", fontWeight: 800 }}>LAST ARCHIVED DATE</span>
+                  <div style={{ fontSize: "1.2rem", fontWeight: 800, color: "#f6dd84", marginTop: "8px" }}>
+                    {attendanceSummary?.lastArchivedDate || "Awaiting first class roll call"}
+                  </div>
+                </div>
+              </div>
+            </div>
+          )}
 
           {/* TAB 4: VERIFIED REPORT CARD */}
           {activeTab === "report-card" && (

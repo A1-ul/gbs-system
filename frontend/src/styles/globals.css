@@ -651,6 +651,89 @@ body.gbs-theme-light .dev-dashboard-layout .dev-workspace-panel {
   box-shadow: 0 14px 36px rgba(8, 24, 51, 0.22) !important;
 }
 
+/* Uniform Royal Navy Mode (High-Contrast Midnight Navy #081833/#0D2247 + Metallic Champagne Gold #F6DD84/#D4AF37 across ALL 9 Dashboards) */
+body.gbs-theme-navy,
+body.gbs-theme-navy #root,
+body.gbs-theme-navy .gbs-app-container,
+body.gbs-theme-navy .role-dashboard-wrapper,
+body.gbs-theme-navy .dev-dashboard-layout {
+  background-color: #050f23 !important;
+  background-image:
+    radial-gradient(circle at 14% 12%, rgba(212, 175, 55, 0.14) 0%, transparent 45%),
+    linear-gradient(135deg, #050f23 0%, #081833 48%, #0d2247 100%) !important;
+  color: #f8fafc !important;
+}
+
+body.gbs-theme-navy .role-dashboard-wrapper .role-dashboard-overlay,
+body.gbs-theme-navy .dev-dashboard-layout .dev-dashboard-real-overlay {
+  background: linear-gradient(135deg, rgba(5, 15, 35, 0.80) 0%, rgba(8, 24, 51, 0.78) 52%, rgba(13, 34, 71, 0.84) 100%) !important;
+}
+
+body.gbs-theme-navy .role-dashboard-wrapper .role-header,
+body.gbs-theme-navy .dev-dashboard-layout .dev-header {
+  background: linear-gradient(90deg, #050f23 0%, #0d2247 52%, #081833 100%) !important;
+  border-bottom: 2px solid #d4af37 !important;
+  color: #f8fafc !important;
+}
+
+body.gbs-theme-navy .role-dashboard-wrapper .role-hero-banner {
+  background: linear-gradient(135deg, #081833 0%, #0d2247 58%, #132d5e 100%) !important;
+  border: 1.5px solid rgba(212, 175, 55, 0.65) !important;
+  color: #f8fafc !important;
+}
+
+body.gbs-theme-navy .role-dashboard-wrapper .role-kpi-box,
+body.gbs-theme-navy .dev-dashboard-layout .dev-kpi-card,
+body.gbs-theme-navy .role-dashboard-wrapper .kpi-card {
+  background: linear-gradient(145deg, rgba(8, 24, 51, 0.96) 0%, rgba(13, 34, 71, 0.94) 100%) !important;
+  border: 1.5px solid rgba(212, 175, 55, 0.55) !important;
+  border-left: 4px solid #d4af37 !important;
+  color: #f8fafc !important;
+  box-shadow: 0 10px 26px rgba(5, 15, 35, 0.55) !important;
+}
+
+body.gbs-theme-navy .role-dashboard-wrapper .role-kpi-box .role-kpi-title,
+body.gbs-theme-navy .dev-dashboard-layout .dev-kpi-card .kpi-label {
+  color: #cbd5e1 !important;
+}
+
+body.gbs-theme-navy .role-dashboard-wrapper .role-kpi-box .role-kpi-num,
+body.gbs-theme-navy .dev-dashboard-layout .dev-kpi-card .kpi-value {
+  color: #f6dd84 !important;
+}
+
+body.gbs-theme-navy .role-dashboard-wrapper .role-tab-nav,
+body.gbs-theme-navy .dev-dashboard-layout .dev-tab-navigation,
+body.gbs-theme-navy .dev-dashboard-layout .dev-tabs-nav {
+  background: rgba(5, 15, 35, 0.92) !important;
+  border: 1.5px solid rgba(212, 175, 55, 0.50) !important;
+}
+
+body.gbs-theme-navy .role-dashboard-wrapper .role-tab-nav .role-tab-btn:not(.active),
+body.gbs-theme-navy .dev-dashboard-layout .dev-tab-navigation .dev-tab-btn:not(.active),
+body.gbs-theme-navy .dev-dashboard-layout .dev-tabs-nav .dev-tab-btn:not(.active) {
+  background: linear-gradient(135deg, #081833 0%, #0d2247 100%) !important;
+  color: #f6dd84 !important;
+  border: 1px solid rgba(212, 175, 55, 0.45) !important;
+}
+
+body.gbs-theme-navy .role-dashboard-wrapper .role-tab-nav .role-tab-btn.active,
+body.gbs-theme-navy .dev-dashboard-layout .dev-tab-navigation .dev-tab-btn.active,
+body.gbs-theme-navy .dev-dashboard-layout .dev-tabs-nav .dev-tab-btn.active {
+  background: linear-gradient(135deg, #f6dd84 0%, #e4b946 55%, #cfa028 100%) !important;
+  color: #081833 !important;
+  border-color: #f6dd84 !important;
+  font-weight: 800 !important;
+  box-shadow: 0 6px 20px rgba(212, 175, 55, 0.42) !important;
+}
+
+body.gbs-theme-navy .role-dashboard-wrapper .role-workspace-card,
+body.gbs-theme-navy .dev-dashboard-layout .dev-workspace-panel {
+  background: linear-gradient(145deg, rgba(8, 24, 51, 0.96) 0%, rgba(13, 34, 71, 0.96) 58%, rgba(5, 15, 35, 0.98) 100%) !important;
+  border: 1.5px solid rgba(212, 175, 55, 0.55) !important;
+  color: #f8fafc !important;
+}
+
 /* Full Page Display Mode for Expanded Tabs / Workspaces */
 body.gbs-full-display-mode .role-main,
 body.gbs-full-display-mode .dev-main {

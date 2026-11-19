@@ -118,6 +118,7 @@ export default function TopCenterSystemBanner({
 
     try {
       document.body.classList.toggle("gbs-theme-light", uiTheme === "light");
+      document.body.classList.toggle("gbs-theme-navy", uiTheme === "navy");
     } catch { }
 
     window.addEventListener("online", handleOnline);
@@ -148,7 +149,17 @@ export default function TopCenterSystemBanner({
     try {
       localStorage.setItem("gbs_ui_theme", next);
       document.body.classList.toggle("gbs-theme-light", next === "light");
+      document.body.classList.toggle("gbs-theme-navy", next === "navy");
       window.dispatchEvent(new CustomEvent("gbs_ui_theme_changed", { detail: { theme: next } }));
+      if (typeof window.showGBSOpenNotice === "function") {
+        window.showGBSOpenNotice(
+          next === "navy"
+            ? "🌙 Deep Royal Navy & Metallic Gold theme activated across all dashboards."
+            : "☀️ Blueprint Light & Royal Navy theme activated cleanly.",
+          "success",
+          next === "navy" ? "NAVY MODE ACTIVE" : "BLUEPRINT LIGHT ACTIVE"
+        );
+      }
     } catch { }
   };
 
@@ -207,6 +218,11 @@ export default function TopCenterSystemBanner({
 
   const handleDirectOrModalAppInstall = async () => {
     const promptObj = typeof window !== "undefined" ? window.__gbsDeferredInstallPrompt : null;
+    if (typeof navigator !== "undefined" && "serviceWorker" in navigator) {
+      try {
+        await navigator.serviceWorker.register("/sw.js", { updateViaCache: "none" });
+      } catch { }
+    }
     if (promptObj) {
       try {
         await promptObj.prompt();
@@ -216,9 +232,12 @@ export default function TopCenterSystemBanner({
           window.__gbsAppInstalled = true;
           setPwaPromptReady(false);
           if (window.showGBSOpenNotice) {
-            window.showGBSOpenNotice("✅ GBS App installed onto your device Home Screen / Apps!", "success", "MOBILE APP INSTALLED");
+            window.showGBSOpenNotice("✅ GBS App installed onto your device Home Screen / App Launcher!", "success", "MOBILE APP INSTALLED");
           }
           return;
+        }
+        if (window.showGBSOpenNotice) {
+          window.showGBSOpenNotice("Installation prompt dismissed. Opening the Mobile App & Push Hub for offline launcher & browser steps.", "info", "MOBILE APP INSTALLER");
         }
       } catch { }
     }
@@ -617,19 +636,27 @@ export default function TopCenterSystemBanner({
           style={{
             background: pwaPromptReady
               ? "linear-gradient(135deg, rgba(16, 185, 129, 0.3), rgba(5, 150, 105, 0.42))"
-              : "linear-gradient(135deg, rgba(168, 85, 247, 0.25), rgba(126, 34, 206, 0.35))",
-            border: pwaPromptReady ? "1.5px solid #10b981" : "1px solid rgba(168, 85, 247, 0.5)",
-            color: pwaPromptReady ? "#6ee7b7" : "#c084fc",
+              : "linear-gradient(135deg, rgba(8, 24, 51, 0.92), rgba(13, 34, 71, 0.95))",
+            border: pwaPromptReady ? "1.5px solid #16a34a" : "1.5px solid rgba(212, 175, 55, 0.72)",
+            color: pwaPromptReady ? "#86efac" : "#f6dd84",
             fontSize: "0.76rem",
             padding: "4px 12px",
             borderRadius: "8px",
             cursor: "pointer",
-            fontWeight: "700",
+            fontWeight: "800",
+            display: "inline-flex",
+            alignItems: "center",
+            gap: "6px",
             transition: "all 0.2s"
           }}
-          title="Install GBS App on your phone or computer & configure lock screen push alerts"
+          title="Install GBS Mobile/Desktop App on this device & manage push alerts"
         >
-          {pwaPromptReady ? "⚡ Install App Now" : "📲 Mobile App & Push"}
+          <img
+            src="/assets/gbs_crest_badge.jpg"
+            alt="GBS App Icon"
+            style={{ width: "16px", height: "16px", borderRadius: "4px", objectFit: "cover", border: "1px solid #d4af37" }}
+          />
+          <span>{pwaPromptReady ? "Install GBS App Now" : "Mobile App & Push"}</span>
         </button>
         <span style={{ color: "#475569" }}>•</span>
         <button
