@@ -1,7 +1,7 @@
 {
   "systemName": "GBS MANAGEMENT SYSTEM (Global Brightest Stars Educational Management System)",
-  "version": "2.6.0-PRODUCTION",
-  "savedAt": "2026-11-19T00:12:00Z",
+  "version": "2.6.1-PRODUCTION",
+  "savedAt": "2026-11-19T00:46:00Z",
   "status": "PRODUCTION_READY_VERIFIED",
   "architecture": {
     "frontend": {
@@ -25,11 +25,24 @@
       "persistentStorePath": "backend/data/gbs_persistent_store.json",
       "systemMemorySnapshotPath": "backend/data/gbs_system_memory_snapshot.json",
       "authMiddleware": "backend/src/middleware/auth.middleware.js",
+      "rcceErrorHandler": "backend/src/rcce/systemErrorHandler.js",
       "staffApprovalRoutes": "backend/src/modules/user/user.routes.js (/pending-staff, /approve-staff, /reject-staff)",
       "smsGatewayAndInboxService": "backend/src/modules/sms/sms.service.js (Arkesel/Hubtel/mNotify/Twilio + persistent /api/v1/sms/inbox)",
       "paymentGatewaysModule": "backend/src/modules/finance/payments/ (Paystack, Hubtel, MTN MoMo, Telecel Cash, AT Money, Visa/Mastercard, Bank Transfer)",
       "translatorModule": "backend/src/modules/translator/translator.routes.js",
       "transportModule": "backend/src/modules/transport/transport.routes.js"
+    },
+    "deploymentAndEnvironment": {
+      "renderBlueprintFile": "render.yaml",
+      "backendEnvTemplate": "backend/.env.example",
+      "liveDomain": "https://gbs-system.onrender.com",
+      "repository": "https://github.com/A1-ul/gbs-system.git",
+      "autoStartupDbSync": "server.js checks DATABASE_URL, runs prisma db push when tables < 6, runs ensurePaymentTables(), and seeds default tenant/admin",
+      "renderDashboardRequiredSecrets": [
+        "DATABASE_URL (PostgreSQL connectionString / Render gbs-db)",
+        "SMS provider key: ARKESEL_API_KEY OR HUBTEL_CLIENT_ID + HUBTEL_CLIENT_SECRET OR MNOTIFY_API_KEY OR TWILIO_ACCOUNT_SID + TWILIO_AUTH_TOKEN + TWILIO_FROM_NUMBER",
+        "Payment gateway live keys: PAYSTACK_SECRET_KEY, PAYSTACK_PUBLIC_KEY, PAYSTACK_WEBHOOK_SECRET, HUBTEL_MERCHANT_ACCOUNT_NUMBER, HUBTEL_WEBHOOK_SECRET"
+      ]
     }
   },
   "subscriptionPricingMemory": {
@@ -276,9 +289,18 @@
       "rootCause": "sms.service.js pushed to in-memory smsLogs and hardcoded status DELIVERED without telecom API integration or persistent inbox; AdminDashboard sent phoneNumber which /communication/sms ignored.",
       "resolution": "Upgraded sms.service.js with genuine Arkesel/Hubtel/mNotify/Twilio HTTP adapters, E.164 normalization, honest carrierStatus (CARRIER_SMS_SENT vs IN_APP_DELIVERED vs CARRIER_SMS_FAILED) + sms: device handoff URI, persistent dispatchedSmsMessages store, GET /api/v1/sms/inbox & PATCH /api/v1/sms/inbox/:id/read endpoints, fixed communication/sms field mapping, and built DirectSMSInboxPanel across all portal top banners.",
       "status": "PERMANENTLY_GUARDED"
+    },
+    {
+      "issueCode": "DIAG-RCCE-403-APPROVAL-MSG",
+      "symptom": "Pending staff login and role denial responses returned generic 'You do not have permission to perform this operation.' instead of clear Headmaster approval guidance",
+      "rootCause": "systemErrorHandler.js performed case-sensitive rawMessage.includes('denied') and excluded 'pending', 'approval', 'approved', 'rejected', 'locked', 'suspended', and 'deleted' keywords.",
+      "resolution": "Updated backend/src/rcce/systemErrorHandler.js to match case-insensitively across all descriptive auth/approval/lockout phrases so users always see the exact reason and action required.",
+      "status": "PERMANENTLY_GUARDED"
     }
   ],
   "verificationSummary": {
+    "backendTestSuitesPassed": "19/19 across 6 suites (user-approval-and-sms, auth-and-voicenote, translator-pwa-demo-rbac, transport-and-demo-limit, payments, payments-http)",
+    "frontendBuildStatus": "vite build passed (index-Y_HUwTjQ.js synced to backend/public)",
     "roleAndPortalEndpointsPassed": "62/62",
     "devControlAndAuthEndpointsPassed": "33/33",
     "staffApprovalSmsAndTranslatorVerified": "2026-11-19 Live Production & Hybrid Parity",
