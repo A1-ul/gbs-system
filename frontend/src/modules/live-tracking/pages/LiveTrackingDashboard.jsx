@@ -2,13 +2,15 @@ import React, { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import apiClient from "../../../api/client/apiClient";
 import { resolveWorldwideLocation } from "../../../utils/globalLocationResolver";
+import { isDemoSandboxMode } from "../../../utils/tokenStorage";
 import "./LiveTracking.css";
 
 export default function LiveTrackingDashboard() {
   const navigate = useNavigate();
+  const isDemoMode = isDemoSandboxMode();
 
-  // Pre-configured real-world institutional enclaves with verified GPS coordinates
-  const defaultEnclaves = [
+  // Sample sandbox enclaves strictly restricted to Demo Sandbox mode; Real Live Production starts cleanly with registered tenants
+  const defaultEnclaves = isDemoMode ? [
     {
       tenantName: "St. Augustine Science Academy",
       tenantCode: "GBS-ROYALOAK",
@@ -89,10 +91,25 @@ export default function LiveTrackingDashboard() {
       activeStudents: 820,
       status: "ACTIVE"
     }
-  ];
+  ] : [];
 
-  const [phoneSearchQuery, setPhoneSearchQuery] = useState("+233-24-555-0199");
-  const [selectedTenantLocation, setSelectedTenantLocation] = useState(defaultEnclaves[0]);
+  const [phoneSearchQuery, setPhoneSearchQuery] = useState(isDemoMode ? "+233-24-555-0199" : "");
+  const [selectedTenantLocation, setSelectedTenantLocation] = useState(() => defaultEnclaves[0] || {
+    tenantName: "Live Tenant & Campus Locator",
+    tenantCode: "LIVE-READY",
+    headmasterName: "Search Institution or Click Locate My GPS",
+    headmasterPhone: "",
+    headmasterEmail: "",
+    branchName: "Global GPS Coordinate Lock Ready",
+    address: "Enter a school name, city, or headmaster phone above",
+    city: "Global",
+    region: "Worldwide",
+    country: "All Countries",
+    latitude: 5.60372,
+    longitude: -0.18696,
+    activeStudents: 0,
+    status: "READY"
+  });
   const [searching, setSearching] = useState(false);
   const [searchError, setSearchError] = useState(null);
   const [mapViewMode, setMapViewMode] = useState("roadmap"); // "roadmap" or "satellite"
@@ -650,7 +667,7 @@ export default function LiveTrackingDashboard() {
                 </div>
                 <div>
                   <span style={{ color: "#94a3b8", display: "block", fontSize: "0.72rem" }}>ENROLLED POPULATION</span>
-                  <strong style={{ color: "#38bdf8" }}>{selectedTenantLocation.activeStudents || 1500} Active Students</strong>
+                  <strong style={{ color: "#38bdf8" }}>{selectedTenantLocation.activeStudents ?? 0} Active Students</strong>
                 </div>
               </div>
             </div>

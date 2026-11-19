@@ -70,8 +70,13 @@ const getSystemMetrics = async () => {
   } catch (err) {
     console.warn('System telemetry db lookup notice (resilience active):', err.message);
     const dynInstitutions = authService.getDynamicInstitutions ? authService.getDynamicInstitutions() : [];
-    totalTenants = dynInstitutions.length > 0 ? dynInstitutions.length : 1;
-    totalUsers = 4;
+    const storeFallback = readPersistentStore();
+    totalTenants = dynInstitutions.length;
+    totalUsers = Math.max(
+      0,
+      Array.isArray(storeFallback.registeredUsers) ? storeFallback.registeredUsers.length : 0,
+      Array.isArray(storeFallback.users) ? storeFallback.users.length : 0
+    );
   }
 
   const socketStats = socketServer.getSocketStats ? socketServer.getSocketStats() : { activeConnections: 0 };
@@ -2244,16 +2249,8 @@ const getSystemAlerts = async (filters = {}) => {
     });
   } catch (err) {
     console.warn('System alerts db lookup notice (resilience active):', err.message);
-    return [
-      {
-        id: 1,
-        alertType: 'SYSTEM_HEALTH_MONITOR',
-        severity: 'LOW',
-        message: 'All core system modules operating in high-availability mode.',
-        isResolved: true,
-        createdAt: new Date().toISOString()
-      }
-    ];
+    const storeFallback = readPersistentStore();
+    return Array.isArray(storeFallback.systemAlerts) ? storeFallback.systemAlerts : [];
   }
 };
 
@@ -2390,29 +2387,7 @@ const getDeployments = async () => {
       take: 30
     });
 
-    if (deploymentAudits.length === 0 && !initialDeploymentSeeded) {
-      initialDeploymentSeeded = true;
-      await prisma.auditLog.create({
-        data: {
-          tenantId: 1,
-          userId: null,
-          module: 'DEV_CONTROL',
-          action: 'DEPLOYMENT_RELEASE',
-          details: JSON.stringify({
-            version: 'v1.0.0-ENTERPRISE-PROD',
-            commitSha: 'a6fd029',
-            branch: 'main',
-            environment: 'production',
-            status: 'DEPLOYED_ACTIVE',
-            isArchived: false,
-            buildNumber: 1042
-          }),
-          ipAddress: '127.0.0.1'
-        }
-      }).catch(() => { });
-    } else {
-      initialDeploymentSeeded = true;
-    }
+    initialDeploymentSeeded = true;
 
     const records = await prisma.auditLog.findMany({
       where: {
@@ -3452,89 +3427,6 @@ const locateTenantByHeadmaster = async (phoneQuery) => {
     }
   }
 
-  const defaultEnclaves = [
-    {
-      tenantName: 'St. Augustine Science Academy',
-      tenantCode: 'GBS-ROYALOAK',
-      headmasterName: 'Arthur Pendleton',
-      headmasterPhone: '+233-24-555-0199',
-      headmasterEmail: 'admin@gbs.edu',
-      branchName: 'Accra Ridge Academic Enclave',
-      address: 'Plot 14, Independence Avenue / Academic Ridge, Accra, Ghana',
-      city: 'Accra',
-      region: 'Greater Accra',
-      country: 'Ghana',
-      latitude: 5.55602,
-      longitude: -0.19690,
-      activeStudents: 1850,
-      status: 'ACTIVE'
-    },
-    {
-      tenantName: 'Royal Oak International STEM Enclave',
-      tenantCode: 'GBS-KUMASI-01',
-      headmasterName: 'Dr. Kwabena Asante',
-      headmasterPhone: '+233-24-442-1199',
-      headmasterEmail: 'k.asante@gbs-staff.edu',
-      branchName: 'Kumasi Science Quad',
-      address: 'Kwame Nkrumah Way, Asokwa Enclave, Kumasi, Ghana',
-      city: 'Kumasi',
-      region: 'Ashanti Region',
-      country: 'Ghana',
-      latitude: 6.68848,
-      longitude: -1.62443,
-      activeStudents: 1220,
-      status: 'ACTIVE'
-    },
-    {
-      tenantName: 'St. Jude Senior Academy',
-      tenantCode: 'GBS-CAPE-01',
-      headmasterName: 'Elena Rostova',
-      headmasterPhone: '+233-24-111-2233',
-      headmasterEmail: 'e.rostova@gbs.edu',
-      branchName: 'Cape Coast Academic Enclave',
-      address: 'Coastal Road, University Enclave, Cape Coast, Ghana',
-      city: 'Cape Coast',
-      region: 'Central Region',
-      country: 'Ghana',
-      latitude: 5.10535,
-      longitude: -1.24660,
-      activeStudents: 940,
-      status: 'ACTIVE'
-    },
-    {
-      tenantName: 'Kampala Main Campus',
-      tenantCode: 'GBS-KAMPALA-01',
-      headmasterName: 'Dr. Peter Mukasa',
-      headmasterPhone: '+256-70-112-3456',
-      headmasterEmail: 'p.mukasa@gbs.ug',
-      branchName: 'Kampala Central Quad',
-      address: 'Plot 12, Makerere Hill Road, Kampala, Uganda',
-      city: 'Kampala',
-      region: 'Central',
-      country: 'Uganda',
-      latitude: 0.34760,
-      longitude: 32.58250,
-      activeStudents: 1450,
-      status: 'ACTIVE'
-    },
-    {
-      tenantName: 'Entebbe Science Campus',
-      tenantCode: 'GBS-ENTEBBE-01',
-      headmasterName: 'Sarah Nansubuga',
-      headmasterPhone: '+256-77-998-1122',
-      headmasterEmail: 's.nansubuga@gbs.ug',
-      branchName: 'Airport View Enclave',
-      address: 'Airport View Road, Entebbe, Uganda',
-      city: 'Entebbe',
-      region: 'Central',
-      country: 'Uganda',
-      latitude: 0.05120,
-      longitude: 32.46370,
-      activeStudents: 820,
-      status: 'ACTIVE'
-    }
-  ];
-
   let result = null;
 
   if (matchedTenant) {
@@ -3556,7 +3448,7 @@ const locateTenantByHeadmaster = async (phoneQuery) => {
       status: matchedTenant.status || 'ACTIVE',
       headmasterName: matchedTenant.headmasterName || inst?.adminName || (matchedHeadmaster ? `${matchedHeadmaster.firstName} ${matchedHeadmaster.lastName}` : 'Headmaster'),
       headmasterPhone: matchedTenant.headmasterPhone || inst?.adminPhone || inst?.officialPhone || query,
-      headmasterEmail: matchedTenant.headmasterEmail || inst?.adminEmail || matchedHeadmaster?.email || 'admin@school.com',
+      headmasterEmail: matchedTenant.headmasterEmail || inst?.adminEmail || matchedHeadmaster?.email || '',
       branchName: `${matchedTenant.name} (${cityVal} Campus)`,
       address: addrVal,
       city: cityVal,
@@ -3564,78 +3456,40 @@ const locateTenantByHeadmaster = async (phoneQuery) => {
       country: countryVal,
       latitude: lat,
       longitude: lng,
-      activeStudents: Number(matchedTenant.totalStudentsEnrolled || inst?.totalStudentsEnrolled || 450)
+      activeStudents: Number(matchedTenant.totalStudentsEnrolled || inst?.totalStudentsEnrolled || 0)
     };
   } else {
-    const enclaveMatch = defaultEnclaves.find((e) => {
-      const eDigits = e.headmasterPhone.replace(/\D/g, '');
-      const phoneHit =
-        digitsOnly.length >= 4 && (
-          e.headmasterPhone === query ||
-          eDigits === digitsOnly ||
-          (digitsOnly.length >= 6 && eDigits.endsWith(digitsOnly.slice(-6))) ||
-          (eDigits.length >= 6 && digitsOnly.endsWith(eDigits.slice(-6)))
-        );
-      const textHit =
-        e.tenantName.toLowerCase().includes(queryLower) ||
-        e.tenantCode.toLowerCase().includes(queryLower) ||
-        e.city.toLowerCase().includes(queryLower) ||
-        e.address.toLowerCase().includes(queryLower);
-      return phoneHit || textHit;
-    });
-
-    if (enclaveMatch) {
-      result = { ...enclaveMatch };
-    } else {
-      const cityCoords = resolveCityCoordinates(query, query, query);
-      let lat = cityCoords?.lat || 5.60372;
-      let lng = cityCoords?.lng || -0.18696;
-      let country = cityCoords?.country || 'Ghana';
-      let city = cityCoords ? query : 'Accra';
-      let region = cityCoords?.region || 'Greater Accra';
-
-      if (!cityCoords) {
-        if (query.startsWith('+256') || digitsOnly.startsWith('256')) {
-          lat = 0.3476;
-          lng = 32.5825;
-          country = 'Uganda';
-          city = 'Kampala';
-        } else if (query.startsWith('+234') || digitsOnly.startsWith('234')) {
-          lat = 6.5244;
-          lng = 3.3792;
-          country = 'Nigeria';
-          city = 'Lagos';
-        } else if (query.startsWith('+254') || digitsOnly.startsWith('254')) {
-          lat = -1.2921;
-          lng = 36.8219;
-          country = 'Kenya';
-          city = 'Nairobi';
-        } else if (query.startsWith('+1') || digitsOnly.startsWith('1')) {
-          lat = 40.7128;
-          lng = -74.0060;
-          country = 'United States';
-          city = 'New York';
-        }
-      }
-
-      result = {
-        tenantName: digitsOnly.length >= 7 ? `Academic Enclave (${query})` : `${query}`,
-        tenantCode: `GBS-${digitsOnly.slice(-4) || 'LOC'}`,
-        headmasterName: 'Executive Headmaster',
-        headmasterPhone: digitsOnly.length >= 7 ? query : '+233 54 329 4615',
-        headmasterEmail: `headmaster.${digitsOnly.slice(-4) || 'verified'}@gbs.edu`,
-        branchName: `${city} Real-Time Location`,
-        address: digitsOnly.length >= 7 ? `Executive Academic Enclave, ${city}, ${country}` : `${query}, ${country}`,
-        city,
-        region,
-        country,
-        latitude: lat,
-        longitude: lng,
-        activeStudents: 450,
-        status: 'ACTIVE',
-        mapSearchQuery: digitsOnly.length >= 7 ? `${lat},${lng}` : query
+    const cityCoords = resolveCityCoordinates(query, query, query);
+    if (!cityCoords) {
+      return {
+        found: false,
+        query,
+        message: 'No registered institution or matching coordinate enclave found for that query.'
       };
     }
+    const lat = cityCoords.lat;
+    const lng = cityCoords.lng;
+    const country = cityCoords.country || 'Global';
+    const city = query;
+    const region = cityCoords.region || city;
+
+    result = {
+      tenantName: `${query}`,
+      tenantCode: 'MAP-LOOKUP',
+      headmasterName: 'Unassigned / Map Search',
+      headmasterPhone: digitsOnly.length >= 7 ? query : '',
+      headmasterEmail: '',
+      branchName: `${city} Geographic Lookup`,
+      address: `${query}, ${country}`,
+      city,
+      region,
+      country,
+      latitude: lat,
+      longitude: lng,
+      activeStudents: 0,
+      status: 'MAP_COORDINATES_ONLY',
+      mapSearchQuery: query
+    };
   }
 
   const mapTarget = result.mapSearchQuery ? encodeURIComponent(result.mapSearchQuery) : `${result.latitude},${result.longitude}`;

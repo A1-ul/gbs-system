@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useRef } from "react";
 import { useNavigate } from "react-router-dom";
 import apiClient from "../../api/client/apiClient";
+import { getLanguageProfile } from "../../utils/i18nCountryEngine";
 
 /**
  * GBS AI Voice Assistant (Real-Time System-Memory Linked Continuous Assistant)
@@ -110,8 +111,71 @@ const LOCAL_MEMORY_TOPICS = [
     keywords: ["what is gbs", "about gbs", "about the system", "how does gbs work", "everything", "explain gbs", "roles", "dashboards", "motto", "intelligence talks to wisdom"],
     answer:
       "GBS School Management System (motto: Intelligence Talks to Wisdom) unifies Headmaster, Teacher or Lecturer, Student, Parent, Accountant, Staff, HR, Alumni, School Clinic, University Hub, Defaulters Monitor, Language Translator, Direct SMS, Payments, Bus Transport, AI Proctoring, and Developer Control into one connected platform."
+  },
+  {
+    id: "globalLocale",
+    keywords: ["country", "countries", "language", "currency", "region", "norm", "arabic", "french", "spanish", "international"],
+    answer:
+      "GBS operates across any country and preferred language worldwide. Use the Country & Language selector in the banner or login page to switch currencies, academic term norms, speech accents, and RTL support instantly."
+  },
+  {
+    id: "autoUpdates",
+    keywords: ["update", "upgrade", "mobile app update", "new version", "automatic", "cache", "refresh"],
+    answer:
+      "GBS Mobile Apps (PWA) and desktop sessions automatically check live build signatures, flush old caches, display an update badge, and upgrade silently whenever improvements ship — no manual reinstall needed."
+  },
+  {
+    id: "attendance",
+    keywords: ["attendance", "roll call", "present", "late", "absent", "qr scan"],
+    answer:
+      "Daily Attendance tracks Present, Absent, Late, and Excused entries across classes, syncing instantly to Parent portals and Defaulters alerts.",
+    tab: "attendance"
   }
 ];
+
+const LOCAL_STOP_WORDS = new Set([
+  "the", "is", "are", "was", "were", "a", "an", "and", "or", "in", "on", "at", "to", "for", "of",
+  "with", "by", "from", "this", "that", "it", "my", "we", "our", "you", "your", "do", "does", "did",
+  "can", "could", "would", "should", "will", "please", "tell", "explain", "about", "what", "how",
+  "when", "where", "why", "who", "which", "gbs", "system", "school"
+]);
+
+function buildLocalQuestionFormation(rawQuery, moduleLabel = "GBS Unified System") {
+  const clean = String(rawQuery || "").trim();
+  const qLower = clean.toLowerCase();
+  let questionStyle = "Direct System Inquiry";
+  let cue = "exact module rules and action path";
+  if (/^(how)\b/i.test(qLower) || qLower.includes("how does") || qLower.includes("how do")) {
+    questionStyle = 'Process & Workflow ("How") Question';
+    cue = "step-by-step system workflow";
+  } else if (/^(what)\b/i.test(qLower)) {
+    questionStyle = 'Definition & Scope ("What") Question';
+    cue = "core purpose and supported capabilities";
+  } else if (/^(why)\b/i.test(qLower)) {
+    questionStyle = 'Policy & Reasoning ("Why") Question';
+    cue = "business rules and system validation reasons";
+  } else if (/^(where|which|who|when)\b/i.test(qLower)) {
+    questionStyle = 'Navigation & Role ("Where / Who / When") Question';
+    cue = "exact dashboard location, owner role, or schedule";
+  } else if (/^(can|could|is|are|does|do)\b/i.test(qLower)) {
+    questionStyle = 'Capability & Status ("Can / Does / Is") Question';
+    cue = "verified system capability and conditions";
+  } else if (/^(open|show|pull|check|go to|take me|run)\b/i.test(qLower)) {
+    questionStyle = "Action Command Request";
+    cue = "immediate navigation or live record retrieval";
+  }
+
+  const terms = clean
+    .toLowerCase()
+    .split(/[^a-z0-9]+/)
+    .filter((w) => w.length >= 2 && !LOCAL_STOP_WORDS.has(w))
+    .filter((v, i, a) => a.indexOf(v) === i)
+    .slice(0, 5);
+
+  const article = /^[aeiou]/i.test(questionStyle) ? "an" : "a";
+  const explanationText = `How your question was formed: You formed ${article} ${questionStyle} focused on ${terms.length > 0 ? `"${terms.join(", ")}"` : "general system operations"}, requesting ${cue} inside ${moduleLabel}.`;
+  return { questionStyle, keyTerms: terms, targetModule: moduleLabel, explanationText };
+}
 
 const INTRO_GREETING =
   "Hello! Welcome to GBS SYSTEM. What action, what command, what activities, or what information do you want to know and learn on GBS SYSTEM? We are ready to answer you!";
@@ -149,6 +213,7 @@ export default function GBSVoiceAssistant() {
   const processCommandRef = useRef(null);
   const silenceTimerRef = useRef(null);
   const lastTranscriptRef = useRef("");
+  const lastRawQueryRef = useRef("");
   const lastProcessedRef = useRef({ text: "", time: 0 });
   const memoryCatalogRef = useRef(null);
   const chatEndRef = useRef(null);
@@ -205,9 +270,9 @@ export default function GBSVoiceAssistant() {
     }
   }, []);
 
-  const appendMessage = (sender, text) => {
+  const appendMessage = (sender, text, formation = null, answerOnly = null) => {
     const time = new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" });
-    setConversationMessages((prev) => [...prev.slice(-28), { sender, text, time }]);
+    setConversationMessages((prev) => [...prev.slice(-28), { sender, text, time, formation, answerOnly }]);
   };
 
   const safelyStartRecognition = () => {
@@ -247,7 +312,14 @@ export default function GBSVoiceAssistant() {
     const recognition = new SpeechRecognition();
     recognition.continuous = true;
     recognition.interimResults = true;
-    recognition.lang = "en-US";
+    recognition.lang = getLanguageProfile().speechLocale || "en-US";
+
+    const syncRecognitionLocale = () => {
+      try {
+        recognition.lang = getLanguageProfile().speechLocale || "en-US";
+      } catch { }
+    };
+    window.addEventListener("gbs_locale_changed", syncRecognitionLocale);
 
     recognition.onstart = () => {
       setIsListening(true);
@@ -311,6 +383,7 @@ export default function GBSVoiceAssistant() {
 
     return () => {
       clearSilenceTimer();
+      window.removeEventListener("gbs_locale_changed", syncRecognitionLocale);
       try {
         recognition.stop();
       } catch { }
@@ -327,13 +400,19 @@ export default function GBSVoiceAssistant() {
       synthRef.current.cancel();
     } catch { }
 
+    const activeLangProfile = getLanguageProfile();
     const utterance = new SpeechSynthesisUtterance(text);
-    if (availableVoices.length > 0) {
+    const matchedLangVoice = availableVoices.find((v) =>
+      String(v.lang || "").toLowerCase().startsWith(String(activeLangProfile.code || "en").toLowerCase())
+    );
+    if (matchedLangVoice) {
+      utterance.voice = matchedLangVoice;
+    } else if (availableVoices.length > 0) {
       utterance.voice = availableVoices[selectedVoiceIndex] || availableVoices[0];
     }
     utterance.rate = voiceRate;
     utterance.pitch = voicePitch;
-    utterance.lang = "en-US";
+    utterance.lang = activeLangProfile.speechLocale || "en-US";
 
     utterance.onstart = () => {
       setIsSpeaking(true);
@@ -464,16 +543,23 @@ export default function GBSVoiceAssistant() {
     return bestScore > 0 ? best : null;
   };
 
-  const executeReply = (replyCore, extraAction = null) => {
+  const executeReply = (replyCore, extraAction = null, questionFormation = null) => {
     if (extraAction?.openTab) triggerDashboardTab(extraAction.openTab);
     if (extraAction?.navigateTo) navigate(extraAction.navigateTo);
     if (extraAction?.trigger === "openTranslator" && typeof window.openGBSScreenTranslator === "function") {
       window.openGBSScreenTranslator();
     }
 
-    const fullTurnReply = `${replyCore} ${FOLLOWUP_PROMPT}`;
+    const resolvedFormation =
+      questionFormation ||
+      (lastRawQueryRef.current ? buildLocalQuestionFormation(lastRawQueryRef.current, extraAction?.openTab || "GBS System Action") : null);
+    const formationLine = resolvedFormation?.explanationText ? ` ${resolvedFormation.explanationText}` : "";
+    const combinedCore = replyCore.includes("How your question was formed:")
+      ? replyCore
+      : `${replyCore}${formationLine}`;
+    const fullTurnReply = `${combinedCore} ${FOLLOWUP_PROMPT}`;
     setAssistantResponse(fullTurnReply);
-    appendMessage("assistant", fullTurnReply);
+    appendMessage("assistant", fullTurnReply, resolvedFormation, replyCore);
     speakAloud(fullTurnReply);
 
     if (typeof window !== "undefined" && typeof window.showGBSOpenNotice === "function") {
@@ -486,6 +572,7 @@ export default function GBSVoiceAssistant() {
     const text = raw.toLowerCase();
     if (!text) return;
 
+    lastRawQueryRef.current = raw;
     appendMessage("user", raw);
     setTranscript("");
 
@@ -504,8 +591,9 @@ export default function GBSVoiceAssistant() {
       return;
     }
 
-    // 1. Direct Portal Navigation & Form Automation Commands
-    if (cleanCmd.includes("open clinic") || cleanCmd.includes("go to clinic") || cleanCmd.includes("school clinic") || cleanCmd.includes("open sickbay")) {
+    // 1. Explicit Pure-Navigation Portal Commands (Explanations fall through to full System Memory AI)
+    const isExplanationQuery = /\b(explain|how|what|why|tell me|describe|pull clinic|pull medical|can)\b/i.test(cleanCmd);
+    if (!isExplanationQuery && (cleanCmd.includes("open clinic") || cleanCmd.includes("go to clinic") || cleanCmd === "school clinic" || cleanCmd.includes("open sickbay"))) {
       triggerDashboardTab("clinic");
       const stats = memoryCatalogRef.current?.liveStats;
       const statLine = stats
@@ -580,10 +668,10 @@ export default function GBSVoiceAssistant() {
       return;
     }
 
-    // 2. Live Backend System Memory Query (raced quickly so spoken feedback never stalls)
+    // 2. Live Backend System Memory Query (generous 4500ms timeout so backend formation + answer resolves reliably)
     try {
       const controller = new AbortController();
-      const timer = setTimeout(() => controller.abort(), 950);
+      const timer = setTimeout(() => controller.abort(), 4500);
       const res = await apiClient.post("/ai/assistant-query", { query: raw }, { signal: controller.signal });
       clearTimeout(timer);
       const result = res?.data?.data;
@@ -591,15 +679,17 @@ export default function GBSVoiceAssistant() {
         if (result.liveStats) {
           memoryCatalogRef.current = { ...(memoryCatalogRef.current || {}), liveStats: result.liveStats };
         }
-        executeReply(result.speechText, result.action || null);
+        const formation = result.questionFormation || buildLocalQuestionFormation(raw, result.topicId || "GBS System Memory");
+        executeReply(result.answerText || result.speechText, result.action || null, formation);
         return;
       }
     } catch { }
 
-    // 3. Instant Local System Memory Fallback (<5ms offline-capable explanation)
+    // 3. Instant Local System Memory Fallback (<5ms offline-capable explanation + question formation breakdown)
     const localHit = matchInstantLocalMemory(cleanCmd);
     if (localHit) {
-      executeReply(localHit.answer, { openTab: localHit.tab, navigateTo: localHit.route });
+      const localFormation = buildLocalQuestionFormation(raw, localHit.id);
+      executeReply(localHit.answer, { openTab: localHit.tab, navigateTo: localHit.route }, localFormation);
       return;
     }
 
@@ -607,8 +697,11 @@ export default function GBSVoiceAssistant() {
     const statsNote = stats
       ? ` Live workspace summary: ${stats.clinicProfilesCount} medical registrations, ${stats.clinicVisitsCount} clinic visits (${stats.activeSickbayCount} active in Sickbay), and ${stats.pendingStaffApprovalsCount} pending staff approvals.`
       : "";
+    const generalFormation = buildLocalQuestionFormation(raw, "GBS Unified System Overview");
     executeReply(
-      `On GBS SYSTEM (v${memorySyncedVersion}), you can manage Admissions, School Clinic & Sickbay records, University Internships/SRC/Streams/Graduation, JHS/SHS/Technical separation, Defaulters Compliance, Staff Approvals, Language Translation, Direct SMS, Payments, Bus Transport, and AI Exam Proctoring.${statsNote}`
+      `On GBS SYSTEM (v${memorySyncedVersion}), you can manage Admissions, School Clinic & Sickbay records, University Internships/SRC/Streams/Graduation, JHS/SHS/Technical separation, Defaulters Compliance, Staff Approvals, Language Translation, Direct SMS, Payments, Bus Transport, Country & Language Norms, and Auto-Updates.${statsNote}`,
+      null,
+      generalFormation
     );
   };
 
@@ -787,7 +880,29 @@ export default function GBSVoiceAssistant() {
                 <div style={{ fontSize: "10px", color: m.sender === "user" ? "#7dd3fc" : "#f5d061", fontWeight: 800, marginBottom: "3px" }}>
                   {m.sender === "user" ? "You" : "GBS System Memory AI"} • {m.time}
                 </div>
-                <div>{m.text}</div>
+                {m.formation ? (
+                  <div style={{ display: "flex", flexDirection: "column", gap: "6px" }}>
+                    <div>{m.answerOnly || m.text}</div>
+                    <div
+                      style={{
+                        background: "rgba(212, 175, 55, 0.14)",
+                        borderLeft: "3px solid #f6dd84",
+                        borderRadius: "6px",
+                        padding: "6px 8px",
+                        fontSize: "11px",
+                        color: "#fef08a"
+                      }}
+                    >
+                      <strong style={{ color: "#f6dd84" }}>🧩 Question Formation Explained:</strong>{" "}
+                      {m.formation.explanationText.replace(/^How your question was formed:\s*/i, "")}
+                    </div>
+                    <div style={{ fontSize: "10.8px", color: "#cbd5e1", fontStyle: "italic" }}>
+                      {FOLLOWUP_PROMPT}
+                    </div>
+                  </div>
+                ) : (
+                  <div>{m.text}</div>
+                )}
               </div>
             ))}
 

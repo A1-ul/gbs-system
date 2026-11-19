@@ -7329,14 +7329,16 @@ export default function TeacherDashboard() {
                 const markedList = scannedBatchScripts.length > 0 ? scannedBatchScripts : scannedSheets;
                 const markedStudentIds = new Set(markedList.map((s) => s.studentId || (s.student && s.student.id)));
 
-                // Active Cohort Students (from roster or fallback cohort)
-                const cohortStudents = roster.length > 0 ? roster : [
-                  { id: 101, firstName: "Kofi", lastName: "Mensah", rollNumber: "STU-101" },
-                  { id: 102, firstName: "Ama", lastName: "Serwaa", rollNumber: "STU-102" },
-                  { id: 103, firstName: "Kwame", lastName: "Appiah", rollNumber: "STU-103" },
-                  { id: 104, firstName: "Abena", lastName: "Osei", rollNumber: "STU-104" },
-                  { id: 105, firstName: "Yaw", lastName: "Boadi", rollNumber: "STU-105" }
-                ];
+                // Active Cohort Students (real roster in Live Production; demo cohort only in Demo Sandbox)
+                const cohortStudents = roster.length > 0
+                  ? roster
+                  : (isDemoSandboxMode()
+                    ? [
+                        { id: 101, firstName: "Sample Student 1", lastName: "(Demo)", rollNumber: "DEMO-101" },
+                        { id: 102, firstName: "Sample Student 2", lastName: "(Demo)", rollNumber: "DEMO-102" },
+                        { id: 103, firstName: "Sample Student 3", lastName: "(Demo)", rollNumber: "DEMO-103" }
+                      ]
+                    : []);
 
                 const unmarkedList = cohortStudents.filter((st) => !markedStudentIds.has(st.id));
 

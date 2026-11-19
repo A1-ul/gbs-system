@@ -5,6 +5,7 @@ import { getServerBaseUrl } from "../../../api/client/apiConfig";
 import { getRoleBackgroundImage } from "../../../utils/userAvatars";
 import { syncSystemModeFlags, clearWorkspaceMutableKeys } from "../../../utils/tokenStorage";
 import { copyTextSafely } from "../../../utils/safeWindow";
+import GlobalLocaleSelector from "../../../components/common/GlobalLocaleSelector";
 import CartoonRoleVideoHubModal from "../../../components/common/CartoonRoleVideoHubModal";
 import "./MainLoginPage.css";
 
@@ -65,8 +66,8 @@ export default function MainLoginPage() {
     gender: "MALE",
     targetGradeLevel: 1,
     targetClassTier: "Primary 1 (Lower Primary)",
-    previousSchool: "St. Jude Preparatory Academy",
-    previousGpa: "3.85",
+    previousSchool: "",
+    previousGpa: "",
     guardianName: "",
     guardianPhone: "",
     guardianEmail: "",
@@ -305,6 +306,9 @@ export default function MainLoginPage() {
           <p style={{ fontSize: "0.75rem", color: "#94a3b8", letterSpacing: "1px", textTransform: "uppercase", marginTop: "2px" }}>
             ENTERPRISE MANAGEMENT SYSTEM — MASTER BLUEPRINT
           </p>
+          <div style={{ display: "flex", justifyContent: "center", marginTop: "10px" }}>
+            <GlobalLocaleSelector compact={false} />
+          </div>
         </div>
 
         {/* Siri-Style AI Voice Assistant Quick Trigger Banner for Accessibility & Remote Voice Operation */}

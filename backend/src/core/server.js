@@ -141,6 +141,47 @@ app.get('/api/v1/health', async (req, res) => {
   res.status(200).json(payload);
 });
 
+const { COUNTRY_NORMS, LANGUAGE_DEFINITIONS, resolveCountryNorm, resolveLanguageSpec } = require('../utils/countryLanguageNorms');
+
+app.get('/api/v1/locale/norms', (req, res) => {
+  const country = req.query.country ? resolveCountryNorm(req.query.country) : null;
+  const language = req.query.language ? resolveLanguageSpec(req.query.language) : null;
+  res.setHeader('Cache-Control', 'no-store');
+  res.status(200).json({
+    status: 'success',
+    data: {
+      countries: Object.values(COUNTRY_NORMS),
+      languages: Object.values(LANGUAGE_DEFINITIONS),
+      activeCountry: country,
+      activeLanguage: language
+    }
+  });
+});
+
+app.get('/api/v1/app-version', (req, res) => {
+  res.setHeader('Cache-Control', 'no-store, no-cache, must-revalidate');
+  let bundleHash = 'dev-local';
+  try {
+    const publicHtml = path.resolve(__dirname, '../../public/index.html');
+    const distHtml = path.resolve(__dirname, '../../../frontend/dist/index.html');
+    const targetHtml = fs.existsSync(publicHtml) ? publicHtml : (fs.existsSync(distHtml) ? distHtml : null);
+    if (targetHtml) {
+      const html = fs.readFileSync(targetHtml, 'utf8');
+      const match = html.match(/index-[A-Za-z0-9_-]+\.js/);
+      if (match) bundleHash = match[0];
+    }
+  } catch { }
+  res.status(200).json({
+    status: 'success',
+    data: {
+      bundleHash,
+      swVersion: 'gbs-cache-v2026.16',
+      autoUpdateEnabled: true,
+      checkedAt: new Date().toISOString()
+    }
+  });
+});
+
 app.get('/api/v1/network-info', (req, res) => {
   const os = require('os');
   const interfaces = os.networkInterfaces();

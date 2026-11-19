@@ -558,28 +558,97 @@ table thead th,
   letter-spacing: 0.6px;
 }
 
-/* Light Mode Workspace Canvas (Crisp Ivory Canvas + High-Contrast Navy Panels matching Mockup) */
+/* Light Mode Blueprint Canvas (Crisp Pearl #F3F5F8 + Pure White KPIs + Midnight Royal Navy #081833 + Metallic Gold #D4AF37) */
 body.gbs-theme-light,
 body.gbs-theme-light #root,
 body.gbs-theme-light .gbs-app-container,
 body.gbs-theme-light .role-dashboard-wrapper,
 body.gbs-theme-light .dev-dashboard-layout {
-  background-color: #f4f1ea !important;
+  background-color: #f3f5f8 !important;
   background-image:
-    radial-gradient(circle at 12% 10%, rgba(212, 175, 55, 0.14) 0%, transparent 45%),
-    linear-gradient(180deg, #f7f4ec 0%, #eef2f7 100%) !important;
+    radial-gradient(circle at 12% 10%, rgba(246, 221, 132, 0.18) 0%, transparent 45%),
+    linear-gradient(180deg, #f7f8fa 0%, #eef2f6 100%) !important;
 }
 
-body.gbs-theme-light .role-dashboard-overlay,
-body.gbs-theme-light .dev-dashboard-real-overlay {
-  background: linear-gradient(135deg, rgba(247, 244, 236, 0.82) 0%, rgba(238, 242, 247, 0.86) 100%) !important;
+body.gbs-theme-light .role-dashboard-wrapper .role-dashboard-overlay,
+body.gbs-theme-light .dev-dashboard-layout .dev-dashboard-real-overlay {
+  background: linear-gradient(180deg, rgba(243, 245, 248, 0.88) 0%, rgba(235, 239, 246, 0.92) 100%) !important;
 }
 
-body.gbs-theme-light .role-tab-nav .role-tab-btn:not(.active) {
+body.gbs-theme-light .role-dashboard-wrapper .role-header,
+body.gbs-theme-light .dev-dashboard-layout .dev-header {
+  background: linear-gradient(90deg, #061329 0%, #0d2247 52%, #081833 100%) !important;
+  border-bottom: 2px solid #d4af37 !important;
+  color: #ffffff !important;
+}
+
+body.gbs-theme-light .role-dashboard-wrapper .role-hero-banner {
+  background: linear-gradient(135deg, #081833 0%, #0d2247 58%, #132d5e 100%) !important;
+  border: 1.5px solid rgba(212, 175, 55, 0.65) !important;
+  box-shadow: 0 16px 36px rgba(8, 24, 51, 0.24) !important;
+}
+
+body.gbs-theme-light .role-dashboard-wrapper .role-kpi-box,
+body.gbs-theme-light .dev-dashboard-layout .dev-kpi-card,
+body.gbs-theme-light .role-dashboard-wrapper .kpi-card {
   background: #ffffff !important;
-  color: #081428 !important;
-  border: 1.5px solid rgba(8, 20, 40, 0.18) !important;
-  box-shadow: 0 2px 8px rgba(8, 20, 40, 0.08) !important;
+  border: 1.5px solid rgba(212, 175, 55, 0.58) !important;
+  border-left: 4px solid #081833 !important;
+  color: #081833 !important;
+  box-shadow: 0 6px 20px rgba(8, 24, 51, 0.08) !important;
+}
+
+body.gbs-theme-light .role-dashboard-wrapper .role-kpi-box:nth-child(2) {
+  border-left-color: #781d2b !important;
+}
+
+body.gbs-theme-light .role-dashboard-wrapper .role-kpi-box:nth-child(4) {
+  border-left-color: #d4af37 !important;
+}
+
+body.gbs-theme-light .role-dashboard-wrapper .role-kpi-box .role-kpi-title,
+body.gbs-theme-light .dev-dashboard-layout .dev-kpi-card .kpi-label {
+  color: #475569 !important;
+}
+
+body.gbs-theme-light .role-dashboard-wrapper .role-kpi-box .role-kpi-num,
+body.gbs-theme-light .dev-dashboard-layout .dev-kpi-card .kpi-value {
+  color: #081833 !important;
+}
+
+body.gbs-theme-light .role-dashboard-wrapper .role-tab-nav,
+body.gbs-theme-light .dev-dashboard-layout .dev-tab-navigation,
+body.gbs-theme-light .dev-dashboard-layout .dev-tabs-nav {
+  background: #081833 !important;
+  border: 1.5px solid rgba(212, 175, 55, 0.58) !important;
+  box-shadow: 0 8px 22px rgba(8, 24, 51, 0.16) !important;
+}
+
+body.gbs-theme-light .role-dashboard-wrapper .role-tab-nav .role-tab-btn:not(.active),
+body.gbs-theme-light .dev-dashboard-layout .dev-tab-navigation .dev-tab-btn:not(.active),
+body.gbs-theme-light .dev-dashboard-layout .dev-tabs-nav .dev-tab-btn:not(.active) {
+  background: rgba(255, 255, 255, 0.96) !important;
+  color: #081833 !important;
+  border: 1.5px solid rgba(212, 175, 55, 0.5) !important;
+  box-shadow: 0 2px 6px rgba(8, 24, 51, 0.1) !important;
+}
+
+body.gbs-theme-light .role-dashboard-wrapper .role-tab-nav .role-tab-btn.active,
+body.gbs-theme-light .dev-dashboard-layout .dev-tab-navigation .dev-tab-btn.active,
+body.gbs-theme-light .dev-dashboard-layout .dev-tabs-nav .dev-tab-btn.active {
+  background: linear-gradient(135deg, #f6dd84 0%, #e4b946 55%, #cfa028 100%) !important;
+  color: #081833 !important;
+  border-color: #f6dd84 !important;
+  font-weight: 800 !important;
+  box-shadow: 0 6px 18px rgba(212, 175, 55, 0.42) !important;
+}
+
+body.gbs-theme-light .role-dashboard-wrapper .role-workspace-card,
+body.gbs-theme-light .dev-dashboard-layout .dev-workspace-panel {
+  background: linear-gradient(145deg, #081833 0%, #0d2247 58%, #07142b 100%) !important;
+  border: 1.5px solid rgba(212, 175, 55, 0.6) !important;
+  color: #f8fafc !important;
+  box-shadow: 0 14px 36px rgba(8, 24, 51, 0.22) !important;
 }
 
 /* Full Page Display Mode for Expanded Tabs / Workspaces */
@@ -728,13 +797,18 @@ textarea:focus {
 }
 
 .btn-primary {
-  background: var(--gbs-btn-gold-wine);
-  color: #ffffff;
+  background: linear-gradient(135deg, #f6dd84 0%, #e4b946 55%, #cfa028 100%);
+  color: #081833;
+  border: 1.5px solid #cfa028;
+  font-weight: 800;
+  box-shadow: 0 4px 14px rgba(212, 175, 55, 0.28);
 }
 
 .btn-primary:hover {
-  background: linear-gradient(135deg, #081428 0%, #0f2347 50%, #d4af37 100%);
-  box-shadow: 0 8px 20px rgba(212, 175, 55, 0.42);
+  background: linear-gradient(135deg, #fef08a 0%, #f6dd84 52%, #d4af37 100%);
+  color: #050f23;
+  box-shadow: 0 8px 22px rgba(212, 175, 55, 0.48);
+  transform: translateY(-1px);
 }
 
 .sidebar-layout {

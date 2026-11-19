@@ -2198,24 +2198,37 @@ export default function AccountantDashboard() {
               </form>
 
               <div className="card-grid-3">
-                <div className="item-card" style={{ borderLeft: "4px solid #38bdf8" }}>
-                  <span className="role-portal-badge" style={{ color: "#38bdf8" }}>HOSTEL ACCOMMODATION</span>
-                  <h3 style={{ margin: "4px 0" }}>Kwame Nkrumah Hostel Hall A</h3>
-                  <strong style={{ fontSize: "1.4rem", color: "#34d399" }}>{currencySymbol}450.00</strong>
-                  <span style={{ fontSize: "0.8rem", color: "#94a3b8" }}>Code: HST-NK-01 • Term: Semester 1 & 2</span>
-                </div>
-                <div className="item-card" style={{ borderLeft: "4px solid #38bdf8" }}>
-                  <span className="role-portal-badge" style={{ color: "#38bdf8" }}>HOSTEL ACCOMMODATION</span>
-                  <h3 style={{ margin: "4px 0" }}>Nelson Mandela Hall Premium Suite</h3>
-                  <strong style={{ fontSize: "1.4rem", color: "#34d399" }}>{currencySymbol}650.00</strong>
-                  <span style={{ fontSize: "0.8rem", color: "#94a3b8" }}>Code: HST-NM-02 • Term: Semester 1 & 2</span>
-                </div>
-                <div className="item-card">
-                  <span className="role-portal-badge" style={{ color: "#3b82f6" }}>ACADEMIC TUITION</span>
-                  <h3 style={{ margin: "4px 0" }}>Undergraduate Level 100-400 Tuition</h3>
-                  <strong style={{ fontSize: "1.4rem", color: "#34d399" }}>{currencySymbol}2,100.00</strong>
-                  <span style={{ fontSize: "0.8rem", color: "#94a3b8" }}>Code: TUI-UG-01 • Term: Semester 1</span>
-                </div>
+                {isDemoTenant && feeStructures.length === 0 && (
+                  <>
+                    <div className="item-card" style={{ borderLeft: "4px solid #38bdf8" }}>
+                      <span className="role-portal-badge" style={{ color: "#38bdf8" }}>HOSTEL ACCOMMODATION (DEMO)</span>
+                      <h3 style={{ margin: "4px 0" }}>Hostel Block Tier A</h3>
+                      <strong style={{ fontSize: "1.4rem", color: "#34d399" }}>{currencySymbol}450.00</strong>
+                      <span style={{ fontSize: "0.8rem", color: "#94a3b8" }}>Code: HST-A01 • Term: Semester 1 & 2</span>
+                    </div>
+                    <div className="item-card" style={{ borderLeft: "4px solid #38bdf8" }}>
+                      <span className="role-portal-badge" style={{ color: "#38bdf8" }}>HOSTEL ACCOMMODATION (DEMO)</span>
+                      <h3 style={{ margin: "4px 0" }}>Hostel Block Tier B</h3>
+                      <strong style={{ fontSize: "1.4rem", color: "#34d399" }}>{currencySymbol}650.00</strong>
+                      <span style={{ fontSize: "0.8rem", color: "#94a3b8" }}>Code: HST-B02 • Term: Semester 1 & 2</span>
+                    </div>
+                    <div className="item-card">
+                      <span className="role-portal-badge" style={{ color: "#3b82f6" }}>ACADEMIC TUITION (DEMO)</span>
+                      <h3 style={{ margin: "4px 0" }}>Standard Tuition Tier</h3>
+                      <strong style={{ fontSize: "1.4rem", color: "#34d399" }}>{currencySymbol}2,100.00</strong>
+                      <span style={{ fontSize: "0.8rem", color: "#94a3b8" }}>Code: TUI-01 • Term: Term 1</span>
+                    </div>
+                  </>
+                )}
+                {!isDemoTenant && feeStructures.length === 0 && (
+                  <div className="item-card" style={{ gridColumn: "1 / -1", borderLeft: "4px solid #d4af37" }}>
+                    <span className="role-portal-badge" style={{ color: "#f6dd84" }}>LIVE BURSARY READY</span>
+                    <h3 style={{ margin: "6px 0" }}>No Institutional Fee Structures Created Yet</h3>
+                    <span style={{ fontSize: "0.85rem", color: "#cbd5e1" }}>
+                      Use the form above to add your institution&apos;s real tuition, boarding, hostel, and transport fee tiers. Zero sample placeholders are shown in Live Production.
+                    </span>
+                  </div>
+                )}
                 {feeStructures.map((f) => (
                   <div key={f.id} className="item-card">
                     <span className="role-portal-badge" style={{ color: "#3b82f6" }}>{f.category}</span>
@@ -3683,30 +3696,69 @@ export default function AccountantDashboard() {
                         </tr>
                       </thead>
                       <tbody>
-                        {[
-                          { date: "2026-10-26 09:15", id: "GL-10491", stream: "TUITION_COLLECTION", desc: "Julian Doe (Grade 10A) - Term 2 Hostel Fee", ref: "MTN MoMo (024 412 8990)", cr: 1500, dr: 0, bal: 2450650 },
-                          { date: "2026-10-24 14:30", id: "GL-10490", stream: "STATUTORY_SSNIT", desc: "October Staff Pension Remittance (Tier 1 & Tier 2)", ref: "GCB Bank Ref #10852", cr: 0, dr: 19665, bal: 2449150 },
-                          { date: "2026-10-23 11:20", id: "GL-10489", stream: "PAYROLL_DISBURSEMENT", desc: "October Staff Net Salaries Disbursement (64 personnel)", ref: "Stanbic Bank Wire #ACH-994", cr: 0, dr: 96135, bal: 2468815 },
-                          { date: "2026-10-20 16:05", id: "GL-10488", stream: "TUITION_COLLECTION", desc: "Ama Osei (SHS 2 Science) - Term 1 Tuition Full Settle", ref: "Telecel Cash (020 999 4411)", cr: 2500, dr: 0, bal: 2564950 },
-                          { date: "2026-10-18 10:45", id: "GL-10487", stream: "OPERATING_EXPENSE", desc: "Campus High-Speed Fiber Internet & Server Lease (Q4)", ref: "Telecel Enterprise #TEL-910", cr: 0, dr: 4500, bal: 2562450 },
-                          { date: "2026-10-15 08:30", id: "GL-10486", stream: "TUITION_COLLECTION", desc: "Kwame Mensah (Lower Primary P2) - Term 1 & 2 Fees", ref: "Stanbic Bank Direct Teller", cr: 3000, dr: 0, bal: 2566950 }
-                        ].map((tx, idx) => (
-                          <tr key={idx}>
-                            <td style={{ color: "#94a3b8" }}>{tx.date}</td>
-                            <td style={{ fontFamily: "monospace", color: "#38bdf8" }}>{tx.id}</td>
-                            <td><span className="role-portal-badge">{tx.stream}</span></td>
-                            <td>{tx.desc}</td>
-                            <td style={{ fontSize: "0.78rem", color: "#cbd5e1" }}>{tx.ref}</td>
-                            <td style={{ color: tx.cr > 0 ? "#34d399" : "#64748b", fontWeight: tx.cr > 0 ? "700" : "normal" }}>
-                              {tx.cr > 0 ? `+${currencySymbol}${tx.cr.toLocaleString()}` : "—"}
-                            </td>
-                            <td style={{ color: tx.dr > 0 ? "#f87171" : "#64748b", fontWeight: tx.dr > 0 ? "700" : "normal" }}>
-                              {tx.dr > 0 ? `-${currencySymbol}${tx.dr.toLocaleString()}` : "—"}
-                            </td>
-                            <td style={{ fontWeight: "800", color: "#f8fafc" }}>{currencySymbol}{tx.bal.toLocaleString()}</td>
-                            <td><span className="badge-status badge-present">RECONCILED</span></td>
-                          </tr>
-                        ))}
+                        {(() => {
+                          const realCreditRows = (payments || []).map((p, idx) => ({
+                            date: p.paidAt || p.createdAt ? new Date(p.paidAt || p.createdAt).toLocaleString() : "Recorded",
+                            id: p.receiptNumber || `GL-CR-${p.id || idx + 1}`,
+                            stream: "TUITION_COLLECTION",
+                            desc: `${p.studentName || "Student Payment"}${p.invoiceTitle ? ` - ${p.invoiceTitle}` : ""}`,
+                            ref: p.paymentMethod || p.gateway || "Portal Payment",
+                            cr: Number(p.amountPaid || p.amount || 0),
+                            dr: 0,
+                            bal: Number(p.amountPaid || p.amount || 0)
+                          }));
+                          const realDebitRows = (expenses || []).map((ex, idx) => ({
+                            date: ex.date || (ex.createdAt ? new Date(ex.createdAt).toLocaleString() : "Recorded"),
+                            id: ex.voucherCode || `GL-DR-${ex.id || idx + 1}`,
+                            stream: ex.category || "OPERATING_EXPENSE",
+                            desc: ex.description || ex.title || "Institutional Expense",
+                            ref: ex.vendor || ex.reference || "Approved Voucher",
+                            cr: 0,
+                            dr: Number(ex.amount || 0),
+                            bal: -Number(ex.amount || 0)
+                          }));
+                          const liveRows = [...realCreditRows, ...realDebitRows];
+                          const rowsToRender = liveRows.length > 0
+                            ? liveRows
+                            : (isDemoTenant
+                              ? [
+                                { date: "Demo Entry", id: "GL-DEMO-01", stream: "TUITION_COLLECTION", desc: "Sample Fee Payment Entry (Demo Sandbox)", ref: "MTN MoMo Demo", cr: 1500, dr: 0, bal: 1500 },
+                                { date: "Demo Entry", id: "GL-DEMO-02", stream: "OPERATING_EXPENSE", desc: "Sample Campus Fiber Expense (Demo Sandbox)", ref: "Voucher #DEMO-02", cr: 0, dr: 450, bal: 1050 }
+                              ]
+                              : []);
+
+                          if (rowsToRender.length === 0) {
+                            return (
+                              <tr>
+                                <td colSpan="9" style={{ textAlign: "center", padding: "2rem", color: "#cbd5e1" }}>
+                                  No live general ledger entries recorded yet for {reportSchoolName}. Real tuition payments and approved expenses appear here automatically.
+                                </td>
+                              </tr>
+                            );
+                          }
+
+                          let running = 0;
+                          return rowsToRender.map((tx, idx) => {
+                            running += Number(tx.cr || 0) - Number(tx.dr || 0);
+                            return (
+                              <tr key={idx}>
+                                <td style={{ color: "#94a3b8" }}>{tx.date}</td>
+                                <td style={{ fontFamily: "monospace", color: "#38bdf8" }}>{tx.id}</td>
+                                <td><span className="role-portal-badge">{tx.stream}</span></td>
+                                <td>{tx.desc}</td>
+                                <td style={{ fontSize: "0.78rem", color: "#cbd5e1" }}>{tx.ref}</td>
+                                <td style={{ color: tx.cr > 0 ? "#34d399" : "#64748b", fontWeight: tx.cr > 0 ? "700" : "normal" }}>
+                                  {tx.cr > 0 ? `+${currencySymbol}${tx.cr.toLocaleString()}` : "—"}
+                                </td>
+                                <td style={{ color: tx.dr > 0 ? "#f87171" : "#64748b", fontWeight: tx.dr > 0 ? "700" : "normal" }}>
+                                  {tx.dr > 0 ? `-${currencySymbol}${tx.dr.toLocaleString()}` : "—"}
+                                </td>
+                                <td style={{ fontWeight: "800", color: "#f8fafc" }}>{currencySymbol}{running.toLocaleString()}</td>
+                                <td><span className="badge-status badge-present">RECONCILED</span></td>
+                              </tr>
+                            );
+                          });
+                        })()}
                       </tbody>
                     </table>
                   </div>

@@ -1,73 +1,77 @@
 /* ==========================================================================
-   GBS SCHOOL SYSTEM — UNIFIED CREST ROYAL NAVY & GOLD THEME
-   Matched directly to GBS System Crest Badge Logo:
-   Deep Royal Navy (#081428 / #0A192F / #0F2347) + Regal Gold (#D4AF37 / #F5D061)
-   + Crest Crimson Burgundy (#6B1D2F) + Crisp Clean Card & Light/Navy Canvas
+   GBS SCHOOL SYSTEM — MASTER BLUEPRINT ROYAL NAVY, CHAMPAGNE GOLD & PEARL PALETTE
+   Matched directly to Approved UI Blueprint (media_1795115820550_64917a98.jpg):
+   Midnight Royal Navy (#081833 / #0D2247) + Metallic Champagne Gold (#F6DD84 / #D4AF37 / #CFA028)
+   + Selective Burgundy Wine (#781D2B) + Pearl Canvas (#F3F5F8) + Pure White (#FFFFFF) + Emerald (#16A34A)
    ========================================================================== */
 
 :root {
-  /* Core GBS Crest Royal Navy & Regal Gold Palette */
-  --gbs-navy-950: #050d1a;
-  --gbs-navy-900: #081428;
-  --gbs-navy-800: #0a192f;
-  --gbs-navy-700: #0f2347;
-  --gbs-navy-600: #16325c;
+  /* Core Master Blueprint Palette */
+  --gbs-navy-950: #050f23;
+  --gbs-navy-900: #081833;
+  --gbs-navy-800: #0d2247;
+  --gbs-navy-700: #132d5e;
+  --gbs-navy-600: #1b3b75;
   --gbs-gold: #d4af37;
-  --gbs-gold-light: #f5d061;
+  --gbs-gold-light: #f6dd84;
+  --gbs-gold-mid: #e4b946;
+  --gbs-gold-deep: #cfa028;
   --gbs-gold-pale: #fef08a;
-  --gbs-gold-glow: rgba(212, 175, 55, 0.38);
-  --gbs-wine: #6b1d2f;
-  --gbs-wine-dark: #4c111f;
-  --gbs-wine-light: #881337;
-  --gbs-brown: #0f2347;
-  --gbs-brown-light: #16325c;
-  --gbs-brown-deep: #081428;
-  --gbs-grey-900: #0a192f;
-  --gbs-grey-800: #0f2347;
+  --gbs-gold-glow: rgba(212, 175, 55, 0.42);
+  --gbs-wine: #781d2b;
+  --gbs-wine-dark: #58121e;
+  --gbs-wine-light: #991b1b;
+  --gbs-blueprint-canvas: #f3f5f8;
+  --gbs-blueprint-card: #ffffff;
+  --gbs-brown: #0d2247;
+  --gbs-brown-light: #132d5e;
+  --gbs-brown-deep: #081833;
+  --gbs-grey-900: #081833;
+  --gbs-grey-800: #0d2247;
   --gbs-grey-700: #1e3a5f;
   --gbs-grey-400: #cbd5e1;
-  --gbs-grey-200: #f1f5f9;
+  --gbs-grey-200: #f3f5f8;
   --gbs-sky: #38bdf8;
   --gbs-sky-glow: rgba(56, 189, 248, 0.30);
-  --gbs-emerald: #10b981;
+  --gbs-emerald: #16a34a;
 
-  /* Compatibility Aliases -> Unified Royal Navy & Gold */
-  --gbs-royal: #081428;
-  --gbs-royal-dark: #050d1a;
-  --gbs-royal-deep: #081428;
-  --gbs-royal-surface: #0f2347;
-  --gbs-royal-elevated: #16325c;
+  /* Compatibility Aliases -> Unified Blueprint Royal Navy & Champagne Gold */
+  --gbs-royal: #081833;
+  --gbs-royal-dark: #050f23;
+  --gbs-royal-deep: #081833;
+  --gbs-royal-surface: #0d2247;
+  --gbs-royal-elevated: #132d5e;
   --gbs-royal-accent: #d4af37;
-  --gbs-royal-glow: rgba(15, 35, 71, 0.85);
+  --gbs-royal-glow: rgba(13, 34, 71, 0.88);
 
   /* Unified System Surface & Brand Variables */
-  --color-primary: #0a192f;
-  --color-primary-hover: #0f2347;
+  --color-primary: #081833;
+  --color-primary-hover: #0d2247;
   --color-secondary: #d4af37;
-  --color-background: #081428;
-  --color-surface: rgba(10, 25, 47, 0.94);
+  --color-background: #081833;
+  --color-surface: rgba(8, 24, 51, 0.96);
   --color-text: #f8fafc;
   --color-text-muted: #cbd5e1;
-  --color-border: rgba(212, 175, 55, 0.45);
-  --color-success: #10b981;
-  --color-warning: #f5d061;
-  --color-danger: #ef4444;
+  --color-border: rgba(212, 175, 55, 0.55);
+  --color-success: #16a34a;
+  --color-warning: #f6dd84;
+  --color-danger: #dc2626;
 
-  /* Signature GBS Crest Gradients */
+  /* Signature Blueprint Gradients */
   --gbs-bg-master:
-    radial-gradient(circle at 14% 14%, rgba(212, 175, 55, 0.16) 0%, transparent 45%),
-    radial-gradient(circle at 86% 18%, rgba(56, 189, 248, 0.14) 0%, transparent 45%),
-    radial-gradient(circle at 50% 88%, rgba(15, 35, 71, 0.85) 0%, transparent 55%),
-    linear-gradient(135deg, #050d1a 0%, #081428 42%, #0f2347 100%);
-  --gbs-header-gradient: linear-gradient(90deg, rgba(8, 20, 40, 0.98) 0%, rgba(15, 35, 71, 0.96) 52%, rgba(8, 20, 40, 0.98) 100%);
-  --gbs-card-gradient: linear-gradient(145deg, rgba(10, 25, 47, 0.94) 0%, rgba(15, 35, 71, 0.94) 55%, rgba(8, 20, 40, 0.96) 100%);
-  --gbs-hero-gradient: linear-gradient(135deg, rgba(8, 20, 40, 0.95) 0%, rgba(15, 35, 71, 0.93) 55%, rgba(22, 50, 92, 0.94) 100%);
-  --gbs-btn-gold-wine: linear-gradient(135deg, #f5d061 0%, #d4af37 52%, #b48a1c 100%);
+    radial-gradient(circle at 14% 14%, rgba(246, 221, 132, 0.14) 0%, transparent 45%),
+    radial-gradient(circle at 86% 18%, rgba(212, 175, 55, 0.12) 0%, transparent 45%),
+    radial-gradient(circle at 50% 88%, rgba(13, 34, 71, 0.90) 0%, transparent 55%),
+    linear-gradient(135deg, #050f23 0%, #081833 45%, #0d2247 100%);
+  --gbs-header-gradient: linear-gradient(90deg, #061329 0%, #0d2247 52%, #081833 100%);
+  --gbs-card-gradient: linear-gradient(145deg, rgba(8, 24, 51, 0.96) 0%, rgba(13, 34, 71, 0.96) 55%, rgba(6, 17, 38, 0.98) 100%);
+  --gbs-hero-gradient: linear-gradient(135deg, rgba(8, 24, 51, 0.96) 0%, rgba(13, 34, 71, 0.94) 55%, rgba(19, 45, 94, 0.95) 100%);
+  --gbs-btn-gold-wine: linear-gradient(135deg, #f6dd84 0%, #e4b946 55%, #cfa028 100%);
 
   /* Architectural Shadows */
-  --shadow-sm: 0 4px 12px rgba(5, 13, 26, 0.45);
-  --shadow-md: 0 12px 28px rgba(5, 13, 26, 0.55), 0 0 18px rgba(212, 175, 55, 0.14);
-  --shadow-lg: 0 20px 45px rgba(5, 13, 26, 0.72), 0 0 28px rgba(212, 175, 55, 0.22);
+  --shadow-sm: 0 4px 12px rgba(8, 24, 51, 0.14);
+  --shadow-md: 0 10px 26px rgba(8, 24, 51, 0.22), 0 0 16px rgba(212, 175, 55, 0.16);
+  --shadow-lg: 0 18px 42px rgba(8, 24, 51, 0.35), 0 0 24px rgba(212, 175, 55, 0.22);
   --radius-sm: 0.375rem;
   --radius-md: 0.625rem;
   --radius-lg: 0.875rem;

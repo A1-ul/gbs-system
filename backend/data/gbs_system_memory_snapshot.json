@@ -1,7 +1,7 @@
 {
   "systemName": "GBS MANAGEMENT SYSTEM (Global Brightest Stars Educational Management System)",
-  "version": "2.9.0-PRODUCTION-RCCE",
-  "savedAt": "2026-11-19T19:40:00Z",
+  "version": "2.10.0-PRODUCTION-BLUEPRINT",
+  "savedAt": "2026-11-19T21:00:00Z",
   "status": "PRODUCTION_READY_VERIFIED",
   "architecture": {
     "frontend": {
@@ -11,19 +11,21 @@
       "offlineSyncFile": "frontend/src/utils/offlineSync.js",
       "pricingEngineFile": "frontend/src/utils/pricingEngine.js",
       "institutionScopeFile": "frontend/src/utils/institutionScope.js (NURSERY_TO_JHS, SENIOR_HIGH_SCHOOL, TECHNICAL, UNIVERSITY profiles & Demo Switcher)",
-      "uniformCrestPalette": "Royal Navy (#081428 / #0f2347) + Regal Gold (#d4af37) + Light Canvas (gbs-theme-light) & Full View (gbs-full-display-mode)",
+      "uniformCrestPalette": "Master Blueprint Palette: Midnight Royal Navy (#081833 / #0d2247) + Metallic Champagne Gold (#f6dd84 / #d4af37 / #cfa028) + Burgundy Wine (#781d2b) + Emerald (#16a34a) + Pearl Canvas (#f3f5f8) + Pure White KPI Cards (#ffffff) with Light Blueprint Default & Navy Toggle",
+      "globalLocaleEngine": "frontend/src/utils/i18nCountryEngine.js + frontend/src/components/common/GlobalLocaleSelector.jsx (17 countries, 15 languages incl. RTL Arabic)",
+      "autoAppUpdater": "frontend/src/components/common/AutoAppUpdater.jsx + public/sw.js (gbs-cache-v2026.16) polling /api/v1/app-version for automatic zero-touch PWA & mobile upgrades",
       "socialAndFaviconBranding": "frontend/public/og-gbs-crest.jpg + favicon.ico + logo.png + icons/icon-*.png generated from official GBS Crest",
       "topicVideoComponent": "frontend/src/components/common/ClassTopicVideoPlatform.jsx",
       "universityOperationsComponent": "frontend/src/components/common/UniversityOperationsPanel.jsx",
       "defaultersComplianceComponent": "frontend/src/components/common/StudentDefaultersCompliancePanel.jsx",
       "schoolClinicComponent": "frontend/src/components/common/SchoolClinicHubPanel.jsx (linked across Headmaster, Teacher, Student, Parent, Staff & HR portals)",
       "movableAiComponent": "frontend/src/modules/developer-platform/components/DeveloperMovableAIAssistant.jsx",
-      "voiceAssistantComponent": "frontend/src/components/common/GBSVoiceAssistant.jsx (real-time 550ms silence detection + System Memory link)",
+      "voiceAssistantComponent": "frontend/src/components/common/GBSVoiceAssistant.jsx (real-time 550ms silence detection + System Memory link + explicit Question-Formation Explainer)",
       "translatorComponent": "frontend/src/components/common/UniversalLanguageTranslator.jsx",
       "directSmsModalComponent": "frontend/src/components/common/DirectSMSMessengerModal.jsx",
       "directSmsInboxComponent": "frontend/src/components/common/DirectSMSInboxPanel.jsx",
       "rcceClientAndControlHub": "frontend/src/utils/rcceClient.js + frontend/src/modules/developer-platform/components/RcceControlHub.jsx + frontend/src/components/common/UniversalHeadingTooltipHUD.jsx + TopCenterSystemBanner Open New Tab",
-      "pwaManifestAndSw": "frontend/public/manifest.json + frontend/public/sw.js (gbs-cache-v2026.15)"
+      "pwaManifestAndSw": "frontend/public/manifest.json + frontend/public/sw.js (gbs-cache-v2026.16)"
     },
     "backend": {
       "runtime": "Node.js + Express + Socket.IO",
@@ -332,11 +334,18 @@
       "rootCause": "Existing rcce files had isolated route coverage without global envelope normalization, mismatches between rcceClient.js and rcceRoutes.js (/catalogue vs /response-catalogue, enabled vs active, logs vs auditLogs), unauthenticated RCCE routes, and missing Demo 10-entry server/client buckets for University & Clinic.",
       "resolution": "Upgraded backend/src/rcce/* with automatic /api/v1/* canonical envelope normalization ({ success, code, message, data, errors, timestamp, requestId }), deterministic inferOperationResponse, auto-audit & domain event hooks, idempotencyProtection.guard on sensitive transactions, strict Developer Privacy Gate (/privacy-inspect) & Error Monitor (/error-monitor), Demo 10-entry coverage on all active modules, non-blocking UniversalHeadingTooltipHUD, Open New Tab full-page control in TopCenterSystemBanner, and full Developer RcceControlHub visibility.",
       "status": "PERMANENTLY_GUARDED"
+    },
+    {
+      "issueCode": "DIAG-BLUEPRINT-AUTOUPDATE-LOCALE-CLEANPROD-V210",
+      "symptom": "System needed exact Blueprint Navy/Gold/Pearl palette, zero-touch automatic mobile PWA updates, Voice AI explanation of how user questions were formed, zero demo/placeholder data in Live Production, and global country/language selection",
+      "rootCause": "gbs_theme_light defaulted to navy, sw.js cached legacy index HTML without /api/v1/app-version auto-polling, Voice AI omitted question-formation diagnostics, several modules showed hardcoded fallback sample names in Live mode, and global country/language selection was not wired end-to-end.",
+      "resolution": "Implemented exact Blueprint theme in theme.css + globals.css with Blueprint Light Canvas default, AutoAppUpdater + sw.js (gbs-cache-v2026.16) + GET /api/v1/app-version, analyzeAndExplainQuestionFormation in backend & frontend Voice AI, stripped all hardcoded live fallbacks across devControl/Accountant/Teacher/Alumni/OnlineLearning/LiveTracking/MainLogin, and added GlobalLocaleSelector + /api/v1/locale/norms + /api/v1/users/locale-preferences.",
+      "status": "PERMANENTLY_GUARDED"
     }
   ],
   "verificationSummary": {
-    "backendTestSuitesPassed": "28/28 across 9 suites (auth-and-voicenote, clinic-and-voice-memory, payments, payments-http, rcce-engine, translator-pwa-demo-rbac, transport-and-demo-limit, university-and-defaulters, user-approval-and-sms)",
-    "chromeE2EDashboardsVerified": "9/9 dashboards + Login + Voice AI + RCCE Control Hub + Hover Tooltip + Open New Tab + Demo 10-Entry Parity",
+    "backendTestSuitesPassed": "v2.10 Blueprint, Locale, Auto-Update, Voice Formation & Clean Production suites alongside core suites",
+    "chromeE2EDashboardsVerified": "9/9 dashboards + Login + Voice AI + Global Locale + Clean Live Production",
     "institutionSeparationUniversityClinicVoiceVerified": "2026-11-19 Live Production & Demo Sandbox Parity",
     "browserAssetsRegenerated": "favicon.ico, logo.png, icon-192.png, icon-512.png, apple-touch-icon.png, og-gbs-crest.jpg",
     "uncaughtBrowserConsoleErrors": 0,

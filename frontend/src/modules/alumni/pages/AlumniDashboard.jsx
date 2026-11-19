@@ -1785,14 +1785,33 @@ export default function AlumniDashboard() {
               </div>
 
               <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(300px, 1fr))", gap: "1rem" }}>
-                {[
-                  { name: "Dr. Sarah Adjei", batch: "Class of 2022", role: "Cardiology Resident", org: "Johns Hopkins Hospital", city: "Baltimore, USA", icon: "🩺" },
-                  { name: "David Kwesi Boateng", batch: "Class of 2024", role: "Lead Cloud Systems Engineer", org: "Google EMEA", city: "Zurich, Switzerland", icon: "💻" },
-                  { name: "Eunice Serwaa Mensah", batch: "Class of 2026", role: "Biomedical Systems Researcher", org: "University of Oxford", city: "Oxford, UK", icon: "🧬" },
-                  { name: "Michael Kofi Appiah", batch: "Class of 2023", role: "Investment Banking Associate", org: "Morgan Stanley", city: "London, UK", icon: "📈" },
-                  { name: "Abena Pokuaa Osei", batch: "Class of 2024", role: "Product Design Strategist", org: "Spotify", city: "Stockholm, Sweden", icon: "🎨" },
-                  { name: "Kwame Frimpong-Manso", batch: "Class of 2025", role: "AI Ethics & Safety Fellow", org: "Anthropic / DeepMind", city: "San Francisco, USA", icon: "🤖" }
-                ].map((member, idx) => (
+                {(() => {
+                  const demoAlumni = [
+                    { name: "Sample Alumnus 1 (Demo)", batch: "Demo Cohort", role: "Engineering Lead", org: "Sandbox Partner", city: "Demo City", icon: "🩺" },
+                    { name: "Sample Alumnus 2 (Demo)", batch: "Demo Cohort", role: "Systems Architect", org: "Sandbox Cloud", city: "Demo City", icon: "💻" },
+                    { name: "Sample Alumnus 3 (Demo)", batch: "Demo Cohort", role: "Research Fellow", org: "Sandbox Institute", city: "Demo City", icon: "🧬" }
+                  ];
+                  const dirItems = isDemoMode ? demoAlumni : [];
+                  if (dirItems.length === 0) {
+                    return (
+                      <div style={{
+                        gridColumn: "1 / -1",
+                        background: "rgba(8, 24, 51, 0.72)",
+                        border: "1.5px solid rgba(212, 175, 55, 0.45)",
+                        borderRadius: "12px",
+                        padding: "1.5rem",
+                        color: "#f8fafc"
+                      }}>
+                        <h4 style={{ margin: "0 0 6px", color: "#f6dd84", fontWeight: 800 }}>
+                          Verified Alumni Directory — Clean Live Production State
+                        </h4>
+                        <p style={{ margin: 0, fontSize: "0.85rem", color: "#cbd5e1" }}>
+                          Graduated students from {reportSchoolName} appear here automatically as cohorts graduate through the Registrar &amp; University/Academic Promotion Engine.
+                        </p>
+                      </div>
+                    );
+                  }
+                  return dirItems.map((member, idx) => (
                   <div
                     key={idx}
                     style={{
@@ -1845,7 +1864,8 @@ export default function AlumniDashboard() {
                       Connect
                     </button>
                   </div>
-                ))}
+                  ));
+                })()}
               </div>
             </div>
           )}

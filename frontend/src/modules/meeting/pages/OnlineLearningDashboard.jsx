@@ -2,6 +2,7 @@ import React, { useState, useEffect, useMemo } from 'react';
 import { getApiBaseUrl } from '../../../api/client/apiConfig';
 import { getActiveSchoolName } from '../../../utils/schoolBranding';
 import { copyTextSafely } from '../../../utils/safeWindow';
+import { isDemoSandboxMode } from '../../../utils/tokenStorage';
 import StudentCooperativeConferenceModal from '../../../components/common/StudentCooperativeConferenceModal';
 import './OnlineLearningDashboard.css';
 
@@ -989,16 +990,40 @@ export default function OnlineLearningDashboard() {
                   </div>
                 ) : (
                   <div style={{ flex: 1, overflowY: 'auto', padding: '10px', fontSize: '0.8rem' }}>
-                    <div style={{ padding: '6px 8px', display: 'flex', justifyContent: 'space-between', borderBottom: '1px solid rgba(255, 255, 255, 0.05)', color: '#34d399', fontWeight: 800 }}>
-                      <span>Host: Dr. Kwame Osei Boateng</span>
-                      <span>🎙️ Host</span>
-                    </div>
-                    {['Kofi Mensah', 'Ama Serwaa', 'Emmanuel Addo', 'Grace Annan', 'Michael Asare', 'Yaa Konadu', 'David Ofori'].map((student, idx) => (
-                      <div key={idx} style={{ padding: '6px 8px', display: 'flex', justifyContent: 'space-between', borderBottom: '1px solid rgba(255, 255, 255, 0.05)', color: '#cbd5e1' }}>
-                        <span>{student}</span>
-                        <span style={{ fontSize: '0.7rem', color: '#64748b' }}>Student</span>
-                      </div>
-                    ))}
+                    {(() => {
+                      let activeHostName = 'Assigned Host / Instructor';
+                      try {
+                        const u = JSON.parse(localStorage.getItem('gbs_user') || '{}');
+                        if (u.firstName || u.name) {
+                          activeHostName = u.name || `${u.firstName} ${u.lastName || ''}`.trim();
+                        }
+                      } catch { }
+                      const liveAttendees = Array.isArray(activeVirtualClassroom?.participants) && activeVirtualClassroom.participants.length > 0
+                        ? activeVirtualClassroom.participants
+                        : (isDemoSandboxMode()
+                          ? ['Kofi Mensah (Demo)', 'Ama Serwaa (Demo)', 'Emmanuel Addo (Demo)']
+                          : []);
+                      return (
+                        <>
+                          <div style={{ padding: '6px 8px', display: 'flex', justifyContent: 'space-between', borderBottom: '1px solid rgba(255, 255, 255, 0.05)', color: '#34d399', fontWeight: 800 }}>
+                            <span>Host: {activeHostName}</span>
+                            <span>🎙️ Host</span>
+                          </div>
+                          {liveAttendees.length === 0 ? (
+                            <div style={{ padding: '12px 8px', color: '#94a3b8', fontSize: '0.76rem' }}>
+                              Waiting for enrolled participants to join live session...
+                            </div>
+                          ) : (
+                            liveAttendees.map((student, idx) => (
+                              <div key={idx} style={{ padding: '6px 8px', display: 'flex', justifyContent: 'space-between', borderBottom: '1px solid rgba(255, 255, 255, 0.05)', color: '#cbd5e1' }}>
+                                <span>{typeof student === 'string' ? student : (student.name || `${student.firstName || ''} ${student.lastName || ''}`.trim())}</span>
+                                <span style={{ fontSize: '0.7rem', color: '#64748b' }}>Participant</span>
+                              </div>
+                            ))
+                          )}
+                        </>
+                      );
+                    })()}
                   </div>
                 )}
               </div>

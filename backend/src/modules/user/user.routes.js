@@ -206,4 +206,7 @@ router.post(
   userController.createUser
 );
 
+router.get('/locale-preferences', userController.getLocalePreferences);
+router.patch('/locale-preferences', userController.updateLocalePreferences);
+
 module.exports = router;

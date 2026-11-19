@@ -1,14 +1,13 @@
 /* 
 ================================================================================
-   GBS ENTERPRISE SERVICE WORKER & LOCK SCREEN PUSH NOTIFICATION ENGINE
-   Intelligence Talks to Wisdom • Native Mobile & Lock Screen Delivery
+   GBS ENTERPRISE SERVICE WORKER & AUTOMATIC MOBILE/WEB UPGRADE ENGINE
+   Intelligence Talks to Wisdom • Zero-Stale-Cache Self-Updating PWA Shell
 ================================================================================
 */
 
-const CACHE_NAME = "gbs-cache-v2026.15";
+const CACHE_NAME = "gbs-cache-v2026.16";
 const OFFLINE_URL = "/offline.html";
 
-// Assets to pre-cache for instant offline startup & PWA installability
 const PRECACHE_ASSETS = [
   "/",
   "/offline.html",
@@ -18,7 +17,6 @@ const PRECACHE_ASSETS = [
   "/assets/gbs_crest_badge.jpg"
 ];
 
-// Service Worker Installation
 self.addEventListener("install", (event) => {
   self.skipWaiting();
   event.waitUntil(
@@ -28,42 +26,61 @@ self.addEventListener("install", (event) => {
   );
 });
 
-// Service Worker Activation & Cache Cleanup
 self.addEventListener("activate", (event) => {
   event.waitUntil(
     caches.keys().then((cacheNames) => {
-      return Promise.all(
-        cacheNames.map((name) => {
-          if (name !== CACHE_NAME) {
-            return caches.delete(name);
-          }
-        })
-      );
-    }).then(() => self.clients.claim())
-  );
-});
-
-// Fetch Interceptor: Network-First with Offline Fallback
-self.addEventListener("fetch", (event) => {
-  if (event.request.method !== "GET") return;
-  const url = new URL(event.request.url);
-
-  // Skip API calls from cache interception
-  if (url.pathname.startsWith("/api/")) return;
-
-  event.respondWith(
-    fetch(event.request).catch(() => {
-      return caches.match(event.request).then((cachedResponse) => {
-        if (cachedResponse) return cachedResponse;
-        if (event.request.headers.get("accept")?.includes("text/html")) {
-          return caches.match(OFFLINE_URL);
-        }
+      const staleCaches = cacheNames.filter((name) => name !== CACHE_NAME);
+      const upgradedFromOlderVersion = staleCaches.length > 0;
+      return Promise.all(staleCaches.map((name) => caches.delete(name))).then(() => upgradedFromOlderVersion);
+    }).then((upgradedFromOlderVersion) => {
+      return self.clients.claim().then(() => upgradedFromOlderVersion);
+    }).then((upgradedFromOlderVersion) => {
+      if (!upgradedFromOlderVersion) return;
+      return self.clients.matchAll({ type: "window", includeUncontrolled: true }).then((clientsList) => {
+        clientsList.forEach((client) => {
+          try {
+            client.postMessage({ type: "GBS_APP_UPDATED", version: CACHE_NAME });
+          } catch { }
+        });
       });
     })
   );
 });
 
-// Native Lock Screen Push Notification Interceptor
+self.addEventListener("message", (event) => {
+  if (event?.data?.type === "SKIP_WAITING") {
+    self.skipWaiting();
+  }
+});
+
+self.addEventListener("fetch", (event) => {
+  if (event.request.method !== "GET") return;
+  const url = new URL(event.request.url);
+
+  if (url.pathname.startsWith("/api/")) return;
+
+  const isDocument = event.request.mode === "navigate" || event.request.headers.get("accept")?.includes("text/html") || url.pathname === "/manifest.json" || url.pathname === "/index.html";
+
+  event.respondWith(
+    fetch(isDocument ? new Request(event.request, { cache: "no-store" }) : event.request)
+      .then((networkRes) => {
+        if (networkRes && networkRes.ok && url.origin === self.location.origin) {
+          const clone = networkRes.clone();
+          caches.open(CACHE_NAME).then((cache) => cache.put(event.request, clone)).catch(() => { });
+        }
+        return networkRes;
+      })
+      .catch(() => {
+        return caches.match(event.request).then((cachedResponse) => {
+          if (cachedResponse) return cachedResponse;
+          if (isDocument) {
+            return caches.match(OFFLINE_URL);
+          }
+        });
+      })
+  );
+});
+
 self.addEventListener("push", (event) => {
   let data = {
     title: "GBS School Management Alert",
@@ -105,12 +122,9 @@ self.addEventListener("push", (event) => {
   );
 });
 
-// Notification Click Handler (Brings User Directly to Their Target Dashboard)
 self.addEventListener("notificationclick", (event) => {
   event.notification.close();
-
   if (event.action === "dismiss") return;
-
   const targetUrl = event.notification.data?.url || "/";
 
   event.waitUntil(

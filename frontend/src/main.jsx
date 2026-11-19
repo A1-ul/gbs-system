@@ -3,6 +3,7 @@ import ReactDOM from "react-dom/client";
 import { Provider } from "react-redux";
 import store from "./platform/store/store";
 import App from "./app/App.jsx";
+import { applyDocumentLocale } from "./utils/i18nCountryEngine";
 
 import "./styles/globals.css";
 import "./styles/theme.css";
@@ -10,8 +11,17 @@ import "./styles/responsive.css";
 import "./styles/animations.css";
 import "./styles/glass.css";
 
+// Apply Global Country/Language norms & Blueprint Light Theme default immediately on boot
+if (typeof window !== "undefined") {
+  try {
+    const savedTheme = localStorage.getItem("gbs_ui_theme");
+    document.body.classList.toggle("gbs-theme-light", savedTheme !== "navy");
+    applyDocumentLocale();
+  } catch { }
+}
+
 // Live Internet Cache-Busting & Stale ServiceWorker/Chunk Recovery
-const GBS_BUILD_RELEASE_ID = "2026-11-16-LIVE-V4";
+const GBS_BUILD_RELEASE_ID = "2026-11-19-BLUEPRINT-AUTOUPDATE";
 if (typeof window !== "undefined") {
   try {
     const prevRelease = localStorage.getItem("gbs_live_release_id");
@@ -34,11 +44,12 @@ if (typeof window !== "undefined") {
     window.dispatchEvent(new CustomEvent("gbs_pwa_installed"));
   });
 
-  // Register Native Mobile & Lock Screen Push Service Worker
+  // Register Native Mobile & Lock Screen Push Service Worker with automatic live update checks
   if ("serviceWorker" in navigator) {
     window.addEventListener("load", () => {
-      navigator.serviceWorker.register("/sw.js").then((reg) => {
-        console.log("[GBS PWA] Service Worker registered for Native Mobile & Push Alerts:", reg.scope);
+      navigator.serviceWorker.register("/sw.js", { updateViaCache: "none" }).then((reg) => {
+        console.log("[GBS PWA] Auto-Updating Service Worker registered:", reg.scope);
+        reg.update().catch(() => { });
       }).catch((err) => {
         console.warn("[GBS PWA] Service Worker registration:", err);
       });

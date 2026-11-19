@@ -8,7 +8,7 @@ import { offlineSyncEngine } from "../../../utils/offlineSync";
 import { getOnboardingRates, updateOnboardingRates } from "../../../utils/pricingEngine";
 import UniversalRoleGuideModal from "../../../components/common/UniversalRoleGuideModal";
 import { navigateToDetail } from "../../../utils/universalNavigation";
-import { syncSystemModeFlags } from "../../../utils/tokenStorage";
+import { syncSystemModeFlags, isDemoSandboxMode } from "../../../utils/tokenStorage";
 import RcceControlHub from "../components/RcceControlHub";
 import PaymentGatewayAdminPanel from "../../../components/common/PaymentGatewayAdminPanel";
 import SchoolClinicHubPanel from "../../../components/common/SchoolClinicHubPanel";
@@ -475,10 +475,12 @@ export default function DeveloperDashboard() {
           return filtered;
         }
       }
-      if (localStorage.getItem("gbs_system_data_mode") === "LIVE_PRODUCTION") {
+      if (!isDemoSandboxMode()) {
         return {};
       }
-    } catch { }
+    } catch {
+      return {};
+    }
     const defaults = {
       "mr.kofi.physics@staugustine.edu": {
         email: "mr.kofi.physics@staugustine.edu",
@@ -615,9 +617,9 @@ export default function DeveloperDashboard() {
     const newViolation = {
       id: `SEC-VIO-${Date.now().toString().slice(-4)}`,
       timestamp: new Date().toISOString(),
-      attemptedEmail: "unauthorized.student@staugustine.edu",
-      tenantCode: "GBS-ROYALOAK",
-      institutionName: "St. Augustine Science Academy",
+      attemptedEmail: "unauthorized.probe@demo.edu",
+      tenantCode: countdowns?.[0]?.tenantCode || "GBS-DEMO-01",
+      institutionName: countdowns?.[0]?.tenantName || "Sandbox Institution",
       sourceIp: "192.168.1.115",
       userAgent: navigator.userAgent,
       penaltyNotice: "your institution will be notify with your details to your headmaster",
@@ -2710,7 +2712,7 @@ export default function DeveloperDashboard() {
       setShowHeadmasterOfflineNoticeModal({
         isOpen: true,
         headmasterName,
-        tenantName: tenant.name || tenant.tenantName || "St. Augustine Science Academy",
+        tenantName: tenant.name || tenant.tenantName || "Registered Institution",
         phone: headmasterPhone
       });
       showNotification(`⚠️ Video Call Blocked: Headmaster ${headmasterName} is currently OFFLINE. In-system video calls strictly require the Headmaster to be actively online on their Admin Dashboard.`);
@@ -2723,7 +2725,7 @@ export default function DeveloperDashboard() {
       callerName: "Gabriel Osei (Chief System Engineer)",
       callerEmail: "gabosei48@gmail.com",
       tenantId: tenant.id || "GBS-MAIN-01",
-      tenantName: tenant.name || tenant.tenantName || "St. Augustine Science Academy",
+      tenantName: tenant.name || tenant.tenantName || "Registered Institution",
       headmasterName,
       headmasterPhone,
       headmasterEmail,
@@ -6836,7 +6838,7 @@ export default function DeveloperDashboard() {
                       <input
                         type="text"
                         required
-                        placeholder="e.g. St. Augustine Science Academy"
+                        placeholder="Enter registered institution name..."
                         value={tenantOnboardForm.institutionName}
                         onChange={(e) => setTenantOnboardForm({ ...tenantOnboardForm, institutionName: e.target.value })}
                       />
@@ -8154,7 +8156,7 @@ export default function DeveloperDashboard() {
                             <td style={{ padding: "12px", fontSize: "0.84rem" }}>
                               <div style={{ color: "#38bdf8", fontWeight: "800", display: "flex", alignItems: "center", gap: "5px" }}>
                                 <span>🏫</span>
-                                <span>{staff.exactRegisteredSchool || staff.tenantName || "St. Augustine International Academy"}</span>
+                                <span>{staff.exactRegisteredSchool || staff.tenantName || "Registered Institution"}</span>
                               </div>
                               <div style={{ color: "#94a3b8", fontSize: "0.72rem", marginTop: "3px" }}>
                                 Tenant Code: <strong style={{ color: "#f8fafc" }}>{staff.schoolCode || staff.tenantCode || "GBS-MAIN"}</strong>
@@ -8542,11 +8544,12 @@ export default function DeveloperDashboard() {
                 <button
                   type="button"
                   onClick={() => {
+                    const primaryTenant = countdowns?.[0] || {};
                     setComposeMessageForm({
-                      tenantCode: "GBS-ROYALOAK",
-                      institutionName: "St. Augustine Science Academy",
-                      headmasterName: "Arthur Pendleton",
-                      headmasterEmail: "admin@gbs.edu",
+                      tenantCode: primaryTenant.tenantCode || "",
+                      institutionName: primaryTenant.tenantName || primaryTenant.name || "",
+                      headmasterName: primaryTenant.headmasterName || "",
+                      headmasterEmail: primaryTenant.headmasterEmail || "",
                       subject: "",
                       messageText: "",
                       urgency: "HIGH",
@@ -10950,7 +10953,7 @@ export default function DeveloperDashboard() {
                 <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
                   <span className="live-camera-pulse"></span>
                   <strong style={{ color: "#f8fafc", fontSize: "0.9rem" }}>
-                    LIVE GOOGLE MAP • EXACT LOCATION FOR "{locatedTenant?.tenantName || "St. Augustine Science Academy"}"
+                    LIVE GOOGLE MAP • EXACT LOCATION FOR "{locatedTenant?.tenantName || "Selected Institution"}"
                   </strong>
                 </div>
 
@@ -11920,7 +11923,7 @@ export default function DeveloperDashboard() {
                             </span>
                           </div>
                           <div style={{ fontSize: "0.8rem", color: "#38bdf8", marginTop: "2px" }}>
-                            Institution: <strong>{selectedDossierTenant?.name || selectedDossierTenant?.tenantName || "St. Augustine Science Academy"}</strong>
+                            Institution: <strong>{selectedDossierTenant?.name || selectedDossierTenant?.tenantName || "Registered Institution"}</strong>
                           </div>
                           <div style={{ fontSize: "0.78rem", color: "#cbd5e1", marginTop: "4px" }}>
                             📧 {currentEmail} • 📱 {currentPhone}

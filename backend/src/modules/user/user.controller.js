@@ -33,8 +33,8 @@ const getUsers = async (req, res, next) => {
       }
     }
 
-    const tenantId = req.user && (req.user.role === 'SUPER_ADMIN' || req.user.role === 'DEVELOPER') 
-      ? req.query.tenantId 
+    const tenantId = req.user && (req.user.role === 'SUPER_ADMIN' || req.user.role === 'DEVELOPER')
+      ? req.query.tenantId
       : (req.tenantId || req.user?.tenantId);
 
     const users = await userService.getUsers(tenantId, req.query.role);
@@ -268,6 +268,54 @@ const rejectStaff = async (req, res, next) => {
   }
 };
 
+const { resolveCountryNorm, resolveLanguageSpec } = require('../../utils/countryLanguageNorms');
+const { readPersistentStore, writePersistentStore } = require('../../core/database/persistentStore');
+
+const getLocalePreferences = async (req, res) => {
+  const store = readPersistentStore();
+  const prefs = store.userLocalePreferences || {};
+  const userKey = String(req.user?.email || req.user?.id || `tenant_${req.tenantId || 1}`).toLowerCase();
+  const saved = prefs[userKey] || { countryCode: 'GH', languageCode: 'en' };
+  const country = resolveCountryNorm(saved.countryCode);
+  const language = resolveLanguageSpec(saved.languageCode);
+  res.status(200).json({
+    status: 'success',
+    data: {
+      country,
+      language,
+      preferences: saved,
+      ...saved
+    }
+  });
+};
+
+const updateLocalePreferences = async (req, res) => {
+  const country = resolveCountryNorm(req.body?.countryCode || req.body?.country || 'GH');
+  const language = resolveLanguageSpec(req.body?.languageCode || req.body?.language || country.defaultLanguage || 'en');
+  const userKey = String(req.user?.email || req.user?.id || `tenant_${req.tenantId || 1}`).toLowerCase();
+  const record = {
+    countryCode: country.code,
+    languageCode: language.code,
+    currencyCode: country.currencyCode,
+    currencySymbol: country.currencySymbol,
+    updatedAt: new Date().toISOString()
+  };
+
+  writePersistentStore((curr) => ({
+    ...curr,
+    userLocalePreferences: {
+      ...(curr.userLocalePreferences && typeof curr.userLocalePreferences === 'object' ? curr.userLocalePreferences : {}),
+      [userKey]: record
+    }
+  }));
+
+  res.status(200).json({
+    status: 'success',
+    message: `Locale updated cleanly to ${country.flag} ${country.name} (${country.currencyCode}) • Language: ${language.nativeName}.`,
+    data: { country, language, preferences: record, ...record }
+  });
+};
+
 module.exports = {
   getUsers,
   getUserCounts,
@@ -281,5 +329,7 @@ module.exports = {
   verifyStaffRegistration,
   getPendingStaff,
   approveStaff,
-  rejectStaff
+  rejectStaff,
+  getLocalePreferences,
+  updateLocalePreferences
 };

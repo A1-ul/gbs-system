@@ -11,6 +11,8 @@ import {
   INSTITUTION_TIERS
 } from "../../utils/institutionScope";
 import { fetchTranslatedMessagesInbox } from "../../utils/languageTranslatorEngine";
+import { getUiLabel } from "../../utils/i18nCountryEngine";
+import GlobalLocaleSelector from "./GlobalLocaleSelector";
 import UniversalLanguageTranslatorModal from "./UniversalLanguageTranslatorModal";
 import DirectSMSMessengerModal from "./DirectSMSMessengerModal";
 import MobileAppPushHubModal from "./MobileAppPushHubModal";
@@ -73,11 +75,12 @@ export default function TopCenterSystemBanner({
   );
   const [uiTheme, setUiTheme] = useState(() => {
     try {
-      return localStorage.getItem("gbs_ui_theme") === "light" ? "light" : "navy";
+      return localStorage.getItem("gbs_ui_theme") === "navy" ? "navy" : "light";
     } catch {
-      return "navy";
+      return "light";
     }
   });
+  const [localeVersion, setLocaleVersion] = useState(0);
   const [fullDisplayMode, setFullDisplayMode] = useState(false);
   const [institutionType, setInstitutionTypeState] = useState(() => getActiveInstitutionType());
   const institutionProfile = getInstitutionRoleProfile(institutionType);
@@ -111,6 +114,7 @@ export default function TopCenterSystemBanner({
     const handleOnline = () => setIsOnline(true);
     const handleOffline = () => setIsOnline(false);
     const handleInstitutionChanged = () => setInstitutionTypeState(getActiveInstitutionType());
+    const handleLocaleChanged = () => setLocaleVersion((v) => v + 1);
 
     try {
       document.body.classList.toggle("gbs-theme-light", uiTheme === "light");
@@ -122,6 +126,7 @@ export default function TopCenterSystemBanner({
     window.addEventListener("gbs_school_name_updated", handleUpdate);
     window.addEventListener("gbs_custom_logo_updated", handleUpdate);
     window.addEventListener("gbs_institution_type_changed", handleInstitutionChanged);
+    window.addEventListener("gbs_locale_changed", handleLocaleChanged);
     window.addEventListener("storage", handleUpdate);
     window.addEventListener("storage", handleInstitutionChanged);
     return () => {
@@ -131,6 +136,7 @@ export default function TopCenterSystemBanner({
       window.removeEventListener("gbs_school_name_updated", handleUpdate);
       window.removeEventListener("gbs_custom_logo_updated", handleUpdate);
       window.removeEventListener("gbs_institution_type_changed", handleInstitutionChanged);
+      window.removeEventListener("gbs_locale_changed", handleLocaleChanged);
       window.removeEventListener("storage", handleUpdate);
       window.removeEventListener("storage", handleInstitutionChanged);
     };
@@ -427,39 +433,41 @@ export default function TopCenterSystemBanner({
           {institutionProfile.icon} Tier: {institutionProfile.shortName}
         </span>
         <span style={{ color: "#475569" }}>•</span>
+        <GlobalLocaleSelector compact onLocaleChange={() => setLocaleVersion((v) => v + 1)} />
         <button
           type="button"
           onClick={handleToggleUiTheme}
           style={{
-            background: uiTheme === "light" ? "rgba(254, 243, 199, 0.22)" : "rgba(15, 35, 71, 0.85)",
-            border: "1px solid rgba(212, 175, 55, 0.55)",
-            color: "#f5d061",
+            background: uiTheme === "light" ? "linear-gradient(135deg, #f6dd84, #d4af37)" : "rgba(13, 34, 71, 0.90)",
+            border: "1px solid rgba(212, 175, 55, 0.72)",
+            color: uiTheme === "light" ? "#081833" : "#f6dd84",
             fontSize: "0.75rem",
             padding: "4px 12px",
             borderRadius: "12px",
             cursor: "pointer",
             fontWeight: 800
           }}
-          title="Switch between Light Canvas Mode and Deep Royal Navy Mode"
+          title="Switch between Blueprint Light Canvas and Deep Midnight Royal Navy Mode"
         >
-          {uiTheme === "light" ? "☀️ Light Mode" : "🌙 Navy Mode"}
+          {uiTheme === "light" ? "☀️ Blueprint Light" : "🌙 Navy Mode"}
         </button>
         <button
           type="button"
           onClick={handleToggleFullDisplay}
           style={{
-            background: fullDisplayMode ? "rgba(16, 185, 129, 0.24)" : "rgba(15, 35, 71, 0.75)",
-            border: `1px solid ${fullDisplayMode ? "#10b981" : "rgba(56, 189, 248, 0.45)"}`,
-            color: fullDisplayMode ? "#6ee7b7" : "#bae6fd",
+            background: fullDisplayMode ? "rgba(22, 163, 74, 0.24)" : "rgba(13, 34, 71, 0.85)",
+            border: `1px solid ${fullDisplayMode ? "#16a34a" : "rgba(212, 175, 55, 0.45)"}`,
+            color: fullDisplayMode ? "#86efac" : "#f6dd84",
             fontSize: "0.75rem",
             padding: "4px 10px",
             borderRadius: "12px",
             cursor: "pointer",
             fontWeight: 800
           }}
-          title="Expand dashboard workspace to full screen width"
+          title={getUiLabel("fullView", "Expand dashboard workspace to full screen width")}
+          data-locale-v={localeVersion}
         >
-          {fullDisplayMode ? "↙ Standard View" : "↗ Full View"}
+          {fullDisplayMode ? "↙ Standard View" : `↗ ${getUiLabel("fullView", "Full View")}`}
         </button>
         <button
           type="button"
