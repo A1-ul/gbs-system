@@ -504,7 +504,9 @@ export default function TopCenterSystemBanner({
           type="button"
           onClick={() => {
             if (typeof window !== "undefined") {
-              window.open(window.location.href, "_blank", "noopener,noreferrer");
+              const targetUrl = new URL(window.location.href);
+              targetUrl.searchParams.set("full", "1");
+              window.open(targetUrl.toString(), "_blank", "noopener,noreferrer");
             }
           }}
           style={{

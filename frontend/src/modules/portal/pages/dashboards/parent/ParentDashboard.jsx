@@ -11,6 +11,7 @@ import UniversalRoleGuideModal from "../../../../../components/common/UniversalR
 import { navigateToDetail } from "../../../../../utils/universalNavigation";
 import { getActiveSchoolName, getActiveSchoolLogo } from "../../../../../utils/schoolBranding";
 import { isDemoSandboxMode } from "../../../../../utils/tokenStorage";
+import { checkDemoEntryLimit, trackDemoEntryCreated } from "../../../../../utils/demoLimitGuard";
 import { copyTextSafely } from "../../../../../utils/safeWindow";
 import SchoolClinicHubPanel from "../../../../../components/common/SchoolClinicHubPanel";
 import "./ParentDashboard.css";
@@ -417,6 +418,11 @@ export default function ParentDashboard() {
 
   const handleParentAdmissionSubmit = async (e) => {
     e.preventDefault();
+    const gate = checkDemoEntryLimit("admissions", "admission applications", parentApplications.length);
+    if (!gate.allowed) {
+      setFeedback({ type: "error", message: gate.message });
+      return;
+    }
     if (!admissionForm.studentFirstName || !admissionForm.studentLastName) {
       setFeedback({ type: "error", message: "Student first and last names are mandatory." });
       return;
@@ -450,6 +456,7 @@ export default function ParentDashboard() {
         notes: admissionForm.notes
       };
 
+      trackDemoEntryCreated("admissions");
       setParentApplications((prev) => [newApp, ...prev]);
       setFeedback({
         type: "success",
@@ -720,6 +727,12 @@ export default function ParentDashboard() {
     e.preventDefault();
     if (!activeInvoiceToPay || !payAmount) return;
 
+    const gate = checkDemoEntryLimit("finance", "fee payments");
+    if (!gate.allowed) {
+      setFeedback({ type: "error", message: gate.message });
+      return;
+    }
+
     if (paymentMethod === "MOMO" && !momoNumber.trim()) {
       setFeedback({ type: "error", message: "Please enter your Mobile Money (MoMo) Number to complete the transaction." });
       return;
@@ -733,9 +746,9 @@ export default function ParentDashboard() {
     setFeedback(null);
     const numericPay = parseFloat(payAmount);
 
-    const sName = `${selectedChild?.firstName || "Julian"} ${selectedChild?.lastName || "Doe"}`;
-    const sClass = selectedChild?.grade || "Grade 10A Mathematics & Science";
-    const sIndex = selectedChild?.indexNumber || selectedChild?.studentId || "GBS-UG-2026-0891";
+    const sName = `${selectedChild?.firstName || (isDemoTenant ? "Julian" : "Ward")} ${selectedChild?.lastName || (isDemoTenant ? "Doe" : "Student")}`;
+    const sClass = selectedChild?.grade || "Enrolled Class";
+    const sIndex = selectedChild?.indexNumber || selectedChild?.studentId || "GBS-STU-ACTIVE";
     const pMethod = paymentMethod === "MOMO"
       ? `Mobile Money (${momoNetwork === "MTN_MOMO" ? "MTN MoMo" : momoNetwork === "TELECEL_CASH" ? "Telecel Cash" : "AT Money"})`
       : paymentMethod === "BANK_WIRE"
@@ -775,7 +788,9 @@ export default function ParentDashboard() {
         studentClass: sClass,
         indexNumber: sIndex,
         transactionRef: paymentRecord.transactionRef
-      }).catch((err) => console.warn("Backend payment endpoint sync:", err?.message));
+      });
+
+      trackDemoEntryCreated("finance");
 
       // 1. Save payment into accountant reconciled ledger
       try {
@@ -795,11 +810,6 @@ export default function ParentDashboard() {
       // 3. Set active receipt for interactive print preview
       setCurrentReceipt(paymentRecord);
       setShowReceiptModal(true);
-
-      setFeedback({
-        type: "success",
-        message: `✅ Payment of ${currencySymbol}${payAmount} for ${sName} confirmed! Receipt #${paymentRecord.receiptNumber} generated.${is70OrFull ? " 🎉 ≥70% Clearance threshold met: Academic Results and Registration automatically unlocked!" : ""}`
-      });
 
       // Update invoice list locally with exact amount paid in status
       const totalAmt = activeInvoiceToPay.amount || ((activeInvoiceToPay.paidAmount || 0) + activeInvoiceToPay.balanceDue);
@@ -823,7 +833,7 @@ export default function ParentDashboard() {
       localStorage.setItem("gbs_parent_invoices", JSON.stringify(updatedInvoices));
       setFeedback({
         type: "success",
-        message: `✓ Payment of GHS ${numericPay.toLocaleString()} confirmed via ${paymentMethod}! Invoice status updated to ${statusLabel}.`
+        message: `✓ Payment of ${currencySymbol}${payAmount} for ${sName} confirmed (${statusLabel})! Receipt #${paymentRecord.receiptNumber} generated.${is70OrFull ? " Academic Results and Registration automatically unlocked!" : ""}`
       });
       setActiveInvoiceToPay(null);
       setPayAmount("");
@@ -841,66 +851,90 @@ export default function ParentDashboard() {
   const handleSendTeacherMessage = async (e) => {
     e.preventDefault();
     if (!teacherMsg.trim()) return;
+
+    const gate = checkDemoEntryLimit("communication", "messages", teacherThread.length);
+    if (!gate.allowed) {
+      setFeedback({ type: "error", message: gate.message });
+      return;
+    }
+
     setLoading(true);
+    setFeedback(null);
 
     const isToAdmin = messageRecipientType === "ADMIN";
     const targetRecipientName = isToAdmin ? "School Administration & Headmaster" : (facultyList.find((f) => f.id === selectedTeacherId)?.name || facultyList[0]?.name || "Class Teacher");
-
-    const newMsgObj = {
-      id: Date.now(),
-      senderName: `${currentUser.firstName} ${currentUser.lastName} (Parent / Guardian)`,
-      studentName: `${selectedChild?.firstName || "Julian"} ${selectedChild?.lastName || "Doe"} (${selectedChild?.grade || "Grade 10A"})`,
-      recipientType: messageRecipientType,
-      recipientTeacher: targetRecipientName,
-      subject: teacherMsgSubject.trim() || `Inquiry regarding ${selectedChild?.firstName || "Julian"}`,
-      content: teacherMsg.trim(),
-      timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
-      replies: []
-    };
-
-    const updatedThread = [newMsgObj, ...teacherThread];
-    setTeacherThread(updatedThread);
-
-    try {
-      if (isToAdmin) {
-        const existingAdmin = JSON.parse(localStorage.getItem("gbs_parent_admin_messages") || "[]");
-        localStorage.setItem("gbs_parent_admin_messages", JSON.stringify([newMsgObj, ...existingAdmin]));
-      } else {
-        localStorage.setItem("gbs_parent_teacher_messages", JSON.stringify(updatedThread));
-      }
-    } catch { }
+    const childDisplayName = selectedChild?.firstName
+      ? `${selectedChild.firstName} ${selectedChild.lastName || ""}`.trim()
+      : (isDemoTenant ? "Julian Doe" : "Enrolled Ward");
 
     try {
       await apiClient.post("/communication/messages", {
         recipientType: messageRecipientType,
         recipientId: isToAdmin ? "ADMIN" : selectedTeacherId,
-        content: `[Child: ${selectedChild?.firstName} | To: ${targetRecipientName}]: ${teacherMsg.trim()}`,
+        content: `[Child: ${childDisplayName} | To: ${targetRecipientName}]: ${teacherMsg.trim()}`,
         priority: "NORMAL"
       });
-    } catch (err) {
-      console.warn("Message API sync:", err?.message || err);
-    }
 
-    setTeacherMsg("");
-    setTeacherMsgSubject("");
-    setLoading(false);
-    setFeedback({
-      type: "success",
-      message: `💬 Message dispatched directly to ${targetRecipientName}! Feedback and replies will reflect directly in your message thread below.`
-    });
+      const newMsgObj = {
+        id: Date.now(),
+        senderName: `${currentUser.firstName} ${currentUser.lastName} (Parent / Guardian)`,
+        studentName: `${childDisplayName} (${selectedChild?.grade || "Enrolled"})`,
+        recipientType: messageRecipientType,
+        recipientTeacher: targetRecipientName,
+        subject: teacherMsgSubject.trim() || `Inquiry regarding ${childDisplayName}`,
+        content: teacherMsg.trim(),
+        timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+        replies: []
+      };
+
+      const updatedThread = [newMsgObj, ...teacherThread];
+      setTeacherThread(updatedThread);
+
+      try {
+        if (isToAdmin) {
+          const existingAdmin = JSON.parse(localStorage.getItem("gbs_parent_admin_messages") || "[]");
+          localStorage.setItem("gbs_parent_admin_messages", JSON.stringify([newMsgObj, ...existingAdmin]));
+        } else {
+          localStorage.setItem("gbs_parent_teacher_messages", JSON.stringify(updatedThread));
+        }
+      } catch { }
+
+      trackDemoEntryCreated("communication");
+      setTeacherMsg("");
+      setTeacherMsgSubject("");
+      setFeedback({
+        type: "success",
+        message: `💬 Message dispatched directly to ${targetRecipientName}! Feedback and replies will reflect directly in your message thread below.`
+      });
+    } catch (err) {
+      setFeedback({
+        type: "error",
+        message: err.response?.data?.message || err.message || "Failed to dispatch message."
+      });
+    } finally {
+      setLoading(false);
+    }
   };
 
   const handleSendParentVoiceNote = (voiceNoteData) => {
+    const gate = checkDemoEntryLimit("communication", "voice notes", teacherThread.length);
+    if (!gate.allowed) {
+      setFeedback({ type: "error", message: gate.message });
+      return;
+    }
     const isToAdmin = messageRecipientType === "ADMIN";
     const targetRecipientName = isToAdmin ? "School Administration & Headmaster" : (facultyList.find((f) => f.id === selectedTeacherId)?.name || facultyList[0]?.name || "Class Teacher");
+    const childDisplayName = selectedChild?.firstName
+      ? `${selectedChild.firstName} ${selectedChild.lastName || ""}`.trim()
+      : (isDemoTenant ? "Julian Doe" : "Enrolled Ward");
 
     const newMsgObj = {
       id: voiceNoteData.id || `PAR-VN-${Date.now()}`,
       senderName: `${currentUser.firstName} ${currentUser.lastName} (Parent / Guardian)`,
-      studentName: `${selectedChild?.firstName || "Julian"} ${selectedChild?.lastName || "Doe"} (${selectedChild?.grade || "Grade 10A"})`,
+      studentName: `${childDisplayName} (${selectedChild?.grade || "Enrolled"})`,
       recipientType: messageRecipientType,
       recipientTeacher: targetRecipientName,
-      subject: teacherMsgSubject.trim() || `Voice Inquiry regarding ${selectedChild?.firstName || "Julian"}`,
+      subject: teacherMsgSubject.trim() || `Voice Inquiry regarding ${childDisplayName}`,
       content: `🎙️ Audio Voice Message (${voiceNoteData.durationLabel || voiceNoteData.duration + "s"})`,
       voiceNote: voiceNoteData,
       timestamp: new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }),
@@ -909,6 +943,7 @@ export default function ParentDashboard() {
 
     const updatedThread = [newMsgObj, ...teacherThread].slice(0, 20);
     setTeacherThread(updatedThread);
+    trackDemoEntryCreated("communication");
 
     try {
       if (isToAdmin) {

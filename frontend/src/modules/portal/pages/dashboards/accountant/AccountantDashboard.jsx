@@ -11,6 +11,7 @@ import SchoolClinicHubPanel from "../../../../../components/common/SchoolClinicH
 import { navigateToDetail } from "../../../../../utils/universalNavigation";
 import { getActiveSchoolName, getActiveSchoolLogo } from "../../../../../utils/schoolBranding";
 import { isDemoSandboxMode } from "../../../../../utils/tokenStorage";
+import { checkDemoEntryLimit, trackDemoEntryCreated } from "../../../../../utils/demoLimitGuard";
 import "./AccountantDashboard.css";
 
 export default function AccountantDashboard() {
@@ -356,18 +357,18 @@ export default function AccountantDashboard() {
       });
     } else {
       setGatewayVerifyResult({
-        found: true,
+        found: false,
         reference: ref,
-        studentName: "Verified Gateway Transaction",
-        indexNumber: "ACC-CONFIRMED",
-        amount: "1,200.00",
-        method: ref.startsWith("MOMO") ? "MTN Mobile Money" : "Stanbic Bank ACH Wire",
+        studentName: "No Matching Record",
+        indexNumber: "UNRECONCILED",
+        amount: "0.00",
+        method: "Not Recorded",
         timestamp: new Date().toLocaleString(),
-        status: "AUTHENTIC_GATEWAY_RECONCILED"
+        status: "NOT_FOUND_IN_LEDGER"
       });
       setFeedback({
-        type: "success",
-        message: `✓ Gateway transaction reference ${ref} verified live against banking settlement switch.`
+        type: "error",
+        message: `⛔ Reference "${ref}" was not found in reconciled payments or active gateway settlement records.`
       });
     }
   };
@@ -1047,6 +1048,11 @@ export default function AccountantDashboard() {
   // Generate Student Invoice (Tuition + Hostel)
   const handleGenerateInvoice = async (e) => {
     e.preventDefault();
+    const gate = checkDemoEntryLimit("finance", "invoices", invoices.length);
+    if (!gate.allowed) {
+      setFeedback({ type: "error", message: gate.message });
+      return;
+    }
     setLoading(true);
     setFeedback(null);
     try {
@@ -1064,6 +1070,7 @@ export default function AccountantDashboard() {
         notes: `Tuition: ${currencySymbol}${tuition.toFixed(2)} | Hostel: ${currencySymbol}${hostel.toFixed(2)} | Discount: ${currencySymbol}${discount.toFixed(2)}. ${newInvoice.notes}`
       });
 
+      trackDemoEntryCreated("finance");
       setFeedback({
         type: "success",
         message: `Invoice generated successfully! Total Billed: ${currencySymbol}${totalAmount.toFixed(2)} (Tuition: ${currencySymbol}${tuition.toFixed(2)} + Hostel: ${currencySymbol}${hostel.toFixed(2)}).`
@@ -1081,7 +1088,13 @@ export default function AccountantDashboard() {
   // Create Fee Structure
   const handleCreateFeeStructure = async (e) => {
     e.preventDefault();
+    const gate = checkDemoEntryLimit("finance", "fee schedules", feeStructures.length);
+    if (!gate.allowed) {
+      setFeedback({ type: "error", message: gate.message });
+      return;
+    }
     setLoading(true);
+    setFeedback(null);
     try {
       await apiClient.post("/finance/fee-structures", {
         code: newFee.code.toUpperCase(),
@@ -1090,6 +1103,7 @@ export default function AccountantDashboard() {
         amount: parseFloat(newFee.amount),
         term: newFee.term
       });
+      trackDemoEntryCreated("finance");
       setFeedback({ type: "success", message: `Fee schedule "${newFee.name}" (${newFee.category}) created successfully.` });
       setNewFee({ code: "", name: "", category: "HOSTEL", amount: "", term: "Semester 1" });
       fetchFeeStructures();
@@ -1103,17 +1117,38 @@ export default function AccountantDashboard() {
   // Record Received Payment (MoMo / Bank / Stripe with Reference = Student Name - Class)
   const handleRecordPayment = async (e) => {
     e.preventDefault();
+    const gate = checkDemoEntryLimit("finance", "payments", reconciledPayments.length);
+    if (!gate.allowed) {
+      setFeedback({ type: "error", message: gate.message });
+      return;
+    }
+    const numericAmt = parseFloat(newPayment.amountPaid);
+    if (!newPayment.studentName?.trim() || isNaN(numericAmt) || numericAmt <= 0) {
+      setFeedback({ type: "error", message: "Student name and a positive payment amount are required." });
+      return;
+    }
+
     setLoading(true);
+    setFeedback(null);
     try {
       const formattedRef = `${newPayment.studentName} - ${newPayment.studentClass}`;
       const receiptNo = `RCT-${Math.floor(10000 + Math.random() * 90000)}`;
+
+      await apiClient.post("/finance/payments", {
+        invoiceId: newPayment.invoiceId ? parseInt(newPayment.invoiceId, 10) : undefined,
+        amountPaid: numericAmt,
+        paymentMethod: newPayment.paymentMethod,
+        studentName: newPayment.studentName,
+        studentClass: newPayment.studentClass,
+        transactionRef: formattedRef
+      });
 
       const newRec = {
         id: `REC-${Date.now()}`,
         receiptNumber: receiptNo,
         studentName: newPayment.studentName,
         studentClass: newPayment.studentClass,
-        amountPaid: parseFloat(newPayment.amountPaid),
+        amountPaid: numericAmt,
         paymentMethod: newPayment.paymentMethod,
         transactionRef: formattedRef,
         gatewayRef: `GW-${Math.floor(100000 + Math.random() * 900000)}`,
@@ -1122,12 +1157,13 @@ export default function AccountantDashboard() {
         gatewayStatus: "CONFIRMED_SUCCESS"
       };
 
+      trackDemoEntryCreated("finance");
       setReconciledPayments([newRec, ...reconciledPayments]);
 
       // If student was debtor, update arrears
       const studentDebtor = debtorsList.find((d) => d.studentName.toLowerCase() === newPayment.studentName.toLowerCase());
       if (studentDebtor) {
-        const remaining = Math.max(0, studentDebtor.totalArrears - parseFloat(newPayment.amountPaid));
+        const remaining = Math.max(0, studentDebtor.totalArrears - numericAmt);
         const updatedDebtors = debtorsList.map((d) => {
           if (d.id === studentDebtor.id) {
             return {
@@ -1161,7 +1197,7 @@ export default function AccountantDashboard() {
       fetchPayments();
       fetchTelemetry();
     } catch (err) {
-      setFeedback({ type: "error", message: err.response?.data?.message || "Payment reconciliation failed." });
+      setFeedback({ type: "error", message: err.response?.data?.message || err.message || "Payment reconciliation failed." });
     } finally {
       setLoading(false);
     }
@@ -1252,7 +1288,13 @@ export default function AccountantDashboard() {
   // Log Operating Expense
   const handleCreateExpense = async (e) => {
     e.preventDefault();
+    const gate = checkDemoEntryLimit("finance", "expenses", expenses.length);
+    if (!gate.allowed) {
+      setFeedback({ type: "error", message: gate.message });
+      return;
+    }
     setLoading(true);
+    setFeedback(null);
     try {
       await apiClient.post("/finance/expenses", {
         title: newExpense.title,
@@ -1261,6 +1303,7 @@ export default function AccountantDashboard() {
         vendorName: newExpense.vendorName,
         notes: newExpense.notes
       });
+      trackDemoEntryCreated("finance");
       setFeedback({ type: "success", message: `Operating expense "${newExpense.title}" recorded in active ledger.` });
       setNewExpense({ title: "", category: "UTILITIES", amount: "", vendorName: "", notes: "" });
       fetchExpenses();
@@ -1300,6 +1343,11 @@ export default function AccountantDashboard() {
   // Requirement: Accountant Increment Request to Headmaster for Exact Approved Amount
   const handleRequestIncrementApproval = (e) => {
     e.preventDefault();
+    const gate = checkDemoEntryLimit("finance", "increment requests", pendingIncrementRequests.length);
+    if (!gate.allowed) {
+      setFeedback({ type: "error", message: gate.message });
+      return;
+    }
     const incVal = parseFloat(incrementForm.value);
     if (isNaN(incVal) || incVal <= 0) {
       setFeedback({ type: "error", message: "Please enter a valid positive increment amount or percentage." });
@@ -1328,6 +1376,7 @@ export default function AccountantDashboard() {
       const updated = [newRequest, ...existing];
       localStorage.setItem("gbs_accountant_increment_requests", JSON.stringify(updated));
       setPendingIncrementRequests(updated);
+      trackDemoEntryCreated("finance");
       window.dispatchEvent(new Event("gbs_increment_requested"));
     } catch { }
 
@@ -2621,14 +2670,38 @@ export default function AccountantDashboard() {
                 </form>
 
                 {gatewayVerifyResult && (
-                  <div style={{ marginTop: "12px", padding: "12px", background: "rgba(16, 185, 129, 0.12)", border: "1px solid #10b981", borderRadius: "8px", display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: "10px" }}>
+                  <div
+                    style={{
+                      marginTop: "12px",
+                      padding: "12px",
+                      background: gatewayVerifyResult.found === false ? "rgba(239, 68, 68, 0.14)" : "rgba(16, 185, 129, 0.12)",
+                      border: `1px solid ${gatewayVerifyResult.found === false ? "#ef4444" : "#10b981"}`,
+                      borderRadius: "8px",
+                      display: "flex",
+                      justifyContent: "space-between",
+                      alignItems: "center",
+                      flexWrap: "wrap",
+                      gap: "10px"
+                    }}
+                  >
                     <div>
-                      <strong style={{ color: "#34d399", fontSize: "0.85rem" }}>✓ GATEWAY RECORD CONFIRMED:</strong>
+                      <strong style={{ color: gatewayVerifyResult.found === false ? "#fca5a5" : "#34d399", fontSize: "0.85rem" }}>
+                        {gatewayVerifyResult.found === false ? "⛔ GATEWAY RECORD NOT FOUND:" : "✓ GATEWAY RECORD CONFIRMED:"}
+                      </strong>
                       <span style={{ color: "#f8fafc", fontSize: "0.85rem", marginLeft: "8px" }}>
-                        Ref: <code>{gatewayVerifyResult.reference}</code> • Amount: GHS {gatewayVerifyResult.amount} • Channel: {gatewayVerifyResult.method}
+                        Ref: <code>{gatewayVerifyResult.reference}</code> • Amount: {currencySymbol} {gatewayVerifyResult.amount} • Channel: {gatewayVerifyResult.method}
                       </span>
                     </div>
-                    <span style={{ background: "#10b981", color: "#022c22", padding: "3px 10px", borderRadius: "999px", fontSize: "0.72rem", fontWeight: 800 }}>
+                    <span
+                      style={{
+                        background: gatewayVerifyResult.found === false ? "#ef4444" : "#10b981",
+                        color: gatewayVerifyResult.found === false ? "#ffffff" : "#022c22",
+                        padding: "3px 10px",
+                        borderRadius: "999px",
+                        fontSize: "0.72rem",
+                        fontWeight: 800
+                      }}
+                    >
                       {gatewayVerifyResult.status}
                     </span>
                   </div>

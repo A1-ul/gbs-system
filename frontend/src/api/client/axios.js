@@ -61,6 +61,14 @@ async function refreshSessionTokenOnce() {
   return refreshInFlightPromise;
 }
 
+const releaseInFlightRequest = (cfg) => {
+  if (typeof window !== "undefined" && cfg && cfg.__gbsTrackedInFlight) {
+    cfg.__gbsTrackedInFlight = false;
+    window.__gbsInFlightRequests = Math.max(0, Number(window.__gbsInFlightRequests || 1) - 1);
+    window.__gbsLastNetworkActivityAt = Date.now();
+  }
+};
+
 axiosInstance.interceptors.request.use(
   (config) => {
     const isDevRoute =
@@ -112,6 +120,12 @@ axiosInstance.interceptors.request.use(
       // ignore malformed JSON in localStorage
     }
 
+    if (typeof window !== "undefined" && !config.__gbsTrackedInFlight) {
+      config.__gbsTrackedInFlight = true;
+      window.__gbsInFlightRequests = Math.max(0, Number(window.__gbsInFlightRequests || 0)) + 1;
+      window.__gbsLastNetworkActivityAt = Date.now();
+    }
+
     return config;
   },
   (error) => Promise.reject(error)
@@ -119,6 +133,7 @@ axiosInstance.interceptors.request.use(
 
 axiosInstance.interceptors.response.use(
   (response) => {
+    releaseInFlightRequest(response?.config);
     try {
       const method = String(response?.config?.method || "get").toLowerCase();
       const url = String(response?.config?.url || "");
@@ -129,6 +144,7 @@ axiosInstance.interceptors.response.use(
         url.includes("/auth/refresh-token") ||
         url.includes("/auth/verify") ||
         url.includes("/translate");
+      const envelopeFailed = response?.data?.success === false;
 
       if (typeof window !== "undefined") {
         const hist = Array.isArray(window.__gbsRcceResponseHistory) ? window.__gbsRcceResponseHistory : [];
@@ -136,8 +152,8 @@ axiosInstance.interceptors.response.use(
           method: method.toUpperCase(),
           url,
           status: response.status,
-          success: true,
-          code: response?.data?.code || "RECORD_FOUND_SUCCESS",
+          success: !envelopeFailed,
+          code: response?.data?.code || (envelopeFailed ? "SYSTEM_ERROR_INTERNAL" : "RECORD_FOUND_SUCCESS"),
           message: response?.data?.message || "OK",
           requestId: response?.data?.requestId || response?.headers?.["x-request-id"] || null,
           timestamp: response?.data?.timestamp || new Date().toISOString()
@@ -147,7 +163,7 @@ axiosInstance.interceptors.response.use(
       }
 
       if (
-        isMutating &&
+        (isMutating || envelopeFailed) &&
         !isSilentEndpoint &&
         typeof window !== "undefined" &&
         typeof window.showGBSOpenNotice === "function"
@@ -158,7 +174,7 @@ axiosInstance.interceptors.response.use(
           response?.data?.notice;
         const code = response?.data?.code;
 
-        let title = "SERVER COMMAND CONFIRMED";
+        let title = envelopeFailed ? "COMMAND VALIDATION FAILED" : "SERVER COMMAND CONFIRMED";
         if (code) {
           const prefix = code.split("_")[0];
           const titles = {
@@ -179,13 +195,13 @@ axiosInstance.interceptors.response.use(
             IDEMPOTENCY: "IDEMPOTENCY KEY LOCKED",
             REQUEST: "REQUEST SUBMITTED"
           };
-          if (titles[prefix]) title = titles[prefix];
+          if (titles[prefix]) title = envelopeFailed ? `${prefix} OPERATION REJECTED` : titles[prefix];
         }
 
         if (serverMsg && typeof serverMsg === "string") {
           window.showGBSOpenNotice(
             serverMsg,
-            "success",
+            envelopeFailed ? "error" : "success",
             title
           );
         }
@@ -202,6 +218,7 @@ axiosInstance.interceptors.response.use(
   async (error) => {
     const status = error.response?.status;
     const originalRequest = error.config || {};
+    releaseInFlightRequest(originalRequest);
     const url = String(originalRequest.url || "");
     const isAuthAttempt =
       url.includes("/auth/login") ||

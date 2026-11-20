@@ -163,6 +163,26 @@ export default function UniversalOpenNoticeHUD() {
       "sign out",
     ];
 
+    let lastInvalidAt = 0;
+
+    const handleInvalid = (e) => {
+      const now = Date.now();
+      if (now - lastInvalidAt < 400) return;
+      lastInvalidAt = now;
+      const field = e?.target;
+      const fieldName = (
+        field?.getAttribute?.("aria-label") ||
+        field?.getAttribute?.("placeholder") ||
+        field?.getAttribute?.("name") ||
+        "required field"
+      ).trim();
+      showNotice(
+        `Some required information is missing (${fieldName}). Please complete all required fields before submitting.`,
+        "warning",
+        "VALIDATION REQUIRED"
+      );
+    };
+
     const handleGlobalClick = (e) => {
       const btn = e.target?.closest?.("button, [role='button'], input[type='submit']");
       if (!btn || btn.disabled) return;
@@ -173,6 +193,15 @@ export default function UniversalOpenNoticeHUD() {
         btn.classList.contains("nav-btn") ||
         btn.classList.contains("dev-tab-btn") ||
         btn.hasAttribute("data-no-hud-notice")
+      ) {
+        return;
+      }
+
+      // Skip form submit controls or incomplete forms so invalid/async API submission owns the notice
+      const ownerForm = btn.closest?.("form");
+      if (
+        btn.type === "submit" ||
+        (ownerForm && typeof ownerForm.checkValidity === "function" && !ownerForm.checkValidity())
       ) {
         return;
       }
@@ -196,8 +225,17 @@ export default function UniversalOpenNoticeHUD() {
 
       const clickTime = Date.now();
       setTimeout(() => {
-        // Only show fallback confirmation if no more specific API/state notice fired after this click
-        if (lastDispatchedRef.current.time < clickTime) {
+        const hasPendingNetwork = Number(window.__gbsInFlightRequests || 0) > 0;
+        const networkFiredAfterClick = Number(window.__gbsLastNetworkActivityAt || 0) >= clickTime - 25;
+        const validationFailed = lastInvalidAt >= clickTime - 50;
+
+        // Only show fallback confirmation for synchronous UI commands when no API/validation event handled it
+        if (
+          !hasPendingNetwork &&
+          !networkFiredAfterClick &&
+          !validationFailed &&
+          lastDispatchedRef.current.time < clickTime
+        ) {
           const isDanger =
             lower.includes("delete") ||
             lower.includes("purge") ||
@@ -211,13 +249,15 @@ export default function UniversalOpenNoticeHUD() {
             "USER COMMAND EXECUTED"
           );
         }
-      }, 280);
+      }, 360);
     };
 
+    document.addEventListener("invalid", handleInvalid, true);
     document.addEventListener("click", handleGlobalClick, true);
 
     return () => {
       window.removeEventListener("gbs-open-notice", handleCustomNotice);
+      document.removeEventListener("invalid", handleInvalid, true);
       document.removeEventListener("click", handleGlobalClick, true);
       window.alert = originalAlert;
       if (timerRef.current) clearTimeout(timerRef.current);

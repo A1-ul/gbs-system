@@ -362,12 +362,19 @@
       "rootCause": "DeveloperLogin prefilled permanentEmail without backend loginLocked enforcement; onboarding/subscriptions lacked country-to-Cedis conversion summary; manifest start_url targeted / and MobileAppPushHubModal called new Notification before ServiceWorkerRegistration.showNotification without clearing single-use beforeinstallprompt; DeveloperDashboard exposed ARCHIVED/MEMBERS panels and TopCenterSystemBanner showed institution switcher to Developer.",
       "resolution": "Added persistent security lockdown endpoints (/dev-control/security/login-status, /intrusion, /re-enable, /intrusions), updated DeveloperLogin & DeveloperDashboard gate to empty inputs with stealth webcam evidence transmission, added multi-country FX to GH₵ conversion in countryLanguageNorms/i18nCountryEngine/devControl/TenantOnboardingFirstPage, fixed manifest.json (/login?source=pwa) + sw.js (DISPATCH_LOCK_SCREEN_PUSH + cached SPA root) + MobileAppPushHubModal + MainLoginPage standalone resume, hid institution switcher on isDevMode banner, and removed ARCHIVED vault & MEMBERS queue from DeveloperDashboard.",
       "status": "PERMANENTLY_GUARDED"
+    },
+    {
+      "issueCode": "DIAG-RCCE-TRUE-FEEDBACK-LIVE-PARITY",
+      "symptom": "No fake success notices may appear when forms fail HTML5 validation or backend requests reject; Parent/Student/Accountant payment & exam/message actions must obey backend truth and Demo 10-entry cap; Open New Tab must open full-page display (?full=1); Live Production must never leak fallback sample rosters/courses/papers.",
+      "rootCause": "UniversalOpenNoticeHUD fired fallback execution toasts on clicks without checking in-flight network tracking or HTML5 form invalidity; TopCenterSystemBanner Open New Tab omitted ?full=1; finance.routes blocked PARENT/STUDENT and finance.service required numeric invoiceId on direct portal settlements; ParentDashboard/StudentDashboard swallowed API errors into fake success alerts; AccountantDashboard fabricated gateway verification hits on unknown references; TeacherDashboard/StudentDashboard had ungated sample rosters/study rooms/past papers.",
+      "resolution": "Added window.__gbsInFlightRequests tracking in axios.js, HTML5 invalid-form capture & pending-request suppression in UniversalOpenNoticeHUD.jsx, ?full=1 enforcement in TopCenterSystemBanner.jsx Open New Tab, unified /api/v1/finance/payments RBAC + direct portal settlement support in finance.routes/controller/service, wired checkDemoEntryLimit & backend-truth error handling across StudentDashboard/ParentDashboard/AccountantDashboard, gated sample rosters/study rooms/past papers behind isDemoSandboxMode(), and verified multi-module RCCE tests.",
+      "status": "PERMANENTLY_GUARDED"
     }
   ],
   "verificationSummary": {
-    "backendTestSuitesPassed": "v2.11 Developer Security Lockdown, Multi-Country Currency-to-Cedis, Mobile PWA & Role Split suites alongside all 12 core suites",
-    "chromeE2EDashboardsVerified": "All role dashboards + Developer Security Lockdown/Re-Enable + Country-to-Cedis Revenue + Mobile App Hub",
-    "institutionSeparationUniversityClinicVoiceVerified": "2026-11-19 Live Production & Demo Sandbox Parity",
+    "backendTestSuitesPassed": "All 13 backend integration suites including multi-module RCCE truth-feedback & Live vs Demo 10-entry parity",
+    "chromeE2EDashboardsVerified": "All 8 user dashboards in both DEMO_SANDBOX and LIVE_PRODUCTION plus DeveloperDashboard telemetry & RCCE Control Hub",
+    "institutionSeparationUniversityClinicVoiceVerified": "2026-11-20 Live Production & Demo Sandbox Parity",
     "browserAssetsRegenerated": "favicon.ico, logo.png, icon-192.png, icon-512.png, apple-touch-icon.png, og-gbs-crest.jpg",
     "uncaughtBrowserConsoleErrors": 0,
     "astUndeclaredErrors": 0

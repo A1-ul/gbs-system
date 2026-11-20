@@ -12706,13 +12706,13 @@ export default function TeacherDashboard() {
                   </tr>
                 </thead>
                 <tbody>
-                  {(roster.length > 0 ? roster : [
+                  {(roster.length > 0 ? roster : (isDemoSandboxMode() ? [
                     { id: "STU-001", studentId: "STU-001", firstName: "Kwame", lastName: "Mensah", rollNumber: "GBS-2026-101" },
                     { id: "STU-002", studentId: "STU-002", firstName: "Ama", lastName: "Osei", rollNumber: "GBS-2026-102" },
                     { id: "STU-003", studentId: "STU-003", firstName: "Kofi", lastName: "Boateng", rollNumber: "GBS-2026-103" },
                     { id: "STU-004", studentId: "STU-004", firstName: "Abena", lastName: "Appiah", rollNumber: "GBS-2026-104" },
                     { id: "STU-005", studentId: "STU-005", firstName: "Esi", lastName: "Sutherland", rollNumber: "GBS-2026-105" }
-                  ]).map((stu, idx) => {
+                  ] : [])).map((stu, idx) => {
                     const sKey = String(stu.id || stu.studentId || idx);
                     const currentScore = manualExamScores[sKey] || {};
                     const rawVal = currentScore.rawMark !== undefined ? currentScore.rawMark : "";
@@ -13475,15 +13475,17 @@ export default function TeacherDashboard() {
                     {studioMeetingLink}
                   </div>
                   <div style={{ fontSize: "0.76rem", fontWeight: 800, color: "#34d399", marginBottom: "6px", textTransform: "uppercase" }}>
-                    👥 Connected Class Participants ({(roster || []).length || 4} Ready):
+                    👥 Connected Class Participants ({(roster || []).length || (isDemoSandboxMode() ? 4 : 1)} Ready):
                   </div>
                   <div style={{ display: "flex", flexDirection: "column", gap: "6px", maxHeight: "140px", overflowY: "auto" }}>
-                    {(roster && roster.length > 0 ? roster.slice(0, 6) : [
+                    {(roster && roster.length > 0 ? roster.slice(0, 6) : (isDemoSandboxMode() ? [
                       { fullName: "Kwame Mensah (Student)" },
                       { fullName: "Ama Serwaa (Student)" },
                       { fullName: "Kofi Boateng (Student)" },
                       { fullName: "Headmaster Supervision Node" }
-                    ]).map((p, i) => (
+                    ] : [
+                      { fullName: "Headmaster Supervision Node" }
+                    ])).map((p, i) => (
                       <div key={i} style={{ display: "flex", justifyContent: "space-between", alignItems: "center", background: "rgba(15, 23, 42, 0.7)", padding: "6px 8px", borderRadius: "6px", fontSize: "0.75rem", color: "#cbd5e1" }}>
                         <span>🟢 {p.fullName || `${p.firstName || ""} ${p.lastName || ""}`}</span>
                         <span style={{ color: "#34d399", fontSize: "0.68rem", fontWeight: 700 }}>Connected</span>

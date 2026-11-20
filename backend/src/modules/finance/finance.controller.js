@@ -106,16 +106,29 @@ const recordPayment = async (req, res, next) => {
   try {
     const tenantId = req.tenantId || req.user?.tenantId || req.headers['x-tenant-id'] || 1;
     const effAmountPaid = req.body.amountPaid !== undefined ? req.body.amountPaid : req.body.amount;
-    if (!req.body.invoiceId || effAmountPaid === undefined) {
+    const numericAmt = parseFloat(effAmountPaid);
+    const hasInvoiceRef = req.body.invoiceId !== undefined && req.body.invoiceId !== null && String(req.body.invoiceId).trim() !== '';
+    const hasStudentRef = Boolean((req.body.studentName && String(req.body.studentName).trim()) || (req.body.indexNumber && String(req.body.indexNumber).trim()));
+
+    if (effAmountPaid === undefined || Number.isNaN(numericAmt) || numericAmt <= 0) {
       return res.status(400).json({
         status: 'fail',
-        message: 'invoiceId and amountPaid are required.'
+        code: 'VALIDATION_INVALID_AMOUNT',
+        message: 'A positive amountPaid is required to record a payment.'
       });
     }
-    const paymentResult = await financeService.recordPayment(tenantId, { ...req.body, amountPaid: effAmountPaid }, req.user?.id);
+    if (!hasInvoiceRef && !hasStudentRef) {
+      return res.status(400).json({
+        status: 'fail',
+        code: 'VALIDATION_MISSING_REQUIRED',
+        message: 'invoiceId or studentName is required to record a payment.'
+      });
+    }
+
+    const paymentResult = await financeService.recordPayment(tenantId, { ...req.body, amountPaid: numericAmt }, req.user?.id);
     res.status(201).json({
       status: 'success',
-      message: 'Payment recorded and invoice reconciled successfully.',
+      message: 'Payment recorded and reconciled successfully.',
       data: paymentResult
     });
   } catch (error) {

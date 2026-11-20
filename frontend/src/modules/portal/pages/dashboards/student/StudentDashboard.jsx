@@ -16,6 +16,7 @@ import { getActiveInstitutionType, getInstitutionRoleProfile } from "../../../..
 import UniversityOperationsPanel from "../../../../../components/common/UniversityOperationsPanel";
 import SchoolClinicHubPanel from "../../../../../components/common/SchoolClinicHubPanel";
 import { isDemoSandboxMode } from "../../../../../utils/tokenStorage";
+import { checkDemoEntryLimit, trackDemoEntryCreated } from "../../../../../utils/demoLimitGuard";
 import "./StudentDashboard.css";
 
 export function StudentDashboard({ initialTab } = {}) {
@@ -655,7 +656,7 @@ export function StudentDashboard({ initialTab } = {}) {
   });
 
   // Course & Class Registration System (Authorized upon Financial Clearance)
-  const [availableCourses, setAvailableCourses] = useState([
+  const [availableCourses, setAvailableCourses] = useState(() => (isDemoSandboxMode() ? [
     {
       code: "CS 201",
       title: "Data Structures & Object Algorithms",
@@ -740,7 +741,7 @@ export function StudentDashboard({ initialTab } = {}) {
         { name: "GBS200_Research_Methodology_Style_Guide.pdf", size: "1.8 MB", type: "PDF", uploadedAt: "2026-09-05", topic: "APA 7th Edition Citations & Thesis Structuring" }
       ]
     }
-  ]);
+  ] : []));
 
   // Course Enrolled File Location Viewer State
   const [selectedCourseForFiles, setSelectedCourseForFiles] = useState(null);
@@ -913,10 +914,16 @@ export function StudentDashboard({ initialTab } = {}) {
   const [classroomHandRaised, setClassroomHandRaised] = useState(false);
   const [classroomMicMuted, setClassroomMicMuted] = useState(true);
   const [classroomCameraOn, setClassroomCameraOn] = useState(true);
-  const [classroomChatMessages, setClassroomChatMessages] = useState([
-    { sender: "Teacher (Moderator)", text: "Welcome everyone to today's live interactive session. Please raise your hand if you have questions.", time: "10:00 AM" },
-    { sender: "Kwame Mensah", text: "Good morning teacher, audio and video are crystal clear!", time: "10:02 AM" }
-  ]);
+  const [classroomChatMessages, setClassroomChatMessages] = useState(() => (
+    isDemoSandboxMode()
+      ? [
+        { sender: "Teacher (Moderator)", text: "Welcome everyone to today's live interactive session. Please raise your hand if you have questions.", time: "10:00 AM" },
+        { sender: "Kwame Mensah", text: "Good morning teacher, audio and video are crystal clear!", time: "10:02 AM" }
+      ]
+      : [
+        { sender: "Classroom Moderator", text: "Live classroom interactive session initialized. Raise your hand or send a question.", time: "Ready" }
+      ]
+  ));
   const [newClassroomMsg, setNewClassroomMsg] = useState("");
 
   const startLocalPeerCamera = async () => {
@@ -1006,12 +1013,18 @@ export function StudentDashboard({ initialTab } = {}) {
   const handleSendClassroomChat = (e) => {
     if (e && e.preventDefault) e.preventDefault();
     if (!newClassroomMsg.trim()) return;
+    const gate = checkDemoEntryLimit("communication", "classroom messages", classroomChatMessages.length);
+    if (!gate.allowed) {
+      setFeedback({ type: "error", message: gate.message });
+      return;
+    }
     const msg = {
       sender: `${studentProfile?.firstName || "Scholar"} ${studentProfile?.lastName || ""}`.trim() || "You",
       text: newClassroomMsg.trim(),
       time: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
     };
     setClassroomChatMessages((prev) => [...prev, msg]);
+    trackDemoEntryCreated("communication");
     setNewClassroomMsg("");
   };
 
@@ -1071,6 +1084,11 @@ export function StudentDashboard({ initialTab } = {}) {
   ];
 
   const handleBorrowBook = (book) => {
+    const gate = checkDemoEntryLimit("library", "borrowed textbooks", borrowedBooks.length);
+    if (!gate.allowed) {
+      setFeedback({ type: "error", message: gate.message });
+      return;
+    }
     if (borrowedBooks.some((b) => b.title === book.title)) {
       setFeedback({ type: "info", message: `You have already borrowed "${book.title}".` });
       return;
@@ -1088,6 +1106,7 @@ export function StudentDashboard({ initialTab } = {}) {
     };
     const updated = [newRecord, ...borrowedBooks];
     setBorrowedBooks(updated);
+    trackDemoEntryCreated("library");
     try {
       localStorage.setItem("gbs_library_borrowed_records", JSON.stringify(updated));
     } catch { }
@@ -1267,17 +1286,46 @@ export function StudentDashboard({ initialTab } = {}) {
     }
   };
 
-  const handleProcessFeePayment = (e) => {
+  const handleProcessFeePayment = async (e) => {
     e.preventDefault();
+    const gate = checkDemoEntryLimit("finance", "fee payments");
+    if (!gate.allowed) {
+      setFeedback({ type: "error", message: gate.message });
+      return;
+    }
     const amt = parseFloat(paymentAmount);
     if (!amt || amt <= 0) {
       setFeedback({ type: "error", message: "Please enter a valid payment amount." });
       return;
     }
 
+    setLoading(true);
+    setFeedback(null);
+    try {
+      await apiClient.post("/finance/payments", {
+        amountPaid: amt,
+        paymentMethod: paymentChannel,
+        momoNumber: payerPhone,
+        studentName: `${currentUser.firstName} ${currentUser.lastName}`,
+        indexNumber: currentUser.studentId || currentUser.indexNumber || "GBS-STU-ACTIVE",
+        transactionRef: `STUDENT-PORTAL-${Date.now()}`
+      });
+    } catch (err) {
+      if (err?.response) {
+        setFeedback({
+          type: "error",
+          message: err.response.data?.message || err.message || "Payment rejected by central finance engine."
+        });
+        setLoading(false);
+        return;
+      }
+      // If genuinely offline (!err?.response), preserve offline queue behavior below
+    }
+
     const currentArr = typeof feeArrears === "number" ? feeArrears : parseFloat(feeArrears || 0);
     const newArrears = Math.max(0, currentArr - amt);
     setFeeArrears(newArrears);
+    trackDemoEntryCreated("finance");
     try {
       localStorage.setItem("gbs_student_fee_arrears", String(newArrears));
       const paymentRec = {
@@ -1287,7 +1335,7 @@ export function StudentDashboard({ initialTab } = {}) {
         paymentChannel,
         newBalanceDue: newArrears,
         studentName: `${currentUser.firstName} ${currentUser.lastName}`,
-        studentId: currentUser.studentId || "GBS-STU-2026-084",
+        studentId: currentUser.studentId || "GBS-STU-ACTIVE",
         reconciledAt: new Date().toISOString()
       };
       const existingHistory = JSON.parse(localStorage.getItem("gbs_reconciled_payments") || "[]");
@@ -1297,6 +1345,7 @@ export function StudentDashboard({ initialTab } = {}) {
       setPaymentSuccessSlip(paymentRec);
     } catch { }
 
+    setLoading(false);
     setFeedback({
       type: "success",
       message: `🎉 Payment of GH₵ ${amt.toFixed(2)} processed successfully via ${paymentChannel}! Remaining arrears: GH₵ ${newArrears.toFixed(2)}.`
@@ -1752,6 +1801,11 @@ export function StudentDashboard({ initialTab } = {}) {
 
   // Submit Homework Assignment to PostgreSQL
   const handleSubmitAssignment = async (assignmentId) => {
+    const gate = checkDemoEntryLimit("assignments", "homework submissions");
+    if (!gate.allowed) {
+      setFeedback({ type: "error", message: gate.message });
+      return;
+    }
     const content = submissionInputs[assignmentId];
     if (!content || !content.trim()) {
       setFeedback({ type: "error", message: "Please enter your homework submission text or link." });
@@ -1789,6 +1843,7 @@ export function StudentDashboard({ initialTab } = {}) {
         window.dispatchEvent(new Event("gbs_submission_updated"));
       } catch (e) { }
 
+      trackDemoEntryCreated("assignments");
       setMySubmissions((prev) => ({
         ...prev,
         [assignmentId]: { content, submittedAt: new Date().toLocaleTimeString(), status: "SUBMITTED" }
@@ -1805,6 +1860,11 @@ export function StudentDashboard({ initialTab } = {}) {
   // Submit Online Exam to PostgreSQL Auto-Grading Engine (Locked after submission)
   const handleSubmitExam = async () => {
     if (!activeExam) return;
+    const gate = checkDemoEntryLimit("exams", "online exam submissions");
+    if (!gate.allowed) {
+      setFeedback({ type: "error", message: gate.message });
+      return;
+    }
     setLoading(true);
     setFeedback(null);
     setShowExamConfirmModal(false);
@@ -1827,19 +1887,28 @@ export function StudentDashboard({ initialTab } = {}) {
 
       const effectivePenalty = Math.max(penaltyMarksDeducted, (proctoringWarnings * 2) + teacherPenaltyMarks);
       const studentDisplayName = `${currentUser.firstName || "Student"} ${currentUser.lastName || ""}`.trim();
-      const res = await apiClient.post("/ai-exam/scan-grade", {
-        examId: activeExam.id,
-        studentId: currentUser.id || 10,
-        studentName: studentDisplayName,
-        studentEmail: currentUser.email || "",
-        extractedAnswers: answersMap,
-        writtenAnswers: writtenMap,
-        penaltyMarksDeducted: effectivePenalty,
-        proctoringWarnings,
-        proctoringLog: proctoringEvents,
-        proctoringSnapshots: proctorSnapshotsRef.current,
-        marksPerWarning: 2
-      }).catch(() => null);
+      let res = null;
+      try {
+        res = await apiClient.post("/ai-exam/scan-grade", {
+          examId: activeExam.id,
+          studentId: currentUser.id || 10,
+          studentName: studentDisplayName,
+          studentEmail: currentUser.email || "",
+          extractedAnswers: answersMap,
+          writtenAnswers: writtenMap,
+          penaltyMarksDeducted: effectivePenalty,
+          proctoringWarnings,
+          proctoringLog: proctoringEvents,
+          proctoringSnapshots: proctorSnapshotsRef.current,
+          marksPerWarning: 2
+        });
+      } catch (apiErr) {
+        if (apiErr?.response) {
+          throw apiErr;
+        }
+        // Only fall back to local exam scoring when the backend is genuinely offline (!apiErr.response)
+        res = null;
+      }
 
       let data = res?.data?.data;
       if (!data) {
@@ -2030,6 +2099,7 @@ export function StudentDashboard({ initialTab } = {}) {
           window.dispatchEvent(new Event("gbs_exam_submitted_to_teacher"));
         } catch { }
 
+        trackDemoEntryCreated("exams");
         localStorage.removeItem("gbs_new_exam_published");
         setNewExamPublished(false);
 
@@ -3546,13 +3616,27 @@ export function StudentDashboard({ initialTab } = {}) {
                                   }
                                 ];
 
-                                const filteredPapers = pastExamPapers.filter((p) => {
+                                const livePastPapers = (() => {
+                                  try {
+                                    const saved = JSON.parse(localStorage.getItem("gbs_published_past_papers") || "[]");
+                                    return Array.isArray(saved) ? saved : [];
+                                  } catch {
+                                    return [];
+                                  }
+                                })();
+                                const effectivePapers = isDemoTenant ? pastExamPapers : livePastPapers;
+
+                                const filteredPapers = effectivePapers.filter((p) => {
                                   if (pastExamYearFilter !== "ALL" && p.year !== pastExamYearFilter) return false;
                                   if (pastExamTermFilter !== "ALL" && p.term !== pastExamTermFilter) return false;
                                   return true;
                                 });
 
-                                return (
+                                return filteredPapers.length === 0 ? (
+                                  <div style={{ padding: "1.5rem", borderRadius: "12px", background: "rgba(15, 23, 42, 0.7)", border: "1px dashed rgba(148, 163, 184, 0.35)", textAlign: "center", color: "#94a3b8" }}>
+                                    No published past examination papers yet in this live institution workspace.
+                                  </div>
+                                ) : (
                                   <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(320px, 1fr))", gap: "14px" }}>
                                     {filteredPapers.map((paper) => (
                                       <div
@@ -6055,13 +6139,19 @@ export function StudentDashboard({ initialTab } = {}) {
                 </span>
               </div>
 
+              {!isDemoTenant && (
+                <div style={{ padding: "1.25rem", borderRadius: "12px", background: "rgba(15, 23, 42, 0.75)", border: "1px dashed rgba(139, 92, 246, 0.45)", textAlign: "center", color: "#cbd5e1", marginBottom: "1.25rem" }}>
+                  No peer cooperative study rooms published yet in this live institution. Join scheduled live sessions or class streams once activated.
+                </div>
+              )}
+
               <div style={{
                 display: "grid",
                 gridTemplateColumns: "repeat(auto-fit, minmax(320px, 1fr))",
                 gap: "1.25rem",
                 marginBottom: "2.5rem"
               }}>
-                {[
+                {(isDemoTenant ? [
                   {
                     id: "STEM-101",
                     name: "🔬 STEM & Mathematics Problem Solving Circle",
@@ -6117,7 +6207,7 @@ export function StudentDashboard({ initialTab } = {}) {
                     description: "Interactive voice conversational practice, vocabulary drills, and cultural storytelling in foreign languages.",
                     roomCode: "LANG-7214"
                   }
-                ].map((room) => (
+                ] : []).map((room) => (
                   <div
                     key={room.id}
                     style={{

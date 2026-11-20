@@ -29,7 +29,7 @@ router.post('/invoices', restrictTo('SUPER_ADMIN', 'ADMIN', 'ACCOUNTANT', 'DEVEL
 router.get('/invoices/:id', financeController.getInvoiceById);
 
 // 5. Payments & Gateway Transactions (Blueprint Box 14 & 15)
-router.post('/payments', restrictTo('SUPER_ADMIN', 'ADMIN', 'ACCOUNTANT', 'DEVELOPER'), financeController.recordPayment);
+router.post('/payments', restrictTo('SUPER_ADMIN', 'ADMIN', 'ACCOUNTANT', 'PARENT', 'STUDENT', 'DEVELOPER'), financeController.recordPayment);
 router.get('/payments', financeController.getPayments);
 
 // 6. Operating Expenses

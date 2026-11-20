@@ -27,6 +27,11 @@ const { demoLimitMiddleware } = require('../src/middleware/demoLimit.middleware'
 const authRoutes = require('../src/modules/auth/auth.routes');
 const clinicRoutes = require('../src/modules/clinic/clinic.routes');
 const universityRoutes = require('../src/modules/university/university.routes');
+const financeRoutes = require('../src/modules/finance/finance.routes');
+const admissionsRoutes = require('../src/modules/admissions/admissions.routes');
+const assignmentRoutes = require('../src/modules/assignment/assignment.routes');
+const aiExamRoutes = require('../src/modules/ai-exam/aiExam.routes');
+const communicationRoutes = require('../src/modules/communication/communication.routes');
 
 function signToken(user) {
   const secret = process.env.JWT_SECRET || 'gbs_enterprise_jwt_super_secret_key_2026_production_hardened';
@@ -54,6 +59,11 @@ function buildTestApp(productOptions = { productId: 'GBS_SCHOOL', productName: '
   app.use('/api/v1/auth', authRoutes);
   app.use('/api/v1/clinic', clinicRoutes);
   app.use('/api/v1/university', universityRoutes);
+  app.use('/api/v1/finance', financeRoutes);
+  app.use('/api/v1/admissions', admissionsRoutes);
+  app.use('/api/v1/assignments', assignmentRoutes);
+  app.use('/api/v1/ai-exam', aiExamRoutes);
+  app.use('/api/v1/communication', communicationRoutes);
 
   // Trigger simulated internal DB error to test safe error normalization
   app.get('/api/v1/test-internal-error', (req, res, next) => {
@@ -379,6 +389,196 @@ test('3. Developer Privacy Gate, Safe Error Hiding vs Diagnostics, Audit Trail, 
     assert.ok(SUPPORTED_GBS_PRODUCTS.some((p) => p.id === 'GBS_REAL_ESTATE'));
     assert.ok(SUPPORTED_GBS_PRODUCTS.some((p) => p.id === 'GBS_EXAM'));
     assert.ok(SUPPORTED_GBS_PRODUCTS.some((p) => p.id === 'GBS_COMPANY'));
+  } finally {
+    await new Promise((resolve) => server.close(resolve));
+  }
+});
+
+test('4. Multi-module RCCE envelopes, negative validation rejection, Demo 10-entry cap & Live unlimited parity (Finance, Admissions, Assignments, AI-Exam, Communication, University)', async () => {
+  writePersistentStore((curr) => {
+    const existingClasses = curr.prismaModels?.Class || [];
+    const hasDefaultClass = existingClasses.some((c) => Number(c.tenantId) === 1);
+    const hasLiveClass = existingClasses.some((c) => Number(c.tenantId) === 2);
+    const existingInsts = Array.isArray(curr.institutions) ? curr.institutions : [];
+    const hasLiveInst = existingInsts.some((inst) => Number(inst.tenantId) === 2 || Number(inst.id) === 2);
+    const existingRegUsers = Array.isArray(curr.registeredUsers) ? curr.registeredUsers : [];
+    const extraUsers = [
+      { id: 5001, tenantId: 2, firstName: 'Grace', lastName: 'Bursar', role: 'ACCOUNTANT', email: 'bursar@stcharles.edu', isActive: true, isApproved: true, status: 'ACTIVE', isDemo: false },
+      { id: 5002, tenantId: 2, firstName: 'Samuel', lastName: 'Lecturer', role: 'TEACHER', email: 'lecturer@stcharles.edu', isActive: true, isApproved: true, status: 'ACTIVE', isDemo: false }
+    ];
+    return {
+      ...curr,
+      demoTrialCounters: {},
+      institutions: hasLiveInst
+        ? existingInsts
+        : [...existingInsts, { id: 2, tenantId: 2, tenantCode: 'ST-CHARLES-LIVE', institutionName: 'St. Charles Live Academy', status: 'ACTIVE', isActive: true, isApproved: true }],
+      registeredUsers: [
+        ...existingRegUsers.filter((u) => Number(u.id) !== 5001 && Number(u.id) !== 5002),
+        ...extraUsers
+      ],
+      prismaModels: {
+        ...(curr.prismaModels || {}),
+        Class: [
+          ...existingClasses,
+          ...(hasDefaultClass ? [] : [{ id: 901, tenantId: 1, name: 'Grade 10 STEM', code: 'G10-STEM', gradeLevel: 10 }]),
+          ...(hasLiveClass ? [] : [{ id: 902, tenantId: 2, name: 'Live Form 2 Science', code: 'LIVE-F2S', gradeLevel: 11 }])
+        ]
+      }
+    };
+  });
+
+  const { app } = buildTestApp();
+  const server = http.createServer(app);
+  await new Promise((resolve) => server.listen(0, '127.0.0.1', resolve));
+  const { port } = server.address();
+  const baseUrl = `http://127.0.0.1:${port}`;
+
+  try {
+    const assertEnvelope = (res, expectedSuccess) => {
+      assert.equal(res.json.success, expectedSuccess, `Expected success=${expectedSuccess}, got body: ${JSON.stringify(res.json)}`);
+      assert.ok(res.json.code, 'Missing RCCE code');
+      assert.ok(res.json.message, 'Missing RCCE message');
+      assert.ok(res.json.timestamp, 'Missing RCCE timestamp');
+      assert.ok(res.json.requestId, 'Missing RCCE requestId');
+    };
+
+    const demoAdmin = signToken({ id: 'usr_admin_master', tenantId: 1, role: 'ADMIN', email: 'demo-admin@gbs.com', isDemo: true });
+    const demoStudent = signToken({ id: 'usr_student_master', tenantId: 1, role: 'STUDENT', email: 'demo-stu@gbs.com', isDemo: true });
+    const demoParent = signToken({ id: 'usr_parent_master', tenantId: 1, role: 'PARENT', email: 'demo-parent@gbs.com', isDemo: true });
+    const demoTeacher = signToken({ id: 'usr_teacher_master', tenantId: 1, role: 'TEACHER', email: 'demo-teacher@gbs.com', isDemo: true });
+    const liveAccountant = signToken({ id: 5001, tenantId: 2, role: 'ACCOUNTANT', email: 'bursar@stcharles.edu', isDemo: false });
+    const liveTeacher = signToken({ id: 5002, tenantId: 2, role: 'TEACHER', email: 'lecturer@stcharles.edu', isDemo: false });
+
+    // A. Negative validation across core modules MUST NEVER return HTTP 2xx
+    const badPay = await reqJson(baseUrl, 'POST', '/api/v1/finance/payments', { amountPaid: 0 }, { Authorization: `Bearer ${demoStudent}` });
+    assert.equal(badPay.status, 400);
+    assertEnvelope(badPay, false);
+
+    const badAdm = await reqJson(baseUrl, 'POST', '/api/v1/admissions/inquiry', { notes: 'Missing names' }, { Authorization: `Bearer ${demoParent}` });
+    assert.equal(badAdm.status, 400);
+    assertEnvelope(badAdm, false);
+
+    const badAssign = await reqJson(baseUrl, 'POST', '/api/v1/assignments', { description: 'Missing title' }, { Authorization: `Bearer ${demoTeacher}` });
+    assert.equal(badAssign.status, 400);
+    assertEnvelope(badAssign, false);
+
+    const badMsg = await reqJson(baseUrl, 'POST', '/api/v1/communication/messages', { content: '   ' }, { Authorization: `Bearer ${demoParent}` });
+    assert.equal(badMsg.status, 400);
+    assertEnvelope(badMsg, false);
+
+    // B. Valid Finance Portal Payment as STUDENT & PARENT succeeds, 10-entry Demo limit blocks 11th (403 DEMO_TRIAL_LIMIT_REACHED), Live Accountant runs past 10 unlimited
+    await reqJson(baseUrl, 'POST', '/api/v1/auth/demo-reset', {}, { Authorization: `Bearer ${demoParent}` });
+    const stuOkPay = await reqJson(
+      baseUrl,
+      'POST',
+      '/api/v1/finance/payments',
+      { amountPaid: 100, paymentMethod: 'MTN_MOMO', studentName: 'Demo Scholar SelfPay', indexNumber: 'IDX-SELF' },
+      { Authorization: `Bearer ${demoStudent}`, 'X-GBS-Mode': 'DEMO_SANDBOX' }
+    );
+    assert.equal(stuOkPay.status, 201, `Student self-pay failed: ${JSON.stringify(stuOkPay.json)}`);
+    assertEnvelope(stuOkPay, true);
+
+    await reqJson(baseUrl, 'POST', '/api/v1/auth/demo-reset', {}, { Authorization: `Bearer ${demoParent}` });
+    for (let i = 1; i <= 10; i++) {
+      const okPay = await reqJson(
+        baseUrl,
+        'POST',
+        '/api/v1/finance/payments',
+        { amountPaid: 100 + i, paymentMethod: 'MTN_MOMO', studentName: `Ward Scholar ${i}`, indexNumber: `IDX-${i}` },
+        { Authorization: `Bearer ${demoParent}`, 'X-GBS-Mode': 'DEMO_SANDBOX' }
+      );
+      assert.equal(okPay.status, 201, `Finance entry #${i} failed: ${JSON.stringify(okPay.json)}`);
+      assertEnvelope(okPay, true);
+    }
+
+    const demoPay11 = await reqJson(
+      baseUrl,
+      'POST',
+      '/api/v1/finance/payments',
+      { amountPaid: 250, paymentMethod: 'MTN_MOMO', studentName: 'Ward Scholar 11', indexNumber: 'IDX-11' },
+      { Authorization: `Bearer ${demoParent}`, 'X-GBS-Mode': 'DEMO_SANDBOX' }
+    );
+    assert.equal(demoPay11.status, 403);
+    assert.equal(demoPay11.json.code, 'DEMO_TRIAL_LIMIT_REACHED');
+    assertEnvelope(demoPay11, false);
+
+    // Live Production Accountant payment succeeds with zero Demo trial limit blocking it
+    const livePay = await reqJson(
+      baseUrl,
+      'POST',
+      '/api/v1/finance/payments',
+      { amountPaid: 950, paymentMethod: 'BANK_TRANSFER', studentName: 'Live Student', indexNumber: 'LIVE-001' },
+      { Authorization: `Bearer ${liveAccountant}`, 'X-GBS-Mode': 'LIVE_PRODUCTION' }
+    );
+    assert.equal(livePay.status, 201, `Live pay unexpected status ${livePay.status}: ${JSON.stringify(livePay.json)}`);
+    assertEnvelope(livePay, true);
+
+    // C. Admissions, Assignments, AI-Exam, Communication, University return canonical RCCE envelopes
+    const okAdm = await reqJson(
+      baseUrl,
+      'POST',
+      '/api/v1/admissions/inquiry',
+      { studentFirstName: 'Nadia', studentLastName: 'Owusu', targetGradeLevel: 10, guardianName: 'Daniel Owusu' },
+      { Authorization: `Bearer ${demoParent}`, 'X-GBS-Mode': 'DEMO_SANDBOX' }
+    );
+    assert.equal(okAdm.status, 201, `okAdm status ${okAdm.status}: ${JSON.stringify(okAdm.json)}`);
+    assertEnvelope(okAdm, true);
+
+    const okAssign = await reqJson(
+      baseUrl,
+      'POST',
+      '/api/v1/assignments',
+      { title: 'Differential Calculus Lab 1', dueDate: '2026-12-01', description: 'Complete Q1-Q5' },
+      { Authorization: `Bearer ${liveTeacher}`, 'X-GBS-Mode': 'LIVE_PRODUCTION' }
+    );
+    assert.equal(okAssign.status, 201, `okAssign status ${okAssign.status}: ${JSON.stringify(okAssign.json)}`);
+    assertEnvelope(okAssign, true);
+
+    const okExam = await reqJson(
+      baseUrl,
+      'POST',
+      '/api/v1/ai-exam/exams',
+      {
+        title: 'RCCE Term Assessment',
+        subjectName: 'Physics',
+        totalMarks: 50,
+        passMarks: 25,
+        questionBank: [{ questionNumber: 1, questionType: 'MULTIPLE_CHOICE', questionText: 'Unit of Force?', options: ['N', 'J', 'W', 'V'], correctOption: 'A', marks: 50 }]
+      },
+      { Authorization: `Bearer ${liveTeacher}`, 'X-GBS-Mode': 'LIVE_PRODUCTION' }
+    );
+    assert.equal(okExam.status, 201, `okExam status ${okExam.status}: ${JSON.stringify(okExam.json)}`);
+    assertEnvelope(okExam, true);
+
+    const okMsg = await reqJson(
+      baseUrl,
+      'POST',
+      '/api/v1/communication/messages',
+      { recipientType: 'ADMIN', content: 'Verified RCCE message test' },
+      { Authorization: `Bearer ${demoParent}`, 'X-GBS-Mode': 'DEMO_SANDBOX' }
+    );
+    assert.equal(okMsg.status, 201, `okMsg status ${okMsg.status}: ${JSON.stringify(okMsg.json)}`);
+    assertEnvelope(okMsg, true);
+
+    const deniedUniGov = await reqJson(
+      baseUrl,
+      'POST',
+      '/api/v1/university/governance',
+      { positionTitle: 'Faculty Rep', holderName: 'Nadia Owusu', duties: 'Academic Council coordination' },
+      { Authorization: `Bearer ${demoAdmin}`, 'X-GBS-Mode': 'DEMO_SANDBOX', 'X-Demo-Institution-Type': 'NURSERY_TO_JHS' }
+    );
+    assert.equal(deniedUniGov.status, 403);
+    assertEnvelope(deniedUniGov, false);
+
+    const okUniGov = await reqJson(
+      baseUrl,
+      'POST',
+      '/api/v1/university/governance',
+      { positionTitle: 'Faculty Rep', holderName: 'Nadia Owusu', duties: 'Academic Council coordination', howToHelpSchool: 'Student mentoring' },
+      { Authorization: `Bearer ${demoAdmin}`, 'X-GBS-Mode': 'DEMO_SANDBOX', 'X-Demo-Institution-Type': 'UNIVERSITY' }
+    );
+    assert.equal(okUniGov.status, 201, `okUniGov status ${okUniGov.status}: ${JSON.stringify(okUniGov.json)}`);
+    assertEnvelope(okUniGov, true);
   } finally {
     await new Promise((resolve) => server.close(resolve));
   }
