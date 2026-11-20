@@ -7,6 +7,7 @@ import { syncSystemModeFlags, clearWorkspaceMutableKeys } from "../../../utils/t
 import { copyTextSafely } from "../../../utils/safeWindow";
 import GlobalLocaleSelector from "../../../components/common/GlobalLocaleSelector";
 import CartoonRoleVideoHubModal from "../../../components/common/CartoonRoleVideoHubModal";
+import MobileAppPushHubModal from "../../../components/common/MobileAppPushHubModal";
 import "./MainLoginPage.css";
 
 const ROLES = [
@@ -26,6 +27,7 @@ export default function MainLoginPage() {
     return localStorage.getItem("gbs_system_mode") || "LIVE_PRODUCTION";
   });
   const [selectedRole, setSelectedRole] = useState("ADMIN");
+  const [showMobileInstallModal, setShowMobileInstallModal] = useState(false);
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
@@ -343,8 +345,35 @@ export default function MainLoginPage() {
           <p style={{ fontSize: "0.75rem", color: "#94a3b8", letterSpacing: "1px", textTransform: "uppercase", marginTop: "2px" }}>
             ENTERPRISE MANAGEMENT SYSTEM — MASTER BLUEPRINT
           </p>
-          <div style={{ display: "flex", justifyContent: "center", marginTop: "10px" }}>
+          <div style={{ display: "flex", justifyContent: "center", alignItems: "center", gap: "8px", flexWrap: "wrap", marginTop: "10px" }}>
             <GlobalLocaleSelector compact={false} />
+            <button
+              type="button"
+              onClick={() => {
+                const promptObj = typeof window !== "undefined" ? window.__gbsDeferredInstallPrompt : null;
+                if (promptObj) {
+                  try {
+                    const p = promptObj.prompt();
+                    window.__gbsDeferredInstallPrompt = null;
+                    Promise.resolve(p).catch(() => { });
+                    return;
+                  } catch { }
+                }
+                setShowMobileInstallModal(true);
+              }}
+              style={{
+                padding: "7px 14px",
+                borderRadius: "10px",
+                background: "linear-gradient(135deg, #081833 0%, #0d2247 100%)",
+                border: "1.5px solid #d4af37",
+                color: "#f6dd84",
+                fontWeight: 800,
+                fontSize: "0.78rem",
+                cursor: "pointer"
+              }}
+            >
+              📲 Install GBS App
+            </button>
           </div>
         </div>
 
@@ -1151,6 +1180,11 @@ export default function MainLoginPage() {
         isOpen={showVideoHubModal}
         onClose={() => setShowVideoHubModal(false)}
         initialVideoId={videoHubRole}
+      />
+
+      <MobileAppPushHubModal
+        isOpen={showMobileInstallModal}
+        onClose={() => setShowMobileInstallModal(false)}
       />
     </div>
   );

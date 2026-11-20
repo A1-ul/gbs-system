@@ -62,6 +62,7 @@ test.before(() => {
       { id: 913, tenantId: 913, tenantCode: 'tnt_uni_913', institutionName: 'Test GBS University', institutionType: 'UNIVERSITY', status: 'ACTIVE', isApproved: true }
     ],
     universityInternships: [],
+    universityAttachments: [],
     universityStreams: [],
     universityGovernanceRoles: [],
     universityExams: [],
@@ -114,6 +115,9 @@ test('1. Strict Institution Separation: JHS, SHS, Technical get 403 on Universit
       const internBlocked = await reqJson(baseUrl, 'GET', '/api/v1/university/internships', null, authHeader);
       assert.equal(internBlocked.status, 403, `${tier} must be blocked from university internships`);
 
+      const attachBlocked = await reqJson(baseUrl, 'GET', '/api/v1/university/attachments', null, authHeader);
+      assert.equal(attachBlocked.status, 403, `${tier} must be blocked from university attachments`);
+
       const srcBlocked = await reqJson(baseUrl, 'GET', '/api/v1/university/governance', null, authHeader);
       assert.equal(srcBlocked.status, 403, `${tier} must be blocked from university SRC`);
     }
@@ -131,7 +135,7 @@ test('1. Strict Institution Separation: JHS, SHS, Technical get 403 on Universit
   }
 });
 
-test('2. University Internship Submission & Course/Internship Grading', async () => {
+test('2. University Separated Industrial Internships vs Academic & Field Attachments Submission and Grading', async () => {
   const app = buildApp();
   const server = http.createServer(app);
   await new Promise((r) => server.listen(0, '127.0.0.1', r));
@@ -154,6 +158,7 @@ test('2. University Internship Submission & Course/Internship Grading', async ()
 
     assert.equal(submitRes.status, 201);
     const internId = submitRes.json.data.internship.id;
+    assert.ok(String(internId).startsWith('INT-'));
     assert.equal(submitRes.json.data.internship.status, 'SUBMITTED');
 
     const gradeRes = await reqJson(baseUrl, 'PATCH', `/api/v1/university/internships/${internId}/grade`, {
@@ -168,6 +173,43 @@ test('2. University Internship Submission & Course/Internship Grading', async ()
     assert.equal(gradeRes.json.data.internship.finalScore, 86);
     assert.equal(gradeRes.json.data.internship.letterGrade, 'A');
     assert.equal(gradeRes.json.data.internship.status, 'GRADED');
+
+    // Separate Academic & Field Attachment Workflow (ATT-...)
+    const submitAttach = await reqJson(baseUrl, 'POST', '/api/v1/university/attachments', {
+      studentName: 'Ama Boateng',
+      courseCode: 'PRAC 304',
+      hostInstitution: 'Korle Bu Teaching Hospital',
+      hostAddress: 'Accra',
+      supervisorName: 'Matron Esi Mensah',
+      academicSupervisor: 'Dr. Mensah',
+      logbookHours: 240,
+      startDate: '2026-06-15',
+      endDate: '2026-08-15',
+      objectives: 'Complete required clinical course attachment logbook'
+    }, { Authorization: `Bearer ${studentToken}` });
+
+    assert.equal(submitAttach.status, 201);
+    const attachId = submitAttach.json.data.attachment.id;
+    assert.ok(String(attachId).startsWith('ATT-'));
+
+    // Cross-isolation check: internships list does not contain ATT- record and attachments list does not contain INT- record
+    const [internListRes, attachListRes] = await Promise.all([
+      reqJson(baseUrl, 'GET', '/api/v1/university/internships', null, { Authorization: `Bearer ${lecturerToken}` }),
+      reqJson(baseUrl, 'GET', '/api/v1/university/attachments', null, { Authorization: `Bearer ${lecturerToken}` })
+    ]);
+    assert.equal(internListRes.json.data.internships.length, 1);
+    assert.equal(attachListRes.json.data.attachments.length, 1);
+
+    const gradeAttach = await reqJson(baseUrl, 'PATCH', `/api/v1/university/attachments/${attachId}/grade`, {
+      supervisorScore: 80,
+      reportScore: 75,
+      courseGradeScore: 85,
+      lecturerRemarks: 'Strong field attachment logbook'
+    }, { Authorization: `Bearer ${lecturerToken}` });
+    assert.equal(gradeAttach.status, 200);
+    // 80*0.4 + 75*0.4 + 85*0.2 = 32 + 30 + 17 = 79
+    assert.equal(gradeAttach.json.data.attachment.finalScore, 79);
+    assert.equal(gradeAttach.json.data.attachment.letterGrade, 'B+');
   } finally {
     await new Promise((r) => server.close(r));
   }

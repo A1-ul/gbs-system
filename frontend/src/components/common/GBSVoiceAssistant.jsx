@@ -12,20 +12,36 @@ import { getLanguageProfile } from "../../utils/i18nCountryEngine";
  * - Explains any GBS module, pricing, Clinic, University Hub, Institution Separation, Defaulters, SMS, Translator, etc.
  * - Keeps continuous listening loop asking whether we are done or there is another until user confirms done/sleep.
  */
+const DEVELOPER_NONDISCLOSURE_PATTERN = /\b(developer|dev\s*portal|mission\s*control|motherland|system\s*creator|platform\s*owner|who\s*(built|made|created)\s*gbs|developer\s*(login|dashboard|credentials|passcode|vault|payout|telemetry)|unlock\s*developer)\b/i;
+
 const LOCAL_MEMORY_TOPICS = [
+  {
+    id: "developer_nondisclosure",
+    keywords: ["developer", "dev portal", "mission control", "motherland", "developer login", "developer dashboard", "who created gbs", "who built gbs"],
+    answer:
+      "I do not disclose developer details, internal engineering controls, or developer portal information. I can explain the exact portals and daily activities for institutional users: Headmaster/Admin, Teacher/Lecturer, Student, Parent/Guardian, Accountant/Bursar, Non-Teaching Staff, HR Officer, and Alumni.",
+    tab: null
+  },
   {
     id: "clinic",
     keywords: ["clinic", "sickbay", "medical", "health", "doctor", "nurse", "sick", "hospital", "medicine", "blood", "genotype", "allergy"],
     answer:
-      "The GBS School Clinic lets institutions treat and admit both Students and Teachers into Sickbay, maintains an Admission Medical Registration record from day one of enrollment, tracks pharmacy supplies, dispatches parent/emergency SMS alerts, and links across Headmaster, Teacher, Student, Parent, Staff, and HR portals for instant record pull.",
+      "In the GBS School Clinic, privacy is strictly enforced: regular users (Student, Teacher, Staff, HR, Accountant) only view their own personal health profile and visit history, and Parents only view their linked ward's health profile — without clinic admin queues or other people's data. Only the Headmaster sees all Staff and Student clinic profiles, full individual health dossiers, Sickbay admissions, treatments, and pharmacy stock on the Headmaster Dashboard.",
     tab: "clinic"
   },
   {
     id: "university",
     keywords: ["university", "internship", "attachment", "src", "stream", "evening", "weekend", "sandwich", "regular", "lecturer", "graduate", "alumni", "cgpa"],
     answer:
-      "University Hub is strictly gated for University institutions: students submit Internship and Attachment forms, lecturers grade both coursework and internship performance, set exams to promote passing students across levels up to Alumni graduation, manage Regular, Evening, Sandwich, and Weekend streams, and list SRC leadership positions with duties and school action plans.",
+      "University Hub separates Industrial Internships (INT) from Academic and Field Attachments (ATT) so each course offering runs its exact required placement workflow. Students submit Internship or Attachment placements separately; Lecturers grade coursework, internships, and attachments independently, set exams to promote passing students up to Alumni graduation, manage Regular/Evening/Sandwich/Weekend streams, and oversee SRC governance plans.",
     tab: "university"
+  },
+  {
+    id: "all_roles_explained",
+    keywords: ["roles", "user roles", "who does what", "everyone", "all users", "activities", "what each user does", "explain roles"],
+    answer:
+      "Each institutional user on GBS performs specific daily activities: Headmaster/Admin approves users, runs Admissions, views ALL Staff and Student clinic profiles and sickbay stock, sets fee structures, oversees Academic Promotions and Institution Language; Teachers/Lecturers deliver coursework, grade assignments and separate university internships/attachments, mark attendance, manage exams with AI proctoring, and view ONLY their own personal health profile; Students take courses, write AI-proctored exams, submit separate Internship or Attachment forms, check fees/results, and view ONLY their own health profile; Parents view their linked wards' grades, attendance, fees, and linked ward's clinic profile; Accountants collect fees, verify receipts, and record expenses; Non-Teaching Staff manage campus logistics/assets and view ONLY their own health profile; HR manages staff recruitment, payroll, leave, and appraisals; Alumni access transcripts and alumni networking.",
+    tab: null
   },
   {
     id: "institutions",
@@ -708,8 +724,16 @@ export default function GBSVoiceAssistant() {
       return;
     }
 
-    if (cleanCmd.includes("developer portal") || cleanCmd.includes("mission control") || cleanCmd.includes("developer login")) {
-      executeReply("Opening the Developer Control Center Login.", { navigateTo: "/developer-control-center/login" });
+    if (DEVELOPER_NONDISCLOSURE_PATTERN.test(cleanCmd)) {
+      executeReply(
+        "I do not disclose developer details, internal engineering controls, or developer portal information. Ask me instead about the Headmaster, Teacher, Student, Parent, Accountant, Staff, HR, or Alumni portals and activities.",
+        null,
+        {
+          interpretation: "You asked about internal developer controls. Institutional assistants strictly protect non-disclosure boundaries.",
+          explanationText: "How your question was formed: You asked about internal platform controls, which are kept strictly non-disclosed so the assistant stays focused on institutional users.",
+          actionTaken: "Protected developer non-disclosure boundary and offered institutional role help."
+        }
+      );
       return;
     }
 
@@ -768,7 +792,7 @@ export default function GBSVoiceAssistant() {
       : "";
     const generalFormation = buildLocalQuestionFormation(raw, "GBS Unified System Overview");
     executeReply(
-      `On GBS SYSTEM (v${memorySyncedVersion}), you can manage Admissions, School Clinic & Sickbay records, University Internships/SRC/Streams/Graduation, JHS/SHS/Technical separation, Defaulters Compliance, Staff Approvals, Language Translation, Direct SMS, Payments, Bus Transport, Country & Language Norms, and Auto-Updates.${statsNote}`,
+      `On GBS SYSTEM (v${memorySyncedVersion}), each institutional user has a dedicated portal and set of daily activities: Headmasters manage admissions, approvals, fee structures, language settings, and all Staff & Student clinic dossiers; Teachers/Lecturers deliver coursework, grade assignments and separate university Internships & Attachments, mark attendance, and run AI-proctored exams; Students take exams and submit Internships or Attachments; Parents monitor their linked wards; Accountants reconcile fees & payroll; Non-Teaching Staff manage campus logistics; HR handles recruitment & leave; Alumni access transcripts. Non-Headmaster users only see their own (or ward's) clinic profile.`,
       null,
       generalFormation
     );
@@ -1006,7 +1030,7 @@ export default function GBSVoiceAssistant() {
                       }}
                     >
                       <strong style={{ color: "#f6dd84" }}>🧩 Question Formation Explained:</strong>{" "}
-                      {m.formation.explanationText.replace(/^How your question was formed:\s*/i, "")}
+                      {(m.formation.explanationText || m.formation.interpretation || "").replace(/^How your question was formed:\s*/i, "")}
                     </div>
                     <div style={{ fontSize: "10.8px", color: "#cbd5e1", fontStyle: "italic" }}>
                       {FOLLOWUP_PROMPT}
@@ -1030,9 +1054,9 @@ export default function GBSVoiceAssistant() {
           <div style={{ padding: "10px 14px", borderTop: "1px solid rgba(212, 175, 55, 0.25)", background: "rgba(4, 10, 22, 0.95)" }}>
             <div style={{ display: "flex", gap: "5px", flexWrap: "wrap", marginBottom: "8px" }}>
               {[
-                { label: "🏥 School Clinic", cmd: "Explain School Clinic and pull medical records" },
-                { label: "🎓 University Hub", cmd: "How does University Internship, Streams, SRC & Graduation work?" },
-                { label: "📋 Defaulters", cmd: "How does the missed exam and absenteeism tracker work?" },
+                { label: "👥 User Roles", cmd: "Explain all institutional user roles and daily activities" },
+                { label: "🏥 School Clinic", cmd: "Explain School Clinic privacy and Headmaster profiles" },
+                { label: "🎓 Internships vs Attachments", cmd: "Explain University Internships vs Attachments" },
                 { label: "✅ Done (Sleep)", cmd: "We are done" }
               ].map((chip) => (
                 <button

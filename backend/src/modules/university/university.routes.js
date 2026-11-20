@@ -15,10 +15,15 @@ router.use(tenantIsolationGuard);
 // Institution operating profile (all authenticated roles)
 router.get('/profile', controller.getInstitutionProfile);
 
-// University Internships & Attachments (UNIVERSITY ONLY)
+// University Industrial Internships (UNIVERSITY ONLY — strictly separate from Academic Attachments)
 router.get('/internships', controller.listInternships);
 router.post('/internships', restrictTo('STUDENT', 'ADMIN', 'SUPER_ADMIN', 'TEACHER', 'DEVELOPER'), controller.submitInternship);
 router.patch('/internships/:id/grade', restrictTo('ADMIN', 'SUPER_ADMIN', 'TEACHER', 'DEVELOPER'), controller.gradeInternship);
+
+// University Academic & Field Attachments (UNIVERSITY ONLY — strictly separate from Internships)
+router.get('/attachments', controller.listAttachments);
+router.post('/attachments', restrictTo('STUDENT', 'ADMIN', 'SUPER_ADMIN', 'TEACHER', 'DEVELOPER'), controller.submitAttachment);
+router.patch('/attachments/:id/grade', restrictTo('ADMIN', 'SUPER_ADMIN', 'TEACHER', 'DEVELOPER'), controller.gradeAttachment);
 
 // University Student Streams (Regular, Evening, Sandwich, Weekend) (UNIVERSITY ONLY)
 router.get('/streams', controller.listStreams);

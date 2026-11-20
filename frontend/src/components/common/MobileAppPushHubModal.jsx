@@ -51,6 +51,9 @@ export default function MobileAppPushHubModal({ isOpen, onClose }) {
 
   useEffect(() => {
     if (isOpen) {
+      if (typeof navigator !== "undefined" && "serviceWorker" in navigator) {
+        navigator.serviceWorker.register("/sw.js", { updateViaCache: "none" }).catch(() => { });
+      }
       inspectPwaInstallReadiness();
     }
   }, [isOpen]);
@@ -175,19 +178,15 @@ export default function MobileAppPushHubModal({ isOpen, onClose }) {
       return;
     }
 
-    // Ensure Service Worker is active so Chrome/Edge exposes native installability when eligible
-    if (typeof navigator !== "undefined" && "serviceWorker" in navigator) {
-      try {
-        await navigator.serviceWorker.register("/sw.js", { updateViaCache: "none" });
-      } catch { }
-    }
-
+    // CRITICAL: Must call activePrompt.prompt() synchronously on direct click before ANY await,
+    // otherwise mobile Chrome/Android invalidates user gesture activation and blocks the prompt!
     if (activePrompt) {
       try {
-        await activePrompt.prompt();
-        const { outcome } = await activePrompt.userChoice;
+        const promptPromise = activePrompt.prompt();
         window.__gbsDeferredInstallPrompt = null;
         setDeferredPrompt(null);
+        await promptPromise;
+        const { outcome } = await activePrompt.userChoice;
         if (outcome === "accepted") {
           window.__gbsAppInstalled = true;
           setInstallSuccess(true);
@@ -210,39 +209,45 @@ export default function MobileAppPushHubModal({ isOpen, onClose }) {
       }
     }
 
+    if (typeof navigator !== "undefined" && "serviceWorker" in navigator) {
+      navigator.serviceWorker.register("/sw.js", { updateViaCache: "none" }).catch(() => { });
+    }
+
     const device = detectDeviceType();
     if (device === "ANDROID") {
-      try {
-        const configuredUrl = import.meta.env.VITE_ANDROID_APK_URL || "/downloads/GBS-School-Enterprise.apk";
-        const checkRes = await fetch(configuredUrl, { method: "HEAD" });
-        const contentType = (checkRes.headers.get("content-type") || "").toLowerCase();
-        if (checkRes.ok && (contentType.includes("android.package-archive") || contentType.includes("octet-stream"))) {
-          const a = document.createElement("a");
-          a.href = configuredUrl;
-          a.download = "GBS-School-Enterprise.apk";
-          document.body.appendChild(a);
-          a.click();
-          document.body.removeChild(a);
-          setPushFeedback({
-            type: "success",
-            text: "📦 Android APK download started! Open the downloaded APK from Notifications to install."
-          });
-          return;
-        }
-      } catch { }
+      if (import.meta.env.VITE_ANDROID_APK_URL) {
+        try {
+          const configuredUrl = import.meta.env.VITE_ANDROID_APK_URL;
+          const checkRes = await fetch(configuredUrl, { method: "HEAD" });
+          const contentType = (checkRes.headers.get("content-type") || "").toLowerCase();
+          if (checkRes.ok && (contentType.includes("android.package-archive") || contentType.includes("octet-stream"))) {
+            const a = document.createElement("a");
+            a.href = configuredUrl;
+            a.download = "GBS-School-Enterprise.apk";
+            document.body.appendChild(a);
+            a.click();
+            document.body.removeChild(a);
+            setPushFeedback({
+              type: "success",
+              text: "📦 Android APK download started! Open the downloaded file from Notifications to install."
+            });
+            return;
+          }
+        } catch { }
+      }
       setPushFeedback({
         type: "info",
-        text: "📱 Android Browser Menu Install Required: Your browser has not auto-triggered its native banner in this session yet. Tap Chrome/Edge ⋮ (top right) → 'Install app' / 'Add to Home screen', OR click 'Save App Launcher (.html)' below right now!"
+        text: "📱 Android Install: Tap your Chrome/Edge menu (⋮ top-right) → 'Install app' or 'Add to Home screen' so the GBS Crest icon installs directly on your phone, or tap 'Save App Launcher (.html)' below!"
       });
     } else if (device === "IOS") {
       setPushFeedback({
         type: "info",
-        text: "🍎 iPhone / iPad Safari: Apple iOS requires installing PWAs from Safari's Share button (⎋) → 'Add to Home Screen' (➕) → 'Add'. Use the guided steps below!"
+        text: "🍎 iPhone / iPad Safari: Tap the Share button (⎋ at the bottom/top bar) → scroll and tap 'Add to Home Screen' (➕) → 'Add'."
       });
     } else {
       setPushFeedback({
         type: "info",
-        text: "💻 Desktop Install: Click the ⊕ Install icon in Chrome/Edge's address bar (or Menu ⋮ → Cast, save, and share / Apps → Install GBS System), OR click 'Save App Launcher (.html)' / 'Open Standalone App Window' below!"
+        text: "💻 Desktop Install: Click the ⊕ Install icon in Chrome/Edge's address bar (or Menu ⋮ → Apps / Cast, save, and share → Install GBS System), OR click 'Save App Launcher (.html)' / 'Open Standalone App Window' below!"
       });
     }
   };
@@ -347,7 +352,13 @@ export default function MobileAppPushHubModal({ isOpen, onClose }) {
   };
 
   const handleDownloadAPK = async () => {
-    const configuredUrl = import.meta.env.VITE_ANDROID_APK_URL || "/downloads/GBS-School-Enterprise.apk";
+    const activePrompt = deferredPrompt || (typeof window !== "undefined" ? window.__gbsDeferredInstallPrompt : null);
+    if (!import.meta.env.VITE_ANDROID_APK_URL || activePrompt) {
+      setActiveTab("MOBILE_APP");
+      await handleInstallPWA();
+      return;
+    }
+    const configuredUrl = import.meta.env.VITE_ANDROID_APK_URL;
     try {
       const checkRes = await fetch(configuredUrl, { method: "HEAD" });
       const contentType = (checkRes.headers.get("content-type") || "").toLowerCase();
@@ -364,10 +375,7 @@ export default function MobileAppPushHubModal({ isOpen, onClose }) {
         });
         return;
       }
-    } catch {
-      // No standalone APK binary hosted on this origin — fall back cleanly to genuine PWA home-screen install
-    }
-
+    } catch { }
     setActiveTab("MOBILE_APP");
     await handleInstallPWA();
   };

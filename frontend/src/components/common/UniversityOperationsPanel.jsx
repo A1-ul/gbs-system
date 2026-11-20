@@ -92,6 +92,7 @@ export default function UniversityOperationsPanel({
   const [statusMsg, setStatusMsg] = useState(null);
 
   const [internships, setInternships] = useState([]);
+  const [attachments, setAttachments] = useState([]);
   const [streams, setStreams] = useState([]);
   const [governanceRoles, setGovernanceRoles] = useState([]);
   const [exams, setExams] = useState([]);
@@ -114,8 +115,35 @@ export default function UniversityOperationsPanel({
     objectives: ""
   });
 
+  const [attachForm, setAttachForm] = useState({
+    studentName: currentUser ? `${currentUser.firstName || ""} ${currentUser.lastName || ""}`.trim() : "",
+    studentEmail: currentUser?.email || "",
+    programme: "B.Sc. Nursing / Education / Engineering",
+    courseCode: "PRAC 302",
+    level: "Level 300",
+    stream: "Regular Students",
+    hostInstitution: "",
+    hostAddress: "",
+    attachmentFocus: "Clinical / Teaching / Field Practicum",
+    supervisorName: "",
+    academicSupervisor: "",
+    supervisorPhone: "",
+    logbookHours: 240,
+    startDate: "",
+    endDate: "",
+    objectives: ""
+  });
+
   const [gradeTargetId, setGradeTargetId] = useState("");
   const [internGradeForm, setInternGradeForm] = useState({
+    supervisorScore: 85,
+    reportScore: 82,
+    courseGradeScore: 80,
+    lecturerRemarks: ""
+  });
+
+  const [gradeAttachTargetId, setGradeAttachTargetId] = useState("");
+  const [attachGradeForm, setAttachGradeForm] = useState({
     supervisorScore: 85,
     reportScore: 82,
     courseGradeScore: 80,
@@ -200,8 +228,9 @@ export default function UniversityOperationsPanel({
     if (!isUniversity) return;
     setLoading(true);
     try {
-      const [intRes, strRes, govRes, exmRes, resRes] = await Promise.all([
+      const [intRes, attRes, strRes, govRes, exmRes, resRes] = await Promise.all([
         apiClient.get("/university/internships").catch(() => null),
+        apiClient.get("/university/attachments").catch(() => null),
         apiClient.get("/university/streams").catch(() => null),
         apiClient.get("/university/governance").catch(() => null),
         apiClient.get("/university/exams").catch(() => null),
@@ -209,12 +238,14 @@ export default function UniversityOperationsPanel({
       ]);
 
       const localInterns = getTenantScopedRecord("uni_internships", []);
+      const localAttach = getTenantScopedRecord("uni_attachments", []);
       const localStreams = getTenantScopedRecord("uni_streams", DEFAULT_STREAMS);
       const localGov = getTenantScopedRecord("uni_governance", DEFAULT_GOVERNANCE);
       const localExams = getTenantScopedRecord("uni_exams", []);
       const localResults = getTenantScopedRecord("uni_results_bundle", { results: [], cgpa: 0, totalCredits: 0, graduations: [] });
 
       setInternships(intRes?.data?.data?.internships ?? localInterns);
+      setAttachments(attRes?.data?.data?.attachments ?? localAttach);
       setStreams(strRes?.data?.data?.streams ?? localStreams);
       setGovernanceRoles(govRes?.data?.data?.governanceRoles ?? localGov);
       setExams(exmRes?.data?.data?.exams ?? localExams);
@@ -235,7 +266,7 @@ export default function UniversityOperationsPanel({
           {profile.icon} Institution Separation Active: {profile.name}
         </h3>
         <p style={{ color: "#e2e8f0", marginBottom: "8px" }}>
-          University Internships &amp; Attachments, SRC Governance Manifestos, Student Streams (Regular / Evening / Sandwich / Weekend), and University Exam-to-Alumni Graduation are <strong>strictly reserved for University institutions</strong>.
+          University Industrial Internships, Academic &amp; Field Attachments, SRC Governance Manifestos, Student Streams (Regular / Evening / Sandwich / Weekend), and University Exam-to-Alumni Graduation are <strong>strictly reserved for University institutions</strong>.
         </p>
         <p style={{ color: "#94a3b8", fontSize: "0.86rem", margin: 0 }}>
           Active Role Structure: <strong>{profile.leadershipRoleTitle}</strong> • <strong>{profile.facultyRoleTitle}</strong> • <strong>{profile.studentRoleTitle}</strong> ({profile.academicTermLabel}).
@@ -245,58 +276,103 @@ export default function UniversityOperationsPanel({
     );
   }
 
+  const PLACEMENT_KIND_META = {
+    internship: {
+      endpoint: "/university/internships",
+      storageKey: "uni_internships",
+      singularKey: "internship",
+      label: "Industrial Internship",
+      idPrefix: "INT"
+    },
+    attachment: {
+      endpoint: "/university/attachments",
+      storageKey: "uni_attachments",
+      singularKey: "attachment",
+      label: "Academic / Field Attachment",
+      idPrefix: "ATT"
+    }
+  };
+
+  const submitPlacementRecord = async (kind, payload, list, setList, resetForm) => {
+    const meta = PLACEMENT_KIND_META[kind];
+    const demoCheck = checkDemoEntryLimit("university", "University Records", internships.length + attachments.length);
+    if (!demoCheck.allowed) return notify(demoCheck.message, true);
+    try {
+      const res = await apiClient.post(meta.endpoint, payload);
+      const created = res?.data?.data?.[meta.singularKey];
+      trackDemoEntryCreated("university");
+      const updated = [created, ...list];
+      setList(updated);
+      setTenantScopedRecord(meta.storageKey, updated);
+      resetForm();
+      notify(res?.data?.message || `✅ University ${meta.label} form submitted & recorded cleanly.`);
+    } catch (err) {
+      if (isDemo && !err?.response) {
+        trackDemoEntryCreated("university");
+        const localRec = { id: `${meta.idPrefix}-${Date.now()}`, ...payload, placementCategory: kind.toUpperCase(), status: "SUBMITTED", createdAt: new Date().toISOString() };
+        const updated = [localRec, ...list];
+        setList(updated);
+        setTenantScopedRecord(meta.storageKey, updated);
+        resetForm();
+        return notify(`✅ [Offline Demo] University ${meta.label} form queued cleanly.`);
+      }
+      notify(err?.response?.data?.message || err.message || `Failed to submit ${meta.label} form.`, true);
+    }
+  };
+
+  const gradePlacementRecord = async (kind, targetId, clearTarget, gradePayload, list, setList) => {
+    const meta = PLACEMENT_KIND_META[kind];
+    if (!targetId) return notify(`Select an ${meta.label.toLowerCase()} record to grade.`, true);
+    try {
+      const res = await apiClient.patch(`${meta.endpoint}/${targetId}/grade`, gradePayload);
+      const graded = res?.data?.data?.[meta.singularKey];
+      const updated = list.map((item) => (String(item.id) === String(targetId) ? graded : item));
+      setList(updated);
+      setTenantScopedRecord(meta.storageKey, updated);
+      clearTarget();
+      notify(res?.data?.message || `✅ ${meta.label} graded (${graded.letterGrade}, Score ${graded.finalScore}%) cleanly.`);
+    } catch (err) {
+      if (isDemo && !err?.response) {
+        const avg = Math.round(((Number(gradePayload.supervisorScore) * 0.4) + (Number(gradePayload.reportScore) * 0.4) + (Number(gradePayload.courseGradeScore) * 0.2)) * 10) / 10;
+        const letter = avg >= 80 ? "A" : avg >= 70 ? "B" : avg >= 60 ? "C" : "D";
+        const updated = list.map((item) => String(item.id) === String(targetId) ? { ...item, ...gradePayload, finalScore: avg, letterGrade: letter, status: "GRADED" } : item);
+        setList(updated);
+        setTenantScopedRecord(meta.storageKey, updated);
+        clearTarget();
+        return notify(`✅ [Offline Demo] ${meta.label} graded (${letter}, ${avg}%).`);
+      }
+      notify(err?.response?.data?.message || err.message || `Failed to grade ${meta.label}.`, true);
+    }
+  };
+
   const handleSubmitInternship = async (e) => {
     e.preventDefault();
     if (!internForm.companyName || !internForm.supervisorName || !internForm.startDate || !internForm.endDate) {
       return notify("Please fill Company Name, Supervisor Name, Start Date, and End Date.", true);
     }
-    const demoCheck = checkDemoEntryLimit("university", "University Records", internships.length);
-    if (!demoCheck.allowed) return notify(demoCheck.message, true);
-    try {
-      const res = await apiClient.post("/university/internships", internForm);
-      const created = res?.data?.data?.internship;
-      trackDemoEntryCreated("university");
-      const updated = [created, ...internships];
-      setInternships(updated);
-      setTenantScopedRecord("uni_internships", updated);
-      setInternForm((prev) => ({ ...prev, companyName: "", companyAddress: "", supervisorName: "", supervisorPhone: "", objectives: "" }));
-      notify(res?.data?.message || "✅ University Internship / Attachment form submitted & recorded cleanly.");
-    } catch (err) {
-      if (isDemo && !err?.response) {
-        trackDemoEntryCreated("university");
-        const localRec = { id: `INT-${Date.now()}`, ...internForm, status: "SUBMITTED", createdAt: new Date().toISOString() };
-        const updated = [localRec, ...internships];
-        setInternships(updated);
-        setTenantScopedRecord("uni_internships", updated);
-        return notify("✅ [Offline Demo] University Internship form queued cleanly.");
-      }
-      notify(err?.response?.data?.message || err.message || "Failed to submit internship form.", true);
-    }
+    await submitPlacementRecord("internship", internForm, internships, setInternships, () =>
+      setInternForm((prev) => ({ ...prev, companyName: "", companyAddress: "", supervisorName: "", supervisorPhone: "", objectives: "" }))
+    );
   };
 
   const handleGradeInternship = async (e) => {
     e.preventDefault();
-    if (!gradeTargetId) return notify("Select an internship record to grade.", true);
-    try {
-      const res = await apiClient.patch(`/university/internships/${gradeTargetId}/grade`, internGradeForm);
-      const graded = res?.data?.data?.internship;
-      const updated = internships.map((i) => (String(i.id) === String(gradeTargetId) ? graded : i));
-      setInternships(updated);
-      setTenantScopedRecord("uni_internships", updated);
-      setGradeTargetId("");
-      notify(res?.data?.message || `✅ Internship & attachment graded (${graded.letterGrade}, Score ${graded.finalScore}%) cleanly.`);
-    } catch (err) {
-      if (isDemo && !err?.response) {
-        const avg = Math.round(((Number(internGradeForm.supervisorScore) * 0.4) + (Number(internGradeForm.reportScore) * 0.4) + (Number(internGradeForm.courseGradeScore) * 0.2)) * 10) / 10;
-        const letter = avg >= 80 ? "A" : avg >= 70 ? "B" : avg >= 60 ? "C" : "D";
-        const updated = internships.map((i) => String(i.id) === String(gradeTargetId) ? { ...i, ...internGradeForm, finalScore: avg, letterGrade: letter, status: "GRADED" } : i);
-        setInternships(updated);
-        setTenantScopedRecord("uni_internships", updated);
-        setGradeTargetId("");
-        return notify(`✅ [Offline Demo] Internship graded (${letter}, ${avg}%).`);
-      }
-      notify(err?.response?.data?.message || err.message || "Failed to grade internship.", true);
+    await gradePlacementRecord("internship", gradeTargetId, () => setGradeTargetId(""), internGradeForm, internships, setInternships);
+  };
+
+  const handleSubmitAttachment = async (e) => {
+    e.preventDefault();
+    if (!attachForm.hostInstitution || !attachForm.supervisorName || !attachForm.startDate || !attachForm.endDate) {
+      return notify("Please fill Host Institution/Site, Field Supervisor, Start Date, and End Date.", true);
     }
+    await submitPlacementRecord("attachment", attachForm, attachments, setAttachments, () =>
+      setAttachForm((prev) => ({ ...prev, hostInstitution: "", hostAddress: "", supervisorName: "", academicSupervisor: "", supervisorPhone: "", objectives: "" }))
+    );
+  };
+
+  const handleGradeAttachment = async (e) => {
+    e.preventDefault();
+    await gradePlacementRecord("attachment", gradeAttachTargetId, () => setGradeAttachTargetId(""), attachGradeForm, attachments, setAttachments);
   };
 
   const handleAddStream = async (e) => {
@@ -403,7 +479,8 @@ export default function UniversityOperationsPanel({
   };
 
   const SUB_TABS = [
-    { id: "INTERNSHIPS", label: "💼 Internships & Attachment Grading" },
+    { id: "INTERNSHIPS", label: `💼 Industrial Internships (${internships.length})` },
+    { id: "ATTACHMENTS", label: `🛠️ Academic & Field Attachments (${attachments.length})` },
     { id: "EXAMS_GRADUATION", label: "🎓 Exams, Results & Alumni Graduation" },
     { id: "STREAMS", label: "🕒 Student Streams (Regular / Evening / Sandwich / Weekend)" },
     { id: "GOVERNANCE", label: "🏛️ Student Positions, Duties & School Plans (SRC)" }
@@ -417,7 +494,7 @@ export default function UniversityOperationsPanel({
             🎓 University Operations Suite • Strictly University Institutions Only
           </span>
           <h2 style={{ margin: "4px 0 0 0", color: "#ffffff", fontSize: "1.35rem" }}>
-            University Academic, Internship, Stream &amp; SRC Hub
+            University Academic, Internship, Attachment, Stream &amp; SRC Hub
           </h2>
         </div>
         <button
@@ -468,30 +545,30 @@ export default function UniversityOperationsPanel({
         ))}
       </div>
 
-      {/* TAB 1: UNIVERSITY INTERNSHIPS & GRADING */}
+      {/* TAB 1: INDUSTRIAL INTERNSHIPS (STRICTLY SEPARATED FROM ATTACHMENTS) */}
       {activeSubTab === "INTERNSHIPS" && (
         <div style={{ display: "grid", gap: "18px" }}>
           <form onSubmit={handleSubmitInternship} style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(210px, 1fr))", gap: "12px", padding: "16px", background: "rgba(6, 15, 30, 0.55)", borderRadius: "12px", border: "1px solid rgba(212, 175, 55, 0.3)" }}>
-            <h4 style={{ gridColumn: "1 / -1", margin: 0, color: "#f5d061" }}>📝 Submit University Internship / Industrial Attachment Form</h4>
+            <h4 style={{ gridColumn: "1 / -1", margin: 0, color: "#f5d061" }}>💼 Submit Industrial Internship Placement Form</h4>
             <input placeholder="Student Full Name" value={internForm.studentName} onChange={(e) => setInternForm({ ...internForm, studentName: e.target.value })} style={inputStyle} />
             <input placeholder="Student Email" value={internForm.studentEmail} onChange={(e) => setInternForm({ ...internForm, studentEmail: e.target.value })} style={inputStyle} />
             <input placeholder="Degree Programme (e.g. B.Sc. Computer Science)" value={internForm.programme} onChange={(e) => setInternForm({ ...internForm, programme: e.target.value })} style={inputStyle} />
             <select value={internForm.stream} onChange={(e) => setInternForm({ ...internForm, stream: e.target.value })} style={inputStyle}>
               {streams.map((s) => <option key={s.id} value={s.streamName}>{s.streamName}</option>)}
             </select>
-            <input required placeholder="Host Organization / Company Name *" value={internForm.companyName} onChange={(e) => setInternForm({ ...internForm, companyName: e.target.value })} style={inputStyle} />
+            <input required placeholder="Host Company / Employer Name *" value={internForm.companyName} onChange={(e) => setInternForm({ ...internForm, companyName: e.target.value })} style={inputStyle} />
             <input placeholder="Company Address / City" value={internForm.companyAddress} onChange={(e) => setInternForm({ ...internForm, companyAddress: e.target.value })} style={inputStyle} />
             <input required placeholder="Industry Supervisor Name *" value={internForm.supervisorName} onChange={(e) => setInternForm({ ...internForm, supervisorName: e.target.value })} style={inputStyle} />
             <input placeholder="Supervisor Phone" value={internForm.supervisorPhone} onChange={(e) => setInternForm({ ...internForm, supervisorPhone: e.target.value })} style={inputStyle} />
             <input required type="date" value={internForm.startDate} onChange={(e) => setInternForm({ ...internForm, startDate: e.target.value })} style={inputStyle} />
             <input required type="date" value={internForm.endDate} onChange={(e) => setInternForm({ ...internForm, endDate: e.target.value })} style={inputStyle} />
-            <textarea placeholder="Attachment Learning Objectives / Duties..." value={internForm.objectives} onChange={(e) => setInternForm({ ...internForm, objectives: e.target.value })} style={{ ...inputStyle, gridColumn: "1 / -1", minHeight: "64px" }} />
-            <button type="submit" style={{ ...primaryBtnStyle, gridColumn: "1 / -1" }}>📤 Submit Internship Placement Form</button>
+            <textarea placeholder="Industrial Internship Learning Objectives & Duties..." value={internForm.objectives} onChange={(e) => setInternForm({ ...internForm, objectives: e.target.value })} style={{ ...inputStyle, gridColumn: "1 / -1", minHeight: "64px" }} />
+            <button type="submit" style={{ ...primaryBtnStyle, gridColumn: "1 / -1" }}>📤 Submit Industrial Internship Form</button>
           </form>
 
           {mode !== "STUDENT" && (
             <form onSubmit={handleGradeInternship} style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(190px, 1fr))", gap: "12px", padding: "16px", background: "rgba(6, 15, 30, 0.55)", borderRadius: "12px", border: "1px solid rgba(16, 185, 129, 0.35)" }}>
-              <h4 style={{ gridColumn: "1 / -1", margin: 0, color: "#6ee7b7" }}>📊 Grade Coursework + Post-Internship Performance</h4>
+              <h4 style={{ gridColumn: "1 / -1", margin: 0, color: "#6ee7b7" }}>📊 Grade Coursework + Industrial Internship Performance</h4>
               <select value={gradeTargetId} onChange={(e) => setGradeTargetId(e.target.value)} style={inputStyle}>
                 <option value="">-- Select Submitted Internship --</option>
                 {internships.map((i) => <option key={i.id} value={i.id}>{i.studentName} @ {i.companyName} ({i.status})</option>)}
@@ -500,7 +577,7 @@ export default function UniversityOperationsPanel({
               <input type="number" min="0" max="100" placeholder="Internship Report Score (40%)" value={internGradeForm.reportScore} onChange={(e) => setInternGradeForm({ ...internGradeForm, reportScore: e.target.value })} style={inputStyle} />
               <input type="number" min="0" max="100" placeholder="Coursework Grade (20%)" value={internGradeForm.courseGradeScore} onChange={(e) => setInternGradeForm({ ...internGradeForm, courseGradeScore: e.target.value })} style={inputStyle} />
               <input placeholder="Lecturer Evaluation Remarks" value={internGradeForm.lecturerRemarks} onChange={(e) => setInternGradeForm({ ...internGradeForm, lecturerRemarks: e.target.value })} style={inputStyle} />
-              <button type="submit" style={emeraldBtnStyle}>✅ Save Course &amp; Internship Grade</button>
+              <button type="submit" style={emeraldBtnStyle}>✅ Save Internship Grade</button>
             </form>
           )}
 
@@ -509,8 +586,8 @@ export default function UniversityOperationsPanel({
               <thead>
                 <tr>
                   <th style={thStyle}>Student</th>
-                  <th style={thStyle}>Host Organization</th>
-                  <th style={thStyle}>Supervisor</th>
+                  <th style={thStyle}>Host Company</th>
+                  <th style={thStyle}>Industry Supervisor</th>
                   <th style={thStyle}>Period</th>
                   <th style={thStyle}>Course / Final Score</th>
                   <th style={thStyle}>Grade &amp; Status</th>
@@ -518,7 +595,7 @@ export default function UniversityOperationsPanel({
               </thead>
               <tbody>
                 {internships.length === 0 ? (
-                  <tr><td colSpan={6} style={{ padding: "16px", textAlign: "center", color: "#94a3b8" }}>No internship placements submitted yet.</td></tr>
+                  <tr><td colSpan={6} style={{ padding: "16px", textAlign: "center", color: "#94a3b8" }}>No industrial internship placements submitted yet.</td></tr>
                 ) : internships.map((i) => (
                   <tr key={i.id} style={{ borderBottom: "1px solid rgba(255,255,255,0.08)" }}>
                     <td style={tdStyle}><strong>{i.studentName}</strong><br /><span style={{ fontSize: "0.75rem", color: "#94a3b8" }}>{i.programme} • {i.stream}</span></td>
@@ -527,6 +604,75 @@ export default function UniversityOperationsPanel({
                     <td style={tdStyle}>{i.startDate} → {i.endDate}</td>
                     <td style={tdStyle}>{i.finalScore != null ? `${i.finalScore}% (Course ${i.academicScore ?? "-"}%)` : "Pending Assessment"}</td>
                     <td style={tdStyle}><span style={{ color: i.letterGrade ? "#6ee7b7" : "#f5d061", fontWeight: 800 }}>{i.letterGrade ? `${i.letterGrade} (${i.status})` : i.status}</span></td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      )}
+
+      {/* TAB 1B: ACADEMIC & FIELD ATTACHMENTS (SEPARATE COURSE OFFERING WORKFLOW) */}
+      {activeSubTab === "ATTACHMENTS" && (
+        <div style={{ display: "grid", gap: "18px" }}>
+          <form onSubmit={handleSubmitAttachment} style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(210px, 1fr))", gap: "12px", padding: "16px", background: "rgba(6, 15, 30, 0.55)", borderRadius: "12px", border: "1px solid rgba(56, 189, 248, 0.4)" }}>
+            <h4 style={{ gridColumn: "1 / -1", margin: 0, color: "#7dd3fc" }}>🛠️ Submit Academic / Field Attachment Form (Course-Specific Practicum)</h4>
+            <input placeholder="Student Full Name" value={attachForm.studentName} onChange={(e) => setAttachForm({ ...attachForm, studentName: e.target.value })} style={inputStyle} />
+            <input placeholder="Student Email" value={attachForm.studentEmail} onChange={(e) => setAttachForm({ ...attachForm, studentEmail: e.target.value })} style={inputStyle} />
+            <input placeholder="Course Code (e.g. PRAC 302)" value={attachForm.courseCode} onChange={(e) => setAttachForm({ ...attachForm, courseCode: e.target.value })} style={inputStyle} />
+            <select value={attachForm.stream} onChange={(e) => setAttachForm({ ...attachForm, stream: e.target.value })} style={inputStyle}>
+              {streams.map((s) => <option key={s.id} value={s.streamName}>{s.streamName}</option>)}
+            </select>
+            <input required placeholder="Host Institution / Field Site *" value={attachForm.hostInstitution} onChange={(e) => setAttachForm({ ...attachForm, hostInstitution: e.target.value })} style={inputStyle} />
+            <input placeholder="Field Site Address / Location" value={attachForm.hostAddress} onChange={(e) => setAttachForm({ ...attachForm, hostAddress: e.target.value })} style={inputStyle} />
+            <input required placeholder="Field Supervisor Name *" value={attachForm.supervisorName} onChange={(e) => setAttachForm({ ...attachForm, supervisorName: e.target.value })} style={inputStyle} />
+            <input placeholder="University Academic Supervisor" value={attachForm.academicSupervisor} onChange={(e) => setAttachForm({ ...attachForm, academicSupervisor: e.target.value })} style={inputStyle} />
+            <input type="number" min="1" placeholder="Required Logbook Hours" value={attachForm.logbookHours} onChange={(e) => setAttachForm({ ...attachForm, logbookHours: e.target.value })} style={inputStyle} />
+            <input placeholder="Supervisor Phone" value={attachForm.supervisorPhone} onChange={(e) => setAttachForm({ ...attachForm, supervisorPhone: e.target.value })} style={inputStyle} />
+            <input required type="date" value={attachForm.startDate} onChange={(e) => setAttachForm({ ...attachForm, startDate: e.target.value })} style={inputStyle} />
+            <input required type="date" value={attachForm.endDate} onChange={(e) => setAttachForm({ ...attachForm, endDate: e.target.value })} style={inputStyle} />
+            <textarea placeholder="Course Practicum & Attachment Field Activities..." value={attachForm.objectives} onChange={(e) => setAttachForm({ ...attachForm, objectives: e.target.value })} style={{ ...inputStyle, gridColumn: "1 / -1", minHeight: "64px" }} />
+            <button type="submit" style={{ ...primaryBtnStyle, gridColumn: "1 / -1" }}>📤 Submit Academic Attachment Form</button>
+          </form>
+
+          {mode !== "STUDENT" && (
+            <form onSubmit={handleGradeAttachment} style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(190px, 1fr))", gap: "12px", padding: "16px", background: "rgba(6, 15, 30, 0.55)", borderRadius: "12px", border: "1px solid rgba(56, 189, 248, 0.4)" }}>
+              <h4 style={{ gridColumn: "1 / -1", margin: 0, color: "#7dd3fc" }}>📊 Grade Academic &amp; Field Attachment Logbook Performance</h4>
+              <select value={gradeAttachTargetId} onChange={(e) => setGradeAttachTargetId(e.target.value)} style={inputStyle}>
+                <option value="">-- Select Submitted Attachment --</option>
+                {attachments.map((a) => <option key={a.id} value={a.id}>{a.studentName} ({a.courseCode || "PRAC"}) @ {a.hostInstitution} ({a.status})</option>)}
+              </select>
+              <input type="number" min="0" max="100" placeholder="Field Supervisor Score (40%)" value={attachGradeForm.supervisorScore} onChange={(e) => setAttachGradeForm({ ...attachGradeForm, supervisorScore: e.target.value })} style={inputStyle} />
+              <input type="number" min="0" max="100" placeholder="Attachment Logbook Score (40%)" value={attachGradeForm.reportScore} onChange={(e) => setAttachGradeForm({ ...attachGradeForm, reportScore: e.target.value })} style={inputStyle} />
+              <input type="number" min="0" max="100" placeholder="Academic Seminar Grade (20%)" value={attachGradeForm.courseGradeScore} onChange={(e) => setAttachGradeForm({ ...attachGradeForm, courseGradeScore: e.target.value })} style={inputStyle} />
+              <input placeholder="Lecturer Assessment Remarks" value={attachGradeForm.lecturerRemarks} onChange={(e) => setAttachGradeForm({ ...attachGradeForm, lecturerRemarks: e.target.value })} style={inputStyle} />
+              <button type="submit" style={emeraldBtnStyle}>✅ Save Attachment Grade</button>
+            </form>
+          )}
+
+          <div style={{ overflowX: "auto" }}>
+            <table style={{ width: "100%", borderCollapse: "collapse", fontSize: "0.86rem" }}>
+              <thead>
+                <tr>
+                  <th style={thStyle}>Student &amp; Course</th>
+                  <th style={thStyle}>Field Site / Host</th>
+                  <th style={thStyle}>Supervisors &amp; Hours</th>
+                  <th style={thStyle}>Period</th>
+                  <th style={thStyle}>Final Score</th>
+                  <th style={thStyle}>Grade &amp; Status</th>
+                </tr>
+              </thead>
+              <tbody>
+                {attachments.length === 0 ? (
+                  <tr><td colSpan={6} style={{ padding: "16px", textAlign: "center", color: "#94a3b8" }}>No academic or field attachments submitted yet.</td></tr>
+                ) : attachments.map((a) => (
+                  <tr key={a.id} style={{ borderBottom: "1px solid rgba(255,255,255,0.08)" }}>
+                    <td style={tdStyle}><strong>{a.studentName}</strong><br /><span style={{ fontSize: "0.75rem", color: "#7dd3fc" }}>{a.courseCode || "PRAC"} • {a.stream}</span></td>
+                    <td style={tdStyle}>{a.hostInstitution}</td>
+                    <td style={tdStyle}>{a.supervisorName}{a.academicSupervisor ? ` / ${a.academicSupervisor}` : ""}<br /><span style={{ fontSize: "0.74rem", color: "#94a3b8" }}>{a.logbookHours || 240} hrs</span></td>
+                    <td style={tdStyle}>{a.startDate} → {a.endDate}</td>
+                    <td style={tdStyle}>{a.finalScore != null ? `${a.finalScore}% (Sem ${a.academicScore ?? "-"}%)` : "Pending Assessment"}</td>
+                    <td style={tdStyle}><span style={{ color: a.letterGrade ? "#6ee7b7" : "#7dd3fc", fontWeight: 800 }}>{a.letterGrade ? `${a.letterGrade} (${a.status})` : a.status}</span></td>
                   </tr>
                 ))}
               </tbody>

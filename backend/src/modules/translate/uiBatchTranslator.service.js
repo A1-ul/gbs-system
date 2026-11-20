@@ -68,6 +68,10 @@ const CORE_UI_LEXICON = {
     'Submit': 'Soumettre',
     'Search': 'Rechercher',
     'Send Message': 'Envoyer Message',
+    'Industrial Internships': 'Stages Industriels',
+    'Academic & Field Attachments': 'Stages Académiques et de Terrain',
+    'My Personal Health & Medical Dossier': 'Mon Dossier Médical Personnel',
+    'All Staff & Student Health Profiles': 'Profils Médicaux du Personnel et des Étudiants',
     'Online (Cloud Ready)': 'En ligne (Cloud Prêt)',
     'DEMO SANDBOX MODE': 'MODE DÉMO ÉDUCATIF',
     'LIVE PRODUCTION WORKSPACE': 'ESPACE PRODUCTION RÉEL',
@@ -367,18 +371,18 @@ async function translateBatchTexts(texts = [], targetIso = 'fr', translateSingle
   }
 
   let translatedCount = 0;
-  // Pack small chunks with an explicit separator token for single-round-trip translation
-  const SEP = '\n⟦GBS⟧\n';
+  // Pack small chunks with explicit separator tokens so neural translators preserve boundaries cleanly
+  const SEP = '\n|||\n';
   const chunks = [];
   let bucket = [];
   let bucketChars = 0;
 
   for (const txt of uncached) {
-    if (txt.includes('⟦GBS⟧')) {
+    if (txt.includes('|||')) {
       chunks.push([txt]);
       continue;
     }
-    if (bucket.length >= 12 || bucketChars + txt.length > 900) {
+    if (bucket.length >= 10 || bucketChars + txt.length > 750) {
       if (bucket.length) chunks.push(bucket);
       bucket = [];
       bucketChars = 0;
@@ -393,8 +397,8 @@ async function translateBatchTexts(texts = [], targetIso = 'fr', translateSingle
       if (chunk.length > 1) {
         try {
           const joined = chunk.join(SEP);
-          const joinedRes = await translateSingleFn(joined, targetIso, 'en');
-          const parts = String(joinedRes?.translatedText || '').split(/\s*⟦\s*GBS\s*⟧\s*/g);
+          const joinedRes = await translateSingleFn(joined, targetIso, 'en', { skipDictionary: true });
+          const parts = String(joinedRes?.translatedText || '').split(/\s*\|\|\|\s*/g);
           if (parts.length === chunk.length && parts.every((p) => p && p.trim().length > 0)) {
             chunk.forEach((orig, idx) => {
               const tr = parts[idx].trim();
@@ -407,13 +411,13 @@ async function translateBatchTexts(texts = [], targetIso = 'fr', translateSingle
         } catch { }
       }
 
-      // Single-item parallel fallback if delimiter count mismatched
-      for (let i = 0; i < chunk.length; i += 4) {
-        const slice = chunk.slice(i, i + 4);
+      // Fast 6-way concurrent single-item fallback if delimiter count mismatched
+      for (let i = 0; i < chunk.length; i += 6) {
+        const slice = chunk.slice(i, i + 6);
         await Promise.all(
           slice.map(async (orig) => {
             try {
-              const single = await translateSingleFn(orig, targetIso, 'en');
+              const single = await translateSingleFn(orig, targetIso, 'en', { skipDictionary: true });
               const tr = String(single?.translatedText || '').trim();
               if (tr) {
                 translations[orig] = tr;

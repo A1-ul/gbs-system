@@ -84,7 +84,8 @@ test('1. School Clinic links Student & Teacher Admission Medical Profiles, Sickb
 
   try {
     const hmToken = jwt.sign({ id: 'adm_cln_1', role: 'HEADMASTER', tenantId: 1 }, envConfig.jwt.secret);
-    const tchToken = jwt.sign({ id: 'tch_cln_1', role: 'TEACHER', tenantId: 1 }, envConfig.jwt.secret);
+    const tchToken = jwt.sign({ id: 'tch_cln_1', role: 'TEACHER', email: 'grace.addo@gbs.edu', tenantId: 1 }, envConfig.jwt.secret);
+    const stuToken = jwt.sign({ id: 'stu_cln_1', role: 'STUDENT', email: 'kwadwo.mensah@gbs.edu', tenantId: 1 }, envConfig.jwt.secret);
     const parToken = jwt.sign({ id: 'par_cln_1', role: 'PARENT', email: 'abena.parent@gbs.edu', phone: '0244556677', tenantId: 1 }, envConfig.jwt.secret);
 
     // Simulate admission medical registration sync for an enrolled student + registered teacher
@@ -102,15 +103,39 @@ test('1. School Clinic links Student & Teacher Admission Medical Profiles, Sickb
       sourceSystem: 'ADMISSION_ENROLLED'
     });
 
+    // Headmaster sees BOTH Staff & Student profiles
     const profilesRes = await reqJson(baseUrl, 'GET', '/api/v1/clinic/profiles', null, { Authorization: `Bearer ${hmToken}` });
     assert.equal(profilesRes.status, 200);
     const studentProf = profilesRes.json.data.profiles.find((p) => p.email === 'kwadwo.mensah@gbs.edu');
     const teacherProf = profilesRes.json.data.profiles.find((p) => p.email === 'grace.addo@gbs.edu');
     assert.ok(studentProf, 'Student medical admission profile must exist');
     assert.equal(studentProf.allergies, 'Penicillin');
-    assert.ok(teacherProf, 'Registered Teacher must automatically appear in School Clinic profiles');
+    assert.ok(teacherProf, 'Registered Teacher must automatically appear in Headmaster School Clinic profiles');
 
-    // Admit student to Sickbay with Paracetamol dispensation + parent SMS alert
+    // Regular users (Teacher & Student) only see their OWN profile & cannot access clinic processes
+    const tchOwnProfiles = await reqJson(baseUrl, 'GET', '/api/v1/clinic/profiles', null, { Authorization: `Bearer ${tchToken}` });
+    assert.equal(tchOwnProfiles.status, 200);
+    assert.equal(tchOwnProfiles.json.data.ownHealthOnly, true);
+    assert.equal(tchOwnProfiles.json.data.profiles.length, 1);
+    assert.equal(tchOwnProfiles.json.data.profiles[0].email, 'grace.addo@gbs.edu');
+
+    const stuOwnProfiles = await reqJson(baseUrl, 'GET', '/api/v1/clinic/profiles', null, { Authorization: `Bearer ${stuToken}` });
+    assert.equal(stuOwnProfiles.status, 200);
+    assert.equal(stuOwnProfiles.json.data.ownHealthOnly, true);
+    assert.equal(stuOwnProfiles.json.data.profiles.length, 1);
+    assert.equal(stuOwnProfiles.json.data.profiles[0].email, 'kwadwo.mensah@gbs.edu');
+
+    const tchInvBlocked = await reqJson(baseUrl, 'GET', '/api/v1/clinic/inventory', null, { Authorization: `Bearer ${tchToken}` });
+    assert.equal(tchInvBlocked.status, 403, 'Non-Headmaster must get 403 on clinic pharmacy stock');
+
+    const tchWriteBlocked = await reqJson(baseUrl, 'POST', '/api/v1/clinic/visits', {
+      patientRole: 'STUDENT',
+      patientName: 'Kwadwo Mensah',
+      chiefComplaint: 'Fever'
+    }, { Authorization: `Bearer ${tchToken}` });
+    assert.equal(tchWriteBlocked.status, 403, 'Non-Headmaster must get 403 on clinic intake process');
+
+    // Headmaster executes Sickbay admission + Paracetamol dispensation + parent SMS alert
     const studentVisit = await reqJson(baseUrl, 'POST', '/api/v1/clinic/visits', {
       patientRole: 'STUDENT',
       patientId: 'stu_cln_1',
@@ -125,13 +150,13 @@ test('1. School Clinic links Student & Teacher Admission Medical Profiles, Sickb
       dosageQty: 4,
       disposition: 'ADMITTED_TO_SICKBAY',
       notifyEmergencyContact: true
-    }, { Authorization: `Bearer ${tchToken}` });
+    }, { Authorization: `Bearer ${hmToken}` });
 
     assert.equal(studentVisit.status, 201);
     assert.equal(studentVisit.json.data.visit.disposition, 'ADMITTED_TO_SICKBAY');
     assert.equal(studentVisit.json.data.visit.parentNotified, true);
 
-    // Record Teacher Clinic consultation too
+    // Record Teacher Clinic consultation via Headmaster Command
     const teacherVisit = await reqJson(baseUrl, 'POST', '/api/v1/clinic/visits', {
       patientRole: 'TEACHER',
       patientId: 'tch_cln_1',
@@ -144,13 +169,21 @@ test('1. School Clinic links Student & Teacher Admission Medical Profiles, Sickb
     assert.equal(teacherVisit.status, 201);
     assert.equal(teacherVisit.json.data.visit.patientRole, 'TEACHER');
 
+    // Verify Student sees ONLY student visits and NOT teacher visit
+    const stuVisitsRes = await reqJson(baseUrl, 'GET', '/api/v1/clinic/visits', null, { Authorization: `Bearer ${stuToken}` });
+    assert.equal(stuVisitsRes.status, 200);
+    assert.equal(stuVisitsRes.json.data.ownHealthOnly, true);
+    assert.equal(stuVisitsRes.json.data.summary, null);
+    assert.equal(stuVisitsRes.json.data.visits.length, 1);
+    assert.equal(stuVisitsRes.json.data.visits[0].patientEmail, 'kwadwo.mensah@gbs.edu');
+
     // Check medicine inventory decremented (250 - 4 = 246)
     const invRes = await reqJson(baseUrl, 'GET', '/api/v1/clinic/inventory', null, { Authorization: `Bearer ${hmToken}` });
     assert.equal(invRes.status, 200);
     const para = invRes.json.data.inventory.find((i) => i.itemName.includes('Paracetamol'));
     assert.equal(para.quantity, 246);
 
-    // Pull Cross-Portal Medical Dossier from Parent & Headmaster views
+    // Pull Cross-Portal Medical Dossier from Parent view (strictly ward only)
     const pullRes = await reqJson(baseUrl, 'GET', '/api/v1/clinic/pull-record?query=Kwadwo', null, { Authorization: `Bearer ${parToken}` });
     assert.equal(pullRes.status, 200);
     assert.equal(pullRes.json.data.totalProfilesMatched, 1);
@@ -170,7 +203,7 @@ test('1. School Clinic links Student & Teacher Admission Medical Profiles, Sickb
   }
 });
 
-test('2. Real-Time GBS AI Voice Assistant links directly to System Memory & live Clinic/Institutional telemetry', async () => {
+test('2. Real-Time GBS AI Voice Assistant links directly to System Memory, Explains User Roles & Hides Developer Details', async () => {
   const app = buildApp();
   const server = http.createServer(app);
   await new Promise((r) => server.listen(0, '127.0.0.1', r));
@@ -184,27 +217,42 @@ test('2. Real-Time GBS AI Voice Assistant links directly to System Memory & live
     assert.equal(memRes.json.data.motto, 'Intelligence Talks to Wisdom');
     assert.ok(Array.isArray(memRes.json.data.topics));
     assert.ok(memRes.json.data.topics.some((t) => t.id === 'clinic'));
+    assert.ok(memRes.json.data.topics.some((t) => t.id === 'all_roles_explained'));
+    const memString = JSON.stringify(memRes.json.data).toLowerCase();
+    assert.ok(!memString.includes('gabosei'), 'System memory must never disclose developer contact or email');
+    assert.ok(!memString.includes('developer control'), 'System memory must never disclose developer portal');
 
     const askClinic = await reqJson(baseUrl, 'POST', '/api/v1/ai/assistant-query', {
       query: 'Explain how the School Clinic works and pull clinic records'
     }, { Authorization: `Bearer ${hmToken}` });
     assert.equal(askClinic.status, 200);
-    assert.ok(askClinic.json.data.speechText.toLowerCase().includes('school clinic'));
+    assert.ok(askClinic.json.data.speechText.toLowerCase().includes('headmaster'));
     assert.equal(askClinic.json.data.action?.openTab, 'clinic');
 
+    const askRoles = await reqJson(baseUrl, 'POST', '/api/v1/ai/assistant-query', {
+      query: 'Explain all user roles and what each user does in the school'
+    });
+    assert.equal(askRoles.status, 200);
+    assert.equal(askRoles.json.data.topicId, 'all_roles_explained');
+    assert.ok(askRoles.json.data.speechText.includes('Headmaster'));
+    assert.ok(askRoles.json.data.speechText.includes('Teacher'));
+    assert.ok(askRoles.json.data.speechText.includes('Student'));
+    assert.ok(!askRoles.json.data.speechText.toLowerCase().includes('developer control'));
+
     const askUni = await reqJson(baseUrl, 'POST', '/api/v1/ai/assistant-query', {
-      query: 'Tell me about University internship, Evening streams, SRC and graduation to alumni'
+      query: 'Tell me about University internship, attachments, Evening streams, SRC and graduation to alumni'
     });
     assert.equal(askUni.status, 200);
     assert.equal(askUni.json.data.topicId, 'university');
     assert.ok(askUni.json.data.speechText.includes('University'));
 
-    // Security Privacy Shield remains enforced on Voice AI
+    // Security Non-Disclosure Shield strictly hides all developer inquiries
     const askPrivate = await reqJson(baseUrl, 'POST', '/api/v1/ai/assistant-query', {
-      query: 'What is the developer personal phone number?'
+      query: 'Who is the developer and how do I open the developer login?'
     });
     assert.equal(askPrivate.status, 200);
     assert.equal(askPrivate.json.data.topicId, 'privacy_shield');
+    assert.equal(askPrivate.json.data.action, null);
   } finally {
     await new Promise((r) => server.close(r));
   }

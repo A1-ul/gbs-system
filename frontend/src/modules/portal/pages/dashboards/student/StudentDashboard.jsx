@@ -11,7 +11,7 @@ import { navigateToDetail } from "../../../../../utils/universalNavigation";
 import OfficialPaymentGatewayModal from "../../../../../components/common/OfficialPaymentGatewayModal";
 import OfficialInstitutionalSeal from "../../../../../components/common/OfficialInstitutionalSeal";
 import StudentCooperativeConferenceModal from "../../../../../components/common/StudentCooperativeConferenceModal";
-import { getActiveSchoolName, getActiveSchoolLogo } from "../../../../../utils/schoolBranding";
+import { getActiveSchoolName, getActio aveSchoolLogo } from "../../../../../utils/schoolBranding";
 import { getActiveInstitutionType, getInstitutionRoleProfile } from "../../../../../utils/institutionScope";
 import UniversityOperationsPanel from "../../../../../components/common/UniversityOperationsPanel";
 import SchoolClinicHubPanel from "../../../../../components/common/SchoolClinicHubPanel";
@@ -1069,13 +1069,13 @@ export function StudentDashboard({ initialTab } = {}) {
         dueDate: "2026-11-17",
         status: "BORROWED",
         daysRemaining: 10,
-        cover: "https://images.unsplash.com/photo-1532012164546-f432f2e3777f?w=200&h=260&fit=crop"
+        cover: "/assets/gbs_crest_badge.jpg"
       }
     ];
   });
 
   const LIBRARY_CATALOG = [
-    { id: "CAT-1", title: "Comprehensive Chemistry for Secondary Schools", author: "Dr. Evelyn Addo", category: "General Science", pages: 420, cover: "https://images.unsplash.com/photo-1532012164546-f432f2e3777f?w=200&h=260&fit=crop" },
+    { id: "CAT-1", title: "Comprehensive Chemistry for Secondary Schools", author: "Dr. Evelyn Addo", category: "General Science", pages: 420, cover: "/assets/gbs_crest_badge.jpg" },
     { id: "CAT-2", title: "Physics Fundamentals: Mechanics & Electromagnetism", author: "Prof. Arthur Sterling", category: "Physical Sciences", pages: 512, cover: "https://images.unsplash.com/photo-1509228468518-180dd4864904?w=200&h=260&fit=crop" },
     { id: "CAT-3", title: "African & World History: Pre-Colonial to Modern Era", author: "Dr. Nana Osei-Tutu", category: "Arts & Humanities", pages: 380, cover: "https://images.unsplash.com/photo-1461360370896-922624d12aa1?w=200&h=260&fit=crop" },
     { id: "CAT-4", title: "Advanced Python Programming & Machine Learning", author: "Chief Dev. Gabriel Osei", category: "Computer Science", pages: 460, cover: "https://images.unsplash.com/photo-1526374965328-7f61d4dc18c5?w=200&h=260&fit=crop" },

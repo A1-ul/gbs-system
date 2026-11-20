@@ -302,27 +302,17 @@ const ROLE_GUIDES = {
     ]
   },
   DEVELOPER: {
-    title: "Platform Developer & Global Sovereignty Console Guide",
-    subtitle: "Multi-Tenant Onboarding, 7-Day Grace Auto-Lock, Live Schools GPS Map, Intrusion Sentinel & DB Sharding",
+    title: "Institutional & Platform Operations Notice",
+    subtitle: "Institutional Governance & Operational Roles Overview",
     badgeColor: "#38bdf8",
-    dashboardRoute: "/developer",
+    dashboardRoute: "/portal/admin/dashboard",
     sections: [
       {
-        id: "onboarding-lock",
-        title: "1. Tenant Onboarding, Per-Student Subscription Billing & 7-Day Grace Auto-Lock",
+        id: "institutional-governance",
+        title: "1. Institutional Operations & User Portals",
         steps: [
-          "Inspect onboarded institutions in the Tenant Registry, verify MoMo payments (0554594193), and click '✓ Approve & Provision Enclave'.",
-          "Monitor automated per-student subscription rates ($3 Basic / $5 SHS / $10 Tertiary) and the 14-day pre-expiry reminder + 7-day grace period auto-lock engine.",
-          "Use the 1-click Padlock toggle to manually Lock or Unlock any school tenant."
-        ]
-      },
-      {
-        id: "gps-sentinel-video",
-        title: "2. Live Registered Schools GPS Map, Intrusion Sentinel & Remote Video Support",
-        steps: [
-          "Open '🗺️ Live Tenant Map' to view GPS coordinates of every registered school and launch turn-by-turn Google Maps navigation.",
-          "Inspect '🛡️ Intrusion Sentinel' to review and block unauthorized login IPs.",
-          "Launch WebRTC Live Video Support calls with Headmasters and manage PostgreSQL database shards."
+          "Headmasters, Teachers, Students, Parents, Accountants, HR, Staff, and Alumni operate inside their designated institutional portals.",
+          "Switch any institutional role above to view its exact step-by-step operating procedures."
         ]
       }
     ]
@@ -339,12 +329,12 @@ const ROLE_ORDER = [
   { key: "STAFF", label: "🛠️ Staff" },
   { key: "ALUMNI", label: "🎖️ Alumni" },
   { key: "INVENTORY", label: "📦 Inventory" },
-  { key: "DEVELOPER", label: "🛡️ Developer" }
+  { key: "DEVELOPER", label: "🛡️ System Maintainer" }
 ];
 
-export default function UniversalRoleGuideModal({ role = "DEVELOPER", isOpen, onClose }) {
+export default function UniversalRoleGuideModal({ role = "ADMIN", isOpen, onClose }) {
   const normalizeRoleKey = (rInput) => {
-    const clean = String(rInput || "DEVELOPER").toUpperCase().trim();
+    const clean = String(rInput || "ADMIN").toUpperCase().trim();
     if (ROLE_GUIDES[clean]) return clean;
     if (clean.includes("HEADMASTER") || clean.includes("PRINCIPAL") || clean.includes("ADMIN")) return "ADMIN";
     if (clean.includes("TEACH")) return "TEACHER";
@@ -355,7 +345,7 @@ export default function UniversalRoleGuideModal({ role = "DEVELOPER", isOpen, on
     if (clean.includes("ALUMN")) return "ALUMNI";
     if (clean.includes("INVENT")) return "INVENTORY";
     if (clean.includes("STAFF")) return "STAFF";
-    return "DEVELOPER";
+    return "ADMIN";
   };
 
   const [selectedRoleKey, setSelectedRoleKey] = useState(() => normalizeRoleKey(role));
@@ -518,7 +508,7 @@ export default function UniversalRoleGuideModal({ role = "DEVELOPER", isOpen, on
                   cursor: "pointer"
                 }}
               >
-                🎬 Full 10-Role Video Theatre
+                🎬 Full Institutional Role Video Theatre
               </button>
               <button
                 type="button"
@@ -558,7 +548,7 @@ export default function UniversalRoleGuideModal({ role = "DEVELOPER", isOpen, on
             <span style={{ fontSize: "0.7rem", color: "#fde68a", fontWeight: 800, marginRight: "4px" }}>
               SWITCH ROLE GUIDE:
             </span>
-            {ROLE_ORDER.map((rItem) => {
+            {ROLE_ORDER.filter((rItem) => rItem.key !== "DEVELOPER" || String(role || "").toUpperCase() === "DEVELOPER").map((rItem) => {
               const isAct = selectedRoleKey === rItem.key;
               return (
                 <button

@@ -28,6 +28,7 @@ import DigitalSignaturePadModal from "../../../../../components/common/DigitalSi
 import { getActiveSchoolName, getActiveSchoolLogo } from "../../../../../utils/schoolBranding";
 import { printHtmlSafely, copyTextSafely } from "../../../../../utils/safeWindow";
 import { checkDemoEntryLimit, trackDemoEntryCreated } from "../../../../../utils/demoLimitGuard";
+import { isDemoSandboxMode } from "../../../../../utils/tokenStorage";
 import "./TeacherDashboard.css";
 
 export default function TeacherDashboard() {

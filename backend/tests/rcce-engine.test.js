@@ -286,7 +286,7 @@ test('3. Developer Privacy Gate, Safe Error Hiding vs Diagnostics, Audit Trail, 
 
   try {
     const devToken = signToken({ id: 1, tenantId: 1, role: 'DEVELOPER', email: 'gabosei48@gmail.com' });
-    const teacherToken = signToken({ id: 2, tenantId: 1, role: 'TEACHER', email: 'teacher@gbs.com', isDemo: true });
+    const headmasterToken = signToken({ id: 'usr_admin_master', tenantId: 1, role: 'ADMIN', email: 'admin@gbs.com', isDemo: true });
     const stdToken = signToken({ id: 3, tenantId: 1, role: 'STUDENT', email: 'student@gbs.com', isDemo: false });
 
     // A. Privacy Gate rejects missing diagnostic reason (403 DEV_PRIVACY_AUDIT_REQUIRED)
@@ -350,7 +350,7 @@ test('3. Developer Privacy Gate, Safe Error Hiding vs Diagnostics, Audit Trail, 
     assert.ok(errMon.json.data.totalIssues >= 2);
 
     // E. Demo Reset + 10-entry trial cap enforced on Clinic module (1..10 succeed, 11th returns 403 DEMO_TRIAL_LIMIT_REACHED)
-    const resetRes = await reqJson(baseUrl, 'POST', '/api/v1/auth/demo-reset', {}, { Authorization: `Bearer ${teacherToken}` });
+    const resetRes = await reqJson(baseUrl, 'POST', '/api/v1/auth/demo-reset', {}, { Authorization: `Bearer ${headmasterToken}` });
     assert.equal(resetRes.status, 200);
     assert.equal(resetRes.json.success, true);
 
@@ -365,7 +365,7 @@ test('3. Developer Privacy Gate, Safe Error Hiding vs Diagnostics, Audit Trail, 
           chiefComplaint: `Checkup #${i}`,
           disposition: 'TREATED_AND_RETURNED_TO_CLASS'
         },
-        { Authorization: `Bearer ${teacherToken}`, 'X-GBS-Mode': 'DEMO_SANDBOX' }
+        { Authorization: `Bearer ${headmasterToken}`, 'X-GBS-Mode': 'DEMO_SANDBOX' }
       );
       assert.equal(okDemo.status, 201, `Expected entry #${i} to succeed`);
     }
@@ -380,7 +380,7 @@ test('3. Developer Privacy Gate, Safe Error Hiding vs Diagnostics, Audit Trail, 
         chiefComplaint: 'Checkup #11',
         disposition: 'TREATED_AND_RETURNED_TO_CLASS'
       },
-      { Authorization: `Bearer ${teacherToken}`, 'X-GBS-Mode': 'DEMO_SANDBOX' }
+      { Authorization: `Bearer ${headmasterToken}`, 'X-GBS-Mode': 'DEMO_SANDBOX' }
     );
     assert.equal(demoBlocked.status, 403);
     assert.equal(demoBlocked.json.code, 'DEMO_TRIAL_LIMIT_REACHED');

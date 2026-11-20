@@ -82,13 +82,15 @@ async function fetchWithTimeout(url, options = {}, timeoutMs = 4500) {
   }
 }
 
-async function translateNeuralText(text, targetIso, sourceIso = 'auto') {
+async function translateNeuralText(text, targetIso, sourceIso = 'auto', options = {}) {
   const clean = String(text || '').trim();
   if (!clean) return { translatedText: '', detectedSourceLang: 'en', provider: 'none', dictMeta: null };
 
+  const skipDict = Boolean(options?.skipDictionary);
   const cacheKey = `${sourceIso}|${targetIso}|${clean}`;
   if (SERVER_TRANSLATION_CACHE.has(cacheKey)) {
-    return SERVER_TRANSLATION_CACHE.get(cacheKey);
+    const cached = SERVER_TRANSLATION_CACHE.get(cacheKey);
+    if (skipDict || cached.dictMeta) return cached;
   }
 
   let translatedText = '';
@@ -98,9 +100,10 @@ async function translateNeuralText(text, targetIso, sourceIso = 'auto') {
 
   // 1. Google translate_a/single (dict-chrome-ex -> gtx fallback; retrieves translations, source detection & dict definitions)
   for (const clientTag of ['dict-chrome-ex', 'gtx']) {
-    if (translatedText && dictMeta) break;
+    if (translatedText && (skipDict || dictMeta)) break;
     try {
-      const singleUrl = `https://translate.googleapis.com/translate_a/single?client=${clientTag}&sl=${encodeURIComponent(sourceIso)}&tl=${encodeURIComponent(targetIso)}&dt=t&dt=bd&dt=md&dt=ex&q=${encodeURIComponent(clean)}`;
+      const dtParams = skipDict ? 'dt=t' : 'dt=t&dt=bd&dt=md&dt=ex';
+      const singleUrl = `https://translate.googleapis.com/translate_a/single?client=${clientTag}&sl=${encodeURIComponent(sourceIso)}&tl=${encodeURIComponent(targetIso)}&${dtParams}&q=${encodeURIComponent(clean)}`;
       const res = await fetchWithTimeout(singleUrl, {}, 2500);
       if (res.ok) {
         const gtxData = await res.json();

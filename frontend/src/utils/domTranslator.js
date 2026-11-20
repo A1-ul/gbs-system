@@ -92,7 +92,11 @@ const INSTANT_PHRASES = {
     "personal daily attendance record": "Relevé Quotidien de Présence Personnel",
     "integrated school clinic": "Clinique Scolaire Intégrée",
     "need help?": "Besoin d'Aide ?",
-    "contact support": "Contacter le Support"
+    "contact support": "Contacter le Support",
+    "industrial internships": "Stages Industriels",
+    "academic & field attachments": "Stages Académiques et de Terrain",
+    "my personal health & medical dossier": "Mon Dossier Médical et de Santé Personnel",
+    "all staff & student health profiles": "Profils de Santé de Tout le Personnel et des Étudiants"
   },
   es: {
     "headmaster command center": "Centro de Mando del Director",
@@ -144,7 +148,11 @@ const INSTANT_PHRASES = {
     "demo sandbox mode": "MODO DEMO PRÁCTICO",
     "live production workspace": "ESPACIO DE PRODUCCIÓN REAL",
     "personal daily attendance record": "Registro Diario de Asistencia Personal",
-    "integrated school clinic": "Clínica Escolar Integrada"
+    "integrated school clinic": "Clínica Escolar Integrada",
+    "industrial internships": "Pasantías Industriales",
+    "academic & field attachments": "Prácticas Académicas y de Campo",
+    "my personal health & medical dossier": "Mi Historial Personal de Salud y Médico",
+    "all staff & student health profiles": "Perfiles de Salud de Todo el Personal y Estudiantes"
   },
   ar: {
     "headmaster command center": "مركز قيادة مدير المدرسة",
@@ -196,7 +204,11 @@ const INSTANT_PHRASES = {
     "demo sandbox mode": "وضع التدريب التجريبي",
     "live production workspace": "بيئة الإنتاج الحقيقية",
     "personal daily attendance record": "سجل الحضور اليومي الشخصي",
-    "integrated school clinic": "العيادة المدرسية المتكاملة"
+    "integrated school clinic": "العيادة المدرسية المتكاملة",
+    "industrial internships": "التدريب الصناعي",
+    "academic & field attachments": "التطبيق الأكاديمي والميداني",
+    "my personal health & medical dossier": "ملفي الصحي والطبي الشخصي",
+    "all staff & student health profiles": "الملفات الصحية لجميع الموظفين والطلاب"
   },
   pt: {
     "headmaster command center": "Centro de Comando do Diretor",
@@ -319,7 +331,7 @@ const INSTANT_PHRASES = {
 const SKIP_TAGS = new Set([
   "SCRIPT", "STYLE", "NOSCRIPT", "TEMPLATE", "SVG", "CODE", "PRE", "KBD", "SAMP", "TEXTAREA", "CANVAS", "VIDEO", "AUDIO"
 ]);
-const TRANSLATABLE_ATTRS = ["placeholder", "title", "aria-label"];
+const TRANSLATABLE_ATTRS = ["placeholder", "aria-label"];
 
 const memoryCachesByLang = new Map(); // lang -> Map<coreString, translatedCore>
 const textNodeState = new WeakMap();  // Text -> { source, applied, prefix, core, suffix, lang }
@@ -646,7 +658,7 @@ function scheduleBatchFlush(langCode) {
   if (batchQueueTimer) clearTimeout(batchQueueTimer);
   batchQueueTimer = setTimeout(() => {
     flushPendingTranslations(langCode);
-  }, 75);
+  }, 18);
 }
 
 export function restoreAllToEnglish() {
@@ -703,7 +715,7 @@ function ensureObserverRunning() {
         scanSubtree(document.body, activeLanguageCode);
         if (pendingStrings.size > 0) scheduleBatchFlush(activeLanguageCode);
       }
-    }, 55);
+    }, 20);
   });
   observerInstance.observe(document.body, {
     childList: true,

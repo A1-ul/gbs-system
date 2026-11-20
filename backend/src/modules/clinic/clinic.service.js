@@ -22,6 +22,37 @@ function normalizeEmail(v) {
   return String(v || '').trim().toLowerCase();
 }
 
+const HEADMASTER_CLINIC_ROLES = new Set(['ADMIN', 'SUPER_ADMIN', 'HEADMASTER', 'PRINCIPAL', 'DEVELOPER']);
+
+function isHeadmasterClinicRole(role) {
+  return HEADMASTER_CLINIC_ROLES.has(String(role || '').trim().toUpperCase());
+}
+
+function matchesCallerIdentity(profileRecord, user) {
+  if (!profileRecord || !user) return false;
+  const callerEmail = normalizeEmail(user.email);
+  const callerId = String(user.id || '').trim();
+  const callerName = `${user.firstName || ''} ${user.lastName || ''}`.trim().toLowerCase();
+  const recEmail = normalizeEmail(profileRecord.email);
+  const recId = String(profileRecord.personId || '').trim();
+  const recName = String(profileRecord.fullName || '').trim().toLowerCase();
+
+  if (callerEmail && recEmail && recEmail === callerEmail) return true;
+  if (callerId && recId && recId === callerId) return true;
+  if (callerName && recName && recName === callerName) return true;
+  return false;
+}
+
+function matchesParentWardProfile(profileRecord, user) {
+  if (!profileRecord || !user) return false;
+  const callerEmail = normalizeEmail(user.email);
+  const callerPhone = String(user.phone || '').replace(/\D+/g, '');
+  const emergencyPhone = String(profileRecord.emergencyContactPhone || '').replace(/\D+/g, '');
+  if (callerEmail && normalizeEmail(profileRecord.email) === callerEmail) return true;
+  if (callerPhone.length >= 6 && emergencyPhone && emergencyPhone.includes(callerPhone.slice(-8))) return true;
+  return false;
+}
+
 /**
  * Automatically creates or updates a Student / Teacher / Staff Admission Medical Profile.
  * Safe non-throwing integration hook for Admissions, Auth Registration, and Clinic Intake.
@@ -246,20 +277,47 @@ async function listClinicProfiles(req) {
 
   const allProfiles = Array.from(profileMap.values());
   const role = String(req.user?.role || '').toUpperCase();
-  const isDemo = String(req.headers?.['x-system-mode'] || '').toUpperCase() === 'DEMO_SANDBOX';
-  const callerEmail = normalizeEmail(req.user?.email);
+  if (isHeadmasterClinicRole(role)) {
+    return allProfiles;
+  }
 
-  if (!isDemo && role === 'STUDENT') {
-    return allProfiles.filter((p) => normalizeEmail(p.email) === callerEmail || String(p.personId) === String(req.user?.id));
+  // Strictly personal health visibility for non-Headmaster roles (never expose school-wide clinic roster)
+  if (role === 'PARENT') {
+    const parentMatches = allProfiles.filter((p) => matchesParentWardProfile(p, req.user));
+    if (parentMatches.length > 0) return parentMatches;
+    const isDemo = String(req.headers?.['x-system-mode'] || '').toUpperCase() === 'DEMO_SANDBOX';
+    return isDemo ? allProfiles.filter((p) => p.personRole === 'STUDENT').slice(0, 1) : [];
   }
-  if (!isDemo && role === 'PARENT') {
-    return allProfiles.filter(
-      (p) =>
-        normalizeEmail(p.email) === callerEmail ||
-        String(p.emergencyContactPhone || '').includes(String(req.user?.phone || '___'))
-    );
+
+  const ownMatches = allProfiles.filter((p) => matchesCallerIdentity(p, req.user));
+  if (ownMatches.length > 0) return ownMatches;
+  if (req.user) {
+    return [
+      {
+        id: `self_${req.user.id || 'user'}`,
+        tenantId: tidStr,
+        personId: String(req.user.id || ''),
+        personRole: role || 'USER',
+        fullName: `${req.user.firstName || ''} ${req.user.lastName || ''}`.trim() || req.user.email || 'Authenticated User',
+        email: req.user.email || null,
+        phone: req.user.phone || null,
+        admissionNumber: req.user.admissionNumber || req.user.employeeId || 'SELF-PROFILE',
+        classOrDepartment: req.user.department || req.user.className || 'Personal Health File',
+        admissionDate: new Date().toISOString().slice(0, 10),
+        bloodGroup: req.user.bloodGroup || 'Pending Screening',
+        genotype: req.user.genotype || 'Pending Screening',
+        allergies: req.user.allergies || 'None Reported',
+        chronicConditions: req.user.medicalNotes || 'None Reported',
+        immunizationStatus: 'Personal Health File',
+        nhisNumber: req.user.nhisNumber || '',
+        emergencyContactName: req.user.emergencyContactName || 'Parent / Next of Kin',
+        emergencyContactPhone: req.user.emergencyContactPhone || req.user.phone || '',
+        medicalClearanceStatus: 'CLEARED',
+        sourceSystem: 'PERSONAL_SELF_HEALTH'
+      }
+    ];
   }
-  return allProfiles;
+  return [];
 }
 
 async function listClinicVisits(req) {
@@ -268,27 +326,46 @@ async function listClinicVisits(req) {
   let visits = (store.schoolClinicVisits || []).filter((v) => String(v.tenantId || '1') === tidStr);
 
   const role = String(req.user?.role || '').toUpperCase();
-  const isDemo = String(req.headers?.['x-system-mode'] || '').toUpperCase() === 'DEMO_SANDBOX';
+  const isHeadmasterView = isHeadmasterClinicRole(role);
   const callerEmail = normalizeEmail(req.user?.email);
+  const callerPhoneDigits = String(req.user?.phone || '').replace(/\D+/g, '');
 
-  if (!isDemo && role === 'STUDENT') {
-    visits = visits.filter((v) => normalizeEmail(v.patientEmail) === callerEmail || String(v.patientId) === String(req.user?.id));
-  } else if (!isDemo && role === 'PARENT') {
-    visits = visits.filter(
-      (v) =>
-        v.patientRole === 'STUDENT' &&
-        (normalizeEmail(v.guardianEmail) === callerEmail ||
-          (req.user?.phone && String(v.emergencyPhone || '').includes(String(req.user.phone))))
-    );
+  if (!isHeadmasterView) {
+    if (role === 'PARENT') {
+      visits = visits.filter((v) => {
+        if (v.patientRole !== 'STUDENT') return false;
+        if (callerEmail && normalizeEmail(v.guardianEmail) === callerEmail) return true;
+        const emDigits = String(v.emergencyPhone || '').replace(/\D+/g, '');
+        return callerPhoneDigits.length >= 6 && emDigits.includes(callerPhoneDigits.slice(-8));
+      });
+    } else {
+      visits = visits.filter((v) =>
+        matchesCallerIdentity(
+          { email: v.patientEmail, personId: v.patientId, fullName: v.patientName },
+          req.user
+        )
+      );
+    }
   }
 
   const profiles = await listClinicProfiles(req);
-  const inventory = listInventoryInternal(tidStr, store);
   const activeSickbay = visits.filter((v) => v.disposition === 'ADMITTED_TO_SICKBAY' && !v.dischargedAt);
 
+  if (!isHeadmasterView) {
+    return {
+      ownHealthOnly: true,
+      visits,
+      summary: null
+    };
+  }
+
+  const inventory = listInventoryInternal(tidStr, store);
+
   return {
+    ownHealthOnly: false,
     visits,
     summary: {
+      ownHealthOnly: false,
       totalRegisteredProfiles: profiles.length,
       studentMedicalProfiles: profiles.filter((p) => p.personRole === 'STUDENT').length,
       teacherAndStaffMedicalProfiles: profiles.filter((p) => p.personRole !== 'STUDENT').length,
@@ -515,10 +592,14 @@ async function updateClinicVisit(req, visitId) {
 }
 
 /**
- * Unified Cross-Portal Record Pull: returns linked Admission Medical Profile + Visit History + Notifications
+ * Unified Cross-Portal Record Pull:
+ * - Headmasters see all Staff & Student admission medical dossiers, visit histories & clinic SMS alerts.
+ * - Regular users (Student, Teacher, Staff, HR, Accountant, Parent) only retrieve their own (or ward's) health info.
  */
 async function pullPatientMedicalDossier(req, rawQuery = '') {
   const tidStr = resolveTidStr(req);
+  const role = String(req.user?.role || '').toUpperCase();
+  const isHeadmasterView = isHeadmasterClinicRole(role);
   const q = String(rawQuery || '').trim().toLowerCase();
   const profiles = await listClinicProfiles(req);
   const { visits } = await listClinicVisits(req);
@@ -543,14 +624,17 @@ async function pullPatientMedicalDossier(req, rawQuery = '') {
       String(v.diagnosis || '').toLowerCase().includes(q)
   );
 
+  const callerEmail = normalizeEmail(req.user?.email);
   const clinicSmsAlerts = (store.dispatchedSmsMessages || []).filter(
     (m) =>
       String(m.tenantId || '1') === tidStr &&
       String(m.subject || m.rawMessage || '').toLowerCase().includes('clinic') &&
+      (isHeadmasterView || (callerEmail && normalizeEmail(m.recipientEmail) === callerEmail)) &&
       (!q || String(m.rawMessage || m.subject || m.recipientName || '').toLowerCase().includes(q))
   );
 
   return {
+    ownHealthOnly: !isHeadmasterView,
     query: rawQuery,
     matchedProfiles,
     matchedVisits,

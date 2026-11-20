@@ -46,6 +46,41 @@ const gradeInternship = async (req, res, next) => {
   }
 };
 
+const listAttachments = async (req, res, next) => {
+  try {
+    const attachments = await universityService.listAttachments(req);
+    res.status(200).json({ status: 'success', results: attachments.length, data: { attachments } });
+  } catch (err) {
+    next(err);
+  }
+};
+
+const submitAttachment = async (req, res, next) => {
+  try {
+    const attachment = await universityService.submitAttachment(req);
+    res.status(201).json({
+      status: 'success',
+      message: 'University academic attachment form submitted successfully.',
+      data: { attachment }
+    });
+  } catch (err) {
+    next(err);
+  }
+};
+
+const gradeAttachment = async (req, res, next) => {
+  try {
+    const attachment = await universityService.gradeAttachment(req, req.params.id);
+    res.status(200).json({
+      status: 'success',
+      message: `Attachment graded (${attachment.letterGrade}) cleanly.`,
+      data: { attachment }
+    });
+  } catch (err) {
+    next(err);
+  }
+};
+
 const listStreams = async (req, res, next) => {
   try {
     const streams = await universityService.listStreams(req);
@@ -157,6 +192,9 @@ module.exports = {
   listInternships,
   submitInternship,
   gradeInternship,
+  listAttachments,
+  submitAttachment,
+  gradeAttachment,
   listStreams,
   createStream,
   listGovernanceRoles,

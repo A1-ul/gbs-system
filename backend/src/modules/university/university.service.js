@@ -153,13 +153,18 @@ function resolveTenantKey(req) {
   return String(req.tenantId || req.user?.tenantId || '1');
 }
 
-/* ==================== 1. UNIVERSITY INTERNSHIPS / ATTACHMENTS ==================== */
+/* ==================== 1A & 1B. UNIVERSITY INTERNSHIPS & SEPARATE ATTACHMENTS ==================== */
 
-async function listInternships(req) {
+function getPlacementStoreKey(kind) {
+  return kind === 'ATTACHMENT' ? 'universityAttachments' : 'universityInternships';
+}
+
+async function listPlacementsByKind(req, kind = 'INTERNSHIP') {
   await ensureUniversityTenant(req);
   const tid = resolveTenantKey(req);
   const store = readPersistentStore();
-  const list = (store.universityInternships || []).filter((item) => String(item.tenantId || '1') === tid);
+  const key = getPlacementStoreKey(kind);
+  const list = (store[key] || []).filter((item) => String(item.tenantId || '1') === tid);
   const role = String(req.user?.role || '').toUpperCase();
   if (role === 'STUDENT') {
     const uEmail = String(req.user?.email || '').trim().toLowerCase();
@@ -174,17 +179,22 @@ async function listInternships(req) {
   return list;
 }
 
-async function submitInternship(req) {
+async function submitPlacementByKind(req, kind = 'INTERNSHIP') {
   await ensureUniversityTenant(req);
   const body = req.body || {};
-  const companyName = String(body.companyName || '').trim();
-  const companyAddress = String(body.companyAddress || '').trim();
-  const supervisorName = String(body.supervisorName || '').trim();
+  const isAttachment = kind === 'ATTACHMENT';
+  const label = isAttachment ? 'Attachment' : 'Internship';
+  const companyName = String(body.companyName || body.hostInstitution || body.hostOrganization || '').trim();
+  const companyAddress = String(body.companyAddress || body.hostAddress || '').trim();
+  const supervisorName = String(body.supervisorName || body.fieldSupervisor || '').trim();
   const startDate = String(body.startDate || '').trim();
   const endDate = String(body.endDate || '').trim();
 
   if (!companyName || !supervisorName || !startDate || !endDate) {
-    throw new AppError('Company Name, Industry Supervisor Name, Start Date, and End Date are required.', 400);
+    throw new AppError(
+      `Host ${isAttachment ? 'Institution / Site' : 'Organization'}, ${isAttachment ? 'Field Supervisor' : 'Industry Supervisor'} Name, Start Date, and End Date are required for ${label}.`,
+      400
+    );
   }
 
   const tid = resolveTenantKey(req);
@@ -194,7 +204,8 @@ async function submitInternship(req) {
     'University Student';
 
   const record = {
-    id: `INT-${Date.now()}-${Math.floor(100 + Math.random() * 900)}`,
+    id: `${isAttachment ? 'ATT' : 'INT'}-${Date.now()}-${Math.floor(100 + Math.random() * 900)}`,
+    placementType: kind,
     tenantId: tid,
     institutionType: 'UNIVERSITY',
     userId: req.user?.id || null,
@@ -202,18 +213,23 @@ async function submitInternship(req) {
     studentName: studentFullName,
     studentEmail: (body.studentEmail || req.user?.email || '').toLowerCase(),
     programme: body.programme || 'B.Sc. / Undergraduate Degree',
+    courseCode: String(body.courseCode || '').trim(),
     level: body.level || 'Level 300',
     stream: body.stream || 'Regular Students',
     companyName,
+    hostInstitution: companyName,
     companyAddress: companyAddress || 'Registered Host Organization',
-    industrySector: body.industrySector || 'Corporate / Engineering / Education',
+    hostAddress: companyAddress || 'Registered Host Organization',
+    industrySector: body.industrySector || (isAttachment ? 'Field Practicum / Clinical / Technical Unit' : 'Corporate / Engineering / Enterprise'),
     supervisorName,
     supervisorPhone: body.supervisorPhone || '',
     supervisorEmail: body.supervisorEmail || '',
+    academicSupervisor: String(body.academicSupervisor || '').trim(),
+    logbookHours: Number(body.logbookHours || 0) || 0,
     startDate,
     endDate,
-    objectives: String(body.objectives || '').trim() || 'Apply university coursework in real workplace setting.',
-    attachmentReportSummary: String(body.attachmentReportSummary || '').trim(),
+    objectives: String(body.objectives || '').trim() || `Complete structured university ${label.toLowerCase()} requirements.`,
+    attachmentReportSummary: String(body.attachmentReportSummary || body.reportSummary || '').trim(),
     status: 'SUBMITTED',
     academicScore: null,
     supervisorScore: null,
@@ -227,18 +243,21 @@ async function submitInternship(req) {
     createdAt: new Date().toISOString()
   };
 
+  const storeKey = getPlacementStoreKey(kind);
   writePersistentStore((curr) => ({
     ...curr,
-    universityInternships: [record, ...(curr.universityInternships || [])].slice(0, 500)
+    [storeKey]: [record, ...(curr[storeKey] || [])].slice(0, 500)
   }));
 
   return record;
 }
 
-async function gradeInternship(req, internshipId) {
+async function gradePlacementByKind(req, placementId, kind = 'INTERNSHIP') {
   await ensureUniversityTenant(req);
   const body = req.body || {};
   const tid = resolveTenantKey(req);
+  const isAttachment = kind === 'ATTACHMENT';
+  const label = isAttachment ? 'Attachment' : 'Internship';
   const supervisorScore = body.supervisorScore != null ? Number(body.supervisorScore) : 80;
   const reportScore = body.reportScore != null ? Number(body.reportScore) : 80;
   const courseGradeScore = body.courseGradeScore != null ? Number(body.courseGradeScore) : null;
@@ -250,11 +269,12 @@ async function gradeInternship(req, internshipId) {
 
   const { letterGrade, gradePoint } = computeLetterAndPoint(weighted);
   const graderName = `${req.user?.firstName || ''} ${req.user?.lastName || ''}`.trim() || req.user?.role || 'Lecturer';
+  const storeKey = getPlacementStoreKey(kind);
 
   let updatedRecord = null;
   writePersistentStore((curr) => {
-    const next = (curr.universityInternships || []).map((item) => {
-      if (String(item.id) === String(internshipId) && String(item.tenantId || '1') === tid) {
+    const next = (curr[storeKey] || []).map((item) => {
+      if (String(item.id) === String(placementId) && String(item.tenantId || '1') === tid) {
         updatedRecord = {
           ...item,
           supervisorScore,
@@ -263,7 +283,7 @@ async function gradeInternship(req, internshipId) {
           finalScore: weighted,
           letterGrade,
           gradePoint,
-          lecturerRemarks: String(body.lecturerRemarks || '').trim() || `Internship evaluated and graded (${letterGrade}).`,
+          lecturerRemarks: String(body.lecturerRemarks || '').trim() || `${label} evaluated and graded (${letterGrade}).`,
           attachmentReportSummary: body.attachmentReportSummary || item.attachmentReportSummary,
           status: body.status || 'GRADED',
           gradedBy: graderName,
@@ -273,14 +293,22 @@ async function gradeInternship(req, internshipId) {
       }
       return item;
     });
-    return { ...curr, universityInternships: next };
+    return { ...curr, [storeKey]: next };
   });
 
   if (!updatedRecord) {
-    throw new AppError('Internship application record not found for your university.', 404);
+    throw new AppError(`${label} placement record not found for your university.`, 404);
   }
   return updatedRecord;
 }
+
+const listInternships = (req) => listPlacementsByKind(req, 'INTERNSHIP');
+const submitInternship = (req) => submitPlacementByKind(req, 'INTERNSHIP');
+const gradeInternship = (req, internshipId) => gradePlacementByKind(req, internshipId, 'INTERNSHIP');
+
+const listAttachments = (req) => listPlacementsByKind(req, 'ATTACHMENT');
+const submitAttachment = (req) => submitPlacementByKind(req, 'ATTACHMENT');
+const gradeAttachment = (req, attachmentId) => gradePlacementByKind(req, attachmentId, 'ATTACHMENT');
 
 /* ==================== 2. UNIVERSITY STREAMS ==================== */
 
@@ -637,6 +665,9 @@ module.exports = {
   listInternships,
   submitInternship,
   gradeInternship,
+  listAttachments,
+  submitAttachment,
+  gradeAttachment,
   listStreams,
   createStream,
   listGovernanceRoles,

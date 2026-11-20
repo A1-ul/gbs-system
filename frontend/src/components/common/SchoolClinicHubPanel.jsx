@@ -15,11 +15,14 @@ const DISPOSITIONS = [
 ];
 
 export default function SchoolClinicHubPanel({
-  mode = "ADMIN", // "ADMIN" | "TEACHER" | "STUDENT" | "PARENT" | "STAFF" | "HR"
+  mode = "ADMIN", // "ADMIN" | "TEACHER" | "STUDENT" | "PARENT" | "STAFF" | "HR" | "ACCOUNTANT"
   currentUser = null,
   onFeedback = null
 }) {
-  const [activeSubTab, setActiveSubTab] = useState("TREAT_ADMIT");
+  const normalizedMode = String(mode || "STUDENT").toUpperCase();
+  const isHeadmasterClinic = ["ADMIN", "SUPER_ADMIN", "HEADMASTER", "PRINCIPAL", "DEVELOPER"].includes(normalizedMode);
+
+  const [activeSubTab, setActiveSubTab] = useState(isHeadmasterClinic ? "DIRECTORY_PROFILES" : "MY_HEALTH");
   const [loading, setLoading] = useState(false);
   const [statusMsg, setStatusMsg] = useState(null);
 
@@ -28,14 +31,20 @@ export default function SchoolClinicHubPanel({
   const [summary, setSummary] = useState(null);
   const [inventory, setInventory] = useState([]);
 
-  // Cross-Portal Instant Record Pull
+  // Headmaster Cross-Portal Dossier & Staff/Student Directory Filters
   const [pullQuery, setPullQuery] = useState("");
   const [pulledDossier, setPulledDossier] = useState(null);
+  const [directoryFilter, setDirectoryFilter] = useState("ALL"); // ALL | STUDENT | STAFF_TEACHER
+  const [selectedPersonId, setSelectedPersonId] = useState(null);
+  const [showSelfUpdateForm, setShowSelfUpdateForm] = useState(false);
+
+  const callerEmail = String(currentUser?.email || "").trim().toLowerCase();
+  const callerFullName = `${currentUser?.firstName || ""} ${currentUser?.lastName || ""}`.trim();
 
   const [visitForm, setVisitForm] = useState({
-    patientName: mode === "STUDENT" || mode === "TEACHER" ? `${currentUser?.firstName || ""} ${currentUser?.lastName || ""}`.trim() : "",
-    patientRole: mode === "TEACHER" ? "TEACHER" : "STUDENT",
-    patientEmail: mode === "STUDENT" || mode === "TEACHER" ? currentUser?.email || "" : "",
+    patientName: "",
+    patientRole: "STUDENT",
+    patientEmail: "",
     classOrDepartment: "",
     admissionNumber: "",
     emergencyPhone: "",
@@ -52,10 +61,10 @@ export default function SchoolClinicHubPanel({
   });
 
   const [profileForm, setProfileForm] = useState({
-    fullName: "",
-    personRole: "STUDENT",
-    email: "",
-    phone: "",
+    fullName: callerFullName || "",
+    personRole: normalizedMode === "TEACHER" ? "TEACHER" : normalizedMode === "STAFF" || normalizedMode === "HR" || normalizedMode === "ACCOUNTANT" ? "STAFF" : "STUDENT",
+    email: currentUser?.email || "",
+    phone: currentUser?.phone || "",
     admissionNumber: "",
     classOrDepartment: "",
     bloodGroup: "O+",
@@ -76,7 +85,6 @@ export default function SchoolClinicHubPanel({
   });
 
   const isDemo = isDemoSandboxMode();
-  const canClinicallyWrite = ["ADMIN", "TEACHER", "STAFF", "HR"].includes(mode);
 
   const notify = (text, isError = false) => {
     setStatusMsg({ text, isError });
@@ -86,24 +94,49 @@ export default function SchoolClinicHubPanel({
   const loadClinicData = useCallback(async () => {
     setLoading(true);
     try {
-      const [profRes, visRes, invRes] = await Promise.all([
+      const requests = [
         apiClient.get("/clinic/profiles").catch(() => null),
-        apiClient.get("/clinic/visits").catch(() => null),
-        apiClient.get("/clinic/inventory").catch(() => null)
-      ]);
+        apiClient.get("/clinic/visits").catch(() => null)
+      ];
+      if (isHeadmasterClinic) {
+        requests.push(apiClient.get("/clinic/inventory").catch(() => null));
+      }
 
-      const localProfs = getTenantScopedRecord("clinic_profiles", []);
-      const localVisits = getTenantScopedRecord("clinic_visits", []);
-      const localInv = getTenantScopedRecord("clinic_inventory", []);
+      const [profRes, visRes, invRes] = await Promise.all(requests);
 
-      setProfiles(profRes?.data?.data?.profiles ?? localProfs);
-      setVisits(visRes?.data?.data?.visits ?? localVisits);
-      setSummary(visRes?.data?.data?.summary ?? null);
-      setInventory(invRes?.data?.data?.inventory ?? localInv);
+      let nextProfiles = profRes?.data?.data?.profiles;
+      let nextVisits = visRes?.data?.data?.visits;
+
+      if (!Array.isArray(nextProfiles)) {
+        const localProfs = isDemo ? getTenantScopedRecord("clinic_profiles", []) : [];
+        nextProfiles = isHeadmasterClinic
+          ? localProfs
+          : localProfs.filter((p) => {
+              const e = String(p.email || "").toLowerCase();
+              const g = String(p.guardianEmail || "").toLowerCase();
+              return callerEmail && (e === callerEmail || g === callerEmail);
+            });
+      }
+
+      if (!Array.isArray(nextVisits)) {
+        const localVisits = isDemo ? getTenantScopedRecord("clinic_visits", []) : [];
+        nextVisits = isHeadmasterClinic
+          ? localVisits
+          : localVisits.filter((v) => {
+              const pe = String(v.patientEmail || "").toLowerCase();
+              const ge = String(v.guardianEmail || "").toLowerCase();
+              return callerEmail && (pe === callerEmail || ge === callerEmail);
+            });
+      }
+
+      setProfiles(nextProfiles);
+      setVisits(nextVisits);
+      setSummary(isHeadmasterClinic ? visRes?.data?.data?.summary ?? null : null);
+      setInventory(isHeadmasterClinic ? invRes?.data?.data?.inventory ?? (isDemo ? getTenantScopedRecord("clinic_inventory", []) : []) : []);
     } finally {
       setLoading(false);
     }
-  }, []);
+  }, [isHeadmasterClinic, isDemo, callerEmail]);
 
   useEffect(() => {
     loadClinicData();
@@ -123,19 +156,22 @@ export default function SchoolClinicHubPanel({
     }));
   };
 
-  const handlePullRecords = async (e) => {
+  const handlePullRecords = async (e, explicitQuery = null) => {
     if (e) e.preventDefault();
+    if (!isHeadmasterClinic) return;
+    const effectiveQuery = explicitQuery !== null ? String(explicitQuery) : pullQuery.trim();
+    if (explicitQuery !== null) setPullQuery(effectiveQuery);
     setLoading(true);
     try {
-      const res = await apiClient.get(`/clinic/pull-record?query=${encodeURIComponent(pullQuery.trim())}`);
+      const res = await apiClient.get(`/clinic/pull-record?query=${encodeURIComponent(effectiveQuery)}`);
       setPulledDossier(res?.data?.data || null);
       notify(`🔍 Pulled ${res?.data?.data?.totalProfilesMatched ?? 0} medical profile(s) & ${res?.data?.data?.totalVisitsMatched ?? 0} clinic visit(s) across all linked portals.`);
     } catch {
-      const q = pullQuery.trim().toLowerCase();
+      const q = effectiveQuery.toLowerCase();
       const matchedProfiles = profiles.filter((p) => !q || `${p.fullName} ${p.email} ${p.admissionNumber}`.toLowerCase().includes(q));
       const matchedVisits = visits.filter((v) => !q || `${v.patientName} ${v.patientEmail} ${v.diagnosis}`.toLowerCase().includes(q));
       setPulledDossier({
-        query: pullQuery,
+        query: effectiveQuery,
         matchedProfiles,
         matchedVisits,
         clinicSmsAlerts: [],
@@ -150,6 +186,9 @@ export default function SchoolClinicHubPanel({
 
   const handleAdmitOrTreat = async (e) => {
     e.preventDefault();
+    if (!isHeadmasterClinic) {
+      return notify("Clinic consultation intake is restricted to the Headmaster Clinic Command.", true);
+    }
     if (!visitForm.patientName || !visitForm.chiefComplaint) {
       return notify("Patient Name and Symptoms / Chief Complaint are required.", true);
     }
@@ -179,6 +218,7 @@ export default function SchoolClinicHubPanel({
   };
 
   const handleDischargeFromSickbay = async (visitId, nextDisposition = "TREATED_AND_RETURNED_TO_CLASS") => {
+    if (!isHeadmasterClinic) return;
     try {
       const res = await apiClient.patch(`/clinic/visits/${visitId}`, { disposition: nextDisposition, discharge: true });
       await loadClinicData();
@@ -190,7 +230,7 @@ export default function SchoolClinicHubPanel({
 
   const handleSaveMedicalProfile = async (e) => {
     e.preventDefault();
-    if (!profileForm.fullName && !profileForm.email) {
+    if (isHeadmasterClinic && !profileForm.fullName && !profileForm.email) {
       return notify("Full Name or Email is required for Admission Medical Registration.", true);
     }
     const demoCheck = checkDemoEntryLimit("clinic", "School Clinic Medical Profiles", profiles.length);
@@ -203,15 +243,20 @@ export default function SchoolClinicHubPanel({
       trackDemoEntryCreated("clinic");
       await loadClinicData();
       setTenantScopedRecord("clinic_profiles", [saved, ...profiles]);
-      setProfileForm((prev) => ({ ...prev, fullName: "", email: "", phone: "", admissionNumber: "", nhisNumber: "" }));
-      notify(res?.data?.message || `📋 Admission Medical Registration synced for ${saved.fullName} across School Clinic & Portal Directory.`);
+      if (isHeadmasterClinic) {
+        setProfileForm((prev) => ({ ...prev, fullName: "", email: "", phone: "", admissionNumber: "", nhisNumber: "" }));
+      } else {
+        setShowSelfUpdateForm(false);
+      }
+      notify(res?.data?.message || `📋 Medical dossier updated cleanly for ${saved.fullName}.`);
     } catch (err) {
-      notify(err?.response?.data?.message || "Failed to save Admission Medical Record.", true);
+      notify(err?.response?.data?.message || "Failed to save Medical Dossier.", true);
     }
   };
 
   const handleAddInventory = async (e) => {
     e.preventDefault();
+    if (!isHeadmasterClinic) return;
     if (!medForm.itemName.trim()) return notify("Medicine name is required.", true);
     const demoCheck = checkDemoEntryLimit("clinic", "School Clinic Pharmacy Items", inventory.length);
     if (!demoCheck.allowed) {
@@ -228,15 +273,184 @@ export default function SchoolClinicHubPanel({
     }
   };
 
+  // Strict Personal / Linked-Ward View for non-Headmaster users (Student, Teacher, Parent, Staff, HR, Accountant)
+  if (!isHeadmasterClinic) {
+    const isParentView = normalizedMode === "PARENT";
+    return (
+      <div className="role-workspace-card" style={{ padding: "22px", borderRadius: "16px", marginBottom: "24px" }}>
+        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: "12px", marginBottom: "16px" }}>
+          <div>
+            <span style={{ fontSize: "0.75rem", fontWeight: 800, color: "#f5d061", letterSpacing: "1px", textTransform: "uppercase" }}>
+              🔒 {isParentView ? "Linked Ward Health & Medical Info Only" : "Personal Health & Medical Info Only"}
+            </span>
+            <h2 style={{ margin: "4px 0 0 0", color: "#ffffff", fontSize: "1.35rem" }}>
+              {isParentView ? "My Ward Health Dossier & Visit History" : "My Personal Health & Medical Dossier"}
+            </h2>
+            <p style={{ margin: "4px 0 0 0", fontSize: "0.82rem", color: "#cbd5e1" }}>
+              Health privacy enforced: you only see {isParentView ? "your linked child's" : "your own"} personal medical dossier and clinic visits. School clinic operations are managed strictly by the Headmaster.
+            </p>
+          </div>
+          <div style={{ display: "flex", gap: "8px", flexWrap: "wrap" }}>
+            {!isParentView && (
+              <button
+                type="button"
+                onClick={() => setShowSelfUpdateForm((prev) => !prev)}
+                style={{
+                  background: "rgba(16, 185, 129, 0.2)",
+                  border: "1px solid #34d399",
+                  color: "#6ee7b7",
+                  borderRadius: "10px",
+                  padding: "8px 14px",
+                  fontWeight: 800,
+                  cursor: "pointer"
+                }}
+              >
+                {showSelfUpdateForm ? "✕ Close Edit" : "✏️ Update My Allergies / Emergency Info"}
+              </button>
+            )}
+            <button
+              type="button"
+              onClick={loadClinicData}
+              disabled={loading}
+              style={{
+                background: "rgba(212, 175, 55, 0.2)",
+                border: "1px solid #d4af37",
+                color: "#f5d061",
+                borderRadius: "10px",
+                padding: "8px 14px",
+                fontWeight: 800,
+                cursor: "pointer"
+              }}
+            >
+              {loading ? "⏳ Syncing..." : "🔄 Refresh My Health Record"}
+            </button>
+          </div>
+        </div>
+
+        {statusMsg && (
+          <div
+            style={{
+              padding: "10px 14px",
+              borderRadius: "10px",
+              marginBottom: "14px",
+              fontWeight: 700,
+              background: statusMsg.isError ? "rgba(220, 38, 38, 0.25)" : "rgba(16, 185, 129, 0.22)",
+              border: `1px solid ${statusMsg.isError ? "#f87171" : "#34d399"}`,
+              color: statusMsg.isError ? "#fecaca" : "#a7f3d0"
+            }}
+          >
+            {statusMsg.text}
+          </div>
+        )}
+
+        {showSelfUpdateForm && !isParentView && (
+          <form onSubmit={handleSaveMedicalProfile} style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(195px, 1fr))", gap: "10px", padding: "16px", background: "rgba(6, 15, 30, 0.65)", borderRadius: "12px", marginBottom: "16px", border: "1px solid rgba(52, 211, 153, 0.4)" }}>
+            <h4 style={{ gridColumn: "1 / -1", margin: 0, color: "#6ee7b7" }}>🩺 Update My Personal Medical Information</h4>
+            <select value={profileForm.bloodGroup} onChange={(e) => setProfileForm({ ...profileForm, bloodGroup: e.target.value })} style={inputStyle}>
+              {BLOOD_GROUPS.map((bg) => <option key={bg} value={bg}>Blood Group: {bg}</option>)}
+            </select>
+            <select value={profileForm.genotype} onChange={(e) => setProfileForm({ ...profileForm, genotype: e.target.value })} style={inputStyle}>
+              {GENOTYPES.map((g) => <option key={g} value={g}>Genotype: {g}</option>)}
+            </select>
+            <input placeholder="Known Allergies (e.g. Penicillin)" value={profileForm.allergies} onChange={(e) => setProfileForm({ ...profileForm, allergies: e.target.value })} style={inputStyle} />
+            <input placeholder="Chronic Conditions (e.g. Asthma)" value={profileForm.chronicConditions} onChange={(e) => setProfileForm({ ...profileForm, chronicConditions: e.target.value })} style={inputStyle} />
+            <input placeholder="NHIS / Health Insurance ID" value={profileForm.nhisNumber} onChange={(e) => setProfileForm({ ...profileForm, nhisNumber: e.target.value })} style={inputStyle} />
+            <input placeholder="Emergency Kin Phone" value={profileForm.emergencyContactPhone} onChange={(e) => setProfileForm({ ...profileForm, emergencyContactPhone: e.target.value })} style={inputStyle} />
+            <button type="submit" style={{ ...primaryBtnStyle, gridColumn: "1 / -1" }}>💾 Save My Personal Health Info</button>
+          </form>
+        )}
+
+        <div style={{ display: "grid", gap: "16px" }}>
+          <div>
+            <h4 style={{ margin: "0 0 10px 0", color: "#f5d061" }}>
+              🪪 {isParentView ? "Linked Ward Medical Profile(s)" : "Personal Baseline Health Profile"}
+            </h4>
+            {profiles.length === 0 ? (
+              <div style={{ padding: "14px", borderRadius: "10px", background: "rgba(6, 15, 30, 0.5)", color: "#cbd5e1", fontSize: "0.86rem" }}>
+                No personal medical admission record has been logged yet{isParentView ? " for your linked ward" : " for your account"}.
+              </div>
+            ) : (
+              <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(260px, 1fr))", gap: "12px" }}>
+                {profiles.map((p) => (
+                  <div key={p.id} style={{ padding: "14px", borderRadius: "12px", background: "rgba(6, 15, 30, 0.72)", border: "1px solid rgba(212, 175, 55, 0.45)" }}>
+                    <div style={{ fontSize: "0.72rem", fontWeight: 800, color: "#f5d061" }}>{p.personRole} • {p.admissionNumber || "REGISTERED"}</div>
+                    <strong style={{ display: "block", fontSize: "1.02rem", color: "#ffffff", margin: "4px 0" }}>{p.fullName}</strong>
+                    <div style={{ fontSize: "0.82rem", color: "#cbd5e1", lineHeight: 1.55 }}>
+                      <div>Blood Group: <strong style={{ color: "#7dd3fc" }}>{p.bloodGroup}</strong> • Genotype: <strong>{p.genotype}</strong></div>
+                      <div>Allergies: <strong>{p.allergies || "None Reported"}</strong></div>
+                      <div>Chronic Conditions: <strong>{p.chronicConditions || "None Reported"}</strong></div>
+                      <div>Emergency Contact: <strong>{p.emergencyContactPhone || p.phone || "On File"}</strong></div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+
+          <div>
+            <h4 style={{ margin: "0 0 10px 0", color: "#7dd3fc" }}>
+              🩺 {isParentView ? "Linked Ward Clinic Visits" : "My Clinic Visits & Checkup History"} ({visits.length})
+            </h4>
+            <div style={{ overflowX: "auto" }}>
+              <table style={{ width: "100%", borderCollapse: "collapse", fontSize: "0.84rem" }}>
+                <thead>
+                  <tr>
+                    <th style={thStyle}>Date</th>
+                    <th style={thStyle}>Vitals</th>
+                    <th style={thStyle}>Reason &amp; Clinical Note</th>
+                    <th style={thStyle}>Medication</th>
+                    <th style={thStyle}>Status</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {visits.length === 0 ? (
+                    <tr><td colSpan={5} style={{ padding: "14px", textAlign: "center", color: "#94a3b8" }}>No personal clinic consultations recorded yet.</td></tr>
+                  ) : visits.map((v) => (
+                    <tr key={v.id} style={{ borderBottom: "1px solid rgba(255,255,255,0.08)" }}>
+                      <td style={tdStyle}>{String(v.createdAt || "").slice(0, 10) || "Recent"}</td>
+                      <td style={tdStyle}>{v.vitals?.temperatureC || "37.0"}°C • {v.vitals?.bloodPressure || "118/76"}</td>
+                      <td style={tdStyle}>{v.chiefComplaint}<br /><strong style={{ color: "#7dd3fc" }}>{v.diagnosis || "Evaluated"}</strong></td>
+                      <td style={tdStyle}>{v.medicationDispensed || "Clinical Rest"}</td>
+                      <td style={tdStyle}><span style={{ color: "#6ee7b7", fontWeight: 800 }}>{v.dischargedAt ? `DISCHARGED (${v.disposition})` : v.disposition}</span></td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  // HEADMASTER COMMAND VIEW: Full Staff & Student Health Profiles + Complete Clinic Operations
+  const staffAndTeachersCount = profiles.filter((p) => String(p.personRole || "").toUpperCase() !== "STUDENT").length;
+  const studentsCount = profiles.filter((p) => String(p.personRole || "").toUpperCase() === "STUDENT").length;
+  const filteredDirectory = profiles.filter((p) => {
+    const r = String(p.personRole || "").toUpperCase();
+    if (directoryFilter === "STUDENT") return r === "STUDENT";
+    if (directoryFilter === "STAFF_TEACHER") return r !== "STUDENT";
+    return true;
+  });
+
+  const selectedProfile = profiles.find((p) => String(p.id) === String(selectedPersonId)) || null;
+  const selectedProfileVisits = selectedProfile
+    ? visits.filter((v) =>
+        (selectedProfile.email && String(v.patientEmail || "").toLowerCase() === String(selectedProfile.email).toLowerCase()) ||
+        (selectedProfile.personId && String(v.patientId || "") === String(selectedProfile.personId)) ||
+        String(v.patientName || "").toLowerCase() === String(selectedProfile.fullName || "").toLowerCase()
+      )
+    : [];
+
   return (
     <div className="role-workspace-card" style={{ padding: "22px", borderRadius: "16px", marginBottom: "24px" }}>
       <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: "12px", marginBottom: "16px" }}>
         <div>
           <span style={{ fontSize: "0.75rem", fontWeight: 800, color: "#f5d061", letterSpacing: "1px", textTransform: "uppercase" }}>
-            🏥 Integrated School Clinic, Sickbay &amp; Admission Medical Registry
+            🏥 Headmaster School Clinic Command • All Staff &amp; Student Medical Registry
           </span>
           <h2 style={{ margin: "4px 0 0 0", color: "#ffffff", fontSize: "1.35rem" }}>
-            Student &amp; Teacher Clinic Portal • Cross-System Health Dossier
+            Complete Staff &amp; Student Clinic Profiles, Sickbay &amp; Pharmacy Hub
           </h2>
         </div>
         <button
@@ -260,9 +474,9 @@ export default function SchoolClinicHubPanel({
       {/* Live Cross-Portal KPI Summary */}
       <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(180px, 1fr))", gap: "12px", marginBottom: "16px" }}>
         <div style={kpiCardStyle}>
-          <span style={{ fontSize: "0.76rem", color: "#cbd5e1" }}>Admission Medical Profiles</span>
+          <span style={{ fontSize: "0.76rem", color: "#cbd5e1" }}>All Staff &amp; Student Profiles</span>
           <strong style={{ fontSize: "1.55rem", color: "#f5d061" }}>{summary?.totalRegisteredProfiles ?? profiles.length}</strong>
-          <span style={{ fontSize: "0.72rem", color: "#94a3b8" }}>Students &amp; Teachers Synced</span>
+          <span style={{ fontSize: "0.72rem", color: "#94a3b8" }}>Students: {studentsCount} • Staff/Teachers: {staffAndTeachersCount}</span>
         </div>
         <div style={kpiCardStyle}>
           <span style={{ fontSize: "0.76rem", color: "#cbd5e1" }}>Clinic Consultations</span>
@@ -282,11 +496,11 @@ export default function SchoolClinicHubPanel({
       </div>
 
       {/* Cross-Portal Medical Record Pull Bar */}
-      <form onSubmit={handlePullRecords} style={{ display: "flex", gap: "10px", flexWrap: "wrap", marginBottom: "16px", padding: "12px", background: "rgba(6, 15, 30, 0.72)", borderRadius: "12px", border: "1px solid rgba(56, 189, 248, 0.35)" }}>
+      <form onSubmit={(e) => handlePullRecords(e, null)} style={{ display: "flex", gap: "10px", flexWrap: "wrap", marginBottom: "16px", padding: "12px", background: "rgba(6, 15, 30, 0.72)", borderRadius: "12px", border: "1px solid rgba(56, 189, 248, 0.35)" }}>
         <input
           value={pullQuery}
           onChange={(e) => setPullQuery(e.target.value)}
-          placeholder="🔍 Pull linked medical record by Student/Teacher Name, Email, Class, or Admission ID..."
+          placeholder="🔍 Pull linked medical record by Student/Staff Name, Email, Class/Dept, or Admission/Staff ID..."
           style={{ ...inputStyle, flex: 1, minWidth: "240px" }}
         />
         <button type="submit" style={primaryBtnStyle}>🔍 Pull Medical Dossier Across System</button>
@@ -313,14 +527,14 @@ export default function SchoolClinicHubPanel({
             <button type="button" onClick={() => setPulledDossier(null)} style={{ background: "transparent", border: "1px solid #64748b", color: "#cbd5e1", borderRadius: "6px", padding: "2px 8px", cursor: "pointer" }}>✕ Close</button>
           </div>
           <div style={{ display: "grid", gap: "8px", fontSize: "0.84rem" }}>
-            {(pulledDossier.matchedProfiles || []).slice(0, 5).map((p) => (
+            {(pulledDossier.matchedProfiles || []).slice(0, 8).map((p) => (
               <div key={p.id} style={{ padding: "8px 10px", borderRadius: "8px", background: "rgba(6, 15, 30, 0.7)" }}>
                 <strong>{p.fullName}</strong> ({p.personRole} • {p.admissionNumber} • {p.classOrDepartment}) — Blood: <strong style={{ color: "#f5d061" }}>{p.bloodGroup}</strong> | Genotype: <strong>{p.genotype}</strong> | Allergies: <strong>{p.allergies}</strong> | Emergency: {p.emergencyContactPhone || "N/A"}
               </div>
             ))}
-            {(pulledDossier.matchedVisits || []).slice(0, 5).map((v) => (
+            {(pulledDossier.matchedVisits || []).slice(0, 8).map((v) => (
               <div key={v.id} style={{ padding: "8px 10px", borderRadius: "8px", background: "rgba(6, 15, 30, 0.5)", borderLeft: "3px solid #34d399" }}>
-                <strong>{v.patientName}</strong> ({v.createdAt?.slice(0, 10)}): {v.chiefComplaint} → <strong>{v.diagnosis}</strong> [{v.disposition}] — Rx: {v.medicationDispensed || "Clinical Rest"}
+                <strong>{v.patientName}</strong> ({String(v.createdAt || "").slice(0, 10)}): {v.chiefComplaint} → <strong>{v.diagnosis}</strong> [{v.disposition}] — Rx: {v.medicationDispensed || "Clinical Rest"}
               </div>
             ))}
           </div>
@@ -330,8 +544,9 @@ export default function SchoolClinicHubPanel({
       {/* Navigation Tabs */}
       <div className="role-tab-nav" style={{ marginBottom: "16px" }}>
         {[
-          { id: "TREAT_ADMIT", label: mode === "STUDENT" || mode === "PARENT" ? "🩺 Request Clinic / Health Check-In" : "🩺 Admit / Treat Student or Teacher" },
-          { id: "REGISTRATIONS", label: `📋 Admission Medical Registrations (${profiles.length})` },
+          { id: "DIRECTORY_PROFILES", label: `👥 All Staff & Student Health Profiles (${profiles.length})` },
+          { id: "TREAT_ADMIT", label: "🩺 Admit / Treat Student or Staff" },
+          { id: "REGISTRATIONS", label: `📋 Admission Medical Registry (${profiles.length})` },
           { id: "VISITS", label: `🏥 Clinic Visits & Sickbay Log (${visits.length})` },
           { id: "INVENTORY", label: `💊 Clinic Pharmacy Stock (${inventory.length})` }
         ].map((t) => (
@@ -347,16 +562,125 @@ export default function SchoolClinicHubPanel({
         ))}
       </div>
 
+      {/* TAB 0: HEADMASTER COMPLETE ALL STAFF & STUDENT HEALTH PROFILES */}
+      {activeSubTab === "DIRECTORY_PROFILES" && (
+        <div style={{ display: "grid", gap: "16px" }}>
+          <div style={{ display: "flex", gap: "8px", flexWrap: "wrap", alignItems: "center" }}>
+            {[
+              { key: "ALL", label: `All Profiles (${profiles.length})` },
+              { key: "STUDENT", label: `Students (${studentsCount})` },
+              { key: "STAFF_TEACHER", label: `Teachers & Staff (${staffAndTeachersCount})` }
+            ].map((f) => (
+              <button
+                key={f.key}
+                type="button"
+                onClick={() => setDirectoryFilter(f.key)}
+                style={{
+                  background: directoryFilter === f.key ? "#d4af37" : "rgba(15, 35, 71, 0.7)",
+                  color: directoryFilter === f.key ? "#081833" : "#f8fafc",
+                  border: "1px solid #d4af37",
+                  borderRadius: "8px",
+                  padding: "6px 12px",
+                  fontWeight: 800,
+                  fontSize: "0.8rem",
+                  cursor: "pointer"
+                }}
+              >
+                {f.label}
+              </button>
+            ))}
+          </div>
+
+          {selectedProfile && (
+            <div style={{ padding: "16px", borderRadius: "12px", background: "rgba(15, 35, 71, 0.9)", border: "1.5px solid #f5d061" }}>
+              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: "8px", marginBottom: "10px" }}>
+                <strong style={{ color: "#f5d061", fontSize: "1rem" }}>
+                  🪪 Complete Health Dossier: {selectedProfile.fullName} ({selectedProfile.personRole})
+                </strong>
+                <button type="button" onClick={() => setSelectedPersonId(null)} style={{ background: "transparent", border: "1px solid #94a3b8", color: "#f8fafc", borderRadius: "6px", padding: "4px 10px", cursor: "pointer" }}>
+                  ✕ Close Dossier
+                </button>
+              </div>
+              <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(210px, 1fr))", gap: "10px", fontSize: "0.84rem", color: "#e2e8f0", marginBottom: "12px" }}>
+                <div><strong>Email:</strong> {selectedProfile.email || "—"}</div>
+                <div><strong>ID / Admission No:</strong> {selectedProfile.admissionNumber || "—"}</div>
+                <div><strong>Class / Department:</strong> {selectedProfile.classOrDepartment || "—"}</div>
+                <div><strong>Blood Group / Genotype:</strong> {selectedProfile.bloodGroup} / {selectedProfile.genotype}</div>
+                <div><strong>Allergies:</strong> {selectedProfile.allergies || "None Reported"}</div>
+                <div><strong>Chronic Conditions:</strong> {selectedProfile.chronicConditions || "None Reported"}</div>
+                <div><strong>NHIS ID:</strong> {selectedProfile.nhisNumber || "Pending"}</div>
+                <div><strong>Emergency Contact:</strong> {selectedProfile.emergencyContactPhone || selectedProfile.phone || "—"}</div>
+              </div>
+              <div style={{ fontSize: "0.82rem", color: "#cbd5e1" }}>
+                <strong style={{ color: "#7dd3fc" }}>Recorded Clinic Visits ({selectedProfileVisits.length}):</strong>
+                {selectedProfileVisits.length === 0 ? (
+                  <p style={{ margin: "6px 0 0 0", color: "#94a3b8" }}>No clinic visits recorded yet for this individual.</p>
+                ) : (
+                  <ul style={{ margin: "6px 0 0 0", paddingLeft: "18px" }}>
+                    {selectedProfileVisits.map((v) => (
+                      <li key={v.id}>
+                        {String(v.createdAt || "").slice(0, 10)}: {v.chiefComplaint} — <strong>{v.diagnosis}</strong> [{v.disposition}] (Rx: {v.medicationDispensed || "None"})
+                      </li>
+                    ))}
+                  </ul>
+                )}
+              </div>
+            </div>
+          )}
+
+          {filteredDirectory.length === 0 ? (
+            <div style={{ padding: "18px", textAlign: "center", color: "#94a3b8", background: "rgba(6, 15, 30, 0.45)", borderRadius: "12px" }}>
+              No Staff or Student clinic profiles recorded in this filter yet.
+            </div>
+          ) : (
+            <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(265px, 1fr))", gap: "12px" }}>
+              {filteredDirectory.map((p) => {
+                const initials = String(p.fullName || "GB").split(/\s+/).filter(Boolean).slice(0, 2).map((w) => w[0]).join("").toUpperCase();
+                const isStudent = String(p.personRole || "").toUpperCase() === "STUDENT";
+                return (
+                  <div key={p.id} style={{ padding: "14px", borderRadius: "12px", background: "rgba(6, 15, 30, 0.72)", border: "1px solid rgba(212, 175, 55, 0.42)", display: "flex", flexDirection: "column", gap: "8px" }}>
+                    <div style={{ display: "flex", alignItems: "center", gap: "10px" }}>
+                      <div style={{ width: "42px", height: "42px", borderRadius: "50%", background: isStudent ? "linear-gradient(135deg, #0284c7, #0f2347)" : "linear-gradient(135deg, #b45309, #0f2347)", border: "1.5px solid #f5d061", color: "#ffffff", display: "flex", alignItems: "center", justifyContent: "center", fontWeight: 900, fontSize: "0.9rem", flexShrink: 0 }}>
+                        {initials || "GB"}
+                      </div>
+                      <div style={{ minWidth: 0 }}>
+                        <strong style={{ display: "block", color: "#ffffff", fontSize: "0.96rem", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{p.fullName}</strong>
+                        <span style={{ fontSize: "0.72rem", fontWeight: 800, color: isStudent ? "#7dd3fc" : "#f5d061" }}>
+                          {p.personRole} • {p.admissionNumber || "REG"}
+                        </span>
+                      </div>
+                    </div>
+                    <div style={{ fontSize: "0.8rem", color: "#cbd5e1", lineHeight: 1.45 }}>
+                      <div>Dept/Class: <strong>{p.classOrDepartment || "General"}</strong></div>
+                      <div>Blood: <strong style={{ color: "#f5d061" }}>{p.bloodGroup}</strong> | Genotype: <strong>{p.genotype}</strong></div>
+                      <div>Allergies: <strong>{p.allergies || "None"}</strong></div>
+                      <div>Emergency: <strong>{p.emergencyContactPhone || p.phone || "On File"}</strong></div>
+                    </div>
+                    <button
+                      type="button"
+                      onClick={() => setSelectedPersonId(p.id)}
+                      style={{ marginTop: "auto", background: "rgba(56, 189, 248, 0.16)", border: "1px solid #38bdf8", color: "#bae6fd", borderRadius: "8px", padding: "6px 10px", fontWeight: 800, fontSize: "0.78rem", cursor: "pointer" }}
+                    >
+                      📂 Open Complete Health Profile
+                    </button>
+                  </div>
+                );
+              })}
+            </div>
+          )}
+        </div>
+      )}
+
       {/* TAB 1: ADMIT / TREAT STUDENT OR TEACHER */}
       {activeSubTab === "TREAT_ADMIT" && (
         <form onSubmit={handleAdmitOrTreat} style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(205px, 1fr))", gap: "12px", padding: "16px", background: "rgba(6, 15, 30, 0.6)", borderRadius: "12px", border: "1px solid rgba(212, 175, 55, 0.35)" }}>
           <h4 style={{ gridColumn: "1 / -1", margin: 0, color: "#f5d061" }}>
-            {mode === "STUDENT" ? "🩺 Student Clinic Check-In Request" : "🩺 Treat Patient or Admit to School Sickbay (Students & Teachers)"}
+            🩺 Treat Patient or Admit to School Sickbay (Students, Teachers &amp; Staff)
           </h4>
 
-          {profiles.length > 0 && canClinicallyWrite && (
+          {profiles.length > 0 && (
             <select onChange={(e) => handleSelectDirectoryPerson(e.target.value)} defaultValue="" style={{ ...inputStyle, gridColumn: "1 / -1" }}>
-              <option value="">-- Optional: Autofill from Admitted Student / Teacher Directory --</option>
+              <option value="">-- Optional: Autofill from Admitted Student / Staff Directory --</option>
               {profiles.map((p) => (
                 <option key={p.id} value={p.id}>{p.fullName} ({p.personRole} • {p.admissionNumber} • {p.classOrDepartment})</option>
               ))}
@@ -396,7 +720,7 @@ export default function SchoolClinicHubPanel({
       {activeSubTab === "REGISTRATIONS" && (
         <div style={{ display: "grid", gap: "16px" }}>
           <form onSubmit={handleSaveMedicalProfile} style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(195px, 1fr))", gap: "10px", padding: "16px", background: "rgba(6, 15, 30, 0.6)", borderRadius: "12px" }}>
-            <h4 style={{ gridColumn: "1 / -1", margin: 0, color: "#f5d061" }}>📋 Register / Update Admission Medical Record (Students &amp; Teachers)</h4>
+            <h4 style={{ gridColumn: "1 / -1", margin: 0, color: "#f5d061" }}>📋 Register / Update Admission Medical Record (Students, Teachers &amp; Staff)</h4>
             <select value={profileForm.personRole} onChange={(e) => setProfileForm({ ...profileForm, personRole: e.target.value })} style={inputStyle}>
               <option value="STUDENT">Student</option>
               <option value="TEACHER">Teacher / Lecturer</option>
@@ -461,7 +785,7 @@ export default function SchoolClinicHubPanel({
                 <th style={thStyle}>Complaint &amp; Diagnosis</th>
                 <th style={thStyle}>Medication</th>
                 <th style={thStyle}>Status / Disposition</th>
-                {canClinicallyWrite && <th style={thStyle}>Action</th>}
+                <th style={thStyle}>Action</th>
               </tr>
             </thead>
             <tbody>
@@ -478,15 +802,13 @@ export default function SchoolClinicHubPanel({
                       {v.dischargedAt ? `DISCHARGED (${v.disposition})` : v.disposition}
                     </span>
                   </td>
-                  {canClinicallyWrite && (
-                    <td style={tdStyle}>
-                      {v.disposition === "ADMITTED_TO_SICKBAY" && !v.dischargedAt ? (
-                        <button type="button" onClick={() => handleDischargeFromSickbay(v.id)} style={{ background: "#059669", color: "#fff", border: "none", borderRadius: "6px", padding: "5px 9px", fontSize: "0.75rem", fontWeight: 700, cursor: "pointer" }}>
-                          ✅ Discharge Sickbay
-                        </button>
-                      ) : "Cleared"}
-                    </td>
-                  )}
+                  <td style={tdStyle}>
+                    {v.disposition === "ADMITTED_TO_SICKBAY" && !v.dischargedAt ? (
+                      <button type="button" onClick={() => handleDischargeFromSickbay(v.id)} style={{ background: "#059669", color: "#fff", border: "none", borderRadius: "6px", padding: "5px 9px", fontSize: "0.75rem", fontWeight: 700, cursor: "pointer" }}>
+                        ✅ Discharge Sickbay
+                      </button>
+                    ) : "Cleared"}
+                  </td>
                 </tr>
               ))}
             </tbody>
@@ -497,14 +819,12 @@ export default function SchoolClinicHubPanel({
       {/* TAB 4: CLINIC PHARMACY INVENTORY */}
       {activeSubTab === "INVENTORY" && (
         <div style={{ display: "grid", gap: "16px" }}>
-          {canClinicallyWrite && (
-            <form onSubmit={handleAddInventory} style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(180px, 1fr))", gap: "10px", padding: "14px", background: "rgba(6, 15, 30, 0.6)", borderRadius: "12px" }}>
-              <input required placeholder="Medicine / First-Aid Supply Name" value={medForm.itemName} onChange={(e) => setMedForm({ ...medForm, itemName: e.target.value })} style={inputStyle} />
-              <input type="number" min="1" placeholder="Quantity" value={medForm.quantity} onChange={(e) => setMedForm({ ...medForm, quantity: e.target.value })} style={inputStyle} />
-              <input placeholder="Unit (tablets / bottles / kits)" value={medForm.unit} onChange={(e) => setMedForm({ ...medForm, unit: e.target.value })} style={inputStyle} />
-              <button type="submit" style={primaryBtnStyle}>💊 Add / Restock Supply</button>
-            </form>
-          )}
+          <form onSubmit={handleAddInventory} style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(180px, 1fr))", gap: "10px", padding: "14px", background: "rgba(6, 15, 30, 0.6)", borderRadius: "12px" }}>
+            <input required placeholder="Medicine / First-Aid Supply Name" value={medForm.itemName} onChange={(e) => setMedForm({ ...medForm, itemName: e.target.value })} style={inputStyle} />
+            <input type="number" min="1" placeholder="Quantity" value={medForm.quantity} onChange={(e) => setMedForm({ ...medForm, quantity: e.target.value })} style={inputStyle} />
+            <input placeholder="Unit (tablets / bottles / kits)" value={medForm.unit} onChange={(e) => setMedForm({ ...medForm, unit: e.target.value })} style={inputStyle} />
+            <button type="submit" style={primaryBtnStyle}>💊 Add / Restock Supply</button>
+          </form>
           <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(220px, 1fr))", gap: "12px" }}>
             {inventory.map((m) => (
               <div key={m.id} style={{ padding: "14px", borderRadius: "10px", background: "rgba(6, 15, 30, 0.7)", border: `1px solid ${m.quantity <= m.reorderLevel ? "#f87171" : "rgba(212, 175, 55, 0.4)"}` }}>

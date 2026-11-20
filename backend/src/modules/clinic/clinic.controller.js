@@ -16,7 +16,13 @@ async function getStatus(req, res, next) {
 async function listProfiles(req, res, next) {
   try {
     const profiles = await service.listClinicProfiles(req);
-    return res.status(200).json({ status: 'success', results: profiles.length, data: { profiles } });
+    const role = String(req.user?.role || '').toUpperCase();
+    const isHeadmasterClinic = ['SUPER_ADMIN', 'ADMIN', 'HEADMASTER', 'PRINCIPAL', 'DEVELOPER'].includes(role);
+    return res.status(200).json({
+      status: 'success',
+      results: profiles.length,
+      data: { profiles, ownHealthOnly: !isHeadmasterClinic }
+    });
   } catch (err) {
     return next(err);
   }
@@ -25,7 +31,20 @@ async function listProfiles(req, res, next) {
 async function upsertProfile(req, res, next) {
   try {
     const tid = req.tenantId || req.user?.tenantId || 1;
-    const profile = service.syncAdmissionMedicalProfile(tid, req.body || {});
+    const role = String(req.user?.role || '').toUpperCase();
+    const isHeadmasterClinic = ['SUPER_ADMIN', 'ADMIN', 'HEADMASTER', 'PRINCIPAL', 'DEVELOPER'].includes(role);
+    const rawBody = { ...(req.body || {}) };
+    if (!isHeadmasterClinic && req.user) {
+      // Non-Headmaster users may only register/update their own personal health metadata
+      rawBody.personId = String(req.user.id);
+      rawBody.personRole = role;
+      rawBody.email = req.user.email || rawBody.email;
+      rawBody.fullName =
+        `${req.user.firstName || ''} ${req.user.lastName || ''}`.trim() ||
+        rawBody.fullName ||
+        req.user.email;
+    }
+    const profile = service.syncAdmissionMedicalProfile(tid, rawBody);
     if (!profile) {
       return res.status(400).json({ status: 'error', message: 'Full Name or Email is required to save a medical registration profile.' });
     }

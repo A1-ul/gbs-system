@@ -1,7 +1,7 @@
 {
   "systemName": "GBS MANAGEMENT SYSTEM (Global Brightest Stars Educational Management System)",
-  "version": "2.10.0-PRODUCTION-BLUEPRINT",
-  "savedAt": "2026-11-19T21:00:00Z",
+  "version": "2.11.0-PRODUCTION-BLUEPRINT",
+  "savedAt": "2026-11-20T14:30:00Z",
   "status": "PRODUCTION_READY_VERIFIED",
   "architecture": {
     "frontend": {
@@ -369,12 +369,19 @@
       "rootCause": "UniversalOpenNoticeHUD fired fallback execution toasts on clicks without checking in-flight network tracking or HTML5 form invalidity; TopCenterSystemBanner Open New Tab omitted ?full=1; finance.routes blocked PARENT/STUDENT and finance.service required numeric invoiceId on direct portal settlements; ParentDashboard/StudentDashboard swallowed API errors into fake success alerts; AccountantDashboard fabricated gateway verification hits on unknown references; TeacherDashboard/StudentDashboard had ungated sample rosters/study rooms/past papers.",
       "resolution": "Added window.__gbsInFlightRequests tracking in axios.js, HTML5 invalid-form capture & pending-request suppression in UniversalOpenNoticeHUD.jsx, ?full=1 enforcement in TopCenterSystemBanner.jsx Open New Tab, unified /api/v1/finance/payments RBAC + direct portal settlement support in finance.routes/controller/service, wired checkDemoEntryLimit & backend-truth error handling across StudentDashboard/ParentDashboard/AccountantDashboard, gated sample rosters/study rooms/past papers behind isDemoSandboxMode(), and verified multi-module RCCE tests.",
       "status": "PERMANENTLY_GUARDED"
+    },
+    {
+      "issueCode": "DIAG-CLINIC-PRIVACY-UNIV-SPLIT-NO-TOOLTIPS-V211",
+      "symptom": "Tooltips needed removal; mobile PWA install prompt needed synchronous user-gesture trigger; University Hub needed strict separation of Industrial Internships and Academic & Field Attachments; School Clinic needed strict own-health-only privacy for regular users vs full Staff & Student profiles for Headmaster; Voice AI needed exact institutional role explanations with strict non-disclosure of internal maintenance details.",
+      "rootCause": "beforeinstallprompt.prompt() ran after await navigator.serviceWorker.register(); Internship and Attachment shared one tab/endpoint; SchoolClinicHubPanel gave non-Headmasters clinic write processes and pulled /clinic/inventory; tooltips rendered via UniversalHeadingTooltipHUD and title attributes.",
+      "resolution": "Removed UniversalHeadingTooltipHUD and stripped title attributes on hover/focus; moved prompt() to synchronous click handler + added Install button on MainLoginPage; split /university/internships and /university/attachments; enforced ownHealthOnly scoping in clinic.service/controller/routes + SchoolClinicHubPanel while adding Headmaster Staff & Student full health profile directory; added ROLE_ACTIVITIES_GUIDE and non-disclosure guard in systemMemoryAssistant + GBSVoiceAssistant.",
+      "status": "PERMANENTLY_GUARDED"
     }
   ],
   "verificationSummary": {
-    "backendTestSuitesPassed": "All 13 backend integration suites including multi-module RCCE truth-feedback & Live vs Demo 10-entry parity",
-    "chromeE2EDashboardsVerified": "All 8 user dashboards in both DEMO_SANDBOX and LIVE_PRODUCTION plus DeveloperDashboard telemetry & RCCE Control Hub",
-    "institutionSeparationUniversityClinicVoiceVerified": "2026-11-20 Live Production & Demo Sandbox Parity",
+    "backendTestSuitesPassed": "All backend integration suites verified",
+    "chromeE2EDashboardsVerified": "All 8 user dashboards in DEMO_SANDBOX and LIVE_PRODUCTION plus Developer control suite verified",
+    "institutionSeparationUniversityClinicVoiceVerified": "2026-11-20 Separated Internships/Attachments, Clinic Privacy & Non-Disclosure Verified",
     "browserAssetsRegenerated": "favicon.ico, logo.png, icon-192.png, icon-512.png, apple-touch-icon.png, og-gbs-crest.jpg",
     "uncaughtBrowserConsoleErrors": 0,
     "astUndeclaredErrors": 0

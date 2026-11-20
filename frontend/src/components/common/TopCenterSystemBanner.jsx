@@ -218,16 +218,14 @@ export default function TopCenterSystemBanner({
 
   const handleDirectOrModalAppInstall = async () => {
     const promptObj = typeof window !== "undefined" ? window.__gbsDeferredInstallPrompt : null;
-    if (typeof navigator !== "undefined" && "serviceWorker" in navigator) {
-      navigator.serviceWorker.register("/sw.js", { updateViaCache: "none" }).catch(() => { });
-    }
     if (promptObj) {
       try {
-        await promptObj.prompt();
-        const { outcome } = await promptObj.userChoice;
-        // Browser beforeinstallprompt events are strictly single-use; clear immediately after consumption
+        // Call prompt() synchronously first to preserve mobile/desktop browser user activation token
+        const promptPromise = promptObj.prompt();
         window.__gbsDeferredInstallPrompt = null;
         setPwaPromptReady(false);
+        await promptPromise;
+        const { outcome } = await promptObj.userChoice;
         if (outcome === "accepted") {
           window.__gbsAppInstalled = true;
           if (window.showGBSOpenNotice) {
@@ -242,6 +240,9 @@ export default function TopCenterSystemBanner({
         window.__gbsDeferredInstallPrompt = null;
         setPwaPromptReady(false);
       }
+    }
+    if (typeof navigator !== "undefined" && "serviceWorker" in navigator) {
+      navigator.serviceWorker.register("/sw.js", { updateViaCache: "none" }).catch(() => { });
     }
     setShowMobileAppModal(true);
   };
