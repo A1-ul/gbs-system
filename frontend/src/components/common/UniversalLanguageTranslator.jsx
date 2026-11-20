@@ -325,7 +325,6 @@ export default function UniversalLanguageTranslator() {
           : "0 4px 14px rgba(15, 23, 42, 0.55), 0 0 10px rgba(212, 175, 55, 0.28)",
         backdropFilter: "blur(8px)",
       }}
-      title="Drag to move anywhere on screen • Click to translate highlighted text or messages"
     >
       {isMinimized ? (
         <button
@@ -350,7 +349,6 @@ export default function UniversalLanguageTranslator() {
             cursor: isDragging ? "grabbing" : "pointer",
             padding: 0,
           }}
-          title="Click to open Language Translator • Drag to move anywhere"
         >
           🌐
         </button>
@@ -365,7 +363,6 @@ export default function UniversalLanguageTranslator() {
               paddingRight: "2px",
               cursor: isDragging ? "grabbing" : "grab",
             }}
-            title="Drag anywhere on screen"
           >
             ⠿
           </span>
@@ -399,7 +396,6 @@ export default function UniversalLanguageTranslator() {
                   fontSize: "0.65rem",
                   fontWeight: 900,
                 }}
-                title={`${unreadInboxCount} unread translated message(s)`}
               >
                 {unreadInboxCount}
               </span>
@@ -424,7 +420,6 @@ export default function UniversalLanguageTranslator() {
               justifyContent: "center",
               padding: 0,
             }}
-            title="Shrink to compact icon"
           >
             –
           </button>
@@ -450,7 +445,6 @@ export default function UniversalLanguageTranslator() {
             padding: 0,
             marginLeft: "-4px",
           }}
-          title="Expand pill label"
         >
           ›
         </button>

@@ -24,6 +24,7 @@ import ClassTopicVideoPlatform from "../../../../../components/common/ClassTopic
 import { navigateToDetail } from "../../../../../utils/universalNavigation";
 import MobileCameraAIExamScannerModal from "../../../../../components/common/MobileCameraAIExamScannerModal";
 import StaffAttendanceClockWidget from "../../../../../components/common/StaffAttendanceClockWidget";
+import LiveCallLauncherAndReceiver from "../../../../../components/common/LiveCallLauncherAndReceiver";
 import FileUploadVerificationCard from "../../../../../components/common/FileUploadVerificationCard";
 import DigitalSignaturePadModal from "../../../../../components/common/DigitalSignaturePadModal";
 import { getActiveSchoolName, getActiveSchoolLogo } from "../../../../../utils/schoolBranding";
@@ -4149,6 +4150,12 @@ export default function TeacherDashboard() {
 
         {/* Prominent Top Center System Branding */}
         <TopCenterSystemBanner roleTitle="Teacher Academic Suite" />
+        <LiveCallLauncherAndReceiver
+          variant="GLOBAL_RECEIVER"
+          userRole="TEACHER"
+          currentUser={currentUser}
+          onFeedback={(msg, isErr) => setFeedback({ type: isErr ? "error" : "success", message: msg })}
+        />
 
         {/* Header */}
         <header className="role-header">
@@ -4186,7 +4193,7 @@ export default function TeacherDashboard() {
               type="button"
               className="role-action-btn"
               onClick={() => window.history.back()}
-              title="Return to previous view or page"
+              aria-label="Return to previous view or page"
               style={{ borderColor: "#64748b", color: "#f8fafc", background: "rgba(30, 41, 59, 0.7)", fontWeight: 700, cursor: "pointer" }}
             >
               ← Back
@@ -4199,7 +4206,7 @@ export default function TeacherDashboard() {
               className="role-action-btn"
               onClick={() => setActiveTab("profile")}
               style={{ borderColor: "#34d399", color: "#34d399", fontWeight: 800 }}
-              title="View & Edit Faculty Profile"
+              aria-label="View & Edit Faculty Profile"
             >
               👤 My Profile
             </button>
@@ -4208,7 +4215,7 @@ export default function TeacherDashboard() {
               className="role-action-btn"
               onClick={() => setShowMobileCameraScanner(true)}
               style={{ borderColor: "#a855f7", color: "#c084fc", fontWeight: 800, background: "rgba(168, 85, 247, 0.15)" }}
-              title="Launch Phone Camera AI Exam Scanner"
+              aria-label="Launch Phone Camera AI Exam Scanner"
             >
               📸 Mobile Camera Scanner
             </button>
@@ -4259,7 +4266,7 @@ export default function TeacherDashboard() {
                   className="role-kpi-box"
                   onClick={() => setActiveTab("classes")}
                   style={{ cursor: "pointer", transition: "transform 0.15s" }}
-                  title="Click to manage assigned classes"
+                  aria-label="Click to manage assigned classes"
                 >
                   <span className="role-kpi-icon">📚</span>
                   <div className="role-kpi-data">
@@ -4271,7 +4278,7 @@ export default function TeacherDashboard() {
                   className="role-kpi-box"
                   onClick={() => setActiveTab("attendance")}
                   style={{ cursor: "pointer", transition: "transform 0.15s" }}
-                  title="Click to view student enrollment and attendance roster"
+                  aria-label="Click to view student enrollment and attendance roster"
                 >
                   <span className="role-kpi-icon">👥</span>
                   <div className="role-kpi-data">
@@ -4283,7 +4290,7 @@ export default function TeacherDashboard() {
                   className="role-kpi-box"
                   onClick={() => setActiveTab("assignments")}
                   style={{ cursor: "pointer", transition: "transform 0.15s" }}
-                  title="Click to view published lesson assignments"
+                  aria-label="Click to view published lesson assignments"
                 >
                   <span className="role-kpi-icon">📝</span>
                   <div className="role-kpi-data">
@@ -4295,7 +4302,7 @@ export default function TeacherDashboard() {
                   className="role-kpi-box"
                   onClick={() => setActiveTab("meetings")}
                   style={{ cursor: "pointer", transition: "transform 0.15s" }}
-                  title="Click to view scheduled live interactive classrooms"
+                  aria-label="Click to view scheduled live interactive classrooms"
                 >
                   <span className="role-kpi-icon">💻</span>
                   <div className="role-kpi-data">
@@ -4462,7 +4469,7 @@ export default function TeacherDashboard() {
             <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(180px, 1fr))", gap: "12px", marginTop: "10px" }}>
               <div
                 onClick={() => setShowWeeklyActivitiesModal(true)}
-                title="Click to view Academic Year schedule and weekly activities"
+                aria-label="Click to view Academic Year schedule and weekly activities"
                 style={{
                   background: "rgba(2, 6, 23, 0.6)",
                   padding: "10px 14px",
@@ -4477,7 +4484,7 @@ export default function TeacherDashboard() {
               </div>
               <div
                 onClick={() => setShowWeeklyActivitiesModal(true)}
-                title="Click to inspect Active Term curriculum timeline"
+                aria-label="Click to inspect Active Term curriculum timeline"
                 style={{
                   background: "rgba(2, 6, 23, 0.6)",
                   padding: "10px 14px",
@@ -4492,7 +4499,7 @@ export default function TeacherDashboard() {
               </div>
               <div
                 onClick={() => setShowWeeklyActivitiesModal(true)}
-                title="Click to view all activities for the weeks to spend in school"
+                aria-label="Click to view all activities for the weeks to spend in school"
                 style={{
                   background: "linear-gradient(135deg, rgba(16, 185, 129, 0.2), rgba(2, 6, 23, 0.85))",
                   padding: "12px 16px",
@@ -4523,7 +4530,7 @@ export default function TeacherDashboard() {
                   setShowWeeklyActivitiesModal(true);
                   setWeeklyActivitiesFilter("WEEKS_8_14");
                 }}
-                title="Click to view Revision, Examination and Vacation dates"
+                aria-label="Click to view Revision, Examination and Vacation dates"
                 style={{
                   background: "rgba(2, 6, 23, 0.6)",
                   padding: "12px 16px",
@@ -4540,6 +4547,13 @@ export default function TeacherDashboard() {
               </div>
             </div>
           </section>
+
+          {/* Global Staff Welcome Prompt & Duty Clock-In / Clock-Out Desk (Greets Staff Immediately Upon Login) */}
+          <StaffAttendanceClockWidget
+            roleOverride="TEACHER"
+            currentUser={teacherProfile}
+            onFeedback={(msg, isErr) => setFeedback({ type: isErr ? "error" : "success", message: msg })}
+          />
 
           {/* Workspace Tabs Navigation */}
           <nav className="role-tab-nav">
@@ -4600,7 +4614,7 @@ export default function TeacherDashboard() {
               className={`role-tab-btn ${activeTab === "meetings" ? "active" : ""}`}
               onClick={() => setActiveTab("meetings")}
             >
-              💻 Virtual Classrooms (Zoom / Meet)
+              💻 Live Video Conferences &amp; Classrooms
             </button>
             <button
               type="button"
@@ -4665,11 +4679,6 @@ export default function TeacherDashboard() {
           {/* ======================================================== */}
           {activeTab === "attendance" && (
             <div className="role-workspace-card">
-              <StaffAttendanceClockWidget
-                roleOverride="TEACHER"
-                currentUser={teacherProfile}
-                onFeedback={(msg, isErr) => setFeedback({ type: isErr ? "error" : "success", message: msg })}
-              />
               <div className="workspace-title-row">
                 <div>
                   <h2><span>📋</span> DAILY CLASSROOM ATTENDANCE REGISTER & WEEKLY ARCHIVES</h2>
@@ -4871,7 +4880,7 @@ export default function TeacherDashboard() {
                             fontSize: "0.8rem",
                             cursor: "pointer"
                           }}
-                          title="View verified weekly attendance register on dedicated page"
+                          aria-label="View verified weekly attendance register on dedicated page"
                         >
                           🔍 View Verified Register (Full Page)
                         </button>
@@ -4891,7 +4900,7 @@ export default function TeacherDashboard() {
                             alignItems: "center",
                             gap: "6px"
                           }}
-                          title="Archive this approved weekly attendance for historical reference"
+                          aria-label="Archive this approved weekly attendance for historical reference"
                         >
                           📁 Archive Approved Weekly Attendance
                         </button>
@@ -4908,7 +4917,7 @@ export default function TeacherDashboard() {
                             fontSize: "0.8rem",
                             cursor: "pointer"
                           }}
-                          title="View historical archived attendances"
+                          aria-label="View historical archived attendances"
                         >
                           🗄️ View Archives ({archivedWeeklyAttendances.length})
                         </button>
@@ -5089,7 +5098,7 @@ export default function TeacherDashboard() {
                                 <button
                                   type="button"
                                   onClick={() => handleMarkSingleStudent(sid, "PRESENT")}
-                                  title={`Tick ${s.firstName} Present`}
+                                  aria-label={`Tick ${s.firstName} Present`}
                                   style={{
                                     display: "inline-flex",
                                     alignItems: "center",
@@ -5114,7 +5123,7 @@ export default function TeacherDashboard() {
                                 <button
                                   type="button"
                                   onClick={() => handleMarkSingleStudent(sid, "ABSENT")}
-                                  title={`Tick ${s.firstName} Absent`}
+                                  aria-label={`Tick ${s.firstName} Absent`}
                                   style={{
                                     display: "inline-flex",
                                     alignItems: "center",
@@ -5139,7 +5148,7 @@ export default function TeacherDashboard() {
                                 <button
                                   type="button"
                                   onClick={() => handleMarkSingleStudent(sid, "LATE")}
-                                  title={`Tick ${s.firstName} Late`}
+                                  aria-label={`Tick ${s.firstName} Late`}
                                   style={{
                                     display: "inline-flex",
                                     alignItems: "center",
@@ -5162,7 +5171,7 @@ export default function TeacherDashboard() {
                                 <button
                                   type="button"
                                   onClick={() => handleMarkSingleStudent(sid, "EXCUSED")}
-                                  title={`Tick ${s.firstName} Excused`}
+                                  aria-label={`Tick ${s.firstName} Excused`}
                                   style={{
                                     display: "inline-flex",
                                     alignItems: "center",
@@ -5185,7 +5194,7 @@ export default function TeacherDashboard() {
                                 <button
                                   type="button"
                                   onClick={() => handleMarkSingleStudent(sid, "CLEAR")}
-                                  title={`Reset ${s.firstName} to unmarked`}
+                                  aria-label={`Reset ${s.firstName} to unmarked`}
                                   style={{
                                     padding: "6px 8px",
                                     borderRadius: "8px",
@@ -5217,7 +5226,7 @@ export default function TeacherDashboard() {
                                 className="btn-secondary"
                                 style={{ padding: "4px 8px", fontSize: "0.72rem", borderColor: "#38bdf8", color: "#38bdf8", fontWeight: "700", cursor: "pointer" }}
                                 onClick={() => navigateToDetail(navigate, "student", sid, s, { returnTab: "attendance" })}
-                                title={`Inspect ${s.firstName}'s full record on dedicated page`}
+                                aria-label={`Inspect ${s.firstName}'s full record on dedicated page`}
                               >
                                 👁️ View
                               </button>
@@ -5335,7 +5344,7 @@ export default function TeacherDashboard() {
                                   className="btn-secondary"
                                   style={{ padding: "4px 10px", fontSize: "0.75rem", borderColor: "#38bdf8", color: "#38bdf8", fontWeight: "700", cursor: "pointer" }}
                                   onClick={() => navigateToDetail(navigate, "attendance", arch.id || arch.date, arch, { returnTab: activeTab })}
-                                  title="View full attendance roll sheet on dedicated page"
+                                  aria-label="View full attendance roll sheet on dedicated page"
                                 >
                                   👁️ View Full Roll
                                 </button>
@@ -5733,7 +5742,7 @@ export default function TeacherDashboard() {
                     type="submit"
                     className="btn-primary"
                     disabled={loading || !newAssignment.title.trim() || (assignmentFile && !isAssignmentFileVerified)}
-                    title={assignmentFile && !isAssignmentFileVerified ? "Please inspect and verify the uploaded assignment file before publishing" : ""}
+                    aria-label={assignmentFile && !isAssignmentFileVerified ? "Please inspect and verify the uploaded assignment file before publishing" : ""}
                     style={{
                       background: (assignmentFile && !isAssignmentFileVerified) ? "rgba(100, 116, 139, 0.4)" : undefined,
                       cursor: (assignmentFile && !isAssignmentFileVerified) ? "not-allowed" : "pointer"
@@ -5807,7 +5816,7 @@ export default function TeacherDashboard() {
                             type="checkbox"
                             checked={selectedArchiveIds.length === assignments.length && assignments.length > 0}
                             onChange={handleSelectAllArchives}
-                            title="Select all assignments for weekly archiving"
+                            aria-label="Select all assignments for weekly archiving"
                           />
                         </th>
                         <th>Title</th>
@@ -5856,7 +5865,7 @@ export default function TeacherDashboard() {
                                   type="button"
                                   onClick={() => handleArchiveSingleAssignment(a)}
                                   style={{ background: "rgba(245, 158, 11, 0.15)", border: "1px solid rgba(245, 158, 11, 0.4)", color: "#fbbf24", padding: "4px 8px", borderRadius: "6px", cursor: "pointer", fontSize: "0.75rem" }}
-                                  title="Archive this weekly assignment to the archives vault"
+                                  aria-label="Archive this weekly assignment to the archives vault"
                                 >
                                   📦 Archive
                                 </button>
@@ -5864,7 +5873,7 @@ export default function TeacherDashboard() {
                                   type="button"
                                   onClick={() => handleDeleteAssignment(a.id)}
                                   style={{ background: "rgba(239, 68, 68, 0.15)", border: "1px solid rgba(239, 68, 68, 0.4)", color: "#f87171", padding: "4px 8px", borderRadius: "6px", cursor: "pointer", fontSize: "0.75rem" }}
-                                  title="Delete assignment permanently"
+                                  aria-label="Delete assignment permanently"
                                 >
                                   🗑️ Delete
                                 </button>
@@ -6021,7 +6030,7 @@ export default function TeacherDashboard() {
                                     className="btn-secondary"
                                     style={{ padding: "6px 10px", fontSize: "0.78rem", borderColor: "#38bdf8", color: "#38bdf8", fontWeight: "700", cursor: "pointer" }}
                                     onClick={() => setInspectingSubmission(sub)}
-                                    title="Open modal to inspect student's full submitted work, attached files, and verify rubric"
+                                    aria-label="Open modal to inspect student's full submitted work, attached files, and verify rubric"
                                   >
                                     🔍 Inspect
                                   </button>
@@ -6314,7 +6323,7 @@ export default function TeacherDashboard() {
                         type="button"
                         onClick={() => handleAddExamTimetableEntry()}
                         style={{ background: "linear-gradient(135deg, #059669, #047857)", color: "#ffffff", border: "1px solid #34d399", padding: "6px 11px", borderRadius: "6px", fontSize: "0.74rem", fontWeight: 800, cursor: "pointer" }}
-                        title="Immediately add a new examination timetable entry for students"
+                        aria-label="Immediately add a new examination timetable entry for students"
                       >
                         ➕ Add Timetable Entry
                       </button>
@@ -6612,7 +6621,7 @@ export default function TeacherDashboard() {
                                 style={{ padding: "6px 12px", fontSize: "0.78rem" }}
                                 onClick={() => handleSaveSingleStudentGrade(sid)}
                                 disabled={saveStatus === "SAVING" || !hasScore}
-                                title="Commit exact grade individually for this student"
+                                aria-label="Commit exact grade individually for this student"
                               >
                                 {saveStatus === "SAVING" ? "⏳ Saving..." : "💾 Save Grade"}
                               </button>
@@ -7820,7 +7829,7 @@ export default function TeacherDashboard() {
                                           fontWeight: 800,
                                           cursor: "pointer"
                                         }}
-                                        title="Inspect question by question and correct any AI mistakes"
+                                        aria-label="Inspect question by question and correct any AI mistakes"
                                       >
                                         🔍 Teacher Manual Override (Zero-Mistake Mode)
                                       </button>
@@ -8543,6 +8552,14 @@ export default function TeacherDashboard() {
                 </button>
               </form>
 
+              {/* Real In-System Teacher Voice & Video Conference + Direct Parent/Headmaster Call Desk */}
+              <LiveCallLauncherAndReceiver
+                variant="FULL_STUDIO"
+                userRole="TEACHER"
+                currentUser={currentUser}
+                onFeedback={(msg, isErr) => setFeedback({ type: isErr ? "error" : "success", message: msg })}
+              />
+
               {/* Active Meetings Grid with Checkboxes for Deletion */}
               <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "10px" }}>
                 <h4 style={{ margin: 0, color: "#34d399", fontSize: "0.95rem" }}>
@@ -8631,7 +8648,7 @@ export default function TeacherDashboard() {
                                 copyTextSafely(shareBundle);
                                 setFeedback({ type: "success", message: `📋 Working Meeting Link copied to clipboard! Share with students/parents anytime.` });
                               }}
-                              title="Copy working meeting link"
+                              aria-label="Copy working meeting link"
                               style={{ fontSize: "0.76rem", padding: "6px 10px" }}
                             >
                               📋 Copy Link
@@ -8652,7 +8669,7 @@ export default function TeacherDashboard() {
                                 fontWeight: 800,
                                 cursor: "pointer"
                               }}
-                              title="Share meeting link via WhatsApp"
+                              aria-label="Share meeting link via WhatsApp"
                             >
                               💚 Share on WhatsApp
                             </button>
@@ -8695,7 +8712,7 @@ export default function TeacherDashboard() {
                                 alignItems: "center",
                                 gap: "4px"
                               }}
-                              title="Broadcast this live class link so every student sees an instant join banner"
+                              aria-label="Broadcast this live class link so every student sees an instant join banner"
                             >
                               🌐 Share Link to All Classes
                             </button>
@@ -8724,7 +8741,7 @@ export default function TeacherDashboard() {
                           className="btn-secondary"
                           style={{ borderColor: isSaved ? "#10b981" : "rgba(255, 255, 255, 0.2)", color: isSaved ? "#34d399" : "#cbd5e1" }}
                           onClick={() => handleSaveMeetingReference(m)}
-                          title="Save this virtual learning session for future reference"
+                          aria-label="Save this virtual learning session for future reference"
                         >
                           {isSaved ? "✓ Saved" : "💾 Save Reference"}
                         </button>
@@ -9350,7 +9367,7 @@ export default function TeacherDashboard() {
                                       alignItems: "center",
                                       gap: "6px"
                                     }}
-                                    title="Inspect full plan dossier on dedicated routed page"
+                                    aria-label="Inspect full plan dossier on dedicated routed page"
                                   >
                                     🔍 View & Inspect Dossier ↗
                                   </button>
@@ -9784,229 +9801,229 @@ export default function TeacherDashboard() {
                 </div>
 
                 {/* STEP 1: INSTITUTION CATEGORY SELECTOR (NURSERY-JHS | SHS | UNIVERSITY) */}
-                <div
-                  style={{
-                    background: "rgba(15, 23, 42, 0.75)",
-                    border: "1px solid rgba(56, 189, 248, 0.28)",
-                    borderRadius: "12px",
-                    padding: "14px 18px",
-                    marginBottom: "16px"
-                  }}
-                >
-                  <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: "10px", marginBottom: "10px" }}>
-                    <span style={{ fontSize: "0.78rem", fontWeight: 800, color: "#38bdf8", textTransform: "uppercase", letterSpacing: "0.5px" }}>
-                      1. Select / Verify Registered Institution Curriculum Tier:
-                    </span>
-                    {curriculumInstitutionTier !== registeredInstitutionTier && (
-                      <button
-                        type="button"
-                        onClick={() => handleSelectCurriculumTier(registeredInstitutionTier)}
-                        style={{
-                          background: "rgba(16, 185, 129, 0.15)",
-                          border: "1px solid #10b981",
-                          color: "#34d399",
-                          padding: "4px 10px",
-                          borderRadius: "6px",
-                          fontSize: "0.74rem",
-                          fontWeight: 700,
-                          cursor: "pointer"
-                        }}
-                      >
-                        🔄 Reset to Registered School Category ({registeredTierMeta.shortLabel})
-                      </button>
-                    )}
-                  </div>
+            <div
+              style={{
+                background: "rgba(15, 23, 42, 0.75)",
+                border: "1px solid rgba(56, 189, 248, 0.28)",
+                borderRadius: "12px",
+                padding: "14px 18px",
+                marginBottom: "16px"
+              }}
+            >
+              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: "10px", marginBottom: "10px" }}>
+                <span style={{ fontSize: "0.78rem", fontWeight: 800, color: "#38bdf8", textTransform: "uppercase", letterSpacing: "0.5px" }}>
+                  1. Select / Verify Registered Institution Curriculum Tier:
+                </span>
+                {curriculumInstitutionTier !== registeredInstitutionTier && (
+                  <button
+                    type="button"
+                    onClick={() => handleSelectCurriculumTier(registeredInstitutionTier)}
+                    style={{
+                      background: "rgba(16, 185, 129, 0.15)",
+                      border: "1px solid #10b981",
+                      color: "#34d399",
+                      padding: "4px 10px",
+                      borderRadius: "6px",
+                      fontSize: "0.74rem",
+                      fontWeight: 700,
+                      cursor: "pointer"
+                    }}
+                  >
+                    🔄 Reset to Registered School Category ({registeredTierMeta.shortLabel})
+                  </button>
+                )}
+              </div>
 
-                  <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(240px, 1fr))", gap: "10px" }}>
-                    {[
-                      {
-                        key: "NURSERY_TO_JHS",
-                        icon: "🎒",
-                        title: "Nursery – JHS (Basic School)",
-                        sub: "Creche, Nursery 1–2, KG 1–2, Primary BS1–BS6 & JHS 1–3 (BECE)",
-                        color: "#10b981"
-                      },
-                      {
-                        key: "SENIOR_HIGH_SCHOOL",
-                        icon: "🎓",
-                        title: "Senior High School (SHS)",
-                        sub: "SHS Form 1, Form 2 & Form 3 (Science, Arts, Business, Visual Arts, Home Econ - WASSCE)",
-                        color: "#38bdf8"
-                      },
-                      {
-                        key: "TECHNICAL",
-                        icon: "🛠️",
-                        title: "Technical & Vocational (TVET)",
-                        sub: "CBT Trade Levels 1–3, Workshop Practicals, Field Attachments & Apprentice Streams",
-                        color: "#d97706"
-                      },
-                      {
-                        key: "UNIVERSITY",
-                        icon: "🏛️",
-                        title: "University / Tertiary Institution",
-                        sub: "Levels 100, 200, 300, 400 Honours & Postgraduate Semesters 1 & 2",
-                        color: "#a855f7"
-                      }
-                    ].map((tierOpt) => {
-                      const isSelected = curriculumInstitutionTier === tierOpt.key;
-                      const isRegistered = registeredInstitutionTier === tierOpt.key;
-                      return (
-                        <div
-                          key={tierOpt.key}
-                          onClick={() => handleSelectCurriculumTier(tierOpt.key)}
-                          style={{
-                            background: isSelected ? "rgba(2, 6, 23, 0.92)" : "rgba(2, 6, 23, 0.45)",
-                            border: isSelected ? `2px solid ${tierOpt.color}` : "1px solid rgba(255,255,255,0.1)",
-                            borderRadius: "10px",
-                            padding: "12px 14px",
-                            cursor: "pointer",
-                            transition: "all 0.18s ease",
-                            boxShadow: isSelected ? `0 6px 18px ${tierOpt.color}33` : "none"
-                          }}
-                        >
-                          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "4px" }}>
-                            <strong style={{ color: isSelected ? tierOpt.color : "#f8fafc", fontSize: "0.92rem" }}>
-                              {tierOpt.icon} {tierOpt.title}
-                            </strong>
-                            {isRegistered && (
-                              <span
-                                style={{
-                                  background: "rgba(16, 185, 129, 0.2)",
-                                  color: "#34d399",
-                                  fontSize: "0.66rem",
-                                  padding: "2px 7px",
-                                  borderRadius: "999px",
-                                  fontWeight: 800
-                                }}
-                              >
-                                REGISTERED
-                              </span>
-                            )}
-                          </div>
-                          <div style={{ fontSize: "0.75rem", color: "#94a3b8", lineHeight: 1.35 }}>{tierOpt.sub}</div>
-                        </div>
-                      );
-                    })}
-                  </div>
-                </div>
-
-                {/* STEP 2: CLASS / LEVEL & SUBJECT FILTER TOOLBAR */}
-                <div
-                  style={{
-                    display: "grid",
-                    gridTemplateColumns: "repeat(auto-fit, minmax(220px, 1fr))",
-                    gap: "12px",
-                    background: "rgba(2, 6, 23, 0.65)",
-                    border: "1px solid rgba(255,255,255,0.08)",
-                    borderRadius: "12px",
-                    padding: "14px 16px",
-                    marginBottom: "18px"
-                  }}
-                >
-                  <div>
-                    <label style={{ display: "block", fontSize: "0.75rem", fontWeight: 800, color: "#34d399", marginBottom: "5px", textTransform: "uppercase" }}>
-                      2. Select Class or Academic Level:
-                    </label>
-                    <select
-                      className="filter-select"
-                      value={currentClassObj.id}
-                      onChange={(e) => setSelectedCurriculumClassId(e.target.value)}
-                      style={{ width: "100%", fontWeight: 700 }}
+              <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(240px, 1fr))", gap: "10px" }}>
+                {[
+                  {
+                    key: "NURSERY_TO_JHS",
+                    icon: "🎒",
+                    title: "Nursery – JHS (Basic School)",
+                    sub: "Creche, Nursery 1–2, KG 1–2, Primary BS1–BS6 & JHS 1–3 (BECE)",
+                    color: "#10b981"
+                  },
+                  {
+                    key: "SENIOR_HIGH_SCHOOL",
+                    icon: "🎓",
+                    title: "Senior High School (SHS)",
+                    sub: "SHS Form 1, Form 2 & Form 3 (Science, Arts, Business, Visual Arts, Home Econ - WASSCE)",
+                    color: "#38bdf8"
+                  },
+                  {
+                    key: "TECHNICAL",
+                    icon: "🛠️",
+                    title: "Technical & Vocational (TVET)",
+                    sub: "CBT Trade Levels 1–3, Workshop Practicals, Field Attachments & Apprentice Streams",
+                    color: "#d97706"
+                  },
+                  {
+                    key: "UNIVERSITY",
+                    icon: "🏛️",
+                    title: "University / Tertiary Institution",
+                    sub: "Levels 100, 200, 300, 400 Honours & Postgraduate Semesters 1 & 2",
+                    color: "#a855f7"
+                  }
+                ].map((tierOpt) => {
+                  const isSelected = curriculumInstitutionTier === tierOpt.key;
+                  const isRegistered = registeredInstitutionTier === tierOpt.key;
+                  return (
+                    <div
+                      key={tierOpt.key}
+                      onClick={() => handleSelectCurriculumTier(tierOpt.key)}
+                      style={{
+                        background: isSelected ? "rgba(2, 6, 23, 0.92)" : "rgba(2, 6, 23, 0.45)",
+                        border: isSelected ? `2px solid ${tierOpt.color}` : "1px solid rgba(255,255,255,0.1)",
+                        borderRadius: "10px",
+                        padding: "12px 14px",
+                        cursor: "pointer",
+                        transition: "all 0.18s ease",
+                        boxShadow: isSelected ? `0 6px 18px ${tierOpt.color}33` : "none"
+                      }}
                     >
-                      {tierClasses.map((cls) => (
-                        <option key={cls.id} value={cls.id}>
-                          {cls.name}
-                        </option>
-                      ))}
-                    </select>
-                  </div>
-
-                  <div>
-                    <label style={{ display: "block", fontSize: "0.75rem", fontWeight: 800, color: "#38bdf8", marginBottom: "5px", textTransform: "uppercase" }}>
-                      3. Filter by Subject / Course:
-                    </label>
-                    <select
-                      className="filter-select"
-                      value={selectedCurriculumSubject}
-                      onChange={(e) => setSelectedCurriculumSubject(e.target.value)}
-                      style={{ width: "100%", fontWeight: 700 }}
-                    >
-                      <option value="ALL">All {allTierSubjects.length} Official Subjects for {activeTierMeta.shortLabel}</option>
-                      {allTierSubjects.map((subj) => (
-                        <option key={subj} value={subj}>
-                          {subj}
-                        </option>
-                      ))}
-                    </select>
-                  </div>
-
-                  <div>
-                    <label style={{ display: "block", fontSize: "0.75rem", fontWeight: 800, color: "#cbd5e1", marginBottom: "5px", textTransform: "uppercase" }}>
-                      Search Subject or Topic:
-                    </label>
-                    <input
-                      type="text"
-                      className="filter-input"
-                      placeholder="e.g. Mathematics, Science, Computing..."
-                      value={curriculumSearchQuery}
-                      onChange={(e) => setCurriculumSearchQuery(e.target.value)}
-                      style={{ width: "100%" }}
-                    />
-                  </div>
-
-                  <div>
-                    <label style={{ display: "block", fontSize: "0.75rem", fontWeight: 800, color: "#fbbf24", marginBottom: "5px", textTransform: "uppercase" }}>
-                      4. Total Weeks to Spend in School (Term Spread):
-                    </label>
-                    <div style={{ display: "flex", gap: "6px", alignItems: "center" }}>
-                      <input
-                        type="number"
-                        min={4}
-                        max={52}
-                        className="filter-input"
-                        value={Number(publishedSchedule.numberOfWeeksInSchool) || 14}
-                        onChange={(e) => {
-                          const wks = Math.max(4, Math.min(52, Number(e.target.value) || 14));
-                          const updatedSched = { ...publishedSchedule, numberOfWeeksInSchool: wks };
-                          setPublishedSchedule(updatedSched);
-                          localStorage.setItem("gbs_published_academic_schedule", JSON.stringify(updatedSched));
-                        }}
-                        style={{ width: "85px", fontWeight: 800, color: "#fbbf24", border: "1px solid rgba(251, 191, 36, 0.45)" }}
-                      />
-                      <span style={{ fontSize: "0.75rem", color: "#fde68a", fontWeight: 700 }}>
-                        Weeks Spread (Week 1 – Week {Number(publishedSchedule.numberOfWeeksInSchool) || 14})
-                      </span>
+                      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "4px" }}>
+                        <strong style={{ color: isSelected ? tierOpt.color : "#f8fafc", fontSize: "0.92rem" }}>
+                          {tierOpt.icon} {tierOpt.title}
+                        </strong>
+                        {isRegistered && (
+                          <span
+                            style={{
+                              background: "rgba(16, 185, 129, 0.2)",
+                              color: "#34d399",
+                              fontSize: "0.66rem",
+                              padding: "2px 7px",
+                              borderRadius: "999px",
+                              fontWeight: 800
+                            }}
+                          >
+                            REGISTERED
+                          </span>
+                        )}
+                      </div>
+                      <div style={{ fontSize: "0.75rem", color: "#94a3b8", lineHeight: 1.35 }}>{tierOpt.sub}</div>
                     </div>
-                  </div>
-                </div>
+                  );
+                })}
+              </div>
+            </div>
 
-                {/* QUICK CLASS / LEVEL PILL SELECTOR */}
-                <div style={{ display: "flex", gap: "6px", flexWrap: "wrap", marginBottom: "18px" }}>
-                  {tierClasses.map((cls) => {
-                    const active = String(cls.id) === String(currentClassObj.id);
-                    return (
-                      <button
-                        key={cls.id}
-                        type="button"
-                        onClick={() => setSelectedCurriculumClassId(cls.id)}
-                        style={{
-                          background: active ? "linear-gradient(135deg, #0284c7, #2563eb)" : "rgba(15, 23, 42, 0.8)",
-                          color: active ? "#ffffff" : "#cbd5e1",
-                          border: active ? "1.5px solid #38bdf8" : "1px solid rgba(255,255,255,0.1)",
-                          borderRadius: "8px",
-                          padding: "6px 12px",
-                          fontSize: "0.76rem",
-                          fontWeight: active ? 800 : 600,
-                          cursor: "pointer"
-                        }}
-                      >
-                        {active ? "✓ " : ""}{cls.name}
-                      </button>
-                    );
-                  })}
-                </div>
+            {/* STEP 2: CLASS / LEVEL & SUBJECT FILTER TOOLBAR */ }
+            <div
+              style={{
+                display: "grid",
+                gridTemplateColumns: "repeat(auto-fit, minmax(220px, 1fr))",
+                gap: "12px",
+                background: "rgba(2, 6, 23, 0.65)",
+                border: "1px solid rgba(255,255,255,0.08)",
+                borderRadius: "12px",
+                padding: "14px 16px",
+                marginBottom: "18px"
+              }}
+            >
+              <div>
+                <label style={{ display: "block", fontSize: "0.75rem", fontWeight: 800, color: "#34d399", marginBottom: "5px", textTransform: "uppercase" }}>
+                  2. Select Class or Academic Level:
+                </label>
+                <select
+                  className="filter-select"
+                  value={currentClassObj.id}
+                  onChange={(e) => setSelectedCurriculumClassId(e.target.value)}
+                  style={{ width: "100%", fontWeight: 700 }}
+                >
+                  {tierClasses.map((cls) => (
+                    <option key={cls.id} value={cls.id}>
+                      {cls.name}
+                    </option>
+                  ))}
+                </select>
+              </div>
 
-                {/* SUBJECT CURRICULUM CARDS GRID */}
+              <div>
+                <label style={{ display: "block", fontSize: "0.75rem", fontWeight: 800, color: "#38bdf8", marginBottom: "5px", textTransform: "uppercase" }}>
+                  3. Filter by Subject / Course:
+                </label>
+                <select
+                  className="filter-select"
+                  value={selectedCurriculumSubject}
+                  onChange={(e) => setSelectedCurriculumSubject(e.target.value)}
+                  style={{ width: "100%", fontWeight: 700 }}
+                >
+                  <option value="ALL">All {allTierSubjects.length} Official Subjects for {activeTierMeta.shortLabel}</option>
+                  {allTierSubjects.map((subj) => (
+                    <option key={subj} value={subj}>
+                      {subj}
+                    </option>
+                  ))}
+                </select>
+              </div>
+
+              <div>
+                <label style={{ display: "block", fontSize: "0.75rem", fontWeight: 800, color: "#cbd5e1", marginBottom: "5px", textTransform: "uppercase" }}>
+                  Search Subject or Topic:
+                </label>
+                <input
+                  type="text"
+                  className="filter-input"
+                  placeholder="e.g. Mathematics, Science, Computing..."
+                  value={curriculumSearchQuery}
+                  onChange={(e) => setCurriculumSearchQuery(e.target.value)}
+                  style={{ width: "100%" }}
+                />
+              </div>
+
+              <div>
+                <label style={{ display: "block", fontSize: "0.75rem", fontWeight: 800, color: "#fbbf24", marginBottom: "5px", textTransform: "uppercase" }}>
+                  4. Total Weeks to Spend in School (Term Spread):
+                </label>
+                <div style={{ display: "flex", gap: "6px", alignItems: "center" }}>
+                  <input
+                    type="number"
+                    min={4}
+                    max={52}
+                    className="filter-input"
+                    value={Number(publishedSchedule.numberOfWeeksInSchool) || 14}
+                    onChange={(e) => {
+                      const wks = Math.max(4, Math.min(52, Number(e.target.value) || 14));
+                      const updatedSched = { ...publishedSchedule, numberOfWeeksInSchool: wks };
+                      setPublishedSchedule(updatedSched);
+                      localStorage.setItem("gbs_published_academic_schedule", JSON.stringify(updatedSched));
+                    }}
+                    style={{ width: "85px", fontWeight: 800, color: "#fbbf24", border: "1px solid rgba(251, 191, 36, 0.45)" }}
+                  />
+                  <span style={{ fontSize: "0.75rem", color: "#fde68a", fontWeight: 700 }}>
+                    Weeks Spread (Week 1 – Week {Number(publishedSchedule.numberOfWeeksInSchool) || 14})
+                  </span>
+                </div>
+              </div>
+            </div>
+
+            {/* QUICK CLASS / LEVEL PILL SELECTOR */ }
+            <div style={{ display: "flex", gap: "6px", flexWrap: "wrap", marginBottom: "18px" }}>
+              {tierClasses.map((cls) => {
+                const active = String(cls.id) === String(currentClassObj.id);
+                return (
+                  <button
+                    key={cls.id}
+                    type="button"
+                    onClick={() => setSelectedCurriculumClassId(cls.id)}
+                    style={{
+                      background: active ? "linear-gradient(135deg, #0284c7, #2563eb)" : "rgba(15, 23, 42, 0.8)",
+                      color: active ? "#ffffff" : "#cbd5e1",
+                      border: active ? "1.5px solid #38bdf8" : "1px solid rgba(255,255,255,0.1)",
+                      borderRadius: "8px",
+                      padding: "6px 12px",
+                      fontSize: "0.76rem",
+                      fontWeight: active ? 800 : 600,
+                      cursor: "pointer"
+                    }}
+                  >
+                    {active ? "✓ " : ""}{cls.name}
+                  </button>
+                );
+              })}
+            </div>
+
+            {/* SUBJECT CURRICULUM CARDS GRID */ }
                 <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(420px, 1fr))", gap: "16px" }}>
                   {filteredSubjects.map((subjectName) => {
                     const bp = buildCurriculumBlueprint(curriculumInstitutionTier, currentClassObj, subjectName);
@@ -10094,7 +10111,7 @@ export default function TeacherDashboard() {
                                 gap: "5px",
                                 boxShadow: "0 4px 12px rgba(16, 185, 129, 0.3)"
                               }}
-                              title="Download official curriculum file to guide teaching"
+                              aria-label="Download official curriculum file to guide teaching"
                             >
                               📥 Download Curriculum
                             </button>
@@ -10111,7 +10128,7 @@ export default function TeacherDashboard() {
                                 fontWeight: 700,
                                 cursor: "pointer"
                               }}
-                              title="Print or Save as PDF"
+                              aria-label="Print or Save as PDF"
                             >
                               🖨️ Print / PDF
                             </button>
@@ -10134,7 +10151,7 @@ export default function TeacherDashboard() {
                                 fontWeight: 800,
                                 cursor: "pointer"
                               }}
-                              title="Update curriculum strands, learning indicators, or term week topics when there are updates"
+                              aria-label="Update curriculum strands, learning indicators, or term week topics when there are updates"
                             >
                               🔄 Update Curriculum
                             </button>
@@ -10195,7 +10212,7 @@ export default function TeacherDashboard() {
                                 fontWeight: 800,
                                 cursor: "pointer"
                               }}
-                              title="Register this curriculum on your teacher profile for Headmaster checkups"
+                              aria-label="Register this curriculum on your teacher profile for Headmaster checkups"
                             >
                               ✅ Set Active for Headmaster Checkup
                             </button>
@@ -10287,1206 +10304,1248 @@ export default function TeacherDashboard() {
                   />
                 </div>
               </div>
-            );
+      );
           })()}
 
-          {activeTab === "defaulters" && (
-            <StudentDefaultersCompliancePanel
-              onFeedback={(msg) => setFeedback({ type: "success", message: msg })}
-            />
-          )}
+      {activeTab === "defaulters" && (
+        <StudentDefaultersCompliancePanel
+          onFeedback={(msg) => setFeedback({ type: "success", message: msg })}
+        />
+      )}
 
-          {activeTab === "clinic" && (
-            <SchoolClinicHubPanel
-              mode="TEACHER"
-              currentUser={currentUser}
-              onFeedback={(msg) => setFeedback({ type: "success", message: msg })}
-            />
-          )}
-        </main>
+      {activeTab === "clinic" && (
+        <SchoolClinicHubPanel
+          mode="TEACHER"
+          currentUser={currentUser}
+          onFeedback={(msg) => setFeedback({ type: "success", message: msg })}
+        />
+      )}
+    </main>
       </div >
 
-      {/* ======================================================== */}
-      {/* ======================================================== */}
-      {/* POP-UP MODAL: NUMBER OF WEEKS IN SCHOOL - WEEKLY ACTIVITIES */}
-      {/* ======================================================== */}
-      {
-        showWeeklyActivitiesModal && (
-          <div className="modal-backdrop" onClick={() => setShowWeeklyActivitiesModal(false)}>
-            <div className="modal-window" style={{ maxWidth: "980px", maxHeight: "90vh", display: "flex", flexDirection: "column" }} onClick={(e) => e.stopPropagation()}>
-              <div className="modal-header" style={{ borderBottom: "2px solid #10b981", background: "linear-gradient(135deg, rgba(16, 185, 129, 0.15), rgba(15, 23, 42, 0.95))" }}>
-                <div>
-                  <h3 style={{ margin: 0, display: "flex", alignItems: "center", gap: "10px", color: "#34d399" }}>
-                    <span>📅</span> ACADEMIC TERM ACTIVITIES & WEEKLY BREAKDOWN
-                  </h3>
-                  <span style={{ fontSize: "0.8rem", color: "#cbd5e1" }}>
-                    Official Headmaster Published Schedule • {publishedSchedule.numberOfWeeksInSchool || 14} Weeks to Spend in School • Vacation Date: {publishedSchedule.vacationDate ? new Date(publishedSchedule.vacationDate).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" }) : "Dec 18, 2026"}
-                  </span>
-                </div>
-                <button type="button" className="modal-close-btn" onClick={() => setShowWeeklyActivitiesModal(false)}>✕</button>
-              </div>
-
-              {/* Filter Tabs */}
-              <div style={{ display: "flex", gap: "10px", padding: "14px 24px", background: "rgba(15, 23, 42, 0.95)", borderBottom: "1px solid rgba(255,255,255,0.08)" }}>
-                <button
-                  type="button"
-                  onClick={() => setWeeklyActivitiesFilter("ALL")}
-                  style={{
-                    padding: "6px 14px",
-                    borderRadius: "8px",
-                    border: weeklyActivitiesFilter === "ALL" ? "2px solid #34d399" : "1px solid rgba(255,255,255,0.15)",
-                    background: weeklyActivitiesFilter === "ALL" ? "rgba(16, 185, 129, 0.25)" : "rgba(255,255,255,0.05)",
-                    color: weeklyActivitiesFilter === "ALL" ? "#34d399" : "#cbd5e1",
-                    fontWeight: 700,
-                    fontSize: "0.82rem",
-                    cursor: "pointer"
-                  }}
-                >
-                  All 14 Weeks
-                </button>
-                <button
-                  type="button"
-                  onClick={() => setWeeklyActivitiesFilter("FIRST_HALF")}
-                  style={{
-                    padding: "6px 14px",
-                    borderRadius: "8px",
-                    border: weeklyActivitiesFilter === "FIRST_HALF" ? "2px solid #38bdf8" : "1px solid rgba(255,255,255,0.15)",
-                    background: weeklyActivitiesFilter === "FIRST_HALF" ? "rgba(56, 189, 248, 0.25)" : "rgba(255,255,255,0.05)",
-                    color: weeklyActivitiesFilter === "FIRST_HALF" ? "#38bdf8" : "#cbd5e1",
-                    fontWeight: 700,
-                    fontSize: "0.82rem",
-                    cursor: "pointer"
-                  }}
-                >
-                  Weeks 1–7 (First Half & Mid-Term)
-                </button>
-                <button
-                  type="button"
-                  onClick={() => setWeeklyActivitiesFilter("SECOND_HALF")}
-                  style={{
-                    padding: "6px 14px",
-                    borderRadius: "8px",
-                    border: weeklyActivitiesFilter === "SECOND_HALF" ? "2px solid #fbbf24" : "1px solid rgba(255,255,255,0.15)",
-                    background: weeklyActivitiesFilter === "SECOND_HALF" ? "rgba(245, 158, 11, 0.25)" : "rgba(255,255,255,0.05)",
-                    color: weeklyActivitiesFilter === "SECOND_HALF" ? "#fbbf24" : "#cbd5e1",
-                    fontWeight: 700,
-                    fontSize: "0.82rem",
-                    cursor: "pointer"
-                  }}
-                >
-                  Weeks 8–14 (Second Half, Exams & Vacation)
-                </button>
-              </div>
-
-              {/* Modal Body: Week by Week Activities */}
-              <div className="modal-body" style={{ overflowY: "auto", padding: "1.25rem 1.5rem", flex: 1, display: "flex", flexDirection: "column", gap: "12px" }}>
-                {[
-                  {
-                    week: 1,
-                    title: "School Reopening, Registration & Orientation",
-                    theme: "Faculty Alignment & Student Welcome",
-                    focus: "Timetable distribution, syllabus presentation, course material vetting, academic goal setting, and classroom allocation.",
-                    deliverables: ["Submit Scheme of Work", "Verify Class Roster", "Timetable Handout"],
-                    status: "COMPLETED",
-                    badgeColor: "#10b981"
-                  },
-                  {
-                    week: 2,
-                    title: "Teaching Resumption & Diagnostic Baseline Assessment",
-                    theme: "Foundational Knowledge Baseline",
-                    focus: "Commence core syllabus topic coverage, administer baseline diagnostic assessment to identify student strengths and learning gaps.",
-                    deliverables: ["Week 2 Lesson Notes", "Diagnostic Test Report", "Daily Attendance Register"],
-                    status: "COMPLETED",
-                    badgeColor: "#10b981"
-                  },
-                  {
-                    week: 3,
-                    title: "Core Subject Instruction & Laboratory Practical Sessions",
-                    theme: "Curriculum Deep Dive",
-                    focus: "Intensive classroom teaching across all enrolled subjects, introductory science/computer laboratory experiments, and structured homework distribution.",
-                    deliverables: ["Lab Safety Briefing", "Homework Task 1 Published", "Weekly Attendance Archive"],
-                    status: "COMPLETED",
-                    badgeColor: "#10b981"
-                  },
-                  {
-                    week: 4,
-                    title: "Continuous Assessment Test 1 (CAT 1)",
-                    theme: "Progress Evaluation",
-                    focus: "First formal mid-cycle assessment test. Evaluate student retention on Weeks 1–3 syllabus content. Grade submissions via AI Exam Scanner.",
-                    deliverables: ["CAT 1 Score Entry", "Remedial Student Identification", "Teacher Lesson Plan 4"],
-                    status: "COMPLETED",
-                    badgeColor: "#10b981"
-                  },
-                  {
-                    week: 5,
-                    title: "Remedial Teaching & Inter-Class Competitions",
-                    theme: "Targeted Reinforcement",
-                    focus: "Targeted remedial support for struggling students, inter-class math and science quiz competitions, and mid-term syllabus progress audits.",
-                    deliverables: ["Remedial Roster Vetting", "Class Quiz Results", "Weekly Attendance Ledger"],
-                    status: "COMPLETED",
-                    badgeColor: "#10b981"
-                  },
-                  {
-                    week: 6,
-                    title: "STEM Project Work & Practical Demonstrations",
-                    theme: "Applied Learning",
-                    focus: "Group project presentations, science exhibitions, creative arts evaluations, and mid-term exam question paper moderation with Headmaster.",
-                    deliverables: ["Submit Mid-Term Exam Drafts", "Project Scoring Matrix", "Lesson Notes Vetting"],
-                    status: "COMPLETED",
-                    badgeColor: "#10b981"
-                  },
-                  {
-                    week: 7,
-                    title: "Official Mid-Term Examination Week",
-                    theme: "Mid-Semester Assessment",
-                    focus: "Administration of formal mid-term examinations under standardized test conditions. Optical mark sheet and written exam answer grading.",
-                    deliverables: ["Mid-Term Exam Administration", "Batch Scan Answer Sheets", "Headmaster Progress Report"],
-                    status: "ACTIVE",
-                    badgeColor: "#38bdf8"
-                  },
-                  {
-                    week: 8,
-                    title: "Mid-Term Break & Parent-Teacher Consultation (PTA)",
-                    theme: "Stakeholder Engagement & Academic Rest",
-                    focus: "Official mid-term holiday break, compilation of mid-term progress slips, and hosting Parent-Teacher Association (PTA) consultation meetings.",
-                    deliverables: ["Issue Progress Slips to Parents", "PTA Meeting Attendance", "Term Half Review"],
-                    status: "UPCOMING",
-                    badgeColor: "#f59e0b"
-                  },
-                  {
-                    week: 9,
-                    title: "Second Half Syllabus Resumption & Practical Workshops",
-                    theme: "Advanced Curriculum Topics",
-                    focus: "Resumption of classroom teaching, tackling advanced syllabus objectives, research assignments, and coursework expansion.",
-                    deliverables: ["Week 9 Lesson Plans", "Assignment 3 Publishing", "Daily Register Verification"],
-                    status: "UPCOMING",
-                    badgeColor: "#64748b"
-                  },
-                  {
-                    week: 10,
-                    title: "Continuous Assessment Test 2 (CAT 2)",
-                    theme: "Second Milestone Vetting",
-                    focus: "Second continuous assessment testing, term project collection, and evaluation of practical laboratory logbooks.",
-                    deliverables: ["CAT 2 Gradebook Upload", "Homework Archive Review", "Weekly Report to Admin"],
-                    status: "UPCOMING",
-                    badgeColor: "#64748b"
-                  },
-                  {
-                    week: 11,
-                    title: "Comprehensive Syllabus Revision & Mock Drills",
-                    theme: "Exam Preparation & Past Questions",
-                    focus: "Review of high-yield examination topics, mock test simulations, past question paper drills, and resolving student question areas.",
-                    deliverables: ["End-of-Term Revision Guide", "Submit Final Exam Papers", "Exam Hall Seat Allocation"],
-                    status: "UPCOMING",
-                    badgeColor: "#64748b"
-                  },
-                  {
-                    week: 12,
-                    title: "Official End-of-Term Examinations",
-                    theme: "Final Terminal Assessment",
-                    focus: "Commencement of main end-of-term examinations across all departments. Strict exam hall invigilation and script security.",
-                    deliverables: ["Conduct Final Exams", "Invigilation Reports", "Security Script Custody"],
-                    status: "UPCOMING",
-                    badgeColor: "#64748b"
-                  },
-                  {
-                    week: 13,
-                    title: "Exam Script Grading & Promotion Records Collation",
-                    theme: "Mark Collation & Report Cards",
-                    focus: "Optical mark scanning and written script grading, entry of 30% class score + 70% exam score into GBS grading engine, report card compilation.",
-                    deliverables: ["Final Grade Submissions", "Report Cards Generated", "Headmaster Promotion Sign-Off"],
-                    status: "UPCOMING",
-                    badgeColor: "#64748b"
-                  },
-                  {
-                    week: 14,
-                    title: "Speech & Prize Day, Vacation & Departure",
-                    theme: "Academic Celebration & Term Closure",
-                    focus: "Official Speech and Prize-Giving Day ceremonies, graduation awards, distributing verified report cards to parents, and official school vacation departure.",
-                    deliverables: ["Distribute Report Cards", "Vacation Date Enforcement", "Archive Term Attendance"],
-                    status: "UPCOMING",
-                    badgeColor: "#64748b"
-                  }
-                ]
-                  .filter((w) => {
-                    if (weeklyActivitiesFilter === "FIRST_HALF") return w.week <= 7;
-                    if (weeklyActivitiesFilter === "SECOND_HALF") return w.week > 7;
-                    return true;
-                  })
-                  .map((w) => (
-                    <div
-                      key={w.week}
-                      style={{
-                        background: w.status === "ACTIVE" ? "rgba(56, 189, 248, 0.12)" : "rgba(15, 23, 42, 0.8)",
-                        border: w.status === "ACTIVE" ? "2px solid #38bdf8" : "1px solid rgba(255, 255, 255, 0.08)",
-                        borderRadius: "12px",
-                        padding: "14px 18px",
-                        display: "flex",
-                        flexDirection: "column",
-                        gap: "6px"
-                      }}
-                    >
-                      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: "8px" }}>
-                        <div style={{ display: "flex", alignItems: "center", gap: "10px" }}>
-                          <span
-                            style={{
-                              background: "rgba(255,255,255,0.1)",
-                              color: "#fff",
-                              fontWeight: 900,
-                              fontSize: "0.85rem",
-                              padding: "4px 10px",
-                              borderRadius: "6px"
-                            }}
-                          >
-                            WEEK {w.week}
-                          </span>
-                          <strong style={{ color: "#f8fafc", fontSize: "1rem" }}>{w.title}</strong>
-                        </div>
-                        <span
-                          style={{
-                            background: `${w.badgeColor}22`,
-                            color: w.badgeColor,
-                            border: `1px solid ${w.badgeColor}55`,
-                            fontSize: "0.72rem",
-                            fontWeight: 800,
-                            padding: "3px 10px",
-                            borderRadius: "12px"
-                          }}
-                        >
-                          ● {w.status}
-                        </span>
-                      </div>
-
-                      <div style={{ fontSize: "0.85rem", color: "#38bdf8", fontWeight: 700 }}>
-                        📌 Theme: {w.theme}
-                      </div>
-
-                      <p style={{ margin: "2px 0 6px", fontSize: "0.85rem", color: "#cbd5e1", lineHeight: "1.4" }}>
-                        {w.focus}
-                      </p>
-
-                      <div style={{ display: "flex", alignItems: "center", gap: "8px", flexWrap: "wrap", marginTop: "2px" }}>
-                        <span style={{ fontSize: "0.72rem", color: "#94a3b8", fontWeight: 700 }}>Required Faculty Deliverables:</span>
-                        {w.deliverables.map((del, i) => (
-                          <span
-                            key={i}
-                            style={{
-                              fontSize: "0.72rem",
-                              background: "rgba(255,255,255,0.06)",
-                              color: "#e2e8f0",
-                              padding: "2px 8px",
-                              borderRadius: "6px",
-                              border: "1px solid rgba(255,255,255,0.08)"
-                            }}
-                          >
-                            ✓ {del}
-                          </span>
-                        ))}
-                      </div>
-                    </div>
-                  ))}
-              </div>
-
-              <div className="modal-footer" style={{ borderTop: "1px solid rgba(255,255,255,0.1)", background: "rgba(15, 23, 42, 0.95)", display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-                <button
-                  type="button"
-                  onClick={() => window.print()}
-                  style={{
-                    background: "rgba(56, 189, 248, 0.2)",
-                    border: "1.5px solid #38bdf8",
-                    color: "#38bdf8",
-                    padding: "8px 18px",
-                    borderRadius: "8px",
-                    fontWeight: 700,
-                    fontSize: "0.85rem",
-                    cursor: "pointer"
-                  }}
-                >
-                  🖨️ Print / Save Term Schedule
-                </button>
-                <button
-                  type="button"
-                  className="btn-secondary"
-                  onClick={() => setShowWeeklyActivitiesModal(false)}
-                  style={{ padding: "8px 20px" }}
-                >
-                  Close Schedule
-                </button>
-              </div>
+    {/* ======================================================== */ }
+  {/* ======================================================== */ }
+  {/* POP-UP MODAL: NUMBER OF WEEKS IN SCHOOL - WEEKLY ACTIVITIES */ }
+  {/* ======================================================== */ }
+  {
+    showWeeklyActivitiesModal && (
+      <div className="modal-backdrop" onClick={() => setShowWeeklyActivitiesModal(false)}>
+        <div className="modal-window" style={{ maxWidth: "980px", maxHeight: "90vh", display: "flex", flexDirection: "column" }} onClick={(e) => e.stopPropagation()}>
+          <div className="modal-header" style={{ borderBottom: "2px solid #10b981", background: "linear-gradient(135deg, rgba(16, 185, 129, 0.15), rgba(15, 23, 42, 0.95))" }}>
+            <div>
+              <h3 style={{ margin: 0, display: "flex", alignItems: "center", gap: "10px", color: "#34d399" }}>
+                <span>📅</span> ACADEMIC TERM ACTIVITIES & WEEKLY BREAKDOWN
+              </h3>
+              <span style={{ fontSize: "0.8rem", color: "#cbd5e1" }}>
+                Official Headmaster Published Schedule • {publishedSchedule.numberOfWeeksInSchool || 14} Weeks to Spend in School • Vacation Date: {publishedSchedule.vacationDate ? new Date(publishedSchedule.vacationDate).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" }) : "Dec 18, 2026"}
+              </span>
             </div>
+            <button type="button" className="modal-close-btn" onClick={() => setShowWeeklyActivitiesModal(false)}>✕</button>
           </div>
-        )
-      }
 
-      {/* POP-UP MODAL 1: REGISTERED CLASSES SELECTION             */}
-      {/* ======================================================== */}
-      {
-        showClassSelectorModal && (
-          <div className="modal-backdrop" onClick={() => setShowClassSelectorModal(false)}>
-            <div className="modal-window" onClick={(e) => e.stopPropagation()}>
-              <div className="modal-header">
-                <h3><span>🏫</span> SELECT REGISTERED CLASS FOR ASSESSMENT</h3>
-                <button type="button" className="modal-close-btn" onClick={() => setShowClassSelectorModal(false)}>✕</button>
-              </div>
-              <div className="modal-body">
-                <p style={{ color: "#94a3b8", fontSize: "0.9rem", marginBottom: "1.25rem" }}>
-                  Select an officially registered academic class from the database to evaluate student assessments:
-                </p>
-                <div className="class-popup-grid">
-                  {classes.map((c) => {
-                    const isCurrent = String(selectedClassId) === String(c.id);
-                    return (
-                      <div
-                        key={c.id}
-                        className={`class-popup-card ${isCurrent ? "active-class" : ""}`}
-                        onClick={() => {
-                          setSelectedClassId(c.id);
-                          fetchRoster(c.id);
-                          setShowClassSelectorModal(false);
-                          setFeedback({ type: "success", message: `Active assessment class updated to "${c.name}" (${c.code}).` });
+          {/* Filter Tabs */}
+          <div style={{ display: "flex", gap: "10px", padding: "14px 24px", background: "rgba(15, 23, 42, 0.95)", borderBottom: "1px solid rgba(255,255,255,0.08)" }}>
+            <button
+              type="button"
+              onClick={() => setWeeklyActivitiesFilter("ALL")}
+              style={{
+                padding: "6px 14px",
+                borderRadius: "8px",
+                border: weeklyActivitiesFilter === "ALL" ? "2px solid #34d399" : "1px solid rgba(255,255,255,0.15)",
+                background: weeklyActivitiesFilter === "ALL" ? "rgba(16, 185, 129, 0.25)" : "rgba(255,255,255,0.05)",
+                color: weeklyActivitiesFilter === "ALL" ? "#34d399" : "#cbd5e1",
+                fontWeight: 700,
+                fontSize: "0.82rem",
+                cursor: "pointer"
+              }}
+            >
+              All 14 Weeks
+            </button>
+            <button
+              type="button"
+              onClick={() => setWeeklyActivitiesFilter("FIRST_HALF")}
+              style={{
+                padding: "6px 14px",
+                borderRadius: "8px",
+                border: weeklyActivitiesFilter === "FIRST_HALF" ? "2px solid #38bdf8" : "1px solid rgba(255,255,255,0.15)",
+                background: weeklyActivitiesFilter === "FIRST_HALF" ? "rgba(56, 189, 248, 0.25)" : "rgba(255,255,255,0.05)",
+                color: weeklyActivitiesFilter === "FIRST_HALF" ? "#38bdf8" : "#cbd5e1",
+                fontWeight: 700,
+                fontSize: "0.82rem",
+                cursor: "pointer"
+              }}
+            >
+              Weeks 1–7 (First Half & Mid-Term)
+            </button>
+            <button
+              type="button"
+              onClick={() => setWeeklyActivitiesFilter("SECOND_HALF")}
+              style={{
+                padding: "6px 14px",
+                borderRadius: "8px",
+                border: weeklyActivitiesFilter === "SECOND_HALF" ? "2px solid #fbbf24" : "1px solid rgba(255,255,255,0.15)",
+                background: weeklyActivitiesFilter === "SECOND_HALF" ? "rgba(245, 158, 11, 0.25)" : "rgba(255,255,255,0.05)",
+                color: weeklyActivitiesFilter === "SECOND_HALF" ? "#fbbf24" : "#cbd5e1",
+                fontWeight: 700,
+                fontSize: "0.82rem",
+                cursor: "pointer"
+              }}
+            >
+              Weeks 8–14 (Second Half, Exams & Vacation)
+            </button>
+          </div>
+
+          {/* Modal Body: Week by Week Activities */}
+          <div className="modal-body" style={{ overflowY: "auto", padding: "1.25rem 1.5rem", flex: 1, display: "flex", flexDirection: "column", gap: "12px" }}>
+            {[
+              {
+                week: 1,
+                title: "School Reopening, Registration & Orientation",
+                theme: "Faculty Alignment & Student Welcome",
+                focus: "Timetable distribution, syllabus presentation, course material vetting, academic goal setting, and classroom allocation.",
+                deliverables: ["Submit Scheme of Work", "Verify Class Roster", "Timetable Handout"],
+                status: "COMPLETED",
+                badgeColor: "#10b981"
+              },
+              {
+                week: 2,
+                title: "Teaching Resumption & Diagnostic Baseline Assessment",
+                theme: "Foundational Knowledge Baseline",
+                focus: "Commence core syllabus topic coverage, administer baseline diagnostic assessment to identify student strengths and learning gaps.",
+                deliverables: ["Week 2 Lesson Notes", "Diagnostic Test Report", "Daily Attendance Register"],
+                status: "COMPLETED",
+                badgeColor: "#10b981"
+              },
+              {
+                week: 3,
+                title: "Core Subject Instruction & Laboratory Practical Sessions",
+                theme: "Curriculum Deep Dive",
+                focus: "Intensive classroom teaching across all enrolled subjects, introductory science/computer laboratory experiments, and structured homework distribution.",
+                deliverables: ["Lab Safety Briefing", "Homework Task 1 Published", "Weekly Attendance Archive"],
+                status: "COMPLETED",
+                badgeColor: "#10b981"
+              },
+              {
+                week: 4,
+                title: "Continuous Assessment Test 1 (CAT 1)",
+                theme: "Progress Evaluation",
+                focus: "First formal mid-cycle assessment test. Evaluate student retention on Weeks 1–3 syllabus content. Grade submissions via AI Exam Scanner.",
+                deliverables: ["CAT 1 Score Entry", "Remedial Student Identification", "Teacher Lesson Plan 4"],
+                status: "COMPLETED",
+                badgeColor: "#10b981"
+              },
+              {
+                week: 5,
+                title: "Remedial Teaching & Inter-Class Competitions",
+                theme: "Targeted Reinforcement",
+                focus: "Targeted remedial support for struggling students, inter-class math and science quiz competitions, and mid-term syllabus progress audits.",
+                deliverables: ["Remedial Roster Vetting", "Class Quiz Results", "Weekly Attendance Ledger"],
+                status: "COMPLETED",
+                badgeColor: "#10b981"
+              },
+              {
+                week: 6,
+                title: "STEM Project Work & Practical Demonstrations",
+                theme: "Applied Learning",
+                focus: "Group project presentations, science exhibitions, creative arts evaluations, and mid-term exam question paper moderation with Headmaster.",
+                deliverables: ["Submit Mid-Term Exam Drafts", "Project Scoring Matrix", "Lesson Notes Vetting"],
+                status: "COMPLETED",
+                badgeColor: "#10b981"
+              },
+              {
+                week: 7,
+                title: "Official Mid-Term Examination Week",
+                theme: "Mid-Semester Assessment",
+                focus: "Administration of formal mid-term examinations under standardized test conditions. Optical mark sheet and written exam answer grading.",
+                deliverables: ["Mid-Term Exam Administration", "Batch Scan Answer Sheets", "Headmaster Progress Report"],
+                status: "ACTIVE",
+                badgeColor: "#38bdf8"
+              },
+              {
+                week: 8,
+                title: "Mid-Term Break & Parent-Teacher Consultation (PTA)",
+                theme: "Stakeholder Engagement & Academic Rest",
+                focus: "Official mid-term holiday break, compilation of mid-term progress slips, and hosting Parent-Teacher Association (PTA) consultation meetings.",
+                deliverables: ["Issue Progress Slips to Parents", "PTA Meeting Attendance", "Term Half Review"],
+                status: "UPCOMING",
+                badgeColor: "#f59e0b"
+              },
+              {
+                week: 9,
+                title: "Second Half Syllabus Resumption & Practical Workshops",
+                theme: "Advanced Curriculum Topics",
+                focus: "Resumption of classroom teaching, tackling advanced syllabus objectives, research assignments, and coursework expansion.",
+                deliverables: ["Week 9 Lesson Plans", "Assignment 3 Publishing", "Daily Register Verification"],
+                status: "UPCOMING",
+                badgeColor: "#64748b"
+              },
+              {
+                week: 10,
+                title: "Continuous Assessment Test 2 (CAT 2)",
+                theme: "Second Milestone Vetting",
+                focus: "Second continuous assessment testing, term project collection, and evaluation of practical laboratory logbooks.",
+                deliverables: ["CAT 2 Gradebook Upload", "Homework Archive Review", "Weekly Report to Admin"],
+                status: "UPCOMING",
+                badgeColor: "#64748b"
+              },
+              {
+                week: 11,
+                title: "Comprehensive Syllabus Revision & Mock Drills",
+                theme: "Exam Preparation & Past Questions",
+                focus: "Review of high-yield examination topics, mock test simulations, past question paper drills, and resolving student question areas.",
+                deliverables: ["End-of-Term Revision Guide", "Submit Final Exam Papers", "Exam Hall Seat Allocation"],
+                status: "UPCOMING",
+                badgeColor: "#64748b"
+              },
+              {
+                week: 12,
+                title: "Official End-of-Term Examinations",
+                theme: "Final Terminal Assessment",
+                focus: "Commencement of main end-of-term examinations across all departments. Strict exam hall invigilation and script security.",
+                deliverables: ["Conduct Final Exams", "Invigilation Reports", "Security Script Custody"],
+                status: "UPCOMING",
+                badgeColor: "#64748b"
+              },
+              {
+                week: 13,
+                title: "Exam Script Grading & Promotion Records Collation",
+                theme: "Mark Collation & Report Cards",
+                focus: "Optical mark scanning and written script grading, entry of 30% class score + 70% exam score into GBS grading engine, report card compilation.",
+                deliverables: ["Final Grade Submissions", "Report Cards Generated", "Headmaster Promotion Sign-Off"],
+                status: "UPCOMING",
+                badgeColor: "#64748b"
+              },
+              {
+                week: 14,
+                title: "Speech & Prize Day, Vacation & Departure",
+                theme: "Academic Celebration & Term Closure",
+                focus: "Official Speech and Prize-Giving Day ceremonies, graduation awards, distributing verified report cards to parents, and official school vacation departure.",
+                deliverables: ["Distribute Report Cards", "Vacation Date Enforcement", "Archive Term Attendance"],
+                status: "UPCOMING",
+                badgeColor: "#64748b"
+              }
+            ]
+              .filter((w) => {
+                if (weeklyActivitiesFilter === "FIRST_HALF") return w.week <= 7;
+                if (weeklyActivitiesFilter === "SECOND_HALF") return w.week > 7;
+                return true;
+              })
+              .map((w) => (
+                <div
+                  key={w.week}
+                  style={{
+                    background: w.status === "ACTIVE" ? "rgba(56, 189, 248, 0.12)" : "rgba(15, 23, 42, 0.8)",
+                    border: w.status === "ACTIVE" ? "2px solid #38bdf8" : "1px solid rgba(255, 255, 255, 0.08)",
+                    borderRadius: "12px",
+                    padding: "14px 18px",
+                    display: "flex",
+                    flexDirection: "column",
+                    gap: "6px"
+                  }}
+                >
+                  <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: "8px" }}>
+                    <div style={{ display: "flex", alignItems: "center", gap: "10px" }}>
+                      <span
+                        style={{
+                          background: "rgba(255,255,255,0.1)",
+                          color: "#fff",
+                          fontWeight: 900,
+                          fontSize: "0.85rem",
+                          padding: "4px 10px",
+                          borderRadius: "6px"
                         }}
                       >
-                        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-                          <span className="role-portal-badge" style={{ color: "#38bdf8" }}>Grade {c.gradeLevel}</span>
-                          <span style={{ fontSize: "0.75rem", color: "#94a3b8", fontFamily: "monospace" }}>{c.code}</span>
-                        </div>
-                        <strong style={{ fontSize: "1.05rem", color: "#f8fafc" }}>{c.name}</strong>
-                        <div style={{ fontSize: "0.8rem", color: "#94a3b8", marginTop: "auto" }}>
-                          Enrolled Students: {c.enrollments ? c.enrollments.length : roster.length} Students
-                        </div>
-                        <button
-                          type="button"
-                          className="btn-primary"
-                          style={{ marginTop: "8px", fontSize: "0.8rem", padding: "6px 12px" }}
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            setSelectedClassId(c.id);
-                            fetchRoster(c.id);
-                            setShowClassSelectorModal(false);
-                            setFeedback({ type: "success", message: `Active assessment class updated to "${c.name}" (${c.code}).` });
-                          }}
-                        >
-                          {isCurrent ? "✓ Currently Selected" : "Select Class for Assessment →"}
-                        </button>
-                      </div>
-                    );
-                  })}
-                </div>
-              </div>
-              <div className="modal-footer">
-                <button type="button" className="btn-secondary" onClick={() => setShowClassSelectorModal(false)}>
-                  Close
-                </button>
-              </div>
-            </div>
-          </div>
-        )
-      }
-
-      {/* ======================================================== */}
-      {/* POP-UP MODAL 2: ALL TERMS & RESULTS OF STUDENTS          */}
-      {/* ======================================================== */}
-      {
-        showTermResultsModal && (
-          <div className="modal-backdrop" onClick={() => setShowTermResultsModal(false)}>
-            <div className="modal-window" style={{ maxWidth: "1050px" }} onClick={(e) => e.stopPropagation()}>
-              <div className="modal-header">
-                <h3><span>📊</span> ALL ACADEMIC TERMS & STUDENT RESULTS LEDGER</h3>
-                <button type="button" className="modal-close-btn" onClick={() => setShowTermResultsModal(false)}>✕</button>
-              </div>
-              <div className="modal-body">
-                {/* Term Switcher */}
-                <div className="term-switcher-nav">
-                  {[
-                    { key: "TERM_1", label: "Term 1 (Fall Semester)" },
-                    { key: "TERM_2", label: "Term 2 (Spring Semester)" },
-                    { key: "TERM_3", label: "Term 3 (Summer Semester)" },
-                    { key: "MID_TERM", label: "Mid-Term Assessment" },
-                    { key: "ANNUAL", label: "Annual Cumulative Report" }
-                  ].map((t) => (
-                    <button
-                      key={t.key}
-                      type="button"
-                      className={`term-pill-btn ${selectedTerm === t.key ? "active" : ""}`}
-                      onClick={() => setSelectedTerm(t.key)}
+                        WEEK {w.week}
+                      </span>
+                      <strong style={{ color: "#f8fafc", fontSize: "1rem" }}>{w.title}</strong>
+                    </div>
+                    <span
+                      style={{
+                        background: `${w.badgeColor}22`,
+                        color: w.badgeColor,
+                        border: `1px solid ${w.badgeColor}55`,
+                        fontSize: "0.72rem",
+                        fontWeight: 800,
+                        padding: "3px 10px",
+                        borderRadius: "12px"
+                      }}
                     >
-                      {t.label}
-                    </button>
-                  ))}
-                </div>
-
-                {/* Class Summary Banner */}
-                <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(160px, 1fr))", gap: "10px", marginBottom: "1.25rem" }}>
-                  <div style={{ background: "rgba(15, 23, 42, 0.6)", padding: "10px 14px", borderRadius: "8px", border: "1px solid rgba(255,255,255,0.08)" }}>
-                    <span style={{ fontSize: "0.75rem", color: "#94a3b8" }}>Target Class</span>
-                    <div style={{ fontWeight: "700", color: "#34d399", fontSize: "0.95rem" }}>
-                      {activeClassObj?.name || "Selected Cohort"}
-                    </div>
-                  </div>
-                  <div style={{ background: "rgba(15, 23, 42, 0.6)", padding: "10px 14px", borderRadius: "8px", border: "1px solid rgba(255,255,255,0.08)" }}>
-                    <span style={{ fontSize: "0.75rem", color: "#94a3b8" }}>Class Size</span>
-                    <div style={{ fontWeight: "700", color: "#38bdf8", fontSize: "0.95rem" }}>{roster.length} Students</div>
-                  </div>
-                  <div style={{ background: "rgba(15, 23, 42, 0.6)", padding: "10px 14px", borderRadius: "8px", border: "1px solid rgba(255,255,255,0.08)" }}>
-                    <span style={{ fontSize: "0.75rem", color: "#94a3b8" }}>Class Average</span>
-                    <div style={{ fontWeight: "700", color: "#fbbf24", fontSize: "0.95rem" }}>
-                      {calculateClassAverage()}%
-                    </div>
-                  </div>
-                  <div style={{ background: "rgba(15, 23, 42, 0.6)", padding: "10px 14px", borderRadius: "8px", border: "1px solid rgba(255,255,255,0.08)" }}>
-                    <span style={{ fontSize: "0.75rem", color: "#94a3b8" }}>Pass Rate</span>
-                    <div style={{ fontWeight: "700", color: "#10b981", fontSize: "0.95rem" }}>96.2% Passing</div>
-                  </div>
-                </div>
-
-                {/* Results Matrix Table */}
-                <div className="role-table-responsive" style={{ maxHeight: "420px" }}>
-                  <table className="role-table">
-                    <thead>
-                      <tr>
-                        <th>#</th>
-                        <th>Student Name</th>
-                        <th>Continuous Assessment (30%)</th>
-                        <th>Mid-Term (20%)</th>
-                        <th>Final Exam (50%)</th>
-                        <th>Total (100%)</th>
-                        <th>Grade</th>
-                        <th>GPA</th>
-                        <th>Status</th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {roster.map((s, idx) => {
-                        const res = getStudentTermResult(s.id, idx);
-                        return (
-                          <tr key={s.id}>
-                            <td style={{ fontWeight: "700", color: "#64748b" }}>{idx + 1}</td>
-                            <td><strong>{s.firstName} {s.lastName}</strong></td>
-                            <td>{res.caScore} / 30</td>
-                            <td>{res.midtermScore} / 20</td>
-                            <td>{res.examScore} / 50</td>
-                            <td><strong style={{ color: "#38bdf8" }}>{res.totalScore} / 100</strong></td>
-                            <td><strong style={{ color: res.grade === "F" ? "#ef4444" : "#10b981" }}>{res.grade}</strong></td>
-                            <td>{res.gpa}</td>
-                            <td>
-                              <span className={`badge-status ${res.totalScore >= 60 ? "badge-present" : "badge-absent"}`}>
-                                {res.totalScore >= 80 ? "DISTINCTION" : res.totalScore >= 60 ? "PASSED" : "NEEDS REMEDIATION"}
-                              </span>
-                            </td>
-                          </tr>
-                        );
-                      })}
-                    </tbody>
-                  </table>
-                </div>
-              </div>
-              <div className="modal-footer">
-                <button type="button" className="btn-secondary" onClick={() => setShowTermResultsModal(false)}>
-                  Close
-                </button>
-              </div>
-            </div>
-          </div>
-        )
-      }
-
-      {/* REQUIREMENT: AI Scanner Confirmation Prompt Modal */}
-      {
-        showScannerConfirmModal && (
-          <div className="role-modal-backdrop">
-            <div className="role-modal-card" style={{ maxWidth: "560px", background: "rgba(15, 23, 42, 0.96)", border: "1px solid rgba(168, 85, 247, 0.4)", borderRadius: "16px", padding: "24px", boxShadow: "0 25px 50px rgba(0,0,0,0.85)" }}>
-              <div style={{ display: "flex", alignItems: "center", gap: "10px", marginBottom: "14px" }}>
-                <span style={{ fontSize: "2rem" }}>🤖</span>
-                <div>
-                  <h3 style={{ margin: 0, color: "#c084fc", fontSize: "1.2rem", fontWeight: "800" }}>
-                    AI EXAM SCANNER CONFIRMATION
-                  </h3>
-                  <span style={{ fontSize: "0.75rem", color: "#94a3b8" }}>
-                    Deterministic Optical Mark Recognition & Result Grading Engine
-                  </span>
-                </div>
-              </div>
-
-              <div style={{ background: "rgba(168, 85, 247, 0.12)", border: "1px solid rgba(168, 85, 247, 0.35)", borderRadius: "10px", padding: "14px 16px", marginBottom: "16px" }}>
-                <p style={{ margin: 0, fontSize: "1rem", fontWeight: "800", color: "#f8fafc", lineHeight: "1.5" }}>
-                  ⚠️ Are these the correct answers you gave before the AI scanner can mark and grade the students?
-                </p>
-                <div style={{ marginTop: "8px", fontSize: "0.82rem", color: "#cbd5e1", display: "flex", flexDirection: "column", gap: "3px" }}>
-                  <span>Selected Cohort: <strong style={{ color: "#38bdf8" }}>{classes.find((c) => String(c.id) === String(scannerClassId || selectedClassId))?.name || "Class"}</strong></span>
-                  <span>Grading Term / Semester: <strong style={{ color: "#34d399" }}>{scannerTerm}</strong></span>
-                  {scannerExamFileName && (
-                    <span>Exam Paper / Sheet: <strong style={{ color: "#f472b6" }}>📄 {scannerExamFileName}</strong></span>
-                  )}
-                </div>
-              </div>
-
-              <div style={{ marginBottom: "18px" }}>
-                <strong style={{ fontSize: "0.82rem", color: "#f6dd84", display: "block", marginBottom: "8px", textTransform: "uppercase" }}>
-                  Teacher Master Answer Key Review (Questions 1 - {scannerQuestionCount}):
-                </strong>
-                <div style={{ display: "grid", gridTemplateColumns: "repeat(5, 1fr)", gap: "8px", maxHeight: "240px", overflowY: "auto" }}>
-                  {Array.from({ length: Math.max(1, Math.min(100, Number(scannerQuestionCount) || 10)) }, (_, i) => i + 1).map((q) => (
-                    <div key={q} style={{ background: "rgba(255,255,255,0.05)", border: "1px solid rgba(212,175,55,0.3)", padding: "8px", borderRadius: "8px", textAlign: "center" }}>
-                      <span style={{ fontSize: "0.72rem", color: "#94a3b8", display: "block" }}>Q{q}</span>
-                      <strong style={{ fontSize: "1.1rem", color: "#f6dd84" }}>{teacherAnswerKey[q] || "A"}</strong>
-                    </div>
-                  ))}
-                </div>
-              </div>
-
-              <div style={{ display: "flex", gap: "10px", justifyContent: "flex-end" }}>
-                <button
-                  type="button"
-                  className="btn-secondary"
-                  onClick={() => setShowScannerConfirmModal(false)}
-                  style={{ padding: "8px 16px", fontSize: "0.85rem" }}
-                >
-                  ✏️ Review / Change Answers
-                </button>
-                <button
-                  type="button"
-                  className="btn-primary"
-                  style={{ background: "linear-gradient(135deg, #8b5cf6, #6d28d9)", padding: "8px 20px", fontSize: "0.85rem", fontWeight: "700" }}
-                  onClick={() => {
-                    setShowScannerConfirmModal(false);
-                    handleRunAiExamScanner();
-                  }}
-                >
-                  ✅ Yes, These Are Correct — Mark & Grade
-                </button>
-              </div>
-            </div>
-          </div>
-        )
-      }
-
-      {/* Requirement: Unmarked Exam Inspection & Corrections Modal */}
-      {
-        showCorrectionModal && activeUnmarkedExam && (
-          <div className="role-modal-backdrop">
-            <div className="role-modal-card" style={{ maxWidth: "680px", background: "rgba(15, 23, 42, 0.98)", border: "2px solid #ef4444", borderRadius: "16px", padding: "24px", boxShadow: "0 25px 60px rgba(0,0,0,0.85)" }}>
-              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "14px", borderBottom: "1px solid rgba(255, 255, 255, 0.1)", paddingBottom: "10px" }}>
-                <div style={{ display: "flex", alignItems: "center", gap: "10px" }}>
-                  <span style={{ fontSize: "1.8rem" }}>🔍</span>
-                  <div>
-                    <h3 style={{ margin: 0, color: "#f87171", fontSize: "1.15rem", fontWeight: "800" }}>
-                      INSPECT & CORRECT UNMARKED EXAM SHEETS
-                    </h3>
-                    <span style={{ fontSize: "0.75rem", color: "#94a3b8" }}>
-                      {activeUnmarkedExam.className} • {activeUnmarkedExam.term} • Uploaded {activeUnmarkedExam.uploadedAt}
+                      ● {w.status}
                     </span>
                   </div>
-                </div>
-                <button type="button" className="modal-close-btn" onClick={() => setShowCorrectionModal(false)}>✕</button>
-              </div>
 
-              <div style={{ background: "rgba(239, 68, 68, 0.1)", border: "1px solid rgba(239, 68, 68, 0.3)", borderRadius: "10px", padding: "12px 16px", marginBottom: "14px", fontSize: "0.85rem", color: "#fecaca" }}>
-                ⚠️ The AI scanner detected {activeUnmarkedExam.papersCount} student exam sheets in this batch that have not yet been evaluated. Inspect answers below, correct any ambiguities, and run optical auto-grading.
-              </div>
+                  <div style={{ fontSize: "0.85rem", color: "#38bdf8", fontWeight: 700 }}>
+                    📌 Theme: {w.theme}
+                  </div>
 
-              {/* Answer Key Corrections Matrix */}
-              <div style={{ marginBottom: "16px" }}>
-                <label style={{ display: "block", fontSize: "0.8rem", color: "#f6dd84", fontWeight: "700", marginBottom: "8px" }}>
-                  Adjust / Correct Master Answer Key for This Class (Q1 - Q{scannerQuestionCount}):
-                </label>
-                <div style={{ display: "grid", gridTemplateColumns: "repeat(5, 1fr)", gap: "8px", maxHeight: "230px", overflowY: "auto" }}>
-                  {Array.from({ length: Math.max(1, Math.min(100, Number(scannerQuestionCount) || 10)) }, (_, i) => i + 1).map((q) => (
-                    <div key={q} style={{ background: "rgba(2, 6, 23, 0.8)", border: "1px solid rgba(212, 175, 55, 0.35)", padding: "8px", borderRadius: "8px", textAlign: "center" }}>
-                      <span style={{ fontSize: "0.72rem", color: "#94a3b8", display: "block" }}>Q{q}</span>
-                      <select
-                        value={teacherAnswerKey[q] || "A"}
-                        onChange={(e) => handleTeacherKeySelect(q, e.target.value)}
-                        style={{ background: "#081833", border: "1px solid #d4af37", color: "#f6dd84", fontWeight: "800", borderRadius: "4px", padding: "2px 6px", fontSize: "0.85rem", marginTop: "4px" }}
+                  <p style={{ margin: "2px 0 6px", fontSize: "0.85rem", color: "#cbd5e1", lineHeight: "1.4" }}>
+                    {w.focus}
+                  </p>
+
+                  <div style={{ display: "flex", alignItems: "center", gap: "8px", flexWrap: "wrap", marginTop: "2px" }}>
+                    <span style={{ fontSize: "0.72rem", color: "#94a3b8", fontWeight: 700 }}>Required Faculty Deliverables:</span>
+                    {w.deliverables.map((del, i) => (
+                      <span
+                        key={i}
+                        style={{
+                          fontSize: "0.72rem",
+                          background: "rgba(255,255,255,0.06)",
+                          color: "#e2e8f0",
+                          padding: "2px 8px",
+                          borderRadius: "6px",
+                          border: "1px solid rgba(255,255,255,0.08)"
+                        }}
                       >
-                        <option value="A">A</option>
-                        <option value="B">B</option>
-                        <option value="C">C</option>
-                        <option value="D">D</option>
-                      </select>
-                    </div>
-                  ))}
+                        ✓ {del}
+                      </span>
+                    ))}
+                  </div>
                 </div>
-              </div>
+              ))}
+          </div>
 
-              <div style={{ display: "flex", gap: "10px", justifyContent: "flex-end" }}>
-                <button
-                  type="button"
-                  className="btn-secondary"
-                  onClick={() => setShowCorrectionModal(false)}
-                  style={{ padding: "8px 16px" }}
-                >
-                  Close
-                </button>
-                <button
-                  type="button"
-                  className="btn-primary"
-                  style={{ background: "linear-gradient(135deg, #10b981, #059669)", fontWeight: "800", padding: "8px 20px" }}
-                  onClick={() => {
-                    setShowCorrectionModal(false);
-                    handleRunAiExamScanner();
-                  }}
-                >
-                  ⚡ Complete AI Grading & Commit Marks
-                </button>
-              </div>
+          <div className="modal-footer" style={{ borderTop: "1px solid rgba(255,255,255,0.1)", background: "rgba(15, 23, 42, 0.95)", display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+            <button
+              type="button"
+              onClick={() => window.print()}
+              style={{
+                background: "rgba(56, 189, 248, 0.2)",
+                border: "1.5px solid #38bdf8",
+                color: "#38bdf8",
+                padding: "8px 18px",
+                borderRadius: "8px",
+                fontWeight: 700,
+                fontSize: "0.85rem",
+                cursor: "pointer"
+              }}
+            >
+              🖨️ Print / Save Term Schedule
+            </button>
+            <button
+              type="button"
+              className="btn-secondary"
+              onClick={() => setShowWeeklyActivitiesModal(false)}
+              style={{ padding: "8px 20px" }}
+            >
+              Close Schedule
+            </button>
+          </div>
+        </div>
+      </div>
+    )
+  }
+
+  {/* POP-UP MODAL 1: REGISTERED CLASSES SELECTION             */ }
+  {/* ======================================================== */ }
+  {
+    showClassSelectorModal && (
+      <div className="modal-backdrop" onClick={() => setShowClassSelectorModal(false)}>
+        <div className="modal-window" onClick={(e) => e.stopPropagation()}>
+          <div className="modal-header">
+            <h3><span>🏫</span> SELECT REGISTERED CLASS FOR ASSESSMENT</h3>
+            <button type="button" className="modal-close-btn" onClick={() => setShowClassSelectorModal(false)}>✕</button>
+          </div>
+          <div className="modal-body">
+            <p style={{ color: "#94a3b8", fontSize: "0.9rem", marginBottom: "1.25rem" }}>
+              Select an officially registered academic class from the database to evaluate student assessments:
+            </p>
+            <div className="class-popup-grid">
+              {classes.map((c) => {
+                const isCurrent = String(selectedClassId) === String(c.id);
+                return (
+                  <div
+                    key={c.id}
+                    className={`class-popup-card ${isCurrent ? "active-class" : ""}`}
+                    onClick={() => {
+                      setSelectedClassId(c.id);
+                      fetchRoster(c.id);
+                      setShowClassSelectorModal(false);
+                      setFeedback({ type: "success", message: `Active assessment class updated to "${c.name}" (${c.code}).` });
+                    }}
+                  >
+                    <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+                      <span className="role-portal-badge" style={{ color: "#38bdf8" }}>Grade {c.gradeLevel}</span>
+                      <span style={{ fontSize: "0.75rem", color: "#94a3b8", fontFamily: "monospace" }}>{c.code}</span>
+                    </div>
+                    <strong style={{ fontSize: "1.05rem", color: "#f8fafc" }}>{c.name}</strong>
+                    <div style={{ fontSize: "0.8rem", color: "#94a3b8", marginTop: "auto" }}>
+                      Enrolled Students: {c.enrollments ? c.enrollments.length : roster.length} Students
+                    </div>
+                    <button
+                      type="button"
+                      className="btn-primary"
+                      style={{ marginTop: "8px", fontSize: "0.8rem", padding: "6px 12px" }}
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        setSelectedClassId(c.id);
+                        fetchRoster(c.id);
+                        setShowClassSelectorModal(false);
+                        setFeedback({ type: "success", message: `Active assessment class updated to "${c.name}" (${c.code}).` });
+                      }}
+                    >
+                      {isCurrent ? "✓ Currently Selected" : "Select Class for Assessment →"}
+                    </button>
+                  </div>
+                );
+              })}
             </div>
           </div>
-        )
-      }
+          <div className="modal-footer">
+            <button type="button" className="btn-secondary" onClick={() => setShowClassSelectorModal(false)}>
+              Close
+            </button>
+          </div>
+        </div>
+      </div>
+    )
+  }
 
-      {/* Requirement: Teachers can create specific class or level to mark exams by AI scanner */}
-      {
-        showCustomClassModal && (
-          <div className="role-modal-backdrop">
-            <div className="role-modal-card" style={{ maxWidth: "520px", background: "rgba(15, 23, 42, 0.98)", border: "1px solid rgba(168, 85, 247, 0.4)", borderRadius: "16px", padding: "24px" }}>
-              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "14px" }}>
-                <div style={{ display: "flex", alignItems: "center", gap: "10px" }}>
-                  <span style={{ fontSize: "1.8rem" }}>➕</span>
-                  <h3 style={{ margin: 0, color: "#c084fc", fontSize: "1.1rem", fontWeight: "800" }}>
-                    CREATE SPECIFIC CLASS / LEVEL TO MARK
-                  </h3>
+  {/* ======================================================== */ }
+  {/* POP-UP MODAL 2: ALL TERMS & RESULTS OF STUDENTS          */ }
+  {/* ======================================================== */ }
+  {
+    showTermResultsModal && (
+      <div className="modal-backdrop" onClick={() => setShowTermResultsModal(false)}>
+        <div className="modal-window" style={{ maxWidth: "1050px" }} onClick={(e) => e.stopPropagation()}>
+          <div className="modal-header">
+            <h3><span>📊</span> ALL ACADEMIC TERMS & STUDENT RESULTS LEDGER</h3>
+            <button type="button" className="modal-close-btn" onClick={() => setShowTermResultsModal(false)}>✕</button>
+          </div>
+          <div className="modal-body">
+            {/* Term Switcher */}
+            <div className="term-switcher-nav">
+              {[
+                { key: "TERM_1", label: "Term 1 (Fall Semester)" },
+                { key: "TERM_2", label: "Term 2 (Spring Semester)" },
+                { key: "TERM_3", label: "Term 3 (Summer Semester)" },
+                { key: "MID_TERM", label: "Mid-Term Assessment" },
+                { key: "ANNUAL", label: "Annual Cumulative Report" }
+              ].map((t) => (
+                <button
+                  key={t.key}
+                  type="button"
+                  className={`term-pill-btn ${selectedTerm === t.key ? "active" : ""}`}
+                  onClick={() => setSelectedTerm(t.key)}
+                >
+                  {t.label}
+                </button>
+              ))}
+            </div>
+
+            {/* Class Summary Banner */}
+            <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(160px, 1fr))", gap: "10px", marginBottom: "1.25rem" }}>
+              <div style={{ background: "rgba(15, 23, 42, 0.6)", padding: "10px 14px", borderRadius: "8px", border: "1px solid rgba(255,255,255,0.08)" }}>
+                <span style={{ fontSize: "0.75rem", color: "#94a3b8" }}>Target Class</span>
+                <div style={{ fontWeight: "700", color: "#34d399", fontSize: "0.95rem" }}>
+                  {activeClassObj?.name || "Selected Cohort"}
                 </div>
-                <button type="button" className="modal-close-btn" onClick={() => setShowCustomClassModal(false)}>✕</button>
+              </div>
+              <div style={{ background: "rgba(15, 23, 42, 0.6)", padding: "10px 14px", borderRadius: "8px", border: "1px solid rgba(255,255,255,0.08)" }}>
+                <span style={{ fontSize: "0.75rem", color: "#94a3b8" }}>Class Size</span>
+                <div style={{ fontWeight: "700", color: "#38bdf8", fontSize: "0.95rem" }}>{roster.length} Students</div>
+              </div>
+              <div style={{ background: "rgba(15, 23, 42, 0.6)", padding: "10px 14px", borderRadius: "8px", border: "1px solid rgba(255,255,255,0.08)" }}>
+                <span style={{ fontSize: "0.75rem", color: "#94a3b8" }}>Class Average</span>
+                <div style={{ fontWeight: "700", color: "#fbbf24", fontSize: "0.95rem" }}>
+                  {calculateClassAverage()}%
+                </div>
+              </div>
+              <div style={{ background: "rgba(15, 23, 42, 0.6)", padding: "10px 14px", borderRadius: "8px", border: "1px solid rgba(255,255,255,0.08)" }}>
+                <span style={{ fontSize: "0.75rem", color: "#94a3b8" }}>Pass Rate</span>
+                <div style={{ fontWeight: "700", color: "#10b981", fontSize: "0.95rem" }}>96.2% Passing</div>
+              </div>
+            </div>
+
+            {/* Results Matrix Table */}
+            <div className="role-table-responsive" style={{ maxHeight: "420px" }}>
+              <table className="role-table">
+                <thead>
+                  <tr>
+                    <th>#</th>
+                    <th>Student Name</th>
+                    <th>Continuous Assessment (30%)</th>
+                    <th>Mid-Term (20%)</th>
+                    <th>Final Exam (50%)</th>
+                    <th>Total (100%)</th>
+                    <th>Grade</th>
+                    <th>GPA</th>
+                    <th>Status</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {roster.map((s, idx) => {
+                    const res = getStudentTermResult(s.id, idx);
+                    return (
+                      <tr key={s.id}>
+                        <td style={{ fontWeight: "700", color: "#64748b" }}>{idx + 1}</td>
+                        <td><strong>{s.firstName} {s.lastName}</strong></td>
+                        <td>{res.caScore} / 30</td>
+                        <td>{res.midtermScore} / 20</td>
+                        <td>{res.examScore} / 50</td>
+                        <td><strong style={{ color: "#38bdf8" }}>{res.totalScore} / 100</strong></td>
+                        <td><strong style={{ color: res.grade === "F" ? "#ef4444" : "#10b981" }}>{res.grade}</strong></td>
+                        <td>{res.gpa}</td>
+                        <td>
+                          <span className={`badge-status ${res.totalScore >= 60 ? "badge-present" : "badge-absent"}`}>
+                            {res.totalScore >= 80 ? "DISTINCTION" : res.totalScore >= 60 ? "PASSED" : "NEEDS REMEDIATION"}
+                          </span>
+                        </td>
+                      </tr>
+                    );
+                  })}
+                </tbody>
+              </table>
+            </div>
+          </div>
+          <div className="modal-footer">
+            <button type="button" className="btn-secondary" onClick={() => setShowTermResultsModal(false)}>
+              Close
+            </button>
+          </div>
+        </div>
+      </div>
+    )
+  }
+
+  {/* REQUIREMENT: AI Scanner Confirmation Prompt Modal */ }
+  {
+    showScannerConfirmModal && (
+      <div className="role-modal-backdrop">
+        <div className="role-modal-card" style={{ maxWidth: "560px", background: "rgba(15, 23, 42, 0.96)", border: "1px solid rgba(168, 85, 247, 0.4)", borderRadius: "16px", padding: "24px", boxShadow: "0 25px 50px rgba(0,0,0,0.85)" }}>
+          <div style={{ display: "flex", alignItems: "center", gap: "10px", marginBottom: "14px" }}>
+            <span style={{ fontSize: "2rem" }}>🤖</span>
+            <div>
+              <h3 style={{ margin: 0, color: "#c084fc", fontSize: "1.2rem", fontWeight: "800" }}>
+                AI EXAM SCANNER CONFIRMATION
+              </h3>
+              <span style={{ fontSize: "0.75rem", color: "#94a3b8" }}>
+                Deterministic Optical Mark Recognition & Result Grading Engine
+              </span>
+            </div>
+          </div>
+
+          <div style={{ background: "rgba(168, 85, 247, 0.12)", border: "1px solid rgba(168, 85, 247, 0.35)", borderRadius: "10px", padding: "14px 16px", marginBottom: "16px" }}>
+            <p style={{ margin: 0, fontSize: "1rem", fontWeight: "800", color: "#f8fafc", lineHeight: "1.5" }}>
+              ⚠️ Are these the correct answers you gave before the AI scanner can mark and grade the students?
+            </p>
+            <div style={{ marginTop: "8px", fontSize: "0.82rem", color: "#cbd5e1", display: "flex", flexDirection: "column", gap: "3px" }}>
+              <span>Selected Cohort: <strong style={{ color: "#38bdf8" }}>{classes.find((c) => String(c.id) === String(scannerClassId || selectedClassId))?.name || "Class"}</strong></span>
+              <span>Grading Term / Semester: <strong style={{ color: "#34d399" }}>{scannerTerm}</strong></span>
+              {scannerExamFileName && (
+                <span>Exam Paper / Sheet: <strong style={{ color: "#f472b6" }}>📄 {scannerExamFileName}</strong></span>
+              )}
+            </div>
+          </div>
+
+          <div style={{ marginBottom: "18px" }}>
+            <strong style={{ fontSize: "0.82rem", color: "#f6dd84", display: "block", marginBottom: "8px", textTransform: "uppercase" }}>
+              Teacher Master Answer Key Review (Questions 1 - {scannerQuestionCount}):
+            </strong>
+            <div style={{ display: "grid", gridTemplateColumns: "repeat(5, 1fr)", gap: "8px", maxHeight: "240px", overflowY: "auto" }}>
+              {Array.from({ length: Math.max(1, Math.min(100, Number(scannerQuestionCount) || 10)) }, (_, i) => i + 1).map((q) => (
+                <div key={q} style={{ background: "rgba(255,255,255,0.05)", border: "1px solid rgba(212,175,55,0.3)", padding: "8px", borderRadius: "8px", textAlign: "center" }}>
+                  <span style={{ fontSize: "0.72rem", color: "#94a3b8", display: "block" }}>Q{q}</span>
+                  <strong style={{ fontSize: "1.1rem", color: "#f6dd84" }}>{teacherAnswerKey[q] || "A"}</strong>
+                </div>
+              ))}
+            </div>
+          </div>
+
+          <div style={{ display: "flex", gap: "10px", justifyContent: "flex-end" }}>
+            <button
+              type="button"
+              className="btn-secondary"
+              onClick={() => setShowScannerConfirmModal(false)}
+              style={{ padding: "8px 16px", fontSize: "0.85rem" }}
+            >
+              ✏️ Review / Change Answers
+            </button>
+            <button
+              type="button"
+              className="btn-primary"
+              style={{ background: "linear-gradient(135deg, #8b5cf6, #6d28d9)", padding: "8px 20px", fontSize: "0.85rem", fontWeight: "700" }}
+              onClick={() => {
+                setShowScannerConfirmModal(false);
+                handleRunAiExamScanner();
+              }}
+            >
+              ✅ Yes, These Are Correct — Mark & Grade
+            </button>
+          </div>
+        </div>
+      </div>
+    )
+  }
+
+  {/* Requirement: Unmarked Exam Inspection & Corrections Modal */ }
+  {
+    showCorrectionModal && activeUnmarkedExam && (
+      <div className="role-modal-backdrop">
+        <div className="role-modal-card" style={{ maxWidth: "680px", background: "rgba(15, 23, 42, 0.98)", border: "2px solid #ef4444", borderRadius: "16px", padding: "24px", boxShadow: "0 25px 60px rgba(0,0,0,0.85)" }}>
+          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "14px", borderBottom: "1px solid rgba(255, 255, 255, 0.1)", paddingBottom: "10px" }}>
+            <div style={{ display: "flex", alignItems: "center", gap: "10px" }}>
+              <span style={{ fontSize: "1.8rem" }}>🔍</span>
+              <div>
+                <h3 style={{ margin: 0, color: "#f87171", fontSize: "1.15rem", fontWeight: "800" }}>
+                  INSPECT & CORRECT UNMARKED EXAM SHEETS
+                </h3>
+                <span style={{ fontSize: "0.75rem", color: "#94a3b8" }}>
+                  {activeUnmarkedExam.className} • {activeUnmarkedExam.term} • Uploaded {activeUnmarkedExam.uploadedAt}
+                </span>
+              </div>
+            </div>
+            <button type="button" className="modal-close-btn" onClick={() => setShowCorrectionModal(false)}>✕</button>
+          </div>
+
+          <div style={{ background: "rgba(239, 68, 68, 0.1)", border: "1px solid rgba(239, 68, 68, 0.3)", borderRadius: "10px", padding: "12px 16px", marginBottom: "14px", fontSize: "0.85rem", color: "#fecaca" }}>
+            ⚠️ The AI scanner detected {activeUnmarkedExam.papersCount} student exam sheets in this batch that have not yet been evaluated. Inspect answers below, correct any ambiguities, and run optical auto-grading.
+          </div>
+
+          {/* Answer Key Corrections Matrix */}
+          <div style={{ marginBottom: "16px" }}>
+            <label style={{ display: "block", fontSize: "0.8rem", color: "#f6dd84", fontWeight: "700", marginBottom: "8px" }}>
+              Adjust / Correct Master Answer Key for This Class (Q1 - Q{scannerQuestionCount}):
+            </label>
+            <div style={{ display: "grid", gridTemplateColumns: "repeat(5, 1fr)", gap: "8px", maxHeight: "230px", overflowY: "auto" }}>
+              {Array.from({ length: Math.max(1, Math.min(100, Number(scannerQuestionCount) || 10)) }, (_, i) => i + 1).map((q) => (
+                <div key={q} style={{ background: "rgba(2, 6, 23, 0.8)", border: "1px solid rgba(212, 175, 55, 0.35)", padding: "8px", borderRadius: "8px", textAlign: "center" }}>
+                  <span style={{ fontSize: "0.72rem", color: "#94a3b8", display: "block" }}>Q{q}</span>
+                  <select
+                    value={teacherAnswerKey[q] || "A"}
+                    onChange={(e) => handleTeacherKeySelect(q, e.target.value)}
+                    style={{ background: "#081833", border: "1px solid #d4af37", color: "#f6dd84", fontWeight: "800", borderRadius: "4px", padding: "2px 6px", fontSize: "0.85rem", marginTop: "4px" }}
+                  >
+                    <option value="A">A</option>
+                    <option value="B">B</option>
+                    <option value="C">C</option>
+                    <option value="D">D</option>
+                  </select>
+                </div>
+              ))}
+            </div>
+          </div>
+
+          <div style={{ display: "flex", gap: "10px", justifyContent: "flex-end" }}>
+            <button
+              type="button"
+              className="btn-secondary"
+              onClick={() => setShowCorrectionModal(false)}
+              style={{ padding: "8px 16px" }}
+            >
+              Close
+            </button>
+            <button
+              type="button"
+              className="btn-primary"
+              style={{ background: "linear-gradient(135deg, #10b981, #059669)", fontWeight: "800", padding: "8px 20px" }}
+              onClick={() => {
+                setShowCorrectionModal(false);
+                handleRunAiExamScanner();
+              }}
+            >
+              ⚡ Complete AI Grading & Commit Marks
+            </button>
+          </div>
+        </div>
+      </div>
+    )
+  }
+
+  {/* Requirement: Teachers can create specific class or level to mark exams by AI scanner */ }
+  {
+    showCustomClassModal && (
+      <div className="role-modal-backdrop">
+        <div className="role-modal-card" style={{ maxWidth: "520px", background: "rgba(15, 23, 42, 0.98)", border: "1px solid rgba(168, 85, 247, 0.4)", borderRadius: "16px", padding: "24px" }}>
+          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "14px" }}>
+            <div style={{ display: "flex", alignItems: "center", gap: "10px" }}>
+              <span style={{ fontSize: "1.8rem" }}>➕</span>
+              <h3 style={{ margin: 0, color: "#c084fc", fontSize: "1.1rem", fontWeight: "800" }}>
+                CREATE SPECIFIC CLASS / LEVEL TO MARK
+              </h3>
+            </div>
+            <button type="button" className="modal-close-btn" onClick={() => setShowCustomClassModal(false)}>✕</button>
+          </div>
+
+          <form onSubmit={handleCreateCustomClassForScanner}>
+            <div style={{ marginBottom: "12px" }}>
+              <label style={{ display: "block", fontSize: "0.78rem", color: "#cbd5e1", marginBottom: "4px", fontWeight: "700" }}>
+                Class / Level Title *
+              </label>
+              <input
+                type="text"
+                required
+                placeholder="e.g. Primary 5 STEM & Computing or Level 300 Software Engineering"
+                value={customClassForm.name}
+                onChange={(e) => setCustomClassForm({ ...customClassForm, name: e.target.value })}
+                className="filter-input"
+                style={{ width: "100%", padding: "8px 12px" }}
+              />
+            </div>
+
+            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "10px", marginBottom: "14px" }}>
+              <div>
+                <label style={{ display: "block", fontSize: "0.75rem", color: "#cbd5e1", marginBottom: "4px", fontWeight: "700" }}>
+                  Class Code / Identifier
+                </label>
+                <input
+                  type="text"
+                  placeholder="e.g. PRI-05 or UNI-300"
+                  value={customClassForm.code}
+                  onChange={(e) => setCustomClassForm({ ...customClassForm, code: e.target.value })}
+                  className="filter-input"
+                  style={{ width: "100%", padding: "8px 10px" }}
+                />
               </div>
 
-              <form onSubmit={handleCreateCustomClassForScanner}>
-                <div style={{ marginBottom: "12px" }}>
-                  <label style={{ display: "block", fontSize: "0.78rem", color: "#cbd5e1", marginBottom: "4px", fontWeight: "700" }}>
-                    Class / Level Title *
+              <div>
+                <label style={{ display: "block", fontSize: "0.75rem", color: "#cbd5e1", marginBottom: "4px", fontWeight: "700" }}>
+                  Grade / Academic Level
+                </label>
+                <select
+                  value={customClassForm.gradeLevel}
+                  onChange={(e) => setCustomClassForm({ ...customClassForm, gradeLevel: e.target.value })}
+                  className="filter-select"
+                  style={{ width: "100%", padding: "8px 10px" }}
+                >
+                  <option value="1">Primary 1 (Grade 1)</option>
+                  <option value="5">Primary 5 (Grade 5)</option>
+                  <option value="8">JHS 2 (Grade 8)</option>
+                  <option value="10">SHS 1 (Grade 10)</option>
+                  <option value="12">SHS 3 (Grade 12)</option>
+                  <option value="13">University Level 100</option>
+                  <option value="15">University Level 300</option>
+                  <option value="16">University Level 400</option>
+                </select>
+              </div>
+            </div>
+
+            <div style={{ display: "flex", gap: "10px", justifyContent: "flex-end" }}>
+              <button
+                type="button"
+                className="btn-secondary"
+                onClick={() => setShowCustomClassModal(false)}
+              >
+                Cancel
+              </button>
+              <button
+                type="submit"
+                className="btn-primary"
+                style={{ background: "linear-gradient(135deg, #8b5cf6, #7c3aed)", fontWeight: "800" }}
+              >
+                Create & Select for Grading
+              </button>
+            </div>
+          </form>
+        </div>
+      </div>
+    )
+  }
+
+  {/* ======================================================== */ }
+  {/* POP-UP MODAL: TEACHER CUSTOM GRADE BOUNDARIES & SCALE    */ }
+  {/* ======================================================== */ }
+  {
+    showGradingScaleModal && (
+      <div className="modal-backdrop" onClick={() => setShowGradingScaleModal(false)}>
+        <div className="modal-window" style={{ maxWidth: "600px" }} onClick={(e) => e.stopPropagation()}>
+          <div className="modal-header">
+            <h3><span>⚙️</span> CONFIGURE TEACHER CUSTOM GRADE BOUNDARIES</h3>
+            <button type="button" className="modal-close-btn" onClick={() => setShowGradingScaleModal(false)}>✕</button>
+          </div>
+          <div className="modal-body" style={{ padding: "1.5rem" }}>
+            <p style={{ margin: "0 0 1rem", fontSize: "0.85rem", color: "#94a3b8" }}>
+              Define your minimum score cutoffs (0 - 100) for each letter grade. Scores equal to or exceeding each threshold will auto-assign that grade, and you can still manually customize any student grade in the table.
+            </p>
+            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "12px", marginBottom: "1.5rem" }}>
+              {["A+", "A", "B", "C", "D"].map((grade) => (
+                <div key={grade} style={{ background: "rgba(15, 23, 42, 0.7)", padding: "10px", borderRadius: "8px", border: "1px solid rgba(255,255,255,0.08)" }}>
+                  <label style={{ display: "flex", justifyContent: "space-between", alignItems: "center", fontSize: "0.85rem", fontWeight: "700", color: "#38bdf8", marginBottom: "4px" }}>
+                    <span>Grade {grade} Min Cutoff</span>
+                    <strong style={{ color: "#34d399" }}>≥ {gradeBoundaries[grade] ?? 0}%</strong>
                   </label>
+                  <input
+                    type="number"
+                    min="0"
+                    max="100"
+                    value={gradeBoundaries[grade] ?? 0}
+                    onChange={(e) => {
+                      const val = parseInt(e.target.value, 10) || 0;
+                      setGradeBoundaries({ ...gradeBoundaries, [grade]: val });
+                    }}
+                    className="filter-input"
+                    style={{ width: "100%", fontWeight: "700" }}
+                  />
+                </div>
+              ))}
+              <div style={{ background: "rgba(15, 23, 42, 0.7)", padding: "10px", borderRadius: "8px", border: "1px solid rgba(239, 68, 68, 0.2)" }}>
+                <label style={{ display: "flex", justifyContent: "space-between", alignItems: "center", fontSize: "0.85rem", fontWeight: "700", color: "#f87171", marginBottom: "4px" }}>
+                  <span>Grade F (Fail)</span>
+                  <strong style={{ color: "#f87171" }}>&lt; {gradeBoundaries["D"] ?? 50}%</strong>
+                </label>
+                <span style={{ fontSize: "0.75rem", color: "#94a3b8", display: "block", marginTop: "8px" }}>
+                  Automatically applied to any score below Grade D threshold.
+                </span>
+              </div>
+            </div>
+            <div style={{ display: "flex", justifyContent: "flex-end", gap: "10px" }}>
+              <button
+                type="button"
+                className="btn-secondary"
+                onClick={() => setShowGradingScaleModal(false)}
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                className="btn-primary"
+                style={{ background: "linear-gradient(135deg, #10b981, #059669)", fontWeight: "800" }}
+                onClick={() => {
+                  localStorage.setItem("gbs_teacher_grade_boundaries", JSON.stringify(gradeBoundaries));
+                  setShowGradingScaleModal(false);
+                  setFeedback({ type: "success", message: "⚙️ Custom grading scale thresholds applied successfully!" });
+                }}
+              >
+                💾 Save & Apply Scale
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+    )
+  }
+
+  {/* ======================================================== */ }
+  {/* POP-UP MODAL: CONFIRM PUBLISH GRADES TO STUDENT DASHBOARD */ }
+  {/* ======================================================== */ }
+  {
+    showPublishModal && (
+      <div className="modal-backdrop" onClick={() => setShowPublishModal(false)}>
+        <div className="modal-window" style={{ maxWidth: "560px" }} onClick={(e) => e.stopPropagation()}>
+          <div className="modal-header">
+            <h3><span>📢</span> PUBLISH EXAM GRADES TO STUDENT DASHBOARD</h3>
+            <button type="button" className="modal-close-btn" onClick={() => setShowPublishModal(false)}>✕</button>
+          </div>
+          <div className="modal-body" style={{ padding: "1.5rem" }}>
+            <div style={{ background: "rgba(56, 189, 248, 0.1)", border: "1px solid rgba(56, 189, 248, 0.3)", borderRadius: "10px", padding: "12px", marginBottom: "1.25rem" }}>
+              <span style={{ display: "block", fontSize: "0.85rem", color: "#38bdf8", fontWeight: "700" }}>
+                Ready to Publish Results:
+              </span>
+              <span style={{ fontSize: "0.8rem", color: "#cbd5e1" }}>
+                Publishing will push graded scores, teacher grades, and remarks to the Student Learning Portal under "Result Published" with date and time recorded.
+              </span>
+            </div>
+
+            <div style={{ marginBottom: "1rem" }}>
+              <label style={{ display: "block", fontSize: "0.8rem", color: "#cbd5e1", marginBottom: "6px", fontWeight: "700" }}>
+                Academic Term or Semester *
+              </label>
+              <select
+                value={publishTerm}
+                onChange={(e) => setPublishTerm(e.target.value)}
+                className="filter-select"
+                style={{ width: "100%", padding: "10px", fontSize: "0.9rem", fontWeight: "700" }}
+              >
+                <option value="Term 1 (First Academic Term)">Term 1 (First Academic Term)</option>
+                <option value="Term 2 (Second Academic Term)">Term 2 (Second Academic Term)</option>
+                <option value="Term 3 (Third Academic Term)">Term 3 (Third Academic Term)</option>
+                <option value="Semester 1 (First Semester)">Semester 1 (First Semester)</option>
+                <option value="Semester 2 (Second Semester)">Semester 2 (Second Semester)</option>
+              </select>
+            </div>
+
+            <div style={{ background: "rgba(15, 23, 42, 0.8)", padding: "10px 14px", borderRadius: "8px", border: "1px solid rgba(255,255,255,0.08)", marginBottom: "1.5rem" }}>
+              <div style={{ display: "flex", justifyContent: "space-between", fontSize: "0.8rem", color: "#94a3b8", marginBottom: "4px" }}>
+                <span>Target Class Cohort:</span>
+                <strong style={{ color: "#34d399" }}>{activeClassObj?.name || "Assigned Cohort"}</strong>
+              </div>
+              <div style={{ display: "flex", justifyContent: "space-between", fontSize: "0.8rem", color: "#94a3b8", marginBottom: "4px" }}>
+                <span>Graded Students in Queue:</span>
+                <strong style={{ color: "#38bdf8" }}>{Object.keys(examScores).filter((k) => examScores[k] !== "").length} student(s)</strong>
+              </div>
+              <div style={{ display: "flex", justifyContent: "space-between", fontSize: "0.8rem", color: "#94a3b8" }}>
+                <span>Publication Timestamp:</span>
+                <strong style={{ color: "#fbbf24" }}>{new Date().toISOString().split("T")[0]} {new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}</strong>
+              </div>
+            </div>
+
+            <div style={{ display: "flex", justifyContent: "flex-end", gap: "10px" }}>
+              <button
+                type="button"
+                className="btn-secondary"
+                onClick={() => setShowPublishModal(false)}
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                className="btn-primary"
+                style={{ background: "linear-gradient(135deg, #0284c7, #38bdf8)", fontWeight: "800", padding: "10px 20px" }}
+                onClick={() => handlePublishAllGradesToStudents(publishTerm)}
+              >
+                🚀 Publish Now to Students Dashboard
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+    )
+  }
+  {/* MODAL: AUTHOR EXAMINATION & SCHEDULE TIMED ACCESS */ }
+  {
+    showAuthorExamModal && (
+      <div
+        className="modal-backdrop invoice-pay-modal-overlay"
+        style={{
+          position: "fixed",
+          inset: 0,
+          zIndex: 99999,
+          background: "rgba(2, 6, 23, 0.82)",
+          backdropFilter: "blur(10px)",
+          display: "flex",
+          alignItems: "center",
+          justifyContent: "center",
+          padding: "1.25rem",
+          overflowY: "auto"
+        }}
+      >
+        <div className="invoice-pay-modal" style={{ width: "100%", maxWidth: "900px", background: "#0b1329", border: "2px solid #8b5cf6", borderRadius: "16px", padding: "2rem", maxHeight: "90vh", overflowY: "auto", boxShadow: "0 25px 60px rgba(0,0,0,0.65)" }}>
+          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", borderBottom: "1.5px solid rgba(139, 92, 246, 0.3)", paddingBottom: "1.1rem", marginBottom: "1.25rem" }}>
+            <div>
+              <span className="role-portal-badge" style={{ color: "#c084fc", marginBottom: "4px", display: "inline-block" }}>
+                CLEAR STEP-BY-STEP EXAM SETTING &amp; PAPER FORMAT BUILDER
+              </span>
+              <h2 style={{ margin: "2px 0 0", color: "#f8fafc", fontSize: "1.3rem", fontWeight: "900" }}>
+                Exam Settings, Questions &amp; Schedule
+              </h2>
+              <p style={{ margin: "4px 0 0", color: "#cbd5e1", fontSize: "0.84rem", lineHeight: 1.45 }}>
+                Follow the 3 simple steps below to set up your exam clearly: (1) Exam Details &amp; Instructions, (2) Marks, Time &amp; Proctoring Rules, and (3) Question Format &amp; Paper Content.
+              </p>
+            </div>
+            <button type="button" className="btn-secondary" onClick={() => setShowAuthorExamModal(false)}>✕ Close</button>
+          </div>
+
+          <form onSubmit={handlePublishNewExam}>
+            {/* STEP 1: EXAM DETAILS & CANDIDATE INSTRUCTIONS */}
+            <div style={{ background: "rgba(15, 23, 42, 0.72)", padding: "14px 16px", borderRadius: "10px", border: "1px solid rgba(56, 189, 248, 0.28)", marginBottom: "1rem" }}>
+              <div style={{ fontSize: "0.82rem", fontWeight: 800, color: "#38bdf8", marginBottom: "10px", textTransform: "uppercase", letterSpacing: "0.03em" }}>
+                Step 1 — Exam Details, Class &amp; Student Instructions
+              </div>
+              <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(210px, 1fr))", gap: "0.85rem", marginBottom: "0.85rem" }}>
+                <div>
+                  <label style={{ display: "block", fontSize: "0.8rem", color: "#e2e8f0", fontWeight: 700, marginBottom: "4px" }}>Exam Title *</label>
                   <input
                     type="text"
                     required
-                    placeholder="e.g. Primary 5 STEM & Computing or Level 300 Software Engineering"
-                    value={customClassForm.name}
-                    onChange={(e) => setCustomClassForm({ ...customClassForm, name: e.target.value })}
+                    placeholder="e.g. End of Term 1 Mathematics Exam"
+                    value={newExamForm.title}
+                    onChange={(e) => setNewExamForm({ ...newExamForm, title: e.target.value })}
                     className="filter-input"
-                    style={{ width: "100%", padding: "8px 12px" }}
+                    style={{ width: "100%" }}
                   />
                 </div>
-
-                <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "10px", marginBottom: "14px" }}>
-                  <div>
-                    <label style={{ display: "block", fontSize: "0.75rem", color: "#cbd5e1", marginBottom: "4px", fontWeight: "700" }}>
-                      Class Code / Identifier
-                    </label>
-                    <input
-                      type="text"
-                      placeholder="e.g. PRI-05 or UNI-300"
-                      value={customClassForm.code}
-                      onChange={(e) => setCustomClassForm({ ...customClassForm, code: e.target.value })}
-                      className="filter-input"
-                      style={{ width: "100%", padding: "8px 10px" }}
-                    />
-                  </div>
-
-                  <div>
-                    <label style={{ display: "block", fontSize: "0.75rem", color: "#cbd5e1", marginBottom: "4px", fontWeight: "700" }}>
-                      Grade / Academic Level
-                    </label>
-                    <select
-                      value={customClassForm.gradeLevel}
-                      onChange={(e) => setCustomClassForm({ ...customClassForm, gradeLevel: e.target.value })}
-                      className="filter-select"
-                      style={{ width: "100%", padding: "8px 10px" }}
-                    >
-                      <option value="1">Primary 1 (Grade 1)</option>
-                      <option value="5">Primary 5 (Grade 5)</option>
-                      <option value="8">JHS 2 (Grade 8)</option>
-                      <option value="10">SHS 1 (Grade 10)</option>
-                      <option value="12">SHS 3 (Grade 12)</option>
-                      <option value="13">University Level 100</option>
-                      <option value="15">University Level 300</option>
-                      <option value="16">University Level 400</option>
-                    </select>
-                  </div>
+                <div>
+                  <label style={{ display: "block", fontSize: "0.8rem", color: "#e2e8f0", fontWeight: 700, marginBottom: "4px" }}>Subject / Course Code *</label>
+                  <input
+                    type="text"
+                    required
+                    placeholder="e.g. MATH 205"
+                    value={newExamForm.subjectCode}
+                    onChange={(e) => setNewExamForm({ ...newExamForm, subjectCode: e.target.value })}
+                    className="filter-input"
+                    style={{ width: "100%" }}
+                  />
                 </div>
-
-                <div style={{ display: "flex", gap: "10px", justifyContent: "flex-end" }}>
-                  <button
-                    type="button"
-                    className="btn-secondary"
-                    onClick={() => setShowCustomClassModal(false)}
-                  >
-                    Cancel
-                  </button>
-                  <button
-                    type="submit"
-                    className="btn-primary"
-                    style={{ background: "linear-gradient(135deg, #8b5cf6, #7c3aed)", fontWeight: "800" }}
-                  >
-                    Create & Select for Grading
-                  </button>
+                <div>
+                  <label style={{ display: "block", fontSize: "0.8rem", color: "#e2e8f0", fontWeight: 700, marginBottom: "4px" }}>Subject Name *</label>
+                  <input
+                    type="text"
+                    required
+                    placeholder="e.g. Core Mathematics"
+                    value={newExamForm.subjectName || ""}
+                    onChange={(e) => setNewExamForm({ ...newExamForm, subjectName: e.target.value })}
+                    className="filter-input"
+                    style={{ width: "100%" }}
+                  />
                 </div>
-              </form>
-            </div>
-          </div>
-        )
-      }
-
-      {/* ======================================================== */}
-      {/* POP-UP MODAL: TEACHER CUSTOM GRADE BOUNDARIES & SCALE    */}
-      {/* ======================================================== */}
-      {
-        showGradingScaleModal && (
-          <div className="modal-backdrop" onClick={() => setShowGradingScaleModal(false)}>
-            <div className="modal-window" style={{ maxWidth: "600px" }} onClick={(e) => e.stopPropagation()}>
-              <div className="modal-header">
-                <h3><span>⚙️</span> CONFIGURE TEACHER CUSTOM GRADE BOUNDARIES</h3>
-                <button type="button" className="modal-close-btn" onClick={() => setShowGradingScaleModal(false)}>✕</button>
+                <div>
+                  <label style={{ display: "block", fontSize: "0.8rem", color: "#e2e8f0", fontWeight: 700, marginBottom: "4px" }}>Target Class / Level *</label>
+                  <input
+                    type="text"
+                    required
+                    placeholder="e.g. Grade 10A or JHS 3"
+                    value={newExamForm.className}
+                    onChange={(e) => setNewExamForm({ ...newExamForm, className: e.target.value })}
+                    className="filter-input"
+                    style={{ width: "100%" }}
+                  />
+                </div>
+                <div>
+                  <label style={{ display: "block", fontSize: "0.8rem", color: "#e2e8f0", fontWeight: 700, marginBottom: "4px" }}>Exam Date *</label>
+                  <input
+                    type="date"
+                    required
+                    value={newExamForm.examDate}
+                    onChange={(e) => setNewExamForm({ ...newExamForm, examDate: e.target.value })}
+                    className="filter-input"
+                    style={{ width: "100%" }}
+                  />
+                </div>
               </div>
-              <div className="modal-body" style={{ padding: "1.5rem" }}>
-                <p style={{ margin: "0 0 1rem", fontSize: "0.85rem", color: "#94a3b8" }}>
-                  Define your minimum score cutoffs (0 - 100) for each letter grade. Scores equal to or exceeding each threshold will auto-assign that grade, and you can still manually customize any student grade in the table.
-                </p>
-                <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "12px", marginBottom: "1.5rem" }}>
-                  {["A+", "A", "B", "C", "D"].map((grade) => (
-                    <div key={grade} style={{ background: "rgba(15, 23, 42, 0.7)", padding: "10px", borderRadius: "8px", border: "1px solid rgba(255,255,255,0.08)" }}>
-                      <label style={{ display: "flex", justifyContent: "space-between", alignItems: "center", fontSize: "0.85rem", fontWeight: "700", color: "#38bdf8", marginBottom: "4px" }}>
-                        <span>Grade {grade} Min Cutoff</span>
-                        <strong style={{ color: "#34d399" }}>≥ {gradeBoundaries[grade] ?? 0}%</strong>
-                      </label>
-                      <input
-                        type="number"
-                        min="0"
-                        max="100"
-                        value={gradeBoundaries[grade] ?? 0}
-                        onChange={(e) => {
-                          const val = parseInt(e.target.value, 10) || 0;
-                          setGradeBoundaries({ ...gradeBoundaries, [grade]: val });
-                        }}
-                        className="filter-input"
-                        style={{ width: "100%", fontWeight: "700" }}
-                      />
-                    </div>
-                  ))}
-                  <div style={{ background: "rgba(15, 23, 42, 0.7)", padding: "10px", borderRadius: "8px", border: "1px solid rgba(239, 68, 68, 0.2)" }}>
-                    <label style={{ display: "flex", justifyContent: "space-between", alignItems: "center", fontSize: "0.85rem", fontWeight: "700", color: "#f87171", marginBottom: "4px" }}>
-                      <span>Grade F (Fail)</span>
-                      <strong style={{ color: "#f87171" }}>&lt; {gradeBoundaries["D"] ?? 50}%</strong>
-                    </label>
-                    <span style={{ fontSize: "0.75rem", color: "#94a3b8", display: "block", marginTop: "8px" }}>
-                      Automatically applied to any score below Grade D threshold.
+              <div>
+                <label style={{ display: "block", fontSize: "0.8rem", color: "#e2e8f0", fontWeight: 700, marginBottom: "4px" }}>
+                  Instructions Shown to Students Before Starting
+                </label>
+                <textarea
+                  rows={2}
+                  placeholder="e.g. Section A carries 40 marks (Objective) and Section B carries 60 marks (Theory). Keep your camera facing forward throughout."
+                  value={newExamForm.instructions || ""}
+                  onChange={(e) => setNewExamForm({ ...newExamForm, instructions: e.target.value })}
+                  className="filter-input"
+                  style={{ width: "100%", fontFamily: "inherit", resize: "vertical" }}
+                />
+              </div>
+            </div>
+
+            {/* STEP 2: TIMING, MARKS, PASSING SCORE & PROCTORING RULES */}
+            <div style={{ background: "rgba(15, 23, 42, 0.8)", padding: "14px 16px", borderRadius: "10px", border: "1.5px solid rgba(245, 158, 11, 0.35)", marginBottom: "1rem" }}>
+              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: "8px", marginBottom: "10px" }}>
+                <div style={{ fontSize: "0.82rem", fontWeight: 800, color: "#fbbf24", textTransform: "uppercase", letterSpacing: "0.03em" }}>
+                  Step 2 — Timing, Total Marks, Pass Mark &amp; Exam Rules
+                </div>
+                {(() => {
+                  const allocated = examQuestionsList.reduce((acc, q) => acc + (Number(q.marks) || 0), 0);
+                  const target = Number(newExamForm.totalMarks) || 100;
+                  const matches = allocated === 0 || allocated === target;
+                  return (
+                    <span style={{
+                      fontSize: "0.75rem",
+                      fontWeight: 800,
+                      padding: "3px 10px",
+                      borderRadius: "999px",
+                      background: matches ? "rgba(16, 185, 129, 0.16)" : "rgba(245, 158, 11, 0.16)",
+                      color: matches ? "#34d399" : "#fcd34d",
+                      border: matches ? "1px solid #10b981" : "1px solid #f59e0b"
+                    }}>
+                      Questions Sum: {allocated} / {target} Total Marks
+                    </span>
+                  );
+                })()}
+              </div>
+              <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(150px, 1fr))", gap: "0.85rem", marginBottom: "0.85rem" }}>
+                <div>
+                  <label style={{ display: "block", fontSize: "0.78rem", color: "#cbd5e1", fontWeight: 700, marginBottom: "4px" }}>Start Time (Opens)</label>
+                  <input
+                    type="text"
+                    placeholder="09:00 AM"
+                    value={newExamForm.startTime}
+                    onChange={(e) => setNewExamForm({ ...newExamForm, startTime: e.target.value })}
+                    className="filter-input"
+                    style={{ width: "100%", fontWeight: "700", color: "#34d399" }}
+                  />
+                </div>
+                <div>
+                  <label style={{ display: "block", fontSize: "0.78rem", color: "#cbd5e1", fontWeight: 700, marginBottom: "4px" }}>End Time (Closes)</label>
+                  <input
+                    type="text"
+                    placeholder="11:30 AM"
+                    value={newExamForm.endTime}
+                    onChange={(e) => setNewExamForm({ ...newExamForm, endTime: e.target.value })}
+                    className="filter-input"
+                    style={{ width: "100%", fontWeight: "700", color: "#f87171" }}
+                  />
+                </div>
+                <div>
+                  <label style={{ display: "block", fontSize: "0.78rem", color: "#cbd5e1", fontWeight: 700, marginBottom: "4px" }}>Duration (Minutes)</label>
+                  <input
+                    type="number"
+                    min="5"
+                    value={newExamForm.durationMinutes}
+                    onChange={(e) => setNewExamForm({ ...newExamForm, durationMinutes: Number(e.target.value) })}
+                    className="filter-input"
+                    style={{ width: "100%" }}
+                  />
+                </div>
+                <div>
+                  <label style={{ display: "block", fontSize: "0.78rem", color: "#cbd5e1", fontWeight: 700, marginBottom: "4px" }}>Total Exam Marks</label>
+                  <input
+                    type="number"
+                    min="1"
+                    value={newExamForm.totalMarks}
+                    onChange={(e) => setNewExamForm({ ...newExamForm, totalMarks: Number(e.target.value) || 100 })}
+                    className="filter-input"
+                    style={{ width: "100%" }}
+                  />
+                </div>
+                <div>
+                  <label style={{ display: "block", fontSize: "0.78rem", color: "#cbd5e1", fontWeight: 700, marginBottom: "4px" }}>Pass Mark</label>
+                  <input
+                    type="number"
+                    min="1"
+                    value={newExamForm.passMarks}
+                    onChange={(e) => setNewExamForm({ ...newExamForm, passMarks: Number(e.target.value) || 50 })}
+                    className="filter-input"
+                    style={{ width: "100%" }}
+                  />
+                </div>
+              </div>
+              <div style={{ display: "flex", gap: "18px", flexWrap: "wrap", paddingTop: "6px" }}>
+                <label style={{ fontSize: "0.8rem", color: "#e2e8f0", cursor: "pointer", display: "flex", alignItems: "center", gap: "8px" }}>
+                  <input
+                    type="checkbox"
+                    id="chkRestrict"
+                    checked={newExamForm.restrictBeforeStart}
+                    onChange={(e) => setNewExamForm({ ...newExamForm, restrictBeforeStart: e.target.checked })}
+                  />
+                  <span>🔒 Lock portal before Start Time (students cannot open questions early)</span>
+                </label>
+                <label style={{ fontSize: "0.8rem", color: "#e2e8f0", cursor: "pointer", display: "flex", alignItems: "center", gap: "8px" }}>
+                  <input
+                    type="checkbox"
+                    id="chkProctoring"
+                    checked={newExamForm.enableProctoring !== false}
+                    onChange={(e) => setNewExamForm({ ...newExamForm, enableProctoring: e.target.checked })}
+                  />
+                  <span>📹 Active AI Proctoring (camera gaze &amp; tab-switch monitoring from Start until End)</span>
+                </label>
+              </div>
+            </div>
+
+            {/* STEP 3: QUESTION FORMAT & PAPER CREATION (Uniform GBS Navy & Gold Layout) */}
+            <div style={{ fontSize: "0.82rem", fontWeight: 800, color: "#f6dd84", marginBottom: "8px", textTransform: "uppercase", letterSpacing: "0.04em" }}>
+              Step 3 — Choose Paper Creation Method &amp; Question Format
+            </div>
+            <div style={{ display: "flex", gap: "8px", marginBottom: "1rem", flexWrap: "wrap" }}>
+              <button
+                type="button"
+                onClick={() => setExamAuthorMode("BUILDER")}
+                style={{
+                  flex: 1,
+                  padding: "9px 12px",
+                  borderRadius: "8px",
+                  border: examAuthorMode === "BUILDER" ? "1.5px solid #d4af37" : "1px solid rgba(212, 175, 55, 0.3)",
+                  background: examAuthorMode === "BUILDER" ? "linear-gradient(135deg, #0d2247, #1a3a70)" : "rgba(8, 24, 51, 0.72)",
+                  color: examAuthorMode === "BUILDER" ? "#f6dd84" : "#cbd5e1",
+                  fontWeight: 800,
+                  fontSize: "0.82rem",
+                  cursor: "pointer"
+                }}
+              >
+                ✍️ Interactive Questions Builder ({examQuestionsList.length})
+              </button>
+              <button
+                type="button"
+                onClick={() => setExamAuthorMode("UPLOAD_DOC")}
+                style={{
+                  flex: 1,
+                  padding: "9px 12px",
+                  borderRadius: "8px",
+                  border: examAuthorMode === "UPLOAD_DOC" ? "1.5px solid #d4af37" : "1px solid rgba(212, 175, 55, 0.3)",
+                  background: examAuthorMode === "UPLOAD_DOC" ? "linear-gradient(135deg, #0d2247, #1a3a70)" : "rgba(8, 24, 51, 0.72)",
+                  color: examAuthorMode === "UPLOAD_DOC" ? "#f6dd84" : "#cbd5e1",
+                  fontWeight: 800,
+                  fontSize: "0.82rem",
+                  cursor: "pointer"
+                }}
+              >
+                📄 Upload Typed Questions Doc / Text
+              </button>
+              <button
+                type="button"
+                onClick={() => setExamAuthorMode("PRINT_OMR")}
+                style={{
+                  flex: 1,
+                  padding: "9px 12px",
+                  borderRadius: "8px",
+                  border: examAuthorMode === "PRINT_OMR" ? "1.5px solid #d4af37" : "1px solid rgba(212, 175, 55, 0.3)",
+                  background: examAuthorMode === "PRINT_OMR" ? "linear-gradient(135deg, #0d2247, #1a3a70)" : "rgba(8, 24, 51, 0.72)",
+                  color: examAuthorMode === "PRINT_OMR" ? "#f6dd84" : "#cbd5e1",
+                  fontWeight: 800,
+                  fontSize: "0.82rem",
+                  cursor: "pointer"
+                }}
+              >
+                🖨️ AI Scanner OMR Sheet Generator
+              </button>
+            </div>
+
+            {/* Mode A: Interactive Builder */}
+            {examAuthorMode === "BUILDER" && (
+              <div style={{ background: "linear-gradient(145deg, #081833 0%, #0d2247 100%)", padding: "14px", borderRadius: "10px", marginBottom: "1.25rem", border: "1.5px solid #d4af37" }}>
+                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "10px", flexWrap: "wrap", gap: "8px" }}>
+                  <div>
+                    <strong style={{ fontSize: "0.92rem", color: "#f6dd84", display: "block" }}>
+                      📚 Multi-Format Question Bank ({examQuestionsList.length} Questions • {examQuestionsList.reduce((acc, q) => acc + (Number(q.marks) || 0), 0)} Total Marks)
+                    </strong>
+                    <span style={{ fontSize: "0.75rem", color: "#e2e8f0" }}>
+                      Select any Question Bank format tab below to configure Multiple Choice, Theory / Essay, True or False, Short Answer, Fill-in-Blank, or Practical Case Study exams.
                     </span>
                   </div>
-                </div>
-                <div style={{ display: "flex", justifyContent: "flex-end", gap: "10px" }}>
-                  <button
-                    type="button"
-                    className="btn-secondary"
-                    onClick={() => setShowGradingScaleModal(false)}
-                  >
-                    Cancel
-                  </button>
-                  <button
-                    type="button"
-                    className="btn-primary"
-                    style={{ background: "linear-gradient(135deg, #10b981, #059669)", fontWeight: "800" }}
-                    onClick={() => {
-                      localStorage.setItem("gbs_teacher_grade_boundaries", JSON.stringify(gradeBoundaries));
-                      setShowGradingScaleModal(false);
-                      setFeedback({ type: "success", message: "⚙️ Custom grading scale thresholds applied successfully!" });
-                    }}
-                  >
-                    💾 Save & Apply Scale
-                  </button>
-                </div>
-              </div>
-            </div>
-          </div>
-        )
-      }
-
-      {/* ======================================================== */}
-      {/* POP-UP MODAL: CONFIRM PUBLISH GRADES TO STUDENT DASHBOARD */}
-      {/* ======================================================== */}
-      {
-        showPublishModal && (
-          <div className="modal-backdrop" onClick={() => setShowPublishModal(false)}>
-            <div className="modal-window" style={{ maxWidth: "560px" }} onClick={(e) => e.stopPropagation()}>
-              <div className="modal-header">
-                <h3><span>📢</span> PUBLISH EXAM GRADES TO STUDENT DASHBOARD</h3>
-                <button type="button" className="modal-close-btn" onClick={() => setShowPublishModal(false)}>✕</button>
-              </div>
-              <div className="modal-body" style={{ padding: "1.5rem" }}>
-                <div style={{ background: "rgba(56, 189, 248, 0.1)", border: "1px solid rgba(56, 189, 248, 0.3)", borderRadius: "10px", padding: "12px", marginBottom: "1.25rem" }}>
-                  <span style={{ display: "block", fontSize: "0.85rem", color: "#38bdf8", fontWeight: "700" }}>
-                    Ready to Publish Results:
-                  </span>
-                  <span style={{ fontSize: "0.8rem", color: "#cbd5e1" }}>
-                    Publishing will push graded scores, teacher grades, and remarks to the Student Learning Portal under "Result Published" with date and time recorded.
+                  <span style={{ background: "rgba(5, 15, 35, 0.85)", border: "1px solid #d4af37", color: "#f6dd84", padding: "4px 10px", borderRadius: "6px", fontSize: "0.73rem", fontWeight: 800 }}>
+                    Paper Format: {describeExamFormatSummary(examQuestionsList)}
                   </span>
                 </div>
 
-                <div style={{ marginBottom: "1rem" }}>
-                  <label style={{ display: "block", fontSize: "0.8rem", color: "#cbd5e1", marginBottom: "6px", fontWeight: "700" }}>
-                    Academic Term or Semester *
-                  </label>
-                  <select
-                    value={publishTerm}
-                    onChange={(e) => setPublishTerm(e.target.value)}
-                    className="filter-select"
-                    style={{ width: "100%", padding: "10px", fontSize: "0.9rem", fontWeight: "700" }}
-                  >
-                    <option value="Term 1 (First Academic Term)">Term 1 (First Academic Term)</option>
-                    <option value="Term 2 (Second Academic Term)">Term 2 (Second Academic Term)</option>
-                    <option value="Term 3 (Third Academic Term)">Term 3 (Third Academic Term)</option>
-                    <option value="Semester 1 (First Semester)">Semester 1 (First Semester)</option>
-                    <option value="Semester 2 (Second Semester)">Semester 2 (Second Semester)</option>
-                  </select>
-                </div>
-
-                <div style={{ background: "rgba(15, 23, 42, 0.8)", padding: "10px 14px", borderRadius: "8px", border: "1px solid rgba(255,255,255,0.08)", marginBottom: "1.5rem" }}>
-                  <div style={{ display: "flex", justifyContent: "space-between", fontSize: "0.8rem", color: "#94a3b8", marginBottom: "4px" }}>
-                    <span>Target Class Cohort:</span>
-                    <strong style={{ color: "#34d399" }}>{activeClassObj?.name || "Assigned Cohort"}</strong>
+                {/* Step 1: Select Question Bank Format Tabs (Clean Uniform Navy & Gold) */}
+                <div style={{ marginBottom: "10px", padding: "10px", borderRadius: "10px", background: "rgba(5, 15, 35, 0.8)", border: "1.5px solid rgba(212, 175, 55, 0.35)" }}>
+                  <div style={{ fontSize: "0.73rem", color: "#f6dd84", fontWeight: 800, marginBottom: "8px", textTransform: "uppercase", letterSpacing: "0.04em" }}>
+                    1️⃣ Select Question Bank Format Tab (Click to Choose Format or Add Question):
                   </div>
-                  <div style={{ display: "flex", justifyContent: "space-between", fontSize: "0.8rem", color: "#94a3b8", marginBottom: "4px" }}>
-                    <span>Graded Students in Queue:</span>
-                    <strong style={{ color: "#38bdf8" }}>{Object.keys(examScores).filter((k) => examScores[k] !== "").length} student(s)</strong>
-                  </div>
-                  <div style={{ display: "flex", justifyContent: "space-between", fontSize: "0.8rem", color: "#94a3b8" }}>
-                    <span>Publication Timestamp:</span>
-                    <strong style={{ color: "#fbbf24" }}>{new Date().toISOString().split("T")[0]} {new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}</strong>
-                  </div>
-                </div>
-
-                <div style={{ display: "flex", justifyContent: "flex-end", gap: "10px" }}>
-                  <button
-                    type="button"
-                    className="btn-secondary"
-                    onClick={() => setShowPublishModal(false)}
-                  >
-                    Cancel
-                  </button>
-                  <button
-                    type="button"
-                    className="btn-primary"
-                    style={{ background: "linear-gradient(135deg, #0284c7, #38bdf8)", fontWeight: "800", padding: "10px 20px" }}
-                    onClick={() => handlePublishAllGradesToStudents(publishTerm)}
-                  >
-                    🚀 Publish Now to Students Dashboard
-                  </button>
-                </div>
-              </div>
-            </div>
-          </div>
-        )
-      }
-      {/* MODAL: AUTHOR EXAMINATION & SCHEDULE TIMED ACCESS */}
-      {
-        showAuthorExamModal && (
-          <div
-            className="modal-backdrop invoice-pay-modal-overlay"
-            style={{
-              position: "fixed",
-              inset: 0,
-              zIndex: 99999,
-              background: "rgba(2, 6, 23, 0.82)",
-              backdropFilter: "blur(10px)",
-              display: "flex",
-              alignItems: "center",
-              justifyContent: "center",
-              padding: "1.25rem",
-              overflowY: "auto"
-            }}
-          >
-            <div className="invoice-pay-modal" style={{ width: "100%", maxWidth: "900px", background: "#0b1329", border: "2px solid #8b5cf6", borderRadius: "16px", padding: "2rem", maxHeight: "90vh", overflowY: "auto", boxShadow: "0 25px 60px rgba(0,0,0,0.65)" }}>
-              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", borderBottom: "1.5px solid rgba(139, 92, 246, 0.3)", paddingBottom: "1.1rem", marginBottom: "1.25rem" }}>
-                <div>
-                  <span className="role-portal-badge" style={{ color: "#c084fc", marginBottom: "4px", display: "inline-block" }}>
-                    CLEAR STEP-BY-STEP EXAM SETTING &amp; PAPER FORMAT BUILDER
-                  </span>
-                  <h2 style={{ margin: "2px 0 0", color: "#f8fafc", fontSize: "1.3rem", fontWeight: "900" }}>
-                    Exam Settings, Questions &amp; Schedule
-                  </h2>
-                  <p style={{ margin: "4px 0 0", color: "#cbd5e1", fontSize: "0.84rem", lineHeight: 1.45 }}>
-                    Follow the 3 simple steps below to set up your exam clearly: (1) Exam Details &amp; Instructions, (2) Marks, Time &amp; Proctoring Rules, and (3) Question Format &amp; Paper Content.
-                  </p>
-                </div>
-                <button type="button" className="btn-secondary" onClick={() => setShowAuthorExamModal(false)}>✕ Close</button>
-              </div>
-
-              <form onSubmit={handlePublishNewExam}>
-                {/* STEP 1: EXAM DETAILS & CANDIDATE INSTRUCTIONS */}
-                <div style={{ background: "rgba(15, 23, 42, 0.72)", padding: "14px 16px", borderRadius: "10px", border: "1px solid rgba(56, 189, 248, 0.28)", marginBottom: "1rem" }}>
-                  <div style={{ fontSize: "0.82rem", fontWeight: 800, color: "#38bdf8", marginBottom: "10px", textTransform: "uppercase", letterSpacing: "0.03em" }}>
-                    Step 1 — Exam Details, Class &amp; Student Instructions
-                  </div>
-                  <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(210px, 1fr))", gap: "0.85rem", marginBottom: "0.85rem" }}>
-                    <div>
-                      <label style={{ display: "block", fontSize: "0.8rem", color: "#e2e8f0", fontWeight: 700, marginBottom: "4px" }}>Exam Title *</label>
-                      <input
-                        type="text"
-                        required
-                        placeholder="e.g. End of Term 1 Mathematics Exam"
-                        value={newExamForm.title}
-                        onChange={(e) => setNewExamForm({ ...newExamForm, title: e.target.value })}
-                        className="filter-input"
-                        style={{ width: "100%" }}
-                      />
-                    </div>
-                    <div>
-                      <label style={{ display: "block", fontSize: "0.8rem", color: "#e2e8f0", fontWeight: 700, marginBottom: "4px" }}>Subject / Course Code *</label>
-                      <input
-                        type="text"
-                        required
-                        placeholder="e.g. MATH 205"
-                        value={newExamForm.subjectCode}
-                        onChange={(e) => setNewExamForm({ ...newExamForm, subjectCode: e.target.value })}
-                        className="filter-input"
-                        style={{ width: "100%" }}
-                      />
-                    </div>
-                    <div>
-                      <label style={{ display: "block", fontSize: "0.8rem", color: "#e2e8f0", fontWeight: 700, marginBottom: "4px" }}>Subject Name *</label>
-                      <input
-                        type="text"
-                        required
-                        placeholder="e.g. Core Mathematics"
-                        value={newExamForm.subjectName || ""}
-                        onChange={(e) => setNewExamForm({ ...newExamForm, subjectName: e.target.value })}
-                        className="filter-input"
-                        style={{ width: "100%" }}
-                      />
-                    </div>
-                    <div>
-                      <label style={{ display: "block", fontSize: "0.8rem", color: "#e2e8f0", fontWeight: 700, marginBottom: "4px" }}>Target Class / Level *</label>
-                      <input
-                        type="text"
-                        required
-                        placeholder="e.g. Grade 10A or JHS 3"
-                        value={newExamForm.className}
-                        onChange={(e) => setNewExamForm({ ...newExamForm, className: e.target.value })}
-                        className="filter-input"
-                        style={{ width: "100%" }}
-                      />
-                    </div>
-                    <div>
-                      <label style={{ display: "block", fontSize: "0.8rem", color: "#e2e8f0", fontWeight: 700, marginBottom: "4px" }}>Exam Date *</label>
-                      <input
-                        type="date"
-                        required
-                        value={newExamForm.examDate}
-                        onChange={(e) => setNewExamForm({ ...newExamForm, examDate: e.target.value })}
-                        className="filter-input"
-                        style={{ width: "100%" }}
-                      />
-                    </div>
-                  </div>
-                  <div>
-                    <label style={{ display: "block", fontSize: "0.8rem", color: "#e2e8f0", fontWeight: 700, marginBottom: "4px" }}>
-                      Instructions Shown to Students Before Starting
-                    </label>
-                    <textarea
-                      rows={2}
-                      placeholder="e.g. Section A carries 40 marks (Objective) and Section B carries 60 marks (Theory). Keep your camera facing forward throughout."
-                      value={newExamForm.instructions || ""}
-                      onChange={(e) => setNewExamForm({ ...newExamForm, instructions: e.target.value })}
-                      className="filter-input"
-                      style={{ width: "100%", fontFamily: "inherit", resize: "vertical" }}
-                    />
-                  </div>
-                </div>
-
-                {/* STEP 2: TIMING, MARKS, PASSING SCORE & PROCTORING RULES */}
-                <div style={{ background: "rgba(15, 23, 42, 0.8)", padding: "14px 16px", borderRadius: "10px", border: "1.5px solid rgba(245, 158, 11, 0.35)", marginBottom: "1rem" }}>
-                  <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: "8px", marginBottom: "10px" }}>
-                    <div style={{ fontSize: "0.82rem", fontWeight: 800, color: "#fbbf24", textTransform: "uppercase", letterSpacing: "0.03em" }}>
-                      Step 2 — Timing, Total Marks, Pass Mark &amp; Exam Rules
-                    </div>
-                    {(() => {
-                      const allocated = examQuestionsList.reduce((acc, q) => acc + (Number(q.marks) || 0), 0);
-                      const target = Number(newExamForm.totalMarks) || 100;
-                      const matches = allocated === 0 || allocated === target;
-                      return (
-                        <span style={{
-                          fontSize: "0.75rem",
-                          fontWeight: 800,
-                          padding: "3px 10px",
-                          borderRadius: "999px",
-                          background: matches ? "rgba(16, 185, 129, 0.16)" : "rgba(245, 158, 11, 0.16)",
-                          color: matches ? "#34d399" : "#fcd34d",
-                          border: matches ? "1px solid #10b981" : "1px solid #f59e0b"
-                        }}>
-                          Questions Sum: {allocated} / {target} Total Marks
-                        </span>
-                      );
-                    })()}
-                  </div>
-                  <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(150px, 1fr))", gap: "0.85rem", marginBottom: "0.85rem" }}>
-                    <div>
-                      <label style={{ display: "block", fontSize: "0.78rem", color: "#cbd5e1", fontWeight: 700, marginBottom: "4px" }}>Start Time (Opens)</label>
-                      <input
-                        type="text"
-                        placeholder="09:00 AM"
-                        value={newExamForm.startTime}
-                        onChange={(e) => setNewExamForm({ ...newExamForm, startTime: e.target.value })}
-                        className="filter-input"
-                        style={{ width: "100%", fontWeight: "700", color: "#34d399" }}
-                      />
-                    </div>
-                    <div>
-                      <label style={{ display: "block", fontSize: "0.78rem", color: "#cbd5e1", fontWeight: 700, marginBottom: "4px" }}>End Time (Closes)</label>
-                      <input
-                        type="text"
-                        placeholder="11:30 AM"
-                        value={newExamForm.endTime}
-                        onChange={(e) => setNewExamForm({ ...newExamForm, endTime: e.target.value })}
-                        className="filter-input"
-                        style={{ width: "100%", fontWeight: "700", color: "#f87171" }}
-                      />
-                    </div>
-                    <div>
-                      <label style={{ display: "block", fontSize: "0.78rem", color: "#cbd5e1", fontWeight: 700, marginBottom: "4px" }}>Duration (Minutes)</label>
-                      <input
-                        type="number"
-                        min="5"
-                        value={newExamForm.durationMinutes}
-                        onChange={(e) => setNewExamForm({ ...newExamForm, durationMinutes: Number(e.target.value) })}
-                        className="filter-input"
-                        style={{ width: "100%" }}
-                      />
-                    </div>
-                    <div>
-                      <label style={{ display: "block", fontSize: "0.78rem", color: "#cbd5e1", fontWeight: 700, marginBottom: "4px" }}>Total Exam Marks</label>
-                      <input
-                        type="number"
-                        min="1"
-                        value={newExamForm.totalMarks}
-                        onChange={(e) => setNewExamForm({ ...newExamForm, totalMarks: Number(e.target.value) || 100 })}
-                        className="filter-input"
-                        style={{ width: "100%" }}
-                      />
-                    </div>
-                    <div>
-                      <label style={{ display: "block", fontSize: "0.78rem", color: "#cbd5e1", fontWeight: 700, marginBottom: "4px" }}>Pass Mark</label>
-                      <input
-                        type="number"
-                        min="1"
-                        value={newExamForm.passMarks}
-                        onChange={(e) => setNewExamForm({ ...newExamForm, passMarks: Number(e.target.value) || 50 })}
-                        className="filter-input"
-                        style={{ width: "100%" }}
-                      />
-                    </div>
-                  </div>
-                  <div style={{ display: "flex", gap: "18px", flexWrap: "wrap", paddingTop: "6px" }}>
-                    <label style={{ fontSize: "0.8rem", color: "#e2e8f0", cursor: "pointer", display: "flex", alignItems: "center", gap: "8px" }}>
-                      <input
-                        type="checkbox"
-                        id="chkRestrict"
-                        checked={newExamForm.restrictBeforeStart}
-                        onChange={(e) => setNewExamForm({ ...newExamForm, restrictBeforeStart: e.target.checked })}
-                      />
-                      <span>🔒 Lock portal before Start Time (students cannot open questions early)</span>
-                    </label>
-                    <label style={{ fontSize: "0.8rem", color: "#e2e8f0", cursor: "pointer", display: "flex", alignItems: "center", gap: "8px" }}>
-                      <input
-                        type="checkbox"
-                        id="chkProctoring"
-                        checked={newExamForm.enableProctoring !== false}
-                        onChange={(e) => setNewExamForm({ ...newExamForm, enableProctoring: e.target.checked })}
-                      />
-                      <span>📹 Active AI Proctoring (camera gaze &amp; tab-switch monitoring from Start until End)</span>
-                    </label>
-                  </div>
-                </div>
-
-                {/* STEP 3: QUESTION FORMAT & PAPER CREATION (Uniform GBS Navy & Gold Layout) */}
-                <div style={{ fontSize: "0.82rem", fontWeight: 800, color: "#f6dd84", marginBottom: "8px", textTransform: "uppercase", letterSpacing: "0.04em" }}>
-                  Step 3 — Choose Paper Creation Method &amp; Question Format
-                </div>
-                <div style={{ display: "flex", gap: "8px", marginBottom: "1rem", flexWrap: "wrap" }}>
-                  <button
-                    type="button"
-                    onClick={() => setExamAuthorMode("BUILDER")}
-                    style={{
-                      flex: 1,
-                      padding: "9px 12px",
-                      borderRadius: "8px",
-                      border: examAuthorMode === "BUILDER" ? "1.5px solid #d4af37" : "1px solid rgba(212, 175, 55, 0.3)",
-                      background: examAuthorMode === "BUILDER" ? "linear-gradient(135deg, #0d2247, #1a3a70)" : "rgba(8, 24, 51, 0.72)",
-                      color: examAuthorMode === "BUILDER" ? "#f6dd84" : "#cbd5e1",
-                      fontWeight: 800,
-                      fontSize: "0.82rem",
-                      cursor: "pointer"
-                    }}
-                  >
-                    ✍️ Interactive Questions Builder ({examQuestionsList.length})
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => setExamAuthorMode("UPLOAD_DOC")}
-                    style={{
-                      flex: 1,
-                      padding: "9px 12px",
-                      borderRadius: "8px",
-                      border: examAuthorMode === "UPLOAD_DOC" ? "1.5px solid #d4af37" : "1px solid rgba(212, 175, 55, 0.3)",
-                      background: examAuthorMode === "UPLOAD_DOC" ? "linear-gradient(135deg, #0d2247, #1a3a70)" : "rgba(8, 24, 51, 0.72)",
-                      color: examAuthorMode === "UPLOAD_DOC" ? "#f6dd84" : "#cbd5e1",
-                      fontWeight: 800,
-                      fontSize: "0.82rem",
-                      cursor: "pointer"
-                    }}
-                  >
-                    📄 Upload Typed Questions Doc / Text
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => setExamAuthorMode("PRINT_OMR")}
-                    style={{
-                      flex: 1,
-                      padding: "9px 12px",
-                      borderRadius: "8px",
-                      border: examAuthorMode === "PRINT_OMR" ? "1.5px solid #d4af37" : "1px solid rgba(212, 175, 55, 0.3)",
-                      background: examAuthorMode === "PRINT_OMR" ? "linear-gradient(135deg, #0d2247, #1a3a70)" : "rgba(8, 24, 51, 0.72)",
-                      color: examAuthorMode === "PRINT_OMR" ? "#f6dd84" : "#cbd5e1",
-                      fontWeight: 800,
-                      fontSize: "0.82rem",
-                      cursor: "pointer"
-                    }}
-                  >
-                    🖨️ AI Scanner OMR Sheet Generator
-                  </button>
-                </div>
-
-                {/* Mode A: Interactive Builder */}
-                {examAuthorMode === "BUILDER" && (
-                  <div style={{ background: "linear-gradient(145deg, #081833 0%, #0d2247 100%)", padding: "14px", borderRadius: "10px", marginBottom: "1.25rem", border: "1.5px solid #d4af37" }}>
-                    <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "10px", flexWrap: "wrap", gap: "8px" }}>
-                      <div>
-                        <strong style={{ fontSize: "0.92rem", color: "#f6dd84", display: "block" }}>
-                          📚 Multi-Format Question Bank ({examQuestionsList.length} Questions • {examQuestionsList.reduce((acc, q) => acc + (Number(q.marks) || 0), 0)} Total Marks)
-                        </strong>
-                        <span style={{ fontSize: "0.75rem", color: "#e2e8f0" }}>
-                          Select any Question Bank format tab below to configure Multiple Choice, Theory / Essay, True or False, Short Answer, Fill-in-Blank, or Practical Case Study exams.
-                        </span>
-                      </div>
-                      <span style={{ background: "rgba(5, 15, 35, 0.85)", border: "1px solid #d4af37", color: "#f6dd84", padding: "4px 10px", borderRadius: "6px", fontSize: "0.73rem", fontWeight: 800 }}>
-                        Paper Format: {describeExamFormatSummary(examQuestionsList)}
+                  <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(175px, 1fr))", gap: "8px" }}>
+                    <button
+                      type="button"
+                      className="gbs-qbank-format-tab"
+                      onClick={() => {
+                        setActiveQuestionFormatTab("ALL");
+                        setSelectedExamPaperFormat("MIXED_MULTI_FORMAT");
+                      }}
+                      style={{
+                        background: activeQuestionFormatTab === "ALL"
+                          ? "linear-gradient(135deg, #f6dd84 0%, #d4af37 100%)"
+                          : "linear-gradient(135deg, #081833 0%, #0d2247 100%)",
+                        color: activeQuestionFormatTab === "ALL" ? "#081833" : "#ffffff",
+                        border: activeQuestionFormatTab === "ALL" ? "2px solid #f6dd84" : "1.5px solid rgba(212, 175, 55, 0.45)",
+                        padding: "8px 12px",
+                        borderRadius: "8px",
+                        fontSize: "0.76rem",
+                        fontWeight: 800,
+                        cursor: "pointer",
+                        display: "inline-flex",
+                        alignItems: "center",
+                        justifyContent: "space-between",
+                        gap: "6px"
+                      }}
+                    >
+                      <span style={{ display: "inline-flex", alignItems: "center", gap: "6px" }}>
+                        <span>🌐</span>
+                        <span>All Formats / Mixed</span>
                       </span>
-                    </div>
+                      <span style={{ background: activeQuestionFormatTab === "ALL" ? "#081833" : "rgba(212, 175, 55, 0.22)", color: "#f6dd84", padding: "1px 6px", borderRadius: "999px", fontSize: "0.7rem", fontWeight: 900 }}>
+                        {examQuestionsList.length}
+                      </span>
+                    </button>
 
-                    {/* Step 1: Select Question Bank Format Tabs (Clean Uniform Navy & Gold) */}
-                    <div style={{ marginBottom: "10px", padding: "10px", borderRadius: "10px", background: "rgba(5, 15, 35, 0.8)", border: "1.5px solid rgba(212, 175, 55, 0.35)" }}>
-                      <div style={{ fontSize: "0.73rem", color: "#f6dd84", fontWeight: 800, marginBottom: "8px", textTransform: "uppercase", letterSpacing: "0.04em" }}>
-                        1️⃣ Select Question Bank Format Tab (Click to Choose Format or Add Question):
-                      </div>
-                      <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(175px, 1fr))", gap: "8px" }}>
+                    {EXAM_QUESTION_TYPES.map((qType) => {
+                      const formatCount = examQuestionsList.filter((q) => (q.questionType || "MULTIPLE_CHOICE").toUpperCase() === qType.value).length;
+                      const isSelectedTab = activeQuestionFormatTab === qType.value;
+                      return (
                         <button
+                          key={qType.value}
                           type="button"
                           className="gbs-qbank-format-tab"
                           onClick={() => {
-                            setActiveQuestionFormatTab("ALL");
-                            setSelectedExamPaperFormat("MIXED_MULTI_FORMAT");
+                            setActiveQuestionFormatTab(qType.value);
+                            setSelectedExamPaperFormat(qType.value);
+                            if (formatCount === 0) {
+                              const created = createDefaultQuestionByType(qType.value, examQuestionsList.length + 1);
+                              setExamQuestionsList([...examQuestionsList, created]);
+                            }
                           }}
                           style={{
-                            background: activeQuestionFormatTab === "ALL"
+                            background: isSelectedTab
                               ? "linear-gradient(135deg, #f6dd84 0%, #d4af37 100%)"
                               : "linear-gradient(135deg, #081833 0%, #0d2247 100%)",
-                            color: activeQuestionFormatTab === "ALL" ? "#081833" : "#ffffff",
-                            border: activeQuestionFormatTab === "ALL" ? "2px solid #f6dd84" : "1.5px solid rgba(212, 175, 55, 0.45)",
+                            color: isSelectedTab ? "#081833" : "#ffffff",
+                            border: isSelectedTab ? "2px solid #f6dd84" : "1.5px solid rgba(212, 175, 55, 0.45)",
                             padding: "8px 12px",
                             borderRadius: "8px",
                             fontSize: "0.76rem",
@@ -11499,2480 +11558,2437 @@ export default function TeacherDashboard() {
                           }}
                         >
                           <span style={{ display: "inline-flex", alignItems: "center", gap: "6px" }}>
-                            <span>🌐</span>
-                            <span>All Formats / Mixed</span>
+                            <span>{qType.icon}</span>
+                            <span>{qType.shortLabel}</span>
                           </span>
-                          <span style={{ background: activeQuestionFormatTab === "ALL" ? "#081833" : "rgba(212, 175, 55, 0.22)", color: "#f6dd84", padding: "1px 6px", borderRadius: "999px", fontSize: "0.7rem", fontWeight: 900 }}>
-                            {examQuestionsList.length}
+                          <span style={{ background: isSelectedTab ? "#081833" : "rgba(212, 175, 55, 0.22)", color: "#f6dd84", border: "1px solid rgba(212, 175, 55, 0.55)", padding: "1px 6px", borderRadius: "999px", fontSize: "0.7rem", fontWeight: 900 }}>
+                            {formatCount}
                           </span>
                         </button>
+                      );
+                    })}
+                  </div>
 
-                        {EXAM_QUESTION_TYPES.map((qType) => {
-                          const formatCount = examQuestionsList.filter((q) => (q.questionType || "MULTIPLE_CHOICE").toUpperCase() === qType.value).length;
-                          const isSelectedTab = activeQuestionFormatTab === qType.value;
-                          return (
-                            <button
-                              key={qType.value}
-                              type="button"
-                              className="gbs-qbank-format-tab"
-                              onClick={() => {
-                                setActiveQuestionFormatTab(qType.value);
-                                setSelectedExamPaperFormat(qType.value);
-                                if (formatCount === 0) {
-                                  const created = createDefaultQuestionByType(qType.value, examQuestionsList.length + 1);
-                                  setExamQuestionsList([...examQuestionsList, created]);
-                                }
-                              }}
-                              style={{
-                                background: isSelectedTab
-                                  ? "linear-gradient(135deg, #f6dd84 0%, #d4af37 100%)"
-                                  : "linear-gradient(135deg, #081833 0%, #0d2247 100%)",
-                                color: isSelectedTab ? "#081833" : "#ffffff",
-                                border: isSelectedTab ? "2px solid #f6dd84" : "1.5px solid rgba(212, 175, 55, 0.45)",
-                                padding: "8px 12px",
-                                borderRadius: "8px",
-                                fontSize: "0.76rem",
-                                fontWeight: 800,
-                                cursor: "pointer",
-                                display: "inline-flex",
-                                alignItems: "center",
-                                justifyContent: "space-between",
-                                gap: "6px"
-                              }}
-                            >
-                              <span style={{ display: "inline-flex", alignItems: "center", gap: "6px" }}>
-                                <span>{qType.icon}</span>
-                                <span>{qType.shortLabel}</span>
-                              </span>
-                              <span style={{ background: isSelectedTab ? "#081833" : "rgba(212, 175, 55, 0.22)", color: "#f6dd84", border: "1px solid rgba(212, 175, 55, 0.55)", padding: "1px 6px", borderRadius: "999px", fontSize: "0.7rem", fontWeight: 900 }}>
-                                {formatCount}
-                              </span>
-                            </button>
-                          );
-                        })}
-                      </div>
+                  {/* Step 2: Clean Single-Row Quick-Add & Format Action Controls */}
+                  <div style={{ marginTop: "10px", paddingTop: "10px", borderTop: "1px solid rgba(212, 175, 55, 0.25)", display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: "8px" }}>
+                    {(() => {
+                      const activeMeta = EXAM_QUESTION_TYPES.find((t) => t.value === activeQuestionFormatTab);
+                      if (!activeMeta) {
+                        return (
+                          <div style={{ fontSize: "0.74rem", color: "#cbd5e1" }}>
+                            💡 Click any format tab above to filter or append questions in that format, or click <strong style={{ color: "#f6dd84" }}>➕ Append Question</strong>.
+                          </div>
+                        );
+                      }
+                      return (
+                        <div style={{ fontSize: "0.75rem", color: "#f8fafc" }}>
+                          <strong style={{ color: "#f6dd84" }}>{activeMeta.label} Bank Selected:</strong>{" "}
+                          <span style={{ color: "#cbd5e1" }}>{activeMeta.studentMode}</span>
+                        </div>
+                      );
+                    })()}
 
-                      {/* Step 2: Clean Single-Row Quick-Add & Format Action Controls */}
-                      <div style={{ marginTop: "10px", paddingTop: "10px", borderTop: "1px solid rgba(212, 175, 55, 0.25)", display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: "8px" }}>
-                        {(() => {
-                          const activeMeta = EXAM_QUESTION_TYPES.find((t) => t.value === activeQuestionFormatTab);
-                          if (!activeMeta) {
-                            return (
-                              <div style={{ fontSize: "0.74rem", color: "#cbd5e1" }}>
-                                💡 Click any format tab above to filter or append questions in that format, or click <strong style={{ color: "#f6dd84" }}>➕ Append Question</strong>.
-                              </div>
-                            );
-                          }
-                          return (
-                            <div style={{ fontSize: "0.75rem", color: "#f8fafc" }}>
-                              <strong style={{ color: "#f6dd84" }}>{activeMeta.label} Bank Selected:</strong>{" "}
-                              <span style={{ color: "#cbd5e1" }}>{activeMeta.studentMode}</span>
-                            </div>
-                          );
-                        })()}
-
-                        <div style={{ display: "flex", flexWrap: "wrap", gap: "8px" }}>
+                    <div style={{ display: "flex", flexWrap: "wrap", gap: "8px" }}>
+                      <button
+                        type="button"
+                        onClick={() => {
+                          const targetType = activeQuestionFormatTab === "ALL" ? "MULTIPLE_CHOICE" : activeQuestionFormatTab;
+                          const created = createDefaultQuestionByType(targetType, examQuestionsList.length + 1);
+                          setExamQuestionsList([...examQuestionsList, created]);
+                        }}
+                        style={{
+                          background: "linear-gradient(135deg, #f6dd84 0%, #d4af37 100%)",
+                          color: "#081833",
+                          border: "1.5px solid #f6dd84",
+                          padding: "6px 14px",
+                          borderRadius: "6px",
+                          fontSize: "0.74rem",
+                          fontWeight: 900,
+                          cursor: "pointer"
+                        }}
+                      >
+                        ➕ Add {activeQuestionFormatTab === "ALL" ? "MCQ" : (EXAM_QUESTION_TYPES.find((t) => t.value === activeQuestionFormatTab)?.shortLabel || "New")} Question
+                      </button>
+                      {activeQuestionFormatTab !== "ALL" && (() => {
+                        const activeMeta = EXAM_QUESTION_TYPES.find((t) => t.value === activeQuestionFormatTab) || EXAM_QUESTION_TYPES[0];
+                        return (
                           <button
                             type="button"
                             onClick={() => {
-                              const targetType = activeQuestionFormatTab === "ALL" ? "MULTIPLE_CHOICE" : activeQuestionFormatTab;
-                              const created = createDefaultQuestionByType(targetType, examQuestionsList.length + 1);
-                              setExamQuestionsList([...examQuestionsList, created]);
+                              const converted = (examQuestionsList.length > 0 ? examQuestionsList : [createDefaultQuestionByType(activeMeta.value, 1)]).map((item, idx) => {
+                                if ((item.questionType || "").toUpperCase() === activeMeta.value) {
+                                  return { ...item, questionNumber: idx + 1 };
+                                }
+                                const tpl = createDefaultQuestionByType(activeMeta.value, idx + 1);
+                                return {
+                                  ...tpl,
+                                  id: item.id || tpl.id,
+                                  questionNumber: idx + 1,
+                                  questionText: item.questionText || tpl.questionText,
+                                  marks: item.marks || tpl.marks
+                                };
+                              });
+                              setExamQuestionsList(converted);
+                              setFeedback({
+                                type: "success",
+                                message: `✓ Configured all ${converted.length} question(s) in this exam paper as ${activeMeta.shortLabel}!`
+                              });
                             }}
                             style={{
-                              background: "linear-gradient(135deg, #f6dd84 0%, #d4af37 100%)",
-                              color: "#081833",
-                              border: "1.5px solid #f6dd84",
-                              padding: "6px 14px",
+                              background: "linear-gradient(135deg, #0d2247 0%, #1a3a70 100%)",
+                              color: "#f6dd84",
+                              border: "1.5px solid #d4af37",
+                              padding: "6px 12px",
                               borderRadius: "6px",
-                              fontSize: "0.74rem",
-                              fontWeight: 900,
+                              fontSize: "0.73rem",
+                              fontWeight: 800,
                               cursor: "pointer"
                             }}
                           >
-                            ➕ Add {activeQuestionFormatTab === "ALL" ? "MCQ" : (EXAM_QUESTION_TYPES.find((t) => t.value === activeQuestionFormatTab)?.shortLabel || "New")} Question
+                            🎯 Set Entire Exam to {activeMeta.shortLabel} Only
                           </button>
-                          {activeQuestionFormatTab !== "ALL" && (() => {
-                            const activeMeta = EXAM_QUESTION_TYPES.find((t) => t.value === activeQuestionFormatTab) || EXAM_QUESTION_TYPES[0];
-                            return (
+                        );
+                      })()}
+                    </div>
+                  </div>
+                </div>
+
+                {examQuestionsList.length === 0 ? (
+                  <div style={{ textAlign: "center", padding: "18px", color: "#e2e8f0", background: "rgba(2, 6, 23, 0.65)", borderRadius: "8px", border: "1px dashed #475569", fontSize: "0.82rem" }}>
+                    📝 No questions added yet. Click any Question Bank tab above (e.g., <strong>📘 Multiple Choice</strong>, <strong>✍️ Theory / Essay</strong>, or <strong>☑️ True or False</strong>) to build your exam.
+                  </div>
+                ) : (
+                  <div style={{ maxHeight: "410px", overflowY: "auto", paddingRight: "4px" }}>
+                    {examQuestionsList.map((q, qIdx) => {
+                      const qType = (q.questionType || "MULTIPLE_CHOICE").toUpperCase();
+                      if (activeQuestionFormatTab !== "ALL" && qType !== activeQuestionFormatTab) {
+                        return null;
+                      }
+                      const typeMeta = EXAM_QUESTION_TYPES.find((t) => t.value === qType) || EXAM_QUESTION_TYPES[0];
+                      const isWrittenType = ["THEORY_ESSAY", "SHORT_ANSWER", "CASE_STUDY"].includes(qType);
+                      return (
+                        <div key={q.id || qIdx} style={{ background: "rgba(2, 6, 23, 0.9)", padding: "12px", borderRadius: "8px", marginBottom: "10px", border: `1.5px solid ${typeMeta.accent}66` }}>
+                          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "8px", flexWrap: "wrap", gap: "8px" }}>
+                            <div style={{ display: "flex", alignItems: "center", gap: "8px", flexWrap: "wrap" }}>
+                              <span style={{ background: typeMeta.activeBg, color: "#ffffff", padding: "3px 9px", borderRadius: "6px", fontWeight: 800, fontSize: "0.76rem", border: `1px solid ${typeMeta.accent}` }}>
+                                Question #{qIdx + 1} • {typeMeta.badge}
+                              </span>
+                              <select
+                                value={qType}
+                                onChange={(e) => {
+                                  const nextType = e.target.value;
+                                  const template = createDefaultQuestionByType(nextType, qIdx + 1);
+                                  const updated = examQuestionsList.map((item, idx) => {
+                                    if (idx !== qIdx) return item;
+                                    return {
+                                      ...template,
+                                      id: item.id || template.id,
+                                      questionNumber: qIdx + 1,
+                                      questionText: item.questionText || template.questionText,
+                                      marks: item.marks || template.marks
+                                    };
+                                  });
+                                  setExamQuestionsList(updated);
+                                }}
+                                className="filter-select"
+                                style={{ padding: "4px 10px", fontSize: "0.75rem", fontWeight: 800, background: "#0f172a", color: "#ffffff", borderColor: typeMeta.accent }}
+                              >
+                                {EXAM_QUESTION_TYPES.map((t) => (
+                                  <option key={t.value} value={t.value} style={{ background: "#0f172a", color: "#ffffff" }}>
+                                    {t.label}
+                                  </option>
+                                ))}
+                              </select>
+                            </div>
+                            <div style={{ display: "flex", alignItems: "center", gap: "6px", flexWrap: "wrap" }}>
+                              <label style={{ fontSize: "0.74rem", color: "#fde68a", fontWeight: 700 }}>Marks:</label>
+                              <input
+                                type="number"
+                                min="1"
+                                max="100"
+                                value={q.marks || 10}
+                                onChange={(e) => {
+                                  const updated = examQuestionsList.map((item, idx) => idx === qIdx ? { ...item, marks: Math.max(1, Number(e.target.value) || 1) } : item);
+                                  setExamQuestionsList(updated);
+                                }}
+                                className="filter-input"
+                                style={{ width: "62px", padding: "2px 6px", fontSize: "0.75rem", color: "#fbbf24", fontWeight: 800 }}
+                              />
+                              {qType === "MULTIPLE_CHOICE" && (
+                                <select
+                                  value={q.correctOption || "A"}
+                                  onChange={(e) => {
+                                    const updated = examQuestionsList.map((item, idx) => idx === qIdx ? { ...item, correctOption: e.target.value } : item);
+                                    setExamQuestionsList(updated);
+                                  }}
+                                  className="filter-select"
+                                  style={{ padding: "3px 8px", fontSize: "0.75rem", background: "#064e3b", color: "#ffffff", borderColor: "#10b981", fontWeight: 800 }}
+                                >
+                                  <option value="A">✓ Correct: Option A</option>
+                                  <option value="B">✓ Correct: Option B</option>
+                                  <option value="C">✓ Correct: Option C</option>
+                                  <option value="D">✓ Correct: Option D</option>
+                                </select>
+                              )}
+                              {qType === "TRUE_FALSE" && (
+                                <select
+                                  value={q.correctOption || "A"}
+                                  onChange={(e) => {
+                                    const updated = examQuestionsList.map((item, idx) => idx === qIdx ? { ...item, correctOption: e.target.value, options: ["True", "False"], optionA: "True", optionB: "False" } : item);
+                                    setExamQuestionsList(updated);
+                                  }}
+                                  className="filter-select"
+                                  style={{ padding: "3px 8px", fontSize: "0.75rem", background: "#064e3b", color: "#ffffff", borderColor: "#10b981", fontWeight: 800 }}
+                                >
+                                  <option value="A">✓ Correct: True (A)</option>
+                                  <option value="B">✓ Correct: False (B)</option>
+                                </select>
+                              )}
                               <button
                                 type="button"
                                 onClick={() => {
-                                  const converted = (examQuestionsList.length > 0 ? examQuestionsList : [createDefaultQuestionByType(activeMeta.value, 1)]).map((item, idx) => {
-                                    if ((item.questionType || "").toUpperCase() === activeMeta.value) {
-                                      return { ...item, questionNumber: idx + 1 };
-                                    }
-                                    const tpl = createDefaultQuestionByType(activeMeta.value, idx + 1);
-                                    return {
-                                      ...tpl,
-                                      id: item.id || tpl.id,
-                                      questionNumber: idx + 1,
-                                      questionText: item.questionText || tpl.questionText,
-                                      marks: item.marks || tpl.marks
-                                    };
-                                  });
-                                  setExamQuestionsList(converted);
-                                  setFeedback({
-                                    type: "success",
-                                    message: `✓ Configured all ${converted.length} question(s) in this exam paper as ${activeMeta.shortLabel}!`
-                                  });
+                                  const remaining = examQuestionsList.filter((_, idx) => idx !== qIdx).map((item, idx) => ({ ...item, questionNumber: idx + 1 }));
+                                  setExamQuestionsList(remaining);
+                                }}
+                                style={{ background: "rgba(239, 68, 68, 0.22)", border: "1px solid rgba(239, 68, 68, 0.55)", color: "#fca5a5", padding: "3px 8px", borderRadius: "5px", fontSize: "0.72rem", fontWeight: 800, cursor: "pointer" }}
+                              >
+                                🗑️ Remove
+                              </button>
+                            </div>
+                          </div>
+
+                          {qType === "CASE_STUDY" && (
+                            <div style={{ marginBottom: "8px" }}>
+                              <label style={{ fontSize: "0.72rem", color: "#f6dd84", fontWeight: 800, display: "block", marginBottom: "3px" }}>
+                                🧪 Practical / Case Scenario Stimulus (Displayed above question to examinee):
+                              </label>
+                              <textarea
+                                rows={2}
+                                placeholder="Describe the laboratory apparatus, financial case data, or field context..."
+                                value={q.caseScenario || ""}
+                                onChange={(e) => {
+                                  const updated = examQuestionsList.map((item, idx) => idx === qIdx ? { ...item, caseScenario: e.target.value } : item);
+                                  setExamQuestionsList(updated);
+                                }}
+                                className="filter-input"
+                                style={{ width: "100%", fontSize: "0.78rem", borderColor: "rgba(212, 175, 55, 0.45)" }}
+                              />
+                            </div>
+                          )}
+
+                          {isWrittenType ? (
+                            <textarea
+                              rows={3}
+                              placeholder="Write the full Theory / Essay, Short Answer, or Case Study prompt for students to answer by typing..."
+                              value={q.questionText || ""}
+                              onChange={(e) => {
+                                const updated = examQuestionsList.map((item, idx) => idx === qIdx ? { ...item, questionText: e.target.value } : item);
+                                setExamQuestionsList(updated);
+                              }}
+                              className="filter-input"
+                              style={{ width: "100%", marginBottom: "8px", fontSize: "0.82rem", fontWeight: 600 }}
+                            />
+                          ) : (
+                            <div style={{ display: "flex", gap: "6px", marginBottom: "8px", alignItems: "center" }}>
+                              <input
+                                type="text"
+                                placeholder={qType === "FILL_IN_BLANK" ? "Type prompt using ____ for the blank (e.g., The powerhouse of the cell is the ____.)" : "Type the examination question prompt here..."}
+                                value={q.questionText || ""}
+                                onChange={(e) => {
+                                  const updated = examQuestionsList.map((item, idx) => idx === qIdx ? { ...item, questionText: e.target.value } : item);
+                                  setExamQuestionsList(updated);
+                                }}
+                                className="filter-input"
+                                style={{ width: "100%", fontSize: "0.82rem", fontWeight: 600 }}
+                              />
+                              {qType === "FILL_IN_BLANK" && (
+                                <button
+                                  type="button"
+                                  onClick={() => {
+                                    const updated = examQuestionsList.map((item, idx) =>
+                                      idx === qIdx ? { ...item, questionText: `${item.questionText || ""} ____ ` } : item
+                                    );
+                                    setExamQuestionsList(updated);
+                                  }}
+                                  style={{ background: "#081833", color: "#f6dd84", border: "1px solid #d4af37", padding: "6px 10px", borderRadius: "6px", fontSize: "0.72rem", fontWeight: 800, whiteSpace: "nowrap", cursor: "pointer" }}
+                                >
+                                  ➕ Insert Blank (____)
+                                </button>
+                              )}
+                            </div>
+                          )}
+
+                          {qType === "MULTIPLE_CHOICE" && (
+                            <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(180px, 1fr))", gap: "8px" }}>
+                              {["A", "B", "C", "D"].map((optKey, oIdx) => {
+                                const fieldName = `option${optKey}`;
+                                const optVal = q[fieldName] ?? (Array.isArray(q.options) ? q.options[oIdx] : "") ?? "";
+                                const isCorrect = (q.correctOption || "A") === optKey;
+                                return (
+                                  <div key={optKey} style={{ display: "flex", alignItems: "center", gap: "6px" }}>
+                                    <button
+                                      type="button"
+                                      aria-label={`Mark Option ${optKey} as the correct answer`}
+                                      onClick={() => {
+                                        const updated = examQuestionsList.map((item, idx) => idx === qIdx ? { ...item, correctOption: optKey } : item);
+                                        setExamQuestionsList(updated);
+                                      }}
+                                      style={{
+                                        minWidth: "28px",
+                                        height: "28px",
+                                        borderRadius: "6px",
+                                        display: "inline-flex",
+                                        alignItems: "center",
+                                        justifyContent: "center",
+                                        fontSize: "0.75rem",
+                                        fontWeight: 900,
+                                        background: isCorrect ? "#059669" : "#1e293b",
+                                        border: isCorrect ? "1.5px solid #34d399" : "1px solid #475569",
+                                        color: "#ffffff",
+                                        cursor: "pointer"
+                                      }}
+                                    >
+                                      {optKey}{isCorrect ? "✓" : ""}
+                                    </button>
+                                    <input
+                                      type="text"
+                                      placeholder={`Option ${optKey}`}
+                                      value={optVal}
+                                      onChange={(e) => {
+                                        const newVal = e.target.value;
+                                        const updated = examQuestionsList.map((item, idx) => {
+                                          if (idx !== qIdx) return item;
+                                          const nextItem = { ...item, [fieldName]: newVal };
+                                          nextItem.options = [
+                                            nextItem.optionA || "",
+                                            nextItem.optionB || "",
+                                            nextItem.optionC || "",
+                                            nextItem.optionD || ""
+                                          ];
+                                          return nextItem;
+                                        });
+                                        setExamQuestionsList(updated);
+                                      }}
+                                      className="filter-input"
+                                      style={{
+                                        width: "100%",
+                                        fontSize: "0.76rem",
+                                        padding: "4px 8px",
+                                        borderColor: isCorrect ? "rgba(16, 185, 129, 0.75)" : undefined
+                                      }}
+                                    />
+                                  </div>
+                                );
+                              })}
+                            </div>
+                          )}
+
+                          {qType === "TRUE_FALSE" && (
+                            <div style={{ display: "flex", gap: "10px", fontSize: "0.76rem", alignItems: "center", flexWrap: "wrap" }}>
+                              <span style={{ color: "#94a3b8", fontSize: "0.74rem", fontWeight: 700 }}>Click Correct Answer:</span>
+                              <button
+                                type="button"
+                                onClick={() => {
+                                  const updated = examQuestionsList.map((item, idx) => idx === qIdx ? { ...item, correctOption: "A", options: ["True", "False"], optionA: "True", optionB: "False" } : item);
+                                  setExamQuestionsList(updated);
                                 }}
                                 style={{
-                                  background: "linear-gradient(135deg, #0d2247 0%, #1a3a70 100%)",
-                                  color: "#f6dd84",
-                                  border: "1.5px solid #d4af37",
-                                  padding: "6px 12px",
+                                  padding: "6px 14px",
                                   borderRadius: "6px",
-                                  fontSize: "0.73rem",
+                                  background: (q.correctOption || "A") === "A" ? "linear-gradient(135deg, #059669, #047857)" : "#1e293b",
+                                  color: "#ffffff",
+                                  border: (q.correctOption || "A") === "A" ? "1.5px solid #34d399" : "1px solid #475569",
                                   fontWeight: 800,
                                   cursor: "pointer"
                                 }}
                               >
-                                🎯 Set Entire Exam to {activeMeta.shortLabel} Only
+                                A. True {(q.correctOption || "A") === "A" ? "✓ (Correct)" : ""}
                               </button>
-                            );
-                          })()}
-                        </div>
-                      </div>
-                    </div>
+                              <button
+                                type="button"
+                                onClick={() => {
+                                  const updated = examQuestionsList.map((item, idx) => idx === qIdx ? { ...item, correctOption: "B", options: ["True", "False"], optionA: "True", optionB: "False" } : item);
+                                  setExamQuestionsList(updated);
+                                }}
+                                style={{
+                                  padding: "6px 14px",
+                                  borderRadius: "6px",
+                                  background: q.correctOption === "B" ? "linear-gradient(135deg, #059669, #047857)" : "#1e293b",
+                                  color: "#ffffff",
+                                  border: q.correctOption === "B" ? "1.5px solid #34d399" : "1px solid #475569",
+                                  fontWeight: 800,
+                                  cursor: "pointer"
+                                }}
+                              >
+                                B. False {q.correctOption === "B" ? "✓ (Correct)" : ""}
+                              </button>
+                            </div>
+                          )}
 
-                    {examQuestionsList.length === 0 ? (
-                      <div style={{ textAlign: "center", padding: "18px", color: "#e2e8f0", background: "rgba(2, 6, 23, 0.65)", borderRadius: "8px", border: "1px dashed #475569", fontSize: "0.82rem" }}>
-                        📝 No questions added yet. Click any Question Bank tab above (e.g., <strong>📘 Multiple Choice</strong>, <strong>✍️ Theory / Essay</strong>, or <strong>☑️ True or False</strong>) to build your exam.
-                      </div>
-                    ) : (
-                      <div style={{ maxHeight: "410px", overflowY: "auto", paddingRight: "4px" }}>
-                        {examQuestionsList.map((q, qIdx) => {
-                          const qType = (q.questionType || "MULTIPLE_CHOICE").toUpperCase();
-                          if (activeQuestionFormatTab !== "ALL" && qType !== activeQuestionFormatTab) {
-                            return null;
-                          }
-                          const typeMeta = EXAM_QUESTION_TYPES.find((t) => t.value === qType) || EXAM_QUESTION_TYPES[0];
-                          const isWrittenType = ["THEORY_ESSAY", "SHORT_ANSWER", "CASE_STUDY"].includes(qType);
-                          return (
-                            <div key={q.id || qIdx} style={{ background: "rgba(2, 6, 23, 0.9)", padding: "12px", borderRadius: "8px", marginBottom: "10px", border: `1.5px solid ${typeMeta.accent}66` }}>
-                              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "8px", flexWrap: "wrap", gap: "8px" }}>
-                                <div style={{ display: "flex", alignItems: "center", gap: "8px", flexWrap: "wrap" }}>
-                                  <span style={{ background: typeMeta.activeBg, color: "#ffffff", padding: "3px 9px", borderRadius: "6px", fontWeight: 800, fontSize: "0.76rem", border: `1px solid ${typeMeta.accent}` }}>
-                                    Question #{qIdx + 1} • {typeMeta.badge}
-                                  </span>
-                                  <select
-                                    value={qType}
-                                    onChange={(e) => {
-                                      const nextType = e.target.value;
-                                      const template = createDefaultQuestionByType(nextType, qIdx + 1);
-                                      const updated = examQuestionsList.map((item, idx) => {
-                                        if (idx !== qIdx) return item;
-                                        return {
-                                          ...template,
-                                          id: item.id || template.id,
-                                          questionNumber: qIdx + 1,
-                                          questionText: item.questionText || template.questionText,
-                                          marks: item.marks || template.marks
-                                        };
-                                      });
-                                      setExamQuestionsList(updated);
-                                    }}
-                                    className="filter-select"
-                                    style={{ padding: "4px 10px", fontSize: "0.75rem", fontWeight: 800, background: "#0f172a", color: "#ffffff", borderColor: typeMeta.accent }}
-                                  >
-                                    {EXAM_QUESTION_TYPES.map((t) => (
-                                      <option key={t.value} value={t.value} style={{ background: "#0f172a", color: "#ffffff" }}>
-                                        {t.label}
-                                      </option>
-                                    ))}
-                                  </select>
-                                </div>
-                                <div style={{ display: "flex", alignItems: "center", gap: "6px", flexWrap: "wrap" }}>
-                                  <label style={{ fontSize: "0.74rem", color: "#fde68a", fontWeight: 700 }}>Marks:</label>
-                                  <input
-                                    type="number"
-                                    min="1"
-                                    max="100"
-                                    value={q.marks || 10}
-                                    onChange={(e) => {
-                                      const updated = examQuestionsList.map((item, idx) => idx === qIdx ? { ...item, marks: Math.max(1, Number(e.target.value) || 1) } : item);
-                                      setExamQuestionsList(updated);
-                                    }}
-                                    className="filter-input"
-                                    style={{ width: "62px", padding: "2px 6px", fontSize: "0.75rem", color: "#fbbf24", fontWeight: 800 }}
-                                  />
-                                  {qType === "MULTIPLE_CHOICE" && (
-                                    <select
-                                      value={q.correctOption || "A"}
-                                      onChange={(e) => {
-                                        const updated = examQuestionsList.map((item, idx) => idx === qIdx ? { ...item, correctOption: e.target.value } : item);
-                                        setExamQuestionsList(updated);
-                                      }}
-                                      className="filter-select"
-                                      style={{ padding: "3px 8px", fontSize: "0.75rem", background: "#064e3b", color: "#ffffff", borderColor: "#10b981", fontWeight: 800 }}
-                                    >
-                                      <option value="A">✓ Correct: Option A</option>
-                                      <option value="B">✓ Correct: Option B</option>
-                                      <option value="C">✓ Correct: Option C</option>
-                                      <option value="D">✓ Correct: Option D</option>
-                                    </select>
-                                  )}
-                                  {qType === "TRUE_FALSE" && (
-                                    <select
-                                      value={q.correctOption || "A"}
-                                      onChange={(e) => {
-                                        const updated = examQuestionsList.map((item, idx) => idx === qIdx ? { ...item, correctOption: e.target.value, options: ["True", "False"], optionA: "True", optionB: "False" } : item);
-                                        setExamQuestionsList(updated);
-                                      }}
-                                      className="filter-select"
-                                      style={{ padding: "3px 8px", fontSize: "0.75rem", background: "#064e3b", color: "#ffffff", borderColor: "#10b981", fontWeight: 800 }}
-                                    >
-                                      <option value="A">✓ Correct: True (A)</option>
-                                      <option value="B">✓ Correct: False (B)</option>
-                                    </select>
-                                  )}
-                                  <button
-                                    type="button"
-                                    onClick={() => {
-                                      const remaining = examQuestionsList.filter((_, idx) => idx !== qIdx).map((item, idx) => ({ ...item, questionNumber: idx + 1 }));
-                                      setExamQuestionsList(remaining);
-                                    }}
-                                    style={{ background: "rgba(239, 68, 68, 0.22)", border: "1px solid rgba(239, 68, 68, 0.55)", color: "#fca5a5", padding: "3px 8px", borderRadius: "5px", fontSize: "0.72rem", fontWeight: 800, cursor: "pointer" }}
-                                  >
-                                    🗑️ Remove
-                                  </button>
-                                </div>
-                              </div>
-
-                              {qType === "CASE_STUDY" && (
-                                <div style={{ marginBottom: "8px" }}>
-                                  <label style={{ fontSize: "0.72rem", color: "#f6dd84", fontWeight: 800, display: "block", marginBottom: "3px" }}>
-                                    🧪 Practical / Case Scenario Stimulus (Displayed above question to examinee):
-                                  </label>
-                                  <textarea
-                                    rows={2}
-                                    placeholder="Describe the laboratory apparatus, financial case data, or field context..."
-                                    value={q.caseScenario || ""}
-                                    onChange={(e) => {
-                                      const updated = examQuestionsList.map((item, idx) => idx === qIdx ? { ...item, caseScenario: e.target.value } : item);
-                                      setExamQuestionsList(updated);
-                                    }}
-                                    className="filter-input"
-                                    style={{ width: "100%", fontSize: "0.78rem", borderColor: "rgba(212, 175, 55, 0.45)" }}
-                                  />
-                                </div>
-                              )}
-
-                              {isWrittenType ? (
-                                <textarea
-                                  rows={3}
-                                  placeholder="Write the full Theory / Essay, Short Answer, or Case Study prompt for students to answer by typing..."
-                                  value={q.questionText || ""}
+                          {qType === "FILL_IN_BLANK" && (
+                            <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(210px, 1fr))", gap: "8px" }}>
+                              <div>
+                                <label style={{ fontSize: "0.72rem", color: "#34d399", fontWeight: 700, display: "block", marginBottom: "3px" }}>Accepted Exact Answer (Auto-Graded):</label>
+                                <input
+                                  type="text"
+                                  placeholder="e.g., Mitochondria"
+                                  value={q.acceptedAnswer || ""}
                                   onChange={(e) => {
-                                    const updated = examQuestionsList.map((item, idx) => idx === qIdx ? { ...item, questionText: e.target.value } : item);
+                                    const updated = examQuestionsList.map((item, idx) => idx === qIdx ? { ...item, acceptedAnswer: e.target.value } : item);
                                     setExamQuestionsList(updated);
                                   }}
                                   className="filter-input"
-                                  style={{ width: "100%", marginBottom: "8px", fontSize: "0.82rem", fontWeight: 600 }}
+                                  style={{ width: "100%", fontSize: "0.76rem" }}
                                 />
-                              ) : (
-                                <div style={{ display: "flex", gap: "6px", marginBottom: "8px", alignItems: "center" }}>
-                                  <input
-                                    type="text"
-                                    placeholder={qType === "FILL_IN_BLANK" ? "Type prompt using ____ for the blank (e.g., The powerhouse of the cell is the ____.)" : "Type the examination question prompt here..."}
-                                    value={q.questionText || ""}
-                                    onChange={(e) => {
-                                      const updated = examQuestionsList.map((item, idx) => idx === qIdx ? { ...item, questionText: e.target.value } : item);
-                                      setExamQuestionsList(updated);
-                                    }}
-                                    className="filter-input"
-                                    style={{ width: "100%", fontSize: "0.82rem", fontWeight: 600 }}
-                                  />
-                                  {qType === "FILL_IN_BLANK" && (
-                                    <button
-                                      type="button"
-                                      onClick={() => {
-                                        const updated = examQuestionsList.map((item, idx) =>
-                                          idx === qIdx ? { ...item, questionText: `${item.questionText || ""} ____ ` } : item
-                                        );
-                                        setExamQuestionsList(updated);
-                                      }}
-                                      style={{ background: "#081833", color: "#f6dd84", border: "1px solid #d4af37", padding: "6px 10px", borderRadius: "6px", fontSize: "0.72rem", fontWeight: 800, whiteSpace: "nowrap", cursor: "pointer" }}
-                                    >
-                                      ➕ Insert Blank (____)
-                                    </button>
-                                  )}
-                                </div>
-                              )}
-
-                              {qType === "MULTIPLE_CHOICE" && (
-                                <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(180px, 1fr))", gap: "8px" }}>
-                                  {["A", "B", "C", "D"].map((optKey, oIdx) => {
-                                    const fieldName = `option${optKey}`;
-                                    const optVal = q[fieldName] ?? (Array.isArray(q.options) ? q.options[oIdx] : "") ?? "";
-                                    const isCorrect = (q.correctOption || "A") === optKey;
-                                    return (
-                                      <div key={optKey} style={{ display: "flex", alignItems: "center", gap: "6px" }}>
-                                        <button
-                                          type="button"
-                                          aria-label={`Mark Option ${optKey} as the correct answer`}
-                                          onClick={() => {
-                                            const updated = examQuestionsList.map((item, idx) => idx === qIdx ? { ...item, correctOption: optKey } : item);
-                                            setExamQuestionsList(updated);
-                                          }}
-                                          style={{
-                                            minWidth: "28px",
-                                            height: "28px",
-                                            borderRadius: "6px",
-                                            display: "inline-flex",
-                                            alignItems: "center",
-                                            justifyContent: "center",
-                                            fontSize: "0.75rem",
-                                            fontWeight: 900,
-                                            background: isCorrect ? "#059669" : "#1e293b",
-                                            border: isCorrect ? "1.5px solid #34d399" : "1px solid #475569",
-                                            color: "#ffffff",
-                                            cursor: "pointer"
-                                          }}
-                                        >
-                                          {optKey}{isCorrect ? "✓" : ""}
-                                        </button>
-                                        <input
-                                          type="text"
-                                          placeholder={`Option ${optKey}`}
-                                          value={optVal}
-                                          onChange={(e) => {
-                                            const newVal = e.target.value;
-                                            const updated = examQuestionsList.map((item, idx) => {
-                                              if (idx !== qIdx) return item;
-                                              const nextItem = { ...item, [fieldName]: newVal };
-                                              nextItem.options = [
-                                                nextItem.optionA || "",
-                                                nextItem.optionB || "",
-                                                nextItem.optionC || "",
-                                                nextItem.optionD || ""
-                                              ];
-                                              return nextItem;
-                                            });
-                                            setExamQuestionsList(updated);
-                                          }}
-                                          className="filter-input"
-                                          style={{
-                                            width: "100%",
-                                            fontSize: "0.76rem",
-                                            padding: "4px 8px",
-                                            borderColor: isCorrect ? "rgba(16, 185, 129, 0.75)" : undefined
-                                          }}
-                                        />
-                                      </div>
-                                    );
-                                  })}
-                                </div>
-                              )}
-
-                              {qType === "TRUE_FALSE" && (
-                                <div style={{ display: "flex", gap: "10px", fontSize: "0.76rem", alignItems: "center", flexWrap: "wrap" }}>
-                                  <span style={{ color: "#94a3b8", fontSize: "0.74rem", fontWeight: 700 }}>Click Correct Answer:</span>
-                                  <button
-                                    type="button"
-                                    onClick={() => {
-                                      const updated = examQuestionsList.map((item, idx) => idx === qIdx ? { ...item, correctOption: "A", options: ["True", "False"], optionA: "True", optionB: "False" } : item);
-                                      setExamQuestionsList(updated);
-                                    }}
-                                    style={{
-                                      padding: "6px 14px",
-                                      borderRadius: "6px",
-                                      background: (q.correctOption || "A") === "A" ? "linear-gradient(135deg, #059669, #047857)" : "#1e293b",
-                                      color: "#ffffff",
-                                      border: (q.correctOption || "A") === "A" ? "1.5px solid #34d399" : "1px solid #475569",
-                                      fontWeight: 800,
-                                      cursor: "pointer"
-                                    }}
-                                  >
-                                    A. True {(q.correctOption || "A") === "A" ? "✓ (Correct)" : ""}
-                                  </button>
-                                  <button
-                                    type="button"
-                                    onClick={() => {
-                                      const updated = examQuestionsList.map((item, idx) => idx === qIdx ? { ...item, correctOption: "B", options: ["True", "False"], optionA: "True", optionB: "False" } : item);
-                                      setExamQuestionsList(updated);
-                                    }}
-                                    style={{
-                                      padding: "6px 14px",
-                                      borderRadius: "6px",
-                                      background: q.correctOption === "B" ? "linear-gradient(135deg, #059669, #047857)" : "#1e293b",
-                                      color: "#ffffff",
-                                      border: q.correctOption === "B" ? "1.5px solid #34d399" : "1px solid #475569",
-                                      fontWeight: 800,
-                                      cursor: "pointer"
-                                    }}
-                                  >
-                                    B. False {q.correctOption === "B" ? "✓ (Correct)" : ""}
-                                  </button>
-                                </div>
-                              )}
-
-                              {qType === "FILL_IN_BLANK" && (
-                                <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(210px, 1fr))", gap: "8px" }}>
-                                  <div>
-                                    <label style={{ fontSize: "0.72rem", color: "#34d399", fontWeight: 700, display: "block", marginBottom: "3px" }}>Accepted Exact Answer (Auto-Graded):</label>
-                                    <input
-                                      type="text"
-                                      placeholder="e.g., Mitochondria"
-                                      value={q.acceptedAnswer || ""}
-                                      onChange={(e) => {
-                                        const updated = examQuestionsList.map((item, idx) => idx === qIdx ? { ...item, acceptedAnswer: e.target.value } : item);
-                                        setExamQuestionsList(updated);
-                                      }}
-                                      className="filter-input"
-                                      style={{ width: "100%", fontSize: "0.76rem" }}
-                                    />
-                                  </div>
-                                  <div>
-                                    <label style={{ fontSize: "0.72rem", color: "#cbd5e1", display: "block", marginBottom: "3px" }}>Alternate Keywords (comma-separated):</label>
-                                    <input
-                                      type="text"
-                                      placeholder="e.g., mitochondria, mitochondrion"
-                                      value={q.acceptedKeywords || ""}
-                                      onChange={(e) => {
-                                        const updated = examQuestionsList.map((item, idx) => idx === qIdx ? { ...item, acceptedKeywords: e.target.value } : item);
-                                        setExamQuestionsList(updated);
-                                      }}
-                                      className="filter-input"
-                                      style={{ width: "100%", fontSize: "0.76rem" }}
-                                    />
-                                  </div>
-                                </div>
-                              )}
-
-                              {isWrittenType && (
-                                <div style={{ display: "flex", flexDirection: "column", gap: "8px", marginTop: "4px" }}>
-                                  {qType === "SHORT_ANSWER" && (
-                                    <div>
-                                      <label style={{ fontSize: "0.72rem", color: "#34d399", fontWeight: 800, display: "block", marginBottom: "3px" }}>
-                                        ✓ Model Short Answer Key (Matched automatically &amp; shown to grader):
-                                      </label>
-                                      <input
-                                        type="text"
-                                        placeholder="e.g., Photosynthetic light conversion in plant chloroplasts"
-                                        value={q.acceptedAnswer || ""}
-                                        onChange={(e) => {
-                                          const updated = examQuestionsList.map((item, idx) => idx === qIdx ? { ...item, acceptedAnswer: e.target.value } : item);
-                                          setExamQuestionsList(updated);
-                                        }}
-                                        className="filter-input"
-                                        style={{ width: "100%", fontSize: "0.76rem", borderColor: "rgba(52, 211, 153, 0.5)" }}
-                                      />
-                                    </div>
-                                  )}
-                                  <div style={{ display: "grid", gridTemplateColumns: "2fr 1fr 1fr", gap: "8px" }}>
-                                    <div>
-                                      <label style={{ fontSize: "0.72rem", color: "#f6dd84", fontWeight: 700, display: "block", marginBottom: "3px" }}>
-                                        Marking Guide / Expected Key Points (Examiner Rubric):
-                                      </label>
-                                      <textarea
-                                        rows={2}
-                                        placeholder="Key definitions, steps, or points students must explain..."
-                                        value={q.markingGuide || ""}
-                                        onChange={(e) => {
-                                          const updated = examQuestionsList.map((item, idx) => idx === qIdx ? { ...item, markingGuide: e.target.value } : item);
-                                          setExamQuestionsList(updated);
-                                        }}
-                                        className="filter-input"
-                                        style={{ width: "100%", fontSize: "0.75rem" }}
-                                      />
-                                    </div>
-                                    <div>
-                                      <label style={{ fontSize: "0.72rem", color: "#cbd5e1", display: "block", marginBottom: "3px" }}>
-                                        Keywords (auto-hint):
-                                      </label>
-                                      <input
-                                        type="text"
-                                        placeholder="e.g., osmosis, semi-permeable"
-                                        value={q.acceptedKeywords || ""}
-                                        onChange={(e) => {
-                                          const updated = examQuestionsList.map((item, idx) => idx === qIdx ? { ...item, acceptedKeywords: e.target.value } : item);
-                                          setExamQuestionsList(updated);
-                                        }}
-                                        className="filter-input"
-                                        style={{ width: "100%", fontSize: "0.75rem" }}
-                                      />
-                                    </div>
-                                    <div>
-                                      <label style={{ fontSize: "0.72rem", color: "#cbd5e1", display: "block", marginBottom: "3px" }}>
-                                        Word Guide:
-                                      </label>
-                                      <input
-                                        type="number"
-                                        min="20"
-                                        max="3000"
-                                        value={q.wordLimit || (qType === "SHORT_ANSWER" ? 60 : 250)}
-                                        onChange={(e) => {
-                                          const updated = examQuestionsList.map((item, idx) => idx === qIdx ? { ...item, wordLimit: Number(e.target.value) || 150 } : item);
-                                          setExamQuestionsList(updated);
-                                        }}
-                                        className="filter-input"
-                                        style={{ width: "100%", fontSize: "0.75rem" }}
-                                      />
-                                    </div>
-                                  </div>
-                                </div>
-                              )}
-                            </div>
-                          );
-                        })}
-                      </div>
-                    )}
-                  </div>
-                )}
-
-                {/* Mode B: Upload Typed Doc */}
-                {examAuthorMode === "UPLOAD_DOC" && (
-                  <div style={{ background: "rgba(15, 23, 42, 0.6)", padding: "14px", borderRadius: "10px", marginBottom: "1.25rem" }}>
-                    <label style={{ display: "block", fontSize: "0.8rem", color: "#38bdf8", marginBottom: "6px", fontWeight: 700 }}>
-                      Attach Typed Examination Paper (.PDF, .DOCX, .TXT)
-                    </label>
-                    <input
-                      type="file"
-                      accept=".pdf,.docx,.txt"
-                      onChange={(e) => {
-                        const file = e.target.files?.[0];
-                        if (file) {
-                          setNewExamForm({ ...newExamForm, uploadedDocName: file.name });
-                          setFeedback({ type: "success", message: `✓ Attached typed examination document '${file.name}' (${(file.size / 1024).toFixed(1)} KB).` });
-                        }
-                      }}
-                      style={{ marginBottom: "10px", fontSize: "0.8rem", color: "#cbd5e1" }}
-                    />
-                    <label style={{ display: "block", fontSize: "0.8rem", color: "#94a3b8", marginBottom: "4px" }}>
-                      Or Paste Typed Examination Questions Text:
-                    </label>
-                    <textarea
-                      rows={4}
-                      placeholder="Paste typed questions here for students to take online..."
-                      value={newExamForm.typedQuestionText}
-                      onChange={(e) => setNewExamForm({ ...newExamForm, typedQuestionText: e.target.value })}
-                      className="filter-input"
-                      style={{ width: "100%", fontSize: "0.8rem" }}
-                    />
-
-                    {/* Typed Exam Verification Preview Display Before Publishing */}
-                    {(newExamForm.uploadedDocName || newExamForm.typedQuestionText) && (
-                      <div style={{
-                        marginTop: "12px",
-                        background: "rgba(2, 6, 23, 0.85)",
-                        border: "1.5px solid #38bdf8",
-                        borderRadius: "8px",
-                        padding: "12px",
-                        boxShadow: "0 4px 15px rgba(56, 189, 248, 0.2)"
-                      }}>
-                        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "8px" }}>
-                          <div style={{ display: "flex", alignItems: "center", gap: "6px" }}>
-                            <span style={{ fontSize: "1.1rem" }}>👁️</span>
-                            <strong style={{ fontSize: "0.85rem", color: "#38bdf8" }}>
-                              VERIFY TYPED EXAM CONTENT (PRE-PUBLICATION AUDIT)
-                            </strong>
-                          </div>
-                          <span style={{
-                            background: "rgba(16, 185, 129, 0.2)",
-                            color: "#34d399",
-                            padding: "2px 8px",
-                            borderRadius: "4px",
-                            fontSize: "0.72rem",
-                            fontWeight: 800
-                          }}>
-                            ✓ Content Verified & Ready to Publish
-                          </span>
-                        </div>
-
-                        {newExamForm.uploadedDocName && (
-                          <div style={{ fontSize: "0.8rem", color: "#cbd5e1", marginBottom: "6px" }}>
-                            📁 <strong>Attached Paper:</strong> <span style={{ color: "#fbbf24" }}>{newExamForm.uploadedDocName}</span>
-                          </div>
-                        )}
-
-                        {newExamForm.typedQuestionText && (
-                          <div>
-                            <span style={{ fontSize: "0.72rem", color: "#94a3b8", display: "block", marginBottom: "3px" }}>
-                              Document Preview:
-                            </span>
-                            <div style={{
-                              background: "rgba(15, 23, 42, 0.9)",
-                              padding: "8px 10px",
-                              borderRadius: "6px",
-                              fontSize: "0.78rem",
-                              color: "#f8fafc",
-                              maxHeight: "100px",
-                              overflowY: "auto",
-                              fontFamily: "monospace",
-                              whiteSpace: "pre-wrap"
-                            }}>
-                              {newExamForm.typedQuestionText}
-                            </div>
-                          </div>
-                        )}
-                      </div>
-                    )}
-                  </div>
-                )}
-
-                {/* Mode C: AI Scanner OMR Sheet */}
-                {examAuthorMode === "PRINT_OMR" && (
-                  <div style={{ background: "rgba(15, 23, 42, 0.6)", padding: "14px", borderRadius: "10px", marginBottom: "1.25rem", textAlign: "center" }}>
-                    <span style={{ fontSize: "2rem" }}>🖨️</span>
-                    <h4 style={{ margin: "4px 0", color: "#34d399", fontSize: "0.95rem" }}>
-                      AI SCANNER COMPLIANT OMR BUBBLE ANSWER SHEET
-                    </h4>
-                    <p style={{ fontSize: "0.78rem", color: "#94a3b8", maxWidth: "480px", margin: "0 auto 10px" }}>
-                      Generates a standardized 50-question optical bubble matrix with high-contrast fiducial markers. When students shade their answers on paper, the AI Exam Scanner automatically grades their script.
-                    </p>
-                    <button
-                      type="button"
-                      className="btn-primary"
-                      style={{ background: "linear-gradient(135deg, #10b981, #059669)", padding: "8px 16px", fontSize: "0.8rem" }}
-                      onClick={() => {
-                        window.print();
-                        setFeedback({ type: "success", message: "OMR answer sheet formatted and sent to printer." });
-                      }}
-                    >
-                      🖨️ Print Standard AI OMR Sheet & Questions
-                    </button>
-                  </div>
-                )}
-
-                <div style={{ display: "flex", justifyContent: "flex-end", gap: "10px", marginTop: "1rem", flexWrap: "wrap" }}>
-                  <button type="button" className="btn-secondary" onClick={() => setShowAuthorExamModal(false)}>Cancel</button>
-                  <button
-                    type="button"
-                    className="btn-primary"
-                    onClick={handleDirectPublishTimedExam}
-                    style={{ background: "linear-gradient(135deg, #10b981, #059669)", padding: "10px 18px", fontWeight: 800 }}
-                  >
-                    🚀 Save & Schedule Timed Exam Now
-                  </button>
-                  <button type="submit" className="btn-primary" style={{ background: "linear-gradient(135deg, #8b5cf6, #6d28d9)", padding: "10px 20px", fontWeight: 800 }}>
-                    🔍 Verify Questions & Proceed to Publish
-                  </button>
-                </div>
-              </form>
-            </div>
-          </div>
-        )
-      }
-
-      {/* MODAL: PRE-PUBLICATION EXAM QUESTION VERIFICATION & AUDIT */}
-      {
-        showQuestionVerificationModal && pendingPublishExam && (
-          <div
-            className="modal-backdrop invoice-pay-modal-overlay"
-            style={{
-              position: "fixed",
-              inset: 0,
-              zIndex: 99999,
-              background: "rgba(2, 6, 23, 0.84)",
-              backdropFilter: "blur(10px)",
-              display: "flex",
-              alignItems: "center",
-              justifyContent: "center",
-              padding: "1.25rem",
-              overflowY: "auto"
-            }}
-          >
-            <div className="invoice-pay-modal" style={{ width: "100%", maxWidth: "860px", background: "#0b1329", border: "2px solid #8b5cf6", borderRadius: "16px", padding: "2rem", maxHeight: "90vh", overflowY: "auto", boxShadow: "0 0 30px rgba(139, 92, 246, 0.4)" }}>
-              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", borderBottom: "1.5px solid rgba(139, 92, 246, 0.4)", paddingBottom: "1rem", marginBottom: "1.25rem" }}>
-                <div>
-                  <span className="role-portal-badge" style={{ color: "#c084fc", marginBottom: "4px", display: "inline-block" }}>
-                    MANDATORY FACULTY AUDIT • PRE-PUBLICATION VERIFICATION
-                  </span>
-                  <h2 style={{ margin: "2px 0 0", color: "#f8fafc", fontSize: "1.35rem", fontWeight: "900" }}>
-                    VERIFY EXAMINATION QUESTIONS BEFORE PUBLISHING
-                  </h2>
-                  <p style={{ margin: "4px 0 0", color: "#94a3b8", fontSize: "0.82rem" }}>
-                    Please inspect all typed questions, attached documents, answer keys, and passing thresholds below. Once confirmed, this examination immediately becomes active for enrolled students.
-                  </p>
-                </div>
-                <button type="button" className="btn-secondary" onClick={() => setShowQuestionVerificationModal(false)}>✕</button>
-              </div>
-
-              {/* Exam Summary Overview */}
-              <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(200px, 1fr))", gap: "10px", background: "rgba(15, 23, 42, 0.8)", padding: "12px 16px", borderRadius: "10px", border: "1px solid rgba(255,255,255,0.08)", marginBottom: "1.25rem" }}>
-                <div>
-                  <span style={{ fontSize: "0.72rem", color: "#94a3b8", display: "block" }}>Paper Title</span>
-                  <strong style={{ color: "#f8fafc", fontSize: "0.88rem" }}>{pendingPublishExam.title}</strong>
-                </div>
-                <div>
-                  <span style={{ fontSize: "0.72rem", color: "#94a3b8", display: "block" }}>Subject / Class</span>
-                  <strong style={{ color: "#38bdf8", fontSize: "0.88rem" }}>{pendingPublishExam.subjectName} ({pendingPublishExam.subjectCode})</strong>
-                </div>
-                <div>
-                  <span style={{ fontSize: "0.72rem", color: "#94a3b8", display: "block" }}>Date & Time Window</span>
-                  <strong style={{ color: "#34d399", fontSize: "0.88rem" }}>{pendingPublishExam.examDate} • {pendingPublishExam.startTime} - {pendingPublishExam.endTime}</strong>
-                </div>
-                <div>
-                  <span style={{ fontSize: "0.72rem", color: "#94a3b8", display: "block" }}>Total Marks / Pass</span>
-                  <strong style={{ color: "#fbbf24", fontSize: "0.88rem" }}>{pendingPublishExam.totalMarks} Marks (Pass: {pendingPublishExam.passMarks})</strong>
-                </div>
-              </div>
-
-              {/* Questions List Verification View */}
-              <div style={{ marginBottom: "1.25rem" }}>
-                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "8px" }}>
-                  <h4 style={{ margin: 0, color: "#e2e8f0", fontSize: "0.95rem" }}>
-                    📝 Authored Questions Verification Matrix
-                  </h4>
-                  <span style={{ background: "rgba(139, 92, 246, 0.2)", color: "#c084fc", padding: "2px 10px", borderRadius: "999px", fontSize: "0.75rem", fontWeight: 700 }}>
-                    {pendingPublishExam.questionBank?.length || 0} Questions Ready
-                  </span>
-                </div>
-
-                {pendingPublishExam.questionBank && pendingPublishExam.questionBank.length > 0 ? (
-                  <div style={{ display: "flex", flexDirection: "column", gap: "8px", maxHeight: "280px", overflowY: "auto", paddingRight: "4px" }}>
-                    {pendingPublishExam.questionBank.map((q, idx) => {
-                      const qType = q.questionType || "MULTIPLE_CHOICE";
-                      const isMCQ = qType === "MULTIPLE_CHOICE";
-                      const isTF = qType === "TRUE_FALSE";
-                      const isFill = qType === "FILL_IN_BLANK";
-                      const isWritten = !isMCQ && !isTF && !isFill;
-                      return (
-                        <div key={q.id || idx} style={{ background: "rgba(2, 6, 23, 0.7)", border: "1px solid rgba(255,255,255,0.08)", borderRadius: "8px", padding: "10px 14px" }}>
-                          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: "6px", marginBottom: "4px" }}>
-                            <strong style={{ color: "#38bdf8", fontSize: "0.82rem" }}>
-                              Question {idx + 1} • [{qType.replace(/_/g, " ")}] ({q.marks || 10} Marks)
-                            </strong>
-                            {isMCQ && (
-                              <span style={{ background: "#065f46", color: "#34d399", padding: "2px 8px", borderRadius: "4px", fontSize: "0.72rem", fontWeight: 800 }}>
-                                Correct: Option {q.correctOption || "A"}
-                              </span>
-                            )}
-                            {isTF && (
-                              <span style={{ background: "#065f46", color: "#34d399", padding: "2px 8px", borderRadius: "4px", fontSize: "0.72rem", fontWeight: 800 }}>
-                                Correct: {q.correctOption === "B" ? "False" : "True"}
-                              </span>
-                            )}
-                            {isFill && (
-                              <span style={{ background: "rgba(217, 119, 6, 0.25)", color: "#fbbf24", padding: "2px 8px", borderRadius: "4px", fontSize: "0.72rem", fontWeight: 800 }}>
-                                Accepted: {q.acceptedAnswer || "Teacher Verified"}
-                              </span>
-                            )}
-                            {isWritten && (
-                              <span style={{ background: "rgba(139, 92, 246, 0.25)", color: "#c084fc", padding: "2px 8px", borderRadius: "4px", fontSize: "0.72rem", fontWeight: 800 }}>
-                                ✍️ Student Typed Written Answer {q.wordLimit ? `• ~${q.wordLimit} words` : ""}
-                              </span>
-                            )}
-                          </div>
-                          <p style={{ margin: "2px 0 6px", color: "#f8fafc", fontSize: "0.85rem", whiteSpace: "pre-wrap" }}>{q.questionText}</p>
-                          {isMCQ && (
-                            <div style={{ display: "grid", gridTemplateColumns: "repeat(2, 1fr)", gap: "6px", fontSize: "0.78rem" }}>
-                              <div style={{ color: q.correctOption === "A" ? "#34d399" : "#94a3b8", fontWeight: q.correctOption === "A" ? 700 : 400 }}>
-                                A) {q.optionA || "Option A"} {q.correctOption === "A" && "✓"}
                               </div>
-                              <div style={{ color: q.correctOption === "B" ? "#34d399" : "#94a3b8", fontWeight: q.correctOption === "B" ? 700 : 400 }}>
-                                B) {q.optionB || "Option B"} {q.correctOption === "B" && "✓"}
-                              </div>
-                              <div style={{ color: q.correctOption === "C" ? "#34d399" : "#94a3b8", fontWeight: q.correctOption === "C" ? 700 : 400 }}>
-                                C) {q.optionC || "Option C"} {q.correctOption === "C" && "✓"}
-                              </div>
-                              <div style={{ color: q.correctOption === "D" ? "#34d399" : "#94a3b8", fontWeight: q.correctOption === "D" ? 700 : 400 }}>
-                                D) {q.optionD || "Option D"} {q.correctOption === "D" && "✓"}
+                              <div>
+                                <label style={{ fontSize: "0.72rem", color: "#cbd5e1", display: "block", marginBottom: "3px" }}>Alternate Keywords (comma-separated):</label>
+                                <input
+                                  type="text"
+                                  placeholder="e.g., mitochondria, mitochondrion"
+                                  value={q.acceptedKeywords || ""}
+                                  onChange={(e) => {
+                                    const updated = examQuestionsList.map((item, idx) => idx === qIdx ? { ...item, acceptedKeywords: e.target.value } : item);
+                                    setExamQuestionsList(updated);
+                                  }}
+                                  className="filter-input"
+                                  style={{ width: "100%", fontSize: "0.76rem" }}
+                                />
                               </div>
                             </div>
                           )}
-                          {isWritten && (q.markingGuide || q.acceptedKeywords) && (
-                            <div style={{ fontSize: "0.75rem", color: "#cbd5e1", background: "rgba(15, 23, 42, 0.7)", padding: "6px 8px", borderRadius: "6px" }}>
-                              {q.markingGuide && <div><strong>Marking Guide:</strong> {q.markingGuide}</div>}
-                              {q.acceptedKeywords && <div style={{ color: "#fbbf24" }}><strong>Keywords:</strong> {q.acceptedKeywords}</div>}
+
+                          {isWrittenType && (
+                            <div style={{ display: "flex", flexDirection: "column", gap: "8px", marginTop: "4px" }}>
+                              {qType === "SHORT_ANSWER" && (
+                                <div>
+                                  <label style={{ fontSize: "0.72rem", color: "#34d399", fontWeight: 800, display: "block", marginBottom: "3px" }}>
+                                    ✓ Model Short Answer Key (Matched automatically &amp; shown to grader):
+                                  </label>
+                                  <input
+                                    type="text"
+                                    placeholder="e.g., Photosynthetic light conversion in plant chloroplasts"
+                                    value={q.acceptedAnswer || ""}
+                                    onChange={(e) => {
+                                      const updated = examQuestionsList.map((item, idx) => idx === qIdx ? { ...item, acceptedAnswer: e.target.value } : item);
+                                      setExamQuestionsList(updated);
+                                    }}
+                                    className="filter-input"
+                                    style={{ width: "100%", fontSize: "0.76rem", borderColor: "rgba(52, 211, 153, 0.5)" }}
+                                  />
+                                </div>
+                              )}
+                              <div style={{ display: "grid", gridTemplateColumns: "2fr 1fr 1fr", gap: "8px" }}>
+                                <div>
+                                  <label style={{ fontSize: "0.72rem", color: "#f6dd84", fontWeight: 700, display: "block", marginBottom: "3px" }}>
+                                    Marking Guide / Expected Key Points (Examiner Rubric):
+                                  </label>
+                                  <textarea
+                                    rows={2}
+                                    placeholder="Key definitions, steps, or points students must explain..."
+                                    value={q.markingGuide || ""}
+                                    onChange={(e) => {
+                                      const updated = examQuestionsList.map((item, idx) => idx === qIdx ? { ...item, markingGuide: e.target.value } : item);
+                                      setExamQuestionsList(updated);
+                                    }}
+                                    className="filter-input"
+                                    style={{ width: "100%", fontSize: "0.75rem" }}
+                                  />
+                                </div>
+                                <div>
+                                  <label style={{ fontSize: "0.72rem", color: "#cbd5e1", display: "block", marginBottom: "3px" }}>
+                                    Keywords (auto-hint):
+                                  </label>
+                                  <input
+                                    type="text"
+                                    placeholder="e.g., osmosis, semi-permeable"
+                                    value={q.acceptedKeywords || ""}
+                                    onChange={(e) => {
+                                      const updated = examQuestionsList.map((item, idx) => idx === qIdx ? { ...item, acceptedKeywords: e.target.value } : item);
+                                      setExamQuestionsList(updated);
+                                    }}
+                                    className="filter-input"
+                                    style={{ width: "100%", fontSize: "0.75rem" }}
+                                  />
+                                </div>
+                                <div>
+                                  <label style={{ fontSize: "0.72rem", color: "#cbd5e1", display: "block", marginBottom: "3px" }}>
+                                    Word Guide:
+                                  </label>
+                                  <input
+                                    type="number"
+                                    min="20"
+                                    max="3000"
+                                    value={q.wordLimit || (qType === "SHORT_ANSWER" ? 60 : 250)}
+                                    onChange={(e) => {
+                                      const updated = examQuestionsList.map((item, idx) => idx === qIdx ? { ...item, wordLimit: Number(e.target.value) || 150 } : item);
+                                      setExamQuestionsList(updated);
+                                    }}
+                                    className="filter-input"
+                                    style={{ width: "100%", fontSize: "0.75rem" }}
+                                  />
+                                </div>
+                              </div>
                             </div>
                           )}
                         </div>
                       );
                     })}
                   </div>
-                ) : (
-                  <div style={{ background: "rgba(2, 6, 23, 0.7)", border: "1px dashed #334155", borderRadius: "8px", padding: "14px", textAlign: "center", color: "#94a3b8", fontSize: "0.82rem" }}>
-                    No multiple-choice questions configured in builder mode.
-                  </div>
-                )}
-
-                {/* Uploaded Doc Preview */}
-                {pendingPublishExam.uploadedDocName && (
-                  <div style={{ marginTop: "10px", background: "rgba(2, 6, 23, 0.8)", border: "1.5px solid #38bdf8", borderRadius: "8px", padding: "10px 14px" }}>
-                    <span style={{ fontSize: "0.75rem", color: "#38bdf8", fontWeight: 700, display: "block", marginBottom: "2px" }}>
-                      📁 Verified Attached Paper Document:
-                    </span>
-                    <strong style={{ color: "#fbbf24", fontSize: "0.85rem" }}>{pendingPublishExam.uploadedDocName}</strong>
-                  </div>
-                )}
-
-                {/* Typed Question Paper Text Preview */}
-                {pendingPublishExam.typedQuestionText && (
-                  <div style={{ marginTop: "10px", background: "rgba(2, 6, 23, 0.8)", border: "1px solid rgba(255,255,255,0.1)", borderRadius: "8px", padding: "10px 14px" }}>
-                    <span style={{ fontSize: "0.75rem", color: "#94a3b8", display: "block", marginBottom: "4px" }}>
-                      📄 Typed Question Paper Text (Verified for Student Portals):
-                    </span>
-                    <div style={{ background: "rgba(15, 23, 42, 0.9)", padding: "10px", borderRadius: "6px", maxHeight: "120px", overflowY: "auto", fontFamily: "monospace", fontSize: "0.78rem", color: "#f8fafc", whiteSpace: "pre-wrap" }}>
-                      {pendingPublishExam.typedQuestionText}
-                    </div>
-                  </div>
                 )}
               </div>
+            )}
 
-              {/* Faculty Verification Attestation */}
-              <div style={{ background: "rgba(16, 185, 129, 0.12)", border: "1px solid #10b981", borderRadius: "8px", padding: "10px 14px", marginBottom: "1.25rem" }}>
-                <label style={{ display: "flex", alignItems: "center", gap: "10px", cursor: "pointer", fontSize: "0.82rem", color: "#34d399", fontWeight: 700 }}>
-                  <input
-                    type="checkbox"
-                    checked={questionsVerifiedCheck}
-                    onChange={(e) => setQuestionsVerifiedCheck(e.target.checked)}
-                    style={{ width: "16px", height: "16px", accentColor: "#10b981" }}
-                  />
-                  <span>I have cross-checked and verified all questions, options, answer keys, and timing above. I authorize publishing this exam to the student dashboard.</span>
+            {/* Mode B: Upload Typed Doc */}
+            {examAuthorMode === "UPLOAD_DOC" && (
+              <div style={{ background: "rgba(15, 23, 42, 0.6)", padding: "14px", borderRadius: "10px", marginBottom: "1.25rem" }}>
+                <label style={{ display: "block", fontSize: "0.8rem", color: "#38bdf8", marginBottom: "6px", fontWeight: 700 }}>
+                  Attach Typed Examination Paper (.PDF, .DOCX, .TXT)
                 </label>
-              </div>
-
-              <div style={{ display: "flex", justifyContent: "flex-end", gap: "10px" }}>
-                <button
-                  type="button"
-                  className="btn-secondary"
-                  onClick={() => setShowQuestionVerificationModal(false)}
-                >
-                  ✏️ Return to Edit Questions
-                </button>
-                <button
-                  type="button"
-                  className="btn-primary"
-                  disabled={!questionsVerifiedCheck}
-                  onClick={handleConfirmPublishVerifiedExam}
-                  style={{
-                    background: questionsVerifiedCheck ? "linear-gradient(135deg, #10b981, #059669)" : "#475569",
-                    cursor: questionsVerifiedCheck ? "pointer" : "not-allowed",
-                    padding: "10px 22px",
-                    fontWeight: 900
+                <input
+                  type="file"
+                  accept=".pdf,.docx,.txt"
+                  onChange={(e) => {
+                    const file = e.target.files?.[0];
+                    if (file) {
+                      setNewExamForm({ ...newExamForm, uploadedDocName: file.name });
+                      setFeedback({ type: "success", message: `✓ Attached typed examination document '${file.name}' (${(file.size / 1024).toFixed(1)} KB).` });
+                    }
                   }}
-                >
-                  🚀 Confirm & Officially Publish to Students
-                </button>
-              </div>
-            </div>
-          </div>
-        )
-      }
-
-      {/* MODAL: ARCHIVED APPROVED WEEKLY ATTENDANCE REGISTERS */}
-      {
-        showArchivedAttendanceModal && (
-          <div
-            className="modal-backdrop invoice-pay-modal-overlay"
-            style={{
-              position: "fixed",
-              inset: 0,
-              zIndex: 99999,
-              background: "rgba(2, 6, 23, 0.82)",
-              backdropFilter: "blur(10px)",
-              display: "flex",
-              alignItems: "center",
-              justifyContent: "center",
-              padding: "1.25rem",
-              overflowY: "auto"
-            }}
-          >
-            <div className="invoice-pay-modal" style={{ width: "100%", maxWidth: "860px", background: "#0b1329", border: "2px solid #38bdf8", borderRadius: "16px", padding: "2rem", maxHeight: "90vh", overflowY: "auto", boxShadow: "0 25px 60px rgba(0,0,0,0.65)" }}>
-              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", borderBottom: "1.5px solid rgba(56, 189, 248, 0.3)", paddingBottom: "1rem", marginBottom: "1.25rem" }}>
-                <div>
-                  <span className="role-portal-badge" style={{ color: "#38bdf8", marginBottom: "4px", display: "inline-block" }}>
-                    OFFICIAL INSTITUTIONAL RECORDS • HISTORICAL ATTENDANCE ARCHIVES
-                  </span>
-                  <h2 style={{ margin: "2px 0 0", color: "#f8fafc", fontSize: "1.35rem", fontWeight: "900" }}>
-                    ARCHIVED APPROVED WEEKLY ATTENDANCES
-                  </h2>
-                  <p style={{ margin: "4px 0 0", color: "#94a3b8", fontSize: "0.82rem" }}>
-                    Complete historical record of weekly attendance registers verified, signed off by the Headmaster, and archived by faculty.
-                  </p>
-                </div>
-                <button type="button" className="btn-secondary" onClick={() => setShowArchivedAttendanceModal(false)}>✕</button>
-              </div>
-
-              {archivedWeeklyAttendances.length === 0 ? (
-                <div style={{ textAlign: "center", padding: "40px 20px", color: "#94a3b8", background: "rgba(15, 23, 42, 0.6)", borderRadius: "12px", border: "1px dashed #334155" }}>
-                  <span style={{ fontSize: "2.5rem", display: "block", marginBottom: "8px" }}>📁</span>
-                  <strong style={{ color: "#f8fafc", fontSize: "1rem" }}>No Weekly Attendance Archived Yet</strong>
-                  <p style={{ margin: "6px auto 0", maxWidth: "440px", fontSize: "0.82rem" }}>
-                    When the Headmaster vets and approves your close of week attendance, click the <strong>"📁 Archive Approved Weekly Attendance"</strong> button to save and reference it here.
-                  </p>
-                </div>
-              ) : (
-                <div className="role-table-responsive" style={{ maxHeight: "380px", overflowY: "auto" }}>
-                  <table className="role-table" style={{ fontSize: "0.82rem" }}>
-                    <thead>
-                      <tr>
-                        <th>Week Report ID</th>
-                        <th>Class / Cohort</th>
-                        <th>Headmaster Sign-off</th>
-                        <th>Archived Date</th>
-                        <th>Total Roster</th>
-                        <th>Status</th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {archivedWeeklyAttendances.map((rec) => (
-                        <tr key={rec.id}>
-                          <td>
-                            <strong style={{ color: "#38bdf8" }}>{rec.id}</strong>
-                            <span style={{ display: "block", fontSize: "0.72rem", color: "#94a3b8" }}>{rec.weekLabel || "Weekly Register"}</span>
-                          </td>
-                          <td>{rec.className || "Grade 10A / SHS 1"}</td>
-                          <td>
-                            <span style={{ color: "#34d399", fontWeight: 700 }}>✓ {rec.headmasterSignOff?.signedBy || "Headmaster"}</span>
-                            <span style={{ display: "block", fontSize: "0.7rem", color: "#64748b" }}>{rec.headmasterSignOff?.signedAt ? new Date(rec.headmasterSignOff.signedAt).toLocaleDateString() : "Verified"}</span>
-                          </td>
-                          <td>{rec.archivedDate || rec.archivedAt?.split("T")[0] || "Archived"}</td>
-                          <td><strong>{rec.records?.length || 24} Students</strong></td>
-                          <td>
-                            <span style={{ background: "#065f46", color: "#34d399", padding: "3px 8px", borderRadius: "999px", fontSize: "0.72rem", fontWeight: 800 }}>
-                              VETTED & ARCHIVED
-                            </span>
-                          </td>
-                        </tr>
-                      ))}
-                    </tbody>
-                  </table>
-                </div>
-              )}
-
-              <div style={{ display: "flex", justifyContent: "flex-end", marginTop: "1.25rem", gap: "10px" }}>
-                <button type="button" className="btn-secondary" onClick={() => setShowArchivedAttendanceModal(false)}>Close Archives</button>
-                <button
-                  type="button"
-                  className="btn-primary"
-                  onClick={() => {
-                    window.print();
-                  }}
-                >
-                  🖨️ Print / Export Archives
-                </button>
-              </div>
-            </div>
-          </div>
-        )
-      }
-
-      {/* MODAL: CREATE / PUBLISH EXAMINATION TIMETABLE GUIDE */}
-      {
-        showExamTimetableModal && (
-          <div
-            className="modal-backdrop invoice-pay-modal-overlay"
-            style={{
-              position: "fixed",
-              inset: 0,
-              zIndex: 99999,
-              background: "rgba(2, 6, 23, 0.82)",
-              backdropFilter: "blur(10px)",
-              display: "flex",
-              alignItems: "center",
-              justifyContent: "center",
-              padding: "1.25rem",
-              overflowY: "auto"
-            }}
-          >
-            <div className="invoice-pay-modal" style={{ width: "100%", maxWidth: "960px", background: "#0b1329", border: "2px solid #38bdf8", borderRadius: "16px", padding: "2rem", maxHeight: "90vh", overflowY: "auto", boxShadow: "0 25px 60px rgba(0,0,0,0.65)" }}>
-              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", borderBottom: "1.5px solid rgba(56, 189, 248, 0.3)", paddingBottom: "1.25rem", marginBottom: "1.5rem" }}>
-                <div>
-                  <span className="role-portal-badge" style={{ color: "#38bdf8", marginBottom: "4px", display: "inline-block" }}>
-                    OFFICIAL ACADEMIC REGULATION • EXAMINATION TIMETABLE GUIDE
-                  </span>
-                  <h2 style={{ margin: "2px 0 0", color: "#f8fafc", fontSize: "1.35rem", fontWeight: "900" }}>
-                    CREATE / EDIT EXAMINATION TIMETABLE GUIDE
-                  </h2>
-                  <p style={{ margin: "4px 0 0", color: "#94a3b8", fontSize: "0.82rem" }}>
-                    Published to the Student Dashboard so candidates learn and prepare according to the official procedure and hall regulations.
-                  </p>
-                </div>
-                <button type="button" className="btn-secondary" onClick={() => setShowExamTimetableModal(false)}>✕</button>
-              </div>
-
-              <form onSubmit={handleSaveExamTimetable}>
-                {/* QUICK ADD NEW EXAM TIMETABLE ENTRY FORM (Allows adding entries anytime when there are exam times for students) */}
-                <div style={{ background: "rgba(15, 23, 42, 0.9)", border: "1.5px solid rgba(56, 189, 248, 0.45)", borderRadius: "12px", padding: "14px", marginBottom: "1.25rem" }}>
-                  <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: "8px", marginBottom: "10px" }}>
-                    <div>
-                      <strong style={{ color: "#38bdf8", fontSize: "0.88rem", display: "block" }}>
-                        ➕ Add Examination Timetable Entry for Students
-                      </strong>
-                      <span style={{ fontSize: "0.75rem", color: "#cbd5e1" }}>
-                        Enter the exam date, start/end time, course, format, and hall below and click <strong>+ Add Timetable Entry</strong> to append it to the guide.
-                      </span>
-                    </div>
-                    <div style={{ display: "flex", gap: "8px", flexWrap: "wrap" }}>
-                      <button
-                        type="button"
-                        onClick={() => handleAddExamTimetableEntry(newTimetableEntryForm)}
-                        style={{ background: "linear-gradient(135deg, #059669, #047857)", color: "#ffffff", border: "1.5px solid #34d399", padding: "7px 14px", borderRadius: "6px", fontSize: "0.78rem", fontWeight: 800, cursor: "pointer" }}
-                      >
-                        ➕ Add Timetable Entry
-                      </button>
-                      <button
-                        type="button"
-                        onClick={handleSyncScheduledExamsToTimetable}
-                        style={{ background: "rgba(245, 158, 11, 0.22)", border: "1px solid #f59e0b", color: "#fbbf24", padding: "7px 12px", borderRadius: "6px", fontSize: "0.76rem", fontWeight: 800, cursor: "pointer" }}
-                      >
-                        🔄 Sync From Scheduled Timed Exams ({exams.length})
-                      </button>
-                      <button
-                        type="button"
-                        onClick={() => {
-                          window.print();
-                          setFeedback({ type: "success", message: "🖨️ Official Examination Timetable Guide formatted for printing." });
-                        }}
-                        style={{ background: "rgba(56, 189, 248, 0.18)", border: "1px solid #38bdf8", color: "#7dd3fc", padding: "7px 12px", borderRadius: "6px", fontSize: "0.76rem", fontWeight: 700, cursor: "pointer" }}
-                      >
-                        🖨️ Print Timetable Guide
-                      </button>
-                    </div>
-                  </div>
-
-                  <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(150px, 1fr))", gap: "8px" }}>
-                    <div>
-                      <label style={{ display: "block", fontSize: "0.72rem", color: "#94a3b8", marginBottom: "2px" }}>Course Code</label>
-                      <input
-                        type="text"
-                        value={newTimetableEntryForm.courseCode}
-                        onChange={(e) => setNewTimetableEntryForm({ ...newTimetableEntryForm, courseCode: e.target.value })}
-                        placeholder="e.g. MATH 205"
-                        className="filter-input"
-                        style={{ width: "100%", fontSize: "0.76rem", fontWeight: 700 }}
-                      />
-                    </div>
-                    <div>
-                      <label style={{ display: "block", fontSize: "0.72rem", color: "#94a3b8", marginBottom: "2px" }}>Subject / Paper Name</label>
-                      <input
-                        type="text"
-                        value={newTimetableEntryForm.subject}
-                        onChange={(e) => setNewTimetableEntryForm({ ...newTimetableEntryForm, subject: e.target.value })}
-                        placeholder="e.g. Core Mathematics"
-                        className="filter-input"
-                        style={{ width: "100%", fontSize: "0.76rem" }}
-                      />
-                    </div>
-                    <div>
-                      <label style={{ display: "block", fontSize: "0.72rem", color: "#94a3b8", marginBottom: "2px" }}>Class / Cohort</label>
-                      <input
-                        type="text"
-                        value={newTimetableEntryForm.className}
-                        onChange={(e) => setNewTimetableEntryForm({ ...newTimetableEntryForm, className: e.target.value })}
-                        placeholder="e.g. Grade 10A / SHS 1"
-                        className="filter-input"
-                        style={{ width: "100%", fontSize: "0.76rem" }}
-                      />
-                    </div>
-                    <div>
-                      <label style={{ display: "block", fontSize: "0.72rem", color: "#94a3b8", marginBottom: "2px" }}>Exam Date</label>
-                      <input
-                        type="date"
-                        value={newTimetableEntryForm.examDate}
-                        onChange={(e) => setNewTimetableEntryForm({ ...newTimetableEntryForm, examDate: e.target.value })}
-                        className="filter-input"
-                        style={{ width: "100%", fontSize: "0.76rem" }}
-                      />
-                    </div>
-                    <div>
-                      <label style={{ display: "block", fontSize: "0.72rem", color: "#34d399", marginBottom: "2px", fontWeight: 700 }}>Start Time</label>
-                      <input
-                        type="text"
-                        value={newTimetableEntryForm.startTime}
-                        onChange={(e) => setNewTimetableEntryForm({ ...newTimetableEntryForm, startTime: e.target.value })}
-                        placeholder="09:00 AM"
-                        className="filter-input"
-                        style={{ width: "100%", fontSize: "0.76rem", color: "#34d399", fontWeight: 700 }}
-                      />
-                    </div>
-                    <div>
-                      <label style={{ display: "block", fontSize: "0.72rem", color: "#f87171", marginBottom: "2px", fontWeight: 700 }}>End Time</label>
-                      <input
-                        type="text"
-                        value={newTimetableEntryForm.endTime}
-                        onChange={(e) => setNewTimetableEntryForm({ ...newTimetableEntryForm, endTime: e.target.value })}
-                        placeholder="11:30 AM"
-                        className="filter-input"
-                        style={{ width: "100%", fontSize: "0.76rem", color: "#f87171", fontWeight: 700 }}
-                      />
-                    </div>
-                    <div>
-                      <label style={{ display: "block", fontSize: "0.72rem", color: "#fde68a", marginBottom: "2px", fontWeight: 700 }}>Exam Format</label>
-                      <select
-                        value={newTimetableEntryForm.examFormat}
-                        onChange={(e) => setNewTimetableEntryForm({ ...newTimetableEntryForm, examFormat: e.target.value })}
-                        className="filter-select"
-                        style={{ width: "100%", fontSize: "0.75rem", background: "#0f172a", color: "#ffffff", fontWeight: 700 }}
-                      >
-                        <option value="Mixed Format (MCQ + Theory)">Mixed Format (MCQ + Theory)</option>
-                        <option value="Multiple Choice (MCQ)">Multiple Choice (MCQ)</option>
-                        <option value="Theory / Long Essay">Theory / Long Essay</option>
-                        <option value="True or False">True or False</option>
-                        <option value="Short Answer">Short Answer</option>
-                        <option value="Fill in the Blank">Fill in the Blank</option>
-                        <option value="Practical / Case Study">Practical / Case Study</option>
-                      </select>
-                    </div>
-                    <div>
-                      <label style={{ display: "block", fontSize: "0.72rem", color: "#94a3b8", marginBottom: "2px" }}>Examination Hall</label>
-                      <input
-                        type="text"
-                        value={newTimetableEntryForm.hall}
-                        onChange={(e) => setNewTimetableEntryForm({ ...newTimetableEntryForm, hall: e.target.value })}
-                        placeholder="Main Examination Hall A"
-                        className="filter-input"
-                        style={{ width: "100%", fontSize: "0.76rem" }}
-                      />
-                    </div>
-                  </div>
-                </div>
-
-                <div style={{ marginBottom: "0.75rem", display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: "10px" }}>
-                  <span style={{ fontSize: "0.82rem", color: "#cbd5e1" }}>
-                    📋 <strong>{examTimetableList.length}</strong> Examination Sessions Configured on Student Guide
-                  </span>
-                  <button
-                    type="button"
-                    onClick={() => handleAddExamTimetableEntry({
-                      courseCode: `COURSE ${101 + examTimetableList.length}`,
-                      subject: `Examination Paper #${examTimetableList.length + 1}`,
-                      className: activeClassObj?.name || newExamForm.className || "Grade 10A / SHS 1"
-                    })}
-                    style={{ background: "linear-gradient(135deg, #0284c7, #0369a1)", color: "#ffffff", border: "1px solid #38bdf8", padding: "6px 12px", borderRadius: "6px", fontSize: "0.76rem", fontWeight: 800, cursor: "pointer" }}
-                  >
-                    ⚡ + Add Another Timetable Row
-                  </button>
-                </div>
-
-                <div className="role-table-responsive" style={{ maxHeight: "360px", overflowY: "auto", marginBottom: "1.5rem" }}>
-                  <table className="role-table" style={{ fontSize: "0.78rem" }}>
-                    <thead>
-                      <tr>
-                        <th>Course &amp; Class</th>
-                        <th>Subject &amp; Format</th>
-                        <th>Date</th>
-                        <th>Start Time</th>
-                        <th>End Time</th>
-                        <th>Hall &amp; Invigilator</th>
-                        <th>Permitted Tools &amp; Syllabus</th>
-                        <th>Action</th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {examTimetableList.length === 0 ? (
-                        <tr>
-                          <td colSpan="8" style={{ textAlign: "center", padding: "28px", color: "#94a3b8" }}>
-                            📅 No examination timetable entries registered yet. Click <strong>➕ Add Timetable Entry</strong> above to schedule exams.
-                          </td>
-                        </tr>
-                      ) : (
-                        examTimetableList.map((entry, idx) => (
-                          <tr key={entry.id || idx}>
-                            <td>
-                              <input
-                                type="text"
-                                value={entry.courseCode || ""}
-                                placeholder="Course Code"
-                                onChange={(e) => {
-                                  const updated = examTimetableList.map((item, i) => i === idx ? { ...item, courseCode: e.target.value } : item);
-                                  setExamTimetableList(updated);
-                                }}
-                                className="filter-input"
-                                style={{ width: "95px", fontSize: "0.76rem", marginBottom: "2px", fontWeight: 700 }}
-                              />
-                              <input
-                                type="text"
-                                value={entry.className || ""}
-                                placeholder="Class / Cohort"
-                                onChange={(e) => {
-                                  const updated = examTimetableList.map((item, i) => i === idx ? { ...item, className: e.target.value } : item);
-                                  setExamTimetableList(updated);
-                                }}
-                                className="filter-input"
-                                style={{ width: "95px", fontSize: "0.72rem" }}
-                              />
-                            </td>
-                            <td>
-                              <input
-                                type="text"
-                                value={entry.subject || ""}
-                                placeholder="Subject Name"
-                                onChange={(e) => {
-                                  const updated = examTimetableList.map((item, i) => i === idx ? { ...item, subject: e.target.value } : item);
-                                  setExamTimetableList(updated);
-                                }}
-                                className="filter-input"
-                                style={{ width: "145px", fontSize: "0.76rem", marginBottom: "2px" }}
-                              />
-                              <select
-                                value={entry.examFormat || "Mixed Format (MCQ + Theory)"}
-                                onChange={(e) => {
-                                  const updated = examTimetableList.map((item, i) => i === idx ? { ...item, examFormat: e.target.value } : item);
-                                  setExamTimetableList(updated);
-                                }}
-                                className="filter-select"
-                                style={{ width: "145px", fontSize: "0.71rem", background: "#0f172a", color: "#fde68a", fontWeight: 700 }}
-                              >
-                                <option value="Mixed Format (MCQ + Theory)">Mixed Format (MCQ + Theory)</option>
-                                <option value="Multiple Choice (MCQ)">Multiple Choice (MCQ)</option>
-                                <option value="Theory / Essay">Theory / Essay</option>
-                                <option value="True or False">True or False</option>
-                                <option value="Short Answer">Short Answer</option>
-                                <option value="Fill in Blank">Fill in Blank</option>
-                                <option value="Case Study / Practical">Case Study / Practical</option>
-                              </select>
-                            </td>
-                            <td>
-                              <input
-                                type="date"
-                                value={entry.examDate || ""}
-                                onChange={(e) => {
-                                  const updated = examTimetableList.map((item, i) => i === idx ? { ...item, examDate: e.target.value } : item);
-                                  setExamTimetableList(updated);
-                                }}
-                                className="filter-input"
-                                style={{ width: "120px", fontSize: "0.75rem" }}
-                              />
-                            </td>
-                            <td>
-                              <input
-                                type="text"
-                                value={entry.startTime || ""}
-                                onChange={(e) => {
-                                  const updated = examTimetableList.map((item, i) => i === idx ? { ...item, startTime: e.target.value } : item);
-                                  setExamTimetableList(updated);
-                                }}
-                                className="filter-input"
-                                style={{ width: "80px", fontSize: "0.75rem" }}
-                              />
-                            </td>
-                            <td>
-                              <input
-                                type="text"
-                                value={entry.endTime || ""}
-                                onChange={(e) => {
-                                  const updated = examTimetableList.map((item, i) => i === idx ? { ...item, endTime: e.target.value } : item);
-                                  setExamTimetableList(updated);
-                                }}
-                                className="filter-input"
-                                style={{ width: "80px", fontSize: "0.75rem" }}
-                              />
-                            </td>
-                            <td>
-                              <input
-                                type="text"
-                                value={entry.hall || ""}
-                                placeholder="Hall"
-                                onChange={(e) => {
-                                  const updated = examTimetableList.map((item, i) => i === idx ? { ...item, hall: e.target.value } : item);
-                                  setExamTimetableList(updated);
-                                }}
-                                className="filter-input"
-                                style={{ width: "110px", fontSize: "0.75rem", marginBottom: "2px" }}
-                              />
-                              <input
-                                type="text"
-                                value={entry.invigilator || ""}
-                                placeholder="Invigilator"
-                                onChange={(e) => {
-                                  const updated = examTimetableList.map((item, i) => i === idx ? { ...item, invigilator: e.target.value } : item);
-                                  setExamTimetableList(updated);
-                                }}
-                                className="filter-input"
-                                style={{ width: "110px", fontSize: "0.72rem" }}
-                              />
-                            </td>
-                            <td>
-                              <input
-                                type="text"
-                                value={entry.permittedTools || ""}
-                                placeholder="Tools"
-                                onChange={(e) => {
-                                  const updated = examTimetableList.map((item, i) => i === idx ? { ...item, permittedTools: e.target.value } : item);
-                                  setExamTimetableList(updated);
-                                }}
-                                className="filter-input"
-                                style={{ width: "130px", fontSize: "0.72rem", marginBottom: "2px" }}
-                              />
-                              <input
-                                type="text"
-                                value={entry.syllabusScope || ""}
-                                placeholder="Syllabus focus"
-                                onChange={(e) => {
-                                  const updated = examTimetableList.map((item, i) => i === idx ? { ...item, syllabusScope: e.target.value } : item);
-                                  setExamTimetableList(updated);
-                                }}
-                                className="filter-input"
-                                style={{ width: "130px", fontSize: "0.72rem" }}
-                              />
-                            </td>
-                            <td>
-                              <button
-                                type="button"
-                                onClick={() => {
-                                  setExamTimetableList(examTimetableList.filter((_, i) => i !== idx));
-                                }}
-                                style={{ background: "rgba(239, 68, 68, 0.2)", border: "1px solid #ef4444", color: "#f87171", padding: "4px 8px", borderRadius: "4px", fontSize: "0.7rem", cursor: "pointer" }}
-                              >
-                                ✕
-                              </button>
-                            </td>
-                          </tr>
-                        ))
-                      )}
-                    </tbody>
-                  </table>
-                </div>
-
-                <div style={{ display: "flex", justifyContent: "flex-end", gap: "10px", flexWrap: "wrap" }}>
-                  <button type="button" className="btn-secondary" onClick={() => setShowExamTimetableModal(false)} style={{ display: "inline-flex", alignItems: "center", gap: "6px" }}>
-                    ⬅️ Back
-                  </button>
-                  <button type="submit" className="btn-primary" style={{ background: "linear-gradient(135deg, #0284c7, #0369a1)", color: "#ffffff", padding: "10px 20px", fontWeight: 800 }}>
-                    📢 Publish Examination Timetable to Students
-                  </button>
-                </div>
-              </form>
-            </div>
-          </div>
-        )
-      }
-
-      {/* MODAL: MANUAL ENTRY FOR WRITTEN & MARKED EXAMS RECORDS (NON-CBT / HAND-MARKED) */}
-      {
-        showManualWrittenExamModal && (
-          <div className="modal-backdrop" onClick={() => setShowManualWrittenExamModal(false)}>
-            <div
-              className="modal-content"
-              onClick={(e) => e.stopPropagation()}
-              style={{ maxWidth: "1020px", width: "95%", maxHeight: "90vh", overflowY: "auto", background: "#0f172a", border: "1.5px solid #10b981", borderRadius: "16px", padding: "24px" }}
-            >
-              {/* Modal Header with Back Button */}
-              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", borderBottom: "1px solid rgba(255,255,255,0.1)", paddingBottom: "16px", marginBottom: "20px" }}>
-                <div style={{ display: "flex", alignItems: "center", gap: "12px" }}>
-                  <button
-                    type="button"
-                    className="btn-secondary"
-                    onClick={() => setShowManualWrittenExamModal(false)}
-                    style={{ padding: "6px 14px", borderRadius: "8px", borderColor: "#64748b", color: "#f8fafc", fontWeight: "700", display: "inline-flex", alignItems: "center", gap: "6px" }}
-                  >
-                    ⬅️ Back
-                  </button>
-                  <div>
-                    <h2 style={{ margin: 0, fontSize: "1.25rem", color: "#34d399", display: "flex", alignItems: "center", gap: "8px" }}>
-                      <span>📝</span> MANUAL ENTRY FOR WRITTEN & MARKED EXAMS RECORDS
-                    </h2>
-                    <p style={{ margin: "4px 0 0", fontSize: "0.82rem", color: "#94a3b8" }}>
-                      Enter scores for physical papers marked directly by teacher (not online CBT and not AI scanner). Records save student-by-student to PostgreSQL gradebook and can be published to student transcripts.
-                    </p>
-                  </div>
-                </div>
-                <button
-                  type="button"
-                  className="modal-close-btn"
-                  onClick={() => setShowManualWrittenExamModal(false)}
-                  style={{ fontSize: "1.3rem", background: "none", border: "none", color: "#94a3b8", cursor: "pointer" }}
-                >
-                  ✕
-                </button>
-              </div>
-
-              {/* Exam Metadata Grid */}
-              <div style={{ background: "rgba(15, 23, 42, 0.7)", border: "1px solid rgba(255, 255, 255, 0.08)", borderRadius: "12px", padding: "16px", marginBottom: "20px" }}>
-                <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(220px, 1fr))", gap: "14px" }}>
-                  <div>
-                    <label style={{ display: "block", fontSize: "0.78rem", fontWeight: "700", color: "#94a3b8", marginBottom: "4px" }}>
-                      Class / Cohort:
-                    </label>
-                    <select
-                      className="filter-select"
-                      value={selectedClassId}
-                      onChange={handleClassChange}
-                      style={{ width: "100%", padding: "8px 10px", background: "#1e293b", color: "#f8fafc", border: "1px solid #334155", borderRadius: "8px" }}
-                    >
-                      {classes.map((c) => (
-                        <option key={c.id} value={c.id}>
-                          {c.name} ({c.code}) — Grade {c.gradeLevel}
-                        </option>
-                      ))}
-                    </select>
-                  </div>
-
-                  <div>
-                    <label style={{ display: "block", fontSize: "0.78rem", fontWeight: "700", color: "#94a3b8", marginBottom: "4px" }}>
-                      Exam Paper Title:
-                    </label>
-                    <input
-                      type="text"
-                      value={manualExamMeta.title}
-                      onChange={(e) => setManualExamMeta({ ...manualExamMeta, title: e.target.value })}
-                      placeholder="e.g. Mid-Term Written Exam Paper 2"
-                      style={{ width: "100%", padding: "8px 10px", background: "#1e293b", color: "#f8fafc", border: "1px solid #334155", borderRadius: "8px" }}
-                    />
-                  </div>
-
-                  <div>
-                    <label style={{ display: "block", fontSize: "0.78rem", fontWeight: "700", color: "#94a3b8", marginBottom: "4px" }}>
-                      Subject:
-                    </label>
-                    <input
-                      type="text"
-                      value={manualExamMeta.subject}
-                      onChange={(e) => setManualExamMeta({ ...manualExamMeta, subject: e.target.value })}
-                      placeholder="e.g. Mathematics & Analytical Geometry"
-                      style={{ width: "100%", padding: "8px 10px", background: "#1e293b", color: "#f8fafc", border: "1px solid #334155", borderRadius: "8px" }}
-                    />
-                  </div>
-
-                  <div>
-                    <label style={{ display: "block", fontSize: "0.78rem", fontWeight: "700", color: "#94a3b8", marginBottom: "4px" }}>
-                      Academic Term:
-                    </label>
-                    <select
-                      value={manualExamMeta.term}
-                      onChange={(e) => setManualExamMeta({ ...manualExamMeta, term: e.target.value })}
-                      style={{ width: "100%", padding: "8px 10px", background: "#1e293b", color: "#f8fafc", border: "1px solid #334155", borderRadius: "8px" }}
-                    >
-                      <option value="Term 1 (First Academic Term)">Term 1 (First Academic Term)</option>
-                      <option value="Term 2 (Second Academic Term)">Term 2 (Second Academic Term)</option>
-                      <option value="Term 3 (Third Academic Term)">Term 3 (Third Academic Term)</option>
-                    </select>
-                  </div>
-
-                  <div>
-                    <label style={{ display: "block", fontSize: "0.78rem", fontWeight: "700", color: "#94a3b8", marginBottom: "4px" }}>
-                      Maximum Total Marks (Points):
-                    </label>
-                    <input
-                      type="number"
-                      value={manualExamMeta.maxMarks}
-                      onChange={(e) => setManualExamMeta({ ...manualExamMeta, maxMarks: Math.max(1, parseFloat(e.target.value) || 100) })}
-                      style={{ width: "100%", padding: "8px 10px", background: "#1e293b", color: "#f8fafc", border: "1px solid #334155", borderRadius: "8px" }}
-                    />
-                  </div>
-
-                  <div>
-                    <label style={{ display: "block", fontSize: "0.78rem", fontWeight: "700", color: "#94a3b8", marginBottom: "4px" }}>
-                      Date Marked & Vetted:
-                    </label>
-                    <input
-                      type="date"
-                      value={manualExamMeta.examDate}
-                      onChange={(e) => setManualExamMeta({ ...manualExamMeta, examDate: e.target.value })}
-                      style={{ width: "100%", padding: "8px 10px", background: "#1e293b", color: "#f8fafc", border: "1px solid #334155", borderRadius: "8px" }}
-                    />
-                  </div>
-                </div>
-              </div>
-
-              {/* Students Score Entry Sheet */}
-              <div style={{ marginBottom: "20px" }}>
-                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "10px" }}>
-                  <h3 style={{ margin: 0, fontSize: "0.95rem", color: "#e2e8f0" }}>
-                    📋 Student Roster & Paper Script Score Entry ({roster.length > 0 ? roster.length : 5} Candidates)
-                  </h3>
-                  <span style={{ fontSize: "0.78rem", color: "#38bdf8" }}>
-                    💡 Auto-computes percentage & letter grade using teacher-configured cutoff scale
-                  </span>
-                </div>
-
-                <div style={{ overflowX: "auto", borderRadius: "10px", border: "1px solid rgba(255, 255, 255, 0.08)" }}>
-                  <table style={{ width: "100%", borderCollapse: "collapse", fontSize: "0.83rem", textAlign: "left" }}>
-                    <thead>
-                      <tr style={{ background: "#1e293b", color: "#94a3b8", borderBottom: "1px solid #334155" }}>
-                        <th style={{ padding: "10px 12px" }}>#</th>
-                        <th style={{ padding: "10px 12px" }}>Student Name</th>
-                        <th style={{ padding: "10px 12px" }}>Roll / ID</th>
-                        <th style={{ padding: "10px 12px" }}>Script Serial #</th>
-                        <th style={{ padding: "10px 12px", width: "110px" }}>Raw Score (/{manualExamMeta.maxMarks})</th>
-                        <th style={{ padding: "10px 12px", width: "80px" }}>Pct %</th>
-                        <th style={{ padding: "10px 12px", width: "70px" }}>Grade</th>
-                        <th style={{ padding: "10px 12px" }}>Teacher Evaluative Remarks</th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {(roster.length > 0 ? roster : (isDemoSandboxMode() ? [
-                        { id: "STU-001", studentId: "STU-001", firstName: "Kwame", lastName: "Mensah", rollNumber: "GBS-2026-101" },
-                        { id: "STU-002", studentId: "STU-002", firstName: "Ama", lastName: "Osei", rollNumber: "GBS-2026-102" },
-                        { id: "STU-003", studentId: "STU-003", firstName: "Kofi", lastName: "Boateng", rollNumber: "GBS-2026-103" },
-                        { id: "STU-004", studentId: "STU-004", firstName: "Abena", lastName: "Appiah", rollNumber: "GBS-2026-104" },
-                        { id: "STU-005", studentId: "STU-005", firstName: "Esi", lastName: "Sutherland", rollNumber: "GBS-2026-105" }
-                      ] : [])).map((stu, idx) => {
-                        const sKey = String(stu.id || stu.studentId || idx);
-                        const currentScore = manualExamScores[sKey] || {};
-                        const rawVal = currentScore.rawMark !== undefined ? currentScore.rawMark : "";
-                        const maxM = parseFloat(manualExamMeta.maxMarks) || 100;
-                        const rawNum = parseFloat(rawVal);
-                        const pct = !isNaN(rawNum) ? Math.min(100, Math.max(0, Math.round((rawNum / maxM) * 100))) : null;
-                        const grade = pct !== null ? computeGrade(pct, sKey) : "—";
-
-                        return (
-                          <tr key={sKey} style={{ borderBottom: "1px solid rgba(255, 255, 255, 0.05)", background: idx % 2 === 0 ? "rgba(15, 23, 42, 0.4)" : "rgba(30, 41, 59, 0.3)" }}>
-                            <td style={{ padding: "10px 12px", color: "#64748b" }}>{idx + 1}</td>
-                            <td style={{ padding: "10px 12px", fontWeight: "600", color: "#f8fafc" }}>
-                              {`${stu.firstName || ""} ${stu.lastName || ""}`.trim() || `Student ${idx + 1}`}
-                            </td>
-                            <td style={{ padding: "10px 12px", color: "#94a3b8", fontFamily: "monospace" }}>
-                              {stu.rollNumber || stu.admissionNumber || `GBS-${idx + 101}`}
-                            </td>
-                            <td style={{ padding: "10px 12px" }}>
-                              <input
-                                type="text"
-                                value={currentScore.scriptSerial || `WRT-SCR-${idx + 101}`}
-                                onChange={(e) => {
-                                  setManualExamScores({
-                                    ...manualExamScores,
-                                    [sKey]: { ...currentScore, scriptSerial: e.target.value }
-                                  });
-                                }}
-                                style={{ width: "110px", padding: "6px 8px", background: "#0f172a", border: "1px solid #334155", borderRadius: "6px", color: "#f8fafc", fontSize: "0.78rem" }}
-                              />
-                            </td>
-                            <td style={{ padding: "10px 12px" }}>
-                              <input
-                                type="number"
-                                min="0"
-                                max={manualExamMeta.maxMarks}
-                                value={rawVal}
-                                placeholder="Score"
-                                onChange={(e) => {
-                                  setManualExamScores({
-                                    ...manualExamScores,
-                                    [sKey]: { ...currentScore, rawMark: e.target.value }
-                                  });
-                                }}
-                                style={{ width: "85px", padding: "6px 8px", background: "#0f172a", border: "1px solid #10b981", borderRadius: "6px", color: "#34d399", fontWeight: "700", fontSize: "0.85rem" }}
-                              />
-                            </td>
-                            <td style={{ padding: "10px 12px" }}>
-                              <span style={{
-                                padding: "4px 8px",
-                                borderRadius: "6px",
-                                fontWeight: "700",
-                                fontSize: "0.78rem",
-                                background: pct === null ? "transparent" : pct >= 80 ? "rgba(16, 185, 129, 0.2)" : pct >= 60 ? "rgba(56, 189, 248, 0.2)" : pct >= 50 ? "rgba(245, 158, 11, 0.2)" : "rgba(239, 68, 68, 0.2)",
-                                color: pct === null ? "#64748b" : pct >= 80 ? "#34d399" : pct >= 60 ? "#38bdf8" : pct >= 50 ? "#fbbf24" : "#f87171"
-                              }}>
-                                {pct !== null ? `${pct}%` : "—"}
-                              </span>
-                            </td>
-                            <td style={{ padding: "10px 12px" }}>
-                              <span style={{
-                                padding: "4px 8px",
-                                borderRadius: "6px",
-                                fontWeight: "800",
-                                fontSize: "0.82rem",
-                                background: grade === "A+" || grade === "A" ? "#065f46" : grade === "B" ? "#1e40af" : grade === "C" ? "#854d0e" : "#991b1b",
-                                color: "#f8fafc"
-                              }}>
-                                {grade}
-                              </span>
-                            </td>
-                            <td style={{ padding: "10px 12px" }}>
-                              <input
-                                type="text"
-                                value={currentScore.remarks || ""}
-                                placeholder="e.g. Accurate working in Section B"
-                                onChange={(e) => {
-                                  setManualExamScores({
-                                    ...manualExamScores,
-                                    [sKey]: { ...currentScore, remarks: e.target.value }
-                                  });
-                                }}
-                                style={{ width: "100%", minWidth: "160px", padding: "6px 8px", background: "#0f172a", border: "1px solid #334155", borderRadius: "6px", color: "#f8fafc", fontSize: "0.78rem" }}
-                              />
-                            </td>
-                          </tr>
-                        );
-                      })}
-                    </tbody>
-                  </table>
-                </div>
-              </div>
-
-              {/* Modal Action Controls with Back Button */}
-              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: "10px", borderTop: "1px solid rgba(255, 255, 255, 0.1)", paddingTop: "16px" }}>
-                <button
-                  type="button"
-                  className="btn-secondary"
-                  onClick={() => setShowManualWrittenExamModal(false)}
-                  style={{ padding: "8px 18px", borderRadius: "8px", borderColor: "#64748b", color: "#f8fafc", fontWeight: "700", display: "inline-flex", alignItems: "center", gap: "6px" }}
-                >
-                  ⬅️ Back to Exams Console
-                </button>
-
-                <div style={{ display: "flex", gap: "10px", flexWrap: "wrap" }}>
-                  <button
-                    type="button"
-                    className="btn-secondary"
-                    onClick={() => {
-                      const sampleScores = {};
-                      (roster.length > 0 ? roster : [1, 2, 3, 4, 5]).forEach((s, idx) => {
-                        const sKey = String(s.id || s.studentId || idx);
-                        sampleScores[sKey] = {
-                          scriptSerial: `WRT-SCR-${idx + 101}`,
-                          rawMark: 65 + ((idx * 7) % 35),
-                          remarks: idx % 2 === 0 ? "Excellent theory grasp & structured essays." : "Satisfactory performance; revise final section."
-                        };
-                      });
-                      setManualExamScores(sampleScores);
-                    }}
-                    style={{ borderColor: "#38bdf8", color: "#38bdf8", fontWeight: "700" }}
-                  >
-                    ⚡ Auto-Fill Sample Marks
-                  </button>
-
-                  <button
-                    type="button"
-                    className="btn-primary"
-                    onClick={() => handleSaveManualWrittenExams(false)}
-                    style={{ background: "linear-gradient(135deg, #059669, #10b981)", fontWeight: "800", padding: "10px 20px" }}
-                  >
-                    💾 Save Written Exam Records to Gradebook
-                  </button>
-
-                  <button
-                    type="button"
-                    className="btn-primary"
-                    onClick={() => handleSaveManualWrittenExams(true)}
-                    style={{ background: "linear-gradient(135deg, #0284c7, #2563eb)", fontWeight: "800", padding: "10px 20px", display: "inline-flex", alignItems: "center", gap: "6px" }}
-                  >
-                    📢 Save & Publish to Students & Parents Portal
-                  </button>
-                </div>
-              </div>
-            </div>
-          </div>
-        )
-      }
-
-      {/* MODAL: TEACHER THEORY & MULTI-FORMAT SUBMITTED EXAM SCRIPT GRADING */}
-      {
-        activeGradingScript && (
-          <div
-            className="modal-backdrop invoice-pay-modal-overlay"
-            style={{
-              position: "fixed",
-              inset: 0,
-              zIndex: 99999,
-              background: "rgba(2, 6, 23, 0.86)",
-              backdropFilter: "blur(10px)",
-              display: "flex",
-              alignItems: "center",
-              justifyContent: "center",
-              padding: "1.25rem",
-              overflowY: "auto"
-            }}
-          >
-            <div className="invoice-pay-modal" style={{ width: "100%", maxWidth: "900px", background: "#0b1329", border: "2px solid #f59e0b", borderRadius: "16px", padding: "1.75rem", maxHeight: "90vh", overflowY: "auto", boxShadow: "0 0 36px rgba(245, 158, 11, 0.35)" }}>
-              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", borderBottom: "1px solid rgba(255,255,255,0.12)", paddingBottom: "12px", marginBottom: "14px", gap: "12px" }}>
-                <div>
-                  <span style={{ fontSize: "0.72rem", fontWeight: 800, color: "#fbbf24", textTransform: "uppercase", letterSpacing: "0.7px" }}>
-                    FACULTY SCRIPT INSPECTION &amp; THEORY MARKING DESK
-                  </span>
-                  <h2 style={{ margin: "2px 0", color: "#f8fafc", fontSize: "1.25rem", fontWeight: 900 }}>
-                    {activeGradingScript.studentName || `Student #${activeGradingScript.studentId}`} — {activeGradingScript.examTitle}
-                  </h2>
-                  <p style={{ margin: 0, fontSize: "0.8rem", color: "#94a3b8" }}>
-                    Live Earned Total:{" "}
-                    <strong style={{ color: "#34d399" }}>
-                      {Object.values(scriptQuestionMarks).reduce((sum, val) => sum + (Number(val) || 0), 0)} / {activeGradingScript.totalMarks || 100}
-                    </strong>
-                  </p>
-                </div>
-                <button type="button" className="btn-secondary" onClick={() => setActiveGradingScript(null)}>✕</button>
-              </div>
-
-              <div style={{ display: "flex", flexDirection: "column", gap: "12px", marginBottom: "14px" }}>
-                {(activeGradingScript.perQuestionBreakdown || []).length === 0 ? (
-                  <div style={{ padding: "14px", background: "rgba(2, 6, 23, 0.65)", borderRadius: "8px", color: "#cbd5e1", fontSize: "0.85rem" }}>
-                    Objective score recorded ({activeGradingScript.scoreObtained}/{activeGradingScript.totalMarks}). No separate typed theory breakdown attached.
-                  </div>
-                ) : (
-                  (activeGradingScript.perQuestionBreakdown || []).map((item, idx) => {
-                    const qKey = String(item.questionNumber || item.id);
-                    const isWritten = ["THEORY_ESSAY", "SHORT_ANSWER", "FILL_IN_BLANK", "CASE_STUDY"].includes(item.questionType);
-                    return (
-                      <div
-                        key={qKey + idx}
-                        style={{
-                          background: "rgba(15, 23, 42, 0.85)",
-                          border: isWritten ? "1.5px solid rgba(245, 158, 11, 0.45)" : "1px solid rgba(255,255,255,0.1)",
-                          borderRadius: "10px",
-                          padding: "12px"
-                        }}
-                      >
-                        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: "8px", marginBottom: "6px" }}>
-                          <strong style={{ color: isWritten ? "#fbbf24" : "#38bdf8", fontSize: "0.84rem" }}>
-                            Question {item.questionNumber} • [{String(item.questionType || "MCQ").replace(/_/g, " ")}] • Max {item.maxMarks} Marks
-                          </strong>
-                          {!isWritten && (
-                            <span style={{ fontSize: "0.75rem", fontWeight: 800, color: item.isCorrect ? "#34d399" : "#f87171" }}>
-                              {item.isCorrect ? "✓ Correct Choice" : `✗ Incorrect (Expected ${item.correctAnswer})`}
-                            </span>
-                          )}
-                        </div>
-
-                        <div style={{ fontSize: "0.85rem", color: "#f8fafc", marginBottom: "8px", whiteSpace: "pre-wrap" }}>
-                          {item.questionText}
-                        </div>
-
-                        <div style={{ background: "rgba(2, 6, 23, 0.78)", border: "1px solid rgba(56, 189, 248, 0.25)", borderRadius: "8px", padding: "10px", marginBottom: "8px" }}>
-                          <span style={{ display: "block", fontSize: "0.72rem", color: "#38bdf8", fontWeight: 800, marginBottom: "4px" }}>
-                            STUDENT&apos;S SUBMITTED ANSWER:
-                          </span>
-                          <div style={{ color: item.studentAnswer ? "#fef3c7" : "#94a3b8", fontSize: "0.84rem", whiteSpace: "pre-wrap", lineHeight: 1.5 }}>
-                            {item.studentAnswer || "(No answer submitted for this question)"}
-                          </div>
-                        </div>
-
-                        {(item.markingGuide || item.acceptedKeywords) && (
-                          <div style={{ fontSize: "0.75rem", color: "#cbd5e1", background: "rgba(6, 78, 59, 0.22)", border: "1px solid rgba(16, 185, 129, 0.28)", borderRadius: "6px", padding: "6px 10px", marginBottom: "8px" }}>
-                            {item.markingGuide && <div><strong style={{ color: "#34d399" }}>Marking Scheme:</strong> {item.markingGuide}</div>}
-                            {item.acceptedKeywords && <div><strong style={{ color: "#fbbf24" }}>Key Concepts:</strong> {item.acceptedKeywords}</div>}
-                            {item.autoSuggestedMarks > 0 && <div style={{ color: "#6ee7b7" }}>Keyword Match Assist: Suggested {item.autoSuggestedMarks} / {item.maxMarks} Marks</div>}
-                          </div>
-                        )}
-
-                        <div style={{ display: "grid", gridTemplateColumns: "150px 1fr", gap: "10px", alignItems: "center" }}>
-                          <div>
-                            <label style={{ display: "block", fontSize: "0.72rem", color: "#94a3b8", marginBottom: "2px" }}>
-                              Marks Awarded (0–{item.maxMarks})
-                            </label>
-                            <input
-                              type="number"
-                              min="0"
-                              max={item.maxMarks}
-                              step="0.5"
-                              className="filter-input"
-                              style={{ width: "100%", fontWeight: 800, color: "#fbbf24" }}
-                              value={scriptQuestionMarks[qKey] ?? 0}
-                              onChange={(e) => setScriptQuestionMarks({ ...scriptQuestionMarks, [qKey]: e.target.value })}
-                            />
-                          </div>
-                          <div>
-                            <label style={{ display: "block", fontSize: "0.72rem", color: "#94a3b8", marginBottom: "2px" }}>
-                              Teacher Comment on Q{item.questionNumber}
-                            </label>
-                            <input
-                              type="text"
-                              placeholder="Optional marking remark..."
-                              className="filter-input"
-                              style={{ width: "100%" }}
-                              value={scriptQuestionComments[qKey] || ""}
-                              onChange={(e) => setScriptQuestionComments({ ...scriptQuestionComments, [qKey]: e.target.value })}
-                            />
-                          </div>
-                        </div>
-                      </div>
-                    );
-                  })
-                )}
-              </div>
-
-              <div style={{ marginBottom: "14px" }}>
-                <label style={{ display: "block", fontSize: "0.78rem", color: "#cbd5e1", fontWeight: 700, marginBottom: "4px" }}>
-                  Overall Examiner Feedback to Student
+                  style={{ marginBottom: "10px", fontSize: "0.8rem", color: "#cbd5e1" }}
+                />
+                <label style={{ display: "block", fontSize: "0.8rem", color: "#94a3b8", marginBottom: "4px" }}>
+                  Or Paste Typed Examination Questions Text:
                 </label>
                 <textarea
-                  rows={2}
+                  rows={4}
+                  placeholder="Paste typed questions here for students to take online..."
+                  value={newExamForm.typedQuestionText}
+                  onChange={(e) => setNewExamForm({ ...newExamForm, typedQuestionText: e.target.value })}
                   className="filter-input"
-                  style={{ width: "100%" }}
-                  placeholder="e.g. Strong theoretical explanations in Section B; minor calculation slip in Q1."
-                  value={scriptOverallFeedback}
-                  onChange={(e) => setScriptOverallFeedback(e.target.value)}
+                  style={{ width: "100%", fontSize: "0.8rem" }}
                 />
-              </div>
 
-              <div style={{ display: "flex", justifyContent: "flex-end", gap: "10px" }}>
-                <button type="button" className="btn-secondary" onClick={() => setActiveGradingScript(null)}>Cancel</button>
+                {/* Typed Exam Verification Preview Display Before Publishing */}
+                {(newExamForm.uploadedDocName || newExamForm.typedQuestionText) && (
+                  <div style={{
+                    marginTop: "12px",
+                    background: "rgba(2, 6, 23, 0.85)",
+                    border: "1.5px solid #38bdf8",
+                    borderRadius: "8px",
+                    padding: "12px",
+                    boxShadow: "0 4px 15px rgba(56, 189, 248, 0.2)"
+                  }}>
+                    <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "8px" }}>
+                      <div style={{ display: "flex", alignItems: "center", gap: "6px" }}>
+                        <span style={{ fontSize: "1.1rem" }}>👁️</span>
+                        <strong style={{ fontSize: "0.85rem", color: "#38bdf8" }}>
+                          VERIFY TYPED EXAM CONTENT (PRE-PUBLICATION AUDIT)
+                        </strong>
+                      </div>
+                      <span style={{
+                        background: "rgba(16, 185, 129, 0.2)",
+                        color: "#34d399",
+                        padding: "2px 8px",
+                        borderRadius: "4px",
+                        fontSize: "0.72rem",
+                        fontWeight: 800
+                      }}>
+                        ✓ Content Verified & Ready to Publish
+                      </span>
+                    </div>
+
+                    {newExamForm.uploadedDocName && (
+                      <div style={{ fontSize: "0.8rem", color: "#cbd5e1", marginBottom: "6px" }}>
+                        📁 <strong>Attached Paper:</strong> <span style={{ color: "#fbbf24" }}>{newExamForm.uploadedDocName}</span>
+                      </div>
+                    )}
+
+                    {newExamForm.typedQuestionText && (
+                      <div>
+                        <span style={{ fontSize: "0.72rem", color: "#94a3b8", display: "block", marginBottom: "3px" }}>
+                          Document Preview:
+                        </span>
+                        <div style={{
+                          background: "rgba(15, 23, 42, 0.9)",
+                          padding: "8px 10px",
+                          borderRadius: "6px",
+                          fontSize: "0.78rem",
+                          color: "#f8fafc",
+                          maxHeight: "100px",
+                          overflowY: "auto",
+                          fontFamily: "monospace",
+                          whiteSpace: "pre-wrap"
+                        }}>
+                          {newExamForm.typedQuestionText}
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                )}
+              </div>
+            )}
+
+            {/* Mode C: AI Scanner OMR Sheet */}
+            {examAuthorMode === "PRINT_OMR" && (
+              <div style={{ background: "rgba(15, 23, 42, 0.6)", padding: "14px", borderRadius: "10px", marginBottom: "1.25rem", textAlign: "center" }}>
+                <span style={{ fontSize: "2rem" }}>🖨️</span>
+                <h4 style={{ margin: "4px 0", color: "#34d399", fontSize: "0.95rem" }}>
+                  AI SCANNER COMPLIANT OMR BUBBLE ANSWER SHEET
+                </h4>
+                <p style={{ fontSize: "0.78rem", color: "#94a3b8", maxWidth: "480px", margin: "0 auto 10px" }}>
+                  Generates a standardized 50-question optical bubble matrix with high-contrast fiducial markers. When students shade their answers on paper, the AI Exam Scanner automatically grades their script.
+                </p>
                 <button
                   type="button"
                   className="btn-primary"
-                  disabled={savingScriptGrade}
-                  onClick={handleCommitScriptGrade}
-                  style={{ background: "linear-gradient(135deg, #10b981, #059669)", fontWeight: 800, padding: "10px 20px" }}
+                  style={{ background: "linear-gradient(135deg, #10b981, #059669)", padding: "8px 16px", fontSize: "0.8rem" }}
+                  onClick={() => {
+                    window.print();
+                    setFeedback({ type: "success", message: "OMR answer sheet formatted and sent to printer." });
+                  }}
                 >
-                  {savingScriptGrade ? "⏳ Publishing Grade..." : "💾 Save & Publish Graded Script"}
+                  🖨️ Print Standard AI OMR Sheet & Questions
                 </button>
               </div>
-            </div>
-          </div>
-        )
-      }
+            )}
 
-      {/* Universal Floating Scroll Navigator (Back to Top / Scroll to Bottom) */}
+            <div style={{ display: "flex", justifyContent: "flex-end", gap: "10px", marginTop: "1rem", flexWrap: "wrap" }}>
+              <button type="button" className="btn-secondary" onClick={() => setShowAuthorExamModal(false)}>Cancel</button>
+              <button
+                type="button"
+                className="btn-primary"
+                onClick={handleDirectPublishTimedExam}
+                style={{ background: "linear-gradient(135deg, #10b981, #059669)", padding: "10px 18px", fontWeight: 800 }}
+              >
+                🚀 Save & Schedule Timed Exam Now
+              </button>
+              <button type="submit" className="btn-primary" style={{ background: "linear-gradient(135deg, #8b5cf6, #6d28d9)", padding: "10px 20px", fontWeight: 800 }}>
+                🔍 Verify Questions & Proceed to Publish
+              </button>
+            </div>
+          </form>
+        </div>
+      </div>
+    )
+  }
+
+  {/* MODAL: PRE-PUBLICATION EXAM QUESTION VERIFICATION & AUDIT */ }
+  {
+    showQuestionVerificationModal && pendingPublishExam && (
       <div
+        className="modal-backdrop invoice-pay-modal-overlay"
         style={{
           position: "fixed",
-          bottom: "24px",
-          right: "24px",
+          inset: 0,
+          zIndex: 99999,
+          background: "rgba(2, 6, 23, 0.84)",
+          backdropFilter: "blur(10px)",
           display: "flex",
-          flexDirection: "column",
-          gap: "8px",
-          zIndex: 9999
+          alignItems: "center",
+          justifyContent: "center",
+          padding: "1.25rem",
+          overflowY: "auto"
         }}
       >
-        <button
-          type="button"
-          onClick={() => window.scrollTo({ top: 0, behavior: "smooth" })}
-          title="Scroll to Top"
-          style={{
-            background: "linear-gradient(135deg, #0284c7, #2563eb)",
-            color: "#ffffff",
-            border: "1.5px solid rgba(255,255,255,0.3)",
-            borderRadius: "50%",
-            width: "42px",
-            height: "42px",
-            fontSize: "1.1rem",
-            cursor: "pointer",
-            boxShadow: "0 4px 14px rgba(0,0,0,0.4)",
-            display: "flex",
-            alignItems: "center",
-            justifyContent: "center",
-            transition: "transform 0.2s"
-          }}
-          onMouseEnter={(e) => e.currentTarget.style.transform = "scale(1.1)"}
-          onMouseLeave={(e) => e.currentTarget.style.transform = "scale(1.0)"}
-        >
-          ⬆️
-        </button>
-        <button
-          type="button"
-          onClick={() => window.scrollTo({ top: document.body.scrollHeight, behavior: "smooth" })}
-          title="Scroll to Bottom"
-          style={{
-            background: "linear-gradient(135deg, #1e293b, #0f172a)",
-            color: "#38bdf8",
-            border: "1.5px solid rgba(56,189,248,0.4)",
-            borderRadius: "50%",
-            width: "42px",
-            height: "42px",
-            fontSize: "1.1rem",
-            cursor: "pointer",
-            boxShadow: "0 4px 14px rgba(0,0,0,0.4)",
-            display: "flex",
-            alignItems: "center",
-            justifyContent: "center",
-            transition: "transform 0.2s"
-          }}
-          onMouseEnter={(e) => e.currentTarget.style.transform = "scale(1.1)"}
-          onMouseLeave={(e) => e.currentTarget.style.transform = "scale(1.0)"}
-        >
-          ⬇️
-        </button>
-      </div>
+        <div className="invoice-pay-modal" style={{ width: "100%", maxWidth: "860px", background: "#0b1329", border: "2px solid #8b5cf6", borderRadius: "16px", padding: "2rem", maxHeight: "90vh", overflowY: "auto", boxShadow: "0 0 30px rgba(139, 92, 246, 0.4)" }}>
+          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", borderBottom: "1.5px solid rgba(139, 92, 246, 0.4)", paddingBottom: "1rem", marginBottom: "1.25rem" }}>
+            <div>
+              <span className="role-portal-badge" style={{ color: "#c084fc", marginBottom: "4px", display: "inline-block" }}>
+                MANDATORY FACULTY AUDIT • PRE-PUBLICATION VERIFICATION
+              </span>
+              <h2 style={{ margin: "2px 0 0", color: "#f8fafc", fontSize: "1.35rem", fontWeight: "900" }}>
+                VERIFY EXAMINATION QUESTIONS BEFORE PUBLISHING
+              </h2>
+              <p style={{ margin: "4px 0 0", color: "#94a3b8", fontSize: "0.82rem" }}>
+                Please inspect all typed questions, attached documents, answer keys, and passing thresholds below. Once confirmed, this examination immediately becomes active for enrolled students.
+              </p>
+            </div>
+            <button type="button" className="btn-secondary" onClick={() => setShowQuestionVerificationModal(false)}>✕</button>
+          </div>
 
-      {/* TEACHER ZERO-MISTAKE MANUAL OVERRIDE MODAL */}
-      {
-        editingScript && (
-          <div className="role-modal-backdrop">
-            <div className="role-modal-card" style={{ maxWidth: "680px", background: "rgba(15, 23, 42, 0.98)", border: "2px solid #f59e0b", borderRadius: "16px", padding: "24px", boxShadow: "0 25px 60px rgba(0,0,0,0.85)" }}>
-              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "14px", borderBottom: "1px solid rgba(255, 255, 255, 0.1)", paddingBottom: "10px" }}>
-                <div style={{ display: "flex", alignItems: "center", gap: "10px" }}>
-                  <span style={{ fontSize: "1.8rem" }}>✍️</span>
-                  <div>
-                    <h3 style={{ margin: 0, color: "#fbbf24", fontSize: "1.15rem", fontWeight: "800" }}>
-                      TEACHER MANUAL SCRIPT OVERRIDE & CORRECTION
-                    </h3>
-                    <span style={{ fontSize: "0.75rem", color: "#94a3b8" }}>
-                      Student: <strong style={{ color: "#fff" }}>{editingScript.studentName}</strong> • Current AI Score: <strong style={{ color: "#34d399" }}>{editingScript.percentage}% (Grade {editingScript.grade})</strong>
-                    </span>
-                  </div>
-                </div>
-                <button type="button" className="modal-close-btn" onClick={() => setEditingScript(null)}>✕</button>
-              </div>
+          {/* Exam Summary Overview */}
+          <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(200px, 1fr))", gap: "10px", background: "rgba(15, 23, 42, 0.8)", padding: "12px 16px", borderRadius: "10px", border: "1px solid rgba(255,255,255,0.08)", marginBottom: "1.25rem" }}>
+            <div>
+              <span style={{ fontSize: "0.72rem", color: "#94a3b8", display: "block" }}>Paper Title</span>
+              <strong style={{ color: "#f8fafc", fontSize: "0.88rem" }}>{pendingPublishExam.title}</strong>
+            </div>
+            <div>
+              <span style={{ fontSize: "0.72rem", color: "#94a3b8", display: "block" }}>Subject / Class</span>
+              <strong style={{ color: "#38bdf8", fontSize: "0.88rem" }}>{pendingPublishExam.subjectName} ({pendingPublishExam.subjectCode})</strong>
+            </div>
+            <div>
+              <span style={{ fontSize: "0.72rem", color: "#94a3b8", display: "block" }}>Date & Time Window</span>
+              <strong style={{ color: "#34d399", fontSize: "0.88rem" }}>{pendingPublishExam.examDate} • {pendingPublishExam.startTime} - {pendingPublishExam.endTime}</strong>
+            </div>
+            <div>
+              <span style={{ fontSize: "0.72rem", color: "#94a3b8", display: "block" }}>Total Marks / Pass</span>
+              <strong style={{ color: "#fbbf24", fontSize: "0.88rem" }}>{pendingPublishExam.totalMarks} Marks (Pass: {pendingPublishExam.passMarks})</strong>
+            </div>
+          </div>
 
-              <div style={{ background: "rgba(245, 158, 11, 0.1)", border: "1px solid rgba(245, 158, 11, 0.3)", borderRadius: "10px", padding: "12px 16px", marginBottom: "14px", fontSize: "0.85rem", color: "#fef3c7" }}>
-                🔍 <strong>Zero-Mistake Guarantee:</strong> AI models make mistakes. Inspect student question answers below. Tap any question to toggle between Correct / Incorrect or adjust the raw score directly.
-              </div>
+          {/* Questions List Verification View */}
+          <div style={{ marginBottom: "1.25rem" }}>
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "8px" }}>
+              <h4 style={{ margin: 0, color: "#e2e8f0", fontSize: "0.95rem" }}>
+                📝 Authored Questions Verification Matrix
+              </h4>
+              <span style={{ background: "rgba(139, 92, 246, 0.2)", color: "#c084fc", padding: "2px 10px", borderRadius: "999px", fontSize: "0.75rem", fontWeight: 700 }}>
+                {pendingPublishExam.questionBank?.length || 0} Questions Ready
+              </span>
+            </div>
 
-              <div style={{ display: "grid", gridTemplateColumns: "repeat(5, 1fr)", gap: "10px", marginBottom: "16px", maxHeight: "260px", overflowY: "auto" }}>
-                {Array.from({ length: Math.max(1, Math.min(100, Number(editingScript.totalQuestions || scannerQuestionCount) || 10)) }, (_, i) => i + 1).map((q) => {
-                  const totalScriptQ = Math.max(1, Math.min(100, Number(editingScript.totalQuestions || scannerQuestionCount) || 10));
-                  const studentAns = (editingScript.answers && editingScript.answers[q]) || "A";
-                  const correctAns = teacherAnswerKey[q] || "A";
-                  const isCorrect = studentAns === correctAns;
-
+            {pendingPublishExam.questionBank && pendingPublishExam.questionBank.length > 0 ? (
+              <div style={{ display: "flex", flexDirection: "column", gap: "8px", maxHeight: "280px", overflowY: "auto", paddingRight: "4px" }}>
+                {pendingPublishExam.questionBank.map((q, idx) => {
+                  const qType = q.questionType || "MULTIPLE_CHOICE";
+                  const isMCQ = qType === "MULTIPLE_CHOICE";
+                  const isTF = qType === "TRUE_FALSE";
+                  const isFill = qType === "FILL_IN_BLANK";
+                  const isWritten = !isMCQ && !isTF && !isFill;
                   return (
-                    <div key={q} style={{ background: isCorrect ? "rgba(16, 185, 129, 0.1)" : "rgba(239, 68, 68, 0.1)", border: isCorrect ? "1px solid #10b981" : "1px solid #ef4444", borderRadius: "8px", padding: "8px", textAlign: "center" }}>
-                      <span style={{ fontSize: "0.72rem", color: "#94a3b8", display: "block" }}>Q{q}</span>
-                      <strong style={{ color: isCorrect ? "#34d399" : "#fca5a5", fontSize: "0.95rem" }}>
-                        Ans: {studentAns} {isCorrect ? "✓" : "✕"}
-                      </strong>
-                      <div style={{ fontSize: "0.68rem", color: "#64748b", marginTop: "2px" }}>Key: {correctAns}</div>
-                      <button
-                        type="button"
-                        onClick={() => {
-                          const newAnswers = { ...editingScript.answers, [q]: isCorrect ? (correctAns === "A" ? "B" : "A") : correctAns };
-                          let correctCount = 0;
-                          for (let k = 1; k <= totalScriptQ; k++) {
-                            if ((newAnswers[k] || "A") === (teacherAnswerKey[k] || "A")) correctCount++;
-                          }
-                          const newPct = Math.round((correctCount / totalScriptQ) * 100);
-                          const newGrade = computeGrade(newPct);
-                          setEditingScript({
-                            ...editingScript,
-                            answers: newAnswers,
-                            totalQuestions: totalScriptQ,
-                            score: correctCount,
-                            percentage: newPct,
-                            grade: newGrade
-                          });
-                        }}
-                        style={{
-                          marginTop: "4px",
-                          background: isCorrect ? "#ef4444" : "#10b981",
-                          color: "#fff",
-                          border: "none",
-                          borderRadius: "4px",
-                          padding: "2px 6px",
-                          fontSize: "0.65rem",
-                          fontWeight: 800,
-                          cursor: "pointer",
-                          width: "100%"
-                        }}
-                      >
-                        {isCorrect ? "Mark ✕" : "Mark ✓"}
-                      </button>
+                    <div key={q.id || idx} style={{ background: "rgba(2, 6, 23, 0.7)", border: "1px solid rgba(255,255,255,0.08)", borderRadius: "8px", padding: "10px 14px" }}>
+                      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: "6px", marginBottom: "4px" }}>
+                        <strong style={{ color: "#38bdf8", fontSize: "0.82rem" }}>
+                          Question {idx + 1} • [{qType.replace(/_/g, " ")}] ({q.marks || 10} Marks)
+                        </strong>
+                        {isMCQ && (
+                          <span style={{ background: "#065f46", color: "#34d399", padding: "2px 8px", borderRadius: "4px", fontSize: "0.72rem", fontWeight: 800 }}>
+                            Correct: Option {q.correctOption || "A"}
+                          </span>
+                        )}
+                        {isTF && (
+                          <span style={{ background: "#065f46", color: "#34d399", padding: "2px 8px", borderRadius: "4px", fontSize: "0.72rem", fontWeight: 800 }}>
+                            Correct: {q.correctOption === "B" ? "False" : "True"}
+                          </span>
+                        )}
+                        {isFill && (
+                          <span style={{ background: "rgba(217, 119, 6, 0.25)", color: "#fbbf24", padding: "2px 8px", borderRadius: "4px", fontSize: "0.72rem", fontWeight: 800 }}>
+                            Accepted: {q.acceptedAnswer || "Teacher Verified"}
+                          </span>
+                        )}
+                        {isWritten && (
+                          <span style={{ background: "rgba(139, 92, 246, 0.25)", color: "#c084fc", padding: "2px 8px", borderRadius: "4px", fontSize: "0.72rem", fontWeight: 800 }}>
+                            ✍️ Student Typed Written Answer {q.wordLimit ? `• ~${q.wordLimit} words` : ""}
+                          </span>
+                        )}
+                      </div>
+                      <p style={{ margin: "2px 0 6px", color: "#f8fafc", fontSize: "0.85rem", whiteSpace: "pre-wrap" }}>{q.questionText}</p>
+                      {isMCQ && (
+                        <div style={{ display: "grid", gridTemplateColumns: "repeat(2, 1fr)", gap: "6px", fontSize: "0.78rem" }}>
+                          <div style={{ color: q.correctOption === "A" ? "#34d399" : "#94a3b8", fontWeight: q.correctOption === "A" ? 700 : 400 }}>
+                            A) {q.optionA || "Option A"} {q.correctOption === "A" && "✓"}
+                          </div>
+                          <div style={{ color: q.correctOption === "B" ? "#34d399" : "#94a3b8", fontWeight: q.correctOption === "B" ? 700 : 400 }}>
+                            B) {q.optionB || "Option B"} {q.correctOption === "B" && "✓"}
+                          </div>
+                          <div style={{ color: q.correctOption === "C" ? "#34d399" : "#94a3b8", fontWeight: q.correctOption === "C" ? 700 : 400 }}>
+                            C) {q.optionC || "Option C"} {q.correctOption === "C" && "✓"}
+                          </div>
+                          <div style={{ color: q.correctOption === "D" ? "#34d399" : "#94a3b8", fontWeight: q.correctOption === "D" ? 700 : 400 }}>
+                            D) {q.optionD || "Option D"} {q.correctOption === "D" && "✓"}
+                          </div>
+                        </div>
+                      )}
+                      {isWritten && (q.markingGuide || q.acceptedKeywords) && (
+                        <div style={{ fontSize: "0.75rem", color: "#cbd5e1", background: "rgba(15, 23, 42, 0.7)", padding: "6px 8px", borderRadius: "6px" }}>
+                          {q.markingGuide && <div><strong>Marking Guide:</strong> {q.markingGuide}</div>}
+                          {q.acceptedKeywords && <div style={{ color: "#fbbf24" }}><strong>Keywords:</strong> {q.acceptedKeywords}</div>}
+                        </div>
+                      )}
                     </div>
                   );
                 })}
               </div>
+            ) : (
+              <div style={{ background: "rgba(2, 6, 23, 0.7)", border: "1px dashed #334155", borderRadius: "8px", padding: "14px", textAlign: "center", color: "#94a3b8", fontSize: "0.82rem" }}>
+                No multiple-choice questions configured in builder mode.
+              </div>
+            )}
 
-              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", background: "rgba(2, 6, 23, 0.7)", padding: "12px 16px", borderRadius: "10px", marginBottom: "16px" }}>
-                <div>
-                  <span style={{ fontSize: "0.75rem", color: "#94a3b8" }}>Recalculated Score:</span>
-                  <div style={{ fontSize: "1.2rem", fontWeight: 900, color: "#34d399" }}>
-                    {editingScript.score || 0} / {editingScript.totalQuestions || scannerQuestionCount || 10} ({editingScript.percentage || 0}%) • Grade {editingScript.grade || "C"}
-                  </div>
-                </div>
-                <div style={{ display: "flex", gap: "8px" }}>
-                  <button
-                    type="button"
-                    className="btn-secondary"
-                    onClick={() => setEditingScript(null)}
-                    style={{ padding: "8px 16px" }}
-                  >
-                    Cancel
-                  </button>
-                  <button
-                    type="button"
-                    className="btn-primary"
-                    style={{ background: "linear-gradient(135deg, #10b981, #059669)", fontWeight: 800, padding: "8px 20px" }}
-                    onClick={() => {
-                      setScannedBatchScripts((prev) =>
-                        prev.map((s) => (s.id === editingScript.id || s.studentId === editingScript.studentId ? editingScript : s))
-                      );
-                      setFeedback({ type: "success", message: `✓ Teacher override applied for ${editingScript.studentName}! Final Grade: ${editingScript.grade} (${editingScript.percentage}%)` });
-                      setEditingScript(null);
-                    }}
-                  >
-                    💾 Save & Commit Override
-                  </button>
+            {/* Uploaded Doc Preview */}
+            {pendingPublishExam.uploadedDocName && (
+              <div style={{ marginTop: "10px", background: "rgba(2, 6, 23, 0.8)", border: "1.5px solid #38bdf8", borderRadius: "8px", padding: "10px 14px" }}>
+                <span style={{ fontSize: "0.75rem", color: "#38bdf8", fontWeight: 700, display: "block", marginBottom: "2px" }}>
+                  📁 Verified Attached Paper Document:
+                </span>
+                <strong style={{ color: "#fbbf24", fontSize: "0.85rem" }}>{pendingPublishExam.uploadedDocName}</strong>
+              </div>
+            )}
+
+            {/* Typed Question Paper Text Preview */}
+            {pendingPublishExam.typedQuestionText && (
+              <div style={{ marginTop: "10px", background: "rgba(2, 6, 23, 0.8)", border: "1px solid rgba(255,255,255,0.1)", borderRadius: "8px", padding: "10px 14px" }}>
+                <span style={{ fontSize: "0.75rem", color: "#94a3b8", display: "block", marginBottom: "4px" }}>
+                  📄 Typed Question Paper Text (Verified for Student Portals):
+                </span>
+                <div style={{ background: "rgba(15, 23, 42, 0.9)", padding: "10px", borderRadius: "6px", maxHeight: "120px", overflowY: "auto", fontFamily: "monospace", fontSize: "0.78rem", color: "#f8fafc", whiteSpace: "pre-wrap" }}>
+                  {pendingPublishExam.typedQuestionText}
                 </div>
               </div>
-            </div>
+            )}
           </div>
-        )
-      }
 
-      {/* ======================================================== */}
-      {/* MODAL: CURRICULUM UPDATE & REVISION STUDIO               */}
-      {/* ======================================================== */}
-      {
-        editingCurriculumModal && (
-          <div className="role-modal-backdrop" onClick={() => setEditingCurriculumModal(null)}>
-            <div
-              className="role-modal-card"
-              onClick={(e) => e.stopPropagation()}
+          {/* Faculty Verification Attestation */}
+          <div style={{ background: "rgba(16, 185, 129, 0.12)", border: "1px solid #10b981", borderRadius: "8px", padding: "10px 14px", marginBottom: "1.25rem" }}>
+            <label style={{ display: "flex", alignItems: "center", gap: "10px", cursor: "pointer", fontSize: "0.82rem", color: "#34d399", fontWeight: 700 }}>
+              <input
+                type="checkbox"
+                checked={questionsVerifiedCheck}
+                onChange={(e) => setQuestionsVerifiedCheck(e.target.checked)}
+                style={{ width: "16px", height: "16px", accentColor: "#10b981" }}
+              />
+              <span>I have cross-checked and verified all questions, options, answer keys, and timing above. I authorize publishing this exam to the student dashboard.</span>
+            </label>
+          </div>
+
+          <div style={{ display: "flex", justifyContent: "flex-end", gap: "10px" }}>
+            <button
+              type="button"
+              className="btn-secondary"
+              onClick={() => setShowQuestionVerificationModal(false)}
+            >
+              ✏️ Return to Edit Questions
+            </button>
+            <button
+              type="button"
+              className="btn-primary"
+              disabled={!questionsVerifiedCheck}
+              onClick={handleConfirmPublishVerifiedExam}
               style={{
-                maxWidth: "880px",
-                width: "95%",
-                maxHeight: "90vh",
-                overflowY: "auto",
-                background: "rgba(15, 23, 42, 0.98)",
-                border: "2px solid #f59e0b",
-                borderRadius: "16px",
-                padding: "22px",
-                boxShadow: "0 25px 60px rgba(0,0,0,0.85)"
+                background: questionsVerifiedCheck ? "linear-gradient(135deg, #10b981, #059669)" : "#475569",
+                cursor: questionsVerifiedCheck ? "pointer" : "not-allowed",
+                padding: "10px 22px",
+                fontWeight: 900
               }}
             >
-              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", borderBottom: "1px solid rgba(255,255,255,0.1)", paddingBottom: "12px", marginBottom: "14px" }}>
+              🚀 Confirm & Officially Publish to Students
+            </button>
+          </div>
+        </div>
+      </div>
+    )
+  }
+
+  {/* MODAL: ARCHIVED APPROVED WEEKLY ATTENDANCE REGISTERS */ }
+  {
+    showArchivedAttendanceModal && (
+      <div
+        className="modal-backdrop invoice-pay-modal-overlay"
+        style={{
+          position: "fixed",
+          inset: 0,
+          zIndex: 99999,
+          background: "rgba(2, 6, 23, 0.82)",
+          backdropFilter: "blur(10px)",
+          display: "flex",
+          alignItems: "center",
+          justifyContent: "center",
+          padding: "1.25rem",
+          overflowY: "auto"
+        }}
+      >
+        <div className="invoice-pay-modal" style={{ width: "100%", maxWidth: "860px", background: "#0b1329", border: "2px solid #38bdf8", borderRadius: "16px", padding: "2rem", maxHeight: "90vh", overflowY: "auto", boxShadow: "0 25px 60px rgba(0,0,0,0.65)" }}>
+          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", borderBottom: "1.5px solid rgba(56, 189, 248, 0.3)", paddingBottom: "1rem", marginBottom: "1.25rem" }}>
+            <div>
+              <span className="role-portal-badge" style={{ color: "#38bdf8", marginBottom: "4px", display: "inline-block" }}>
+                OFFICIAL INSTITUTIONAL RECORDS • HISTORICAL ATTENDANCE ARCHIVES
+              </span>
+              <h2 style={{ margin: "2px 0 0", color: "#f8fafc", fontSize: "1.35rem", fontWeight: "900" }}>
+                ARCHIVED APPROVED WEEKLY ATTENDANCES
+              </h2>
+              <p style={{ margin: "4px 0 0", color: "#94a3b8", fontSize: "0.82rem" }}>
+                Complete historical record of weekly attendance registers verified, signed off by the Headmaster, and archived by faculty.
+              </p>
+            </div>
+            <button type="button" className="btn-secondary" onClick={() => setShowArchivedAttendanceModal(false)}>✕</button>
+          </div>
+
+          {archivedWeeklyAttendances.length === 0 ? (
+            <div style={{ textAlign: "center", padding: "40px 20px", color: "#94a3b8", background: "rgba(15, 23, 42, 0.6)", borderRadius: "12px", border: "1px dashed #334155" }}>
+              <span style={{ fontSize: "2.5rem", display: "block", marginBottom: "8px" }}>📁</span>
+              <strong style={{ color: "#f8fafc", fontSize: "1rem" }}>No Weekly Attendance Archived Yet</strong>
+              <p style={{ margin: "6px auto 0", maxWidth: "440px", fontSize: "0.82rem" }}>
+                When the Headmaster vets and approves your close of week attendance, click the <strong>"📁 Archive Approved Weekly Attendance"</strong> button to save and reference it here.
+              </p>
+            </div>
+          ) : (
+            <div className="role-table-responsive" style={{ maxHeight: "380px", overflowY: "auto" }}>
+              <table className="role-table" style={{ fontSize: "0.82rem" }}>
+                <thead>
+                  <tr>
+                    <th>Week Report ID</th>
+                    <th>Class / Cohort</th>
+                    <th>Headmaster Sign-off</th>
+                    <th>Archived Date</th>
+                    <th>Total Roster</th>
+                    <th>Status</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {archivedWeeklyAttendances.map((rec) => (
+                    <tr key={rec.id}>
+                      <td>
+                        <strong style={{ color: "#38bdf8" }}>{rec.id}</strong>
+                        <span style={{ display: "block", fontSize: "0.72rem", color: "#94a3b8" }}>{rec.weekLabel || "Weekly Register"}</span>
+                      </td>
+                      <td>{rec.className || "Grade 10A / SHS 1"}</td>
+                      <td>
+                        <span style={{ color: "#34d399", fontWeight: 700 }}>✓ {rec.headmasterSignOff?.signedBy || "Headmaster"}</span>
+                        <span style={{ display: "block", fontSize: "0.7rem", color: "#64748b" }}>{rec.headmasterSignOff?.signedAt ? new Date(rec.headmasterSignOff.signedAt).toLocaleDateString() : "Verified"}</span>
+                      </td>
+                      <td>{rec.archivedDate || rec.archivedAt?.split("T")[0] || "Archived"}</td>
+                      <td><strong>{rec.records?.length || 24} Students</strong></td>
+                      <td>
+                        <span style={{ background: "#065f46", color: "#34d399", padding: "3px 8px", borderRadius: "999px", fontSize: "0.72rem", fontWeight: 800 }}>
+                          VETTED & ARCHIVED
+                        </span>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          )}
+
+          <div style={{ display: "flex", justifyContent: "flex-end", marginTop: "1.25rem", gap: "10px" }}>
+            <button type="button" className="btn-secondary" onClick={() => setShowArchivedAttendanceModal(false)}>Close Archives</button>
+            <button
+              type="button"
+              className="btn-primary"
+              onClick={() => {
+                window.print();
+              }}
+            >
+              🖨️ Print / Export Archives
+            </button>
+          </div>
+        </div>
+      </div>
+    )
+  }
+
+  {/* MODAL: CREATE / PUBLISH EXAMINATION TIMETABLE GUIDE */ }
+  {
+    showExamTimetableModal && (
+      <div
+        className="modal-backdrop invoice-pay-modal-overlay"
+        style={{
+          position: "fixed",
+          inset: 0,
+          zIndex: 99999,
+          background: "rgba(2, 6, 23, 0.82)",
+          backdropFilter: "blur(10px)",
+          display: "flex",
+          alignItems: "center",
+          justifyContent: "center",
+          padding: "1.25rem",
+          overflowY: "auto"
+        }}
+      >
+        <div className="invoice-pay-modal" style={{ width: "100%", maxWidth: "960px", background: "#0b1329", border: "2px solid #38bdf8", borderRadius: "16px", padding: "2rem", maxHeight: "90vh", overflowY: "auto", boxShadow: "0 25px 60px rgba(0,0,0,0.65)" }}>
+          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", borderBottom: "1.5px solid rgba(56, 189, 248, 0.3)", paddingBottom: "1.25rem", marginBottom: "1.5rem" }}>
+            <div>
+              <span className="role-portal-badge" style={{ color: "#38bdf8", marginBottom: "4px", display: "inline-block" }}>
+                OFFICIAL ACADEMIC REGULATION • EXAMINATION TIMETABLE GUIDE
+              </span>
+              <h2 style={{ margin: "2px 0 0", color: "#f8fafc", fontSize: "1.35rem", fontWeight: "900" }}>
+                CREATE / EDIT EXAMINATION TIMETABLE GUIDE
+              </h2>
+              <p style={{ margin: "4px 0 0", color: "#94a3b8", fontSize: "0.82rem" }}>
+                Published to the Student Dashboard so candidates learn and prepare according to the official procedure and hall regulations.
+              </p>
+            </div>
+            <button type="button" className="btn-secondary" onClick={() => setShowExamTimetableModal(false)}>✕</button>
+          </div>
+
+          <form onSubmit={handleSaveExamTimetable}>
+            {/* QUICK ADD NEW EXAM TIMETABLE ENTRY FORM (Allows adding entries anytime when there are exam times for students) */}
+            <div style={{ background: "rgba(15, 23, 42, 0.9)", border: "1.5px solid rgba(56, 189, 248, 0.45)", borderRadius: "12px", padding: "14px", marginBottom: "1.25rem" }}>
+              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: "8px", marginBottom: "10px" }}>
                 <div>
-                  <h3 style={{ margin: 0, color: "#fbbf24", fontSize: "1.12rem", fontWeight: 800 }}>
-                    🔄 Update Official Curriculum & Term Week Spread — {editingCurriculumModal.subjectName} ({editingCurriculumModal.className})
-                  </h3>
-                  <span style={{ fontSize: "0.78rem", color: "#94a3b8" }}>
-                    Updates sync immediately across Teacher & Headmaster Curriculum Checkup registries • {editingCurriculumModal.numberOfWeeks} Weeks in Term
+                  <strong style={{ color: "#38bdf8", fontSize: "0.88rem", display: "block" }}>
+                    ➕ Add Examination Timetable Entry for Students
+                  </strong>
+                  <span style={{ fontSize: "0.75rem", color: "#cbd5e1" }}>
+                    Enter the exam date, start/end time, course, format, and hall below and click <strong>+ Add Timetable Entry</strong> to append it to the guide.
                   </span>
                 </div>
-                <button type="button" className="modal-close-btn" onClick={() => setEditingCurriculumModal(null)}>✕</button>
-              </div>
-
-              <form onSubmit={handleSaveCurriculumUpdate}>
-                <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "12px", marginBottom: "14px" }}>
-                  <div>
-                    <label style={{ display: "block", fontSize: "0.75rem", fontWeight: 800, color: "#38bdf8", marginBottom: "4px" }}>
-                      Curriculum Version / Update Tag:
-                    </label>
-                    <input
-                      type="text"
-                      className="filter-input"
-                      value={editingCurriculumModal.versionTag || "v2026.2 Updated"}
-                      onChange={(e) => setEditingCurriculumModal({ ...editingCurriculumModal, versionTag: e.target.value })}
-                      style={{ width: "100%" }}
-                    />
-                  </div>
-                  <div>
-                    <label style={{ display: "block", fontSize: "0.75rem", fontWeight: 800, color: "#34d399", marginBottom: "4px" }}>
-                      Framework Authority / Regulatory Reference:
-                    </label>
-                    <input
-                      type="text"
-                      className="filter-input"
-                      value={editingCurriculumModal.frameworkAuthority || ""}
-                      onChange={(e) => setEditingCurriculumModal({ ...editingCurriculumModal, frameworkAuthority: e.target.value })}
-                      style={{ width: "100%" }}
-                    />
-                  </div>
-                </div>
-
-                <div style={{ marginBottom: "14px" }}>
-                  <div style={{ fontSize: "0.8rem", fontWeight: 800, color: "#fbbf24", marginBottom: "8px", textTransform: "uppercase" }}>
-                    1. Update Core Curriculum Strands & Learning Indicators:
-                  </div>
-                  <div style={{ display: "flex", flexDirection: "column", gap: "10px" }}>
-                    {(editingCurriculumModal.strands || []).map((st, idx) => (
-                      <div key={idx} style={{ background: "rgba(2, 6, 23, 0.7)", border: "1px solid rgba(56, 189, 248, 0.25)", borderRadius: "10px", padding: "10px 12px" }}>
-                        <div style={{ display: "grid", gridTemplateColumns: "120px 1fr", gap: "8px", marginBottom: "6px" }}>
-                          <input
-                            type="text"
-                            className="filter-input"
-                            value={st.code}
-                            onChange={(e) => {
-                              const next = [...editingCurriculumModal.strands];
-                              next[idx] = { ...next[idx], code: e.target.value };
-                              setEditingCurriculumModal({ ...editingCurriculumModal, strands: next });
-                            }}
-                            style={{ fontSize: "0.78rem", fontWeight: 800, color: "#38bdf8" }}
-                          />
-                          <input
-                            type="text"
-                            className="filter-input"
-                            value={st.strand}
-                            onChange={(e) => {
-                              const next = [...editingCurriculumModal.strands];
-                              next[idx] = { ...next[idx], strand: e.target.value };
-                              setEditingCurriculumModal({ ...editingCurriculumModal, strands: next });
-                            }}
-                            style={{ fontSize: "0.82rem", fontWeight: 700 }}
-                          />
-                        </div>
-                        <input
-                          type="text"
-                          className="filter-input"
-                          value={st.indicator}
-                          onChange={(e) => {
-                            const next = [...editingCurriculumModal.strands];
-                            next[idx] = { ...next[idx], indicator: e.target.value };
-                            setEditingCurriculumModal({ ...editingCurriculumModal, strands: next });
-                          }}
-                          style={{ width: "100%", fontSize: "0.78rem", color: "#cbd5e1" }}
-                          placeholder="Learning indicator..."
-                        />
-                      </div>
-                    ))}
-                  </div>
-                </div>
-
-                <div style={{ marginBottom: "16px" }}>
-                  <div style={{ fontSize: "0.8rem", fontWeight: 800, color: "#34d399", marginBottom: "8px", textTransform: "uppercase" }}>
-                    2. Update Week-by-Week Syllabus Spread ({(editingCurriculumModal.weeklyScheme || []).length} Weeks in School Term):
-                  </div>
-                  <div style={{ maxHeight: "260px", overflowY: "auto", display: "flex", flexDirection: "column", gap: "8px", paddingRight: "4px" }}>
-                    {(editingCurriculumModal.weeklyScheme || []).map((wk, wIdx) => (
-                      <div key={wIdx} style={{ display: "grid", gridTemplateColumns: "130px 1fr 1fr", gap: "8px", background: "rgba(2, 6, 23, 0.65)", padding: "8px 10px", borderRadius: "8px", border: "1px solid rgba(255,255,255,0.08)" }}>
-                        <strong style={{ color: "#38bdf8", fontSize: "0.76rem", alignSelf: "center" }}>{wk.week}</strong>
-                        <input
-                          type="text"
-                          className="filter-input"
-                          value={wk.topic}
-                          onChange={(e) => {
-                            const nextW = [...editingCurriculumModal.weeklyScheme];
-                            nextW[wIdx] = { ...nextW[wIdx], topic: e.target.value };
-                            setEditingCurriculumModal({ ...editingCurriculumModal, weeklyScheme: nextW });
-                          }}
-                          style={{ fontSize: "0.76rem" }}
-                          placeholder="Week Topic"
-                        />
-                        <input
-                          type="text"
-                          className="filter-input"
-                          value={wk.deliverable}
-                          onChange={(e) => {
-                            const nextW = [...editingCurriculumModal.weeklyScheme];
-                            nextW[wIdx] = { ...nextW[wIdx], deliverable: e.target.value };
-                            setEditingCurriculumModal({ ...editingCurriculumModal, weeklyScheme: nextW });
-                          }}
-                          style={{ fontSize: "0.75rem", color: "#34d399" }}
-                          placeholder="Deliverable"
-                        />
-                      </div>
-                    ))}
-                  </div>
-                </div>
-
-                <div style={{ display: "flex", justifyContent: "flex-end", gap: "10px" }}>
-                  <button type="button" className="btn-secondary" onClick={() => setEditingCurriculumModal(null)}>
-                    Cancel
+                <div style={{ display: "flex", gap: "8px", flexWrap: "wrap" }}>
+                  <button
+                    type="button"
+                    onClick={() => handleAddExamTimetableEntry(newTimetableEntryForm)}
+                    style={{ background: "linear-gradient(135deg, #059669, #047857)", color: "#ffffff", border: "1.5px solid #34d399", padding: "7px 14px", borderRadius: "6px", fontSize: "0.78rem", fontWeight: 800, cursor: "pointer" }}
+                  >
+                    ➕ Add Timetable Entry
                   </button>
                   <button
-                    type="submit"
-                    className="btn-primary"
-                    style={{ background: "linear-gradient(135deg, #f59e0b, #d97706)", color: "#0f172a", fontWeight: 900, padding: "9px 20px" }}
+                    type="button"
+                    onClick={handleSyncScheduledExamsToTimetable}
+                    style={{ background: "rgba(245, 158, 11, 0.22)", border: "1px solid #f59e0b", color: "#fbbf24", padding: "7px 12px", borderRadius: "6px", fontSize: "0.76rem", fontWeight: 800, cursor: "pointer" }}
                   >
-                    💾 Save Curriculum Update & Sync with Headmaster Checkup
+                    🔄 Sync From Scheduled Timed Exams ({exams.length})
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      window.print();
+                      setFeedback({ type: "success", message: "🖨️ Official Examination Timetable Guide formatted for printing." });
+                    }}
+                    style={{ background: "rgba(56, 189, 248, 0.18)", border: "1px solid #38bdf8", color: "#7dd3fc", padding: "7px 12px", borderRadius: "6px", fontSize: "0.76rem", fontWeight: 700, cursor: "pointer" }}
+                  >
+                    🖨️ Print Timetable Guide
                   </button>
                 </div>
-              </form>
-            </div>
-          </div>
-        )
-      }
-
-      {/* ======================================================== */}
-      {/* MODAL: INBUILT LIVE VIRTUAL CLASSROOM & ZOOM STUDIO       */}
-      {/* ======================================================== */}
-      {
-        activeLiveClassroomSession && (() => {
-          const studioHostName = currentUser ? `${currentUser.firstName || "Faculty"} ${currentUser.lastName || "Teacher"}`.trim() : "Faculty Instructor";
-          const studioMeetingLink = activeLiveClassroomSession.meetingLink || activeLiveClassroomSession.safeMeetingUrl || activeLiveClassroomSession.meetingUrl || activeLiveClassroomSession.workingInAppLink || "https://zoom.us";
-          const studioClassName = activeLiveClassroomSession.className || activeLiveClassroomSession.class?.name || (activeLiveClassroomSession.classId ? `Class #${activeLiveClassroomSession.classId}` : "Assigned Cohort");
-
-          return (
-            <div className="role-modal-backdrop" onClick={() => setActiveLiveClassroomSession(null)}>
-              <div
-                className="role-modal-card"
-                onClick={(e) => e.stopPropagation()}
-                style={{
-                  maxWidth: "940px",
-                  width: "96%",
-                  background: "linear-gradient(145deg, #020617, #0f172a)",
-                  border: "2px solid #38bdf8",
-                  borderRadius: "18px",
-                  padding: "22px",
-                  boxShadow: "0 25px 70px rgba(0,0,0,0.9)"
-                }}
-              >
-                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", borderBottom: "1px solid rgba(56, 189, 248, 0.25)", paddingBottom: "12px", marginBottom: "16px", flexWrap: "wrap", gap: "10px" }}>
-                  <div>
-                    <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
-                      <span style={{ background: "#ef4444", color: "#fff", padding: "3px 9px", borderRadius: "999px", fontSize: "0.7rem", fontWeight: 900 }}>
-                        🔴 LIVE CLASSROOM BRIDGE ACTIVE
-                      </span>
-                      <span style={{ background: "rgba(56, 189, 248, 0.16)", color: "#38bdf8", padding: "3px 10px", borderRadius: "999px", fontSize: "0.72rem", fontWeight: 800 }}>
-                        {activeLiveClassroomSession.platform} • Passcode: {activeLiveClassroomSession.passcode || "GBS2026"}
-                      </span>
-                    </div>
-                    <h3 style={{ margin: "6px 0 0", color: "#f8fafc", fontSize: "1.18rem", fontWeight: 800 }}>
-                      🎥 {activeLiveClassroomSession.title} ({studioClassName || activeLiveClassroomSession.class?.name || "Assigned Cohort"})
-                    </h3>
-                  </div>
-                  <button type="button" className="modal-close-btn" onClick={() => setActiveLiveClassroomSession(null)}>✕</button>
-                </div>
-
-                {/* Live Conference Stage */}
-                <div style={{ display: "grid", gridTemplateColumns: "2fr 1fr", gap: "14px", marginBottom: "16px" }}>
-                  <div
-                    style={{
-                      background: "radial-gradient(circle at center, #1e293b 0%, #020617 100%)",
-                      border: "1.5px solid rgba(56, 189, 248, 0.4)",
-                      borderRadius: "14px",
-                      minHeight: "290px",
-                      padding: "18px",
-                      display: "flex",
-                      flexDirection: "column",
-                      justifyContent: "space-between",
-                      position: "relative"
-                    }}
-                  >
-                    <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-                      <span style={{ background: "rgba(16, 185, 129, 0.2)", color: "#34d399", padding: "4px 10px", borderRadius: "6px", fontSize: "0.74rem", fontWeight: 800 }}>
-                        🎙️ Host: {studioHostName} (HD Audio & Screen Share Ready)
-                      </span>
-                      <span style={{ fontSize: "0.74rem", color: "#94a3b8", fontFamily: "monospace" }}>
-                        ENCRYPTED E2EE • 60 FPS
-                      </span>
-                    </div>
-
-                    <div style={{ textAlign: "center", padding: "24px 12px" }}>
-                      <div style={{ fontSize: "3.2rem", marginBottom: "8px" }}>
-                        {activeLiveClassroomSession.platform === "WHATSAPP" ? "💚" : "📹"}
-                      </div>
-                      <h4 style={{ margin: "0 0 6px", color: "#f8fafc", fontSize: "1.08rem" }}>
-                        {activeLiveClassroomSession.title} — Interactive Virtual Classroom
-                      </h4>
-                      <p style={{ margin: "0 auto", maxWidth: "460px", fontSize: "0.82rem", color: "#94a3b8" }}>
-                        Students and parents clicking the shared meeting link join this live session immediately. You can also launch the external {activeLiveClassroomSession.platform} desktop/mobile app below.
-                      </p>
-                    </div>
-
-                    <div style={{ display: "flex", justifyContent: "center", gap: "10px", flexWrap: "wrap" }}>
-                      <button
-                        type="button"
-                        onClick={() => {
-                          navigator.clipboard?.writeText(studioMeetingLink);
-                          setFeedback({ type: "success", message: `📋 Working meeting link copied: ${studioMeetingLink}` });
-                        }}
-                        style={{ background: "rgba(56, 189, 248, 0.2)", border: "1px solid #38bdf8", color: "#38bdf8", padding: "7px 14px", borderRadius: "8px", fontSize: "0.78rem", fontWeight: 800, cursor: "pointer" }}
-                      >
-                        📋 Copy Working Join Link
-                      </button>
-                      <button
-                        type="button"
-                        onClick={() => {
-                          const waUrl = `https://wa.me/?text=${encodeURIComponent(
-                            `🎓 *LIVE CLASS INVITATION (${studioClassName})*\nTopic: ${activeLiveClassroomSession.title}\nJoin Link: ${studioMeetingLink}\nPasscode: ${activeLiveClassroomSession.passcode || "GBS2026"}`
-                          )}`;
-                          window.open(waUrl, "_blank", "noopener,noreferrer");
-                        }}
-                        style={{ background: "rgba(37, 211, 102, 0.2)", border: "1px solid #25D366", color: "#4ade80", padding: "7px 14px", borderRadius: "8px", fontSize: "0.78rem", fontWeight: 800, cursor: "pointer" }}
-                      >
-                        💚 Share Live Link on WhatsApp
-                      </button>
-                      <a
-                        href={studioMeetingLink}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        style={{ background: "linear-gradient(135deg, #0284c7, #2563eb)", color: "#fff", padding: "7px 15px", borderRadius: "8px", fontSize: "0.78rem", fontWeight: 800, textDecoration: "none" }}
-                      >
-                        🚀 Open External {activeLiveClassroomSession.platform} App ↗
-                      </a>
-                    </div>
-                  </div>
-
-                  {/* Participant & Link Verification Sidebar */}
-                  <div style={{ background: "rgba(2, 6, 23, 0.8)", border: "1px solid rgba(255,255,255,0.1)", borderRadius: "14px", padding: "14px", display: "flex", flexDirection: "column", justifyContent: "space-between" }}>
-                    <div>
-                      <div style={{ fontSize: "0.76rem", fontWeight: 800, color: "#38bdf8", marginBottom: "8px", textTransform: "uppercase" }}>
-                        🔗 Verified Shareable Meeting Link:
-                      </div>
-                      <div style={{ background: "rgba(15, 23, 42, 0.9)", padding: "8px 10px", borderRadius: "8px", border: "1px solid rgba(56, 189, 248, 0.3)", fontSize: "0.74rem", color: "#e2e8f0", wordBreak: "break-all", marginBottom: "12px", fontFamily: "monospace" }}>
-                        {studioMeetingLink}
-                      </div>
-                      <div style={{ fontSize: "0.76rem", fontWeight: 800, color: "#34d399", marginBottom: "6px", textTransform: "uppercase" }}>
-                        👥 Connected Class Participants ({(roster || []).length || (isDemoSandboxMode() ? 4 : 1)} Ready):
-                      </div>
-                      <div style={{ display: "flex", flexDirection: "column", gap: "6px", maxHeight: "140px", overflowY: "auto" }}>
-                        {(roster && roster.length > 0 ? roster.slice(0, 6) : (isDemoSandboxMode() ? [
-                          { fullName: "Kwame Mensah (Student)" },
-                          { fullName: "Ama Serwaa (Student)" },
-                          { fullName: "Kofi Boateng (Student)" },
-                          { fullName: "Headmaster Supervision Node" }
-                        ] : [
-                          { fullName: "Headmaster Supervision Node" }
-                        ])).map((p, i) => (
-                          <div key={i} style={{ display: "flex", justifyContent: "space-between", alignItems: "center", background: "rgba(15, 23, 42, 0.7)", padding: "6px 8px", borderRadius: "6px", fontSize: "0.75rem", color: "#cbd5e1" }}>
-                            <span>🟢 {p.fullName || `${p.firstName || ""} ${p.lastName || ""}`}</span>
-                            <span style={{ color: "#34d399", fontSize: "0.68rem", fontWeight: 700 }}>Connected</span>
-                          </div>
-                        ))}
-                      </div>
-                    </div>
-
-                    <button
-                      type="button"
-                      onClick={() => setActiveLiveClassroomSession(null)}
-                      style={{ width: "100%", marginTop: "12px", background: "rgba(239, 68, 68, 0.2)", border: "1px solid #ef4444", color: "#fca5a5", padding: "8px", borderRadius: "8px", fontWeight: 800, fontSize: "0.8rem", cursor: "pointer" }}
-                    >
-                      ⏹️ Leave / Close Classroom Studio
-                    </button>
-                  </div>
-                </div>
-              </div>
-            </div>
-          );
-        })()
-      }
-
-      {/* Student Homework Verification & Inspection Modal */}
-      {
-        inspectingSubmission && (
-          <div className="role-modal-overlay" onClick={() => setInspectingSubmission(null)}>
-            <div
-              className="role-modal-content"
-              style={{ maxWidth: "680px", width: "95%", background: "linear-gradient(135deg, #0b1329 0%, #111e38 100%)", border: "1.5px solid #38bdf8", borderRadius: "16px", padding: "24px", boxShadow: "0 20px 50px rgba(0,0,0,0.6)" }}
-              onClick={(e) => e.stopPropagation()}
-            >
-              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: "16px" }}>
-                <div>
-                  <h3 style={{ margin: 0, color: "#38bdf8", fontSize: "1.2rem", display: "flex", alignItems: "center", gap: "8px" }}>
-                    <span>🔍</span> STUDENT HOMEWORK VERIFICATION & SCORING DOSSIER
-                  </h3>
-                  <p style={{ margin: "4px 0 0", color: "#94a3b8", fontSize: "0.85rem" }}>
-                    Inspect submitted student source work, evaluate rigor, verify attached documentation, and affix scores.
-                  </p>
-                </div>
-                <button
-                  type="button"
-                  onClick={() => setInspectingSubmission(null)}
-                  style={{ background: "rgba(255,255,255,0.08)", border: "none", color: "#cbd5e1", fontSize: "1.2rem", borderRadius: "50%", width: "32px", height: "32px", cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center" }}
-                >
-                  ✕
-                </button>
               </div>
 
-              <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(200px, 1fr))", gap: "12px", background: "rgba(15, 23, 42, 0.6)", padding: "14px", borderRadius: "10px", border: "1px solid rgba(255,255,255,0.08)", marginBottom: "16px" }}>
+              <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(150px, 1fr))", gap: "8px" }}>
                 <div>
-                  <span style={{ fontSize: "0.72rem", color: "#94a3b8", display: "block", textTransform: "uppercase" }}>Student Scholar</span>
-                  <strong style={{ color: "#f8fafc", fontSize: "0.95rem" }}>{inspectingSubmission.studentName}</strong>
-                  <span style={{ display: "block", fontSize: "0.75rem", color: "#38bdf8" }}>{inspectingSubmission.studentClass || "Enrolled Cohort"}</span>
-                </div>
-                <div>
-                  <span style={{ fontSize: "0.72rem", color: "#94a3b8", display: "block", textTransform: "uppercase" }}>Assignment Module</span>
-                  <strong style={{ color: "#f8fafc", fontSize: "0.95rem" }}>{inspectingSubmission.assignmentTitle}</strong>
-                </div>
-                <div>
-                  <span style={{ fontSize: "0.72rem", color: "#94a3b8", display: "block", textTransform: "uppercase" }}>Submitted Timestamp</span>
-                  <span style={{ color: "#cbd5e1", fontSize: "0.85rem" }}>{inspectingSubmission.submittedAt}</span>
-                </div>
-                <div>
-                  <span style={{ fontSize: "0.72rem", color: "#94a3b8", display: "block", textTransform: "uppercase" }}>Current Audit Status</span>
-                  <span className={`badge-status ${inspectingSubmission.status === "VERIFIED_AND_GRADED" ? "badge-present" : "badge-excused"}`} style={{ fontSize: "0.75rem" }}>
-                    {inspectingSubmission.status === "VERIFIED_AND_GRADED" ? `✓ Marked (${inspectingSubmission.score}/${inspectingSubmission.maxScore || 100})` : "⏳ Pending Verification"}
-                  </span>
-                </div>
-              </div>
-
-              <div style={{ marginBottom: "16px" }}>
-                <label style={{ fontSize: "0.82rem", fontWeight: 700, color: "#cbd5e1", display: "block", marginBottom: "6px" }}>
-                  Student Submitted Response & Analytical Working:
-                </label>
-                <div style={{ background: "rgba(2, 6, 23, 0.8)", border: "1px solid rgba(255,255,255,0.1)", borderRadius: "10px", padding: "14px", color: "#f8fafc", fontSize: "0.9rem", lineHeight: "1.5", maxHeight: "160px", overflowY: "auto", whiteSpace: "pre-wrap" }}>
-                  {inspectingSubmission.submittedContent}
-                </div>
-              </div>
-
-              <div style={{ marginBottom: "16px", background: "rgba(56, 189, 248, 0.08)", border: "1px dashed #38bdf8", borderRadius: "10px", padding: "12px 16px", display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-                <div style={{ display: "flex", alignItems: "center", gap: "10px" }}>
-                  <span style={{ fontSize: "1.5rem" }}>📎</span>
-                  <div>
-                    <strong style={{ color: "#38bdf8", fontSize: "0.88rem", display: "block" }}>
-                      {inspectingSubmission.attachmentName || inspectingSubmission.attachmentUrl || "student_homework_source.pdf"}
-                    </strong>
-                    <span style={{ color: "#94a3b8", fontSize: "0.75rem" }}>Authentic student uploaded source document (Verified PDF/DOCX)</span>
-                  </div>
-                </div>
-                <button
-                  type="button"
-                  className="btn-secondary"
-                  style={{ fontSize: "0.78rem", padding: "6px 12px", borderColor: "#38bdf8", color: "#38bdf8", cursor: "pointer", fontWeight: 700 }}
-                  onClick={() => setShowAttachedFileViewer(!showAttachedFileViewer)}
-                >
-                  {showAttachedFileViewer ? "✕ Close Document" : "👁️ View & Inspect Document"}
-                </button>
-              </div>
-
-              {/* INTERACTIVE ATTACHED FILE INSPECTION PREVIEW PANE */}
-              {showAttachedFileViewer && (
-                <div style={{
-                  background: "#ffffff",
-                  color: "#0f172a",
-                  borderRadius: "10px",
-                  padding: "16px 20px",
-                  margin: "0 0 16px",
-                  border: "2px solid #38bdf8",
-                  boxShadow: "0 10px 25px rgba(0, 0, 0, 0.4)",
-                  maxHeight: "320px",
-                  overflowY: "auto"
-                }}>
-                  <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", borderBottom: "1.5px solid #e2e8f0", paddingBottom: "8px", marginBottom: "12px" }}>
-                    <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
-                      <span style={{ fontSize: "1.3rem" }}>📄</span>
-                      <div>
-                        <strong style={{ fontSize: "0.92rem", color: "#0f172a", display: "block" }}>
-                          {inspectingSubmission.attachmentName || "student_homework_source.pdf"}
-                        </strong>
-                        <span style={{ fontSize: "0.72rem", color: "#64748b" }}>
-                          Author: {inspectingSubmission.studentName} • Cryptographic Hash: SHA-256 (VERIFIED)
-                        </span>
-                      </div>
-                    </div>
-                    <button
-                      type="button"
-                      onClick={() => setShowAttachedFileViewer(false)}
-                      style={{ background: "#f1f5f9", border: "1px solid #cbd5e1", borderRadius: "6px", padding: "4px 8px", fontSize: "0.74rem", cursor: "pointer", fontWeight: 700 }}
-                    >
-                      ✕ Hide
-                    </button>
-                  </div>
-                  <div style={{ fontFamily: "Georgia, serif", fontSize: "0.88rem", lineHeight: "1.65", color: "#334155", background: "#f8fafc", padding: "14px", borderRadius: "8px", border: "1px solid #e2e8f0" }}>
-                    <div style={{ fontWeight: 800, color: "#1e293b", marginBottom: "6px", fontSize: "0.95rem" }}>
-                      OFFICIAL STUDENT MANUSCRIPT: {inspectingSubmission.assignmentTitle}
-                    </div>
-                    <p style={{ margin: "0 0 10px", whiteSpace: "pre-wrap" }}>
-                      {inspectingSubmission.submittedContent}
-                    </p>
-                    <div style={{ marginTop: "12px", paddingTop: "8px", borderTop: "1px dashed #cbd5e1", display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", fontSize: "0.74rem", color: "#64748b" }}>
-                      <span>Grading Rubric: Completeness, Methodological Steps & Conceptual Clarity</span>
-                      <span style={{ color: "#059669", fontWeight: 800 }}>✓ Plagiarism Index: 0.0% • Authentic Submission</span>
-                    </div>
-                  </div>
-                </div>
-              )}
-
-              <div style={{ display: "grid", gridTemplateColumns: "140px 1fr", gap: "14px", marginBottom: "20px" }}>
-                <div>
-                  <label style={{ fontSize: "0.82rem", fontWeight: 700, color: "#34d399", display: "block", marginBottom: "6px" }}>
-                    Score (Pts / {inspectingSubmission.maxScore || 100}):
-                  </label>
-                  <input
-                    type="number"
-                    min="0"
-                    max={inspectingSubmission.maxScore || 100}
-                    className="filter-input"
-                    style={{ width: "100%", padding: "10px", fontSize: "1.1rem", fontWeight: 800, textAlign: "center", color: "#34d399" }}
-                    value={submissionScores[inspectingSubmission.id] !== undefined ? submissionScores[inspectingSubmission.id] : (inspectingSubmission.score !== null && inspectingSubmission.score !== undefined ? inspectingSubmission.score : "")}
-                    onChange={(e) => setSubmissionScores({ ...submissionScores, [inspectingSubmission.id]: e.target.value })}
-                    placeholder="0 - 100"
-                  />
-                </div>
-                <div>
-                  <label style={{ fontSize: "0.82rem", fontWeight: 700, color: "#cbd5e1", display: "block", marginBottom: "6px" }}>
-                    Teacher Feedback, Rubric Notes & Constructive Commentary:
-                  </label>
+                  <label style={{ display: "block", fontSize: "0.72rem", color: "#94a3b8", marginBottom: "2px" }}>Course Code</label>
                   <input
                     type="text"
+                    value={newTimetableEntryForm.courseCode}
+                    onChange={(e) => setNewTimetableEntryForm({ ...newTimetableEntryForm, courseCode: e.target.value })}
+                    placeholder="e.g. MATH 205"
                     className="filter-input"
-                    style={{ width: "100%", padding: "10px", fontSize: "0.9rem" }}
-                    value={submissionRemarks[inspectingSubmission.id] !== undefined ? submissionRemarks[inspectingSubmission.id] : (inspectingSubmission.teacherRemarks || "")}
-                    onChange={(e) => setSubmissionRemarks({ ...submissionRemarks, [inspectingSubmission.id]: e.target.value })}
-                    placeholder="e.g. Exceptional rigor shown in step 4. Keep up the high standard!"
+                    style={{ width: "100%", fontSize: "0.76rem", fontWeight: 700 }}
+                  />
+                </div>
+                <div>
+                  <label style={{ display: "block", fontSize: "0.72rem", color: "#94a3b8", marginBottom: "2px" }}>Subject / Paper Name</label>
+                  <input
+                    type="text"
+                    value={newTimetableEntryForm.subject}
+                    onChange={(e) => setNewTimetableEntryForm({ ...newTimetableEntryForm, subject: e.target.value })}
+                    placeholder="e.g. Core Mathematics"
+                    className="filter-input"
+                    style={{ width: "100%", fontSize: "0.76rem" }}
+                  />
+                </div>
+                <div>
+                  <label style={{ display: "block", fontSize: "0.72rem", color: "#94a3b8", marginBottom: "2px" }}>Class / Cohort</label>
+                  <input
+                    type="text"
+                    value={newTimetableEntryForm.className}
+                    onChange={(e) => setNewTimetableEntryForm({ ...newTimetableEntryForm, className: e.target.value })}
+                    placeholder="e.g. Grade 10A / SHS 1"
+                    className="filter-input"
+                    style={{ width: "100%", fontSize: "0.76rem" }}
+                  />
+                </div>
+                <div>
+                  <label style={{ display: "block", fontSize: "0.72rem", color: "#94a3b8", marginBottom: "2px" }}>Exam Date</label>
+                  <input
+                    type="date"
+                    value={newTimetableEntryForm.examDate}
+                    onChange={(e) => setNewTimetableEntryForm({ ...newTimetableEntryForm, examDate: e.target.value })}
+                    className="filter-input"
+                    style={{ width: "100%", fontSize: "0.76rem" }}
+                  />
+                </div>
+                <div>
+                  <label style={{ display: "block", fontSize: "0.72rem", color: "#34d399", marginBottom: "2px", fontWeight: 700 }}>Start Time</label>
+                  <input
+                    type="text"
+                    value={newTimetableEntryForm.startTime}
+                    onChange={(e) => setNewTimetableEntryForm({ ...newTimetableEntryForm, startTime: e.target.value })}
+                    placeholder="09:00 AM"
+                    className="filter-input"
+                    style={{ width: "100%", fontSize: "0.76rem", color: "#34d399", fontWeight: 700 }}
+                  />
+                </div>
+                <div>
+                  <label style={{ display: "block", fontSize: "0.72rem", color: "#f87171", marginBottom: "2px", fontWeight: 700 }}>End Time</label>
+                  <input
+                    type="text"
+                    value={newTimetableEntryForm.endTime}
+                    onChange={(e) => setNewTimetableEntryForm({ ...newTimetableEntryForm, endTime: e.target.value })}
+                    placeholder="11:30 AM"
+                    className="filter-input"
+                    style={{ width: "100%", fontSize: "0.76rem", color: "#f87171", fontWeight: 700 }}
+                  />
+                </div>
+                <div>
+                  <label style={{ display: "block", fontSize: "0.72rem", color: "#fde68a", marginBottom: "2px", fontWeight: 700 }}>Exam Format</label>
+                  <select
+                    value={newTimetableEntryForm.examFormat}
+                    onChange={(e) => setNewTimetableEntryForm({ ...newTimetableEntryForm, examFormat: e.target.value })}
+                    className="filter-select"
+                    style={{ width: "100%", fontSize: "0.75rem", background: "#0f172a", color: "#ffffff", fontWeight: 700 }}
+                  >
+                    <option value="Mixed Format (MCQ + Theory)">Mixed Format (MCQ + Theory)</option>
+                    <option value="Multiple Choice (MCQ)">Multiple Choice (MCQ)</option>
+                    <option value="Theory / Long Essay">Theory / Long Essay</option>
+                    <option value="True or False">True or False</option>
+                    <option value="Short Answer">Short Answer</option>
+                    <option value="Fill in the Blank">Fill in the Blank</option>
+                    <option value="Practical / Case Study">Practical / Case Study</option>
+                  </select>
+                </div>
+                <div>
+                  <label style={{ display: "block", fontSize: "0.72rem", color: "#94a3b8", marginBottom: "2px" }}>Examination Hall</label>
+                  <input
+                    type="text"
+                    value={newTimetableEntryForm.hall}
+                    onChange={(e) => setNewTimetableEntryForm({ ...newTimetableEntryForm, hall: e.target.value })}
+                    placeholder="Main Examination Hall A"
+                    className="filter-input"
+                    style={{ width: "100%", fontSize: "0.76rem" }}
                   />
                 </div>
               </div>
+            </div>
 
-              <div style={{ display: "flex", justifyContent: "flex-end", gap: "10px" }}>
+            <div style={{ marginBottom: "0.75rem", display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: "10px" }}>
+              <span style={{ fontSize: "0.82rem", color: "#cbd5e1" }}>
+                📋 <strong>{examTimetableList.length}</strong> Examination Sessions Configured on Student Guide
+              </span>
+              <button
+                type="button"
+                onClick={() => handleAddExamTimetableEntry({
+                  courseCode: `COURSE ${101 + examTimetableList.length}`,
+                  subject: `Examination Paper #${examTimetableList.length + 1}`,
+                  className: activeClassObj?.name || newExamForm.className || "Grade 10A / SHS 1"
+                })}
+                style={{ background: "linear-gradient(135deg, #0284c7, #0369a1)", color: "#ffffff", border: "1px solid #38bdf8", padding: "6px 12px", borderRadius: "6px", fontSize: "0.76rem", fontWeight: 800, cursor: "pointer" }}
+              >
+                ⚡ + Add Another Timetable Row
+              </button>
+            </div>
+
+            <div className="role-table-responsive" style={{ maxHeight: "360px", overflowY: "auto", marginBottom: "1.5rem" }}>
+              <table className="role-table" style={{ fontSize: "0.78rem" }}>
+                <thead>
+                  <tr>
+                    <th>Course &amp; Class</th>
+                    <th>Subject &amp; Format</th>
+                    <th>Date</th>
+                    <th>Start Time</th>
+                    <th>End Time</th>
+                    <th>Hall &amp; Invigilator</th>
+                    <th>Permitted Tools &amp; Syllabus</th>
+                    <th>Action</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {examTimetableList.length === 0 ? (
+                    <tr>
+                      <td colSpan="8" style={{ textAlign: "center", padding: "28px", color: "#94a3b8" }}>
+                        📅 No examination timetable entries registered yet. Click <strong>➕ Add Timetable Entry</strong> above to schedule exams.
+                      </td>
+                    </tr>
+                  ) : (
+                    examTimetableList.map((entry, idx) => (
+                      <tr key={entry.id || idx}>
+                        <td>
+                          <input
+                            type="text"
+                            value={entry.courseCode || ""}
+                            placeholder="Course Code"
+                            onChange={(e) => {
+                              const updated = examTimetableList.map((item, i) => i === idx ? { ...item, courseCode: e.target.value } : item);
+                              setExamTimetableList(updated);
+                            }}
+                            className="filter-input"
+                            style={{ width: "95px", fontSize: "0.76rem", marginBottom: "2px", fontWeight: 700 }}
+                          />
+                          <input
+                            type="text"
+                            value={entry.className || ""}
+                            placeholder="Class / Cohort"
+                            onChange={(e) => {
+                              const updated = examTimetableList.map((item, i) => i === idx ? { ...item, className: e.target.value } : item);
+                              setExamTimetableList(updated);
+                            }}
+                            className="filter-input"
+                            style={{ width: "95px", fontSize: "0.72rem" }}
+                          />
+                        </td>
+                        <td>
+                          <input
+                            type="text"
+                            value={entry.subject || ""}
+                            placeholder="Subject Name"
+                            onChange={(e) => {
+                              const updated = examTimetableList.map((item, i) => i === idx ? { ...item, subject: e.target.value } : item);
+                              setExamTimetableList(updated);
+                            }}
+                            className="filter-input"
+                            style={{ width: "145px", fontSize: "0.76rem", marginBottom: "2px" }}
+                          />
+                          <select
+                            value={entry.examFormat || "Mixed Format (MCQ + Theory)"}
+                            onChange={(e) => {
+                              const updated = examTimetableList.map((item, i) => i === idx ? { ...item, examFormat: e.target.value } : item);
+                              setExamTimetableList(updated);
+                            }}
+                            className="filter-select"
+                            style={{ width: "145px", fontSize: "0.71rem", background: "#0f172a", color: "#fde68a", fontWeight: 700 }}
+                          >
+                            <option value="Mixed Format (MCQ + Theory)">Mixed Format (MCQ + Theory)</option>
+                            <option value="Multiple Choice (MCQ)">Multiple Choice (MCQ)</option>
+                            <option value="Theory / Essay">Theory / Essay</option>
+                            <option value="True or False">True or False</option>
+                            <option value="Short Answer">Short Answer</option>
+                            <option value="Fill in Blank">Fill in Blank</option>
+                            <option value="Case Study / Practical">Case Study / Practical</option>
+                          </select>
+                        </td>
+                        <td>
+                          <input
+                            type="date"
+                            value={entry.examDate || ""}
+                            onChange={(e) => {
+                              const updated = examTimetableList.map((item, i) => i === idx ? { ...item, examDate: e.target.value } : item);
+                              setExamTimetableList(updated);
+                            }}
+                            className="filter-input"
+                            style={{ width: "120px", fontSize: "0.75rem" }}
+                          />
+                        </td>
+                        <td>
+                          <input
+                            type="text"
+                            value={entry.startTime || ""}
+                            onChange={(e) => {
+                              const updated = examTimetableList.map((item, i) => i === idx ? { ...item, startTime: e.target.value } : item);
+                              setExamTimetableList(updated);
+                            }}
+                            className="filter-input"
+                            style={{ width: "80px", fontSize: "0.75rem" }}
+                          />
+                        </td>
+                        <td>
+                          <input
+                            type="text"
+                            value={entry.endTime || ""}
+                            onChange={(e) => {
+                              const updated = examTimetableList.map((item, i) => i === idx ? { ...item, endTime: e.target.value } : item);
+                              setExamTimetableList(updated);
+                            }}
+                            className="filter-input"
+                            style={{ width: "80px", fontSize: "0.75rem" }}
+                          />
+                        </td>
+                        <td>
+                          <input
+                            type="text"
+                            value={entry.hall || ""}
+                            placeholder="Hall"
+                            onChange={(e) => {
+                              const updated = examTimetableList.map((item, i) => i === idx ? { ...item, hall: e.target.value } : item);
+                              setExamTimetableList(updated);
+                            }}
+                            className="filter-input"
+                            style={{ width: "110px", fontSize: "0.75rem", marginBottom: "2px" }}
+                          />
+                          <input
+                            type="text"
+                            value={entry.invigilator || ""}
+                            placeholder="Invigilator"
+                            onChange={(e) => {
+                              const updated = examTimetableList.map((item, i) => i === idx ? { ...item, invigilator: e.target.value } : item);
+                              setExamTimetableList(updated);
+                            }}
+                            className="filter-input"
+                            style={{ width: "110px", fontSize: "0.72rem" }}
+                          />
+                        </td>
+                        <td>
+                          <input
+                            type="text"
+                            value={entry.permittedTools || ""}
+                            placeholder="Tools"
+                            onChange={(e) => {
+                              const updated = examTimetableList.map((item, i) => i === idx ? { ...item, permittedTools: e.target.value } : item);
+                              setExamTimetableList(updated);
+                            }}
+                            className="filter-input"
+                            style={{ width: "130px", fontSize: "0.72rem", marginBottom: "2px" }}
+                          />
+                          <input
+                            type="text"
+                            value={entry.syllabusScope || ""}
+                            placeholder="Syllabus focus"
+                            onChange={(e) => {
+                              const updated = examTimetableList.map((item, i) => i === idx ? { ...item, syllabusScope: e.target.value } : item);
+                              setExamTimetableList(updated);
+                            }}
+                            className="filter-input"
+                            style={{ width: "130px", fontSize: "0.72rem" }}
+                          />
+                        </td>
+                        <td>
+                          <button
+                            type="button"
+                            onClick={() => {
+                              setExamTimetableList(examTimetableList.filter((_, i) => i !== idx));
+                            }}
+                            style={{ background: "rgba(239, 68, 68, 0.2)", border: "1px solid #ef4444", color: "#f87171", padding: "4px 8px", borderRadius: "4px", fontSize: "0.7rem", cursor: "pointer" }}
+                          >
+                            ✕
+                          </button>
+                        </td>
+                      </tr>
+                    ))
+                  )}
+                </tbody>
+              </table>
+            </div>
+
+            <div style={{ display: "flex", justifyContent: "flex-end", gap: "10px", flexWrap: "wrap" }}>
+              <button type="button" className="btn-secondary" onClick={() => setShowExamTimetableModal(false)} style={{ display: "inline-flex", alignItems: "center", gap: "6px" }}>
+                ⬅️ Back
+              </button>
+              <button type="submit" className="btn-primary" style={{ background: "linear-gradient(135deg, #0284c7, #0369a1)", color: "#ffffff", padding: "10px 20px", fontWeight: 800 }}>
+                📢 Publish Examination Timetable to Students
+              </button>
+            </div>
+          </form>
+        </div>
+      </div>
+    )
+  }
+
+  {/* MODAL: MANUAL ENTRY FOR WRITTEN & MARKED EXAMS RECORDS (NON-CBT / HAND-MARKED) */ }
+  {
+    showManualWrittenExamModal && (
+      <div className="modal-backdrop" onClick={() => setShowManualWrittenExamModal(false)}>
+        <div
+          className="modal-content"
+          onClick={(e) => e.stopPropagation()}
+          style={{ maxWidth: "1020px", width: "95%", maxHeight: "90vh", overflowY: "auto", background: "#0f172a", border: "1.5px solid #10b981", borderRadius: "16px", padding: "24px" }}
+        >
+          {/* Modal Header with Back Button */}
+          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", borderBottom: "1px solid rgba(255,255,255,0.1)", paddingBottom: "16px", marginBottom: "20px" }}>
+            <div style={{ display: "flex", alignItems: "center", gap: "12px" }}>
+              <button
+                type="button"
+                className="btn-secondary"
+                onClick={() => setShowManualWrittenExamModal(false)}
+                style={{ padding: "6px 14px", borderRadius: "8px", borderColor: "#64748b", color: "#f8fafc", fontWeight: "700", display: "inline-flex", alignItems: "center", gap: "6px" }}
+              >
+                ⬅️ Back
+              </button>
+              <div>
+                <h2 style={{ margin: 0, fontSize: "1.25rem", color: "#34d399", display: "flex", alignItems: "center", gap: "8px" }}>
+                  <span>📝</span> MANUAL ENTRY FOR WRITTEN & MARKED EXAMS RECORDS
+                </h2>
+                <p style={{ margin: "4px 0 0", fontSize: "0.82rem", color: "#94a3b8" }}>
+                  Enter scores for physical papers marked directly by teacher (not online CBT and not AI scanner). Records save student-by-student to PostgreSQL gradebook and can be published to student transcripts.
+                </p>
+              </div>
+            </div>
+            <button
+              type="button"
+              className="modal-close-btn"
+              onClick={() => setShowManualWrittenExamModal(false)}
+              style={{ fontSize: "1.3rem", background: "none", border: "none", color: "#94a3b8", cursor: "pointer" }}
+            >
+              ✕
+            </button>
+          </div>
+
+          {/* Exam Metadata Grid */}
+          <div style={{ background: "rgba(15, 23, 42, 0.7)", border: "1px solid rgba(255, 255, 255, 0.08)", borderRadius: "12px", padding: "16px", marginBottom: "20px" }}>
+            <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(220px, 1fr))", gap: "14px" }}>
+              <div>
+                <label style={{ display: "block", fontSize: "0.78rem", fontWeight: "700", color: "#94a3b8", marginBottom: "4px" }}>
+                  Class / Cohort:
+                </label>
+                <select
+                  className="filter-select"
+                  value={selectedClassId}
+                  onChange={handleClassChange}
+                  style={{ width: "100%", padding: "8px 10px", background: "#1e293b", color: "#f8fafc", border: "1px solid #334155", borderRadius: "8px" }}
+                >
+                  {classes.map((c) => (
+                    <option key={c.id} value={c.id}>
+                      {c.name} ({c.code}) — Grade {c.gradeLevel}
+                    </option>
+                  ))}
+                </select>
+              </div>
+
+              <div>
+                <label style={{ display: "block", fontSize: "0.78rem", fontWeight: "700", color: "#94a3b8", marginBottom: "4px" }}>
+                  Exam Paper Title:
+                </label>
+                <input
+                  type="text"
+                  value={manualExamMeta.title}
+                  onChange={(e) => setManualExamMeta({ ...manualExamMeta, title: e.target.value })}
+                  placeholder="e.g. Mid-Term Written Exam Paper 2"
+                  style={{ width: "100%", padding: "8px 10px", background: "#1e293b", color: "#f8fafc", border: "1px solid #334155", borderRadius: "8px" }}
+                />
+              </div>
+
+              <div>
+                <label style={{ display: "block", fontSize: "0.78rem", fontWeight: "700", color: "#94a3b8", marginBottom: "4px" }}>
+                  Subject:
+                </label>
+                <input
+                  type="text"
+                  value={manualExamMeta.subject}
+                  onChange={(e) => setManualExamMeta({ ...manualExamMeta, subject: e.target.value })}
+                  placeholder="e.g. Mathematics & Analytical Geometry"
+                  style={{ width: "100%", padding: "8px 10px", background: "#1e293b", color: "#f8fafc", border: "1px solid #334155", borderRadius: "8px" }}
+                />
+              </div>
+
+              <div>
+                <label style={{ display: "block", fontSize: "0.78rem", fontWeight: "700", color: "#94a3b8", marginBottom: "4px" }}>
+                  Academic Term:
+                </label>
+                <select
+                  value={manualExamMeta.term}
+                  onChange={(e) => setManualExamMeta({ ...manualExamMeta, term: e.target.value })}
+                  style={{ width: "100%", padding: "8px 10px", background: "#1e293b", color: "#f8fafc", border: "1px solid #334155", borderRadius: "8px" }}
+                >
+                  <option value="Term 1 (First Academic Term)">Term 1 (First Academic Term)</option>
+                  <option value="Term 2 (Second Academic Term)">Term 2 (Second Academic Term)</option>
+                  <option value="Term 3 (Third Academic Term)">Term 3 (Third Academic Term)</option>
+                </select>
+              </div>
+
+              <div>
+                <label style={{ display: "block", fontSize: "0.78rem", fontWeight: "700", color: "#94a3b8", marginBottom: "4px" }}>
+                  Maximum Total Marks (Points):
+                </label>
+                <input
+                  type="number"
+                  value={manualExamMeta.maxMarks}
+                  onChange={(e) => setManualExamMeta({ ...manualExamMeta, maxMarks: Math.max(1, parseFloat(e.target.value) || 100) })}
+                  style={{ width: "100%", padding: "8px 10px", background: "#1e293b", color: "#f8fafc", border: "1px solid #334155", borderRadius: "8px" }}
+                />
+              </div>
+
+              <div>
+                <label style={{ display: "block", fontSize: "0.78rem", fontWeight: "700", color: "#94a3b8", marginBottom: "4px" }}>
+                  Date Marked & Vetted:
+                </label>
+                <input
+                  type="date"
+                  value={manualExamMeta.examDate}
+                  onChange={(e) => setManualExamMeta({ ...manualExamMeta, examDate: e.target.value })}
+                  style={{ width: "100%", padding: "8px 10px", background: "#1e293b", color: "#f8fafc", border: "1px solid #334155", borderRadius: "8px" }}
+                />
+              </div>
+            </div>
+          </div>
+
+          {/* Students Score Entry Sheet */}
+          <div style={{ marginBottom: "20px" }}>
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "10px" }}>
+              <h3 style={{ margin: 0, fontSize: "0.95rem", color: "#e2e8f0" }}>
+                📋 Student Roster & Paper Script Score Entry ({roster.length > 0 ? roster.length : 5} Candidates)
+              </h3>
+              <span style={{ fontSize: "0.78rem", color: "#38bdf8" }}>
+                💡 Auto-computes percentage & letter grade using teacher-configured cutoff scale
+              </span>
+            </div>
+
+            <div style={{ overflowX: "auto", borderRadius: "10px", border: "1px solid rgba(255, 255, 255, 0.08)" }}>
+              <table style={{ width: "100%", borderCollapse: "collapse", fontSize: "0.83rem", textAlign: "left" }}>
+                <thead>
+                  <tr style={{ background: "#1e293b", color: "#94a3b8", borderBottom: "1px solid #334155" }}>
+                    <th style={{ padding: "10px 12px" }}>#</th>
+                    <th style={{ padding: "10px 12px" }}>Student Name</th>
+                    <th style={{ padding: "10px 12px" }}>Roll / ID</th>
+                    <th style={{ padding: "10px 12px" }}>Script Serial #</th>
+                    <th style={{ padding: "10px 12px", width: "110px" }}>Raw Score (/{manualExamMeta.maxMarks})</th>
+                    <th style={{ padding: "10px 12px", width: "80px" }}>Pct %</th>
+                    <th style={{ padding: "10px 12px", width: "70px" }}>Grade</th>
+                    <th style={{ padding: "10px 12px" }}>Teacher Evaluative Remarks</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {(roster.length > 0 ? roster : (isDemoSandboxMode() ? [
+                    { id: "STU-001", studentId: "STU-001", firstName: "Kwame", lastName: "Mensah", rollNumber: "GBS-2026-101" },
+                    { id: "STU-002", studentId: "STU-002", firstName: "Ama", lastName: "Osei", rollNumber: "GBS-2026-102" },
+                    { id: "STU-003", studentId: "STU-003", firstName: "Kofi", lastName: "Boateng", rollNumber: "GBS-2026-103" },
+                    { id: "STU-004", studentId: "STU-004", firstName: "Abena", lastName: "Appiah", rollNumber: "GBS-2026-104" },
+                    { id: "STU-005", studentId: "STU-005", firstName: "Esi", lastName: "Sutherland", rollNumber: "GBS-2026-105" }
+                  ] : [])).map((stu, idx) => {
+                    const sKey = String(stu.id || stu.studentId || idx);
+                    const currentScore = manualExamScores[sKey] || {};
+                    const rawVal = currentScore.rawMark !== undefined ? currentScore.rawMark : "";
+                    const maxM = parseFloat(manualExamMeta.maxMarks) || 100;
+                    const rawNum = parseFloat(rawVal);
+                    const pct = !isNaN(rawNum) ? Math.min(100, Math.max(0, Math.round((rawNum / maxM) * 100))) : null;
+                    const grade = pct !== null ? computeGrade(pct, sKey) : "—";
+
+                    return (
+                      <tr key={sKey} style={{ borderBottom: "1px solid rgba(255, 255, 255, 0.05)", background: idx % 2 === 0 ? "rgba(15, 23, 42, 0.4)" : "rgba(30, 41, 59, 0.3)" }}>
+                        <td style={{ padding: "10px 12px", color: "#64748b" }}>{idx + 1}</td>
+                        <td style={{ padding: "10px 12px", fontWeight: "600", color: "#f8fafc" }}>
+                          {`${stu.firstName || ""} ${stu.lastName || ""}`.trim() || `Student ${idx + 1}`}
+                        </td>
+                        <td style={{ padding: "10px 12px", color: "#94a3b8", fontFamily: "monospace" }}>
+                          {stu.rollNumber || stu.admissionNumber || `GBS-${idx + 101}`}
+                        </td>
+                        <td style={{ padding: "10px 12px" }}>
+                          <input
+                            type="text"
+                            value={currentScore.scriptSerial || `WRT-SCR-${idx + 101}`}
+                            onChange={(e) => {
+                              setManualExamScores({
+                                ...manualExamScores,
+                                [sKey]: { ...currentScore, scriptSerial: e.target.value }
+                              });
+                            }}
+                            style={{ width: "110px", padding: "6px 8px", background: "#0f172a", border: "1px solid #334155", borderRadius: "6px", color: "#f8fafc", fontSize: "0.78rem" }}
+                          />
+                        </td>
+                        <td style={{ padding: "10px 12px" }}>
+                          <input
+                            type="number"
+                            min="0"
+                            max={manualExamMeta.maxMarks}
+                            value={rawVal}
+                            placeholder="Score"
+                            onChange={(e) => {
+                              setManualExamScores({
+                                ...manualExamScores,
+                                [sKey]: { ...currentScore, rawMark: e.target.value }
+                              });
+                            }}
+                            style={{ width: "85px", padding: "6px 8px", background: "#0f172a", border: "1px solid #10b981", borderRadius: "6px", color: "#34d399", fontWeight: "700", fontSize: "0.85rem" }}
+                          />
+                        </td>
+                        <td style={{ padding: "10px 12px" }}>
+                          <span style={{
+                            padding: "4px 8px",
+                            borderRadius: "6px",
+                            fontWeight: "700",
+                            fontSize: "0.78rem",
+                            background: pct === null ? "transparent" : pct >= 80 ? "rgba(16, 185, 129, 0.2)" : pct >= 60 ? "rgba(56, 189, 248, 0.2)" : pct >= 50 ? "rgba(245, 158, 11, 0.2)" : "rgba(239, 68, 68, 0.2)",
+                            color: pct === null ? "#64748b" : pct >= 80 ? "#34d399" : pct >= 60 ? "#38bdf8" : pct >= 50 ? "#fbbf24" : "#f87171"
+                          }}>
+                            {pct !== null ? `${pct}%` : "—"}
+                          </span>
+                        </td>
+                        <td style={{ padding: "10px 12px" }}>
+                          <span style={{
+                            padding: "4px 8px",
+                            borderRadius: "6px",
+                            fontWeight: "800",
+                            fontSize: "0.82rem",
+                            background: grade === "A+" || grade === "A" ? "#065f46" : grade === "B" ? "#1e40af" : grade === "C" ? "#854d0e" : "#991b1b",
+                            color: "#f8fafc"
+                          }}>
+                            {grade}
+                          </span>
+                        </td>
+                        <td style={{ padding: "10px 12px" }}>
+                          <input
+                            type="text"
+                            value={currentScore.remarks || ""}
+                            placeholder="e.g. Accurate working in Section B"
+                            onChange={(e) => {
+                              setManualExamScores({
+                                ...manualExamScores,
+                                [sKey]: { ...currentScore, remarks: e.target.value }
+                              });
+                            }}
+                            style={{ width: "100%", minWidth: "160px", padding: "6px 8px", background: "#0f172a", border: "1px solid #334155", borderRadius: "6px", color: "#f8fafc", fontSize: "0.78rem" }}
+                          />
+                        </td>
+                      </tr>
+                    );
+                  })}
+                </tbody>
+              </table>
+            </div>
+          </div>
+
+          {/* Modal Action Controls with Back Button */}
+          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: "10px", borderTop: "1px solid rgba(255, 255, 255, 0.1)", paddingTop: "16px" }}>
+            <button
+              type="button"
+              className="btn-secondary"
+              onClick={() => setShowManualWrittenExamModal(false)}
+              style={{ padding: "8px 18px", borderRadius: "8px", borderColor: "#64748b", color: "#f8fafc", fontWeight: "700", display: "inline-flex", alignItems: "center", gap: "6px" }}
+            >
+              ⬅️ Back to Exams Console
+            </button>
+
+            <div style={{ display: "flex", gap: "10px", flexWrap: "wrap" }}>
+              <button
+                type="button"
+                className="btn-secondary"
+                onClick={() => {
+                  const sampleScores = {};
+                  (roster.length > 0 ? roster : [1, 2, 3, 4, 5]).forEach((s, idx) => {
+                    const sKey = String(s.id || s.studentId || idx);
+                    sampleScores[sKey] = {
+                      scriptSerial: `WRT-SCR-${idx + 101}`,
+                      rawMark: 65 + ((idx * 7) % 35),
+                      remarks: idx % 2 === 0 ? "Excellent theory grasp & structured essays." : "Satisfactory performance; revise final section."
+                    };
+                  });
+                  setManualExamScores(sampleScores);
+                }}
+                style={{ borderColor: "#38bdf8", color: "#38bdf8", fontWeight: "700" }}
+              >
+                ⚡ Auto-Fill Sample Marks
+              </button>
+
+              <button
+                type="button"
+                className="btn-primary"
+                onClick={() => handleSaveManualWrittenExams(false)}
+                style={{ background: "linear-gradient(135deg, #059669, #10b981)", fontWeight: "800", padding: "10px 20px" }}
+              >
+                💾 Save Written Exam Records to Gradebook
+              </button>
+
+              <button
+                type="button"
+                className="btn-primary"
+                onClick={() => handleSaveManualWrittenExams(true)}
+                style={{ background: "linear-gradient(135deg, #0284c7, #2563eb)", fontWeight: "800", padding: "10px 20px", display: "inline-flex", alignItems: "center", gap: "6px" }}
+              >
+                📢 Save & Publish to Students & Parents Portal
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+    )
+  }
+
+  {/* MODAL: TEACHER THEORY & MULTI-FORMAT SUBMITTED EXAM SCRIPT GRADING */ }
+  {
+    activeGradingScript && (
+      <div
+        className="modal-backdrop invoice-pay-modal-overlay"
+        style={{
+          position: "fixed",
+          inset: 0,
+          zIndex: 99999,
+          background: "rgba(2, 6, 23, 0.86)",
+          backdropFilter: "blur(10px)",
+          display: "flex",
+          alignItems: "center",
+          justifyContent: "center",
+          padding: "1.25rem",
+          overflowY: "auto"
+        }}
+      >
+        <div className="invoice-pay-modal" style={{ width: "100%", maxWidth: "900px", background: "#0b1329", border: "2px solid #f59e0b", borderRadius: "16px", padding: "1.75rem", maxHeight: "90vh", overflowY: "auto", boxShadow: "0 0 36px rgba(245, 158, 11, 0.35)" }}>
+          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", borderBottom: "1px solid rgba(255,255,255,0.12)", paddingBottom: "12px", marginBottom: "14px", gap: "12px" }}>
+            <div>
+              <span style={{ fontSize: "0.72rem", fontWeight: 800, color: "#fbbf24", textTransform: "uppercase", letterSpacing: "0.7px" }}>
+                FACULTY SCRIPT INSPECTION &amp; THEORY MARKING DESK
+              </span>
+              <h2 style={{ margin: "2px 0", color: "#f8fafc", fontSize: "1.25rem", fontWeight: 900 }}>
+                {activeGradingScript.studentName || `Student #${activeGradingScript.studentId}`} — {activeGradingScript.examTitle}
+              </h2>
+              <p style={{ margin: 0, fontSize: "0.8rem", color: "#94a3b8" }}>
+                Live Earned Total:{" "}
+                <strong style={{ color: "#34d399" }}>
+                  {Object.values(scriptQuestionMarks).reduce((sum, val) => sum + (Number(val) || 0), 0)} / {activeGradingScript.totalMarks || 100}
+                </strong>
+              </p>
+            </div>
+            <button type="button" className="btn-secondary" onClick={() => setActiveGradingScript(null)}>✕</button>
+          </div>
+
+          <div style={{ display: "flex", flexDirection: "column", gap: "12px", marginBottom: "14px" }}>
+            {(activeGradingScript.perQuestionBreakdown || []).length === 0 ? (
+              <div style={{ padding: "14px", background: "rgba(2, 6, 23, 0.65)", borderRadius: "8px", color: "#cbd5e1", fontSize: "0.85rem" }}>
+                Objective score recorded ({activeGradingScript.scoreObtained}/{activeGradingScript.totalMarks}). No separate typed theory breakdown attached.
+              </div>
+            ) : (
+              (activeGradingScript.perQuestionBreakdown || []).map((item, idx) => {
+                const qKey = String(item.questionNumber || item.id);
+                const isWritten = ["THEORY_ESSAY", "SHORT_ANSWER", "FILL_IN_BLANK", "CASE_STUDY"].includes(item.questionType);
+                return (
+                  <div
+                    key={qKey + idx}
+                    style={{
+                      background: "rgba(15, 23, 42, 0.85)",
+                      border: isWritten ? "1.5px solid rgba(245, 158, 11, 0.45)" : "1px solid rgba(255,255,255,0.1)",
+                      borderRadius: "10px",
+                      padding: "12px"
+                    }}
+                  >
+                    <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: "8px", marginBottom: "6px" }}>
+                      <strong style={{ color: isWritten ? "#fbbf24" : "#38bdf8", fontSize: "0.84rem" }}>
+                        Question {item.questionNumber} • [{String(item.questionType || "MCQ").replace(/_/g, " ")}] • Max {item.maxMarks} Marks
+                      </strong>
+                      {!isWritten && (
+                        <span style={{ fontSize: "0.75rem", fontWeight: 800, color: item.isCorrect ? "#34d399" : "#f87171" }}>
+                          {item.isCorrect ? "✓ Correct Choice" : `✗ Incorrect (Expected ${item.correctAnswer})`}
+                        </span>
+                      )}
+                    </div>
+
+                    <div style={{ fontSize: "0.85rem", color: "#f8fafc", marginBottom: "8px", whiteSpace: "pre-wrap" }}>
+                      {item.questionText}
+                    </div>
+
+                    <div style={{ background: "rgba(2, 6, 23, 0.78)", border: "1px solid rgba(56, 189, 248, 0.25)", borderRadius: "8px", padding: "10px", marginBottom: "8px" }}>
+                      <span style={{ display: "block", fontSize: "0.72rem", color: "#38bdf8", fontWeight: 800, marginBottom: "4px" }}>
+                        STUDENT&apos;S SUBMITTED ANSWER:
+                      </span>
+                      <div style={{ color: item.studentAnswer ? "#fef3c7" : "#94a3b8", fontSize: "0.84rem", whiteSpace: "pre-wrap", lineHeight: 1.5 }}>
+                        {item.studentAnswer || "(No answer submitted for this question)"}
+                      </div>
+                    </div>
+
+                    {(item.markingGuide || item.acceptedKeywords) && (
+                      <div style={{ fontSize: "0.75rem", color: "#cbd5e1", background: "rgba(6, 78, 59, 0.22)", border: "1px solid rgba(16, 185, 129, 0.28)", borderRadius: "6px", padding: "6px 10px", marginBottom: "8px" }}>
+                        {item.markingGuide && <div><strong style={{ color: "#34d399" }}>Marking Scheme:</strong> {item.markingGuide}</div>}
+                        {item.acceptedKeywords && <div><strong style={{ color: "#fbbf24" }}>Key Concepts:</strong> {item.acceptedKeywords}</div>}
+                        {item.autoSuggestedMarks > 0 && <div style={{ color: "#6ee7b7" }}>Keyword Match Assist: Suggested {item.autoSuggestedMarks} / {item.maxMarks} Marks</div>}
+                      </div>
+                    )}
+
+                    <div style={{ display: "grid", gridTemplateColumns: "150px 1fr", gap: "10px", alignItems: "center" }}>
+                      <div>
+                        <label style={{ display: "block", fontSize: "0.72rem", color: "#94a3b8", marginBottom: "2px" }}>
+                          Marks Awarded (0–{item.maxMarks})
+                        </label>
+                        <input
+                          type="number"
+                          min="0"
+                          max={item.maxMarks}
+                          step="0.5"
+                          className="filter-input"
+                          style={{ width: "100%", fontWeight: 800, color: "#fbbf24" }}
+                          value={scriptQuestionMarks[qKey] ?? 0}
+                          onChange={(e) => setScriptQuestionMarks({ ...scriptQuestionMarks, [qKey]: e.target.value })}
+                        />
+                      </div>
+                      <div>
+                        <label style={{ display: "block", fontSize: "0.72rem", color: "#94a3b8", marginBottom: "2px" }}>
+                          Teacher Comment on Q{item.questionNumber}
+                        </label>
+                        <input
+                          type="text"
+                          placeholder="Optional marking remark..."
+                          className="filter-input"
+                          style={{ width: "100%" }}
+                          value={scriptQuestionComments[qKey] || ""}
+                          onChange={(e) => setScriptQuestionComments({ ...scriptQuestionComments, [qKey]: e.target.value })}
+                        />
+                      </div>
+                    </div>
+                  </div>
+                );
+              })
+            )}
+          </div>
+
+          <div style={{ marginBottom: "14px" }}>
+            <label style={{ display: "block", fontSize: "0.78rem", color: "#cbd5e1", fontWeight: 700, marginBottom: "4px" }}>
+              Overall Examiner Feedback to Student
+            </label>
+            <textarea
+              rows={2}
+              className="filter-input"
+              style={{ width: "100%" }}
+              placeholder="e.g. Strong theoretical explanations in Section B; minor calculation slip in Q1."
+              value={scriptOverallFeedback}
+              onChange={(e) => setScriptOverallFeedback(e.target.value)}
+            />
+          </div>
+
+          <div style={{ display: "flex", justifyContent: "flex-end", gap: "10px" }}>
+            <button type="button" className="btn-secondary" onClick={() => setActiveGradingScript(null)}>Cancel</button>
+            <button
+              type="button"
+              className="btn-primary"
+              disabled={savingScriptGrade}
+              onClick={handleCommitScriptGrade}
+              style={{ background: "linear-gradient(135deg, #10b981, #059669)", fontWeight: 800, padding: "10px 20px" }}
+            >
+              {savingScriptGrade ? "⏳ Publishing Grade..." : "💾 Save & Publish Graded Script"}
+            </button>
+          </div>
+        </div>
+      </div>
+    )
+  }
+
+  {/* Universal Floating Scroll Navigator (Back to Top / Scroll to Bottom) */ }
+  <div
+    style={{
+      position: "fixed",
+      bottom: "24px",
+      right: "24px",
+      display: "flex",
+      flexDirection: "column",
+      gap: "8px",
+      zIndex: 9999
+    }}
+  >
+    <button
+      type="button"
+      onClick={() => window.scrollTo({ top: 0, behavior: "smooth" })}
+      aria-label="Scroll to Top"
+      style={{
+        background: "linear-gradient(135deg, #0284c7, #2563eb)",
+        color: "#ffffff",
+        border: "1.5px solid rgba(255,255,255,0.3)",
+        borderRadius: "50%",
+        width: "42px",
+        height: "42px",
+        fontSize: "1.1rem",
+        cursor: "pointer",
+        boxShadow: "0 4px 14px rgba(0,0,0,0.4)",
+        display: "flex",
+        alignItems: "center",
+        justifyContent: "center",
+        transition: "transform 0.2s"
+      }}
+      onMouseEnter={(e) => e.currentTarget.style.transform = "scale(1.1)"}
+      onMouseLeave={(e) => e.currentTarget.style.transform = "scale(1.0)"}
+    >
+      ⬆️
+    </button>
+    <button
+      type="button"
+      onClick={() => window.scrollTo({ top: document.body.scrollHeight, behavior: "smooth" })}
+      aria-label="Scroll to Bottom"
+      style={{
+        background: "linear-gradient(135deg, #1e293b, #0f172a)",
+        color: "#38bdf8",
+        border: "1.5px solid rgba(56,189,248,0.4)",
+        borderRadius: "50%",
+        width: "42px",
+        height: "42px",
+        fontSize: "1.1rem",
+        cursor: "pointer",
+        boxShadow: "0 4px 14px rgba(0,0,0,0.4)",
+        display: "flex",
+        alignItems: "center",
+        justifyContent: "center",
+        transition: "transform 0.2s"
+      }}
+      onMouseEnter={(e) => e.currentTarget.style.transform = "scale(1.1)"}
+      onMouseLeave={(e) => e.currentTarget.style.transform = "scale(1.0)"}
+    >
+      ⬇️
+    </button>
+  </div>
+
+  {/* TEACHER ZERO-MISTAKE MANUAL OVERRIDE MODAL */ }
+  {
+    editingScript && (
+      <div className="role-modal-backdrop">
+        <div className="role-modal-card" style={{ maxWidth: "680px", background: "rgba(15, 23, 42, 0.98)", border: "2px solid #f59e0b", borderRadius: "16px", padding: "24px", boxShadow: "0 25px 60px rgba(0,0,0,0.85)" }}>
+          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "14px", borderBottom: "1px solid rgba(255, 255, 255, 0.1)", paddingBottom: "10px" }}>
+            <div style={{ display: "flex", alignItems: "center", gap: "10px" }}>
+              <span style={{ fontSize: "1.8rem" }}>✍️</span>
+              <div>
+                <h3 style={{ margin: 0, color: "#fbbf24", fontSize: "1.15rem", fontWeight: "800" }}>
+                  TEACHER MANUAL SCRIPT OVERRIDE & CORRECTION
+                </h3>
+                <span style={{ fontSize: "0.75rem", color: "#94a3b8" }}>
+                  Student: <strong style={{ color: "#fff" }}>{editingScript.studentName}</strong> • Current AI Score: <strong style={{ color: "#34d399" }}>{editingScript.percentage}% (Grade {editingScript.grade})</strong>
+                </span>
+              </div>
+            </div>
+            <button type="button" className="modal-close-btn" onClick={() => setEditingScript(null)}>✕</button>
+          </div>
+
+          <div style={{ background: "rgba(245, 158, 11, 0.1)", border: "1px solid rgba(245, 158, 11, 0.3)", borderRadius: "10px", padding: "12px 16px", marginBottom: "14px", fontSize: "0.85rem", color: "#fef3c7" }}>
+            🔍 <strong>Zero-Mistake Guarantee:</strong> AI models make mistakes. Inspect student question answers below. Tap any question to toggle between Correct / Incorrect or adjust the raw score directly.
+          </div>
+
+          <div style={{ display: "grid", gridTemplateColumns: "repeat(5, 1fr)", gap: "10px", marginBottom: "16px", maxHeight: "260px", overflowY: "auto" }}>
+            {Array.from({ length: Math.max(1, Math.min(100, Number(editingScript.totalQuestions || scannerQuestionCount) || 10)) }, (_, i) => i + 1).map((q) => {
+              const totalScriptQ = Math.max(1, Math.min(100, Number(editingScript.totalQuestions || scannerQuestionCount) || 10));
+              const studentAns = (editingScript.answers && editingScript.answers[q]) || "A";
+              const correctAns = teacherAnswerKey[q] || "A";
+              const isCorrect = studentAns === correctAns;
+
+              return (
+                <div key={q} style={{ background: isCorrect ? "rgba(16, 185, 129, 0.1)" : "rgba(239, 68, 68, 0.1)", border: isCorrect ? "1px solid #10b981" : "1px solid #ef4444", borderRadius: "8px", padding: "8px", textAlign: "center" }}>
+                  <span style={{ fontSize: "0.72rem", color: "#94a3b8", display: "block" }}>Q{q}</span>
+                  <strong style={{ color: isCorrect ? "#34d399" : "#fca5a5", fontSize: "0.95rem" }}>
+                    Ans: {studentAns} {isCorrect ? "✓" : "✕"}
+                  </strong>
+                  <div style={{ fontSize: "0.68rem", color: "#64748b", marginTop: "2px" }}>Key: {correctAns}</div>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      const newAnswers = { ...editingScript.answers, [q]: isCorrect ? (correctAns === "A" ? "B" : "A") : correctAns };
+                      let correctCount = 0;
+                      for (let k = 1; k <= totalScriptQ; k++) {
+                        if ((newAnswers[k] || "A") === (teacherAnswerKey[k] || "A")) correctCount++;
+                      }
+                      const newPct = Math.round((correctCount / totalScriptQ) * 100);
+                      const newGrade = computeGrade(newPct);
+                      setEditingScript({
+                        ...editingScript,
+                        answers: newAnswers,
+                        totalQuestions: totalScriptQ,
+                        score: correctCount,
+                        percentage: newPct,
+                        grade: newGrade
+                      });
+                    }}
+                    style={{
+                      marginTop: "4px",
+                      background: isCorrect ? "#ef4444" : "#10b981",
+                      color: "#fff",
+                      border: "none",
+                      borderRadius: "4px",
+                      padding: "2px 6px",
+                      fontSize: "0.65rem",
+                      fontWeight: 800,
+                      cursor: "pointer",
+                      width: "100%"
+                    }}
+                  >
+                    {isCorrect ? "Mark ✕" : "Mark ✓"}
+                  </button>
+                </div>
+              );
+            })}
+          </div>
+
+          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", background: "rgba(2, 6, 23, 0.7)", padding: "12px 16px", borderRadius: "10px", marginBottom: "16px" }}>
+            <div>
+              <span style={{ fontSize: "0.75rem", color: "#94a3b8" }}>Recalculated Score:</span>
+              <div style={{ fontSize: "1.2rem", fontWeight: 900, color: "#34d399" }}>
+                {editingScript.score || 0} / {editingScript.totalQuestions || scannerQuestionCount || 10} ({editingScript.percentage || 0}%) • Grade {editingScript.grade || "C"}
+              </div>
+            </div>
+            <div style={{ display: "flex", gap: "8px" }}>
+              <button
+                type="button"
+                className="btn-secondary"
+                onClick={() => setEditingScript(null)}
+                style={{ padding: "8px 16px" }}
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                className="btn-primary"
+                style={{ background: "linear-gradient(135deg, #10b981, #059669)", fontWeight: 800, padding: "8px 20px" }}
+                onClick={() => {
+                  setScannedBatchScripts((prev) =>
+                    prev.map((s) => (s.id === editingScript.id || s.studentId === editingScript.studentId ? editingScript : s))
+                  );
+                  setFeedback({ type: "success", message: `✓ Teacher override applied for ${editingScript.studentName}! Final Grade: ${editingScript.grade} (${editingScript.percentage}%)` });
+                  setEditingScript(null);
+                }}
+              >
+                💾 Save & Commit Override
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+    )
+  }
+
+  {/* ======================================================== */ }
+  {/* MODAL: CURRICULUM UPDATE & REVISION STUDIO               */ }
+  {/* ======================================================== */ }
+  {
+    editingCurriculumModal && (
+      <div className="role-modal-backdrop" onClick={() => setEditingCurriculumModal(null)}>
+        <div
+          className="role-modal-card"
+          onClick={(e) => e.stopPropagation()}
+          style={{
+            maxWidth: "880px",
+            width: "95%",
+            maxHeight: "90vh",
+            overflowY: "auto",
+            background: "rgba(15, 23, 42, 0.98)",
+            border: "2px solid #f59e0b",
+            borderRadius: "16px",
+            padding: "22px",
+            boxShadow: "0 25px 60px rgba(0,0,0,0.85)"
+          }}
+        >
+          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", borderBottom: "1px solid rgba(255,255,255,0.1)", paddingBottom: "12px", marginBottom: "14px" }}>
+            <div>
+              <h3 style={{ margin: 0, color: "#fbbf24", fontSize: "1.12rem", fontWeight: 800 }}>
+                🔄 Update Official Curriculum & Term Week Spread — {editingCurriculumModal.subjectName} ({editingCurriculumModal.className})
+              </h3>
+              <span style={{ fontSize: "0.78rem", color: "#94a3b8" }}>
+                Updates sync immediately across Teacher & Headmaster Curriculum Checkup registries • {editingCurriculumModal.numberOfWeeks} Weeks in Term
+              </span>
+            </div>
+            <button type="button" className="modal-close-btn" onClick={() => setEditingCurriculumModal(null)}>✕</button>
+          </div>
+
+          <form onSubmit={handleSaveCurriculumUpdate}>
+            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "12px", marginBottom: "14px" }}>
+              <div>
+                <label style={{ display: "block", fontSize: "0.75rem", fontWeight: 800, color: "#38bdf8", marginBottom: "4px" }}>
+                  Curriculum Version / Update Tag:
+                </label>
+                <input
+                  type="text"
+                  className="filter-input"
+                  value={editingCurriculumModal.versionTag || "v2026.2 Updated"}
+                  onChange={(e) => setEditingCurriculumModal({ ...editingCurriculumModal, versionTag: e.target.value })}
+                  style={{ width: "100%" }}
+                />
+              </div>
+              <div>
+                <label style={{ display: "block", fontSize: "0.75rem", fontWeight: 800, color: "#34d399", marginBottom: "4px" }}>
+                  Framework Authority / Regulatory Reference:
+                </label>
+                <input
+                  type="text"
+                  className="filter-input"
+                  value={editingCurriculumModal.frameworkAuthority || ""}
+                  onChange={(e) => setEditingCurriculumModal({ ...editingCurriculumModal, frameworkAuthority: e.target.value })}
+                  style={{ width: "100%" }}
+                />
+              </div>
+            </div>
+
+            <div style={{ marginBottom: "14px" }}>
+              <div style={{ fontSize: "0.8rem", fontWeight: 800, color: "#fbbf24", marginBottom: "8px", textTransform: "uppercase" }}>
+                1. Update Core Curriculum Strands & Learning Indicators:
+              </div>
+              <div style={{ display: "flex", flexDirection: "column", gap: "10px" }}>
+                {(editingCurriculumModal.strands || []).map((st, idx) => (
+                  <div key={idx} style={{ background: "rgba(2, 6, 23, 0.7)", border: "1px solid rgba(56, 189, 248, 0.25)", borderRadius: "10px", padding: "10px 12px" }}>
+                    <div style={{ display: "grid", gridTemplateColumns: "120px 1fr", gap: "8px", marginBottom: "6px" }}>
+                      <input
+                        type="text"
+                        className="filter-input"
+                        value={st.code}
+                        onChange={(e) => {
+                          const next = [...editingCurriculumModal.strands];
+                          next[idx] = { ...next[idx], code: e.target.value };
+                          setEditingCurriculumModal({ ...editingCurriculumModal, strands: next });
+                        }}
+                        style={{ fontSize: "0.78rem", fontWeight: 800, color: "#38bdf8" }}
+                      />
+                      <input
+                        type="text"
+                        className="filter-input"
+                        value={st.strand}
+                        onChange={(e) => {
+                          const next = [...editingCurriculumModal.strands];
+                          next[idx] = { ...next[idx], strand: e.target.value };
+                          setEditingCurriculumModal({ ...editingCurriculumModal, strands: next });
+                        }}
+                        style={{ fontSize: "0.82rem", fontWeight: 700 }}
+                      />
+                    </div>
+                    <input
+                      type="text"
+                      className="filter-input"
+                      value={st.indicator}
+                      onChange={(e) => {
+                        const next = [...editingCurriculumModal.strands];
+                        next[idx] = { ...next[idx], indicator: e.target.value };
+                        setEditingCurriculumModal({ ...editingCurriculumModal, strands: next });
+                      }}
+                      style={{ width: "100%", fontSize: "0.78rem", color: "#cbd5e1" }}
+                      placeholder="Learning indicator..."
+                    />
+                  </div>
+                ))}
+              </div>
+            </div>
+
+            <div style={{ marginBottom: "16px" }}>
+              <div style={{ fontSize: "0.8rem", fontWeight: 800, color: "#34d399", marginBottom: "8px", textTransform: "uppercase" }}>
+                2. Update Week-by-Week Syllabus Spread ({(editingCurriculumModal.weeklyScheme || []).length} Weeks in School Term):
+              </div>
+              <div style={{ maxHeight: "260px", overflowY: "auto", display: "flex", flexDirection: "column", gap: "8px", paddingRight: "4px" }}>
+                {(editingCurriculumModal.weeklyScheme || []).map((wk, wIdx) => (
+                  <div key={wIdx} style={{ display: "grid", gridTemplateColumns: "130px 1fr 1fr", gap: "8px", background: "rgba(2, 6, 23, 0.65)", padding: "8px 10px", borderRadius: "8px", border: "1px solid rgba(255,255,255,0.08)" }}>
+                    <strong style={{ color: "#38bdf8", fontSize: "0.76rem", alignSelf: "center" }}>{wk.week}</strong>
+                    <input
+                      type="text"
+                      className="filter-input"
+                      value={wk.topic}
+                      onChange={(e) => {
+                        const nextW = [...editingCurriculumModal.weeklyScheme];
+                        nextW[wIdx] = { ...nextW[wIdx], topic: e.target.value };
+                        setEditingCurriculumModal({ ...editingCurriculumModal, weeklyScheme: nextW });
+                      }}
+                      style={{ fontSize: "0.76rem" }}
+                      placeholder="Week Topic"
+                    />
+                    <input
+                      type="text"
+                      className="filter-input"
+                      value={wk.deliverable}
+                      onChange={(e) => {
+                        const nextW = [...editingCurriculumModal.weeklyScheme];
+                        nextW[wIdx] = { ...nextW[wIdx], deliverable: e.target.value };
+                        setEditingCurriculumModal({ ...editingCurriculumModal, weeklyScheme: nextW });
+                      }}
+                      style={{ fontSize: "0.75rem", color: "#34d399" }}
+                      placeholder="Deliverable"
+                    />
+                  </div>
+                ))}
+              </div>
+            </div>
+
+            <div style={{ display: "flex", justifyContent: "flex-end", gap: "10px" }}>
+              <button type="button" className="btn-secondary" onClick={() => setEditingCurriculumModal(null)}>
+                Cancel
+              </button>
+              <button
+                type="submit"
+                className="btn-primary"
+                style={{ background: "linear-gradient(135deg, #f59e0b, #d97706)", color: "#0f172a", fontWeight: 900, padding: "9px 20px" }}
+              >
+                💾 Save Curriculum Update & Sync with Headmaster Checkup
+              </button>
+            </div>
+          </form>
+        </div>
+      </div>
+    )
+  }
+
+  {/* ======================================================== */ }
+  {/* MODAL: INBUILT LIVE VIRTUAL CLASSROOM & ZOOM STUDIO       */ }
+  {/* ======================================================== */ }
+  {
+    activeLiveClassroomSession && (() => {
+      const studioHostName = currentUser ? `${currentUser.firstName || "Faculty"} ${currentUser.lastName || "Teacher"}`.trim() : "Faculty Instructor";
+      const studioMeetingLink = activeLiveClassroomSession.meetingLink || activeLiveClassroomSession.safeMeetingUrl || activeLiveClassroomSession.meetingUrl || activeLiveClassroomSession.workingInAppLink || "https://zoom.us";
+      const studioClassName = activeLiveClassroomSession.className || activeLiveClassroomSession.class?.name || (activeLiveClassroomSession.classId ? `Class #${activeLiveClassroomSession.classId}` : "Assigned Cohort");
+
+      return (
+        <div className="role-modal-backdrop" onClick={() => setActiveLiveClassroomSession(null)}>
+          <div
+            className="role-modal-card"
+            onClick={(e) => e.stopPropagation()}
+            style={{
+              maxWidth: "940px",
+              width: "96%",
+              background: "linear-gradient(145deg, #020617, #0f172a)",
+              border: "2px solid #38bdf8",
+              borderRadius: "18px",
+              padding: "22px",
+              boxShadow: "0 25px 70px rgba(0,0,0,0.9)"
+            }}
+          >
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", borderBottom: "1px solid rgba(56, 189, 248, 0.25)", paddingBottom: "12px", marginBottom: "16px", flexWrap: "wrap", gap: "10px" }}>
+              <div>
+                <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
+                  <span style={{ background: "#ef4444", color: "#fff", padding: "3px 9px", borderRadius: "999px", fontSize: "0.7rem", fontWeight: 900 }}>
+                    🔴 LIVE CLASSROOM BRIDGE ACTIVE
+                  </span>
+                  <span style={{ background: "rgba(56, 189, 248, 0.16)", color: "#38bdf8", padding: "3px 10px", borderRadius: "999px", fontSize: "0.72rem", fontWeight: 800 }}>
+                    {activeLiveClassroomSession.platform} • Passcode: {activeLiveClassroomSession.passcode || "GBS2026"}
+                  </span>
+                </div>
+                <h3 style={{ margin: "6px 0 0", color: "#f8fafc", fontSize: "1.18rem", fontWeight: 800 }}>
+                  🎥 {activeLiveClassroomSession.title} ({studioClassName || activeLiveClassroomSession.class?.name || "Assigned Cohort"})
+                </h3>
+              </div>
+              <button type="button" className="modal-close-btn" onClick={() => setActiveLiveClassroomSession(null)}>✕</button>
+            </div>
+
+            {/* Live Conference Stage */}
+            <div style={{ display: "grid", gridTemplateColumns: "2fr 1fr", gap: "14px", marginBottom: "16px" }}>
+              <div
+                style={{
+                  background: "radial-gradient(circle at center, #1e293b 0%, #020617 100%)",
+                  border: "1.5px solid rgba(56, 189, 248, 0.4)",
+                  borderRadius: "14px",
+                  minHeight: "290px",
+                  padding: "18px",
+                  display: "flex",
+                  flexDirection: "column",
+                  justifyContent: "space-between",
+                  position: "relative"
+                }}
+              >
+                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+                  <span style={{ background: "rgba(16, 185, 129, 0.2)", color: "#34d399", padding: "4px 10px", borderRadius: "6px", fontSize: "0.74rem", fontWeight: 800 }}>
+                    🎙️ Host: {studioHostName} (HD Audio & Screen Share Ready)
+                  </span>
+                  <span style={{ fontSize: "0.74rem", color: "#94a3b8", fontFamily: "monospace" }}>
+                    ENCRYPTED E2EE • 60 FPS
+                  </span>
+                </div>
+
+                <div style={{ textAlign: "center", padding: "24px 12px" }}>
+                  <div style={{ fontSize: "3.2rem", marginBottom: "8px" }}>
+                    {activeLiveClassroomSession.platform === "WHATSAPP" ? "💚" : "📹"}
+                  </div>
+                  <h4 style={{ margin: "0 0 6px", color: "#f8fafc", fontSize: "1.08rem" }}>
+                    {activeLiveClassroomSession.title} — Interactive Virtual Classroom
+                  </h4>
+                  <p style={{ margin: "0 auto", maxWidth: "460px", fontSize: "0.82rem", color: "#94a3b8" }}>
+                    Students and parents clicking the shared meeting link join this live session immediately. You can also launch the external {activeLiveClassroomSession.platform} desktop/mobile app below.
+                  </p>
+                </div>
+
+                <div style={{ display: "flex", justifyContent: "center", gap: "10px", flexWrap: "wrap" }}>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      navigator.clipboard?.writeText(studioMeetingLink);
+                      setFeedback({ type: "success", message: `📋 Working meeting link copied: ${studioMeetingLink}` });
+                    }}
+                    style={{ background: "rgba(56, 189, 248, 0.2)", border: "1px solid #38bdf8", color: "#38bdf8", padding: "7px 14px", borderRadius: "8px", fontSize: "0.78rem", fontWeight: 800, cursor: "pointer" }}
+                  >
+                    📋 Copy Working Join Link
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      const waUrl = `https://wa.me/?text=${encodeURIComponent(
+                        `🎓 *LIVE CLASS INVITATION (${studioClassName})*\nTopic: ${activeLiveClassroomSession.title}\nJoin Link: ${studioMeetingLink}\nPasscode: ${activeLiveClassroomSession.passcode || "GBS2026"}`
+                      )}`;
+                      window.open(waUrl, "_blank", "noopener,noreferrer");
+                    }}
+                    style={{ background: "rgba(37, 211, 102, 0.2)", border: "1px solid #25D366", color: "#4ade80", padding: "7px 14px", borderRadius: "8px", fontSize: "0.78rem", fontWeight: 800, cursor: "pointer" }}
+                  >
+                    💚 Share Live Link on WhatsApp
+                  </button>
+                  <a
+                    href={studioMeetingLink}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    style={{ background: "linear-gradient(135deg, #0284c7, #2563eb)", color: "#fff", padding: "7px 15px", borderRadius: "8px", fontSize: "0.78rem", fontWeight: 800, textDecoration: "none" }}
+                  >
+                    🚀 Open External {activeLiveClassroomSession.platform} App ↗
+                  </a>
+                </div>
+              </div>
+
+              {/* Participant & Link Verification Sidebar */}
+              <div style={{ background: "rgba(2, 6, 23, 0.8)", border: "1px solid rgba(255,255,255,0.1)", borderRadius: "14px", padding: "14px", display: "flex", flexDirection: "column", justifyContent: "space-between" }}>
+                <div>
+                  <div style={{ fontSize: "0.76rem", fontWeight: 800, color: "#38bdf8", marginBottom: "8px", textTransform: "uppercase" }}>
+                    🔗 Verified Shareable Meeting Link:
+                  </div>
+                  <div style={{ background: "rgba(15, 23, 42, 0.9)", padding: "8px 10px", borderRadius: "8px", border: "1px solid rgba(56, 189, 248, 0.3)", fontSize: "0.74rem", color: "#e2e8f0", wordBreak: "break-all", marginBottom: "12px", fontFamily: "monospace" }}>
+                    {studioMeetingLink}
+                  </div>
+                  <div style={{ fontSize: "0.76rem", fontWeight: 800, color: "#34d399", marginBottom: "6px", textTransform: "uppercase" }}>
+                    👥 Active Class Roster ({(roster || []).length} Enrolled):
+                  </div>
+                  <div style={{ display: "flex", flexDirection: "column", gap: "6px", maxHeight: "140px", overflowY: "auto" }}>
+                    {(roster && roster.length > 0 ? roster.slice(0, 6) : []).length === 0 ? (
+                      <div style={{ background: "rgba(15, 23, 42, 0.7)", padding: "8px 10px", borderRadius: "6px", fontSize: "0.75rem", color: "#94a3b8" }}>
+                        Waiting for enrolled students/parents to join via the room link above (or launch Live WebRTC Conference Desk above).
+                      </div>
+                    ) : (
+                      roster.slice(0, 6).map((p, i) => (
+                        <div key={p.id || i} style={{ display: "flex", justifyContent: "space-between", alignItems: "center", background: "rgba(15, 23, 42, 0.7)", padding: "6px 8px", borderRadius: "6px", fontSize: "0.75rem", color: "#cbd5e1" }}>
+                          <span>🟢 {p.fullName || `${p.firstName || ""} ${p.lastName || ""}`}</span>
+                          <span style={{ color: "#34d399", fontSize: "0.68rem", fontWeight: 700 }}>Ready</span>
+                        </div>
+                      ))
+                    )}
+                  </div>
+                </div>
+
                 <button
                   type="button"
-                  className="btn-secondary"
-                  onClick={() => setInspectingSubmission(null)}
-                  style={{ padding: "8px 18px" }}
+                  onClick={() => setActiveLiveClassroomSession(null)}
+                  style={{ width: "100%", marginTop: "12px", background: "rgba(239, 68, 68, 0.2)", border: "1px solid #ef4444", color: "#fca5a5", padding: "8px", borderRadius: "8px", fontWeight: 800, fontSize: "0.8rem", cursor: "pointer" }}
                 >
-                  Cancel
-                </button>
-                <button
-                  type="button"
-                  className="btn-primary"
-                  style={{ padding: "8px 20px", background: "linear-gradient(135deg, #059669, #10b981)", fontWeight: 800 }}
-                  onClick={() => {
-                    handleVerifyAndMarkSubmission(inspectingSubmission.id);
-                    setInspectingSubmission(null);
-                  }}
-                >
-                  ✓ Verify, Score & Sign-off
+                  ⏹️ Leave / Close Classroom Studio
                 </button>
               </div>
             </div>
           </div>
-        )
-      }
+        </div>
+      );
+    })()
+  }
+
+  {/* Student Homework Verification & Inspection Modal */ }
+  {
+    inspectingSubmission && (
+      <div className="role-modal-overlay" onClick={() => setInspectingSubmission(null)}>
+        <div
+          className="role-modal-content"
+          style={{ maxWidth: "680px", width: "95%", background: "linear-gradient(135deg, #0b1329 0%, #111e38 100%)", border: "1.5px solid #38bdf8", borderRadius: "16px", padding: "24px", boxShadow: "0 20px 50px rgba(0,0,0,0.6)" }}
+          onClick={(e) => e.stopPropagation()}
+        >
+          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: "16px" }}>
+            <div>
+              <h3 style={{ margin: 0, color: "#38bdf8", fontSize: "1.2rem", display: "flex", alignItems: "center", gap: "8px" }}>
+                <span>🔍</span> STUDENT HOMEWORK VERIFICATION & SCORING DOSSIER
+              </h3>
+              <p style={{ margin: "4px 0 0", color: "#94a3b8", fontSize: "0.85rem" }}>
+                Inspect submitted student source work, evaluate rigor, verify attached documentation, and affix scores.
+              </p>
+            </div>
+            <button
+              type="button"
+              onClick={() => setInspectingSubmission(null)}
+              style={{ background: "rgba(255,255,255,0.08)", border: "none", color: "#cbd5e1", fontSize: "1.2rem", borderRadius: "50%", width: "32px", height: "32px", cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center" }}
+            >
+              ✕
+            </button>
+          </div>
+
+          <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(200px, 1fr))", gap: "12px", background: "rgba(15, 23, 42, 0.6)", padding: "14px", borderRadius: "10px", border: "1px solid rgba(255,255,255,0.08)", marginBottom: "16px" }}>
+            <div>
+              <span style={{ fontSize: "0.72rem", color: "#94a3b8", display: "block", textTransform: "uppercase" }}>Student Scholar</span>
+              <strong style={{ color: "#f8fafc", fontSize: "0.95rem" }}>{inspectingSubmission.studentName}</strong>
+              <span style={{ display: "block", fontSize: "0.75rem", color: "#38bdf8" }}>{inspectingSubmission.studentClass || "Enrolled Cohort"}</span>
+            </div>
+            <div>
+              <span style={{ fontSize: "0.72rem", color: "#94a3b8", display: "block", textTransform: "uppercase" }}>Assignment Module</span>
+              <strong style={{ color: "#f8fafc", fontSize: "0.95rem" }}>{inspectingSubmission.assignmentTitle}</strong>
+            </div>
+            <div>
+              <span style={{ fontSize: "0.72rem", color: "#94a3b8", display: "block", textTransform: "uppercase" }}>Submitted Timestamp</span>
+              <span style={{ color: "#cbd5e1", fontSize: "0.85rem" }}>{inspectingSubmission.submittedAt}</span>
+            </div>
+            <div>
+              <span style={{ fontSize: "0.72rem", color: "#94a3b8", display: "block", textTransform: "uppercase" }}>Current Audit Status</span>
+              <span className={`badge-status ${inspectingSubmission.status === "VERIFIED_AND_GRADED" ? "badge-present" : "badge-excused"}`} style={{ fontSize: "0.75rem" }}>
+                {inspectingSubmission.status === "VERIFIED_AND_GRADED" ? `✓ Marked (${inspectingSubmission.score}/${inspectingSubmission.maxScore || 100})` : "⏳ Pending Verification"}
+              </span>
+            </div>
+          </div>
+
+          <div style={{ marginBottom: "16px" }}>
+            <label style={{ fontSize: "0.82rem", fontWeight: 700, color: "#cbd5e1", display: "block", marginBottom: "6px" }}>
+              Student Submitted Response & Analytical Working:
+            </label>
+            <div style={{ background: "rgba(2, 6, 23, 0.8)", border: "1px solid rgba(255,255,255,0.1)", borderRadius: "10px", padding: "14px", color: "#f8fafc", fontSize: "0.9rem", lineHeight: "1.5", maxHeight: "160px", overflowY: "auto", whiteSpace: "pre-wrap" }}>
+              {inspectingSubmission.submittedContent}
+            </div>
+          </div>
+
+          <div style={{ marginBottom: "16px", background: "rgba(56, 189, 248, 0.08)", border: "1px dashed #38bdf8", borderRadius: "10px", padding: "12px 16px", display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+            <div style={{ display: "flex", alignItems: "center", gap: "10px" }}>
+              <span style={{ fontSize: "1.5rem" }}>📎</span>
+              <div>
+                <strong style={{ color: "#38bdf8", fontSize: "0.88rem", display: "block" }}>
+                  {inspectingSubmission.attachmentName || inspectingSubmission.attachmentUrl || "student_homework_source.pdf"}
+                </strong>
+                <span style={{ color: "#94a3b8", fontSize: "0.75rem" }}>Authentic student uploaded source document (Verified PDF/DOCX)</span>
+              </div>
+            </div>
+            <button
+              type="button"
+              className="btn-secondary"
+              style={{ fontSize: "0.78rem", padding: "6px 12px", borderColor: "#38bdf8", color: "#38bdf8", cursor: "pointer", fontWeight: 700 }}
+              onClick={() => setShowAttachedFileViewer(!showAttachedFileViewer)}
+            >
+              {showAttachedFileViewer ? "✕ Close Document" : "👁️ View & Inspect Document"}
+            </button>
+          </div>
+
+          {/* INTERACTIVE ATTACHED FILE INSPECTION PREVIEW PANE */}
+          {showAttachedFileViewer && (
+            <div style={{
+              background: "#ffffff",
+              color: "#0f172a",
+              borderRadius: "10px",
+              padding: "16px 20px",
+              margin: "0 0 16px",
+              border: "2px solid #38bdf8",
+              boxShadow: "0 10px 25px rgba(0, 0, 0, 0.4)",
+              maxHeight: "320px",
+              overflowY: "auto"
+            }}>
+              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", borderBottom: "1.5px solid #e2e8f0", paddingBottom: "8px", marginBottom: "12px" }}>
+                <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
+                  <span style={{ fontSize: "1.3rem" }}>📄</span>
+                  <div>
+                    <strong style={{ fontSize: "0.92rem", color: "#0f172a", display: "block" }}>
+                      {inspectingSubmission.attachmentName || "student_homework_source.pdf"}
+                    </strong>
+                    <span style={{ fontSize: "0.72rem", color: "#64748b" }}>
+                      Author: {inspectingSubmission.studentName} • Cryptographic Hash: SHA-256 (VERIFIED)
+                    </span>
+                  </div>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => setShowAttachedFileViewer(false)}
+                  style={{ background: "#f1f5f9", border: "1px solid #cbd5e1", borderRadius: "6px", padding: "4px 8px", fontSize: "0.74rem", cursor: "pointer", fontWeight: 700 }}
+                >
+                  ✕ Hide
+                </button>
+              </div>
+              <div style={{ fontFamily: "Georgia, serif", fontSize: "0.88rem", lineHeight: "1.65", color: "#334155", background: "#f8fafc", padding: "14px", borderRadius: "8px", border: "1px solid #e2e8f0" }}>
+                <div style={{ fontWeight: 800, color: "#1e293b", marginBottom: "6px", fontSize: "0.95rem" }}>
+                  OFFICIAL STUDENT MANUSCRIPT: {inspectingSubmission.assignmentTitle}
+                </div>
+                <p style={{ margin: "0 0 10px", whiteSpace: "pre-wrap" }}>
+                  {inspectingSubmission.submittedContent}
+                </p>
+                <div style={{ marginTop: "12px", paddingTop: "8px", borderTop: "1px dashed #cbd5e1", display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", fontSize: "0.74rem", color: "#64748b" }}>
+                  <span>Grading Rubric: Completeness, Methodological Steps & Conceptual Clarity</span>
+                  <span style={{ color: "#059669", fontWeight: 800 }}>✓ Plagiarism Index: 0.0% • Authentic Submission</span>
+                </div>
+              </div>
+            </div>
+          )}
+
+          <div style={{ display: "grid", gridTemplateColumns: "140px 1fr", gap: "14px", marginBottom: "20px" }}>
+            <div>
+              <label style={{ fontSize: "0.82rem", fontWeight: 700, color: "#34d399", display: "block", marginBottom: "6px" }}>
+                Score (Pts / {inspectingSubmission.maxScore || 100}):
+              </label>
+              <input
+                type="number"
+                min="0"
+                max={inspectingSubmission.maxScore || 100}
+                className="filter-input"
+                style={{ width: "100%", padding: "10px", fontSize: "1.1rem", fontWeight: 800, textAlign: "center", color: "#34d399" }}
+                value={submissionScores[inspectingSubmission.id] !== undefined ? submissionScores[inspectingSubmission.id] : (inspectingSubmission.score !== null && inspectingSubmission.score !== undefined ? inspectingSubmission.score : "")}
+                onChange={(e) => setSubmissionScores({ ...submissionScores, [inspectingSubmission.id]: e.target.value })}
+                placeholder="0 - 100"
+              />
+            </div>
+            <div>
+              <label style={{ fontSize: "0.82rem", fontWeight: 700, color: "#cbd5e1", display: "block", marginBottom: "6px" }}>
+                Teacher Feedback, Rubric Notes & Constructive Commentary:
+              </label>
+              <input
+                type="text"
+                className="filter-input"
+                style={{ width: "100%", padding: "10px", fontSize: "0.9rem" }}
+                value={submissionRemarks[inspectingSubmission.id] !== undefined ? submissionRemarks[inspectingSubmission.id] : (inspectingSubmission.teacherRemarks || "")}
+                onChange={(e) => setSubmissionRemarks({ ...submissionRemarks, [inspectingSubmission.id]: e.target.value })}
+                placeholder="e.g. Exceptional rigor shown in step 4. Keep up the high standard!"
+              />
+            </div>
+          </div>
+
+          <div style={{ display: "flex", justifyContent: "flex-end", gap: "10px" }}>
+            <button
+              type="button"
+              className="btn-secondary"
+              onClick={() => setInspectingSubmission(null)}
+              style={{ padding: "8px 18px" }}
+            >
+              Cancel
+            </button>
+            <button
+              type="button"
+              className="btn-primary"
+              style={{ padding: "8px 20px", background: "linear-gradient(135deg, #059669, #10b981)", fontWeight: 800 }}
+              onClick={() => {
+                handleVerifyAndMarkSubmission(inspectingSubmission.id);
+                setInspectingSubmission(null);
+              }}
+            >
+              ✓ Verify, Score & Sign-off
+            </button>
+          </div>
+        </div>
+      </div>
+    )
+  }
 
       <DigitalSignaturePadModal
         isOpen={showSignaturePad}

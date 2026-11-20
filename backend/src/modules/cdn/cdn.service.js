@@ -111,34 +111,59 @@ async function getCDNStatus() {
   };
 }
 
-async function getAssets(category) {
+async function getAssets(category, tenantCode = null) {
   let assets = loadAssetsMeta();
+  if (tenantCode && String(tenantCode).toUpperCase() !== "ALL") {
+    const cleanTenant = String(tenantCode).trim().toUpperCase();
+    assets = assets.filter((a) => String(a.tenantCode || "GBS-MAIN").toUpperCase() === cleanTenant);
+  }
   if (category) {
     assets = assets.filter((a) => a.category === category);
   }
   return assets;
 }
 
-async function uploadAsset({ fileName, category, tenantCode, mimeType, fileData }) {
+async function uploadAsset({ fileName, category, tenantCode, tenantId, mimeType, fileData }) {
   const assets = loadAssetsMeta();
-  const id = `CDN-${Date.now().toString().slice(-6)}`;
   const cleanName = (fileName || `asset_${Date.now()}`).replace(/[^a-zA-Z0-9._-]/g, "_");
   const cleanCategory = (category || "report-cards").toLowerCase();
-  const cleanTenant = (tenantCode || "GBS-MAIN").toUpperCase();
+  const cleanTenant = String(tenantCode || (tenantId ? `TENANT-${tenantId}` : "GBS-MAIN")).trim().toUpperCase();
 
-  // If base64 content provided, write to vault disk
-  let byteSize = 1048576; // default 1MB if simulated
+  // Compute deterministic SHA-256 over actual file content to prevent duplicate storage
+  const rawContentBuffer = fileData
+    ? Buffer.from(String(fileData).replace(/^data:[^;]+;base64,/, ""), "base64")
+    : Buffer.from(`${cleanTenant}:${cleanCategory}:${cleanName}`, "utf8");
+  const sha256 = crypto.createHash("sha256").update(rawContentBuffer).digest("hex");
+
+  // Deduplication check: if this tenant already uploaded identical content (matching SHA-256), reuse existing storage object
+  const existingDuplicate = assets.find(
+    (a) =>
+      a.sha256 === sha256 &&
+      String(a.tenantCode || "GBS-MAIN").toUpperCase() === cleanTenant
+  );
+  if (existingDuplicate) {
+    return {
+      ...existingDuplicate,
+      deduplicated: true,
+      duplicatePrevented: true
+    };
+  }
+
+  const id = `CDN-${Date.now().toString().slice(-6)}`;
+  let byteSize = fileData ? rawContentBuffer.length : 1048576;
   if (fileData) {
     try {
-      const base64Data = fileData.replace(/^data:[^;]+;base64,/, "");
-      const buffer = Buffer.from(base64Data, "base64");
-      byteSize = buffer.length;
-      const targetPath = path.join(CDN_VAULT_DIR, `${id}_${cleanName}`);
-      fs.writeFileSync(targetPath, buffer);
+      const tenantDir = path.join(CDN_VAULT_DIR, cleanTenant);
+      if (!fs.existsSync(tenantDir)) {
+        fs.mkdirSync(tenantDir, { recursive: true });
+      }
+      const targetPath = path.join(tenantDir, `${sha256.slice(0, 16)}_${cleanName}`);
+      if (!fs.existsSync(targetPath)) {
+        fs.writeFileSync(targetPath, rawContentBuffer);
+      }
     } catch {}
   }
 
-  const sha256 = crypto.createHash("sha256").update(cleanName + Date.now()).digest("hex");
   const formattedSize = byteSize > 1048576 
     ? `${(byteSize / (1024 * 1024)).toFixed(2)} MB` 
     : `${(byteSize / 1024).toFixed(1)} KB`;
@@ -148,13 +173,15 @@ async function uploadAsset({ fileName, category, tenantCode, mimeType, fileData 
     fileName: cleanName,
     category: cleanCategory,
     tenantCode: cleanTenant,
+    tenantId: Number(tenantId) || 1,
     mimeType: mimeType || "application/octet-stream",
     fileSizeBytes: byteSize,
     formattedSize,
     s3Bucket: `gbs-${cleanCategory}-vault`,
     cdnUrl: `https://cdn.gbs-system.org/vault/${cleanTenant}/${cleanCategory}/${cleanName}`,
     sha256,
-    cacheControl: "public, max-age=31536000, immutable",
+    deduplicated: false,
+    cacheControl: "private, max-age=31536000, immutable",
     uploadedAt: new Date().toISOString(),
     viewsCount: 1
   };
@@ -164,7 +191,7 @@ async function uploadAsset({ fileName, category, tenantCode, mimeType, fileData 
   return newAsset;
 }
 
-async function generatePresignedUrl({ assetId, expiresInSeconds = 3600 }) {
+async function generatePresignedUrl({ assetId, expiresInSeconds = 3600, tenantCode = null }) {
   const assets = loadAssetsMeta();
   const asset = assets.find((a) => a.id === assetId || a.fileName === assetId);
   const signature = crypto.randomBytes(24).toString("hex");
@@ -178,9 +205,21 @@ async function generatePresignedUrl({ assetId, expiresInSeconds = 3600 }) {
     };
   }
 
+  // Enforce strict tenant file isolation: another school cannot sign URLs for this institution's document
+  if (
+    tenantCode &&
+    String(tenantCode).toUpperCase() !== "ALL" &&
+    String(asset.tenantCode || "GBS-MAIN").toUpperCase() !== String(tenantCode).trim().toUpperCase()
+  ) {
+    const err = new Error("Access denied: You do not have permission to access files belonging to another institution.");
+    err.statusCode = 403;
+    throw err;
+  }
+
   return {
     assetId: asset.id,
     fileName: asset.fileName,
+    tenantCode: asset.tenantCode,
     presignedUrl: `${asset.cdnUrl}?X-Amz-Signature=${signature}&X-Amz-Expires=${expiresInSeconds}`,
     cdnEdgeUrl: asset.cdnUrl,
     expiresAt,

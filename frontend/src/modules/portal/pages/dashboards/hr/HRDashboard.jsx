@@ -473,7 +473,7 @@ export default function HRDashboard() {
               alignItems: "center",
               gap: "1rem"
             }}
-            title="Click to view Staff & Faculty Directory"
+            aria-label="Click to view Staff & Faculty Directory"
             onMouseEnter={(e) => { e.currentTarget.style.transform = "translateY(-3px)"; e.currentTarget.style.borderColor = "#c084fc"; }}
             onMouseLeave={(e) => { e.currentTarget.style.transform = "none"; e.currentTarget.style.borderColor = "rgba(139, 92, 246, 0.3)"; }}
           >
@@ -497,7 +497,7 @@ export default function HRDashboard() {
               alignItems: "center",
               gap: "1rem"
             }}
-            title="Click to view Headmaster Audit Directives"
+            aria-label="Click to view Headmaster Audit Directives"
             onMouseEnter={(e) => { e.currentTarget.style.transform = "translateY(-3px)"; e.currentTarget.style.borderColor = "#c084fc"; }}
             onMouseLeave={(e) => { e.currentTarget.style.transform = "none"; e.currentTarget.style.borderColor = "rgba(139, 92, 246, 0.3)"; }}
           >
@@ -521,7 +521,7 @@ export default function HRDashboard() {
               alignItems: "center",
               gap: "1rem"
             }}
-            title="Click to view Leave & Absence Management"
+            aria-label="Click to view Leave & Absence Management"
             onMouseEnter={(e) => { e.currentTarget.style.transform = "translateY(-3px)"; e.currentTarget.style.borderColor = "#c084fc"; }}
             onMouseLeave={(e) => { e.currentTarget.style.transform = "none"; e.currentTarget.style.borderColor = "rgba(139, 92, 246, 0.3)"; }}
           >
@@ -545,7 +545,7 @@ export default function HRDashboard() {
               alignItems: "center",
               gap: "1rem"
             }}
-            title="Click to view Payroll & Salary Tiers"
+            aria-label="Click to view Payroll & Salary Tiers"
             onMouseEnter={(e) => { e.currentTarget.style.transform = "translateY(-3px)"; e.currentTarget.style.borderColor = "#c084fc"; }}
             onMouseLeave={(e) => { e.currentTarget.style.transform = "none"; e.currentTarget.style.borderColor = "rgba(139, 92, 246, 0.3)"; }}
           >
@@ -556,6 +556,12 @@ export default function HRDashboard() {
             </div>
           </div>
         </div>
+
+        {/* Global Staff Welcome Prompt & Duty Clock-In / Clock-Out Desk (Greets HR Immediately Upon Login) */}
+        <StaffAttendanceClockWidget
+          roleOverride="HR"
+          onFeedback={(msg, isErr) => showToast(isErr ? "error" : "success", "STAFF CLOCK-IN DESK", msg)}
+        />
 
         {/* Navigation Tabs */}
         <nav className="role-tab-nav">
@@ -593,10 +599,6 @@ export default function HRDashboard() {
         {/* TAB 1: STAFF DIRECTORY */}
         {activeTab === "staff_roster" && (
           <div>
-            <StaffAttendanceClockWidget
-              roleOverride="HR"
-              onFeedback={(msg, isErr) => showToast(isErr ? "error" : "success", "STAFF CLOCK-IN DESK", msg)}
-            />
             <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "1rem" }}>
               <div>
                 <h3 style={{ margin: 0, fontSize: "1.15rem", fontWeight: "800", color: "#f8fafc" }}>
@@ -668,7 +670,7 @@ export default function HRDashboard() {
                             fontWeight: "700",
                             cursor: "pointer"
                           }}
-                          title="View full staff profile on dedicated page"
+                          aria-label="View full staff profile on dedicated page"
                         >
                           🔍 View Profile
                         </button>

@@ -29,7 +29,10 @@ const RCCE_EVENTS = Object.freeze({
   SYSTEM_ERROR_DETECTED: 'SYSTEM_ERROR_DETECTED',
   ATTENDANCE_COMPLETED: 'ATTENDANCE_COMPLETED',
   EXAM_SCORED: 'EXAM_SCORED',
-  TOPIC_VIDEO_PUBLISHED: 'TOPIC_VIDEO_PUBLISHED'
+  TOPIC_VIDEO_PUBLISHED: 'TOPIC_VIDEO_PUBLISHED',
+  DB_POOL_WARNING_80: 'DB_POOL_WARNING_80',
+  DB_POOL_CRITICAL_95: 'DB_POOL_CRITICAL_95',
+  INFRA_STORAGE_WARNING: 'INFRA_STORAGE_WARNING'
 });
 
 class EventNotificationEngine extends EventEmitter {
@@ -153,7 +156,7 @@ class EventNotificationEngine extends EventEmitter {
       await prisma.notificationQueueItem.create({
         data: {
           tenantId,
-          userId: notifItem.userId,
+          userId: null,
           recipientContact: payload.recipientEmail || payload.recipientPhone || 'portal_user',
           recipientName: payload.recipientName || 'Portal User',
           channel: 'IN_APP',

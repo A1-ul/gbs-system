@@ -13,8 +13,9 @@ async function getStatus(req, res) {
 
 async function getAssets(req, res) {
   try {
-    const { category } = req.query;
-    const assets = await cdnService.getAssets(category);
+    const { category, tenantCode } = req.query;
+    const resolvedTenant = tenantCode || req.headers["x-tenant-code"] || null;
+    const assets = await cdnService.getAssets(category, resolvedTenant);
     return res.status(200).json({ status: "success", count: assets.length, data: assets });
   } catch (error) {
     return res.status(500).json({ status: "error", message: error.message });
@@ -23,14 +24,23 @@ async function getAssets(req, res) {
 
 async function uploadAsset(req, res) {
   try {
-    const { fileName, category, tenantCode, mimeType, fileData } = req.body;
+    const { fileName, category, tenantCode, tenantId, mimeType, fileData } = req.body;
     if (!fileName) {
       return res.status(400).json({ status: "error", message: "fileName is required for CDN ingestion." });
     }
-    const asset = await cdnService.uploadAsset({ fileName, category, tenantCode, mimeType, fileData });
-    return res.status(201).json({
+    const asset = await cdnService.uploadAsset({
+      fileName,
+      category,
+      tenantCode: tenantCode || req.headers["x-tenant-code"],
+      tenantId: tenantId || req.user?.tenantId || req.headers["x-tenant-id"],
+      mimeType,
+      fileData
+    });
+    return res.status(asset.deduplicated ? 200 : 201).json({
       status: "success",
-      message: "Asset successfully ingested into S3-compatible cloud object store and broadcast to edge CDN nodes.",
+      message: asset.deduplicated
+        ? "Identical document detected via SHA-256 content digest. Existing authorized asset reused without storage duplication."
+        : "Asset successfully ingested into S3-compatible cloud object store and broadcast to edge CDN nodes.",
       data: asset
     });
   } catch (error) {
@@ -40,11 +50,12 @@ async function uploadAsset(req, res) {
 
 async function generatePresignedUrl(req, res) {
   try {
-    const { assetId, expiresInSeconds } = req.body;
-    const result = await cdnService.generatePresignedUrl({ assetId, expiresInSeconds });
+    const { assetId, expiresInSeconds, tenantCode } = req.body;
+    const resolvedTenant = tenantCode || req.headers["x-tenant-code"] || null;
+    const result = await cdnService.generatePresignedUrl({ assetId, expiresInSeconds, tenantCode: resolvedTenant });
     return res.status(200).json({ status: "success", data: result });
   } catch (error) {
-    return res.status(500).json({ status: "error", message: error.message });
+    return res.status(error.statusCode || 500).json({ status: "error", message: error.message });
   }
 }
 

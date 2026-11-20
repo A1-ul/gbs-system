@@ -36,7 +36,14 @@ async function getSystemHealth() {
       connected: Boolean(pgLive.active),
       latencyMs: dbLatencyMs,
       poolActiveConnections: pgLive.poolActiveConnections || 1,
-      poolMaxConnections: pgLive.poolMaxConnections || 20
+      poolIdleConnections: pgLive.poolIdleConnections ?? 0,
+      poolWaitingRequests: pgLive.poolWaitingRequests ?? 0,
+      poolMaxConnections: pgLive.poolMaxConnections || 25,
+      postgresMaxConnections: pgLive.postgresMaxConnections || 100,
+      maxSafeApplicationConnections: pgLive.maxSafeApplicationConnections || 80,
+      poolUtilizationPct: pgLive.poolUtilizationPct ?? 0,
+      poolAlertLevel: pgLive.poolAlertLevel || 'NORMAL',
+      connectionPool: pgLive.connectionPool || null
     },
     system: {
       platform: os.platform(),

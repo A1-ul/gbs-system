@@ -1553,7 +1553,7 @@ export default function AccountantDashboard() {
                   borderRadius: "6px",
                   cursor: "pointer"
                 }}
-                title="Select institutional currency standard (reflects on Student and Parent dashboards)"
+                aria-label="Select institutional currency standard (reflects on Student and Parent dashboards)"
               >
                 {CURRENCY_OPTIONS.map((c) => (
                   <option key={c.code} value={c.symbol}>{c.label}</option>
@@ -1567,7 +1567,7 @@ export default function AccountantDashboard() {
               type="button"
               className="role-action-btn"
               onClick={() => window.history.back()}
-              title="Return to previous view or page"
+              aria-label="Return to previous view or page"
               style={{ borderColor: "#64748b", color: "#f8fafc", background: "rgba(30, 41, 59, 0.7)", fontWeight: 700, cursor: "pointer" }}
             >
               ← Back
@@ -1629,7 +1629,7 @@ export default function AccountantDashboard() {
                   className="role-kpi-box"
                   onClick={() => setActiveTab("invoices")}
                   style={{ cursor: "pointer", transition: "transform 0.15s" }}
-                  title="Click to inspect all student billing invoices"
+                  aria-label="Click to inspect all student billing invoices"
                 >
                   <span className="role-kpi-icon">💰</span>
                   <div className="role-kpi-data">
@@ -1641,7 +1641,7 @@ export default function AccountantDashboard() {
                   className="role-kpi-box"
                   onClick={() => setActiveTab("payments")}
                   style={{ cursor: "pointer", transition: "transform 0.15s" }}
-                  title="Click to inspect confirmed payments and MoMo reconciliations"
+                  aria-label="Click to inspect confirmed payments and MoMo reconciliations"
                 >
                   <span className="role-kpi-icon">💳</span>
                   <div className="role-kpi-data">
@@ -1653,7 +1653,7 @@ export default function AccountantDashboard() {
                   className="role-kpi-box"
                   onClick={() => setActiveTab("debtors")}
                   style={{ cursor: "pointer", transition: "transform 0.15s" }}
-                  title="Click to view students with outstanding arrears"
+                  aria-label="Click to view students with outstanding arrears"
                 >
                   <span className="role-kpi-icon">⏳</span>
                   <div className="role-kpi-data">
@@ -1665,7 +1665,7 @@ export default function AccountantDashboard() {
                   className="role-kpi-box"
                   onClick={() => setActiveTab("statements")}
                   style={{ cursor: "pointer", transition: "transform 0.15s" }}
-                  title="Click to generate balance sheet and collection reports"
+                  aria-label="Click to generate balance sheet and collection reports"
                 >
                   <span className="role-kpi-icon">📈</span>
                   <div className="role-kpi-data">
@@ -1714,6 +1714,12 @@ export default function AccountantDashboard() {
               <span>{feedback.message}</span>
             </div>
           )}
+
+          {/* Global Staff Welcome Prompt & Duty Clock-In / Clock-Out Desk (Greets Bursar/Accountant Immediately Upon Login) */}
+          <StaffAttendanceClockWidget
+            roleOverride="ACCOUNTANT"
+            onFeedback={(msg, isErr) => setFeedback({ type: isErr ? "error" : "success", message: msg })}
+          />
 
           {/* Workspace Tabs Navigation */}
           <nav className="role-tab-nav">
@@ -1899,10 +1905,6 @@ export default function AccountantDashboard() {
           {/* TAB 1: STUDENT INVOICES */}
           {activeTab === "invoices" && (
             <div className="role-workspace-card">
-              <StaffAttendanceClockWidget
-                roleOverride="ACCOUNTANT"
-                onFeedback={(msg, isErr) => setFeedback({ type: isErr ? "error" : "success", message: msg })}
-              />
               <div className="workspace-title-row">
                 <div>
                   <h2><span>📑</span> STUDENT BILLING INVOICES & ARREARS</h2>
@@ -2053,7 +2055,7 @@ export default function AccountantDashboard() {
                               className="btn-secondary"
                               style={{ padding: "4px 10px", fontSize: "0.75rem", borderColor: "#38bdf8", color: "#38bdf8", cursor: "pointer" }}
                               onClick={() => navigateToDetail(navigate, "invoice", inv.invoiceNumber || inv.id, inv, { returnTab: activeTab })}
-                              title="View full student fee invoice on dedicated page"
+                              aria-label="View full student fee invoice on dedicated page"
                             >
                               🔍 View Invoice
                             </button>
@@ -2168,7 +2170,7 @@ export default function AccountantDashboard() {
                                   className="btn-primary"
                                   style={{ padding: "6px 10px", fontSize: "0.75rem", background: "linear-gradient(135deg, #f59e0b, #d97706)" }}
                                   onClick={() => handleDistributePaymentReminder(d)}
-                                  title="Send payment reminder SMS to parent"
+                                  aria-label="Send payment reminder SMS to parent"
                                 >
                                   📢 Send Reminder
                                 </button>
@@ -2179,7 +2181,7 @@ export default function AccountantDashboard() {
                                   className="btn-secondary"
                                   style={{ padding: "6px 10px", fontSize: "0.75rem", borderColor: "#10b981", color: "#34d399" }}
                                   onClick={() => handleClearDebtorHold(d)}
-                                  title="Mark as paid and release holds"
+                                  aria-label="Mark as paid and release holds"
                                 >
                                   ✓ Clear Hold
                                 </button>
@@ -2364,7 +2366,7 @@ export default function AccountantDashboard() {
                       e.currentTarget.style.transform = "none";
                       e.currentTarget.style.boxShadow = "0 6px 18px rgba(56, 189, 248, 0.2)";
                     }}
-                    title="Click to expand full interactive breakdown grouped by tier (Basic, JHS, SHS, University)"
+                    aria-label="Click to expand full interactive breakdown grouped by tier (Basic, JHS, SHS, University)"
                   >
                     <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
                       <span style={{ fontSize: "0.75rem", color: "#94a3b8", textTransform: "uppercase", fontWeight: "700" }}>Total Registered Classes</span>
@@ -3012,7 +3014,7 @@ export default function AccountantDashboard() {
                                   className="btn-secondary"
                                   style={{ padding: "3px 8px", fontSize: "0.72rem", borderColor: "#38bdf8", color: "#38bdf8", cursor: "pointer" }}
                                   onClick={() => navigateToDetail(navigate, "payment", p.receiptNumber || p.id, p, { returnTab: activeTab })}
-                                  title="View payment receipt on dedicated page"
+                                  aria-label="View payment receipt on dedicated page"
                                 >
                                   🔍 View Receipt
                                 </button>
@@ -3413,7 +3415,7 @@ export default function AccountantDashboard() {
                                 className="btn-primary"
                                 style={{ background: "linear-gradient(135deg, #0284c7, #0369a1)", fontSize: "0.75rem", padding: "4px 8px", whiteSpace: "nowrap", cursor: "pointer" }}
                                 onClick={() => navigateToDetail(navigate, "report", ay.academicYear || idx, ay, { returnTab: activeTab })}
-                                title="View full audited fiscal year dossier on dedicated page"
+                                aria-label="View full audited fiscal year dossier on dedicated page"
                               >
                                 📜 Reference Dossier
                               </button>
@@ -4075,7 +4077,7 @@ export default function AccountantDashboard() {
                                     fontWeight: 700,
                                     cursor: "pointer"
                                   }}
-                                  title="Open full verification dossier on dedicated routed page"
+                                  aria-label="Open full verification dossier on dedicated routed page"
                                 >
                                   📄 Verify on New Page ↗
                                 </button>
@@ -4096,7 +4098,7 @@ export default function AccountantDashboard() {
                                     fontWeight: 700,
                                     cursor: "pointer"
                                   }}
-                                  title="Dispatch WhatsApp acknowledgement with Zoom link"
+                                  aria-label="Dispatch WhatsApp acknowledgement with Zoom link"
                                 >
                                   💬 WhatsApp + Zoom
                                 </button>
@@ -4314,7 +4316,7 @@ export default function AccountantDashboard() {
                                   fontWeight: 700,
                                   cursor: "pointer"
                                 }}
-                                title="Open full verification dossier on dedicated page"
+                                aria-label="Open full verification dossier on dedicated page"
                               >
                                 📄 Verify ↗
                               </button>
@@ -4658,7 +4660,7 @@ export default function AccountantDashboard() {
         <button
           type="button"
           onClick={() => window.scrollTo({ top: 0, behavior: "smooth" })}
-          title="Scroll to Top"
+          aria-label="Scroll to Top"
           style={{
             background: "linear-gradient(135deg, #0284c7, #2563eb)",
             color: "#ffffff",
@@ -4682,7 +4684,7 @@ export default function AccountantDashboard() {
         <button
           type="button"
           onClick={() => window.scrollTo({ top: document.body.scrollHeight, behavior: "smooth" })}
-          title="Scroll to Bottom"
+          aria-label="Scroll to Bottom"
           style={{
             background: "linear-gradient(135deg, #1e293b, #0f172a)",
             color: "#38bdf8",

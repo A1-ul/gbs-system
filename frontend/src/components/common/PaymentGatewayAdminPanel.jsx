@@ -130,7 +130,13 @@ export default function PaymentGatewayAdminPanel({
       supportsMastercard: Boolean(cfg.supportsMastercard),
       supportsBankTransfer: Boolean(cfg.supportsBankTransfer),
       paystackSubaccountCode: cfg.paystackSubaccountCode || "",
+      paystackPublicKey: cfg.paystackPublicKey || "",
+      paystackSecretKey: "",
+      paystackWebhookSecret: "",
       hubtelMerchantAccount: cfg.hubtelMerchantAccount || "",
+      hubtelClientId: cfg.hubtelClientId || "",
+      hubtelClientSecret: "",
+      hubtelWebhookSecret: "",
       bankName: cfg.bankName || "",
       bankAccountNumber: cfg.bankAccountNumber || "",
       bankAccountName: cfg.bankAccountName || "",
@@ -140,19 +146,41 @@ export default function PaymentGatewayAdminPanel({
     });
   };
 
+  const handleTestGateway = async (gwName) => {
+    setLoading(true);
+    setFeedback(null);
+    try {
+      const res = await apiClient.post(`/payments/admin/test-gateway/${encodeURIComponent(gwName)}`, {
+        tenantId: tenantId || 1
+      });
+      const data = res?.data?.data;
+      setFeedback({
+        type: data?.connected ? "success" : "error",
+        message: data?.message || `${gwName} connectivity check complete.`
+      });
+    } catch (err) {
+      setFeedback({ type: "error", message: err?.response?.data?.message || `Could not verify ${gwName} API connectivity.` });
+    } finally {
+      setLoading(false);
+    }
+  };
+
   const handleSaveGatewayConfig = async (e) => {
     e.preventDefault();
     if (!editingGateway) return;
     setLoading(true);
     setFeedback(null);
     try {
-      await apiClient.put(`/payments/admin/config/${encodeURIComponent(editingGateway)}`, {
-        ...configDraft,
-        tenantId: tenantId || 1
-      });
+      const payload = { ...configDraft, tenantId: tenantId || 1 };
+      if (!payload.paystackSecretKey) delete payload.paystackSecretKey;
+      if (!payload.paystackWebhookSecret) delete payload.paystackWebhookSecret;
+      if (!payload.hubtelClientSecret) delete payload.hubtelClientSecret;
+      if (!payload.hubtelWebhookSecret) delete payload.hubtelWebhookSecret;
+
+      await apiClient.put(`/payments/admin/config/${encodeURIComponent(editingGateway)}`, payload);
       setFeedback({
         type: "success",
-        message: `${editingGateway} settings saved. Secret keys stay protected in server environment variables.`
+        message: `${editingGateway} settings & keys saved securely (secret keys encrypted server-side and never sent back to browser).`
       });
       setEditingGateway(null);
       loadOverview();
@@ -343,13 +371,23 @@ export default function PaymentGatewayAdminPanel({
                 <div style={{ fontSize: "0.74rem", color: "#38bdf8" }}>Merchant Account: {cfg.hubtelMerchantAccount}</div>
               )}
               {allowConfigEdit && (
-                <button
-                  type="button"
-                  onClick={() => startEditGateway(cfg)}
-                  style={{ marginTop: "auto", background: "rgba(56,189,248,0.16)", border: "1px solid #38bdf8", color: "#bae6fd", borderRadius: "8px", padding: "7px 10px", fontWeight: 700, cursor: "pointer", fontSize: "0.78rem" }}
-                >
-                  Configure School Routing & Methods
-                </button>
+                <div style={{ display: "flex", gap: "8px", marginTop: "auto", flexWrap: "wrap" }}>
+                  <button
+                    type="button"
+                    onClick={() => startEditGateway(cfg)}
+                    style={{ flex: 1, background: "rgba(56,189,248,0.16)", border: "1px solid #38bdf8", color: "#bae6fd", borderRadius: "8px", padding: "7px 10px", fontWeight: 700, cursor: "pointer", fontSize: "0.78rem" }}
+                  >
+                    Configure Keys &amp; Methods
+                  </button>
+                  <button
+                    type="button"
+                    disabled={loading}
+                    onClick={() => handleTestGateway(cfg.gateway)}
+                    style={{ background: "rgba(16,185,129,0.18)", border: "1px solid #10b981", color: "#6ee7b7", borderRadius: "8px", padding: "7px 10px", fontWeight: 700, cursor: "pointer", fontSize: "0.78rem" }}
+                  >
+                    Test Live API
+                  </button>
+                </div>
               )}
             </div>
           ))}
@@ -401,29 +439,75 @@ export default function PaymentGatewayAdminPanel({
           </div>
 
           {editingGateway === "PAYSTACK" && (
-            <label style={{ fontSize: "0.78rem", color: "#cbd5e1" }}>
-              School Paystack Subaccount Code (for direct school settlement, optional)
-              <input
-                type="text"
-                placeholder="ACCT_xxxxxxxxxx"
-                value={configDraft.paystackSubaccountCode || ""}
-                onChange={(e) => setConfigDraft({ ...configDraft, paystackSubaccountCode: e.target.value })}
-                style={{ width: "100%", padding: "8px", marginTop: "4px", borderRadius: "6px", background: "#0f172a", color: "#fff", border: "1px solid #334155" }}
-              />
-            </label>
+            <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(220px, 1fr))", gap: "10px" }}>
+              <label style={{ fontSize: "0.78rem", color: "#cbd5e1" }}>
+                Paystack Live / Test Public Key
+                <input
+                  type="text"
+                  placeholder="pk_live_... or pk_test_..."
+                  value={configDraft.paystackPublicKey || ""}
+                  onChange={(e) => setConfigDraft({ ...configDraft, paystackPublicKey: e.target.value })}
+                  style={{ width: "100%", padding: "8px", marginTop: "4px", borderRadius: "6px", background: "#0f172a", color: "#fff", border: "1px solid #334155", boxSizing: "border-box" }}
+                />
+              </label>
+              <label style={{ fontSize: "0.78rem", color: "#cbd5e1" }}>
+                Paystack Secret Key (Encrypted at Rest — leave blank to keep existing)
+                <input
+                  type="password"
+                  autoComplete="new-password"
+                  placeholder="sk_live_... or sk_test_..."
+                  value={configDraft.paystackSecretKey || ""}
+                  onChange={(e) => setConfigDraft({ ...configDraft, paystackSecretKey: e.target.value })}
+                  style={{ width: "100%", padding: "8px", marginTop: "4px", borderRadius: "6px", background: "#0f172a", color: "#fff", border: "1px solid #334155", boxSizing: "border-box" }}
+                />
+              </label>
+              <label style={{ fontSize: "0.78rem", color: "#cbd5e1" }}>
+                School Paystack Subaccount Code (Optional)
+                <input
+                  type="text"
+                  placeholder="ACCT_xxxxxxxxxx"
+                  value={configDraft.paystackSubaccountCode || ""}
+                  onChange={(e) => setConfigDraft({ ...configDraft, paystackSubaccountCode: e.target.value })}
+                  style={{ width: "100%", padding: "8px", marginTop: "4px", borderRadius: "6px", background: "#0f172a", color: "#fff", border: "1px solid #334155", boxSizing: "border-box" }}
+                />
+              </label>
+            </div>
           )}
 
           {editingGateway === "HUBTEL" && (
-            <label style={{ fontSize: "0.78rem", color: "#cbd5e1" }}>
-              School Hubtel POS Sales / Merchant Account Number
-              <input
-                type="text"
-                placeholder="2019988"
-                value={configDraft.hubtelMerchantAccount || ""}
-                onChange={(e) => setConfigDraft({ ...configDraft, hubtelMerchantAccount: e.target.value })}
-                style={{ width: "100%", padding: "8px", marginTop: "4px", borderRadius: "6px", background: "#0f172a", color: "#fff", border: "1px solid #334155" }}
-              />
-            </label>
+            <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(220px, 1fr))", gap: "10px" }}>
+              <label style={{ fontSize: "0.78rem", color: "#cbd5e1" }}>
+                Hubtel Client ID
+                <input
+                  type="text"
+                  placeholder="Enter Hubtel API Client ID"
+                  value={configDraft.hubtelClientId || ""}
+                  onChange={(e) => setConfigDraft({ ...configDraft, hubtelClientId: e.target.value })}
+                  style={{ width: "100%", padding: "8px", marginTop: "4px", borderRadius: "6px", background: "#0f172a", color: "#fff", border: "1px solid #334155", boxSizing: "border-box" }}
+                />
+              </label>
+              <label style={{ fontSize: "0.78rem", color: "#cbd5e1" }}>
+                Hubtel Client Secret (Encrypted at Rest)
+                <input
+                  type="password"
+                  autoComplete="new-password"
+                  placeholder="Enter Hubtel Client Secret"
+                  value={configDraft.hubtelClientSecret || ""}
+                  onChange={(e) => setConfigDraft({ ...configDraft, hubtelClientSecret: e.target.value })}
+                  style={{ width: "100%", padding: "8px", marginTop: "4px", borderRadius: "6px", background: "#0f172a", color: "#fff", border: "1px solid #334155", boxSizing: "border-box" }}
+                />
+              </label>
+              <label style={{ fontSize: "0.78rem", color: "#cbd5e1" }}>
+                Hubtel POS Sales / Merchant Account Number
+                <input
+                  type="text"
+                  placeholder="2019988"
+                  value={configDraft.hubtelMerchantAccount || ""}
+                  onChange={(e) => setConfigDraft({ ...configDraft, hubtelMerchantAccount: e.target.value })}
+                  style={{ width: "100%", padding: "8px", marginTop: "4px", borderRadius: "6px", background: "#0f172a", color: "#fff", border: "1px solid #334155", boxSizing: "border-box" }}
+                />
+              </label>
+            </div>
           )}
 
           {editingGateway === "BANK_DIRECT" && (

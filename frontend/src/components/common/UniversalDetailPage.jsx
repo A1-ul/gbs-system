@@ -469,7 +469,7 @@ export default function UniversalDetailPage() {
               type="button"
               className="gbs-detail-back-btn"
               onClick={handleBack}
-              title="Return to previous dashboard view"
+              aria-label="Return to previous dashboard view"
             >
               ⬅ Back
             </button>
@@ -573,7 +573,7 @@ export default function UniversalDetailPage() {
                   type="button"
                   className="gbs-btn-action-detail"
                   onClick={handleCopyId}
-                  title="Copy record identifier to clipboard"
+                  aria-label="Copy record identifier to clipboard"
                 >
                   {copiedId ? "✓ Copied ID" : "📋 Copy ID"}
                 </button>
@@ -581,7 +581,7 @@ export default function UniversalDetailPage() {
                   type="button"
                   className="gbs-btn-action-detail"
                   onClick={handleDownloadJson}
-                  title="Export raw JSON record"
+                  aria-label="Export raw JSON record"
                 >
                   📥 Export JSON
                 </button>
@@ -589,7 +589,7 @@ export default function UniversalDetailPage() {
                   type="button"
                   className="gbs-btn-action-detail gbs-btn-action-primary"
                   onClick={handlePrint}
-                  title="Print verified official record sheet"
+                  aria-label="Print verified official record sheet"
                 >
                   🖨️ Print Record
                 </button>
@@ -696,7 +696,7 @@ export default function UniversalDetailPage() {
                     cursor: "pointer",
                     boxShadow: "0 4px 14px rgba(16, 185, 129, 0.4)"
                   }}
-                  title="Officially verify and approve this dossier"
+                  aria-label="Officially verify and approve this dossier"
                 >
                   ✅ Verify & Approve Dossier
                 </button>
@@ -717,7 +717,7 @@ export default function UniversalDetailPage() {
                     border: "1px solid #f59e0b",
                     cursor: "pointer"
                   }}
-                  title="Issue clarification query or revision request"
+                  aria-label="Issue clarification query or revision request"
                 >
                   ⚠️ Issue Query / Revision
                 </button>
@@ -738,7 +738,7 @@ export default function UniversalDetailPage() {
                     border: "1px solid #a855f7",
                     cursor: "pointer"
                   }}
-                  title="Apply administrative compliance seal"
+                  aria-label="Apply administrative compliance seal"
                 >
                   ⚖️ Compliance Endorsement
                 </button>
@@ -759,7 +759,7 @@ export default function UniversalDetailPage() {
                     border: "1px solid rgba(255, 255, 255, 0.2)",
                     cursor: "pointer"
                   }}
-                  title="Return to originating dashboard"
+                  aria-label="Return to originating dashboard"
                 >
                   ⬅ Back to Dashboard
                 </button>

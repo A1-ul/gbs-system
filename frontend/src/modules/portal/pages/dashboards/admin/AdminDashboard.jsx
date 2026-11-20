@@ -19,6 +19,8 @@ import UniversityOperationsPanel from "../../../../../components/common/Universi
 import StudentDefaultersCompliancePanel from "../../../../../components/common/StudentDefaultersCompliancePanel";
 import SchoolClinicHubPanel from "../../../../../components/common/SchoolClinicHubPanel";
 import HeadmasterStaffAttendanceView from "../../../../../components/common/HeadmasterStaffAttendanceView";
+import LiveCallLauncherAndReceiver from "../../../../../components/common/LiveCallLauncherAndReceiver";
+import OfficialPaymentGatewayModal from "../../../../../components/common/OfficialPaymentGatewayModal";
 import { openUrlSafely } from "../../../../../utils/safeWindow";
 import { isDemoSandboxMode } from "../../../../../utils/tokenStorage";
 import { checkDemoEntryLimit, trackDemoEntryCreated } from "../../../../../utils/demoLimitGuard";
@@ -27,6 +29,7 @@ import "./AdminDashboard.css";
 export function AdminDashboard({ initialTab } = {}) {
   const navigate = useNavigate();
   const [showAdminGuideModal, setShowAdminGuideModal] = useState(false);
+  const [showHeadmasterRenewalCheckout, setShowHeadmasterRenewalCheckout] = useState(false);
   const [showHeadmasterSignaturePad, setShowHeadmasterSignaturePad] = useState(false);
   const [headmasterSignature, setHeadmasterSignature] = useState(() => {
     try {
@@ -5369,6 +5372,12 @@ export function AdminDashboard({ initialTab } = {}) {
 
         {/* Prominent Top Center System Branding */}
         <TopCenterSystemBanner roleTitle="Headmaster Command Center" />
+        <LiveCallLauncherAndReceiver
+          variant="GLOBAL_RECEIVER"
+          userRole="ADMIN"
+          currentUser={currentUser}
+          onFeedback={(msg, isErr) => setFeedback({ type: isErr ? "error" : "success", message: msg })}
+        />
 
         {/* Header */}
         <header className="role-header">
@@ -5472,7 +5481,7 @@ export function AdminDashboard({ initialTab } = {}) {
                 color: activeTab === "cctv" ? "#fca5a5" : "#38bdf8",
                 fontWeight: 800
               }}
-              title="Open Headmaster Exclusive Inbuilt Campus CCTV & Mobile Device Link"
+              aria-label="Open Headmaster Exclusive Inbuilt Campus CCTV & Mobile Device Link"
             >
               📹 Inbuilt CCTV &amp; Mobile
             </button>
@@ -5578,7 +5587,7 @@ export function AdminDashboard({ initialTab } = {}) {
                   className="role-kpi-box"
                   onClick={() => setActiveTab("admissions")}
                   style={{ cursor: "pointer", transition: "transform 0.15s", border: "1.5px solid rgba(16, 185, 129, 0.55)", background: "rgba(16, 185, 129, 0.1)" }}
-                  title="Click to inspect admitted students & admissions roster"
+                  aria-label="Click to inspect admitted students & admissions roster"
                 >
                   <span className="role-kpi-icon">🎓</span>
                   <div className="role-kpi-data">
@@ -5592,7 +5601,7 @@ export function AdminDashboard({ initialTab } = {}) {
                   className="role-kpi-box"
                   onClick={() => setActiveTab("busTransport")}
                   style={{ cursor: "pointer", transition: "transform 0.15s", border: "1.5px solid rgba(56, 189, 248, 0.55)", background: "rgba(56, 189, 248, 0.1)" }}
-                  title="Click to inspect students boarding school buses & routes"
+                  aria-label="Click to inspect students boarding school buses & routes"
                 >
                   <span className="role-kpi-icon">🚌</span>
                   <div className="role-kpi-data">
@@ -5606,7 +5615,7 @@ export function AdminDashboard({ initialTab } = {}) {
                   className="role-kpi-box"
                   onClick={() => setActiveTab("academics")}
                   style={{ cursor: "pointer", transition: "transform 0.15s" }}
-                  title="Click to manage institution classes and level tiers"
+                  aria-label="Click to manage institution classes and level tiers"
                 >
                   <span className="role-kpi-icon">🏛️</span>
                   <div className="role-kpi-data">
@@ -5618,7 +5627,7 @@ export function AdminDashboard({ initialTab } = {}) {
                   className="role-kpi-box"
                   onClick={() => setActiveTab("admissions")}
                   style={{ cursor: "pointer", transition: "transform 0.15s" }}
-                  title="Click to inspect admissions applications intake pipeline"
+                  aria-label="Click to inspect admissions applications intake pipeline"
                 >
                   <span className="role-kpi-icon">📂</span>
                   <div className="role-kpi-data">
@@ -5630,7 +5639,7 @@ export function AdminDashboard({ initialTab } = {}) {
                   className="role-kpi-box"
                   onClick={() => setActiveTab("feeApprovals")}
                   style={{ cursor: "pointer", transition: "transform 0.15s" }}
-                  title="Click to inspect billing and student fee ledger"
+                  aria-label="Click to inspect billing and student fee ledger"
                 >
                   <span className="role-kpi-icon">💳</span>
                   <div className="role-kpi-data">
@@ -5642,7 +5651,7 @@ export function AdminDashboard({ initialTab } = {}) {
                   className="role-kpi-box"
                   onClick={() => setActiveTab("cctv")}
                   style={{ cursor: "pointer", transition: "transform 0.15s", border: "1.5px solid rgba(239, 68, 68, 0.55)", background: "rgba(239, 68, 68, 0.1)" }}
-                  title="Click to open Headmaster Exclusive Inbuilt Campus CCTV & Mobile Link"
+                  aria-label="Click to open Headmaster Exclusive Inbuilt Campus CCTV & Mobile Link"
                 >
                   <span className="role-kpi-icon">📹</span>
                   <div className="role-kpi-data">
@@ -5743,7 +5752,7 @@ export function AdminDashboard({ initialTab } = {}) {
                     <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
                       <span style={{ fontSize: "1.2rem" }}>📱</span>
                       <span style={{ fontSize: "0.82rem", color: "#fef3c7" }}>
-                        Platform Continuation MoMo: <strong>0554594193</strong> (GABRIEL KUBI OSEI-APPIAH) • Reference: <strong>"{institutionName}"</strong>
+                        Pay Platform Renewal via <strong>Official Multi-Network Checkout (Any MTN, Telecel Cash, AirtelTigo Number or Card)</strong> • Reference: <strong>"{institutionName}"</strong>
                       </span>
                     </div>
                     <div style={{ display: "flex", gap: "8px", flexWrap: "wrap" }}>
@@ -6322,7 +6331,7 @@ export function AdminDashboard({ initialTab } = {}) {
             <div
               onClick={() => setActiveTab("busTransport")}
               style={{ display: "flex", alignItems: "center", gap: "12px", padding: "8px 12px", borderRadius: "10px", background: "rgba(56, 189, 248, 0.12)", border: "1px solid rgba(56, 189, 248, 0.35)", cursor: "pointer" }}
-              title="Click to inspect all students boarding school buses"
+              aria-label="Click to inspect all students boarding school buses"
             >
               <span style={{ fontSize: "1.7rem" }}>🚌</span>
               <div>
@@ -6341,7 +6350,7 @@ export function AdminDashboard({ initialTab } = {}) {
             <div
               onClick={() => setActiveTab("lessonVetting")}
               style={{ display: "flex", alignItems: "center", gap: "12px", padding: "8px 12px", borderRadius: "10px", background: "rgba(168, 85, 247, 0.12)", border: "1px solid rgba(168, 85, 247, 0.35)", cursor: "pointer" }}
-              title="Click to open Teacher Plans & Lesson Notes Vetting Desk"
+              aria-label="Click to open Teacher Plans & Lesson Notes Vetting Desk"
             >
               <span style={{ fontSize: "1.7rem" }}>📑</span>
               <div>
@@ -6360,7 +6369,7 @@ export function AdminDashboard({ initialTab } = {}) {
             <div
               onClick={() => setActiveTab("cctv")}
               style={{ display: "flex", alignItems: "center", gap: "12px", padding: "8px 12px", borderRadius: "10px", background: "rgba(239, 68, 68, 0.12)", border: "1px solid rgba(239, 68, 68, 0.35)", cursor: "pointer" }}
-              title="Click to view Inbuilt Campus CCTV Cameras & Connect to Headmaster Mobile Devices"
+              aria-label="Click to view Inbuilt Campus CCTV Cameras & Connect to Headmaster Mobile Devices"
             >
               <span style={{ fontSize: "1.7rem" }}>📹</span>
               <div>
@@ -6425,7 +6434,7 @@ export function AdminDashboard({ initialTab } = {}) {
                     fontSize: "0.78rem",
                     cursor: "pointer"
                   }}
-                  title={isDirectiveBannerMinimized ? "Expand Developer Statutory Directive Warning" : "Minimize Developer Statutory Directive Warning"}
+                  aria-label={isDirectiveBannerMinimized ? "Expand Developer Statutory Directive Warning" : "Minimize Developer Statutory Directive Warning"}
                 >
                   {isDirectiveBannerMinimized ? "➕ Expand Warning" : "➖ Minimize Warning"}
                 </button>
@@ -6660,7 +6669,7 @@ export function AdminDashboard({ initialTab } = {}) {
                                   fontWeight: 800,
                                   cursor: "pointer"
                                 }}
-                                title="Update this curriculum when there are updates"
+                                aria-label="Update this curriculum when there are updates"
                               >
                                 🔄 Update
                               </button>
@@ -6741,7 +6750,7 @@ export function AdminDashboard({ initialTab } = {}) {
                                   className="btn-secondary"
                                   style={{ padding: "6px 10px", fontSize: "0.75rem", borderColor: "#38bdf8", color: "#38bdf8", cursor: "pointer" }}
                                   onClick={() => setSelectedTeacherForCheckup(getTeacherActiveCurriculumProfile(staff))}
-                                  title="View teacher profile and active curriculum used for checkups"
+                                  aria-label="View teacher profile and active curriculum used for checkups"
                                 >
                                   📚 Profile & Curriculum Checkup
                                 </button>
@@ -6750,7 +6759,7 @@ export function AdminDashboard({ initialTab } = {}) {
                                   className="btn-secondary"
                                   style={{ padding: "6px 10px", fontSize: "0.78rem", borderColor: "#38bdf8", color: "#38bdf8", cursor: "pointer" }}
                                   onClick={() => navigateToDetail(navigate, "staff", staff.id, staff, { returnTab: activeTab })}
-                                  title="View staff profile on dedicated routed page"
+                                  aria-label="View staff profile on dedicated routed page"
                                 >
                                   🔍 View
                                 </button>
@@ -6892,7 +6901,7 @@ export function AdminDashboard({ initialTab } = {}) {
                                 onClick={() => navigateToDetail(navigate, "hr-report", rep.id, rep, { returnTab: activeTab })}
                                 className="btn-primary"
                                 style={{ padding: "5px 12px", fontSize: "0.78rem", background: "#0284c7" }}
-                                title="Inspect HR report details on dedicated routed page"
+                                aria-label="Inspect HR report details on dedicated routed page"
                               >
                                 🔍 Inspect & Certify
                               </button>
@@ -7027,7 +7036,7 @@ export function AdminDashboard({ initialTab } = {}) {
                                   onClick={() => navigateToDetail(navigate, "attendance", rep.id, rep, { returnTab: activeTab })}
                                   className="btn-secondary"
                                   style={{ padding: "5px 10px", fontSize: "0.78rem", borderColor: "#38bdf8", color: "#38bdf8", display: "flex", alignItems: "center", gap: "6px", justifyContent: "center", cursor: "pointer" }}
-                                  title="View full class attendance register on dedicated routed page"
+                                  aria-label="View full class attendance register on dedicated routed page"
                                 >
                                   🔍 View & Verify Roll-Call Sheet
                                 </button>
@@ -7451,7 +7460,7 @@ export function AdminDashboard({ initialTab } = {}) {
                           }}
                           className="filter-select"
                           style={{ padding: "6px 10px", fontSize: "0.78rem" }}
-                          title="Items per page on Vetting Desk"
+                          aria-label="Items per page on Vetting Desk"
                         >
                           <option value={3}>3 Plans / Page</option>
                           <option value={4}>4 Plans / Page</option>
@@ -7584,7 +7593,7 @@ export function AdminDashboard({ initialTab } = {}) {
                                   <strong
                                     onClick={() => setSelectedTeacherForCheckup(getTeacherActiveCurriculumProfile(plan))}
                                     style={{ color: isHovered ? "#38bdf8" : "#f8fafc", fontSize: "0.88rem", cursor: "pointer", textDecoration: isHovered ? "underline" : "none" }}
-                                    title="Click to inspect teacher profile & active curriculum used"
+                                    aria-label="Click to inspect teacher profile & active curriculum used"
                                   >
                                     {plan.teacherName}
                                   </strong>
@@ -7697,7 +7706,7 @@ export function AdminDashboard({ initialTab } = {}) {
                                         cursor: "pointer",
                                         whiteSpace: "nowrap"
                                       }}
-                                      title="Open on dedicated full-page verification desk"
+                                      aria-label="Open on dedicated full-page verification desk"
                                     >
                                       📄 Verify on New Page ↗
                                     </button>
@@ -7715,7 +7724,7 @@ export function AdminDashboard({ initialTab } = {}) {
                                         cursor: "pointer",
                                         whiteSpace: "nowrap"
                                       }}
-                                      title="1-Click Vet & Approve this teacher plan/lesson notes"
+                                      aria-label="1-Click Vet & Approve this teacher plan/lesson notes"
                                     >
                                       ✅ Approve
                                     </button>
@@ -7733,7 +7742,7 @@ export function AdminDashboard({ initialTab } = {}) {
                                         cursor: "pointer",
                                         whiteSpace: "nowrap"
                                       }}
-                                      title="Request revision from teacher"
+                                      aria-label="Request revision from teacher"
                                     >
                                       ⚠️ Revision
                                     </button>
@@ -9394,7 +9403,7 @@ export function AdminDashboard({ initialTab } = {}) {
                             className="table-checkbox"
                             checked={selectedApps.length === filteredApplications.length && filteredApplications.length > 0}
                             onChange={toggleSelectAllApps}
-                            title="Select all applications"
+                            aria-label="Select all applications"
                           />
                         </th>
                         <th>App # & Type</th>
@@ -9469,7 +9478,7 @@ export function AdminDashboard({ initialTab } = {}) {
                                   className="btn-secondary"
                                   onClick={() => navigateToDetail(navigate, "admission", app.applicationNumber || app.id, app, { returnTab: activeTab })}
                                   style={{ padding: "4px 10px", fontSize: "0.78rem", borderColor: "#38bdf8", color: "#38bdf8", whiteSpace: "nowrap", cursor: "pointer" }}
-                                  title="View full admission enquiry dossier on dedicated routed page"
+                                  aria-label="View full admission enquiry dossier on dedicated routed page"
                                 >
                                   🔍 View & Verify
                                 </button>
@@ -9487,7 +9496,7 @@ export function AdminDashboard({ initialTab } = {}) {
                                     fontWeight: 800,
                                     whiteSpace: "nowrap"
                                   }}
-                                  title="Edit or amend student admission details based on parent request"
+                                  aria-label="Edit or amend student admission details based on parent request"
                                 >
                                   ✏️ Edit / Amend Details
                                 </button>
@@ -9496,7 +9505,7 @@ export function AdminDashboard({ initialTab } = {}) {
                                     type="button"
                                     onClick={() => navigateToDetail(navigate, "admission", app.applicationNumber || app.id, { ...app, printMode: true }, { returnTab: activeTab })}
                                     style={{ padding: "4px 8px", fontSize: "0.75rem", background: "rgba(16, 185, 129, 0.2)", border: "1px solid #10b981", color: "#34d399", borderRadius: "6px", cursor: "pointer", fontWeight: 800, whiteSpace: "nowrap" }}
-                                    title="Print or download official letter of admission"
+                                    aria-label="Print or download official letter of admission"
                                   >
                                     🖨️ Admission Letter
                                   </button>
@@ -9506,7 +9515,7 @@ export function AdminDashboard({ initialTab } = {}) {
                                   className="btn-action-approve"
                                   onClick={() => handleApproveApplication(app.id, app.applicationNumber)}
                                   disabled={loading || app.stage === "APPROVED"}
-                                  title="Approve applicant & provision student"
+                                  aria-label="Approve applicant & provision student"
                                 >
                                   ✅ Approve
                                 </button>
@@ -9515,7 +9524,7 @@ export function AdminDashboard({ initialTab } = {}) {
                                   className="btn-action-reject"
                                   onClick={() => handleRejectApplication(app.id, app.applicationNumber)}
                                   disabled={loading || app.stage === "REJECTED"}
-                                  title="Reject applicant"
+                                  aria-label="Reject applicant"
                                 >
                                   ❌ Reject
                                 </button>
@@ -9524,7 +9533,7 @@ export function AdminDashboard({ initialTab } = {}) {
                                   className="btn-action-delete"
                                   onClick={() => handleDeleteApplication(app.id, app.applicationNumber)}
                                   disabled={loading}
-                                  title="Permanently delete application record"
+                                  aria-label="Permanently delete application record"
                                 >
                                   🗑️ Delete
                                 </button>
@@ -9656,7 +9665,7 @@ export function AdminDashboard({ initialTab } = {}) {
                   {/* Genuine Live Google Map Embed */}
                   <div style={{ position: "relative", width: "100%", height: "420px", borderRadius: "10px", overflow: "hidden", border: "1px solid rgba(255,255,255,0.15)", background: "#020617", marginBottom: "1rem" }}>
                     <iframe
-                      title="Headmaster Live Google Map Guardian Locator"
+                      aria-label="Headmaster Live Google Map Guardian Locator"
                       width="100%"
                       height="100%"
                       style={{ border: 0 }}
@@ -9715,6 +9724,14 @@ export function AdminDashboard({ initialTab } = {}) {
                   </span>
                 </div>
               </div>
+
+              {/* Real In-System Headmaster-Parent & Headmaster-Teachers Voice / Video Call Studio */}
+              <LiveCallLauncherAndReceiver
+                variant="FULL_STUDIO"
+                userRole="ADMIN"
+                currentUser={currentUser}
+                onFeedback={(msg, isErr) => setFeedback({ type: isErr ? "error" : "success", message: msg })}
+              />
 
               {/* Channel Selector */}
               <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(240px, 1fr))", gap: "12px", marginBottom: "1.5rem" }}>
@@ -10493,7 +10510,7 @@ export function AdminDashboard({ initialTab } = {}) {
                             className="btn-secondary"
                             onClick={() => handleArchiveAnnouncement(an.id)}
                             style={{ padding: "6px 12px", fontSize: "0.78rem", whiteSpace: "nowrap", borderColor: "#a855f7", color: "#c084fc" }}
-                            title="Move circular into archive vault"
+                            aria-label="Move circular into archive vault"
                           >
                             📦 Archive Circular
                           </button>
@@ -10762,7 +10779,7 @@ export function AdminDashboard({ initialTab } = {}) {
                           key={log.id}
                           style={{ cursor: "pointer", transition: "background 0.2s" }}
                           onClick={() => setSelectedAuditLog(log)}
-                          title="Click to view full reference details"
+                          aria-label="Click to view full reference details"
                         >
                           <td>
                             <strong style={{ fontFamily: "monospace", color: "#38bdf8" }}>
@@ -10884,7 +10901,7 @@ export function AdminDashboard({ initialTab } = {}) {
                                     cursor: "pointer",
                                     whiteSpace: "nowrap"
                                   }}
-                                  title="Open on dedicated full-page verification desk"
+                                  aria-label="Open on dedicated full-page verification desk"
                                 >
                                   📄 Verify on New Page ↗
                                 </button>
@@ -10989,7 +11006,7 @@ export function AdminDashboard({ initialTab } = {}) {
                                   cursor: "pointer",
                                   whiteSpace: "nowrap"
                                 }}
-                                title="Inspect authorization dossier on dedicated page"
+                                aria-label="Inspect authorization dossier on dedicated page"
                               >
                                 🔍 Inspect Dossier ↗
                               </button>
@@ -11063,7 +11080,7 @@ export function AdminDashboard({ initialTab } = {}) {
                                 fontWeight: "800",
                                 cursor: "pointer"
                               }}
-                              title={isCardMinimized ? "Expand statutory directive warning" : "Minimize statutory directive warning"}
+                              aria-label={isCardMinimized ? "Expand statutory directive warning" : "Minimize statutory directive warning"}
                             >
                               {isCardMinimized ? "➕ Expand Warning" : "➖ Minimize Warning"}
                             </button>
@@ -11527,15 +11544,22 @@ export function AdminDashboard({ initialTab } = {}) {
                     style={{ width: "100%", padding: "10px", fontSize: "0.85rem", background: "linear-gradient(135deg, #2563eb, #1d4ed8)" }}
                     disabled={loading}
                   >
-                    📢 Save & Publish Academic Architecture (Weeks & Vacation Date) to Teachers & Students
+                    📢 Save &amp; Publish Academic Architecture (Weeks &amp; Vacation Date) to Teachers &amp; Students
                   </button>
                 </form>
 
-                {/* Form 2: Headmaster Zoom & WhatsApp Online Meeting Scheduler */}
-                <form
-                  onSubmit={handleScheduleZoomMeeting}
-                  style={{ background: "rgba(15, 23, 42, 0.75)", border: "1px solid rgba(59, 130, 246, 0.3)", borderRadius: "14px", padding: "1.5rem" }}
-                >
+                {/* Form 2: Headmaster Real WebRTC Faculty & Parent Video/Voice Conference Desk */}
+                <div style={{ display: "flex", flexDirection: "column", gap: "14px" }}>
+                  <LiveCallLauncherAndReceiver
+                    variant="FULL_STUDIO"
+                    userRole="ADMIN"
+                    currentUser={currentUser}
+                    onFeedback={(msg, isErr) => setFeedback({ type: isErr ? "error" : "success", message: msg })}
+                  />
+                  <form
+                    onSubmit={handleScheduleZoomMeeting}
+                    style={{ background: "rgba(15, 23, 42, 0.75)", border: "1px solid rgba(59, 130, 246, 0.3)", borderRadius: "14px", padding: "1.5rem" }}
+                  >
                   <div style={{ display: "flex", alignItems: "center", gap: "10px", marginBottom: "1rem", borderBottom: "1px solid rgba(255,255,255,0.08)", paddingBottom: "10px" }}>
                     <span style={{ fontSize: "1.3rem" }}>🎥</span>
                     <div>
@@ -11694,6 +11718,7 @@ export function AdminDashboard({ initialTab } = {}) {
                     🎥 Schedule & Dispatch {zoomMeetingPlatform} Meeting Link to Faculty
                   </button>
                 </form>
+                </div>
               </div>
 
               {/* SECTION 2: HEADMASTER EXCLUSIVE STUDENT CLASS ASSIGNMENT */}
@@ -11854,7 +11879,7 @@ export function AdminDashboard({ initialTab } = {}) {
                                   alignItems: "center",
                                   gap: "4px"
                                 }}
-                                title="View full student profile on dedicated routed page"
+                                aria-label="View full student profile on dedicated routed page"
                               >
                                 👁️ View Profile (Full Page)
                               </button>
@@ -12416,7 +12441,7 @@ export function AdminDashboard({ initialTab } = {}) {
                         type="button"
                         onClick={handleSimulateFacialMismatch}
                         style={{ flex: 1, background: "rgba(239, 68, 68, 0.2)", border: "1px solid #ef4444", color: "#fca5a5", padding: "10px", borderRadius: "8px", fontWeight: "700", fontSize: "0.82rem", cursor: "pointer" }}
-                        title="Simulate biometric mismatch to verify system denial"
+                        aria-label="Simulate biometric mismatch to verify system denial"
                       >
                         🧪 Simulate Mismatch (Deny)
                       </button>
@@ -12590,7 +12615,7 @@ export function AdminDashboard({ initialTab } = {}) {
                         onClick={handleDirectStaffActivation}
                         className="btn-primary"
                         style={{ background: "linear-gradient(135deg, #3b82f6, #1d4ed8)", borderColor: "#2563eb", fontWeight: "800" }}
-                        title="Directly activate this staff member as an official institutional member immediately without waiting for OTP"
+                        aria-label="Directly activate this staff member as an official institutional member immediately without waiting for OTP"
                       >
                         ⚡ Instant Direct Activation (Executive Appointment)
                       </button>
@@ -12963,8 +12988,17 @@ export function AdminDashboard({ initialTab } = {}) {
                     </div>
                   </div>
 
-                  <div style={{ background: "rgba(16, 185, 129, 0.12)", border: "1px solid rgba(16, 185, 129, 0.3)", borderRadius: "8px", padding: "10px 14px", marginBottom: "1rem", fontSize: "0.8rem", color: "#a7f3d0" }}>
-                    Remit <strong>GH₵ {subAmountDueNow.toLocaleString()}</strong> to MTN MoMo: <strong>0554594193</strong> (GABRIEL KUBI OSEI-APPIAH)
+                  <div style={{ background: "rgba(16, 185, 129, 0.12)", border: "1px solid rgba(16, 185, 129, 0.3)", borderRadius: "8px", padding: "10px 14px", marginBottom: "1rem", fontSize: "0.8rem", color: "#a7f3d0", display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: "10px" }}>
+                    <span>
+                      Pay <strong>GH₵ {subAmountDueNow.toLocaleString()}</strong> online using <strong>ANY Mobile Money network &amp; phone number</strong> (MTN MoMo, Telecel Cash, AT Money) or enter your verified reference:
+                    </span>
+                    <button
+                      type="button"
+                      onClick={() => setShowHeadmasterRenewalCheckout(true)}
+                      style={{ background: "linear-gradient(135deg, #059669, #10b981)", color: "#fff", border: "none", borderRadius: "8px", padding: "7px 12px", fontWeight: 800, cursor: "pointer", fontSize: "0.78rem" }}
+                    >
+                      💳 Pay Online via Official Checkout
+                    </button>
                   </div>
 
                   <div style={{ display: "flex", justifyContent: "flex-end", gap: "10px" }}>
@@ -13748,7 +13782,7 @@ export function AdminDashboard({ initialTab } = {}) {
                 className={`renewal-celebration-card ${tenantSubscription.isLifetime || tenantSubscription.durationLabel?.includes("Lifetime") ? "lifetime" : ""}`}
                 onClick={(e) => e.stopPropagation()}
               >
-                <div className="renewal-trophy-icon" title="GBS Official Subscription Crest">
+                <div className="renewal-trophy-icon" aria-label="GBS Official Subscription Crest">
                   <img
                     src="/assets/gbs_crest_badge.jpg"
                     alt="GBS Official Logo"
@@ -15904,10 +15938,13 @@ export function AdminDashboard({ initialTab } = {}) {
                 border: "1px solid rgba(56, 189, 248, 0.3)"
               }}>
                 {[
-                  { name: `${currentUser.firstName} ${currentUser.lastName} (Headmaster Host)`, role: "Executive Host • Speaking", badge: "🎤 HOST LIVE", color: "#38bdf8" },
-                  { name: "Dr. Robert Vance", role: "Head of Advanced Mathematics", badge: "🟢 Connected", color: "#34d399" },
-                  { name: "Prof. Eleanor Sterling", role: "Senior Physics & Chemistry", badge: "🟢 Connected", color: "#34d399" },
-                  { name: "Claire Montgomery", role: "Basic & Primary Lead", badge: "🟢 Connected", color: "#34d399" }
+                  { name: `${currentUser.firstName} ${currentUser.lastName} (Headmaster Host)`, role: "Executive Host • Active", badge: "🎤 HOST LIVE", color: "#38bdf8" },
+                  ...(Array.isArray(staffList) ? staffList.slice(0, 5).map((st) => ({
+                    name: `${st.firstName || ""} ${st.lastName || ""}`.trim() || st.name || st.email,
+                    role: st.role || st.department || "Faculty Member",
+                    badge: "📡 Invited to Room",
+                    color: "#34d399"
+                  })) : [])
                 ].map((part, idx) => (
                   <div
                     key={idx}
@@ -16058,7 +16095,7 @@ export function AdminDashboard({ initialTab } = {}) {
             alignItems: "center",
             justifyContent: "center"
           }}
-          title="Scroll to Top"
+          aria-label="Scroll to Top"
         >
           ⬆️
         </button>
@@ -16080,7 +16117,7 @@ export function AdminDashboard({ initialTab } = {}) {
             alignItems: "center",
             justifyContent: "center"
           }}
-          title="Scroll to Bottom"
+          aria-label="Scroll to Bottom"
         >
           ⬇️
         </button>
@@ -16102,6 +16139,24 @@ export function AdminDashboard({ initialTab } = {}) {
         role="ADMIN"
         isOpen={showAdminGuideModal}
         onClose={() => setShowAdminGuideModal(false)}
+      />
+
+      <OfficialPaymentGatewayModal
+        isOpen={showHeadmasterRenewalCheckout}
+        onClose={() => setShowHeadmasterRenewalCheckout(false)}
+        tenantId={currentUser?.tenantId || 1}
+        paymentScope="SUBSCRIPTION"
+        allowPublicOnboarding={true}
+        amount={Number(subAmountDueNow || 0) || 100}
+        currency="GHS"
+        title={`Institution Subscription Renewal (${institutionName})`}
+        subscriptionMetadata={{ planLabel: "Institution Continuation Renewal" }}
+        onSuccess={({ transaction }) => {
+          if (transaction?.reference) {
+            setMomoTxnId(transaction.reference);
+            setFeedback({ type: "success", message: `Verified MoMo / Card Renewal Payment Reference ${transaction.reference} attached cleanly!` });
+          }
+        }}
       />
     </div >
   );

@@ -36,7 +36,7 @@ export default function UniversalAIAssistantHUD() {
     setIsMinimized(val);
     try {
       localStorage.setItem("gbs_antigravity_ai_minimized", String(val));
-    } catch {}
+    } catch { }
   };
   const [detectedIssues, setDetectedIssues] = useState([]);
   const [repairLog, setRepairLog] = useState([]);
@@ -132,7 +132,7 @@ export default function UniversalAIAssistantHUD() {
 
     await new Promise((r) => setTimeout(r, 600));
     setRepairLog((prev) => [...prev, "🔍 Auditing browser session tokens & localStorage keys..."]);
-    
+
     // Clean mock or corrupted entries without clearing user credentials
     clearFakeDataEntries();
 
@@ -141,7 +141,7 @@ export default function UniversalAIAssistantHUD() {
 
     try {
       await fetch(resolveApiUrl("/api/v1/health"));
-    } catch {}
+    } catch { }
 
     await new Promise((r) => setTimeout(r, 600));
     setRepairLog((prev) => [
@@ -204,7 +204,6 @@ export default function UniversalAIAssistantHUD() {
             padding: 0,
             transition: "all 0.2s ease"
           }}
-          title="Expand System Health Monitor"
         >
           <span>{systemStatus === "ANOMALY" ? "⚠️" : "🤖"}</span>
           {unreadCount > 0 && (
@@ -247,16 +246,16 @@ export default function UniversalAIAssistantHUD() {
             gap: "6px",
             padding: "4px 10px",
             borderRadius: "18px",
-            background: systemStatus === "ANOMALY" 
+            background: systemStatus === "ANOMALY"
               ? "linear-gradient(135deg, rgba(239, 68, 68, 0.95), rgba(185, 28, 28, 0.95))"
               : systemStatus === "REPAIRING"
-              ? "linear-gradient(135deg, rgba(245, 158, 11, 0.95), rgba(217, 119, 6, 0.95))"
-              : "linear-gradient(135deg, rgba(15, 23, 42, 0.95), rgba(30, 41, 59, 0.95))",
-            border: systemStatus === "ANOMALY" 
-              ? "1.5px solid #f87171" 
+                ? "linear-gradient(135deg, rgba(245, 158, 11, 0.95), rgba(217, 119, 6, 0.95))"
+                : "linear-gradient(135deg, rgba(15, 23, 42, 0.95), rgba(30, 41, 59, 0.95))",
+            border: systemStatus === "ANOMALY"
+              ? "1.5px solid #f87171"
               : systemStatus === "REPAIRING"
-              ? "1.5px solid #fbbf24"
-              : "1.5px solid #38bdf8",
+                ? "1.5px solid #fbbf24"
+                : "1.5px solid #38bdf8",
             boxShadow: "0 4px 14px rgba(0, 0, 0, 0.45)",
             color: "#ffffff",
             cursor: "pointer",
@@ -266,7 +265,6 @@ export default function UniversalAIAssistantHUD() {
             transition: "all 0.2s ease",
             userSelect: "none"
           }}
-          title="GBS System Monitor • Click to open, or click '—' to minimize"
         >
           <span style={{ fontSize: "0.85rem" }}>
             {systemStatus === "ANOMALY" ? "⚠️" : systemStatus === "REPAIRING" ? "⚙️" : "🤖"}
@@ -275,8 +273,8 @@ export default function UniversalAIAssistantHUD() {
             {systemStatus === "ANOMALY"
               ? `System Monitor (${detectedIssues.length})`
               : systemStatus === "REPAIRING"
-              ? "Checking..."
-              : "System Monitor"}
+                ? "Checking..."
+                : "System Monitor"}
           </span>
           {unreadCount > 0 && (
             <span
@@ -319,7 +317,6 @@ export default function UniversalAIAssistantHUD() {
               marginLeft: "2px",
               padding: 0
             }}
-            title="Minimize System Health Monitor"
           >
             —
           </button>
@@ -390,7 +387,6 @@ export default function UniversalAIAssistantHUD() {
                   fontSize: "0.7rem",
                   fontWeight: 900
                 }}
-                title="Minimize to tiny icon"
               >
                 —
               </button>
@@ -408,7 +404,6 @@ export default function UniversalAIAssistantHUD() {
                   fontSize: "0.7rem",
                   fontWeight: 900
                 }}
-                title="Collapse panel"
               >
                 ✕
               </button>

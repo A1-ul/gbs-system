@@ -76,6 +76,9 @@ model Tenant {
   studentLocations    StudentLocation[]
   migrationJobs       MigrationJob[]
   institutionRegistrations InstitutionRegistration[]
+  attendancePolicy    TenantAttendancePolicy?
+  staffAttendanceLogs StaffAttendanceRecord[]
+  liveCallSessions    LiveCallSession[]
 
   @@index([code])
   @@index([domain])
@@ -1289,6 +1292,9 @@ model PaymentTransaction {
 
   @@unique([tenantId, receiptNumber])
   @@index([tenantId])
+  @@index([tenantId, gatewayStatus])
+  @@index([tenantId, studentId])
+  @@index([tenantId, createdAt])
   @@index([invoiceId])
   @@index([studentId])
   @@index([gateway])
@@ -1311,7 +1317,13 @@ model PaymentGatewayConfig {
   supportsMastercard    Boolean  @default(false)
   supportsBankTransfer  Boolean  @default(false)
   paystackSubaccountCode String?
+  paystackPublicKey     String?
+  paystackSecretKeyEnc  String?  @db.Text
+  paystackWebhookSecretEnc String? @db.Text
   hubtelMerchantAccount String?
+  hubtelClientId        String?
+  hubtelClientSecretEnc String?  @db.Text
+  hubtelWebhookSecretEnc String? @db.Text
   bankName              String?
   bankAccountNumber     String?
   bankAccountName       String?
@@ -1999,4 +2011,94 @@ model TransportAssignment {
   @@index([tenant_id])
   @@index([route_id])
   @@map("transport_assignments")
+}
+
+// ==================================================
+// ENTERPRISE STAFF DUTY ATTENDANCE & AUTO CLOCK-OUT
+// Partitioned & B-Tree Indexed by tenantId for Millions of Schools
+// ==================================================
+
+model TenantAttendancePolicy {
+  id                               Int      @id @default(autoincrement())
+  tenantId                         Int      @unique
+  tenant                           Tenant   @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  closingTime                      String   @default("16:00")
+  lateCutoffTime                   String   @default("08:15")
+  autoClockOutDelayMinutes         Int      @default(120)
+  activeTerm                       String   @default("Term 1 (2026/2027)")
+  academicYear                     String   @default("2026-2027")
+  enforceClockOutReasonBeforeClose Boolean  @default(true)
+  updatedAt                        DateTime @updatedAt
+  createdAt                        DateTime @default(now())
+
+  @@index([tenantId])
+  @@map("tenant_attendance_policies")
+}
+
+model StaffAttendanceRecord {
+  id               String    @id
+  tenantId         Int
+  tenant           Tenant    @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  staffId          String
+  staffName        String
+  staffEmail       String?
+  staffRole        String
+  designation      String?
+  department       String?
+  isClinicStaff    Boolean   @default(false)
+  termLabel        String?
+  academicYear     String?
+  shiftDate        String
+  clockInAt        DateTime?
+  clockOutAt       DateTime?
+  scheduledCloseAt DateTime?
+  durationMinutes  Int?
+  hoursWorkedLabel String?
+  clockInNote      String?   @db.Text
+  clockOutNote     String?   @db.Text
+  clockOutReason   String?   @db.Text
+  bypassedClockIn  Boolean   @default(false)
+  markedPresent    Boolean   @default(true)
+  autoClockOut     Boolean   @default(false)
+  lateFlag         Boolean   @default(false)
+  status           String    @default("CLOCKED_IN") // CLOCKED_IN, CLOCKED_OUT, AUTO_CLOCKED_OUT, BYPASSED_UNMARKED
+  createdAt        DateTime  @default(now())
+  updatedAt        DateTime  @updatedAt
+
+  @@index([tenantId, shiftDate])
+  @@index([tenantId, termLabel, status])
+  @@index([tenantId, staffId, shiftDate])
+  @@map("staff_attendance_records")
+}
+
+// ==================================================
+// REAL-TIME WEBRTC VOICE & VIDEO CALLS / CONFERENCES
+// ==================================================
+
+model LiveCallSession {
+  id               String    @id
+  tenantId         Int
+  tenant           Tenant    @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  roomCode         String
+  callScope        String    @default("DIRECT") // DIRECT, FACULTY_CONFERENCE, PARENT_CONFERENCE, CLASS_CONFERENCE
+  mediaMode        String    @default("VIDEO")  // VIDEO, VOICE
+  title            String
+  initiatorUserId  String
+  initiatorName    String
+  initiatorRole    String
+  targetUserId     String?
+  targetName       String?
+  targetRole       String?
+  status           String    @default("RINGING") // RINGING, ACTIVE, ENDED, DECLINED
+  participantsJson String?   @db.Text
+  startedAt        DateTime  @default(now())
+  answeredAt       DateTime?
+  endedAt          DateTime?
+  createdAt        DateTime  @default(now())
+  updatedAt        DateTime  @updatedAt
+
+  @@index([tenantId, status])
+  @@index([tenantId, roomCode])
+  @@index([tenantId, targetUserId, status])
+  @@map("live_call_sessions")
 }

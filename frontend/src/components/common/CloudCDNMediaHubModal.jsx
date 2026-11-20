@@ -381,7 +381,7 @@ export default function CloudCDNMediaHubModal({ isOpen, onClose }) {
                           type="button"
                           className="gbs-cdn-action-btn"
                           onClick={() => handleGeneratePresignedUrl(asset)}
-                          title="Generate Signed URL"
+                          aria-label="Generate Signed URL"
                         >
                           🔑 Presigned URL
                         </button>
@@ -391,7 +391,7 @@ export default function CloudCDNMediaHubModal({ isOpen, onClose }) {
                           rel="noreferrer"
                           className="gbs-cdn-action-btn"
                           style={{ textDecoration: "none", display: "inline-block" }}
-                          title="Download via Edge CDN"
+                          aria-label="Download via Edge CDN"
                         >
                           ⚡ CDN Link
                         </a>

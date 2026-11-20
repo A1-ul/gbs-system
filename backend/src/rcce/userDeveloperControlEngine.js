@@ -6,6 +6,8 @@ const { readPersistentStore } = require('../core/database/persistentStore');
 const { businessRulesEngine } = require('./businessRulesEngine');
 const { auditTracker } = require('./auditTracker');
 const { getDemoUsageSummary } = require('../middleware/demoLimit.middleware');
+const { connectionPoolManager } = require('../core/database/connectionPoolManager');
+const { cloudInfraManager } = require('../core/infrastructure/cloudInfraManager');
 
 /**
  * GBS USER AND DEVELOPER CONTROL ENGINE (GBS-RCCE)
@@ -91,12 +93,15 @@ class UserDeveloperControlEngine {
     const uptimeSec = Math.floor((Date.now() - this.systemStartTime) / 1000);
     const maint = businessRulesEngine.getMaintenanceState();
 
-    let dbStatus = { active: false, connected: false, status: 'STANDBY', role: 'STANDBY_LOCAL', mode: 'LOCAL_PERSISTENT_STANDBY', engine: 'PostgreSQL', version: 'Not configured', poolActiveConnections: 0, poolMaxConnections: 20 };
+    let dbStatus = { active: false, connected: false, status: 'STANDBY', role: 'STANDBY_LOCAL', mode: 'LOCAL_PERSISTENT_STANDBY', engine: 'PostgreSQL', version: 'Not configured', poolActiveConnections: 0, poolMaxConnections: 25 };
     try {
       if (typeof prisma.getPostgresLiveStatus === 'function') {
         dbStatus = await prisma.getPostgresLiveStatus(false);
       }
     } catch (_) { }
+
+    const poolTelemetry = connectionPoolManager.getPoolStatus();
+    const infraReport = await cloudInfraManager.getComprehensiveInfrastructureReport(prisma).catch(() => null);
 
     const store = readPersistentStore();
     const institutions = Array.isArray(store.institutions) ? store.institutions : [];
@@ -126,7 +131,12 @@ class UserDeveloperControlEngine {
           heapTotalMb: Math.round(memory.heapTotal / (1024 * 1024))
         }
       },
-      database: dbStatus,
+      database: {
+        ...dbStatus,
+        connectionPool: poolTelemetry
+      },
+      connectionPool: poolTelemetry,
+      infrastructure: infraReport,
       tenancy: {
         totalTenants: institutions.length,
         totalUsers: Math.max(users.length, registeredUsers.length),

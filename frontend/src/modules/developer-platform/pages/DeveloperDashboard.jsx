@@ -111,7 +111,7 @@ export default function DeveloperDashboard() {
     memoryUsageMb: 0,
     memory: { usagePct: "0%", heapUsedMb: 0, freeMb: 0 },
     cpu: { cores: 0, loadAvg: [0, 0, 0] },
-    database: { engine: "PostgreSQL", role: "PROBING", status: "CHECKING", connected: null, poolStatus: "CHECKING CLUSTER...", poolSize: 0, maxPoolSize: 20 },
+    database: { engine: "PostgreSQL", role: "PROBING", status: "CHECKING", connected: null, poolStatus: "CHECKING CLUSTER...", poolSize: 0, idleConnections: 0, waitingRequests: 0, maxPoolSize: 25, postgresMaxConnections: 100, maxSafeApplicationConnections: 80, utilizationPct: 0, alertLevel: "NORMAL" },
     sockets: { activeConnections: 0, maxConnections: 10000 },
     metrics: { totalTenants: 0, totalUsers: 0, activeLocks: 0, totalBackups: 0 }
   });
@@ -5271,7 +5271,7 @@ export default function DeveloperDashboard() {
               <span className="telemetry-pill healthy">● Kernel: ONLINE</span>
               <span className={`telemetry-pill ${metrics.database?.connected === true ? "healthy" : ""}`}>
                 {metrics.database?.connected === true
-                  ? `🐘 ${metrics.database?.engine || "PostgreSQL"}: ACTIVE (${metrics.database?.poolSize || 1}/${metrics.database?.maxPoolSize || 20})`
+                  ? `🐘 ${metrics.database?.engine || "PostgreSQL"}: ACTIVE (Pool: ${metrics.database?.poolSize || 1} Active / ${metrics.database?.idleConnections ?? 0} Idle / ${metrics.database?.maxPoolSize || 25} Max • SafeCap: ${metrics.database?.maxSafeApplicationConnections || 80}/${metrics.database?.postgresMaxConnections || 100})`
                   : metrics.database?.connected === false
                     ? "🐘 PostgreSQL: STANDBY (Persistent Fallback Active)"
                     : "🐘 PostgreSQL: CHECKING..."}
@@ -9162,7 +9162,7 @@ export default function DeveloperDashboard() {
                     {metrics.database?.poolStatus || (metrics.database?.connected === false ? "STANDBY_FALLBACK" : "CHECKING...")}
                   </span>
                   <span style={{ fontSize: "0.72rem", color: "#64748b" }}>
-                    {metrics.database?.engine || "PostgreSQL"} • Pool: {metrics.database?.poolSize || 0}/{metrics.database?.maxPoolSize || 20}
+                    {metrics.database?.engine || "PostgreSQL"} • Active: {metrics.database?.poolSize || 1}/{metrics.database?.maxPoolSize || 25} (Idle: {metrics.database?.idleConnections ?? 0} • Wait: {metrics.database?.waitingRequests ?? 0} • PG Max: {metrics.database?.postgresMaxConnections || 100})
                     {metrics.database?.latencyMs !== undefined && metrics.database?.latencyMs !== null ? ` • ${metrics.database.latencyMs}ms` : ""}
                   </span>
                 </div>
@@ -11012,7 +11012,7 @@ export default function DeveloperDashboard() {
                 <div style={{ fontSize: "0.85rem", color: "#cbd5e1", display: "flex", flexDirection: "column", gap: "6px" }}>
                   <div><strong>Cluster:</strong> {systemEnv?.databaseHost || "Primary PostgreSQL Cluster"}</div>
                   <div><strong>PostgreSQL Engine:</strong> {metrics.database?.engine || "PostgreSQL Primary"}</div>
-                  <div><strong>Active Connections:</strong> {metrics.database?.poolSize || 1} / {metrics.database?.maxPoolSize || 20} Connection Pool</div>
+                  <div><strong>Active Connections:</strong> {metrics.database?.poolSize || 1} Active / {metrics.database?.idleConnections ?? 0} Idle / {metrics.database?.maxPoolSize || 25} Max Pool (Safe Cap: {metrics.database?.maxSafeApplicationConnections || 80}/{metrics.database?.postgresMaxConnections || 100})</div>
                   <div><strong>Primary DB / Latency:</strong> {metrics.database?.databaseName || "gbs_system"} ({metrics.database?.latencyMs ?? 1} ms)</div>
                 </div>
               </div>

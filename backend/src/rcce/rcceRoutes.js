@@ -10,6 +10,9 @@ const { protect } = require('../middleware/auth.middleware');
 const { restrictTo } = require('../middleware/rbac.middleware');
 const { readPersistentStore } = require('../core/database/persistentStore');
 const { getDemoUsageSummary } = require('../middleware/demoLimit.middleware');
+const prisma = require('../core/database/prisma.client');
+const { connectionPoolManager } = require('../core/database/connectionPoolManager');
+const { cloudInfraManager } = require('../core/infrastructure/cloudInfraManager');
 
 const router = express.Router();
 
@@ -338,6 +341,73 @@ router.post('/validate-operation', protect, (req, res) => {
   }
 
   res.rcceSuccess('VALIDATION_PASSED', { operation, eligible: true }, 'Operation validated and eligible for execution.');
+});
+
+/**
+ * 13. GET /api/v1/rcce/pool-status
+ * Real-time PostgreSQL Connection Pool & PgBouncer Telemetry
+ */
+router.get('/pool-status', async (req, res, next) => {
+  try {
+    if (typeof prisma.getPostgresLiveStatus === 'function') {
+      await prisma.getPostgresLiveStatus(false);
+    }
+    const pool = connectionPoolManager.getPoolStatus();
+    const code =
+      pool.alertLevel === 'CRITICAL_95'
+        ? 'DB_POOL_CRITICAL_95'
+        : pool.alertLevel === 'WARNING_80'
+          ? 'DB_POOL_WARNING_80'
+          : 'DB_POOL_HEALTHY';
+    res.rcceSuccess(code, pool);
+  } catch (err) {
+    next(err);
+  }
+});
+
+/**
+ * 14. POST /api/v1/rcce/pool-simulate-threshold
+ * Controlled verification of 80% warning and 95% critical connection pool alerts
+ */
+router.post('/pool-simulate-threshold', protect, restrictTo(...MANAGEMENT_ROLES), async (req, res, next) => {
+  try {
+    const targetPct = Number(req.body?.utilizationPct ?? 85);
+    const result = connectionPoolManager.simulateUtilizationThreshold(targetPct);
+    if (result.criticalTriggered) {
+      await eventNotificationEngine.emitEvent('DB_POOL_CRITICAL_95', result, {
+        tenantId: 1,
+        userId: req.user?.id || null,
+        actorRole: req.user?.role || 'DEVELOPER',
+        requestId: req.requestId
+      });
+      return res.rcceSuccess('DB_POOL_CRITICAL_95', result, result.alert?.message);
+    }
+    if (result.warningTriggered) {
+      await eventNotificationEngine.emitEvent('DB_POOL_WARNING_80', result, {
+        tenantId: 1,
+        userId: req.user?.id || null,
+        actorRole: req.user?.role || 'DEVELOPER',
+        requestId: req.requestId
+      });
+      return res.rcceSuccess('DB_POOL_WARNING_80', result, result.alert?.message);
+    }
+    return res.rcceSuccess('DB_POOL_HEALTHY', result);
+  } catch (err) {
+    next(err);
+  }
+});
+
+/**
+ * 15. GET /api/v1/rcce/infrastructure-audit
+ * Complete Render.com & PostgreSQL Cloud Infrastructure, Capacity, Storage & Performance Report
+ */
+router.get('/infrastructure-audit', async (req, res, next) => {
+  try {
+    const report = await cloudInfraManager.getComprehensiveInfrastructureReport(prisma);
+    res.rcceSuccess('INFRA_AUDIT_COMPLETED', report);
+  } catch (err) {
+    next(err);
+  }
 });
 
 module.exports = router;

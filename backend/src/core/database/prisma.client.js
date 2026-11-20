@@ -6,11 +6,15 @@ const {
   checkPostgresReachable,
   getPostgresTargetInfo
 } = require('./persistentStore');
+const { connectionPoolManager } = require('./connectionPoolManager');
 
 let cachedPgOnline = null;
 let lastPgCheckAt = 0;
 let lastPgError = null;
 let probePromise = null;
+let cachedLiveStatusPayload = null;
+let lastLiveStatusAt = 0;
+let liveStatusInFlight = null;
 
 const PG_CONNECT_ERROR_CODES = new Set(['P1000', 'P1001', 'P1002', 'P1003', 'P1008', 'P1011', 'P1017', '57P01', '57P02', '57P03']);
 
@@ -31,6 +35,8 @@ const resetPostgresCache = () => {
   cachedPgOnline = null;
   lastPgCheckAt = 0;
   lastPgError = null;
+  cachedLiveStatusPayload = null;
+  lastLiveStatusAt = 0;
 };
 
 const withProbeTimeout = (promise, ms = 2500) => {
@@ -1032,15 +1038,29 @@ const handleRawSqlOffline = (sql, values = []) => {
 };
 
 const createResilientPrismaClient = () => {
-  const client = new PrismaClient({ log: ['error'] });
+  if (process.env.DATABASE_URL) {
+    process.env.DATABASE_URL = connectionPoolManager.buildOptimizedDatabaseUrl(process.env.DATABASE_URL);
+  }
+
+  const client = new PrismaClient({
+    log: ['error'],
+    datasources: process.env.DATABASE_URL
+      ? { db: { url: process.env.DATABASE_URL } }
+      : undefined
+  });
 
   const origTransaction = client.$transaction.bind(client);
   const origExecuteRawUnsafe = client.$executeRawUnsafe.bind(client);
   const origQueryRawUnsafe = client.$queryRawUnsafe.bind(client);
 
-  // Proactively warm up Prisma query engine & PostgreSQL pool on initialization when configured
+  // Proactively warm up Prisma query engine, PostgreSQL pool & composite multi-tenant indexes on initialization
   if (process.env.DATABASE_URL) {
-    client.$connect().catch(() => { });
+    client.$connect()
+      .then(() => {
+        connectionPoolManager.ensureOptimizedMultiTenantIndexes(origExecuteRawUnsafe).catch(() => {});
+        connectionPoolManager.syncLivePostgresStats(origQueryRawUnsafe).catch(() => {});
+      })
+      .catch(() => { });
   }
 
   const isPostgresOnline = async (forceRefresh = false) => {
@@ -1072,6 +1092,7 @@ const createResilientPrismaClient = () => {
 
   const getPostgresLiveStatus = async (forceRefresh = false) => {
     const targetInfo = getPostgresTargetInfo();
+    const poolSnap = connectionPoolManager.getPoolStatus();
     if (!process.env.DATABASE_URL) {
       return {
         active: false,
@@ -1086,86 +1107,140 @@ const createResilientPrismaClient = () => {
         port: targetInfo.port,
         latencyMs: null,
         poolActiveConnections: 0,
-        poolMaxConnections: 20,
+        poolIdleConnections: 0,
+        poolWaitingRequests: 0,
+        poolMaxConnections: poolSnap.maxPoolCapacity,
+        postgresMaxConnections: poolSnap.postgresMaxConnections,
+        maxSafeApplicationConnections: poolSnap.maxSafeApplicationConnections,
+        poolUtilizationPct: 0,
+        poolAlertLevel: 'NORMAL',
+        connectionPool: poolSnap,
         error: 'DATABASE_URL not set',
         checkedAt: new Date().toISOString()
       };
     }
 
-    const start = Date.now();
-    try {
-      if (forceRefresh) resetPostgresCache();
-      const rows = await withProbeTimeout(
-        origQueryRawUnsafe(
-          "SELECT current_database() AS db, version() AS pg_version"
-        ),
-        8000
-      );
-      let activeConnCount = 1;
-      try {
-        const connRows = await withProbeTimeout(
-          origQueryRawUnsafe("SELECT count(*)::int AS connections FROM pg_stat_activity WHERE datname = current_database()"),
-          3000
-        );
-        if (Array.isArray(connRows) && connRows[0]?.connections !== undefined) {
-          activeConnCount = Number(connRows[0].connections) || 1;
-        }
-      } catch { }
-      const latencyMs = Date.now() - start;
-      const info = Array.isArray(rows) && rows[0] ? rows[0] : {};
-      const fullVersion = String(info.pg_version || info.version || 'PostgreSQL');
-      const shortMatch = fullVersion.match(/PostgreSQL\s+[\d.]+/i);
-      const versionShort = shortMatch ? shortMatch[0] : 'PostgreSQL';
-      markPostgresState(true);
-
+    // Fast-path cache (5s TTL) + single-flight deduplication to prevent redundant DB health query storms
+    const nowTs = Date.now();
+    if (!forceRefresh && cachedLiveStatusPayload && nowTs - lastLiveStatusAt < 5000) {
       return {
-        active: true,
-        connected: true,
-        status: 'ACTIVE',
-        mode: 'POSTGRESQL_LIVE',
-        role: 'PRIMARY_ACTIVE',
-        engine: `${versionShort} Primary`,
-        versionShort,
-        version: fullVersion,
-        database: info.db || targetInfo.database,
-        host: targetInfo.host,
-        port: targetInfo.port,
-        latencyMs,
-        poolActiveConnections: activeConnCount,
-        poolMaxConnections: 20,
-        error: null,
-        checkedAt: new Date().toISOString()
-      };
-    } catch (err) {
-      const msg = err?.message || 'PostgreSQL connection unavailable';
-      if (isPostgresConnectivityError(err)) {
-        markPostgresState(false, msg);
-      }
-      return {
-        active: false,
-        connected: false,
-        status: 'STANDBY',
-        mode: 'STANDBY_FALLBACK',
-        role: 'STANDBY_FALLBACK',
-        engine: 'PostgreSQL (Standby)',
-        versionShort: 'PostgreSQL',
-        version: msg,
-        database: targetInfo.database,
-        host: targetInfo.host,
-        port: targetInfo.port,
-        latencyMs: Date.now() - start,
-        poolActiveConnections: 0,
-        poolMaxConnections: 20,
-        error: msg,
-        checkedAt: new Date().toISOString()
+        ...cachedLiveStatusPayload,
+        poolActiveConnections: poolSnap.activeConnections || 1,
+        poolIdleConnections: poolSnap.idleConnections || 0,
+        poolWaitingRequests: poolSnap.waitingRequests || 0,
+        poolMaxConnections: poolSnap.maxPoolCapacity,
+        postgresMaxConnections: poolSnap.postgresMaxConnections,
+        maxSafeApplicationConnections: poolSnap.maxSafeApplicationConnections,
+        poolUtilizationPct: poolSnap.utilizationPercentage,
+        poolAlertLevel: poolSnap.alertLevel,
+        connectionPool: poolSnap
       };
     }
+
+    if (!forceRefresh && liveStatusInFlight) {
+      return liveStatusInFlight;
+    }
+
+    liveStatusInFlight = (async () => {
+      const start = Date.now();
+      try {
+        if (forceRefresh) resetPostgresCache();
+        const rows = await withProbeTimeout(
+          origQueryRawUnsafe(
+            "SELECT current_database() AS db, version() AS pg_version"
+          ),
+          8000
+        );
+        const livePool = await withProbeTimeout(
+          connectionPoolManager.syncLivePostgresStats(origQueryRawUnsafe),
+          4000
+        ).catch(() => connectionPoolManager.getPoolStatus());
+
+        await connectionPoolManager.ensureOptimizedMultiTenantIndexes(origExecuteRawUnsafe).catch(() => {});
+
+        const latencyMs = Date.now() - start;
+        const info = Array.isArray(rows) && rows[0] ? rows[0] : {};
+        const fullVersion = String(info.pg_version || info.version || 'PostgreSQL');
+        const shortMatch = fullVersion.match(/PostgreSQL\s+[\d.]+/i);
+        const versionShort = shortMatch ? shortMatch[0] : 'PostgreSQL';
+        connectionPoolManager.postgresServerCapacity.versionShort = versionShort;
+        markPostgresState(true);
+
+        const payload = {
+          active: true,
+          connected: true,
+          status: 'ACTIVE',
+          mode: 'POSTGRESQL_LIVE',
+          role: 'PRIMARY_ACTIVE',
+          engine: `${versionShort} Primary`,
+          versionShort,
+          version: fullVersion,
+          database: info.db || targetInfo.database,
+          host: targetInfo.host,
+          port: targetInfo.port,
+          latencyMs,
+          poolActiveConnections: livePool.activeConnections || 1,
+          poolIdleConnections: livePool.idleConnections || 0,
+          poolWaitingRequests: livePool.waitingRequests || 0,
+          poolMaxConnections: livePool.maxPoolCapacity,
+          postgresMaxConnections: livePool.postgresMaxConnections,
+          maxSafeApplicationConnections: livePool.maxSafeApplicationConnections,
+          poolUtilizationPct: livePool.utilizationPercentage,
+          poolAlertLevel: livePool.alertLevel,
+          connectionPool: livePool,
+          error: null,
+          checkedAt: new Date().toISOString()
+        };
+        cachedLiveStatusPayload = payload;
+        lastLiveStatusAt = Date.now();
+        return payload;
+      } catch (err) {
+        const msg = err?.message || 'PostgreSQL connection unavailable';
+        if (isPostgresConnectivityError(err)) {
+          markPostgresState(false, msg);
+        }
+        const fallbackPool = connectionPoolManager.getPoolStatus();
+        return {
+          active: false,
+          connected: false,
+          status: 'STANDBY',
+          mode: 'STANDBY_FALLBACK',
+          role: 'STANDBY_FALLBACK',
+          engine: 'PostgreSQL (Standby)',
+          versionShort: 'PostgreSQL',
+          version: msg,
+          database: targetInfo.database,
+          host: targetInfo.host,
+          port: targetInfo.port,
+          latencyMs: Date.now() - start,
+          poolActiveConnections: 0,
+          poolIdleConnections: 0,
+          poolWaitingRequests: 0,
+          poolMaxConnections: fallbackPool.maxPoolCapacity,
+          postgresMaxConnections: fallbackPool.postgresMaxConnections,
+          maxSafeApplicationConnections: fallbackPool.maxSafeApplicationConnections,
+          poolUtilizationPct: 0,
+          poolAlertLevel: 'NORMAL',
+          connectionPool: fallbackPool,
+          error: msg,
+          checkedAt: new Date().toISOString()
+        };
+      } finally {
+        liveStatusInFlight = null;
+      }
+    })();
+
+    return liveStatusInFlight;
   };
 
   client.isPostgresOnline = isPostgresOnline;
   client.getPostgresLiveStatus = getPostgresLiveStatus;
+  client.getConnectionPoolStatus = () => connectionPoolManager.getPoolStatus();
+  client.connectionPoolManager = connectionPoolManager;
   client.resetPostgresCache = resetPostgresCache;
   client.getLastPostgresError = () => lastPgError;
+
+  const LARGE_PAGINATED_MODELS = new Set(['AuditLog', 'ActivityLog', 'AttendanceRecord', 'NotificationQueueItem', 'VoiceVerificationLog']);
 
   if (typeof client.$use === 'function') {
     client.$use(async (params, next) => {
@@ -1173,15 +1248,45 @@ const createResilientPrismaClient = () => {
       if (!params.model || params.action === 'queryRaw' || params.action === 'executeRaw' || params.action === 'runCommandRaw') {
         return next(params);
       }
+
+      // Enforce safe pagination bound on high-volume log/record tables when no explicit take is supplied
+      if (params.action === 'findMany' && LARGE_PAGINATED_MODELS.has(params.model)) {
+        params.args = params.args || {};
+        if (params.args.take === undefined) {
+          params.args.take = 250;
+        }
+      }
+
+      const tenantIdHint =
+        params.args?.where?.tenantId ||
+        params.args?.data?.tenantId ||
+        1;
+
       const online = await isPostgresOnline();
       if (!online) {
-        return executeLocalPrismaQuery(params);
+        const slot = connectionPoolManager.acquireConnectionSlot({
+          model: params.model,
+          action: params.action,
+          tenantId: tenantIdHint
+        });
+        try {
+          const localRes = executeLocalPrismaQuery(params);
+          connectionPoolManager.releaseConnectionSlot(slot, null);
+          return localRes;
+        } catch (localErr) {
+          connectionPoolManager.releaseConnectionSlot(slot, localErr);
+          throw localErr;
+        }
       }
+
       try {
         if (params.args) {
           params.args = sanitizeIdsForPrisma(params.args, params.model);
         }
-        const res = await next(params);
+        const res = await connectionPoolManager.executeWithRetry(
+          () => next(params),
+          { model: params.model, action: params.action, tenantId: tenantIdHint }
+        );
         markPostgresState(true);
         return res;
       } catch (err) {
@@ -1301,15 +1406,10 @@ const createResilientPrismaClient = () => {
   });
 };
 
-let prisma;
-
-if (process.env.NODE_ENV === 'production') {
-  prisma = createResilientPrismaClient();
-} else {
-  if (!global.__prisma) {
-    global.__prisma = createResilientPrismaClient();
-  }
-  prisma = global.__prisma;
+// Enforce strict single-instance PrismaClient across both production and development
+if (!globalThis.__prisma) {
+  globalThis.__prisma = createResilientPrismaClient();
 }
+const prisma = globalThis.__prisma;
 
 module.exports = prisma;

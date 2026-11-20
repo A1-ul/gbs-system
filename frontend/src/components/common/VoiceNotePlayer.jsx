@@ -181,7 +181,7 @@ export default function VoiceNotePlayer({
             fontSize: "1rem",
             boxShadow: "0 2px 8px rgba(0,0,0,0.3)"
           }}
-          title={!hasValidAudio ? "Audio recording unavailable" : (isPlaying ? "Pause" : "Play Exact Recorded Voice Note")}
+          aria-label={!hasValidAudio ? "Audio recording unavailable" : (isPlaying ? "Pause" : "Play Exact Recorded Voice Note")}
         >
           {isPlaying ? "⏸" : "▶"}
         </button>
@@ -236,7 +236,7 @@ export default function VoiceNotePlayer({
                   href={voiceNote.audioUrl}
                   download={`gbs-voice-note-${voiceNote.id || Date.now()}.webm`}
                   style={{ color: "#38bdf8", textDecoration: "none", fontWeight: 700 }}
-                  title="Download recorded audio"
+                  aria-label="Download recorded audio"
                 >
                   ⬇
                 </a>

@@ -14,10 +14,46 @@ router.use(tenantIsolationGuard);
 const ALL_STAFF_ACCESS = ['ADMIN', 'SUPER_ADMIN', 'HEADMASTER', 'PRINCIPAL', 'TEACHER', 'STAFF', 'HR', 'ACCOUNTANT', 'CLINIC_DOCTOR', 'CLINIC_NURSE', 'DEVELOPER'];
 const EXECUTIVE_VIEW_ACCESS = ['ADMIN', 'SUPER_ADMIN', 'HEADMASTER', 'PRINCIPAL', 'HR', 'DEVELOPER'];
 
+router.get('/settings', restrictTo(...ALL_STAFF_ACCESS), async (req, res, next) => {
+  try {
+    const tid = String(parseInt(req.tenantId || req.user?.tenantId || 1, 10) || 1);
+    const settings = staffAttendanceService.getTenantSettings(tid);
+    res.status(200).json({ status: 'success', data: { settings } });
+  } catch (err) {
+    next(err);
+  }
+});
+
+router.put('/settings', restrictTo(...EXECUTIVE_VIEW_ACCESS), async (req, res, next) => {
+  try {
+    const settings = await staffAttendanceService.updateAttendanceSettings(req);
+    res.status(200).json({
+      status: 'success',
+      message: `School attendance policy updated (Closing Time: ${settings.closingTime}, Auto Clock-Out: +${Math.round((settings.autoClockOutDelayMinutes || 120) / 60)}h, Term: ${settings.activeTerm}).`,
+      data: { settings }
+    });
+  } catch (err) {
+    next(err);
+  }
+});
+
 router.get('/my-status', restrictTo(...ALL_STAFF_ACCESS), async (req, res, next) => {
   try {
     const data = await staffAttendanceService.getMyStaffAttendanceStatus(req);
     res.status(200).json({ status: 'success', data });
+  } catch (err) {
+    next(err);
+  }
+});
+
+router.post('/bypass', restrictTo(...ALL_STAFF_ACCESS), async (req, res, next) => {
+  try {
+    const entry = await staffAttendanceService.bypassClockInStaff(req);
+    res.status(200).json({
+      status: 'success',
+      message: 'Welcome screen bypassed. Note: You are NOT marked present at work or on duty until you clock in.',
+      data: { record: entry }
+    });
   } catch (err) {
     next(err);
   }

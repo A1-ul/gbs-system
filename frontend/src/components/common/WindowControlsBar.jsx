@@ -25,7 +25,6 @@ function OnboardActionButton({ onNavigate }) {
         fontSize: "0.75rem",
         fontWeight: "800"
       }}
-      title="Open the Official Onboarding Form to register your Educational Institution / School"
     >
       🏫 Onboard Your Educational Institution / School
     </button>
@@ -260,7 +259,6 @@ export default function WindowControlsBar({
             cursor: "pointer",
             transition: "all 0.2s"
           }}
-          title="Return to previous view without resetting page"
         >
           <span>{customBackLabel}</span>
         </button>
@@ -337,7 +335,6 @@ export default function WindowControlsBar({
                 fontSize: "0.75rem",
                 fontWeight: "800"
               }}
-              title="Watch the Complete Role Presentation Video & Live Action Walkthrough"
             >
               🎬 Presentation Video
             </button>
@@ -356,7 +353,6 @@ export default function WindowControlsBar({
                 fontSize: "0.75rem",
                 fontWeight: "800"
               }}
-              title="Open the Exact Role Operating Guide & Voice Assistant"
             >
               📖 Operating Guide
             </button>
@@ -378,7 +374,6 @@ export default function WindowControlsBar({
             fontSize: "0.75rem",
             fontWeight: "600"
           }}
-          title="Smooth scroll to top of window"
         >
           ⬆ Top
         </button>
@@ -397,7 +392,6 @@ export default function WindowControlsBar({
             fontSize: "0.75rem",
             fontWeight: "600"
           }}
-          title="Smooth scroll to bottom of window"
         >
           ⬇ Bottom
         </button>
@@ -418,7 +412,6 @@ export default function WindowControlsBar({
               fontSize: "0.75rem",
               fontWeight: "700"
             }}
-            title="Open the current active tab in a brand-new full-page browser tab"
           >
             ↗ Open Tab Full Page
           </button>
@@ -439,7 +432,6 @@ export default function WindowControlsBar({
               fontSize: "0.75rem",
               fontWeight: "700"
             }}
-            title={isExpanded ? "Restore standard dashboard view" : "Expand workspace to full-page display"}
           >
             {isExpanded ? "↙ Exit Full Display" : "⛶ Full Display"}
           </button>
@@ -461,7 +453,6 @@ export default function WindowControlsBar({
               fontWeight: "900",
               boxShadow: "0 2px 8px rgba(239, 68, 68, 0.45)"
             }}
-            title="Sign Out of the current Dashboard and return to Login"
           >
             🚪 Sign Out
           </button>

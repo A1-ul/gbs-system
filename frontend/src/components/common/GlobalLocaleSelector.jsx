@@ -54,7 +54,6 @@ export default function GlobalLocaleSelector({ compact = true, lockedDeveloperEn
           fontSize: compact ? "0.73rem" : "0.8rem",
           fontWeight: 800
         }}
-        title="Developer Control Center always operates in Standard System English regardless of tenant language choices"
       >
         <span>🌐 English (Developer Standard • Immutable)</span>
       </div>
@@ -121,11 +120,6 @@ export default function GlobalLocaleSelector({ compact = true, lockedDeveloperEn
         flexWrap: "wrap",
         justifyContent: "center"
       }}
-      title={
-        isHeadmaster
-          ? `Headmaster Institution Language Control | Active Norms: ${country.flag} ${country.name} | Language: ${lang.label} (Applies to entire school; Developer excluded)`
-          : `Active Regional Norms: ${country.flag} ${country.name} | Currency: ${country.currencyCode} | Academic: ${country.termSystem} | Language: ${lang.label}`
-      }
     >
       <select
         aria-label="Select Country and Educational Norms"

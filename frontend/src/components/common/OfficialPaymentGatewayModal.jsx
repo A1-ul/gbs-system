@@ -26,12 +26,26 @@ const STATE_BADGES = {
   UNDER_REVIEW: { label: "Under Finance Review", bg: "#422006", color: "#fde047" }
 };
 
-function isValidGhanaPhoneInput(phone) {
+function isValidMomoPhoneInput(phone) {
   const cleaned = String(phone || "").replace(/[\s\-().]/g, "");
   let local = cleaned;
   if (local.startsWith("+233")) local = "0" + local.slice(4);
   else if (local.startsWith("233") && local.length === 12) local = "0" + local.slice(3);
-  return /^0[235][0-9]{8}$/.test(local);
+  else if (local.startsWith("00233")) local = "0" + local.slice(5);
+  return /^0[235][0-9]{8}$/.test(local) || /^\+[1-9][0-9]{7,14}$/.test(cleaned);
+}
+
+function detectMomoNetworkLabel(phone) {
+  const cleaned = String(phone || "").replace(/[\s\-().]/g, "");
+  let local = cleaned;
+  if (local.startsWith("+233")) local = "0" + local.slice(4);
+  else if (local.startsWith("233") && local.length === 12) local = "0" + local.slice(3);
+  const p = local.slice(0, 3);
+  if (["024", "025", "053", "054", "055", "059"].includes(p)) return "MTN MoMo Detected";
+  if (["020", "050"].includes(p)) return "Telecel Cash Detected";
+  if (["026", "027", "056", "057"].includes(p)) return "AT Money (AirtelTigo) Detected";
+  if (/^\+[1-9]/.test(cleaned)) return "International E.164 Wallet";
+  return "Ghana Mobile Network";
 }
 
 /**
@@ -114,7 +128,7 @@ export default function OfficialPaymentGatewayModal({
         let userObj = {};
         try {
           userObj = JSON.parse(localStorage.getItem("gbs_user") || "{}");
-        } catch {}
+        } catch { }
         setPayerEmail((prev) => prev || userObj.email || "");
 
         const effectiveTenantId = tenantId || userObj.tenantId || localStorage.getItem("gbs_tenant_id") || 1;
@@ -160,7 +174,7 @@ export default function OfficialPaymentGatewayModal({
       } catch (err) {
         setErrorMsg(
           err.response?.data?.message ||
-            "Could not load student fee records from the school server. Please confirm the student ID."
+          "Could not load student fee records from the school server. Please confirm the student ID."
         );
       } finally {
         setLoadingStatement(false);
@@ -220,8 +234,8 @@ export default function OfficialPaymentGatewayModal({
       }
     }
 
-    if (isMomoChannel && !isValidGhanaPhoneInput(payerPhone)) {
-      setErrorMsg("Enter a valid 10-digit Ghana Mobile Money number (e.g. 024XXXXXXX or 055XXXXXXX).");
+    if (isMomoChannel && !isValidMomoPhoneInput(payerPhone)) {
+      setErrorMsg("Enter a valid Mobile Money number (any 10-digit 02x/05x Ghana number or +233/+... E.164 wallet).");
       return;
     }
 
@@ -628,13 +642,21 @@ export default function OfficialPaymentGatewayModal({
 
                     {isMomoChannel && (
                       <div>
-                        <label style={{ display: "block", fontSize: "0.8rem", color: "#cbd5e1", marginBottom: "6px", fontWeight: 700 }}>
-                          Mobile Money Number (Ghana) *
-                        </label>
+                        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "6px" }}>
+                          <label style={{ fontSize: "0.8rem", color: "#cbd5e1", fontWeight: 700 }}>
+                            Your Mobile Money Number (Any Network: MTN, Telecel, AirtelTigo) *
+                          </label>
+                          {payerPhone.trim().length >= 3 && (
+                            <span style={{ fontSize: "0.72rem", color: "#34d399", fontWeight: 800 }}>
+                              {detectMomoNetworkLabel(payerPhone)}
+                            </span>
+                          )}
+                        </div>
                         <input
                           type="tel"
                           required
-                          placeholder="024 123 4567 or 055 459 4193"
+                          data-testid="momo-payer-phone-input"
+                          placeholder="Enter any MoMo number (e.g. 024..., 020..., 027..., +233...)"
                           value={payerPhone}
                           onChange={(e) => setPayerPhone(e.target.value)}
                           style={{ width: "100%", padding: "10px 12px", borderRadius: "10px", border: "1px solid rgba(148,163,184,0.35)", background: "#020617", color: "#fff", boxSizing: "border-box" }}

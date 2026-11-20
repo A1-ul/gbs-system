@@ -143,8 +143,9 @@ class PaystackAdapter extends BasePaymentAdapter {
     if (!momoProvider) {
       throw new AppError(`Paystack does not support direct charge for channel ${channel}.`, 400);
     }
-    if (!phoneResult || !phoneResult.local) {
-      throw new AppError('Valid Ghana mobile money phone number is required.', 400);
+    const resolvedMomoPhone = phoneResult?.local || phoneResult?.e164 || '';
+    if (!resolvedMomoPhone) {
+      throw new AppError('Valid mobile money phone number is required.', 400);
     }
 
     const chargePayload = {
@@ -153,7 +154,7 @@ class PaystackAdapter extends BasePaymentAdapter {
       currency,
       reference,
       mobile_money: {
-        phone: phoneResult.local,
+        phone: resolvedMomoPhone,
         provider: momoProvider
       },
       metadata: {

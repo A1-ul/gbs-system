@@ -2208,7 +2208,7 @@ export function StudentDashboard({ initialTab } = {}) {
               type="button"
               className="role-action-btn"
               onClick={() => window.history.back()}
-              title="Return to previous view or page"
+              aria-label="Return to previous view or page"
               style={{ borderColor: "#64748b", color: "#f8fafc", background: "rgba(30, 41, 59, 0.7)", fontWeight: 700, cursor: "pointer" }}
             >
               ← Back
@@ -2301,7 +2301,7 @@ export function StudentDashboard({ initialTab } = {}) {
           {/* REQUIREMENT: Student Profile Card with Uploaded Picture and Class / Level Progression */}
           <div className="student-profile-header-card">
             <div style={{ display: "flex", flexDirection: "column", gap: "6px", alignItems: "center" }}>
-              <label className="student-avatar-frame" title="Click to upload profile photo (Must satisfy dress code)">
+              <label className="student-avatar-frame" aria-label="Click to upload profile photo (Must satisfy dress code)">
                 <img
                   src={studentPhoto}
                   alt="Student Profile"
@@ -2328,7 +2328,7 @@ export function StudentDashboard({ initialTab } = {}) {
                   fontWeight: 700,
                   cursor: "pointer"
                 }}
-                title="Review official school uniform and dress-code standards for scholar profile photographs"
+                aria-label="Review official school uniform and dress-code standards for scholar profile photographs"
               >
                 👔 Dress Code
               </button>
@@ -2353,7 +2353,7 @@ export function StudentDashboard({ initialTab } = {}) {
                 <div style={{ display: "flex", alignItems: "center", gap: "8px", background: "rgba(59, 130, 246, 0.15)", border: "1px solid rgba(59, 130, 246, 0.4)", padding: "6px 12px", borderRadius: "8px" }}>
                   <span style={{ fontSize: "0.8rem", color: "#93c5fd" }}>Enrolled Class:</span>
                   <strong style={{ fontSize: "0.88rem", color: "#f8fafc" }}>{academicLevel}</strong>
-                  <span style={{ fontSize: "0.72rem", background: "rgba(59, 130, 246, 0.3)", color: "#60a5fa", padding: "2px 8px", borderRadius: "4px", fontWeight: "700" }} title="Class assignments and promotions are exclusively managed by the Headmaster">
+                  <span style={{ fontSize: "0.72rem", background: "rgba(59, 130, 246, 0.3)", color: "#60a5fa", padding: "2px 8px", borderRadius: "4px", fontWeight: "700" }} aria-label="Class assignments and promotions are exclusively managed by the Headmaster">
                     🔒 Assigned Exclusively by Headmaster
                   </span>
                 </div>
@@ -2442,7 +2442,7 @@ export function StudentDashboard({ initialTab } = {}) {
                   className="role-kpi-box"
                   onClick={() => setActiveTab("report-card")}
                   style={{ cursor: "pointer", transition: "transform 0.15s" }}
-                  title="Click to view term report card and GPA analytics"
+                  aria-label="Click to view term report card and GPA analytics"
                 >
                   <span className="role-kpi-icon">⭐</span>
                   <div className="role-kpi-data">
@@ -2454,7 +2454,7 @@ export function StudentDashboard({ initialTab } = {}) {
                   className="role-kpi-box"
                   onClick={() => setActiveTab("exams")}
                   style={{ cursor: "pointer", transition: "transform 0.15s" }}
-                  title="Click to view examination timetable and status"
+                  aria-label="Click to view examination timetable and status"
                 >
                   <span className="role-kpi-icon">📝</span>
                   <div className="role-kpi-data">
@@ -2468,7 +2468,7 @@ export function StudentDashboard({ initialTab } = {}) {
                   className="role-kpi-box"
                   onClick={() => setActiveTab("assignments")}
                   style={{ cursor: "pointer", transition: "transform 0.15s" }}
-                  title="Click to view homework tasks and assignment submission desk"
+                  aria-label="Click to view homework tasks and assignment submission desk"
                 >
                   <span className="role-kpi-icon">⏳</span>
                   <div className="role-kpi-data">
@@ -2480,7 +2480,7 @@ export function StudentDashboard({ initialTab } = {}) {
                   className="role-kpi-box"
                   onClick={() => setActiveTab("attendance")}
                   style={{ cursor: "pointer", transition: "transform 0.15s" }}
-                  title="Click to view attendance record and term presence rate"
+                  aria-label="Click to view attendance record and term presence rate"
                 >
                   <span className="role-kpi-icon">🎯</span>
                   <div className="role-kpi-data">
@@ -2600,7 +2600,7 @@ export function StudentDashboard({ initialTab } = {}) {
                   type="button"
                   onClick={() => setConcludedClassNotice({ ...concludedClassNotice, dismissed: true })}
                   style={{ background: "transparent", border: "none", color: "#94a3b8", cursor: "pointer", fontSize: "1.1rem", padding: "4px" }}
-                  title="Dismiss notification"
+                  aria-label="Dismiss notification"
                 >
                   ✕
                 </button>
@@ -3151,7 +3151,7 @@ export function StudentDashboard({ initialTab } = {}) {
                             className="btn-secondary"
                             style={{ borderColor: "#10b981", color: "#34d399", padding: "10px 20px" }}
                             onClick={handlePublishNewExamSession}
-                            title="Faculty/Teacher publishes a new exam session"
+                            aria-label="Faculty/Teacher publishes a new exam session"
                           >
                             📢 Simulate Faculty Publishing Next Exam Session
                           </button>
@@ -3261,7 +3261,7 @@ export function StudentDashboard({ initialTab } = {}) {
                                                   className="btn-secondary"
                                                   style={{ padding: "4px 8px", fontSize: "0.7rem", borderColor: "#f59e0b", color: "#fbbf24", fontWeight: "700" }}
                                                   onClick={() => handleUnlockExam({ id: examId, title: ex.title || fallbackTitle })}
-                                                  title="Simulate scheduled start time arrived and unlock portal"
+                                                  aria-label="Simulate scheduled start time arrived and unlock portal"
                                                 >
                                                   ⏱️ Time Ready: Unlock Portal
                                                 </button>
@@ -3906,7 +3906,7 @@ export function StudentDashboard({ initialTab } = {}) {
                                       borderRadius: "6px",
                                       fontWeight: 700
                                     }}
-                                    title={proctoringDetail}
+                                    aria-label={proctoringDetail}
                                   >
                                     {proctoringStatus === "CAMERA_ACTIVE"
                                       ? "📹 AI Proctoring Live • Webcam & Focus Active"
@@ -3929,7 +3929,7 @@ export function StudentDashboard({ initialTab } = {}) {
                                       fontWeight: 700,
                                       cursor: "pointer"
                                     }}
-                                    title="Simulate head movement away to test proctoring alert and penalty deduction"
+                                    aria-label="Simulate head movement away to test proctoring alert and penalty deduction"
                                   >
                                     👁️ Test Proctoring Alert
                                   </button>
@@ -4756,7 +4756,7 @@ export function StudentDashboard({ initialTab } = {}) {
                             type="button"
                             className="btn-secondary"
                             onClick={() => handleSaveMeetingReference(m)}
-                            title="Save this online class for future reference"
+                            aria-label="Save this online class for future reference"
                             style={{
                               fontSize: "0.8rem",
                               padding: "8px 12px",
@@ -4798,7 +4798,7 @@ export function StudentDashboard({ initialTab } = {}) {
                             type="button"
                             onClick={() => handleSaveMeetingReference(s)}
                             style={{ background: "none", border: "none", color: "#f87171", cursor: "pointer", fontSize: "0.75rem" }}
-                            title="Remove from saved references"
+                            aria-label="Remove from saved references"
                           >
                             ✖ Remove
                           </button>
@@ -5049,7 +5049,7 @@ export function StudentDashboard({ initialTab } = {}) {
                                       gap: "6px",
                                       cursor: "pointer"
                                     }}
-                                    title="Go to Course Enrolled File Location & Academic Materials"
+                                    aria-label="Go to Course Enrolled File Location & Academic Materials"
                                   >
                                     📂 Go to Course Enrolled (File Location)
                                   </button>
@@ -5269,7 +5269,7 @@ export function StudentDashboard({ initialTab } = {}) {
                       <div
                         key={b.id}
                         onDoubleClick={() => setSelectedBookForPreview(b)}
-                        title="Double-click to view high-resolution book cover and full syllabus details"
+                        aria-label="Double-click to view high-resolution book cover and full syllabus details"
                         style={{
                           background: "rgba(15, 23, 42, 0.8)",
                           border: "1.5px solid rgba(245, 158, 11, 0.4)",
@@ -5341,7 +5341,7 @@ export function StudentDashboard({ initialTab } = {}) {
                       <div
                         key={cat.id}
                         onDoubleClick={() => setSelectedBookForPreview(cat)}
-                        title="Double-click to view high-resolution cover and book details"
+                        aria-label="Double-click to view high-resolution cover and book details"
                         style={{
                           background: "rgba(15, 23, 42, 0.65)",
                           border: "1px solid rgba(255, 255, 255, 0.08)",
@@ -6838,7 +6838,7 @@ export function StudentDashboard({ initialTab } = {}) {
                             className="btn-primary"
                             style={{ padding: "4px 10px", fontSize: "0.75rem", cursor: "pointer" }}
                             onClick={() => navigateToDetail(navigate, "report", file.id || file.name, file, { returnTab: activeTab })}
-                            title="View full course material details on dedicated page"
+                            aria-label="View full course material details on dedicated page"
                           >
                             👁️ View
                           </button>
@@ -7047,7 +7047,7 @@ export function StudentDashboard({ initialTab } = {}) {
         <button
           type="button"
           onClick={() => window.scrollTo({ top: 0, behavior: "smooth" })}
-          title="Scroll to Top"
+          aria-label="Scroll to Top"
           style={{
             background: "linear-gradient(135deg, #0284c7, #2563eb)",
             color: "#ffffff",
@@ -7071,7 +7071,7 @@ export function StudentDashboard({ initialTab } = {}) {
         <button
           type="button"
           onClick={() => window.scrollTo({ top: document.body.scrollHeight, behavior: "smooth" })}
-          title="Scroll to Bottom"
+          aria-label="Scroll to Bottom"
           style={{
             background: "linear-gradient(135deg, #1e293b, #0f172a)",
             color: "#38bdf8",
@@ -7684,7 +7684,7 @@ export function StudentDashboard({ initialTab } = {}) {
                     fontWeight: 800,
                     textDecoration: "none"
                   }}
-                  title="Launch in external Zoom or Google Meet app"
+                  aria-label="Launch in external Zoom or Google Meet app"
                 >
                   🔗 Open in External App ↗
                 </a>
@@ -8104,7 +8104,7 @@ export function StudentDashboard({ initialTab } = {}) {
                         "https://www.youtube.com/embed/1LGYfM3uFq4?rel=0&modestbranding=1",
                         "https://www.youtube.com/embed/G6n8U-3pD_g?rel=0&modestbranding=1"
                       ][selectedCatchUpLecture] || "https://www.youtube.com/embed/WUvTyaaNkzM"}
-                      title="Concluded Lesson Catch-Up Video"
+                      aria-label="Concluded Lesson Catch-Up Video"
                       allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
                       allowFullScreen
                       style={{ width: "100%", height: "100%", border: "none" }}

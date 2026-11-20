@@ -16,7 +16,8 @@ function generateMeetCode() {
  * Generates realistic platform meeting URL & credentials
  */
 function generatePlatformCredentials(platform, title) {
-  const plat = (platform || 'ZOOM').toUpperCase();
+  const plat = (platform || 'GBS_WEBRTC').toUpperCase();
+  const roomCode = `GBS-ROOM-${Math.floor(100000 + Math.random() * 899999)}`;
   if (plat === 'GOOGLE_MEET') {
     const code = generateMeetCode();
     return {
@@ -27,12 +28,12 @@ function generatePlatformCredentials(platform, title) {
     };
   }
 
-  // Default to ZOOM
+  // Genuine GBS In-System Live WebRTC Voice & Video Conference Bridge
   const mId = Math.floor(1000000000 + Math.random() * 9000000000).toString();
   const pwd = Math.floor(100000 + Math.random() * 900000).toString();
   return {
-    platform: 'ZOOM',
-    meetingUrl: `https://zoom.us/j/${mId}?pwd=${pwd}`,
+    platform: plat,
+    meetingUrl: `/conference/room/${roomCode}?title=${encodeURIComponent(title || 'GBS Live Session')}`,
     meetingId: mId,
     passcode: pwd
   };

@@ -275,6 +275,33 @@ export const rcceApi = {
     } catch (err) {
       return parseRcceError(err);
     }
+  },
+
+  async getPoolStatus() {
+    try {
+      const res = await axiosInstance.get(`${RCCE_BASE_URL}/pool-status`);
+      return parseRcceResponse(res);
+    } catch (err) {
+      return parseRcceError(err);
+    }
+  },
+
+  async simulatePoolThreshold(utilizationPct = 85) {
+    try {
+      const res = await axiosInstance.post(`${RCCE_BASE_URL}/pool-simulate-threshold`, { utilizationPct });
+      return parseRcceResponse(res);
+    } catch (err) {
+      return parseRcceError(err);
+    }
+  },
+
+  async getInfrastructureAudit() {
+    try {
+      const res = await axiosInstance.get(`${RCCE_BASE_URL}/infrastructure-audit`);
+      return parseRcceResponse(res);
+    } catch (err) {
+      return parseRcceError(err);
+    }
   }
 };
 

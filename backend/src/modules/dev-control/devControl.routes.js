@@ -16,6 +16,28 @@ router.post('/security/re-enable', devControlController.reEnableDeveloperLogin);
 // 2. Real-Time Telemetry & Monitoring (Step 33)
 router.get('/metrics', devControlController.getMetrics);
 router.get('/telemetry', devControlController.getMetrics);
+router.get('/infrastructure-monitor', async (req, res, next) => {
+  try {
+    const { cloudInfraManager } = require('../../core/infrastructure/cloudInfraManager');
+    const prismaClient = require('../../core/database/prisma.client');
+    const report = await cloudInfraManager.getComprehensiveInfrastructureReport(prismaClient);
+    res.status(200).json({ status: 'success', data: report });
+  } catch (err) {
+    next(err);
+  }
+});
+router.get('/pool-status', async (req, res, next) => {
+  try {
+    const prismaClient = require('../../core/database/prisma.client');
+    const { connectionPoolManager } = require('../../core/database/connectionPoolManager');
+    if (typeof prismaClient.getPostgresLiveStatus === 'function') {
+      await prismaClient.getPostgresLiveStatus(false);
+    }
+    res.status(200).json({ status: 'success', data: connectionPoolManager.getPoolStatus() });
+  } catch (err) {
+    next(err);
+  }
+});
 
 // 3. Developer Tenant Registration Console (Actual DB Counts)
 router.get('/tenant-console', devControlController.getTenantConsole);

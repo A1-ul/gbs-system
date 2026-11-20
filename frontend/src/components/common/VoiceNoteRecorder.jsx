@@ -363,7 +363,7 @@ export default function VoiceNoteRecorder({ onSendVoiceNote, onCancel, role = "U
               cursor: "pointer",
               fontSize: "1.1rem"
             }}
-            title="Cancel Voice Note"
+            aria-label="Cancel Voice Note"
           >
             ✕
           </button>
@@ -397,7 +397,7 @@ export default function VoiceNoteRecorder({ onSendVoiceNote, onCancel, role = "U
                   boxShadow: "0 0 15px rgba(239, 68, 68, 0.6)",
                   animation: "pulse 1.5s infinite"
                 }}
-                title="Stop Recording"
+                aria-label="Stop Recording"
               >
                 ⬛
               </button>
@@ -419,7 +419,7 @@ export default function VoiceNoteRecorder({ onSendVoiceNote, onCancel, role = "U
                   justifyContent: "center",
                   boxShadow: "0 0 16px rgba(56, 189, 248, 0.4)"
                 }}
-                title="Start Recording Your Exact Voice"
+                aria-label="Start Recording Your Exact Voice"
               >
                 <svg width="26" height="26" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
                   <rect x="8" y="2" width="8" height="11" rx="4" fill="#e2e8f0" stroke="#38bdf8" strokeWidth="1.2" />
@@ -491,7 +491,7 @@ export default function VoiceNoteRecorder({ onSendVoiceNote, onCancel, role = "U
                 alignItems: "center",
                 justifyContent: "center"
               }}
-              title={isPlaying ? "Pause Preview" : "Play Exact Recording Preview"}
+              aria-label={isPlaying ? "Pause Preview" : "Play Exact Recording Preview"}
             >
               {isPlaying ? "⏸" : "▶"}
             </button>

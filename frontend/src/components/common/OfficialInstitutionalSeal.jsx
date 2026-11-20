@@ -31,7 +31,7 @@ export default function OfficialInstitutionalSeal({
         userSelect: 'none',
         flexShrink: 0
       }}
-      title={`Official Conferred Seal • ${effectiveSchoolName}`}
+      aria-label={`Official Conferred Seal • ${effectiveSchoolName}`}
     >
       {/* Outer Golden Starburst Ring */}
       <div

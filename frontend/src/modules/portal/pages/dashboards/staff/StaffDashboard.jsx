@@ -422,7 +422,7 @@ export default function StaffDashboard() {
                   className="role-kpi-box"
                   onClick={() => setActiveTab("duties")}
                   style={{ cursor: "pointer", transition: "transform 0.15s, border-color 0.15s" }}
-                  title="Click to view Operational Duties & Tasks"
+                  aria-label="Click to view Operational Duties & Tasks"
                   onMouseEnter={(e) => { e.currentTarget.style.transform = "translateY(-3px)"; e.currentTarget.style.borderColor = "#38bdf8"; }}
                   onMouseLeave={(e) => { e.currentTarget.style.transform = "none"; e.currentTarget.style.borderColor = ""; }}
                 >
@@ -436,7 +436,7 @@ export default function StaffDashboard() {
                   className="role-kpi-box"
                   onClick={() => navigate("/transport")}
                   style={{ cursor: "pointer", transition: "transform 0.15s, border-color 0.15s" }}
-                  title="Click to view Transport Fleet"
+                  aria-label="Click to view Transport Fleet"
                   onMouseEnter={(e) => { e.currentTarget.style.transform = "translateY(-3px)"; e.currentTarget.style.borderColor = "#34d399"; }}
                   onMouseLeave={(e) => { e.currentTarget.style.transform = "none"; e.currentTarget.style.borderColor = ""; }}
                 >
@@ -450,7 +450,7 @@ export default function StaffDashboard() {
                   className="role-kpi-box"
                   onClick={() => setActiveTab("admissions")}
                   style={{ cursor: "pointer", transition: "transform 0.15s, border-color 0.15s" }}
-                  title="Click to view Admissions Document Verification"
+                  aria-label="Click to view Admissions Document Verification"
                   onMouseEnter={(e) => { e.currentTarget.style.transform = "translateY(-3px)"; e.currentTarget.style.borderColor = "#38bdf8"; }}
                   onMouseLeave={(e) => { e.currentTarget.style.transform = "none"; e.currentTarget.style.borderColor = ""; }}
                 >
@@ -464,7 +464,7 @@ export default function StaffDashboard() {
                   className="role-kpi-box"
                   onClick={() => setActiveTab("maintenance")}
                   style={{ cursor: "pointer", transition: "transform 0.15s, border-color 0.15s" }}
-                  title="Click to view Campus Facility & Maintenance"
+                  aria-label="Click to view Campus Facility & Maintenance"
                   onMouseEnter={(e) => { e.currentTarget.style.transform = "translateY(-3px)"; e.currentTarget.style.borderColor = "#38bdf8"; }}
                   onMouseLeave={(e) => { e.currentTarget.style.transform = "none"; e.currentTarget.style.borderColor = ""; }}
                 >
@@ -516,6 +516,13 @@ export default function StaffDashboard() {
             </div>
           )}
 
+          {/* Global Staff Welcome Prompt & Duty Clock-In / Clock-Out Desk (Greets Staff Immediately Upon Login) */}
+          <StaffAttendanceClockWidget
+            roleOverride="STAFF"
+            currentUser={currentUser}
+            onFeedback={(msg, isErr) => setFeedback({ type: isErr ? "error" : "success", message: msg })}
+          />
+
           {/* Workspace Tabs Navigation */}
           <nav className="role-tab-nav">
             <button
@@ -566,11 +573,6 @@ export default function StaffDashboard() {
           {/* TAB 1: OPERATIONAL DUTIES */}
           {activeTab === "duties" && (
             <div className="role-workspace-card">
-              <StaffAttendanceClockWidget
-                roleOverride="STAFF"
-                currentUser={currentUser}
-                onFeedback={(msg, isErr) => setFeedback({ type: isErr ? "error" : "success", message: msg })}
-              />
               <div className="workspace-title-row">
                 <div>
                   <h2><span>📌</span> CAMPUS OPERATIONAL ROSTER & TASKS</h2>
@@ -678,7 +680,7 @@ export default function StaffDashboard() {
                                 className="btn-secondary"
                                 style={{ padding: "4px 10px", fontSize: "0.75rem", borderColor: "#38bdf8", color: "#38bdf8", cursor: "pointer" }}
                                 onClick={() => navigateToDetail(navigate, "activity", t.ticket_number || t.id, t, { returnTab: activeTab })}
-                                title="View full task details on dedicated page"
+                                aria-label="View full task details on dedicated page"
                               >
                                 🔍 View
                               </button>
@@ -772,7 +774,7 @@ export default function StaffDashboard() {
                                 className="btn-secondary"
                                 style={{ padding: "4px 10px", fontSize: "0.75rem", borderColor: "#38bdf8", color: "#38bdf8", cursor: "pointer" }}
                                 onClick={() => navigateToDetail(navigate, "admission", app.applicationNumber || app.id, app, { returnTab: activeTab })}
-                                title="View admission application dossier on dedicated page"
+                                aria-label="View admission application dossier on dedicated page"
                               >
                                 🔍 View Dossier
                               </button>
@@ -1045,7 +1047,7 @@ export default function StaffDashboard() {
                             className="btn-secondary"
                             onClick={() => handleQuickRestock(it.id, 10)}
                             style={{ padding: "3px 8px", fontSize: "0.74rem", borderColor: "#10b981", color: "#34d399", cursor: "pointer" }}
-                            title="Restock +10 units immediately"
+                            aria-label="Restock +10 units immediately"
                           >
                             +10 Restock
                           </button>

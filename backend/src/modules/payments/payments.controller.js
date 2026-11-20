@@ -357,8 +357,21 @@ async function updateGatewayConfig(req, res, next) {
     );
     return res.status(200).json({
       success: true,
-      message: `${req.params.gateway} configuration saved securely (API secret keys remain managed via server environment variables).`,
+      message: `${req.params.gateway} configuration saved and encrypted securely on the server.`,
       data: { config: updated }
+    });
+  } catch (err) {
+    return next(err);
+  }
+}
+
+async function testGatewayConnectivity(req, res, next) {
+  try {
+    const targetTenantId = req.body?.tenantId !== undefined ? req.body.tenantId : getTenantIdFromReq(req);
+    const result = await paymentsService.testGatewayConnectivity(targetTenantId, req.params.gateway);
+    return res.status(200).json({
+      success: true,
+      data: result
     });
   } catch (err) {
     return next(err);
@@ -464,6 +477,7 @@ module.exports = {
   retryWebhooks,
   getAdminOverview,
   updateGatewayConfig,
+  testGatewayConnectivity,
   triggerSandboxWebhook,
   renderSandboxCheckoutPage
 };

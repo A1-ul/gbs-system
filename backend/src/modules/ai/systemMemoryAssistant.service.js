@@ -225,6 +225,24 @@ const CORE_TOPICS = [
     keywords: ['alumni', 'former student', 'graduated', 'transcript', 'gift', 'pledge', 'endowment'],
     speech: 'The Alumni Portal gives graduates verified transcripts, cohort networking, and institutional endowment or pledge contributions audited by Accountancy.',
     action: null
+  },
+  {
+    id: 'staff_duty_attendance',
+    keywords: ['clock in', 'clock out', 'bypass', 'staff attendance', 'welcome to school', 'auto clock out', 'closing time', 'staff report to work', 'reason for clocking out'],
+    speech: 'When staff log in they are greeted with Welcome to School for their registered institution to either Clock In and record exact arrival time for Headmaster full-term monitoring, or Bypass without being marked present. Clocking out before school closing time requires a mandatory reason, and the system automatically clocks out staff who forget 2 hours after closing time.',
+    action: { openTab: 'staffAttendance' }
+  },
+  {
+    id: 'live_conferencing_calls',
+    keywords: ['video call', 'voice call', 'conference call', 'headmaster parent call', 'teachers meeting', 'webrtc', 'call parent', 'parent call', 'live conference'],
+    speech: 'GBS includes integrated real-time WebRTC voice and video conferencing inside Headmaster, Teacher, and Parent portals for Headmaster-Teachers meetings, Teacher class conferences, and direct Headmaster-Parent or Teacher-Parent voice and video calls.',
+    action: { openTab: 'meetings' }
+  },
+  {
+    id: 'database_architecture',
+    keywords: ['database', 'postgres', 'millions of schools', 'scalable', 'scale', 'linked', 'linking', 'cross-module', 'memory', 'architecture', 'tenant isolation'],
+    speech: 'Strict GBS System Architecture Rule: Every database table is strictly partitioned and composite-indexed by tenantId for multi-million-school scale, with relational foreign keys and cross-portal linking connecting Admissions, Academics, Attendance, Proctored Exams, School Clinic, Payments, Conferencing, HR, Transport, and Alumni cleanly across every school.',
+    action: null
   }
 ];
 
@@ -269,6 +287,9 @@ const TOPIC_HUMAN_LABELS = {
   hr_payroll: 'HR Contracts, Leave & Payroll Ledger',
   library_inventory: 'Library Circulation & Campus Inventory',
   alumni: 'Alumni Directory, Transcripts & Pledges',
+  staff_duty_attendance: 'Staff Duty Clock-In, Bypass, Mandatory Early Reason & 2h Auto Clock-Out',
+  live_conferencing_calls: 'In-System WebRTC Voice & Video Calls and Conferences',
+  database_architecture: 'Multi-Million-School Partitioned Database & Cross-Module Linking Mandate',
   privacy_shield: 'Institutional Confidentiality Policy',
   general_memory: 'System Portal Guide'
 };
@@ -382,6 +403,12 @@ function getSystemMemoryCatalog(req = null) {
       UNIVERSITY: 10
     },
     roleActivities: ROLE_ACTIVITIES_GUIDE,
+    databaseScalingPolicy: {
+      scaleTarget: 'MULTI_MILLION_SCHOOLS',
+      partitionKey: 'tenantId',
+      strictRelationalLinking: true,
+      storageEngine: 'PostgreSQL + Prisma Composite Indexes + Persistent Hybrid Mirror'
+    },
     dashboards: safeDashboards,
     topics: CORE_TOPICS.map(({ id, speech, action }) => ({ id, speech, action })),
     liveStats

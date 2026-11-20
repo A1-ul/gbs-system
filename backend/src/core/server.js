@@ -92,6 +92,9 @@ app.use(compression());
 
 // GBS Central System Response, Control and Communication Engine (GBS-RCCE)
 const { setupRcce, rcceCentralErrorHandler, idempotencyProtection } = require('../rcce');
+const { cloudInfraManager } = require('./infrastructure/cloudInfraManager');
+const { connectionPoolManager } = require('./database/connectionPoolManager');
+app.use(cloudInfraManager.apiTelemetryMiddleware());
 setupRcce(app, { productId: 'GBS_SCHOOL', productName: 'GBS School Management System' });
 
 if (envConfig.env === 'development') {
@@ -160,7 +163,7 @@ app.get('/api/v1/app-version', (req, res) => {
     status: 'success',
     data: {
       bundleHash,
-      swVersion: 'gbs-cache-v2026.18',
+      swVersion: 'gbs-cache-v2026.19',
       autoUpdateEnabled: true,
       checkedAt: new Date().toISOString()
     }
@@ -248,6 +251,8 @@ app.use('/api/v1/assignments', assignmentRoutes);
 app.use('/api/v1/assignment', assignmentRoutes);
 app.use('/api/v1/meetings', meetingRoutes);
 app.use('/api/v1/meeting', meetingRoutes);
+app.use('/api/v1/video', require('../modules/video/video.routes'));
+app.use('/api/v1/live-calls', require('../modules/video/video.routes'));
 app.use('/api/v1/parents', parentRoutes);
 app.use('/api/v1/parent-portal', parentRoutes);
 app.use('/api/v1/emergency-locator', parentRoutes);
@@ -614,6 +619,12 @@ const server = app.listen(PORT, HOST, async () => {
   try {
     initializeSocket(server);
     readPersistentStore();
+    try {
+      const staffAttendanceService = require('../modules/attendance/staffAttendance.service');
+      if (typeof staffAttendanceService.startAutoStaffClockOutScheduler === 'function') {
+        staffAttendanceService.startAutoStaffClockOutScheduler(60000);
+      }
+    } catch { }
     if (process.env.DATABASE_URL) {
       const prismaClient = require('./database/prisma.client');
       const { exec } = require('child_process');
@@ -709,8 +720,20 @@ const server = app.listen(PORT, HOST, async () => {
             } catch { }
 
             const defaultData = await authService.seedDefaultAdmin();
-            console.log(`✅ [DATABASE] PostgreSQL ACTIVE (${pgLive.versionShort || 'PostgreSQL'} | DB: ${pgLive.database} | ${pgLive.latencyMs}ms | Pool: ${pgLive.poolActiveConnections || 1}/${pgLive.poolMaxConnections || 20}).`);
+            console.log(`✅ [DATABASE] PostgreSQL ACTIVE (${pgLive.versionShort || 'PostgreSQL'} | DB: ${pgLive.database} | ${pgLive.latencyMs}ms | Pool: ${pgLive.poolActiveConnections || 1}/${pgLive.poolMaxConnections || 25} [Idle: ${pgLive.poolIdleConnections ?? 0}, MaxSafeApp: ${pgLive.maxSafeApplicationConnections || 80}/${pgLive.postgresMaxConnections || 100}]).`);
             console.log(`✅ [DATABASE] Default Tenant '${defaultData?.tenant?.code || 'GBS-MAIN'}' & Super Admin verified in PostgreSQL.`);
+
+            // Start 60-second background PostgreSQL idle-in-transaction & leak reaper
+            const reaperTimer = setInterval(async () => {
+              try {
+                cloudInfraManager.backgroundJobs.idleConnectionReaper.runsCount++;
+                cloudInfraManager.backgroundJobs.idleConnectionReaper.lastRunAt = new Date().toISOString();
+                await connectionPoolManager.reapStuckConnections(prismaClient.$queryRawUnsafe.bind(prismaClient), 60);
+              } catch (_) {
+                cloudInfraManager.backgroundJobs.idleConnectionReaper.failuresCount++;
+              }
+            }, 60000);
+            if (typeof reaperTimer.unref === 'function') reaperTimer.unref();
           } else {
             console.warn(`⚠️ [DATABASE] PostgreSQL unreachable (${pgLive.error || 'connection failed'}); running Persistent Store fallback.`);
           }
@@ -729,10 +752,35 @@ const server = app.listen(PORT, HOST, async () => {
 });
 
 process.on('unhandledRejection', (err) => {
-  console.error('UNHANDLED REJECTION! 💥 Shutting down...', err);
-  server.close(() => {
-    process.exit(1);
-  });
+  const msg = String(err?.message || err || '');
+  const isTransientDbOrNetwork = /ECONNREFUSED|ECONNRESET|ETIMEDOUT|P1001|P1002|P1008|P1017|57P01|Can't reach database|Connection terminated|DB_PROBE_TIMEOUT/i.test(msg);
+  if (isTransientDbOrNetwork) {
+    console.warn('⚠️ [RESILIENCE] Transient database/network rejection safely absorbed without crashing application:', msg);
+    try {
+      const prismaClient = require('./database/prisma.client');
+      if (typeof prismaClient.resetPostgresCache === 'function') {
+        prismaClient.resetPostgresCache();
+      }
+    } catch (_) {}
+    return;
+  }
+  console.error('⚠️ [UNHANDLED REJECTION] Non-fatal runtime rejection logged and contained:', msg);
 });
+
+const gracefulShutdown = async (signal) => {
+  console.log(`🛑 [GBS SYSTEM] Received ${signal}. Releasing database connection pool gracefully...`);
+  try {
+    const prismaClient = require('./database/prisma.client');
+    if (typeof prismaClient.$disconnect === 'function') {
+      await prismaClient.$disconnect();
+    }
+  } catch (_) {}
+  server.close(() => {
+    process.exit(0);
+  });
+};
+
+process.on('SIGTERM', () => gracefulShutdown('SIGTERM'));
+process.on('SIGINT', () => gracefulShutdown('SIGINT'));
 
 module.exports = app;

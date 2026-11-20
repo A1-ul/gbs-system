@@ -27,7 +27,8 @@ const {
   getAdapter,
   getTenantGatewayConfigs,
   upsertTenantGatewayConfig,
-  resolveGatewayAndChannels
+  resolveGatewayAndChannels,
+  testGatewayConnectivity
 } = require('./payments.registry');
 const { reconcileVerifiedOutcome } = require('./payments.reconciler');
 const { getFinancialReports } = require('./payments.reports');
@@ -438,13 +439,15 @@ async function initiatePayment({ tenantId, requestingUser, body, originUrl = '' 
 
   // Validate gateway & channel support
   const { configs, channels } = await resolveGatewayAndChannels(tid);
+  const secretConfigs = await getTenantGatewayConfigs(tid, { includeSecrets: true });
   const channelEntry = channels.find((c) => c.channel === input.channel);
   if (!channelEntry) {
     throw new AppError(`${CHANNEL_LABELS[input.channel] || input.channel} is currently not enabled for ${tenant.name}.`, 400);
   }
 
   const chosenGatewayName = input.gateway || channelEntry.primaryGateway;
-  const gatewayConfig = configs.find((c) => c.gateway === chosenGatewayName && c.effectiveEnabled);
+  const gatewayConfig = secretConfigs.find((c) => c.gateway === chosenGatewayName && c.effectiveEnabled)
+    || configs.find((c) => c.gateway === chosenGatewayName && c.effectiveEnabled);
   if (!gatewayConfig) {
     throw new AppError(`Payment gateway ${chosenGatewayName} is not configured or enabled for ${tenant.name}.`, 400);
   }
@@ -614,7 +617,7 @@ async function submitAuthorizationStep({ tenantId, reference, otp, requestingUse
     return { transaction: _sanitizeTransactionForClient(tx), customerMessage: STATE_CUSTOMER_MESSAGES.SUCCESSFUL };
   }
 
-  const configs = await getTenantGatewayConfigs(tid);
+  const configs = await getTenantGatewayConfigs(tid, { includeSecrets: true });
   const cfg = configs.find((c) => c.gateway === tx.gateway) || {};
   const adapter = getAdapter(tx.gateway);
   if (!adapter) throw new AppError(`Adapter for ${tx.gateway} unavailable.`, 400);
@@ -742,7 +745,7 @@ async function verifyTransactionStatus({ tenantId, reference, userId = null }) {
     [TRANSACTION_STATES.CREATED, TRANSACTION_STATES.PENDING, TRANSACTION_STATES.REQUIRES_CUSTOMER_ACTION].includes(tx.gatewayStatus)
   ) {
     const adapter = getAdapter(tx.gateway);
-    const configs = await getTenantGatewayConfigs(tx.tenantId);
+    const configs = await getTenantGatewayConfigs(tx.tenantId, { includeSecrets: true });
     const cfg = configs.find((c) => c.gateway === tx.gateway) || {};
     // Always verify with provider before expiring in case webhook got delayed!
     let providerCheck = null;
@@ -773,7 +776,7 @@ async function verifyTransactionStatus({ tenantId, reference, userId = null }) {
     }
   }
 
-  const configs = await getTenantGatewayConfigs(tx.tenantId);
+  const configs = await getTenantGatewayConfigs(tx.tenantId, { includeSecrets: true });
   const cfg = configs.find((c) => c.gateway === tx.gateway) || {};
   const adapter = getAdapter(tx.gateway);
   if (!adapter) {
@@ -832,10 +835,20 @@ async function handleWebhook({ gateway, rawBody, headers = {}, payload = {} }) {
   const rawText = Buffer.isBuffer(rawBody) ? rawBody.toString('utf8') : JSON.stringify(parsedPayload);
   const payloadHash = sha256Hex(rawText);
 
+  const tentativeRef = parsedPayload?.data?.reference || parsedPayload?.reference || parsedPayload?.Data?.ClientReference || null;
+  let webhookTid = 1;
+  if (tentativeRef) {
+    const tentativeTx = await prisma.paymentTransaction.findFirst({ where: { reference: String(tentativeRef) } }).catch(() => null);
+    if (tentativeTx?.tenantId) webhookTid = tentativeTx.tenantId;
+  }
+  const webhookConfigs = await getTenantGatewayConfigs(webhookTid, { includeSecrets: true }).catch(() => []);
+  const webhookCfg = webhookConfigs.find((c) => c.gateway === gw) || {};
+
   const signatureValid = adapter.verifyWebhookSignature({
     rawBody: rawText,
     headers,
-    payload: parsedPayload
+    payload: parsedPayload,
+    config: webhookCfg
   });
 
   if (!signatureValid) {
@@ -1204,6 +1217,7 @@ module.exports = {
   getTenantGatewayConfigs,
   upsertTenantGatewayConfig,
   resolveGatewayAndChannels,
+  testGatewayConnectivity,
   triggerSandboxConfirmation,
   getAdminOverview
 };

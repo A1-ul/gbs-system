@@ -1,7 +1,4 @@
-const { PrismaClient } = require('@prisma/client');
-const prismaClient = new PrismaClient({
-  log: process.env.NODE_ENV === 'development' ? ['query', 'info', 'warn', 'error'] : ['error'],
-});
+const prismaClient = require('../src/core/database/prisma.client');
 
 /**
  * GBS Enterprise Database Manager

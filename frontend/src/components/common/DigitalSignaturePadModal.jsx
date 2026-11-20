@@ -163,13 +163,13 @@ export default function DigitalSignaturePadModal({
             <button
               type="button"
               onClick={() => setInkColor("#0f2b5c")}
-              title="Official Blue Ink"
+              aria-label="Official Blue Ink"
               style={{ width: "22px", height: "22px", borderRadius: "50%", background: "#0f2b5c", border: inkColor === "#0f2b5c" ? "2px solid #fbbf24" : "1px solid #fff", cursor: "pointer" }}
             />
             <button
               type="button"
               onClick={() => setInkColor("#000000")}
-              title="Executive Black Ink"
+              aria-label="Executive Black Ink"
               style={{ width: "22px", height: "22px", borderRadius: "50%", background: "#000000", border: inkColor === "#000000" ? "2px solid #fbbf24" : "1px solid #fff", cursor: "pointer" }}
             />
           </div>

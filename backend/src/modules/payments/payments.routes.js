@@ -80,6 +80,11 @@ router.put(
   controller.updateGatewayConfig
 );
 router.post(
+  '/admin/test-gateway/:gateway',
+  restrictTo('ADMIN', 'SUPER_ADMIN', 'ACCOUNTANT', 'DEVELOPER'),
+  controller.testGatewayConnectivity
+);
+router.post(
   '/admin/webhooks/retry',
   restrictTo('ADMIN', 'SUPER_ADMIN', 'ACCOUNTANT', 'DEVELOPER'),
   controller.retryWebhooks

@@ -328,7 +328,7 @@ export default function BiometricFaceScannerModal({ isOpen, onClose, onScanCompl
             <span className="dot-pulse"></span>
             LIVE BIOMETRIC ONBOARDING SENSOR
           </div>
-          <button type="button" className="face-scan-close-btn" onClick={onClose} title="Close Scanner">
+          <button type="button" className="face-scan-close-btn" onClick={onClose} aria-label="Close Scanner">
             ✕
           </button>
         </div>

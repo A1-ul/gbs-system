@@ -63,10 +63,10 @@ class AuditTracker {
       await prisma.auditLog.create({
         data: {
           tenantId: record.tenantId,
-          userId: record.userId,
+          userId: null,
           action: record.action,
           module: record.module,
-          details: `[${record.outcome}] [Role:${record.userRole}] [Req:${record.requestId}] ${record.details}`,
+          details: `[${record.outcome}] [Role:${record.userRole}] [User:${record.userId ?? 'SYS'}] [Req:${record.requestId}] ${record.details}`,
           ipAddress: record.ipAddress,
           userAgent: record.userAgent
         }

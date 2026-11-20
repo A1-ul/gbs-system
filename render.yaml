@@ -65,6 +65,22 @@ services:
           name: gbs-db
           property: connectionString
         key: DATABASE_URL
+      - key: DB_POOL_MAX
+        value: "25"
+      - key: DB_POOL_MIN
+        value: "2"
+      - key: DB_IDLE_TIMEOUT_MS
+        value: "30000"
+      - key: DB_CONNECTION_TIMEOUT_MS
+        value: "10000"
+      - key: DB_ACQUIRE_TIMEOUT_MS
+        value: "15000"
+      - key: DB_STATEMENT_TIMEOUT_MS
+        value: "20000"
+      - key: PGBOUNCER_ENABLED
+        value: "false"
+      - key: RENDER_INSTANCE_COUNT
+        value: "1"
 
   # 2. GBS High-Performance Static Frontend CDN Service (Optional Separate CDN)
   - type: web

@@ -14,6 +14,7 @@ import { isDemoSandboxMode } from "../../../../../utils/tokenStorage";
 import { checkDemoEntryLimit, trackDemoEntryCreated } from "../../../../../utils/demoLimitGuard";
 import { copyTextSafely } from "../../../../../utils/safeWindow";
 import SchoolClinicHubPanel from "../../../../../components/common/SchoolClinicHubPanel";
+import LiveCallLauncherAndReceiver from "../../../../../components/common/LiveCallLauncherAndReceiver";
 import "./ParentDashboard.css";
 
 export default function ParentDashboard() {
@@ -1045,6 +1046,11 @@ export default function ParentDashboard() {
           <WindowControlsBar />
           {/* Prominent Top Center System Branding */}
           <TopCenterSystemBanner roleTitle="Guardian & Parent Portal" />
+          <LiveCallLauncherAndReceiver
+            variant="GLOBAL_RECEIVER"
+            userRole="PARENT"
+            onFeedback={(msg, isErr) => setFeedback({ type: isErr ? "error" : "success", message: msg })}
+          />
         </div>
 
         {/* Main Content */}
@@ -1066,7 +1072,6 @@ export default function ParentDashboard() {
                   className="role-kpi-box"
                   onClick={() => setActiveTab("children")}
                   style={{ cursor: "pointer", transition: "transform 0.15s, border-color 0.15s" }}
-                  title="Click to view Child Profiles & Overview"
                   onMouseEnter={(e) => { e.currentTarget.style.transform = "translateY(-3px)"; e.currentTarget.style.borderColor = "#38bdf8"; }}
                   onMouseLeave={(e) => { e.currentTarget.style.transform = "none"; e.currentTarget.style.borderColor = ""; }}
                 >
@@ -1080,7 +1085,6 @@ export default function ParentDashboard() {
                   className="role-kpi-box"
                   onClick={() => setActiveTab("attendance")}
                   style={{ cursor: "pointer", transition: "transform 0.15s, border-color 0.15s" }}
-                  title="Click to view Attendance & Punctuality"
                   onMouseEnter={(e) => { e.currentTarget.style.transform = "translateY(-3px)"; e.currentTarget.style.borderColor = "#38bdf8"; }}
                   onMouseLeave={(e) => { e.currentTarget.style.transform = "none"; e.currentTarget.style.borderColor = ""; }}
                 >
@@ -1094,7 +1098,6 @@ export default function ParentDashboard() {
                   className="role-kpi-box"
                   onClick={() => setActiveTab("fees")}
                   style={{ cursor: "pointer", transition: "transform 0.15s, border-color 0.15s" }}
-                  title="Click to view School Fees & Billing Portal"
                   onMouseEnter={(e) => { e.currentTarget.style.transform = "translateY(-3px)"; e.currentTarget.style.borderColor = "#38bdf8"; }}
                   onMouseLeave={(e) => { e.currentTarget.style.transform = "none"; e.currentTarget.style.borderColor = ""; }}
                 >
@@ -1108,7 +1111,6 @@ export default function ParentDashboard() {
                   className="role-kpi-box"
                   onClick={() => setActiveTab("grades")}
                   style={{ cursor: "pointer", transition: "transform 0.15s, border-color 0.15s" }}
-                  title="Click to view Academic Grades & Report Cards"
                   onMouseEnter={(e) => { e.currentTarget.style.transform = "translateY(-3px)"; e.currentTarget.style.borderColor = "#38bdf8"; }}
                   onMouseLeave={(e) => { e.currentTarget.style.transform = "none"; e.currentTarget.style.borderColor = ""; }}
                 >
@@ -1671,7 +1673,6 @@ export default function ParentDashboard() {
                                   className="btn-secondary"
                                   style={{ padding: "4px 8px", fontSize: "0.72rem", borderColor: "#38bdf8", color: "#38bdf8", fontWeight: "700", cursor: "pointer" }}
                                   onClick={() => navigateToDetail(navigate, "admission", app.applicationNumber || app.id, app, { returnTab: activeTab })}
-                                  title="View complete intake file and submitted documents on dedicated page"
                                 >
                                   📁 View Intake File
                                 </button>
@@ -1749,7 +1750,7 @@ export default function ParentDashboard() {
                   {/* Real Live Google Map Iframe */}
                   <div style={{ position: "relative", width: "100%", height: "420px" }}>
                     <iframe
-                      title="Google Map Live Guardian Locator"
+                      aria-label="Google Map Live Guardian Locator"
                       width="100%"
                       height="100%"
                       style={{ border: 0 }}
@@ -2085,7 +2086,6 @@ export default function ParentDashboard() {
                                   className="btn-primary"
                                   style={{ background: "linear-gradient(135deg, #10b981, #059669)", fontSize: "0.78rem", padding: "4px 10px", cursor: "pointer" }}
                                   onClick={() => navigateToDetail(navigate, "report", req.id || req.purpose, req, { returnTab: activeTab })}
-                                  title="View and print sealed academic transcript on dedicated page"
                                 >
                                   📜 View & Print Sealed Transcript
                                 </button>
@@ -2325,7 +2325,6 @@ export default function ParentDashboard() {
                                 className="btn-secondary"
                                 style={{ padding: "6px 10px", fontSize: "0.75rem", borderColor: "#38bdf8", color: "#38bdf8", cursor: "pointer" }}
                                 onClick={() => navigateToDetail(navigate, "invoice", inv.invoiceNumber || inv.id, inv, { returnTab: activeTab })}
-                                title="View full fee invoice statement on dedicated page"
                               >
                                 🔍 View
                               </button>
@@ -2616,9 +2615,14 @@ export default function ParentDashboard() {
             </div>
           )}
 
-          {/* TAB 6: SCHEDULED PARENT-TEACHER CONFERENCES & WORKING ZOOM LINKS */}
+          {/* TAB 6: SCHEDULED PARENT-TEACHER CONFERENCES & LIVE VOICE / VIDEO CALLS */}
           {activeTab === "meetings" && (
             <div className="role-workspace-card">
+              <LiveCallLauncherAndReceiver
+                variant="FULL_STUDIO"
+                userRole="PARENT"
+                onFeedback={(msg, isErr) => setFeedback({ type: isErr ? "error" : "success", message: msg })}
+              />
               <div className="workspace-title-row">
                 <div>
                   <h2><span>💻</span> PARENT-TEACHER VIRTUAL CONFERENCES & ARCHIVES</h2>
@@ -2738,10 +2742,9 @@ export default function ParentDashboard() {
                               type="button"
                               className="btn-secondary"
                               style={{ padding: "8px 12px", fontSize: "0.8rem" }}
-                              title="Copy Direct Zoom Link"
                               onClick={() => {
                                 copyTextSafely(safeUrl);
-                                setFeedback({ type: "success", message: `📋 Zoom URL copied to clipboard: ${safeUrl}` });
+                                setFeedback({ type: "success", message: `📋 Conference URL copied to clipboard: ${safeUrl}` });
                               }}
                             >
                               📋 Copy
@@ -2751,7 +2754,6 @@ export default function ParentDashboard() {
                               type="button"
                               className="btn-secondary"
                               style={{ padding: "8px 12px", fontSize: "0.8rem", color: "#fbbf24", borderColor: "#f59e0b" }}
-                              title="Archive this meeting after conference concludes"
                               onClick={() => handleArchiveMeeting(m)}
                             >
                               📁 Archive
@@ -3611,7 +3613,6 @@ export default function ParentDashboard() {
         <button
           type="button"
           onClick={() => window.scrollTo({ top: 0, behavior: "smooth" })}
-          title="Scroll to Top"
           style={{
             background: "linear-gradient(135deg, #0284c7, #2563eb)",
             color: "#ffffff",
@@ -3635,7 +3636,6 @@ export default function ParentDashboard() {
         <button
           type="button"
           onClick={() => window.scrollTo({ top: document.body.scrollHeight, behavior: "smooth" })}
-          title="Scroll to Bottom"
           style={{
             background: "linear-gradient(135deg, #1e293b, #0f172a)",
             color: "#38bdf8",

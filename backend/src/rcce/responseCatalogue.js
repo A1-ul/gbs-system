@@ -766,6 +766,45 @@ const RESPONSE_CATALOGUE = Object.freeze({
     category: 'DEMO',
     message: 'Demo Trial Limit Reached (10/10 entries used for this module). Register or sign into a Live School account for unlimited production access, or reset Demo Data.',
     description: '10-entry Demo Sandbox trial cap enforced cleanly.'
+  },
+
+  // =========================================================================
+  // 16. DATABASE CONNECTION POOL & CLOUD INFRASTRUCTURE (INFRASTRUCTURE)
+  // =========================================================================
+  DB_POOL_HEALTHY: {
+    code: 'DB_POOL_HEALTHY',
+    statusCode: 200,
+    category: 'INFRASTRUCTURE',
+    message: 'PostgreSQL connection pool is operating within safe capacity parameters.',
+    description: 'Connection pool utilization is below 80% warning threshold.'
+  },
+  DB_POOL_WARNING_80: {
+    code: 'DB_POOL_WARNING_80',
+    statusCode: 200,
+    category: 'INFRASTRUCTURE',
+    message: 'Warning: PostgreSQL connection pool utilization has reached or exceeded 80% capacity.',
+    description: 'Pool utilization warning threshold (80%) triggered.'
+  },
+  DB_POOL_CRITICAL_95: {
+    code: 'DB_POOL_CRITICAL_95',
+    statusCode: 200,
+    category: 'INFRASTRUCTURE',
+    message: 'Critical Alert: PostgreSQL connection pool utilization has reached or exceeded 95% capacity.',
+    description: 'Pool utilization critical threshold (95%) triggered.'
+  },
+  INFRA_AUDIT_COMPLETED: {
+    code: 'INFRA_AUDIT_COMPLETED',
+    statusCode: 200,
+    category: 'INFRASTRUCTURE',
+    message: 'Enterprise cloud infrastructure, connection pool, and storage telemetry audit completed.',
+    description: 'Complete Render & PostgreSQL infrastructure telemetry retrieved.'
+  },
+  DOCUMENT_DEDUPLICATED: {
+    code: 'DOCUMENT_DEDUPLICATED',
+    statusCode: 200,
+    category: 'INFRASTRUCTURE',
+    message: 'Identical document content verified via SHA-256 digest. Reusing authorized storage object without duplication.',
+    description: 'Duplicate file upload prevented.'
   }
 });
 

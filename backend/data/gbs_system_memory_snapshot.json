@@ -379,9 +379,19 @@
     }
   ],
   "verificationSummary": {
-    "backendTestSuitesPassed": "All 13 backend integration suites verified",
+    "backendTestSuitesPassed": "All 14 backend integration suites verified",
     "chromeE2EDashboardsVerified": "All 8 user dashboards in DEMO_SANDBOX (across JHS, SHS, TVET, University) and LIVE_PRODUCTION plus Developer control suite verified",
     "institutionSeparationUniversityClinicVoiceVerified": "2026-11-20 Tier-Tailored School Portals (JHS/SHS/TVET/University), Separated Internships/Attachments, Clinic Privacy & Non-Disclosure Verified",
+    "multiMillionSchoolDatabaseMandate": {
+      "enforced": true,
+      "scaleTarget": "MILLIONS_OF_SCHOOLS",
+      "partitionStrategy": "Every institutional table enforces composite (tenantId, ...) B-Tree indexes and strict tenantId + foreign-key cross-module relational linking across Admissions, Academics, Staff & Student Attendance, Proctored Exams, School Clinic, Payments, Live WebRTC Video/Voice Calls, HR, Transport, and Alumni.",
+      "newlyAddedEnterpriseModules": [
+        "Staff Welcome-to-School Onboarding + Clock-In / Bypass Choice + Early Clock-Out Mandatory Reason + 2-Hour Post-Close Auto Clock-Out + Full-Term Headmaster Monitoring",
+        "Real WebRTC + Socket.IO In-System Voice & Video Conferencing (Teacher Conferences, Headmaster-Teachers Meetings, Headmaster-Parent & Teacher-Parent Direct Calls)",
+        "Multi-Network Any-Phone Mobile Money Checkout (MTN MoMo, Telecel Cash, AirtelTigo AT Money, Card, Bank) with Server-Side Secure Gateway Configuration & Connectivity Verification"
+      ]
+    },
     "browserAssetsRegenerated": "favicon.ico, logo.png, icon-192.png, icon-512.png, apple-touch-icon.png, og-gbs-crest.jpg",
     "uncaughtBrowserConsoleErrors": 0,
     "astUndeclaredErrors": 0

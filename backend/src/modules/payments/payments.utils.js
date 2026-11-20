@@ -19,31 +19,71 @@ function normalizeGhanaPhone(rawPhone) {
     local = '0' + local.slice(5);
   }
 
-  if (!/^0[235][0-9]{8}$/.test(local)) {
+  // Support ALL Ghanaian 10-digit mobile networks (MTN, Telecel, AirtelTigo, Glo & all 02x/05x/03x prefixes)
+  if (/^0[235][0-9]{8}$/.test(local)) {
+    const prefix = local.slice(0, 3);
+    let detectedNetwork = 'OTHER';
+    if (['024', '025', '053', '054', '055', '059'].includes(prefix)) {
+      detectedNetwork = 'MTN_MOMO';
+    } else if (['020', '050'].includes(prefix)) {
+      detectedNetwork = 'TELECEL_CASH';
+    } else if (['026', '027', '056', '057'].includes(prefix)) {
+      detectedNetwork = 'AT_MONEY';
+    }
+
     return {
-      valid: false,
-      error: 'Enter a valid 10-digit Ghana phone number (e.g. 024XXXXXXX, 055XXXXXXX, 020XXXXXXX, or 027XXXXXXX).'
+      valid: true,
+      local,
+      international: '233' + local.slice(1),
+      e164: '+233' + local.slice(1),
+      masked: maskPhone(local),
+      detectedNetwork
     };
   }
 
-  const prefix = local.slice(0, 3);
-  let detectedNetwork = 'OTHER';
-  if (['024', '025', '053', '054', '055', '059'].includes(prefix)) {
-    detectedNetwork = 'MTN_MOMO';
-  } else if (['020', '050'].includes(prefix)) {
-    detectedNetwork = 'TELECEL_CASH';
-  } else if (['026', '027', '056', '057'].includes(prefix)) {
-    detectedNetwork = 'AT_MONEY';
+  // Support international E.164 numbers (+XXX...) so global campuses work on any carrier/wallet
+  if (/^\+[1-9][0-9]{7,14}$/.test(cleaned)) {
+    return {
+      valid: true,
+      local: cleaned,
+      international: cleaned.slice(1),
+      e164: cleaned,
+      masked: maskPhone(cleaned),
+      detectedNetwork: 'INTERNATIONAL'
+    };
   }
 
   return {
-    valid: true,
-    local,
-    international: '233' + local.slice(1),
-    e164: '+233' + local.slice(1),
-    masked: maskPhone(local),
-    detectedNetwork
+    valid: false,
+    error: 'Enter a valid 10-digit Ghana Mobile Money number (e.g. 024/054/055/059/020/050/026/027/057) or E.164 international number (+...).'
   };
+}
+
+function _deriveEncryptionKey() {
+  const seed = process.env.GATEWAY_CONFIG_SECRET || process.env.JWT_SECRET || 'gbs_gateway_encryption_key_v1';
+  return crypto.createHash('sha256').update(seed, 'utf8').digest();
+}
+
+function encryptGatewaySecret(plaintext) {
+  if (!plaintext || !String(plaintext).trim()) return null;
+  const iv = crypto.randomBytes(12);
+  const cipher = crypto.createCipheriv('aes-256-gcm', _deriveEncryptionKey(), iv);
+  const encrypted = Buffer.concat([cipher.update(String(plaintext).trim(), 'utf8'), cipher.final()]);
+  const tag = cipher.getAuthTag();
+  return `enc_v1:${iv.toString('hex')}:${tag.toString('hex')}:${encrypted.toString('hex')}`;
+}
+
+function decryptGatewaySecret(cipherText) {
+  if (!cipherText || typeof cipherText !== 'string') return '';
+  if (!cipherText.startsWith('enc_v1:')) return cipherText;
+  try {
+    const [, ivHex, tagHex, dataHex] = cipherText.split(':');
+    const decipher = crypto.createDecipheriv('aes-256-gcm', _deriveEncryptionKey(), Buffer.from(ivHex, 'hex'));
+    decipher.setAuthTag(Buffer.from(tagHex, 'hex'));
+    return Buffer.concat([decipher.update(Buffer.from(dataHex, 'hex')), decipher.final()]).toString('utf8');
+  } catch {
+    return '';
+  }
 }
 
 function maskPhone(phone) {
@@ -98,6 +138,8 @@ module.exports = {
   normalizeGhanaPhone,
   maskPhone,
   maskSecretPreview,
+  encryptGatewaySecret,
+  decryptGatewaySecret,
   generateTransactionReference,
   generateReceiptNumber,
   roundMoney,

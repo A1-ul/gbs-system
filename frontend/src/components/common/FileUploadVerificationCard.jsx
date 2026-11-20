@@ -168,7 +168,7 @@ const FileUploadVerificationCard = ({
             <button
               type="button"
               onClick={onRemove}
-              title="Remove or Replace File"
+              aria-label="Remove or Replace File"
               style={{
                 padding: "6px 10px",
                 fontSize: "0.78rem",

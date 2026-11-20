@@ -696,7 +696,7 @@ export default function MobileCameraAIExamScannerModal({
                       fontWeight: 800,
                       cursor: "pointer"
                     }}
-                    title="Toggle Flash / Torch"
+                    aria-label="Toggle Flash / Torch"
                   >
                     🔦 {torchEnabled ? "Torch ON" : "Torch"}
                   </button>
@@ -713,7 +713,7 @@ export default function MobileCameraAIExamScannerModal({
                       fontWeight: 800,
                       cursor: "pointer"
                     }}
-                    title="Switch Back / Front Camera"
+                    aria-label="Switch Back / Front Camera"
                   >
                     🔄 Switch ({cameraFacing === "environment" ? "Back" : "Front"})
                   </button>
@@ -883,7 +883,7 @@ export default function MobileCameraAIExamScannerModal({
                               handleDeletePage(idx);
                             }}
                             style={{ position: "absolute", top: "2px", right: "2px", background: "rgba(239, 68, 68, 0.9)", border: "none", color: "#fff", borderRadius: "50%", width: "16px", height: "16px", fontSize: "10px", cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center" }}
-                            title="Remove page"
+                            aria-label="Remove page"
                           >
                             ✕
                           </button>

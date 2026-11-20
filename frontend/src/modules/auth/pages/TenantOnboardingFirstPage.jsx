@@ -515,7 +515,7 @@ export default function TenantOnboardingFirstPage() {
             type="button"
             className="gbs-btn-already-in"
             onClick={() => navigate("/login")}
-            title="Click to go directly to the Main GBS Login Page"
+            aria-label="Click to go directly to the Main GBS Login Page"
           >
             <span>🔐 I am already in</span>
             <span style={{ fontSize: "0.75rem", opacity: 0.8 }}>▼</span>
@@ -608,7 +608,7 @@ export default function TenantOnboardingFirstPage() {
           Official Institutional Tenant Onboarding & Autonomous Enterprise Provisioning Gateway.
           Register your institution to activate enterprise cloud management, AI grading, biometric verification, and resilient disaster recovery.
         </p>
-        <div className="gbs-palette-bar" title="Golden Blended Gradient with Wine Brown, Grey, and Sky Blue">
+        <div className="gbs-palette-bar" aria-label="Golden Blended Gradient with Wine Brown, Grey, and Sky Blue">
           <span className="gbs-bar-gold"></span>
           <span className="gbs-bar-wine"></span>
           <span className="gbs-bar-grey"></span>
@@ -960,7 +960,7 @@ export default function TenantOnboardingFirstPage() {
                     type="tel"
                     name="adminPhone"
                     className="gbs-input-control"
-                    placeholder="e.g. 0554594193"
+                    placeholder="e.g. 024 123 4567"
                     value={form.adminPhone}
                     onChange={handleChange}
                     required
@@ -1011,7 +1011,7 @@ export default function TenantOnboardingFirstPage() {
                     type="button"
                     className="gbs-password-toggle-btn"
                     onClick={() => setShowPassword(!showPassword)}
-                    title={showPassword ? "Hide password" : "Show password"}
+                    aria-label={showPassword ? "Hide password" : "Show password"}
                   >
                     {showPassword ? "🙈" : "👁️"}
                   </button>
@@ -1036,7 +1036,7 @@ export default function TenantOnboardingFirstPage() {
                     type="button"
                     className="gbs-password-toggle-btn"
                     onClick={() => setShowConfirmPassword(!showConfirmPassword)}
-                    title={showConfirmPassword ? "Hide password" : "Show password"}
+                    aria-label={showConfirmPassword ? "Hide password" : "Show password"}
                   >
                     {showConfirmPassword ? "🙈" : "👁️"}
                   </button>
@@ -1349,6 +1349,7 @@ export default function TenantOnboardingFirstPage() {
                   </div>
                   <div style={{ fontSize: "0.78rem", color: "#cbd5e1", marginBottom: "8px" }}>
                     Please remit <strong>GH₵ {calculation.payableAmount.toLocaleString()}</strong> (Country Equivalent: <strong>{calculation.countryFx.formattedLocalAmount}</strong> • {form.paymentScheduleMode === "BULK_FULL_TERM" ? `Bulk payment for ${calculation.subscribedMonths} months` : `Monthly installment 1 of ${calculation.subscribedMonths} at GH₵ ${calculation.monthlyRate.toLocaleString()}/month`}) to MTN MoMo: <strong>0554594193</strong> (GABRIELKUBI OSEI-APPIAH) and enter your MoMo Transaction ID below, or pay directly via verified online checkout:
+                    Pay <strong>GH₵ {calculation.payableAmount.toLocaleString()}</strong> (Country Equivalent: <strong>{calculation.countryFx.formattedLocalAmount}</strong> • {form.paymentScheduleMode === "BULK_FULL_TERM" ? `Bulk payment for ${calculation.subscribedMonths} months` : `Monthly installment 1 of ${calculation.subscribedMonths} at GH₵ ${calculation.monthlyRate.toLocaleString()}/month`}) directly online using <strong>ANY Mobile Money network &amp; phone number</strong> (MTN MoMo, Telecel Cash, AirtelTigo AT Money, or Visa/Mastercard) or enter a verified bank/MoMo transaction reference:
                   </div>
                   <div style={{ marginBottom: "10px" }}>
                     <button

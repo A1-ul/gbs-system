@@ -454,7 +454,6 @@ export default function TopCenterSystemBanner({
                 color: "#f5d061",
                 fontWeight: "800"
               }}
-              title={`Institution Operating Tier: ${institutionProfile.name}`}
             >
               {institutionProfile.icon} Tier: {institutionProfile.shortName}
             </span>
@@ -479,7 +478,6 @@ export default function TopCenterSystemBanner({
             cursor: "pointer",
             fontWeight: 800
           }}
-          title="Switch between Blueprint Light Canvas and Deep Midnight Royal Navy Mode"
         >
           {uiTheme === "light" ? "☀️ Blueprint Light" : "🌙 Navy Mode"}
         </button>
@@ -496,7 +494,6 @@ export default function TopCenterSystemBanner({
             cursor: "pointer",
             fontWeight: 800
           }}
-          title={getUiLabel("fullView", "Expand dashboard workspace to full screen width")}
           data-locale-v={localeVersion}
         >
           {fullDisplayMode ? "↙ Standard View" : `↗ ${getUiLabel("fullView", "Full View")}`}
@@ -520,7 +517,6 @@ export default function TopCenterSystemBanner({
             cursor: "pointer",
             fontWeight: 800
           }}
-          title="Open the current dashboard tab in a dedicated full-page browser tab"
         >
           🗗 Open New Tab
         </button>
@@ -537,7 +533,6 @@ export default function TopCenterSystemBanner({
             color: isOnline ? "#34d399" : "#fbbf24",
             fontWeight: "700"
           }}
-          title={isOnline ? "Internet Connected: Cloud DB active" : "Offline Mode: All data saved locally & persists in SQLite/JSON"}
         >
           {isOnline ? "🟢 Online (Cloud Ready)" : "🟠 Offline Mode (Local Safe Storage)"}
         </span>
@@ -557,7 +552,6 @@ export default function TopCenterSystemBanner({
             fontWeight: "700",
             transition: "all 0.2s"
           }}
-          title="Manually sync all offline records to cloud PostgreSQL & create instant JSON point-in-time backup"
         >
           {syncingCloud ? "⏳ Syncing to Cloud..." : "☁️ Sync to Cloud & Backup"}
         </button>
@@ -576,7 +570,6 @@ export default function TopCenterSystemBanner({
             fontWeight: "700",
             transition: "all 0.2s"
           }}
-          title="Open Language Translator, Exact Word Meaning & Received Translated Messages Inbox"
         >
           🌐 Language Translator &amp; Inbox
           {unreadTranslatedCount > 0 && (
@@ -608,7 +601,6 @@ export default function TopCenterSystemBanner({
             fontWeight: "700",
             transition: "all 0.2s"
           }}
-          title="Send direct SMS messages between users or to any mobile contact network number"
         >
           📱 Direct Mobile SMS
           {unreadSmsCount > 0 && (
@@ -640,7 +632,6 @@ export default function TopCenterSystemBanner({
             fontWeight: "700",
             transition: "all 0.2s"
           }}
-          title="Display educational news and video insights from across the world"
         >
           🌍 Global Educational News
         </button>
@@ -664,7 +655,6 @@ export default function TopCenterSystemBanner({
             gap: "6px",
             transition: "all 0.2s"
           }}
-          title="Install GBS Mobile/Desktop App on this device & manage push alerts"
         >
           <img
             src="/assets/gbs_crest_badge.jpg"
@@ -688,7 +678,6 @@ export default function TopCenterSystemBanner({
             fontWeight: "700",
             transition: "all 0.2s"
           }}
-          title="Open S3 Cloud Object Storage Vault & Global Edge CDN Management Desk"
         >
           ☁️ Cloud CDN & S3 Vault
         </button>
@@ -707,7 +696,6 @@ export default function TopCenterSystemBanner({
             fontWeight: "700",
             transition: "all 0.2s"
           }}
-          title="Clear all fake mock data and reset dashboard to fresh blank state for real user entry"
         >
           {cleaned ? "✓ Cleared Fresh" : "🧹 Clear Test Data"}
         </button>
@@ -793,7 +781,6 @@ export default function TopCenterSystemBanner({
               fontWeight: 800,
               cursor: "pointer"
             }}
-            title="Restore fresh Demo Sandbox training data"
           >
             🔄 Reset Demo Data
           </button>
@@ -880,7 +867,6 @@ export default function TopCenterSystemBanner({
                       color: isActive ? "#ffffff" : dash.highlight ? "#34d399" : "#cbd5e1",
                       boxShadow: isActive ? "0 0 10px rgba(56, 189, 248, 0.4)" : "none"
                     }}
-                    title={dash.tooltip}
                   >
                     <span>{dash.icon}</span>
                     <span>{dash.title}</span>

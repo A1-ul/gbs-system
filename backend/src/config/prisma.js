@@ -8,26 +8,7 @@ COMMONJS ONLY
 ====================================
 */
 
-const { PrismaClient } = require("@prisma/client");
-
-const globalForPrisma = globalThis;
-
-/*
-====================================
-SINGLETON CLIENT
-====================================
-*/
-
-const prisma =
-    globalForPrisma.__PRISMA_CLIENT__ ||
-    new PrismaClient({
-        log: ["warn", "error"],
-        errorFormat: "minimal"
-    });
-
-if (process.env.NODE_ENV !== "production") {
-    globalForPrisma.__PRISMA_CLIENT__ = prisma;
-}
+const prisma = require("../core/database/prisma.client");
 
 /*
 ====================================

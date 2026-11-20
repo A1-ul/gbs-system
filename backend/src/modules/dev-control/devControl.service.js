@@ -22,6 +22,8 @@ const {
   removeDeletedTenantLockout,
   isTenantLockedOut
 } = require('../../core/database/persistentStore');
+const { connectionPoolManager } = require('../../core/database/connectionPoolManager');
+const { cloudInfraManager } = require('../../core/infrastructure/cloudInfraManager');
 
 /**
  * Enterprise Developer Control Center & Real-Time Countdown Engine (Blueprint Box 9 & 10)
@@ -117,10 +119,18 @@ const getSystemMetrics = async () => {
       connected: Boolean(pgLive.active),
       poolStatus: pgLive.active ? 'ACTIVE • CONNECTED' : 'STANDBY_FALLBACK',
       poolSize: pgLive.poolActiveConnections || 1,
-      maxPoolSize: pgLive.poolMaxConnections || 20,
+      idleConnections: pgLive.poolIdleConnections ?? 0,
+      waitingRequests: pgLive.poolWaitingRequests ?? 0,
+      maxPoolSize: pgLive.poolMaxConnections || connectionPoolManager.config.maxPoolSize || 25,
+      postgresMaxConnections: pgLive.postgresMaxConnections || 100,
+      maxSafeApplicationConnections: pgLive.maxSafeApplicationConnections || 80,
+      utilizationPct: pgLive.poolUtilizationPct ?? 0,
+      alertLevel: pgLive.poolAlertLevel || 'NORMAL',
       latencyMs: pgLive.latencyMs ?? null,
-      databaseName: pgLive.database || 'gbs_system'
+      databaseName: pgLive.database || 'gbs_system',
+      connectionPool: pgLive.connectionPool || connectionPoolManager.getPoolStatus()
     },
+    infrastructure: await cloudInfraManager.getComprehensiveInfrastructureReport(prisma).catch(() => null),
     metrics: {
       totalTenants,
       totalUsers,

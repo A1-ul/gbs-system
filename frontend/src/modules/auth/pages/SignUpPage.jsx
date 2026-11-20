@@ -2,6 +2,7 @@ import React, { useState, useEffect } from "react";
 import { Link, useNavigate, useLocation } from "react-router-dom";
 import { register, registerInstitution, getPublicInstitutions } from "../api/auth.api";
 import BiometricFaceScannerModal from "../components/BiometricFaceScannerModal";
+import OfficialPaymentGatewayModal from "../../../components/common/OfficialPaymentGatewayModal";
 import "./SignUpPage.css";
 
 const ONBOARDING_TRACKS = [
@@ -119,6 +120,7 @@ export const computeSubscriptionTiers = (instType, studentCountInput) => {
 export default function SignUpPage({ defaultRole }) {
   const navigate = useNavigate();
   const location = useLocation();
+  const [showSignupCheckout, setShowSignupCheckout] = useState(false);
 
   // Detect track from query params or prop or URL path
   const getInitialTrack = () => {
@@ -435,7 +437,7 @@ export default function SignUpPage({ defaultRole }) {
       return;
     }
     if (instForm.subscriptionPlan !== "1_MONTH_TRIAL" && (!instForm.momoTxnId || !instForm.momoTxnId.trim() || instForm.momoTxnId === "FREE_TRIAL_AUTO")) {
-      setError("Subscription payment reference is required for paid tiers. Please remit your payment to MoMo 0554594193 (GABRIELKUBI OSEI-APPIAH) and enter the Transaction ID.");
+      setError("Subscription payment is required for paid plans. Pay online via Official Checkout (any MTN MoMo, Telecel Cash, AirtelTigo number or Card) or enter your verified Transaction ID.");
       setLoading(false);
       return;
     }
@@ -1182,7 +1184,7 @@ export default function SignUpPage({ defaultRole }) {
                       <button
                         type="button"
                         onClick={() => setShowPassword((prev) => !prev)}
-                        title={showPassword ? "Hide password" : "View password"}
+                        aria-label={showPassword ? "Hide password" : "View password"}
                         style={{ position: "absolute", right: "10px", background: "none", border: "none", color: "#94a3b8", cursor: "pointer", fontSize: "1rem", padding: "4px" }}
                       >
                         {showPassword ? "🙈" : "👁️"}
@@ -1206,7 +1208,7 @@ export default function SignUpPage({ defaultRole }) {
                       <button
                         type="button"
                         onClick={() => setShowConfirmPassword((prev) => !prev)}
-                        title={showConfirmPassword ? "Hide password" : "View password"}
+                        aria-label={showConfirmPassword ? "Hide password" : "View password"}
                         style={{ position: "absolute", right: "10px", background: "none", border: "none", color: "#94a3b8", cursor: "pointer", fontSize: "1rem", padding: "4px" }}
                       >
                         {showConfirmPassword ? "🙈" : "👁️"}
@@ -1389,24 +1391,38 @@ export default function SignUpPage({ defaultRole }) {
                   </div>
                 ) : (
                   <>
-                    {/* Developer MoMo Payment Details */}
+                    {/* Multi-Network Mobile Money & Card Online Checkout Banner */}
                     <div style={{ background: "rgba(15, 23, 42, 0.95)", border: "1px solid rgba(56, 189, 248, 0.4)", borderRadius: "12px", padding: "14px 18px", display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: "12px", marginBottom: "1.25rem" }}>
                       <div>
-                        <span style={{ fontSize: "0.72rem", color: "#94a3b8", display: "block", fontWeight: "700" }}>REGISTERED DEVELOPER NUMBER</span>
-                        <strong style={{ fontSize: "1.3rem", color: "#34d399", fontFamily: "monospace", letterSpacing: "1px" }}>
-                          0554594193
+                        <span style={{ fontSize: "0.72rem", color: "#94a3b8", display: "block", fontWeight: "700" }}>MULTI-NETWORK MOBILE MONEY &amp; CARD GATEWAY</span>
+                        <strong style={{ fontSize: "1.02rem", color: "#34d399" }}>
+                          Pay with ANY Phone Number on MTN MoMo, Telecel Cash, or AirtelTigo (AT Money)
                         </strong>
                       </div>
-                      <div>
-                        <span style={{ fontSize: "0.72rem", color: "#94a3b8", display: "block", fontWeight: "700" }}>REGISTERED DEVELOPER NAME</span>
-                        <strong style={{ fontSize: "1.1rem", color: "#38bdf8", letterSpacing: "0.5px" }}>
-                          GABRIELKUBI OSEI-APPIAH
-                        </strong>
-                      </div>
-                      <span style={{ background: "rgba(16, 185, 129, 0.2)", color: "#6ee7b7", border: "1px solid #10b981", padding: "4px 12px", borderRadius: "999px", fontSize: "0.75rem", fontWeight: "800" }}>
-                        ✓ OFFICIAL DEVELOPER RECIPIENT
-                      </span>
+                      <button
+                        type="button"
+                        onClick={() => setShowSignupCheckout(true)}
+                        style={{ background: "linear-gradient(135deg, #059669, #10b981)", color: "#fff", border: "none", padding: "9px 16px", borderRadius: "9px", fontSize: "0.82rem", fontWeight: "800", cursor: "pointer" }}
+                      >
+                        💳 Pay Online via Official Checkout
+                      </button>
                     </div>
+                    <OfficialPaymentGatewayModal
+                      isOpen={showSignupCheckout}
+                      onClose={() => setShowSignupCheckout(false)}
+                      tenantId={1}
+                      paymentScope="SUBSCRIPTION"
+                      allowPublicOnboarding={true}
+                      amount={Number(instForm.paymentAmount || 0) || 100}
+                      currency="GHS"
+                      title={`Institution Plan Checkout (${instForm.institutionName || "New School"})`}
+                      subscriptionMetadata={{ planLabel: instForm.subscriptionPlan }}
+                      onSuccess={({ transaction }) => {
+                        if (transaction?.reference) {
+                          setInstForm((prev) => ({ ...prev, momoTxnId: transaction.reference }));
+                        }
+                      }}
+                    />
 
                     <div className="form-grid-3">
                       <div className="form-field">
@@ -2390,7 +2406,7 @@ export default function SignUpPage({ defaultRole }) {
                       <button
                         type="button"
                         onClick={() => setShowPassword((prev) => !prev)}
-                        title={showPassword ? "Hide password" : "View password"}
+                        aria-label={showPassword ? "Hide password" : "View password"}
                         style={{ position: "absolute", right: "10px", background: "none", border: "none", color: "#94a3b8", cursor: "pointer", fontSize: "1rem", padding: "4px" }}
                       >
                         {showPassword ? "🙈" : "👁️"}
@@ -2415,7 +2431,7 @@ export default function SignUpPage({ defaultRole }) {
                       <button
                         type="button"
                         onClick={() => setShowConfirmPassword((prev) => !prev)}
-                        title={showConfirmPassword ? "Hide password" : "View password"}
+                        aria-label={showConfirmPassword ? "Hide password" : "View password"}
                         style={{ position: "absolute", right: "10px", background: "none", border: "none", color: "#94a3b8", cursor: "pointer", fontSize: "1rem", padding: "4px" }}
                       >
                         {showConfirmPassword ? "🙈" : "👁️"}
