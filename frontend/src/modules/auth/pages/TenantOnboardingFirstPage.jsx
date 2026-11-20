@@ -1066,7 +1066,13 @@ export default function TenantOnboardingFirstPage() {
                   <div className="gbs-rate-pill-title">Official Student Rate / Month</div>
                   <div className="gbs-rate-pill-val">GH₵ {calculation.rate}.00</div>
                   <span style={{ fontSize: "0.7rem", color: "#94a3b8" }}>
-                    {form.institutionType === "UNIVERSITY" ? "University (GH₵ 10 / student)" : form.institutionType === "SENIOR_HIGH_SCHOOL" ? "SHS (GH₵ 5 / student)" : "Nursery – JHS (GH₵ 3 / student)"}
+                    {form.institutionType === "UNIVERSITY"
+                      ? "University (GH₵ 10 / student)"
+                      : form.institutionType === "TECHNICAL"
+                        ? "Technical / TVET (GH₵ 5 / student)"
+                        : form.institutionType === "SENIOR_HIGH_SCHOOL"
+                          ? "SHS (GH₵ 5 / student)"
+                          : "Nursery – JHS (GH₵ 3 / student)"}
                   </span>
                 </div>
 

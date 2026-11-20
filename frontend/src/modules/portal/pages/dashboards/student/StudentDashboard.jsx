@@ -11,7 +11,7 @@ import { navigateToDetail } from "../../../../../utils/universalNavigation";
 import OfficialPaymentGatewayModal from "../../../../../components/common/OfficialPaymentGatewayModal";
 import OfficialInstitutionalSeal from "../../../../../components/common/OfficialInstitutionalSeal";
 import StudentCooperativeConferenceModal from "../../../../../components/common/StudentCooperativeConferenceModal";
-import { getActiveSchoolName, getActio aveSchoolLogo } from "../../../../../utils/schoolBranding";
+import { getActiveSchoolName, getActiveSchoolLogo } from "../../../../../utils/schoolBranding";
 import { getActiveInstitutionType, getInstitutionRoleProfile } from "../../../../../utils/institutionScope";
 import UniversityOperationsPanel from "../../../../../components/common/UniversityOperationsPanel";
 import SchoolClinicHubPanel from "../../../../../components/common/SchoolClinicHubPanel";
@@ -263,12 +263,12 @@ export function StudentDashboard({ initialTab } = {}) {
       const video = proctorVideoRef.current;
       if (!video || video.readyState < 2) return null;
       const snapCanvas = document.createElement("canvas");
-      snapCanvas.width = 160;
-      snapCanvas.height = 120;
+      snapCanvas.width = 320;
+      snapCanvas.height = 240;
       const sCtx = snapCanvas.getContext("2d");
       if (!sCtx) return null;
-      sCtx.drawImage(video, 0, 0, 160, 120);
-      return snapCanvas.toDataURL("image/jpeg", 0.55);
+      sCtx.drawImage(video, 0, 0, 320, 240);
+      return snapCanvas.toDataURL("image/jpeg", 0.72);
     } catch {
       return null;
     }
@@ -537,6 +537,8 @@ export function StudentDashboard({ initialTab } = {}) {
           examId: activeExam?.id || "EXAM-ACTIVE",
           examTitle: activeExam?.title || "Active Examination",
           studentId: studentProfile?.id || 10,
+          studentIndexNumber: studentProfile?.admissionNumber || studentProfile?.studentId || `GBS-STU-${studentProfile?.id || 10}`,
+          className: studentProfile?.currentClass || activeExam?.class?.name || "Enrolled Cohort",
           studentName: stuName,
           studentEmail: studentProfile?.email || "",
           status: proctorStreamRef.current ? "CAMERA_ACTIVE" : "FOCUS_ONLY_ACTIVE",
@@ -573,7 +575,7 @@ export function StudentDashboard({ initialTab } = {}) {
     };
 
     syncHeartbeatAndMessages();
-    const hbInterval = setInterval(syncHeartbeatAndMessages, 3500);
+    const hbInterval = setInterval(syncHeartbeatAndMessages, 1000);
     return () => {
       active = false;
       clearInterval(hbInterval);
@@ -1654,14 +1656,14 @@ export function StudentDashboard({ initialTab } = {}) {
 
   const getQuestionTypeBadge = (qType) => {
     const map = {
-      MULTIPLE_CHOICE: { label: "Multiple Choice", color: "#38bdf8" },
+      MULTIPLE_CHOICE: { label: "Multiple Choice", color: "#d4af37" },
       THEORY_ESSAY: { label: "Theory / Essay (Typed)", color: "#d4af37" },
-      SHORT_ANSWER: { label: "Short Answer (Typed)", color: "#a855f7" },
-      TRUE_FALSE: { label: "True / False", color: "#10b981" },
-      FILL_IN_BLANK: { label: "Fill in the Blank", color: "#f97316" },
-      CASE_STUDY: { label: "Practical / Case Study (Typed)", color: "#ec4899" }
+      SHORT_ANSWER: { label: "Short Answer (Typed)", color: "#d4af37" },
+      TRUE_FALSE: { label: "True / False", color: "#d4af37" },
+      FILL_IN_BLANK: { label: "Fill in the Blank", color: "#d4af37" },
+      CASE_STUDY: { label: "Practical / Case Study (Typed)", color: "#d4af37" }
     };
-    return map[qType] || { label: "Exam Question", color: "#38bdf8" };
+    return map[qType] || { label: "Exam Question", color: "#d4af37" };
   };
 
   const fetchExams = async () => {
@@ -1928,15 +1930,32 @@ export function StudentDashboard({ initialTab } = {}) {
 
           if (isWritten) {
             writtenCount += 1;
+            const modelAns = String(q.acceptedAnswer || "").trim().toLowerCase();
+            const kwList = String(q.acceptedKeywords || "")
+              .split(",")
+              .map((k) => k.trim().toLowerCase())
+              .filter(Boolean);
+            const ansLower = studentWritten.toLowerCase();
+            let autoSuggestedMarks = 0;
+            if (ansLower) {
+              if (modelAns && (ansLower === modelAns || ansLower.includes(modelAns))) {
+                autoSuggestedMarks = qMarks;
+              } else if (kwList.length > 0) {
+                const kwHits = kwList.filter((kw) => ansLower.includes(kw)).length;
+                autoSuggestedMarks = Math.round((kwHits / kwList.length) * qMarks);
+              }
+            }
             return {
               questionId: q.id || idx + 1,
               questionNumber: qNum,
               questionType: qType,
               questionText: q.questionText || `Question ${qNum}`,
+              caseScenario: q.caseScenario || "",
               maxMarks: qMarks,
               studentAnswer: studentWritten,
               markingGuide: q.markingGuide || "",
-              autoSuggestedMarks: 0,
+              acceptedAnswer: q.acceptedAnswer || "",
+              autoSuggestedMarks,
               marksAwarded: null,
               status: "PENDING_TEACHER_REVIEW"
             };
@@ -2689,7 +2708,7 @@ export function StudentDashboard({ initialTab } = {}) {
               onClick={() => setActiveTab("courses")}
               style={{ borderLeft: "3px solid #10b981" }}
             >
-              📚 Course & Class Registration
+              📚 Courses, Streams &amp; Placements
             </button>
             <button
               type="button"
@@ -2739,16 +2758,6 @@ export function StudentDashboard({ initialTab } = {}) {
             >
               🏥 School Clinic &amp; Medical File
             </button>
-            {institutionType === "UNIVERSITY" && (
-              <button
-                type="button"
-                className={`role-tab-btn ${activeTab === "university" ? "active" : ""}`}
-                onClick={() => setActiveTab("university")}
-                style={{ borderLeft: "3px solid #d4af37", color: activeTab === "university" ? "#ffffff" : "#f5d061", fontWeight: 800 }}
-              >
-                💼 University Internships, Streams &amp; SRC
-              </button>
-            )}
           </nav>
 
           {/* TAB 1: TIMETABLE */}
@@ -3951,15 +3960,15 @@ export function StudentDashboard({ initialTab } = {}) {
                                   </div>
                                 </div>
 
-                                {/* Multi-Format Question Bank Section Navigator for Easy Answering */}
-                                <div style={{ display: "flex", gap: "6px", flexWrap: "wrap", marginBottom: "10px", paddingBottom: "8px", borderBottom: "1px solid rgba(148, 163, 184, 0.16)" }}>
+                                {/* Multi-Format Question Bank Section Navigator (Uniform GBS Navy & Gold) */}
+                                <div style={{ display: "flex", gap: "6px", flexWrap: "wrap", marginBottom: "10px", paddingBottom: "8px", borderBottom: "1px solid rgba(212, 175, 55, 0.25)" }}>
                                   {[
-                                    { type: "MULTIPLE_CHOICE", label: "📘 Multiple Choice", color: "#0284c7" },
-                                    { type: "THEORY_ESSAY", label: "✍️ Theory / Essay", color: "#d97706" },
-                                    { type: "TRUE_FALSE", label: "☑️ True / False", color: "#059669" },
-                                    { type: "SHORT_ANSWER", label: "📝 Short Answer", color: "#7c3aed" },
-                                    { type: "FILL_IN_BLANK", label: "🔤 Fill in Blank", color: "#ea580c" },
-                                    { type: "CASE_STUDY", label: "🧪 Case Study", color: "#db2777" }
+                                    { type: "MULTIPLE_CHOICE", label: "📘 Multiple Choice" },
+                                    { type: "THEORY_ESSAY", label: "✍️ Theory / Essay" },
+                                    { type: "TRUE_FALSE", label: "☑️ True / False" },
+                                    { type: "SHORT_ANSWER", label: "📝 Short Answer" },
+                                    { type: "FILL_IN_BLANK", label: "🔤 Fill in Blank" },
+                                    { type: "CASE_STUDY", label: "🧪 Case Study" }
                                   ].map((fmt) => {
                                     const matchingIndices = questionsList
                                       .map((qItem, idx) => (resolveExamQuestionType(qItem) === fmt.type ? idx : -1))
@@ -3972,9 +3981,9 @@ export function StudentDashboard({ initialTab } = {}) {
                                         type="button"
                                         onClick={() => setExamQuestionIndex(matchingIndices[0])}
                                         style={{
-                                          background: isActiveFormat ? fmt.color : "rgba(15, 23, 42, 0.9)",
-                                          color: "#ffffff",
-                                          border: isActiveFormat ? "2px solid #fbbf24" : `1px solid ${fmt.color}`,
+                                          background: isActiveFormat ? "linear-gradient(135deg, #f6dd84, #d4af37)" : "linear-gradient(135deg, #081833, #0d2247)",
+                                          color: isActiveFormat ? "#081833" : "#f6dd84",
+                                          border: "1.5px solid #d4af37",
                                           padding: "5px 11px",
                                           borderRadius: "6px",
                                           fontSize: "0.73rem",
@@ -3998,6 +4007,7 @@ export function StudentDashboard({ initialTab } = {}) {
                                       <button
                                         key={q.id || idx}
                                         type="button"
+                                        aria-label={`Jump to Question ${idx + 1} (${shortBadge}): ${isAns ? "Answered" : "Unsolved"}`}
                                         onClick={() => setExamQuestionIndex(idx)}
                                         style={{
                                           minWidth: "44px",
@@ -4006,7 +4016,7 @@ export function StudentDashboard({ initialTab } = {}) {
                                           borderRadius: "8px",
                                           background: isAns ? "#059669" : "rgba(30, 41, 59, 0.9)",
                                           color: "#ffffff",
-                                          border: isCurrent ? "2px solid #38bdf8" : isAns ? "1px solid #10b981" : "1px solid rgba(255, 255, 255, 0.2)",
+                                          border: isCurrent ? "2px solid #d4af37" : isAns ? "1px solid #10b981" : "1px solid rgba(255, 255, 255, 0.2)",
                                           fontWeight: 800,
                                           fontSize: "0.76rem",
                                           cursor: "pointer",
@@ -4014,11 +4024,10 @@ export function StudentDashboard({ initialTab } = {}) {
                                           alignItems: "center",
                                           justifyContent: "center",
                                           gap: "3px",
-                                          boxShadow: isCurrent ? "0 0 10px rgba(56, 189, 248, 0.6)" : "none",
+                                          boxShadow: isCurrent ? "0 0 10px rgba(212, 175, 55, 0.55)" : "none",
                                           transform: isCurrent ? "scale(1.06)" : "scale(1)",
                                           transition: "all 0.15s ease"
                                         }}
-                                        title={`Jump to Question ${idx + 1} (${shortBadge}): ${isAns ? "Answered" : "Unsolved"}`}
                                       >
                                         <span>{idx + 1}</span>
                                         <span style={{ fontSize: "0.62rem", color: "#fde68a", fontWeight: 900 }}>{shortBadge}</span>
@@ -4106,8 +4115,37 @@ export function StudentDashboard({ initialTab } = {}) {
                                       </span>
                                     </div>
 
+                                    {qType === "CASE_STUDY" && currentQ.caseScenario && (
+                                      <div style={{
+                                        background: "rgba(8, 24, 51, 0.85)",
+                                        border: "1.5px solid #d4af37",
+                                        borderRadius: "10px",
+                                        padding: "12px 14px",
+                                        marginBottom: "12px",
+                                        color: "#e2e8f0",
+                                        fontSize: "0.9rem"
+                                      }}>
+                                        <div style={{ fontSize: "0.72rem", fontWeight: 900, color: "#f6dd84", textTransform: "uppercase", marginBottom: "4px" }}>
+                                          🧪 Case Study / Practical Scenario Brief
+                                        </div>
+                                        <div style={{ whiteSpace: "pre-line", lineHeight: 1.55 }}>{currentQ.caseScenario}</div>
+                                      </div>
+                                    )}
+
                                     <div className="question-text" style={{ fontSize: getExamFontSizePx(), lineHeight: "1.65", color: "#f8fafc", marginBottom: "1rem", whiteSpace: "pre-line" }}>
-                                      Question {safeIndex + 1}: {currentQ.questionText}
+                                      Question {safeIndex + 1}:{" "}
+                                      {qType === "FILL_IN_BLANK" && String(currentQ.questionText || "").includes("____")
+                                        ? String(currentQ.questionText).split("____").map((part, pIdx, arr) => (
+                                          <React.Fragment key={pIdx}>
+                                            {part}
+                                            {pIdx < arr.length - 1 && (
+                                              <span style={{ display: "inline-block", minWidth: "85px", borderBottom: "2px solid #f6dd84", color: "#f6dd84", textAlign: "center", fontWeight: 900, margin: "0 4px" }}>
+                                                {typedValue ? ` ${typedValue} ` : " ______ "}
+                                              </span>
+                                            )}
+                                          </React.Fragment>
+                                        ))
+                                        : currentQ.questionText}
                                     </div>
 
                                     {/* Multiple Choice & True/False Options */}
@@ -5043,6 +5081,14 @@ export function StudentDashboard({ initialTab } = {}) {
                   </div>
                 </div>
               )}
+
+              <div style={{ marginTop: "1.5rem" }}>
+                <UniversityOperationsPanel
+                  mode="STUDENT"
+                  currentUser={studentProfile}
+                  onFeedback={(msg) => setFeedback({ type: "success", message: msg })}
+                />
+              </div>
             </div>
           )}
 
@@ -6353,14 +6399,6 @@ export function StudentDashboard({ initialTab } = {}) {
                 </div>
               </div>
             </div>
-          )}
-
-          {activeTab === "university" && (
-            <UniversityOperationsPanel
-              mode="STUDENT"
-              currentUser={studentProfile}
-              onFeedback={(msg) => setFeedback({ type: "success", message: msg })}
-            />
           )}
 
           {activeTab === "clinic" && (

@@ -6050,13 +6050,6 @@ export default function DeveloperDashboard() {
             🏥 School Clinic Oversight
           </button>
           <button
-            className={`dev-tab-btn ${activeTab === "university" ? "active" : ""}`}
-            onClick={() => setActiveTab("university")}
-            style={{ borderColor: "#d4af37", color: activeTab === "university" ? "#fff" : "#f5d061" }}
-          >
-            🎓 University Operations Hub
-          </button>
-          <button
             className={`dev-tab-btn ${activeTab === "defaulters" ? "active" : ""}`}
             onClick={() => setActiveTab("defaulters")}
             style={{ borderColor: "#f59e0b", color: activeTab === "defaulters" ? "#fff" : "#fcd34d" }}
@@ -6455,8 +6448,11 @@ export default function DeveloperDashboard() {
 
                 const rows = instList.map((inst, idx) => {
                   const rawType = String(inst.institutionType || "SHS").toUpperCase();
-                  const category = rawType.includes("UNI") ? "University" : rawType.includes("SHS") || rawType.includes("SENIOR") ? "SHS" : "Nursery – JHS";
-                  const rate = category === "University" ? (editableRates.UNIVERSITY || 10) : category === "SHS" ? (editableRates.SHS || 5) : (editableRates.JHS || 3);
+                  const isUniTier = rawType.includes("UNI") || rawType.includes("TERTIARY");
+                  const isTechTier = rawType.includes("TECH") || rawType.includes("TVET") || rawType.includes("VOCAT");
+                  const isShsTier = rawType.includes("SHS") || rawType.includes("SENIOR");
+                  const category = isUniTier ? "University" : isTechTier ? "Technical / TVET" : isShsTier ? "SHS" : "Nursery – JHS";
+                  const rate = isUniTier ? (editableRates.UNIVERSITY || 10) : (isTechTier || isShsTier) ? (editableRates.SHS || 5) : (editableRates.JHS || 3);
                   const activeStu = Number(inst.activeStudents || inst.totalStudentsEnrolled || 0);
                   const prevStu = Number(inst.previousStudents || activeStu);
                   const monthly = activeStu * rate;
@@ -11136,15 +11132,6 @@ export default function DeveloperDashboard() {
         {activeTab === "clinic" && (
           <div className="tab-pane-content">
             <SchoolClinicHubPanel
-              mode="ADMIN"
-              currentUser={{ firstName: "Gabriel", lastName: "Osei", role: "DEVELOPER" }}
-            />
-          </div>
-        )}
-
-        {activeTab === "university" && (
-          <div className="tab-pane-content">
-            <UniversityOperationsPanel
               mode="ADMIN"
               currentUser={{ firstName: "Gabriel", lastName: "Osei", role: "DEVELOPER" }}
             />

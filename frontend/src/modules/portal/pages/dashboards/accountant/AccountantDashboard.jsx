@@ -8,6 +8,7 @@ import UniversalRoleGuideModal from "../../../../../components/common/UniversalR
 import PaymentGatewayAdminPanel from "../../../../../components/common/PaymentGatewayAdminPanel";
 import FinancialReportsPanel from "../../../../../components/common/FinancialReportsPanel";
 import SchoolClinicHubPanel from "../../../../../components/common/SchoolClinicHubPanel";
+import StaffAttendanceClockWidget from "../../../../../components/common/StaffAttendanceClockWidget";
 import { navigateToDetail } from "../../../../../utils/universalNavigation";
 import { getActiveSchoolName, getActiveSchoolLogo } from "../../../../../utils/schoolBranding";
 import { isDemoSandboxMode } from "../../../../../utils/tokenStorage";
@@ -1898,6 +1899,10 @@ export default function AccountantDashboard() {
           {/* TAB 1: STUDENT INVOICES */}
           {activeTab === "invoices" && (
             <div className="role-workspace-card">
+              <StaffAttendanceClockWidget
+                roleOverride="ACCOUNTANT"
+                onFeedback={(msg, isErr) => setFeedback({ type: isErr ? "error" : "success", message: msg })}
+              />
               <div className="workspace-title-row">
                 <div>
                   <h2><span>📑</span> STUDENT BILLING INVOICES & ARREARS</h2>

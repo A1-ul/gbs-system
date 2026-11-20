@@ -18,6 +18,7 @@ import { getActiveInstitutionType, getInstitutionRoleProfile } from "../../../..
 import UniversityOperationsPanel from "../../../../../components/common/UniversityOperationsPanel";
 import StudentDefaultersCompliancePanel from "../../../../../components/common/StudentDefaultersCompliancePanel";
 import SchoolClinicHubPanel from "../../../../../components/common/SchoolClinicHubPanel";
+import HeadmasterStaffAttendanceView from "../../../../../components/common/HeadmasterStaffAttendanceView";
 import { openUrlSafely } from "../../../../../utils/safeWindow";
 import { isDemoSandboxMode } from "../../../../../utils/tokenStorage";
 import { checkDemoEntryLimit, trackDemoEntryCreated } from "../../../../../utils/demoLimitGuard";
@@ -455,6 +456,49 @@ export function AdminDashboard({ initialTab } = {}) {
         { name: "DOC905: Doctoral Thesis Writing & Multi-Center Validation", code: "DOC-905" },
         { name: "DOC906: Final Doctoral Dissertation Defense (Viva Voce)", code: "DOC-906" }
       ]
+    },
+    {
+      levelTitle: "TVET Year 1 (CBT Certificate I — Foundation Trade & Workshop)",
+      code: "TVET-L1",
+      gradeLevel: 13,
+      subjects: [
+        { name: "TVT101: Workshop Safety, Metrology & Hand Tool Engineering", code: "TVT-101" },
+        { name: "TVT102: Technical Drawing & CAD Schematics", code: "TVT-102" },
+        { name: "TVT103: Applied Trade Science & Workshop Mathematics", code: "TVT-103" },
+        { name: "TVT104: Core Electrical & Mechanical Principles", code: "TVT-104" }
+      ]
+    },
+    {
+      levelTitle: "TVET Year 2 (CBT Certificate II — Applied Trade & Field Practicum)",
+      code: "TVET-L2",
+      gradeLevel: 14,
+      subjects: [
+        { name: "TVT201: Industrial Power Systems & Mechatronics Maintenance", code: "TVT-201" },
+        { name: "TVT202: CNC Fabrication, Welding & Automotive Diagnostics", code: "TVT-202" },
+        { name: "TVT203: Building Technology, Plumbing & Civil Craftsmanship", code: "TVT-203" },
+        { name: "TVT204: Trade Field Attachment & Workshop Logbook Practicum", code: "TVT-204" }
+      ]
+    },
+    {
+      levelTitle: "TVET Year 3 (Higher National Diploma / Master Craftsperson)",
+      code: "TVET-L3",
+      gradeLevel: 15,
+      subjects: [
+        { name: "TVT301: Advanced Industrial Instrumentation & PLC Automation", code: "TVT-301" },
+        { name: "TVT302: Renewable Energy, Solar Microgrids & Fault Diagnostics", code: "TVT-302" },
+        { name: "TVT303: Entrepreneurship, Cost Estimation & Workshop Management", code: "TVT-303" },
+        { name: "TVT304: Final COTVET Competency Project & Trade Defense", code: "TVT-304" }
+      ]
+    },
+    {
+      levelTitle: "TVET Specialized Computing & Digital Craft Track (NVTI / CBT)",
+      code: "TVET-ICT",
+      gradeLevel: 14,
+      subjects: [
+        { name: "TVT211: Computer Hardware Repair, Networking & Fiber Splicing", code: "TVT-211" },
+        { name: "TVT212: Enterprise Database & Web Application Craft", code: "TVT-212" },
+        { name: "TVT213: Applied Cybersecurity & Digital Electronics Lab", code: "TVT-213" }
+      ]
     }
   ];
 
@@ -523,14 +567,17 @@ export function AdminDashboard({ initialTab } = {}) {
   const [showMomoSubmitModal, setShowMomoSubmitModal] = useState(false);
   const [momoTxnId, setMomoTxnId] = useState("");
   const [momoAmount, setMomoAmount] = useState("2500");
-  const [subInstitutionTier, setSubInstitutionTier] = useState("NURSERY_TO_JHS"); // NURSERY_TO_JHS (GH₵3) | SHS (GH₵5) | UNIVERSITY (GH₵10)
+  const [subInstitutionTier, setSubInstitutionTier] = useState(() => {
+    const t = getActiveInstitutionType();
+    return t === "SENIOR_HIGH_SCHOOL" ? "SHS" : t;
+  }); // NURSERY_TO_JHS (GH₵3) | SHS/TECHNICAL (GH₵5) | UNIVERSITY (GH₵10)
   const [subStudentCount, setSubStudentCount] = useState("300");
   const [subTermPlan, setSubTermPlan] = useState("6_MONTHS"); // 1_MONTH | 3_MONTHS | 6_MONTHS | 9_MONTHS | 12_MONTHS
   const [subPaymentScheduleMode, setSubPaymentScheduleMode] = useState("BULK_FULL_TERM"); // MONTHLY_SPREAD | BULK_FULL_TERM
   const [subBulkTermsAccepted, setSubBulkTermsAccepted] = useState(true);
   const [subBulkSignatory, setSubBulkSignatory] = useState(() => `${currentUser?.firstName || "Arthur"} ${currentUser?.lastName || "Pendleton"}`);
 
-  const subPerStudentRate = subInstitutionTier === "UNIVERSITY" ? 10 : subInstitutionTier === "SHS" ? 5 : 3;
+  const subPerStudentRate = subInstitutionTier === "UNIVERSITY" ? 10 : (subInstitutionTier === "SHS" || subInstitutionTier === "SENIOR_HIGH_SCHOOL" || subInstitutionTier === "TECHNICAL") ? 5 : 3;
   const subMonthlyFee = (Math.max(0, parseInt(subStudentCount, 10) || 0)) * subPerStudentRate;
   const subMonthsMap = { "1_MONTH": 1, "3_MONTHS": 3, "6_MONTHS": 6, "9_MONTHS": 9, "12_MONTHS": 12, "LIFETIME": 12 };
   const subDiscountMap = { "1_MONTH": 0, "3_MONTHS": 3, "6_MONTHS": 5, "9_MONTHS": 7, "12_MONTHS": 10, "LIFETIME": 10 };
@@ -3029,14 +3076,14 @@ export function AdminDashboard({ initialTab } = {}) {
   // Institutional Admission Letter Templates & Composition Studio State
   const [showLetterTemplateModal, setShowLetterTemplateModal] = useState(false);
   const [selectedInstitutionTier, setSelectedInstitutionTier] = useState(() => {
-    return localStorage.getItem("gbs_institution_type") || "SHS";
+    const rawTier = localStorage.getItem("gbs_institution_type") || "SENIOR_HIGH_SCHOOL";
+    if (rawTier === "NURSERY_TO_JHS" || rawTier === "BASIC") return "BASIC";
+    if (rawTier === "TECHNICAL") return "TECHNICAL";
+    if (rawTier === "UNIVERSITY") return "UNIVERSITY";
+    return "SHS";
   });
   const [admissionLetterTemplates, setAdmissionLetterTemplates] = useState(() => {
-    try {
-      const stored = localStorage.getItem("gbs_admission_letter_template");
-      if (stored) return JSON.parse(stored);
-    } catch { }
-    return {
+    const defaultTemplates = {
       UNIVERSITY: {
         letterTitle: "OFFICIAL OFFER OF PROVISIONAL UNDERGRADUATE ADMISSION",
         preamble: "The Academic Board and Directorate of Admissions have approved your application for provisional admission into the undergraduate degree curriculum at our institution for the 2026/2027 Academic Session.",
@@ -3048,6 +3095,17 @@ export function AdminDashboard({ initialTab } = {}) {
         conditions: "1. Prompt settlement of tuition and academic facility user fees. 2. Verification of official WASSCE / Cambridge A-Level certificates. 3. Compliance with university matriculation regulations.",
         signatoryOne: "Dr. Evelyn Addo, Registrar & Academic Secretary",
         signatoryTwo: "Prof. Arthur Sterling, Vice-Chancellor / Chancellor"
+      },
+      TECHNICAL: {
+        letterTitle: "OFFICIAL TVET / TECHNICAL INSTITUTE ADMISSION & WORKSHOP PLACEMENT",
+        preamble: "We are pleased to offer you admission into our Competency-Based Training (CBT) Technical & Vocational programme for the 2026/2027 academic session.",
+        academicTrack: "Automotive Mechatronics, Electrical Engineering & Applied ICT (CBT Level I–II)",
+        residentialStatus: "Workshop Day / Technical Hostel Placement",
+        houseOfResidence: "Workshop Block T1 • COTVET Practical Studio",
+        csspsCode: "TVET-2026-COTVET-410",
+        conditions: "1. Submission of BECE / prior trade certificate. 2. Personal Protective Equipment (PPE) workshop compliance & safety orientation. 3. Compulsory supervised trade field attachment.",
+        signatoryOne: "Engr. Samuel Mensah, Head of Technical Training & Attachments",
+        signatoryTwo: "Principal, GBS Technical & Vocational Institute"
       },
       SHS: {
         letterTitle: "OFFICIAL SENIOR HIGH SCHOOL PROVISIONAL ADMISSION OFFER & HOUSE PLACEMENT",
@@ -3071,12 +3129,18 @@ export function AdminDashboard({ initialTab } = {}) {
         signatoryTwo: "Headmaster / Executive Director"
       }
     };
+    try {
+      const stored = JSON.parse(localStorage.getItem("gbs_admission_letter_template") || "null");
+      if (stored && typeof stored === "object") {
+        return { ...defaultTemplates, ...stored };
+      }
+    } catch { }
+    return defaultTemplates;
   });
 
   const handleSaveAdmissionTemplate = (e) => {
     e.preventDefault();
     localStorage.setItem("gbs_admission_letter_template", JSON.stringify(admissionLetterTemplates));
-    localStorage.setItem("gbs_institution_type", selectedInstitutionTier);
     window.dispatchEvent(new Event("gbs_admission_template_updated"));
     window.dispatchEvent(new Event("storage"));
     setShowLetterTemplateModal(false);
@@ -6214,16 +6278,15 @@ export function AdminDashboard({ initialTab } = {}) {
             >
               🏥 School Clinic &amp; Medical Registry
             </button>
-            {institutionType === "UNIVERSITY" && (
-              <button
-                type="button"
-                className={`role-tab-btn ${activeTab === "university" ? "active" : ""}`}
-                onClick={() => setActiveTab("university")}
-                style={{ borderLeft: "3px solid #d4af37", color: activeTab === "university" ? "#ffffff" : "#f5d061", fontWeight: 800 }}
-              >
-                🎓 University Hub (Internships, Streams, SRC &amp; Graduation)
-              </button>
-            )}
+            <button
+              type="button"
+              data-testid="admin-staff-attendance-tab"
+              className={`role-tab-btn ${activeTab === "staffAttendance" ? "active" : ""}`}
+              onClick={() => setActiveTab("staffAttendance")}
+              style={{ borderLeft: "3px solid #d4af37", color: activeTab === "staffAttendance" ? "#f6dd84" : "#f5d061", fontWeight: 800 }}
+            >
+              ⏱️ Staff &amp; Clinic Attendance
+            </button>
           </nav>
 
           {/* HEADMASTER EXECUTIVE LIVE METRICS BAR: Students Admitted, Students Boarding Bus, Vetting Desk & Inbuilt CCTV */}
@@ -6240,7 +6303,7 @@ export function AdminDashboard({ initialTab } = {}) {
             <div
               onClick={() => setActiveTab("admissions")}
               style={{ display: "flex", alignItems: "center", gap: "12px", padding: "8px 12px", borderRadius: "10px", background: "rgba(16, 185, 129, 0.12)", border: "1px solid rgba(16, 185, 129, 0.35)", cursor: "pointer" }}
-              title="Click to inspect all students admitted into the institution"
+              aria-label="Inspect all students admitted into the institution"
             >
               <span style={{ fontSize: "1.7rem" }}>🎓</span>
               <div>
@@ -8409,14 +8472,20 @@ export function AdminDashboard({ initialTab } = {}) {
             </div>
           )}
 
-          {/* TAB 2: ACADEMIC CLASSES (NURSERY 1 TO UNIVERSITY LEVEL 400 & SUBJECT CODES) */}
+          {/* TAB 2: ACADEMIC CLASSES & INSTITUTIONAL OPERATIONS (TAILORED TO INSTITUTION TIER) */}
           {activeTab === "academics" && (
             <div className="role-workspace-card">
               <div className="workspace-title-row">
                 <div>
-                  <h2><span>📚</span> ACADEMIC CLASSES & COURSE CURRICULUM CREATION</h2>
+                  <h2><span>📚</span> {institutionProfile.shortName.toUpperCase()} CLASSES &amp; COURSE CURRICULUM CREATION</h2>
                   <p>
-                    Select and create classes from Nursery 1 to University Level 400, assign subjects/courses with their course codes, and use class title as registration code.
+                    {institutionType === "UNIVERSITY"
+                      ? "Create undergraduate and postgraduate degree levels (Level 100 – PhD), assign credit-hour course codes, and manage internships, attachments & streams."
+                      : institutionType === "TECHNICAL"
+                        ? "Create TVET trade workshop levels (CBT Year 1 – HND), assign trade codes, and manage supervised field attachments & shifts."
+                        : institutionType === "SENIOR_HIGH_SCHOOL"
+                          ? "Create Senior High School classes (SHS 1 – 3), assign WASSCE subjects & house/track streams, and manage student progression."
+                          : "Select and create classes from Nursery 1 to JHS 3 (BECE), assign NaCCA subjects with registration codes, and manage streams & prefects."}
                   </p>
                 </div>
                 <Link to="/academic" className="btn-secondary">
@@ -8424,24 +8493,25 @@ export function AdminDashboard({ initialTab } = {}) {
                 </Link>
               </div>
 
-              {/* Class Creation Form with Nursery 1 to University Level 400 Presets */}
+              {/* Class Creation Form Tailored Strictly to Active Institution Tier */}
               <form onSubmit={handleCreateClass} style={{ background: "rgba(2, 6, 23, 0.6)", padding: "1.5rem", borderRadius: "12px", border: "1px solid rgba(255, 255, 255, 0.08)", marginBottom: "2rem" }}>
                 <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "1rem", borderBottom: "1px solid rgba(255, 255, 255, 0.08)", paddingBottom: "0.75rem" }}>
                   <h4 style={{ margin: 0, color: "#38bdf8", fontSize: "1rem" }}>
-                    🏫 Create Class & Assign Subjects / Course Codes
+                    🏫 Create {institutionProfile.shortName} Class &amp; Assign Subjects / Course Codes
                   </h4>
                   <span style={{ fontSize: "0.8rem", color: "#94a3b8" }}>
-                    Standard Curriculum: <strong>Nursery 1 through University Level 400</strong>
+                    Active Tier: <strong>{institutionProfile.icon} {institutionProfile.name}</strong>
                   </span>
                 </div>
 
                 <div style={{ marginBottom: "1rem" }}>
                   <label style={{ display: "block", fontSize: "0.75rem", color: "#38bdf8", fontWeight: "700", marginBottom: "6px" }}>
-                    Select Class Level Tier (Nursery 1 to University Level 400) *
+                    Select {institutionProfile.shortName} Class / Programme Level *
                   </label>
                   <select
                     className="filter-select"
                     style={{ width: "100%", borderColor: "#38bdf8" }}
+                    value={newClass.code}
                     onChange={(e) => {
                       const selected = CLASS_CURRICULUM_PRESETS.find(p => p.code === e.target.value);
                       if (selected) {
@@ -8454,46 +8524,63 @@ export function AdminDashboard({ initialTab } = {}) {
                       }
                     }}
                   >
-                    <optgroup label="EARLY CHILDHOOD EDUCATION (Nursery 1-2 & KG 1-2)">
-                      {CLASS_CURRICULUM_PRESETS.slice(0, 4).map(p => (
-                        <option key={p.code} value={p.code}>{p.levelTitle} — Registration Code: {p.code}</option>
-                      ))}
-                    </optgroup>
-                    <optgroup label="LOWER PRIMARY (Grades 1 - 3)">
-                      {CLASS_CURRICULUM_PRESETS.slice(4, 7).map(p => (
-                        <option key={p.code} value={p.code}>{p.levelTitle} — Registration Code: {p.code}</option>
-                      ))}
-                    </optgroup>
-                    <optgroup label="UPPER PRIMARY (Grades 4 - 6)">
-                      {CLASS_CURRICULUM_PRESETS.slice(7, 10).map(p => (
-                        <option key={p.code} value={p.code}>{p.levelTitle} — Registration Code: {p.code}</option>
-                      ))}
-                    </optgroup>
-                    <optgroup label="JUNIOR HIGH SCHOOL (JHS 1 - 3)">
-                      {CLASS_CURRICULUM_PRESETS.slice(10, 13).map(p => (
-                        <option key={p.code} value={p.code}>{p.levelTitle} — Registration Code: {p.code}</option>
-                      ))}
-                    </optgroup>
-                    <optgroup label="SENIOR HIGH SCHOOL (SHS 1 - 3)">
-                      {CLASS_CURRICULUM_PRESETS.slice(13, 16).map(p => (
-                        <option key={p.code} value={p.code}>{p.levelTitle} — Registration Code: {p.code}</option>
-                      ))}
-                    </optgroup>
-                    <optgroup label="TERTIARY / UNIVERSITY UNDERGRADUATE (Levels 100 - 400)">
-                      {CLASS_CURRICULUM_PRESETS.slice(16, 20).map(p => (
-                        <option key={p.code} value={p.code}>{p.levelTitle} — Registration Code: {p.code}</option>
-                      ))}
-                    </optgroup>
-                    <optgroup label="TERTIARY / UNIVERSITY POSTGRADUATE - MASTER'S LEVEL (M.Sc / M.Ed / MBA)">
-                      {CLASS_CURRICULUM_PRESETS.slice(20, 22).map(p => (
-                        <option key={p.code} value={p.code}>{p.levelTitle} — Registration Code: {p.code}</option>
-                      ))}
-                    </optgroup>
-                    <optgroup label="TERTIARY / UNIVERSITY POSTGRADUATE - DOCTORAL LEVEL (PhD / D.Phil)">
-                      {CLASS_CURRICULUM_PRESETS.slice(22).map(p => (
-                        <option key={p.code} value={p.code}>{p.levelTitle} — Registration Code: {p.code}</option>
-                      ))}
-                    </optgroup>
+                    {institutionType === "NURSERY_TO_JHS" && (
+                      <>
+                        <optgroup label="EARLY CHILDHOOD EDUCATION (Nursery 1-2 & KG 1-2)">
+                          {CLASS_CURRICULUM_PRESETS.slice(0, 4).map(p => (
+                            <option key={p.code} value={p.code}>{p.levelTitle} — Registration Code: {p.code}</option>
+                          ))}
+                        </optgroup>
+                        <optgroup label="LOWER PRIMARY (Grades 1 - 3)">
+                          {CLASS_CURRICULUM_PRESETS.slice(4, 7).map(p => (
+                            <option key={p.code} value={p.code}>{p.levelTitle} — Registration Code: {p.code}</option>
+                          ))}
+                        </optgroup>
+                        <optgroup label="UPPER PRIMARY (Grades 4 - 6)">
+                          {CLASS_CURRICULUM_PRESETS.slice(7, 10).map(p => (
+                            <option key={p.code} value={p.code}>{p.levelTitle} — Registration Code: {p.code}</option>
+                          ))}
+                        </optgroup>
+                        <optgroup label="JUNIOR HIGH SCHOOL (JHS 1 - 3)">
+                          {CLASS_CURRICULUM_PRESETS.slice(10, 13).map(p => (
+                            <option key={p.code} value={p.code}>{p.levelTitle} — Registration Code: {p.code}</option>
+                          ))}
+                        </optgroup>
+                      </>
+                    )}
+                    {institutionType === "SENIOR_HIGH_SCHOOL" && (
+                      <optgroup label="SENIOR HIGH SCHOOL (SHS 1 - 3 • WASSCE)">
+                        {CLASS_CURRICULUM_PRESETS.slice(13, 16).map(p => (
+                          <option key={p.code} value={p.code}>{p.levelTitle} — Registration Code: {p.code}</option>
+                        ))}
+                      </optgroup>
+                    )}
+                    {institutionType === "TECHNICAL" && (
+                      <optgroup label="TECHNICAL & VOCATIONAL INSTITUTE (TVET / CBT / HND)">
+                        {CLASS_CURRICULUM_PRESETS.slice(25).map(p => (
+                          <option key={p.code} value={p.code}>{p.levelTitle} — Registration Code: {p.code}</option>
+                        ))}
+                      </optgroup>
+                    )}
+                    {institutionType === "UNIVERSITY" && (
+                      <>
+                        <optgroup label="TERTIARY / UNIVERSITY UNDERGRADUATE (Levels 100 - 400)">
+                          {CLASS_CURRICULUM_PRESETS.slice(16, 20).map(p => (
+                            <option key={p.code} value={p.code}>{p.levelTitle} — Registration Code: {p.code}</option>
+                          ))}
+                        </optgroup>
+                        <optgroup label="TERTIARY / UNIVERSITY POSTGRADUATE - MASTER'S LEVEL (M.Sc / M.Ed / MBA)">
+                          {CLASS_CURRICULUM_PRESETS.slice(20, 22).map(p => (
+                            <option key={p.code} value={p.code}>{p.levelTitle} — Registration Code: {p.code}</option>
+                          ))}
+                        </optgroup>
+                        <optgroup label="TERTIARY / UNIVERSITY POSTGRADUATE - DOCTORAL LEVEL (PhD / D.Phil)">
+                          {CLASS_CURRICULUM_PRESETS.slice(22, 25).map(p => (
+                            <option key={p.code} value={p.code}>{p.levelTitle} — Registration Code: {p.code}</option>
+                          ))}
+                        </optgroup>
+                      </>
+                    )}
                   </select>
                 </div>
 
@@ -9085,11 +9172,14 @@ export function AdminDashboard({ initialTab } = {}) {
                                             {classes.map(c => (
                                               <option key={c.code} value={c.code}>Transfer to {c.name} ({c.code})</option>
                                             ))}
-                                            <option value="PRI-01">Primary 1</option>
-                                            <option value="PRI-02">Primary 2</option>
-                                            <option value="PRI-03">Primary 3</option>
-                                            <option value="PRI-04">Primary 4</option>
-                                            <option value="JHS-01">JHS 1</option>
+                                            {CLASS_CURRICULUM_PRESETS.filter((p) => {
+                                              if (institutionType === "NURSERY_TO_JHS") return p.gradeLevel <= 9;
+                                              if (institutionType === "SENIOR_HIGH_SCHOOL") return p.code.startsWith("SHS-");
+                                              if (institutionType === "TECHNICAL") return p.code.startsWith("TVET-");
+                                              return p.code.startsWith("UNI-");
+                                            }).map((p) => (
+                                              <option key={p.code} value={p.code}>{p.levelTitle}</option>
+                                            ))}
                                           </select>
                                         </div>
                                       ) : (
@@ -9136,6 +9226,14 @@ export function AdminDashboard({ initialTab } = {}) {
                     );
                   })()}
                 </div>
+              </div>
+
+              <div style={{ marginTop: "2rem" }}>
+                <UniversityOperationsPanel
+                  mode="ADMIN"
+                  currentUser={currentUser}
+                  onFeedback={(msg) => setFeedback({ type: "success", message: msg })}
+                />
               </div>
             </div>
           )}
@@ -11820,7 +11918,15 @@ export function AdminDashboard({ initialTab } = {}) {
                   </div>
                   <div style={{ background: "rgba(255,255,255,0.03)", padding: "12px", borderRadius: "8px", border: "1px solid rgba(255,255,255,0.06)" }}>
                     <span style={{ fontSize: "0.75rem", color: "#94a3b8", display: "block" }}>Class Progression Path</span>
-                    <strong style={{ fontSize: "0.85rem", color: "#38bdf8" }}>Nursery 1 → University Level 400</strong>
+                    <strong style={{ fontSize: "0.85rem", color: "#38bdf8" }}>
+                      {institutionType === "UNIVERSITY"
+                        ? "Level 100 → Level 400 → PhD"
+                        : institutionType === "TECHNICAL"
+                          ? "TVET Year 1 → Year 3 / CBT II"
+                          : institutionType === "SENIOR_HIGH_SCHOOL"
+                            ? "SHS Form 1 → Form 3 (WASSCE)"
+                            : "Nursery 1 → JHS 3 (BECE)"}
+                    </strong>
                   </div>
                   <div style={{ background: "rgba(255,255,255,0.03)", padding: "12px", borderRadius: "8px", border: "1px solid rgba(255,255,255,0.06)" }}>
                     <span style={{ fontSize: "0.75rem", color: "#94a3b8", display: "block" }}>Debtor Policy</span>
@@ -11837,19 +11943,18 @@ export function AdminDashboard({ initialTab } = {}) {
             />
           )}
 
-          {activeTab === "university" && (
-            <UniversityOperationsPanel
+          {activeTab === "clinic" && (
+            <SchoolClinicHubPanel
               mode="ADMIN"
               currentUser={currentUser}
               onFeedback={(msg) => setFeedback({ type: "success", message: msg })}
             />
           )}
 
-          {activeTab === "clinic" && (
-            <SchoolClinicHubPanel
-              mode="ADMIN"
+          {activeTab === "staffAttendance" && (
+            <HeadmasterStaffAttendanceView
               currentUser={currentUser}
-              onFeedback={(msg) => setFeedback({ type: "success", message: msg })}
+              onFeedback={(msg, isErr) => setFeedback({ type: isErr ? "error" : "success", message: msg })}
             />
           )}
         </main>
@@ -12649,6 +12754,7 @@ export function AdminDashboard({ initialTab } = {}) {
                       >
                         <option value="NURSERY_TO_JHS">Nursery – JHS (GH₵ 3 / Active Student / Month)</option>
                         <option value="SHS">Senior High School - SHS (GH₵ 5 / Active Student / Month)</option>
+                        <option value="TECHNICAL">Technical & Vocational Institute - TVET (GH₵ 5 / Active Student / Month)</option>
                         <option value="UNIVERSITY">University Level (GH₵ 10 / Active Student / Month)</option>
                       </select>
                     </div>
@@ -14567,7 +14673,7 @@ export function AdminDashboard({ initialTab } = {}) {
 
               <form onSubmit={handleSaveAdmissionTemplate}>
                 {/* Institution Type Selector Tabs */}
-                <div style={{ display: "flex", gap: "10px", marginBottom: "1.5rem" }}>
+                <div style={{ display: "flex", gap: "10px", marginBottom: "1.5rem", flexWrap: "wrap" }}>
                   <button
                     type="button"
                     onClick={() => setSelectedInstitutionTier("UNIVERSITY")}
@@ -14584,6 +14690,23 @@ export function AdminDashboard({ initialTab } = {}) {
                     }}
                   >
                     🎓 University / Tertiary Degree Template
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setSelectedInstitutionTier("TECHNICAL")}
+                    style={{
+                      flex: 1,
+                      padding: "10px",
+                      borderRadius: "8px",
+                      border: selectedInstitutionTier === "TECHNICAL" ? "2px solid #f59e0b" : "1px solid rgba(255,255,255,0.1)",
+                      background: selectedInstitutionTier === "TECHNICAL" ? "rgba(245, 158, 11, 0.2)" : "rgba(15, 23, 42, 0.6)",
+                      color: selectedInstitutionTier === "TECHNICAL" ? "#fbbf24" : "#94a3b8",
+                      fontWeight: "800",
+                      fontSize: "0.85rem",
+                      cursor: "pointer"
+                    }}
+                  >
+                    🛠️ Technical / TVET Template
                   </button>
                   <button
                     type="button"
@@ -14686,6 +14809,37 @@ export function AdminDashboard({ initialTab } = {}) {
                           onChange={(e) => setAdmissionLetterTemplates({
                             ...admissionLetterTemplates,
                             UNIVERSITY: { ...admissionLetterTemplates.UNIVERSITY, programTitle: e.target.value }
+                          })}
+                          className="filter-input"
+                          style={{ width: "100%" }}
+                        />
+                      </div>
+                    </div>
+                  )}
+
+                  {selectedInstitutionTier === "TECHNICAL" && (
+                    <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "12px", marginBottom: "1rem" }}>
+                      <div>
+                        <label style={{ display: "block", fontSize: "0.78rem", color: "#94a3b8", marginBottom: "4px" }}>TVET Trade &amp; Workshop Track</label>
+                        <input
+                          type="text"
+                          value={admissionLetterTemplates.TECHNICAL?.academicTrack || ""}
+                          onChange={(e) => setAdmissionLetterTemplates({
+                            ...admissionLetterTemplates,
+                            TECHNICAL: { ...(admissionLetterTemplates.TECHNICAL || {}), academicTrack: e.target.value }
+                          })}
+                          className="filter-input"
+                          style={{ width: "100%" }}
+                        />
+                      </div>
+                      <div>
+                        <label style={{ display: "block", fontSize: "0.78rem", color: "#94a3b8", marginBottom: "4px" }}>Workshop Placement / COTVET Code</label>
+                        <input
+                          type="text"
+                          value={admissionLetterTemplates.TECHNICAL?.csspsCode || ""}
+                          onChange={(e) => setAdmissionLetterTemplates({
+                            ...admissionLetterTemplates,
+                            TECHNICAL: { ...(admissionLetterTemplates.TECHNICAL || {}), csspsCode: e.target.value }
                           })}
                           className="filter-input"
                           style={{ width: "100%" }}

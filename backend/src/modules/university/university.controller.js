@@ -60,7 +60,7 @@ const submitAttachment = async (req, res, next) => {
     const attachment = await universityService.submitAttachment(req);
     res.status(201).json({
       status: 'success',
-      message: 'University academic attachment form submitted successfully.',
+      message: 'Academic & field attachment form submitted successfully.',
       data: { attachment }
     });
   } catch (err) {

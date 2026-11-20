@@ -9,9 +9,19 @@ export default function ExamScannerDashboard() {
   const [exams, setExams] = useState([]);
   const [selectedExamId, setSelectedExamId] = useState("");
   const [studentId, setStudentId] = useState("1");
-  const [studentName, setStudentName] = useState("Ethan Vance");
+  const [studentName, setStudentName] = useState("Candidate #1");
+  const [questionCount, setQuestionCount] = useState(10);
+  const [marksPerQuestion, setMarksPerQuestion] = useState(10);
+  const [quickKeyString, setQuickKeyString] = useState("");
+  const [savingKey, setSavingKey] = useState(false);
+  const [savedKeyAt, setSavedKeyAt] = useState(null);
 
-  // 10-Question OMR Bubble Form
+  const [teacherAnswerKey, setTeacherAnswerKey] = useState({
+    1: "A", 2: "C", 3: "B", 4: "D", 5: "A",
+    6: "C", 7: "B", 8: "A", 9: "D", 10: "C"
+  });
+
+  // Dynamic 1..N OMR Bubble Form
   const [answers, setAnswers] = useState({
     1: "A",
     2: "C",
@@ -29,6 +39,75 @@ export default function ExamScannerDashboard() {
   const [pastSheets, setPastSheets] = useState([]);
   const [loading, setLoading] = useState(false);
   const [feedback, setFeedback] = useState(null);
+
+  const handleQuestionCountChange = (rawCount) => {
+    const count = Math.max(1, Math.min(200, parseInt(rawCount, 10) || 10));
+    setQuestionCount(count);
+    const letters = ["A", "B", "C", "D"];
+    setTeacherAnswerKey((prev) => {
+      const next = { ...prev };
+      for (let i = 1; i <= count; i++) {
+        if (!next[i]) next[i] = letters[(i - 1) % 4];
+      }
+      return next;
+    });
+    setAnswers((prev) => {
+      const next = { ...prev };
+      for (let i = 1; i <= count; i++) {
+        if (!next[i]) next[i] = letters[(i - 1) % 4];
+      }
+      return next;
+    });
+  };
+
+  const handleQuickKeyApply = (raw) => {
+    setQuickKeyString(raw);
+    const tokens = String(raw || "")
+      .toUpperCase()
+      .replace(/[^A-D]/g, " ")
+      .trim()
+      .split(/\s+/)
+      .filter(Boolean);
+    const list = tokens.length === 1 && tokens[0].length > 1 ? tokens[0].split("") : tokens;
+    if (list.length === 0) return;
+    const count = Math.max(1, Math.min(200, list.length));
+    setQuestionCount(count);
+    const mapped = {};
+    list.slice(0, count).forEach((ans, idx) => {
+      mapped[idx + 1] = ans;
+    });
+    setTeacherAnswerKey((prev) => ({ ...prev, ...mapped }));
+  };
+
+  const handleSaveAnswerKey = async () => {
+    const count = Math.max(1, Math.min(200, Number(questionCount) || 10));
+    const trimmed = {};
+    for (let i = 1; i <= count; i++) {
+      trimmed[i] = teacherAnswerKey[i] || "A";
+    }
+    setSavingKey(true);
+    setFeedback(null);
+    try {
+      const res = await apiClient.post("/ai-exam/answer-key", {
+        examId: selectedExamId || "1",
+        questionCount: count,
+        marksPerQuestion: Number(marksPerQuestion) || 10,
+        teacherAnswerKey: trimmed
+      });
+      setSavedKeyAt(res?.data?.data?.answerKey?.savedAt || new Date().toISOString());
+      setFeedback({
+        type: "success",
+        message: `💾 Teacher Master Answer Key saved for ${count} question(s)! Ready to run AI Scan Marking & Grading.`
+      });
+    } catch (err) {
+      setFeedback({
+        type: "error",
+        message: err?.response?.data?.message || "Failed to save teacher answer key."
+      });
+    } finally {
+      setSavingKey(false);
+    }
+  };
 
   const fetchExams = async () => {
     try {
@@ -61,7 +140,14 @@ export default function ExamScannerDashboard() {
   }, []);
 
   const handleBubbleSelect = (qNum, option) => {
-    setAnswers(prev => ({
+    setAnswers((prev) => ({
+      ...prev,
+      [qNum]: option
+    }));
+  };
+
+  const handleTeacherKeySelect = (qNum, option) => {
+    setTeacherAnswerKey((prev) => ({
       ...prev,
       [qNum]: option
     }));
@@ -70,19 +156,29 @@ export default function ExamScannerDashboard() {
   const handleScanSheet = async () => {
     setLoading(true);
     setFeedback(null);
+    const count = Math.max(1, Math.min(200, Number(questionCount) || 10));
+    const trimmedKey = {};
+    const trimmedAnswers = {};
+    for (let i = 1; i <= count; i++) {
+      trimmedKey[i] = teacherAnswerKey[i] || "A";
+      trimmedAnswers[i] = answers[i] || "";
+    }
     try {
       const res = await apiClient.post("/ai-exam/scan-grade", {
-        examId: selectedExamId,
+        examId: selectedExamId || "1",
         studentId,
+        questionCount: count,
+        marksPerQuestion: Number(marksPerQuestion) || 10,
+        teacherAnswerKey: trimmedKey,
         imageUrl: "/assets/academic-records-bg.jpg",
-        extractedAnswers: answers
+        extractedAnswers: trimmedAnswers
       });
 
       if (res.data?.data) {
         setScanResult(res.data.data);
         setFeedback({
           type: "success",
-          message: `Grading completed! Scored ${res.data.data.scoreObtained}/${res.data.data.totalMarks} (Grade ${res.data.data.grade}) with ${res.data.data.confidencePct}% AI confidence.`
+          message: `Grading completed! Scored ${res.data.data.scoreObtained}/${res.data.data.totalMarks} (${res.data.data.percentage || 0}% • Grade ${res.data.data.grade}) with ${res.data.data.confidencePct}% AI confidence.`
         });
         fetchPastSheets();
       }
@@ -204,42 +300,135 @@ export default function ExamScannerDashboard() {
                   placeholder="e.g. 1"
                 />
               </div>
+              <div className="group">
+                <label>Number of Questions to Mark (1–200)</label>
+                <input
+                  type="number"
+                  data-testid="scanner-question-count"
+                  min="1"
+                  max="200"
+                  value={questionCount}
+                  onChange={(e) => handleQuestionCountChange(e.target.value)}
+                />
+              </div>
+              <div className="group">
+                <label>Marks Per Question</label>
+                <input
+                  type="number"
+                  min="1"
+                  max="50"
+                  value={marksPerQuestion}
+                  onChange={(e) => setMarksPerQuestion(Math.max(1, Number(e.target.value) || 10))}
+                />
+              </div>
             </div>
 
-            {/* Interactive Bubble Matrix */}
+            {/* Quick Answer Key & Save Master Key Bar */}
+            <div style={{
+              marginTop: "14px",
+              padding: "12px 14px",
+              borderRadius: "10px",
+              background: "linear-gradient(135deg, #081833 0%, #0d2247 100%)",
+              border: "1.5px solid #d4af37",
+              display: "flex",
+              gap: "10px",
+              flexWrap: "wrap",
+              alignItems: "flex-end"
+            }}>
+              <div style={{ flex: 1, minWidth: "220px" }}>
+                <label style={{ fontSize: "0.78rem", color: "#f6dd84", fontWeight: 800, display: "block", marginBottom: "4px" }}>
+                  🔑 Paste / Type Master Answer Key (e.g. A,C,B,D...)
+                </label>
+                <input
+                  type="text"
+                  value={quickKeyString}
+                  onChange={(e) => handleQuickKeyApply(e.target.value)}
+                  placeholder="Optional: A,B,C,D... or toggle Q1..QN below"
+                  style={{ width: "100%", padding: "8px 10px", borderRadius: "6px", border: "1px solid #d4af37", background: "rgba(2,6,23,0.85)", color: "#ffffff" }}
+                />
+              </div>
+              <button
+                type="button"
+                data-testid="save-answer-key-btn"
+                onClick={handleSaveAnswerKey}
+                disabled={savingKey}
+                style={{
+                  background: "linear-gradient(135deg, #f6dd84, #d4af37)",
+                  color: "#081833",
+                  border: "1.5px solid #f6dd84",
+                  borderRadius: "8px",
+                  padding: "9px 16px",
+                  fontWeight: 900,
+                  cursor: "pointer"
+                }}
+              >
+                {savingKey ? "⏳ Saving..." : `💾 Save Answer Key (${questionCount} Qs)`}
+              </button>
+              {savedKeyAt && (
+                <span style={{ fontSize: "0.74rem", color: "#6ee7b7", fontWeight: 700 }}>
+                  ✓ Saved {new Date(savedKeyAt).toLocaleTimeString()}
+                </span>
+              )}
+            </div>
+
+            {/* Interactive Master Key + Student Bubble Matrices */}
             <div style={{ marginTop: "16px" }}>
-              <label style={{ fontSize: "0.85rem", fontWeight: 700, color: "#94a3b8", display: "block", marginBottom: "8px" }}>
-                Optical Bubble Recognition Grid (Questions 1 - 10)
+              <label style={{ fontSize: "0.85rem", fontWeight: 800, color: "#f6dd84", display: "block", marginBottom: "8px" }}>
+                🎯 Teacher Master Answer Key &amp; Student Optical Bubbles (Questions 1 – {questionCount})
               </label>
-              <div style={{ display: "grid", gridTemplateColumns: "repeat(5, 1fr)", gap: "10px" }}>
-                {[1, 2, 3, 4, 5, 6, 7, 8, 9, 10].map((qNum) => (
+              <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(150px, 1fr))", gap: "10px", maxHeight: "360px", overflowY: "auto", paddingRight: "4px" }}>
+                {Array.from({ length: Math.max(1, Math.min(200, Number(questionCount) || 10)) }, (_, i) => i + 1).map((qNum) => (
                   <div
                     key={qNum}
                     style={{
-                      background: "rgba(255,255,255,0.04)",
+                      background: "rgba(8, 24, 51, 0.72)",
                       padding: "8px",
-                      borderRadius: "6px",
+                      borderRadius: "8px",
                       textAlign: "center",
-                      border: "1px solid rgba(255,255,255,0.08)"
+                      border: "1px solid rgba(212, 175, 55, 0.35)"
                     }}
                   >
-                    <div style={{ fontSize: "0.8rem", fontWeight: 700, color: "#cbd5e1", marginBottom: "4px" }}>
-                      Q{qNum}
+                    <div style={{ fontSize: "0.78rem", fontWeight: 800, color: "#f6dd84", marginBottom: "5px" }}>
+                      Q{qNum} (Key: {teacherAnswerKey[qNum] || "A"})
                     </div>
+                    <div style={{ display: "flex", justifyContent: "center", gap: "4px", marginBottom: "6px" }}>
+                      {["A", "B", "C", "D"].map((opt) => (
+                        <button
+                          key={`key-${opt}`}
+                          type="button"
+                          onClick={() => handleTeacherKeySelect(qNum, opt)}
+                          style={{
+                            width: "22px",
+                            height: "22px",
+                            borderRadius: "4px",
+                            border: (teacherAnswerKey[qNum] || "A") === opt ? "2px solid #f6dd84" : "1px solid rgba(255,255,255,0.2)",
+                            background: (teacherAnswerKey[qNum] || "A") === opt ? "#d4af37" : "transparent",
+                            color: (teacherAnswerKey[qNum] || "A") === opt ? "#081833" : "#94a3b8",
+                            fontSize: "0.68rem",
+                            fontWeight: 800,
+                            cursor: "pointer",
+                            padding: 0
+                          }}
+                        >
+                          {opt}
+                        </button>
+                      ))}
+                    </div>
+                    <div style={{ fontSize: "0.66rem", color: "#94a3b8", marginBottom: "3px" }}>Student Mark:</div>
                     <div style={{ display: "flex", justifyContent: "center", gap: "4px" }}>
                       {["A", "B", "C", "D"].map((opt) => (
                         <button
-                          key={opt}
+                          key={`stu-${opt}`}
                           type="button"
                           onClick={() => handleBubbleSelect(qNum, opt)}
                           style={{
                             width: "22px",
                             height: "22px",
                             borderRadius: "50%",
-                            border: answers[qNum] === opt ? "2px solid #3b82f6" : "1px solid rgba(255,255,255,0.2)",
-                            background: answers[qNum] === opt ? "#3b82f6" : "transparent",
+                            border: answers[qNum] === opt ? "2px solid #38bdf8" : "1px solid rgba(255,255,255,0.2)",
+                            background: answers[qNum] === opt ? "#0d2247" : "transparent",
                             color: "#ffffff",
-                            fontSize: "0.7rem",
+                            fontSize: "0.68rem",
                             fontWeight: 700,
                             cursor: "pointer",
                             padding: 0
@@ -260,7 +449,7 @@ export default function ExamScannerDashboard() {
             </div>
 
             <button className="scan-btn" onClick={handleScanSheet} disabled={loading}>
-              {loading ? "EVALUATING AGAINST CURRICULUM..." : "⚡ RUN OMR AI AUTO-GRADING"}
+              {loading ? "EVALUATING AGAINST CURRICULUM..." : `⚡ START AI SCAN MARKING & GRADING (${questionCount} Qs)`}
             </button>
           </div>
 
@@ -304,6 +493,15 @@ export default function ExamScannerDashboard() {
                       {scanResult.needsManualReview ? "Yes (Flagged)" : "No (Auto-Certified)"}
                     </strong>
                   </div>
+                  {Array.isArray(scanResult.perQuestionBreakdown) && scanResult.perQuestionBreakdown.length > 0 && (
+                    <div style={{ marginTop: "10px", maxHeight: "200px", overflowY: "auto", display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(95px, 1fr))", gap: "6px" }}>
+                      {scanResult.perQuestionBreakdown.map((item) => (
+                        <div key={item.questionNumber} style={{ padding: "4px 6px", borderRadius: "6px", fontSize: "0.72rem", fontWeight: 700, background: item.marksAwarded > 0 ? "rgba(16,185,129,0.2)" : "rgba(239,68,68,0.2)", color: item.marksAwarded > 0 ? "#6ee7b7" : "#fca5a5" }}>
+                          Q{item.questionNumber}: {item.studentAnswer || "-"}/{item.expectedAnswer || "A"} {item.marksAwarded > 0 ? "✔" : "✘"}
+                        </div>
+                      ))}
+                    </div>
+                  )}
                 </div>
               </div>
             ) : (

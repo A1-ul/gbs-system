@@ -197,9 +197,38 @@ const deleteProctorEvidence = async (req, res, next) => {
   }
 };
 
+const saveScannerAnswerKey = async (req, res, next) => {
+  try {
+    const tenantId = resolveTenantId(req, 1);
+    const saved = await aiExamService.saveScannerAnswerKey(tenantId, req.body || {}, req.user);
+    res.status(200).json({
+      status: 'success',
+      message: `Answer key saved cleanly (${saved.questionCount} questions) and linked to AI Exam Scanner.`,
+      data: { answerKey: saved, answerKeyConfig: saved }
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+
+const getScannerAnswerKey = async (req, res, next) => {
+  try {
+    const tenantId = resolveTenantId(req, 1);
+    const config = await aiExamService.getScannerAnswerKey(tenantId, req.query || {});
+    res.status(200).json({
+      status: 'success',
+      data: { answerKey: config, answerKeyConfig: config }
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+
 module.exports = {
   getExams,
   createExam,
+  saveScannerAnswerKey,
+  getScannerAnswerKey,
   submitAnswerSheet,
   getAnswerSheets,
   gradeAnswerSheet,

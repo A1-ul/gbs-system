@@ -11,6 +11,7 @@ import { isDemoSandboxMode, clearAuthStorage } from "../../../../../utils/tokenS
 import { checkDemoEntryLimit, trackDemoEntryCreated } from "../../../../../utils/demoLimitGuard";
 import { useDashboardTabSync } from "../../../../../hooks/useDashboardTabSync";
 import SchoolClinicHubPanel from "../../../../../components/common/SchoolClinicHubPanel";
+import StaffAttendanceClockWidget from "../../../../../components/common/StaffAttendanceClockWidget";
 import "../teacher/TeacherDashboard.css";
 
 export default function HRDashboard() {
@@ -592,6 +593,10 @@ export default function HRDashboard() {
         {/* TAB 1: STAFF DIRECTORY */}
         {activeTab === "staff_roster" && (
           <div>
+            <StaffAttendanceClockWidget
+              roleOverride="HR"
+              onFeedback={(msg, isErr) => showToast(isErr ? "error" : "success", "STAFF CLOCK-IN DESK", msg)}
+            />
             <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "1rem" }}>
               <div>
                 <h3 style={{ margin: 0, fontSize: "1.15rem", fontWeight: "800", color: "#f8fafc" }}>

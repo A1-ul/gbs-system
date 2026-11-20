@@ -13,6 +13,8 @@ import StudentLogin from "../modules/auth/pages/StudentLogin";
 import ParentLogin from "../modules/auth/pages/ParentLogin";
 import AccountantLogin from "../modules/auth/pages/AccountantLogin";
 import StaffLogin from "../modules/auth/pages/StaffLogin";
+import ForgotPassword from "../modules/auth/pages/ForgotPassword";
+import ResetPassword from "../modules/auth/pages/ResetPassword";
 
 const RoleDashboardView = lazy(() => import("../modules/portal/pages/RoleDashboardView"));
 const AdminDashboard = lazy(() => import("../modules/portal/pages/dashboards/admin/AdminDashboard"));
@@ -233,6 +235,8 @@ export default function AppRouter() {
           <Route path="/login/staff" element={<StaffLogin />} />
           <Route path="/login/hr" element={<StaffLogin defaultRole="HR" />} />
           <Route path="/login/alumni" element={<StaffLogin defaultRole="ALUMNI" />} />
+          <Route path="/forgot-password" element={<ForgotPassword />} />
+          <Route path="/reset-password" element={<ResetPassword />} />
 
           {/* Master Blueprint Section 3: Dedicated Role-Based Interactive Workspaces */}
           <Route path="/portal/admin/dashboard" element={<ProtectedPortalRoute loginPath="/login/admin" allowedRoles={["ADMIN", "SUPER_ADMIN"]}><AdminDashboard /></ProtectedPortalRoute>} />

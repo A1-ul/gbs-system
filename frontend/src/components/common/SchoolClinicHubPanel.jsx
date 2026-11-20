@@ -3,6 +3,7 @@ import apiClient from "../../api/client/apiClient";
 import { getTenantScopedRecord, setTenantScopedRecord } from "../../utils/institutionScope";
 import { isDemoSandboxMode } from "../../utils/tokenStorage";
 import { checkDemoEntryLimit, trackDemoEntryCreated } from "../../utils/demoLimitGuard";
+import StaffAttendanceClockWidget from "./StaffAttendanceClockWidget";
 
 const BLOOD_GROUPS = ["O+", "O-", "A+", "A-", "B+", "B-", "AB+", "AB-", "Pending Screening"];
 const GENOTYPES = ["AA", "AS", "SS", "AC", "SC", "Pending Screening"];
@@ -343,6 +344,14 @@ export default function SchoolClinicHubPanel({
           </div>
         )}
 
+        {["TEACHER", "STAFF", "HR", "ACCOUNTANT", "CLINIC_DOCTOR", "CLINIC_NURSE", "DOCTOR", "NURSE"].includes(normalizedMode) && (
+          <StaffAttendanceClockWidget
+            isClinicDesk={true}
+            currentUser={currentUser}
+            onFeedback={notify}
+          />
+        )}
+
         {showSelfUpdateForm && !isParentView && (
           <form onSubmit={handleSaveMedicalProfile} style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(195px, 1fr))", gap: "10px", padding: "16px", background: "rgba(6, 15, 30, 0.65)", borderRadius: "12px", marginBottom: "16px", border: "1px solid rgba(52, 211, 153, 0.4)" }}>
             <h4 style={{ gridColumn: "1 / -1", margin: 0, color: "#6ee7b7" }}>🩺 Update My Personal Medical Information</h4>
@@ -494,6 +503,13 @@ export default function SchoolClinicHubPanel({
           <span style={{ fontSize: "0.72rem", color: "#94a3b8" }}>Medicine Supplies Monitored</span>
         </div>
       </div>
+
+      {/* School Clinic Medical Officer (Doctor / Nurse) Clock-In & Clock-Out Desk */}
+      <StaffAttendanceClockWidget
+        isClinicDesk={true}
+        currentUser={currentUser}
+        onFeedback={notify}
+      />
 
       {/* Cross-Portal Medical Record Pull Bar */}
       <form onSubmit={(e) => handlePullRecords(e, null)} style={{ display: "flex", gap: "10px", flexWrap: "wrap", marginBottom: "16px", padding: "12px", background: "rgba(6, 15, 30, 0.72)", borderRadius: "12px", border: "1px solid rgba(56, 189, 248, 0.35)" }}>

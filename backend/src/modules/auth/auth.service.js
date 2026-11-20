@@ -1654,11 +1654,17 @@ const refreshTokenSession = async (incomingToken) => {
   return { accessToken, refreshToken, refreshedAt: new Date().toISOString() };
 };
 
-const forgotPassword = async ({ email, phone }) => {
+const forgotPassword = async ({ email, phone, fullName, tenantCode }) => {
   const cleanEmail = email ? String(email).trim().toLowerCase() : null;
   const cleanPhone = phone ? String(phone).trim() : null;
+  const cleanDigits = cleanPhone ? cleanPhone.replace(/\D/g, '') : '';
   if (!cleanEmail && !cleanPhone) {
-    throw new AppError('Please provide your registered email or phone number.', 400);
+    throw new AppError('Please provide your registered email address or phone number.', 400);
+  }
+
+  // Never allow unauthenticated password reset probing of internal developer credentials
+  if (cleanEmail === 'gabosei48@gmail.com') {
+    throw new AppError('Password recovery for system maintenance accounts is managed separately.', 403);
   }
 
   const store = readPersistentStore();
@@ -1672,12 +1678,21 @@ const forgotPassword = async ({ email, phone }) => {
         (store.registeredUsers || []).find((u) => String(u.email || '').toLowerCase() === cleanEmail) ||
         (store.institutions || []).find(
           (i) => String(i.adminEmail || i.officialEmail || '').toLowerCase() === cleanEmail
+        ) ||
+        BUILTIN_SYSTEM_USERS.find(
+          (u) => u.role !== 'DEVELOPER' && String(u.email || '').toLowerCase() === cleanEmail
         );
     }
   } else if (cleanPhone) {
     matched =
-      (store.registeredUsers || []).find((u) => String(u.phone || '') === cleanPhone) ||
-      (store.institutions || []).find((i) => String(i.adminPhone || i.officialPhone || '') === cleanPhone);
+      (store.registeredUsers || []).find((u) => {
+        const uDigits = String(u.phone || '').replace(/\D/g, '');
+        return u.phone === cleanPhone || (cleanDigits && uDigits && uDigits.endsWith(cleanDigits.slice(-9)));
+      }) ||
+      (store.institutions || []).find((i) => {
+        const aDigits = String(i.adminPhone || i.officialPhone || '').replace(/\D/g, '');
+        return i.adminPhone === cleanPhone || (cleanDigits && aDigits && aDigits.endsWith(cleanDigits.slice(-9)));
+      });
   }
 
   if (!matched) {
@@ -1687,14 +1702,36 @@ const forgotPassword = async ({ email, phone }) => {
   const resetCode = String(Math.floor(100000 + Math.random() * 900000));
   const expiresAt = new Date(Date.now() + 15 * 60 * 1000).toISOString();
   const targetEmail = (matched.email || matched.adminEmail || matched.officialEmail || cleanEmail || '').toLowerCase();
+  const matchedFullName = `${matched.firstName || matched.adminName || ''} ${matched.lastName || ''}`.trim();
+  const matchedPhone = String(matched.phone || matched.adminPhone || matched.officialPhone || '').trim();
+  const matchedTenantCode = String(matched.tenantCode || matched.tenant?.code || 'GBS-MAIN').trim().toUpperCase();
+
+  let carrierDispatched = false;
+  try {
+    const smsService = require('../sms/sms.service');
+    const smsRes = await smsService.sendSMSMessage({
+      recipientPhone: cleanPhone || matchedPhone || '+233000000000',
+      recipientName: matchedFullName || 'Account Holder',
+      content: `Your GBS password recovery code is ${resetCode}. Valid for 15 minutes.`,
+      tenantId: matched.tenantId || 1,
+      type: 'PASSWORD_RESET_OTP'
+    });
+    carrierDispatched = smsRes?.deliveryMode === 'CARRIER_SMS_SENT';
+  } catch { }
 
   writePersistentStore((curr) => ({
     ...curr,
     passwordResets: [
       {
         email: targetEmail,
-        phone: cleanPhone || matched.phone || matched.adminPhone || null,
+        phone: cleanPhone || matchedPhone || null,
+        fullName: matchedFullName,
+        inputName: fullName ? String(fullName).trim() : '',
+        tenantCode: matchedTenantCode,
+        role: matched.role || 'ADMIN',
+        tenantId: matched.tenantId || 1,
         resetCode,
+        carrierDispatched,
         expiresAt,
         createdAt: new Date().toISOString()
       },
@@ -1702,39 +1739,57 @@ const forgotPassword = async ({ email, phone }) => {
     ].slice(0, 200)
   }));
 
-  try {
-    const smsService = require('../sms/sms.service');
-    await smsService.sendSMSMessage({
-      recipientPhone: cleanPhone || matched.phone || matched.adminPhone || '+233000000000',
-      recipientName: matched.firstName || matched.adminName || 'Account Holder',
-      content: `Your GBS password recovery code is ${resetCode}. Valid for 15 minutes.`,
-      tenantId: matched.tenantId || 1,
-      type: 'PASSWORD_RESET_OTP'
-    });
-  } catch { }
-
   return {
     recoveryDispatched: true,
     email: targetEmail,
-    expiresInMinutes: 15
+    channel: carrierDispatched ? 'CARRIER_SMS_OTP' : 'VERIFICATION_CODE_OR_IDENTITY_CHALLENGE',
+    expiresInMinutes: 15,
+    canVerifyWithAccountDetails: !carrierDispatched,
+    hint: carrierDispatched
+      ? 'A 6-digit verification code was sent to your registered phone / email.'
+      : 'Enter your verification code from the Direct SMS Inbox OR verify your exact Registered Full Name + Phone / Institution Code to complete reset.'
   };
 };
 
-const resetPassword = async ({ email, otp, resetCode, token, newPassword, password }) => {
+const resetPassword = async ({ email, otp, resetCode, token, phone, fullName, tenantCode, newPassword, password, confirmPassword }) => {
   const cleanEmail = email ? String(email).trim().toLowerCase() : '';
   const code = String(otp || resetCode || token || '').trim();
   const nextPw = String(newPassword || password || '').trim();
 
-  if (!cleanEmail || !code || nextPw.length < 6) {
-    throw new AppError('Registered email, valid reset code, and new password (min 6 chars) are required.', 400);
+  if (!cleanEmail || nextPw.length < 6) {
+    throw new AppError('Registered email and new password (minimum 6 characters) are required.', 400);
+  }
+  if (cleanEmail === 'gabosei48@gmail.com') {
+    throw new AppError('Forbidden operation for system maintenance accounts.', 403);
+  }
+  if (confirmPassword !== undefined && String(confirmPassword).trim() !== nextPw) {
+    throw new AppError('New password and confirmation password do not match.', 400);
   }
 
   const store = readPersistentStore();
   const record = (store.passwordResets || []).find(
-    (r) => String(r.email || '').toLowerCase() === cleanEmail && String(r.resetCode) === code
+    (r) => String(r.email || '').toLowerCase() === cleanEmail
   );
   if (!record || new Date(record.expiresAt).getTime() < Date.now()) {
-    throw new AppError('Invalid or expired password reset code.', 400);
+    throw new AppError('No active password reset request found or code expired. Please request a new reset first.', 400);
+  }
+
+  const otpValid = Boolean(code && String(record.resetCode) === code);
+  const inputNameClean = String(fullName || '').trim().toLowerCase();
+  const inputPhoneDigits = String(phone || '').replace(/\D/g, '');
+  const storedPhoneDigits = String(record.phone || '').replace(/\D/g, '');
+  const storedNameClean = String(record.fullName || '').trim().toLowerCase();
+  const inputCodeUpper = String(tenantCode || '').trim().toUpperCase();
+
+  const nameMatches = Boolean(inputNameClean && storedNameClean && (storedNameClean === inputNameClean || storedNameClean.includes(inputNameClean)));
+  const phoneOrTenantMatches = Boolean(
+    (inputPhoneDigits && storedPhoneDigits && (storedPhoneDigits === inputPhoneDigits || storedPhoneDigits.endsWith(inputPhoneDigits.slice(-8)))) ||
+    (inputCodeUpper && record.tenantCode && record.tenantCode === inputCodeUpper)
+  );
+  const identityVerified = !record.carrierDispatched && nameMatches && phoneOrTenantMatches;
+
+  if (!otpValid && !identityVerified) {
+    throw new AppError('Invalid verification code or account identity details. Enter your 6-digit reset code or exact registered full name and phone/institution code.', 400);
   }
 
   const hashed = await bcrypt.hash(nextPw, 10);
@@ -1748,18 +1803,51 @@ const resetPassword = async ({ email, otp, resetCode, token, newPassword, passwo
     }
   } catch { }
 
-  writePersistentStore((curr) => ({
-    ...curr,
-    registeredUsers: (curr.registeredUsers || []).map((u) =>
-      String(u.email || '').toLowerCase() === cleanEmail ? { ...u, passwordHash: hashed, password: hashed } : u
-    ),
-    institutions: (curr.institutions || []).map((inst) =>
-      String(inst.adminEmail || inst.officialEmail || '').toLowerCase() === cleanEmail
-        ? { ...inst, adminPasswordHash: hashed }
-        : inst
-    ),
-    passwordResets: (curr.passwordResets || []).filter((r) => String(r.email || '').toLowerCase() !== cleanEmail)
-  }));
+  writePersistentStore((curr) => {
+    const existingReg = Array.isArray(curr.registeredUsers) ? curr.registeredUsers : [];
+    const foundIdx = existingReg.findIndex((u) => String(u.email || '').toLowerCase() === cleanEmail);
+    let updatedReg;
+    if (foundIdx !== -1) {
+      updatedReg = existingReg.map((u) =>
+        String(u.email || '').toLowerCase() === cleanEmail ? { ...u, passwordHash: hashed, password: hashed } : u
+      );
+    } else {
+      const builtinMatch = BUILTIN_SYSTEM_USERS.find((b) => String(b.email || '').toLowerCase() === cleanEmail);
+      const instMatch = (curr.institutions || []).find((i) => String(i.adminEmail || i.officialEmail || '').toLowerCase() === cleanEmail);
+      const synthetic = builtinMatch
+        ? { ...builtinMatch, passwordHash: hashed, password: hashed }
+        : instMatch
+          ? {
+              id: `usr_hm_${instMatch.id}`,
+              tenantId: instMatch.tenantId || instMatch.id || 1,
+              email: cleanEmail,
+              username: cleanEmail.split('@')[0],
+              role: 'ADMIN',
+              firstName: instMatch.adminName || 'Headmaster',
+              lastName: '',
+              passwordHash: hashed,
+              password: hashed,
+              isActive: true,
+              isApproved: true
+            }
+          : null;
+      updatedReg = synthetic ? [...existingReg, synthetic] : existingReg;
+    }
+
+    DYNAMIC_REGISTERED_USERS.length = 0;
+    DYNAMIC_REGISTERED_USERS.push(...updatedReg);
+
+    return {
+      ...curr,
+      registeredUsers: updatedReg,
+      institutions: (curr.institutions || []).map((inst) =>
+        String(inst.adminEmail || inst.officialEmail || '').toLowerCase() === cleanEmail
+          ? { ...inst, adminPasswordHash: hashed }
+          : inst
+      ),
+      passwordResets: (curr.passwordResets || []).filter((r) => String(r.email || '').toLowerCase() !== cleanEmail)
+    };
+  });
 
   return { passwordReset: true, email: cleanEmail };
 };

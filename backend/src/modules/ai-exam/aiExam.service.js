@@ -301,6 +301,59 @@ const createExam = async (tenantId = 1, payload = {}, user = null) => {
 const computeLetterGrade = (pct) =>
   pct >= 90 ? 'A+' : pct >= 80 ? 'A' : pct >= 70 ? 'B' : pct >= 60 ? 'C' : pct >= 50 ? 'D' : 'F';
 
+const saveScannerAnswerKey = async (tenantId = 1, payload = {}, user = null) => {
+  const tid = parseInt(tenantId, 10) || 1;
+  const examId = String(payload.examId || 'DEFAULT').trim();
+  const classId = payload.classId ? String(payload.classId) : '';
+  const rawKey =
+    (payload.answerKey && typeof payload.answerKey === 'object' ? payload.answerKey : null) ||
+    (payload.teacherAnswerKey && typeof payload.teacherAnswerKey === 'object' ? payload.teacherAnswerKey : null) ||
+    (payload.answers && typeof payload.answers === 'object' ? payload.answers : {});
+  const questionCount = Math.max(1, Math.min(200, parseInt(payload.questionCount, 10) || Object.keys(rawKey).length || 10));
+  const marksPerQuestion = Math.max(1, Math.min(100, Number(payload.marksPerQuestion || 1) || 1));
+  const normalizedKey = {};
+  for (let i = 1; i <= questionCount; i++) {
+    const val = rawKey[i] ?? rawKey[String(i)];
+    if (val !== undefined && String(val).trim() !== '') {
+      normalizedKey[String(i)] = String(val).trim().toUpperCase();
+    }
+  }
+  if (Object.keys(normalizedKey).length === 0) {
+    throw new AppError('Please provide at least one correct answer in the Teacher Master Answer Key before saving.', 400);
+  }
+
+  const record = {
+    examId,
+    classId,
+    tenantId: tid,
+    questionCount,
+    marksPerQuestion,
+    answerKey: normalizedKey,
+    savedBy: user?.email || user?.firstName || 'TEACHER',
+    savedAt: new Date().toISOString()
+  };
+
+  writePersistentStore((curr) => {
+    const scannerAnswerKeys = { ...(curr.scannerAnswerKeys || {}) };
+    const tKeys = { ...(scannerAnswerKeys[String(tid)] || {}) };
+    tKeys[`${examId}::${classId || 'ALL'}`] = record;
+    tKeys[examId] = record;
+    scannerAnswerKeys[String(tid)] = tKeys;
+    return { ...curr, scannerAnswerKeys };
+  });
+
+  return record;
+};
+
+const getScannerAnswerKey = async (tenantId = 1, query = {}) => {
+  const tid = parseInt(tenantId, 10) || 1;
+  const examId = String(query.examId || 'DEFAULT').trim();
+  const classId = query.classId ? String(query.classId) : '';
+  const store = readPersistentStore();
+  const tKeys = store.scannerAnswerKeys?.[String(tid)] || {};
+  return tKeys[`${examId}::${classId || 'ALL'}`] || tKeys[examId] || null;
+};
+
 const submitAnswerSheet = async (
   {
     examId,
@@ -310,9 +363,12 @@ const submitAnswerSheet = async (
     classId,
     imageUrl,
     extractedAnswers,
+    answers,
     writtenAnswers,
     essayAnswers,
     teacherAnswerKey,
+    questionCount,
+    marksPerQuestion,
     penaltyMarksDeducted = 0,
     proctoringWarnings = 0,
     proctoringLog = [],
@@ -378,36 +434,74 @@ const submitAnswerSheet = async (
   }
   questions = enrichQuestionsWithOptions(questions);
 
-  // Update questionBank correct answers if teacher supplied customized answer key
-  if (teacherAnswerKey && typeof teacherAnswerKey === 'object') {
+  const savedKeyCfg =
+    store.scannerAnswerKeys?.[String(tid)]?.[`${examId || exam.id}::${classId || 'ALL'}`] ||
+    store.scannerAnswerKeys?.[String(tid)]?.[String(examId || exam.id)] ||
+    null;
+
+  const mergedTeacherKey = {
+    ...(savedKeyCfg?.answerKey || {}),
+    ...(teacherAnswerKey && typeof teacherAnswerKey === 'object' ? teacherAnswerKey : {})
+  };
+
+  const explicitQCount = Math.max(
+    0,
+    parseInt(questionCount, 10) || (teacherAnswerKey ? Object.keys(teacherAnswerKey).length : 0) || Number(savedKeyCfg?.questionCount || 0)
+  );
+  const perQMarks = Math.max(1, Number(marksPerQuestion || savedKeyCfg?.marksPerQuestion || 10));
+  const combinedWrittenPre = {
+    ...(essayAnswers && typeof essayAnswers === 'object' ? essayAnswers : {}),
+    ...(writtenAnswers && typeof writtenAnswers === 'object' ? writtenAnswers : {})
+  };
+
+  // When Teacher runs the AI Exam Scanner with an explicit question count N (e.g. 5, 20, 40, 50) & Answer Key, expand/trim OMR evaluation to match 1..N exactly
+  if (explicitQCount > 0 && Object.keys(mergedTeacherKey).length > 0 && Object.keys(combinedWrittenPre).length === 0) {
+    const omrList = [];
+    for (let i = 1; i <= explicitQCount; i++) {
+      const existingQ = questions[i - 1] || {};
+      const keyVal = mergedTeacherKey[i] ?? mergedTeacherKey[String(i)] ?? existingQ.correctOption ?? 'A';
+      omrList.push({
+        ...existingQ,
+        id: existingQ.id || `omr-q-${i}`,
+        questionNumber: i,
+        questionType: existingQ.questionType || 'MULTIPLE_CHOICE',
+        questionText: existingQ.questionText || `OMR Question ${i}`,
+        correctOption: String(keyVal).trim().toUpperCase(),
+        correctAnswer: String(keyVal).trim().toUpperCase(),
+        marks: Number(marksPerQuestion || savedKeyCfg?.marksPerQuestion || existingQ.marks || perQMarks)
+      });
+    }
+    questions = omrList;
+  } else if (Object.keys(mergedTeacherKey).length > 0) {
     for (const q of questions) {
-      if (teacherAnswerKey[q.questionNumber]) {
-        q.correctAnswer = teacherAnswerKey[q.questionNumber];
-        q.correctOption = teacherAnswerKey[q.questionNumber];
+      const tk = mergedTeacherKey[q.questionNumber] ?? mergedTeacherKey[String(q.questionNumber)];
+      if (tk) {
+        q.correctAnswer = tk;
+        q.correctOption = tk;
         if (typeof q.id === 'number') {
           await prisma.questionBank.update({
             where: { id: q.id },
-            data: { correctAnswer: teacherAnswerKey[q.questionNumber] }
+            data: { correctAnswer: tk }
           }).catch(() => { });
         }
       }
     }
   }
 
-  const totalQuestions = questions.length || 10;
+  const totalQuestions = questions.length || explicitQCount || 10;
   let matchedAnswers = 0;
   let calculatedScore = 0;
   let objectiveMarksObtained = 0;
   let maxPossibleMarks = 0;
   let writtenQuestionsCount = 0;
   let hasManualTheoryReview = false;
-  const combinedWritten = {
-    ...(essayAnswers && typeof essayAnswers === 'object' ? essayAnswers : {}),
-    ...(writtenAnswers && typeof writtenAnswers === 'object' ? writtenAnswers : {})
-  };
+  const combinedWritten = combinedWrittenPre;
+  const resolvedExtracted =
+    (extractedAnswers && typeof extractedAnswers === 'object' ? extractedAnswers : null) ||
+    (answers && typeof answers === 'object' ? answers : null);
   const perQuestionBreakdown = [];
 
-  if (questions.length > 0 && ((extractedAnswers && typeof extractedAnswers === 'object') || Object.keys(combinedWritten).length > 0)) {
+  if (questions.length > 0 && (resolvedExtracted || Object.keys(combinedWritten).length > 0)) {
     questions.forEach((q, idx) => {
       const qMarks = Number(q.marks) || 10;
       const qType = String(q.questionType || 'MULTIPLE_CHOICE').toUpperCase();
@@ -415,18 +509,21 @@ const submitAnswerSheet = async (
 
       const lookupKeys = [String(q.questionNumber), String(idx + 1), String(q.id)].filter(Boolean);
       const rawWritten = lookupKeys.map((k) => combinedWritten[k]).find((v) => v !== undefined && String(v).trim() !== '');
-      const rawObj = extractedAnswers ? lookupKeys.map((k) => extractedAnswers[k]).find((v) => v !== undefined && String(v).trim() !== '') : undefined;
+      const rawObj = resolvedExtracted ? lookupKeys.map((k) => resolvedExtracted[k]).find((v) => v !== undefined && String(v).trim() !== '') : undefined;
 
       if (qType === 'THEORY_ESSAY' || qType === 'SHORT_ANSWER' || qType === 'CASE_STUDY') {
         writtenQuestionsCount++;
         hasManualTheoryReview = true;
         const studentResponse = String(rawWritten ?? rawObj ?? '').trim();
+        const acceptedAns = String(q.acceptedAnswer || '').trim().toLowerCase();
         const keywords = String(q.acceptedKeywords || '')
           .split(',')
           .map((s) => s.trim().toLowerCase())
           .filter(Boolean);
         let autoSuggestedMarks = 0;
-        if (studentResponse && keywords.length > 0) {
+        if (studentResponse && acceptedAns && qType === 'SHORT_ANSWER' && studentResponse.toLowerCase() === acceptedAns) {
+          autoSuggestedMarks = qMarks;
+        } else if (studentResponse && keywords.length > 0) {
           const lowerResp = studentResponse.toLowerCase();
           const matchedKw = keywords.filter((kw) => lowerResp.includes(kw)).length;
           autoSuggestedMarks = Math.round((matchedKw / keywords.length) * qMarks * 10) / 10;
@@ -436,9 +533,10 @@ const submitAnswerSheet = async (
           id: q.id,
           questionType: qType,
           questionText: q.questionText,
+          caseScenario: q.caseScenario || '',
           maxMarks: qMarks,
           studentAnswer: studentResponse,
-          correctAnswer: q.markingGuide || q.acceptedKeywords || 'Teacher Rubric Grading',
+          correctAnswer: q.acceptedAnswer || q.markingGuide || q.acceptedKeywords || 'Teacher Rubric Grading',
           markingGuide: q.markingGuide || '',
           acceptedKeywords: q.acceptedKeywords || '',
           awardedMarks: 0,
@@ -624,18 +722,20 @@ const submitAnswerSheet = async (
     proctoringEvidence: mergedEvents,
     scoreObtained: calculatedScore,
     objectiveMarksObtained,
+    objectiveScore: objectiveMarksObtained,
     totalMarks: denom,
     percentage,
     totalQuestions,
     writtenQuestionsCount,
     matchedAnswers,
+    correctCount: matchedAnswers,
     grade,
     isPassed,
     pass: isPassed,
     confidencePct,
     needsManualReview,
     gradingStatus,
-    extractedAnswers: extractedAnswers || {},
+    extractedAnswers: resolvedExtracted || {},
     writtenAnswers: combinedWritten,
     perQuestionBreakdown,
     teacherFeedback: '',
@@ -704,11 +804,13 @@ const submitAnswerSheet = async (
     proctoringEvidence: submissionEntry.proctoringEvidence,
     scoreObtained: calculatedScore,
     objectiveMarksObtained,
+    objectiveScore: objectiveMarksObtained,
     totalMarks: denom,
     percentage,
     totalQuestions,
     writtenQuestionsCount,
     matchedAnswers,
+    correctCount: matchedAnswers,
     grade,
     isPassed,
     pass: isPassed,
@@ -929,6 +1031,15 @@ const recordProctorHeartbeat = async (tenantId = 1, payload = {}) => {
       examId,
       examTitle,
       studentId: studentId || existing.studentId || sessionKey,
+      studentIndexNumber: String(
+        payload.studentIndexNumber ||
+          payload.studentIndex ||
+          payload.admissionNumber ||
+          existing.studentIndexNumber ||
+          studentId ||
+          ''
+      ).trim(),
+      className: String(payload.className || payload.level || existing.className || 'Enrolled Class').trim(),
       studentName: studentName || existing.studentName,
       studentEmail: studentEmail || existing.studentEmail || '',
       status: payload.status || existing.status || 'CAMERA_ACTIVE',
@@ -936,6 +1047,7 @@ const recordProctorHeartbeat = async (tenantId = 1, payload = {}) => {
       movementDelta: payload.movementDelta !== undefined ? Number(payload.movementDelta) : (existing.movementDelta || 0),
       cameraActive: Boolean(payload.cameraActive ?? payload.snapshotDataUrl ?? existing.cameraActive),
       snapshotDataUrl: payload.snapshotDataUrl || existing.snapshotDataUrl || null,
+      liveFrameSeq: (Number(existing.liveFrameSeq) || 0) + 1,
       latestReason: payload.latestReason || existing.latestReason || 'Continuous webcam & focus monitoring active.',
       selfWarningsCount: clientWarnings,
       teacherWarningsCount: Number(existing.teacherWarningsCount || 0),
@@ -952,6 +1064,13 @@ const recordProctorHeartbeat = async (tenantId = 1, payload = {}) => {
     activeProctoringSessions[String(tid)] = tenantSessions;
     return { ...curr, activeProctoringSessions };
   });
+
+  try {
+    const socketServer = require('../../core/socket/socketServer');
+    if (socketServer && typeof socketServer.emitToTenant === 'function') {
+      socketServer.emitToTenant(tid, 'proctor_live_frame', updatedSession);
+    }
+  } catch { }
 
   return updatedSession;
 };
@@ -1263,6 +1382,8 @@ const deleteProctorEvidence = async (tenantId = 1, evidenceId) => {
 module.exports = {
   getExams,
   createExam,
+  saveScannerAnswerKey,
+  getScannerAnswerKey,
   submitAnswerSheet,
   gradeAnswerSheet,
   getAnswerSheets,

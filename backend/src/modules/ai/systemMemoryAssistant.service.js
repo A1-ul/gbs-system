@@ -101,16 +101,16 @@ const CORE_TOPICS = [
     action: { openTab: 'clinic' }
   },
   {
-    id: 'university',
-    keywords: ['university', 'internship', 'attachment', 'src', 'stream', 'evening', 'weekend', 'sandwich', 'regular', 'lecturer', 'graduate', 'alumni', 'degree', 'cgpa'],
-    speech: 'University Hub strictly serves University institutions with separate Industrial Internships and Academic Field Attachments depending on each student course offering, alongside Lecturer evaluation, exams, level progression to Alumni, Regular/Evening/Sandwich/Weekend streams, and SRC governance positions.',
-    action: { openTab: 'university' }
+    id: 'academics_placements',
+    keywords: ['internship', 'attachment', 'src', 'prefect', 'stream', 'evening', 'weekend', 'sandwich', 'regular', 'lecturer', 'graduate', 'alumni', 'degree', 'cgpa', 'tvet', 'wassce', 'bece'],
+    speech: 'Each registered institution runs modern academic operations tailored natively to its tier inside its main Academics, Curriculum, and Courses portal: Nursery to JHS manages Terms 1–3, BECE readiness, Houses, and Prefects; Senior High School manages WASSCE Tracks, Houses, and Prefect Council; TVET manages Trade Practicals, Attachments, Shift Streams, and Workshop Captains; University manages separated Industrial Internships and Academic Field Attachments depending on course offerings, GPA grading, Regular/Evening/Sandwich/Weekend streams, SRC governance, and graduation to Alumni.',
+    action: { openTab: 'academics' }
   },
   {
     id: 'institutions',
-    keywords: ['jhs', 'shs', 'technical', 'tvet', 'separate', 'institution type', 'difference', 'nursery', 'polytechnic'],
-    speech: 'GBS separates operations strictly across four institution types: Nursery to JHS, Senior High School, Technical and TVET, and University. Each portal adapts role titles, classes, and permitted modules automatically while blocking non-university portals from university-only features.',
-    action: null
+    keywords: ['jhs', 'shs', 'technical', 'tvet', 'separate', 'institution type', 'difference', 'nursery', 'polytechnic', 'university'],
+    speech: 'GBS operates directly according to the registered institution type across Nursery to JHS, Senior High School, Technical TVET, and University. Headmasters, Principals, Teachers, Lecturers, and Students automatically see their institution-specific classes, grading scales, promotions, streams, and placements.',
+    action: { openTab: 'academics' }
   },
   {
     id: 'defaulters',
@@ -248,8 +248,8 @@ const TOPIC_HUMAN_LABELS = {
   role_alumni: 'Alumni Activities',
   clinic: 'Personal Health & School Clinic Dossier',
   clinic_pull: 'Personal Health & Medical Record Lookup',
-  university: 'University Hub (Separate Internships & Attachments, Streams, SRC & Graduation)',
-  institutions: 'Institution Tier Separation (JHS, SHS, Technical, University)',
+  academics_placements: 'Tier-Tailored Academics, Placements (Internships vs Attachments), Streams & Student Leadership',
+  institutions: 'Institution Tier Operations (Nursery-JHS, SHS, Technical, University)',
   defaulters: 'Exam, Assignment & Attendance Defaulters Tracker',
   pricing: 'Active-Student Subscription Pricing & Discounts',
   staff_approval: 'Headmaster Pending Staff Approval Workflow',

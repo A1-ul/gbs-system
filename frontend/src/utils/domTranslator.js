@@ -30,7 +30,7 @@ const INSTANT_PHRASES = {
     "school clinic & medical file": "Clinique Scolaire et Dossier Médical",
     "school clinic & health billing ledger": "Clinique Scolaire et Facturation Santé",
     "university operations": "Opérations Universitaires",
-    "university hub": "Pôle Universitaire",
+    "academics & placements": "Académique et Stages",
     "academic classes & curriculum": "Classes Académiques et Programme",
     "admissions pipeline & intake": "Pipeline des Admissions",
     "financial statements & audit engine": "États Financiers et Moteur d'Audit",

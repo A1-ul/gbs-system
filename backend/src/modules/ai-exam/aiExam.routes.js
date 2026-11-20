@@ -10,6 +10,8 @@ router.use(optionalProtect);
 
 router.get('/exams', aiExamController.getExams);
 router.post('/exams', aiExamController.createExam);
+router.get('/answer-key', aiExamController.getScannerAnswerKey);
+router.post('/answer-key', aiExamController.saveScannerAnswerKey);
 router.post('/scan-grade', aiExamController.submitAnswerSheet);
 router.post('/scan-sheet', aiExamController.submitAnswerSheet);
 router.get('/answer-sheets', aiExamController.getAnswerSheets);

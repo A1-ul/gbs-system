@@ -217,6 +217,7 @@ app.post('/api/v1/admissions', idempotencyProtection.guard('ADMISSION_SUBMISSION
 app.post('/api/v1/admissions/inquiries', idempotencyProtection.guard('ADMISSION_INQUIRY'));
 app.post('/api/v1/clinic/visits', idempotencyProtection.guard('CLINIC_ENCOUNTER'));
 app.post('/api/v1/university/internships', idempotencyProtection.guard('UNIVERSITY_INTERNSHIP'));
+app.post('/api/v1/institution/internships', idempotencyProtection.guard('UNIVERSITY_INTERNSHIP'));
 
 // API Routes
 app.use('/api/v1/auth', authRoutes);
@@ -225,6 +226,7 @@ app.use('/api/v1/users', userRoutes);
 app.use('/api/v1/academics', academicRoutes);
 app.use('/api/v1/academic', academicRoutes);
 app.use('/api/v1/university', require('../modules/university/university.routes'));
+app.use('/api/v1/institution', require('../modules/university/institution.routes'));
 app.use('/api/v1/clinic', require('../modules/clinic/clinic.routes'));
 app.use('/api/v1/health-clinic', require('../modules/clinic/clinic.routes'));
 app.use('/api/v1/finance', financeRoutes);
@@ -241,6 +243,7 @@ app.use('/api/v1/developer-control-center', devControlRoutes);
 app.use('/api/v1/timetables', timetableRoutes);
 app.use('/api/v1/timetable', timetableRoutes);
 app.use('/api/v1/attendance', attendanceRoutes);
+app.use('/api/v1/staff-attendance', require('../modules/attendance/staffAttendance.routes'));
 app.use('/api/v1/assignments', assignmentRoutes);
 app.use('/api/v1/assignment', assignmentRoutes);
 app.use('/api/v1/meetings', meetingRoutes);

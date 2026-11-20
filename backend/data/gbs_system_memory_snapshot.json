@@ -38,7 +38,7 @@
       "authMiddleware": "backend/src/middleware/auth.middleware.js",
       "rcceErrorHandler": "backend/src/rcce/systemErrorHandler.js",
       "institutionProfilesUtil": "backend/src/utils/institutionProfiles.js",
-      "universityRoutes": "backend/src/modules/university/university.routes.js (/internships, /streams, /governance, /exams, /results, /advance-student — strictly UNIVERSITY only)",
+      "institutionAndUniversityRoutes": "backend/src/modules/university/institution.routes.js (tier-native /api/v1/institution/* across JHS, SHS, TVET & University inside Academics/Curriculum/Courses) + legacy university.routes.js (/api/v1/university/* strictly UNIVERSITY only)",
       "schoolClinicRoutes": "backend/src/modules/clinic/clinic.routes.js (/profiles, /visits, /pull-record, /inventory — auto-linked to Auth registration & Admissions)",
       "systemMemoryVoiceAiRoutes": "backend/src/modules/ai/ai.routes.js (GET /system-memory, POST /assistant-query linked directly to gbs_system_memory_snapshot.json & live store)",
       "defaultersComplianceRoutes": "backend/src/modules/academic/academic.routes.js (/defaulters-report, /defaulters-report/sync)",
@@ -372,16 +372,16 @@
     },
     {
       "issueCode": "DIAG-CLINIC-PRIVACY-UNIV-SPLIT-NO-TOOLTIPS-V211",
-      "symptom": "Tooltips needed removal; mobile PWA install prompt needed synchronous user-gesture trigger; University Hub needed strict separation of Industrial Internships and Academic & Field Attachments; School Clinic needed strict own-health-only privacy for regular users vs full Staff & Student profiles for Headmaster; Voice AI needed exact institutional role explanations with strict non-disclosure of internal maintenance details.",
-      "rootCause": "beforeinstallprompt.prompt() ran after await navigator.serviceWorker.register(); Internship and Attachment shared one tab/endpoint; SchoolClinicHubPanel gave non-Headmasters clinic write processes and pulled /clinic/inventory; tooltips rendered via UniversalHeadingTooltipHUD and title attributes.",
-      "resolution": "Removed UniversalHeadingTooltipHUD and stripped title attributes on hover/focus; moved prompt() to synchronous click handler + added Install button on MainLoginPage; split /university/internships and /university/attachments; enforced ownHealthOnly scoping in clinic.service/controller/routes + SchoolClinicHubPanel while adding Headmaster Staff & Student full health profile directory; added ROLE_ACTIVITIES_GUIDE and non-disclosure guard in systemMemoryAssistant + GBSVoiceAssistant.",
+      "symptom": "Tooltips needed removal; mobile PWA install prompt needed synchronous user-gesture trigger; School Operations needed tier-native Academics/Curriculum/Courses workflows tailoring classes, streams, attachments vs industrial internships, progression, and leadership to Nursery-JHS, SHS, TVET, and University; School Clinic needed own-health privacy for regular users vs Headmaster directory; Voice AI needed role guide with internal non-disclosure.",
+      "rootCause": "beforeinstallprompt.prompt() ran after await navigator.serviceWorker.register(); Internship and Attachment shared one tab/endpoint; UniversityOperationsPanel blocked JHS/SHS/TVET behind a separate tertiary wall instead of adapting inside Academics/Curriculum/Courses; SchoolClinicHubPanel gave non-Headmasters clinic write actions; tooltips rendered via UniversalHeadingTooltipHUD and title attributes.",
+      "resolution": "Removed UniversalHeadingTooltipHUD and stripped hover tooltips; moved prompt() to synchronous click handler; removed standalone tertiary tab walls and added /api/v1/institution/* so Academics/Curriculum/Courses natively operate for JHS, SHS, TVET (attachments+workshops), and University (separated INT- industrial internships vs ATT- attachments); enforced ownHealthOnly clinic privacy vs Headmaster directory; added ROLE_ACTIVITIES_GUIDE and non-disclosure guard in Voice AI.",
       "status": "PERMANENTLY_GUARDED"
     }
   ],
   "verificationSummary": {
-    "backendTestSuitesPassed": "All backend integration suites verified",
-    "chromeE2EDashboardsVerified": "All 8 user dashboards in DEMO_SANDBOX and LIVE_PRODUCTION plus Developer control suite verified",
-    "institutionSeparationUniversityClinicVoiceVerified": "2026-11-20 Separated Internships/Attachments, Clinic Privacy & Non-Disclosure Verified",
+    "backendTestSuitesPassed": "All 13 backend integration suites verified",
+    "chromeE2EDashboardsVerified": "All 8 user dashboards in DEMO_SANDBOX (across JHS, SHS, TVET, University) and LIVE_PRODUCTION plus Developer control suite verified",
+    "institutionSeparationUniversityClinicVoiceVerified": "2026-11-20 Tier-Tailored School Portals (JHS/SHS/TVET/University), Separated Internships/Attachments, Clinic Privacy & Non-Disclosure Verified",
     "browserAssetsRegenerated": "favicon.ico, logo.png, icon-192.png, icon-512.png, apple-touch-icon.png, og-gbs-crest.jpg",
     "uncaughtBrowserConsoleErrors": 0,
     "astUndeclaredErrors": 0

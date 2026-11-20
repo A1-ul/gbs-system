@@ -10,6 +10,7 @@ import { isDemoSandboxMode, clearAuthStorage } from "../../../../../utils/tokenS
 import { checkDemoEntryLimit, trackDemoEntryCreated } from "../../../../../utils/demoLimitGuard";
 import { useDashboardTabSync } from "../../../../../hooks/useDashboardTabSync";
 import SchoolClinicHubPanel from "../../../../../components/common/SchoolClinicHubPanel";
+import StaffAttendanceClockWidget from "../../../../../components/common/StaffAttendanceClockWidget";
 import "./StaffDashboard.css";
 
 export default function StaffDashboard() {
@@ -565,6 +566,11 @@ export default function StaffDashboard() {
           {/* TAB 1: OPERATIONAL DUTIES */}
           {activeTab === "duties" && (
             <div className="role-workspace-card">
+              <StaffAttendanceClockWidget
+                roleOverride="STAFF"
+                currentUser={currentUser}
+                onFeedback={(msg, isErr) => setFeedback({ type: isErr ? "error" : "success", message: msg })}
+              />
               <div className="workspace-title-row">
                 <div>
                   <h2><span>📌</span> CAMPUS OPERATIONAL ROSTER & TASKS</h2>

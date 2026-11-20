@@ -243,8 +243,9 @@ test('2. Real-Time GBS AI Voice Assistant links directly to System Memory, Expla
       query: 'Tell me about University internship, attachments, Evening streams, SRC and graduation to alumni'
     });
     assert.equal(askUni.status, 200);
-    assert.equal(askUni.json.data.topicId, 'university');
-    assert.ok(askUni.json.data.speechText.includes('University'));
+    assert.equal(askUni.json.data.topicId, 'academics_placements');
+    assert.ok(askUni.json.data.speechText.includes('Internships'));
+    assert.ok(!askUni.json.data.speechText.toLowerCase().includes('university hub'));
 
     // Security Non-Disclosure Shield strictly hides all developer inquiries
     const askPrivate = await reqJson(baseUrl, 'POST', '/api/v1/ai/assistant-query', {

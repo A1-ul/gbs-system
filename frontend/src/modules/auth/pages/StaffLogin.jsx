@@ -132,13 +132,18 @@ export default function StaffLogin({ defaultRole = "STAFF" }) {
               />
               <button
                 type="button"
+                aria-label={showPassword ? "Hide password" : "View password"}
                 onClick={() => setShowPassword((prev) => !prev)}
-                title={showPassword ? "Hide password" : "View password"}
                 style={{ position: "absolute", right: "10px", background: "none", border: "none", color: "#94a3b8", cursor: "pointer", fontSize: "1rem", padding: "4px" }}
               >
                 {showPassword ? "🙈" : "👁️"}
               </button>
             </div>
+          </div>
+          <div style={{ display: "flex", justifyContent: "flex-end", marginBottom: "10px" }}>
+            <Link to="/forgot-password" style={{ color: "#f5d061", fontSize: "0.82rem", fontWeight: 700, textDecoration: "none" }}>
+              🔑 Forgot Password?
+            </Link>
           </div>
           {error && <div className="error-alert" style={{ color: "#ef4444", marginBottom: "12px", fontSize: "0.85rem" }}>{error}</div>}
           <button 

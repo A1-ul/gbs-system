@@ -672,8 +672,8 @@ export default function MainLoginPage() {
               />
               <button
                 type="button"
+                aria-label={showPassword ? "Hide password" : "View password"}
                 onClick={() => setShowPassword((prev) => !prev)}
-                title={showPassword ? "Hide password" : "View password"}
                 style={{
                   position: "absolute",
                   right: "10px",
@@ -696,9 +696,23 @@ export default function MainLoginPage() {
             <label className="remember-me">
               <input type="checkbox" defaultChecked /> Remember Session
             </label>
-            <Link to="/developer-control-center/login" className="dev-link">
-              🔒 Developer Control Center
-            </Link>
+            <div style={{ display: "flex", alignItems: "center", gap: "12px", flexWrap: "wrap" }}>
+              <Link
+                to="/forgot-password"
+                data-testid="forgot-password-link"
+                style={{
+                  color: "#f5d061",
+                  fontWeight: 700,
+                  fontSize: "0.85rem",
+                  textDecoration: "none"
+                }}
+              >
+                🔑 Forgot Password?
+              </Link>
+              <Link to="/developer-control-center/login" className="dev-link">
+                🔒 Developer Control Center
+              </Link>
+            </div>
           </div>
 
           <button type="submit" className="submit-btn" disabled={loading}>

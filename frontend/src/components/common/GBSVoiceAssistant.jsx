@@ -30,24 +30,24 @@ const LOCAL_MEMORY_TOPICS = [
     tab: "clinic"
   },
   {
-    id: "university",
-    keywords: ["university", "internship", "attachment", "src", "stream", "evening", "weekend", "sandwich", "regular", "lecturer", "graduate", "alumni", "cgpa"],
+    id: "academics_placements",
+    keywords: ["internship", "attachment", "src", "prefect", "stream", "evening", "weekend", "sandwich", "regular", "lecturer", "graduate", "alumni", "cgpa", "tvet", "wassce", "bece"],
     answer:
-      "University Hub separates Industrial Internships (INT) from Academic and Field Attachments (ATT) so each course offering runs its exact required placement workflow. Students submit Internship or Attachment placements separately; Lecturers grade coursework, internships, and attachments independently, set exams to promote passing students up to Alumni graduation, manage Regular/Evening/Sandwich/Weekend streams, and oversee SRC governance plans.",
-    tab: "university"
+      "Every school operates natively inside its main Academics and Courses portal with zero separate University Hub: Nursery to JHS manages Terms 1–3, BECE prep, Houses, and Prefects; Senior High School manages WASSCE Tracks, Houses, and Prefect Council; TVET manages Trade Practicals, Attachments, Shift Streams, and Workshop Captains; University manages separated Industrial Internships (INT) and Academic & Field Attachments (ATT), GPA/CGPA grading, Regular/Evening/Sandwich/Weekend streams, SRC governance, and Alumni graduation.",
+    tab: "academics"
   },
   {
     id: "all_roles_explained",
     keywords: ["roles", "user roles", "who does what", "everyone", "all users", "activities", "what each user does", "explain roles"],
     answer:
-      "Each institutional user on GBS performs specific daily activities: Headmaster/Admin approves users, runs Admissions, views ALL Staff and Student clinic profiles and sickbay stock, sets fee structures, oversees Academic Promotions and Institution Language; Teachers/Lecturers deliver coursework, grade assignments and separate university internships/attachments, mark attendance, manage exams with AI proctoring, and view ONLY their own personal health profile; Students take courses, write AI-proctored exams, submit separate Internship or Attachment forms, check fees/results, and view ONLY their own health profile; Parents view their linked wards' grades, attendance, fees, and linked ward's clinic profile; Accountants collect fees, verify receipts, and record expenses; Non-Teaching Staff manage campus logistics/assets and view ONLY their own health profile; HR manages staff recruitment, payroll, leave, and appraisals; Alumni access transcripts and alumni networking.",
+      "Each institutional user on GBS performs specific daily activities: Headmaster/Admin approves users, runs Admissions, views ALL Staff and Student clinic profiles and sickbay stock, sets fee structures, oversees Academic Promotions and Institution Language; Teachers/Lecturers deliver coursework, grade assignments and separated Internships or Attachments, mark attendance, manage exams with AI proctoring, and view ONLY their own personal health profile; Students take courses, write AI-proctored exams, submit separated Internship or Attachment forms, check fees/results, and view ONLY their own health profile; Parents view their linked wards' grades, attendance, fees, and linked ward's clinic profile; Accountants collect fees, verify receipts, and record expenses; Non-Teaching Staff manage campus logistics/assets and view ONLY their own health profile; HR manages staff recruitment, payroll, leave, and appraisals; Alumni access transcripts and alumni networking.",
     tab: null
   },
   {
     id: "institutions",
-    keywords: ["jhs", "shs", "technical", "tvet", "separate", "institution type", "nursery", "difference"],
+    keywords: ["jhs", "shs", "technical", "tvet", "separate", "institution type", "nursery", "difference", "university"],
     answer:
-      "GBS strictly separates operational logic across Nursery to JHS, Senior High School, Technical TVET, and University tiers. Role titles, classes, and permitted modules adjust per institution type so JHS, SHS, and Technical portals cannot access University-only modules."
+      "GBS automatically adapts to the registered institution across Nursery to JHS, Senior High School, Technical TVET, and University so classes, assessments, terms, placements, and student leadership match how your exact institution operates."
   },
   {
     id: "defaulters",
@@ -126,7 +126,7 @@ const LOCAL_MEMORY_TOPICS = [
     id: "overview",
     keywords: ["what is gbs", "about gbs", "about the system", "how does gbs work", "everything", "explain gbs", "roles", "dashboards", "motto", "intelligence talks to wisdom"],
     answer:
-      "GBS School Management System (motto: Intelligence Talks to Wisdom) unifies Headmaster, Teacher or Lecturer, Student, Parent, Accountant, Staff, HR, Alumni, School Clinic, University Hub, Defaulters Monitor, Language Translator, Direct SMS, Payments, Bus Transport, AI Proctoring, and Developer Control into one connected platform."
+      "GBS School Management System (motto: Intelligence Talks to Wisdom) unifies Headmaster, Teacher or Lecturer, Student, Parent, Accountant, Staff, HR, and Alumni portals across Nursery to JHS, Senior High School, Technical TVET, and University institutions with School Clinic privacy, Defaulters Monitor, Language Translator, Direct SMS, Payments, Bus Transport, and AI Proctoring."
   },
   {
     id: "globalLocale",
@@ -792,7 +792,7 @@ export default function GBSVoiceAssistant() {
       : "";
     const generalFormation = buildLocalQuestionFormation(raw, "GBS Unified System Overview");
     executeReply(
-      `On GBS SYSTEM (v${memorySyncedVersion}), each institutional user has a dedicated portal and set of daily activities: Headmasters manage admissions, approvals, fee structures, language settings, and all Staff & Student clinic dossiers; Teachers/Lecturers deliver coursework, grade assignments and separate university Internships & Attachments, mark attendance, and run AI-proctored exams; Students take exams and submit Internships or Attachments; Parents monitor their linked wards; Accountants reconcile fees & payroll; Non-Teaching Staff manage campus logistics; HR handles recruitment & leave; Alumni access transcripts. Non-Headmaster users only see their own (or ward's) clinic profile.`,
+      `On GBS SYSTEM (v${memorySyncedVersion}), each institutional user operates inside a portal tailored to your registered institution (Nursery–JHS, SHS, TVET, or University): Headmasters manage admissions, approvals, fee structures, language settings, and all Staff & Student clinic dossiers; Teachers/Lecturers deliver coursework, grade assignments, practicals, and Internships or Attachments, mark attendance, and run AI-proctored exams; Students take exams and submit Internships or Attachments; Parents monitor their linked wards; Accountants reconcile fees & payroll; Non-Teaching Staff manage campus logistics; HR handles recruitment & leave; Alumni access transcripts. Non-Headmaster users only see their own (or ward's) clinic profile.`,
       null,
       generalFormation
     );
@@ -810,7 +810,7 @@ export default function GBSVoiceAssistant() {
 
   return (
     <>
-      {/* Floating Movable Launcher (Drags anywhere across screen) */}
+      {/* Brain-Only Movable Assistant Symbol (Free from dashboard blockages & zero tooltips) */}
       <div
         className="gbs-voice-assistant-launcher"
         onMouseDown={handleDragStart}
@@ -822,68 +822,36 @@ export default function GBSVoiceAssistant() {
           zIndex: 99999,
           display: "flex",
           alignItems: "center",
-          gap: "10px",
           userSelect: "none",
           cursor: "grab"
         }}
       >
-        {(!isOpen || isSleeping) && (
-          <div
-            onClick={toggleAssistant}
-            style={{
-              background: "linear-gradient(135deg, #081833, #0d2247)",
-              color: "#f5d061",
-              border: "1.5px solid #d4af37",
-              borderRadius: "20px",
-              padding: "7px 14px",
-              fontSize: "12px",
-              fontWeight: 800,
-              boxShadow: "0 6px 20px rgba(0, 0, 0, 0.55)",
-              cursor: "grab",
-              display: "flex",
-              alignItems: "center",
-              gap: "6px",
-              backdropFilter: "blur(10px)"
-            }}
-            title="Drag to move anywhere • Click to open GBS AI Assistant"
-          >
-            <span style={{ opacity: 0.75 }}>⠿</span>
-            <span>🎙️</span>
-            <span>GBS AI Assistant (Memory Linked)</span>
-          </div>
-        )}
-
         <button
           type="button"
+          aria-label="GBS Brain Assistant"
+          data-testid="gbs-brain-assistant-btn"
           onClick={toggleAssistant}
-          title={isOpen && !isSleeping ? "Click to put GBS AI Assistant to sleep" : "Click to wake GBS AI Assistant"}
           style={{
-            width: "58px",
-            height: "58px",
+            width: "50px",
+            height: "50px",
             borderRadius: "50%",
             border: isOpen && !isSleeping ? "2.5px solid #f5d061" : "2px solid #d4af37",
             background: isOpen && !isSleeping
-              ? "radial-gradient(circle at 35% 35%, #d4af37 0%, #0f2347 55%, #060f1e 100%)"
-              : "radial-gradient(circle at 35% 35%, #0f2347 0%, #081428 70%, #060f1e 100%)",
+              ? "radial-gradient(circle at 35% 35%, #d4af37 0%, #0d2247 58%, #060f1e 100%)"
+              : "radial-gradient(circle at 35% 35%, #0d2247 0%, #081833 75%, #060f1e 100%)",
             boxShadow: isOpen && !isSleeping
-              ? "0 0 30px rgba(212, 175, 55, 0.75), 0 0 50px rgba(56, 189, 248, 0.45)"
-              : "0 6px 20px rgba(0, 0, 0, 0.65), 0 0 15px rgba(212, 175, 55, 0.35)",
+              ? "0 0 24px rgba(212, 175, 55, 0.72), 0 0 36px rgba(56, 189, 248, 0.35)"
+              : "0 4px 16px rgba(0, 0, 0, 0.55), 0 0 12px rgba(212, 175, 55, 0.35)",
             display: "flex",
             alignItems: "center",
             justifyContent: "center",
             cursor: "pointer",
             outline: "none",
             transition: "all 0.25s ease",
-            transform: isOpen && !isSleeping ? "scale(1.08)" : "scale(1)"
+            transform: isOpen && !isSleeping ? "scale(1.06)" : "scale(1)"
           }}
         >
-          {isSpeaking ? (
-            <span style={{ fontSize: "22px" }}>🔊</span>
-          ) : isListening ? (
-            <span style={{ fontSize: "22px" }}>🎙️</span>
-          ) : (
-            <span style={{ fontSize: "20px" }}>{isSleeping ? "🧠" : "⚡"}</span>
-          )}
+          <span style={{ fontSize: "23px", lineHeight: 1 }} aria-hidden="true">🧠</span>
         </button>
       </div>
 
@@ -920,7 +888,6 @@ export default function GBSVoiceAssistant() {
           <div
             onMouseDown={handleDragStart}
             onTouchStart={handleDragStart}
-            title="Drag header to move Voice Assistant anywhere on screen"
             style={{
               padding: "12px 14px",
               background: "linear-gradient(135deg, #050f23 0%, #0d2247 100%)",
@@ -934,16 +901,16 @@ export default function GBSVoiceAssistant() {
           >
             <div style={{ display: "flex", alignItems: "center", gap: "8px", minWidth: 0 }}>
               <span style={{ color: "#d4af37", fontSize: "14px" }}>⠿</span>
-              <span style={{ fontSize: "17px" }}>{isSleeping ? "😴" : isListening ? "🎙️" : "🧠"}</span>
+              <span style={{ fontSize: "17px" }}>🧠</span>
               <div style={{ minWidth: 0 }}>
                 <strong style={{ fontSize: "12px", color: "#f6dd84", display: "block", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
-                  GBS SYSTEM MEMORY AI ASSISTANT
+                  GBS SYSTEM ASSISTANT
                 </strong>
                 <span style={{ fontSize: "10px", color: isSleeping ? "#94a3b8" : "#34d399", fontWeight: 700, display: "block" }}>
                   {isMinimized
                     ? "Minimized • Click Expand to view chat"
                     : isSleeping
-                      ? "Sleeping • Click orb to wake"
+                      ? "Sleeping • Click brain icon to wake"
                       : isSpeaking
                         ? "🔊 Answering live from System Memory..."
                         : isListening
@@ -968,7 +935,6 @@ export default function GBSVoiceAssistant() {
                   padding: "4px 9px",
                   borderRadius: "999px"
                 }}
-                title={isMinimized ? "Expand GBS AI Assistant window" : "Minimize GBS AI Assistant window"}
               >
                 {isMinimized ? "🗖 Expand" : "🗕 Minimize"}
               </button>
@@ -986,7 +952,7 @@ export default function GBSVoiceAssistant() {
                   padding: "4px 9px",
                   borderRadius: "999px"
                 }}
-                title="Finish conversation and put assistant to sleep"
+                aria-label="Finish conversation and put assistant to sleep"
               >
                 😴 Done / Sleep
               </button>
@@ -996,171 +962,171 @@ export default function GBSVoiceAssistant() {
           {!isMinimized && (
             <>
 
-          {/* Multi-Turn Thread */}
-          <div style={{ padding: "14px 16px", flex: 1, overflowY: "auto", display: "flex", flexDirection: "column", gap: "10px" }}>
-            {conversationMessages.map((m, idx) => (
-              <div
-                key={idx}
-                style={{
-                  alignSelf: m.sender === "user" ? "flex-end" : "flex-start",
-                  maxWidth: "88%",
-                  background: m.sender === "user" ? "rgba(37, 99, 235, 0.35)" : "rgba(8, 20, 40, 0.92)",
-                  border: m.sender === "user" ? "1px solid rgba(56, 189, 248, 0.55)" : "1px solid rgba(212, 175, 55, 0.42)",
-                  borderRadius: "12px",
-                  padding: "9px 12px",
-                  fontSize: "12.5px",
-                  lineHeight: 1.45,
-                  color: m.sender === "user" ? "#e0f2fe" : "#f8fafc"
-                }}
-              >
-                <div style={{ fontSize: "10px", color: m.sender === "user" ? "#7dd3fc" : "#f5d061", fontWeight: 800, marginBottom: "3px" }}>
-                  {m.sender === "user" ? "You" : "GBS System Memory AI"} • {m.time}
-                </div>
-                {m.formation ? (
-                  <div style={{ display: "flex", flexDirection: "column", gap: "6px" }}>
-                    <div>{m.answerOnly || m.text}</div>
-                    <div
+              {/* Multi-Turn Thread */}
+              <div style={{ padding: "14px 16px", flex: 1, overflowY: "auto", display: "flex", flexDirection: "column", gap: "10px" }}>
+                {conversationMessages.map((m, idx) => (
+                  <div
+                    key={idx}
+                    style={{
+                      alignSelf: m.sender === "user" ? "flex-end" : "flex-start",
+                      maxWidth: "88%",
+                      background: m.sender === "user" ? "rgba(37, 99, 235, 0.35)" : "rgba(8, 20, 40, 0.92)",
+                      border: m.sender === "user" ? "1px solid rgba(56, 189, 248, 0.55)" : "1px solid rgba(212, 175, 55, 0.42)",
+                      borderRadius: "12px",
+                      padding: "9px 12px",
+                      fontSize: "12.5px",
+                      lineHeight: 1.45,
+                      color: m.sender === "user" ? "#e0f2fe" : "#f8fafc"
+                    }}
+                  >
+                    <div style={{ fontSize: "10px", color: m.sender === "user" ? "#7dd3fc" : "#f5d061", fontWeight: 800, marginBottom: "3px" }}>
+                      {m.sender === "user" ? "You" : "GBS System Memory AI"} • {m.time}
+                    </div>
+                    {m.formation ? (
+                      <div style={{ display: "flex", flexDirection: "column", gap: "6px" }}>
+                        <div>{m.answerOnly || m.text}</div>
+                        <div
+                          style={{
+                            background: "rgba(212, 175, 55, 0.14)",
+                            borderLeft: "3px solid #f6dd84",
+                            borderRadius: "6px",
+                            padding: "6px 8px",
+                            fontSize: "11px",
+                            color: "#fef08a"
+                          }}
+                        >
+                          <strong style={{ color: "#f6dd84" }}>🧩 Question Formation Explained:</strong>{" "}
+                          {(m.formation.explanationText || m.formation.interpretation || "").replace(/^How your question was formed:\s*/i, "")}
+                        </div>
+                        <div style={{ fontSize: "10.8px", color: "#cbd5e1", fontStyle: "italic" }}>
+                          {FOLLOWUP_PROMPT}
+                        </div>
+                      </div>
+                    ) : (
+                      <div>{m.text}</div>
+                    )}
+                  </div>
+                ))}
+
+                {transcript && (
+                  <div style={{ fontSize: "12px", color: "#7dd3fc", fontStyle: "italic", padding: "4px 8px" }}>
+                    🎙️ Hearing live: "{transcript}"
+                  </div>
+                )}
+                <div ref={chatEndRef} />
+              </div>
+
+              {/* Quick Memory Queries + Continuous Reply Bar */}
+              <div style={{ padding: "10px 14px", borderTop: "1px solid rgba(212, 175, 55, 0.25)", background: "rgba(4, 10, 22, 0.95)" }}>
+                <div style={{ display: "flex", gap: "5px", flexWrap: "wrap", marginBottom: "8px" }}>
+                  {[
+                    { label: "👥 User Roles", cmd: "Explain all institutional user roles and daily activities" },
+                    { label: "🏥 School Clinic", cmd: "Explain School Clinic privacy and Headmaster profiles" },
+                    { label: "🎓 Placements & Tiers", cmd: "Explain Internships, Attachments, and institution streams" },
+                    { label: "✅ Done (Sleep)", cmd: "We are done" }
+                  ].map((chip) => (
+                    <button
+                      key={chip.label}
+                      type="button"
+                      onClick={() => processVoiceCommand(chip.cmd)}
                       style={{
-                        background: "rgba(212, 175, 55, 0.14)",
-                        borderLeft: "3px solid #f6dd84",
-                        borderRadius: "6px",
-                        padding: "6px 8px",
-                        fontSize: "11px",
-                        color: "#fef08a"
+                        background: chip.label.includes("Done") ? "rgba(245, 158, 11, 0.18)" : "rgba(15, 35, 71, 0.9)",
+                        border: chip.label.includes("Done") ? "1px solid #f59e0b" : "1px solid rgba(212, 175, 55, 0.45)",
+                        color: chip.label.includes("Done") ? "#fde68a" : "#f5d061",
+                        borderRadius: "999px",
+                        padding: "4px 9px",
+                        fontSize: "10.8px",
+                        fontWeight: 700,
+                        cursor: "pointer"
                       }}
                     >
-                      <strong style={{ color: "#f6dd84" }}>🧩 Question Formation Explained:</strong>{" "}
-                      {(m.formation.explanationText || m.formation.interpretation || "").replace(/^How your question was formed:\s*/i, "")}
-                    </div>
-                    <div style={{ fontSize: "10.8px", color: "#cbd5e1", fontStyle: "italic" }}>
-                      {FOLLOWUP_PROMPT}
-                    </div>
-                  </div>
-                ) : (
-                  <div>{m.text}</div>
-                )}
+                      {chip.label}
+                    </button>
+                  ))}
+                </div>
+
+                <form onSubmit={handleTypedSubmit} style={{ display: "flex", gap: "6px" }}>
+                  <input
+                    type="text"
+                    placeholder="Ask anything about GBS SYSTEM or say command..."
+                    value={typedInput}
+                    onChange={(e) => setTypedInput(e.target.value)}
+                    style={{
+                      flex: 1,
+                      background: "#081428",
+                      color: "#f8fafc",
+                      border: "1px solid rgba(212, 175, 55, 0.45)",
+                      borderRadius: "8px",
+                      padding: "8px 10px",
+                      fontSize: "12.5px",
+                      outline: "none"
+                    }}
+                  />
+                  <button
+                    type="submit"
+                    style={{
+                      background: "linear-gradient(135deg, #0f2347, #d4af37)",
+                      color: "#ffffff",
+                      border: "1px solid #f5d061",
+                      borderRadius: "8px",
+                      padding: "8px 14px",
+                      fontSize: "12px",
+                      fontWeight: 800,
+                      cursor: "pointer"
+                    }}
+                  >
+                    Ask
+                  </button>
+                </form>
+
+                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginTop: "8px" }}>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      if (!speechSupported) return;
+                      if (isListening && recognitionRef.current) {
+                        continuousRef.current = false;
+                        setContinuousListening(false);
+                        try { recognitionRef.current.stop(); } catch { }
+                      } else {
+                        continuousRef.current = true;
+                        setContinuousListening(true);
+                        safelyStartRecognition();
+                      }
+                    }}
+                    style={{
+                      background: isListening ? "#b91c1c" : "#1d4ed8",
+                      color: "#ffffff",
+                      border: "none",
+                      borderRadius: "8px",
+                      padding: "6px 12px",
+                      fontSize: "11.5px",
+                      fontWeight: 700,
+                      cursor: speechSupported ? "pointer" : "not-allowed",
+                      opacity: speechSupported ? 1 : 0.6
+                    }}
+                  >
+                    {isListening ? "⏹️ Pause Mic" : "🎙️ Keep Listening"}
+                  </button>
+
+                  <button
+                    type="button"
+                    onClick={() => speakAloud(assistantResponse)}
+                    style={{
+                      background: "#0f2347",
+                      color: "#f5d061",
+                      border: "1px solid rgba(212, 175, 55, 0.45)",
+                      borderRadius: "8px",
+                      padding: "6px 12px",
+                      fontSize: "11.5px",
+                      fontWeight: 700,
+                      cursor: "pointer"
+                    }}
+                  >
+                    🔊 Replay
+                  </button>
+                </div>
               </div>
-            ))}
-
-            {transcript && (
-              <div style={{ fontSize: "12px", color: "#7dd3fc", fontStyle: "italic", padding: "4px 8px" }}>
-                🎙️ Hearing live: "{transcript}"
-              </div>
-            )}
-            <div ref={chatEndRef} />
-          </div>
-
-          {/* Quick Memory Queries + Continuous Reply Bar */}
-          <div style={{ padding: "10px 14px", borderTop: "1px solid rgba(212, 175, 55, 0.25)", background: "rgba(4, 10, 22, 0.95)" }}>
-            <div style={{ display: "flex", gap: "5px", flexWrap: "wrap", marginBottom: "8px" }}>
-              {[
-                { label: "👥 User Roles", cmd: "Explain all institutional user roles and daily activities" },
-                { label: "🏥 School Clinic", cmd: "Explain School Clinic privacy and Headmaster profiles" },
-                { label: "🎓 Internships vs Attachments", cmd: "Explain University Internships vs Attachments" },
-                { label: "✅ Done (Sleep)", cmd: "We are done" }
-              ].map((chip) => (
-                <button
-                  key={chip.label}
-                  type="button"
-                  onClick={() => processVoiceCommand(chip.cmd)}
-                  style={{
-                    background: chip.label.includes("Done") ? "rgba(245, 158, 11, 0.18)" : "rgba(15, 35, 71, 0.9)",
-                    border: chip.label.includes("Done") ? "1px solid #f59e0b" : "1px solid rgba(212, 175, 55, 0.45)",
-                    color: chip.label.includes("Done") ? "#fde68a" : "#f5d061",
-                    borderRadius: "999px",
-                    padding: "4px 9px",
-                    fontSize: "10.8px",
-                    fontWeight: 700,
-                    cursor: "pointer"
-                  }}
-                >
-                  {chip.label}
-                </button>
-              ))}
-            </div>
-
-            <form onSubmit={handleTypedSubmit} style={{ display: "flex", gap: "6px" }}>
-              <input
-                type="text"
-                placeholder="Ask anything about GBS SYSTEM or say command..."
-                value={typedInput}
-                onChange={(e) => setTypedInput(e.target.value)}
-                style={{
-                  flex: 1,
-                  background: "#081428",
-                  color: "#f8fafc",
-                  border: "1px solid rgba(212, 175, 55, 0.45)",
-                  borderRadius: "8px",
-                  padding: "8px 10px",
-                  fontSize: "12.5px",
-                  outline: "none"
-                }}
-              />
-              <button
-                type="submit"
-                style={{
-                  background: "linear-gradient(135deg, #0f2347, #d4af37)",
-                  color: "#ffffff",
-                  border: "1px solid #f5d061",
-                  borderRadius: "8px",
-                  padding: "8px 14px",
-                  fontSize: "12px",
-                  fontWeight: 800,
-                  cursor: "pointer"
-                }}
-              >
-                Ask
-              </button>
-            </form>
-
-            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginTop: "8px" }}>
-              <button
-                type="button"
-                onClick={() => {
-                  if (!speechSupported) return;
-                  if (isListening && recognitionRef.current) {
-                    continuousRef.current = false;
-                    setContinuousListening(false);
-                    try { recognitionRef.current.stop(); } catch { }
-                  } else {
-                    continuousRef.current = true;
-                    setContinuousListening(true);
-                    safelyStartRecognition();
-                  }
-                }}
-                style={{
-                  background: isListening ? "#b91c1c" : "#1d4ed8",
-                  color: "#ffffff",
-                  border: "none",
-                  borderRadius: "8px",
-                  padding: "6px 12px",
-                  fontSize: "11.5px",
-                  fontWeight: 700,
-                  cursor: speechSupported ? "pointer" : "not-allowed",
-                  opacity: speechSupported ? 1 : 0.6
-                }}
-              >
-                {isListening ? "⏹️ Pause Mic" : "🎙️ Keep Listening"}
-              </button>
-
-              <button
-                type="button"
-                onClick={() => speakAloud(assistantResponse)}
-                style={{
-                  background: "#0f2347",
-                  color: "#f5d061",
-                  border: "1px solid rgba(212, 175, 55, 0.45)",
-                  borderRadius: "8px",
-                  padding: "6px 12px",
-                  fontSize: "11.5px",
-                  fontWeight: 700,
-                  cursor: "pointer"
-                }}
-              >
-                🔊 Replay
-              </button>
-            </div>
-          </div>
             </>
           )}
         </div>

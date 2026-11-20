@@ -78,5 +78,8 @@ router.patch(
   controller.crossCheckWeeklyReport
 );
 
+// 7. Staff Clock-In / Clock-Out Attendance (Including Clinic Doctors & Nurses)
+router.use('/staff', require('./staffAttendance.routes'));
+
 module.exports = router;
 

@@ -31,6 +31,14 @@ export default function TeacherLiveProctoringPanel({
   const [inspectEvidenceModal, setInspectEvidenceModal] = useState(null);
   const [subView, setSubView] = useState("CAMERAS"); // 'CAMERAS' | 'EVIDENCE' | 'SENT_MESSAGES'
   const [statusFeedback, setStatusFeedback] = useState(null);
+  const [activeWatchStudentKey, setActiveWatchStudentKey] = useState(null);
+  const [watchModalMsg, setWatchModalMsg] = useState("");
+  const [watchModalSeverity, setWatchModalSeverity] = useState("WARNING");
+  const [watchModalDeduct, setWatchModalDeduct] = useState(2);
+
+  const activeWatchSession = activeWatchStudentKey
+    ? liveSessions.find((s) => String(s.sessionKey || s.studentId) === String(activeWatchStudentKey)) || null
+    : null;
 
   const notify = (msg, type = "success") => {
     setStatusFeedback({ message: msg, type });
@@ -61,7 +69,7 @@ export default function TeacherLiveProctoringPanel({
 
   useEffect(() => {
     fetchProctoringData();
-    const timer = setInterval(fetchProctoringData, 3200);
+    const timer = setInterval(fetchProctoringData, 1000);
     return () => clearInterval(timer);
   }, [fetchProctoringData]);
 
@@ -72,23 +80,37 @@ export default function TeacherLiveProctoringPanel({
     const seen = new Set();
     const hits = [];
     liveSessions.forEach((s) => {
-      const hay = `${s.studentName || ""} ${s.studentEmail || ""} ${s.studentId || ""}`.toLowerCase();
+      const hay = `${s.studentName || ""} ${s.studentEmail || ""} ${s.studentId || ""} ${s.studentIndexNumber || ""} ${s.className || ""}`.toLowerCase();
       if (hay.includes(q)) {
         const key = String(s.studentId || s.studentName);
         if (!seen.has(key)) {
           seen.add(key);
-          hits.push({ studentId: String(s.studentId), name: s.studentName, email: s.studentEmail || "", onCamera: true });
+          hits.push({
+            studentId: String(s.studentId),
+            name: s.studentName,
+            email: s.studentEmail || "",
+            indexNumber: s.studentIndexNumber || "",
+            className: s.className || "",
+            onCamera: true
+          });
         }
       }
     });
     (roster || []).forEach((r) => {
       const fullName = `${r.firstName || ""} ${r.lastName || ""}`.trim();
-      const hay = `${fullName} ${r.email || ""} ${r.id || ""}`.toLowerCase();
+      const hay = `${fullName} ${r.email || ""} ${r.id || ""} ${r.admissionNumber || ""} ${r.currentClass || ""}`.toLowerCase();
       if (hay.includes(q)) {
         const key = String(r.id || fullName);
         if (!seen.has(key)) {
           seen.add(key);
-          hits.push({ studentId: String(r.id), name: fullName || r.email, email: r.email || "", onCamera: false });
+          hits.push({
+            studentId: String(r.id),
+            name: fullName || r.email,
+            email: r.email || "",
+            indexNumber: r.admissionNumber || r.studentId || "",
+            className: r.currentClass || "",
+            onCamera: false
+          });
         }
       }
     });
@@ -168,6 +190,8 @@ export default function TeacherLiveProctoringPanel({
         examId: session.examId,
         examTitle: session.examTitle,
         studentId: session.studentId,
+        studentIndexNumber: session.studentIndexNumber || session.studentId,
+        className: session.className || "Enrolled Class",
         studentName: session.studentName,
         studentEmail: session.studentEmail,
         snapshotDataUrl: session.snapshotDataUrl,
@@ -455,7 +479,7 @@ export default function TeacherLiveProctoringPanel({
             type="button"
             disabled={sendingMsg}
             onClick={() => handleDispatchMessage({ overrideMode: "ALL" })}
-            style={{ background: "rgba(56, 189, 248, 0.2)", border: "1px solid #38bdf8", color: "#bae6fd", borderRadius: "8px", padding: "8px 12px", fontSize: "0.76rem", fontWeight: 800, cursor: "pointer" }}
+            style={{ background: "rgba(13, 34, 71, 0.9)", border: "1.5px solid #d4af37", color: "#f6dd84", borderRadius: "8px", padding: "8px 12px", fontSize: "0.76rem", fontWeight: 800, cursor: "pointer" }}
           >
             📣 Quick Broadcast ALL
           </button>
@@ -467,7 +491,7 @@ export default function TeacherLiveProctoringPanel({
         <div>
           <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "10px", flexWrap: "wrap", gap: "8px" }}>
             <span style={{ fontSize: "0.82rem", color: "#cbd5e1", fontWeight: 700 }}>
-              Active / Recent Examinee Feeds: <strong style={{ color: "#f6dd84" }}>{liveSessions.length}</strong>
+              Active / Recent Examinee Live Feeds (1s Live Sync): <strong style={{ color: "#f6dd84" }}>{liveSessions.length}</strong>
               {selectedStudentIds.length > 0 && ` • Checked for messaging: ${selectedStudentIds.length}`}
             </span>
             {liveSessions.length > 0 && (
@@ -483,20 +507,21 @@ export default function TeacherLiveProctoringPanel({
 
           {liveSessions.length === 0 ? (
             <div style={{ padding: "1.5rem", textAlign: "center", borderRadius: "10px", border: "1px dashed rgba(212, 175, 55, 0.45)", background: "rgba(5, 15, 35, 0.55)", color: "#cbd5e1", fontSize: "0.84rem" }}>
-              No students are currently live in an online AI-proctored examination. As soon as students click <strong>Start Exam</strong> on their portal, their real camera feed, movement status, warnings, and score deductions appear here live.
+              No students are currently live in an online AI-proctored examination. As soon as students click <strong>Start Exam</strong> on their portal, their live video feed, student Index ID, class, warnings, and score deductions appear here continuously.
             </div>
           ) : (
-            <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(290px, 1fr))", gap: "12px" }}>
+            <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(305px, 1fr))", gap: "12px" }}>
               {liveSessions.map((sess) => {
                 const isSelected = selectedStudentIds.includes(String(sess.studentId));
                 const hasWarn = (sess.warningsCount || 0) > 0 || sess.status === "WARNING_DETECTED";
                 const isSaving = savingEvidenceFor === String(sess.studentId);
+                const sessKey = String(sess.sessionKey || sess.studentId);
                 return (
                   <div
-                    key={sess.sessionKey || sess.studentId}
+                    key={sessKey}
                     style={{
-                      background: "rgba(5, 15, 35, 0.88)",
-                      border: isSelected ? "2px solid #f6dd84" : hasWarn ? "1.5px solid #ef4444" : "1.5px solid rgba(56, 189, 248, 0.45)",
+                      background: "rgba(5, 15, 35, 0.9)",
+                      border: isSelected ? "2px solid #f6dd84" : hasWarn ? "1.5px solid #ef4444" : "1.5px solid rgba(212, 175, 55, 0.48)",
                       borderRadius: "12px",
                       padding: "12px",
                       display: "flex",
@@ -504,15 +529,20 @@ export default function TeacherLiveProctoringPanel({
                       gap: "8px"
                     }}
                   >
-                    <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: "6px" }}>
-                      <label style={{ display: "flex", alignItems: "center", gap: "6px", cursor: "pointer", fontWeight: 800, fontSize: "0.85rem", color: "#f8fafc" }}>
-                        <input
-                          type="checkbox"
-                          checked={isSelected}
-                          onChange={() => toggleSelectCamera(sess.studentId)}
-                        />
-                        <span>{sess.studentName}</span>
-                      </label>
+                    <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", gap: "6px" }}>
+                      <div style={{ display: "flex", flexDirection: "column", gap: "2px" }}>
+                        <label style={{ display: "flex", alignItems: "center", gap: "6px", cursor: "pointer", fontWeight: 800, fontSize: "0.88rem", color: "#f8fafc" }}>
+                          <input
+                            type="checkbox"
+                            checked={isSelected}
+                            onChange={() => toggleSelectCamera(sess.studentId)}
+                          />
+                          <span>{sess.studentName}</span>
+                        </label>
+                        <div style={{ fontSize: "0.7rem", color: "#f6dd84", fontWeight: 700, paddingLeft: "20px" }}>
+                          ID: {sess.studentIndexNumber || sess.studentId || "STU"} • Class: {sess.className || "Enrolled Class"}
+                        </div>
+                      </div>
                       <span style={{
                         fontSize: "0.68rem",
                         fontWeight: 800,
@@ -522,12 +552,23 @@ export default function TeacherLiveProctoringPanel({
                         color: hasWarn ? "#fca5a5" : "#6ee7b7",
                         border: `1px solid ${hasWarn ? "#ef4444" : "#10b981"}`
                       }}>
-                        {sess.status === "SUBMITTED" ? "✅ SUBMITTED" : hasWarn ? `⚠️ ${sess.warningsCount} WARN` : "📹 LIVE"}
+                        {sess.status === "SUBMITTED" ? "✅ SUBMITTED" : hasWarn ? `⚠️ ${sess.warningsCount} WARN` : "🔴 LIVE VIDEO"}
                       </span>
                     </div>
 
-                    {/* Real Webcam Frame Snapshot or Focus Guard Status */}
-                    <div style={{ position: "relative", width: "100%", height: "140px", borderRadius: "8px", overflow: "hidden", background: "#020617", border: "1px solid rgba(255,255,255,0.12)", display: "flex", alignItems: "center", justifyContent: "center" }}>
+                    {/* Real Live Video Feed Snapshot (click to open Enlarged Profile & Watch Modal) */}
+                    <div
+                      role="button"
+                      tabIndex={0}
+                      onClick={() => setActiveWatchStudentKey(sessKey)}
+                      onKeyDown={(e) => {
+                        if (e.key === "Enter" || e.key === " ") {
+                          e.preventDefault();
+                          setActiveWatchStudentKey(sessKey);
+                        }
+                      }}
+                      style={{ position: "relative", width: "100%", height: "175px", borderRadius: "8px", overflow: "hidden", background: "#020617", border: "1px solid rgba(212, 175, 55, 0.32)", display: "flex", alignItems: "center", justifyContent: "center", cursor: "pointer" }}
+                    >
                       {sess.snapshotDataUrl ? (
                         <img
                           src={sess.snapshotDataUrl}
@@ -538,10 +579,13 @@ export default function TeacherLiveProctoringPanel({
                         <div style={{ textAlign: "center", padding: "10px", color: "#94a3b8", fontSize: "0.75rem" }}>
                           <div style={{ fontSize: "1.6rem", marginBottom: "4px" }}>🛡️</div>
                           <strong>Focus &amp; Tab-Lock Active</strong>
-                          <div>{sess.cameraActive ? "Awaiting next webcam frame..." : "Camera not attached on examinee device"}</div>
+                          <div>{sess.cameraActive ? "Streaming live webcam..." : "Camera standby on examinee device"}</div>
                         </div>
                       )}
-                      <div style={{ position: "absolute", bottom: "4px", left: "6px", right: "6px", background: "rgba(2,6,23,0.8)", borderRadius: "5px", padding: "3px 6px", fontSize: "0.68rem", display: "flex", justifyContent: "space-between", color: "#e2e8f0" }}>
+                      <div style={{ position: "absolute", top: "6px", right: "6px", background: "rgba(8, 24, 51, 0.85)", border: "1px solid #d4af37", color: "#f6dd84", fontSize: "0.66rem", fontWeight: 800, padding: "2px 7px", borderRadius: "6px" }}>
+                        👁️ Click to Watch Fullscreen
+                      </div>
+                      <div style={{ position: "absolute", bottom: "4px", left: "6px", right: "6px", background: "rgba(2,6,23,0.84)", borderRadius: "5px", padding: "3px 6px", fontSize: "0.68rem", display: "flex", justifyContent: "space-between", color: "#e2e8f0" }}>
                         <span>{sess.examTitle || "Active Exam"}</span>
                         <span>{sess.lastHeartbeatAt ? new Date(sess.lastHeartbeatAt).toLocaleTimeString() : ""}</span>
                       </div>
@@ -567,6 +611,13 @@ export default function TeacherLiveProctoringPanel({
                     <div style={{ display: "flex", gap: "6px", flexWrap: "wrap", marginTop: "auto" }}>
                       <button
                         type="button"
+                        onClick={() => setActiveWatchStudentKey(sessKey)}
+                        style={{ flex: 1, background: "linear-gradient(135deg, #0d2247, #1a3a70)", border: "1.5px solid #d4af37", color: "#f6dd84", borderRadius: "6px", padding: "5px 8px", fontSize: "0.72rem", fontWeight: 800, cursor: "pointer" }}
+                      >
+                        👁️ Watch &amp; Profile
+                      </button>
+                      <button
+                        type="button"
                         onClick={() => {
                           const txt = messageText.trim() || "Please keep your eyes strictly on your exam screen.";
                           handleDispatchMessage({
@@ -577,9 +628,9 @@ export default function TeacherLiveProctoringPanel({
                             overrideDeduct: 0
                           });
                         }}
-                        style={{ flex: 1, background: "rgba(56, 189, 248, 0.18)", border: "1px solid #38bdf8", color: "#bae6fd", borderRadius: "6px", padding: "5px 8px", fontSize: "0.72rem", fontWeight: 800, cursor: "pointer" }}
+                        style={{ background: "rgba(13, 34, 71, 0.9)", border: "1px solid #d4af37", color: "#f6dd84", borderRadius: "6px", padding: "5px 8px", fontSize: "0.72rem", fontWeight: 800, cursor: "pointer" }}
                       >
-                        💬 Message
+                        💬 Msg
                       </button>
                       <button
                         type="button"
@@ -600,7 +651,7 @@ export default function TeacherLiveProctoringPanel({
                         onClick={() => handleSaveEvidenceSnapshot(sess)}
                         style={{ background: "linear-gradient(135deg, #f6dd84, #cfa028)", border: "1px solid #d4af37", color: "#081833", borderRadius: "6px", padding: "5px 8px", fontSize: "0.72rem", fontWeight: 800, cursor: "pointer" }}
                       >
-                        {isSaving ? "Saving..." : "📸 Save Evidence"}
+                        {isSaving ? "Saving..." : "📸 Evidence"}
                       </button>
                     </div>
                   </div>
@@ -735,6 +786,146 @@ export default function TeacherLiveProctoringPanel({
               <button type="button" onClick={() => setInspectEvidenceModal(null)} className="btn-secondary" style={{ padding: "6px 14px", fontSize: "0.78rem" }}>
                 Close
               </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ENLARGED LIVE WATCH & STUDENT PROFILE + DIRECT WARNING MODAL */}
+      {activeWatchSession && (
+        <div className="invoice-pay-modal-overlay" onClick={() => setActiveWatchStudentKey(null)}>
+          <div
+            data-testid="proctor-live-watch-modal"
+            style={{
+              background: "linear-gradient(145deg, #081833 0%, #0d2247 100%)",
+              border: "2px solid #d4af37",
+              borderRadius: "16px",
+              padding: "22px",
+              maxWidth: "740px",
+              width: "96%",
+              color: "#f8fafc",
+              maxHeight: "90vh",
+              overflowY: "auto"
+            }}
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", gap: "12px", borderBottom: "1px solid rgba(212, 175, 55, 0.35)", paddingBottom: "12px", marginBottom: "14px" }}>
+              <div>
+                <div style={{ fontSize: "0.74rem", fontWeight: 800, color: "#f6dd84", letterSpacing: "0.8px", textTransform: "uppercase" }}>
+                  🔴 LIVE EXAM INVIGILATION &amp; STUDENT PROFILE
+                </div>
+                <h3 style={{ margin: "4px 0 2px", color: "#ffffff", fontSize: "1.2rem" }}>
+                  {activeWatchSession.studentName}
+                </h3>
+                <div style={{ fontSize: "0.8rem", color: "#cbd5e1" }}>
+                  Student ID / Index: <strong style={{ color: "#f6dd84" }}>{activeWatchSession.studentIndexNumber || activeWatchSession.studentId}</strong> • Class: <strong style={{ color: "#f6dd84" }}>{activeWatchSession.className || "Enrolled Class"}</strong> • Email: <strong>{activeWatchSession.studentEmail || "Registered Candidate"}</strong>
+                </div>
+              </div>
+              <button type="button" onClick={() => setActiveWatchStudentKey(null)} style={{ background: "rgba(212, 175, 55, 0.18)", border: "1px solid #d4af37", color: "#f6dd84", borderRadius: "8px", padding: "6px 12px", fontWeight: 800, cursor: "pointer" }}>✕ Close</button>
+            </div>
+
+            <div style={{ display: "grid", gridTemplateColumns: "1.2fr 1fr", gap: "14px", marginBottom: "14px" }}>
+              <div style={{ background: "#020617", borderRadius: "12px", border: "1.5px solid #d4af37", overflow: "hidden", minHeight: "260px", display: "flex", alignItems: "center", justifyContent: "center", position: "relative" }}>
+                {activeWatchSession.snapshotDataUrl ? (
+                  <img
+                    src={activeWatchSession.snapshotDataUrl}
+                    alt={`Live Stream - ${activeWatchSession.studentName}`}
+                    style={{ width: "100%", height: "100%", maxHeight: "320px", objectFit: "cover" }}
+                  />
+                ) : (
+                  <div style={{ textAlign: "center", padding: "18px", color: "#94a3b8", fontSize: "0.84rem" }}>
+                    <div style={{ fontSize: "2rem", marginBottom: "6px" }}>🎥</div>
+                    Awaiting Examinee Webcam Stream...
+                  </div>
+                )}
+                <div style={{ position: "absolute", top: "8px", left: "8px", background: "rgba(8, 24, 51, 0.86)", color: "#f6dd84", fontSize: "0.7rem", fontWeight: 800, padding: "3px 8px", borderRadius: "6px", border: "1px solid rgba(212,175,55,0.5)" }}>
+                  {activeWatchSession.examTitle} • Frame #{activeWatchSession.liveFrameSeq || 1}
+                </div>
+              </div>
+
+              <div style={{ display: "flex", flexDirection: "column", gap: "10px" }}>
+                <div style={{ background: "rgba(5, 15, 35, 0.78)", border: "1px solid rgba(212, 175, 55, 0.4)", borderRadius: "10px", padding: "10px 12px", fontSize: "0.8rem" }}>
+                  <div><strong>Exam Status:</strong> <span style={{ color: "#f6dd84" }}>{activeWatchSession.status}</span></div>
+                  <div><strong>Movement Delta:</strong> {activeWatchSession.movementDelta || 0}</div>
+                  <div><strong>Total Warnings:</strong> <strong style={{ color: (activeWatchSession.warningsCount || 0) > 0 ? "#fca5a5" : "#6ee7b7" }}>{activeWatchSession.warningsCount || 0}</strong></div>
+                  <div><strong>Lost Marks Deducted:</strong> <strong style={{ color: "#fca5a5" }}>-{activeWatchSession.penaltyMarksDeducted || 0} Marks</strong></div>
+                  <div><strong>Last Feed Update:</strong> {activeWatchSession.lastHeartbeatAt ? new Date(activeWatchSession.lastHeartbeatAt).toLocaleTimeString() : "Active"}</div>
+                </div>
+
+                <div style={{ background: "rgba(5, 15, 35, 0.78)", border: "1px solid rgba(212, 175, 55, 0.4)", borderRadius: "10px", padding: "10px 12px" }}>
+                  <label style={{ display: "block", fontSize: "0.74rem", fontWeight: 800, color: "#f6dd84", marginBottom: "6px" }}>
+                    📣 SEND DIRECT MESSAGE / WARNING TO {activeWatchSession.studentName.toUpperCase()}
+                  </label>
+                  <textarea
+                    rows={2}
+                    className="filter-input"
+                    style={{ width: "100%", marginBottom: "8px" }}
+                    placeholder="Type warning or direct instruction for this examinee..."
+                    value={watchModalMsg}
+                    onChange={(e) => setWatchModalMsg(e.target.value)}
+                  />
+                  <div style={{ display: "flex", gap: "6px", alignItems: "center", marginBottom: "8px" }}>
+                    <select className="filter-select" style={{ flex: 1 }} value={watchModalSeverity} onChange={(e) => setWatchModalSeverity(e.target.value)}>
+                      <option value="WARNING">⚠️ Official Warning</option>
+                      <option value="INFO">ℹ️ Exam Notice / Instruction</option>
+                    </select>
+                    {watchModalSeverity === "WARNING" && (
+                      <input
+                        type="number"
+                        min="0"
+                        max="50"
+                        className="filter-input"
+                        style={{ width: "78px" }}
+                        value={watchModalDeduct}
+                        onChange={(e) => setWatchModalDeduct(Number(e.target.value) || 0)}
+                      />
+                    )}
+                  </div>
+                  <div style={{ display: "flex", gap: "8px" }}>
+                    <button
+                      type="button"
+                      disabled={sendingMsg}
+                      onClick={() => {
+                        handleDispatchMessage({
+                          overrideMode: "SINGLE",
+                          overrideStudentIds: [String(activeWatchSession.studentId)],
+                          overrideText: watchModalMsg.trim() || "Keep your eyes on the exam screen and stop looking away.",
+                          overrideSeverity: watchModalSeverity,
+                          overrideDeduct: watchModalSeverity === "WARNING" ? watchModalDeduct : 0
+                        });
+                        setWatchModalMsg("");
+                      }}
+                      style={{ flex: 1, background: "linear-gradient(135deg, #f6dd84, #cfa028)", color: "#081833", border: "1px solid #d4af37", borderRadius: "8px", padding: "7px 10px", fontWeight: 900, cursor: "pointer", fontSize: "0.78rem" }}
+                    >
+                      {watchModalSeverity === "WARNING" ? `⚠️ Send Warning (-${watchModalDeduct} Marks)` : "💬 Send Direct Instruction"}
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => handleSaveEvidenceSnapshot(activeWatchSession)}
+                      style={{ background: "rgba(13, 34, 71, 0.9)", color: "#f6dd84", border: "1px solid #d4af37", borderRadius: "8px", padding: "7px 10px", fontWeight: 800, cursor: "pointer", fontSize: "0.78rem" }}
+                    >
+                      📸 Save Evidence
+                    </button>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <div style={{ background: "#050f23", border: "1px solid rgba(212, 175, 55, 0.3)", borderRadius: "10px", padding: "10px 12px" }}>
+              <div style={{ fontSize: "0.75rem", fontWeight: 800, color: "#f6dd84", marginBottom: "6px" }}>
+                📋 Live Movement &amp; Violation Audit Trail ({(activeWatchSession.events || []).length} events)
+              </div>
+              <div style={{ maxHeight: "150px", overflowY: "auto" }}>
+                {(activeWatchSession.events || []).length === 0 ? (
+                  <div style={{ fontSize: "0.78rem", color: "#94a3b8" }}>No irregular movement or tab-switch alerts recorded for this student.</div>
+                ) : (
+                  activeWatchSession.events.map((ev, idx) => (
+                    <div key={ev.id || idx} style={{ fontSize: "0.76rem", padding: "4px 0", borderBottom: "1px solid rgba(255,255,255,0.08)" }}>
+                      <strong style={{ color: "#f6dd84" }}>[{ev.time || ev.timeIso}]</strong> {ev.reason}
+                    </div>
+                  ))
+                )}
+              </div>
             </div>
           </div>
         </div>

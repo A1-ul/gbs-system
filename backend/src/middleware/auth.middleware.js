@@ -205,7 +205,7 @@ const protect = async (req, res, next) => {
             status: matchedInst?.status || 'ACTIVE'
           }
         };
-      } else if (matchedInst && (String(decoded.id) === `usr_hm_${matchedInst.id}` || String(decoded.role).toUpperCase() === 'ADMIN' || String(decoded.role).toUpperCase() === 'SUPER_ADMIN')) {
+      } else if (matchedInst && (String(decoded.id) === `usr_hm_${matchedInst.id}` || ['ADMIN', 'SUPER_ADMIN', 'HEADMASTER', 'PRINCIPAL'].includes(String(decoded.role).toUpperCase()))) {
         user = {
           id: decoded.id,
           tenantId: matchedInst.tenantId || numericTenantId,

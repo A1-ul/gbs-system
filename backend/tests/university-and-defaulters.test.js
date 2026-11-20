@@ -19,12 +19,14 @@ const envConfig = require('../src/core/config/env.config');
 const { readPersistentStore, writePersistentStore } = require('../src/core/database/persistentStore');
 const { rcceCentralErrorHandler } = require('../src/rcce/systemErrorHandler');
 const universityRoutes = require('../src/modules/university/university.routes');
+const institutionRoutes = require('../src/modules/university/institution.routes');
 const academicRoutes = require('../src/modules/academic/academic.routes');
 
 function buildApp() {
   const app = express();
   app.use(express.json({ limit: '5mb' }));
   app.use('/api/v1/university', universityRoutes);
+  app.use('/api/v1/institution', institutionRoutes);
   app.use('/api/v1/academic', academicRoutes);
   app.use(rcceCentralErrorHandler);
   return app;
@@ -334,6 +336,94 @@ test('4. University SRC Positions/Manifestos, Custom Stream & Defaulters Report 
     assert.equal(syncRes.json.data.didNotTakeExam.count, 1);
     assert.equal(syncRes.json.data.didNotSubmitAssignment.count, 1);
     assert.equal(syncRes.json.data.notAttendingSchool.count, 1);
+  } finally {
+    await new Promise((r) => server.close(r));
+  }
+});
+
+test('5. Tier-Native /api/v1/institution/* Works Across JHS, SHS, TVET & University Without University Hub Blockers', async () => {
+  const app = buildApp();
+  const server = http.createServer(app);
+  await new Promise((r) => server.listen(0, '127.0.0.1', r));
+  const baseUrl = `http://127.0.0.1:${server.address().port}`;
+
+  try {
+    // 1. All 4 tiers operate cleanly on streams, leadership/prefects, exams & results inside /api/v1/institution/*
+    for (const [tenantId, tier, expectStreamSnippet] of [
+      [910, 'NURSERY_TO_JHS', 'Regular Morning School'],
+      [911, 'SENIOR_HIGH_SCHOOL', 'Boarding House Stream'],
+      [912, 'TECHNICAL', 'Regular Workshop Stream'],
+      [913, 'UNIVERSITY', 'Regular Students']
+    ]) {
+      const adminToken = jwt.sign({ id: `adm_${tenantId}`, role: 'HEADMASTER', tenantId, institutionType: tier }, envConfig.jwt.secret);
+      const auth = { Authorization: `Bearer ${adminToken}` };
+
+      const profileRes = await reqJson(baseUrl, 'GET', '/api/v1/institution/profile', null, auth);
+      assert.equal(profileRes.status, 200);
+      assert.equal(profileRes.json.data.institutionType, tier);
+
+      const streamsRes = await reqJson(baseUrl, 'GET', '/api/v1/institution/streams', null, auth);
+      assert.equal(streamsRes.status, 200);
+      assert.ok(
+        streamsRes.json.data.streams.some((s) => String(s.streamName).includes(expectStreamSnippet)),
+        `${tier} streams should include '${expectStreamSnippet}'`
+      );
+
+      const govRes = await reqJson(baseUrl, 'POST', '/api/v1/institution/governance', {
+        positionTitle: `${tier} Representative`,
+        holderName: `Leader ${tenantId}`,
+        stream: streamsRes.json.data.streams[0]?.streamName || 'Main Stream',
+        duties: 'Coordinate student welfare & campus cleanliness',
+        howToHelpSchool: 'Lead weekly peer academic mentoring'
+      }, auth);
+      assert.equal(govRes.status, 201);
+
+      const govListRes = await reqJson(baseUrl, 'GET', '/api/v1/institution/governance', null, auth);
+      assert.equal(govListRes.status, 200);
+      assert.ok(govListRes.json.data.governanceRoles.some((g) => g.positionTitle === `${tier} Representative`));
+
+      const examRes = await reqJson(baseUrl, 'POST', '/api/v1/institution/exams', {
+        courseCode: `${tier.slice(0, 3)}-101`,
+        courseTitle: `${tier} Core Assessment`,
+        targetLevel: tier === 'UNIVERSITY' ? 'Level 100' : tier === 'TECHNICAL' ? 'TVET Year 1' : tier === 'SENIOR_HIGH_SCHOOL' ? 'SHS Form 1' : 'JHS 1',
+        passMark: 50
+      }, auth);
+      assert.equal(examRes.status, 201);
+    }
+
+    // 2. Attachments allowed on TVET (TECHNICAL) & UNIVERSITY, strictly separated from UNIVERSITY-only Industrial Internships
+    const tvetToken = jwt.sign({ id: 'u_912', role: 'STUDENT', tenantId: 912, institutionType: 'TECHNICAL' }, envConfig.jwt.secret);
+    const tvetAuth = { Authorization: `Bearer ${tvetToken}` };
+
+    const tvetAttach = await reqJson(baseUrl, 'POST', '/api/v1/institution/attachments', {
+      studentName: 'Kofi Artisans',
+      courseCode: 'TVT-204',
+      hostInstitution: 'Tema Shipyard & Drydock',
+      supervisorName: 'Engr. Tackie',
+      startDate: '2026-07-01',
+      endDate: '2026-09-01',
+      objectives: 'Complete COTVET electrical & welding workshop attachment'
+    }, tvetAuth);
+    assert.equal(tvetAttach.status, 201);
+    assert.ok(String(tvetAttach.json.data.attachment.id).startsWith('ATT-'));
+
+    const tvetInternBlocked = await reqJson(baseUrl, 'GET', '/api/v1/institution/internships', null, tvetAuth);
+    assert.equal(tvetInternBlocked.status, 403, 'TVET must not access University-only Industrial Internships');
+
+    const jhsToken = jwt.sign({ id: 'u_910', role: 'STUDENT', tenantId: 910, institutionType: 'NURSERY_TO_JHS' }, envConfig.jwt.secret);
+    const jhsAttachBlocked = await reqJson(baseUrl, 'GET', '/api/v1/institution/attachments', null, { Authorization: `Bearer ${jhsToken}` });
+    assert.equal(jhsAttachBlocked.status, 403, 'Basic/JHS should not open tertiary/TVET attachments');
+
+    const uniToken = jwt.sign({ id: 'u_913', role: 'STUDENT', tenantId: 913, institutionType: 'UNIVERSITY' }, envConfig.jwt.secret);
+    const uniIntRes = await reqJson(baseUrl, 'POST', '/api/v1/institution/internships', {
+      studentName: 'Ama University',
+      companyName: 'Accra Software Systems',
+      supervisorName: 'Dir. Quaye',
+      startDate: '2026-07-01',
+      endDate: '2026-09-01'
+    }, { Authorization: `Bearer ${uniToken}` });
+    assert.equal(uniIntRes.status, 201);
+    assert.ok(String(uniIntRes.json.data.internship.id).startsWith('INT-'));
   } finally {
     await new Promise((r) => server.close(r));
   }

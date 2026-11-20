@@ -275,7 +275,7 @@ export function getActiveTenantId() {
     const tenant = JSON.parse(localStorage.getItem("gbs_tenant") || "{}");
     if (tenant.id) return String(tenant.id);
     if (tenant.code) return String(tenant.code);
-  } catch {}
+  } catch { }
   return "1";
 }
 
@@ -284,21 +284,26 @@ export function getActiveTenantId() {
  */
 export function getActiveInstitutionType() {
   try {
+    const mode = String(localStorage.getItem("gbs_system_mode") || "LIVE_PRODUCTION").toUpperCase();
+    const tenant = JSON.parse(localStorage.getItem("gbs_tenant") || "{}");
+    const user = JSON.parse(localStorage.getItem("gbs_user") || "{}");
+    const isDemo = mode === "DEMO_SANDBOX" || user?.isDemo === true;
     const directType = localStorage.getItem("gbs_institution_type");
+    const registeredRaw = user?.institutionType || tenant?.institutionType;
+
+    // In Live Production, ALWAYS honor the registered institution type before any leftover local selector key
+    if (!isDemo && registeredRaw) {
+      return normalizeInstitutionTierKey(registeredRaw);
+    }
+
     if (directType && INSTITUTION_TIERS[directType]) {
       return directType;
     }
 
-    const tenant = JSON.parse(localStorage.getItem("gbs_tenant") || "{}");
-    if (tenant.institutionType && INSTITUTION_TIERS[tenant.institutionType]) {
-      return tenant.institutionType;
+    if (registeredRaw) {
+      return normalizeInstitutionTierKey(registeredRaw);
     }
-
-    const user = JSON.parse(localStorage.getItem("gbs_user") || "{}");
-    if (user.institutionType && INSTITUTION_TIERS[user.institutionType]) {
-      return user.institutionType;
-    }
-  } catch {}
+  } catch { }
 
   // Default to NURSERY_TO_JHS as required by institutional blueprint
   return "NURSERY_TO_JHS";
@@ -334,8 +339,16 @@ export function isLevelPermitted(levelIdentifier, institutionType = getActiveIns
   }
 
   if (institutionType === "SENIOR_HIGH_SCHOOL") {
-    // Restricted: Creche, Nursery, KG, Primary, or University
-    if (clean.includes("NURSERY") || clean.includes("KINDERGARTEN") || clean.includes("KG ") || clean.includes("PRIMARY") || clean.includes("BASIC 1") || clean.includes("BASIC 2") || clean.includes("BASIC 3") || clean.includes("BASIC 4") || clean.includes("BASIC 5") || clean.includes("BASIC 6") || clean.includes("LEVEL ") || clean.includes("FACULTY")) {
+    // Restricted: Creche, Nursery, KG, Primary, TVET trade workshops, or University
+    if (clean.includes("NURSERY") || clean.includes("KINDERGARTEN") || clean.includes("KG ") || clean.includes("PRIMARY") || clean.includes("BASIC 1") || clean.includes("BASIC 2") || clean.includes("BASIC 3") || clean.includes("BASIC 4") || clean.includes("BASIC 5") || clean.includes("BASIC 6") || clean.includes("LEVEL ") || clean.includes("FACULTY") || clean.includes("TVET")) {
+      return false;
+    }
+    return true;
+  }
+
+  if (institutionType === "TECHNICAL") {
+    // Restricted: Basic School (Creche/Nursery/KG/Primary/JHS) or Senior High tracks
+    if (clean.includes("NURSERY") || clean.includes("KINDERGARTEN") || clean.includes("KG ") || clean.includes("PRIMARY") || clean.includes("JHS") || clean.includes("SHS")) {
       return false;
     }
     return true;
@@ -384,7 +397,7 @@ export function getTenantScopedRecord(baseKey, defaultValue = null) {
     const key = getTenantScopedStorageKey(baseKey);
     const item = localStorage.getItem(key);
     if (item !== null) return JSON.parse(item);
-  } catch {}
+  } catch { }
   return defaultValue;
 }
 
