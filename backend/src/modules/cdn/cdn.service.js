@@ -26,7 +26,7 @@ function loadAssetsMeta() {
     if (fs.existsSync(CDN_META_FILE)) {
       return JSON.parse(fs.readFileSync(CDN_META_FILE, "utf-8"));
     }
-  } catch {}
+  } catch { }
   return [
     {
       id: "CDN-RPT-001",
@@ -79,7 +79,7 @@ function loadAssetsMeta() {
 function saveAssetsMeta(assets) {
   try {
     fs.writeFileSync(CDN_META_FILE, JSON.stringify(assets, null, 2));
-  } catch {}
+  } catch { }
 }
 
 async function getCDNStatus() {
@@ -161,11 +161,11 @@ async function uploadAsset({ fileName, category, tenantCode, tenantId, mimeType,
       if (!fs.existsSync(targetPath)) {
         fs.writeFileSync(targetPath, rawContentBuffer);
       }
-    } catch {}
+    } catch { }
   }
 
-  const formattedSize = byteSize > 1048576 
-    ? `${(byteSize / (1024 * 1024)).toFixed(2)} MB` 
+  const formattedSize = byteSize > 1048576
+    ? `${(byteSize / (1024 * 1024)).toFixed(2)} MB`
     : `${(byteSize / 1024).toFixed(1)} KB`;
 
   const newAsset = {

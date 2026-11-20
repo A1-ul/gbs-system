@@ -5,7 +5,7 @@
 ================================================================================
 */
 
-const CACHE_NAME = "gbs-cache-v2026.19";
+const CACHE_NAME = "gbs-cache-v2026.20";
 const OFFLINE_URL = "/offline.html";
 
 const PRECACHE_ASSETS = [
@@ -15,6 +15,8 @@ const PRECACHE_ASSETS = [
   "/manifest.json",
   "/icons/icon-192.png",
   "/icons/icon-512.png",
+  "/icons/icon-144.png",
+  "/icons/apple-touch-icon.png",
   "/assets/gbs_crest_badge.jpg"
 ];
 

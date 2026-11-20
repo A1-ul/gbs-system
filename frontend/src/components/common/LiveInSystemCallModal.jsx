@@ -33,12 +33,21 @@ export default function LiveInSystemCallModal({
   const localVideoRef = useRef(null);
   const remoteVideoRef = useRef(null);
   const localStreamRef = useRef(null);
+  const remoteStreamRef = useRef(null);
   const peerConnRef = useRef(null);
   const lastSignalTimeRef = useRef(null);
   const offerSentRef = useRef(false);
 
+  const onSessionEndedRef = useRef(onSessionEnded);
+  const onCloseRef = useRef(onClose);
+  useEffect(() => {
+    onSessionEndedRef.current = onSessionEnded;
+    onCloseRef.current = onClose;
+  });
+
   const myUserId = String(currentUser?.id || currentUser?.email || "user");
   const callId = session?.id || liveSession?.id;
+  const initiatorUserId = session?.initiatorUserId || liveSession?.initiatorUserId;
   const mediaMode = String(liveSession?.mediaMode || session?.mediaMode || "VIDEO").toUpperCase();
 
   const stopTracks = useCallback(() => {
@@ -68,6 +77,24 @@ export default function LiveInSystemCallModal({
     } catch { }
   }, [callId]);
 
+  // Ensure local video element stays connected to hardware stream across re-renders without re-initializing hardware
+  useEffect(() => {
+    if (localVideoRef.current && localStreamRef.current) {
+      if (localVideoRef.current.srcObject !== localStreamRef.current) {
+        localVideoRef.current.srcObject = localStreamRef.current;
+      }
+    }
+  }, [cameraOff, mediaMode]);
+
+  // Ensure remote video element stays connected to incoming stream across re-renders
+  useEffect(() => {
+    if (remoteVideoRef.current && remoteStreamRef.current) {
+      if (remoteVideoRef.current.srcObject !== remoteStreamRef.current) {
+        remoteVideoRef.current.srcObject = remoteStreamRef.current;
+      }
+    }
+  }, [remoteConnected]);
+
   useEffect(() => {
     if (!callId) return undefined;
     let active = true;
@@ -85,7 +112,7 @@ export default function LiveInSystemCallModal({
               return;
             }
             localStreamRef.current = stream;
-            if (localVideoRef.current) {
+            if (localVideoRef.current && localVideoRef.current.srcObject !== stream) {
               localVideoRef.current.srcObject = stream;
             }
             setMediaStatus(mediaMode === "VIDEO" ? "HD Camera & Microphone Live" : "Voice Microphone Live");
@@ -119,8 +146,12 @@ export default function LiveInSystemCallModal({
           }
 
           pc.ontrack = (evt) => {
-            if (remoteVideoRef.current && evt.streams && evt.streams[0]) {
-              remoteVideoRef.current.srcObject = evt.streams[0];
+            if (evt.streams && evt.streams[0]) {
+              const rStream = evt.streams[0];
+              remoteStreamRef.current = rStream;
+              if (remoteVideoRef.current && remoteVideoRef.current.srcObject !== rStream) {
+                remoteVideoRef.current.srcObject = rStream;
+              }
               setRemoteConnected(true);
             }
           };
@@ -131,7 +162,7 @@ export default function LiveInSystemCallModal({
             }
           };
 
-          const isInitiator = String(session?.initiatorUserId) === myUserId;
+          const isInitiator = String(initiatorUserId) === myUserId;
           if (isInitiator && !offerSentRef.current) {
             offerSentRef.current = true;
             try {
@@ -159,13 +190,29 @@ export default function LiveInSystemCallModal({
         if (!data) return;
 
         if (data.session) {
-          setLiveSession(data.session);
+          // Avoid triggering unnecessary re-renders on identical polling responses
+          setLiveSession((prev) => {
+            if (!prev) return data.session;
+            if (
+              prev.id === data.session.id &&
+              prev.status === data.session.status &&
+              prev.mediaMode === data.session.mediaMode &&
+              JSON.stringify(prev.participants || []) === JSON.stringify(data.session.participants || []) &&
+              (prev.chatMessages?.length || 0) === (data.session.chatMessages?.length || 0)
+            ) {
+              return prev;
+            }
+            return data.session;
+          });
           if (Array.isArray(data.session.chatMessages)) {
-            setChatLog(data.session.chatMessages);
+            setChatLog((prev) => {
+              if (prev.length === data.session.chatMessages.length) return prev;
+              return data.session.chatMessages;
+            });
           }
           if (data.session.status === "ENDED" || data.session.status === "DECLINED") {
             setMediaStatus(`Call ${data.session.status.toLowerCase()}`);
-            if (typeof onSessionEnded === "function") onSessionEnded(data.session);
+            if (typeof onSessionEndedRef.current === "function") onSessionEndedRef.current(data.session);
           }
         }
 
@@ -197,7 +244,7 @@ export default function LiveInSystemCallModal({
       clearInterval(pollInterval);
       stopTracks();
     };
-  }, [callId, mediaMode, myUserId, sendSignal, session?.initiatorUserId, stopTracks, onSessionEnded]);
+  }, [callId, mediaMode, myUserId, initiatorUserId, sendSignal, stopTracks]);
 
   const toggleMic = () => {
     const nextMuted = !micMuted;

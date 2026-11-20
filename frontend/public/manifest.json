@@ -3,7 +3,7 @@
   "name": "GBS International School Management System",
   "description": "GBS Enterprise School Management Platform — Intelligence Talks to Wisdom",
   "start_url": "/login?source=pwa",
-  "id": "/login",
+  "id": "/login?source=pwa",
   "scope": "/",
   "display": "standalone",
   "display_override": ["window-controls-overlay", "standalone"],
@@ -13,28 +13,40 @@
   "prefer_related_applications": false,
   "icons": [
     {
-      "src": "/icons/icon-192.png?v=gbs2026",
+      "src": "/icons/icon-192.png",
       "type": "image/png",
       "sizes": "192x192",
       "purpose": "any"
     },
     {
-      "src": "/icons/icon-192.png?v=gbs2026",
+      "src": "/icons/icon-192.png",
       "type": "image/png",
       "sizes": "192x192",
       "purpose": "maskable"
     },
     {
-      "src": "/icons/icon-512.png?v=gbs2026",
+      "src": "/icons/icon-512.png",
       "type": "image/png",
       "sizes": "512x512",
       "purpose": "any"
     },
     {
-      "src": "/icons/icon-512.png?v=gbs2026",
+      "src": "/icons/icon-512.png",
       "type": "image/png",
       "sizes": "512x512",
       "purpose": "maskable"
+    },
+    {
+      "src": "/icons/icon-144.png",
+      "type": "image/png",
+      "sizes": "144x144",
+      "purpose": "any"
+    },
+    {
+      "src": "/icons/apple-touch-icon.png",
+      "type": "image/png",
+      "sizes": "180x180",
+      "purpose": "any"
     }
   ],
   "shortcuts": [

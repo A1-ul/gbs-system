@@ -63,6 +63,16 @@ export default function LiveCallLauncherAndReceiver({
     } catch { }
   }, [variant]);
 
+  const handleCloseCallModal = useCallback(() => {
+    setActiveModalSession(null);
+    pollIncomingAndConferences();
+  }, [pollIncomingAndConferences]);
+
+  const handleCallSessionEnded = useCallback(() => {
+    setActiveModalSession(null);
+    pollIncomingAndConferences();
+  }, [pollIncomingAndConferences]);
+
   useEffect(() => {
     pollIncomingAndConferences();
     loadDirectory();
@@ -384,14 +394,8 @@ export default function LiveCallLauncherAndReceiver({
         <LiveInSystemCallModal
           session={activeModalSession}
           currentUser={resolvedUser}
-          onClose={() => {
-            setActiveModalSession(null);
-            pollIncomingAndConferences();
-          }}
-          onSessionEnded={() => {
-            setActiveModalSession(null);
-            pollIncomingAndConferences();
-          }}
+          onClose={handleCloseCallModal}
+          onSessionEnded={handleCallSessionEnded}
         />
       )}
     </>
