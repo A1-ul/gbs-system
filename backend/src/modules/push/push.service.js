@@ -17,26 +17,7 @@ function loadSubscriptions() {
       return JSON.parse(fs.readFileSync(SUBSCRIPTIONS_FILE, "utf-8"));
     }
   } catch { }
-  return [
-    {
-      id: "SUB-DEVICE-001",
-      userId: "USER-PRNT-101",
-      userRole: "PARENT",
-      devicePlatform: "Android (Samsung Galaxy S24)",
-      endpoint: "https://fcm.googleapis.com/fcm/send/sample_token_samsung_01",
-      keys: { p256dh: "BMc8...sample", auth: "xYz...sample" },
-      subscribedAt: new Date(Date.now() - 3600000 * 48).toISOString()
-    },
-    {
-      id: "SUB-DEVICE-002",
-      userId: "USER-TCHR-204",
-      userRole: "TEACHER",
-      devicePlatform: "iOS (Apple iPhone 15 Pro)",
-      endpoint: "https://web.push.apple.com/sample_token_iphone_02",
-      keys: { p256dh: "APL9...sample", auth: "aBc...sample" },
-      subscribedAt: new Date(Date.now() - 3600000 * 24).toISOString()
-    }
-  ];
+  return [];
 }
 
 function saveSubscriptions(subs) {
@@ -51,29 +32,7 @@ function loadPushLogs() {
       return JSON.parse(fs.readFileSync(PUSH_LOGS_FILE, "utf-8"));
     }
   } catch { }
-  return [
-    {
-      id: "PUSH-8841",
-      title: "💰 School Fees Receipt Acknowledged",
-      body: "Official receipt #REC-8842 issued for Kwesi Mensah (GH₵ 2,400). Balance cleared.",
-      category: "FEES_PAID",
-      targetRole: "PARENT",
-      targetUserId: "USER-PRNT-101",
-      dispatchedAt: new Date(Date.now() - 3600000 * 2).toISOString(),
-      deliveryStatus: "DELIVERED_TO_LOCK_SCREEN",
-      latencyMs: 145
-    },
-    {
-      id: "PUSH-8842",
-      title: "🚌 School Bus GPS Sentinel Alert",
-      body: "Transit Bus 4 is 3 minutes away from pick-up zone (Airport Residential).",
-      category: "SCHOOL_BUS_ALERT",
-      targetRole: "ALL_PARENTS",
-      dispatchedAt: new Date(Date.now() - 3600000 * 5).toISOString(),
-      deliveryStatus: "DELIVERED_TO_LOCK_SCREEN",
-      latencyMs: 98
-    }
-  ];
+  return [];
 }
 
 function savePushLogs(logs) {
@@ -137,7 +96,7 @@ async function dispatchPushNotification({ title, body, category, targetRole, tar
     category: cleanCategory,
     targetRole: (targetRole || "ALL_USERS").toUpperCase(),
     targetUserId: targetUserId || "BROADCAST",
-    url: url || "/portal/dashboard",
+    url: url || "/login",
     icon: icon || "/assets/gbs_crest_badge.jpg",
     badge: badge || "/icons/icon-192.png",
     dispatchedAt: new Date().toISOString(),

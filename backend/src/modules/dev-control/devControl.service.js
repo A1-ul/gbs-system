@@ -8,6 +8,12 @@ const socketServer = require('../../core/socket/socketServer');
 const smsService = require('../sms/sms.service');
 const authService = require('../auth/auth.service');
 const {
+  resolveCountryNorm,
+  convertGhsToCountryCurrency,
+  convertCountryCurrencyToGhs,
+  getCurrencyRateToGhs
+} = require('../../utils/countryLanguageNorms');
+const {
   readPersistentStore,
   writePersistentStore,
   addPermanentlyDeletedIds,
@@ -2654,14 +2660,281 @@ const deleteIntrusionViolation = async (id) => {
     writePersistentStore((curr) => {
       const violations = Array.isArray(curr.intrusionViolations) ? curr.intrusionViolations : [];
       const trials = Array.isArray(curr.staffBreachTrials) ? curr.staffBreachTrials : [];
+      const devSec = curr.developerSecurity && typeof curr.developerSecurity === 'object' ? curr.developerSecurity : {};
+      const events = Array.isArray(devSec.intrusionEvents) ? devSec.intrusionEvents : [];
       return {
         ...curr,
         intrusionViolations: violations.filter((v) => String(v.id) !== raw),
-        staffBreachTrials: trials.filter((t) => String(t.id) !== raw)
+        staffBreachTrials: trials.filter((t) => String(t.id) !== raw),
+        developerSecurity: {
+          ...devSec,
+          intrusionEvents: events.filter((ev) => String(ev.id) !== raw)
+        }
       };
     });
   } catch { }
   return { id: raw, deleted: true, permanent: true };
+};
+
+const getDeveloperLoginSecurityStatus = () => {
+  const store = readPersistentStore();
+  const sec = store.developerSecurity && typeof store.developerSecurity === 'object'
+    ? store.developerSecurity
+    : {};
+  const events = Array.isArray(sec.intrusionEvents) ? sec.intrusionEvents : [];
+  return {
+    loginLocked: Boolean(sec.loginLocked),
+    lockedAt: sec.lockedAt || null,
+    lockedReason: sec.lockedReason || null,
+    lockEventId: sec.lockEventId || null,
+    totalIntrusions: events.length,
+    lastAttemptTimestamp: sec.lockedAt || events[0]?.timestamp || null
+  };
+};
+
+const recordDeveloperIntrusionAndLock = async (payload = {}) => {
+  const attemptedEmail = String(payload.attemptedEmail || payload.email || 'anonymous@unknown').trim().toLowerCase();
+  const capturedPhoto = payload.capturedPhoto || payload.intruderPhoto || null;
+  const nowIso = new Date().toISOString();
+  const eventId = payload.id || `INTRUSION-${Date.now()}-${Math.floor(100 + Math.random() * 900)}`;
+
+  const eventRecord = {
+    id: eventId,
+    category: payload.category || (payload.isRegisteredStaff ? 'REGISTERED_STAFF_BREACH' : 'UNREGISTERED_INTRUDER_EXTERNAL'),
+    isRegisteredStaff: Boolean(payload.isRegisteredStaff),
+    attemptedEmail,
+    staffName: payload.staffName || null,
+    staffRole: payload.staffRole || null,
+    institutionName: payload.institutionName || (payload.isRegisteredStaff ? 'Registered School' : 'UNREGISTERED EXTERNAL ENTITY'),
+    exactRegisteredSchool: payload.exactRegisteredSchool || payload.institutionName || 'NONE (Unregistered External Origin)',
+    tenantCode: payload.tenantCode || 'EXTERNAL-BREACH',
+    trialCount: Math.max(1, parseInt(payload.trialCount || 1, 10) || 1),
+    capturedPhoto,
+    intruderPhoto: capturedPhoto,
+    sourceIp: String(payload.sourceIp || 'External Client').trim(),
+    userAgent: String(payload.userAgent || '').trim().slice(0, 260),
+    timestamp: nowIso,
+    formattedTime: new Date().toLocaleTimeString(),
+    status: 'LOGIN_LOCKED_EVIDENCE_SENT',
+    penaltyNotice: payload.penaltyNotice || `SECURITY LOCKDOWN: False entry attempt (${attemptedEmail}) to Developer Portal intercepted. Camera snapshot captured and transmitted to Developer Dashboard.`
+  };
+
+  writePersistentStore((curr) => {
+    const prevSec = curr.developerSecurity && typeof curr.developerSecurity === 'object' ? curr.developerSecurity : {};
+    const prevEvents = Array.isArray(prevSec.intrusionEvents) ? prevSec.intrusionEvents : [];
+    const prevViolations = Array.isArray(curr.intrusionViolations) ? curr.intrusionViolations : [];
+    const prevAlerts = Array.isArray(curr.systemAlerts) ? curr.systemAlerts : [];
+
+    return {
+      ...curr,
+      intrusionViolations: [eventRecord, ...prevViolations.filter((v) => v.id !== eventId)].slice(0, 100),
+      developerSecurity: {
+        ...prevSec,
+        loginLocked: true,
+        lockedAt: nowIso,
+        lockedReason: 'There has been a false entry attempt to the Developer Login page to access the Developer Portal. Access is disabled until authorized Developer credentials are entered.',
+        lockEventId: eventId,
+        lastAttemptedEmail: attemptedEmail,
+        intrusionEvents: [eventRecord, ...prevEvents.filter((ev) => ev.id !== eventId)].slice(0, 100)
+      },
+      systemAlerts: [
+        {
+          id: `ALT-SEC-${Date.now()}`,
+          severity: 'CRITICAL',
+          title: 'Developer Portal Intrusion & Auto-Lockdown',
+          message: `False entry by "${attemptedEmail}" intercepted. Camera snapshot saved (${eventId}) and Developer login disabled.`,
+          isResolved: false,
+          createdAt: nowIso
+        },
+        ...prevAlerts
+      ].slice(0, 100)
+    };
+  });
+
+  try {
+    if (typeof socketServer.getIO === 'function') {
+      const io = socketServer.getIO();
+      if (io) io.emit('gbs_dev_intrusion_alert', eventRecord);
+    }
+  } catch { }
+
+  return {
+    loginLocked: true,
+    lockedAt: nowIso,
+    event: eventRecord
+  };
+};
+
+const getDeveloperIntrusionEvents = () => {
+  const store = readPersistentStore();
+  const sec = store.developerSecurity && typeof store.developerSecurity === 'object' ? store.developerSecurity : {};
+  const fromSec = Array.isArray(sec.intrusionEvents) ? sec.intrusionEvents : [];
+  const fromViolations = Array.isArray(store.intrusionViolations) ? store.intrusionViolations : [];
+  const merged = [];
+  const seen = new Set();
+  for (const item of [...fromSec, ...fromViolations]) {
+    if (!item || !item.id || seen.has(item.id) || isPermanentlyDeleted(item.id)) continue;
+    seen.add(item.id);
+    merged.push(item);
+  }
+  return {
+    loginLocked: Boolean(sec.loginLocked),
+    lockedAt: sec.lockedAt || null,
+    events: merged
+  };
+};
+
+const reEnableDeveloperAccess = async ({ email, password }) => {
+  const cleanEmail = String(email || '').trim().toLowerCase();
+  const cleanPass = String(password || '').trim();
+  const authorizedEmail = String(process.env.DEVELOPER_EMAIL || 'gabosei48@gmail.com').trim().toLowerCase();
+  const authorizedPass = String(process.env.DEVELOPER_PASSWORD || '0543294615Gab').trim();
+
+  if (!cleanEmail || !cleanPass || cleanEmail !== authorizedEmail || cleanPass !== authorizedPass) {
+    throw new AppError('Invalid Developer Gmail or Password. Developer Login remains disabled until authentic Developer credentials are entered.', 403);
+  }
+
+  const nowIso = new Date().toISOString();
+  writePersistentStore((curr) => {
+    const prevSec = curr.developerSecurity && typeof curr.developerSecurity === 'object' ? curr.developerSecurity : {};
+    const prevEvents = Array.isArray(prevSec.intrusionEvents) ? prevSec.intrusionEvents : [];
+    return {
+      ...curr,
+      developerSecurity: {
+        ...prevSec,
+        loginLocked: false,
+        unlockedAt: nowIso,
+        unlockedBy: cleanEmail,
+        // Keep intrusionEvents intact so Developer can review all intruder photos on the Dashboard
+        intrusionEvents: prevEvents
+      }
+    };
+  });
+
+  return {
+    reEnabled: true,
+    loginLocked: false,
+    unlockedAt: nowIso,
+    developerEmail: authorizedEmail
+  };
+};
+
+const getDeveloperCountrySubscriptionsSummary = async () => {
+  const store = readPersistentStore();
+  const pendingApps = await getPendingInstitutionApplications();
+  const subs = Array.isArray(store.subscriptions) ? store.subscriptions : [];
+  const storeInsts = Array.isArray(store.institutions) ? store.institutions : [];
+  const tenantLocaleMap = store.tenantLocalePreferences && typeof store.tenantLocalePreferences === 'object'
+    ? store.tenantLocalePreferences
+    : {};
+
+  let dbTenants = [];
+  try {
+    dbTenants = await prisma.tenant.findMany({
+      where: { isDeleted: false },
+      include: { subscriptions: true }
+    });
+  } catch { }
+
+  const records = [];
+  const seenKeys = new Set();
+
+  const pushInstitutionFinancial = (item, stage) => {
+    if (!item) return;
+    const name = item.institutionName || item.name || item.tenantName;
+    const code = item.tenantCode || item.code || item.assignedTenantCode || item.tenantUid;
+    const key = `${String(code || name || item.id).toLowerCase()}`;
+    if (!key || seenKeys.has(key) || isPermanentlyDeleted(item.id || code || name)) return;
+    seenKeys.add(key);
+
+    const localeOverride = item.id ? tenantLocaleMap[String(item.id)] : null;
+    const countryInput = item.countryCode || item.country || localeOverride?.countryCode || 'GH';
+    const countryProfile = resolveCountryNorm(countryInput);
+
+    const studentCount = Math.max(0, parseInt(item.totalStudentsEnrolled || item.studentCount || 100, 10) || 0);
+    const tierUpper = String(item.institutionType || item.planName || 'NURSERY_TO_JHS').toUpperCase();
+    const rateGhs = tierUpper.includes('UNI') ? 10 : (tierUpper.includes('SHS') || tierUpper.includes('TECH') ? 5 : 3);
+    const months = Math.max(1, parseInt(item.subscribedMonths || 3, 10) || 3);
+    const rawGhs =
+      Number(item.convertedGhsAmount) ||
+      Number(item.totalTermFee) ||
+      Number(item.calculatedFee) ||
+      (item.localCurrencyAmount ? convertCountryCurrencyToGhs(item.localCurrencyAmount, countryProfile.currencyCode) : 0) ||
+      Math.round(studentCount * rateGhs * months * 100) / 100;
+
+    const converted = convertGhsToCountryCurrency(rawGhs, countryProfile.code);
+
+    records.push({
+      institutionName: name || 'Registered Institution',
+      tenantCode: code || `GBS-${item.id || records.length + 1}`,
+      stage,
+      countryCode: converted.countryCode,
+      countryName: converted.countryName,
+      countryFlag: converted.countryFlag,
+      currencyCode: converted.currencyCode,
+      currencySymbol: converted.currencySymbol,
+      fxRateToGhs: converted.fxRateToGhs,
+      studentCount,
+      localCurrencyAmount: converted.localCurrencyAmount,
+      convertedGhsAmount: converted.convertedGhsAmount,
+      formattedLocalAmount: converted.formattedLocalAmount,
+      formattedGhsAmount: converted.formattedGhsAmount
+    });
+  };
+
+  pendingApps
+    .filter((a) => !a.isApproved && String(a.status || '').toUpperCase() !== 'REJECTED')
+    .forEach((a) => pushInstitutionFinancial(a, 'READY_TO_ONBOARD'));
+
+  subs.forEach((s) => pushInstitutionFinancial(s, s.paymentVerified ? 'RENEWAL_OR_ACTIVE' : 'READY_TO_PAY'));
+  storeInsts.forEach((inst) => pushInstitutionFinancial(inst, 'REGISTERED_ACTIVE'));
+  dbTenants.forEach((t) => pushInstitutionFinancial({
+    id: t.id,
+    name: t.name,
+    code: t.code,
+    countryCode: tenantLocaleMap[String(t.id)]?.countryCode || 'GH',
+    totalStudentsEnrolled: t.subscriptions?.[0]?.studentCount || 100,
+    convertedGhsAmount: t.subscriptions?.[0]?.amountPaid || t.subscriptions?.[0]?.feeAmount || 0
+  }, 'REGISTERED_ACTIVE'));
+
+  // Group by country
+  const byCountryMap = new Map();
+  let totalConvertedGhsAllCountries = 0;
+
+  for (const rec of records) {
+    totalConvertedGhsAllCountries += rec.convertedGhsAmount;
+    if (!byCountryMap.has(rec.countryCode)) {
+      byCountryMap.set(rec.countryCode, {
+        countryCode: rec.countryCode,
+        countryName: rec.countryName,
+        countryFlag: rec.countryFlag,
+        currencyCode: rec.currencyCode,
+        currencySymbol: rec.currencySymbol,
+        fxRateToGhs: getCurrencyRateToGhs(rec.currencyCode),
+        institutionsCount: 0,
+        readyOnboardingCount: 0,
+        readyRenewalCount: 0,
+        totalStudents: 0,
+        totalLocalCurrencyAmount: 0,
+        totalConvertedGhsAmount: 0
+      });
+    }
+    const grp = byCountryMap.get(rec.countryCode);
+    grp.institutionsCount += 1;
+    if (rec.stage === 'READY_TO_ONBOARD') grp.readyOnboardingCount += 1;
+    else grp.readyRenewalCount += 1;
+    grp.totalStudents += rec.studentCount;
+    grp.totalLocalCurrencyAmount = Math.round((grp.totalLocalCurrencyAmount + rec.localCurrencyAmount) * 100) / 100;
+    grp.totalConvertedGhsAmount = Math.round((grp.totalConvertedGhsAmount + rec.convertedGhsAmount) * 100) / 100;
+  }
+
+  return {
+    countriesSummary: Array.from(byCountryMap.values()),
+    institutionsBreakdown: records,
+    totalCountriesRegistered: byCountryMap.size,
+    totalInstitutionsCount: records.length,
+    totalConvertedGhsAmount: Math.round(totalConvertedGhsAllCountries * 100) / 100
+  };
 };
 
 const issueLicense = async (data = {}) => {
@@ -3675,6 +3948,11 @@ module.exports = {
   deleteHeadmasterMessageThread,
   deleteHeadmasterMessageReply,
   deleteIntrusionViolation,
+  getDeveloperLoginSecurityStatus,
+  recordDeveloperIntrusionAndLock,
+  getDeveloperIntrusionEvents,
+  reEnableDeveloperAccess,
+  getDeveloperCountrySubscriptionsSummary,
   initiateTenantOnboard,
   verifyAndProvisionTenant,
   getOnboardedTenants,

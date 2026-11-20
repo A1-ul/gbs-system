@@ -194,6 +194,43 @@ export default function MainLoginPage() {
         })
         .catch(() => { });
     }
+
+    // Standalone Installed Mobile/Desktop PWA Session Auto-Resume & Shortcut Role Pre-select
+    if (typeof window !== "undefined") {
+      try {
+        const params = new URLSearchParams(window.location.search);
+        const roleQuery = String(params.get("role") || "").trim().toUpperCase();
+        if (roleQuery && ROLES.some((r) => r.id === roleQuery)) {
+          setSelectedRole(roleQuery);
+        }
+        const isStandaloneLaunch =
+          window.matchMedia?.("(display-mode: standalone)")?.matches ||
+          window.navigator?.standalone === true ||
+          params.get("source") === "pwa";
+        const activeToken = localStorage.getItem("gbs_token");
+        const storedUser = JSON.parse(localStorage.getItem("gbs_user") || "null");
+        if (isStandaloneLaunch && activeToken && storedUser?.role) {
+          const userRole = String(storedUser.role).trim().toUpperCase();
+          const roleRouteMap = {
+            ADMIN: "/portal/admin/dashboard",
+            SUPER_ADMIN: "/portal/admin/dashboard",
+            HEADMASTER: "/portal/admin/dashboard",
+            TEACHER: "/portal/teacher/dashboard",
+            STUDENT: "/portal/student/dashboard",
+            PARENT: "/portal/parent/dashboard",
+            ACCOUNTANT: "/portal/accountant/dashboard",
+            STAFF: "/portal/staff/dashboard",
+            HR: "/portal/hr/dashboard",
+            ALUMNI: "/portal/alumni/dashboard",
+            DEVELOPER: "/developer-control-center/dashboard"
+          };
+          const resumeTarget = roleRouteMap[userRole];
+          if (resumeTarget) {
+            navigate(resumeTarget, { replace: true });
+          }
+        }
+      } catch { }
+    }
   }, []);
 
   const ROLE_CREDENTIALS = {

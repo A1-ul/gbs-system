@@ -219,18 +219,17 @@ export default function TopCenterSystemBanner({
   const handleDirectOrModalAppInstall = async () => {
     const promptObj = typeof window !== "undefined" ? window.__gbsDeferredInstallPrompt : null;
     if (typeof navigator !== "undefined" && "serviceWorker" in navigator) {
-      try {
-        await navigator.serviceWorker.register("/sw.js", { updateViaCache: "none" });
-      } catch { }
+      navigator.serviceWorker.register("/sw.js", { updateViaCache: "none" }).catch(() => { });
     }
     if (promptObj) {
       try {
         await promptObj.prompt();
         const { outcome } = await promptObj.userChoice;
+        // Browser beforeinstallprompt events are strictly single-use; clear immediately after consumption
+        window.__gbsDeferredInstallPrompt = null;
+        setPwaPromptReady(false);
         if (outcome === "accepted") {
-          window.__gbsDeferredInstallPrompt = null;
           window.__gbsAppInstalled = true;
-          setPwaPromptReady(false);
           if (window.showGBSOpenNotice) {
             window.showGBSOpenNotice("✅ GBS App installed onto your device Home Screen / App Launcher!", "success", "MOBILE APP INSTALLED");
           }
@@ -239,7 +238,10 @@ export default function TopCenterSystemBanner({
         if (window.showGBSOpenNotice) {
           window.showGBSOpenNotice("Installation prompt dismissed. Opening the Mobile App & Push Hub for offline launcher & browser steps.", "info", "MOBILE APP INSTALLER");
         }
-      } catch { }
+      } catch {
+        window.__gbsDeferredInstallPrompt = null;
+        setPwaPromptReady(false);
+      }
     }
     setShowMobileAppModal(true);
   };
@@ -437,23 +439,27 @@ export default function TopCenterSystemBanner({
           {roleTitle}
         </span>
         <span style={{ color: "#475569" }}>•</span>
-        <span
-          style={{
-            display: "inline-flex",
-            alignItems: "center",
-            gap: "5px",
-            padding: "3px 10px",
-            borderRadius: "12px",
-            background: "rgba(212, 175, 55, 0.16)",
-            border: "1px solid rgba(212, 175, 55, 0.45)",
-            color: "#f5d061",
-            fontWeight: "800"
-          }}
-          title={`Institution Operating Tier: ${institutionProfile.name}`}
-        >
-          {institutionProfile.icon} Tier: {institutionProfile.shortName}
-        </span>
-        <span style={{ color: "#475569" }}>•</span>
+        {!isDevMode && (
+          <>
+            <span
+              style={{
+                display: "inline-flex",
+                alignItems: "center",
+                gap: "5px",
+                padding: "3px 10px",
+                borderRadius: "12px",
+                background: "rgba(212, 175, 55, 0.16)",
+                border: "1px solid rgba(212, 175, 55, 0.45)",
+                color: "#f5d061",
+                fontWeight: "800"
+              }}
+              title={`Institution Operating Tier: ${institutionProfile.name}`}
+            >
+              {institutionProfile.icon} Tier: {institutionProfile.shortName}
+            </span>
+            <span style={{ color: "#475569" }}>•</span>
+          </>
+        )}
         <GlobalLocaleSelector
           compact
           lockedDeveloperEnglish={isDevMode}
@@ -738,35 +744,37 @@ export default function TopCenterSystemBanner({
           <span>🟡 DEMO SANDBOX MODE</span>
           <span>•</span>
           <span style={{ fontWeight: 600 }}>Identical live workflow trainer — up to {demoTrialUsage.maxPerModule} trial entries per module ({demoTrialUsage.totalUsed} created).</span>
-          <label style={{ display: "inline-flex", alignItems: "center", gap: "6px", fontSize: "0.74rem", fontWeight: 800, color: "#fef3c7" }}>
-            <span>🏫 Demo Institution:</span>
-            <select
-              aria-label="Demo Institution Tier Switcher"
-              value={institutionType}
-              onChange={(e) => {
-                const nextType = e.target.value;
-                setActiveInstitutionType(nextType);
-                setInstitutionTypeState(nextType);
-                setSyncFeedback(`🏫 Switched Demo Institution profile to ${INSTITUTION_TIERS[nextType]?.shortName || nextType}.`);
-                setTimeout(() => setSyncFeedback(null), 4000);
-              }}
-              style={{
-                background: "#081428",
-                color: "#f5d061",
-                border: "1px solid #d4af37",
-                borderRadius: "10px",
-                padding: "3px 8px",
-                fontSize: "0.73rem",
-                fontWeight: 800,
-                cursor: "pointer"
-              }}
-            >
-              <option value="NURSERY_TO_JHS">Nursery – JHS</option>
-              <option value="SENIOR_HIGH_SCHOOL">Senior High (SHS)</option>
-              <option value="TECHNICAL">Technical / TVET</option>
-              <option value="UNIVERSITY">University / Tertiary</option>
-            </select>
-          </label>
+          {!isDevMode && (
+            <label style={{ display: "inline-flex", alignItems: "center", gap: "6px", fontSize: "0.74rem", fontWeight: 800, color: "#fef3c7" }}>
+              <span>🏫 Demo Institution:</span>
+              <select
+                aria-label="Demo Institution Tier Switcher"
+                value={institutionType}
+                onChange={(e) => {
+                  const nextType = e.target.value;
+                  setActiveInstitutionType(nextType);
+                  setInstitutionTypeState(nextType);
+                  setSyncFeedback(`🏫 Switched Demo Institution profile to ${INSTITUTION_TIERS[nextType]?.shortName || nextType}.`);
+                  setTimeout(() => setSyncFeedback(null), 4000);
+                }}
+                style={{
+                  background: "#081428",
+                  color: "#f5d061",
+                  border: "1px solid #d4af37",
+                  borderRadius: "10px",
+                  padding: "3px 8px",
+                  fontSize: "0.73rem",
+                  fontWeight: 800,
+                  cursor: "pointer"
+                }}
+              >
+                <option value="NURSERY_TO_JHS">Nursery – JHS</option>
+                <option value="SENIOR_HIGH_SCHOOL">Senior High (SHS)</option>
+                <option value="TECHNICAL">Technical / TVET</option>
+                <option value="UNIVERSITY">University / Tertiary</option>
+              </select>
+            </label>
+          )}
           <button
             type="button"
             onClick={() => {

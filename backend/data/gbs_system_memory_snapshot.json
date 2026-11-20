@@ -355,11 +355,18 @@
       "rootCause": "Previous locale selector only updated a small label helper and per-user object without persisting tenant-wide Headmaster institution language or translating the React DOM across all portals, and rendered active language controls on Developer Control Center.",
       "resolution": "Created locale.service.js & locale.routes.js (/api/v1/locale/tenant-preference, /norms) with strict per-tenant isolation and Developer role immutability, uiBatchTranslator.service.js (/api/v1/translate/batch with cached + neural translation), React-safe domTranslator.js, TenantLocaleTranslatorController.jsx, login hydration in auth.controller.js & auth.api.js, and data-gbs-developer-portal English lock on DeveloperDashboard/DeveloperLogin/DeveloperAIDiagnostics/TopCenterSystemBanner.",
       "status": "PERMANENTLY_GUARDED"
+    },
+    {
+      "issueCode": "DIAG-DEV-SECURITY-FX-MOBILE-ADMIN-SPLIT",
+      "symptom": "Developer Login must pre-fill empty inputs, auto-disable with false-entry notice and transmit intruder camera snapshots to Developer Dashboard until valid Gmail+Password re-enable; subscriptions must calculate per country currency and convert to Cedis; PWA install/push must work on mobile; Developer Dashboard must remove Demo Institution switcher, Archived Approved Vault, and Member Signups",
+      "rootCause": "DeveloperLogin prefilled permanentEmail without backend loginLocked enforcement; onboarding/subscriptions lacked country-to-Cedis conversion summary; manifest start_url targeted / and MobileAppPushHubModal called new Notification before ServiceWorkerRegistration.showNotification without clearing single-use beforeinstallprompt; DeveloperDashboard exposed ARCHIVED/MEMBERS panels and TopCenterSystemBanner showed institution switcher to Developer.",
+      "resolution": "Added persistent security lockdown endpoints (/dev-control/security/login-status, /intrusion, /re-enable, /intrusions), updated DeveloperLogin & DeveloperDashboard gate to empty inputs with stealth webcam evidence transmission, added multi-country FX to GH₵ conversion in countryLanguageNorms/i18nCountryEngine/devControl/TenantOnboardingFirstPage, fixed manifest.json (/login?source=pwa) + sw.js (DISPATCH_LOCK_SCREEN_PUSH + cached SPA root) + MobileAppPushHubModal + MainLoginPage standalone resume, hid institution switcher on isDevMode banner, and removed ARCHIVED vault & MEMBERS queue from DeveloperDashboard.",
+      "status": "PERMANENTLY_GUARDED"
     }
   ],
   "verificationSummary": {
-    "backendTestSuitesPassed": "v2.10 Blueprint, Locale, Auto-Update, Voice Formation & Clean Production suites alongside core suites",
-    "chromeE2EDashboardsVerified": "9/9 dashboards + Login + Voice AI + Global Locale + Clean Live Production",
+    "backendTestSuitesPassed": "v2.11 Developer Security Lockdown, Multi-Country Currency-to-Cedis, Mobile PWA & Role Split suites alongside all 12 core suites",
+    "chromeE2EDashboardsVerified": "All role dashboards + Developer Security Lockdown/Re-Enable + Country-to-Cedis Revenue + Mobile App Hub",
     "institutionSeparationUniversityClinicVoiceVerified": "2026-11-19 Live Production & Demo Sandbox Parity",
     "browserAssetsRegenerated": "favicon.ico, logo.png, icon-192.png, icon-512.png, apple-touch-icon.png, og-gbs-crest.jpg",
     "uncaughtBrowserConsoleErrors": 0,

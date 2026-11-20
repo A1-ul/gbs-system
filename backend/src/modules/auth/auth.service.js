@@ -3,6 +3,7 @@ const jwt = require('jsonwebtoken');
 const prisma = require('../../core/database/prisma.client');
 const envConfig = require('../../core/config/env.config');
 const { AppError } = require('../../middleware/error.middleware');
+const { convertGhsToCountryCurrency } = require('../../utils/countryLanguageNorms');
 const {
   readPersistentStore,
   writePersistentStore,
@@ -872,6 +873,10 @@ const registerInstitution = async (data) => {
     ? totalTermFee
     : Math.round((totalTermFee / subscribedMonths) * 100) / 100;
   const calculatedBaseFee = monthlyFee;
+  const countryCurrencyBreakdown = convertGhsToCountryCurrency(
+    amountDueNow > 0 ? amountDueNow : totalTermFee,
+    country || data.countryCode || 'GH'
+  );
 
   const regData = {
     id: `reg_${Date.now()}`,
@@ -897,10 +902,17 @@ const registerInstitution = async (data) => {
     bulkTermsAccepted,
     bulkTermsSignedBy,
     paymentAmount: String(data.paymentAmount || amountDueNow),
+    country: countryCurrencyBreakdown.countryName || country || 'Ghana',
+    countryCode: countryCurrencyBreakdown.countryCode,
+    countryFlag: countryCurrencyBreakdown.countryFlag,
+    currencyCode: data.currencyCode || countryCurrencyBreakdown.currencyCode,
+    currencySymbol: data.currencySymbol || countryCurrencyBreakdown.currencySymbol,
+    fxRateToGhs: countryCurrencyBreakdown.fxRateToGhs,
+    localCurrencyAmount: Number(data.localCurrencyAmount || countryCurrencyBreakdown.localCurrencyAmount || 0),
+    convertedGhsAmount: Number(data.convertedGhsAmount || countryCurrencyBreakdown.convertedGhsAmount || amountDueNow || 0),
     momoTxnId: data.momoTxnId || (effPlan === '1_MONTH_TRIAL' ? 'FREE_TRIAL_AUTO' : ''),
     hasUsedTrial: (effPlan === '1_MONTH_TRIAL'),
     isApproved: false,
-    country: country || 'Ghana',
     region: region || data.stateRegion || '',
     stateRegion: region || data.stateRegion || '',
     city: city || '',
@@ -1098,6 +1110,13 @@ const registerInstitution = async (data) => {
         subscribedMonths: enrichedReg.subscribedMonths,
         totalTermFee: enrichedReg.totalTermFee,
         paymentScheduleMode: enrichedReg.paymentScheduleMode,
+        country: enrichedReg.country,
+        countryCode: enrichedReg.countryCode,
+        currencyCode: enrichedReg.currencyCode,
+        currencySymbol: enrichedReg.currencySymbol,
+        fxRateToGhs: enrichedReg.fxRateToGhs,
+        localCurrencyAmount: enrichedReg.localCurrencyAmount,
+        convertedGhsAmount: enrichedReg.convertedGhsAmount,
         createdAt: registration.createdAt
       },
       message: 'Institution registration received successfully. Your institution credentials and identifiers have been recorded for Developer Control Center review and provisioning.'
@@ -1139,6 +1158,13 @@ const registerInstitution = async (data) => {
         subscribedMonths: enrichedReg.subscribedMonths,
         totalTermFee: enrichedReg.totalTermFee,
         paymentScheduleMode: enrichedReg.paymentScheduleMode,
+        country: enrichedReg.country,
+        countryCode: enrichedReg.countryCode,
+        currencyCode: enrichedReg.currencyCode,
+        currencySymbol: enrichedReg.currencySymbol,
+        fxRateToGhs: enrichedReg.fxRateToGhs,
+        localCurrencyAmount: enrichedReg.localCurrencyAmount,
+        convertedGhsAmount: enrichedReg.convertedGhsAmount,
         createdAt: regData.createdAt
       },
       message: 'Institution registration received successfully. Your institution credentials and identifiers have been recorded for Developer Control Center review and provisioning.'

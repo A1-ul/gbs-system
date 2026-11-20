@@ -8,18 +8,61 @@ const prisma = require('../../core/database/prisma.client');
 // 1. Master Developer Login & Session Initialization
 const devLogin = async (req, res, next) => {
   try {
-    const { username, password, pinCode } = req.body;
+    const { username, email, password, pinCode, capturedPhoto } = req.body || {};
 
-    // Verify Developer Master Credentials (permanent email gabosei48@gmail.com & password 0543294615Gab or valid master PIN)
-    const cleanEmail = String(username || '').trim().toLowerCase();
+    // Check if Developer Login Page has already been disabled due to a prior false entry
+    const lockState = devControlService.getDeveloperLoginSecurityStatus();
+    if (lockState.loginLocked) {
+      return res.status(423).json({
+        status: 'locked',
+        loginLocked: true,
+        lockedAt: lockState.lockedAt,
+        lockEventId: lockState.lockEventId,
+        message: 'there has been a false entry to the developer login page to access the developer portal. Please enter the authorized Developer Gmail and Password to re-enable access.',
+        data: lockState
+      });
+    }
+
+    // Verify Developer Master Credentials strictly (must match authorized Gmail & Password, or valid biometric PIN)
+    const cleanEmail = String(username || email || '').trim().toLowerCase();
     const cleanPassword = String(password || '').trim();
-    const isMasterCredential = (cleanPassword === '0543294615Gab') ||
-      (cleanEmail === 'gabosei48@gmail.com' && cleanPassword === '0543294615Gab');
+    const authorizedEmail = String(process.env.DEVELOPER_EMAIL || 'gabosei48@gmail.com').trim().toLowerCase();
+    const authorizedPassword = String(process.env.DEVELOPER_PASSWORD || '0543294615Gab').trim();
+    const isMasterCredential = Boolean(
+      cleanEmail &&
+      cleanPassword &&
+      cleanEmail === authorizedEmail &&
+      cleanPassword === authorizedPassword
+    );
 
     let securityLevel = 'LEVEL_5_DEVELOPER_ROOT';
     if (!isMasterCredential) {
-      const pinVerification = await devControlService.verifyDevPin(pinCode || cleanPassword);
-      securityLevel = pinVerification.securityLevel;
+      let pinValid = false;
+      if (pinCode && (!cleanEmail || cleanEmail === authorizedEmail)) {
+        try {
+          const pinVerification = await devControlService.verifyDevPin(pinCode);
+          securityLevel = pinVerification.securityLevel;
+          pinValid = true;
+        } catch {
+          pinValid = false;
+        }
+      }
+      if (!pinValid) {
+        const lockRes = await devControlService.recordDeveloperIntrusionAndLock({
+          attemptedEmail: cleanEmail || 'anonymous@unknown',
+          capturedPhoto: capturedPhoto || null,
+          sourceIp: req.ip || '127.0.0.1',
+          userAgent: req.headers['user-agent'] || '',
+          penaltyNotice: `SECURITY LOCKDOWN: False entry attempt (${cleanEmail || 'empty input'}) to Developer Login intercepted.`
+        });
+        return res.status(403).json({
+          status: 'fail',
+          loginLocked: true,
+          lockEventId: lockRes.event.id,
+          lockedAt: lockRes.lockedAt,
+          message: 'there has been a false entry to the developer login page to access the developer portal'
+        });
+      }
     }
 
     const token = jwt.sign(
@@ -808,6 +851,111 @@ const deleteIntrusionViolation = async (req, res, next) => {
   }
 };
 
+// Developer Security Lockdown, Intruder Camera Snapshot Vault, & Re-Enable
+const getSecurityLoginStatus = async (req, res, next) => {
+  try {
+    const statusData = devControlService.getDeveloperLoginSecurityStatus();
+    res.status(200).json({
+      status: 'success',
+      data: statusData
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+
+const reportIntrusionAndLock = async (req, res, next) => {
+  try {
+    const payload = {
+      ...(req.body || {}),
+      sourceIp: (req.body && req.body.sourceIp) || req.ip || '127.0.0.1',
+      userAgent: (req.body && req.body.userAgent) || req.headers['user-agent'] || ''
+    };
+    const result = await devControlService.recordDeveloperIntrusionAndLock(payload);
+    res.status(201).json({
+      status: 'locked',
+      message: 'there has been a false entry to the developer login page to access the developer portal',
+      data: result
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+
+const getIntrusionEvents = async (req, res, next) => {
+  try {
+    const result = devControlService.getDeveloperIntrusionEvents();
+    res.status(200).json({
+      status: 'success',
+      data: result
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+
+const reEnableDeveloperLogin = async (req, res, next) => {
+  try {
+    const { email, username, password } = req.body || {};
+    const unlocked = await devControlService.reEnableDeveloperAccess({
+      email: email || username,
+      password
+    });
+
+    const token = jwt.sign(
+      {
+        role: 'DEVELOPER',
+        email: unlocked.developerEmail,
+        devId: 'DEV-GBS-MASTER',
+        pinVerified: true,
+        securityLevel: 'LEVEL_5_DEVELOPER_ROOT'
+      },
+      envConfig.jwt.secret,
+      { expiresIn: '24h' }
+    );
+    const refreshToken = jwt.sign(
+      {
+        id: 1,
+        role: 'DEVELOPER',
+        email: unlocked.developerEmail
+      },
+      envConfig.jwt.refreshSecret,
+      { expiresIn: '30d' }
+    );
+
+    res.status(200).json({
+      status: 'success',
+      message: 'Developer portal access verified and re-enabled.',
+      token,
+      refreshToken,
+      developer: {
+        id: 'DEV-GBS-ROOT',
+        email: unlocked.developerEmail,
+        username: unlocked.developerEmail,
+        fullName: 'Gabriel Osei',
+        securityClearance: 'LEVEL_5_DEVELOPER_ROOT',
+        pinVerified: true
+      },
+      data: unlocked
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+
+// Developer Multi-Country Subscription Currency & Ghana Cedis (GH₵) Summary
+const getCountrySubscriptions = async (req, res, next) => {
+  try {
+    const summary = await devControlService.getDeveloperCountrySubscriptionsSummary();
+    res.status(200).json({
+      status: 'success',
+      data: summary
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+
 module.exports = {
   devLogin,
   verifyPin,
@@ -850,6 +998,11 @@ module.exports = {
   deleteHeadmasterMessageThread,
   deleteHeadmasterMessageReply,
   deleteIntrusionViolation,
+  getSecurityLoginStatus,
+  reportIntrusionAndLock,
+  getIntrusionEvents,
+  reEnableDeveloperLogin,
+  getCountrySubscriptions,
   initiateTenantOnboard,
   verifyTenantOnboard,
   getOnboardedTenants,

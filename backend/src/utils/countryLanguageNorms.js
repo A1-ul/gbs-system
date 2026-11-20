@@ -249,8 +249,91 @@ const LANGUAGE_DEFINITIONS = Object.freeze({
 });
 
 function resolveCountryNorm(countryCode = 'GH') {
-  const key = String(countryCode || 'GH').trim().toUpperCase();
-  return COUNTRY_NORMS[key] || COUNTRY_NORMS.GH;
+  const raw = String(countryCode || 'GH').trim();
+  const key = raw.toUpperCase();
+  if (COUNTRY_NORMS[key]) return COUNTRY_NORMS[key];
+
+  const low = raw.toLowerCase();
+  const byNameOrDial = Object.values(COUNTRY_NORMS).find(
+    (c) => c.name.toLowerCase() === low || c.dialCode === raw
+  );
+  if (byNameOrDial) return byNameOrDial;
+
+  const EXTENDED_FX_COUNTRIES = {
+    uganda: { code: 'UG', name: 'Uganda', flag: '🇺🇬', currencyCode: 'UGX', currencySymbol: 'USh ', dialCode: '+256', defaultLanguage: 'en', currencyRateToGhs: 0.0042 },
+    rwanda: { code: 'RW', name: 'Rwanda', flag: '🇷🇼', currencyCode: 'RWF', currencySymbol: 'RF ', dialCode: '+250', defaultLanguage: 'en', currencyRateToGhs: 0.0115 },
+    tanzania: { code: 'TZ', name: 'Tanzania', flag: '🇹🇿', currencyCode: 'TZS', currencySymbol: 'TSh ', dialCode: '+255', defaultLanguage: 'sw', currencyRateToGhs: 0.0061 },
+    "côte d'ivoire": { code: 'CI', name: "Côte d'Ivoire", flag: '🇨🇮', currencyCode: 'XOF', currencySymbol: 'CFA ', dialCode: '+225', defaultLanguage: 'fr', currencyRateToGhs: 0.026 },
+    senegal: { code: 'SN', name: 'Senegal', flag: '🇸🇳', currencyCode: 'XOF', currencySymbol: 'CFA ', dialCode: '+221', defaultLanguage: 'fr', currencyRateToGhs: 0.026 },
+    egypt: { code: 'EG', name: 'Egypt', flag: '🇪🇬', currencyCode: 'EGP', currencySymbol: 'E£', dialCode: '+20', defaultLanguage: 'ar', currencyRateToGhs: 0.32 },
+    italy: { code: 'IT', name: 'Italy', flag: '🇮🇹', currencyCode: 'EUR', currencySymbol: '€', dialCode: '+39', defaultLanguage: 'en', currencyRateToGhs: 17.15 },
+    netherlands: { code: 'NL', name: 'Netherlands', flag: '🇳🇱', currencyCode: 'EUR', currencySymbol: '€', dialCode: '+31', defaultLanguage: 'en', currencyRateToGhs: 17.15 },
+    switzerland: { code: 'CH', name: 'Switzerland', flag: '🇨🇭', currencyCode: 'CHF', currencySymbol: 'CHF ', dialCode: '+41', defaultLanguage: 'de', currencyRateToGhs: 17.9 },
+    australia: { code: 'AU', name: 'Australia', flag: '🇦🇺', currencyCode: 'AUD', currencySymbol: 'A$', dialCode: '+61', defaultLanguage: 'en', currencyRateToGhs: 10.35 },
+    'south korea': { code: 'KR', name: 'South Korea', flag: '🇰🇷', currencyCode: 'KRW', currencySymbol: '₩', dialCode: '+82', defaultLanguage: 'en', currencyRateToGhs: 0.0114 },
+    zambia: { code: 'ZM', name: 'Zambia', flag: '🇿🇲', currencyCode: 'ZMW', currencySymbol: 'ZK ', dialCode: '+260', defaultLanguage: 'en', currencyRateToGhs: 0.58 },
+    zimbabwe: { code: 'ZW', name: 'Zimbabwe', flag: '🇿🇼', currencyCode: 'USD', currencySymbol: '$', dialCode: '+263', defaultLanguage: 'en', currencyRateToGhs: 15.8 }
+  };
+  return EXTENDED_FX_COUNTRIES[low] || COUNTRY_NORMS.GH;
+}
+
+const CURRENCY_RATE_TO_GHS = Object.freeze({
+  GHS: 1.0,
+  NGN: 0.0098,
+  KES: 0.122,
+  ZAR: 0.87,
+  GBP: 20.1,
+  USD: 15.8,
+  CAD: 11.4,
+  EUR: 17.15,
+  BRL: 2.75,
+  AED: 4.3,
+  SAR: 4.21,
+  INR: 0.188,
+  CNY: 2.18,
+  JPY: 0.104,
+  UGX: 0.0042,
+  RWF: 0.0115,
+  TZS: 0.0061,
+  XOF: 0.026,
+  EGP: 0.32,
+  CHF: 17.9,
+  AUD: 10.35,
+  KRW: 0.0114,
+  ZMW: 0.58
+});
+
+function getCurrencyRateToGhs(currencyOrCountry = 'GH') {
+  const upper = String(currencyOrCountry || 'GH').trim().toUpperCase();
+  if (CURRENCY_RATE_TO_GHS[upper]) return CURRENCY_RATE_TO_GHS[upper];
+  const country = resolveCountryNorm(currencyOrCountry);
+  if (country.currencyRateToGhs) return Number(country.currencyRateToGhs);
+  return CURRENCY_RATE_TO_GHS[country.currencyCode] || 1.0;
+}
+
+function convertGhsToCountryCurrency(amountInGhs = 0, countryQuery = 'GH') {
+  const country = resolveCountryNorm(countryQuery);
+  const fxToGhs = getCurrencyRateToGhs(country.currencyCode || country.code);
+  const ghsNum = Math.max(0, Number(amountInGhs) || 0);
+  const localAmount = fxToGhs > 0 ? Math.round((ghsNum / fxToGhs) * 100) / 100 : ghsNum;
+  return {
+    countryCode: country.code,
+    countryName: country.name,
+    countryFlag: country.flag || '🌍',
+    currencyCode: country.currencyCode,
+    currencySymbol: country.currencySymbol,
+    fxRateToGhs: fxToGhs,
+    localCurrencyAmount: localAmount,
+    convertedGhsAmount: Math.round(ghsNum * 100) / 100,
+    formattedLocalAmount: `${country.currencySymbol.trim()} ${localAmount.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`,
+    formattedGhsAmount: `GH₵ ${(Math.round(ghsNum * 100) / 100).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`
+  };
+}
+
+function convertCountryCurrencyToGhs(localAmount = 0, countryOrCurrency = 'GHS') {
+  const fxToGhs = getCurrencyRateToGhs(countryOrCurrency);
+  const localNum = Math.max(0, Number(localAmount) || 0);
+  return Math.round(localNum * fxToGhs * 100) / 100;
 }
 
 function resolveLanguageSpec(langCode = 'en') {
@@ -261,6 +344,10 @@ function resolveLanguageSpec(langCode = 'en') {
 module.exports = {
   COUNTRY_NORMS,
   LANGUAGE_DEFINITIONS,
+  CURRENCY_RATE_TO_GHS,
   resolveCountryNorm,
-  resolveLanguageSpec
+  resolveLanguageSpec,
+  getCurrencyRateToGhs,
+  convertGhsToCountryCurrency,
+  convertCountryCurrencyToGhs
 };

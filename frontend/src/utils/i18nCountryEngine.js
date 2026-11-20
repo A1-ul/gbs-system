@@ -585,3 +585,97 @@ export function hydrateLocaleFromLoginUser(user) {
     }));
   }
 }
+
+// =========================================================================
+// Shared Global Country Currency <-> Ghana Cedis (GH₵) Conversion Helpers
+// Matches backend countryLanguageNorms.js rates 1:1
+// =========================================================================
+export const CURRENCY_RATE_TO_GHS = Object.freeze({
+  GHS: 1.0,
+  NGN: 0.0098,
+  KES: 0.122,
+  ZAR: 0.87,
+  GBP: 20.1,
+  USD: 15.8,
+  CAD: 11.4,
+  EUR: 17.15,
+  BRL: 2.75,
+  AED: 4.3,
+  SAR: 4.21,
+  INR: 0.188,
+  CNY: 2.18,
+  JPY: 0.104,
+  UGX: 0.0042,
+  RWF: 0.0115,
+  TZS: 0.0061,
+  XOF: 0.026,
+  EGP: 0.32,
+  CHF: 17.9,
+  AUD: 10.35,
+  KRW: 0.0114,
+  ZMW: 0.58
+});
+
+export const EXTENDED_FX_COUNTRIES = [
+  ...GLOBAL_COUNTRIES,
+  { code: "UG", name: "Uganda", flag: "🇺🇬", currencyCode: "UGX", currencySymbol: "USh", dialCode: "+256" },
+  { code: "RW", name: "Rwanda", flag: "🇷🇼", currencyCode: "RWF", currencySymbol: "RF", dialCode: "+250" },
+  { code: "TZ", name: "Tanzania", flag: "🇹🇿", currencyCode: "TZS", currencySymbol: "TSh", dialCode: "+255" },
+  { code: "CI", name: "Côte d'Ivoire", flag: "🇨🇮", currencyCode: "XOF", currencySymbol: "CFA", dialCode: "+225" },
+  { code: "SN", name: "Senegal", flag: "🇸🇳", currencyCode: "XOF", currencySymbol: "CFA", dialCode: "+221" },
+  { code: "EG", name: "Egypt", flag: "🇪🇬", currencyCode: "EGP", currencySymbol: "E£", dialCode: "+20" },
+  { code: "IT", name: "Italy", flag: "🇮🇹", currencyCode: "EUR", currencySymbol: "€", dialCode: "+39" },
+  { code: "NL", name: "Netherlands", flag: "🇳🇱", currencyCode: "EUR", currencySymbol: "€", dialCode: "+31" },
+  { code: "CH", name: "Switzerland", flag: "🇨🇭", currencyCode: "CHF", currencySymbol: "CHF", dialCode: "+41" },
+  { code: "AU", name: "Australia", flag: "🇦🇺", currencyCode: "AUD", currencySymbol: "A$", dialCode: "+61" },
+  { code: "KR", name: "South Korea", flag: "🇰🇷", currencyCode: "KRW", currencySymbol: "₩", dialCode: "+82" },
+  { code: "ZM", name: "Zambia", flag: "🇿🇲", currencyCode: "ZMW", currencySymbol: "ZK", dialCode: "+260" },
+  { code: "ZW", name: "Zimbabwe", flag: "🇿🇼", currencyCode: "USD", currencySymbol: "$", dialCode: "+263" }
+];
+
+export function resolveCountryCurrencyProfile(countryOrQuery = "GH") {
+  const raw = String(countryOrQuery || "GH").trim();
+  const upper = raw.toUpperCase();
+  const low = raw.toLowerCase();
+  const hit = EXTENDED_FX_COUNTRIES.find(
+    (c) =>
+      c.code === upper ||
+      c.name.toLowerCase() === low ||
+      c.currencyCode === upper ||
+      c.dialCode === raw
+  );
+  return hit || GLOBAL_COUNTRIES[0];
+}
+
+export function getCurrencyRateToGhs(currencyOrCountry = "GHS") {
+  const upper = String(currencyOrCountry || "GHS").trim().toUpperCase();
+  if (CURRENCY_RATE_TO_GHS[upper]) return CURRENCY_RATE_TO_GHS[upper];
+  const prof = resolveCountryCurrencyProfile(currencyOrCountry);
+  return CURRENCY_RATE_TO_GHS[prof.currencyCode] || 1.0;
+}
+
+export function convertGhsToCountryCurrency(amountInGhs = 0, countryOrCurrency = "GH") {
+  const prof = resolveCountryCurrencyProfile(countryOrCurrency);
+  const fxToGhs = getCurrencyRateToGhs(prof.currencyCode || prof.code);
+  const ghsNum = Math.max(0, Number(amountInGhs) || 0);
+  const localAmount = fxToGhs > 0 ? Math.round((ghsNum / fxToGhs) * 100) / 100 : ghsNum;
+  const convertedGhsAmount = Math.round(ghsNum * 100) / 100;
+  return {
+    countryCode: prof.code,
+    countryName: prof.name,
+    countryFlag: prof.flag || "🌍",
+    currencyCode: prof.currencyCode,
+    currencySymbol: prof.currencySymbol,
+    fxRateToGhs: fxToGhs,
+    localCurrencyAmount: localAmount,
+    convertedGhsAmount,
+    formattedLocalAmount: `${String(prof.currencySymbol || prof.currencyCode).trim()} ${localAmount.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`,
+    formattedGhsAmount: `GH₵ ${convertedGhsAmount.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`
+  };
+}
+
+export function convertCountryCurrencyToGhs(localAmount = 0, countryOrCurrency = "GHS") {
+  const fxToGhs = getCurrencyRateToGhs(countryOrCurrency);
+  const localNum = Math.max(0, Number(localAmount) || 0);
+  return Math.round(localNum * fxToGhs * 100) / 100;
+}

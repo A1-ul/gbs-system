@@ -126,11 +126,12 @@ export default function MobileAppPushHubModal({ isOpen, onClose }) {
   const handleDownloadWebAppLauncher = () => {
     if (typeof window === "undefined" || typeof document === "undefined") return;
     const liveOrigin = window.location.origin;
+    const launcherTarget = `${liveOrigin}/login?source=pwa`;
     const launcherHtml = `<!DOCTYPE html>
 <html lang="en">
 <head>
   <meta charset="UTF-8" />
-  <meta http-equiv="refresh" content="0;url=${liveOrigin}" />
+  <meta http-equiv="refresh" content="0;url=${launcherTarget}" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>GBS School Management System — App Launcher</title>
   <link rel="icon" href="${liveOrigin}/icons/icon-192.png" />
@@ -142,8 +143,8 @@ export default function MobileAppPushHubModal({ isOpen, onClose }) {
 <body>
   <div>
     <h2>Launching GBS School Management System...</h2>
-    <p>Redirecting to <a href="${liveOrigin}">${liveOrigin}</a></p>
-    <script>window.location.replace(${JSON.stringify(liveOrigin)});</script>
+    <p>Redirecting to <a href="${launcherTarget}">${launcherTarget}</a></p>
+    <script>window.location.replace(${JSON.stringify(launcherTarget)});</script>
   </div>
 </body>
 </html>`;
@@ -177,7 +178,7 @@ export default function MobileAppPushHubModal({ isOpen, onClose }) {
     // Ensure Service Worker is active so Chrome/Edge exposes native installability when eligible
     if (typeof navigator !== "undefined" && "serviceWorker" in navigator) {
       try {
-        await navigator.serviceWorker.register("/sw.js");
+        await navigator.serviceWorker.register("/sw.js", { updateViaCache: "none" });
       } catch { }
     }
 
@@ -185,11 +186,11 @@ export default function MobileAppPushHubModal({ isOpen, onClose }) {
       try {
         await activePrompt.prompt();
         const { outcome } = await activePrompt.userChoice;
+        window.__gbsDeferredInstallPrompt = null;
+        setDeferredPrompt(null);
         if (outcome === "accepted") {
-          window.__gbsDeferredInstallPrompt = null;
           window.__gbsAppInstalled = true;
           setInstallSuccess(true);
-          setDeferredPrompt(null);
           setPushFeedback({
             type: "success",
             text: "✅ Installation accepted! GBS App has been installed onto your device Home Screen / App Launcher."
@@ -198,11 +199,13 @@ export default function MobileAppPushHubModal({ isOpen, onClose }) {
         } else {
           setPushFeedback({
             type: "info",
-            text: "Installation prompt was dismissed. Click 'Install App on This Device' again anytime to install."
+            text: "Installation prompt was dismissed. You can install anytime from browser Menu → Install App / Add to Home Screen or download the launcher below."
           });
           return;
         }
       } catch (err) {
+        window.__gbsDeferredInstallPrompt = null;
+        setDeferredPrompt(null);
         console.warn("Native install prompt fallback:", err);
       }
     }
@@ -303,23 +306,37 @@ export default function MobileAppPushHubModal({ isOpen, onClose }) {
       });
     } catch {}
 
-    // 2. Trigger native system notification on this device
+    // 2. Trigger native system notification cleanly across Android Chrome (SW showNotification) & Desktop
     if (typeof window !== "undefined" && "Notification" in window && Notification.permission === "granted") {
       try {
-        if ("serviceWorker" in navigator && navigator.serviceWorker.controller) {
-          navigator.serviceWorker.controller.postMessage({
-            type: "DISPATCH_LOCK_SCREEN_PUSH",
-            title,
-            body
+        if ("serviceWorker" in navigator) {
+          const swReg = await navigator.serviceWorker.ready;
+          if (swReg && typeof swReg.showNotification === "function") {
+            await swReg.showNotification(title, {
+              body,
+              icon: "/assets/gbs_crest_badge.jpg",
+              badge: "/assets/gbs_crest_badge.jpg",
+              vibrate: [200, 100, 200],
+              tag: `gbs-alert-${Date.now()}`,
+              renotify: true,
+              data: { url: "/login?source=pwa" }
+            });
+          } else if (navigator.serviceWorker.controller) {
+            navigator.serviceWorker.controller.postMessage({
+              type: "DISPATCH_LOCK_SCREEN_PUSH",
+              title,
+              body,
+              url: "/login?source=pwa"
+            });
+          }
+        } else {
+          new Notification(title, {
+            body,
+            icon: "/assets/gbs_crest_badge.jpg",
+            badge: "/assets/gbs_crest_badge.jpg",
+            tag: `gbs-alert-${Date.now()}`
           });
         }
-        // Direct browser notification fallback
-        new Notification(title, {
-          body,
-          icon: "/assets/gbs_crest_badge.jpg",
-          badge: "/assets/gbs_crest_badge.jpg",
-          tag: `gbs-alert-${Date.now()}`
-        });
       } catch (e) {
         console.warn("Direct notification notice:", e);
       }

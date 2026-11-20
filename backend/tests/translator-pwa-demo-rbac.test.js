@@ -240,7 +240,7 @@ test('4. Mobile App PWA install assets (manifest.json, sw.js, offline.html, PNG 
 
   const manifest = JSON.parse(fs.readFileSync(path.join(feRoot, 'public/manifest.json'), 'utf8'));
   assert.equal(manifest.display, 'standalone');
-  assert.equal(manifest.start_url, '/');
+  assert.equal(manifest.start_url, '/login?source=pwa');
   assert.ok(Array.isArray(manifest.icons) && manifest.icons.length >= 2);
 
   const sw = fs.readFileSync(path.join(feRoot, 'public/sw.js'), 'utf8');

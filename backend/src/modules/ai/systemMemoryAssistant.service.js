@@ -131,6 +131,18 @@ const CORE_TOPICS = [
     action: null
   },
   {
+    id: 'developer_security',
+    keywords: ['developer login', 'intruder', 'false entry', 'camera snapshot', 'disabled', 're-enable', 'lockdown'],
+    speech: 'If any false entry is attempted on the Developer Login page, GBS automatically captures a live camera snapshot, transmits the forensic evidence to the Developer Dashboard, and disables the login portal until the authorized Developer enters valid Gmail and password credentials in empty verification fields.',
+    action: null
+  },
+  {
+    id: 'country_cedis_fx',
+    keywords: ['cedis', 'ghs', 'currency conversion', 'exchange rate', 'country subscription', 'registered countries'],
+    speech: 'GBS calculates each onboarding and renewal subscription in the institution country local currency and converts every country figure accurately into Ghana Cedis on the Developer Dashboard so the Developer sees all registered countries and ready payments in one settlement table.',
+    action: null
+  },
+  {
     id: 'attendance',
     keywords: ['attendance', 'roll call', 'present', 'late', 'check in', 'qr scan'],
     speech: 'Daily Attendance tracks Present, Absent, Late, and Excused statuses via instant teacher roll-call grids or student ID scanning, updating Defaulters alerts and Parent portals live.',

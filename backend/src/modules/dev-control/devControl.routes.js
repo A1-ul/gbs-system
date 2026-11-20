@@ -5,9 +5,13 @@ const devControlController = require('./devControl.controller');
 
 const router = express.Router();
 
-// 1. Authentication & PIN Security
+// 1. Authentication, Security Lockdown, Intruder Evidence & PIN Security
 router.post('/auth/login', devControlController.devLogin);
 router.post('/verify-pin', devControlController.verifyPin);
+router.get('/security/login-status', devControlController.getSecurityLoginStatus);
+router.post('/security/intrusion', devControlController.reportIntrusionAndLock);
+router.get('/security/intrusions', devControlController.getIntrusionEvents);
+router.post('/security/re-enable', devControlController.reEnableDeveloperLogin);
 
 // 2. Real-Time Telemetry & Monitoring (Step 33)
 router.get('/metrics', devControlController.getMetrics);
@@ -78,6 +82,7 @@ router.post('/deployments/batch-delete', devControlController.batchDeleteDeploym
 
 // 14. Enterprise Licensing & Subscription Controls
 router.get('/licenses', devControlController.getLicenses);
+router.get('/country-subscriptions', devControlController.getCountrySubscriptions);
 router.post('/licenses', devControlController.issueLicense);
 router.delete('/licenses/:id', devControlController.deleteLicense);
 router.post('/licenses/batch-delete', devControlController.batchDeleteLicenses);

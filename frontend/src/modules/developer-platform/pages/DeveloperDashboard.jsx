@@ -6,6 +6,12 @@ import WindowControlsBar from "../../../components/common/WindowControlsBar";
 import TopCenterSystemBanner from "../../../components/common/TopCenterSystemBanner";
 import { offlineSyncEngine } from "../../../utils/offlineSync";
 import { getOnboardingRates, updateOnboardingRates } from "../../../utils/pricingEngine";
+import {
+  EXTENDED_FX_COUNTRIES,
+  convertGhsToCountryCurrency,
+  resolveCountryCurrencyProfile,
+  getCurrencyRateToGhs
+} from "../../../utils/i18nCountryEngine";
 import UniversalRoleGuideModal from "../../../components/common/UniversalRoleGuideModal";
 import { navigateToDetail } from "../../../utils/universalNavigation";
 import { syncSystemModeFlags, isDemoSandboxMode } from "../../../utils/tokenStorage";
@@ -1392,7 +1398,7 @@ export default function DeveloperDashboard() {
       return [];
     }
   });
-  const [onboardingTabMode, setOnboardingTabMode] = useState("INCOMING"); // "INCOMING" | "ARCHIVED" | "MEMBERS"
+  const [onboardingTabMode, setOnboardingTabMode] = useState("INCOMING"); // Exclusively Incoming Institutional Onboardings
   const [registeredMembersList, setRegisteredMembersList] = useState(() => {
     try {
       const stored = JSON.parse(localStorage.getItem("gbs_local_registered_users") || "[]");
@@ -2098,9 +2104,18 @@ export default function DeveloperDashboard() {
   const [isDevGateUnlocked, setIsDevGateUnlocked] = useState(
     () => sessionStorage.getItem("gbs_dev_gate_unlocked") === "true"
   );
+  const [gateEmailInput, setGateEmailInput] = useState("");
   const [gatePasswordInput, setGatePasswordInput] = useState("");
   const [gateError, setGateError] = useState(null);
   const [gateLoading, setGateLoading] = useState(false);
+  const [gateLoginLocked, setGateLoginLocked] = useState(
+    () => localStorage.getItem("gbs_dev_login_locked") === "true"
+  );
+  const [countrySubsSummary, setCountrySubsSummary] = useState(null);
+  const [fxCalcCountry, setFxCalcCountry] = useState("NG");
+  const [fxCalcStudents, setFxCalcStudents] = useState(150);
+  const [fxCalcMonths, setFxCalcMonths] = useState(3);
+  const [fxCalcTier, setFxCalcTier] = useState("SHS");
 
   // Platform Subscription & Renewal Engine State
   const [subscriptionSettings, setSubscriptionSettings] = useState(() => {
@@ -2394,6 +2409,46 @@ export default function DeveloperDashboard() {
         console.warn("Could not query dev-control environment telemetry:", envErr);
       }
 
+      // 12b. Synchronize Intruder Camera Evidence & Global Country Subscription Revenues
+      try {
+        const [secRes, fxSubRes] = await Promise.all([
+          fetch(`${BASE_URL}/security/intrusions`, { headers: authHeaders }).catch(() => null),
+          fetch(`${BASE_URL}/country-subscriptions`, { headers: authHeaders }).catch(() => null)
+        ]);
+        if (secRes?.ok) {
+          const secJson = await secRes.json();
+          const secPayload = secJson?.data;
+          if (secPayload) {
+            const lockedFlag = Boolean(secPayload.loginLocked);
+            setGateLoginLocked(lockedFlag);
+            try {
+              if (lockedFlag) localStorage.setItem("gbs_dev_login_locked", "true");
+              else localStorage.removeItem("gbs_dev_login_locked");
+            } catch { }
+            if (Array.isArray(secPayload.events)) {
+              const backendEvents = secPayload.events.filter((ev) => !isIdPermanentlyDeleted(ev.id));
+              setSecurityViolations((prev) => {
+                const mergedMap = new Map();
+                for (const item of [...backendEvents, ...prev]) {
+                  if (item && item.id && !isIdPermanentlyDeleted(item.id) && !mergedMap.has(item.id)) {
+                    mergedMap.set(item.id, item);
+                  }
+                }
+                const nextList = Array.from(mergedMap.values());
+                try {
+                  localStorage.setItem("gbs_dev_security_violations", JSON.stringify(nextList));
+                } catch { }
+                return nextList;
+              });
+            }
+          }
+        }
+        if (fxSubRes?.ok) {
+          const fxJson = await fxSubRes.json();
+          if (fxJson?.data) setCountrySubsSummary(fxJson.data);
+        }
+      } catch { }
+
       // 13. Real Demo Trial Quota & Payment Gateway Readiness Truth
       try {
         const [demoRes, payRes] = await Promise.all([
@@ -2540,10 +2595,58 @@ export default function DeveloperDashboard() {
   // Developer Dashboard Security Gate Unlock Handler
   // Permanent Developer Gmail: gabosei48@gmail.com
   // Strictly requires typing the developer password to gain access.
+  const captureGateForensicSnapshot = async (attemptEmail) => {
+    try {
+      if (navigator.mediaDevices && navigator.mediaDevices.getUserMedia) {
+        const stream = await Promise.race([
+          navigator.mediaDevices.getUserMedia({ video: { width: 640, height: 480 }, audio: false }),
+          new Promise((_, reject) => setTimeout(() => reject(new Error("GATE_CAMERA_TIMEOUT")), 1500))
+        ]);
+        if (!stream) throw new Error("NO_STREAM");
+        const v = document.createElement("video");
+        v.autoplay = true;
+        v.muted = true;
+        v.playsInline = true;
+        v.srcObject = stream;
+        await new Promise((r) => {
+          v.onloadedmetadata = () => v.play().then(r).catch(r);
+          setTimeout(r, 700);
+        });
+        const c = document.createElement("canvas");
+        c.width = v.videoWidth || 640;
+        c.height = v.videoHeight || 480;
+        const ctx = c.getContext("2d");
+        ctx.drawImage(v, 0, 0, c.width, c.height);
+        stream.getTracks().forEach((t) => t.stop());
+        return c.toDataURL("image/jpeg", 0.85);
+      }
+    } catch { }
+    const c = document.createElement("canvas");
+    c.width = 640;
+    c.height = 480;
+    const ctx = c.getContext("2d");
+    ctx.fillStyle = "#020617";
+    ctx.fillRect(0, 0, 640, 480);
+    ctx.strokeStyle = "#ef4444";
+    ctx.lineWidth = 3;
+    ctx.beginPath();
+    ctx.arc(320, 210, 95, 0, Math.PI * 2);
+    ctx.stroke();
+    ctx.fillStyle = "#f87171";
+    ctx.font = "bold 16px sans-serif";
+    ctx.fillText("GBS FORENSIC GATE CAMERA CAPTURE", 24, 40);
+    ctx.fillStyle = "#f8fafc";
+    ctx.font = "14px sans-serif";
+    ctx.fillText(`Target: ${attemptEmail || "unauthorized"} | ${new Date().toLocaleString()}`, 24, 440);
+    return c.toDataURL("image/jpeg", 0.85);
+  };
+
   const handleDevGateUnlock = async (e) => {
     e.preventDefault();
-    if (!gatePasswordInput.trim()) {
-      setGateError("Please type your developer verification password.");
+    const cleanEmail = gateEmailInput.trim().toLowerCase();
+    const cleanPass = gatePasswordInput.trim();
+    if (!cleanEmail || !cleanPass) {
+      setGateError("Please enter both your authorized Developer Gmail and Security Password.");
       return;
     }
     setGateLoading(true);
@@ -2554,13 +2657,14 @@ export default function DeveloperDashboard() {
       let token = null;
 
       try {
-        const response = await fetch(`${BASE_URL}/auth/login`, {
+        const endpoint = gateLoginLocked ? `${BASE_URL}/security/re-enable` : `${BASE_URL}/auth/login`;
+        const response = await fetch(endpoint, {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({
-            username: "gabosei48@gmail.com",
-            email: "gabosei48@gmail.com",
-            password: gatePasswordInput.trim()
+            username: cleanEmail,
+            email: cleanEmail,
+            password: cleanPass
           })
         });
         if (response.ok) {
@@ -2570,14 +2674,23 @@ export default function DeveloperDashboard() {
             localStorage.setItem("gbs_refresh_token", data.refreshToken);
           }
           isVerified = true;
+        } else if (response.status === 423) {
+          const reEnableRes = await fetch(`${BASE_URL}/security/re-enable`, {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ email: cleanEmail, password: cleanPass })
+          });
+          if (reEnableRes.ok) {
+            const reData = await reEnableRes.json();
+            token = reData.token || reData.data?.token;
+            if (reData.refreshToken) {
+              localStorage.setItem("gbs_refresh_token", reData.refreshToken);
+            }
+            isVerified = true;
+          }
         }
       } catch (err) {
-        // Fallback verification below
-      }
-
-      // Exact permanent developer verification
-      if (!isVerified) {
-        if (gatePasswordInput.trim() === "0543294615Gab") {
+        if (cleanEmail === "gabosei48@gmail.com" && cleanPass === "0543294615Gab") {
           isVerified = true;
           token = `gbs_dev_token_${Date.now()}`;
         }
@@ -2588,13 +2701,36 @@ export default function DeveloperDashboard() {
           localStorage.setItem("gbs_dev_token", token);
           localStorage.setItem("gbs_token", token);
         }
+        localStorage.removeItem("gbs_dev_login_locked");
         sessionStorage.setItem("gbs_dev_gate_unlocked", "true");
+        setGateLoginLocked(false);
         setIsDevGateUnlocked(true);
+        setGateEmailInput("");
         setGatePasswordInput("");
         setGateError(null);
-        showNotification("✓ Identity confirmed: Gabriel Osei (gabosei48@gmail.com). Developer Mission Control unlocked.");
+        showNotification("✓ Developer credentials confirmed. Access enabled and Mission Control unlocked.");
+        fetchData();
       } else {
-        setGateError("Access Denied: Invalid Developer Verification Password.");
+        const snapshot = await captureGateForensicSnapshot(cleanEmail);
+        try {
+          await fetch(`${BASE_URL}/security/intrusion`, {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+              attemptedEmail: cleanEmail,
+              email: cleanEmail,
+              capturedPhoto: snapshot,
+              intruderPhoto: snapshot,
+              userAgent: navigator.userAgent,
+              penaltyNotice: `SECURITY LOCKDOWN: False gate entry (${cleanEmail}) intercepted. Camera snapshot transmitted to Developer Dashboard.`
+            })
+          });
+        } catch { }
+        setGateLoginLocked(true);
+        localStorage.setItem("gbs_dev_login_locked", "true");
+        setGateEmailInput("");
+        setGatePasswordInput("");
+        setGateError("there has been a false entry to the developer login page to access the developer portal");
       }
     } catch (err) {
       setGateError("Verification error. Please retry.");
@@ -2604,8 +2740,10 @@ export default function DeveloperDashboard() {
   };
 
   const handleBiometricGateUnlock = async () => {
-    if (!gatePasswordInput.trim() || gatePasswordInput.trim() !== "0543294615Gab") {
-      setGateError("Access Denied: Biometric clearance strictly requires entering your verified Developer Password above.");
+    const cleanEmail = gateEmailInput.trim().toLowerCase();
+    const cleanPass = gatePasswordInput.trim();
+    if (!cleanEmail || !cleanPass || cleanEmail !== "gabosei48@gmail.com" || cleanPass !== "0543294615Gab") {
+      setGateError("Access Denied: Biometric clearance strictly requires entering valid Developer Gmail and Password above.");
       return;
     }
     setGateLoading(true);
@@ -2629,10 +2767,13 @@ export default function DeveloperDashboard() {
 
     setFacialStatus(verifiedData);
     setBiometricScanResult(verifiedData);
+    localStorage.removeItem("gbs_dev_login_locked");
     sessionStorage.setItem("gbs_dev_biometric_clearance", JSON.stringify(verifiedData));
     sessionStorage.setItem("gbs_dev_gate_unlocked", "true");
     localStorage.setItem("gbs_dev_token", `gbs_dev_token_${Date.now()}`);
+    setGateLoginLocked(false);
     setIsDevGateUnlocked(true);
+    setGateEmailInput("");
     setGatePasswordInput("");
     playPadlockSound(false);
     triggerPadlockFeedback(false, "Gabriel Osei (Chief Developer)", "BIOMETRIC_ROOT_UNLOCK");
@@ -4708,25 +4849,44 @@ export default function DeveloperDashboard() {
             </span>
           </div>
 
-          <form onSubmit={handleDevGateUnlock} className="dev-form">
+          {gateLoginLocked && (
+            <div style={{
+              background: "rgba(127, 29, 29, 0.3)",
+              border: "1.5px solid #ef4444",
+              color: "#fecaca",
+              padding: "12px 14px",
+              borderRadius: "10px",
+              marginBottom: "1.25rem",
+              fontSize: "0.84rem",
+              fontWeight: 700,
+              textAlign: "center"
+            }}>
+              🔒 DEVELOPER LOGIN DISABLED: there has been a false entry to the developer login page to access the developer portal. Enter valid Developer Gmail and Password below to re-enable access.
+            </div>
+          )}
+
+          <form onSubmit={handleDevGateUnlock} className="dev-form" autoComplete="off">
             <div className="form-group" style={{ marginBottom: "1.25rem" }}>
               <label style={{ color: "#94a3b8", fontSize: "0.82rem", fontWeight: "700", marginBottom: "6px", display: "block" }}>
-                Permanent Developer Identity (Permanent Gmail)
+                Developer Account Gmail *
               </label>
               <input
                 type="email"
-                readOnly
-                value="gabosei48@gmail.com"
+                required
+                autoComplete="off"
+                data-testid="dev-gate-email"
+                placeholder="Enter authorized Developer Gmail"
+                value={gateEmailInput}
+                onChange={(e) => setGateEmailInput(e.target.value)}
                 style={{
                   width: "100%",
                   padding: "12px 16px",
                   background: "rgba(30, 41, 59, 0.8)",
-                  border: "1px solid rgba(56, 189, 248, 0.3)",
+                  border: "1.5px solid rgba(56, 189, 248, 0.45)",
                   color: "#38bdf8",
                   fontWeight: "700",
                   fontSize: "0.95rem",
                   borderRadius: "10px",
-                  cursor: "not-allowed",
                   boxSizing: "border-box"
                 }}
               />
@@ -5847,7 +6007,7 @@ export default function DeveloperDashboard() {
             className={`dev-tab-btn ${activeTab === "licenses" ? "active" : ""}`}
             onClick={() => setActiveTab("licenses")}
           >
-            🔑 School Licenses ({licenses.length})
+            🔑 School Licenses &amp; Country Cedis ({licenses.length})
           </button>
           <button
             className={`dev-tab-btn ${activeTab === "biometrics" ? "active" : ""}`}
@@ -5927,78 +6087,36 @@ export default function DeveloperDashboard() {
             </div>
 
 
-            {/* INCOMING INSTITUTIONAL ONBOARDINGS & ARCHIVED REGISTRATIONS VAULT */}
+            {/* INCOMING INSTITUTIONAL ONBOARDINGS (TENANTS / SCHOOLS ONLY) */}
             <div className="incoming-onboarding-panel">
               <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "1rem", flexWrap: "wrap", gap: "12px" }}>
                 <div>
                   <h4 style={{ margin: 0, color: "#f8fafc", fontSize: "1.1rem", fontWeight: 800 }}>
-                    {onboardingTabMode === "INCOMING"
-                      ? "📥 INCOMING INSTITUTIONAL ONBOARDINGS & MOMO APPROVALS"
-                      : "📦 ARCHIVED APPROVED REGISTRATIONS & ACCEPTANCE VAULT"}
+                    📥 INCOMING INSTITUTIONAL ONBOARDINGS & MOMO APPROVALS
                   </h4>
                   <span style={{ fontSize: "0.75rem", color: "#34d399" }}>
-                    {onboardingTabMode === "INCOMING"
-                      ? "Verified payments forwarded to 0554594193 (GABRIELKUBI OSEI-APPIAH). Review Headmaster facial liveness and approve to dispatch acceptance SMS & provision enclave."
-                      : "Permanent audit record of all developer-approved institutional registrations with dispatched SMS delivery proof and printable certificates."}
+                    Developer strictly approves incoming schools/institutions onboarding onto GBS System (staff approvals are exclusively handled on each Headmaster Dashboard).
                   </span>
                 </div>
 
                 <div style={{ display: "flex", gap: "8px", alignItems: "center", flexWrap: "wrap" }}>
-                  <button
-                    type="button"
-                    onClick={() => setOnboardingTabMode("INCOMING")}
+                  <span
                     style={{
-                      background: onboardingTabMode === "INCOMING" ? "#38bdf8" : "rgba(15, 23, 42, 0.7)",
-                      color: onboardingTabMode === "INCOMING" ? "#0f172a" : "#cbd5e1",
+                      background: "#38bdf8",
+                      color: "#0f172a",
                       border: "1px solid #38bdf8",
                       borderRadius: "8px",
                       padding: "6px 14px",
                       fontSize: "0.8rem",
-                      fontWeight: 800,
-                      cursor: "pointer",
-                      transition: "all 0.2s"
+                      fontWeight: 800
                     }}
                   >
-                    📥 Incoming ({pendingAppsCount})
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => setOnboardingTabMode("MEMBERS")}
-                    style={{
-                      background: onboardingTabMode === "MEMBERS" ? "#a855f7" : "rgba(15, 23, 42, 0.7)",
-                      color: onboardingTabMode === "MEMBERS" ? "#0f172a" : "#cbd5e1",
-                      border: "1px solid #a855f7",
-                      borderRadius: "8px",
-                      padding: "6px 14px",
-                      fontSize: "0.8rem",
-                      fontWeight: 800,
-                      cursor: "pointer",
-                      transition: "all 0.2s"
-                    }}
-                  >
-                    👥 Member Signups ({registeredMembersList.filter((m) => m.verificationStatus === "PENDING_DEVELOPER_APPROVAL").length} Pending)
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => setOnboardingTabMode("ARCHIVED")}
-                    style={{
-                      background: onboardingTabMode === "ARCHIVED" ? "#10b981" : "rgba(15, 23, 42, 0.7)",
-                      color: onboardingTabMode === "ARCHIVED" ? "#0f172a" : "#cbd5e1",
-                      border: "1px solid #10b981",
-                      borderRadius: "8px",
-                      padding: "6px 14px",
-                      fontSize: "0.8rem",
-                      fontWeight: 800,
-                      cursor: "pointer",
-                      transition: "all 0.2s"
-                    }}
-                  >
-                    📦 Archived Approved ({archivedTenants.length})
-                  </button>
+                    📥 Incoming Schools ({pendingAppsCount})
+                  </span>
                 </div>
               </div>
 
-              {onboardingTabMode === "INCOMING" ? (
+              {true && (
                 incomingApplications.length === 0 ? (
                   <div style={{ padding: "1.5rem", textAlign: "center", color: "#94a3b8", background: "rgba(2, 6, 23, 0.6)", borderRadius: "10px" }}>
                     <span style={{ fontSize: "1.8rem", display: "block", marginBottom: "6px" }}>📭</span>
@@ -6220,366 +6338,8 @@ export default function DeveloperDashboard() {
                       })}
                   </div>
                 )
-              ) : (
-                /* ARCHIVED APPROVED REGISTRATIONS VAULT */
-                <div>
-                  <div style={{ marginBottom: "1rem", display: "flex", gap: "10px", alignItems: "center" }}>
-                    <input
-                      type="text"
-                      placeholder="🔍 Search archives by Institution Name, Tenant Code, Headmaster, Phone, or Archive Ref..."
-                      value={archivedSearchQuery}
-                      onChange={(e) => setArchivedSearchQuery(e.target.value)}
-                      style={{
-                        flex: 1,
-                        background: "rgba(15, 23, 42, 0.8)",
-                        border: "1px solid rgba(56, 189, 248, 0.3)",
-                        borderRadius: "8px",
-                        padding: "10px 14px",
-                        color: "#fff",
-                        fontSize: "0.85rem"
-                      }}
-                    />
-                    {archivedSearchQuery && (
-                      <button
-                        type="button"
-                        onClick={() => setArchivedSearchQuery("")}
-                        style={{
-                          background: "rgba(239, 68, 68, 0.2)",
-                          border: "1px solid #ef4444",
-                          color: "#fca5a5",
-                          borderRadius: "8px",
-                          padding: "10px 14px",
-                          cursor: "pointer",
-                          fontWeight: 700,
-                          fontSize: "0.8rem"
-                        }}
-                      >
-                        Clear
-                      </button>
-                    )}
-                  </div>
-
-                  {archivedTenants.length === 0 ? (
-                    <div style={{ padding: "2rem", textAlign: "center", color: "#94a3b8", background: "rgba(2, 6, 23, 0.6)", borderRadius: "10px" }}>
-                      <span style={{ fontSize: "2rem", display: "block", marginBottom: "8px" }}>📦</span>
-                      <strong style={{ color: "#f8fafc", fontSize: "0.95rem" }}>No Archived Registrations Yet</strong>
-                      <div style={{ fontSize: "0.8rem", marginTop: "4px" }}>
-                        When incoming institution onboarding applications are approved, they are permanently archived here for reference.
-                      </div>
-                    </div>
-                  ) : (
-                    <div style={{ display: "flex", flexDirection: "column", gap: "12px" }}>
-                      {archivedTenants
-                        .filter((item) => {
-                          if (!archivedSearchQuery.trim()) return true;
-                          const q = archivedSearchQuery.toLowerCase();
-                          return (
-                            (item.institutionName && item.institutionName.toLowerCase().includes(q)) ||
-                            (item.assignedTenantCode && item.assignedTenantCode.toLowerCase().includes(q)) ||
-                            (item.tenantCode && item.tenantCode.toLowerCase().includes(q)) ||
-                            (item.headmasterName && item.headmasterName.toLowerCase().includes(q)) ||
-                            (item.headmasterPhone && item.headmasterPhone.includes(q)) ||
-                            (item.archiveRef && item.archiveRef.toLowerCase().includes(q))
-                          );
-                        })
-                        .map((tenant, idx) => (
-                          <div
-                            key={idx}
-                            style={{
-                              background: "rgba(15, 23, 42, 0.85)",
-                              border: "1.5px solid rgba(16, 185, 129, 0.35)",
-                              borderRadius: "12px",
-                              padding: "16px 20px",
-                              boxShadow: "0 4px 15px rgba(0, 0, 0, 0.3)"
-                            }}
-                          >
-                            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", flexWrap: "wrap", gap: "10px", marginBottom: "10px" }}>
-                              <div>
-                                <div style={{ display: "flex", alignItems: "center", gap: "10px", flexWrap: "wrap" }}>
-                                  <strong style={{ color: "#f8fafc", fontSize: "1.1rem" }}>{tenant.institutionName}</strong>
-                                  <span style={{ background: "rgba(16, 185, 129, 0.2)", color: "#34d399", border: "1px solid #10b981", borderRadius: "6px", padding: "2px 8px", fontSize: "0.72rem", fontWeight: 800 }}>
-                                    ✓ APPROVED & ARCHIVED
-                                  </span>
-                                  <span style={{ background: "rgba(56, 189, 248, 0.15)", color: "#38bdf8", borderRadius: "6px", padding: "2px 8px", fontSize: "0.72rem", fontWeight: 700, fontFamily: "monospace" }}>
-                                    {tenant.archiveRef || `ARC-${idx + 1}`}
-                                  </span>
-                                </div>
-                                <div style={{ fontSize: "0.78rem", color: "#94a3b8", marginTop: "4px" }}>
-                                  Tenant Code: <strong style={{ color: "#38bdf8", fontFamily: "monospace" }}>{tenant.assignedTenantCode || tenant.tenantCode}</strong> •
-                                  Approved: <strong style={{ color: "#cbd5e1" }}>{new Date(tenant.approvedAt || Date.now()).toLocaleString()}</strong> •
-                                  Approver: <strong style={{ color: "#fde68a" }}>{tenant.approvedBy || "Gabriel Osei"}</strong>
-                                </div>
-                              </div>
-
-                              <div style={{ display: "flex", gap: "8px" }}>
-                                <button
-                                  type="button"
-                                  onClick={() => handlePrintAcceptanceCertificate(tenant)}
-                                  style={{
-                                    background: "linear-gradient(135deg, #0284c7, #0369a1)",
-                                    color: "#fff",
-                                    border: "none",
-                                    borderRadius: "8px",
-                                    padding: "7px 14px",
-                                    fontSize: "0.78rem",
-                                    fontWeight: 700,
-                                    cursor: "pointer",
-                                    display: "flex",
-                                    alignItems: "center",
-                                    gap: "6px"
-                                  }}
-                                >
-                                  🖨️ Print Acceptance Voucher
-                                </button>
-                                <button
-                                  type="button"
-                                  onClick={() => navigateToDetail(navigate, "onboarding", tenant.archiveRef || tenant.id || tenant.assignedTenantCode, tenant, { returnTab: activeTab })}
-                                  style={{
-                                    background: "rgba(56, 189, 248, 0.16)",
-                                    border: "1px solid #38bdf8",
-                                    color: "#38bdf8",
-                                    borderRadius: "8px",
-                                    padding: "7px 12px",
-                                    fontSize: "0.78rem",
-                                    fontWeight: 700,
-                                    cursor: "pointer"
-                                  }}
-                                  title="View archived registration dossier on dedicated routed page"
-                                >
-                                  🔍 View Dossier
-                                </button>
-                                <button
-                                  type="button"
-                                  onClick={() => {
-                                    const liveLoginUrl = typeof window !== "undefined" ? `${window.location.origin}/login` : "/login";
-                                    copyTextSafely(
-                                      `GBS Onboarded Tenant: ${tenant.institutionName}\nTenant Code: ${tenant.assignedTenantCode || tenant.tenantCode}\nHeadmaster: ${tenant.headmasterName} (${tenant.headmasterPhone})\nLogin URL: ${liveLoginUrl}`
-                                    );
-                                    showNotification(`✓ Tenant credentials & live login URL copied to clipboard!`);
-                                  }}
-                                  style={{
-                                    background: "rgba(56, 189, 248, 0.15)",
-                                    border: "1px solid #38bdf8",
-                                    color: "#7dd3fc",
-                                    borderRadius: "8px",
-                                    padding: "7px 12px",
-                                    fontSize: "0.78rem",
-                                    fontWeight: 700,
-                                    cursor: "pointer"
-                                  }}
-                                >
-                                  📋 Copy Details
-                                </button>
-                                <button
-                                  type="button"
-                                  onClick={() => handlePermanentlyDeleteAndClearInstitution(tenant)}
-                                  style={{
-                                    background: "rgba(127, 29, 29, 0.75)",
-                                    border: "1px solid #ef4444",
-                                    color: "#fecaca",
-                                    borderRadius: "8px",
-                                    padding: "7px 12px",
-                                    fontSize: "0.78rem",
-                                    fontWeight: 700,
-                                    cursor: "pointer"
-                                  }}
-                                  title="Permanently delete this approved institution and clear ALL its records"
-                                >
-                                  🗑️ Delete Permanently & Clear
-                                </button>
-                              </div>
-                            </div>
-
-                            {/* SMS Transmission Proof Box */}
-                            <div style={{ background: "rgba(6, 95, 70, 0.25)", border: "1px solid rgba(16, 185, 129, 0.35)", borderRadius: "8px", padding: "10px 14px", marginTop: "10px" }}>
-                              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "4px" }}>
-                                <span style={{ fontSize: "0.72rem", color: "#6ee7b7", fontWeight: 800, textTransform: "uppercase" }}>
-                                  📱 Registered Mobile SMS Transmission Proof
-                                </span>
-                                <span style={{ fontSize: "0.7rem", color: "#34d399", fontWeight: 700 }}>
-                                  ✓ DELIVERED TO: {tenant.dispatchedPhone || tenant.headmasterPhone}
-                                </span>
-                              </div>
-                              <div style={{ fontSize: "0.78rem", color: "#d1fae5", fontFamily: "monospace", lineHeight: 1.4 }}>
-                                "{tenant.dispatchedSms || `GBS REGISTRATION ACCEPTANCE: Congratulations ${tenant.institutionName}! Your application to join the GBS Management System has been verified & approved. Assigned Tenant Code: ${tenant.assignedTenantCode || tenant.tenantCode}.`}"
-                              </div>
-                            </div>
-
-                            <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(200px, 1fr))", gap: "10px", marginTop: "10px", fontSize: "0.75rem", color: "#94a3b8" }}>
-                              <div>Headmaster: <strong style={{ color: "#f8fafc" }}>{tenant.headmasterName}</strong></div>
-                              <div>Mobile: <strong style={{ color: "#38bdf8" }}>{tenant.headmasterPhone}</strong></div>
-                              <div>Email: <strong style={{ color: "#cbd5e1" }}>{tenant.headmasterEmail}</strong></div>
-                              <div>MoMo Txn: <strong style={{ color: "#34d399" }}>{tenant.momoTxnId || "MTN-TXN"} (GHS {tenant.paymentAmount || 500})</strong></div>
-                            </div>
-                          </div>
-                        ))}
-                    </div>
-                  )}
-                </div>
               )}
             </div>
-
-
-            {onboardingTabMode === "MEMBERS" && (
-              <div style={{ display: "flex", flexDirection: "column", gap: "12px" }}>
-                <div style={{ background: "rgba(2, 6, 23, 0.6)", padding: "12px 16px", borderRadius: "10px", border: "1px solid rgba(168, 85, 247, 0.3)", display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: "10px" }}>
-                  <div>
-                    <strong style={{ color: "#c084fc", fontSize: "0.95rem" }}>
-                      👥 NEW REGISTERED USERS & STAFF QUALIFICATION QUEUE
-                    </strong>
-                    <p style={{ margin: "2px 0 0", color: "#94a3b8", fontSize: "0.78rem" }}>
-                      All staff, teachers, accountants, HR, and students who register to join the GBS system are held here for Developer review, credential verification, and system provision.
-                    </p>
-                  </div>
-                  <span style={{ background: "rgba(168, 85, 247, 0.2)", color: "#c084fc", padding: "3px 10px", borderRadius: "999px", fontSize: "0.75rem", fontWeight: 800 }}>
-                    Total Registered: {registeredMembersList.length}
-                  </span>
-                </div>
-
-                {registeredMembersList.length === 0 ? (
-                  <div style={{ padding: "2rem", textAlign: "center", color: "#94a3b8", background: "rgba(2, 6, 23, 0.6)", borderRadius: "10px" }}>
-                    <span style={{ fontSize: "2rem", display: "block", marginBottom: "8px" }}>👥</span>
-                    No user registrations in queue. New member signups will appear here live.
-                  </div>
-                ) : (
-                  <div style={{ display: "flex", flexDirection: "column", gap: "10px" }}>
-                    {registeredMembersList.map((user, idx) => {
-                      const isPending = user.verificationStatus === "PENDING_DEVELOPER_APPROVAL" || user.verificationStatus === "PENDING";
-                      return (
-                        <div
-                          key={idx}
-                          style={{
-                            background: "rgba(15, 23, 42, 0.85)",
-                            border: `1.5px solid ${isPending ? "#f59e0b" : "#10b981"}`,
-                            borderRadius: "12px",
-                            padding: "14px 18px",
-                            display: "flex",
-                            justifyContent: "space-between",
-                            alignItems: "center",
-                            flexWrap: "wrap",
-                            gap: "12px",
-                            boxShadow: "0 4px 14px rgba(0, 0, 0, 0.3)"
-                          }}
-                        >
-                          <div style={{ display: "flex", alignItems: "center", gap: "12px" }}>
-                            <div style={{ width: "46px", height: "46px", borderRadius: "10px", overflow: "hidden", background: "#020617", border: "1.5px solid #38bdf8", flexShrink: 0 }}>
-                              <img
-                                src={user.facePhoto || "/assets/admin-dashboard-bg.jpg"}
-                                alt={user.firstName}
-                                style={{ width: "100%", height: "100%", objectFit: "cover" }}
-                                onError={(e) => { e.target.src = "/assets/admin-dashboard-bg.jpg"; }}
-                              />
-                            </div>
-                            <div>
-                              <div style={{ display: "flex", alignItems: "center", gap: "8px", flexWrap: "wrap" }}>
-                                <strong style={{ color: "#f8fafc", fontSize: "0.95rem" }}>
-                                  {user.firstName} {user.lastName}
-                                </strong>
-                                <span style={{
-                                  background: user.role === "TEACHER" ? "#0284c7" : user.role === "ACCOUNTANT" ? "#059669" : user.role === "HR" ? "#d97706" : "#6366f1",
-                                  color: "#fff",
-                                  padding: "2px 7px",
-                                  borderRadius: "4px",
-                                  fontSize: "0.68rem",
-                                  fontWeight: 900
-                                }}>
-                                  {user.role}
-                                </span>
-                                <span style={{
-                                  background: isPending ? "rgba(245, 158, 11, 0.2)" : "rgba(16, 185, 129, 0.2)",
-                                  color: isPending ? "#fde68a" : "#34d399",
-                                  fontSize: "0.7rem",
-                                  fontWeight: 800,
-                                  padding: "2px 6px",
-                                  borderRadius: "4px"
-                                }}>
-                                  {isPending ? "⏳ PENDING VERIFICATION" : "✓ VERIFIED & ACTIVE"}
-                                </span>
-                              </div>
-                              <div style={{ fontSize: "0.76rem", color: "#94a3b8", marginTop: "3px" }}>
-                                Email: <strong style={{ color: "#38bdf8" }}>{user.email}</strong> • Phone: <strong style={{ color: "#cbd5e1" }}>{user.phone || "—"}</strong> • Tenant: <strong style={{ color: "#fbbf24" }}>{user.tenantCode || "GBS-MAIN"}</strong>
-                              </div>
-                            </div>
-                          </div>
-
-                          <div style={{ display: "flex", gap: "8px", alignItems: "center" }}>
-                            <button
-                              type="button"
-                              onClick={() => navigateToDetail(navigate, "user", user.id || idx, user, { returnTab: activeTab })}
-                              style={{
-                                background: "rgba(56, 189, 248, 0.15)",
-                                border: "1px solid #38bdf8",
-                                color: "#38bdf8",
-                                borderRadius: "8px",
-                                padding: "7px 12px",
-                                fontWeight: 800,
-                                fontSize: "0.76rem",
-                                cursor: "pointer"
-                              }}
-                            >
-                              🔍 Inspect Dossier
-                            </button>
-                            {isPending ? (
-                              <button
-                                type="button"
-                                onClick={() => handleApproveRegisteredMember(user.id)}
-                                style={{
-                                  background: "linear-gradient(135deg, #10b981, #059669)",
-                                  border: "none",
-                                  borderRadius: "8px",
-                                  padding: "7px 14px",
-                                  color: "#fff",
-                                  fontWeight: 800,
-                                  fontSize: "0.78rem",
-                                  cursor: "pointer",
-                                  boxShadow: "0 2px 10px rgba(16, 185, 129, 0.3)"
-                                }}
-                              >
-                                ✓ Approve & Grant Access
-                              </button>
-                            ) : (
-                              <button
-                                type="button"
-                                onClick={() => handleRejectRegisteredMember(user.id)}
-                                style={{
-                                  background: "rgba(239, 68, 68, 0.2)",
-                                  border: "1px solid #ef4444",
-                                  borderRadius: "8px",
-                                  padding: "6px 12px",
-                                  color: "#fca5a5",
-                                  fontWeight: 700,
-                                  fontSize: "0.74rem",
-                                  cursor: "pointer"
-                                }}
-                              >
-                                De-provision
-                              </button>
-                            )}
-                            <button
-                              type="button"
-                              onClick={() => handleDeleteRegisteredMember(user.id)}
-                              style={{
-                                background: "#7f1d1d",
-                                border: "1px solid #ef4444",
-                                borderRadius: "8px",
-                                padding: "6px 12px",
-                                color: "#fecaca",
-                                fontWeight: 800,
-                                fontSize: "0.74rem",
-                                cursor: "pointer"
-                              }}
-                              title="Permanently delete this member from the system"
-                            >
-                              🗑️ Delete
-                            </button>
-                          </div>
-                        </div>
-                      );
-                    })}
-                  </div>
-                )}
-              </div>
-            )}
 
             {/* GBS ENTERPRISE PER-STUDENT RATE CONFIGURATOR */}
             <div style={{
@@ -8275,12 +8035,31 @@ export default function DeveloperDashboard() {
               boxShadow: "0 10px 30px rgba(239, 68, 68, 0.2)",
               fontFamily: "'Times New Roman', Times, Georgia, serif"
             }}>
+              {gateLoginLocked && (
+                <div style={{
+                  background: "rgba(127, 29, 29, 0.35)",
+                  border: "1px solid #ef4444",
+                  borderRadius: "10px",
+                  padding: "10px 14px",
+                  marginBottom: "1rem",
+                  display: "flex",
+                  justifyContent: "space-between",
+                  alignItems: "center",
+                  flexWrap: "wrap",
+                  gap: "10px"
+                }}>
+                  <span style={{ color: "#fecaca", fontSize: "0.84rem", fontWeight: 800 }}>
+                    🔴 DEVELOPER LOGIN PAGE LOCKED: False entry intercepted — Intruder photo snapshots shown below for action.
+                  </span>
+                </div>
+              )}
+
               <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "1.25rem", flexWrap: "wrap", gap: "10px" }}>
                 <div style={{ display: "flex", alignItems: "center", gap: "10px" }}>
                   <span style={{ fontSize: "1.8rem" }}>📸</span>
                   <div>
                     <h3 style={{ margin: 0, color: "#f87171", fontSize: "1.2rem", fontWeight: "900", letterSpacing: "0.5px" }}>
-                      UNREGISTERED EXTERNAL INTRUDERS — AUTOMATIC CAMERA EVIDENCE GALLERY
+                      INTRUDER CAMERA EVIDENCE GALLERY &amp; LOGIN LOCKDOWN LOGS
                     </h3>
                     <p style={{ margin: "4px 0 0", color: "#cbd5e1", fontSize: "0.85rem" }}>
                       Forensic camera snapshots captured automatically for unauthorized users not registered on any institution who attempted repeat developer logins.
@@ -10371,6 +10150,231 @@ export default function DeveloperDashboard() {
                 </tbody>
               </table>
             </div>
+
+            {/* GLOBAL COUNTRY CURRENCY & GHANA CEDIS (GH₵) CONVERSION DASHBOARD */}
+            <div className="dev-section-title" style={{ marginTop: "2rem" }}>
+              <div>
+                <h3>🌍 REGISTERED COUNTRIES &amp; SUBSCRIPTION REVENUE CONVERTED TO CEDIS (GH₵)</h3>
+                <span style={{ fontSize: "0.75rem", color: "#34d399" }}>
+                  Automatically calculates each school&apos;s onboarding/renewal subscription in its country&apos;s local currency and converts to Ghana Cedis (GH₵) for developer settlement tracking.
+                </span>
+              </div>
+            </div>
+
+            {(() => {
+              const synthRows = [];
+              const seenTenantKeys = new Set();
+              const addSyntheticRow = (item, stage) => {
+                if (!item) return;
+                const name = item.institutionName || item.tenantName || item.name || "Registered Institution";
+                const code = item.tenantCode || item.code || item.assignedTenantCode || item.id;
+                const key = String(code || name).toLowerCase();
+                if (seenTenantKeys.has(key)) return;
+                seenTenantKeys.add(key);
+                const cInput = item.countryCode || item.country || "GH";
+                const students = Math.max(0, parseInt(item.totalStudentsEnrolled || item.studentCount || 100, 10) || 100);
+                const ghsRaw = Number(item.convertedGhsAmount) || Number(item.totalTermFee) || Number(item.calculatedFee) || (students * 3 * 3);
+                const fx = convertGhsToCountryCurrency(ghsRaw, cInput);
+                synthRows.push({
+                  institutionName: name,
+                  tenantCode: code,
+                  stage,
+                  ...fx,
+                  studentCount: students
+                });
+              };
+              const backendCountrySummary = countrySubsSummary?.countriesSummary || [];
+              const backendInstBreakdown = countrySubsSummary?.institutionsBreakdown || [];
+              if (backendInstBreakdown.length === 0) {
+                incomingApplications.forEach((a) => addSyntheticRow(a, "READY_TO_ONBOARD"));
+                countdowns.forEach((c) => addSyntheticRow(c, "RENEWAL_OR_ACTIVE"));
+                onboardedTenants.forEach((t) => addSyntheticRow(t, "REGISTERED_ACTIVE"));
+              }
+              const rowsToRender = backendInstBreakdown.length > 0 ? backendInstBreakdown : synthRows;
+              const countryGroups = backendCountrySummary.length > 0
+                ? backendCountrySummary
+                : Array.from(
+                    rowsToRender.reduce((map, r) => {
+                      if (!map.has(r.countryCode)) {
+                        map.set(r.countryCode, {
+                          countryCode: r.countryCode,
+                          countryName: r.countryName,
+                          countryFlag: r.countryFlag,
+                          currencyCode: r.currencyCode,
+                          currencySymbol: r.currencySymbol,
+                          fxRateToGhs: r.fxRateToGhs,
+                          institutionsCount: 0,
+                          totalLocalCurrencyAmount: 0,
+                          totalConvertedGhsAmount: 0
+                        });
+                      }
+                      const grp = map.get(r.countryCode);
+                      grp.institutionsCount += 1;
+                      grp.totalLocalCurrencyAmount = Math.round((grp.totalLocalCurrencyAmount + (r.localCurrencyAmount || 0)) * 100) / 100;
+                      grp.totalConvertedGhsAmount = Math.round((grp.totalConvertedGhsAmount + (r.convertedGhsAmount || 0)) * 100) / 100;
+                      return map;
+                    }, new Map()).values()
+                  );
+              const totalGhs = countrySubsSummary?.totalConvertedGhsAmount ?? rowsToRender.reduce((acc, r) => acc + (r.convertedGhsAmount || 0), 0);
+
+              const tierRateGhs = fxCalcTier === "UNI" ? 10 : fxCalcTier === "SHS" ? 5 : 3;
+              const calcBaseGhs = Math.round(Math.max(1, Number(fxCalcStudents) || 0) * tierRateGhs * Math.max(1, Number(fxCalcMonths) || 1) * 100) / 100;
+              const calcFx = convertGhsToCountryCurrency(calcBaseGhs, fxCalcCountry);
+
+              return (
+                <div data-testid="dev-country-subscriptions-panel" style={{ display: "flex", flexDirection: "column", gap: "1rem", marginBottom: "2rem" }}>
+                  <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(220px, 1fr))", gap: "12px" }}>
+                    <div style={{ background: "rgba(15, 23, 42, 0.85)", border: "1px solid rgba(56, 189, 248, 0.35)", borderRadius: "12px", padding: "14px" }}>
+                      <div style={{ fontSize: "0.75rem", color: "#94a3b8", fontWeight: 700 }}>COUNTRIES REGISTERED / READY</div>
+                      <div style={{ fontSize: "1.6rem", fontWeight: 900, color: "#38bdf8", marginTop: "4px" }}>{countryGroups.length}</div>
+                    </div>
+                    <div style={{ background: "rgba(15, 23, 42, 0.85)", border: "1px solid rgba(16, 185, 129, 0.35)", borderRadius: "12px", padding: "14px" }}>
+                      <div style={{ fontSize: "0.75rem", color: "#94a3b8", fontWeight: 700 }}>INSTITUTIONS READY FOR ONBOARD / RENEWAL</div>
+                      <div style={{ fontSize: "1.6rem", fontWeight: 900, color: "#34d399", marginTop: "4px" }}>{rowsToRender.length}</div>
+                    </div>
+                    <div style={{ background: "rgba(15, 23, 42, 0.85)", border: "1px solid rgba(245, 158, 11, 0.45)", borderRadius: "12px", padding: "14px" }}>
+                      <div style={{ fontSize: "0.75rem", color: "#fde68a", fontWeight: 700 }}>TOTAL CONVERTED SUBSCRIPTION VALUE (CEDIS)</div>
+                      <div style={{ fontSize: "1.6rem", fontWeight: 900, color: "#fbbf24", marginTop: "4px" }}>
+                        GH₵ {Number(totalGhs || 0).toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Live Country Currency <-> Cedis Simulator Calculator */}
+                  <div style={{ background: "rgba(15, 23, 42, 0.85)", border: "1px solid rgba(212, 175, 55, 0.4)", borderRadius: "12px", padding: "14px" }}>
+                    <div style={{ fontSize: "0.85rem", fontWeight: 800, color: "#f5d061", marginBottom: "10px" }}>
+                      💱 Country Currency ↔ Ghana Cedis (GH₵) Live Subscription Calculator
+                    </div>
+                    <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(160px, 1fr))", gap: "10px", alignItems: "end" }}>
+                      <div>
+                        <label style={{ display: "block", fontSize: "0.72rem", color: "#cbd5e1", marginBottom: "4px" }}>Institution Country</label>
+                        <select
+                          aria-label="Calculator Country Selector"
+                          value={fxCalcCountry}
+                          onChange={(e) => setFxCalcCountry(e.target.value)}
+                          style={{ width: "100%", padding: "8px", background: "#020617", color: "#f8fafc", border: "1px solid #334155", borderRadius: "8px" }}
+                        >
+                          {EXTENDED_FX_COUNTRIES.map((c) => (
+                            <option key={c.code} value={c.code}>
+                              {c.flag} {c.name} ({c.currencyCode})
+                            </option>
+                          ))}
+                        </select>
+                      </div>
+                      <div>
+                        <label style={{ display: "block", fontSize: "0.72rem", color: "#cbd5e1", marginBottom: "4px" }}>School Tier</label>
+                        <select
+                          aria-label="Calculator Tier Selector"
+                          value={fxCalcTier}
+                          onChange={(e) => setFxCalcTier(e.target.value)}
+                          style={{ width: "100%", padding: "8px", background: "#020617", color: "#f8fafc", border: "1px solid #334155", borderRadius: "8px" }}
+                        >
+                          <option value="JHS">Nursery / Basic / JHS (GH₵ 3/stu)</option>
+                          <option value="SHS">SHS / Technical (GH₵ 5/stu)</option>
+                          <option value="UNI">University / Tertiary (GH₵ 10/stu)</option>
+                        </select>
+                      </div>
+                      <div>
+                        <label style={{ display: "block", fontSize: "0.72rem", color: "#cbd5e1", marginBottom: "4px" }}>Students</label>
+                        <input
+                          type="number"
+                          min="1"
+                          value={fxCalcStudents}
+                          onChange={(e) => setFxCalcStudents(e.target.value)}
+                          style={{ width: "100%", padding: "8px", background: "#020617", color: "#f8fafc", border: "1px solid #334155", borderRadius: "8px", boxSizing: "border-box" }}
+                        />
+                      </div>
+                      <div>
+                        <label style={{ display: "block", fontSize: "0.72rem", color: "#cbd5e1", marginBottom: "4px" }}>Months</label>
+                        <input
+                          type="number"
+                          min="1"
+                          value={fxCalcMonths}
+                          onChange={(e) => setFxCalcMonths(e.target.value)}
+                          style={{ width: "100%", padding: "8px", background: "#020617", color: "#f8fafc", border: "1px solid #334155", borderRadius: "8px", boxSizing: "border-box" }}
+                        />
+                      </div>
+                      <div style={{ background: "rgba(2, 6, 23, 0.8)", border: "1px solid #34d399", borderRadius: "8px", padding: "8px 12px" }}>
+                        <div style={{ fontSize: "0.7rem", color: "#94a3b8" }}>Local ({calcFx.currencyCode}) → Ghana Cedis</div>
+                        <div style={{ fontWeight: 900, color: "#34d399", fontSize: "0.9rem" }}>
+                          {calcFx.formattedLocalAmount} = {calcFx.formattedGhsAmount}
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Country Breakdown Table */}
+                  <div className="countdown-table-container">
+                    <table className="countdown-table">
+                      <thead>
+                        <tr>
+                          <th>COUNTRY</th>
+                          <th>LOCAL CURRENCY</th>
+                          <th>EXCHANGE RATE TO GH₵</th>
+                          <th>REGISTERED / READY SCHOOLS</th>
+                          <th>LOCAL CURRENCY AMOUNT</th>
+                          <th>CONVERTED AMOUNT IN CEDIS (GH₵)</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {countryGroups.length === 0 ? (
+                          <tr>
+                            <td colSpan={6} style={{ textAlign: "center", padding: "1.25rem", color: "#94a3b8" }}>
+                              No registered country subscriptions recorded yet.
+                            </td>
+                          </tr>
+                        ) : (
+                          countryGroups.map((cg) => (
+                            <tr key={`country_fx_${cg.countryCode}`}>
+                              <td><strong>{cg.countryFlag} {cg.countryName}</strong> ({cg.countryCode})</td>
+                              <td>{cg.currencyCode} ({cg.currencySymbol})</td>
+                              <td>1 {cg.currencyCode} = GH₵ {cg.fxRateToGhs}</td>
+                              <td>{cg.institutionsCount} School(s)</td>
+                              <td style={{ color: "#38bdf8", fontWeight: 800 }}>
+                                {String(cg.currencySymbol || cg.currencyCode).trim()} {Number(cg.totalLocalCurrencyAmount || 0).toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                              </td>
+                              <td style={{ color: "#fbbf24", fontWeight: 900 }}>
+                                GH₵ {Number(cg.totalConvertedGhsAmount || 0).toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                              </td>
+                            </tr>
+                          ))
+                        )}
+                      </tbody>
+                    </table>
+                  </div>
+
+                  {/* Per-Institution Ready-to-Onboard / Renewal Breakdown */}
+                  {rowsToRender.length > 0 && (
+                    <div className="countdown-table-container">
+                      <table className="countdown-table">
+                        <thead>
+                          <tr>
+                            <th>INSTITUTION</th>
+                            <th>COUNTRY</th>
+                            <th>STATUS / STAGE</th>
+                            <th>STUDENTS</th>
+                            <th>COUNTRY CURRENCY AMOUNT</th>
+                            <th>CONVERTED GH₵ AMOUNT</th>
+                          </tr>
+                        </thead>
+                        <tbody>
+                          {rowsToRender.map((instRow, rIdx) => (
+                            <tr key={`inst_fx_${instRow.tenantCode || rIdx}`}>
+                              <td><strong>{instRow.institutionName}</strong> <span style={{ color: "#64748b", fontSize: "0.75rem" }}>({instRow.tenantCode})</span></td>
+                              <td>{instRow.countryFlag} {instRow.countryName}</td>
+                              <td><span className="status-badge active">{instRow.stage}</span></td>
+                              <td>{Number(instRow.studentCount || 0).toLocaleString()}</td>
+                              <td style={{ color: "#38bdf8", fontWeight: 700 }}>{instRow.formattedLocalAmount}</td>
+                              <td style={{ color: "#34d399", fontWeight: 800 }}>{instRow.formattedGhsAmount}</td>
+                            </tr>
+                          ))}
+                        </tbody>
+                      </table>
+                    </div>
+                  )}
+                </div>
+              );
+            })()}
 
             {/* PLATFORM SUBSCRIPTION CONTROL REGISTRY (DIRECT PERMANENT DELETION) */}
             <div className="dev-section-title" style={{ marginTop: "2rem" }}>

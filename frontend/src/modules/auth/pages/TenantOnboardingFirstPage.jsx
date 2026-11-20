@@ -3,6 +3,7 @@ import { useNavigate, Link } from "react-router-dom";
 import { registerInstitution } from "../api/auth.api";
 import BiometricFaceScannerModal from "../components/BiometricFaceScannerModal";
 import { getOnboardingRates } from "../../../utils/pricingEngine";
+import { convertGhsToCountryCurrency } from "../../../utils/i18nCountryEngine";
 import CartoonRoleVideoHubModal from "../../../components/common/CartoonRoleVideoHubModal";
 import OfficialPaymentGatewayModal from "../../../components/common/OfficialPaymentGatewayModal";
 import "./TenantOnboardingFirstPage.css";
@@ -250,6 +251,10 @@ export default function TenantOnboardingFirstPage() {
         ? Math.round((totalTermFee / subscribedMonths) * 100) / 100
         : totalTermFee;
 
+    const countryLookup = form.country || form.countryCode || "Ghana";
+    const countryFx = convertGhsToCountryCurrency(payableAmount, countryLookup);
+    const countryTermFx = convertGhsToCountryCurrency(totalTermFee, countryLookup);
+
     return {
       count,
       rate: currentRatePerStudent,
@@ -266,9 +271,11 @@ export default function TenantOnboardingFirstPage() {
       grossTermFee,
       discountAmount,
       totalTermFee,
-      payableAmount
+      payableAmount,
+      countryFx,
+      countryTermFx
     };
-  }, [form.totalStudentsEnrolled, currentRatePerStudent, form.subscriptionPlan, form.paymentScheduleMode]);
+  }, [form.totalStudentsEnrolled, currentRatePerStudent, form.subscriptionPlan, form.paymentScheduleMode, form.country, form.countryCode]);
 
   // Detected Carriers for Phones
   const officialPhoneCarrier = useMemo(() => {
@@ -375,6 +382,11 @@ export default function TenantOnboardingFirstPage() {
       bulkTermsSignedBy: form.bulkTermsSignedBy || form.adminName,
       calculatedFee: String(calculation.totalTermFee || calculation.monthlyRate),
       paymentAmount: String(calculation.payableAmount),
+      currencyCode: calculation.countryFx.currencyCode,
+      currencySymbol: calculation.countryFx.currencySymbol,
+      fxRateToGhs: calculation.countryFx.fxRateToGhs,
+      localCurrencyAmount: calculation.countryTermFx.localCurrencyAmount,
+      convertedGhsAmount: calculation.countryTermFx.convertedGhsAmount,
       headmasterName: form.adminName,
       headmasterEmail: form.adminEmail,
       headmasterPhone: `${form.countryCode} ${form.adminPhone}`,
@@ -1204,6 +1216,15 @@ export default function TenantOnboardingFirstPage() {
                 <div style={{ marginTop: "6px", fontSize: "0.72rem", color: "#94a3b8" }}>
                   • <strong>Population Growth Policy:</strong> Future billing adjusts automatically as active student population grows or reduces (e.g., 200→300 increases next billing; 500→400 decreases next billing). Previously paid subscription periods are never retrospectively changed.
                 </div>
+                <div data-testid="onboarding-country-currency-preview" style={{ marginTop: "10px", padding: "10px 12px", borderRadius: "8px", background: "rgba(15, 23, 42, 0.9)", border: "1px solid rgba(56, 189, 248, 0.45)", display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: "8px" }}>
+                  <span style={{ fontSize: "0.78rem", color: "#e2e8f0" }}>
+                    💱 <strong>Country Currency Billing ({calculation.countryFx.countryFlag} {calculation.countryFx.countryName}):</strong>{" "}
+                    <strong style={{ color: "#38bdf8" }}>{calculation.countryTermFx.formattedLocalAmount}</strong> ({calculation.subscribedMonths}-month plan)
+                  </span>
+                  <span style={{ fontSize: "0.78rem", color: "#fbbf24", fontWeight: 800 }}>
+                    Converted to Ghana Cedis: {calculation.countryTermFx.formattedGhsAmount} (1 {calculation.countryFx.currencyCode} = GH₵ {calculation.countryFx.fxRateToGhs})
+                  </span>
+                </div>
               </div>
 
               {/* Payment Schedule Mode Selector (Spread Monthly vs Bulk Full Term with Signed T&C) */}
@@ -1321,7 +1342,7 @@ export default function TenantOnboardingFirstPage() {
                     💳 Mobile Money / Bank Payment Remittance ({form.paymentScheduleMode === "BULK_FULL_TERM" ? `Bulk Full Term — ${calculation.subscribedMonths} Months` : "First Month of Monthly Spread"})
                   </div>
                   <div style={{ fontSize: "0.78rem", color: "#cbd5e1", marginBottom: "8px" }}>
-                    Please remit <strong>GH₵ {calculation.payableAmount.toLocaleString()}</strong> ({form.paymentScheduleMode === "BULK_FULL_TERM" ? `Bulk payment for ${calculation.subscribedMonths} months` : `Monthly installment 1 of ${calculation.subscribedMonths} at GH₵ ${calculation.monthlyRate.toLocaleString()}/month`}) to MTN MoMo: <strong>0554594193</strong> (GABRIELKUBI OSEI-APPIAH) and enter your MoMo Transaction ID below, or pay directly via verified online checkout:
+                    Please remit <strong>GH₵ {calculation.payableAmount.toLocaleString()}</strong> (Country Equivalent: <strong>{calculation.countryFx.formattedLocalAmount}</strong> • {form.paymentScheduleMode === "BULK_FULL_TERM" ? `Bulk payment for ${calculation.subscribedMonths} months` : `Monthly installment 1 of ${calculation.subscribedMonths} at GH₵ ${calculation.monthlyRate.toLocaleString()}/month`}) to MTN MoMo: <strong>0554594193</strong> (GABRIELKUBI OSEI-APPIAH) and enter your MoMo Transaction ID below, or pay directly via verified online checkout:
                   </div>
                   <div style={{ marginBottom: "10px" }}>
                     <button

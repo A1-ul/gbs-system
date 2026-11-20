@@ -160,7 +160,7 @@ app.get('/api/v1/app-version', (req, res) => {
     status: 'success',
     data: {
       bundleHash,
-      swVersion: 'gbs-cache-v2026.16',
+      swVersion: 'gbs-cache-v2026.17',
       autoUpdateEnabled: true,
       checkedAt: new Date().toISOString()
     }
@@ -444,8 +444,10 @@ app.post('/api/v1/subscriptions/calculate-and-subscribe', (req, res) => {
     ? totalTermFee
     : Math.round((totalTermFee / monthsSubscribed) * 100) / 100;
 
+  const { convertGhsToCountryCurrency } = require('../utils/countryLanguageNorms');
   const now = new Date();
   const expiry = new Date(now.getTime() + monthsSubscribed * 30 * 86400000);
+  const countryBreakdown = convertGhsToCountryCurrency(amountDueNow, body.country || body.countryCode || 'GH');
 
   const subRecord = {
     id: `SUB-${Date.now()}`,
@@ -453,6 +455,14 @@ app.post('/api/v1/subscriptions/calculate-and-subscribe', (req, res) => {
     receiptNumber: body.momoTxnId ? `RCP-GBS-${Date.now().toString().slice(-6)}` : null,
     institutionName: body.institutionName || 'GBS Tenant Institution',
     institutionType: tier,
+    country: countryBreakdown.countryName,
+    countryCode: countryBreakdown.countryCode,
+    countryFlag: countryBreakdown.countryFlag,
+    currencyCode: body.currencyCode || countryBreakdown.currencyCode,
+    currencySymbol: body.currencySymbol || countryBreakdown.currencySymbol,
+    fxRateToGhs: countryBreakdown.fxRateToGhs,
+    localCurrencyAmount: countryBreakdown.localCurrencyAmount,
+    convertedGhsAmount: countryBreakdown.convertedGhsAmount,
     studentCount,
     ratePerStudent,
     fixedTenantFee: 0,

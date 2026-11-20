@@ -5,11 +5,12 @@
 ================================================================================
 */
 
-const CACHE_NAME = "gbs-cache-v2026.16";
+const CACHE_NAME = "gbs-cache-v2026.17";
 const OFFLINE_URL = "/offline.html";
 
 const PRECACHE_ASSETS = [
   "/",
+  "/login?source=pwa",
   "/offline.html",
   "/manifest.json",
   "/icons/icon-192.png",
@@ -48,8 +49,32 @@ self.addEventListener("activate", (event) => {
 });
 
 self.addEventListener("message", (event) => {
-  if (event?.data?.type === "SKIP_WAITING") {
+  const payload = event?.data;
+  if (!payload) return;
+  if (payload.type === "SKIP_WAITING") {
     self.skipWaiting();
+    return;
+  }
+  if (payload.type === "DISPATCH_LOCK_SCREEN_PUSH") {
+    const title = payload.title || "GBS School Management Alert";
+    const options = {
+      body: payload.body || "New update on your GBS dashboard.",
+      icon: payload.icon || "/assets/gbs_crest_badge.jpg",
+      badge: payload.badge || "/assets/gbs_crest_badge.jpg",
+      vibrate: [200, 100, 200, 100, 250],
+      tag: payload.tag || `gbs-push-${Date.now()}`,
+      renotify: true,
+      requireInteraction: true,
+      data: {
+        url: payload.url || "/login?source=pwa",
+        dispatchedAt: new Date().toISOString()
+      },
+      actions: [
+        { action: "open_dashboard", title: "📲 Open Portal" },
+        { action: "dismiss", title: "✕ Dismiss" }
+      ]
+    };
+    event.waitUntil(self.registration.showNotification(title, options));
   }
 });
 
@@ -71,9 +96,11 @@ self.addEventListener("fetch", (event) => {
         return networkRes;
       })
       .catch(() => {
-        return caches.match(event.request).then((cachedResponse) => {
+        return caches.match(event.request).then(async (cachedResponse) => {
           if (cachedResponse) return cachedResponse;
           if (isDocument) {
+            const cachedRoot = (await caches.match("/")) || (await caches.match("/index.html"));
+            if (cachedRoot) return cachedRoot;
             return caches.match(OFFLINE_URL);
           }
         });
@@ -86,7 +113,7 @@ self.addEventListener("push", (event) => {
     title: "GBS School Management Alert",
     body: "New update on your institutional dashboard.",
     category: "GENERAL",
-    url: "/portal/dashboard",
+    url: "/login?source=pwa",
     icon: "/assets/gbs_crest_badge.jpg",
     badge: "/assets/gbs_crest_badge.jpg"
   };
