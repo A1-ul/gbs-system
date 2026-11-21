@@ -351,6 +351,19 @@ const getDeployments = async (req, res, next) => {
   }
 };
 
+const createDeployment = async (req, res, next) => {
+  try {
+    const deployment = await devControlService.recordDeploymentRelease(req.body || {});
+    res.status(201).json({
+      status: 'success',
+      message: `Release ${deployment.version} recorded in deployment history.`,
+      data: { deployment }
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+
 const rollbackDeployment = async (req, res, next) => {
   try {
     const result = await devControlService.triggerDeploymentRollback(req.body.version, req.body.reason);
@@ -809,6 +822,46 @@ const deleteSubscriptionControl = async (req, res, next) => {
   }
 };
 
+const getHeadmasterMessages = async (req, res, next) => {
+  try {
+    const messages = await devControlService.getHeadmasterMessages(req.query?.tenantCode || null);
+    res.status(200).json({
+      status: 'success',
+      results: messages.length,
+      data: { messages }
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+
+const createHeadmasterMessage = async (req, res, next) => {
+  try {
+    const message = await devControlService.createHeadmasterMessage(req.body || {});
+    res.status(201).json({
+      status: 'success',
+      message: `Official directive dispatched to Headmaster ${message.headmasterName}.`,
+      data: { message }
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+
+const replyToHeadmasterMessage = async (req, res, next) => {
+  try {
+    const { threadId } = req.params;
+    const result = await devControlService.replyToHeadmasterMessage(threadId, req.body || {});
+    res.status(201).json({
+      status: 'success',
+      message: `Reply transmitted in directive thread ${threadId}.`,
+      data: result
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+
 const deleteHeadmasterMessageThread = async (req, res, next) => {
   try {
     const { threadId } = req.params;
@@ -985,6 +1038,7 @@ module.exports = {
   deleteAuditLog,
   batchDeleteAuditLogs,
   getDeployments,
+  createDeployment,
   archiveDeployment,
   batchArchiveDeployments,
   deleteDeployment,
@@ -995,6 +1049,9 @@ module.exports = {
   deleteLicense,
   batchDeleteLicenses,
   deleteSubscriptionControl,
+  getHeadmasterMessages,
+  createHeadmasterMessage,
+  replyToHeadmasterMessage,
   deleteHeadmasterMessageThread,
   deleteHeadmasterMessageReply,
   deleteIntrusionViolation,

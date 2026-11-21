@@ -25,6 +25,7 @@ import { navigateToDetail } from "../../../../../utils/universalNavigation";
 import MobileCameraAIExamScannerModal from "../../../../../components/common/MobileCameraAIExamScannerModal";
 import StaffAttendanceClockWidget from "../../../../../components/common/StaffAttendanceClockWidget";
 import LiveCallLauncherAndReceiver from "../../../../../components/common/LiveCallLauncherAndReceiver";
+import LiveInSystemCallModal from "../../../../../components/common/LiveInSystemCallModal";
 import FileUploadVerificationCard from "../../../../../components/common/FileUploadVerificationCard";
 import DigitalSignaturePadModal from "../../../../../components/common/DigitalSignaturePadModal";
 import { getActiveSchoolName, getActiveSchoolLogo } from "../../../../../utils/schoolBranding";
@@ -544,6 +545,35 @@ export default function TeacherDashboard() {
 
   // Inbuilt Live Zoom / Virtual Classroom Studio State (Ensures Zoom/Meeting Links Always Work)
   const [activeLiveClassroomSession, setActiveLiveClassroomSession] = useState(null);
+  const [activeTeacherLiveWebRtcSession, setActiveTeacherLiveWebRtcSession] = useState(null);
+
+  const handleLaunchInSystemLiveClassRoom = async (meetingInfo = {}) => {
+    try {
+      const targetClassObj = (classes || []).find((c) => String(c.id) === String(meetingInfo.classId || selectedClassId));
+      const resolvedClassName = meetingInfo.className || targetClassObj?.name || "Assigned Class";
+      const res = await apiClient.post("/video/calls/initiate", {
+        callScope: "CLASS_CONFERENCE",
+        mediaMode: meetingInfo.mediaMode || "VIDEO",
+        title: meetingInfo.title || `Live Online Class (${resolvedClassName})`,
+        className: resolvedClassName,
+        roomCode: meetingInfo.roomCode || (meetingInfo.meetingId ? `GBS-CLASS-${meetingInfo.meetingId}` : undefined)
+      });
+      const liveSess = res?.data?.data?.session;
+      if (liveSess) {
+        setActiveLiveClassroomSession(null);
+        setActiveTeacherLiveWebRtcSession(liveSess);
+        setFeedback({
+          type: "success",
+          message: `🎓 Live Online Class "${liveSess.title}" is NOW LIVE! All students can join immediately from their Student Dashboard.`
+        });
+      }
+    } catch (err) {
+      setFeedback({
+        type: "error",
+        message: err?.response?.data?.message || "Could not start in-system live online class room."
+      });
+    }
+  };
   const [liveStudioMicOn, setLiveStudioMicOn] = useState(true);
   const [liveStudioCamOn, setLiveStudioCamOn] = useState(true);
   const [liveStudioScreenShare, setLiveStudioScreenShare] = useState(false);
@@ -8552,11 +8582,13 @@ export default function TeacherDashboard() {
                 </button>
               </form>
 
-              {/* Real In-System Teacher Voice & Video Conference + Direct Parent/Headmaster Call Desk */}
+              {/* Real In-System Live Online Classes with Students + Direct Faculty / Parent Call Desk */}
               <LiveCallLauncherAndReceiver
                 variant="FULL_STUDIO"
                 userRole="TEACHER"
                 currentUser={currentUser}
+                classes={classes}
+                selectedClassId={selectedClassId}
                 onFeedback={(msg, isErr) => setFeedback({ type: isErr ? "error" : "success", message: msg })}
               />
 
@@ -8675,7 +8707,7 @@ export default function TeacherDashboard() {
                             </button>
                             <button
                               type="button"
-                              onClick={() => {
+                              onClick={async () => {
                                 const broadcastPayload = {
                                   id: m.id,
                                   title: m.title,
@@ -8691,13 +8723,13 @@ export default function TeacherDashboard() {
                                   window.dispatchEvent(new CustomEvent("gbs_live_class_broadcast", { detail: broadcastPayload }));
                                   window.dispatchEvent(new Event("storage"));
                                 } catch { }
-                                setFeedback({
-                                  type: "success",
-                                  message: `📡 Link Broadcasted to ALL Classes! All student dashboards will now display the "Join Live Class Now" banner.`
+                                await handleLaunchInSystemLiveClassRoom({
+                                  title: m.title,
+                                  classId: m.classId,
+                                  className: m.class?.name || (m.classId ? `Class #${m.classId}` : "All Classes"),
+                                  meetingId: m.meetingId || m.id,
+                                  mediaMode: "VIDEO"
                                 });
-                                if (window.showGBSOpenNotice) {
-                                  window.showGBSOpenNotice(`Broadcast dispatched to all classes: ${m.title}`, "success", "Live Class Broadcast");
-                                }
                               }}
                               style={{
                                 background: "rgba(56, 189, 248, 0.2)",
@@ -13733,6 +13765,21 @@ export default function TeacherDashboard() {
                 <div style={{ display: "flex", justifyContent: "center", gap: "10px", flexWrap: "wrap" }}>
                   <button
                     type="button"
+                    onClick={() =>
+                      handleLaunchInSystemLiveClassRoom({
+                        title: activeLiveClassroomSession.title,
+                        classId: activeLiveClassroomSession.classId,
+                        className: studioClassName,
+                        meetingId: activeLiveClassroomSession.meetingId || activeLiveClassroomSession.id,
+                        mediaMode: "VIDEO"
+                      })
+                    }
+                    style={{ background: "linear-gradient(135deg, #059669, #10b981)", border: "1px solid #f6dd84", color: "#fff", padding: "8px 16px", borderRadius: "8px", fontSize: "0.82rem", fontWeight: 900, cursor: "pointer" }}
+                  >
+                    🎓 Enter Live In-System Video Class with Students (WebRTC)
+                  </button>
+                  <button
+                    type="button"
                     onClick={() => {
                       navigator.clipboard?.writeText(studioMeetingLink);
                       setFeedback({ type: "success", message: `📋 Working meeting link copied: ${studioMeetingLink}` });
@@ -13806,6 +13853,15 @@ export default function TeacherDashboard() {
       );
     })()
   }
+
+  {activeTeacherLiveWebRtcSession && (
+    <LiveInSystemCallModal
+      session={activeTeacherLiveWebRtcSession}
+      currentUser={currentUser}
+      onClose={() => setActiveTeacherLiveWebRtcSession(null)}
+      onSessionEnded={() => setActiveTeacherLiveWebRtcSession(null)}
+    />
+  )}
 
   {/* Student Homework Verification & Inspection Modal */ }
   {

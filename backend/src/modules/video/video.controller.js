@@ -113,6 +113,15 @@ async function getCallState(req, res, next) {
   }
 }
 
+async function updatePresence(req, res, next) {
+  try {
+    const data = await liveCallService.updatePresence(req);
+    return res.status(200).json({ success: true, data });
+  } catch (err) {
+    return next(err);
+  }
+}
+
 module.exports = {
   getStatus,
   getDirectory,
@@ -122,5 +131,6 @@ module.exports = {
   declineCall,
   endCall,
   postSignal,
-  getCallState
+  getCallState,
+  updatePresence
 };

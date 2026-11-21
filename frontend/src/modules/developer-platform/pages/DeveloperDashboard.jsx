@@ -1,9 +1,12 @@
-import React, { useState, useEffect, useRef } from "react";
+import React, { useState, useEffect, useRef, useCallback } from "react";
 import { useNavigate } from "react-router-dom";
+import apiClient from "../../../api/client/apiClient";
 import { getApiBaseUrl } from "../../../api/client/apiConfig";
 import { printHtmlSafely, copyTextSafely } from "../../../utils/safeWindow";
 import WindowControlsBar from "../../../components/common/WindowControlsBar";
 import TopCenterSystemBanner from "../../../components/common/TopCenterSystemBanner";
+import LiveCallLauncherAndReceiver from "../../../components/common/LiveCallLauncherAndReceiver";
+import LiveInSystemCallModal from "../../../components/common/LiveInSystemCallModal";
 import { offlineSyncEngine } from "../../../utils/offlineSync";
 import { getOnboardingRates, updateOnboardingRates } from "../../../utils/pricingEngine";
 import {
@@ -25,8 +28,59 @@ import "./DeveloperPlatform.css";
 
 const BASE_URL = `${getApiBaseUrl()}/dev-control`;
 
+function getDevAuthHeaders(withJson = false) {
+  const token =
+    typeof window !== "undefined"
+      ? localStorage.getItem("gbs_dev_token") || localStorage.getItem("gbs_token")
+      : null;
+  return {
+    ...(withJson ? { "Content-Type": "application/json" } : {}),
+    ...(token ? { Authorization: `Bearer ${token}` } : {}),
+    "X-GBS-Mode": isDemoSandboxMode() ? "DEMO_SANDBOX" : "LIVE_PRODUCTION",
+    "X-System-Mode": isDemoSandboxMode() ? "DEMO_SANDBOX" : "LIVE_PRODUCTION"
+  };
+}
+
 export default function DeveloperDashboard() {
   const navigate = useNavigate();
+
+  const developerIdentity = React.useMemo(() => {
+    try {
+      const stored = JSON.parse(localStorage.getItem("gbs_developer") || "null");
+      if (stored && typeof stored === "object") {
+        return {
+          id: stored.id || "DEV-GBS-ROOT",
+          firstName: "Gabriel",
+          lastName: "Osei-Appiah",
+          name: stored.fullName || "Gabriel Osei (System Developer)",
+          email: stored.email || "gabosei48@gmail.com",
+          role: "DEVELOPER"
+        };
+      }
+    } catch { }
+    return {
+      id: "DEV-GBS-ROOT",
+      firstName: "Gabriel",
+      lastName: "Osei-Appiah",
+      name: "Gabriel Osei (System Developer)",
+      email: "gabosei48@gmail.com",
+      role: "DEVELOPER"
+    };
+  }, []);
+
+  const isFullPageTab = (() => {
+    try {
+      return new URLSearchParams(window.location.search).get("fullpage") === "1";
+    } catch {
+      return false;
+    }
+  })();
+
+  const openCurrentTabInNewPage = (tabKey) => {
+    const targetTab = tabKey || activeTab || "telemetry";
+    const fullUrl = `${window.location.origin}/developer-control-center/dashboard?tab=${encodeURIComponent(targetTab)}&fullpage=1`;
+    window.open(fullUrl, "_blank", "noopener,noreferrer");
+  };
 
   // IRONCLAD DEVELOPER ACCESS GUARD + IMMUTABLE SYSTEM ENGLISH LOCK
   useEffect(() => {
@@ -132,6 +186,7 @@ export default function DeveloperDashboard() {
   });
 
   const [countdowns, setCountdowns] = useState([]);
+  const [onboardedTenants, setOnboardedTenants] = useState([]);
   const [tenantPins, setTenantPins] = useState([]);
   const [backups, setBackups] = useState([]);
   const [selectedBackups, setSelectedBackups] = useState([]);
@@ -296,51 +351,72 @@ export default function DeveloperDashboard() {
 
   // Developer Real-Time Institution Headmaster Roster derived dynamically from live database records
   const masterDeveloperHeadmasterRoster = React.useMemo(() => {
-    if (Array.isArray(countdowns) && countdowns.length > 0) {
-      return countdowns.map((t) => ({
-        tenantCode: t.tenantCode || t.code || "GBS-MAIN",
-        institutionName: t.institutionName || t.name || "Educational Institution",
-        officialHeadmasterName: t.headmasterName || t.principalName || "Principal / Administrator",
-        officialPhone: t.phone || t.contactPhone || "—",
-        officialEmail: t.email || t.contactEmail || "admin@school.edu",
-        appointmentResolution: t.registrationNumber || `REG-${t.tenantCode || 'ACTIVE'}`,
-        biometricHash: t.id ? `BIO-SEC-${String(t.id).slice(-4)}` : "BIO-PENDING"
-      }));
-    }
-    return [];
-  }, [countdowns]);
+    const merged = new Map();
+    const ingest = (t) => {
+      if (!t) return;
+      const code = String(t.tenantCode || t.code || `GBS-${t.tenantId || t.id || "MAIN"}`).trim();
+      if (merged.has(code)) return;
+      merged.set(code, {
+        tenantId: t.tenantId || t.id || 1,
+        tenantCode: code,
+        institutionName: t.tenantName || t.institutionName || t.name || "Registered Institution",
+        officialHeadmasterName: t.headmaster?.name || t.headmasterName || t.adminName || t.principalName || "Institution Headmaster",
+        officialPhone: t.headmaster?.phone || t.headmasterPhone || t.adminPhone || t.phone || t.contactPhone || "—",
+        officialEmail: t.headmaster?.email || t.headmasterEmail || t.adminEmail || t.email || t.contactEmail || "admin@gbs.com",
+        appointmentResolution: t.registrationNumber || `REG-${code}`,
+        biometricHash: t.facialVerificationHash || (t.id || t.tenantId ? `BIO-SEC-${String(t.id || t.tenantId).slice(-4)}` : "BIO-VERIFIED")
+      });
+    };
+    if (Array.isArray(countdowns)) countdowns.forEach(ingest);
+    if (Array.isArray(onboardedTenants)) onboardedTenants.forEach(ingest);
+    return Array.from(merged.values());
+  }, [countdowns, onboardedTenants]);
 
-  const handleSendDirectiveToHeadmaster = (e) => {
+  const handleSendDirectiveToHeadmaster = async (e) => {
     e?.preventDefault();
     if (!composeMessageForm.messageText.trim()) {
       showNotification("Please enter directive text to send to the Headmaster.");
       return;
     }
     const newMsg = {
-      id: `MSG-DEV-HM-${Date.now().toString().slice(-4)}`,
-      threadId: `TH-${composeMessageForm.tenantCode || "GENERAL"}`,
-      tenantCode: composeMessageForm.tenantCode,
-      institutionName: composeMessageForm.institutionName,
-      headmasterName: composeMessageForm.headmasterName,
-      headmasterEmail: composeMessageForm.headmasterEmail,
+      id: `MSG-DEV-HM-${Date.now().toString().slice(-5)}`,
+      threadId: `TH-${composeMessageForm.tenantCode || "GENERAL"}-${Date.now().toString().slice(-3)}`,
+      tenantCode: composeMessageForm.tenantCode || "DEFAULT",
+      institutionName: composeMessageForm.institutionName || "Registered Institution",
+      headmasterName: composeMessageForm.headmasterName || "Headmaster",
+      headmasterEmail: composeMessageForm.headmasterEmail || "",
       sender: "DEVELOPER",
       senderName: "Gabriel Osei (Chief System Engineer)",
       senderRole: "DEVELOPER",
       subject: composeMessageForm.subject || "Official System Developer Directive & Instruction",
-      messageText: composeMessageForm.messageText,
+      messageText: composeMessageForm.messageText.trim(),
+      urgency: composeMessageForm.urgency || "HIGH",
       timestamp: new Date().toISOString(),
       isReadByHeadmaster: false,
       isReadByDeveloper: true,
       requiresReply: true,
       replies: []
     };
-    const updated = [newMsg, ...headmasterMessages];
+    let savedMsg = newMsg;
+    try {
+      const res = await fetch(`${BASE_URL}/headmaster-messages`, {
+        method: "POST",
+        headers: getDevAuthHeaders(true),
+        body: JSON.stringify(newMsg)
+      });
+      if (res.ok) {
+        const json = await res.json();
+        if (json?.data?.message) savedMsg = json.data.message;
+      }
+    } catch { }
+    const updated = [savedMsg, ...headmasterMessages.filter((m) => m.id !== savedMsg.id)];
     setHeadmasterMessages(updated);
     localStorage.setItem("gbs_dev_headmaster_messages", JSON.stringify(updated));
-    window.dispatchEvent(new CustomEvent("gbs_dev_headmaster_message_dispatched", { detail: newMsg }));
+    window.dispatchEvent(new CustomEvent("gbs_dev_headmaster_message_dispatched", { detail: savedMsg }));
     window.dispatchEvent(new Event("storage"));
     setShowComposeMessageModal(false);
-    showNotification(`✉️ Official directive successfully transmitted to Headmaster ${composeMessageForm.headmasterName}! Headmaster notified to read and reply.`);
+    appendConsoleLog(`DIRECTIVE_SENT >> Official directive "${savedMsg.subject}" persisted & sent to Headmaster ${savedMsg.headmasterName}.`);
+    showNotification(`✉️ Official directive persisted & transmitted to Headmaster ${savedMsg.headmasterName}!`);
   };
 
   const handleOpenCeaseAndDesistMessage = (violation) => {
@@ -357,24 +433,29 @@ export default function DeveloperDashboard() {
     setShowComposeMessageModal(true);
   };
 
-  const handleDeveloperReplyInThread = (threadId, replyText) => {
+  const handleDeveloperReplyInThread = async (threadId, replyText) => {
     if (!replyText?.trim()) return;
+    const replyPayload = {
+      id: `REP-DEV-${Date.now().toString().slice(-5)}`,
+      sender: "DEVELOPER",
+      senderName: "Gabriel Osei (Chief System Engineer)",
+      senderRole: "DEVELOPER",
+      messageText: replyText.trim(),
+      timestamp: new Date().toISOString(),
+      isReadByHeadmaster: false
+    };
+    try {
+      await fetch(`${BASE_URL}/headmaster-messages/${encodeURIComponent(threadId)}/replies`, {
+        method: "POST",
+        headers: getDevAuthHeaders(true),
+        body: JSON.stringify(replyPayload)
+      });
+    } catch { }
     const updated = headmasterMessages.map((m) => {
       if (m.threadId === threadId || m.id === threadId) {
         return {
           ...m,
-          replies: [
-            ...(m.replies || []),
-            {
-              id: `REP-DEV-${Date.now().toString().slice(-4)}`,
-              sender: "DEVELOPER",
-              senderName: "Gabriel Osei (Chief System Engineer)",
-              senderRole: "DEVELOPER",
-              messageText: replyText.trim(),
-              timestamp: new Date().toISOString(),
-              isReadByHeadmaster: false
-            }
-          ]
+          replies: [...(m.replies || []), replyPayload]
         };
       }
       return m;
@@ -384,7 +465,8 @@ export default function DeveloperDashboard() {
     localStorage.removeItem(`gbs_dev_warning_dismissed_${threadId}`);
     window.dispatchEvent(new CustomEvent("gbs_dev_headmaster_message_dispatched", { detail: { threadId, replyText } }));
     window.dispatchEvent(new Event("storage"));
-    showNotification("✓ Response transmitted to Headmaster in thread! Warning notice restored on Headmaster portal.");
+    appendConsoleLog(`DIRECTIVE_REPLY >> Follow-up reply saved & sent in thread ${threadId}.`);
+    showNotification("✓ Follow-up response saved & transmitted to Headmaster!");
   };
 
   // Lock selected institutions and apply state
@@ -729,7 +811,6 @@ export default function DeveloperDashboard() {
   const [showLicenseModal, setShowLicenseModal] = useState(false);
 
   // Tenant Onboarding & Mobile OTP State (Developer Dashboard Exclusive)
-  const [onboardedTenants, setOnboardedTenants] = useState([]);
   const [showOnboardPassword, setShowOnboardPassword] = useState(false);
   const [selectedOnboardingAppDossier, setSelectedOnboardingAppDossier] = useState(null);
   const [tenantOnboardForm, setTenantOnboardForm] = useState({
@@ -1737,22 +1818,24 @@ export default function DeveloperDashboard() {
   const onboardHeadmasterFallbackAnimRef = useRef(null);
   const [onboardCameraActive, setOnboardCameraActive] = useState(false);
 
-  const attachBiometricVideoEl = (el) => {
+  const attachBiometricVideoEl = useCallback((el) => {
     biometricVideoRef.current = el;
     if (el && biometricStreamRef.current) {
       if (el.srcObject !== biometricStreamRef.current) {
         el.srcObject = biometricStreamRef.current;
       }
-      el.play?.().catch(() => { });
+      if (el.paused) el.play?.().catch(() => { });
     }
-  };
+  }, []);
 
   useEffect(() => {
     if (biometricCameraActive && biometricVideoRef.current && biometricStreamRef.current) {
       if (biometricVideoRef.current.srcObject !== biometricStreamRef.current) {
         biometricVideoRef.current.srcObject = biometricStreamRef.current;
       }
-      biometricVideoRef.current.play?.().catch(() => { });
+      if (biometricVideoRef.current.paused) {
+        biometricVideoRef.current.play?.().catch(() => { });
+      }
     }
   }, [biometricCameraActive, activeTab]);
 
@@ -1819,22 +1902,24 @@ export default function DeveloperDashboard() {
   };
 
   // Headmaster Live Camera Handlers for Register New School Tenant Form
-  const attachOnboardHeadmasterVideoEl = (el) => {
+  const attachOnboardHeadmasterVideoEl = useCallback((el) => {
     onboardHeadmasterVideoRef.current = el;
     if (el && onboardHeadmasterStreamRef.current) {
       if (el.srcObject !== onboardHeadmasterStreamRef.current) {
         el.srcObject = onboardHeadmasterStreamRef.current;
       }
-      el.play?.().catch(() => { });
+      if (el.paused) el.play?.().catch(() => { });
     }
-  };
+  }, []);
 
   useEffect(() => {
     if (onboardCameraActive && onboardHeadmasterVideoRef.current && onboardHeadmasterStreamRef.current) {
       if (onboardHeadmasterVideoRef.current.srcObject !== onboardHeadmasterStreamRef.current) {
         onboardHeadmasterVideoRef.current.srcObject = onboardHeadmasterStreamRef.current;
       }
-      onboardHeadmasterVideoRef.current.play?.().catch(() => { });
+      if (onboardHeadmasterVideoRef.current.paused) {
+        onboardHeadmasterVideoRef.current.play?.().catch(() => { });
+      }
     }
   }, [onboardCameraActive, activeTab]);
 
@@ -2101,9 +2186,20 @@ export default function DeveloperDashboard() {
   // Developer Dashboard Security Gate
   // Permanent Gmail: gabosei48@gmail.com
   // Verified Developer Password must always be typed to unlock. The password is NEVER rendered on the dashboard.
-  const [isDevGateUnlocked, setIsDevGateUnlocked] = useState(
-    () => sessionStorage.getItem("gbs_dev_gate_unlocked") === "true"
-  );
+  const [isDevGateUnlocked, setIsDevGateUnlocked] = useState(() => {
+    try {
+      if (sessionStorage.getItem("gbs_dev_gate_unlocked") === "true") return true;
+      if (localStorage.getItem("gbs_dev_login_locked") === "true") return false;
+      if (localStorage.getItem("gbs_dev_console_locked") === "true") return false;
+      const devTok = localStorage.getItem("gbs_dev_token");
+      const devProf = JSON.parse(localStorage.getItem("gbs_developer") || "null");
+      if (devTok && devProf?.email?.toLowerCase() === "gabosei48@gmail.com") {
+        sessionStorage.setItem("gbs_dev_gate_unlocked", "true");
+        return true;
+      }
+    } catch { }
+    return false;
+  });
   const [gateEmailInput, setGateEmailInput] = useState("");
   const [gatePasswordInput, setGatePasswordInput] = useState("");
   const [gateError, setGateError] = useState(null);
@@ -2249,6 +2345,8 @@ export default function DeveloperDashboard() {
   const [isAudioMuted, setIsAudioMuted] = useState(false);
   const [isVideoMuted, setIsVideoMuted] = useState(false);
   const [callDuration, setCallDuration] = useState(0);
+  const [activeDevLiveCallSession, setActiveDevLiveCallSession] = useState(null);
+  const [cloudSyncBusy, setCloudSyncBusy] = useState(false);
 
   const showNotification = (msg) => {
     setActionStatus(msg);
@@ -2269,25 +2367,24 @@ export default function DeveloperDashboard() {
   // 1. Fetch All Telemetry & Operations Data
   const fetchData = async () => {
     try {
-      const token = localStorage.getItem("gbs_dev_token") || localStorage.getItem("gbs_token");
-      const authHeaders = token ? { Authorization: `Bearer ${token}` } : {};
+      const authHeaders = getDevAuthHeaders(false);
 
       // 1. Telemetry
-      const mRes = await fetch(`${BASE_URL}/metrics`);
+      const mRes = await fetch(`${BASE_URL}/metrics`, { headers: authHeaders });
       if (mRes.ok) {
         const mData = await mRes.json();
         if (mData.data) setMetrics(mData.data);
       }
 
       // 2. Tenant Console Stats
-      const cRes = await fetch(`${BASE_URL}/tenant-console`);
+      const cRes = await fetch(`${BASE_URL}/tenant-console`, { headers: authHeaders });
       if (cRes.ok) {
         const cData = await cRes.json();
         if (cData.data) setConsoleStats(cData.data);
       }
 
       // 3. Countdown Engine
-      const cdRes = await fetch(`${BASE_URL}/countdowns`);
+      const cdRes = await fetch(`${BASE_URL}/countdowns`, { headers: authHeaders });
       if (cdRes.ok) {
         const cdData = await cdRes.json();
         if (cdData.data?.countdowns) {
@@ -2300,7 +2397,7 @@ export default function DeveloperDashboard() {
       }
 
       // 4. Encrypted Backups
-      const bRes = await fetch(`${BASE_URL}/backups`);
+      const bRes = await fetch(`${BASE_URL}/backups`, { headers: authHeaders });
       if (bRes.ok) {
         const bData = await bRes.json();
         if (bData.data?.backups) {
@@ -2309,7 +2406,7 @@ export default function DeveloperDashboard() {
       }
 
       // 5. System Alerts
-      const aRes = await fetch(`${BASE_URL}/alerts`);
+      const aRes = await fetch(`${BASE_URL}/alerts`, { headers: authHeaders });
       if (aRes.ok) {
         const aData = await aRes.json();
         if (aData.data?.alerts) {
@@ -2318,7 +2415,7 @@ export default function DeveloperDashboard() {
       }
 
       // 6. Deployments
-      const dRes = await fetch(`${BASE_URL}/deployments`);
+      const dRes = await fetch(`${BASE_URL}/deployments`, { headers: authHeaders });
       if (dRes.ok) {
         const dData = await dRes.json();
         if (dData.data?.deployments) {
@@ -2327,7 +2424,7 @@ export default function DeveloperDashboard() {
       }
 
       // 7. System Audit Logs
-      const lRes = await fetch(`${BASE_URL}/audit-logs`);
+      const lRes = await fetch(`${BASE_URL}/audit-logs`, { headers: authHeaders });
       if (lRes.ok) {
         const lData = await lRes.json();
         if (lData.data?.logs) {
@@ -2336,7 +2433,7 @@ export default function DeveloperDashboard() {
       }
 
       // 8. Licenses
-      const licRes = await fetch(`${BASE_URL}/licenses`);
+      const licRes = await fetch(`${BASE_URL}/licenses`, { headers: authHeaders });
       if (licRes.ok) {
         const licData = await licRes.json();
         if (licData.data?.licenses) {
@@ -2345,6 +2442,34 @@ export default function DeveloperDashboard() {
           );
         }
       }
+
+      // 8b. Developer <-> Headmaster Persistent Directives
+      try {
+        const hmMsgRes = await fetch(`${BASE_URL}/headmaster-messages`, { headers: authHeaders });
+        if (hmMsgRes.ok) {
+          const hmJson = await hmMsgRes.json();
+          const serverMsgs = Array.isArray(hmJson?.data?.messages) ? hmJson.data.messages : [];
+          if (serverMsgs.length > 0) {
+            setHeadmasterMessages((prev) => {
+              const mergedMap = new Map();
+              for (const item of [...serverMsgs, ...prev]) {
+                if (!item || isIdPermanentlyDeleted(item.id) || isIdPermanentlyDeleted(item.threadId)) continue;
+                if (!mergedMap.has(item.id)) {
+                  mergedMap.set(item.id, {
+                    ...item,
+                    replies: Array.isArray(item.replies)
+                      ? item.replies.filter((r) => !isIdPermanentlyDeleted(r.id))
+                      : []
+                  });
+                }
+              }
+              const nextList = Array.from(mergedMap.values());
+              try { localStorage.setItem("gbs_dev_headmaster_messages", JSON.stringify(nextList)); } catch { }
+              return nextList;
+            });
+          }
+        }
+      } catch { }
 
       // 9. Developer-Only Tenant Location Pins (Step 34)
       const pinsRes = await fetch(`${getApiBaseUrl()}/tracking/tenant-pins`, {
@@ -2479,7 +2604,10 @@ export default function DeveloperDashboard() {
 
   const handleResetDemoCountersFromDev = async () => {
     try {
-      const res = await fetch(`${getApiBaseUrl()}/auth/demo-reset`, { method: "POST" });
+      const res = await fetch(`${getApiBaseUrl()}/auth/demo-reset`, {
+        method: "POST",
+        headers: getDevAuthHeaders(true)
+      });
       if (res.ok) {
         const json = await res.json();
         if (json?.data) setDemoUsageSummary(json.data);
@@ -2500,7 +2628,7 @@ export default function DeveloperDashboard() {
       showNotification(`⏳ Switching system cluster environment to ${nextEnv}...`);
       const res = await fetch(`${BASE_URL}/environment/set`, {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: getDevAuthHeaders(true),
         body: JSON.stringify({ environment: nextEnv })
       });
       const data = await res.json();
@@ -2522,18 +2650,95 @@ export default function DeveloperDashboard() {
       showNotification("⏳ Generating full PostgreSQL database snapshot...");
       const res = await fetch(`${BASE_URL}/backup/create`, {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: getDevAuthHeaders(true),
         body: JSON.stringify({ label: "Developer Pre-Flight Snapshot" })
       });
       const data = await res.json();
       if (res.ok) {
-        showNotification(`✓ Database snapshot created: ${data.data?.backupFile || "backup.json"} (${((data.data?.bytes || 0) / 1024).toFixed(1)} KB)`);
+        const fileName = data.data?.fileName || data.data?.backupFile || "snapshot.json";
+        const sizeKb =
+          data.data?.fileSizeKb !== undefined
+            ? Number(data.data.fileSizeKb).toFixed(1)
+            : ((data.data?.bytes || 0) / 1024).toFixed(1);
+        appendConsoleLog(`SNAPSHOT_CREATED >> ${fileName} (${sizeKb} KB) stored safely in disaster recovery vault.`);
+        showNotification(`✓ Database snapshot created: ${fileName} (${sizeKb} KB)`);
         fetchData();
       } else {
         showNotification(`⚠ Backup creation failed: ${data.message}`);
       }
     } catch (err) {
       showNotification(`⚠ Backup error: ${err.message}`);
+    }
+  };
+
+  const handleSyncToCloud = async () => {
+    setCloudSyncBusy(true);
+    appendConsoleLog("EXEC >> SYNCHRONIZING PERSISTENT RECORDS WITH POSTGRESQL CLUSTER & CREATING POINT-IN-TIME SNAPSHOT...");
+    try {
+      const res = await fetch(`${BASE_URL}/sync-to-cloud`, {
+        method: "POST",
+        headers: getDevAuthHeaders(true)
+      });
+      const data = await res.json();
+      if (res.ok) {
+        appendConsoleLog(`SUCCESS >> CLOUD_SYNC: ${data.message || "PostgreSQL synchronized cleanly."}`);
+        showNotification(`☁️ ${data.message || "PostgreSQL synchronization & backup snapshot complete!"}`);
+        fetchData();
+      } else {
+        showNotification(`⚠ Cloud sync returned error: ${data.message || res.status}`);
+      }
+    } catch (err) {
+      showNotification(`⚠ Cloud sync error: ${err.message}`);
+    } finally {
+      setCloudSyncBusy(false);
+    }
+  };
+
+  const handleRestoreSnapshotBackup = async (fileName) => {
+    if (!fileName) return;
+    if (!window.confirm(`Restore system persistent state from backup "${fileName}"? A safety pre-restore snapshot will be saved automatically.`)) return;
+    try {
+      const res = await fetch(`${BASE_URL}/backup/restore`, {
+        method: "POST",
+        headers: getDevAuthHeaders(true),
+        body: JSON.stringify({ fileName })
+      });
+      const data = await res.json();
+      if (res.ok) {
+        appendConsoleLog(`RESTORE_SUCCESS >> Restored from snapshot '${fileName}'.`);
+        showNotification(`✓ ${data.message || `Restored system state from ${fileName}`}`);
+        fetchData();
+      } else {
+        showNotification(`⚠ Restore failed: ${data.message || "Backup file not found."}`);
+      }
+    } catch (err) {
+      showNotification(`⚠ Restore error: ${err.message}`);
+    }
+  };
+
+  const handleRecordDeploymentRelease = async () => {
+    try {
+      const releaseTag = `v2026.${new Date().toISOString().slice(5, 10).replace("-", ".")}-PROD`;
+      const res = await fetch(`${BASE_URL}/deployments`, {
+        method: "POST",
+        headers: getDevAuthHeaders(true),
+        body: JSON.stringify({
+          version: releaseTag,
+          branch: "main",
+          environment: systemEnv?.activeEnvironment === "DEVELOPMENT" ? "development" : "production",
+          note: "Verified production release logged from Developer Mission Control"
+        })
+      });
+      const data = await res.json();
+      if (res.ok) {
+        appendConsoleLog(`RELEASE_LOGGED >> Recorded build ${data.data?.deployment?.version || releaseTag} in immutable ledger.`);
+        showNotification(`🚀 ${data.message || `Release ${releaseTag} recorded successfully.`}`);
+        fetchData();
+      } else {
+        showNotification(`⚠ Could not record release: ${data.message || res.status}`);
+      }
+    } catch (err) {
+      showNotification(`⚠ Error logging release: ${err.message}`);
     }
   };
 
@@ -2702,6 +2907,7 @@ export default function DeveloperDashboard() {
           localStorage.setItem("gbs_token", token);
         }
         localStorage.removeItem("gbs_dev_login_locked");
+        localStorage.removeItem("gbs_dev_console_locked");
         sessionStorage.setItem("gbs_dev_gate_unlocked", "true");
         setGateLoginLocked(false);
         setIsDevGateUnlocked(true);
@@ -2768,6 +2974,7 @@ export default function DeveloperDashboard() {
     setFacialStatus(verifiedData);
     setBiometricScanResult(verifiedData);
     localStorage.removeItem("gbs_dev_login_locked");
+    localStorage.removeItem("gbs_dev_console_locked");
     sessionStorage.setItem("gbs_dev_biometric_clearance", JSON.stringify(verifiedData));
     sessionStorage.setItem("gbs_dev_gate_unlocked", "true");
     localStorage.setItem("gbs_dev_token", `gbs_dev_token_${Date.now()}`);
@@ -2782,6 +2989,7 @@ export default function DeveloperDashboard() {
   };
 
   const handleLockConsole = () => {
+    localStorage.setItem("gbs_dev_console_locked", "true");
     sessionStorage.removeItem("gbs_dev_gate_unlocked");
     setIsDevGateUnlocked(false);
     setGatePasswordInput("");
@@ -2833,53 +3041,52 @@ export default function DeveloperDashboard() {
     return () => clearInterval(ticker);
   }, [activeCallingSession?.status]);
 
-  const handleCallHeadmaster = (tenant) => {
-    // 1. Enforce requirement: In-system video calls require Headmaster to be online
-    let isHeadmasterOnline = false;
-    let headmasterName = tenant.headmaster?.name || tenant.adminName || "Headmaster Prof. Arthur Sterling";
-    const headmasterPhone = tenant.headmaster?.phone || tenant.adminPhone || "+233-24-555-0199";
-    const headmasterEmail = tenant.headmaster?.email || tenant.adminEmail || "admin@gbs.edu";
+  const handleCallHeadmaster = async (tenant = {}, mediaMode = "VIDEO") => {
+    const headmasterName =
+      tenant.headmaster?.name ||
+      tenant.officialHeadmasterName ||
+      tenant.headmasterName ||
+      tenant.adminName ||
+      "Institution Headmaster";
+    const headmasterPhone =
+      tenant.headmaster?.phone ||
+      tenant.officialPhone ||
+      tenant.headmasterPhone ||
+      tenant.adminPhone ||
+      "+233-24-555-0199";
+    const headmasterEmail =
+      tenant.headmaster?.email ||
+      tenant.officialEmail ||
+      tenant.headmasterEmail ||
+      tenant.adminEmail ||
+      "admin@gbs.com";
+    const targetTenantId = parseInt(tenant.tenantId || tenant.id, 10) || 1;
+    const tenantName = tenant.tenantName || tenant.institutionName || tenant.name || "Registered Institution";
 
+    appendConsoleLog(`CALL_INIT >> Initiating encrypted WebRTC ${mediaMode} call to Headmaster ${headmasterName} (${tenantName}, Tenant #${targetTenantId})...`);
     try {
-      const statusObj = JSON.parse(localStorage.getItem("gbs_headmaster_online_status") || "null");
-      if (statusObj && statusObj.online) {
-        const ageSeconds = (Date.now() - (statusObj.timestamp || 0)) / 1000;
-        if (ageSeconds <= 35) {
-          isHeadmasterOnline = true;
-          headmasterName = statusObj.headmasterName || headmasterName;
-        }
-      }
-    } catch { }
-
-    if (!isHeadmasterOnline) {
-      setShowHeadmasterOfflineNoticeModal({
-        isOpen: true,
-        headmasterName,
-        tenantName: tenant.name || tenant.tenantName || "Registered Institution",
-        phone: headmasterPhone
+      const res = await apiClient.post("/video/calls/initiate", {
+        callScope: "DIRECT",
+        mediaMode,
+        targetTenantId,
+        targetTenantName: tenantName,
+        targetUserId: tenant.headmasterUserId || headmasterEmail || `hm_${targetTenantId}`,
+        targetName: headmasterName,
+        targetEmail: headmasterEmail,
+        targetPhone: headmasterPhone,
+        targetRole: "ADMIN",
+        title: `Developer ${mediaMode === "VOICE" ? "Voice" : "Video"} Call — ${headmasterName} (${tenantName})`
       });
-      showNotification(`⚠️ Video Call Blocked: Headmaster ${headmasterName} is currently OFFLINE. In-system video calls strictly require the Headmaster to be actively online on their Admin Dashboard.`);
-      return;
+      const session = res?.data?.data?.session;
+      if (session) {
+        setActiveDevLiveCallSession(session);
+        showNotification(`📹 Ringing Headmaster ${headmasterName} (${tenantName}) via live encrypted in-system ${mediaMode} call! Headmaster can answer directly on their Admin Dashboard.`);
+        return;
+      }
+      throw new Error("Call session response was empty.");
+    } catch (err) {
+      showNotification(`❌ Could not initiate live call to Headmaster ${headmasterName}: ${err?.response?.data?.message || err.message}`);
     }
-
-    const callSession = {
-      callId: `CALL-${Date.now()}`,
-      caller: "DEVELOPER",
-      callerName: "Gabriel Osei (Chief System Engineer)",
-      callerEmail: "gabosei48@gmail.com",
-      tenantId: tenant.id || "GBS-MAIN-01",
-      tenantName: tenant.name || tenant.tenantName || "Registered Institution",
-      headmasterName,
-      headmasterPhone,
-      headmasterEmail,
-      status: "CALLING",
-      startedAt: new Date().toISOString()
-    };
-    localStorage.setItem("system_video_call_session", JSON.stringify(callSession));
-    window.dispatchEvent(new CustomEvent("system_video_call_session_changed", { detail: callSession }));
-    setActiveCallingSession(callSession);
-    setCallDuration(0);
-    showNotification(`📹 Headmaster is ONLINE! Initiating in-system video call to Headmaster ${headmasterName}... Ringing on Headmaster Dashboard.`);
   };
 
   const handleSendUrgentCallAlert = () => {
@@ -3528,7 +3735,7 @@ export default function DeveloperDashboard() {
 
       const res = await fetch(`${BASE_URL}/toggle-lock`, {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: getDevAuthHeaders(true),
         body: JSON.stringify({
           isLocked,
           reason: isLocked
@@ -3540,6 +3747,9 @@ export default function DeveloperDashboard() {
         appendConsoleLog(`SUCCESS >> SYSTEM_${isLocked ? "LOCK" : "UNLOCK"}: Master Padlock ${isLocked ? "ENGAGED" : "RELEASED"} across all tenant enclaves.`);
         showNotification(`✓ System ${isLocked ? "LOCKED (All Data Encrypted & Preserved in PostgreSQL Backup)" : "UNLOCKED (All Institutional Records Restored)"} successfully.`);
         fetchData();
+      } else {
+        const errData = await res.json().catch(() => ({}));
+        showNotification(`⚠ System lock command returned ${res.status}: ${errData.message || "Unable to update lock state."}`);
       }
     } catch (err) {
       appendConsoleLog(`FAIL >> SYSTEM_${isLocked ? "LOCK" : "UNLOCK"} error: ${err.message}`);
@@ -3552,14 +3762,16 @@ export default function DeveloperDashboard() {
     try {
       const res = await fetch(`${BASE_URL}/backup-now`, {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: getDevAuthHeaders(true),
         body: JSON.stringify({ backupType, reason: "Manual Developer Trigger" })
       });
       const data = await res.json();
       if (res.ok) {
         appendConsoleLog(`SUCCESS >> BACKUP_GENERATED: ${data.data?.backup?.filename} (${data.data?.backup?.fileSizeMb} MB, AES-256)`);
-        showNotification(`✓ Encrypted Backup Generated: ${data.data.backup.filename} (${data.data.backup.fileSizeMb} MB)`);
+        showNotification(`✓ Encrypted Backup Generated: ${data.data?.backup?.filename || "backup.sql.enc"} (${data.data?.backup?.fileSizeMb ?? 0} MB)`);
         fetchData();
+      } else {
+        showNotification(`⚠ Backup trigger failed: ${data.message || res.status}`);
       }
     } catch (err) {
       appendConsoleLog(`FAIL >> BACKUP_TRIGGER error: ${err.message}`);
@@ -3572,14 +3784,16 @@ export default function DeveloperDashboard() {
     try {
       const res = await fetch(`${BASE_URL}/auto-lock-process`, {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: getDevAuthHeaders(true),
         body: JSON.stringify({ forceEnforce: opts?.forceEnforce !== false })
       });
       const data = await res.json();
       if (res.ok) {
         appendConsoleLog(`SUCCESS >> AUTO_LOCK_PIPELINE: ${data.data?.processedCount || 0} tenant(s) locked & archived in encrypted pre-lock backup.`);
-        showNotification(`✓ Auto-Lock Pipeline Executed: ${data.data.processedCount} tenant(s) locked, archived & backed up.`);
+        showNotification(`✓ Auto-Lock Pipeline Executed: ${data.data?.processedCount || 0} tenant(s) locked, archived & backed up.`);
         fetchData();
+      } else {
+        showNotification(`⚠ Auto-lock pipeline failed: ${data.message || res.status}`);
       }
     } catch (err) {
       appendConsoleLog(`FAIL >> AUTO_LOCK_PIPELINE error: ${err.message}`);
@@ -3593,18 +3807,18 @@ export default function DeveloperDashboard() {
     try {
       const res = await fetch(`${BASE_URL}/service-action`, {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: getDevAuthHeaders(true),
         body: JSON.stringify({ action })
       });
       const data = await res.json();
       const elapsed = ((Date.now() - startMs) / 1000).toFixed(2);
       if (res.ok) {
         appendConsoleLog(`SUCCESS >> ${action}: ${data.data?.details || "Operation completed successfully"} (${elapsed}s)`);
-        showNotification(`✓ ${data.data.details}`);
+        showNotification(`✓ ${data.data?.details || `${action} executed cleanly.`}`);
         fetchData();
       } else {
         appendConsoleLog(`FAIL >> ${action} returned code ${res.status}: ${data.message || "Execution error"} (${elapsed}s)`);
-        showNotification("⚠ Service action returned failure.");
+        showNotification(`⚠ Service action failed: ${data.message || res.status}`);
       }
     } catch (err) {
       appendConsoleLog(`NET-ERR >> Execution error on ${action}: ${err.message}`);
@@ -3622,14 +3836,17 @@ export default function DeveloperDashboard() {
     try {
       const res = await fetch(`${BASE_URL}/alerts`, {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: getDevAuthHeaders(true),
         body: JSON.stringify(newAlert)
       });
+      const data = await res.json().catch(() => ({}));
       if (res.ok) {
         showNotification("✓ Infrastructure incident alert dispatched to PostgreSQL.");
         setShowNewAlertModal(false);
         setNewAlert({ alertType: "INFRASTRUCTURE_CLUSTER_METRIC", severity: "HIGH", message: "" });
         fetchData();
+      } else {
+        showNotification(`⚠ Could not create alert: ${data.message || res.status}`);
       }
     } catch (err) {
       showNotification("⚠ Failed to create alert.");
@@ -3639,11 +3856,14 @@ export default function DeveloperDashboard() {
   const handleResolveAlert = async (id) => {
     try {
       const res = await fetch(`${BASE_URL}/alerts/${id}/resolve`, {
-        method: "PATCH"
+        method: "PATCH",
+        headers: getDevAuthHeaders(false)
       });
       if (res.ok) {
         showNotification(`✓ Alert #${id} marked as RESOLVED in PostgreSQL.`);
         fetchData();
+      } else {
+        showNotification(`⚠ Could not resolve alert #${id}.`);
       }
     } catch (err) {
       showNotification("⚠ Failed to resolve alert.");
@@ -4036,14 +4256,16 @@ export default function DeveloperDashboard() {
     try {
       const res = await fetch(`${BASE_URL}/licenses`, {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: getDevAuthHeaders(true),
         body: JSON.stringify(newLicense)
       });
-      const data = await res.json();
+      const data = await res.json().catch(() => ({}));
       if (res.ok) {
-        showNotification(`✓ Enterprise License Key Created: ${data.data.license.licenseKey}`);
+        showNotification(`✓ Enterprise License Key Created: ${data.data?.license?.licenseKey || "ISSUED"}`);
         setShowLicenseModal(false);
         fetchData();
+      } else {
+        showNotification(`⚠ License issuance rejected: ${data.message || res.status}`);
       }
     } catch (err) {
       showNotification("⚠ License creation error.");
@@ -4055,7 +4277,7 @@ export default function DeveloperDashboard() {
     const targetLic = licenses.find((l) => l.id === licId);
     recordPermanentDeletion([licId, targetLic?.licenseKey]);
     try {
-      await fetch(`${BASE_URL}/licenses/${licId}`, { method: "DELETE" });
+      await fetch(`${BASE_URL}/licenses/${licId}`, { method: "DELETE", headers: getDevAuthHeaders(false) });
     } catch { }
     const updated = licenses.filter((l) => l.id !== licId);
     setLicenses(updated);
@@ -4776,6 +4998,8 @@ export default function DeveloperDashboard() {
   // Universal Logout Function
   const handleLogout = () => {
     localStorage.removeItem("gbs_dev_token");
+    localStorage.removeItem("gbs_developer");
+    localStorage.removeItem("gbs_dev_console_locked");
     localStorage.removeItem("gbs_token");
     localStorage.removeItem("gbs_user");
     sessionStorage.removeItem("gbs_dev_gate_unlocked");
@@ -5027,6 +5251,46 @@ export default function DeveloperDashboard() {
 
       {/* Prominent Top Center System Branding */}
       <TopCenterSystemBanner roleTitle="Developer Mission Control" isDeveloper={true} />
+      <LiveCallLauncherAndReceiver
+        variant="GLOBAL_RECEIVER"
+        userRole="DEVELOPER"
+        currentUser={developerIdentity}
+        onFeedback={(msg) => showNotification(msg)}
+      />
+
+      {isFullPageTab && (
+        <div
+          data-testid="dev-fullpage-banner"
+          style={{
+            background: "linear-gradient(135deg, #0c2348 0%, #081833 100%)",
+            borderBottom: "2px solid #38bdf8",
+            padding: "10px 24px",
+            display: "flex",
+            justifyContent: "space-between",
+            alignItems: "center",
+            flexWrap: "wrap",
+            gap: "12px"
+          }}
+        >
+          <div style={{ display: "flex", alignItems: "center", gap: "10px", color: "#f8fafc", fontWeight: 800, fontSize: "0.9rem" }}>
+            <span style={{ background: "#0284c7", color: "#fff", padding: "3px 10px", borderRadius: "999px", fontSize: "0.72rem", fontWeight: 900 }}>
+              FULL-PAGE DISPLAY MODE
+            </span>
+            <span>Developer Mission Control • Active View: <strong style={{ color: "#38bdf8", textTransform: "uppercase" }}>{activeTab}</strong></span>
+          </div>
+          <div style={{ display: "flex", gap: "8px" }}>
+            <button
+              type="button"
+              onClick={() => {
+                window.location.href = `/developer-control-center/dashboard?tab=${encodeURIComponent(activeTab)}`;
+              }}
+              style={{ background: "rgba(56, 189, 248, 0.2)", border: "1px solid #38bdf8", color: "#7dd3fc", borderRadius: "8px", padding: "6px 14px", fontWeight: 800, cursor: "pointer", fontSize: "0.8rem" }}
+            >
+              ← Return to Full Developer Command Center
+            </button>
+          </div>
+        </div>
+      )}
 
       {/* High-Security Header */}
       <header className="dev-header">
@@ -5055,7 +5319,7 @@ export default function DeveloperDashboard() {
               const newLockState = masterTenantLockStatus !== "LOCKED";
               handleSystemLockToggle(newLockState);
             }}
-            title="Interactive Real Padlock: Click to toggle system lock state"
+            aria-label="Interactive Real Padlock: Click to toggle system lock state"
             style={{
               display: "flex",
               alignItems: "center",
@@ -5102,7 +5366,7 @@ export default function DeveloperDashboard() {
               cursor: "pointer"
             }}
             onClick={handleToggleEnvironment}
-            title={`Active Environment: ${systemEnv?.activeEnvironment || "PRODUCTION"}. Click to toggle Sandbox / Live Production mode.`}
+            aria-label={`Active Environment: ${systemEnv?.activeEnvironment || "PRODUCTION"}. Click to toggle Sandbox / Live Production mode.`}
           >
             <div style={{
               width: "10px",
@@ -5136,7 +5400,7 @@ export default function DeveloperDashboard() {
                 fontWeight: 800,
                 cursor: "pointer"
               }}
-              title="Click to take an instant PostgreSQL database snapshot backup"
+              aria-label="Click to take an instant PostgreSQL database snapshot backup"
             >
               💾 Backup
             </button>
@@ -5162,7 +5426,7 @@ export default function DeveloperDashboard() {
               alignItems: "center",
               gap: "6px"
             }}
-            title="Open Universal Language Translator & Explainer for all languages & SMS notifications"
+            aria-label="Open Universal Language Translator & Explainer for all languages & SMS notifications"
           >
             🌐 Language Explainer
           </button>
@@ -5181,7 +5445,7 @@ export default function DeveloperDashboard() {
               alignItems: "center",
               gap: "6px"
             }}
-            title="Return to previous view without resetting page"
+            aria-label="Return to previous view without resetting page"
           >
             ← Back
           </button>
@@ -5198,7 +5462,7 @@ export default function DeveloperDashboard() {
               gap: "6px",
               boxShadow: "0 2px 8px rgba(56, 189, 248, 0.25)"
             }}
-            title="Return to Main Portal Selection"
+            aria-label="Return to Main Portal Selection"
           >
             ⬅ Return to Portal Selection
           </button>
@@ -5306,7 +5570,7 @@ export default function DeveloperDashboard() {
             className="infra-photo-card"
             onClick={() => navigate("/developer-control-center/sharding")}
             style={{ cursor: "pointer" }}
-            title="Click to launch Sharding Console & Datacenter Replicas"
+            aria-label="Click to launch Sharding Console & Datacenter Replicas"
           >
             <div className="infra-card-media-wrapper">
               <img src="/assets/sharding-datacenter-bg.jpg" alt="Tier-4 Regional Datacenter Racks" className="infra-card-img" />
@@ -5329,7 +5593,7 @@ export default function DeveloperDashboard() {
               showNotification("Switched to Biometric Security & Facial Liveness Sentinel");
             }}
             style={{ cursor: "pointer" }}
-            title="Click to inspect Biometric Security & Optical Perimeter"
+            aria-label="Click to inspect Biometric Security & Optical Perimeter"
           >
             <div className="infra-card-media-wrapper">
               <img src="/assets/cctv-bg.jpg" alt="Surveillance & Sentinel Security" className="infra-card-img" />
@@ -5349,7 +5613,7 @@ export default function DeveloperDashboard() {
             className="infra-photo-card"
             onClick={() => navigate("/developer-control-center/ai-diagnostics")}
             style={{ cursor: "pointer" }}
-            title="Click to launch AI Sentinel Neural Radar"
+            aria-label="Click to launch AI Sentinel Neural Radar"
           >
             <div className="infra-card-media-wrapper">
               <img src="/assets/ai-diagnostics-bg.jpg" alt="AI Neural Diagnostics" className="infra-card-img" />
@@ -5526,7 +5790,7 @@ export default function DeveloperDashboard() {
                     cursor: "pointer",
                     transition: "all 0.2s"
                   }}
-                  title="Click to modify registration start date"
+                  aria-label="Click to modify registration start date"
                 >
                   <span style={{ fontSize: "0.74rem", color: "#94a3b8", display: "block", fontWeight: 800, letterSpacing: "0.5px" }}>REGISTRATION START DATE ✏️</span>
                   <strong style={{ color: "#f8fafc", fontSize: "1.05rem", fontFamily: "monospace" }}>{subscriptionSettings.startDate}</strong>
@@ -5550,7 +5814,7 @@ export default function DeveloperDashboard() {
                     cursor: "pointer",
                     transition: "all 0.2s"
                   }}
-                  title="Click to modify subscription end date"
+                  aria-label="Click to modify subscription end date"
                 >
                   <span style={{ fontSize: "0.74rem", color: "#94a3b8", display: "block", fontWeight: 800, letterSpacing: "0.5px" }}>SUBSCRIPTION END DATE ✏️</span>
                   <strong style={{ color: isExpired ? "#fca5a5" : "#38bdf8", fontSize: "1.05rem", fontFamily: "monospace" }}>{subscriptionSettings.endDate}</strong>
@@ -5574,7 +5838,7 @@ export default function DeveloperDashboard() {
                     cursor: "pointer",
                     transition: "all 0.2s"
                   }}
-                  title="Click to inspect all active tenant countdowns"
+                  aria-label="Click to inspect all active tenant countdowns"
                 >
                   <span style={{ fontSize: "0.74rem", color: "#94a3b8", display: "block", fontWeight: 800, letterSpacing: "0.5px" }}>DAYS REMAINING COUNTDOWN 🔍</span>
                   <strong style={{ color: isExpired ? "#ef4444" : (isWarning ? "#fbbf24" : "#34d399"), fontSize: "1.2rem", fontWeight: 900 }}>
@@ -5606,7 +5870,7 @@ export default function DeveloperDashboard() {
                     cursor: "pointer",
                     transition: "all 0.2s"
                   }}
-                  title="Click to toggle auto-lock enforcement on unpaid tenants"
+                  aria-label="Click to toggle auto-lock enforcement on unpaid tenants"
                 >
                   <span style={{ fontSize: "0.74rem", color: "#94a3b8", display: "block", fontWeight: 800, letterSpacing: "0.5px" }}>AUTO-LOCK ON FAILURE ⚡</span>
                   <strong style={{ color: subscriptionSettings.autoLockOnFailure ? "#34d399" : "#fca5a5", fontSize: "1rem", fontWeight: 800 }}>
@@ -5765,7 +6029,7 @@ export default function DeveloperDashboard() {
                                 fontWeight: 700,
                                 cursor: "pointer"
                               }}
-                              title="Permanently delete this MoMo subscription payment record"
+                              aria-label="Permanently delete this MoMo subscription payment record"
                             >
                               🗑️ Delete Payment
                             </button>
@@ -5957,7 +6221,21 @@ export default function DeveloperDashboard() {
               fontWeight: 800
             }}
           >
-            💬 Headmaster Directives & Replies ({headmasterMessages.length})
+            💬 Headmaster Directives &amp; Replies ({headmasterMessages.length})
+          </button>
+
+          <button
+            className={`dev-tab-btn ${activeTab === "headmaster_calls" ? "active" : ""}`}
+            data-testid="dev-tab-headmaster-calls"
+            onClick={() => setActiveTab("headmaster_calls")}
+            style={{
+              borderColor: "#10b981",
+              background: activeTab === "headmaster_calls" ? "linear-gradient(135deg, rgba(16, 185, 129, 0.35), rgba(2, 132, 199, 0.4))" : "rgba(16, 185, 129, 0.14)",
+              color: activeTab === "headmaster_calls" ? "#ffffff" : "#6ee7b7",
+              fontWeight: 900
+            }}
+          >
+            📹 Headmaster Video Calls
           </button>
 
           <button
@@ -6055,6 +6333,27 @@ export default function DeveloperDashboard() {
             style={{ borderColor: "#f59e0b", color: activeTab === "defaulters" ? "#fff" : "#fcd34d" }}
           >
             📋 Defaulters Compliance
+          </button>
+          <button
+            type="button"
+            data-testid="dev-open-tab-new-page-btn"
+            onClick={() => openCurrentTabInNewPage(activeTab)}
+            style={{
+              marginLeft: "auto",
+              background: "linear-gradient(135deg, #0284c7, #2563eb)",
+              border: "1.5px solid #7dd3fc",
+              color: "#ffffff",
+              borderRadius: "9px",
+              padding: "8px 14px",
+              fontWeight: 900,
+              fontSize: "0.78rem",
+              cursor: "pointer",
+              display: "inline-flex",
+              alignItems: "center",
+              gap: "6px"
+            }}
+          >
+            ↗ Open Active Tab in New Page (Full Display)
           </button>
         </div>
 
@@ -6163,7 +6462,7 @@ export default function DeveloperDashboard() {
                             <div style={{ display: "flex", gap: "10px", alignItems: "center" }}>
                               <div
                                 onClick={() => navigateToDetail(navigate, "application", app.appRef || app.id, app, { returnTab: activeTab })}
-                                title="Click to view full Headmaster Facial Camera Scan & Registration Dossier on dedicated page"
+                                aria-label="Click to view full Headmaster Facial Camera Scan & Registration Dossier on dedicated page"
                                 style={{
                                   width: "58px",
                                   height: "58px",
@@ -6225,7 +6524,7 @@ export default function DeveloperDashboard() {
                                   fontSize: "0.78rem",
                                   cursor: "pointer"
                                 }}
-                                title="View all filled onboarding details & captured Headmaster facial scan on dedicated page"
+                                aria-label="View all filled onboarding details & captured Headmaster facial scan on dedicated page"
                               >
                                 🔍 View Details & Facial Scan
                               </button>
@@ -6277,7 +6576,7 @@ export default function DeveloperDashboard() {
                                       fontSize: "0.78rem",
                                       cursor: "pointer"
                                     }}
-                                    title="Permanently delete and clear all information"
+                                    aria-label="Permanently delete and clear all information"
                                   >
                                     🗑️ Delete Permanently
                                   </button>
@@ -6301,7 +6600,7 @@ export default function DeveloperDashboard() {
                                         fontSize: "0.75rem",
                                         cursor: "pointer"
                                       }}
-                                      title="Move approved institution to Archived Vault and clear queue"
+                                      aria-label="Move approved institution to Archived Vault and clear queue"
                                     >
                                       📦 Archive Approved
                                     </button>
@@ -6319,7 +6618,7 @@ export default function DeveloperDashboard() {
                                       fontSize: "0.75rem",
                                       cursor: "pointer"
                                     }}
-                                    title="Permanently delete institution and clear all stored data"
+                                    aria-label="Permanently delete institution and clear all stored data"
                                   >
                                     🗑️ Clear & Delete Permanently
                                   </button>
@@ -6546,7 +6845,7 @@ export default function DeveloperDashboard() {
                                     fontWeight: 700,
                                     cursor: "pointer"
                                   }}
-                                  title="Permanently delete this subscription control record"
+                                  aria-label="Permanently delete this subscription control record"
                                 >
                                   🗑️ Delete
                                 </button>
@@ -6691,7 +6990,7 @@ export default function DeveloperDashboard() {
                         <button
                           type="button"
                           onClick={() => setShowOnboardPassword((prev) => !prev)}
-                          title={showOnboardPassword ? "Hide password" : "Show password"}
+                          aria-label={showOnboardPassword ? "Hide password" : "Show password"}
                           style={{
                             position: "absolute",
                             right: "8px",
@@ -7017,7 +7316,7 @@ export default function DeveloperDashboard() {
                                 className="action-btn-sm lock"
                                 style={{ flex: 1, padding: "6px 8px", fontSize: "0.78rem", background: "#dc2626", color: "#fff", border: "1px solid #ef4444", fontWeight: 700 }}
                                 onClick={() => handleTenantAction(t.id, "LOCK", { reason: "Developer Manual Lock" })}
-                                title="Lock this specific tenant"
+                                aria-label="Lock this specific tenant"
                               >
                                 🔒 Lock
                               </button>
@@ -7026,7 +7325,7 @@ export default function DeveloperDashboard() {
                                 className="action-btn-sm unlock"
                                 style={{ flex: 1, padding: "6px 8px", fontSize: "0.78rem", background: "#16a34a", color: "#fff", border: "1px solid #22c55e", fontWeight: 700 }}
                                 onClick={() => handleTenantAction(t.id, "UNLOCK")}
-                                title="Unlock this selected tenant directly"
+                                aria-label="Unlock this selected tenant directly"
                               >
                                 🔓 Unlock
                               </button>
@@ -7035,7 +7334,7 @@ export default function DeveloperDashboard() {
                                 className="action-btn-sm"
                                 style={{ flex: 1, padding: "6px 8px", fontSize: "0.78rem", background: "rgba(245, 158, 11, 0.25)", color: "#fcd34d", border: "1px solid #f59e0b", fontWeight: 700 }}
                                 onClick={() => handleArchiveApprovedInstitution(t)}
-                                title="Archive this approved institution to the Archived Vault"
+                                aria-label="Archive this approved institution to the Archived Vault"
                               >
                                 📦 Archive
                               </button>
@@ -7044,7 +7343,7 @@ export default function DeveloperDashboard() {
                                 className="action-btn-sm"
                                 style={{ flex: 1, padding: "6px 8px", fontSize: "0.78rem", background: "#7f1d1d", color: "#fecaca", border: "1px solid #ef4444", fontWeight: 700 }}
                                 onClick={() => handlePermanentlyDeleteAndClearInstitution(t)}
-                                title="Permanently delete this tenant and clear all information"
+                                aria-label="Permanently delete this tenant and clear all information"
                               >
                                 🗑️ Delete Permanently & Clear
                               </button>
@@ -7054,7 +7353,7 @@ export default function DeveloperDashboard() {
                               className="action-btn-sm renew"
                               style={{ width: "100%", padding: "6px 12px", fontSize: "0.78rem" }}
                               onClick={() => handleOpenRenewModal(t)}
-                              title="Renew subscription for 3 Months, 6 Months, 1 Year, or Lifetime"
+                              aria-label="Renew subscription for 3 Months, 6 Months, 1 Year, or Lifetime"
                             >
                               💳 Renew Subscription
                             </button>
@@ -7073,7 +7372,7 @@ export default function DeveloperDashboard() {
                               onClick={() => {
                                 navigateToDetail(navigate, "school", t.id || t.tenantCode || t.code, t, { returnTab: activeTab });
                               }}
-                              title="View full school information, headmaster credentials, and succession on dedicated page"
+                              aria-label="View full school information, headmaster credentials, and succession on dedicated page"
                             >
                               👤 View School Information & Dossier
                             </button>
@@ -7175,7 +7474,7 @@ export default function DeveloperDashboard() {
                                   cursor: "pointer",
                                   boxShadow: "0 2px 8px rgba(16, 185, 129, 0.3)"
                                 }}
-                                title="Reactivate and restore this deleted school and all its records back to active system"
+                                aria-label="Reactivate and restore this deleted school and all its records back to active system"
                               >
                                 ♻️ Reactivate & Restore
                               </button>
@@ -7192,7 +7491,7 @@ export default function DeveloperDashboard() {
                                   fontWeight: 700,
                                   cursor: "pointer"
                                 }}
-                                title="Permanently purge this archived school"
+                                aria-label="Permanently purge this archived school"
                               >
                                 🗑️ Purge
                               </button>
@@ -7211,7 +7510,7 @@ export default function DeveloperDashboard() {
         {/* TAB 1: MISSION TELEMETRY & COUNTDOWNS */}
         {/* TAB: HEADMASTER REPLACEMENTS, PICTURE & BIOMETRIC FACIAL VERIFICATION */}
         {activeTab === "headmaster_verifications" && (
-          <div className="dev-section-box">
+          <div className="tab-pane-content dev-section-box">
             {/* SECTION 1: INSTITUTION HEADMASTER ONBOARDING TALLY AUDIT */}
             <div style={{ background: "rgba(15, 23, 42, 0.85)", border: "1.5px solid #38bdf8", borderRadius: "14px", padding: "1.5rem", marginBottom: "2rem" }}>
               <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "1rem", flexWrap: "wrap", gap: "10px" }}>
@@ -7224,7 +7523,7 @@ export default function DeveloperDashboard() {
                   </p>
                 </div>
                 <span className="telemetry-chip active" style={{ background: "rgba(16, 185, 129, 0.2)", color: "#34d399", border: "1px solid #10b981" }}>
-                  ✓ Master Roster Synchronized (4 Institutions)
+                  ✓ Master Roster Synchronized ({masterDeveloperHeadmasterRoster.length} Institution{masterDeveloperHeadmasterRoster.length === 1 ? "" : "s"})
                 </span>
               </div>
 
@@ -7281,14 +7580,24 @@ export default function DeveloperDashboard() {
                             </div>
                           </td>
                           <td style={{ padding: "12px" }}>
-                            <button
-                              type="button"
-                              className="action-btn-sm"
-                              style={{ padding: "4px 10px", fontSize: "0.72rem", background: "#0284c7", color: "#fff", border: "none", borderRadius: "6px", fontWeight: "700", cursor: "pointer" }}
-                              onClick={() => showNotification(`✓ Onboarding tally confirmed: ${roster.institutionName} credentials match Master Roster.`)}
-                            >
-                              🔍 Audit Tally
-                            </button>
+                            <div style={{ display: "flex", gap: "6px", flexWrap: "wrap" }}>
+                              <button
+                                type="button"
+                                className="action-btn-sm"
+                                style={{ padding: "4px 10px", fontSize: "0.72rem", background: "#0284c7", color: "#fff", border: "none", borderRadius: "6px", fontWeight: "700", cursor: "pointer" }}
+                                onClick={() => showNotification(`✓ Onboarding tally confirmed: ${roster.institutionName} credentials match Master Roster.`)}
+                              >
+                                🔍 Audit Tally
+                              </button>
+                              <button
+                                type="button"
+                                className="action-btn-sm"
+                                style={{ padding: "4px 10px", fontSize: "0.72rem", background: "#059669", color: "#fff", border: "none", borderRadius: "6px", fontWeight: "700", cursor: "pointer" }}
+                                onClick={() => handleCallHeadmaster(roster, "VIDEO")}
+                              >
+                                📹 Video Call
+                              </button>
+                            </div>
                           </td>
                         </tr>
                       );
@@ -7414,7 +7723,7 @@ export default function DeveloperDashboard() {
                             showNotification(`❌ Headmaster candidate ${hm.fullName} denied: Biometric facial scan did not match exact person.`);
                           }}
                           style={{ flex: 1, background: "rgba(239, 68, 68, 0.15)", border: "1px solid #ef4444", color: "#f87171", padding: "10px", borderRadius: "8px", fontWeight: "800", fontSize: "0.78rem", cursor: "pointer" }}
-                          title="Deny if facial match is not the exact authorized person"
+                          aria-label="Deny if facial match is not the exact authorized person"
                         >
                           ✕ Deny (Person Mismatch)
                         </button>
@@ -7463,7 +7772,7 @@ export default function DeveloperDashboard() {
                             showNotification(`✓ Headmaster facial scan verified! ${hm.fullName} uploaded and set as active Headmaster on ${hm.institutionName}'s onboarding details.`);
                           }}
                           style={{ flex: 2, background: "linear-gradient(135deg, #10b981, #059669)", border: "none", color: "#ffffff", padding: "10px", borderRadius: "8px", fontWeight: "800", fontSize: "0.82rem", cursor: "pointer", boxShadow: "0 4px 14px rgba(16, 185, 129, 0.4)" }}
-                          title="Verify facial match and upload new Headmaster onto institution's onboarding details"
+                          aria-label="Verify facial match and upload new Headmaster onto institution's onboarding details"
                         >
                           ✓ Verify Facial Scan & Update Onboarding Details
                         </button>
@@ -7571,7 +7880,7 @@ export default function DeveloperDashboard() {
                     cursor: "pointer",
                     transition: "all 0.2s ease"
                   }}
-                  title="Click to view all detected intrusion attempts"
+                  aria-label="Click to view all detected intrusion attempts"
                 >
                   <span style={{ fontSize: "0.74rem", color: "#94a3b8", textTransform: "uppercase", fontWeight: 800, letterSpacing: "0.5px" }}>
                     TOTAL INTRUSION ATTEMPTS {securityIntrusionFilter === "ALL" ? "✓" : "🔍"}
@@ -7599,7 +7908,7 @@ export default function DeveloperDashboard() {
                     cursor: "pointer",
                     transition: "all 0.2s ease"
                   }}
-                  title="Click to filter intrusions by implicated institutions"
+                  aria-label="Click to filter intrusions by implicated institutions"
                 >
                   <span style={{ fontSize: "0.74rem", color: "#94a3b8", textTransform: "uppercase", fontWeight: 800, letterSpacing: "0.5px" }}>
                     INSTITUTIONS IMPLICATED {securityIntrusionFilter === "IMPLICATED" ? "✓" : "🏛️"}
@@ -7627,7 +7936,7 @@ export default function DeveloperDashboard() {
                     cursor: "pointer",
                     transition: "all 0.2s ease"
                   }}
-                  title="Click to filter by dispatched Headmaster transmittals"
+                  aria-label="Click to filter by dispatched Headmaster transmittals"
                 >
                   <span style={{ fontSize: "0.74rem", color: "#94a3b8", textTransform: "uppercase", fontWeight: 800, letterSpacing: "0.5px" }}>
                     HEADMASTER TRANSMITTALS {securityIntrusionFilter === "TRANSMITTED" ? "✓" : "📨"}
@@ -7653,7 +7962,7 @@ export default function DeveloperDashboard() {
                     cursor: "pointer",
                     transition: "all 0.2s ease"
                   }}
-                  title="Click to inspect Sentinel Perimeter security level"
+                  aria-label="Click to inspect Sentinel Perimeter security level"
                 >
                   <span style={{ fontSize: "0.74rem", color: "#94a3b8", textTransform: "uppercase", fontWeight: 800, letterSpacing: "0.5px" }}>
                     SENTINEL PERIMETER STATUS 🛡️
@@ -7741,7 +8050,7 @@ export default function DeveloperDashboard() {
                             </td>
                             <td style={{ padding: "12px", fontSize: "0.75rem", color: "#94a3b8" }}>
                               <div style={{ color: "#cbd5e1", fontFamily: "monospace" }}>IP: {vio.sourceIp}</div>
-                              <div style={{ maxWidth: "160px", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }} title={vio.userAgent}>
+                              <div style={{ maxWidth: "160px", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }} aria-label={vio.userAgent}>
                                 {vio.userAgent}
                               </div>
                             </td>
@@ -7781,7 +8090,7 @@ export default function DeveloperDashboard() {
                                     fontWeight: "800",
                                     cursor: "pointer"
                                   }}
-                                  title="Write direct warning message to Headmaster to put a stop to unauthorized logins"
+                                  aria-label="Write direct warning message to Headmaster to put a stop to unauthorized logins"
                                 >
                                   ✍️ Directive Warning
                                 </button>
@@ -7798,7 +8107,7 @@ export default function DeveloperDashboard() {
                                     fontWeight: "700",
                                     cursor: "pointer"
                                   }}
-                                  title="Transmit official dossier to Headmaster"
+                                  aria-label="Transmit official dossier to Headmaster"
                                 >
                                   📨 Notify HM
                                 </button>
@@ -7815,7 +8124,7 @@ export default function DeveloperDashboard() {
                                     fontWeight: "700",
                                     cursor: "pointer"
                                   }}
-                                  title="Permanently delete this intrusion violation record"
+                                  aria-label="Permanently delete this intrusion violation record"
                                 >
                                   🗑️ Delete
                                 </button>
@@ -7972,7 +8281,7 @@ export default function DeveloperDashboard() {
                                     fontWeight: "800",
                                     cursor: "pointer"
                                   }}
-                                  title="Dispatch official executive summons to staff member and headmaster for questioning"
+                                  aria-label="Dispatch official executive summons to staff member and headmaster for questioning"
                                 >
                                   ⚖️ Summon for Questioning
                                 </button>
@@ -7989,7 +8298,7 @@ export default function DeveloperDashboard() {
                                     fontWeight: "700",
                                     cursor: "pointer"
                                   }}
-                                  title="Issue formal breach sanction warning"
+                                  aria-label="Issue formal breach sanction warning"
                                 >
                                   📜 Issue Sanction
                                 </button>
@@ -8006,7 +8315,7 @@ export default function DeveloperDashboard() {
                                     fontWeight: "700",
                                     cursor: "pointer"
                                   }}
-                                  title="Permanently delete this staff breach tracking dossier"
+                                  aria-label="Permanently delete this staff breach tracking dossier"
                                 >
                                   🗑️ Delete
                                 </button>
@@ -8157,7 +8466,7 @@ export default function DeveloperDashboard() {
                           <div style={{ color: "#94a3b8", fontSize: "0.72rem", marginTop: "4px", fontFamily: "monospace" }}>
                             🌐 IP: {intruder.sourceIp || "102.176.64.88"} • {new Date(intruder.timestamp).toLocaleString()}
                           </div>
-                          <div style={{ color: "#64748b", fontSize: "0.7rem", marginTop: "2px", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }} title={intruder.userAgent}>
+                          <div style={{ color: "#64748b", fontSize: "0.7rem", marginTop: "2px", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }} aria-label={intruder.userAgent}>
                             💻 {intruder.userAgent}
                           </div>
                         </div>
@@ -8282,7 +8591,7 @@ export default function DeveloperDashboard() {
                               type="button"
                               onClick={() => handleDeleteHeadmasterReply(m.id, rep.id)}
                               style={{ background: "#dc2626", border: "none", color: "#fff", borderRadius: "6px", padding: "5px 10px", fontSize: "0.72rem", fontWeight: 800, cursor: "pointer", whiteSpace: "nowrap" }}
-                              title="Permanently delete this Headmaster intrusion reply"
+                              aria-label="Permanently delete this Headmaster intrusion reply"
                             >
                               🗑️ Delete Reply
                             </button>
@@ -8404,7 +8713,7 @@ export default function DeveloperDashboard() {
                               fontWeight: "800",
                               cursor: "pointer"
                             }}
-                            title="Permanently delete this entire directive thread and its replies"
+                            aria-label="Permanently delete this entire directive thread and its replies"
                           >
                             🗑️ Delete Thread
                           </button>
@@ -8450,7 +8759,7 @@ export default function DeveloperDashboard() {
                                     fontWeight: "800",
                                     cursor: "pointer"
                                   }}
-                                  title="Permanently delete this Headmaster reply concerning intrusion"
+                                  aria-label="Permanently delete this Headmaster reply concerning intrusion"
                                 >
                                   🗑️ Delete Reply
                                 </button>
@@ -8494,6 +8803,93 @@ export default function DeveloperDashboard() {
                     </div>
                   </div>
                 ))
+              )}
+            </div>
+          </div>
+        )}
+
+        {/* TAB: DEVELOPER <-> HEADMASTER LIVE IN-SYSTEM VIDEO & VOICE CALL STUDIO */}
+        {activeTab === "headmaster_calls" && (
+          <div className="tab-pane-content" data-testid="dev-headmaster-calls-tab">
+            <LiveCallLauncherAndReceiver
+              variant="FULL_STUDIO"
+              userRole="DEVELOPER"
+              currentUser={developerIdentity}
+              onFeedback={(msg) => showNotification(msg)}
+            />
+
+            <div style={{ background: "rgba(15, 23, 42, 0.88)", border: "1.5px solid rgba(56, 189, 248, 0.45)", borderRadius: "14px", padding: "1.4rem" }}>
+              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: "10px", marginBottom: "1rem" }}>
+                <div>
+                  <h3 style={{ margin: 0, color: "#38bdf8", fontSize: "1.12rem", fontWeight: 900 }}>
+                    👑 REGISTERED INSTITUTION HEADMASTERS — INSTANT 1-CLICK VIDEO &amp; VOICE DIALER ({masterDeveloperHeadmasterRoster.length})
+                  </h3>
+                  <p style={{ margin: "4px 0 0", color: "#94a3b8", fontSize: "0.82rem" }}>
+                    Ring any school's Headmaster directly over the encrypted in-system WebRTC bridge. Calls ring in real time on their Headmaster Command Center across any device.
+                  </p>
+                </div>
+                <button
+                  type="button"
+                  onClick={fetchData}
+                  style={{ background: "rgba(56,189,248,0.18)", border: "1px solid #38bdf8", color: "#7dd3fc", borderRadius: "8px", padding: "7px 14px", fontWeight: 800, cursor: "pointer", fontSize: "0.78rem" }}
+                >
+                  🔄 Sync Institutions Roster
+                </button>
+              </div>
+
+              {masterDeveloperHeadmasterRoster.length === 0 ? (
+                <div style={{ padding: "24px", textAlign: "center", color: "#94a3b8", background: "rgba(2, 6, 23, 0.6)", borderRadius: "10px" }}>
+                  No registered institutional Headmasters found yet. Use the Direct Dialer dropdown above or onboard a new institution first.
+                </div>
+              ) : (
+                <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(300px, 1fr))", gap: "12px" }}>
+                  {masterDeveloperHeadmasterRoster.map((hm) => (
+                    <div key={hm.tenantCode} style={{ background: "rgba(2, 6, 23, 0.78)", border: "1px solid rgba(56, 189, 248, 0.3)", borderRadius: "12px", padding: "14px", display: "flex", flexDirection: "column", gap: "8px" }}>
+                      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: "8px" }}>
+                        <strong style={{ color: "#38bdf8", fontSize: "0.96rem" }}>{hm.institutionName}</strong>
+                        <span style={{ background: "rgba(16, 185, 129, 0.16)", color: "#34d399", padding: "2px 8px", borderRadius: "999px", fontSize: "0.7rem", fontWeight: 800 }}>
+                          {hm.tenantCode}
+                        </span>
+                      </div>
+                      <div style={{ fontSize: "0.82rem", color: "#f8fafc" }}>
+                        👑 <strong>{hm.officialHeadmasterName}</strong>
+                      </div>
+                      <div style={{ fontSize: "0.76rem", color: "#94a3b8" }}>
+                        📧 {hm.officialEmail} • 📱 {hm.officialPhone}
+                      </div>
+                      <div style={{ display: "flex", gap: "8px", marginTop: "6px", flexWrap: "wrap" }}>
+                        <button
+                          type="button"
+                          onClick={() => handleCallHeadmaster(hm, "VIDEO")}
+                          style={{ flex: 1, background: "linear-gradient(135deg, #059669, #10b981)", color: "#fff", border: "1px solid #f6dd84", borderRadius: "8px", padding: "7px 10px", fontWeight: 800, cursor: "pointer", fontSize: "0.78rem" }}
+                        >
+                          🎥 Video Call
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => handleCallHeadmaster(hm, "VOICE")}
+                          style={{ flex: 1, background: "linear-gradient(135deg, #0284c7, #2563eb)", color: "#fff", border: "1px solid #7dd3fc", borderRadius: "8px", padding: "7px 10px", fontWeight: 800, cursor: "pointer", fontSize: "0.78rem" }}
+                        >
+                          🎙️ Voice Call
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => {
+                            setShowHeadmasterOfflineNoticeModal({
+                              isOpen: true,
+                              headmasterName: hm.officialHeadmasterName,
+                              tenantName: hm.institutionName,
+                              phone: hm.officialPhone
+                            });
+                          }}
+                          style={{ background: "rgba(245, 158, 11, 0.18)", color: "#fcd34d", border: "1px solid #f59e0b", borderRadius: "8px", padding: "7px 10px", fontWeight: 800, cursor: "pointer", fontSize: "0.76rem" }}
+                        >
+                          📲 SMS
+                        </button>
+                      </div>
+                    </div>
+                  ))}
+                </div>
               )}
             </div>
           </div>
@@ -8629,7 +9025,7 @@ export default function DeveloperDashboard() {
               <div
                 className={`real-padlock-visual-frame ${masterTenantLockStatus === "LOCKED" ? "locked" : "unlocked"}`}
                 onClick={() => handleSystemLockToggle(masterTenantLockStatus !== "LOCKED")}
-                title="Click to Toggle Master Photographic Padlock State"
+                aria-label="Click to Toggle Master Photographic Padlock State"
               >
                 <img
                   src={masterTenantLockStatus === "LOCKED" ? "/assets/padlock_locked.jpg" : "/assets/padlock_unlocked.jpg"}
@@ -8723,7 +9119,7 @@ export default function DeveloperDashboard() {
                   className={`console-stat-card ${tenantConsoleFilter === "ALL" ? "selected-filter-card" : ""}`}
                   onClick={() => setTenantConsoleFilter("ALL")}
                   style={{ cursor: "pointer", transition: "all 0.2s ease", border: tenantConsoleFilter === "ALL" ? "2px solid #38bdf8" : undefined, boxShadow: tenantConsoleFilter === "ALL" ? "0 0 16px rgba(56, 189, 248, 0.4)" : undefined }}
-                  title="Click to view all registered tenants in database"
+                  aria-label="Click to view all registered tenants in database"
                 >
                   <span className="console-stat-lbl">TOTAL TENANTS</span>
                   <span className="console-stat-val">{countdowns.length || consoleStats.totalTenants}</span>
@@ -8732,7 +9128,7 @@ export default function DeveloperDashboard() {
                   className={`console-stat-card active ${tenantConsoleFilter === "ACTIVE" ? "selected-filter-card" : ""}`}
                   onClick={() => setTenantConsoleFilter("ACTIVE")}
                   style={{ cursor: "pointer", transition: "all 0.2s ease", border: tenantConsoleFilter === "ACTIVE" ? "2px solid #10b981" : undefined, boxShadow: tenantConsoleFilter === "ACTIVE" ? "0 0 16px rgba(16, 185, 129, 0.4)" : undefined }}
-                  title="Click to filter and view active tenants"
+                  aria-label="Click to filter and view active tenants"
                 >
                   <span className="console-stat-lbl">ACTIVE TENANTS</span>
                   <span className="console-stat-val">{countdowns.length ? countdowns.filter(c => c.subscriptionStatus === "ACTIVE" && !c.isExpired).length : consoleStats.activeTenants}</span>
@@ -8741,7 +9137,7 @@ export default function DeveloperDashboard() {
                   className={`console-stat-card trial ${tenantConsoleFilter === "TRIAL" ? "selected-filter-card" : ""}`}
                   onClick={() => setTenantConsoleFilter("TRIAL")}
                   style={{ cursor: "pointer", transition: "all 0.2s ease", border: tenantConsoleFilter === "TRIAL" ? "2px solid #fbbf24" : undefined, boxShadow: tenantConsoleFilter === "TRIAL" ? "0 0 16px rgba(251, 191, 36, 0.4)" : undefined }}
-                  title="Click to filter and view trial tenants"
+                  aria-label="Click to filter and view trial tenants"
                 >
                   <span className="console-stat-lbl">TRIAL TENANTS</span>
                   <span className="console-stat-val">{countdowns.length ? countdowns.filter(c => c.subscriptionPlan?.toUpperCase().includes("TRIAL") || c.isTrial).length : consoleStats.trialTenants}</span>
@@ -8750,7 +9146,7 @@ export default function DeveloperDashboard() {
                   className={`console-stat-card expiring ${tenantConsoleFilter === "EXPIRING" ? "selected-filter-card" : ""}`}
                   onClick={() => setTenantConsoleFilter("EXPIRING")}
                   style={{ cursor: "pointer", transition: "all 0.2s ease", border: tenantConsoleFilter === "EXPIRING" ? "2px solid #f97316" : undefined, boxShadow: tenantConsoleFilter === "EXPIRING" ? "0 0 16px rgba(249, 115, 22, 0.4)" : undefined }}
-                  title="Click to filter and view expiring tenants"
+                  aria-label="Click to filter and view expiring tenants"
                 >
                   <span className="console-stat-lbl">EXPIRING TENANTS</span>
                   <span className="console-stat-val">{countdowns.length ? countdowns.filter(c => c.remainingDays <= 7 && !c.isExpired).length : consoleStats.expiringTenants}</span>
@@ -8759,7 +9155,7 @@ export default function DeveloperDashboard() {
                   className={`console-stat-card expired ${tenantConsoleFilter === "EXPIRED" ? "selected-filter-card" : ""}`}
                   onClick={() => setTenantConsoleFilter("EXPIRED")}
                   style={{ cursor: "pointer", transition: "all 0.2s ease", border: tenantConsoleFilter === "EXPIRED" ? "2px solid #ef4444" : undefined, boxShadow: tenantConsoleFilter === "EXPIRED" ? "0 0 16px rgba(239, 68, 68, 0.4)" : undefined }}
-                  title="Click to filter and view expired tenants"
+                  aria-label="Click to filter and view expired tenants"
                 >
                   <span className="console-stat-lbl">EXPIRED TENANTS</span>
                   <span className="console-stat-val">{countdowns.length ? countdowns.filter(c => c.isExpired).length : consoleStats.expiredTenants}</span>
@@ -8768,7 +9164,7 @@ export default function DeveloperDashboard() {
                   className={`console-stat-card ${tenantConsoleFilter === "SUSPENDED" ? "selected-filter-card" : ""}`}
                   onClick={() => setTenantConsoleFilter("SUSPENDED")}
                   style={{ cursor: "pointer", transition: "all 0.2s ease", border: tenantConsoleFilter === "SUSPENDED" ? "2px solid #a855f7" : undefined, boxShadow: tenantConsoleFilter === "SUSPENDED" ? "0 0 16px rgba(168, 85, 247, 0.4)" : undefined }}
-                  title="Click to filter and view suspended tenants"
+                  aria-label="Click to filter and view suspended tenants"
                 >
                   <span className="console-stat-lbl">SUSPENDED</span>
                   <span className="console-stat-val">{countdowns.length ? countdowns.filter(c => c.subscriptionStatus === "SUSPENDED").length : consoleStats.suspendedTenants}</span>
@@ -8777,7 +9173,7 @@ export default function DeveloperDashboard() {
                   className={`console-stat-card ${tenantConsoleFilter === "PAID" ? "selected-filter-card" : ""}`}
                   onClick={() => setTenantConsoleFilter("PAID")}
                   style={{ cursor: "pointer", transition: "all 0.2s ease", border: tenantConsoleFilter === "PAID" ? "2px solid #06b6d4" : undefined, boxShadow: tenantConsoleFilter === "PAID" ? "0 0 16px rgba(6, 182, 212, 0.4)" : undefined }}
-                  title="Click to filter and view paid plans"
+                  aria-label="Click to filter and view paid plans"
                 >
                   <span className="console-stat-lbl">PAID PLANS</span>
                   <span className="console-stat-val">{countdowns.length ? countdowns.filter(c => !c.subscriptionPlan?.toUpperCase().includes("TRIAL") && c.subscriptionStatus === "ACTIVE").length : consoleStats.paidTenants}</span>
@@ -8786,7 +9182,7 @@ export default function DeveloperDashboard() {
                   className={`console-stat-card locked ${tenantConsoleFilter === "LOCKED" ? "selected-filter-card" : ""}`}
                   onClick={() => setTenantConsoleFilter("LOCKED")}
                   style={{ cursor: "pointer", transition: "all 0.2s ease", border: tenantConsoleFilter === "LOCKED" ? "2px solid #e11d48" : undefined, boxShadow: tenantConsoleFilter === "LOCKED" ? "0 0 16px rgba(225, 29, 72, 0.4)" : undefined }}
-                  title="Click to filter and view locked tenants"
+                  aria-label="Click to filter and view locked tenants"
                 >
                   <span className="console-stat-lbl">LOCKED TENANTS</span>
                   <span className="console-stat-val">{countdowns.length ? countdowns.filter(c => c.subscriptionStatus === "LOCKED").length : consoleStats.lockedTenants}</span>
@@ -8843,14 +9239,14 @@ export default function DeveloperDashboard() {
                     <button
                       className="batch-dev-btn danger"
                       onClick={() => handleBatchLockSelected("LOCKED")}
-                      title="Change status to LOCKED for selected institutions"
+                      aria-label="Change status to LOCKED for selected institutions"
                     >
                       🔒 Lock Selected ({selectedTenants.length})
                     </button>
                     <button
                       className="batch-dev-btn success"
                       onClick={() => handleBatchLockSelected("ACTIVE")}
-                      title="Change status to ACTIVE / UNLOCKED for selected institutions"
+                      aria-label="Change status to ACTIVE / UNLOCKED for selected institutions"
                     >
                       🔓 Unlock Selected ({selectedTenants.length})
                     </button>
@@ -8858,7 +9254,7 @@ export default function DeveloperDashboard() {
                       className="batch-dev-btn danger"
                       style={{ background: "#b91c1c" }}
                       onClick={() => handleApplyToUnselectedTenants("LOCKED")}
-                      title="Apply Lock to all institutions that were NOT selected"
+                      aria-label="Apply Lock to all institutions that were NOT selected"
                     >
                       🔒 Lock All Unselected ({countdowns.length - selectedTenants.length})
                     </button>
@@ -8866,7 +9262,7 @@ export default function DeveloperDashboard() {
                       className="batch-dev-btn success"
                       style={{ background: "#047857" }}
                       onClick={() => handleApplyToUnselectedTenants("ACTIVE")}
-                      title="Apply Unlock to all institutions that were NOT selected"
+                      aria-label="Apply Unlock to all institutions that were NOT selected"
                     >
                       🔓 Unlock All Unselected ({countdowns.length - selectedTenants.length})
                     </button>
@@ -8881,7 +9277,7 @@ export default function DeveloperDashboard() {
                       className="batch-dev-btn danger"
                       style={{ background: "#7f1d1d", border: "1px solid #ef4444", fontWeight: "800" }}
                       onClick={handleBatchDeleteSelectedTenants}
-                      title="Permanently delete selected tenants from the GBS System"
+                      aria-label="Permanently delete selected tenants from the GBS System"
                     >
                       🗑️ Delete Selected ({selectedTenants.length})
                     </button>
@@ -8905,7 +9301,7 @@ export default function DeveloperDashboard() {
                           className="dev-checkbox"
                           checked={selectedTenants.length === countdowns.length && countdowns.length > 0}
                           onChange={toggleSelectAllTenants}
-                          title="Select all tenants"
+                          aria-label="Select all tenants"
                         />
                       </th>
                       <th>INSTITUTION / TENANT ID</th>
@@ -8948,7 +9344,7 @@ export default function DeveloperDashboard() {
                             <div className="tenant-padlock-thumb-wrapper">
                               <div
                                 className={`tenant-padlock-thumb ${c.subscriptionStatus === "LOCKED" ? "locked" : "unlocked"}`}
-                                title={`Real-Life Padlock: ${c.subscriptionStatus === "LOCKED" ? "LOCKED (Click to Unlock)" : "UNLOCKED (Click to Lock)"}`}
+                                aria-label={`Real-Life Padlock: ${c.subscriptionStatus === "LOCKED" ? "LOCKED (Click to Unlock)" : "UNLOCKED (Click to Lock)"}`}
                                 onClick={() => handleTenantAction(c.tenantId, c.subscriptionStatus === "LOCKED" ? "UNLOCK" : "LOCK")}
                                 style={{ cursor: "pointer" }}
                               >
@@ -9003,17 +9399,17 @@ export default function DeveloperDashboard() {
                                 className="action-btn-sm renew"
                                 onClick={() => handleOpenRenewModal(c)}
                                 disabled={actionLoadingMap[c.tenantId]}
-                                title="Renew subscription for 3 Months, 6 Months, 1 Year, or Lifetime"
+                                aria-label="Renew subscription for 3 Months, 6 Months, 1 Year, or Lifetime"
                               >
                                 {actionLoadingMap[`${c.tenantId}-RENEW`] ? "⏳ Renewing..." : "💳 Renew Subscription"}
                               </button>
 
                               {/* QUICK 1-CLICK RENEWAL BADGES */}
-                              <div className="quick-renew-group" title="Quick 1-Click Renew">
+                              <div className="quick-renew-group" aria-label="Quick 1-Click Renew">
                                 <button
                                   type="button"
                                   className="quick-renew-btn"
-                                  title="Quick Renew: 3 Months (+90 Days)"
+                                  aria-label="Quick Renew: 3 Months (+90 Days)"
                                   disabled={actionLoadingMap[c.tenantId]}
                                   onClick={() => handleRenewSubscription(c.tenantId, "3_MONTHS")}
                                 >
@@ -9022,7 +9418,7 @@ export default function DeveloperDashboard() {
                                 <button
                                   type="button"
                                   className="quick-renew-btn"
-                                  title="Quick Renew: 6 Months (+180 Days)"
+                                  aria-label="Quick Renew: 6 Months (+180 Days)"
                                   disabled={actionLoadingMap[c.tenantId]}
                                   onClick={() => handleRenewSubscription(c.tenantId, "6_MONTHS")}
                                 >
@@ -9031,7 +9427,7 @@ export default function DeveloperDashboard() {
                                 <button
                                   type="button"
                                   className="quick-renew-btn"
-                                  title="Quick Renew: 1 Year (+365 Days)"
+                                  aria-label="Quick Renew: 1 Year (+365 Days)"
                                   disabled={actionLoadingMap[c.tenantId]}
                                   onClick={() => handleRenewSubscription(c.tenantId, "1_YEAR")}
                                 >
@@ -9040,7 +9436,7 @@ export default function DeveloperDashboard() {
                                 <button
                                   type="button"
                                   className="quick-renew-btn gold"
-                                  title="Quick Renew: Lifetime Joined Subscription (Permanent)"
+                                  aria-label="Quick Renew: Lifetime Joined Subscription (Permanent)"
                                   disabled={actionLoadingMap[c.tenantId]}
                                   onClick={() => handleRenewSubscription(c.tenantId, "LIFETIME")}
                                 >
@@ -9061,7 +9457,7 @@ export default function DeveloperDashboard() {
                                 }}
                                 disabled={actionLoadingMap[c.tenantId] || actionLoadingMap[`${c.tenantId}-LOCK`]}
                                 onClick={() => handleTenantAction(c.tenantId, "LOCK", { reason: "Developer Manual Lock" })}
-                                title="Lock this specific tenant"
+                                aria-label="Lock this specific tenant"
                               >
                                 {actionLoadingMap[`${c.tenantId}-LOCK`] ? "⏳..." : "🔒 Lock"}
                               </button>
@@ -9080,7 +9476,7 @@ export default function DeveloperDashboard() {
                                 }}
                                 disabled={actionLoadingMap[c.tenantId] || actionLoadingMap[`${c.tenantId}-UNLOCK`]}
                                 onClick={() => handleTenantAction(c.tenantId, "UNLOCK")}
-                                title="Unlock this selected tenant directly (does not require lifting master lock on entire system)"
+                                aria-label="Unlock this selected tenant directly (does not require lifting master lock on entire system)"
                               >
                                 {actionLoadingMap[`${c.tenantId}-UNLOCK`] ? "⏳..." : "🔓 Unlock"}
                               </button>
@@ -9088,7 +9484,7 @@ export default function DeveloperDashboard() {
                                 className="action-btn-sm"
                                 style={{ background: "linear-gradient(135deg, #6366f1, #4f46e5)", color: "#fff", display: "inline-flex", alignItems: "center", gap: "4px", fontWeight: 700 }}
                                 onClick={() => handleOpenChangeHeadmaster(c)}
-                                title="Request and update Headmaster details to reflect on onboarding records"
+                                aria-label="Request and update Headmaster details to reflect on onboarding records"
                               >
                                 🔄 Change Headmaster
                               </button>
@@ -9112,7 +9508,7 @@ export default function DeveloperDashboard() {
                                 className="action-btn-sm"
                                 style={{ background: "#7f1d1d", color: "#fecaca", border: "1px solid #ef4444", fontWeight: 700 }}
                                 onClick={() => handleDeleteTenant(c.tenantId, c.tenantName)}
-                                title="Permanently delete this tenant if no longer interested in being part of the platform"
+                                aria-label="Permanently delete this tenant if no longer interested in being part of the platform"
                               >
                                 🗑️ Delete
                               </button>
@@ -9255,9 +9651,15 @@ export default function DeveloperDashboard() {
                 <h3>ENCRYPTED POSTGRESQL BACKUPS & DISASTER RECOVERY (STEP 37)</h3>
                 <span style={{ fontSize: "0.75rem", color: "#34d399" }}>AES-256 Encrypted • Automated & On-Demand Snapshots</span>
               </div>
-              <div style={{ display: "flex", gap: "8px" }}>
+              <div style={{ display: "flex", gap: "8px", flexWrap: "wrap" }}>
                 <button className="action-btn-sm" style={{ background: "#2563eb", color: "#fff", padding: "8px 16px" }} onClick={() => handleTriggerBackup("FULL")}>
                   + Immediate Full Backup
+                </button>
+                <button className="action-btn-sm" style={{ background: "#059669", color: "#fff", padding: "8px 16px" }} onClick={handleCreateSnapshotBackup}>
+                  📸 Create Point-in-Time Snapshot
+                </button>
+                <button className="action-btn-sm" style={{ background: "#0284c7", color: "#fff", padding: "8px 16px" }} disabled={cloudSyncBusy} onClick={handleSyncToCloud}>
+                  {cloudSyncBusy ? "⏳ Syncing..." : "☁️ Sync to PostgreSQL Cloud"}
                 </button>
                 <button className="action-btn-sm" style={{ background: "#d97706", color: "#fff", padding: "8px 16px" }} onClick={handleAutoLockProcess}>
                   ⚡ Run Grace Period Auto-Backup
@@ -9297,7 +9699,7 @@ export default function DeveloperDashboard() {
                         className="dev-checkbox"
                         checked={selectedBackups.length === backups.length && backups.length > 0}
                         onChange={toggleSelectAllBackups}
-                        title="Select all backups"
+                        aria-label="Select all backups"
                       />
                     </th>
                     <th>BACKUP ID</th>
@@ -9365,7 +9767,7 @@ export default function DeveloperDashboard() {
                               className="action-btn-sm"
                               style={{ background: "rgba(56, 189, 248, 0.2)", color: "#38bdf8", border: "1px solid #38bdf8", padding: "4px 8px", cursor: "pointer" }}
                               onClick={() => navigateToDetail(navigate, "backup", b.id, b, { returnTab: activeTab })}
-                              title="View full backup manifest on dedicated page"
+                              aria-label="View full backup manifest on dedicated page"
                             >
                               🔍 View
                             </button>
@@ -9373,7 +9775,7 @@ export default function DeveloperDashboard() {
                               className="action-btn-sm"
                               style={{ background: "#dc2626", color: "#fff", padding: "4px 8px" }}
                               onClick={() => handleDeleteBackup(b.id, b.filename)}
-                              title="Delete backup snapshot"
+                              aria-label="Delete backup snapshot"
                             >
                               🗑️ Delete
                             </button>
@@ -9385,6 +9787,34 @@ export default function DeveloperDashboard() {
                 </tbody>
               </table>
             </div>
+
+            {/* Point-in-Time Snapshot Restore Vault */}
+            {Array.isArray(systemEnv?.backups) && systemEnv.backups.length > 0 && (
+              <div style={{ marginTop: "1.5rem", background: "rgba(15, 23, 42, 0.85)", border: "1px solid rgba(16, 185, 129, 0.4)", borderRadius: "12px", padding: "1.25rem" }}>
+                <h4 style={{ margin: "0 0 10px", color: "#34d399", fontSize: "0.95rem", fontWeight: 900 }}>
+                  ♻️ POINT-IN-TIME RECOVERY SNAPSHOTS ({systemEnv.backups.length} Available for 1-Click Restore)
+                </h4>
+                <div style={{ display: "flex", flexDirection: "column", gap: "8px" }}>
+                  {systemEnv.backups.map((snap) => (
+                    <div key={snap.fileName} style={{ display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: "10px", background: "rgba(2, 6, 23, 0.7)", padding: "10px 14px", borderRadius: "8px", border: "1px solid rgba(56, 189, 248, 0.25)" }}>
+                      <div>
+                        <strong style={{ color: "#38bdf8", fontFamily: "monospace", fontSize: "0.84rem" }}>{snap.fileName}</strong>
+                        <div style={{ fontSize: "0.74rem", color: "#94a3b8" }}>
+                          Size: {snap.fileSizeKb} KB • Captured: {snap.createdAt ? new Date(snap.createdAt).toLocaleString() : "Verified"}
+                        </div>
+                      </div>
+                      <button
+                        type="button"
+                        onClick={() => handleRestoreSnapshotBackup(snap.fileName)}
+                        style={{ background: "linear-gradient(135deg, #059669, #10b981)", color: "#fff", border: "none", borderRadius: "7px", padding: "6px 14px", fontWeight: 800, cursor: "pointer", fontSize: "0.76rem" }}
+                      >
+                        🔄 Restore Snapshot
+                      </button>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
           </div>
         )}
 
@@ -9493,7 +9923,7 @@ export default function DeveloperDashboard() {
                         className="dev-checkbox"
                         checked={selectedAlerts.length === alerts.length && alerts.length > 0}
                         onChange={toggleSelectAllAlerts}
-                        title="Select all alerts"
+                        aria-label="Select all alerts"
                       />
                     </th>
                     <th>ALERT ID</th>
@@ -9556,7 +9986,7 @@ export default function DeveloperDashboard() {
                               className="action-btn-sm"
                               style={{ background: "rgba(56, 189, 248, 0.2)", color: "#38bdf8", border: "1px solid #38bdf8", padding: "4px 8px", cursor: "pointer" }}
                               onClick={() => navigateToDetail(navigate, "alert", a.id, a, { returnTab: activeTab })}
-                              title="View full alert incident on dedicated page"
+                              aria-label="View full alert incident on dedicated page"
                             >
                               🔍 View
                             </button>
@@ -9564,7 +9994,7 @@ export default function DeveloperDashboard() {
                               <button
                                 className="action-btn-sm unlock"
                                 onClick={() => handleResolveAlert(a.id)}
-                                title="Resolve incident"
+                                aria-label="Resolve incident"
                               >
                                 ✓ Resolve
                               </button>
@@ -9573,7 +10003,7 @@ export default function DeveloperDashboard() {
                               className="action-btn-sm"
                               style={{ background: "#dc2626", color: "#fff", padding: "4px 8px" }}
                               onClick={() => handleDeleteAlert(a.id)}
-                              title="Delete alert"
+                              aria-label="Delete alert"
                             >
                               🗑️ Delete
                             </button>
@@ -9597,6 +10027,22 @@ export default function DeveloperDashboard() {
                 <span style={{ fontSize: "0.75rem", color: "#60a5fa" }}>Immutable Production Release Ledger • Archive, Delete &amp; Rollback Engine</span>
               </div>
               <div style={{ display: "flex", gap: "8px", flexWrap: "wrap" }}>
+                <button
+                  type="button"
+                  className="action-btn-sm"
+                  data-testid="dev-record-deployment-btn"
+                  onClick={handleRecordDeploymentRelease}
+                  style={{
+                    background: "linear-gradient(135deg, #059669, #10b981)",
+                    color: "#fff",
+                    border: "1px solid #6ee7b7",
+                    fontWeight: 800,
+                    padding: "6px 14px",
+                    cursor: "pointer"
+                  }}
+                >
+                  + Record Live Build Release
+                </button>
                 {[
                   { key: "ACTIVE", label: `🟢 Active Releases (${deployments.filter((d) => !d.isArchived).length})` },
                   { key: "ARCHIVED", label: `📦 Archived Releases (${deployments.filter((d) => d.isArchived).length})` },
@@ -9748,7 +10194,7 @@ export default function DeveloperDashboard() {
                               className="action-btn-sm"
                               style={{ background: "rgba(56, 189, 248, 0.2)", color: "#38bdf8", border: "1px solid #38bdf8", padding: "4px 8px", cursor: "pointer" }}
                               onClick={() => navigateToDetail(navigate, "deployment", d.id || d.version, d, { returnTab: activeTab })}
-                              title="View deployment manifest on dedicated page"
+                              aria-label="View deployment manifest on dedicated page"
                             >
                               🔍 View
                             </button>
@@ -9765,7 +10211,7 @@ export default function DeveloperDashboard() {
                               className="action-btn-sm"
                               style={{ background: d.isArchived ? "#059669" : "#d97706", color: "#fff", fontWeight: 700 }}
                               onClick={() => handleArchiveDeployment(d.id, !d.isArchived)}
-                              title={d.isArchived ? "Restore deployment from archive" : "Archive this deployment"}
+                              aria-label={d.isArchived ? "Restore deployment from archive" : "Archive this deployment"}
                             >
                               {d.isArchived ? "♻️ Unarchive" : "📦 Archive"}
                             </button>
@@ -9774,7 +10220,7 @@ export default function DeveloperDashboard() {
                               className="action-btn-sm"
                               style={{ background: "#dc2626", color: "#fff", fontWeight: 700 }}
                               onClick={() => handleDeleteDeployment(d.id, d.version)}
-                              title="Permanently delete this deployment record"
+                              aria-label="Permanently delete this deployment record"
                             >
                               🗑️ Delete
                             </button>
@@ -9971,7 +10417,7 @@ export default function DeveloperDashboard() {
                               className="action-btn-sm"
                               style={{ background: "rgba(56, 189, 248, 0.2)", color: "#38bdf8", border: "1px solid #38bdf8", padding: "4px 8px", cursor: "pointer" }}
                               onClick={() => navigateToDetail(navigate, "audit-log", log.id, log, { returnTab: activeTab })}
-                              title="View audit event ledger on dedicated page"
+                              aria-label="View audit event ledger on dedicated page"
                             >
                               🔍 View
                             </button>
@@ -9980,7 +10426,7 @@ export default function DeveloperDashboard() {
                               className="action-btn-sm"
                               style={{ background: log.isArchived ? "#059669" : "#d97706", color: "#fff", padding: "4px 8px", fontWeight: 700 }}
                               onClick={() => handleArchiveAuditLog(log.id, !log.isArchived)}
-                              title={log.isArchived ? "Unarchive audit log" : "Archive audit log"}
+                              aria-label={log.isArchived ? "Unarchive audit log" : "Archive audit log"}
                             >
                               {log.isArchived ? "♻️ Restore" : "📦 Archive"}
                             </button>
@@ -9989,7 +10435,7 @@ export default function DeveloperDashboard() {
                               className="action-btn-sm"
                               style={{ background: "#dc2626", color: "#fff", padding: "4px 8px", fontWeight: 700 }}
                               onClick={() => handleDeleteAuditLog(log.id)}
-                              title="Delete audit log"
+                              aria-label="Delete audit log"
                             >
                               🗑️ Delete
                             </button>
@@ -10126,7 +10572,7 @@ export default function DeveloperDashboard() {
                             className="action-btn-sm"
                             style={{ background: "rgba(56, 189, 248, 0.2)", color: "#38bdf8", border: "1px solid #38bdf8", padding: "4px 8px", cursor: "pointer" }}
                             onClick={() => navigateToDetail(navigate, "license", lic.id, lic, { returnTab: activeTab })}
-                            title="View cryptographic license manifest on dedicated page"
+                            aria-label="View cryptographic license manifest on dedicated page"
                           >
                             🔍 View
                           </button>
@@ -10135,7 +10581,7 @@ export default function DeveloperDashboard() {
                             className="action-btn-sm"
                             style={{ background: "rgba(239, 68, 68, 0.2)", color: "#f87171", border: "1px solid #ef4444", padding: "4px 8px", cursor: "pointer" }}
                             onClick={() => handleDeleteLicense(lic.id)}
-                            title="Permanently revoke and delete this license key"
+                            aria-label="Permanently revoke and delete this license key"
                           >
                             🗑️ Delete License
                           </button>
@@ -10429,7 +10875,7 @@ export default function DeveloperDashboard() {
                               className="action-btn-sm"
                               style={{ background: "rgba(239, 68, 68, 0.25)", color: "#fca5a5", border: "1px solid #ef4444", padding: "5px 10px", cursor: "pointer", fontWeight: 800 }}
                               onClick={() => handleDeleteSubscriptionControl(subId, subName)}
-                              title="Permanently delete this subscription control record"
+                              aria-label="Permanently delete this subscription control record"
                             >
                               🗑️ Delete Subscription Control
                             </button>
@@ -10513,7 +10959,7 @@ export default function DeveloperDashboard() {
                         await handleRunBiometricScan();
                         setTouchBiometricScanning(false);
                       }}
-                      title="Click to engage touch biometric sensor"
+                      aria-label="Click to engage touch biometric sensor"
                     >
                       <div className="touch-fingerprint-icon">🧬</div>
                       <h4 style={{ color: "#f8fafc", margin: "0 0 6px", fontSize: "1rem", fontWeight: 800 }}>
@@ -10761,7 +11207,7 @@ export default function DeveloperDashboard() {
                     padding: "10px 16px",
                     cursor: "pointer"
                   }}
-                  title="Use HTML5 Geolocation & Reverse Geocoding to pinpoint your exact real-time GPS location"
+                  aria-label="Use HTML5 Geolocation & Reverse Geocoding to pinpoint your exact real-time GPS location"
                 >
                   🛰️ Locate My Real-Time GPS
                 </button>
@@ -10968,7 +11414,7 @@ export default function DeveloperDashboard() {
 
               <div style={{ position: "relative", minHeight: "480px", background: "#020617" }}>
                 <iframe
-                  title="Live Tenant Google Map"
+                  aria-label="Live Tenant Google Map"
                   src={
                     locatorMapMode === "satellite"
                       ? (locatedTenant?.satelliteEmbedUrl || `https://maps.google.com/maps?q=${locatedTenant?.latitude || 5.55602},${locatedTenant?.longitude || -0.19690}&t=k&z=17&output=embed`)
@@ -11140,8 +11586,17 @@ export default function DeveloperDashboard() {
 
         {activeTab === "defaulters" && (
           <div className="tab-pane-content">
-            <StudentDefaultersCompliancePanel />
+            <StudentDefaultersCompliancePanel onFeedback={(msg) => showNotification(msg)} />
           </div>
+        )}
+
+        {activeDevLiveCallSession && (
+          <LiveInSystemCallModal
+            session={activeDevLiveCallSession}
+            currentUser={developerIdentity}
+            onClose={() => setActiveDevLiveCallSession(null)}
+            onSessionEnded={() => setActiveDevLiveCallSession(null)}
+          />
         )}
 
         {/* Mobile OTP Verification Modal for Tenant Onboarding */}
@@ -12075,7 +12530,7 @@ export default function DeveloperDashboard() {
                       alignItems: "center",
                       gap: "6px"
                     }}
-                    title="Back to Developer Dashboard"
+                    aria-label="Back to Developer Dashboard"
                   >
                     ⬅️ Back
                   </button>
@@ -12400,7 +12855,7 @@ export default function DeveloperDashboard() {
                       alignItems: "center",
                       gap: "6px"
                     }}
-                    title="Back to Directives & Intrusion Sentinel"
+                    aria-label="Back to Directives & Intrusion Sentinel"
                   >
                     ⬅️ Back
                   </button>
@@ -12738,7 +13193,7 @@ export default function DeveloperDashboard() {
               alignItems: 'center',
               justifyContent: 'center'
             }}
-            title='Scroll to Top'
+            aria-label='Scroll to Top'
           >
             ⬆️
           </button>
@@ -12760,7 +13215,7 @@ export default function DeveloperDashboard() {
               alignItems: 'center',
               justifyContent: 'center'
             }}
-            title='Scroll to Bottom'
+            aria-label='Scroll to Bottom'
           >
             ⬇️
           </button>

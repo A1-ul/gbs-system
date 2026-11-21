@@ -96,6 +96,7 @@ router.post('/audit-logs/batch-delete', devControlController.batchDeleteAuditLog
 
 // 13. Deployment History & Release Control
 router.get('/deployments', devControlController.getDeployments);
+router.post('/deployments', devControlController.createDeployment);
 router.post('/deployments/rollback', devControlController.rollbackDeployment);
 router.patch('/deployments/:id/archive', devControlController.archiveDeployment);
 router.post('/deployments/batch-archive', devControlController.batchArchiveDeployments);
@@ -109,6 +110,9 @@ router.post('/licenses', devControlController.issueLicense);
 router.delete('/licenses/:id', devControlController.deleteLicense);
 router.post('/licenses/batch-delete', devControlController.batchDeleteLicenses);
 router.delete('/subscriptions/:id', devControlController.deleteSubscriptionControl);
+router.get('/headmaster-messages', devControlController.getHeadmasterMessages);
+router.post('/headmaster-messages', devControlController.createHeadmasterMessage);
+router.post('/headmaster-messages/:threadId/replies', devControlController.replyToHeadmasterMessage);
 router.delete('/headmaster-messages/:threadId', devControlController.deleteHeadmasterMessageThread);
 router.delete('/headmaster-messages/:threadId/replies/:replyId', devControlController.deleteHeadmasterMessageReply);
 router.delete('/intrusion-violations/:id', devControlController.deleteIntrusionViolation);

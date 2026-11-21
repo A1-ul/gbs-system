@@ -8,16 +8,36 @@ const socketServer = require('../../core/socket/socketServer');
 /**
  * Live In-System Voice & Video Call / Conference Service
  * Supports:
- *  - Direct 1-to-1 Voice & Video Calls: Headmaster <-> Parent, Headmaster <-> Teacher/Staff, Teacher <-> Parent
- *  - Multi-Participant In-System Video/Voice Conferences: Headmaster-Teachers Meetings, Teacher-Class/PTA Conferences
- * Strictly scoped per tenantId so millions of schools run isolated without cross-tenant leaks.
+ *  - Direct 1-to-1 Voice & Video Calls:
+ *      * Developer <-> Headmaster (Cross-Tenant across all registered institutions)
+ *      * Headmaster <-> Parent, Headmaster <-> Teacher/Staff, Teacher <-> Parent
+ *  - Multi-Participant In-System Video/Voice Conferences:
+ *      * Developer <-> Headmasters Executive Conference (DEVELOPER_HEADMASTERS_CONFERENCE)
+ *      * Teacher <-> Students Live Online Classrooms (CLASS_CONFERENCE)
+ *      * Headmaster <-> Teachers Faculty Meetings (FACULTY_CONFERENCE)
+ *      * Parent-Teacher / PTA Conferences (PARENT_CONFERENCE)
+ * Strictly scoped per tenantId for all institutional roles so schools stay 100% isolated.
  */
+
+const onlinePresenceMap = new Map(); // key -> { userId, email, name, role, tenantId, lastSeenAt }
+const ONLINE_TTL_MS = 45000;
+
+function isDeveloperUser(user = {}) {
+  return String(user?.role || '').trim().toUpperCase() === 'DEVELOPER';
+}
+
+function isHeadmasterRole(role = '') {
+  return ['ADMIN', 'SUPER_ADMIN', 'HEADMASTER', 'PRINCIPAL'].includes(String(role || '').trim().toUpperCase());
+}
 
 function parseTid(req) {
   return parseInt(req.tenantId || req.user?.tenantId || 1, 10) || 1;
 }
 
 function formatCallerName(user = {}) {
+  if (isDeveloperUser(user)) {
+    return `${user.firstName || 'Gabriel'} ${user.lastName || 'Osei-Appiah'}`.trim() + ' (System Developer)';
+  }
   return (
     `${user.firstName || ''} ${user.lastName || ''}`.trim() ||
     user.name ||
@@ -25,6 +45,45 @@ function formatCallerName(user = {}) {
     user.email ||
     'School User'
   );
+}
+
+function touchPresence(user = {}, tid = 1) {
+  if (!user) return;
+  const email = String(user.email || '').trim().toLowerCase();
+  const uid = String(user.id || email || '');
+  const role = String(user.role || '').trim().toUpperCase();
+  if (!uid && !email) return;
+  const entry = {
+    userId: uid,
+    email,
+    name: formatCallerName(user),
+    role,
+    tenantId: parseInt(tid, 10) || 1,
+    lastSeenAt: Date.now()
+  };
+  if (email) onlinePresenceMap.set(`email:${email}`, entry);
+  if (uid) onlinePresenceMap.set(`id:${entry.tenantId}:${uid}`, entry);
+  if (isHeadmasterRole(role)) {
+    onlinePresenceMap.set(`hm_tenant:${entry.tenantId}`, entry);
+  }
+}
+
+function getPresenceInfo(tid, email, userId) {
+  const now = Date.now();
+  const eKey = email ? `email:${String(email).trim().toLowerCase()}` : null;
+  const uKey = userId ? `id:${parseInt(tid, 10) || 1}:${String(userId)}` : null;
+  const hmKey = `hm_tenant:${parseInt(tid, 10) || 1}`;
+  const hit =
+    (eKey && onlinePresenceMap.get(eKey)) ||
+    (uKey && onlinePresenceMap.get(uKey)) ||
+    onlinePresenceMap.get(hmKey) ||
+    null;
+  if (!hit) return { isOnline: false, lastSeenAt: null };
+  const fresh = now - hit.lastSeenAt <= ONLINE_TTL_MS;
+  return {
+    isOnline: fresh,
+    lastSeenAt: new Date(hit.lastSeenAt).toISOString()
+  };
 }
 
 function getTenantCallStore(tid) {
@@ -49,6 +108,53 @@ function saveTenantCallStore(tid, updater) {
     };
   });
   return nextResult;
+}
+
+/**
+ * Resolves the tenant bucket owning a call session.
+ * Non-developer users are STRICTLY limited to their own tenantId (zero cross-tenant leakage).
+ * Developer users can locate calls across any tenant bucket so Developer <-> Headmaster calls work for every school.
+ */
+function resolveCallLocation(req, callId) {
+  const userTid = parseTid(req);
+  const localList = getTenantCallStore(userTid);
+  const localHit = localList.find(
+    (c) => String(c.id) === String(callId) || String(c.roomCode) === String(callId)
+  );
+  if (localHit) {
+    return { tid: userTid, session: localHit };
+  }
+
+  // Headmasters may also join a Developer-hosted multi-headmaster conference stored under tenant 1
+  if (isHeadmasterRole(req.user?.role) && userTid !== 1) {
+    const rootList = getTenantCallStore(1);
+    const devConfHit = rootList.find(
+      (c) =>
+        (String(c.id) === String(callId) || String(c.roomCode) === String(callId)) &&
+        c.callScope === 'DEVELOPER_HEADMASTERS_CONFERENCE'
+    );
+    if (devConfHit) {
+      return { tid: 1, session: devConfHit };
+    }
+  }
+
+  if (!isDeveloperUser(req.user)) {
+    throw new AppError(`Live call or conference session "${callId}" was not found for this institution.`, 404);
+  }
+
+  const store = readPersistentStore();
+  const map = store.liveCallSessions || {};
+  for (const [bucketTid, list] of Object.entries(map)) {
+    if (!Array.isArray(list)) continue;
+    const hit = list.find(
+      (c) => String(c.id) === String(callId) || String(c.roomCode) === String(callId)
+    );
+    if (hit) {
+      return { tid: parseInt(bucketTid, 10) || 1, session: hit };
+    }
+  }
+
+  throw new AppError(`Live call or conference session "${callId}" was not found.`, 404);
 }
 
 async function syncCallSessionToPrisma(session) {
@@ -87,12 +193,107 @@ async function syncCallSessionToPrisma(session) {
 }
 
 /**
- * Lists tenant-scoped reachable contacts (Teachers, Parents/Guardians, Headmasters, Staff)
- * for direct Headmaster <-> Parent, Headmaster <-> Teacher, or Teacher <-> Parent calls.
+ * Lists reachable contacts for Voice/Video Calls:
+ * - For DEVELOPER: returns ALL registered institutional Headmasters across all active tenants with live online status.
+ * - For Institutional Roles: returns tenant-scoped Headmasters, Teachers, Parents, Students, Staff (never exposes Developer).
  */
 async function getCallDirectory(req) {
   const tid = parseTid(req);
+  touchPresence(req.user, tid);
   const store = readPersistentStore();
+
+  if (isDeveloperUser(req.user)) {
+    const hmMap = new Map();
+    const pushHeadmaster = (entry) => {
+      const email = String(entry.email || '').trim().toLowerCase();
+      const targetTid = parseInt(entry.tenantId, 10) || 1;
+      const key = email || `tenant:${targetTid}`;
+      if (hmMap.has(key)) return;
+      const presence = getPresenceInfo(targetTid, email, entry.userId);
+      hmMap.set(key, {
+        userId: String(entry.userId || email || `hm_tenant_${targetTid}`),
+        name: String(entry.name || 'Institution Headmaster').trim(),
+        email,
+        role: 'ADMIN',
+        phone: entry.phone || '',
+        tenantId: targetTid,
+        tenantName: entry.tenantName || 'Registered Institution',
+        tenantCode: entry.tenantCode || `GBS-${targetTid}`,
+        isOnline: presence.isOnline,
+        lastSeenAt: presence.lastSeenAt
+      });
+    };
+
+    try {
+      const [dbTenants, dbAdmins] = await Promise.all([
+        prisma.tenant.findMany({ where: { isDeleted: false } }).catch(() => []),
+        prisma.user.findMany({
+          where: {
+            isActive: true,
+            isLocked: false,
+            isDeleted: false,
+            role: { in: ['ADMIN', 'SUPER_ADMIN', 'HEADMASTER', 'PRINCIPAL'] }
+          },
+          select: { id: true, tenantId: true, firstName: true, lastName: true, email: true, role: true, phone: true }
+        }).catch(() => [])
+      ]);
+
+      const tenantById = new Map(dbTenants.map((t) => [Number(t.id), t]));
+      for (const adm of dbAdmins) {
+        const tObj = tenantById.get(Number(adm.tenantId || 1));
+        if (tObj && (tObj.status === 'DELETED' || tObj.status === 'PURGED' || tObj.isDeleted)) continue;
+        pushHeadmaster({
+          userId: String(adm.id),
+          name: `${adm.firstName || ''} ${adm.lastName || ''}`.trim() || adm.email,
+          email: adm.email,
+          phone: adm.phone || tObj?.headmasterPhone || '',
+          tenantId: adm.tenantId || 1,
+          tenantName: tObj?.name || 'GBS Main Institution',
+          tenantCode: tObj?.code || 'DEFAULT'
+        });
+      }
+      for (const t of dbTenants) {
+        if (t.status === 'DELETED' || t.status === 'PURGED' || t.isDeleted) continue;
+        if (t.headmasterEmail || t.headmasterName) {
+          pushHeadmaster({
+            userId: `hm_tenant_${t.id}`,
+            name: t.headmasterName || 'Headmaster',
+            email: t.headmasterEmail || '',
+            phone: t.headmasterPhone || '',
+            tenantId: t.id,
+            tenantName: t.name,
+            tenantCode: t.code
+          });
+        }
+      }
+    } catch { }
+
+    const storeInsts = Array.isArray(store.institutions) ? store.institutions : [];
+    for (const inst of storeInsts) {
+      const st = String(inst.status || 'ACTIVE').toUpperCase();
+      if (st === 'DELETED' || st === 'PURGED' || st === 'REJECTED') continue;
+      pushHeadmaster({
+        userId: inst.headmasterUserId || `hm_inst_${inst.tenantId || inst.id}`,
+        name: inst.headmasterName || inst.adminName || 'Headmaster',
+        email: inst.headmasterEmail || inst.adminEmail || inst.officialEmail || '',
+        phone: inst.headmasterPhone || inst.adminPhone || inst.officialPhone || '',
+        tenantId: parseInt(inst.tenantId || inst.assignedTenantId || inst.id, 10) || 1,
+        tenantName: inst.institutionName || inst.tenantName || inst.name || 'Registered Institution',
+        tenantCode: inst.tenantCode || inst.code || 'GBS-INST'
+      });
+    }
+
+    const headmasters = Array.from(hmMap.values()).sort((a, b) => Number(b.isOnline) - Number(a.isOnline));
+    return {
+      contacts: headmasters,
+      headmasters,
+      teachers: [],
+      parents: [],
+      students: [],
+      staff: []
+    };
+  }
+
   const regUsers = Array.isArray(store.registeredUsers) ? store.registeredUsers : [];
 
   let dbUsers = [];
@@ -114,13 +315,15 @@ async function getCallDirectory(req) {
     const key = email || `id:${u.id}`;
     if (combined.has(key)) return;
     const fullName = `${u.firstName || ''} ${u.lastName || ''}`.trim() || u.fullName || u.name || email;
+    const presence = getPresenceInfo(tid, email, u.id);
     combined.set(key, {
       userId: String(u.id || email),
       name: fullName,
       email,
       role,
       phone: u.phone || '',
-      studentName: u.studentName || u.wardName || ''
+      studentName: u.studentName || u.wardName || '',
+      isOnline: presence.isOnline
     });
   };
 
@@ -156,45 +359,75 @@ async function getCallDirectory(req) {
 
   return {
     contacts,
-    headmasters: contacts.filter((c) => ['ADMIN', 'SUPER_ADMIN', 'HEADMASTER', 'PRINCIPAL'].includes(c.role)),
+    headmasters: contacts.filter((c) => isHeadmasterRole(c.role)),
     teachers: contacts.filter((c) => c.role === 'TEACHER'),
     parents: contacts.filter((c) => c.role === 'PARENT'),
+    students: contacts.filter((c) => c.role === 'STUDENT'),
     staff: contacts.filter((c) => ['STAFF', 'HR', 'ACCOUNTANT', 'CLINIC_DOCTOR', 'CLINIC_NURSE'].includes(c.role))
   };
 }
 
 /**
- * Initiates either a direct 1-on-1 Voice/Video Call OR a Multi-Participant Live Conference Room.
+ * Initiates either a direct 1-on-1 Voice/Video Call OR a Multi-Participant Live Conference / Live Online Class Room.
  */
 async function initiateCall(req) {
-  const tid = parseTid(req);
+  const callerIsDev = isDeveloperUser(req.user);
   const body = req.body || {};
   const callScope = String(body.callScope || 'DIRECT').toUpperCase();
   const mediaMode = String(body.mediaMode || 'VIDEO').toUpperCase() === 'VOICE' ? 'VOICE' : 'VIDEO';
+
+  // For Developer calling a Headmaster of a specific school, store in that target institution's tenant bucket
+  let targetTid = parseTid(req);
+  if (callerIsDev && callScope !== 'DEVELOPER_HEADMASTERS_CONFERENCE') {
+    const rawTargetTid = parseInt(body.targetTenantId, 10);
+    if (!Number.isNaN(rawTargetTid) && rawTargetTid > 0) {
+      targetTid = rawTargetTid;
+    } else if (body.targetEmail) {
+      try {
+        const matched = await prisma.user.findFirst({
+          where: { email: String(body.targetEmail).trim().toLowerCase() },
+          select: { tenantId: true }
+        }).catch(() => null);
+        if (matched?.tenantId) targetTid = parseInt(matched.tenantId, 10) || 1;
+      } catch { }
+    }
+  }
+
+  touchPresence(req.user, callerIsDev ? 1 : targetTid);
+
   const initiatorUserId = String(req.user?.id || req.user?.email || 'host');
   const initiatorName = formatCallerName(req.user);
   const initiatorRole = String(req.user?.role || 'USER').toUpperCase();
 
-  const callId = `CALL-${tid}-${Date.now()}-${Math.floor(100 + Math.random() * 900)}`;
-  const roomCode = String(body.roomCode || `GBS-ROOM-${tid}-${Math.floor(100000 + Math.random() * 899999)}`).trim();
+  const callId = `CALL-${targetTid}-${Date.now()}-${Math.floor(100 + Math.random() * 900)}`;
+  const roomCode = String(body.roomCode || `GBS-ROOM-${targetTid}-${Math.floor(100000 + Math.random() * 899999)}`).trim();
 
   if (callScope === 'DIRECT' && !body.targetUserId && !body.targetEmail && !body.targetRole) {
-    throw new AppError('Please select a recipient (Parent, Teacher, or Headmaster) to place a direct call.', 400);
+    throw new AppError('Please select a recipient (Headmaster, Parent, or Teacher) to place a direct call.', 400);
   }
+
+  const defaultTitle =
+    callScope === 'DEVELOPER_HEADMASTERS_CONFERENCE'
+      ? 'Developer & Headmasters Executive Video Conference'
+      : callScope === 'CLASS_CONFERENCE'
+        ? `Live Online Class${body.className ? ` — ${body.className}` : ''}`
+        : callScope === 'FACULTY_CONFERENCE'
+          ? 'Headmaster & Teachers Faculty Conference'
+          : callScope === 'PARENT_CONFERENCE'
+            ? 'Parent-Teacher / Headmaster Conference'
+            : `${mediaMode === 'VOICE' ? 'Voice' : 'Video'} Call with ${body.targetName || body.targetRole || 'Participant'}`;
 
   const session = {
     id: callId,
-    tenantId: tid,
+    tenantId: targetTid,
+    targetTenantId: targetTid,
+    targetTenantName: body.targetTenantName ? String(body.targetTenantName).trim() : null,
+    className: body.className ? String(body.className).trim() : null,
+    subject: body.subject ? String(body.subject).trim() : null,
     roomCode,
     callScope,
     mediaMode,
-    title:
-      String(body.title || '').trim() ||
-      (callScope === 'FACULTY_CONFERENCE'
-        ? 'Headmaster & Teachers Faculty Conference'
-        : callScope === 'PARENT_CONFERENCE'
-          ? 'Parent-Teacher / Headmaster Conference'
-          : `${mediaMode === 'VOICE' ? 'Voice' : 'Video'} Call with ${body.targetName || body.targetRole || 'Participant'}`),
+    title: String(body.title || '').trim() || defaultTitle,
     initiatorUserId,
     initiatorName,
     initiatorEmail: String(req.user?.email || '').trim().toLowerCase(),
@@ -202,7 +435,8 @@ async function initiateCall(req) {
     targetUserId: body.targetUserId ? String(body.targetUserId) : null,
     targetName: body.targetName ? String(body.targetName).trim() : null,
     targetEmail: body.targetEmail ? String(body.targetEmail).trim().toLowerCase() : null,
-    targetRole: body.targetRole ? String(body.targetRole).toUpperCase() : null,
+    targetPhone: body.targetPhone ? String(body.targetPhone).trim() : null,
+    targetRole: body.targetRole ? String(body.targetRole).toUpperCase() : (callerIsDev ? 'ADMIN' : null),
     status: callScope === 'DIRECT' ? 'RINGING' : 'ACTIVE',
     participants: [
       {
@@ -222,16 +456,18 @@ async function initiateCall(req) {
     endedAt: null
   };
 
-  saveTenantCallStore(tid, (list) => [session, ...list]);
+  saveTenantCallStore(targetTid, (list) => [session, ...list]);
   await syncCallSessionToPrisma(session);
 
-  socketServer.emitToTenant(tid, 'incoming_call_invite', {
+  socketServer.emitToTenant(targetTid, 'incoming_call_invite', {
     callId: session.id,
     roomCode: session.roomCode,
-    tenantId: tid,
+    tenantId: targetTid,
     callScope: session.callScope,
     mediaMode: session.mediaMode,
     title: session.title,
+    className: session.className,
+    subject: session.subject,
     initiatorUserId: session.initiatorUserId,
     initiatorName: session.initiatorName,
     initiatorRole: session.initiatorRole,
@@ -242,15 +478,6 @@ async function initiateCall(req) {
     startedAt: session.startedAt
   });
 
-  return session;
-}
-
-function getCallByIdOrFail(tid, callId) {
-  const list = getTenantCallStore(tid);
-  const session = list.find((c) => String(c.id) === String(callId) || String(c.roomCode) === String(callId));
-  if (!session) {
-    throw new AppError(`Live call or conference session "${callId}" was not found for this institution.`, 404);
-  }
   return session;
 }
 
@@ -269,32 +496,92 @@ function doesCallTargetUser(call, user = {}) {
   if (call.targetEmail && uemail && String(call.targetEmail).toLowerCase() === uemail) {
     return true;
   }
+  // When Developer calls an institution's Headmaster, any Headmaster/Super Admin of that tenant should receive it
+  if (call.initiatorRole === 'DEVELOPER' && isHeadmasterRole(urole) && isHeadmasterRole(call.targetRole || 'ADMIN')) {
+    return true;
+  }
   if (call.targetUserId) {
     const tUid = String(call.targetUserId);
     if (uemail && tUid.toLowerCase() === uemail) return true;
     if (!call.targetEmail && tUid === uid) return true;
   }
-  if (call.targetRole && !call.targetUserId && !call.targetEmail && call.targetRole === urole) {
+  if (call.targetRole && !call.targetUserId && !call.targetEmail) {
+    if (call.targetRole === urole) return true;
+    if (isHeadmasterRole(call.targetRole) && isHeadmasterRole(urole)) return true;
+  }
+  if (call.callScope === 'DEVELOPER_HEADMASTERS_CONFERENCE' && (isHeadmasterRole(urole) || urole === 'DEVELOPER')) {
     return true;
   }
-  if (call.callScope === 'FACULTY_CONFERENCE' && ['TEACHER', 'ADMIN', 'SUPER_ADMIN', 'HEADMASTER', 'PRINCIPAL'].includes(urole)) {
+  if (call.callScope === 'FACULTY_CONFERENCE' && (urole === 'TEACHER' || isHeadmasterRole(urole))) {
     return true;
   }
-  if (call.callScope === 'PARENT_CONFERENCE' && ['PARENT', 'TEACHER', 'ADMIN', 'SUPER_ADMIN', 'HEADMASTER'].includes(urole)) {
+  if (call.callScope === 'PARENT_CONFERENCE' && (urole === 'PARENT' || urole === 'TEACHER' || isHeadmasterRole(urole))) {
     return true;
   }
-  if (call.callScope === 'CLASS_CONFERENCE' && ['STUDENT', 'PARENT', 'TEACHER', 'ADMIN'].includes(urole)) {
+  if (call.callScope === 'CLASS_CONFERENCE' && (urole === 'STUDENT' || urole === 'PARENT' || urole === 'TEACHER' || isHeadmasterRole(urole))) {
     return true;
   }
   return false;
 }
 
+function canUserSeeActiveConference(call, user = {}) {
+  const urole = String(user.role || '').toUpperCase();
+  const scope = String(call.callScope || '').toUpperCase();
+  if (scope === 'DIRECT') return false;
+  if (urole === 'DEVELOPER') {
+    return scope === 'DEVELOPER_HEADMASTERS_CONFERENCE' || call.initiatorRole === 'DEVELOPER';
+  }
+  if (urole === 'STUDENT') {
+    return scope === 'CLASS_CONFERENCE';
+  }
+  if (urole === 'PARENT') {
+    return scope === 'PARENT_CONFERENCE' || scope === 'CLASS_CONFERENCE';
+  }
+  if (urole === 'TEACHER') {
+    return ['FACULTY_CONFERENCE', 'CLASS_CONFERENCE', 'PARENT_CONFERENCE'].includes(scope);
+  }
+  if (isHeadmasterRole(urole)) {
+    return ['FACULTY_CONFERENCE', 'CLASS_CONFERENCE', 'PARENT_CONFERENCE', 'DEVELOPER_HEADMASTERS_CONFERENCE'].includes(scope);
+  }
+  return true;
+}
+
 async function getIncomingAndActiveCalls(req) {
   const tid = parseTid(req);
-  const list = getTenantCallStore(tid);
+  touchPresence(req.user, tid);
+  const callerIsDev = isDeveloperUser(req.user);
   const callerId = String(req.user?.id || '');
   const callerEmail = String(req.user?.email || '').trim().toLowerCase();
   const cutoffMs = Date.now() - 12 * 3600 * 1000;
+
+  let list = [];
+  if (callerIsDev) {
+    const store = readPersistentStore();
+    const map = store.liveCallSessions || {};
+    for (const bucket of Object.values(map)) {
+      if (Array.isArray(bucket)) {
+        for (const c of bucket) {
+          if (
+            c.initiatorRole === 'DEVELOPER' ||
+            c.targetRole === 'DEVELOPER' ||
+            c.callScope === 'DEVELOPER_HEADMASTERS_CONFERENCE'
+          ) {
+            list.push(c);
+          }
+        }
+      }
+    }
+    list.sort((a, b) => new Date(b.startedAt || 0).getTime() - new Date(a.startedAt || 0).getTime());
+  } else {
+    list = [...getTenantCallStore(tid)];
+    // Also surface active Developer-hosted Multi-Headmaster Conferences stored in root bucket 1 to any Headmaster
+    if (isHeadmasterRole(req.user?.role) && tid !== 1) {
+      const rootConfs = getTenantCallStore(1).filter(
+        (c) => c.callScope === 'DEVELOPER_HEADMASTERS_CONFERENCE' && ['RINGING', 'ACTIVE'].includes(c.status)
+      );
+      list = [...rootConfs, ...list];
+    }
+  }
 
   const recentActive = list.filter((c) => {
     if (!['RINGING', 'ACTIVE'].includes(c.status)) return false;
@@ -305,7 +592,7 @@ async function getIncomingAndActiveCalls(req) {
   const incomingCalls = recentActive.filter(
     (c) => c.status === 'RINGING' && doesCallTargetUser(c, req.user)
   );
-  const activeConferences = recentActive.filter((c) => c.callScope !== 'DIRECT');
+  const activeConferences = recentActive.filter((c) => canUserSeeActiveConference(c, req.user));
   const myCalls = list
     .filter(
       (c) =>
@@ -313,7 +600,7 @@ async function getIncomingAndActiveCalls(req) {
         (callerEmail && c.initiatorEmail === callerEmail) ||
         doesCallTargetUser(c, req.user)
     )
-    .slice(0, 20);
+    .slice(0, 25);
 
   return {
     incomingCalls,
@@ -323,8 +610,9 @@ async function getIncomingAndActiveCalls(req) {
 }
 
 async function answerOrJoinCall(req) {
-  const tid = parseTid(req);
   const callId = req.params.callId;
+  const { tid } = resolveCallLocation(req, callId);
+  touchPresence(req.user, tid);
   const userId = String(req.user?.id || req.user?.email || `member-${Date.now()}`);
   const userEmail = String(req.user?.email || '').trim().toLowerCase() || null;
   const userName = formatCallerName(req.user);
@@ -379,8 +667,8 @@ async function answerOrJoinCall(req) {
 }
 
 async function declineCall(req) {
-  const tid = parseTid(req);
   const callId = req.params.callId;
+  const { tid } = resolveCallLocation(req, callId);
   let updatedSession = null;
 
   saveTenantCallStore(tid, (list) =>
@@ -410,8 +698,8 @@ async function declineCall(req) {
 }
 
 async function endCall(req) {
-  const tid = parseTid(req);
   const callId = req.params.callId;
+  const { tid } = resolveCallLocation(req, callId);
   let updatedSession = null;
 
   saveTenantCallStore(tid, (list) =>
@@ -439,8 +727,8 @@ async function endCall(req) {
 }
 
 async function postSignalOrChat(req) {
-  const tid = parseTid(req);
   const callId = req.params.callId;
+  const { tid } = resolveCallLocation(req, callId);
   const senderId = String(req.user?.id || req.user?.email || 'peer');
   const senderName = formatCallerName(req.user);
   const body = req.body || {};
@@ -512,8 +800,7 @@ async function postSignalOrChat(req) {
 }
 
 async function getCallState(req) {
-  const tid = parseTid(req);
-  const call = getCallByIdOrFail(tid, req.params.callId);
+  const { session: call } = resolveCallLocation(req, req.params.callId);
   const sinceIso = req.query?.since ? String(req.query.since) : null;
   const callerId = String(req.user?.id || req.user?.email || '');
   const callerEmail = String(req.user?.email || '').trim().toLowerCase() || null;
@@ -532,6 +819,10 @@ async function getCallState(req) {
     session: {
       id: call.id,
       tenantId: call.tenantId,
+      targetTenantId: call.targetTenantId || call.tenantId,
+      targetTenantName: call.targetTenantName || null,
+      className: call.className || null,
+      subject: call.subject || null,
       roomCode: call.roomCode,
       callScope: call.callScope,
       mediaMode: call.mediaMode,
@@ -541,6 +832,8 @@ async function getCallState(req) {
       initiatorRole: call.initiatorRole,
       targetUserId: call.targetUserId,
       targetName: call.targetName,
+      targetEmail: call.targetEmail || null,
+      targetPhone: call.targetPhone || null,
       targetRole: call.targetRole,
       status: call.status,
       participants: call.participants || [],
@@ -553,6 +846,18 @@ async function getCallState(req) {
   };
 }
 
+async function updatePresence(req) {
+  const tid = parseTid(req);
+  touchPresence(req.user, tid);
+  return {
+    online: true,
+    tenantId: tid,
+    role: String(req.user?.role || '').toUpperCase(),
+    email: req.user?.email || null,
+    timestamp: new Date().toISOString()
+  };
+}
+
 module.exports = {
   getCallDirectory,
   initiateCall,
@@ -561,5 +866,6 @@ module.exports = {
   declineCall,
   endCall,
   postSignalOrChat,
-  getCallState
+  getCallState,
+  updatePresence
 };

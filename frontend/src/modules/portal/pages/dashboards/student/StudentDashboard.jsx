@@ -7,6 +7,7 @@ import { getUserAvatar } from "../../../../../utils/userAvatars";
 import { offlineSyncEngine } from "../../../../../utils/offlineSync";
 import UniversalRoleGuideModal from "../../../../../components/common/UniversalRoleGuideModal";
 import ClassTopicVideoPlatform from "../../../../../components/common/ClassTopicVideoPlatform";
+import LiveCallLauncherAndReceiver from "../../../../../components/common/LiveCallLauncherAndReceiver";
 import { navigateToDetail } from "../../../../../utils/universalNavigation";
 import OfficialPaymentGatewayModal from "../../../../../components/common/OfficialPaymentGatewayModal";
 import OfficialInstitutionalSeal from "../../../../../components/common/OfficialInstitutionalSeal";
@@ -2171,6 +2172,12 @@ export function StudentDashboard({ initialTab } = {}) {
 
         {/* Prominent Top Center System Branding */}
         <TopCenterSystemBanner roleTitle="Student Learning Portal" />
+        <LiveCallLauncherAndReceiver
+          variant="GLOBAL_RECEIVER"
+          userRole="STUDENT"
+          currentUser={currentUser}
+          onFeedback={(msg, isErr) => setFeedback({ type: isErr ? "error" : "success", message: msg })}
+        />
 
         {/* Header */}
         <header className="role-header">
@@ -4698,6 +4705,14 @@ export function StudentDashboard({ initialTab } = {}) {
               <div style={{ marginBottom: "2rem" }}>
                 <ClassTopicVideoPlatform mode="STUDENT" currentUser={currentUser} />
               </div>
+
+              {/* Real-Time In-System Live Teacher Online Classes */}
+              <LiveCallLauncherAndReceiver
+                variant="STUDENT_CLASSROOM_LIST"
+                userRole="STUDENT"
+                currentUser={currentUser}
+                onFeedback={(msg, isErr) => setFeedback({ type: isErr ? "error" : "success", message: msg })}
+              />
 
               {/* Requirement: Live Online Classes with Day Reminder from Teacher Notice */}
               <h3 style={{ color: "#34d399", margin: "0 0 12px", display: "flex", alignItems: "center", gap: "8px" }}>

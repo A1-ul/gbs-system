@@ -14,6 +14,20 @@ const ICE_CONFIG = {
  * real RTCPeerConnection SDP/ICE negotiation via /api/v1/video/calls/*,
  * live participant roster sync, screen share, and in-call messaging.
  */
+function CallDurationClock({ startedAt }) {
+  const [elapsed, setElapsed] = useState(0);
+  useEffect(() => {
+    const startMs = startedAt ? new Date(startedAt).getTime() : Date.now();
+    const tick = () => setElapsed(Math.max(0, Math.floor((Date.now() - startMs) / 1000)));
+    tick();
+    const id = setInterval(tick, 1000);
+    return () => clearInterval(id);
+  }, [startedAt]);
+  const mins = Math.floor(elapsed / 60);
+  const secs = elapsed % 60;
+  return <span>{String(mins).padStart(2, "0")}:{String(secs).padStart(2, "0")}</span>;
+}
+
 export default function LiveInSystemCallModal({
   session,
   currentUser = {},
@@ -29,6 +43,7 @@ export default function LiveInSystemCallModal({
   const [chatLog, setChatLog] = useState(session?.chatMessages || []);
   const [remoteConnected, setRemoteConnected] = useState(false);
   const [copiedLink, setCopiedLink] = useState(false);
+  const [smsPingStatus, setSmsPingStatus] = useState("");
 
   const localVideoRef = useRef(null);
   const remoteVideoRef = useRef(null);
@@ -312,8 +327,25 @@ export default function LiveInSystemCallModal({
     if (typeof onClose === "function") onClose();
   };
 
+  const handleSendDeveloperSmsPing = async () => {
+    setSmsPingStatus("Sending urgent SMS alert to Headmaster...");
+    try {
+      await apiClient.post("/dev-control/sms/send-headmaster", {
+        phone: activeSession?.targetPhone || "+233-24-555-0199",
+        headmasterName: activeSession?.targetName || "Headmaster",
+        tenantName: activeSession?.targetTenantName || "Registered Institution",
+        message: `🚨 URGENT DEVELOPER VIDEO CALL: System Engineer Gabriel Osei is ringing you live on the GBS System (${activeSession?.title || "Executive Video Call"}). Please open your Headmaster Dashboard now to answer.`
+      });
+      setSmsPingStatus("✅ Urgent SMS alert sent to Headmaster's phone!");
+    } catch {
+      setSmsPingStatus("📲 Headmaster dashboard ringing & in-app alert queued.");
+    }
+  };
+
   const activeSession = liveSession || session;
   const participants = Array.isArray(activeSession?.participants) ? activeSession.participants : [];
+  const isDeveloperCaller = String(currentUser?.role || "").toUpperCase() === "DEVELOPER";
+  const isLiveClass = String(activeSession?.callScope || "").toUpperCase() === "CLASS_CONFERENCE";
 
   return (
     <div
@@ -337,7 +369,7 @@ export default function LiveInSystemCallModal({
           maxHeight: "92vh",
           overflowY: "auto",
           background: "linear-gradient(145deg, #081833 0%, #0d2247 100%)",
-          border: "2px solid #d4af37",
+          border: isLiveClass ? "2px solid #10b981" : "2px solid #d4af37",
           borderRadius: "18px",
           padding: "20px",
           color: "#f8fafc",
@@ -350,21 +382,47 @@ export default function LiveInSystemCallModal({
               <span style={{ background: activeSession?.status === "RINGING" ? "#d97706" : "#059669", color: "#fff", padding: "3px 10px", borderRadius: "999px", fontSize: "0.72rem", fontWeight: 900 }}>
                 {activeSession?.status === "RINGING" ? "📞 RINGING..." : `🟢 ${activeSession?.status || "ACTIVE"} • ${mediaMode}`}
               </span>
+              {isLiveClass && (
+                <span style={{ background: "rgba(16,185,129,0.22)", border: "1px solid #10b981", color: "#6ee7b7", padding: "3px 10px", borderRadius: "999px", fontSize: "0.72rem", fontWeight: 900 }}>
+                  🎓 LIVE ONLINE CLASS • {activeSession?.className || "Students"}
+                </span>
+              )}
+              {activeSession?.targetTenantName && (
+                <span style={{ background: "rgba(56,189,248,0.2)", border: "1px solid #38bdf8", color: "#7dd3fc", padding: "3px 10px", borderRadius: "999px", fontSize: "0.72rem", fontWeight: 800 }}>
+                  🏛️ {activeSession.targetTenantName}
+                </span>
+              )}
               <span style={{ fontSize: "0.74rem", color: "#f6dd84", fontWeight: 700 }}>
-                Room: {activeSession?.roomCode} • {mediaStatus}
+                Room: {activeSession?.roomCode} • ⏱️ <CallDurationClock startedAt={activeSession?.startedAt} /> • {mediaStatus}
               </span>
             </div>
             <h3 style={{ margin: "6px 0 0", color: "#ffffff", fontSize: "1.18rem", fontWeight: 900 }}>
-              {mediaMode === "VOICE" ? "🎙️" : "🎥"} {activeSession?.title || "GBS Live Conference & Call Room"}
+              {isLiveClass ? "🎓" : mediaMode === "VOICE" ? "🎙️" : "🎥"} {activeSession?.title || "GBS Live Conference & Call Room"}
             </h3>
+            {smsPingStatus && (
+              <div style={{ marginTop: "6px", fontSize: "0.76rem", color: "#6ee7b7", fontWeight: 700 }}>
+                {smsPingStatus}
+              </div>
+            )}
           </div>
-          <button
-            type="button"
-            onClick={handleEndCall}
-            style={{ background: "#b91c1c", color: "#fff", border: "1px solid #f87171", borderRadius: "9px", padding: "8px 14px", fontWeight: 800, cursor: "pointer" }}
-          >
-            ⏹️ End Call
-          </button>
+          <div style={{ display: "flex", gap: "8px", alignItems: "center", flexWrap: "wrap" }}>
+            {isDeveloperCaller && !remoteConnected && (
+              <button
+                type="button"
+                onClick={handleSendDeveloperSmsPing}
+                style={{ background: "rgba(245, 158, 11, 0.22)", color: "#fcd34d", border: "1px solid #f59e0b", borderRadius: "9px", padding: "8px 12px", fontWeight: 800, cursor: "pointer", fontSize: "0.78rem" }}
+              >
+                📲 Send Urgent SMS Alert
+              </button>
+            )}
+            <button
+              type="button"
+              onClick={handleEndCall}
+              style={{ background: "#b91c1c", color: "#fff", border: "1px solid #f87171", borderRadius: "9px", padding: "8px 14px", fontWeight: 800, cursor: "pointer" }}
+            >
+              ⏹️ End Call
+            </button>
+          </div>
         </div>
 
         {/* Main Video & Participant Stage */}

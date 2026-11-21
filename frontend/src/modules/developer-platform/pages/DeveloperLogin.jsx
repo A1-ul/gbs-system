@@ -483,6 +483,7 @@ export default function DeveloperLogin() {
         localStorage.setItem("gbs_dev_token", token);
         localStorage.setItem("gbs_token", token);
         localStorage.removeItem("gbs_dev_login_locked");
+        localStorage.removeItem("gbs_dev_console_locked");
         sessionStorage.setItem("gbs_dev_gate_unlocked", "true");
         localStorage.setItem(
           "gbs_developer",
@@ -514,6 +515,7 @@ export default function DeveloperLogin() {
         localStorage.setItem("gbs_dev_token", offlineToken);
         localStorage.setItem("gbs_token", offlineToken);
         localStorage.removeItem("gbs_dev_login_locked");
+        localStorage.removeItem("gbs_dev_console_locked");
         sessionStorage.setItem("gbs_dev_gate_unlocked", "true");
         setLoginLocked(false);
         navigate("/developer-control-center/dashboard");
@@ -565,13 +567,15 @@ export default function DeveloperLogin() {
           localStorage.setItem("gbs_refresh_token", response.data.refreshToken);
         }
         localStorage.removeItem("gbs_dev_login_locked");
+        localStorage.removeItem("gbs_dev_console_locked");
         sessionStorage.setItem("gbs_dev_gate_unlocked", "true");
         localStorage.setItem(
           "gbs_developer",
           JSON.stringify({
             email: permanentEmail,
             fullName: "Gabriel Osei",
-            role: "CHIEF_SYSTEM_ENGINEER",
+            role: "DEVELOPER",
+            title: "CHIEF_SYSTEM_ENGINEER",
             aiAssistant: "GBS System Operations Monitor"
           })
         );
@@ -606,6 +610,7 @@ export default function DeveloperLogin() {
         localStorage.setItem("gbs_dev_token", offlineToken);
         localStorage.setItem("gbs_token", offlineToken);
         localStorage.removeItem("gbs_dev_login_locked");
+        localStorage.removeItem("gbs_dev_console_locked");
         sessionStorage.setItem("gbs_dev_gate_unlocked", "true");
         navigate("/developer-control-center/dashboard");
         setLoading(false);
@@ -781,7 +786,7 @@ export default function DeveloperLogin() {
                   <button
                     type="button"
                     onClick={() => setShowReEnablePassword((prev) => !prev)}
-                    title={showReEnablePassword ? "Hide password" : "View password"}
+                    aria-label={showReEnablePassword ? "Hide password" : "View password"}
                     style={{ position: "absolute", right: "12px", background: "none", border: "none", color: "#94a3b8", cursor: "pointer", fontSize: "1.05rem", padding: "4px" }}
                   >
                     {showReEnablePassword ? "🙈" : "👁️"}
@@ -889,7 +894,7 @@ export default function DeveloperLogin() {
                 <button
                   type="button"
                   onClick={() => setShowPassword((prev) => !prev)}
-                  title={showPassword ? "Hide password" : "View password"}
+                  aria-label={showPassword ? "Hide password" : "View password"}
                   style={{ position: "absolute", right: "12px", background: "none", border: "none", color: "#94a3b8", cursor: "pointer", fontSize: "1.05rem", padding: "4px" }}
                 >
                   {showPassword ? "🙈" : "👁️"}

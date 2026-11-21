@@ -22,6 +22,7 @@ const staffAttendanceService = require('../src/modules/attendance/staffAttendanc
 const videoRoutes = require('../src/modules/video/video.routes');
 const paymentsRoutes = require('../src/modules/payments/payments.routes');
 const aiRoutes = require('../src/modules/ai/ai.routes');
+const devControlRoutes = require('../src/modules/dev-control/devControl.routes');
 const { registerAdapterOverride, resetDefaultAdapters } = require('../src/modules/payments/payments.registry');
 const PaystackAdapter = require('../src/modules/payments/adapters/paystack.adapter');
 const { normalizeGhanaPhone } = require('../src/modules/payments/payments.utils');
@@ -96,6 +97,15 @@ test.before(async () => {
         email: 'parent.abena@attcalltest.edu',
         role: 'PARENT',
         status: 'APPROVED'
+      },
+      {
+        id: 'usr_stu_t1',
+        tenantId: 1,
+        firstName: 'Ama',
+        lastName: 'Mensah',
+        email: 'student.ama@attcalltest.edu',
+        role: 'STUDENT',
+        status: 'APPROVED'
       }
     ],
     staffAttendanceLogs: {
@@ -114,6 +124,7 @@ test.before(async () => {
   app.use('/api/v1/video', videoRoutes);
   app.use('/api/v1/payments', paymentsRoutes);
   app.use('/api/v1/ai', aiRoutes);
+  app.use('/api/v1/dev-control', devControlRoutes);
   app.use(errorHandler);
 
   server = http.createServer(app);
@@ -205,8 +216,8 @@ test('1. Staff Attendance: Welcome Prompt -> Bypass (Not Marked Present) -> Cloc
   assert.equal(goodOutRes.json.data.record.status, 'CLOCKED_OUT');
   assert.equal(goodOutRes.json.data.record.earlyDeparture, true);
 
-  // Simulate an open staff shift from yesterday that staff forgot to clock out -> Auto Clock-Out 2h sweep triggers automatically!
-  const yesterday = new Date(Date.now() - 24 * 3600 * 1000).toISOString().slice(0, 10);
+  // Simulate an open staff shift from 2 days ago that staff forgot to clock out -> Auto Clock-Out 2h sweep triggers deterministically at any hour!
+  const yesterday = new Date(Date.now() - 48 * 3600 * 1000).toISOString().slice(0, 10);
   writePersistentStore((curr) => {
     const logs = Array.isArray(curr.staffAttendanceLogs?.['1']) ? curr.staffAttendanceLogs['1'] : [];
     return {
@@ -455,4 +466,162 @@ test('4. System Memory permanently stores Multi-Million-School Database Scaling 
   });
   assert.equal(devProbe.status, 200);
   assert.equal(devProbe.json.data.topicId, 'privacy_shield');
+});
+
+test('5. Developer <-> Headmaster Cross-Tenant Video Call & Teacher <-> Student Live Online Class (Role Isolation)', async () => {
+  const devToken = signTestToken({
+    id: 'DEV-GBS-ROOT',
+    tenantId: 1,
+    role: 'DEVELOPER',
+    email: 'gabosei48@gmail.com',
+    firstName: 'Gabriel',
+    lastName: 'Osei'
+  });
+  const hmToken = signTestToken({
+    id: 'usr_hm_t1',
+    tenantId: 1,
+    role: 'ADMIN',
+    email: 'headmaster@attcalltest.edu',
+    firstName: 'Arthur',
+    lastName: 'Pendleton'
+  });
+  const tchToken = signTestToken({
+    id: 'usr_tch_t1',
+    tenantId: 1,
+    role: 'TEACHER',
+    email: 'teacher.kofi@attcalltest.edu',
+    firstName: 'Kofi',
+    lastName: 'Mensah'
+  });
+  const stuToken = signTestToken({
+    id: 'usr_stu_t1',
+    tenantId: 1,
+    role: 'STUDENT',
+    email: 'student.ama@attcalltest.edu',
+    firstName: 'Ama',
+    lastName: 'Mensah'
+  });
+
+  // 1. Developer sees Headmasters across institutions in Call Directory
+  const devDir = await apiReq('GET', '/video/calls/directory', devToken);
+  assert.equal(devDir.status, 200);
+  assert.ok(Array.isArray(devDir.json.data.headmasters));
+  assert.ok(devDir.json.data.headmasters.length >= 1);
+
+  // 2. Headmaster presence heartbeat + Developer calls Headmaster directly
+  const presRes = await apiReq('POST', '/video/calls/presence', hmToken, { status: 'ONLINE' });
+  assert.equal(presRes.status, 200);
+
+  const devCallRes = await apiReq('POST', '/video/calls/initiate', devToken, {
+    callScope: 'DIRECT',
+    mediaMode: 'VIDEO',
+    targetUserId: 'usr_hm_t1',
+    targetName: 'Arthur Pendleton',
+    targetEmail: 'headmaster@attcalltest.edu',
+    targetRole: 'ADMIN',
+    targetTenantId: 1,
+    targetTenantName: 'St. Augustine International Academy',
+    title: 'Developer Executive Check-In'
+  });
+  assert.equal(devCallRes.status, 201);
+  const devCallId = devCallRes.json.data.session.id;
+
+  // Headmaster sees incoming Developer video call and answers it
+  const hmIncoming = await apiReq('GET', '/video/calls/incoming', hmToken);
+  assert.equal(hmIncoming.status, 200);
+  assert.ok(hmIncoming.json.data.incomingCalls.some((c) => c.id === devCallId));
+
+  const hmAns = await apiReq('POST', `/video/calls/${devCallId}/answer`, hmToken, {});
+  assert.equal(hmAns.status, 200);
+  assert.equal(hmAns.json.data.session.status, 'ACTIVE');
+  assert.equal(hmAns.json.data.session.participants.length, 2);
+
+  // Developer can poll & end the cross-tenant call cleanly
+  const devEnd = await apiReq('POST', `/video/calls/${devCallId}/end`, devToken, {});
+  assert.equal(devEnd.status, 200);
+  assert.equal(devEnd.json.data.session.status, 'ENDED');
+
+  // 3. Teacher launches Live Online Class (CLASS_CONFERENCE) + Headmaster launches private FACULTY_CONFERENCE
+  const liveClassRes = await apiReq('POST', '/video/calls/initiate', tchToken, {
+    callScope: 'CLASS_CONFERENCE',
+    mediaMode: 'VIDEO',
+    title: 'Live Calculus Revision Class',
+    className: 'SHS 3 Science'
+  });
+  assert.equal(liveClassRes.status, 201);
+  const liveClassId = liveClassRes.json.data.session.id;
+
+  const facultyConfRes = await apiReq('POST', '/video/calls/initiate', hmToken, {
+    callScope: 'FACULTY_CONFERENCE',
+    mediaMode: 'VIDEO',
+    title: 'Confidential Faculty Board Briefing'
+  });
+  assert.equal(facultyConfRes.status, 201);
+  const facultyConfId = facultyConfRes.json.data.session.id;
+
+  // Student sees the Teacher's Live Online Class, and MUST NOT see confidential FACULTY_CONFERENCE
+  const stuIncoming = await apiReq('GET', '/video/calls/incoming', stuToken);
+  assert.equal(stuIncoming.status, 200);
+  assert.ok(stuIncoming.json.data.activeConferences.some((c) => c.id === liveClassId));
+  assert.equal(stuIncoming.json.data.activeConferences.some((c) => c.id === facultyConfId), false);
+
+  // Student joins the Teacher Live Online Class cleanly
+  const stuJoin = await apiReq('POST', `/video/calls/${liveClassId}/answer`, stuToken, {});
+  assert.equal(stuJoin.status, 200);
+  assert.equal(stuJoin.json.data.session.participants.length, 2);
+
+  // Clean up rooms
+  await apiReq('POST', `/video/calls/${liveClassId}/end`, tchToken, {});
+  await apiReq('POST', `/video/calls/${facultyConfId}/end`, hmToken, {});
+});
+
+test('6. Developer Direct Directives (headmaster-messages) & Deployment Release Persistence', async () => {
+  const devToken = signTestToken({
+    id: 'DEV-GBS-ROOT',
+    tenantId: 1,
+    role: 'DEVELOPER',
+    email: 'gabosei48@gmail.com'
+  });
+
+  // Create Headmaster Directive
+  const createMsg = await apiReq('POST', '/dev-control/headmaster-messages', devToken, {
+    institutionName: 'St. Augustine International Academy',
+    headmasterName: 'Arthur Pendleton',
+    subject: 'Automated Test Directive',
+    messageText: 'Confirming durable server-side directive storage.',
+    urgency: 'HIGH'
+  });
+  assert.equal(createMsg.status, 201);
+  const createdThread = createMsg.json.data?.message || createMsg.json.data;
+  const threadId = createdThread?.id;
+  assert.ok(threadId);
+
+  // Reply to Directive
+  const replyMsg = await apiReq('POST', `/dev-control/headmaster-messages/${encodeURIComponent(threadId)}/replies`, devToken, {
+    messageText: 'Follow-up acknowledged.'
+  });
+  assert.equal(replyMsg.status, 201);
+
+  // Fetch Directives list & verify persistence
+  const listMsg = await apiReq('GET', '/dev-control/headmaster-messages', devToken);
+  assert.equal(listMsg.status, 200);
+  const threads = listMsg.json.data?.messages || listMsg.json.data || [];
+  const foundThread = threads.find((t) => t.id === threadId);
+  assert.ok(foundThread);
+  assert.ok((foundThread.replies || []).some((r) => (r.messageText || r.text) === 'Follow-up acknowledged.'));
+
+  // Delete Directive cleanly
+  const delMsg = await apiReq('DELETE', `/dev-control/headmaster-messages/${encodeURIComponent(threadId)}`, devToken);
+  assert.equal(delMsg.status, 200);
+
+  // Record a Deployment Release
+  const depRes = await apiReq('POST', '/dev-control/deployments', devToken, {
+    version: 'v4.9.9-test',
+    environment: 'PRODUCTION',
+    status: 'SUCCESS',
+    notes: 'Automated verification release'
+  });
+  assert.equal(depRes.status, 201);
+  const depObj = depRes.json.data?.deployment || depRes.json.data;
+  assert.equal(depObj.version, 'v4.9.9-test');
 });

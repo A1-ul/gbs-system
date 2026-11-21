@@ -2628,6 +2628,122 @@ const deleteSubscriptionControl = async (id) => {
   return { id, deleted: true, permanent: true };
 };
 
+const getHeadmasterMessages = async (tenantCode = null) => {
+  const store = readPersistentStore();
+  const list = Array.isArray(store.headmasterMessages) ? store.headmasterMessages : [];
+  const filtered = list.filter((m) => {
+    if (!m || isPermanentlyDeleted(m.id)) return false;
+    if (tenantCode && m.tenantCode && String(m.tenantCode).toUpperCase() !== String(tenantCode).toUpperCase()) return false;
+    return true;
+  });
+  return filtered.map((m) => ({
+    ...m,
+    replies: Array.isArray(m.replies) ? m.replies.filter((r) => !isPermanentlyDeleted(r.id)) : []
+  }));
+};
+
+const createHeadmasterMessage = async (payload = {}) => {
+  const messageText = String(payload.messageText || payload.message || '').trim();
+  if (!messageText) {
+    throw new AppError('Directive message text is required.', 400);
+  }
+  const msg = {
+    id: payload.id || `MSG-DEV-HM-${Date.now()}-${Math.floor(100 + Math.random() * 899)}`,
+    threadId: payload.threadId || `TH-${payload.tenantCode || 'GENERAL'}-${Date.now().toString().slice(-4)}`,
+    tenantCode: String(payload.tenantCode || 'DEFAULT').trim(),
+    institutionName: String(payload.institutionName || 'Registered Institution').trim(),
+    headmasterName: String(payload.headmasterName || 'Headmaster').trim(),
+    headmasterEmail: String(payload.headmasterEmail || '').trim().toLowerCase(),
+    sender: String(payload.sender || 'DEVELOPER').toUpperCase(),
+    senderName: String(payload.senderName || 'Gabriel Osei (Chief System Engineer)').trim(),
+    senderRole: String(payload.senderRole || 'DEVELOPER').toUpperCase(),
+    subject: String(payload.subject || 'Official System Developer Directive & Instruction').trim(),
+    messageText,
+    urgency: String(payload.urgency || 'HIGH').toUpperCase(),
+    requiresReply: payload.requiresReply !== false,
+    timestamp: payload.timestamp || new Date().toISOString(),
+    isReadByHeadmaster: false,
+    isReadByDeveloper: true,
+    replies: Array.isArray(payload.replies) ? payload.replies : []
+  };
+  writePersistentStore((curr) => {
+    const existing = Array.isArray(curr.headmasterMessages) ? curr.headmasterMessages : [];
+    return {
+      ...curr,
+      headmasterMessages: [msg, ...existing.filter((m) => String(m.id) !== String(msg.id))].slice(0, 300)
+    };
+  });
+  return msg;
+};
+
+const replyToHeadmasterMessage = async (threadId, payload = {}) => {
+  const rawThread = String(threadId || '').trim();
+  const messageText = String(payload.messageText || payload.replyText || payload.message || '').trim();
+  if (!messageText) {
+    throw new AppError('Reply message text is required.', 400);
+  }
+  const reply = {
+    id: payload.id || `REP-${Date.now()}-${Math.floor(100 + Math.random() * 899)}`,
+    sender: String(payload.sender || 'DEVELOPER').toUpperCase(),
+    senderName: String(payload.senderName || 'Gabriel Osei (Chief System Engineer)').trim(),
+    senderRole: String(payload.senderRole || 'DEVELOPER').toUpperCase(),
+    messageText,
+    timestamp: payload.timestamp || new Date().toISOString(),
+    isReadByHeadmaster: payload.sender === 'HEADMASTER'
+  };
+  let updatedThread = null;
+  writePersistentStore((curr) => {
+    const existing = Array.isArray(curr.headmasterMessages) ? curr.headmasterMessages : [];
+    return {
+      ...curr,
+      headmasterMessages: existing.map((m) => {
+        if (String(m.id) !== rawThread && String(m.threadId) !== rawThread) return m;
+        updatedThread = {
+          ...m,
+          replies: [...(Array.isArray(m.replies) ? m.replies : []), reply]
+        };
+        return updatedThread;
+      })
+    };
+  });
+  return { threadId: rawThread, reply, thread: updatedThread };
+};
+
+const recordDeploymentRelease = async (payload = {}) => {
+  const version = String(payload.version || `v2026.${new Date().toISOString().slice(5, 10).replace('-', '.')}-PROD`).trim();
+  const commitSha = String(payload.commitSha || 'e5083b9').trim();
+  const branch = String(payload.branch || 'main').trim();
+  const environment = String(payload.environment || 'production').trim();
+  const buildNumber = parseInt(payload.buildNumber, 10) || Math.floor(1050 + (Date.now() % 900));
+  const note = String(payload.note || payload.reason || 'Verified production release logged from Developer Mission Control').trim();
+  const detailsObj = {
+    version,
+    commitSha,
+    branch,
+    environment,
+    status: 'DEPLOYED_ACTIVE',
+    isArchived: false,
+    buildNumber,
+    note
+  };
+  const created = await prisma.auditLog.create({
+    data: {
+      tenantId: 1,
+      userId: null,
+      module: 'DEV_CONTROL',
+      action: 'DEPLOYMENT_RELEASE',
+      details: JSON.stringify(detailsObj),
+      ipAddress: '127.0.0.1'
+    }
+  });
+  return {
+    id: created.id,
+    action: created.action,
+    ...detailsObj,
+    deployedAt: created.createdAt || new Date().toISOString()
+  };
+};
+
 const deleteHeadmasterMessageThread = async (threadId) => {
   const raw = String(threadId || '').trim();
   addPermanentlyDeletedIds([raw, `HeadmasterMessage:${raw}`]);
@@ -3945,6 +4061,7 @@ module.exports = {
   deleteAuditLog,
   batchDeleteAuditLogs,
   getDeployments,
+  recordDeploymentRelease,
   archiveDeployment,
   batchArchiveDeployments,
   deleteDeployment,
@@ -3955,6 +4072,9 @@ module.exports = {
   deleteLicense,
   batchDeleteLicenses,
   deleteSubscriptionControl,
+  getHeadmasterMessages,
+  createHeadmasterMessage,
+  replyToHeadmasterMessage,
   deleteHeadmasterMessageThread,
   deleteHeadmasterMessageReply,
   deleteIntrusionViolation,

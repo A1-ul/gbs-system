@@ -15,6 +15,7 @@ router.use(tenantIsolationGuard);
 
 router.get('/calls/directory', controller.getDirectory);
 router.get('/calls/incoming', controller.getIncomingAndActive);
+router.post('/calls/presence', controller.updatePresence);
 router.post('/calls/initiate', controller.initiateCall);
 router.get('/calls/:callId', controller.getCallState);
 router.post('/calls/:callId/answer', controller.answerCall);
