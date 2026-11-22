@@ -498,7 +498,7 @@ export default function RoleCountGrid() {
                           style={{ width: "16px", height: "16px", cursor: "pointer" }}
                           checked={selectedUsers.length === roleUsers.length && roleUsers.length > 0}
                           onChange={toggleSelectAllUsers}
-                          title="Select all users"
+                          aria-label="Select all users"
                         />
                       </th>
                       <th>ID</th>
@@ -534,7 +534,7 @@ export default function RoleCountGrid() {
                             <button
                               className="inspect-btn"
                               onClick={() => navigateToDetail(navigate, (u.role || "user").toLowerCase(), u.id, u)}
-                              title="View full user profile and verification credentials on dedicated page"
+                              aria-label="View full user profile and verification credentials on dedicated page"
                             >
                               🔍 View Profile
                             </button>

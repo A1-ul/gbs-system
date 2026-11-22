@@ -4,11 +4,10 @@ function Tooltip({
     text,
     children
 }) {
-
+    // Tooltips disabled system-wide per UI directive
+    void text;
     return (
-        <span
-            title={text}
-        >
+        <span>
             {children}
         </span>
     );

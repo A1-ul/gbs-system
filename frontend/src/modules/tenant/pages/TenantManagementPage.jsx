@@ -321,14 +321,14 @@ export default function TenantManagementPage() {
                         <div className="tenant-action-buttons">
                           <button
                             className="inspect-btn"
-                            title="Inspect Tenant Details"
+                            aria-label="Inspect Tenant Details"
                             onClick={() => setInspectTenant(t)}
                           >
                             🔍 Inspect
                           </button>
                           <button
                             className="lifecycle-btn"
-                            title="Change Subscription Status"
+                            aria-label="Change Subscription Status"
                             onClick={() => {
                               setStatusModalTenant(t);
                               setNewStatus(t.status);

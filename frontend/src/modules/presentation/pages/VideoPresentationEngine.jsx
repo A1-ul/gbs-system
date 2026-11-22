@@ -996,7 +996,7 @@ export default function VideoPresentationEngine() {
                 cursor: "pointer",
                 transition: "all 0.2s ease"
               }}
-              title={mode.desc}
+              aria-label={mode.desc}
             >
               {mode.label}
             </button>

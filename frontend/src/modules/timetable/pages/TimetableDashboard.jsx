@@ -275,7 +275,7 @@ export default function TimetableDashboard() {
                 className="seed-weekly-btn"
                 disabled={seedingWeekly || !selectedClassId}
                 onClick={handleSeedWeekly}
-                title="Automatically populate a collision-free Monday-Friday schedule"
+                aria-label="Automatically populate a collision-free Monday-Friday schedule"
               >
                 {seedingWeekly ? "⚡ Generating Schedule..." : "⚡ Auto-Generate Weekly Timetable"}
               </button>
@@ -288,7 +288,7 @@ export default function TimetableDashboard() {
               </button>
             </div>
           </div>
-          
+
           <div className="hero-photo-showcase-frame">
             <div className="showcase-photo-wrapper">
               <img
@@ -427,14 +427,14 @@ export default function TimetableDashboard() {
                                 <button
                                   className="slot-edit-btn"
                                   onClick={() => handleOpenEditSlot(slot)}
-                                  title="Edit Slot"
+                                  aria-label="Edit Slot"
                                 >
                                   ✏️
                                 </button>
                                 <button
                                   className="slot-delete-btn"
                                   onClick={() => handleDeleteSlot(slot)}
-                                  title="Delete Slot"
+                                  aria-label="Delete Slot"
                                 >
                                   🗑️
                                 </button>
@@ -444,7 +444,7 @@ export default function TimetableDashboard() {
                             <button
                               className="empty-slot-placeholder"
                               onClick={() => handleOpenCreateSlot(day, period.start, period.end)}
-                              title={`Schedule on ${day} at ${period.start}`}
+                              aria-label={`Schedule on ${day} at ${period.start}`}
                             >
                               + Schedule
                             </button>

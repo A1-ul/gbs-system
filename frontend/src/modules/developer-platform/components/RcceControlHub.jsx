@@ -519,14 +519,14 @@ export default function RcceControlHub() {
 
             <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(195px, 1fr))", gap: 10 }}>
               {[
-                { label: "Active / Idle Connections", val: `${livePool.activeConnections ?? 1} Active • ${livePool.idleConnections ?? 0} Idle`, sub: `Max Pool: ${livePool.maxPoolCapacity ?? 25} (Min: ${livePool.minPoolCapacity ?? 2})`, color: "#34d399" },
+                { label: "Active / Idle Connections", val: `${livePool.activeConnections ?? 0} Active • ${livePool.idleConnections ?? 0} Idle`, sub: `Max Pool: ${livePool.maxPoolCapacity ?? 25} (Min: ${livePool.minPoolCapacity ?? 2})`, color: "#34d399" },
                 { label: "Waiting / Timeouts / Failed", val: `${livePool.waitingRequests ?? 0} Waiting`, sub: `Timeouts: ${livePool.connectionTimeouts ?? 0} • Failed: ${livePool.failedConnections ?? 0}`, color: "#38bdf8" },
-                { label: "Pool Utilization & Alert", val: `${livePool.utilizationPercentage ?? 4}% (${livePool.alertLevel || "NORMAL"})`, sub: `Warn: 80% • Crit: 95% • Leaks: ${livePool.leakedConnectionsDetected ?? 0}`, color: (livePool.utilizationPercentage ?? 0) >= 95 ? "#f87171" : (livePool.utilizationPercentage ?? 0) >= 80 ? "#fbbf24" : "#34d399" },
-                { label: "Backend CPU & RAM", val: `CPU: ${liveInfra.backendResources?.cpuUtilizationPct ?? 8}% • RAM: ${liveInfra.backendResources?.ramUtilizationPct ?? 24}%`, sub: `RSS: ${liveInfra.backendResources?.ramRssMb ?? telemetry?.server?.memory?.rssMb ?? 0} MB / ${liveInfra.backendResources?.containerRamLimitMb ?? 512} MB`, color: "#a78bfa" },
-                { label: "PostgreSQL CPU & RAM", val: `CPU: ${liveInfra.postgresResources?.cpuUtilizationPct ?? 6}% • RAM: ${liveInfra.postgresResources?.ramUtilizationPct ?? 18}%`, sub: `Est. ${liveInfra.postgresResources?.ramUsedEstimatedMb ?? 42} MB / ${liveInfra.postgresResources?.ramAllocatedMb ?? 256} MB`, color: "#60a5fa" },
-                { label: "Database Storage Usage", val: `${liveInfra.postgresResources?.storageUsedPretty || livePool.storage?.databaseSizePretty || "22 MB"}`, sub: `${liveInfra.postgresResources?.storageUtilizationPct ?? 2.2}% of ${liveInfra.postgresResources?.storageQuotaMb ?? 1024} MB Quota`, color: "#34d399" },
-                { label: "API Response & Errors", val: `Avg: ${liveInfra.apiPerformance?.avgResponseTimeMs ?? 4.2}ms`, sub: `P95: ${liveInfra.apiPerformance?.p95ResponseTimeMs ?? 12}ms • Failed: ${liveInfra.apiPerformance?.failedRequests ?? 0}`, color: "#f5d061" },
-                { label: "Background Jobs & Backups", val: `Jobs Failed: ${liveInfra.backgroundJobs?.totalFailures ?? 0}`, sub: `Backups: ${liveInfra.storageAndBackups?.backupStatus?.totalSnapshots ?? 1} Verified • Uptime: ${liveInfra.uptimeSeconds ?? telemetry?.systemUptimeSeconds ?? 0}s`, color: "#34d399" }
+                { label: "Pool Utilization & Alert", val: `${livePool.utilizationPercentage ?? 0}% (${livePool.alertLevel || "NORMAL"})`, sub: `Warn: 80% • Crit: 95% • Leaks: ${livePool.leakedConnectionsDetected ?? 0}`, color: (livePool.utilizationPercentage ?? 0) >= 95 ? "#f87171" : (livePool.utilizationPercentage ?? 0) >= 80 ? "#fbbf24" : "#34d399" },
+                { label: "Backend CPU & RAM", val: `CPU: ${liveInfra.backendResources?.cpuUtilizationPct ?? 0}% • RAM: ${liveInfra.backendResources?.ramUtilizationPct ?? 0}%`, sub: `RSS: ${liveInfra.backendResources?.ramRssMb ?? telemetry?.server?.memory?.rssMb ?? 0} MB / ${liveInfra.backendResources?.containerRamLimitMb ?? 512} MB`, color: "#a78bfa" },
+                { label: "PostgreSQL CPU & RAM", val: `CPU: ${liveInfra.postgresResources?.cpuUtilizationPct ?? 0}% • RAM: ${liveInfra.postgresResources?.ramUtilizationPct ?? 0}%`, sub: `Est. ${liveInfra.postgresResources?.ramUsedEstimatedMb ?? 0} MB / ${liveInfra.postgresResources?.ramAllocatedMb ?? 256} MB`, color: "#60a5fa" },
+                { label: "Database Storage Usage", val: `${liveInfra.postgresResources?.storageUsedPretty || livePool.storage?.databaseSizePretty || "0 MB"}`, sub: `${liveInfra.postgresResources?.storageUtilizationPct ?? 0}% of ${liveInfra.postgresResources?.storageQuotaMb ?? 1024} MB Quota`, color: "#34d399" },
+                { label: "API Response & Errors", val: `Avg: ${liveInfra.apiPerformance?.avgResponseTimeMs ?? 0}ms`, sub: `P95: ${liveInfra.apiPerformance?.p95ResponseTimeMs ?? 0}ms • Failed: ${liveInfra.apiPerformance?.failedRequests ?? 0}`, color: "#f5d061" },
+                { label: "Background Jobs & Backups", val: `Jobs Failed: ${liveInfra.backgroundJobs?.totalFailures ?? 0}`, sub: `Backups: ${liveInfra.storageAndBackups?.backupStatus?.totalSnapshots ?? 0} Verified • Uptime: ${liveInfra.uptimeSeconds ?? telemetry?.systemUptimeSeconds ?? 0}s`, color: "#34d399" }
               ].map((card) => (
                 <div key={card.label} style={{ background: "#020617", border: "1px solid #1e293b", borderRadius: 8, padding: "10px 12px" }}>
                   <div style={{ fontSize: 11.5, color: "#94a3b8", fontWeight: 600 }}>{card.label}</div>
@@ -535,6 +535,14 @@ export default function RcceControlHub() {
                 </div>
               ))}
             </div>
+            {liveInfra.renderHostingEvaluation?.estimatedMonthlyHostingCostSummary && (
+              <div style={{ marginTop: 12, padding: "10px 12px", borderRadius: 8, background: "rgba(2, 6, 23, 0.75)", border: "1px solid #1e293b", fontSize: 12, color: "#cbd5e1", display: "grid", gap: 4 }}>
+                <div style={{ color: "#f5d061", fontWeight: 700 }}>Render.com Capacity &amp; PgBouncer Readiness: {livePool.pgBouncer?.mode || "DIRECT_PRISMA_POOL_READY_FOR_PGBOUNCER"}</div>
+                <div>Baseline: {liveInfra.renderHostingEvaluation.estimatedMonthlyHostingCostSummary.currentFreePrototypeUsd}</div>
+                <div>Starter Growth (Up to 15 Schools): {liveInfra.renderHostingEvaluation.estimatedMonthlyHostingCostSummary.recommendedCostEffectiveStarterProductionUsd}</div>
+                <div>Enterprise Scale (Up to 100 Schools): {liveInfra.renderHostingEvaluation.estimatedMonthlyHostingCostSummary.recommendedEnterpriseMultiSchoolScaleUsd}</div>
+              </div>
+            )}
           </div>
 
           {/* Demo Sandbox 10-Entry Cap Monitor */}

@@ -8,6 +8,8 @@ import SchoolClinicHubPanel from "../../../../../components/common/SchoolClinicH
 import LiveCallLauncherAndReceiver from "../../../../../components/common/LiveCallLauncherAndReceiver";
 import DirectSMSInboxPanel from "../../../../../components/common/DirectSMSInboxPanel";
 import VoiceNoteRecorder from "../../../../../components/common/VoiceNoteRecorder";
+import { useDashboardTabSync } from "../../../../../hooks/useDashboardTabSync";
+import { checkDemoEntryLimit, trackDemoEntryCreated } from "../../../../../utils/demoLimitGuard";
 import { getUserAvatar, rotateUserAvatar, getLocalFallbackAvatar } from "../../../../../utils/userAvatars";
 import "../staff/StaffDashboard.css";
 
@@ -26,7 +28,7 @@ export default function SecretaryDashboard() {
     };
   }, []);
 
-  const [activeTab, setActiveTab] = useState("visitors");
+  const { activeTab, setActiveTab } = useDashboardTabSync("visitors", "gbs_secretary_active_tab");
   const [avatarUrl, setAvatarUrl] = useState(() => getUserAvatar("SECRETARY"));
   const [isNavyMode, setIsNavyMode] = useState(() => localStorage.getItem("gbs_ui_theme") === "navy");
   const [overview, setOverview] = useState({
@@ -106,6 +108,11 @@ export default function SecretaryDashboard() {
   const handleCheckInVisitor = async (e) => {
     e.preventDefault();
     setFeedback(null);
+    const demoCheck = checkDemoEntryLimit("secretary", "Front Office Records", records.length);
+    if (!demoCheck.allowed) {
+      setFeedback({ type: "error", message: demoCheck.message });
+      return;
+    }
     try {
       const res = await apiClient.post("/secretary/records", {
         recordType: "VISITOR_LOG",
@@ -116,6 +123,7 @@ export default function SecretaryDashboard() {
         purpose: visitorForm.purpose,
         status: "CHECKED_IN"
       });
+      trackDemoEntryCreated("secretary");
       setFeedback({ type: "success", message: res.data?.message || "Visitor checked in." });
       setVisitorForm({ counterpartyName: "", phone: "", counterpartyRole: "Parent / Guardian", purpose: "" });
       fetchSecretaryData();
@@ -127,12 +135,18 @@ export default function SecretaryDashboard() {
   const handleSaveLetter = async (e) => {
     e.preventDefault();
     setFeedback(null);
+    const demoCheck = checkDemoEntryLimit("secretary", "Front Office Records", records.length);
+    if (!demoCheck.allowed) {
+      setFeedback({ type: "error", message: demoCheck.message });
+      return;
+    }
     try {
       const res = await apiClient.post("/secretary/records", {
         ...letterForm,
         counterpartyName: letterForm.targetAudience,
         status: "SENT"
       });
+      trackDemoEntryCreated("secretary");
       setFeedback({ type: "success", message: res.data?.message || "Official correspondence recorded." });
       setLetterForm({ recordType: "CIRCULAR", title: "", subject: "", targetAudience: "ALL_PARENTS", content: "" });
       fetchSecretaryData();
@@ -144,6 +158,11 @@ export default function SecretaryDashboard() {
   const handleCreateAppointment = async (e) => {
     e.preventDefault();
     setFeedback(null);
+    const demoCheck = checkDemoEntryLimit("secretary", "Front Office Records", records.length);
+    if (!demoCheck.allowed) {
+      setFeedback({ type: "error", message: demoCheck.message });
+      return;
+    }
     try {
       const res = await apiClient.post("/secretary/records", {
         recordType: "APPOINTMENT",
@@ -151,6 +170,7 @@ export default function SecretaryDashboard() {
         targetAudience: "HEADMASTER",
         status: "SCHEDULED"
       });
+      trackDemoEntryCreated("secretary");
       setFeedback({ type: "success", message: res.data?.message || "Appointment scheduled cleanly." });
       setAppointmentForm({ title: "", counterpartyName: "", phone: "", scheduledAt: "", purpose: "" });
       fetchSecretaryData();
@@ -183,8 +203,7 @@ export default function SecretaryDashboard() {
 
       <div className="role-dashboard-container">
         <WindowControlsBar
-          roleTitle="School Secretary & Front Office Portal"
-          onSwitchDashboard={() => { }}
+          title="School Secretary & Front Office Portal"
         />
 
         <main className="role-main-content">

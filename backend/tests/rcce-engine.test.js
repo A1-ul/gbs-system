@@ -48,6 +48,14 @@ function signToken(user) {
   );
 }
 
+function assertEnvelope(res, expectedSuccess) {
+  assert.equal(res.json.success, expectedSuccess, `Expected success=${expectedSuccess}, got body: ${JSON.stringify(res.json)}`);
+  assert.ok(res.json.code, 'Missing RCCE code');
+  assert.ok(res.json.message, 'Missing RCCE message');
+  assert.ok(res.json.timestamp, 'Missing RCCE timestamp');
+  assert.ok(res.json.requestId, 'Missing RCCE requestId');
+}
+
 function buildTestApp(productOptions = { productId: 'GBS_SCHOOL', productName: 'GBS School Management System' }) {
   const app = express();
   app.use(express.json());
@@ -64,6 +72,8 @@ function buildTestApp(productOptions = { productId: 'GBS_SCHOOL', productName: '
   app.use('/api/v1/assignments', assignmentRoutes);
   app.use('/api/v1/ai-exam', aiExamRoutes);
   app.use('/api/v1/communication', communicationRoutes);
+  app.use('/api/v1/stationery', require('../src/modules/stationery/stationery.routes'));
+  app.use('/api/v1/secretary', require('../src/modules/secretary/secretary.routes'));
 
   // Trigger simulated internal DB error to test safe error normalization
   app.get('/api/v1/test-internal-error', (req, res, next) => {
@@ -434,14 +444,6 @@ test('4. Multi-module RCCE envelopes, negative validation rejection, Demo 10-ent
   const baseUrl = `http://127.0.0.1:${port}`;
 
   try {
-    const assertEnvelope = (res, expectedSuccess) => {
-      assert.equal(res.json.success, expectedSuccess, `Expected success=${expectedSuccess}, got body: ${JSON.stringify(res.json)}`);
-      assert.ok(res.json.code, 'Missing RCCE code');
-      assert.ok(res.json.message, 'Missing RCCE message');
-      assert.ok(res.json.timestamp, 'Missing RCCE timestamp');
-      assert.ok(res.json.requestId, 'Missing RCCE requestId');
-    };
-
     const demoAdmin = signToken({ id: 'usr_admin_master', tenantId: 1, role: 'ADMIN', email: 'demo-admin@gbs.com', isDemo: true });
     const demoStudent = signToken({ id: 'usr_student_master', tenantId: 1, role: 'STUDENT', email: 'demo-stu@gbs.com', isDemo: true });
     const demoParent = signToken({ id: 'usr_parent_master', tenantId: 1, role: 'PARENT', email: 'demo-parent@gbs.com', isDemo: true });
@@ -579,6 +581,131 @@ test('4. Multi-module RCCE envelopes, negative validation rejection, Demo 10-ent
     );
     assert.equal(okUniGov.status, 201, `okUniGov status ${okUniGov.status}: ${JSON.stringify(okUniGov.json)}`);
     assertEnvelope(okUniGov, true);
+
+    // D. Demo 10-Entry Limit also applies cleanly to Secretary & Stationery while Live Production stays unlimited
+    for (let i = 1; i <= 10; i++) {
+      const okSec = await reqJson(
+        baseUrl,
+        'POST',
+        '/api/v1/secretary/records',
+        { recordType: 'VISITOR_LOG', title: `Demo Visitor ${i}`, counterpartyName: `Guest ${i}` },
+        { Authorization: `Bearer ${demoAdmin}`, 'X-GBS-Mode': 'DEMO_SANDBOX' }
+      );
+      assert.equal(okSec.status, 201, `Demo secretary entry #${i} failed`);
+      assertEnvelope(okSec, true);
+    }
+    const demoSec11 = await reqJson(
+      baseUrl,
+      'POST',
+      '/api/v1/secretary/records',
+      { recordType: 'VISITOR_LOG', title: 'Demo Visitor 11', counterpartyName: 'Guest 11' },
+      { Authorization: `Bearer ${demoAdmin}`, 'X-GBS-Mode': 'DEMO_SANDBOX' }
+    );
+    assert.equal(demoSec11.status, 403);
+    assert.equal(demoSec11.json.code, 'DEMO_TRIAL_LIMIT_REACHED');
+
+    const liveSecUnlimited = await reqJson(
+      baseUrl,
+      'POST',
+      '/api/v1/secretary/records',
+      { recordType: 'VISITOR_LOG', title: 'Live Production Visitor', counterpartyName: 'Ministry Rep' },
+      { Authorization: `Bearer ${liveTeacher}`, 'X-GBS-Mode': 'LIVE_PRODUCTION' }
+    );
+    assert.notEqual(liveSecUnlimited.json?.code, 'DEMO_TRIAL_LIMIT_REACHED');
+  } finally {
+    await new Promise((resolve) => server.close(resolve));
+  }
+});
+
+test('5. Database Connection Pool Optimization, Concurrent Multi-Tenant Pooling, Leak Recovery, 80%/95% Alerts & Render Cloud Infra Audit', async () => {
+  const { connectionPoolManager } = require('../src/core/database/connectionPoolManager');
+  const { app } = buildTestApp();
+  const server = http.createServer(app);
+  await new Promise((resolve) => server.listen(0, '127.0.0.1', resolve));
+  const { port } = server.address();
+  const baseUrl = `http://127.0.0.1:${port}`;
+  const devToken = signToken({ id: 99, tenantId: 1, role: 'DEVELOPER', email: 'gabosei48@gmail.com' });
+
+  try {
+    // 1. Controlled Multi-Institution Concurrency Stress (25 simultaneous multi-tenant operations via pool)
+    const beforeTotal = connectionPoolManager.metrics.totalQueriesExecuted;
+    await Promise.all(
+      Array.from({ length: 25 }, (_, idx) => {
+        const tid = (idx % 5) + 1;
+        return connectionPoolManager.executeWithRetry(
+          async () => {
+            await new Promise((r) => setTimeout(r, 8));
+            return { tenantId: tid, ok: true };
+          },
+          { model: 'MultiTenantLoadCheck', action: 'findMany', tenantId: tid }
+        );
+      })
+    );
+    const afterPool = connectionPoolManager.getPoolStatus();
+    assert.ok(connectionPoolManager.metrics.totalQueriesExecuted >= beforeTotal + 25);
+    assert.equal(connectionPoolManager.inFlightQueries.size, 0, 'All 25 pooled slots must release cleanly with zero leaks');
+    assert.ok(afterPool.multiTenantIsolation.sharedPoolReuse);
+    assert.equal(afterPool.multiTenantIsolation.perUserConnectionCreation, false);
+    assert.ok(afterPool.multiTenantIsolation.distinctTenantsServedCount >= 5);
+    assert.ok(afterPool.maxPoolCapacity <= afterPool.maxSafeApplicationConnections);
+
+    // 2. Transient DB interruption recovery via executeWithRetry
+    let attemptCount = 0;
+    const recoveredVal = await connectionPoolManager.executeWithRetry(
+      async () => {
+        attemptCount++;
+        if (attemptCount === 1) {
+          const e = new Error('Connection terminated unexpectedly');
+          e.code = 'ECONNRESET';
+          throw e;
+        }
+        return 'RECOVERED_AFTER_TRANSIENT_FAILURE';
+      },
+      { model: 'PoolRecoveryCheck', action: 'queryRaw', tenantId: 2 }
+    );
+    assert.equal(recoveredVal, 'RECOVERED_AFTER_TRANSIENT_FAILURE');
+    assert.equal(connectionPoolManager.inFlightQueries.size, 0);
+
+    // 3. 80% WARNING & 95% CRITICAL threshold alerts + /pool-status & /infrastructure-audit endpoints
+    const warnRes = await reqJson(
+      baseUrl,
+      'POST',
+      '/api/v1/rcce/pool-simulate-threshold',
+      { utilizationPct: 84 },
+      { Authorization: `Bearer ${devToken}` }
+    );
+    assert.equal(warnRes.status, 200);
+    assert.equal(warnRes.json.code, 'DB_POOL_WARNING_80');
+    assert.equal(warnRes.json.data.warningTriggered, true);
+
+    const critRes = await reqJson(
+      baseUrl,
+      'POST',
+      '/api/v1/rcce/pool-simulate-threshold',
+      { utilizationPct: 96 },
+      { Authorization: `Bearer ${devToken}` }
+    );
+    assert.equal(critRes.status, 200);
+    assert.equal(critRes.json.code, 'DB_POOL_CRITICAL_95');
+    assert.equal(critRes.json.data.criticalTriggered, true);
+
+    const poolRes = await reqJson(baseUrl, 'GET', '/api/v1/rcce/pool-status');
+    assert.equal(poolRes.status, 200);
+    assertEnvelope(poolRes, true);
+    assert.equal(poolRes.json.data.previousConfiguration.maxPoolSize, 20);
+    assert.equal(poolRes.json.data.newConfiguration.maxPoolSize, 25);
+    assert.equal(poolRes.json.data.pgBouncer.compatible, true);
+
+    const infraRes = await reqJson(baseUrl, 'GET', '/api/v1/rcce/infrastructure-audit');
+    assert.equal(infraRes.status, 200);
+    assert.equal(infraRes.json.code, 'INFRA_AUDIT_COMPLETED');
+    assert.ok(infraRes.json.data.backendResources);
+    assert.ok(infraRes.json.data.postgresResources);
+    assert.ok(infraRes.json.data.connectionPool);
+    assert.ok(infraRes.json.data.apiPerformance);
+    assert.ok(infraRes.json.data.backgroundJobs);
+    assert.ok(infraRes.json.data.storageAndBackups);
+    assert.ok(infraRes.json.data.renderHostingEvaluation?.estimatedMonthlyHostingCostSummary);
   } finally {
     await new Promise((resolve) => server.close(resolve));
   }

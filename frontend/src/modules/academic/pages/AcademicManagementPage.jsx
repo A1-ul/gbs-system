@@ -238,7 +238,7 @@ export default function AcademicManagementPage() {
                 className="seed-curriculum-btn"
                 disabled={seeding}
                 onClick={handleSeedCurriculum}
-                title="Auto-generate standard Cambridge / AP grade levels and subjects"
+                aria-label="Auto-generate standard Cambridge / AP grade levels and subjects"
               >
                 {seeding ? "⚡ Seeding Curriculum..." : "⚡ Seed Standard STEM Curriculum"}
               </button>

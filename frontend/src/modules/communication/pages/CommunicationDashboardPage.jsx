@@ -415,7 +415,7 @@ export default function CommunicationDashboardPage() {
             <aside className="channel-sidebar">
               <div className="sidebar-header">
                 <h3>Campus Channels</h3>
-                <button className="add-chan-btn" onClick={() => setShowChannelModal(true)} title="Create New Channel">
+                <button className="add-chan-btn" onClick={() => setShowChannelModal(true)} aria-label="Create New Channel">
                   + New
                 </button>
               </div>

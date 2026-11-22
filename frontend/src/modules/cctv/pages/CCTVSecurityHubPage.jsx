@@ -453,7 +453,7 @@ export default function CCTVSecurityHubPage() {
                       type="button"
                       className="btn-state"
                       style={{ background: "rgba(56, 189, 248, 0.2)", borderColor: "#38bdf8", color: "#38bdf8", fontWeight: 700 }}
-                      title="Capture and Preview Snapshot from this Camera Gate"
+                      aria-label="Capture and Preview Snapshot from this Camera Gate"
                       onClick={(e) => { e.stopPropagation(); handleCaptureCameraSnapshot(cam); }}
                     >
                       📸 Snap
@@ -462,7 +462,7 @@ export default function CCTVSecurityHubPage() {
                       type="button"
                       className="btn-state"
                       style={{ background: "rgba(16, 185, 129, 0.2)", borderColor: "#10b981", color: "#34d399", fontWeight: 700 }}
-                      title="Test & Verify Link to this Camera Gate"
+                      aria-label="Test & Verify Link to this Camera Gate"
                       onClick={(e) => { e.stopPropagation(); handleTestCameraGate(cam); }}
                     >
                       🧪 Test
@@ -471,28 +471,28 @@ export default function CCTVSecurityHubPage() {
                       type="button"
                       className="btn-state"
                       style={{ background: "rgba(245, 158, 11, 0.2)", borderColor: "#f59e0b", color: "#fbbf24", fontWeight: 700 }}
-                      title="Test Transmission to Headmaster Mobile Device"
+                      aria-label="Test Transmission to Headmaster Mobile Device"
                       onClick={(e) => { e.stopPropagation(); handleTestHeadmasterMobileGate(cam); }}
                     >
                       📲 Mobile
                     </button>
                     <button
                       className={`btn-state ${isRec ? "active" : ""}`}
-                      title="Set Recording"
+                      aria-label="Set Recording"
                       onClick={(e) => { e.stopPropagation(); handleUpdateCameraStatus(cam.id, "RECORDING"); }}
                     >
                       REC
                     </button>
                     <button
                       className={`btn-state ${isOnline ? "active" : ""}`}
-                      title="Set Live"
+                      aria-label="Set Live"
                       onClick={(e) => { e.stopPropagation(); handleUpdateCameraStatus(cam.id, "ONLINE"); }}
                     >
                       LIVE
                     </button>
                     <button
                       className="btn-state maint"
-                      title="Maintenance"
+                      aria-label="Maintenance"
                       onClick={(e) => { e.stopPropagation(); handleUpdateCameraStatus(cam.id, "MAINTENANCE"); }}
                     >
                       MAINT

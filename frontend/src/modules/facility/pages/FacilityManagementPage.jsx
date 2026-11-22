@@ -369,7 +369,7 @@ export default function FacilityManagementPage() {
                         onClick={() => setSelectedReferenceTicket(t)}
                         className="ticket-badge"
                         style={{ cursor: 'pointer', border: '1px solid rgba(59, 130, 246, 0.4)', background: 'rgba(59, 130, 246, 0.1)', color: '#60a5fa', padding: '4px 8px', borderRadius: '4px' }}
-                        title="Click to view reference details"
+                        aria-label="Click to view reference details"
                       >
                         📄 {t.ticket_number}
                       </button>
@@ -406,7 +406,7 @@ export default function FacilityManagementPage() {
                         <button
                           className="btn-action"
                           style={{ background: 'rgba(59, 130, 246, 0.2)', color: '#93c5fd', borderColor: '#3b82f6' }}
-                          title="View Maintenance Reference Details"
+                          aria-label="View Maintenance Reference Details"
                           onClick={() => setSelectedReferenceTicket(t)}
                         >
                           Ref
@@ -414,7 +414,7 @@ export default function FacilityManagementPage() {
                         {t.status === "PENDING" && (
                           <button
                             className="btn-action approve"
-                            title="Approve & Dispatch Work Order"
+                            aria-label="Approve & Dispatch Work Order"
                             onClick={() => handleStatusUpdate(t.id, "APPROVED", t.estimated_cost)}
                           >
                             Approve
@@ -423,7 +423,7 @@ export default function FacilityManagementPage() {
                         {t.status === "APPROVED" && (
                           <button
                             className="btn-action progress"
-                            title="Start Servicing"
+                            aria-label="Start Servicing"
                             onClick={() => handleStatusUpdate(t.id, "IN_PROGRESS", t.estimated_cost)}
                           >
                             Start
@@ -432,7 +432,7 @@ export default function FacilityManagementPage() {
                         {t.status === "IN_PROGRESS" && (
                           <button
                             className="btn-action resolve"
-                            title="Complete & Resolve Work Order"
+                            aria-label="Complete & Resolve Work Order"
                             onClick={() => handleStatusUpdate(t.id, "RESOLVED", t.estimated_cost)}
                           >
                             Resolve
@@ -441,7 +441,7 @@ export default function FacilityManagementPage() {
                         {t.status !== "RESOLVED" && t.status !== "REJECTED" && (
                           <button
                             className="btn-action reject"
-                            title="Reject Work Order"
+                            aria-label="Reject Work Order"
                             onClick={() => handleStatusUpdate(t.id, "REJECTED", 0)}
                           >
                             Reject

@@ -409,7 +409,7 @@ export default function DataMigrationDashboard() {
                           <button
                             className="btn-rollback"
                             onClick={() => handleRollback(job.id)}
-                            title="Rollback this batch"
+                            aria-label="Rollback this batch"
                           >
                             Rollback
                           </button>

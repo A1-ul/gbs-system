@@ -142,8 +142,8 @@ export default function TransportManagementPage() {
     const chosenId = preselectedRouteId
       ? String(preselectedRouteId)
       : (assignForm.routeId && routes.some((r) => String(r.id) === String(assignForm.routeId))
-          ? String(assignForm.routeId)
-          : (routes[0]?.id ? String(routes[0].id) : ''));
+        ? String(assignForm.routeId)
+        : (routes[0]?.id ? String(routes[0].id) : ''));
     const routeObj = routes.find((r) => String(r.id) === chosenId) || routes[0] || null;
     setAssignForm({
       studentId: students[0]?.id ? String(students[0].id) : '',
@@ -589,7 +589,7 @@ export default function TransportManagementPage() {
                               speed: '38 km/h',
                               workingHours: '06:30 - 18:00 (On-Duty)'
                             })}
-                            title="Verify Driver's Live Google Maps GPS Location during working hours"
+                            aria-label="Verify Driver's Live Google Maps GPS Location during working hours"
                           >
                             📍 Live Map
                           </button>
@@ -1094,7 +1094,7 @@ export default function TransportManagementPage() {
         <button
           type="button"
           onClick={() => window.scrollTo({ top: 0, behavior: "smooth" })}
-          title="Scroll to Top"
+          aria-label="Scroll to Top"
           style={{
             background: "linear-gradient(135deg, #f59e0b, #d97706)",
             color: "#ffffff",
@@ -1118,7 +1118,7 @@ export default function TransportManagementPage() {
         <button
           type="button"
           onClick={() => window.scrollTo({ top: document.body.scrollHeight, behavior: "smooth" })}
-          title="Scroll to Bottom"
+          aria-label="Scroll to Bottom"
           style={{
             background: "linear-gradient(135deg, #1e293b, #0f172a)",
             color: "#fbbf24",

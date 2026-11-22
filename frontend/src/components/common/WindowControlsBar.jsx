@@ -76,6 +76,7 @@ export default function WindowControlsBar({
       if (path.includes("/portal/parent")) return "PARENT";
       if (path.includes("/portal/accountant")) return "ACCOUNTANT";
       if (path.includes("/portal/hr") || path === "/hr") return "HR";
+      if (path.includes("/portal/secretary")) return "SECRETARY";
       if (path.includes("/portal/staff")) return "STAFF";
       if (path.includes("/portal/alumni")) return "ALUMNI";
       if (path.includes("/portal/inventory") || path === "/inventory") return "INVENTORY";
@@ -123,9 +124,23 @@ export default function WindowControlsBar({
   const handleBack = () => {
     if (onBack) {
       onBack();
-    } else {
-      window.history.back();
+      return;
     }
+    try {
+      const url = new URL(window.location.href);
+      const isOpenedFullPage = url.searchParams.get("full") === "1" || url.searchParams.get("fullpage") === "1";
+      if (window.history.length > 1) {
+        window.history.back();
+        return;
+      }
+      if (isOpenedFullPage) {
+        url.searchParams.delete("full");
+        url.searchParams.delete("fullpage");
+        window.location.assign(url.toString());
+        return;
+      }
+    } catch { }
+    window.history.back();
   };
 
   const handleScrollTop = () => {
@@ -215,7 +230,11 @@ export default function WindowControlsBar({
           } else {
             url.searchParams.delete("full");
           }
-          window.history.replaceState(window.history.state, "", url.toString());
+          window.history.pushState(
+            { ...(window.history.state || {}), tab: url.searchParams.get("tab"), full: next },
+            "",
+            url.toString()
+          );
           window.dispatchEvent(new CustomEvent("gbs_full_display_toggled", { detail: { full: next } }));
         } catch { }
       }

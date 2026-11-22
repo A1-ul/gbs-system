@@ -7700,7 +7700,7 @@ export function AdminDashboard({ initialTab } = {}) {
                                         cursor: "pointer",
                                         fontWeight: 800
                                       }}
-                                      title="Open full Vetting & Inspection Evaluation Modal"
+                                      aria-label="Open full Vetting & Inspection Evaluation Modal"
                                     >
                                       🔍 Inspect & Vet
                                     </button>

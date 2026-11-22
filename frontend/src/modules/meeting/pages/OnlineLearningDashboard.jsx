@@ -477,7 +477,7 @@ export default function OnlineLearningDashboard() {
                 cursor: "pointer",
                 boxShadow: "0 4px 12px rgba(37, 211, 102, 0.3)"
               }}
-              title="Organize / Invite Parents to Virtual Meeting via WhatsApp"
+              aria-label="Organize / Invite Parents to Virtual Meeting via WhatsApp"
             >
               <span>💬</span> Organize WhatsApp Meeting
             </button>
@@ -498,7 +498,7 @@ export default function OnlineLearningDashboard() {
                 cursor: "pointer",
                 boxShadow: "0 4px 12px rgba(139, 92, 246, 0.35)"
               }}
-              title="Launch Student Cooperative Conferencing & Social Lounge"
+              aria-label="Launch Student Cooperative Conferencing & Social Lounge"
             >
               <span>🎙️</span> Student Cooperative Lounge
             </button>
@@ -514,7 +514,7 @@ export default function OnlineLearningDashboard() {
               type="button"
               className="refresh-btn"
               onClick={fetchData}
-              title="Refresh sessions from database"
+              aria-label="Refresh sessions from database"
             >
               🔄 Refresh
             </button>
@@ -608,11 +608,11 @@ export default function OnlineLearningDashboard() {
 
                   {/* Feature Badges from Master Blueprint */}
                   <div className="feature-badges-row">
-                    {meeting.hasChat && <span className="feat-badge" title="Live In-Session Chat">💬 Chat</span>}
-                    {meeting.hasBreakout && <span className="feat-badge" title="Breakout Rooms Enabled">👥 Breakouts</span>}
-                    {meeting.hasRaiseHand && <span className="feat-badge" title="Raise Hand Protocol">✋ Raise Hand</span>}
-                    {meeting.hasScreenShare && <span className="feat-badge" title="Screen Share Enabled">🖥️ Screen Share</span>}
-                    {meeting.isRecorded && <span className="feat-badge recording" title="Cloud Session Recording">⏺️ Cloud Rec</span>}
+                    {meeting.hasChat && <span className="feat-badge">💬 Chat</span>}
+                    {meeting.hasBreakout && <span className="feat-badge">👥 Breakouts</span>}
+                    {meeting.hasRaiseHand && <span className="feat-badge">✋ Raise Hand</span>}
+                    {meeting.hasScreenShare && <span className="feat-badge">🖥️ Screen Share</span>}
+                    {meeting.isRecorded && <span className="feat-badge recording">⏺️ Cloud Rec</span>}
                   </div>
 
                   <div className="meeting-card-actions">
@@ -628,7 +628,7 @@ export default function OnlineLearningDashboard() {
                       type="button"
                       className="card-secondary-btn"
                       onClick={() => handleInspectRoster(meeting.id)}
-                      title="View student attendees and attendance status"
+                      aria-label="View student attendees and attendance status"
                     >
                       👥 Roster ({meeting._count?.attendances || 0})
                     </button>
@@ -636,7 +636,7 @@ export default function OnlineLearningDashboard() {
                       type="button"
                       className="card-secondary-btn copy-btn"
                       onClick={() => handleCopyLink(meeting)}
-                      title="Copy meeting join link & credentials"
+                      aria-label="Copy meeting join link & credentials"
                     >
                       🔗
                     </button>
@@ -906,11 +906,11 @@ export default function OnlineLearningDashboard() {
                   rel="noopener noreferrer"
                   className="ctrl-btn"
                   style={{ background: '#0284c7', color: '#fff', textDecoration: 'none' }}
-                  title="Launch in External Zoom Web Client"
+                  aria-label="Launch in External Zoom Web Client"
                 >
                   🚀 Open Zoom Web Client
                 </a>
-                <button type="button" className="modal-close-btn" onClick={handleLeaveClassroom} title="Leave Session">✕</button>
+                <button type="button" className="modal-close-btn" onClick={handleLeaveClassroom} aria-label="Leave Session">✕</button>
               </div>
             </div>
 

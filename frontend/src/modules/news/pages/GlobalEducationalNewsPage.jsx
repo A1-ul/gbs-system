@@ -266,7 +266,7 @@ export default function GlobalEducationalNewsPage() {
                     type="button"
                     className="gbs-news-play-btn"
                     onClick={() => setActiveVideoModal(news)}
-                    title="Watch Video Presentation"
+                    aria-label="Watch Video Presentation"
                   >
                     ▶ Watch Video ({news.videoDuration})
                   </button>

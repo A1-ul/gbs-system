@@ -119,7 +119,11 @@ const RESOURCE_BUCKETS = [
   { prefix: '/timetables', bucket: 'timetables', label: 'Timetable Schedule Slots' },
   { prefix: '/timetable', bucket: 'timetables', label: 'Timetable Schedule Slots' },
   { prefix: '/attendance', bucket: 'attendance', label: 'Attendance Records' },
-  { prefix: '/topic-videos', bucket: 'topic_videos', label: 'Topic Video Guides' }
+  { prefix: '/topic-videos', bucket: 'topic_videos', label: 'Topic Video Guides' },
+  { prefix: '/stationery', bucket: 'stationery', label: 'School Stationery & Store Entries' },
+  { prefix: '/stationary', bucket: 'stationery', label: 'School Stationery & Store Entries' },
+  { prefix: '/secretary', bucket: 'secretary', label: 'School Secretary Front-Office Records' },
+  { prefix: '/front-desk', bucket: 'secretary', label: 'School Secretary Front-Office Records' }
 ];
 
 function decodeAuthHint(req) {

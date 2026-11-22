@@ -478,7 +478,7 @@ export default function ShardingDrManagementPage() {
                       <span className="status-pill online">{drill.status}</span>
                     </td>
                     <td>{drill.initiated_by}</td>
-                    <td className="code-font hash-truncated" title={drill.verification_hash}>
+                    <td className="code-font hash-truncated">
                       {drill.verification_hash.substring(0, 16)}...
                     </td>
                     <td>{new Date(drill.created_at).toLocaleString()}</td>

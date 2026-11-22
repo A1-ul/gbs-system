@@ -398,7 +398,7 @@ export default function AdmissionWorkflowDashboard() {
             >
               <span>➕</span> New Admission Inquiry
             </button>
-            <button type="button" className="adm-refresh-btn" onClick={fetchData} title="Refresh">
+            <button type="button" className="adm-refresh-btn" onClick={fetchData} aria-label="Refresh">
               🔄 Refresh
             </button>
           </div>
