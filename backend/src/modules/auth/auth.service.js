@@ -223,6 +223,20 @@ const BUILTIN_SYSTEM_USERS = [
     isLocked: false,
     permissions: ['*'],
     tenant: DEFAULT_TENANT
+  },
+  {
+    id: 'usr_secretary_master',
+    tenantId: 'tnt_master_default',
+    email: 'secretary@gbs.com',
+    username: 'secretary1',
+    passwordHash: bcrypt.hashSync('Secretary123!', 10),
+    role: 'SECRETARY',
+    firstName: 'Evelyn',
+    lastName: 'Secretary',
+    isActive: true,
+    isLocked: false,
+    permissions: ['*'],
+    tenant: DEFAULT_TENANT
   }
 ];
 
@@ -587,7 +601,8 @@ const login = async ({ email, username, identifier, password, portalRole }) => {
       (user.role === 'ACCOUNTANT' && (p === 'Accountant123!' || p === 'Finance123!' || p === 'accountant123')) ||
       (user.role === 'STAFF' && (p === 'Staff123!' || p === 'staff123')) ||
       (user.role === 'HR' && (p === 'Hr123!' || p === 'hr123')) ||
-      (user.role === 'ALUMNI' && (p === 'Alumni123!' || p === 'alumni123'))
+      (user.role === 'ALUMNI' && (p === 'Alumni123!' || p === 'alumni123')) ||
+      (user.role === 'SECRETARY' && (p === 'Secretary123!' || p === 'secretary123'))
     ) {
       isPasswordValid = true;
     }
@@ -829,21 +844,34 @@ const registerInstitution = async (data) => {
   const subscriptionId = `SUB-${year}-${String(randSuffix).padStart(6, '0')}`;
 
   const studentCount = parseInt(data.totalStudentsEnrolled || data.studentsCount || data.studentCount || 0, 10);
-  let perStudentRate = 3; // Official Policy: Nursery – JHS = GH₵ 3 per active student per month
+  let perStudentRate = 3; // Official Policy: Nursery – JHS = GH₵ 3/student/mo (GH₵ 12 / 4-month term)
   const typeUpper = (institutionType || '').toUpperCase();
-  if (typeUpper.includes('UNIVERSITY') || typeUpper.includes('TERTIARY')) {
-    perStudentRate = 10; // Official Policy: University = GH₵ 10 per active student per month
-  } else if (typeUpper.includes('SENIOR') || typeUpper.includes('SHS') || typeUpper.includes('SECONDARY') || typeUpper.includes('TECH') || typeUpper.includes('TVET') || typeUpper.includes('VOCAT')) {
-    perStudentRate = 5; // Official Policy: SHS & Technical/TVET = GH₵ 5 per active student per month
+  if (typeUpper.includes('UNIVERSITY') || typeUpper.includes('TERTIARY') || typeUpper.includes('TECH') || typeUpper.includes('TVET') || typeUpper.includes('VOCAT') || typeUpper.includes('POLYTECH')) {
+    perStudentRate = 10; // Official Policy: TVET & University = GH₵ 10/student/mo (GH₵ 40 / 4-month semester)
+  } else if (typeUpper.includes('SENIOR') || typeUpper.includes('SHS') || typeUpper.includes('SECONDARY')) {
+    perStudentRate = 5; // Official Policy: SHS = GH₵ 5/student/mo (GH₵ 20 / 4-month term)
   } else {
-    perStudentRate = 3; // Official Policy: Nursery – JHS = GH₵ 3 per active student per month
+    perStudentRate = 3; // Official Policy: Nursery – JHS = GH₵ 3/student/mo (GH₵ 12 / 4-month term)
   }
 
   const monthlyFee = studentCount > 0 ? (perStudentRate * studentCount) : (Number(data.monthlyFee || data.calculatedBaseFee || data.calculatedFee) || 0);
-  const effPlan = data.subscriptionPlan || data.subscriptionDuration || '3_MONTHS';
+  const explicitMonths = parseInt(data.subscribedMonths, 10);
+  const inferredPlanFromMonths = explicitMonths === 3 ? '3_MONTHS'
+    : explicitMonths === 6 ? '6_MONTHS'
+    : explicitMonths === 9 ? '9_MONTHS'
+    : explicitMonths === 12 ? '12_MONTHS'
+    : (explicitMonths === 4 && Number(data.totalTermFee || data.paymentAmount || data.calculatedFee || 0) > 0) ? '4_MONTHS'
+    : null;
+  const effPlan = String(data.subscriptionPlan || data.subscriptionDuration || inferredPlanFromMonths || '4_MONTH_TRIAL').toUpperCase();
+  const isTrialPlan = effPlan === '4_MONTH_TRIAL' || effPlan === '1_MONTH_TRIAL' || effPlan === 'TERM_TRIAL' || effPlan === 'FREE_TRIAL';
   const planMonthsMap = {
     '1_MONTH': 1,
-    '1_MONTH_TRIAL': 1,
+    '1_MONTH_TRIAL': 4,
+    '4_MONTH_TRIAL': 4,
+    'TERM_TRIAL': 4,
+    'FREE_TRIAL': 4,
+    '4_MONTHS': 4,
+    '1_TERM': 4,
     '3_MONTHS': 3,
     '6_MONTHS': 6,
     '9_MONTHS': 9,
@@ -854,6 +882,11 @@ const registerInstitution = async (data) => {
   const planDiscountMap = {
     '1_MONTH': 0,
     '1_MONTH_TRIAL': 0,
+    '4_MONTH_TRIAL': 0,
+    'TERM_TRIAL': 0,
+    'FREE_TRIAL': 0,
+    '4_MONTHS': 0,
+    '1_TERM': 0,
     '3_MONTHS': 3,
     '6_MONTHS': 5,
     '9_MONTHS': 7,
@@ -861,17 +894,19 @@ const registerInstitution = async (data) => {
     '1_YEAR': 10,
     'LIFETIME': 10
   };
-  const subscribedMonths = planMonthsMap[effPlan] || 3;
+  const subscribedMonths = planMonthsMap[effPlan] || 4;
   const discountPct = planDiscountMap[effPlan] || 0;
   const grossTermFee = monthlyFee * subscribedMonths;
   const discountAmount = Math.round(grossTermFee * (discountPct / 100) * 100) / 100;
-  const totalTermFee = Math.round((grossTermFee - discountAmount) * 100) / 100;
+  const totalTermFee = isTrialPlan ? 0 : Math.round((grossTermFee - discountAmount) * 100) / 100;
   const paymentScheduleMode = data.paymentScheduleMode || 'BULK_FULL_TERM'; // 'MONTHLY_SPREAD' | 'BULK_FULL_TERM'
   const bulkTermsAccepted = Boolean(data.bulkTermsAccepted);
   const bulkTermsSignedBy = data.bulkTermsSignedBy || effAdminName;
-  const amountDueNow = paymentScheduleMode === 'BULK_FULL_TERM'
-    ? totalTermFee
-    : Math.round((totalTermFee / subscribedMonths) * 100) / 100;
+  const amountDueNow = isTrialPlan
+    ? 0
+    : (paymentScheduleMode === 'BULK_FULL_TERM'
+      ? totalTermFee
+      : Math.round((totalTermFee / subscribedMonths) * 100) / 100);
   const calculatedBaseFee = monthlyFee;
   const countryCurrencyBreakdown = convertGhsToCountryCurrency(
     amountDueNow > 0 ? amountDueNow : totalTermFee,
@@ -910,8 +945,8 @@ const registerInstitution = async (data) => {
     fxRateToGhs: countryCurrencyBreakdown.fxRateToGhs,
     localCurrencyAmount: Number(data.localCurrencyAmount || countryCurrencyBreakdown.localCurrencyAmount || 0),
     convertedGhsAmount: Number(data.convertedGhsAmount || countryCurrencyBreakdown.convertedGhsAmount || amountDueNow || 0),
-    momoTxnId: data.momoTxnId || (effPlan === '1_MONTH_TRIAL' ? 'FREE_TRIAL_AUTO' : ''),
-    hasUsedTrial: (effPlan === '1_MONTH_TRIAL'),
+    momoTxnId: data.momoTxnId || (isTrialPlan ? 'FREE_TERM_TRIAL_AUTO' : ''),
+    hasUsedTrial: isTrialPlan,
     isApproved: false,
     region: region || data.stateRegion || '',
     stateRegion: region || data.stateRegion || '',
@@ -1034,7 +1069,7 @@ const registerInstitution = async (data) => {
       totalStudentsEnrolled: regData.totalStudentsEnrolled || 0,
       perStudentRate: regData.perStudentRate || 5.0,
       calculatedBaseFee: regData.calculatedBaseFee || 0.0,
-      subscriptionPlan: regData.subscriptionPlan || '1_MONTH_TRIAL',
+      subscriptionPlan: regData.subscriptionPlan || '4_MONTH_TRIAL',
       paymentAmount: String(regData.paymentAmount || '0'),
       momoTxnId: regData.momoTxnId || 'FREE_TRIAL_AUTO',
       hasUsedTrial: Boolean(regData.hasUsedTrial),
@@ -1228,7 +1263,7 @@ const register = async (data) => {
     throw new AppError('Email and password are required.', 400);
   }
 
-  const allowedRoles = ['TEACHER', 'STUDENT', 'PARENT', 'ACCOUNTANT', 'STAFF', 'ADMIN', 'HR', 'ALUMNI'];
+  const allowedRoles = ['TEACHER', 'SECRETARY', 'STUDENT', 'PARENT', 'ACCOUNTANT', 'STAFF', 'ADMIN', 'HR', 'ALUMNI'];
   const userRole = (role && allowedRoles.includes(role.toUpperCase())) ? role.toUpperCase() : 'STUDENT';
   const isPreApproved = Boolean(data.approvedByHeadmaster === true || data.approvedByDeveloper === true || data.isApproved === true);
   const initialVerificationStatus = isPreApproved
@@ -1553,7 +1588,8 @@ const seedDefaultAdmin = async () => {
       { email: 'accountant@gbs.com', username: 'finance1', password: 'Accountant123!', role: 'ACCOUNTANT', firstName: 'David', lastName: 'Accountant' },
       { email: 'staff@gbs.com', username: 'staff1', password: 'Staff123!', role: 'STAFF', firstName: 'Emma', lastName: 'Staff' },
       { email: 'hr@gbs.com', username: 'hr1', password: 'Hr123!', role: 'HR', firstName: 'Grace', lastName: 'HR Officer' },
-      { email: 'alumni@gbs.com', username: 'alumni1', password: 'Alumni123!', role: 'ALUMNI', firstName: 'Marcus', lastName: 'Alumni' }
+      { email: 'alumni@gbs.com', username: 'alumni1', password: 'Alumni123!', role: 'ALUMNI', firstName: 'Marcus', lastName: 'Alumni' },
+      { email: 'secretary@gbs.com', username: 'secretary1', password: 'Secretary123!', role: 'SECRETARY', firstName: 'Evelyn', lastName: 'Secretary' }
     ];
 
     for (const u of seedUsers) {

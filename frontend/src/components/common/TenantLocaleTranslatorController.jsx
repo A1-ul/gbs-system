@@ -41,10 +41,8 @@ export default function TenantLocaleTranslatorController() {
 
     let pollTimer = null;
     if (!isPublicAuthRoute) {
-      // Defer 60ms so portal component mounts cleanly, then sync tenant institution language
-      const initialSync = setTimeout(() => {
-        syncTenantLocaleFromServer();
-      }, 60);
+      // Sync tenant institution language immediately on route mount and periodically
+      syncTenantLocaleFromServer();
       pollTimer = setInterval(() => {
         if (document.visibilityState !== "hidden") {
           syncTenantLocaleFromServer();
@@ -55,7 +53,6 @@ export default function TenantLocaleTranslatorController() {
       window.addEventListener("focus", handleFocus);
 
       return () => {
-        clearTimeout(initialSync);
         if (pollTimer) clearInterval(pollTimer);
         window.removeEventListener("focus", handleFocus);
       };

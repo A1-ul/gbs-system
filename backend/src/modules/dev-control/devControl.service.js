@@ -197,9 +197,9 @@ const syncDynamicInstitutionsToTenants = async () => {
         await prisma.subscription.create({
           data: {
             tenantId: createdTenant.id,
-            planName: item.subscriptionPlan || 'Enterprise 30-Day Evaluation Trial',
+            planName: item.subscriptionPlan || '4-Month Full Term Free Trial (120 Days)',
             startDate: item.createdAt || new Date().toISOString(),
-            endDate: item.trialEndDate || new Date(Date.now() + 30 * 86400000).toISOString(),
+            endDate: item.trialEndDate || new Date(Date.now() + 120 * 86400000).toISOString(),
             gracePeriodDays: 7,
             autoLock: true,
             status: effectiveStatus,
@@ -261,7 +261,7 @@ const getTenantRegistrationConsole = async () => {
 
     if (sub) {
       const pName = String(sub.planName || '').toLowerCase();
-      if (pName.includes('trial') || pName.includes('30-day') || pName.includes('1_month_trial')) {
+      if (pName.includes('trial') || pName.includes('30-day') || pName.includes('120-day') || pName.includes('1_month_trial') || pName.includes('4_month_trial')) {
         trialTenants++;
       } else if (effectiveStatus === 'ACTIVE') {
         paidTenants++;
@@ -328,8 +328,8 @@ const getTenantCountdowns = async () => {
     );
 
     let trialStart = t.createdAt ? new Date(t.createdAt) : new Date();
-    let trialEnd = new Date(trialStart.getTime() + 30 * 24 * 60 * 60 * 1000);
-    let planName = t.planName || dynMatch?.subscriptionPlan || 'Enterprise 30-Day Evaluation Trial';
+    let trialEnd = new Date(trialStart.getTime() + 120 * 24 * 60 * 60 * 1000);
+    let planName = t.planName || dynMatch?.subscriptionPlan || '4-Month Full Term Free Trial (120 Days)';
     let graceDays = 7;
 
     if (sub) {
@@ -845,6 +845,14 @@ const developerTenantAction = async (tenantId, action, params = {}, developer = 
         durationLabel = '3 Months';
         planName = 'Enterprise 3 Months Term Subscription';
         daysToAdd = 90;
+      } else if (duration === '4_MONTHS' || duration === '4' || duration === '4MONTHS' || duration === '1_TERM' || duration === '1_SEMESTER') {
+        durationLabel = '4 Months (1 Full Term / Semester)';
+        planName = 'Enterprise 4 Months Term Subscription';
+        daysToAdd = 120;
+      } else if (duration === '4_MONTH_TRIAL' || duration === '1_MONTH_TRIAL' || duration === 'TRIAL') {
+        durationLabel = '4-Month Term Free Trial (120 Days)';
+        planName = '4-Month Full Term Free Trial (120 Days)';
+        daysToAdd = 120;
       } else if (duration === '6_MONTHS' || duration === '6' || duration === '6MONTHS') {
         durationLabel = '6 Months';
         planName = 'Enterprise 6 Months Term Subscription';
@@ -1763,7 +1771,7 @@ const verifyAndApproveInstitution = async (idOrTenantUid, developerNotes = 'Appr
       adminEmail: fallbackEmail,
       adminPhone: applicationData.adminPhone || applicationData.officialPhone || '+233 54 329 4615',
       adminPasswordHash: fallbackHash,
-      subscriptionPlan: applicationData.subscriptionPlan || '1_MONTH_TRIAL',
+      subscriptionPlan: applicationData.subscriptionPlan || '4_MONTH_TRIAL',
       paymentAmount: applicationData.paymentAmount || '0',
       facePhoto: applicationData.facePhoto || applicationData.scannedFacePhoto || applicationData.headmasterPhoto || null
     };
@@ -1780,7 +1788,7 @@ const verifyAndApproveInstitution = async (idOrTenantUid, developerNotes = 'Appr
       adminEmail: 'admin@gbs.edu',
       adminPhone: '+233 54 329 4615',
       adminPasswordHash: await bcrypt.hash('Headmaster123!', 10),
-      subscriptionPlan: '1_MONTH_TRIAL'
+      subscriptionPlan: '4_MONTH_TRIAL'
     };
   }
 
@@ -1899,13 +1907,15 @@ const verifyAndApproveInstitution = async (idOrTenantUid, developerNotes = 'Appr
   }
 
   // 5. Provision Subscription
-  const isTrial = (reg.subscriptionPlan === '1_MONTH_TRIAL');
-  let durationDays = 30;
-  if (reg.subscriptionPlan === '3_MONTHS') durationDays = 90;
-  else if (reg.subscriptionPlan === '6_MONTHS') durationDays = 180;
-  else if (reg.subscriptionPlan === '9_MONTHS') durationDays = 270;
-  else if (reg.subscriptionPlan === '12_MONTHS' || reg.subscriptionPlan === '1_YEAR') durationDays = 365;
-  else if (reg.subscriptionPlan === 'LIFETIME') durationDays = 3650;
+  const regPlanUpper = String(reg.subscriptionPlan || '4_MONTH_TRIAL').toUpperCase();
+  const isTrial = (regPlanUpper === '4_MONTH_TRIAL' || regPlanUpper === '1_MONTH_TRIAL' || regPlanUpper === 'TERM_TRIAL' || regPlanUpper === 'FREE_TRIAL');
+  let durationDays = 120; // Default 4-month full term free trial
+  if (isTrial || regPlanUpper === '4_MONTHS' || regPlanUpper === '1_TERM' || regPlanUpper === '1_SEMESTER') durationDays = 120;
+  else if (regPlanUpper === '3_MONTHS') durationDays = 90;
+  else if (regPlanUpper === '6_MONTHS') durationDays = 180;
+  else if (regPlanUpper === '9_MONTHS') durationDays = 270;
+  else if (regPlanUpper === '12_MONTHS' || regPlanUpper === '1_YEAR') durationDays = 365;
+  else if (regPlanUpper === 'LIFETIME') durationDays = 3650;
 
   const startDate = new Date();
   const endDate = new Date(Date.now() + durationDays * 86400000);
@@ -1921,7 +1931,7 @@ const verifyAndApproveInstitution = async (idOrTenantUid, developerNotes = 'Appr
         sub = await prisma.subscription.create({
           data: {
             tenantId: tenant.id,
-            planName: isTrial ? '1-Month Free Trial' : `Enterprise (${reg.subscriptionPlan})`,
+            planName: isTrial ? '4-Month Full Term Free Trial (120 Days)' : `Enterprise (${reg.subscriptionPlan})`,
             startDate,
             endDate,
             gracePeriodDays: 7,
@@ -2979,7 +2989,9 @@ const getDeveloperCountrySubscriptionsSummary = async () => {
 
     const studentCount = Math.max(0, parseInt(item.totalStudentsEnrolled || item.studentCount || 100, 10) || 0);
     const tierUpper = String(item.institutionType || item.planName || 'NURSERY_TO_JHS').toUpperCase();
-    const rateGhs = tierUpper.includes('UNI') ? 10 : (tierUpper.includes('SHS') || tierUpper.includes('TECH') ? 5 : 3);
+    const rateGhs = (tierUpper.includes('UNI') || tierUpper.includes('TERTIARY') || tierUpper.includes('TECH') || tierUpper.includes('TVET') || tierUpper.includes('VOCAT') || tierUpper.includes('POLYTECH'))
+      ? 10
+      : (tierUpper.includes('SHS') || tierUpper.includes('SENIOR') ? 5 : 3);
     const months = Math.max(1, parseInt(item.subscribedMonths || 3, 10) || 3);
     const rawGhs =
       Number(item.convertedGhsAmount) ||
@@ -3260,7 +3272,7 @@ const verifyAndProvisionTenant = async (payload = {}) => {
     : `GBS-TEN-${Date.now().toString().slice(-4)}`;
 
   const startDate = new Date();
-  const endDate = new Date(startDate.getTime() + 30 * 24 * 60 * 60 * 1000); // 30-day trial
+  const endDate = new Date(startDate.getTime() + 120 * 24 * 60 * 60 * 1000); // 4-month term free trial (120 days)
 
   // ACID Transaction to provision Tenant, Subscription, License, Headmaster Account
   let result = null;
@@ -3300,7 +3312,7 @@ const verifyAndProvisionTenant = async (payload = {}) => {
         subscription = await tx.subscription.create({
           data: {
             tenantId: tenant.id,
-            planName: data.planTier || 'Enterprise SaaS Tier (30-Day Trial)',
+            planName: data.planTier || '4-Month Full Term Free Trial (120 Days)',
             startDate,
             endDate,
             gracePeriodDays: 7,
@@ -3957,10 +3969,10 @@ const getTenantSubscription = async (idOrCode) => {
       createdAt: dynMatch?.createdAt ? new Date(dynMatch.createdAt) : new Date(),
       subscriptions: [
         {
-          planName: dynMatch?.subscriptionPlan || 'Enterprise 30-Day Evaluation Trial',
+          planName: dynMatch?.subscriptionPlan || '4-Month Full Term Free Trial (120 Days)',
           status: 'ACTIVE',
           startDate: new Date(),
-          endDate: new Date(Date.now() + 30 * 86400000)
+          endDate: new Date(Date.now() + 120 * 86400000)
         }
       ],
       users: [
@@ -3997,10 +4009,12 @@ const getTenantSubscription = async (idOrCode) => {
       durationLabel = '1 Year';
     } else if (pName.includes('6 month')) {
       durationLabel = '6 Months';
+    } else if (pName.includes('4 month') || pName.includes('4_month') || pName.includes('1 term')) {
+      durationLabel = pName.includes('trial') ? '4-Month Term Free Trial (120 Days)' : '4 Months (Term/Semester)';
     } else if (pName.includes('3 month')) {
       durationLabel = '3 Months';
-    } else if (pName.includes('trial') || pName.includes('30-day')) {
-      durationLabel = '30-Day Trial';
+    } else if (pName.includes('trial') || pName.includes('120-day') || pName.includes('30-day')) {
+      durationLabel = '4-Month Term Free Trial (120 Days)';
     }
   }
 

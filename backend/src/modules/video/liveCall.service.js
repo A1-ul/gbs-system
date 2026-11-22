@@ -1,9 +1,25 @@
 'use strict';
 
+const { EventEmitter } = require('events');
 const prisma = require('../../core/database/prisma.client');
 const { readPersistentStore, writePersistentStore } = require('../../core/database/persistentStore');
 const { AppError } = require('../../middleware/error.middleware');
 const socketServer = require('../../core/socket/socketServer');
+
+const callEventBus = new EventEmitter();
+callEventBus.setMaxListeners(500);
+
+function emitCallStreamEvent(callId, roomCode, eventType, payload = {}) {
+  const envelope = {
+    type: eventType,
+    callId,
+    roomCode,
+    timestamp: new Date().toISOString(),
+    ...payload
+  };
+  if (callId) callEventBus.emit(`call:${callId}`, envelope);
+  if (roomCode && roomCode !== callId) callEventBus.emit(`call:${roomCode}`, envelope);
+}
 
 /**
  * Live In-System Voice & Video Call / Conference Service
@@ -361,9 +377,10 @@ async function getCallDirectory(req) {
     contacts,
     headmasters: contacts.filter((c) => isHeadmasterRole(c.role)),
     teachers: contacts.filter((c) => c.role === 'TEACHER'),
+    secretary: contacts.filter((c) => c.role === 'SECRETARY'),
     parents: contacts.filter((c) => c.role === 'PARENT'),
     students: contacts.filter((c) => c.role === 'STUDENT'),
-    staff: contacts.filter((c) => ['STAFF', 'HR', 'ACCOUNTANT', 'CLINIC_DOCTOR', 'CLINIC_NURSE'].includes(c.role))
+    staff: contacts.filter((c) => ['SECRETARY', 'STAFF', 'HR', 'ACCOUNTANT', 'CLINIC_DOCTOR', 'CLINIC_NURSE'].includes(c.role))
   };
 }
 
@@ -477,6 +494,7 @@ async function initiateCall(req) {
     status: session.status,
     startedAt: session.startedAt
   });
+  emitCallStreamEvent(session.id, session.roomCode, 'call_initiated', { session });
 
   return session;
 }
@@ -512,10 +530,10 @@ function doesCallTargetUser(call, user = {}) {
   if (call.callScope === 'DEVELOPER_HEADMASTERS_CONFERENCE' && (isHeadmasterRole(urole) || urole === 'DEVELOPER')) {
     return true;
   }
-  if (call.callScope === 'FACULTY_CONFERENCE' && (urole === 'TEACHER' || isHeadmasterRole(urole))) {
+  if (call.callScope === 'FACULTY_CONFERENCE' && (urole === 'TEACHER' || urole === 'SECRETARY' || isHeadmasterRole(urole))) {
     return true;
   }
-  if (call.callScope === 'PARENT_CONFERENCE' && (urole === 'PARENT' || urole === 'TEACHER' || isHeadmasterRole(urole))) {
+  if (call.callScope === 'PARENT_CONFERENCE' && (urole === 'PARENT' || urole === 'TEACHER' || urole === 'SECRETARY' || isHeadmasterRole(urole))) {
     return true;
   }
   if (call.callScope === 'CLASS_CONFERENCE' && (urole === 'STUDENT' || urole === 'PARENT' || urole === 'TEACHER' || isHeadmasterRole(urole))) {
@@ -537,7 +555,7 @@ function canUserSeeActiveConference(call, user = {}) {
   if (urole === 'PARENT') {
     return scope === 'PARENT_CONFERENCE' || scope === 'CLASS_CONFERENCE';
   }
-  if (urole === 'TEACHER') {
+  if (urole === 'TEACHER' || urole === 'SECRETARY') {
     return ['FACULTY_CONFERENCE', 'CLASS_CONFERENCE', 'PARENT_CONFERENCE'].includes(scope);
   }
   if (isHeadmasterRole(urole)) {
@@ -662,6 +680,11 @@ async function answerOrJoinCall(req) {
     participants: updatedSession.participants,
     joinedBy: { userId, name: userName, role: userRole }
   });
+  emitCallStreamEvent(updatedSession.id, updatedSession.roomCode, 'participant_joined', {
+    status: updatedSession.status,
+    participants: updatedSession.participants,
+    joinedBy: { userId, name: userName, role: userRole }
+  });
 
   return updatedSession;
 }
@@ -721,6 +744,10 @@ async function endCall(req) {
   socketServer.emitToRoom(`call_${tid}_${updatedSession.roomCode}`, 'call_ended', {
     callId: updatedSession.id,
     roomCode: updatedSession.roomCode,
+    endedBy: formatCallerName(req.user)
+  });
+  emitCallStreamEvent(updatedSession.id, updatedSession.roomCode, 'call_ended', {
+    status: 'ENDED',
     endedBy: formatCallerName(req.user)
   });
   return updatedSession;
@@ -790,6 +817,15 @@ async function postSignalOrChat(req) {
     roomCode: targetRoomCode,
     ...recordedItem
   });
+  emitCallStreamEvent(
+    updatedCall.id,
+    targetRoomCode,
+    body.chatText ? 'chat_message' : 'webrtc_signal',
+    {
+      item: recordedItem,
+      participants: updatedCall.participants
+    }
+  );
 
   return {
     callId: updatedCall.id,
@@ -867,5 +903,7 @@ module.exports = {
   endCall,
   postSignalOrChat,
   getCallState,
-  updatePresence
+  updatePresence,
+  resolveCallLocation,
+  callEventBus
 };

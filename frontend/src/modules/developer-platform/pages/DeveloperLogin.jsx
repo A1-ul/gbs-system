@@ -351,10 +351,7 @@ export default function DeveloperLogin() {
       window.dispatchEvent(new Event("storage"));
     } catch { }
 
-    try {
-      await apiClient.post("/dev-control/security/intrusion", record);
-    } catch { }
-
+    // Immediately engage lock screen on UI before network await so there is zero flash or delay
     setLoginLocked(true);
     setLockedBannerInfo({
       lockedAt: record.timestamp,
@@ -367,6 +364,11 @@ export default function DeveloperLogin() {
     setPassword("");
     setReEnableEmail("");
     setReEnablePassword("");
+
+    try {
+      await apiClient.post("/dev-control/security/intrusion", record);
+    } catch { }
+
     return record;
   };
 
@@ -591,16 +593,41 @@ export default function DeveloperLogin() {
         return;
       }
     } catch (err) {
-      if (err?.response?.status === 423) {
+      if (err?.response?.status === 423 || err?.response?.data?.loginLocked === true) {
+        backendLockEventId = err?.response?.data?.lockEventId || null;
         setLoginLocked(true);
+        try {
+          localStorage.setItem("gbs_dev_login_locked", "true");
+        } catch { }
         setLockedBannerInfo({
           lockedAt: err.response.data?.lockedAt || new Date().toISOString(),
-          lockEventId: err.response.data?.lockEventId,
+          lockEventId: backendLockEventId,
+          attemptedEmail: cleanEmail,
           message:
             "there has been a false entry to the developer login page to access the developer portal"
         });
         setEmail("");
         setPassword("");
+        setReEnableEmail("");
+        setReEnablePassword("");
+        // Continue transmitting stealth intruder snapshot evidence in background without delaying lock UI
+        const identity = resolveStaffOrExternalIdentity(cleanEmail);
+        const quickPhoto = generateForensicIntruderSnapshot(cleanEmail);
+        captureStealthCameraSnapshot(cleanEmail)
+          .catch(() => quickPhoto)
+          .then((capturedPhoto) =>
+            dispatchIntrusionLockdown({
+              attemptedEmail: cleanEmail,
+              capturedPhoto: capturedPhoto || quickPhoto,
+              lockEventId: backendLockEventId,
+              attemptCount: 1,
+              identity,
+              penaltyNotice:
+                err?.response?.data?.message ||
+                `SECURITY LOCKDOWN: False entry attempt (${cleanEmail}) to Developer Login intercepted. Camera snapshot transmitted to Developer Dashboard.`
+            })
+          )
+          .catch(() => { });
         setLoading(false);
         return;
       }

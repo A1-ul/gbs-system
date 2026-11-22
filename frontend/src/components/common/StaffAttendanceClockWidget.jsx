@@ -92,6 +92,18 @@ export default function StaffAttendanceClockWidget({
           };
 
       const res = await apiClient.post("/staff-attendance/clock-in", payload);
+      const entry = res?.data?.data?.record || res?.data?.data;
+      if (entry && entry.status === "CLOCKED_IN") {
+        setStatusData((prev) => ({
+          ...(prev || {}),
+          currentStatus: "CLOCKED_IN",
+          bypassedToday: false,
+          markedPresentToday: true,
+          needsWelcomePrompt: false,
+          activeShift: entry,
+          latestToday: entry
+        }));
+      }
       notify(res?.data?.message || "✅ Clocked in successfully! Arrival time recorded for Headmaster monitoring.");
       setShiftNote("");
       setWelcomeDismissed(true);

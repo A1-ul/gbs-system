@@ -16,6 +16,7 @@ import { getActiveSchoolName, getActiveSchoolLogo } from "../../../../../utils/s
 import { getActiveInstitutionType, getInstitutionRoleProfile } from "../../../../../utils/institutionScope";
 import UniversityOperationsPanel from "../../../../../components/common/UniversityOperationsPanel";
 import SchoolClinicHubPanel from "../../../../../components/common/SchoolClinicHubPanel";
+import SchoolStationeryHubPanel from "../../../../../components/common/SchoolStationeryHubPanel";
 import { isDemoSandboxMode } from "../../../../../utils/tokenStorage";
 import { checkDemoEntryLimit, trackDemoEntryCreated } from "../../../../../utils/demoLimitGuard";
 import "./StudentDashboard.css";
@@ -398,7 +399,7 @@ export function StudentDashboard({ initialTab } = {}) {
 
       try {
         const stream = await navigator.mediaDevices.getUserMedia({
-          video: { facingMode: "user", width: { ideal: 320 }, height: { ideal: 240 } },
+          video: { facingMode: "user", width: { ideal: 320 }, height: { ideal: 240 }, frameRate: { ideal: 24, min: 15 } },
           audio: false
         });
         if (cancelled) {
@@ -932,7 +933,10 @@ export function StudentDashboard({ initialTab } = {}) {
   const startLocalPeerCamera = async () => {
     try {
       if (navigator.mediaDevices && navigator.mediaDevices.getUserMedia) {
-        const stream = await navigator.mediaDevices.getUserMedia({ video: { width: 640, height: 480 }, audio: true });
+        const stream = await navigator.mediaDevices.getUserMedia({
+          video: { width: { ideal: 640 }, height: { ideal: 360 }, frameRate: { ideal: 30, min: 24 } },
+          audio: { echoCancellation: true, noiseSuppression: true, autoGainControl: true }
+        });
         localPeerStreamRef.current = stream;
         if (localPeerVideoRef.current) {
           localPeerVideoRef.current.srcObject = stream;
@@ -2756,6 +2760,15 @@ export function StudentDashboard({ initialTab } = {}) {
               style={{ borderLeft: "3px solid #8b5cf6", color: activeTab === "cooperative-conferencing" ? "#c084fc" : undefined, fontWeight: 800 }}
             >
               🎙️ Cooperative Voice & Video Conferencing
+            </button>
+            <button
+              type="button"
+              data-testid="student-stationery-tab"
+              className={`role-tab-btn ${activeTab === "stationery" ? "active" : ""}`}
+              onClick={() => setActiveTab("stationery")}
+              style={{ borderLeft: "3px solid #d4af37", fontWeight: 800 }}
+            >
+              🎒 School Stationery Store
             </button>
             <button
               type="button"
@@ -6413,6 +6426,15 @@ export function StudentDashboard({ initialTab } = {}) {
                   </div>
                 </div>
               </div>
+            </div>
+          )}
+
+          {activeTab === "stationery" && (
+            <div className="role-workspace-card">
+              <SchoolStationeryHubPanel
+                mode="STUDENT"
+                currentUser={studentProfile}
+              />
             </div>
           )}
 

@@ -17,93 +17,202 @@ const DEVELOPER_NONDISCLOSURE_PATTERN = /\b(developer|dev\s*portal|mission\s*con
 const LOCAL_MEMORY_TOPICS = [
   {
     id: "developer_nondisclosure",
-    keywords: ["developer", "dev portal", "mission control", "motherland", "developer login", "developer dashboard", "who created gbs", "who built gbs"],
+    phrases: ["developer login", "developer dashboard", "who created gbs", "who built gbs", "dev portal", "mission control"],
+    keywords: ["developer", "motherland"],
     answer:
-      "I do not disclose developer details, internal engineering controls, or developer portal information. I can explain the exact portals and daily activities for institutional users: Headmaster/Admin, Teacher/Lecturer, Student, Parent/Guardian, Accountant/Bursar, Non-Teaching Staff, HR Officer, and Alumni.",
+      "I do not disclose developer details, internal engineering controls, or developer portal information. I can explain the exact portals and daily activities for institutional users: Headmaster/Admin, Teacher/Lecturer, School Secretary, Student, Parent/Guardian, Accountant/Bursar, Non-Teaching Staff, HR Officer, and Alumni.",
     tab: null
   },
   {
+    id: "role_headmaster",
+    phrases: ["headmaster portal", "admin portal", "principal portal", "headmaster dashboard", "admin dashboard", "headmaster role"],
+    keywords: ["headmaster", "principal", "chancellor", "rector", "provost"],
+    answer:
+      "The Headmaster / Principal Portal (/portal/admin/dashboard) includes Pending Staff & Admissions Approvals, Staff Duty Attendance Monitor (+2h auto clock-out), School Stationery Price Authority Desk (exclusive control to set official Textbook, Cardigan, Socks, and School Bag prices), Live Faculty & Parent Video/Voice Conferences, Academics/Timetables/Defaulters Compliance, All-Campus School Clinic & Sickbay Registry, Bus Transport, and 4-Month Term Trial / Per-Student Subscription Management.",
+    route: "/portal/admin/dashboard"
+  },
+  {
+    id: "role_teacher",
+    phrases: ["teacher portal", "lecturer portal", "teacher dashboard", "lecturer dashboard", "teacher role", "lecturer role", "teacher activities", "faculty portal", "know about the teacher", "about the teacher"],
+    keywords: ["teacher", "lecturer", "faculty", "instructor", "educator"],
+    answer:
+      "The Teacher / Lecturer Portal (/portal/teacher/dashboard) connects Faculty directly to Staff Duty Clock-In, Daily Student Attendance Roll Call, Class Topic Video Platform (upload/record lessons), Assignments & Homework Grading, AI-Proctored Exam Creation & Live Camera Wall (issue warnings, save evidence snapshots, deduct lost marks), High-Speed Live Class & Parent Video/Voice Calls, Tier Academics & University/TVET Placements, Defaulters Compliance Monitor, School Stationery Catalog & Requests, Direct SMS Inbox, and Personal Clinic Health Dossier.",
+    route: "/portal/teacher/dashboard"
+  },
+  {
+    id: "role_secretary",
+    phrases: ["secretary portal", "secretary dashboard", "school secretary", "front desk portal", "secretary role", "secretary activities", "about the secretary"],
+    keywords: ["secretary", "visitor log", "circular", "official letter", "appointment", "appointments", "minutes", "reception"],
+    answer:
+      "The School Secretary Portal (/portal/secretary/dashboard) manages Front-Desk Campus Visitor Check-In/Out Logs, Official Letters, Circulars, Certificates & Meeting Minutes, Headmaster Appointments Scheduling, Staff Duty Clock-In, School Stationery Store Sales & Expenses (auto-synced directly to Accountant Expenses Ledger), Direct SMS & Voice Notes, Live Video/Voice Calls, and Personal Clinic Health Dossier.",
+    route: "/portal/secretary/dashboard"
+  },
+  {
+    id: "role_student",
+    phrases: ["student portal", "student dashboard", "student role", "student activities", "about the student", "undergraduate portal"],
+    keywords: ["student", "pupil", "apprentice", "undergraduate", "learner"],
+    answer:
+      "The Student Portal (/portal/student/dashboard) gives learners their Live Timetable, Class Topic Video Player, Homework Submissions, Report Cards, AI-Proctored Exam Runner & Live Cooperative Study Rooms, separated Internships & Academic Attachments (for TVET/University), School Stationery Catalog & Requests, Fee Balance & MoMo/Card Checkout, Bus Transport, and Self-Only Clinic Health Record.",
+    route: "/portal/student/dashboard"
+  },
+  {
+    id: "role_parent",
+    phrases: ["parent portal", "guardian portal", "parent dashboard", "parent role", "guardian role", "parent activities", "about the parent"],
+    keywords: ["parent", "guardian", "mother", "father", "ward"],
+    answer:
+      "The Parent / Guardian Portal (/portal/parent/dashboard) provides Linked Ward Switching, Attendance & Report Card Monitoring, Tuition Payment via Any Phone MoMo/Card, Headmaster-Priced School Stationery Catalog & Orders, Live Video/Voice Calls with Headmaster & Teachers, Direct SMS & Voice Notes, Bus Transit Status, and Linked Ward Clinic Health Info.",
+    route: "/portal/parent/dashboard"
+  },
+  {
+    id: "role_accountant",
+    phrases: ["accountant portal", "bursar portal", "finance portal", "accountant dashboard", "bursar dashboard", "accountant role", "about the accountant"],
+    keywords: ["accountant", "bursar", "treasury", "auditing", "bookkeeping"],
+    answer:
+      "The Accountant / Bursar Portal (/portal/accountant/dashboard) operates Financial Telemetry, Class Fee Structures & Student Invoices, Multi-Gateway MoMo/Card Payment Reconciliation, School Stationery Revenue & Auto-Synced Expenses Audit (STATIONERY_SUPPLIES), Operating Expenses Ledger, HR Payroll & Loans, GAAP/IFRS Statements, and Personal Clinic Access.",
+    route: "/portal/accountant/dashboard"
+  },
+  {
+    id: "role_staff",
+    phrases: ["staff portal", "staff dashboard", "non-teaching staff", "staff role", "staff activities", "about the staff"],
+    keywords: ["non-teaching", "storekeeper", "logistics"],
+    answer:
+      "The Non-Teaching Staff Portal (/portal/staff/dashboard) handles Staff Duty Clock-In (+2h auto-clock-out), Campus Inventory & Asset Tracking, School Stationery Sales & Expense Sync to Accountancy, Transport Dispatch, Leave Requests, Live Calls, and Personal Clinic Health Dossier.",
+    route: "/portal/staff/dashboard"
+  },
+  {
+    id: "role_hr",
+    phrases: ["hr portal", "hr dashboard", "human resource portal", "hr role", "hr activities"],
+    keywords: ["hr", "human resource", "personnel", "contracts"],
+    answer:
+      "The Human Resources (HR) Portal (/portal/hr/dashboard) oversees Personnel Directories, Contracts, Leave Approvals, Staff Attendance Audits with the Headmaster, Payroll Grading, Staff Loans, and Personal Clinic Health Access.",
+    route: "/portal/hr/dashboard"
+  },
+  {
+    id: "role_alumni",
+    phrases: ["alumni portal", "alumni dashboard", "alumni role", "alumni activities"],
+    keywords: ["alumni", "former student", "graduated"],
+    answer:
+      "The Alumni Portal (/portal/alumni/dashboard) gives graduated cohorts Verified Academic Transcripts, Honours Tracking, Reunions, Mentorship, and Institutional Endowment Pledges.",
+    route: "/portal/alumni/dashboard"
+  },
+  {
+    id: "school_stationery",
+    phrases: ["school stationery", "stationery store", "stationary store", "school items", "who sets the price", "stationery expense"],
+    keywords: ["stationery", "stationary", "textbook", "textbooks", "cardigan", "cardigans", "socks", "school bag", "school bags", "exercise book", "uniforms", "bookshop"],
+    answer:
+      "School Stationery Store displays Textbooks, Cardigans, School Socks, School Bags, Exercise Books, and Uniforms across every dashboard. Strictly ONLY the Headmaster can set or edit prices. Secretaries, Staff, and Accountants record sales and store expenses, and all stationery expenses sync automatically into the Accountant Expenses Ledger (STATIONERY_SUPPLIES) for auditing.",
+    tab: "stationery"
+  },
+  {
     id: "clinic",
+    phrases: ["school clinic", "medical record", "sickbay treatment", "health dossier"],
     keywords: ["clinic", "sickbay", "medical", "health", "doctor", "nurse", "sick", "hospital", "medicine", "blood", "genotype", "allergy"],
     answer:
-      "In the GBS School Clinic, privacy is strictly enforced: regular users (Student, Teacher, Staff, HR, Accountant) only view their own personal health profile and visit history, and Parents only view their linked ward's health profile — without clinic admin queues or other people's data. Only the Headmaster sees all Staff and Student clinic profiles, full individual health dossiers, Sickbay admissions, treatments, and pharmacy stock on the Headmaster Dashboard.",
+      "In the GBS School Clinic, privacy is strictly enforced: regular users (Student, Teacher, Secretary, Staff, HR, Accountant) only view their own personal health profile and visit history, and Parents only view their linked ward's health profile — without clinic admin queues or other people's data. Only the Headmaster sees all Staff and Student clinic profiles, Sickbay admissions, treatments, and pharmacy stock on the Headmaster Dashboard.",
     tab: "clinic"
   },
   {
     id: "academics_placements",
-    keywords: ["internship", "attachment", "src", "prefect", "stream", "evening", "weekend", "sandwich", "regular", "lecturer", "graduate", "alumni", "cgpa", "tvet", "wassce", "bece"],
+    phrases: ["industrial internship", "academic attachment", "topic video", "lesson stream"],
+    keywords: ["internship", "attachment", "src", "prefect", "stream", "evening", "weekend", "sandwich", "regular", "degree", "cgpa", "wassce", "bece"],
     answer:
-      "Every school operates natively inside its main Academics and Courses portal with zero separate University Hub: Nursery to JHS manages Terms 1–3, BECE prep, Houses, and Prefects; Senior High School manages WASSCE Tracks, Houses, and Prefect Council; TVET manages Trade Practicals, Attachments, Shift Streams, and Workshop Captains; University manages separated Industrial Internships (INT) and Academic & Field Attachments (ATT), GPA/CGPA grading, Regular/Evening/Sandwich/Weekend streams, SRC governance, and Alumni graduation.",
+      "Every school operates natively inside its main Academics and Courses portal: Nursery to JHS manages Terms 1–3, BECE prep, Houses, and Prefects; Senior High School manages WASSCE Tracks, Houses, and Prefect Council; TVET manages Trade Practicals, Attachments, Shift Streams, and Workshop Captains; University manages separated Industrial Internships (INT) and Academic & Field Attachments (ATT), GPA/CGPA grading, Regular/Evening/Sandwich/Weekend streams, SRC governance, and Alumni graduation.",
     tab: "academics"
   },
   {
     id: "all_roles_explained",
-    keywords: ["roles", "user roles", "who does what", "everyone", "all users", "activities", "what each user does", "explain roles"],
+    phrases: ["each user", "every portal", "all portals", "all roles", "all users", "explain roles"],
+    keywords: ["roles", "responsibilities", "dashboards", "duties"],
     answer:
-      "Each institutional user on GBS performs specific daily activities: Headmaster/Admin approves users, runs Admissions, views ALL Staff and Student clinic profiles and sickbay stock, sets fee structures, oversees Academic Promotions and Institution Language; Teachers/Lecturers deliver coursework, grade assignments and separated Internships or Attachments, mark attendance, manage exams with AI proctoring, and view ONLY their own personal health profile; Students take courses, write AI-proctored exams, submit separated Internship or Attachment forms, check fees/results, and view ONLY their own health profile; Parents view their linked wards' grades, attendance, fees, and linked ward's clinic profile; Accountants collect fees, verify receipts, and record expenses; Non-Teaching Staff manage campus logistics/assets and view ONLY their own health profile; HR manages staff recruitment, payroll, leave, and appraisals; Alumni access transcripts and alumni networking.",
+      "GBS links 9 institutional portals: Headmaster/Admin (approvals, stationery pricing, all clinic dossiers, term renewals), Teacher/Lecturer (attendance, topic videos, AI-proctored exams, live class calls, placements), School Secretary (visitor logs, official letters/circulars, appointments, stationery sales & expenses), Student (timetables, proctored exams, homework, stationery orders), Parent (ward progress, MoMo fee checkout, calls), Accountant (invoices, payroll, synced stationery expense audit), Non-Teaching Staff (inventory, stationery, transport), HR (contracts, leave, attendance audits), and Alumni (transcripts & pledges).",
     tab: null
   },
   {
     id: "institutions",
-    keywords: ["jhs", "shs", "technical", "tvet", "separate", "institution type", "nursery", "difference", "university"],
+    phrases: ["institution type", "institution tier", "nursery to jhs", "senior high school"],
+    keywords: ["jhs", "shs", "technical", "tvet", "separate", "nursery", "difference", "university"],
     answer:
       "GBS automatically adapts to the registered institution across Nursery to JHS, Senior High School, Technical TVET, and University so classes, assessments, terms, placements, and student leadership match how your exact institution operates."
   },
   {
     id: "defaulters",
-    keywords: ["defaulter", "absent", "not coming", "missed exam", "partake", "assignment", "unsubmitted", "compliance"],
+    phrases: ["defaulters monitor", "missed exam", "did not partake"],
+    keywords: ["defaulter", "absent", "not coming", "partake", "unsubmitted", "compliance"],
     answer:
       "The Compliance and Defaulters Monitor calculates exact student counts and clickable rosters for students who did not partake in exams, did not submit assignments, or have not been coming to school, with direct warning alerts.",
     tab: "defaulters"
   },
   {
     id: "pricing",
-    keywords: ["price", "pricing", "cost", "fee rate", "subscription", "discount", "how much"],
+    phrases: ["free trial", "term free trial", "4 months", "4 month trial", "per student", "subscription plan", "how much"],
+    keywords: ["price", "pricing", "cost", "fee rate", "subscription", "discount", "trial", "semester", "termly", "12 cedis", "20 cedis", "40 cedis"],
     answer:
-      "GBS pricing is 100 percent active-student based with zero fixed tenant fees: 3 Cedis monthly per student for Nursery to JHS, 5 Cedis for SHS and Technical institutes, and 10 Cedis for Universities, with 3, 5, 7, and 12 percent multi-month discounts.",
+      "All new institutions receive a 4-Month Full Term Free Trial (120 Days) with zero charge. Thereafter, GBS bills per active student per term or semester: Nursery to JHS is 3 Cedis × 4 months = 12 Cedis per student per term; SHS is 5 Cedis × 4 = 20 Cedis per student per term; TVET Technical Institutes and Universities are 10 Cedis × 4 = 40 Cedis per student per semester, with zero fixed tenant fees.",
     route: "/onboarding"
   },
   {
     id: "staff_approval",
-    keywords: ["approve", "approval", "pending", "new staff", "register", "rejected", "cannot login"],
+    phrases: ["pending staff", "staff approval", "cannot login"],
+    keywords: ["approve", "approval", "pending", "new staff", "rejected", "locked"],
     answer:
-      "All new Teachers, Accountants, HR, and Staff remain pending until the Headmaster approves them in the Headmaster Pending Staff desk; once approved, their role dashboard unlocks immediately.",
+      "All new Teachers, Secretaries, Accountants, HR, and Staff remain pending until the Headmaster approves them in the Headmaster Pending Staff desk; once approved, their role dashboard unlocks immediately.",
     tab: "roster"
   },
   {
     id: "payments",
-    keywords: ["pay", "payment", "momo", "mobile money", "paystack", "hubtel", "telecel", "visa", "card", "receipt"],
+    phrases: ["mobile money", "pay fees", "paystack", "hubtel", "mtn momo"],
+    keywords: ["pay", "payment", "momo", "telecel", "visa", "card", "receipt"],
     answer:
-      "Parents and students pay fees via MTN Mobile Money, Telecel Cash, AT Money, Visa, Mastercard, or Bank Transfer through Paystack and Hubtel. Receipts update instantly across Student, Parent, and Accountant ledgers without ever storing MoMo PINs or CVVs.",
+      "Parents and students pay fees with any phone number via MTN Mobile Money, Telecel Cash, AT Money, Visa, Mastercard, or Bank Transfer through Paystack and Hubtel. Receipts update instantly across Student, Parent, and Accountant ledgers without ever storing MoMo PINs or CVVs.",
     tab: "fees"
   },
   {
     id: "proctoring",
-    keywords: ["proctor", "exam monitor", "cheat", "start exam", "camera"],
+    phrases: ["ai proctoring", "exam monitor", "start exam", "camera wall"],
+    keywords: ["proctor", "cheat", "camera", "evidence", "lost marks", "deduct"],
     answer:
-      "When a student clicks Start Exam, live AI camera focus monitoring, tab-switch guards, and anti-copy protection run continuously until submission or exam completion.",
+      "When a student clicks Start Exam, live AI camera monitoring, focus checks, teacher camera wall snapshots, warnings, saved evidence, and exact lost-mark deductions run continuously until submission.",
     tab: "exams"
   },
   {
     id: "translator",
+    phrases: ["system language", "switch language", "language translator"],
     keywords: ["translat", "language", "twi", "ga", "french", "ewe", "hausa", "meaning"],
     answer:
-      "The movable Language Translator pill drags anywhere on screen, translates with exact dictionary meaning across Twi, Ga, Ewe, Fante, Hausa, French, Spanish, Arabic, and English, and sends translated messages directly to recipient inboxes with full sender details."
+      "The movable Language Translator pill drags anywhere on screen, translates with exact dictionary meaning across Twi, Ga, Ewe, Fante, Hausa, French, Spanish, Arabic, and English, and Headmaster language switching translates the entire institutional workspace.",
+    tab: null
   },
   {
     id: "sms",
-    keywords: ["sms", "text message", "inbox", "dispatch", "phone message"],
+    phrases: ["direct sms", "sms inbox", "text message"],
+    keywords: ["sms", "dispatch", "phone message"],
     answer:
       "Direct Mobile SMS dispatches through Arkesel, Hubtel, mNotify, or Twilio while storing every message and sender metadata in the recipient's live Direct SMS Inbox."
   },
   {
     id: "mobileApp",
-    keywords: ["install", "mobile app", "apk", "pwa", "android", "iphone", "ipad"],
+    phrases: ["mobile app", "apple device", "iphone", "ipad", "mac safari", "install app", "android app"],
+    keywords: ["install", "apk", "pwa", "android", "apple", "ios", "iphone", "ipad", "mobileconfig"],
     answer:
-      "Open Mobile App and Push in the top system banner and click Install App Now to install GBS cleanly onto Android, iPhone, iPad, Windows, or Mac with offline caching."
+      "Open Mobile App and Push in the top banner or Install App on login to install GBS directly onto BOTH Apple devices (iPhone, iPad, Mac via 1-tap Apple .mobileconfig WebClip or Safari Add to Home Screen) AND Android/Windows devices with automatic OTA upgrades."
+  },
+  {
+    id: "live_conferencing_calls",
+    phrases: ["video call", "voice call", "conference call", "teachers meeting", "headmaster parent call"],
+    keywords: ["webrtc", "call parent", "parent call", "meeting", "camera speed", "camera feed"],
+    answer:
+      "GBS delivers high-speed 30fps WebRTC voice & video calls and conferences with instant SSE push signaling across Headmaster, Teacher, Secretary, and Parent portals."
+  },
+  {
+    id: "staff_duty_attendance",
+    phrases: ["clock in", "clock out", "staff attendance", "welcome to school", "auto clock out"],
+    keywords: ["bypass", "clock", "arrival", "closing time"],
+    answer:
+      "All staff clock in upon login under Welcome to School for Headmaster term monitoring (or bypass unmarked), supply a mandatory reason when leaving before school closing time, and are automatically clocked out 2 hours after closing time if forgotten."
   },
   {
     id: "transport",
+    phrases: ["bus route", "campus transport"],
     keywords: ["bus", "transport", "route", "boarding", "pickup"],
     answer:
       "Administrators assign students to commuter bus routes in Headmaster Command Center or Transport Hub, syncing pickup stops and fares to Student and Parent portals.",
@@ -111,6 +220,7 @@ const LOCAL_MEMORY_TOPICS = [
   },
   {
     id: "admissions",
+    phrases: ["student admission", "admissions inquiry", "apply online"],
     keywords: ["admission", "enroll", "enrol", "prospective", "apply"],
     answer:
       "Admissions tracks student inquiries, documents, interviews, and final approval, automatically creating Student and Parent logins alongside an Admission Medical Registration record in the School Clinic.",
@@ -118,34 +228,39 @@ const LOCAL_MEMORY_TOPICS = [
   },
   {
     id: "demoVsLive",
-    keywords: ["demo", "sandbox", "live", "production", "trial"],
+    phrases: ["demo mode", "sandbox mode", "live mode", "real production"],
+    keywords: ["demo", "sandbox", "production"],
     answer:
-      "Demo Sandbox lets users practice every workflow (up to 10 trial entries per module) and switch institution types freely, while Live Production enforces strict tenant data isolation and unlimited real institutional records."
-  },
-  {
-    id: "overview",
-    keywords: ["what is gbs", "about gbs", "about the system", "how does gbs work", "everything", "explain gbs", "roles", "dashboards", "motto", "intelligence talks to wisdom"],
-    answer:
-      "GBS School Management System (motto: Intelligence Talks to Wisdom) unifies Headmaster, Teacher or Lecturer, Student, Parent, Accountant, Staff, HR, and Alumni portals across Nursery to JHS, Senior High School, Technical TVET, and University institutions with School Clinic privacy, Defaulters Monitor, Language Translator, Direct SMS, Payments, Bus Transport, and AI Proctoring."
+      "Demo Sandbox lets users walk through every portal (up to 10 trial entries per module) and switch institution types freely, while Live Production enforces strict school isolation, zero demo/placeholder rows, and unlimited institutional records."
   },
   {
     id: "globalLocale",
-    keywords: ["country", "countries", "language", "currency", "region", "norm", "arabic", "french", "spanish", "international"],
+    phrases: ["country currency", "preferred language", "international school"],
+    keywords: ["country", "countries", "currency", "region", "norm", "arabic", "french", "spanish"],
     answer:
       "GBS operates across any country and preferred language worldwide. Use the Country & Language selector in the banner or login page to switch currencies, academic term norms, speech accents, and RTL support instantly."
   },
   {
     id: "autoUpdates",
-    keywords: ["update", "upgrade", "mobile app update", "new version", "automatic", "cache", "refresh"],
+    phrases: ["automatic update", "mobile app update", "latest version"],
+    keywords: ["update", "upgrade", "new version", "automatic", "cache", "refresh"],
     answer:
-      "GBS Mobile Apps (PWA) and desktop sessions automatically check live build signatures, flush old caches, display an update badge, and upgrade silently whenever improvements ship — no manual reinstall needed."
+      "GBS Apple, Android, and desktop apps automatically detect new builds, flush old caches, and upgrade silently whenever improvements ship — no manual reinstall needed."
   },
   {
     id: "attendance",
+    phrases: ["daily attendance", "student attendance"],
     keywords: ["attendance", "roll call", "present", "late", "absent", "qr scan"],
     answer:
       "Daily Attendance tracks Present, Absent, Late, and Excused entries across classes, syncing instantly to Parent portals and Defaulters alerts.",
     tab: "attendance"
+  },
+  {
+    id: "overview",
+    phrases: ["what is gbs", "about gbs", "how does gbs work"],
+    keywords: ["overview", "everything", "explain gbs", "intelligence talks to wisdom"],
+    answer:
+      "GBS School Management System (motto: Intelligence Talks to Wisdom) unifies Headmaster, Teacher or Lecturer, School Secretary, Student, Parent, Accountant, Staff, HR, and Alumni portals across Nursery to JHS, Senior High School, Technical TVET, and University institutions."
   }
 ];
 
@@ -613,12 +728,24 @@ export default function GBSVoiceAssistant() {
   };
 
   const matchInstantLocalMemory = (cleanCmd) => {
+    const qTokens = cleanCmd.split(/[^a-z0-9]+/).filter(Boolean);
+    const wantsPortalBreakdown = /\b(portal|dashboard|role|activities|duties|tabs|features|about)\b/i.test(cleanCmd);
     let best = null;
     let bestScore = 0;
     for (const item of LOCAL_MEMORY_TOPICS) {
       let score = 0;
-      for (const kw of item.keywords) {
-        if (cleanCmd.includes(kw)) score += kw.includes(" ") ? 3 : 2;
+      for (const ph of (item.phrases || [])) {
+        if (cleanCmd.includes(ph)) score += 10;
+      }
+      for (const kw of (item.keywords || [])) {
+        if (kw.includes(" ")) {
+          if (cleanCmd.includes(kw)) score += 6;
+        } else if (qTokens.includes(kw) || cleanCmd.includes(kw)) {
+          score += qTokens.includes(kw) ? 4 : 2;
+        }
+      }
+      if (wantsPortalBreakdown && item.id.startsWith("role_") && score > 0) {
+        score += 4;
       }
       if (score > bestScore) {
         bestScore = score;
@@ -677,7 +804,7 @@ export default function GBSVoiceAssistant() {
     }
 
     // 1. Explicit Pure-Navigation Portal Commands (Explanations fall through to full System Memory AI)
-    const isExplanationQuery = /\b(explain|how|what|why|tell me|describe|pull clinic|pull medical|can)\b/i.test(cleanCmd);
+    const isExplanationQuery = /\b(explain|how|what|why|tell me|want to know|know about|describe|pull clinic|pull medical|can)\b/i.test(cleanCmd);
     if (!isExplanationQuery && (cleanCmd.includes("open clinic") || cleanCmd.includes("go to clinic") || cleanCmd === "school clinic" || cleanCmd.includes("open sickbay"))) {
       triggerDashboardTab("clinic");
       const stats = memoryCatalogRef.current?.liveStats;
@@ -688,9 +815,13 @@ export default function GBSVoiceAssistant() {
       return;
     }
 
-    if (cleanCmd.includes("login") || cleanCmd.includes("sign in") || cleanCmd.includes("open headmaster") || cleanCmd.includes("open student") || cleanCmd.includes("open teacher") || cleanCmd.includes("open parent") || cleanCmd.includes("open accountant") || cleanCmd.includes("open staff")) {
+    if (!isExplanationQuery && (cleanCmd.includes("login") || cleanCmd.includes("sign in") || cleanCmd.includes("open headmaster") || cleanCmd.includes("open secretary") || cleanCmd.includes("open student") || cleanCmd.includes("open teacher") || cleanCmd.includes("open parent") || cleanCmd.includes("open accountant") || cleanCmd.includes("open staff"))) {
       if (cleanCmd.includes("admin") || cleanCmd.includes("headmaster")) {
         executeReply("Opening the Headmaster Executive Command Portal now.", { navigateTo: "/login/admin" });
+        return;
+      }
+      if (cleanCmd.includes("secretary")) {
+        executeReply("Opening the School Secretary Portal now.", { navigateTo: "/login/secretary" });
         return;
       }
       if (cleanCmd.includes("teacher") || cleanCmd.includes("lecturer")) {
@@ -792,7 +923,7 @@ export default function GBSVoiceAssistant() {
       : "";
     const generalFormation = buildLocalQuestionFormation(raw, "GBS Unified System Overview");
     executeReply(
-      `On GBS SYSTEM (v${memorySyncedVersion}), each institutional user operates inside a portal tailored to your registered institution (Nursery–JHS, SHS, TVET, or University): Headmasters manage admissions, approvals, fee structures, language settings, and all Staff & Student clinic dossiers; Teachers/Lecturers deliver coursework, grade assignments, practicals, and Internships or Attachments, mark attendance, and run AI-proctored exams; Students take exams and submit Internships or Attachments; Parents monitor their linked wards; Accountants reconcile fees & payroll; Non-Teaching Staff manage campus logistics; HR handles recruitment & leave; Alumni access transcripts. Non-Headmaster users only see their own (or ward's) clinic profile.`,
+      `On GBS SYSTEM (v${memorySyncedVersion}), each institutional user operates inside a portal tailored to your registered institution (Nursery–JHS, SHS, TVET, or University): Headmasters approve users, set official School Stationery prices, inspect Staff Clock-In logs, configure language settings, and manage all clinic dossiers; Teachers/Lecturers deliver coursework, Topic Videos, AI-proctored exam cameras, live calls, and Internships/Attachments; School Secretaries handle visitor logs, official letters/circulars, appointments, and stationery sales/expenses; Students take proctored exams and submit assignments or placements; Parents monitor wards and pay fees via MoMo; Accountants reconcile fees & synced stationery expenses; Non-Teaching Staff manage campus logistics; HR handles contracts & leave; Alumni access transcripts.`,
       null,
       generalFormation
     );

@@ -18,6 +18,7 @@ import { getActiveInstitutionType, getInstitutionRoleProfile } from "../../../..
 import UniversityOperationsPanel from "../../../../../components/common/UniversityOperationsPanel";
 import StudentDefaultersCompliancePanel from "../../../../../components/common/StudentDefaultersCompliancePanel";
 import SchoolClinicHubPanel from "../../../../../components/common/SchoolClinicHubPanel";
+import SchoolStationeryHubPanel from "../../../../../components/common/SchoolStationeryHubPanel";
 import HeadmasterStaffAttendanceView from "../../../../../components/common/HeadmasterStaffAttendanceView";
 import LiveCallLauncherAndReceiver from "../../../../../components/common/LiveCallLauncherAndReceiver";
 import OfficialPaymentGatewayModal from "../../../../../components/common/OfficialPaymentGatewayModal";
@@ -573,18 +574,18 @@ export function AdminDashboard({ initialTab } = {}) {
   const [subInstitutionTier, setSubInstitutionTier] = useState(() => {
     const t = getActiveInstitutionType();
     return t === "SENIOR_HIGH_SCHOOL" ? "SHS" : t;
-  }); // NURSERY_TO_JHS (GH₵3) | SHS/TECHNICAL (GH₵5) | UNIVERSITY (GH₵10)
+  }); // NURSERY_TO_JHS (GH₵3/mo • 12/term) | SHS (GH₵5/mo • 20/term) | TECHNICAL/UNIVERSITY (GH₵10/mo • 40/semester)
   const [subStudentCount, setSubStudentCount] = useState("300");
-  const [subTermPlan, setSubTermPlan] = useState("6_MONTHS"); // 1_MONTH | 3_MONTHS | 6_MONTHS | 9_MONTHS | 12_MONTHS
+  const [subTermPlan, setSubTermPlan] = useState("4_MONTHS"); // 4_MONTHS | 3_MONTHS | 6_MONTHS | 9_MONTHS | 12_MONTHS
   const [subPaymentScheduleMode, setSubPaymentScheduleMode] = useState("BULK_FULL_TERM"); // MONTHLY_SPREAD | BULK_FULL_TERM
   const [subBulkTermsAccepted, setSubBulkTermsAccepted] = useState(true);
   const [subBulkSignatory, setSubBulkSignatory] = useState(() => `${currentUser?.firstName || "Arthur"} ${currentUser?.lastName || "Pendleton"}`);
 
-  const subPerStudentRate = subInstitutionTier === "UNIVERSITY" ? 10 : (subInstitutionTier === "SHS" || subInstitutionTier === "SENIOR_HIGH_SCHOOL" || subInstitutionTier === "TECHNICAL") ? 5 : 3;
+  const subPerStudentRate = (subInstitutionTier === "UNIVERSITY" || subInstitutionTier === "TECHNICAL") ? 10 : (subInstitutionTier === "SHS" || subInstitutionTier === "SENIOR_HIGH_SCHOOL") ? 5 : 3;
   const subMonthlyFee = (Math.max(0, parseInt(subStudentCount, 10) || 0)) * subPerStudentRate;
-  const subMonthsMap = { "1_MONTH": 1, "3_MONTHS": 3, "6_MONTHS": 6, "9_MONTHS": 9, "12_MONTHS": 12, "LIFETIME": 12 };
-  const subDiscountMap = { "1_MONTH": 0, "3_MONTHS": 3, "6_MONTHS": 5, "9_MONTHS": 7, "12_MONTHS": 10, "LIFETIME": 10 };
-  const subMonthsCount = subMonthsMap[subTermPlan] || 6;
+  const subMonthsMap = { "4_MONTH_TRIAL": 4, "4_MONTHS": 4, "1_TERM": 4, "1_MONTH": 1, "3_MONTHS": 3, "6_MONTHS": 6, "9_MONTHS": 9, "12_MONTHS": 12, "LIFETIME": 12 };
+  const subDiscountMap = { "4_MONTH_TRIAL": 0, "4_MONTHS": 0, "1_TERM": 0, "1_MONTH": 0, "3_MONTHS": 3, "6_MONTHS": 5, "9_MONTHS": 7, "12_MONTHS": 10, "LIFETIME": 10 };
+  const subMonthsCount = subMonthsMap[subTermPlan] || 4;
   const subDiscountPct = subDiscountMap[subTermPlan] || 0;
   const subGrossTermFee = subMonthlyFee * subMonthsCount;
   const subDiscountAmount = Math.round(subGrossTermFee * (subDiscountPct / 100) * 100) / 100;
@@ -1873,7 +1874,9 @@ export function AdminDashboard({ initialTab } = {}) {
   const startLiveWebcam = async () => {
     try {
       if (navigator.mediaDevices && navigator.mediaDevices.getUserMedia) {
-        const stream = await navigator.mediaDevices.getUserMedia({ video: { width: 480, height: 360 } });
+        const stream = await navigator.mediaDevices.getUserMedia({
+          video: { width: { ideal: 480 }, height: { ideal: 360 }, frameRate: { ideal: 30, min: 24 } }
+        });
         facialStreamRef.current = stream;
         if (facialVideoRef.current) {
           facialVideoRef.current.srcObject = stream;
@@ -3864,7 +3867,10 @@ export function AdminDashboard({ initialTab } = {}) {
     }
     try {
       if (navigator.mediaDevices && navigator.mediaDevices.getUserMedia) {
-        const stream = await navigator.mediaDevices.getUserMedia({ video: true, audio: false });
+        const stream = await navigator.mediaDevices.getUserMedia({
+          video: { width: { ideal: 640 }, height: { ideal: 360 }, frameRate: { ideal: 30, min: 24 } },
+          audio: false
+        });
         cctvLiveStreamRef.current = stream;
         setCctvWebcamActive(true);
         setTimeout(() => {
@@ -6286,6 +6292,15 @@ export function AdminDashboard({ initialTab } = {}) {
               style={{ borderLeft: "3px solid #10b981", color: activeTab === "clinic" ? "#ffffff" : "#6ee7b7", fontWeight: 800 }}
             >
               🏥 School Clinic &amp; Medical Registry
+            </button>
+            <button
+              type="button"
+              data-testid="admin-stationery-tab"
+              className={`role-tab-btn ${activeTab === "stationery" ? "active" : ""}`}
+              onClick={() => setActiveTab("stationery")}
+              style={{ borderLeft: "3px solid #d4af37", color: activeTab === "stationery" ? "#f6dd84" : undefined, fontWeight: 800 }}
+            >
+              🎒 School Stationery &amp; Price Desk
             </button>
             <button
               type="button"
@@ -11976,6 +11991,15 @@ export function AdminDashboard({ initialTab } = {}) {
             />
           )}
 
+          {activeTab === "stationery" && (
+            <div className="role-workspace-card">
+              <SchoolStationeryHubPanel
+                mode="HEADMASTER"
+                currentUser={currentUser}
+              />
+            </div>
+          )}
+
           {activeTab === "staffAttendance" && (
             <HeadmasterStaffAttendanceView
               currentUser={currentUser}
@@ -12777,10 +12801,10 @@ export function AdminDashboard({ initialTab } = {}) {
                           fontWeight: 700
                         }}
                       >
-                        <option value="NURSERY_TO_JHS">Nursery – JHS (GH₵ 3 / Active Student / Month)</option>
-                        <option value="SHS">Senior High School - SHS (GH₵ 5 / Active Student / Month)</option>
-                        <option value="TECHNICAL">Technical & Vocational Institute - TVET (GH₵ 5 / Active Student / Month)</option>
-                        <option value="UNIVERSITY">University Level (GH₵ 10 / Active Student / Month)</option>
+                        <option value="NURSERY_TO_JHS">Nursery – JHS (GH₵ 3/mo • GH₵ 12 / Term)</option>
+                        <option value="SHS">Senior High School - SHS (GH₵ 5/mo • GH₵ 20 / Term)</option>
+                        <option value="TECHNICAL">Technical & Vocational Institute - TVET (GH₵ 10/mo • GH₵ 40 / Semester)</option>
+                        <option value="UNIVERSITY">University Level (GH₵ 10/mo • GH₵ 40 / Semester)</option>
                       </select>
                     </div>
 
@@ -12836,11 +12860,11 @@ export function AdminDashboard({ initialTab } = {}) {
                   {/* Official 5 Payment Periods Selector */}
                   <div style={{ marginBottom: "0.9rem" }}>
                     <label style={{ display: "block", color: "#cbd5e1", fontSize: "0.78rem", fontWeight: 700, marginBottom: "6px" }}>
-                      Official Subscription Duration &amp; Discount (1, 3, 6, 9, 12 Months):
+                      Official Subscription Term &amp; Multi-Month Periods (4 Months Term = Monthly Rate × 4):
                     </label>
                     <div style={{ display: "grid", gridTemplateColumns: "repeat(5, 1fr)", gap: "6px" }}>
                       {[
-                        { id: "1_MONTH", label: "1 Month (0%)", months: 1, discountPct: 0 },
+                        { id: "4_MONTHS", label: "4 Months (1 Term/Sem)", months: 4, discountPct: 0 },
                         { id: "3_MONTHS", label: "3 Months (3%)", months: 3, discountPct: 3 },
                         { id: "6_MONTHS", label: "6 Months (5%)", months: 6, discountPct: 5 },
                         { id: "9_MONTHS", label: "9 Months (7%)", months: 9, discountPct: 7 },

@@ -38,6 +38,8 @@ const communicationRoutes = require('../modules/communication/communication.rout
 const libraryRoutes = require('../modules/library/library.routes');
 const transportRoutes = require('../modules/transport/transport.routes');
 const inventoryRoutes = require('../modules/inventory/inventory.routes');
+const stationeryRoutes = require('../modules/stationery/stationery.routes');
+const secretaryRoutes = require('../modules/secretary/secretary.routes');
 const hrRoutes = require('../modules/hr/hr.routes');
 const facilityRoutes = require('../modules/facility/facility.routes');
 const digitalTwinRoutes = require('../modules/digital-twin/digitalTwin.routes');
@@ -163,12 +165,110 @@ app.get('/api/v1/app-version', (req, res) => {
     status: 'success',
     data: {
       bundleHash,
-      swVersion: 'gbs-cache-v2026.19',
+      swVersion: 'gbs-cache-v2026.21',
       autoUpdateEnabled: true,
       checkedAt: new Date().toISOString()
     }
   });
 });
+
+// Public Apple iOS / iPadOS / macOS WebClip Configuration Profile (.mobileconfig)
+const serveAppleWebClipProfile = (req, res) => {
+  const proto = String(req.headers['x-forwarded-proto'] || req.protocol || 'https').split(',')[0].trim();
+  const hostHeader = req.get('host') || 'gbs-system.onrender.com';
+  const rawOrigin = String(req.query.origin || `${proto}://${hostHeader}`).trim();
+  const safeOrigin = /^https?:\/\/[a-zA-Z0-9.-]+(?::\d+)?(?:\/[^\s<>"']*)?$/.test(rawOrigin)
+    ? rawOrigin.replace(/\/+$/, '')
+    : `${proto}://${hostHeader}`;
+
+  const xmlEscape = (v) => String(v || '')
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&apos;');
+
+  let iconBase64 = '';
+  const iconCandidates = [
+    path.resolve(__dirname, '../../public/gbs-logo.png'),
+    path.resolve(__dirname, '../../../frontend/public/gbs-logo.png'),
+    path.resolve(__dirname, '../../public/icons/icon-192x192.png'),
+    path.resolve(__dirname, '../../../frontend/public/icons/icon-192x192.png')
+  ];
+  for (const cand of iconCandidates) {
+    try {
+      if (fs.existsSync(cand)) {
+        iconBase64 = fs.readFileSync(cand).toString('base64');
+        break;
+      }
+    } catch { }
+  }
+
+  const iconXmlBlock = iconBase64
+    ? `\n      <key>Icon</key>\n      <data>${iconBase64}</data>`
+    : '';
+
+  const mobileConfigXml = `<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+  <key>PayloadContent</key>
+  <array>
+    <dict>
+      <key>FullScreen</key>
+      <true/>${iconXmlBlock}
+      <key>IgnoreManifestScope</key>
+      <false/>
+      <key>IsRemovable</key>
+      <true/>
+      <key>Label</key>
+      <string>GBS School</string>
+      <key>PayloadDescription</key>
+      <string>Installs GBS School Management System as a standalone full-screen Apple iOS/iPadOS App</string>
+      <key>PayloadDisplayName</key>
+      <string>GBS School System WebClip</string>
+      <key>PayloadIdentifier</key>
+      <string>com.gbs.schoolsystem.webclip.v2026</string>
+      <key>PayloadType</key>
+      <string>com.apple.webClip.managed</string>
+      <key>PayloadUUID</key>
+      <string>7B5D4A1C-92F1-4E6B-8D7F-1A2B3C4D5E6F</string>
+      <key>PayloadVersion</key>
+      <integer>1</integer>
+      <key>Precomposed</key>
+      <true/>
+      <key>URL</key>
+      <string>${xmlEscape(safeOrigin)}/</string>
+    </dict>
+  </array>
+  <key>PayloadDescription</key>
+  <string>Official GBS School Management System Home Screen App Profile for iPhone, iPad &amp; Mac</string>
+  <key>PayloadDisplayName</key>
+  <string>GBS School System App</string>
+  <key>PayloadIdentifier</key>
+  <string>com.gbs.schoolsystem.profile</string>
+  <key>PayloadOrganization</key>
+  <string>GBS Technology</string>
+  <key>PayloadRemovalDisallowed</key>
+  <false/>
+  <key>PayloadType</key>
+  <string>Configuration</string>
+  <key>PayloadUUID</key>
+  <string>9A8E2B4D-10C3-4A5E-B6F0-9E8D7C6B5A4F</string>
+  <key>PayloadVersion</key>
+  <integer>1</integer>
+</dict>
+</plist>
+`;
+
+  res.setHeader('Cache-Control', 'no-store, no-cache, must-revalidate');
+  res.setHeader('Content-Type', 'application/x-apple-aspen-config; charset=utf-8');
+  res.setHeader('Content-Disposition', 'attachment; filename="GBS-School-System-iOS.mobileconfig"');
+  res.status(200).send(mobileConfigXml);
+};
+
+app.get('/api/v1/app/ios-webclip.mobileconfig', serveAppleWebClipProfile);
+app.get('/api/v1/auth/ios-webclip.mobileconfig', serveAppleWebClipProfile);
 
 app.get('/api/v1/network-info', (req, res) => {
   const os = require('os');
@@ -277,6 +377,10 @@ app.use('/api/v1/transport', transportRoutes);
 app.use('/api/v1/transports', transportRoutes);
 app.use('/api/v1/inventory', inventoryRoutes);
 app.use('/api/v1/procurement', inventoryRoutes);
+app.use('/api/v1/stationery', stationeryRoutes);
+app.use('/api/v1/stationary', stationeryRoutes);
+app.use('/api/v1/secretary', secretaryRoutes);
+app.use('/api/v1/front-desk', secretaryRoutes);
 app.use('/api/v1/hr', hrRoutes);
 app.use('/api/v1/staff-management', hrRoutes);
 app.use('/api/v1/ai/exam-scanner', aiExamRoutes);
@@ -419,14 +523,25 @@ app.post('/api/v1/subscriptions/calculate-and-subscribe', (req, res) => {
   const body = req.body || {};
   const tier = String(body.institutionType || body.tier || 'NURSERY_TO_JHS').toUpperCase();
   const studentCount = Math.max(1, parseInt(body.studentCount || body.totalStudentsEnrolled || 100, 10));
-  // Official GBS Student Subscription Rates: Nursery–JHS = GH₵3, SHS = GH₵5, University = GH₵10
-  const ratePerStudent = tier.includes('UNI') || tier.includes('TERTIARY') ? 10 : (tier.includes('SHS') || tier.includes('SENIOR')) ? 5 : 3;
+  // Official GBS Student Subscription Rates:
+  // Nursery–JHS = GH₵3/mo (12/term) | SHS = GH₵5/mo (20/term) | TVET & University = GH₵10/mo (40/semester)
+  const ratePerStudent = (tier.includes('UNI') || tier.includes('TERTIARY') || tier.includes('TECH') || tier.includes('TVET') || tier.includes('VOCAT') || tier.includes('POLYTECH'))
+    ? 10
+    : (tier.includes('SHS') || tier.includes('SENIOR') || tier.includes('SECONDARY'))
+      ? 5
+      : 3;
   // 100% student-based: zero fixed tenant fees, zero basic package fees, zero additional access charges
   const monthlyFee = ratePerStudent * studentCount;
-  const plan = String(body.subscriptionPlan || body.term || '3_MONTHS').toUpperCase();
+  const plan = String(body.subscriptionPlan || body.term || '4_MONTH_TRIAL').toUpperCase();
+  const isTrialPlan = plan === '4_MONTH_TRIAL' || plan === '1_MONTH_TRIAL' || plan === 'TERM_TRIAL' || plan === 'FREE_TRIAL';
   const monthsMap = {
     '1_MONTH': 1,
-    '1_MONTH_TRIAL': 1,
+    '1_MONTH_TRIAL': 4,
+    '4_MONTH_TRIAL': 4,
+    'TERM_TRIAL': 4,
+    'FREE_TRIAL': 4,
+    '4_MONTHS': 4,
+    '1_TERM': 4,
     '3_MONTHS': 3,
     '6_MONTHS': 6,
     '9_MONTHS': 9,
@@ -436,21 +551,28 @@ app.post('/api/v1/subscriptions/calculate-and-subscribe', (req, res) => {
   const discountMap = {
     '1_MONTH': 0,
     '1_MONTH_TRIAL': 0,
+    '4_MONTH_TRIAL': 0,
+    'TERM_TRIAL': 0,
+    'FREE_TRIAL': 0,
+    '4_MONTHS': 0,
+    '1_TERM': 0,
     '3_MONTHS': 3,
     '6_MONTHS': 5,
     '9_MONTHS': 7,
     '12_MONTHS': 10,
     'LIFETIME': 10
   };
-  const monthsSubscribed = monthsMap[plan] || 3;
+  const monthsSubscribed = monthsMap[plan] || 4;
   const discountPct = discountMap[plan] || 0;
   const grossTermFee = monthlyFee * monthsSubscribed;
   const discountAmount = Math.round(grossTermFee * (discountPct / 100) * 100) / 100;
-  const totalTermFee = Math.round((grossTermFee - discountAmount) * 100) / 100;
+  const totalTermFee = isTrialPlan ? 0 : Math.round((grossTermFee - discountAmount) * 100) / 100;
   const paymentScheduleMode = body.paymentScheduleMode || 'BULK_FULL_TERM'; // 'MONTHLY_SPREAD' | 'BULK_FULL_TERM'
-  const amountDueNow = paymentScheduleMode === 'BULK_FULL_TERM'
-    ? totalTermFee
-    : Math.round((totalTermFee / monthsSubscribed) * 100) / 100;
+  const amountDueNow = isTrialPlan
+    ? 0
+    : (paymentScheduleMode === 'BULK_FULL_TERM'
+      ? totalTermFee
+      : Math.round((totalTermFee / monthsSubscribed) * 100) / 100);
 
   const { convertGhsToCountryCurrency } = require('../utils/countryLanguageNorms');
   const now = new Date();
@@ -510,11 +632,15 @@ app.post('/api/v1/subscriptions/calculate-and-subscribe', (req, res) => {
 app.post('/api/v1/subscriptions/recalculate-population', (req, res) => {
   const body = req.body || {};
   const tier = String(body.institutionType || body.tier || 'NURSERY_TO_JHS').toUpperCase();
-  const ratePerStudent = tier.includes('UNI') || tier.includes('TERTIARY') ? 10 : (tier.includes('SHS') || tier.includes('SENIOR')) ? 5 : 3;
+  const ratePerStudent = (tier.includes('UNI') || tier.includes('TERTIARY') || tier.includes('TECH') || tier.includes('TVET') || tier.includes('VOCAT') || tier.includes('POLYTECH'))
+    ? 10
+    : (tier.includes('SHS') || tier.includes('SENIOR') || tier.includes('SECONDARY'))
+      ? 5
+      : 3;
   const previousStudents = Math.max(0, parseInt(body.previousStudents || 200, 10));
   const newActiveStudents = Math.max(0, parseInt(body.newActiveStudents || 300, 10));
-  const months = Math.max(1, parseInt(body.months || 3, 10));
-  const discountMap = { 1: 0, 3: 3, 6: 5, 9: 7, 12: 10 };
+  const months = Math.max(1, parseInt(body.months || 4, 10));
+  const discountMap = { 1: 0, 3: 3, 4: 0, 6: 5, 9: 7, 12: 10 };
   const discountPct = discountMap[months] || 0;
 
   const previousMonthly = previousStudents * ratePerStudent;
@@ -614,41 +740,43 @@ app.use(errorHandler);
 const PORT = envConfig.port || 5000;
 const HOST = process.env.HOST || '0.0.0.0';
 
-const server = app.listen(PORT, HOST, async () => {
-  console.log(`🚀 [GBS SYSTEM] Server running on http://${HOST}:${PORT} (LAN & Mobile accessible) in ${envConfig.env} mode.`);
-  try {
-    initializeSocket(server);
-    readPersistentStore();
+let server = null;
+if (process.env.GBS_NO_LISTEN !== '1') {
+  server = app.listen(PORT, HOST, async () => {
+    console.log(`🚀 [GBS SYSTEM] Server running on http://${HOST}:${PORT} (LAN & Mobile accessible) in ${envConfig.env} mode.`);
     try {
-      const staffAttendanceService = require('../modules/attendance/staffAttendance.service');
-      if (typeof staffAttendanceService.startAutoStaffClockOutScheduler === 'function') {
-        staffAttendanceService.startAutoStaffClockOutScheduler(60000);
-      }
-    } catch { }
-    if (process.env.DATABASE_URL) {
-      const prismaClient = require('./database/prisma.client');
-      const { exec } = require('child_process');
-      const { promisify } = require('util');
-      const backendRoot = require('path').resolve(__dirname, '../..');
-
-      let pgReachable = false;
-      for (let attempt = 1; attempt <= 3; attempt++) {
-        pgReachable = await checkPostgresReachable(2500);
-        if (pgReachable) break;
-        if (attempt < 3) {
-          await new Promise((r) => setTimeout(r, 1500));
+      initializeSocket(server);
+      readPersistentStore();
+      try {
+        const staffAttendanceService = require('../modules/attendance/staffAttendance.service');
+        if (typeof staffAttendanceService.startAutoStaffClockOutScheduler === 'function') {
+          staffAttendanceService.startAutoStaffClockOutScheduler(60000);
         }
-      }
+      } catch { }
+      if (process.env.DATABASE_URL) {
+        const prismaClient = require('./database/prisma.client');
+        const { exec } = require('child_process');
+        const { promisify } = require('util');
+        const backendRoot = require('path').resolve(__dirname, '../..');
 
-      if (pgReachable) {
-        if (typeof prismaClient.resetPostgresCache === 'function') {
-          prismaClient.resetPostgresCache();
+        let pgReachable = false;
+        for (let attempt = 1; attempt <= 3; attempt++) {
+          pgReachable = await checkPostgresReachable(2500);
+          if (pgReachable) break;
+          if (attempt < 3) {
+            await new Promise((r) => setTimeout(r, 1500));
+          }
         }
-        try {
-          console.log('🔄 [DATABASE] Initializing active PostgreSQL primary connection & schema...');
-          await prismaClient.$connect().catch(() => { });
 
-          await prismaClient.$executeRawUnsafe(`
+        if (pgReachable) {
+          if (typeof prismaClient.resetPostgresCache === 'function') {
+            prismaClient.resetPostgresCache();
+          }
+          try {
+            console.log('🔄 [DATABASE] Initializing active PostgreSQL primary connection & schema...');
+            await prismaClient.$connect().catch(() => { });
+
+            await prismaClient.$executeRawUnsafe(`
             DO $$
             BEGIN
               IF EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name = 'cctv_streams' AND column_name = 'rtsp_endpoint') THEN
@@ -660,96 +788,97 @@ const server = app.listen(PORT, HOST, async () => {
             END $$;
           `).catch(() => { });
 
-          try {
-            const existingTables = await prismaClient.$queryRawUnsafe(`
+            try {
+              const existingTables = await prismaClient.$queryRawUnsafe(`
               SELECT COUNT(*)::int AS cnt
               FROM information_schema.tables
               WHERE table_schema = 'public'
                 AND table_name IN ('tenants', 'users', 'shard_registry', 'replica_status', 'cctv_streams', 'security_gate_events');
             `).catch(() => []);
-            const tableCount = Array.isArray(existingTables) ? Number(existingTables[0]?.cnt || 0) : 0;
+              const tableCount = Array.isArray(existingTables) ? Number(existingTables[0]?.cnt || 0) : 0;
 
-            if (tableCount < 6) {
-              const prismaCliPath = require.resolve('prisma/build/index.js');
-              const schemaPath = path.join(backendRoot, 'prisma', 'schema.prisma');
-              await promisify(exec)(
-                `"${process.execPath}" "${prismaCliPath}" db push --schema="${schemaPath}" --skip-generate --accept-data-loss`,
-                {
-                  cwd: backendRoot,
-                  timeout: 90000,
-                  maxBuffer: 8 * 1024 * 1024,
-                  windowsHide: true
-                }
-              );
+              if (tableCount < 6) {
+                const prismaCliPath = require.resolve('prisma/build/index.js');
+                const schemaPath = path.join(backendRoot, 'prisma', 'schema.prisma');
+                await promisify(exec)(
+                  `"${process.execPath}" "${prismaCliPath}" db push --schema="${schemaPath}" --skip-generate --accept-data-loss`,
+                  {
+                    cwd: backendRoot,
+                    timeout: 90000,
+                    maxBuffer: 8 * 1024 * 1024,
+                    windowsHide: true
+                  }
+                );
+              }
+              console.log('✅ [DATABASE] PostgreSQL schema tables verified and synchronized.');
+            } catch (pushErr) {
+              console.log('✅ [DATABASE] PostgreSQL schema tables verified (active connection ready).');
             }
-            console.log('✅ [DATABASE] PostgreSQL schema tables verified and synchronized.');
-          } catch (pushErr) {
-            console.log('✅ [DATABASE] PostgreSQL schema tables verified (active connection ready).');
-          }
 
-          try {
-            const { ensurePaymentTables } = require('./database/ensurePaymentTables');
-            await ensurePaymentTables();
-          } catch (paySchemaErr) {
-            console.warn('⚠️ [PAYMENTS] Startup DDL sync notice:', paySchemaErr.message);
-          }
-
-          const pgLive = typeof prismaClient.getPostgresLiveStatus === 'function'
-            ? await prismaClient.getPostgresLiveStatus(true)
-            : { active: await checkPostgresReachable(2000), database: 'gbs_system', versionShort: 'PostgreSQL', latencyMs: 0 };
-
-          if (pgLive.active) {
-            // Seed default sharding & replica topology rows only if tables are empty (e.g. fresh Render DB)
             try {
-              const shardRows = await prismaClient.$queryRawUnsafe('SELECT COUNT(*)::int AS cnt FROM shard_registry;').catch(() => []);
-              if (Array.isArray(shardRows) && Number(shardRows[0]?.cnt) === 0) {
-                await prismaClient.$executeRawUnsafe(`
+              const { ensurePaymentTables } = require('./database/ensurePaymentTables');
+              await ensurePaymentTables();
+            } catch (paySchemaErr) {
+              console.warn('⚠️ [PAYMENTS] Startup DDL sync notice:', paySchemaErr.message);
+            }
+
+            const pgLive = typeof prismaClient.getPostgresLiveStatus === 'function'
+              ? await prismaClient.getPostgresLiveStatus(true)
+              : { active: await checkPostgresReachable(2000), database: 'gbs_system', versionShort: 'PostgreSQL', latencyMs: 0 };
+
+            if (pgLive.active) {
+              // Seed default sharding & replica topology rows only if tables are empty (e.g. fresh Render DB)
+              try {
+                const shardRows = await prismaClient.$queryRawUnsafe('SELECT COUNT(*)::int AS cnt FROM shard_registry;').catch(() => []);
+                if (Array.isArray(shardRows) && Number(shardRows[0]?.cnt) === 0) {
+                  await prismaClient.$executeRawUnsafe(`
                   INSERT INTO shard_registry (shard_key, name, region, host, port, database_name, allocated_tenants, max_tenants, storage_capacity_gb, storage_used_gb, avg_latency_ms, status, is_primary)
                   VALUES ('SHARD-PRIMARY-01', 'Primary PostgreSQL Cluster', 'PRIMARY_REGION', $1, $2, $3, 1, 100, 1000, 12.5, $4, 'ONLINE', true)
                   ON CONFLICT DO NOTHING;
                 `, pgLive.host || 'localhost', Number(pgLive.port || 5432), pgLive.database || 'gbs_system', Number(pgLive.latencyMs || 2.5)).catch(() => { });
-              }
-              const repRows = await prismaClient.$queryRawUnsafe('SELECT COUNT(*)::int AS cnt FROM replica_status;').catch(() => []);
-              if (Array.isArray(repRows) && Number(repRows[0]?.cnt) === 0) {
-                await prismaClient.$executeRawUnsafe(`
+                }
+                const repRows = await prismaClient.$queryRawUnsafe('SELECT COUNT(*)::int AS cnt FROM replica_status;').catch(() => []);
+                if (Array.isArray(repRows) && Number(repRows[0]?.cnt) === 0) {
+                  await prismaClient.$executeRawUnsafe(`
                   INSERT INTO replica_status (replica_name, role, endpoint, region, replication_lag_ms, sync_state, wal_lsn, health_score, is_healthy)
                   VALUES ('pg-primary-node-01', 'PRIMARY', $1, 'PRIMARY_REGION', 0.0, 'STREAMING', '0/1A00000', 100, true)
                   ON CONFLICT DO NOTHING;
                 `, `${pgLive.host || 'localhost'}:${pgLive.port || 5432}`).catch(() => { });
-              }
-            } catch { }
+                }
+              } catch { }
 
-            const defaultData = await authService.seedDefaultAdmin();
-            console.log(`✅ [DATABASE] PostgreSQL ACTIVE (${pgLive.versionShort || 'PostgreSQL'} | DB: ${pgLive.database} | ${pgLive.latencyMs}ms | Pool: ${pgLive.poolActiveConnections || 1}/${pgLive.poolMaxConnections || 25} [Idle: ${pgLive.poolIdleConnections ?? 0}, MaxSafeApp: ${pgLive.maxSafeApplicationConnections || 80}/${pgLive.postgresMaxConnections || 100}]).`);
-            console.log(`✅ [DATABASE] Default Tenant '${defaultData?.tenant?.code || 'GBS-MAIN'}' & Super Admin verified in PostgreSQL.`);
+              const defaultData = await authService.seedDefaultAdmin();
+              console.log(`✅ [DATABASE] PostgreSQL ACTIVE (${pgLive.versionShort || 'PostgreSQL'} | DB: ${pgLive.database} | ${pgLive.latencyMs}ms | Pool: ${pgLive.poolActiveConnections || 1}/${pgLive.poolMaxConnections || 25} [Idle: ${pgLive.poolIdleConnections ?? 0}, MaxSafeApp: ${pgLive.maxSafeApplicationConnections || 80}/${pgLive.postgresMaxConnections || 100}]).`);
+              console.log(`✅ [DATABASE] Default Tenant '${defaultData?.tenant?.code || 'GBS-MAIN'}' & Super Admin verified in PostgreSQL.`);
 
-            // Start 60-second background PostgreSQL idle-in-transaction & leak reaper
-            const reaperTimer = setInterval(async () => {
-              try {
-                cloudInfraManager.backgroundJobs.idleConnectionReaper.runsCount++;
-                cloudInfraManager.backgroundJobs.idleConnectionReaper.lastRunAt = new Date().toISOString();
-                await connectionPoolManager.reapStuckConnections(prismaClient.$queryRawUnsafe.bind(prismaClient), 60);
-              } catch (_) {
-                cloudInfraManager.backgroundJobs.idleConnectionReaper.failuresCount++;
-              }
-            }, 60000);
-            if (typeof reaperTimer.unref === 'function') reaperTimer.unref();
-          } else {
-            console.warn(`⚠️ [DATABASE] PostgreSQL unreachable (${pgLive.error || 'connection failed'}); running Persistent Store fallback.`);
+              // Start 60-second background PostgreSQL idle-in-transaction & leak reaper
+              const reaperTimer = setInterval(async () => {
+                try {
+                  cloudInfraManager.backgroundJobs.idleConnectionReaper.runsCount++;
+                  cloudInfraManager.backgroundJobs.idleConnectionReaper.lastRunAt = new Date().toISOString();
+                  await connectionPoolManager.reapStuckConnections(prismaClient.$queryRawUnsafe.bind(prismaClient), 60);
+                } catch (_) {
+                  cloudInfraManager.backgroundJobs.idleConnectionReaper.failuresCount++;
+                }
+              }, 60000);
+              if (typeof reaperTimer.unref === 'function') reaperTimer.unref();
+            } else {
+              console.warn(`⚠️ [DATABASE] PostgreSQL unreachable (${pgLive.error || 'connection failed'}); running Persistent Store fallback.`);
+            }
+          } catch (dbSyncErr) {
+            console.warn('⚠️ [DATABASE] PostgreSQL initialization notice (Persistent fallback ready):', dbSyncErr.message);
           }
-        } catch (dbSyncErr) {
-          console.warn('⚠️ [DATABASE] PostgreSQL initialization notice (Persistent fallback ready):', dbSyncErr.message);
+        } else {
+          console.warn('⚠️ [DATABASE] PostgreSQL host/port did not respond within startup timeout; running Persistent Store fallback.');
         }
       } else {
-        console.warn('⚠️ [DATABASE] PostgreSQL host/port did not respond within startup timeout; running Persistent Store fallback.');
+        console.log('ℹ️ [DATABASE] DATABASE_URL not configured; running GBS Persistent Hybrid Store.');
       }
-    } else {
-      console.log('ℹ️ [DATABASE] DATABASE_URL not configured; running GBS Persistent Hybrid Store.');
+    } catch (err) {
+      console.log('✅ [DATABASE] GBS Persistent Hybrid Cloud-Local Engine active.');
     }
-  } catch (err) {
-    console.log('✅ [DATABASE] GBS Persistent Hybrid Cloud-Local Engine active.');
-  }
-});
+  });
+}
 
 process.on('unhandledRejection', (err) => {
   const msg = String(err?.message || err || '');
@@ -761,7 +890,7 @@ process.on('unhandledRejection', (err) => {
       if (typeof prismaClient.resetPostgresCache === 'function') {
         prismaClient.resetPostgresCache();
       }
-    } catch (_) {}
+    } catch (_) { }
     return;
   }
   console.error('⚠️ [UNHANDLED REJECTION] Non-fatal runtime rejection logged and contained:', msg);
@@ -774,10 +903,14 @@ const gracefulShutdown = async (signal) => {
     if (typeof prismaClient.$disconnect === 'function') {
       await prismaClient.$disconnect();
     }
-  } catch (_) {}
-  server.close(() => {
+  } catch (_) { }
+  if (server && typeof server.close === 'function') {
+    server.close(() => {
+      process.exit(0);
+    });
+  } else {
     process.exit(0);
-  });
+  }
 };
 
 process.on('SIGTERM', () => gracefulShutdown('SIGTERM'));

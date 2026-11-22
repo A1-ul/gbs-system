@@ -15,6 +15,7 @@ enum UserRole {
   SUPER_ADMIN
   ADMIN
   TEACHER
+  SECRETARY
   STUDENT
   PARENT
   ACCOUNTANT
@@ -79,6 +80,9 @@ model Tenant {
   attendancePolicy    TenantAttendancePolicy?
   staffAttendanceLogs StaffAttendanceRecord[]
   liveCallSessions    LiveCallSession[]
+  stationeryItems     StationeryItem[]
+  stationeryTxns      StationeryTransaction[]
+  secretaryRecords    SecretaryRecord[]
 
   @@index([code])
   @@index([domain])
@@ -1415,6 +1419,7 @@ model SchoolExpense {
 
   @@unique([tenantId, expenseNumber])
   @@index([tenantId])
+  @@index([tenantId, category])
   @@index([category])
   @@index([paymentStatus])
   @@map("school_expenses")
@@ -2101,4 +2106,99 @@ model LiveCallSession {
   @@index([tenantId, roomCode])
   @@index([tenantId, targetUserId, status])
   @@map("live_call_sessions")
+}
+
+// ==================================================
+// SCHOOL STATIONERY STORE & EXPENSE SYNC ENGINE
+// ==================================================
+
+model StationeryItem {
+  id                  String   @id
+  tenantId            Int
+  tenant              Tenant   @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  itemCode            String
+  name                String
+  category            String   // TEXTBOOK, CARDIGAN, SOCKS, SCHOOL_BAG, EXERCISE_BOOK, UNIFORM, OTHER
+  description         String?  @db.Text
+  unitPrice           Float
+  currency            String   @default("GHS")
+  stockQty            Int      @default(0)
+  reorderLevel        Int      @default(10)
+  unitLabel           String   @default("Piece")
+  isActive            Boolean  @default(true)
+  priceLockedByRole   String   @default("ADMIN")
+  priceUpdatedByName  String?
+  priceUpdatedByRole  String?
+  priceUpdatedAt      DateTime @default(now())
+  createdAt           DateTime @default(now())
+  updatedAt           DateTime @updatedAt
+
+  @@unique([tenantId, itemCode])
+  @@index([tenantId, category, isActive])
+  @@map("stationery_items")
+}
+
+model StationeryTransaction {
+  id                  String   @id
+  tenantId            Int
+  tenant              Tenant   @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  referenceNumber     String
+  transactionType     String   // SALE, ORDER_REQUEST, RESTOCK_EXPENSE, OPERATING_EXPENSE
+  itemId              String?
+  itemName            String
+  category            String?
+  quantity            Int      @default(1)
+  unitPrice           Float    @default(0.0)
+  totalAmount         Float
+  currency            String   @default("GHS")
+  buyerName           String?
+  buyerRole           String?
+  buyerClass          String?
+  vendorName          String?
+  paymentStatus       String   @default("PAID") // PAID, PENDING_APPROVAL, RECORDED
+  recordedById        Int?
+  recordedByName      String?
+  recordedByRole      String?
+  linkedExpenseId     Int?
+  linkedExpenseNumber String?
+  notes               String?  @db.Text
+  occurredAt          DateTime @default(now())
+  createdAt           DateTime @default(now())
+
+  @@index([tenantId, transactionType, occurredAt])
+  @@index([tenantId, linkedExpenseNumber])
+  @@map("stationery_transactions")
+}
+
+// ==================================================
+// SCHOOL SECRETARY FRONT-OFFICE & CORRESPONDENCE
+// ==================================================
+
+model SecretaryRecord {
+  id               String    @id
+  tenantId         Int
+  tenant           Tenant    @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  referenceCode    String
+  recordType       String    // VISITOR_LOG, OFFICIAL_LETTER, CIRCULAR, APPOINTMENT, MINUTES
+  title            String
+  subject          String?
+  counterpartyName String?
+  counterpartyRole String?
+  phone            String?
+  email            String?
+  purpose          String?   @db.Text
+  content          String?   @db.Text
+  targetAudience   String?   // ALL_PARENTS, ALL_STAFF, HEADMASTER, TEACHERS, STUDENTS, EXTERNAL
+  scheduledAt      DateTime?
+  checkedInAt      DateTime?
+  checkedOutAt     DateTime?
+  status           String    @default("ACTIVE") // ACTIVE, CHECKED_IN, CHECKED_OUT, SENT, DRAFT, COMPLETED
+  handledById      Int?
+  handledByName    String?
+  createdAt        DateTime  @default(now())
+  updatedAt        DateTime  @updatedAt
+
+  @@index([tenantId, recordType, status])
+  @@index([tenantId, createdAt])
+  @@map("secretary_records")
 }

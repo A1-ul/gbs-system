@@ -1424,20 +1424,20 @@
         "academicYear": "2026-2027",
         "shiftDate": "2026-11-21",
         "clockInAt": "2026-11-21T02:14:45.500Z",
-        "clockOutAt": null,
+        "clockOutAt": "2026-11-22T01:59:00.000Z",
         "scheduledCloseAt": "2026-11-21T23:59:00.000Z",
-        "durationMinutes": null,
-        "hoursWorkedLabel": "Active On Duty",
+        "durationMinutes": 1424,
+        "hoursWorkedLabel": "23h 44m",
         "clockInNote": "Reported to school and clocked in to begin duties.",
-        "clockOutNote": null,
-        "clockOutReason": null,
+        "clockOutNote": "Auto clock-out (23:59 + 2h post-close safety sweep). Staff forgot to clock out manually.",
+        "clockOutReason": "Auto-clocked out by system 2 hours after institution closing time.",
         "bypassedClockIn": false,
         "markedPresent": true,
-        "autoClockOut": false,
+        "autoClockOut": true,
         "lateFlag": false,
-        "status": "CLOCKED_IN",
+        "status": "AUTO_CLOCKED_OUT",
         "createdAt": "2026-11-21T02:14:45.585Z",
-        "updatedAt": "2026-11-21T02:14:45.585Z"
+        "updatedAt": "2026-11-22T15:21:23.721Z"
       }
     ],
     "LiveCallSession": [
@@ -1486,7 +1486,7 @@
     ]
   },
   "rawSqlTables": {},
-  "updatedAt": "2026-11-21T02:19:06.244Z",
+  "updatedAt": "2026-11-22T15:21:23.726Z",
   "auditTrail": [
     {
       "id": "AUD-1795227546232-Y8NI",
@@ -3790,18 +3790,18 @@
         "academicYear": "2026-2027",
         "shiftDate": "2026-11-21",
         "clockInAt": "2026-11-21T02:14:45.500Z",
-        "clockOutAt": null,
+        "clockOutAt": "2026-11-22T01:59:00.000Z",
         "scheduledCloseAt": "2026-11-21T23:59:00.000Z",
         "autoCloseAt": "2026-11-22T01:59:00.000Z",
-        "durationMinutes": null,
-        "hoursWorkedLabel": "Active On Duty",
+        "durationMinutes": 1424,
+        "hoursWorkedLabel": "23h 44m",
         "clockInNote": "Reported to school and clocked in to begin duties.",
-        "clockOutNote": "",
-        "clockOutReason": "",
+        "clockOutNote": "Auto clock-out (23:59 + 2h post-close safety sweep). Staff forgot to clock out manually.",
+        "clockOutReason": "Auto-clocked out by system 2 hours after institution closing time.",
         "bypassedClockIn": false,
         "markedPresent": true,
-        "autoClockOut": false,
-        "status": "CLOCKED_IN",
+        "autoClockOut": true,
+        "status": "AUTO_CLOCKED_OUT",
         "lateFlag": false
       },
       {

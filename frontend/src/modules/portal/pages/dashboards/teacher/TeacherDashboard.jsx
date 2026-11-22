@@ -18,6 +18,7 @@ import {
 import UniversityOperationsPanel from "../../../../../components/common/UniversityOperationsPanel";
 import StudentDefaultersCompliancePanel from "../../../../../components/common/StudentDefaultersCompliancePanel";
 import SchoolClinicHubPanel from "../../../../../components/common/SchoolClinicHubPanel";
+import SchoolStationeryHubPanel from "../../../../../components/common/SchoolStationeryHubPanel";
 import TeacherLiveProctoringPanel from "../../../../../components/common/TeacherLiveProctoringPanel";
 import UniversalRoleGuideModal from "../../../../../components/common/UniversalRoleGuideModal";
 import ClassTopicVideoPlatform from "../../../../../components/common/ClassTopicVideoPlatform";
@@ -4693,6 +4694,15 @@ export default function TeacherDashboard() {
               style={{ borderLeft: "3px solid #f59e0b", color: activeTab === "defaulters" ? "#fde68a" : "#fcd34d", fontWeight: 800 }}
             >
               📋 Defaulters (Exams / Assignments / Attendance)
+            </button>
+            <button
+              type="button"
+              data-testid="teacher-stationery-tab"
+              className={`role-tab-btn ${activeTab === "stationery" ? "active" : ""}`}
+              onClick={() => setActiveTab("stationery")}
+              style={{ borderLeft: "3px solid #d4af37", fontWeight: 800 }}
+            >
+              🎒 School Stationery &amp; Prices
             </button>
             <button
               type="button"
@@ -10343,6 +10353,15 @@ export default function TeacherDashboard() {
         <StudentDefaultersCompliancePanel
           onFeedback={(msg) => setFeedback({ type: "success", message: msg })}
         />
+      )}
+
+      {activeTab === "stationery" && (
+        <div className="role-workspace-card">
+          <SchoolStationeryHubPanel
+            mode="TEACHER"
+            currentUser={currentUser}
+          />
+        </div>
       )}
 
       {activeTab === "clinic" && (

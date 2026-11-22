@@ -49,7 +49,7 @@ const getTenantById = async (id) => {
  * Automated Enterprise Tenant Provisioning Engine
  * Creates:
  * 1. Unique Tenant with System Identifiers (TEN-2026-XXXXXX, GBS-ACC-XXXX)
- * 2. 30-Day Trial Subscription (SUB-2026-XXXXXX)
+ * 2. 4-Month Term Free Trial Subscription (120 Days, SUB-2026-XXXXXX)
  * 3. Default Enterprise License
  * 4. Tenant Administrator Account
  * 5. Permanent Audit Log Entry
@@ -65,7 +65,7 @@ const createTenant = async (data, operatorUser) => {
     : `GBS-ACC-${String(sequenceNum).padStart(4, '0')}`;
 
   const startDate = new Date();
-  const endDate = new Date(startDate.getTime() + 30 * 24 * 60 * 60 * 1000); // 30-day trial
+  const endDate = new Date(startDate.getTime() + 120 * 24 * 60 * 60 * 1000); // 4-month term free trial (120 days)
 
   // Execute ACID Transaction for Provisioning
   const provisionedTenant = await prisma.$transaction(async (tx) => {
@@ -81,11 +81,11 @@ const createTenant = async (data, operatorUser) => {
       }
     });
 
-    // 2. Create Default Subscription (Enterprise Trial)
+    // 2. Create Default Subscription (4-Month Term Free Trial)
     const subscription = await tx.subscription.create({
       data: {
         tenantId: tenant.id,
-        planName: data.planName || 'Enterprise SaaS Tier (30-Day Trial)',
+        planName: data.planName || '4-Month Full Term Free Trial (120 Days)',
         startDate,
         endDate,
         gracePeriodDays: 7,
@@ -141,7 +141,7 @@ const createTenant = async (data, operatorUser) => {
         userId: operatorUser ? operatorUser.id : (adminUser ? adminUser.id : null),
         action: 'TENANT_PROVISIONED',
         module: 'TENANT_MANAGEMENT',
-        details: `Enterprise Tenant '${tenant.name}' (${tenant.code}) provisioned successfully with 30-day trial subscription ending ${endDate.toISOString().split('T')[0]}.`
+        details: `Enterprise Tenant '${tenant.name}' (${tenant.code}) provisioned successfully with 4-month term free trial subscription (120 days) ending ${endDate.toISOString().split('T')[0]}.`
       }
     });
 

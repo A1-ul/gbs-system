@@ -1,12 +1,51 @@
 import React, { useEffect, useRef, useState, useCallback } from "react";
 import apiClient from "../../api/client/apiClient";
+import { getAccessToken } from "../../utils/tokenStorage";
 
 const ICE_CONFIG = {
   iceServers: [
     { urls: "stun:stun.l.google.com:19302" },
     { urls: "stun:stun1.l.google.com:19302" }
-  ]
+  ],
+  iceCandidatePoolSize: 6,
+  bundlePolicy: "max-bundle",
+  rtcpMuxPolicy: "require"
 };
+
+function tuneVideoSenderPerformance(pc, participantCount = 2) {
+  if (!pc || typeof pc.getSenders !== "function") return;
+  const maxBitrate = participantCount >= 4 ? 320000 : participantCount >= 3 ? 450000 : 950000;
+  for (const sender of pc.getSenders()) {
+    if (sender.track?.kind !== "video" || typeof sender.getParameters !== "function") continue;
+    try {
+      const params = sender.getParameters() || {};
+      params.degradationPreference = "maintain-framerate";
+      if (!Array.isArray(params.encodings) || params.encodings.length === 0) {
+        params.encodings = [{}];
+      }
+      params.encodings[0].maxFramerate = 30;
+      params.encodings[0].maxBitrate = maxBitrate;
+      sender.setParameters(params).catch(() => { });
+    } catch { }
+  }
+}
+
+function preferFastHardwareCodecs(pc) {
+  try {
+    if (typeof RTCRtpSender === "undefined" || typeof RTCRtpSender.getCapabilities !== "function") return;
+    const caps = RTCRtpSender.getCapabilities("video");
+    if (!caps?.codecs?.length) return;
+    const preferred = [
+      ...caps.codecs.filter((c) => /VP8|H264/i.test(c.mimeType)),
+      ...caps.codecs.filter((c) => !/VP8|H264/i.test(c.mimeType))
+    ];
+    for (const trans of pc.getTransceivers?.() || []) {
+      if (trans.sender?.track?.kind === "video" && typeof trans.setCodecPreferences === "function") {
+        trans.setCodecPreferences(preferred);
+      }
+    }
+  } catch { }
+}
 
 /**
  * Real WebRTC + Server-Signaled In-System Voice & Video Call / Conference Modal.
@@ -119,8 +158,10 @@ export default function LiveInSystemCallModal({
         if (navigator.mediaDevices && typeof navigator.mediaDevices.getUserMedia === "function") {
           try {
             const stream = await navigator.mediaDevices.getUserMedia({
-              audio: true,
-              video: mediaMode === "VIDEO" ? { width: { ideal: 640 }, height: { ideal: 480 } } : false
+              audio: { echoCancellation: true, noiseSuppression: true, autoGainControl: true },
+              video: mediaMode === "VIDEO"
+                ? { width: { ideal: 640 }, height: { ideal: 360 }, frameRate: { ideal: 30, min: 24 } }
+                : false
             });
             if (!active) {
               stream.getTracks().forEach((t) => t.stop());
@@ -130,7 +171,7 @@ export default function LiveInSystemCallModal({
             if (localVideoRef.current && localVideoRef.current.srcObject !== stream) {
               localVideoRef.current.srcObject = stream;
             }
-            setMediaStatus(mediaMode === "VIDEO" ? "HD Camera & Microphone Live" : "Voice Microphone Live");
+            setMediaStatus(mediaMode === "VIDEO" ? "30FPS Adaptive Camera & Mic Live" : "Voice Microphone Live");
           } catch (hwErr) {
             try {
               const audioOnly = await navigator.mediaDevices.getUserMedia({ audio: true, video: false });
@@ -158,6 +199,8 @@ export default function LiveInSystemCallModal({
             localStreamRef.current.getTracks().forEach((track) => {
               pc.addTrack(track, localStreamRef.current);
             });
+            preferFastHardwareCodecs(pc);
+            tuneVideoSenderPerformance(pc, liveSession?.participants?.length || session?.participants?.length || 2);
           }
 
           pc.ontrack = (evt) => {
@@ -195,6 +238,68 @@ export default function LiveInSystemCallModal({
 
     startMediaAndWebRTC();
 
+    const processIncomingSignal = async (sig) => {
+      const pc = peerConnRef.current;
+      if (!sig) return;
+      if (sig.createdAt) lastSignalTimeRef.current = sig.createdAt;
+      if (!pc || !sig.payload) return;
+      try {
+        if (sig.signalType === "OFFER" && pc.signalingState !== "closed") {
+          await pc.setRemoteDescription(new RTCSessionDescription(sig.payload));
+          const ans = await pc.createAnswer();
+          await pc.setLocalDescription(ans);
+          await sendSignal("ANSWER", ans);
+          tuneVideoSenderPerformance(pc, liveSession?.participants?.length || 2);
+          setRemoteConnected(true);
+        } else if (sig.signalType === "ANSWER" && pc.signalingState === "have-local-offer") {
+          await pc.setRemoteDescription(new RTCSessionDescription(sig.payload));
+          tuneVideoSenderPerformance(pc, liveSession?.participants?.length || 2);
+          setRemoteConnected(true);
+        } else if (sig.signalType === "ICE_CANDIDATE") {
+          await pc.addIceCandidate(new RTCIceCandidate(sig.payload));
+        }
+      } catch { }
+    };
+
+    // Real-time SSE Push Signaling (<15ms latency instead of polling delay)
+    let eventSource = null;
+    try {
+      const tok = getAccessToken();
+      if (tok && typeof EventSource !== "undefined") {
+        const base = String(apiClient.defaults?.baseURL || "/api/v1").replace(/\/+$/, "");
+        const sseUrl = `${base}/video/calls/${encodeURIComponent(callId)}/stream?token=${encodeURIComponent(tok)}`;
+        eventSource = new EventSource(sseUrl);
+
+        eventSource.addEventListener("participant_joined", (evt) => {
+          try {
+            const d = JSON.parse(evt.data);
+            setLiveSession((prev) => prev ? { ...prev, status: d.status || prev.status, participants: d.participants || prev.participants } : prev);
+            if (peerConnRef.current && Array.isArray(d.participants)) {
+              tuneVideoSenderPerformance(peerConnRef.current, d.participants.length);
+            }
+          } catch { }
+        });
+        eventSource.addEventListener("webrtc_signal", (evt) => {
+          try {
+            const d = JSON.parse(evt.data);
+            if (d?.item) processIncomingSignal(d.item);
+          } catch { }
+        });
+        eventSource.addEventListener("chat_message", (evt) => {
+          try {
+            const d = JSON.parse(evt.data);
+            if (d?.item) {
+              setChatLog((prev) => prev.some((m) => m.id === d.item.id) ? prev : [...prev, d.item]);
+            }
+          } catch { }
+        });
+        eventSource.addEventListener("call_ended", () => {
+          setMediaStatus("Call ended");
+          if (typeof onSessionEndedRef.current === "function") onSessionEndedRef.current(liveSession);
+        });
+      }
+    } catch { }
+
     const pollInterval = setInterval(async () => {
       if (!active) return;
       try {
@@ -219,6 +324,9 @@ export default function LiveInSystemCallModal({
             }
             return data.session;
           });
+          if (peerConnRef.current && Array.isArray(data.session.participants)) {
+            tuneVideoSenderPerformance(peerConnRef.current, data.session.participants.length);
+          }
           if (Array.isArray(data.session.chatMessages)) {
             setChatLog((prev) => {
               if (prev.length === data.session.chatMessages.length) return prev;
@@ -232,31 +340,18 @@ export default function LiveInSystemCallModal({
         }
 
         const sigs = Array.isArray(data.signals) ? data.signals : [];
-        const pc = peerConnRef.current;
         for (const sig of sigs) {
-          if (sig.createdAt) lastSignalTimeRef.current = sig.createdAt;
-          if (!pc || !sig.payload) continue;
-          try {
-            if (sig.signalType === "OFFER" && pc.signalingState !== "closed") {
-              await pc.setRemoteDescription(new RTCSessionDescription(sig.payload));
-              const ans = await pc.createAnswer();
-              await pc.setLocalDescription(ans);
-              await sendSignal("ANSWER", ans);
-              setRemoteConnected(true);
-            } else if (sig.signalType === "ANSWER" && pc.signalingState === "have-local-offer") {
-              await pc.setRemoteDescription(new RTCSessionDescription(sig.payload));
-              setRemoteConnected(true);
-            } else if (sig.signalType === "ICE_CANDIDATE") {
-              await pc.addIceCandidate(new RTCIceCandidate(sig.payload));
-            }
-          } catch { }
+          await processIncomingSignal(sig);
         }
       } catch { }
-    }, 1800);
+    }, 3200);
 
     return () => {
       active = false;
       clearInterval(pollInterval);
+      if (eventSource) {
+        try { eventSource.close(); } catch { }
+      }
       stopTracks();
     };
   }, [callId, mediaMode, myUserId, initiatorUserId, sendSignal, stopTracks]);
@@ -354,8 +449,7 @@ export default function LiveInSystemCallModal({
         position: "fixed",
         inset: 0,
         zIndex: 100020,
-        background: "rgba(3, 8, 22, 0.9)",
-        backdropFilter: "blur(10px)",
+        background: "rgba(3, 8, 22, 0.94)",
         display: "flex",
         alignItems: "center",
         justifyContent: "center",
@@ -443,6 +537,8 @@ export default function LiveInSystemCallModal({
                   objectFit: "cover",
                   borderRadius: "8px",
                   background: "#020617",
+                  transform: "translateZ(0)",
+                  willChange: "transform",
                   display: mediaMode === "VIDEO" && !cameraOff ? "block" : "none"
                 }}
               />
@@ -470,6 +566,8 @@ export default function LiveInSystemCallModal({
                   objectFit: "cover",
                   borderRadius: "8px",
                   background: "#020617",
+                  transform: "translateZ(0)",
+                  willChange: "transform",
                   display: remoteConnected ? "block" : "none"
                 }}
               />

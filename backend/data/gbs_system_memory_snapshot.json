@@ -1,7 +1,7 @@
 {
   "systemName": "GBS MANAGEMENT SYSTEM (Global Brightest Stars Educational Management System)",
-  "version": "2.11.0-PRODUCTION-BLUEPRINT",
-  "savedAt": "2026-11-20T14:30:00Z",
+  "version": "2.13.0-PRODUCTION-BLUEPRINT",
+  "savedAt": "2026-11-22T14:00:00Z",
   "status": "PRODUCTION_READY_VERIFIED",
   "architecture": {
     "frontend": {
@@ -13,19 +13,22 @@
       "institutionScopeFile": "frontend/src/utils/institutionScope.js (NURSERY_TO_JHS, SENIOR_HIGH_SCHOOL, TECHNICAL, UNIVERSITY profiles & Demo Switcher)",
       "uniformCrestPalette": "Master Blueprint Palette: Midnight Royal Navy (#081833 / #0d2247) + Metallic Champagne Gold (#f6dd84 / #d4af37 / #cfa028) + Burgundy Wine (#781d2b) + Emerald (#16a34a) + Pearl Canvas (#f3f5f8) + Pure White KPI Cards (#ffffff) with Light Blueprint Default & Navy Toggle",
       "globalLocaleEngine": "frontend/src/utils/i18nCountryEngine.js + frontend/src/components/common/GlobalLocaleSelector.jsx (17 countries, 15 languages incl. RTL Arabic)",
-      "autoAppUpdater": "frontend/src/components/common/AutoAppUpdater.jsx + public/sw.js (gbs-cache-v2026.16) polling /api/v1/app-version for automatic zero-touch PWA & mobile upgrades",
+      "autoAppUpdater": "frontend/src/components/common/AutoAppUpdater.jsx + public/sw.js (gbs-cache-v2026.21) polling /api/v1/app-version + Apple iOS .mobileconfig WebClip & Android PWA install",
       "socialAndFaviconBranding": "frontend/public/og-gbs-crest.jpg + favicon.ico + logo.png + icons/icon-*.png generated from official GBS Crest",
       "topicVideoComponent": "frontend/src/components/common/ClassTopicVideoPlatform.jsx",
+      "stationeryComponent": "frontend/src/components/common/SchoolStationeryHubPanel.jsx (Textbooks, Cardigans, Socks, School Bags across all portals; Headmaster-only pricing + Accountant expense audit)",
+      "secretaryDashboard": "frontend/src/modules/portal/pages/dashboards/secretary/SecretaryDashboard.jsx",
+      "liveVideoConferencing": "frontend/src/components/common/LiveInSystemCallModal.jsx (30fps WebRTC + SSE instant push signaling)",
       "universityOperationsComponent": "frontend/src/components/common/UniversityOperationsPanel.jsx",
       "defaultersComplianceComponent": "frontend/src/components/common/StudentDefaultersCompliancePanel.jsx",
-      "schoolClinicComponent": "frontend/src/components/common/SchoolClinicHubPanel.jsx (linked across Headmaster, Teacher, Student, Parent, Staff & HR portals)",
+      "schoolClinicComponent": "frontend/src/components/common/SchoolClinicHubPanel.jsx (linked across Headmaster, Teacher, Secretary, Student, Parent, Staff & HR portals)",
       "movableAiComponent": "frontend/src/modules/developer-platform/components/DeveloperMovableAIAssistant.jsx",
       "voiceAssistantComponent": "frontend/src/components/common/GBSVoiceAssistant.jsx (real-time 550ms silence detection + System Memory link + explicit Question-Formation Explainer)",
       "translatorComponent": "frontend/src/components/common/UniversalLanguageTranslator.jsx",
       "directSmsModalComponent": "frontend/src/components/common/DirectSMSMessengerModal.jsx",
       "directSmsInboxComponent": "frontend/src/components/common/DirectSMSInboxPanel.jsx",
       "rcceClientAndControlHub": "frontend/src/utils/rcceClient.js + frontend/src/modules/developer-platform/components/RcceControlHub.jsx + frontend/src/components/common/UniversalHeadingTooltipHUD.jsx + TopCenterSystemBanner Open New Tab",
-      "pwaManifestAndSw": "frontend/public/manifest.json + frontend/public/sw.js (gbs-cache-v2026.16)"
+      "pwaManifestAndSw": "frontend/public/manifest.json + frontend/public/sw.js (gbs-cache-v2026.21) + Apple iOS .mobileconfig"
     },
     "backend": {
       "runtime": "Node.js + Express + Socket.IO",
@@ -62,19 +65,38 @@
     }
   },
   "subscriptionPricingMemory": {
-    "policyTitle": "OFFICIAL GBS STUDENT-BASED SUBSCRIPTION PRICING POLICY (Revised GBS Developer Policy)",
-    "pricingPrinciple": "100% student-based subscription model. NO fixed tenant fees, NO basic package fees, NO additional monthly access charges. Inactive, deleted, and archived students do not attract charges.",
+    "policyTitle": "OFFICIAL GBS STUDENT-BASED SUBSCRIPTION PRICING POLICY (Term / Semester & 4-Month Free Trial)",
+    "pricingPrinciple": "100% student-based subscription model with a 4-month full-term free trial (120 days) for all new institutions. Term/Semester formula: monthlyRate * 4 months * activeStudents (Nursery-JHS = GH₵ 3*4 = GH₵ 12/term, SHS = GH₵ 5*4 = GH₵ 20/term, Technical/TVET = GH₵ 10*4 = GH₵ 40/semester, University = GH₵ 10*4 = GH₵ 40/semester). Inactive, deleted, and archived students do not attract charges.",
+    "freeTrialPolicy": {
+      "id": "4_MONTH_TRIAL",
+      "months": 4,
+      "durationDays": 120,
+      "label": "4-Month Full Term Free Trial (120 Days)"
+    },
     "ratesPerStudentPerMonthGHS": {
       "NURSERY_TO_JHS": 3,
       "SHS": 5,
-      "TECHNICAL": 5,
+      "TECHNICAL": 10,
       "UNIVERSITY": 10
     },
-    "formula": "monthlyCharge = activeStudents * ratePerStudent; grossTotal = monthlyCharge * months; discountAmount = grossTotal * (discountPct / 100); netTotalPayment = grossTotal - discountAmount",
+    "ratesPerStudentPerTermSemesterGHS": {
+      "NURSERY_TO_JHS_TERM": 12,
+      "SHS_TERM": 20,
+      "TECHNICAL_SEMESTER": 40,
+      "UNIVERSITY_SEMESTER": 40
+    },
+    "formula": "monthlyCharge = activeStudents * ratePerStudent; termCharge4Months = monthlyCharge * 4; grossTotal = monthlyCharge * months; discountAmount = grossTotal * (discountPct / 100); netTotalPayment = grossTotal - discountAmount",
     "paymentPeriodsAndDiscounts": [
       {
-        "id": "1_MONTH",
-        "months": 1,
+        "id": "4_MONTH_TRIAL",
+        "months": 4,
+        "durationDays": 120,
+        "discountPct": 0,
+        "isTrial": true
+      },
+      {
+        "id": "4_MONTHS",
+        "months": 4,
         "discountPct": 0
       },
       {
@@ -100,7 +122,7 @@
     ],
     "example300StudentsNurseryJhs": {
       "monthlyChargeGHS": 900,
-      "1_month": 900,
+      "term4MonthsGHS": 3600,
       "3_months_3pct_off": 2619,
       "6_months_5pct_off": 5130,
       "9_months_7pct_off": 7533,
@@ -218,7 +240,20 @@
       ],
       "component": "frontend/src/modules/portal/pages/dashboards/staff/StaffDashboard.jsx",
       "keyBehaviors": [
-        "Manages staff attendance, leave applications, salary grouping, loans, and campus operations."
+        "Manages staff attendance, leave applications, salary grouping, loans, stationery sales/expenses, and campus operations."
+      ]
+    },
+    {
+      "id": 10,
+      "name": "School Secretary Portal",
+      "route": "/portal/secretary/dashboard",
+      "aliasRoutes": [
+        "/login/secretary",
+        "/signup/secretary"
+      ],
+      "component": "frontend/src/modules/portal/pages/dashboards/secretary/SecretaryDashboard.jsx",
+      "keyBehaviors": [
+        "Manages Visitor Front-Desk check-in/out logs, Official Letters & Parent/Staff Circulars, Headmaster Appointments, Staff Clock-In attendance, School Stationery Desk & Expense logging synced to Accountant Expenses Ledger, Direct SMS & Voice/Video calls."
       ]
     }
   ],

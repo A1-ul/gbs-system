@@ -11,7 +11,7 @@ router.use(protect);
 router.use(tenantStatusGuard);
 router.use(tenantIsolationGuard);
 
-const ALL_STAFF_ACCESS = ['ADMIN', 'SUPER_ADMIN', 'HEADMASTER', 'PRINCIPAL', 'TEACHER', 'STAFF', 'HR', 'ACCOUNTANT', 'CLINIC_DOCTOR', 'CLINIC_NURSE', 'DEVELOPER'];
+const ALL_STAFF_ACCESS = ['ADMIN', 'SUPER_ADMIN', 'HEADMASTER', 'PRINCIPAL', 'TEACHER', 'SECRETARY', 'STAFF', 'HR', 'ACCOUNTANT', 'CLINIC_DOCTOR', 'CLINIC_NURSE', 'DEVELOPER'];
 const EXECUTIVE_VIEW_ACCESS = ['ADMIN', 'SUPER_ADMIN', 'HEADMASTER', 'PRINCIPAL', 'HR', 'DEVELOPER'];
 
 router.get('/settings', restrictTo(...ALL_STAFF_ACCESS), async (req, res, next) => {

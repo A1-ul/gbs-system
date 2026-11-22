@@ -6648,7 +6648,7 @@ export default function DeveloperDashboard() {
                     ⚙️ OFFICIAL GBS 100% STUDENT-BASED SUBSCRIPTION PRICING & REVENUE POLICY
                   </h4>
                   <span style={{ fontSize: "0.75rem", color: "#94a3b8" }}>
-                    Revised GBS Developer Directive: Nursery–JHS = GH₵{editableRates.JHS}/student • SHS = GH₵{editableRates.SHS}/student • University = GH₵{editableRates.UNIVERSITY}/student • NO fixed tenant or package fees.
+                    Revised GBS Developer Directive: 4-Month Term Free Trial (120 Days) • Nursery–JHS = GH₵{editableRates.JHS}/mo ({editableRates.JHS * 4}/term) • SHS = GH₵{editableRates.SHS}/mo ({editableRates.SHS * 4}/term) • TVET &amp; University = GH₵{editableRates.UNIVERSITY}/mo ({editableRates.UNIVERSITY * 4}/sem) • NO fixed tenant fees.
                   </span>
                 </div>
                 {ratesSavedFeedback && (
@@ -6751,7 +6751,7 @@ export default function DeveloperDashboard() {
                   const isTechTier = rawType.includes("TECH") || rawType.includes("TVET") || rawType.includes("VOCAT");
                   const isShsTier = rawType.includes("SHS") || rawType.includes("SENIOR");
                   const category = isUniTier ? "University" : isTechTier ? "Technical / TVET" : isShsTier ? "SHS" : "Nursery – JHS";
-                  const rate = isUniTier ? (editableRates.UNIVERSITY || 10) : (isTechTier || isShsTier) ? (editableRates.SHS || 5) : (editableRates.JHS || 3);
+                  const rate = (isUniTier || isTechTier) ? (editableRates.UNIVERSITY || 10) : isShsTier ? (editableRates.SHS || 5) : (editableRates.JHS || 3);
                   const activeStu = Number(inst.activeStudents || inst.totalStudentsEnrolled || 0);
                   const prevStu = Number(inst.previousStudents || activeStu);
                   const monthly = activeStu * rate;
@@ -10659,7 +10659,7 @@ export default function DeveloperDashboard() {
                   );
               const totalGhs = countrySubsSummary?.totalConvertedGhsAmount ?? rowsToRender.reduce((acc, r) => acc + (r.convertedGhsAmount || 0), 0);
 
-              const tierRateGhs = fxCalcTier === "UNI" ? 10 : fxCalcTier === "SHS" ? 5 : 3;
+              const tierRateGhs = (fxCalcTier === "UNI" || fxCalcTier === "TVET") ? 10 : fxCalcTier === "SHS" ? 5 : 3;
               const calcBaseGhs = Math.round(Math.max(1, Number(fxCalcStudents) || 0) * tierRateGhs * Math.max(1, Number(fxCalcMonths) || 1) * 100) / 100;
               const calcFx = convertGhsToCountryCurrency(calcBaseGhs, fxCalcCountry);
 
@@ -10711,9 +10711,10 @@ export default function DeveloperDashboard() {
                           onChange={(e) => setFxCalcTier(e.target.value)}
                           style={{ width: "100%", padding: "8px", background: "#020617", color: "#f8fafc", border: "1px solid #334155", borderRadius: "8px" }}
                         >
-                          <option value="JHS">Nursery / Basic / JHS (GH₵ 3/stu)</option>
-                          <option value="SHS">SHS / Technical (GH₵ 5/stu)</option>
-                          <option value="UNI">University / Tertiary (GH₵ 10/stu)</option>
+                          <option value="JHS">Nursery / Basic / JHS (GH₵ 3/mo • 12/term)</option>
+                          <option value="SHS">Senior High / SHS (GH₵ 5/mo • 20/term)</option>
+                          <option value="TVET">Technical / TVET (GH₵ 10/mo • 40/semester)</option>
+                          <option value="UNI">University / Tertiary (GH₵ 10/mo • 40/semester)</option>
                         </select>
                       </div>
                       <div>
@@ -11827,7 +11828,7 @@ export default function DeveloperDashboard() {
                   <div style={{ gridColumn: "1 / -1", background: "rgba(15, 23, 42, 0.75)", padding: "10px", borderRadius: "8px", border: "1px solid rgba(56, 189, 248, 0.35)", display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: "10px" }}>
                     <div>
                       <span style={{ fontSize: "0.7rem", color: "#94a3b8" }}>SUBSCRIBED TERM: </span>
-                      <strong style={{ fontSize: "0.8rem", color: "#38bdf8" }}>{selectedOnboardingAppDossier.subscriptionPlan || selectedOnboardingAppDossier.subscriptionDuration || "1_MONTH_TRIAL"} ({selectedOnboardingAppDossier.subscribedMonths || 1} Mo)</strong>
+                      <strong style={{ fontSize: "0.8rem", color: "#38bdf8" }}>{selectedOnboardingAppDossier.subscriptionPlan || selectedOnboardingAppDossier.subscriptionDuration || "4_MONTH_TRIAL"} ({selectedOnboardingAppDossier.subscribedMonths || 4} Mo)</strong>
                     </div>
                     <div>
                       <span style={{ fontSize: "0.7rem", color: "#94a3b8" }}>PAYMENT STRUCTURE: </span>

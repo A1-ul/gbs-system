@@ -28,7 +28,11 @@ export default function GlobalLocaleSelector({ compact = true, lockedDeveloperEn
       applyDocumentLocale("en", "GH");
       return;
     }
-    applyDocumentLocale(languageCode, countryCode);
+    const latestLang = getPreferredLanguageCode();
+    const latestCountry = getPreferredCountryCode();
+    if (latestLang !== languageCode) setLanguageCode(latestLang);
+    if (latestCountry !== countryCode) setCountryCode(latestCountry);
+    applyDocumentLocale(latestLang, latestCountry);
     const onLocaleEvent = (e) => {
       if (isDeveloperPortalContext()) return;
       if (e?.detail?.country?.code) setCountryCode(e.detail.country.code);

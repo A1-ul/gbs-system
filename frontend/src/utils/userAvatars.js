@@ -45,6 +45,10 @@ export const REAL_LIFE_AVATARS = {
     "https://images.unsplash.com/photo-1580894732444-8ecded7900cd?auto=format&fit=crop&w=400&q=80", // Personnel & Staffing Lead
     "https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?auto=format&fit=crop&w=400&q=80"  // Faculty Compliance Executive
   ],
+  SECRETARY: [
+    "https://images.unsplash.com/photo-1573496359142-b8d87734a5a2?auto=format&fit=crop&w=400&q=80", // School Secretary & Front-Office Coordinator
+    "https://images.unsplash.com/photo-1573497019940-1c28c88b4f3e?auto=format&fit=crop&w=400&q=80"  // Executive Correspondence Officer
+  ],
   DEVELOPER: [
     "https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=400&q=80", // Gabriel Osei - Chief System Engineer
     "https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?auto=format&fit=crop&w=400&q=80", // Enterprise Cloud Architect
@@ -62,6 +66,7 @@ export const LOCAL_FALLBACK_AVATARS = {
   ACCOUNTANT: "/assets/real/accountant_finance.jpg",
   STAFF: "/assets/real/staff_gate_turnstile.jpg",
   HR: "/assets/hr-bg.jpg",
+  SECRETARY: "/assets/staff-dashboard-bg.jpg",
   DEVELOPER: "/assets/admin-avatar.jpg",
   ALUMNI: "/assets/images/graduation.jpg"
 };
@@ -74,6 +79,7 @@ export const ROLE_BACKGROUND_IMAGES = {
   ACCOUNTANT: "/assets/finance-hero-bg.jpg",
   STAFF: "/assets/staff-dashboard-bg.jpg",
   HR: "/assets/hr-bg.jpg",
+  SECRETARY: "/assets/staff-dashboard-bg.jpg",
   DEVELOPER: "/assets/developer-dashboard-hero.jpg",
   ALUMNI: "/assets/academic-records-bg.jpg"
 };

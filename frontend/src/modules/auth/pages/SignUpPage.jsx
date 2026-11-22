@@ -8,6 +8,7 @@ import "./SignUpPage.css";
 const ONBOARDING_TRACKS = [
   { id: "INSTITUTION", title: "Institution Onboarding", icon: "🏫", desc: "Register School / Academy", color: "#3b82f6" },
   { id: "TEACHER", title: "Teacher / Faculty", icon: "👨‍🏫", desc: "Academic Staff Registration", color: "#10b981" },
+  { id: "SECRETARY", title: "School Secretary", icon: "🗂️", desc: "Front Office, Letters & Records", color: "#0ea5e9" },
   { id: "STUDENT", title: "Student Enrollment", icon: "🎓", desc: "Student Admission & Portal", color: "#8b5cf6" },
   { id: "PARENT", title: "Parent / Guardian", icon: "👨‍👩‍👧", desc: "Family & Child Monitoring", color: "#f59e0b" },
   { id: "ACCOUNTANT", title: "Accountant / Bursar", icon: "📊", desc: "Finance & Payroll Officer", color: "#ec4899" },
@@ -19,9 +20,9 @@ const ONBOARDING_TRACKS = [
 
 export const getStudentRate = (instType) => {
   const norm = String(instType || "NURSERY_TO_JHS").toUpperCase();
-  if (norm.includes("UNI") || norm.includes("COLLEGE") || norm.includes("TERTIARY")) return 10; // GH₵ 10 for University
-  if (norm.includes("SHS") || norm.includes("SENIOR") || norm.includes("SECONDARY") || norm.includes("TECH") || norm.includes("TVET")) return 5; // GH₵ 5 for SHS & Technical/TVET
-  return 3; // GH₵ 3 for Nursery – JHS
+  if (norm.includes("UNI") || norm.includes("COLLEGE") || norm.includes("TERTIARY") || norm.includes("TECH") || norm.includes("TVET") || norm.includes("VOCAT") || norm.includes("POLYTECH")) return 10; // GH₵ 10/mo (GH₵ 40 / semester) for TVET & University
+  if (norm.includes("SHS") || norm.includes("SENIOR") || norm.includes("SECONDARY")) return 5; // GH₵ 5/mo (GH₵ 20 / term) for SHS
+  return 3; // GH₵ 3/mo (GH₵ 12 / term) for Nursery – JHS
 };
 
 export const getTierFee = (tierId, instType, studentCount) => {
@@ -29,12 +30,14 @@ export const getTierFee = (tierId, instType, studentCount) => {
   const rate = getStudentRate(instType);
   const monthlyCharge = count > 0 ? rate * count : rate * 100;
 
-  if (tierId === "1_MONTH" || tierId === "1_MONTH_TRIAL") return monthlyCharge; // 0% discount
+  if (tierId === "4_MONTH_TRIAL" || tierId === "1_MONTH_TRIAL") return 0; // Free 4-month term trial
+  if (tierId === "4_MONTHS" || tierId === "1_TERM") return Math.round(monthlyCharge * 4 * 100) / 100; // Full Term/Semester = rate × 4 × students
+  if (tierId === "1_MONTH") return monthlyCharge; // 0% discount
   if (tierId === "3_MONTHS") return Math.round(monthlyCharge * 3 * 0.97 * 100) / 100; // 3% discount
   if (tierId === "6_MONTHS") return Math.round(monthlyCharge * 6 * 0.95 * 100) / 100; // 5% discount
   if (tierId === "9_MONTHS") return Math.round(monthlyCharge * 9 * 0.93 * 100) / 100; // 7% discount
   if (tierId === "12_MONTHS" || tierId === "LIFETIME") return Math.round(monthlyCharge * 12 * 0.90 * 100) / 100; // 10% discount
-  return monthlyCharge;
+  return Math.round(monthlyCharge * 4 * 100) / 100;
 };
 
 export const computeSubscriptionTiers = (instType, studentCountInput) => {
@@ -42,19 +45,34 @@ export const computeSubscriptionTiers = (instType, studentCountInput) => {
   const effectiveStudents = students > 0 ? students : 100;
   const rate = getStudentRate(instType);
   const monthlyCharge = effectiveStudents * rate;
+  const termCharge4Mo = monthlyCharge * 4;
 
   return [
     {
-      id: "1_MONTH",
-      name: "1 Month Subscription",
-      duration: "1 Month (0% Discount)",
-      months: 1,
+      id: "4_MONTH_TRIAL",
+      name: "4-Month Term Free Trial",
+      duration: "1 Full Term (120 Days • Free)",
+      months: 4,
       discountPct: 0,
-      grossGHS: monthlyCharge,
-      feeGHS: monthlyCharge,
-      badge: "0% DISCOUNT",
+      grossGHS: termCharge4Mo,
+      feeGHS: 0,
+      badge: "FREE TERM TRIAL",
       badgeColor: "#10b981",
-      desc: `${effectiveStudents} active students × GH₵ ${rate} = GH₵ ${monthlyCharge.toLocaleString()}/month (0% discount).`,
+      desc: `Full 4-month term access (normal value GH₵ ${termCharge4Mo.toLocaleString()} at GH₵ ${rate * 4}/student) free with zero upfront charge.`,
+      disabled: false,
+      popular: true
+    },
+    {
+      id: "4_MONTHS",
+      name: "4 Months (1 Full Term / Semester)",
+      duration: `4 Months (GH₵ ${rate * 4} / student / term)`,
+      months: 4,
+      discountPct: 0,
+      grossGHS: termCharge4Mo,
+      feeGHS: termCharge4Mo,
+      badge: "FULL TERM / SEM",
+      badgeColor: "#0ea5e9",
+      desc: `${effectiveStudents} active students × GH₵ ${rate}/mo × 4 months (GH₵ ${rate * 4}/student) = GH₵ ${termCharge4Mo.toLocaleString()}.`,
       disabled: false,
       popular: false
     },
@@ -129,6 +147,7 @@ export default function SignUpPage({ defaultRole }) {
     if (query) return query.toUpperCase();
     if (location.pathname.includes("/institution") || location.pathname.includes("/tenant")) return "INSTITUTION";
     if (location.pathname.includes("/teacher")) return "TEACHER";
+    if (location.pathname.includes("/secretary")) return "SECRETARY";
     if (location.pathname.includes("/student")) return "STUDENT";
     if (location.pathname.includes("/parent")) return "PARENT";
     if (location.pathname.includes("/accountant")) return "ACCOUNTANT";
@@ -173,8 +192,8 @@ export default function SignUpPage({ defaultRole }) {
     confirmPassword: "",
     biometricFaceToken: "",
     facePhoto: "",
-    // Subscription choice and payment (Default: 1 Month Free Trial)
-    subscriptionPlan: "1_MONTH_TRIAL",
+    // Subscription choice and payment (Default: 4-Month Term Free Trial)
+    subscriptionPlan: "4_MONTH_TRIAL",
     momoTxnId: "FREE_TRIAL_AUTO",
     paymentAmount: "0",
     senderPhone: "",
@@ -393,8 +412,8 @@ export default function SignUpPage({ defaultRole }) {
       };
 
       if (name === "institutionType" || name === "totalStudentsEnrolled") {
-        const plan = next.subscriptionPlan || "1_MONTH_TRIAL";
-        if (plan === "1_MONTH_TRIAL") {
+        const plan = next.subscriptionPlan || "4_MONTH_TRIAL";
+        if (plan === "4_MONTH_TRIAL" || plan === "1_MONTH_TRIAL") {
           next.paymentAmount = "0";
           next.momoTxnId = "FREE_TRIAL_AUTO";
         } else {
@@ -436,7 +455,7 @@ export default function SignUpPage({ defaultRole }) {
       setLoading(false);
       return;
     }
-    if (instForm.subscriptionPlan !== "1_MONTH_TRIAL" && (!instForm.momoTxnId || !instForm.momoTxnId.trim() || instForm.momoTxnId === "FREE_TRIAL_AUTO")) {
+    if (instForm.subscriptionPlan !== "4_MONTH_TRIAL" && instForm.subscriptionPlan !== "1_MONTH_TRIAL" && (!instForm.momoTxnId || !instForm.momoTxnId.trim() || instForm.momoTxnId === "FREE_TRIAL_AUTO")) {
       setError("Subscription payment is required for paid plans. Pay online via Official Checkout (any MTN MoMo, Telecel Cash, AirtelTigo number or Card) or enter your verified Transaction ID.");
       setLoading(false);
       return;
@@ -509,7 +528,7 @@ export default function SignUpPage({ defaultRole }) {
           facePhoto: appRecord.facePhoto
         });
         localStorage.setItem("gbs_local_registered_users", JSON.stringify(filteredUsers));
-        if (instForm.subscriptionPlan === "1_MONTH_TRIAL") {
+        if (instForm.subscriptionPlan === "4_MONTH_TRIAL" || instForm.subscriptionPlan === "1_MONTH_TRIAL") {
           localStorage.setItem("gbs_trial_redeemed", "true");
         }
       } catch { }
@@ -912,10 +931,10 @@ export default function SignUpPage({ defaultRole }) {
                       value={instForm.institutionType}
                       onChange={handleInstChange}
                     >
-                      <option value="NURSERY_TO_JHS">🏫 Basic School / JHS (GH₵ 3 per student)</option>
-                      <option value="SENIOR_HIGH_SCHOOL">🎓 Senior High School / SHS (GH₵ 5 per student)</option>
-                      <option value="TECHNICAL">🔧 Technical &amp; Vocational / TVET (GH₵ 5 per student)</option>
-                      <option value="UNIVERSITY">🏛️ University &amp; Tertiary (GH₵ 10 per student)</option>
+                      <option value="NURSERY_TO_JHS">🏫 Basic School / JHS (GH₵ 3/mo • GH₵ 12 / Term)</option>
+                      <option value="SENIOR_HIGH_SCHOOL">🎓 Senior High School / SHS (GH₵ 5/mo • GH₵ 20 / Term)</option>
+                      <option value="TECHNICAL">🔧 Technical &amp; Vocational / TVET (GH₵ 10/mo • GH₵ 40 / Semester)</option>
+                      <option value="UNIVERSITY">🏛️ University &amp; Tertiary (GH₵ 10/mo • GH₵ 40 / Semester)</option>
                     </select>
                   </div>
                   <div className="form-field">
@@ -1275,14 +1294,15 @@ export default function SignUpPage({ defaultRole }) {
                   <span>📱</span> 4. SUBSCRIPTION PLAN SELECTION & ONBOARDING PAYMENT
                 </h3>
                 <p style={{ fontSize: "0.88rem", color: "#cbd5e1", margin: "0 0 1.25rem", lineHeight: "1.5" }}>
-                  👉 Please select your preferred institutional subscription plan below. The <strong>1 Month Free Trial</strong> provides immediate activation with <strong>zero upfront payment</strong>, while term and annual plans provide extended uninterrupted coverage for your school.
+                  👉 Please select your preferred institutional subscription plan below. Every new school receives a full <strong>4-Month Term Free Trial (120 Days)</strong> with <strong>zero upfront payment</strong>; term/semester charges compute at Monthly Rate × 4 months (JHS GH₵ 12, SHS GH₵ 20, TVET &amp; University GH₵ 40 per student).
                 </p>
 
                 {/* Automated Headcount Multiplier Formula Card */}
                 {(() => {
                   const ratePerStudent = getStudentRate(instForm.institutionType);
                   const studentCount = Math.max(0, parseInt(instForm.totalStudentsEnrolled, 10) || 0);
-                  const fullAnnualFee = studentCount > 0 ? (ratePerStudent * studentCount) : (ratePerStudent * 100);
+                  const effectiveStudents = studentCount > 0 ? studentCount : 100;
+                  const term4MoFee = ratePerStudent * 4 * effectiveStudents;
                   const activeTiers = computeSubscriptionTiers(instForm.institutionType, instForm.totalStudentsEnrolled);
 
                   return (
@@ -1290,34 +1310,34 @@ export default function SignUpPage({ defaultRole }) {
                       <div style={{ background: "rgba(15, 23, 42, 0.95)", border: "1.5px solid #38bdf8", borderRadius: "12px", padding: "14px 18px", marginBottom: "1.25rem", display: "flex", flexWrap: "wrap", justifyContent: "space-between", alignItems: "center", gap: "12px" }}>
                         <div>
                           <span style={{ fontSize: "0.72rem", color: "#94a3b8", fontWeight: 800, textTransform: "uppercase", letterSpacing: "0.5px", display: "block" }}>
-                            ⚡ AUTOMATIC HEADCOUNT PRICING FORMULA
+                            ⚡ AUTOMATIC TERM / SEMESTER HEADCOUNT FORMULA
                           </span>
                           <div style={{ display: "flex", alignItems: "center", gap: "8px", marginTop: "4px" }}>
                             <span style={{ fontSize: "1.2rem" }}>
                               {instForm.institutionType === "UNIVERSITY" ? "🏛️" : instForm.institutionType === "TECHNICAL" ? "🔧" : instForm.institutionType === "SENIOR_HIGH_SCHOOL" ? "🎓" : "🏫"}
                             </span>
                             <strong style={{ color: "#38bdf8", fontSize: "0.98rem" }}>
-                              {instForm.institutionType === "UNIVERSITY" ? "University / Tertiary (GH₵ 10 / student)" : instForm.institutionType === "TECHNICAL" ? "Technical & Vocational / TVET (GH₵ 5 / student)" : instForm.institutionType === "SENIOR_HIGH_SCHOOL" ? "Senior High School / SHS (GH₵ 5 / student)" : "Basic School / JHS (GH₵ 3 / student)"}
+                              {instForm.institutionType === "UNIVERSITY" ? "University / Tertiary (GH₵ 10/mo • GH₵ 40 / Semester)" : instForm.institutionType === "TECHNICAL" ? "Technical & Vocational / TVET (GH₵ 10/mo • GH₵ 40 / Semester)" : instForm.institutionType === "SENIOR_HIGH_SCHOOL" ? "Senior High School / SHS (GH₵ 5/mo • GH₵ 20 / Term)" : "Basic School / JHS (GH₵ 3/mo • GH₵ 12 / Term)"}
                             </strong>
                           </div>
                           <span style={{ fontSize: "0.82rem", color: "#cbd5e1", marginTop: "4px", display: "block" }}>
-                            Multiplier: <strong>GHS {ratePerStudent}.00</strong> × <strong>{studentCount} Students</strong> = <strong style={{ color: "#34d399" }}>GHS {fullAnnualFee.toLocaleString()}</strong> (Full Academic Year)
+                            Term Formula: <strong>GH₵ {ratePerStudent} × 4 Mo = GH₵ {ratePerStudent * 4}/stu</strong> × <strong>{effectiveStudents} Students</strong> = <strong style={{ color: "#34d399" }}>GH₵ {term4MoFee.toLocaleString()} / Term</strong>
                           </span>
                         </div>
                         <div style={{ textAlign: "right" }}>
                           <span style={{ fontSize: "0.72rem", color: "#94a3b8", fontWeight: 700, display: "block" }}>
                             CURRENT PAYABLE AMOUNT
                           </span>
-                          <span style={{ fontSize: "1.5rem", fontWeight: 900, color: (instForm.subscriptionPlan === "1_MONTH_TRIAL" || instForm.paymentAmount === "0") ? "#34d399" : "#38bdf8" }}>
-                            {(instForm.subscriptionPlan === "1_MONTH_TRIAL" || instForm.paymentAmount === "0") ? "FREE (0 GHS)" : `GHS ${Number(instForm.paymentAmount || fullAnnualFee).toLocaleString()}`}
+                          <span style={{ fontSize: "1.5rem", fontWeight: 900, color: (instForm.subscriptionPlan === "4_MONTH_TRIAL" || instForm.subscriptionPlan === "1_MONTH_TRIAL" || instForm.paymentAmount === "0") ? "#34d399" : "#38bdf8" }}>
+                            {(instForm.subscriptionPlan === "4_MONTH_TRIAL" || instForm.subscriptionPlan === "1_MONTH_TRIAL" || instForm.paymentAmount === "0") ? "FREE (0 GHS)" : `GHS ${Number(instForm.paymentAmount || term4MoFee).toLocaleString()}`}
                           </span>
                         </div>
                       </div>
 
-                      {/* Interactive Subscription Tier Cards (5 choices) */}
+                      {/* Interactive Subscription Tier Cards */}
                       <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(210px, 1fr))", gap: "12px", marginBottom: "1.5rem" }}>
                         {activeTiers.map((tier) => {
-                          const isSelected = (instForm.subscriptionPlan || "1_MONTH_TRIAL") === tier.id;
+                          const isSelected = (instForm.subscriptionPlan || "4_MONTH_TRIAL") === tier.id;
                           return (
                             <div
                               key={tier.id}
@@ -1326,7 +1346,7 @@ export default function SignUpPage({ defaultRole }) {
                                   ...prev,
                                   subscriptionPlan: tier.id,
                                   paymentAmount: String(tier.feeGHS),
-                                  momoTxnId: tier.id === "1_MONTH_TRIAL" ? "FREE_TRIAL_AUTO" : (prev.momoTxnId === "FREE_TRIAL_AUTO" ? "" : prev.momoTxnId)
+                                  momoTxnId: (tier.id === "4_MONTH_TRIAL" || tier.id === "1_MONTH_TRIAL") ? "FREE_TRIAL_AUTO" : (prev.momoTxnId === "FREE_TRIAL_AUTO" ? "" : prev.momoTxnId)
                                 }));
                               }}
                               style={{
@@ -1377,12 +1397,12 @@ export default function SignUpPage({ defaultRole }) {
                 })()}
 
                 {/* Conditional Payment Guidance */}
-                {instForm.subscriptionPlan === "1_MONTH_TRIAL" ? (
+                {(instForm.subscriptionPlan === "4_MONTH_TRIAL" || instForm.subscriptionPlan === "1_MONTH_TRIAL") ? (
                   <div style={{ background: "rgba(16, 185, 129, 0.15)", border: "1.5px solid #10b981", borderRadius: "12px", padding: "14px 18px", display: "flex", alignItems: "center", gap: "12px", marginBottom: "1rem" }}>
                     <span style={{ fontSize: "1.8rem" }}>🎉</span>
                     <div>
                       <strong style={{ color: "#34d399", fontSize: "0.92rem", display: "block" }}>
-                        1 Month Free Trial Plan Active (Zero Payment Required)
+                        4-Month Full Term Free Trial Plan Active (120 Days • Zero Payment Required)
                       </strong>
                       <span style={{ color: "#cbd5e1", fontSize: "0.78rem" }}>
                         Your institution will be provisioned immediately with full system access. Mobile Money Transaction ID is not required for this trial.

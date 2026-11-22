@@ -13,6 +13,7 @@ import "./MainLoginPage.css";
 const ROLES = [
   { id: "ADMIN", title: "Headmaster Portal", icon: "🎓", desc: "Executive School Control", color: "#3b82f6" },
   { id: "TEACHER", title: "Teacher Portal", icon: "👨‍🏫", desc: "Academics & Grading", color: "#10b981" },
+  { id: "SECRETARY", title: "Secretary Desk", icon: "🗂️", desc: "Front Office & Records", color: "#0ea5e9" },
   { id: "STUDENT", title: "Student Portal", icon: "🎓", desc: "Results & Courses", color: "#8b5cf6" },
   { id: "PARENT", title: "Parent Portal", icon: "👨‍👩‍👧", desc: "Attendance & Fees", color: "#f59e0b" },
   { id: "ACCOUNTANT", title: "Finance Portal", icon: "📊", desc: "Payroll & Invoices", color: "#ec4899" },
@@ -218,6 +219,7 @@ export default function MainLoginPage() {
             SUPER_ADMIN: "/portal/admin/dashboard",
             HEADMASTER: "/portal/admin/dashboard",
             TEACHER: "/portal/teacher/dashboard",
+            SECRETARY: "/portal/secretary/dashboard",
             STUDENT: "/portal/student/dashboard",
             PARENT: "/portal/parent/dashboard",
             ACCOUNTANT: "/portal/accountant/dashboard",
@@ -238,6 +240,7 @@ export default function MainLoginPage() {
   const ROLE_CREDENTIALS = {
     ADMIN: { email: "admin@gbs.com", password: "Admin123!" },
     TEACHER: { email: "teacher@gbs.com", password: "Teacher123!" },
+    SECRETARY: { email: "secretary@gbs.com", password: "Secretary123!" },
     STUDENT: { email: "student@gbs.com", password: "Student123!" },
     PARENT: { email: "parent@gbs.com", password: "Parent123!" },
     ACCOUNTANT: { email: "accountant@gbs.com", password: "Accountant123!" },
@@ -544,6 +547,7 @@ export default function MainLoginPage() {
             <span>Direct Role Portals:</span>
             <Link to="/login/admin" style={{ color: "#60a5fa", textDecoration: "none" }}>Headmaster</Link> •
             <Link to="/login/teacher" style={{ color: "#34d399", textDecoration: "none" }}>Teacher</Link> •
+            <Link to="/login/secretary" style={{ color: "#38bdf8", textDecoration: "none" }}>Secretary</Link> •
             <Link to="/login/student" style={{ color: "#c084fc", textDecoration: "none" }}>Student</Link> •
             <Link to="/login/parent" style={{ color: "#fbbf24", textDecoration: "none" }}>Parent</Link> •
             <Link to="/login/accountant" style={{ color: "#f472b6", textDecoration: "none" }}>Accountant</Link> •

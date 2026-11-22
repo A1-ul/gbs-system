@@ -8,6 +8,7 @@ import UniversalRoleGuideModal from "../../../../../components/common/UniversalR
 import PaymentGatewayAdminPanel from "../../../../../components/common/PaymentGatewayAdminPanel";
 import FinancialReportsPanel from "../../../../../components/common/FinancialReportsPanel";
 import SchoolClinicHubPanel from "../../../../../components/common/SchoolClinicHubPanel";
+import SchoolStationeryHubPanel from "../../../../../components/common/SchoolStationeryHubPanel";
 import StaffAttendanceClockWidget from "../../../../../components/common/StaffAttendanceClockWidget";
 import { navigateToDetail } from "../../../../../utils/universalNavigation";
 import { getActiveSchoolName, getActiveSchoolLogo } from "../../../../../utils/schoolBranding";
@@ -1799,6 +1800,15 @@ export default function AccountantDashboard() {
             </button>
             <button
               type="button"
+              data-testid="accountant-stationery-tab"
+              className={`role-tab-btn ${activeTab === "stationery" ? "active" : ""}`}
+              onClick={() => setActiveTab("stationery")}
+              style={{ borderLeft: "3px solid #d4af37", color: activeTab === "stationery" ? "#f6dd84" : undefined, fontWeight: 800 }}
+            >
+              🎒 School Stationery Audit &amp; Expenses
+            </button>
+            <button
+              type="button"
               className={`role-tab-btn ${activeTab === "clinic" ? "active" : ""}`}
               onClick={() => setActiveTab("clinic")}
               style={{ borderLeft: "3px solid #10b981", color: activeTab === "clinic" ? "#ffffff" : "#6ee7b7", fontWeight: 800 }}
@@ -3077,6 +3087,7 @@ export default function AccountantDashboard() {
                         onChange={(e) => setNewExpense({ ...newExpense, category: e.target.value })}
                       >
                         <option value="UTILITIES">Campus Utilities & Power</option>
+                        <option value="STATIONERY_SUPPLIES">School Stationery &amp; Textbooks Supplies</option>
                         <option value="TECHNOLOGY">Cloud & IT Infrastructure</option>
                         <option value="LAB_SUPPLIES">Science Lab Consumables</option>
                         <option value="FACILITIES">Campus Maintenance</option>
@@ -4330,6 +4341,16 @@ export default function AccountantDashboard() {
               </div>
             );
           })()}
+
+          {activeTab === "stationery" && (
+            <div className="role-workspace-card">
+              <SchoolStationeryHubPanel
+                mode="ACCOUNTANT"
+                currentUser={(() => { try { return JSON.parse(localStorage.getItem("gbs_user") || "null") || { role: "ACCOUNTANT" }; } catch { return { role: "ACCOUNTANT" }; } })()}
+                onExpenseRecorded={() => { fetchExpenses(); fetchTelemetry(); }}
+              />
+            </div>
+          )}
 
           {activeTab === "clinic" && (
             <SchoolClinicHubPanel

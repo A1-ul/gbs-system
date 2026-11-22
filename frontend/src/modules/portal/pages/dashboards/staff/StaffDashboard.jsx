@@ -10,6 +10,7 @@ import { isDemoSandboxMode, clearAuthStorage } from "../../../../../utils/tokenS
 import { checkDemoEntryLimit, trackDemoEntryCreated } from "../../../../../utils/demoLimitGuard";
 import { useDashboardTabSync } from "../../../../../hooks/useDashboardTabSync";
 import SchoolClinicHubPanel from "../../../../../components/common/SchoolClinicHubPanel";
+import SchoolStationeryHubPanel from "../../../../../components/common/SchoolStationeryHubPanel";
 import StaffAttendanceClockWidget from "../../../../../components/common/StaffAttendanceClockWidget";
 import "./StaffDashboard.css";
 
@@ -562,6 +563,15 @@ export default function StaffDashboard() {
             </button>
             <button
               type="button"
+              data-testid="staff-stationery-tab"
+              className={`role-tab-btn ${activeTab === "stationery" ? "active" : ""}`}
+              onClick={() => setActiveTab("stationery")}
+              style={{ borderLeft: "3px solid #d4af37", fontWeight: 800 }}
+            >
+              🎒 Stationery Store &amp; Expenses
+            </button>
+            <button
+              type="button"
               className={`role-tab-btn ${activeTab === "clinic" ? "active" : ""}`}
               onClick={() => setActiveTab("clinic")}
               style={{ borderLeft: "3px solid #10b981", color: activeTab === "clinic" ? "#ffffff" : "#6ee7b7", fontWeight: 800 }}
@@ -1057,6 +1067,15 @@ export default function StaffDashboard() {
                   </tbody>
                 </table>
               </div>
+            </div>
+          )}
+
+          {activeTab === "stationery" && (
+            <div className="role-workspace-card">
+              <SchoolStationeryHubPanel
+                mode="STAFF"
+                currentUser={(() => { try { return JSON.parse(localStorage.getItem("gbs_user") || "null") || { role: "STAFF" }; } catch { return { role: "STAFF" }; } })()}
+              />
             </div>
           )}
 

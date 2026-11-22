@@ -11,26 +11,27 @@ export default function GBSCompanyWebsite() {
   // Selected System Modal
   const [selectedSystem, setSelectedSystem] = useState(null);
 
-  // Per-Student Onboarding Calculator State
+  // Per-Student Onboarding Calculator State (4-Month Term / Semester Basis)
   const [rates, setRates] = useState(() => getOnboardingRates());
   const [calcTier, setCalcTier] = useState("SHS");
   const [calcStudents, setCalcStudents] = useState(300);
-  const [computedFee, setComputedFee] = useState(() => calculateOnboardingFee(300, "SHS"));
+  const [computedPricing, setComputedPricing] = useState(() => calculateOnboardingFee("SHS", 300, "4_MONTHS"));
+  const computedFee = computedPricing?.totalTermFee || 0;
 
   // Recalculate fees when tier or student population changes
   useEffect(() => {
-    setComputedFee(calculateOnboardingFee(calcStudents, calcTier));
+    setComputedPricing(calculateOnboardingFee(calcTier, calcStudents, "4_MONTHS"));
   }, [calcStudents, calcTier]);
 
   // Listen for developer dynamic rate adjustments
   useEffect(() => {
     const handleRatesUpdate = (e) => {
-      if (e?.detail?.rates) {
-        setRates(e.detail.rates);
+      if (e?.detail) {
+        setRates(e.detail.rates || e.detail);
       } else {
         setRates(getOnboardingRates());
       }
-      setComputedFee(calculateOnboardingFee(calcStudents, calcTier));
+      setComputedPricing(calculateOnboardingFee(calcTier, calcStudents, "4_MONTHS"));
     };
     window.addEventListener("gbs_rates_updated", handleRatesUpdate);
     window.addEventListener("storage", handleRatesUpdate);
@@ -318,7 +319,7 @@ export default function GBSCompanyWebsite() {
                 onClick={() => setCalcTier("BASIC")}
               >
                 <span className="tier-name">Nursery / Primary / JHS</span>
-                <span className="tier-rate">{formatCedis(rates.BASIC_PER_STUDENT)} / student</span>
+                <span className="tier-rate">{formatCedis(rates.JHS || 3)}/mo • {formatCedis((rates.JHS || 3) * 4)} / term</span>
               </button>
               <button
                 type="button"
@@ -326,7 +327,15 @@ export default function GBSCompanyWebsite() {
                 onClick={() => setCalcTier("SHS")}
               >
                 <span className="tier-name">Senior High School (SHS)</span>
-                <span className="tier-rate">{formatCedis(rates.SHS_PER_STUDENT)} / student</span>
+                <span className="tier-rate">{formatCedis(rates.SHS || 5)}/mo • {formatCedis((rates.SHS || 5) * 4)} / term</span>
+              </button>
+              <button
+                type="button"
+                className={`tier-btn ${calcTier === "TVET" ? "active" : ""}`}
+                onClick={() => setCalcTier("TVET")}
+              >
+                <span className="tier-name">Technical / TVET</span>
+                <span className="tier-rate">{formatCedis(rates.TVET || 10)}/mo • {formatCedis((rates.TVET || 10) * 4)} / semester</span>
               </button>
               <button
                 type="button"
@@ -334,7 +343,7 @@ export default function GBSCompanyWebsite() {
                 onClick={() => setCalcTier("UNIVERSITY")}
               >
                 <span className="tier-name">University / Tertiary</span>
-                <span className="tier-rate">{formatCedis(rates.UNIVERSITY_PER_STUDENT)} / student</span>
+                <span className="tier-rate">{formatCedis(rates.UNIVERSITY || 10)}/mo • {formatCedis((rates.UNIVERSITY || 10) * 4)} / semester</span>
               </button>
             </div>
 
@@ -372,16 +381,22 @@ export default function GBSCompanyWebsite() {
 
           <div className="calc-right">
             <div className="fee-display-box">
-              <span className="fee-eyebrow">Calculated One-Time Onboarding Fee</span>
+              <span className="fee-eyebrow">4-Month Term Free Trial • Per-Term Charge After Trial</span>
               <div className="fee-figure">{formatCedis(computedFee)}</div>
               <div className="fee-breakdown-formula">
                 Formula: {calcStudents.toLocaleString()} Students × {formatCedis(
                   calcTier === "BASIC"
-                    ? rates.BASIC_PER_STUDENT
+                    ? (rates.JHS || 3)
                     : calcTier === "SHS"
-                      ? rates.SHS_PER_STUDENT
-                      : rates.UNIVERSITY_PER_STUDENT
-                )}
+                      ? (rates.SHS || 5)
+                      : (rates.TVET || rates.UNIVERSITY || 10)
+                )}/mo × 4 Mo ({formatCedis(
+                  (calcTier === "BASIC"
+                    ? (rates.JHS || 3)
+                    : calcTier === "SHS"
+                      ? (rates.SHS || 5)
+                      : (rates.TVET || rates.UNIVERSITY || 10)) * 4
+                )}/student/term)
               </div>
 
               <div className="fee-inclusions-list">

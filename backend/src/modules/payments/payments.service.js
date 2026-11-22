@@ -216,7 +216,7 @@ async function resolveStudentInTenant(tenantId, studentIdentifier, requestingUse
         where: { id: link.studentId, tenantId: tid, isDeleted: false }
       }).catch(() => null);
     }
-  } else if (!rawId && ['ADMIN', 'SUPER_ADMIN', 'HEADMASTER', 'PRINCIPAL', 'DEVELOPER', 'TEACHER', 'STAFF', 'HR', 'ALUMNI'].includes(String(requestingUser?.role || '').toUpperCase())) {
+  } else if (!rawId && ['ADMIN', 'SUPER_ADMIN', 'HEADMASTER', 'PRINCIPAL', 'DEVELOPER', 'TEACHER', 'SECRETARY', 'STAFF', 'HR', 'ALUMNI'].includes(String(requestingUser?.role || '').toUpperCase())) {
     student = await prisma.user.findFirst({
       where: { tenantId: tid, role: 'STUDENT', isDeleted: false }
     }).catch(() => null);

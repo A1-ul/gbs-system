@@ -155,7 +155,7 @@ export default function TenantOnboardingFirstPage() {
     adminPhone: "",
     password: "",
     confirmPassword: "",
-    subscriptionPlan: "3_MONTHS", // 1_MONTH | 3_MONTHS | 6_MONTHS | 9_MONTHS | 12_MONTHS
+    subscriptionPlan: "4_MONTH_TRIAL", // 4_MONTH_TRIAL (Free Full Term) | 4_MONTHS | 3_MONTHS | 6_MONTHS | 9_MONTHS | 12_MONTHS
     paymentScheduleMode: "BULK_FULL_TERM", // "BULK_FULL_TERM" | "MONTHLY_SPREAD"
     bulkTermsAccepted: true,
     bulkTermsSignedBy: "",
@@ -172,10 +172,10 @@ export default function TenantOnboardingFirstPage() {
   const [showVideoHubModal, setShowVideoHubModal] = useState(false);
   const [showOnboardingCheckout, setShowOnboardingCheckout] = useState(false);
 
-  // Pricing Engine Rates (Official Policy: Nursery–JHS = GH₵3, SHS = GH₵5, University = GH₵10)
+  // Pricing Engine Rates: Nursery–JHS = GH₵3/mo (12/term) | SHS = GH₵5/mo (20/term) | TVET & Uni = GH₵10/mo (40/sem)
   const activeRates = useMemo(() => getOnboardingRates(), []);
 
-  // Check if 1-Month Free Trial has already been used by this tenant or contact
+  // Check if 4-Month Term Free Trial has already been used by this tenant or contact
   const isTrialLocked = useMemo(() => {
     try {
       if (localStorage.getItem("gbs_trial_used") === "true") return true;
@@ -201,37 +201,42 @@ export default function TenantOnboardingFirstPage() {
 
   const hasUsedTrial = isTrialLocked;
 
-  // Calculate Official Rate per Student per Month based on Institution Category
-  // Nursery – JHS: GH₵ 3 | SHS: GH₵ 5 | University: GH₵ 10
+  // Official Rate per Student per Month based on Institution Category:
+  // Nursery–JHS: GH₵ 3/mo (12/term) | SHS: GH₵ 5/mo (20/term) | TVET & University: GH₵ 10/mo (40/semester)
   const currentRatePerStudent = useMemo(() => {
     if (form.institutionType === "UNIVERSITY") return activeRates.UNIVERSITY || 10;
-    if (form.institutionType === "SENIOR_HIGH_SCHOOL" || form.institutionType === "TECHNICAL") return activeRates.SHS || 5;
+    if (form.institutionType === "TECHNICAL") return activeRates.TVET || activeRates.UNIVERSITY || 10;
+    if (form.institutionType === "SENIOR_HIGH_SCHOOL") return activeRates.SHS || 5;
     return activeRates.JHS || 3;
   }, [form.institutionType, activeRates]);
 
-  // Official 100% Student-Based Subscription & Multi-Month Discount Calculation
-  // Subscription = Number of Active Students × Rate (No fixed tenant fees, no package fees, no access charges)
-  // Discounts: 1 Month (0%), 3 Months (3%), 6 Months (5%), 9 Months (7%), 12 Months (10%)
+  // Official 100% Student-Based Term/Semester Subscription & Multi-Month Discount Calculation
   const calculation = useMemo(() => {
     const count = Math.max(0, parseInt(form.totalStudentsEnrolled, 10) || 0);
     const monthlyRate = count * currentRatePerStudent;
+    const isTrialSelected = form.subscriptionPlan === "4_MONTH_TRIAL" || form.subscriptionPlan === "1_MONTH_TRIAL";
 
-    const calcDiscounted = (months, discountPct) => {
+    const calcDiscounted = (months, discountPct, isTrial = false) => {
       const gross = monthlyRate * months;
       const discountAmt = Math.round(gross * (discountPct / 100) * 100) / 100;
-      const net = Math.round((gross - discountAmt) * 100) / 100;
-      return { months, discountPct, gross, discountAmt, net };
+      const net = isTrial ? 0 : Math.round((gross - discountAmt) * 100) / 100;
+      return { months, discountPct, gross, discountAmt, net, isTrial };
     };
 
+    const pTrial = calcDiscounted(4, 0, true);
     const p1 = calcDiscounted(1, 0);
+    const p4 = calcDiscounted(4, 0);
     const p3 = calcDiscounted(3, 3);
     const p6 = calcDiscounted(6, 5);
     const p9 = calcDiscounted(9, 7);
     const p12 = calcDiscounted(12, 10);
 
     const periodMap = {
+      "4_MONTH_TRIAL": pTrial,
+      "1_MONTH_TRIAL": pTrial,
+      "4_MONTHS": p4,
+      "1_TERM": p4,
       "1_MONTH": p1,
-      "1_MONTH_TRIAL": p1,
       "3_MONTHS": p3,
       "6_MONTHS": p6,
       "9_MONTHS": p9,
@@ -239,17 +244,18 @@ export default function TenantOnboardingFirstPage() {
       "LIFETIME": p12
     };
 
-    const selectedPeriod = periodMap[form.subscriptionPlan] || p3;
+    const selectedPeriod = periodMap[form.subscriptionPlan] || pTrial;
     const subscribedMonths = selectedPeriod.months;
     const discountPct = selectedPeriod.discountPct;
     const grossTermFee = selectedPeriod.gross;
     const discountAmount = selectedPeriod.discountAmt;
     const totalTermFee = selectedPeriod.net;
 
-    const payableAmount =
-      form.paymentScheduleMode === "MONTHLY_SPREAD"
+    const payableAmount = isTrialSelected
+      ? 0
+      : (form.paymentScheduleMode === "MONTHLY_SPREAD"
         ? Math.round((totalTermFee / subscribedMonths) * 100) / 100
-        : totalTermFee;
+        : totalTermFee);
 
     const countryLookup = form.country || form.countryCode || "Ghana";
     const countryFx = convertGhsToCountryCurrency(payableAmount, countryLookup);
@@ -259,13 +265,16 @@ export default function TenantOnboardingFirstPage() {
       count,
       rate: currentRatePerStudent,
       monthlyRate,
+      monthTrialRate: 0,
       oneMonthRate: p1.net,
+      fourMonthTermRate: p4.net,
       termRate: p3.net,
       semesterRate: p6.net,
       nineMonthRate: p9.net,
       annualBase: p12.net,
       lifetimeRate: p12.net,
-      periods: { p1, p3, p6, p9, p12 },
+      periods: { pTrial, p1, p4, p3, p6, p9, p12 },
+      isTrialSelected,
       subscribedMonths,
       discountPct,
       grossTermFee,
@@ -352,13 +361,13 @@ export default function TenantOnboardingFirstPage() {
     }
 
     // Trial Lock Verification
-    if (form.subscriptionPlan === "1_MONTH_TRIAL" && hasUsedTrial) {
-      setError("Your institution has already used its 1-Month Free Trial. Please select a 3 Months, 6 Months, 9 Months, 12 Months, or Lifetime subscription to protect your institutional records.");
+    if ((form.subscriptionPlan === "4_MONTH_TRIAL" || form.subscriptionPlan === "1_MONTH_TRIAL") && hasUsedTrial) {
+      setError("Your institution has already used its 4-Month Term Free Trial. Please select a 4 Months Term, 3 Months, 6 Months, 9 Months, 12 Months, or Lifetime subscription to protect your institutional records.");
       return;
     }
 
     // Bulk Payment Terms & Conditions Verification
-    if (form.subscriptionPlan !== "1_MONTH_TRIAL" && form.paymentScheduleMode === "BULK_FULL_TERM" && !form.bulkTermsAccepted) {
+    if (form.subscriptionPlan !== "4_MONTH_TRIAL" && form.subscriptionPlan !== "1_MONTH_TRIAL" && form.paymentScheduleMode === "BULK_FULL_TERM" && !form.bulkTermsAccepted) {
       setError("Please sign and accept the Bulk Subscription Payment Terms & Conditions to pay your preferred subscription in bulk without monthly spread.");
       return;
     }
@@ -449,7 +458,7 @@ export default function TenantOnboardingFirstPage() {
 
     // Mark as onboarded on this device so next visit takes the user straight to /login
     localStorage.setItem("gbs_tenant_already_onboarded", "true");
-    if (form.subscriptionPlan === "1_MONTH_TRIAL") {
+    if (form.subscriptionPlan === "4_MONTH_TRIAL" || form.subscriptionPlan === "1_MONTH_TRIAL") {
       localStorage.setItem("gbs_trial_used", "true");
       try {
         const used = JSON.parse(localStorage.getItem("gbs_used_trial_institutions") || "[]");
@@ -1067,12 +1076,12 @@ export default function TenantOnboardingFirstPage() {
                   <div className="gbs-rate-pill-val">GH₵ {calculation.rate}.00</div>
                   <span style={{ fontSize: "0.7rem", color: "#94a3b8" }}>
                     {form.institutionType === "UNIVERSITY"
-                      ? "University (GH₵ 10 / student)"
+                      ? "University (GH₵ 10/mo • GH₵ 40 / Semester)"
                       : form.institutionType === "TECHNICAL"
-                        ? "Technical / TVET (GH₵ 5 / student)"
+                        ? "Technical / TVET (GH₵ 10/mo • GH₵ 40 / Semester)"
                         : form.institutionType === "SENIOR_HIGH_SCHOOL"
-                          ? "SHS (GH₵ 5 / student)"
-                          : "Nursery – JHS (GH₵ 3 / student)"}
+                          ? "SHS (GH₵ 5/mo • GH₵ 20 / Term)"
+                          : "Nursery – JHS (GH₵ 3/mo • GH₵ 12 / Term)"}
                   </span>
                 </div>
 
@@ -1083,50 +1092,69 @@ export default function TenantOnboardingFirstPage() {
                 </div>
 
                 <div className="gbs-rate-pill">
-                  <div className="gbs-rate-pill-title">Monthly Subscription Charge</div>
-                  <div className="gbs-rate-pill-val" style={{ color: "#38bdf8" }}>GH₵ {calculation.monthlyRate.toLocaleString()} / mo</div>
-                  <span style={{ fontSize: "0.7rem", color: "#94a3b8" }}>{calculation.count} Active Students × GH₵ {calculation.rate}</span>
+                  <div className="gbs-rate-pill-title">Term / Semester Rate (× 4 Mo)</div>
+                  <div className="gbs-rate-pill-val" style={{ color: "#38bdf8" }}>GH₵ {calculation.periods.p4.net.toLocaleString()}</div>
+                  <span style={{ fontSize: "0.7rem", color: "#94a3b8" }}>{calculation.count} Active Students × GH₵ {calculation.rate * 4}/term (GH₵ {calculation.rate}/mo)</span>
                 </div>
 
                 <div className="gbs-rate-pill">
-                  <div className="gbs-rate-pill-title">Total Payment ({calculation.subscribedMonths} Mo • {calculation.discountPct}% Off)</div>
+                  <div className="gbs-rate-pill-title">
+                    {calculation.isTrialSelected ? "Free Term Trial (120 Days • 4 Mo)" : `Total Payment (${calculation.subscribedMonths} Mo • ${calculation.discountPct}% Off)`}
+                  </div>
                   <div className="gbs-rate-pill-val" style={{ color: "#34d399" }}>
-                    GH₵ {calculation.totalTermFee.toLocaleString()}
+                    {calculation.isTrialSelected ? "FREE (GH₵ 0)" : `GH₵ ${calculation.totalTermFee.toLocaleString()}`}
                   </div>
                   <span style={{ fontSize: "0.7rem", color: "#94a3b8" }}>
-                    {calculation.discountPct > 0
-                      ? `Gross GH₵ ${calculation.grossTermFee.toLocaleString()} − GH₵ ${calculation.discountAmount.toLocaleString()} (${calculation.discountPct}% Discount)`
-                      : `GH₵ ${calculation.monthlyRate.toLocaleString()} × 1 Month (0% Discount)`}
+                    {calculation.isTrialSelected
+                      ? `Full 4-month term free trial (valued at GH₵ ${calculation.periods.p4.net.toLocaleString()})`
+                      : calculation.discountPct > 0
+                        ? `Gross GH₵ ${calculation.grossTermFee.toLocaleString()} − GH₵ ${calculation.discountAmount.toLocaleString()} (${calculation.discountPct}% Discount)`
+                        : `GH₵ ${calculation.monthlyRate.toLocaleString()}/mo × ${calculation.subscribedMonths} Months`}
                   </span>
                 </div>
               </div>
 
               <div style={{ fontSize: "0.82rem", color: "#cbd5e1", marginBottom: "8px", fontWeight: 700 }}>
-                Select Official Payment Period (5 Supported Durations & Discounts):
+                Select Official Free Trial or Term / Multi-Month Payment Period:
               </div>
 
-              {/* 5 Official Subscription Periods Grid */}
+              {/* Subscription Periods Grid */}
               <div className="gbs-subscription-tier-grid">
-                {/* 1 Month (0% Discount) / 1-Month Free Institutional Trial */}
+                {/* 4-Month Full Term Free Trial (120 Days) */}
                 <div
-                  className={`gbs-tier-card ${form.subscriptionPlan === "1_MONTH" || form.subscriptionPlan === "1_MONTH_TRIAL" ? "selected" : ""} ${isTrialLocked ? "disabled-trial" : ""}`}
+                  className={`gbs-tier-card ${form.subscriptionPlan === "4_MONTH_TRIAL" || form.subscriptionPlan === "1_MONTH_TRIAL" ? "selected" : ""} ${isTrialLocked ? "disabled-trial" : ""}`}
                   onClick={() => {
                     if (isTrialLocked) {
-                      setError("🔒 Free Trial Ineligible: This institution or registered contact has already utilized the 1-Month Free Trial. Please select an active paid tier (3, 6, 9, or 12 Months).");
+                      setError("🔒 Free Trial Ineligible: This institution or registered contact has already utilized the 4-Month Term Free Trial. Please select an active paid period (4 Months Term, 3, 6, 9, or 12 Months).");
                       return;
                     }
-                    setForm((prev) => ({ ...prev, subscriptionPlan: "1_MONTH" }));
+                    setForm((prev) => ({ ...prev, subscriptionPlan: "4_MONTH_TRIAL", momoTxnId: "FREE_TRIAL_AUTO" }));
                   }}
                   style={{ opacity: isTrialLocked ? 0.75 : 1, position: "relative" }}
                 >
                   <div>
                     <span className="gbs-tier-badge" style={{ background: isTrialLocked ? "#ef4444" : "#10b981", color: "#fff" }}>
-                      {isTrialLocked ? "🔒 TRIAL USED (INELIGIBLE)" : "1 MONTH • FREE TRIAL / STANDARD"}
+                      {isTrialLocked ? "🔒 TRIAL USED" : "4 MONTHS • FREE TERM TRIAL"}
                     </span>
-                    <div className="gbs-tier-name">1 Month {isTrialLocked ? "(Paid Only)" : "Evaluation"}</div>
-                    <div className="gbs-tier-fee">GH₵ {calculation.oneMonthRate.toLocaleString()}</div>
+                    <div className="gbs-tier-name">Full Term Trial (120 Days)</div>
+                    <div className="gbs-tier-fee" style={{ color: "#34d399" }}>FREE (GH₵ 0)</div>
                     <div className="gbs-tier-desc">
-                      {isTrialLocked ? "Previous trial detected. Select a paid period to maintain records." : `${calculation.count} students × GH₵ ${calculation.rate} × 1 month (0% discount).`}
+                      {isTrialLocked ? "Previous term trial detected. Select a paid period." : `4-month full term free (worth GH₵ ${calculation.periods.p4.net.toLocaleString()} at GH₵ ${calculation.rate * 4}/student).`}
+                    </div>
+                  </div>
+                </div>
+
+                {/* 4 Months (1 Full Term / Semester) */}
+                <div
+                  className={`gbs-tier-card ${form.subscriptionPlan === "4_MONTHS" || form.subscriptionPlan === "1_TERM" ? "selected" : ""}`}
+                  onClick={() => setForm((prev) => ({ ...prev, subscriptionPlan: "4_MONTHS" }))}
+                >
+                  <div>
+                    <span className="gbs-tier-badge" style={{ background: "#0ea5e9", color: "#fff" }}>4 MONTHS • FULL TERM / SEM</span>
+                    <div className="gbs-tier-name">4 Months (1 Term / Semester)</div>
+                    <div className="gbs-tier-fee">GH₵ {calculation.fourMonthTermRate.toLocaleString()}</div>
+                    <div className="gbs-tier-desc">
+                      {calculation.count} students × GH₵ {calculation.rate} × 4 mo (GH₵ {calculation.rate * 4}/student).
                     </div>
                   </div>
                 </div>
@@ -1195,32 +1223,32 @@ export default function TenantOnboardingFirstPage() {
               {/* Official Student Subscription Rate & Population Reference Matrix */}
               <div style={{ marginTop: "16px", padding: "12px 14px", background: "rgba(2, 6, 23, 0.65)", borderRadius: "10px", border: "1px solid rgba(148, 163, 184, 0.2)" }}>
                 <div style={{ fontSize: "0.78rem", fontWeight: 800, color: "#fbbf24", marginBottom: "8px" }}>
-                  📊 Official GBS Monthly Student Subscription Benchmark (Students × Rate) & Population Growth Policy:
+                  📊 Official GBS Term/Semester Subscription Benchmark (Monthly Rate × 4 Mo × Active Students):
                 </div>
                 <div style={{ overflowX: "auto" }}>
                   <table style={{ width: "100%", borderCollapse: "collapse", fontSize: "0.74rem", color: "#e2e8f0", textAlign: "left" }}>
                     <thead>
                       <tr style={{ borderBottom: "1px solid rgba(148, 163, 184, 0.25)", color: "#38bdf8" }}>
                         <th style={{ padding: "5px 8px" }}>Active Students</th>
-                        <th style={{ padding: "5px 8px" }}>Nursery – JHS (GH₵3)</th>
-                        <th style={{ padding: "5px 8px" }}>SHS (GH₵5)</th>
-                        <th style={{ padding: "5px 8px" }}>University (GH₵10)</th>
+                        <th style={{ padding: "5px 8px" }}>JHS Term (GH₵3×4=12)</th>
+                        <th style={{ padding: "5px 8px" }}>SHS Term (GH₵5×4=20)</th>
+                        <th style={{ padding: "5px 8px" }}>TVET &amp; Uni Sem (GH₵10×4=40)</th>
                       </tr>
                     </thead>
                     <tbody>
                       {[100, 200, 300, 500, 1000, 2000].map((stu) => (
                         <tr key={stu} style={{ borderBottom: "1px solid rgba(148, 163, 184, 0.1)" }}>
                           <td style={{ padding: "4px 8px", fontWeight: 700 }}>{stu.toLocaleString()}</td>
-                          <td style={{ padding: "4px 8px" }}>GH₵ {(stu * 3).toLocaleString()}</td>
-                          <td style={{ padding: "4px 8px" }}>GH₵ {(stu * 5).toLocaleString()}</td>
-                          <td style={{ padding: "4px 8px" }}>GH₵ {(stu * 10).toLocaleString()}</td>
+                          <td style={{ padding: "4px 8px" }}>GH₵ {(stu * 12).toLocaleString()}</td>
+                          <td style={{ padding: "4px 8px" }}>GH₵ {(stu * 20).toLocaleString()}</td>
+                          <td style={{ padding: "4px 8px" }}>GH₵ {(stu * 40).toLocaleString()}</td>
                         </tr>
                       ))}
                     </tbody>
                   </table>
                 </div>
                 <div style={{ marginTop: "6px", fontSize: "0.72rem", color: "#94a3b8" }}>
-                  • <strong>Population Growth Policy:</strong> Future billing adjusts automatically as active student population grows or reduces (e.g., 200→300 increases next billing; 500→400 decreases next billing). Previously paid subscription periods are never retrospectively changed.
+                  • <strong>4-Month Term Free Trial &amp; Population Policy:</strong> All institutions begin with a 4-month (120-day) full-term free trial. Future billing adjusts automatically as active student population changes without retrospective edits.
                 </div>
                 <div data-testid="onboarding-country-currency-preview" style={{ marginTop: "10px", padding: "10px 12px", borderRadius: "8px", background: "rgba(15, 23, 42, 0.9)", border: "1px solid rgba(56, 189, 248, 0.45)", display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: "8px" }}>
                   <span style={{ fontSize: "0.78rem", color: "#e2e8f0" }}>
@@ -1234,7 +1262,7 @@ export default function TenantOnboardingFirstPage() {
               </div>
 
               {/* Payment Schedule Mode Selector (Spread Monthly vs Bulk Full Term with Signed T&C) */}
-              {form.subscriptionPlan !== "1_MONTH_TRIAL" && (
+              {form.subscriptionPlan !== "4_MONTH_TRIAL" && form.subscriptionPlan !== "1_MONTH_TRIAL" && (
                 <div style={{ marginTop: "18px", padding: "16px", background: "rgba(15, 23, 42, 0.85)", borderRadius: "12px", border: "1px solid rgba(56, 189, 248, 0.35)" }}>
                   <div style={{ fontSize: "0.86rem", color: "#38bdf8", fontWeight: 800, marginBottom: "10px" }}>
                     ⚖️ Choose Preferred Subscription Payment Structure ({calculation.subscribedMonths} Months Selected):
@@ -1336,13 +1364,13 @@ export default function TenantOnboardingFirstPage() {
                 <div className="gbs-trial-upgrade-prompt">
                   <span style={{ fontSize: "1.4rem" }}>🛡️</span>
                   <div>
-                    <strong>Disaster Recovery & Modernization Notice:</strong> Your institution's 1-Month Free Trial has expired. Please select a 3 Months, 6 Months, 9 Months, 12 Months, or Lifetime license to transition from traditional to modern school management, keeping all institutional data, grades, and records secure even in catastrophic events.
+                    <strong>Disaster Recovery & Modernization Notice:</strong> Your institution's 4-Month Full Term Free Trial has expired. Please select a 4 Months Term, 3 Months, 6 Months, 9 Months, 12 Months, or Lifetime license to transition from traditional to modern school management, keeping all institutional data, grades, and records secure even in catastrophic events.
                   </div>
                 </div>
               )}
 
               {/* MoMo Payment Reference If Paid Plan */}
-              {form.subscriptionPlan !== "1_MONTH_TRIAL" && (
+              {form.subscriptionPlan !== "4_MONTH_TRIAL" && form.subscriptionPlan !== "1_MONTH_TRIAL" && (
                 <div style={{ marginTop: "18px", padding: "14px", background: "rgba(30, 41, 59, 0.8)", borderRadius: "10px", border: "1px solid rgba(212, 175, 55, 0.3)" }}>
                   <div style={{ fontSize: "0.85rem", color: "#fbbf24", fontWeight: 700, marginBottom: "6px" }}>
                     💳 Mobile Money / Bank Payment Remittance ({form.paymentScheduleMode === "BULK_FULL_TERM" ? `Bulk Full Term — ${calculation.subscribedMonths} Months` : "First Month of Monthly Spread"})

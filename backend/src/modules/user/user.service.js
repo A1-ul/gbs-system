@@ -7,6 +7,7 @@ const ALL_ROLES = [
   'SUPER_ADMIN',
   'ADMIN',
   'TEACHER',
+  'SECRETARY',
   'STUDENT',
   'PARENT',
   'ACCOUNTANT',
@@ -416,7 +417,7 @@ const initiateStaffRegistration = async (data, adminUser, currentTenantId) => {
     throw new AppError('Staff Email and Mobile Phone Number are required.', 400);
   }
 
-  const validRoles = ['TEACHER', 'ACCOUNTANT', 'STAFF', 'ADMIN', 'HR', 'ALUMNI'];
+  const validRoles = ['TEACHER', 'SECRETARY', 'ACCOUNTANT', 'STAFF', 'ADMIN', 'HR', 'ALUMNI'];
   const staffRole = (role || 'TEACHER').toUpperCase();
   if (!validRoles.includes(staffRole)) {
     throw new AppError(`Invalid staff role '${role}'. Allowed roles: ${validRoles.join(', ')}`, 400);

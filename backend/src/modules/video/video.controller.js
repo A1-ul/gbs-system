@@ -122,6 +122,69 @@ async function updatePresence(req, res, next) {
   }
 }
 
+async function streamCallEvents(req, res, next) {
+  try {
+    const callId = req.params.callId;
+    const { session } = liveCallService.resolveCallLocation(req, callId);
+    const callerId = String(req.user?.id || req.user?.email || '');
+    const callerEmail = String(req.user?.email || '').trim().toLowerCase() || null;
+
+    res.setHeader('Content-Type', 'text/event-stream');
+    res.setHeader('Cache-Control', 'no-cache, no-transform');
+    res.setHeader('Connection', 'keep-alive');
+    res.setHeader('X-Accel-Buffering', 'no');
+    if (typeof res.flushHeaders === 'function') res.flushHeaders();
+
+    const writeEvent = (eventName, payload) => {
+      try {
+        res.write(`event: ${eventName}\ndata: ${JSON.stringify(payload)}\n\n`);
+      } catch { }
+    };
+
+    writeEvent('connected', {
+      callId: session.id,
+      roomCode: session.roomCode,
+      status: session.status,
+      participants: session.participants || []
+    });
+
+    const onEvent = (evt) => {
+      if (!evt) return;
+      if (evt.type === 'webrtc_signal' && evt.item) {
+        const sig = evt.item;
+        if (sig.senderEmail && callerEmail && sig.senderEmail === callerEmail) return;
+        if (!sig.senderEmail && String(sig.senderId) === callerId) return;
+        if (sig.targetUserId && callerId && String(sig.targetUserId) !== callerId) return;
+      }
+      writeEvent(evt.type || 'update', evt);
+    };
+
+    const channelById = `call:${session.id}`;
+    const channelByRoom = `call:${session.roomCode}`;
+    liveCallService.callEventBus.on(channelById, onEvent);
+    if (channelByRoom !== channelById) {
+      liveCallService.callEventBus.on(channelByRoom, onEvent);
+    }
+
+    const heartbeat = setInterval(() => {
+      try {
+        res.write(`: heartbeat ${Date.now()}\n\n`);
+      } catch { }
+    }, 20000);
+    if (typeof heartbeat.unref === 'function') heartbeat.unref();
+
+    req.on('close', () => {
+      clearInterval(heartbeat);
+      liveCallService.callEventBus.off(channelById, onEvent);
+      if (channelByRoom !== channelById) {
+        liveCallService.callEventBus.off(channelByRoom, onEvent);
+      }
+    });
+  } catch (err) {
+    return next(err);
+  }
+}
+
 module.exports = {
   getStatus,
   getDirectory,
@@ -132,5 +195,6 @@ module.exports = {
   endCall,
   postSignal,
   getCallState,
-  updatePresence
+  updatePresence,
+  streamCallEvents
 };

@@ -165,7 +165,10 @@ export default function OnlineLearningDashboard() {
       setTimeout(async () => {
         try {
           if (navigator.mediaDevices && navigator.mediaDevices.getUserMedia) {
-            const stream = await navigator.mediaDevices.getUserMedia({ video: true, audio: true });
+            const stream = await navigator.mediaDevices.getUserMedia({
+              video: { width: { ideal: 640 }, height: { ideal: 360 }, frameRate: { ideal: 30, min: 24 } },
+              audio: { echoCancellation: true, noiseSuppression: true, autoGainControl: true }
+            });
             if (classroomVideoRef.current) {
               classroomVideoRef.current.srcObject = stream;
               classroomVideoRef.current.play();

@@ -16,7 +16,8 @@ const DEMO_ACCOUNT_EMAILS = new Set([
   'finance@gbs.com',
   'staff@gbs.com',
   'hr@gbs.com',
-  'alumni@gbs.com'
+  'alumni@gbs.com',
+  'secretary@gbs.com'
 ]);
 
 const DEMO_ACCOUNT_USERNAMES = new Set([
@@ -27,7 +28,8 @@ const DEMO_ACCOUNT_USERNAMES = new Set([
   'finance1',
   'staff1',
   'hr1',
-  'alumni1'
+  'alumni1',
+  'secretary1'
 ]);
 
 const DEMO_ACCOUNT_IDS = new Set([
@@ -49,7 +51,9 @@ const DEMO_ACCOUNT_IDS = new Set([
   'usr_hr_master',
   'usr_hr1',
   'usr_alumni_master',
-  'usr_alumni1'
+  'usr_alumni1',
+  'usr_secretary_master',
+  'usr_secretary1'
 ]);
 
 const EXEMPT_PATH_PREFIXES = [

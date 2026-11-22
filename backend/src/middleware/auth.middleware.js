@@ -17,7 +17,8 @@ const ROLE_DEFAULT_IDS = {
   ACCOUNTANT: 5,
   STAFF: 6,
   HR: 7,
-  ALUMNI: 8
+  ALUMNI: 8,
+  SECRETARY: 9
 };
 
 const toNumericId = (val, fallback = 1) => {
@@ -249,7 +250,9 @@ const protect = async (req, res, next) => {
           'usr_hr_master',
           'usr_hr1',
           'usr_alumni_master',
-          'usr_alumni1'
+          'usr_alumni1',
+          'usr_secretary_master',
+          'usr_secretary1'
         ]);
         if (decoded.role === 'DEVELOPER' || BUILTIN_IDS.has(String(decoded.id))) {
           user = {

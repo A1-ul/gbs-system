@@ -126,13 +126,13 @@ export default function StudentCooperativeConferenceModal({ isOpen, onClose, ini
       try {
         if (navigator.mediaDevices && navigator.mediaDevices.getUserMedia) {
           const stream = await navigator.mediaDevices.getUserMedia({
-            video: { width: 640, height: 480 },
-            audio: true
+            video: { width: { ideal: 640 }, height: { ideal: 360 }, frameRate: { ideal: 30, min: 24 } },
+            audio: { echoCancellation: true, noiseSuppression: true, autoGainControl: true }
           });
           localStreamRef.current = stream;
           if (localVideoRef.current) {
             localVideoRef.current.srcObject = stream;
-            localVideoRef.current.play().catch(() => {});
+            localVideoRef.current.play().catch(() => { });
           }
         }
       } catch (err) {
@@ -171,7 +171,7 @@ export default function StudentCooperativeConferenceModal({ isOpen, onClose, ini
           const stream = await navigator.mediaDevices.getDisplayMedia({ video: true, audio: true });
           if (localVideoRef.current) {
             localVideoRef.current.srcObject = stream;
-            localVideoRef.current.play().catch(() => {});
+            localVideoRef.current.play().catch(() => { });
           }
           const track = stream.getVideoTracks()[0];
           if (track) {

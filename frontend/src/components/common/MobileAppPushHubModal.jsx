@@ -166,6 +166,26 @@ export default function MobileAppPushHubModal({ isOpen, onClose }) {
     });
   };
 
+  const handleInstallAppleWebClipProfile = () => {
+    if (typeof window === "undefined") return;
+    const originUrl = window.location.origin;
+    const profileUrl = `${originUrl}/api/v1/app/ios-webclip.mobileconfig?origin=${encodeURIComponent(originUrl)}`;
+    try {
+      const a = document.createElement("a");
+      a.href = profileUrl;
+      a.download = "GBS-School-System-iOS.mobileconfig";
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+    } catch {
+      window.location.href = profileUrl;
+    }
+    setPushFeedback({
+      type: "success",
+      text: "🍎 Apple iOS / iPadOS App Profile downloaded! On iPhone/iPad: open Settings → Profile Downloaded → Install (or in Safari tap Share ⎋ → Add to Home Screen) so the GBS Crest icon runs full-screen on Apple devices with automatic updates."
+    });
+  };
+
   const handleInstallPWA = async () => {
     setPushFeedback(null);
     const activePrompt = deferredPrompt || (typeof window !== "undefined" ? window.__gbsDeferredInstallPrompt : null);
@@ -240,10 +260,8 @@ export default function MobileAppPushHubModal({ isOpen, onClose }) {
         text: "📱 Android Install: Tap your Chrome/Edge menu (⋮ top-right) → 'Install app' or 'Add to Home screen' so the GBS Crest icon installs directly on your phone, or tap 'Save App Launcher (.html)' below!"
       });
     } else if (device === "IOS") {
-      setPushFeedback({
-        type: "info",
-        text: "🍎 iPhone / iPad Safari: Tap the Share button (⎋ at the bottom/top bar) → scroll and tap 'Add to Home Screen' (➕) → 'Add'."
-      });
+      handleInstallAppleWebClipProfile();
+      return;
     } else {
       setPushFeedback({
         type: "info",
@@ -492,6 +510,22 @@ export default function MobileAppPushHubModal({ isOpen, onClose }) {
                   </button>
                   <button
                     type="button"
+                    onClick={handleInstallAppleWebClipProfile}
+                    style={{
+                      background: "linear-gradient(135deg, rgba(15, 23, 42, 0.95), rgba(30, 41, 59, 0.95))",
+                      border: "1.5px solid #f6dd84",
+                      color: "#f6dd84",
+                      borderRadius: "10px",
+                      padding: "10px 14px",
+                      fontWeight: 800,
+                      fontSize: "0.82rem",
+                      cursor: "pointer"
+                    }}
+                  >
+                    🍎 Install on Apple (iPhone / iPad / Mac Profile)
+                  </button>
+                  <button
+                    type="button"
                     onClick={handleDownloadWebAppLauncher}
                     style={{
                       background: "rgba(16, 185, 129, 0.2)",
@@ -545,13 +579,12 @@ export default function MobileAppPushHubModal({ isOpen, onClose }) {
                 <div className="gbs-app-card">
                   <div style={{ display: "flex", alignItems: "center", gap: "8px", marginBottom: "8px" }}>
                     <span style={{ fontSize: "1.4rem" }}>🍎</span>
-                    <strong style={{ color: "#38bdf8", fontSize: "0.95rem" }}>Apple iPhone &amp; iPad</strong>
+                    <strong style={{ color: "#38bdf8", fontSize: "0.95rem" }}>Apple iPhone, iPad &amp; Mac</strong>
                   </div>
                   <ol style={{ margin: 0, paddingLeft: "1.2rem", fontSize: "0.82rem", color: "#cbd5e1", lineHeight: "1.6" }}>
-                    <li>Open this link in <strong>Safari</strong> on your iPhone or iPad.</li>
-                    <li>Tap the <strong>Share button (⎋)</strong> at the bottom bar.</li>
-                    <li>Scroll down and tap <strong>"Add to Home Screen" (➕)</strong>.</li>
-                    <li>Tap <strong>"Add"</strong> at the top right to launch GBS fullscreen!</li>
+                    <li><strong>Fastest (Any iOS Browser):</strong> Tap <strong>Install on Apple (.mobileconfig)</strong> above, then open iPhone/iPad <strong>Settings → Profile Downloaded → Install</strong>.</li>
+                    <li><strong>Or in Apple Safari:</strong> Tap the <strong>Share button (⎋)</strong> → <strong>"Add to Home Screen" (➕)</strong> → <strong>Add</strong>.</li>
+                    <li>On macOS Safari / Chrome, click <strong>File → Add to Dock</strong> or Chrome <strong>Install (⊕)</strong> to run fullscreen with auto-updates!</li>
                   </ol>
                 </div>
 

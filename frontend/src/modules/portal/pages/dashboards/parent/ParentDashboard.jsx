@@ -14,6 +14,7 @@ import { isDemoSandboxMode } from "../../../../../utils/tokenStorage";
 import { checkDemoEntryLimit, trackDemoEntryCreated } from "../../../../../utils/demoLimitGuard";
 import { copyTextSafely } from "../../../../../utils/safeWindow";
 import SchoolClinicHubPanel from "../../../../../components/common/SchoolClinicHubPanel";
+import SchoolStationeryHubPanel from "../../../../../components/common/SchoolStationeryHubPanel";
 import LiveCallLauncherAndReceiver from "../../../../../components/common/LiveCallLauncherAndReceiver";
 import "./ParentDashboard.css";
 
@@ -1324,6 +1325,15 @@ export default function ParentDashboard() {
               onClick={() => setActiveTab("meetings")}
             >
               💻 Parent-Teacher Meetings
+            </button>
+            <button
+              type="button"
+              data-testid="parent-stationery-tab"
+              className={`role-tab-btn ${activeTab === "stationery" ? "active" : ""}`}
+              onClick={() => setActiveTab("stationery")}
+              style={{ borderLeft: "3px solid #d4af37", fontWeight: 800 }}
+            >
+              🎒 School Stationery &amp; Prices
             </button>
             <button
               type="button"
@@ -2827,6 +2837,15 @@ export default function ParentDashboard() {
                   </div>
                 )
               )}
+            </div>
+          )}
+
+          {activeTab === "stationery" && (
+            <div className="role-workspace-card">
+              <SchoolStationeryHubPanel
+                mode="PARENT"
+                currentUser={(() => { try { return JSON.parse(localStorage.getItem("gbs_user") || "null") || { role: "PARENT" }; } catch { return { role: "PARENT" }; } })()}
+              />
             </div>
           )}
 

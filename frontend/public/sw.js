@@ -5,7 +5,7 @@
 ================================================================================
 */
 
-const CACHE_NAME = "gbs-cache-v2026.20";
+const CACHE_NAME = "gbs-cache-v2026.21";
 const OFFLINE_URL = "/offline.html";
 
 const PRECACHE_ASSETS = [
@@ -84,7 +84,8 @@ self.addEventListener("fetch", (event) => {
   if (event.request.method !== "GET") return;
   const url = new URL(event.request.url);
 
-  if (url.pathname.startsWith("/api/")) return;
+  // Bypass API calls & Range requests (critical for Apple iOS Safari video/audio streaming)
+  if (url.pathname.startsWith("/api/") || event.request.headers.get("range")) return;
 
   const isDocument = event.request.mode === "navigate" || event.request.headers.get("accept")?.includes("text/html") || url.pathname === "/manifest.json" || url.pathname === "/index.html";
 

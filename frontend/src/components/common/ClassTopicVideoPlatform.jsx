@@ -271,12 +271,15 @@ export default function ClassTopicVideoPlatform({
     let stream = null;
     try {
       if (navigator.mediaDevices && navigator.mediaDevices.getUserMedia) {
-        stream = await navigator.mediaDevices.getUserMedia({ video: true, audio: true });
+        stream = await navigator.mediaDevices.getUserMedia({
+          video: { width: { ideal: 640 }, height: { ideal: 360 }, frameRate: { ideal: 30, min: 24 } },
+          audio: { echoCancellation: true, noiseSuppression: true, autoGainControl: true }
+        });
       }
     } catch {
       try {
         if (navigator.mediaDevices && navigator.mediaDevices.getUserMedia) {
-          stream = await navigator.mediaDevices.getUserMedia({ video: true });
+          stream = await navigator.mediaDevices.getUserMedia({ video: { frameRate: { ideal: 30, min: 20 } } });
         }
       } catch {
         stream = null;
