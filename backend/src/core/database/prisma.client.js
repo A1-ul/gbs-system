@@ -116,6 +116,13 @@ const INT_ID_FIELDS = new Set([
 
 const SKIP_INT_CONTAINERS = new Set(['orderBy', 'select', 'include', 'omit', 'distinct', 'by']);
 const SORT_DIRECTIONS = new Set(['asc', 'desc']);
+const STRING_ID_MODELS = new Set([
+  'StaffAttendanceRecord',
+  'LiveCallSession',
+  'StationeryItem',
+  'StationeryTransaction',
+  'SecretaryRecord'
+]);
 
 const sanitizeIdsForPrisma = (obj, modelName = null, parentKey = null) => {
   if (!obj || typeof obj !== 'object') return obj;
@@ -124,9 +131,11 @@ const sanitizeIdsForPrisma = (obj, modelName = null, parentKey = null) => {
   for (const [k, v] of Object.entries(obj)) {
     // InstitutionRegistration.subscriptionId is a String identifier (e.g. "SUB-2026-001"), not a numeric FK
     const skipSubscriptionInt = k === 'subscriptionId' && modelName === 'InstitutionRegistration';
+    // Models with String @id primary keys (e.g. "SATT-...", "CALL-...", "STN-...", "SEC-...") must keep String IDs
+    const skipStringPrimaryId = k === 'id' && STRING_ID_MODELS.has(modelName);
     const inNonIdValueContainer = SKIP_INT_CONTAINERS.has(parentKey);
     const isSortOrderValue = typeof v === 'string' && SORT_DIRECTIONS.has(v.trim().toLowerCase());
-    if (INT_ID_FIELDS.has(k) && typeof v === 'string' && !skipSubscriptionInt && !inNonIdValueContainer && !isSortOrderValue) {
+    if (INT_ID_FIELDS.has(k) && typeof v === 'string' && !skipSubscriptionInt && !skipStringPrimaryId && !inNonIdValueContainer && !isSortOrderValue) {
       out[k] = toSafeInt(v, 1);
     } else if (v && typeof v === 'object' && !(v instanceof Date)) {
       out[k] = sanitizeIdsForPrisma(v, modelName, k);
@@ -1386,6 +1395,9 @@ const createResilientPrismaClient = () => {
       return handleRawSqlOffline(sql, values);
     }
   };
+
+  client.sanitizeIdsForPrisma = sanitizeIdsForPrisma;
+  client.STRING_ID_MODELS = STRING_ID_MODELS;
 
   return new Proxy(client, {
     get(target, prop, receiver) {

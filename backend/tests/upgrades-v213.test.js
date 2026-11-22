@@ -386,3 +386,28 @@ test('6. GBS AI Voice Assistant Answers Exact Portal, Teacher, Secretary, Statio
   assert.equal(shieldRes.status, 200);
   assert.equal(shieldRes.json.data.topicId, 'privacy_shield');
 });
+
+test('7. Prisma ID Sanitizer Preserves String Primary Keys for StaffAttendanceRecord, LiveCallSession, Stationery & Secretary Models', () => {
+  const prismaClient = require('../src/core/database/prisma.client');
+  assert.equal(typeof prismaClient.sanitizeIdsForPrisma, 'function');
+
+  for (const [modelName, sampleId] of [
+    ['StaffAttendanceRecord', 'SATT-179525500659-901'],
+    ['LiveCallSession', 'CALL-1-1795357534025-793'],
+    ['StationeryItem', 'STN-1795357530613-824'],
+    ['StationeryTransaction', 'TXN-1795357530999-112'],
+    ['SecretaryRecord', 'SEC-1795357532720-548']
+  ]) {
+    const out = prismaClient.sanitizeIdsForPrisma(
+      { where: { id: sampleId }, create: { id: sampleId, tenantId: '1' } },
+      modelName
+    );
+    assert.equal(out.where.id, sampleId, `${modelName} where.id must stay String`);
+    assert.equal(out.create.id, sampleId, `${modelName} create.id must stay String`);
+    assert.equal(out.create.tenantId, 1, `${modelName} tenantId must coerce to Int`);
+  }
+
+  const userSanitized = prismaClient.sanitizeIdsForPrisma({ where: { id: 'usr_teacher_master', tenantId: '1' } }, 'User');
+  assert.equal(userSanitized.where.id, 2);
+  assert.equal(userSanitized.where.tenantId, 1);
+});
