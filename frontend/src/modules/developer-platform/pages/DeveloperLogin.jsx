@@ -437,6 +437,8 @@ export default function DeveloperLogin() {
       if (!token) token = `gbs_dev_token_${Date.now()}`;
       localStorage.setItem("gbs_dev_token", token);
       localStorage.setItem("gbs_token", token);
+      localStorage.setItem("gbs_access_token", token);
+      window.dispatchEvent(new CustomEvent("gbs_auth_session_updated"));
       localStorage.removeItem("gbs_dev_login_locked");
       sessionStorage.setItem("gbs_dev_gate_unlocked", "true");
       localStorage.setItem(
@@ -484,6 +486,8 @@ export default function DeveloperLogin() {
         }
         localStorage.setItem("gbs_dev_token", token);
         localStorage.setItem("gbs_token", token);
+        localStorage.setItem("gbs_access_token", token);
+        window.dispatchEvent(new CustomEvent("gbs_auth_session_updated"));
         localStorage.removeItem("gbs_dev_login_locked");
         localStorage.removeItem("gbs_dev_console_locked");
         sessionStorage.setItem("gbs_dev_gate_unlocked", "true");
@@ -565,6 +569,8 @@ export default function DeveloperLogin() {
       if (response.data?.token) {
         localStorage.setItem("gbs_dev_token", response.data.token);
         localStorage.setItem("gbs_token", response.data.token);
+        localStorage.setItem("gbs_access_token", response.data.token);
+        window.dispatchEvent(new CustomEvent("gbs_auth_session_updated"));
         if (response.data?.refreshToken) {
           localStorage.setItem("gbs_refresh_token", response.data.refreshToken);
         }

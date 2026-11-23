@@ -1,11 +1,56 @@
 import { getApiBaseUrl } from "../api/client/apiConfig";
 
+function readCleanStorageValue(key) {
+  try {
+    const val = localStorage.getItem(key);
+    if (!val || val === "null" || val === "undefined") return null;
+    const trimmed = String(val).trim();
+    return trimmed || null;
+  } catch {
+    return null;
+  }
+}
+
+export function getActiveAuthToken({ isDeveloperContext = false } = {}) {
+  const inDevPath =
+    isDeveloperContext ||
+    (typeof window !== "undefined" &&
+      String(window.location?.pathname || "").startsWith("/developer"));
+
+  if (inDevPath) {
+    return (
+      readCleanStorageValue("gbs_dev_token") ||
+      readCleanStorageValue("gbs_token") ||
+      readCleanStorageValue("gbs_access_token") ||
+      null
+    );
+  }
+  return (
+    readCleanStorageValue("gbs_token") ||
+    readCleanStorageValue("gbs_access_token") ||
+    readCleanStorageValue("gbs_dev_token") ||
+    null
+  );
+}
+
+export function hasActiveAuthSession({ isDeveloperContext = false } = {}) {
+  if (getActiveAuthToken({ isDeveloperContext })) return true;
+  const refresh = readCleanStorageValue("gbs_refresh_token");
+  if (refresh && !refresh.startsWith("gbs_local_refresh_") && !refresh.startsWith("gbs_builtin_refresh_")) {
+    return true;
+  }
+  if (!isDeveloperContext && isBuiltInDemoUser()) {
+    return true;
+  }
+  return false;
+}
+
 export function getAccessToken() {
-  return localStorage.getItem("gbs_token") || null;
+  return getActiveAuthToken({ isDeveloperContext: false });
 }
 
 export function getRefreshToken() {
-  return localStorage.getItem("gbs_refresh_token") || null;
+  return readCleanStorageValue("gbs_refresh_token");
 }
 
 export function getUser() {
@@ -24,6 +69,7 @@ export function saveAuthSession(data = {}) {
 
   if (accessToken) {
     localStorage.setItem("gbs_token", accessToken);
+    localStorage.setItem("gbs_access_token", accessToken);
   }
 
   if (refreshToken) {
@@ -112,6 +158,10 @@ export function saveAuthSession(data = {}) {
         clearBranding: Boolean(previousTenantId && newTenantId && previousTenantId !== newTenantId)
       });
     }
+  }
+
+  if (typeof window !== "undefined" && (accessToken || user)) {
+    window.dispatchEvent(new CustomEvent("gbs_auth_session_updated"));
   }
 }
 
@@ -279,4 +329,7 @@ export function clearAuthStorage() {
   localStorage.removeItem("gbs_auth_role");
   localStorage.removeItem("gbs_tenant_id");
   localStorage.removeItem("gbs_tenant");
+  if (typeof window !== "undefined") {
+    window.dispatchEvent(new CustomEvent("gbs_auth_session_cleared"));
+  }
 }

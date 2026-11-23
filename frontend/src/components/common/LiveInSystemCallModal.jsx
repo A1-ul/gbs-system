@@ -1,6 +1,6 @@
 import React, { useEffect, useRef, useState, useCallback } from "react";
 import apiClient from "../../api/client/apiClient";
-import { getAccessToken } from "../../utils/tokenStorage";
+import { getActiveAuthToken } from "../../utils/tokenStorage";
 
 const ICE_CONFIG = {
   iceServers: [
@@ -74,8 +74,14 @@ export default function LiveInSystemCallModal({
   onSessionEnded = null
 }) {
   const [liveSession, setLiveSession] = useState(session || null);
+  const [activeMediaMode, setActiveMediaMode] = useState(() =>
+    String(session?.mediaMode || "VIDEO").toUpperCase() === "VOICE" ? "VOICE" : "VIDEO"
+  );
   const [micMuted, setMicMuted] = useState(false);
-  const [cameraOff, setCameraOff] = useState(String(session?.mediaMode || "VIDEO").toUpperCase() === "VOICE");
+  const [cameraOff, setCameraOff] = useState(
+    String(session?.mediaMode || "VIDEO").toUpperCase() === "VOICE"
+  );
+  const [switchingMediaMode, setSwitchingMediaMode] = useState(false);
   const [screenSharing, setScreenSharing] = useState(false);
   const [mediaStatus, setMediaStatus] = useState("Connecting audio/video hardware...");
   const [chatInput, setChatInput] = useState("");
@@ -91,6 +97,13 @@ export default function LiveInSystemCallModal({
   const localStreamRef = useRef(null);
   const remoteStreamRef = useRef(null);
   const peerConnRef = useRef(null);
+  const videoSenderRef = useRef(null);
+  const initialMediaModeRef = useRef(
+    String(session?.mediaMode || "VIDEO").toUpperCase() === "VOICE" ? "VOICE" : "VIDEO"
+  );
+  const activeMediaModeRef = useRef(activeMediaMode);
+  const micMutedRef = useRef(micMuted);
+  const mediaSwitchBusyRef = useRef(false);
   const lastSignalTimeRef = useRef(null);
   const offerSentRef = useRef(false);
   const pendingSignalsRef = useRef([]);
@@ -104,12 +117,25 @@ export default function LiveInSystemCallModal({
   useEffect(() => {
     onSessionEndedRef.current = onSessionEnded;
     onCloseRef.current = onClose;
+    activeMediaModeRef.current = activeMediaMode;
+    micMutedRef.current = micMuted;
   });
 
   const myUserId = String(currentUser?.id || currentUser?.email || "user");
   const callId = session?.id || liveSession?.id;
   const initiatorUserId = session?.initiatorUserId || liveSession?.initiatorUserId;
-  const mediaMode = String(liveSession?.mediaMode || session?.mediaMode || "VIDEO").toUpperCase();
+  const mediaMode = activeMediaMode;
+  const syncedSessionIdRef = useRef(session?.id || null);
+
+  useEffect(() => {
+    if (!session?.id || syncedSessionIdRef.current === session.id) return;
+    syncedSessionIdRef.current = session.id;
+    const nextMode = String(session?.mediaMode || "VIDEO").toUpperCase() === "VOICE" ? "VOICE" : "VIDEO";
+    initialMediaModeRef.current = nextMode;
+    setActiveMediaMode(nextMode);
+    setCameraOff(nextMode === "VOICE");
+    setLiveSession(session);
+  }, [session?.id]);
 
   const stopTracks = useCallback(() => {
     try {
@@ -129,10 +155,15 @@ export default function LiveInSystemCallModal({
         });
         localStreamRef.current = null;
       }
+      if (localVideoRef.current) {
+        localVideoRef.current.srcObject = null;
+      }
       if (peerConnRef.current) {
         peerConnRef.current.close();
         peerConnRef.current = null;
       }
+      videoSenderRef.current = null;
+      offerSentRef.current = false;
       pendingSignalsRef.current = [];
       pendingIceCandidatesRef.current = [];
       processedSignalIdsRef.current.clear();
@@ -167,9 +198,9 @@ export default function LiveInSystemCallModal({
     } catch { }
   }, []);
 
-  const attachLocalStreamToVideo = useCallback((stream) => {
+  const attachLocalStreamToVideo = useCallback((stream, forceRebind = false) => {
     if (!localVideoRef.current || !stream) return;
-    if (localVideoRef.current.srcObject !== stream) {
+    if (forceRebind || localVideoRef.current.srcObject !== stream) {
       localVideoRef.current.srcObject = stream;
     }
     localVideoRef.current.muted = true;
@@ -177,9 +208,9 @@ export default function LiveInSystemCallModal({
     localVideoRef.current.play().catch(() => { });
   }, []);
 
-  const attachRemoteStreamToVideo = useCallback((stream) => {
+  const attachRemoteStreamToVideo = useCallback((stream, forceRebind = false) => {
     if (!remoteVideoRef.current || !stream) return;
-    if (remoteVideoRef.current.srcObject !== stream) {
+    if (forceRebind || remoteVideoRef.current.srcObject !== stream) {
       remoteVideoRef.current.srcObject = stream;
     }
     remoteVideoRef.current.muted = false;
@@ -191,29 +222,94 @@ export default function LiveInSystemCallModal({
     }
   }, []);
 
-  const sendSignal = useCallback(async (signalType, payload) => {
+  const sendSignal = useCallback(async (signalType, payload, extra = {}) => {
     if (!callId) return;
     try {
       await apiClient.post(`/video/calls/${encodeURIComponent(callId)}/signal`, {
         signalType,
-        payload
+        payload,
+        ...extra
       });
     } catch { }
   }, [callId]);
 
-  // Ensure local video element stays connected & playing across re-renders
-  useEffect(() => {
-    if (localVideoRef.current && localStreamRef.current) {
-      attachLocalStreamToVideo(localStreamRef.current);
+  const findVideoSender = useCallback((pc) => {
+    if (!pc || typeof pc.getSenders !== "function") return null;
+    const senders = pc.getSenders() || [];
+    if (videoSenderRef.current && senders.includes(videoSenderRef.current)) {
+      return videoSenderRef.current;
     }
-  }, [cameraOff, mediaMode, attachLocalStreamToVideo]);
+    const directSender = senders.find((s) => s.track?.kind === "video");
+    if (directSender) {
+      videoSenderRef.current = directSender;
+      return directSender;
+    }
+    const transceivers = typeof pc.getTransceivers === "function" ? pc.getTransceivers() : [];
+    const videoTransceiver = transceivers.find(
+      (t) =>
+        t.sender?.track?.kind === "video" ||
+        t.receiver?.track?.kind === "video"
+    );
+    if (videoTransceiver?.sender) {
+      videoSenderRef.current = videoTransceiver.sender;
+      return videoTransceiver.sender;
+    }
+    return null;
+  }, []);
+
+  const renegotiatePeerConnection = useCallback(async (pc) => {
+    if (!pc || pc.signalingState === "closed") return;
+    try {
+      if (pc.signalingState !== "stable") return;
+      const offer = await pc.createOffer({
+        offerToReceiveAudio: true,
+        offerToReceiveVideo: true
+      });
+      await pc.setLocalDescription(offer);
+      await sendSignal("OFFER", offer);
+    } catch { }
+  }, [sendSignal]);
+
+  const acquireFreshCameraTrack = useCallback(async () => {
+    if (!navigator.mediaDevices || typeof navigator.mediaDevices.getUserMedia !== "function") {
+      return null;
+    }
+    try {
+      const hdStream = await navigator.mediaDevices.getUserMedia({
+        video: { width: { ideal: 640 }, height: { ideal: 360 }, frameRate: { ideal: 30 } },
+        audio: false
+      });
+      const track = hdStream.getVideoTracks()[0] || null;
+      if (track) return track;
+    } catch { }
+    try {
+      const basicStream = await navigator.mediaDevices.getUserMedia({ video: true, audio: false });
+      return basicStream.getVideoTracks()[0] || null;
+    } catch {
+      return null;
+    }
+  }, []);
+
+  // Ensure local video element stays connected & playing whenever switching back to VIDEO or turning camera ON
+  useEffect(() => {
+    if (activeMediaMode === "VIDEO" && !cameraOff && localStreamRef.current) {
+      attachLocalStreamToVideo(localStreamRef.current, true);
+      const rafId = requestAnimationFrame(() => {
+        if (localVideoRef.current && localStreamRef.current) {
+          attachLocalStreamToVideo(localStreamRef.current, true);
+        }
+      });
+      return () => cancelAnimationFrame(rafId);
+    }
+    return undefined;
+  }, [cameraOff, activeMediaMode, attachLocalStreamToVideo]);
 
   // Ensure remote video element stays connected & audible across re-renders
   useEffect(() => {
     if (remoteVideoRef.current && remoteStreamRef.current) {
       attachRemoteStreamToVideo(remoteStreamRef.current);
     }
-  }, [remoteConnected, attachRemoteStreamToVideo]);
+  }, [remoteConnected, activeMediaMode, attachRemoteStreamToVideo]);
 
   useEffect(() => {
     if (!callId) return undefined;
@@ -243,6 +339,11 @@ export default function LiveInSystemCallModal({
       if (sig.createdAt) lastSignalTimeRef.current = sig.createdAt;
       try {
         if (sig.signalType === "OFFER" && pc.signalingState !== "closed") {
+          if (pc.signalingState !== "stable") {
+            try {
+              await pc.setLocalDescription({ type: "rollback" });
+            } catch { }
+          }
           await pc.setRemoteDescription(new RTCSessionDescription(sig.payload));
           await flushPendingIce(pc);
           const ans = await pc.createAnswer();
@@ -261,6 +362,10 @@ export default function LiveInSystemCallModal({
           } else {
             pendingIceCandidatesRef.current.push(sig.payload);
           }
+        } else if (sig.signalType === "MEDIA_MODE") {
+          if (remoteStreamRef.current) {
+            attachRemoteStreamToVideo(remoteStreamRef.current, true);
+          }
         }
       } catch { }
     };
@@ -271,7 +376,8 @@ export default function LiveInSystemCallModal({
         return null;
       }
       const audioCfg = { echoCancellation: true, noiseSuppression: true, autoGainControl: true };
-      if (mediaMode === "VIDEO") {
+      const initialMode = initialMediaModeRef.current;
+      if (initialMode === "VIDEO") {
         try {
           const stream = await navigator.mediaDevices.getUserMedia({
             audio: audioCfg,
@@ -297,7 +403,7 @@ export default function LiveInSystemCallModal({
               try {
                 const audioOnly = await navigator.mediaDevices.getUserMedia({ audio: true, video: false });
                 setCameraOff(true);
-                setMediaStatus("Audio-Only Connected (click Turn Camera On once camera is free)");
+                setMediaStatus("Audio-Only Connected (click Switch to Video Call or Turn Camera On once camera is free)");
                 return audioOnly;
               } catch {
                 setCameraOff(true);
@@ -311,7 +417,7 @@ export default function LiveInSystemCallModal({
         try {
           const audioStream = await navigator.mediaDevices.getUserMedia({ audio: audioCfg, video: false });
           setCameraOff(true);
-          setMediaStatus("Voice Microphone Live");
+          setMediaStatus("Voice Call Active — Click Switch to Video Call anytime");
           return audioStream;
         } catch {
           setCameraOff(true);
@@ -341,9 +447,22 @@ export default function LiveInSystemCallModal({
           return;
         }
         if (stream) {
-          localStreamRef.current = stream;
-          attachLocalStreamToVideo(stream);
-          startMicLevelMonitor(stream);
+          // Guard against race if user already switched to VOICE before initial getUserMedia resolved
+          if (activeMediaModeRef.current === "VOICE") {
+            stream.getVideoTracks().forEach((t) => {
+              try {
+                t.enabled = false;
+                t.stop();
+              } catch { }
+            });
+            const voiceOnlyStream = new MediaStream(stream.getAudioTracks().filter((t) => t.readyState === "live"));
+            localStreamRef.current = voiceOnlyStream;
+            startMicLevelMonitor(voiceOnlyStream);
+          } else {
+            localStreamRef.current = stream;
+            attachLocalStreamToVideo(stream, true);
+            startMicLevelMonitor(stream);
+          }
         }
 
         if (typeof RTCPeerConnection === "function") {
@@ -352,16 +471,30 @@ export default function LiveInSystemCallModal({
 
           if (localStreamRef.current) {
             localStreamRef.current.getTracks().forEach((track) => {
-              pc.addTrack(track, localStreamRef.current);
+              const sender = pc.addTrack(track, localStreamRef.current);
+              if (track.kind === "video") {
+                videoSenderRef.current = sender;
+              }
             });
             preferFastHardwareCodecs(pc);
             tuneVideoSenderPerformance(pc, liveSession?.participants?.length || session?.participants?.length || 2);
           }
 
           pc.ontrack = (evt) => {
-            const incomingStream = evt.streams?.[0] || new MediaStream([evt.track]);
-            remoteStreamRef.current = incomingStream;
-            attachRemoteStreamToVideo(incomingStream);
+            const incomingStream = evt.streams?.[0];
+            if (incomingStream) {
+              const mergedTracks = [...incomingStream.getTracks()];
+              if (evt.track && !mergedTracks.includes(evt.track)) {
+                mergedTracks.push(evt.track);
+              }
+              remoteStreamRef.current = new MediaStream(mergedTracks);
+            } else {
+              const prevTracks = remoteStreamRef.current
+                ? remoteStreamRef.current.getTracks().filter((t) => t.kind !== evt.track.kind && t.readyState === "live")
+                : [];
+              remoteStreamRef.current = new MediaStream([...prevTracks, evt.track]);
+            }
+            attachRemoteStreamToVideo(remoteStreamRef.current, true);
             setRemoteConnected(true);
           };
 
@@ -394,7 +527,8 @@ export default function LiveInSystemCallModal({
     // Real-time SSE Push Signaling (<15ms latency instead of polling delay)
     let eventSource = null;
     try {
-      const tok = getAccessToken();
+      const isDevCtx = String(currentUser?.role || "").toUpperCase() === "DEVELOPER";
+      const tok = getActiveAuthToken({ isDeveloperContext: isDevCtx });
       if (tok && typeof EventSource !== "undefined") {
         const base = String(apiClient.defaults?.baseURL || "/api/v1").replace(/\/+$/, "");
         const sseUrl = `${base}/video/calls/${encodeURIComponent(callId)}/stream?token=${encodeURIComponent(tok)}`;
@@ -417,6 +551,17 @@ export default function LiveInSystemCallModal({
           try {
             const d = JSON.parse(evt.data);
             if (d?.item) processIncomingSignal(d.item);
+          } catch { }
+        });
+        eventSource.addEventListener("media_mode_changed", (evt) => {
+          try {
+            const d = JSON.parse(evt.data);
+            if (d?.participants) {
+              setLiveSession((prev) => (prev ? { ...prev, participants: d.participants } : prev));
+            }
+            if (remoteStreamRef.current) {
+              attachRemoteStreamToVideo(remoteStreamRef.current, true);
+            }
           } catch { }
         });
         eventSource.addEventListener("chat_message", (evt) => {
@@ -492,7 +637,7 @@ export default function LiveInSystemCallModal({
       }
       stopTracks();
     };
-  }, [callId, mediaMode, myUserId, initiatorUserId, sendSignal, stopTracks, attachLocalStreamToVideo, attachRemoteStreamToVideo, startMicLevelMonitor]);
+  }, [callId, myUserId, initiatorUserId, currentUser?.role, sendSignal, stopTracks, attachLocalStreamToVideo, attachRemoteStreamToVideo, startMicLevelMonitor]);
 
   const toggleMic = async () => {
     const nextMuted = !micMuted;
@@ -518,38 +663,131 @@ export default function LiveInSystemCallModal({
     }
   };
 
-  const toggleCamera = async () => {
-    const nextOff = !cameraOff;
-    if (!nextOff) {
-      const existingTracks = localStreamRef.current?.getVideoTracks?.() || [];
-      if (existingTracks.length > 0 && existingTracks[0].readyState === "live") {
-        existingTracks.forEach((t) => { t.enabled = true; });
-        setCameraOff(false);
-        attachLocalStreamToVideo(localStreamRef.current);
-      } else if (navigator.mediaDevices?.getUserMedia) {
+  const activateVideoTrackOnCall = useCallback(async ({ switchToVideoMode = false } = {}) => {
+    const existingAudioTracks = (localStreamRef.current?.getAudioTracks?.() || []).filter(
+      (t) => t.readyState === "live"
+    );
+    const existingLiveVideo = (localStreamRef.current?.getVideoTracks?.() || []).find(
+      (t) => t.readyState === "live"
+    );
+
+    let vidTrack = existingLiveVideo || null;
+    if (vidTrack) {
+      vidTrack.enabled = true;
+    } else {
+      vidTrack = await acquireFreshCameraTrack();
+    }
+
+    if (!vidTrack) {
+      setCameraOff(true);
+      setMediaStatus("Camera permission denied or busy by another app");
+      return false;
+    }
+
+    // Stop any ended/stale old video tracks before constructing a fresh MediaStream so browsers always rebind video decoding
+    (localStreamRef.current?.getVideoTracks?.() || []).forEach((oldTrack) => {
+      if (oldTrack !== vidTrack) {
+        try { oldTrack.stop(); } catch { }
+      }
+    });
+
+    const nextStream = new MediaStream([...existingAudioTracks, vidTrack]);
+    localStreamRef.current = nextStream;
+
+    if (switchToVideoMode) {
+      setActiveMediaMode("VIDEO");
+      setLiveSession((prev) => (prev ? { ...prev, mediaMode: "VIDEO" } : prev));
+    }
+    setCameraOff(false);
+    setScreenSharing(false);
+    setMediaStatus(micMutedRef.current ? "Live Camera Active (Mic Muted)" : "HD Live Camera & Microphone Active");
+    attachLocalStreamToVideo(nextStream, true);
+    requestAnimationFrame(() => {
+      if (localStreamRef.current) {
+        attachLocalStreamToVideo(localStreamRef.current, true);
+      }
+    });
+
+    // Sync WebRTC sender & SDP renegotiation asynchronously so UI switch is instantaneous and never blocks on signaling HTTP
+    if (peerConnRef.current && peerConnRef.current.signalingState !== "closed") {
+      const pc = peerConnRef.current;
+      const participantCount = liveSession?.participants?.length || 2;
+      (async () => {
         try {
-          const vidStream = await navigator.mediaDevices.getUserMedia({ video: true, audio: false });
-          const vidTrack = vidStream.getVideoTracks()[0];
-          if (vidTrack) {
-            if (!localStreamRef.current) localStreamRef.current = new MediaStream();
-            localStreamRef.current.addTrack(vidTrack);
-            attachLocalStreamToVideo(localStreamRef.current);
-            if (peerConnRef.current) {
-              const sender = peerConnRef.current.getSenders().find((s) => s.track?.kind === "video");
-              if (sender) {
-                await sender.replaceTrack(vidTrack);
-              } else {
-                peerConnRef.current.addTrack(vidTrack, localStreamRef.current);
-              }
-            }
-            setCameraOff(false);
-            setMediaStatus("HD Live Camera & Microphone Active");
+          const existingSender = findVideoSender(pc);
+          if (existingSender) {
+            await existingSender.replaceTrack(vidTrack);
+            tuneVideoSenderPerformance(pc, participantCount);
+          } else {
+            videoSenderRef.current = pc.addTrack(vidTrack, nextStream);
+            preferFastHardwareCodecs(pc);
+            tuneVideoSenderPerformance(pc, participantCount);
+            await renegotiatePeerConnection(pc);
           }
-        } catch {
-          setCameraOff(true);
-          setMediaStatus("Camera permission denied or busy by another app");
+        } catch { }
+      })();
+    }
+
+    return true;
+  }, [acquireFreshCameraTrack, findVideoSender, renegotiatePeerConnection, attachLocalStreamToVideo, liveSession?.participants?.length]);
+
+  const switchCallMediaMode = async (targetMode) => {
+    const normalizedTarget = String(targetMode || "").toUpperCase() === "VOICE" ? "VOICE" : "VIDEO";
+    if (mediaSwitchBusyRef.current) return;
+    mediaSwitchBusyRef.current = true;
+    setSwitchingMediaMode(true);
+    try {
+      if (normalizedTarget === "VOICE") {
+        // Gracefully release camera track while keeping live audio microphone & WebRTC connection intact
+        const liveAudioTracks = (localStreamRef.current?.getAudioTracks?.() || []).filter(
+          (t) => t.readyState === "live"
+        );
+        (localStreamRef.current?.getVideoTracks?.() || []).forEach((t) => {
+          try {
+            t.enabled = false;
+            t.stop();
+          } catch { }
+        });
+
+        const audioOnlyStream = new MediaStream(liveAudioTracks);
+        localStreamRef.current = audioOnlyStream;
+        if (localVideoRef.current) {
+          localVideoRef.current.srcObject = null;
+        }
+        setScreenSharing(false);
+        setCameraOff(true);
+        setActiveMediaMode("VOICE");
+        setLiveSession((prev) => (prev ? { ...prev, mediaMode: "VOICE" } : prev));
+        setMediaStatus("Voice Call Active — Click Switch to Video Call anytime");
+
+        if (peerConnRef.current && peerConnRef.current.signalingState !== "closed") {
+          const sender = findVideoSender(peerConnRef.current);
+          if (sender) {
+            sender.replaceTrack(null).catch(() => { });
+          }
+        }
+        sendSignal("MEDIA_MODE", { mediaMode: "VOICE", videoOff: true }, { mediaMode: "VOICE" }).catch(() => { });
+      } else {
+        setMediaStatus("Re-activating live camera for Video Call...");
+        const ok = await activateVideoTrackOnCall({ switchToVideoMode: true });
+        if (ok) {
+          sendSignal("MEDIA_MODE", { mediaMode: "VIDEO", videoOff: false }, { mediaMode: "VIDEO" }).catch(() => { });
         }
       }
+    } finally {
+      mediaSwitchBusyRef.current = false;
+      setSwitchingMediaMode(false);
+    }
+  };
+
+  const toggleCamera = async () => {
+    if (activeMediaMode === "VOICE") {
+      await switchCallMediaMode("VIDEO");
+      return;
+    }
+    const nextOff = !cameraOff;
+    if (!nextOff) {
+      await activateVideoTrackOnCall({ switchToVideoMode: false });
     } else {
       setCameraOff(true);
       if (localStreamRef.current) {
@@ -557,6 +795,7 @@ export default function LiveInSystemCallModal({
           t.enabled = false;
         });
       }
+      setMediaStatus("Camera Paused — Voice Audio Active");
     }
   };
 
@@ -573,20 +812,34 @@ export default function LiveInSystemCallModal({
   };
 
   const toggleScreenShare = async () => {
-    if (screenSharing || !navigator.mediaDevices?.getDisplayMedia) {
+    if (screenSharing) {
       setScreenSharing(false);
+      if (activeMediaMode === "VIDEO") {
+        await activateVideoTrackOnCall({ switchToVideoMode: false });
+      }
+      return;
+    }
+    if (!navigator.mediaDevices?.getDisplayMedia) {
       return;
     }
     try {
       const displayStream = await navigator.mediaDevices.getDisplayMedia({ video: true });
       const screenTrack = displayStream.getVideoTracks()[0];
       if (screenTrack && peerConnRef.current) {
-        const sender = peerConnRef.current.getSenders().find((s) => s.track?.kind === "video");
+        const sender = findVideoSender(peerConnRef.current);
         if (sender) {
           await sender.replaceTrack(screenTrack);
+        } else {
+          videoSenderRef.current = peerConnRef.current.addTrack(screenTrack, displayStream);
+          await renegotiatePeerConnection(peerConnRef.current);
         }
         setScreenSharing(true);
-        screenTrack.onended = () => setScreenSharing(false);
+        screenTrack.onended = () => {
+          setScreenSharing(false);
+          if (activeMediaModeRef.current === "VIDEO") {
+            activateVideoTrackOnCall({ switchToVideoMode: false });
+          }
+        };
       }
     } catch { }
   };
@@ -846,6 +1099,28 @@ export default function LiveInSystemCallModal({
           <div style={{ display: "flex", gap: "8px", flexWrap: "wrap" }}>
             <button type="button" onClick={toggleMic} style={{ background: micMuted ? "#991b1b" : "#065f46", color: "#fff", border: "1px solid #d4af37", borderRadius: "8px", padding: "8px 14px", fontWeight: 800, cursor: "pointer", fontSize: "0.8rem" }}>
               {micMuted ? "🔇 Unmute Mic" : "🎙️ Mute Mic"}
+            </button>
+            <button
+              type="button"
+              data-testid="call-switch-media-mode-btn"
+              disabled={switchingMediaMode}
+              onClick={() => switchCallMediaMode(mediaMode === "VIDEO" ? "VOICE" : "VIDEO")}
+              style={{
+                background: mediaMode === "VIDEO" ? "linear-gradient(135deg, #b45309, #d97706)" : "linear-gradient(135deg, #0284c7, #2563eb)",
+                color: "#fff",
+                border: "1px solid #f6dd84",
+                borderRadius: "8px",
+                padding: "8px 14px",
+                fontWeight: 900,
+                cursor: switchingMediaMode ? "wait" : "pointer",
+                fontSize: "0.8rem"
+              }}
+            >
+              {switchingMediaMode
+                ? "⏳ Switching..."
+                : mediaMode === "VIDEO"
+                  ? "📞 Switch to Voice Call"
+                  : "📹 Switch to Video Call"}
             </button>
             {mediaMode === "VIDEO" && (
               <button type="button" onClick={toggleCamera} style={{ background: cameraOff ? "#991b1b" : "#1d4ed8", color: "#fff", border: "1px solid #d4af37", borderRadius: "8px", padding: "8px 14px", fontWeight: 800, cursor: "pointer", fontSize: "0.8rem" }}>

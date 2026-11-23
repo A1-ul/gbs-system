@@ -5,7 +5,7 @@ import { resolveApiUrl } from "../../api/client/apiConfig";
 import { saveActiveScrollSnapshot, isDeveloperRoute } from "../../utils/globalNavigationScrollManager";
 import { clearFakeDataEntries } from "../../utils/freshSystemReset";
 import { getActiveSchoolName, getActiveSchoolLogo } from "../../utils/schoolBranding";
-import { isDemoSandboxMode, resetDemoSandboxData } from "../../utils/tokenStorage";
+import { isDemoSandboxMode, resetDemoSandboxData, hasActiveAuthSession } from "../../utils/tokenStorage";
 import {
   getActiveInstitutionType,
   setActiveInstitutionType,
@@ -233,6 +233,7 @@ export default function TopCenterSystemBanner({
   };
 
   useEffect(() => {
+    let smsAuthPaused = false;
     const syncTranslatedBadge = async () => {
       try {
         const list = await fetchTranslatedMessagesInbox({ receiverRole: currentUserRole, limit: 40 });
@@ -240,6 +241,7 @@ export default function TopCenterSystemBanner({
       } catch { }
     };
     const syncSmsInboxBadge = async () => {
+      if (smsAuthPaused || !hasActiveAuthSession({ isDeveloperContext: isDevMode })) return;
       try {
         const u = JSON.parse(localStorage.getItem("gbs_user") || "{}");
         const params = new URLSearchParams();
@@ -251,10 +253,14 @@ export default function TopCenterSystemBanner({
         const res = await apiClient.get(`/sms/inbox?${params.toString()}`);
         const count = Number(res?.data?.unreadCount ?? res?.data?.data?.unreadCount ?? 0);
         setUnreadSmsCount(Number.isFinite(count) ? count : 0);
-      } catch { }
+      } catch (err) {
+        if (err?.response?.status === 401) smsAuthPaused = true;
+      }
     };
     const onPromptReady = () => setPwaPromptReady(Boolean(window.__gbsDeferredInstallPrompt));
     const onInstalled = () => setPwaPromptReady(false);
+    const onAuthExpired = () => { smsAuthPaused = true; };
+    const onAuthUpdated = () => { smsAuthPaused = false; syncSmsInboxBadge(); };
 
     syncTranslatedBadge();
     syncSmsInboxBadge();
@@ -263,6 +269,9 @@ export default function TopCenterSystemBanner({
     window.addEventListener("gbs_direct_sms_updated", syncSmsInboxBadge);
     window.addEventListener("gbs_pwa_install_ready", onPromptReady);
     window.addEventListener("gbs_pwa_installed", onInstalled);
+    window.addEventListener("gbs_auth_session_expired", onAuthExpired);
+    window.addEventListener("gbs_auth_session_cleared", onAuthExpired);
+    window.addEventListener("gbs_auth_session_updated", onAuthUpdated);
     const inboxPoll = setInterval(() => {
       syncTranslatedBadge();
       syncSmsInboxBadge();
@@ -273,9 +282,12 @@ export default function TopCenterSystemBanner({
       window.removeEventListener("gbs_direct_sms_updated", syncSmsInboxBadge);
       window.removeEventListener("gbs_pwa_install_ready", onPromptReady);
       window.removeEventListener("gbs_pwa_installed", onInstalled);
+      window.removeEventListener("gbs_auth_session_expired", onAuthExpired);
+      window.removeEventListener("gbs_auth_session_cleared", onAuthExpired);
+      window.removeEventListener("gbs_auth_session_updated", onAuthUpdated);
       clearInterval(inboxPoll);
     };
-  }, [currentUserRole]);
+  }, [currentUserRole, isDevMode]);
 
   const handleDirectOrModalAppInstall = async () => {
     const promptObj = typeof window !== "undefined" ? window.__gbsDeferredInstallPrompt : null;

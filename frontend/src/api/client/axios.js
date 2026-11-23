@@ -1,6 +1,11 @@
 import axios from "axios";
 import { getApiBaseUrl } from "./apiConfig";
-import { isDemoSandboxMode } from "../../utils/tokenStorage";
+import {
+  isDemoSandboxMode,
+  isBuiltInDemoUser,
+  getActiveAuthToken,
+  getUser
+} from "../../utils/tokenStorage";
 
 const axiosInstance = axios.create({
   baseURL: getApiBaseUrl(),
@@ -11,19 +16,71 @@ const axiosInstance = axios.create({
 });
 
 let refreshInFlightPromise = null;
+let demoRecoverInFlightPromise = null;
+let lastDemoRecoverFailedAt = 0;
 let lastAuthRedirectNoticeAt = 0;
+
+const BUILTIN_DEMO_RECOVERY_CREDS = {
+  "admin@gbs.com": "Admin123!",
+  "teacher@gbs.com": "Teacher123!",
+  "student@gbs.com": "Student123!",
+  "parent@gbs.com": "Parent123!",
+  "accountant@gbs.com": "Accountant123!",
+  "finance@gbs.com": "Accountant123!",
+  "staff@gbs.com": "Staff123!",
+  "hr@gbs.com": "Hr123!",
+  "alumni@gbs.com": "Alumni123!",
+  "secretary@gbs.com": "Secretary123!"
+};
 
 function readCleanToken(key) {
   try {
     const val = localStorage.getItem(key);
     if (!val || val === "null" || val === "undefined") return null;
-    return val;
+    const trimmed = String(val).trim();
+    return trimmed || null;
   } catch {
     return null;
   }
 }
 
-async function refreshSessionTokenOnce() {
+function isJwtExpiredOrExpiringSoon(token, bufferMs = 30000) {
+  if (!token || typeof token !== "string") return false;
+  const parts = token.split(".");
+  if (parts.length !== 3) return false;
+  try {
+    const base64 = parts[1].replace(/-/g, "+").replace(/_/g, "/");
+    const padded = base64 + "=".repeat((4 - (base64.length % 4)) % 4);
+    const json = atob(padded);
+    const payload = JSON.parse(json);
+    if (typeof payload?.exp === "number") {
+      return payload.exp * 1000 <= Date.now() + bufferMs;
+    }
+  } catch {
+    return false;
+  }
+  return false;
+}
+
+function isPublicOrAuthEndpoint(url = "") {
+  const u = String(url || "");
+  return (
+    u.includes("/auth/login") ||
+    u.includes("/auth/register") ||
+    u.includes("/auth/signup") ||
+    u.includes("/auth/refresh-token") ||
+    u.includes("/auth/forgot-password") ||
+    u.includes("/auth/reset-password") ||
+    u.includes("/dev-control/auth/login") ||
+    u.includes("/dev-control/security/") ||
+    u.includes("/developer-control-center/auth/login") ||
+    u.includes("/health") ||
+    u.includes("/app-version") ||
+    u.includes("/locale")
+  );
+}
+
+async function refreshSessionTokenOnce({ isDeveloperContext = false } = {}) {
   if (refreshInFlightPromise) return refreshInFlightPromise;
 
   const refreshToken = readCleanToken("gbs_refresh_token");
@@ -43,11 +100,17 @@ async function refreshSessionTokenOnce() {
       if (nextAccess) {
         localStorage.setItem("gbs_token", nextAccess);
         localStorage.setItem("gbs_access_token", nextAccess);
-        if (localStorage.getItem("gbs_dev_token")) {
+        const onDevPortal =
+          isDeveloperContext ||
+          (typeof window !== "undefined" && window.location?.pathname?.startsWith("/developer"));
+        if (onDevPortal && localStorage.getItem("gbs_dev_token")) {
           localStorage.setItem("gbs_dev_token", nextAccess);
         }
         if (nextRefresh) {
           localStorage.setItem("gbs_refresh_token", nextRefresh);
+        }
+        if (typeof window !== "undefined") {
+          window.dispatchEvent(new CustomEvent("gbs_auth_session_updated"));
         }
         return nextAccess;
       }
@@ -61,6 +124,57 @@ async function refreshSessionTokenOnce() {
   return refreshInFlightPromise;
 }
 
+async function recoverBuiltInDemoTokenOnce() {
+  if (demoRecoverInFlightPromise) return demoRecoverInFlightPromise;
+  if (Date.now() - lastDemoRecoverFailedAt < 60000) return null;
+
+  const currentUser = getUser();
+  if (!currentUser || !isBuiltInDemoUser(currentUser)) return null;
+
+  const cleanEmail = String(currentUser.email || "").trim().toLowerCase();
+  const demoPassword = BUILTIN_DEMO_RECOVERY_CREDS[cleanEmail];
+  if (!demoPassword) return null;
+
+  demoRecoverInFlightPromise = axios
+    .post(
+      `${getApiBaseUrl()}/auth/login`,
+      {
+        email: cleanEmail,
+        username: currentUser.username || cleanEmail,
+        password: demoPassword,
+        portalRole: currentUser.role || undefined
+      },
+      { headers: { "Content-Type": "application/json" }, timeout: 10000 }
+    )
+    .then((res) => {
+      const payload = res.data?.data || res.data || {};
+      const nextAccess = payload.accessToken || payload.token;
+      const nextRefresh = payload.refreshToken;
+      if (nextAccess) {
+        localStorage.setItem("gbs_token", nextAccess);
+        localStorage.setItem("gbs_access_token", nextAccess);
+        if (nextRefresh) {
+          localStorage.setItem("gbs_refresh_token", nextRefresh);
+        }
+        if (typeof window !== "undefined") {
+          window.dispatchEvent(new CustomEvent("gbs_auth_session_updated"));
+        }
+        return nextAccess;
+      }
+      lastDemoRecoverFailedAt = Date.now();
+      return null;
+    })
+    .catch(() => {
+      lastDemoRecoverFailedAt = Date.now();
+      return null;
+    })
+    .finally(() => {
+      demoRecoverInFlightPromise = null;
+    });
+
+  return demoRecoverInFlightPromise;
+}
+
 const releaseInFlightRequest = (cfg) => {
   if (typeof window !== "undefined" && cfg && cfg.__gbsTrackedInFlight) {
     cfg.__gbsTrackedInFlight = false;
@@ -70,16 +184,30 @@ const releaseInFlightRequest = (cfg) => {
 };
 
 axiosInstance.interceptors.request.use(
-  (config) => {
+  async (config) => {
     const isDevRoute =
       (typeof window !== "undefined" &&
         window.location?.pathname?.startsWith("/developer")) ||
       String(config.url || "").includes("/dev-control") ||
       String(config.url || "").includes("/developer");
 
-    const token = isDevRoute
-      ? readCleanToken("gbs_dev_token") || readCleanToken("gbs_token")
-      : readCleanToken("gbs_token") || readCleanToken("gbs_dev_token");
+    let token = getActiveAuthToken({ isDeveloperContext: isDevRoute });
+
+    // Proactive pre-flight token renewal: refresh expired JWTs BEFORE sending so endpoints receive a valid token (HTTP 200) instead of a 401 round-trip
+    if (!isPublicOrAuthEndpoint(config.url) && !config._skipPreFlightRefresh) {
+      const needsRefresh = !token || isJwtExpiredOrExpiringSoon(token);
+      if (needsRefresh) {
+        const refreshed = await refreshSessionTokenOnce({ isDeveloperContext: isDevRoute });
+        if (refreshed) {
+          token = refreshed;
+        } else if (!isDevRoute && isBuiltInDemoUser()) {
+          const recovered = await recoverBuiltInDemoTokenOnce();
+          if (recovered) {
+            token = recovered;
+          }
+        }
+      }
+    }
 
     if (token) {
       config.headers.Authorization = `Bearer ${token}`;
@@ -230,7 +358,17 @@ axiosInstance.interceptors.response.use(
     // Seamless automatic token refresh and retry on expired JWT (401)
     if (status === 401 && !originalRequest._retry && !isAuthAttempt) {
       originalRequest._retry = true;
-      const freshAccessToken = await refreshSessionTokenOnce();
+      originalRequest._skipPreFlightRefresh = true;
+      const isDevRoute =
+        (typeof window !== "undefined" &&
+          window.location?.pathname?.startsWith("/developer")) ||
+        url.includes("/dev-control") ||
+        url.includes("/developer");
+
+      let freshAccessToken = await refreshSessionTokenOnce({ isDeveloperContext: isDevRoute });
+      if (!freshAccessToken && !isDevRoute && isBuiltInDemoUser()) {
+        freshAccessToken = await recoverBuiltInDemoTokenOnce();
+      }
       if (freshAccessToken) {
         originalRequest.headers = {
           ...(originalRequest.headers || {}),
@@ -239,13 +377,16 @@ axiosInstance.interceptors.response.use(
         return axiosInstance(originalRequest);
       }
 
-      // Refresh failed or absent: clear stale broken tokens cleanly instead of looping 401 popups
+      // Refresh failed or absent: clear stale broken tokens cleanly and pause background pollers instead of looping 401s
       try {
         localStorage.removeItem("gbs_token");
         localStorage.removeItem("gbs_access_token");
         localStorage.removeItem("gbs_refresh_token");
         if (typeof window !== "undefined" && window.location?.pathname?.startsWith("/developer")) {
           localStorage.removeItem("gbs_dev_token");
+        }
+        if (typeof window !== "undefined") {
+          window.dispatchEvent(new CustomEvent("gbs_auth_session_expired"));
         }
       } catch { }
     }

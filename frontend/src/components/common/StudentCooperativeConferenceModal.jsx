@@ -95,6 +95,47 @@ export default function StudentCooperativeConferenceModal({ isOpen, onClose, ini
   // Media Stream Refs
   const localVideoRef = useRef(null);
   const localStreamRef = useRef(null);
+  const switchingModeRef = useRef(false);
+
+  const attachLocalStreamToPreview = (stream) => {
+    if (!localVideoRef.current || !stream) return;
+    localVideoRef.current.srcObject = stream;
+    localVideoRef.current.muted = true;
+    localVideoRef.current.playsInline = true;
+    localVideoRef.current.play().catch(() => { });
+  };
+
+  const acquireFreshVideoTrack = async () => {
+    if (!navigator.mediaDevices || typeof navigator.mediaDevices.getUserMedia !== "function") {
+      return null;
+    }
+    try {
+      const hdStream = await navigator.mediaDevices.getUserMedia({
+        video: { width: { ideal: 640 }, height: { ideal: 360 }, frameRate: { ideal: 30 } },
+        audio: false
+      });
+      const track = hdStream.getVideoTracks()[0] || null;
+      if (track) return track;
+    } catch { }
+    try {
+      const basicStream = await navigator.mediaDevices.getUserMedia({ video: true, audio: false });
+      return basicStream.getVideoTracks()[0] || null;
+    } catch {
+      return null;
+    }
+  };
+
+  // Re-attach live MediaStream whenever <video> mounts/re-mounts after switching Voice -> Video or turning Camera ON
+  useEffect(() => {
+    if (!inCall || callMode !== "VIDEO" || isCameraOff || !localStreamRef.current) return undefined;
+    attachLocalStreamToPreview(localStreamRef.current);
+    const rafId = requestAnimationFrame(() => {
+      if (localStreamRef.current && localVideoRef.current) {
+        attachLocalStreamToPreview(localStreamRef.current);
+      }
+    });
+    return () => cancelAnimationFrame(rafId);
+  }, [inCall, callMode, isCameraOff]);
 
   // Timer for active call
   useEffect(() => {
@@ -120,7 +161,16 @@ export default function StudentCooperativeConferenceModal({ isOpen, onClose, ini
     const targetRoom = room || activeRoom;
     setActiveRoom(targetRoom);
     setCallMode(mode);
+    setIsMicMuted(false);
+    setIsCameraOff(mode === "VOICE");
     setInCall(true);
+
+    if (localStreamRef.current) {
+      localStreamRef.current.getTracks().forEach((t) => {
+        try { t.stop(); } catch { }
+      });
+      localStreamRef.current = null;
+    }
 
     if (mode === "VIDEO") {
       try {
@@ -130,13 +180,16 @@ export default function StudentCooperativeConferenceModal({ isOpen, onClose, ini
             audio: { echoCancellation: true, noiseSuppression: true, autoGainControl: true }
           });
           localStreamRef.current = stream;
-          if (localVideoRef.current) {
-            localVideoRef.current.srcObject = stream;
-            localVideoRef.current.play().catch(() => { });
-          }
+          attachLocalStreamToPreview(stream);
         }
       } catch (err) {
-        console.warn("Hardware camera unavailable, operating in simulated video preview mode:", err.message);
+        try {
+          const basic = await navigator.mediaDevices.getUserMedia({ video: true, audio: true });
+          localStreamRef.current = basic;
+          attachLocalStreamToPreview(basic);
+        } catch {
+          console.warn("Hardware camera unavailable, operating in simulated video preview mode:", err.message);
+        }
       }
     } else {
       // Voice only mode
@@ -148,6 +201,86 @@ export default function StudentCooperativeConferenceModal({ isOpen, onClose, ini
       } catch (err) {
         console.warn("Microphone access notice:", err.message);
       }
+    }
+  };
+
+  const handleSwitchCallMode = async (nextMode) => {
+    if (switchingModeRef.current) return;
+    switchingModeRef.current = true;
+    try {
+      if (nextMode === "VOICE") {
+        const liveAudioTracks = (localStreamRef.current?.getAudioTracks?.() || []).filter(
+          (t) => t.readyState === "live"
+        );
+        (localStreamRef.current?.getVideoTracks?.() || []).forEach((t) => {
+          try {
+            t.enabled = false;
+            t.stop();
+          } catch { }
+        });
+        localStreamRef.current = new MediaStream(liveAudioTracks);
+        if (localVideoRef.current) {
+          localVideoRef.current.srcObject = null;
+        }
+        setIsScreenSharing(false);
+        setIsCameraOff(true);
+        setCallMode("VOICE");
+      } else {
+        const liveAudioTracks = (localStreamRef.current?.getAudioTracks?.() || []).filter(
+          (t) => t.readyState === "live"
+        );
+        let vidTrack = (localStreamRef.current?.getVideoTracks?.() || []).find(
+          (t) => t.readyState === "live"
+        );
+        if (vidTrack) {
+          vidTrack.enabled = true;
+        } else {
+          vidTrack = await acquireFreshVideoTrack();
+        }
+        if (vidTrack) {
+          const nextStream = new MediaStream([...liveAudioTracks, vidTrack]);
+          localStreamRef.current = nextStream;
+          setIsCameraOff(false);
+          setCallMode("VIDEO");
+          requestAnimationFrame(() => attachLocalStreamToPreview(nextStream));
+        } else {
+          setIsCameraOff(true);
+          setCallMode("VIDEO");
+        }
+      }
+    } finally {
+      switchingModeRef.current = false;
+    }
+  };
+
+  const handleToggleCamera = async () => {
+    if (isCameraOff) {
+      const liveAudioTracks = (localStreamRef.current?.getAudioTracks?.() || []).filter(
+        (t) => t.readyState === "live"
+      );
+      let vidTrack = (localStreamRef.current?.getVideoTracks?.() || []).find(
+        (t) => t.readyState === "live"
+      );
+      if (vidTrack) {
+        vidTrack.enabled = true;
+        setIsCameraOff(false);
+        requestAnimationFrame(() => attachLocalStreamToPreview(localStreamRef.current));
+      } else {
+        vidTrack = await acquireFreshVideoTrack();
+        if (vidTrack) {
+          const nextStream = new MediaStream([...liveAudioTracks, vidTrack]);
+          localStreamRef.current = nextStream;
+          setIsCameraOff(false);
+          requestAnimationFrame(() => attachLocalStreamToPreview(nextStream));
+        }
+      }
+    } else {
+      if (localStreamRef.current) {
+        localStreamRef.current.getVideoTracks().forEach((t) => {
+          t.enabled = false;
+        });
+      }
+      setIsCameraOff(true);
     }
   };
 
@@ -382,16 +515,9 @@ export default function StudentCooperativeConferenceModal({ isOpen, onClose, ini
                 <span className="coop-timer-tag">⏱️ {formatTimer(callDuration)}</span>
                 <button
                   type="button"
+                  data-testid="coop-switch-mode-btn"
                   className="coop-btn-switch-mode"
-                  onClick={() => {
-                    const nextMode = callMode === "VIDEO" ? "VOICE" : "VIDEO";
-                    setCallMode(nextMode);
-                    if (nextMode === "VOICE" && localStreamRef.current) {
-                      localStreamRef.current.getVideoTracks().forEach((t) => (t.enabled = false));
-                    } else if (nextMode === "VIDEO" && localStreamRef.current) {
-                      localStreamRef.current.getVideoTracks().forEach((t) => (t.enabled = true));
-                    }
-                  }}
+                  onClick={() => handleSwitchCallMode(callMode === "VIDEO" ? "VOICE" : "VIDEO")}
                 >
                   Switch to {callMode === "VIDEO" ? "🎙️ Voice Call" : "📹 Video Call"} Mode
                 </button>
@@ -531,13 +657,7 @@ export default function StudentCooperativeConferenceModal({ isOpen, onClose, ini
                     <button
                       type="button"
                       className={`coop-control-btn ${isCameraOff ? "danger" : "normal"}`}
-                      onClick={() => {
-                        if (localStreamRef.current) {
-                          const videoTrack = localStreamRef.current.getVideoTracks()[0];
-                          if (videoTrack) videoTrack.enabled = !videoTrack.enabled;
-                        }
-                        setIsCameraOff(!isCameraOff);
-                      }}
+                      onClick={handleToggleCamera}
                     >
                       {isCameraOff ? "📷 Turn Cam ON" : "📷 Turn Cam OFF"}
                     </button>

@@ -1,12 +1,10 @@
 import React, { useState, useEffect, useMemo } from 'react';
-import { getApiBaseUrl } from '../../../api/client/apiConfig';
+import apiClient from '../../../api/client/apiClient';
 import { getActiveSchoolName } from '../../../utils/schoolBranding';
 import { copyTextSafely } from '../../../utils/safeWindow';
 import { isDemoSandboxMode } from '../../../utils/tokenStorage';
 import StudentCooperativeConferenceModal from '../../../components/common/StudentCooperativeConferenceModal';
 import './OnlineLearningDashboard.css';
-
-const API_BASE = getApiBaseUrl();
 
 export default function OnlineLearningDashboard() {
   const [meetings, setMeetings] = useState([]);
@@ -39,6 +37,26 @@ export default function OnlineLearningDashboard() {
   ]);
   const [newChatMessage, setNewChatMessage] = useState('');
   const classroomVideoRef = React.useRef(null);
+  const classroomStreamRef = React.useRef(null);
+
+  const attachClassroomVideo = (stream) => {
+    if (!classroomVideoRef.current || !stream) return;
+    classroomVideoRef.current.srcObject = stream;
+    classroomVideoRef.current.muted = true;
+    classroomVideoRef.current.playsInline = true;
+    classroomVideoRef.current.play().catch(() => { });
+  };
+
+  useEffect(() => {
+    if (activeVirtualClassroom && !inCallVideoMuted && classroomStreamRef.current) {
+      attachClassroomVideo(classroomStreamRef.current);
+      const rafId = requestAnimationFrame(() => {
+        if (classroomStreamRef.current) attachClassroomVideo(classroomStreamRef.current);
+      });
+      return () => cancelAnimationFrame(rafId);
+    }
+    return undefined;
+  }, [activeVirtualClassroom, inCallVideoMuted]);
 
   useEffect(() => {
     let timer = null;
@@ -70,37 +88,29 @@ export default function OnlineLearningDashboard() {
     isRecorded: true
   });
 
-  const getHeaders = () => {
-    const token = localStorage.getItem('gbs_token');
-    return {
-      'Content-Type': 'application/json',
-      Authorization: token ? `Bearer ${token}` : ''
-    };
-  };
-
   const fetchData = async () => {
     try {
       setLoading(true);
       setError(null);
 
-      // 1. Fetch Meetings
-      const meetingsRes = await fetch(`${API_BASE}/meetings`, { headers: getHeaders() });
-      const meetingsJson = await meetingsRes.json();
-      if (meetingsJson.status === 'success') {
-        setMeetings(meetingsJson.data.meetings || []);
+      // 1. Fetch Meetings (via apiClient for automatic JWT refresh & tenant headers)
+      const meetingsRes = await apiClient.get('/meetings');
+      const meetingsJson = meetingsRes?.data || {};
+      if (meetingsJson.status === 'success' || Array.isArray(meetingsJson.data?.meetings)) {
+        setMeetings(meetingsJson.data?.meetings || []);
       } else {
         throw new Error(meetingsJson.message || 'Failed to fetch meetings');
       }
 
       // 2. Fetch Classes for dropdown
-      const classesRes = await fetch(`${API_BASE}/academics/classes`, { headers: getHeaders() });
-      const classesJson = await classesRes.json();
-      if (classesJson.status === 'success') {
-        setClasses(classesJson.data.classes || []);
+      const classesRes = await apiClient.get('/academics/classes');
+      const classesJson = classesRes?.data || {};
+      if (classesJson.status === 'success' || Array.isArray(classesJson.data?.classes)) {
+        setClasses(classesJson.data?.classes || []);
       }
     } catch (err) {
       console.error('Online learning fetch error:', err);
-      setError(err.message);
+      setError(err?.response?.data?.message || err.message);
     } finally {
       setLoading(false);
     }
@@ -142,12 +152,11 @@ export default function OnlineLearningDashboard() {
 
       setActionNotice({ type: 'info', text: `Connecting to ${meeting.platform} classroom "${meeting.title}"...` });
       try {
-        await fetch(`${API_BASE}/meetings/${meeting.id}/join`, {
-          method: 'POST',
-          headers: getHeaders()
-        });
+        await apiClient.post(`/meetings/${meeting.id}/join`);
       } catch { }
 
+      setInCallAudioMuted(false);
+      setInCallVideoMuted(false);
       setActiveVirtualClassroom(meeting);
       if (meeting.status !== 'LIVE') {
         setActionNotice({
@@ -169,15 +178,13 @@ export default function OnlineLearningDashboard() {
               video: { width: { ideal: 640 }, height: { ideal: 360 }, frameRate: { ideal: 30, min: 24 } },
               audio: { echoCancellation: true, noiseSuppression: true, autoGainControl: true }
             });
-            if (classroomVideoRef.current) {
-              classroomVideoRef.current.srcObject = stream;
-              classroomVideoRef.current.play();
-            }
+            classroomStreamRef.current = stream;
+            attachClassroomVideo(stream);
           }
         } catch (camErr) {
           console.warn('Classroom webcam access fallback:', camErr);
         }
-      }, 300);
+      }, 250);
       fetchData();
     } catch (err) {
       setActionNotice({ type: 'error', text: `❌ ${err.message}` });
@@ -197,7 +204,11 @@ export default function OnlineLearningDashboard() {
           if (videoTrack) {
             videoTrack.onended = () => {
               setIsScreenSharing(false);
-              if (classroomVideoRef.current) classroomVideoRef.current.srcObject = null;
+              if (classroomStreamRef.current && !inCallVideoMuted) {
+                attachClassroomVideo(classroomStreamRef.current);
+              } else if (classroomVideoRef.current) {
+                classroomVideoRef.current.srcObject = null;
+              }
               setActionNotice({ type: 'info', text: 'Screen sharing ended.' });
             };
           }
@@ -211,9 +222,13 @@ export default function OnlineLearningDashboard() {
         console.warn('Screen sharing cancelled:', err);
       }
     } else {
-      if (classroomVideoRef.current && classroomVideoRef.current.srcObject) {
+      if (classroomVideoRef.current && classroomVideoRef.current.srcObject && classroomVideoRef.current.srcObject !== classroomStreamRef.current) {
         const tracks = classroomVideoRef.current.srcObject.getTracks();
         tracks.forEach(t => t.stop());
+      }
+      if (classroomStreamRef.current && !inCallVideoMuted) {
+        attachClassroomVideo(classroomStreamRef.current);
+      } else if (classroomVideoRef.current) {
         classroomVideoRef.current.srcObject = null;
       }
       setIsScreenSharing(false);
@@ -231,7 +246,71 @@ export default function OnlineLearningDashboard() {
     window.open(`https://api.whatsapp.com/send?phone=${cleanPhone}&text=${inviteText}`, "_blank");
   };
 
+  const handleToggleClassroomAudio = () => {
+    const nextMuted = !inCallAudioMuted;
+    setInCallAudioMuted(nextMuted);
+    if (classroomStreamRef.current) {
+      classroomStreamRef.current.getAudioTracks().forEach((t) => {
+        t.enabled = !nextMuted;
+      });
+    }
+  };
+
+  const handleToggleClassroomVideo = async () => {
+    if (!inCallVideoMuted) {
+      const liveAudioTracks = (classroomStreamRef.current?.getAudioTracks?.() || []).filter(
+        (t) => t.readyState === 'live'
+      );
+      (classroomStreamRef.current?.getVideoTracks?.() || []).forEach((t) => {
+        try {
+          t.enabled = false;
+          t.stop();
+        } catch { }
+      });
+      classroomStreamRef.current = new MediaStream(liveAudioTracks);
+      if (classroomVideoRef.current) classroomVideoRef.current.srcObject = null;
+      setInCallVideoMuted(true);
+    } else {
+      const liveAudioTracks = (classroomStreamRef.current?.getAudioTracks?.() || []).filter(
+        (t) => t.readyState === 'live'
+      );
+      let vidTrack = (classroomStreamRef.current?.getVideoTracks?.() || []).find(
+        (t) => t.readyState === 'live'
+      );
+      if (vidTrack) {
+        vidTrack.enabled = true;
+      } else if (navigator.mediaDevices && navigator.mediaDevices.getUserMedia) {
+        try {
+          const camStream = await navigator.mediaDevices.getUserMedia({
+            video: { width: { ideal: 640 }, height: { ideal: 360 }, frameRate: { ideal: 30 } },
+            audio: false
+          });
+          vidTrack = camStream.getVideoTracks()[0] || null;
+        } catch {
+          try {
+            const fallback = await navigator.mediaDevices.getUserMedia({ video: true, audio: false });
+            vidTrack = fallback.getVideoTracks()[0] || null;
+          } catch { }
+        }
+      }
+      if (vidTrack) {
+        const nextStream = new MediaStream([...liveAudioTracks, vidTrack]);
+        classroomStreamRef.current = nextStream;
+        setInCallVideoMuted(false);
+        requestAnimationFrame(() => attachClassroomVideo(nextStream));
+      } else {
+        setInCallVideoMuted(false);
+      }
+    }
+  };
+
   const handleLeaveClassroom = () => {
+    if (classroomStreamRef.current) {
+      classroomStreamRef.current.getTracks().forEach((t) => {
+        try { t.stop(); } catch { }
+      });
+      classroomStreamRef.current = null;
+    }
     if (classroomVideoRef.current && classroomVideoRef.current.srcObject) {
       const tracks = classroomVideoRef.current.srcObject.getTracks();
       tracks.forEach((t) => t.stop());
@@ -258,13 +337,13 @@ export default function OnlineLearningDashboard() {
   // Inspect attendance roster
   const handleInspectRoster = async (meetingId) => {
     try {
-      const res = await fetch(`${API_BASE}/meetings/${meetingId}`, { headers: getHeaders() });
-      const json = await res.json();
-      if (json.status === 'success') {
+      const res = await apiClient.get(`/meetings/${meetingId}`);
+      const json = res?.data || {};
+      if (json.status === 'success' || json.data?.meeting) {
         setSelectedMeetingRoster(json.data.meeting);
       }
     } catch (err) {
-      setActionNotice({ type: 'error', text: `Failed to inspect roster: ${err.message}` });
+      setActionNotice({ type: 'error', text: `Failed to inspect roster: ${err?.response?.data?.message || err.message}` });
     }
   };
 
@@ -301,13 +380,9 @@ export default function OnlineLearningDashboard() {
         hasRaiseHand: formData.hasRaiseHand
       };
 
-      const res = await fetch(`${API_BASE}/meetings`, {
-        method: 'POST',
-        headers: getHeaders(),
-        body: JSON.stringify(payload)
-      });
-      const json = await res.json();
-      if (json.status === 'success') {
+      const res = await apiClient.post('/meetings', payload);
+      const json = res?.data || {};
+      if (json.status === 'success' || json.data?.meeting) {
         setActionNotice({ type: 'success', text: `✅ Virtual class "${json.data.meeting.title}" scheduled successfully!` });
         setShowCreateModal(false);
         setFormData({
@@ -917,19 +992,19 @@ export default function OnlineLearningDashboard() {
             {/* Stage: Video Viewport & Sidebar */}
             <div className="classroom-main-stage">
               <div className="classroom-video-viewport">
-                {!inCallVideoMuted ? (
-                  <video
-                    ref={classroomVideoRef}
-                    autoPlay
-                    playsInline
-                    muted
-                    className="classroom-webcam-feed"
-                  />
-                ) : (
+                <video
+                  ref={classroomVideoRef}
+                  autoPlay
+                  playsInline
+                  muted
+                  className="classroom-webcam-feed"
+                  style={{ display: !inCallVideoMuted ? 'block' : 'none' }}
+                />
+                {inCallVideoMuted && (
                   <div style={{ textAlign: 'center', color: '#94a3b8' }}>
-                    <div style={{ fontSize: '3.5rem', marginBottom: '8px' }}>👤</div>
-                    <strong style={{ color: '#f8fafc', display: 'block' }}>Instructor Video Muted</strong>
-                    <span style={{ fontSize: '0.78rem' }}>Audio stream active • High Definition Classroom Feed</span>
+                    <div style={{ fontSize: '3.5rem', marginBottom: '8px' }}>🎙️</div>
+                    <strong style={{ color: '#f8fafc', display: 'block' }}>Voice Mode Active (Video Paused)</strong>
+                    <span style={{ fontSize: '0.78rem' }}>Audio stream active • Click Start Video / Switch to Video anytime</span>
                   </div>
                 )}
 
@@ -1038,16 +1113,16 @@ export default function OnlineLearningDashboard() {
                 <button
                   type="button"
                   className={`ctrl-btn ${inCallAudioMuted ? 'danger' : 'active'}`}
-                  onClick={() => setInCallAudioMuted(!inCallAudioMuted)}
+                  onClick={handleToggleClassroomAudio}
                 >
                   {inCallAudioMuted ? '🔇 Unmute Mic' : '🎤 Mute Mic'}
                 </button>
                 <button
                   type="button"
                   className={`ctrl-btn ${inCallVideoMuted ? 'danger' : 'active'}`}
-                  onClick={() => setInCallVideoMuted(!inCallVideoMuted)}
+                  onClick={handleToggleClassroomVideo}
                 >
-                  {inCallVideoMuted ? '📹 Start Video' : '📷 Stop Video'}
+                  {inCallVideoMuted ? '📹 Switch to Video' : '🎙️ Switch to Voice'}
                 </button>
                 <button
                   type="button"

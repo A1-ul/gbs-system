@@ -204,7 +204,7 @@ async function syncCallSessionToPrisma(session) {
         answeredAt: session.answeredAt ? new Date(session.answeredAt) : null,
         endedAt: session.endedAt ? new Date(session.endedAt) : null
       }
-    }).catch(() => {});
+    }).catch(() => { });
   } catch { }
 }
 
@@ -825,8 +825,29 @@ async function postSignalOrChat(req) {
         return updatedCall;
       }
 
-      if (!body.signalType) {
-        throw new AppError('signalType (OFFER, ANSWER, or ICE_CANDIDATE) or chatText is required.', 400);
+      if (!body.signalType && !body.mediaMode) {
+        throw new AppError('signalType (OFFER, ANSWER, ICE_CANDIDATE, or MEDIA_MODE) or chatText is required.', 400);
+      }
+
+      const normalizedSignalType = String(body.signalType || 'MEDIA_MODE').toUpperCase();
+      let nextMediaMode = c.mediaMode;
+      let nextParticipants = c.participants || [];
+      if (normalizedSignalType === 'MEDIA_MODE' || body.mediaMode) {
+        const requestedMode = String(body.mediaMode || body.payload?.mediaMode || '').toUpperCase();
+        if (requestedMode === 'VOICE' || requestedMode === 'VIDEO') {
+          nextMediaMode = requestedMode;
+          const callerEmailLower = String(req.user?.email || '').trim().toLowerCase();
+          nextParticipants = (c.participants || []).map((p) => {
+            const matchesParticipant =
+              String(p.userId) === senderId ||
+              (callerEmailLower && String(p.email || '').trim().toLowerCase() === callerEmailLower);
+            if (!matchesParticipant) return p;
+            return {
+              ...p,
+              videoOff: requestedMode === 'VOICE' ? true : Boolean(body.payload?.videoOff === true)
+            };
+          });
+        }
       }
 
       const sig = {
@@ -835,13 +856,18 @@ async function postSignalOrChat(req) {
         senderEmail: String(req.user?.email || '').trim().toLowerCase() || null,
         senderName,
         targetUserId: body.targetUserId ? String(body.targetUserId) : null,
-        signalType: String(body.signalType).toUpperCase(),
-        payload: body.payload || null,
+        signalType: normalizedSignalType,
+        payload:
+          normalizedSignalType === 'MEDIA_MODE'
+            ? { ...(body.payload || {}), mediaMode: nextMediaMode }
+            : (body.payload || null),
         createdAt: new Date().toISOString()
       };
       recordedItem = sig;
       updatedCall = {
         ...c,
+        mediaMode: nextMediaMode,
+        participants: nextParticipants,
         signals: [...(c.signals || []), sig].slice(-120)
       };
       return updatedCall;
@@ -855,6 +881,7 @@ async function postSignalOrChat(req) {
   socketServer.emitToRoom(`call_${tid}_${targetRoomCode}`, 'webrtc_signal', {
     callId: updatedCall.id,
     roomCode: targetRoomCode,
+    mediaMode: updatedCall.mediaMode,
     ...recordedItem
   });
   emitCallStreamEvent(
@@ -863,13 +890,22 @@ async function postSignalOrChat(req) {
     body.chatText ? 'chat_message' : 'webrtc_signal',
     {
       item: recordedItem,
+      mediaMode: updatedCall.mediaMode,
       participants: updatedCall.participants
     }
   );
+  if (recordedItem?.signalType === 'MEDIA_MODE') {
+    emitCallStreamEvent(updatedCall.id, targetRoomCode, 'media_mode_changed', {
+      mediaMode: updatedCall.mediaMode,
+      participants: updatedCall.participants,
+      changedBy: senderName
+    });
+  }
 
   return {
     callId: updatedCall.id,
     roomCode: targetRoomCode,
+    mediaMode: updatedCall.mediaMode,
     recorded: recordedItem,
     participants: updatedCall.participants
   };

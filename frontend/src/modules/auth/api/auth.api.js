@@ -117,6 +117,17 @@ const BUILTIN_OFFLINE_USERS = [
     tenantId: "1",
     tenantCode: "GBS-MAIN",
     tenantName: "GBS International School (Main Branch)"
+  },
+  {
+    email: "secretary@gbs.com",
+    username: "secretary1",
+    passwords: ["Secretary123!"],
+    role: "SECRETARY",
+    firstName: "Evelyn",
+    lastName: "Secretary",
+    tenantId: "1",
+    tenantCode: "GBS-MAIN",
+    tenantName: "GBS International School (Main Branch)"
   }
 ];
 

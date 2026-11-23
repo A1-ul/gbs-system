@@ -1,5 +1,6 @@
-import React, { useEffect, useState, useCallback } from "react";
+import React, { useEffect, useState, useCallback, useRef } from "react";
 import apiClient from "../../api/client/apiClient";
+import { hasActiveAuthSession } from "../../utils/tokenStorage";
 import LiveInSystemCallModal from "./LiveInSystemCallModal";
 
 /**
@@ -55,12 +56,16 @@ export default function LiveCallLauncherAndReceiver({
   const [liveClassTarget, setLiveClassTarget] = useState("");
   const [activeModalSession, setActiveModalSession] = useState(null);
   const [busy, setBusy] = useState(false);
+  const authPausedRef = useRef(false);
 
   const notify = useCallback((msg, isErr = false) => {
     if (typeof onFeedback === "function") onFeedback(msg, isErr);
   }, [onFeedback]);
 
   const pollIncomingAndConferences = useCallback(async () => {
+    if (authPausedRef.current || !hasActiveAuthSession({ isDeveloperContext: isDeveloper })) {
+      return;
+    }
     try {
       const res = await apiClient.get("/video/calls/incoming");
       const data = res?.data?.data;
@@ -69,19 +74,30 @@ export default function LiveCallLauncherAndReceiver({
         setActiveConferences(Array.isArray(data.activeConferences) ? data.activeConferences : []);
         setRecentCalls(Array.isArray(data.recentCalls) ? data.recentCalls : []);
       }
-    } catch { }
-  }, []);
+    } catch (err) {
+      if (err?.response?.status === 401) {
+        authPausedRef.current = true;
+      }
+    }
+  }, [isDeveloper]);
 
   const loadDirectory = useCallback(async () => {
     if (variant !== "FULL_STUDIO") return;
+    if (authPausedRef.current || !hasActiveAuthSession({ isDeveloperContext: isDeveloper })) {
+      return;
+    }
     try {
       const res = await apiClient.get("/video/calls/directory");
       const data = res?.data?.data;
       if (data) {
         setDirectory(data);
       }
-    } catch { }
-  }, [variant]);
+    } catch (err) {
+      if (err?.response?.status === 401) {
+        authPausedRef.current = true;
+      }
+    }
+  }, [variant, isDeveloper]);
 
   const handleCloseCallModal = useCallback(() => {
     setActiveModalSession(null);
@@ -94,10 +110,29 @@ export default function LiveCallLauncherAndReceiver({
   }, [pollIncomingAndConferences]);
 
   useEffect(() => {
+    authPausedRef.current = false;
     pollIncomingAndConferences();
     loadDirectory();
     const timer = setInterval(pollIncomingAndConferences, 5000);
-    return () => clearInterval(timer);
+    const onAuthExpired = () => {
+      authPausedRef.current = true;
+    };
+    const onAuthUpdated = () => {
+      authPausedRef.current = false;
+      pollIncomingAndConferences();
+      loadDirectory();
+    };
+    window.addEventListener("gbs_auth_session_expired", onAuthExpired);
+    window.addEventListener("gbs_auth_session_cleared", onAuthExpired);
+    window.addEventListener("gbs_auth_session_updated", onAuthUpdated);
+    window.addEventListener("storage", onAuthUpdated);
+    return () => {
+      clearInterval(timer);
+      window.removeEventListener("gbs_auth_session_expired", onAuthExpired);
+      window.removeEventListener("gbs_auth_session_cleared", onAuthExpired);
+      window.removeEventListener("gbs_auth_session_updated", onAuthUpdated);
+      window.removeEventListener("storage", onAuthUpdated);
+    };
   }, [pollIncomingAndConferences, loadDirectory]);
 
   const handleStartDirectCall = async (target, mediaMode = "VIDEO") => {

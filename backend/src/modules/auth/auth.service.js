@@ -19,8 +19,14 @@ const signToken = (id, role, tenantId) => {
   });
 };
 
-const signRefreshToken = (id) => {
-  return jwt.sign({ id }, envConfig.jwt.refreshSecret, {
+const signRefreshToken = (id, extra = {}) => {
+  const payload = { id };
+  if (extra && typeof extra === 'object') {
+    if (extra.role) payload.role = extra.role;
+    if (extra.tenantId !== undefined && extra.tenantId !== null) payload.tenantId = extra.tenantId;
+    if (extra.email) payload.email = String(extra.email).trim().toLowerCase();
+  }
+  return jwt.sign(payload, envConfig.jwt.refreshSecret, {
     expiresIn: envConfig.jwt.refreshExpires
   });
 };
@@ -858,10 +864,10 @@ const registerInstitution = async (data) => {
   const explicitMonths = parseInt(data.subscribedMonths, 10);
   const inferredPlanFromMonths = explicitMonths === 3 ? '3_MONTHS'
     : explicitMonths === 6 ? '6_MONTHS'
-    : explicitMonths === 9 ? '9_MONTHS'
-    : explicitMonths === 12 ? '12_MONTHS'
-    : (explicitMonths === 4 && Number(data.totalTermFee || data.paymentAmount || data.calculatedFee || 0) > 0) ? '4_MONTHS'
-    : null;
+      : explicitMonths === 9 ? '9_MONTHS'
+        : explicitMonths === 12 ? '12_MONTHS'
+          : (explicitMonths === 4 && Number(data.totalTermFee || data.paymentAmount || data.calculatedFee || 0) > 0) ? '4_MONTHS'
+            : null;
   const effPlan = String(data.subscriptionPlan || data.subscriptionDuration || inferredPlanFromMonths || '4_MONTH_TRIAL').toUpperCase();
   const isTrialPlan = effPlan === '4_MONTH_TRIAL' || effPlan === '1_MONTH_TRIAL' || effPlan === 'TERM_TRIAL' || effPlan === 'FREE_TRIAL';
   const planMonthsMap = {
@@ -1671,6 +1677,47 @@ const refreshTokenSession = async (incomingToken) => {
       (store.users || []).find((u) => String(u.id) === String(decoded.id)) ||
       BUILTIN_SYSTEM_USERS.find((u) => String(u.id) === String(decoded.id));
   }
+  if (!userRecord && String(decoded.id || '').startsWith('usr_hm_') && Array.isArray(store.institutions)) {
+    const matchedInst = store.institutions.find((inst) => `usr_hm_${inst.id}` === String(decoded.id));
+    if (matchedInst) {
+      const st = String(matchedInst.status || '').toUpperCase();
+      userRecord = {
+        id: decoded.id,
+        tenantId: matchedInst.tenantId || matchedInst.id,
+        tenantCode: matchedInst.tenantCode,
+        email: matchedInst.adminEmail || matchedInst.officialEmail,
+        role: decoded.role || 'ADMIN',
+        isLocked: matchedInst.isLocked === true || st === 'LOCKED' || st === 'SUSPENDED',
+        isDeleted: matchedInst.isDeleted === true || st === 'DELETED',
+        isActive: matchedInst.isActive !== false
+      };
+    }
+  }
+  if (!userRecord && (decoded.email || decoded.role)) {
+    const decEmail = String(decoded.email || '').trim().toLowerCase();
+    const decRole = String(decoded.role || '').trim().toUpperCase();
+    userRecord =
+      (decEmail && BUILTIN_SYSTEM_USERS.find((u) => String(u.email || '').toLowerCase() === decEmail)) ||
+      (decRole && BUILTIN_SYSTEM_USERS.find((u) => String(u.role || '').toUpperCase() === decRole)) ||
+      null;
+  }
+  if (!userRecord && Number.isInteger(numId) && numId >= 1 && numId <= 9) {
+    const NUM_ID_TO_BUILTIN = {
+      1: 'usr_super_admin',
+      2: 'usr_teacher_master',
+      3: 'usr_student_master',
+      4: 'usr_parent_master',
+      5: 'usr_accountant_master',
+      6: 'usr_staff_master',
+      7: 'usr_hr_master',
+      8: 'usr_alumni_master',
+      9: 'usr_secretary_master'
+    };
+    const mappedId = NUM_ID_TO_BUILTIN[numId];
+    if (mappedId) {
+      userRecord = BUILTIN_SYSTEM_USERS.find((u) => u.id === mappedId) || null;
+    }
+  }
 
   if (!userRecord) {
     throw new AppError('Access Denied: User account not found.', 403);
@@ -1686,7 +1733,11 @@ const refreshTokenSession = async (incomingToken) => {
   }
 
   const accessToken = signToken(userRecord.id, userRecord.role, userRecord.tenantId || DEFAULT_TENANT.id);
-  const refreshToken = signRefreshToken(userRecord.id);
+  const refreshToken = signRefreshToken(userRecord.id, {
+    role: userRecord.role,
+    tenantId: userRecord.tenantId || DEFAULT_TENANT.id,
+    email: userRecord.email
+  });
   return { accessToken, refreshToken, refreshedAt: new Date().toISOString() };
 };
 
@@ -1854,18 +1905,18 @@ const resetPassword = async ({ email, otp, resetCode, token, phone, fullName, te
         ? { ...builtinMatch, passwordHash: hashed, password: hashed }
         : instMatch
           ? {
-              id: `usr_hm_${instMatch.id}`,
-              tenantId: instMatch.tenantId || instMatch.id || 1,
-              email: cleanEmail,
-              username: cleanEmail.split('@')[0],
-              role: 'ADMIN',
-              firstName: instMatch.adminName || 'Headmaster',
-              lastName: '',
-              passwordHash: hashed,
-              password: hashed,
-              isActive: true,
-              isApproved: true
-            }
+            id: `usr_hm_${instMatch.id}`,
+            tenantId: instMatch.tenantId || instMatch.id || 1,
+            email: cleanEmail,
+            username: cleanEmail.split('@')[0],
+            role: 'ADMIN',
+            firstName: instMatch.adminName || 'Headmaster',
+            lastName: '',
+            passwordHash: hashed,
+            password: hashed,
+            isActive: true,
+            isApproved: true
+          }
           : null;
       updatedReg = synthetic ? [...existingReg, synthetic] : existingReg;
     }
