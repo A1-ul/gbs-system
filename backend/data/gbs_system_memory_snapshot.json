@@ -1,7 +1,7 @@
 {
   "systemName": "GBS MANAGEMENT SYSTEM (Global Brightest Stars Educational Management System)",
-  "version": "2.13.0-PRODUCTION-BLUEPRINT",
-  "savedAt": "2026-11-22T14:00:00Z",
+  "version": "2.14.0-PRODUCTION-BLUEPRINT",
+  "savedAt": "2026-11-23T23:12:00Z",
   "status": "PRODUCTION_READY_VERIFIED",
   "architecture": {
     "frontend": {
@@ -411,11 +411,37 @@
       "rootCause": "beforeinstallprompt.prompt() ran after await navigator.serviceWorker.register(); Internship and Attachment shared one tab/endpoint; UniversityOperationsPanel blocked JHS/SHS/TVET behind a separate tertiary wall instead of adapting inside Academics/Curriculum/Courses; SchoolClinicHubPanel gave non-Headmasters clinic write actions; tooltips rendered via UniversalHeadingTooltipHUD and title attributes.",
       "resolution": "Removed UniversalHeadingTooltipHUD and stripped hover tooltips; moved prompt() to synchronous click handler; removed standalone tertiary tab walls and added /api/v1/institution/* so Academics/Curriculum/Courses natively operate for JHS, SHS, TVET (attachments+workshops), and University (separated INT- industrial internships vs ATT- attachments); enforced ownHealthOnly clinic privacy vs Headmaster directory; added ROLE_ACTIVITIES_GUIDE and non-disclosure guard in Voice AI.",
       "status": "PERMANENTLY_GUARDED"
+    },
+    {
+      "issueCode": "DIAG-EXAM-VETTING-AND-DIRECT-MOMO-BANK-PAYMENTS-V212",
+      "symptom": "Teachers across all institution tiers (Nursery-JHS, SHS, TVET, University) must submit end-of-term/semester exams to the Headmaster for vetting and ongoing confirmation, and users must pay seamlessly via direct MoMo app/USSD handoff and direct bank-to-school/developer settlement with strict gateway validation.",
+      "rootCause": "Exam creation bypassed a formal Headmaster vetting & ongoing-confirmation workflow across institution tiers, and payment modals needed streamlined direct MoMo app launch/install handoff plus Bank-to-School and Onboarding-to-Developer verification.",
+      "resolution": "Implemented end-to-end Exam Vetting Hub (ExamVettingHubPanel.jsx + /api/v1/ai-exam/vetting/* & /api/v1/exams/vetting/*) supporting teacher submission, revision loop, and Headmaster vetting & ongoing confirmation across all 4 tiers, alongside verified multi-gateway MTN MoMo / Paystack / Hubtel / Direct Bank payment adapters. Verified 18/18 checks in backend/verify_upgrade_e2e.js.",
+      "status": "PERMANENTLY_GUARDED"
+    },
+    {
+      "issueCode": "DIAG-GLOBAL-PAGE-NAVIGATION-SCROLL-RESTORATION-V213",
+      "symptom": "Clicking dashboard tabs or menu items scrolled back to the top of the existing dashboard instead of opening dedicated module pages and restoring exact scroll position on Back/Forward navigation.",
+      "rootCause": "Dashboards switched local tab state without URL module routes, browser history entries, or per-route window + scrollable container scroll snapshot restoration.",
+      "resolution": "Implemented dedicated internal routes /portal/<role>/dashboard/:moduleId? across all 9 institutional dashboards (excluding Developer Dashboard) via globalNavigationScrollManager.js, useDashboardTabSync.js, DashboardTabPageController.jsx, and WindowControlsBar back/forward integration (commit 3f6fa23). Verified 10/10 Desktop + 10/10 Mobile real Chrome CDP navigation and exact scroll restoration checks.",
+      "status": "PERMANENTLY_GUARDED"
+    },
+    {
+      "issueCode": "DIAG-AUTH-401-PREFLIGHT-AND-VIDEO-VOICE-VIDEO-V214",
+      "symptom": "Dashboard polling on /api/v1/video/calls/incoming returned HTTP 401 when tokens expired, refreshed in PostgreSQL standby, or cleared while gbs_user remained; switching from Video Call -> Voice Call -> Back to Video Call failed across dashboards.",
+      "rootCause": "axios.js cleared tokens on 401 without pausing background pollers or proactively refreshing expired JWTs pre-flight; auth.middleware.js and auth.service.js refreshTokenSession missed DEV_JWT_SECRET fallback and standby numeric/built-in/usr_hm_* user resolution; LiveInSystemCallModal included mediaMode in the main WebRTC/SSE useEffect dependency array, lacked a Voice->Video switch button and transceiver-aware replaceTrack/SDP renegotiation, and blocked button state on network signal POSTs; StudentCooperativeConferenceModal and OnlineLearningDashboard unmounted <video> without re-acquiring stopped camera tracks or rebinding srcObject.",
+      "resolution": "Added getActiveAuthToken()/hasActiveAuthSession() in tokenStorage.js, proactive pre-flight JWT expiration refresh & built-in Demo recovery in axios.js, auth-guarded pollers in LiveCallLauncherAndReceiver.jsx & TopCenterSystemBanner.jsx, apiClient migration in OnlineLearningDashboard.jsx, and standby/DEV_JWT_SECRET resolution in auth.middleware.js & auth.service.js (keeping unauthenticated calls strictly 401). Decoupled activeMediaMode from WebRTC teardown in LiveInSystemCallModal.jsx, persisted MEDIA_MODE signaling in liveCall.service.js, added non-blocking Video<->Voice switch with fresh MediaStream + transceiver replaceTrack/SDP renegotiation, and fixed camera re-acquisition & srcObject rebinding in StudentCooperativeConferenceModal.jsx and OnlineLearningDashboard.jsx (commit a243bc5). Verified 69/69 local API+Chrome checks, 18/18 regression checks, and 53/53 live Render HTTP checks.",
+      "status": "PERMANENTLY_GUARDED"
     }
   ],
   "verificationSummary": {
-    "backendTestSuitesPassed": "All 14 backend integration suites verified",
-    "chromeE2EDashboardsVerified": "All 8 user dashboards in DEMO_SANDBOX (across JHS, SHS, TVET, University) and LIVE_PRODUCTION plus Developer control suite verified",
+    "latestVerifiedCommit": "a243bc5",
+    "latestLiveBundleHash": "index-DiuujEUj.js",
+    "liveProductionUrl": "https://gbs-system.onrender.com",
+    "autoMemoryRuleFile": "AGENTS.md",
+    "backendTestSuitesPassed": "18/18 upgrade regression checks + 43/43 multi-role auth & video signaling API checks verified",
+    "chromeE2EDashboardsVerified": "All 10 roles (Admin, Teacher, Student, Parent, Accountant, Secretary, Staff, HR, Alumni, Developer) verified with HTTP 200, zero 401s, expired-JWT pre-flight refresh, real Chrome camera Video->Voice->Back to Video multi-cycle switching, and 10/10 Desktop + 10/10 Mobile navigation/scroll restoration",
+    "liveRenderHttpAuditPassed": "53/53 live HTTP checks passed on https://gbs-system.onrender.com (200 OK across all 10 dashboards + Video->Voice->Video signaling; 401 Unauthorized enforced on unauthenticated requests)",
     "institutionSeparationUniversityClinicVoiceVerified": "2026-11-20 Tier-Tailored School Portals (JHS/SHS/TVET/University), Separated Internships/Attachments, Clinic Privacy & Non-Disclosure Verified",
     "multiMillionSchoolDatabaseMandate": {
       "enforced": true,
@@ -423,12 +449,15 @@
       "partitionStrategy": "Every institutional table enforces composite (tenantId, ...) B-Tree indexes and strict tenantId + foreign-key cross-module relational linking across Admissions, Academics, Staff & Student Attendance, Proctored Exams, School Clinic, Payments, Live WebRTC Video/Voice Calls, HR, Transport, and Alumni.",
       "newlyAddedEnterpriseModules": [
         "Staff Welcome-to-School Onboarding + Clock-In / Bypass Choice + Early Clock-Out Mandatory Reason + 2-Hour Post-Close Auto Clock-Out + Full-Term Headmaster Monitoring",
-        "Real WebRTC + Socket.IO In-System Voice & Video Conferencing (Teacher Conferences, Headmaster-Teachers Meetings, Headmaster-Parent & Teacher-Parent Direct Calls)",
-        "Multi-Network Any-Phone Mobile Money Checkout (MTN MoMo, Telecel Cash, AirtelTigo AT Money, Card, Bank) with Server-Side Secure Gateway Configuration & Connectivity Verification"
+        "Real WebRTC + Socket.IO + SSE In-System Voice & Video Conferencing with Seamless Video <-> Voice <-> Video Switching across all 10 Dashboards",
+        "Multi-Network Any-Phone Mobile Money Checkout (MTN MoMo, Telecel Cash, AirtelTigo AT Money, Card, Bank) with Server-Side Secure Gateway Configuration & Connectivity Verification",
+        "Cross-Institution Teacher-to-Headmaster Exam Vetting & Ongoing Confirmation Workflow (Nursery-JHS, SHS, TVET, University)",
+        "Global Page-Based Module Routing & Exact Window/Container Scroll Position Restoration across all 9 Institutional Dashboards"
       ]
     },
     "browserAssetsRegenerated": "favicon.ico, logo.png, icon-192.png, icon-512.png, apple-touch-icon.png, og-gbs-crest.jpg",
     "uncaughtBrowserConsoleErrors": 0,
-    "astUndeclaredErrors": 0
+    "astUndeclaredErrors": 0,
+    "tooltipRegressions": 0
   }
 }

@@ -116,6 +116,19 @@ d:\version1\GBS_SYSTEM\
 * Passed 17 / 17 backend master production audit suites.
 * Compiled 210 Vite modules cleanly with zero errors.
 
+### Phase 11: Cross-Institution Exam Vetting & Direct MoMo / Bank Payment Gateways (Nov 2026)
+* Delivered `ExamVettingHubPanel.jsx` and `/api/v1/ai-exam/vetting/*` enabling Teachers to submit end-of-term/semester exams to the Headmaster for vetting, revision loops, and ongoing-exam confirmation across Nursery–JHS, SHS, TVET, and University tiers.
+* Delivered direct MoMo app/USSD handoff and direct Bank-to-School / Onboarding-to-Developer payment flows across MTN MoMo, Paystack, Hubtel, and Bank adapters with HMAC verification and idempotency guards (`18 / 18` checks verified in `backend/verify_upgrade_e2e.js`).
+
+### Phase 12: Global Page Navigation & Exact Scroll Position Restoration (Nov 2026 — Commit `3f6fa23`)
+* Upgraded all 9 institutional dashboards (excluding Developer Dashboard) to dedicated internal routes (`/portal/<role>/dashboard/:moduleId`) with exact window & scrollable container scroll/state restoration across browser Back/Forward and application Back buttons (`10 / 10` Desktop + `10 / 10` Mobile Chrome CDP verified).
+
+### Phase 13: Dashboard Auth HTTP 200 Hardening, Seamless Video ↔ Voice ↔ Video Switching & Auto-Memory Protocol (Nov 2026 — Commit `a243bc5`)
+* Eliminated dashboard `401` polling errors across all 10 roles via proactive pre-flight JWT expiry refresh, standby built-in/refresh token resolution, `DEV_JWT_SECRET` fallback, auth-guarded call/SMS pollers, and `apiClient` migration in `OnlineLearningDashboard.jsx`, while preserving strict `401 Unauthorized` protection for unauthenticated requests.
+* Fixed **Video → Voice → Back to Video** (and **Voice → Video upgrade**) across `LiveInSystemCallModal.jsx`, `StudentCooperativeConferenceModal.jsx`, `OnlineLearningDashboard.jsx`, and `liveCall.service.js` with persistent `MEDIA_MODE` signaling, fresh `MediaStream` camera re-acquisition, and non-blocking WebRTC transceiver `replaceTrack()` / SDP renegotiation.
+* Verified **69 / 69** local API + real Chrome media-stream checks, **18 / 18** upgrade regression checks, and **53 / 53** live production HTTP checks on `https://gbs-system.onrender.com` (`index-DiuujEUj.js`).
+* Established permanent automatic post-job memory persistence in root [`AGENTS.md`](file:///d:/version1/GBS_SYSTEM/AGENTS.md) so all future completed jobs are automatically archived to system memory without needing user reminders.
+
 ---
 
 ## 3. THE 100% REMOTE SELF-ONBOARDING & PRICING MULTIPLIER ENGINE

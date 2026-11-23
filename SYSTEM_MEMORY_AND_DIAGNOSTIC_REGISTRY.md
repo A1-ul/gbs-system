@@ -252,6 +252,46 @@ flowchart TD
   - Prominent sticky `⬅ Back to Previous Page` button preserves originating dashboard tab, search filters, and scroll position via `sessionStorage` and browser history state.
   - Comprehensive inspection features: KPI metric summaries, attribute data ledger, specialized attendance roll tables, candidate admission dossiers, lesson plan assessments, facial identity verification photos, and executive verification controls (`✅ Verify & Approve Dossier`, `⚠️ Issue Query / Revision`, `⚖️ Compliance Seal`, `🖨️ Print Record`).
 
+---
+
+## 10. Exam Vetting, Direct Payments & Global Page Navigation with Scroll Restoration (Nov 2026 — Commit `3f6fa23`)
+
+- **Cross-Institution Teacher → Headmaster Exam Vetting & Ongoing Confirmation:**
+  - Component: [`ExamVettingHubPanel.jsx`](file:///d:/version1/GBS_SYSTEM/frontend/src/components/common/ExamVettingHubPanel.jsx) wired to `/api/v1/ai-exam/vetting/*` and `/api/v1/exams/vetting/*`.
+  - Supports teacher submission of end-of-term/semester exams, Headmaster revision requests, teacher resubmission, and Headmaster vetting & ongoing-exam confirmation across all 4 institution tiers (`NURSERY_TO_JHS`, `SENIOR_HIGH_SCHOOL`, `TECHNICAL`, `UNIVERSITY`).
+- **Direct MoMo App / USSD & Bank-to-School/Developer Payment Gateways:**
+  - Verified MTN MoMo, Paystack, Hubtel, and Direct Bank-to-School / Onboarding-to-Developer flows with HMAC webhook validation, idempotency protection, partial payment receipts, refund balance restoration, and zero raw PIN/CVV storage (`18/18` checks passing in [`verify_upgrade_e2e.js`](file:///d:/version1/GBS_SYSTEM/backend/verify_upgrade_e2e.js)).
+- **Global Page-Based Module Routing & Exact Scroll Position Restoration:**
+  - Implemented across all 9 institutional dashboards (explicitly excluding Developer Dashboard) via [`AppRouter.jsx`](file:///d:/version1/GBS_SYSTEM/frontend/src/router/AppRouter.jsx), [`globalNavigationScrollManager.js`](file:///d:/version1/GBS_SYSTEM/frontend/src/utils/globalNavigationScrollManager.js), [`useDashboardTabSync.js`](file:///d:/version1/GBS_SYSTEM/frontend/src/hooks/useDashboardTabSync.js), and [`DashboardTabPageController.jsx`](file:///d:/version1/GBS_SYSTEM/frontend/src/components/common/DashboardTabPageController.jsx).
+  - Opens every dashboard module on its own internal route (`/portal/<role>/dashboard/:moduleId`) and restores exact window + scrollable container positions on browser Back/Forward and application Back buttons (`10/10` Desktop + `10/10` Mobile Chrome CDP verified).
+
+---
+
+## 11. Dashboard Auth HTTP 200 Hardening, Seamless Video ↔ Voice ↔ Video Switching & Automatic Memory Protocol (Nov 2026 — Commit `a243bc5`)
+
+### A. Elimination of Dashboard `401` Polling Errors (Preserving Real Security)
+- **Root Causes Resolved:**
+  1. Expired/missing JWTs caused `LiveCallLauncherAndReceiver` (`/api/v1/video/calls/incoming`) and `TopCenterSystemBanner` (`/api/v1/sms/inbox`) to keep polling without a valid token after `axios.js` cleared stale tokens.
+  2. `auth.middleware.js` lacked `DEV_JWT_SECRET` verification fallback and standby numeric/built-in email lookup; `auth.service.js` `refreshTokenSession()` missed PostgreSQL-standby resolution for built-in numeric IDs (`1..9`), `SECRETARY`, and onboarded Headmasters (`usr_hm_*`).
+  3. `OnlineLearningDashboard.jsx` used raw `fetch()` without full auth headers or refresh handling.
+- **Fixes Applied:**
+  - [`tokenStorage.js`](file:///d:/version1/GBS_SYSTEM/frontend/src/utils/tokenStorage.js): Added `getActiveAuthToken()` & `hasActiveAuthSession()` across `gbs_token`, `gbs_access_token`, `gbs_dev_token`, plus `gbs_auth_session_updated` / `gbs_auth_session_cleared` events.
+  - [`axios.js`](file:///d:/version1/GBS_SYSTEM/frontend/src/api/client/axios.js): Added proactive client-side JWT expiration pre-flight renewal (refreshes expired tokens *before* requests leave the browser), built-in Demo Sandbox one-time recovery, and `gbs_auth_session_expired` broadcast on unrecoverable live expiry.
+  - [`LiveCallLauncherAndReceiver.jsx`](file:///d:/version1/GBS_SYSTEM/frontend/src/components/common/LiveCallLauncherAndReceiver.jsx) & [`TopCenterSystemBanner.jsx`](file:///d:/version1/GBS_SYSTEM/frontend/src/components/common/TopCenterSystemBanner.jsx): Guarded background polling with `hasActiveAuthSession()` so unauthenticated sessions never spam `401`, resuming automatically on login/refresh.
+  - [`auth.middleware.js`](file:///d:/version1/GBS_SYSTEM/backend/src/middleware/auth.middleware.js), [`auth.service.js`](file:///d:/version1/GBS_SYSTEM/backend/src/modules/auth/auth.service.js), [`auth.api.js`](file:///d:/version1/GBS_SYSTEM/frontend/src/modules/auth/api/auth.api.js), [`DeveloperLogin.jsx`](file:///d:/version1/GBS_SYSTEM/frontend/src/modules/developer-platform/pages/DeveloperLogin.jsx): Added `DEV_JWT_SECRET` fallback, standby refresh & built-in resolution, and `secretary@gbs.com` offline support.
+  - **Security Guarantee Preserved:** Unauthenticated and tampered requests to `/api/v1/video/calls/incoming` strictly return **`401 Unauthorized`**.
+
+### B. Seamless Video → Voice → Back to Video Switching Across All Dashboards
+- **Backend Signaling Persistence:** [`liveCall.service.js`](file:///d:/version1/GBS_SYSTEM/backend/src/modules/video/liveCall.service.js) persists `MEDIA_MODE` (`VIDEO` ↔ `VOICE`) and participant `videoOff` state on `POST /api/v1/video/calls/:callId/signal` and emits `media_mode_changed` over SSE & Socket so polling never reverts the user's selected mode.
+- **In-System Live Call Modal (All 10 Dashboards):** [`LiveInSystemCallModal.jsx`](file:///d:/version1/GBS_SYSTEM/frontend/src/components/common/LiveInSystemCallModal.jsx) decoupled `activeMediaMode` from the WebRTC/SSE lifecycle `useEffect`, added an always-available `Switch to Voice Call` / `Switch to Video Call` control (`data-testid="call-switch-media-mode-btn"`), releases camera cleanly on Video → Voice while keeping audio uninterrupted, re-acquires a live camera track into a fresh `new MediaStream([...liveAudioTracks, vidTrack])` on Voice → Video, performs non-blocking transceiver-aware `replaceTrack()` / `addTrack()` + SDP renegotiation `OFFER`, guards initial `getUserMedia` race conditions, and uses `getActiveAuthToken()` for SSE streams.
+- **Student Cooperative Conference & Virtual Classroom:** [`StudentCooperativeConferenceModal.jsx`](file:///d:/version1/GBS_SYSTEM/frontend/src/components/common/StudentCooperativeConferenceModal.jsx) and [`OnlineLearningDashboard.jsx`](file:///d:/version1/GBS_SYSTEM/frontend/src/modules/meeting/pages/OnlineLearningDashboard.jsx) preserve audio tracks in refs, re-acquire camera tracks on Voice → Video return, and re-attach `srcObject` + `.play()` cleanly.
+
+### C. Verification & Automatic Memory Persistence
+- **Local Verification:** `69 / 69` API & real headless Chrome CDP media-stream checks passed (`0` failures, `0` tooltip regressions) + `18 / 18` upgrade regression checks passed.
+- **Live Render Production Verification (`https://gbs-system.onrender.com`, bundle `index-DiuujEUj.js`):** `53 / 53` live HTTP checks passed — green `200`/`201` across all 10 dashboards, token refresh, and `VIDEO → VOICE → VIDEO` signaling; strict `401 Unauthorized` verified on unauthenticated access.
+- **Permanent Automatic Memory Rule:** Created [`AGENTS.md`](file:///d:/version1/GBS_SYSTEM/AGENTS.md) at the repository root so every future session automatically saves completed jobs into `backend/data/gbs_system_memory_snapshot.json`, `SYSTEM_MEMORY_AND_DIAGNOSTIC_REGISTRY.md`, and `MASTER_SYSTEM_MEMORY_LEDGER.md` without requiring user reminders.
+
+
 
 
 
