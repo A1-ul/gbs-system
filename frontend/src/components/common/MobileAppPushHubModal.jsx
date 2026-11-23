@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from "react";
 import apiClient from "../../api/client/apiClient";
+import { resolveApiUrl } from "../../api/client/apiConfig";
 import { getActiveSchoolName } from "../../utils/schoolBranding";
 import "./MobileAppPushHubModal.css";
 
@@ -25,6 +26,7 @@ export default function MobileAppPushHubModal({ isOpen, onClose }) {
       window.navigator?.standalone === true)
   );
   const [pushFeedback, setPushFeedback] = useState(null);
+  const [showAppleInstallGuide, setShowAppleInstallGuide] = useState(false);
   const [pwaDiagnostics, setPwaDiagnostics] = useState({
     swRegistered: false,
     swActive: false,
@@ -98,11 +100,19 @@ export default function MobileAppPushHubModal({ isOpen, onClose }) {
   const detectDeviceType = () => {
     if (typeof navigator === "undefined") return "DESKTOP";
     const ua = navigator.userAgent || "";
-    if (/iPad|iPhone|iPod/i.test(ua) || (navigator.platform === "MacIntel" && navigator.maxTouchPoints > 1)) {
-      return "IOS";
-    }
+    const isIOS = /iPad|iPhone|iPod/i.test(ua) || (navigator.platform === "MacIntel" && navigator.maxTouchPoints > 1);
+    if (isIOS) return "IOS";
     if (/Android/i.test(ua)) return "ANDROID";
+    if (/Macintosh|Mac OS X/i.test(ua) && /Safari/i.test(ua) && !/Chrome|Chromium|Edg/i.test(ua)) {
+      return "MAC_SAFARI";
+    }
     return "DESKTOP";
+  };
+
+  const isIOSSafariBrowser = () => {
+    if (typeof navigator === "undefined") return false;
+    const ua = navigator.userAgent || "";
+    return /Safari/i.test(ua) && !/CriOS|FxiOS|EdgiOS|OPiOS|DuckDuckGo/i.test(ua);
   };
 
   const handleOpenStandaloneAppWindow = () => {
@@ -166,23 +176,54 @@ export default function MobileAppPushHubModal({ isOpen, onClose }) {
     });
   };
 
+  const handleInstallAppleHomeScreen = async () => {
+    setShowAppleInstallGuide(true);
+    const device = detectDeviceType();
+    if (device === "MAC_SAFARI") {
+      setPushFeedback({
+        type: "success",
+        text: "🍎 Apple Mac Safari Install: Click 'File' in the top menu bar → 'Add to Dock...' → Click 'Add'. The GBS App installs natively onto your Mac Dock & Applications without any download prompt!"
+      });
+      return;
+    }
+
+    // Native Apple Web Share Sheet prompt option if supported on iOS Safari / Chrome
+    if (device === "IOS") {
+      setPushFeedback({
+        type: "success",
+        text: isIOSSafariBrowser()
+          ? "🍎 Apple iPhone / iPad Native Install (No Profile Download Needed): Tap the Safari Share button (⎋) at the bottom bar → scroll down & tap 'Add to Home Screen' (➕) → tap 'Add'. The full-screen GBS App icon appears immediately on your Home Screen!"
+          : "🍎 Apple iOS Install: Tap the Share button (⎋) in your browser's address bar → tap 'Add to Home Screen' (➕) → tap 'Add' (or open this link in Safari for 1-tap Add to Home Screen)."
+      });
+      return;
+    }
+
+    setPushFeedback({
+      type: "info",
+      text: "🍎 On Apple iPhone / iPad: open this page in Safari or Chrome → tap Share (⎋) → 'Add to Home Screen' → 'Add'. On Mac Safari: File → 'Add to Dock'."
+    });
+  };
+
   const handleInstallAppleWebClipProfile = () => {
     if (typeof window === "undefined") return;
-    const originUrl = window.location.origin;
-    const profileUrl = `${originUrl}/api/v1/app/ios-webclip.mobileconfig?origin=${encodeURIComponent(originUrl)}`;
-    try {
-      const a = document.createElement("a");
-      a.href = profileUrl;
-      a.download = "GBS-School-System-iOS.mobileconfig";
-      document.body.appendChild(a);
-      a.click();
-      document.body.removeChild(a);
-    } catch {
-      window.location.href = profileUrl;
+    const device = detectDeviceType();
+    // On iOS non-Safari browsers, Apple blocks .mobileconfig installation and displays a failed download message.
+    if (device === "IOS" && !isIOSSafariBrowser()) {
+      setShowAppleInstallGuide(true);
+      setPushFeedback({
+        type: "info",
+        text: "🍎 Apple only allows WebClip profiles inside Safari. Tap the Share button (⎋) → 'Add to Home Screen' directly here in your browser (fastest — zero download needed!), OR copy the page link and open it in Apple Safari."
+      });
+      return;
     }
+    const originUrl = window.location.origin;
+    const profileUrl = resolveApiUrl(`/api/v1/app/ios-webclip.mobileconfig?origin=${encodeURIComponent(originUrl)}`);
+    // Navigate directly WITHOUT a.download so Safari invokes the native iOS Profile Installer sheet cleanly
+    window.location.assign(profileUrl);
+    setShowAppleInstallGuide(true);
     setPushFeedback({
       type: "success",
-      text: "🍎 Apple iOS / iPadOS App Profile downloaded! On iPhone/iPad: open Settings → Profile Downloaded → Install (or in Safari tap Share ⎋ → Add to Home Screen) so the GBS Crest icon runs full-screen on Apple devices with automatic updates."
+      text: "🍎 Safari Apple Profile opened: Tap 'Allow' → then open iPhone/iPad Settings → General → VPN & Device Management → GBS School System App → Install. (Or simply tap Share ⎋ → Add to Home Screen for instant install without Settings!)"
     });
   };
 
@@ -259,13 +300,13 @@ export default function MobileAppPushHubModal({ isOpen, onClose }) {
         type: "info",
         text: "📱 Android Install: Tap your Chrome/Edge menu (⋮ top-right) → 'Install app' or 'Add to Home screen' so the GBS Crest icon installs directly on your phone, or tap 'Save App Launcher (.html)' below!"
       });
-    } else if (device === "IOS") {
-      handleInstallAppleWebClipProfile();
+    } else if (device === "IOS" || device === "MAC_SAFARI") {
+      await handleInstallAppleHomeScreen();
       return;
     } else {
       setPushFeedback({
         type: "info",
-        text: "💻 Desktop Install: Click the ⊕ Install icon in Chrome/Edge's address bar (or Menu ⋮ → Apps / Cast, save, and share → Install GBS System), OR click 'Save App Launcher (.html)' / 'Open Standalone App Window' below!"
+        text: "💻 Laptop / PC Install: Click the ⊕ Install icon in Chrome or Edge's address bar (or Menu ⋮ → 'Install GBS System' / 'Apps → Install this site as an app'). You can also launch Standalone App Window or save the Desktop Launcher below!"
       });
     }
   };
@@ -288,7 +329,7 @@ export default function MobileAppPushHubModal({ isOpen, onClose }) {
             devicePlatform: navigator.userAgent.includes("Android") ? "Android Native / Chrome" : navigator.userAgent.includes("iPhone") ? "Apple iOS Safari" : "Desktop Browser",
             subscription: { endpoint: `https://fcm.googleapis.com/fcm/send/device_${Date.now()}` }
           });
-        } catch {}
+        } catch { }
 
         setTestPushStatus("PERMISSIONS_GRANTED");
       }
@@ -327,7 +368,7 @@ export default function MobileAppPushHubModal({ isOpen, onClose }) {
         category,
         targetRole: "ALL_USERS"
       });
-    } catch {}
+    } catch { }
 
     // 2. Trigger native system notification cleanly across Android Chrome (SW showNotification) & Desktop
     if (typeof window !== "undefined" && "Notification" in window && Notification.permission === "granted") {
@@ -510,7 +551,7 @@ export default function MobileAppPushHubModal({ isOpen, onClose }) {
                   </button>
                   <button
                     type="button"
-                    onClick={handleInstallAppleWebClipProfile}
+                    onClick={handleInstallAppleHomeScreen}
                     style={{
                       background: "linear-gradient(135deg, rgba(15, 23, 42, 0.95), rgba(30, 41, 59, 0.95))",
                       border: "1.5px solid #f6dd84",
@@ -522,7 +563,7 @@ export default function MobileAppPushHubModal({ isOpen, onClose }) {
                       cursor: "pointer"
                     }}
                   >
-                    🍎 Install on Apple (iPhone / iPad / Mac Profile)
+                    🍎 Install on Apple (iPhone / iPad / Mac)
                   </button>
                   <button
                     type="button"
@@ -538,7 +579,7 @@ export default function MobileAppPushHubModal({ isOpen, onClose }) {
                       cursor: "pointer"
                     }}
                   >
-                    ⬇️ Save App Launcher (.html)
+                    ⬇️ Save Desktop/PC Launcher (.html)
                   </button>
                   <button
                     type="button"
@@ -558,6 +599,57 @@ export default function MobileAppPushHubModal({ isOpen, onClose }) {
                   </button>
                 </div>
               </div>
+
+              {/* Dedicated Interactive Apple iOS / iPadOS / Mac Guided Installer Box (Zero Failed Download Popup) */}
+              {(showAppleInstallGuide || detectDeviceType() === "IOS" || detectDeviceType() === "MAC_SAFARI") && (
+                <div
+                  data-testid="apple-native-install-sheet"
+                  style={{
+                    marginTop: "1rem",
+                    background: "linear-gradient(135deg, rgba(8, 24, 51, 0.96), rgba(15, 35, 71, 0.96))",
+                    border: "2px solid #d4af37",
+                    borderRadius: "12px",
+                    padding: "14px 16px",
+                    color: "#f8fafc"
+                  }}
+                >
+                  <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: "8px", marginBottom: "8px" }}>
+                    <strong style={{ color: "#f6dd84", fontSize: "0.96rem" }}>
+                      🍎 Apple Direct Home Screen Install (iPhone, iPad &amp; Mac — Zero Download Errors)
+                    </strong>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        navigator.clipboard?.writeText(window.location.origin);
+                        setPushFeedback({ type: "success", text: "✅ Copied GBS App link! Paste into Apple Safari if needed." });
+                      }}
+                      style={{ background: "rgba(56, 189, 248, 0.2)", border: "1px solid #38bdf8", color: "#bae6fd", borderRadius: "8px", padding: "5px 10px", fontSize: "0.75rem", fontWeight: 800, cursor: "pointer" }}
+                    >
+                      📋 Copy App URL
+                    </button>
+                  </div>
+                  <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(220px, 1fr))", gap: "10px", fontSize: "0.82rem", color: "#e2e8f0" }}>
+                    <div style={{ background: "rgba(2, 6, 23, 0.65)", padding: "10px 12px", borderRadius: "8px", border: "1px solid rgba(212, 175, 55, 0.3)" }}>
+                      <strong style={{ color: "#34d399", display: "block", marginBottom: "4px" }}>Step 1 (Recommended — Instant PWA):</strong>
+                      Tap the <strong>Share icon (⎋)</strong> in Safari or iOS Chrome → tap <strong>"Add to Home Screen" (➕)</strong> → tap <strong>"Add"</strong>. Works offline, opens full-screen with the GBS Crest icon, and auto-updates!
+                    </div>
+                    <div style={{ background: "rgba(2, 6, 23, 0.65)", padding: "10px 12px", borderRadius: "8px", border: "1px solid rgba(56, 189, 248, 0.3)" }}>
+                      <strong style={{ color: "#38bdf8", display: "block", marginBottom: "4px" }}>MacBook / iMac:</strong>
+                      In <strong>Safari</strong>: click <strong>File → Add to Dock</strong>. In <strong>Chrome / Edge</strong>: click the <strong>⊕ Install</strong> icon in the address bar.
+                    </div>
+                    <div style={{ background: "rgba(2, 6, 23, 0.65)", padding: "10px 12px", borderRadius: "8px", border: "1px solid rgba(246, 221, 132, 0.3)" }}>
+                      <strong style={{ color: "#f6dd84", display: "block", marginBottom: "6px" }}>Optional Managed WebClip (Safari Only):</strong>
+                      <button
+                        type="button"
+                        onClick={handleInstallAppleWebClipProfile}
+                        style={{ background: "rgba(212, 175, 55, 0.2)", border: "1px solid #d4af37", color: "#f6dd84", borderRadius: "7px", padding: "6px 10px", fontSize: "0.76rem", fontWeight: 800, cursor: "pointer", width: "100%" }}
+                      >
+                        📲 Open Safari WebClip Profile
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              )}
 
               {/* Platform Guides Grid */}
               <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(210px, 1fr))", gap: "1rem", marginTop: "1rem" }}>

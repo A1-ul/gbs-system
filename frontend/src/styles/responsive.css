@@ -8,10 +8,25 @@
     .tablet-hidden {
         display: none;
     }
+
     .gbs-system-top-center-banner {
         flex-wrap: wrap !important;
         gap: 6px !important;
         padding: 8px 10px !important;
+    }
+
+    .role-header,
+    .dev-header,
+    .dev-top-header {
+        flex-wrap: wrap !important;
+        gap: 10px !important;
+    }
+
+    .role-header-actions,
+    .dev-header-actions {
+        display: flex !important;
+        flex-wrap: wrap !important;
+        gap: 8px !important;
     }
 }
 
@@ -20,34 +35,48 @@
         display: flex;
         flex-direction: column;
     }
+
     .role-tab-nav,
-    .dev-tabs-bar {
+    .dev-tab-navigation,
+    .dev-tabs-nav,
+    .dev-tabs-bar,
+    .finance-tab-nav,
+    .tabs-navigation-bar {
         display: flex !important;
-        flex-wrap: nowrap !important;
-        overflow-x: auto !important;
-        -webkit-overflow-scrolling: touch;
+        flex-wrap: wrap !important;
+        overflow-x: visible !important;
         gap: 6px !important;
-        padding-bottom: 6px !important;
+        padding: 8px !important;
+        align-items: stretch !important;
     }
+
     .role-tab-btn,
     .dev-tab-btn {
-        flex: 0 0 auto !important;
-        min-height: 40px;
+        flex: 1 1 calc(50% - 6px) !important;
+        min-width: 132px;
+        min-height: 42px;
         font-size: 0.78rem !important;
-        padding: 8px 12px !important;
-        white-space: nowrap;
+        padding: 8px 10px !important;
+        white-space: normal !important;
+        line-height: 1.25;
+        text-align: center;
+        justify-content: center;
     }
+
     .role-workspace-card,
-    .dev-panel {
+    .dev-panel,
+    .dev-workspace-panel {
         padding: 14px !important;
         border-radius: 12px !important;
     }
+
     table {
         display: block;
         max-width: 100%;
         overflow-x: auto;
         -webkit-overflow-scrolling: touch;
     }
+
     .login-glass-card {
         width: 96vw !important;
         padding: 18px 14px !important;
@@ -59,6 +88,7 @@
     .mobile-hidden {
         display: none;
     }
+
     .gbs-system-top-center-banner button,
     .gbs-system-top-center-banner select {
         font-size: 0.72rem !important;

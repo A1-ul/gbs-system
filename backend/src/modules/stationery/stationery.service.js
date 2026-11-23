@@ -61,6 +61,83 @@ function normalizeCategory(cat = '') {
   return 'OTHER';
 }
 
+function normalizeTargetClass(value) {
+  const clean = String(value || '').trim();
+  if (!clean || clean.toUpperCase() === 'ALL' || clean.toUpperCase() === 'ALL_CLASSES' || clean.toUpperCase() === 'GENERAL') {
+    return 'ALL_CLASSES';
+  }
+  return clean;
+}
+
+function sanitizeClassPricing(input) {
+  if (!input) return {};
+  let raw = input;
+  if (typeof raw === 'string') {
+    try {
+      raw = JSON.parse(raw);
+    } catch {
+      return {};
+    }
+  }
+  const map = {};
+  if (Array.isArray(raw)) {
+    for (const entry of raw) {
+      if (!entry || typeof entry !== 'object') continue;
+      const cls = String(entry.className || entry.classLevel || entry.level || entry.class || '').trim();
+      const price = Number(entry.unitPrice ?? entry.price);
+      if (cls && cls.toUpperCase() !== 'ALL_CLASSES' && Number.isFinite(price) && price >= 0) {
+        map[cls] = Math.round(price * 100) / 100;
+      }
+    }
+    return map;
+  }
+  if (typeof raw === 'object') {
+    for (const [k, v] of Object.entries(raw)) {
+      const cls = String(k || '').trim();
+      const price = Number(v);
+      if (cls && cls.toUpperCase() !== 'ALL_CLASSES' && Number.isFinite(price) && price >= 0) {
+        map[cls] = Math.round(price * 100) / 100;
+      }
+    }
+  }
+  return map;
+}
+
+function hydrateStationeryItem(item) {
+  if (!item) return item;
+  const classPricing = sanitizeClassPricing(item.classPricingJson || item.classPricing);
+  const targetClass = normalizeTargetClass(item.targetClass);
+  return {
+    ...item,
+    targetClass,
+    classPricing
+  };
+}
+
+function resolveAuthoritativePriceForClass(item, buyerClass) {
+  const hydrated = hydrateStationeryItem(item);
+  const cleanBuyer = String(buyerClass || '').trim().toLowerCase();
+  if (cleanBuyer && hydrated.classPricing && Object.keys(hydrated.classPricing).length > 0) {
+    for (const [clsName, clsPrice] of Object.entries(hydrated.classPricing)) {
+      if (String(clsName).trim().toLowerCase() === cleanBuyer) {
+        return Number(clsPrice);
+      }
+    }
+  }
+  return Number(hydrated.unitPrice) || 0;
+}
+
+function matchesClassFilter(hydratedItem, requestedClass) {
+  const cleanReq = String(requestedClass || '').trim().toLowerCase();
+  if (!cleanReq || cleanReq === 'all' || cleanReq === 'all_classes') return true;
+  if (String(hydratedItem.targetClass || 'ALL_CLASSES').toUpperCase() === 'ALL_CLASSES') return true;
+  if (String(hydratedItem.targetClass || '').trim().toLowerCase() === cleanReq) return true;
+  if (hydratedItem.classPricing && Object.keys(hydratedItem.classPricing).some((k) => k.trim().toLowerCase() === cleanReq)) {
+    return true;
+  }
+  return false;
+}
+
 async function ensureDemoStarterItemsIfDemo(req, tid) {
   if (!isDemoSandboxRequest(req) || tid !== 1) return [];
   const existing = await prisma.stationeryItem.findMany({
@@ -73,8 +150,15 @@ async function ensureDemoStarterItemsIfDemo(req, tid) {
       itemCode: 'STN-TXT-001',
       name: 'Core Mathematics & Integrated Science Textbook Set',
       category: 'TEXTBOOK',
-      description: 'Approved term textbook bundle covering Core Mathematics and Integrated Science.',
+      description: 'Approved term textbook bundle priced respectfully by class level.',
       unitPrice: 85.0,
+      targetClass: 'ALL_CLASSES',
+      classPricing: {
+        'Primary 1': 55.0,
+        'Primary 4': 65.0,
+        'JHS 1': 85.0,
+        'SHS 1': 120.0
+      },
       stockQty: 120,
       reorderLevel: 20,
       unitLabel: 'Set'
@@ -83,8 +167,15 @@ async function ensureDemoStarterItemsIfDemo(req, tid) {
       itemCode: 'STN-CRD-002',
       name: 'Official GBS Navy Cardigan / Sweater',
       category: 'CARDIGAN',
-      description: 'Knitted navy-and-gold school crest cardigan for campus and morning assembly wear.',
+      description: 'Knitted navy-and-gold school crest cardigan sized and priced by school level.',
       unitPrice: 110.0,
+      targetClass: 'ALL_CLASSES',
+      classPricing: {
+        'Nursery 1': 75.0,
+        'Primary 1': 90.0,
+        'JHS 1': 110.0,
+        'SHS 1': 130.0
+      },
       stockQty: 75,
       reorderLevel: 15,
       unitLabel: 'Piece'
@@ -95,6 +186,12 @@ async function ensureDemoStarterItemsIfDemo(req, tid) {
       category: 'SOCKS',
       description: 'Heavy-duty breathable cotton striped school socks in institutional colors.',
       unitPrice: 18.0,
+      targetClass: 'ALL_CLASSES',
+      classPricing: {
+        'Primary 1': 15.0,
+        'JHS 1': 18.0,
+        'SHS 1': 22.0
+      },
       stockQty: 200,
       reorderLevel: 30,
       unitLabel: 'Pair'
@@ -105,6 +202,12 @@ async function ensureDemoStarterItemsIfDemo(req, tid) {
       category: 'SCHOOL_BAG',
       description: 'Water-resistant multi-compartment school backpack with embroidered institutional crest.',
       unitPrice: 145.0,
+      targetClass: 'ALL_CLASSES',
+      classPricing: {
+        'Primary 1': 115.0,
+        'JHS 1': 145.0,
+        'SHS 1': 165.0
+      },
       stockQty: 60,
       reorderLevel: 12,
       unitLabel: 'Bag'
@@ -115,6 +218,12 @@ async function ensureDemoStarterItemsIfDemo(req, tid) {
       category: 'EXERCISE_BOOK',
       description: '80-leaf ruled institutional exercise books stamped with official school crest.',
       unitPrice: 45.0,
+      targetClass: 'ALL_CLASSES',
+      classPricing: {
+        'Primary 1': 35.0,
+        'JHS 1': 45.0,
+        'SHS 1': 55.0
+      },
       stockQty: 250,
       reorderLevel: 40,
       unitLabel: 'Pack'
@@ -123,8 +232,14 @@ async function ensureDemoStarterItemsIfDemo(req, tid) {
       itemCode: 'STN-UNI-006',
       name: 'Official School Ceremonial Uniform Set',
       category: 'UNIFORM',
-      description: 'Complete tailored school uniform set approved by the Headmaster.',
+      description: 'Complete tailored school uniform set approved by the Headmaster by level.',
       unitPrice: 180.0,
+      targetClass: 'ALL_CLASSES',
+      classPricing: {
+        'Primary 1': 140.0,
+        'JHS 1': 180.0,
+        'SHS 1': 210.0
+      },
       stockQty: 50,
       reorderLevel: 10,
       unitLabel: 'Set'
@@ -144,6 +259,8 @@ async function ensureDemoStarterItemsIfDemo(req, tid) {
           description: s.description,
           unitPrice: s.unitPrice,
           currency: 'GHS',
+          targetClass: s.targetClass || 'ALL_CLASSES',
+          classPricingJson: s.classPricing ? JSON.stringify(s.classPricing) : null,
           stockQty: s.stockQty,
           reorderLevel: s.reorderLevel,
           unitLabel: s.unitLabel,
@@ -174,13 +291,43 @@ async function listCatalog(req) {
     where.category = normalizeCategory(req.query.category);
   }
 
-  const items = await prisma.stationeryItem.findMany({
-    where,
-    orderBy: [{ category: 'asc' }, { name: 'asc' }]
-  });
+  const [rawItems, schoolClasses] = await Promise.all([
+    prisma.stationeryItem.findMany({
+      where,
+      orderBy: [{ category: 'asc' }, { name: 'asc' }]
+    }),
+    prisma.class.findMany({
+      where: { tenantId: tid },
+      select: { name: true, gradeLevel: true }
+    }).catch(() => [])
+  ]);
+
+  const requestedClass = String(req.query?.className || req.query?.targetClass || '').trim();
+  const hydratedAll = rawItems.map(hydrateStationeryItem);
+  const filteredItems = hydratedAll
+    .filter((item) => matchesClassFilter(item, requestedClass))
+    .map((item) => ({
+      ...item,
+      effectiveUnitPrice: requestedClass && requestedClass.toUpperCase() !== 'ALL' && requestedClass.toUpperCase() !== 'ALL_CLASSES'
+        ? resolveAuthoritativePriceForClass(item, requestedClass)
+        : Number(item.unitPrice) || 0
+    }));
+
+  const classSet = new Set();
+  for (const c of schoolClasses || []) {
+    if (c?.name) classSet.add(String(c.name).trim());
+    if (c?.gradeLevel) classSet.add(String(c.gradeLevel).trim());
+  }
+  for (const it of hydratedAll) {
+    if (it.targetClass && it.targetClass !== 'ALL_CLASSES') classSet.add(it.targetClass);
+    for (const clsKey of Object.keys(it.classPricing || {})) {
+      classSet.add(clsKey);
+    }
+  }
 
   return {
-    items,
+    items: filteredItems,
+    availableClasses: Array.from(classSet).sort(),
     canEditPrices: HEADMASTER_PRICE_ROLES.has(normalizeRole(req.user?.role)),
     priceAuthorityRole: 'HEADMASTER'
   };
@@ -192,12 +339,25 @@ async function createItem(req) {
   const body = req.body || {};
 
   const name = String(body.name || '').trim();
-  const unitPrice = Number(body.unitPrice);
+  const targetClass = normalizeTargetClass(body.targetClass || body.classLevel || body.className);
+  const classPricing = sanitizeClassPricing(body.classPricing || body.classPrices || body.classPricingJson);
+  const classPriceValues = Object.values(classPricing);
+
+  let unitPrice = body.unitPrice !== undefined && body.unitPrice !== '' && body.unitPrice !== null
+    ? Number(body.unitPrice)
+    : (classPriceValues.length > 0 ? Number(classPriceValues[0]) : NaN);
+
   if (!name) {
     throw new AppError('Stationery item name is required.', 400);
   }
   if (!Number.isFinite(unitPrice) || unitPrice < 0) {
-    throw new AppError('A valid unit price set by the Headmaster is required.', 400);
+    throw new AppError('A valid unit price (or class-level price) set by the Headmaster is required.', 400);
+  }
+  unitPrice = Math.round(unitPrice * 100) / 100;
+
+  // If Headmaster selected a specific targetClass and did not add a separate classPricing entry for it, mirror it cleanly
+  if (targetClass !== 'ALL_CLASSES' && classPricing[targetClass] === undefined) {
+    classPricing[targetClass] = unitPrice;
   }
 
   const category = normalizeCategory(body.category || 'OTHER');
@@ -214,6 +374,7 @@ async function createItem(req) {
 
   const stockQty = Math.max(0, parseInt(body.stockQty ?? 0, 10) || 0);
   const reorderLevel = Math.max(0, parseInt(body.reorderLevel ?? 10, 10) || 10);
+  const classPricingJson = Object.keys(classPricing).length > 0 ? JSON.stringify(classPricing) : null;
 
   const item = await prisma.stationeryItem.create({
     data: {
@@ -223,8 +384,10 @@ async function createItem(req) {
       name,
       category,
       description: body.description ? String(body.description).trim() : null,
-      unitPrice: Math.round(unitPrice * 100) / 100,
+      unitPrice,
       currency: String(body.currency || 'GHS').toUpperCase(),
+      targetClass,
+      classPricingJson,
       stockQty,
       reorderLevel,
       unitLabel: String(body.unitLabel || 'Piece').trim() || 'Piece',
@@ -236,18 +399,23 @@ async function createItem(req) {
     }
   });
 
+  const hydrated = hydrateStationeryItem(item);
+  const classSummary = Object.keys(hydrated.classPricing).length > 0
+    ? ` [Class Prices: ${Object.entries(hydrated.classPricing).map(([c, p]) => `${c}=${item.currency} ${Number(p).toFixed(2)}`).join(', ')}]`
+    : (hydrated.targetClass !== 'ALL_CLASSES' ? ` [Class: ${hydrated.targetClass}]` : '');
+
   await prisma.auditLog.create({
     data: {
       tenantId: tid,
       userId: parseNumericUserId(req.user),
       module: 'SCHOOL_STATIONERY',
       action: 'STATIONERY_ITEM_CREATED',
-      details: `Headmaster (${getActorDisplayName(req.user)}) published "${item.name}" (${item.category}) at fixed official price ${item.currency} ${item.unitPrice.toFixed(2)}.`,
+      details: `Headmaster (${getActorDisplayName(req.user)}) published "${item.name}" (${item.category}) at fixed official price ${item.currency} ${item.unitPrice.toFixed(2)}${classSummary}.`,
       ipAddress: '127.0.0.1'
     }
   }).catch(() => { });
 
-  return item;
+  return hydrated;
 }
 
 async function updateItem(req) {
@@ -280,12 +448,27 @@ async function updateItem(req) {
   if (body.isActive !== undefined) updateData.isActive = Boolean(body.isActive);
   if (body.currency !== undefined) updateData.currency = String(body.currency || 'GHS').toUpperCase();
 
+  let priceMetadataTouched = false;
+  if (body.targetClass !== undefined || body.classLevel !== undefined) {
+    updateData.targetClass = normalizeTargetClass(body.targetClass ?? body.classLevel);
+    priceMetadataTouched = true;
+  }
+  if (body.classPricing !== undefined || body.classPrices !== undefined || body.classPricingJson !== undefined) {
+    const nextClassPricing = sanitizeClassPricing(body.classPricing ?? body.classPrices ?? body.classPricingJson);
+    updateData.classPricingJson = Object.keys(nextClassPricing).length > 0 ? JSON.stringify(nextClassPricing) : null;
+    priceMetadataTouched = true;
+  }
+
   if (body.unitPrice !== undefined) {
     const nextPrice = Number(body.unitPrice);
     if (!Number.isFinite(nextPrice) || nextPrice < 0) {
       throw new AppError('Unit price must be a non-negative number.', 400);
     }
     updateData.unitPrice = Math.round(nextPrice * 100) / 100;
+    priceMetadataTouched = true;
+  }
+
+  if (priceMetadataTouched) {
     updateData.priceUpdatedByName = getActorDisplayName(req.user);
     updateData.priceUpdatedByRole = normalizeRole(req.user?.role);
     updateData.priceUpdatedAt = new Date();
@@ -296,18 +479,20 @@ async function updateItem(req) {
     data: updateData
   });
 
+  const hydrated = hydrateStationeryItem(updated);
+
   await prisma.auditLog.create({
     data: {
       tenantId: tid,
       userId: parseNumericUserId(req.user),
       module: 'SCHOOL_STATIONERY',
       action: 'STATIONERY_PRICE_UPDATED',
-      details: `Headmaster (${getActorDisplayName(req.user)}) updated "${updated.name}" price to ${updated.currency} ${Number(updated.unitPrice).toFixed(2)} (stock: ${updated.stockQty}).`,
+      details: `Headmaster (${getActorDisplayName(req.user)}) updated "${hydrated.name}" (${hydrated.targetClass}) base price to ${hydrated.currency} ${Number(hydrated.unitPrice).toFixed(2)} (class tiers: ${Object.keys(hydrated.classPricing).length}, stock: ${hydrated.stockQty}).`,
       ipAddress: '127.0.0.1'
     }
   }).catch(() => { });
 
-  return updated;
+  return hydrated;
 }
 
 async function recordSaleOrOrder(req) {
@@ -317,18 +502,23 @@ async function recordSaleOrOrder(req) {
   const qty = Math.max(1, parseInt(body.quantity ?? 1, 10) || 1);
   const role = normalizeRole(req.user?.role);
 
-  const item = await prisma.stationeryItem.findFirst({
+  const rawItem = await prisma.stationeryItem.findFirst({
     where: { id: itemId, tenantId: tid }
   });
-  if (!item) {
+  if (!rawItem) {
     throw new AppError('Selected stationery item was not found in this school catalog.', 404);
   }
+  const item = hydrateStationeryItem(rawItem);
 
   const isStaffRecorder = ['ADMIN', 'SUPER_ADMIN', 'HEADMASTER', 'PRINCIPAL', 'SECRETARY', 'ACCOUNTANT', 'STAFF'].includes(role);
   const txnType = body.orderOnly || !isStaffRecorder ? 'ORDER_REQUEST' : 'SALE';
 
-  // Authoritative unitPrice ALWAYS comes from Headmaster's stored catalog price (never from client payload)
-  const authoritativeUnitPrice = Number(item.unitPrice) || 0;
+  const buyerClass = body.buyerClass
+    ? String(body.buyerClass).trim()
+    : (item.targetClass !== 'ALL_CLASSES' ? item.targetClass : null);
+
+  // Authoritative unitPrice ALWAYS comes from Headmaster's stored class/base catalog price (never from client payload)
+  const authoritativeUnitPrice = resolveAuthoritativePriceForClass(item, buyerClass);
   const totalAmount = Math.round(authoritativeUnitPrice * qty * 100) / 100;
 
   if (txnType === 'SALE' && Number(item.stockQty || 0) < qty) {
@@ -340,19 +530,19 @@ async function recordSaleOrOrder(req) {
 
   let updatedItem = item;
   if (txnType === 'SALE') {
-    updatedItem = await prisma.stationeryItem.update({
+    const rawUpdated = await prisma.stationeryItem.update({
       where: { id: item.id },
       data: {
         stockQty: Math.max(0, Number(item.stockQty || 0) - qty),
         updatedAt: new Date()
       }
     });
+    updatedItem = hydrateStationeryItem(rawUpdated);
   }
 
   const refNum = `STN-SAL-${Date.now().toString().slice(-6)}-${Math.floor(10 + Math.random() * 89)}`;
   const buyerName = String(body.buyerName || getActorDisplayName(req.user)).trim();
   const buyerRole = String(body.buyerRole || role || 'STUDENT').toUpperCase();
-  const buyerClass = body.buyerClass ? String(body.buyerClass).trim() : null;
 
   const txn = await prisma.stationeryTransaction.create({
     data: {

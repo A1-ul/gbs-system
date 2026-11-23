@@ -351,9 +351,20 @@ async function getCallDirectory(req) {
     pushEntry(u);
   }
 
-  // Also include linked Parents/Guardians from admitted parents & parent-student store links
+  // Also include admitted Students & linked Parents/Guardians from store admissions
   const admissions = (store.admissions || []).filter((a) => parseInt(a.tenantId || 1, 10) === tid);
   for (const adm of admissions) {
+    if (adm.firstName || adm.lastName || adm.studentName) {
+      pushEntry({
+        id: adm.studentUserId || `student_adm_${adm.id}`,
+        firstName: adm.firstName || adm.studentName || 'Student',
+        lastName: adm.lastName || '',
+        email: adm.studentEmail || adm.email || `student.${adm.id}@school.local`,
+        role: 'STUDENT',
+        phone: adm.studentPhone || adm.phone || '',
+        studentName: adm.className || adm.targetGrade || ''
+      });
+    }
     if (adm.guardianEmail || adm.parentEmail || adm.guardianName || adm.parentName) {
       pushEntry({
         id: `parent_${adm.id || adm.guardianEmail || adm.parentName}`,
@@ -390,7 +401,7 @@ async function getCallDirectory(req) {
 async function initiateCall(req) {
   const callerIsDev = isDeveloperUser(req.user);
   const body = req.body || {};
-  const callScope = String(body.callScope || 'DIRECT').toUpperCase();
+  const callScope = String(body.callScope || body.callType || 'DIRECT').toUpperCase();
   const mediaMode = String(body.mediaMode || 'VIDEO').toUpperCase() === 'VOICE' ? 'VOICE' : 'VIDEO';
 
   // For Developer calling a Headmaster of a specific school, store in that target institution's tenant bucket
@@ -430,9 +441,15 @@ async function initiateCall(req) {
         ? `Live Online Class${body.className ? ` — ${body.className}` : ''}`
         : callScope === 'FACULTY_CONFERENCE'
           ? 'Headmaster & Teachers Faculty Conference'
-          : callScope === 'PARENT_CONFERENCE'
-            ? 'Parent-Teacher / Headmaster Conference'
-            : `${mediaMode === 'VOICE' ? 'Voice' : 'Video'} Call with ${body.targetName || body.targetRole || 'Participant'}`;
+          : callScope === 'STAFF_CONFERENCE'
+            ? 'Headmaster & All School Staff Conference'
+            : callScope === 'STUDENT_CONFERENCE'
+              ? `Headmaster & Students Live Assembly${body.className ? ` — ${body.className}` : ''}`
+              : callScope === 'ALL_CAMPUS_CONFERENCE'
+                ? 'Headmaster All-Campus Live Video Conference (Staff, Teachers, Parents & Students)'
+                : callScope === 'PARENT_CONFERENCE'
+                  ? 'Parent-Teacher / Headmaster Conference'
+                  : `${mediaMode === 'VOICE' ? 'Voice' : 'Video'} Call with ${body.targetName || body.targetRole || 'Participant'}`;
 
   const session = {
     id: callId,
@@ -533,7 +550,16 @@ function doesCallTargetUser(call, user = {}) {
   if (call.callScope === 'FACULTY_CONFERENCE' && (urole === 'TEACHER' || urole === 'SECRETARY' || isHeadmasterRole(urole))) {
     return true;
   }
+  if (call.callScope === 'STAFF_CONFERENCE' && ['TEACHER', 'STAFF', 'SECRETARY', 'HR', 'ACCOUNTANT', 'CLINIC_DOCTOR', 'CLINIC_NURSE'].includes(urole) || (call.callScope === 'STAFF_CONFERENCE' && isHeadmasterRole(urole))) {
+    return true;
+  }
   if (call.callScope === 'PARENT_CONFERENCE' && (urole === 'PARENT' || urole === 'TEACHER' || urole === 'SECRETARY' || isHeadmasterRole(urole))) {
+    return true;
+  }
+  if (call.callScope === 'STUDENT_CONFERENCE' && (urole === 'STUDENT' || urole === 'TEACHER' || isHeadmasterRole(urole))) {
+    return true;
+  }
+  if (call.callScope === 'ALL_CAMPUS_CONFERENCE' && urole !== 'DEVELOPER') {
     return true;
   }
   if (call.callScope === 'CLASS_CONFERENCE' && (urole === 'STUDENT' || urole === 'PARENT' || urole === 'TEACHER' || isHeadmasterRole(urole))) {
@@ -549,17 +575,31 @@ function canUserSeeActiveConference(call, user = {}) {
   if (urole === 'DEVELOPER') {
     return scope === 'DEVELOPER_HEADMASTERS_CONFERENCE' || call.initiatorRole === 'DEVELOPER';
   }
+  if (scope === 'ALL_CAMPUS_CONFERENCE') {
+    return true;
+  }
   if (urole === 'STUDENT') {
-    return scope === 'CLASS_CONFERENCE';
+    return scope === 'CLASS_CONFERENCE' || scope === 'STUDENT_CONFERENCE';
   }
   if (urole === 'PARENT') {
     return scope === 'PARENT_CONFERENCE' || scope === 'CLASS_CONFERENCE';
   }
-  if (urole === 'TEACHER' || urole === 'SECRETARY') {
-    return ['FACULTY_CONFERENCE', 'CLASS_CONFERENCE', 'PARENT_CONFERENCE'].includes(scope);
+  if (urole === 'TEACHER') {
+    return ['FACULTY_CONFERENCE', 'STAFF_CONFERENCE', 'CLASS_CONFERENCE', 'STUDENT_CONFERENCE', 'PARENT_CONFERENCE'].includes(scope);
+  }
+  if (['STAFF', 'SECRETARY', 'HR', 'ACCOUNTANT', 'CLINIC_DOCTOR', 'CLINIC_NURSE'].includes(urole)) {
+    return ['STAFF_CONFERENCE', 'FACULTY_CONFERENCE', 'PARENT_CONFERENCE'].includes(scope);
   }
   if (isHeadmasterRole(urole)) {
-    return ['FACULTY_CONFERENCE', 'CLASS_CONFERENCE', 'PARENT_CONFERENCE', 'DEVELOPER_HEADMASTERS_CONFERENCE'].includes(scope);
+    return [
+      'FACULTY_CONFERENCE',
+      'STAFF_CONFERENCE',
+      'CLASS_CONFERENCE',
+      'STUDENT_CONFERENCE',
+      'PARENT_CONFERENCE',
+      'ALL_CAMPUS_CONFERENCE',
+      'DEVELOPER_HEADMASTERS_CONFERENCE'
+    ].includes(scope);
   }
   return true;
 }

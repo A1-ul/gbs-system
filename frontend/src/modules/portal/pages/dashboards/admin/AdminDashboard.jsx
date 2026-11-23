@@ -21,6 +21,7 @@ import SchoolClinicHubPanel from "../../../../../components/common/SchoolClinicH
 import SchoolStationeryHubPanel from "../../../../../components/common/SchoolStationeryHubPanel";
 import HeadmasterStaffAttendanceView from "../../../../../components/common/HeadmasterStaffAttendanceView";
 import LiveCallLauncherAndReceiver from "../../../../../components/common/LiveCallLauncherAndReceiver";
+import LiveInSystemCallModal from "../../../../../components/common/LiveInSystemCallModal";
 import OfficialPaymentGatewayModal from "../../../../../components/common/OfficialPaymentGatewayModal";
 import { openUrlSafely } from "../../../../../utils/safeWindow";
 import { isDemoSandboxMode } from "../../../../../utils/tokenStorage";
@@ -79,8 +80,10 @@ export function AdminDashboard({ initialTab } = {}) {
     setActiveTabState(cleanTab);
     sessionStorage.setItem("gbs_admin_active_tab", cleanTab);
     const url = new URL(window.location);
-    url.searchParams.set("tab", cleanTab);
-    window.history.replaceState({ tab: cleanTab }, "", url);
+    if (url.searchParams.get("tab") !== cleanTab) {
+      url.searchParams.set("tab", cleanTab);
+      window.history.pushState({ tab: cleanTab }, "", url.toString());
+    }
   };
 
   useEffect(() => {
@@ -2449,6 +2452,45 @@ export function AdminDashboard({ initialTab } = {}) {
   // Requirement: Working Zoom & WhatsApp Online Conference Studio on Headmaster Dashboard
   const [zoomMeetingPlatform, setZoomMeetingPlatform] = useState("ZOOM"); // "ZOOM" | "WHATSAPP" | "GOOGLE_MEET" | "MICROSOFT_TEAMS"
   const [activeAdminLiveMeeting, setActiveAdminLiveMeeting] = useState(null);
+  const [activeHeadmasterLiveCallSession, setActiveHeadmasterLiveCallSession] = useState(null);
+  const [headmasterConferenceAudience, setHeadmasterConferenceAudience] = useState("ALL_CAMPUS_CONFERENCE");
+
+  const handleLaunchHeadmasterLiveConference = async (
+    topicOverride,
+    audienceOverride = headmasterConferenceAudience,
+    mediaMode = "VIDEO"
+  ) => {
+    const cleanTopic = String(topicOverride || academicPlan.zoomTopic || "Headmaster Live Executive Video Conference").trim();
+    const callScope = audienceOverride || "ALL_CAMPUS_CONFERENCE";
+    try {
+      const res = await apiClient.post("/video/calls/initiate", {
+        callScope,
+        mediaMode,
+        title: cleanTopic
+      });
+      const session = res?.data?.data?.session;
+      if (session) {
+        setActiveAdminLiveMeeting(null);
+        setActiveHeadmasterLiveCallSession(session);
+        setFeedback({
+          type: "success",
+          message: `🎥 Live Headmaster Video Conference "${cleanTopic}" started with real camera & audio!`
+        });
+        return;
+      }
+    } catch (err) {
+      setFeedback({
+        type: "error",
+        message: err?.response?.data?.message || "Could not start live in-system camera conference. Opening studio fallback."
+      });
+    }
+    setActiveAdminLiveMeeting({
+      topic: cleanTopic,
+      platform: zoomMeetingPlatform,
+      meetingUrl: formatDirectMeetingUrl(academicPlan.zoomUrl, cleanTopic, zoomMeetingPlatform),
+      scheduledAt: academicPlan.zoomDate
+    });
+  };
 
   // Build or retrieve the curriculum used by a specific teacher, spread across `academicPlan.numberOfWeeksInSchool`
   const getTeacherActiveCurriculumProfile = (teacherObj) => {
@@ -11653,31 +11695,57 @@ export function AdminDashboard({ initialTab } = {}) {
 
                   <div style={{ background: "rgba(59, 130, 246, 0.1)", border: "1px solid rgba(59, 130, 246, 0.25)", padding: "10px", borderRadius: "8px", marginBottom: "1rem" }}>
                     <span style={{ fontSize: "0.75rem", color: "#93c5fd", display: "block", marginBottom: "8px" }}>
-                      ✓ Teachers can click "Join Headmaster Faculty Zoom Meeting Now" directly from their teacher dashboard, or join via WhatsApp.
+                      ✓ Launch a real in-system HD Video & Audio Conference with Staff, Parents, Teachers, or Students — or share an external link.
                     </span>
+                    <div style={{ marginBottom: "8px" }}>
+                      <label style={{ display: "block", fontSize: "0.72rem", color: "#cbd5e1", fontWeight: 700, marginBottom: "4px" }}>
+                        Target Conference Audience (In-System Live Video Camera & Audio)
+                      </label>
+                      <select
+                        value={headmasterConferenceAudience}
+                        onChange={(e) => setHeadmasterConferenceAudience(e.target.value)}
+                        className="filter-select"
+                        style={{ width: "100%", padding: "7px 10px", fontSize: "0.8rem", fontWeight: 700, color: "#34d399" }}
+                      >
+                        <option value="ALL_CAMPUS_CONFERENCE">🌐 All Campus (Staff, Teachers, Parents & Students)</option>
+                        <option value="STAFF_CONFERENCE">🏢 All Staff & Administration (Staff, HR, Bursar, Secretary, Teachers)</option>
+                        <option value="FACULTY_CONFERENCE">👩‍🏫 Teachers & Faculty Only</option>
+                        <option value="PARENT_CONFERENCE">👨‍👩‍👧 Parents & Guardians PTA Conference</option>
+                        <option value="STUDENT_CONFERENCE">🎓 Students Live Campus Assembly</option>
+                      </select>
+                    </div>
                     <div style={{ display: "flex", gap: "8px", flexWrap: "wrap" }}>
                       <button
                         type="button"
-                        onClick={() =>
-                          setActiveAdminLiveMeeting({
-                            topic: academicPlan.zoomTopic || "Headmaster Faculty Executive Briefing",
-                            platform: zoomMeetingPlatform,
-                            meetingUrl: formatDirectMeetingUrl(academicPlan.zoomUrl, academicPlan.zoomTopic, zoomMeetingPlatform),
-                            scheduledAt: academicPlan.zoomDate
-                          })
-                        }
+                        onClick={() => handleLaunchHeadmasterLiveConference(academicPlan.zoomTopic, headmasterConferenceAudience, "VIDEO")}
+                        style={{
+                          background: "linear-gradient(135deg, #059669, #10b981)",
+                          color: "#fff",
+                          border: "none",
+                          padding: "8px 14px",
+                          borderRadius: "6px",
+                          fontSize: "0.78rem",
+                          fontWeight: 800,
+                          cursor: "pointer"
+                        }}
+                      >
+                        🎥 Launch Live Video Camera Conference Now
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => handleLaunchHeadmasterLiveConference(academicPlan.zoomTopic, headmasterConferenceAudience, "AUDIO")}
                         style={{
                           background: "linear-gradient(135deg, #2563eb, #1d4ed8)",
                           color: "#fff",
                           border: "none",
-                          padding: "7px 12px",
+                          padding: "8px 12px",
                           borderRadius: "6px",
                           fontSize: "0.75rem",
                           fontWeight: 800,
                           cursor: "pointer"
                         }}
                       >
-                        🚀 Launch Live Conference Studio Now
+                        📞 Voice-Only Conference
                       </button>
                       <button
                         type="button"
@@ -16068,7 +16136,29 @@ export function AdminDashboard({ initialTab } = {}) {
                 </div>
               </div>
 
-              <div style={{ display: "flex", justifyContent: "flex-end" }}>
+              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: "10px", flexWrap: "wrap" }}>
+                <button
+                  type="button"
+                  onClick={() =>
+                    handleLaunchHeadmasterLiveConference(
+                      activeAdminLiveMeeting.topic,
+                      headmasterConferenceAudience,
+                      "VIDEO"
+                    )
+                  }
+                  style={{
+                    background: "linear-gradient(135deg, #059669, #10b981)",
+                    color: "#fff",
+                    border: "none",
+                    padding: "9px 18px",
+                    borderRadius: "8px",
+                    fontSize: "0.84rem",
+                    fontWeight: 800,
+                    cursor: "pointer"
+                  }}
+                >
+                  🎥 Start Real In-System Live Camera & Audio Room
+                </button>
                 <button
                   type="button"
                   onClick={() => setActiveAdminLiveMeeting(null)}
@@ -16090,6 +16180,15 @@ export function AdminDashboard({ initialTab } = {}) {
           </div>
         )
       }
+
+      {activeHeadmasterLiveCallSession && (
+        <LiveInSystemCallModal
+          session={activeHeadmasterLiveCallSession}
+          currentUser={currentUser}
+          onClose={() => setActiveHeadmasterLiveCallSession(null)}
+          onFeedback={(msg, isErr) => setFeedback({ type: isErr ? "error" : "success", message: msg })}
+        />
+      )}
 
       {/* UNIVERSAL FLOATING SCROLL CONTROLS */}
       <div style={{

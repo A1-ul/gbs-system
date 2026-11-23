@@ -4,6 +4,7 @@ import { Provider } from "react-redux";
 import store from "./platform/store/store";
 import App from "./app/App.jsx";
 import { applyDocumentLocale } from "./utils/i18nCountryEngine";
+import { applyDashboardThemeToDocument } from "./utils/dashboardTheme";
 
 import "./styles/globals.css";
 import "./styles/theme.css";
@@ -11,13 +12,10 @@ import "./styles/responsive.css";
 import "./styles/animations.css";
 import "./styles/glass.css";
 
-// Apply Global Country/Language norms & Blueprint Light / Royal Navy theme classes immediately on boot
+// Apply Global Country/Language norms & Per-Dashboard Theme (Blueprint Light OFF by default until toggled ON per dashboard)
 if (typeof window !== "undefined") {
   try {
-    const savedTheme = localStorage.getItem("gbs_ui_theme");
-    const isNavy = savedTheme === "navy";
-    document.body.classList.toggle("gbs-theme-light", !isNavy);
-    document.body.classList.toggle("gbs-theme-navy", isNavy);
+    applyDashboardThemeToDocument();
     applyDocumentLocale();
   } catch { }
 }

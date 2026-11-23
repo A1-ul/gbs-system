@@ -8669,18 +8669,18 @@ export default function TeacherDashboard() {
                             <button
                               type="button"
                               onClick={() =>
-                                setActiveLiveClassroomSession({
-                                  ...m,
+                                handleLaunchInSystemLiveClassRoom({
+                                  title: m.title,
+                                  classId: m.classId,
                                   className: m.class?.name || (m.classId ? `Class #${m.classId}` : "Assigned Class"),
-                                  meetingLink: safeMeetingUrl || m.meetingUrl || workingInAppLink,
-                                  safeMeetingUrl,
-                                  workingInAppLink
+                                  meetingId: m.meetingId || m.id,
+                                  mediaMode: "VIDEO"
                                 })
                               }
                               className="btn-primary"
                               style={{ flex: 1, textAlign: "center", fontSize: "0.8rem", cursor: "pointer", fontWeight: 800 }}
                             >
-                              🚀 Join Live Classroom
+                              🎥 Join Live Camera Classroom
                             </button>
                             <button
                               type="button"

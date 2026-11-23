@@ -2122,6 +2122,8 @@ model StationeryItem {
   description         String?  @db.Text
   unitPrice           Float
   currency            String   @default("GHS")
+  targetClass         String   @default("ALL_CLASSES")
+  classPricingJson    String?  @db.Text
   stockQty            Int      @default(0)
   reorderLevel        Int      @default(10)
   unitLabel           String   @default("Piece")

@@ -190,10 +190,14 @@ const serveAppleWebClipProfile = (req, res) => {
 
   let iconBase64 = '';
   const iconCandidates = [
-    path.resolve(__dirname, '../../public/gbs-logo.png'),
-    path.resolve(__dirname, '../../../frontend/public/gbs-logo.png'),
-    path.resolve(__dirname, '../../public/icons/icon-192x192.png'),
-    path.resolve(__dirname, '../../../frontend/public/icons/icon-192x192.png')
+    path.resolve(__dirname, '../../public/icons/apple-touch-icon.png'),
+    path.resolve(__dirname, '../../../frontend/public/icons/apple-touch-icon.png'),
+    path.resolve(__dirname, '../../public/icons/icon-192.png'),
+    path.resolve(__dirname, '../../../frontend/public/icons/icon-192.png'),
+    path.resolve(__dirname, '../../public/logo.png'),
+    path.resolve(__dirname, '../../../frontend/public/logo.png'),
+    path.resolve(__dirname, '../../public/assets/gbs_crest_badge.jpg'),
+    path.resolve(__dirname, '../../../frontend/public/assets/gbs_crest_badge.jpg')
   ];
   for (const cand of iconCandidates) {
     try {
@@ -263,7 +267,7 @@ const serveAppleWebClipProfile = (req, res) => {
 
   res.setHeader('Cache-Control', 'no-store, no-cache, must-revalidate');
   res.setHeader('Content-Type', 'application/x-apple-aspen-config; charset=utf-8');
-  res.setHeader('Content-Disposition', 'attachment; filename="GBS-School-System-iOS.mobileconfig"');
+  res.setHeader('Content-Disposition', 'inline; filename="GBS-School-System-iOS.mobileconfig"');
   res.status(200).send(mobileConfigXml);
 };
 

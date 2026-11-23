@@ -23,6 +23,47 @@ const CATEGORY_BADGES = {
   OTHER: { label: "School Item", icon: "📦", bg: "#f1f5f9", color: "#334155" }
 };
 
+const DEFAULT_SCHOOL_LEVELS = [
+  "Creche",
+  "Nursery 1",
+  "Nursery 2",
+  "KG 1",
+  "KG 2",
+  "Primary 1",
+  "Primary 2",
+  "Primary 3",
+  "Primary 4",
+  "Primary 5",
+  "Primary 6",
+  "JHS 1",
+  "JHS 2",
+  "JHS 3",
+  "SHS 1",
+  "SHS 2",
+  "SHS 3",
+  "TVET Year 1",
+  "TVET Year 2",
+  "TVET Year 3",
+  "Level 100",
+  "Level 200",
+  "Level 300",
+  "Level 400"
+];
+
+function resolveItemPriceForClass(item, className) {
+  if (!item) return 0;
+  const cleanClass = String(className || "").trim().toLowerCase();
+  const pricing = item.classPricing && typeof item.classPricing === "object" ? item.classPricing : {};
+  if (cleanClass && cleanClass !== "all" && cleanClass !== "all_classes") {
+    for (const [cls, price] of Object.entries(pricing)) {
+      if (String(cls).trim().toLowerCase() === cleanClass) {
+        return Number(price) || 0;
+      }
+    }
+  }
+  return Number(item.unitPrice) || 0;
+}
+
 export default function SchoolStationeryHubPanel({
   currentUser = {},
   mode = "STAFF",
@@ -38,32 +79,40 @@ export default function SchoolStationeryHubPanel({
     mode === "ACCOUNTANT" ? "AUDIT" : "CATALOG"
   );
   const [items, setItems] = useState([]);
+  const [schoolClasses, setSchoolClasses] = useState([]);
   const [transactions, setTransactions] = useState([]);
   const [auditSummary, setAuditSummary] = useState(null);
   const [loading, setLoading] = useState(true);
   const [categoryFilter, setCategoryFilter] = useState("ALL");
+  const [classFilter, setClassFilter] = useState("ALL_CLASSES");
   const [searchTerm, setSearchTerm] = useState("");
   const [feedback, setFeedback] = useState(null);
 
-  // Headmaster Create Item Form State
+  // Headmaster Create Item Form State (supports Class/Level selection & Per-Class Pricing Matrix)
   const [newItem, setNewItem] = useState({
     name: "",
     category: "TEXTBOOK",
+    targetClass: "ALL_CLASSES",
     unitPrice: "",
     stockQty: "50",
     reorderLevel: "10",
     unitLabel: "Piece",
-    description: ""
+    description: "",
+    classPricing: {}
   });
+  const [newClassPriceDraft, setNewClassPriceDraft] = useState({ className: "Primary 1", price: "" });
 
-  // Headmaster Inline Edit Price / Stock State
+  // Headmaster Inline Edit Price / Class Pricing / Stock State
   const [editingItemId, setEditingItemId] = useState(null);
   const [editForm, setEditForm] = useState({
     name: "",
+    targetClass: "ALL_CLASSES",
     unitPrice: "",
     stockQty: "",
-    description: ""
+    description: "",
+    classPricing: {}
   });
+  const [editClassPriceDraft, setEditClassPriceDraft] = useState({ className: "Primary 1", price: "" });
 
   // Sales / Order Request Form State
   const [saleForm, setSaleForm] = useState({
@@ -71,7 +120,7 @@ export default function SchoolStationeryHubPanel({
     quantity: "1",
     buyerName: `${currentUser?.firstName || ""} ${currentUser?.lastName || ""}`.trim() || "",
     buyerRole: canOperateStore ? "STUDENT" : roleUpper,
-    buyerClass: "",
+    buyerClass: currentUser?.className || currentUser?.gradeLevel || "",
     notes: ""
   });
 
@@ -89,11 +138,29 @@ export default function SchoolStationeryHubPanel({
   const loadStationeryData = useCallback(async () => {
     setLoading(true);
     try {
-      const [catRes, txnRes] = await Promise.all([
+      const [catRes, txnRes, clsRes] = await Promise.all([
         apiClient.get("/stationery/items"),
-        apiClient.get("/stationery/transactions")
+        apiClient.get("/stationery/transactions"),
+        apiClient.get("/academics/classes").catch(() => null)
       ]);
       const loadedItems = catRes.data?.data?.items || [];
+      const backendClasses = catRes.data?.data?.availableClasses || [];
+      const academicClasses = clsRes?.data?.data?.classes || clsRes?.data?.data || [];
+      const mergedClasses = new Set();
+      if (Array.isArray(academicClasses)) {
+        academicClasses.forEach((c) => {
+          const nm = typeof c === "string" ? c : c?.name || c?.className || c?.gradeLevel;
+          if (nm && String(nm).trim()) mergedClasses.add(String(nm).trim());
+        });
+      }
+      if (Array.isArray(backendClasses)) {
+        backendClasses.forEach((nm) => {
+          if (nm && String(nm).trim()) mergedClasses.add(String(nm).trim());
+        });
+      }
+      DEFAULT_SCHOOL_LEVELS.forEach((lvl) => mergedClasses.add(lvl));
+      setSchoolClasses(Array.from(mergedClasses));
+
       setItems(loadedItems);
       setTransactions(txnRes.data?.data?.transactions || []);
 
@@ -124,43 +191,109 @@ export default function SchoolStationeryHubPanel({
   const filteredItems = useMemo(() => {
     return items.filter((it) => {
       if (categoryFilter !== "ALL" && it.category !== categoryFilter) return false;
+      if (classFilter && classFilter !== "ALL_CLASSES") {
+        const cleanFilter = classFilter.trim().toLowerCase();
+        const itemTarget = String(it.targetClass || "ALL_CLASSES").trim().toLowerCase();
+        const hasClassTier = Object.keys(it.classPricing || {}).some(
+          (k) => String(k).trim().toLowerCase() === cleanFilter
+        );
+        if (itemTarget !== "all_classes" && itemTarget !== cleanFilter && !hasClassTier) {
+          return false;
+        }
+      }
       if (searchTerm.trim()) {
         const q = searchTerm.trim().toLowerCase();
-        const hay = `${it.name || ""} ${it.itemCode || ""} ${it.category || ""} ${it.description || ""}`.toLowerCase();
+        const classKeys = Object.keys(it.classPricing || {}).join(" ");
+        const hay = `${it.name || ""} ${it.itemCode || ""} ${it.category || ""} ${it.targetClass || ""} ${classKeys} ${it.description || ""}`.toLowerCase();
         if (!hay.includes(q)) return false;
       }
       return true;
     });
-  }, [items, categoryFilter, searchTerm]);
+  }, [items, categoryFilter, classFilter, searchTerm]);
 
   const selectedSaleItem = useMemo(
     () => items.find((it) => String(it.id) === String(saleForm.itemId)) || null,
     [items, saleForm.itemId]
   );
 
+  const selectedSaleUnitPrice = useMemo(
+    () => resolveItemPriceForClass(selectedSaleItem, saleForm.buyerClass),
+    [selectedSaleItem, saleForm.buyerClass]
+  );
+
+  const handleAddNewClassPriceRow = () => {
+    const cls = String(newClassPriceDraft.className || "").trim();
+    const price = Number(newClassPriceDraft.price);
+    if (!cls || !Number.isFinite(price) || price < 0) {
+      setFeedback({ type: "error", text: "Select a class/level and enter a valid price first." });
+      return;
+    }
+    setNewItem((prev) => ({
+      ...prev,
+      unitPrice: prev.unitPrice === "" ? String(price) : prev.unitPrice,
+      classPricing: { ...(prev.classPricing || {}), [cls]: Math.round(price * 100) / 100 }
+    }));
+    setNewClassPriceDraft((prev) => ({ ...prev, price: "" }));
+  };
+
+  const handleRemoveNewClassPriceRow = (clsKey) => {
+    setNewItem((prev) => {
+      const next = { ...(prev.classPricing || {}) };
+      delete next[clsKey];
+      return { ...prev, classPricing: next };
+    });
+  };
+
+  const handleAddEditClassPriceRow = () => {
+    const cls = String(editClassPriceDraft.className || "").trim();
+    const price = Number(editClassPriceDraft.price);
+    if (!cls || !Number.isFinite(price) || price < 0) return;
+    setEditForm((prev) => ({
+      ...prev,
+      classPricing: { ...(prev.classPricing || {}), [cls]: Math.round(price * 100) / 100 }
+    }));
+    setEditClassPriceDraft((prev) => ({ ...prev, price: "" }));
+  };
+
+  const handleRemoveEditClassPriceRow = (clsKey) => {
+    setEditForm((prev) => {
+      const next = { ...(prev.classPricing || {}) };
+      delete next[clsKey];
+      return { ...prev, classPricing: next };
+    });
+  };
+
   const handleCreateItem = async (e) => {
     e.preventDefault();
     if (!isHeadmaster) return;
     setFeedback(null);
     try {
+      const classPrices = newItem.classPricing || {};
+      const fallbackPrice = newItem.unitPrice !== ""
+        ? Number(newItem.unitPrice)
+        : Number(Object.values(classPrices)[0]);
       const res = await apiClient.post("/stationery/items", {
         ...newItem,
-        unitPrice: Number(newItem.unitPrice),
+        targetClass: newItem.targetClass || "ALL_CLASSES",
+        classPricing: classPrices,
+        unitPrice: fallbackPrice,
         stockQty: parseInt(newItem.stockQty || "0", 10),
         reorderLevel: parseInt(newItem.reorderLevel || "10", 10)
       });
       setFeedback({
         type: "success",
-        text: res.data?.message || `Published "${newItem.name}" at Headmaster official price.`
+        text: res.data?.message || `Published "${newItem.name}" at Headmaster official class price.`
       });
       setNewItem({
         name: "",
         category: "TEXTBOOK",
+        targetClass: "ALL_CLASSES",
         unitPrice: "",
         stockQty: "50",
         reorderLevel: "10",
         unitLabel: "Piece",
-        description: ""
+        description: "",
+        classPricing: {}
       });
       await loadStationeryData();
     } catch (err) {
@@ -177,6 +310,8 @@ export default function SchoolStationeryHubPanel({
     try {
       const res = await apiClient.put(`/stationery/items/${itemId}`, {
         name: editForm.name,
+        targetClass: editForm.targetClass || "ALL_CLASSES",
+        classPricing: editForm.classPricing || {},
         unitPrice: Number(editForm.unitPrice),
         stockQty: parseInt(editForm.stockQty || "0", 10),
         description: editForm.description
@@ -184,7 +319,7 @@ export default function SchoolStationeryHubPanel({
       setEditingItemId(null);
       setFeedback({
         type: "success",
-        text: res.data?.message || "Headmaster updated stationery price & stock cleanly."
+        text: res.data?.message || "Headmaster updated stationery class prices & stock cleanly."
       });
       await loadStationeryData();
     } catch (err) {
@@ -487,12 +622,28 @@ export default function SchoolStationeryHubPanel({
                   </select>
                 </div>
                 <div>
-                  <label style={{ display: "block", fontSize: "0.75rem", color: textMuted, fontWeight: 700, marginBottom: "4px" }}>Official Price (GH₵) *</label>
+                  <label style={{ display: "block", fontSize: "0.75rem", color: textMuted, fontWeight: 700, marginBottom: "4px" }}>Class / Level Scope *</label>
+                  <select
+                    value={newItem.targetClass}
+                    onChange={(e) => setNewItem({ ...newItem, targetClass: e.target.value })}
+                    style={inputStyle}
+                    data-testid="stationery-target-class-select"
+                  >
+                    <option value="ALL_CLASSES">🌐 All Classes (or Multi-Level Matrix Below)</option>
+                    {schoolClasses.map((cls) => (
+                      <option key={cls} value={cls}>🎓 {cls} Only</option>
+                    ))}
+                  </select>
+                </div>
+                <div>
+                  <label style={{ display: "block", fontSize: "0.75rem", color: textMuted, fontWeight: 700, marginBottom: "4px" }}>
+                    {newItem.targetClass !== "ALL_CLASSES" ? `${newItem.targetClass} Price (GH₵) *` : "Base / Default Price (GH₵) *"}
+                  </label>
                   <input
                     type="number"
                     min="0"
                     step="0.01"
-                    required
+                    required={Object.keys(newItem.classPricing || {}).length === 0}
                     placeholder="e.g. 95.00"
                     value={newItem.unitPrice}
                     onChange={(e) => setNewItem({ ...newItem, unitPrice: e.target.value })}
@@ -534,9 +685,88 @@ export default function SchoolStationeryHubPanel({
                       cursor: "pointer"
                     }}
                   >
-                    + Set Price &amp; Publish Item
+                    + Set Class Price &amp; Publish Item
                   </button>
                 </div>
+              </div>
+
+              {/* Per-Class / Per-Level Price Matrix Builder */}
+              <div
+                style={{
+                  marginTop: "12px",
+                  paddingTop: "12px",
+                  borderTop: `1px dashed ${isDark ? "rgba(212,175,55,0.35)" : "#cbd5e1"}`
+                }}
+              >
+                <div style={{ fontSize: "0.78rem", fontWeight: 800, color: isDark ? "#f6dd84" : "#081833", marginBottom: "6px" }}>
+                  🎓 Set Different Prices by Class / Level (Optional — overrides base price for each class selected)
+                </div>
+                <div style={{ display: "flex", gap: "8px", flexWrap: "wrap", alignItems: "center" }}>
+                  <select
+                    value={newClassPriceDraft.className}
+                    onChange={(e) => setNewClassPriceDraft((p) => ({ ...p, className: e.target.value }))}
+                    style={{ ...inputStyle, width: "auto", minWidth: "160px" }}
+                  >
+                    {schoolClasses.map((cls) => (
+                      <option key={cls} value={cls}>{cls}</option>
+                    ))}
+                  </select>
+                  <input
+                    type="number"
+                    min="0"
+                    step="0.01"
+                    placeholder="Class Price (GH₵)"
+                    value={newClassPriceDraft.price}
+                    onChange={(e) => setNewClassPriceDraft((p) => ({ ...p, price: e.target.value }))}
+                    style={{ ...inputStyle, width: "160px" }}
+                  />
+                  <button
+                    type="button"
+                    onClick={handleAddNewClassPriceRow}
+                    style={{
+                      padding: "9px 14px",
+                      borderRadius: "8px",
+                      border: "1px solid #d4af37",
+                      background: "rgba(212, 175, 55, 0.16)",
+                      color: isDark ? "#f6dd84" : "#081833",
+                      fontWeight: 800,
+                      fontSize: "0.8rem",
+                      cursor: "pointer"
+                    }}
+                  >
+                    + Add Class Price
+                  </button>
+                </div>
+                {Object.keys(newItem.classPricing || {}).length > 0 && (
+                  <div style={{ display: "flex", flexWrap: "wrap", gap: "6px", marginTop: "8px" }}>
+                    {Object.entries(newItem.classPricing).map(([cls, pr]) => (
+                      <span
+                        key={cls}
+                        style={{
+                          display: "inline-flex",
+                          alignItems: "center",
+                          gap: "6px",
+                          background: isDark ? "rgba(56, 189, 248, 0.15)" : "#eff6ff",
+                          border: "1px solid rgba(56, 189, 248, 0.45)",
+                          color: isDark ? "#bae6fd" : "#1e3a8a",
+                          padding: "4px 10px",
+                          borderRadius: "999px",
+                          fontSize: "0.75rem",
+                          fontWeight: 800
+                        }}
+                      >
+                        🎓 {cls}: GHS {Number(pr).toFixed(2)}
+                        <button
+                          type="button"
+                          onClick={() => handleRemoveNewClassPriceRow(cls)}
+                          style={{ border: "none", background: "transparent", color: "#ef4444", fontWeight: 900, cursor: "pointer", padding: 0 }}
+                        >
+                          ✕
+                        </button>
+                      </span>
+                    ))}
+                  </div>
+                )}
               </div>
             </form>
           ) : (
@@ -582,13 +812,26 @@ export default function SchoolStationeryHubPanel({
                 </button>
               ))}
             </div>
-            <input
-              type="text"
-              placeholder="Search textbook, cardigan, socks, bag..."
-              value={searchTerm}
-              onChange={(e) => setSearchTerm(e.target.value)}
-              style={{ ...inputStyle, maxWidth: "260px" }}
-            />
+            <div style={{ display: "flex", gap: "8px", flexWrap: "wrap", alignItems: "center" }}>
+              <select
+                value={classFilter}
+                onChange={(e) => setClassFilter(e.target.value)}
+                style={{ ...inputStyle, width: "auto", minWidth: "185px" }}
+                data-testid="stationery-class-filter"
+              >
+                <option value="ALL_CLASSES">🎓 All Classes / Levels</option>
+                {schoolClasses.map((cls) => (
+                  <option key={cls} value={cls}>View Prices for: {cls}</option>
+                ))}
+              </select>
+              <input
+                type="text"
+                placeholder="Search textbook, cardigan, class..."
+                value={searchTerm}
+                onChange={(e) => setSearchTerm(e.target.value)}
+                style={{ ...inputStyle, maxWidth: "240px" }}
+              />
+            </div>
           </div>
 
           {/* Items Grid */}
@@ -644,6 +887,17 @@ export default function SchoolStationeryHubPanel({
                             style={inputStyle}
                             aria-label="Edit item name"
                           />
+                          <select
+                            value={editForm.targetClass || "ALL_CLASSES"}
+                            onChange={(e) => setEditForm({ ...editForm, targetClass: e.target.value })}
+                            style={inputStyle}
+                            aria-label="Edit target class"
+                          >
+                            <option value="ALL_CLASSES">🌐 All Classes / Multi-Level</option>
+                            {schoolClasses.map((cls) => (
+                              <option key={cls} value={cls}>🎓 {cls} Only</option>
+                            ))}
+                          </select>
                           <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "6px" }}>
                             <input
                               type="number"
@@ -661,13 +915,72 @@ export default function SchoolStationeryHubPanel({
                               aria-label="Edit stock quantity"
                             />
                           </div>
+                          {/* Inline Per-Class Price Editor */}
+                          <div style={{ background: surfaceBg, borderRadius: "8px", padding: "8px", border: cardBorder }}>
+                            <div style={{ fontSize: "0.7rem", fontWeight: 800, color: textMuted, marginBottom: "4px" }}>
+                              Per-Class Prices ({Object.keys(editForm.classPricing || {}).length})
+                            </div>
+                            <div style={{ display: "flex", gap: "4px", marginBottom: "6px" }}>
+                              <select
+                                value={editClassPriceDraft.className}
+                                onChange={(e) => setEditClassPriceDraft((p) => ({ ...p, className: e.target.value }))}
+                                style={{ ...inputStyle, padding: "5px 6px", fontSize: "0.75rem", flex: 1 }}
+                              >
+                                {schoolClasses.map((cls) => (
+                                  <option key={cls} value={cls}>{cls}</option>
+                                ))}
+                              </select>
+                              <input
+                                type="number"
+                                step="0.01"
+                                placeholder="Price"
+                                value={editClassPriceDraft.price}
+                                onChange={(e) => setEditClassPriceDraft((p) => ({ ...p, price: e.target.value }))}
+                                style={{ ...inputStyle, padding: "5px 6px", fontSize: "0.75rem", width: "78px" }}
+                              />
+                              <button
+                                type="button"
+                                onClick={handleAddEditClassPriceRow}
+                                style={{ padding: "5px 8px", borderRadius: "6px", border: "none", background: "#0284c7", color: "#fff", fontWeight: 800, fontSize: "0.72rem", cursor: "pointer" }}
+                              >
+                                +
+                              </button>
+                            </div>
+                            <div style={{ display: "flex", flexWrap: "wrap", gap: "4px" }}>
+                              {Object.entries(editForm.classPricing || {}).map(([cls, pr]) => (
+                                <span
+                                  key={cls}
+                                  style={{
+                                    display: "inline-flex",
+                                    alignItems: "center",
+                                    gap: "4px",
+                                    background: isDark ? "rgba(56,189,248,0.16)" : "#e0f2fe",
+                                    color: isDark ? "#bae6fd" : "#0369a1",
+                                    padding: "2px 7px",
+                                    borderRadius: "999px",
+                                    fontSize: "0.7rem",
+                                    fontWeight: 700
+                                  }}
+                                >
+                                  {cls}: {Number(pr).toFixed(2)}
+                                  <button
+                                    type="button"
+                                    onClick={() => handleRemoveEditClassPriceRow(cls)}
+                                    style={{ border: "none", background: "transparent", color: "#ef4444", fontWeight: 900, cursor: "pointer", padding: 0 }}
+                                  >
+                                    ✕
+                                  </button>
+                                </span>
+                              ))}
+                            </div>
+                          </div>
                           <div style={{ display: "flex", gap: "6px", marginTop: "4px" }}>
                             <button
                               type="button"
                               onClick={() => handleSaveItemEdit(item.id)}
                               style={{ flex: 1, padding: "6px 10px", borderRadius: "6px", border: "none", background: "#16a34a", color: "#fff", fontWeight: 800, fontSize: "0.78rem", cursor: "pointer" }}
                             >
-                              Save Price
+                              Save Class Prices
                             </button>
                             <button
                               type="button"
@@ -683,15 +996,43 @@ export default function SchoolStationeryHubPanel({
                           <div style={{ fontWeight: 800, fontSize: "0.96rem", color: textPrimary, marginBottom: "4px" }}>
                             {item.name}
                           </div>
+                          <div style={{ display: "flex", flexWrap: "wrap", gap: "5px", marginBottom: "6px" }}>
+                            <span style={{ fontSize: "0.68rem", fontWeight: 800, padding: "2px 8px", borderRadius: "999px", background: isDark ? "rgba(56,189,248,0.15)" : "#e0f2fe", color: isDark ? "#7dd3fc" : "#0369a1" }}>
+                              🎓 {item.targetClass && item.targetClass !== "ALL_CLASSES" ? item.targetClass : (Object.keys(item.classPricing || {}).length > 0 ? `Class-Level Tariff (${Object.keys(item.classPricing).length} levels)` : "All Classes")}
+                            </span>
+                          </div>
                           <div style={{ fontSize: "0.72rem", color: textMuted, marginBottom: "8px" }}>
                             Code: <code>{item.itemCode}</code> {item.description ? `• ${item.description}` : ""}
                           </div>
+                          {Object.keys(item.classPricing || {}).length > 0 && (
+                            <div style={{ display: "flex", flexWrap: "wrap", gap: "4px", marginBottom: "8px" }}>
+                              {Object.entries(item.classPricing).map(([cls, pr]) => {
+                                const isActiveClass = classFilter !== "ALL_CLASSES" && cls.toLowerCase() === classFilter.toLowerCase();
+                                return (
+                                  <span
+                                    key={cls}
+                                    style={{
+                                      fontSize: "0.69rem",
+                                      fontWeight: isActiveClass ? 900 : 700,
+                                      padding: "2px 7px",
+                                      borderRadius: "6px",
+                                      background: isActiveClass ? "#16a34a" : (isDark ? "rgba(15,23,42,0.85)" : "#f1f5f9"),
+                                      color: isActiveClass ? "#ffffff" : textPrimary,
+                                      border: isActiveClass ? "1px solid #4ade80" : cardBorder
+                                    }}
+                                  >
+                                    {cls}: {item.currency || "GHS"} {Number(pr).toFixed(2)}
+                                  </span>
+                                );
+                              })}
+                            </div>
+                          )}
                           <div style={{ display: "flex", justifyContent: "space-between", alignItems: "baseline", paddingTop: "8px", borderTop: `1px solid ${isDark ? "rgba(148,163,184,0.18)" : "#e2e8f0"}` }}>
                             <strong style={{ fontSize: "1.25rem", color: isDark ? "#f6dd84" : "#081833" }}>
-                              {item.currency || "GHS"} {Number(item.unitPrice || 0).toFixed(2)}
+                              {item.currency || "GHS"} {resolveItemPriceForClass(item, classFilter).toFixed(2)}
                             </strong>
                             <span style={{ fontSize: "0.68rem", color: "#16a34a", fontWeight: 700 }}>
-                              🔒 Headmaster Fixed Price
+                              🔒 {classFilter !== "ALL_CLASSES" ? `${classFilter} Tariff` : "Headmaster Fixed"}
                             </span>
                           </div>
                         </>
@@ -703,7 +1044,14 @@ export default function SchoolStationeryHubPanel({
                         <button
                           type="button"
                           onClick={() => {
-                            setSaleForm((prev) => ({ ...prev, itemId: item.id, quantity: "1" }));
+                            setSaleForm((prev) => ({
+                              ...prev,
+                              itemId: item.id,
+                              quantity: "1",
+                              buyerClass: classFilter !== "ALL_CLASSES"
+                                ? classFilter
+                                : (item.targetClass && item.targetClass !== "ALL_CLASSES" ? item.targetClass : prev.buyerClass)
+                            }));
                             setActiveSubTab("SALES_ORDERS");
                           }}
                           style={{
@@ -727,9 +1075,11 @@ export default function SchoolStationeryHubPanel({
                               setEditingItemId(item.id);
                               setEditForm({
                                 name: item.name,
+                                targetClass: item.targetClass || "ALL_CLASSES",
                                 unitPrice: String(item.unitPrice),
                                 stockQty: String(item.stockQty),
-                                description: item.description || ""
+                                description: item.description || "",
+                                classPricing: { ...(item.classPricing || {}) }
                               });
                             }}
                             style={{
@@ -743,7 +1093,7 @@ export default function SchoolStationeryHubPanel({
                               cursor: "pointer"
                             }}
                           >
-                            Edit Price
+                            Edit Class Price
                           </button>
                         )}
                       </div>
@@ -797,10 +1147,12 @@ export default function SchoolStationeryHubPanel({
                 />
               </div>
               <div>
-                <label style={{ display: "block", fontSize: "0.75rem", color: textMuted, fontWeight: 700, marginBottom: "4px" }}>Headmaster Locked Total</label>
+                <label style={{ display: "block", fontSize: "0.75rem", color: textMuted, fontWeight: 700, marginBottom: "4px" }}>
+                  Headmaster Locked Total {saleForm.buyerClass ? `(${saleForm.buyerClass})` : ""}
+                </label>
                 <div style={{ ...inputStyle, background: surfaceBg, color: "#16a34a", fontWeight: 900 }}>
                   {selectedSaleItem
-                    ? `${selectedSaleItem.currency || "GHS"} ${(Number(selectedSaleItem.unitPrice || 0) * Math.max(1, parseInt(saleForm.quantity || "1", 10))).toFixed(2)}`
+                    ? `${selectedSaleItem.currency || "GHS"} ${(selectedSaleUnitPrice * Math.max(1, parseInt(saleForm.quantity || "1", 10))).toFixed(2)}`
                     : "GHS 0.00"}
                 </div>
               </div>
@@ -818,14 +1170,24 @@ export default function SchoolStationeryHubPanel({
                 />
               </div>
               <div>
-                <label style={{ display: "block", fontSize: "0.75rem", color: textMuted, fontWeight: 700, marginBottom: "4px" }}>Class / Department</label>
-                <input
-                  type="text"
-                  placeholder="e.g. JHS 2 / SHS 1"
+                <label style={{ display: "block", fontSize: "0.75rem", color: textMuted, fontWeight: 700, marginBottom: "4px" }}>Class / Level (Determines Tariff)</label>
+                <select
                   value={saleForm.buyerClass}
                   onChange={(e) => setSaleForm({ ...saleForm, buyerClass: e.target.value })}
                   style={inputStyle}
-                />
+                  data-testid="stationery-sale-class-select"
+                >
+                  <option value="">-- General / Default Price --</option>
+                  {schoolClasses.map((cls) => {
+                    const clsPrice = selectedSaleItem ? resolveItemPriceForClass(selectedSaleItem, cls) : null;
+                    const hasExplicit = selectedSaleItem?.classPricing && Object.keys(selectedSaleItem.classPricing).some((k) => k.toLowerCase() === cls.toLowerCase());
+                    return (
+                      <option key={cls} value={cls}>
+                        {cls}{hasExplicit && clsPrice !== null ? ` — ${selectedSaleItem.currency || "GHS"} ${clsPrice.toFixed(2)}` : ""}
+                      </option>
+                    );
+                  })}
+                </select>
               </div>
             </div>
 

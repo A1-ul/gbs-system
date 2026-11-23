@@ -12,6 +12,12 @@ import {
 } from "../../utils/institutionScope";
 import { fetchTranslatedMessagesInbox } from "../../utils/languageTranslatorEngine";
 import { getUiLabel } from "../../utils/i18nCountryEngine";
+import {
+  getDashboardTheme,
+  setDashboardTheme,
+  applyDashboardThemeToDocument,
+  resolveDashboardThemeKey
+} from "../../utils/dashboardTheme";
 import GlobalLocaleSelector from "./GlobalLocaleSelector";
 import UniversalLanguageTranslatorModal from "./UniversalLanguageTranslatorModal";
 import DirectSMSMessengerModal from "./DirectSMSMessengerModal";
@@ -28,17 +34,17 @@ import CloudCDNMediaHubModal from "./CloudCDNMediaHubModal";
  *    at top center with increased font size. The main system name does NOT appear on user dashboards.
  */
 const DASHBOARDS_LIST = [
-  { path: "/onboarding", title: "Onboard School", icon: "🏫", tooltip: "Register educational institution / school", highlight: true },
-  { path: "/portal/admin/dashboard", title: "Headmaster Portal", icon: "🎓", tooltip: "Executive Leadership, Vetting, Admissions, CCTV" },
-  { path: "/portal/teacher/dashboard", title: "Teacher Portal", icon: "👨‍🏫", tooltip: "Attendance, Grading, Plans & Live Classes" },
-  { path: "/portal/secretary/dashboard", title: "Secretary Desk", icon: "🗂️", tooltip: "Visitors, Letters, Circulars, Appointments & Stationery" },
-  { path: "/portal/student/dashboard", title: "Student Hub", icon: "🎒", tooltip: "Examinations, Peer Chat, Video Lessons & Schedule" },
-  { path: "/portal/parent/dashboard", title: "Parent Portal", icon: "👨‍👩‍👧", tooltip: "Ward Performance, Fees, Bus Tracking" },
-  { path: "/portal/accountant/dashboard", title: "Accountant Desk", icon: "💰", tooltip: "Fee Ledgers, Alumni Gifts & Procurement Audit" },
-  { path: "/portal/staff/dashboard", title: "Staff Ops", icon: "👔", tooltip: "Campus Staff Operations, Library, Logistics & Clinic" },
-  { path: "/portal/hr/dashboard", title: "HR Portal", icon: "📋", tooltip: "Human Resources, Contracts, Leave & Staff Health" },
-  { path: "/portal/alumni/dashboard", title: "Alumni Hub", icon: "🏛️", tooltip: "Alumni Pledges, Networking & Institutional Gifts" },
-  { path: "/developer-control-center/dashboard", title: "Developer Center", icon: "🛡️", tooltip: "Chief Developer Mission Control & Security Sentinel" }
+  { path: "/onboarding", title: "Onboard School", icon: "🏫", highlight: true },
+  { path: "/portal/admin/dashboard", title: "Headmaster Portal", icon: "🎓" },
+  { path: "/portal/teacher/dashboard", title: "Teacher Portal", icon: "👨‍🏫" },
+  { path: "/portal/secretary/dashboard", title: "Secretary Desk", icon: "🗂️" },
+  { path: "/portal/student/dashboard", title: "Student Hub", icon: "🎒" },
+  { path: "/portal/parent/dashboard", title: "Parent Portal", icon: "👨‍👩‍👧" },
+  { path: "/portal/accountant/dashboard", title: "Accountant Desk", icon: "💰" },
+  { path: "/portal/staff/dashboard", title: "Staff Ops", icon: "👔" },
+  { path: "/portal/hr/dashboard", title: "HR Portal", icon: "📋" },
+  { path: "/portal/alumni/dashboard", title: "Alumni Hub", icon: "🏛️" },
+  { path: "/developer-control-center/dashboard", title: "Developer Center", icon: "🛡️" }
 ];
 
 export default function TopCenterSystemBanner({
@@ -74,13 +80,8 @@ export default function TopCenterSystemBanner({
   const [pwaPromptReady, setPwaPromptReady] = useState(
     typeof window !== "undefined" && Boolean(window.__gbsDeferredInstallPrompt)
   );
-  const [uiTheme, setUiTheme] = useState(() => {
-    try {
-      return localStorage.getItem("gbs_ui_theme") === "navy" ? "navy" : "light";
-    } catch {
-      return "light";
-    }
-  });
+  const dashboardThemeKey = resolveDashboardThemeKey();
+  const [uiTheme, setUiTheme] = useState(() => getDashboardTheme());
   const [localeVersion, setLocaleVersion] = useState(0);
   const [fullDisplayMode, setFullDisplayMode] = useState(false);
   const [institutionType, setInstitutionTypeState] = useState(() => getActiveInstitutionType());
@@ -117,9 +118,14 @@ export default function TopCenterSystemBanner({
     const handleInstitutionChanged = () => setInstitutionTypeState(getActiveInstitutionType());
     const handleLocaleChanged = () => setLocaleVersion((v) => v + 1);
 
+    const handleThemeRouteSync = () => {
+      const nextDashTheme = getDashboardTheme();
+      setUiTheme(nextDashTheme);
+      applyDashboardThemeToDocument(nextDashTheme);
+    };
+
     try {
-      document.body.classList.toggle("gbs-theme-light", uiTheme === "light");
-      document.body.classList.toggle("gbs-theme-navy", uiTheme === "navy");
+      applyDashboardThemeToDocument(uiTheme);
     } catch { }
 
     window.addEventListener("online", handleOnline);
@@ -129,6 +135,7 @@ export default function TopCenterSystemBanner({
     window.addEventListener("gbs_custom_logo_updated", handleUpdate);
     window.addEventListener("gbs_institution_type_changed", handleInstitutionChanged);
     window.addEventListener("gbs_locale_changed", handleLocaleChanged);
+    window.addEventListener("popstate", handleThemeRouteSync);
     window.addEventListener("storage", handleUpdate);
     window.addEventListener("storage", handleInstitutionChanged);
     return () => {
@@ -139,26 +146,24 @@ export default function TopCenterSystemBanner({
       window.removeEventListener("gbs_custom_logo_updated", handleUpdate);
       window.removeEventListener("gbs_institution_type_changed", handleInstitutionChanged);
       window.removeEventListener("gbs_locale_changed", handleLocaleChanged);
+      window.removeEventListener("popstate", handleThemeRouteSync);
       window.removeEventListener("storage", handleUpdate);
       window.removeEventListener("storage", handleInstitutionChanged);
     };
-  }, [isDevMode, institutionName, uiTheme]);
+  }, [isDevMode, institutionName, uiTheme, dashboardThemeKey]);
 
   const handleToggleUiTheme = () => {
     const next = uiTheme === "light" ? "navy" : "light";
     setUiTheme(next);
     try {
-      localStorage.setItem("gbs_ui_theme", next);
-      document.body.classList.toggle("gbs-theme-light", next === "light");
-      document.body.classList.toggle("gbs-theme-navy", next === "navy");
-      window.dispatchEvent(new CustomEvent("gbs_ui_theme_changed", { detail: { theme: next } }));
+      setDashboardTheme(next);
       if (typeof window.showGBSOpenNotice === "function") {
         window.showGBSOpenNotice(
           next === "navy"
-            ? "🌙 Deep Royal Navy & Metallic Gold theme activated across all dashboards."
-            : "☀️ Blueprint Light & Royal Navy theme activated cleanly.",
+            ? "🌙 Blueprint Light Mode turned OFF (Deep Royal Navy & Gold active on this dashboard)."
+            : "☀️ Blueprint Light Mode turned ON for this dashboard.",
           "success",
-          next === "navy" ? "NAVY MODE ACTIVE" : "BLUEPRINT LIGHT ACTIVE"
+          next === "navy" ? "BLUEPRINT LIGHT OFF" : "BLUEPRINT LIGHT ON"
         );
       }
     } catch { }
@@ -480,7 +485,7 @@ export default function TopCenterSystemBanner({
             fontWeight: 800
           }}
         >
-          {uiTheme === "light" ? "☀️ Blueprint Light" : "🌙 Navy Mode"}
+          {uiTheme === "light" ? "☀️ Blueprint Light: ON" : "🌙 Blueprint Light: OFF"}
         </button>
         <button
           type="button"

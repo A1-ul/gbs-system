@@ -12,6 +12,7 @@ import { checkDemoEntryLimit, trackDemoEntryCreated } from "../../../../../utils
 import { useDashboardTabSync } from "../../../../../hooks/useDashboardTabSync";
 import SchoolClinicHubPanel from "../../../../../components/common/SchoolClinicHubPanel";
 import StaffAttendanceClockWidget from "../../../../../components/common/StaffAttendanceClockWidget";
+import LiveCallLauncherAndReceiver from "../../../../../components/common/LiveCallLauncherAndReceiver";
 import "../teacher/TeacherDashboard.css";
 
 export default function HRDashboard() {
@@ -457,6 +458,11 @@ export default function HRDashboard() {
 
         {/* Prominent Top Center System Branding */}
         <TopCenterSystemBanner roleTitle="Human Resources & Faculty Affairs" />
+        <LiveCallLauncherAndReceiver
+          variant="GLOBAL_RECEIVER"
+          userRole="HR"
+          onFeedback={(msg, isErr) => showToast(isErr ? "error" : "success", "Live Conference", msg)}
+        />
 
         {/* Interactive KPI Inscription Cards */}
         <div className="gbs-kpi-summary-strip" style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(220px, 1fr))", gap: "1rem", marginBottom: "1.5rem" }}>

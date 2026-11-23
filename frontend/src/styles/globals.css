@@ -987,12 +987,14 @@ button:focus-visible {
   outline-offset: 2px;
 }
 
-/* Full-Page Tab Display Mode (?full=1 or Full Display toggle) */
+/* Full-Page Tab Display Mode (?full=1 or Active Tab Page View) */
 body.gbs-full-display-mode .role-kpi-grid,
 body.gbs-full-display-mode .role-kpi-row,
 body.gbs-full-display-mode .gbs-kpi-summary-strip,
 body.gbs-full-display-mode .top-center-system-hero,
-body.gbs-full-display-mode .dev-kpi-grid {
+body.gbs-full-display-mode .dev-kpi-grid,
+body.gbs-tab-page-view .role-hero-banner,
+body.gbs-tab-page-view .role-hero-showcase {
   display: none !important;
 }
 
@@ -1009,6 +1011,38 @@ body.gbs-full-display-mode main {
 body.gbs-full-display-mode .role-workspace-card,
 body.gbs-full-display-mode .dev-workspace-panel {
   min-height: calc(100dvh - 150px);
+}
+
+/* Evidence Image Preview Cursor Cue (Zero Tooltips) */
+img[data-evidence-preview="true"],
+.evidence-preview-img,
+.role-workspace-card img:not([data-no-preview="true"]),
+.dev-workspace-panel img:not([data-no-preview="true"]) {
+  cursor: zoom-in;
+}
+
+/* Clean, Well-Arranged Action Bars & Responsive Scrollbars on Desktop, Laptop, and Mobile */
+.role-header-actions,
+.window-controls-bar,
+.dev-header-actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+}
+
+.table-responsive::-webkit-scrollbar,
+.dev-table-container::-webkit-scrollbar,
+.gbs-table-scroll::-webkit-scrollbar {
+  height: 8px;
+  width: 8px;
+}
+
+.table-responsive::-webkit-scrollbar-thumb,
+.dev-table-container::-webkit-scrollbar-thumb,
+.gbs-table-scroll::-webkit-scrollbar-thumb {
+  background: rgba(212, 175, 55, 0.55);
+  border-radius: 999px;
 }
 
 /* ============================================================================

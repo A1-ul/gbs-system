@@ -1,9 +1,10 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 
 /**
  * FileUploadVerificationCard
  * Institutional file inspection & verification card.
- * Enforces requirement: "any upload must be seen and verify before submitting."
+ * Enforces requirement: "any upload must be seen and verify before submitting"
+ * and supports full-resolution evidence image previews across every dashboard.
  */
 const FileUploadVerificationCard = ({
   file,
@@ -14,12 +15,44 @@ const FileUploadVerificationCard = ({
   category = "Academics"
 }) => {
   const [showInspectionModal, setShowInspectionModal] = useState(false);
+  const [imagePreviewUrl, setImagePreviewUrl] = useState(null);
+
+  const fileName = typeof file === "string"
+    ? (file.startsWith("data:image/") ? "evidence-image.png" : file)
+    : file?.name || "document.pdf";
+  const fileExt = fileName.split(".").pop()?.toUpperCase() || "DOC";
+  const isImageFile =
+    ["PNG", "JPG", "JPEG", "WEBP", "GIF", "BMP", "SVG"].includes(fileExt) ||
+    (typeof file === "string" && (file.startsWith("data:image/") || /\.(png|jpe?g|webp|gif)(\?.*)?$/i.test(file))) ||
+    (typeof file === "object" && Boolean(file?.type?.startsWith?.("image/") || file?.dataUrl?.startsWith?.("data:image/") || file?.previewUrl));
+
+  useEffect(() => {
+    if (!file || !isImageFile) {
+      setImagePreviewUrl(null);
+      return undefined;
+    }
+    if (typeof file === "string") {
+      setImagePreviewUrl(file);
+      return undefined;
+    }
+    if (file.dataUrl || file.previewUrl || file.url) {
+      setImagePreviewUrl(file.dataUrl || file.previewUrl || file.url);
+      return undefined;
+    }
+    if (typeof File !== "undefined" && file instanceof File) {
+      const objectUrl = URL.createObjectURL(file);
+      setImagePreviewUrl(objectUrl);
+      return () => URL.revokeObjectURL(objectUrl);
+    }
+    setImagePreviewUrl(null);
+    return undefined;
+  }, [file, isImageFile]);
 
   if (!file) return null;
 
-  const fileName = typeof file === "string" ? file : file.name || "document.pdf";
-  const fileSize = typeof file === "object" ? file.size || "1.2 MB" : "1.2 MB";
-  const fileExt = fileName.split(".").pop()?.toUpperCase() || "DOC";
+  const fileSize = typeof file === "object"
+    ? (typeof file.size === "number" ? `${(file.size / 1024).toFixed(1)} KB` : file.size || "Verified")
+    : "Verified";
 
   const getExtBadge = () => {
     switch (fileExt) {
@@ -258,7 +291,44 @@ const FileUploadVerificationCard = ({
                 textAlign: "center"
               }}
             >
-              <div style={{ fontSize: "2.5rem", marginBottom: "8px" }}>{badge.icon}</div>
+              {imagePreviewUrl ? (
+                <div style={{ marginBottom: "12px", width: "100%" }}>
+                  <img
+                    src={imagePreviewUrl}
+                    alt={fileName}
+                    data-evidence-preview="true"
+                    onClick={() => window.openGBSImagePreview?.({ src: imagePreviewUrl, title: fileName, subtitle: `${label} • ${category}` })}
+                    style={{
+                      maxWidth: "100%",
+                      maxHeight: "300px",
+                      borderRadius: "10px",
+                      border: "1px solid rgba(56, 189, 248, 0.4)",
+                      objectFit: "contain",
+                      cursor: "zoom-in"
+                    }}
+                  />
+                  <div style={{ marginTop: "8px" }}>
+                    <button
+                      type="button"
+                      onClick={() => window.openGBSImagePreview?.({ src: imagePreviewUrl, title: fileName, subtitle: `${label} • ${category}` })}
+                      style={{
+                        background: "rgba(56, 189, 248, 0.16)",
+                        border: "1px solid #38bdf8",
+                        color: "#38bdf8",
+                        padding: "5px 12px",
+                        borderRadius: "6px",
+                        fontSize: "0.76rem",
+                        fontWeight: 800,
+                        cursor: "pointer"
+                      }}
+                    >
+                      🔍 Open Full-Screen Evidence Inspector
+                    </button>
+                  </div>
+                </div>
+              ) : (
+                <div style={{ fontSize: "2.5rem", marginBottom: "8px" }}>{badge.icon}</div>
+              )}
               <strong style={{ color: "#f8fafc", fontSize: "0.95rem" }}>{fileName}</strong>
               <p style={{ color: "#94a3b8", fontSize: "0.8rem", maxWidth: "420px", margin: "6px auto 12px" }}>
                 Document verified for correct structure, valid page boundaries, legible typography, and compliant file format ({fileExt}).

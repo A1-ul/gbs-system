@@ -111,6 +111,53 @@ const getLiveProctorSessions = async (req, res, next) => {
   }
 };
 
+const streamProctorLiveEvents = async (req, res, next) => {
+  try {
+    const tenantId = resolveTenantId(req, 1);
+    const examFilter = String(req.query?.examId || '').trim();
+
+    res.setHeader('Content-Type', 'text/event-stream');
+    res.setHeader('Cache-Control', 'no-cache, no-transform');
+    res.setHeader('Connection', 'keep-alive');
+    res.setHeader('X-Accel-Buffering', 'no');
+    if (typeof res.flushHeaders === 'function') res.flushHeaders();
+
+    const writeEvent = (eventName, payload) => {
+      try {
+        res.write(`event: ${eventName}\ndata: ${JSON.stringify(payload)}\n\n`);
+      } catch { }
+    };
+
+    const initialSessions = await aiExamService.getLiveProctorSessions(tenantId, { examId: examFilter });
+    writeEvent('proctor_snapshot', { sessions: initialSessions, timestamp: new Date().toISOString() });
+
+    const onEvent = (evt) => {
+      if (!evt) return;
+      if (evt.type === 'proctor_live_frame' && evt.session) {
+        if (examFilter && String(evt.session.examId || '') !== examFilter) return;
+        writeEvent('proctor_live_frame', { session: evt.session });
+      } else if (evt.type === 'proctor_message' && evt.message) {
+        writeEvent('proctor_message', { message: evt.message });
+      }
+    };
+
+    const channel = `tenant:${tenantId}`;
+    aiExamService.proctorEventBus.on(channel, onEvent);
+
+    const heartbeat = setInterval(() => {
+      try { res.write(`: heartbeat ${Date.now()}\n\n`); } catch { }
+    }, 20000);
+    if (typeof heartbeat.unref === 'function') heartbeat.unref();
+
+    req.on('close', () => {
+      clearInterval(heartbeat);
+      aiExamService.proctorEventBus.off(channel, onEvent);
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+
 const sendProctorMessage = async (req, res, next) => {
   try {
     const tenantId = resolveTenantId(req, 1);
@@ -234,6 +281,7 @@ module.exports = {
   gradeAnswerSheet,
   postProctorHeartbeat,
   getLiveProctorSessions,
+  streamProctorLiveEvents,
   sendProctorMessage,
   getStudentProctorMessages,
   ackProctorMessage,

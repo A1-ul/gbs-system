@@ -206,6 +206,8 @@ async function ensurePaymentTables() {
           "description" TEXT,
           "unitPrice" DOUBLE PRECISION NOT NULL,
           "currency" TEXT NOT NULL DEFAULT 'GHS',
+          "targetClass" TEXT NOT NULL DEFAULT 'ALL_CLASSES',
+          "classPricingJson" TEXT,
           "stockQty" INTEGER NOT NULL DEFAULT 0,
           "reorderLevel" INTEGER NOT NULL DEFAULT 10,
           "unitLabel" TEXT NOT NULL DEFAULT 'Piece',
@@ -218,6 +220,8 @@ async function ensurePaymentTables() {
           "updatedAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
           UNIQUE ("tenantId", "itemCode")
         )`,
+        `ALTER TABLE IF EXISTS stationery_items ADD COLUMN IF NOT EXISTS "targetClass" TEXT NOT NULL DEFAULT 'ALL_CLASSES'`,
+        `ALTER TABLE IF EXISTS stationery_items ADD COLUMN IF NOT EXISTS "classPricingJson" TEXT`,
         `CREATE INDEX IF NOT EXISTS idx_stationery_items_tenant ON stationery_items ("tenantId", "category", "isActive")`,
         `CREATE TABLE IF NOT EXISTS stationery_transactions (
           "id" TEXT PRIMARY KEY,

@@ -3480,7 +3480,7 @@ const verifyAndProvisionTenant = async (payload = {}) => {
     });
   } catch (txErr) {
     console.warn('Database provisioning fallback (using memory resilience):', txErr.message);
-    const mockTenant = {
+    const fallbackTenant = {
       id: Math.floor(1000 + Math.random() * 9000),
       name: data.institutionName || 'Provisioned Institution',
       code: tenantCode,
@@ -3488,17 +3488,17 @@ const verifyAndProvisionTenant = async (payload = {}) => {
       status: 'ACTIVE',
       isActive: true
     };
-    const mockUser = {
+    const fallbackAdminUser = {
       id: Math.floor(1000 + Math.random() * 9000),
-      tenantId: mockTenant.id,
-      firstName: data.adminName ? data.adminName.split(' ')[0] : 'Dr.',
+      tenantId: fallbackTenant.id,
+      firstName: data.adminName ? data.adminName.split(' ')[0] : 'Institution',
       lastName: data.adminName ? data.adminName.split(' ').slice(1).join(' ') : 'Headmaster',
       email: data.adminEmail || `admin@${tenantCode.toLowerCase()}.edu`,
       username: (data.adminEmail || '').split('@')[0] || 'headmaster',
       role: 'ADMIN',
       isActive: true
     };
-    result = { tenant: mockTenant, subscription: { status: 'ACTIVE', planName: 'Enterprise Trial' }, adminUser: mockUser };
+    result = { tenant: fallbackTenant, subscription: { status: 'ACTIVE', planName: 'Enterprise Provisioned' }, adminUser: fallbackAdminUser };
   }
 
   // Ensure dynamic memory institutions and users have this verified tenant so Headmaster can immediately log in

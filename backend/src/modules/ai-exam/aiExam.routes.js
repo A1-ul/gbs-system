@@ -18,9 +18,15 @@ router.get('/answer-sheets', aiExamController.getAnswerSheets);
 router.post('/answer-sheets/:id/grade', aiExamController.gradeAnswerSheet);
 router.patch('/answer-sheets/:id/grade', aiExamController.gradeAnswerSheet);
 
-// Live AI Exam Proctoring: Camera Feed Heartbeat, Broadcast/Search Messaging & Reference Evidence Vault
+// Live AI Exam Proctoring: Camera Feed Heartbeat, High-Speed SSE Stream, Broadcast/Search Messaging & Reference Evidence Vault
 router.post('/proctor/heartbeat', aiExamController.postProctorHeartbeat);
 router.get('/proctor/live', aiExamController.getLiveProctorSessions);
+router.get('/proctor/stream', (req, res, next) => {
+  if (!req.headers.authorization && req.query?.token) {
+    req.headers.authorization = `Bearer ${req.query.token}`;
+  }
+  return optionalProtect(req, res, () => aiExamController.streamProctorLiveEvents(req, res, next));
+});
 router.post('/proctor/message', aiExamController.sendProctorMessage);
 router.get('/proctor/messages', aiExamController.getStudentProctorMessages);
 router.post('/proctor/messages/:id/ack', aiExamController.ackProctorMessage);

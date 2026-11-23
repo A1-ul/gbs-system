@@ -122,7 +122,7 @@ export default function DeveloperLogin() {
     if (user) {
       const roleUpper = String(user.role || "STAFF").toUpperCase();
       const isStaffRole = ["TEACHER", "ACCOUNTANT", "ADMIN", "HEADMASTER", "STAFF", "LIBRARIAN", "BURSAR", "DIRECTOR"].includes(roleUpper);
-      const schoolName = user.schoolName || user.tenantName || localStorage.getItem("gbs_tenant_name") || "St. Augustine International Academy";
+      const schoolName = user.schoolName || user.tenantName || localStorage.getItem("gbs_tenant_name") || "Registered GBS Institution";
       const schoolCode = user.schoolCode || user.tenantCode || localStorage.getItem("gbs_tenant_code") || "GBS-MAIN";
       return {
         isRegisteredStaff: isStaffRole,
@@ -155,7 +155,7 @@ export default function DeveloperLogin() {
         staffDepartment: "Academic Faculty",
         staffPhone: "+233-24-555-0199",
         staffAvatar: "/assets/illustrations/staff_avatar_sample.png",
-        exactRegisteredSchool: localStorage.getItem("gbs_tenant_name") || "St. Augustine International Academy",
+        exactRegisteredSchool: localStorage.getItem("gbs_tenant_name") || "Registered GBS Institution",
         schoolCode: localStorage.getItem("gbs_tenant_code") || "GBS-MAIN",
         schoolLocation: "Main Institutional Campus"
       };

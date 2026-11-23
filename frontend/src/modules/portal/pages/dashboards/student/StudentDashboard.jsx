@@ -228,6 +228,22 @@ export function StudentDashboard({ initialTab } = {}) {
   const lastProctorAlertAtRef = useRef(0);
   const proctorSnapshotsRef = useRef([]);
   const proctorSyncCountRef = useRef({ warnings: 0, penalty: 0, teacherMarks: 0, status: "IDLE", events: [] });
+  const proctorPrewarmPromiseRef = useRef(null);
+
+  const requestFastExamCameraStream = async () => {
+    if (!navigator.mediaDevices || typeof navigator.mediaDevices.getUserMedia !== "function") {
+      return null;
+    }
+    try {
+      return await navigator.mediaDevices.getUserMedia({
+        video: { facingMode: "user", width: { ideal: 320 }, height: { ideal: 240 } },
+        audio: false
+      });
+    } catch {
+      // Immediate universal fallback for USB/older webcams that reject facingMode or resolution hints
+      return await navigator.mediaDevices.getUserMedia({ video: true, audio: false });
+    }
+  };
 
   // Past Questions Archive Filters & Inspection
   const [pastExamYearFilter, setPastExamYearFilter] = useState("ALL");
@@ -355,6 +371,10 @@ export function StudentDashboard({ initialTab } = {}) {
     setLastAlertReason("");
     lastProctorAlertAtRef.current = 0;
     proctorOffFrameStreakRef.current = 0;
+    // Pre-warm camera hardware immediately inside the user click gesture for instant startup (<250ms)
+    if (!proctorStreamRef.current && navigator.mediaDevices?.getUserMedia) {
+      proctorPrewarmPromiseRef.current = requestFastExamCameraStream().catch(() => null);
+    }
     if (examObj) setActiveExam(examObj);
     if (typeof durationSeconds === "number" && durationSeconds > 0) {
       setExamTimeLeftSeconds(durationSeconds);
@@ -398,21 +418,59 @@ export function StudentDashboard({ initialTab } = {}) {
       }
 
       try {
-        const stream = await navigator.mediaDevices.getUserMedia({
-          video: { facingMode: "user", width: { ideal: 320 }, height: { ideal: 240 }, frameRate: { ideal: 24, min: 15 } },
-          audio: false
-        });
+        const prewarmed = proctorPrewarmPromiseRef.current ? await proctorPrewarmPromiseRef.current : null;
+        proctorPrewarmPromiseRef.current = null;
+        const stream = prewarmed || (await requestFastExamCameraStream());
+        if (!stream) {
+          throw new Error("No camera stream available");
+        }
         if (cancelled) {
           stream.getTracks().forEach((t) => t.stop());
           return;
         }
         proctorStreamRef.current = stream;
-        if (proctorVideoRef.current) {
-          proctorVideoRef.current.srcObject = stream;
-          proctorVideoRef.current.play().catch(() => { });
-        }
+        const bindVideoEl = () => {
+          if (proctorVideoRef.current && proctorVideoRef.current.srcObject !== stream) {
+            proctorVideoRef.current.srcObject = stream;
+            proctorVideoRef.current.muted = true;
+            proctorVideoRef.current.play().catch(() => { });
+          }
+        };
+        bindVideoEl();
+        setTimeout(bindVideoEl, 80);
         setProctoringStatus("CAMERA_ACTIVE");
         setProctoringDetail("Live Webcam Face Monitor, Gaze & Tab-Lock Active");
+
+        // Push the very first live frame to the Teacher Exam Monitor wall as soon as frames decode
+        const sendImmediateFirstFrame = () => {
+          const snapNow = captureWebcamSnapshotDataUrl();
+          if (!snapNow || cancelled) return;
+          if (proctorSnapshotsRef.current.length === 0) proctorSnapshotsRef.current = [snapNow];
+          const stuNameNow = `${studentProfile?.firstName || "Student"} ${studentProfile?.lastName || ""}`.trim();
+          apiClient.post("/ai-exam/proctor/heartbeat", {
+            examId: activeExam?.id || "EXAM-ACTIVE",
+            examTitle: activeExam?.title || "Active Examination",
+            studentId: studentProfile?.id || 10,
+            studentIndexNumber: studentProfile?.admissionNumber || studentProfile?.studentId || `GBS-STU-${studentProfile?.id || 10}`,
+            className: studentProfile?.currentClass || activeExam?.class?.name || "Enrolled Cohort",
+            studentName: stuNameNow,
+            studentEmail: studentProfile?.email || "",
+            status: "CAMERA_ACTIVE",
+            movementStatus: "CAMERA_ACTIVE",
+            cameraActive: true,
+            snapshotDataUrl: snapNow,
+            warningsCount: proctorSyncCountRef.current.warnings || 0,
+            penaltyMarksDeducted: proctorSyncCountRef.current.penalty || 0,
+            marksPerWarning: 2
+          }).catch(() => { });
+        };
+        if (proctorVideoRef.current) {
+          proctorVideoRef.current.onloadeddata = () => {
+            proctorVideoRef.current?.play?.().catch(() => { });
+            sendImmediateFirstFrame();
+          };
+        }
+        setTimeout(sendImmediateFirstFrame, 280);
 
         const faceDetector = typeof window !== "undefined" && "FaceDetector" in window
           ? new window.FaceDetector({ fastMode: true, maxDetectedFaces: 3 })
@@ -933,13 +991,19 @@ export function StudentDashboard({ initialTab } = {}) {
   const startLocalPeerCamera = async () => {
     try {
       if (navigator.mediaDevices && navigator.mediaDevices.getUserMedia) {
-        const stream = await navigator.mediaDevices.getUserMedia({
-          video: { width: { ideal: 640 }, height: { ideal: 360 }, frameRate: { ideal: 30, min: 24 } },
-          audio: { echoCancellation: true, noiseSuppression: true, autoGainControl: true }
-        });
+        let stream = null;
+        try {
+          stream = await navigator.mediaDevices.getUserMedia({
+            video: { width: { ideal: 640 }, height: { ideal: 360 }, frameRate: { ideal: 30 } },
+            audio: { echoCancellation: true, noiseSuppression: true, autoGainControl: true }
+          });
+        } catch {
+          stream = await navigator.mediaDevices.getUserMedia({ video: true, audio: true });
+        }
         localPeerStreamRef.current = stream;
         if (localPeerVideoRef.current) {
           localPeerVideoRef.current.srcObject = stream;
+          localPeerVideoRef.current.muted = true;
           localPeerVideoRef.current.play().catch(() => { });
         }
       }
@@ -3907,15 +3971,49 @@ export function StudentDashboard({ initialTab } = {}) {
                                     muted
                                     playsInline
                                     style={{
-                                      width: proctoringStatus === "CAMERA_ACTIVE" || proctoringStatus === "WARNING_DETECTED" ? "64px" : "0px",
-                                      height: proctoringStatus === "CAMERA_ACTIVE" || proctoringStatus === "WARNING_DETECTED" ? "46px" : "0px",
+                                      width: proctoringStatus === "FOCUS_ONLY_ACTIVE" ? "0px" : "112px",
+                                      height: proctoringStatus === "FOCUS_ONLY_ACTIVE" ? "0px" : "76px",
                                       borderRadius: "8px",
                                       objectFit: "cover",
+                                      background: "#020617",
                                       border: proctoringStatus === "WARNING_DETECTED" ? "2px solid #ef4444" : "2px solid #10b981",
                                       transform: "scaleX(-1)",
-                                      display: proctoringStatus === "CAMERA_ACTIVE" || proctoringStatus === "WARNING_DETECTED" ? "block" : "none"
+                                      display: proctoringStatus === "FOCUS_ONLY_ACTIVE" ? "none" : "block"
                                     }}
                                   />
+                                  {proctoringStatus === "FOCUS_ONLY_ACTIVE" && (
+                                    <button
+                                      type="button"
+                                      onClick={async () => {
+                                        try {
+                                          const s = await requestFastExamCameraStream();
+                                          if (s) {
+                                            proctorStreamRef.current = s;
+                                            if (proctorVideoRef.current) {
+                                              proctorVideoRef.current.srcObject = s;
+                                              proctorVideoRef.current.play().catch(() => { });
+                                            }
+                                            setProctoringStatus("CAMERA_ACTIVE");
+                                            setProctoringDetail("Live Webcam Face Monitor, Gaze & Tab-Lock Active");
+                                          }
+                                        } catch {
+                                          setFeedback({ type: "warning", message: "Please allow browser camera permission in your address bar to activate live exam proctoring video." });
+                                        }
+                                      }}
+                                      style={{
+                                        background: "rgba(16, 185, 129, 0.22)",
+                                        border: "1px solid #10b981",
+                                        color: "#6ee7b7",
+                                        padding: "5px 10px",
+                                        borderRadius: "6px",
+                                        fontSize: "0.74rem",
+                                        fontWeight: 800,
+                                        cursor: "pointer"
+                                      }}
+                                    >
+                                      🎥 Enable Exam Camera
+                                    </button>
+                                  )}
                                   <span
                                     style={{
                                       fontSize: "0.75rem",
@@ -7948,7 +8046,13 @@ export function StudentDashboard({ initialTab } = {}) {
             <div style={{ display: "flex", justifyContent: "center", gap: "12px", alignItems: "center" }}>
               <button
                 type="button"
-                onClick={() => setIsPeerMicMuted(!isPeerMicMuted)}
+                onClick={() => {
+                  const nextMuted = !isPeerMicMuted;
+                  setIsPeerMicMuted(nextMuted);
+                  if (localPeerStreamRef.current) {
+                    localPeerStreamRef.current.getAudioTracks().forEach((t) => { t.enabled = !nextMuted; });
+                  }
+                }}
                 style={{
                   padding: "10px 16px",
                   borderRadius: "10px",
@@ -7963,7 +8067,13 @@ export function StudentDashboard({ initialTab } = {}) {
               </button>
               <button
                 type="button"
-                onClick={() => setIsPeerCameraOff(!isPeerCameraOff)}
+                onClick={() => {
+                  const nextOff = !isPeerCameraOff;
+                  setIsPeerCameraOff(nextOff);
+                  if (localPeerStreamRef.current) {
+                    localPeerStreamRef.current.getVideoTracks().forEach((t) => { t.enabled = !nextOff; });
+                  }
+                }}
                 style={{
                   padding: "10px 16px",
                   borderRadius: "10px",

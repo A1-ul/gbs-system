@@ -10,6 +10,7 @@ import FinancialReportsPanel from "../../../../../components/common/FinancialRep
 import SchoolClinicHubPanel from "../../../../../components/common/SchoolClinicHubPanel";
 import SchoolStationeryHubPanel from "../../../../../components/common/SchoolStationeryHubPanel";
 import StaffAttendanceClockWidget from "../../../../../components/common/StaffAttendanceClockWidget";
+import LiveCallLauncherAndReceiver from "../../../../../components/common/LiveCallLauncherAndReceiver";
 import { navigateToDetail } from "../../../../../utils/universalNavigation";
 import { getActiveSchoolName, getActiveSchoolLogo } from "../../../../../utils/schoolBranding";
 import { isDemoSandboxMode } from "../../../../../utils/tokenStorage";
@@ -1609,6 +1610,11 @@ export default function AccountantDashboard() {
           <WindowControlsBar />
           {/* Prominent Top Center System Branding */}
           <TopCenterSystemBanner roleTitle="Finance & Bursar Operations" />
+          <LiveCallLauncherAndReceiver
+            variant="GLOBAL_RECEIVER"
+            userRole="ACCOUNTANT"
+            onFeedback={(msg, isErr) => setFeedback({ type: isErr ? "error" : "success", message: msg })}
+          />
         </div>
 
         {/* Main Content */}

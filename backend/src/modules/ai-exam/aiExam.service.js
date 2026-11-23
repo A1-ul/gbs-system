@@ -629,7 +629,7 @@ const submitAnswerSheet = async (
   const rawScoreObtained = Math.max(0, Math.round(calculatedScore * 10) / 10);
   const rawPercentage = Math.max(0, Math.min(100, Math.round((rawScoreObtained / denom) * 100)));
 
-  const liveSessionsMap = store.activeProctoringSessions?.[String(tid)] || {};
+  const liveSessionsMap = getMergedTenantProctorSessions(tid, store);
   const matchingLiveSess = Object.values(liveSessionsMap).find((sess) => {
     const sameExam = !examId || String(sess.examId || '') === String(exam.id || examId);
     const sameStudent =
@@ -748,9 +748,9 @@ const submitAnswerSheet = async (
     examSubmissions[String(tid)] = [submissionEntry, ...prevList];
 
     const activeProctoringSessions = { ...(curr.activeProctoringSessions || {}) };
-    const tenantSessMap = { ...(activeProctoringSessions[String(tid)] || {}) };
+    const tenantSessMap = { ...getMergedTenantProctorSessions(tid, curr) };
     if (matchingLiveSess?.sessionKey && tenantSessMap[matchingLiveSess.sessionKey]) {
-      tenantSessMap[matchingLiveSess.sessionKey] = {
+      const submittedSess = {
         ...tenantSessMap[matchingLiveSess.sessionKey],
         status: 'SUBMITTED',
         finalScoreObtained: calculatedScore,
@@ -758,6 +758,9 @@ const submitAnswerSheet = async (
         penaltyMarksDeducted: finalPenaltyMarks,
         submittedAt: submissionEntry.submittedAt
       };
+      tenantSessMap[matchingLiveSess.sessionKey] = submittedSess;
+      getTenantMemorySessionsMap(tid).set(matchingLiveSess.sessionKey, submittedSess);
+      proctorEventBus.emit(`tenant:${tid}`, { type: 'proctor_live_frame', session: submittedSess });
       activeProctoringSessions[String(tid)] = tenantSessMap;
     }
 
@@ -965,8 +968,38 @@ const getAnswerSheets = async (examId, tenantId = 1) => {
 };
 
 // ============================================================================
-// REAL-TIME ONLINE EXAM PROCTORING: CAMERAS, BROADCAST MESSAGES & EVIDENCE VAULT
+// REAL-TIME ONLINE EXAM PROCTORING: HIGH-SPEED IN-MEMORY STREAM, SSE & EVIDENCE VAULT
 // ============================================================================
+const { EventEmitter } = require('events');
+const proctorEventBus = new EventEmitter();
+proctorEventBus.setMaxListeners(500);
+
+// Fast RAM cache so live student exam camera frames never block on synchronous disk writes
+const liveProctoringMemoryStore = new Map(); // String(tid) -> Map(sessionKey -> session)
+const lastProctorDiskFlushAt = new Map(); // `${tid}::${sessionKey}` -> timestamp ms
+const PROCTOR_DISK_FLUSH_INTERVAL_MS = 10000;
+
+function getTenantMemorySessionsMap(tid) {
+  const key = String(tid);
+  if (!liveProctoringMemoryStore.has(key)) {
+    liveProctoringMemoryStore.set(key, new Map());
+  }
+  return liveProctoringMemoryStore.get(key);
+}
+
+function getMergedTenantProctorSessions(tid, storeOverride = null) {
+  const store = storeOverride || readPersistentStore();
+  const diskMap = store.activeProctoringSessions?.[String(tid)] || {};
+  const memMap = getTenantMemorySessionsMap(tid);
+  const merged = { ...diskMap };
+  for (const [sKey, memSess] of memMap.entries()) {
+    const diskSess = merged[sKey];
+    if (!diskSess || (Number(memSess.liveFrameSeq) || 0) >= (Number(diskSess.liveFrameSeq) || 0)) {
+      merged[sKey] = memSess;
+    }
+  }
+  return merged;
+}
 
 const normalizeSessionKey = (examId, studentId, studentEmail, studentName) => {
   const ePart = String(examId || 'ACTIVE_EXAM').trim();
@@ -982,88 +1015,90 @@ const recordProctorHeartbeat = async (tenantId = 1, payload = {}) => {
   const examId = payload.examId || 'EXAM-ACTIVE';
   const examTitle = String(payload.examTitle || 'Active Online Examination').trim();
   const sessionKey = normalizeSessionKey(examId, studentId, studentEmail, studentName);
-  const nowIso = new Date().toISOString();
+  const nowMs = Date.now();
+  const nowIso = new Date(nowMs).toISOString();
 
-  let updatedSession = null;
+  const memMap = getTenantMemorySessionsMap(tid);
+  const isFirstInMem = !memMap.has(sessionKey);
+  const existing = memMap.get(sessionKey) || (readPersistentStore().activeProctoringSessions?.[String(tid)]?.[sessionKey] || {});
 
-  writePersistentStore((curr) => {
-    const activeProctoringSessions = { ...(curr.activeProctoringSessions || {}) };
-    const tenantSessions = { ...(activeProctoringSessions[String(tid)] || {}) };
-    const existing = tenantSessions[sessionKey] || {};
-
-    const existingEvents = Array.isArray(existing.events) ? existing.events : [];
-    const nextEvents = [...existingEvents];
-    if (payload.eventLogItem && typeof payload.eventLogItem === 'object') {
-      const evId = String(payload.eventLogItem.id || `EV-${Date.now()}`);
-      if (!nextEvents.some((ev) => String(ev.id) === evId)) {
-        nextEvents.unshift({
-          ...payload.eventLogItem,
-          id: evId,
-          timeIso: payload.eventLogItem.timeIso || nowIso
-        });
-      }
-    } else if (payload.latestReason && payload.status === 'WARNING_DETECTED') {
+  const existingEvents = Array.isArray(existing.events) ? existing.events : [];
+  const nextEvents = [...existingEvents];
+  let hasNewAlert = false;
+  if (payload.eventLogItem && typeof payload.eventLogItem === 'object') {
+    const evId = String(payload.eventLogItem.id || `EV-${nowMs}`);
+    if (!nextEvents.some((ev) => String(ev.id) === evId)) {
+      hasNewAlert = true;
       nextEvents.unshift({
-        id: `EV-${Date.now()}`,
-        time: new Date().toLocaleTimeString(),
-        timeIso: nowIso,
-        reason: payload.latestReason,
-        warningNumber: Number(payload.warningsCount) || (existingEvents.length + 1)
+        ...payload.eventLogItem,
+        id: evId,
+        timeIso: payload.eventLogItem.timeIso || nowIso
       });
     }
+  } else if (payload.latestReason && payload.status === 'WARNING_DETECTED') {
+    hasNewAlert = true;
+    nextEvents.unshift({
+      id: `EV-${nowMs}`,
+      time: new Date().toLocaleTimeString(),
+      timeIso: nowIso,
+      reason: payload.latestReason,
+      warningNumber: Number(payload.warningsCount) || (existingEvents.length + 1)
+    });
+  }
 
-    const teacherAddedMarks = Number(existing.teacherDeductedMarks || 0);
-    const clientWarnings = Number(payload.warningsCount ?? existing.selfWarningsCount ?? 0);
-    const marksPerWarn = Math.max(0, Number(payload.marksPerWarning) || 2);
-    const computedClientPenalty = Math.max(
-      Number(payload.penaltyMarksDeducted || 0),
-      clientWarnings * marksPerWarn
-    );
-    const totalWarnings = Math.max(clientWarnings, Number(existing.teacherWarningsCount || 0) + clientWarnings);
-    const totalDeductedMarks = Math.max(
-      computedClientPenalty + teacherAddedMarks,
-      Number(existing.penaltyMarksDeducted || 0)
-    );
+  const teacherAddedMarks = Number(existing.teacherDeductedMarks || 0);
+  const clientWarnings = Number(payload.warningsCount ?? existing.selfWarningsCount ?? 0);
+  const marksPerWarn = Math.max(0, Number(payload.marksPerWarning) || 2);
+  const computedClientPenalty = Math.max(
+    Number(payload.penaltyMarksDeducted || 0),
+    clientWarnings * marksPerWarn
+  );
+  const totalWarnings = Math.max(clientWarnings, Number(existing.teacherWarningsCount || 0) + clientWarnings);
+  const totalDeductedMarks = Math.max(
+    computedClientPenalty + teacherAddedMarks,
+    Number(existing.penaltyMarksDeducted || 0)
+  );
 
-    updatedSession = {
-      sessionKey,
-      tenantId: tid,
-      examId,
-      examTitle,
-      studentId: studentId || existing.studentId || sessionKey,
-      studentIndexNumber: String(
-        payload.studentIndexNumber ||
-          payload.studentIndex ||
-          payload.admissionNumber ||
-          existing.studentIndexNumber ||
-          studentId ||
-          ''
-      ).trim(),
-      className: String(payload.className || payload.level || existing.className || 'Enrolled Class').trim(),
-      studentName: studentName || existing.studentName,
-      studentEmail: studentEmail || existing.studentEmail || '',
-      status: payload.status || existing.status || 'CAMERA_ACTIVE',
-      movementStatus: payload.movementStatus || payload.status || 'NORMAL',
-      movementDelta: payload.movementDelta !== undefined ? Number(payload.movementDelta) : (existing.movementDelta || 0),
-      cameraActive: Boolean(payload.cameraActive ?? payload.snapshotDataUrl ?? existing.cameraActive),
-      snapshotDataUrl: payload.snapshotDataUrl || existing.snapshotDataUrl || null,
-      liveFrameSeq: (Number(existing.liveFrameSeq) || 0) + 1,
-      latestReason: payload.latestReason || existing.latestReason || 'Continuous webcam & focus monitoring active.',
-      selfWarningsCount: clientWarnings,
-      teacherWarningsCount: Number(existing.teacherWarningsCount || 0),
-      warningsCount: totalWarnings,
-      teacherDeductedMarks: teacherAddedMarks,
-      penaltyMarksDeducted: totalDeductedMarks,
-      marksPerWarning: marksPerWarn,
-      events: nextEvents.slice(0, 60),
-      startedAt: existing.startedAt || nowIso,
-      lastHeartbeatAt: nowIso
-    };
+  const updatedSession = {
+    sessionKey,
+    tenantId: tid,
+    examId,
+    examTitle,
+    studentId: studentId || existing.studentId || sessionKey,
+    studentIndexNumber: String(
+      payload.studentIndexNumber ||
+        payload.studentIndex ||
+        payload.admissionNumber ||
+        existing.studentIndexNumber ||
+        studentId ||
+        ''
+    ).trim(),
+    className: String(payload.className || payload.level || existing.className || 'Enrolled Class').trim(),
+    studentName: studentName || existing.studentName,
+    studentEmail: studentEmail || existing.studentEmail || '',
+    status: payload.status || existing.status || 'CAMERA_ACTIVE',
+    movementStatus: payload.movementStatus || payload.status || 'NORMAL',
+    movementDelta: payload.movementDelta !== undefined ? Number(payload.movementDelta) : (existing.movementDelta || 0),
+    cameraActive: Boolean(payload.cameraActive ?? payload.snapshotDataUrl ?? existing.cameraActive),
+    snapshotDataUrl: payload.snapshotDataUrl || existing.snapshotDataUrl || null,
+    liveFrameSeq: (Number(existing.liveFrameSeq) || 0) + 1,
+    latestReason: payload.latestReason || existing.latestReason || 'Continuous webcam & focus monitoring active.',
+    selfWarningsCount: clientWarnings,
+    teacherWarningsCount: Number(existing.teacherWarningsCount || 0),
+    warningsCount: totalWarnings,
+    teacherDeductedMarks: teacherAddedMarks,
+    penaltyMarksDeducted: totalDeductedMarks,
+    marksPerWarning: marksPerWarn,
+    events: nextEvents.slice(0, 60),
+    startedAt: existing.startedAt || nowIso,
+    lastHeartbeatAt: nowIso
+  };
 
-    tenantSessions[sessionKey] = updatedSession;
-    activeProctoringSessions[String(tid)] = tenantSessions;
-    return { ...curr, activeProctoringSessions };
-  });
+  // Instant RAM update (<1ms latency)
+  memMap.set(sessionKey, updatedSession);
+
+  // Push instantaneously to all connected Teacher Exam Monitor SSE streams & Socket.IO clients
+  proctorEventBus.emit(`tenant:${tid}`, { type: 'proctor_live_frame', session: updatedSession });
 
   try {
     const socketServer = require('../../core/socket/socketServer');
@@ -1072,13 +1107,26 @@ const recordProctorHeartbeat = async (tenantId = 1, payload = {}) => {
     }
   } catch { }
 
+  // Persist to disk only on new sessions, warnings, or every 10s (eliminates event-loop blocking disk writes per camera frame)
+  const flushKey = `${tid}::${sessionKey}`;
+  const lastFlush = lastProctorDiskFlushAt.get(flushKey) || 0;
+  if (isFirstInMem || hasNewAlert || (nowMs - lastFlush) >= PROCTOR_DISK_FLUSH_INTERVAL_MS) {
+    lastProctorDiskFlushAt.set(flushKey, nowMs);
+    writePersistentStore((curr) => {
+      const activeProctoringSessions = { ...(curr.activeProctoringSessions || {}) };
+      const tenantSessions = { ...(activeProctoringSessions[String(tid)] || {}) };
+      tenantSessions[sessionKey] = updatedSession;
+      activeProctoringSessions[String(tid)] = tenantSessions;
+      return { ...curr, activeProctoringSessions };
+    });
+  }
+
   return updatedSession;
 };
 
 const getLiveProctorSessions = async (tenantId = 1, filters = {}) => {
   const tid = parseInt(tenantId, 10) || 1;
-  const store = readPersistentStore();
-  const sessMap = store.activeProctoringSessions?.[String(tid)] || {};
+  const sessMap = getMergedTenantProctorSessions(tid);
   const q = String(filters.search || '').trim().toLowerCase();
   const examFilter = String(filters.examId || '').trim();
 
@@ -1113,7 +1161,7 @@ const sendProctorMessage = async (tenantId = 1, payload = {}, user = null) => {
   const severity = String(payload.severity || (deductMarks > 0 ? 'WARNING' : 'INFO')).toUpperCase();
 
   const store = readPersistentStore();
-  const liveSessions = Object.values(store.activeProctoringSessions?.[String(tid)] || {});
+  const liveSessions = Object.values(getMergedTenantProctorSessions(tid, store));
   const rosterUsers = (store.registeredUsers || []).filter(
     (u) => String(u.tenantId || '1') === String(tid) && String(u.role || '').toUpperCase() === 'STUDENT'
   );
@@ -1202,7 +1250,8 @@ const sendProctorMessage = async (tenantId = 1, payload = {}, user = null) => {
     proctorMessages[String(tid)] = [msgEntry, ...prevMsgs.slice(0, 199)];
 
     const activeProctoringSessions = { ...(curr.activeProctoringSessions || {}) };
-    const tenantSessMap = { ...(activeProctoringSessions[String(tid)] || {}) };
+    const tenantSessMap = { ...getMergedTenantProctorSessions(tid, curr) };
+    const memMap = getTenantMemorySessionsMap(tid);
 
     if (deductMarks > 0 || severity === 'WARNING') {
       const targetIdSet = new Set(msgEntry.recipientStudentIds);
@@ -1226,7 +1275,7 @@ const sendProctorMessage = async (tenantId = 1, payload = {}, user = null) => {
             penaltyMarks: deductMarks,
             source: 'TEACHER_INVIGILATOR'
           };
-          tenantSessMap[sKey] = {
+          const updatedWarnSess = {
             ...s,
             status: 'WARNING_DETECTED',
             latestReason: warnEvent.reason,
@@ -1236,6 +1285,9 @@ const sendProctorMessage = async (tenantId = 1, payload = {}, user = null) => {
             penaltyMarksDeducted: nextPenaltyTotal,
             events: [warnEvent, ...(Array.isArray(s.events) ? s.events : [])].slice(0, 60)
           };
+          tenantSessMap[sKey] = updatedWarnSess;
+          memMap.set(sKey, updatedWarnSess);
+          proctorEventBus.emit(`tenant:${tid}`, { type: 'proctor_live_frame', session: updatedWarnSess });
         }
       });
       activeProctoringSessions[String(tid)] = tenantSessMap;
@@ -1243,6 +1295,8 @@ const sendProctorMessage = async (tenantId = 1, payload = {}, user = null) => {
 
     return { ...curr, proctorMessages, activeProctoringSessions };
   });
+
+  proctorEventBus.emit(`tenant:${tid}`, { type: 'proctor_message', message: msgEntry });
 
   try {
     const socketServer = require('../../core/socket/socketServer');
@@ -1278,7 +1332,7 @@ const getStudentProctorMessages = async (tenantId = 1, query = {}) => {
     });
 
   // Also fetch live session penalty total so student exam screen reflects exact teacher mark deductions
-  const sessMap = store.activeProctoringSessions?.[String(tid)] || {};
+  const sessMap = getMergedTenantProctorSessions(tid, store);
   const liveSess = Object.values(sessMap).find((s) => {
     const sameExam = !examFilter || String(s.examId) === examFilter;
     const sameStudent =
@@ -1389,6 +1443,7 @@ module.exports = {
   getAnswerSheets,
   ensureSampleExam,
   ensureQuestionBank,
+  proctorEventBus,
   recordProctorHeartbeat,
   getLiveProctorSessions,
   sendProctorMessage,

@@ -10,6 +10,7 @@ import DirectSMSInboxPanel from "../../../../../components/common/DirectSMSInbox
 import VoiceNoteRecorder from "../../../../../components/common/VoiceNoteRecorder";
 import { useDashboardTabSync } from "../../../../../hooks/useDashboardTabSync";
 import { checkDemoEntryLimit, trackDemoEntryCreated } from "../../../../../utils/demoLimitGuard";
+import { getDashboardTheme } from "../../../../../utils/dashboardTheme";
 import { getUserAvatar, rotateUserAvatar, getLocalFallbackAvatar } from "../../../../../utils/userAvatars";
 import "../staff/StaffDashboard.css";
 
@@ -30,7 +31,7 @@ export default function SecretaryDashboard() {
 
   const { activeTab, setActiveTab } = useDashboardTabSync("visitors", "gbs_secretary_active_tab");
   const [avatarUrl, setAvatarUrl] = useState(() => getUserAvatar("SECRETARY"));
-  const [isNavyMode, setIsNavyMode] = useState(() => localStorage.getItem("gbs_ui_theme") === "navy");
+  const [isNavyMode, setIsNavyMode] = useState(() => getDashboardTheme() === "navy");
   const [overview, setOverview] = useState({
     activeVisitors: 0,
     totalVisitorsLogged: 0,
@@ -66,14 +67,16 @@ export default function SecretaryDashboard() {
   });
 
   useEffect(() => {
-    const syncTheme = () => setIsNavyMode(localStorage.getItem("gbs_ui_theme") === "navy");
+    const syncTheme = () => setIsNavyMode(getDashboardTheme() === "navy");
     const tabHandler = (e) => {
       if (e?.detail?.tab) setActiveTab(e.detail.tab);
     };
     window.addEventListener("gbs_theme_changed", syncTheme);
+    window.addEventListener("gbs_ui_theme_changed", syncTheme);
     window.addEventListener("gbs_open_dashboard_tab", tabHandler);
     return () => {
       window.removeEventListener("gbs_theme_changed", syncTheme);
+      window.removeEventListener("gbs_ui_theme_changed", syncTheme);
       window.removeEventListener("gbs_open_dashboard_tab", tabHandler);
     };
   }, []);
@@ -200,6 +203,12 @@ export default function SecretaryDashboard() {
       data-testid="secretary-dashboard-root"
     >
       <TopCenterSystemBanner roleTitle="School Secretary & Front Office" />
+      <LiveCallLauncherAndReceiver
+        variant="GLOBAL_RECEIVER"
+        userRole="SECRETARY"
+        currentUser={currentUser}
+        onFeedback={(msg, isErr) => setFeedback({ type: isErr ? "error" : "success", message: msg })}
+      />
 
       <div className="role-dashboard-container">
         <WindowControlsBar

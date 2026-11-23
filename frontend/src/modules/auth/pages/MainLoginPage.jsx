@@ -352,15 +352,24 @@ export default function MainLoginPage() {
             <GlobalLocaleSelector compact={false} />
             <button
               type="button"
-              onClick={() => {
+              onClick={async () => {
                 const promptObj = typeof window !== "undefined" ? window.__gbsDeferredInstallPrompt : null;
                 if (promptObj) {
                   try {
                     const p = promptObj.prompt();
                     window.__gbsDeferredInstallPrompt = null;
-                    Promise.resolve(p).catch(() => { });
-                    return;
-                  } catch { }
+                    await p;
+                    const choice = await promptObj.userChoice;
+                    if (choice?.outcome === "accepted") {
+                      window.__gbsAppInstalled = true;
+                      if (window.showGBSOpenNotice) {
+                        window.showGBSOpenNotice("✅ GBS App installed onto your device Home Screen / App Launcher!", "success", "MOBILE APP INSTALLED");
+                      }
+                      return;
+                    }
+                  } catch {
+                    window.__gbsDeferredInstallPrompt = null;
+                  }
                 }
                 setShowMobileInstallModal(true);
               }}

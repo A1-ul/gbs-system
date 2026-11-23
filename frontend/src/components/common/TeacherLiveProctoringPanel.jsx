@@ -1,7 +1,8 @@
-import React, { useState, useEffect, useCallback } from "react";
+import React, { useState, useEffect, useCallback, useRef } from "react";
 import apiClient from "../../api/client/apiClient";
 import { printHtmlSafely } from "../../utils/safeWindow";
 import { getActiveSchoolName } from "../../utils/schoolBranding";
+import { getAccessToken } from "../../utils/tokenStorage";
 
 /**
  * TeacherLiveProctoringPanel
@@ -48,6 +49,19 @@ export default function TeacherLiveProctoringPanel({
     }
   };
 
+  const sseConnectedRef = useRef(false);
+
+  const fetchLiveOnly = useCallback(async () => {
+    try {
+      const liveRes = await apiClient
+        .get("/ai-exam/proctor/live", { params: selectedExamId ? { examId: selectedExamId } : {} })
+        .catch(() => null);
+      if (liveRes?.data?.data?.sessions) {
+        setLiveSessions(liveRes.data.data.sessions);
+      }
+    } catch { }
+  }, [selectedExamId]);
+
   const fetchProctoringData = useCallback(async () => {
     try {
       const [liveRes, evRes, msgRes] = await Promise.all([
@@ -69,9 +83,78 @@ export default function TeacherLiveProctoringPanel({
 
   useEffect(() => {
     fetchProctoringData();
-    const timer = setInterval(fetchProctoringData, 1000);
-    return () => clearInterval(timer);
-  }, [fetchProctoringData]);
+
+    // Real-time SSE Live Proctoring Stream (<50ms latency as students stream exam camera frames)
+    let eventSource = null;
+    try {
+      if (typeof EventSource !== "undefined") {
+        const tok = getAccessToken();
+        const base = String(apiClient.defaults?.baseURL || "/api/v1").replace(/\/+$/, "");
+        const qs = new URLSearchParams();
+        if (tok) qs.set("token", tok);
+        if (selectedExamId) qs.set("examId", selectedExamId);
+        const sseUrl = `${base}/ai-exam/proctor/stream${qs.toString() ? `?${qs.toString()}` : ""}`;
+        eventSource = new EventSource(sseUrl);
+
+        eventSource.addEventListener("proctor_snapshot", (evt) => {
+          sseConnectedRef.current = true;
+          try {
+            const d = JSON.parse(evt.data);
+            if (Array.isArray(d.sessions)) setLiveSessions(d.sessions);
+          } catch { }
+        });
+
+        eventSource.addEventListener("proctor_live_frame", (evt) => {
+          sseConnectedRef.current = true;
+          try {
+            const d = JSON.parse(evt.data);
+            const nextSess = d?.session;
+            if (!nextSess?.sessionKey) return;
+            setLiveSessions((prev) => {
+              const idx = prev.findIndex((s) => String(s.sessionKey) === String(nextSess.sessionKey));
+              if (idx >= 0) {
+                const copy = [...prev];
+                copy[idx] = nextSess;
+                return copy;
+              }
+              return [nextSess, ...prev];
+            });
+          } catch { }
+        });
+
+        eventSource.addEventListener("proctor_message", (evt) => {
+          try {
+            const d = JSON.parse(evt.data);
+            if (d?.message?.id) {
+              setSentMessagesLog((prev) =>
+                prev.some((m) => m.id === d.message.id) ? prev : [d.message, ...prev]
+              );
+            }
+          } catch { }
+        });
+
+        eventSource.onerror = () => {
+          sseConnectedRef.current = false;
+        };
+      }
+    } catch { }
+
+    const fastFallbackTimer = setInterval(() => {
+      if (!sseConnectedRef.current) {
+        fetchLiveOnly();
+      }
+    }, 1500);
+    const fullSyncTimer = setInterval(fetchProctoringData, 8000);
+
+    return () => {
+      clearInterval(fastFallbackTimer);
+      clearInterval(fullSyncTimer);
+      sseConnectedRef.current = false;
+      if (eventSource) {
+        try { eventSource.close(); } catch { }
+      }
+    };
+  }, [fetchProctoringData, fetchLiveOnly, selectedExamId]);
 
   // Combined search suggestions across live cameras + class roster
   const searchCandidateMatches = (() => {

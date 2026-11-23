@@ -2,6 +2,7 @@ import React, { Suspense, lazy } from "react";
 import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
 import GBSVoiceAssistant from "../components/common/GBSVoiceAssistant";
 import TenantLocaleTranslatorController from "../components/common/TenantLocaleTranslatorController";
+import DashboardTabPageController from "../components/common/DashboardTabPageController";
 import { isDemoSandboxMode } from "../utils/tokenStorage";
 
 import MainLoginPage from "../modules/auth/pages/MainLoginPage";
@@ -197,6 +198,7 @@ function ProtectedPortalRoute({ children, loginPath = "/login", allowedRoles = n
 export default function AppRouter() {
   return (
     <BrowserRouter>
+      <DashboardTabPageController />
       <Suspense fallback={<div style={{ minHeight: "100vh", display: "flex", alignItems: "center", justifyContent: "center", background: "#020617", color: "#f8fafc", fontWeight: 800, fontFamily: "'Times New Roman', Times, Georgia, serif" }}>Loading GBS System Portal...</div>}>
         <Routes>
           {/* Master First Page of the System: Tenant Onboarding Forms with Auto-Redirect */}

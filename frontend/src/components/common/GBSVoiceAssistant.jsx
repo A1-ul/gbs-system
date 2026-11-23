@@ -311,6 +311,107 @@ function buildLocalQuestionFormation(rawQuery, moduleLabel = "GBS Unified System
 const INTRO_GREETING =
   "Hello! Welcome to GBS SYSTEM. What action, what command, what activities, or what information do you want to know and learn on GBS SYSTEM? We are ready to answer you!";
 
+const AMERICAN_MALE_VOICE_KEYWORDS = [
+  "microsoft guy",
+  "microsoft david",
+  "microsoft mark",
+  "microsoft andrew",
+  "microsoft christopher",
+  "microsoft eric",
+  "microsoft roger",
+  "microsoft steffan",
+  "microsoft tony",
+  "microsoft davis",
+  "microsoft jason",
+  "microsoft brandon",
+  "google us english male",
+  "aaron",
+  "alex",
+  "fred",
+  "nathan",
+  "evan",
+  "tom",
+  "bruce",
+  "ralph",
+  "matthew",
+  "joey",
+  "justin",
+  "stephen",
+  "male"
+];
+
+const FEMALE_VOICE_EXCLUDE_KEYWORDS = [
+  "zira",
+  "aria",
+  "jenny",
+  "michelle",
+  "sara",
+  "ana",
+  "emma",
+  "ava",
+  "samantha",
+  "victoria",
+  "karen",
+  "moira",
+  "tessa",
+  "fiona",
+  "allison",
+  "nicky",
+  "susan",
+  "kate",
+  "hazel",
+  "libby",
+  "sonia",
+  "natasha",
+  "clara",
+  "female",
+  "woman"
+];
+
+export function selectPreferredAmericanMaleVoice(voices = []) {
+  if (!Array.isArray(voices) || voices.length === 0) return null;
+
+  const scoreVoice = (v) => {
+    const name = String(v?.name || "").toLowerCase();
+    const lang = String(v?.lang || "").toLowerCase().replace("_", "-");
+    let score = 0;
+
+    const isUsEnglish = lang === "en-us" || lang.startsWith("en-us");
+    const isAnyEnglish = lang.startsWith("en");
+    const isFemale = FEMALE_VOICE_EXCLUDE_KEYWORDS.some((kw) => name.includes(kw));
+    const maleIdx = AMERICAN_MALE_VOICE_KEYWORDS.findIndex((kw) => name.includes(kw));
+    const isMale = maleIdx !== -1;
+
+    if (isUsEnglish) score += 100;
+    else if (isAnyEnglish) score += 35;
+
+    if (isMale) {
+      score += 120 - Math.min(maleIdx, 30);
+    }
+    if (isFemale) {
+      score -= 140;
+    }
+    if (name.includes("natural") || name.includes("online") || name.includes("neural") || name.includes("enhanced")) {
+      score += 18;
+    }
+    if (isUsEnglish && !isFemale && (name.includes("google us english") || name.includes("en-us"))) {
+      score += 20;
+    }
+    return score;
+  };
+
+  let best = voices[0];
+  let bestScore = -Infinity;
+  for (const v of voices) {
+    const sc = scoreVoice(v);
+    if (sc > bestScore) {
+      bestScore = sc;
+      best = v;
+    }
+  }
+  return best || null;
+}
+
 const DONE_INTENT_REGEX = /\b(we are done|i am done|i'm done|yes done|done now|all done|finished|nothing else|no more|no other|that's all|that is all|conversation is over|go to sleep|go off|sleep now|goodbye|bye bye|stop listening|turn off)\b/i;
 const ANOTHER_INTENT_REGEX = /\b(there is another|another question|another one|one more|not done|not yet|have another|more help|still here)\b/i;
 const FOLLOWUP_PROMPT = "Are we done with what you want, or is there another? Tell me if there is another, or say we are done.";
@@ -341,10 +442,17 @@ export default function GBSVoiceAssistant() {
   const [speechSupported, setSpeechSupported] = useState(true);
   const [memorySyncedVersion, setMemorySyncedVersion] = useState("2.7.0");
 
-  const [voiceRate, setVoiceRate] = useState(1.04);
-  const [voicePitch, setVoicePitch] = useState(1.0);
+  const [voiceRate, setVoiceRate] = useState(() => {
+    try {
+      const saved = parseFloat(localStorage.getItem("gbs_voice_rate") || "");
+      if (Number.isFinite(saved) && saved >= 0.72 && saved <= 1.0) return saved;
+    } catch { }
+    return 0.88; // Clear, measured American English speaking pace (never fast mode)
+  });
+  const [voicePitch, setVoicePitch] = useState(0.93);
   const [selectedVoiceIndex, setSelectedVoiceIndex] = useState(0);
   const [availableVoices, setAvailableVoices] = useState([]);
+  const [activeVoiceLabel, setActiveVoiceLabel] = useState("US English Male");
 
   const recognitionRef = useRef(null);
   const synthRef = useRef(typeof window !== "undefined" ? window.speechSynthesis : null);
@@ -402,8 +510,15 @@ export default function GBSVoiceAssistant() {
     const loadVoices = () => {
       const voices = window.speechSynthesis.getVoices();
       if (voices && voices.length > 0) {
-        const englishVoices = voices.filter((v) => v.lang.startsWith("en"));
-        setAvailableVoices(englishVoices.length > 0 ? englishVoices : voices);
+        const englishVoices = voices.filter((v) => String(v.lang || "").toLowerCase().startsWith("en"));
+        const pool = englishVoices.length > 0 ? englishVoices : voices;
+        setAvailableVoices(pool);
+        const preferred = selectPreferredAmericanMaleVoice(pool);
+        if (preferred) {
+          const prefIdx = pool.indexOf(preferred);
+          if (prefIdx >= 0) setSelectedVoiceIndex(prefIdx);
+          setActiveVoiceLabel(`${preferred.name} (${preferred.lang || "en-US"})`);
+        }
       }
     };
     loadVoices();
@@ -542,19 +657,25 @@ export default function GBSVoiceAssistant() {
       synthRef.current.cancel();
     } catch { }
 
-    const activeLangProfile = getLanguageProfile();
+    const allVoices =
+      (availableVoices && availableVoices.length > 0)
+        ? availableVoices
+        : (typeof window !== "undefined" && window.speechSynthesis?.getVoices ? window.speechSynthesis.getVoices() : []);
     const utterance = new SpeechSynthesisUtterance(text);
-    const matchedLangVoice = availableVoices.find((v) =>
-      String(v.lang || "").toLowerCase().startsWith(String(activeLangProfile.code || "en").toLowerCase())
-    );
-    if (matchedLangVoice) {
-      utterance.voice = matchedLangVoice;
-    } else if (availableVoices.length > 0) {
-      utterance.voice = availableVoices[selectedVoiceIndex] || availableVoices[0];
+    const preferredMaleUsVoice = selectPreferredAmericanMaleVoice(allVoices);
+    const chosenVoice = preferredMaleUsVoice || allVoices[selectedVoiceIndex] || allVoices[0] || null;
+    if (chosenVoice) {
+      utterance.voice = chosenVoice;
+      const lowerName = String(chosenVoice.name || "").toLowerCase();
+      const soundsFemale = FEMALE_VOICE_EXCLUDE_KEYWORDS.some((kw) => lowerName.includes(kw));
+      // Keep warm, clear American male tone; lower pitch slightly if OS only exposes a neutral/female fallback voice
+      utterance.pitch = soundsFemale ? 0.78 : voicePitch;
+    } else {
+      utterance.pitch = voicePitch;
     }
-    utterance.rate = voiceRate;
-    utterance.pitch = voicePitch;
-    utterance.lang = activeLangProfile.speechLocale || "en-US";
+    utterance.rate = Math.min(0.98, Math.max(0.75, Number(voiceRate) || 0.88));
+    utterance.lang = "en-US";
+    utterance.volume = 1.0;
 
     utterance.onstart = () => {
       setIsSpeaking(true);
@@ -1210,7 +1331,7 @@ export default function GBSVoiceAssistant() {
                   </button>
                 </form>
 
-                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginTop: "8px" }}>
+                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: "6px", marginTop: "8px" }}>
                   <button
                     type="button"
                     onClick={() => {
@@ -1240,6 +1361,36 @@ export default function GBSVoiceAssistant() {
                     {isListening ? "⏹️ Pause Mic" : "🎙️ Keep Listening"}
                   </button>
 
+                  <div style={{ display: "inline-flex", alignItems: "center", gap: "4px", fontSize: "10.5px", color: "#cbd5e1" }}>
+                    <span style={{ color: "#7dd3fc", fontWeight: 700 }}>🇺🇸 Male:</span>
+                    {[
+                      { label: "Slow", val: 0.8 },
+                      { label: "Clear", val: 0.88 },
+                      { label: "Steady", val: 0.95 }
+                    ].map((opt) => (
+                      <button
+                        key={opt.label}
+                        type="button"
+                        onClick={() => {
+                          setVoiceRate(opt.val);
+                          try { localStorage.setItem("gbs_voice_rate", String(opt.val)); } catch { }
+                        }}
+                        style={{
+                          background: Math.abs(voiceRate - opt.val) < 0.02 ? "#d4af37" : "#0f2347",
+                          color: Math.abs(voiceRate - opt.val) < 0.02 ? "#081833" : "#f5d061",
+                          border: "1px solid rgba(212, 175, 55, 0.5)",
+                          borderRadius: "6px",
+                          padding: "3px 6px",
+                          fontSize: "10px",
+                          fontWeight: 800,
+                          cursor: "pointer"
+                        }}
+                      >
+                        {opt.label}
+                      </button>
+                    ))}
+                  </div>
+
                   <button
                     type="button"
                     onClick={() => speakAloud(assistantResponse)}
@@ -1256,6 +1407,9 @@ export default function GBSVoiceAssistant() {
                   >
                     🔊 Replay
                   </button>
+                </div>
+                <div style={{ marginTop: "4px", fontSize: "10px", color: "#94a3b8", textAlign: "right" }}>
+                  Voice: <strong style={{ color: "#f6dd84" }}>{activeVoiceLabel}</strong> • Speed {voiceRate.toFixed(2)}x
                 </div>
               </div>
             </>

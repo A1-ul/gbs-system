@@ -50,6 +50,7 @@ export default function LiveCallLauncherAndReceiver({
   const [directory, setDirectory] = useState({ contacts: [], headmasters: [], teachers: [], parents: [], students: [], staff: [] });
   const [selectedContactId, setSelectedContactId] = useState("");
   const [conferenceTitle, setConferenceTitle] = useState("");
+  const [headmasterConfAudience, setHeadmasterConfAudience] = useState("ALL_CAMPUS_CONFERENCE");
   const [liveClassTopic, setLiveClassTopic] = useState("");
   const [liveClassTarget, setLiveClassTarget] = useState("");
   const [activeModalSession, setActiveModalSession] = useState(null);
@@ -200,15 +201,23 @@ export default function LiveCallLauncherAndReceiver({
   const availableTargets = isDeveloper
     ? [...(directory.headmasters || [])]
     : isHeadmaster
-      ? [...(directory.parents || []), ...(directory.teachers || []), ...(directory.staff || [])]
+      ? [
+        ...(directory.teachers || []),
+        ...(directory.staff || []),
+        ...(directory.parents || []),
+        ...(directory.students || [])
+      ]
       : isTeacher
-        ? [...(directory.parents || []), ...(directory.headmasters || []), ...(directory.students || [])]
+        ? [...(directory.parents || []), ...(directory.headmasters || []), ...(directory.students || []), ...(directory.staff || [])]
         : [...(directory.headmasters || []), ...(directory.teachers || [])];
 
   const chosenContact = availableTargets.find((c) => String(c.userId) === String(selectedContactId)) || null;
 
-  const activeTeacherLiveClasses = activeConferences.filter((c) => c.callScope === "CLASS_CONFERENCE");
+  const activeTeacherLiveClasses = activeConferences.filter((c) => c.callScope === "CLASS_CONFERENCE" || c.callScope === "STUDENT_CONFERENCE" || c.callScope === "ALL_CAMPUS_CONFERENCE");
   const activeDevExecConfs = activeConferences.filter((c) => c.callScope === "DEVELOPER_HEADMASTERS_CONFERENCE");
+  const activeHeadmasterCampusConfs = activeConferences.filter((c) =>
+    ["FACULTY_CONFERENCE", "STAFF_CONFERENCE", "PARENT_CONFERENCE", "STUDENT_CONFERENCE", "ALL_CAMPUS_CONFERENCE"].includes(String(c.callScope || "").toUpperCase())
+  );
 
   const resolvedTeacherClassName = (() => {
     if (liveClassTarget) return liveClassTarget;
@@ -326,6 +335,60 @@ export default function LiveCallLauncherAndReceiver({
                   style={{ background: "#0284c7", color: "#fff", border: "1px solid #7dd3fc", borderRadius: "8px", padding: "8px 14px", fontWeight: 800, cursor: "pointer", fontSize: "0.82rem" }}
                 >
                   🎙️ Join Audio Only
+                </button>
+              </div>
+            </div>
+          ))}
+        </div>
+      )}
+
+      {/* Global Active Headmaster Conference Banner for Staff, Teachers, Parents, Secretary, HR, Accountant */}
+      {variant === "GLOBAL_RECEIVER" && !isDeveloper && !isHeadmaster && !isStudent && activeHeadmasterCampusConfs.length > 0 && (
+        <div
+          data-testid="campus-live-conference-banner"
+          style={{ display: "flex", flexDirection: "column", gap: "8px", marginBottom: "12px" }}
+        >
+          {activeHeadmasterCampusConfs.slice(0, 2).map((conf) => (
+            <div
+              key={conf.id}
+              style={{
+                background: "linear-gradient(135deg, #065f46 0%, #081833 100%)",
+                border: "2px solid #d4af37",
+                borderRadius: "14px",
+                padding: "12px 16px",
+                color: "#ffffff",
+                display: "flex",
+                justifyContent: "space-between",
+                alignItems: "center",
+                flexWrap: "wrap",
+                gap: "12px",
+                boxShadow: "0 10px 30px rgba(0,0,0,0.4)"
+              }}
+            >
+              <div>
+                <div style={{ fontSize: "0.72rem", fontWeight: 900, color: "#f6dd84", textTransform: "uppercase" }}>
+                  🎥 LIVE SCHOOL VIDEO CONFERENCE ACTIVE • {(conf.participants || []).length} IN ROOM
+                </div>
+                <strong style={{ fontSize: "1rem" }}>
+                  {conf.title} — Hosted by {conf.initiatorName}
+                </strong>
+              </div>
+              <div style={{ display: "flex", gap: "8px", flexWrap: "wrap" }}>
+                <button
+                  type="button"
+                  disabled={busy}
+                  onClick={() => handleAcceptCall(conf, "VIDEO")}
+                  style={{ background: "#10b981", color: "#fff", border: "1px solid #f6dd84", borderRadius: "8px", padding: "8px 14px", fontWeight: 900, cursor: "pointer", fontSize: "0.82rem" }}
+                >
+                  🎥 Join Video Conference
+                </button>
+                <button
+                  type="button"
+                  disabled={busy}
+                  onClick={() => handleAcceptCall(conf, "VOICE")}
+                  style={{ background: "#0284c7", color: "#fff", border: "1px solid #7dd3fc", borderRadius: "8px", padding: "8px 14px", fontWeight: 800, cursor: "pointer", fontSize: "0.82rem" }}
+                >
+                  🎙️ Join Audio
                 </button>
               </div>
             </div>
@@ -468,7 +531,7 @@ export default function LiveCallLauncherAndReceiver({
                 {isDeveloper
                   ? "Developer ↔ Headmaster Direct Video / Voice Calls & Executive Conferences"
                   : isHeadmaster
-                    ? "Headmaster–Teachers Conferences & Direct Headmaster–Parent Video / Voice Calls"
+                    ? "Headmaster Live Video Conferences (Staff, Teachers, Parents & Students) & Direct Calls"
                     : isTeacher
                       ? "Live Online Classes with Students & Direct Faculty / Parent Calls"
                       : "Direct Parent–Headmaster & Parent–Teacher Video / Voice Calling"}
@@ -596,7 +659,7 @@ export default function LiveCallLauncherAndReceiver({
                 style={{ width: "100%", padding: "8px 10px", borderRadius: "8px", border: "1px solid rgba(212,175,55,0.5)", background: "#081833", color: "#ffffff", marginBottom: "10px", fontSize: "0.82rem" }}
               >
                 <option value="">
-                  -- Select {isDeveloper ? "Registered Institution Headmaster" : isHeadmaster ? "Parent / Teacher / Staff" : isTeacher ? "Parent, Headmaster, or Student" : "Headmaster or Teacher"} --
+                  -- Select {isDeveloper ? "Registered Institution Headmaster" : isHeadmaster ? "Teacher / Staff / Parent / Student" : isTeacher ? "Parent, Headmaster, Student, or Staff" : "Headmaster or Teacher"} --
                 </option>
                 {availableTargets.map((c) => (
                   <option key={`${c.tenantId || "t"}_${c.userId}`} value={c.userId}>
@@ -650,13 +713,32 @@ export default function LiveCallLauncherAndReceiver({
               </div>
               {!isParent && (
                 <>
+                  {isHeadmaster && (
+                    <div style={{ marginBottom: "8px" }}>
+                      <label style={{ display: "block", fontSize: "0.72rem", color: "#f6dd84", fontWeight: 800, marginBottom: "4px" }}>
+                        🎯 Select Conference Audience (Staff, Teachers, Parents, or Students)
+                      </label>
+                      <select
+                        data-testid="headmaster-conference-audience-select"
+                        value={headmasterConfAudience}
+                        onChange={(e) => setHeadmasterConfAudience(e.target.value)}
+                        style={{ width: "100%", padding: "8px 10px", borderRadius: "8px", border: "1px solid rgba(212,175,55,0.55)", background: "#081833", color: "#ffffff", fontSize: "0.82rem", fontWeight: 700 }}
+                      >
+                        <option value="ALL_CAMPUS_CONFERENCE">🏛️ All Campus (Staff, Teachers, Parents &amp; Students)</option>
+                        <option value="STAFF_CONFERENCE">👔 All School Staff (Admin, Secretary, HR, Accountant, Non-Teaching)</option>
+                        <option value="FACULTY_CONFERENCE">👨‍🏫 Teachers &amp; Academic Faculty</option>
+                        <option value="PARENT_CONFERENCE">👨‍👩‍👧 Parents &amp; Guardians (PTA Video Meeting)</option>
+                        <option value="STUDENT_CONFERENCE">🎓 Students Live Assembly / Town Hall</option>
+                      </select>
+                    </div>
+                  )}
                   <input
                     type="text"
                     placeholder={
                       isDeveloper
                         ? "Agenda (e.g. National Headmasters Platform Upgrade Briefing)"
                         : isHeadmaster
-                          ? "Agenda (e.g. Headmaster & Teachers Staff Briefing)"
+                          ? "Agenda (e.g. Term Briefing with Staff / Parents / Teachers / Students)"
                           : "Topic (e.g. PTA Meeting / Revision Conference)"
                     }
                     value={conferenceTitle}
@@ -668,21 +750,28 @@ export default function LiveCallLauncherAndReceiver({
                       type="button"
                       disabled={busy}
                       data-testid="launch-faculty-conference-btn"
-                      onClick={() =>
+                      onClick={() => {
+                        const hmAudienceTitles = {
+                          ALL_CAMPUS_CONFERENCE: "Headmaster All-Campus Live Video Conference (Staff, Teachers, Parents & Students)",
+                          STAFF_CONFERENCE: "Headmaster & School Staff Live Video Conference",
+                          FACULTY_CONFERENCE: "Headmaster & Teachers Faculty Video Conference",
+                          PARENT_CONFERENCE: "Headmaster & Parents PTA Live Video Conference",
+                          STUDENT_CONFERENCE: "Headmaster & Students Live Video Assembly"
+                        };
                         handleLaunchConference(
                           isDeveloper
                             ? "DEVELOPER_HEADMASTERS_CONFERENCE"
                             : isHeadmaster
-                              ? "FACULTY_CONFERENCE"
+                              ? headmasterConfAudience
                               : "CLASS_CONFERENCE",
                           isDeveloper
                             ? "Developer & Headmasters Executive Video Conference"
                             : isHeadmaster
-                              ? "Headmaster & Teachers Live Conference"
+                              ? (hmAudienceTitles[headmasterConfAudience] || "Headmaster Live Video Conference")
                               : "Teacher Live Video Conference",
                           "VIDEO"
-                        )
-                      }
+                        );
+                      }}
                       style={{ flex: 1, background: "linear-gradient(135deg, #2563eb, #1d4ed8)", color: "#fff", border: "1px solid #7dd3fc", borderRadius: "8px", padding: "8px 12px", fontWeight: 800, cursor: "pointer", fontSize: "0.8rem" }}
                     >
                       🎥 Launch Video Conference
@@ -692,8 +781,16 @@ export default function LiveCallLauncherAndReceiver({
                       disabled={busy}
                       onClick={() =>
                         handleLaunchConference(
-                          isDeveloper ? "DEVELOPER_HEADMASTERS_CONFERENCE" : "PARENT_CONFERENCE",
-                          isDeveloper ? "Developer & Headmasters Voice Briefing" : "Parent & Guardian Voice Conference",
+                          isDeveloper
+                            ? "DEVELOPER_HEADMASTERS_CONFERENCE"
+                            : isHeadmaster
+                              ? headmasterConfAudience
+                              : "PARENT_CONFERENCE",
+                          isDeveloper
+                            ? "Developer & Headmasters Voice Briefing"
+                            : isHeadmaster
+                              ? `Headmaster Live Voice Conference (${headmasterConfAudience.replace(/_/g, " ")})`
+                              : "Parent & Guardian Voice Conference",
                           "VOICE"
                         )
                       }

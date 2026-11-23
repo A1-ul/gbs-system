@@ -12,6 +12,7 @@ import { useDashboardTabSync } from "../../../../../hooks/useDashboardTabSync";
 import SchoolClinicHubPanel from "../../../../../components/common/SchoolClinicHubPanel";
 import SchoolStationeryHubPanel from "../../../../../components/common/SchoolStationeryHubPanel";
 import StaffAttendanceClockWidget from "../../../../../components/common/StaffAttendanceClockWidget";
+import LiveCallLauncherAndReceiver from "../../../../../components/common/LiveCallLauncherAndReceiver";
 import "./StaffDashboard.css";
 
 export default function StaffDashboard() {
@@ -334,6 +335,12 @@ export default function StaffDashboard() {
 
         {/* Prominent Top Center System Branding */}
         <TopCenterSystemBanner roleTitle="Campus Operations & Staff" />
+        <LiveCallLauncherAndReceiver
+          variant="GLOBAL_RECEIVER"
+          userRole="STAFF"
+          currentUser={currentUser}
+          onFeedback={(msg, isErr) => setFeedback({ type: isErr ? "error" : "success", message: msg })}
+        />
 
         {/* Header */}
         <header className="role-header">
