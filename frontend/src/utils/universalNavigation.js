@@ -1,3 +1,5 @@
+import { saveActiveScrollSnapshot } from "./globalNavigationScrollManager";
+
 /**
  * GBS Universal Navigation Engine
  * Standardized across all dashboards:
@@ -70,6 +72,9 @@ export function navigateToDetail(navigate, category, id, recordData = null, opti
   if (!navigate) return;
   const safeCat = String(category || "generic").toLowerCase().trim();
   const safeId = encodeURIComponent(String(id || recordData?.id || Date.now()));
+
+  // Preserve exact outgoing scroll (window + nested containers) for Back navigation
+  saveActiveScrollSnapshot();
 
   // Preserve dashboard state
   if (options.dashboardKey) {

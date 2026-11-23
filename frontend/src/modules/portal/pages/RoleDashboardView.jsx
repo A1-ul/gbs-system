@@ -10,6 +10,7 @@ import AccountantDashboard from "./dashboards/accountant/AccountantDashboard";
 import StaffDashboard from "./dashboards/staff/StaffDashboard";
 import AlumniDashboard from "../../alumni/pages/AlumniDashboard";
 import HRDashboard from "./dashboards/hr/HRDashboard";
+import SecretaryDashboard from "./dashboards/secretary/SecretaryDashboard";
 import "./RoleDashboardView.css";
 
 const ROLE_CONFIGS = {
@@ -249,6 +250,7 @@ export default function RoleDashboardView() {
   if (normalizedRole === "accountant" || normalizedRole === "bursar") return <AccountantDashboard />;
   if (normalizedRole === "staff") return <StaffDashboard />;
   if (normalizedRole === "hr") return <HRDashboard />;
+  if (normalizedRole === "secretary") return <SecretaryDashboard />;
   if (normalizedRole === "alumni" || normalizedRole === "graduate") return <AlumniDashboard />;
   if (normalizedRole === "admin" || normalizedRole === "headmaster") return <AdminDashboard />;
 

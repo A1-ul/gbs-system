@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from "react";
-import { Link, useNavigate } from "react-router-dom";
+import { Link, useNavigate, useLocation } from "react-router-dom";
 import apiClient from "../../../../../api/client/apiClient";
 import WindowControlsBar from "../../../../../components/common/WindowControlsBar";
 import TopCenterSystemBanner from "../../../../../components/common/TopCenterSystemBanner";
@@ -10,6 +10,7 @@ import { getActiveSchoolName, getActiveSchoolLogo } from "../../../../../utils/s
 import { isDemoSandboxMode, clearAuthStorage } from "../../../../../utils/tokenStorage";
 import { checkDemoEntryLimit, trackDemoEntryCreated } from "../../../../../utils/demoLimitGuard";
 import { useDashboardTabSync } from "../../../../../hooks/useDashboardTabSync";
+import { performSmartBack } from "../../../../../utils/globalNavigationScrollManager";
 import SchoolClinicHubPanel from "../../../../../components/common/SchoolClinicHubPanel";
 import StaffAttendanceClockWidget from "../../../../../components/common/StaffAttendanceClockWidget";
 import LiveCallLauncherAndReceiver from "../../../../../components/common/LiveCallLauncherAndReceiver";
@@ -17,6 +18,7 @@ import "../teacher/TeacherDashboard.css";
 
 export default function HRDashboard() {
   const navigate = useNavigate();
+  const location = useLocation();
   const [showHRGuideModal, setShowHRGuideModal] = useState(false);
   const [hrAvatar, setHrAvatar] = useState(() => getUserAvatar("HR"));
 
@@ -350,7 +352,7 @@ export default function HRDashboard() {
         <div style={{ display: "flex", alignItems: "center", gap: "14px" }}>
           <button
             type="button"
-            onClick={() => window.history.back()}
+            onClick={() => performSmartBack(navigate, location)}
             style={{
               background: "rgba(255,255,255,0.08)",
               border: "1px solid rgba(255,255,255,0.2)",

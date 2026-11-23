@@ -1,6 +1,8 @@
 import React, { useState, useEffect } from "react";
+import { useNavigate, useInRouterContext } from "react-router-dom";
 import apiClient from "../../api/client/apiClient";
 import { resolveApiUrl } from "../../api/client/apiConfig";
+import { saveActiveScrollSnapshot, isDeveloperRoute } from "../../utils/globalNavigationScrollManager";
 import { clearFakeDataEntries } from "../../utils/freshSystemReset";
 import { getActiveSchoolName, getActiveSchoolLogo } from "../../utils/schoolBranding";
 import { isDemoSandboxMode, resetDemoSandboxData } from "../../utils/tokenStorage";
@@ -47,11 +49,64 @@ const DASHBOARDS_LIST = [
   { path: "/developer-control-center/dashboard", title: "Developer Center", icon: "🛡️" }
 ];
 
+function RouterPortalSwitchButton({ dash, isActive, isDevMode }) {
+  const navigate = useNavigate();
+  return (
+    <button
+      type="button"
+      onClick={() => {
+        if (dash.path === "/onboarding") {
+          try {
+            localStorage.removeItem("gbs_tenant_already_onboarded");
+            localStorage.removeItem("gbs_walkthrough_completed");
+          } catch { }
+        }
+        if (isDevMode || isDeveloperRoute(dash.path)) {
+          window.location.href = dash.path;
+          return;
+        }
+        saveActiveScrollSnapshot();
+        navigate(dash.path);
+      }}
+      style={{
+        display: "inline-flex",
+        alignItems: "center",
+        gap: "5px",
+        padding: "5px 11px",
+        borderRadius: "18px",
+        fontSize: "0.74rem",
+        fontWeight: 800,
+        cursor: "pointer",
+        transition: "all 0.18s ease",
+        border: isActive
+          ? "1.5px solid #38bdf8"
+          : dash.highlight
+            ? "1.5px solid #10b981"
+            : "1px solid rgba(255, 255, 255, 0.16)",
+        background: isActive
+          ? "linear-gradient(135deg, rgba(2, 132, 199, 0.45), rgba(56, 189, 248, 0.25))"
+          : dash.highlight
+            ? "linear-gradient(135deg, rgba(16, 185, 129, 0.28), rgba(5, 150, 105, 0.18))"
+            : "rgba(15, 23, 42, 0.7)",
+        color: isActive ? "#ffffff" : dash.highlight ? "#34d399" : "#cbd5e1",
+        boxShadow: isActive ? "0 0 10px rgba(56, 189, 248, 0.4)" : "none"
+      }}
+    >
+      <span>{dash.icon}</span>
+      <span>{dash.title}</span>
+      {isActive && (
+        <span style={{ width: "6px", height: "6px", borderRadius: "50%", background: "#38bdf8", boxShadow: "0 0 6px #38bdf8" }} />
+      )}
+    </button>
+  );
+}
+
 export default function TopCenterSystemBanner({
   roleTitle = "Enterprise Workspace",
   institutionName = null,
   isDeveloper = false
 }) {
+  const inRouter = useInRouterContext();
   const isDevMode = isDeveloper || roleTitle.toLowerCase().includes("developer");
 
   const [schoolName, setSchoolName] = useState(() => {
@@ -836,7 +891,17 @@ export default function TopCenterSystemBanner({
             }}>
               {DASHBOARDS_LIST.map((dash) => {
                 const currentPath = typeof window !== "undefined" ? window.location.pathname : "";
-                const isActive = currentPath === dash.path;
+                const isActive = currentPath === dash.path || currentPath.startsWith(`${dash.path}/`);
+                if (inRouter) {
+                  return (
+                    <RouterPortalSwitchButton
+                      key={dash.path}
+                      dash={dash}
+                      isActive={isActive}
+                      isDevMode={isDevMode}
+                    />
+                  );
+                }
                 return (
                   <button
                     key={dash.path}

@@ -1,304 +1,352 @@
-import React, { useEffect, useState, useCallback, useRef } from "react";
-import { useLocation } from "react-router-dom";
+import React, { useEffect, useLayoutEffect, useRef, useState, useCallback } from "react";
+import { useLocation, useNavigate, useNavigationType } from "react-router-dom";
 import { applyDashboardThemeToDocument } from "../../utils/dashboardTheme";
+import { getActiveSchoolName, getActiveSchoolLogo } from "../../utils/schoolBranding";
+import {
+  isDeveloperRoute,
+  parsePortalDashboardRoute,
+  getInstitutionalPortalLabel,
+  resolveModuleTitle,
+  saveScrollSnapshotForEntry,
+  hasSnapshotForEntry,
+  saveActiveScrollSnapshot,
+  setActiveNavigationKeys,
+  restoreScrollSnapshotAsync,
+  resetScrollToTopInstant,
+  cancelPendingScrollRestoration,
+  registerScrolledContainer,
+  recordNavigationEntry,
+  performSmartBack,
+  isScrollRestorationInProgress
+} from "../../utils/globalNavigationScrollManager";
 
-const TAB_BUTTON_SELECTOR = [
-  ".role-tab-btn",
-  ".dev-tab-btn",
-  ".role-tab-nav button",
-  ".dev-tab-navigation button",
-  ".dev-tabs-nav button",
-  ".dev-tabs-bar button",
-  ".finance-tab-nav button",
-  ".tabs-navigation-bar button",
-  ".sharding-tab-navigation button",
-  ".ai-tab-nav button"
-].join(", ");
+/**
+ * Tag overview-only sibling blocks that precede <nav className="role-tab-nav">
+ * inside institutional dashboards ONLY when displaying a dedicated module page route
+ * (/portal/:role/dashboard/:moduleId), so the requested module renders immediately at top
+ * without showing accidental sections of the dashboard overview above it.
+ */
+function syncOverviewBlockVisibility(isModulePageView, shouldCenterActiveTab = false) {
+  if (typeof document === "undefined") return;
 
-const SCROLL_STORAGE_KEY = "gbs_tab_page_scroll_map_v1";
+  // Clear any previously tagged nodes first
+  document.querySelectorAll("[data-gbs-overview-section='true']").forEach((el) => {
+    el.removeAttribute("data-gbs-overview-section");
+  });
 
-function isDashboardPath(pathname = "") {
-  const p = String(pathname || "").toLowerCase();
-  return (
-    p.startsWith("/portal/") ||
-    p.startsWith("/developer/dashboard") ||
-    p.startsWith("/developer/control") ||
-    p === "/admin" ||
-    p === "/teacher" ||
-    p === "/student" ||
-    p === "/parent" ||
-    p === "/accountant" ||
-    p === "/staff" ||
-    p === "/hr" ||
-    p === "/secretary" ||
-    p === "/alumni"
-  );
-}
+  if (!isModulePageView) return;
 
-function getPortalLabel(pathname = "") {
-  const p = String(pathname || "").toLowerCase();
-  if (p.includes("/developer")) return "Developer Mission Control";
-  if (p.includes("/admin")) return "Headmaster Command Center";
-  if (p.includes("/teacher")) return "Teacher Academic Suite";
-  if (p.includes("/student")) return "Student Learning Portal";
-  if (p.includes("/parent")) return "Parent & Guardian Portal";
-  if (p.includes("/accountant")) return "Finance & Bursar Portal";
-  if (p.includes("/secretary")) return "School Secretary & Front Office";
-  if (p.includes("/hr")) return "HR & Faculty Affairs";
-  if (p.includes("/staff")) return "Campus Operations & Staff";
-  if (p.includes("/alumni")) return "Alumni Network Portal";
-  return "GBS School Portal";
-}
+  const navs = document.querySelectorAll(".role-tab-nav");
+  navs.forEach((nav) => {
+    const parent = nav.parentElement;
+    if (!parent) return;
 
-function saveScrollForKey(key, y) {
-  try {
-    const raw = sessionStorage.getItem(SCROLL_STORAGE_KEY);
-    const map = raw ? JSON.parse(raw) : {};
-    map[key] = Math.max(0, Math.round(Number(y) || 0));
-    const keys = Object.keys(map);
-    if (keys.length > 60) {
-      delete map[keys[0]];
+    let sibling = nav.previousElementSibling;
+    while (sibling) {
+      const tag = sibling.tagName;
+      const cls = String(sibling.className || "");
+      const roleAttr = sibling.getAttribute("role") || "";
+      const isModalOrDialog =
+        roleAttr === "dialog" ||
+        cls.includes("modal") ||
+        cls.includes("overlay") ||
+        sibling.hasAttribute("data-gbs-keep-in-module");
+
+      // Preserve live inline feedback banners (small alerts right above tabs) & headers & modals
+      const isHeader = tag === "HEADER" || cls.includes("role-header");
+      const textLen = (sibling.textContent || "").trim().length;
+      const isFeedbackAlert =
+        !isHeader &&
+        !isModalOrDialog &&
+        sibling.style?.borderRadius === "10px" &&
+        textLen > 0 &&
+        textLen < 360 &&
+        (sibling.textContent.includes("✅") || sibling.textContent.includes("⚠️"));
+
+      if (!isHeader && !isModalOrDialog && !isFeedbackAlert) {
+        sibling.setAttribute("data-gbs-overview-section", "true");
+      }
+      sibling = sibling.previousElementSibling;
     }
-    sessionStorage.setItem(SCROLL_STORAGE_KEY, JSON.stringify(map));
-  } catch { }
-}
 
-function readScrollForKey(key) {
-  try {
-    const raw = sessionStorage.getItem(SCROLL_STORAGE_KEY);
-    const map = raw ? JSON.parse(raw) : {};
-    return typeof map[key] === "number" ? map[key] : null;
-  } catch {
-    return null;
-  }
-}
-
-function readActiveTabLabelFromDom() {
-  try {
-    const activeEl = document.querySelector(
-      ".role-tab-btn.active, .dev-tab-btn.active, .role-tab-nav button.active, .dev-tab-navigation button.active, .dev-tabs-nav button.active"
-    );
-    const text = activeEl?.textContent?.replace(/\s+/g, " ").trim();
-    if (text) return text.slice(0, 72);
-  } catch { }
-  try {
-    const tabParam = new URLSearchParams(window.location.search).get("tab");
-    if (tabParam) {
-      return tabParam
-        .replace(/[_-]+/g, " ")
-        .replace(/([a-z])([A-Z])/g, "$1 $2")
-        .replace(/\b\w/g, (c) => c.toUpperCase());
+    // Center the active tab horizontally ONLY on fresh PUSH navigation (never overwrite POP scroll restoration!)
+    if (shouldCenterActiveTab) {
+      const activeBtn = nav.querySelector(".role-tab-btn.active");
+      if (activeBtn && nav.scrollWidth > nav.clientWidth) {
+        const desiredLeft = activeBtn.offsetLeft - nav.clientWidth / 2 + activeBtn.clientWidth / 2;
+        nav.scrollLeft = Math.max(0, desiredLeft);
+      }
     }
-  } catch { }
-  return "Active Workspace Page";
+  });
 }
 
 /**
- * DashboardTabPageController
- * Ensures EVERY active tab clicked across ALL dashboards (including Developer Dashboard)
- * opens in a clean, dedicated Full-Page View (?tab=...&full=1) with proper browser history,
- * and clicking Back returns to the exact previous page/tab and restores its scroll position.
+ * DashboardTabPageController (Global Navigation & Scroll Restoration Controller)
+ *
+ * Mounted once inside AppRouter's <BrowserRouter>:
+ * - Manages manual scroll restoration across all institutional dashboards & module pages.
+ * - Saves outgoing window + nested container scroll positions before every navigation.
+ * - Restores exact saved scroll positions on Browser Back, Browser Forward, and App Back (POP).
+ * - Displays a clean sticky Module Navigation Bar on /portal/:role/dashboard/:moduleId routes.
+ * - STRICTLY EXCLUDES the Developer Dashboard (/developer*, /developer-control-center*).
  */
 export default function DashboardTabPageController() {
   const location = useLocation();
-  const [isFullTabPage, setIsFullTabPage] = useState(false);
-  const [activeTabTitle, setActiveTabTitle] = useState("");
-  const [activeTabId, setActiveTabId] = useState("");
-  const pendingClickRef = useRef(null);
+  const navigate = useNavigate();
+  const navigationType = useNavigationType();
 
-  const syncFromCurrentUrl = useCallback((shouldRestoreScroll = false) => {
-    const onDash = isDashboardPath(window.location.pathname);
-    applyDashboardThemeToDocument(window.location.pathname);
+  const isDev = isDeveloperRoute(location.pathname);
+  const routeInfo = parsePortalDashboardRoute(location.pathname, location.search);
+  const isModulePage = !isDev && routeInfo.isPortalDashboard && routeInfo.isModulePage;
 
-    if (!onDash) {
-      document.body.classList.remove("gbs-full-display-mode", "gbs-tab-page-view");
-      setIsFullTabPage(false);
+  const [schoolName, setSchoolName] = useState(() => getActiveSchoolName({ isDeveloperContext: false }));
+  const [schoolLogo, setSchoolLogo] = useState(() => getActiveSchoolLogo({ isDeveloperContext: false }));
+  const [resolvedTitle, setResolvedTitle] = useState(() =>
+    routeInfo.moduleId ? resolveModuleTitle(routeInfo.moduleId) : ""
+  );
+
+  const prevLocationRef = useRef({
+    key: location.key,
+    routeKey: `${location.pathname}${location.search}`,
+    pathname: location.pathname
+  });
+  const scrollSaveTimerRef = useRef(null);
+
+  // Keep institutional branding fresh in the module page bar
+  useEffect(() => {
+    const syncBranding = () => {
+      setSchoolName(getActiveSchoolName({ isDeveloperContext: false }));
+      setSchoolLogo(getActiveSchoolLogo({ isDeveloperContext: false }));
+    };
+    window.addEventListener("gbs_school_branding_updated", syncBranding);
+    window.addEventListener("gbs_school_name_updated", syncBranding);
+    window.addEventListener("gbs_school_logo_updated", syncBranding);
+    window.addEventListener("gbs_custom_logo_updated", syncBranding);
+    window.addEventListener("storage", syncBranding);
+    return () => {
+      window.removeEventListener("gbs_school_branding_updated", syncBranding);
+      window.removeEventListener("gbs_school_name_updated", syncBranding);
+      window.removeEventListener("gbs_school_logo_updated", syncBranding);
+      window.removeEventListener("gbs_custom_logo_updated", syncBranding);
+      window.removeEventListener("storage", syncBranding);
+    };
+  }, []);
+
+  // Configure browser history.scrollRestoration = "manual" for non-developer routes
+  useEffect(() => {
+    if (typeof window === "undefined" || !("scrollRestoration" in window.history)) return;
+    if (isDev) {
+      // Do not interfere with Developer Dashboard scroll restoration
+      try {
+        window.history.scrollRestoration = "auto";
+      } catch { }
+      return;
+    }
+    try {
+      window.history.scrollRestoration = "manual";
+    } catch { }
+  }, [isDev]);
+
+  // Continuously capture window & nested scrollable container scroll positions (throttled)
+  useEffect(() => {
+    if (typeof window === "undefined" || isDev) return undefined;
+
+    const currentEntryKey = location.key || "default";
+    const currentRouteKey = `${location.pathname}${location.search}`;
+
+    const scheduleSave = () => {
+      if (isScrollRestorationInProgress()) return;
+      // Synchronously update in-memory snapshot immediately so rapid Browser Back never misses a pixel
+      saveScrollSnapshotForEntry(currentEntryKey, currentRouteKey, null, false);
+      if (scrollSaveTimerRef.current) clearTimeout(scrollSaveTimerRef.current);
+      scrollSaveTimerRef.current = setTimeout(() => {
+        if (!isScrollRestorationInProgress()) {
+          saveScrollSnapshotForEntry(currentEntryKey, currentRouteKey, null, true);
+        }
+      }, 60);
+    };
+
+    const handleWindowScroll = () => {
+      scheduleSave();
+    };
+
+    const handleCaptureScroll = (e) => {
+      const target = e.target;
+      if (target && target !== document && target !== document.documentElement && target !== document.body) {
+        registerScrolledContainer(target);
+      }
+      scheduleSave();
+    };
+
+    // Snapshot immediately right before any click on links/buttons/cards that might navigate
+    const handlePointerDownCapture = (e) => {
+      if (isScrollRestorationInProgress()) return;
+      const interactive = e.target?.closest?.(
+        "a[href], button, .role-kpi-box, .role-kpi-card, .module-card-link, [role='button']"
+      );
+      if (interactive) {
+        saveScrollSnapshotForEntry(currentEntryKey, currentRouteKey);
+      }
+    };
+
+    const handlePageHide = () => {
+      saveScrollSnapshotForEntry(currentEntryKey, currentRouteKey);
+    };
+
+    window.addEventListener("scroll", handleWindowScroll, { passive: true });
+    document.addEventListener("scroll", handleCaptureScroll, { capture: true, passive: true });
+    document.addEventListener("pointerdown", handlePointerDownCapture, { capture: true, passive: true });
+    window.addEventListener("pagehide", handlePageHide);
+    window.addEventListener("beforeunload", handlePageHide);
+
+    return () => {
+      if (scrollSaveTimerRef.current) {
+        clearTimeout(scrollSaveTimerRef.current);
+        scrollSaveTimerRef.current = null;
+      }
+      window.removeEventListener("scroll", handleWindowScroll);
+      document.removeEventListener("scroll", handleCaptureScroll, true);
+      document.removeEventListener("pointerdown", handlePointerDownCapture, true);
+      window.removeEventListener("pagehide", handlePageHide);
+      window.removeEventListener("beforeunload", handlePageHide);
+    };
+  }, [isDev, location.key, location.pathname, location.search]);
+
+  // Core Route Transition Handler: body class, theme sync, history trail, and scroll restore / reset
+  useLayoutEffect(() => {
+    const currentEntryKey = location.key || "default";
+    const currentRouteKey = `${location.pathname}${location.search}`;
+    const prev = prevLocationRef.current;
+
+    applyDashboardThemeToDocument(location.pathname);
+
+    if (isDev) {
+      // Strictly exclude Developer Dashboard from module-page body classes and global scroll manager
+      cancelPendingScrollRestoration();
+      document.body.classList.remove("gbs-module-page-view", "gbs-tab-page-view", "gbs-full-display-mode");
+      syncOverviewBlockVisibility(false);
+      prevLocationRef.current = { key: currentEntryKey, routeKey: currentRouteKey, pathname: location.pathname };
       return;
     }
 
-    const params = new URLSearchParams(window.location.search);
-    const fullActive = params.get("full") === "1" || params.get("fullpage") === "1";
-    const tabParam = params.get("tab") || "";
-
-    document.body.classList.toggle("gbs-full-display-mode", fullActive);
-    document.body.classList.toggle("gbs-tab-page-view", fullActive);
-    setIsFullTabPage(fullActive);
-    setActiveTabId(tabParam);
-
-    const stateLabel = window.history.state?.tabLabel;
-    setActiveTabTitle(stateLabel || readActiveTabLabelFromDom());
-
-    window.dispatchEvent(new CustomEvent("gbs_full_display_toggled", { detail: { full: fullActive, tab: tabParam } }));
-
-    if (shouldRestoreScroll) {
-      const savedFromState = typeof window.history.state?.gbsScrollY === "number" ? window.history.state.gbsScrollY : null;
-      const savedFromMap = readScrollForKey(window.location.pathname + window.location.search);
-      const targetY = savedFromState !== null ? savedFromState : savedFromMap;
-      if (targetY !== null) {
-        setTimeout(() => {
-          window.scrollTo({ top: targetY, behavior: "auto" });
-        }, 70);
+    // Only initialize an outgoing snapshot if it never captured one yet (never overwrite pre-navigation snapshots after DOM commit!)
+    if (prev.key !== currentEntryKey || prev.routeKey !== currentRouteKey) {
+      if (!isDeveloperRoute(prev.pathname) && !hasSnapshotForEntry(prev.key)) {
+        saveScrollSnapshotForEntry(prev.key, prev.routeKey, {
+          windowX: 0,
+          windowY: 0,
+          containers: [],
+          pathname: prev.pathname,
+          search: "",
+          role: null,
+          moduleId: null,
+          savedAt: Date.now()
+        }, true);
       }
     }
-  }, []);
 
-  useEffect(() => {
-    syncFromCurrentUrl(false);
-  }, [location.pathname, location.search, syncFromCurrentUrl]);
+    // Update active navigation keys & record in-app + per-dashboard history
+    setActiveNavigationKeys(currentEntryKey, currentRouteKey);
+    recordNavigationEntry({
+      key: currentEntryKey,
+      pathname: location.pathname,
+      search: location.search,
+      navigationType
+    });
 
-  useEffect(() => {
-    if (typeof window === "undefined") return undefined;
+    // Apply or remove clean Dedicated Module Page layout class
+    document.body.classList.toggle("gbs-module-page-view", isModulePage);
+    document.body.classList.remove("gbs-tab-page-view", "gbs-full-display-mode");
 
-    const handleTabClickCapture = (e) => {
-      if (!isDashboardPath(window.location.pathname)) return;
-      const btn = e.target?.closest?.(TAB_BUTTON_SELECTOR);
-      if (!btn) return;
-      if (btn.closest("[data-gbs-tab-page-bar='true']")) return;
-
-      const prevHref = window.location.href;
-      const prevKey = window.location.pathname + window.location.search;
-      const prevScrollY = window.scrollY;
-      const prevParams = new URLSearchParams(window.location.search);
-      const prevWasFull = prevParams.get("full") === "1";
-      const clickedLabel = btn.textContent?.replace(/\s+/g, " ").trim().slice(0, 72) || "Active Workspace Page";
-
-      // Snapshot exact scroll position of the previous view before leaving it
-      saveScrollForKey(prevKey, prevScrollY);
-      try {
-        window.history.replaceState(
-          { ...(window.history.state || {}), gbsScrollY: prevScrollY },
-          "",
-          prevHref
-        );
-      } catch { }
-
-      if (pendingClickRef.current) {
-        clearTimeout(pendingClickRef.current);
+    // Synchronize overview block visibility immediately + after lazy dashboard renders
+    const centerOnPush = navigationType !== "POP";
+    syncOverviewBlockVisibility(isModulePage, centerOnPush);
+    const domSyncRaf = requestAnimationFrame(() => {
+      syncOverviewBlockVisibility(isModulePage, centerOnPush);
+      if (routeInfo.moduleId) {
+        setResolvedTitle(resolveModuleTitle(routeInfo.moduleId));
       }
-
-      // Let the dashboard React onClick + useEffect run first, then enforce full-page tab state cleanly
-      pendingClickRef.current = setTimeout(() => {
-        if (!isDashboardPath(window.location.pathname)) return;
-        const url = new URL(window.location.href);
-        const currentTab = url.searchParams.get("tab") || activeTabId || "active";
-        url.searchParams.set("tab", currentTab);
-        url.searchParams.set("full", "1");
-        const nextUrl = url.toString();
-
-        const nextState = {
-          ...(window.history.state || {}),
-          tab: currentTab,
-          full: true,
-          tabLabel: clickedLabel,
-          gbsTabPage: true,
-          gbsScrollY: 0
-        };
-
-        try {
-          if (window.location.href !== prevHref) {
-            // Dashboard already pushed a history entry for the new tab — enrich it in place (no duplicate Back step)
-            window.history.replaceState(nextState, "", nextUrl);
-          } else if (!prevWasFull) {
-            // Clicking the currently active tab from Overview opens it as a new full page entry so Back returns to Overview
-            window.history.pushState(nextState, "", nextUrl);
-          } else {
-            window.history.replaceState(nextState, "", nextUrl);
-          }
-        } catch { }
-
-        document.body.classList.add("gbs-full-display-mode", "gbs-tab-page-view");
-        setIsFullTabPage(true);
-        setActiveTabId(currentTab);
-        setActiveTabTitle(clickedLabel);
-        window.dispatchEvent(new CustomEvent("gbs_full_display_toggled", { detail: { full: true, tab: currentTab } }));
-        window.scrollTo({ top: 0, behavior: "smooth" });
-      }, 65);
-    };
-
-    const handlePopState = () => {
-      syncFromCurrentUrl(true);
-    };
-
-    const handleScrollSave = () => {
-      if (!isDashboardPath(window.location.pathname)) return;
-      saveScrollForKey(window.location.pathname + window.location.search, window.scrollY);
-    };
-
-    const handleCustomFullToggle = (e) => {
-      if (typeof e?.detail?.full === "boolean") {
-        setIsFullTabPage(e.detail.full && isDashboardPath(window.location.pathname));
-        document.body.classList.toggle("gbs-tab-page-view", e.detail.full && isDashboardPath(window.location.pathname));
+    });
+    const domSyncDelayed = setTimeout(() => {
+      syncOverviewBlockVisibility(isModulePage, false);
+      if (routeInfo.moduleId) {
+        setResolvedTitle(resolveModuleTitle(routeInfo.moduleId));
       }
-    };
+    }, 180);
 
-    document.addEventListener("click", handleTabClickCapture, true);
-    window.addEventListener("popstate", handlePopState);
-    window.addEventListener("scroll", handleScrollSave, { passive: true });
-    window.addEventListener("gbs_full_display_toggled", handleCustomFullToggle);
+    // Handle Scroll Position:
+    // - POP (Browser Back / Forward or Application Back): restore exact previous window + container scroll!
+    // - PUSH (Opening a new page/module): scroll cleanly to top (0, 0) immediately!
+    // - REPLACE: preserve current scroll unless pathname changed to a different module/page.
+    if (navigationType === "POP") {
+      restoreScrollSnapshotAsync(currentEntryKey, currentRouteKey);
+    } else if (navigationType === "PUSH") {
+      if (prev.routeKey !== currentRouteKey) {
+        resetScrollToTopInstant();
+      }
+    } else if (navigationType === "REPLACE" && prev.pathname !== location.pathname) {
+      resetScrollToTopInstant();
+    }
+
+    prevLocationRef.current = { key: currentEntryKey, routeKey: currentRouteKey, pathname: location.pathname };
 
     return () => {
-      if (pendingClickRef.current) clearTimeout(pendingClickRef.current);
-      document.removeEventListener("click", handleTabClickCapture, true);
-      window.removeEventListener("popstate", handlePopState);
-      window.removeEventListener("scroll", handleScrollSave);
-      window.removeEventListener("gbs_full_display_toggled", handleCustomFullToggle);
+      cancelAnimationFrame(domSyncRaf);
+      clearTimeout(domSyncDelayed);
     };
-  }, [activeTabId, syncFromCurrentUrl]);
+  }, [isDev, isModulePage, location.key, location.pathname, location.search, navigationType, routeInfo.moduleId]);
 
-  if (!isFullTabPage || !isDashboardPath(location.pathname)) {
+  // Keep overview blocks tagged even if React lazily mounts dashboard content after navigation
+  useEffect(() => {
+    if (isDev || !isModulePage) return undefined;
+    const rootEl = document.getElementById("root");
+    if (!rootEl) return undefined;
+
+    let rafPending = null;
+    const observer = new MutationObserver(() => {
+      if (rafPending) return;
+      rafPending = requestAnimationFrame(() => {
+        rafPending = null;
+        syncOverviewBlockVisibility(true);
+      });
+    });
+    observer.observe(rootEl, { childList: true, subtree: true });
+    return () => {
+      if (rafPending) cancelAnimationFrame(rafPending);
+      observer.disconnect();
+    };
+  }, [isDev, isModulePage]);
+
+  const handleAppBack = useCallback(() => {
+    performSmartBack(navigate, location, routeInfo.baseDashboardPath);
+  }, [navigate, location, routeInfo.baseDashboardPath]);
+
+  const handleGoToOverview = useCallback(() => {
+    saveActiveScrollSnapshot();
+    if (routeInfo.baseDashboardPath) {
+      navigate(routeInfo.baseDashboardPath);
+    }
+  }, [navigate, routeInfo.baseDashboardPath]);
+
+  if (isDev || !isModulePage) {
     return null;
   }
 
-  const portalLabel = getPortalLabel(location.pathname);
-
-  const handleBackToPrevious = () => {
-    try {
-      if (window.history.length > 1) {
-        window.history.back();
-        return;
-      }
-      const url = new URL(window.location.href);
-      url.searchParams.delete("full");
-      url.searchParams.delete("fullpage");
-      window.history.pushState({ tab: activeTabId, full: false }, "", url.toString());
-      syncFromCurrentUrl(true);
-    } catch {
-      window.history.back();
-    }
-  };
-
-  const handleReturnToOverview = () => {
-    try {
-      saveScrollForKey(window.location.pathname + window.location.search, window.scrollY);
-      const url = new URL(window.location.href);
-      url.searchParams.delete("full");
-      url.searchParams.delete("fullpage");
-      window.history.pushState({ tab: activeTabId, full: false, gbsScrollY: 0 }, "", url.toString());
-      syncFromCurrentUrl(false);
-      window.scrollTo({ top: 0, behavior: "smooth" });
-    } catch { }
-  };
-
-  const handleOpenSeparateBrowserTab = () => {
-    try {
-      const url = new URL(window.location.href);
-      url.searchParams.set("full", "1");
-      if (activeTabId) url.searchParams.set("tab", activeTabId);
-      window.open(url.toString(), "_blank", "noopener");
-    } catch { }
-  };
+  const portalLabel = getInstitutionalPortalLabel(routeInfo.role || location.pathname);
+  const displayModuleTitle = resolvedTitle || resolveModuleTitle(routeInfo.moduleId);
 
   return (
     <div
-      data-gbs-tab-page-bar="true"
-      data-testid="gbs-active-tab-page-bar"
+      data-gbs-module-page-bar="true"
+      data-testid="gbs-module-page-bar"
+      className="gbs-module-page-bar"
       style={{
         position: "sticky",
         top: 0,
-        zIndex: 9996,
-        background: "linear-gradient(135deg, rgba(8, 24, 51, 0.98) 0%, rgba(15, 36, 74, 0.98) 100%)",
+        zIndex: 9995,
+        background: "linear-gradient(135deg, rgba(6, 15, 30, 0.98) 0%, rgba(12, 30, 62, 0.98) 100%)",
         borderBottom: "2px solid #d4af37",
-        padding: "9px clamp(10px, 2vw, 22px)",
+        padding: "8px clamp(10px, 2vw, 22px)",
         display: "flex",
         justifyContent: "space-between",
         alignItems: "center",
@@ -308,34 +356,76 @@ export default function DashboardTabPageController() {
         color: "#f8fafc"
       }}
     >
-      <div style={{ display: "flex", alignItems: "center", gap: "10px", flexWrap: "wrap" }}>
+      <div style={{ display: "flex", alignItems: "center", gap: "10px", flexWrap: "wrap", minWidth: 0 }}>
         <button
           type="button"
-          onClick={handleBackToPrevious}
-          data-testid="tab-page-back-btn"
+          onClick={handleAppBack}
+          data-testid="module-page-back-btn"
+          aria-label="Return to previous page"
           style={{
             background: "linear-gradient(135deg, #2563eb, #1d4ed8)",
             color: "#ffffff",
-            border: "1px solid rgba(147, 197, 253, 0.5)",
+            border: "1px solid rgba(147, 197, 253, 0.55)",
             borderRadius: "8px",
             padding: "7px 14px",
-            fontSize: "0.8rem",
+            minHeight: "38px",
+            fontSize: "0.82rem",
             fontWeight: 800,
             cursor: "pointer",
             display: "inline-flex",
             alignItems: "center",
-            gap: "6px"
+            gap: "6px",
+            flexShrink: 0
           }}
         >
-          ← Back to Previous Page
+          ← Back
         </button>
 
-        <div style={{ display: "flex", flexDirection: "column" }}>
-          <span style={{ fontSize: "0.66rem", fontWeight: 900, color: "#f6dd84", letterSpacing: "0.6px", textTransform: "uppercase" }}>
-            {portalLabel} • FULL-PAGE ACTIVE TAB VIEW
+        {schoolLogo && (
+          <img
+            src={schoolLogo}
+            alt="School Crest"
+            style={{
+              width: "30px",
+              height: "30px",
+              borderRadius: "7px",
+              objectFit: "contain",
+              background: "rgba(15, 23, 42, 0.9)",
+              border: "1.5px solid #d4af37",
+              padding: "2px",
+              flexShrink: 0
+            }}
+            onError={(e) => { e.target.style.display = "none"; }}
+          />
+        )}
+
+        <div style={{ display: "flex", flexDirection: "column", minWidth: 0 }}>
+          <span
+            style={{
+              fontSize: "0.66rem",
+              fontWeight: 900,
+              color: "#f6dd84",
+              letterSpacing: "0.5px",
+              textTransform: "uppercase",
+              whiteSpace: "nowrap",
+              overflow: "hidden",
+              textOverflow: "ellipsis"
+            }}
+          >
+            {String(schoolName || "OFFICIAL INSTITUTION").toUpperCase()} • {portalLabel}
           </span>
-          <strong style={{ fontSize: "0.94rem", color: "#ffffff", lineHeight: 1.2 }}>
-            {activeTabTitle || readActiveTabLabelFromDom()}
+          <strong
+            data-testid="module-page-title"
+            style={{
+              fontSize: "0.95rem",
+              color: "#ffffff",
+              lineHeight: 1.2,
+              whiteSpace: "nowrap",
+              overflow: "hidden",
+              textOverflow: "ellipsis"
+            }}
+          >
+            {displayModuleTitle}
           </strong>
         </div>
       </div>
@@ -343,35 +433,22 @@ export default function DashboardTabPageController() {
       <div style={{ display: "flex", alignItems: "center", gap: "8px", flexWrap: "wrap" }}>
         <button
           type="button"
-          onClick={handleReturnToOverview}
+          onClick={handleGoToOverview}
+          data-testid="module-page-overview-btn"
+          aria-label="Return to Dashboard Overview"
           style={{
             background: "rgba(212, 175, 55, 0.16)",
             border: "1px solid #d4af37",
             color: "#f6dd84",
             borderRadius: "8px",
-            padding: "6px 12px",
-            fontSize: "0.76rem",
+            padding: "7px 13px",
+            minHeight: "38px",
+            fontSize: "0.78rem",
             fontWeight: 800,
             cursor: "pointer"
           }}
         >
           🏠 Dashboard Overview
-        </button>
-        <button
-          type="button"
-          onClick={handleOpenSeparateBrowserTab}
-          style={{
-            background: "rgba(56, 189, 248, 0.16)",
-            border: "1px solid #38bdf8",
-            color: "#7dd3fc",
-            borderRadius: "8px",
-            padding: "6px 12px",
-            fontSize: "0.76rem",
-            fontWeight: 800,
-            cursor: "pointer"
-          }}
-        >
-          ↗ Open in Separate Tab
         </button>
       </div>
     </div>

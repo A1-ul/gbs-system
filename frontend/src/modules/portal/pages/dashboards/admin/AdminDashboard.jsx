@@ -28,6 +28,7 @@ import ExamVettingHubPanel from "../../../../../components/common/ExamVettingHub
 import { openUrlSafely } from "../../../../../utils/safeWindow";
 import { isDemoSandboxMode } from "../../../../../utils/tokenStorage";
 import { checkDemoEntryLimit, trackDemoEntryCreated } from "../../../../../utils/demoLimitGuard";
+import { useDashboardTabSync } from "../../../../../hooks/useDashboardTabSync";
 import "./AdminDashboard.css";
 
 export function AdminDashboard({ initialTab } = {}) {
@@ -69,46 +70,8 @@ export function AdminDashboard({ initialTab } = {}) {
     return tab;
   };
 
-  // Tab & Scroll Preservation (Back button restores exact tab & view)
-  const [activeTab, setActiveTabState] = useState(() => {
-    if (initialTab) return normalizeAdminTab(initialTab);
-    const urlTab = new URLSearchParams(window.location.search).get("tab");
-    if (urlTab) return normalizeAdminTab(urlTab);
-    return normalizeAdminTab(sessionStorage.getItem("gbs_admin_active_tab") || "roster");
-  });
-
-  const setActiveTab = (tab) => {
-    const cleanTab = normalizeAdminTab(tab);
-    setActiveTabState(cleanTab);
-    sessionStorage.setItem("gbs_admin_active_tab", cleanTab);
-    const url = new URL(window.location);
-    if (url.searchParams.get("tab") !== cleanTab) {
-      url.searchParams.set("tab", cleanTab);
-      window.history.pushState({ tab: cleanTab }, "", url.toString());
-    }
-  };
-
-  useEffect(() => {
-    const handlePopState = () => {
-      const tab = new URLSearchParams(window.location.search).get("tab") || sessionStorage.getItem("gbs_admin_active_tab");
-      if (tab) setActiveTabState(normalizeAdminTab(tab));
-    };
-    window.addEventListener("popstate", handlePopState);
-    return () => window.removeEventListener("popstate", handlePopState);
-  }, []);
-
-  // Preserve & Restore Scroll Position on Back
-  useEffect(() => {
-    const savedScroll = sessionStorage.getItem("gbs_admin_scroll_pos");
-    if (savedScroll) {
-      setTimeout(() => window.scrollTo(0, parseInt(savedScroll, 10)), 50);
-    }
-    const handleScroll = () => {
-      sessionStorage.setItem("gbs_admin_scroll_pos", window.scrollY.toString());
-    };
-    window.addEventListener("scroll", handleScroll, { passive: true });
-    return () => window.removeEventListener("scroll", handleScroll);
-  }, []);
+  // Unified React Router module-page navigation & exact scroll restoration
+  const { activeTab, setActiveTab } = useDashboardTabSync("roster", "gbs_admin_active_tab", normalizeAdminTab, { initialTab });
 
   // Global Toast Notification for signs of action
   const [toastNotification, setToastNotification] = useState(null);
@@ -6366,7 +6329,7 @@ export function AdminDashboard({ initialTab } = {}) {
           </nav>
 
           {/* HEADMASTER EXECUTIVE LIVE METRICS BAR: Students Admitted, Students Boarding Bus, Vetting Desk & Inbuilt CCTV */}
-          <div style={{
+          <div className="gbs-overview-only" style={{
             display: "grid",
             gridTemplateColumns: "repeat(auto-fit, minmax(230px, 1fr))",
             gap: "12px",

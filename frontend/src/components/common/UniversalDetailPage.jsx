@@ -4,6 +4,7 @@ import apiClient from "../../api/client/apiClient";
 import { getApiBaseUrl } from "../../api/client/apiConfig";
 import { getActiveSchoolName } from "../../utils/schoolBranding";
 import { copyTextSafely } from "../../utils/safeWindow";
+import { performSmartBack } from "../../utils/globalNavigationScrollManager";
 import "./UniversalDetailPage.css";
 
 const CATEGORY_META = {
@@ -393,11 +394,7 @@ export default function UniversalDetailPage() {
   }, [category, id]);
 
   const handleBack = () => {
-    if (location.state?.fromPath) {
-      navigate(location.state.fromPath);
-    } else {
-      navigate(-1);
-    }
+    performSmartBack(navigate, location, location.state?.fromPath || null);
   };
 
   const handleCopyId = async () => {

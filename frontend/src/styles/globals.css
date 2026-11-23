@@ -1013,6 +1013,142 @@ body.gbs-full-display-mode .dev-workspace-panel {
   min-height: calc(100dvh - 150px);
 }
 
+/* ============================================================================
+   DEDICATED INSTITUTIONAL MODULE PAGE VIEW (/portal/:role/dashboard/:moduleId)
+   Strictly scoped to non-developer institutional dashboards.
+   Displays the requested module immediately as a dedicated application page
+   while preserving header, branding, and compact module switcher navigation.
+   ============================================================================ */
+body.gbs-module-page-view [data-gbs-overview-section="true"],
+body.gbs-module-page-view .gbs-overview-only,
+body.gbs-module-page-view .gbs-system-top-center-banner,
+body.gbs-module-page-view .window-controls-bar,
+body.gbs-module-page-view .role-hero-banner,
+body.gbs-module-page-view .role-hero-showcase,
+body.gbs-module-page-view .headmaster-subscription-card,
+body.gbs-module-page-view .role-kpi-grid,
+body.gbs-module-page-view .role-kpi-row,
+body.gbs-module-page-view .role-kpi-strip,
+body.gbs-module-page-view .gbs-kpi-summary-strip {
+  display: none !important;
+}
+
+/* Keep the dashboard header crisp and non-stacking under the sticky Module Page Bar */
+body.gbs-module-page-view .role-header {
+  position: relative !important;
+  top: auto !important;
+  padding: 0.55rem clamp(0.75rem, 2vw, 1.5rem) !important;
+  z-index: 10 !important;
+}
+
+body.gbs-module-page-view .role-main,
+body.gbs-module-page-view .role-main-content,
+body.gbs-module-page-view .dashboard-main {
+  max-width: 100% !important;
+  width: 100% !important;
+  padding: 0.75rem clamp(0.75rem, 2vw, 1.5rem) 2rem !important;
+}
+
+/* Single-row horizontally scrollable module navigation strip so requested module content shows immediately */
+body.gbs-module-page-view .role-tab-nav {
+  display: flex !important;
+  flex-wrap: nowrap !important;
+  overflow-x: auto !important;
+  overflow-y: hidden !important;
+  -webkit-overflow-scrolling: touch;
+  gap: 6px !important;
+  padding: 6px 8px !important;
+  margin-bottom: 0.85rem !important;
+  scrollbar-width: thin;
+}
+
+body.gbs-module-page-view .role-tab-nav .role-tab-btn {
+  flex: 0 0 auto !important;
+  white-space: nowrap !important;
+  min-width: auto !important;
+  padding: 7px 12px !important;
+  font-size: 0.78rem !important;
+}
+
+body.gbs-module-page-view .role-workspace-card {
+  min-height: calc(100dvh - 180px);
+  scroll-margin-top: 72px;
+}
+
+.role-workspace-card,
+.role-tab-nav,
+.role-table-responsive,
+.table-responsive {
+  scroll-margin-top: 72px;
+}
+
+@media (max-width: 768px) {
+  .gbs-module-page-bar {
+    padding: 6px 10px !important;
+    gap: 6px !important;
+    flex-wrap: nowrap !important;
+  }
+
+  .gbs-module-page-bar button {
+    padding: 6px 10px !important;
+    min-height: 34px !important;
+    font-size: 0.74rem !important;
+    white-space: nowrap;
+  }
+
+  body.gbs-module-page-view .role-header {
+    padding: 0.35rem 0.65rem !important;
+    gap: 6px !important;
+    flex-direction: column !important;
+    align-items: stretch !important;
+  }
+
+  body.gbs-module-page-view .role-header-brand {
+    display: none !important;
+  }
+
+  body.gbs-module-page-view .role-header-actions {
+    display: flex !important;
+    flex-wrap: nowrap !important;
+    overflow-x: auto !important;
+    -webkit-overflow-scrolling: touch;
+    justify-content: flex-start !important;
+    gap: 6px !important;
+    padding-bottom: 2px;
+  }
+
+  body.gbs-module-page-view .role-header-actions .role-action-btn {
+    flex: 0 0 auto !important;
+    white-space: nowrap !important;
+    padding: 5px 9px !important;
+    font-size: 0.72rem !important;
+  }
+
+  body.gbs-module-page-view .role-status-ticker {
+    display: none !important;
+  }
+
+  body.gbs-module-page-view .role-main,
+  body.gbs-module-page-view .role-main-content,
+  body.gbs-module-page-view .dashboard-main {
+    padding: 0.45rem 0.6rem calc(72px + env(safe-area-inset-bottom, 0px)) !important;
+  }
+
+  body.gbs-module-page-view .role-tab-nav {
+    flex-wrap: nowrap !important;
+    overflow-x: auto !important;
+    padding: 5px 6px !important;
+    margin-bottom: 0.55rem !important;
+  }
+
+  body.gbs-module-page-view .role-tab-nav .role-tab-btn {
+    flex: 0 0 auto !important;
+    min-width: auto !important;
+    padding: 6px 10px !important;
+    font-size: 0.74rem !important;
+  }
+}
+
 /* Evidence Image Preview Cursor Cue (Zero Tooltips) */
 img[data-evidence-preview="true"],
 .evidence-preview-img,

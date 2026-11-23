@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from "react";
-import { Link, useNavigate } from "react-router-dom";
+import { Link, useNavigate, useLocation } from "react-router-dom";
 import apiClient from "../../../../../api/client/apiClient";
 import WindowControlsBar from "../../../../../components/common/WindowControlsBar";
 import TopCenterSystemBanner from "../../../../../components/common/TopCenterSystemBanner";
@@ -19,10 +19,13 @@ import SchoolClinicHubPanel from "../../../../../components/common/SchoolClinicH
 import SchoolStationeryHubPanel from "../../../../../components/common/SchoolStationeryHubPanel";
 import { isDemoSandboxMode } from "../../../../../utils/tokenStorage";
 import { checkDemoEntryLimit, trackDemoEntryCreated } from "../../../../../utils/demoLimitGuard";
+import { useDashboardTabSync } from "../../../../../hooks/useDashboardTabSync";
+import { performSmartBack } from "../../../../../utils/globalNavigationScrollManager";
 import "./StudentDashboard.css";
 
 export function StudentDashboard({ initialTab } = {}) {
   const navigate = useNavigate();
+  const location = useLocation();
   const [showStudentGuideModal, setShowStudentGuideModal] = useState(false);
   const [showCoopModal, setShowCoopModal] = useState(false);
   const [selectedCoopRoom, setSelectedCoopRoom] = useState(null);
@@ -82,63 +85,8 @@ export function StudentDashboard({ initialTab } = {}) {
     };
   }, []);
 
-  const [activeTab, setActiveTab] = useState(() => {
-    if (initialTab) return initialTab;
-    try {
-      const urlParams = new URLSearchParams(window.location.search);
-      const tabParam = urlParams.get("tab");
-      if (tabParam) return tabParam;
-      const stored = sessionStorage.getItem("gbs_student_active_tab");
-      if (stored) return stored;
-    } catch { }
-    return "timetable";
-  });
-
-  // Track and restore scroll position and tab history for seamless back navigation
-  useEffect(() => {
-    try {
-      sessionStorage.setItem("gbs_student_active_tab", activeTab);
-      const url = new URL(window.location.href);
-      if (url.searchParams.get("tab") !== activeTab) {
-        url.searchParams.set("tab", activeTab);
-        window.history.pushState({ tab: activeTab }, "", url.toString());
-      }
-    } catch { }
-  }, [activeTab]);
-
-  useEffect(() => {
-    const handlePopState = () => {
-      try {
-        const urlParams = new URLSearchParams(window.location.search);
-        const tabParam = urlParams.get("tab") || sessionStorage.getItem("gbs_student_active_tab");
-        if (tabParam) setActiveTab(tabParam);
-        const savedScroll = sessionStorage.getItem("gbs_student_scroll_pos");
-        if (savedScroll) {
-          setTimeout(() => window.scrollTo(0, parseInt(savedScroll, 10)), 100);
-        }
-      } catch { }
-    };
-
-    const handleScroll = () => {
-      try {
-        sessionStorage.setItem("gbs_student_scroll_pos", String(window.scrollY));
-      } catch { }
-    };
-
-    window.addEventListener("popstate", handlePopState);
-    window.addEventListener("scroll", handleScroll, { passive: true });
-
-    // Initial scroll restore
-    const savedScroll = sessionStorage.getItem("gbs_student_scroll_pos");
-    if (savedScroll) {
-      setTimeout(() => window.scrollTo(0, parseInt(savedScroll, 10)), 150);
-    }
-
-    return () => {
-      window.removeEventListener("popstate", handlePopState);
-      window.removeEventListener("scroll", handleScroll);
-    };
-  }, []);
+  // Unified React Router module-page navigation & exact scroll restoration
+  const { activeTab, setActiveTab } = useDashboardTabSync("timetable", "gbs_student_active_tab", null, { initialTab });
   const [loading, setLoading] = useState(false);
   const [feedback, setFeedback] = useState(null);
   const [institutionType, setInstitutionType] = useState(() => getActiveInstitutionType());
@@ -2286,7 +2234,7 @@ export function StudentDashboard({ initialTab } = {}) {
             <button
               type="button"
               className="role-action-btn"
-              onClick={() => window.history.back()}
+              onClick={() => performSmartBack(navigate, location)}
               aria-label="Return to previous view or page"
               style={{ borderColor: "#64748b", color: "#f8fafc", background: "rgba(30, 41, 59, 0.7)", fontWeight: 700, cursor: "pointer" }}
             >

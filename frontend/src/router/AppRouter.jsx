@@ -243,19 +243,19 @@ export default function AppRouter() {
           <Route path="/forgot-password" element={<ForgotPassword />} />
           <Route path="/reset-password" element={<ResetPassword />} />
 
-          {/* Master Blueprint Section 3: Dedicated Role-Based Interactive Workspaces */}
-          <Route path="/portal/admin/dashboard" element={<ProtectedPortalRoute loginPath="/login/admin" allowedRoles={["ADMIN", "SUPER_ADMIN"]}><AdminDashboard /></ProtectedPortalRoute>} />
-          <Route path="/portal/super_admin/dashboard" element={<Navigate to="/portal/admin/dashboard" replace />} />
-          <Route path="/portal/teacher/dashboard" element={<ProtectedPortalRoute loginPath="/login/teacher" allowedRoles={["TEACHER"]}><TeacherDashboard /></ProtectedPortalRoute>} />
-          <Route path="/portal/student/dashboard" element={<ProtectedPortalRoute loginPath="/login/student" allowedRoles={["STUDENT"]}><StudentDashboard /></ProtectedPortalRoute>} />
-          <Route path="/portal/parent/dashboard" element={<ProtectedPortalRoute loginPath="/login/parent" allowedRoles={["PARENT"]}><ParentDashboard /></ProtectedPortalRoute>} />
-          <Route path="/portal/accountant/dashboard" element={<ProtectedPortalRoute loginPath="/login/accountant" allowedRoles={["ACCOUNTANT"]}><AccountantDashboard /></ProtectedPortalRoute>} />
-          <Route path="/portal/staff/dashboard" element={<ProtectedPortalRoute loginPath="/login/staff" allowedRoles={["STAFF"]}><StaffDashboard /></ProtectedPortalRoute>} />
-          <Route path="/portal/hr/dashboard" element={<ProtectedPortalRoute loginPath="/login/hr" allowedRoles={["HR"]}><HRDashboard /></ProtectedPortalRoute>} />
-          <Route path="/portal/alumni/dashboard" element={<ProtectedPortalRoute loginPath="/login/alumni" allowedRoles={["ALUMNI"]}><AlumniDashboard /></ProtectedPortalRoute>} />
-          <Route path="/portal/secretary/dashboard" element={<ProtectedPortalRoute loginPath="/login/secretary" allowedRoles={["SECRETARY"]}><SecretaryDashboard /></ProtectedPortalRoute>} />
+          {/* Master Blueprint Section 3: Dedicated Role-Based Interactive Workspaces (with Dedicated Module Page Routes) */}
+          <Route path="/portal/admin/dashboard/:moduleId?" element={<ProtectedPortalRoute loginPath="/login/admin" allowedRoles={["ADMIN", "SUPER_ADMIN"]}><AdminDashboard /></ProtectedPortalRoute>} />
+          <Route path="/portal/super_admin/dashboard/:moduleId?" element={<Navigate to="/portal/admin/dashboard" replace />} />
+          <Route path="/portal/teacher/dashboard/:moduleId?" element={<ProtectedPortalRoute loginPath="/login/teacher" allowedRoles={["TEACHER"]}><TeacherDashboard /></ProtectedPortalRoute>} />
+          <Route path="/portal/student/dashboard/:moduleId?" element={<ProtectedPortalRoute loginPath="/login/student" allowedRoles={["STUDENT"]}><StudentDashboard /></ProtectedPortalRoute>} />
+          <Route path="/portal/parent/dashboard/:moduleId?" element={<ProtectedPortalRoute loginPath="/login/parent" allowedRoles={["PARENT"]}><ParentDashboard /></ProtectedPortalRoute>} />
+          <Route path="/portal/accountant/dashboard/:moduleId?" element={<ProtectedPortalRoute loginPath="/login/accountant" allowedRoles={["ACCOUNTANT"]}><AccountantDashboard /></ProtectedPortalRoute>} />
+          <Route path="/portal/staff/dashboard/:moduleId?" element={<ProtectedPortalRoute loginPath="/login/staff" allowedRoles={["STAFF"]}><StaffDashboard /></ProtectedPortalRoute>} />
+          <Route path="/portal/hr/dashboard/:moduleId?" element={<ProtectedPortalRoute loginPath="/login/hr" allowedRoles={["HR"]}><HRDashboard /></ProtectedPortalRoute>} />
+          <Route path="/portal/alumni/dashboard/:moduleId?" element={<ProtectedPortalRoute loginPath="/login/alumni" allowedRoles={["ALUMNI"]}><AlumniDashboard /></ProtectedPortalRoute>} />
+          <Route path="/portal/secretary/dashboard/:moduleId?" element={<ProtectedPortalRoute loginPath="/login/secretary" allowedRoles={["SECRETARY"]}><SecretaryDashboard /></ProtectedPortalRoute>} />
           <Route path="/portal/developer/dashboard" element={<Navigate to="/developer-control-center/dashboard" replace />} />
-          <Route path="/portal/:role/dashboard" element={<ProtectedPortalRoute loginPath="/login"><RoleDashboardView /></ProtectedPortalRoute>} />
+          <Route path="/portal/:role/dashboard/:moduleId?" element={<ProtectedPortalRoute loginPath="/login"><RoleDashboardView /></ProtectedPortalRoute>} />
 
           {/* Hidden Enterprise Developer Control Center */}
           <Route path="/developer-control-center" element={<Navigate to="/developer-control-center/login" replace />} />

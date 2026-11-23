@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from "react";
-import { Link, useNavigate } from "react-router-dom";
+import { Link, useNavigate, useLocation } from "react-router-dom";
 import apiClient from "../../../../../api/client/apiClient";
 import WindowControlsBar from "../../../../../components/common/WindowControlsBar";
 import TopCenterSystemBanner from "../../../../../components/common/TopCenterSystemBanner";
@@ -34,10 +34,13 @@ import { getActiveSchoolName, getActiveSchoolLogo } from "../../../../../utils/s
 import { printHtmlSafely, copyTextSafely } from "../../../../../utils/safeWindow";
 import { checkDemoEntryLimit, trackDemoEntryCreated } from "../../../../../utils/demoLimitGuard";
 import { isDemoSandboxMode } from "../../../../../utils/tokenStorage";
+import { useDashboardTabSync } from "../../../../../hooks/useDashboardTabSync";
+import { performSmartBack } from "../../../../../utils/globalNavigationScrollManager";
 import "./TeacherDashboard.css";
 
 export default function TeacherDashboard() {
   const navigate = useNavigate();
+  const location = useLocation();
 
   // Faculty Authenticated User Identity
   // Digital Signature Pad State for Teacher Endorsement
@@ -135,62 +138,8 @@ export default function TeacherDashboard() {
   const [scannerScriptFilter, setScannerScriptFilter] = useState("ALL"); // "ALL" | "MARKED" | "UNMARKED"
   const [editingScript, setEditingScript] = useState(null);
 
-  const [activeTab, setActiveTab] = useState(() => {
-    try {
-      const urlParams = new URLSearchParams(window.location.search);
-      const tabParam = urlParams.get("tab");
-      if (tabParam) return tabParam;
-      const stored = sessionStorage.getItem("gbs_teacher_active_tab");
-      if (stored) return stored;
-    } catch { }
-    return "attendance";
-  });
-
-  // Track and restore scroll position and tab history for seamless back navigation
-  useEffect(() => {
-    try {
-      sessionStorage.setItem("gbs_teacher_active_tab", activeTab);
-      const url = new URL(window.location.href);
-      if (url.searchParams.get("tab") !== activeTab) {
-        url.searchParams.set("tab", activeTab);
-        window.history.pushState({ tab: activeTab }, "", url.toString());
-      }
-    } catch { }
-  }, [activeTab]);
-
-  useEffect(() => {
-    const handlePopState = () => {
-      try {
-        const urlParams = new URLSearchParams(window.location.search);
-        const tabParam = urlParams.get("tab") || sessionStorage.getItem("gbs_teacher_active_tab");
-        if (tabParam) setActiveTab(tabParam);
-        const savedScroll = sessionStorage.getItem("gbs_teacher_scroll_pos");
-        if (savedScroll) {
-          setTimeout(() => window.scrollTo(0, parseInt(savedScroll, 10)), 100);
-        }
-      } catch { }
-    };
-
-    const handleScroll = () => {
-      try {
-        sessionStorage.setItem("gbs_teacher_scroll_pos", String(window.scrollY));
-      } catch { }
-    };
-
-    window.addEventListener("popstate", handlePopState);
-    window.addEventListener("scroll", handleScroll, { passive: true });
-
-    // Initial scroll restore
-    const savedScroll = sessionStorage.getItem("gbs_teacher_scroll_pos");
-    if (savedScroll) {
-      setTimeout(() => window.scrollTo(0, parseInt(savedScroll, 10)), 150);
-    }
-
-    return () => {
-      window.removeEventListener("popstate", handlePopState);
-      window.removeEventListener("scroll", handleScroll);
-    };
-  }, []);
+  // Unified React Router module-page navigation & exact scroll restoration
+  const { activeTab, setActiveTab } = useDashboardTabSync("attendance", "gbs_teacher_active_tab");
   const [loading, setLoading] = useState(false);
   const [feedback, setFeedback] = useState(null);
   const [institutionType, setInstitutionType] = useState(() => getActiveInstitutionType());
@@ -4274,7 +4223,7 @@ export default function TeacherDashboard() {
             <button
               type="button"
               className="role-action-btn"
-              onClick={() => window.history.back()}
+              onClick={() => performSmartBack(navigate, location)}
               aria-label="Return to previous view or page"
               style={{ borderColor: "#64748b", color: "#f8fafc", background: "rgba(30, 41, 59, 0.7)", fontWeight: 700, cursor: "pointer" }}
             >

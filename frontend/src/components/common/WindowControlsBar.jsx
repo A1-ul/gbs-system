@@ -1,8 +1,49 @@
 import React, { useState, useEffect } from "react";
-import { useNavigate, useInRouterContext } from "react-router-dom";
+import { useNavigate, useLocation, useInRouterContext } from "react-router-dom";
 import { getActiveSchoolName, getActiveSchoolLogo } from "../../utils/schoolBranding";
+import { performSmartBack, isDeveloperRoute } from "../../utils/globalNavigationScrollManager";
 import CartoonRoleVideoHubModal from "./CartoonRoleVideoHubModal";
 import UniversalRoleGuideModal from "./UniversalRoleGuideModal";
+
+function RouterSmartBackButton({ onBack, customBackLabel, isDevContext }) {
+  const navigate = useNavigate();
+  const location = useLocation();
+
+  const handleClick = () => {
+    if (onBack) {
+      onBack();
+      return;
+    }
+    if (isDevContext || isDeveloperRoute(location.pathname)) {
+      window.history.back();
+      return;
+    }
+    performSmartBack(navigate, location);
+  };
+
+  return (
+    <button
+      type="button"
+      className="btn-window-control btn-window-back"
+      onClick={handleClick}
+      style={{
+        display: "inline-flex",
+        alignItems: "center",
+        gap: "6px",
+        padding: "6px 14px",
+        background: "rgba(30, 41, 59, 0.9)",
+        border: "1px solid rgba(56, 189, 248, 0.4)",
+        borderRadius: "8px",
+        color: "#38bdf8",
+        fontWeight: "700",
+        cursor: "pointer",
+        transition: "all 0.2s"
+      }}
+    >
+      <span>{customBackLabel}</span>
+    </button>
+  );
+}
 
 function OnboardActionButton({ onNavigate }) {
   return (
@@ -162,15 +203,16 @@ export default function WindowControlsBar({
   };
 
   useEffect(() => {
-    if (!modalTargetId && typeof document !== "undefined") {
+    const devPath = typeof window !== "undefined" && isDeveloperRoute(window.location.pathname);
+    if (!modalTargetId && typeof document !== "undefined" && (isDevContext || devPath)) {
       document.body.classList.toggle("gbs-full-display-mode", isExpanded);
     }
     return () => {
-      if (!modalTargetId && typeof document !== "undefined") {
+      if (!modalTargetId && typeof document !== "undefined" && (isDevContext || devPath)) {
         document.body.classList.remove("gbs-full-display-mode");
       }
     };
-  }, [isExpanded, modalTargetId]);
+  }, [isExpanded, modalTargetId, isDevContext]);
 
   useEffect(() => {
     const syncFullState = (e) => {
@@ -261,26 +303,34 @@ export default function WindowControlsBar({
       }}
     >
       <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
-        <button
-          type="button"
-          className="btn-window-control btn-window-back"
-          onClick={handleBack}
-          style={{
-            display: "inline-flex",
-            alignItems: "center",
-            gap: "6px",
-            padding: "6px 14px",
-            background: "rgba(30, 41, 59, 0.9)",
-            border: "1px solid rgba(56, 189, 248, 0.4)",
-            borderRadius: "8px",
-            color: "#38bdf8",
-            fontWeight: "700",
-            cursor: "pointer",
-            transition: "all 0.2s"
-          }}
-        >
-          <span>{customBackLabel}</span>
-        </button>
+        {inRouter ? (
+          <RouterSmartBackButton
+            onBack={onBack}
+            customBackLabel={customBackLabel}
+            isDevContext={isDevContext}
+          />
+        ) : (
+          <button
+            type="button"
+            className="btn-window-control btn-window-back"
+            onClick={handleBack}
+            style={{
+              display: "inline-flex",
+              alignItems: "center",
+              gap: "6px",
+              padding: "6px 14px",
+              background: "rgba(30, 41, 59, 0.9)",
+              border: "1px solid rgba(56, 189, 248, 0.4)",
+              borderRadius: "8px",
+              color: "#38bdf8",
+              fontWeight: "700",
+              cursor: "pointer",
+              transition: "all 0.2s"
+            }}
+          >
+            <span>{customBackLabel}</span>
+          </button>
+        )}
 
         <span style={{ color: "#94a3b8", fontWeight: "600", fontSize: "0.78rem" }}>
           {title}
