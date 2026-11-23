@@ -415,7 +415,15 @@ async function listUniversityExams(req) {
   const tier = await resolveScopedTier(req, ALL_TIERS);
   const tid = resolveTenantKey(req);
   const store = readPersistentStore();
-  return (store.universityExams || []).filter((e) => String(e.tenantId || '1') === tid && matchesTierScope(e, tier));
+  const role = String(req.user?.role || '').toUpperCase();
+  const list = (store.universityExams || []).filter((e) => String(e.tenantId || '1') === tid && matchesTierScope(e, tier));
+  if (role === 'STUDENT') {
+    return list.filter((e) => {
+      const vs = String(e.vettingStatus || '').toUpperCase();
+      return vs !== 'PENDING_HEADMASTER_VETTING' && vs !== 'REVISION_REQUESTED' && vs !== 'REJECTED';
+    });
+  }
+  return list;
 }
 
 async function createUniversityExam(req) {
@@ -429,22 +437,62 @@ async function createUniversityExam(req) {
   const tid = resolveTenantKey(req);
   const lecturerName = `${req.user?.firstName || ''} ${req.user?.lastName || ''}`.trim() || getInstitutionProfile(tier).facultyRoleTitle;
   const defaultTarget = (TIER_LEVEL_LADDERS[tier] || ['Level 100'])[0];
+  const actorRole = String(req.user?.role || '').toUpperCase();
+  const requireHeadmasterVetting =
+    body.requireHeadmasterVetting !== undefined
+      ? Boolean(body.requireHeadmasterVetting)
+      : actorRole === 'TEACHER';
+
+  const examId = `EXM-${Date.now()}`;
+  const semesterLabel = String(body.semester || (tier === 'NURSERY_TO_JHS' ? 'Term 1' : 'Semester 1'));
+  const targetLevel = String(body.targetLevel || defaultTarget);
+  const instructions = String(body.instructions || 'Answer all mandatory sections cleanly.').trim();
+  const examDate = body.examDate || new Date().toISOString().slice(0, 10);
+
+  let vettingSubmission = null;
+  if (requireHeadmasterVetting) {
+    const aiExamService = require('../ai-exam/aiExam.service');
+    vettingSubmission = await aiExamService.submitExamForHeadmasterVetting(
+      tid,
+      {
+        examId,
+        institutionType: tier,
+        examCategory: tier === 'UNIVERSITY' ? 'END_OF_SEMESTER' : 'END_OF_TERM',
+        academicTerm: semesterLabel,
+        title: `${courseCode} — ${courseTitle}`,
+        subjectCode: courseCode,
+        subjectName: courseTitle,
+        className: targetLevel,
+        examDate,
+        passMarks: Math.max(40, Math.min(80, Number(body.passMark || 50))),
+        instructions,
+        questionBank: Array.isArray(body.questions) ? body.questions : [],
+        typedQuestionText:
+          body.typedQuestionText ||
+          `${courseCode} (${courseTitle}) — ${semesterLabel} Examination for ${targetLevel}. Instructions: ${instructions}`
+      },
+      req.user
+    );
+  }
+
   const exam = {
-    id: `EXM-${Date.now()}`,
+    id: examId,
     tenantId: tid,
     institutionType: tier,
     courseCode,
     courseTitle,
     creditHours: Math.max(1, parseInt(body.creditHours || 3, 10)),
-    targetLevel: String(body.targetLevel || defaultTarget),
-    semester: String(body.semester || (tier === 'NURSERY_TO_JHS' ? 'Term 1' : 'Semester 1')),
+    targetLevel,
+    semester: semesterLabel,
     stream: String(body.stream || 'All Streams'),
     passMark: Math.max(40, Math.min(80, Number(body.passMark || 50))),
-    examDate: body.examDate || new Date().toISOString().slice(0, 10),
-    instructions: String(body.instructions || 'Answer all mandatory sections cleanly.').trim(),
+    examDate,
+    instructions,
     questions: Array.isArray(body.questions) ? body.questions : [],
     setByLecturer: lecturerName,
-    status: 'PUBLISHED',
+    vettingSubmissionId: vettingSubmission?.id || null,
+    vettingStatus: requireHeadmasterVetting ? 'PENDING_HEADMASTER_VETTING' : 'CONFIRMED_ONGOING',
+    status: requireHeadmasterVetting ? 'PENDING_HEADMASTER_VETTING' : 'PUBLISHED',
     createdAt: new Date().toISOString()
   };
 

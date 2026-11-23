@@ -117,7 +117,7 @@ function getEnvDefaultConfigs(tenantId = 1) {
       supportsAtMoney: true,
       supportsVisa: true,
       supportsMastercard: true,
-      supportsBankTransfer: false,
+      supportsBankTransfer: true,
       settlementLabel: 'Official Test & Demo Sandbox Gateway (No Real Funds)',
       allowPartialPayments: true,
       minPartialPercent: 20,
@@ -514,7 +514,7 @@ async function testGatewayConnectivity(tenantId = 1, gateway = 'PAYSTACK') {
   return { gateway: gw, connected: false, mode: cfg.mode, message: 'Unknown gateway.' };
 }
 
-async function resolveGatewayAndChannels(tenantId = 1) {
+async function resolveGatewayAndChannels(tenantId = 1, options = {}) {
   const configs = await getTenantGatewayConfigs(tenantId);
   const channelOptions = [];
 
@@ -533,10 +533,14 @@ async function resolveGatewayAndChannels(tenantId = 1) {
         primaryGateway: ordered[0].gateway,
         mode: ordered[0].mode,
         isSandbox: ordered[0].gateway === GATEWAYS.SANDBOX_PSP,
+        scope: options.scope || 'SCHOOL_FEES',
         gateways: ordered.map((g) => ({
           gateway: g.gateway,
           mode: g.mode,
           settlementLabel: g.settlementLabel,
+          bankName: g.bankName || null,
+          bankAccountName: g.bankAccountName || null,
+          bankBranch: g.bankBranch || null,
           supportsDirectMomoPrompt: Boolean(g.capabilities?.supportsDirectMomoPrompt),
           supportsHostedCheckout: Boolean(g.capabilities?.supportsHostedCheckout)
         }))

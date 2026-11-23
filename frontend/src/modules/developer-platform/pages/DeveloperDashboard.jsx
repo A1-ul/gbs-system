@@ -20,6 +20,7 @@ import { navigateToDetail } from "../../../utils/universalNavigation";
 import { syncSystemModeFlags, isDemoSandboxMode } from "../../../utils/tokenStorage";
 import RcceControlHub from "../components/RcceControlHub";
 import PaymentGatewayAdminPanel from "../../../components/common/PaymentGatewayAdminPanel";
+import FinancialReportsPanel from "../../../components/common/FinancialReportsPanel";
 import SchoolClinicHubPanel from "../../../components/common/SchoolClinicHubPanel";
 import UniversityOperationsPanel from "../../../components/common/UniversityOperationsPanel";
 import StudentDefaultersCompliancePanel from "../../../components/common/StudentDefaultersCompliancePanel";
@@ -9948,9 +9949,10 @@ export default function DeveloperDashboard() {
                         </td>
                         <td>
                           <span
-                            className={`severity-badge ${a.severity.toLowerCase()}`}
+                            className={`status-badge ${a.severity === "CRITICAL" || a.severity === "HIGH" ? "locked" : "active"}`}
+                            style={{ fontWeight: 800, fontSize: "0.72rem" }}
                           >
-                            {a.severity}
+                            {a.severity || "MEDIUM"}
                           </span>
                         </td>
                         <td style={{ maxWidth: "340px", color: "#cbd5e1" }}>
@@ -11553,6 +11555,7 @@ export default function DeveloperDashboard() {
 
         {activeTab === "payment_admin" && (
           <div className="tab-pane-content">
+            <FinancialReportsPanel currencySymbol="GHS" />
             <div style={{ background: "rgba(15, 23, 42, 0.85)", border: "1.5px solid rgba(16, 185, 129, 0.4)", borderRadius: "14px", padding: "1.5rem" }}>
               <PaymentGatewayAdminPanel
                 currencySymbol="GHS"

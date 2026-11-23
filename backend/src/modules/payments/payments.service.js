@@ -481,11 +481,17 @@ async function initiatePayment({ tenantId, requestingUser, body, originUrl = '' 
       ? (process.env.HUBTEL_MERCHANT_ACCOUNT_NUMBER || null)
       : (gatewayConfig.hubtelMerchantAccount || null);
 
+  // Only bind a single invoiceId when caller targeted one invoice or amount fits inside the first invoice
+  const boundInvoiceId =
+    input.invoiceId
+      ? (targetInvoice?.id || null)
+      : (targetInvoice && input.amount <= roundMoney(targetInvoice.balanceDue) + 0.01 ? targetInvoice.id : null);
+
   // Create CREATED record in DB before external API call
   const initialTx = await prisma.paymentTransaction.create({
     data: {
       tenantId: tid,
-      invoiceId: targetInvoice?.id || null,
+      invoiceId: boundInvoiceId,
       receiptNumber,
       reference,
       providerReference: null,
@@ -526,8 +532,7 @@ async function initiatePayment({ tenantId, requestingUser, body, originUrl = '' 
       userId: requestingUser?.id ? parseInt(requestingUser.id, 10) : null,
       module: 'PAYMENTS',
       action: 'PAYMENT_INITIATED',
-      entityId: initialTx.id,
-      details: `Initiated ${chosenGatewayName} / ${input.channel} payment ${reference} for ${input.currency} ${input.amount.toFixed(2)} (${tenant.name}).`
+      details: `[TX #${initialTx.id}] Initiated ${chosenGatewayName} / ${input.channel} payment ${reference} for ${input.currency} ${input.amount.toFixed(2)} (${tenant.name}).`
     }
   }).catch(() => {});
 
@@ -707,7 +712,7 @@ async function switchToFallbackMethod({ tenantId, reference, newGateway, newChan
       invoiceId: oldTx.invoiceId,
       amount: oldTx.expectedAmount || oldTx.amountPaid,
       currency: oldTx.currency,
-      gateway: newGateway || oldTx.gateway,
+      gateway: newGateway || (newChannel && String(newChannel).toUpperCase() !== String(oldTx.channel).toUpperCase() ? undefined : oldTx.gateway),
       channel: newChannel || oldTx.channel,
       payerPhone: payerPhone || undefined,
       payerEmail: oldTx.payerEmail || undefined,
@@ -939,7 +944,7 @@ async function handleWebhook({ gateway, rawBody, headers = {}, payload = {} }) {
 
     // Cross-verify server-to-server whenever provider requires verification or for live Paystack/Hubtel confirmations
     if (gw !== GATEWAYS.SANDBOX_PSP && parsedEvent.mappedStatus === TRANSACTION_STATES.SUCCESSFUL) {
-      const configs = await getTenantGatewayConfigs(tx.tenantId);
+      const configs = await getTenantGatewayConfigs(tx.tenantId, { includeSecrets: true });
       const cfg = configs.find((c) => c.gateway === gw) || {};
       if (adapter.isConfigured(cfg)) {
         const s2s = await adapter.verifyTransaction({
@@ -1160,21 +1165,42 @@ async function triggerSandboxConfirmation({ reference, outcome = 'SUCCESSFUL' })
 
 async function getAdminOverview(tenantId = null) {
   await ensurePaymentTables();
-  const [configs, transactions, webhooks, receipts] = await Promise.all([
+  const [configs, transactions, webhooks, receipts, auditLogs] = await Promise.all([
     getTenantGatewayConfigs(tenantId || 1),
     prisma.paymentTransaction.findMany(tenantId ? { where: { tenantId: parseInt(tenantId, 10) } } : {}).catch(() => []),
     prisma.paymentWebhookEvent.findMany({}).catch(() => []),
-    prisma.paymentReceipt.findMany(tenantId ? { where: { tenantId: parseInt(tenantId, 10) } } : {}).catch(() => [])
+    prisma.paymentReceipt.findMany(tenantId ? { where: { tenantId: parseInt(tenantId, 10) } } : {}).catch(() => []),
+    prisma.auditLog.findMany({
+      where: {
+        module: 'PAYMENTS',
+        ...(tenantId ? { tenantId: parseInt(tenantId, 10) } : {})
+      },
+      orderBy: { createdAt: 'desc' },
+      take: 60
+    }).catch(() => [])
   ]);
 
   transactions.sort((a, b) => new Date(b.createdAt || 0) - new Date(a.createdAt || 0));
   webhooks.sort((a, b) => new Date(b.createdAt || 0) - new Date(a.createdAt || 0));
 
+  const gatewayHealth = configs.map((c) => ({
+    gateway: c.gateway,
+    mode: c.mode,
+    configured: Boolean(c.adapterConfigured),
+    active: Boolean(c.effectiveEnabled),
+    channelsCount: (c.supportedChannels || []).length,
+    supportedChannels: c.supportedChannels || [],
+    hasSecretKey: Boolean(c.hasSecretKey),
+    status: c.effectiveEnabled ? 'OPERATIONAL' : c.adapterConfigured ? 'STANDBY_DISABLED' : 'CREDENTIALS_REQUIRED'
+  }));
+
   return {
     configs,
+    gatewayHealth,
     transactions: transactions.slice(0, 100).map(_sanitizeTransactionForClient),
     webhooks: webhooks.slice(0, 100),
     receipts: receipts.slice(0, 50),
+    auditLogs: Array.isArray(auditLogs) ? auditLogs.slice(0, 60) : [],
     stats: {
       totalTransactions: transactions.length,
       successful: transactions.filter((t) => t.gatewayStatus === TRANSACTION_STATES.SUCCESSFUL).length,
@@ -1187,7 +1213,17 @@ async function getAdminOverview(tenantId = null) {
       underReviewOrReversed: transactions.filter((t) =>
         [TRANSACTION_STATES.UNDER_REVIEW, TRANSACTION_STATES.REVERSED, TRANSACTION_STATES.REFUNDED].includes(t.gatewayStatus)
       ).length,
-      failedWebhooks: webhooks.filter((w) => w.processingStatus === 'FAILED' || w.processingStatus === 'RETRYING').length
+      failedWebhooks: webhooks.filter((w) => w.processingStatus === 'FAILED' || w.processingStatus === 'RETRYING').length,
+      schoolFeeSettledTotal: roundMoney(
+        transactions
+          .filter((t) => t.gatewayStatus === TRANSACTION_STATES.SUCCESSFUL && t.paymentScope !== PAYMENT_SCOPES.SUBSCRIPTION)
+          .reduce((sum, t) => sum + Number(t.amountPaid || 0), 0)
+      ),
+      subscriptionSettledTotal: roundMoney(
+        transactions
+          .filter((t) => t.gatewayStatus === TRANSACTION_STATES.SUCCESSFUL && t.paymentScope === PAYMENT_SCOPES.SUBSCRIPTION)
+          .reduce((sum, t) => sum + Number(t.amountPaid || 0), 0)
+      )
     }
   };
 }

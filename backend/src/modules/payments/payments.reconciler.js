@@ -121,9 +121,19 @@ async function reconcileVerifiedOutcome({
 
     if (targetStatus === TRANSACTION_STATES.SUCCESSFUL) {
       const settledAmount = roundMoney(verifiedAmount ?? freshTx.amountPaid ?? 0);
-      const { beforeTotal, afterTotal, invoicesTouched, description } =
+      const { beforeTotal, afterTotal, invoicesTouched, allocations, description } =
         await _postSuccessAccounting(tx, freshTx, settledAmount);
       updatedInvoices = invoicesTouched;
+
+      let mergedMetadata = {};
+      try {
+        mergedMetadata = freshTx.metadataJson ? JSON.parse(freshTx.metadataJson) : {};
+      } catch {
+        mergedMetadata = {};
+      }
+      if (Array.isArray(allocations) && allocations.length > 0) {
+        mergedMetadata.allocations = allocations;
+      }
 
       const tenant = await tx.tenant.findFirst({ where: { id: freshTx.tenantId } }).catch(() => null);
       const student = freshTx.studentId
@@ -181,6 +191,7 @@ async function reconcileVerifiedOutcome({
           reconciledAt: new Date(),
           paidAt: new Date(),
           failureReason: null,
+          metadataJson: JSON.stringify(mergedMetadata),
           displayMessage: gatewayResponse || 'Payment confirmed and fee account updated.'
         }
       });
@@ -191,8 +202,7 @@ async function reconcileVerifiedOutcome({
           userId: actorUserId || freshTx.payerUserId || null,
           module: 'PAYMENTS',
           action: 'PAYMENT_CONFIRMED_RECONCILED',
-          entityId: updatedTx.id,
-          details: `${updatedTx.gateway} ${updatedTx.channel} payment ${updatedTx.reference} (${updatedTx.currency} ${settledAmount.toFixed(2)}) confirmed via ${source}. Receipt ${receiptNum} issued.`
+          details: `[TX #${updatedTx.id}] ${updatedTx.gateway} ${updatedTx.channel} payment ${updatedTx.reference} (${updatedTx.currency} ${settledAmount.toFixed(2)}) confirmed via ${source}. Receipt ${receiptNum} issued.`
         }
       }).catch(() => {});
 
@@ -236,8 +246,7 @@ async function reconcileVerifiedOutcome({
         userId: actorUserId || freshTx.payerUserId || null,
         module: 'PAYMENTS',
         action: `PAYMENT_STATUS_${targetStatus}`,
-        entityId: updatedTx.id,
-        details: `Payment ${updatedTx.reference} transitioned ${freshTx.gatewayStatus} -> ${targetStatus} via ${source}. ${gatewayResponse || ''}`.trim()
+        details: `[TX #${updatedTx.id}] Payment ${updatedTx.reference} transitioned ${freshTx.gatewayStatus} -> ${targetStatus} via ${source}. ${gatewayResponse || ''}`.trim()
       }
     }).catch(() => {});
 
@@ -254,10 +263,47 @@ async function reconcileVerifiedOutcome({
       tenantId: transaction.tenantId,
       reference: result.transaction.reference,
       status: result.transaction.gatewayStatus,
+      paymentScope: result.transaction.paymentScope,
       studentId: result.transaction.studentId,
       amountPaid: result.transaction.amountPaid,
       receiptNumber: result.receipt?.receiptNumber || null
     });
+
+    // Emit canonical GBS-RCCE domain event for Developer & School Dashboards
+    try {
+      const { RCCE_EVENTS, eventNotificationEngine } = require('../../rcce/eventNotificationEngine');
+      const finalSt = result.transaction.gatewayStatus;
+      if (finalSt === TRANSACTION_STATES.SUCCESSFUL) {
+        await eventNotificationEngine.emitEvent(
+          RCCE_EVENTS.PAYMENT_RECEIVED,
+          {
+            reference: result.transaction.reference,
+            receiptNumber: result.receipt?.receiptNumber || result.transaction.receiptNumber,
+            amount: result.transaction.amountPaid,
+            currency: result.transaction.currency || 'GHS',
+            gateway: result.transaction.gateway,
+            channel: result.transaction.channel,
+            paymentScope: result.transaction.paymentScope,
+            studentId: result.transaction.studentId,
+            message: `${result.transaction.currency || 'GHS'} ${Number(result.transaction.amountPaid || 0).toFixed(2)} confirmed via ${result.transaction.gateway} (${result.transaction.channel}). Receipt ${result.receipt?.receiptNumber || result.transaction.receiptNumber} issued.`
+          },
+          { tenantId: transaction.tenantId, userId: actorUserId || transaction.payerUserId || null, actorRole: 'SYSTEM' }
+        );
+      } else if ([TRANSACTION_STATES.FAILED, TRANSACTION_STATES.REVERSED, TRANSACTION_STATES.REFUNDED].includes(finalSt)) {
+        await eventNotificationEngine.emitEvent(
+          RCCE_EVENTS.PAYMENT_REJECTED,
+          {
+            reference: result.transaction.reference,
+            status: finalSt,
+            gateway: result.transaction.gateway,
+            channel: result.transaction.channel,
+            reason: result.transaction.failureReason || gatewayResponse,
+            message: `Payment ${result.transaction.reference} transitioned to ${finalSt}: ${result.transaction.failureReason || gatewayResponse || 'Not completed'}.`
+          },
+          { tenantId: transaction.tenantId, userId: actorUserId || transaction.payerUserId || null, actorRole: 'SYSTEM' }
+        );
+      }
+    } catch { }
   }
 
   return result;
@@ -294,6 +340,7 @@ async function _postSuccessAccounting(tx, paymentTx, settledAmount) {
 
   let remainingToAllocate = roundMoney(settledAmount);
   const invoicesTouched = [];
+  const allocations = [];
   const descriptions = [];
 
   for (const inv of openInvoices) {
@@ -314,6 +361,7 @@ async function _postSuccessAccounting(tx, paymentTx, settledAmount) {
     });
 
     invoicesTouched.push(updated);
+    allocations.push({ invoiceId: inv.id, amount: applyAmt });
     descriptions.push(`${inv.title} (${inv.academicTerm})`);
     remainingToAllocate = roundMoney(remainingToAllocate - applyAmt);
   }
@@ -324,28 +372,64 @@ async function _postSuccessAccounting(tx, paymentTx, settledAmount) {
     beforeTotal,
     afterTotal,
     invoicesTouched,
+    allocations,
     description: descriptions.join('; ') || paymentTx.feeAccount || 'School Fees Settlement'
   };
 }
 
 async function _reverseAccounting(tx, paymentTx) {
-  if (!paymentTx.invoiceId || !paymentTx.studentId) return;
-  const inv = await tx.studentInvoice.findFirst({
-    where: { id: paymentTx.invoiceId, tenantId: paymentTx.tenantId }
-  });
-  if (!inv) return;
-  const reversedAmt = roundMoney(paymentTx.amountPaid || 0);
-  const newPaid = Math.max(0, roundMoney(Number(inv.paidAmount || 0) - reversedAmt));
-  const newBalance = Math.min(roundMoney(inv.netAmount), roundMoney(Number(inv.netAmount) - newPaid));
-  const newStatus = newPaid <= 0 ? 'DUE' : (newBalance > 0 ? 'PARTIAL' : 'PAID');
-  await tx.studentInvoice.update({
-    where: { id: inv.id },
-    data: {
-      paidAmount: newPaid,
-      balanceDue: newBalance,
-      status: newStatus
+  if (!paymentTx.studentId) return;
+
+  // Prefer exact recorded multi-invoice allocations if present
+  let recordedAllocations = [];
+  try {
+    const meta = paymentTx.metadataJson ? JSON.parse(paymentTx.metadataJson) : {};
+    if (Array.isArray(meta.allocations)) {
+      recordedAllocations = meta.allocations;
     }
+  } catch { }
+
+  if (recordedAllocations.length > 0) {
+    for (const alloc of recordedAllocations) {
+      const inv = await tx.studentInvoice.findFirst({
+        where: { id: alloc.invoiceId, tenantId: paymentTx.tenantId }
+      });
+      if (!inv) continue;
+      const revAmt = roundMoney(alloc.amount || 0);
+      const newPaid = Math.max(0, roundMoney(Number(inv.paidAmount || 0) - revAmt));
+      const newBalance = Math.min(roundMoney(inv.netAmount), roundMoney(Number(inv.netAmount) - newPaid));
+      const newStatus = newPaid <= 0 ? 'DUE' : (newBalance > 0 ? 'PARTIAL' : 'PAID');
+      await tx.studentInvoice.update({
+        where: { id: inv.id },
+        data: { paidAmount: newPaid, balanceDue: newBalance, status: newStatus }
+      });
+    }
+    return;
+  }
+
+  // Fallback: reverse across student's paid/partial invoices up to total reversed amount
+  let remainingToReverse = roundMoney(paymentTx.amountPaid || 0);
+  if (remainingToReverse <= 0) return;
+
+  const studentInvoices = await tx.studentInvoice.findMany({
+    where: { tenantId: paymentTx.tenantId, studentId: paymentTx.studentId }
   });
+  studentInvoices.sort((a, b) => (a.id === paymentTx.invoiceId ? -1 : b.id === paymentTx.invoiceId ? 1 : new Date(b.updatedAt || 0) - new Date(a.updatedAt || 0)));
+
+  for (const inv of studentInvoices) {
+    if (remainingToReverse <= 0) break;
+    const paidSoFar = roundMoney(inv.paidAmount || 0);
+    if (paidSoFar <= 0) continue;
+    const deductAmt = Math.min(paidSoFar, remainingToReverse);
+    const newPaid = Math.max(0, roundMoney(paidSoFar - deductAmt));
+    const newBalance = Math.min(roundMoney(inv.netAmount), roundMoney(Number(inv.netAmount) - newPaid));
+    const newStatus = newPaid <= 0 ? 'DUE' : (newBalance > 0 ? 'PARTIAL' : 'PAID');
+    await tx.studentInvoice.update({
+      where: { id: inv.id },
+      data: { paidAmount: newPaid, balanceDue: newBalance, status: newStatus }
+    });
+    remainingToReverse = roundMoney(remainingToReverse - deductAmt);
+  }
 }
 
 async function _activateTenantSubscriptionOnPayment(tx, paymentTx) {
@@ -354,13 +438,50 @@ async function _activateTenantSubscriptionOnPayment(tx, paymentTx) {
     await tx.tenant.update({
       where: { id: tenant.id },
       data: {
-        isLocked: false,
         isActive: true,
-        lockReason: null,
-        lockedAt: null
+        status: 'ACTIVE'
       }
     }).catch(() => {});
   }
+  try {
+    const { writePersistentStore } = require('../../core/database/persistentStore');
+    writePersistentStore((curr) => {
+      const subs = Array.isArray(curr.subscriptions) ? curr.subscriptions : [];
+      const matched = subs.some((s) => s.momoTxnId === paymentTx.reference || s.paymentReference === paymentTx.reference);
+      const updatedSubs = matched
+        ? subs.map((s) =>
+            s.momoTxnId === paymentTx.reference || s.paymentReference === paymentTx.reference
+              ? {
+                  ...s,
+                  paymentVerified: true,
+                  subscriptionStatus: 'ACTIVE',
+                  receiptNumber: paymentTx.receiptNumber || s.receiptNumber,
+                  verifiedAt: new Date().toISOString()
+                }
+              : s
+          )
+        : [
+            {
+              id: `SUB-${Date.now()}`,
+              tenantId: paymentTx.tenantId,
+              institutionName: tenant?.name || `Institution #${paymentTx.tenantId}`,
+              paymentReference: paymentTx.reference,
+              momoTxnId: paymentTx.reference,
+              receiptNumber: paymentTx.receiptNumber,
+              gateway: paymentTx.gateway,
+              channel: paymentTx.channel,
+              amountDueNow: paymentTx.amountPaid,
+              currencyCode: paymentTx.currency || 'GHS',
+              paymentVerified: true,
+              subscriptionStatus: 'ACTIVE',
+              verifiedAt: new Date().toISOString(),
+              createdAt: new Date().toISOString()
+            },
+            ...subs
+          ];
+      return { ...curr, subscriptions: updatedSubs };
+    });
+  } catch { }
 }
 
 async function _flagUnderReview(transaction, { reason, providerReference, source }) {
@@ -379,8 +500,7 @@ async function _flagUnderReview(transaction, { reason, providerReference, source
       userId: transaction.payerUserId || null,
       module: 'PAYMENTS',
       action: 'PAYMENT_FLAGGED_UNDER_REVIEW',
-      entityId: transaction.id,
-      details: `${source}: ${reason}`
+      details: `[TX #${transaction.id}] ${source}: ${reason}`
     }
   }).catch(() => {});
   return { transaction: updated, receipt: null, flaggedForReview: true };
@@ -396,14 +516,19 @@ async function _queuePaymentNotification(tx, paymentTx, receipt, kind = 'CONFIRM
     await tx.notificationQueueItem.create({
       data: {
         tenantId: paymentTx.tenantId,
-        recipientUserId: paymentTx.payerUserId || paymentTx.studentId || null,
+        userId: paymentTx.payerUserId || paymentTx.studentId || null,
         recipientContact: paymentTx.payerEmail || paymentTx.payerPhone || 'finance@gbs.edu',
+        recipientName: receipt?.studentName || 'GBS Payer',
         channel: 'IN_APP',
-        subject: kind === 'CONFIRMED' ? 'School Fee Payment Receipt Confirmed' : 'Payment Status Update',
-        body: msg,
+        title: kind === 'CONFIRMED' ? 'School Fee Payment Receipt Confirmed' : 'Payment Status Update',
+        content: msg,
         status: 'SENT',
         priority: 'HIGH',
-        sentAt: new Date()
+        sentAt: new Date(),
+        metadata: JSON.stringify({
+          reference: paymentTx.reference,
+          receiptNumber: receipt?.receiptNumber || paymentTx.receiptNumber || null
+        })
       }
     });
   } catch {

@@ -805,6 +805,84 @@ const RESPONSE_CATALOGUE = Object.freeze({
     category: 'INFRASTRUCTURE',
     message: 'Identical document content verified via SHA-256 digest. Reusing authorized storage object without duplication.',
     description: 'Duplicate file upload prevented.'
+  },
+
+  // =========================================================================
+  // 17. CROSS-INSTITUTION EXAM VETTING & CONFIRMATION (EXAMS)
+  // =========================================================================
+  EXAM_VETTING_SUBMITTED: {
+    code: 'EXAM_VETTING_SUBMITTED',
+    statusCode: 201,
+    category: 'ACADEMIC',
+    message: 'End-of-Term / Semester exam paper has been submitted to the Headmaster for vetting and confirmation.',
+    description: 'Teacher submitted examination paper for institutional vetting.'
+  },
+  EXAM_VETTING_CONFIRMED: {
+    code: 'EXAM_VETTING_CONFIRMED',
+    statusCode: 200,
+    category: 'ACADEMIC',
+    message: 'Examination has been vetted and officially confirmed by the Headmaster for ongoing exams.',
+    description: 'Headmaster authorized examination for ongoing institutional administration.'
+  },
+  EXAM_VETTING_REVISION_REQUESTED: {
+    code: 'EXAM_VETTING_REVISION_REQUESTED',
+    statusCode: 200,
+    category: 'ACADEMIC',
+    message: 'Headmaster vetting remarks have been returned to the teacher for revision before confirmation.',
+    description: 'Exam returned to educator for updates prior to ongoing exam confirmation.'
+  },
+  EXAM_VETTING_REJECTED: {
+    code: 'EXAM_VETTING_REJECTED',
+    statusCode: 200,
+    category: 'ACADEMIC',
+    message: 'Examination submission was declined during Headmaster vetting.',
+    description: 'Exam paper rejected by institutional leadership.'
+  },
+  EXAM_VETTING_RESUBMITTED: {
+    code: 'EXAM_VETTING_RESUBMITTED',
+    statusCode: 200,
+    category: 'ACADEMIC',
+    message: 'Revised examination paper has been resubmitted to the Headmaster for vetting and confirmation.',
+    description: 'Educator submitted updated exam paper following vetting remarks.'
+  },
+
+  // =========================================================================
+  // 18. MULTI-GATEWAY PAYMENT LIFECYCLE & RECONCILIATION (FINANCE)
+  // =========================================================================
+  PAYMENT_INITIATED: {
+    code: 'PAYMENT_INITIATED',
+    statusCode: 201,
+    category: 'FINANCE',
+    message: 'Payment request created and initiated securely with the selected payment provider.',
+    description: 'Pending payment created with unique reference and awaiting customer authorization.'
+  },
+  PAYMENT_VERIFIED_SUCCESS: {
+    code: 'PAYMENT_VERIFIED_SUCCESS',
+    statusCode: 200,
+    category: 'FINANCE',
+    message: 'Payment confirmed by provider. Official receipt issued and account balance updated.',
+    description: 'Verified server-to-server / signed webhook payment confirmation settled.'
+  },
+  PAYMENT_WEBHOOK_INVALID: {
+    code: 'PAYMENT_WEBHOOK_INVALID',
+    statusCode: 401,
+    category: 'FINANCE',
+    message: 'Invalid payment webhook signature rejected.',
+    description: 'Cryptographic webhook signature verification failed.'
+  },
+  PAYMENT_RECONCILED: {
+    code: 'PAYMENT_RECONCILED',
+    statusCode: 200,
+    category: 'FINANCE',
+    message: 'Pending payment transactions reconciled directly against payment providers.',
+    description: 'Server-to-server reconciliation completed.'
+  },
+  PAYMENT_REFUNDED: {
+    code: 'PAYMENT_REFUNDED',
+    statusCode: 200,
+    category: 'FINANCE',
+    message: 'Payment refund or reversal recorded and school ledger adjusted.',
+    description: 'Confirmed payment reversed or refunded with atomic balance restoration.'
   }
 });
 
@@ -900,7 +978,12 @@ function inferOperationResponse({ method = 'GET', path = '/', statusCode = 200, 
   }
   if (p.includes('/verify-pin')) return getOperationResponse('AUTH_PIN_VERIFIED', message || null, s);
   if (p.includes('/approve-staff')) return getOperationResponse('STAFF_APPROVED_SUCCESS', message || null, s);
+  if (p.includes('/vetting/submit') && m === 'POST') return getOperationResponse('EXAM_VETTING_SUBMITTED', message || null, s);
+  if (p.includes('/vetting/') && p.includes('/review')) return getOperationResponse('EXAM_VETTING_CONFIRMED', message || null, s);
+  if (p.includes('/vetting/') && p.includes('/resubmit')) return getOperationResponse('EXAM_VETTING_RESUBMITTED', message || null, s);
   if (p.includes('/payment') || p.includes('/fees') || p.includes('/finance')) {
+    if (m === 'POST' && p.includes('/initiate')) return getOperationResponse('PAYMENT_INITIATED', message || null, s);
+    if (m === 'POST' && p.includes('/reconcile')) return getOperationResponse('PAYMENT_RECONCILED', message || null, s);
     if (m === 'POST' && s === 202) return getOperationResponse('FINANCE_PAYMENT_PENDING', message || null, s);
     if (m === 'POST' && p.includes('calculate')) return getOperationResponse('FINANCE_SUBSCRIPTION_CALCULATED', message || null, s);
     if (m === 'POST') return getOperationResponse('FINANCE_PAYMENT_SUCCESS', message || null, s);

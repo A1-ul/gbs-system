@@ -6,7 +6,10 @@ const { resolveTenantId } = require('../../utils/resolveTenantId');
 const getExams = async (req, res, next) => {
   try {
     const tenantId = resolveTenantId(req, 1);
-    const exams = await aiExamService.getExams(tenantId);
+    const forStudent =
+      String(req.user?.role || '').toUpperCase() === 'STUDENT' ||
+      String(req.query?.studentOnly || '').toLowerCase() === 'true';
+    const exams = await aiExamService.getExams(tenantId, { forStudent });
     res.status(200).json({
       status: 'success',
       results: exams.length,
@@ -271,6 +274,88 @@ const getScannerAnswerKey = async (req, res, next) => {
   }
 };
 
+const listExamVettingSubmissions = async (req, res, next) => {
+  try {
+    const tenantId = resolveTenantId(req, 1);
+    const submissions = await aiExamService.listExamVettingSubmissions(tenantId, req.query || {}, req.user);
+    res.status(200).json({
+      status: 'success',
+      results: submissions.length,
+      data: { submissions }
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+
+const submitExamForHeadmasterVetting = async (req, res, next) => {
+  try {
+    const tenantId = resolveTenantId(req, 1);
+    const submission = await aiExamService.submitExamForHeadmasterVetting(tenantId, req.body || {}, req.user);
+    res.status(201).json({
+      status: 'success',
+      code: 'EXAM_VETTING_SUBMITTED',
+      message: `End-of-Term / Semester Exam "${submission.title}" has been submitted to the Headmaster for vetting and ongoing exam confirmation.`,
+      data: { submission }
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+
+const reviewExamVettingSubmission = async (req, res, next) => {
+  try {
+    const tenantId = resolveTenantId(req, 1);
+    const result = await aiExamService.reviewExamVettingSubmission(
+      tenantId,
+      req.params.id,
+      req.body || {},
+      req.user
+    );
+    const decision = result.submission?.vettingStatus;
+    const code =
+      decision === 'CONFIRMED_ONGOING'
+        ? 'EXAM_VETTING_CONFIRMED'
+        : decision === 'REVISION_REQUESTED'
+          ? 'EXAM_VETTING_REVISION_REQUESTED'
+          : 'EXAM_VETTING_REJECTED';
+    const message =
+      decision === 'CONFIRMED_ONGOING'
+        ? `Exam "${result.submission.title}" has been vetted and officially confirmed for ongoing examinations.`
+        : decision === 'REVISION_REQUESTED'
+          ? `Revision requested for "${result.submission.title}". Headmaster remarks sent back to teacher.`
+          : `Exam "${result.submission.title}" was rejected by Headmaster vetting.`;
+    res.status(200).json({
+      status: 'success',
+      code,
+      message,
+      data: result
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+
+const resubmitExamForHeadmasterVetting = async (req, res, next) => {
+  try {
+    const tenantId = resolveTenantId(req, 1);
+    const submission = await aiExamService.resubmitExamForHeadmasterVetting(
+      tenantId,
+      req.params.id,
+      req.body || {},
+      req.user
+    );
+    res.status(200).json({
+      status: 'success',
+      code: 'EXAM_VETTING_RESUBMITTED',
+      message: `Revised exam "${submission.title}" resubmitted to Headmaster for vetting and confirmation.`,
+      data: { submission }
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+
 module.exports = {
   getExams,
   createExam,
@@ -287,5 +372,9 @@ module.exports = {
   ackProctorMessage,
   saveProctorEvidence,
   getProctorEvidence,
-  deleteProctorEvidence
+  deleteProctorEvidence,
+  listExamVettingSubmissions,
+  submitExamForHeadmasterVetting,
+  reviewExamVettingSubmission,
+  resubmitExamForHeadmasterVetting
 };

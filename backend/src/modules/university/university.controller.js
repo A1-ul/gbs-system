@@ -146,9 +146,13 @@ const listExams = async (req, res, next) => {
 const createExam = async (req, res, next) => {
   try {
     const exam = await universityService.createUniversityExam(req);
+    const pendingVetting = exam?.vettingStatus === 'PENDING_HEADMASTER_VETTING';
     res.status(201).json({
       status: 'success',
-      message: `University examination '${exam.courseCode}' published cleanly.`,
+      code: pendingVetting ? 'EXAM_VETTING_SUBMITTED' : 'UNIVERSITY_EXAM_PUBLISHED',
+      message: pendingVetting
+        ? `Examination '${exam.courseCode}' submitted to the Headmaster / Principal for vetting & confirmation before ongoing exams.`
+        : `Examination '${exam.courseCode}' confirmed and published cleanly.`,
       data: { exam }
     });
   } catch (err) {

@@ -1738,14 +1738,18 @@ export function StudentDashboard({ initialTab } = {}) {
   const fetchExams = async () => {
     try {
       const [examsRes, sheetsRes] = await Promise.all([
-        apiClient.get("/ai-exam/exams"),
+        apiClient.get("/ai-exam/exams?studentOnly=true"),
         apiClient.get("/ai-exam/answer-sheets").catch(() => null)
       ]);
       const list = examsRes.data?.data?.exams || examsRes.data?.data || [];
       const teacherExams = JSON.parse(localStorage.getItem("gbs_teacher_published_exams") || "[]");
       const seenIds = new Set();
       const combined = [];
-      [...teacherExams, ...list].forEach((ex) => {
+      [...list, ...teacherExams].forEach((ex) => {
+        const vs = String(ex?.vettingStatus || "").toUpperCase();
+        if (vs === "PENDING_HEADMASTER_VETTING" || vs === "REVISION_REQUESTED" || vs === "REJECTED") {
+          return;
+        }
         if (!seenIds.has(String(ex.id))) {
           seenIds.add(String(ex.id));
           combined.push(ex);

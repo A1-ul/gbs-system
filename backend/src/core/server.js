@@ -319,6 +319,8 @@ app.use('/api/v1', demoLimitMiddleware);
 app.post('/api/v1/auth/register', idempotencyProtection.guard('USER_REGISTRATION'));
 app.post('/api/v1/auth/signup', idempotencyProtection.guard('USER_REGISTRATION'));
 app.post('/api/v1/payments/initiate', idempotencyProtection.guard('FEE_PAYMENT'));
+app.post('/api/v1/ai-exam/vetting/submit', idempotencyProtection.guard('EXAM_VETTING_SUBMISSION'));
+app.post('/api/v1/exams/vetting/submit', idempotencyProtection.guard('EXAM_VETTING_SUBMISSION'));
 app.post('/api/v1/subscriptions/calculate-and-subscribe', idempotencyProtection.guard('SUBSCRIPTION_BILLING'));
 app.post('/api/v1/admissions', idempotencyProtection.guard('ADMISSION_SUBMISSION'));
 app.post('/api/v1/admissions/inquiries', idempotencyProtection.guard('ADMISSION_INQUIRY'));

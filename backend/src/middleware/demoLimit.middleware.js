@@ -69,7 +69,7 @@ const EXEMPT_PATH_PREFIXES = [
   '/sms/'
 ];
 
-const NON_CREATE_ACTION_REGEX = /\/(login|logout|refresh-token|verify|verify-pin|webhook|reconcile|calculate|scan|grade|sync|heartbeat|ack|live-location|location|watch|export|status|forgot-password|reset-password|reset-demo|demo-reset|approve|reject|vet|voice|batch-delete|batch-archive|batch-resolve|restore|purge|recalculate-population|advance-student|pull-record)(\/|$)/i;
+const NON_CREATE_ACTION_REGEX = /\/(login|logout|refresh-token|verify|verify-pin|webhook|reconcile|calculate|scan|grade|sync|heartbeat|ack|live-location|location|watch|export|status|forgot-password|reset-password|reset-demo|demo-reset|approve|reject|vet|review|resubmit|fallback|cancel|submit-otp|sandbox-confirm|test-gateway|admin-action|voice|batch-delete|batch-archive|batch-resolve|restore|purge|recalculate-population|advance-student|pull-record)(\/|$)/i;
 
 const RESOURCE_BUCKETS = [
   { prefix: '/transport/routes', bucket: 'transport_routes', label: 'Bus Commuter Routes' },

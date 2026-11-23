@@ -294,13 +294,20 @@ class PaystackAdapter extends BasePaymentAdapter {
   }
 
   verifyWebhookSignature({ rawBody, headers = {}, config = {} }) {
-    const secretKey = this._getSecretKey(config);
-    if (!secretKey) return false;
     const signature = headers['x-paystack-signature'] || headers['X-Paystack-Signature'];
     if (!signature) return false;
+    const candidateKeys = [
+      this._getSecretKey(config),
+      config?.webhookSecret || '',
+      process.env.PAYSTACK_WEBHOOK_SECRET || ''
+    ].filter((k, idx, arr) => Boolean(k) && arr.indexOf(k) === idx);
+    if (candidateKeys.length === 0) return false;
     const payloadString = Buffer.isBuffer(rawBody) ? rawBody : Buffer.from(String(rawBody || ''), 'utf8');
-    const expectedHmac = crypto.createHmac('sha512', secretKey).update(payloadString).digest('hex');
-    return timingSafeEqualsHex(expectedHmac, String(signature).toLowerCase());
+    const provided = String(signature).toLowerCase();
+    return candidateKeys.some((key) => {
+      const expectedHmac = crypto.createHmac('sha512', key).update(payloadString).digest('hex');
+      return timingSafeEqualsHex(expectedHmac, provided);
+    });
   }
 
   parseWebhookEvent({ payload = {} }) {

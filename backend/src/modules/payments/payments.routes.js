@@ -33,6 +33,7 @@ router.get('/sandbox-checkout/:reference', controller.renderSandboxCheckoutPage)
 router.post('/sandbox-checkout/:reference/complete', paymentWriteLimiter, controller.triggerSandboxWebhook);
 
 // 3. Public Onboarding Subscription Checkout (for schools registering before login)
+router.get('/onboarding/gateways', controller.getOnboardingGateways);
 router.post('/onboarding/initiate', paymentWriteLimiter, controller.initiateOnboardingSubscriptionPayment);
 router.get('/onboarding/verify/:reference', controller.verifyOnboardingTransaction);
 

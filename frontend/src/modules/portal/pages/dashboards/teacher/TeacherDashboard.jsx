@@ -20,6 +20,7 @@ import StudentDefaultersCompliancePanel from "../../../../../components/common/S
 import SchoolClinicHubPanel from "../../../../../components/common/SchoolClinicHubPanel";
 import SchoolStationeryHubPanel from "../../../../../components/common/SchoolStationeryHubPanel";
 import TeacherLiveProctoringPanel from "../../../../../components/common/TeacherLiveProctoringPanel";
+import ExamVettingHubPanel from "../../../../../components/common/ExamVettingHubPanel";
 import UniversalRoleGuideModal from "../../../../../components/common/UniversalRoleGuideModal";
 import ClassTopicVideoPlatform from "../../../../../components/common/ClassTopicVideoPlatform";
 import { navigateToDetail } from "../../../../../utils/universalNavigation";
@@ -1527,6 +1528,56 @@ export default function TeacherDashboard() {
       status: "PUBLISHED_ACTIVE",
       publishedAt: new Date().toISOString()
     };
+  };
+
+  const handleSendExamToHeadmasterForVetting = async () => {
+    if (!newExamForm.title.trim()) {
+      setFeedback({ type: "error", message: "Please provide an Examination Paper Title before sending to the Headmaster for vetting." });
+      return;
+    }
+    const createdExam = buildCreatedExamObject();
+    const instType = getActiveInstitutionType();
+    try {
+      const res = await apiClient.post("/ai-exam/vetting/submit", {
+        examId: createdExam.id,
+        institutionType: instType,
+        examCategory: instType === "UNIVERSITY" ? "END_OF_SEMESTER" : "END_OF_TERM",
+        academicTerm: publishTerm || (instType === "UNIVERSITY" ? "Semester 1" : "End of Term Exam"),
+        academicYear: "2026-2027",
+        title: createdExam.title,
+        subjectCode: createdExam.subjectCode,
+        subjectName: createdExam.subjectName,
+        className: createdExam.class?.name || activeClassObj?.name || "Assigned Class Cohort",
+        examDate: createdExam.examDate,
+        startTime: createdExam.startTime,
+        endTime: createdExam.endTime,
+        durationMinutes: createdExam.durationMinutes,
+        totalMarks: createdExam.totalMarks,
+        passMarks: createdExam.passMarks,
+        examMode: createdExam.examMode,
+        restrictBeforeStart: createdExam.restrictBeforeStart,
+        instructions: createdExam.instructions,
+        questionBank: createdExam.questionBank,
+        typedQuestionText: createdExam.typedQuestionText,
+        uploadedDocName: createdExam.uploadedDocName,
+        submittedByName: teacherProfile?.fullName || `${currentUser?.firstName || ""} ${currentUser?.lastName || ""}`.trim() || "Subject Educator",
+        submittedByEmail: currentUser?.email || ""
+      });
+      setShowQuestionVerificationModal(false);
+      setShowAuthorExamModal(false);
+      setPendingPublishExam(null);
+      window.dispatchEvent(new Event("gbs_exam_vetting_updated"));
+      const msg = res.data?.message || `Exam '${createdExam.title}' sent to Headmaster for vetting & confirmation before ongoing exams!`;
+      setFeedback({ type: "success", message: msg });
+      if (typeof window !== "undefined" && typeof window.showGBSOpenNotice === "function") {
+        window.showGBSOpenNotice(msg, "success", "EXAM SENT TO HEADMASTER FOR VETTING");
+      }
+    } catch (err) {
+      setFeedback({
+        type: "error",
+        message: err?.response?.data?.message || "Could not submit exam to Headmaster for vetting."
+      });
+    }
   };
 
   const handleDirectPublishTimedExam = () => {
@@ -4618,6 +4669,14 @@ export default function TeacherDashboard() {
             </button>
             <button
               type="button"
+              className={`role-tab-btn ${activeTab === "examVetting" ? "active" : ""}`}
+              onClick={() => setActiveTab("examVetting")}
+              style={{ borderLeft: "3px solid #f59e0b", color: activeTab === "examVetting" ? "#fbbf24" : undefined, fontWeight: 800 }}
+            >
+              📝 Send End-of-Term / Semester Exams for Vetting
+            </button>
+            <button
+              type="button"
               data-testid="teacher-exams-monitor-tab"
               className={`role-tab-btn ${activeTab === "examsMonitor" ? "active" : ""}`}
               onClick={() => setActiveTab("examsMonitor")}
@@ -6098,6 +6157,19 @@ export default function TeacherDashboard() {
           {/* ======================================================== */}
           {/* TAB 4: EXAMS & RESULTS (INDIVIDUAL STUDENT GRADE ENTRY)   */}
           {/* ======================================================== */}
+          {activeTab === "examVetting" && (
+            <div className="role-workspace-card">
+              <ExamVettingHubPanel
+                mode="TEACHER"
+                currentUser={currentUser}
+                availableClasses={classes}
+                existingExams={exams}
+                returnTab="examVetting"
+                onFeedback={(fb) => setFeedback(fb)}
+              />
+            </div>
+          )}
+
           {activeTab === "exams" && (
             <div className="role-workspace-card">
               <div className="workspace-title-row">
@@ -12206,6 +12278,14 @@ export default function TeacherDashboard() {
 
             <div style={{ display: "flex", justifyContent: "flex-end", gap: "10px", marginTop: "1rem", flexWrap: "wrap" }}>
               <button type="button" className="btn-secondary" onClick={() => setShowAuthorExamModal(false)}>Cancel</button>
+              <button
+                type="button"
+                className="btn-primary"
+                onClick={handleSendExamToHeadmasterForVetting}
+                style={{ background: "linear-gradient(135deg, #d97706, #f59e0b)", color: "#0f172a", padding: "10px 18px", fontWeight: 900 }}
+              >
+                📝 Send to Headmaster for Vetting & Confirmation
+              </button>
               <button
                 type="button"
                 className="btn-primary"

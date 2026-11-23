@@ -1,7 +1,8 @@
 import React, { useEffect, useRef, useState } from "react";
 import apiClient from "../../api/client/apiClient";
 import { getApiBaseUrl } from "../../api/client/apiConfig";
-import { getActiveSchoolName } from "../../utils/schoolBranding";
+import { getActiveSchoolName, getActiveSchoolLogo } from "../../utils/schoolBranding";
+import { copyTextSafely } from "../../utils/safeWindow";
 
 const CHANNEL_META = {
   MTN_MOMO: { title: "MTN Mobile Money", subtitle: "Phone prompt or browser checkout", accent: "#f59e0b", icon: "📱" },
@@ -156,19 +157,19 @@ export default function OfficialPaymentGatewayModal({
               : outstanding;
           setPayAmount(suggestedAmt > 0 ? String(suggestedAmt) : "");
         } else {
-          // Subscription / Onboarding payment context
-          const res = await apiClient.get("/payments/gateways", {
+          // Subscription / Onboarding payment context (public safe gateway lookup -> Developer Platform Account)
+          const gatewayEndpoint = allowPublicOnboarding
+            ? `/payments/onboarding/gateways?tenantId=${encodeURIComponent(effectiveTenantId)}`
+            : `/payments/gateways?scope=SUBSCRIPTION`;
+          const res = await apiClient.get(gatewayEndpoint, {
             headers: { "x-tenant-id": String(effectiveTenantId) }
           }).catch(() => null);
-          const channels = res?.data?.data?.channels || [
-            { channel: "MTN_MOMO", primaryGateway: "SANDBOX_PSP", isSandbox: true },
-            { channel: "TELECEL_CASH", primaryGateway: "SANDBOX_PSP", isSandbox: true },
-            { channel: "AT_MONEY", primaryGateway: "SANDBOX_PSP", isSandbox: true },
-            { channel: "VISA", primaryGateway: "SANDBOX_PSP", isSandbox: true }
-          ];
+          const channels = res?.data?.data?.channels || [];
           setAvailableChannels(channels);
-          setSelectedChannel(channels[0]?.channel || "MTN_MOMO");
-          setSelectedGateway(channels[0]?.primaryGateway || "SANDBOX_PSP");
+          if (channels.length > 0) {
+            setSelectedChannel(channels[0].channel);
+            setSelectedGateway(channels[0].primaryGateway);
+          }
           setPayAmount(amount ? String(amount) : "");
         }
       } catch (err) {
@@ -196,14 +197,22 @@ export default function OfficialPaymentGatewayModal({
   const startStatusPolling = (reference) => {
     stopPolling();
     setPollingActive(true);
+    let attempts = 0;
+    const maxAttempts = 20; // ~90 seconds of automatic checks, never an indefinite spinner
     pollTimerRef.current = setInterval(async () => {
+      attempts += 1;
       try {
         const res = await verifyOnServer(reference, true);
         if (res && ["SUCCESSFUL", "FAILED", "CANCELLED", "EXPIRED", "REVERSED", "REFUNDED"].includes(res.transaction?.gatewayStatus)) {
           stopPolling();
+          return;
         }
       } catch {
-        // Continue polling cleanly until verified or cancelled
+        // Continue cleanly until verified, cancelled, or maxAttempts reached
+      }
+      if (attempts >= maxAttempts) {
+        stopPolling();
+        setInfoMsg("Still awaiting confirmation from your payment provider. Once you approve on your phone or checkout page, click 'Verify Payment Status' below or choose a fallback option.");
       }
     }, 4500);
   };
@@ -422,6 +431,7 @@ export default function OfficialPaymentGatewayModal({
     if (!verifiedReceipt && !activeTransaction) return;
     const r = verifiedReceipt || {};
     const tx = activeTransaction || {};
+    const schoolLogo = getActiveSchoolLogo() || "/assets/gbs_crest_badge.jpg";
     const win = window.open("", "_blank", "width=760,height=860");
     if (!win) return;
     win.document.write(`<!DOCTYPE html>
@@ -431,7 +441,9 @@ export default function OfficialPaymentGatewayModal({
 <style>
   body { font-family: Arial, sans-serif; color: #0f172a; padding: 32px; }
   .box { border: 2px solid #0f172a; padding: 24px; max-width: 640px; margin: 0 auto; }
-  .hdr { display: flex; justify-content: space-between; border-bottom: 2px solid #cbd5e1; padding-bottom: 12px; margin-bottom: 16px; }
+  .hdr { display: flex; justify-content: space-between; align-items: center; border-bottom: 2px solid #cbd5e1; padding-bottom: 12px; margin-bottom: 16px; gap: 12px; }
+  .brand { display: flex; align-items: center; gap: 12px; }
+  .brand img { width: 52px; height: 52px; object-fit: contain; border-radius: 8px; }
   .row { display: flex; justify-content: space-between; padding: 6px 0; border-bottom: 1px dashed #e2e8f0; font-size: 14px; }
   .paid { font-size: 22px; font-weight: 800; color: #047857; margin-top: 12px; }
 </style>
@@ -439,16 +451,21 @@ export default function OfficialPaymentGatewayModal({
 <body>
   <div class="box">
     <div class="hdr">
-      <div><h2 style="margin:0;">${r.institutionName || schoolDisplayName}</h2><div>Official Verified Fee Receipt</div></div>
+      <div class="brand">
+        <img src="${schoolLogo}" alt="Institution Logo" />
+        <div><h2 style="margin:0;">${r.institutionName || schoolDisplayName}</h2><div>Official Verified Payment Receipt</div></div>
+      </div>
       <div style="text-align:right;"><strong>${r.receiptNumber || tx.receiptNumber}</strong><br/>${new Date(r.issuedAt || Date.now()).toLocaleString()}</div>
     </div>
     <div class="row"><span>Student Name</span><strong>${r.studentName || statement?.student?.fullName || studentName || "—"}</strong></div>
     <div class="row"><span>Student ID</span><strong>${r.studentCode || statement?.student?.studentCode || studentId || "—"}</strong></div>
+    <div class="row"><span>Payer Contact</span><strong>${tx.payerEmail || payerEmail || tx.payerPhone || "Verified Payer"}</strong></div>
     <div class="row"><span>Academic Period</span><strong>${r.academicYear || tx.academicYear || "2026-2027"} • ${r.term || tx.term || ""}</strong></div>
-    <div class="row"><span>Fee Description</span><strong>${r.feeDescription || tx.feeAccount || title}</strong></div>
-    <div class="row"><span>Payment Gateway & Method</span><strong>${r.gateway || tx.gateway} • ${r.channel || tx.channel}</strong></div>
+    <div class="row"><span>Payment Description</span><strong>${r.feeDescription || tx.feeAccount || title}</strong></div>
+    <div class="row"><span>Payment Gateway &amp; Method</span><strong>${r.gateway || tx.gateway} • ${r.channel || tx.channel}</strong></div>
     <div class="row"><span>GBS Transaction Reference</span><strong>${r.transactionRef || tx.reference}</strong></div>
     <div class="row"><span>Provider Reference</span><strong>${r.providerReference || tx.providerReference || "—"}</strong></div>
+    <div class="row"><span>Payment Status</span><strong>CONFIRMED SUCCESSFUL</strong></div>
     <div class="row"><span>Balance Before Payment</span><strong>${r.currency || currency} ${Number(r.balanceBefore || 0).toFixed(2)}</strong></div>
     <div class="row"><span>Remaining Balance Due</span><strong>${r.currency || currency} ${Number(r.balanceAfter || 0).toFixed(2)}</strong></div>
     <div class="paid">Amount Confirmed: ${r.currency || currency} ${Number(r.amountPaid || tx.amountPaid || 0).toFixed(2)}</div>
@@ -512,6 +529,19 @@ export default function OfficialPaymentGatewayModal({
           >
             ✕ Close
           </button>
+        </div>
+
+        {/* Settlement Recipient Banner */}
+        <div style={{ background: "rgba(16, 185, 129, 0.1)", border: "1px solid rgba(16, 185, 129, 0.35)", borderRadius: "10px", padding: "9px 12px", marginBottom: "12px", fontSize: "0.78rem", color: "#a7f3d0", display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: "6px" }}>
+          <span>
+            <strong>Verified Recipient:</strong>{" "}
+            {paymentScope === "SUBSCRIPTION"
+              ? "GBS Platform Developer Account (Automatic Subscription Activation)"
+              : `${schoolDisplayName} — Official School Accountant Account`}
+          </span>
+          <span style={{ fontWeight: 800, color: "#34d399" }}>
+            {selectedGateway || "Verified Gateway"}
+          </span>
         </div>
 
         {/* Sandbox Notice */}
@@ -718,7 +748,19 @@ export default function OfficialPaymentGatewayModal({
             <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: "8px", background: "rgba(2,6,23,0.6)", padding: "12px 14px", borderRadius: "12px" }}>
               <div>
                 <div style={{ fontSize: "0.72rem", color: "#94a3b8" }}>Transaction Reference</div>
-                <strong style={{ fontFamily: "monospace", fontSize: "0.95rem", color: "#38bdf8" }}>{activeTransaction.reference}</strong>
+                <div style={{ display: "flex", alignItems: "center", gap: "8px", marginTop: "2px" }}>
+                  <strong style={{ fontFamily: "monospace", fontSize: "0.95rem", color: "#38bdf8" }}>{activeTransaction.reference}</strong>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      copyTextSafely(activeTransaction.reference);
+                      setInfoMsg(`Reference ${activeTransaction.reference} copied to clipboard.`);
+                    }}
+                    style={{ background: "rgba(56,189,248,0.16)", border: "1px solid #38bdf8", color: "#bae6fd", borderRadius: "6px", padding: "2px 8px", fontSize: "0.7rem", fontWeight: 700, cursor: "pointer" }}
+                  >
+                    Copy
+                  </button>
+                </div>
               </div>
               <span style={{ background: badge.bg, color: badge.color, border: `1px solid ${badge.color}`, padding: "4px 10px", borderRadius: "999px", fontSize: "0.75rem", fontWeight: 800 }}>
                 {badge.label}
@@ -728,6 +770,60 @@ export default function OfficialPaymentGatewayModal({
             {activeTransaction.ussdInstruction && (
               <div style={{ background: "rgba(15, 23, 42, 0.85)", border: "1px solid #38bdf8", borderRadius: "10px", padding: "12px", fontSize: "0.85rem", color: "#e0f2fe" }}>
                 <strong>Provider Instructions:</strong> {activeTransaction.ussdInstruction}
+              </div>
+            )}
+
+            {/* Honest Mobile Money App / Handset Prompt Guidance (never fabricates deep links or asks for MoMo PIN) */}
+            {["MTN_MOMO", "TELECEL_CASH", "AT_MONEY"].includes(activeTransaction.channel) &&
+              !["SUCCESSFUL", "CANCELLED", "REFUNDED", "REVERSED"].includes(activeTransaction.gatewayStatus) && (
+                <div style={{ background: "rgba(245, 158, 11, 0.08)", border: "1px solid rgba(245, 158, 11, 0.35)", borderRadius: "10px", padding: "12px", fontSize: "0.78rem", color: "#fde68a", lineHeight: 1.5 }}>
+                  <strong style={{ display: "block", marginBottom: "4px", color: "#fbbf24" }}>
+                    How to Authorize Your Mobile Money Payment Securely:
+                  </strong>
+                  <div>1. Check your phone for the official carrier authorization prompt (or open your official carrier MoMo app if installed to view Pending Approvals).</div>
+                  <div>2. Enter your Mobile Money PIN <strong>only on your phone&apos;s official carrier prompt or app</strong> — never inside GBS.</div>
+                  <div>3. <strong>No MoMo app installed?</strong> No problem — carrier handset prompts work without the app, or use <em>Pay in Browser via Secure Checkout</em> below.</div>
+                  {activeTransaction.channel === "MTN_MOMO" && (
+                    <div style={{ marginTop: "6px", display: "flex", gap: "10px", flexWrap: "wrap" }}>
+                      <a
+                        href="https://play.google.com/store/search?q=MTN%20MoMo&c=apps"
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        style={{ color: "#38bdf8", fontWeight: 700, textDecoration: "underline" }}
+                      >
+                        Official MTN MoMo on Google Play ↗
+                      </a>
+                      <a
+                        href="https://apps.apple.com/search?term=MTN%20MoMo"
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        style={{ color: "#38bdf8", fontWeight: 700, textDecoration: "underline" }}
+                      >
+                        Official MTN MoMo on Apple App Store ↗
+                      </a>
+                    </div>
+                  )}
+                </div>
+              )}
+
+            {/* Retry Banner on Failed / Expired / Cancelled Transactions */}
+            {["FAILED", "EXPIRED", "CANCELLED"].includes(activeTransaction.gatewayStatus) && (
+              <div style={{ background: "rgba(239, 68, 68, 0.12)", border: "1px solid #ef4444", borderRadius: "10px", padding: "12px", display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: "8px" }}>
+                <div style={{ fontSize: "0.82rem", color: "#fecaca" }}>
+                  <strong>Transaction {activeTransaction.gatewayStatus}.</strong> No fee balance was changed. You can retry cleanly or choose another payment method.
+                </div>
+                <button
+                  type="button"
+                  onClick={() => {
+                    stopPolling();
+                    setStep("SETUP");
+                    setActiveTransaction(null);
+                    setErrorMsg("");
+                  }}
+                  style={{ background: "#059669", color: "#fff", border: "none", borderRadius: "8px", padding: "8px 14px", fontWeight: 800, cursor: "pointer", fontSize: "0.8rem" }}
+                >
+                  Try Again / Change Method
+                </button>
               </div>
             )}
 

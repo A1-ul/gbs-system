@@ -446,14 +446,23 @@ export default function UniversityOperationsPanel({
     const demoCheck = checkDemoEntryLimit("university", "Academic Examinations", exams.length);
     if (!demoCheck.allowed) return notify(demoCheck.message, true);
     try {
-      const res = await apiClient.post("/institution/exams", examForm);
+      const res = await apiClient.post("/institution/exams", {
+        ...examForm,
+        requireHeadmasterVetting: mode !== "ADMIN"
+      });
       const exam = res?.data?.data?.exam;
       trackDemoEntryCreated("university");
       const updated = [exam, ...exams];
       setExams(updated);
       setTenantScopedRecord("uni_exams", updated);
       setExamForm((prev) => ({ ...prev, courseCode: "", courseTitle: "" }));
-      notify(res?.data?.message || `✅ ${profile.shortName} Exam '${exam.courseCode}' published for ${exam.targetLevel}.`);
+      window.dispatchEvent(new Event("gbs_exam_vetting_updated"));
+      notify(
+        res?.data?.message ||
+          (mode !== "ADMIN"
+            ? `✅ ${profile.shortName} Exam '${exam.courseCode}' sent to ${profile.leadershipRoleTitle} for vetting & confirmation before ongoing exams.`
+            : `✅ ${profile.shortName} Exam '${exam.courseCode}' confirmed and published for ${exam.targetLevel}.`)
+      );
     } catch (err) {
       notify(err?.response?.data?.message || err.message || `Failed to publish ${profile.shortName} exam.`, true);
     }
@@ -744,7 +753,11 @@ export default function UniversityOperationsPanel({
                   </select>
                   <input type="number" min="40" max="80" placeholder="Pass Mark" value={examForm.passMark} onChange={(e) => setExamForm({ ...examForm, passMark: e.target.value })} style={inputStyle} />
                 </div>
-                <button type="submit" style={primaryBtnStyle}>📚 Publish {profile.shortName} Exam</button>
+                <button type="submit" style={primaryBtnStyle}>
+                  {mode === "ADMIN"
+                    ? `📚 Confirm & Publish ${profile.shortName} Exam`
+                    : `📝 Submit ${profile.shortName} Exam to ${profile.leadershipRoleTitle} for Vetting`}
+                </button>
               </form>
 
               <form onSubmit={handleRecordResult} style={{ display: "grid", gap: "10px", padding: "16px", background: "rgba(6, 15, 30, 0.55)", borderRadius: "12px", border: "1px solid rgba(56, 189, 248, 0.35)" }}>

@@ -19,14 +19,16 @@ export default function PaymentGatewayAdminPanel({
   const [feedback, setFeedback] = useState(null);
   const [overview, setOverview] = useState({
     configs: [],
+    gatewayHealth: [],
     transactions: [],
     webhooks: [],
     receipts: [],
+    auditLogs: [],
     stats: {}
   });
   const [verifyInput, setVerifyInput] = useState("");
   const [verifiedResult, setVerifiedResult] = useState(null);
-  const [activeSubView, setActiveSubView] = useState("GATEWAYS"); // GATEWAYS | TRANSACTIONS | WEBHOOKS
+  const [activeSubView, setActiveSubView] = useState("GATEWAYS"); // GATEWAYS | TRANSACTIONS | WEBHOOKS | HEALTH | AUDIT
   const [editingGateway, setEditingGateway] = useState(null);
   const [configDraft, setConfigDraft] = useState({});
 
@@ -267,6 +269,14 @@ export default function PaymentGatewayAdminPanel({
           <div style={{ fontSize: "0.72rem", color: "#94a3b8" }}>Webhook Alerts</div>
           <strong style={{ fontSize: "1.25rem", color: "#c4b5fd" }}>{stats.failedWebhooks || 0}</strong>
         </div>
+        <div style={{ background: "rgba(15,23,42,0.7)", border: "1px solid rgba(16,185,129,0.35)", borderRadius: "10px", padding: "12px" }}>
+          <div style={{ fontSize: "0.72rem", color: "#94a3b8" }}>School Fees Settled</div>
+          <strong style={{ fontSize: "1.1rem", color: "#34d399" }}>{currencySymbol} {Number(stats.schoolFeeSettledTotal || 0).toLocaleString()}</strong>
+        </div>
+        <div style={{ background: "rgba(15,23,42,0.7)", border: "1px solid rgba(56,189,248,0.35)", borderRadius: "10px", padding: "12px" }}>
+          <div style={{ fontSize: "0.72rem", color: "#94a3b8" }}>Subscriptions Settled</div>
+          <strong style={{ fontSize: "1.1rem", color: "#38bdf8" }}>{currencySymbol} {Number(stats.subscriptionSettledTotal || 0).toLocaleString()}</strong>
+        </div>
       </div>
 
       {/* Reference Verification Bar */}
@@ -301,7 +311,7 @@ export default function PaymentGatewayAdminPanel({
 
       {/* Sub-navigation */}
       <div style={{ display: "flex", gap: "8px", flexWrap: "wrap" }}>
-        {["GATEWAYS", "TRANSACTIONS", "WEBHOOKS"].map((tabKey) => (
+        {["GATEWAYS", "TRANSACTIONS", "WEBHOOKS", "HEALTH", "AUDIT"].map((tabKey) => (
           <button
             key={tabKey}
             type="button"
@@ -321,7 +331,11 @@ export default function PaymentGatewayAdminPanel({
               ? `Payment Providers (${overview.configs.length})`
               : tabKey === "TRANSACTIONS"
                 ? `Transactions (${overview.transactions.length})`
-                : `Webhook Logs (${overview.webhooks.length})`}
+                : tabKey === "WEBHOOKS"
+                  ? `Webhook Logs (${overview.webhooks.length})`
+                  : tabKey === "HEALTH"
+                    ? `Service Health (${(overview.gatewayHealth || overview.configs).length})`
+                    : `Payment Audit Logs (${(overview.auditLogs || []).length})`}
           </button>
         ))}
       </div>
@@ -621,6 +635,55 @@ export default function PaymentGatewayAdminPanel({
                     <td style={{ fontFamily: "monospace" }}>{w.transactionRef || "—"}</td>
                     <td style={{ color: w.signatureValid ? "#34d399" : "#f87171" }}>{w.signatureValid ? "Valid" : "Rejected"}</td>
                     <td><strong>{w.processingStatus}</strong></td>
+                  </tr>
+                ))
+              )}
+            </tbody>
+          </table>
+        </div>
+      )}
+      {/* SERVICE HEALTH & WEBHOOK ENDPOINTS */}
+      {activeSubView === "HEALTH" && (
+        <div style={{ display: "flex", flexDirection: "column", gap: "12px" }}>
+          <div style={{ background: "rgba(2, 6, 23, 0.7)", border: "1px solid rgba(56, 189, 248, 0.3)", borderRadius: "10px", padding: "12px", fontSize: "0.8rem", color: "#cbd5e1" }}>
+            <strong style={{ color: "#38bdf8", display: "block", marginBottom: "6px" }}>Official Provider Webhook Endpoints (Configure in Paystack / Hubtel Merchant Dashboard):</strong>
+            <div style={{ fontFamily: "monospace", marginBottom: "4px" }}>Paystack Webhook URL: <strong style={{ color: "#34d399" }}>{window.location.origin}/api/v1/payments/webhooks/paystack</strong></div>
+            <div style={{ fontFamily: "monospace" }}>Hubtel Callback URL: <strong style={{ color: "#34d399" }}>{window.location.origin}/api/v1/payments/webhooks/hubtel</strong></div>
+          </div>
+          <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(220px, 1fr))", gap: "10px" }}>
+            {(overview.gatewayHealth || []).map((gh) => (
+              <div key={gh.gateway} style={{ background: "rgba(15,23,42,0.75)", border: `1px solid ${gh.active ? "#10b981" : "#f59e0b"}`, borderRadius: "10px", padding: "12px", fontSize: "0.8rem" }}>
+                <strong style={{ color: "#fff" }}>{gh.gateway}</strong>
+                <div style={{ marginTop: "4px", color: gh.active ? "#34d399" : "#fbbf24", fontWeight: 800 }}>{gh.status} ({gh.mode})</div>
+                <div style={{ marginTop: "4px", color: "#94a3b8" }}>Enabled Methods: {(gh.supportedChannels || []).join(", ") || "None"}</div>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {/* PAYMENT AUDIT LOGS */}
+      {activeSubView === "AUDIT" && (
+        <div className="role-table-responsive" style={{ overflowX: "auto" }}>
+          <table className="role-table">
+            <thead>
+              <tr>
+                <th>Timestamp</th>
+                <th>School / Tenant</th>
+                <th>Action</th>
+                <th>Audit Details</th>
+              </tr>
+            </thead>
+            <tbody>
+              {(overview.auditLogs || []).length === 0 ? (
+                <tr><td colSpan="4" style={{ textAlign: "center", padding: "18px", color: "#94a3b8" }}>No payment audit trail entries recorded yet.</td></tr>
+              ) : (
+                (overview.auditLogs || []).map((log, i) => (
+                  <tr key={log.id || i}>
+                    <td style={{ fontSize: "0.76rem" }}>{log.createdAt ? new Date(log.createdAt).toLocaleString() : "—"}</td>
+                    <td>Tenant #{log.tenantId || 1}</td>
+                    <td><strong style={{ color: "#38bdf8" }}>{log.action}</strong></td>
+                    <td style={{ fontSize: "0.78rem", color: "#cbd5e1" }}>{log.details || "—"}</td>
                   </tr>
                 ))
               )}

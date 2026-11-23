@@ -160,8 +160,9 @@ const normalizeQuestionItem = (q = {}, idx = 0, allowTemplateFallback = true) =>
 const enrichQuestionsWithOptions = (qb = []) =>
   (qb || []).map((q, idx) => normalizeQuestionItem(q, idx, true));
 
-const getExams = async (tenantId = 1) => {
+const getExams = async (tenantId = 1, options = {}) => {
   const tid = parseInt(tenantId, 10) || 1;
+  const forStudent = Boolean(options.forStudent);
   if (tid === 1) {
     await ensureSampleExam(tid).catch(() => null);
   }
@@ -199,6 +200,16 @@ const getExams = async (tenantId = 1) => {
       ...ex,
       tenantId: tid,
       questionBank: enrichQuestionsWithOptions(qb)
+    });
+  }
+
+  if (forStudent) {
+    return merged.filter((ex) => {
+      const vs = String(ex.vettingStatus || '').toUpperCase();
+      if (vs === 'PENDING_HEADMASTER_VETTING' || vs === 'REVISION_REQUESTED' || vs === 'REJECTED') {
+        return false;
+      }
+      return true;
     });
   }
 
@@ -1067,11 +1078,11 @@ const recordProctorHeartbeat = async (tenantId = 1, payload = {}) => {
     studentId: studentId || existing.studentId || sessionKey,
     studentIndexNumber: String(
       payload.studentIndexNumber ||
-        payload.studentIndex ||
-        payload.admissionNumber ||
-        existing.studentIndexNumber ||
-        studentId ||
-        ''
+      payload.studentIndex ||
+      payload.admissionNumber ||
+      existing.studentIndexNumber ||
+      studentId ||
+      ''
     ).trim(),
     className: String(payload.className || payload.level || existing.className || 'Enrolled Class').trim(),
     studentName: studentName || existing.studentName,
@@ -1433,6 +1444,449 @@ const deleteProctorEvidence = async (tenantId = 1, evidenceId) => {
   return { deleted: true, id: evidenceId };
 };
 
+// =========================================================================
+// END-OF-TERM & SEMESTER EXAM VETTING & HEADMASTER CONFIRMATION WORKFLOW
+// Works across ALL institutions (Nursery/Primary/JHS, SHS, TVET, University)
+// =========================================================================
+
+const VALID_VETTING_DECISIONS = new Set([
+  'CONFIRMED_ONGOING',
+  'REVISION_REQUESTED',
+  'REJECTED'
+]);
+
+const normalizeVettingInstitutionType = (rawType) => {
+  const s = String(rawType || '').trim().toUpperCase();
+  if (!s) return 'NURSERY_TO_JHS';
+  if (s.includes('UNIV') || s.includes('TERTIARY') || s.includes('COLLEGE')) return 'UNIVERSITY';
+  if (s.includes('TECH') || s.includes('TVET') || s.includes('VOCAT') || s.includes('POLYTECH')) return 'TECHNICAL';
+  if (s.includes('SHS') || s.includes('SENIOR') || s.includes('SECONDARY')) return 'SENIOR_HIGH_SCHOOL';
+  return 'NURSERY_TO_JHS';
+};
+
+const emitVettingRcceSignal = async (eventType, payload, context) => {
+  try {
+    const { eventNotificationEngine } = require('../../rcce/eventNotificationEngine');
+    await eventNotificationEngine.emitEvent(eventType, payload, context);
+  } catch (_) { }
+};
+
+const submitExamForHeadmasterVetting = async (tenantId = 1, payload = {}, user = null) => {
+  const tid = parseInt(tenantId, 10) || 1;
+  const title = String(payload.title || '').trim();
+  const subjectName = String(payload.subjectName || payload.courseTitle || payload.subjectCode || '').trim();
+  if (!title) {
+    throw new AppError('Examination title is required before sending to the Headmaster for vetting.', 400);
+  }
+
+  const questionBankInput = Array.isArray(payload.questionBank) ? payload.questionBank : [];
+  const normalizedQuestions = questionBankInput.map((q, idx) => normalizeQuestionItem(q, idx, false));
+  const typedText = String(payload.typedQuestionText || '').trim();
+  const uploadedDocName = String(payload.uploadedDocName || '').trim();
+
+  if (normalizedQuestions.length === 0 && !typedText && !uploadedDocName) {
+    throw new AppError('Please include at least one exam question, typed exam paper text, or an attached exam document for Headmaster vetting.', 400);
+  }
+
+  const institutionType = normalizeVettingInstitutionType(
+    payload.institutionType || user?.institutionType || user?.tenant?.institutionType
+  );
+  const defaultPeriod = institutionType === 'UNIVERSITY'
+    ? 'Semester 1'
+    : institutionType === 'TECHNICAL'
+      ? 'CBT Module Assessment'
+      : institutionType === 'SENIOR_HIGH_SCHOOL'
+        ? 'End of Semester / Form Exam'
+        : 'End of Term Examination';
+
+  const computedTotalMarks =
+    Number(payload.totalMarks) ||
+    normalizedQuestions.reduce((sum, q) => sum + (Number(q.marks) || 0), 0) ||
+    100;
+
+  const nowIso = new Date().toISOString();
+  const submissionId = payload.id && String(payload.id).startsWith('EVET-')
+    ? String(payload.id)
+    : `EVET-${Date.now()}-${Math.floor(100 + Math.random() * 900)}`;
+
+  const teacherName =
+    String(payload.submittedByName || '').trim() ||
+    `${user?.firstName || ''} ${user?.lastName || ''}`.trim() ||
+    user?.email ||
+    'Subject Educator';
+
+  const record = {
+    id: submissionId,
+    tenantId: tid,
+    examId: payload.examId || `exam-vet-${Date.now()}`,
+    institutionType,
+    examCategory: String(payload.examCategory || (institutionType === 'UNIVERSITY' ? 'END_OF_SEMESTER' : 'END_OF_TERM')).toUpperCase(),
+    academicTerm: String(payload.academicTerm || payload.term || payload.semester || defaultPeriod).trim(),
+    academicYear: String(payload.academicYear || '2026-2027').trim(),
+    title,
+    subjectCode: String(payload.subjectCode || payload.courseCode || 'CORE-101').trim().toUpperCase(),
+    subjectName: subjectName || 'Core Subject',
+    className: String(payload.className || payload.class?.name || payload.targetLevel || 'Assigned Class Cohort').trim(),
+    examDate: String(payload.examDate || nowIso.split('T')[0]).trim(),
+    startTime: String(payload.startTime || '09:00 AM').trim(),
+    endTime: String(payload.endTime || '11:30 AM').trim(),
+    durationMinutes: Math.max(15, Number(payload.durationMinutes) || 120),
+    totalMarks: computedTotalMarks,
+    passMarks: Math.max(1, Math.min(computedTotalMarks, Number(payload.passMarks) || 50)),
+    examMode: String(payload.examMode || 'HYBRID').toUpperCase(),
+    restrictBeforeStart: Boolean(payload.restrictBeforeStart),
+    enableProctoring: payload.enableProctoring !== false,
+    instructions: String(payload.instructions || 'Answer all required sections clearly within the scheduled examination window.').trim(),
+    syllabusScope: String(payload.syllabusScope || 'Complete End-of-Term / Semester Curriculum Coverage').trim(),
+    markingSchemeNotes: String(payload.markingSchemeNotes || '').trim(),
+    questionBank: normalizedQuestions,
+    typedQuestionText: typedText,
+    uploadedDocName,
+    uploadedDocData: payload.uploadedDocData || null,
+    submittedByUserId: user?.id ? parseInt(user.id, 10) || null : null,
+    submittedByName: teacherName,
+    submittedByEmail: String(user?.email || payload.submittedByEmail || '').toLowerCase(),
+    submittedByRole: String(user?.role || 'TEACHER').toUpperCase(),
+    vettingStatus: 'PENDING_HEADMASTER_VETTING',
+    headmasterRemarks: '',
+    vettedByUserId: null,
+    vettedByName: null,
+    vettedAt: null,
+    confirmedOngoingAt: null,
+    revisionCount: 0,
+    submittedAt: nowIso,
+    updatedAt: nowIso
+  };
+
+  writePersistentStore((curr) => {
+    const map = { ...(curr.examVettingSubmissions || {}) };
+    const existing = Array.isArray(map[String(tid)]) ? map[String(tid)] : [];
+    map[String(tid)] = [record, ...existing.filter((x) => String(x.id) !== String(record.id))].slice(0, 400);
+    return { ...curr, examVettingSubmissions: map };
+  });
+
+  try {
+    await prisma.auditLog.create({
+      data: {
+        tenantId: tid,
+        userId: record.submittedByUserId,
+        module: 'EXAMS',
+        action: 'EXAM_SUBMITTED_FOR_VETTING',
+        details: `${record.submittedByName} submitted ${record.examCategory} exam "${record.title}" (${record.subjectName} — ${record.className}, ${record.institutionType}) to Headmaster for vetting and ongoing exam confirmation.`
+      }
+    }).catch(() => { });
+  } catch (_) { }
+
+  await emitVettingRcceSignal(
+    'EXAM_VETTING_SUBMITTED',
+    {
+      submissionId: record.id,
+      examTitle: record.title,
+      className: record.className,
+      institutionType: record.institutionType,
+      teacherName: record.submittedByName,
+      message: `${record.submittedByName} submitted "${record.title}" (${record.academicTerm} • ${record.className}) for Headmaster vetting & confirmation.`
+    },
+    { tenantId: tid, userId: record.submittedByUserId, actorRole: record.submittedByRole }
+  );
+
+  return record;
+};
+
+const listExamVettingSubmissions = async (tenantId = 1, filters = {}, user = null) => {
+  const tid = parseInt(tenantId, 10) || 1;
+  const store = readPersistentStore();
+  const list = Array.isArray(store.examVettingSubmissions?.[String(tid)])
+    ? store.examVettingSubmissions[String(tid)]
+    : [];
+
+  const statusFilter = String(filters.status || '').trim().toUpperCase();
+  const instFilter = String(filters.institutionType || '').trim().toUpperCase();
+  const termFilter = String(filters.academicTerm || '').trim().toLowerCase();
+  const mineOnly = String(filters.mineOnly || '').toLowerCase() === 'true';
+
+  return list.filter((item) => {
+    if (statusFilter && statusFilter !== 'ALL' && String(item.vettingStatus || '').toUpperCase() !== statusFilter) {
+      return false;
+    }
+    if (instFilter && instFilter !== 'ALL' && normalizeVettingInstitutionType(item.institutionType) !== normalizeVettingInstitutionType(instFilter)) {
+      return false;
+    }
+    if (termFilter && !String(item.academicTerm || '').toLowerCase().includes(termFilter)) {
+      return false;
+    }
+    if (mineOnly && user?.email) {
+      if (String(item.submittedByEmail || '').toLowerCase() !== String(user.email).toLowerCase()) {
+        return false;
+      }
+    }
+    return true;
+  });
+};
+
+const reviewExamVettingSubmission = async (tenantId = 1, submissionId, payload = {}, user = null) => {
+  const tid = parseInt(tenantId, 10) || 1;
+  const actorRole = String(user?.role || '').toUpperCase();
+  if (user && !['ADMIN', 'SUPER_ADMIN', 'DEVELOPER', 'HEADMASTER', 'PRINCIPAL'].includes(actorRole)) {
+    throw new AppError('Only the Headmaster, Principal, or Authorized Institution Administrator can vet and confirm examinations for ongoing exams.', 403);
+  }
+
+  const rawDecision = String(payload.decision || payload.vettingStatus || '').trim().toUpperCase();
+  const decision =
+    rawDecision === 'APPROVE' || rawDecision === 'APPROVED' || rawDecision === 'CONFIRM' || rawDecision === 'CONFIRMED'
+      ? 'CONFIRMED_ONGOING'
+      : rawDecision === 'REVISION' || rawDecision === 'NEEDS_REVISION'
+        ? 'REVISION_REQUESTED'
+        : rawDecision;
+
+  if (!VALID_VETTING_DECISIONS.has(decision)) {
+    throw new AppError('Invalid vetting decision. Allowed values: CONFIRMED_ONGOING, REVISION_REQUESTED, REJECTED.', 400);
+  }
+
+  const remarks = String(payload.headmasterRemarks || payload.remarks || '').trim();
+  if ((decision === 'REVISION_REQUESTED' || decision === 'REJECTED') && !remarks) {
+    throw new AppError('Please provide clear Headmaster vetting remarks when requesting a revision or rejecting an exam paper.', 400);
+  }
+
+  const store = readPersistentStore();
+  const list = Array.isArray(store.examVettingSubmissions?.[String(tid)])
+    ? store.examVettingSubmissions[String(tid)]
+    : [];
+  const target = list.find((x) => String(x.id) === String(submissionId));
+  if (!target) {
+    throw new AppError(`Exam vetting submission "${submissionId}" was not found for institution #${tid}.`, 404);
+  }
+
+  const nowIso = new Date().toISOString();
+  const reviewerName =
+    String(payload.vettedByName || '').trim() ||
+    `${user?.firstName || ''} ${user?.lastName || ''}`.trim() ||
+    'Headmaster / Principal';
+
+  const updatedRecord = {
+    ...target,
+    vettingStatus: decision,
+    headmasterRemarks:
+      remarks ||
+      (decision === 'CONFIRMED_ONGOING'
+        ? 'Vetted, verified, and officially confirmed by Headmaster for ongoing examinations.'
+        : target.headmasterRemarks),
+    vettedByUserId: user?.id ? parseInt(user.id, 10) || null : null,
+    vettedByName: reviewerName,
+    vettedAt: nowIso,
+    confirmedOngoingAt: decision === 'CONFIRMED_ONGOING' ? nowIso : target.confirmedOngoingAt,
+    updatedAt: nowIso
+  };
+
+  let publishedExam = null;
+  if (decision === 'CONFIRMED_ONGOING') {
+    publishedExam = await createExam(
+      tid,
+      {
+        id: updatedRecord.examId || `exam-${Date.now()}`,
+        title: updatedRecord.title,
+        subjectCode: updatedRecord.subjectCode,
+        subjectName: updatedRecord.subjectName,
+        class: { name: updatedRecord.className, code: updatedRecord.subjectCode },
+        className: updatedRecord.className,
+        examDate: updatedRecord.examDate,
+        startTime: updatedRecord.startTime,
+        endTime: updatedRecord.endTime,
+        durationMinutes: updatedRecord.durationMinutes,
+        totalMarks: updatedRecord.totalMarks,
+        passMarks: updatedRecord.passMarks,
+        examMode: updatedRecord.examMode,
+        restrictBeforeStart: updatedRecord.restrictBeforeStart,
+        questionBank: updatedRecord.questionBank,
+        typedQuestionText: updatedRecord.typedQuestionText,
+        uploadedDocName: updatedRecord.uploadedDocName,
+        status: 'PUBLISHED_ACTIVE',
+        publishedAt: nowIso,
+        createdBy: updatedRecord.submittedByEmail || updatedRecord.submittedByName
+      },
+      user
+    );
+
+    // Stamp Headmaster vetting confirmation directly on the published exam record
+    writePersistentStore((curr) => {
+      const publishedExams = { ...(curr.publishedExams || {}) };
+      const existing = Array.isArray(publishedExams[String(tid)]) ? publishedExams[String(tid)] : [];
+      publishedExams[String(tid)] = existing.map((ex) =>
+        String(ex.id) === String(publishedExam.id)
+          ? {
+            ...ex,
+            institutionType: updatedRecord.institutionType,
+            examCategory: updatedRecord.examCategory,
+            academicTerm: updatedRecord.academicTerm,
+            academicYear: updatedRecord.academicYear,
+            vettingSubmissionId: updatedRecord.id,
+            vettingStatus: 'CONFIRMED_ONGOING',
+            confirmedByHeadmaster: reviewerName,
+            confirmedOngoingAt: nowIso,
+            headmasterRemarks: updatedRecord.headmasterRemarks
+          }
+          : ex
+      );
+      // Also synchronize university/tier exam record if linked
+      const universityExams = Array.isArray(curr.universityExams)
+        ? curr.universityExams.map((ue) =>
+          String(ue.vettingSubmissionId || ue.id) === String(updatedRecord.id) ||
+            String(ue.id) === String(updatedRecord.examId)
+            ? {
+              ...ue,
+              vettingStatus: 'CONFIRMED_ONGOING',
+              status: 'PUBLISHED',
+              confirmedByHeadmaster: reviewerName,
+              confirmedOngoingAt: nowIso,
+              headmasterRemarks: updatedRecord.headmasterRemarks
+            }
+            : ue
+        )
+        : curr.universityExams;
+
+      return { ...curr, publishedExams, universityExams };
+    });
+    updatedRecord.examId = publishedExam.id;
+  } else {
+    // Ensure rejected / revision-requested exams are NOT active for students
+    writePersistentStore((curr) => {
+      const publishedExams = { ...(curr.publishedExams || {}) };
+      const existing = Array.isArray(publishedExams[String(tid)]) ? publishedExams[String(tid)] : [];
+      publishedExams[String(tid)] = existing.map((ex) =>
+        String(ex.id) === String(updatedRecord.examId) || String(ex.vettingSubmissionId) === String(updatedRecord.id)
+          ? {
+            ...ex,
+            vettingStatus: decision,
+            status: decision,
+            headmasterRemarks: updatedRecord.headmasterRemarks
+          }
+          : ex
+      );
+      const universityExams = Array.isArray(curr.universityExams)
+        ? curr.universityExams.map((ue) =>
+          String(ue.vettingSubmissionId || ue.id) === String(updatedRecord.id) ||
+            String(ue.id) === String(updatedRecord.examId)
+            ? {
+              ...ue,
+              vettingStatus: decision,
+              status: decision,
+              headmasterRemarks: updatedRecord.headmasterRemarks
+            }
+            : ue
+        )
+        : curr.universityExams;
+      return { ...curr, publishedExams, universityExams };
+    });
+  }
+
+  writePersistentStore((curr) => {
+    const map = { ...(curr.examVettingSubmissions || {}) };
+    const existing = Array.isArray(map[String(tid)]) ? map[String(tid)] : [];
+    map[String(tid)] = existing.map((x) => (String(x.id) === String(updatedRecord.id) ? updatedRecord : x));
+    return { ...curr, examVettingSubmissions: map };
+  });
+
+  try {
+    await prisma.auditLog.create({
+      data: {
+        tenantId: tid,
+        userId: updatedRecord.vettedByUserId,
+        module: 'EXAMS',
+        action: `EXAM_VETTING_${decision}`,
+        details: `${reviewerName} marked "${updatedRecord.title}" (${updatedRecord.academicTerm} • ${updatedRecord.className}) as ${decision}. Remarks: ${updatedRecord.headmasterRemarks}`
+      }
+    }).catch(() => { });
+  } catch (_) { }
+
+  const rcceEvt =
+    decision === 'CONFIRMED_ONGOING'
+      ? 'EXAM_CONFIRMED_ONGOING'
+      : decision === 'REVISION_REQUESTED'
+        ? 'EXAM_REVISION_REQUESTED'
+        : 'EXAM_VETTING_REJECTED';
+
+  await emitVettingRcceSignal(
+    rcceEvt,
+    {
+      submissionId: updatedRecord.id,
+      examId: updatedRecord.examId,
+      examTitle: updatedRecord.title,
+      className: updatedRecord.className,
+      institutionType: updatedRecord.institutionType,
+      decision,
+      vettedBy: reviewerName,
+      remarks: updatedRecord.headmasterRemarks,
+      message:
+        decision === 'CONFIRMED_ONGOING'
+          ? `Headmaster (${reviewerName}) vetted and confirmed "${updatedRecord.title}" for ongoing examinations (${updatedRecord.className}).`
+          : `Headmaster (${reviewerName}) marked "${updatedRecord.title}" as ${decision}: ${updatedRecord.headmasterRemarks}`
+    },
+    { tenantId: tid, userId: updatedRecord.vettedByUserId, actorRole: actorRole || 'ADMIN' }
+  );
+
+  return { submission: updatedRecord, publishedExam };
+};
+
+const resubmitExamForHeadmasterVetting = async (tenantId = 1, submissionId, payload = {}, user = null) => {
+  const tid = parseInt(tenantId, 10) || 1;
+  const store = readPersistentStore();
+  const list = Array.isArray(store.examVettingSubmissions?.[String(tid)])
+    ? store.examVettingSubmissions[String(tid)]
+    : [];
+  const existing = list.find((x) => String(x.id) === String(submissionId));
+  if (!existing) {
+    throw new AppError(`Exam vetting submission "${submissionId}" was not found.`, 404);
+  }
+
+  const nowIso = new Date().toISOString();
+  const nextQuestions = Array.isArray(payload.questionBank) && payload.questionBank.length > 0
+    ? payload.questionBank.map((q, idx) => normalizeQuestionItem(q, idx, false))
+    : existing.questionBank;
+
+  const updated = {
+    ...existing,
+    title: payload.title ? String(payload.title).trim() : existing.title,
+    subjectName: payload.subjectName ? String(payload.subjectName).trim() : existing.subjectName,
+    className: payload.className ? String(payload.className).trim() : existing.className,
+    academicTerm: payload.academicTerm ? String(payload.academicTerm).trim() : existing.academicTerm,
+    examDate: payload.examDate ? String(payload.examDate).trim() : existing.examDate,
+    startTime: payload.startTime ? String(payload.startTime).trim() : existing.startTime,
+    endTime: payload.endTime ? String(payload.endTime).trim() : existing.endTime,
+    durationMinutes: payload.durationMinutes ? Number(payload.durationMinutes) : existing.durationMinutes,
+    instructions: payload.instructions !== undefined ? String(payload.instructions).trim() : existing.instructions,
+    syllabusScope: payload.syllabusScope !== undefined ? String(payload.syllabusScope).trim() : existing.syllabusScope,
+    markingSchemeNotes: payload.markingSchemeNotes !== undefined ? String(payload.markingSchemeNotes).trim() : existing.markingSchemeNotes,
+    typedQuestionText: payload.typedQuestionText !== undefined ? String(payload.typedQuestionText).trim() : existing.typedQuestionText,
+    uploadedDocName: payload.uploadedDocName !== undefined ? String(payload.uploadedDocName).trim() : existing.uploadedDocName,
+    uploadedDocData: payload.uploadedDocData !== undefined ? payload.uploadedDocData : existing.uploadedDocData,
+    questionBank: nextQuestions,
+    vettingStatus: 'PENDING_HEADMASTER_VETTING',
+    revisionCount: Number(existing.revisionCount || 0) + 1,
+    resubmittedNote: String(payload.resubmittedNote || 'Updated per Headmaster vetting feedback.').trim(),
+    updatedAt: nowIso
+  };
+
+  writePersistentStore((curr) => {
+    const map = { ...(curr.examVettingSubmissions || {}) };
+    const prev = Array.isArray(map[String(tid)]) ? map[String(tid)] : [];
+    map[String(tid)] = prev.map((x) => (String(x.id) === String(updated.id) ? updated : x));
+    return { ...curr, examVettingSubmissions: map };
+  });
+
+  await emitVettingRcceSignal(
+    'EXAM_VETTING_SUBMITTED',
+    {
+      submissionId: updated.id,
+      examTitle: updated.title,
+      revisionCount: updated.revisionCount,
+      message: `Revised exam "${updated.title}" (Revision #${updated.revisionCount}) resubmitted for Headmaster vetting & confirmation.`
+    },
+    { tenantId: tid, userId: user?.id || null, actorRole: String(user?.role || 'TEACHER').toUpperCase() }
+  );
+
+  return updated;
+};
+
 module.exports = {
   getExams,
   createExam,
@@ -1451,5 +1905,9 @@ module.exports = {
   ackProctorMessage,
   saveProctorEvidence,
   getProctorEvidence,
-  deleteProctorEvidence
+  deleteProctorEvidence,
+  submitExamForHeadmasterVetting,
+  listExamVettingSubmissions,
+  reviewExamVettingSubmission,
+  resubmitExamForHeadmasterVetting
 };

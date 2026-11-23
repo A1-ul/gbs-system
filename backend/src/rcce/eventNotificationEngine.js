@@ -29,6 +29,10 @@ const RCCE_EVENTS = Object.freeze({
   SYSTEM_ERROR_DETECTED: 'SYSTEM_ERROR_DETECTED',
   ATTENDANCE_COMPLETED: 'ATTENDANCE_COMPLETED',
   EXAM_SCORED: 'EXAM_SCORED',
+  EXAM_VETTING_SUBMITTED: 'EXAM_VETTING_SUBMITTED',
+  EXAM_CONFIRMED_ONGOING: 'EXAM_CONFIRMED_ONGOING',
+  EXAM_REVISION_REQUESTED: 'EXAM_REVISION_REQUESTED',
+  EXAM_VETTING_REJECTED: 'EXAM_VETTING_REJECTED',
   TOPIC_VIDEO_PUBLISHED: 'TOPIC_VIDEO_PUBLISHED',
   DB_POOL_WARNING_80: 'DB_POOL_WARNING_80',
   DB_POOL_CRITICAL_95: 'DB_POOL_CRITICAL_95',
@@ -186,6 +190,10 @@ class EventNotificationEngine extends EventEmitter {
       SYSTEM_ERROR_DETECTED: '🚨 System Error Diagnostic Alert',
       ATTENDANCE_COMPLETED: '📅 Daily Roll Call Archived',
       EXAM_SCORED: '💯 Examination Grade Published',
+      EXAM_VETTING_SUBMITTED: '📝 End-of-Term / Semester Exam Submitted for Vetting',
+      EXAM_CONFIRMED_ONGOING: '✅ Exam Vetted & Confirmed for Ongoing Exams',
+      EXAM_REVISION_REQUESTED: '⚠️ Exam Vetting Revision Requested by Headmaster',
+      EXAM_VETTING_REJECTED: '❌ Exam Paper Declined During Vetting',
       TOPIC_VIDEO_PUBLISHED: '🎥 Topic Video Lesson Published'
     };
     return titles[eventType] || '🔔 System Notification';

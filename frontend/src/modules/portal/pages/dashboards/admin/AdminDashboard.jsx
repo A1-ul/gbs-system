@@ -23,6 +23,8 @@ import HeadmasterStaffAttendanceView from "../../../../../components/common/Head
 import LiveCallLauncherAndReceiver from "../../../../../components/common/LiveCallLauncherAndReceiver";
 import LiveInSystemCallModal from "../../../../../components/common/LiveInSystemCallModal";
 import OfficialPaymentGatewayModal from "../../../../../components/common/OfficialPaymentGatewayModal";
+import PaymentGatewayAdminPanel from "../../../../../components/common/PaymentGatewayAdminPanel";
+import ExamVettingHubPanel from "../../../../../components/common/ExamVettingHubPanel";
 import { openUrlSafely } from "../../../../../utils/safeWindow";
 import { isDemoSandboxMode } from "../../../../../utils/tokenStorage";
 import { checkDemoEntryLimit, trackDemoEntryCreated } from "../../../../../utils/demoLimitGuard";
@@ -6221,6 +6223,14 @@ export function AdminDashboard({ initialTab } = {}) {
             </button>
             <button
               type="button"
+              className={`role-tab-btn ${activeTab === "examVetting" ? "active" : ""}`}
+              onClick={() => setActiveTab("examVetting")}
+              style={{ borderLeft: "3px solid #f59e0b", color: activeTab === "examVetting" ? "#fbbf24" : undefined }}
+            >
+              📝 End-of-Term / Semester Exam Vetting & Confirmation
+            </button>
+            <button
+              type="button"
               className={`role-tab-btn ${activeTab === "planner" ? "active" : ""}`}
               onClick={() => setActiveTab("planner")}
               style={{ borderLeft: "3px solid #38bdf8", color: activeTab === "planner" ? "#38bdf8" : undefined }}
@@ -7195,6 +7205,21 @@ export function AdminDashboard({ initialTab } = {}) {
                   </table>
                 </div>
               </div>
+            </div>
+          )}
+
+          {/* ======================================================== */}
+          {/* TAB: END-OF-TERM & SEMESTER EXAM VETTING & CONFIRMATION  */}
+          {/* ======================================================== */}
+          {activeTab === "examVetting" && (
+            <div className="role-workspace-card">
+              <ExamVettingHubPanel
+                mode="HEADMASTER"
+                currentUser={currentUser}
+                availableClasses={classes}
+                returnTab="examVetting"
+                onFeedback={(fb) => setFeedback(fb)}
+              />
             </div>
           )}
 
@@ -10900,6 +10925,16 @@ export function AdminDashboard({ initialTab } = {}) {
 
               {/* Live Database Fee Collections & Outstanding Summary */}
               <FinancialReportsPanel currencySymbol="GHS" />
+
+              {/* Authorized School Administrator Multi-Gateway Payment Monitoring & Bank Setup */}
+              <div style={{ marginBottom: "1.5rem", background: "rgba(15, 23, 42, 0.72)", border: "1px solid rgba(56, 189, 248, 0.25)", borderRadius: "14px", padding: "16px" }}>
+                <PaymentGatewayAdminPanel
+                  tenantId={currentUser?.tenantId || 1}
+                  currencySymbol="GHS"
+                  allowConfigEdit={true}
+                  title="Institutional Payment Gateways, Bank Settlement & Live Collections"
+                />
+              </div>
 
               {/* Pending Requests Section */}
               <div style={{ marginBottom: "2rem" }}>

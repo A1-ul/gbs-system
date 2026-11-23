@@ -38,11 +38,43 @@ async function getStatus(req, res, next) {
   }
 }
 
+async function getOnboardingGateways(req, res, next) {
+  try {
+    bindIo(req);
+    const tenantId = req.query.tenantId || 1;
+    const result = await paymentsService.resolveGatewayAndChannels(tenantId, { scope: 'SUBSCRIPTION' });
+    const safeConfigs = result.configs.map((c) => ({
+      gateway: c.gateway,
+      mode: c.mode,
+      isEnabled: c.isEnabled,
+      effectiveEnabled: c.effectiveEnabled,
+      supportedChannels: c.supportedChannels,
+      settlementLabel: c.settlementLabel,
+      bankName: c.bankName || null,
+      bankAccountName: c.bankAccountName || null,
+      bankBranch: c.bankBranch || null,
+      capabilities: c.capabilities
+    }));
+    return res.status(200).json({
+      success: true,
+      data: {
+        scope: 'SUBSCRIPTION',
+        recipientLabel: 'GBS Platform Developer Account',
+        channels: result.channels,
+        gateways: safeConfigs
+      }
+    });
+  } catch (err) {
+    return next(err);
+  }
+}
+
 async function getAvailableGateways(req, res, next) {
   try {
     bindIo(req);
     const tenantId = getTenantIdFromReq(req);
-    const result = await paymentsService.resolveGatewayAndChannels(tenantId);
+    const scope = String(req.query.scope || 'SCHOOL_FEES').toUpperCase();
+    const result = await paymentsService.resolveGatewayAndChannels(tenantId, { scope });
     const safeConfigs = result.configs.map((c) => ({
       gateway: c.gateway,
       mode: c.mode,
@@ -53,12 +85,16 @@ async function getAvailableGateways(req, res, next) {
       allowPartialPayments: c.allowPartialPayments,
       minPartialPercent: c.minPartialPercent,
       publicKeyPreview: c.publicKeyPreview,
+      bankName: c.bankName || null,
+      bankAccountName: c.bankAccountName || null,
+      bankBranch: c.bankBranch || null,
       capabilities: c.capabilities
     }));
     return res.status(200).json({
       success: true,
       data: {
         tenantId: parseInt(tenantId, 10) || 1,
+        scope,
         channels: result.channels,
         gateways: safeConfigs
       }
@@ -458,6 +494,7 @@ async function act(outcome) {
 
 module.exports = {
   getStatus,
+  getOnboardingGateways,
   getAvailableGateways,
   getStudentFeeStatement,
   initiatePayment,
