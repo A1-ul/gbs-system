@@ -821,7 +821,8 @@ const executeLocalPrismaQuery = ({ model, action, args = {} }) => {
         if (!isNaN(aId) && aId > maxSeenId) maxSeenId = aId;
       });
     }
-    const nextId = maxSeenId + 1;
+    const baseIdFloor = model === 'PaymentTransaction' ? Math.max(maxSeenId, 900000) : maxSeenId;
+    const nextId = baseIdFloor + 1;
     const nowIso = new Date().toISOString();
     const record = {
       id: rawData.id || nextId,
@@ -857,6 +858,9 @@ const executeLocalPrismaQuery = ({ model, action, args = {} }) => {
 
   if (action === 'update' || action === 'upsert') {
     let idx = table.findIndex((r) => matchesWhere(r, args.where));
+    if (idx < 0 && args.data?.reference) {
+      idx = table.findIndex((r) => r.reference && String(r.reference) === String(args.data.reference));
+    }
     const nowIso = new Date().toISOString();
     const patch = action === 'upsert' ? (idx >= 0 ? args.update : args.create) : args.data;
     const cleanPatch = { ...(patch || {}) };
@@ -886,7 +890,8 @@ const executeLocalPrismaQuery = ({ model, action, args = {} }) => {
         if (!isNaN(aId) && aId > maxSeenId) maxSeenId = aId;
       });
     }
-    const nextId = maxSeenId + 1;
+    const baseIdFloor = model === 'PaymentTransaction' ? Math.max(maxSeenId, 900000) : maxSeenId;
+    const nextId = baseIdFloor + 1;
     const created = {
       id: toSafeInt(args.where?.id, nextId),
       tenantId: 1,

@@ -245,6 +245,86 @@ async function verifyOnboardingTransaction(req, res, next) {
   }
 }
 
+async function _assertOnboardingSubscriptionTx(reference) {
+  const tx = await prisma.paymentTransaction.findFirst({ where: { reference } }).catch(() => null);
+  if (!tx) {
+    const err = new Error(`Onboarding transaction reference "${reference}" was not found.`);
+    err.statusCode = 404;
+    throw err;
+  }
+  if (String(tx.paymentScope || '').toUpperCase() !== 'SUBSCRIPTION') {
+    const err = new Error('Authentication required for institutional school fee transactions.');
+    err.statusCode = 401;
+    throw err;
+  }
+  return tx;
+}
+
+async function triggerOnboardingSandboxWebhook(req, res, next) {
+  try {
+    bindIo(req);
+    await _assertOnboardingSubscriptionTx(req.params.reference);
+    const data = await paymentsService.triggerSandboxConfirmation({
+      reference: req.params.reference,
+      outcome: req.body?.outcome || 'SUCCESSFUL'
+    });
+    return res.status(200).json({ success: true, data });
+  } catch (err) {
+    return next(err);
+  }
+}
+
+async function submitOnboardingAuthorizationStep(req, res, next) {
+  try {
+    bindIo(req);
+    const tx = await _assertOnboardingSubscriptionTx(req.params.reference);
+    const data = await paymentsService.submitAuthorizationStep({
+      tenantId: tx.tenantId,
+      reference: req.params.reference,
+      otp: req.body?.otp,
+      requestingUser: null
+    });
+    return res.status(200).json({ success: true, data });
+  } catch (err) {
+    return next(err);
+  }
+}
+
+async function switchOnboardingToFallbackMethod(req, res, next) {
+  try {
+    bindIo(req);
+    const tx = await _assertOnboardingSubscriptionTx(req.params.reference);
+    const data = await paymentsService.switchToFallbackMethod({
+      tenantId: tx.tenantId,
+      reference: req.params.reference,
+      newGateway: req.body?.gateway,
+      newChannel: req.body?.channel,
+      preferHostedCheckout: req.body?.preferHostedCheckout,
+      payerPhone: req.body?.payerPhone,
+      requestingUser: null,
+      originUrl: getOriginUrl(req)
+    });
+    return res.status(201).json({ success: !data.error, data });
+  } catch (err) {
+    return next(err);
+  }
+}
+
+async function cancelOnboardingPayment(req, res, next) {
+  try {
+    bindIo(req);
+    const tx = await _assertOnboardingSubscriptionTx(req.params.reference);
+    const data = await paymentsService.cancelPayment({
+      tenantId: tx.tenantId,
+      reference: req.params.reference,
+      requestingUser: null
+    });
+    return res.status(200).json({ success: true, data });
+  } catch (err) {
+    return next(err);
+  }
+}
+
 async function getTransactionStatus(req, res, next) {
   try {
     bindIo(req);
@@ -504,6 +584,10 @@ module.exports = {
   cancelPayment,
   verifyTransaction,
   verifyOnboardingTransaction,
+  triggerOnboardingSandboxWebhook,
+  submitOnboardingAuthorizationStep,
+  switchOnboardingToFallbackMethod,
+  cancelOnboardingPayment,
   getTransactionStatus,
   listTransactions,
   getReceipt,

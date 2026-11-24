@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useRef } from "react";
+import { createPortal } from "react-dom";
 import "./StudentCooperativeConferenceModal.css";
 
 const PRESET_STUDY_ROOMS = [
@@ -188,7 +189,14 @@ export default function StudentCooperativeConferenceModal({ isOpen, onClose, ini
           localStreamRef.current = basic;
           attachLocalStreamToPreview(basic);
         } catch {
-          console.warn("Hardware camera unavailable, operating in simulated video preview mode:", err.message);
+          try {
+            const videoOnly = await navigator.mediaDevices.getUserMedia({ video: true, audio: false });
+            localStreamRef.current = videoOnly;
+            setIsMicMuted(true);
+            attachLocalStreamToPreview(videoOnly);
+          } catch {
+            console.warn("Hardware camera unavailable, operating in audio/standby mode:", err?.message || "No camera");
+          }
         }
       }
     } else {
@@ -387,7 +395,7 @@ export default function StudentCooperativeConferenceModal({ isOpen, onClose, ini
 
   if (!isOpen) return null;
 
-  return (
+  const modalMarkup = (
     <div className="coop-modal-backdrop">
       <div className="coop-modal-container">
         {/* Header Bar */}
@@ -538,6 +546,10 @@ export default function StudentCooperativeConferenceModal({ isOpen, onClose, ini
                         autoPlay
                         playsInline
                         muted
+                        onLoadedMetadata={(e) => {
+                          e.currentTarget.muted = true;
+                          e.currentTarget.play().catch(() => { });
+                        }}
                         className={`coop-video-feed ${isCameraOff ? "hidden" : ""}`}
                       />
                       {isCameraOff && (
@@ -835,4 +847,8 @@ export default function StudentCooperativeConferenceModal({ isOpen, onClose, ini
       </div>
     </div>
   );
+
+  return typeof document !== "undefined" && document.body
+    ? createPortal(modalMarkup, document.body)
+    : modalMarkup;
 }

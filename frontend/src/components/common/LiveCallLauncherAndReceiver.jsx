@@ -44,11 +44,17 @@ export default function LiveCallLauncherAndReceiver({
   const isTeacher = roleUpper === "TEACHER";
   const isStudent = roleUpper === "STUDENT";
   const isParent = roleUpper === "PARENT";
+  const isSecretary = roleUpper === "SECRETARY";
+  const isAccountant = roleUpper === "ACCOUNTANT";
+  const isHR = roleUpper === "HR";
+  const isStaff = roleUpper === "STAFF";
+  const isAlumni = roleUpper === "ALUMNI";
+  const isCampusStaff = isSecretary || isAccountant || isHR || isStaff;
 
   const [incomingCalls, setIncomingCalls] = useState([]);
   const [activeConferences, setActiveConferences] = useState([]);
   const [recentCalls, setRecentCalls] = useState([]);
-  const [directory, setDirectory] = useState({ contacts: [], headmasters: [], teachers: [], parents: [], students: [], staff: [] });
+  const [directory, setDirectory] = useState({ contacts: [], headmasters: [], teachers: [], parents: [], students: [], staff: [], alumni: [] });
   const [selectedContactId, setSelectedContactId] = useState("");
   const [conferenceTitle, setConferenceTitle] = useState("");
   const [headmasterConfAudience, setHeadmasterConfAudience] = useState("ALL_CAMPUS_CONFERENCE");
@@ -233,25 +239,44 @@ export default function LiveCallLauncherAndReceiver({
     } catch { }
   };
 
-  const availableTargets = isDeveloper
+  const rawAvailableTargets = isDeveloper
     ? [...(directory.headmasters || [])]
     : isHeadmaster
       ? [
         ...(directory.teachers || []),
         ...(directory.staff || []),
         ...(directory.parents || []),
-        ...(directory.students || [])
+        ...(directory.students || []),
+        ...(directory.alumni || [])
       ]
       : isTeacher
         ? [...(directory.parents || []), ...(directory.headmasters || []), ...(directory.students || []), ...(directory.staff || [])]
-        : [...(directory.headmasters || []), ...(directory.teachers || [])];
+        : isCampusStaff
+          ? [...(directory.headmasters || []), ...(directory.teachers || []), ...(directory.staff || []), ...(directory.parents || []), ...(directory.students || [])]
+          : isStudent
+            ? [...(directory.teachers || []), ...(directory.headmasters || []), ...(directory.students || []), ...(directory.staff || [])]
+            : isAlumni
+              ? [...(directory.headmasters || []), ...(directory.teachers || []), ...(directory.alumni || []), ...(directory.staff || [])]
+              : [...(directory.headmasters || []), ...(directory.teachers || []), ...(directory.staff || [])];
+
+  const availableTargets = (() => {
+    const seen = new Set();
+    const out = [];
+    for (const item of rawAvailableTargets) {
+      const key = `${item.tenantId || "t"}_${String(item.userId || item.email || item.name).toLowerCase()}`;
+      if (seen.has(key)) continue;
+      seen.add(key);
+      out.push(item);
+    }
+    return out;
+  })();
 
   const chosenContact = availableTargets.find((c) => String(c.userId) === String(selectedContactId)) || null;
 
   const activeTeacherLiveClasses = activeConferences.filter((c) => c.callScope === "CLASS_CONFERENCE" || c.callScope === "STUDENT_CONFERENCE" || c.callScope === "ALL_CAMPUS_CONFERENCE");
   const activeDevExecConfs = activeConferences.filter((c) => c.callScope === "DEVELOPER_HEADMASTERS_CONFERENCE");
   const activeHeadmasterCampusConfs = activeConferences.filter((c) =>
-    ["FACULTY_CONFERENCE", "STAFF_CONFERENCE", "PARENT_CONFERENCE", "STUDENT_CONFERENCE", "ALL_CAMPUS_CONFERENCE"].includes(String(c.callScope || "").toUpperCase())
+    ["FACULTY_CONFERENCE", "STAFF_CONFERENCE", "PARENT_CONFERENCE", "STUDENT_CONFERENCE", "ALL_CAMPUS_CONFERENCE", "ALUMNI_CONFERENCE"].includes(String(c.callScope || "").toUpperCase())
   );
 
   const resolvedTeacherClassName = (() => {
@@ -569,7 +594,19 @@ export default function LiveCallLauncherAndReceiver({
                     ? "Headmaster Live Video Conferences (Staff, Teachers, Parents & Students) & Direct Calls"
                     : isTeacher
                       ? "Live Online Classes with Students & Direct Faculty / Parent Calls"
-                      : "Direct Parent–Headmaster & Parent–Teacher Video / Voice Calling"}
+                      : isSecretary
+                        ? "Secretary Front Desk — Direct Video / Voice Calling & Campus Conferences"
+                        : isAccountant
+                          ? "Bursar & Finance Office — Direct Video / Voice Calling & Parent Fee Consultations"
+                          : isHR
+                            ? "HR Directorate — Staff Interviews, Video Meetings & Direct Faculty Calling"
+                            : isStaff
+                              ? "Campus Operations & Staff — Direct Video / Voice Calling & Team Rooms"
+                              : isStudent
+                                ? "Student Live Video / Voice Calling with Teachers, Headmaster & Classmates"
+                                : isAlumni
+                                  ? "Alumni Live Video Reunions, Mentorship Calls & School Connection Hub"
+                                  : "Direct Parent–Headmaster & Parent–Teacher Video / Voice Calling"}
               </h3>
             </div>
             <button
@@ -694,7 +731,7 @@ export default function LiveCallLauncherAndReceiver({
                 style={{ width: "100%", padding: "8px 10px", borderRadius: "8px", border: "1px solid rgba(212,175,55,0.5)", background: "#081833", color: "#ffffff", marginBottom: "10px", fontSize: "0.82rem" }}
               >
                 <option value="">
-                  -- Select {isDeveloper ? "Registered Institution Headmaster" : isHeadmaster ? "Teacher / Staff / Parent / Student" : isTeacher ? "Parent, Headmaster, Student, or Staff" : "Headmaster or Teacher"} --
+                  -- Select {isDeveloper ? "Registered Institution Headmaster" : isHeadmaster ? "Teacher / Staff / Parent / Student / Alumni" : isTeacher ? "Parent, Headmaster, Student, or Staff" : isCampusStaff ? "Headmaster, Teacher, Staff, Parent, or Student" : isStudent ? "Teacher, Headmaster, Classmate, or Staff" : isAlumni ? "Headmaster, Teacher, Alumni, or Staff" : "Headmaster, Teacher, or Bursar/Staff"} --
                 </option>
                 {availableTargets.map((c) => (
                   <option key={`${c.tenantId || "t"}_${c.userId}`} value={c.userId}>
@@ -798,12 +835,24 @@ export default function LiveCallLauncherAndReceiver({
                             ? "DEVELOPER_HEADMASTERS_CONFERENCE"
                             : isHeadmaster
                               ? headmasterConfAudience
-                              : "CLASS_CONFERENCE",
+                              : isTeacher
+                                ? "CLASS_CONFERENCE"
+                                : isCampusStaff
+                                  ? "STAFF_CONFERENCE"
+                                  : isAlumni
+                                    ? "ALUMNI_CONFERENCE"
+                                    : "STUDENT_CONFERENCE",
                           isDeveloper
                             ? "Developer & Headmasters Executive Video Conference"
                             : isHeadmaster
                               ? (hmAudienceTitles[headmasterConfAudience] || "Headmaster Live Video Conference")
-                              : "Teacher Live Video Conference",
+                              : isTeacher
+                                ? "Teacher Live Video Conference"
+                                : isCampusStaff
+                                  ? `${roleUpper} Live Coordination Video Conference`
+                                  : isAlumni
+                                    ? "Alumni Live Video Reunion & Mentorship Room"
+                                    : "Student Live Study Video Conference",
                           "VIDEO"
                         );
                       }}
@@ -820,12 +869,24 @@ export default function LiveCallLauncherAndReceiver({
                             ? "DEVELOPER_HEADMASTERS_CONFERENCE"
                             : isHeadmaster
                               ? headmasterConfAudience
-                              : "PARENT_CONFERENCE",
+                              : isCampusStaff
+                                ? "STAFF_CONFERENCE"
+                                : isAlumni
+                                  ? "ALUMNI_CONFERENCE"
+                                  : isStudent
+                                    ? "STUDENT_CONFERENCE"
+                                    : "PARENT_CONFERENCE",
                           isDeveloper
                             ? "Developer & Headmasters Voice Briefing"
                             : isHeadmaster
                               ? `Headmaster Live Voice Conference (${headmasterConfAudience.replace(/_/g, " ")})`
-                              : "Parent & Guardian Voice Conference",
+                              : isCampusStaff
+                                ? `${roleUpper} Live Voice Briefing`
+                                : isAlumni
+                                  ? "Alumni Live Voice Mentorship Circle"
+                                  : isStudent
+                                    ? "Student Live Audio Study Group"
+                                    : "Parent & Guardian Voice Conference",
                           "VOICE"
                         )
                       }

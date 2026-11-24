@@ -391,6 +391,7 @@ async function getCallDirectory(req) {
     secretary: contacts.filter((c) => c.role === 'SECRETARY'),
     parents: contacts.filter((c) => c.role === 'PARENT'),
     students: contacts.filter((c) => c.role === 'STUDENT'),
+    alumni: contacts.filter((c) => c.role === 'ALUMNI'),
     staff: contacts.filter((c) => ['SECRETARY', 'STAFF', 'HR', 'ACCOUNTANT', 'CLINIC_DOCTOR', 'CLINIC_NURSE'].includes(c.role))
   };
 }
@@ -562,6 +563,9 @@ function doesCallTargetUser(call, user = {}) {
   if (call.callScope === 'ALL_CAMPUS_CONFERENCE' && urole !== 'DEVELOPER') {
     return true;
   }
+  if (call.callScope === 'ALUMNI_CONFERENCE' && (urole === 'ALUMNI' || urole === 'TEACHER' || urole === 'SECRETARY' || isHeadmasterRole(urole))) {
+    return true;
+  }
   if (call.callScope === 'CLASS_CONFERENCE' && (urole === 'STUDENT' || urole === 'PARENT' || urole === 'TEACHER' || isHeadmasterRole(urole))) {
     return true;
   }
@@ -584,11 +588,14 @@ function canUserSeeActiveConference(call, user = {}) {
   if (urole === 'PARENT') {
     return scope === 'PARENT_CONFERENCE' || scope === 'CLASS_CONFERENCE';
   }
+  if (urole === 'ALUMNI') {
+    return scope === 'ALUMNI_CONFERENCE' || scope === 'ALL_CAMPUS_CONFERENCE' || scope === 'PARENT_CONFERENCE';
+  }
   if (urole === 'TEACHER') {
-    return ['FACULTY_CONFERENCE', 'STAFF_CONFERENCE', 'CLASS_CONFERENCE', 'STUDENT_CONFERENCE', 'PARENT_CONFERENCE'].includes(scope);
+    return ['FACULTY_CONFERENCE', 'STAFF_CONFERENCE', 'CLASS_CONFERENCE', 'STUDENT_CONFERENCE', 'PARENT_CONFERENCE', 'ALUMNI_CONFERENCE'].includes(scope);
   }
   if (['STAFF', 'SECRETARY', 'HR', 'ACCOUNTANT', 'CLINIC_DOCTOR', 'CLINIC_NURSE'].includes(urole)) {
-    return ['STAFF_CONFERENCE', 'FACULTY_CONFERENCE', 'PARENT_CONFERENCE'].includes(scope);
+    return ['STAFF_CONFERENCE', 'FACULTY_CONFERENCE', 'PARENT_CONFERENCE', 'ALUMNI_CONFERENCE'].includes(scope);
   }
   if (isHeadmasterRole(urole)) {
     return [
@@ -597,6 +604,7 @@ function canUserSeeActiveConference(call, user = {}) {
       'CLASS_CONFERENCE',
       'STUDENT_CONFERENCE',
       'PARENT_CONFERENCE',
+      'ALUMNI_CONFERENCE',
       'ALL_CAMPUS_CONFERENCE',
       'DEVELOPER_HEADMASTERS_CONFERENCE'
     ].includes(scope);

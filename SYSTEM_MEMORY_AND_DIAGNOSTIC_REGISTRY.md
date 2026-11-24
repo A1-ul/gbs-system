@@ -291,6 +291,38 @@ flowchart TD
 - **Live Render Production Verification (`https://gbs-system.onrender.com`, bundle `index-DiuujEUj.js`):** `53 / 53` live HTTP checks passed — green `200`/`201` across all 10 dashboards, token refresh, and `VIDEO → VOICE → VIDEO` signaling; strict `401 Unauthorized` verified on unauthenticated access.
 - **Permanent Automatic Memory Rule:** Created [`AGENTS.md`](file:///d:/version1/GBS_SYSTEM/AGENTS.md) at the repository root so every future session automatically saves completed jobs into `backend/data/gbs_system_memory_snapshot.json`, `SYSTEM_MEMORY_AND_DIAGNOSTIC_REGISTRY.md`, and `MASTER_SYSTEM_MEMORY_LEDGER.md` without requiring user reminders.
 
+---
+
+## 12. 10-Dashboard Live Video Camera Display, Production Payment Hardening, Responsive Unclipping & Developer Full-Page Module Routing (Nov 2026 — v2.15.0)
+
+### A. Video Calling Camera Display Across All 10 Dashboards
+- **Root Causes Resolved:**
+  1. Video call modals (`LiveInSystemCallModal`, `StudentCooperativeConferenceModal`, `OnlineLearningDashboard`, Student peer call modal) rendered inside dashboard containers with CSS `backdrop-filter` / `transform`, clipping fixed full-screen overlays.
+  2. Initial camera acquisition failed completely if microphone access failed or cold-start camera drivers took >3.5s; browser autoplay policies blocked unmuted remote streams; WebRTC omitted explicit `recvonly` transceivers and `have-local-offer` rollback on peer join.
+  3. Accountant, HR, Staff, Alumni, and Student dashboards lacked full `FULL_STUDIO` call launchers, and `liveCall.service.js` omitted Alumni directory & conference routing.
+- **Fixes Applied:**
+  - Portaled all video/call modals directly to `document.body` via `createPortal`.
+  - Upgraded [`LiveInSystemCallModal.jsx`](file:///d:/version1/GBS_SYSTEM/frontend/src/components/common/LiveInSystemCallModal.jsx) with 5 Google STUN servers, cold-start resilient `getUserMediaWithTimeout` (`6500ms` primary + audio-optional video fallback), remote muted autoplay fallback + `Tap to Unmute Speaker Audio` banner, live resolution readout, camera switcher (`enumerateDevices`), explicit `Activate / Retry Camera` control, `recvonly` audio/video transceivers, and `have-local-offer` rollback/ICE restart.
+  - Upgraded [`LiveCallLauncherAndReceiver.jsx`](file:///d:/version1/GBS_SYSTEM/frontend/src/components/common/LiveCallLauncherAndReceiver.jsx) and [`liveCall.service.js`](file:///d:/version1/GBS_SYSTEM/backend/src/modules/video/liveCall.service.js) to support all 10 roles (including `ALUMNI` directory & `ALUMNI_CONFERENCE`), and mounted `FULL_STUDIO` studios across Admin, Teacher, Student, Parent, Accountant, Secretary, Staff, HR, Alumni, and Developer dashboards.
+
+### B. Guaranteed Production & Demo Sandbox Payment Processing
+- **Root Causes Resolved:**
+  1. Public onboarding Step 2 actions (`sandbox-confirm`, `submit-otp`, `fallback`, `cancel`) hit JWT-protected routes and failed with `401` before Headmaster login.
+  2. `"GH₵"` currency symbols failed ISO validation; non-numeric mock `invoiceId` values caused lookup errors; raw integer `studentIdentifier` (`19`) violated Prisma `String? studentCode` on live PostgreSQL, causing silent offline store fallback and `404` on confirm/verify.
+  3. Paystack direct MoMo `POST /charge` failures had no automatic Hosted Checkout fallback; Live Production accounts without pre-seeded invoices could not settle custom amounts; `OfficialPaymentGatewayModal` re-ran `loadContext()` on async parent re-renders and unmounted active forms mid-checkout.
+- **Fixes Applied:**
+  - Added public onboarding Step 2 endpoints in [`payments.routes.js`](file:///d:/version1/GBS_SYSTEM/backend/src/modules/payments/payments.routes.js) and [`payments.controller.js`](file:///d:/version1/GBS_SYSTEM/backend/src/modules/payments/payments.controller.js) strictly scoped to `paymentScope === 'SUBSCRIPTION'` (rejecting `SCHOOL_FEES` with `401`).
+  - Hardened [`payments.validator.js`](file:///d:/version1/GBS_SYSTEM/backend/src/modules/payments/payments.validator.js), [`payments.service.js`](file:///d:/version1/GBS_SYSTEM/backend/src/modules/payments/payments.service.js), [`payments.reconciler.js`](file:///d:/version1/GBS_SYSTEM/backend/src/modules/payments/payments.reconciler.js), [`paystack.adapter.js`](file:///d:/version1/GBS_SYSTEM/backend/src/modules/payments/adapters/paystack.adapter.js), [`prisma.client.js`](file:///d:/version1/GBS_SYSTEM/backend/src/core/database/prisma.client.js), and [`finance.service.js`](file:///d:/version1/GBS_SYSTEM/backend/src/modules/finance/finance.service.js) with `GH₵ → GHS` normalization, strict `String` `studentCode` coercion, `STU-<tid>-<id>` resolution, unique `reference`-keyed updates, Paystack `/charge → Hosted Checkout` auto-fallback, Live Production auto-invoice issuance, and canonical `/api/v1/finance/payments` receipts.
+  - Portaled [`OfficialPaymentGatewayModal.jsx`](file:///d:/version1/GBS_SYSTEM/frontend/src/components/common/OfficialPaymentGatewayModal.jsx) to `document.body`, clamped minimum partial amounts, and locked `loadContext()` to run only on modal open (`!justOpened` guard) so parent refreshes never reset active checkouts. Replaced hardcoded KPIs in [`ParentDashboard.jsx`](file:///d:/version1/GBS_SYSTEM/frontend/src/modules/portal/pages/dashboards/parent/ParentDashboard.jsx) and live fallback leakage in [`AccountantDashboard.jsx`](file:///d:/version1/GBS_SYSTEM/frontend/src/modules/portal/pages/dashboards/accountant/AccountantDashboard.jsx).
+
+### C. Responsive Unclipping, Zero Tooltips & Developer Dedicated Module Routing
+- Removed `text-overflow: ellipsis` / `white-space: nowrap` clipping across [`globals.css`](file:///d:/version1/GBS_SYSTEM/frontend/src/styles/globals.css), [`AdminDashboard.css`](file:///d:/version1/GBS_SYSTEM/frontend/src/modules/portal/pages/dashboards/admin/AdminDashboard.css), [`TeacherDashboard.css`](file:///d:/version1/GBS_SYSTEM/frontend/src/modules/portal/pages/dashboards/teacher/TeacherDashboard.css), [`DeveloperPlatform.css`](file:///d:/version1/GBS_SYSTEM/frontend/src/modules/developer-platform/pages/DeveloperPlatform.css), and [`HRDashboard.jsx`](file:///d:/version1/GBS_SYSTEM/frontend/src/modules/portal/pages/dashboards/hr/HRDashboard.jsx); ensured `.role-tab-nav` wraps visibly and `.role-header-brand` stays visible on `390x844` mobile with zero horizontal overflow.
+- Added dedicated `:moduleId?` routes for Developer Portal in [`AppRouter.jsx`](file:///d:/version1/GBS_SYSTEM/frontend/src/router/AppRouter.jsx) and built self-contained full-page module navigation with sticky `[data-testid="dev-module-page-bar"]` (`← Back`, `🏠 Developer Overview`, `↗ Open in New Tab`) and per-entry exact Back scroll restoration (`gbs_dev_scroll_snapshots_v2`) in [`DeveloperDashboard.jsx`](file:///d:/version1/GBS_SYSTEM/frontend/src/modules/developer-platform/pages/DeveloperDashboard.jsx), preserving strict Developer Portal English LTR isolation (`data-gbs-developer-portal="true" data-gbs-no-translate="true"`).
+- **Verification Verdict (Bundle `index-1ypqqsuB.js`):**
+  - `37 / 37` full E2E API + real Chrome CDP checks passed (`640x360` portaled live cameras across ALL 10 dashboards, `0` HTML tooltip attributes, `0` clipped labels, `0` 401s, `0` console errors, Parent payment UI checkout -> official receipt, Developer full-page module routing + exact Back scroll restoration `544 → 0 → 544`, and `390x844` mobile layout).
+  - `18 / 18` upgrade regression checks passed in [`verify_upgrade_e2e.js`](file:///d:/version1/GBS_SYSTEM/backend/verify_upgrade_e2e.js).
+
+
 
 
 

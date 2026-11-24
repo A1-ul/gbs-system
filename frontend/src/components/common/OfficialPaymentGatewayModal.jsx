@@ -1,8 +1,21 @@
 import React, { useEffect, useRef, useState } from "react";
+import { createPortal } from "react-dom";
 import apiClient from "../../api/client/apiClient";
 import { getApiBaseUrl } from "../../api/client/apiConfig";
 import { getActiveSchoolName, getActiveSchoolLogo } from "../../utils/schoolBranding";
 import { copyTextSafely } from "../../utils/safeWindow";
+
+function normalizeIsoCurrency(raw) {
+  const s = String(raw || "GHS").trim().toUpperCase();
+  if (!s || s === "GH₵" || s === "₵" || s === "GHC" || s === "CEDI" || s === "CEDIS") return "GHS";
+  if (s === "₦" || s === "NAIRA") return "NGN";
+  if (s === "$" || s === "US$") return "USD";
+  if (s === "£") return "GBP";
+  if (s === "€") return "EUR";
+  if (s === "KSH" || s === "KSHS") return "KES";
+  if (s === "R") return "ZAR";
+  return /^[A-Z]{3}$/.test(s) ? s : "GHS";
+}
 
 const CHANNEL_META = {
   MTN_MOMO: { title: "MTN Mobile Money", subtitle: "Phone prompt or browser checkout", accent: "#f59e0b", icon: "📱" },
@@ -94,6 +107,10 @@ export default function OfficialPaymentGatewayModal({
   const [pollingActive, setPollingActive] = useState(false);
 
   const pollTimerRef = useRef(null);
+  const wasOpenRef = useRef(false);
+  const stepRef = useRef("SETUP");
+  stepRef.current = step;
+  const safeCurrency = normalizeIsoCurrency(currency);
   const schoolDisplayName = statement?.institution?.name || getActiveSchoolName() || "School Finance Portal";
 
   const stopPolling = () => {
@@ -110,7 +127,16 @@ export default function OfficialPaymentGatewayModal({
 
   useEffect(() => {
     if (!isOpen) {
+      wasOpenRef.current = false;
       stopPolling();
+      return;
+    }
+
+    const justOpened = !wasOpenRef.current;
+    wasOpenRef.current = true;
+
+    // Never wipe out or unmount an open checkout form/authorization flow if parent props re-render asynchronously
+    if (!justOpened) {
       return;
     }
 
@@ -151,10 +177,13 @@ export default function OfficialPaymentGatewayModal({
           }
 
           const outstanding = Number(data?.feeSummary?.outstandingBalance || 0);
-          const suggestedAmt =
-            amount !== null && amount !== undefined && Number(amount) > 0 && Number(amount) <= outstanding
-              ? Number(amount)
+          const minPayable = Number(data?.feeSummary?.minimumPayableAmount || 0);
+          const requestedAmt = amount !== null && amount !== undefined && Number(amount) > 0 ? Number(amount) : 0;
+          const clampedReq =
+            outstanding > 0 && requestedAmt > 0 && requestedAmt <= outstanding
+              ? Math.max(requestedAmt, Math.min(minPayable, outstanding))
               : outstanding;
+          const suggestedAmt = outstanding > 0 ? clampedReq : requestedAmt;
           setPayAmount(suggestedAmt > 0 ? String(suggestedAmt) : "");
         } else {
           // Subscription / Onboarding payment context (public safe gateway lookup -> Developer Platform Account)
@@ -230,15 +259,16 @@ export default function OfficialPaymentGatewayModal({
 
     if (statement?.feeSummary) {
       const due = Number(statement.feeSummary.outstandingBalance || 0);
-      if (numericAmount > due + 0.01) {
-        setErrorMsg(`You cannot pay more than the verified balance of ${currency} ${due.toFixed(2)}.`);
+      if (due > 0 && numericAmount > due + 0.01) {
+        setErrorMsg(`You cannot pay more than the verified balance of ${safeCurrency} ${due.toFixed(2)}.`);
         return;
       }
       if (
+        due > 0 &&
         numericAmount < due - 0.01 &&
         statement.feeSummary.allowPartialPayments === false
       ) {
-        setErrorMsg(`Partial payments are not enabled. Full amount (${currency} ${due.toFixed(2)}) is required.`);
+        setErrorMsg(`Partial payments are not enabled. Full amount (${safeCurrency} ${due.toFixed(2)}) is required.`);
         return;
       }
     }
@@ -251,13 +281,17 @@ export default function OfficialPaymentGatewayModal({
     setLoading(true);
     try {
       const returnUrl = `${window.location.origin}/payment-callback`;
+      const safeNumericInvoiceId =
+        invoiceId !== null && invoiceId !== undefined && /^\d+$/.test(String(invoiceId).trim())
+          ? Number(String(invoiceId).trim())
+          : null;
       const payload = {
         paymentScope,
         studentIdentifier: studentIdentifier || statement?.student?.studentCode || (statement?.student?.id ? String(statement.student.id) : null),
         studentId: statement?.student?.id || studentId || null,
-        invoiceId: invoiceId || null,
+        invoiceId: safeNumericInvoiceId,
         amount: numericAmount,
-        currency,
+        currency: safeCurrency,
         gateway: selectedGateway || undefined,
         channel: selectedChannel,
         payerPhone: isMomoChannel ? payerPhone : undefined,
@@ -307,7 +341,10 @@ export default function OfficialPaymentGatewayModal({
     setLoading(true);
     setErrorMsg("");
     try {
-      const res = await apiClient.post(`/payments/${encodeURIComponent(activeTransaction.reference)}/submit-otp`, {
+      const otpEndpoint = allowPublicOnboarding
+        ? `/payments/onboarding/${encodeURIComponent(activeTransaction.reference)}/submit-otp`
+        : `/payments/${encodeURIComponent(activeTransaction.reference)}/submit-otp`;
+      const res = await apiClient.post(otpEndpoint, {
         otp: otpInput.trim()
       });
       const data = res.data?.data;
@@ -369,8 +406,11 @@ export default function OfficialPaymentGatewayModal({
     setErrorMsg("");
     try {
       stopPolling();
+      const fbEndpoint = allowPublicOnboarding
+        ? `/payments/onboarding/${encodeURIComponent(activeTransaction.reference)}/fallback`
+        : `/payments/${encodeURIComponent(activeTransaction.reference)}/fallback`;
       const res = await apiClient.post(
-        `/payments/${encodeURIComponent(activeTransaction.reference)}/fallback`,
+        fbEndpoint,
         {
           gateway: alt.gateway,
           channel: alt.channel,
@@ -400,7 +440,10 @@ export default function OfficialPaymentGatewayModal({
     stopPolling();
     setLoading(true);
     try {
-      await apiClient.post(`/payments/${encodeURIComponent(activeTransaction.reference)}/cancel`);
+      const cancelEndpoint = allowPublicOnboarding
+        ? `/payments/onboarding/${encodeURIComponent(activeTransaction.reference)}/cancel`
+        : `/payments/${encodeURIComponent(activeTransaction.reference)}/cancel`;
+      await apiClient.post(cancelEndpoint);
       setStep("SETUP");
       setActiveTransaction(null);
       setInfoMsg("Previous payment request cancelled. You may choose another payment method.");
@@ -416,7 +459,10 @@ export default function OfficialPaymentGatewayModal({
     setLoading(true);
     setErrorMsg("");
     try {
-      await apiClient.post(`/payments/${encodeURIComponent(activeTransaction.reference)}/sandbox-confirm`, {
+      const sandboxEndpoint = allowPublicOnboarding
+        ? `/payments/onboarding/${encodeURIComponent(activeTransaction.reference)}/sandbox-confirm`
+        : `/payments/${encodeURIComponent(activeTransaction.reference)}/sandbox-confirm`;
+      await apiClient.post(sandboxEndpoint, {
         outcome
       });
       await verifyOnServer(activeTransaction.reference, false);
@@ -479,14 +525,23 @@ export default function OfficialPaymentGatewayModal({
   if (!isOpen) return null;
 
   const badge = STATE_BADGES[activeTransaction?.gatewayStatus] || STATE_BADGES.PENDING;
-  const resolvedCheckoutUrl = activeTransaction?.authorizationUrl
-    ? activeTransaction.authorizationUrl.startsWith("/")
-      ? `${getApiBaseUrl().replace(/\/api\/v1$/, "")}${activeTransaction.authorizationUrl}?returnUrl=${encodeURIComponent(`${window.location.origin}/payment-callback?payment_ref=${activeTransaction.reference}`)}`
-      : activeTransaction.authorizationUrl
-    : null;
+  const resolvedCheckoutUrl = (() => {
+    const rawUrl = activeTransaction?.authorizationUrl;
+    if (!rawUrl) return null;
+    const cbReturn = `${window.location.origin}/payment-callback?payment_ref=${encodeURIComponent(activeTransaction.reference)}`;
+    if (rawUrl.startsWith("/")) {
+      const base = `${getApiBaseUrl().replace(/\/api\/v1$/, "")}${rawUrl}`;
+      return `${base}${base.includes("?") ? "&" : "?"}returnUrl=${encodeURIComponent(cbReturn)}`;
+    }
+    if (rawUrl.includes("/sandbox-checkout/") && !rawUrl.includes("returnUrl=")) {
+      return `${rawUrl}${rawUrl.includes("?") ? "&" : "?"}returnUrl=${encodeURIComponent(cbReturn)}`;
+    }
+    return rawUrl;
+  })();
 
-  return (
+  const modalContent = (
     <div
+      data-testid="official-payment-gateway-modal"
       style={{
         position: "fixed",
         inset: 0,
@@ -591,21 +646,21 @@ export default function OfficialPaymentGatewayModal({
                     <div style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: "8px", borderTop: "1px solid rgba(148,163,184,0.15)", paddingTop: "10px" }}>
                       <div>
                         <div style={{ fontSize: "0.7rem", color: "#94a3b8" }}>Total Billed</div>
-                        <strong>{currency} {Number(statement.feeSummary.totalBilled).toFixed(2)}</strong>
+                        <strong>{safeCurrency} {Number(statement.feeSummary.totalBilled).toFixed(2)}</strong>
                       </div>
                       <div>
                         <div style={{ fontSize: "0.7rem", color: "#94a3b8" }}>Already Paid</div>
-                        <strong style={{ color: "#34d399" }}>{currency} {Number(statement.feeSummary.totalPaid).toFixed(2)}</strong>
+                        <strong style={{ color: "#34d399" }}>{safeCurrency} {Number(statement.feeSummary.totalPaid).toFixed(2)}</strong>
                       </div>
                       <div>
                         <div style={{ fontSize: "0.7rem", color: "#94a3b8" }}>Balance Due</div>
-                        <strong style={{ color: "#f87171", fontSize: "1.02rem" }}>{currency} {Number(statement.feeSummary.outstandingBalance).toFixed(2)}</strong>
+                        <strong style={{ color: "#f87171", fontSize: "1.02rem" }}>{safeCurrency} {Number(statement.feeSummary.outstandingBalance).toFixed(2)}</strong>
                       </div>
                     </div>
                   </div>
                 )}
 
-                {statement?.feeSummary && Number(statement.feeSummary.outstandingBalance) <= 0 ? (
+                {statement?.feeSummary && Number(statement.feeSummary.outstandingBalance) <= 0 && !statement.feeSummary.allowCustomAmount && !(Number(amount) > 0) ? (
                   <div style={{ padding: "16px", background: "rgba(16, 185, 129, 0.14)", border: "1px solid #10b981", borderRadius: "10px", textAlign: "center", color: "#6ee7b7" }}>
                     <strong>No Outstanding Balance Due.</strong> All verified school fees for this student are currently paid in full.
                   </div>
@@ -613,21 +668,21 @@ export default function OfficialPaymentGatewayModal({
                   <>
                     <div>
                       <label style={{ display: "block", fontSize: "0.8rem", color: "#cbd5e1", marginBottom: "6px", fontWeight: 700 }}>
-                        Amount to Pay ({currency})
+                        Amount to Pay ({safeCurrency})
                       </label>
                       <input
                         type="number"
                         step="0.01"
                         required
-                        min={statement?.feeSummary?.minimumPayableAmount || 1}
-                        max={statement?.feeSummary?.outstandingBalance || undefined}
+                        min={Number(statement?.feeSummary?.outstandingBalance || 0) > 0 ? (statement?.feeSummary?.minimumPayableAmount || 1) : 1}
+                        max={Number(statement?.feeSummary?.outstandingBalance || 0) > 0 ? statement.feeSummary.outstandingBalance : undefined}
                         value={payAmount}
                         onChange={(e) => setPayAmount(e.target.value)}
                         style={{ width: "100%", padding: "10px 12px", borderRadius: "10px", border: "1px solid rgba(148,163,184,0.35)", background: "#020617", color: "#34d399", fontSize: "1.15rem", fontWeight: 800, boxSizing: "border-box" }}
                       />
-                      {statement?.feeSummary?.allowPartialPayments && (
+                      {statement?.feeSummary?.allowPartialPayments && Number(statement?.feeSummary?.outstandingBalance || 0) > 0 && (
                         <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginTop: "6px", fontSize: "0.76rem", color: "#94a3b8" }}>
-                          <span>Partial payment minimum: {currency} {Number(statement.feeSummary.minimumPayableAmount).toFixed(2)}</span>
+                          <span>Partial payment minimum: {safeCurrency} {Number(statement.feeSummary.minimumPayableAmount).toFixed(2)}</span>
                           <button
                             type="button"
                             onClick={() => setPayAmount(String(statement.feeSummary.outstandingBalance))}
@@ -635,6 +690,11 @@ export default function OfficialPaymentGatewayModal({
                           >
                             Pay Full Balance
                           </button>
+                        </div>
+                      )}
+                      {statement?.feeSummary && Number(statement.feeSummary.outstandingBalance || 0) <= 0 && (
+                        <div style={{ marginTop: "6px", fontSize: "0.75rem", color: "#6ee7b7" }}>
+                          Enter the school fee amount to settle; an official institutional invoice &amp; receipt will be issued automatically upon confirmation.
                         </div>
                       )}
                     </div>
@@ -733,7 +793,7 @@ export default function OfficialPaymentGatewayModal({
                         cursor: loading ? "wait" : "pointer"
                       }}
                     >
-                      {loading ? "Starting Payment with Provider..." : `Proceed to Pay ${currency} ${Number(payAmount || 0).toFixed(2)}`}
+                      {loading ? "Starting Payment with Provider..." : `Proceed to Pay ${safeCurrency} ${Number(payAmount || 0).toFixed(2)}`}
                     </button>
                   </>
                 )}
@@ -954,12 +1014,12 @@ export default function OfficialPaymentGatewayModal({
               </div>
               <div style={{ display: "flex", justifyContent: "space-between" }}>
                 <span style={{ color: "#94a3b8" }}>Confirmed Amount:</span>
-                <strong style={{ color: "#34d399" }}>{currency} {Number(verifiedReceipt?.amountPaid || activeTransaction?.amountPaid || 0).toFixed(2)}</strong>
+                <strong style={{ color: "#34d399" }}>{safeCurrency} {Number(verifiedReceipt?.amountPaid || activeTransaction?.amountPaid || 0).toFixed(2)}</strong>
               </div>
               {verifiedReceipt && (
                 <div style={{ display: "flex", justifyContent: "space-between" }}>
                   <span style={{ color: "#94a3b8" }}>Remaining Fee Balance:</span>
-                  <strong>{currency} {Number(verifiedReceipt.balanceAfter || 0).toFixed(2)}</strong>
+                  <strong>{safeCurrency} {Number(verifiedReceipt.balanceAfter || 0).toFixed(2)}</strong>
                 </div>
               )}
             </div>
@@ -985,4 +1045,8 @@ export default function OfficialPaymentGatewayModal({
       </div>
     </div>
   );
+
+  return typeof document !== "undefined" && document.body
+    ? createPortal(modalContent, document.body)
+    : modalContent;
 }

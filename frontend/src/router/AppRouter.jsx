@@ -257,14 +257,14 @@ export default function AppRouter() {
           <Route path="/portal/developer/dashboard" element={<Navigate to="/developer-control-center/dashboard" replace />} />
           <Route path="/portal/:role/dashboard/:moduleId?" element={<ProtectedPortalRoute loginPath="/login"><RoleDashboardView /></ProtectedPortalRoute>} />
 
-          {/* Hidden Enterprise Developer Control Center */}
+          {/* Hidden Enterprise Developer Control Center (with Dedicated Module Page Routes) */}
           <Route path="/developer-control-center" element={<Navigate to="/developer-control-center/login" replace />} />
           <Route path="/developer" element={<Navigate to="/developer-control-center/login" replace />} />
           <Route path="/developer/login" element={<DeveloperLogin />} />
-          <Route path="/developer/dashboard" element={<DeveloperDashboard />} />
-          <Route path="/developer/control-center" element={<DeveloperDashboard />} />
+          <Route path="/developer/dashboard/:moduleId?" element={<DeveloperDashboard />} />
+          <Route path="/developer/control-center/:moduleId?" element={<DeveloperDashboard />} />
           <Route path="/developer-control-center/login" element={<DeveloperLogin />} />
-          <Route path="/developer-control-center/dashboard" element={<DeveloperDashboard />} />
+          <Route path="/developer-control-center/dashboard/:moduleId?" element={<DeveloperDashboard />} />
           <Route path="/developer-control-center/ai-diagnostics" element={<DeveloperAIDiagnostics />} />
           <Route path="/developer-control-center/sharding" element={<ShardingDrManagementPage />} />
           <Route path="/developer-control-center/dr-failover" element={<ShardingDrManagementPage />} />

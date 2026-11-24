@@ -33,9 +33,14 @@ router.get('/sandbox-checkout/:reference', controller.renderSandboxCheckoutPage)
 router.post('/sandbox-checkout/:reference/complete', paymentWriteLimiter, controller.triggerSandboxWebhook);
 
 // 3. Public Onboarding Subscription Checkout (for schools registering before login)
+// Strictly scoped in controller to paymentScope === 'SUBSCRIPTION' transactions only.
 router.get('/onboarding/gateways', controller.getOnboardingGateways);
 router.post('/onboarding/initiate', paymentWriteLimiter, controller.initiateOnboardingSubscriptionPayment);
 router.get('/onboarding/verify/:reference', controller.verifyOnboardingTransaction);
+router.post('/onboarding/:reference/sandbox-confirm', paymentWriteLimiter, controller.triggerOnboardingSandboxWebhook);
+router.post('/onboarding/:reference/submit-otp', paymentWriteLimiter, controller.submitOnboardingAuthorizationStep);
+router.post('/onboarding/:reference/fallback', paymentWriteLimiter, controller.switchOnboardingToFallbackMethod);
+router.post('/onboarding/:reference/cancel', paymentWriteLimiter, controller.cancelOnboardingPayment);
 
 // 4. All Student / Parent / School / Developer Operations Require Authentication & Tenant Isolation
 router.use(protect);

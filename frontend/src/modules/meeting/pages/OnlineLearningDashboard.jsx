@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useMemo } from 'react';
+import { createPortal } from 'react-dom';
 import apiClient from '../../../api/client/apiClient';
 import { getActiveSchoolName } from '../../../utils/schoolBranding';
 import { copyTextSafely } from '../../../utils/safeWindow';
@@ -170,21 +171,32 @@ export default function OnlineLearningDashboard() {
         });
       }
 
-      // Try camera stream initialization
+      // Try camera stream initialization with graceful audio-optional fallback
       setTimeout(async () => {
+        if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) return;
+        let stream = null;
         try {
-          if (navigator.mediaDevices && navigator.mediaDevices.getUserMedia) {
-            const stream = await navigator.mediaDevices.getUserMedia({
-              video: { width: { ideal: 640 }, height: { ideal: 360 }, frameRate: { ideal: 30, min: 24 } },
-              audio: { echoCancellation: true, noiseSuppression: true, autoGainControl: true }
-            });
-            classroomStreamRef.current = stream;
-            attachClassroomVideo(stream);
+          stream = await navigator.mediaDevices.getUserMedia({
+            video: { width: { ideal: 640 }, height: { ideal: 360 }, frameRate: { ideal: 30 } },
+            audio: { echoCancellation: true, noiseSuppression: true, autoGainControl: true }
+          });
+        } catch {
+          try {
+            stream = await navigator.mediaDevices.getUserMedia({ video: true, audio: true });
+          } catch {
+            try {
+              stream = await navigator.mediaDevices.getUserMedia({ video: true, audio: false });
+              setInCallAudioMuted(true);
+            } catch (camErr) {
+              console.warn('Classroom webcam access fallback:', camErr);
+            }
           }
-        } catch (camErr) {
-          console.warn('Classroom webcam access fallback:', camErr);
         }
-      }, 250);
+        if (stream) {
+          classroomStreamRef.current = stream;
+          attachClassroomVideo(stream);
+        }
+      }, 200);
       fetchData();
     } catch (err) {
       setActionNotice({ type: 'error', text: `❌ ${err.message}` });
@@ -954,206 +966,215 @@ export default function OnlineLearningDashboard() {
         </div>
       )}
 
-      {/* Interactive Virtual Video Classroom Modal (Working Zoom Enclave) */}
-      {activeVirtualClassroom && (
-        <div className="modal-backdrop" style={{ zIndex: 99999 }}>
-          <div className="modal-box virtual-classroom-modal">
-            {/* Header */}
-            <div className="modal-header" style={{ borderBottom: '1px solid rgba(56, 189, 248, 0.3)', paddingBottom: '10px' }}>
-              <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-                <span style={{ fontSize: '1.6rem' }}>📹</span>
-                <div>
-                  <h2 style={{ fontSize: '1.15rem', margin: 0, color: '#f8fafc' }}>
-                    {activeVirtualClassroom.title}
-                  </h2>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginTop: '4px', fontSize: '0.75rem', color: '#94a3b8' }}>
-                    <span className="status-pill status-live">● LIVE CLASSROOM</span>
-                    <span>Room ID: <strong>984 2190 4421</strong></span>
-                    <span>Passcode: <strong>GBS2026</strong></span>
-                    <span style={{ color: '#38bdf8' }}>⏱ {Math.floor(callDuration / 60)}:{(callDuration % 60).toString().padStart(2, '0')}</span>
-                  </div>
-                </div>
-              </div>
-              <div style={{ display: 'flex', gap: '10px', alignItems: 'center' }}>
-                <a
-                  href={`https://zoom.us/wc/join/98421904421`}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="ctrl-btn"
-                  style={{ background: '#0284c7', color: '#fff', textDecoration: 'none' }}
-                  aria-label="Launch in External Zoom Web Client"
-                >
-                  🚀 Open Zoom Web Client
-                </a>
-                <button type="button" className="modal-close-btn" onClick={handleLeaveClassroom} aria-label="Leave Session">✕</button>
-              </div>
-            </div>
-
-            {/* Stage: Video Viewport & Sidebar */}
-            <div className="classroom-main-stage">
-              <div className="classroom-video-viewport">
-                <video
-                  ref={classroomVideoRef}
-                  autoPlay
-                  playsInline
-                  muted
-                  className="classroom-webcam-feed"
-                  style={{ display: !inCallVideoMuted ? 'block' : 'none' }}
-                />
-                {inCallVideoMuted && (
-                  <div style={{ textAlign: 'center', color: '#94a3b8' }}>
-                    <div style={{ fontSize: '3.5rem', marginBottom: '8px' }}>🎙️</div>
-                    <strong style={{ color: '#f8fafc', display: 'block' }}>Voice Mode Active (Video Paused)</strong>
-                    <span style={{ fontSize: '0.78rem' }}>Audio stream active • Click Start Video / Switch to Video anytime</span>
-                  </div>
-                )}
-
-                {isHandRaised && (
-                  <div style={{ position: 'absolute', top: '16px', right: '16px', background: 'rgba(245, 158, 11, 0.9)', color: '#000', fontWeight: 900, padding: '4px 10px', borderRadius: '20px', fontSize: '0.8rem', display: 'flex', alignItems: 'center', gap: '6px' }}>
-                    ✋ Hand Raised
-                  </div>
-                )}
-
-                {isScreenSharing && (
-                  <div style={{ position: 'absolute', top: '16px', left: '16px', background: 'rgba(56, 189, 248, 0.9)', color: '#000', fontWeight: 900, padding: '4px 10px', borderRadius: '20px', fontSize: '0.8rem' }}>
-                    🖥️ Presentation Screen Sharing Active
-                  </div>
-                )}
-              </div>
-
-              {/* Sidebar: Tabs for Chat & Participants */}
-              <div className="classroom-sidebar">
-                <div style={{ display: 'flex', borderBottom: '1px solid rgba(255, 255, 255, 0.1)' }}>
-                  <button
-                    type="button"
-                    style={{ flex: 1, padding: '10px', background: classroomTab === 'chat' ? 'rgba(56, 189, 248, 0.15)' : 'transparent', color: classroomTab === 'chat' ? '#38bdf8' : '#94a3b8', border: 'none', fontWeight: 700, cursor: 'pointer', fontSize: '0.8rem' }}
-                    onClick={() => setClassroomTab('chat')}
-                  >
-                    💬 Live Chat ({chatMessages.length})
-                  </button>
-                  <button
-                    type="button"
-                    style={{ flex: 1, padding: '10px', background: classroomTab === 'roster' ? 'rgba(56, 189, 248, 0.15)' : 'transparent', color: classroomTab === 'roster' ? '#38bdf8' : '#94a3b8', border: 'none', fontWeight: 700, cursor: 'pointer', fontSize: '0.8rem' }}
-                    onClick={() => setClassroomTab('roster')}
-                  >
-                    👥 Participants (18)
-                  </button>
-                </div>
-
-                {classroomTab === 'chat' ? (
-                  <div style={{ flex: 1, display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
-                    <div style={{ flex: 1, overflowY: 'auto', padding: '10px', display: 'flex', flexDirection: 'column', gap: '8px' }}>
-                      {chatMessages.map((msg, i) => (
-                        <div key={i} style={{ background: 'rgba(2, 6, 23, 0.7)', padding: '6px 10px', borderRadius: '8px', fontSize: '0.78rem' }}>
-                          <div style={{ display: 'flex', justifyContent: 'space-between', color: '#38bdf8', fontWeight: 700, marginBottom: '2px', fontSize: '0.72rem' }}>
-                            <span>{msg.sender}</span>
-                            <span style={{ color: '#64748b' }}>{msg.time}</span>
-                          </div>
-                          <div style={{ color: '#f1f5f9' }}>{msg.text}</div>
-                        </div>
-                      ))}
+      {/* Interactive Virtual Video Classroom Modal (Working Zoom Enclave — Portaled to document.body) */}
+      {activeVirtualClassroom && (() => {
+        const classroomModal = (
+          <div className="modal-backdrop" style={{ zIndex: 99999 }}>
+            <div className="modal-box virtual-classroom-modal">
+              {/* Header */}
+              <div className="modal-header" style={{ borderBottom: '1px solid rgba(56, 189, 248, 0.3)', paddingBottom: '10px' }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+                  <span style={{ fontSize: '1.6rem' }}>📹</span>
+                  <div>
+                    <h2 style={{ fontSize: '1.15rem', margin: 0, color: '#f8fafc' }}>
+                      {activeVirtualClassroom.title}
+                    </h2>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginTop: '4px', fontSize: '0.75rem', color: '#94a3b8' }}>
+                      <span className="status-pill status-live">● LIVE CLASSROOM</span>
+                      <span>Room ID: <strong>984 2190 4421</strong></span>
+                      <span>Passcode: <strong>GBS2026</strong></span>
+                      <span style={{ color: '#38bdf8' }}>⏱ {Math.floor(callDuration / 60)}:{(callDuration % 60).toString().padStart(2, '0')}</span>
                     </div>
-                    <form onSubmit={handleSendChatMessage} style={{ display: 'flex', gap: '6px', padding: '10px', borderTop: '1px solid rgba(255, 255, 255, 0.1)' }}>
-                      <input
-                        type="text"
-                        placeholder="Type message to class..."
-                        value={newChatMessage}
-                        onChange={(e) => setNewChatMessage(e.target.value)}
-                        style={{ flex: 1, padding: '8px 12px', background: '#020617', border: '1px solid #334155', borderRadius: '6px', color: '#fff', fontSize: '0.8rem' }}
-                      />
-                      <button type="submit" style={{ background: '#0284c7', border: 'none', color: '#fff', padding: '8px 14px', borderRadius: '6px', cursor: 'pointer', fontWeight: 800 }}>
-                        Send
-                      </button>
-                    </form>
                   </div>
-                ) : (
-                  <div style={{ flex: 1, overflowY: 'auto', padding: '10px', fontSize: '0.8rem' }}>
-                    {(() => {
-                      let activeHostName = 'Assigned Host / Instructor';
-                      try {
-                        const u = JSON.parse(localStorage.getItem('gbs_user') || '{}');
-                        if (u.firstName || u.name) {
-                          activeHostName = u.name || `${u.firstName} ${u.lastName || ''}`.trim();
-                        }
-                      } catch { }
-                      const liveAttendees = Array.isArray(activeVirtualClassroom?.participants) && activeVirtualClassroom.participants.length > 0
-                        ? activeVirtualClassroom.participants
-                        : (isDemoSandboxMode()
-                          ? ['Kofi Mensah (Demo)', 'Ama Serwaa (Demo)', 'Emmanuel Addo (Demo)']
-                          : []);
-                      return (
-                        <>
-                          <div style={{ padding: '6px 8px', display: 'flex', justifyContent: 'space-between', borderBottom: '1px solid rgba(255, 255, 255, 0.05)', color: '#34d399', fontWeight: 800 }}>
-                            <span>Host: {activeHostName}</span>
-                            <span>🎙️ Host</span>
-                          </div>
-                          {liveAttendees.length === 0 ? (
-                            <div style={{ padding: '12px 8px', color: '#94a3b8', fontSize: '0.76rem' }}>
-                              Waiting for enrolled participants to join live session...
+                </div>
+                <div style={{ display: 'flex', gap: '10px', alignItems: 'center' }}>
+                  <a
+                    href={`https://zoom.us/wc/join/98421904421`}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="ctrl-btn"
+                    style={{ background: '#0284c7', color: '#fff', textDecoration: 'none' }}
+                    aria-label="Launch in External Zoom Web Client"
+                  >
+                    🚀 Open Zoom Web Client
+                  </a>
+                  <button type="button" className="modal-close-btn" onClick={handleLeaveClassroom} aria-label="Leave Session">✕</button>
+                </div>
+              </div>
+
+              {/* Stage: Video Viewport & Sidebar */}
+              <div className="classroom-main-stage">
+                <div className="classroom-video-viewport">
+                  <video
+                    ref={classroomVideoRef}
+                    autoPlay
+                    playsInline
+                    muted
+                    onLoadedMetadata={(e) => {
+                      e.currentTarget.muted = true;
+                      e.currentTarget.play().catch(() => { });
+                    }}
+                    className="classroom-webcam-feed"
+                    style={{ display: !inCallVideoMuted ? 'block' : 'none' }}
+                  />
+                  {inCallVideoMuted && (
+                    <div style={{ textAlign: 'center', color: '#94a3b8' }}>
+                      <div style={{ fontSize: '3.5rem', marginBottom: '8px' }}>🎙️</div>
+                      <strong style={{ color: '#f8fafc', display: 'block' }}>Voice Mode Active (Video Paused)</strong>
+                      <span style={{ fontSize: '0.78rem' }}>Audio stream active • Click Start Video / Switch to Video anytime</span>
+                    </div>
+                  )}
+
+                  {isHandRaised && (
+                    <div style={{ position: 'absolute', top: '16px', right: '16px', background: 'rgba(245, 158, 11, 0.9)', color: '#000', fontWeight: 900, padding: '4px 10px', borderRadius: '20px', fontSize: '0.8rem', display: 'flex', alignItems: 'center', gap: '6px' }}>
+                      ✋ Hand Raised
+                    </div>
+                  )}
+
+                  {isScreenSharing && (
+                    <div style={{ position: 'absolute', top: '16px', left: '16px', background: 'rgba(56, 189, 248, 0.9)', color: '#000', fontWeight: 900, padding: '4px 10px', borderRadius: '20px', fontSize: '0.8rem' }}>
+                      🖥️ Presentation Screen Sharing Active
+                    </div>
+                  )}
+                </div>
+
+                {/* Sidebar: Tabs for Chat & Participants */}
+                <div className="classroom-sidebar">
+                  <div style={{ display: 'flex', borderBottom: '1px solid rgba(255, 255, 255, 0.1)' }}>
+                    <button
+                      type="button"
+                      style={{ flex: 1, padding: '10px', background: classroomTab === 'chat' ? 'rgba(56, 189, 248, 0.15)' : 'transparent', color: classroomTab === 'chat' ? '#38bdf8' : '#94a3b8', border: 'none', fontWeight: 700, cursor: 'pointer', fontSize: '0.8rem' }}
+                      onClick={() => setClassroomTab('chat')}
+                    >
+                      💬 Live Chat ({chatMessages.length})
+                    </button>
+                    <button
+                      type="button"
+                      style={{ flex: 1, padding: '10px', background: classroomTab === 'roster' ? 'rgba(56, 189, 248, 0.15)' : 'transparent', color: classroomTab === 'roster' ? '#38bdf8' : '#94a3b8', border: 'none', fontWeight: 700, cursor: 'pointer', fontSize: '0.8rem' }}
+                      onClick={() => setClassroomTab('roster')}
+                    >
+                      👥 Participants (18)
+                    </button>
+                  </div>
+
+                  {classroomTab === 'chat' ? (
+                    <div style={{ flex: 1, display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
+                      <div style={{ flex: 1, overflowY: 'auto', padding: '10px', display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                        {chatMessages.map((msg, i) => (
+                          <div key={i} style={{ background: 'rgba(2, 6, 23, 0.7)', padding: '6px 10px', borderRadius: '8px', fontSize: '0.78rem' }}>
+                            <div style={{ display: 'flex', justifyContent: 'space-between', color: '#38bdf8', fontWeight: 700, marginBottom: '2px', fontSize: '0.72rem' }}>
+                              <span>{msg.sender}</span>
+                              <span style={{ color: '#64748b' }}>{msg.time}</span>
                             </div>
-                          ) : (
-                            liveAttendees.map((student, idx) => (
-                              <div key={idx} style={{ padding: '6px 8px', display: 'flex', justifyContent: 'space-between', borderBottom: '1px solid rgba(255, 255, 255, 0.05)', color: '#cbd5e1' }}>
-                                <span>{typeof student === 'string' ? student : (student.name || `${student.firstName || ''} ${student.lastName || ''}`.trim())}</span>
-                                <span style={{ fontSize: '0.7rem', color: '#64748b' }}>Participant</span>
+                            <div style={{ color: '#f1f5f9' }}>{msg.text}</div>
+                          </div>
+                        ))}
+                      </div>
+                      <form onSubmit={handleSendChatMessage} style={{ display: 'flex', gap: '6px', padding: '10px', borderTop: '1px solid rgba(255, 255, 255, 0.1)' }}>
+                        <input
+                          type="text"
+                          placeholder="Type message to class..."
+                          value={newChatMessage}
+                          onChange={(e) => setNewChatMessage(e.target.value)}
+                          style={{ flex: 1, padding: '8px 12px', background: '#020617', border: '1px solid #334155', borderRadius: '6px', color: '#fff', fontSize: '0.8rem' }}
+                        />
+                        <button type="submit" style={{ background: '#0284c7', border: 'none', color: '#fff', padding: '8px 14px', borderRadius: '6px', cursor: 'pointer', fontWeight: 800 }}>
+                          Send
+                        </button>
+                      </form>
+                    </div>
+                  ) : (
+                    <div style={{ flex: 1, overflowY: 'auto', padding: '10px', fontSize: '0.8rem' }}>
+                      {(() => {
+                        let activeHostName = 'Assigned Host / Instructor';
+                        try {
+                          const u = JSON.parse(localStorage.getItem('gbs_user') || '{}');
+                          if (u.firstName || u.name) {
+                            activeHostName = u.name || `${u.firstName} ${u.lastName || ''}`.trim();
+                          }
+                        } catch { }
+                        const liveAttendees = Array.isArray(activeVirtualClassroom?.participants) && activeVirtualClassroom.participants.length > 0
+                          ? activeVirtualClassroom.participants
+                          : (isDemoSandboxMode()
+                            ? ['Kofi Mensah (Demo)', 'Ama Serwaa (Demo)', 'Emmanuel Addo (Demo)']
+                            : []);
+                        return (
+                          <>
+                            <div style={{ padding: '6px 8px', display: 'flex', justifyContent: 'space-between', borderBottom: '1px solid rgba(255, 255, 255, 0.05)', color: '#34d399', fontWeight: 800 }}>
+                              <span>Host: {activeHostName}</span>
+                              <span>🎙️ Host</span>
+                            </div>
+                            {liveAttendees.length === 0 ? (
+                              <div style={{ padding: '12px 8px', color: '#94a3b8', fontSize: '0.76rem' }}>
+                                Waiting for enrolled participants to join live session...
                               </div>
-                            ))
-                          )}
-                        </>
-                      );
-                    })()}
-                  </div>
-                )}
-              </div>
-            </div>
-
-            {/* Bottom Controls Bar */}
-            <div className="classroom-controls-bar">
-              <div style={{ display: 'flex', gap: '8px' }}>
-                <button
-                  type="button"
-                  className={`ctrl-btn ${inCallAudioMuted ? 'danger' : 'active'}`}
-                  onClick={handleToggleClassroomAudio}
-                >
-                  {inCallAudioMuted ? '🔇 Unmute Mic' : '🎤 Mute Mic'}
-                </button>
-                <button
-                  type="button"
-                  className={`ctrl-btn ${inCallVideoMuted ? 'danger' : 'active'}`}
-                  onClick={handleToggleClassroomVideo}
-                >
-                  {inCallVideoMuted ? '📹 Switch to Video' : '🎙️ Switch to Voice'}
-                </button>
-                <button
-                  type="button"
-                  className={`ctrl-btn ${isScreenSharing ? 'active' : ''}`}
-                  onClick={handleToggleScreenShare}
-                >
-                  🖥️ {isScreenSharing ? 'Stop Share' : 'Share Screen'}
-                </button>
-                <button
-                  type="button"
-                  className={`ctrl-btn ${isHandRaised ? 'active' : ''}`}
-                  onClick={() => setIsHandRaised(!isHandRaised)}
-                >
-                  ✋ {isHandRaised ? 'Lower Hand' : 'Raise Hand'}
-                </button>
+                            ) : (
+                              liveAttendees.map((student, idx) => (
+                                <div key={idx} style={{ padding: '6px 8px', display: 'flex', justifyContent: 'space-between', borderBottom: '1px solid rgba(255, 255, 255, 0.05)', color: '#cbd5e1' }}>
+                                  <span>{typeof student === 'string' ? student : (student.name || `${student.firstName || ''} ${student.lastName || ''}`.trim())}</span>
+                                  <span style={{ fontSize: '0.7rem', color: '#64748b' }}>Participant</span>
+                                </div>
+                              ))
+                            )}
+                          </>
+                        );
+                      })()}
+                    </div>
+                  )}
+                </div>
               </div>
 
-              <div style={{ display: 'flex', gap: '8px' }}>
-                <button
-                  type="button"
-                  className="ctrl-btn danger"
-                  onClick={handleLeaveClassroom}
-                  style={{ background: '#ef4444', color: '#fff', fontWeight: 800, border: 'none' }}
-                >
-                  🔴 End / Leave Classroom
-                </button>
+              {/* Bottom Controls Bar */}
+              <div className="classroom-controls-bar">
+                <div style={{ display: 'flex', gap: '8px' }}>
+                  <button
+                    type="button"
+                    className={`ctrl-btn ${inCallAudioMuted ? 'danger' : 'active'}`}
+                    onClick={handleToggleClassroomAudio}
+                  >
+                    {inCallAudioMuted ? '🔇 Unmute Mic' : '🎤 Mute Mic'}
+                  </button>
+                  <button
+                    type="button"
+                    className={`ctrl-btn ${inCallVideoMuted ? 'danger' : 'active'}`}
+                    onClick={handleToggleClassroomVideo}
+                  >
+                    {inCallVideoMuted ? '📹 Switch to Video' : '🎙️ Switch to Voice'}
+                  </button>
+                  <button
+                    type="button"
+                    className={`ctrl-btn ${isScreenSharing ? 'active' : ''}`}
+                    onClick={handleToggleScreenShare}
+                  >
+                    🖥️ {isScreenSharing ? 'Stop Share' : 'Share Screen'}
+                  </button>
+                  <button
+                    type="button"
+                    className={`ctrl-btn ${isHandRaised ? 'active' : ''}`}
+                    onClick={() => setIsHandRaised(!isHandRaised)}
+                  >
+                    ✋ {isHandRaised ? 'Lower Hand' : 'Raise Hand'}
+                  </button>
+                </div>
+
+                <div style={{ display: 'flex', gap: '8px' }}>
+                  <button
+                    type="button"
+                    className="ctrl-btn danger"
+                    onClick={handleLeaveClassroom}
+                    style={{ background: '#ef4444', color: '#fff', fontWeight: 800, border: 'none' }}
+                  >
+                    🔴 End / Leave Classroom
+                  </button>
+                </div>
               </div>
             </div>
           </div>
-        </div>
-      )}
+        );
+        return typeof document !== 'undefined' && document.body
+          ? createPortal(classroomModal, document.body)
+          : classroomModal;
+      })()}
 
       <StudentCooperativeConferenceModal
         isOpen={showStudentCoopModal}

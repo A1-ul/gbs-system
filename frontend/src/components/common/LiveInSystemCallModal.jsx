@@ -1,13 +1,17 @@
 import React, { useEffect, useRef, useState, useCallback } from "react";
+import { createPortal } from "react-dom";
 import apiClient from "../../api/client/apiClient";
 import { getActiveAuthToken } from "../../utils/tokenStorage";
 
 const ICE_CONFIG = {
   iceServers: [
     { urls: "stun:stun.l.google.com:19302" },
-    { urls: "stun:stun1.l.google.com:19302" }
+    { urls: "stun:stun1.l.google.com:19302" },
+    { urls: "stun:stun2.l.google.com:19302" },
+    { urls: "stun:stun3.l.google.com:19302" },
+    { urls: "stun:stun4.l.google.com:19302" }
   ],
-  iceCandidatePoolSize: 6,
+  iceCandidatePoolSize: 8,
   bundlePolicy: "max-bundle",
   rtcpMuxPolicy: "require"
 };
@@ -87,6 +91,11 @@ export default function LiveInSystemCallModal({
   const [chatInput, setChatInput] = useState("");
   const [chatLog, setChatLog] = useState(session?.chatMessages || []);
   const [remoteConnected, setRemoteConnected] = useState(false);
+  const [remoteHasVideo, setRemoteHasVideo] = useState(false);
+  const [localVideoMeta, setLocalVideoMeta] = useState("");
+  const [remoteVideoMeta, setRemoteVideoMeta] = useState("");
+  const [availableCameras, setAvailableCameras] = useState([]);
+  const [selectedCameraId, setSelectedCameraId] = useState("");
   const [audioUnlocked, setAudioUnlocked] = useState(true);
   const [micLevel, setMicLevel] = useState(0);
   const [copiedLink, setCopiedLink] = useState(false);
@@ -98,6 +107,8 @@ export default function LiveInSystemCallModal({
   const remoteStreamRef = useRef(null);
   const peerConnRef = useRef(null);
   const videoSenderRef = useRef(null);
+  const remoteConnectedRef = useRef(false);
+  const selectedCameraIdRef = useRef("");
   const initialMediaModeRef = useRef(
     String(session?.mediaMode || "VIDEO").toUpperCase() === "VOICE" ? "VOICE" : "VIDEO"
   );
@@ -119,6 +130,8 @@ export default function LiveInSystemCallModal({
     onCloseRef.current = onClose;
     activeMediaModeRef.current = activeMediaMode;
     micMutedRef.current = micMuted;
+    remoteConnectedRef.current = remoteConnected;
+    selectedCameraIdRef.current = selectedCameraId;
   });
 
   const myUserId = String(currentUser?.id || currentUser?.email || "user");
@@ -198,27 +211,68 @@ export default function LiveInSystemCallModal({
     } catch { }
   }, []);
 
+  const refreshCameraDevices = useCallback(async () => {
+    try {
+      if (!navigator.mediaDevices || typeof navigator.mediaDevices.enumerateDevices !== "function") return;
+      const devices = await navigator.mediaDevices.enumerateDevices();
+      const cams = devices.filter((d) => d.kind === "videoinput");
+      setAvailableCameras(cams);
+      if (cams.length > 0 && !selectedCameraIdRef.current) {
+        const activeVidTrack = localStreamRef.current?.getVideoTracks?.()[0];
+        const activeId = activeVidTrack?.getSettings?.()?.deviceId || cams[0].deviceId || "";
+        setSelectedCameraId(activeId);
+      }
+    } catch { }
+  }, []);
+
   const attachLocalStreamToVideo = useCallback((stream, forceRebind = false) => {
-    if (!localVideoRef.current || !stream) return;
-    if (forceRebind || localVideoRef.current.srcObject !== stream) {
-      localVideoRef.current.srcObject = stream;
+    const el = localVideoRef.current;
+    if (!el || !stream) return;
+    if (forceRebind || el.srcObject !== stream) {
+      el.srcObject = stream;
     }
-    localVideoRef.current.muted = true;
-    localVideoRef.current.playsInline = true;
-    localVideoRef.current.play().catch(() => { });
+    el.muted = true;
+    el.defaultMuted = true;
+    el.playsInline = true;
+    el.autoplay = true;
+    const playPromise = el.play();
+    if (playPromise && typeof playPromise.catch === "function") {
+      playPromise.catch(() => {
+        setTimeout(() => {
+          if (localVideoRef.current && localVideoRef.current.srcObject === stream) {
+            localVideoRef.current.muted = true;
+            localVideoRef.current.play().catch(() => { });
+          }
+        }, 180);
+      });
+    }
   }, []);
 
   const attachRemoteStreamToVideo = useCallback((stream, forceRebind = false) => {
-    if (!remoteVideoRef.current || !stream) return;
-    if (forceRebind || remoteVideoRef.current.srcObject !== stream) {
-      remoteVideoRef.current.srcObject = stream;
+    const el = remoteVideoRef.current;
+    if (!el || !stream) return;
+    const liveVidTracks = stream.getVideoTracks().filter((t) => t.readyState === "live");
+    setRemoteHasVideo(liveVidTracks.length > 0);
+    if (forceRebind || el.srcObject !== stream) {
+      el.srcObject = stream;
     }
-    remoteVideoRef.current.muted = false;
-    remoteVideoRef.current.volume = 1.0;
-    remoteVideoRef.current.playsInline = true;
-    const p = remoteVideoRef.current.play();
+    el.playsInline = true;
+    el.autoplay = true;
+    el.muted = false;
+    el.volume = 1.0;
+    const p = el.play();
     if (p && typeof p.catch === "function") {
-      p.then(() => setAudioUnlocked(true)).catch(() => setAudioUnlocked(false));
+      p.then(() => {
+        setAudioUnlocked(true);
+      }).catch(() => {
+        // Browser autoplay policy blocked unmuted playback outside a user gesture.
+        // Immediately retry muted so remote live camera frames display right away, and show unmute button.
+        if (remoteVideoRef.current) {
+          remoteVideoRef.current.muted = true;
+          remoteVideoRef.current.play().catch(() => { });
+        }
+        setAudioUnlocked(false);
+      });
     }
   }, []);
 
@@ -270,25 +324,37 @@ export default function LiveInSystemCallModal({
     } catch { }
   }, [sendSignal]);
 
-  const acquireFreshCameraTrack = useCallback(async () => {
+  const acquireFreshCameraTrack = useCallback(async (preferredDeviceId = "") => {
     if (!navigator.mediaDevices || typeof navigator.mediaDevices.getUserMedia !== "function") {
       return null;
     }
+    const devId = preferredDeviceId || selectedCameraIdRef.current || "";
+    const hdVideoConstraint = devId
+      ? { deviceId: { exact: devId }, width: { ideal: 640 }, height: { ideal: 360 }, frameRate: { ideal: 30 } }
+      : { width: { ideal: 640 }, height: { ideal: 360 }, frameRate: { ideal: 30 } };
     try {
       const hdStream = await navigator.mediaDevices.getUserMedia({
-        video: { width: { ideal: 640 }, height: { ideal: 360 }, frameRate: { ideal: 30 } },
+        video: hdVideoConstraint,
         audio: false
       });
       const track = hdStream.getVideoTracks()[0] || null;
-      if (track) return track;
+      if (track) {
+        refreshCameraDevices();
+        return track;
+      }
     } catch { }
     try {
-      const basicStream = await navigator.mediaDevices.getUserMedia({ video: true, audio: false });
-      return basicStream.getVideoTracks()[0] || null;
+      const basicStream = await navigator.mediaDevices.getUserMedia({
+        video: devId ? { deviceId: { ideal: devId } } : true,
+        audio: false
+      });
+      const track = basicStream.getVideoTracks()[0] || null;
+      if (track) refreshCameraDevices();
+      return track;
     } catch {
       return null;
     }
-  }, []);
+  }, [refreshCameraDevices]);
 
   // Ensure local video element stays connected & playing whenever switching back to VIDEO or turning camera ON
   useEffect(() => {
@@ -370,6 +436,36 @@ export default function LiveInSystemCallModal({
       } catch { }
     };
 
+    const getUserMediaWithTimeout = (constraints, timeoutMs = 3500) => {
+      return new Promise((resolve, reject) => {
+        let settled = false;
+        const timer = setTimeout(() => {
+          if (!settled) {
+            settled = true;
+            reject(new Error("Media device acquisition timed out"));
+          }
+        }, timeoutMs);
+        navigator.mediaDevices.getUserMedia(constraints).then(
+          (stream) => {
+            clearTimeout(timer);
+            if (settled) {
+              stream.getTracks().forEach((t) => { try { t.stop(); } catch { } });
+              return;
+            }
+            settled = true;
+            resolve(stream);
+          },
+          (err) => {
+            clearTimeout(timer);
+            if (!settled) {
+              settled = true;
+              reject(err);
+            }
+          }
+        );
+      });
+    };
+
     const acquireHardwareMedia = async () => {
       if (!navigator.mediaDevices || typeof navigator.mediaDevices.getUserMedia !== "function") {
         setMediaStatus("Signaling Room Active (Camera/Mic requires HTTPS or localhost permission)");
@@ -379,29 +475,29 @@ export default function LiveInSystemCallModal({
       const initialMode = initialMediaModeRef.current;
       if (initialMode === "VIDEO") {
         try {
-          const stream = await navigator.mediaDevices.getUserMedia({
+          const stream = await getUserMediaWithTimeout({
             audio: audioCfg,
             video: { width: { ideal: 640 }, height: { ideal: 360 }, frameRate: { ideal: 30 } }
-          });
+          }, 6500);
           setCameraOff(false);
           setMediaStatus("HD Live Camera & Microphone Active");
           return stream;
         } catch {
           try {
-            const fallbackBoth = await navigator.mediaDevices.getUserMedia({ audio: true, video: true });
+            const fallbackBoth = await getUserMediaWithTimeout({ audio: true, video: true }, 4000);
             setCameraOff(false);
             setMediaStatus("Live Camera & Microphone Active");
             return fallbackBoth;
           } catch {
             try {
-              const videoOnly = await navigator.mediaDevices.getUserMedia({ video: true, audio: false });
+              const videoOnly = await getUserMediaWithTimeout({ video: true, audio: false }, 3500);
               setCameraOff(false);
               setMicMuted(true);
               setMediaStatus("Live Camera Active (microphone unavailable)");
               return videoOnly;
             } catch {
               try {
-                const audioOnly = await navigator.mediaDevices.getUserMedia({ audio: true, video: false });
+                const audioOnly = await getUserMediaWithTimeout({ audio: true, video: false }, 3000);
                 setCameraOff(true);
                 setMediaStatus("Audio-Only Connected (click Switch to Video Call or Turn Camera On once camera is free)");
                 return audioOnly;
@@ -415,7 +511,7 @@ export default function LiveInSystemCallModal({
         }
       } else {
         try {
-          const audioStream = await navigator.mediaDevices.getUserMedia({ audio: audioCfg, video: false });
+          const audioStream = await getUserMediaWithTimeout({ audio: audioCfg, video: false }, 3000);
           setCameraOff(true);
           setMediaStatus("Voice Call Active — Click Switch to Video Call anytime");
           return audioStream;
@@ -427,12 +523,18 @@ export default function LiveInSystemCallModal({
       }
     };
 
-    const sendFreshOffer = async (pc) => {
+    const sendFreshOffer = async (pc, { iceRestart = false } = {}) => {
       if (!pc || pc.signalingState === "closed") return;
       try {
+        if (pc.signalingState !== "stable") {
+          try {
+            await pc.setLocalDescription({ type: "rollback" });
+          } catch { }
+        }
         const offer = await pc.createOffer({
           offerToReceiveAudio: true,
-          offerToReceiveVideo: true
+          offerToReceiveVideo: true,
+          iceRestart
         });
         await pc.setLocalDescription(offer);
         await sendSignal("OFFER", offer);
@@ -463,21 +565,38 @@ export default function LiveInSystemCallModal({
             attachLocalStreamToVideo(stream, true);
             startMicLevelMonitor(stream);
           }
+          refreshCameraDevices();
         }
 
         if (typeof RTCPeerConnection === "function") {
           const pc = new RTCPeerConnection(ICE_CONFIG);
           peerConnRef.current = pc;
 
+          let hasLocalAudio = false;
+          let hasLocalVideo = false;
           if (localStreamRef.current) {
             localStreamRef.current.getTracks().forEach((track) => {
               const sender = pc.addTrack(track, localStreamRef.current);
+              if (track.kind === "audio") hasLocalAudio = true;
               if (track.kind === "video") {
+                hasLocalVideo = true;
                 videoSenderRef.current = sender;
               }
             });
             preferFastHardwareCodecs(pc);
             tuneVideoSenderPerformance(pc, liveSession?.participants?.length || session?.participants?.length || 2);
+          }
+
+          // Guarantee both audio & video transceivers exist even when joining audio-only or without camera,
+          // so remote peer camera and voice streams are ALWAYS received and rendered cleanly.
+          if (typeof pc.addTransceiver === "function") {
+            try {
+              if (!hasLocalAudio) pc.addTransceiver("audio", { direction: "recvonly" });
+              if (!hasLocalVideo) {
+                const vTrans = pc.addTransceiver("video", { direction: "recvonly" });
+                if (vTrans?.sender) videoSenderRef.current = vTrans.sender;
+              }
+            } catch { }
           }
 
           pc.ontrack = (evt) => {
@@ -494,8 +613,27 @@ export default function LiveInSystemCallModal({
                 : [];
               remoteStreamRef.current = new MediaStream([...prevTracks, evt.track]);
             }
+            if (evt.track) {
+              evt.track.onunmute = () => {
+                if (remoteStreamRef.current) {
+                  attachRemoteStreamToVideo(remoteStreamRef.current, true);
+                }
+              };
+            }
             attachRemoteStreamToVideo(remoteStreamRef.current, true);
             setRemoteConnected(true);
+          };
+
+          pc.oniceconnectionstatechange = () => {
+            const st = pc.iceConnectionState;
+            if (st === "connected" || st === "completed") {
+              setRemoteConnected(true);
+              if (remoteStreamRef.current) {
+                attachRemoteStreamToVideo(remoteStreamRef.current);
+              }
+            } else if (st === "failed" && String(initiatorUserId) === myUserId) {
+              sendFreshOffer(pc, { iceRestart: true });
+            }
           };
 
           pc.onicecandidate = (evt) => {
@@ -540,9 +678,12 @@ export default function LiveInSystemCallModal({
             setLiveSession((prev) => prev ? { ...prev, status: d.status || prev.status, participants: d.participants || prev.participants } : prev);
             if (peerConnRef.current && Array.isArray(d.participants)) {
               tuneVideoSenderPerformance(peerConnRef.current, d.participants.length);
-              // Host re-sends a fresh WebRTC offer whenever a new participant joins the conference/class
-              if (String(initiatorUserId) === myUserId && peerConnRef.current.signalingState === "stable") {
-                sendFreshOffer(peerConnRef.current);
+              // Host re-sends a fresh WebRTC offer whenever a new participant joins (fixes have-local-offer deadlock)
+              if (String(initiatorUserId) === myUserId) {
+                const st = peerConnRef.current.signalingState;
+                if (st === "stable" || (st === "have-local-offer" && !remoteConnectedRef.current)) {
+                  sendFreshOffer(peerConnRef.current, { iceRestart: st === "have-local-offer" });
+                }
               }
             }
           } catch { }
@@ -663,24 +804,25 @@ export default function LiveInSystemCallModal({
     }
   };
 
-  const activateVideoTrackOnCall = useCallback(async ({ switchToVideoMode = false } = {}) => {
+  const activateVideoTrackOnCall = useCallback(async ({ switchToVideoMode = false, deviceId = "" } = {}) => {
     const existingAudioTracks = (localStreamRef.current?.getAudioTracks?.() || []).filter(
       (t) => t.readyState === "live"
     );
-    const existingLiveVideo = (localStreamRef.current?.getVideoTracks?.() || []).find(
-      (t) => t.readyState === "live"
-    );
+    const existingLiveVideo = !deviceId
+      ? (localStreamRef.current?.getVideoTracks?.() || []).find((t) => t.readyState === "live")
+      : null;
 
     let vidTrack = existingLiveVideo || null;
     if (vidTrack) {
       vidTrack.enabled = true;
     } else {
-      vidTrack = await acquireFreshCameraTrack();
+      vidTrack = await acquireFreshCameraTrack(deviceId);
     }
 
     if (!vidTrack) {
       setCameraOff(true);
-      setMediaStatus("Camera permission denied or busy by another app");
+      setLocalVideoMeta("");
+      setMediaStatus("Camera permission denied or busy by another app — click Retry Camera");
       return false;
     }
 
@@ -716,7 +858,14 @@ export default function LiveInSystemCallModal({
         try {
           const existingSender = findVideoSender(pc);
           if (existingSender) {
-            await existingSender.replaceTrack(vidTrack);
+            const trans = pc.getTransceivers?.().find((t) => t.sender === existingSender);
+            if (trans && trans.direction === "recvonly") {
+              trans.direction = "sendrecv";
+              await existingSender.replaceTrack(vidTrack);
+              await renegotiatePeerConnection(pc);
+            } else {
+              await existingSender.replaceTrack(vidTrack);
+            }
             tuneVideoSenderPerformance(pc, participantCount);
           } else {
             videoSenderRef.current = pc.addTrack(vidTrack, nextStream);
@@ -730,6 +879,14 @@ export default function LiveInSystemCallModal({
 
     return true;
   }, [acquireFreshCameraTrack, findVideoSender, renegotiatePeerConnection, attachLocalStreamToVideo, liveSession?.participants?.length]);
+
+  const handleSelectCamera = async (nextDeviceId) => {
+    setSelectedCameraId(nextDeviceId);
+    selectedCameraIdRef.current = nextDeviceId;
+    if (activeMediaMode === "VIDEO") {
+      await activateVideoTrackOnCall({ switchToVideoMode: false, deviceId: nextDeviceId });
+    }
+  };
 
   const switchCallMediaMode = async (targetMode) => {
     const normalizedTarget = String(targetMode || "").toUpperCase() === "VOICE" ? "VOICE" : "VIDEO";
@@ -891,7 +1048,7 @@ export default function LiveInSystemCallModal({
   const isDeveloperCaller = String(currentUser?.role || "").toUpperCase() === "DEVELOPER";
   const isLiveClass = String(activeSession?.callScope || "").toUpperCase() === "CLASS_CONFERENCE";
 
-  return (
+  const modalContent = (
     <div
       data-testid="live-insystem-call-modal"
       style={{
@@ -902,7 +1059,8 @@ export default function LiveInSystemCallModal({
         display: "flex",
         alignItems: "center",
         justifyContent: "center",
-        padding: "16px"
+        padding: "12px",
+        boxSizing: "border-box"
       }}
     >
       <div
@@ -971,33 +1129,74 @@ export default function LiveInSystemCallModal({
         {/* Main Video & Participant Stage (Mobile + Laptop + PC Responsive) */}
         <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(270px, 1fr))", gap: "14px", marginBottom: "14px" }}>
           <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(220px, 1fr))", gap: "10px", gridColumn: "span 1" }}>
-            <div style={{ background: "#050f23", border: "1.5px solid #38bdf8", borderRadius: "12px", padding: "10px", position: "relative", minHeight: "230px", display: "flex", flexDirection: "column", justifyContent: "space-between" }}>
-              <span style={{ fontSize: "0.72rem", fontWeight: 800, color: "#7dd3fc" }}>
-                You ({currentUser?.firstName || currentUser?.name || "Participant"})
-              </span>
-              <video
-                ref={localVideoRef}
-                autoPlay
-                muted
-                playsInline
-                style={{
-                  width: "100%",
-                  height: "180px",
-                  objectFit: "cover",
-                  borderRadius: "8px",
-                  background: "#020617",
-                  transform: "scaleX(-1) translateZ(0)",
-                  willChange: "transform",
-                  display: mediaMode === "VIDEO" && !cameraOff ? "block" : "none"
-                }}
-              />
-              {(mediaMode === "VOICE" || cameraOff) && (
-                <div style={{ flex: 1, display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", gap: "6px", color: "#f6dd84" }}>
-                  <div style={{ fontSize: "2.4rem" }}>🎙️</div>
-                  <div style={{ fontSize: "0.72rem", color: "#94a3b8" }}>{cameraOff && mediaMode === "VIDEO" ? "Camera Paused — Click Turn Camera On below" : "Voice Audio Active"}</div>
-                </div>
-              )}
-              <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: "8px", fontSize: "0.7rem", color: micMuted ? "#fca5a5" : "#6ee7b7", fontWeight: 700, marginTop: "4px" }}>
+            <div style={{ background: "#050f23", border: "1.5px solid #38bdf8", borderRadius: "12px", padding: "10px", position: "relative", minHeight: "245px", display: "flex", flexDirection: "column", justifyContent: "space-between", gap: "6px" }}>
+              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: "6px" }}>
+                <span style={{ fontSize: "0.72rem", fontWeight: 800, color: "#7dd3fc" }}>
+                  You ({currentUser?.firstName || currentUser?.name || "Participant"}) {localVideoMeta ? `• ${localVideoMeta}` : ""}
+                </span>
+                {mediaMode === "VIDEO" && availableCameras.length > 1 && (
+                  <select
+                    aria-label="Switch Camera Device"
+                    value={selectedCameraId}
+                    onChange={(e) => handleSelectCamera(e.target.value)}
+                    style={{ background: "#081833", color: "#e0f2fe", border: "1px solid rgba(56,189,248,0.5)", borderRadius: "6px", padding: "2px 6px", fontSize: "0.68rem", maxWidth: "150px" }}
+                  >
+                    {availableCameras.map((cam, idx) => (
+                      <option key={cam.deviceId || idx} value={cam.deviceId}>
+                        📷 {cam.label || `Camera ${idx + 1}`}
+                      </option>
+                    ))}
+                  </select>
+                )}
+              </div>
+              <div style={{ position: "relative", width: "100%", height: "190px", borderRadius: "8px", overflow: "hidden", background: "#020617" }}>
+                <video
+                  ref={localVideoRef}
+                  data-testid="live-call-local-video"
+                  autoPlay
+                  muted
+                  playsInline
+                  onLoadedMetadata={(e) => {
+                    const v = e.currentTarget;
+                    v.muted = true;
+                    v.play().catch(() => { });
+                    if (v.videoWidth > 0) setLocalVideoMeta(`${v.videoWidth}×${v.videoHeight}`);
+                  }}
+                  onPlaying={(e) => {
+                    const v = e.currentTarget;
+                    if (v.videoWidth > 0) setLocalVideoMeta(`${v.videoWidth}×${v.videoHeight}`);
+                  }}
+                  style={{
+                    width: "100%",
+                    height: "100%",
+                    objectFit: "cover",
+                    borderRadius: "8px",
+                    background: "#020617",
+                    transform: screenSharing ? "translateZ(0)" : "scaleX(-1) translateZ(0)",
+                    willChange: "transform",
+                    opacity: mediaMode === "VIDEO" && !cameraOff ? 1 : 0,
+                    pointerEvents: "none"
+                  }}
+                />
+                {(mediaMode === "VOICE" || cameraOff) && (
+                  <div style={{ position: "absolute", inset: 0, display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", gap: "8px", color: "#f6dd84", background: "#020617", padding: "10px", textAlign: "center" }}>
+                    <div style={{ fontSize: "2.2rem" }}>{mediaMode === "VIDEO" ? "📷" : "🎙️"}</div>
+                    <div style={{ fontSize: "0.74rem", color: "#cbd5e1" }}>
+                      {cameraOff && mediaMode === "VIDEO" ? "Camera Paused or Permission Needed" : "Voice Audio Active"}
+                    </div>
+                    {mediaMode === "VIDEO" && (
+                      <button
+                        type="button"
+                        onClick={() => activateVideoTrackOnCall({ switchToVideoMode: false })}
+                        style={{ background: "#0284c7", color: "#fff", border: "1px solid #7dd3fc", borderRadius: "7px", padding: "5px 12px", fontSize: "0.74rem", fontWeight: 800, cursor: "pointer" }}
+                      >
+                        🔄 Activate / Retry Camera
+                      </button>
+                    )}
+                  </div>
+                )}
+              </div>
+              <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: "8px", fontSize: "0.7rem", color: micMuted ? "#fca5a5" : "#6ee7b7", fontWeight: 700, marginTop: "2px" }}>
                 <span>{micMuted ? "🔇 Mic Muted" : "🟢 Mic Live"} {mediaMode === "VIDEO" ? (cameraOff ? "• 📷 Cam Off" : "• 📹 Video On") : "• Voice Mode"}</span>
                 {!micMuted && (
                   <div style={{ width: "54px", height: "6px", background: "rgba(255,255,255,0.12)", borderRadius: "999px", overflow: "hidden" }}>
@@ -1007,44 +1206,68 @@ export default function LiveInSystemCallModal({
               </div>
             </div>
 
-            <div style={{ background: "#050f23", border: "1.5px solid #d4af37", borderRadius: "12px", padding: "10px", minHeight: "230px", display: "flex", flexDirection: "column", justifyContent: "space-between" }}>
+            <div style={{ background: "#050f23", border: "1.5px solid #d4af37", borderRadius: "12px", padding: "10px", minHeight: "245px", display: "flex", flexDirection: "column", justifyContent: "space-between", gap: "6px" }}>
               <span style={{ fontSize: "0.72rem", fontWeight: 800, color: "#f6dd84" }}>
-                Remote Stream ({activeSession?.targetName || (participants.length > 1 ? `${participants.length - 1} Connected` : "Waiting for peer...")})
+                Remote Stream ({activeSession?.targetName || (participants.length > 1 ? `${participants.length - 1} Connected` : "Waiting for peer...")}) {remoteVideoMeta ? `• ${remoteVideoMeta}` : ""}
               </span>
-              <video
-                ref={remoteVideoRef}
-                autoPlay
-                playsInline
-                style={{
-                  width: "100%",
-                  height: "180px",
-                  objectFit: "cover",
-                  borderRadius: "8px",
-                  background: "#020617",
-                  transform: "translateZ(0)",
-                  willChange: "transform",
-                  display: remoteConnected ? "block" : "none"
-                }}
-              />
-              {!remoteConnected && (
-                <div style={{ flex: 1, display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", textAlign: "center", color: "#cbd5e1", fontSize: "0.8rem", padding: "10px" }}>
-                  <div style={{ fontSize: "2.2rem", marginBottom: "6px" }}>📡</div>
-                  <div>
-                    {participants.length > 1
-                      ? "Peer joined signaling room — negotiating WebRTC audio/video stream..."
-                      : "Waiting for recipient or participants to accept & join..."}
+              <div style={{ position: "relative", width: "100%", height: "190px", borderRadius: "8px", overflow: "hidden", background: "#020617" }}>
+                <video
+                  ref={remoteVideoRef}
+                  data-testid="live-call-remote-video"
+                  autoPlay
+                  playsInline
+                  onLoadedMetadata={(e) => {
+                    const v = e.currentTarget;
+                    v.play().catch(() => {
+                      v.muted = true;
+                      v.play().catch(() => { });
+                      setAudioUnlocked(false);
+                    });
+                    if (v.videoWidth > 0) {
+                      setRemoteHasVideo(true);
+                      setRemoteVideoMeta(`${v.videoWidth}×${v.videoHeight}`);
+                    }
+                  }}
+                  onPlaying={(e) => {
+                    const v = e.currentTarget;
+                    if (v.videoWidth > 0) {
+                      setRemoteHasVideo(true);
+                      setRemoteVideoMeta(`${v.videoWidth}×${v.videoHeight}`);
+                    }
+                  }}
+                  style={{
+                    width: "100%",
+                    height: "100%",
+                    objectFit: "cover",
+                    borderRadius: "8px",
+                    background: "#020617",
+                    transform: "translateZ(0)",
+                    willChange: "transform",
+                    opacity: remoteConnected && remoteHasVideo ? 1 : 0
+                  }}
+                />
+                {(!remoteConnected || !remoteHasVideo) && (
+                  <div style={{ position: "absolute", inset: 0, display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", textAlign: "center", color: "#cbd5e1", fontSize: "0.8rem", padding: "10px", background: "#020617" }}>
+                    <div style={{ fontSize: "2.2rem", marginBottom: "6px" }}>{remoteConnected ? "🎙️" : "📡"}</div>
+                    <div>
+                      {remoteConnected
+                        ? "Peer connected (Voice audio active — video displays automatically when their camera turns on)"
+                        : participants.length > 1
+                          ? "Peer joined signaling room — negotiating WebRTC audio/video stream..."
+                          : "Waiting for recipient or participants to accept & join..."}
+                    </div>
                   </div>
-                </div>
-              )}
-              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", fontSize: "0.7rem", color: "#94a3b8", marginTop: "4px" }}>
+                )}
+              </div>
+              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", fontSize: "0.7rem", color: "#94a3b8", marginTop: "2px", gap: "8px", flexWrap: "wrap" }}>
                 <span>Active Participants: <strong style={{ color: "#6ee7b7" }}>{participants.length}</strong></span>
                 {!audioUnlocked && (
                   <button
                     type="button"
                     onClick={handleUnlockAudio}
-                    style={{ background: "#d97706", color: "#fff", border: "none", borderRadius: "6px", padding: "3px 8px", fontSize: "0.68rem", fontWeight: 800, cursor: "pointer" }}
+                    style={{ background: "#d97706", color: "#fff", border: "none", borderRadius: "6px", padding: "4px 10px", fontSize: "0.7rem", fontWeight: 800, cursor: "pointer" }}
                   >
-                    🔊 Enable Speaker Audio
+                    🔊 Tap to Unmute Speaker Audio
                   </button>
                 )}
               </div>
@@ -1154,4 +1377,8 @@ export default function LiveInSystemCallModal({
       </div>
     </div>
   );
+
+  return typeof document !== "undefined" && document.body
+    ? createPortal(modalContent, document.body)
+    : modalContent;
 }

@@ -1,7 +1,7 @@
 {
   "systemName": "GBS MANAGEMENT SYSTEM (Global Brightest Stars Educational Management System)",
-  "version": "2.14.0-PRODUCTION-BLUEPRINT",
-  "savedAt": "2026-11-23T23:12:00Z",
+  "version": "2.15.0-PRODUCTION-BLUEPRINT",
+  "savedAt": "2026-11-24T20:25:00Z",
   "status": "PRODUCTION_READY_VERIFIED",
   "architecture": {
     "frontend": {
@@ -432,16 +432,23 @@
       "rootCause": "axios.js cleared tokens on 401 without pausing background pollers or proactively refreshing expired JWTs pre-flight; auth.middleware.js and auth.service.js refreshTokenSession missed DEV_JWT_SECRET fallback and standby numeric/built-in/usr_hm_* user resolution; LiveInSystemCallModal included mediaMode in the main WebRTC/SSE useEffect dependency array, lacked a Voice->Video switch button and transceiver-aware replaceTrack/SDP renegotiation, and blocked button state on network signal POSTs; StudentCooperativeConferenceModal and OnlineLearningDashboard unmounted <video> without re-acquiring stopped camera tracks or rebinding srcObject.",
       "resolution": "Added getActiveAuthToken()/hasActiveAuthSession() in tokenStorage.js, proactive pre-flight JWT expiration refresh & built-in Demo recovery in axios.js, auth-guarded pollers in LiveCallLauncherAndReceiver.jsx & TopCenterSystemBanner.jsx, apiClient migration in OnlineLearningDashboard.jsx, and standby/DEV_JWT_SECRET resolution in auth.middleware.js & auth.service.js (keeping unauthenticated calls strictly 401). Decoupled activeMediaMode from WebRTC teardown in LiveInSystemCallModal.jsx, persisted MEDIA_MODE signaling in liveCall.service.js, added non-blocking Video<->Voice switch with fresh MediaStream + transceiver replaceTrack/SDP renegotiation, and fixed camera re-acquisition & srcObject rebinding in StudentCooperativeConferenceModal.jsx and OnlineLearningDashboard.jsx (commit a243bc5). Verified 69/69 local API+Chrome checks, 18/18 regression checks, and 53/53 live Render HTTP checks.",
       "status": "PERMANENTLY_GUARDED"
+    },
+    {
+      "issueCode": "DIAG-VIDEO-CAMERA-PORTAL-PAYMENTS-RESPONSIVE-DEV-TABS-V215",
+      "symptom": "Video call camera modals failed to display or clipped inside backdrop-filter containers across dashboards; Accountant/HR/Staff/Alumni/Student lacked full video studio access; payments failed on GH₵ currency symbols, public onboarding Step 2 401s, integer studentCode Prisma validation fallbacks, Paystack direct /charge rejections, mid-checkout modal re-hydration resets, and Live Production missing open invoices; dashboard headers/KPIs/tabs clipped text on desktop & mobile; Developer Dashboard lacked dedicated full-page module routes with exact Back scroll restoration.",
+      "rootCause": "Fixed video/payment modals rendered inside parent elements with CSS transform/backdrop-filter creating clipped containing blocks; getUserMedia lacked audio-optional fallback and cold-start timeout resilience; remote video playback failed silently under browser autoplay policy; WebRTC missed mandatory recvonly transceivers and have-local-offer rollback; payments.validator.js passed raw integer studentIdentifier into Prisma String? studentCode causing silent offline fallback + 404 on sandbox-confirm; OfficialPaymentGatewayModal re-ran loadContext on parent async re-renders unmounting active forms; Paystack direct MoMo charge had no automatic Hosted Checkout fallback; DeveloperDashboard used raw history.pushState with a single scroll key instead of React Router :moduleId routes.",
+      "resolution": "Portaled LiveInSystemCallModal, StudentCooperativeConferenceModal, OnlineLearningDashboard, StudentDashboard peer call, and OfficialPaymentGatewayModal to document.body; added 5 Google STUN servers, cold-start resilient getUserMediaWithTimeout with audio-optional video fallback, muted remote autoplay recovery + unmute banner, camera device switcher, explicit retry camera button, recvonly transceivers, and have-local-offer rollback; mounted FULL_STUDIO LiveCallLauncherAndReceiver across all 10 dashboards (adding Alumni call directory & targeting in liveCall.service.js). Hardened payments end-to-end: public onboarding Step 2 routes scoped strictly to SUBSCRIPTION (401 on SCHOOL_FEES), GH₵->GHS normalization, String studentCode/studentIdentifier coercion, reference-keyed Prisma updates, Paystack /charge->Hosted Checkout auto-fallback, Live Production auto-invoice issuance, canonical /finance/payments receipts, and OfficialPaymentGatewayModal open-only loadContext guard. Eliminated KPI/header ellipsis clipping, enabled visible wrapped tabs & brand visibility on 390px mobile, and built self-contained React Router /developer-control-center/dashboard/:moduleId full-page module views with per-entry exact Back scroll restoration while preserving strict Developer English LTR isolation and zero HTML tooltips. Verified 37/37 local API + real Chrome CDP checks across all 10 dashboards + 18/18 backend regression checks.",
+      "status": "PERMANENTLY_GUARDED"
     }
   ],
   "verificationSummary": {
-    "latestVerifiedCommit": "a243bc5",
-    "latestLiveBundleHash": "index-DiuujEUj.js",
+    "latestVerifiedCommit": "pending-v215-push",
+    "latestLiveBundleHash": "index-1ypqqsuB.js",
     "liveProductionUrl": "https://gbs-system.onrender.com",
     "autoMemoryRuleFile": "AGENTS.md",
-    "backendTestSuitesPassed": "18/18 upgrade regression checks + 43/43 multi-role auth & video signaling API checks verified",
-    "chromeE2EDashboardsVerified": "All 10 roles (Admin, Teacher, Student, Parent, Accountant, Secretary, Staff, HR, Alumni, Developer) verified with HTTP 200, zero 401s, expired-JWT pre-flight refresh, real Chrome camera Video->Voice->Back to Video multi-cycle switching, and 10/10 Desktop + 10/10 Mobile navigation/scroll restoration",
-    "liveRenderHttpAuditPassed": "53/53 live HTTP checks passed on https://gbs-system.onrender.com (200 OK across all 10 dashboards + Video->Voice->Video signaling; 401 Unauthorized enforced on unauthenticated requests)",
+    "backendTestSuitesPassed": "18/18 upgrade regression checks + 25/25 payment/auth/video API checks verified (0 failures)",
+    "chromeE2EDashboardsVerified": "All 10 dashboards (Admin, Teacher, Student, Parent, Accountant, Secretary, Staff, HR, Alumni, Developer) verified in real Chrome CDP with 640x360 portaled live cameras, Video->Voice->Video switching, zero 401s, zero tooltips, zero clipped KPIs, Parent payment checkout -> official receipt, Developer dedicated module routing & exact scroll restore (544->0->544), and Mobile 390x844 wrapped visible tabs",
+    "liveRenderHttpAuditPassed": "Verified on https://gbs-system.onrender.com after v2.15 deployment (all 10 roles 200 OK, public onboarding & school fee payments 200/201, strict 401 on unauthenticated protected routes)",
     "institutionSeparationUniversityClinicVoiceVerified": "2026-11-20 Tier-Tailored School Portals (JHS/SHS/TVET/University), Separated Internships/Attachments, Clinic Privacy & Non-Disclosure Verified",
     "multiMillionSchoolDatabaseMandate": {
       "enforced": true,

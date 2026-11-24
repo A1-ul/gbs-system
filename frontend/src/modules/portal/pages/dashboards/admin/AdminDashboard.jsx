@@ -16267,7 +16267,7 @@ export function AdminDashboard({ initialTab } = {}) {
         onClose={() => setShowHeadmasterRenewalCheckout(false)}
         tenantId={currentUser?.tenantId || 1}
         paymentScope="SUBSCRIPTION"
-        allowPublicOnboarding={true}
+        allowPublicOnboarding={!localStorage.getItem("gbs_access_token")}
         amount={Number(subAmountDueNow || 0) || 100}
         currency="GHS"
         title={`Institution Subscription Renewal (${institutionName})`}

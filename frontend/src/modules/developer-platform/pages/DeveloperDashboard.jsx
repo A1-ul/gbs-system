@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef, useCallback } from "react";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useLocation, useParams, useNavigationType } from "react-router-dom";
 import apiClient from "../../../api/client/apiClient";
 import { getApiBaseUrl } from "../../../api/client/apiConfig";
 import { printHtmlSafely, copyTextSafely } from "../../../utils/safeWindow";
@@ -42,8 +42,84 @@ function getDevAuthHeaders(withJson = false) {
   };
 }
 
+const DEV_SCROLL_SNAPSHOT_KEY = "gbs_dev_scroll_snapshots_v2";
+const DEV_MODULE_LABELS = {
+  onboarding: "Tenant Onboarding & Approvals",
+  headmaster_verifications: "Headmaster Picture Verification",
+  intrusion_sentinel: "Tenant Intrusion Sentinel & Penalty",
+  headmaster_messages: "Headmaster Directives & Replies",
+  headmaster_calls: "Headmaster Video & Voice Calls",
+  rcce: "GBS-RCCE Engine & Server Control",
+  telemetry: "Server Health & Subscriptions",
+  backups: "Database Backups & Recovery",
+  alerts: "System Alerts & Telemetry",
+  deployments: "App Releases & Deployments",
+  "audit-logs": "Activity History & Audit Logs",
+  licenses: "School Licenses & Country Cedis",
+  biometrics: "Security & Face Access",
+  locations: "School Locations & Map",
+  multidb: "Multi-DB & Disaster Recovery",
+  digitaltwin: "Campus Map & Sensors",
+  payment_admin: "Payment Gateways & Settlement",
+  clinic: "School Clinic Oversight",
+  defaulters: "Defaulters Compliance Registry"
+};
+
+function readDevScrollMap() {
+  try {
+    const parsed = JSON.parse(sessionStorage.getItem(DEV_SCROLL_SNAPSHOT_KEY) || "{}");
+    return parsed && typeof parsed === "object" ? parsed : {};
+  } catch {
+    return {};
+  }
+}
+
+function writeDevScrollSnapshot(entryKey, routeKey, y) {
+  try {
+    const map = readDevScrollMap();
+    const safeY = Math.max(0, Math.round(Number(y) || 0));
+    if (entryKey) map[`k:${entryKey}`] = safeY;
+    if (routeKey) map[`r:${routeKey}`] = safeY;
+    const keys = Object.keys(map);
+    if (keys.length > 100) {
+      keys.slice(0, keys.length - 100).forEach((k) => delete map[k]);
+    }
+    sessionStorage.setItem(DEV_SCROLL_SNAPSHOT_KEY, JSON.stringify(map));
+  } catch { }
+}
+
 export default function DeveloperDashboard() {
   const navigate = useNavigate();
+  const location = useLocation();
+  const params = useParams();
+  const navType = useNavigationType();
+
+  const devBasePath = React.useMemo(() => {
+    const p = String(location.pathname || "").toLowerCase();
+    if (p.startsWith("/developer/control-center")) return "/developer/control-center";
+    if (p.startsWith("/developer/dashboard")) return "/developer/dashboard";
+    return "/developer-control-center/dashboard";
+  }, [location.pathname]);
+
+  const urlModuleId = React.useMemo(() => {
+    if (!params?.moduleId) return null;
+    try {
+      return decodeURIComponent(params.moduleId);
+    } catch {
+      return params.moduleId;
+    }
+  }, [params?.moduleId]);
+
+  const queryParams = React.useMemo(() => {
+    try {
+      return new URLSearchParams(location.search || "");
+    } catch {
+      return new URLSearchParams();
+    }
+  }, [location.search]);
+
+  const queryTabParam = queryParams.get("tab") || null;
+  const isFullPageTab = Boolean(urlModuleId || queryParams.get("fullpage") === "1");
 
   const developerIdentity = React.useMemo(() => {
     try {
@@ -69,19 +145,63 @@ export default function DeveloperDashboard() {
     };
   }, []);
 
-  const isFullPageTab = (() => {
+  // Active Tab synchronized with Dedicated Developer Module Routes (/developer-control-center/dashboard/:moduleId)
+  const [activeTabState, setActiveTabState] = useState(() => {
     try {
-      return new URLSearchParams(window.location.search).get("fullpage") === "1";
-    } catch {
-      return false;
-    }
-  })();
+      if (urlModuleId) return urlModuleId;
+      if (queryTabParam) return queryTabParam;
+      const stored = sessionStorage.getItem("gbs_dev_active_tab");
+      if (stored) return stored;
+    } catch { }
+    return "telemetry";
+  });
 
-  const openCurrentTabInNewPage = (tabKey) => {
+  const activeTab = urlModuleId || activeTabState;
+
+  const setActiveTab = useCallback((nextTabOrUpdater) => {
+    const resolved =
+      typeof nextTabOrUpdater === "function"
+        ? nextTabOrUpdater(activeTab)
+        : nextTabOrUpdater;
+    const cleanTab = String(resolved || "telemetry").trim();
+    if (!cleanTab) return;
+
+    // Capture exact scroll position of current page before opening dedicated module page
+    const curRouteKey = `${location.pathname}${location.search || ""}`;
+    writeDevScrollSnapshot(location.key, curRouteKey, window.scrollY);
+
+    setActiveTabState(cleanTab);
+    try {
+      sessionStorage.setItem("gbs_dev_active_tab", cleanTab);
+    } catch { }
+
+    const targetPath = `${devBasePath}/${encodeURIComponent(cleanTab)}`;
+    if (location.pathname !== targetPath) {
+      navigate(targetPath);
+    }
+  }, [activeTab, devBasePath, location.key, location.pathname, location.search, navigate]);
+
+  const handleDevBack = useCallback(() => {
+    const curRouteKey = `${location.pathname}${location.search || ""}`;
+    writeDevScrollSnapshot(location.key, curRouteKey, window.scrollY);
+    if (window.history.length > 1) {
+      navigate(-1);
+    } else {
+      navigate(devBasePath);
+    }
+  }, [devBasePath, location.key, location.pathname, location.search, navigate]);
+
+  const handleDevOverview = useCallback(() => {
+    const curRouteKey = `${location.pathname}${location.search || ""}`;
+    writeDevScrollSnapshot(location.key, curRouteKey, window.scrollY);
+    navigate(devBasePath);
+  }, [devBasePath, location.key, location.pathname, location.search, navigate]);
+
+  const openCurrentTabInNewPage = useCallback((tabKey) => {
     const targetTab = tabKey || activeTab || "telemetry";
-    const fullUrl = `${window.location.origin}/developer-control-center/dashboard?tab=${encodeURIComponent(targetTab)}&fullpage=1`;
+    const fullUrl = `${window.location.origin}${devBasePath}/${encodeURIComponent(targetTab)}?fullpage=1`;
     window.open(fullUrl, "_blank", "noopener,noreferrer");
-  };
+  }, [activeTab, devBasePath]);
 
   // IRONCLAD DEVELOPER ACCESS GUARD + IMMUTABLE SYSTEM ENGLISH LOCK
   useEffect(() => {
@@ -99,66 +219,56 @@ export default function DeveloperDashboard() {
     }
   }, [navigate]);
 
-  // Active Tab: 'telemetry' | 'backups' | 'alerts' | 'deployments' | 'audit-logs' | 'licenses' | 'biometrics' | 'locations'
-  const [activeTab, setActiveTab] = useState(() => {
-    try {
-      const urlParams = new URLSearchParams(window.location.search);
-      const tabParam = urlParams.get("tab");
-      if (tabParam) return tabParam;
-      const stored = sessionStorage.getItem("gbs_dev_active_tab");
-      if (stored) return stored;
-    } catch { }
-    return "telemetry";
-  });
-
-  // Track and restore scroll position and tab history for seamless back navigation
+  // Sync activeTabState when URL route changes (Browser Back/Forward or direct link)
   useEffect(() => {
-    try {
-      sessionStorage.setItem("gbs_dev_active_tab", activeTab);
-      const url = new URL(window.location.href);
-      if (url.searchParams.get("tab") !== activeTab) {
-        url.searchParams.set("tab", activeTab);
-        window.history.pushState({ tab: activeTab }, "", url.toString());
-      }
-    } catch { }
-  }, [activeTab]);
-
-  useEffect(() => {
-    const handlePopState = () => {
+    const nextFromUrl = urlModuleId || queryTabParam;
+    if (nextFromUrl && nextFromUrl !== activeTabState) {
+      setActiveTabState(nextFromUrl);
       try {
-        const urlParams = new URLSearchParams(window.location.search);
-        const tabParam = urlParams.get("tab") || sessionStorage.getItem("gbs_dev_active_tab");
-        if (tabParam) setActiveTab(tabParam);
-        const savedScroll = sessionStorage.getItem("gbs_dev_scroll_pos");
-        if (savedScroll) {
-          setTimeout(() => window.scrollTo(0, parseInt(savedScroll, 10)), 100);
-        }
+        sessionStorage.setItem("gbs_dev_active_tab", nextFromUrl);
       } catch { }
-    };
+    }
+  }, [urlModuleId, queryTabParam, activeTabState]);
+
+  // Exact per-entry scroll position capture & Back/Forward restoration (self-contained inside Developer Portal)
+  useEffect(() => {
+    const routeKey = `${location.pathname}${location.search || ""}`;
+    let timer1 = null;
+    let timer2 = null;
+    let rafId = null;
+
+    if (navType === "POP") {
+      const map = readDevScrollMap();
+      const targetY =
+        map[`k:${location.key}`] !== undefined
+          ? map[`k:${location.key}`]
+          : map[`r:${routeKey}`];
+      if (typeof targetY === "number" && Number.isFinite(targetY)) {
+        const applyRestore = () => window.scrollTo(0, targetY);
+        rafId = requestAnimationFrame(applyRestore);
+        timer1 = setTimeout(applyRestore, 70);
+        timer2 = setTimeout(applyRestore, 200);
+      }
+    } else if (isFullPageTab) {
+      window.scrollTo(0, 0);
+    }
 
     const handleScroll = () => {
-      try {
-        sessionStorage.setItem("gbs_dev_scroll_pos", String(window.scrollY));
-      } catch { }
+      writeDevScrollSnapshot(location.key, routeKey, window.scrollY);
     };
 
     const onVoiceTab = (e) => { if (e?.detail?.tab) setActiveTab(e.detail.tab); };
-    window.addEventListener("popstate", handlePopState);
     window.addEventListener("scroll", handleScroll, { passive: true });
     window.addEventListener("gbs_open_dashboard_tab", onVoiceTab);
 
-    // Initial scroll restore
-    const savedScroll = sessionStorage.getItem("gbs_dev_scroll_pos");
-    if (savedScroll) {
-      setTimeout(() => window.scrollTo(0, parseInt(savedScroll, 10)), 150);
-    }
-
     return () => {
-      window.removeEventListener("popstate", handlePopState);
+      if (rafId) cancelAnimationFrame(rafId);
+      if (timer1) clearTimeout(timer1);
+      if (timer2) clearTimeout(timer2);
       window.removeEventListener("scroll", handleScroll);
       window.removeEventListener("gbs_open_dashboard_tab", onVoiceTab);
     };
-  }, []);
+  }, [location.key, location.pathname, location.search, navType, isFullPageTab, setActiveTab]);
 
   // State Management (100% Zero-Mock, Live Database Records)
   const [metrics, setMetrics] = useState({
@@ -5228,7 +5338,11 @@ export default function DeveloperDashboard() {
   const pendingAppsCount = pendingIncomingList.length;
 
   return (
-    <div className="dev-dashboard-layout role-theme-developer" data-gbs-developer-portal="true" data-gbs-no-translate="true">
+    <div
+      className={`dev-dashboard-layout role-theme-developer ${isFullPageTab ? "dev-module-page-active" : ""}`}
+      data-gbs-developer-portal="true"
+      data-gbs-no-translate="true"
+    >
       <div
         className="dev-dashboard-real-bg"
         style={{ backgroundImage: `url('/assets/developer-command-center-bg.jpg')` }}
@@ -5248,33 +5362,40 @@ export default function DeveloperDashboard() {
 
       {isFullPageTab && (
         <div
-          data-testid="dev-fullpage-banner"
-          style={{
-            background: "linear-gradient(135deg, #0c2348 0%, #081833 100%)",
-            borderBottom: "2px solid #38bdf8",
-            padding: "10px 24px",
-            display: "flex",
-            justifyContent: "space-between",
-            alignItems: "center",
-            flexWrap: "wrap",
-            gap: "12px"
-          }}
+          className="dev-module-page-bar"
+          data-testid="dev-module-page-bar"
         >
-          <div style={{ display: "flex", alignItems: "center", gap: "10px", color: "#f8fafc", fontWeight: 800, fontSize: "0.9rem" }}>
-            <span style={{ background: "#0284c7", color: "#fff", padding: "3px 10px", borderRadius: "999px", fontSize: "0.72rem", fontWeight: 900 }}>
-              FULL-PAGE DISPLAY MODE
-            </span>
-            <span>Developer Mission Control • Active View: <strong style={{ color: "#38bdf8", textTransform: "uppercase" }}>{activeTab}</strong></span>
-          </div>
-          <div style={{ display: "flex", gap: "8px" }}>
+          <div style={{ display: "flex", alignItems: "center", gap: "10px", flexWrap: "wrap", color: "#f8fafc", fontWeight: 800, fontSize: "0.9rem" }}>
             <button
               type="button"
-              onClick={() => {
-                window.location.href = `/developer-control-center/dashboard?tab=${encodeURIComponent(activeTab)}`;
-              }}
+              data-testid="dev-module-back-btn"
+              onClick={handleDevBack}
+              style={{ background: "rgba(30, 41, 59, 0.9)", border: "1.5px solid #38bdf8", color: "#e0f2fe", borderRadius: "8px", padding: "6px 14px", fontWeight: 800, cursor: "pointer", fontSize: "0.8rem" }}
+            >
+              ← Back
+            </button>
+            <button
+              type="button"
+              data-testid="dev-module-overview-btn"
+              onClick={handleDevOverview}
+              style={{ background: "rgba(16, 185, 129, 0.2)", border: "1.5px solid #10b981", color: "#6ee7b7", borderRadius: "8px", padding: "6px 14px", fontWeight: 800, cursor: "pointer", fontSize: "0.8rem" }}
+            >
+              🏠 Developer Overview
+            </button>
+            <span style={{ background: "#0284c7", color: "#fff", padding: "3px 10px", borderRadius: "999px", fontSize: "0.72rem", fontWeight: 900 }}>
+              FULL-PAGE MODULE
+            </span>
+            <span>
+              <strong style={{ color: "#38bdf8" }}>{DEV_MODULE_LABELS[activeTab] || activeTab}</strong>
+            </span>
+          </div>
+          <div style={{ display: "flex", gap: "8px", flexWrap: "wrap" }}>
+            <button
+              type="button"
+              onClick={() => openCurrentTabInNewPage(activeTab)}
               style={{ background: "rgba(56, 189, 248, 0.2)", border: "1px solid #38bdf8", color: "#7dd3fc", borderRadius: "8px", padding: "6px 14px", fontWeight: 800, cursor: "pointer", fontSize: "0.8rem" }}
             >
-              ← Return to Full Developer Command Center
+              ↗ Open in New Tab
             </button>
           </div>
         </div>
@@ -5420,7 +5541,7 @@ export default function DeveloperDashboard() {
           </button>
           <button
             type="button"
-            onClick={() => window.history.back()}
+            onClick={handleDevBack}
             style={{
               background: "rgba(30, 41, 59, 0.8)",
               border: "1.5px solid #64748b",
@@ -5501,668 +5622,670 @@ export default function DeveloperDashboard() {
       <main className="dev-main">
         {actionStatus && <div className="action-notification">{actionStatus}</div>}
 
-        {/* Real-Life Developer Command Center Hero Banner */}
-        <section
-          className="dev-hero-showcase-banner"
-          style={{
-            backgroundImage: `linear-gradient(135deg, rgba(30, 42, 68, 0.56) 0%, rgba(88, 28, 135, 0.50) 50%, rgba(15, 23, 42, 0.62) 100%), url('/assets/developer-dashboard-hero.jpg')`
-          }}
-        >
-          <div className="hero-text-block">
-            <div className="hero-pill-badge">MISSION CONTROL • ZERO-MOCK TELEMETRY</div>
-            <h2>Developer Enterprise Operations & Sentinel Engine</h2>
-            <p>
-              Hardware-accelerated PostgreSQL cluster telemetry, countdown-driven license automation,
-              biometric facial anti-spoofing verification, and encrypted disaster-recovery pipelines.
-            </p>
-
-            <div className="dev-hero-pills">
-              <span className={`telemetry-pill ${systemEnv?.activeEnvironment === "PRODUCTION" ? "healthy" : ""}`} style={{ fontWeight: 800 }}>
-                {systemEnv?.activeEnvironment === "PRODUCTION" ? "🟢 PRODUCTION CLUSTER [LIVE]" : "🟡 DEV SANDBOX [ISOLATED]"}
-              </span>
-              <span className="telemetry-pill healthy">● Kernel: ONLINE</span>
-              <span className={`telemetry-pill ${metrics.database?.connected === true ? "healthy" : ""}`}>
-                {metrics.database?.connected === true
-                  ? `🐘 ${metrics.database?.engine || "PostgreSQL"}: ACTIVE (Pool: ${metrics.database?.poolSize || 1} Active / ${metrics.database?.idleConnections ?? 0} Idle / ${metrics.database?.maxPoolSize || 25} Max • SafeCap: ${metrics.database?.maxSafeApplicationConnections || 80}/${metrics.database?.postgresMaxConnections || 100})`
-                  : metrics.database?.connected === false
-                    ? "🐘 PostgreSQL: STANDBY (Persistent Fallback Active)"
-                    : "🐘 PostgreSQL: CHECKING..."}
-              </span>
-              <span className="telemetry-pill">🔒 Locks: {metrics.metrics?.activeLocks || 0}</span>
-              <span className="telemetry-pill">💾 Backups: {metrics.metrics?.totalBackups || 0}</span>
-              <span className="telemetry-pill">🚨 Active Alerts: {alerts.filter(a => !a.isResolved).length}</span>
-            </div>
-          </div>
-
-          <div className="hero-photo-showcase-frame">
-            <div className="showcase-photo-wrapper">
-              <img
-                src="/assets/developer-dashboard-hero.jpg"
-                alt="Institutional Engineering Command Center"
-                className="real-life-dashboard-photo"
-              />
-              <div className="showcase-verified-badge">
-                <span className="live-camera-pulse"></span>
-                <span>REAL-LIFE COMMAND CENTER</span>
-              </div>
-            </div>
-            <div className="showcase-photo-caption">
-              <span>📍 Global Systems Operations Command Center • Live Infrastructure View</span>
-            </div>
-          </div>
-        </section>
-
-        {/* Real-Life Infrastructure Tri-Card Photo Showcase */}
-        <div className="infra-photographic-grid">
-          <div
-            className="infra-photo-card"
-            onClick={() => navigate("/developer-control-center/sharding")}
-            style={{ cursor: "pointer" }}
-            aria-label="Click to launch Sharding Console & Datacenter Replicas"
-          >
-            <div className="infra-card-media-wrapper">
-              <img src="/assets/sharding-datacenter-bg.jpg" alt="Tier-4 Regional Datacenter Racks" className="infra-card-img" />
-              <div className="infra-card-tag">TIER-4 REGIONAL DATACENTER ↗</div>
-            </div>
-            <div className="infra-card-body">
-              <h4>Regional Sharding & Read Replicas</h4>
-              <p>Active PostgreSQL clusters across 3 regions with zero-loss WAL streaming and automated failover.</p>
-              <div className="infra-stat-row">
-                <span>Load Avg: {metrics.cpu?.loadAvg?.[0] !== undefined ? metrics.cpu.loadAvg[0].toFixed(2) : "0.00"}</span>
-                <span className="text-emerald">Sync Lag: 0.00ms</span>
-              </div>
-            </div>
-          </div>
-
-          <div
-            className="infra-photo-card"
-            onClick={() => {
-              setActiveTab("biometrics");
-              showNotification("Switched to Biometric Security & Facial Liveness Sentinel");
+        <div className="dev-overview-only">
+          {/* Real-Life Developer Command Center Hero Banner */}
+          <section
+            className="dev-hero-showcase-banner"
+            style={{
+              backgroundImage: `linear-gradient(135deg, rgba(30, 42, 68, 0.56) 0%, rgba(88, 28, 135, 0.50) 50%, rgba(15, 23, 42, 0.62) 100%), url('/assets/developer-dashboard-hero.jpg')`
             }}
-            style={{ cursor: "pointer" }}
-            aria-label="Click to inspect Biometric Security & Optical Perimeter"
           >
-            <div className="infra-card-media-wrapper">
-              <img src="/assets/cctv-bg.jpg" alt="Surveillance & Sentinel Security" className="infra-card-img" />
-              <div className="infra-card-tag">SENTINEL PERIMETER LAB ↗</div>
+            <div className="hero-text-block">
+              <div className="hero-pill-badge">MISSION CONTROL • ZERO-MOCK TELEMETRY</div>
+              <h2>Developer Enterprise Operations & Sentinel Engine</h2>
+              <p>
+                Hardware-accelerated PostgreSQL cluster telemetry, countdown-driven license automation,
+                biometric facial anti-spoofing verification, and encrypted disaster-recovery pipelines.
+              </p>
+
+              <div className="dev-hero-pills">
+                <span className={`telemetry-pill ${systemEnv?.activeEnvironment === "PRODUCTION" ? "healthy" : ""}`} style={{ fontWeight: 800 }}>
+                  {systemEnv?.activeEnvironment === "PRODUCTION" ? "🟢 PRODUCTION CLUSTER [LIVE]" : "🟡 DEV SANDBOX [ISOLATED]"}
+                </span>
+                <span className="telemetry-pill healthy">● Kernel: ONLINE</span>
+                <span className={`telemetry-pill ${metrics.database?.connected === true ? "healthy" : ""}`}>
+                  {metrics.database?.connected === true
+                    ? `🐘 ${metrics.database?.engine || "PostgreSQL"}: ACTIVE (Pool: ${metrics.database?.poolSize || 1} Active / ${metrics.database?.idleConnections ?? 0} Idle / ${metrics.database?.maxPoolSize || 25} Max • SafeCap: ${metrics.database?.maxSafeApplicationConnections || 80}/${metrics.database?.postgresMaxConnections || 100})`
+                    : metrics.database?.connected === false
+                      ? "🐘 PostgreSQL: STANDBY (Persistent Fallback Active)"
+                      : "🐘 PostgreSQL: CHECKING..."}
+                </span>
+                <span className="telemetry-pill">🔒 Locks: {metrics.metrics?.activeLocks || 0}</span>
+                <span className="telemetry-pill">💾 Backups: {metrics.metrics?.totalBackups || 0}</span>
+                <span className="telemetry-pill">🚨 Active Alerts: {alerts.filter(a => !a.isResolved).length}</span>
+              </div>
             </div>
-            <div className="infra-card-body">
-              <h4>Facial Liveness & Optical Perimeter</h4>
-              <p>Sub-millisecond 3D pupil reflection analysis and 2D presentation attack rejection engine.</p>
-              <div className="infra-stat-row">
-                <span>Anti-Spoofing: 99.4%</span>
-                <span className="text-purple">Confidence: 99.6%</span>
+
+            <div className="hero-photo-showcase-frame">
+              <div className="showcase-photo-wrapper">
+                <img
+                  src="/assets/developer-dashboard-hero.jpg"
+                  alt="Institutional Engineering Command Center"
+                  className="real-life-dashboard-photo"
+                />
+                <div className="showcase-verified-badge">
+                  <span className="live-camera-pulse"></span>
+                  <span>REAL-LIFE COMMAND CENTER</span>
+                </div>
+              </div>
+              <div className="showcase-photo-caption">
+                <span>📍 Global Systems Operations Command Center • Live Infrastructure View</span>
+              </div>
+            </div>
+          </section>
+
+          {/* Real-Life Infrastructure Tri-Card Photo Showcase */}
+          <div className="infra-photographic-grid">
+            <div
+              className="infra-photo-card"
+              onClick={() => navigate("/developer-control-center/sharding")}
+              style={{ cursor: "pointer" }}
+              aria-label="Click to launch Sharding Console & Datacenter Replicas"
+            >
+              <div className="infra-card-media-wrapper">
+                <img src="/assets/sharding-datacenter-bg.jpg" alt="Tier-4 Regional Datacenter Racks" className="infra-card-img" />
+                <div className="infra-card-tag">TIER-4 REGIONAL DATACENTER ↗</div>
+              </div>
+              <div className="infra-card-body">
+                <h4>Regional Sharding & Read Replicas</h4>
+                <p>Active PostgreSQL clusters across 3 regions with zero-loss WAL streaming and automated failover.</p>
+                <div className="infra-stat-row">
+                  <span>Load Avg: {metrics.cpu?.loadAvg?.[0] !== undefined ? metrics.cpu.loadAvg[0].toFixed(2) : "0.00"}</span>
+                  <span className="text-emerald">Sync Lag: 0.00ms</span>
+                </div>
+              </div>
+            </div>
+
+            <div
+              className="infra-photo-card"
+              onClick={() => {
+                setActiveTab("biometrics");
+                showNotification("Switched to Biometric Security & Facial Liveness Sentinel");
+              }}
+              style={{ cursor: "pointer" }}
+              aria-label="Click to inspect Biometric Security & Optical Perimeter"
+            >
+              <div className="infra-card-media-wrapper">
+                <img src="/assets/cctv-bg.jpg" alt="Surveillance & Sentinel Security" className="infra-card-img" />
+                <div className="infra-card-tag">SENTINEL PERIMETER LAB ↗</div>
+              </div>
+              <div className="infra-card-body">
+                <h4>Facial Liveness & Optical Perimeter</h4>
+                <p>Sub-millisecond 3D pupil reflection analysis and 2D presentation attack rejection engine.</p>
+                <div className="infra-stat-row">
+                  <span>Anti-Spoofing: 99.4%</span>
+                  <span className="text-purple">Confidence: 99.6%</span>
+                </div>
+              </div>
+            </div>
+
+            <div
+              className="infra-photo-card"
+              onClick={() => navigate("/developer-control-center/ai-diagnostics")}
+              style={{ cursor: "pointer" }}
+              aria-label="Click to launch AI Sentinel Neural Radar"
+            >
+              <div className="infra-card-media-wrapper">
+                <img src="/assets/ai-diagnostics-bg.jpg" alt="AI Neural Diagnostics" className="infra-card-img" />
+                <div className="infra-card-tag">AI SENTINEL RADAR ↗</div>
+              </div>
+              <div className="infra-card-body">
+                <h4>Neural Diagnostics & Error Auto-Fix</h4>
+                <p>Real-time heap anomaly detection, slow query analysis, and proactive maintenance trigger engine.</p>
+                <div className="infra-stat-row">
+                  <span>Uptime: {Math.round(metrics.uptimeSeconds || 0)}s</span>
+                  <span className="text-blue">Memory: {metrics.memory?.usagePct || "0%"}</span>
+                </div>
               </div>
             </div>
           </div>
 
-          <div
-            className="infra-photo-card"
-            onClick={() => navigate("/developer-control-center/ai-diagnostics")}
-            style={{ cursor: "pointer" }}
-            aria-label="Click to launch AI Sentinel Neural Radar"
-          >
-            <div className="infra-card-media-wrapper">
-              <img src="/assets/ai-diagnostics-bg.jpg" alt="AI Neural Diagnostics" className="infra-card-img" />
-              <div className="infra-card-tag">AI SENTINEL RADAR ↗</div>
-            </div>
-            <div className="infra-card-body">
-              <h4>Neural Diagnostics & Error Auto-Fix</h4>
-              <p>Real-time heap anomaly detection, slow query analysis, and proactive maintenance trigger engine.</p>
-              <div className="infra-stat-row">
-                <span>Uptime: {Math.round(metrics.uptimeSeconds || 0)}s</span>
-                <span className="text-blue">Memory: {metrics.memory?.usagePct || "0%"}</span>
-              </div>
-            </div>
-          </div>
-        </div>
+          {/* PLATFORM SUBSCRIPTION MANAGEMENT & AUTO-LOCKOUT ENGINE (DEVELOPER CONTROL) */}
+          {(() => {
+            const daysLeft = calculateDaysRemaining(subscriptionSettings.endDate);
+            const isWarning = daysLeft <= subscriptionSettings.advanceReminderDays && daysLeft > 0;
+            const isExpired = daysLeft <= 0;
 
-        {/* PLATFORM SUBSCRIPTION MANAGEMENT & AUTO-LOCKOUT ENGINE (DEVELOPER CONTROL) */}
-        {(() => {
-          const daysLeft = calculateDaysRemaining(subscriptionSettings.endDate);
-          const isWarning = daysLeft <= subscriptionSettings.advanceReminderDays && daysLeft > 0;
-          const isExpired = daysLeft <= 0;
-
-          return (
-            <div style={{
-              background: "linear-gradient(135deg, rgba(15, 23, 42, 0.95), rgba(30, 41, 59, 0.95))",
-              border: isExpired ? "2px solid #ef4444" : (isWarning ? "2px solid #f59e0b" : "1.5px solid rgba(56, 189, 248, 0.4)"),
-              borderRadius: "16px",
-              padding: "1.5rem",
-              marginBottom: "1.75rem",
-              boxShadow: "0 10px 30px rgba(0,0,0,0.6)"
-            }}>
-              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", flexWrap: "wrap", gap: "1rem", marginBottom: "1.25rem" }}>
-                <div>
-                  <div style={{ display: "flex", alignItems: "center", gap: "10px", flexWrap: "wrap" }}>
-                    <span style={{ fontSize: "1.5rem" }}>🏢</span>
-                    <h3 style={{ margin: 0, color: "#f8fafc", fontSize: "1.15rem", fontWeight: 900, letterSpacing: "0.5px" }}>
-                      PLATFORM SUBSCRIPTION & AUTOMATED LOCKOUT MANAGEMENT
-                    </h3>
-                    <span style={{
-                      background: isExpired ? "rgba(239, 68, 68, 0.2)" : (isWarning ? "rgba(245, 158, 11, 0.2)" : "rgba(16, 185, 129, 0.2)"),
-                      border: `1px solid ${isExpired ? "#ef4444" : (isWarning ? "#f59e0b" : "#10b981")}`,
-                      color: isExpired ? "#fca5a5" : (isWarning ? "#fde68a" : "#6ee7b7"),
-                      padding: "3px 10px",
-                      borderRadius: "999px",
-                      fontSize: "0.75rem",
-                      fontWeight: 800
-                    }}>
-                      {isExpired ? "● SUBSCRIPTION EXPIRED (LOCKOUT ACTIVE)" : (isWarning ? "⚠ ADVANCE REMINDER ACTIVE" : "● SUBSCRIPTION ACTIVE")}
-                    </span>
-                  </div>
-                  <p style={{ margin: "6px 0 0", color: "#94a3b8", fontSize: "0.85rem" }}>
-                    Governs registration active dates, advance reminder notices to tenant Headmasters, and automated lockout upon non-payment.
-                  </p>
-                </div>
-
-                <div style={{ display: "flex", gap: "8px", flexWrap: "wrap" }}>
-                  <button
-                    type="button"
-                    onClick={handleSendSubscriptionReminderToTenants}
-                    style={{
-                      background: "linear-gradient(135deg, #d97706, #b45309)",
-                      color: "#fff",
-                      border: "none",
-                      padding: "8px 14px",
-                      borderRadius: "8px",
-                      fontSize: "0.8rem",
-                      fontWeight: 700,
-                      cursor: "pointer",
-                      display: "flex",
-                      alignItems: "center",
-                      gap: "6px"
-                    }}
-                  >
-                    📢 Broadcast Renewal Reminder
-                  </button>
-                  <button
-                    type="button"
-                    onClick={handleExecuteSubscriptionAutoLock}
-                    style={{
-                      background: "linear-gradient(135deg, #dc2626, #991b1b)",
-                      color: "#fff",
-                      border: "none",
-                      padding: "8px 14px",
-                      borderRadius: "8px",
-                      fontSize: "0.8rem",
-                      fontWeight: 700,
-                      cursor: "pointer",
-                      display: "flex",
-                      alignItems: "center",
-                      gap: "6px"
-                    }}
-                  >
-                    🔒 Enforce Auto-Lock Pipeline
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => setShowSubscriptionEditModal(true)}
-                    style={{
-                      background: "rgba(56, 189, 248, 0.2)",
-                      border: "1px solid #38bdf8",
-                      color: "#7dd3fc",
-                      padding: "8px 14px",
-                      borderRadius: "8px",
-                      fontSize: "0.8rem",
-                      fontWeight: 700,
-                      cursor: "pointer"
-                    }}
-                  >
-                    🗓️ Adjust Dates
-                  </button>
-                </div>
-              </div>
-
-              {/* Status Alert Banners */}
-              {isWarning && (
-                <div style={{
-                  background: "rgba(245, 158, 11, 0.15)",
-                  border: "1px solid #f59e0b",
-                  borderRadius: "10px",
-                  padding: "10px 16px",
-                  marginBottom: "1rem",
-                  display: "flex",
-                  alignItems: "center",
-                  gap: "10px"
-                }}>
-                  <span style={{ fontSize: "1.2rem" }}>⚠️</span>
-                  <div style={{ fontSize: "0.85rem", color: "#fef3c7" }}>
-                    <strong>ADVANCE PREPARATION NOTICE:</strong> Platform subscription expires in <strong>{daysLeft} days</strong> ({subscriptionSettings.endDate}). Advance reminder notices have been dispatched to registered Headmasters for preparation.
-                  </div>
-                </div>
-              )}
-
-              {isExpired && (
-                <div style={{
-                  background: "rgba(239, 68, 68, 0.2)",
-                  border: "1px solid #ef4444",
-                  borderRadius: "10px",
-                  padding: "10px 16px",
-                  marginBottom: "1rem",
-                  display: "flex",
-                  alignItems: "center",
-                  gap: "10px"
-                }}>
-                  <span style={{ fontSize: "1.2rem" }}>🚨</span>
-                  <div style={{ fontSize: "0.85rem", color: "#fee2e2" }}>
-                    <strong>AUTOMATIC LOCKOUT ENGAGED:</strong> Subscription date passed ({subscriptionSettings.endDate}). Unpaid tenants automatically locked out until continuation payment is cleared.
-                  </div>
-                </div>
-              )}
-
-              {/* Subscription Telemetry Inscription Grid: Strictly Equal In Size */}
-              <div className="dev-equal-inscription-grid" style={{
-                display: "grid",
-                gridTemplateColumns: "repeat(4, 1fr)",
-                gap: "14px",
-                marginBottom: "1.25rem",
-                alignItems: "stretch"
-              }}>
-                <div
-                  className="dev-inscription-box"
-                  onClick={() => {
-                    setShowSubscriptionEditModal(true);
-                    showNotification("Opening Subscription Window Settings (Start Date)...");
-                  }}
-                  style={{
-                    background: "rgba(2, 6, 23, 0.75)",
-                    padding: "16px 18px",
-                    borderRadius: "12px",
-                    border: "1.5px solid rgba(56, 189, 248, 0.25)",
-                    display: "flex",
-                    flexDirection: "column",
-                    justifyContent: "space-between",
-                    minHeight: "96px",
-                    cursor: "pointer",
-                    transition: "all 0.2s"
-                  }}
-                  aria-label="Click to modify registration start date"
-                >
-                  <span style={{ fontSize: "0.74rem", color: "#94a3b8", display: "block", fontWeight: 800, letterSpacing: "0.5px" }}>REGISTRATION START DATE ✏️</span>
-                  <strong style={{ color: "#f8fafc", fontSize: "1.05rem", fontFamily: "monospace" }}>{subscriptionSettings.startDate}</strong>
-                </div>
-
-                <div
-                  className="dev-inscription-box"
-                  onClick={() => {
-                    setShowSubscriptionEditModal(true);
-                    showNotification("Opening Subscription Window Settings (End Date)...");
-                  }}
-                  style={{
-                    background: "rgba(2, 6, 23, 0.75)",
-                    padding: "16px 18px",
-                    borderRadius: "12px",
-                    border: "1.5px solid rgba(56, 189, 248, 0.25)",
-                    display: "flex",
-                    flexDirection: "column",
-                    justifyContent: "space-between",
-                    minHeight: "96px",
-                    cursor: "pointer",
-                    transition: "all 0.2s"
-                  }}
-                  aria-label="Click to modify subscription end date"
-                >
-                  <span style={{ fontSize: "0.74rem", color: "#94a3b8", display: "block", fontWeight: 800, letterSpacing: "0.5px" }}>SUBSCRIPTION END DATE ✏️</span>
-                  <strong style={{ color: isExpired ? "#fca5a5" : "#38bdf8", fontSize: "1.05rem", fontFamily: "monospace" }}>{subscriptionSettings.endDate}</strong>
-                </div>
-
-                <div
-                  className="dev-inscription-box"
-                  onClick={() => {
-                    setActiveTab("licenses");
-                    showNotification("Navigating to Tenant Licenses & Subscription Countdowns...");
-                  }}
-                  style={{
-                    background: "rgba(2, 6, 23, 0.75)",
-                    padding: "16px 18px",
-                    borderRadius: "12px",
-                    border: "1.5px solid rgba(56, 189, 248, 0.25)",
-                    display: "flex",
-                    flexDirection: "column",
-                    justifyContent: "space-between",
-                    minHeight: "96px",
-                    cursor: "pointer",
-                    transition: "all 0.2s"
-                  }}
-                  aria-label="Click to inspect all active tenant countdowns"
-                >
-                  <span style={{ fontSize: "0.74rem", color: "#94a3b8", display: "block", fontWeight: 800, letterSpacing: "0.5px" }}>DAYS REMAINING COUNTDOWN 🔍</span>
-                  <strong style={{ color: isExpired ? "#ef4444" : (isWarning ? "#fbbf24" : "#34d399"), fontSize: "1.2rem", fontWeight: 900 }}>
-                    {isExpired ? "0 Days (Expired)" : `${daysLeft} Days Remaining`}
-                  </strong>
-                </div>
-
-                <div
-                  className="dev-inscription-box"
-                  onClick={() => {
-                    const nextVal = !subscriptionSettings.autoLockOnFailure;
-                    setSubscriptionSettings((prev) => {
-                      const updated = { ...prev, autoLockOnFailure: nextVal };
-                      localStorage.setItem("gbs_system_subscription_settings", JSON.stringify(updated));
-                      localStorage.setItem("gbs_platform_subscription_settings", JSON.stringify(updated));
-                      return updated;
-                    });
-                    showNotification(`Auto-Lock on non-payment ${nextVal ? "ACTIVATED" : "DEACTIVATED"}`);
-                  }}
-                  style={{
-                    background: "rgba(2, 6, 23, 0.75)",
-                    padding: "16px 18px",
-                    borderRadius: "12px",
-                    border: "1.5px solid rgba(56, 189, 248, 0.25)",
-                    display: "flex",
-                    flexDirection: "column",
-                    justifyContent: "space-between",
-                    minHeight: "96px",
-                    cursor: "pointer",
-                    transition: "all 0.2s"
-                  }}
-                  aria-label="Click to toggle auto-lock enforcement on unpaid tenants"
-                >
-                  <span style={{ fontSize: "0.74rem", color: "#94a3b8", display: "block", fontWeight: 800, letterSpacing: "0.5px" }}>AUTO-LOCK ON FAILURE ⚡</span>
-                  <strong style={{ color: subscriptionSettings.autoLockOnFailure ? "#34d399" : "#fca5a5", fontSize: "1rem", fontWeight: 800 }}>
-                    {subscriptionSettings.autoLockOnFailure ? "✓ AUTO-LOCK STRICT" : "DISABLED"}
-                  </strong>
-                </div>
-              </div>
-
-              {/* Master Platform Continuation MoMo Remittance Box */}
+            return (
               <div style={{
-                background: "linear-gradient(135deg, rgba(16, 185, 129, 0.1), rgba(6, 95, 70, 0.2))",
-                border: "1.5px solid rgba(16, 185, 129, 0.4)",
-                borderRadius: "12px",
-                padding: "14px 18px",
-                display: "flex",
-                justifyContent: "space-between",
-                alignItems: "center",
-                flexWrap: "wrap",
-                gap: "12px"
+                background: "linear-gradient(135deg, rgba(15, 23, 42, 0.95), rgba(30, 41, 59, 0.95))",
+                border: isExpired ? "2px solid #ef4444" : (isWarning ? "2px solid #f59e0b" : "1.5px solid rgba(56, 189, 248, 0.4)"),
+                borderRadius: "16px",
+                padding: "1.5rem",
+                marginBottom: "1.75rem",
+                boxShadow: "0 10px 30px rgba(0,0,0,0.6)"
               }}>
-                <div style={{ display: "flex", alignItems: "center", gap: "12px" }}>
-                  <div style={{ fontSize: "1.8rem" }}>📱</div>
+                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", flexWrap: "wrap", gap: "1rem", marginBottom: "1.25rem" }}>
                   <div>
-                    <span style={{ fontSize: "0.75rem", color: "#6ee7b7", fontWeight: 800, letterSpacing: "1px", textTransform: "uppercase" }}>
-                      PLATFORM CONTINUATION & LICENSE RENEWAL MOMO
-                    </span>
-                    <div style={{ color: "#f8fafc", fontSize: "0.85rem", marginTop: "2px" }}>
-                      Every registered tenant and headmaster remits continuation dues to this designated merchant account:
+                    <div style={{ display: "flex", alignItems: "center", gap: "10px", flexWrap: "wrap" }}>
+                      <span style={{ fontSize: "1.5rem" }}>🏢</span>
+                      <h3 style={{ margin: 0, color: "#f8fafc", fontSize: "1.15rem", fontWeight: 900, letterSpacing: "0.5px" }}>
+                        PLATFORM SUBSCRIPTION & AUTOMATED LOCKOUT MANAGEMENT
+                      </h3>
+                      <span style={{
+                        background: isExpired ? "rgba(239, 68, 68, 0.2)" : (isWarning ? "rgba(245, 158, 11, 0.2)" : "rgba(16, 185, 129, 0.2)"),
+                        border: `1px solid ${isExpired ? "#ef4444" : (isWarning ? "#f59e0b" : "#10b981")}`,
+                        color: isExpired ? "#fca5a5" : (isWarning ? "#fde68a" : "#6ee7b7"),
+                        padding: "3px 10px",
+                        borderRadius: "999px",
+                        fontSize: "0.75rem",
+                        fontWeight: 800
+                      }}>
+                        {isExpired ? "● SUBSCRIPTION EXPIRED (LOCKOUT ACTIVE)" : (isWarning ? "⚠ ADVANCE REMINDER ACTIVE" : "● SUBSCRIPTION ACTIVE")}
+                      </span>
+                    </div>
+                    <p style={{ margin: "6px 0 0", color: "#94a3b8", fontSize: "0.85rem" }}>
+                      Governs registration active dates, advance reminder notices to tenant Headmasters, and automated lockout upon non-payment.
+                    </p>
+                  </div>
+
+                  <div style={{ display: "flex", gap: "8px", flexWrap: "wrap" }}>
+                    <button
+                      type="button"
+                      onClick={handleSendSubscriptionReminderToTenants}
+                      style={{
+                        background: "linear-gradient(135deg, #d97706, #b45309)",
+                        color: "#fff",
+                        border: "none",
+                        padding: "8px 14px",
+                        borderRadius: "8px",
+                        fontSize: "0.8rem",
+                        fontWeight: 700,
+                        cursor: "pointer",
+                        display: "flex",
+                        alignItems: "center",
+                        gap: "6px"
+                      }}
+                    >
+                      📢 Broadcast Renewal Reminder
+                    </button>
+                    <button
+                      type="button"
+                      onClick={handleExecuteSubscriptionAutoLock}
+                      style={{
+                        background: "linear-gradient(135deg, #dc2626, #991b1b)",
+                        color: "#fff",
+                        border: "none",
+                        padding: "8px 14px",
+                        borderRadius: "8px",
+                        fontSize: "0.8rem",
+                        fontWeight: 700,
+                        cursor: "pointer",
+                        display: "flex",
+                        alignItems: "center",
+                        gap: "6px"
+                      }}
+                    >
+                      🔒 Enforce Auto-Lock Pipeline
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setShowSubscriptionEditModal(true)}
+                      style={{
+                        background: "rgba(56, 189, 248, 0.2)",
+                        border: "1px solid #38bdf8",
+                        color: "#7dd3fc",
+                        padding: "8px 14px",
+                        borderRadius: "8px",
+                        fontSize: "0.8rem",
+                        fontWeight: 700,
+                        cursor: "pointer"
+                      }}
+                    >
+                      🗓️ Adjust Dates
+                    </button>
+                  </div>
+                </div>
+
+                {/* Status Alert Banners */}
+                {isWarning && (
+                  <div style={{
+                    background: "rgba(245, 158, 11, 0.15)",
+                    border: "1px solid #f59e0b",
+                    borderRadius: "10px",
+                    padding: "10px 16px",
+                    marginBottom: "1rem",
+                    display: "flex",
+                    alignItems: "center",
+                    gap: "10px"
+                  }}>
+                    <span style={{ fontSize: "1.2rem" }}>⚠️</span>
+                    <div style={{ fontSize: "0.85rem", color: "#fef3c7" }}>
+                      <strong>ADVANCE PREPARATION NOTICE:</strong> Platform subscription expires in <strong>{daysLeft} days</strong> ({subscriptionSettings.endDate}). Advance reminder notices have been dispatched to registered Headmasters for preparation.
                     </div>
                   </div>
-                </div>
+                )}
 
-                <div style={{ background: "rgba(0,0,0,0.4)", padding: "8px 16px", borderRadius: "10px", border: "1px solid rgba(16, 185, 129, 0.4)", textAlign: "right" }}>
-                  <span style={{ fontSize: "0.7rem", color: "#94a3b8", display: "block" }}>Subscription Payment MoMo</span>
-                  <strong style={{ color: "#34d399", fontSize: "1.2rem", fontFamily: "monospace" }}>0554594193</strong>
-                  <span style={{ fontSize: "0.75rem", color: "#38bdf8", fontWeight: 700, display: "block" }}>GABRIEL KUBI OSEI-APPIAH</span>
-                  <button
-                    type="button"
-                    onClick={() => setActiveTab("payment_admin")}
-                    style={{ marginTop: "6px", background: "#059669", color: "#fff", border: "none", borderRadius: "6px", padding: "5px 10px", fontSize: "0.72rem", fontWeight: 700, cursor: "pointer" }}
+                {isExpired && (
+                  <div style={{
+                    background: "rgba(239, 68, 68, 0.2)",
+                    border: "1px solid #ef4444",
+                    borderRadius: "10px",
+                    padding: "10px 16px",
+                    marginBottom: "1rem",
+                    display: "flex",
+                    alignItems: "center",
+                    gap: "10px"
+                  }}>
+                    <span style={{ fontSize: "1.2rem" }}>🚨</span>
+                    <div style={{ fontSize: "0.85rem", color: "#fee2e2" }}>
+                      <strong>AUTOMATIC LOCKOUT ENGAGED:</strong> Subscription date passed ({subscriptionSettings.endDate}). Unpaid tenants automatically locked out until continuation payment is cleared.
+                    </div>
+                  </div>
+                )}
+
+                {/* Subscription Telemetry Inscription Grid: Strictly Equal In Size */}
+                <div className="dev-equal-inscription-grid" style={{
+                  display: "grid",
+                  gridTemplateColumns: "repeat(4, 1fr)",
+                  gap: "14px",
+                  marginBottom: "1.25rem",
+                  alignItems: "stretch"
+                }}>
+                  <div
+                    className="dev-inscription-box"
+                    onClick={() => {
+                      setShowSubscriptionEditModal(true);
+                      showNotification("Opening Subscription Window Settings (Start Date)...");
+                    }}
+                    style={{
+                      background: "rgba(2, 6, 23, 0.75)",
+                      padding: "16px 18px",
+                      borderRadius: "12px",
+                      border: "1.5px solid rgba(56, 189, 248, 0.25)",
+                      display: "flex",
+                      flexDirection: "column",
+                      justifyContent: "space-between",
+                      minHeight: "96px",
+                      cursor: "pointer",
+                      transition: "all 0.2s"
+                    }}
+                    aria-label="Click to modify registration start date"
                   >
-                    Open Payment Gateways & Webhook Console ↗
-                  </button>
-                </div>
-              </div>
+                    <span style={{ fontSize: "0.74rem", color: "#94a3b8", display: "block", fontWeight: 800, letterSpacing: "0.5px" }}>REGISTRATION START DATE ✏️</span>
+                    <strong style={{ color: "#f8fafc", fontSize: "1.05rem", fontFamily: "monospace" }}>{subscriptionSettings.startDate}</strong>
+                  </div>
 
-              {/* INCOMING INSTITUTIONAL MOMO SUBSCRIPTION PAYMENTS (PENDING VERIFICATION & RESTORATION) */}
-              <div style={{
-                marginTop: "1.25rem",
-                padding: "16px 18px",
-                borderRadius: "14px",
-                background: "rgba(15, 23, 42, 0.8)",
-                border: "1.5px solid rgba(56, 189, 248, 0.3)"
-              }}>
-                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "12px", flexWrap: "wrap", gap: "8px" }}>
-                  <div style={{ display: "flex", alignItems: "center", gap: "10px" }}>
-                    <span style={{ fontSize: "1.3rem" }}>📋</span>
+                  <div
+                    className="dev-inscription-box"
+                    onClick={() => {
+                      setShowSubscriptionEditModal(true);
+                      showNotification("Opening Subscription Window Settings (End Date)...");
+                    }}
+                    style={{
+                      background: "rgba(2, 6, 23, 0.75)",
+                      padding: "16px 18px",
+                      borderRadius: "12px",
+                      border: "1.5px solid rgba(56, 189, 248, 0.25)",
+                      display: "flex",
+                      flexDirection: "column",
+                      justifyContent: "space-between",
+                      minHeight: "96px",
+                      cursor: "pointer",
+                      transition: "all 0.2s"
+                    }}
+                    aria-label="Click to modify subscription end date"
+                  >
+                    <span style={{ fontSize: "0.74rem", color: "#94a3b8", display: "block", fontWeight: 800, letterSpacing: "0.5px" }}>SUBSCRIPTION END DATE ✏️</span>
+                    <strong style={{ color: isExpired ? "#fca5a5" : "#38bdf8", fontSize: "1.05rem", fontFamily: "monospace" }}>{subscriptionSettings.endDate}</strong>
+                  </div>
+
+                  <div
+                    className="dev-inscription-box"
+                    onClick={() => {
+                      setActiveTab("licenses");
+                      showNotification("Navigating to Tenant Licenses & Subscription Countdowns...");
+                    }}
+                    style={{
+                      background: "rgba(2, 6, 23, 0.75)",
+                      padding: "16px 18px",
+                      borderRadius: "12px",
+                      border: "1.5px solid rgba(56, 189, 248, 0.25)",
+                      display: "flex",
+                      flexDirection: "column",
+                      justifyContent: "space-between",
+                      minHeight: "96px",
+                      cursor: "pointer",
+                      transition: "all 0.2s"
+                    }}
+                    aria-label="Click to inspect all active tenant countdowns"
+                  >
+                    <span style={{ fontSize: "0.74rem", color: "#94a3b8", display: "block", fontWeight: 800, letterSpacing: "0.5px" }}>DAYS REMAINING COUNTDOWN 🔍</span>
+                    <strong style={{ color: isExpired ? "#ef4444" : (isWarning ? "#fbbf24" : "#34d399"), fontSize: "1.2rem", fontWeight: 900 }}>
+                      {isExpired ? "0 Days (Expired)" : `${daysLeft} Days Remaining`}
+                    </strong>
+                  </div>
+
+                  <div
+                    className="dev-inscription-box"
+                    onClick={() => {
+                      const nextVal = !subscriptionSettings.autoLockOnFailure;
+                      setSubscriptionSettings((prev) => {
+                        const updated = { ...prev, autoLockOnFailure: nextVal };
+                        localStorage.setItem("gbs_system_subscription_settings", JSON.stringify(updated));
+                        localStorage.setItem("gbs_platform_subscription_settings", JSON.stringify(updated));
+                        return updated;
+                      });
+                      showNotification(`Auto-Lock on non-payment ${nextVal ? "ACTIVATED" : "DEACTIVATED"}`);
+                    }}
+                    style={{
+                      background: "rgba(2, 6, 23, 0.75)",
+                      padding: "16px 18px",
+                      borderRadius: "12px",
+                      border: "1.5px solid rgba(56, 189, 248, 0.25)",
+                      display: "flex",
+                      flexDirection: "column",
+                      justifyContent: "space-between",
+                      minHeight: "96px",
+                      cursor: "pointer",
+                      transition: "all 0.2s"
+                    }}
+                    aria-label="Click to toggle auto-lock enforcement on unpaid tenants"
+                  >
+                    <span style={{ fontSize: "0.74rem", color: "#94a3b8", display: "block", fontWeight: 800, letterSpacing: "0.5px" }}>AUTO-LOCK ON FAILURE ⚡</span>
+                    <strong style={{ color: subscriptionSettings.autoLockOnFailure ? "#34d399" : "#fca5a5", fontSize: "1rem", fontWeight: 800 }}>
+                      {subscriptionSettings.autoLockOnFailure ? "✓ AUTO-LOCK STRICT" : "DISABLED"}
+                    </strong>
+                  </div>
+                </div>
+
+                {/* Master Platform Continuation MoMo Remittance Box */}
+                <div style={{
+                  background: "linear-gradient(135deg, rgba(16, 185, 129, 0.1), rgba(6, 95, 70, 0.2))",
+                  border: "1.5px solid rgba(16, 185, 129, 0.4)",
+                  borderRadius: "12px",
+                  padding: "14px 18px",
+                  display: "flex",
+                  justifyContent: "space-between",
+                  alignItems: "center",
+                  flexWrap: "wrap",
+                  gap: "12px"
+                }}>
+                  <div style={{ display: "flex", alignItems: "center", gap: "12px" }}>
+                    <div style={{ fontSize: "1.8rem" }}>📱</div>
                     <div>
-                      <h4 style={{ margin: 0, color: "#f8fafc", fontSize: "0.95rem", fontWeight: 800 }}>
-                        Incoming Institutional MoMo Payments (Reconciliation & Instant Unlock)
-                      </h4>
-                      <span style={{ fontSize: "0.74rem", color: "#94a3b8" }}>
-                        Headmasters remit continuation payments with their exact Institution Name as Reference.
+                      <span style={{ fontSize: "0.75rem", color: "#6ee7b7", fontWeight: 800, letterSpacing: "1px", textTransform: "uppercase" }}>
+                        PLATFORM CONTINUATION & LICENSE RENEWAL MOMO
+                      </span>
+                      <div style={{ color: "#f8fafc", fontSize: "0.85rem", marginTop: "2px" }}>
+                        Every registered tenant and headmaster remits continuation dues to this designated merchant account:
+                      </div>
+                    </div>
+                  </div>
+
+                  <div style={{ background: "rgba(0,0,0,0.4)", padding: "8px 16px", borderRadius: "10px", border: "1px solid rgba(16, 185, 129, 0.4)", textAlign: "right" }}>
+                    <span style={{ fontSize: "0.7rem", color: "#94a3b8", display: "block" }}>Subscription Payment MoMo</span>
+                    <strong style={{ color: "#34d399", fontSize: "1.2rem", fontFamily: "monospace" }}>0554594193</strong>
+                    <span style={{ fontSize: "0.75rem", color: "#38bdf8", fontWeight: 700, display: "block" }}>GABRIEL KUBI OSEI-APPIAH</span>
+                    <button
+                      type="button"
+                      onClick={() => setActiveTab("payment_admin")}
+                      style={{ marginTop: "6px", background: "#059669", color: "#fff", border: "none", borderRadius: "6px", padding: "5px 10px", fontSize: "0.72rem", fontWeight: 700, cursor: "pointer" }}
+                    >
+                      Open Payment Gateways & Webhook Console ↗
+                    </button>
+                  </div>
+                </div>
+
+                {/* INCOMING INSTITUTIONAL MOMO SUBSCRIPTION PAYMENTS (PENDING VERIFICATION & RESTORATION) */}
+                <div style={{
+                  marginTop: "1.25rem",
+                  padding: "16px 18px",
+                  borderRadius: "14px",
+                  background: "rgba(15, 23, 42, 0.8)",
+                  border: "1.5px solid rgba(56, 189, 248, 0.3)"
+                }}>
+                  <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "12px", flexWrap: "wrap", gap: "8px" }}>
+                    <div style={{ display: "flex", alignItems: "center", gap: "10px" }}>
+                      <span style={{ fontSize: "1.3rem" }}>📋</span>
+                      <div>
+                        <h4 style={{ margin: 0, color: "#f8fafc", fontSize: "0.95rem", fontWeight: 800 }}>
+                          Incoming Institutional MoMo Payments (Reconciliation & Instant Unlock)
+                        </h4>
+                        <span style={{ fontSize: "0.74rem", color: "#94a3b8" }}>
+                          Headmasters remit continuation payments with their exact Institution Name as Reference.
+                        </span>
+                      </div>
+                    </div>
+                    <div style={{ display: "flex", gap: "8px" }}>
+                      <span style={{ background: "rgba(245, 158, 11, 0.2)", color: "#fbbf24", padding: "3px 10px", borderRadius: "999px", fontSize: "0.74rem", fontWeight: 800 }}>
+                        {momoReconciliations.filter(r => r.status === "PENDING_DEVELOPER_RECONCILIATION").length} Pending
+                      </span>
+                      <span style={{ background: "rgba(16, 185, 129, 0.2)", color: "#34d399", padding: "3px 10px", borderRadius: "999px", fontSize: "0.74rem", fontWeight: 800 }}>
+                        {momoReconciliations.filter(r => r.status === "VERIFIED_AND_UNLOCKED").length} Verified & Restored
                       </span>
                     </div>
                   </div>
-                  <div style={{ display: "flex", gap: "8px" }}>
-                    <span style={{ background: "rgba(245, 158, 11, 0.2)", color: "#fbbf24", padding: "3px 10px", borderRadius: "999px", fontSize: "0.74rem", fontWeight: 800 }}>
-                      {momoReconciliations.filter(r => r.status === "PENDING_DEVELOPER_RECONCILIATION").length} Pending
-                    </span>
-                    <span style={{ background: "rgba(16, 185, 129, 0.2)", color: "#34d399", padding: "3px 10px", borderRadius: "999px", fontSize: "0.74rem", fontWeight: 800 }}>
-                      {momoReconciliations.filter(r => r.status === "VERIFIED_AND_UNLOCKED").length} Verified & Restored
-                    </span>
-                  </div>
-                </div>
 
-                {momoReconciliations.length === 0 ? (
-                  <div style={{ textAlign: "center", padding: "1.5rem", color: "#64748b", fontSize: "0.82rem", background: "rgba(0,0,0,0.2)", borderRadius: "10px" }}>
-                    No incoming MoMo subscription payments submitted yet. When a Headmaster submits a transaction reference from their portal, it will immediately display here for 1-click verification & restoration.
-                  </div>
-                ) : (
-                  <div style={{ display: "flex", flexDirection: "column", gap: "10px" }}>
-                    {momoReconciliations.map((recon) => {
-                      const isPending = recon.status === "PENDING_DEVELOPER_RECONCILIATION";
-                      return (
-                        <div
-                          key={recon.id}
-                          style={{
-                            display: "flex",
-                            justifyContent: "space-between",
-                            alignItems: "center",
-                            background: isPending ? "rgba(245, 158, 11, 0.12)" : "rgba(16, 185, 129, 0.1)",
-                            border: `1.5px solid ${isPending ? "#f59e0b" : "#10b981"}`,
-                            borderRadius: "12px",
-                            padding: "12px 16px",
-                            flexWrap: "wrap",
-                            gap: "12px"
-                          }}
-                        >
-                          <div>
-                            <div style={{ display: "flex", alignItems: "center", gap: "8px", flexWrap: "wrap" }}>
-                              <span style={{ fontSize: "0.8rem", color: "#94a3b8" }}>Institution Reference:</span>
-                              <strong style={{ color: "#38bdf8", fontSize: "1rem" }}>
-                                "{recon.tenantName || recon.referenceUsed}"
-                              </strong>
-                              <span style={{
-                                background: isPending ? "rgba(245, 158, 11, 0.3)" : "rgba(16, 185, 129, 0.3)",
-                                color: isPending ? "#fde68a" : "#a7f3d0",
-                                padding: "2px 8px",
-                                borderRadius: "6px",
-                                fontSize: "0.7rem",
-                                fontWeight: 800
-                              }}>
-                                {isPending ? "⏳ PENDING VERIFICATION" : "✓ VERIFIED & RESTORED"}
-                              </span>
+                  {momoReconciliations.length === 0 ? (
+                    <div style={{ textAlign: "center", padding: "1.5rem", color: "#64748b", fontSize: "0.82rem", background: "rgba(0,0,0,0.2)", borderRadius: "10px" }}>
+                      No incoming MoMo subscription payments submitted yet. When a Headmaster submits a transaction reference from their portal, it will immediately display here for 1-click verification & restoration.
+                    </div>
+                  ) : (
+                    <div style={{ display: "flex", flexDirection: "column", gap: "10px" }}>
+                      {momoReconciliations.map((recon) => {
+                        const isPending = recon.status === "PENDING_DEVELOPER_RECONCILIATION";
+                        return (
+                          <div
+                            key={recon.id}
+                            style={{
+                              display: "flex",
+                              justifyContent: "space-between",
+                              alignItems: "center",
+                              background: isPending ? "rgba(245, 158, 11, 0.12)" : "rgba(16, 185, 129, 0.1)",
+                              border: `1.5px solid ${isPending ? "#f59e0b" : "#10b981"}`,
+                              borderRadius: "12px",
+                              padding: "12px 16px",
+                              flexWrap: "wrap",
+                              gap: "12px"
+                            }}
+                          >
+                            <div>
+                              <div style={{ display: "flex", alignItems: "center", gap: "8px", flexWrap: "wrap" }}>
+                                <span style={{ fontSize: "0.8rem", color: "#94a3b8" }}>Institution Reference:</span>
+                                <strong style={{ color: "#38bdf8", fontSize: "1rem" }}>
+                                  "{recon.tenantName || recon.referenceUsed}"
+                                </strong>
+                                <span style={{
+                                  background: isPending ? "rgba(245, 158, 11, 0.3)" : "rgba(16, 185, 129, 0.3)",
+                                  color: isPending ? "#fde68a" : "#a7f3d0",
+                                  padding: "2px 8px",
+                                  borderRadius: "6px",
+                                  fontSize: "0.7rem",
+                                  fontWeight: 800
+                                }}>
+                                  {isPending ? "⏳ PENDING VERIFICATION" : "✓ VERIFIED & RESTORED"}
+                                </span>
+                              </div>
+
+                              <div style={{ display: "flex", gap: "16px", flexWrap: "wrap", marginTop: "6px", fontSize: "0.8rem", color: "#cbd5e1" }}>
+                                <span>Txn ID: <strong style={{ color: "#34d399", fontFamily: "monospace" }}>{recon.txnId}</strong></span>
+                                <span>Amount: <strong>GHS {recon.amount}</strong></span>
+                                <span>Headmaster: <strong>{recon.headmasterName}</strong> ({recon.headmasterEmail})</span>
+                                <span>Submitted: <strong>{new Date(recon.submittedAt).toLocaleTimeString()}</strong></span>
+                              </div>
                             </div>
 
-                            <div style={{ display: "flex", gap: "16px", flexWrap: "wrap", marginTop: "6px", fontSize: "0.8rem", color: "#cbd5e1" }}>
-                              <span>Txn ID: <strong style={{ color: "#34d399", fontFamily: "monospace" }}>{recon.txnId}</strong></span>
-                              <span>Amount: <strong>GHS {recon.amount}</strong></span>
-                              <span>Headmaster: <strong>{recon.headmasterName}</strong> ({recon.headmasterEmail})</span>
-                              <span>Submitted: <strong>{new Date(recon.submittedAt).toLocaleTimeString()}</strong></span>
-                            </div>
-                          </div>
-
-                          <div style={{ display: "flex", gap: "8px" }}>
-                            {isPending && (
+                            <div style={{ display: "flex", gap: "8px" }}>
+                              {isPending && (
+                                <button
+                                  type="button"
+                                  onClick={() => handleVerifyAndUnlockPayment(recon)}
+                                  style={{
+                                    background: "linear-gradient(135deg, #10b981, #059669)",
+                                    border: "none",
+                                    color: "#fff",
+                                    padding: "8px 16px",
+                                    borderRadius: "8px",
+                                    fontSize: "0.8rem",
+                                    fontWeight: 800,
+                                    cursor: "pointer",
+                                    boxShadow: "0 2px 10px rgba(16, 185, 129, 0.4)"
+                                  }}
+                                >
+                                  ✓ Verify MoMo & Restore School Portal
+                                </button>
+                              )}
                               <button
                                 type="button"
-                                onClick={() => handleVerifyAndUnlockPayment(recon)}
+                                onClick={() => handleRejectPayment(recon.id)}
                                 style={{
-                                  background: "linear-gradient(135deg, #10b981, #059669)",
-                                  border: "none",
-                                  color: "#fff",
-                                  padding: "8px 16px",
+                                  background: "rgba(239, 68, 68, 0.2)",
+                                  border: "1px solid #ef4444",
+                                  color: "#fca5a5",
+                                  padding: "8px 12px",
                                   borderRadius: "8px",
-                                  fontSize: "0.8rem",
-                                  fontWeight: 800,
-                                  cursor: "pointer",
-                                  boxShadow: "0 2px 10px rgba(16, 185, 129, 0.4)"
+                                  fontSize: "0.78rem",
+                                  fontWeight: 700,
+                                  cursor: "pointer"
                                 }}
+                                aria-label="Permanently delete this MoMo subscription payment record"
                               >
-                                ✓ Verify MoMo & Restore School Portal
+                                🗑️ Delete Payment
                               </button>
-                            )}
-                            <button
-                              type="button"
-                              onClick={() => handleRejectPayment(recon.id)}
-                              style={{
-                                background: "rgba(239, 68, 68, 0.2)",
-                                border: "1px solid #ef4444",
-                                color: "#fca5a5",
-                                padding: "8px 12px",
-                                borderRadius: "8px",
-                                fontSize: "0.78rem",
-                                fontWeight: 700,
-                                cursor: "pointer"
-                              }}
-                              aria-label="Permanently delete this MoMo subscription payment record"
-                            >
-                              🗑️ Delete Payment
-                            </button>
+                            </div>
                           </div>
-                        </div>
-                      );
-                    })}
+                        );
+                      })}
+                    </div>
+                  )}
+                </div>
+              </div>
+            );
+          })()}
+
+          {/* EMERGENCY INTRUSION SENTINEL ALERT BANNER */}
+          {securityViolations.length > 0 && (
+            <div style={{
+              margin: "0 0 1.25rem 0",
+              padding: "16px 22px",
+              background: "linear-gradient(135deg, rgba(239, 68, 68, 0.22) 0%, rgba(185, 28, 28, 0.35) 100%)",
+              border: "2px solid #ef4444",
+              borderRadius: "14px",
+              boxShadow: "0 0 25px rgba(239, 68, 68, 0.35)",
+              display: "flex",
+              justifyContent: "space-between",
+              alignItems: "center",
+              flexWrap: "wrap",
+              gap: "12px"
+            }}>
+              <div style={{ display: "flex", alignItems: "center", gap: "14px" }}>
+                <div style={{
+                  width: "48px",
+                  height: "48px",
+                  borderRadius: "50%",
+                  background: "rgba(239, 68, 68, 0.3)",
+                  border: "2px solid #ef4444",
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "center",
+                  fontSize: "1.6rem",
+                  boxShadow: "0 0 15px rgba(239, 68, 68, 0.6)"
+                }}>
+                  🚨
+                </div>
+                <div>
+                  <div style={{ display: "flex", alignItems: "center", gap: "10px" }}>
+                    <h4 style={{ margin: 0, color: "#fca5a5", fontSize: "1.05rem", fontWeight: "900", textTransform: "uppercase", letterSpacing: "0.5px" }}>
+                      SECURITY SENTINEL: {securityViolations.length} UNAUTHORIZED DEVELOPER LOGIN ATTEMPTS DETECTED
+                    </h4>
+                    <span style={{ background: "#ef4444", color: "#fff", fontSize: "0.72rem", padding: "2px 8px", borderRadius: "10px", fontWeight: "800" }}>
+                      PENALTY NOTICES ACTIVE
+                    </span>
                   </div>
-                )}
-              </div>
-            </div>
-          );
-        })()}
-
-        {/* EMERGENCY INTRUSION SENTINEL ALERT BANNER */}
-        {securityViolations.length > 0 && (
-          <div style={{
-            margin: "0 0 1.25rem 0",
-            padding: "16px 22px",
-            background: "linear-gradient(135deg, rgba(239, 68, 68, 0.22) 0%, rgba(185, 28, 28, 0.35) 100%)",
-            border: "2px solid #ef4444",
-            borderRadius: "14px",
-            boxShadow: "0 0 25px rgba(239, 68, 68, 0.35)",
-            display: "flex",
-            justifyContent: "space-between",
-            alignItems: "center",
-            flexWrap: "wrap",
-            gap: "12px"
-          }}>
-            <div style={{ display: "flex", alignItems: "center", gap: "14px" }}>
-              <div style={{
-                width: "48px",
-                height: "48px",
-                borderRadius: "50%",
-                background: "rgba(239, 68, 68, 0.3)",
-                border: "2px solid #ef4444",
-                display: "flex",
-                alignItems: "center",
-                justifyContent: "center",
-                fontSize: "1.6rem",
-                boxShadow: "0 0 15px rgba(239, 68, 68, 0.6)"
-              }}>
-                🚨
-              </div>
-              <div>
-                <div style={{ display: "flex", alignItems: "center", gap: "10px" }}>
-                  <h4 style={{ margin: 0, color: "#fca5a5", fontSize: "1.05rem", fontWeight: "900", textTransform: "uppercase", letterSpacing: "0.5px" }}>
-                    SECURITY SENTINEL: {securityViolations.length} UNAUTHORIZED DEVELOPER LOGIN ATTEMPTS DETECTED
-                  </h4>
-                  <span style={{ background: "#ef4444", color: "#fff", fontSize: "0.72rem", padding: "2px 8px", borderRadius: "10px", fontWeight: "800" }}>
-                    PENALTY NOTICES ACTIVE
-                  </span>
+                  <p style={{ margin: "4px 0 0 0", color: "#fecaca", fontSize: "0.85rem", maxWidth: "900px" }}>
+                    Non-developer users from registered institutions attempted unauthorized entry. System enforced perimeter lock and displayed: <strong style={{ color: "#fff", background: "rgba(0,0,0,0.4)", padding: "2px 6px", borderRadius: "4px" }}>"your institution will be notify with your details to your headmaster"</strong>.
+                  </p>
                 </div>
-                <p style={{ margin: "4px 0 0 0", color: "#fecaca", fontSize: "0.85rem", maxWidth: "900px" }}>
-                  Non-developer users from registered institutions attempted unauthorized entry. System enforced perimeter lock and displayed: <strong style={{ color: "#fff", background: "rgba(0,0,0,0.4)", padding: "2px 6px", borderRadius: "4px" }}>"your institution will be notify with your details to your headmaster"</strong>.
-                </p>
+              </div>
+              <div style={{ display: "flex", gap: "10px" }}>
+                <button
+                  type="button"
+                  onClick={() => setActiveTab("intrusion_sentinel")}
+                  style={{
+                    background: "linear-gradient(135deg, #ef4444, #b91c1c)",
+                    color: "#ffffff",
+                    border: "none",
+                    borderRadius: "8px",
+                    padding: "10px 18px",
+                    fontWeight: "800",
+                    fontSize: "0.82rem",
+                    cursor: "pointer",
+                    boxShadow: "0 4px 15px rgba(239, 68, 68, 0.4)"
+                  }}
+                >
+                  Inspect Intrusion Dossier ({securityViolations.length})
+                </button>
               </div>
             </div>
-            <div style={{ display: "flex", gap: "10px" }}>
-              <button
-                type="button"
-                onClick={() => setActiveTab("intrusion_sentinel")}
-                style={{
-                  background: "linear-gradient(135deg, #ef4444, #b91c1c)",
-                  color: "#ffffff",
-                  border: "none",
-                  borderRadius: "8px",
-                  padding: "10px 18px",
-                  fontWeight: "800",
-                  fontSize: "0.82rem",
-                  cursor: "pointer",
-                  boxShadow: "0 4px 15px rgba(239, 68, 68, 0.4)"
-                }}
-              >
-                Inspect Intrusion Dossier ({securityViolations.length})
-              </button>
-            </div>
-          </div>
-        )}
+          )}
 
-        {/* HERO ALERT BANNER: PENDING ONBOARDING APPLICATIONS QUEUE */}
-        {pendingAppsCount > 0 && (
-          <div style={{
-            margin: "0 0 1.25rem 0",
-            padding: "16px 22px",
-            background: "linear-gradient(135deg, rgba(245, 158, 11, 0.22) 0%, rgba(180, 83, 9, 0.35) 100%)",
-            border: "2px solid #f59e0b",
-            borderRadius: "14px",
-            boxShadow: "0 0 25px rgba(245, 158, 11, 0.35)",
-            display: "flex",
-            justifyContent: "space-between",
-            alignItems: "center",
-            flexWrap: "wrap",
-            gap: "12px"
-          }}>
-            <div style={{ display: "flex", alignItems: "center", gap: "14px" }}>
-              <div style={{
-                width: "48px",
-                height: "48px",
-                borderRadius: "50%",
-                background: "rgba(245, 158, 11, 0.3)",
-                border: "2px solid #f59e0b",
-                display: "flex",
-                alignItems: "center",
-                justifyContent: "center",
-                fontSize: "1.6rem",
-                boxShadow: "0 0 15px rgba(245, 158, 11, 0.6)"
-              }}>
-                ⚡
-              </div>
-              <div>
-                <div style={{ display: "flex", alignItems: "center", gap: "10px" }}>
-                  <h4 style={{ margin: 0, color: "#fef08a", fontSize: "1.05rem", fontWeight: "900", textTransform: "uppercase", letterSpacing: "0.5px" }}>
-                    ONBOARDING QUEUE: {pendingAppsCount} NEW INSTITUTION REGISTRATION{pendingAppsCount > 1 ? "S" : ""} AWAITING DEVELOPER APPROVAL
-                  </h4>
-                  <span style={{ background: "#f59e0b", color: "#0f172a", fontSize: "0.72rem", padding: "2px 8px", borderRadius: "10px", fontWeight: "900" }}>
-                    ACTION REQUIRED
-                  </span>
+          {/* HERO ALERT BANNER: PENDING ONBOARDING APPLICATIONS QUEUE */}
+          {pendingAppsCount > 0 && (
+            <div style={{
+              margin: "0 0 1.25rem 0",
+              padding: "16px 22px",
+              background: "linear-gradient(135deg, rgba(245, 158, 11, 0.22) 0%, rgba(180, 83, 9, 0.35) 100%)",
+              border: "2px solid #f59e0b",
+              borderRadius: "14px",
+              boxShadow: "0 0 25px rgba(245, 158, 11, 0.35)",
+              display: "flex",
+              justifyContent: "space-between",
+              alignItems: "center",
+              flexWrap: "wrap",
+              gap: "12px"
+            }}>
+              <div style={{ display: "flex", alignItems: "center", gap: "14px" }}>
+                <div style={{
+                  width: "48px",
+                  height: "48px",
+                  borderRadius: "50%",
+                  background: "rgba(245, 158, 11, 0.3)",
+                  border: "2px solid #f59e0b",
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "center",
+                  fontSize: "1.6rem",
+                  boxShadow: "0 0 15px rgba(245, 158, 11, 0.6)"
+                }}>
+                  ⚡
                 </div>
-                <p style={{ margin: "4px 0 0 0", color: "#fde68a", fontSize: "0.85rem", maxWidth: "900px" }}>
-                  New school onboarding applications have been submitted. Review institution credentials and approve to provision tenant enclaves and trigger automated confirmation SMS.
-                </p>
+                <div>
+                  <div style={{ display: "flex", alignItems: "center", gap: "10px" }}>
+                    <h4 style={{ margin: 0, color: "#fef08a", fontSize: "1.05rem", fontWeight: "900", textTransform: "uppercase", letterSpacing: "0.5px" }}>
+                      ONBOARDING QUEUE: {pendingAppsCount} NEW INSTITUTION REGISTRATION{pendingAppsCount > 1 ? "S" : ""} AWAITING DEVELOPER APPROVAL
+                    </h4>
+                    <span style={{ background: "#f59e0b", color: "#0f172a", fontSize: "0.72rem", padding: "2px 8px", borderRadius: "10px", fontWeight: "900" }}>
+                      ACTION REQUIRED
+                    </span>
+                  </div>
+                  <p style={{ margin: "4px 0 0 0", color: "#fde68a", fontSize: "0.85rem", maxWidth: "900px" }}>
+                    New school onboarding applications have been submitted. Review institution credentials and approve to provision tenant enclaves and trigger automated confirmation SMS.
+                  </p>
+                </div>
+              </div>
+              <div style={{ display: "flex", gap: "10px" }}>
+                <button
+                  type="button"
+                  onClick={() => { setActiveTab("onboarding"); setOnboardingTabMode("INCOMING"); }}
+                  style={{
+                    background: "linear-gradient(135deg, #f59e0b, #d97706)",
+                    color: "#0f172a",
+                    border: "none",
+                    borderRadius: "8px",
+                    padding: "10px 18px",
+                    fontWeight: "900",
+                    fontSize: "0.82rem",
+                    cursor: "pointer",
+                    boxShadow: "0 4px 15px rgba(245, 158, 11, 0.4)"
+                  }}
+                >
+                  ⚡ Review & Approve Now ({pendingAppsCount} Pending)
+                </button>
               </div>
             </div>
-            <div style={{ display: "flex", gap: "10px" }}>
-              <button
-                type="button"
-                onClick={() => { setActiveTab("onboarding"); setOnboardingTabMode("INCOMING"); }}
-                style={{
-                  background: "linear-gradient(135deg, #f59e0b, #d97706)",
-                  color: "#0f172a",
-                  border: "none",
-                  borderRadius: "8px",
-                  padding: "10px 18px",
-                  fontWeight: "900",
-                  fontSize: "0.82rem",
-                  cursor: "pointer",
-                  boxShadow: "0 4px 15px rgba(245, 158, 11, 0.4)"
-                }}
-              >
-                ⚡ Review & Approve Now ({pendingAppsCount} Pending)
-              </button>
-            </div>
-          </div>
-        )}
+          )}
+        </div>
 
         {/* Interactive Developer Tab Navigation */}
         <div className="dev-tab-navigation">

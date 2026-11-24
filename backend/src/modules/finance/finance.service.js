@@ -293,35 +293,33 @@ async function recordPayment(tenantId, data, receivedById = null) {
   }
 
   const receiptNumber = data.receiptNumber || `RCP-2026-${Math.floor(100000 + Math.random() * 900000)}`;
-  const paymentMethod = data.paymentMethod || 'BANK_TRANSFER';
+  const paymentMethod = String(data.paymentMethod || 'BANK_TRANSFER').toUpperCase();
   const transactionRef = data.transactionRef || (rawInv ? `PORTAL-${rawInv}-${Date.now()}` : `TXN-${Date.now()}`);
+  const rawCur = String(data.currency || 'GHS').trim().toUpperCase();
+  const normalizedCurrency = (rawCur === 'GH₵' || rawCur === '₵' || rawCur === 'GHC' || !/^[A-Z]{3}$/.test(rawCur)) ? 'GHS' : rawCur;
+  const parsedStudentId = data.studentId && /^\d+$/.test(String(data.studentId).trim())
+    ? parseInt(String(data.studentId).trim(), 10)
+    : (invoice?.studentId || null);
+
+  if (!invoice && parsedStudentId) {
+    invoice = await prisma.studentInvoice.findFirst({
+      where: { tenantId: tid, studentId: parsedStudentId, status: { not: 'PAID' } }
+    }).catch(() => null);
+    if (invoice) numericInvoiceId = invoice.id;
+  }
 
   // Execute atomic reconciliation
   const result = await prisma.$transaction(async (tx) => {
-    // A. Record payment transaction
-    const payment = await tx.paymentTransaction.create({
-      data: {
-        tenantId: tid,
-        invoiceId: numericInvoiceId,
-        receiptNumber,
-        amountPaid,
-        paymentMethod,
-        transactionRef,
-        studentCode: data.indexNumber || null,
-        payerPhone: data.momoNumber || null,
-        gatewayStatus: 'SUCCESS',
-        paidAt: new Date(),
-        receivedById: receivedById ? parseInt(receivedById, 10) : null,
-        notes: data.notes || (data.studentName ? `Portal remittance for ${data.studentName} (${data.studentClass || 'Student'})` : null)
-      }
-    });
-
-    // B. Reconcile invoice balances when tied to a numeric DB invoice
+    const balanceBefore = invoice ? Number(invoice.balanceDue || 0) : amountPaid;
     let updatedInvoice = null;
+    let balanceAfter = 0;
+
+    // A. Reconcile invoice balances when tied to a numeric DB invoice
     if (invoice && numericInvoiceId !== null) {
-      const updatedPaid = invoice.paidAmount + amountPaid;
-      const updatedBalance = Math.max(0, Number((invoice.netAmount - updatedPaid).toFixed(2)));
+      const updatedPaid = Number((Number(invoice.paidAmount || 0) + amountPaid).toFixed(2));
+      const updatedBalance = Math.max(0, Number((Number(invoice.netAmount || invoice.amount || 0) - updatedPaid).toFixed(2)));
       const updatedStatus = updatedBalance === 0 ? 'PAID' : 'PARTIAL';
+      balanceAfter = updatedBalance;
 
       updatedInvoice = await tx.studentInvoice.update({
         where: { id: numericInvoiceId },
@@ -333,7 +331,69 @@ async function recordPayment(tenantId, data, receivedById = null) {
       });
     }
 
-    // C. Record immutable audit log
+    // B. Record canonical payment transaction (100% aligned with PaymentGatewayAdminPanel & Reconciler)
+    const payment = await tx.paymentTransaction.create({
+      data: {
+        tenantId: tid,
+        invoiceId: numericInvoiceId,
+        receiptNumber,
+        reference: transactionRef,
+        providerReference: transactionRef,
+        gateway: data.gateway || 'SCHOOL_DIRECT',
+        channel: paymentMethod,
+        paymentScope: 'SCHOOL_FEES',
+        studentId: parsedStudentId,
+        studentCode: data.indexNumber || data.studentCode || null,
+        payerUserId: receivedById ? parseInt(receivedById, 10) : parsedStudentId,
+        payerPhone: data.momoNumber || data.payerPhone || null,
+        payerEmail: data.payerEmail || null,
+        academicYear: data.academicYear || '2026-2027',
+        term: invoice?.academicTerm || data.term || '2026-2027 Term 2',
+        feeAccount: invoice?.title || data.feeAccount || 'Tuition & School Fees',
+        expectedAmount: amountPaid,
+        amountPaid,
+        currency: normalizedCurrency,
+        paymentMethod,
+        transactionRef,
+        gatewayStatus: 'SUCCESSFUL',
+        accountingPosted: true,
+        paidAt: new Date(),
+        verifiedAt: new Date(),
+        receivedById: receivedById ? parseInt(receivedById, 10) : null,
+        notes: data.notes || (data.studentName ? `Portal remittance for ${data.studentName} (${data.studentClass || 'Student'})` : null)
+      }
+    });
+
+    // C. Issue verifiable PaymentReceipt record
+    let receipt = null;
+    try {
+      receipt = await tx.paymentReceipt.create({
+        data: {
+          tenantId: tid,
+          paymentTransactionId: payment.id,
+          invoiceId: numericInvoiceId,
+          studentId: parsedStudentId,
+          receiptNumber,
+          transactionRef,
+          providerReference: transactionRef,
+          institutionName: data.institutionName || `GBS Institution #${tid}`,
+          studentName: data.studentName || 'Student Account',
+          studentCode: data.indexNumber || data.studentCode || (parsedStudentId ? `STU-${tid}-${parsedStudentId}` : null),
+          academicYear: data.academicYear || '2026-2027',
+          term: invoice?.academicTerm || data.term || '2026-2027 Term 2',
+          feeDescription: invoice?.title || data.feeAccount || 'School Fees Payment',
+          gateway: data.gateway || 'SCHOOL_DIRECT',
+          channel: paymentMethod,
+          currency: normalizedCurrency,
+          amountPaid,
+          balanceBefore,
+          balanceAfter,
+          issuedAt: new Date()
+        }
+      });
+    } catch { }
+
+    // D. Record immutable audit log
     await tx.auditLog.create({
       data: {
         tenantId: tid,
@@ -341,13 +401,13 @@ async function recordPayment(tenantId, data, receivedById = null) {
         module: 'FINANCE',
         action: 'PAYMENT_RECORDED',
         details: invoice
-          ? `Recorded payment of $${amountPaid} for Invoice ${invoice.invoiceNumber}. Balance: $${updatedInvoice.balanceDue} (Receipt: ${receiptNumber})`
-          : `Recorded portal fee remittance of $${amountPaid} for ${data.studentName || data.indexNumber || 'Student'} (Receipt: ${receiptNumber})`,
+          ? `Recorded payment of ${normalizedCurrency} ${amountPaid} for Invoice ${invoice.invoiceNumber}. Balance: ${normalizedCurrency} ${updatedInvoice.balanceDue} (Receipt: ${receiptNumber})`
+          : `Recorded portal fee remittance of ${normalizedCurrency} ${amountPaid} for ${data.studentName || data.indexNumber || 'Student'} (Receipt: ${receiptNumber})`,
         ipAddress: '127.0.0.1'
       }
     });
 
-    return { payment, updatedInvoice };
+    return { payment, updatedInvoice, receipt };
   });
 
   return result;

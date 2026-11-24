@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useRef } from "react";
+import { createPortal } from "react-dom";
 import { Link, useNavigate, useLocation } from "react-router-dom";
 import apiClient from "../../../../../api/client/apiClient";
 import WindowControlsBar from "../../../../../components/common/WindowControlsBar";
@@ -946,12 +947,18 @@ export function StudentDashboard({ initialTab } = {}) {
             audio: { echoCancellation: true, noiseSuppression: true, autoGainControl: true }
           });
         } catch {
-          stream = await navigator.mediaDevices.getUserMedia({ video: true, audio: true });
+          try {
+            stream = await navigator.mediaDevices.getUserMedia({ video: true, audio: true });
+          } catch {
+            stream = await navigator.mediaDevices.getUserMedia({ video: true, audio: false });
+            setIsPeerMicMuted(true);
+          }
         }
         localPeerStreamRef.current = stream;
         if (localPeerVideoRef.current) {
           localPeerVideoRef.current.srcObject = stream;
           localPeerVideoRef.current.muted = true;
+          localPeerVideoRef.current.playsInline = true;
           localPeerVideoRef.current.play().catch(() => { });
         }
       }
@@ -4777,6 +4784,14 @@ export function StudentDashboard({ initialTab } = {}) {
                 onFeedback={(msg, isErr) => setFeedback({ type: isErr ? "error" : "success", message: msg })}
               />
 
+              {/* Real-Time Direct Student Video / Voice Calling Studio (Teachers, Headmaster & Peers) */}
+              <LiveCallLauncherAndReceiver
+                variant="FULL_STUDIO"
+                userRole="STUDENT"
+                currentUser={currentUser}
+                onFeedback={(msg, isErr) => setFeedback({ type: isErr ? "error" : "success", message: msg })}
+              />
+
               {/* Requirement: Live Online Classes with Day Reminder from Teacher Notice */}
               <h3 style={{ color: "#34d399", margin: "0 0 12px", display: "flex", alignItems: "center", gap: "8px" }}>
                 <span>🔴</span> Active & Upcoming Live Online Classes to Join:
@@ -7897,7 +7912,8 @@ export function StudentDashboard({ initialTab } = {}) {
       )}
 
       {/* PEER-TO-PEER LIVE VIDEO CALL MODAL */}
-      {activePeerVideoCall && (
+      {activePeerVideoCall && (() => {
+        const peerModal = (
         <div style={{
           position: "fixed",
           inset: 0,
@@ -7962,6 +7978,10 @@ export function StudentDashboard({ initialTab } = {}) {
                   autoPlay
                   playsInline
                   muted
+                  onLoadedMetadata={(e) => {
+                    e.currentTarget.muted = true;
+                    e.currentTarget.play().catch(() => { });
+                  }}
                   style={{
                     width: "100%",
                     height: "100%",
@@ -8019,11 +8039,18 @@ export function StudentDashboard({ initialTab } = {}) {
               </button>
               <button
                 type="button"
-                onClick={() => {
+                onClick={async () => {
                   const nextOff = !isPeerCameraOff;
                   setIsPeerCameraOff(nextOff);
-                  if (localPeerStreamRef.current) {
+                  const liveVidTracks = (localPeerStreamRef.current?.getVideoTracks?.() || []).filter((t) => t.readyState === "live");
+                  if (!nextOff && liveVidTracks.length === 0) {
+                    await startLocalPeerCamera();
+                  } else if (localPeerStreamRef.current) {
                     localPeerStreamRef.current.getVideoTracks().forEach((t) => { t.enabled = !nextOff; });
+                    if (!nextOff && localPeerVideoRef.current) {
+                      localPeerVideoRef.current.srcObject = localPeerStreamRef.current;
+                      localPeerVideoRef.current.play().catch(() => { });
+                    }
                   }
                 }}
                 style={{
@@ -8072,7 +8099,11 @@ export function StudentDashboard({ initialTab } = {}) {
             </div>
           </div>
         </div>
-      )}
+        );
+        return typeof document !== "undefined" && document.body
+          ? createPortal(peerModal, document.body)
+          : peerModal;
+      })()}
 
       {/* CATCH-UP RECORDING VIDEO PLAYER & PDF NOTES MODAL */}
       {showCatchUpModal && (

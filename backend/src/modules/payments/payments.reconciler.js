@@ -101,9 +101,11 @@ async function reconcileVerifiedOutcome({
   }
 
   const result = await prisma.$transaction(async (tx) => {
-    // Re-read inside transaction to prevent concurrent webhook + polling double posting
+    // Re-read inside transaction by unique reference when present (prevents any numeric ID collision)
     const freshTx = await tx.paymentTransaction.findFirst({
-      where: { id: transaction.id, tenantId: transaction.tenantId }
+      where: transaction.reference
+        ? { reference: transaction.reference, tenantId: transaction.tenantId }
+        : { id: transaction.id, tenantId: transaction.tenantId }
     });
     if (!freshTx) {
       throw new AppError('Transaction not found for school tenant.', 404);
@@ -182,7 +184,7 @@ async function reconcileVerifiedOutcome({
       }
 
       const updatedTx = await tx.paymentTransaction.update({
-        where: { id: freshTx.id },
+        where: freshTx.reference ? { reference: freshTx.reference } : { id: freshTx.id },
         data: {
           gatewayStatus: TRANSACTION_STATES.SUCCESSFUL,
           providerReference: providerReference || freshTx.providerReference,
@@ -226,7 +228,7 @@ async function reconcileVerifiedOutcome({
     }
 
     const updatedTx = await tx.paymentTransaction.update({
-      where: { id: freshTx.id },
+      where: freshTx.reference ? { reference: freshTx.reference } : { id: freshTx.id },
       data: {
         gatewayStatus: targetStatus,
         providerReference: providerReference || freshTx.providerReference,

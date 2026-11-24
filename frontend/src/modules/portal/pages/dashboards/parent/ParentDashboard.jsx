@@ -1039,7 +1039,11 @@ export default function ParentDashboard() {
                   <span className="role-kpi-icon">📊</span>
                   <div className="role-kpi-data">
                     <span className="role-kpi-title">Term Attendance</span>
-                    <strong className="role-kpi-num">98.5% Present</strong>
+                    <strong className="role-kpi-num">
+                      {childAttendance.length > 0
+                        ? `${Math.round((childAttendance.filter((a) => String(a.status || "").toUpperCase() === "PRESENT").length / childAttendance.length) * 1000) / 10}% Present`
+                        : "Ready"}
+                    </strong>
                   </div>
                 </div>
                 <div
@@ -1052,7 +1056,12 @@ export default function ParentDashboard() {
                   <span className="role-kpi-icon">💳</span>
                   <div className="role-kpi-data">
                     <span className="role-kpi-title">Tuition Balance</span>
-                    <strong className="role-kpi-num">$1,300 Due</strong>
+                    <strong className="role-kpi-num">
+                      {(() => {
+                        const dueSum = (childInvoices || []).reduce((acc, inv) => acc + Math.max(0, Number(inv.balanceDue ?? (Number(inv.netAmount || inv.amount || 0) - Number(inv.paidAmount || 0)))), 0);
+                        return dueSum > 0 ? `${currencySymbol}${dueSum.toLocaleString()} Due` : `${currencySymbol}0 Due`;
+                      })()}
+                    </strong>
                   </div>
                 </div>
                 <div
@@ -3056,11 +3065,11 @@ export default function ParentDashboard() {
         onClose={() => setGatewayPaymentTarget(null)}
         tenantId={currentUser?.tenantId || 1}
         studentId={selectedChild?.id || selectedChild?.studentId || "3"}
-        studentIdentifier={selectedChild?.studentCode || selectedChild?.id || "3"}
+        studentIdentifier={String(selectedChild?.studentCode || selectedChild?.id || "3")}
         studentName={selectedChild ? `${selectedChild.firstName || ""} ${selectedChild.lastName || ""}`.trim() : "Ward"}
-        invoiceId={gatewayPaymentTarget?.id || null}
+        invoiceId={/^\d+$/.test(String(gatewayPaymentTarget?.id || "")) ? Number(gatewayPaymentTarget.id) : null}
         amount={gatewayPaymentTarget?.balanceDue || null}
-        currency={currencySymbol === "$" ? "GHS" : (currencySymbol || "GHS")}
+        currency={/^[A-Z]{3}$/.test(String(currencySymbol || "").toUpperCase()) ? String(currencySymbol).toUpperCase() : "GHS"}
         title={gatewayPaymentTarget?.title || "School Tuition & Fee Settlement"}
         onSuccess={({ transaction, receipt }) => {
           if (selectedChild?.id) {

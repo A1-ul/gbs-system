@@ -1590,7 +1590,7 @@ export default function AccountantDashboard() {
                   <span className="role-kpi-icon">💰</span>
                   <div className="role-kpi-data">
                     <span className="role-kpi-title">Total Billed ↗</span>
-                    <strong className="role-kpi-num">{currencySymbol}{(telemetry.totalBilled || 148500).toLocaleString()}</strong>
+                    <strong className="role-kpi-num">{currencySymbol}{(telemetry.totalBilled ?? (isDemoTenant ? 148500 : 0)).toLocaleString()}</strong>
                   </div>
                 </div>
                 <div
@@ -1761,6 +1761,14 @@ export default function AccountantDashboard() {
               style={{ borderLeft: "3px solid #d4af37", color: activeTab === "stationery" ? "#f6dd84" : undefined, fontWeight: 800 }}
             >
               🎒 School Stationery Audit &amp; Expenses
+            </button>
+            <button
+              type="button"
+              className={`role-tab-btn ${activeTab === "calls" ? "active" : ""}`}
+              onClick={() => setActiveTab("calls")}
+              style={{ borderLeft: "3px solid #38bdf8", color: activeTab === "calls" ? "#ffffff" : "#7dd3fc", fontWeight: 800 }}
+            >
+              🎥 Live Video &amp; Voice Calls
             </button>
             <button
               type="button"
@@ -4303,6 +4311,17 @@ export default function AccountantDashboard() {
                 mode="ACCOUNTANT"
                 currentUser={(() => { try { return JSON.parse(localStorage.getItem("gbs_user") || "null") || { role: "ACCOUNTANT" }; } catch { return { role: "ACCOUNTANT" }; } })()}
                 onExpenseRecorded={() => { fetchExpenses(); fetchTelemetry(); }}
+              />
+            </div>
+          )}
+
+          {activeTab === "calls" && (
+            <div className="role-workspace-card">
+              <LiveCallLauncherAndReceiver
+                variant="FULL_STUDIO"
+                userRole="ACCOUNTANT"
+                currentUser={currentUser}
+                onFeedback={(msg, isErr) => setFeedback({ type: isErr ? "error" : "success", message: msg })}
               />
             </div>
           )}

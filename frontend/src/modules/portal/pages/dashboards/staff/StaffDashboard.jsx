@@ -579,6 +579,14 @@ export default function StaffDashboard() {
             </button>
             <button
               type="button"
+              className={`role-tab-btn ${activeTab === "calls" ? "active" : ""}`}
+              onClick={() => setActiveTab("calls")}
+              style={{ borderLeft: "3px solid #38bdf8", color: activeTab === "calls" ? "#ffffff" : "#7dd3fc", fontWeight: 800 }}
+            >
+              🎥 Live Video &amp; Voice Calls
+            </button>
+            <button
+              type="button"
               className={`role-tab-btn ${activeTab === "clinic" ? "active" : ""}`}
               onClick={() => setActiveTab("clinic")}
               style={{ borderLeft: "3px solid #10b981", color: activeTab === "clinic" ? "#ffffff" : "#6ee7b7", fontWeight: 800 }}
@@ -1082,6 +1090,17 @@ export default function StaffDashboard() {
               <SchoolStationeryHubPanel
                 mode="STAFF"
                 currentUser={(() => { try { return JSON.parse(localStorage.getItem("gbs_user") || "null") || { role: "STAFF" }; } catch { return { role: "STAFF" }; } })()}
+              />
+            </div>
+          )}
+
+          {activeTab === "calls" && (
+            <div className="role-workspace-card">
+              <LiveCallLauncherAndReceiver
+                variant="FULL_STUDIO"
+                userRole="STAFF"
+                currentUser={currentUser}
+                onFeedback={(msg, isErr) => setFeedback({ type: isErr ? "error" : "success", message: msg })}
               />
             </div>
           )}

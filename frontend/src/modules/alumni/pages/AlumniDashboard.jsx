@@ -5,6 +5,7 @@ import WindowControlsBar from "../../../components/common/WindowControlsBar";
 import TopCenterSystemBanner from "../../../components/common/TopCenterSystemBanner";
 import OfficialInstitutionalSeal from "../../../components/common/OfficialInstitutionalSeal";
 import UniversalRoleGuideModal from "../../../components/common/UniversalRoleGuideModal";
+import LiveCallLauncherAndReceiver from "../../../components/common/LiveCallLauncherAndReceiver";
 import { navigateToDetail } from "../../../utils/universalNavigation";
 import { getActiveSchoolName, getActiveSchoolLogo } from "../../../utils/schoolBranding";
 import { isDemoSandboxMode, clearAuthStorage } from "../../../utils/tokenStorage";
@@ -755,6 +756,11 @@ export default function AlumniDashboard() {
 
         {/* Main Container */}
         <div style={{ maxWidth: "1400px", margin: "0 auto", padding: "1.5rem 2rem" }}>
+          <LiveCallLauncherAndReceiver
+            variant="GLOBAL_RECEIVER"
+            userRole="ALUMNI"
+            onFeedback={(msg, isErr) => setAlumniNotice({ type: isErr ? "error" : "success", message: msg })}
+          />
           {alumniNotice && (
             <div style={{
               marginBottom: "1rem",
@@ -1589,6 +1595,11 @@ export default function AlumniDashboard() {
           {/* TAB 4: 1-CLICK ZERO-PROMPT ZOOM REUNIONS & MENTORSHIP */}
           {activeTab === "ZOOM_REUNIONS" && (
             <div>
+              <LiveCallLauncherAndReceiver
+                variant="FULL_STUDIO"
+                userRole="ALUMNI"
+                onFeedback={(msg, isErr) => setAlumniNotice({ type: isErr ? "error" : "success", message: msg })}
+              />
               <div style={{
                 display: "flex",
                 justifyContent: "space-between",

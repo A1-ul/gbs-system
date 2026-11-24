@@ -155,24 +155,28 @@ h6 {
   --gbs-role-accent: #d4af37;
   --gbs-role-accent-soft: rgba(212, 175, 55, 0.20);
 }
+
 .role-dashboard-wrapper.role-theme-admin .role-dashboard-overlay {
   background:
     radial-gradient(circle at 15% 15%, rgba(212, 175, 55, 0.20) 0%, transparent 46%),
     radial-gradient(circle at 85% 22%, rgba(107, 29, 47, 0.24) 0%, transparent 50%),
     linear-gradient(135deg, rgba(6, 15, 30, 0.68) 0%, rgba(8, 20, 40, 0.64) 50%, rgba(15, 35, 71, 0.72) 100%) !important;
 }
+
 .role-dashboard-wrapper.role-theme-admin .role-header {
   background: linear-gradient(90deg, rgba(6, 15, 30, 0.96) 0%, rgba(8, 20, 40, 0.95) 50%, rgba(15, 35, 71, 0.96) 100%) !important;
   border-bottom: 2px solid #d4af37 !important;
   box-shadow: 0 6px 25px rgba(4, 10, 22, 0.65), 0 0 20px rgba(212, 175, 55, 0.26) !important;
   backdrop-filter: blur(16px);
 }
+
 .role-dashboard-wrapper.role-theme-admin .role-hero-banner {
   background: linear-gradient(135deg, rgba(6, 15, 30, 0.92) 0%, rgba(10, 25, 47, 0.90) 55%, rgba(15, 35, 71, 0.94) 100%) !important;
   border: 1.5px solid rgba(212, 175, 55, 0.72) !important;
   box-shadow: 0 20px 50px rgba(4, 10, 22, 0.52), inset 0 1px 0 rgba(255, 255, 255, 0.16) !important;
   backdrop-filter: blur(14px);
 }
+
 .role-dashboard-wrapper.role-theme-admin .role-workspace-card,
 .role-dashboard-wrapper.role-theme-admin .role-kpi-box,
 .role-dashboard-wrapper.role-theme-admin .admin-locator-box {
@@ -181,11 +185,13 @@ h6 {
   border-left: 3.5px solid #d4af37 !important;
   backdrop-filter: blur(14px);
 }
+
 .role-dashboard-wrapper.role-theme-admin .role-tab-nav .role-tab-btn {
   background: linear-gradient(135deg, rgba(8, 20, 40, 0.92), rgba(15, 35, 71, 0.88));
   border: 1px solid rgba(212, 175, 55, 0.45);
   color: #f5d061;
 }
+
 .role-dashboard-wrapper.role-theme-admin .role-tab-nav .role-tab-btn.active {
   background: linear-gradient(135deg, #0f2347 0%, #6b1d2f 45%, #d4af37 100%) !important;
   color: #ffffff !important;
@@ -198,24 +204,28 @@ h6 {
   --gbs-role-accent: #10b981;
   --gbs-role-accent-soft: rgba(16, 185, 129, 0.18);
 }
+
 .role-dashboard-wrapper.role-theme-teacher .role-dashboard-overlay {
   background:
     radial-gradient(circle at 18% 18%, rgba(16, 185, 129, 0.22) 0%, transparent 48%),
     radial-gradient(circle at 82% 22%, rgba(212, 175, 55, 0.16) 0%, transparent 48%),
     linear-gradient(135deg, rgba(6, 15, 30, 0.70) 0%, rgba(8, 20, 40, 0.66) 50%, rgba(15, 35, 71, 0.74) 100%) !important;
 }
+
 .role-dashboard-wrapper.role-theme-teacher .role-header {
   background: linear-gradient(90deg, rgba(6, 15, 30, 0.96) 0%, rgba(8, 20, 40, 0.95) 50%, rgba(15, 35, 71, 0.96) 100%) !important;
   border-bottom: 2px solid #10b981 !important;
   box-shadow: 0 6px 25px rgba(4, 10, 22, 0.62), 0 0 20px rgba(16, 185, 129, 0.22) !important;
   backdrop-filter: blur(16px);
 }
+
 .role-dashboard-wrapper.role-theme-teacher .role-hero-banner {
   background: linear-gradient(135deg, rgba(6, 15, 30, 0.92) 0%, rgba(10, 25, 47, 0.90) 55%, rgba(6, 78, 59, 0.35) 100%) !important;
   border: 1.5px solid rgba(16, 185, 129, 0.62) !important;
   box-shadow: 0 20px 50px rgba(4, 10, 22, 0.5), inset 0 1px 0 rgba(255, 255, 255, 0.16) !important;
   backdrop-filter: blur(14px);
 }
+
 .role-dashboard-wrapper.role-theme-teacher .role-workspace-card,
 .role-dashboard-wrapper.role-theme-teacher .role-kpi-box {
   background: linear-gradient(145deg, rgba(8, 20, 40, 0.92) 0%, rgba(15, 35, 71, 0.88) 55%, rgba(10, 25, 47, 0.94) 100%) !important;
@@ -223,11 +233,13 @@ h6 {
   border-left: 3.5px solid #10b981 !important;
   backdrop-filter: blur(14px);
 }
+
 .role-dashboard-wrapper.role-theme-teacher .role-tab-nav .role-tab-btn {
   background: linear-gradient(135deg, rgba(8, 20, 40, 0.92), rgba(15, 35, 71, 0.88));
   border: 1px solid rgba(16, 185, 129, 0.42);
   color: #ecfdf5;
 }
+
 .role-dashboard-wrapper.role-theme-teacher .role-tab-nav .role-tab-btn.active {
   background: linear-gradient(135deg, #065f46 0%, #059669 55%, #d4af37 100%) !important;
   color: #ffffff !important;
@@ -240,24 +252,28 @@ h6 {
   --gbs-role-accent: #38bdf8;
   --gbs-role-accent-soft: rgba(37, 99, 235, 0.22);
 }
+
 .role-dashboard-wrapper.role-theme-student .role-dashboard-overlay {
   background:
     radial-gradient(circle at 18% 18%, rgba(37, 99, 235, 0.24) 0%, transparent 48%),
     radial-gradient(circle at 82% 22%, rgba(212, 175, 55, 0.16) 0%, transparent 48%),
     linear-gradient(135deg, rgba(6, 15, 30, 0.70) 0%, rgba(8, 20, 40, 0.66) 50%, rgba(15, 35, 71, 0.74) 100%) !important;
 }
+
 .role-dashboard-wrapper.role-theme-student .role-header {
   background: linear-gradient(90deg, rgba(6, 15, 30, 0.96) 0%, rgba(8, 20, 40, 0.95) 50%, rgba(15, 35, 71, 0.96) 100%) !important;
   border-bottom: 2px solid #38bdf8 !important;
   box-shadow: 0 6px 25px rgba(4, 10, 22, 0.62), 0 0 20px rgba(56, 189, 248, 0.24) !important;
   backdrop-filter: blur(16px);
 }
+
 .role-dashboard-wrapper.role-theme-student .role-hero-banner {
   background: linear-gradient(135deg, rgba(6, 15, 30, 0.92) 0%, rgba(10, 25, 47, 0.90) 55%, rgba(29, 78, 216, 0.32) 100%) !important;
   border: 1.5px solid rgba(56, 189, 248, 0.60) !important;
   box-shadow: 0 20px 50px rgba(4, 10, 22, 0.5), inset 0 1px 0 rgba(255, 255, 255, 0.16) !important;
   backdrop-filter: blur(14px);
 }
+
 .role-dashboard-wrapper.role-theme-student .role-workspace-card,
 .role-dashboard-wrapper.role-theme-student .role-kpi-box {
   background: linear-gradient(145deg, rgba(8, 20, 40, 0.92) 0%, rgba(15, 35, 71, 0.88) 55%, rgba(10, 25, 47, 0.94) 100%) !important;
@@ -265,11 +281,13 @@ h6 {
   border-left: 3.5px solid #2563eb !important;
   backdrop-filter: blur(14px);
 }
+
 .role-dashboard-wrapper.role-theme-student .role-tab-nav .role-tab-btn {
   background: linear-gradient(135deg, rgba(8, 20, 40, 0.92), rgba(15, 35, 71, 0.88));
   border: 1px solid rgba(56, 189, 248, 0.42);
   color: #e0f2fe;
 }
+
 .role-dashboard-wrapper.role-theme-student .role-tab-nav .role-tab-btn.active {
   background: linear-gradient(135deg, #1d4ed8 0%, #2563eb 52%, #d4af37 100%) !important;
   color: #ffffff !important;
@@ -282,24 +300,28 @@ h6 {
   --gbs-role-accent: #fb7185;
   --gbs-role-accent-soft: rgba(159, 18, 57, 0.22);
 }
+
 .role-dashboard-wrapper.role-theme-parent .role-dashboard-overlay {
   background:
     radial-gradient(circle at 18% 18%, rgba(159, 18, 57, 0.24) 0%, transparent 48%),
     radial-gradient(circle at 82% 22%, rgba(212, 175, 55, 0.16) 0%, transparent 48%),
     linear-gradient(135deg, rgba(6, 15, 30, 0.70) 0%, rgba(8, 20, 40, 0.66) 50%, rgba(15, 35, 71, 0.74) 100%) !important;
 }
+
 .role-dashboard-wrapper.role-theme-parent .role-header {
   background: linear-gradient(90deg, rgba(6, 15, 30, 0.96) 0%, rgba(8, 20, 40, 0.95) 50%, rgba(15, 35, 71, 0.96) 100%) !important;
   border-bottom: 2px solid #e11d48 !important;
   box-shadow: 0 6px 25px rgba(4, 10, 22, 0.62), 0 0 20px rgba(225, 29, 72, 0.24) !important;
   backdrop-filter: blur(16px);
 }
+
 .role-dashboard-wrapper.role-theme-parent .role-hero-banner {
   background: linear-gradient(135deg, rgba(6, 15, 30, 0.92) 0%, rgba(10, 25, 47, 0.90) 55%, rgba(159, 18, 57, 0.34) 100%) !important;
   border: 1.5px solid rgba(251, 113, 133, 0.58) !important;
   box-shadow: 0 20px 50px rgba(4, 10, 22, 0.5), inset 0 1px 0 rgba(255, 255, 255, 0.16) !important;
   backdrop-filter: blur(14px);
 }
+
 .role-dashboard-wrapper.role-theme-parent .role-workspace-card,
 .role-dashboard-wrapper.role-theme-parent .role-kpi-box {
   background: linear-gradient(145deg, rgba(8, 20, 40, 0.92) 0%, rgba(15, 35, 71, 0.88) 55%, rgba(10, 25, 47, 0.94) 100%) !important;
@@ -307,11 +329,13 @@ h6 {
   border-left: 3.5px solid #be123c !important;
   backdrop-filter: blur(14px);
 }
+
 .role-dashboard-wrapper.role-theme-parent .role-tab-nav .role-tab-btn {
   background: linear-gradient(135deg, rgba(8, 20, 40, 0.92), rgba(15, 35, 71, 0.88));
   border: 1px solid rgba(251, 113, 133, 0.42);
   color: #ffe4e6;
 }
+
 .role-dashboard-wrapper.role-theme-parent .role-tab-nav .role-tab-btn.active {
   background: linear-gradient(135deg, #881337 0%, #be123c 52%, #d4af37 100%) !important;
   color: #ffffff !important;
@@ -324,24 +348,28 @@ h6 {
   --gbs-role-accent: #f59e0b;
   --gbs-role-accent-soft: rgba(245, 158, 11, 0.20);
 }
+
 .role-dashboard-wrapper.role-theme-accountant .role-dashboard-overlay {
   background:
     radial-gradient(circle at 18% 18%, rgba(245, 158, 11, 0.22) 0%, transparent 48%),
     radial-gradient(circle at 82% 22%, rgba(16, 185, 129, 0.16) 0%, transparent 48%),
     linear-gradient(135deg, rgba(6, 15, 30, 0.70) 0%, rgba(8, 20, 40, 0.66) 50%, rgba(15, 35, 71, 0.74) 100%) !important;
 }
+
 .role-dashboard-wrapper.role-theme-accountant .role-header {
   background: linear-gradient(90deg, rgba(6, 15, 30, 0.96) 0%, rgba(8, 20, 40, 0.95) 50%, rgba(15, 35, 71, 0.96) 100%) !important;
   border-bottom: 2px solid #f59e0b !important;
   box-shadow: 0 6px 25px rgba(4, 10, 22, 0.62), 0 0 20px rgba(245, 158, 11, 0.24) !important;
   backdrop-filter: blur(16px);
 }
+
 .role-dashboard-wrapper.role-theme-accountant .role-hero-banner {
   background: linear-gradient(135deg, rgba(6, 15, 30, 0.92) 0%, rgba(10, 25, 47, 0.90) 55%, rgba(180, 83, 9, 0.30) 100%) !important;
   border: 1.5px solid rgba(245, 158, 11, 0.60) !important;
   box-shadow: 0 20px 50px rgba(4, 10, 22, 0.5), inset 0 1px 0 rgba(255, 255, 255, 0.16) !important;
   backdrop-filter: blur(14px);
 }
+
 .role-dashboard-wrapper.role-theme-accountant .role-workspace-card,
 .role-dashboard-wrapper.role-theme-accountant .role-kpi-box {
   background: linear-gradient(145deg, rgba(8, 20, 40, 0.92) 0%, rgba(15, 35, 71, 0.88) 55%, rgba(10, 25, 47, 0.94) 100%) !important;
@@ -349,11 +377,13 @@ h6 {
   border-left: 3.5px solid #f59e0b !important;
   backdrop-filter: blur(14px);
 }
+
 .role-dashboard-wrapper.role-theme-accountant .role-tab-nav .role-tab-btn {
   background: linear-gradient(135deg, rgba(8, 20, 40, 0.92), rgba(15, 35, 71, 0.88));
   border: 1px solid rgba(245, 158, 11, 0.45);
   color: #fef3c7;
 }
+
 .role-dashboard-wrapper.role-theme-accountant .role-tab-nav .role-tab-btn.active {
   background: linear-gradient(135deg, #b45309 0%, #d97706 52%, #10b981 100%) !important;
   color: #ffffff !important;
@@ -366,24 +396,28 @@ h6 {
   --gbs-role-accent: #0ea5e9;
   --gbs-role-accent-soft: rgba(14, 165, 233, 0.20);
 }
+
 .role-dashboard-wrapper.role-theme-staff .role-dashboard-overlay {
   background:
     radial-gradient(circle at 18% 18%, rgba(14, 165, 233, 0.22) 0%, transparent 48%),
     radial-gradient(circle at 82% 22%, rgba(212, 175, 55, 0.16) 0%, transparent 48%),
     linear-gradient(135deg, rgba(6, 15, 30, 0.70) 0%, rgba(8, 20, 40, 0.66) 50%, rgba(15, 35, 71, 0.74) 100%) !important;
 }
+
 .role-dashboard-wrapper.role-theme-staff .role-header {
   background: linear-gradient(90deg, rgba(6, 15, 30, 0.96) 0%, rgba(8, 20, 40, 0.95) 50%, rgba(15, 35, 71, 0.96) 100%) !important;
   border-bottom: 2px solid #0ea5e9 !important;
   box-shadow: 0 6px 25px rgba(4, 10, 22, 0.62), 0 0 20px rgba(14, 165, 233, 0.24) !important;
   backdrop-filter: blur(16px);
 }
+
 .role-dashboard-wrapper.role-theme-staff .role-hero-banner {
   background: linear-gradient(135deg, rgba(6, 15, 30, 0.92) 0%, rgba(10, 25, 47, 0.90) 55%, rgba(2, 132, 199, 0.30) 100%) !important;
   border: 1.5px solid rgba(56, 189, 248, 0.58) !important;
   box-shadow: 0 20px 50px rgba(4, 10, 22, 0.5), inset 0 1px 0 rgba(255, 255, 255, 0.16) !important;
   backdrop-filter: blur(14px);
 }
+
 .role-dashboard-wrapper.role-theme-staff .role-workspace-card,
 .role-dashboard-wrapper.role-theme-staff .role-kpi-box {
   background: linear-gradient(145deg, rgba(8, 20, 40, 0.92) 0%, rgba(15, 35, 71, 0.88) 55%, rgba(10, 25, 47, 0.94) 100%) !important;
@@ -391,11 +425,13 @@ h6 {
   border-left: 3.5px solid #0ea5e9 !important;
   backdrop-filter: blur(14px);
 }
+
 .role-dashboard-wrapper.role-theme-staff .role-tab-nav .role-tab-btn {
   background: linear-gradient(135deg, rgba(8, 20, 40, 0.92), rgba(15, 35, 71, 0.88));
   border: 1px solid rgba(56, 189, 248, 0.42);
   color: #e0f2fe;
 }
+
 .role-dashboard-wrapper.role-theme-staff .role-tab-nav .role-tab-btn.active {
   background: linear-gradient(135deg, #0369a1 0%, #0ea5e9 52%, #d4af37 100%) !important;
   color: #ffffff !important;
@@ -408,18 +444,21 @@ h6 {
   --gbs-role-accent: #8b5cf6;
   --gbs-role-accent-soft: rgba(124, 58, 237, 0.20);
 }
+
 .role-dashboard-wrapper.role-theme-hr .role-dashboard-overlay {
   background:
     radial-gradient(circle at 16% 18%, rgba(124, 58, 237, 0.22) 0%, transparent 48%),
     radial-gradient(circle at 84% 20%, rgba(212, 175, 55, 0.16) 0%, transparent 46%),
     linear-gradient(135deg, rgba(6, 15, 30, 0.70) 0%, rgba(8, 20, 40, 0.66) 50%, rgba(15, 35, 71, 0.74) 100%) !important;
 }
+
 .role-dashboard-wrapper.role-theme-hr .role-header {
   background: linear-gradient(90deg, rgba(6, 15, 30, 0.96) 0%, rgba(8, 20, 40, 0.95) 50%, rgba(15, 35, 71, 0.96) 100%) !important;
   border-bottom: 2px solid #a855f7 !important;
   box-shadow: 0 6px 24px rgba(4, 10, 22, 0.64), 0 0 18px rgba(168, 85, 247, 0.24) !important;
   backdrop-filter: blur(16px);
 }
+
 .role-dashboard-wrapper.role-theme-hr .role-hero-banner,
 .role-dashboard-wrapper.role-theme-hr .role-workspace-card,
 .role-dashboard-wrapper.role-theme-hr .role-kpi-box {
@@ -428,11 +467,13 @@ h6 {
   border-left: 3.5px solid #8b5cf6 !important;
   backdrop-filter: blur(14px);
 }
+
 .role-dashboard-wrapper.role-theme-hr .role-tab-nav .role-tab-btn {
   background: linear-gradient(135deg, rgba(8, 20, 40, 0.92), rgba(15, 35, 71, 0.88));
   border: 1px solid rgba(168, 85, 247, 0.42);
   color: #f3e8ff;
 }
+
 .role-dashboard-wrapper.role-theme-hr .role-tab-nav .role-tab-btn.active {
   background: linear-gradient(135deg, #6d28d9 0%, #8b5cf6 52%, #d4af37 100%) !important;
   color: #ffffff !important;
@@ -445,18 +486,21 @@ h6 {
   --gbs-role-accent: #d97706;
   --gbs-role-accent-soft: rgba(217, 119, 6, 0.20);
 }
+
 .role-dashboard-wrapper.role-theme-alumni .role-dashboard-overlay {
   background:
     radial-gradient(circle at 18% 18%, rgba(217, 119, 6, 0.20) 0%, transparent 48%),
     radial-gradient(circle at 82% 22%, rgba(212, 175, 55, 0.18) 0%, transparent 45%),
     linear-gradient(135deg, rgba(6, 15, 30, 0.70) 0%, rgba(8, 20, 40, 0.66) 50%, rgba(15, 35, 71, 0.74) 100%) !important;
 }
+
 .role-dashboard-wrapper.role-theme-alumni .role-header {
   background: linear-gradient(90deg, rgba(6, 15, 30, 0.96) 0%, rgba(8, 20, 40, 0.95) 50%, rgba(15, 35, 71, 0.96) 100%) !important;
   border-bottom: 2px solid #d97706 !important;
   box-shadow: 0 6px 24px rgba(4, 10, 22, 0.64), 0 0 18px rgba(217, 119, 6, 0.24) !important;
   backdrop-filter: blur(16px);
 }
+
 .role-dashboard-wrapper.role-theme-alumni .role-hero-banner,
 .role-dashboard-wrapper.role-theme-alumni .role-workspace-card,
 .role-dashboard-wrapper.role-theme-alumni .role-kpi-box {
@@ -465,11 +509,13 @@ h6 {
   border-left: 3.5px solid #d97706 !important;
   backdrop-filter: blur(14px);
 }
+
 .role-dashboard-wrapper.role-theme-alumni .role-tab-nav .role-tab-btn {
   background: linear-gradient(135deg, rgba(8, 20, 40, 0.92), rgba(15, 35, 71, 0.88));
   border: 1px solid rgba(251, 191, 36, 0.45);
   color: #fef3c7;
 }
+
 .role-dashboard-wrapper.role-theme-alumni .role-tab-nav .role-tab-btn.active {
   background: linear-gradient(135deg, #0f2347 0%, #b45309 55%, #f59e0b 100%) !important;
   color: #ffffff !important;
@@ -488,12 +534,14 @@ h6 {
   box-shadow: 0 14px 34px rgba(4, 10, 22, 0.55), inset 0 1px 0 rgba(255, 255, 255, 0.14) !important;
   backdrop-filter: blur(14px);
 }
+
 .dev-dashboard-layout .dev-tab-navigation .dev-tab-btn,
 .dev-dashboard-layout .dev-tabs-nav .dev-tab-btn {
   background: linear-gradient(135deg, rgba(6, 15, 30, 0.92), rgba(15, 35, 71, 0.86));
   border: 1px solid rgba(56, 189, 248, 0.42);
   color: #e2e8f0;
 }
+
 .dev-dashboard-layout .dev-tab-navigation .dev-tab-btn.active,
 .dev-dashboard-layout .dev-tabs-nav .dev-tab-btn.active {
   background: linear-gradient(135deg, #0284c7 0%, #0f2347 50%, #d4af37 100%) !important;
@@ -1049,25 +1097,25 @@ body.gbs-module-page-view .dashboard-main {
   padding: 0.75rem clamp(0.75rem, 2vw, 1.5rem) 2rem !important;
 }
 
-/* Single-row horizontally scrollable module navigation strip so requested module content shows immediately */
+/* Clean wrapped module navigation strip so ALL tabs remain visible in clear order without hidden off-screen tabs */
 body.gbs-module-page-view .role-tab-nav {
   display: flex !important;
-  flex-wrap: nowrap !important;
-  overflow-x: auto !important;
-  overflow-y: hidden !important;
-  -webkit-overflow-scrolling: touch;
-  gap: 6px !important;
-  padding: 6px 8px !important;
-  margin-bottom: 0.85rem !important;
-  scrollbar-width: thin;
+  flex-wrap: wrap !important;
+  overflow-x: visible !important;
+  overflow-y: visible !important;
+  gap: 7px !important;
+  padding: 8px 10px !important;
+  margin-bottom: 0.95rem !important;
 }
 
 body.gbs-module-page-view .role-tab-nav .role-tab-btn {
-  flex: 0 0 auto !important;
-  white-space: nowrap !important;
+  flex: 0 1 auto !important;
+  white-space: normal !important;
+  text-align: left !important;
   min-width: auto !important;
   padding: 7px 12px !important;
-  font-size: 0.78rem !important;
+  font-size: 0.79rem !important;
+  line-height: 1.25 !important;
 }
 
 body.gbs-module-page-view .role-workspace-card {
@@ -1084,68 +1132,72 @@ body.gbs-module-page-view .role-workspace-card {
 
 @media (max-width: 768px) {
   .gbs-module-page-bar {
-    padding: 6px 10px !important;
+    padding: 8px 10px !important;
     gap: 6px !important;
-    flex-wrap: nowrap !important;
+    flex-wrap: wrap !important;
   }
 
   .gbs-module-page-bar button {
     padding: 6px 10px !important;
-    min-height: 34px !important;
-    font-size: 0.74rem !important;
+    min-height: 36px !important;
+    font-size: 0.75rem !important;
     white-space: nowrap;
   }
 
   body.gbs-module-page-view .role-header {
-    padding: 0.35rem 0.65rem !important;
-    gap: 6px !important;
+    padding: 0.5rem 0.65rem !important;
+    gap: 8px !important;
     flex-direction: column !important;
     align-items: stretch !important;
   }
 
   body.gbs-module-page-view .role-header-brand {
-    display: none !important;
+    display: flex !important;
+    align-items: center !important;
+    gap: 8px !important;
   }
 
   body.gbs-module-page-view .role-header-actions {
     display: flex !important;
-    flex-wrap: nowrap !important;
-    overflow-x: auto !important;
-    -webkit-overflow-scrolling: touch;
+    flex-wrap: wrap !important;
+    overflow-x: visible !important;
     justify-content: flex-start !important;
     gap: 6px !important;
     padding-bottom: 2px;
   }
 
   body.gbs-module-page-view .role-header-actions .role-action-btn {
-    flex: 0 0 auto !important;
-    white-space: nowrap !important;
-    padding: 5px 9px !important;
-    font-size: 0.72rem !important;
+    flex: 0 1 auto !important;
+    white-space: normal !important;
+    padding: 6px 10px !important;
+    font-size: 0.74rem !important;
   }
 
   body.gbs-module-page-view .role-status-ticker {
-    display: none !important;
+    display: flex !important;
+    flex-wrap: wrap !important;
+    gap: 6px !important;
+    font-size: 0.72rem !important;
   }
 
   body.gbs-module-page-view .role-main,
   body.gbs-module-page-view .role-main-content,
   body.gbs-module-page-view .dashboard-main {
-    padding: 0.45rem 0.6rem calc(72px + env(safe-area-inset-bottom, 0px)) !important;
+    padding: 0.55rem 0.65rem calc(72px + env(safe-area-inset-bottom, 0px)) !important;
   }
 
   body.gbs-module-page-view .role-tab-nav {
-    flex-wrap: nowrap !important;
-    overflow-x: auto !important;
-    padding: 5px 6px !important;
-    margin-bottom: 0.55rem !important;
+    flex-wrap: wrap !important;
+    overflow-x: visible !important;
+    padding: 6px !important;
+    margin-bottom: 0.65rem !important;
   }
 
   body.gbs-module-page-view .role-tab-nav .role-tab-btn {
-    flex: 0 0 auto !important;
-    min-width: auto !important;
-    padding: 6px 10px !important;
-    font-size: 0.74rem !important;
+    flex: 1 1 calc(50% - 8px) !important;
+    min-width: 135px !important;
+    padding: 7px 10px !important;
+    font-size: 0.75rem !important;
   }
 }
 
@@ -1184,7 +1236,8 @@ img[data-evidence-preview="true"],
 /* ============================================================================
    CROSS-DEVICE MOBILE, TABLET & TOUCH ACCESSIBILITY GUARANTEES
    ============================================================================ */
-html, body {
+html,
+body {
   max-width: 100%;
   overflow-x: clip;
   -webkit-tap-highlight-color: rgba(212, 175, 55, 0.2);
@@ -1260,7 +1313,7 @@ html, body {
   }
 
   .modal-box,
-  [role="dialog"] > div {
+  [role="dialog"]>div {
     width: 96vw !important;
     max-width: 96vw !important;
     max-height: 92dvh !important;
@@ -1270,6 +1323,7 @@ html, body {
 
 /* Prevent sticky mobile hover lift and ensure touch devices expose actionable states cleanly */
 @media (hover: none) {
+
   .role-tab-btn:hover,
   .dev-tab-btn:hover,
   .btn-window-control:hover,
@@ -1282,6 +1336,7 @@ html, body {
 }
 
 @media print {
+
   .window-controls-bar,
   .top-center-system-banner,
   .role-tab-nav,
@@ -1290,6 +1345,7 @@ html, body {
   .btn-window-control {
     display: none !important;
   }
+
   body {
     background: #ffffff !important;
     color: #0f172a !important;

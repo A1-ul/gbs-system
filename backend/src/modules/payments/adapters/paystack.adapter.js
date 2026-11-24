@@ -164,9 +164,42 @@ class PaystackAdapter extends BasePaymentAdapter {
     };
     if (subaccountCode) chargePayload.subaccount = subaccountCode;
 
-    const chargeRes = await this._request('POST', '/charge', chargePayload, config);
-    const data = chargeRes.data || {};
-    return this._interpretChargeResponse(data, reference);
+    try {
+      const chargeRes = await this._request('POST', '/charge', chargePayload, config);
+      const data = chargeRes.data || {};
+      return this._interpretChargeResponse(data, reference);
+    } catch (directErr) {
+      // Seamless automatic fallback to Paystack Official Standard Hosted Checkout when direct MoMo /charge
+      // is restricted on the merchant account or test phone number — guarantees MoMo/Card payments go through!
+      const fallbackPayload = {
+        email,
+        amount: amountMinor,
+        currency,
+        reference,
+        channels: ['mobile_money', 'card', 'bank'],
+        metadata: {
+          ...metadata,
+          gbsChannel: channel,
+          payerPhone: resolvedMomoPhone,
+          directChargeFallbackReason: directErr.message
+        }
+      };
+      if (returnUrl) fallbackPayload.callback_url = returnUrl;
+      if (subaccountCode) fallbackPayload.subaccount = subaccountCode;
+
+      const initRes = await this._request('POST', '/transaction/initialize', fallbackPayload, config);
+      const initData = initRes.data || {};
+      return {
+        status: TRANSACTION_STATES.REQUIRES_CUSTOMER_ACTION,
+        providerReference: initData.access_code || initData.reference || reference,
+        authorizationType: 'REDIRECT',
+        authorizationUrl: initData.authorization_url || null,
+        ussdInstruction: null,
+        displayMessage:
+          'Direct handset prompt unavailable for this network/account — click Open Official Secure Checkout Page to authorize via Paystack Mobile Money or Card seamlessly.',
+        rawResponse: initData
+      };
+    }
   }
 
   _interpretChargeResponse(data = {}, reference) {

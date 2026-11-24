@@ -675,7 +675,12 @@ export default function SecretaryDashboard() {
           {/* TAB 5: VIDEO/VOICE CALLS & DIRECT SMS */}
           {activeTab === "calls" && (
             <div className="role-workspace-card" style={{ display: "flex", flexDirection: "column", gap: "18px" }}>
-              <LiveCallLauncherAndReceiver currentUser={currentUser} />
+              <LiveCallLauncherAndReceiver
+                variant="FULL_STUDIO"
+                userRole="SECRETARY"
+                currentUser={currentUser}
+                onFeedback={(msg, isErr) => setFeedback({ type: isErr ? "error" : "success", message: msg })}
+              />
               <DirectSMSInboxPanel currentUser={currentUser} />
               <VoiceNoteRecorder currentUser={currentUser} />
             </div>

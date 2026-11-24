@@ -105,22 +105,28 @@
 .dev-nav button,
 .dev-nav .dev-action-btn,
 .dev-padlock-quick-widget {
-  height: 38px !important;
+  min-height: 40px !important;
+  height: auto !important;
   box-sizing: border-box !important;
   display: inline-flex !important;
   align-items: center !important;
   justify-content: center !important;
   gap: 6px !important;
-  padding: 0 14px !important;
+  padding: 6px 14px !important;
   background: rgba(30, 41, 59, 0.7) !important;
   border: 1.5px solid rgba(255, 255, 255, 0.12) !important;
   border-radius: 8px !important;
   color: #e2e8f0 !important;
   font-size: 0.8rem !important;
   font-weight: 700 !important;
+  line-height: 1.2 !important;
   cursor: pointer !important;
   white-space: nowrap !important;
   transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1) !important;
+}
+
+.dev-padlock-quick-widget {
+  white-space: normal !important;
 }
 
 .dev-nav button:hover,
@@ -346,9 +352,11 @@
   color: #94a3b8 !important;
   letter-spacing: 0.6px !important;
   margin-bottom: 0.4rem !important;
-  white-space: nowrap !important;
-  overflow: hidden !important;
-  text-overflow: ellipsis !important;
+  white-space: normal !important;
+  overflow: visible !important;
+  text-overflow: unset !important;
+  line-height: 1.28 !important;
+  overflow-wrap: break-word !important;
   text-transform: uppercase !important;
 }
 
@@ -708,9 +716,43 @@
   font-weight: 700;
   letter-spacing: 0.5px;
   text-transform: uppercase;
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
+  white-space: normal;
+  overflow: visible;
+  text-overflow: unset;
+  line-height: 1.28;
+  overflow-wrap: break-word;
+}
+
+/* Dedicated Developer Full-Page Module Mode (Self-Contained, Preserves Developer Isolation) */
+.dev-dashboard-layout.dev-module-page-active .dev-overview-only {
+  display: none !important;
+}
+
+.dev-dashboard-layout.dev-module-page-active .dev-main {
+  padding-top: 1rem;
+  max-width: 100%;
+}
+
+.dev-dashboard-layout.dev-module-page-active .dev-tab-navigation {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-bottom: 1rem;
+}
+
+.dev-module-page-bar {
+  position: sticky;
+  top: 0;
+  z-index: 40;
+  background: linear-gradient(135deg, rgba(8, 24, 51, 0.97) 0%, rgba(15, 23, 42, 0.97) 100%);
+  border-bottom: 2px solid rgba(56, 189, 248, 0.55);
+  padding: 10px clamp(12px, 2vw, 24px);
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 10px;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.45);
 }
 
 .box-val {

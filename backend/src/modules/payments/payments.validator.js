@@ -38,6 +38,19 @@ function assertNoSensitivePaymentCredentials(payload) {
   inspect(payload);
 }
 
+function normalizeCurrencyCode(rawCurrency) {
+  const s = String(rawCurrency || 'GHS').trim().toUpperCase();
+  if (!s || s === 'GH₵' || s === '₵' || s === 'GHC' || s === 'CEDI' || s === 'CEDIS') return 'GHS';
+  if (s === '₦' || s === 'NAIRA') return 'NGN';
+  if (s === '$' || s === 'US$') return 'USD';
+  if (s === '£') return 'GBP';
+  if (s === '€') return 'EUR';
+  if (s === 'KSH' || s === 'KSHS') return 'KES';
+  if (s === 'R') return 'ZAR';
+  if (/^[A-Z]{3}$/.test(s)) return s;
+  return 'GHS';
+}
+
 function validateInitiatePayload(body = {}) {
   assertNoSensitivePaymentCredentials(body);
 
@@ -76,17 +89,23 @@ function validateInitiatePayload(body = {}) {
     throw new AppError('Student unique ID or invoice selection is required for school fee payments.', 400);
   }
 
+  const rawInvoiceStr = body.invoiceId !== undefined && body.invoiceId !== null ? String(body.invoiceId).trim() : '';
+  const parsedInvoiceId = /^\d+$/.test(rawInvoiceStr) ? parseInt(rawInvoiceStr, 10) : null;
+  const rawStudentIdent = body.studentIdentifier !== undefined && body.studentIdentifier !== null && String(body.studentIdentifier).trim() !== ''
+    ? String(body.studentIdentifier).trim()
+    : (body.studentId !== undefined && body.studentId !== null && String(body.studentId).trim() !== '' ? String(body.studentId).trim() : null);
+
   return {
     scope,
     channel,
     gateway,
     amount,
-    currency: String(body.currency || 'GHS').toUpperCase(),
+    currency: normalizeCurrencyCode(body.currency),
     phoneResult,
     isMomoChannel,
     preferHostedCheckout: Boolean(body.preferHostedCheckout),
-    studentIdentifier: body.studentIdentifier || (body.studentId ? String(body.studentId) : null),
-    invoiceId: body.invoiceId ? parseInt(body.invoiceId, 10) : null,
+    studentIdentifier: rawStudentIdent,
+    invoiceId: parsedInvoiceId,
     payerEmail: body.payerEmail ? String(body.payerEmail).trim().toLowerCase() : null,
     payerName: body.payerName ? String(body.payerName).trim() : null,
     academicYear: body.academicYear ? String(body.academicYear).trim() : null,
@@ -98,5 +117,6 @@ function validateInitiatePayload(body = {}) {
 
 module.exports = {
   assertNoSensitivePaymentCredentials,
+  normalizeCurrencyCode,
   validateInitiatePayload
 };

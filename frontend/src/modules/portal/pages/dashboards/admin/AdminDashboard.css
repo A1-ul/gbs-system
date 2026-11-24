@@ -316,18 +316,22 @@
   text-transform: uppercase;
   letter-spacing: 0.5px;
   font-weight: 700;
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
+  white-space: normal;
+  overflow: visible;
+  text-overflow: unset;
+  line-height: 1.28;
+  overflow-wrap: break-word;
 }
 
 .sub-telemetry-pill strong {
-  font-size: 0.98rem;
+  font-size: 0.96rem;
   color: #f8fafc;
   font-weight: 800;
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
+  white-space: normal;
+  overflow: visible;
+  text-overflow: unset;
+  line-height: 1.28;
+  overflow-wrap: anywhere;
 }
 
 @media (max-width: 960px) {
