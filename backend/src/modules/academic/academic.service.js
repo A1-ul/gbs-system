@@ -1178,9 +1178,9 @@ function getDemoSeedLessonPlans() {
       curriculumReference: 'Ghana NaCCA Common Core Mathematics Curriculum (Illustrative Demo Entry — verify exact page in school syllabus)',
       status: 'PENDING_VETTING',
       revisionNumber: 1,
-      teacherId: 'teacher-demo-1',
-      teacherName: 'Sarah Jenkins',
-      teacherEmail: 'teacher@gbs.edu',
+      teacherId: 'usr_teacher_master',
+      teacherName: 'Sarah Teacher',
+      teacherEmail: 'teacher@gbs.com',
       teacherPosition: 'Senior Mathematics & Science Educator',
       resourcesAttached: 'Balance_Scale_Algebra_Cards.pdf',
       structuredJson: JSON.stringify({
@@ -1244,9 +1244,9 @@ function getDemoSeedLessonPlans() {
       curriculumReference: 'Ghana NaCCA SHS Integrated Science Curriculum (Illustrative Demo Entry)',
       status: 'VETTED_APPROVED',
       revisionNumber: 1,
-      teacherId: 'teacher-demo-1',
-      teacherName: 'Sarah Jenkins',
-      teacherEmail: 'teacher@gbs.edu',
+      teacherId: 'usr_teacher_master',
+      teacherName: 'Sarah Teacher',
+      teacherEmail: 'teacher@gbs.com',
       teacherPosition: 'Senior Mathematics & Science Educator',
       resourcesAttached: 'Starch_Test_Safety_Sheet.pdf',
       structuredJson: JSON.stringify({
@@ -1322,9 +1322,9 @@ function getDemoSeedLessonPlans() {
       curriculumReference: 'NaCCA SHS Core Mathematics Annual Curriculum Framework (Illustrative Demo)',
       status: 'VETTED_APPROVED',
       revisionNumber: 1,
-      teacherId: 'teacher-demo-1',
-      teacherName: 'Sarah Jenkins',
-      teacherEmail: 'teacher@gbs.edu',
+      teacherId: 'usr_teacher_master',
+      teacherName: 'Sarah Teacher',
+      teacherEmail: 'teacher@gbs.com',
       teacherPosition: 'Senior Mathematics & Science Educator',
       resourcesAttached: 'SHS1_Math_Yearly_Scheme.pdf',
       structuredJson: JSON.stringify({
@@ -1699,9 +1699,15 @@ const updateTeacherLessonPlan = async (tenantId, planId, data = {}, operatorUser
   const isSupervisor = ['ADMIN', 'SUPER_ADMIN', 'DEVELOPER'].includes(role);
   const opId = operatorUser?.id != null ? String(operatorUser.id) : '';
   const opEmail = String(operatorUser?.email || '').toLowerCase();
+  const isDemoSeedPlanForDemoTeacher =
+    tidNum === 1 &&
+    String(existing.id || '').startsWith('plan-demo-') &&
+    role === 'TEACHER' &&
+    (opEmail === 'teacher@gbs.com' || opEmail === 'teacher@gbs.edu');
   const isOwner =
     (opId && String(existing.teacherId) === opId) ||
-    (opEmail && String(existing.teacherEmail || '').toLowerCase() === opEmail);
+    (opEmail && String(existing.teacherEmail || '').toLowerCase() === opEmail) ||
+    isDemoSeedPlanForDemoTeacher;
 
   if (!isSupervisor && !isOwner) {
     throw new AppError('Access denied: you may only edit your own lesson plans or notes.', 403);
@@ -1842,9 +1848,15 @@ const deleteTeacherLessonPlan = async (tenantId, planId, operatorUser = null) =>
   const isSupervisor = ['ADMIN', 'SUPER_ADMIN', 'DEVELOPER'].includes(role);
   const opId = operatorUser?.id != null ? String(operatorUser.id) : '';
   const opEmail = String(operatorUser?.email || '').toLowerCase();
+  const isDemoSeedPlanForDemoTeacher =
+    tidNum === 1 &&
+    String(existing.id || '').startsWith('plan-demo-') &&
+    role === 'TEACHER' &&
+    (opEmail === 'teacher@gbs.com' || opEmail === 'teacher@gbs.edu');
   const isOwner =
     (opId && String(existing.teacherId) === opId) ||
-    (opEmail && String(existing.teacherEmail || '').toLowerCase() === opEmail);
+    (opEmail && String(existing.teacherEmail || '').toLowerCase() === opEmail) ||
+    isDemoSeedPlanForDemoTeacher;
 
   if (!isSupervisor && !isOwner) {
     throw new AppError('Access denied: you may only delete your own drafts.', 403);
