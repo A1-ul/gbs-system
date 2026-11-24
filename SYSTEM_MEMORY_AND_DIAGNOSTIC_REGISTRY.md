@@ -323,6 +323,23 @@ flowchart TD
   - `18 / 18` upgrade regression checks passed in [`verify_upgrade_e2e.js`](file:///d:/version1/GBS_SYSTEM/backend/verify_upgrade_e2e.js).
   - `27 / 27` live Render production checks passed on `https://gbs-system.onrender.com` (all 10 roles `200 OK`, public onboarding & parent fee payments `201/200` with receipts, `VIDEO → VOICE → VIDEO` signaling, live SPA routes `200 OK`, and strict `401 Unauthorized` on unauthenticated & cross-scope access).
 
+---
+
+## 13. Student Self-Payment of School Fees & Bills, Official School Bank/MoMo Receiving Accounts, Payee Referencing & Live Accountant Audit Ledger (Nov 2026 — v2.16.0)
+
+- **Root Causes Resolved:**
+  1. [`StudentDashboard.jsx`](file:///d:/version1/GBS_SYSTEM/frontend/src/modules/portal/pages/dashboards/student/StudentDashboard.jsx) `fees-history` tab rendered static placeholder ledger rows instead of live database bills, school receiving accounts, and verified receipts.
+  2. School payment configuration lacked dedicated Official School MoMo receiving account fields (`schoolMomoNumber`, `schoolMomoNetwork`, `schoolMomoAccountName`, `schoolMomoMerchantId`) alongside School Bank Account details.
+  3. Payment records did not explicitly track and reference `paidByRole` (`STUDENT` Self-Payment vs `PARENT`), `paidByName`, `payeeReference` (attributing the student as payee/beneficiary), or `destinationAccountSummary` (exact school Bank Account / School MoMo credited).
+  4. [`AccountantDashboard.jsx`](file:///d:/version1/GBS_SYSTEM/frontend/src/modules/portal/pages/dashboards/accountant/AccountantDashboard.jsx) `payments` tab read from `localStorage` (`reconciledPayments`) instead of merging live database records returned by `GET /api/v1/finance/payments`.
+- **Upgrades Applied:**
+  - **Backend:** Updated [`payments.registry.js`](file:///d:/version1/GBS_SYSTEM/backend/src/modules/payments/payments.registry.js), [`bankDirect.adapter.js`](file:///d:/version1/GBS_SYSTEM/backend/src/modules/payments/adapters/bankDirect.adapter.js), [`payments.service.js`](file:///d:/version1/GBS_SYSTEM/backend/src/modules/payments/payments.service.js), [`payments.reconciler.js`](file:///d:/version1/GBS_SYSTEM/backend/src/modules/payments/payments.reconciler.js), [`finance.controller.js`](file:///d:/version1/GBS_SYSTEM/backend/src/modules/finance/finance.controller.js), and [`finance.service.js`](file:///d:/version1/GBS_SYSTEM/backend/src/modules/finance/finance.service.js) to store/expose School Official Bank & MoMo receiving accounts, generate canonical Student Payee References (`<Student Name> (<Student Code>) — Paid by Student (Self)` vs `Paid by Parent: <Parent Name>`), record them in immutable `AuditLog` entries, and enrich `GET /api/v1/finance/payments` and `GET /api/v1/payments/admin/overview` with Student Self-Paid vs Parent Paid totals.
+  - **Frontend:** Upgraded [`OfficialPaymentGatewayModal.jsx`](file:///d:/version1/GBS_SYSTEM/frontend/src/components/common/OfficialPaymentGatewayModal.jsx), [`StudentDashboard.jsx`](file:///d:/version1/GBS_SYSTEM/frontend/src/modules/portal/pages/dashboards/student/StudentDashboard.jsx), [`ParentDashboard.jsx`](file:///d:/version1/GBS_SYSTEM/frontend/src/modules/portal/pages/dashboards/parent/ParentDashboard.jsx), [`AccountantDashboard.jsx`](file:///d:/version1/GBS_SYSTEM/frontend/src/modules/portal/pages/dashboards/accountant/AccountantDashboard.jsx), and [`PaymentGatewayAdminPanel.jsx`](file:///d:/version1/GBS_SYSTEM/frontend/src/components/common/PaymentGatewayAdminPanel.jsx) so Students can self-pay individual school bills or balances into the school's verified Bank Account / Official MoMo, Parents see both their own payments and their ward's self-payments, and the Accountant Dashboard reflects every Student & Parent payment live from PostgreSQL with Payer filters, audit receipts, and configurable School Bank & MoMo accounts.
+- **Verification Verdict (Bundle `index-C4FRB9If.js`):**
+  - `11 / 11` end-to-end real Chrome CDP + PostgreSQL lifecycle checks passed (Accountant bank/MoMo config & Term 2 bill issuance → Student Bank Transfer + Accountant approval → Student MoMo Self-Payment → Parent visibility & Parent MoMo Payment → Accountant live DB audit ledger & immutable audit logs, `0` tooltips).
+  - `18 / 18` backend upgrade regression checks passed in [`verify_upgrade_e2e.js`](file:///d:/version1/GBS_SYSTEM/backend/verify_upgrade_e2e.js).
+
+
 
 
 

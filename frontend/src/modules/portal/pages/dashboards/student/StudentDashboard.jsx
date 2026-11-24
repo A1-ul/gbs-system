@@ -864,6 +864,7 @@ export function StudentDashboard({ initialTab } = {}) {
 
   // Official Payment Gateway Modal State
   const [showOfficialPaymentModal, setShowOfficialPaymentModal] = useState(false);
+  const [selectedFeeInvoiceTarget, setSelectedFeeInvoiceTarget] = useState(null);
   const [feeBalance, setFeeBalance] = useState(0);
   const [studentFeeStatement, setStudentFeeStatement] = useState(null);
 
@@ -880,6 +881,53 @@ export function StudentDashboard({ initialTab } = {}) {
     } catch {
       // Keep UI safe without fabricating paid states on error
     }
+  };
+
+  const openStudentSelfPayment = (invoiceObj = null) => {
+    setSelectedFeeInvoiceTarget(invoiceObj || null);
+    setShowOfficialPaymentModal(true);
+  };
+
+  const handlePrintStudentOfficialReceipt = (item) => {
+    if (!item) return;
+    const win = window.open("", "_blank", "width=760,height=860");
+    if (!win) {
+      window.showGBSOpenNotice?.(`Official Receipt ${item.receiptNumber || item.reference} ready.`, "success", "Official Receipt");
+      return;
+    }
+    const instName = studentFeeStatement?.institution?.name || activeSchoolName || "GBS Institution";
+    const stuName = item.studentName || studentFeeStatement?.student?.fullName || `${currentUser?.firstName || ""} ${currentUser?.lastName || ""}`.trim();
+    const stuCode = item.studentCode || studentFeeStatement?.student?.studentCode || `STU-${currentUser?.id || ""}`;
+    win.document.write(`<!DOCTYPE html>
+<html>
+<head>
+<title>Official Fee Receipt - ${item.receiptNumber || item.reference}</title>
+<style>
+  body { font-family: Arial, sans-serif; color: #0f172a; padding: 28px; }
+  .box { border: 2px solid #0f172a; padding: 22px; max-width: 640px; margin: 0 auto; }
+  .row { display: flex; justify-content: space-between; gap: 12px; padding: 7px 0; border-bottom: 1px dashed #cbd5e1; font-size: 14px; }
+  .amt { font-size: 20px; font-weight: 800; color: #047857; margin-top: 14px; }
+</style>
+</head>
+<body>
+  <div class="box">
+    <h2 style="margin:0 0 4px;">${instName}</h2>
+    <div style="color:#475569;font-size:13px;margin-bottom:14px;">Official Verified Student Fee Receipt • Certified by GBS Bursar &amp; Accountant Ledger</div>
+    <div class="row"><span>Receipt Number</span><strong>${item.receiptNumber || "—"}</strong></div>
+    <div class="row"><span>GBS Transaction Reference</span><strong>${item.reference || item.transactionRef || "—"}</strong></div>
+    <div class="row"><span>Student Credited (Payee)</span><strong>${stuName} (${stuCode})</strong></div>
+    <div class="row"><span>Paid By (Payer)</span><strong>${item.paidByLabel || (item.paidByRole === "PARENT" ? "Parent / Guardian" : "Student (Self-Payment)")} — ${item.paidByName || stuName}</strong></div>
+    <div class="row"><span>Student Payee Reference</span><strong>${item.payeeReference || `${stuName} (${stuCode})`}</strong></div>
+    <div class="row"><span>School Account / MoMo Credited</span><strong>${item.destinationAccountSummary || `${instName} Official Collection Account`}</strong></div>
+    <div class="row"><span>Payment Gateway &amp; Method</span><strong>${item.gateway || "VERIFIED"} • ${item.channel || item.paymentMethod || "MOMO"}</strong></div>
+    <div class="row"><span>Status</span><strong>${item.gatewayStatus || "SUCCESSFUL"}</strong></div>
+    <div class="row"><span>Date &amp; Time</span><strong>${new Date(item.paidAt || item.issuedAt || item.createdAt || Date.now()).toLocaleString()}</strong></div>
+    <div class="amt">Amount Paid: ${item.currency || "GHS"} ${Number(item.amountPaid || 0).toFixed(2)}</div>
+  </div>
+  <script>window.onload = function() { window.print(); };</script>
+</body>
+</html>`);
+    win.document.close();
   };
 
   useEffect(() => {
@@ -2661,19 +2709,22 @@ export function StudentDashboard({ initialTab } = {}) {
                 <div style={{ fontSize: "0.75rem", color: feeBalance > 0 ? "#f87171" : "#34d399", fontWeight: 800, textTransform: "uppercase" }}>
                   OFFICIAL STUDENT TUITION & LEDGER STATUS
                 </div>
-                <div style={{ fontSize: "1.15rem", fontWeight: 900, color: "#f8fafc" }}>
-                  Total Billed: GHS 3,200.00 • Total Settled: GHS 2,800.00
+                <div style={{ fontSize: "1.1rem", fontWeight: 900, color: "#f8fafc" }}>
+                  Total Billed: {studentFeeStatement?.feeSummary?.currency || "GHS"} {Number(studentFeeStatement?.feeSummary?.totalBilled ?? 0).toFixed(2)} • Total Settled: {studentFeeStatement?.feeSummary?.currency || "GHS"} {Number(studentFeeStatement?.feeSummary?.totalPaid ?? 0).toFixed(2)}
                 </div>
                 <div style={{ fontSize: "0.82rem", color: feeBalance > 0 ? "#fca5a5" : "#a7f3d0", marginTop: "2px" }}>
-                  {feeBalance > 0 ? "Outstanding Remaining Fee Arrears: GHS " + feeBalance.toFixed(2) + " (Due: End of Academic Term)" : "✓ All institutional tuition and facility user fees are fully settled."}
+                  {feeBalance > 0
+                    ? `Outstanding Balance Due: ${studentFeeStatement?.feeSummary?.currency || "GHS"} ${feeBalance.toFixed(2)} — Pay directly to School Official Account / MoMo (Ref: ${studentFeeStatement?.student?.fullName || currentUser?.firstName || "Student"})`
+                    : "✓ All billed school fees are settled. You can still pay new school bills or advance fees anytime."}
                 </div>
               </div>
             </div>
 
-            {feeBalance > 0 && (
+            <div style={{ display: "flex", gap: "8px", flexWrap: "wrap" }}>
               <button
                 type="button"
-                onClick={() => setShowOfficialPaymentModal(true)}
+                data-testid="student-pay-fees-banner-btn"
+                onClick={() => openStudentSelfPayment(null)}
                 style={{
                   background: "linear-gradient(135deg, #10b981, #059669)",
                   border: "none",
@@ -2686,9 +2737,27 @@ export function StudentDashboard({ initialTab } = {}) {
                   boxShadow: "0 4px 14px rgba(16, 185, 129, 0.4)"
                 }}
               >
-                💳 Pay Outstanding Balance (GHS {feeBalance}) →
+                {feeBalance > 0
+                  ? `💳 Pay School Fees (${studentFeeStatement?.feeSummary?.currency || "GHS"} ${feeBalance.toFixed(2)}) →`
+                  : "💳 Pay School Bill / Advance Fee →"}
               </button>
-            )}
+              <button
+                type="button"
+                onClick={() => setActiveTab("fees-history")}
+                style={{
+                  background: "rgba(56, 189, 248, 0.16)",
+                  border: "1px solid #38bdf8",
+                  borderRadius: "8px",
+                  color: "#bae6fd",
+                  fontWeight: 800,
+                  fontSize: "0.84rem",
+                  padding: "10px 14px",
+                  cursor: "pointer"
+                }}
+              >
+                📄 Open Fees &amp; Bills Ledger
+              </button>
+            </div>
           </div>
 
           {/* Workspace Tabs Navigation */}
@@ -5494,247 +5563,317 @@ export function StudentDashboard({ initialTab } = {}) {
             </div>
           )}
 
-          {/* TAB: LIFETIME FINANCIAL CLEARANCE LEDGER & ALL TRANSACTIONS FROM DAY 1 OF ADMISSION */}
-          {activeTab === "fees-history" && (
-            <div className="role-workspace-card">
-              <div className="workspace-title-row">
-                <div>
-                  <h2><span>💳</span> LIFETIME INSTITUTIONAL FEE LEDGER & TRANSACTIONS HISTORY</h2>
-                  <p>
-                    Cross-check all tuition, lab levies, facility user fees, and payments made to the institution from Day 1 of admission to date. Certified by the GBS Bursar Directorate.
-                  </p>
-                </div>
-                <div style={{ display: "flex", gap: "10px", alignItems: "center", flexWrap: "wrap" }}>
-                  <div style={{ background: "rgba(16, 185, 129, 0.15)", border: "1.5px solid #10b981", padding: "8px 16px", borderRadius: "10px", color: "#34d399", fontWeight: 800, fontSize: "0.85rem" }}>
-                    Total Lifetime Settled: GH₵ 8,450.00
+          {/* TAB: STUDENT SELF-PAYMENT FEES, SCHOOL BILLS & VERIFIED RECEIPTS LEDGER */}
+          {activeTab === "fees-history" && (() => {
+            const feeCur = studentFeeStatement?.feeSummary?.currency || "GHS";
+            const totalBilledLive = Number(studentFeeStatement?.feeSummary?.totalBilled || 0);
+            const totalPaidLive = Number(studentFeeStatement?.feeSummary?.totalPaid || 0);
+            const outstandingLive = Number(studentFeeStatement?.feeSummary?.outstandingBalance ?? feeBalance ?? 0);
+            const liveInvoices = studentFeeStatement?.invoices || [];
+            const liveTx = studentFeeStatement?.transactions || [];
+            const recv = studentFeeStatement?.schoolReceivingAccounts || null;
+            const stuFullName = studentFeeStatement?.student?.fullName || `${currentUser?.firstName || ""} ${currentUser?.lastName || ""}`.trim() || "Student";
+            const stuCode = studentFeeStatement?.student?.studentCode || currentUser?.username || `STU-${currentUser?.id || ""}`;
+
+            return (
+              <div className="role-workspace-card">
+                <div className="workspace-title-row">
+                  <div>
+                    <h2><span>💳</span> STUDENT SCHOOL FEES, BILLS &amp; SELF-PAYMENT PORTAL</h2>
+                    <p>
+                      Pay your tuition, hostel, exam, or facility bills directly to the school&apos;s official Bank Account or School MoMo Account. Every payment is referenced in your student name (<strong>{stuFullName} • {stuCode}</strong>) and reflects immediately on the Accountant &amp; Parent dashboards for official auditing.
+                    </p>
                   </div>
-                  {feeBalance > 0 && (
+                  <div style={{ display: "flex", gap: "10px", alignItems: "center", flexWrap: "wrap" }}>
                     <button
                       type="button"
-                      onClick={() => setShowOfficialPaymentModal(true)}
+                      data-testid="student-self-pay-main-btn"
+                      onClick={() => openStudentSelfPayment(null)}
                       style={{
                         background: "linear-gradient(135deg, #10b981 0%, #059669 100%)",
                         border: "none",
                         borderRadius: "10px",
                         color: "#ffffff",
-                        padding: "8px 16px",
+                        padding: "10px 18px",
                         fontWeight: 900,
-                        fontSize: "0.85rem",
+                        fontSize: "0.88rem",
                         cursor: "pointer",
                         boxShadow: "0 4px 15px rgba(16, 185, 129, 0.4)"
                       }}
                     >
-                      💳 Settle Remaining Arrears (GH₵ {feeBalance.toFixed(2)})
+                      {outstandingLive > 0
+                        ? `💳 Pay Fees / School Bill (${feeCur} ${outstandingLive.toFixed(2)})`
+                        : "💳 Pay New School Bill / Advance Fee"}
                     </button>
-                  )}
+                    <button
+                      type="button"
+                      onClick={loadVerifiedStudentFees}
+                      style={{
+                        background: "rgba(56, 189, 248, 0.16)",
+                        border: "1px solid #38bdf8",
+                        borderRadius: "10px",
+                        color: "#bae6fd",
+                        padding: "10px 14px",
+                        fontWeight: 700,
+                        fontSize: "0.84rem",
+                        cursor: "pointer"
+                      }}
+                    >
+                      🔄 Refresh Balance
+                    </button>
+                  </div>
                 </div>
-              </div>
 
-              {/* Summary Cards */}
-              <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(220px, 1fr))", gap: "14px", marginBottom: "20px" }}>
-                <div style={{ background: "rgba(15, 23, 42, 0.7)", border: "1px solid rgba(255, 255, 255, 0.1)", borderRadius: "12px", padding: "14px" }}>
-                  <span style={{ fontSize: "0.75rem", color: "#94a3b8", fontWeight: 700, display: "block" }}>ADMISSION DATE</span>
-                  <strong style={{ color: "#38bdf8", fontSize: "1rem" }}>Jan 15, 2024 (Day 1)</strong>
-                  <div style={{ fontSize: "0.72rem", color: "#64748b", marginTop: "2px" }}>Matric: STU-2026-0891</div>
+                {/* Live Summary Cards */}
+                <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(210px, 1fr))", gap: "14px", marginBottom: "18px" }}>
+                  <div style={{ background: "rgba(15, 23, 42, 0.78)", border: "1px solid rgba(56, 189, 248, 0.3)", borderRadius: "12px", padding: "14px" }}>
+                    <span style={{ fontSize: "0.74rem", color: "#94a3b8", fontWeight: 700, display: "block" }}>STUDENT PAYEE IDENTITY</span>
+                    <strong style={{ color: "#38bdf8", fontSize: "1rem" }}>{stuFullName}</strong>
+                    <div style={{ fontSize: "0.76rem", color: "#cbd5e1", marginTop: "4px", fontFamily: "monospace" }}>ID: {stuCode}</div>
+                  </div>
+                  <div style={{ background: "rgba(15, 23, 42, 0.78)", border: "1px solid rgba(255, 255, 255, 0.12)", borderRadius: "12px", padding: "14px" }}>
+                    <span style={{ fontSize: "0.74rem", color: "#94a3b8", fontWeight: 700, display: "block" }}>TOTAL BILLED CHARGES</span>
+                    <strong style={{ color: "#f8fafc", fontSize: "1.1rem" }}>{feeCur} {totalBilledLive.toFixed(2)}</strong>
+                    <div style={{ fontSize: "0.75rem", color: "#94a3b8", marginTop: "4px" }}>{liveInvoices.length} Official School Bill(s)</div>
+                  </div>
+                  <div style={{ background: "rgba(15, 23, 42, 0.78)", border: "1px solid rgba(16, 185, 129, 0.35)", borderRadius: "12px", padding: "14px" }}>
+                    <span style={{ fontSize: "0.74rem", color: "#94a3b8", fontWeight: 700, display: "block" }}>TOTAL VERIFIED PAID</span>
+                    <strong style={{ color: "#34d399", fontSize: "1.1rem" }}>{feeCur} {totalPaidLive.toFixed(2)}</strong>
+                    <div style={{ fontSize: "0.75rem", color: "#6ee7b7", marginTop: "4px" }}>{liveTx.filter((t) => t.gatewayStatus === "SUCCESSFUL").length} Confirmed Receipt(s)</div>
+                  </div>
+                  <div style={{ background: "rgba(15, 23, 42, 0.78)", border: `1px solid ${outstandingLive > 0 ? "rgba(245, 158, 11, 0.45)" : "rgba(16, 185, 129, 0.45)"}`, borderRadius: "12px", padding: "14px" }}>
+                    <span style={{ fontSize: "0.74rem", color: "#94a3b8", fontWeight: 700, display: "block" }}>CURRENT BALANCE DUE</span>
+                    <strong style={{ color: outstandingLive > 0 ? "#fbbf24" : "#34d399", fontSize: "1.1rem" }}>
+                      {outstandingLive > 0 ? `${feeCur} ${outstandingLive.toFixed(2)}` : `✓ Cleared (${feeCur} 0.00)`}
+                    </strong>
+                    <div style={{ fontSize: "0.75rem", color: "#94a3b8", marginTop: "4px" }}>Synced live with Accountant Ledger</div>
+                  </div>
                 </div>
-                <div style={{ background: "rgba(15, 23, 42, 0.7)", border: "1px solid rgba(255, 255, 255, 0.1)", borderRadius: "12px", padding: "14px" }}>
-                  <span style={{ fontSize: "0.75rem", color: "#94a3b8", fontWeight: 700, display: "block" }}>LIFETIME INVOICED CHARGES</span>
-                  <strong style={{ color: "#f8fafc", fontSize: "1rem" }}>GH₵ 8,950.00</strong>
-                  <div style={{ fontSize: "0.72rem", color: "#10b981", marginTop: "2px" }}>8 Audited Billing Cycles</div>
-                </div>
-                <div style={{ background: "rgba(15, 23, 42, 0.7)", border: "1px solid rgba(255, 255, 255, 0.1)", borderRadius: "12px", padding: "14px" }}>
-                  <span style={{ fontSize: "0.75rem", color: "#94a3b8", fontWeight: 700, display: "block" }}>CURRENT BALANCE STATUS</span>
-                  <strong style={{ color: feeBalance > 0 ? "#f59e0b" : "#34d399", fontSize: "1rem" }}>
-                    {feeBalance > 0 ? `GH₵ ${feeBalance.toFixed(2)} Pending` : "✓ Fully Cleared (GH₵ 0.00)"}
-                  </strong>
-                  <div style={{ fontSize: "0.72rem", color: "#94a3b8", marginTop: "2px" }}>80% Exam Threshold Satisfied</div>
-                </div>
-              </div>
 
-              {/* Lifetime Ledger Table */}
-              <div className="role-table-responsive">
-                <table className="role-table">
-                  <thead>
-                    <tr>
-                      <th>#</th>
-                      <th>Billing Period / Academic Term</th>
-                      <th>Date</th>
-                      <th>Receipt #</th>
-                      <th>Fee Purpose & Description</th>
-                      <th>Payment Channel</th>
-                      <th>Billed (GH₵)</th>
-                      <th>Settled (GH₵)</th>
-                      <th>Balance</th>
-                      <th>Audit Status</th>
-                      <th style={{ textAlign: "center" }}>Receipt</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {[
-                      {
-                        idx: 1,
-                        term: "Admission Enrolment (Day 1)",
-                        date: "2024-01-15",
-                        receipt: "GBS-REC-2024-0019",
-                        desc: "Admission Acceptance, Student File Creation & Matriculation Pack",
-                        channel: "MTN MoMo (+233 24 555 0199)",
-                        channelBadge: "🟡 MTN",
-                        billed: 850.00,
-                        paid: 850.00,
-                        balance: 0.00,
-                        status: "SETTLED"
-                      },
-                      {
-                        idx: 2,
-                        term: "Year 1 • Term 1",
-                        date: "2024-01-20",
-                        receipt: "GBS-REC-2024-0312",
-                        desc: "Tuition, STEM Practical Science Levy & Digital Portal Access",
-                        channel: "GhIPSS Instant Bank Wire",
-                        channelBadge: "🏦 Bank",
-                        billed: 1200.00,
-                        paid: 1200.00,
-                        balance: 0.00,
-                        status: "SETTLED"
-                      },
-                      {
-                        idx: 3,
-                        term: "Year 1 • Term 2",
-                        date: "2024-05-10",
-                        receipt: "GBS-REC-2024-0894",
-                        desc: "Tuition, Library Access & Mid-Year Terminal Examination Fee",
-                        channel: "Telecel Cash",
-                        channelBadge: "🔴 Telecel",
-                        billed: 1100.00,
-                        paid: 1100.00,
-                        balance: 0.00,
-                        status: "SETTLED"
-                      },
-                      {
-                        idx: 4,
-                        term: "Year 1 • Term 3",
-                        date: "2024-09-18",
-                        receipt: "GBS-REC-2024-1420",
-                        desc: "Tuition, Promotional Examination & ICT Laboratory Fee",
-                        channel: "MTN MoMo",
-                        channelBadge: "🟡 MTN",
-                        billed: 1150.00,
-                        paid: 1150.00,
-                        balance: 0.00,
-                        status: "SETTLED"
-                      },
-                      {
-                        idx: 5,
-                        term: "Year 2 • Term 1",
-                        date: "2025-01-14",
-                        receipt: "GBS-REC-2025-0211",
-                        desc: "Tuition, Senior Secondary Science Lab & Sports Development",
-                        channel: "Visa 3DS Debit",
-                        channelBadge: "💳 Visa",
-                        billed: 1300.00,
-                        paid: 1300.00,
-                        balance: 0.00,
-                        status: "SETTLED"
-                      },
-                      {
-                        idx: 6,
-                        term: "Year 2 • Term 2",
-                        date: "2025-05-12",
-                        receipt: "GBS-REC-2025-0955",
-                        desc: "Tuition & Digital Cloud LMS Platform User License",
-                        channel: "MTN MoMo",
-                        channelBadge: "🟡 MTN",
-                        billed: 1250.00,
-                        paid: 1250.00,
-                        balance: 0.00,
-                        status: "SETTLED"
-                      },
-                      {
-                        idx: 7,
-                        term: "Year 2 • Term 3",
-                        date: "2025-09-22",
-                        receipt: "GBS-REC-2025-1688",
-                        desc: "Tuition & Pre-Finals Mock Assessment Examination Fee",
-                        channel: "GhIPSS Instant Bank Transfer",
-                        channelBadge: "🏦 Bank",
-                        billed: 1200.00,
-                        paid: 1200.00,
-                        balance: 0.00,
-                        status: "SETTLED"
-                      },
-                      {
-                        idx: 8,
-                        term: "Year 3 • Term 1 (Active)",
-                        date: "2026-10-18",
-                        receipt: feeBalance === 0 ? "GBS-REC-2026-2104" : "GBS-INV-2026-PART",
-                        desc: "Tuition, WASSCE Certification Prep & Senior Terminal Clearance",
-                        channel: "MTN MoMo (+233 24 555 0199)",
-                        channelBadge: "🟡 MTN",
-                        billed: 900.00,
-                        paid: 900.00 - feeBalance,
-                        balance: feeBalance,
-                        status: feeBalance === 0 ? "SETTLED" : "PARTIALLY_SETTLED"
-                      }
-                    ].map((row) => (
-                      <tr key={row.idx} style={{ background: row.balance > 0 ? "rgba(245, 158, 11, 0.06)" : "transparent" }}>
-                        <td style={{ color: "#94a3b8", fontWeight: 700 }}>{row.idx}</td>
-                        <td>
-                          <strong style={{ color: "#f8fafc", fontSize: "0.85rem" }}>{row.term}</strong>
-                        </td>
-                        <td style={{ fontSize: "0.8rem", color: "#94a3b8", whiteSpace: "nowrap" }}>{row.date}</td>
-                        <td style={{ fontFamily: "monospace", fontSize: "0.78rem", color: "#38bdf8" }}>{row.receipt}</td>
-                        <td style={{ fontSize: "0.8rem", color: "#cbd5e1" }}>{row.desc}</td>
-                        <td>
-                          <span style={{ fontSize: "0.72rem", background: "rgba(255, 255, 255, 0.08)", padding: "2px 8px", borderRadius: "6px", color: "#f8fafc", fontWeight: 700 }}>
-                            {row.channelBadge} {row.channel}
-                          </span>
-                        </td>
-                        <td style={{ fontWeight: 700 }}>{row.billed.toFixed(2)}</td>
-                        <td style={{ fontWeight: 800, color: "#34d399" }}>{row.paid.toFixed(2)}</td>
-                        <td style={{ fontWeight: 800, color: row.balance > 0 ? "#f59e0b" : "#94a3b8" }}>{row.balance.toFixed(2)}</td>
-                        <td>
-                          <span style={{
-                            fontSize: "0.72rem",
-                            padding: "3px 8px",
-                            borderRadius: "6px",
-                            fontWeight: 800,
-                            background: row.balance === 0 ? "rgba(16, 185, 129, 0.2)" : "rgba(245, 158, 11, 0.2)",
-                            color: row.balance === 0 ? "#34d399" : "#fbbf24"
-                          }}>
-                            {row.balance === 0 ? "✓ Cleared & Reconciled" : "⏳ Active Balance"}
-                          </span>
-                        </td>
-                        <td style={{ textAlign: "center" }}>
-                          <button
-                            type="button"
-                            onClick={() => {
-                              window.showGBSOpenNotice?.(
-                                `Official Bursar Receipt (${row.receipt}) for ${row.term} (GH₵ ${row.paid.toFixed(2)}) downloaded!`,
-                                "success",
-                                "Receipt Download"
-                              );
-                            }}
-                            style={{
-                              background: "rgba(56, 189, 248, 0.15)",
-                              border: "1px solid #38bdf8",
-                              borderRadius: "6px",
-                              color: "#38bdf8",
-                              padding: "4px 8px",
-                              fontSize: "0.72rem",
-                              fontWeight: 700,
-                              cursor: "pointer"
-                            }}
-                          >
-                            🧾 Receipt
-                          </button>
-                        </td>
+                {/* Official School Receiving Accounts Box (School Bank Account + School MoMo Account) */}
+                <div style={{ background: "rgba(16, 185, 129, 0.08)", border: "1.5px solid rgba(16, 185, 129, 0.38)", borderRadius: "12px", padding: "14px 16px", marginBottom: "20px" }}>
+                  <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: "8px", marginBottom: "10px" }}>
+                    <strong style={{ color: "#34d399", fontSize: "0.9rem" }}>
+                      🏛️ OFFICIAL SCHOOL RECEIVING ACCOUNT &amp; SCHOOL MOMO DETAILS
+                    </strong>
+                    <span style={{ fontSize: "0.74rem", color: "#a7f3d0", fontWeight: 700 }}>
+                      Auto-Referenced to: {stuFullName} ({stuCode}) — Paid by Student (Self)
+                    </span>
+                  </div>
+                  <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(260px, 1fr))", gap: "12px" }}>
+                    <div style={{ background: "rgba(2, 6, 23, 0.55)", borderRadius: "10px", padding: "12px", border: "1px solid rgba(250, 204, 21, 0.35)" }}>
+                      <div style={{ fontSize: "0.72rem", color: "#fbbf24", fontWeight: 800, textTransform: "uppercase" }}>📱 Official School Mobile Money (MoMo)</div>
+                      {recv?.momo?.configured ? (
+                        <>
+                          <div style={{ fontSize: "1rem", fontWeight: 900, color: "#fff", fontFamily: "monospace", marginTop: "4px" }}>{recv.momo.number}</div>
+                          <div style={{ fontSize: "0.8rem", color: "#cbd5e1", marginTop: "2px" }}>
+                            {recv.momo.network} • {recv.momo.accountName}
+                            {recv.momo.merchantId ? ` • Merchant ID: ${recv.momo.merchantId}` : ""}
+                          </div>
+                        </>
+                      ) : (
+                        <div style={{ fontSize: "0.8rem", color: "#cbd5e1", marginTop: "4px" }}>
+                          Processed directly through the school&apos;s verified online Mobile Money gateway (MTN MoMo, Telecel Cash, AirtelTigo).
+                        </div>
+                      )}
+                    </div>
+                    <div style={{ background: "rgba(2, 6, 23, 0.55)", borderRadius: "10px", padding: "12px", border: "1px solid rgba(56, 189, 248, 0.35)" }}>
+                      <div style={{ fontSize: "0.72rem", color: "#38bdf8", fontWeight: 800, textTransform: "uppercase" }}>🏦 Official School Bank Account</div>
+                      {recv?.bank?.configured ? (
+                        <>
+                          <div style={{ fontSize: "1rem", fontWeight: 900, color: "#fff", fontFamily: "monospace", marginTop: "4px" }}>{recv.bank.bankAccountNumber}</div>
+                          <div style={{ fontSize: "0.8rem", color: "#cbd5e1", marginTop: "2px" }}>
+                            {recv.bank.bankName}{recv.bank.bankBranch ? ` (${recv.bank.bankBranch})` : ""} • {recv.bank.bankAccountName}
+                          </div>
+                        </>
+                      ) : (
+                        <div style={{ fontSize: "0.8rem", color: "#cbd5e1", marginTop: "4px" }}>
+                          School bank deposit account details will appear here once configured by the School Accountant.
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                </div>
+
+                {/* Section 1: Issued School Bills / Invoices */}
+                <h3 style={{ color: "#f8fafc", fontSize: "0.96rem", margin: "0 0 10px" }}>📋 Your Issued School Fees &amp; Bills ({liveInvoices.length})</h3>
+                <div className="role-table-responsive" style={{ marginBottom: "22px" }}>
+                  <table className="role-table">
+                    <thead>
+                      <tr>
+                        <th>Invoice #</th>
+                        <th>Academic Term</th>
+                        <th>Bill Description</th>
+                        <th>Net Billed ({feeCur})</th>
+                        <th>Paid ({feeCur})</th>
+                        <th>Balance Due ({feeCur})</th>
+                        <th>Status</th>
+                        <th style={{ textAlign: "center" }}>Pay Bill</th>
                       </tr>
-                    ))}
-                  </tbody>
-                </table>
+                    </thead>
+                    <tbody>
+                      {liveInvoices.length === 0 ? (
+                        <tr>
+                          <td colSpan="8" style={{ textAlign: "center", padding: "18px", color: "#94a3b8" }}>
+                            No open school bills issued yet. You can still make an official school fee or advance payment using the green button above.
+                          </td>
+                        </tr>
+                      ) : (
+                        liveInvoices.map((inv) => {
+                          const bal = Number(inv.balanceDue || 0);
+                          return (
+                            <tr key={inv.id}>
+                              <td style={{ fontFamily: "monospace", color: "#38bdf8", fontWeight: 700 }}>{inv.invoiceNumber}</td>
+                              <td>{inv.academicTerm || "Current Term"}</td>
+                              <td style={{ color: "#e2e8f0" }}>{inv.title}</td>
+                              <td style={{ fontWeight: 700 }}>{Number(inv.netAmount || inv.amount || 0).toFixed(2)}</td>
+                              <td style={{ color: "#34d399", fontWeight: 800 }}>{Number(inv.paidAmount || 0).toFixed(2)}</td>
+                              <td style={{ color: bal > 0 ? "#fbbf24" : "#94a3b8", fontWeight: 800 }}>{bal.toFixed(2)}</td>
+                              <td>
+                                <span style={{
+                                  fontSize: "0.72rem",
+                                  padding: "3px 8px",
+                                  borderRadius: "6px",
+                                  fontWeight: 800,
+                                  background: bal <= 0 ? "rgba(16, 185, 129, 0.2)" : "rgba(245, 158, 11, 0.2)",
+                                  color: bal <= 0 ? "#34d399" : "#fbbf24"
+                                }}>
+                                  {inv.status || (bal <= 0 ? "PAID" : "DUE")}
+                                </span>
+                              </td>
+                              <td style={{ textAlign: "center" }}>
+                                {bal > 0 ? (
+                                  <button
+                                    type="button"
+                                    onClick={() => openStudentSelfPayment(inv)}
+                                    style={{
+                                      background: "#059669",
+                                      border: "none",
+                                      borderRadius: "6px",
+                                      color: "#fff",
+                                      padding: "5px 10px",
+                                      fontSize: "0.74rem",
+                                      fontWeight: 800,
+                                      cursor: "pointer"
+                                    }}
+                                  >
+                                    💳 Pay This Bill
+                                  </button>
+                                ) : (
+                                  <span style={{ color: "#34d399", fontSize: "0.76rem", fontWeight: 800 }}>✓ Paid</span>
+                                )}
+                              </td>
+                            </tr>
+                          );
+                        })
+                      )}
+                    </tbody>
+                  </table>
+                </div>
+
+                {/* Section 2: Live Verified Payments & Official Receipts History (Student Self + Parent) */}
+                <h3 style={{ color: "#f8fafc", fontSize: "0.96rem", margin: "0 0 10px" }}>🧾 Verified Payment Transactions &amp; Official Receipts ({liveTx.length})</h3>
+                <div className="role-table-responsive">
+                  <table className="role-table">
+                    <thead>
+                      <tr>
+                        <th>Receipt # &amp; Ref</th>
+                        <th>Date</th>
+                        <th>Paid By (Payer)</th>
+                        <th>Student Payee Reference</th>
+                        <th>School Account / MoMo Credited</th>
+                        <th>Method</th>
+                        <th>Amount ({feeCur})</th>
+                        <th>Status</th>
+                        <th style={{ textAlign: "center" }}>Receipt</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {liveTx.length === 0 ? (
+                        <tr>
+                          <td colSpan="9" style={{ textAlign: "center", padding: "18px", color: "#94a3b8" }}>
+                            No verified payment transactions recorded yet. Once you or your parent completes a payment, the official receipt appears here and on the Accountant ledger immediately.
+                          </td>
+                        </tr>
+                      ) : (
+                        liveTx.map((tx) => {
+                          const isSelf = tx.paidByRole === "STUDENT";
+                          const isParent = tx.paidByRole === "PARENT";
+                          return (
+                            <tr key={tx.id || tx.reference}>
+                              <td>
+                                <strong style={{ fontFamily: "monospace", color: "#38bdf8", display: "block" }}>{tx.receiptNumber || "—"}</strong>
+                                <span style={{ fontFamily: "monospace", fontSize: "0.72rem", color: "#94a3b8" }}>{tx.reference || tx.transactionRef}</span>
+                              </td>
+                              <td style={{ fontSize: "0.78rem", color: "#cbd5e1", whiteSpace: "nowrap" }}>
+                                {new Date(tx.paidAt || tx.createdAt || Date.now()).toLocaleString()}
+                              </td>
+                              <td>
+                                <span style={{
+                                  display: "inline-block",
+                                  padding: "3px 8px",
+                                  borderRadius: "6px",
+                                  fontSize: "0.72rem",
+                                  fontWeight: 800,
+                                  background: isSelf ? "rgba(56, 189, 248, 0.2)" : isParent ? "rgba(168, 85, 247, 0.2)" : "rgba(16, 185, 129, 0.2)",
+                                  color: isSelf ? "#38bdf8" : isParent ? "#c084fc" : "#34d399"
+                                }}>
+                                  {isSelf ? "🎓 Student (Self)" : isParent ? "👨‍👩‍👧 Parent" : (tx.paidByLabel || "Finance Office")}
+                                </span>
+                                <div style={{ fontSize: "0.74rem", color: "#e2e8f0", marginTop: "2px" }}>{tx.paidByName || stuFullName}</div>
+                              </td>
+                              <td style={{ fontSize: "0.78rem", color: "#fbbf24", fontWeight: 700 }}>
+                                {tx.payeeReference || `${stuFullName} (${stuCode})`}
+                              </td>
+                              <td style={{ fontSize: "0.76rem", color: "#a7f3d0" }}>
+                                {tx.destinationAccountSummary || "Official School Collection Account"}
+                              </td>
+                              <td style={{ fontSize: "0.76rem", color: "#cbd5e1" }}>
+                                {tx.gateway} • {tx.channel || tx.paymentMethod}
+                              </td>
+                              <td style={{ fontWeight: 900, color: "#34d399" }}>
+                                {tx.currency || feeCur} {Number(tx.amountPaid || 0).toFixed(2)}
+                              </td>
+                              <td>
+                                <span style={{
+                                  fontSize: "0.72rem",
+                                  padding: "3px 8px",
+                                  borderRadius: "6px",
+                                  fontWeight: 800,
+                                  background: tx.gatewayStatus === "SUCCESSFUL" ? "rgba(16, 185, 129, 0.2)" : "rgba(245, 158, 11, 0.2)",
+                                  color: tx.gatewayStatus === "SUCCESSFUL" ? "#34d399" : "#fbbf24"
+                                }}>
+                                  {tx.gatewayStatus === "SUCCESSFUL" ? "✓ Confirmed & Posted" : tx.gatewayStatus}
+                                </span>
+                              </td>
+                              <td style={{ textAlign: "center" }}>
+                                <button
+                                  type="button"
+                                  onClick={() => handlePrintStudentOfficialReceipt(tx)}
+                                  style={{
+                                    background: "rgba(56, 189, 248, 0.15)",
+                                    border: "1px solid #38bdf8",
+                                    borderRadius: "6px",
+                                    color: "#38bdf8",
+                                    padding: "5px 10px",
+                                    fontSize: "0.72rem",
+                                    fontWeight: 700,
+                                    cursor: "pointer"
+                                  }}
+                                >
+                                  🖨️ Print Receipt
+                                </button>
+                              </td>
+                            </tr>
+                          );
+                        })
+                      )}
+                    </tbody>
+                  </table>
+                </div>
               </div>
-            </div>
-          )}
+            );
+          })()}
 
           {activeTab === "peer-chat" && (
             <div className="role-workspace-card">
@@ -8381,21 +8520,26 @@ export function StudentDashboard({ initialTab } = {}) {
         </div>
       )}
 
-      {/* OFFICIAL PAYMENT GATEWAY MODAL FOR OUTSTANDING ARREARS */}
+      {/* OFFICIAL PAYMENT GATEWAY MODAL FOR STUDENT SELF-PAYMENT OF FEES & BILLS */}
       <OfficialPaymentGatewayModal
         isOpen={showOfficialPaymentModal}
-        onClose={() => setShowOfficialPaymentModal(false)}
-        amount={feeBalance > 0 ? feeBalance : null}
+        onClose={() => {
+          setShowOfficialPaymentModal(false);
+          setSelectedFeeInvoiceTarget(null);
+        }}
+        tenantId={currentUser?.tenantId || 1}
+        invoiceId={selectedFeeInvoiceTarget && /^\d+$/.test(String(selectedFeeInvoiceTarget.id || "")) ? Number(selectedFeeInvoiceTarget.id) : null}
+        amount={selectedFeeInvoiceTarget?.balanceDue || (feeBalance > 0 ? feeBalance : null)}
         currency="GHS"
-        title={studentFeeStatement?.feeSummary?.feeDescription || "School Fees Payment"}
+        title={selectedFeeInvoiceTarget?.title || studentFeeStatement?.feeSummary?.feeDescription || "Student School Fees & Bills Self-Payment"}
         studentId={studentFeeStatement?.student?.id || currentUser?.id || "3"}
-        studentIdentifier={studentFeeStatement?.student?.studentCode || currentUser?.username || "STU-2026-0891"}
+        studentIdentifier={String(studentFeeStatement?.student?.studentCode || studentFeeStatement?.student?.id || currentUser?.id || "3")}
         studentName={studentFeeStatement?.student?.fullName || `${currentUser?.firstName || ""} ${currentUser?.lastName || ""}`.trim() || "Student"}
         onSuccess={({ transaction, receipt }) => {
           loadVerifiedStudentFees();
           setFeedback({
             type: "success",
-            message: `Payment verified by provider! Receipt ${receipt?.receiptNumber || transaction?.receiptNumber} issued. Remaining balance: ${receipt?.currency || "GHS"} ${Number(receipt?.balanceAfter ?? 0).toFixed(2)}.`
+            message: `Payment verified & posted to School Accountant Ledger! Receipt ${receipt?.receiptNumber || transaction?.receiptNumber} (${transaction?.payeeReference || "Student Self-Payment"}). Remaining balance: ${receipt?.currency || "GHS"} ${Number(receipt?.balanceAfter ?? 0).toFixed(2)}.`
           });
         }}
       />

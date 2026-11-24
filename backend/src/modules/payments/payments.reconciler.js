@@ -141,6 +141,49 @@ async function reconcileVerifiedOutcome({
       const student = freshTx.studentId
         ? await tx.user.findFirst({ where: { id: freshTx.studentId, tenantId: freshTx.tenantId } }).catch(() => null)
         : null;
+      const payerUser = freshTx.payerUserId
+        ? await tx.user.findFirst({ where: { id: freshTx.payerUserId, tenantId: freshTx.tenantId } }).catch(() => null)
+        : null;
+
+      const resolvedStudentName =
+        mergedMetadata.studentName ||
+        (student ? `${student.firstName || ''} ${student.lastName || ''}`.trim() : null) ||
+        (freshTx.paymentScope === PAYMENT_SCOPES.SUBSCRIPTION ? (tenant?.name || 'School Institution') : 'Student Account');
+      const resolvedStudentCode =
+        mergedMetadata.studentCode || freshTx.studentCode || student?.username || (freshTx.studentId ? `STU-${freshTx.tenantId}-${freshTx.studentId}` : null);
+      const paidByRole = String(
+        mergedMetadata.paidByRole ||
+        payerUser?.role ||
+        (freshTx.payerUserId && freshTx.studentId && Number(freshTx.payerUserId) === Number(freshTx.studentId) ? 'STUDENT' : 'PARENT')
+      ).toUpperCase();
+      const paidByName =
+        mergedMetadata.paidByName ||
+        (payerUser ? `${payerUser.firstName || ''} ${payerUser.lastName || ''}`.trim() || payerUser.email : null) ||
+        (paidByRole === 'STUDENT' ? resolvedStudentName : freshTx.payerEmail || 'Verified Payer');
+      const paidByLabel =
+        mergedMetadata.paidByLabel ||
+        (paidByRole === 'STUDENT'
+          ? 'Student (Self-Payment)'
+          : paidByRole === 'PARENT'
+            ? 'Parent / Guardian'
+            : paidByRole === 'ACCOUNTANT'
+              ? 'School Accountant'
+              : paidByRole);
+      const payeeReference =
+        mergedMetadata.payeeReference ||
+        (paidByRole === 'STUDENT'
+          ? `${resolvedStudentName}${resolvedStudentCode ? ` (${resolvedStudentCode})` : ''} — Paid by Student (Self)`
+          : paidByRole === 'PARENT'
+            ? `${resolvedStudentName}${resolvedStudentCode ? ` (${resolvedStudentCode})` : ''} — Paid by Parent: ${paidByName}`
+            : `${resolvedStudentName}${resolvedStudentCode ? ` (${resolvedStudentCode})` : ''} — ${paidByLabel}`);
+      const destinationAccountSummary = mergedMetadata.destinationAccountSummary || null;
+
+      mergedMetadata.studentName = resolvedStudentName;
+      mergedMetadata.studentCode = resolvedStudentCode;
+      mergedMetadata.paidByRole = paidByRole;
+      mergedMetadata.paidByName = paidByName;
+      mergedMetadata.paidByLabel = paidByLabel;
+      mergedMetadata.payeeReference = payeeReference;
 
       const existingReceipt = await tx.paymentReceipt.findFirst({
         where: { paymentTransactionId: freshTx.id }
@@ -155,10 +198,8 @@ async function reconcileVerifiedOutcome({
             paymentTransactionId: freshTx.id,
             invoiceId: freshTx.invoiceId || (invoicesTouched[0]?.id ?? null),
             studentId: freshTx.studentId || null,
-            studentCode: freshTx.studentCode || student?.username || null,
-            studentName: student
-              ? `${student.firstName} ${student.lastName}`.trim()
-              : (freshTx.paymentScope === PAYMENT_SCOPES.SUBSCRIPTION ? (tenant?.name || 'School Institution') : 'Student Account'),
+            studentCode: resolvedStudentCode,
+            studentName: resolvedStudentName,
             institutionName: tenant?.name || `Institution #${freshTx.tenantId}`,
             receiptNumber: receiptNum,
             transactionRef: freshTx.reference || freshTx.transactionRef || receiptNum,
@@ -194,6 +235,7 @@ async function reconcileVerifiedOutcome({
           paidAt: new Date(),
           failureReason: null,
           metadataJson: JSON.stringify(mergedMetadata),
+          notes: freshTx.notes || `${payeeReference}${destinationAccountSummary ? ` -> ${destinationAccountSummary}` : ''}`,
           displayMessage: gatewayResponse || 'Payment confirmed and fee account updated.'
         }
       });
@@ -204,15 +246,36 @@ async function reconcileVerifiedOutcome({
           userId: actorUserId || freshTx.payerUserId || null,
           module: 'PAYMENTS',
           action: 'PAYMENT_CONFIRMED_RECONCILED',
-          details: `[TX #${updatedTx.id}] ${updatedTx.gateway} ${updatedTx.channel} payment ${updatedTx.reference} (${updatedTx.currency} ${settledAmount.toFixed(2)}) confirmed via ${source}. Receipt ${receiptNum} issued.`
+          details: `[TX #${updatedTx.id}] ${payeeReference} | ${updatedTx.gateway} ${updatedTx.channel} payment ${updatedTx.reference} (${updatedTx.currency} ${settledAmount.toFixed(2)})${destinationAccountSummary ? ` -> ${destinationAccountSummary}` : ''} confirmed via ${source}. Receipt ${receiptNum} issued.`
         }
       }).catch(() => {});
 
       await _queuePaymentNotification(tx, updatedTx, createdReceipt, 'CONFIRMED');
 
+      const enrichedReceipt = createdReceipt
+        ? {
+            ...createdReceipt,
+            paidByRole,
+            paidByName,
+            paidByLabel,
+            payeeReference,
+            destinationAccountSummary
+          }
+        : null;
+      const enrichedTx = {
+        ...updatedTx,
+        studentName: resolvedStudentName,
+        studentCode: resolvedStudentCode,
+        paidByRole,
+        paidByName,
+        paidByLabel,
+        payeeReference,
+        destinationAccountSummary
+      };
+
       return {
-        transaction: updatedTx,
-        receipt: createdReceipt,
+        transaction: enrichedTx,
+        receipt: enrichedReceipt,
         updatedInvoices,
         idempotentSkip: false
       };

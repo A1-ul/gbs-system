@@ -65,18 +65,20 @@ class BankDirectAdapter extends BasePaymentAdapter {
 
     const recipientLabel = scope === 'SUBSCRIPTION' ? 'GBS Platform Developer' : institutionName;
     const bankSummary = `${bank.bankName}${bank.bankBranch ? ` (${bank.bankBranch})` : ''} • Account Name: ${bank.bankAccountName} • Account No: ${bank.bankAccountNumber}`;
+    const payeeRefText = metadata?.payeeReference ? ` | Student Reference: ${metadata.payeeReference}` : '';
     return {
       status: TRANSACTION_STATES.REQUIRES_CUSTOMER_ACTION,
       providerReference: reference,
       authorizationType: 'BANK_REFERENCE',
       authorizationUrl: null,
-      ussdInstruction: bankSummary,
-      displayMessage: `Transfer exact amount (${currency} ${Number(amount).toFixed(2)}) from your bank app or branch to ${recipientLabel}'s official bank account (${bankSummary}) using reference "${reference}". Your account statement updates automatically once verified.`,
+      ussdInstruction: `${bankSummary}${payeeRefText}`,
+      displayMessage: `Transfer exact amount (${currency} ${Number(amount).toFixed(2)}) from your bank app or branch to ${recipientLabel}'s official bank account (${bankSummary}) quoting reference "${reference}"${metadata?.payeeReference ? ` (${metadata.payeeReference})` : ''}. Your account & school Accountant ledger update automatically once verified.`,
       rawResponse: {
         bankName: bank.bankName,
         bankAccountNumber: bank.bankAccountNumber,
         bankAccountName: bank.bankAccountName,
         bankBranch: bank.bankBranch || null,
+        payeeReference: metadata?.payeeReference || null,
         reference
       }
     };

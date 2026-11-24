@@ -28,6 +28,7 @@ const {
   getTenantGatewayConfigs,
   upsertTenantGatewayConfig,
   resolveGatewayAndChannels,
+  extractSchoolReceivingAccounts,
   testGatewayConnectivity
 } = require('./payments.registry');
 const { reconcileVerifiedOutcome } = require('./payments.reconciler');
@@ -316,12 +317,32 @@ async function getStudentFeeStatement({ tenantId, studentIdentifier, requestingU
     prisma.studentInvoice.findMany({ where: { tenantId: tid, studentId: student.id } }).catch(() => []),
     prisma.paymentTransaction.findMany({ where: { tenantId: tid, studentId: student.id } }).catch(() => []),
     prisma.paymentReceipt.findMany({ where: { tenantId: tid, studentId: student.id } }).catch(() => []),
-    resolveGatewayAndChannels(tid)
+    resolveGatewayAndChannels(tid, { tenantName: tenant.name })
   ]);
 
   invoices.sort((a, b) => new Date(b.createdAt || 0) - new Date(a.createdAt || 0));
   transactions.sort((a, b) => new Date(b.createdAt || 0) - new Date(a.createdAt || 0));
   receipts.sort((a, b) => new Date(b.issuedAt || 0) - new Date(a.issuedAt || 0));
+
+  const userMap = await _buildUsersLookupMap(transactions);
+  const enrichedTransactions = transactions.slice(0, 25).map((t) => _sanitizeTransactionForClient(t, userMap));
+  const txByRef = {};
+  const txById = {};
+  enrichedTransactions.forEach((t) => {
+    if (t.reference) txByRef[t.reference] = t;
+    if (t.id) txById[t.id] = t;
+  });
+  const enrichedReceipts = receipts.slice(0, 25).map((r) => {
+    const linkedTx = (r.paymentTransactionId && txById[r.paymentTransactionId]) || (r.transactionRef && txByRef[r.transactionRef]) || null;
+    return {
+      ...r,
+      paidByRole: linkedTx?.paidByRole || null,
+      paidByName: linkedTx?.paidByName || null,
+      paidByLabel: linkedTx?.paidByLabel || null,
+      payeeReference: linkedTx?.payeeReference || `${r.studentName || 'Student'}${r.studentCode ? ` (${r.studentCode})` : ''}`,
+      destinationAccountSummary: linkedTx?.destinationAccountSummary || null
+    };
+  });
 
   const activeInvoices = invoices.filter((i) => i.status !== 'CANCELLED');
   const totalBilled = roundMoney(activeInvoices.reduce((s, i) => s + Number(i.netAmount || 0), 0));
@@ -374,8 +395,9 @@ async function getStudentFeeStatement({ tenantId, studentIdentifier, requestingU
     },
     invoices: activeInvoices,
     availableChannels: gatewayBundle.channels,
-    transactions: transactions.slice(0, 25),
-    receipts: receipts.slice(0, 25)
+    schoolReceivingAccounts: gatewayBundle.schoolReceivingAccounts || extractSchoolReceivingAccounts(gatewayBundle.configs, tenant.name),
+    transactions: enrichedTransactions,
+    receipts: enrichedReceipts
   };
 }
 
@@ -579,7 +601,46 @@ async function initiatePayment({ tenantId, requestingUser, body, originUrl = '' 
   const safePayerUserId = Number.isInteger(rawPayerNum) && rawPayerNum > 0 ? rawPayerNum : null;
   const safeStudentCode = input.studentIdentifier !== undefined && input.studentIdentifier !== null && String(input.studentIdentifier).trim() !== ''
     ? String(input.studentIdentifier).trim()
-    : (student?.username ? String(student.username).trim() : null);
+    : (student?.username ? String(student.username).trim() : (safeStudentId ? `STU-${tid}-${safeStudentId}` : null));
+
+  const studentFullName = student
+    ? `${student.firstName || ''} ${student.lastName || ''}`.trim() || student.username || `Student #${student.id}`
+    : (input.scope === PAYMENT_SCOPES.SUBSCRIPTION ? tenant.name : null);
+  const paidByRole = String(
+    requestingUser?.role ||
+    (input.scope === PAYMENT_SCOPES.SUBSCRIPTION ? 'ADMIN' : 'STUDENT')
+  ).toUpperCase();
+  const paidByName =
+    (requestingUser ? `${requestingUser.firstName || ''} ${requestingUser.lastName || ''}`.trim() || requestingUser.email : null) ||
+    input.payerName ||
+    (paidByRole === 'STUDENT' ? studentFullName : 'Authorized Payer');
+  const paidByLabel =
+    paidByRole === 'STUDENT'
+      ? 'Student (Self-Payment)'
+      : paidByRole === 'PARENT'
+        ? 'Parent / Guardian'
+        : paidByRole === 'ACCOUNTANT'
+          ? 'School Accountant'
+          : paidByRole === 'ADMIN' || paidByRole === 'SUPER_ADMIN'
+            ? 'Headmaster / Admin'
+            : paidByRole;
+  const payeeReference =
+    input.scope === PAYMENT_SCOPES.SUBSCRIPTION
+      ? `${tenant.name} — Platform Subscription (${paidByName})`
+      : paidByRole === 'STUDENT'
+        ? `${studentFullName || 'Student'}${safeStudentCode ? ` (${safeStudentCode})` : ''} — Paid by Student (Self)`
+        : paidByRole === 'PARENT'
+          ? `${studentFullName || 'Student'}${safeStudentCode ? ` (${safeStudentCode})` : ''} — Paid by Parent: ${paidByName}`
+          : `${studentFullName || 'Student'}${safeStudentCode ? ` (${safeStudentCode})` : ''} — Paid by ${paidByName} (${paidByLabel})`;
+
+  const schoolReceivingAccounts = extractSchoolReceivingAccounts(configs, tenant.name);
+  const destinationAccountSummary = _resolveDestinationAccountSummary(
+    schoolReceivingAccounts,
+    input.channel,
+    chosenGatewayName,
+    input.scope,
+    tenant.name
+  );
 
   // Create CREATED record in DB before external API call
   const initialTx = await prisma.paymentTransaction.create({
@@ -612,9 +673,21 @@ async function initiatePayment({ tenantId, requestingUser, body, originUrl = '' 
       accountingPosted: false,
       expiresAt,
       displayMessage: STATE_CUSTOMER_MESSAGES.CREATED,
+      notes: `${payeeReference}${destinationAccountSummary ? ` -> ${destinationAccountSummary}` : ''}`,
       metadataJson: JSON.stringify({
         institutionName: tenant.name,
-        studentName: student ? `${student.firstName} ${student.lastName}`.trim() : null,
+        studentName: studentFullName,
+        studentCode: safeStudentCode,
+        paidByRole,
+        paidByName,
+        paidByLabel,
+        paidByUserId: safePayerUserId,
+        payeeReference,
+        destinationAccountSummary,
+        schoolBankAccountNumber: schoolReceivingAccounts.bank?.bankAccountNumber || null,
+        schoolBankName: schoolReceivingAccounts.bank?.bankName || null,
+        schoolMomoNumber: schoolReceivingAccounts.momo?.number || null,
+        schoolMomoNetwork: schoolReceivingAccounts.momo?.network || null,
         initiatedAt: new Date().toISOString()
       })
     }
@@ -623,10 +696,10 @@ async function initiatePayment({ tenantId, requestingUser, body, originUrl = '' 
   await prisma.auditLog.create({
     data: {
       tenantId: tid,
-      userId: requestingUser?.id ? parseInt(requestingUser.id, 10) : null,
+      userId: requestingUser?.id && /^\d+$/.test(String(requestingUser.id)) ? parseInt(requestingUser.id, 10) : null,
       module: 'PAYMENTS',
       action: 'PAYMENT_INITIATED',
-      details: `[TX #${initialTx.id}] Initiated ${chosenGatewayName} / ${input.channel} payment ${reference} for ${input.currency} ${input.amount.toFixed(2)} (${tenant.name}).`
+      details: `[TX #${initialTx.id}] ${payeeReference} | Initiated ${chosenGatewayName} / ${input.channel} payment ${reference} for ${input.currency} ${input.amount.toFixed(2)}${destinationAccountSummary ? ` -> ${destinationAccountSummary}` : ''} (${tenant.name}).`
     }
   }).catch(() => {});
 
@@ -642,7 +715,7 @@ async function initiatePayment({ tenantId, requestingUser, body, originUrl = '' 
       currency: input.currency,
       channel: input.channel,
       payerEmail: input.payerEmail || requestingUser?.email || student?.email || 'payer@gbs-school.edu',
-      payerName: input.payerName || (requestingUser ? `${requestingUser.firstName || ''} ${requestingUser.lastName || ''}`.trim() : null),
+      payerName: input.payerName || paidByName || null,
       phoneResult: input.phoneResult,
       subaccountCode,
       merchantAccountNumber,
@@ -651,11 +724,17 @@ async function initiatePayment({ tenantId, requestingUser, body, originUrl = '' 
       cancellationUrl: fallbackReturnUrl,
       preferHostedCheckout: input.preferHostedCheckout,
       institutionName: tenant.name,
-      description: `${tenant.name} — ${feeAccount}`,
+      description: `${tenant.name} — ${feeAccount} (${payeeReference})`,
       apiBaseUrl: originUrl,
       metadata: {
         tenantId: tid,
         studentId: student?.id || null,
+        studentName: studentFullName,
+        studentCode: safeStudentCode,
+        paidByRole,
+        paidByName,
+        payeeReference,
+        destinationAccountSummary,
         invoiceId: targetInvoice?.id || null,
         reference,
         paymentScope: input.scope
@@ -1225,7 +1304,8 @@ async function listTransactions({ tenantId, studentId, status, gateway, scope })
 
   const list = await prisma.paymentTransaction.findMany({ where }).catch(() => []);
   list.sort((a, b) => new Date(b.createdAt || 0) - new Date(a.createdAt || 0));
-  return list.map(_sanitizeTransactionForClient);
+  const userMap = await _buildUsersLookupMap(list);
+  return list.map((tx) => _sanitizeTransactionForClient(tx, userMap));
 }
 
 async function getReceipt({ tenantId, receiptOrRef }) {
@@ -1286,6 +1366,15 @@ async function getAdminOverview(tenantId = null) {
   transactions.sort((a, b) => new Date(b.createdAt || 0) - new Date(a.createdAt || 0));
   webhooks.sort((a, b) => new Date(b.createdAt || 0) - new Date(a.createdAt || 0));
 
+  const userMap = await _buildUsersLookupMap(transactions);
+  const enrichedAllTx = transactions.map((t) => _sanitizeTransactionForClient(t, userMap));
+  const successfulFeeTx = enrichedAllTx.filter(
+    (t) => t.gatewayStatus === TRANSACTION_STATES.SUCCESSFUL && t.paymentScope !== PAYMENT_SCOPES.SUBSCRIPTION
+  );
+  const studentSelfTx = successfulFeeTx.filter((t) => t.paidByRole === 'STUDENT');
+  const parentPaidTx = successfulFeeTx.filter((t) => t.paidByRole === 'PARENT');
+  const schoolReceivingAccounts = extractSchoolReceivingAccounts(configs);
+
   const gatewayHealth = configs.map((c) => ({
     gateway: c.gateway,
     mode: c.mode,
@@ -1299,8 +1388,9 @@ async function getAdminOverview(tenantId = null) {
 
   return {
     configs,
+    schoolReceivingAccounts,
     gatewayHealth,
-    transactions: transactions.slice(0, 100).map(_sanitizeTransactionForClient),
+    transactions: enrichedAllTx.slice(0, 100),
     webhooks: webhooks.slice(0, 100),
     receipts: receipts.slice(0, 50),
     auditLogs: Array.isArray(auditLogs) ? auditLogs.slice(0, 60) : [],
@@ -1318,25 +1408,140 @@ async function getAdminOverview(tenantId = null) {
       ).length,
       failedWebhooks: webhooks.filter((w) => w.processingStatus === 'FAILED' || w.processingStatus === 'RETRYING').length,
       schoolFeeSettledTotal: roundMoney(
-        transactions
-          .filter((t) => t.gatewayStatus === TRANSACTION_STATES.SUCCESSFUL && t.paymentScope !== PAYMENT_SCOPES.SUBSCRIPTION)
-          .reduce((sum, t) => sum + Number(t.amountPaid || 0), 0)
+        successfulFeeTx.reduce((sum, t) => sum + Number(t.amountPaid || 0), 0)
       ),
       subscriptionSettledTotal: roundMoney(
         transactions
           .filter((t) => t.gatewayStatus === TRANSACTION_STATES.SUCCESSFUL && t.paymentScope === PAYMENT_SCOPES.SUBSCRIPTION)
           .reduce((sum, t) => sum + Number(t.amountPaid || 0), 0)
-      )
+      ),
+      studentSelfPaidCount: studentSelfTx.length,
+      studentSelfPaidTotal: roundMoney(studentSelfTx.reduce((sum, t) => sum + Number(t.amountPaid || 0), 0)),
+      parentPaidCount: parentPaidTx.length,
+      parentPaidTotal: roundMoney(parentPaidTx.reduce((sum, t) => sum + Number(t.amountPaid || 0), 0))
     }
   };
 }
 
-function _sanitizeTransactionForClient(tx) {
+function _resolveDestinationAccountSummary(receivingAccounts, channel, gateway, scope = 'SCHOOL_FEES', tenantName = 'School') {
+  if (scope === PAYMENT_SCOPES.SUBSCRIPTION) {
+    return 'GBS Platform Developer Settlement Account';
+  }
+  const ch = String(channel || '').toUpperCase();
+  if (gateway === GATEWAYS.BANK_DIRECT || ch === CHANNELS.BANK_TRANSFER) {
+    if (receivingAccounts?.bank?.configured) {
+      return `${receivingAccounts.bank.bankName} • A/C ${receivingAccounts.bank.bankAccountNumber} (${receivingAccounts.bank.bankAccountName})`;
+    }
+    return `${tenantName} Official Bank Account`;
+  }
+  if ([CHANNELS.MTN_MOMO, CHANNELS.TELECEL_CASH, CHANNELS.AT_MONEY].includes(ch)) {
+    if (receivingAccounts?.momo?.configured) {
+      return `${receivingAccounts.momo.network || 'Official School MoMo'} • ${receivingAccounts.momo.number} (${receivingAccounts.momo.accountName})`;
+    }
+    if (receivingAccounts?.hubtelMerchantAccount) {
+      return `${tenantName} Hubtel Merchant #${receivingAccounts.hubtelMerchantAccount}`;
+    }
+    if (receivingAccounts?.paystackSubaccountCode) {
+      return `${tenantName} Paystack Subaccount ${receivingAccounts.paystackSubaccountCode}`;
+    }
+    return `${tenantName} Official School MoMo Account`;
+  }
+  if (receivingAccounts?.paystackSubaccountCode) {
+    return `${tenantName} Card Settlement (${receivingAccounts.paystackSubaccountCode})`;
+  }
+  if (receivingAccounts?.bank?.configured) {
+    return `${receivingAccounts.bank.bankName} • A/C ${receivingAccounts.bank.bankAccountNumber}`;
+  }
+  return `${tenantName} Official School Collection Account`;
+}
+
+async function _buildUsersLookupMap(transactions = []) {
+  const userIds = [
+    ...new Set(
+      (transactions || [])
+        .flatMap((t) => [t?.studentId, t?.payerUserId, t?.receivedById])
+        .filter((id) => Number.isInteger(Number(id)) && Number(id) > 0)
+        .map((id) => Number(id))
+    )
+  ];
+  if (userIds.length === 0) return {};
+  const users = await prisma.user.findMany({
+    where: { id: { in: userIds } },
+    select: { id: true, firstName: true, lastName: true, username: true, email: true, role: true }
+  }).catch(() => []);
+  const map = {};
+  users.forEach((u) => { map[u.id] = u; });
+  return map;
+}
+
+function _sanitizeTransactionForClient(tx, userMap = {}) {
   if (!tx) return null;
   const copy = { ...tx };
   // Ensure no sensitive secrets ever leak
   delete copy.rawResponse;
-  return copy;
+
+  let meta = {};
+  try {
+    meta = copy.metadataJson ? JSON.parse(copy.metadataJson) : {};
+  } catch { }
+
+  const stuUser = copy.studentId ? userMap[copy.studentId] : null;
+  const payerUser = copy.payerUserId ? userMap[copy.payerUserId] : (copy.receivedById ? userMap[copy.receivedById] : null);
+
+  const studentName =
+    copy.studentName ||
+    meta.studentName ||
+    (stuUser ? `${stuUser.firstName || ''} ${stuUser.lastName || ''}`.trim() : null) ||
+    (copy.paymentScope === PAYMENT_SCOPES.SUBSCRIPTION ? (meta.institutionName || 'School Institution') : null);
+  const studentCode =
+    meta.studentCode ||
+    copy.studentCode ||
+    stuUser?.username ||
+    (copy.studentId ? `STU-${copy.tenantId || 1}-${copy.studentId}` : null);
+  const paidByRole = String(
+    copy.paidByRole ||
+    meta.paidByRole ||
+    payerUser?.role ||
+    (copy.paymentScope === PAYMENT_SCOPES.SUBSCRIPTION
+      ? 'ADMIN'
+      : (copy.payerUserId && copy.studentId && Number(copy.payerUserId) === Number(copy.studentId) ? 'STUDENT' : 'PARENT'))
+  ).toUpperCase();
+  const paidByName =
+    copy.paidByName ||
+    meta.paidByName ||
+    (payerUser ? `${payerUser.firstName || ''} ${payerUser.lastName || ''}`.trim() || payerUser.email : null) ||
+    (paidByRole === 'STUDENT' ? studentName : copy.payerEmail || 'Verified Payer');
+  const paidByLabel =
+    copy.paidByLabel ||
+    meta.paidByLabel ||
+    (paidByRole === 'STUDENT'
+      ? 'Student (Self-Payment)'
+      : paidByRole === 'PARENT'
+        ? 'Parent / Guardian'
+        : paidByRole === 'ACCOUNTANT'
+          ? 'School Accountant'
+          : paidByRole);
+  const payeeReference =
+    copy.payeeReference ||
+    meta.payeeReference ||
+    (copy.paymentScope === PAYMENT_SCOPES.SUBSCRIPTION
+      ? `${meta.institutionName || 'School'} — Subscription`
+      : paidByRole === 'STUDENT'
+        ? `${studentName || 'Student'}${studentCode ? ` (${studentCode})` : ''} — Paid by Student (Self)`
+        : paidByRole === 'PARENT'
+          ? `${studentName || 'Student'}${studentCode ? ` (${studentCode})` : ''} — Paid by Parent: ${paidByName}`
+          : `${studentName || 'Student'}${studentCode ? ` (${studentCode})` : ''} — ${paidByLabel}`);
+
+  return {
+    ...copy,
+    studentName,
+    studentCode,
+    paidByRole,
+    paidByName,
+    paidByLabel,
+    payeeReference,
+    destinationAccountSummary: copy.destinationAccountSummary || meta.destinationAccountSummary || null
+  };
 }
 
 module.exports = {

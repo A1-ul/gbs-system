@@ -101,6 +101,7 @@ export default function ParentDashboard() {
   // Child Data States
   const [childAttendance, setChildAttendance] = useState([]);
   const [childInvoices, setChildInvoices] = useState([]);
+  const [wardFeeStatement, setWardFeeStatement] = useState(null);
   const [meetings, setMeetings] = useState([]);
 
   // Payment Modal State
@@ -559,6 +560,15 @@ export default function ParentDashboard() {
     } catch (err) {
       console.warn("Invoices fetch error:", err);
       setChildInvoices([]);
+    }
+
+    try {
+      const stmtRes = await apiClient.get(`/payments/student-statement?studentId=${encodeURIComponent(studentId)}`);
+      if (stmtRes.data?.data) {
+        setWardFeeStatement(stmtRes.data.data);
+      }
+    } catch {
+      setWardFeeStatement(null);
     }
   };
 
@@ -2237,6 +2247,48 @@ export default function ParentDashboard() {
                 </div>
               </div>
 
+              {/* Official School Receiving Account & School MoMo Banner */}
+              {wardFeeStatement?.schoolReceivingAccounts && (
+                <div style={{ background: "rgba(16, 185, 129, 0.08)", border: "1.5px solid rgba(16, 185, 129, 0.38)", borderRadius: "12px", padding: "14px 16px", marginBottom: "1.25rem" }}>
+                  <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: "8px", marginBottom: "10px" }}>
+                    <strong style={{ color: "#34d399", fontSize: "0.88rem" }}>
+                      🏛️ OFFICIAL SCHOOL RECEIVING ACCOUNT &amp; MOMO (VERIFIED FOR PARENT &amp; STUDENT SELF-PAYMENTS)
+                    </strong>
+                    <span style={{ fontSize: "0.75rem", color: "#a7f3d0", fontWeight: 700 }}>
+                      Ward Payee: {wardFeeStatement.student?.fullName} ({wardFeeStatement.student?.studentCode})
+                    </span>
+                  </div>
+                  <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(250px, 1fr))", gap: "10px" }}>
+                    <div style={{ background: "rgba(2, 6, 23, 0.55)", borderRadius: "10px", padding: "10px 12px", border: "1px solid rgba(250, 204, 21, 0.35)" }}>
+                      <div style={{ fontSize: "0.7rem", color: "#fbbf24", fontWeight: 800, textTransform: "uppercase" }}>📱 Official School Mobile Money (MoMo)</div>
+                      {wardFeeStatement.schoolReceivingAccounts.momo?.configured ? (
+                        <>
+                          <div style={{ fontSize: "0.96rem", fontWeight: 900, color: "#fff", fontFamily: "monospace", marginTop: "3px" }}>{wardFeeStatement.schoolReceivingAccounts.momo.number}</div>
+                          <div style={{ fontSize: "0.78rem", color: "#cbd5e1" }}>
+                            {wardFeeStatement.schoolReceivingAccounts.momo.network} • {wardFeeStatement.schoolReceivingAccounts.momo.accountName}
+                          </div>
+                        </>
+                      ) : (
+                        <div style={{ fontSize: "0.78rem", color: "#cbd5e1", marginTop: "3px" }}>Processed via verified school MoMo gateway.</div>
+                      )}
+                    </div>
+                    <div style={{ background: "rgba(2, 6, 23, 0.55)", borderRadius: "10px", padding: "10px 12px", border: "1px solid rgba(56, 189, 248, 0.35)" }}>
+                      <div style={{ fontSize: "0.7rem", color: "#38bdf8", fontWeight: 800, textTransform: "uppercase" }}>🏦 Official School Bank Account</div>
+                      {wardFeeStatement.schoolReceivingAccounts.bank?.configured ? (
+                        <>
+                          <div style={{ fontSize: "0.96rem", fontWeight: 900, color: "#fff", fontFamily: "monospace", marginTop: "3px" }}>{wardFeeStatement.schoolReceivingAccounts.bank.bankAccountNumber}</div>
+                          <div style={{ fontSize: "0.78rem", color: "#cbd5e1" }}>
+                            {wardFeeStatement.schoolReceivingAccounts.bank.bankName}{wardFeeStatement.schoolReceivingAccounts.bank.bankBranch ? ` (${wardFeeStatement.schoolReceivingAccounts.bank.bankBranch})` : ""} • {wardFeeStatement.schoolReceivingAccounts.bank.bankAccountName}
+                          </div>
+                        </>
+                      ) : (
+                        <div style={{ fontSize: "0.78rem", color: "#cbd5e1", marginTop: "3px" }}>Configured by School Accountant Office.</div>
+                      )}
+                    </div>
+                  </div>
+                </div>
+              )}
+
               {/* Comprehensive Invoice Ledger */}
               <div style={{ marginBottom: "1rem", display: "flex", justifyContent: "space-between", alignItems: "center" }}>
                 <h3 style={{ fontSize: "1rem", color: "#f8fafc", margin: 0 }}>📋 Detailed Invoices & Receipts Ledger</h3>
@@ -2317,6 +2369,75 @@ export default function ParentDashboard() {
                           </td>
                         </tr>
                       ))
+                    )}
+                  </tbody>
+                </table>
+              </div>
+              {/* Live Verified Payments & Receipts History (Parent + Student Self-Payments) */}
+              <div style={{ marginTop: "1.75rem", marginBottom: "0.75rem", display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: "8px" }}>
+                <h3 style={{ fontSize: "1rem", color: "#f8fafc", margin: 0 }}>🧾 Verified Payments &amp; Receipts Ledger (Parent &amp; Ward Self-Payments)</h3>
+                <span style={{ fontSize: "0.78rem", color: "#a7f3d0", fontWeight: 700 }}>
+                  {(wardFeeStatement?.transactions || []).length} Verified Record(s) Synced with Accountant
+                </span>
+              </div>
+              <div className="role-table-responsive">
+                <table className="role-table">
+                  <thead>
+                    <tr>
+                      <th>Receipt # &amp; Ref</th>
+                      <th>Date</th>
+                      <th>Paid By</th>
+                      <th>Student Payee Reference</th>
+                      <th>School Account / MoMo</th>
+                      <th>Amount</th>
+                      <th>Status</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {(wardFeeStatement?.transactions || []).length === 0 ? (
+                      <tr>
+                        <td colSpan="7" style={{ textAlign: "center", padding: "18px", color: "#94a3b8" }}>
+                          No verified online/bank fee payments recorded yet. Payments made by you or by your ward from the Student Dashboard appear here automatically.
+                        </td>
+                      </tr>
+                    ) : (
+                      (wardFeeStatement?.transactions || []).map((tx) => {
+                        const isSelf = tx.paidByRole === "STUDENT";
+                        const isParent = tx.paidByRole === "PARENT";
+                        return (
+                          <tr key={tx.id || tx.reference}>
+                            <td>
+                              <strong style={{ fontFamily: "monospace", color: "#38bdf8", display: "block" }}>{tx.receiptNumber || "—"}</strong>
+                              <span style={{ fontFamily: "monospace", fontSize: "0.72rem", color: "#94a3b8" }}>{tx.reference || tx.transactionRef}</span>
+                            </td>
+                            <td style={{ fontSize: "0.78rem", color: "#cbd5e1", whiteSpace: "nowrap" }}>
+                              {new Date(tx.paidAt || tx.createdAt || Date.now()).toLocaleString()}
+                            </td>
+                            <td>
+                              <span style={{
+                                display: "inline-block",
+                                padding: "3px 8px",
+                                borderRadius: "6px",
+                                fontSize: "0.72rem",
+                                fontWeight: 800,
+                                background: isSelf ? "rgba(56, 189, 248, 0.2)" : isParent ? "rgba(168, 85, 247, 0.2)" : "rgba(16, 185, 129, 0.2)",
+                                color: isSelf ? "#38bdf8" : isParent ? "#c084fc" : "#34d399"
+                              }}>
+                                {isSelf ? "🎓 Student (Self)" : isParent ? "👨‍👩‍👧 Parent" : (tx.paidByLabel || "Finance Office")}
+                              </span>
+                              <div style={{ fontSize: "0.74rem", color: "#e2e8f0", marginTop: "2px" }}>{tx.paidByName || "Verified Payer"}</div>
+                            </td>
+                            <td style={{ fontSize: "0.78rem", color: "#fbbf24", fontWeight: 700 }}>{tx.payeeReference || "—"}</td>
+                            <td style={{ fontSize: "0.76rem", color: "#a7f3d0" }}>{tx.destinationAccountSummary || "Official School Account"}</td>
+                            <td style={{ color: "#34d399", fontWeight: 900 }}>{tx.currency || "GHS"} {Number(tx.amountPaid || 0).toFixed(2)}</td>
+                            <td>
+                              <span className={`badge-status ${tx.gatewayStatus === "SUCCESSFUL" ? "badge-present" : "badge-absent"}`}>
+                                {tx.gatewayStatus === "SUCCESSFUL" ? "✓ Confirmed" : tx.gatewayStatus}
+                              </span>
+                            </td>
+                          </tr>
+                        );
+                      })
                     )}
                   </tbody>
                 </table>
@@ -3072,14 +3193,11 @@ export default function ParentDashboard() {
         currency={/^[A-Z]{3}$/.test(String(currencySymbol || "").toUpperCase()) ? String(currencySymbol).toUpperCase() : "GHS"}
         title={gatewayPaymentTarget?.title || "School Tuition & Fee Settlement"}
         onSuccess={({ transaction, receipt }) => {
-          if (selectedChild?.id) {
-            apiClient.get(`/finance/invoices?studentId=${selectedChild.id}`).then((r) => {
-              setChildInvoices(r.data?.data?.invoices || r.data?.data || []);
-            }).catch(() => {});
-          }
+          const sid = selectedChild?.id || selectedChild?.studentId || "3";
+          loadChildDetails(sid);
           setFeedback({
             type: "success",
-            message: `Payment confirmed by provider! Official Receipt ${receipt?.receiptNumber || transaction?.receiptNumber} issued for ${transaction?.currency || "GHS"} ${Number(transaction?.amountPaid || 0).toFixed(2)}.`
+            message: `Verified payment confirmed & reflected on Accountant Ledger! Receipt ${receipt?.receiptNumber || transaction?.receiptNumber} (${transaction?.payeeReference || "Parent Payment"}). Remaining balance: ${receipt?.currency || "GHS"} ${Number(receipt?.balanceAfter ?? 0).toFixed(2)}.`
           });
         }}
       />

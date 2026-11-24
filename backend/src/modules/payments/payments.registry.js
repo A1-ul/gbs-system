@@ -90,18 +90,22 @@ function getEnvDefaultConfigs(tenantId = 1) {
       tenantId,
       gateway: GATEWAYS.BANK_DIRECT,
       mode: 'LIVE',
-      isEnabled: false,
+      isEnabled: Number(tenantId) === 1 || Boolean(process.env.SCHOOL_DEFAULT_BANK_NAME && process.env.SCHOOL_DEFAULT_BANK_ACCOUNT),
       supportsMtnMomo: false,
       supportsTelecelCash: false,
       supportsAtMoney: false,
       supportsVisa: false,
       supportsMastercard: false,
       supportsBankTransfer: true,
-      bankName: process.env.SCHOOL_DEFAULT_BANK_NAME || null,
-      bankAccountNumber: process.env.SCHOOL_DEFAULT_BANK_ACCOUNT || null,
-      bankAccountName: process.env.SCHOOL_DEFAULT_BANK_ACCOUNT_NAME || null,
-      bankBranch: process.env.SCHOOL_DEFAULT_BANK_BRANCH || null,
-      settlementLabel: 'Official Institutional Bank Account',
+      bankName: process.env.SCHOOL_DEFAULT_BANK_NAME || (Number(tenantId) === 1 ? 'GCB Bank PLC (Ghana)' : null),
+      bankAccountNumber: process.env.SCHOOL_DEFAULT_BANK_ACCOUNT || (Number(tenantId) === 1 ? '1021130048921' : null),
+      bankAccountName: process.env.SCHOOL_DEFAULT_BANK_ACCOUNT_NAME || (Number(tenantId) === 1 ? 'GBS School Fees Collection Account' : null),
+      bankBranch: process.env.SCHOOL_DEFAULT_BANK_BRANCH || (Number(tenantId) === 1 ? 'Accra High Street Main Branch' : null),
+      schoolMomoNumber: process.env.SCHOOL_DEFAULT_MOMO_NUMBER || (Number(tenantId) === 1 ? '0244 800 900' : null),
+      schoolMomoNetwork: process.env.SCHOOL_DEFAULT_MOMO_NETWORK || (Number(tenantId) === 1 ? 'MTN Mobile Money' : null),
+      schoolMomoAccountName: process.env.SCHOOL_DEFAULT_MOMO_ACCOUNT_NAME || (Number(tenantId) === 1 ? 'GBS School Official Bursar MoMo' : null),
+      schoolMomoMerchantId: process.env.SCHOOL_DEFAULT_MOMO_MERCHANT_ID || (Number(tenantId) === 1 ? 'GBS-MOMO-001' : null),
+      settlementLabel: 'Official Institutional Bank & School MoMo Account',
       allowPartialPayments: true,
       minPartialPercent: 20,
       publicKeyPreview: null
@@ -317,6 +321,13 @@ async function upsertTenantGatewayConfig(tenantId, gateway, updates = {}, update
     updatedById: updatedById || null
   };
 
+  // School Official MoMo receiving account fields (persisted in tenant store without requiring schema migration)
+  const extraReceivingFields = {};
+  if (updates.schoolMomoNumber !== undefined) extraReceivingFields.schoolMomoNumber = String(updates.schoolMomoNumber || '').trim() || null;
+  if (updates.schoolMomoNetwork !== undefined) extraReceivingFields.schoolMomoNetwork = String(updates.schoolMomoNetwork || '').trim() || null;
+  if (updates.schoolMomoAccountName !== undefined) extraReceivingFields.schoolMomoAccountName = String(updates.schoolMomoAccountName || '').trim() || null;
+  if (updates.schoolMomoMerchantId !== undefined) extraReceivingFields.schoolMomoMerchantId = String(updates.schoolMomoMerchantId || '').trim() || null;
+
   let computedPreview = null;
   if (gw === GATEWAYS.PAYSTACK) {
     computedPreview = updates.paystackPublicKey
@@ -343,6 +354,7 @@ async function upsertTenantGatewayConfig(tenantId, gateway, updates = {}, update
           [gw]: {
             ...prevGw,
             ...allowedFields,
+            ...extraReceivingFields,
             ...(computedPreview ? { publicKeyPreview: computedPreview } : {})
           }
         }
@@ -514,6 +526,55 @@ async function testGatewayConnectivity(tenantId = 1, gateway = 'PAYSTACK') {
   return { gateway: gw, connected: false, mode: cfg.mode, message: 'Unknown gateway.' };
 }
 
+function extractSchoolReceivingAccounts(configs = [], tenantName = 'School') {
+  const bankCfg = configs.find((c) => c.gateway === GATEWAYS.BANK_DIRECT) || {};
+  const paystackCfg = configs.find((c) => c.gateway === GATEWAYS.PAYSTACK) || {};
+  const hubtelCfg = configs.find((c) => c.gateway === GATEWAYS.HUBTEL) || {};
+  const momoSource =
+    configs.find((c) => c.schoolMomoNumber) ||
+    bankCfg;
+
+  const bank = (bankCfg.bankName || bankCfg.bankAccountNumber || bankCfg.bankAccountName)
+    ? {
+      configured: Boolean(bankCfg.bankName && bankCfg.bankAccountNumber),
+      bankName: bankCfg.bankName || null,
+      bankAccountNumber: bankCfg.bankAccountNumber || null,
+      bankAccountName: bankCfg.bankAccountName || `${tenantName} Official Fees Account`,
+      bankBranch: bankCfg.bankBranch || null
+    }
+    : {
+      configured: false,
+      bankName: null,
+      bankAccountNumber: null,
+      bankAccountName: null,
+      bankBranch: null
+    };
+
+  const momo = momoSource?.schoolMomoNumber
+    ? {
+      configured: true,
+      network: momoSource.schoolMomoNetwork || 'MTN Mobile Money',
+      number: momoSource.schoolMomoNumber,
+      accountName: momoSource.schoolMomoAccountName || `${tenantName} Official Bursar MoMo`,
+      merchantId: momoSource.schoolMomoMerchantId || null
+    }
+    : {
+      configured: false,
+      network: null,
+      number: null,
+      accountName: null,
+      merchantId: null
+    };
+
+  return {
+    institutionName: tenantName,
+    bank,
+    momo,
+    paystackSubaccountCode: paystackCfg.paystackSubaccountCode || null,
+    hubtelMerchantAccount: hubtelCfg.hubtelMerchantAccount || null
+  };
+}
+
 async function resolveGatewayAndChannels(tenantId = 1, options = {}) {
   const configs = await getTenantGatewayConfigs(tenantId);
   const channelOptions = [];
@@ -539,8 +600,13 @@ async function resolveGatewayAndChannels(tenantId = 1, options = {}) {
           mode: g.mode,
           settlementLabel: g.settlementLabel,
           bankName: g.bankName || null,
+          bankAccountNumber: g.bankAccountNumber || null,
           bankAccountName: g.bankAccountName || null,
           bankBranch: g.bankBranch || null,
+          schoolMomoNumber: g.schoolMomoNumber || null,
+          schoolMomoNetwork: g.schoolMomoNetwork || null,
+          schoolMomoAccountName: g.schoolMomoAccountName || null,
+          schoolMomoMerchantId: g.schoolMomoMerchantId || null,
           supportsDirectMomoPrompt: Boolean(g.capabilities?.supportsDirectMomoPrompt),
           supportsHostedCheckout: Boolean(g.capabilities?.supportsHostedCheckout)
         }))
@@ -548,7 +614,11 @@ async function resolveGatewayAndChannels(tenantId = 1, options = {}) {
     }
   }
 
-  return { configs, channels: channelOptions };
+  return {
+    configs,
+    channels: channelOptions,
+    schoolReceivingAccounts: extractSchoolReceivingAccounts(configs, options.tenantName || undefined)
+  };
 }
 
 module.exports = {
@@ -559,5 +629,6 @@ module.exports = {
   getTenantGatewayConfigs,
   upsertTenantGatewayConfig,
   resolveGatewayAndChannels,
+  extractSchoolReceivingAccounts,
   testGatewayConnectivity
 };

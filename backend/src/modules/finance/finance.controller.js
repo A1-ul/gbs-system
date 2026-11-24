@@ -125,7 +125,12 @@ const recordPayment = async (req, res, next) => {
       });
     }
 
-    const paymentResult = await financeService.recordPayment(tenantId, { ...req.body, amountPaid: numericAmt }, req.user?.id);
+    const paymentResult = await financeService.recordPayment(
+      tenantId,
+      { ...req.body, amountPaid: numericAmt },
+      req.user?.id,
+      req.user || null
+    );
     res.status(201).json({
       status: 'success',
       message: 'Payment recorded and reconciled successfully.',

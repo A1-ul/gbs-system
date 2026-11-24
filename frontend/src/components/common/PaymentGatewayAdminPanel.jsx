@@ -143,6 +143,10 @@ export default function PaymentGatewayAdminPanel({
       bankAccountNumber: cfg.bankAccountNumber || "",
       bankAccountName: cfg.bankAccountName || "",
       bankBranch: cfg.bankBranch || "",
+      schoolMomoNumber: cfg.schoolMomoNumber || "",
+      schoolMomoNetwork: cfg.schoolMomoNetwork || "MTN Mobile Money",
+      schoolMomoAccountName: cfg.schoolMomoAccountName || "",
+      schoolMomoMerchantId: cfg.schoolMomoMerchantId || "",
       allowPartialPayments: cfg.allowPartialPayments !== false,
       minPartialPercent: cfg.minPartialPercent || 20
     });
@@ -274,6 +278,14 @@ export default function PaymentGatewayAdminPanel({
           <strong style={{ fontSize: "1.1rem", color: "#34d399" }}>{currencySymbol} {Number(stats.schoolFeeSettledTotal || 0).toLocaleString()}</strong>
         </div>
         <div style={{ background: "rgba(15,23,42,0.7)", border: "1px solid rgba(56,189,248,0.35)", borderRadius: "10px", padding: "12px" }}>
+          <div style={{ fontSize: "0.72rem", color: "#94a3b8" }}>🎓 Student Self-Paid</div>
+          <strong style={{ fontSize: "1.02rem", color: "#38bdf8" }}>{stats.studentSelfPaidCount || 0} ({currencySymbol} {Number(stats.studentSelfPaidTotal || 0).toLocaleString()})</strong>
+        </div>
+        <div style={{ background: "rgba(15,23,42,0.7)", border: "1px solid rgba(192,132,252,0.35)", borderRadius: "10px", padding: "12px" }}>
+          <div style={{ fontSize: "0.72rem", color: "#94a3b8" }}>👨‍👩‍👧 Parent Paid</div>
+          <strong style={{ fontSize: "1.02rem", color: "#c084fc" }}>{stats.parentPaidCount || 0} ({currencySymbol} {Number(stats.parentPaidTotal || 0).toLocaleString()})</strong>
+        </div>
+        <div style={{ background: "rgba(15,23,42,0.7)", border: "1px solid rgba(56,189,248,0.35)", borderRadius: "10px", padding: "12px" }}>
           <div style={{ fontSize: "0.72rem", color: "#94a3b8" }}>Subscriptions Settled</div>
           <strong style={{ fontSize: "1.1rem", color: "#38bdf8" }}>{currencySymbol} {Number(stats.subscriptionSettledTotal || 0).toLocaleString()}</strong>
         </div>
@@ -383,6 +395,16 @@ export default function PaymentGatewayAdminPanel({
               )}
               {cfg.hubtelMerchantAccount && (
                 <div style={{ fontSize: "0.74rem", color: "#38bdf8" }}>Merchant Account: {cfg.hubtelMerchantAccount}</div>
+              )}
+              {cfg.bankAccountNumber && (
+                <div style={{ fontSize: "0.74rem", color: "#38bdf8" }}>
+                  Bank: {cfg.bankName} • A/C <strong>{cfg.bankAccountNumber}</strong> ({cfg.bankAccountName})
+                </div>
+              )}
+              {cfg.schoolMomoNumber && (
+                <div style={{ fontSize: "0.74rem", color: "#fbbf24" }}>
+                  School MoMo: {cfg.schoolMomoNetwork || "MoMo"} • <strong>{cfg.schoolMomoNumber}</strong> ({cfg.schoolMomoAccountName})
+                </div>
               )}
               {allowConfigEdit && (
                 <div style={{ display: "flex", gap: "8px", marginTop: "auto", flexWrap: "wrap" }}>
@@ -525,11 +547,25 @@ export default function PaymentGatewayAdminPanel({
           )}
 
           {editingGateway === "BANK_DIRECT" && (
-            <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(180px, 1fr))", gap: "8px" }}>
-              <input type="text" placeholder="Bank Name" value={configDraft.bankName || ""} onChange={(e) => setConfigDraft({ ...configDraft, bankName: e.target.value })} style={{ padding: "8px", borderRadius: "6px", background: "#0f172a", color: "#fff", border: "1px solid #334155" }} />
-              <input type="text" placeholder="Account Number" value={configDraft.bankAccountNumber || ""} onChange={(e) => setConfigDraft({ ...configDraft, bankAccountNumber: e.target.value })} style={{ padding: "8px", borderRadius: "6px", background: "#0f172a", color: "#fff", border: "1px solid #334155" }} />
-              <input type="text" placeholder="Account Name" value={configDraft.bankAccountName || ""} onChange={(e) => setConfigDraft({ ...configDraft, bankAccountName: e.target.value })} style={{ padding: "8px", borderRadius: "6px", background: "#0f172a", color: "#fff", border: "1px solid #334155" }} />
-              <input type="text" placeholder="Branch" value={configDraft.bankBranch || ""} onChange={(e) => setConfigDraft({ ...configDraft, bankBranch: e.target.value })} style={{ padding: "8px", borderRadius: "6px", background: "#0f172a", color: "#fff", border: "1px solid #334155" }} />
+            <div style={{ display: "flex", flexDirection: "column", gap: "10px" }}>
+              <div style={{ fontSize: "0.78rem", color: "#38bdf8", fontWeight: 800 }}>Official School Bank Account (Displayed to Students &amp; Parents)</div>
+              <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(180px, 1fr))", gap: "8px" }}>
+                <input type="text" placeholder="Bank Name (e.g. GCB Bank PLC)" value={configDraft.bankName || ""} onChange={(e) => setConfigDraft({ ...configDraft, bankName: e.target.value })} style={{ padding: "8px", borderRadius: "6px", background: "#0f172a", color: "#fff", border: "1px solid #334155" }} />
+                <input type="text" placeholder="School Account Number" value={configDraft.bankAccountNumber || ""} onChange={(e) => setConfigDraft({ ...configDraft, bankAccountNumber: e.target.value })} style={{ padding: "8px", borderRadius: "6px", background: "#0f172a", color: "#fff", border: "1px solid #334155" }} />
+                <input type="text" placeholder="School Account Name" value={configDraft.bankAccountName || ""} onChange={(e) => setConfigDraft({ ...configDraft, bankAccountName: e.target.value })} style={{ padding: "8px", borderRadius: "6px", background: "#0f172a", color: "#fff", border: "1px solid #334155" }} />
+                <input type="text" placeholder="Branch" value={configDraft.bankBranch || ""} onChange={(e) => setConfigDraft({ ...configDraft, bankBranch: e.target.value })} style={{ padding: "8px", borderRadius: "6px", background: "#0f172a", color: "#fff", border: "1px solid #334155" }} />
+              </div>
+              <div style={{ fontSize: "0.78rem", color: "#fbbf24", fontWeight: 800, marginTop: "4px" }}>Official School Mobile Money (MoMo) Receiving Account</div>
+              <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(180px, 1fr))", gap: "8px" }}>
+                <input type="text" placeholder="School Official MoMo Number (e.g. 0244 800 900)" value={configDraft.schoolMomoNumber || ""} onChange={(e) => setConfigDraft({ ...configDraft, schoolMomoNumber: e.target.value })} style={{ padding: "8px", borderRadius: "6px", background: "#0f172a", color: "#fff", border: "1px solid #334155" }} />
+                <select value={configDraft.schoolMomoNetwork || "MTN Mobile Money"} onChange={(e) => setConfigDraft({ ...configDraft, schoolMomoNetwork: e.target.value })} style={{ padding: "8px", borderRadius: "6px", background: "#0f172a", color: "#fff", border: "1px solid #334155" }}>
+                  <option value="MTN Mobile Money">MTN Mobile Money</option>
+                  <option value="Telecel Cash">Telecel Cash</option>
+                  <option value="AirtelTigo Money">AirtelTigo Money</option>
+                </select>
+                <input type="text" placeholder="School MoMo Registered Name" value={configDraft.schoolMomoAccountName || ""} onChange={(e) => setConfigDraft({ ...configDraft, schoolMomoAccountName: e.target.value })} style={{ padding: "8px", borderRadius: "6px", background: "#0f172a", color: "#fff", border: "1px solid #334155" }} />
+                <input type="text" placeholder="Merchant ID (Optional)" value={configDraft.schoolMomoMerchantId || ""} onChange={(e) => setConfigDraft({ ...configDraft, schoolMomoMerchantId: e.target.value })} style={{ padding: "8px", borderRadius: "6px", background: "#0f172a", color: "#fff", border: "1px solid #334155" }} />
+              </div>
             </div>
           )}
 
@@ -565,9 +601,10 @@ export default function PaymentGatewayAdminPanel({
           <table className="role-table">
             <thead>
               <tr>
-                <th>Reference</th>
-                <th>Student / Scope</th>
-                <th>Gateway & Method</th>
+                <th>Reference &amp; Receipt</th>
+                <th>Student Credited (Payee)</th>
+                <th>Paid By (Payer)</th>
+                <th>School Account / Method</th>
                 <th>Amount</th>
                 <th>Status</th>
                 <th>Actions</th>
@@ -575,34 +612,62 @@ export default function PaymentGatewayAdminPanel({
             </thead>
             <tbody>
               {overview.transactions.length === 0 ? (
-                <tr><td colSpan="6" style={{ textAlign: "center", padding: "18px", color: "#94a3b8" }}>No gateway transactions recorded yet.</td></tr>
+                <tr><td colSpan="7" style={{ textAlign: "center", padding: "18px", color: "#94a3b8" }}>No gateway transactions recorded yet.</td></tr>
               ) : (
-                overview.transactions.map((tx) => (
-                  <tr key={tx.id}>
-                    <td style={{ fontFamily: "monospace", color: "#38bdf8" }}>{tx.reference || tx.transactionRef}</td>
-                    <td>{tx.studentCode || tx.paymentScope}</td>
-                    <td>{tx.gateway} • {tx.channel || tx.paymentMethod}</td>
-                    <td><strong>{tx.currency || currencySymbol} {Number(tx.amountPaid || 0).toFixed(2)}</strong></td>
-                    <td><strong>{tx.gatewayStatus}</strong></td>
-                    <td style={{ display: "flex", gap: "6px", flexWrap: "wrap" }}>
-                      {tx.gateway === "BANK_DIRECT" && tx.gatewayStatus !== "SUCCESSFUL" && (
-                        <button type="button" onClick={() => handleAdminAction(tx.reference, "APPROVE_BANK_DEPOSIT")} style={{ background: "#059669", color: "#fff", border: "none", borderRadius: "6px", padding: "4px 8px", fontSize: "0.72rem", cursor: "pointer" }}>
-                          Confirm Bank Slip
-                        </button>
-                      )}
-                      {tx.gatewayStatus === "SUCCESSFUL" && (
-                        <button type="button" onClick={() => handleAdminAction(tx.reference, "REFUND")} style={{ background: "#7c3aed", color: "#fff", border: "none", borderRadius: "6px", padding: "4px 8px", fontSize: "0.72rem", cursor: "pointer" }}>
-                          Record Refund
-                        </button>
-                      )}
-                      {!["SUCCESSFUL", "CANCELLED", "REFUNDED"].includes(tx.gatewayStatus) && tx.reference && (
-                        <button type="button" onClick={() => { setVerifyInput(tx.reference); }} style={{ background: "#0284c7", color: "#fff", border: "none", borderRadius: "6px", padding: "4px 8px", fontSize: "0.72rem", cursor: "pointer" }}>
-                          Check
-                        </button>
-                      )}
-                    </td>
-                  </tr>
-                ))
+                overview.transactions.map((tx) => {
+                  const isSelf = tx.paidByRole === "STUDENT";
+                  const isParent = tx.paidByRole === "PARENT";
+                  return (
+                    <tr key={tx.id}>
+                      <td>
+                        <div style={{ fontFamily: "monospace", color: "#38bdf8", fontWeight: 700 }}>{tx.reference || tx.transactionRef}</div>
+                        {tx.receiptNumber && <div style={{ fontFamily: "monospace", fontSize: "0.72rem", color: "#94a3b8" }}>{tx.receiptNumber}</div>}
+                      </td>
+                      <td>
+                        <strong style={{ color: "#fff" }}>{tx.studentName || tx.studentCode || tx.paymentScope}</strong>
+                        {tx.studentCode && <div style={{ fontSize: "0.72rem", color: "#38bdf8", fontFamily: "monospace" }}>{tx.studentCode}</div>}
+                        {tx.payeeReference && <div style={{ fontSize: "0.72rem", color: "#fbbf24" }}>{tx.payeeReference}</div>}
+                      </td>
+                      <td>
+                        <span style={{
+                          display: "inline-block",
+                          padding: "2px 7px",
+                          borderRadius: "6px",
+                          fontSize: "0.7rem",
+                          fontWeight: 800,
+                          background: isSelf ? "rgba(56, 189, 248, 0.2)" : isParent ? "rgba(168, 85, 247, 0.2)" : "rgba(16, 185, 129, 0.18)",
+                          color: isSelf ? "#38bdf8" : isParent ? "#c084fc" : "#34d399"
+                        }}>
+                          {isSelf ? "🎓 Student (Self)" : isParent ? "👨‍👩‍👧 Parent" : (tx.paidByLabel || tx.paymentScope)}
+                        </span>
+                        <div style={{ fontSize: "0.74rem", color: "#cbd5e1", marginTop: "2px" }}>{tx.paidByName || tx.payerEmail || "—"}</div>
+                      </td>
+                      <td>
+                        <div>{tx.gateway} • {tx.channel || tx.paymentMethod}</div>
+                        {tx.destinationAccountSummary && <div style={{ fontSize: "0.72rem", color: "#a7f3d0" }}>{tx.destinationAccountSummary}</div>}
+                      </td>
+                      <td><strong>{tx.currency || currencySymbol} {Number(tx.amountPaid || 0).toFixed(2)}</strong></td>
+                      <td><strong>{tx.gatewayStatus}</strong></td>
+                      <td style={{ display: "flex", gap: "6px", flexWrap: "wrap" }}>
+                        {tx.gateway === "BANK_DIRECT" && tx.gatewayStatus !== "SUCCESSFUL" && (
+                          <button type="button" onClick={() => handleAdminAction(tx.reference, "APPROVE_BANK_DEPOSIT")} style={{ background: "#059669", color: "#fff", border: "none", borderRadius: "6px", padding: "4px 8px", fontSize: "0.72rem", cursor: "pointer" }}>
+                            Confirm Bank Slip
+                          </button>
+                        )}
+                        {tx.gatewayStatus === "SUCCESSFUL" && (
+                          <button type="button" onClick={() => handleAdminAction(tx.reference, "REFUND")} style={{ background: "#7c3aed", color: "#fff", border: "none", borderRadius: "6px", padding: "4px 8px", fontSize: "0.72rem", cursor: "pointer" }}>
+                            Record Refund
+                          </button>
+                        )}
+                        {!["SUCCESSFUL", "CANCELLED", "REFUNDED"].includes(tx.gatewayStatus) && tx.reference && (
+                          <button type="button" onClick={() => { setVerifyInput(tx.reference); }} style={{ background: "#0284c7", color: "#fff", border: "none", borderRadius: "6px", padding: "4px 8px", fontSize: "0.72rem", cursor: "pointer" }}>
+                            Check
+                          </button>
+                        )}
+                      </td>
+                    </tr>
+                  );
+                })
               )}
             </tbody>
           </table>

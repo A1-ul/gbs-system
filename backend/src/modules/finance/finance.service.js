@@ -266,10 +266,10 @@ async function getInvoiceById(tenantId, invoiceId) {
 }
 
 // 4. Payment Gateway Reconciliation & Recording
-async function recordPayment(tenantId, data, receivedById = null) {
+async function recordPayment(tenantId, data, receivedById = null, actorUser = null) {
   const tid = parseInt(tenantId, 10);
   const rawInv = data.invoiceId !== undefined && data.invoiceId !== null ? String(data.invoiceId).trim() : '';
-  const numericInvoiceId = /^\d+$/.test(rawInv) ? parseInt(rawInv, 10) : null;
+  let numericInvoiceId = /^\d+$/.test(rawInv) ? parseInt(rawInv, 10) : null;
   const amountPaid = parseFloat(data.amountPaid);
 
   if (Number.isNaN(amountPaid) || amountPaid <= 0) {
@@ -308,6 +308,79 @@ async function recordPayment(tenantId, data, receivedById = null) {
     if (invoice) numericInvoiceId = invoice.id;
   }
 
+  // Resolve canonical Student Payee & Payer attribution + School Receiving Account
+  let studentRecord = null;
+  if (parsedStudentId) {
+    studentRecord = await prisma.user.findFirst({
+      where: { id: parsedStudentId, tenantId: tid },
+      select: { id: true, firstName: true, lastName: true, username: true, email: true }
+    }).catch(() => null);
+  }
+  const resolvedStudentName =
+    (data.studentName && String(data.studentName).trim()) ||
+    (studentRecord ? `${studentRecord.firstName || ''} ${studentRecord.lastName || ''}`.trim() : null) ||
+    'Student Account';
+  const resolvedStudentCode =
+    (data.indexNumber && String(data.indexNumber).trim()) ||
+    (data.studentCode && String(data.studentCode).trim()) ||
+    studentRecord?.username ||
+    (parsedStudentId ? `STU-${tid}-${parsedStudentId}` : null);
+  const paidByRole = String(data.paidByRole || actorUser?.role || 'ACCOUNTANT').toUpperCase();
+  const paidByName =
+    (data.paidByName && String(data.paidByName).trim()) ||
+    (actorUser ? `${actorUser.firstName || ''} ${actorUser.lastName || ''}`.trim() || actorUser.email : null) ||
+    (paidByRole === 'STUDENT' ? resolvedStudentName : 'School Finance Office');
+  const paidByLabel =
+    paidByRole === 'STUDENT'
+      ? 'Student (Self-Payment)'
+      : paidByRole === 'PARENT'
+        ? 'Parent / Guardian'
+        : paidByRole === 'ACCOUNTANT'
+          ? 'School Accountant'
+          : paidByRole;
+  const payeeReference =
+    paidByRole === 'STUDENT'
+      ? `${resolvedStudentName}${resolvedStudentCode ? ` (${resolvedStudentCode})` : ''} — Paid by Student (Self)`
+      : paidByRole === 'PARENT'
+        ? `${resolvedStudentName}${resolvedStudentCode ? ` (${resolvedStudentCode})` : ''} — Paid by Parent: ${paidByName}`
+        : `${resolvedStudentName}${resolvedStudentCode ? ` (${resolvedStudentCode})` : ''} — Recorded by ${paidByName} (${paidByLabel})`;
+
+  let destinationAccountSummary = data.destinationAccountSummary || null;
+  try {
+    const { getTenantGatewayConfigs, extractSchoolReceivingAccounts } = require('../payments/payments.registry');
+    const cfgs = await getTenantGatewayConfigs(tid);
+    const recv = extractSchoolReceivingAccounts(cfgs, data.institutionName || `GBS Institution #${tid}`);
+    if (!destinationAccountSummary) {
+      if (paymentMethod.includes('BANK')) {
+        destinationAccountSummary = recv.bank?.configured
+          ? `${recv.bank.bankName} • A/C ${recv.bank.bankAccountNumber} (${recv.bank.bankAccountName})`
+          : 'Official School Bank Account';
+      } else if (paymentMethod.includes('MOMO') || paymentMethod.includes('CASH') || paymentMethod.includes('MONEY')) {
+        destinationAccountSummary = recv.momo?.configured
+          ? `${recv.momo.network} • ${recv.momo.number} (${recv.momo.accountName})`
+          : 'Official School MoMo Merchant Account';
+      } else {
+        destinationAccountSummary = recv.bank?.configured
+          ? `${recv.bank.bankName} • A/C ${recv.bank.bankAccountNumber}`
+          : 'Official School Finance Collection Account';
+      }
+    }
+  } catch { }
+
+  const txMetadata = {
+    institutionName: data.institutionName || `GBS Institution #${tid}`,
+    studentName: resolvedStudentName,
+    studentCode: resolvedStudentCode,
+    studentClass: data.studentClass || null,
+    paidByRole,
+    paidByName,
+    paidByLabel,
+    paidByUserId: receivedById ? parseInt(receivedById, 10) : parsedStudentId,
+    payeeReference,
+    destinationAccountSummary,
+    recordedAt: new Date().toISOString()
+  };
+
   // Execute atomic reconciliation
   const result = await prisma.$transaction(async (tx) => {
     const balanceBefore = invoice ? Number(invoice.balanceDue || 0) : amountPaid;
@@ -332,6 +405,7 @@ async function recordPayment(tenantId, data, receivedById = null) {
     }
 
     // B. Record canonical payment transaction (100% aligned with PaymentGatewayAdminPanel & Reconciler)
+    const safePayerId = receivedById && /^\d+$/.test(String(receivedById)) ? parseInt(String(receivedById), 10) : parsedStudentId;
     const payment = await tx.paymentTransaction.create({
       data: {
         tenantId: tid,
@@ -343,10 +417,10 @@ async function recordPayment(tenantId, data, receivedById = null) {
         channel: paymentMethod,
         paymentScope: 'SCHOOL_FEES',
         studentId: parsedStudentId,
-        studentCode: data.indexNumber || data.studentCode || null,
-        payerUserId: receivedById ? parseInt(receivedById, 10) : parsedStudentId,
+        studentCode: resolvedStudentCode,
+        payerUserId: safePayerId,
         payerPhone: data.momoNumber || data.payerPhone || null,
-        payerEmail: data.payerEmail || null,
+        payerEmail: data.payerEmail || actorUser?.email || null,
         academicYear: data.academicYear || '2026-2027',
         term: invoice?.academicTerm || data.term || '2026-2027 Term 2',
         feeAccount: invoice?.title || data.feeAccount || 'Tuition & School Fees',
@@ -358,9 +432,9 @@ async function recordPayment(tenantId, data, receivedById = null) {
         gatewayStatus: 'SUCCESSFUL',
         accountingPosted: true,
         paidAt: new Date(),
-        verifiedAt: new Date(),
-        receivedById: receivedById ? parseInt(receivedById, 10) : null,
-        notes: data.notes || (data.studentName ? `Portal remittance for ${data.studentName} (${data.studentClass || 'Student'})` : null)
+        receivedById: safePayerId,
+        metadataJson: JSON.stringify(txMetadata),
+        notes: data.notes || `${payeeReference}${destinationAccountSummary ? ` -> ${destinationAccountSummary}` : ''}`
       }
     });
 
@@ -377,8 +451,8 @@ async function recordPayment(tenantId, data, receivedById = null) {
           transactionRef,
           providerReference: transactionRef,
           institutionName: data.institutionName || `GBS Institution #${tid}`,
-          studentName: data.studentName || 'Student Account',
-          studentCode: data.indexNumber || data.studentCode || (parsedStudentId ? `STU-${tid}-${parsedStudentId}` : null),
+          studentName: resolvedStudentName,
+          studentCode: resolvedStudentCode,
           academicYear: data.academicYear || '2026-2027',
           term: invoice?.academicTerm || data.term || '2026-2027 Term 2',
           feeDescription: invoice?.title || data.feeAccount || 'School Fees Payment',
@@ -397,17 +471,31 @@ async function recordPayment(tenantId, data, receivedById = null) {
     await tx.auditLog.create({
       data: {
         tenantId: tid,
-        userId: receivedById ? parseInt(receivedById, 10) : null,
+        userId: safePayerId,
         module: 'FINANCE',
         action: 'PAYMENT_RECORDED',
-        details: invoice
-          ? `Recorded payment of ${normalizedCurrency} ${amountPaid} for Invoice ${invoice.invoiceNumber}. Balance: ${normalizedCurrency} ${updatedInvoice.balanceDue} (Receipt: ${receiptNumber})`
-          : `Recorded portal fee remittance of ${normalizedCurrency} ${amountPaid} for ${data.studentName || data.indexNumber || 'Student'} (Receipt: ${receiptNumber})`,
+        details: `${payeeReference} | Amount: ${normalizedCurrency} ${amountPaid.toFixed(2)} via ${paymentMethod}${destinationAccountSummary ? ` -> ${destinationAccountSummary}` : ''} | Receipt: ${receiptNumber}${invoice ? ` | Remaining Balance: ${normalizedCurrency} ${updatedInvoice.balanceDue}` : ''}`,
         ipAddress: '127.0.0.1'
       }
     });
 
-    return { payment, updatedInvoice, receipt };
+    return {
+      payment: {
+        ...payment,
+        studentName: resolvedStudentName,
+        studentCode: resolvedStudentCode,
+        studentClass: data.studentClass || null,
+        paidByRole,
+        paidByName,
+        paidByLabel,
+        payeeReference,
+        destinationAccountSummary
+      },
+      updatedInvoice,
+      receipt: receipt
+        ? { ...receipt, paidByRole, paidByName, paidByLabel, payeeReference, destinationAccountSummary }
+        : null
+    };
   });
 
   return result;
@@ -420,12 +508,86 @@ async function getPayments(tenantId, filters = {}) {
   if (filters.gatewayStatus) whereClause.gatewayStatus = filters.gatewayStatus;
   if (filters.paymentMethod) whereClause.paymentMethod = filters.paymentMethod;
 
-  return await prisma.paymentTransaction.findMany({
+  const rows = await prisma.paymentTransaction.findMany({
     where: whereClause,
     include: {
       invoice: true
     },
     orderBy: { createdAt: 'desc' }
+  });
+
+  // Resolve linked students and payers in a single batch query so Accountant sees exact Student Payee & Payer Role/Name
+  const userIds = [
+    ...new Set(
+      rows
+        .flatMap((r) => [r.studentId, r.payerUserId, r.receivedById])
+        .filter((id) => Number.isInteger(Number(id)) && Number(id) > 0)
+        .map((id) => Number(id))
+    )
+  ];
+  const users = userIds.length > 0
+    ? await prisma.user.findMany({
+        where: { id: { in: userIds } },
+        select: { id: true, firstName: true, lastName: true, username: true, email: true, role: true }
+      }).catch(() => [])
+    : [];
+  const userMap = {};
+  users.forEach((u) => { userMap[u.id] = u; });
+
+  return rows.map((tx) => {
+    let meta = {};
+    try {
+      meta = tx.metadataJson ? JSON.parse(tx.metadataJson) : {};
+    } catch { }
+    const stuUser = tx.studentId ? userMap[tx.studentId] : null;
+    const payerUser = tx.payerUserId ? userMap[tx.payerUserId] : (tx.receivedById ? userMap[tx.receivedById] : null);
+
+    const studentName =
+      meta.studentName ||
+      (stuUser ? `${stuUser.firstName || ''} ${stuUser.lastName || ''}`.trim() : null) ||
+      (tx.paymentScope === 'SUBSCRIPTION' ? (meta.institutionName || 'School Subscription') : `Student #${tx.studentId || tx.studentCode || 'N/A'}`);
+    const studentCode =
+      meta.studentCode ||
+      tx.studentCode ||
+      stuUser?.username ||
+      (tx.studentId ? `STU-${tx.tenantId}-${tx.studentId}` : null);
+    const paidByRole = String(
+      meta.paidByRole ||
+      payerUser?.role ||
+      (tx.payerUserId && tx.studentId && Number(tx.payerUserId) === Number(tx.studentId) ? 'STUDENT' : 'ACCOUNTANT')
+    ).toUpperCase();
+    const paidByName =
+      meta.paidByName ||
+      (payerUser ? `${payerUser.firstName || ''} ${payerUser.lastName || ''}`.trim() || payerUser.email : null) ||
+      (paidByRole === 'STUDENT' ? studentName : 'School Finance Office');
+    const paidByLabel =
+      meta.paidByLabel ||
+      (paidByRole === 'STUDENT'
+        ? 'Student (Self-Payment)'
+        : paidByRole === 'PARENT'
+          ? 'Parent / Guardian'
+          : paidByRole === 'ACCOUNTANT'
+            ? 'School Accountant'
+            : paidByRole);
+    const payeeReference =
+      meta.payeeReference ||
+      (paidByRole === 'STUDENT'
+        ? `${studentName}${studentCode ? ` (${studentCode})` : ''} — Paid by Student (Self)`
+        : paidByRole === 'PARENT'
+          ? `${studentName}${studentCode ? ` (${studentCode})` : ''} — Paid by Parent: ${paidByName}`
+          : `${studentName}${studentCode ? ` (${studentCode})` : ''} — ${paidByLabel}`);
+
+    return {
+      ...tx,
+      studentName,
+      studentCode,
+      studentClass: meta.studentClass || tx.invoice?.academicTerm || tx.term || 'Enrolled Student',
+      paidByRole,
+      paidByName,
+      paidByLabel,
+      payeeReference,
+      destinationAccountSummary: meta.destinationAccountSummary || null
+    };
   });
 }
 

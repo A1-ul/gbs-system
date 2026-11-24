@@ -112,6 +112,26 @@ export default function OfficialPaymentGatewayModal({
   stepRef.current = step;
   const safeCurrency = normalizeIsoCurrency(currency);
   const schoolDisplayName = statement?.institution?.name || getActiveSchoolName() || "School Finance Portal";
+  const receivingAccounts = statement?.schoolReceivingAccounts || null;
+  const currentActor = (() => {
+    try {
+      const u = JSON.parse(localStorage.getItem("gbs_user") || "{}");
+      const role = String(u.role || localStorage.getItem("gbs_auth_role") || "").toUpperCase();
+      const name = `${u.firstName || ""} ${u.lastName || ""}`.trim() || u.fullName || u.name || u.email || "";
+      return { role, name };
+    } catch {
+      return { role: "", name: "" };
+    }
+  })();
+  const isStudentSelfPayer = paymentScope === "SCHOOL_FEES" && currentActor.role === "STUDENT";
+  const isParentPayer = paymentScope === "SCHOOL_FEES" && currentActor.role === "PARENT";
+  const previewStudentName = statement?.student?.fullName || studentName || currentActor.name || "Student";
+  const previewStudentCode = statement?.student?.studentCode || (studentIdentifier ? String(studentIdentifier) : (studentId ? `STU-${studentId}` : ""));
+  const previewPayeeReference = isStudentSelfPayer
+    ? `${previewStudentName}${previewStudentCode ? ` (${previewStudentCode})` : ""} — Paid by Student (Self)`
+    : isParentPayer
+      ? `${previewStudentName}${previewStudentCode ? ` (${previewStudentCode})` : ""} — Paid by Parent: ${currentActor.name || "Parent"}`
+      : `${previewStudentName}${previewStudentCode ? ` (${previewStudentCode})` : ""}`;
 
   const stopPolling = () => {
     if (pollTimerRef.current) {
@@ -379,6 +399,9 @@ export default function OfficialPaymentGatewayModal({
           stopPolling();
           setVerifiedReceipt(data.receipt || null);
           setStep("RESULT");
+          try {
+            window.dispatchEvent(new Event("gbs_payment_made"));
+          } catch { }
           if (typeof onSuccess === "function") {
             onSuccess({ transaction: data.transaction, receipt: data.receipt });
           }
@@ -503,8 +526,11 @@ export default function OfficialPaymentGatewayModal({
       </div>
       <div style="text-align:right;"><strong>${r.receiptNumber || tx.receiptNumber}</strong><br/>${new Date(r.issuedAt || Date.now()).toLocaleString()}</div>
     </div>
-    <div class="row"><span>Student Name</span><strong>${r.studentName || statement?.student?.fullName || studentName || "—"}</strong></div>
-    <div class="row"><span>Student ID</span><strong>${r.studentCode || statement?.student?.studentCode || studentId || "—"}</strong></div>
+    <div class="row"><span>Student Credited (Payee)</span><strong>${r.studentName || tx.studentName || statement?.student?.fullName || studentName || "—"}</strong></div>
+    <div class="row"><span>Student ID / Index</span><strong>${r.studentCode || tx.studentCode || statement?.student?.studentCode || studentId || "—"}</strong></div>
+    <div class="row"><span>Paid By (Payer)</span><strong>${r.paidByLabel || tx.paidByLabel || (isStudentSelfPayer ? "Student (Self-Payment)" : isParentPayer ? "Parent / Guardian" : "Verified Payer")} — ${r.paidByName || tx.paidByName || currentActor.name || tx.payerEmail || "—"}</strong></div>
+    <div class="row"><span>Student Payee Reference</span><strong>${r.payeeReference || tx.payeeReference || previewPayeeReference}</strong></div>
+    <div class="row"><span>School Account / MoMo Credited</span><strong>${r.destinationAccountSummary || tx.destinationAccountSummary || `${schoolDisplayName} Official Collection Account`}</strong></div>
     <div class="row"><span>Payer Contact</span><strong>${tx.payerEmail || payerEmail || tx.payerPhone || "Verified Payer"}</strong></div>
     <div class="row"><span>Academic Period</span><strong>${r.academicYear || tx.academicYear || "2026-2027"} • ${r.term || tx.term || ""}</strong></div>
     <div class="row"><span>Payment Description</span><strong>${r.feeDescription || tx.feeAccount || title}</strong></div>
@@ -587,16 +613,47 @@ export default function OfficialPaymentGatewayModal({
         </div>
 
         {/* Settlement Recipient Banner */}
-        <div style={{ background: "rgba(16, 185, 129, 0.1)", border: "1px solid rgba(16, 185, 129, 0.35)", borderRadius: "10px", padding: "9px 12px", marginBottom: "12px", fontSize: "0.78rem", color: "#a7f3d0", display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: "6px" }}>
-          <span>
-            <strong>Verified Recipient:</strong>{" "}
-            {paymentScope === "SUBSCRIPTION"
-              ? "GBS Platform Developer Account (Automatic Subscription Activation)"
-              : `${schoolDisplayName} — Official School Accountant Account`}
-          </span>
-          <span style={{ fontWeight: 800, color: "#34d399" }}>
-            {selectedGateway || "Verified Gateway"}
-          </span>
+        <div style={{ background: "rgba(16, 185, 129, 0.1)", border: "1px solid rgba(16, 185, 129, 0.35)", borderRadius: "10px", padding: "10px 12px", marginBottom: "12px", fontSize: "0.78rem", color: "#a7f3d0", display: "flex", flexDirection: "column", gap: "6px" }}>
+          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: "6px" }}>
+            <span>
+              <strong>Verified Recipient:</strong>{" "}
+              {paymentScope === "SUBSCRIPTION"
+                ? "GBS Platform Developer Account (Automatic Subscription Activation)"
+                : `${schoolDisplayName} — Official School Accountant Account`}
+            </span>
+            <span style={{ fontWeight: 800, color: "#34d399" }}>
+              {selectedGateway || "Verified Gateway"}
+            </span>
+          </div>
+          {paymentScope === "SCHOOL_FEES" && receivingAccounts && (receivingAccounts.bank?.configured || receivingAccounts.momo?.configured) && (
+            <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(220px, 1fr))", gap: "8px", paddingTop: "6px", borderTop: "1px solid rgba(16,185,129,0.22)" }}>
+              {receivingAccounts.momo?.configured && (
+                <div style={{ background: "rgba(2, 6, 23, 0.45)", padding: "7px 10px", borderRadius: "8px", border: "1px solid rgba(250, 204, 21, 0.3)" }}>
+                  <div style={{ fontSize: "0.68rem", color: "#fbbf24", fontWeight: 800, textTransform: "uppercase" }}>School Official MoMo Account</div>
+                  <div style={{ color: "#fff", fontWeight: 800, fontFamily: "monospace", fontSize: "0.85rem" }}>{receivingAccounts.momo.number}</div>
+                  <div style={{ fontSize: "0.72rem", color: "#cbd5e1" }}>
+                    {receivingAccounts.momo.network} • {receivingAccounts.momo.accountName}
+                    {receivingAccounts.momo.merchantId ? ` (Merchant: ${receivingAccounts.momo.merchantId})` : ""}
+                  </div>
+                </div>
+              )}
+              {receivingAccounts.bank?.configured && (
+                <div style={{ background: "rgba(2, 6, 23, 0.45)", padding: "7px 10px", borderRadius: "8px", border: "1px solid rgba(56, 189, 248, 0.3)" }}>
+                  <div style={{ fontSize: "0.68rem", color: "#38bdf8", fontWeight: 800, textTransform: "uppercase" }}>School Official Bank Account</div>
+                  <div style={{ color: "#fff", fontWeight: 800, fontFamily: "monospace", fontSize: "0.85rem" }}>{receivingAccounts.bank.bankAccountNumber}</div>
+                  <div style={{ fontSize: "0.72rem", color: "#cbd5e1" }}>
+                    {receivingAccounts.bank.bankName}{receivingAccounts.bank.bankBranch ? ` (${receivingAccounts.bank.bankBranch})` : ""} • {receivingAccounts.bank.bankAccountName}
+                  </div>
+                </div>
+              )}
+            </div>
+          )}
+          {paymentScope === "SCHOOL_FEES" && (
+            <div style={{ fontSize: "0.74rem", color: "#e0f2fe", background: "rgba(56, 189, 248, 0.12)", border: "1px solid rgba(56, 189, 248, 0.28)", borderRadius: "7px", padding: "6px 10px" }}>
+              <strong>Student Payee Reference (Reflected on Accountant Ledger):</strong>{" "}
+              <span style={{ color: "#fbbf24", fontWeight: 700 }}>{activeTransaction?.payeeReference || previewPayeeReference}</span>
+            </div>
+          )}
         </div>
 
         {/* Sandbox Notice */}
@@ -1004,20 +1061,42 @@ export default function OfficialPaymentGatewayModal({
             </div>
 
             <div style={{ background: "rgba(2, 6, 23, 0.55)", borderRadius: "12px", padding: "14px", fontSize: "0.84rem", display: "flex", flexDirection: "column", gap: "6px" }}>
-              <div style={{ display: "flex", justifyContent: "space-between" }}>
+              <div style={{ display: "flex", justifyContent: "space-between", gap: "8px", flexWrap: "wrap" }}>
                 <span style={{ color: "#94a3b8" }}>Reference:</span>
                 <strong style={{ fontFamily: "monospace" }}>{activeTransaction?.reference}</strong>
               </div>
-              <div style={{ display: "flex", justifyContent: "space-between" }}>
+              {paymentScope === "SCHOOL_FEES" && (
+                <>
+                  <div style={{ display: "flex", justifyContent: "space-between", gap: "8px", flexWrap: "wrap" }}>
+                    <span style={{ color: "#94a3b8" }}>Student Credited (Payee):</span>
+                    <strong style={{ color: "#fff" }}>{verifiedReceipt?.studentName || activeTransaction?.studentName || previewStudentName} ({verifiedReceipt?.studentCode || activeTransaction?.studentCode || previewStudentCode})</strong>
+                  </div>
+                  <div style={{ display: "flex", justifyContent: "space-between", gap: "8px", flexWrap: "wrap" }}>
+                    <span style={{ color: "#94a3b8" }}>Paid By:</span>
+                    <strong style={{ color: "#38bdf8" }}>{verifiedReceipt?.paidByLabel || activeTransaction?.paidByLabel || (isStudentSelfPayer ? "Student (Self-Payment)" : "Parent / Guardian")} — {verifiedReceipt?.paidByName || activeTransaction?.paidByName || currentActor.name}</strong>
+                  </div>
+                  <div style={{ display: "flex", justifyContent: "space-between", gap: "8px", flexWrap: "wrap" }}>
+                    <span style={{ color: "#94a3b8" }}>Student Payee Reference:</span>
+                    <strong style={{ color: "#fbbf24" }}>{verifiedReceipt?.payeeReference || activeTransaction?.payeeReference || previewPayeeReference}</strong>
+                  </div>
+                  {(verifiedReceipt?.destinationAccountSummary || activeTransaction?.destinationAccountSummary) && (
+                    <div style={{ display: "flex", justifyContent: "space-between", gap: "8px", flexWrap: "wrap" }}>
+                      <span style={{ color: "#94a3b8" }}>School Account / MoMo Credited:</span>
+                      <strong style={{ color: "#a7f3d0" }}>{verifiedReceipt?.destinationAccountSummary || activeTransaction?.destinationAccountSummary}</strong>
+                    </div>
+                  )}
+                </>
+              )}
+              <div style={{ display: "flex", justifyContent: "space-between", gap: "8px", flexWrap: "wrap" }}>
                 <span style={{ color: "#94a3b8" }}>Provider & Channel:</span>
                 <strong>{activeTransaction?.gateway} • {activeTransaction?.channel}</strong>
               </div>
-              <div style={{ display: "flex", justifyContent: "space-between" }}>
+              <div style={{ display: "flex", justifyContent: "space-between", gap: "8px", flexWrap: "wrap" }}>
                 <span style={{ color: "#94a3b8" }}>Confirmed Amount:</span>
                 <strong style={{ color: "#34d399" }}>{safeCurrency} {Number(verifiedReceipt?.amountPaid || activeTransaction?.amountPaid || 0).toFixed(2)}</strong>
               </div>
               {verifiedReceipt && (
-                <div style={{ display: "flex", justifyContent: "space-between" }}>
+                <div style={{ display: "flex", justifyContent: "space-between", gap: "8px", flexWrap: "wrap" }}>
                   <span style={{ color: "#94a3b8" }}>Remaining Fee Balance:</span>
                   <strong>{safeCurrency} {Number(verifiedReceipt.balanceAfter || 0).toFixed(2)}</strong>
                 </div>

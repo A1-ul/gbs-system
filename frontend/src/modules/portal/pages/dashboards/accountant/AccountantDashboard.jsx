@@ -101,6 +101,7 @@ export default function AccountantDashboard() {
   const [payments, setPayments] = useState([]);
   const [expenses, setExpenses] = useState([]);
   const [paymentDateFilter, setPaymentDateFilter] = useState("ALL");
+  const [paymentPayerFilter, setPaymentPayerFilter] = useState("ALL");
 
   // Institutional Payment Gateways Directory & Verification State
   const [gatewaySearchQuery, setGatewaySearchQuery] = useState("");
@@ -876,14 +877,17 @@ export default function AccountantDashboard() {
     fetchClassFeeMatrix();
 
     const handleSyncPayments = () => {
+      fetchPayments();
+      fetchInvoices();
+      fetchTelemetry();
       try {
         const stored = JSON.parse(localStorage.getItem("gbs_reconciled_payments") || "[]");
         if (Array.isArray(stored) && stored.length > 0) {
           setReconciledPayments((prev) => {
-            const combined = [...stored];
-            prev.forEach((p) => {
-              if (!combined.some((c) => c.receiptNumber === p.receiptNumber || c.id === p.id)) {
-                combined.push(p);
+            const combined = [...prev];
+            stored.forEach((p) => {
+              if (!combined.some((c) => (p.receiptNumber && c.receiptNumber === p.receiptNumber) || (p.reference && c.reference === p.reference) || c.id === p.id)) {
+                combined.unshift(p);
               }
             });
             return combined;
@@ -964,7 +968,53 @@ export default function AccountantDashboard() {
   const fetchPayments = async () => {
     try {
       const res = await apiClient.get("/finance/payments");
-      setPayments(res.data?.data?.payments || []);
+      const dbList = res.data?.data?.payments || [];
+      setPayments(dbList);
+      if (Array.isArray(dbList) && dbList.length > 0) {
+        const normalizedDb = dbList
+          .filter((tx) => tx.paymentScope !== "SUBSCRIPTION")
+          .map((tx) => {
+            const rawDt = new Date(tx.paidAt || tx.createdAt || Date.now());
+            const isoDate = Number.isNaN(rawDt.getTime())
+              ? new Date().toISOString().replace("T", " ").slice(0, 16)
+              : `${rawDt.toISOString().split("T")[0]} ${rawDt.toTimeString().slice(0, 5)}`;
+            return {
+              id: `db-${tx.id || tx.reference}`,
+              receiptNumber: tx.receiptNumber || `RCP-${tx.id}`,
+              reference: tx.reference || tx.transactionRef,
+              gatewayRef: tx.providerReference || tx.reference || tx.transactionRef,
+              studentName: tx.studentName || `Student #${tx.studentId || tx.studentCode || "N/A"}`,
+              indexNumber: tx.studentCode || (tx.studentId ? `STU-${tx.tenantId || 1}-${tx.studentId}` : "—"),
+              studentClass: tx.studentClass || tx.term || "Enrolled Student",
+              amountPaid: Number(tx.amountPaid || 0),
+              currency: tx.currency || "GHS",
+              paymentMethod: `${tx.gateway || "GATEWAY"} • ${tx.channel || tx.paymentMethod || "MOMO"}`,
+              gatewayStatus: tx.gatewayStatus || "SUCCESSFUL",
+              accountingPosted: Boolean(tx.accountingPosted),
+              paidByRole: tx.paidByRole || "PARENT",
+              paidByName: tx.paidByName || "Verified Payer",
+              paidByLabel: tx.paidByLabel || (tx.paidByRole === "STUDENT" ? "Student (Self-Payment)" : tx.paidByRole === "PARENT" ? "Parent / Guardian" : "School Finance Office"),
+              payeeReference: tx.payeeReference || `${tx.studentName || "Student"} (${tx.studentCode || ""})`,
+              transactionRef: tx.payeeReference || tx.reference || tx.transactionRef,
+              destinationAccountSummary: tx.destinationAccountSummary || "Official School Collection Account",
+              paidAt: isoDate,
+              fromDatabase: true
+            };
+          });
+        setReconciledPayments((prev) => {
+          const merged = [...normalizedDb];
+          prev.forEach((localItem) => {
+            if (localItem.fromDatabase) return;
+            const dup = merged.some(
+              (m) =>
+                (localItem.receiptNumber && m.receiptNumber === localItem.receiptNumber) ||
+                (localItem.reference && m.reference === localItem.reference)
+            );
+            if (!dup) merged.push(localItem);
+          });
+          return merged;
+        });
+      }
     } catch (err) {
       console.warn("Could not fetch payments:", err);
     }
@@ -2770,6 +2820,10 @@ export default function AccountantDashboard() {
             const thisMonth = today.substring(0, 7);
 
             const filteredReconciledPayments = reconciledPayments.filter((p) => {
+              const pRole = String(p.paidByRole || "ACCOUNTANT").toUpperCase();
+              if (paymentPayerFilter === "STUDENT" && pRole !== "STUDENT") return false;
+              if (paymentPayerFilter === "PARENT" && pRole !== "PARENT") return false;
+              if (paymentPayerFilter === "OFFICE" && (pRole === "STUDENT" || pRole === "PARENT")) return false;
               if (paymentDateFilter === "ALL") return true;
               const pDate = p.paidAt?.split(" ")[0] || "";
               if (paymentDateFilter === "TODAY") return pDate === today;
@@ -2779,64 +2833,120 @@ export default function AccountantDashboard() {
               return true;
             });
 
-            const totalGroupedAmount = filteredReconciledPayments.reduce((acc, p) => acc + (parseFloat(p.amountPaid) || 0), 0);
+            const totalGroupedAmount = filteredReconciledPayments
+              .filter((p) => !p.gatewayStatus || p.gatewayStatus === "SUCCESSFUL")
+              .reduce((acc, p) => acc + (parseFloat(p.amountPaid) || 0), 0);
+            const studentSelfPayments = reconciledPayments.filter(
+              (p) => String(p.paidByRole || "").toUpperCase() === "STUDENT" && (!p.gatewayStatus || p.gatewayStatus === "SUCCESSFUL")
+            );
+            const parentPayments = reconciledPayments.filter(
+              (p) => String(p.paidByRole || "").toUpperCase() === "PARENT" && (!p.gatewayStatus || p.gatewayStatus === "SUCCESSFUL")
+            );
 
             return (
               <div className="role-workspace-card">
                 <div className="workspace-title-row" style={{ alignItems: "flex-start", flexWrap: "wrap", gap: "12px" }}>
                   <div>
-                    <h2><span>💳</span> PAYMENT VERIFICATION & DATE GROUPING LEDGER</h2>
-                    <p>Group payment dates to verify settlements via Mobile Money (MoMo) and Bank Wires; tertiary students tracked by Index Number</p>
+                    <h2><span>💳</span> LIVE STUDENT &amp; PARENT FEE PAYMENTS AUDIT LEDGER</h2>
+                    <p>Every payment settled by a Student (self-payment) or Parent into the school&apos;s official Bank Account or MoMo reflects here automatically with exact Student Payee &amp; Payer audit references.</p>
                   </div>
-                  {/* Date Grouping Filter Buttons */}
-                  <div style={{ display: "flex", gap: "6px", alignItems: "center", flexWrap: "wrap", background: "rgba(15, 23, 42, 0.75)", padding: "8px 12px", borderRadius: "10px", border: "1px solid rgba(56, 189, 248, 0.3)" }}>
-                    <span style={{ fontSize: "0.78rem", color: "#94a3b8", fontWeight: 700, marginRight: "4px" }}>Group Dates:</span>
-                    {[
-                      { key: "ALL", label: "All Collections" },
-                      { key: "TODAY", label: "📅 Today" },
-                      { key: "YESTERDAY", label: "Yesterday" },
-                      { key: "PAST_7_DAYS", label: "Past 7 Days" },
-                      { key: "THIS_MONTH", label: "This Month" }
-                    ].map((btn) => (
-                      <button
-                        key={btn.key}
-                        type="button"
-                        className={`btn-secondary ${paymentDateFilter === btn.key ? "active" : ""}`}
-                        style={{
-                          padding: "4px 10px",
-                          fontSize: "0.76rem",
-                          background: paymentDateFilter === btn.key ? "#0284c7" : "transparent",
-                          borderColor: paymentDateFilter === btn.key ? "#38bdf8" : "#475569",
-                          color: paymentDateFilter === btn.key ? "#ffffff" : "#cbd5e1",
-                          fontWeight: paymentDateFilter === btn.key ? 800 : 500
-                        }}
-                        onClick={() => setPaymentDateFilter(btn.key)}
-                      >
-                        {btn.label}
-                      </button>
-                    ))}
+                  {/* Date & Payer Grouping Filter Buttons */}
+                  <div style={{ display: "flex", gap: "8px", alignItems: "center", flexWrap: "wrap" }}>
+                    <div style={{ display: "flex", gap: "6px", alignItems: "center", flexWrap: "wrap", background: "rgba(15, 23, 42, 0.75)", padding: "8px 12px", borderRadius: "10px", border: "1px solid rgba(56, 189, 248, 0.3)" }}>
+                      <span style={{ fontSize: "0.76rem", color: "#94a3b8", fontWeight: 700 }}>Paid By:</span>
+                      {[
+                        { key: "ALL", label: "All Payers" },
+                        { key: "STUDENT", label: `🎓 Student Self (${studentSelfPayments.length})` },
+                        { key: "PARENT", label: `👨‍👩‍👧 Parent (${parentPayments.length})` },
+                        { key: "OFFICE", label: "🏛️ Finance Office" }
+                      ].map((btn) => (
+                        <button
+                          key={btn.key}
+                          type="button"
+                          className={`btn-secondary ${paymentPayerFilter === btn.key ? "active" : ""}`}
+                          style={{
+                            padding: "4px 10px",
+                            fontSize: "0.75rem",
+                            background: paymentPayerFilter === btn.key ? "#059669" : "transparent",
+                            borderColor: paymentPayerFilter === btn.key ? "#34d399" : "#475569",
+                            color: paymentPayerFilter === btn.key ? "#ffffff" : "#cbd5e1",
+                            fontWeight: paymentPayerFilter === btn.key ? 800 : 500
+                          }}
+                          onClick={() => setPaymentPayerFilter(btn.key)}
+                        >
+                          {btn.label}
+                        </button>
+                      ))}
+                    </div>
+                    <div style={{ display: "flex", gap: "6px", alignItems: "center", flexWrap: "wrap", background: "rgba(15, 23, 42, 0.75)", padding: "8px 12px", borderRadius: "10px", border: "1px solid rgba(56, 189, 248, 0.3)" }}>
+                      <span style={{ fontSize: "0.76rem", color: "#94a3b8", fontWeight: 700 }}>Dates:</span>
+                      {[
+                        { key: "ALL", label: "All" },
+                        { key: "TODAY", label: "📅 Today" },
+                        { key: "YESTERDAY", label: "Yesterday" },
+                        { key: "PAST_7_DAYS", label: "7 Days" },
+                        { key: "THIS_MONTH", label: "Month" }
+                      ].map((btn) => (
+                        <button
+                          key={btn.key}
+                          type="button"
+                          className={`btn-secondary ${paymentDateFilter === btn.key ? "active" : ""}`}
+                          style={{
+                            padding: "4px 9px",
+                            fontSize: "0.75rem",
+                            background: paymentDateFilter === btn.key ? "#0284c7" : "transparent",
+                            borderColor: paymentDateFilter === btn.key ? "#38bdf8" : "#475569",
+                            color: paymentDateFilter === btn.key ? "#ffffff" : "#cbd5e1",
+                            fontWeight: paymentDateFilter === btn.key ? 800 : 500
+                          }}
+                          onClick={() => setPaymentDateFilter(btn.key)}
+                        >
+                          {btn.label}
+                        </button>
+                      ))}
+                    </div>
+                    <button
+                      type="button"
+                      className="btn-secondary"
+                      onClick={() => { fetchPayments(); fetchInvoices(); fetchTelemetry(); }}
+                      style={{ padding: "8px 12px", fontSize: "0.78rem", borderColor: "#38bdf8", color: "#38bdf8", fontWeight: 700 }}
+                    >
+                      🔄 Sync Live DB Ledger
+                    </button>
                   </div>
                 </div>
 
                 {/* Group Summary Metric Banner */}
-                <div style={{ background: "rgba(56, 189, 248, 0.08)", border: "1px solid rgba(56, 189, 248, 0.25)", borderRadius: "10px", padding: "10px 16px", marginBottom: "1.25rem", display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: "10px" }}>
+                <div style={{ background: "rgba(56, 189, 248, 0.08)", border: "1px solid rgba(56, 189, 248, 0.25)", borderRadius: "10px", padding: "12px 16px", marginBottom: "1.25rem", display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: "12px" }}>
                   <div style={{ display: "flex", alignItems: "center", gap: "10px" }}>
                     <span style={{ fontSize: "1.2rem" }}>📊</span>
                     <div>
-                      <span style={{ fontSize: "0.78rem", color: "#94a3b8", textTransform: "uppercase", fontWeight: 700 }}>Grouped Collections Telemetry:</span>
-                      <strong style={{ display: "block", color: "#f8fafc", fontSize: "0.95rem" }}>
-                        {paymentDateFilter === "ALL" ? "All Verified Payments" : paymentDateFilter === "TODAY" ? "Today's Verified Transactions" : paymentDateFilter === "YESTERDAY" ? "Yesterday's Collections" : paymentDateFilter === "PAST_7_DAYS" ? "Past 7 Days Collections" : "Current Month Collections"}
+                      <span style={{ fontSize: "0.76rem", color: "#94a3b8", textTransform: "uppercase", fontWeight: 700 }}>Audited Fee Collections Breakdown:</span>
+                      <strong style={{ display: "block", color: "#f8fafc", fontSize: "0.94rem" }}>
+                        {paymentPayerFilter === "ALL" ? "All Student, Parent & Office Collections" : paymentPayerFilter === "STUDENT" ? "Student Self-Payments" : paymentPayerFilter === "PARENT" ? "Parent Fee Payments" : "Finance Office Direct Entries"}
                       </strong>
                     </div>
                   </div>
-                  <div style={{ display: "flex", gap: "16px", alignItems: "center" }}>
+                  <div style={{ display: "flex", gap: "18px", alignItems: "center", flexWrap: "wrap" }}>
                     <div>
-                      <span style={{ fontSize: "0.72rem", color: "#94a3b8", display: "block" }}>Records Count</span>
-                      <strong style={{ color: "#38bdf8", fontSize: "1.1rem" }}>{filteredReconciledPayments.length} Verified</strong>
+                      <span style={{ fontSize: "0.72rem", color: "#94a3b8", display: "block" }}>🎓 Student Self-Paid</span>
+                      <strong style={{ color: "#38bdf8", fontSize: "1.02rem" }}>
+                        {studentSelfPayments.length} ({currencySymbol}{studentSelfPayments.reduce((s, p) => s + (parseFloat(p.amountPaid) || 0), 0).toFixed(2)})
+                      </strong>
                     </div>
                     <div>
-                      <span style={{ fontSize: "0.72rem", color: "#94a3b8", display: "block" }}>Group Subtotal</span>
-                      <strong style={{ color: "#34d399", fontSize: "1.15rem" }}>{currencySymbol}{totalGroupedAmount.toFixed(2)}</strong>
+                      <span style={{ fontSize: "0.72rem", color: "#94a3b8", display: "block" }}>👨‍👩‍👧 Parent Paid</span>
+                      <strong style={{ color: "#c084fc", fontSize: "1.02rem" }}>
+                        {parentPayments.length} ({currencySymbol}{parentPayments.reduce((s, p) => s + (parseFloat(p.amountPaid) || 0), 0).toFixed(2)})
+                      </strong>
+                    </div>
+                    <div>
+                      <span style={{ fontSize: "0.72rem", color: "#94a3b8", display: "block" }}>Filtered Count</span>
+                      <strong style={{ color: "#f8fafc", fontSize: "1.05rem" }}>{filteredReconciledPayments.length} Records</strong>
+                    </div>
+                    <div>
+                      <span style={{ fontSize: "0.72rem", color: "#94a3b8", display: "block" }}>Confirmed Subtotal</span>
+                      <strong style={{ color: "#34d399", fontSize: "1.12rem" }}>{currencySymbol}{totalGroupedAmount.toFixed(2)}</strong>
                     </div>
                   </div>
                 </div>
@@ -2931,70 +3041,99 @@ export default function AccountantDashboard() {
                   </button>
                 </form>
 
-                {/* Payments Table with Student Name, Class, Index Number, Timestamp, Means, and Reference */}
+                {/* Payments Audit Table with Student Payee, Paid By (Student Self vs Parent), School Account/MoMo, and Reference */}
                 <div className="role-table-responsive">
                   <table className="role-table">
                     <thead>
                       <tr>
-                        <th>Receipt #</th>
-                        <th>Student Scholar & Index #</th>
-                        <th>Enrolled Class</th>
+                        <th>Receipt # &amp; Ref</th>
+                        <th>Student Credited (Payee)</th>
+                        <th>Paid By (Payer)</th>
                         <th>Amount Paid</th>
-                        <th>Gateway / Channel</th>
-                        <th>Payment Reference (Name - Class)</th>
-                        <th>Transaction Timestamp</th>
-                        <th>Reconciliation</th>
+                        <th>School Account / MoMo &amp; Method</th>
+                        <th>Student Payee Reference</th>
+                        <th>Timestamp</th>
+                        <th>Audit &amp; Reconciliation</th>
                       </tr>
                     </thead>
                     <tbody>
                       {filteredReconciledPayments.length === 0 ? (
                         <tr>
                           <td colSpan="8" style={{ textAlign: "center", padding: "2rem", color: "#94a3b8" }}>
-                            No reconciled payments matching selected date group "{paymentDateFilter}".
+                            No reconciled payments matching the selected filter.
                           </td>
                         </tr>
                       ) : (
-                        filteredReconciledPayments.map((p) => (
-                          <tr key={p.id}>
-                            <td><strong style={{ fontFamily: "monospace", color: "#38bdf8" }}>{p.receiptNumber}</strong></td>
-                            <td>
-                              <strong>{p.studentName}</strong>
-                              <span style={{ display: "block", fontSize: "0.74rem", color: "#38bdf8", fontFamily: "monospace", marginTop: "2px" }}>
-                                Index: {p.indexNumber || (p.studentName.includes("Victoria") ? "GBS-UG-2022-0455" : p.studentName.includes("Kwame") ? "GBS-UG-2023-0188" : "GBS-UG-2024-0012")}
-                              </span>
-                            </td>
-                            <td><span className="role-portal-badge" style={{ color: "#c084fc" }}>{p.studentClass}</span></td>
-                            <td style={{ color: "#34d399", fontWeight: "700", fontSize: "1rem" }}>
-                              {currencySymbol}{parseFloat(p.amountPaid).toFixed(2)}
-                            </td>
-                            <td>
-                              <span className="role-portal-badge" style={{ color: "#34d399" }}>{p.paymentMethod}</span>
-                              <div style={{ fontSize: "0.7rem", color: "#94a3b8", fontFamily: "monospace" }}>{p.gatewayRef}</div>
-                            </td>
-                            <td>
-                              <strong style={{ color: "#fbbf24", fontFamily: "monospace", fontSize: "0.85rem" }}>
-                                {p.transactionRef}
-                              </strong>
-                            </td>
-                            <td>
-                              <div style={{ fontSize: "0.82rem", color: "#f8fafc" }}>{p.paidAt}</div>
-                            </td>
-                            <td>
-                              <div style={{ display: "flex", gap: "6px", alignItems: "center" }}>
-                                <span className="badge-status badge-present">✓ RECONCILED</span>
-                                <button
-                                  type="button"
-                                  className="btn-secondary"
-                                  style={{ padding: "3px 8px", fontSize: "0.72rem", borderColor: "#38bdf8", color: "#38bdf8", cursor: "pointer" }}
-                                  onClick={() => navigateToDetail(navigate, "payment", p.receiptNumber || p.id, p, { returnTab: activeTab })}
-                                  aria-label="View payment receipt on dedicated page"
-                                >
-                                  🔍 View Receipt
-                                </button>
-                              </div>
-                            </td>
-                          </tr>
-                        ))
+                        filteredReconciledPayments.map((p) => {
+                          const pRole = String(p.paidByRole || "ACCOUNTANT").toUpperCase();
+                          const isStudentSelf = pRole === "STUDENT";
+                          const isParent = pRole === "PARENT";
+                          const isConfirmed = !p.gatewayStatus || p.gatewayStatus === "SUCCESSFUL";
+                          return (
+                            <tr key={p.id || p.reference}>
+                              <td>
+                                <strong style={{ fontFamily: "monospace", color: "#38bdf8", display: "block" }}>{p.receiptNumber}</strong>
+                                <span style={{ fontFamily: "monospace", fontSize: "0.7rem", color: "#94a3b8" }}>{p.reference || p.gatewayRef}</span>
+                              </td>
+                              <td>
+                                <strong>{p.studentName}</strong>
+                                <span style={{ display: "block", fontSize: "0.74rem", color: "#38bdf8", fontFamily: "monospace", marginTop: "2px" }}>
+                                  ID: {p.indexNumber || "—"}
+                                </span>
+                                <span style={{ display: "block", fontSize: "0.72rem", color: "#c084fc" }}>{p.studentClass}</span>
+                              </td>
+                              <td>
+                                <span style={{
+                                  display: "inline-block",
+                                  padding: "3px 8px",
+                                  borderRadius: "6px",
+                                  fontSize: "0.72rem",
+                                  fontWeight: 800,
+                                  background: isStudentSelf ? "rgba(56, 189, 248, 0.2)" : isParent ? "rgba(168, 85, 247, 0.2)" : "rgba(16, 185, 129, 0.18)",
+                                  color: isStudentSelf ? "#38bdf8" : isParent ? "#c084fc" : "#34d399"
+                                }}>
+                                  {isStudentSelf ? "🎓 Student (Self)" : isParent ? "👨‍👩‍👧 Parent" : (p.paidByLabel || "🏛️ Finance Office")}
+                                </span>
+                                <div style={{ fontSize: "0.75rem", color: "#f8fafc", marginTop: "3px", fontWeight: 600 }}>
+                                  {p.paidByName || (isStudentSelf ? p.studentName : "Accountant Office")}
+                                </div>
+                              </td>
+                              <td style={{ color: "#34d399", fontWeight: "800", fontSize: "0.98rem", whiteSpace: "nowrap" }}>
+                                {p.currency || currencySymbol} {parseFloat(p.amountPaid || 0).toFixed(2)}
+                              </td>
+                              <td>
+                                <span className="role-portal-badge" style={{ color: "#34d399" }}>{p.paymentMethod}</span>
+                                <div style={{ fontSize: "0.73rem", color: "#a7f3d0", marginTop: "3px" }}>
+                                  {p.destinationAccountSummary || "Official School Collection Account"}
+                                </div>
+                              </td>
+                              <td>
+                                <strong style={{ color: "#fbbf24", fontSize: "0.8rem" }}>
+                                  {p.payeeReference || p.transactionRef}
+                                </strong>
+                              </td>
+                              <td>
+                                <div style={{ fontSize: "0.8rem", color: "#f8fafc", whiteSpace: "nowrap" }}>{p.paidAt}</div>
+                              </td>
+                              <td>
+                                <div style={{ display: "flex", gap: "6px", alignItems: "center", flexWrap: "wrap" }}>
+                                  <span className={`badge-status ${isConfirmed ? "badge-present" : "badge-absent"}`}>
+                                    {isConfirmed ? "✓ POSTED & AUDITED" : `⏳ ${p.gatewayStatus}`}
+                                  </span>
+                                  <button
+                                    type="button"
+                                    className="btn-secondary"
+                                    style={{ padding: "3px 8px", fontSize: "0.72rem", borderColor: "#38bdf8", color: "#38bdf8", cursor: "pointer" }}
+                                    onClick={() => navigateToDetail(navigate, "payment", p.receiptNumber || p.id, p, { returnTab: activeTab })}
+                                    aria-label="View payment receipt on dedicated page"
+                                  >
+                                    🔍 Audit Receipt
+                                  </button>
+                                </div>
+                              </td>
+                            </tr>
+                          );
+                        })
                       )}
                     </tbody>
                   </table>
