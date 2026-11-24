@@ -292,7 +292,7 @@ node frontend/scripts/build-frontend-memory.cjs
 * **Student Self-Payment & School Receiving Accounts:** Upgraded Student Dashboard (`fees-history`) with live DB bills, per-invoice self-payment, Official School Bank Account & School MoMo receiving account visibility, and printable verified receipts — following the exact official server-verified payment gateway workflow.
 * **Canonical Student Payee & Payer Referencing:** Every Student self-payment (`Paid by Student (Self)`) and Parent payment (`Paid by Parent: <Parent Name>`) records the Student as Payee/Beneficiary, Payer role/name, and School Bank/MoMo credited across `PaymentTransaction`, `PaymentReceipt`, `BankDirectAdapter`, and immutable `AuditLog` entries.
 * **Parent Visibility & Live Accountant Audit Ledger:** Parents see both their own payments and their ward's self-payments on `ParentDashboard`; Accountant Dashboard (`payments` & `gateways` tabs) pulls live PostgreSQL records from `/api/v1/finance/payments` and `/api/v1/payments/admin/overview` with Student-Self vs Parent payer filters, totals, and configurable School Bank & Official School MoMo details.
-* **Verification Verdict (`index-C4FRB9If.js`):** **11 / 11** Real Chrome CDP + PostgreSQL Student→Parent→Accountant E2E checks passed + **18 / 18** backend regression checks passed.
+* **Verification Verdict (`index-C4FRB9If.js`, Commit `2a7d9e4`):** **11 / 11** Real Chrome CDP + PostgreSQL Student→Parent→Accountant E2E checks passed + **18 / 18** backend regression checks passed + **12 / 12** Live Render HTTP production checks passed on `https://gbs-system.onrender.com`.
 
 ---
 *Certified & Archived in System Memory by Gabriel Osei — Lead Architect & Developer.*  

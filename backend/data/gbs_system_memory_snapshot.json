@@ -449,13 +449,13 @@
     }
   ],
   "verificationSummary": {
-    "latestVerifiedCommit": "pending-v216-push",
+    "latestVerifiedCommit": "2a7d9e4",
     "latestLiveBundleHash": "index-C4FRB9If.js",
     "liveProductionUrl": "https://gbs-system.onrender.com",
     "autoMemoryRuleFile": "AGENTS.md",
     "backendTestSuitesPassed": "18/18 upgrade regression checks + 25/25 payment/auth/video API checks + 11/11 Student+Parent->Accountant E2E checks verified (0 failures)",
     "chromeE2EDashboardsVerified": "All 10 dashboards verified in real Chrome CDP (640x360 cameras, zero 401s, zero tooltips, zero clipped KPIs, Developer full-page module routing & scroll restore, Mobile 390x844), plus full Student Self-Payment (Bank + MoMo) -> Parent Dashboard visibility & Parent Payment -> Accountant Live DB Audit Ledger & Audit Logs",
-    "liveRenderHttpAuditPassed": "Verified on https://gbs-system.onrender.com after v2.16 deployment (bundle index-C4FRB9If.js): Student Self-Payment + Parent Payment -> Accountant live audit ledger & immutable audit logs verified",
+    "liveRenderHttpAuditPassed": "12/12 v2.16 live HTTP checks passed on https://gbs-system.onrender.com (bundle index-C4FRB9If.js, commit 2a7d9e4): Student Self-Payment + Parent Payment -> Accountant live DB audit ledger (/finance/payments) & Audit Overview (/payments/admin/overview) with Student Payee Ref & School Bank/MoMo, SPA routes 200 OK, and strict 401 on unauthenticated access",
     "institutionSeparationUniversityClinicVoiceVerified": "2026-11-20 Tier-Tailored School Portals (JHS/SHS/TVET/University), Separated Internships/Attachments, Clinic Privacy & Non-Disclosure Verified",
     "multiMillionSchoolDatabaseMandate": {
       "enforced": true,
