@@ -342,7 +342,7 @@ flowchart TD
 
 ---
 
-## 14. 1.0x Real-Time Exam Invigilation Camera, Unlimited Custom Exam Scanner Question Count & Ghana NaCCA Teacher Lesson Planning and Vetting Suite (Nov 2026 — v2.17.0)
+## 14. 1.0x Real-Time Exam Invigilation Camera, Unlimited Custom Exam Scanner Question Count & Ghana NaCCA Teacher Lesson Planning and Vetting Suite (Nov 2026 — v2.17.0, Commits `678fb69` / `af70b90`)
 
 - **Root Causes Resolved:**
   1. **Slow Exam Invigilation Camera:** [`StudentDashboard.jsx`](file:///d:/version1/GBS_SYSTEM/frontend/src/modules/portal/pages/dashboards/student/StudentDashboard.jsx) sequentially awaited a 1000ms heartbeat+messages timer (~0.5–1 FPS effective), while [`TeacherLiveProctoringPanel.jsx`](file:///d:/version1/GBS_SYSTEM/frontend/src/components/common/TeacherLiveProctoringPanel.jsx) swapped static `<img>` snapshots without WebRTC video or `document.body` portaling.
@@ -355,6 +355,7 @@ flowchart TD
 - **Verification Verdict (Bundle `index-DUkwSuJg.js`):**
   - Local E2E API + PostgreSQL + Real Headless Chrome CDP passed 100%: strict `401` on unauthenticated calls, 10–20 FPS server proctor frame throughput & WebRTC signaling, portaled `1.0x` Live Exam Invigilation modal, 135-question custom answer key + `Q101–Q135` pagination + accurate grading (`91%`), full Ghana NaCCA 16-element lifecycle (`DRAFT` hidden from Admin → `SUBMIT` → `REVISION_REQUIRED` w/ itemized section comments → `RESUBMIT Rev #2` → `VETTED_APPROVED` → post-teaching reflection preserving approval + RBAC `403`s + audit delete protection), Mobile `390x844` responsiveness, `0` HTML tooltips, and `0` uncaught JS errors.
   - `18 / 18` regression checks passed in [`verify_upgrade_e2e.js`](file:///d:/version1/GBS_SYSTEM/backend/verify_upgrade_e2e.js).
+  - `26 / 26` live Render production checks passed on `https://gbs-system.onrender.com` (Commits `678fb69` / `af70b90`, bundle `index-DUkwSuJg.js`): live SPA routes `200 OK`, strict `401` on unauthenticated access, live `1.0x` proctor frame + WebRTC signaling, custom `135`-question answer key, RBAC `403`s, 6 templates, quality check, Render PostgreSQL draft create/hide/delete, Headmaster `REVISION_REQUIRED` w/ section comments → Teacher Revise & Resubmit `Rev #2` → Headmaster `VETTED_APPROVED` → Teacher post-lesson reflection preserving `VETTED_APPROVED`.
 
 
 
