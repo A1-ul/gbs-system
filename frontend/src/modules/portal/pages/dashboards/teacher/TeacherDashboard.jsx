@@ -21,6 +21,7 @@ import SchoolClinicHubPanel from "../../../../../components/common/SchoolClinicH
 import SchoolStationeryHubPanel from "../../../../../components/common/SchoolStationeryHubPanel";
 import TeacherLiveProctoringPanel from "../../../../../components/common/TeacherLiveProctoringPanel";
 import ExamVettingHubPanel from "../../../../../components/common/ExamVettingHubPanel";
+import TeacherLessonPlanStudio from "../../../../../components/common/TeacherLessonPlanStudio";
 import UniversalRoleGuideModal from "../../../../../components/common/UniversalRoleGuideModal";
 import ClassTopicVideoPlatform from "../../../../../components/common/ClassTopicVideoPlatform";
 import { navigateToDetail } from "../../../../../utils/universalNavigation";
@@ -1659,6 +1660,8 @@ export default function TeacherDashboard() {
   const [examSheetPreviewUrl, setExamSheetPreviewUrl] = useState(null);
   const [showScannerConfirmModal, setShowScannerConfirmModal] = useState(false);
   const [scannerQuestionCount, setScannerQuestionCount] = useState(10);
+  const [scannerQuestionCountInput, setScannerQuestionCountInput] = useState("10");
+  const [scannerMatrixPage, setScannerMatrixPage] = useState(1);
   const [scannerMarksPerQuestion, setScannerMarksPerQuestion] = useState(1);
   const [scannerKeyQuickInput, setScannerKeyQuickInput] = useState("");
   const [savingAnswerKey, setSavingAnswerKey] = useState(false);
@@ -2052,6 +2055,7 @@ export default function TeacherDashboard() {
 
   const [lessonPlanFilter, setLessonPlanFilter] = useState("ALL");
   const [lessonStatusFilter, setLessonStatusFilter] = useState("ALL");
+  const [curriculumPrefillPlan, setCurriculumPrefillPlan] = useState(null);
   const [newPlanForm, setNewPlanForm] = useState({
     planType: "WEEKLY_PLAN",
     title: "",
@@ -2165,7 +2169,7 @@ export default function TeacherDashboard() {
     try {
       const res = await apiClient.get("/academics/lesson-plans");
       const list = res.data?.data?.plans || res.data?.plans;
-      if (Array.isArray(list) && list.length > 0) {
+      if (Array.isArray(list)) {
         setTeacherPlans(list);
         localStorage.setItem("gbs_teacher_lesson_plans", JSON.stringify(list));
       }
@@ -3709,9 +3713,19 @@ export default function TeacherDashboard() {
     }));
   };
 
+  const SCANNER_MAX_QUESTIONS = 2000;
+  const SCANNER_PAGE_SIZE = 50;
+
   const handleSetScannerQuestionCount = (rawCount) => {
-    const count = Math.max(1, Math.min(100, parseInt(rawCount, 10) || 10));
+    const rawStr = String(rawCount ?? "");
+    setScannerQuestionCountInput(rawStr);
+    if (rawStr.trim() === "") return;
+    const parsed = parseInt(rawStr, 10);
+    if (Number.isNaN(parsed) || parsed < 1) return;
+    const count = Math.max(1, Math.min(SCANNER_MAX_QUESTIONS, parsed));
     setScannerQuestionCount(count);
+    const maxPages = Math.max(1, Math.ceil(count / SCANNER_PAGE_SIZE));
+    setScannerMatrixPage((prev) => Math.min(prev, maxPages));
     const letters = ["A", "B", "C", "D"];
     setTeacherAnswerKey((prev) => {
       const next = { ...prev };
@@ -3729,6 +3743,16 @@ export default function TeacherDashboard() {
     });
   };
 
+  const handleScannerQuestionCountBlur = () => {
+    const parsed = parseInt(scannerQuestionCountInput, 10);
+    const safeCount = Number.isNaN(parsed) || parsed < 1
+      ? Math.max(1, Number(scannerQuestionCount) || 10)
+      : Math.max(1, Math.min(SCANNER_MAX_QUESTIONS, parsed));
+    setScannerQuestionCount(safeCount);
+    setScannerQuestionCountInput(String(safeCount));
+    handleSetScannerQuestionCount(safeCount);
+  };
+
   const handleApplyQuickAnswerKeyString = (rawInput) => {
     setScannerKeyQuickInput(rawInput);
     const tokens = String(rawInput || "")
@@ -3739,8 +3763,10 @@ export default function TeacherDashboard() {
       .filter(Boolean);
     const expanded = tokens.length === 1 && tokens[0].length > 1 ? tokens[0].split("") : tokens;
     if (expanded.length === 0) return;
-    const count = Math.max(1, Math.min(100, expanded.length));
+    const count = Math.max(1, Math.min(SCANNER_MAX_QUESTIONS, expanded.length));
     setScannerQuestionCount(count);
+    setScannerQuestionCountInput(String(count));
+    setScannerMatrixPage(1);
     const nextKey = {};
     expanded.slice(0, count).forEach((ans, idx) => {
       nextKey[idx + 1] = ans;
@@ -3750,7 +3776,7 @@ export default function TeacherDashboard() {
 
   const handleSaveScannerAnswerKey = async () => {
     const examIdToUse = scannerExamId || (exams[0] ? String(exams[0].id) : "1");
-    const count = Math.max(1, Math.min(100, Number(scannerQuestionCount) || 10));
+    const count = Math.max(1, Math.min(SCANNER_MAX_QUESTIONS, Number(scannerQuestionCount) || 10));
     const trimmedKey = {};
     for (let i = 1; i <= count; i++) {
       trimmedKey[i] = teacherAnswerKey[i] || "A";
@@ -3760,7 +3786,7 @@ export default function TeacherDashboard() {
       const res = await apiClient.post("/ai-exam/answer-key", {
         examId: examIdToUse,
         questionCount: count,
-        marksPerQuestion: Number(scannerMarksPerQuestion) || 1,
+        marksPerQuestion: Math.max(0.25, Number(scannerMarksPerQuestion) || 1),
         teacherAnswerKey: trimmedKey
       });
       setSavedScannerKeyAt(res?.data?.data?.answerKey?.savedAt || new Date().toISOString());
@@ -3796,8 +3822,8 @@ export default function TeacherDashboard() {
     setLoading(true);
     setFeedback(null);
     try {
-      const totalQ = Math.max(1, Math.min(100, Number(scannerQuestionCount) || 10));
-      const marksEach = Math.max(1, Number(scannerMarksPerQuestion) || 1);
+      const totalQ = Math.max(1, Math.min(SCANNER_MAX_QUESTIONS, Number(scannerQuestionCount) || 10));
+      const marksEach = Math.max(0.25, Number(scannerMarksPerQuestion) || 1);
       let correctCount = 0;
       const questionBreakdown = [];
       for (let q = 1; q <= totalQ; q++) {
@@ -3809,8 +3835,8 @@ export default function TeacherDashboard() {
       }
       const pct = Math.round((correctCount / totalQ) * 100);
       const chosenGrade = computeGrade(pct, targetStudent.id);
-      const marksAwarded = correctCount * marksEach;
-      const maxMarks = totalQ * marksEach;
+      const marksAwarded = Math.round(correctCount * marksEach * 100) / 100;
+      const maxMarks = Math.round(totalQ * marksEach * 100) / 100;
 
       const gradedRecord = {
         id: `SHEET-BATCH-${Date.now()}-${currentScriptIndex}`,
@@ -7351,18 +7377,41 @@ export default function TeacherDashboard() {
               }}>
                 <div>
                   <label style={{ display: "block", fontSize: "0.78rem", color: "#f6dd84", marginBottom: "6px", fontWeight: 800 }}>
-                    🔢 Number of Questions to Mark (1–100) *
+                    🔢 Number of Questions to Mark (Custom — Any Count) *
                   </label>
                   <input
                     type="number"
                     data-testid="teacher-scanner-question-count"
                     min="1"
-                    max="100"
+                    max={SCANNER_MAX_QUESTIONS}
                     className="filter-input"
                     style={{ width: "100%", borderColor: "#d4af37", fontWeight: 800 }}
-                    value={scannerQuestionCount}
+                    placeholder="Enter any count e.g. 25, 60, 120, 200"
+                    value={scannerQuestionCountInput}
                     onChange={(e) => handleSetScannerQuestionCount(e.target.value)}
+                    onBlur={handleScannerQuestionCountBlur}
                   />
+                  <div style={{ display: "flex", gap: "4px", flexWrap: "wrap", marginTop: "6px" }}>
+                    {[20, 40, 60, 100, 120, 150, 200].map((preset) => (
+                      <button
+                        key={preset}
+                        type="button"
+                        onClick={() => handleSetScannerQuestionCount(preset)}
+                        style={{
+                          padding: "2px 7px",
+                          borderRadius: "999px",
+                          border: Number(scannerQuestionCount) === preset ? "1.5px solid #f6dd84" : "1px solid rgba(212,175,55,0.35)",
+                          background: Number(scannerQuestionCount) === preset ? "#d4af37" : "rgba(255,255,255,0.06)",
+                          color: Number(scannerQuestionCount) === preset ? "#081833" : "#fde68a",
+                          fontSize: "0.68rem",
+                          fontWeight: 800,
+                          cursor: "pointer"
+                        }}
+                      >
+                        {preset} Qs
+                      </button>
+                    ))}
+                  </div>
                 </div>
                 <div>
                   <label style={{ display: "block", fontSize: "0.78rem", color: "#f6dd84", marginBottom: "6px", fontWeight: 800 }}>
@@ -7370,13 +7419,17 @@ export default function TeacherDashboard() {
                   </label>
                   <input
                     type="number"
-                    min="1"
-                    max="20"
+                    min="0.25"
+                    step="0.25"
+                    max="1000"
                     className="filter-input"
                     style={{ width: "100%", borderColor: "#d4af37", fontWeight: 800 }}
                     value={scannerMarksPerQuestion}
-                    onChange={(e) => setScannerMarksPerQuestion(Math.max(1, Number(e.target.value) || 1))}
+                    onChange={(e) => setScannerMarksPerQuestion(Math.max(0.25, Number(e.target.value) || 1))}
                   />
+                  <span style={{ display: "block", marginTop: "6px", fontSize: "0.7rem", color: "#93c5fd", fontWeight: 700 }}>
+                    Total Possible Score: {Math.round(scannerQuestionCount * (Number(scannerMarksPerQuestion) || 1) * 100) / 100} Marks
+                  </span>
                 </div>
                 <div>
                   <label style={{ display: "block", fontSize: "0.78rem", color: "#f6dd84", marginBottom: "6px", fontWeight: 800 }}>
@@ -7508,22 +7561,78 @@ export default function TeacherDashboard() {
               )}
 
               {/* Master Answer Key & Student Bubble Matrix Dual Column */}
+              {(() => {
+                const totalScannerQ = Math.max(1, Math.min(SCANNER_MAX_QUESTIONS, Number(scannerQuestionCount) || 10));
+                const totalPages = Math.max(1, Math.ceil(totalScannerQ / SCANNER_PAGE_SIZE));
+                const safePage = Math.min(Math.max(1, scannerMatrixPage), totalPages);
+                const pageStart = (safePage - 1) * SCANNER_PAGE_SIZE + 1;
+                const pageEnd = Math.min(totalScannerQ, safePage * SCANNER_PAGE_SIZE);
+                const visibleQNums = Array.from({ length: pageEnd - pageStart + 1 }, (_, idx) => pageStart + idx);
+                return (
+                  <>
+                    {totalPages > 1 && (
+                      <div
+                        data-testid="teacher-scanner-pagination"
+                        style={{
+                          display: "flex",
+                          alignItems: "center",
+                          justifyContent: "space-between",
+                          flexWrap: "wrap",
+                          gap: "8px",
+                          padding: "10px 14px",
+                          marginBottom: "1rem",
+                          borderRadius: "10px",
+                          background: "rgba(15, 23, 42, 0.85)",
+                          border: "1px solid rgba(212, 175, 55, 0.4)"
+                        }}
+                      >
+                        <span style={{ fontSize: "0.78rem", color: "#fde68a", fontWeight: 800 }}>
+                          📑 Viewing Questions Q{pageStart}–Q{pageEnd} of {totalScannerQ} Total Questions (Page {safePage}/{totalPages})
+                        </span>
+                        <div style={{ display: "flex", gap: "6px", flexWrap: "wrap" }}>
+                          {Array.from({ length: totalPages }, (_, idx) => idx + 1).map((pg) => {
+                            const s = (pg - 1) * SCANNER_PAGE_SIZE + 1;
+                            const e = Math.min(totalScannerQ, pg * SCANNER_PAGE_SIZE);
+                            return (
+                              <button
+                                key={pg}
+                                type="button"
+                                data-testid={`scanner-page-btn-${pg}`}
+                                onClick={() => setScannerMatrixPage(pg)}
+                                style={{
+                                  padding: "4px 10px",
+                                  borderRadius: "6px",
+                                  border: safePage === pg ? "1.5px solid #f6dd84" : "1px solid rgba(148,163,184,0.3)",
+                                  background: safePage === pg ? "#d4af37" : "rgba(255,255,255,0.06)",
+                                  color: safePage === pg ? "#081833" : "#e2e8f0",
+                                  fontSize: "0.74rem",
+                                  fontWeight: 800,
+                                  cursor: "pointer"
+                                }}
+                              >
+                                Q{s}–{e}
+                              </button>
+                            );
+                          })}
+                        </div>
+                      </div>
+                    )}
               <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(320px, 1fr))", gap: "1.5rem", marginBottom: "1.5rem" }}>
                 {/* Column 1: Teacher Master Answer Key (Teacher defines the specific correct answers) */}
                 <div style={{ background: "rgba(2, 6, 23, 0.7)", padding: "1.5rem", borderRadius: "14px", border: "1px solid rgba(56, 189, 248, 0.3)" }}>
                   <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "1rem", borderBottom: "1px solid rgba(255, 255, 255, 0.08)", paddingBottom: "8px" }}>
                     <h4 style={{ margin: 0, color: "#f6dd84", fontSize: "0.95rem" }}>
-                      🎯 Teacher Master Answer Key ({scannerQuestionCount} Questions)
+                      🎯 Teacher Master Answer Key ({totalScannerQ} Questions)
                     </h4>
-                    <span style={{ fontSize: "0.75rem", color: "#34d399" }}>● Click to set correct answers</span>
+                    <span style={{ fontSize: "0.75rem", color: "#34d399" }}>● Q{pageStart}–Q{pageEnd}</span>
                   </div>
 
                   <div style={{ display: "flex", flexDirection: "column", gap: "10px", maxHeight: "430px", overflowY: "auto", paddingRight: "4px" }}>
-                    {Array.from({ length: Math.max(1, Math.min(100, Number(scannerQuestionCount) || 10)) }, (_, idx) => idx + 1).map((qNum) => {
+                    {visibleQNums.map((qNum) => {
                       const correctOpt = teacherAnswerKey[qNum] || "A";
                       return (
                         <div key={qNum} style={{ display: "flex", alignItems: "center", justifyContent: "space-between", background: "rgba(56, 189, 248, 0.05)", padding: "6px 12px", borderRadius: "8px", border: "1px solid rgba(212, 175, 55, 0.25)" }}>
-                          <span style={{ fontWeight: "700", color: "#f6dd84", fontSize: "0.85rem", minWidth: "40px" }}>
+                          <span style={{ fontWeight: "700", color: "#f6dd84", fontSize: "0.85rem", minWidth: "46px" }}>
                             Q{qNum}:
                           </span>
                           <div style={{ display: "flex", gap: "10px" }}>
@@ -7558,17 +7667,17 @@ export default function TeacherDashboard() {
                 <div style={{ background: "rgba(2, 6, 23, 0.7)", padding: "1.5rem", borderRadius: "14px", border: "1px solid rgba(212, 175, 55, 0.35)" }}>
                   <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "1rem", borderBottom: "1px solid rgba(255, 255, 255, 0.08)", paddingBottom: "8px" }}>
                     <h4 style={{ margin: 0, color: "#f6dd84", fontSize: "0.95rem" }}>
-                      📝 Student Answer Sheet ({scannerQuestionCount} Bubbles)
+                      📝 Student Answer Sheet ({totalScannerQ} Bubbles)
                     </h4>
-                    <span style={{ fontSize: "0.75rem", color: "#94a3b8" }}>Student Response Matrix</span>
+                    <span style={{ fontSize: "0.75rem", color: "#94a3b8" }}>Q{pageStart}–Q{pageEnd}</span>
                   </div>
 
                   <div style={{ display: "flex", flexDirection: "column", gap: "10px", maxHeight: "430px", overflowY: "auto", paddingRight: "4px" }}>
-                    {Array.from({ length: Math.max(1, Math.min(100, Number(scannerQuestionCount) || 10)) }, (_, idx) => idx + 1).map((qNum) => {
+                    {visibleQNums.map((qNum) => {
                       const selectedOpt = scannerAnswers[qNum];
                       return (
                         <div key={qNum} style={{ display: "flex", alignItems: "center", justifyContent: "space-between", background: "rgba(255, 255, 255, 0.03)", padding: "6px 12px", borderRadius: "8px" }}>
-                          <span style={{ fontWeight: "700", color: "#cbd5e1", fontSize: "0.85rem", minWidth: "40px" }}>
+                          <span style={{ fontWeight: "700", color: "#cbd5e1", fontSize: "0.85rem", minWidth: "46px" }}>
                             Q{qNum}:
                           </span>
                           <div style={{ display: "flex", gap: "10px" }}>
@@ -7666,6 +7775,9 @@ export default function TeacherDashboard() {
                   )}
                 </div>
               </div>
+                  </>
+                );
+              })()}
 
               {/* MARKED SCRIPTS VS UNMARKED SCRIPTS INSPECTION & TEACHER ZERO-MISTAKE OVERRIDE */}
               {(() => {
@@ -8887,581 +8999,31 @@ export default function TeacherDashboard() {
           )}
 
           {/* ======================================================== */}
-          {/* TAB 8: YEARLY, TERMLY, WEEKLY PLANS & LESSON NOTES VETTING */}
+          {/* TAB 8: GHANA NaCCA LEARNER-CENTRED LESSON PLANNING & VETTING STUDIO */}
           {/* ======================================================== */}
           {activeTab === "lessonPlans" && (
-            <div className="role-workspace-card">
-              <div className="workspace-title-row">
-                <div>
-                  <h2><span>📑</span> TEACHER PLANS & LESSON NOTES VETTING SUITE</h2>
-                  <p>
-                    Author and upload your <strong>Yearly Plans</strong>, <strong>Termly Schemes of Work</strong>, <strong>Weekly Forecast Plans</strong>, and <strong>Classroom Lesson Notes</strong> for Headmaster vetting. Receive executive approval, direct pedagogical feedback words from the Headmaster, and institutional directives.
-                  </p>
-                </div>
-                <div style={{ display: "flex", gap: "10px", alignItems: "center", flexWrap: "wrap" }}>
-                  <span className="role-portal-badge" style={{ color: "#38bdf8" }}>
-                    {teacherPlans.length} Total Plans Uploaded
-                  </span>
-                  <span className="role-portal-badge" style={{ color: "#34d399" }}>
-                    {teacherPlans.filter((p) => p.status === "VETTED_APPROVED").length} Approved
-                  </span>
-                  {teacherPlans.some((p) => p.status === "REVISION_REQUIRED") && (
-                    <span className="role-portal-badge" style={{ color: "#f87171" }}>
-                      {teacherPlans.filter((p) => p.status === "REVISION_REQUIRED").length} Revisions Required
-                    </span>
-                  )}
-                </div>
-              </div>
-
-              {/* Headmaster Directives Callout Bar */}
-              <div style={{
-                background: "linear-gradient(135deg, rgba(30, 58, 138, 0.45) 0%, rgba(15, 23, 42, 0.85) 100%)",
-                border: "1.5px solid rgba(59, 130, 246, 0.4)",
-                borderRadius: "14px",
-                padding: "1.25rem 1.5rem",
-                marginBottom: "1.75rem",
-                boxShadow: "0 10px 25px -5px rgba(0, 0, 0, 0.3)"
-              }}>
-                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "12px", flexWrap: "wrap", gap: "10px" }}>
-                  <div style={{ display: "flex", alignItems: "center", gap: "10px" }}>
-                    <span style={{ fontSize: "1.4rem" }}>📢</span>
-                    <div>
-                      <h4 style={{ margin: 0, color: "#60a5fa", fontSize: "1rem", fontWeight: "800", letterSpacing: "0.3px" }}>
-                        OFFICIAL DIRECTIVES & INSTRUCTIONS FROM HEADMASTER ON LESSON NOTES
-                      </h4>
-                      <span style={{ fontSize: "0.75rem", color: "#94a3b8" }}>
-                        Specific Instructions & Whole-Faculty Pedagogical Standards
-                      </span>
-                    </div>
-                  </div>
-                  <span style={{ background: "rgba(56, 189, 248, 0.2)", color: "#38bdf8", fontSize: "0.75rem", padding: "4px 12px", borderRadius: "12px", fontWeight: "700" }}>
-                    {facultyDirectives.length} Active Directives
-                  </span>
-                </div>
-
-                <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(320px, 1fr))", gap: "12px" }}>
-                  {(Array.isArray(facultyDirectives) ? facultyDirectives : []).filter(Boolean).map((dir) => {
-                    const userFirst = typeof currentUser?.firstName === "string" ? currentUser.firstName.toLowerCase() : "";
-                    const targetName = typeof dir?.targetTeacherName === "string" ? dir.targetTeacherName.toLowerCase() : "";
-                    const isForMe = dir?.target === "ALL" ||
-                      String(dir?.target) === String(currentUser?.id) ||
-                      (userFirst && targetName && targetName.includes(userFirst));
-                    return (
-                      <div
-                        key={dir.id}
-                        style={{
-                          background: isForMe ? "rgba(15, 23, 42, 0.75)" : "rgba(2, 6, 23, 0.5)",
-                          border: isForMe ? "1px solid rgba(56, 189, 248, 0.4)" : "1px solid rgba(255, 255, 255, 0.08)",
-                          borderRadius: "10px",
-                          padding: "12px 14px",
-                          display: "flex",
-                          flexDirection: "column",
-                          justifyContent: "space-between"
-                        }}
-                      >
-                        <div>
-                          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "6px" }}>
-                            <span style={{
-                              fontSize: "0.7rem",
-                              fontWeight: "800",
-                              padding: "2px 8px",
-                              borderRadius: "4px",
-                              background: dir.target === "ALL" ? "rgba(16, 185, 129, 0.2)" : "rgba(168, 85, 247, 0.2)",
-                              color: dir.target === "ALL" ? "#34d399" : "#c084fc"
-                            }}>
-                              {dir.target === "ALL" ? "📢 TO ALL TEACHERS" : `🎯 DIRECT TO: ${dir.targetTeacherName}`}
-                            </span>
-                            <span style={{ fontSize: "0.72rem", color: "#94a3b8" }}>
-                              {new Date(dir.issuedAt).toLocaleDateString()}
-                            </span>
-                          </div>
-                          <strong style={{ color: "#f8fafc", fontSize: "0.88rem", display: "block", marginBottom: "4px" }}>
-                            {dir.subject}
-                          </strong>
-                          <p style={{ margin: 0, fontSize: "0.82rem", color: "#cbd5e1", lineHeight: "1.45" }}>
-                            "{dir.message}"
-                          </p>
-                        </div>
-                        <div style={{ marginTop: "8px", fontSize: "0.72rem", color: "#93c5fd", display: "flex", justifyContent: "space-between", borderTop: "1px solid rgba(255, 255, 255, 0.06)", paddingTop: "6px" }}>
-                          <span>Issued by: {dir.issuedBy}</span>
-                          <span>✓ Verified by Headmaster</span>
-                        </div>
-                      </div>
-                    );
-                  })}
-                </div>
-              </div>
-
-              {/* Two Column Section: Upload/Authoring Form + Submitted Plans & Notes Ledger */}
-              <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(360px, 1fr))", gap: "1.75rem", marginBottom: "2rem" }}>
-                {/* Panel 1: Upload / Create Plan Form */}
-                <form
-                  onSubmit={handleUploadPlan}
-                  style={{
-                    background: "rgba(2, 6, 23, 0.7)",
-                    padding: "1.5rem",
-                    borderRadius: "14px",
-                    border: "1px solid rgba(56, 189, 248, 0.35)",
-                    boxShadow: "0 10px 25px rgba(0,0,0,0.4)"
-                  }}
-                >
-                  <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "1rem", borderBottom: "1px solid rgba(255, 255, 255, 0.08)", paddingBottom: "10px" }}>
-                    <h3 style={{ margin: 0, color: "#38bdf8", fontSize: "1.05rem", display: "flex", alignItems: "center", gap: "8px", fontWeight: "800" }}>
-                      <span>📤</span> Upload & Submit Plan / Notes for Vetting
-                    </h3>
-                    <span style={{ fontSize: "0.75rem", color: "#34d399", fontWeight: "700" }}>Headmaster Quality Desk</span>
-                  </div>
-
-                  <div style={{ marginBottom: "12px" }}>
-                    <label style={{ display: "block", fontSize: "0.78rem", color: "#cbd5e1", marginBottom: "4px", fontWeight: "700" }}>
-                      Plan / Submission Category *
-                    </label>
-                    <select
-                      value={newPlanForm.planType}
-                      onChange={(e) => setNewPlanForm({ ...newPlanForm, planType: e.target.value })}
-                      className="filter-select"
-                      style={{ width: "100%", padding: "8px 12px", fontSize: "0.85rem", background: "rgba(15, 23, 42, 0.9)", color: "#38bdf8", fontWeight: "700" }}
-                    >
-                      <option value="YEARLY_PLAN">📅 Yearly Academic Scheme of Work / Yearly Plan</option>
-                      <option value="TERMLY_PLAN">📆 Termly Scheme of Work / Course Outline</option>
-                      <option value="WEEKLY_PLAN">🗓️ Weekly Forecast / Weekly Instructional Plan</option>
-                      <option value="LESSON_NOTES">📖 Comprehensive Classroom Lesson Notes</option>
-                    </select>
-                  </div>
-
-                  <div style={{ marginBottom: "12px" }}>
-                    <label style={{ display: "block", fontSize: "0.78rem", color: "#cbd5e1", marginBottom: "4px", fontWeight: "700" }}>
-                      Document / Plan Title *
-                    </label>
-                    <input
-                      type="text"
-                      required
-                      placeholder="e.g. Term 1 Scheme of Work: Differential Calculus & Physics"
-                      value={newPlanForm.title}
-                      onChange={(e) => setNewPlanForm({ ...newPlanForm, title: e.target.value })}
-                      className="filter-input"
-                      style={{ width: "100%", padding: "8px 12px", fontSize: "0.85rem" }}
-                    />
-                  </div>
-
-                  <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "10px", marginBottom: "12px" }}>
-                    <div>
-                      <label style={{ display: "block", fontSize: "0.75rem", color: "#cbd5e1", marginBottom: "4px", fontWeight: "700" }}>
-                        Subject / Discipline *
-                      </label>
-                      <input
-                        type="text"
-                        required
-                        placeholder="e.g. Advanced Mathematics"
-                        value={newPlanForm.subjectName}
-                        onChange={(e) => setNewPlanForm({ ...newPlanForm, subjectName: e.target.value })}
-                        className="filter-input"
-                        style={{ width: "100%", padding: "8px 10px", fontSize: "0.82rem" }}
-                      />
-                    </div>
-                    <div>
-                      <label style={{ display: "block", fontSize: "0.75rem", color: "#cbd5e1", marginBottom: "4px", fontWeight: "700" }}>
-                        Target Class / Grade Level *
-                      </label>
-                      <input
-                        type="text"
-                        required
-                        placeholder="e.g. Grade 10A (SHS 1)"
-                        value={newPlanForm.className}
-                        onChange={(e) => setNewPlanForm({ ...newPlanForm, className: e.target.value })}
-                        className="filter-input"
-                        style={{ width: "100%", padding: "8px 10px", fontSize: "0.82rem" }}
-                      />
-                    </div>
-                  </div>
-
-                  <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "10px", marginBottom: "12px" }}>
-                    <div>
-                      <label style={{ display: "block", fontSize: "0.75rem", color: "#cbd5e1", marginBottom: "4px", fontWeight: "700" }}>
-                        Term / Semester *
-                      </label>
-                      <select
-                        value={newPlanForm.term}
-                        onChange={(e) => setNewPlanForm({ ...newPlanForm, term: e.target.value })}
-                        className="filter-select"
-                        style={{ width: "100%", padding: "8px 10px", fontSize: "0.82rem" }}
-                      >
-                        <option value="Term 1">Term 1 (First Term)</option>
-                        <option value="Term 2">Term 2 (Second Term)</option>
-                        <option value="Term 3">Term 3 (Third Term)</option>
-                        <option value="Full Academic Year">Full Academic Year 2025/2026</option>
-                      </select>
-                    </div>
-                    <div>
-                      <label style={{ display: "block", fontSize: "0.75rem", color: "#cbd5e1", marginBottom: "4px", fontWeight: "700" }}>
-                        Week Number / Span *
-                      </label>
-                      <input
-                        type="text"
-                        placeholder="e.g. Week 7 or Weeks 1-12"
-                        value={newPlanForm.weekNumber}
-                        onChange={(e) => setNewPlanForm({ ...newPlanForm, weekNumber: e.target.value })}
-                        className="filter-input"
-                        style={{ width: "100%", padding: "8px 10px", fontSize: "0.82rem" }}
-                      />
-                    </div>
-                  </div>
-
-                  <div style={{ marginBottom: "12px" }}>
-                    <label style={{ display: "block", fontSize: "0.78rem", color: "#cbd5e1", marginBottom: "4px", fontWeight: "700" }}>
-                      Main Topic & Core Subtopics *
-                    </label>
-                    <input
-                      type="text"
-                      required
-                      placeholder="e.g. Composite Function Derivatives, Chain Rule, and Rates of Change"
-                      value={newPlanForm.topic}
-                      onChange={(e) => setNewPlanForm({ ...newPlanForm, topic: e.target.value })}
-                      className="filter-input"
-                      style={{ width: "100%", padding: "8px 12px", fontSize: "0.85rem" }}
-                    />
-                  </div>
-
-                  <div style={{ marginBottom: "12px" }}>
-                    <label style={{ display: "block", fontSize: "0.78rem", color: "#cbd5e1", marginBottom: "4px", fontWeight: "700" }}>
-                      Key Learning Objectives & Bloom's Competencies
-                    </label>
-                    <textarea
-                      rows={2}
-                      placeholder="State what students will understand, calculate, or demonstrate by lesson conclusion..."
-                      value={newPlanForm.learningObjectives}
-                      onChange={(e) => setNewPlanForm({ ...newPlanForm, learningObjectives: e.target.value })}
-                      className="filter-input"
-                      style={{ width: "100%", padding: "8px 10px", fontSize: "0.82rem", lineHeight: "1.4" }}
-                    />
-                  </div>
-
-                  <div style={{ marginBottom: "12px" }}>
-                    <label style={{ display: "block", fontSize: "0.78rem", color: "#cbd5e1", marginBottom: "4px", fontWeight: "700" }}>
-                      Pedagogical Activities, Methodology & Formative Evaluation
-                    </label>
-                    <textarea
-                      rows={2}
-                      placeholder="e.g. Teacher demonstration, student paired problem sets, exit quiz, lab experiment..."
-                      value={newPlanForm.pedagogicalActivities}
-                      onChange={(e) => setNewPlanForm({ ...newPlanForm, pedagogicalActivities: e.target.value })}
-                      className="filter-input"
-                      style={{ width: "100%", padding: "8px 10px", fontSize: "0.82rem", lineHeight: "1.4" }}
-                    />
-                  </div>
-
-                  {/* File Upload Simulation with Inspection & Verification */}
-                  <div style={{ marginBottom: "14px", background: "rgba(15, 23, 42, 0.6)", padding: "12px", borderRadius: "10px", border: "1px dashed rgba(56, 189, 248, 0.4)" }}>
-                    <label style={{ display: "block", fontSize: "0.8rem", color: "#38bdf8", marginBottom: "6px", fontWeight: "700" }}>
-                      📎 Attach Document / Scheme of Work / Lesson Notes File (Must be Inspected & Verified)
-                    </label>
-                    <input
-                      type="file"
-                      accept=".pdf,.doc,.docx,.xls,.xlsx,.ppt,.pptx,.png,.jpg"
-                      onChange={(e) => {
-                        const file = e.target.files?.[0];
-                        if (file) {
-                          const sizeFormatted = file.size > 1024 * 1024
-                            ? `${(file.size / (1024 * 1024)).toFixed(2)} MB`
-                            : `${(file.size / 1024).toFixed(1)} KB`;
-                          setUploadedPlanFile({ name: file.name, size: sizeFormatted });
-                          setUploadedPlanFileName(file.name);
-                          setIsPlanFileVerified(false);
-                        }
-                      }}
-                      style={{ fontSize: "0.8rem", color: "#94a3b8" }}
-                    />
-                    {uploadedPlanFile && (
-                      <FileUploadVerificationCard
-                        file={uploadedPlanFile}
-                        isVerified={isPlanFileVerified}
-                        onVerify={() => setIsPlanFileVerified(true)}
-                        onRemove={() => {
-                          setUploadedPlanFile(null);
-                          setUploadedPlanFileName("");
-                          setIsPlanFileVerified(false);
-                        }}
-                        label="Lesson Plan Document"
-                        category="Curriculum & Vetting"
-                      />
-                    )}
-                  </div>
-
-                  <button
-                    type="submit"
-                    className="btn-primary"
-                    disabled={Boolean(uploadedPlanFile && !isPlanFileVerified)}
-                    style={{
-                      width: "100%",
-                      background: (uploadedPlanFile && !isPlanFileVerified)
-                        ? "rgba(100, 116, 139, 0.4)"
-                        : "linear-gradient(135deg, #0284c7, #0369a1)",
-                      fontWeight: "800",
-                      padding: "11px",
-                      fontSize: "0.9rem",
-                      boxShadow: "0 4px 15px rgba(2, 132, 199, 0.4)",
-                      cursor: (uploadedPlanFile && !isPlanFileVerified) ? "not-allowed" : "pointer"
-                    }}
-                  >
-                    {uploadedPlanFile && !isPlanFileVerified ? "⚠️ Verify File Content Above to Submit" : "📤 Submit Plan / Lesson Notes to Headmaster for Vetting"}
-                  </button>
-                </form>
-
-                {/* Panel 2: Submitted Plans & Vetting Ledger with Headmaster Remarks */}
-                <div>
-                  {/* Filter Toolbar */}
-                  <div style={{ background: "rgba(15, 23, 42, 0.6)", padding: "12px 14px", borderRadius: "10px", border: "1px solid rgba(255,255,255,0.08)", marginBottom: "14px" }}>
-                    <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "8px", flexWrap: "wrap", gap: "8px" }}>
-                      <strong style={{ fontSize: "0.85rem", color: "#f8fafc" }}>
-                        Filter Submitted Plans & Lesson Notes:
-                      </strong>
-                      <span style={{ fontSize: "0.75rem", color: "#94a3b8" }}>
-                        {teacherPlans.length} records in vetting pipeline
-                      </span>
-                    </div>
-
-                    <div style={{ display: "flex", gap: "8px", flexWrap: "wrap" }}>
-                      {[
-                        { key: "ALL", label: "All Types" },
-                        { key: "YEARLY_PLAN", label: "📅 Yearly Plans" },
-                        { key: "TERMLY_PLAN", label: "📆 Termly Plans" },
-                        { key: "WEEKLY_PLAN", label: "🗓️ Weekly Plans" },
-                        { key: "LESSON_NOTES", label: "📖 Lesson Notes" }
-                      ].map((t) => (
-                        <button
-                          key={t.key}
-                          type="button"
-                          onClick={() => setLessonPlanFilter(t.key)}
-                          style={{
-                            background: lessonPlanFilter === t.key ? "#0284c7" : "rgba(255, 255, 255, 0.05)",
-                            color: lessonPlanFilter === t.key ? "#fff" : "#94a3b8",
-                            border: lessonPlanFilter === t.key ? "1px solid #38bdf8" : "1px solid rgba(255, 255, 255, 0.1)",
-                            borderRadius: "6px",
-                            padding: "4px 10px",
-                            fontSize: "0.75rem",
-                            fontWeight: "700",
-                            cursor: "pointer"
-                          }}
-                        >
-                          {t.label}
-                        </button>
-                      ))}
-                    </div>
-
-                    <div style={{ display: "flex", gap: "8px", flexWrap: "wrap", marginTop: "8px" }}>
-                      {[
-                        { key: "ALL", label: "All Statuses" },
-                        { key: "VETTED_APPROVED", label: "🟢 Vetted & Approved" },
-                        { key: "PENDING_VETTING", label: "⏳ Pending Vetting" },
-                        { key: "REVISION_REQUIRED", label: "⚠️ Revision Required" }
-                      ].map((s) => (
-                        <button
-                          key={s.key}
-                          type="button"
-                          onClick={() => setLessonStatusFilter(s.key)}
-                          style={{
-                            background: lessonStatusFilter === s.key ? "#334155" : "transparent",
-                            color: lessonStatusFilter === s.key ? "#f8fafc" : "#64748b",
-                            border: "1px solid rgba(255, 255, 255, 0.08)",
-                            borderRadius: "6px",
-                            padding: "3px 8px",
-                            fontSize: "0.72rem",
-                            fontWeight: "600",
-                            cursor: "pointer"
-                          }}
-                        >
-                          {s.label}
-                        </button>
-                      ))}
-                    </div>
-                  </div>
-
-                  {/* Plans Stream */}
-                  <div style={{ display: "flex", flexDirection: "column", gap: "12px", maxHeight: "640px", overflowY: "auto", paddingRight: "4px" }}>
-                    {teacherPlans.length === 0 ? (
-                      <div style={{ textAlign: "center", padding: "3rem 1.5rem", background: "rgba(15, 23, 42, 0.4)", borderRadius: "12px", border: "1px dashed rgba(148, 163, 184, 0.2)" }}>
-                        <div style={{ fontSize: "2rem", marginBottom: "8px" }}>📝</div>
-                        <h4 style={{ color: "#f8fafc", margin: "0 0 6px" }}>No Lesson Plans or Notes Submitted Yet</h4>
-                        <p style={{ color: "#94a3b8", fontSize: "0.85rem", margin: 0 }}>
-                          Use the '+ Create Lesson Plan or Notes' form on the left to prepare and submit your syllabus structure for Headmaster review.
-                        </p>
-                      </div>
-                    ) : (
-                      teacherPlans
-                        .filter((p) => lessonPlanFilter === "ALL" || p.planType === lessonPlanFilter)
-                        .filter((p) => lessonStatusFilter === "ALL" || p.status === lessonStatusFilter)
-                        .map((plan) => {
-                          const typeLabels = {
-                            YEARLY_PLAN: { text: "📅 Yearly Plan", color: "#38bdf8", bg: "rgba(56, 189, 248, 0.15)" },
-                            TERMLY_PLAN: { text: "📆 Termly Plan", color: "#818cf8", bg: "rgba(129, 140, 248, 0.15)" },
-                            WEEKLY_PLAN: { text: "🗓️ Weekly Plan", color: "#a855f7", bg: "rgba(168, 85, 247, 0.15)" },
-                            LESSON_NOTES: { text: "📖 Lesson Notes", color: "#f472b6", bg: "rgba(244, 114, 182, 0.15)" }
-                          };
-                          const typeMeta = typeLabels[plan.planType] || { text: plan.planType, color: "#38bdf8", bg: "rgba(56, 189, 248, 0.15)" };
-
-                          return (
-                            <div
-                              key={plan.id}
-                              style={{
-                                background: "rgba(15, 23, 42, 0.85)",
-                                borderRadius: "12px",
-                                border: plan.status === "VETTED_APPROVED"
-                                  ? "1.5px solid rgba(16, 185, 129, 0.5)"
-                                  : plan.status === "REVISION_REQUIRED"
-                                    ? "1.5px solid rgba(239, 68, 68, 0.5)"
-                                    : "1.5px solid rgba(245, 158, 11, 0.5)",
-                                padding: "16px",
-                                boxShadow: "0 6px 18px rgba(0,0,0,0.35)",
-                                transition: "all 0.2s ease"
-                              }}
-                              onMouseEnter={(e) => {
-                                e.currentTarget.style.transform = "translateY(-2px)";
-                                e.currentTarget.style.borderColor = "#38bdf8";
-                                e.currentTarget.style.boxShadow = "0 10px 25px rgba(56, 189, 248, 0.25)";
-                              }}
-                              onMouseLeave={(e) => {
-                                e.currentTarget.style.transform = "none";
-                                e.currentTarget.style.borderColor = plan.status === "VETTED_APPROVED"
-                                  ? "rgba(16, 185, 129, 0.5)"
-                                  : plan.status === "REVISION_REQUIRED"
-                                    ? "rgba(239, 68, 68, 0.5)"
-                                    : "rgba(245, 158, 11, 0.5)";
-                                e.currentTarget.style.boxShadow = "0 6px 18px rgba(0,0,0,0.35)";
-                              }}
-                            >
-                              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: "8px", flexWrap: "wrap", gap: "8px" }}>
-                                <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
-                                  <span style={{ background: typeMeta.bg, color: typeMeta.color, fontSize: "0.72rem", padding: "3px 8px", borderRadius: "6px", fontWeight: "800" }}>
-                                    {typeMeta.text}
-                                  </span>
-                                  <span style={{ fontSize: "0.78rem", color: "#94a3b8" }}>
-                                    {plan.className} • {plan.subjectName}
-                                  </span>
-                                </div>
-
-                                <div>
-                                  {plan.status === "VETTED_APPROVED" ? (
-                                    <span style={{ background: "rgba(16, 185, 129, 0.2)", color: "#34d399", fontSize: "0.75rem", padding: "3px 10px", borderRadius: "12px", fontWeight: "800", display: "inline-flex", alignItems: "center", gap: "4px" }}>
-                                      ✓ VETTED & APPROVED
-                                    </span>
-                                  ) : plan.status === "REVISION_REQUIRED" ? (
-                                    <span style={{ background: "rgba(239, 68, 68, 0.2)", color: "#f87171", fontSize: "0.75rem", padding: "3px 10px", borderRadius: "12px", fontWeight: "800", display: "inline-flex", alignItems: "center", gap: "4px" }}>
-                                      ⚠️ REVISION REQUESTED
-                                    </span>
-                                  ) : (
-                                    <span style={{ background: "rgba(245, 158, 11, 0.2)", color: "#fbbf24", fontSize: "0.75rem", padding: "3px 10px", borderRadius: "12px", fontWeight: "800", display: "inline-flex", alignItems: "center", gap: "4px" }}>
-                                      ⏳ PENDING HEADMASTER VETTING
-                                    </span>
-                                  )}
-                                </div>
-                              </div>
-
-                              <h4 style={{ margin: "0 0 6px 0", color: "#f8fafc", fontSize: "0.98rem", fontWeight: "800" }}>
-                                {plan.title}
-                              </h4>
-
-                              <div style={{ fontSize: "0.8rem", color: "#cbd5e1", marginBottom: "8px", display: "flex", flexDirection: "column", gap: "3px" }}>
-                                <div><strong>Topic:</strong> {plan.topic}</div>
-                                <div><strong>Span:</strong> {plan.term} • {plan.weekNumber}</div>
-                                {plan.learningObjectives && (
-                                  <div style={{ color: "#94a3b8", fontSize: "0.78rem" }}>
-                                    <strong>Objectives:</strong> {plan.learningObjectives}
-                                  </div>
-                                )}
-                                {plan.resourcesAttached && (
-                                  <div style={{ fontSize: "0.75rem", color: "#38bdf8", marginTop: "2px" }}>
-                                    📎 Attached Document: <strong>{plan.resourcesAttached}</strong>
-                                  </div>
-                                )}
-                              </div>
-
-                              {/* HEADMASTER WORDS & REMARKS SECTION */}
-                              {plan.headmasterRemarks ? (
-                                <div style={{
-                                  background: plan.status === "VETTED_APPROVED" ? "rgba(16, 185, 129, 0.1)" : "rgba(239, 68, 68, 0.1)",
-                                  borderLeft: `3px solid ${plan.status === "VETTED_APPROVED" ? "#10b981" : "#ef4444"}`,
-                                  borderRadius: "6px",
-                                  padding: "8px 12px",
-                                  marginTop: "10px"
-                                }}>
-                                  <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "3px" }}>
-                                    <span style={{ fontSize: "0.75rem", fontWeight: "800", color: plan.status === "VETTED_APPROVED" ? "#34d399" : "#f87171" }}>
-                                      💬 Words & Feedback from Headmaster:
-                                    </span>
-                                    <span style={{ fontSize: "0.7rem", color: "#94a3b8" }}>
-                                      {plan.vettedAt ? new Date(plan.vettedAt).toLocaleString() : "Recently Vetted"}
-                                    </span>
-                                  </div>
-                                  <p style={{ margin: 0, fontSize: "0.84rem", color: "#f8fafc", fontStyle: "italic", lineHeight: "1.4" }}>
-                                    "{plan.headmasterRemarks}"
-                                  </p>
-                                  <span style={{ display: "block", marginTop: "4px", fontSize: "0.7rem", color: "#94a3b8" }}>
-                                    — Endorsed by: <strong>{plan.vettedBy || "Headmaster Arthur Pendleton"}</strong>
-                                  </span>
-                                </div>
-                              ) : (
-                                <div style={{ marginTop: "6px", fontSize: "0.75rem", color: "#fbbf24", fontStyle: "italic" }}>
-                                  ⏳ Under review at Headmaster's desk. Remarks will be published upon vetting completion.
-                                </div>
-                              )}
-
-                              {/* Interactive Action Bar with Hover & Page Navigation */}
-                              <div style={{ marginTop: "12px", borderTop: "1px solid rgba(255, 255, 255, 0.08)", paddingTop: "10px", display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: "8px" }}>
-                                <span style={{ fontSize: "0.72rem", color: "#94a3b8" }}>
-                                  Plan Ref: <code style={{ color: "#38bdf8" }}>{plan.id}</code>
-                                </span>
-                                <div style={{ display: "flex", gap: "8px", alignItems: "center" }}>
-                                  <button
-                                    type="button"
-                                    onClick={() => navigateToDetail(navigate, "lesson-plan", plan.id, {
-                                      ...plan,
-                                      institutionName: getActiveSchoolName()
-                                    }, { returnTab: activeTab })}
-                                    style={{
-                                      background: "linear-gradient(135deg, rgba(2, 132, 199, 0.25), rgba(56, 189, 248, 0.15))",
-                                      border: "1px solid #38bdf8",
-                                      color: "#38bdf8",
-                                      borderRadius: "8px",
-                                      padding: "6px 14px",
-                                      fontSize: "0.78rem",
-                                      fontWeight: "800",
-                                      cursor: "pointer",
-                                      display: "inline-flex",
-                                      alignItems: "center",
-                                      gap: "6px"
-                                    }}
-                                    aria-label="Inspect full plan dossier on dedicated routed page"
-                                  >
-                                    🔍 View & Inspect Dossier ↗
-                                  </button>
-                                  {plan.status === "REVISION_REQUIRED" && (
-                                    <button
-                                      type="button"
-                                      onClick={() => handleResubmitPlan(plan)}
-                                      style={{
-                                        background: "rgba(239, 68, 68, 0.15)",
-                                        border: "1px solid #ef4444",
-                                        color: "#fca5a5",
-                                        padding: "6px 12px",
-                                        borderRadius: "8px",
-                                        fontSize: "0.78rem",
-                                        fontWeight: "700",
-                                        cursor: "pointer"
-                                      }}
-                                    >
-                                      ✏️ Address Remarks & Revise Plan
-                                    </button>
-                                  )}
-                                </div>
-                              </div>
-                            </div>
-                          );
-                        })
-                    )}
-                  </div>
-                </div>
-              </div>
-            </div>
+            <TeacherLessonPlanStudio
+              teacherPlans={teacherPlans}
+              setTeacherPlans={setTeacherPlans}
+              facultyDirectives={facultyDirectives}
+              currentUser={currentUser}
+              assignedStaffPosition={assignedStaffPosition}
+              schoolName={getActiveSchoolName()}
+              classes={classes}
+              prefillPlan={curriculumPrefillPlan}
+              onPrefillConsumed={() => setCurriculumPrefillPlan(null)}
+              setFeedback={setFeedback}
+              onRefreshPlans={fetchTeacherPlans}
+              onOpenDetailPage={(plan) =>
+                navigateToDetail(
+                  navigate,
+                  "lesson-plan",
+                  plan.id,
+                  { ...plan, institutionName: getActiveSchoolName() },
+                  { returnTab: activeTab }
+                )
+              }
+            />
           )}
 
           {/* ======================================================== */}
@@ -10284,19 +9846,20 @@ export default function TeacherDashboard() {
                               type="button"
                               onClick={() => {
                                 recordTeacherActiveCurriculumUsage(bp, "LOADED_INTO_LESSON_PLAN");
-                                setNewPlanForm((prev) => ({
-                                  ...prev,
+                                const prefill = {
                                   title: `${bp.className} — ${bp.subjectName} Official Curriculum Lesson Plan`,
                                   className: bp.className,
                                   subjectName: bp.subjectName,
                                   topic: bp.strands[0]?.strand || bp.subjectName,
                                   learningObjectives: bp.strands.map((s) => s.indicator).join(" | "),
                                   methodology: bp.strands.map((s) => s.pedagogy).join(" • ")
-                                }));
+                                };
+                                setNewPlanForm((prev) => ({ ...prev, ...prefill }));
+                                setCurriculumPrefillPlan(prefill);
                                 setActiveTab("lessonPlans");
                                 setFeedback({
                                   type: "success",
-                                  message: `✨ Loaded "${bp.subjectName}" (${bp.className}) curriculum strands & objectives into Lesson Plan editor.`
+                                  message: `✨ Loaded "${bp.subjectName}" (${bp.className}) curriculum strands & objectives into Lesson Plan Studio.`
                                 });
                               }}
                               style={{
@@ -10914,7 +10477,7 @@ export default function TeacherDashboard() {
               Teacher Master Answer Key Review (Questions 1 - {scannerQuestionCount}):
             </strong>
             <div style={{ display: "grid", gridTemplateColumns: "repeat(5, 1fr)", gap: "8px", maxHeight: "240px", overflowY: "auto" }}>
-              {Array.from({ length: Math.max(1, Math.min(100, Number(scannerQuestionCount) || 10)) }, (_, i) => i + 1).map((q) => (
+              {Array.from({ length: Math.max(1, Math.min(SCANNER_MAX_QUESTIONS, Number(scannerQuestionCount) || 10)) }, (_, i) => i + 1).map((q) => (
                 <div key={q} style={{ background: "rgba(255,255,255,0.05)", border: "1px solid rgba(212,175,55,0.3)", padding: "8px", borderRadius: "8px", textAlign: "center" }}>
                   <span style={{ fontSize: "0.72rem", color: "#94a3b8", display: "block" }}>Q{q}</span>
                   <strong style={{ fontSize: "1.1rem", color: "#f6dd84" }}>{teacherAnswerKey[q] || "A"}</strong>
@@ -10979,7 +10542,7 @@ export default function TeacherDashboard() {
               Adjust / Correct Master Answer Key for This Class (Q1 - Q{scannerQuestionCount}):
             </label>
             <div style={{ display: "grid", gridTemplateColumns: "repeat(5, 1fr)", gap: "8px", maxHeight: "230px", overflowY: "auto" }}>
-              {Array.from({ length: Math.max(1, Math.min(100, Number(scannerQuestionCount) || 10)) }, (_, i) => i + 1).map((q) => (
+              {Array.from({ length: Math.max(1, Math.min(SCANNER_MAX_QUESTIONS, Number(scannerQuestionCount) || 10)) }, (_, i) => i + 1).map((q) => (
                 <div key={q} style={{ background: "rgba(2, 6, 23, 0.8)", border: "1px solid rgba(212, 175, 55, 0.35)", padding: "8px", borderRadius: "8px", textAlign: "center" }}>
                   <span style={{ fontSize: "0.72rem", color: "#94a3b8", display: "block" }}>Q{q}</span>
                   <select
@@ -13480,8 +13043,8 @@ export default function TeacherDashboard() {
           </div>
 
           <div style={{ display: "grid", gridTemplateColumns: "repeat(5, 1fr)", gap: "10px", marginBottom: "16px", maxHeight: "260px", overflowY: "auto" }}>
-            {Array.from({ length: Math.max(1, Math.min(100, Number(editingScript.totalQuestions || scannerQuestionCount) || 10)) }, (_, i) => i + 1).map((q) => {
-              const totalScriptQ = Math.max(1, Math.min(100, Number(editingScript.totalQuestions || scannerQuestionCount) || 10));
+            {Array.from({ length: Math.max(1, Math.min(SCANNER_MAX_QUESTIONS, Number(editingScript.totalQuestions || scannerQuestionCount) || 10)) }, (_, i) => i + 1).map((q) => {
+              const totalScriptQ = Math.max(1, Math.min(SCANNER_MAX_QUESTIONS, Number(editingScript.totalQuestions || scannerQuestionCount) || 10));
               const studentAns = (editingScript.answers && editingScript.answers[q]) || "A";
               const correctAns = teacherAnswerKey[q] || "A";
               const isCorrect = studentAns === correctAns;

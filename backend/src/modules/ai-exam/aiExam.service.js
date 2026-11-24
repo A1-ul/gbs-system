@@ -320,8 +320,8 @@ const saveScannerAnswerKey = async (tenantId = 1, payload = {}, user = null) => 
     (payload.answerKey && typeof payload.answerKey === 'object' ? payload.answerKey : null) ||
     (payload.teacherAnswerKey && typeof payload.teacherAnswerKey === 'object' ? payload.teacherAnswerKey : null) ||
     (payload.answers && typeof payload.answers === 'object' ? payload.answers : {});
-  const questionCount = Math.max(1, Math.min(200, parseInt(payload.questionCount, 10) || Object.keys(rawKey).length || 10));
-  const marksPerQuestion = Math.max(1, Math.min(100, Number(payload.marksPerQuestion || 1) || 1));
+  const questionCount = Math.max(1, Math.min(2000, parseInt(payload.questionCount, 10) || Object.keys(rawKey).length || 10));
+  const marksPerQuestion = Math.max(0.25, Math.min(1000, Number(payload.marksPerQuestion || 1) || 1));
   const normalizedKey = {};
   for (let i = 1; i <= questionCount; i++) {
     const val = rawKey[i] ?? rawKey[String(i)];
@@ -459,7 +459,7 @@ const submitAnswerSheet = async (
     0,
     parseInt(questionCount, 10) || (teacherAnswerKey ? Object.keys(teacherAnswerKey).length : 0) || Number(savedKeyCfg?.questionCount || 0)
   );
-  const perQMarks = Math.max(1, Number(marksPerQuestion || savedKeyCfg?.marksPerQuestion || 10));
+  const perQMarks = Math.max(0.25, Number(marksPerQuestion || savedKeyCfg?.marksPerQuestion || 10));
   const combinedWrittenPre = {
     ...(essayAnswers && typeof essayAnswers === 'object' ? essayAnswers : {}),
     ...(writtenAnswers && typeof writtenAnswers === 'object' ? writtenAnswers : {})
@@ -1133,6 +1133,111 @@ const recordProctorHeartbeat = async (tenantId = 1, payload = {}) => {
   }
 
   return updatedSession;
+};
+
+const proctorWebRtcSignalsStore = new Map(); // String(tid) -> Array<signal>
+
+const pushProctorLiveFrame = async (tenantId = 1, payload = {}) => {
+  const tid = parseInt(tenantId, 10) || 1;
+  const studentId = payload.studentId || payload.userId || null;
+  const studentName = String(payload.studentName || 'Student Examinee').trim();
+  const studentEmail = String(payload.studentEmail || '').trim();
+  const examId = payload.examId || 'EXAM-ACTIVE';
+  const sessionKey = payload.sessionKey
+    ? String(payload.sessionKey)
+    : normalizeSessionKey(examId, studentId, studentEmail, studentName);
+  const nowIso = new Date().toISOString();
+
+  const memMap = getTenantMemorySessionsMap(tid);
+  const existing = memMap.get(sessionKey);
+  if (!existing) {
+    // First frame creates the session cleanly through full heartbeat
+    return recordProctorHeartbeat(tid, payload);
+  }
+
+  const updatedSession = {
+    ...existing,
+    snapshotDataUrl: payload.snapshotDataUrl || existing.snapshotDataUrl || null,
+    cameraActive: payload.cameraActive !== undefined ? Boolean(payload.cameraActive) : true,
+    movementDelta: payload.movementDelta !== undefined ? Number(payload.movementDelta) : existing.movementDelta,
+    liveFrameSeq: (Number(existing.liveFrameSeq) || 0) + 1,
+    streamFpsHint: Number(payload.fpsHint || existing.streamFpsHint || 10),
+    lastHeartbeatAt: nowIso
+  };
+  memMap.set(sessionKey, updatedSession);
+
+  // Instant <1ms push to connected Teacher SSE streams & Socket.IO clients (zero disk blocking)
+  proctorEventBus.emit(`tenant:${tid}`, { type: 'proctor_live_frame', session: updatedSession });
+  try {
+    const socketServer = require('../../core/socket/socketServer');
+    if (socketServer && typeof socketServer.emitToTenant === 'function') {
+      socketServer.emitToTenant(tid, 'proctor_live_frame', updatedSession);
+    }
+  } catch { }
+
+  return {
+    sessionKey,
+    liveFrameSeq: updatedSession.liveFrameSeq,
+    lastHeartbeatAt: nowIso
+  };
+};
+
+const pushProctorWebRtcSignal = async (tenantId = 1, payload = {}, user = null) => {
+  const tid = parseInt(tenantId, 10) || 1;
+  const sessionKey = String(payload.sessionKey || '').trim();
+  const signalType = String(payload.signalType || '').trim().toUpperCase();
+  if (!sessionKey || !signalType) {
+    throw new AppError('sessionKey and signalType are required for live proctor video signaling.', 400);
+  }
+  const nowMs = Date.now();
+  const entry = {
+    id: `PWS-${nowMs}-${Math.floor(Math.random() * 9000 + 1000)}`,
+    tenantId: tid,
+    sessionKey,
+    examId: payload.examId || null,
+    studentId: payload.studentId ? String(payload.studentId) : null,
+    viewerId: String(payload.viewerId || user?.id || 'invigilator'),
+    senderRole: String(payload.senderRole || user?.role || 'TEACHER').toUpperCase(),
+    targetRole: String(payload.targetRole || (String(payload.senderRole || user?.role || '').toUpperCase() === 'STUDENT' ? 'TEACHER' : 'STUDENT')).toUpperCase(),
+    signalType,
+    data: payload.data || null,
+    createdAtMs: nowMs,
+    createdAt: new Date(nowMs).toISOString()
+  };
+
+  const key = String(tid);
+  const prev = proctorWebRtcSignalsStore.get(key) || [];
+  const fresh = prev.filter((item) => nowMs - item.createdAtMs < 90000);
+  fresh.push(entry);
+  proctorWebRtcSignalsStore.set(key, fresh.slice(-200));
+
+  proctorEventBus.emit(`tenant:${tid}`, { type: 'proctor_webrtc_signal', signal: entry });
+  try {
+    const socketServer = require('../../core/socket/socketServer');
+    if (socketServer && typeof socketServer.emitToTenant === 'function') {
+      socketServer.emitToTenant(tid, 'proctor_webrtc_signal', entry);
+    }
+  } catch { }
+
+  return entry;
+};
+
+const getProctorWebRtcSignals = async (tenantId = 1, query = {}) => {
+  const tid = parseInt(tenantId, 10) || 1;
+  const nowMs = Date.now();
+  const list = (proctorWebRtcSignalsStore.get(String(tid)) || []).filter((item) => nowMs - item.createdAtMs < 90000);
+  const sessionKey = String(query.sessionKey || '').trim();
+  const targetRole = String(query.targetRole || '').trim().toUpperCase();
+  const viewerId = String(query.viewerId || '').trim();
+  const sinceMs = Number(query.sinceMs || 0) || 0;
+
+  return list.filter((item) => {
+    if (sessionKey && item.sessionKey !== sessionKey) return false;
+    if (targetRole && item.targetRole !== targetRole) return false;
+    if (viewerId && item.viewerId !== viewerId) return false;
+    if (sinceMs > 0 && item.createdAtMs <= sinceMs) return false;
+    return true;
+  });
 };
 
 const getLiveProctorSessions = async (tenantId = 1, filters = {}) => {
@@ -1899,6 +2004,9 @@ module.exports = {
   ensureQuestionBank,
   proctorEventBus,
   recordProctorHeartbeat,
+  pushProctorLiveFrame,
+  pushProctorWebRtcSignal,
+  getProctorWebRtcSignals,
   getLiveProctorSessions,
   sendProctorMessage,
   getStudentProctorMessages,

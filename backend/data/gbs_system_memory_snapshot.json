@@ -1,7 +1,7 @@
 {
   "systemName": "GBS MANAGEMENT SYSTEM (Global Brightest Stars Educational Management System)",
-  "version": "2.16.0-PRODUCTION-BLUEPRINT",
-  "savedAt": "2026-11-24T21:12:00Z",
+  "version": "2.17.0-PRODUCTION-BLUEPRINT",
+  "savedAt": "2026-11-24T22:48:00Z",
   "status": "PRODUCTION_READY_VERIFIED",
   "architecture": {
     "frontend": {
@@ -446,16 +446,23 @@
       "rootCause": "StudentDashboard fees-history tab rendered static hardcoded ledger rows instead of live DB invoices/transactions and omitted School Bank/MoMo receiving details; PaymentGatewayConfig lacked School Official MoMo receiving account fields; payment initiation & reconciliation did not record structured paidByRole (STUDENT vs PARENT), paidByName, payeeReference, or destinationAccountSummary; AccountantDashboard payments tab rendered localStorage reconciledPayments instead of merging live PostgreSQL records from GET /api/v1/finance/payments.",
       "resolution": "Added Official School Bank & School MoMo receiving account configuration and resolution in payments.registry.js & PaymentGatewayAdminPanel.jsx; added canonical Student Payee & Payer attribution (paidByRole, paidByName, paidByLabel, payeeReference, destinationAccountSummary) across payments.service.js, payments.reconciler.js, bankDirect.adapter.js, finance.controller.js, and finance.service.js (including immutable AuditLog entries and batch-enriched GET /api/v1/finance/payments & /payments/admin/overview Student-Self vs Parent stats); upgraded OfficialPaymentGatewayModal.jsx with verified School MoMo/Bank recipient details, Student Payee reference banner, and full printable receipt attribution; replaced StudentDashboard.jsx hardcoded ledger with live DB bills, per-invoice self-payment, School Account/MoMo panel, and printable receipts; added live ward self-payment & parent receipt ledger + school accounts panel to ParentDashboard.jsx; wired AccountantDashboard.jsx payments tab directly to live DB /finance/payments with Student-Self vs Parent payer filters and real-time sync. Verified 11/11 local real Chrome CDP Student->Parent->Accountant E2E checks + 18/18 backend regression checks.",
       "status": "PERMANENTLY_GUARDED"
+    },
+    {
+      "issueCode": "DIAG-PROCTOR-1X-CAMERA-SCANNER-UNLIMITED-NACCA-LESSON-STUDIO-V217",
+      "symptom": "Teacher Dashboard live exam invigilation camera streamed slowly (~0.5-1 FPS) instead of smooth real-time 1.0x student motion; Exam Script Scanner capped question counts at 100 fixed; Teacher Lesson Planning & Lesson Notes Vetting stored records only in volatile RAM without tenant isolation, lacked Ghana NaCCA 16-element learner-centred structure, drafts/autosave, subject-adaptable templates, revision loops, itemized supervisor feedback, printable PDF export, and post-teaching reflection preservation.",
+      "rootCause": "StudentDashboard sequentially awaited 1000ms heartbeat+messages on a single timer while TeacherLiveProctoringPanel only swapped static img snapshots without WebRTC video or body-portaling; TeacherDashboard had 7 hardcoded Math.min(100, ...) caps and ExamScannerDashboard had 200 caps; academic.service.js stored teacherLessonPlansStore in an unpersisted in-memory array without tenantId filtering, DRAFT workflow, structured NaCCA fields, review history, or quality validation.",
+      "resolution": "1) Built dual-layer 1.0x Live Exam Invigilation streaming: RAM-only POST /api/v1/ai-exam/proctor/frame + protected WebRTC signaling (/proctor/webrtc/signal & /signals) in aiExam.service/controller/routes, 30fps WebRTC responder + non-blocking ~10fps frame pump in StudentDashboard.jsx, and body-portaled TeacherLiveProctoringPanel.jsx with explicit playbackRate=1.0 video receiver + live 1.0x FPS indicator. 2) Removed hardcoded 100/200 caps across aiExam.service.js (up to 2000), TeacherDashboard.jsx, ExamScannerDashboard.jsx, and MobileCameraAIExamScannerModal.jsx, adding free numeric typing, quick count presets, decimal marks (0.25+), and 50-question/page matrix pagination. 3) Engineered full Ghana NaCCA Learner-Centred Lesson Planning & Vetting subsystem: idempotent PostgreSQL tables (ensureLessonPlanTables.js: teacher_lesson_plans & teacher_faculty_directives) with strict tenant isolation & AuditLog recording, 6 non-fabricating subject-adaptable templates & 7-point pedagogical alignment checker (lessonPlanQuality.util.js), complete lifecycle APIs (GET /templates, POST /quality-check, CRUD + DRAFT/SUBMIT/REVISION_REQUIRED/RESUBMIT/VETTED_APPROVED + post-teaching reflection preservation), TeacherLessonPlanStudio.jsx, LessonNotesVettingModal.jsx, and A4 PDF builder (lessonPlanPrintHelper.js). Verified 100% local API + PostgreSQL + real Chrome CDP (Desktop 1440x900 + Mobile 390x844, 0 tooltips, 0 JS errors) + 18/18 regression checks.",
+      "status": "PERMANENTLY_GUARDED"
     }
   ],
   "verificationSummary": {
-    "latestVerifiedCommit": "2a7d9e4",
-    "latestLiveBundleHash": "index-C4FRB9If.js",
+    "latestVerifiedCommit": "PENDING_PUSH_V217",
+    "latestLiveBundleHash": "index-DUkwSuJg.js",
     "liveProductionUrl": "https://gbs-system.onrender.com",
     "autoMemoryRuleFile": "AGENTS.md",
-    "backendTestSuitesPassed": "18/18 upgrade regression checks + 25/25 payment/auth/video API checks + 11/11 Student+Parent->Accountant E2E checks verified (0 failures)",
-    "chromeE2EDashboardsVerified": "All 10 dashboards verified in real Chrome CDP (640x360 cameras, zero 401s, zero tooltips, zero clipped KPIs, Developer full-page module routing & scroll restore, Mobile 390x844), plus full Student Self-Payment (Bank + MoMo) -> Parent Dashboard visibility & Parent Payment -> Accountant Live DB Audit Ledger & Audit Logs",
-    "liveRenderHttpAuditPassed": "12/12 v2.16 live HTTP checks passed on https://gbs-system.onrender.com (bundle index-C4FRB9If.js, commit 2a7d9e4): Student Self-Payment + Parent Payment -> Accountant live DB audit ledger (/finance/payments) & Audit Overview (/payments/admin/overview) with Student Payee Ref & School Bank/MoMo, SPA routes 200 OK, and strict 401 on unauthenticated access",
+    "backendTestSuitesPassed": "18/18 upgrade regression checks + full v2.17 E2E suite (strict 401 auth, 1.0x live proctor frame stream & WebRTC signaling, 135-question scanner key & grading, 16-element Ghana NaCCA lesson planning/draft/vetting/revision/approval/post-lesson-reflection & RBAC 403 checks) verified (0 failures)",
+    "chromeE2EDashboardsVerified": "Real Chrome CDP verified portaled 1.0x Live Exam Invigilation modal, 135-question Teacher Exam Script Scanner with Q101-Q135 pagination & key sync, Teacher NaCCA Lesson Planning Studio (6 templates, live 7-point quality check, persisted cards, Mobile 390x844 responsive), and Headmaster portaled NaCCA Vetting Modal with all 16 sections & 0 HTML tooltips / 0 uncaught JS errors",
+    "liveRenderHttpAuditPassed": "Pending live deploy verification for bundle index-DUkwSuJg.js",
     "institutionSeparationUniversityClinicVoiceVerified": "2026-11-20 Tier-Tailored School Portals (JHS/SHS/TVET/University), Separated Internships/Attachments, Clinic Privacy & Non-Disclosure Verified",
     "multiMillionSchoolDatabaseMandate": {
       "enforced": true,

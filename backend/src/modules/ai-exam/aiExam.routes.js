@@ -26,8 +26,11 @@ router.get('/answer-sheets', aiExamController.getAnswerSheets);
 router.post('/answer-sheets/:id/grade', aiExamController.gradeAnswerSheet);
 router.patch('/answer-sheets/:id/grade', aiExamController.gradeAnswerSheet);
 
-// Live AI Exam Proctoring: Camera Feed Heartbeat, High-Speed SSE Stream, Broadcast/Search Messaging & Reference Evidence Vault
+// Live AI Exam Proctoring: Camera Feed Heartbeat, High-Speed Frame & 1.0x WebRTC Video Stream, SSE Stream, Broadcast/Search Messaging & Reference Evidence Vault
 router.post('/proctor/heartbeat', aiExamController.postProctorHeartbeat);
+router.post('/proctor/frame', protect, aiExamController.postProctorLiveFrame);
+router.post('/proctor/webrtc/signal', protect, aiExamController.postProctorWebRtcSignal);
+router.get('/proctor/webrtc/signals', protect, aiExamController.getProctorWebRtcSignals);
 router.get('/proctor/live', aiExamController.getLiveProctorSessions);
 router.get('/proctor/stream', (req, res, next) => {
   if (!req.headers.authorization && req.query?.token) {

@@ -25,6 +25,7 @@ import LiveInSystemCallModal from "../../../../../components/common/LiveInSystem
 import OfficialPaymentGatewayModal from "../../../../../components/common/OfficialPaymentGatewayModal";
 import PaymentGatewayAdminPanel from "../../../../../components/common/PaymentGatewayAdminPanel";
 import ExamVettingHubPanel from "../../../../../components/common/ExamVettingHubPanel";
+import LessonNotesVettingModal from "../../../../../components/common/LessonNotesVettingModal";
 import { openUrlSafely } from "../../../../../utils/safeWindow";
 import { isDemoSandboxMode } from "../../../../../utils/tokenStorage";
 import { checkDemoEntryLimit, trackDemoEntryCreated } from "../../../../../utils/demoLimitGuard";
@@ -2668,9 +2669,10 @@ export function AdminDashboard({ initialTab } = {}) {
     try {
       const res = await apiClient.get("/academics/lesson-plans");
       const list = res.data?.data?.plans || res.data?.plans;
-      if (Array.isArray(list) && list.length > 0) {
-        setTeacherLessonPlans(list);
-        localStorage.setItem("gbs_teacher_lesson_plans", JSON.stringify(list));
+      if (Array.isArray(list)) {
+        const submittedOnly = list.filter((p) => p.status !== "DRAFT");
+        setTeacherLessonPlans(submittedOnly);
+        localStorage.setItem("gbs_teacher_lesson_plans", JSON.stringify(submittedOnly));
       }
     } catch (err) {
       console.warn("Backend lesson plans fetch fallback:", err?.message);
@@ -2690,20 +2692,31 @@ export function AdminDashboard({ initialTab } = {}) {
     }
   };
 
-  const handleVetPlan = async (e) => {
-    e.preventDefault();
-    if (!selectedVettingPlan) return;
-
-    const remarksText = headmasterRemarksInput.trim() || (vettingDecision === "VETTED_APPROVED"
+  const handleCommitStructuredVetting = async ({ plan, vettingStatus, headmasterRemarks, sectionComments = {} }) => {
+    if (!plan) return;
+    const remarksText = (headmasterRemarks || "").trim() || (vettingStatus === "VETTED_APPROVED"
       ? "Vetted, endorsed, and officially authorized for classroom instruction."
-      : "Revisions requested. Please align lesson objectives with practical exercises and resubmit.");
+      : "Corrections requested. Please address supervisor comments and resubmit.");
+
+    let serverPlan = null;
+    try {
+      const res = await apiClient.put(`/academics/lesson-plans/${plan.id}/vet`, {
+        vettingStatus,
+        headmasterRemarks: remarksText,
+        sectionComments
+      });
+      serverPlan = res.data?.data?.plan || null;
+    } catch (err) {
+      console.warn("Backend structured vetting sync notice:", err?.message);
+    }
 
     const updated = teacherLessonPlans.map((p) => {
-      if (String(p.id) === String(selectedVettingPlan.id)) {
-        return {
+      if (String(p.id) === String(plan.id)) {
+        return serverPlan || {
           ...p,
-          status: vettingDecision,
+          status: vettingStatus,
           headmasterRemarks: remarksText,
+          sectionComments,
           vettedBy: `${currentUser.firstName} ${currentUser.lastName} (Headmaster)`,
           vettedAt: new Date().toISOString()
         };
@@ -2715,23 +2728,28 @@ export function AdminDashboard({ initialTab } = {}) {
     localStorage.setItem("gbs_teacher_lesson_plans", JSON.stringify(updated));
     window.dispatchEvent(new Event("storage"));
 
-    try {
-      await apiClient.put(`/academics/lesson-plans/${selectedVettingPlan.id}/vet`, {
-        vettingStatus: vettingDecision,
-        headmasterRemarks: remarksText
-      });
-    } catch (err) {
-      console.warn("Backend vetting sync fallback:", err?.message);
-    }
-
-    const decisionText = vettingDecision === "VETTED_APPROVED" ? "Approved & Endorsed" : "Marked for Revision";
+    const decisionText = vettingStatus === "VETTED_APPROVED"
+      ? "Approved & Endorsed"
+      : vettingStatus === "REVISION_REQUIRED"
+        ? "Returned for Corrections"
+        : "Marked Under Review";
     setFeedback({
       type: "success",
-      message: `✅ Plan "${selectedVettingPlan.title}" ${decisionText}! Vetting remarks and words sent directly to ${selectedVettingPlan.teacherName}.`
+      message: `✅ Plan "${plan.title}" ${decisionText}! Structured vetting remarks sent directly to ${plan.teacherName}.`
     });
 
     setSelectedVettingPlan(null);
     setHeadmasterRemarksInput("");
+  };
+
+  const handleVetPlan = async (e) => {
+    e.preventDefault();
+    if (!selectedVettingPlan) return;
+    await handleCommitStructuredVetting({
+      plan: selectedVettingPlan,
+      vettingStatus: vettingDecision,
+      headmasterRemarks: headmasterRemarksInput
+    });
   };
 
   const handleBroadcastDirective = async (e) => {
@@ -7421,6 +7439,7 @@ export function AdminDashboard({ initialTab } = {}) {
               {/* SECTION 2: VETTING QUEUE & FEEDBACK WORKSPACE (WITH HOVERING & PAGE NAVIGATION) */}
               {(() => {
                 const filteredVettingPlans = teacherLessonPlans
+                  .filter((p) => p.status !== "DRAFT")
                   .filter((p) => vettingFilterType === "ALL" || p.planType === vettingFilterType)
                   .filter((p) => vettingFilterStatus === "ALL" || p.status === vettingFilterStatus)
                   .filter((p) => {
@@ -13957,213 +13976,16 @@ export function AdminDashboard({ initialTab } = {}) {
         }
 
         {/* ======================================================== */}
-        {/* HEADMASTER TEACHER PLAN & NOTES VETTING MODAL            */}
+        {/* HEADMASTER STRUCTURED NaCCA LESSON NOTES VETTING MODAL   */}
         {/* ======================================================== */}
-        {
-          selectedVettingPlan && (
-            <div className="role-modal-backdrop" onClick={() => setSelectedVettingPlan(null)}>
-              <div
-                className="role-modal-card"
-                style={{ maxWidth: "720px", background: "rgba(15, 23, 42, 0.98)", border: "2px solid #38bdf8", borderRadius: "16px", padding: "24px", boxShadow: "0 25px 60px rgba(0,0,0,0.9)" }}
-                onClick={(e) => e.stopPropagation()}
-              >
-                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "14px", borderBottom: "1px solid rgba(255, 255, 255, 0.1)", paddingBottom: "10px" }}>
-                  <div style={{ display: "flex", alignItems: "center", gap: "10px" }}>
-                    <span style={{ fontSize: "1.8rem" }}>📑</span>
-                    <div>
-                      <h3 style={{ margin: 0, color: "#38bdf8", fontSize: "1.15rem", fontWeight: "800" }}>
-                        HEADMASTER VETTING DESK • PLAN EVALUATION
-                      </h3>
-                      <span style={{ fontSize: "0.75rem", color: "#94a3b8" }}>
-                        Evaluate Pedagogical Quality, Objectives & Dispatch Feedback Words to Teacher
-                      </span>
-                    </div>
-                  </div>
-                  <button type="button" className="modal-close-btn" onClick={() => setSelectedVettingPlan(null)}>✕</button>
-                </div>
-
-                {/* Plan Metadata Overview */}
-                <div style={{ background: "rgba(2, 6, 23, 0.8)", border: "1px solid rgba(56, 189, 248, 0.3)", borderRadius: "10px", padding: "14px", marginBottom: "16px" }}>
-                  <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: "8px", flexWrap: "wrap", gap: "8px" }}>
-                    <div>
-                      <span style={{ fontSize: "0.75rem", color: "#94a3b8" }}>Submitter / Faculty Educator:</span>
-                      <strong style={{ display: "block", color: "#f8fafc", fontSize: "1rem" }}>
-                        {selectedVettingPlan.teacherName} ({selectedVettingPlan.teacherPosition || "Faculty Member"})
-                      </strong>
-                    </div>
-                    <span className="role-portal-badge" style={{ color: "#38bdf8" }}>
-                      {selectedVettingPlan.planType}
-                    </span>
-                  </div>
-
-                  <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(180px, 1fr))", gap: "8px", fontSize: "0.82rem", color: "#cbd5e1" }}>
-                    <div><strong>Document:</strong> {selectedVettingPlan.title}</div>
-                    <div><strong>Discipline:</strong> {selectedVettingPlan.subjectName}</div>
-                    <div><strong>Class / Level:</strong> {selectedVettingPlan.className}</div>
-                    <div><strong>Academic Period:</strong> {selectedVettingPlan.term} • {selectedVettingPlan.weekNumber}</div>
-                  </div>
-
-                  <div style={{ marginTop: "10px", fontSize: "0.82rem", color: "#cbd5e1", borderTop: "1px solid rgba(255, 255, 255, 0.08)", paddingTop: "8px" }}>
-                    <div style={{ marginBottom: "4px" }}>
-                      <strong style={{ color: "#38bdf8" }}>Main Topic:</strong> {selectedVettingPlan.topic}
-                    </div>
-                    {selectedVettingPlan.learningObjectives && (
-                      <div style={{ marginBottom: "4px" }}>
-                        <strong style={{ color: "#34d399" }}>Learning Objectives:</strong> {selectedVettingPlan.learningObjectives}
-                      </div>
-                    )}
-                    {selectedVettingPlan.pedagogicalActivities && (
-                      <div style={{ marginBottom: "4px" }}>
-                        <strong style={{ color: "#a855f7" }}>Pedagogical Activities:</strong> {selectedVettingPlan.pedagogicalActivities}
-                      </div>
-                    )}
-                    {selectedVettingPlan.resourcesAttached && (
-                      <div style={{ color: "#fbbf24", marginTop: "4px" }}>
-                        📎 Attached File: <strong>{selectedVettingPlan.resourcesAttached}</strong>
-                      </div>
-                    )}
-                  </div>
-                </div>
-
-                {/* Vetting Action Form */}
-                <form onSubmit={handleVetPlan}>
-                  <div style={{ marginBottom: "14px" }}>
-                    <label style={{ display: "block", fontSize: "0.8rem", color: "#cbd5e1", fontWeight: "700", marginBottom: "8px" }}>
-                      Headmaster Executive Decision *
-                    </label>
-                    <div style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: "10px" }}>
-                      <button
-                        type="button"
-                        onClick={() => setVettingDecision("VETTED_APPROVED")}
-                        style={{
-                          background: vettingDecision === "VETTED_APPROVED" ? "rgba(16, 185, 129, 0.25)" : "rgba(255, 255, 255, 0.05)",
-                          border: vettingDecision === "VETTED_APPROVED" ? "2px solid #10b981" : "1px solid rgba(255, 255, 255, 0.1)",
-                          color: vettingDecision === "VETTED_APPROVED" ? "#34d399" : "#94a3b8",
-                          padding: "10px",
-                          borderRadius: "8px",
-                          fontWeight: "800",
-                          fontSize: "0.82rem",
-                          cursor: "pointer"
-                        }}
-                      >
-                        🟢 Endorse & Approve
-                      </button>
-                      <button
-                        type="button"
-                        onClick={() => setVettingDecision("REVISION_REQUIRED")}
-                        style={{
-                          background: vettingDecision === "REVISION_REQUIRED" ? "rgba(239, 68, 68, 0.25)" : "rgba(255, 255, 255, 0.05)",
-                          border: vettingDecision === "REVISION_REQUIRED" ? "2px solid #ef4444" : "1px solid rgba(255, 255, 255, 0.1)",
-                          color: vettingDecision === "REVISION_REQUIRED" ? "#f87171" : "#94a3b8",
-                          padding: "10px",
-                          borderRadius: "8px",
-                          fontWeight: "800",
-                          fontSize: "0.82rem",
-                          cursor: "pointer"
-                        }}
-                      >
-                        🔴 Request Revisions
-                      </button>
-                      <button
-                        type="button"
-                        onClick={() => setVettingDecision("UNDER_REVIEW")}
-                        style={{
-                          background: vettingDecision === "UNDER_REVIEW" ? "rgba(245, 158, 11, 0.25)" : "rgba(255, 255, 255, 0.05)",
-                          border: vettingDecision === "UNDER_REVIEW" ? "2px solid #f59e0b" : "1px solid rgba(255, 255, 255, 0.1)",
-                          color: vettingDecision === "UNDER_REVIEW" ? "#fbbf24" : "#94a3b8",
-                          padding: "10px",
-                          borderRadius: "8px",
-                          fontWeight: "800",
-                          fontSize: "0.82rem",
-                          cursor: "pointer"
-                        }}
-                      >
-                        🟡 Keep Under Review
-                      </button>
-                    </div>
-                  </div>
-
-                  {/* Quick Preset Feedback Words */}
-                  <div style={{ marginBottom: "10px" }}>
-                    <span style={{ fontSize: "0.72rem", color: "#94a3b8", fontWeight: "700", display: "block", marginBottom: "4px" }}>
-                      Quick Endorsement & Feedback Presets:
-                    </span>
-                    <div style={{ display: "flex", gap: "6px", flexWrap: "wrap" }}>
-                      {[
-                        "Vetted, endorsed, and officially authorized for classroom instruction.",
-                        "Commendable alignment with practical experiments. Ensure differentiated pacing for all students.",
-                        "Revisions requested. Please expand the step-by-step worked examples and formative rubrics before resubmitting.",
-                        "Please align lesson learning outcomes with WAEC and Cambridge syllabus benchmarks."
-                      ].map((preset, pIdx) => (
-                        <button
-                          key={pIdx}
-                          type="button"
-                          onClick={() => setHeadmasterRemarksInput(preset)}
-                          style={{
-                            background: "rgba(255, 255, 255, 0.05)",
-                            border: "1px solid rgba(255, 255, 255, 0.1)",
-                            color: "#cbd5e1",
-                            borderRadius: "4px",
-                            padding: "3px 8px",
-                            fontSize: "0.72rem",
-                            cursor: "pointer",
-                            textAlign: "left"
-                          }}
-                        >
-                          ⚡ "{preset.slice(0, 42)}..."
-                        </button>
-                      ))}
-                    </div>
-                  </div>
-
-                  <div style={{ marginBottom: "16px" }}>
-                    <label style={{ display: "block", fontSize: "0.78rem", color: "#cbd5e1", fontWeight: "700", marginBottom: "4px" }}>
-                      Headmaster Words & Remarks to {selectedVettingPlan.teacherName} *
-                    </label>
-                    <textarea
-                      rows={3}
-                      required
-                      placeholder={`Enter your specific words, directives, commendations, or correction points directly to ${selectedVettingPlan.teacherName}...`}
-                      value={headmasterRemarksInput}
-                      onChange={(e) => setHeadmasterRemarksInput(e.target.value)}
-                      className="filter-input"
-                      style={{ width: "100%", padding: "10px 12px", fontSize: "0.85rem", lineHeight: "1.4" }}
-                    />
-                    <span style={{ fontSize: "0.72rem", color: "#94a3b8", marginTop: "3px", display: "block" }}>
-                      These remarks will be displayed directly inside {selectedVettingPlan.teacherName}'s portal upon saving.
-                    </span>
-                  </div>
-
-                  <div style={{ display: "flex", gap: "10px", justifyContent: "flex-end" }}>
-                    <button
-                      type="button"
-                      className="btn-secondary"
-                      onClick={() => setSelectedVettingPlan(null)}
-                      style={{ padding: "8px 16px" }}
-                    >
-                      Cancel
-                    </button>
-                    <button
-                      type="submit"
-                      className="btn-primary"
-                      style={{
-                        background: vettingDecision === "VETTED_APPROVED"
-                          ? "linear-gradient(135deg, #10b981, #059669)"
-                          : "linear-gradient(135deg, #ef4444, #dc2626)",
-                        padding: "8px 22px",
-                        fontSize: "0.85rem",
-                        fontWeight: "800",
-                        boxShadow: "0 4px 15px rgba(0,0,0,0.4)"
-                      }}
-                    >
-                      ✅ Commit Vetting & Send Words to Teacher
-                    </button>
-                  </div>
-                </form>
-              </div>
-            </div>
-          )
-        }
+        {selectedVettingPlan && (
+          <LessonNotesVettingModal
+            plan={selectedVettingPlan}
+            schoolName={reportSchoolName}
+            onClose={() => setSelectedVettingPlan(null)}
+            onCommitVetting={handleCommitStructuredVetting}
+          />
+        )}
       </div >
       {/* WALK-IN / IN-PERSON STUDENT ADMISSION & INSTANT ENROLLMENT MODAL */}
       {

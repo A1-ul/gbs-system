@@ -987,16 +987,36 @@ export default function MobileCameraAIExamScannerModal({
                     Select specific question numbers to be graded by AI Scanner. Only ticked question numbers will be evaluated.
                   </span>
                 </div>
-                <div style={{ display: "flex", alignItems: "center", gap: "6px", fontSize: "0.78rem", color: "#cbd5e1" }}>
-                  <span>Questions to Answer:</span>
+                <div style={{ display: "flex", alignItems: "center", gap: "8px", fontSize: "0.78rem", color: "#cbd5e1", flexWrap: "wrap" }}>
+                  <span>Total Questions to Mark:</span>
                   <input
                     type="number"
                     min="1"
-                    max={markingScheme.length}
+                    max="2000"
                     value={requiredQuestionCount}
-                    onChange={(e) => setRequiredQuestionCount(Math.max(1, parseInt(e.target.value) || 1))}
-                    style={{ width: "50px", padding: "3px 6px", borderRadius: "6px", background: "#020617", border: "1px solid #38bdf8", color: "#38bdf8", fontWeight: 800, textAlign: "center" }}
+                    onChange={(e) => {
+                      const nextCount = Math.max(1, Math.min(2000, parseInt(e.target.value, 10) || 1));
+                      setRequiredQuestionCount(nextCount);
+                      setMarkingScheme((prev) => {
+                        if (nextCount <= prev.length) return prev;
+                        const extended = [...prev];
+                        for (let q = prev.length + 1; q <= nextCount; q++) {
+                          extended.push({
+                            qNum: q,
+                            question: `Question ${q}`,
+                            modelAnswer: "Enter teacher's preferred answer here...",
+                            acceptableAlternatives: [],
+                            maxMarks: 5,
+                            strictness: "STANDARD"
+                          });
+                        }
+                        return extended;
+                      });
+                      setSelectedQuestionNumbers(Array.from({ length: nextCount }, (_, idx) => idx + 1));
+                    }}
+                    style={{ width: "74px", padding: "3px 6px", borderRadius: "6px", background: "#020617", border: "1px solid #38bdf8", color: "#38bdf8", fontWeight: 800, textAlign: "center" }}
                   />
+                  <span style={{ fontSize: "0.72rem", color: "#94a3b8" }}>(Enter any custom count)</span>
                 </div>
               </div>
 

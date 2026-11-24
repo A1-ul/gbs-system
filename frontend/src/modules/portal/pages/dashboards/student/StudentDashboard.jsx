@@ -171,13 +171,16 @@ export function StudentDashboard({ initialTab } = {}) {
   const proctorVideoRef = useRef(null);
   const proctorStreamRef = useRef(null);
   const proctorCanvasRef = useRef(null);
+  const proctorSnapCanvasRef = useRef(null);
   const proctorPrevFrameRef = useRef(null);
   const proctorIntervalRef = useRef(null);
   const proctorOffFrameStreakRef = useRef(0);
   const lastProctorAlertAtRef = useRef(0);
   const proctorSnapshotsRef = useRef([]);
-  const proctorSyncCountRef = useRef({ warnings: 0, penalty: 0, teacherMarks: 0, status: "IDLE", events: [] });
+  const proctorSyncCountRef = useRef({ warnings: 0, penalty: 0, teacherMarks: 0, status: "IDLE", movementDelta: 0, events: [] });
   const proctorPrewarmPromiseRef = useRef(null);
+  const proctorSessionKeyRef = useRef(null);
+  const proctorPeersRef = useRef(new Map()); // viewerId -> RTCPeerConnection
 
   const requestFastExamCameraStream = async () => {
     if (!navigator.mediaDevices || typeof navigator.mediaDevices.getUserMedia !== "function") {
@@ -185,12 +188,19 @@ export function StudentDashboard({ initialTab } = {}) {
     }
     try {
       return await navigator.mediaDevices.getUserMedia({
-        video: { facingMode: "user", width: { ideal: 320 }, height: { ideal: 240 } },
+        video: { facingMode: "user", width: { ideal: 640 }, height: { ideal: 360 }, frameRate: { ideal: 30, min: 15 } },
         audio: false
       });
     } catch {
-      // Immediate universal fallback for USB/older webcams that reject facingMode or resolution hints
-      return await navigator.mediaDevices.getUserMedia({ video: true, audio: false });
+      try {
+        return await navigator.mediaDevices.getUserMedia({
+          video: { width: { ideal: 480 }, height: { ideal: 270 }, frameRate: { ideal: 24 } },
+          audio: false
+        });
+      } catch {
+        // Immediate universal fallback for USB/older webcams that reject facingMode or resolution hints
+        return await navigator.mediaDevices.getUserMedia({ video: true, audio: false });
+      }
     }
   };
 
@@ -207,6 +217,12 @@ export function StudentDashboard({ initialTab } = {}) {
     if (proctorIntervalRef.current) {
       clearInterval(proctorIntervalRef.current);
       proctorIntervalRef.current = null;
+    }
+    if (proctorPeersRef.current) {
+      proctorPeersRef.current.forEach((pc) => {
+        try { pc.close(); } catch { }
+      });
+      proctorPeersRef.current.clear();
     }
     if (proctorStreamRef.current) {
       try {
@@ -225,17 +241,20 @@ export function StudentDashboard({ initialTab } = {}) {
     setProctoringDetail("Exam session ended. AI proctoring camera and monitors stopped.");
   };
 
-  const captureWebcamSnapshotDataUrl = () => {
+  const captureWebcamSnapshotDataUrl = (compactForLiveStream = false) => {
     try {
       const video = proctorVideoRef.current;
       if (!video || video.readyState < 2) return null;
-      const snapCanvas = document.createElement("canvas");
-      snapCanvas.width = 320;
-      snapCanvas.height = 240;
+      const w = compactForLiveStream ? 320 : 480;
+      const h = compactForLiveStream ? 180 : 270;
+      const snapCanvas = proctorSnapCanvasRef.current || document.createElement("canvas");
+      if (snapCanvas.width !== w) snapCanvas.width = w;
+      if (snapCanvas.height !== h) snapCanvas.height = h;
+      proctorSnapCanvasRef.current = snapCanvas;
       const sCtx = snapCanvas.getContext("2d");
       if (!sCtx) return null;
-      sCtx.drawImage(video, 0, 0, 320, 240);
-      return snapCanvas.toDataURL("image/jpeg", 0.72);
+      sCtx.drawImage(video, 0, 0, w, h);
+      return snapCanvas.toDataURL("image/jpeg", compactForLiveStream ? 0.56 : 0.72);
     } catch {
       return null;
     }
@@ -490,6 +509,7 @@ export function StudentDashboard({ initialTab } = {}) {
             const avgBrightness = totalLum / pixelCount;
             const avgMotion = prev ? diffSum / pixelCount : 0;
             proctorPrevFrameRef.current = currLum;
+            proctorSyncCountRef.current.movementDelta = Math.round(avgMotion);
 
             if (avgBrightness < 14) {
               proctorOffFrameStreakRef.current += 1;
@@ -529,42 +549,76 @@ export function StudentDashboard({ initialTab } = {}) {
     };
   }, [examStarted, examSubmitted]);
 
-  // Stream periodic live camera snapshot frames & poll Teacher Invigilator messages/penalties every 3.5s
+  // Dual-Layer Real-Time 1.0x Proctoring Streamer:
+  // Layer A: True 30 FPS 1.0x WebRTC peer video when Teacher opens Live Watch & Profile
+  // Layer B: High-speed ~8-10 FPS adaptive non-blocking frame stream (smooth natural motion, never slow-motion)
+  // Plus decoupled 3s metadata & Teacher invigilator message polling
   useEffect(() => {
     if (!examStarted || examSubmitted) return;
     let active = true;
+    let frameTimer = null;
+    let signalPollTimer = null;
+    let lastSignalMs = Date.now() - 5000;
+    const processedSigIds = new Set();
 
-    const syncHeartbeatAndMessages = async () => {
-      if (!active) return;
+    const STUN_CFG = {
+      iceServers: [
+        { urls: "stun:stun.l.google.com:19302" },
+        { urls: "stun:stun1.l.google.com:19302" },
+        { urls: "stun:stun2.l.google.com:19302" }
+      ]
+    };
+
+    const getExamIdentity = () => {
       const stuName = `${studentProfile?.firstName || "Student"} ${studentProfile?.lastName || ""}`.trim();
-      const snap = captureWebcamSnapshotDataUrl();
+      const examIdVal = activeExam?.id || "EXAM-ACTIVE";
+      const stuIdVal = studentProfile?.id || 10;
+      const stuEmailVal = studentProfile?.email || "";
+      const fallbackKey = `${examIdVal}::${stuIdVal || stuEmailVal || stuName}`;
+      return {
+        stuName,
+        examIdVal,
+        stuIdVal,
+        stuEmailVal,
+        sessionKey: proctorSessionKeyRef.current || fallbackKey
+      };
+    };
+
+    const sendHeartbeatAndPollMessages = async () => {
+      if (!active) return;
+      const { stuName, examIdVal, stuIdVal, stuEmailVal } = getExamIdentity();
+      const snap = captureWebcamSnapshotDataUrl(false);
       if (snap && proctorSnapshotsRef.current.length === 0) {
         proctorSnapshotsRef.current = [snap];
       }
       try {
-        await apiClient.post("/ai-exam/proctor/heartbeat", {
-          examId: activeExam?.id || "EXAM-ACTIVE",
+        const hbRes = await apiClient.post("/ai-exam/proctor/heartbeat", {
+          examId: examIdVal,
           examTitle: activeExam?.title || "Active Examination",
-          studentId: studentProfile?.id || 10,
-          studentIndexNumber: studentProfile?.admissionNumber || studentProfile?.studentId || `GBS-STU-${studentProfile?.id || 10}`,
+          studentId: stuIdVal,
+          studentIndexNumber: studentProfile?.admissionNumber || studentProfile?.studentId || `GBS-STU-${stuIdVal}`,
           className: studentProfile?.currentClass || activeExam?.class?.name || "Enrolled Cohort",
           studentName: stuName,
-          studentEmail: studentProfile?.email || "",
+          studentEmail: stuEmailVal,
           status: proctorStreamRef.current ? "CAMERA_ACTIVE" : "FOCUS_ONLY_ACTIVE",
           movementStatus: proctorSyncCountRef.current.status || (proctorStreamRef.current ? "CAMERA_ACTIVE" : "FOCUS_ONLY_ACTIVE"),
+          movementDelta: proctorSyncCountRef.current.movementDelta || 0,
           cameraActive: Boolean(proctorStreamRef.current),
           snapshotDataUrl: snap,
           warningsCount: proctorSyncCountRef.current.warnings || 0,
           penaltyMarksDeducted: proctorSyncCountRef.current.penalty || 0,
           marksPerWarning: 2
         });
+        if (hbRes?.data?.data?.session?.sessionKey) {
+          proctorSessionKeyRef.current = hbRes.data.data.session.sessionKey;
+        }
       } catch { }
 
       try {
         const msgRes = await apiClient.get("/ai-exam/proctor/messages", {
           params: {
             examId: activeExam?.id || "",
-            studentId: studentProfile?.id || 10,
+            studentId: stuIdVal,
             studentName: stuName
           }
         });
@@ -583,11 +637,155 @@ export function StudentDashboard({ initialTab } = {}) {
       } catch { }
     };
 
-    syncHeartbeatAndMessages();
-    const hbInterval = setInterval(syncHeartbeatAndMessages, 1000);
+    // High-speed adaptive live frame loop (~8-10 FPS smooth natural 1.0x motion fallback)
+    const pumpLiveFrame = async () => {
+      if (!active) return;
+      const t0 = performance.now();
+      const snapCompact = captureWebcamSnapshotDataUrl(true);
+      if (snapCompact) {
+        const { stuName, examIdVal, stuIdVal, stuEmailVal, sessionKey } = getExamIdentity();
+        try {
+          await apiClient.post("/ai-exam/proctor/frame", {
+            sessionKey,
+            examId: examIdVal,
+            examTitle: activeExam?.title || "Active Examination",
+            studentId: stuIdVal,
+            studentName: stuName,
+            studentEmail: stuEmailVal,
+            cameraActive: true,
+            movementDelta: proctorSyncCountRef.current.movementDelta || 0,
+            fpsHint: 10,
+            snapshotDataUrl: snapCompact
+          });
+        } catch { }
+      }
+      if (!active) return;
+      const elapsed = performance.now() - t0;
+      const hasWebRtcWatchers = proctorPeersRef.current.size > 0;
+      // When direct 30fps WebRTC is already streaming to teacher, throttle JPEG backup slightly to save CPU/bandwidth
+      const targetIntervalMs = hasWebRtcWatchers ? 400 : 100;
+      const nextDelay = Math.max(40, targetIntervalMs - elapsed);
+      frameTimer = setTimeout(pumpLiveFrame, nextDelay);
+    };
+
+    // Handle Teacher WebRTC WATCH_REQUEST / ANSWER / ICE_CANDIDATE for genuine 30fps 1.0x live video
+    const handleIncomingWebRtcSignal = async (sig) => {
+      if (!active || !sig?.id || processedSigIds.has(sig.id)) return;
+      processedSigIds.add(sig.id);
+      if (sig.createdAtMs && sig.createdAtMs > lastSignalMs) {
+        lastSignalMs = sig.createdAtMs;
+      }
+      const viewerId = String(sig.viewerId || "invigilator");
+      const { sessionKey, examIdVal, stuIdVal } = getExamIdentity();
+
+      if (sig.signalType === "WATCH_STOP") {
+        const existingPc = proctorPeersRef.current.get(viewerId);
+        if (existingPc) {
+          try { existingPc.close(); } catch { }
+          proctorPeersRef.current.delete(viewerId);
+        }
+        return;
+      }
+
+      if (sig.signalType === "WATCH_REQUEST") {
+        if (typeof RTCPeerConnection !== "function" || !proctorStreamRef.current) return;
+        const prevPc = proctorPeersRef.current.get(viewerId);
+        if (prevPc) {
+          try { prevPc.close(); } catch { }
+        }
+        const pc = new RTCPeerConnection(STUN_CFG);
+        proctorPeersRef.current.set(viewerId, pc);
+
+        proctorStreamRef.current.getVideoTracks().forEach((track) => {
+          pc.addTrack(track, proctorStreamRef.current);
+        });
+
+        pc.onicecandidate = (evt) => {
+          if (evt.candidate) {
+            apiClient.post("/ai-exam/proctor/webrtc/signal", {
+              sessionKey,
+              examId: examIdVal,
+              studentId: stuIdVal,
+              viewerId,
+              senderRole: "STUDENT",
+              targetRole: "TEACHER",
+              signalType: "ICE_CANDIDATE",
+              data: evt.candidate
+            }).catch(() => { });
+          }
+        };
+
+        pc.onconnectionstatechange = () => {
+          if (["failed", "closed", "disconnected"].includes(pc.connectionState)) {
+            if (proctorPeersRef.current.get(viewerId) === pc) {
+              proctorPeersRef.current.delete(viewerId);
+            }
+          }
+        };
+
+        try {
+          const offer = await pc.createOffer();
+          await pc.setLocalDescription(offer);
+          await apiClient.post("/ai-exam/proctor/webrtc/signal", {
+            sessionKey,
+            examId: examIdVal,
+            studentId: stuIdVal,
+            viewerId,
+            senderRole: "STUDENT",
+            targetRole: "TEACHER",
+            signalType: "OFFER",
+            data: offer
+          });
+        } catch { }
+        return;
+      }
+
+      const pc = proctorPeersRef.current.get(viewerId);
+      if (!pc) return;
+      if (sig.signalType === "ANSWER" && sig.data) {
+        try {
+          if (pc.signalingState === "have-local-offer") {
+            await pc.setRemoteDescription(new RTCSessionDescription(sig.data));
+          }
+        } catch { }
+      } else if (sig.signalType === "ICE_CANDIDATE" && sig.data) {
+        try {
+          await pc.addIceCandidate(new RTCIceCandidate(sig.data));
+        } catch { }
+      }
+    };
+
+    const pollWebRtcSignals = async () => {
+      if (!active) return;
+      const { sessionKey } = getExamIdentity();
+      try {
+        const res = await apiClient.get("/ai-exam/proctor/webrtc/signals", {
+          params: { sessionKey, targetRole: "STUDENT", sinceMs: lastSignalMs }
+        });
+        const sigs = res?.data?.data?.signals || [];
+        for (const s of sigs) {
+          await handleIncomingWebRtcSignal(s);
+        }
+      } catch { }
+    };
+
+    sendHeartbeatAndPollMessages().then(() => {
+      if (active) {
+        frameTimer = setTimeout(pumpLiveFrame, 120);
+      }
+    });
+    const hbInterval = setInterval(sendHeartbeatAndPollMessages, 3000);
+    signalPollTimer = setInterval(pollWebRtcSignals, 500);
+
     return () => {
       active = false;
       clearInterval(hbInterval);
+      if (frameTimer) clearTimeout(frameTimer);
+      if (signalPollTimer) clearInterval(signalPollTimer);
+      proctorPeersRef.current.forEach((pc) => {
+        try { pc.close(); } catch { }
+      });
+      proctorPeersRef.current.clear();
     };
   }, [examStarted, examSubmitted, activeExam?.id]);
 
@@ -8053,191 +8251,191 @@ export function StudentDashboard({ initialTab } = {}) {
       {/* PEER-TO-PEER LIVE VIDEO CALL MODAL */}
       {activePeerVideoCall && (() => {
         const peerModal = (
-        <div style={{
-          position: "fixed",
-          inset: 0,
-          background: "rgba(2, 6, 23, 0.92)",
-          backdropFilter: "blur(12px)",
-          zIndex: 999999,
-          display: "flex",
-          alignItems: "center",
-          justifyContent: "center",
-          padding: "1rem"
-        }}>
           <div style={{
-            background: "#090d16",
-            border: "2px solid #06b6d4",
-            borderRadius: "20px",
-            width: "100%",
-            maxWidth: "760px",
-            padding: "1.5rem",
-            boxShadow: "0 25px 60px rgba(0, 0, 0, 0.9)",
-            color: "#fff"
+            position: "fixed",
+            inset: 0,
+            background: "rgba(2, 6, 23, 0.92)",
+            backdropFilter: "blur(12px)",
+            zIndex: 999999,
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+            padding: "1rem"
           }}>
-            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", borderBottom: "1px solid rgba(255, 255, 255, 0.1)", paddingBottom: "10px", marginBottom: "14px" }}>
-              <div style={{ display: "flex", alignItems: "center", gap: "10px" }}>
-                <span style={{ fontSize: "1.5rem" }}>📹</span>
-                <div>
-                  <h3 style={{ margin: 0, fontSize: "1.1rem", fontWeight: 800, color: "#22d3ee" }}>
-                    LIVE PEER STUDY CALL • {activePeerVideoCall.firstName} {activePeerVideoCall.lastName}
-                  </h3>
-                  <span style={{ fontSize: "0.75rem", color: "#94a3b8" }}>
-                    Verified Scholar Index: {activePeerVideoCall.indexNumber || activePeerVideoCall.studentId} • Encrypted WebRTC Session
-                  </span>
+            <div style={{
+              background: "#090d16",
+              border: "2px solid #06b6d4",
+              borderRadius: "20px",
+              width: "100%",
+              maxWidth: "760px",
+              padding: "1.5rem",
+              boxShadow: "0 25px 60px rgba(0, 0, 0, 0.9)",
+              color: "#fff"
+            }}>
+              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", borderBottom: "1px solid rgba(255, 255, 255, 0.1)", paddingBottom: "10px", marginBottom: "14px" }}>
+                <div style={{ display: "flex", alignItems: "center", gap: "10px" }}>
+                  <span style={{ fontSize: "1.5rem" }}>📹</span>
+                  <div>
+                    <h3 style={{ margin: 0, fontSize: "1.1rem", fontWeight: 800, color: "#22d3ee" }}>
+                      LIVE PEER STUDY CALL • {activePeerVideoCall.firstName} {activePeerVideoCall.lastName}
+                    </h3>
+                    <span style={{ fontSize: "0.75rem", color: "#94a3b8" }}>
+                      Verified Scholar Index: {activePeerVideoCall.indexNumber || activePeerVideoCall.studentId} • Encrypted WebRTC Session
+                    </span>
+                  </div>
                 </div>
-              </div>
-              <div style={{ background: "rgba(6, 182, 212, 0.2)", border: "1px solid #06b6d4", borderRadius: "20px", padding: "4px 12px", color: "#67e8f9", fontFamily: "monospace", fontWeight: 800 }}>
-                ⏱️ {Math.floor(peerCallDuration / 60).toString().padStart(2, '0')}:{(peerCallDuration % 60).toString().padStart(2, '0')}
-              </div>
-            </div>
-
-            {/* Video Screens Split (Live Camera Feeds) */}
-            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "12px", height: "300px", marginBottom: "1rem" }}>
-              {/* Remote Peer Stream */}
-              <div style={{ background: "#020617", border: "1.5px solid rgba(255, 255, 255, 0.15)", borderRadius: "14px", position: "relative", overflow: "hidden", display: "flex", alignItems: "center", justifyContent: "center" }}>
-                <img
-                  src={activePeerVideoCall.photo || "https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=400&h=400&fit=crop"}
-                  alt={activePeerVideoCall.firstName}
-                  style={{ width: "100%", height: "100%", objectFit: "cover", filter: isPeerCameraOff ? "none" : "none" }}
-                />
-                {/* Simulated Peer Active Pulse Ring */}
-                <div style={{ position: "absolute", inset: "15px", border: "1.5px dashed rgba(34, 211, 238, 0.4)", borderRadius: "10px", pointerEvents: "none" }}></div>
-                <div style={{ position: "absolute", top: "10px", left: "10px", background: "rgba(2, 6, 23, 0.8)", padding: "3px 8px", borderRadius: "4px", fontSize: "0.7rem", color: "#34d399", fontWeight: "bold", fontFamily: "monospace" }}>
-                  ● REMOTE WEBRTC FEED • 30 FPS
-                </div>
-                <div style={{ position: "absolute", bottom: "10px", left: "10px", background: "rgba(0,0,0,0.7)", padding: "3px 8px", borderRadius: "6px", fontSize: "0.72rem", color: "#34d399", fontWeight: 700 }}>
-                  ● {activePeerVideoCall.firstName} ({activePeerVideoCall.currentClass || "Scholar"})
+                <div style={{ background: "rgba(6, 182, 212, 0.2)", border: "1px solid #06b6d4", borderRadius: "20px", padding: "4px 12px", color: "#67e8f9", fontFamily: "monospace", fontWeight: 800 }}>
+                  ⏱️ {Math.floor(peerCallDuration / 60).toString().padStart(2, '0')}:{(peerCallDuration % 60).toString().padStart(2, '0')}
                 </div>
               </div>
 
-              {/* Local User Stream (Direct Hardware Camera Feed) */}
-              <div style={{ background: "#020617", border: "1.5px solid #06b6d4", borderRadius: "14px", position: "relative", overflow: "hidden", display: "flex", alignItems: "center", justifyContent: "center" }}>
-                <video
-                  ref={localPeerVideoRef}
-                  autoPlay
-                  playsInline
-                  muted
-                  onLoadedMetadata={(e) => {
-                    e.currentTarget.muted = true;
-                    e.currentTarget.play().catch(() => { });
+              {/* Video Screens Split (Live Camera Feeds) */}
+              <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "12px", height: "300px", marginBottom: "1rem" }}>
+                {/* Remote Peer Stream */}
+                <div style={{ background: "#020617", border: "1.5px solid rgba(255, 255, 255, 0.15)", borderRadius: "14px", position: "relative", overflow: "hidden", display: "flex", alignItems: "center", justifyContent: "center" }}>
+                  <img
+                    src={activePeerVideoCall.photo || "https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=400&h=400&fit=crop"}
+                    alt={activePeerVideoCall.firstName}
+                    style={{ width: "100%", height: "100%", objectFit: "cover", filter: isPeerCameraOff ? "none" : "none" }}
+                  />
+                  {/* Simulated Peer Active Pulse Ring */}
+                  <div style={{ position: "absolute", inset: "15px", border: "1.5px dashed rgba(34, 211, 238, 0.4)", borderRadius: "10px", pointerEvents: "none" }}></div>
+                  <div style={{ position: "absolute", top: "10px", left: "10px", background: "rgba(2, 6, 23, 0.8)", padding: "3px 8px", borderRadius: "4px", fontSize: "0.7rem", color: "#34d399", fontWeight: "bold", fontFamily: "monospace" }}>
+                    ● REMOTE WEBRTC FEED • 30 FPS
+                  </div>
+                  <div style={{ position: "absolute", bottom: "10px", left: "10px", background: "rgba(0,0,0,0.7)", padding: "3px 8px", borderRadius: "6px", fontSize: "0.72rem", color: "#34d399", fontWeight: 700 }}>
+                    ● {activePeerVideoCall.firstName} ({activePeerVideoCall.currentClass || "Scholar"})
+                  </div>
+                </div>
+
+                {/* Local User Stream (Direct Hardware Camera Feed) */}
+                <div style={{ background: "#020617", border: "1.5px solid #06b6d4", borderRadius: "14px", position: "relative", overflow: "hidden", display: "flex", alignItems: "center", justifyContent: "center" }}>
+                  <video
+                    ref={localPeerVideoRef}
+                    autoPlay
+                    playsInline
+                    muted
+                    onLoadedMetadata={(e) => {
+                      e.currentTarget.muted = true;
+                      e.currentTarget.play().catch(() => { });
+                    }}
+                    style={{
+                      width: "100%",
+                      height: "100%",
+                      objectFit: "cover",
+                      transform: "scaleX(-1)",
+                      display: isPeerCameraOff ? "none" : "block"
+                    }}
+                  />
+                  {isPeerCameraOff && (
+                    <div style={{ textAlign: "center", color: "#94a3b8" }}>
+                      <img
+                        src={studentAvatar || "/assets/illustrations/user_face_placeholder.jpg"}
+                        alt="You"
+                        style={{ width: "70px", height: "70px", borderRadius: "50%", objectFit: "cover", marginBottom: "8px", border: "2px solid #64748b" }}
+                      />
+                      <div style={{ fontSize: "0.78rem" }}>Camera Turned Off</div>
+                    </div>
+                  )}
+                  <div style={{ position: "absolute", top: "10px", left: "10px", background: "rgba(2, 6, 23, 0.8)", padding: "3px 8px", borderRadius: "4px", fontSize: "0.7rem", color: "#38bdf8", fontWeight: "bold", fontFamily: "monospace" }}>
+                    ● LOCAL CAM: ACTIVE (YOU)
+                  </div>
+                  <div style={{ position: "absolute", bottom: "10px", left: "10px", background: "rgba(0,0,0,0.7)", padding: "3px 8px", borderRadius: "6px", fontSize: "0.72rem", color: "#38bdf8", fontWeight: 700 }}>
+                    ● You ({studentProfile?.firstName || "Scholar"})
+                  </div>
+                  {isPeerScreenSharing && (
+                    <div style={{ position: "absolute", top: "10px", right: "10px", background: "rgba(16, 185, 129, 0.9)", padding: "2px 8px", borderRadius: "4px", fontSize: "0.7rem", fontWeight: 800 }}>
+                      🖥️ Screen Shared
+                    </div>
+                  )}
+                </div>
+              </div>
+
+              {/* Video Call Controls Bar */}
+              <div style={{ display: "flex", justifyContent: "center", gap: "12px", alignItems: "center" }}>
+                <button
+                  type="button"
+                  onClick={() => {
+                    const nextMuted = !isPeerMicMuted;
+                    setIsPeerMicMuted(nextMuted);
+                    if (localPeerStreamRef.current) {
+                      localPeerStreamRef.current.getAudioTracks().forEach((t) => { t.enabled = !nextMuted; });
+                    }
                   }}
                   style={{
-                    width: "100%",
-                    height: "100%",
-                    objectFit: "cover",
-                    transform: "scaleX(-1)",
-                    display: isPeerCameraOff ? "none" : "block"
+                    padding: "10px 16px",
+                    borderRadius: "10px",
+                    background: isPeerMicMuted ? "#ef4444" : "rgba(30, 41, 59, 0.8)",
+                    border: "1px solid rgba(255, 255, 255, 0.15)",
+                    color: "#fff",
+                    fontWeight: 700,
+                    cursor: "pointer"
                   }}
-                />
-                {isPeerCameraOff && (
-                  <div style={{ textAlign: "center", color: "#94a3b8" }}>
-                    <img
-                      src={studentAvatar || "/assets/illustrations/user_face_placeholder.jpg"}
-                      alt="You"
-                      style={{ width: "70px", height: "70px", borderRadius: "50%", objectFit: "cover", marginBottom: "8px", border: "2px solid #64748b" }}
-                    />
-                    <div style={{ fontSize: "0.78rem" }}>Camera Turned Off</div>
-                  </div>
-                )}
-                <div style={{ position: "absolute", top: "10px", left: "10px", background: "rgba(2, 6, 23, 0.8)", padding: "3px 8px", borderRadius: "4px", fontSize: "0.7rem", color: "#38bdf8", fontWeight: "bold", fontFamily: "monospace" }}>
-                  ● LOCAL CAM: ACTIVE (YOU)
-                </div>
-                <div style={{ position: "absolute", bottom: "10px", left: "10px", background: "rgba(0,0,0,0.7)", padding: "3px 8px", borderRadius: "6px", fontSize: "0.72rem", color: "#38bdf8", fontWeight: 700 }}>
-                  ● You ({studentProfile?.firstName || "Scholar"})
-                </div>
-                {isPeerScreenSharing && (
-                  <div style={{ position: "absolute", top: "10px", right: "10px", background: "rgba(16, 185, 129, 0.9)", padding: "2px 8px", borderRadius: "4px", fontSize: "0.7rem", fontWeight: 800 }}>
-                    🖥️ Screen Shared
-                  </div>
-                )}
+                >
+                  {isPeerMicMuted ? "🔇 Unmute Mic" : "🎤 Mute Mic"}
+                </button>
+                <button
+                  type="button"
+                  onClick={async () => {
+                    const nextOff = !isPeerCameraOff;
+                    setIsPeerCameraOff(nextOff);
+                    const liveVidTracks = (localPeerStreamRef.current?.getVideoTracks?.() || []).filter((t) => t.readyState === "live");
+                    if (!nextOff && liveVidTracks.length === 0) {
+                      await startLocalPeerCamera();
+                    } else if (localPeerStreamRef.current) {
+                      localPeerStreamRef.current.getVideoTracks().forEach((t) => { t.enabled = !nextOff; });
+                      if (!nextOff && localPeerVideoRef.current) {
+                        localPeerVideoRef.current.srcObject = localPeerStreamRef.current;
+                        localPeerVideoRef.current.play().catch(() => { });
+                      }
+                    }
+                  }}
+                  style={{
+                    padding: "10px 16px",
+                    borderRadius: "10px",
+                    background: isPeerCameraOff ? "#ef4444" : "rgba(30, 41, 59, 0.8)",
+                    border: "1px solid rgba(255, 255, 255, 0.15)",
+                    color: "#fff",
+                    fontWeight: 700,
+                    cursor: "pointer"
+                  }}
+                >
+                  {isPeerCameraOff ? "📷 Start Camera" : "📷 Stop Camera"}
+                </button>
+                <button
+                  type="button"
+                  onClick={handleTogglePeerScreenShare}
+                  style={{
+                    padding: "10px 16px",
+                    borderRadius: "10px",
+                    background: isPeerScreenSharing ? "#10b981" : "rgba(30, 41, 59, 0.8)",
+                    border: "1px solid rgba(255, 255, 255, 0.15)",
+                    color: "#fff",
+                    fontWeight: 700,
+                    cursor: "pointer"
+                  }}
+                >
+                  {isPeerScreenSharing ? "🖥️ Stop Share" : "🖥️ Share Screen"}
+                </button>
+                <button
+                  type="button"
+                  onClick={handleEndPeerVideoCall}
+                  style={{
+                    padding: "10px 22px",
+                    borderRadius: "10px",
+                    background: "linear-gradient(135deg, #ef4444, #b91c1c)",
+                    border: "none",
+                    color: "#fff",
+                    fontWeight: 900,
+                    cursor: "pointer",
+                    boxShadow: "0 4px 14px rgba(239, 68, 68, 0.4)"
+                  }}
+                >
+                  🔴 End Video Call
+                </button>
               </div>
             </div>
-
-            {/* Video Call Controls Bar */}
-            <div style={{ display: "flex", justifyContent: "center", gap: "12px", alignItems: "center" }}>
-              <button
-                type="button"
-                onClick={() => {
-                  const nextMuted = !isPeerMicMuted;
-                  setIsPeerMicMuted(nextMuted);
-                  if (localPeerStreamRef.current) {
-                    localPeerStreamRef.current.getAudioTracks().forEach((t) => { t.enabled = !nextMuted; });
-                  }
-                }}
-                style={{
-                  padding: "10px 16px",
-                  borderRadius: "10px",
-                  background: isPeerMicMuted ? "#ef4444" : "rgba(30, 41, 59, 0.8)",
-                  border: "1px solid rgba(255, 255, 255, 0.15)",
-                  color: "#fff",
-                  fontWeight: 700,
-                  cursor: "pointer"
-                }}
-              >
-                {isPeerMicMuted ? "🔇 Unmute Mic" : "🎤 Mute Mic"}
-              </button>
-              <button
-                type="button"
-                onClick={async () => {
-                  const nextOff = !isPeerCameraOff;
-                  setIsPeerCameraOff(nextOff);
-                  const liveVidTracks = (localPeerStreamRef.current?.getVideoTracks?.() || []).filter((t) => t.readyState === "live");
-                  if (!nextOff && liveVidTracks.length === 0) {
-                    await startLocalPeerCamera();
-                  } else if (localPeerStreamRef.current) {
-                    localPeerStreamRef.current.getVideoTracks().forEach((t) => { t.enabled = !nextOff; });
-                    if (!nextOff && localPeerVideoRef.current) {
-                      localPeerVideoRef.current.srcObject = localPeerStreamRef.current;
-                      localPeerVideoRef.current.play().catch(() => { });
-                    }
-                  }
-                }}
-                style={{
-                  padding: "10px 16px",
-                  borderRadius: "10px",
-                  background: isPeerCameraOff ? "#ef4444" : "rgba(30, 41, 59, 0.8)",
-                  border: "1px solid rgba(255, 255, 255, 0.15)",
-                  color: "#fff",
-                  fontWeight: 700,
-                  cursor: "pointer"
-                }}
-              >
-                {isPeerCameraOff ? "📷 Start Camera" : "📷 Stop Camera"}
-              </button>
-              <button
-                type="button"
-                onClick={handleTogglePeerScreenShare}
-                style={{
-                  padding: "10px 16px",
-                  borderRadius: "10px",
-                  background: isPeerScreenSharing ? "#10b981" : "rgba(30, 41, 59, 0.8)",
-                  border: "1px solid rgba(255, 255, 255, 0.15)",
-                  color: "#fff",
-                  fontWeight: 700,
-                  cursor: "pointer"
-                }}
-              >
-                {isPeerScreenSharing ? "🖥️ Stop Share" : "🖥️ Share Screen"}
-              </button>
-              <button
-                type="button"
-                onClick={handleEndPeerVideoCall}
-                style={{
-                  padding: "10px 22px",
-                  borderRadius: "10px",
-                  background: "linear-gradient(135deg, #ef4444, #b91c1c)",
-                  border: "none",
-                  color: "#fff",
-                  fontWeight: 900,
-                  cursor: "pointer",
-                  boxShadow: "0 4px 14px rgba(239, 68, 68, 0.4)"
-                }}
-              >
-                🔴 End Video Call
-              </button>
-            </div>
           </div>
-        </div>
         );
         return typeof document !== "undefined" && document.body
           ? createPortal(peerModal, document.body)

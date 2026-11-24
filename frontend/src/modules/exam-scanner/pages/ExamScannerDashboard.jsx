@@ -10,7 +10,11 @@ export default function ExamScannerDashboard() {
   const [selectedExamId, setSelectedExamId] = useState("");
   const [studentId, setStudentId] = useState("1");
   const [studentName, setStudentName] = useState("Candidate #1");
+  const SCANNER_MAX_QUESTIONS = 2000;
+  const SCANNER_PAGE_SIZE = 50;
   const [questionCount, setQuestionCount] = useState(10);
+  const [questionCountInput, setQuestionCountInput] = useState("10");
+  const [matrixPage, setMatrixPage] = useState(1);
   const [marksPerQuestion, setMarksPerQuestion] = useState(10);
   const [quickKeyString, setQuickKeyString] = useState("");
   const [savingKey, setSavingKey] = useState(false);
@@ -41,8 +45,14 @@ export default function ExamScannerDashboard() {
   const [feedback, setFeedback] = useState(null);
 
   const handleQuestionCountChange = (rawCount) => {
-    const count = Math.max(1, Math.min(200, parseInt(rawCount, 10) || 10));
+    const rawStr = String(rawCount ?? "");
+    setQuestionCountInput(rawStr);
+    if (rawStr.trim() === "") return;
+    const parsed = parseInt(rawStr, 10);
+    if (Number.isNaN(parsed) || parsed < 1) return;
+    const count = Math.max(1, Math.min(SCANNER_MAX_QUESTIONS, parsed));
     setQuestionCount(count);
+    setMatrixPage((prev) => Math.min(prev, Math.max(1, Math.ceil(count / SCANNER_PAGE_SIZE))));
     const letters = ["A", "B", "C", "D"];
     setTeacherAnswerKey((prev) => {
       const next = { ...prev };
@@ -60,6 +70,16 @@ export default function ExamScannerDashboard() {
     });
   };
 
+  const handleQuestionCountBlur = () => {
+    const parsed = parseInt(questionCountInput, 10);
+    const safe = Number.isNaN(parsed) || parsed < 1
+      ? Math.max(1, Number(questionCount) || 10)
+      : Math.max(1, Math.min(SCANNER_MAX_QUESTIONS, parsed));
+    setQuestionCount(safe);
+    setQuestionCountInput(String(safe));
+    handleQuestionCountChange(safe);
+  };
+
   const handleQuickKeyApply = (raw) => {
     setQuickKeyString(raw);
     const tokens = String(raw || "")
@@ -70,8 +90,10 @@ export default function ExamScannerDashboard() {
       .filter(Boolean);
     const list = tokens.length === 1 && tokens[0].length > 1 ? tokens[0].split("") : tokens;
     if (list.length === 0) return;
-    const count = Math.max(1, Math.min(200, list.length));
+    const count = Math.max(1, Math.min(SCANNER_MAX_QUESTIONS, list.length));
     setQuestionCount(count);
+    setQuestionCountInput(String(count));
+    setMatrixPage(1);
     const mapped = {};
     list.slice(0, count).forEach((ans, idx) => {
       mapped[idx + 1] = ans;
@@ -80,7 +102,7 @@ export default function ExamScannerDashboard() {
   };
 
   const handleSaveAnswerKey = async () => {
-    const count = Math.max(1, Math.min(200, Number(questionCount) || 10));
+    const count = Math.max(1, Math.min(SCANNER_MAX_QUESTIONS, Number(questionCount) || 10));
     const trimmed = {};
     for (let i = 1; i <= count; i++) {
       trimmed[i] = teacherAnswerKey[i] || "A";
@@ -91,7 +113,7 @@ export default function ExamScannerDashboard() {
       const res = await apiClient.post("/ai-exam/answer-key", {
         examId: selectedExamId || "1",
         questionCount: count,
-        marksPerQuestion: Number(marksPerQuestion) || 10,
+        marksPerQuestion: Math.max(0.25, Number(marksPerQuestion) || 10),
         teacherAnswerKey: trimmed
       });
       setSavedKeyAt(res?.data?.data?.answerKey?.savedAt || new Date().toISOString());
@@ -156,7 +178,7 @@ export default function ExamScannerDashboard() {
   const handleScanSheet = async () => {
     setLoading(true);
     setFeedback(null);
-    const count = Math.max(1, Math.min(200, Number(questionCount) || 10));
+    const count = Math.max(1, Math.min(SCANNER_MAX_QUESTIONS, Number(questionCount) || 10));
     const trimmedKey = {};
     const trimmedAnswers = {};
     for (let i = 1; i <= count; i++) {
@@ -168,7 +190,7 @@ export default function ExamScannerDashboard() {
         examId: selectedExamId || "1",
         studentId,
         questionCount: count,
-        marksPerQuestion: Number(marksPerQuestion) || 10,
+        marksPerQuestion: Math.max(0.25, Number(marksPerQuestion) || 10),
         teacherAnswerKey: trimmedKey,
         imageUrl: "/assets/academic-records-bg.jpg",
         extractedAnswers: trimmedAnswers
@@ -301,24 +323,26 @@ export default function ExamScannerDashboard() {
                 />
               </div>
               <div className="group">
-                <label>Number of Questions to Mark (1–200)</label>
+                <label>Number of Questions to Mark (Custom — Any Count)</label>
                 <input
                   type="number"
                   data-testid="scanner-question-count"
                   min="1"
-                  max="200"
-                  value={questionCount}
+                  max={SCANNER_MAX_QUESTIONS}
+                  value={questionCountInput}
                   onChange={(e) => handleQuestionCountChange(e.target.value)}
+                  onBlur={handleQuestionCountBlur}
                 />
               </div>
               <div className="group">
                 <label>Marks Per Question</label>
                 <input
                   type="number"
-                  min="1"
-                  max="50"
+                  min="0.25"
+                  step="0.25"
+                  max="1000"
                   value={marksPerQuestion}
-                  onChange={(e) => setMarksPerQuestion(Math.max(1, Number(e.target.value) || 10))}
+                  onChange={(e) => setMarksPerQuestion(Math.max(0.25, Number(e.target.value) || 1))}
                 />
               </div>
             </div>
@@ -372,76 +396,115 @@ export default function ExamScannerDashboard() {
             </div>
 
             {/* Interactive Master Key + Student Bubble Matrices */}
-            <div style={{ marginTop: "16px" }}>
-              <label style={{ fontSize: "0.85rem", fontWeight: 800, color: "#f6dd84", display: "block", marginBottom: "8px" }}>
-                🎯 Teacher Master Answer Key &amp; Student Optical Bubbles (Questions 1 – {questionCount})
-              </label>
-              <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(150px, 1fr))", gap: "10px", maxHeight: "360px", overflowY: "auto", paddingRight: "4px" }}>
-                {Array.from({ length: Math.max(1, Math.min(200, Number(questionCount) || 10)) }, (_, i) => i + 1).map((qNum) => (
-                  <div
-                    key={qNum}
-                    style={{
-                      background: "rgba(8, 24, 51, 0.72)",
-                      padding: "8px",
-                      borderRadius: "8px",
-                      textAlign: "center",
-                      border: "1px solid rgba(212, 175, 55, 0.35)"
-                    }}
-                  >
-                    <div style={{ fontSize: "0.78rem", fontWeight: 800, color: "#f6dd84", marginBottom: "5px" }}>
-                      Q{qNum} (Key: {teacherAnswerKey[qNum] || "A"})
-                    </div>
-                    <div style={{ display: "flex", justifyContent: "center", gap: "4px", marginBottom: "6px" }}>
-                      {["A", "B", "C", "D"].map((opt) => (
-                        <button
-                          key={`key-${opt}`}
-                          type="button"
-                          onClick={() => handleTeacherKeySelect(qNum, opt)}
-                          style={{
-                            width: "22px",
-                            height: "22px",
-                            borderRadius: "4px",
-                            border: (teacherAnswerKey[qNum] || "A") === opt ? "2px solid #f6dd84" : "1px solid rgba(255,255,255,0.2)",
-                            background: (teacherAnswerKey[qNum] || "A") === opt ? "#d4af37" : "transparent",
-                            color: (teacherAnswerKey[qNum] || "A") === opt ? "#081833" : "#94a3b8",
-                            fontSize: "0.68rem",
-                            fontWeight: 800,
-                            cursor: "pointer",
-                            padding: 0
-                          }}
-                        >
-                          {opt}
-                        </button>
-                      ))}
-                    </div>
-                    <div style={{ fontSize: "0.66rem", color: "#94a3b8", marginBottom: "3px" }}>Student Mark:</div>
-                    <div style={{ display: "flex", justifyContent: "center", gap: "4px" }}>
-                      {["A", "B", "C", "D"].map((opt) => (
-                        <button
-                          key={`stu-${opt}`}
-                          type="button"
-                          onClick={() => handleBubbleSelect(qNum, opt)}
-                          style={{
-                            width: "22px",
-                            height: "22px",
-                            borderRadius: "50%",
-                            border: answers[qNum] === opt ? "2px solid #38bdf8" : "1px solid rgba(255,255,255,0.2)",
-                            background: answers[qNum] === opt ? "#0d2247" : "transparent",
-                            color: "#ffffff",
-                            fontSize: "0.68rem",
-                            fontWeight: 700,
-                            cursor: "pointer",
-                            padding: 0
-                          }}
-                        >
-                          {opt}
-                        </button>
-                      ))}
-                    </div>
+            {(() => {
+              const totalQ = Math.max(1, Math.min(SCANNER_MAX_QUESTIONS, Number(questionCount) || 10));
+              const totalPages = Math.max(1, Math.ceil(totalQ / SCANNER_PAGE_SIZE));
+              const safePage = Math.min(Math.max(1, matrixPage), totalPages);
+              const startQ = (safePage - 1) * SCANNER_PAGE_SIZE + 1;
+              const endQ = Math.min(totalQ, safePage * SCANNER_PAGE_SIZE);
+              const pageQNums = Array.from({ length: endQ - startQ + 1 }, (_, i) => startQ + i);
+              return (
+                <div style={{ marginTop: "16px" }}>
+                  <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: "8px", marginBottom: "8px" }}>
+                    <label style={{ fontSize: "0.85rem", fontWeight: 800, color: "#f6dd84", margin: 0 }}>
+                      🎯 Teacher Master Answer Key &amp; Student Optical Bubbles (Questions {startQ}–{endQ} of {totalQ})
+                    </label>
+                    {totalPages > 1 && (
+                      <div style={{ display: "flex", gap: "4px", flexWrap: "wrap" }}>
+                        {Array.from({ length: totalPages }, (_, i) => i + 1).map((pg) => {
+                          const s = (pg - 1) * SCANNER_PAGE_SIZE + 1;
+                          const e = Math.min(totalQ, pg * SCANNER_PAGE_SIZE);
+                          return (
+                            <button
+                              key={pg}
+                              type="button"
+                              onClick={() => setMatrixPage(pg)}
+                              style={{
+                                padding: "3px 8px",
+                                borderRadius: "5px",
+                                border: safePage === pg ? "1.5px solid #f6dd84" : "1px solid rgba(255,255,255,0.2)",
+                                background: safePage === pg ? "#d4af37" : "rgba(255,255,255,0.06)",
+                                color: safePage === pg ? "#081833" : "#cbd5e1",
+                                fontSize: "0.7rem",
+                                fontWeight: 800,
+                                cursor: "pointer"
+                              }}
+                            >
+                              Q{s}–{e}
+                            </button>
+                          );
+                        })}
+                      </div>
+                    )}
                   </div>
-                ))}
-              </div>
-            </div>
+                  <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(150px, 1fr))", gap: "10px", maxHeight: "360px", overflowY: "auto", paddingRight: "4px" }}>
+                    {pageQNums.map((qNum) => (
+                      <div
+                        key={qNum}
+                        style={{
+                          background: "rgba(8, 24, 51, 0.72)",
+                          padding: "8px",
+                          borderRadius: "8px",
+                          textAlign: "center",
+                          border: "1px solid rgba(212, 175, 55, 0.35)"
+                        }}
+                      >
+                        <div style={{ fontSize: "0.78rem", fontWeight: 800, color: "#f6dd84", marginBottom: "5px" }}>
+                          Q{qNum} (Key: {teacherAnswerKey[qNum] || "A"})
+                        </div>
+                        <div style={{ display: "flex", justifyContent: "center", gap: "4px", marginBottom: "6px" }}>
+                          {["A", "B", "C", "D"].map((opt) => (
+                            <button
+                              key={`key-${opt}`}
+                              type="button"
+                              onClick={() => handleTeacherKeySelect(qNum, opt)}
+                              style={{
+                                width: "22px",
+                                height: "22px",
+                                borderRadius: "4px",
+                                border: (teacherAnswerKey[qNum] || "A") === opt ? "2px solid #f6dd84" : "1px solid rgba(255,255,255,0.2)",
+                                background: (teacherAnswerKey[qNum] || "A") === opt ? "#d4af37" : "transparent",
+                                color: (teacherAnswerKey[qNum] || "A") === opt ? "#081833" : "#94a3b8",
+                                fontSize: "0.68rem",
+                                fontWeight: 800,
+                                cursor: "pointer",
+                                padding: 0
+                              }}
+                            >
+                              {opt}
+                            </button>
+                          ))}
+                        </div>
+                        <div style={{ fontSize: "0.66rem", color: "#94a3b8", marginBottom: "3px" }}>Student Mark:</div>
+                        <div style={{ display: "flex", justifyContent: "center", gap: "4px" }}>
+                          {["A", "B", "C", "D"].map((opt) => (
+                            <button
+                              key={`stu-${opt}`}
+                              type="button"
+                              onClick={() => handleBubbleSelect(qNum, opt)}
+                              style={{
+                                width: "22px",
+                                height: "22px",
+                                borderRadius: "50%",
+                                border: answers[qNum] === opt ? "2px solid #38bdf8" : "1px solid rgba(255,255,255,0.2)",
+                                background: answers[qNum] === opt ? "#0d2247" : "transparent",
+                                color: "#ffffff",
+                                fontSize: "0.68rem",
+                                fontWeight: 700,
+                                cursor: "pointer",
+                                padding: 0
+                              }}
+                            >
+                              {opt}
+                            </button>
+                          ))}
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              );
+            })()}
 
             <div className="dropzone" style={{ marginTop: "18px" }}>
               <span className="drop-icon">📷</span>

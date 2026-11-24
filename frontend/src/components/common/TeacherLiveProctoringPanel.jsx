@@ -1,8 +1,9 @@
 import React, { useState, useEffect, useCallback, useRef } from "react";
+import { createPortal } from "react-dom";
 import apiClient from "../../api/client/apiClient";
 import { printHtmlSafely } from "../../utils/safeWindow";
 import { getActiveSchoolName } from "../../utils/schoolBranding";
-import { getAccessToken } from "../../utils/tokenStorage";
+import { getActiveAuthToken, getAccessToken } from "../../utils/tokenStorage";
 
 /**
  * TeacherLiveProctoringPanel
@@ -36,6 +37,15 @@ export default function TeacherLiveProctoringPanel({
   const [watchModalMsg, setWatchModalMsg] = useState("");
   const [watchModalSeverity, setWatchModalSeverity] = useState("WARNING");
   const [watchModalDeduct, setWatchModalDeduct] = useState(2);
+  const [watchWebRtcLive, setWatchWebRtcLive] = useState(false);
+  const [watchMeasuredFps, setWatchMeasuredFps] = useState(0);
+
+  const watchRemoteVideoRef = useRef(null);
+  const watchRemoteStreamRef = useRef(null);
+  const watchPcRef = useRef(null);
+  const watchViewerIdRef = useRef("");
+  const watchFrameTimestampsRef = useRef([]);
+  const watchSignalHandlerRef = useRef(null);
 
   const activeWatchSession = activeWatchStudentKey
     ? liveSessions.find((s) => String(s.sessionKey || s.studentId) === String(activeWatchStudentKey)) || null
@@ -84,11 +94,11 @@ export default function TeacherLiveProctoringPanel({
   useEffect(() => {
     fetchProctoringData();
 
-    // Real-time SSE Live Proctoring Stream (<50ms latency as students stream exam camera frames)
+    // Real-time SSE Live Proctoring Stream (<20ms push latency as students stream 1.0x camera frames)
     let eventSource = null;
     try {
       if (typeof EventSource !== "undefined") {
-        const tok = getAccessToken();
+        const tok = getActiveAuthToken() || getAccessToken();
         const base = String(apiClient.defaults?.baseURL || "/api/v1").replace(/\/+$/, "");
         const qs = new URLSearchParams();
         if (tok) qs.set("token", tok);
@@ -110,6 +120,12 @@ export default function TeacherLiveProctoringPanel({
             const d = JSON.parse(evt.data);
             const nextSess = d?.session;
             if (!nextSess?.sessionKey) return;
+            const nowMs = Date.now();
+            if (String(nextSess.sessionKey) === String(activeWatchStudentKey || "")) {
+              const arr = [...watchFrameTimestampsRef.current.filter((t) => nowMs - t <= 2000), nowMs];
+              watchFrameTimestampsRef.current = arr;
+              setWatchMeasuredFps(Math.max(1, Math.round(arr.length / 2)));
+            }
             setLiveSessions((prev) => {
               const idx = prev.findIndex((s) => String(s.sessionKey) === String(nextSess.sessionKey));
               if (idx >= 0) {
@@ -119,6 +135,15 @@ export default function TeacherLiveProctoringPanel({
               }
               return [nextSess, ...prev];
             });
+          } catch { }
+        });
+
+        eventSource.addEventListener("proctor_webrtc_signal", (evt) => {
+          try {
+            const d = JSON.parse(evt.data);
+            if (d?.signal && typeof watchSignalHandlerRef.current === "function") {
+              watchSignalHandlerRef.current(d.signal);
+            }
           } catch { }
         });
 
@@ -143,7 +168,7 @@ export default function TeacherLiveProctoringPanel({
       if (!sseConnectedRef.current) {
         fetchLiveOnly();
       }
-    }, 1500);
+    }, 350);
     const fullSyncTimer = setInterval(fetchProctoringData, 8000);
 
     return () => {
@@ -154,7 +179,156 @@ export default function TeacherLiveProctoringPanel({
         try { eventSource.close(); } catch { }
       }
     };
-  }, [fetchProctoringData, fetchLiveOnly, selectedExamId]);
+  }, [fetchProctoringData, fetchLiveOnly, selectedExamId, activeWatchStudentKey]);
+
+  // Real-time 1.0x WebRTC 30 FPS Live Video Receiver when Teacher opens Enlarged Watch & Student Profile Modal
+  useEffect(() => {
+    const sessKey = activeWatchStudentKey;
+    setWatchWebRtcLive(false);
+    setWatchMeasuredFps(0);
+    watchFrameTimestampsRef.current = [];
+    watchRemoteStreamRef.current = null;
+
+    if (!sessKey || typeof RTCPeerConnection !== "function") {
+      watchSignalHandlerRef.current = null;
+      return;
+    }
+
+    let active = true;
+    const viewerId = `invig_${Date.now()}_${Math.floor(Math.random() * 900 + 100)}`;
+    watchViewerIdRef.current = viewerId;
+    const processedSigIds = new Set();
+    let offerReceived = false;
+    let lastSigMs = Date.now() - 3000;
+
+    const pc = new RTCPeerConnection({
+      iceServers: [
+        { urls: "stun:stun.l.google.com:19302" },
+        { urls: "stun:stun1.l.google.com:19302" },
+        { urls: "stun:stun2.l.google.com:19302" }
+      ]
+    });
+    watchPcRef.current = pc;
+
+    try {
+      if (typeof pc.addTransceiver === "function") {
+        pc.addTransceiver("video", { direction: "recvonly" });
+      }
+    } catch { }
+
+    pc.ontrack = (evt) => {
+      const stream = evt.streams?.[0] || new MediaStream([evt.track]);
+      watchRemoteStreamRef.current = stream;
+      if (watchRemoteVideoRef.current) {
+        watchRemoteVideoRef.current.srcObject = stream;
+        watchRemoteVideoRef.current.muted = true;
+        watchRemoteVideoRef.current.playsInline = true;
+        watchRemoteVideoRef.current.playbackRate = 1.0;
+        watchRemoteVideoRef.current.play().catch(() => { });
+      }
+      if (active) setWatchWebRtcLive(true);
+    };
+
+    pc.onicecandidate = (evt) => {
+      if (evt.candidate && active) {
+        apiClient.post("/ai-exam/proctor/webrtc/signal", {
+          sessionKey: sessKey,
+          viewerId,
+          senderRole: "TEACHER",
+          targetRole: "STUDENT",
+          signalType: "ICE_CANDIDATE",
+          data: evt.candidate
+        }).catch(() => { });
+      }
+    };
+
+    pc.onconnectionstatechange = () => {
+      if (!active) return;
+      if (pc.connectionState === "connected") {
+        setWatchWebRtcLive(true);
+      } else if (["failed", "disconnected", "closed"].includes(pc.connectionState)) {
+        setWatchWebRtcLive(false);
+      }
+    };
+
+    const handleIncomingSignal = async (sig) => {
+      if (!active || !sig?.id || processedSigIds.has(sig.id)) return;
+      if (String(sig.sessionKey) !== String(sessKey)) return;
+      if (String(sig.targetRole || "").toUpperCase() !== "TEACHER") return;
+      if (sig.viewerId && String(sig.viewerId) !== viewerId) return;
+      processedSigIds.add(sig.id);
+      if (sig.createdAtMs && sig.createdAtMs > lastSigMs) lastSigMs = sig.createdAtMs;
+
+      if (sig.signalType === "OFFER" && sig.data) {
+        offerReceived = true;
+        try {
+          await pc.setRemoteDescription(new RTCSessionDescription(sig.data));
+          const answer = await pc.createAnswer();
+          await pc.setLocalDescription(answer);
+          await apiClient.post("/ai-exam/proctor/webrtc/signal", {
+            sessionKey: sessKey,
+            viewerId,
+            senderRole: "TEACHER",
+            targetRole: "STUDENT",
+            signalType: "ANSWER",
+            data: answer
+          });
+        } catch { }
+      } else if (sig.signalType === "ICE_CANDIDATE" && sig.data) {
+        try {
+          await pc.addIceCandidate(new RTCIceCandidate(sig.data));
+        } catch { }
+      }
+    };
+
+    watchSignalHandlerRef.current = handleIncomingSignal;
+
+    const sendWatchRequest = () => {
+      if (!active) return;
+      apiClient.post("/ai-exam/proctor/webrtc/signal", {
+        sessionKey: sessKey,
+        viewerId,
+        senderRole: "TEACHER",
+        targetRole: "STUDENT",
+        signalType: "WATCH_REQUEST"
+      }).catch(() => { });
+    };
+
+    sendWatchRequest();
+    const retryWatchTimer = setTimeout(() => {
+      if (active && !offerReceived) sendWatchRequest();
+    }, 1400);
+
+    const sigPollTimer = setInterval(async () => {
+      if (!active) return;
+      try {
+        const res = await apiClient.get("/ai-exam/proctor/webrtc/signals", {
+          params: { sessionKey: sessKey, targetRole: "TEACHER", viewerId, sinceMs: lastSigMs }
+        });
+        const list = res?.data?.data?.signals || [];
+        for (const s of list) {
+          await handleIncomingSignal(s);
+        }
+      } catch { }
+    }, 550);
+
+    return () => {
+      active = false;
+      clearTimeout(retryWatchTimer);
+      clearInterval(sigPollTimer);
+      watchSignalHandlerRef.current = null;
+      apiClient.post("/ai-exam/proctor/webrtc/signal", {
+        sessionKey: sessKey,
+        viewerId,
+        senderRole: "TEACHER",
+        targetRole: "STUDENT",
+        signalType: "WATCH_STOP"
+      }).catch(() => { });
+      try { pc.close(); } catch { }
+      watchPcRef.current = null;
+      watchRemoteStreamRef.current = null;
+    };
+  }, [activeWatchStudentKey]);
 
   // Combined search suggestions across live cameras + class roster
   const searchCandidateMatches = (() => {
@@ -837,9 +1011,9 @@ export default function TeacherLiveProctoringPanel({
         </div>
       )}
 
-      {/* EVIDENCE INSPECTION MODAL */}
-      {inspectEvidenceModal && (
-        <div className="invoice-pay-modal-overlay" onClick={() => setInspectEvidenceModal(null)}>
+      {/* EVIDENCE INSPECTION MODAL (PORTALED TO DOCUMENT.BODY) */}
+      {inspectEvidenceModal && typeof document !== "undefined" && document.body && createPortal(
+        <div className="invoice-pay-modal-overlay" style={{ zIndex: 999990 }} onClick={() => setInspectEvidenceModal(null)}>
           <div style={{ background: "#081833", border: "2px solid #d4af37", borderRadius: "14px", padding: "20px", maxWidth: "600px", width: "95%", color: "#f8fafc" }} onClick={(e) => e.stopPropagation()}>
             <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "10px" }}>
               <h3 style={{ margin: 0, color: "#f6dd84" }}>🗂️ Evidence Reference: {inspectEvidenceModal.studentName}</h3>
@@ -871,12 +1045,13 @@ export default function TeacherLiveProctoringPanel({
               </button>
             </div>
           </div>
-        </div>
+        </div>,
+        document.body
       )}
 
-      {/* ENLARGED LIVE WATCH & STUDENT PROFILE + DIRECT WARNING MODAL */}
-      {activeWatchSession && (
-        <div className="invoice-pay-modal-overlay" onClick={() => setActiveWatchStudentKey(null)}>
+      {/* ENLARGED LIVE WATCH & STUDENT PROFILE + DIRECT WARNING MODAL (PORTALED TO DOCUMENT.BODY, 1.0x REAL-TIME VIDEO) */}
+      {activeWatchSession && typeof document !== "undefined" && document.body && createPortal(
+        <div className="invoice-pay-modal-overlay" style={{ zIndex: 999995 }} onClick={() => setActiveWatchStudentKey(null)}>
           <div
             data-testid="proctor-live-watch-modal"
             style={{
@@ -884,10 +1059,10 @@ export default function TeacherLiveProctoringPanel({
               border: "2px solid #d4af37",
               borderRadius: "16px",
               padding: "22px",
-              maxWidth: "740px",
+              maxWidth: "800px",
               width: "96%",
               color: "#f8fafc",
-              maxHeight: "90vh",
+              maxHeight: "92vh",
               overflowY: "auto"
             }}
             onClick={(e) => e.stopPropagation()}
@@ -907,28 +1082,71 @@ export default function TeacherLiveProctoringPanel({
               <button type="button" onClick={() => setActiveWatchStudentKey(null)} style={{ background: "rgba(212, 175, 55, 0.18)", border: "1px solid #d4af37", color: "#f6dd84", borderRadius: "8px", padding: "6px 12px", fontWeight: 800, cursor: "pointer" }}>✕ Close</button>
             </div>
 
-            <div style={{ display: "grid", gridTemplateColumns: "1.2fr 1fr", gap: "14px", marginBottom: "14px" }}>
+            <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(290px, 1fr))", gap: "14px", marginBottom: "14px" }}>
               <div style={{ background: "#020617", borderRadius: "12px", border: "1.5px solid #d4af37", overflow: "hidden", minHeight: "260px", display: "flex", alignItems: "center", justifyContent: "center", position: "relative" }}>
-                {activeWatchSession.snapshotDataUrl ? (
-                  <img
-                    src={activeWatchSession.snapshotDataUrl}
-                    alt={`Live Stream - ${activeWatchSession.studentName}`}
-                    style={{ width: "100%", height: "100%", maxHeight: "320px", objectFit: "cover" }}
-                  />
-                ) : (
-                  <div style={{ textAlign: "center", padding: "18px", color: "#94a3b8", fontSize: "0.84rem" }}>
-                    <div style={{ fontSize: "2rem", marginBottom: "6px" }}>🎥</div>
-                    Awaiting Examinee Webcam Stream...
-                  </div>
+                {/* Layer A: True 30 FPS 1.0x Real-Time WebRTC Live Video Stream */}
+                <video
+                  ref={watchRemoteVideoRef}
+                  data-testid="proctor-watch-webrtc-video"
+                  autoPlay
+                  playsInline
+                  muted
+                  onLoadedMetadata={(e) => {
+                    e.currentTarget.playbackRate = 1.0;
+                    e.currentTarget.play().catch(() => { });
+                  }}
+                  style={{
+                    width: "100%",
+                    height: "100%",
+                    maxHeight: "340px",
+                    objectFit: "cover",
+                    display: watchWebRtcLive ? "block" : "none"
+                  }}
+                />
+                {/* Layer B: High-Speed 1.0x Smooth Motion SSE Frame Stream (Zero-delay instant display & firewall fallback) */}
+                {!watchWebRtcLive && (
+                  activeWatchSession.snapshotDataUrl ? (
+                    <img
+                      data-testid="proctor-watch-fast-frame"
+                      src={activeWatchSession.snapshotDataUrl}
+                      decoding="async"
+                      alt={`Live Stream - ${activeWatchSession.studentName}`}
+                      style={{ width: "100%", height: "100%", maxHeight: "340px", objectFit: "cover" }}
+                    />
+                  ) : (
+                    <div style={{ textAlign: "center", padding: "18px", color: "#94a3b8", fontSize: "0.84rem" }}>
+                      <div style={{ fontSize: "2rem", marginBottom: "6px" }}>🎥</div>
+                      Awaiting Examinee Webcam Stream...
+                    </div>
+                  )
                 )}
-                <div style={{ position: "absolute", top: "8px", left: "8px", background: "rgba(8, 24, 51, 0.86)", color: "#f6dd84", fontSize: "0.7rem", fontWeight: 800, padding: "3px 8px", borderRadius: "6px", border: "1px solid rgba(212,175,55,0.5)" }}>
+                <div style={{ position: "absolute", top: "8px", left: "8px", background: "rgba(8, 24, 51, 0.88)", color: "#f6dd84", fontSize: "0.7rem", fontWeight: 800, padding: "3px 8px", borderRadius: "6px", border: "1px solid rgba(212,175,55,0.5)" }}>
                   {activeWatchSession.examTitle} • Frame #{activeWatchSession.liveFrameSeq || 1}
+                </div>
+                <div
+                  data-testid="proctor-watch-speed-badge"
+                  style={{
+                    position: "absolute",
+                    bottom: "8px",
+                    right: "8px",
+                    background: watchWebRtcLive ? "rgba(16, 185, 129, 0.9)" : "rgba(2, 132, 199, 0.9)",
+                    color: "#ffffff",
+                    fontSize: "0.68rem",
+                    fontWeight: 900,
+                    padding: "3px 9px",
+                    borderRadius: "999px"
+                  }}
+                >
+                  {watchWebRtcLive
+                    ? "🟢 1.0x REAL-TIME VIDEO (30 FPS)"
+                    : `⚡ 1.0x LIVE STREAM (${watchMeasuredFps || activeWatchSession.streamFpsHint || 10} FPS)`}
                 </div>
               </div>
 
               <div style={{ display: "flex", flexDirection: "column", gap: "10px" }}>
                 <div style={{ background: "rgba(5, 15, 35, 0.78)", border: "1px solid rgba(212, 175, 55, 0.4)", borderRadius: "10px", padding: "10px 12px", fontSize: "0.8rem" }}>
                   <div><strong>Exam Status:</strong> <span style={{ color: "#f6dd84" }}>{activeWatchSession.status}</span></div>
+                  <div><strong>Stream Speed:</strong> <strong style={{ color: "#34d399" }}>1.0x Real-Time ({watchWebRtcLive ? "WebRTC 30 FPS" : `Fast SSE ${watchMeasuredFps || activeWatchSession.streamFpsHint || 10} FPS`})</strong></div>
                   <div><strong>Movement Delta:</strong> {activeWatchSession.movementDelta || 0}</div>
                   <div><strong>Total Warnings:</strong> <strong style={{ color: (activeWatchSession.warningsCount || 0) > 0 ? "#fca5a5" : "#6ee7b7" }}>{activeWatchSession.warningsCount || 0}</strong></div>
                   <div><strong>Lost Marks Deducted:</strong> <strong style={{ color: "#fca5a5" }}>-{activeWatchSession.penaltyMarksDeducted || 0} Marks</strong></div>
@@ -1011,7 +1229,8 @@ export default function TeacherLiveProctoringPanel({
               </div>
             </div>
           </div>
-        </div>
+        </div>,
+        document.body
       )}
     </div>
   );

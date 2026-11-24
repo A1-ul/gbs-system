@@ -221,10 +221,34 @@ const updateStudentClass = async (req, res, next) => {
   }
 };
 
-// 5. Teacher Lesson Plans & Notes Vetting
+// 5. Teacher Lesson Plans & Notes Vetting (NaCCA Learner-Centred Suite)
+const getLessonPlanTemplates = async (req, res, next) => {
+  try {
+    const metadata = await academicService.getLessonPlanTemplates();
+    res.status(200).json({
+      status: 'success',
+      data: metadata
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+
+const evaluateLessonPlanQuality = async (req, res, next) => {
+  try {
+    const report = academicService.checkLessonPlanQuality(req.body || {});
+    res.status(200).json({
+      status: 'success',
+      data: { qualityReport: report }
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+
 const getTeacherLessonPlans = async (req, res, next) => {
   try {
-    const plans = await academicService.getTeacherLessonPlans(req.tenantId, req.query);
+    const plans = await academicService.getTeacherLessonPlans(req.tenantId, req.query, req.user);
     res.status(200).json({
       status: 'success',
       results: plans.length,
@@ -238,10 +262,43 @@ const getTeacherLessonPlans = async (req, res, next) => {
 const submitTeacherLessonPlan = async (req, res, next) => {
   try {
     const newPlan = await academicService.submitTeacherLessonPlan(req.tenantId, req.body, req.user);
+    const isDraft = newPlan.status === 'DRAFT';
     res.status(201).json({
       status: 'success',
-      message: `Lesson plan/notes submitted to Headmaster for vetting successfully.`,
+      message: isDraft
+        ? 'Lesson plan draft saved securely.'
+        : 'Lesson plan/notes submitted to Headmaster for vetting successfully.',
       data: { plan: newPlan }
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+
+const updateTeacherLessonPlan = async (req, res, next) => {
+  try {
+    const updatedPlan = await academicService.updateTeacherLessonPlan(req.tenantId, req.params.id, req.body, req.user);
+    res.status(200).json({
+      status: 'success',
+      message: updatedPlan.status === 'PENDING_VETTING'
+        ? `Lesson plan revision #${updatedPlan.revisionNumber} submitted for Headmaster vetting.`
+        : updatedPlan.status === 'VETTED_APPROVED'
+          ? 'Post-teaching reflection saved on approved lesson note.'
+          : 'Lesson plan draft updated successfully.',
+      data: { plan: updatedPlan }
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+
+const deleteTeacherLessonPlan = async (req, res, next) => {
+  try {
+    const result = await academicService.deleteTeacherLessonPlan(req.tenantId, req.params.id, req.user);
+    res.status(200).json({
+      status: 'success',
+      message: 'Draft lesson plan deleted successfully.',
+      data: result
     });
   } catch (error) {
     next(error);
@@ -253,7 +310,7 @@ const vetTeacherLessonPlan = async (req, res, next) => {
     const vettedPlan = await academicService.vetTeacherLessonPlan(req.tenantId, req.params.id, req.body, req.user);
     res.status(200).json({
       status: 'success',
-      message: `Plan vetted and feedback sent to teacher successfully.`,
+      message: `Plan vetted (${vettedPlan.status}) and feedback sent to teacher successfully.`,
       data: { plan: vettedPlan }
     });
   } catch (error) {
@@ -330,8 +387,12 @@ module.exports = {
   saveAcademicPlan,
   promoteStudents,
   updateStudentClass,
+  getLessonPlanTemplates,
+  evaluateLessonPlanQuality,
   getTeacherLessonPlans,
   submitTeacherLessonPlan,
+  updateTeacherLessonPlan,
+  deleteTeacherLessonPlan,
   vetTeacherLessonPlan,
   broadcastFacultyDirective,
   getFacultyDirectives,

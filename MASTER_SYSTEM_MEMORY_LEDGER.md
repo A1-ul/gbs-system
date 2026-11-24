@@ -295,5 +295,14 @@ node frontend/scripts/build-frontend-memory.cjs
 * **Verification Verdict (`index-C4FRB9If.js`, Commit `2a7d9e4`):** **11 / 11** Real Chrome CDP + PostgreSQL Student→Parent→Accountant E2E checks passed + **18 / 18** backend regression checks passed + **12 / 12** Live Render HTTP production checks passed on `https://gbs-system.onrender.com`.
 
 ---
+
+## 13. PHASE V2.17 — 1.0x REAL-TIME EXAM INVIGILATION CAMERA, CUSTOM UNLIMITED EXAM SCRIPT SCANNER QUESTION COUNT & GHANA NaCCA LESSON PLANNING AND VETTING SUITE (NOV 2026)
+
+* **1.0x Real-Time Live Exam Invigilation Camera:** Replaced 1-second sequential snapshot heartbeats with dual-layer real-time streaming: 30 FPS `1.0x` WebRTC peer video (`WATCH_REQUEST → OFFER → ANSWER → ICE_CANDIDATE`) + non-blocking RAM-only high-speed frame push (`POST /api/v1/ai-exam/proctor/frame` → SSE/Socket.IO), rendered inside a `document.body`-portaled Teacher Live Invigilation modal with explicit `playbackRate = 1.0` and live speed/FPS telemetry.
+* **Custom Arbitrary Question Count in Exam Script Scanner:** Removed all hardcoded `100`/`200` limits across backend (`aiExam.service.js` up to `2000`) and frontend (`TeacherDashboard.jsx`, `ExamScannerDashboard.jsx`, `MobileCameraAIExamScannerModal.jsx`), enabling teachers to type any custom question count (e.g., `25`, `60`, `120`, `135`, `200+`) with decimal marks per question (`0.25+`) and clean 50-questions-per-page pagination.
+* **Ghana NaCCA Learner-Centred Teacher Lesson Planning & Vetting Solution:** Built PostgreSQL-persisted, strictly tenant-isolated lesson planning & vetting (`ensureLessonPlanTables.js`, `lessonPlanQuality.util.js`, `academic.service/controller/routes`, `TeacherLessonPlanStudio.jsx`, `LessonNotesVettingModal.jsx`, `lessonPlanPrintHelper.js`) covering all 16 Ghana NaCCA educational elements + lesson identification, 6 subject-adaptable non-fabricating templates, local draft autosave + DB drafts, 7-point pedagogical alignment & missing-section checks, itemized supervisor comments, revision & resubmission audit history, printable A4 PDF export, and post-teaching reflection recording that preserves approval status.
+* **Verification Verdict (`index-DUkwSuJg.js`):** 100% local E2E API + PostgreSQL + Real Headless Chrome CDP pass (Desktop `1440x900` & Mobile `390x844`, `0` HTML tooltips, `0` uncaught JS errors) + **18 / 18** backend regression checks passed.
+
+---
 *Certified & Archived in System Memory by Gabriel Osei — Lead Architect & Developer.*  
 *GBS Company of Management System — Real-Life Production Foundation.*

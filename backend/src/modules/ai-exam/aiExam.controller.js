@@ -100,6 +100,40 @@ const postProctorHeartbeat = async (req, res, next) => {
   }
 };
 
+const postProctorLiveFrame = async (req, res, next) => {
+  try {
+    const tenantId = resolveTenantId(req, 1);
+    const frameRes = await aiExamService.pushProctorLiveFrame(tenantId, {
+      ...req.body,
+      studentId: req.body?.studentId || req.user?.id,
+      studentEmail: req.body?.studentEmail || req.user?.email
+    });
+    res.status(200).json({ status: 'success', data: frameRes });
+  } catch (error) {
+    next(error);
+  }
+};
+
+const postProctorWebRtcSignal = async (req, res, next) => {
+  try {
+    const tenantId = resolveTenantId(req, 1);
+    const signal = await aiExamService.pushProctorWebRtcSignal(tenantId, req.body || {}, req.user);
+    res.status(200).json({ status: 'success', data: { signal } });
+  } catch (error) {
+    next(error);
+  }
+};
+
+const getProctorWebRtcSignals = async (req, res, next) => {
+  try {
+    const tenantId = resolveTenantId(req, 1);
+    const signals = await aiExamService.getProctorWebRtcSignals(tenantId, req.query || {});
+    res.status(200).json({ status: 'success', data: { signals } });
+  } catch (error) {
+    next(error);
+  }
+};
+
 const getLiveProctorSessions = async (req, res, next) => {
   try {
     const tenantId = resolveTenantId(req, 1);
@@ -141,6 +175,8 @@ const streamProctorLiveEvents = async (req, res, next) => {
         writeEvent('proctor_live_frame', { session: evt.session });
       } else if (evt.type === 'proctor_message' && evt.message) {
         writeEvent('proctor_message', { message: evt.message });
+      } else if (evt.type === 'proctor_webrtc_signal' && evt.signal) {
+        writeEvent('proctor_webrtc_signal', { signal: evt.signal });
       }
     };
 
@@ -365,6 +401,9 @@ module.exports = {
   getAnswerSheets,
   gradeAnswerSheet,
   postProctorHeartbeat,
+  postProctorLiveFrame,
+  postProctorWebRtcSignal,
+  getProctorWebRtcSignals,
   getLiveProctorSessions,
   streamProctorLiveEvents,
   sendProctorMessage,

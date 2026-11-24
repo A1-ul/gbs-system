@@ -37,9 +37,13 @@ router.post('/promote-students', restrictTo('SUPER_ADMIN', 'ADMIN', 'DEVELOPER')
 router.put('/students/:studentId/class', restrictTo('SUPER_ADMIN', 'ADMIN', 'DEVELOPER'), academicController.updateStudentClass);
 router.post('/students/update-class', restrictTo('SUPER_ADMIN', 'ADMIN', 'DEVELOPER'), academicController.updateStudentClass);
 
-// 5. Teacher Lesson Plans & Notes Vetting (Yearly, Termly, Weekly, Lesson Notes)
+// 5. Teacher Lesson Plans & Notes Vetting (NaCCA Learner-Centred Suite: Yearly, Termly, Weekly, Lesson Notes)
+router.get('/lesson-plans/templates', restrictTo('SUPER_ADMIN', 'ADMIN', 'TEACHER', 'DEVELOPER'), academicController.getLessonPlanTemplates);
+router.post('/lesson-plans/quality-check', restrictTo('SUPER_ADMIN', 'ADMIN', 'TEACHER', 'DEVELOPER'), academicController.evaluateLessonPlanQuality);
 router.get('/lesson-plans', academicController.getTeacherLessonPlans);
 router.post('/lesson-plans', restrictTo('SUPER_ADMIN', 'ADMIN', 'TEACHER', 'DEVELOPER'), academicController.submitTeacherLessonPlan);
+router.put('/lesson-plans/:id', restrictTo('SUPER_ADMIN', 'ADMIN', 'TEACHER', 'DEVELOPER'), academicController.updateTeacherLessonPlan);
+router.delete('/lesson-plans/:id', restrictTo('SUPER_ADMIN', 'ADMIN', 'TEACHER', 'DEVELOPER'), academicController.deleteTeacherLessonPlan);
 router.put('/lesson-plans/:id/vet', restrictTo('SUPER_ADMIN', 'ADMIN', 'DEVELOPER'), academicController.vetTeacherLessonPlan);
 router.post('/lesson-plans/directive', restrictTo('SUPER_ADMIN', 'ADMIN', 'DEVELOPER'), academicController.broadcastFacultyDirective);
 router.get('/lesson-plans/directives', academicController.getFacultyDirectives);
