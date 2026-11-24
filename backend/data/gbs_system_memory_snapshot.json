@@ -442,13 +442,13 @@
     }
   ],
   "verificationSummary": {
-    "latestVerifiedCommit": "pending-v215-push",
+    "latestVerifiedCommit": "d22e42b",
     "latestLiveBundleHash": "index-1ypqqsuB.js",
     "liveProductionUrl": "https://gbs-system.onrender.com",
     "autoMemoryRuleFile": "AGENTS.md",
     "backendTestSuitesPassed": "18/18 upgrade regression checks + 25/25 payment/auth/video API checks verified (0 failures)",
     "chromeE2EDashboardsVerified": "All 10 dashboards (Admin, Teacher, Student, Parent, Accountant, Secretary, Staff, HR, Alumni, Developer) verified in real Chrome CDP with 640x360 portaled live cameras, Video->Voice->Video switching, zero 401s, zero tooltips, zero clipped KPIs, Parent payment checkout -> official receipt, Developer dedicated module routing & exact scroll restore (544->0->544), and Mobile 390x844 wrapped visible tabs",
-    "liveRenderHttpAuditPassed": "Verified on https://gbs-system.onrender.com after v2.15 deployment (all 10 roles 200 OK, public onboarding & school fee payments 200/201, strict 401 on unauthenticated protected routes)",
+    "liveRenderHttpAuditPassed": "27/27 live HTTP checks passed on https://gbs-system.onrender.com (bundle index-1ypqqsuB.js, commit d22e42b): all 10 roles 200 OK, public onboarding & school fee payments 201/200 with official receipts, Video->Voice->Video signaling 200/201, SPA routes 200 OK, System Memory v2.15.0 verified, and strict 401 Unauthorized enforced on unauthenticated/cross-scope requests",
     "institutionSeparationUniversityClinicVoiceVerified": "2026-11-20 Tier-Tailored School Portals (JHS/SHS/TVET/University), Separated Internships/Attachments, Clinic Privacy & Non-Disclosure Verified",
     "multiMillionSchoolDatabaseMandate": {
       "enforced": true,

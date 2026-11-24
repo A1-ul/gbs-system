@@ -293,7 +293,7 @@ flowchart TD
 
 ---
 
-## 12. 10-Dashboard Live Video Camera Display, Production Payment Hardening, Responsive Unclipping & Developer Full-Page Module Routing (Nov 2026 — v2.15.0)
+## 12. 10-Dashboard Live Video Camera Display, Production Payment Hardening, Responsive Unclipping & Developer Full-Page Module Routing (Nov 2026 — v2.15.0, Commit `d22e42b`)
 
 ### A. Video Calling Camera Display Across All 10 Dashboards
 - **Root Causes Resolved:**
@@ -318,9 +318,10 @@ flowchart TD
 ### C. Responsive Unclipping, Zero Tooltips & Developer Dedicated Module Routing
 - Removed `text-overflow: ellipsis` / `white-space: nowrap` clipping across [`globals.css`](file:///d:/version1/GBS_SYSTEM/frontend/src/styles/globals.css), [`AdminDashboard.css`](file:///d:/version1/GBS_SYSTEM/frontend/src/modules/portal/pages/dashboards/admin/AdminDashboard.css), [`TeacherDashboard.css`](file:///d:/version1/GBS_SYSTEM/frontend/src/modules/portal/pages/dashboards/teacher/TeacherDashboard.css), [`DeveloperPlatform.css`](file:///d:/version1/GBS_SYSTEM/frontend/src/modules/developer-platform/pages/DeveloperPlatform.css), and [`HRDashboard.jsx`](file:///d:/version1/GBS_SYSTEM/frontend/src/modules/portal/pages/dashboards/hr/HRDashboard.jsx); ensured `.role-tab-nav` wraps visibly and `.role-header-brand` stays visible on `390x844` mobile with zero horizontal overflow.
 - Added dedicated `:moduleId?` routes for Developer Portal in [`AppRouter.jsx`](file:///d:/version1/GBS_SYSTEM/frontend/src/router/AppRouter.jsx) and built self-contained full-page module navigation with sticky `[data-testid="dev-module-page-bar"]` (`← Back`, `🏠 Developer Overview`, `↗ Open in New Tab`) and per-entry exact Back scroll restoration (`gbs_dev_scroll_snapshots_v2`) in [`DeveloperDashboard.jsx`](file:///d:/version1/GBS_SYSTEM/frontend/src/modules/developer-platform/pages/DeveloperDashboard.jsx), preserving strict Developer Portal English LTR isolation (`data-gbs-developer-portal="true" data-gbs-no-translate="true"`).
-- **Verification Verdict (Bundle `index-1ypqqsuB.js`):**
+- **Verification Verdict (Bundle `index-1ypqqsuB.js`, Commit `d22e42b`):**
   - `37 / 37` full E2E API + real Chrome CDP checks passed (`640x360` portaled live cameras across ALL 10 dashboards, `0` HTML tooltip attributes, `0` clipped labels, `0` 401s, `0` console errors, Parent payment UI checkout -> official receipt, Developer full-page module routing + exact Back scroll restoration `544 → 0 → 544`, and `390x844` mobile layout).
   - `18 / 18` upgrade regression checks passed in [`verify_upgrade_e2e.js`](file:///d:/version1/GBS_SYSTEM/backend/verify_upgrade_e2e.js).
+  - `27 / 27` live Render production checks passed on `https://gbs-system.onrender.com` (all 10 roles `200 OK`, public onboarding & parent fee payments `201/200` with receipts, `VIDEO → VOICE → VIDEO` signaling, live SPA routes `200 OK`, and strict `401 Unauthorized` on unauthenticated & cross-scope access).
 
 
 
