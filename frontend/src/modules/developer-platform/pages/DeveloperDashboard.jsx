@@ -21,9 +21,7 @@ import { syncSystemModeFlags } from "../../../utils/tokenStorage";
 import RcceControlHub from "../components/RcceControlHub";
 import PaymentGatewayAdminPanel from "../../../components/common/PaymentGatewayAdminPanel";
 import FinancialReportsPanel from "../../../components/common/FinancialReportsPanel";
-import SchoolClinicHubPanel from "../../../components/common/SchoolClinicHubPanel";
 import UniversityOperationsPanel from "../../../components/common/UniversityOperationsPanel";
-import StudentDefaultersCompliancePanel from "../../../components/common/StudentDefaultersCompliancePanel";
 import { stopAndRestoreEnglishForDeveloper } from "../../../utils/domTranslator";
 import "./DeveloperPlatform.css";
 
@@ -146,9 +144,7 @@ const DEV_MODULE_LABELS = {
   locations: "School Locations & Map",
   multidb: "Multi-DB & Disaster Recovery",
   digitaltwin: "Campus Map & Sensors",
-  payment_admin: "Payment Gateways & Settlement",
-  clinic: "School Clinic Oversight",
-  defaulters: "Defaulters Compliance Registry"
+  payment_admin: "Payment Gateways & Settlement"
 };
 
 function readDevScrollMap() {
@@ -6647,20 +6643,6 @@ export default function DeveloperDashboard() {
             💳 Payment Gateways
           </button>
           <button
-            className={`dev-tab-btn ${activeTab === "clinic" ? "active" : ""}`}
-            onClick={() => setActiveTab("clinic")}
-            style={{ borderColor: "#10b981", color: activeTab === "clinic" ? "#fff" : "#6ee7b7" }}
-          >
-            🏥 School Clinic Oversight
-          </button>
-          <button
-            className={`dev-tab-btn ${activeTab === "defaulters" ? "active" : ""}`}
-            onClick={() => setActiveTab("defaulters")}
-            style={{ borderColor: "#f59e0b", color: activeTab === "defaulters" ? "#fff" : "#fcd34d" }}
-          >
-            📋 Defaulters Compliance
-          </button>
-          <button
             type="button"
             data-testid="dev-open-tab-new-page-btn"
             onClick={() => openCurrentTabInNewPage(activeTab)}
@@ -11907,21 +11889,6 @@ export default function DeveloperDashboard() {
                 title="Developer Payment Gateway Administration & Webhook Console"
               />
             </div>
-          </div>
-        )}
-
-        {activeTab === "clinic" && (
-          <div className="tab-pane-content">
-            <SchoolClinicHubPanel
-              mode="ADMIN"
-              currentUser={{ firstName: "Gabriel", lastName: "Osei", role: "DEVELOPER" }}
-            />
-          </div>
-        )}
-
-        {activeTab === "defaulters" && (
-          <div className="tab-pane-content">
-            <StudentDefaultersCompliancePanel onFeedback={(msg) => showNotification(msg)} />
           </div>
         )}
 

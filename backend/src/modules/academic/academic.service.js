@@ -2078,7 +2078,7 @@ const getDefaultersReport = async (tenantId, query = {}, req = null) => {
   const store = readPersistentStore();
   const institutionType = await resolveTenantInstitutionType({ tenantId: tidNum, user: req?.user, req });
 
-  // 1. Gather enrolled students for this tenant
+  // 1. Gather enrolled students + linked parent/guardian mobile numbers for this tenant
   const studentMap = new Map();
   const addStudent = (s) => {
     if (!s) return;
@@ -2090,24 +2090,62 @@ const getDefaultersReport = async (tenantId, query = {}, req = null) => {
       name: s.name || prev.name || `${s.firstName || ''} ${s.lastName || ''}`.trim() || 'Enrolled Student',
       email: s.email || prev.email || null,
       phone: s.phone || prev.phone || null,
+      parentName: s.parentName || prev.parentName || null,
+      parentPhone: s.parentPhone || prev.parentPhone || null,
       classOrLevel: s.classOrLevel || prev.classOrLevel || 'Enrolled Class'
     });
   };
 
+  // Enrich parent contact lookup from admissions & registered parent links
+  const parentLookupByEmail = new Map();
+  const parentLookupByName = new Map();
+  const admissionsList = Array.isArray(store.studentAdmissions?.[tidStr])
+    ? store.studentAdmissions[tidStr]
+    : (Array.isArray(store.admissions) ? store.admissions.filter((a) => String(a.tenantId || '1') === tidStr) : []);
+  admissionsList.forEach((adm) => {
+    const pInfo = {
+      parentName: adm.guardianName || adm.parentName || null,
+      parentPhone: adm.guardianPhone || adm.parentPhone || null,
+      studentPhone: adm.phone || adm.studentPhone || null
+    };
+    if (adm.email) parentLookupByEmail.set(String(adm.email).toLowerCase(), pInfo);
+    const full = `${adm.firstName || ''} ${adm.lastName || ''}`.trim().toLowerCase();
+    if (full) parentLookupByName.set(full, pInfo);
+  });
+
   try {
     const dbStudents = await prisma.student.findMany({
       where: { tenantId: tidNum },
-      include: { user: { select: { id: true, firstName: true, lastName: true, email: true } } }
+      include: {
+        user: { select: { id: true, firstName: true, lastName: true, email: true } },
+        parents: {
+          include: {
+            parent: {
+              include: {
+                user: { select: { firstName: true, lastName: true, email: true, registrationProfile: { select: { phone: true } } } }
+              }
+            }
+          }
+        }
+      }
     });
-    dbStudents.forEach((st) =>
+    dbStudents.forEach((st) => {
+      const firstParent = st.parents?.[0]?.parent;
+      const pName = firstParent?.user
+        ? `${firstParent.user.firstName || ''} ${firstParent.user.lastName || ''}`.trim()
+        : null;
+      const pPhone = firstParent?.phone || firstParent?.user?.registrationProfile?.phone || null;
       addStudent({
         id: st.userId || st.id,
         studentNumber: st.studentNumber || st.admissionNumber,
         name: st.user ? `${st.user.firstName || ''} ${st.user.lastName || ''}`.trim() : st.fullName || `Student #${st.id}`,
         email: st.user?.email || st.email,
+        phone: st.phone || null,
+        parentName: pName,
+        parentPhone: pPhone,
         classOrLevel: st.gradeLevel || st.className || 'Assigned Class'
-      })
-    );
+      });
+    });
   } catch { }
 
   try {
@@ -2115,27 +2153,35 @@ const getDefaultersReport = async (tenantId, query = {}, req = null) => {
       where: { tenantId: tidNum, role: 'STUDENT', isDeleted: false },
       include: { registrationProfile: { select: { phone: true } } }
     });
-    dbStudentUsers.forEach((u) =>
+    dbStudentUsers.forEach((u) => {
+      const pMatch = parentLookupByEmail.get(String(u.email || '').toLowerCase()) ||
+        parentLookupByName.get(`${u.firstName || ''} ${u.lastName || ''}`.trim().toLowerCase()) || {};
       addStudent({
         id: u.id,
         name: `${u.firstName || ''} ${u.lastName || ''}`.trim(),
         email: u.email,
-        phone: u.registrationProfile?.phone || null
-      })
-    );
+        phone: u.registrationProfile?.phone || pMatch.studentPhone || null,
+        parentName: pMatch.parentName || null,
+        parentPhone: pMatch.parentPhone || null
+      });
+    });
   } catch { }
 
   [...(store.registeredUsers || []), ...(store.users || [])]
     .filter((u) => u && String(u.role || '').toUpperCase() === 'STUDENT' && String(u.tenantId || '1') === tidStr && !u.isDeleted)
-    .forEach((u) =>
+    .forEach((u) => {
+      const pMatch = parentLookupByEmail.get(String(u.email || '').toLowerCase()) ||
+        parentLookupByName.get(`${u.firstName || ''} ${u.lastName || ''}`.trim().toLowerCase()) || {};
       addStudent({
         id: u.id,
         name: `${u.firstName || ''} ${u.lastName || ''}`.trim(),
         email: u.email,
-        phone: u.phone || null,
+        phone: u.phone || pMatch.studentPhone || null,
+        parentName: u.guardianName || u.parentName || pMatch.parentName || null,
+        parentPhone: u.guardianPhone || u.parentPhone || pMatch.parentPhone || null,
         classOrLevel: u.targetGrade || u.level || 'Registered Student'
-      })
-    );
+      });
+    });
 
   // Merge any persisted teacher/client compliance roster items for this tenant
   const customSnap = (store.studentComplianceRecords || {})[tidStr] || null;
@@ -2179,6 +2225,8 @@ const getDefaultersReport = async (tenantId, query = {}, req = null) => {
             studentName: st.name,
             email: st.email,
             phone: st.phone,
+            parentName: st.parentName || null,
+            parentPhone: st.parentPhone || null,
             classOrLevel: st.classOrLevel,
             missedExamTitle: latestExamTitle,
             status: 'DID_NOT_TAKE_EXAM'
@@ -2219,6 +2267,8 @@ const getDefaultersReport = async (tenantId, query = {}, req = null) => {
             studentName: st.name,
             email: st.email,
             phone: st.phone,
+            parentName: st.parentName || null,
+            parentPhone: st.parentPhone || null,
             classOrLevel: st.classOrLevel,
             missingAssignmentTitle: latestAssignTitle,
             dueDate: assignments[0]?.dueDate || null,
@@ -2259,6 +2309,8 @@ const getDefaultersReport = async (tenantId, query = {}, req = null) => {
             studentName: st.name,
             email: st.email,
             phone: st.phone,
+            parentName: st.parentName || null,
+            parentPhone: st.parentPhone || null,
             classOrLevel: st.classOrLevel,
             absentDays: stats.absentDays,
             presentDays: stats.presentDays,
@@ -2308,6 +2360,179 @@ const syncDefaultersSnapshot = async (tenantId, payload = {}) => {
   return await getDefaultersReport(tenantId);
 };
 
+// ============================================================================
+// HEADMASTER -> SECRETARY DEFAULTERS PHONE CHECKUP & FEEDBACK LOOP
+// ============================================================================
+const dispatchDefaultersToSecretary = async (tenantId, payload = {}, user = null) => {
+  const tidNum = parseInt(tenantId, 10) || 1;
+  const tidStr = String(tidNum);
+  const rawItems = Array.isArray(payload.items) && payload.items.length > 0
+    ? payload.items
+    : (payload.studentName ? [payload] : []);
+
+  if (rawItems.length === 0) {
+    throw new AppError('Please select at least one defaulter student to send to the School Secretary for parent/student phone follow-up.', 400);
+  }
+
+  const nowIso = new Date().toISOString();
+  const dispatcherName = user
+    ? `${user.firstName || ''} ${user.lastName || ''}`.trim() || user.email || 'Headmaster'
+    : 'Headmaster';
+  const headmasterNote = String(payload.headmasterNote || payload.instructions || 'Please call the student or parent/guardian via their mobile number to verify the exact reason and report feedback back to the Headmaster.').trim();
+
+  const createdRecords = rawItems.map((item, idx) => {
+    const rawCat = String(item.category || item.status || 'NOT_ATTENDING_SCHOOL').trim().toUpperCase();
+    const category =
+      rawCat.includes('EXAM') ? 'MISSED_EXAM'
+        : rawCat.includes('ASSIGN') ? 'UNSUBMITTED_ASSIGNMENT'
+          : 'NOT_ATTENDING_SCHOOL';
+    return {
+      id: `DFU-${tidNum}-${Date.now()}-${idx}-${Math.floor(100 + Math.random() * 900)}`,
+      tenantId: tidNum,
+      studentId: item.studentId || item.id || `STU-${idx + 1}`,
+      studentName: String(item.studentName || item.name || 'Enrolled Student').trim(),
+      studentEmail: item.studentEmail || item.email || null,
+      studentPhone: String(item.studentPhone || item.phone || '').trim() || null,
+      parentName: String(item.parentName || item.guardianName || '').trim() || null,
+      parentPhone: String(item.parentPhone || item.guardianPhone || '').trim() || null,
+      classOrLevel: String(item.classOrLevel || item.className || 'Assigned Class').trim(),
+      category,
+      issueDetail: String(
+        item.issueDetail ||
+        item.missedExamTitle ||
+        item.missingAssignmentTitle ||
+        (item.absentDays ? `${item.absentDays} absent day(s)` : '') ||
+        (category === 'MISSED_EXAM'
+          ? 'Could not / did not write scheduled examination'
+          : category === 'UNSUBMITTED_ASSIGNMENT'
+            ? 'Has not submitted required assignment'
+            : 'Has not been coming to school')
+      ).trim(),
+      headmasterNote: String(item.headmasterNote || headmasterNote).trim(),
+      dispatchedByName: dispatcherName,
+      dispatchedByEmail: user?.email || null,
+      dispatchedAt: nowIso,
+      status: 'PENDING_SECRETARY_CALL',
+      secretaryReport: null
+    };
+  });
+
+  writePersistentStore((curr) => {
+    const map = { ...(curr.defaultersFollowups || {}) };
+    const existing = Array.isArray(map[tidStr]) ? map[tidStr] : [];
+    map[tidStr] = [...createdRecords, ...existing].slice(0, 500);
+    return { ...curr, defaultersFollowups: map };
+  });
+
+  try {
+    await prisma.auditLog.create({
+      data: {
+        tenantId: tidNum,
+        userId: Number.isInteger(Number(user?.id)) ? Number(user.id) : null,
+        module: 'ACADEMICS_DEFAULTERS',
+        action: 'HEADMASTER_DISPATCHED_DEFAULTERS_TO_SECRETARY',
+        details: `${dispatcherName} dispatched ${createdRecords.length} defaulter follow-up checkup(s) to School Secretary.`
+      }
+    }).catch(() => { });
+  } catch { }
+
+  return {
+    dispatchedCount: createdRecords.length,
+    followups: createdRecords
+  };
+};
+
+const getDefaultersFollowups = async (tenantId, query = {}) => {
+  const tidNum = parseInt(tenantId, 10) || 1;
+  const tidStr = String(tidNum);
+  const store = readPersistentStore();
+  let list = Array.isArray(store.defaultersFollowups?.[tidStr])
+    ? store.defaultersFollowups[tidStr]
+    : [];
+
+  if (query.status && String(query.status).toUpperCase() !== 'ALL') {
+    const st = String(query.status).toUpperCase();
+    list = list.filter((x) => String(x.status || '').toUpperCase() === st);
+  }
+  if (query.category && String(query.category).toUpperCase() !== 'ALL') {
+    const cat = String(query.category).toUpperCase();
+    list = list.filter((x) => String(x.category || '').toUpperCase() === cat);
+  }
+
+  const allTenantItems = Array.isArray(store.defaultersFollowups?.[tidStr])
+    ? store.defaultersFollowups[tidStr]
+    : [];
+
+  return {
+    tenantId: tidNum,
+    totalDispatched: allTenantItems.length,
+    pendingSecretaryCallCount: allTenantItems.filter((x) => x.status === 'PENDING_SECRETARY_CALL').length,
+    reportedBackCount: allTenantItems.filter((x) => x.status === 'REPORTED_TO_HEADMASTER').length,
+    followups: list
+  };
+};
+
+const submitSecretaryFollowupReport = async (tenantId, followupId, payload = {}, user = null) => {
+  const tidNum = parseInt(tenantId, 10) || 1;
+  const tidStr = String(tidNum);
+  const verifiedReason = String(payload.verifiedReason || payload.reason || payload.feedback || '').trim();
+  if (!verifiedReason) {
+    throw new AppError('Please enter the verified reason obtained from the student or parent before submitting feedback to the Headmaster.', 400);
+  }
+
+  const store = readPersistentStore();
+  const list = Array.isArray(store.defaultersFollowups?.[tidStr]) ? store.defaultersFollowups[tidStr] : [];
+  const target = list.find((x) => String(x.id) === String(followupId));
+  if (!target) {
+    throw new AppError(`Defaulter follow-up record "${followupId}" was not found for institution #${tidNum}.`, 404);
+  }
+
+  const nowIso = new Date().toISOString();
+  const secretaryName = user
+    ? `${user.firstName || ''} ${user.lastName || ''}`.trim() || user.email || 'School Secretary'
+    : 'School Secretary';
+
+  const reportObj = {
+    contactCalled: String(payload.contactCalled || 'PARENT').trim().toUpperCase(),
+    phoneDialed: String(payload.phoneDialed || target.parentPhone || target.studentPhone || '').trim() || 'Recorded Contact',
+    callOutcome: String(payload.callOutcome || 'REACHED_VERIFIED').trim().toUpperCase(),
+    verifiedReason,
+    expectedReturnDate: String(payload.expectedReturnDate || '').trim() || null,
+    secretaryNotes: String(payload.secretaryNotes || '').trim() || '',
+    reportedByName: secretaryName,
+    reportedByEmail: user?.email || null,
+    reportedAt: nowIso
+  };
+
+  const updated = {
+    ...target,
+    status: 'REPORTED_TO_HEADMASTER',
+    secretaryReport: reportObj,
+    updatedAt: nowIso
+  };
+
+  writePersistentStore((curr) => {
+    const map = { ...(curr.defaultersFollowups || {}) };
+    const existing = Array.isArray(map[tidStr]) ? map[tidStr] : [];
+    map[tidStr] = existing.map((x) => (String(x.id) === String(followupId) ? updated : x));
+    return { ...curr, defaultersFollowups: map };
+  });
+
+  try {
+    await prisma.auditLog.create({
+      data: {
+        tenantId: tidNum,
+        userId: Number.isInteger(Number(user?.id)) ? Number(user.id) : null,
+        module: 'ACADEMICS_DEFAULTERS',
+        action: 'SECRETARY_REPORTED_DEFAULTER_CHECKUP',
+        details: `${secretaryName} called ${reportObj.contactCalled} (${reportObj.phoneDialed}) for ${target.studentName} and reported to Headmaster: ${verifiedReason}`
+      }
+    }).catch(() => { });
+  } catch { }
+
+  return updated;
+};
+
 module.exports = {
   getClasses,
   getClassById,
@@ -2336,5 +2561,8 @@ module.exports = {
   broadcastFacultyDirective,
   getFacultyDirectives,
   getDefaultersReport,
-  syncDefaultersSnapshot
+  syncDefaultersSnapshot,
+  dispatchDefaultersToSecretary,
+  getDefaultersFollowups,
+  submitSecretaryFollowupReport
 };

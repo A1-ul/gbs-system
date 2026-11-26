@@ -48,8 +48,11 @@ router.put('/lesson-plans/:id/vet', restrictTo('SUPER_ADMIN', 'ADMIN', 'DEVELOPE
 router.post('/lesson-plans/directive', restrictTo('SUPER_ADMIN', 'ADMIN', 'DEVELOPER'), academicController.broadcastFacultyDirective);
 router.get('/lesson-plans/directives', academicController.getFacultyDirectives);
 
-// 6. Student Compliance & Non-Participants Ledger (Missed Exams, Missing Assignments, Chronic Absentees)
-router.get('/defaulters-report', restrictTo('SUPER_ADMIN', 'ADMIN', 'TEACHER', 'HR', 'DEVELOPER'), academicController.getDefaultersReport);
-router.post('/defaulters-report/sync', restrictTo('SUPER_ADMIN', 'ADMIN', 'TEACHER', 'DEVELOPER'), academicController.syncDefaultersReport);
+// 6. Student Compliance & Non-Participants Ledger (Missed Exams, Missing Assignments, Chronic Absentees + Headmaster->Secretary Phone Checkup Loop)
+router.get('/defaulters-report', restrictTo('SUPER_ADMIN', 'ADMIN', 'HEADMASTER', 'PRINCIPAL', 'TEACHER', 'SECRETARY', 'HR', 'DEVELOPER'), academicController.getDefaultersReport);
+router.post('/defaulters-report/sync', restrictTo('SUPER_ADMIN', 'ADMIN', 'HEADMASTER', 'PRINCIPAL', 'TEACHER', 'DEVELOPER'), academicController.syncDefaultersReport);
+router.get('/defaulters-followups', restrictTo('SUPER_ADMIN', 'ADMIN', 'HEADMASTER', 'PRINCIPAL', 'SECRETARY', 'TEACHER', 'DEVELOPER'), academicController.getDefaultersFollowups);
+router.post('/defaulters-followups', restrictTo('SUPER_ADMIN', 'ADMIN', 'HEADMASTER', 'PRINCIPAL', 'DEVELOPER'), academicController.dispatchDefaultersToSecretary);
+router.patch('/defaulters-followups/:id/report', restrictTo('SECRETARY', 'SUPER_ADMIN', 'ADMIN', 'HEADMASTER', 'PRINCIPAL', 'DEVELOPER'), academicController.submitSecretaryFollowupReport);
 
 module.exports = router;

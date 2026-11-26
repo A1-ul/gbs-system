@@ -24,6 +24,8 @@ router.use(tenantIsolationGuard);
 
 router.get('/calls/directory', controller.getDirectory);
 router.get('/calls/incoming', controller.getIncomingAndActive);
+router.get('/calls/missed', controller.getMissedCalls);
+router.patch('/calls/missed/:callId/acknowledge', controller.acknowledgeMissedCall);
 router.post('/calls/presence', controller.updatePresence);
 router.post('/calls/initiate', controller.initiateCall);
 router.get('/calls/:callId/stream', controller.streamCallEvents);

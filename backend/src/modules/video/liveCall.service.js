@@ -415,6 +415,34 @@ async function getCallDirectory(req) {
 /**
  * Initiates either a direct 1-on-1 Voice/Video Call OR a Multi-Participant Live Conference / Live Online Class Room.
  */
+function formatRolePosition(role = '') {
+  const r = String(role || '').trim().toUpperCase();
+  const MAP = {
+    DEVELOPER: 'System Engineer / Developer',
+    SUPER_ADMIN: 'Executive Headmaster / Director',
+    ADMIN: 'Headmaster / Principal',
+    HEADMASTER: 'Headmaster / Principal',
+    PRINCIPAL: 'Principal / Headmaster',
+    TEACHER: 'Teacher / Lecturer',
+    LECTURER: 'Lecturer / Teacher',
+    SECRETARY: 'School Secretary',
+    CLINIC_DOCTOR: 'School Clinic Doctor',
+    CLINIC_NURSE: 'School Clinic Nurse',
+    DOCTOR: 'School Clinic Doctor',
+    NURSE: 'School Clinic Nurse',
+    ACCOUNTANT: 'Accountant / Bursar',
+    BURSAR: 'Accountant / Bursar',
+    HR: 'Human Resources Officer',
+    STAFF: 'Non-Teaching Staff',
+    STUDENT: 'Student',
+    PARENT: 'Parent / Guardian',
+    ALUMNI: 'Alumni Member'
+  };
+  return MAP[r] || (r ? r.replace(/_/g, ' ') : 'School Member');
+}
+
+const DIRECT_RING_TIMEOUT_MS = 45000;
+
 async function initiateCall(req) {
   const callerIsDev = isDeveloperUser(req.user);
   const body = req.body || {};
@@ -483,12 +511,17 @@ async function initiateCall(req) {
     initiatorName,
     initiatorEmail: String(req.user?.email || '').trim().toLowerCase(),
     initiatorRole,
+    initiatorPosition: formatRolePosition(initiatorRole),
     targetUserId: body.targetUserId ? String(body.targetUserId) : null,
     targetName: body.targetName ? String(body.targetName).trim() : null,
     targetEmail: body.targetEmail ? String(body.targetEmail).trim().toLowerCase() : null,
     targetPhone: body.targetPhone ? String(body.targetPhone).trim() : null,
     targetRole: body.targetRole ? String(body.targetRole).toUpperCase() : (callerIsDev ? 'ADMIN' : null),
+    targetPosition: formatRolePosition(body.targetRole || (callerIsDev ? 'ADMIN' : '')),
     status: callScope === 'DIRECT' ? 'RINGING' : 'ACTIVE',
+    seenByCallee: false,
+    missedAt: null,
+    returnedAt: null,
     participants: [
       {
         userId: initiatorUserId,
@@ -522,9 +555,11 @@ async function initiateCall(req) {
     initiatorUserId: session.initiatorUserId,
     initiatorName: session.initiatorName,
     initiatorRole: session.initiatorRole,
+    initiatorPosition: session.initiatorPosition,
     targetUserId: session.targetUserId,
     targetEmail: session.targetEmail,
     targetRole: session.targetRole,
+    targetPosition: session.targetPosition,
     status: session.status,
     startedAt: session.startedAt
   });
@@ -628,19 +663,61 @@ function canUserSeeActiveConference(call, user = {}) {
   return true;
 }
 
+function expireTimedOutDirectCalls(tid) {
+  const nowMs = Date.now();
+  let changed = false;
+  const current = getTenantCallStore(tid);
+  for (const c of current) {
+    if (
+      c.callScope === 'DIRECT' &&
+      c.status === 'RINGING' &&
+      !c.answeredAt &&
+      nowMs - new Date(c.startedAt || 0).getTime() >= DIRECT_RING_TIMEOUT_MS
+    ) {
+      changed = true;
+      break;
+    }
+  }
+  if (!changed) return;
+  const nowIso = new Date(nowMs).toISOString();
+  saveTenantCallStore(tid, (list) =>
+    list.map((c) => {
+      if (
+        c.callScope === 'DIRECT' &&
+        c.status === 'RINGING' &&
+        !c.answeredAt &&
+        nowMs - new Date(c.startedAt || 0).getTime() >= DIRECT_RING_TIMEOUT_MS
+      ) {
+        return {
+          ...c,
+          status: 'MISSED',
+          missedAt: c.missedAt || nowIso,
+          endedAt: c.endedAt || nowIso,
+          seenByCallee: false,
+          missedReason: 'NO_ANSWER_OR_OFFLINE'
+        };
+      }
+      return c;
+    })
+  );
+}
+
 async function getIncomingAndActiveCalls(req) {
   const tid = parseTid(req);
   touchPresence(req.user, tid);
+  expireTimedOutDirectCalls(tid);
   const callerIsDev = isDeveloperUser(req.user);
   const callerId = String(req.user?.id || '');
   const callerEmail = String(req.user?.email || '').trim().toLowerCase();
   const cutoffMs = Date.now() - 12 * 3600 * 1000;
+  const missedCutoffMs = Date.now() - 7 * 24 * 3600 * 1000;
 
   let list = [];
   if (callerIsDev) {
     const store = readPersistentStore();
     const map = store.liveCallSessions || {};
-    for (const bucket of Object.values(map)) {
+    for (const [bTid, bucket] of Object.entries(map)) {
+      expireTimedOutDirectCalls(parseInt(bTid, 10) || 1);
       if (Array.isArray(bucket)) {
         for (const c of bucket) {
           if (
@@ -671,9 +748,27 @@ async function getIncomingAndActiveCalls(req) {
     return Number.isFinite(t) && t >= cutoffMs;
   });
 
-  const incomingCalls = recentActive.filter(
-    (c) => c.status === 'RINGING' && doesCallTargetUser(c, req.user)
-  );
+  const incomingCalls = recentActive
+    .filter((c) => c.status === 'RINGING' && doesCallTargetUser(c, req.user))
+    .map((c) => ({
+      ...c,
+      initiatorPosition: c.initiatorPosition || formatRolePosition(c.initiatorRole)
+    }));
+
+  const missedCalls = list
+    .filter((c) => {
+      if (c.status !== 'MISSED' || c.callScope !== 'DIRECT') return false;
+      if (c.seenByCallee === true) return false;
+      const t = new Date(c.missedAt || c.endedAt || c.startedAt || 0).getTime();
+      if (!Number.isFinite(t) || t < missedCutoffMs) return false;
+      return doesCallTargetUser(c, req.user);
+    })
+    .slice(0, 15)
+    .map(({ signals, ...c }) => ({
+      ...c,
+      initiatorPosition: c.initiatorPosition || formatRolePosition(c.initiatorRole)
+    }));
+
   const activeConferences = recentActive.filter((c) => canUserSeeActiveConference(c, req.user));
   const myCalls = list
     .filter(
@@ -686,9 +781,48 @@ async function getIncomingAndActiveCalls(req) {
 
   return {
     incomingCalls,
+    missedCalls,
     activeConferences,
-    recentCalls: myCalls.map(({ signals, ...rest }) => rest)
+    recentCalls: myCalls.map(({ signals, ...rest }) => ({
+      ...rest,
+      initiatorPosition: rest.initiatorPosition || formatRolePosition(rest.initiatorRole),
+      targetPosition: rest.targetPosition || formatRolePosition(rest.targetRole)
+    }))
   };
+}
+
+async function getMissedCalls(req) {
+  const data = await getIncomingAndActiveCalls(req);
+  return {
+    missedCalls: data.missedCalls || [],
+    unseenCount: (data.missedCalls || []).length
+  };
+}
+
+async function acknowledgeMissedCall(req) {
+  const callId = req.params.callId;
+  const { tid } = resolveCallLocation(req, callId);
+  const action = String(req.body?.action || 'DISMISSED').toUpperCase();
+  const nowIso = new Date().toISOString();
+  let updatedSession = null;
+
+  saveTenantCallStore(tid, (list) =>
+    list.map((c) => {
+      if (String(c.id) !== String(callId) && String(c.roomCode) !== String(callId)) return c;
+      updatedSession = {
+        ...c,
+        seenByCallee: true,
+        acknowledgedAt: nowIso,
+        returnedAt: action === 'RETURNED' ? nowIso : (c.returnedAt || null)
+      };
+      return updatedSession;
+    })
+  );
+
+  if (!updatedSession) {
+    throw new AppError(`Missed call "${callId}" was not found.`, 404);
+  }
+  return updatedSession;
 }
 
 async function answerOrJoinCall(req) {
@@ -788,14 +922,19 @@ async function endCall(req) {
   const callId = req.params.callId;
   const { tid } = resolveCallLocation(req, callId);
   let updatedSession = null;
+  const nowIso = new Date().toISOString();
 
   saveTenantCallStore(tid, (list) =>
     list.map((c) => {
       if (String(c.id) !== String(callId) && String(c.roomCode) !== String(callId)) return c;
+      const wasUnansweredDirect = c.callScope === 'DIRECT' && c.status === 'RINGING' && !c.answeredAt;
       updatedSession = {
         ...c,
-        status: 'ENDED',
-        endedAt: new Date().toISOString()
+        status: wasUnansweredDirect ? 'MISSED' : 'ENDED',
+        endedAt: nowIso,
+        missedAt: wasUnansweredDirect ? nowIso : (c.missedAt || null),
+        seenByCallee: wasUnansweredDirect ? false : Boolean(c.seenByCallee),
+        missedReason: wasUnansweredDirect ? 'UNANSWERED_OR_OFFLINE' : (c.missedReason || null)
       };
       return updatedSession;
     })
@@ -808,10 +947,11 @@ async function endCall(req) {
   socketServer.emitToRoom(`call_${tid}_${updatedSession.roomCode}`, 'call_ended', {
     callId: updatedSession.id,
     roomCode: updatedSession.roomCode,
+    status: updatedSession.status,
     endedBy: formatCallerName(req.user)
   });
   emitCallStreamEvent(updatedSession.id, updatedSession.roomCode, 'call_ended', {
-    status: 'ENDED',
+    status: updatedSession.status,
     endedBy: formatCallerName(req.user)
   });
   return updatedSession;
@@ -998,6 +1138,8 @@ module.exports = {
   getCallDirectory,
   initiateCall,
   getIncomingAndActiveCalls,
+  getMissedCalls,
+  acknowledgeMissedCall,
   answerOrJoinCall,
   declineCall,
   endCall,

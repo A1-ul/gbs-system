@@ -6,6 +6,7 @@ import TopCenterSystemBanner from "../../../components/common/TopCenterSystemBan
 import OfficialInstitutionalSeal from "../../../components/common/OfficialInstitutionalSeal";
 import UniversalRoleGuideModal from "../../../components/common/UniversalRoleGuideModal";
 import LiveCallLauncherAndReceiver from "../../../components/common/LiveCallLauncherAndReceiver";
+import SchoolClinicHubPanel from "../../../components/common/SchoolClinicHubPanel";
 import { navigateToDetail } from "../../../utils/universalNavigation";
 import { getActiveSchoolName, getActiveSchoolLogo } from "../../../utils/schoolBranding";
 import { isDemoSandboxMode, clearAuthStorage } from "../../../utils/tokenStorage";
@@ -27,7 +28,11 @@ export default function AlumniDashboard() {
   const { activeTab, setActiveTab } = useDashboardTabSync("CUMULATIVE_RECORDS", "gbs_alumni_active_tab");
 
   useEffect(() => {
-    const onVoiceTab = (e) => { if (e?.detail?.tab) setActiveTab(e.detail.tab); };
+    const onVoiceTab = (e) => {
+      if (e?.detail?.tab) {
+        setActiveTab(e.detail.tab === "clinic" ? "MY_HEALTH" : e.detail.tab);
+      }
+    };
     window.addEventListener("gbs_open_dashboard_tab", onVoiceTab);
     return () => window.removeEventListener("gbs_open_dashboard_tab", onVoiceTab);
   }, [setActiveTab]);
@@ -298,6 +303,15 @@ export default function AlumniDashboard() {
     ];
   }, []);
 
+  // Permanent Institutional Alumni Ledger Directory
+  const ALUMNI_LEDGER_DIRECTORY = useMemo(() => {
+    try {
+      const stored = localStorage.getItem("gbs_alumni_directory");
+      if (stored) return JSON.parse(stored);
+    } catch { }
+    return [];
+  }, []);
+
   // Completion Batches Directory (Demo showcase vs real institutional cohorts)
   const batchesData = useMemo(() => {
     if (!isDemoMode) {
@@ -377,15 +391,6 @@ export default function AlumniDashboard() {
     if (selectedLevelFilter === "ALL") return cumulativeAcademicHistory;
     return cumulativeAcademicHistory.filter(item => item.levelCode === selectedLevelFilter);
   }, [cumulativeAcademicHistory, selectedLevelFilter]);
-
-  // Permanent Institutional Alumni Ledger Directory
-  const ALUMNI_LEDGER_DIRECTORY = useMemo(() => {
-    try {
-      const stored = localStorage.getItem("gbs_alumni_directory");
-      if (stored) return JSON.parse(stored);
-    } catch { }
-    return [];
-  }, []);
 
   // Handle Verify Credentials Form
   const handleVerifyCredentials = (e) => {
@@ -843,7 +848,8 @@ export default function AlumniDashboard() {
               { id: "BATCHES", label: "👥 Completion Batches (2022–2026)", icon: "🏆" },
               { id: "ZOOM_REUNIONS", label: "🎥 1-Click Zoom Reunions & Mentorship", icon: "🌐" },
               { id: "DIRECTORY", label: "🔍 Global Alumni Directory", icon: "🌍" },
-              { id: "ENDOWMENT", label: "💝 Giving & Scholarship Fund", icon: "✨" }
+              { id: "ENDOWMENT", label: "💝 Giving & Scholarship Fund", icon: "✨" },
+              { id: "MY_HEALTH", label: "My Health Status", icon: "🩺" }
             ].map(tab => (
               <button
                 key={tab.id}
@@ -1917,6 +1923,21 @@ export default function AlumniDashboard() {
                   ✨ Make an Alumni Pledge / Gift
                 </button>
               </div>
+            </div>
+          )}
+
+          {/* TAB 7: PERSONAL MEDICAL HEALTH STATUS (STRICT READ-ONLY) */}
+          {activeTab === "MY_HEALTH" && (
+            <div className="role-workspace-card">
+              <SchoolClinicHubPanel
+                currentUser={{
+                  firstName: alumniProfile.fullName?.split(" ")[0] || "Alumni",
+                  lastName: alumniProfile.fullName?.split(" ").slice(1).join(" ") || "Member",
+                  email: alumniProfile.email,
+                  role: "ALUMNI"
+                }}
+                mode="SELF"
+              />
             </div>
           )}
         </div>

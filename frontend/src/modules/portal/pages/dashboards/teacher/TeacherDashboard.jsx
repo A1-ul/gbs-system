@@ -26,6 +26,11 @@ import UniversalRoleGuideModal from "../../../../../components/common/UniversalR
 import ClassTopicVideoPlatform from "../../../../../components/common/ClassTopicVideoPlatform";
 import { navigateToDetail } from "../../../../../utils/universalNavigation";
 import MobileCameraAIExamScannerModal from "../../../../../components/common/MobileCameraAIExamScannerModal";
+import {
+  extractStudentAnswersFromScriptImage,
+  evaluateStudentScriptAgainstTeacherKey,
+  generateStandardOmrSheetDataUrl
+} from "../../../../../utils/omrScriptExtractor";
 import StaffAttendanceClockWidget from "../../../../../components/common/StaffAttendanceClockWidget";
 import LiveCallLauncherAndReceiver from "../../../../../components/common/LiveCallLauncherAndReceiver";
 import LiveInSystemCallModal from "../../../../../components/common/LiveInSystemCallModal";
@@ -1670,10 +1675,7 @@ export default function TeacherDashboard() {
     1: "A", 2: "C", 3: "B", 4: "D", 5: "A",
     6: "C", 7: "B", 8: "A", 9: "D", 10: "C"
   });
-  const [scannerAnswers, setScannerAnswers] = useState({
-    1: "A", 2: "C", 3: "B", 4: "D", 5: "A",
-    6: "C", 7: "B", 8: "A", 9: "D", 10: "C"
-  });
+  const [scannerAnswers, setScannerAnswers] = useState({});
   const [scannerResult, setScannerResult] = useState(null);
   const [scannedSheets, setScannedSheets] = useState([]);
   const [savingAllGrades, setSavingAllGrades] = useState(false);
@@ -3824,19 +3826,34 @@ export default function TeacherDashboard() {
     try {
       const totalQ = Math.max(1, Math.min(SCANNER_MAX_QUESTIONS, Number(scannerQuestionCount) || 10));
       const marksEach = Math.max(0.25, Number(scannerMarksPerQuestion) || 1);
-      let correctCount = 0;
-      const questionBreakdown = [];
-      for (let q = 1; q <= totalQ; q++) {
-        const expected = String(teacherAnswerKey[q] || "A").toUpperCase();
-        const actual = String(scannerAnswers[q] || "").toUpperCase();
-        const isCorrect = Boolean(actual) && actual === expected;
-        if (isCorrect) correctCount++;
-        questionBreakdown.push({ qNum: q, expected, actual: actual || "-", isCorrect });
+
+      // Extract student's chosen answers optically from captured mobile photo/uploaded script (teacher NEVER enters student answers)
+      let autoExtracted = scannerAnswers;
+      if (examSheetPreviewUrl) {
+        const optical = await extractStudentAnswersFromScriptImage(examSheetPreviewUrl, totalQ);
+        autoExtracted = optical.detectedAnswers;
+        setScannerAnswers(autoExtracted);
+      } else if (!autoExtracted || Object.keys(autoExtracted).length === 0) {
+        setFeedback({
+          type: "error",
+          message: "Please capture or upload the student's exam script photo first so the AI Scanner can extract the student's chosen answers automatically."
+        });
+        setLoading(false);
+        return;
       }
-      const pct = Math.round((correctCount / totalQ) * 100);
+
+      const evalReport = evaluateStudentScriptAgainstTeacherKey({
+        teacherAnswerKey,
+        extractedStudentAnswers: autoExtracted,
+        questionCount: totalQ,
+        marksPerQuestion: marksEach
+      });
+      const correctCount = evalReport.correctCount;
+      const pct = evalReport.percentage;
       const chosenGrade = computeGrade(pct, targetStudent.id);
-      const marksAwarded = Math.round(correctCount * marksEach * 100) / 100;
-      const maxMarks = Math.round(totalQ * marksEach * 100) / 100;
+      const marksAwarded = evalReport.marksObtained;
+      const maxMarks = evalReport.totalMarks;
+      const questionBreakdown = evalReport.questionBreakdown;
 
       const gradedRecord = {
         id: `SHEET-BATCH-${Date.now()}-${currentScriptIndex}`,
@@ -3853,11 +3870,15 @@ export default function TeacherDashboard() {
         grade: chosenGrade,
         pass: pct >= 50,
         correctCount,
+        wrongCount: evalReport.wrongCount,
+        unansweredCount: evalReport.unansweredCount,
+        correctQuestions: evalReport.correctQuestions,
+        wrongQuestions: evalReport.wrongQuestions,
         totalQuestions: totalQ,
         questionBreakdown,
-        fileName: scannerExamFileName || `Exam_Script_Sheet_${currentScriptIndex}.pdf`,
+        fileName: scannerExamFileName || `Exam_Script_Sheet_${currentScriptIndex}.png`,
         scannedAt: new Date().toLocaleTimeString(),
-        answers: { ...scannerAnswers }
+        answers: { ...autoExtracted }
       };
 
       try {
@@ -3867,9 +3888,9 @@ export default function TeacherDashboard() {
           studentId: parseInt(targetStudent.id || 101, 10),
           questionCount: totalQ,
           marksPerQuestion: marksEach,
-          imageUrl: "/images/teacher_dash_banner.jpg",
+          imageUrl: examSheetPreviewUrl ? `captured-script://${scannerExamFileName || Date.now()}` : "/images/teacher_dash_banner.jpg",
           teacherAnswerKey,
-          extractedAnswers: scannerAnswers,
+          extractedAnswers: autoExtracted,
           score: pct,
           grade: chosenGrade
         });
@@ -3884,7 +3905,7 @@ export default function TeacherDashboard() {
 
       setFeedback({
         type: "success",
-        message: `🤖 Script #${currentScriptIndex} for "${gradedRecord.studentName}" Marked & Graded! ${correctCount}/${totalQ} (${pct}% • ${marksAwarded}/${maxMarks} Marks • Grade ${chosenGrade}).`
+        message: `🤖 Script #${currentScriptIndex} for "${gradedRecord.studentName}" Marked! Correct: ${correctCount} • Wrong: ${evalReport.wrongCount} • Final Score: ${marksAwarded}/${maxMarks} Marks (${pct}% • Grade ${chosenGrade}).`
       });
 
       fetchScannedSheets();
@@ -7289,11 +7310,13 @@ export default function TeacherDashboard() {
 
                 <div>
                   <label style={{ display: "block", fontSize: "0.8rem", color: "#c084fc", marginBottom: "6px", fontWeight: "700" }}>
-                    Upload Exam Sheet / Answer Paper *
+                    Capture / Upload Student Script Photo (Mobile Camera OMR) *
                   </label>
                   <input
                     type="file"
-                    accept=".pdf,image/*,.doc,.docx"
+                    accept="image/*"
+                    capture="environment"
+                    data-testid="teacher-scanner-script-upload"
                     className="filter-input"
                     style={{ width: "100%", padding: "5px 8px" }}
                     onChange={(e) => {
@@ -7301,18 +7324,30 @@ export default function TeacherDashboard() {
                       if (file) {
                         setScannerExamFile(file);
                         setScannerExamFileName(file.name);
-                        setIsExamSheetVerified(false);
-                        if (file.type.startsWith("image/")) {
-                          setExamSheetPreviewUrl(URL.createObjectURL(file));
-                        } else {
-                          setExamSheetPreviewUrl(null);
-                        }
+                        setIsExamSheetVerified(true);
+                        const reader = new FileReader();
+                        reader.onload = async (ev) => {
+                          const dataUrl = ev.target?.result;
+                          setExamSheetPreviewUrl(dataUrl);
+                          if (dataUrl) {
+                            try {
+                              const totalQ = Math.max(1, Math.min(SCANNER_MAX_QUESTIONS, Number(scannerQuestionCount) || 10));
+                              const optical = await extractStudentAnswersFromScriptImage(dataUrl, totalQ);
+                              setScannerAnswers(optical.detectedAnswers);
+                              setFeedback({
+                                type: "success",
+                                message: `📸 AI Optical Sensor extracted ${optical.answeredCount}/${totalQ} student choices from "${file.name}"! Click "Run AI Scan with Teacher Key" to mark.`
+                              });
+                            } catch { }
+                          }
+                        };
+                        reader.readAsDataURL(file);
                       }
                     }}
                   />
                   {scannerExamFileName && (
-                    <span style={{ fontSize: "0.75rem", color: isExamSheetVerified ? "#34d399" : "#fbbf24", display: "block", marginTop: "4px", fontWeight: "700" }}>
-                      {isExamSheetVerified ? `✓ ${scannerExamFileName} (Verified)` : `⏳ ${scannerExamFileName} (Awaiting Teacher Verification)`}
+                    <span style={{ fontSize: "0.75rem", color: "#34d399", display: "block", marginTop: "4px", fontWeight: "700" }}>
+                      ✓ {scannerExamFileName} (Optically Read by AI Scanner)
                     </span>
                   )}
                 </div>
@@ -7663,108 +7698,176 @@ export default function TeacherDashboard() {
                   </div>
                 </div>
 
-                {/* Column 2: Student Bubble Sheet Matrix (Student answers detected by optical sensor) */}
-                <div style={{ background: "rgba(2, 6, 23, 0.7)", padding: "1.5rem", borderRadius: "14px", border: "1px solid rgba(212, 175, 55, 0.35)" }}>
-                  <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "1rem", borderBottom: "1px solid rgba(255, 255, 255, 0.08)", paddingBottom: "8px" }}>
-                    <h4 style={{ margin: 0, color: "#f6dd84", fontSize: "0.95rem" }}>
-                      📝 Student Answer Sheet ({totalScannerQ} Bubbles)
+                {/* Column 2: AI Auto-Extracted Student Choices (Read-Only from Mobile Camera / Captured Script — Teacher Enters Key ONLY) */}
+                <div
+                  data-testid="teacher-scanner-auto-extracted-panel"
+                  style={{ background: "rgba(2, 6, 23, 0.7)", padding: "1.5rem", borderRadius: "14px", border: "1px solid rgba(56, 189, 248, 0.38)", display: "flex", flexDirection: "column", gap: "10px" }}
+                >
+                  <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", borderBottom: "1px solid rgba(255, 255, 255, 0.08)", paddingBottom: "8px", flexWrap: "wrap", gap: "6px" }}>
+                    <h4 style={{ margin: 0, color: "#38bdf8", fontSize: "0.95rem" }}>
+                      📱 Captured Student Script — AI Optical Reader
                     </h4>
-                    <span style={{ fontSize: "0.75rem", color: "#94a3b8" }}>Q{pageStart}–Q{pageEnd}</span>
+                    <span style={{ fontSize: "0.72rem", color: "#6ee7b7", fontWeight: 800 }}>
+                      Read-Only (Auto-Extracted)
+                    </span>
                   </div>
 
-                  <div style={{ display: "flex", flexDirection: "column", gap: "10px", maxHeight: "430px", overflowY: "auto", paddingRight: "4px" }}>
-                    {visibleQNums.map((qNum) => {
-                      const selectedOpt = scannerAnswers[qNum];
-                      return (
-                        <div key={qNum} style={{ display: "flex", alignItems: "center", justifyContent: "space-between", background: "rgba(255, 255, 255, 0.03)", padding: "6px 12px", borderRadius: "8px" }}>
-                          <span style={{ fontWeight: "700", color: "#cbd5e1", fontSize: "0.85rem", minWidth: "46px" }}>
-                            Q{qNum}:
-                          </span>
-                          <div style={{ display: "flex", gap: "10px" }}>
-                            {["A", "B", "C", "D"].map((opt) => (
-                              <button
-                                key={opt}
-                                type="button"
-                                onClick={() => handleScannerBubbleSelect(qNum, opt)}
-                                style={{
-                                  width: "30px",
-                                  height: "30px",
-                                  borderRadius: "50%",
-                                  border: selectedOpt === opt ? "2px solid #38bdf8" : "1px solid rgba(255, 255, 255, 0.2)",
-                                  background: selectedOpt === opt ? "#0d2247" : "rgba(255, 255, 255, 0.05)",
-                                  color: selectedOpt === opt ? "#f6dd84" : "#94a3b8",
-                                  fontWeight: "800",
-                                  fontSize: "0.8rem",
-                                  cursor: "pointer"
-                                }}
-                              >
-                                {opt}
-                              </button>
-                            ))}
-                          </div>
-                        </div>
-                      );
-                    })}
+                  <p style={{ margin: 0, fontSize: "0.78rem", color: "#cbd5e1", lineHeight: 1.45 }}>
+                    Teachers only enter the <strong>Preferred Correct Answer Key</strong> on the left. Capture the student's script using your Mobile Camera or upload the captured photo — the AI Scanner automatically detects the student's chosen answers and marks them against your key!
+                  </p>
+
+                  <div style={{ display: "flex", gap: "8px", flexWrap: "wrap" }}>
+                    <button
+                      type="button"
+                      onClick={() => setShowMobileCameraScanner(true)}
+                      style={{
+                        flex: 1,
+                        background: "linear-gradient(135deg, #a855f7, #6d28d9)",
+                        color: "#fff",
+                        border: "1px solid #d8b4fe",
+                        borderRadius: "8px",
+                        padding: "9px 12px",
+                        fontWeight: 900,
+                        fontSize: "0.8rem",
+                        cursor: "pointer"
+                      }}
+                    >
+                      📸 Open Live Mobile Camera Scanner
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        const url = generateStandardOmrSheetDataUrl(totalScannerQ, {}, `GBS OMR SHEET (${totalScannerQ} QUESTIONS)`);
+                        const a = document.createElement("a");
+                        a.href = url;
+                        a.download = `GBS-OMR-Blank-Sheet-${totalScannerQ}Q.png`;
+                        document.body.appendChild(a);
+                        a.click();
+                        document.body.removeChild(a);
+                      }}
+                      style={{
+                        background: "rgba(56, 189, 248, 0.16)",
+                        color: "#bae6fd",
+                        border: "1px solid #38bdf8",
+                        borderRadius: "8px",
+                        padding: "9px 12px",
+                        fontWeight: 800,
+                        fontSize: "0.76rem",
+                        cursor: "pointer"
+                      }}
+                    >
+                      🖨️ Blank OMR Sheet
+                    </button>
                   </div>
+
+                  {examSheetPreviewUrl ? (
+                    <div style={{ display: "flex", flexDirection: "column", gap: "8px" }}>
+                      <div style={{ fontSize: "0.75rem", color: "#6ee7b7", fontWeight: 800 }}>
+                        ✓ Student Choices Automatically Read from Captured Script ({scannerExamFileName}):
+                      </div>
+                      <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(70px, 1fr))", gap: "5px", maxHeight: "260px", overflowY: "auto" }}>
+                        {visibleQNums.map((qNum) => {
+                          const detected = scannerAnswers[qNum] || "—";
+                          return (
+                            <div
+                              key={qNum}
+                              style={{
+                                background: "rgba(15, 23, 42, 0.9)",
+                                border: "1px solid rgba(56, 189, 248, 0.35)",
+                                borderRadius: "6px",
+                                padding: "5px 6px",
+                                textAlign: "center",
+                                fontSize: "0.74rem",
+                                fontWeight: 800,
+                                color: detected === "—" ? "#94a3b8" : "#7dd3fc"
+                              }}
+                            >
+                              Q{qNum}: {detected}
+                            </div>
+                          );
+                        })}
+                      </div>
+                      <button
+                        type="button"
+                        data-testid="teacher-run-ai-scan-btn"
+                        className="btn-primary"
+                        onClick={handleRunAiExamScanner}
+                        disabled={loading}
+                        style={{ marginTop: "4px" }}
+                      >
+                        {loading ? "⏳ Marking Script..." : `⚡ Mark Captured Script Against Teacher Key (${totalScannerQ} Qs)`}
+                      </button>
+                    </div>
+                  ) : (
+                    <div style={{ flex: 1, display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", textAlign: "center", padding: "20px 10px", border: "1.5px dashed rgba(56, 189, 248, 0.3)", borderRadius: "10px", color: "#94a3b8", fontSize: "0.8rem" }}>
+                      <span style={{ fontSize: "2rem", marginBottom: "6px" }}>📷</span>
+                      No student script captured yet. Use <strong>Open Live Mobile Camera Scanner</strong> or upload the captured script photo above so the AI automatically extracts the student's chosen answers.
+                    </div>
+                  )}
                 </div>
 
-                {/* Column 3: Auto-Grade Result Display */}
+                {/* Column 3: Auto-Grade Result Display (Correct List, Wrong List & Exact Final Score) */}
                 <div>
                   {scannerResult ? (
-                    <div style={{ background: "rgba(2, 6, 23, 0.8)", padding: "1.5rem", borderRadius: "14px", border: "1px solid rgba(16, 185, 129, 0.4)", height: "100%", display: "flex", flexDirection: "column" }}>
+                    <div
+                      data-testid="teacher-scanner-final-score"
+                      style={{ background: "rgba(2, 6, 23, 0.8)", padding: "1.5rem", borderRadius: "14px", border: "1.5px solid rgba(16, 185, 129, 0.5)", height: "100%", display: "flex", flexDirection: "column", gap: "10px" }}
+                    >
                       <span className="role-portal-badge" style={{ color: scannerResult.pass ? "#34d399" : "#f87171" }}>
                         {scannerResult.pass ? "🎉 EXAM PASSED" : "⚠️ NEEDS IMPROVEMENT"}
                       </span>
-                      <h3 style={{ margin: "8px 0 4px", fontSize: "1.6rem", color: "#f8fafc" }}>
-                        {scannerResult.percentage}% Score • Grade {scannerResult.grade}
+                      <h3 style={{ margin: "2px 0", fontSize: "1.45rem", color: "#f8fafc" }}>
+                        Final Score: {scannerResult.marksAwarded ?? scannerResult.correctCount} / {scannerResult.maxMarks ?? scannerResult.totalQuestions} Marks ({scannerResult.percentage}% • Grade {scannerResult.grade})
                       </h3>
-                      <p style={{ color: "#94a3b8", fontSize: "0.85rem", margin: 0 }}>
-                        Student: {scannerResult.studentName} • {scannerResult.marksAwarded ?? scannerResult.correctCount} / {scannerResult.maxMarks ?? scannerResult.totalQuestions} Marks
+                      <p style={{ color: "#94a3b8", fontSize: "0.82rem", margin: 0 }}>
+                        Student: <strong style={{ color: "#fff" }}>{scannerResult.studentName}</strong>
                       </p>
 
-                      <div style={{ margin: "1rem 0", display: "grid", gridTemplateColumns: "1fr 1fr", gap: "10px" }}>
-                        <div style={{ background: "rgba(16, 185, 129, 0.1)", padding: "10px", borderRadius: "8px", border: "1px solid rgba(16, 185, 129, 0.25)" }}>
-                          <span style={{ fontSize: "0.75rem", color: "#34d399" }}>Accuracy</span>
-                          <div style={{ fontSize: "1.2rem", fontWeight: "800", color: "#f8fafc" }}>
-                            {scannerResult.correctCount ?? Math.round((scannerResult.percentage / 100) * (scannerResult.totalQuestions || 10))} / {scannerResult.totalQuestions || 10}
-                          </div>
+                      {/* Explicit Correct vs Wrong Counts & Question Number Lists */}
+                      <div
+                        data-testid="teacher-scanner-correct-list"
+                        style={{ background: "rgba(16, 185, 129, 0.14)", padding: "10px 12px", borderRadius: "8px", border: "1px solid rgba(16, 185, 129, 0.4)" }}
+                      >
+                        <div style={{ fontSize: "0.78rem", color: "#34d399", fontWeight: 900 }}>
+                          ✅ Questions Marked Correct: {scannerResult.correctCount} of {scannerResult.totalQuestions}
                         </div>
-                        <div style={{ background: "rgba(212, 175, 55, 0.1)", padding: "10px", borderRadius: "8px", border: "1px solid rgba(212, 175, 55, 0.3)" }}>
-                          <span style={{ fontSize: "0.75rem", color: "#f6dd84" }}>Class Gradebook</span>
-                          <div style={{ fontSize: "0.95rem", fontWeight: "700", color: "#34d399" }}>
-                            ✓ Committed
-                          </div>
+                        <div style={{ fontSize: "0.76rem", color: "#d1fae5", marginTop: "3px", fontWeight: 700, lineHeight: 1.45 }}>
+                          {(scannerResult.correctQuestions || []).length > 0
+                            ? scannerResult.correctQuestions.map((q) => `Q${q}`).join(", ")
+                            : "None"}
                         </div>
                       </div>
 
-                      {Array.isArray(scannerResult.questionBreakdown) && scannerResult.questionBreakdown.length > 0 && (
-                        <div style={{ maxHeight: "170px", overflowY: "auto", background: "rgba(8, 24, 51, 0.65)", borderRadius: "8px", padding: "8px", marginBottom: "10px", border: "1px solid rgba(212,175,55,0.2)" }}>
-                          <div style={{ fontSize: "0.72rem", fontWeight: 800, color: "#f6dd84", marginBottom: "4px" }}>
-                            Question-by-Question AI Comparison ({scannerResult.questionBreakdown.length} Questions):
-                          </div>
-                          <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(84px, 1fr))", gap: "4px" }}>
-                            {scannerResult.questionBreakdown.map((item) => (
-                              <div key={item.qNum} style={{ fontSize: "0.7rem", padding: "3px 6px", borderRadius: "5px", background: item.isCorrect ? "rgba(16,185,129,0.2)" : "rgba(239,68,68,0.2)", color: item.isCorrect ? "#6ee7b7" : "#fca5a5", fontWeight: 700 }}>
-                                Q{item.qNum}: {item.actual}/{item.expected} {item.isCorrect ? "✔" : "✘"}
-                              </div>
-                            ))}
-                          </div>
+                      <div
+                        data-testid="teacher-scanner-wrong-list"
+                        style={{ background: "rgba(239, 68, 68, 0.14)", padding: "10px 12px", borderRadius: "8px", border: "1px solid rgba(239, 68, 68, 0.4)" }}
+                      >
+                        <div style={{ fontSize: "0.78rem", color: "#f87171", fontWeight: 900 }}>
+                          ❌ Questions Marked Wrong: {scannerResult.wrongCount ?? ((scannerResult.totalQuestions || 0) - (scannerResult.correctCount || 0))} of {scannerResult.totalQuestions}
                         </div>
-                      )}
+                        <div style={{ fontSize: "0.76rem", color: "#fecaca", marginTop: "3px", fontWeight: 700, lineHeight: 1.45 }}>
+                          {(scannerResult.wrongQuestions || []).length > 0
+                            ? scannerResult.wrongQuestions.map((w) => `Q${w.questionNumber} (Chosen: ${w.studentAnswer} | Key: ${w.correctAnswer})`).join(", ")
+                            : "Zero wrong answers!"}
+                        </div>
+                      </div>
 
-                      <div style={{ marginTop: "auto", background: "rgba(255, 255, 255, 0.04)", padding: "10px", borderRadius: "8px", fontSize: "0.8rem", color: "#cbd5e1" }}>
-                        🔒 <strong>Class Ledger Sync:</strong> Evaluated against Teacher Master Key and saved to respective class gradebook in PostgreSQL.
+                      <div style={{ marginTop: "auto", background: "rgba(255, 255, 255, 0.04)", padding: "10px", borderRadius: "8px", fontSize: "0.78rem", color: "#cbd5e1" }}>
+                        🔒 <strong>Class Ledger Sync:</strong> Marked against Teacher Preferred Answer Key and saved to class gradebook.
                       </div>
                     </div>
                   ) : (
                     <div style={{ background: "rgba(15, 23, 42, 0.5)", padding: "2rem", borderRadius: "14px", border: "1px dashed rgba(255, 255, 255, 0.15)", height: "100%", display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", textAlign: "center" }}>
                       <span style={{ fontSize: "3rem", marginBottom: "10px" }}>🤖</span>
                       <strong style={{ color: "#f8fafc", fontSize: "1.05rem" }}>Exam Script Scanner Ready</strong>
-                      <p style={{ color: "#94a3b8", fontSize: "0.85rem", maxWidth: "280px", margin: "6px 0 16px" }}>
-                        Select the target class, set your Teacher Master Answer Key, mark the optical bubbles, and click Run AI OMR Scan to auto-grade.
+                      <p style={{ color: "#94a3b8", fontSize: "0.84rem", maxWidth: "280px", margin: "6px 0 16px" }}>
+                        1. Enter ONLY your Preferred Correct Answers on the left.<br />
+                        2. Capture the student's script via Mobile Camera or photo upload.<br />
+                        3. Click below to see exact Correct Questions, Wrong Questions &amp; Final Score.
                       </p>
                       <button
                         type="button"
+                        data-testid="teacher-run-ai-scan-btn"
                         className="btn-primary"
                         onClick={handleRunAiExamScanner}
                         disabled={loading}
@@ -13676,6 +13779,9 @@ export default function TeacherDashboard() {
         isOpen={showMobileCameraScanner}
         onClose={() => setShowMobileCameraScanner(false)}
         initialClass={classes.find((c) => String(c.id) === String(selectedClassId)) || classes[0]}
+        initialTeacherAnswerKey={teacherAnswerKey}
+        initialQuestionCount={scannerQuestionCount}
+        initialMarksPerQuestion={scannerMarksPerQuestion}
         classes={classes}
         currentUser={currentUser}
         onGradingComplete={(result) => {

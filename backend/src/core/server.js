@@ -165,7 +165,7 @@ app.get('/api/v1/app-version', (req, res) => {
     status: 'success',
     data: {
       bundleHash,
-      swVersion: 'gbs-cache-v2026.21',
+      swVersion: 'gbs-cache-v2026.22',
       autoUpdateEnabled: true,
       checkedAt: new Date().toISOString()
     }

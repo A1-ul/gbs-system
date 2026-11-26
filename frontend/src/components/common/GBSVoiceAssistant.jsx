@@ -2,6 +2,8 @@ import React, { useState, useEffect, useRef } from "react";
 import { useNavigate } from "react-router-dom";
 import apiClient from "../../api/client/apiClient";
 import { getLanguageProfile } from "../../utils/i18nCountryEngine";
+import { JOLLY_PHONICS_42_SOUNDS, COUNTRY_ALPHABETS_CATALOG } from "../../utils/phonicsAndAlphabetsData";
+import { playJollyPhonicsExactSound, playCountryAlphabetExactSound } from "../../utils/phonicsAudioEngine";
 
 /**
  * GBS AI Voice Assistant (Real-Time System-Memory Linked Continuous Assistant)
@@ -1104,6 +1106,66 @@ export default function GBSVoiceAssistant() {
                 executeReply("No active submit button was found on this view.");
               }
               return;
+            }
+
+            // 1B. Direct 42 Jolly Phonics & Country/Language Alphabet Teaching (Speaks EXACT Phonetic Sound — NEVER Letter Name!)
+            const asksPhonicsOrAlphabet = /\b(jolly\s*phonics|phonics|sound\s+of|how\s+does\s+(?:the\s+)?letter|pronounce|how\s+to\s+write|how\s+is\s+(?:the\s+)?letter|alphabet|alphabets|write\s+letters|letter\s+sound)\b/i.test(cleanCmd);
+            if (asksPhonicsOrAlphabet) {
+              // Check for a specific country/language match first (all 17 listed countries)
+              const matchedCountry = COUNTRY_ALPHABETS_CATALOG.find((c) => {
+                const cName = c.countryName.toLowerCase();
+                if (cleanCmd.includes(cName)) return true;
+                return c.languages.some((l) => cleanCmd.includes(l.name.toLowerCase().split(" ")[0]));
+              });
+
+              // Check for a specific letter or digraph (e.g. "sound of s", "letter sh", "write ɛ", "jolly phonics ai")
+              const letterTokenMatch = raw.match(/(?:letter|sound|phonics|write|pronounce)\s+(?:for\s+|of\s+)?["']?([a-zA-ZƐɛƆɔŊŋƉɖƑƒƔɣƲʋƁɓƊɗƘƙƳƴẸẹỌọṢṣÑñÇçß一二三人大口日学あいうえお]{1,4})["']?(?:\b|$)/i);
+              const targetGlyph = letterTokenMatch ? letterTokenMatch[1].trim() : "";
+
+              if (matchedCountry) {
+                const matchedLang =
+                  matchedCountry.languages.find((l) => cleanCmd.includes(l.name.toLowerCase().split(" ")[0])) ||
+                  matchedCountry.languages[0];
+                const matchedLetter = targetGlyph
+                  ? matchedLang.alphabet.find(
+                      (item) =>
+                        String(item.upper || "").toLowerCase() === targetGlyph.toLowerCase() ||
+                        String(item.glyph || "").toLowerCase() === targetGlyph.toLowerCase()
+                    )
+                  : null;
+
+                if (matchedLetter) {
+                  await playCountryAlphabetExactSound(matchedLetter, matchedLang, { withWord: false });
+                  const guideMsg = `In ${matchedCountry.countryName} (${matchedLang.name}), the exact phonetic sound is "${matchedLetter.phonemeSpeak || matchedLetter.sound}" (not the English letter name), as in ${matchedLetter.example}. Script direction is ${matchedLang.direction === "rtl" ? "Right to Left" : "Left to Right"}. How to write it: ${matchedLetter.howToWrite}`;
+                  executeReply(guideMsg, null, buildLocalQuestionFormation(raw, `${matchedCountry.countryName} Alphabet & Writing`));
+                  return;
+                }
+
+                const sampleLetters = matchedLang.alphabet.slice(0, 6).map((l) => `${l.letter} (${l.phonemeSpeak || l.sound})`).join(", ");
+                const countryMsg = `${matchedCountry.countryName} uses ${matchedLang.name} (${matchedLang.script}, written ${matchedLang.direction === "rtl" ? "Right to Left" : "Left to Right"}). ${matchedLang.note} Opening examples with exact sounds: ${sampleLetters}. Open the Language Translator and select Country & Language Alphabets to hear every exact letter sound and trace the numbered stroke-order guide.`;
+                executeReply(countryMsg, null, buildLocalQuestionFormation(raw, `${matchedCountry.countryName} Alphabet & Letter Sounds`));
+                return;
+              }
+
+              if (targetGlyph) {
+                const gLow = targetGlyph.toLowerCase();
+                const phonicHit = JOLLY_PHONICS_42_SOUNDS.find(
+                  (p) =>
+                    p.phonemeKey === gLow ||
+                    p.grapheme.toLowerCase() === gLow ||
+                    p.upper.toLowerCase() === gLow ||
+                    (gLow === "c" && p.phonemeKey === "ck") ||
+                    (gLow === "k" && p.phonemeKey === "ck") ||
+                    (gLow === "oo" && p.phonemeKey === "oo_long") ||
+                    (gLow === "th" && p.phonemeKey === "th_unvoiced")
+                );
+                if (phonicHit) {
+                  await playJollyPhonicsExactSound(phonicHit, { withWord: false, locale: "en-GB" });
+                  const phonicReply = `That is the exact Jolly Phonics sound "${phonicHit.phonemeSpeak}" (${phonicHit.ipa}, Group ${phonicHit.group} — never the letter name), as in ${phonicHit.examples.join(", ")}. Action: ${phonicHit.action} How to write it: ${phonicHit.howToWrite}`;
+                  executeReply(phonicReply, null, buildLocalQuestionFormation(raw, "42 Jolly Phonics Exact Sounds & Writing"));
+                  return;
+                }
+              }
             }
 
             // 2. Live Backend System Memory Query (generous 4500ms timeout so backend formation + answer resolves reliably)

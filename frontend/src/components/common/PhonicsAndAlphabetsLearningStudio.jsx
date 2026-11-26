@@ -5,15 +5,38 @@ import {
   COUNTRY_ALPHABETS_CATALOG,
   speakPhonicsOrLetter
 } from "../../utils/phonicsAndAlphabetsData";
+import {
+  playJollyPhonicsExactSound,
+  playCountryAlphabetExactSound,
+  getLetterStrokeDiagram
+} from "../../utils/phonicsAudioEngine";
 
 /**
- * Interactive 4-Line Handwriting Guide & Finger/Mouse Trace Canvas
- * Lets learners inspect exact letter placement and trace/write each letter live.
+ * Interactive 4-Line Handwriting Guide, Step-by-Step Visual Stroke Diagram & Trace Canvas
+ * Shows EXACTLY how each country writes its letters (numbered start dots + directional arrows)
+ * and lets students trace & practice writing live.
  */
-function LetterWritingPracticePad({ displayGlyph, direction = "ltr", label = "Letter" }) {
+function LetterWritingPracticePad({ displayGlyph, direction = "ltr", label = "Letter", howToWrite = "" }) {
   const canvasRef = useRef(null);
   const drawingRef = useRef(false);
   const [strokeCount, setStrokeCount] = useState(0);
+  const [animStep, setAnimStep] = useState(-1);
+
+  const strokeInfo = useMemo(
+    () => getLetterStrokeDiagram(displayGlyph, howToWrite, direction),
+    [displayGlyph, howToWrite, direction]
+  );
+
+  const playStrokeAnimation = () => {
+    const total = strokeInfo.paths ? strokeInfo.paths.length : strokeInfo.steps.length;
+    if (!total) return;
+    setAnimStep(0);
+    for (let i = 1; i <= total; i++) {
+      setTimeout(() => {
+        setAnimStep(i < total ? i : -1);
+      }, i * 850);
+    }
+  };
 
   const drawGuideCanvas = () => {
     const canvas = canvasRef.current;
@@ -103,7 +126,138 @@ function LetterWritingPracticePad({ displayGlyph, direction = "ltr", label = "Le
   };
 
   return (
-    <div style={{ display: "flex", flexDirection: "column", gap: "6px" }}>
+    <div style={{ display: "flex", flexDirection: "column", gap: "8px" }}>
+      {/* Visual Numbered Stroke-Order Writing Guide */}
+      <div
+        data-testid="letter-stroke-order-guide"
+        style={{
+          display: "grid",
+          gridTemplateColumns: "92px 1fr",
+          gap: "10px",
+          alignItems: "center",
+          background: "rgba(8, 24, 51, 0.85)",
+          border: "1px solid rgba(56, 189, 248, 0.42)",
+          borderRadius: "10px",
+          padding: "8px 10px"
+        }}
+      >
+        <div
+          style={{
+            width: "88px",
+            height: "88px",
+            borderRadius: "8px",
+            background: "#fffdf5",
+            border: "1.5px solid #d4af37",
+            position: "relative",
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+            overflow: "hidden"
+          }}
+        >
+          <svg viewBox="0 0 100 100" width="84" height="84" aria-label={`How to write ${label}`}>
+            <defs>
+              <marker id="gbsStrokeArrow" markerWidth="6" markerHeight="6" refX="4.5" refY="3" orient="auto">
+                <path d="M0,0 L6,3 L0,6 Z" fill="#0284c7" />
+              </marker>
+            </defs>
+            <line x1="6" y1="20" x2="94" y2="20" stroke="#bfdbfe" strokeWidth="1" />
+            <line x1="6" y1="50" x2="94" y2="50" stroke="#fcd34d" strokeDasharray="3 3" strokeWidth="1" />
+            <line x1="6" y1="80" x2="94" y2="80" stroke="#2563eb" strokeWidth="1.2" />
+            <text
+              x="50"
+              y="74"
+              textAnchor="middle"
+              fontSize="58"
+              fontWeight="700"
+              fill="rgba(15, 35, 71, 0.14)"
+              direction={direction}
+            >
+              {String(displayGlyph || "").slice(0, 3)}
+            </text>
+            {Array.isArray(strokeInfo.paths) && strokeInfo.paths.map((st, idx) => {
+              const isHighlighted = animStep === -1 || animStep === idx;
+              return (
+                <g key={idx} opacity={isHighlighted ? 1 : 0.25}>
+                  <path
+                    d={st.d}
+                    fill="none"
+                    stroke={animStep === idx ? "#dc2626" : "#0284c7"}
+                    strokeWidth={animStep === idx ? "3.6" : "2.6"}
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    markerEnd="url(#gbsStrokeArrow)"
+                  />
+                  <circle cx={st.start[0]} cy={st.start[1]} r="6.8" fill="#059669" />
+                  <text
+                    x={st.start[0]}
+                    y={st.start[1] + 2.7}
+                    textAnchor="middle"
+                    fontSize="8.5"
+                    fontWeight="900"
+                    fill="#ffffff"
+                  >
+                    {idx + 1}
+                  </text>
+                </g>
+              );
+            })}
+            {!strokeInfo.paths && (
+              <g>
+                <path
+                  d={direction === "rtl" ? "M 82 14 L 22 14" : "M 18 14 L 78 14"}
+                  fill="none"
+                  stroke="#059669"
+                  strokeWidth="2.5"
+                  markerEnd="url(#gbsStrokeArrow)"
+                />
+                <text x="50" y="94" textAnchor="middle" fontSize="9" fontWeight="800" fill="#0369a1">
+                  {direction === "rtl" ? "← Right to Left" : "Left to Right →"}
+                </text>
+              </g>
+            )}
+          </svg>
+        </div>
+
+        <div style={{ display: "flex", flexDirection: "column", gap: "4px" }}>
+          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: "6px", flexWrap: "wrap" }}>
+            <span style={{ fontSize: "10.5px", fontWeight: 900, color: "#7dd3fc" }}>
+              ✏️ Exact Writing Stroke Order ({direction === "rtl" ? "Right → Left" : "Left → Right"})
+            </span>
+            <button
+              type="button"
+              data-no-hud-notice="true"
+              onClick={playStrokeAnimation}
+              style={{
+                padding: "2px 8px",
+                borderRadius: "999px",
+                background: "rgba(16, 185, 129, 0.22)",
+                border: "1px solid #10b981",
+                color: "#6ee7b7",
+                fontSize: "10px",
+                fontWeight: 800,
+                cursor: "pointer"
+              }}
+            >
+              ▶ Replay Strokes
+            </button>
+          </div>
+          <ol style={{ margin: 0, paddingLeft: "16px", fontSize: "11px", color: "#e2e8f0", lineHeight: 1.4 }}>
+            {strokeInfo.steps.map((stepText, sIdx) => (
+              <li
+                key={sIdx}
+                style={{
+                  color: animStep === sIdx ? "#fde68a" : "#e2e8f0",
+                  fontWeight: animStep === sIdx ? 800 : 500
+                }}
+              >
+                {stepText}
+              </li>
+            ))}
+          </ol>
+        </div>
+      </div>
+
       <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: "8px", flexWrap: "wrap" }}>
         <span style={{ fontSize: "11px", fontWeight: 800, color: "#fde68a" }}>
           ✍️ Practice Writing &amp; Trace ({label}) — {direction === "rtl" ? "Right → Left" : "Left → Right"}:
@@ -225,9 +379,9 @@ export default function PhonicsAndAlphabetsLearningStudio({ mode = "JOLLY_PHONIC
         return;
       }
       setSelectedLetterIdx(idx);
-      speakPhonicsOrLetter(letters[idx].speakText || letters[idx].letter, activeLanguage.speechLocale, 0.96);
+      playCountryAlphabetExactSound(letters[idx], activeLanguage, { withWord: false });
       idx += 1;
-      autoPlayTimerRef.current = setTimeout(step, 1550);
+      autoPlayTimerRef.current = setTimeout(step, 1450);
     };
     step();
   };
@@ -351,7 +505,7 @@ export default function PhonicsAndAlphabetsLearningStudio({ mode = "JOLLY_PHONIC
                 onClick={() => {
                   setSelectedPhonicId(sound.id);
                   const locale = activePhonicsCountry.languages.find((l) => l.speechLocale.startsWith("en"))?.speechLocale || "en-GB";
-                  speakPhonicsOrLetter(sound.speakText, locale, 0.96);
+                  playJollyPhonicsExactSound(sound, { withWord: false, locale });
                 }}
                 style={{
                   padding: "8px 6px",
@@ -399,30 +553,57 @@ export default function PhonicsAndAlphabetsLearningStudio({ mode = "JOLLY_PHONIC
                   <span style={{ fontSize: "15px", color: "#fde68a" }}>{activePhonic.ipa}</span>
                 </div>
               </div>
-              <button
-                type="button"
-                data-no-hud-notice="true"
-                onClick={() => {
-                  const locale = activePhonicsCountry.languages.find((l) => l.speechLocale.startsWith("en"))?.speechLocale || "en-GB";
-                  speakPhonicsOrLetter(activePhonic.speakText, locale, 0.95);
-                }}
-                style={{
-                  padding: "8px 14px",
-                  borderRadius: "8px",
-                  background: "linear-gradient(135deg, #0284c7, #0369a1)",
-                  border: "1px solid #7dd3fc",
-                  color: "#ffffff",
-                  fontWeight: 800,
-                  fontSize: "12px",
-                  cursor: "pointer"
-                }}
-              >
-                🔊 Play Sound
-              </button>
+              <div style={{ display: "flex", gap: "6px", flexWrap: "wrap" }}>
+                <button
+                  type="button"
+                  data-no-hud-notice="true"
+                  data-testid="phonics-exact-sound-btn"
+                  onClick={() => {
+                    const locale = activePhonicsCountry.languages.find((l) => l.speechLocale.startsWith("en"))?.speechLocale || "en-GB";
+                    playJollyPhonicsExactSound(activePhonic, { withWord: false, locale });
+                  }}
+                  style={{
+                    padding: "8px 13px",
+                    borderRadius: "8px",
+                    background: "linear-gradient(135deg, #059669, #10b981)",
+                    border: "1px solid #6ee7b7",
+                    color: "#ffffff",
+                    fontWeight: 800,
+                    fontSize: "12px",
+                    cursor: "pointer"
+                  }}
+                >
+                  🔊 Exact Sound ({activePhonic.ipa})
+                </button>
+                <button
+                  type="button"
+                  data-no-hud-notice="true"
+                  data-testid="phonics-sound-word-btn"
+                  onClick={() => {
+                    const locale = activePhonicsCountry.languages.find((l) => l.speechLocale.startsWith("en"))?.speechLocale || "en-GB";
+                    playJollyPhonicsExactSound(activePhonic, { withWord: true, locale });
+                  }}
+                  style={{
+                    padding: "8px 13px",
+                    borderRadius: "8px",
+                    background: "linear-gradient(135deg, #0284c7, #0369a1)",
+                    border: "1px solid #7dd3fc",
+                    color: "#ffffff",
+                    fontWeight: 800,
+                    fontSize: "12px",
+                    cursor: "pointer"
+                  }}
+                >
+                  🗣️ Sound + Words
+                </button>
+              </div>
             </div>
 
             <div style={{ fontSize: "12.5px", color: "#e2e8f0", lineHeight: 1.5 }}>
-              <div><strong style={{ color: "#fde68a" }}>Sound Cue:</strong> {activePhonic.soundCue}</div>
+              <div>
+                <strong style={{ color: "#fde68a" }}>Exact Phonetic Sound (Not Letter Name):</strong>{" "}
+                <span style={{ color: "#6ee7b7", fontWeight: 800 }}>{activePhonic.soundCue}</span>
+              </div>
               <div><strong style={{ color: "#6ee7b7" }}>Jolly Phonics Action:</strong> {activePhonic.action}</div>
               <div style={{ marginTop: "4px" }}>
                 <strong style={{ color: "#7dd3fc" }}>How to Write:</strong> {activePhonic.howToWrite}
@@ -457,6 +638,7 @@ export default function PhonicsAndAlphabetsLearningStudio({ mode = "JOLLY_PHONIC
             displayGlyph={activePhonic.grapheme.replace(/\s*\(.*\)/, "")}
             direction="ltr"
             label={`"${activePhonic.grapheme}"`}
+            howToWrite={activePhonic.howToWrite}
           />
         </div>
       </div>
@@ -606,7 +788,7 @@ export default function PhonicsAndAlphabetsLearningStudio({ mode = "JOLLY_PHONIC
               onClick={() => {
                 stopAutoPlay();
                 setSelectedLetterIdx(idx);
-                speakPhonicsOrLetter(item.speakText || item.letter, activeLanguage.speechLocale, 0.95);
+                playCountryAlphabetExactSound(item, activeLanguage, { withWord: false });
               }}
               style={{
                 padding: "8px 6px",
@@ -655,30 +837,51 @@ export default function PhonicsAndAlphabetsLearningStudio({ mode = "JOLLY_PHONIC
                   {activeLetter.letter} <span style={{ fontSize: "14px", color: "#7dd3fc" }}>({activeLetter.name})</span>
                 </div>
               </div>
-              <button
-                type="button"
-                data-no-hud-notice="true"
-                onClick={() => speakPhonicsOrLetter(activeLetter.speakText || activeLetter.letter, activeLanguage.speechLocale, 0.94)}
-                style={{
-                  padding: "8px 14px",
-                  borderRadius: "8px",
-                  background: "linear-gradient(135deg, #0284c7, #0369a1)",
-                  border: "1px solid #7dd3fc",
-                  color: "#ffffff",
-                  fontWeight: 800,
-                  fontSize: "12px",
-                  cursor: "pointer"
-                }}
-              >
-                🔊 Hear Sound
-              </button>
+              <div style={{ display: "flex", gap: "6px", flexWrap: "wrap" }}>
+                <button
+                  type="button"
+                  data-no-hud-notice="true"
+                  data-testid="alphabet-exact-sound-btn"
+                  onClick={() => playCountryAlphabetExactSound(activeLetter, activeLanguage, { withWord: false })}
+                  style={{
+                    padding: "8px 13px",
+                    borderRadius: "8px",
+                    background: "linear-gradient(135deg, #059669, #10b981)",
+                    border: "1px solid #6ee7b7",
+                    color: "#ffffff",
+                    fontWeight: 800,
+                    fontSize: "12px",
+                    cursor: "pointer"
+                  }}
+                >
+                  🔊 Exact Sound
+                </button>
+                <button
+                  type="button"
+                  data-no-hud-notice="true"
+                  data-testid="alphabet-sound-word-btn"
+                  onClick={() => playCountryAlphabetExactSound(activeLetter, activeLanguage, { withWord: true })}
+                  style={{
+                    padding: "8px 13px",
+                    borderRadius: "8px",
+                    background: "linear-gradient(135deg, #0284c7, #0369a1)",
+                    border: "1px solid #7dd3fc",
+                    color: "#ffffff",
+                    fontWeight: 800,
+                    fontSize: "12px",
+                    cursor: "pointer"
+                  }}
+                >
+                  🗣️ Sound + Word
+                </button>
+              </div>
             </div>
 
             <div style={{ fontSize: "12.5px", color: "#e2e8f0", lineHeight: 1.55 }}>
-              <div><strong style={{ color: "#fde68a" }}>Pronunciation / Sound:</strong> {activeLetter.sound}</div>
-              <div><strong style={{ color: "#6ee7b7" }}>Example Word:</strong> {activeLetter.example}</div>
+              <div><strong style={{ color: "#fde68a" }}>Exact Letter Sound (Not English Letter Name):</strong> {activeLetter.sound}</div>
+              <div><strong style={{ color: "#6ee7b7" }}>Native Example Word:</strong> {activeLetter.example}</div>
               <div style={{ marginTop: "4px" }}>
-                <strong style={{ color: "#7dd3fc" }}>How to Write This Letter:</strong> {activeLetter.howToWrite}
+                <strong style={{ color: "#7dd3fc" }}>How {activeCountry.countryName} ({activeLanguage.name}) Writes This Letter:</strong> {activeLetter.howToWrite}
               </div>
             </div>
           </div>
@@ -687,6 +890,7 @@ export default function PhonicsAndAlphabetsLearningStudio({ mode = "JOLLY_PHONIC
             displayGlyph={activeLetter.glyph || activeLetter.letter}
             direction={activeLanguage.direction}
             label={`${activeLetter.letter} (${activeLanguage.name})`}
+            howToWrite={activeLetter.howToWrite}
           />
         </div>
       )}

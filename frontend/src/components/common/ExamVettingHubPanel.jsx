@@ -1064,6 +1064,7 @@ export default function ExamVettingHubPanel({
                       <div style={{ display: "flex", gap: "6px", flexWrap: "wrap" }}>
                         <button
                           type="button"
+                          data-testid={`vet-inspect-btn-${item.id}`}
                           onClick={() => {
                             setInspectingItem(item);
                             setReviewRemarks(item.headmasterRemarks || "");
@@ -1254,6 +1255,7 @@ export default function ExamVettingHubPanel({
                   {profile.leadershipRoleTitle} Official Vetting Remarks &amp; Directives
                   <textarea
                     rows={3}
+                    data-testid="headmaster-vet-remarks-input"
                     placeholder="Enter approval endorsement or specific revision directives for the teacher..."
                     value={reviewRemarks}
                     onChange={(e) => setReviewRemarks(e.target.value)}
@@ -1263,6 +1265,7 @@ export default function ExamVettingHubPanel({
                 <div style={{ display: "flex", gap: "10px", flexWrap: "wrap" }}>
                   <button
                     type="button"
+                    data-testid="headmaster-vet-confirm-btn"
                     disabled={submitting}
                     onClick={() => handleHeadmasterDecision(inspectingItem, "CONFIRMED_ONGOING")}
                     style={{

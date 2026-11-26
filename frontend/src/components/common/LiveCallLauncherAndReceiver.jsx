@@ -1,6 +1,11 @@
 import React, { useEffect, useState, useCallback, useRef } from "react";
 import apiClient from "../../api/client/apiClient";
 import { hasActiveAuthSession } from "../../utils/tokenStorage";
+import {
+  startIncomingRingtone,
+  stopIncomingRingtone,
+  formatRolePositionLabel
+} from "../../utils/callRingtoneEngine";
 import LiveInSystemCallModal from "./LiveInSystemCallModal";
 
 /**
@@ -52,6 +57,7 @@ export default function LiveCallLauncherAndReceiver({
   const isCampusStaff = isSecretary || isAccountant || isHR || isStaff;
 
   const [incomingCalls, setIncomingCalls] = useState([]);
+  const [missedCalls, setMissedCalls] = useState([]);
   const [activeConferences, setActiveConferences] = useState([]);
   const [recentCalls, setRecentCalls] = useState([]);
   const [directory, setDirectory] = useState({ contacts: [], headmasters: [], teachers: [], parents: [], students: [], staff: [], alumni: [] });
@@ -77,6 +83,7 @@ export default function LiveCallLauncherAndReceiver({
       const data = res?.data?.data;
       if (data) {
         setIncomingCalls(Array.isArray(data.incomingCalls) ? data.incomingCalls : []);
+        setMissedCalls(Array.isArray(data.missedCalls) ? data.missedCalls : []);
         setActiveConferences(Array.isArray(data.activeConferences) ? data.activeConferences : []);
         setRecentCalls(Array.isArray(data.recentCalls) ? data.recentCalls : []);
       }
@@ -134,12 +141,62 @@ export default function LiveCallLauncherAndReceiver({
     window.addEventListener("storage", onAuthUpdated);
     return () => {
       clearInterval(timer);
+      stopIncomingRingtone();
       window.removeEventListener("gbs_auth_session_expired", onAuthExpired);
       window.removeEventListener("gbs_auth_session_cleared", onAuthExpired);
       window.removeEventListener("gbs_auth_session_updated", onAuthUpdated);
       window.removeEventListener("storage", onAuthUpdated);
     };
   }, [pollIncomingAndConferences, loadDirectory]);
+
+  // Play real incoming telephone ringing tone with caller name & position whenever a call is ringing
+  const activeIncomingId = incomingCalls[0]?.id || null;
+  useEffect(() => {
+    if (activeIncomingId && !activeModalSession) {
+      const topCall = incomingCalls[0];
+      startIncomingRingtone({
+        callId: topCall.id,
+        callerName: topCall.initiatorName,
+        callerPosition: topCall.initiatorPosition || formatRolePositionLabel(topCall.initiatorRole),
+        mediaMode: topCall.mediaMode
+      });
+    } else {
+      stopIncomingRingtone();
+    }
+    return () => {
+      stopIncomingRingtone();
+    };
+  }, [activeIncomingId, activeModalSession]);
+
+  const handleReturnMissedCall = async (missedCall, mode = "VIDEO") => {
+    if (!missedCall) return;
+    try {
+      await apiClient.patch(`/video/calls/missed/${encodeURIComponent(missedCall.id)}/acknowledge`, {
+        action: "RETURNED"
+      });
+    } catch { }
+    setMissedCalls((prev) => prev.filter((m) => m.id !== missedCall.id));
+    await handleStartDirectCall(
+      {
+        userId: missedCall.initiatorUserId || null,
+        name: missedCall.initiatorName || "Caller",
+        email: missedCall.initiatorEmail || null,
+        role: missedCall.initiatorRole || "ADMIN",
+        tenantId: missedCall.tenantId || undefined,
+        tenantName: missedCall.targetTenantName || undefined
+      },
+      mode
+    );
+  };
+
+  const handleDismissMissedCall = async (missedCallId) => {
+    try {
+      await apiClient.patch(`/video/calls/missed/${encodeURIComponent(missedCallId)}/acknowledge`, {
+        action: "DISMISSED"
+      });
+    } catch { }
+    setMissedCalls((prev) => prev.filter((m) => m.id !== missedCallId));
+  };
 
   const handleStartDirectCall = async (target, mediaMode = "VIDEO") => {
     if (!target) {
@@ -207,6 +264,7 @@ export default function LiveCallLauncherAndReceiver({
   };
 
   const handleAcceptCall = async (call, overrideMediaMode = null) => {
+    stopIncomingRingtone();
     setBusy(true);
     try {
       const res = await apiClient.post(`/video/calls/${encodeURIComponent(call.id)}/answer`, {
@@ -223,6 +281,7 @@ export default function LiveCallLauncherAndReceiver({
   };
 
   const handleDeclineCall = async (call) => {
+    stopIncomingRingtone();
     try {
       await apiClient.post(`/video/calls/${encodeURIComponent(call.id)}/decline`, {
         reason: "Recipient declined."
@@ -309,12 +368,15 @@ export default function LiveCallLauncherAndReceiver({
           }}
         >
           <div>
-            <div style={{ fontSize: "0.72rem", fontWeight: 900, color: incomingCalls[0].initiatorRole === "DEVELOPER" ? "#38bdf8" : "#6ee7b7", textTransform: "uppercase" }}>
-              📞 INCOMING {incomingCalls[0].mediaMode} CALL • {incomingCalls[0].initiatorRole}
+            <div style={{ fontSize: "0.75rem", fontWeight: 900, color: incomingCalls[0].initiatorRole === "DEVELOPER" ? "#38bdf8" : "#fde68a", textTransform: "uppercase", letterSpacing: "0.5px" }}>
+              🔔 RINGING • INCOMING {incomingCalls[0].mediaMode} CALL • {incomingCalls[0].initiatorPosition || formatRolePositionLabel(incomingCalls[0].initiatorRole)}
             </div>
-            <strong style={{ fontSize: "1.02rem" }}>
-              {incomingCalls[0].initiatorName} is calling you ({incomingCalls[0].title})
+            <strong style={{ fontSize: "1.06rem", display: "block", marginTop: "2px" }}>
+              {incomingCalls[0].initiatorName} ({incomingCalls[0].initiatorPosition || formatRolePositionLabel(incomingCalls[0].initiatorRole)}) is calling you
             </strong>
+            <span style={{ fontSize: "0.78rem", color: "#cbd5e1" }}>
+              {incomingCalls[0].title}
+            </span>
           </div>
           <div style={{ display: "flex", gap: "8px", flexWrap: "wrap" }}>
             <button
@@ -344,6 +406,91 @@ export default function LiveCallLauncherAndReceiver({
               ✖ Decline
             </button>
           </div>
+        </div>
+      )}
+
+      {/* Missed Video & Voice Calls Login Alert Prompt (Visible immediately upon login after being offline) */}
+      {missedCalls.length > 0 && (
+        <div
+          data-testid="missed-calls-alert-banner"
+          style={{
+            background: "linear-gradient(135deg, rgba(127, 29, 29, 0.94) 0%, rgba(15, 23, 42, 0.96) 100%)",
+            border: "2px solid #f59e0b",
+            borderRadius: "14px",
+            padding: "13px 16px",
+            marginBottom: "12px",
+            color: "#ffffff",
+            display: "flex",
+            flexDirection: "column",
+            gap: "10px",
+            boxShadow: "0 12px 32px rgba(0,0,0,0.45)"
+          }}
+        >
+          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: "8px" }}>
+            <div style={{ fontSize: "0.78rem", fontWeight: 900, color: "#fde68a", textTransform: "uppercase", letterSpacing: "0.6px" }}>
+              📵 YOU HAVE {missedCalls.length} MISSED {missedCalls.length === 1 ? "CALL" : "CALLS"} WHILE OFFLINE — RETURN CALL PROMPT
+            </div>
+            <span style={{ fontSize: "0.72rem", color: "#fecaca", fontWeight: 700 }}>
+              Tap Return Video or Return Voice Call below to call back immediately
+            </span>
+          </div>
+          {missedCalls.slice(0, 5).map((mc) => {
+            const posLabel = mc.initiatorPosition || formatRolePositionLabel(mc.initiatorRole);
+            const missedTime = new Date(mc.missedAt || mc.endedAt || mc.startedAt || Date.now()).toLocaleString();
+            return (
+              <div
+                key={mc.id}
+                data-testid={`missed-call-row-${mc.id}`}
+                style={{
+                  display: "flex",
+                  justifyContent: "space-between",
+                  alignItems: "center",
+                  flexWrap: "wrap",
+                  gap: "10px",
+                  background: "rgba(2, 6, 23, 0.65)",
+                  border: "1px solid rgba(251, 191, 36, 0.4)",
+                  borderRadius: "10px",
+                  padding: "10px 12px"
+                }}
+              >
+                <div>
+                  <strong style={{ color: "#ffffff", fontSize: "0.95rem" }}>
+                    {mc.mediaMode === "VOICE" ? "📞 Missed Voice Call" : "📹 Missed Video Call"} from {mc.initiatorName}
+                  </strong>
+                  <div style={{ fontSize: "0.78rem", color: "#fde68a", fontWeight: 700, marginTop: "2px" }}>
+                    Position: {posLabel} • Missed at {missedTime}
+                  </div>
+                </div>
+                <div style={{ display: "flex", gap: "7px", flexWrap: "wrap" }}>
+                  <button
+                    type="button"
+                    disabled={busy}
+                    data-testid={`return-video-call-${mc.id}`}
+                    onClick={() => handleReturnMissedCall(mc, "VIDEO")}
+                    style={{ background: "#10b981", color: "#fff", border: "1px solid #6ee7b7", borderRadius: "8px", padding: "7px 12px", fontWeight: 900, cursor: "pointer", fontSize: "0.78rem" }}
+                  >
+                    📹 Return Video Call
+                  </button>
+                  <button
+                    type="button"
+                    disabled={busy}
+                    data-testid={`return-voice-call-${mc.id}`}
+                    onClick={() => handleReturnMissedCall(mc, "VOICE")}
+                    style={{ background: "#0284c7", color: "#fff", border: "1px solid #7dd3fc", borderRadius: "8px", padding: "7px 12px", fontWeight: 800, cursor: "pointer", fontSize: "0.78rem" }}
+                  >
+                    📞 Return Voice Call
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => handleDismissMissedCall(mc.id)}
+                    style={{ background: "rgba(148, 163, 184, 0.18)", color: "#e2e8f0", border: "1px solid rgba(148, 163, 184, 0.4)", borderRadius: "8px", padding: "7px 10px", fontWeight: 700, cursor: "pointer", fontSize: "0.76rem" }}
+                  >
+                    Dismiss
+                  </button>
+                </div>
+              </div>
+            );
+          })}
         </div>
       )}
 

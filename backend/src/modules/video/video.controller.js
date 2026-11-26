@@ -56,6 +56,28 @@ async function getIncomingAndActive(req, res, next) {
   }
 }
 
+async function getMissedCalls(req, res, next) {
+  try {
+    const data = await liveCallService.getMissedCalls(req);
+    return res.status(200).json({ success: true, data });
+  } catch (err) {
+    return next(err);
+  }
+}
+
+async function acknowledgeMissedCall(req, res, next) {
+  try {
+    const session = await liveCallService.acknowledgeMissedCall(req);
+    return res.status(200).json({
+      success: true,
+      message: 'Missed call updated cleanly.',
+      data: { session }
+    });
+  } catch (err) {
+    return next(err);
+  }
+}
+
 async function answerCall(req, res, next) {
   try {
     const session = await liveCallService.answerOrJoinCall(req);
@@ -190,6 +212,8 @@ module.exports = {
   getDirectory,
   initiateCall,
   getIncomingAndActive,
+  getMissedCalls,
+  acknowledgeMissedCall,
   answerCall,
   declineCall,
   endCall,

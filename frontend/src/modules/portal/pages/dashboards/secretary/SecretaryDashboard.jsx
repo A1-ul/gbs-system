@@ -46,6 +46,9 @@ export default function SecretaryDashboard() {
     pendingStationeryOrders: 0
   });
   const [records, setRecords] = useState([]);
+  const [defaulterFollowups, setDefaulterFollowups] = useState([]);
+  const [followupDrafts, setFollowupDrafts] = useState({});
+  const [submittingFollowupId, setSubmittingFollowupId] = useState(null);
   const [loading, setLoading] = useState(true);
   const [feedback, setFeedback] = useState(null);
 
@@ -106,15 +109,19 @@ export default function SecretaryDashboard() {
   const fetchSecretaryData = useCallback(async () => {
     setLoading(true);
     try {
-      const [ovRes, recRes] = await Promise.all([
-        apiClient.get("/secretary/overview"),
-        apiClient.get("/secretary/records")
+      const [ovRes, recRes, fupRes] = await Promise.all([
+        apiClient.get("/secretary/overview").catch(() => null),
+        apiClient.get("/secretary/records").catch(() => null),
+        apiClient.get("/academic/defaulters-followups").catch(() => null)
       ]);
-      if (ovRes.data?.data?.summary) {
+      if (ovRes?.data?.data?.summary) {
         setOverview(ovRes.data.data.summary);
       }
-      if (Array.isArray(recRes.data?.data?.records)) {
+      if (Array.isArray(recRes?.data?.data?.records)) {
         setRecords(recRes.data.data.records);
+      }
+      if (Array.isArray(fupRes?.data?.data?.followups)) {
+        setDefaulterFollowups(fupRes.data.data.followups);
       }
     } catch (err) {
       setFeedback({
@@ -125,6 +132,39 @@ export default function SecretaryDashboard() {
       setLoading(false);
     }
   }, []);
+
+  const handleSubmitDefaulterCheckupReport = async (followupItem) => {
+    const draft = followupDrafts[followupItem.id] || {};
+    const verifiedReason = String(draft.verifiedReason || "").trim();
+    if (!verifiedReason) {
+      setFeedback({ type: "error", message: "Please enter the verified reason given by the parent or student before reporting back to the Headmaster." });
+      return;
+    }
+    setSubmittingFollowupId(followupItem.id);
+    setFeedback(null);
+    try {
+      const res = await apiClient.patch(`/academic/defaulters-followups/${encodeURIComponent(followupItem.id)}/report`, {
+        contactCalled: draft.contactCalled || (followupItem.parentPhone ? "PARENT" : "STUDENT"),
+        phoneDialed: draft.phoneDialed || followupItem.parentPhone || followupItem.studentPhone || "",
+        callOutcome: draft.callOutcome || "REACHED_VERIFIED",
+        verifiedReason,
+        expectedReturnDate: draft.expectedReturnDate || "",
+        secretaryNotes: draft.secretaryNotes || ""
+      });
+      setFeedback({
+        type: "success",
+        message: res?.data?.message || `Checkup report for ${followupItem.studentName} sent back to Headmaster!`
+      });
+      await fetchSecretaryData();
+    } catch (err) {
+      setFeedback({
+        type: "error",
+        message: err?.response?.data?.message || "Failed to submit checkup feedback to Headmaster."
+      });
+    } finally {
+      setSubmittingFollowupId(null);
+    }
+  };
 
   useEffect(() => {
     fetchSecretaryData();
@@ -434,6 +474,51 @@ export default function SecretaryDashboard() {
             </div>
           )}
 
+          {/* Headmaster Defaulters Parent/Student Phone Checkup Alert */}
+          {defaulterFollowups.filter((f) => f.status === "PENDING_SECRETARY_CALL").length > 0 && (
+            <div
+              data-testid="secretary-defaulters-alert-banner"
+              style={{
+                padding: "13px 16px",
+                borderRadius: "12px",
+                marginBottom: "1rem",
+                background: "linear-gradient(135deg, rgba(180, 83, 9, 0.28), rgba(15, 23, 42, 0.92))",
+                border: "2px solid #f59e0b",
+                display: "flex",
+                justifyContent: "space-between",
+                alignItems: "center",
+                flexWrap: "wrap",
+                gap: "10px",
+                color: "#fff"
+              }}
+            >
+              <div>
+                <strong style={{ color: "#fde68a", fontSize: "0.94rem", display: "block" }}>
+                  📞 HEADMASTER DIRECTIVE: {defaulterFollowups.filter((f) => f.status === "PENDING_SECRETARY_CALL").length} Student / Parent Phone Checkup(s) Assigned
+                </strong>
+                <span style={{ fontSize: "0.82rem", color: "#e2e8f0" }}>
+                  Please call the listed students or their parents via mobile phone to verify why they missed exams, school attendance, or assignments, then submit your checkup report back to the Headmaster.
+                </span>
+              </div>
+              <button
+                type="button"
+                onClick={() => setActiveTab("defaultersFollowup")}
+                style={{
+                  background: "linear-gradient(135deg, #d97706, #f59e0b)",
+                  color: "#0f172a",
+                  border: "1px solid #fef08a",
+                  borderRadius: "8px",
+                  padding: "8px 14px",
+                  fontWeight: 900,
+                  cursor: "pointer",
+                  fontSize: "0.82rem"
+                }}
+              >
+                Open Phone Checkup List →
+              </button>
+            </div>
+          )}
+
           {/* Global Staff Welcome Prompt & Duty Clock-In / Auto-Clock-Out */}
           <StaffAttendanceClockWidget
             roleOverride="SECRETARY"
@@ -472,6 +557,15 @@ export default function SecretaryDashboard() {
               style={{ borderLeft: "3px solid #d4af37" }}
             >
               🎒 Stationery Price List
+            </button>
+            <button
+              type="button"
+              data-testid="secretary-defaulters-tab"
+              className={`role-tab-btn ${activeTab === "defaultersFollowup" ? "active" : ""}`}
+              onClick={() => setActiveTab("defaultersFollowup")}
+              style={{ borderLeft: "3px solid #f59e0b" }}
+            >
+              📞 Defaulters Call Checkups ({defaulterFollowups.filter((f) => f.status === "PENDING_SECRETARY_CALL").length} Pending)
             </button>
             <button
               type="button"
@@ -777,6 +871,177 @@ export default function SecretaryDashboard() {
                 isDark={isNavyMode}
                 onExpenseRecorded={() => fetchSecretaryData()}
               />
+            </div>
+          )}
+
+          {/* TAB 4B: HEADMASTER DEFAULTERS PARENT/STUDENT MOBILE CALL CHECKUPS & FEEDBACK */}
+          {activeTab === "defaultersFollowup" && (
+            <div className="role-workspace-card" data-testid="secretary-defaulters-followup-panel">
+              <div className="workspace-title-row">
+                <div>
+                  <h2><span>📞</span> HEADMASTER DEFAULTERS PHONE CHECKUPS &amp; FEEDBACK TO HEADMASTER</h2>
+                  <p>
+                    Call students or parents/guardians directly via their mobile contacts to verify reasons for missed exams, absenteeism, or unsubmitted assignments, then report your verified checkup feedback back to the Headmaster.
+                  </p>
+                </div>
+              </div>
+
+              {defaulterFollowups.length === 0 ? (
+                <div style={{ padding: "24px", textAlign: "center", color: "#94a3b8", background: "rgba(15, 23, 42, 0.55)", borderRadius: "12px" }}>
+                  No defaulter checkup lists have been dispatched by the Headmaster yet.
+                </div>
+              ) : (
+                <div style={{ display: "flex", flexDirection: "column", gap: "14px" }}>
+                  {defaulterFollowups.map((item) => {
+                    const draft = followupDrafts[item.id] || {};
+                    const isReported = item.status === "REPORTED_TO_HEADMASTER";
+                    const defaultPhone = item.parentPhone || item.studentPhone || "";
+                    return (
+                      <div
+                        key={item.id}
+                        data-testid={`secretary-followup-card-${item.id}`}
+                        style={{
+                          background: "rgba(15, 23, 42, 0.86)",
+                          border: isReported ? "1.5px solid #10b981" : "1.5px solid #f59e0b",
+                          borderRadius: "12px",
+                          padding: "14px 16px",
+                          color: "#f8fafc",
+                          display: "flex",
+                          flexDirection: "column",
+                          gap: "10px"
+                        }}
+                      >
+                        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", flexWrap: "wrap", gap: "10px" }}>
+                          <div>
+                            <strong style={{ fontSize: "1.02rem", color: "#ffffff" }}>
+                              {item.studentName} • <span style={{ color: "#38bdf8" }}>{item.classOrLevel}</span>
+                            </strong>
+                            <div style={{ fontSize: "0.8rem", color: "#fde68a", fontWeight: 700, marginTop: "2px" }}>
+                              Issue: {item.category.replace(/_/g, " ")} — {item.issueDetail}
+                            </div>
+                            <div style={{ fontSize: "0.78rem", color: "#cbd5e1", marginTop: "3px" }}>
+                              Headmaster Directive ({item.dispatchedByName}): {item.headmasterNote}
+                            </div>
+                          </div>
+                          <span
+                            style={{
+                              padding: "4px 10px",
+                              borderRadius: "999px",
+                              fontSize: "0.74rem",
+                              fontWeight: 800,
+                              background: isReported ? "rgba(16,185,129,0.2)" : "rgba(245,158,11,0.2)",
+                              border: `1px solid ${isReported ? "#10b981" : "#f59e0b"}`,
+                              color: isReported ? "#6ee7b7" : "#fde68a"
+                            }}
+                          >
+                            {isReported ? "✓ Feedback Sent to Headmaster" : "⏳ Pending Mobile Phone Checkup"}
+                          </span>
+                        </div>
+
+                        {/* Clickable Mobile Contacts */}
+                        <div style={{ display: "flex", gap: "10px", flexWrap: "wrap", alignItems: "center", background: "rgba(2, 6, 23, 0.6)", padding: "9px 12px", borderRadius: "8px", fontSize: "0.82rem" }}>
+                          <div>
+                            👨‍👩‍👧 Parent ({item.parentName || "Guardian"}):{" "}
+                            {item.parentPhone ? (
+                              <a href={`tel:${item.parentPhone}`} style={{ color: "#6ee7b7", fontWeight: 900, textDecoration: "underline" }}>
+                                📞 {item.parentPhone}
+                              </a>
+                            ) : (
+                              <span style={{ color: "#94a3b8" }}>Not recorded</span>
+                            )}
+                          </div>
+                          <div>
+                            📱 Student Mobile:{" "}
+                            {item.studentPhone ? (
+                              <a href={`tel:${item.studentPhone}`} style={{ color: "#38bdf8", fontWeight: 900, textDecoration: "underline" }}>
+                                📞 {item.studentPhone}
+                              </a>
+                            ) : (
+                              <span style={{ color: "#94a3b8" }}>Not recorded</span>
+                            )}
+                          </div>
+                        </div>
+
+                        {isReported && item.secretaryReport ? (
+                          <div style={{ background: "rgba(16, 185, 129, 0.12)", border: "1px solid rgba(16, 185, 129, 0.45)", borderRadius: "8px", padding: "10px 12px", fontSize: "0.82rem" }}>
+                            <strong style={{ color: "#6ee7b7" }}>
+                              ✓ Checkup Report Submitted to Headmaster ({item.secretaryReport.contactCalled} • {item.secretaryReport.phoneDialed} • {item.secretaryReport.callOutcome.replace(/_/g, " ")}):
+                            </strong>
+                            <div style={{ color: "#ffffff", marginTop: "4px" }}>{item.secretaryReport.verifiedReason}</div>
+                            {item.secretaryReport.expectedReturnDate && (
+                              <div style={{ color: "#7dd3fc", marginTop: "2px", fontSize: "0.76rem" }}>Expected Return Date: {item.secretaryReport.expectedReturnDate}</div>
+                            )}
+                          </div>
+                        ) : (
+                          <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(190px, 1fr))", gap: "8px" }}>
+                            <select
+                              className="filter-select"
+                              value={draft.contactCalled || (item.parentPhone ? "PARENT" : "STUDENT")}
+                              onChange={(e) => setFollowupDrafts((p) => ({ ...p, [item.id]: { ...p[item.id], contactCalled: e.target.value } }))}
+                            >
+                              <option value="PARENT">Called Parent / Guardian</option>
+                              <option value="STUDENT">Called Student Directly</option>
+                              <option value="BOTH">Called Both Parent &amp; Student</option>
+                            </select>
+                            <input
+                              type="text"
+                              className="filter-input"
+                              placeholder="Mobile Number Dialed"
+                              value={draft.phoneDialed !== undefined ? draft.phoneDialed : defaultPhone}
+                              onChange={(e) => setFollowupDrafts((p) => ({ ...p, [item.id]: { ...p[item.id], phoneDialed: e.target.value } }))}
+                            />
+                            <select
+                              className="filter-select"
+                              value={draft.callOutcome || "REACHED_VERIFIED"}
+                              onChange={(e) => setFollowupDrafts((p) => ({ ...p, [item.id]: { ...p[item.id], callOutcome: e.target.value } }))}
+                            >
+                              <option value="REACHED_VERIFIED">Reached — Reason Verified</option>
+                              <option value="MEDICAL_EXCUSE">Medical / Illness Confirmed</option>
+                              <option value="PROMISED_RETURN">Parent Promised Return / Submission</option>
+                              <option value="FINANCIAL_CHALLENGE">Family / Transport Challenge</option>
+                              <option value="NO_ANSWER_RETRY">No Answer — Scheduled Retry</option>
+                            </select>
+                            <input
+                              type="date"
+                              className="filter-input"
+                              value={draft.expectedReturnDate || ""}
+                              onChange={(e) => setFollowupDrafts((p) => ({ ...p, [item.id]: { ...p[item.id], expectedReturnDate: e.target.value } }))}
+                            />
+                            <input
+                              type="text"
+                              className="filter-input"
+                              style={{ gridColumn: "1 / -1" }}
+                              data-testid={`secretary-verified-reason-input-${item.id}`}
+                              placeholder="Enter exact verified reason given by student or parent during phone checkup *"
+                              value={draft.verifiedReason || ""}
+                              onChange={(e) => setFollowupDrafts((p) => ({ ...p, [item.id]: { ...p[item.id], verifiedReason: e.target.value } }))}
+                            />
+                            <button
+                              type="button"
+                              data-testid={`secretary-submit-report-btn-${item.id}`}
+                              disabled={submittingFollowupId === item.id}
+                              onClick={() => handleSubmitDefaulterCheckupReport(item)}
+                              style={{
+                                gridColumn: "1 / -1",
+                                background: "linear-gradient(135deg, #059669, #10b981)",
+                                color: "#ffffff",
+                                border: "1px solid #6ee7b7",
+                                borderRadius: "8px",
+                                padding: "9px 14px",
+                                fontWeight: 900,
+                                cursor: submittingFollowupId === item.id ? "wait" : "pointer",
+                                fontSize: "0.84rem"
+                              }}
+                            >
+                              {submittingFollowupId === item.id ? "Sending Report..." : "✅ Submit Verified Checkup Feedback to Headmaster"}
+                            </button>
+                          </div>
+                        )}
+                      </div>
+                    );
+                  })}
+                </div>
+              )}
             </div>
           )}
 

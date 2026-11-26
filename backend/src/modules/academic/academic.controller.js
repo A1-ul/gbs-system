@@ -369,6 +369,44 @@ const syncDefaultersReport = async (req, res, next) => {
   }
 };
 
+const dispatchDefaultersToSecretary = async (req, res, next) => {
+  try {
+    const result = await academicService.dispatchDefaultersToSecretary(req.tenantId, req.body || {}, req.user);
+    res.status(201).json({
+      status: 'success',
+      message: `Dispatched ${result.dispatchedCount} defaulter follow-up checkup(s) to School Secretary for parent/student phone verification.`,
+      data: result
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+
+const getDefaultersFollowups = async (req, res, next) => {
+  try {
+    const data = await academicService.getDefaultersFollowups(req.tenantId, req.query || {});
+    res.status(200).json({
+      status: 'success',
+      data
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+
+const submitSecretaryFollowupReport = async (req, res, next) => {
+  try {
+    const followup = await academicService.submitSecretaryFollowupReport(req.tenantId, req.params.id, req.body || {}, req.user);
+    res.status(200).json({
+      status: 'success',
+      message: `Checkup report for ${followup.studentName} submitted back to Headmaster successfully.`,
+      data: { followup }
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+
 module.exports = {
   getClasses,
   getClassById,
@@ -397,5 +435,8 @@ module.exports = {
   broadcastFacultyDirective,
   getFacultyDirectives,
   getDefaultersReport,
-  syncDefaultersReport
+  syncDefaultersReport,
+  dispatchDefaultersToSecretary,
+  getDefaultersFollowups,
+  submitSecretaryFollowupReport
 };

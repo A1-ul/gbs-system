@@ -2,6 +2,12 @@ import React, { useEffect, useRef, useState, useCallback } from "react";
 import { createPortal } from "react-dom";
 import apiClient from "../../api/client/apiClient";
 import { getActiveAuthToken } from "../../utils/tokenStorage";
+import {
+  startOutgoingRingbackTone,
+  stopOutgoingRingbackTone,
+  stopAllCallRingtones,
+  formatRolePositionLabel
+} from "../../utils/callRingtoneEngine";
 
 const ICE_CONFIG = {
   iceServers: [
@@ -96,6 +102,8 @@ export default function LiveInSystemCallModal({
   const [remoteVideoMeta, setRemoteVideoMeta] = useState("");
   const [availableCameras, setAvailableCameras] = useState([]);
   const [selectedCameraId, setSelectedCameraId] = useState("");
+  const [availableMics, setAvailableMics] = useState([]);
+  const [selectedMicId, setSelectedMicId] = useState("");
   const [audioUnlocked, setAudioUnlocked] = useState(true);
   const [micLevel, setMicLevel] = useState(0);
   const [copiedLink, setCopiedLink] = useState(false);
@@ -103,12 +111,15 @@ export default function LiveInSystemCallModal({
 
   const localVideoRef = useRef(null);
   const remoteVideoRef = useRef(null);
+  const remoteAudioRef = useRef(null);
   const localStreamRef = useRef(null);
   const remoteStreamRef = useRef(null);
   const peerConnRef = useRef(null);
   const videoSenderRef = useRef(null);
+  const audioSenderRef = useRef(null);
   const remoteConnectedRef = useRef(false);
   const selectedCameraIdRef = useRef("");
+  const selectedMicIdRef = useRef("");
   const initialMediaModeRef = useRef(
     String(session?.mediaMode || "VIDEO").toUpperCase() === "VOICE" ? "VOICE" : "VIDEO"
   );
@@ -132,11 +143,31 @@ export default function LiveInSystemCallModal({
     micMutedRef.current = micMuted;
     remoteConnectedRef.current = remoteConnected;
     selectedCameraIdRef.current = selectedCameraId;
+    selectedMicIdRef.current = selectedMicId;
   });
 
   const myUserId = String(currentUser?.id || currentUser?.email || "user");
+  const myEmailLower = String(currentUser?.email || "").trim().toLowerCase();
   const callId = session?.id || liveSession?.id;
   const initiatorUserId = session?.initiatorUserId || liveSession?.initiatorUserId;
+  const initiatorEmailLower = String(session?.initiatorEmail || liveSession?.initiatorEmail || "").trim().toLowerCase();
+  const isOutgoingRinging =
+    String(liveSession?.status || session?.status || "").toUpperCase() === "RINGING" &&
+    String(liveSession?.callScope || session?.callScope || "DIRECT").toUpperCase() === "DIRECT" &&
+    !remoteConnected &&
+    (String(initiatorUserId) === myUserId || (myEmailLower && initiatorEmailLower && myEmailLower === initiatorEmailLower));
+
+  // Play real outgoing call ringback tone while waiting for the recipient to answer
+  useEffect(() => {
+    if (isOutgoingRinging) {
+      startOutgoingRingbackTone();
+    } else {
+      stopOutgoingRingbackTone();
+    }
+    return () => {
+      stopOutgoingRingbackTone();
+    };
+  }, [isOutgoingRinging]);
   const mediaMode = activeMediaMode;
   const syncedSessionIdRef = useRef(session?.id || null);
 
@@ -216,11 +247,18 @@ export default function LiveInSystemCallModal({
       if (!navigator.mediaDevices || typeof navigator.mediaDevices.enumerateDevices !== "function") return;
       const devices = await navigator.mediaDevices.enumerateDevices();
       const cams = devices.filter((d) => d.kind === "videoinput");
+      const mics = devices.filter((d) => d.kind === "audioinput");
       setAvailableCameras(cams);
+      setAvailableMics(mics);
       if (cams.length > 0 && !selectedCameraIdRef.current) {
         const activeVidTrack = localStreamRef.current?.getVideoTracks?.()[0];
         const activeId = activeVidTrack?.getSettings?.()?.deviceId || cams[0].deviceId || "";
         setSelectedCameraId(activeId);
+      }
+      if (mics.length > 0 && !selectedMicIdRef.current) {
+        const activeAudTrack = localStreamRef.current?.getAudioTracks?.()[0];
+        const activeMicId = activeAudTrack?.getSettings?.()?.deviceId || mics[0].deviceId || "";
+        setSelectedMicId(activeMicId);
       }
     } catch { }
   }, []);
@@ -249,29 +287,40 @@ export default function LiveInSystemCallModal({
   }, []);
 
   const attachRemoteStreamToVideo = useCallback((stream, forceRebind = false) => {
-    const el = remoteVideoRef.current;
-    if (!el || !stream) return;
+    if (!stream) return;
     const liveVidTracks = stream.getVideoTracks().filter((t) => t.readyState === "live");
     setRemoteHasVideo(liveVidTracks.length > 0);
+
+    // Dedicated remote <audio> element guarantees crisp voice playback in BOTH Video & Voice modes
+    const audioEl = remoteAudioRef.current;
+    if (audioEl) {
+      if (forceRebind || audioEl.srcObject !== stream) {
+        audioEl.srcObject = stream;
+      }
+      audioEl.muted = false;
+      audioEl.volume = 1.0;
+      audioEl.play().then(() => setAudioUnlocked(true)).catch(() => { });
+    }
+
+    const el = remoteVideoRef.current;
+    if (!el) return;
     if (forceRebind || el.srcObject !== stream) {
       el.srcObject = stream;
     }
     el.playsInline = true;
     el.autoplay = true;
-    el.muted = false;
+    el.muted = Boolean(audioEl); // Avoid double audio echo when dedicated remote <audio> plays voice
     el.volume = 1.0;
     const p = el.play();
     if (p && typeof p.catch === "function") {
       p.then(() => {
         setAudioUnlocked(true);
       }).catch(() => {
-        // Browser autoplay policy blocked unmuted playback outside a user gesture.
-        // Immediately retry muted so remote live camera frames display right away, and show unmute button.
         if (remoteVideoRef.current) {
           remoteVideoRef.current.muted = true;
           remoteVideoRef.current.play().catch(() => { });
         }
-        setAudioUnlocked(false);
+        if (!audioEl) setAudioUnlocked(false);
       });
     }
   }, []);
@@ -511,14 +560,24 @@ export default function LiveInSystemCallModal({
         }
       } else {
         try {
-          const audioStream = await getUserMediaWithTimeout({ audio: audioCfg, video: false }, 3000);
+          const audioStream = await getUserMediaWithTimeout({ audio: audioCfg, video: false }, 6000);
           setCameraOff(true);
-          setMediaStatus("Voice Call Active — Click Switch to Video Call anytime");
+          setMicMuted(false);
+          setMediaStatus("Voice Call Microphone Live — Click Switch to Video Call anytime");
           return audioStream;
         } catch {
-          setCameraOff(true);
-          setMediaStatus("Voice Room Active (allow microphone access in browser)");
-          return null;
+          try {
+            const basicAudioStream = await getUserMediaWithTimeout({ audio: true, video: false }, 5000);
+            setCameraOff(true);
+            setMicMuted(false);
+            setMediaStatus("Voice Call Microphone Live — Click Switch to Video Call anytime");
+            return basicAudioStream;
+          } catch {
+            setCameraOff(true);
+            setMicMuted(true);
+            setMediaStatus("Voice Room Active (allow microphone access or click Unmute Mic)");
+            return null;
+          }
         }
       }
     };
@@ -577,7 +636,10 @@ export default function LiveInSystemCallModal({
           if (localStreamRef.current) {
             localStreamRef.current.getTracks().forEach((track) => {
               const sender = pc.addTrack(track, localStreamRef.current);
-              if (track.kind === "audio") hasLocalAudio = true;
+              if (track.kind === "audio") {
+                hasLocalAudio = true;
+                audioSenderRef.current = sender;
+              }
               if (track.kind === "video") {
                 hasLocalVideo = true;
                 videoSenderRef.current = sender;
@@ -591,7 +653,10 @@ export default function LiveInSystemCallModal({
           // so remote peer camera and voice streams are ALWAYS received and rendered cleanly.
           if (typeof pc.addTransceiver === "function") {
             try {
-              if (!hasLocalAudio) pc.addTransceiver("audio", { direction: "recvonly" });
+              if (!hasLocalAudio) {
+                const aTrans = pc.addTransceiver("audio", { direction: "recvonly" });
+                if (aTrans?.sender) audioSenderRef.current = aTrans.sender;
+              }
               if (!hasLocalVideo) {
                 const vTrans = pc.addTransceiver("video", { direction: "recvonly" });
                 if (vTrans?.sender) videoSenderRef.current = vTrans.sender;
@@ -780,27 +845,91 @@ export default function LiveInSystemCallModal({
     };
   }, [callId, myUserId, initiatorUserId, currentUser?.role, sendSignal, stopTracks, attachLocalStreamToVideo, attachRemoteStreamToVideo, startMicLevelMonitor]);
 
+  const acquireAndBindMicTrack = async (deviceId = "") => {
+    if (!navigator.mediaDevices || typeof navigator.mediaDevices.getUserMedia !== "function") {
+      return false;
+    }
+    const micId = deviceId || selectedMicIdRef.current || "";
+    const preferredAudio = micId
+      ? { deviceId: { exact: micId }, echoCancellation: true, noiseSuppression: true, autoGainControl: true }
+      : { echoCancellation: true, noiseSuppression: true, autoGainControl: true };
+    let audioStream = null;
+    try {
+      audioStream = await navigator.mediaDevices.getUserMedia({ audio: preferredAudio, video: false });
+    } catch {
+      try {
+        audioStream = await navigator.mediaDevices.getUserMedia({ audio: micId ? { deviceId: { ideal: micId } } : true, video: false });
+      } catch {
+        return false;
+      }
+    }
+    const audioTrack = audioStream?.getAudioTracks?.()[0];
+    if (!audioTrack) return false;
+    audioTrack.enabled = true;
+
+    const existingVideoTracks = (localStreamRef.current?.getVideoTracks?.() || []).filter((t) => t.readyState === "live");
+    (localStreamRef.current?.getAudioTracks?.() || []).forEach((oldT) => {
+      if (oldT !== audioTrack) {
+        try { oldT.stop(); } catch { }
+      }
+    });
+
+    const nextStream = new MediaStream([audioTrack, ...existingVideoTracks]);
+    localStreamRef.current = nextStream;
+    startMicLevelMonitor(nextStream);
+    refreshCameraDevices();
+
+    if (peerConnRef.current && peerConnRef.current.signalingState !== "closed") {
+      const pc = peerConnRef.current;
+      try {
+        const existingAudioSender =
+          audioSenderRef.current ||
+          pc.getSenders?.().find((s) => s.track?.kind === "audio") ||
+          pc.getTransceivers?.().find((t) => t.sender?.track?.kind === "audio" || t.receiver?.track?.kind === "audio")?.sender;
+        if (existingAudioSender) {
+          const trans = pc.getTransceivers?.().find((t) => t.sender === existingAudioSender);
+          if (trans && trans.direction === "recvonly") {
+            trans.direction = "sendrecv";
+            await existingAudioSender.replaceTrack(audioTrack);
+            await renegotiatePeerConnection(pc);
+          } else {
+            await existingAudioSender.replaceTrack(audioTrack);
+          }
+          audioSenderRef.current = existingAudioSender;
+        } else {
+          audioSenderRef.current = pc.addTrack(audioTrack, nextStream);
+          await renegotiatePeerConnection(pc);
+        }
+      } catch { }
+    }
+    setMicMuted(false);
+    setMediaStatus(activeMediaModeRef.current === "VOICE" ? "Live Microphone Active (Voice Call)" : "HD Live Camera & Microphone Active");
+    return true;
+  };
+
+  const handleSelectMic = async (nextMicId) => {
+    setSelectedMicId(nextMicId);
+    selectedMicIdRef.current = nextMicId;
+    await acquireAndBindMicTrack(nextMicId);
+  };
+
   const toggleMic = async () => {
     const nextMuted = !micMuted;
-    setMicMuted(nextMuted);
-    if (localStreamRef.current && localStreamRef.current.getAudioTracks().length > 0) {
-      localStreamRef.current.getAudioTracks().forEach((t) => {
+    const liveAudioTracks = (localStreamRef.current?.getAudioTracks?.() || []).filter((t) => t.readyState === "live");
+    if (liveAudioTracks.length > 0) {
+      setMicMuted(nextMuted);
+      liveAudioTracks.forEach((t) => {
         t.enabled = !nextMuted;
       });
-    } else if (!nextMuted && navigator.mediaDevices?.getUserMedia) {
-      try {
-        const audioStream = await navigator.mediaDevices.getUserMedia({ audio: true, video: false });
-        const audioTrack = audioStream.getAudioTracks()[0];
-        if (audioTrack) {
-          if (!localStreamRef.current) localStreamRef.current = new MediaStream();
-          localStreamRef.current.addTrack(audioTrack);
-          if (peerConnRef.current) peerConnRef.current.addTrack(audioTrack, localStreamRef.current);
-          startMicLevelMonitor(localStreamRef.current);
-          setMediaStatus("Live Microphone Enabled");
-        }
-      } catch {
+      setMediaStatus(nextMuted ? "Microphone Muted" : "Live Microphone Active");
+    } else if (!nextMuted) {
+      const ok = await acquireAndBindMicTrack(selectedMicIdRef.current);
+      if (!ok) {
         setMicMuted(true);
+        setMediaStatus("Microphone permission needed — allow mic in browser settings");
       }
+    } else {
+      setMicMuted(true);
     }
   };
 
@@ -960,8 +1089,13 @@ export default function LiveInSystemCallModal({
     if (audioCtxRef.current && audioCtxRef.current.state === "suspended") {
       audioCtxRef.current.resume().catch(() => { });
     }
+    if (remoteAudioRef.current) {
+      remoteAudioRef.current.muted = false;
+      remoteAudioRef.current.volume = 1.0;
+      remoteAudioRef.current.play().then(() => setAudioUnlocked(true)).catch(() => { });
+    }
     if (remoteVideoRef.current) {
-      remoteVideoRef.current.muted = false;
+      remoteVideoRef.current.muted = Boolean(remoteAudioRef.current);
       remoteVideoRef.current.volume = 1.0;
       remoteVideoRef.current.play().then(() => setAudioUnlocked(true)).catch(() => { });
     }
@@ -1018,6 +1152,7 @@ export default function LiveInSystemCallModal({
   };
 
   const handleEndCall = async () => {
+    stopAllCallRingtones();
     stopTracks();
     if (callId) {
       try {
@@ -1148,6 +1283,20 @@ export default function LiveInSystemCallModal({
                     ))}
                   </select>
                 )}
+                {availableMics.length > 1 && (
+                  <select
+                    aria-label="Switch Microphone Device"
+                    value={selectedMicId}
+                    onChange={(e) => handleSelectMic(e.target.value)}
+                    style={{ background: "#081833", color: "#a7f3d0", border: "1px solid rgba(16,185,129,0.5)", borderRadius: "6px", padding: "2px 6px", fontSize: "0.68rem", maxWidth: "150px" }}
+                  >
+                    {availableMics.map((mic, idx) => (
+                      <option key={mic.deviceId || idx} value={mic.deviceId}>
+                        🎙️ {mic.label || `Microphone ${idx + 1}`}
+                      </option>
+                    ))}
+                  </select>
+                )}
               </div>
               <div style={{ position: "relative", width: "100%", height: "190px", borderRadius: "8px", overflow: "hidden", background: "#020617" }}>
                 <video
@@ -1211,6 +1360,7 @@ export default function LiveInSystemCallModal({
                 Remote Stream ({activeSession?.targetName || (participants.length > 1 ? `${participants.length - 1} Connected` : "Waiting for peer...")}) {remoteVideoMeta ? `• ${remoteVideoMeta}` : ""}
               </span>
               <div style={{ position: "relative", width: "100%", height: "190px", borderRadius: "8px", overflow: "hidden", background: "#020617" }}>
+                <audio ref={remoteAudioRef} data-testid="live-call-remote-audio" autoPlay playsInline />
                 <video
                   ref={remoteVideoRef}
                   data-testid="live-call-remote-video"

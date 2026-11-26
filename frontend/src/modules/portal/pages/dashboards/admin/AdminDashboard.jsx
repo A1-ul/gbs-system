@@ -12064,6 +12064,8 @@ export function AdminDashboard({ initialTab } = {}) {
 
           {activeTab === "defaulters" && (
             <StudentDefaultersCompliancePanel
+              mode="HEADMASTER"
+              currentUser={currentUser}
               onFeedback={(msg) => setFeedback({ type: "success", message: msg })}
             />
           )}

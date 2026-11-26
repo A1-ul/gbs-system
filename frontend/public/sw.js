@@ -5,7 +5,7 @@
 ================================================================================
 */
 
-const CACHE_NAME = "gbs-cache-v2026.21";
+const CACHE_NAME = "gbs-cache-v2026.22";
 const OFFLINE_URL = "/offline.html";
 
 const PRECACHE_ASSETS = [

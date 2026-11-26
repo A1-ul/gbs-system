@@ -717,6 +717,20 @@ const submitAnswerSheet = async (
     ? proctoringLog
     : (Array.isArray(matchingLiveSess?.events) ? matchingLiveSess.events : []);
 
+  const correctQuestions = perQuestionBreakdown
+    .filter((q) => q.isCorrect === true)
+    .map((q) => Number(q.questionNumber));
+  const wrongQuestions = perQuestionBreakdown
+    .filter((q) => q.isCorrect === false)
+    .map((q) => ({
+      questionNumber: Number(q.questionNumber),
+      studentAnswer: q.studentAnswer || 'UNANSWERED',
+      correctAnswer: q.correctAnswer || 'A',
+      marksLost: Number(q.maxMarks) || 1
+    }));
+  const wrongCount = wrongQuestions.length;
+  const unansweredCount = perQuestionBreakdown.filter((q) => !q.studentAnswer).length;
+
   const submissionEntry = {
     id: answerSheetRecord?.id || `sheet-${Date.now()}`,
     prismaAnswerSheetId: answerSheetRecord?.id || null,
@@ -740,6 +754,10 @@ const submitAnswerSheet = async (
     writtenQuestionsCount,
     matchedAnswers,
     correctCount: matchedAnswers,
+    wrongCount,
+    unansweredCount,
+    correctQuestions,
+    wrongQuestions,
     grade,
     isPassed,
     pass: isPassed,
@@ -825,6 +843,10 @@ const submitAnswerSheet = async (
     writtenQuestionsCount,
     matchedAnswers,
     correctCount: matchedAnswers,
+    wrongCount,
+    unansweredCount,
+    correctQuestions,
+    wrongQuestions,
     grade,
     isPassed,
     pass: isPassed,

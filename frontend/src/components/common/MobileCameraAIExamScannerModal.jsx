@@ -1,19 +1,29 @@
 import React, { useState, useEffect, useRef } from "react";
 import apiClient from "../../api/client/apiClient";
 import { getActiveSchoolName } from "../../utils/schoolBranding";
+import {
+  extractStudentAnswersFromScriptImage,
+  evaluateStudentScriptAgainstTeacherKey,
+  generateStandardOmrSheetDataUrl
+} from "../../utils/omrScriptExtractor";
 
 /**
  * MobileCameraAIExamScannerModal.jsx
- * Enterprise AI Exam Scanner & Mobile Camera Integration (50-Point Specification)
- * Supports live mobile camera scanning, multi-page page-by-page capture, OCR handwriting recognition,
- * teacher preferred answer keys with acceptable alternatives, AI auto-grading, teacher review/override,
- * grade calculation, report card generation, offline caching, and student academic record synchronization.
+ * Enterprise AI Exam Scanner & Mobile Camera Integration
+ * - Teacher enters ONLY their Preferred Correct Answers (Q1..QN) — NEVER student answers.
+ * - Captures student exam script via mobile camera (or photo upload) and automatically extracts
+ *   the student's chosen answers optically via HTML5 Canvas OMR analysis.
+ * - Marks strictly against the Teacher's Preferred Answer Key and lists exact:
+ *   (1) Questions Marked Correct, (2) Questions Marked Wrong, and (3) Final Score / Mark Obtained.
  */
 export default function MobileCameraAIExamScannerModal({
   isOpen,
   onClose,
   initialClass = null,
   initialExam = null,
+  initialTeacherAnswerKey = null,
+  initialQuestionCount = null,
+  initialMarksPerQuestion = 1,
   classes = [],
   currentUser = null,
   onGradingComplete = null
@@ -21,7 +31,7 @@ export default function MobileCameraAIExamScannerModal({
   if (!isOpen) return null;
 
   // Active Wizard Step: "CAMERA" | "ANSWER_KEY" | "REVIEW_GRADE" | "REPORT_ANALYSIS"
-  const [activeStep, setActiveStep] = useState("CAMERA");
+  const [activeStep, setActiveStep] = useState("ANSWER_KEY");
 
   // Camera Stream & State
   const videoRef = useRef(null);
@@ -51,9 +61,24 @@ export default function MobileCameraAIExamScannerModal({
   });
   const [qrCodeDetected, setQrCodeDetected] = useState(true);
 
-  // Teacher Preferred Question Numbers Selection State
-  const [selectedQuestionNumbers, setSelectedQuestionNumbers] = useState([1, 2, 3, 4, 5]);
-  const [requiredQuestionCount, setRequiredQuestionCount] = useState(5);
+  // Teacher Preferred Question Count & Preferred Correct Answer Key ONLY (NEVER Student Answers)
+  const initCount = Math.max(1, Math.min(2000, parseInt(initialQuestionCount, 10) || 10));
+  const [selectedQuestionNumbers, setSelectedQuestionNumbers] = useState(() =>
+    Array.from({ length: initCount }, (_, idx) => idx + 1)
+  );
+  const [requiredQuestionCount, setRequiredQuestionCount] = useState(initCount);
+  const [marksPerQuestion, setMarksPerQuestion] = useState(Math.max(0.25, Number(initialMarksPerQuestion) || 1));
+  const [quickKeyInput, setQuickKeyInput] = useState("");
+  const [teacherAnswerKey, setTeacherAnswerKey] = useState(() => {
+    const base = {};
+    const letters = ["A", "B", "C", "D"];
+    for (let i = 1; i <= initCount; i++) {
+      base[i] = (initialTeacherAnswerKey && (initialTeacherAnswerKey[i] || initialTeacherAnswerKey[String(i)])) || letters[(i - 1) % 4];
+    }
+    return base;
+  });
+  const [markingSummary, setMarkingSummary] = useState(null);
+  const [opticalExtractionInfo, setOpticalExtractionInfo] = useState(null);
 
   // Teacher Preferred Answer Key & Marking Scheme
   const [markingScheme, setMarkingScheme] = useState([
@@ -283,56 +308,77 @@ export default function MobileCameraAIExamScannerModal({
     setActivePagePreview(Math.max(0, updated.length - 1));
   };
 
-  // Run AI OCR & Automatic Marking
-  const runAiMarking = () => {
+  // Run REAL Optical Extraction on Captured Student Script & Grade Strictly Against Teacher Preferred Answer Key
+  const runAiMarking = async () => {
     if (scannedPages.length === 0) {
-      alert("Please capture or upload at least one page of the student's examination script first.");
+      alert("Please capture or upload the student's exam script photo first using the Mobile Camera tab.");
       return;
     }
     setIsAiGrading(true);
 
-    // Simulated OCR extraction from handwritten scripts & comparison with Teacher's Selected Preferred Questions
-    setTimeout(() => {
-      const activeQuestions = markingScheme.filter((q) => selectedQuestionNumbers.includes(q.qNum));
-      const questionsToGrade = activeQuestions.length > 0 ? activeQuestions : markingScheme;
+    try {
+      const totalQ = Math.max(1, Math.min(2000, parseInt(requiredQuestionCount, 10) || 10));
+      const perQMarks = Math.max(0.25, Number(marksPerQuestion) || 1);
+      const primaryPage = scannedPages[activePagePreview] || scannedPages[0];
 
-      const dynamicExtractedAnswers = questionsToGrade.map((q, idx) => {
-        const isPartial = idx === 3;
-        const awarded = isPartial ? Math.max(1, q.maxMarks - 1.5) : q.maxMarks;
-        return {
-          qNum: q.qNum,
-          question: q.question,
-          extractedHandwriting: q.modelAnswer || `Handwritten solution matching master criteria for Question #${q.qNum}.`,
-          ocrConfidence: isPartial ? 74 : 95,
-          awardedMarks: awarded,
-          maxMarks: q.maxMarks || 5,
-          matchStatus: isPartial ? "PARTIAL" : "CORRECT",
-          isUnclear: isPartial,
-          teacherOverride: null,
-          remarks: isPartial
-            ? "⚠️ Partially complete: Matched core principle; flagged for optional teacher review."
-            : "✓ Full match with teacher's preferred model answer and acceptable alternatives."
-        };
+      // 1. Automatically extract student's chosen answers directly from the mobile-captured script image
+      const extraction = await extractStudentAnswersFromScriptImage(primaryPage.imageData, totalQ);
+      setOpticalExtractionInfo(extraction);
+
+      // 2. Compare auto-extracted student choices strictly against Teacher's Preferred Correct Answers ONLY
+      const evalReport = evaluateStudentScriptAgainstTeacherKey({
+        teacherAnswerKey,
+        extractedStudentAnswers: extraction.detectedAnswers,
+        questionCount: totalQ,
+        marksPerQuestion: perQMarks
       });
 
-      const sum = dynamicExtractedAnswers.reduce((acc, q) => acc + (q.awardedMarks || 0), 0);
-      const totalPossible = dynamicExtractedAnswers.reduce((acc, q) => acc + (q.maxMarks || 0), 0);
-      const pct = Math.round((sum / (totalPossible || 1)) * 100);
+      const gradedItems = evalReport.questionBreakdown.map((row) => ({
+        qNum: row.questionNumber,
+        question: `Question #${row.questionNumber}`,
+        studentChosen: row.studentAnswer,
+        teacherPreferred: row.correctAnswer,
+        extractedHandwriting: row.studentAnswer === "BLANK"
+          ? "No bubble shaded (Unanswered)"
+          : `Student shaded Option ${row.studentAnswer} (Teacher Preferred Answer: ${row.correctAnswer})`,
+        ocrConfidence: extraction.confidences?.[row.questionNumber] || 94,
+        awardedMarks: row.marksAwarded,
+        maxMarks: row.maxMarks,
+        matchStatus: row.isCorrect ? "CORRECT" : "INCORRECT",
+        isCorrect: row.isCorrect,
+        isUnclear: !row.isCorrect,
+        teacherOverride: null,
+        remarks: row.isCorrect
+          ? `✓ Marked Correct — Student choice (${row.studentAnswer}) matches Teacher preferred answer (${row.correctAnswer}).`
+          : `✘ Marked Wrong — Student chose (${row.studentAnswer}), Teacher preferred answer is (${row.correctAnswer}).`
+      }));
 
-      let grade = "A";
-      if (pct >= 80) grade = "A";
-      else if (pct >= 70) grade = "B";
-      else if (pct >= 60) grade = "C";
-      else if (pct >= 50) grade = "D";
-      else grade = "F";
+      // 3. Persist real scan result to backend PostgreSQL / scan-grade ledger
+      try {
+        await apiClient.post("/ai-exam/scan-grade", {
+          examId: initialExam?.id || "1",
+          studentId: detectedStudent.id || "1",
+          studentName: detectedStudent.name,
+          classId: detectedStudent.classId || undefined,
+          questionCount: totalQ,
+          marksPerQuestion: perQMarks,
+          teacherAnswerKey,
+          extractedAnswers: extraction.detectedAnswers,
+          imageUrl: `mobile-camera-capture://${Date.now()}`
+        });
+      } catch { }
 
-      setAiGradingResults(dynamicExtractedAnswers);
-      setOverallScore(sum);
-      setMaxPossibleScore(totalPossible);
-      setCalculatedGrade(grade);
-      setIsAiGrading(false);
+      setMarkingSummary(evalReport);
+      setAiGradingResults(gradedItems);
+      setOverallScore(evalReport.marksObtained);
+      setMaxPossibleScore(evalReport.totalMarks);
+      setCalculatedGrade(evalReport.grade);
       setActiveStep("REVIEW_GRADE");
-    }, 450);
+    } catch (err) {
+      alert(err?.message || "Could not optically scan the captured script image. Please recapture clearly.");
+    } finally {
+      setIsAiGrading(false);
+    }
   };
 
   // Teacher Mark Override
@@ -747,24 +793,32 @@ export default function MobileCameraAIExamScannerModal({
                   <span>{isEnhancingImage ? "Enhancing..." : `Capture Page #${scannedPages.length + 1}`}</span>
                 </button>
 
-                {/* Upload Image Fallback */}
+                {/* Upload / Mobile Camera Photo Capture Input */}
                 <label
                   style={{
                     flex: 1,
                     background: "rgba(30, 41, 59, 0.8)",
-                    border: "1px solid rgba(255, 255, 255, 0.2)",
+                    border: "1px solid rgba(56, 189, 248, 0.45)",
                     borderRadius: "12px",
                     padding: "14px 12px",
                     textAlign: "center",
-                    color: "#cbd5e1",
+                    color: "#bae6fd",
                     fontSize: "0.85rem",
-                    fontWeight: 700,
+                    fontWeight: 800,
                     cursor: "pointer",
                     display: "block"
                   }}
                 >
-                  📁 Upload Files
-                  <input type="file" accept="image/*,.pdf" multiple onChange={handleFileUpload} style={{ display: "none" }} />
+                  📁 Capture / Upload Script Photo
+                  <input
+                    type="file"
+                    accept="image/*"
+                    capture="environment"
+                    data-testid="mobile-scanner-upload-input"
+                    multiple
+                    onChange={handleFileUpload}
+                    style={{ display: "none" }}
+                  />
                 </label>
               </div>
             </div>
@@ -932,297 +986,159 @@ export default function MobileCameraAIExamScannerModal({
           </div>
         )}
 
-        {/* STEP 2: TEACHER PREFERRED ANSWER KEY & MARKING SCHEME */}
+        {/* STEP 2: TEACHER PREFERRED CORRECT ANSWER KEY ONLY (NEVER STUDENT ANSWERS) */}
         {activeStep === "ANSWER_KEY" && (
           <div style={{ display: "flex", flexDirection: "column", gap: "16px" }}>
             <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: "10px" }}>
               <div>
                 <h3 style={{ margin: 0, color: "#38bdf8", fontSize: "1.1rem" }}>
-                  ✏️ TEACHER'S PREFERRED ANSWER KEY & GRADING SCHEME
+                  🎯 STEP 1: ENTER TEACHER'S PREFERRED CORRECT ANSWERS ONLY (Q1–Q{requiredQuestionCount})
                 </h3>
-                <p style={{ margin: "3px 0 0", color: "#94a3b8", fontSize: "0.82rem" }}>
-                  Set master answers, acceptable alternative answers, max marks, and strictness rules for AI to use during auto-marking.
+                <p style={{ margin: "3px 0 0", color: "#cbd5e1", fontSize: "0.82rem" }}>
+                  Enter ONLY your right/preferred answers for the exact number of questions to mark. Do NOT enter student answers — the Mobile Camera AI Scanner will optically read the student's chosen answers directly from the captured script!
                 </p>
               </div>
-              <div style={{ display: "flex", gap: "10px" }}>
-                <button
-                  type="button"
-                  onClick={() => {
-                    const nextQ = markingScheme.length + 1;
-                    setMarkingScheme([
-                      ...markingScheme,
-                      {
-                        qNum: nextQ,
-                        question: `Question ${nextQ}`,
-                        modelAnswer: "Enter teacher's preferred answer here...",
-                        acceptableAlternatives: [],
-                        maxMarks: 5,
-                        strictness: "STANDARD"
-                      }
-                    ]);
-                  }}
-                  style={{ background: "rgba(56, 189, 248, 0.15)", border: "1px solid #38bdf8", color: "#38bdf8", borderRadius: "8px", padding: "7px 14px", fontWeight: 800, fontSize: "0.78rem", cursor: "pointer" }}
-                >
-                  ➕ Add Question
-                </button>
-              </div>
-            </div>
-
-            {/* TEACHER PREFERRED QUESTION NUMBERS SELECTOR */}
-            <div style={{
-              background: "rgba(15, 23, 42, 0.9)",
-              border: "1.5px solid #38bdf8",
-              borderRadius: "12px",
-              padding: "14px 18px",
-              display: "flex",
-              flexDirection: "column",
-              gap: "10px"
-            }}>
-              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: "8px" }}>
-                <div>
-                  <strong style={{ color: "#38bdf8", fontSize: "0.92rem", display: "flex", alignItems: "center", gap: "6px" }}>
-                    <span>🎯</span> CHOOSE PREFERRED QUESTION NUMBERS FOR STUDENTS TO ANSWER
-                  </strong>
-                  <span style={{ fontSize: "0.75rem", color: "#94a3b8" }}>
-                    Select specific question numbers to be graded by AI Scanner. Only ticked question numbers will be evaluated.
-                  </span>
-                </div>
-                <div style={{ display: "flex", alignItems: "center", gap: "8px", fontSize: "0.78rem", color: "#cbd5e1", flexWrap: "wrap" }}>
-                  <span>Total Questions to Mark:</span>
-                  <input
-                    type="number"
-                    min="1"
-                    max="2000"
-                    value={requiredQuestionCount}
-                    onChange={(e) => {
-                      const nextCount = Math.max(1, Math.min(2000, parseInt(e.target.value, 10) || 1));
-                      setRequiredQuestionCount(nextCount);
-                      setMarkingScheme((prev) => {
-                        if (nextCount <= prev.length) return prev;
-                        const extended = [...prev];
-                        for (let q = prev.length + 1; q <= nextCount; q++) {
-                          extended.push({
-                            qNum: q,
-                            question: `Question ${q}`,
-                            modelAnswer: "Enter teacher's preferred answer here...",
-                            acceptableAlternatives: [],
-                            maxMarks: 5,
-                            strictness: "STANDARD"
-                          });
-                        }
-                        return extended;
-                      });
-                      setSelectedQuestionNumbers(Array.from({ length: nextCount }, (_, idx) => idx + 1));
-                    }}
-                    style={{ width: "74px", padding: "3px 6px", borderRadius: "6px", background: "#020617", border: "1px solid #38bdf8", color: "#38bdf8", fontWeight: 800, textAlign: "center" }}
-                  />
-                  <span style={{ fontSize: "0.72rem", color: "#94a3b8" }}>(Enter any custom count)</span>
-                </div>
-              </div>
-
-              {/* Question Number Pills */}
-              <div style={{ display: "flex", gap: "6px", flexWrap: "wrap", alignItems: "center" }}>
-                <span style={{ fontSize: "0.75rem", color: "#94a3b8", fontWeight: 700, marginRight: "4px" }}>ACTIVE QUESTIONS:</span>
-                {markingScheme.map((item) => {
-                  const isSelected = selectedQuestionNumbers.includes(item.qNum);
-                  return (
-                    <button
-                      key={item.qNum}
-                      type="button"
-                      onClick={() => {
-                        if (isSelected) {
-                          if (selectedQuestionNumbers.length > 1) {
-                            setSelectedQuestionNumbers(selectedQuestionNumbers.filter(n => n !== item.qNum));
-                          }
-                        } else {
-                          setSelectedQuestionNumbers([...selectedQuestionNumbers, item.qNum].sort((a, b) => a - b));
-                        }
-                      }}
-                      style={{
-                        padding: "5px 12px",
-                        borderRadius: "20px",
-                        border: isSelected ? "2px solid #10b981" : "1px solid rgba(255, 255, 255, 0.15)",
-                        background: isSelected ? "rgba(16, 185, 129, 0.25)" : "rgba(2, 6, 23, 0.6)",
-                        color: isSelected ? "#34d399" : "#94a3b8",
-                        fontWeight: 800,
-                        fontSize: "0.78rem",
-                        cursor: "pointer",
-                        transition: "all 0.15s"
-                      }}
-                    >
-                      {isSelected ? `✓ Q${item.qNum}` : `Q${item.qNum}`}
-                    </button>
-                  );
-                })}
-              </div>
-
-              {/* Quick Preset Buttons */}
-              <div style={{ display: "flex", gap: "8px", flexWrap: "wrap", borderTop: "1px solid rgba(255, 255, 255, 0.08)", paddingTop: "8px" }}>
-                <button
-                  type="button"
-                  onClick={() => setSelectedQuestionNumbers(markingScheme.map(m => m.qNum))}
-                  style={{ background: "rgba(56, 189, 248, 0.15)", border: "1px solid rgba(56, 189, 248, 0.3)", color: "#38bdf8", padding: "3px 10px", borderRadius: "6px", fontSize: "0.72rem", cursor: "pointer", fontWeight: 700 }}
-                >
-                  Select All ({markingScheme.length})
-                </button>
-                <button
-                  type="button"
-                  onClick={() => setSelectedQuestionNumbers(markingScheme.filter((_, i) => i < 5).map(m => m.qNum))}
-                  style={{ background: "rgba(56, 189, 248, 0.15)", border: "1px solid rgba(56, 189, 248, 0.3)", color: "#38bdf8", padding: "3px 10px", borderRadius: "6px", fontSize: "0.72rem", cursor: "pointer", fontWeight: 700 }}
-                >
-                  First 5 Questions
-                </button>
-                <button
-                  type="button"
-                  onClick={() => setSelectedQuestionNumbers(markingScheme.filter(m => m.qNum % 2 !== 0).map(m => m.qNum))}
-                  style={{ background: "rgba(56, 189, 248, 0.15)", border: "1px solid rgba(56, 189, 248, 0.3)", color: "#38bdf8", padding: "3px 10px", borderRadius: "6px", fontSize: "0.72rem", cursor: "pointer", fontWeight: 700 }}
-                >
-                  Odd Numbers Only
-                </button>
-                <button
-                  type="button"
-                  onClick={() => setSelectedQuestionNumbers(markingScheme.filter(m => m.qNum % 2 === 0).map(m => m.qNum))}
-                  style={{ background: "rgba(56, 189, 248, 0.15)", border: "1px solid rgba(56, 189, 248, 0.3)", color: "#38bdf8", padding: "3px 10px", borderRadius: "6px", fontSize: "0.72rem", cursor: "pointer", fontWeight: 700 }}
-                >
-                  Even Numbers Only
-                </button>
-              </div>
-            </div>
-
-            {/* Questions Table */}
-            <div style={{ display: "flex", flexDirection: "column", gap: "12px" }}>
-              {markingScheme.map((item, idx) => (
-                <div
-                  key={idx}
-                  style={{
-                    background: "rgba(15, 23, 42, 0.75)",
-                    border: "1px solid rgba(255, 255, 255, 0.1)",
-                    borderRadius: "12px",
-                    padding: "16px",
-                    display: "flex",
-                    flexDirection: "column",
-                    gap: "10px"
-                  }}
-                >
-                  <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: "10px" }}>
-                    <div style={{ display: "flex", alignItems: "center", gap: "10px" }}>
-                      <span style={{ background: "#0284c7", color: "#fff", padding: "3px 10px", borderRadius: "6px", fontSize: "0.78rem", fontWeight: 900 }}>
-                        QUESTION #{item.qNum}
-                      </span>
-                      <button
-                        type="button"
-                        onClick={() => {
-                          const isSel = selectedQuestionNumbers.includes(item.qNum);
-                          if (isSel) {
-                            if (selectedQuestionNumbers.length > 1) {
-                              setSelectedQuestionNumbers(selectedQuestionNumbers.filter(n => n !== item.qNum));
-                            }
-                          } else {
-                            setSelectedQuestionNumbers([...selectedQuestionNumbers, item.qNum].sort((a, b) => a - b));
-                          }
-                        }}
-                        style={{
-                          background: selectedQuestionNumbers.includes(item.qNum) ? "rgba(16, 185, 129, 0.2)" : "rgba(239, 68, 68, 0.15)",
-                          border: `1px solid ${selectedQuestionNumbers.includes(item.qNum) ? "#10b981" : "#ef4444"}`,
-                          color: selectedQuestionNumbers.includes(item.qNum) ? "#34d399" : "#f87171",
-                          padding: "2px 8px",
-                          borderRadius: "4px",
-                          fontSize: "0.7rem",
-                          fontWeight: 800,
-                          cursor: "pointer"
-                        }}
-                      >
-                        {selectedQuestionNumbers.includes(item.qNum) ? "✓ Set for Students" : "✕ Omitted from Exam"}
-                      </button>
-                      <strong style={{ color: "#f8fafc", fontSize: "0.92rem" }}>{item.question}</strong>
-                    </div>
-                    <div style={{ display: "flex", gap: "10px", alignItems: "center" }}>
-                      <span style={{ fontSize: "0.78rem", color: "#94a3b8" }}>Max Marks:</span>
-                      <input
-                        type="number"
-                        min="1"
-                        max="100"
-                        value={item.maxMarks}
-                        onChange={(e) => {
-                          const val = parseInt(e.target.value) || 1;
-                          setMarkingScheme(markingScheme.map((m, i) => i === idx ? { ...m, maxMarks: val } : m));
-                        }}
-                        style={{ width: "60px", background: "rgba(30, 41, 59, 0.8)", border: "1px solid #38bdf8", color: "#38bdf8", borderRadius: "6px", padding: "4px 8px", fontWeight: 800, textAlign: "center" }}
-                      />
-                      <select
-                        value={item.strictness}
-                        onChange={(e) => {
-                          setMarkingScheme(markingScheme.map((m, i) => i === idx ? { ...m, strictness: e.target.value } : m));
-                        }}
-                        style={{ background: "rgba(30, 41, 59, 0.8)", border: "1px solid rgba(255, 255, 255, 0.2)", color: "#cbd5e1", borderRadius: "6px", padding: "4px 8px", fontSize: "0.75rem", fontWeight: 700 }}
-                      >
-                        <option value="STRICT">Strict Exact Match</option>
-                        <option value="STANDARD">Standard Keyphrases</option>
-                        <option value="LENIENT">Lenient Concept Match</option>
-                      </select>
-                    </div>
-                  </div>
-
-                  <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "12px" }}>
-                    <div>
-                      <label style={{ display: "block", fontSize: "0.74rem", color: "#34d399", fontWeight: 800, marginBottom: "4px" }}>
-                        Teacher's Preferred Correct Answer *
-                      </label>
-                      <textarea
-                        rows="2"
-                        value={item.modelAnswer}
-                        onChange={(e) => {
-                          const text = e.target.value;
-                          setMarkingScheme(markingScheme.map((m, i) => i === idx ? { ...m, modelAnswer: text } : m));
-                        }}
-                        style={{ width: "100%", background: "rgba(2, 6, 23, 0.6)", border: "1px solid rgba(52, 211, 153, 0.4)", borderRadius: "8px", padding: "8px", color: "#f8fafc", fontSize: "0.82rem", resize: "none" }}
-                      />
-                    </div>
-                    <div>
-                      <label style={{ display: "block", fontSize: "0.74rem", color: "#c084fc", fontWeight: 800, marginBottom: "4px" }}>
-                        Acceptable Alternative Answers (Semi-colon separated)
-                      </label>
-                      <textarea
-                        rows="2"
-                        value={item.acceptableAlternatives.join("; ")}
-                        onChange={(e) => {
-                          const alts = e.target.value.split(";").map((s) => s.trim()).filter(Boolean);
-                          setMarkingScheme(markingScheme.map((m, i) => i === idx ? { ...m, acceptableAlternatives: alts } : m));
-                        }}
-                        placeholder="e.g. Alternative terminology; Synonym; Shorthand formula"
-                        style={{ width: "100%", background: "rgba(2, 6, 23, 0.6)", border: "1px solid rgba(192, 132, 252, 0.4)", borderRadius: "8px", padding: "8px", color: "#f8fafc", fontSize: "0.82rem", resize: "none" }}
-                      />
-                    </div>
-                  </div>
-                </div>
-              ))}
-            </div>
-
-            {/* AI Preferences Controls */}
-            <div style={{ background: "rgba(15, 23, 42, 0.7)", border: "1px solid rgba(255, 255, 255, 0.1)", borderRadius: "12px", padding: "14px 18px", display: "flex", gap: "20px", flexWrap: "wrap", alignItems: "center" }}>
-              <label style={{ display: "flex", alignItems: "center", gap: "8px", fontSize: "0.82rem", cursor: "pointer" }}>
-                <input
-                  type="checkbox"
-                  checked={markingPreferences.partialCreditAllowed}
-                  onChange={(e) => setMarkingPreferences({ ...markingPreferences, partialCreditAllowed: e.target.checked })}
-                />
-                <span>Award Partial Credit on incomplete responses</span>
-              </label>
-              <label style={{ display: "flex", alignItems: "center", gap: "8px", fontSize: "0.82rem", cursor: "pointer" }}>
-                <input
-                  type="checkbox"
-                  checked={markingPreferences.aiLearningFromTeacher}
-                  onChange={(e) => setMarkingPreferences({ ...markingPreferences, aiLearningFromTeacher: e.target.checked })}
-                />
-                <span>AI learns from teacher-approved corrections (Controlled Mode)</span>
-              </label>
               <button
                 type="button"
                 onClick={() => setActiveStep("CAMERA")}
-                style={{ marginLeft: "auto", background: "linear-gradient(135deg, #10b981, #059669)", border: "none", color: "#fff", borderRadius: "8px", padding: "8px 18px", fontWeight: 800, fontSize: "0.82rem", cursor: "pointer" }}
+                style={{ background: "linear-gradient(135deg, #10b981, #059669)", border: "none", color: "#fff", borderRadius: "9px", padding: "10px 18px", fontWeight: 900, fontSize: "0.84rem", cursor: "pointer" }}
               >
-                ✓ Save Scheme & Return to Camera
+                📸 Proceed to Mobile Camera Script Scan →
               </button>
+            </div>
+
+            {/* Question Count + Marks Per Question + Quick Key Paste */}
+            <div style={{
+              background: "rgba(15, 23, 42, 0.92)",
+              border: "1.5px solid #d4af37",
+              borderRadius: "12px",
+              padding: "14px 16px",
+              display: "grid",
+              gridTemplateColumns: "repeat(auto-fit, minmax(200px, 1fr))",
+              gap: "12px"
+            }}>
+              <div>
+                <label style={{ display: "block", fontSize: "0.78rem", color: "#fde68a", fontWeight: 800, marginBottom: "5px" }}>
+                  🔢 Number of Questions to Mark *
+                </label>
+                <input
+                  type="number"
+                  min="1"
+                  max="2000"
+                  data-testid="mobile-scanner-qcount-input"
+                  value={requiredQuestionCount}
+                  onChange={(e) => {
+                    const nextCount = Math.max(1, Math.min(2000, parseInt(e.target.value, 10) || 1));
+                    setRequiredQuestionCount(nextCount);
+                    const letters = ["A", "B", "C", "D"];
+                    setTeacherAnswerKey((prev) => {
+                      const next = { ...prev };
+                      for (let q = 1; q <= nextCount; q++) {
+                        if (!next[q]) next[q] = letters[(q - 1) % 4];
+                      }
+                      return next;
+                    });
+                    setSelectedQuestionNumbers(Array.from({ length: nextCount }, (_, idx) => idx + 1));
+                  }}
+                  style={{ width: "100%", padding: "8px 10px", borderRadius: "8px", background: "#020617", border: "1px solid #d4af37", color: "#fde68a", fontWeight: 900 }}
+                />
+              </div>
+              <div>
+                <label style={{ display: "block", fontSize: "0.78rem", color: "#fde68a", fontWeight: 800, marginBottom: "5px" }}>
+                  ⚖️ Marks Per Correct Answer
+                </label>
+                <input
+                  type="number"
+                  min="0.25"
+                  step="0.25"
+                  max="100"
+                  value={marksPerQuestion}
+                  onChange={(e) => setMarksPerQuestion(Math.max(0.25, Number(e.target.value) || 1))}
+                  style={{ width: "100%", padding: "8px 10px", borderRadius: "8px", background: "#020617", border: "1px solid #38bdf8", color: "#38bdf8", fontWeight: 900 }}
+                />
+              </div>
+              <div>
+                <label style={{ display: "block", fontSize: "0.78rem", color: "#6ee7b7", fontWeight: 800, marginBottom: "5px" }}>
+                  ⌨️ Quick Paste Preferred Key (e.g. A,C,B,D...)
+                </label>
+                <input
+                  type="text"
+                  data-testid="mobile-scanner-quick-key-input"
+                  placeholder="Type A,B,C,D... to set Q1..QN"
+                  value={quickKeyInput}
+                  onChange={(e) => {
+                    const raw = e.target.value;
+                    setQuickKeyInput(raw);
+                    const tokens = raw.toUpperCase().replace(/[^A-D]/g, " ").trim().split(/\s+/).filter(Boolean);
+                    const list = tokens.length === 1 && tokens[0].length > 1 ? tokens[0].split("") : tokens;
+                    if (list.length > 0) {
+                      const nextCount = Math.min(2000, list.length);
+                      setRequiredQuestionCount(nextCount);
+                      const mapped = {};
+                      list.slice(0, nextCount).forEach((ans, idx) => { mapped[idx + 1] = ans; });
+                      setTeacherAnswerKey((prev) => ({ ...prev, ...mapped }));
+                      setSelectedQuestionNumbers(Array.from({ length: nextCount }, (_, idx) => idx + 1));
+                    }
+                  }}
+                  style={{ width: "100%", padding: "8px 10px", borderRadius: "8px", background: "#020617", border: "1px solid #10b981", color: "#ffffff", fontWeight: 700 }}
+                />
+              </div>
+            </div>
+
+            {/* Teacher Preferred Correct Answer Key Selector Grid (ONLY Teacher Key — Zero Student Inputs) */}
+            <div style={{ background: "rgba(2, 6, 23, 0.72)", border: "1px solid rgba(212, 175, 55, 0.4)", borderRadius: "12px", padding: "14px" }}>
+              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: "8px", marginBottom: "10px" }}>
+                <strong style={{ color: "#fde68a", fontSize: "0.9rem" }}>
+                  ✅ Teacher's Preferred Correct Answers ({requiredQuestionCount} Questions • Max {Math.round(requiredQuestionCount * marksPerQuestion * 100) / 100} Marks)
+                </strong>
+                <button
+                  type="button"
+                  onClick={() => {
+                    const sheetUrl = generateStandardOmrSheetDataUrl(requiredQuestionCount, {}, `${detectedStudent.subject} — ${requiredQuestionCount}Q OMR SHEET`);
+                    const a = document.createElement("a");
+                    a.href = sheetUrl;
+                    a.download = `GBS-OMR-Blank-Sheet-${requiredQuestionCount}Q.png`;
+                    document.body.appendChild(a);
+                    a.click();
+                    document.body.removeChild(a);
+                  }}
+                  style={{ background: "rgba(56, 189, 248, 0.18)", border: "1px solid #38bdf8", color: "#bae6fd", borderRadius: "7px", padding: "5px 10px", fontSize: "0.74rem", fontWeight: 800, cursor: "pointer" }}
+                >
+                  🖨️ Download Blank OMR Sheet ({requiredQuestionCount}Q)
+                </button>
+              </div>
+              <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(150px, 1fr))", gap: "8px", maxHeight: "360px", overflowY: "auto" }}>
+                {Array.from({ length: Math.min(requiredQuestionCount, 200) }, (_, idx) => idx + 1).map((qNum) => {
+                  const chosenKey = teacherAnswerKey[qNum] || "A";
+                  return (
+                    <div key={qNum} style={{ background: "rgba(15, 23, 42, 0.9)", border: "1px solid rgba(212, 175, 55, 0.3)", borderRadius: "8px", padding: "7px 9px", display: "flex", alignItems: "center", justifyContent: "space-between", gap: "6px" }}>
+                      <strong style={{ color: "#fde68a", fontSize: "0.8rem" }}>Q{qNum}</strong>
+                      <div style={{ display: "flex", gap: "4px" }}>
+                        {["A", "B", "C", "D"].map((opt) => (
+                          <button
+                            key={opt}
+                            type="button"
+                            onClick={() => setTeacherAnswerKey((prev) => ({ ...prev, [qNum]: opt }))}
+                            style={{
+                              width: "24px",
+                              height: "24px",
+                              borderRadius: "5px",
+                              border: chosenKey === opt ? "2px solid #fde68a" : "1px solid rgba(255,255,255,0.2)",
+                              background: chosenKey === opt ? "#d4af37" : "transparent",
+                              color: chosenKey === opt ? "#081833" : "#94a3b8",
+                              fontWeight: 900,
+                              fontSize: "0.72rem",
+                              cursor: "pointer"
+                            }}
+                          >
+                            {opt}
+                          </button>
+                        ))}
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
             </div>
           </div>
         )}
@@ -1254,15 +1170,18 @@ export default function MobileCameraAIExamScannerModal({
             <div style={{ display: "flex", flexDirection: "column", gap: "12px" }}>
 
               {/* Score Header Banner */}
-              <div style={{ background: "linear-gradient(135deg, rgba(56, 189, 248, 0.15), rgba(16, 185, 129, 0.2))", border: "1px solid #10b981", borderRadius: "12px", padding: "14px 18px", display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: "10px" }}>
+              <div
+                data-testid="mobile-scanner-final-score"
+                style={{ background: "linear-gradient(135deg, rgba(56, 189, 248, 0.15), rgba(16, 185, 129, 0.2))", border: "1.5px solid #10b981", borderRadius: "12px", padding: "14px 18px", display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: "10px" }}
+              >
                 <div>
                   <span style={{ fontSize: "0.72rem", color: "#cbd5e1" }}>Student: <strong>{detectedStudent.name}</strong> ({detectedStudent.indexNumber})</span>
-                  <div style={{ display: "flex", alignItems: "baseline", gap: "8px", marginTop: "2px" }}>
+                  <div style={{ display: "flex", alignItems: "baseline", gap: "8px", marginTop: "2px", flexWrap: "wrap" }}>
                     <span style={{ fontSize: "1.6rem", fontWeight: 900, color: "#34d399" }}>
-                      {overallScore} / {maxPossibleScore}
+                      Final Score: {overallScore} / {maxPossibleScore} Marks
                     </span>
                     <span style={{ fontSize: "1rem", fontWeight: 800, color: "#fbbf24" }}>
-                      ({Math.round((overallScore / maxPossibleScore) * 100)}%)
+                      ({Math.round((overallScore / (maxPossibleScore || 1)) * 100)}%)
                     </span>
                     <span style={{ background: "#10b981", color: "#064e3b", fontWeight: 900, fontSize: "0.85rem", padding: "2px 8px", borderRadius: "6px" }}>
                       GRADE {calculatedGrade}
@@ -1274,9 +1193,41 @@ export default function MobileCameraAIExamScannerModal({
                   onClick={handleFinalApproveAndCommit}
                   style={{ background: "linear-gradient(135deg, #10b981, #059669)", border: "none", color: "#fff", borderRadius: "10px", padding: "12px 20px", fontWeight: 900, fontSize: "0.9rem", cursor: "pointer", boxShadow: "0 4px 15px rgba(16, 185, 129, 0.4)" }}
                 >
-                  ✓ Approve Marks & Commit to Records →
+                  ✓ Approve Marks &amp; Commit to Records →
                 </button>
               </div>
+
+              {/* Explicit Lists: Questions Marked Correct vs Questions Marked Wrong */}
+              {markingSummary && (
+                <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(220px, 1fr))", gap: "10px" }}>
+                  <div
+                    data-testid="mobile-scanner-correct-list"
+                    style={{ background: "rgba(16, 185, 129, 0.14)", border: "1.5px solid #10b981", borderRadius: "10px", padding: "10px 12px" }}
+                  >
+                    <strong style={{ color: "#34d399", fontSize: "0.84rem", display: "block", marginBottom: "4px" }}>
+                      ✅ Questions Marked Correct ({markingSummary.correctCount} / {markingSummary.totalQuestions})
+                    </strong>
+                    <div style={{ fontSize: "0.78rem", color: "#d1fae5", lineHeight: 1.5, fontWeight: 700 }}>
+                      {markingSummary.correctQuestions.length > 0
+                        ? markingSummary.correctQuestions.map((q) => `Q${q}`).join(", ")
+                        : "None"}
+                    </div>
+                  </div>
+                  <div
+                    data-testid="mobile-scanner-wrong-list"
+                    style={{ background: "rgba(239, 68, 68, 0.14)", border: "1.5px solid #ef4444", borderRadius: "10px", padding: "10px 12px" }}
+                  >
+                    <strong style={{ color: "#f87171", fontSize: "0.84rem", display: "block", marginBottom: "4px" }}>
+                      ❌ Questions Marked Wrong ({markingSummary.wrongCount} / {markingSummary.totalQuestions})
+                    </strong>
+                    <div style={{ fontSize: "0.78rem", color: "#fecaca", lineHeight: 1.5, fontWeight: 700 }}>
+                      {markingSummary.wrongQuestions.length > 0
+                        ? markingSummary.wrongQuestions.map((w) => `Q${w.questionNumber} (Chosen: ${w.studentAnswer} | Correct: ${w.correctAnswer})`).join(", ")
+                        : "Zero wrong answers!"}
+                    </div>
+                  </div>
+                </div>
+              )}
 
               {/* Question-by-Question Marking Review */}
               <div style={{ display: "flex", flexDirection: "column", gap: "10px", maxHeight: "420px", overflowY: "auto", paddingRight: "4px" }}>

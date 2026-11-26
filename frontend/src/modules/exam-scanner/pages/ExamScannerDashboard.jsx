@@ -1,6 +1,11 @@
 import React, { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import apiClient from "../../../api/client/apiClient";
+import {
+  extractStudentAnswersFromScriptImage,
+  evaluateStudentScriptAgainstTeacherKey,
+  generateStandardOmrSheetDataUrl
+} from "../../../utils/omrScriptExtractor";
 import "./ExamScanner.css";
 
 export default function ExamScannerDashboard() {
@@ -25,19 +30,11 @@ export default function ExamScannerDashboard() {
     6: "C", 7: "B", 8: "A", 9: "D", 10: "C"
   });
 
-  // Dynamic 1..N OMR Bubble Form
-  const [answers, setAnswers] = useState({
-    1: "A",
-    2: "C",
-    3: "B",
-    4: "D",
-    5: "A",
-    6: "C",
-    7: "B",
-    8: "A",
-    9: "D",
-    10: "C"
-  });
+  // AI-Extracted Student Chosen Answers (populated automatically from mobile camera / uploaded script photo — NEVER entered by teacher)
+  const [answers, setAnswers] = useState({});
+  const [capturedScriptDataUrl, setCapturedScriptDataUrl] = useState(null);
+  const [capturedScriptName, setCapturedScriptName] = useState("");
+  const [opticalStatus, setOpticalStatus] = useState("");
 
   const [scanResult, setScanResult] = useState(null);
   const [pastSheets, setPastSheets] = useState([]);
@@ -175,35 +172,80 @@ export default function ExamScannerDashboard() {
     }));
   };
 
+  const handleCapturedScriptFile = (e) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    setCapturedScriptName(file.name);
+    const reader = new FileReader();
+    reader.onload = async (ev) => {
+      const dataUrl = ev.target?.result;
+      setCapturedScriptDataUrl(dataUrl);
+      if (dataUrl) {
+        const count = Math.max(1, Math.min(SCANNER_MAX_QUESTIONS, Number(questionCount) || 10));
+        const optical = await extractStudentAnswersFromScriptImage(dataUrl, count);
+        setAnswers(optical.detectedAnswers);
+        setOpticalStatus(`✓ Optically extracted ${optical.answeredCount} of ${count} student answers from "${file.name}"`);
+      }
+    };
+    reader.readAsDataURL(file);
+  };
+
   const handleScanSheet = async () => {
     setLoading(true);
     setFeedback(null);
     const count = Math.max(1, Math.min(SCANNER_MAX_QUESTIONS, Number(questionCount) || 10));
+    const perQ = Math.max(0.25, Number(marksPerQuestion) || 10);
     const trimmedKey = {};
-    const trimmedAnswers = {};
     for (let i = 1; i <= count; i++) {
       trimmedKey[i] = teacherAnswerKey[i] || "A";
-      trimmedAnswers[i] = answers[i] || "";
     }
     try {
+      let extractedMap = answers;
+      if (capturedScriptDataUrl) {
+        const optical = await extractStudentAnswersFromScriptImage(capturedScriptDataUrl, count);
+        extractedMap = optical.detectedAnswers;
+        setAnswers(extractedMap);
+      } else if (Object.keys(extractedMap || {}).length === 0) {
+        setFeedback({
+          type: "error",
+          message: "Please capture or upload the student's script photo first so the AI Scanner can extract the student's chosen answers automatically."
+        });
+        setLoading(false);
+        return;
+      }
+
+      const localEval = evaluateStudentScriptAgainstTeacherKey({
+        teacherAnswerKey: trimmedKey,
+        extractedStudentAnswers: extractedMap,
+        questionCount: count,
+        marksPerQuestion: perQ
+      });
+
       const res = await apiClient.post("/ai-exam/scan-grade", {
         examId: selectedExamId || "1",
         studentId,
         questionCount: count,
-        marksPerQuestion: Math.max(0.25, Number(marksPerQuestion) || 10),
+        marksPerQuestion: perQ,
         teacherAnswerKey: trimmedKey,
-        imageUrl: "/assets/academic-records-bg.jpg",
-        extractedAnswers: trimmedAnswers
+        imageUrl: capturedScriptDataUrl ? `captured-script://${capturedScriptName || Date.now()}` : "/assets/academic-records-bg.jpg",
+        extractedAnswers: extractedMap
       });
 
-      if (res.data?.data) {
-        setScanResult(res.data.data);
-        setFeedback({
-          type: "success",
-          message: `Grading completed! Scored ${res.data.data.scoreObtained}/${res.data.data.totalMarks} (${res.data.data.percentage || 0}% • Grade ${res.data.data.grade}) with ${res.data.data.confidencePct}% AI confidence.`
-        });
-        fetchPastSheets();
-      }
+      const serverData = res.data?.data || {};
+      const mergedResult = {
+        ...localEval,
+        ...serverData,
+        correctCount: serverData.correctCount ?? localEval.correctCount,
+        wrongCount: serverData.wrongCount ?? localEval.wrongCount,
+        correctQuestions: Array.isArray(serverData.correctQuestions) && serverData.correctQuestions.length > 0 ? serverData.correctQuestions : localEval.correctQuestions,
+        wrongQuestions: Array.isArray(serverData.wrongQuestions) ? serverData.wrongQuestions : localEval.wrongQuestions
+      };
+      setScanResult(mergedResult);
+      setFeedback({
+        type: "success",
+        message: `Grading completed! Correct: ${mergedResult.correctCount} • Wrong: ${mergedResult.wrongCount} • Final Score: ${mergedResult.scoreObtained}/${mergedResult.totalMarks} (${mergedResult.percentage || 0}% • Grade ${mergedResult.grade}).`
+      });
+      fetchPastSheets();
     } catch (err) {
       setFeedback({
         type: "error",
@@ -407,7 +449,7 @@ export default function ExamScannerDashboard() {
                 <div style={{ marginTop: "16px" }}>
                   <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: "8px", marginBottom: "8px" }}>
                     <label style={{ fontSize: "0.85rem", fontWeight: 800, color: "#f6dd84", margin: 0 }}>
-                      🎯 Teacher Master Answer Key &amp; Student Optical Bubbles (Questions {startQ}–{endQ} of {totalQ})
+                      🎯 Teacher Preferred Correct Answer Key ONLY (Questions {startQ}–{endQ} of {totalQ} — Student Answers Auto-Read from Captured Script)
                     </label>
                     {totalPages > 1 && (
                       <div style={{ display: "flex", gap: "4px", flexWrap: "wrap" }}>
@@ -475,29 +517,8 @@ export default function ExamScannerDashboard() {
                             </button>
                           ))}
                         </div>
-                        <div style={{ fontSize: "0.66rem", color: "#94a3b8", marginBottom: "3px" }}>Student Mark:</div>
-                        <div style={{ display: "flex", justifyContent: "center", gap: "4px" }}>
-                          {["A", "B", "C", "D"].map((opt) => (
-                            <button
-                              key={`stu-${opt}`}
-                              type="button"
-                              onClick={() => handleBubbleSelect(qNum, opt)}
-                              style={{
-                                width: "22px",
-                                height: "22px",
-                                borderRadius: "50%",
-                                border: answers[qNum] === opt ? "2px solid #38bdf8" : "1px solid rgba(255,255,255,0.2)",
-                                background: answers[qNum] === opt ? "#0d2247" : "transparent",
-                                color: "#ffffff",
-                                fontSize: "0.68rem",
-                                fontWeight: 700,
-                                cursor: "pointer",
-                                padding: 0
-                              }}
-                            >
-                              {opt}
-                            </button>
-                          ))}
+                        <div style={{ fontSize: "0.68rem", color: answers[qNum] ? "#7dd3fc" : "#64748b", fontWeight: 700 }}>
+                          {answers[qNum] ? `Student Script: ${answers[qNum]}` : "Awaiting Camera Scan"}
                         </div>
                       </div>
                     ))}
@@ -506,10 +527,26 @@ export default function ExamScannerDashboard() {
               );
             })()}
 
-            <div className="dropzone" style={{ marginTop: "18px" }}>
+            <label
+              className="dropzone"
+              style={{ marginTop: "18px", display: "block", cursor: "pointer" }}
+            >
               <span className="drop-icon">📷</span>
-              <p>Optical Machine Sheet Camera Feed • High-Speed 300 DPI Scanner Attached</p>
-            </div>
+              <p style={{ margin: "4px 0", fontWeight: 800, color: "#bae6fd" }}>
+                Tap to Capture Student Script via Mobile Camera or Upload Script Photo
+              </p>
+              <span style={{ fontSize: "0.76rem", color: opticalStatus ? "#6ee7b7" : "#94a3b8" }}>
+                {opticalStatus || "AI Optical Sensor reads the student's chosen answers automatically — teacher enters ONLY preferred answers above."}
+              </span>
+              <input
+                type="file"
+                accept="image/*"
+                capture="environment"
+                data-testid="exam-scanner-script-upload"
+                onChange={handleCapturedScriptFile}
+                style={{ display: "none" }}
+              />
+            </label>
 
             <button className="scan-btn" onClick={handleScanSheet} disabled={loading}>
               {loading ? "EVALUATING AGAINST CURRICULUM..." : `⚡ START AI SCAN MARKING & GRADING (${questionCount} Qs)`}
@@ -544,7 +581,37 @@ export default function ExamScannerDashboard() {
                   </div>
                 </div>
 
-                <div style={{ marginTop: "16px", padding: "12px", background: "rgba(0,0,0,0.25)", borderRadius: "8px" }}>
+                {/* Explicit Lists: Questions Marked Correct & Questions Marked Wrong */}
+                <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "10px", marginTop: "14px" }}>
+                  <div
+                    data-testid="exam-scanner-correct-list"
+                    style={{ background: "rgba(16,185,129,0.14)", border: "1px solid #10b981", borderRadius: "8px", padding: "10px" }}
+                  >
+                    <strong style={{ color: "#34d399", fontSize: "0.78rem", display: "block" }}>
+                      ✅ Questions Marked Correct ({scanResult.correctCount ?? 0} / {scanResult.totalQuestions || questionCount})
+                    </strong>
+                    <div style={{ color: "#d1fae5", fontSize: "0.75rem", marginTop: "4px", fontWeight: 700 }}>
+                      {(scanResult.correctQuestions || []).length > 0
+                        ? scanResult.correctQuestions.map((q) => `Q${q}`).join(", ")
+                        : "None"}
+                    </div>
+                  </div>
+                  <div
+                    data-testid="exam-scanner-wrong-list"
+                    style={{ background: "rgba(239,68,68,0.14)", border: "1px solid #ef4444", borderRadius: "8px", padding: "10px" }}
+                  >
+                    <strong style={{ color: "#f87171", fontSize: "0.78rem", display: "block" }}>
+                      ❌ Questions Marked Wrong ({scanResult.wrongCount ?? 0} / {scanResult.totalQuestions || questionCount})
+                    </strong>
+                    <div style={{ color: "#fecaca", fontSize: "0.75rem", marginTop: "4px", fontWeight: 700 }}>
+                      {(scanResult.wrongQuestions || []).length > 0
+                        ? scanResult.wrongQuestions.map((w) => `Q${w.questionNumber} (${w.studentAnswer} vs ${w.correctAnswer})`).join(", ")
+                        : "Zero wrong answers!"}
+                    </div>
+                  </div>
+                </div>
+
+                <div style={{ marginTop: "14px", padding: "12px", background: "rgba(0,0,0,0.25)", borderRadius: "8px" }}>
                   <div style={{ fontSize: "0.85rem", color: "#94a3b8" }}>
                     Verified Sheet ID: <strong style={{ color: "#ffffff" }}>#SHT-{scanResult.answerSheetId}</strong>
                   </div>

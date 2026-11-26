@@ -12,9 +12,9 @@ router.use(optionalProtect);
 
 // Cross-Institution End-of-Term / Semester Exam Vetting & Headmaster Confirmation Workflow
 router.get('/vetting', aiExamController.listExamVettingSubmissions);
-router.post('/vetting/submit', protect, restrictTo('TEACHER', 'ADMIN', 'SUPER_ADMIN', 'DEVELOPER'), aiExamController.submitExamForHeadmasterVetting);
-router.put('/vetting/:id/review', protect, restrictTo('ADMIN', 'SUPER_ADMIN', 'DEVELOPER'), aiExamController.reviewExamVettingSubmission);
-router.put('/vetting/:id/resubmit', protect, restrictTo('TEACHER', 'ADMIN', 'SUPER_ADMIN', 'DEVELOPER'), aiExamController.resubmitExamForHeadmasterVetting);
+router.post('/vetting/submit', protect, restrictTo('TEACHER', 'ADMIN', 'SUPER_ADMIN', 'HEADMASTER', 'PRINCIPAL', 'DEVELOPER'), aiExamController.submitExamForHeadmasterVetting);
+router.put('/vetting/:id/review', protect, restrictTo('ADMIN', 'SUPER_ADMIN', 'HEADMASTER', 'PRINCIPAL', 'DEVELOPER'), aiExamController.reviewExamVettingSubmission);
+router.put('/vetting/:id/resubmit', protect, restrictTo('TEACHER', 'ADMIN', 'SUPER_ADMIN', 'HEADMASTER', 'PRINCIPAL', 'DEVELOPER'), aiExamController.resubmitExamForHeadmasterVetting);
 
 router.get('/exams', aiExamController.getExams);
 router.post('/exams', aiExamController.createExam);
