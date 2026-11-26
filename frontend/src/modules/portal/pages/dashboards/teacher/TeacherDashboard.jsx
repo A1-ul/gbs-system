@@ -1670,6 +1670,7 @@ export default function TeacherDashboard() {
   const [scannerMarksPerQuestion, setScannerMarksPerQuestion] = useState(1);
   const [scannerKeyQuickInput, setScannerKeyQuickInput] = useState("");
   const [savingAnswerKey, setSavingAnswerKey] = useState(false);
+  const [scanningScript, setScanningScript] = useState(false);
   const [savedScannerKeyAt, setSavedScannerKeyAt] = useState(null);
   const [teacherAnswerKey, setTeacherAnswerKey] = useState({
     1: "A", 2: "C", 3: "B", 4: "D", 5: "A",
@@ -3821,7 +3822,7 @@ export default function TeacherDashboard() {
       }
     }
 
-    setLoading(true);
+    setScanningScript(true);
     setFeedback(null);
     try {
       const totalQ = Math.max(1, Math.min(SCANNER_MAX_QUESTIONS, Number(scannerQuestionCount) || 10));
@@ -3838,7 +3839,7 @@ export default function TeacherDashboard() {
           type: "error",
           message: "Please capture or upload the student's exam script photo first so the AI Scanner can extract the student's chosen answers automatically."
         });
-        setLoading(false);
+        setScanningScript(false);
         return;
       }
 
@@ -3915,7 +3916,7 @@ export default function TeacherDashboard() {
         message: err.response?.data?.message || err.message || "Failed to scan and grade answer sheet."
       });
     } finally {
-      setLoading(false);
+      setScanningScript(false);
     }
   };
 
@@ -7792,10 +7793,10 @@ export default function TeacherDashboard() {
                         data-testid="teacher-run-ai-scan-btn"
                         className="btn-primary"
                         onClick={handleRunAiExamScanner}
-                        disabled={loading}
+                        disabled={scanningScript}
                         style={{ marginTop: "4px" }}
                       >
-                        {loading ? "⏳ Marking Script..." : `⚡ Mark Captured Script Against Teacher Key (${totalScannerQ} Qs)`}
+                        {scanningScript ? "⏳ Marking Script..." : `⚡ Mark Captured Script Against Teacher Key (${totalScannerQ} Qs)`}
                       </button>
                     </div>
                   ) : (
@@ -7870,9 +7871,9 @@ export default function TeacherDashboard() {
                         data-testid="teacher-run-ai-scan-btn"
                         className="btn-primary"
                         onClick={handleRunAiExamScanner}
-                        disabled={loading}
+                        disabled={scanningScript}
                       >
-                        ⚡ Run AI Scan with Teacher Key
+                        {scanningScript ? "⏳ Marking Script..." : "⚡ Run AI Scan with Teacher Key"}
                       </button>
                     </div>
                   )}
