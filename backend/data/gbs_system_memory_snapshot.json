@@ -1,7 +1,7 @@
 {
   "systemName": "GBS MANAGEMENT SYSTEM (Global Brightest Stars Educational Management System)",
-  "version": "2.17.0-PRODUCTION-BLUEPRINT",
-  "savedAt": "2026-11-24T22:55:30Z",
+  "version": "2.18.0-PRODUCTION-BLUEPRINT",
+  "savedAt": "2026-11-26T00:43:00Z",
   "status": "PRODUCTION_READY_VERIFIED",
   "architecture": {
     "frontend": {
@@ -16,15 +16,16 @@
       "autoAppUpdater": "frontend/src/components/common/AutoAppUpdater.jsx + public/sw.js (gbs-cache-v2026.21) polling /api/v1/app-version + Apple iOS .mobileconfig WebClip & Android PWA install",
       "socialAndFaviconBranding": "frontend/public/og-gbs-crest.jpg + favicon.ico + logo.png + icons/icon-*.png generated from official GBS Crest",
       "topicVideoComponent": "frontend/src/components/common/ClassTopicVideoPlatform.jsx",
-      "stationeryComponent": "frontend/src/components/common/SchoolStationeryHubPanel.jsx (Textbooks, Cardigans, Socks, School Bags across all portals; Headmaster-only pricing + Accountant expense audit)",
-      "secretaryDashboard": "frontend/src/modules/portal/pages/dashboards/secretary/SecretaryDashboard.jsx",
+      "stationeryComponent": "frontend/src/components/common/SchoolStationeryHubPanel.jsx (Strictly Headmaster-only Add Item & Set/Edit Prices; Read-Only Listed Prices for Teachers, Secretaries, Clinic Doctors/Nurses, HR & Staff; Accountant Read-Only Audit; Student/Parent Price View & Item Requests)",
+      "secretaryDashboard": "frontend/src/modules/portal/pages/dashboards/secretary/SecretaryDashboard.jsx (Full-bleed real-life executive secretarial office hero /assets/real/secretary_office_desk.jpg + Blueprint layout)",
+      "clinicDashboard": "frontend/src/modules/portal/pages/dashboards/clinic/ClinicDashboard.jsx (Separate School Clinic Dashboard strictly operated by School Doctors & Nurses ONLY at /portal/clinic/dashboard/:moduleId? with /assets/real/school_clinic_medical.jpg)",
       "liveVideoConferencing": "frontend/src/components/common/LiveInSystemCallModal.jsx (30fps WebRTC + SSE instant push signaling)",
       "universityOperationsComponent": "frontend/src/components/common/UniversityOperationsPanel.jsx",
       "defaultersComplianceComponent": "frontend/src/components/common/StudentDefaultersCompliancePanel.jsx",
-      "schoolClinicComponent": "frontend/src/components/common/SchoolClinicHubPanel.jsx (linked across Headmaster, Teacher, Secretary, Student, Parent, Staff & HR portals)",
+      "schoolClinicComponent": "frontend/src/components/common/SchoolClinicHubPanel.jsx (Full clinic operations strictly restricted to CLINIC_DOCTOR/CLINIC_NURSE; strictly Read-Only personal health status without editing for all other staff/Headmaster/students and linked ward health status for parents)",
       "movableAiComponent": "frontend/src/modules/developer-platform/components/DeveloperMovableAIAssistant.jsx",
-      "voiceAssistantComponent": "frontend/src/components/common/GBSVoiceAssistant.jsx (real-time 550ms silence detection + System Memory link + explicit Question-Formation Explainer)",
-      "translatorComponent": "frontend/src/components/common/UniversalLanguageTranslator.jsx",
+      "voiceAssistantComponent": "frontend/src/components/common/GBSVoiceAssistant.jsx (Clear active non-rushed tone 1.02x/pitch 1.06 + sentence-chunked natural speech + detailed end-to-end roles & performance for all 10 portals + System Memory link)",
+      "translatorComponent": "frontend/src/components/common/UniversalLanguageTranslatorModal.jsx + frontend/src/components/common/PhonicsAndAlphabetsLearningStudio.jsx + frontend/src/utils/phonicsAndAlphabetsData.js (42 Jolly Phonics sounds across Groups 1-7 + 17-country/language alphabets with audio & HTML5 letter-writing trace canvas)",
       "directSmsModalComponent": "frontend/src/components/common/DirectSMSMessengerModal.jsx",
       "directSmsInboxComponent": "frontend/src/components/common/DirectSMSInboxPanel.jsx",
       "rcceClientAndControlHub": "frontend/src/utils/rcceClient.js + frontend/src/modules/developer-platform/components/RcceControlHub.jsx + frontend/src/components/common/UniversalHeadingTooltipHUD.jsx + TopCenterSystemBanner Open New Tab",
@@ -240,7 +241,7 @@
       ],
       "component": "frontend/src/modules/portal/pages/dashboards/staff/StaffDashboard.jsx",
       "keyBehaviors": [
-        "Manages staff attendance, leave applications, salary grouping, loans, stationery sales/expenses, and campus operations."
+        "Manages staff attendance, leave applications, salary grouping, loans, campus operations, read-only listed Stationery prices, and read-only own medical health status."
       ]
     },
     {
@@ -253,7 +254,22 @@
       ],
       "component": "frontend/src/modules/portal/pages/dashboards/secretary/SecretaryDashboard.jsx",
       "keyBehaviors": [
-        "Manages Visitor Front-Desk check-in/out logs, Official Letters & Parent/Staff Circulars, Headmaster Appointments, Staff Clock-In attendance, School Stationery Desk & Expense logging synced to Accountant Expenses Ledger, Direct SMS & Voice/Video calls."
+        "Displays full-bleed real-life secretarial office & document hero (/assets/real/secretary_office_desk.jpg), manages Visitor Front-Desk check-in/out logs, Official Letters & Parent/Staff Circulars, Headmaster Appointments, Staff Clock-In attendance, Read-Only Listed Stationery Prices, Read-Only Own Medical Health Status, Direct SMS & Live Voice/Video calls."
+      ]
+    },
+    {
+      "id": 11,
+      "name": "Separate School Clinic Dashboard (Doctors & Nurses Only)",
+      "route": "/portal/clinic/dashboard",
+      "aliasRoutes": [
+        "/portal/clinic_doctor/dashboard",
+        "/portal/clinic_nurse/dashboard",
+        "/login/clinic",
+        "/signup/clinic"
+      ],
+      "component": "frontend/src/modules/portal/pages/dashboards/clinic/ClinicDashboard.jsx",
+      "keyBehaviors": [
+        "Operated strictly by authorized School Doctors (CLINIC_DOCTOR) and School Nurses (CLINIC_NURSE) ONLY — manages full school medical profiles directory, consultations & vitals, sickbay admissions/discharges, admissions medical registrations, clinic pharmacy inventory, clinic desk clock-in, live voice/video calls, Direct SMS, and read-only listed stationery prices. All other staff (including Headmaster) and students strictly see ONLY their own medical health status in read-only mode without editing."
       ]
     }
   ],
@@ -453,16 +469,23 @@
       "rootCause": "StudentDashboard sequentially awaited 1000ms heartbeat+messages on a single timer while TeacherLiveProctoringPanel only swapped static img snapshots without WebRTC video or body-portaling; TeacherDashboard had 7 hardcoded Math.min(100, ...) caps and ExamScannerDashboard had 200 caps; academic.service.js stored teacherLessonPlansStore in an unpersisted in-memory array without tenantId filtering, DRAFT workflow, structured NaCCA fields, review history, or quality validation.",
       "resolution": "1) Built dual-layer 1.0x Live Exam Invigilation streaming: RAM-only POST /api/v1/ai-exam/proctor/frame + protected WebRTC signaling (/proctor/webrtc/signal & /signals) in aiExam.service/controller/routes, 30fps WebRTC responder + non-blocking ~10fps frame pump in StudentDashboard.jsx, and body-portaled TeacherLiveProctoringPanel.jsx with explicit playbackRate=1.0 video receiver + live 1.0x FPS indicator. 2) Removed hardcoded 100/200 caps across aiExam.service.js (up to 2000), TeacherDashboard.jsx, ExamScannerDashboard.jsx, and MobileCameraAIExamScannerModal.jsx, adding free numeric typing, quick count presets, decimal marks (0.25+), and 50-question/page matrix pagination. 3) Engineered full Ghana NaCCA Learner-Centred Lesson Planning & Vetting subsystem: idempotent PostgreSQL tables (ensureLessonPlanTables.js: teacher_lesson_plans & teacher_faculty_directives) with strict tenant isolation & AuditLog recording, 6 non-fabricating subject-adaptable templates & 7-point pedagogical alignment checker (lessonPlanQuality.util.js), complete lifecycle APIs (GET /templates, POST /quality-check, CRUD + DRAFT/SUBMIT/REVISION_REQUIRED/RESUBMIT/VETTED_APPROVED + post-teaching reflection preservation), TeacherLessonPlanStudio.jsx, LessonNotesVettingModal.jsx, and A4 PDF builder (lessonPlanPrintHelper.js). Verified 100% local API + PostgreSQL + real Chrome CDP (Desktop 1440x900 + Mobile 390x844, 0 tooltips, 0 JS errors) + 18/18 regression checks.",
       "status": "PERMANENTLY_GUARDED"
+    },
+    {
+      "issueCode": "DIAG-PRODUCTION-READINESS-STATIONERY-CLINIC-PHONICS-VOICE-NAV-V218",
+      "symptom": "1) Teacher/Staff stationery panels leaked Headmaster add/edit pricing forms in Demo walkthrough; 2) School Clinic needed a separate dashboard strictly operated by School Doctors & Nurses ONLY while all other staff/Headmaster/students see strictly read-only personal health status without editing; 3) Secretary Dashboard had an unstyled blue gap instead of her real-life secretarial office & document hero image; 4) Language Translator lacked the 42 Jolly Phonics sounds and country-by-country alphabets with letter-writing guides; 5) AI Voice Assistant sounded dull/sleepy (0.88x rate, 0.78-0.93 pitch) and needed detailed end-to-end portal role & performance explanations; 6) Clicking dashboard tabs showed the huge multi-row overview tab wall on top and overwrote overviewTab so Back navigation failed to restore exact previous dashboard location and tab state.",
+      "rootCause": "SchoolStationeryHubPanel prioritized currentUser.role over portal mode; rbac.middleware demo Admin bypass allowed non-clinic Headmaster demo requests onto clinic visit/inventory endpoints without controller-level operator checks, and SchoolClinicHubPanel exposed self-edit forms; SecretaryDashboard used undefined CSS classes (role-hero-showcase/role-kpi-strip) instead of Blueprint .role-hero-banner/.role-kpi-row; GBSVoiceAssistant defaulted to 0.88x rate/0.78-0.93 pitch and spoke whole paragraphs in a single utterance; globals.css kept .role-tab-nav expanded on body.gbs-module-page-view while useDashboardTabSync overwrote overviewTab on :moduleId navigation and DashboardTabPageController queried nested .role-tab-nav elements.",
+      "resolution": "1) Locked SchoolStationeryHubPanel to mode-first Read-Only Listed Prices for Teacher/Secretary/Staff/HR/Clinic and strictly Headmaster-only Add/Edit Price authority backed by 403 RBAC in stationery.routes/service. 2) Created dedicated ClinicDashboard.jsx (/portal/clinic/dashboard/:moduleId?) with CLINIC_DOCTOR & CLINIC_NURSE Prisma enum + PG startup ALTER TYPE + built-in Doctor/Nurse accounts + strict controller & service 403 guards (even in Demo) while stripping self-edit from SchoolClinicHubPanel for read-only personal health status across Headmaster/Teacher/Secretary/Staff/HR/Accountant/Student. 3) Rebuilt SecretaryDashboard hero with Blueprint classes & full-bleed /assets/real/secretary_office_desk.jpg (1376x768). 4) Built phonicsAndAlphabetsData.js + PhonicsAndAlphabetsLearningStudio.jsx inside UniversalLanguageTranslatorModal with all 42 Jolly Phonics sounds (Groups 1-7), all 17 system country alphabets (incl. Ghana Twi/Ga/Ewe, Nigeria Hausa/Yoruba, 28-letter Arabic RTL, Hindi, Pinyin/Hanzi, Hiragana), speech playback, and HTML5 canvas trace/write pad. 5) Upgraded GBSVoiceAssistant tone to crisp active non-rushed 1.02x rate / 1.06 pitch with Neural/Natural voice priority, sentence-chunked utterances, and detailed 10-portal role/performance memory in systemMemoryAssistant.service.js. 6) Standardized global page navigation & exact scroll restoration across all 10 institutional dashboards (strictly excluding Developer Dashboard): tagged & hid primary overview nav.role-tab-nav on dedicated module pages, added Switch Module dropdown inside sticky Module Page Bar, stopped overwriting overviewTab on :moduleId navigation, preserved per-entry overviewTab & safe filter controls alongside window + nested container scroll snapshots, added touchstart & keyboard capture, and replaced hardcoded window.scrollTo(600/300) jumps. Verified 82/82 local API + real Chrome CDP Desktop/Mobile checks across all 10 institutional portals + Developer isolation (0px scroll drift, 0 tooltips, 0 JS errors), 18/18 regression checks, and 29/29 live Render checks on commit a2dc211.",
+      "status": "PERMANENTLY_GUARDED"
     }
   ],
   "verificationSummary": {
-    "latestVerifiedCommit": "af70b90",
-    "latestLiveBundleHash": "index-DUkwSuJg.js",
+    "latestVerifiedCommit": "a2dc211",
+    "latestLiveBundleHash": "index-Ct8wFWpW.js",
     "liveProductionUrl": "https://gbs-system.onrender.com",
     "autoMemoryRuleFile": "AGENTS.md",
-    "backendTestSuitesPassed": "18/18 upgrade regression checks + full v2.17 E2E suite (strict 401 auth, 1.0x live proctor frame stream & WebRTC signaling, 135-question scanner key & grading, 16-element Ghana NaCCA lesson planning/draft/vetting/revision/approval/post-lesson-reflection & RBAC 403 checks) verified (0 failures)",
-    "chromeE2EDashboardsVerified": "Real Chrome CDP verified portaled 1.0x Live Exam Invigilation modal, 135-question Teacher Exam Script Scanner with Q101-Q135 pagination & key sync, Teacher NaCCA Lesson Planning Studio (6 templates, live 7-point quality check, persisted cards, Mobile 390x844 responsive), and Headmaster portaled NaCCA Vetting Modal with all 16 sections & 0 HTML tooltips / 0 uncaught JS errors",
-    "liveRenderHttpAuditPassed": "26/26 v2.17 live HTTP checks passed on https://gbs-system.onrender.com (bundle index-DUkwSuJg.js, commit af70b90): SPA routes 200 OK, strict 401 unauthenticated checks, live 1.0x proctor frame & WebRTC signaling 200 OK, custom 135-question answer key 200 OK, RBAC 403s, 6 non-fabricating templates, missing-section quality check, Render PostgreSQL DRAFT create/hide/delete, Headmaster REVISION_REQUIRED with itemized section comments -> Teacher Revise & Resubmit Rev #2 -> Headmaster VETTED_APPROVED -> Teacher post-lesson reflection preserving VETTED_APPROVED",
+    "backendTestSuitesPassed": "18/18 upgrade regression checks (verify_upgrade_e2e.js) + 82/82 v2.18 backend API security/RBAC/Stationery/Clinic/AI checks passed (0 failures)",
+    "chromeE2EDashboardsVerified": "Real Headless Chrome CDP Desktop (1440x900) & Mobile (390x844) verified across all 10 institutional dashboards + Developer exclusion: exact 0px scroll restoration on App Back (260->260), Browser Back to Overview (520->520 + exact tab), Browser Forward (260->260), real React nested container horizontal scroll restoration (140->140), Mobile 390x844 Back restoration (480->480, 0 overflow), Direct URL refresh, Teacher Read-Only Stationery vs Headmaster Add/Edit, School Clinic Doctor Dashboard + Headmaster/Teacher Read-Only Health Status, Secretary full-bleed real-life hero image (1376w, 340h), 42 Jolly Phonics + 17-country alphabets (incl. 28-letter Arabic RTL) + canvas, Developer Dashboard excluded (scrollRestoration=auto), 0 native HTML tooltips, 0 uncaught page errors",
+    "liveRenderHttpAuditPassed": "29/29 v2.18 live HTTP checks passed on https://gbs-system.onrender.com (bundle index-Ct8wFWpW.js, commit a2dc211): SPA routes & real-life images 200 OK, strict 401 unauthenticated checks, Doctor/Nurse/Teacher/Secretary/Admin login & video calls 200 OK, Stationery GET 200 / POST 403 for Teacher/Secretary/Doctor/Nurse, Clinic full access for Doctor vs ownHealthOnly+readOnly & 403 ops for Headmaster/Teacher/Secretary, AI Voice 42 Jolly Phonics 200 OK",
     "institutionSeparationUniversityClinicVoiceVerified": "2026-11-20 Tier-Tailored School Portals (JHS/SHS/TVET/University), Separated Internships/Attachments, Clinic Privacy & Non-Disclosure Verified",
     "multiMillionSchoolDatabaseMandate": {
       "enforced": true,
