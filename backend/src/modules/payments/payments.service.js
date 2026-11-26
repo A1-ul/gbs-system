@@ -10,7 +10,8 @@ const {
   GATEWAYS,
   CHANNELS,
   CHANNEL_LABELS,
-  PAYMENT_SCOPES
+  PAYMENT_SCOPES,
+  DEVELOPER_PAYMENT_DESTINATION
 } = require('./payments.constants');
 const {
   generateTransactionReference,
@@ -31,8 +32,8 @@ const {
   extractSchoolReceivingAccounts,
   testGatewayConnectivity
 } = require('./payments.registry');
-const { reconcileVerifiedOutcome } = require('./payments.reconciler');
-const { getFinancialReports } = require('./payments.reports');
+const { reconcileVerifiedOutcome, _recalculateStudentAccessClearance } = require('./payments.reconciler');
+const { getFinancialReports, exportFinancialReportCsv } = require('./payments.reports');
 
 const DEFAULT_FEE_EXPIRY_MINUTES = 15;
 
@@ -368,6 +369,8 @@ async function getStudentFeeStatement({ tenantId, studentIdentifier, requestingU
     student.username ||
     `STU-${tid}-${student.id}`;
 
+  const accessClearance = await getStudentAccessClearance({ tenantId: tid, studentId: student.id });
+
   return {
     institution: {
       id: tid,
@@ -393,11 +396,95 @@ async function getStudentFeeStatement({ tenantId, studentIdentifier, requestingU
       minimumPayableAmount,
       allowCustomAmount: activeInvoices.length === 0 || outstandingBalance <= 0
     },
+    accessClearance,
     invoices: activeInvoices,
     availableChannels: gatewayBundle.channels,
     schoolReceivingAccounts: gatewayBundle.schoolReceivingAccounts || extractSchoolReceivingAccounts(gatewayBundle.configs, tenant.name),
     transactions: enrichedTransactions,
     receipts: enrichedReceipts
+  };
+}
+
+async function getStudentAccessClearance({ tenantId, studentId, studentIdentifier = null, requestingUser = null }) {
+  await ensurePaymentTables();
+  const tid = parseInt(tenantId, 10) || 1;
+  let sid = parseInt(studentId, 10);
+  if (!Number.isFinite(sid) || sid <= 0) {
+    const stu = await resolveStudentInTenant(tid, studentIdentifier, requestingUser);
+    sid = stu.id;
+  }
+  return _recalculateStudentAccessClearance(prisma, tid, sid, 'LIVE_QUERY', requestingUser?.id || null);
+}
+
+async function submitBankDepositProof({
+  tenantId,
+  reference,
+  bankName = '',
+  bankSlipReference = '',
+  depositorName = '',
+  depositDate = '',
+  receiptNote = '',
+  requestingUser = null
+}) {
+  await ensurePaymentTables();
+  const tid = tenantId ? parseInt(tenantId, 10) : null;
+  const where = tid ? { tenantId: tid, reference } : { reference };
+  const tx = await prisma.paymentTransaction.findFirst({ where });
+  if (!tx) {
+    throw new AppError(`Bank payment transaction "${reference}" was not found.`, 404);
+  }
+  if (tx.gateway !== GATEWAYS.BANK_DIRECT && tx.channel !== CHANNELS.BANK_TRANSFER) {
+    throw new AppError('Bank deposit proof can only be submitted for Bank Transfer / Deposit transactions.', 400);
+  }
+  if (tx.gatewayStatus === TRANSACTION_STATES.SUCCESSFUL || tx.accountingPosted) {
+    return {
+      transaction: _sanitizeTransactionForClient(tx),
+      customerMessage: 'This bank payment has already been verified and settled.'
+    };
+  }
+  const cleanSlipRef = String(bankSlipReference || '').trim();
+  if (!cleanSlipRef || cleanSlipRef.length < 3) {
+    throw new AppError('Please provide your bank deposit slip number or transfer reference (at least 3 characters).', 400);
+  }
+
+  let meta = {};
+  try {
+    meta = tx.metadataJson ? JSON.parse(tx.metadataJson) : {};
+  } catch { }
+  meta.bankProof = {
+    bankName: String(bankName || '').trim() || meta.schoolBankName || 'Commercial Bank',
+    bankSlipReference: cleanSlipRef,
+    depositorName: String(depositorName || '').trim() || meta.paidByName || 'Payer',
+    depositDate: String(depositDate || '').trim() || new Date().toISOString().slice(0, 10),
+    receiptNote: String(receiptNote || '').trim().slice(0, 500),
+    submittedAt: new Date().toISOString(),
+    submittedByUserId: requestingUser?.id || null
+  };
+
+  // Never auto-mark an unverified bank deposit as PAID — transition strictly to UNDER_REVIEW
+  const updated = await prisma.paymentTransaction.update({
+    where: { reference: tx.reference },
+    data: {
+      gatewayStatus: TRANSACTION_STATES.UNDER_REVIEW,
+      providerReference: cleanSlipRef,
+      displayMessage: `Bank deposit reference "${cleanSlipRef}" submitted and queued for verification by the authorized finance office. Your balance will update automatically once verified.`,
+      metadataJson: JSON.stringify(meta)
+    }
+  });
+
+  await prisma.auditLog.create({
+    data: {
+      tenantId: tx.tenantId,
+      userId: requestingUser?.id && /^\d+$/.test(String(requestingUser.id)) ? parseInt(requestingUser.id, 10) : null,
+      module: 'PAYMENTS',
+      action: 'BANK_PROOF_SUBMITTED',
+      details: `[TX #${tx.id}] Bank proof submitted for ${tx.reference} (Slip: ${cleanSlipRef}, Bank: ${meta.bankProof.bankName}, Depositor: ${meta.bankProof.depositorName}). Status set to UNDER_REVIEW pending finance verification.`
+    }
+  }).catch(() => {});
+
+  return {
+    transaction: _sanitizeTransactionForClient(updated),
+    customerMessage: updated.displayMessage
   };
 }
 
@@ -1386,9 +1473,62 @@ async function getAdminOverview(tenantId = null) {
     status: c.effectiveEnabled ? 'OPERATIONAL' : c.adapterConfigured ? 'STANDBY_DISABLED' : 'CREDENTIALS_REQUIRED'
   }));
 
+  // Developer Subscription Revenue & Per-School Subscription Tracker
+  const subscriptionTx = enrichedAllTx.filter((t) => t.paymentScope === PAYMENT_SCOPES.SUBSCRIPTION);
+  const allTenants = !tenantId
+    ? await prisma.tenant.findMany({ where: { isDeleted: false }, select: { id: true, name: true, code: true, status: true } }).catch(() => [])
+    : [];
+  const allDbSubs = !tenantId
+    ? await prisma.subscription.findMany({}).catch(() => [])
+    : await prisma.subscription.findMany({ where: { tenantId: parseInt(tenantId, 10) } }).catch(() => []);
+  const tenantNameMap = new Map(allTenants.map((t) => [t.id, t]));
+
+  const subscriptionTracker = {
+    developerPaymentDestination: DEVELOPER_PAYMENT_DESTINATION,
+    confirmedRevenueTotal: roundMoney(
+      subscriptionTx
+        .filter((t) => t.gatewayStatus === TRANSACTION_STATES.SUCCESSFUL)
+        .reduce((sum, t) => sum + Number(t.amountPaid || 0), 0)
+    ),
+    pendingSubscriptionsCount: subscriptionTx.filter((t) =>
+      [TRANSACTION_STATES.CREATED, TRANSACTION_STATES.PENDING, TRANSACTION_STATES.REQUIRES_CUSTOMER_ACTION, TRANSACTION_STATES.PROCESSING, TRANSACTION_STATES.UNDER_REVIEW].includes(t.gatewayStatus)
+    ).length,
+    failedSubscriptionsCount: subscriptionTx.filter((t) =>
+      [TRANSACTION_STATES.FAILED, TRANSACTION_STATES.CANCELLED, TRANSACTION_STATES.EXPIRED].includes(t.gatewayStatus)
+    ).length,
+    refundedSubscriptionsTotal: roundMoney(
+      subscriptionTx
+        .filter((t) => [TRANSACTION_STATES.REFUNDED, TRANSACTION_STATES.REVERSED].includes(t.gatewayStatus))
+        .reduce((sum, t) => sum + Number(t.amountPaid || 0), 0)
+    ),
+    expiredTenantsCount: allTenants.filter((t) => ['EXPIRED', 'SUSPENDED', 'LOCKED'].includes(String(t.status || '').toUpperCase())).length,
+    records: subscriptionTx.slice(0, 100).map((t) => {
+      const tInfo = tenantNameMap.get(Number(t.tenantId)) || {};
+      const dbSub = allDbSubs.find((s) => Number(s.tenantId) === Number(t.tenantId));
+      return {
+        reference: t.reference,
+        tenantId: t.tenantId,
+        schoolName: tInfo.name || t.studentName || `Institution #${t.tenantId}`,
+        schoolCode: tInfo.code || `GBS-${t.tenantId}`,
+        subscriptionPlan: t.term || dbSub?.planName || t.feeAccount || 'GBS Platform Subscription',
+        expectedAmount: Number(t.expectedAmount || t.amountPaid || 0),
+        amountPaid: Number(t.amountPaid || 0),
+        currency: t.currency || 'GHS',
+        gateway: t.gateway,
+        channel: t.channel,
+        gatewayStatus: t.gatewayStatus,
+        paymentDate: t.paidAt || t.createdAt,
+        confirmed: t.gatewayStatus === TRANSACTION_STATES.SUCCESSFUL,
+        receiptNumber: t.receiptNumber || null
+      };
+    })
+  };
+
   return {
     configs,
     schoolReceivingAccounts,
+    developerPaymentDestination: DEVELOPER_PAYMENT_DESTINATION,
+    subscriptionTracker,
     gatewayHealth,
     transactions: enrichedAllTx.slice(0, 100),
     webhooks: webhooks.slice(0, 100),
@@ -1425,7 +1565,7 @@ async function getAdminOverview(tenantId = null) {
 
 function _resolveDestinationAccountSummary(receivingAccounts, channel, gateway, scope = 'SCHOOL_FEES', tenantName = 'School') {
   if (scope === PAYMENT_SCOPES.SUBSCRIPTION) {
-    return 'GBS Platform Developer Settlement Account';
+    return `GBS Developer Collection (${DEVELOPER_PAYMENT_DESTINATION.primaryNetwork}: ${DEVELOPER_PAYMENT_DESTINATION.momoNumber} via Official Gateway)`;
   }
   const ch = String(channel || '').toUpperCase();
   if (gateway === GATEWAYS.BANK_DIRECT || ch === CHANNELS.BANK_TRANSFER) {
@@ -1546,6 +1686,8 @@ function _sanitizeTransactionForClient(tx, userMap = {}) {
 
 module.exports = {
   getStudentFeeStatement,
+  getStudentAccessClearance,
+  submitBankDepositProof,
   initiatePayment,
   submitAuthorizationStep,
   switchToFallbackMethod,
@@ -1558,6 +1700,7 @@ module.exports = {
   listTransactions,
   getReceipt,
   getFinancialReports,
+  exportFinancialReportCsv,
   getTenantGatewayConfigs,
   upsertTenantGatewayConfig,
   resolveGatewayAndChannels,

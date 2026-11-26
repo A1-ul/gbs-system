@@ -1087,7 +1087,7 @@ async function getCallState(req) {
       return false;
     }
     if (s.targetUserId && callerId && String(s.targetUserId) !== callerId) return false;
-    if (sinceIso && s.createdAt <= sinceIso) return false;
+    if (sinceIso && s.createdAt < sinceIso) return false;
     return true;
   });
 
@@ -1104,8 +1104,10 @@ async function getCallState(req) {
       mediaMode: call.mediaMode,
       title: call.title,
       initiatorUserId: call.initiatorUserId,
+      initiatorEmail: call.initiatorEmail || null,
       initiatorName: call.initiatorName,
       initiatorRole: call.initiatorRole,
+      initiatorPosition: call.initiatorPosition || formatRolePosition(call.initiatorRole),
       targetUserId: call.targetUserId,
       targetName: call.targetName,
       targetEmail: call.targetEmail || null,
@@ -1134,7 +1136,90 @@ async function updatePresence(req) {
   };
 }
 
+async function getIceServers() {
+  const iceServers = [
+    { urls: 'stun:stun.l.google.com:19302' },
+    { urls: 'stun:stun1.l.google.com:19302' },
+    { urls: 'stun:stun2.l.google.com:19302' },
+    { urls: 'stun:stun.relay.metered.ca:80' }
+  ];
+
+  // 1. Explicit custom TURN configuration via environment variables (recommended for production)
+  const envTurnUrls = String(process.env.TURN_URLS || process.env.WEBRTC_TURN_URLS || '')
+    .split(',')
+    .map((u) => u.trim())
+    .filter(Boolean);
+  const envTurnUser = String(process.env.TURN_USERNAME || process.env.WEBRTC_TURN_USERNAME || '').trim();
+  const envTurnCred = String(process.env.TURN_CREDENTIAL || process.env.WEBRTC_TURN_CREDENTIAL || '').trim();
+
+  if (envTurnUrls.length > 0 && envTurnUser && envTurnCred) {
+    iceServers.push({
+      urls: envTurnUrls,
+      username: envTurnUser,
+      credential: envTurnCred
+    });
+  }
+
+  // 2. Twilio Network Traversal Service (NTS) dynamic TURN tokens when Twilio credentials are configured
+  const twilioSid = String(process.env.TWILIO_ACCOUNT_SID || '').trim();
+  const twilioToken = String(process.env.TWILIO_AUTH_TOKEN || '').trim();
+  if (twilioSid && twilioToken && envTurnUrls.length === 0) {
+    try {
+      const authHeader = Buffer.from(`${twilioSid}:${twilioToken}`).toString('base64');
+      const controller = new AbortController();
+      const t = setTimeout(() => controller.abort(), 3500);
+      const resp = await fetch(`https://api.twilio.com/2010-04-01/Accounts/${encodeURIComponent(twilioSid)}/Tokens.json`, {
+        method: 'POST',
+        headers: { Authorization: `Basic ${authHeader}` },
+        signal: controller.signal
+      });
+      clearTimeout(t);
+      if (resp.ok) {
+        const json = await resp.json();
+        if (Array.isArray(json.ice_servers) && json.ice_servers.length > 0) {
+          for (const srv of json.ice_servers) {
+            if (srv.urls || srv.url) {
+              iceServers.push({
+                urls: srv.urls || srv.url,
+                ...(srv.username ? { username: srv.username } : {}),
+                ...(srv.credential ? { credential: srv.credential } : {})
+              });
+            }
+          }
+        }
+      }
+    } catch { }
+  }
+
+  // 3. Metered OpenRelay fallback TURN (port 80/443 TCP+UDP+TLS) so users behind symmetric NAT / mobile 4G always connect
+  const hasTurn = iceServers.some((s) => {
+    const urls = Array.isArray(s.urls) ? s.urls : [s.urls];
+    return urls.some((u) => /^turns?:/i.test(String(u || '')));
+  });
+  if (!hasTurn) {
+    iceServers.push(
+      {
+        urls: [
+          'turn:openrelay.metered.ca:80',
+          'turn:openrelay.metered.ca:443',
+          'turn:openrelay.metered.ca:443?transport=tcp'
+        ],
+        username: 'openrelayproject',
+        credential: 'openrelayproject'
+      }
+    );
+  }
+
+  return {
+    iceServers,
+    iceCandidatePoolSize: 10,
+    bundlePolicy: 'max-bundle',
+    rtcpMuxPolicy: 'require'
+  };
+}
+
 module.exports = {
+  getIceServers,
   getCallDirectory,
   initiateCall,
   getIncomingAndActiveCalls,

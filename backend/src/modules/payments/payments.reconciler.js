@@ -224,6 +224,19 @@ async function reconcileVerifiedOutcome({
         await _activateTenantSubscriptionOnPayment(tx, freshTx);
       }
 
+      let accessClearance = null;
+      if (freshTx.paymentScope !== PAYMENT_SCOPES.SUBSCRIPTION && freshTx.studentId) {
+        accessClearance = await _recalculateStudentAccessClearance(
+          tx,
+          freshTx.tenantId,
+          freshTx.studentId,
+          source,
+          actorUserId || freshTx.payerUserId || null
+        );
+      }
+
+      const safeAuditUserId = await _resolveSafeAuditUserId(tx, actorUserId || freshTx.payerUserId || null);
+
       const updatedTx = await tx.paymentTransaction.update({
         where: freshTx.reference ? { reference: freshTx.reference } : { id: freshTx.id },
         data: {
@@ -243,24 +256,24 @@ async function reconcileVerifiedOutcome({
       await tx.auditLog.create({
         data: {
           tenantId: freshTx.tenantId,
-          userId: actorUserId || freshTx.payerUserId || null,
+          userId: safeAuditUserId,
           module: 'PAYMENTS',
           action: 'PAYMENT_CONFIRMED_RECONCILED',
           details: `[TX #${updatedTx.id}] ${payeeReference} | ${updatedTx.gateway} ${updatedTx.channel} payment ${updatedTx.reference} (${updatedTx.currency} ${settledAmount.toFixed(2)})${destinationAccountSummary ? ` -> ${destinationAccountSummary}` : ''} confirmed via ${source}. Receipt ${receiptNum} issued.`
         }
-      }).catch(() => {});
+      }).catch(() => { });
 
       await _queuePaymentNotification(tx, updatedTx, createdReceipt, 'CONFIRMED');
 
       const enrichedReceipt = createdReceipt
         ? {
-            ...createdReceipt,
-            paidByRole,
-            paidByName,
-            paidByLabel,
-            payeeReference,
-            destinationAccountSummary
-          }
+          ...createdReceipt,
+          paidByRole,
+          paidByName,
+          paidByLabel,
+          payeeReference,
+          destinationAccountSummary
+        }
         : null;
       const enrichedTx = {
         ...updatedTx,
@@ -277,17 +290,28 @@ async function reconcileVerifiedOutcome({
         transaction: enrichedTx,
         receipt: enrichedReceipt,
         updatedInvoices,
+        accessClearance,
         idempotentSkip: false
       };
     }
 
     // Handle Refunded or Reversed settlements atomically (restore unpaid balance only once)
+    let reversedAccessClearance = null;
     if (
       (targetStatus === TRANSACTION_STATES.REFUNDED || targetStatus === TRANSACTION_STATES.REVERSED) &&
       freshTx.accountingPosted &&
       freshTx.gatewayStatus === TRANSACTION_STATES.SUCCESSFUL
     ) {
       await _reverseAccounting(tx, freshTx);
+      if (freshTx.paymentScope !== PAYMENT_SCOPES.SUBSCRIPTION && freshTx.studentId) {
+        reversedAccessClearance = await _recalculateStudentAccessClearance(
+          tx,
+          freshTx.tenantId,
+          freshTx.studentId,
+          `${source}_${targetStatus}`,
+          actorUserId || freshTx.payerUserId || null
+        );
+      }
     }
 
     const updatedTx = await tx.paymentTransaction.update({
@@ -297,28 +321,30 @@ async function reconcileVerifiedOutcome({
         providerReference: providerReference || freshTx.providerReference,
         failureReason:
           targetStatus === TRANSACTION_STATES.FAILED ||
-          targetStatus === TRANSACTION_STATES.CANCELLED ||
-          targetStatus === TRANSACTION_STATES.EXPIRED
+            targetStatus === TRANSACTION_STATES.CANCELLED ||
+            targetStatus === TRANSACTION_STATES.EXPIRED
             ? (gatewayResponse || freshTx.failureReason || `Payment ${targetStatus.toLowerCase()}`)
             : freshTx.failureReason,
         displayMessage: gatewayResponse || freshTx.displayMessage
       }
     });
 
+    const safeStatusAuditUserId = await _resolveSafeAuditUserId(tx, actorUserId || freshTx.payerUserId || null);
     await tx.auditLog.create({
       data: {
         tenantId: freshTx.tenantId,
-        userId: actorUserId || freshTx.payerUserId || null,
+        userId: safeStatusAuditUserId,
         module: 'PAYMENTS',
         action: `PAYMENT_STATUS_${targetStatus}`,
         details: `[TX #${updatedTx.id}] Payment ${updatedTx.reference} transitioned ${freshTx.gatewayStatus} -> ${targetStatus} via ${source}. ${gatewayResponse || ''}`.trim()
       }
-    }).catch(() => {});
+    }).catch(() => { });
 
     return {
       transaction: updatedTx,
       receipt: null,
       updatedInvoices,
+      accessClearance: reversedAccessClearance,
       idempotentSkip: false
     };
   });
@@ -506,7 +532,7 @@ async function _activateTenantSubscriptionOnPayment(tx, paymentTx) {
         isActive: true,
         status: 'ACTIVE'
       }
-    }).catch(() => {});
+    }).catch(() => { });
   }
   try {
     const { writePersistentStore } = require('../../core/database/persistentStore');
@@ -515,35 +541,35 @@ async function _activateTenantSubscriptionOnPayment(tx, paymentTx) {
       const matched = subs.some((s) => s.momoTxnId === paymentTx.reference || s.paymentReference === paymentTx.reference);
       const updatedSubs = matched
         ? subs.map((s) =>
-            s.momoTxnId === paymentTx.reference || s.paymentReference === paymentTx.reference
-              ? {
-                  ...s,
-                  paymentVerified: true,
-                  subscriptionStatus: 'ACTIVE',
-                  receiptNumber: paymentTx.receiptNumber || s.receiptNumber,
-                  verifiedAt: new Date().toISOString()
-                }
-              : s
-          )
-        : [
-            {
-              id: `SUB-${Date.now()}`,
-              tenantId: paymentTx.tenantId,
-              institutionName: tenant?.name || `Institution #${paymentTx.tenantId}`,
-              paymentReference: paymentTx.reference,
-              momoTxnId: paymentTx.reference,
-              receiptNumber: paymentTx.receiptNumber,
-              gateway: paymentTx.gateway,
-              channel: paymentTx.channel,
-              amountDueNow: paymentTx.amountPaid,
-              currencyCode: paymentTx.currency || 'GHS',
+          s.momoTxnId === paymentTx.reference || s.paymentReference === paymentTx.reference
+            ? {
+              ...s,
               paymentVerified: true,
               subscriptionStatus: 'ACTIVE',
-              verifiedAt: new Date().toISOString(),
-              createdAt: new Date().toISOString()
-            },
-            ...subs
-          ];
+              receiptNumber: paymentTx.receiptNumber || s.receiptNumber,
+              verifiedAt: new Date().toISOString()
+            }
+            : s
+        )
+        : [
+          {
+            id: `SUB-${Date.now()}`,
+            tenantId: paymentTx.tenantId,
+            institutionName: tenant?.name || `Institution #${paymentTx.tenantId}`,
+            paymentReference: paymentTx.reference,
+            momoTxnId: paymentTx.reference,
+            receiptNumber: paymentTx.receiptNumber,
+            gateway: paymentTx.gateway,
+            channel: paymentTx.channel,
+            amountDueNow: paymentTx.amountPaid,
+            currencyCode: paymentTx.currency || 'GHS',
+            paymentVerified: true,
+            subscriptionStatus: 'ACTIVE',
+            verifiedAt: new Date().toISOString(),
+            createdAt: new Date().toISOString()
+          },
+          ...subs
+        ];
       return { ...curr, subscriptions: updatedSubs };
     });
   } catch { }
@@ -567,7 +593,7 @@ async function _flagUnderReview(transaction, { reason, providerReference, source
       action: 'PAYMENT_FLAGGED_UNDER_REVIEW',
       details: `[TX #${transaction.id}] ${source}: ${reason}`
     }
-  }).catch(() => {});
+  }).catch(() => { });
   return { transaction: updated, receipt: null, flaggedForReview: true };
 }
 
@@ -578,10 +604,11 @@ async function _queuePaymentNotification(tx, paymentTx, receipt, kind = 'CONFIRM
         ? `Official Receipt ${receipt?.receiptNumber || paymentTx.receiptNumber}: ${paymentTx.currency} ${Number(paymentTx.amountPaid).toFixed(2)} received via ${paymentTx.gateway} (${paymentTx.channel}). Remaining balance: ${paymentTx.currency} ${Number(receipt?.balanceAfter || 0).toFixed(2)}.`
         : `Payment ${paymentTx.reference} status updated to ${paymentTx.gatewayStatus}.`;
 
+    const safeNotifUserId = await _resolveSafeAuditUserId(tx, paymentTx.payerUserId || paymentTx.studentId || null);
     await tx.notificationQueueItem.create({
       data: {
         tenantId: paymentTx.tenantId,
-        userId: paymentTx.payerUserId || paymentTx.studentId || null,
+        userId: safeNotifUserId,
         recipientContact: paymentTx.payerEmail || paymentTx.payerPhone || 'finance@gbs.edu',
         recipientName: receipt?.studentName || 'GBS Payer',
         channel: 'IN_APP',
@@ -601,8 +628,103 @@ async function _queuePaymentNotification(tx, paymentTx, receipt, kind = 'CONFIRM
   }
 }
 
+async function _resolveSafeAuditUserId(tx, rawUserId) {
+  const num = Number(rawUserId);
+  if (!Number.isInteger(num) || num <= 0) return null;
+  try {
+    const found = await tx.user.findUnique({ where: { id: num }, select: { id: true } });
+    return found ? found.id : null;
+  } catch {
+    return null;
+  }
+}
+
+/**
+ * Automatically recalculates a student's fee-related access permissions (course registration,
+ * results viewing, exam clearance) strictly from verified DB invoice balances.
+ * Never removes unrelated disciplinary, academic, or administrative restrictions.
+ */
+async function _recalculateStudentAccessClearance(tx, tenantId, studentId, source = 'PAYMENT_CONFIRMED', actorUserId = null) {
+  if (!studentId) return null;
+  const tid = parseInt(tenantId, 10) || 1;
+  const sid = parseInt(studentId, 10);
+  if (!Number.isFinite(sid) || sid <= 0) return null;
+
+  const invoices = await tx.studentInvoice.findMany({
+    where: { tenantId: tid, studentId: sid }
+  }).catch(() => []);
+
+  const activeInvoices = invoices.filter((i) => i.status !== 'CANCELLED');
+  const totalBilled = roundMoney(activeInvoices.reduce((s, i) => s + Number(i.netAmount || 0), 0));
+  const totalPaid = roundMoney(activeInvoices.reduce((s, i) => s + Number(i.paidAmount || 0), 0));
+  const outstandingBalance = roundMoney(activeInvoices.reduce((s, i) => s + Math.max(0, Number(i.balanceDue || 0)), 0));
+  const percentPaid = totalBilled > 0 ? Math.min(100, Math.round((totalPaid / totalBilled) * 100)) : 100;
+  const isFullyPaid = outstandingBalance <= 0.01;
+  const feeStatus = isFullyPaid ? 'CLEARED' : totalPaid > 0 ? 'PARTIAL' : 'UNPAID';
+
+  // Read existing student holds to ensure disciplinary/academic/admin restrictions are NEVER auto-removed
+  const { readPersistentStore, writePersistentStore } = require('../../core/database/persistentStore');
+  const store = readPersistentStore();
+  const existingRecord = store.studentFeeClearance?.[String(tid)]?.[String(sid)] || {};
+  const preservedHolds = {
+    disciplinaryHold: Boolean(existingRecord.disciplinaryHold),
+    academicHold: Boolean(existingRecord.academicHold),
+    administrativeHold: Boolean(existingRecord.administrativeHold)
+  };
+  const hasUnrelatedHold = preservedHolds.disciplinaryHold || preservedHolds.academicHold || preservedHolds.administrativeHold;
+
+  // Policy: Full payment restores all fee-related permissions; partial >= 50% restores course registration unless unrelated holds exist
+  const feeClearedForRegistration = isFullyPaid || percentPaid >= 50;
+  const feeClearedForResults = isFullyPaid;
+  const feeClearedForExams = isFullyPaid || percentPaid >= 70;
+
+  const clearance = {
+    tenantId: tid,
+    studentId: sid,
+    totalBilled,
+    totalPaid,
+    outstandingBalance,
+    percentPaid,
+    feeStatus,
+    isFullyPaid,
+    courseRegistrationAllowed: feeClearedForRegistration && !hasUnrelatedHold,
+    resultsViewingAllowed: feeClearedForResults && !hasUnrelatedHold,
+    examClearanceAllowed: feeClearedForExams && !hasUnrelatedHold,
+    ...preservedHolds,
+    recalculatedAt: new Date().toISOString(),
+    source
+  };
+
+  try {
+    writePersistentStore((curr) => ({
+      ...curr,
+      studentFeeClearance: {
+        ...(curr.studentFeeClearance || {}),
+        [String(tid)]: {
+          ...((curr.studentFeeClearance || {})[String(tid)] || {}),
+          [String(sid)]: clearance
+        }
+      }
+    }));
+  } catch { }
+
+  const safeClearanceAuditUserId = await _resolveSafeAuditUserId(tx, actorUserId || sid);
+  await tx.auditLog.create({
+    data: {
+      tenantId: tid,
+      userId: safeClearanceAuditUserId,
+      module: 'PAYMENTS',
+      action: 'STUDENT_ACCESS_RECALCULATED',
+      details: `[Student #${sid}] Fee clearance recalculated via ${source}: status=${feeStatus}, paid=${percentPaid}%, outstanding=${outstandingBalance.toFixed(2)}, courseReg=${clearance.courseRegistrationAllowed}, resultsView=${clearance.resultsViewingAllowed}, unrelatedHold=${hasUnrelatedHold}.`
+    }
+  }).catch(() => { });
+
+  return clearance;
+}
+
 module.exports = {
   setSocketIo,
   emitTenantPaymentUpdate,
-  reconcileVerifiedOutcome
+  reconcileVerifiedOutcome,
+  _recalculateStudentAccessClearance
 };

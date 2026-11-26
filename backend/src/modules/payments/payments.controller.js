@@ -2,7 +2,7 @@
 
 const paymentsService = require('./payments.service');
 const { setSocketIo } = require('./payments.reconciler');
-const { TRANSACTION_STATES, GATEWAYS } = require('./payments.constants');
+const { TRANSACTION_STATES, GATEWAYS, DEVELOPER_PAYMENT_DESTINATION } = require('./payments.constants');
 const prisma = require('../../core/database/prisma.client');
 
 function bindIo(req) {
@@ -60,6 +60,7 @@ async function getOnboardingGateways(req, res, next) {
       data: {
         scope: 'SUBSCRIPTION',
         recipientLabel: 'GBS Platform Developer Account',
+        developerPaymentDestination: DEVELOPER_PAYMENT_DESTINATION,
         channels: result.channels,
         gateways: safeConfigs
       }
@@ -95,6 +96,7 @@ async function getAvailableGateways(req, res, next) {
       data: {
         tenantId: parseInt(tenantId, 10) || 1,
         scope,
+        ...(scope === 'SUBSCRIPTION' ? { developerPaymentDestination: DEVELOPER_PAYMENT_DESTINATION } : {}),
         channels: result.channels,
         gateways: safeConfigs
       }
@@ -572,11 +574,87 @@ async function act(outcome) {
   return res.status(200).type('html').send(html);
 }
 
+async function getStudentAccessClearance(req, res, next) {
+  try {
+    bindIo(req);
+    const tenantId = getTenantIdFromReq(req);
+    const studentIdentifier = req.query.studentId || req.query.studentCode || null;
+    const data = await paymentsService.getStudentAccessClearance({
+      tenantId,
+      studentId: req.query.studentId || (req.user?.role === 'STUDENT' ? req.user.id : null),
+      studentIdentifier,
+      requestingUser: req.user
+    });
+    return res.status(200).json({ success: true, data });
+  } catch (err) {
+    return next(err);
+  }
+}
+
+async function submitBankDepositProof(req, res, next) {
+  try {
+    bindIo(req);
+    const tenantId = getTenantIdFromReq(req);
+    const data = await paymentsService.submitBankDepositProof({
+      tenantId,
+      reference: req.params.reference,
+      bankName: req.body?.bankName,
+      bankSlipReference: req.body?.bankSlipReference || req.body?.slipReference || req.body?.providerReference,
+      depositorName: req.body?.depositorName,
+      depositDate: req.body?.depositDate,
+      receiptNote: req.body?.receiptNote || req.body?.notes,
+      requestingUser: req.user
+    });
+    return res.status(200).json({ success: true, data });
+  } catch (err) {
+    return next(err);
+  }
+}
+
+async function submitOnboardingBankDepositProof(req, res, next) {
+  try {
+    bindIo(req);
+    const tx = await _assertOnboardingSubscriptionTx(req.params.reference);
+    const data = await paymentsService.submitBankDepositProof({
+      tenantId: tx.tenantId,
+      reference: req.params.reference,
+      bankName: req.body?.bankName,
+      bankSlipReference: req.body?.bankSlipReference || req.body?.slipReference || req.body?.providerReference,
+      depositorName: req.body?.depositorName,
+      depositDate: req.body?.depositDate,
+      receiptNote: req.body?.receiptNote || req.body?.notes,
+      requestingUser: null
+    });
+    return res.status(200).json({ success: true, data });
+  } catch (err) {
+    return next(err);
+  }
+}
+
+async function exportFinancialReportsCsv(req, res, next) {
+  try {
+    bindIo(req);
+    const tenantId = req.user?.role === 'DEVELOPER' && req.query.tenantId
+      ? req.query.tenantId
+      : getTenantIdFromReq(req);
+    const { filename, csv } = await paymentsService.exportFinancialReportCsv(tenantId, req.query || {});
+    res.setHeader('Content-Type', 'text/csv; charset=utf-8');
+    res.setHeader('Content-Disposition', `attachment; filename="${filename}"`);
+    return res.status(200).send(csv);
+  } catch (err) {
+    return next(err);
+  }
+}
+
 module.exports = {
   getStatus,
   getOnboardingGateways,
   getAvailableGateways,
   getStudentFeeStatement,
+  getStudentAccessClearance,
+  submitBankDepositProof,
+  submitOnboardingBankDepositProof,
+  exportFinancialReportsCsv,
   initiatePayment,
   initiateOnboardingSubscriptionPayment,
   submitAuthorizationStep,

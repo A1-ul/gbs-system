@@ -22,6 +22,15 @@ async function getStatus(req, res, next) {
   }
 }
 
+async function getIceServers(_req, res, next) {
+  try {
+    const data = await liveCallService.getIceServers();
+    return res.status(200).json({ success: true, data });
+  } catch (err) {
+    return next(err);
+  }
+}
+
 async function getDirectory(req, res, next) {
   try {
     const data = await liveCallService.getCallDirectory(req);
@@ -209,6 +218,7 @@ async function streamCallEvents(req, res, next) {
 
 module.exports = {
   getStatus,
+  getIceServers,
   getDirectory,
   initiateCall,
   getIncomingAndActive,

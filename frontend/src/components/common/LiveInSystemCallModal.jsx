@@ -9,15 +9,23 @@ import {
   formatRolePositionLabel
 } from "../../utils/callRingtoneEngine";
 
-const ICE_CONFIG = {
+const DEFAULT_ICE_CONFIG = {
   iceServers: [
     { urls: "stun:stun.l.google.com:19302" },
     { urls: "stun:stun1.l.google.com:19302" },
     { urls: "stun:stun2.l.google.com:19302" },
-    { urls: "stun:stun3.l.google.com:19302" },
-    { urls: "stun:stun4.l.google.com:19302" }
+    { urls: "stun:stun.relay.metered.ca:80" },
+    {
+      urls: [
+        "turn:openrelay.metered.ca:80",
+        "turn:openrelay.metered.ca:443",
+        "turn:openrelay.metered.ca:443?transport=tcp"
+      ],
+      username: "openrelayproject",
+      credential: "openrelayproject"
+    }
   ],
-  iceCandidatePoolSize: 8,
+  iceCandidatePoolSize: 10,
   bundlePolicy: "max-bundle",
   rtcpMuxPolicy: "require"
 };
@@ -105,6 +113,7 @@ export default function LiveInSystemCallModal({
   const [availableMics, setAvailableMics] = useState([]);
   const [selectedMicId, setSelectedMicId] = useState("");
   const [audioUnlocked, setAudioUnlocked] = useState(true);
+  const [iceStatus, setIceStatus] = useState("connecting");
   const [micLevel, setMicLevel] = useState(0);
   const [copiedLink, setCopiedLink] = useState(false);
   const [smsPingStatus, setSmsPingStatus] = useState("");
@@ -118,6 +127,8 @@ export default function LiveInSystemCallModal({
   const videoSenderRef = useRef(null);
   const audioSenderRef = useRef(null);
   const remoteConnectedRef = useRef(false);
+  const prevParticipantCountRef = useRef(Array.isArray(session?.participants) ? session.participants.length : 1);
+  const makingOfferRef = useRef(false);
   const selectedCameraIdRef = useRef("");
   const selectedMicIdRef = useRef("");
   const initialMediaModeRef = useRef(
@@ -148,14 +159,21 @@ export default function LiveInSystemCallModal({
 
   const myUserId = String(currentUser?.id || currentUser?.email || "user");
   const myEmailLower = String(currentUser?.email || "").trim().toLowerCase();
+  const myRoleUpper = String(currentUser?.role || "").trim().toUpperCase();
   const callId = session?.id || liveSession?.id;
   const initiatorUserId = session?.initiatorUserId || liveSession?.initiatorUserId;
   const initiatorEmailLower = String(session?.initiatorEmail || liveSession?.initiatorEmail || "").trim().toLowerCase();
+  const initiatorRoleUpper = String(session?.initiatorRole || liveSession?.initiatorRole || "").trim().toUpperCase();
+  const isMeInitiator = Boolean(
+    (myUserId && initiatorUserId && String(initiatorUserId) === myUserId) ||
+    (myEmailLower && initiatorEmailLower && myEmailLower === initiatorEmailLower) ||
+    (myRoleUpper === "DEVELOPER" && initiatorRoleUpper === "DEVELOPER")
+  );
   const isOutgoingRinging =
     String(liveSession?.status || session?.status || "").toUpperCase() === "RINGING" &&
     String(liveSession?.callScope || session?.callScope || "DIRECT").toUpperCase() === "DIRECT" &&
     !remoteConnected &&
-    (String(initiatorUserId) === myUserId || (myEmailLower && initiatorEmailLower && myEmailLower === initiatorEmailLower));
+    isMeInitiator;
 
   // Play real outgoing call ringback tone while waiting for the recipient to answer
   useEffect(() => {
@@ -288,8 +306,14 @@ export default function LiveInSystemCallModal({
 
   const attachRemoteStreamToVideo = useCallback((stream, forceRebind = false) => {
     if (!stream) return;
-    const liveVidTracks = stream.getVideoTracks().filter((t) => t.readyState === "live");
-    setRemoteHasVideo(liveVidTracks.length > 0);
+    const liveVidTracks = stream.getVideoTracks().filter((t) => t.readyState === "live" && t.enabled !== false);
+    const hasActiveVideoTrack = liveVidTracks.length > 0;
+    const el = remoteVideoRef.current;
+    if (hasActiveVideoTrack || (el && el.videoWidth > 0)) {
+      setRemoteHasVideo(true);
+    } else {
+      setRemoteHasVideo(false);
+    }
 
     // Dedicated remote <audio> element guarantees crisp voice playback in BOTH Video & Voice modes
     const audioEl = remoteAudioRef.current;
@@ -299,10 +323,14 @@ export default function LiveInSystemCallModal({
       }
       audioEl.muted = false;
       audioEl.volume = 1.0;
-      audioEl.play().then(() => setAudioUnlocked(true)).catch(() => { });
+      const ap = audioEl.play();
+      if (ap && typeof ap.then === "function") {
+        ap.then(() => setAudioUnlocked(true)).catch(() => {
+          setAudioUnlocked(false);
+        });
+      }
     }
 
-    const el = remoteVideoRef.current;
     if (!el) return;
     if (forceRebind || el.srcObject !== stream) {
       el.srcObject = stream;
@@ -314,7 +342,7 @@ export default function LiveInSystemCallModal({
     const p = el.play();
     if (p && typeof p.catch === "function") {
       p.then(() => {
-        setAudioUnlocked(true);
+        if (!audioEl) setAudioUnlocked(true);
       }).catch(() => {
         if (remoteVideoRef.current) {
           remoteVideoRef.current.muted = true;
@@ -426,6 +454,30 @@ export default function LiveInSystemCallModal({
     }
   }, [remoteConnected, activeMediaMode, attachRemoteStreamToVideo]);
 
+  // Auto-unlock remote speaker audio on the very next user gesture if browser blocked autoplay
+  useEffect(() => {
+    if (audioUnlocked) return undefined;
+    const unlockOnGesture = () => {
+      if (audioCtxRef.current && audioCtxRef.current.state === "suspended") {
+        audioCtxRef.current.resume().catch(() => { });
+      }
+      if (remoteAudioRef.current) {
+        remoteAudioRef.current.muted = false;
+        remoteAudioRef.current.volume = 1.0;
+        remoteAudioRef.current.play().then(() => setAudioUnlocked(true)).catch(() => { });
+      }
+      if (remoteVideoRef.current) {
+        remoteVideoRef.current.play().catch(() => { });
+      }
+    };
+    window.addEventListener("pointerdown", unlockOnGesture, { once: true });
+    window.addEventListener("keydown", unlockOnGesture, { once: true });
+    return () => {
+      window.removeEventListener("pointerdown", unlockOnGesture);
+      window.removeEventListener("keydown", unlockOnGesture);
+    };
+  }, [audioUnlocked]);
+
   useEffect(() => {
     if (!callId) return undefined;
     let active = true;
@@ -485,7 +537,7 @@ export default function LiveInSystemCallModal({
       } catch { }
     };
 
-    const getUserMediaWithTimeout = (constraints, timeoutMs = 3500) => {
+    const getUserMediaWithTimeout = (constraints, timeoutMs = 45000) => {
       return new Promise((resolve, reject) => {
         let settled = false;
         const timer = setTimeout(() => {
@@ -527,26 +579,26 @@ export default function LiveInSystemCallModal({
           const stream = await getUserMediaWithTimeout({
             audio: audioCfg,
             video: { width: { ideal: 640 }, height: { ideal: 360 }, frameRate: { ideal: 30 } }
-          }, 6500);
+          }, 45000);
           setCameraOff(false);
           setMediaStatus("HD Live Camera & Microphone Active");
           return stream;
         } catch {
           try {
-            const fallbackBoth = await getUserMediaWithTimeout({ audio: true, video: true }, 4000);
+            const fallbackBoth = await getUserMediaWithTimeout({ audio: true, video: true }, 20000);
             setCameraOff(false);
             setMediaStatus("Live Camera & Microphone Active");
             return fallbackBoth;
           } catch {
             try {
-              const videoOnly = await getUserMediaWithTimeout({ video: true, audio: false }, 3500);
+              const videoOnly = await getUserMediaWithTimeout({ video: true, audio: false }, 12000);
               setCameraOff(false);
               setMicMuted(true);
-              setMediaStatus("Live Camera Active (microphone unavailable)");
+              setMediaStatus("Live Camera Active (microphone unavailable — click Unmute Mic to retry)");
               return videoOnly;
             } catch {
               try {
-                const audioOnly = await getUserMediaWithTimeout({ audio: true, video: false }, 3000);
+                const audioOnly = await getUserMediaWithTimeout({ audio: true, video: false }, 12000);
                 setCameraOff(true);
                 setMediaStatus("Audio-Only Connected (click Switch to Video Call or Turn Camera On once camera is free)");
                 return audioOnly;
@@ -560,14 +612,14 @@ export default function LiveInSystemCallModal({
         }
       } else {
         try {
-          const audioStream = await getUserMediaWithTimeout({ audio: audioCfg, video: false }, 6000);
+          const audioStream = await getUserMediaWithTimeout({ audio: audioCfg, video: false }, 45000);
           setCameraOff(true);
           setMicMuted(false);
           setMediaStatus("Voice Call Microphone Live — Click Switch to Video Call anytime");
           return audioStream;
         } catch {
           try {
-            const basicAudioStream = await getUserMediaWithTimeout({ audio: true, video: false }, 5000);
+            const basicAudioStream = await getUserMediaWithTimeout({ audio: true, video: false }, 20000);
             setCameraOff(true);
             setMicMuted(false);
             setMediaStatus("Voice Call Microphone Live — Click Switch to Video Call anytime");
@@ -583,7 +635,8 @@ export default function LiveInSystemCallModal({
     };
 
     const sendFreshOffer = async (pc, { iceRestart = false } = {}) => {
-      if (!pc || pc.signalingState === "closed") return;
+      if (!pc || pc.signalingState === "closed" || makingOfferRef.current) return;
+      makingOfferRef.current = true;
       try {
         if (pc.signalingState !== "stable") {
           try {
@@ -597,16 +650,28 @@ export default function LiveInSystemCallModal({
         });
         await pc.setLocalDescription(offer);
         await sendSignal("OFFER", offer);
-      } catch { }
+      } catch { } finally {
+        makingOfferRef.current = false;
+      }
     };
 
     const startMediaAndWebRTC = async () => {
       try {
-        const stream = await acquireHardwareMedia();
+        const [stream, iceRes] = await Promise.all([
+          acquireHardwareMedia(),
+          apiClient.get("/video/calls/ice-servers").catch(() => null)
+        ]);
         if (!active) {
           stream?.getTracks().forEach((t) => t.stop());
           return;
         }
+        const liveIceConfig = iceRes?.data?.data?.iceServers?.length
+          ? {
+              ...DEFAULT_ICE_CONFIG,
+              ...iceRes.data.data
+            }
+          : DEFAULT_ICE_CONFIG;
+
         if (stream) {
           // Guard against race if user already switched to VOICE before initial getUserMedia resolved
           if (activeMediaModeRef.current === "VOICE") {
@@ -628,8 +693,9 @@ export default function LiveInSystemCallModal({
         }
 
         if (typeof RTCPeerConnection === "function") {
-          const pc = new RTCPeerConnection(ICE_CONFIG);
+          const pc = new RTCPeerConnection(liveIceConfig);
           peerConnRef.current = pc;
+          remoteStreamRef.current = new MediaStream();
 
           let hasLocalAudio = false;
           let hasLocalVideo = false;
@@ -665,23 +731,31 @@ export default function LiveInSystemCallModal({
           }
 
           pc.ontrack = (evt) => {
-            const incomingStream = evt.streams?.[0];
-            if (incomingStream) {
-              const mergedTracks = [...incomingStream.getTracks()];
-              if (evt.track && !mergedTracks.includes(evt.track)) {
-                mergedTracks.push(evt.track);
-              }
-              remoteStreamRef.current = new MediaStream(mergedTracks);
-            } else {
-              const prevTracks = remoteStreamRef.current
-                ? remoteStreamRef.current.getTracks().filter((t) => t.kind !== evt.track.kind && t.readyState === "live")
-                : [];
-              remoteStreamRef.current = new MediaStream([...prevTracks, evt.track]);
+            if (!remoteStreamRef.current) {
+              remoteStreamRef.current = new MediaStream();
             }
-            if (evt.track) {
-              evt.track.onunmute = () => {
+            const incomingTracks = evt.streams?.[0]?.getTracks?.() || (evt.track ? [evt.track] : []);
+            for (const track of incomingTracks) {
+              if (!track) continue;
+              // Remove any ended or older track of the same kind so video never wipes out audio and vice versa
+              remoteStreamRef.current.getTracks().forEach((existing) => {
+                if (existing.kind === track.kind && existing.id !== track.id) {
+                  try {
+                    remoteStreamRef.current.removeTrack(existing);
+                  } catch { }
+                }
+              });
+              if (!remoteStreamRef.current.getTracks().some((t) => t.id === track.id)) {
+                remoteStreamRef.current.addTrack(track);
+              }
+              track.onunmute = () => {
                 if (remoteStreamRef.current) {
                   attachRemoteStreamToVideo(remoteStreamRef.current, true);
+                }
+              };
+              track.onended = () => {
+                if (remoteStreamRef.current) {
+                  attachRemoteStreamToVideo(remoteStreamRef.current, false);
                 }
               };
             }
@@ -691,13 +765,20 @@ export default function LiveInSystemCallModal({
 
           pc.oniceconnectionstatechange = () => {
             const st = pc.iceConnectionState;
+            setIceStatus(st);
             if (st === "connected" || st === "completed") {
               setRemoteConnected(true);
               if (remoteStreamRef.current) {
-                attachRemoteStreamToVideo(remoteStreamRef.current);
+                attachRemoteStreamToVideo(remoteStreamRef.current, true);
               }
-            } else if (st === "failed" && String(initiatorUserId) === myUserId) {
-              sendFreshOffer(pc, { iceRestart: true });
+            } else if (st === "failed" || st === "disconnected") {
+              if (isMeInitiator) {
+                setTimeout(() => {
+                  if (peerConnRef.current === pc && (pc.iceConnectionState === "failed" || pc.iceConnectionState === "disconnected")) {
+                    sendFreshOffer(pc, { iceRestart: true });
+                  }
+                }, 1500);
+              }
             }
           };
 
@@ -716,8 +797,7 @@ export default function LiveInSystemCallModal({
             }
           }
 
-          const isInitiator = String(initiatorUserId) === myUserId;
-          if (isInitiator && !offerSentRef.current) {
+          if (isMeInitiator && !offerSentRef.current) {
             offerSentRef.current = true;
             await sendFreshOffer(pc);
           }
@@ -742,9 +822,10 @@ export default function LiveInSystemCallModal({
             const d = JSON.parse(evt.data);
             setLiveSession((prev) => prev ? { ...prev, status: d.status || prev.status, participants: d.participants || prev.participants } : prev);
             if (peerConnRef.current && Array.isArray(d.participants)) {
+              prevParticipantCountRef.current = d.participants.length;
               tuneVideoSenderPerformance(peerConnRef.current, d.participants.length);
               // Host re-sends a fresh WebRTC offer whenever a new participant joins (fixes have-local-offer deadlock)
-              if (String(initiatorUserId) === myUserId) {
+              if (isMeInitiator) {
                 const st = peerConnRef.current.signalingState;
                 if (st === "stable" || (st === "have-local-offer" && !remoteConnectedRef.current)) {
                   sendFreshOffer(peerConnRef.current, { iceRestart: st === "have-local-offer" });
@@ -809,7 +890,16 @@ export default function LiveInSystemCallModal({
             return data.session;
           });
           if (peerConnRef.current && Array.isArray(data.session.participants)) {
-            tuneVideoSenderPerformance(peerConnRef.current, data.session.participants.length);
+            const nextCount = data.session.participants.length;
+            tuneVideoSenderPerformance(peerConnRef.current, nextCount);
+            // If a peer joined while SSE was reconnecting, trigger a fresh offer automatically
+            if (isMeInitiator && nextCount > prevParticipantCountRef.current && !remoteConnectedRef.current) {
+              const st = peerConnRef.current.signalingState;
+              if (st === "stable" || st === "have-local-offer") {
+                sendFreshOffer(peerConnRef.current, { iceRestart: st === "have-local-offer" });
+              }
+            }
+            prevParticipantCountRef.current = nextCount;
           }
           if (Array.isArray(data.session.chatMessages)) {
             setChatLog((prev) => {
@@ -843,7 +933,7 @@ export default function LiveInSystemCallModal({
       }
       stopTracks();
     };
-  }, [callId, myUserId, initiatorUserId, currentUser?.role, sendSignal, stopTracks, attachLocalStreamToVideo, attachRemoteStreamToVideo, startMicLevelMonitor]);
+  }, [callId, myUserId, initiatorUserId, isMeInitiator, currentUser?.role, sendSignal, stopTracks, attachLocalStreamToVideo, attachRemoteStreamToVideo, startMicLevelMonitor]);
 
   const acquireAndBindMicTrack = async (deviceId = "") => {
     if (!navigator.mediaDevices || typeof navigator.mediaDevices.getUserMedia !== "function") {
@@ -1102,6 +1192,35 @@ export default function LiveInSystemCallModal({
     setAudioUnlocked(true);
   };
 
+  const handleReconnectMedia = async () => {
+    handleUnlockAudio();
+    if (localStreamRef.current && activeMediaModeRef.current === "VIDEO" && !cameraOff) {
+      attachLocalStreamToVideo(localStreamRef.current, true);
+    }
+    if (remoteStreamRef.current) {
+      attachRemoteStreamToVideo(remoteStreamRef.current, true);
+    }
+    if (peerConnRef.current && peerConnRef.current.signalingState !== "closed") {
+      setMediaStatus("Refreshing live video & voice connection...");
+      try {
+        const pc = peerConnRef.current;
+        if (pc.signalingState !== "stable") {
+          try { await pc.setLocalDescription({ type: "rollback" }); } catch { }
+        }
+        const offer = await pc.createOffer({
+          offerToReceiveAudio: true,
+          offerToReceiveVideo: true,
+          iceRestart: true
+        });
+        await pc.setLocalDescription(offer);
+        await sendSignal("OFFER", offer);
+        setMediaStatus("Live connection refreshed");
+      } catch {
+        setMediaStatus("Live connection active");
+      }
+    }
+  };
+
   const toggleScreenShare = async () => {
     if (screenSharing) {
       setScreenSharing(false);
@@ -1164,10 +1283,14 @@ export default function LiveInSystemCallModal({
   };
 
   const handleSendDeveloperSmsPing = async () => {
+    if (!activeSession?.targetPhone) {
+      setSmsPingStatus("📲 Headmaster dashboard is ringing live in-system (no SMS phone number registered on institution profile).");
+      return;
+    }
     setSmsPingStatus("Sending urgent SMS alert to Headmaster...");
     try {
       await apiClient.post("/dev-control/sms/send-headmaster", {
-        phone: activeSession?.targetPhone || "+233-24-555-0199",
+        phone: activeSession.targetPhone,
         headmasterName: activeSession?.targetName || "Headmaster",
         tenantName: activeSession?.targetTenantName || "Registered Institution",
         message: `🚨 URGENT DEVELOPER VIDEO CALL: System Engineer Gabriel Osei is ringing you live on the GBS System (${activeSession?.title || "Executive Video Call"}). Please open your Headmaster Dashboard now to answer.`
@@ -1410,7 +1533,7 @@ export default function LiveInSystemCallModal({
                 )}
               </div>
               <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", fontSize: "0.7rem", color: "#94a3b8", marginTop: "2px", gap: "8px", flexWrap: "wrap" }}>
-                <span>Active Participants: <strong style={{ color: "#6ee7b7" }}>{participants.length}</strong></span>
+                <span>Active Participants: <strong style={{ color: "#6ee7b7" }}>{participants.length}</strong> • Media Link: <strong style={{ color: iceStatus === "connected" || iceStatus === "completed" ? "#34d399" : "#fbbf24" }}>{iceStatus}</strong></span>
                 {!audioUnlocked && (
                   <button
                     type="button"
@@ -1502,6 +1625,9 @@ export default function LiveInSystemCallModal({
             )}
             <button type="button" onClick={handleUnlockAudio} style={{ background: "rgba(16,185,129,0.2)", color: "#6ee7b7", border: "1px solid #10b981", borderRadius: "8px", padding: "8px 14px", fontWeight: 800, cursor: "pointer", fontSize: "0.8rem" }}>
               🔊 Speaker Audio On
+            </button>
+            <button type="button" onClick={handleReconnectMedia} style={{ background: "rgba(99,102,241,0.22)", color: "#c7d2fe", border: "1px solid #818cf8", borderRadius: "8px", padding: "8px 14px", fontWeight: 800, cursor: "pointer", fontSize: "0.8rem" }}>
+              🔄 Reconnect Video/Audio
             </button>
             <button type="button" onClick={toggleScreenShare} style={{ background: screenSharing ? "#059669" : "rgba(56,189,248,0.16)", color: "#7dd3fc", border: "1px solid #38bdf8", borderRadius: "8px", padding: "8px 14px", fontWeight: 800, cursor: "pointer", fontSize: "0.8rem" }}>
               {screenSharing ? "🖥️ Sharing Screen" : "🖥️ Share Screen"}

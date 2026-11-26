@@ -106,6 +106,30 @@ export default function PaymentGatewayAdminPanel({
     }
   };
 
+  const handleExportCsvReport = async (reportType = "TRANSACTIONS") => {
+    setLoading(true);
+    setFeedback(null);
+    try {
+      const params = new URLSearchParams({ reportType, period: "ALL" });
+      if (tenantId) params.set("tenantId", String(tenantId));
+      const res = await apiClient.get(`/payments/reports/export?${params.toString()}`, { responseType: "blob" });
+      const blob = new Blob([res.data], { type: "text/csv;charset=utf-8;" });
+      const url = window.URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = `gbs-payments-${reportType.toLowerCase()}.csv`;
+      document.body.appendChild(a);
+      a.click();
+      a.remove();
+      window.URL.revokeObjectURL(url);
+      setFeedback({ type: "success", message: `Exported ${reportType} financial report (CSV).` });
+    } catch (err) {
+      setFeedback({ type: "error", message: err.response?.data?.message || "Could not export CSV report." });
+    } finally {
+      setLoading(false);
+    }
+  };
+
   const handleAdminAction = async (reference, action) => {
     setLoading(true);
     setFeedback(null);
@@ -227,6 +251,14 @@ export default function PaymentGatewayAdminPanel({
           </button>
           <button
             type="button"
+            onClick={() => handleExportCsvReport(activeSubView === "SUBSCRIPTIONS" ? "SUBSCRIPTIONS" : "TRANSACTIONS")}
+            disabled={loading}
+            style={{ background: "#059669", color: "#fff", border: "none", borderRadius: "8px", padding: "8px 12px", fontWeight: 700, cursor: "pointer", fontSize: "0.8rem" }}
+          >
+            Export CSV Report
+          </button>
+          <button
+            type="button"
             onClick={loadOverview}
             disabled={loading}
             style={{ background: "rgba(148,163,184,0.18)", color: "#e2e8f0", border: "1px solid rgba(148,163,184,0.3)", borderRadius: "8px", padding: "8px 12px", fontWeight: 700, cursor: "pointer", fontSize: "0.8rem" }}
@@ -323,7 +355,7 @@ export default function PaymentGatewayAdminPanel({
 
       {/* Sub-navigation */}
       <div style={{ display: "flex", gap: "8px", flexWrap: "wrap" }}>
-        {["GATEWAYS", "TRANSACTIONS", "WEBHOOKS", "HEALTH", "AUDIT"].map((tabKey) => (
+        {["GATEWAYS", "TRANSACTIONS", "SUBSCRIPTIONS", "WEBHOOKS", "HEALTH", "AUDIT"].map((tabKey) => (
           <button
             key={tabKey}
             type="button"
@@ -343,14 +375,86 @@ export default function PaymentGatewayAdminPanel({
               ? `Payment Providers (${overview.configs.length})`
               : tabKey === "TRANSACTIONS"
                 ? `Transactions (${overview.transactions.length})`
-                : tabKey === "WEBHOOKS"
-                  ? `Webhook Logs (${overview.webhooks.length})`
-                  : tabKey === "HEALTH"
-                    ? `Service Health (${(overview.gatewayHealth || overview.configs).length})`
-                    : `Payment Audit Logs (${(overview.auditLogs || []).length})`}
+                : tabKey === "SUBSCRIPTIONS"
+                  ? `Developer Subscriptions (${(overview.subscriptionTracker?.records || []).length})`
+                  : tabKey === "WEBHOOKS"
+                    ? `Webhook Logs (${overview.webhooks.length})`
+                    : tabKey === "HEALTH"
+                      ? `Service Health (${(overview.gatewayHealth || overview.configs).length})`
+                      : `Payment Audit Logs (${(overview.auditLogs || []).length})`}
           </button>
         ))}
       </div>
+
+      {/* DEVELOPER SUBSCRIPTIONS & DESIGNATED DESTINATION */}
+      {activeSubView === "SUBSCRIPTIONS" && (
+        <div style={{ display: "flex", flexDirection: "column", gap: "12px" }}>
+          <div style={{ background: "rgba(56, 189, 248, 0.08)", border: "1.5px solid rgba(56, 189, 248, 0.4)", borderRadius: "12px", padding: "14px", display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: "10px" }}>
+            <div>
+              <div style={{ fontWeight: 800, color: "#38bdf8", fontSize: "0.92rem" }}>
+                Designated GBS Developer Subscription Payment Channel
+              </div>
+              <div style={{ fontSize: "0.82rem", color: "#e2e8f0", marginTop: "4px" }}>
+                Main Mobile Money Number: <strong style={{ color: "#fbbf24" }}>{overview.developerPaymentDestination?.momoNumber || "0554594193"}</strong> ({overview.developerPaymentDestination?.primaryNetwork || "MTN Mobile Money"})
+              </div>
+              <div style={{ fontSize: "0.74rem", color: "#94a3b8", marginTop: "3px" }}>
+                {overview.developerPaymentDestination?.securityNotice || "Only verified gateway settlements count as confirmed revenue. GBS never requests or stores any MoMo PIN."}
+              </div>
+            </div>
+            <div style={{ display: "flex", gap: "12px", flexWrap: "wrap" }}>
+              <div style={{ background: "rgba(2,6,23,0.7)", border: "1px solid rgba(16,185,129,0.4)", borderRadius: "8px", padding: "8px 12px" }}>
+                <div style={{ fontSize: "0.7rem", color: "#94a3b8" }}>Confirmed Revenue</div>
+                <strong style={{ color: "#34d399" }}>{currencySymbol} {Number(overview.subscriptionTracker?.confirmedRevenueTotal || 0).toLocaleString()}</strong>
+              </div>
+              <div style={{ background: "rgba(2,6,23,0.7)", border: "1px solid rgba(245,158,11,0.4)", borderRadius: "8px", padding: "8px 12px" }}>
+                <div style={{ fontSize: "0.7rem", color: "#94a3b8" }}>Pending / Expired</div>
+                <strong style={{ color: "#fbbf24" }}>{overview.subscriptionTracker?.pendingSubscriptionsCount || 0} / {overview.subscriptionTracker?.expiredTenantsCount || 0}</strong>
+              </div>
+              <div style={{ background: "rgba(2,6,23,0.7)", border: "1px solid rgba(239,68,68,0.4)", borderRadius: "8px", padding: "8px 12px" }}>
+                <div style={{ fontSize: "0.7rem", color: "#94a3b8" }}>Refunded</div>
+                <strong style={{ color: "#fca5a5" }}>{currencySymbol} {Number(overview.subscriptionTracker?.refundedSubscriptionsTotal || 0).toLocaleString()}</strong>
+              </div>
+            </div>
+          </div>
+
+          <div style={{ overflowX: "auto", background: "rgba(15, 23, 42, 0.7)", borderRadius: "12px", border: "1px solid rgba(148,163,184,0.2)" }}>
+            <table style={{ width: "100%", borderCollapse: "collapse", fontSize: "0.8rem" }}>
+              <thead>
+                <tr style={{ background: "rgba(2,6,23,0.8)", color: "#94a3b8", textAlign: "left" }}>
+                  <th style={{ padding: "10px" }}>School (ID)</th>
+                  <th style={{ padding: "10px" }}>Plan</th>
+                  <th style={{ padding: "10px" }}>Amount</th>
+                  <th style={{ padding: "10px" }}>Method / Gateway</th>
+                  <th style={{ padding: "10px" }}>Reference</th>
+                  <th style={{ padding: "10px" }}>Status</th>
+                  <th style={{ padding: "10px" }}>Date</th>
+                </tr>
+              </thead>
+              <tbody>
+                {(overview.subscriptionTracker?.records || []).length === 0 ? (
+                  <tr>
+                    <td colSpan="7" style={{ padding: "18px", textAlign: "center", color: "#94a3b8" }}>
+                      No school subscription payment records found yet.
+                    </td>
+                  </tr>
+                ) : (
+                  (overview.subscriptionTracker?.records || []).map((rec) => (
+                    <tr key={rec.reference} style={{ borderTop: "1px solid rgba(148,163,184,0.12)" }}>
+                      <td style={{ padding: "9px 10px", fontWeight: 700, color: "#fff" }}>{rec.schoolName} (#{rec.tenantId})</td>
+                      <td style={{ padding: "9px 10px", color: "#cbd5e1" }}>{rec.subscriptionPlan}</td>
+                      <td style={{ padding: "9px 10px", color: "#34d399", fontWeight: 700 }}>{rec.currency} {Number(rec.amountPaid || 0).toFixed(2)}</td>
+                      <td style={{ padding: "9px 10px", color: "#cbd5e1" }}>{rec.channel} • {rec.gateway}</td>
+                      <td style={{ padding: "9px 10px", fontFamily: "monospace", color: "#38bdf8" }}>{rec.reference}</td>
+                      <td style={{ padding: "9px 10px", fontWeight: 800, color: rec.confirmed ? "#34d399" : "#fbbf24" }}>{rec.gatewayStatus}</td>
+                      <td style={{ padding: "9px 10px", color: "#94a3b8" }}>{rec.paymentDate ? new Date(rec.paymentDate).toLocaleString() : "-"}</td>
+                    </tr>
+                  ))
+                )}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      )}
 
       {/* GATEWAYS LIST */}
       {activeSubView === "GATEWAYS" && (

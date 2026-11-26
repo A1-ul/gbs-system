@@ -346,5 +346,13 @@ node frontend/scripts/build-frontend-memory.cjs
 * **Verification Verdict (`index-Sa4PbT-n.js`, Commits `610be1b` & `3701bbe`):** **36 / 36** Localhost comprehensive API + RBAC + Real Chrome CDP checks + **18 / 18** `backend/verify_upgrade_e2e.js` regression checks + **33 / 33** Live Render production verification checks on `https://gbs-system.onrender.com` (`0` failures, `0` native HTML tooltips, `0` uncaught JS errors).
 
 ---
+
+## 18. PHASE V2.22 — REAL-TIME WEBRTC VIDEO/VOICE CALL RELIABILITY (STUN/TURN + DEVELOPER CALLING) & COMPLETE MULTI-GATEWAY SCHOOL/DEVELOPER PAYMENT INTEGRATION (NOV 2026)
+
+* **Real-Time WebRTC Video & Voice Calling (All Users + Developer):** Added `GET /api/v1/video/calls/ice-servers` (STUN + env TURN / Twilio NTS / OpenRelay TCP+UDP ports 80/443 TURN), fixed `getCallState` (`initiatorEmail` + `< sinceIso` preserving same-ms ICE candidates), and upgraded `LiveInSystemCallModal.jsx` with Developer-safe `isMeInitiator`, 45s non-destructive permission timeout, persistent single `remoteStreamRef` track merging (preventing video tracks from dropping audio), autoplay-block detection + next-gesture auto-unlock, polling participant re-offer, live ICE link indicator, and `Reconnect Video/Audio` control.
+* **Complete Multi-Gateway School & Developer Payment Module:** Surfaced designated GBS Developer Payment Destination (`0554594193`, MTN Mobile Money & supported Ghana networks via official merchant gateways, zero PIN storage) across checkout and Developer Dashboard; added Bank Deposit/Transfer proof submission (`POST /api/v1/payments/:reference/bank-proof`, strictly `UNDER_REVIEW` until finance approval); implemented automatic Student Access Clearance recalculation (`courseRegistrationAllowed`, `resultsViewingAllowed`, `examClearanceAllowed`, preserving unrelated disciplinary/academic/admin holds) + `GET /api/v1/payments/student-clearance`; hardened PostgreSQL `$transaction` FK safety for audit/notification rows; and added Developer Subscriptions revenue tracker tab + `GET /api/v1/payments/reports/export` CSV financial report export.
+* **Verification Verdict (`index-D9UpQVNf.js`):** Backend syntax checks (`9/9` pass), end-to-end local PostgreSQL video & multi-gateway payment verification (`6/6` suites pass), clean Vite production build synced to `backend/public/`, `0` native HTML tooltips, pushed to `origin/main` and verified live on `https://gbs-system.onrender.com`.
+
+---
 *Certified & Archived in System Memory by Gabriel Osei — Lead Architect & Developer.*  
 *GBS Company of Management System — Real-Life Production Foundation.*

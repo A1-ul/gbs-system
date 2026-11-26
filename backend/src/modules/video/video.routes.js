@@ -22,6 +22,7 @@ router.use(protect);
 router.use(tenantStatusGuard);
 router.use(tenantIsolationGuard);
 
+router.get('/calls/ice-servers', controller.getIceServers);
 router.get('/calls/directory', controller.getDirectory);
 router.get('/calls/incoming', controller.getIncomingAndActive);
 router.get('/calls/missed', controller.getMissedCalls);

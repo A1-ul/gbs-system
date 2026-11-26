@@ -39,6 +39,7 @@ router.post('/onboarding/initiate', paymentWriteLimiter, controller.initiateOnbo
 router.get('/onboarding/verify/:reference', controller.verifyOnboardingTransaction);
 router.post('/onboarding/:reference/sandbox-confirm', paymentWriteLimiter, controller.triggerOnboardingSandboxWebhook);
 router.post('/onboarding/:reference/submit-otp', paymentWriteLimiter, controller.submitOnboardingAuthorizationStep);
+router.post('/onboarding/:reference/bank-proof', paymentWriteLimiter, controller.submitOnboardingBankDepositProof);
 router.post('/onboarding/:reference/fallback', paymentWriteLimiter, controller.switchOnboardingToFallbackMethod);
 router.post('/onboarding/:reference/cancel', paymentWriteLimiter, controller.cancelOnboardingPayment);
 
@@ -48,11 +49,13 @@ router.use(tenantIsolationGuard);
 
 router.get('/gateways', controller.getAvailableGateways);
 router.get('/student-statement', controller.getStudentFeeStatement);
+router.get('/student-clearance', controller.getStudentAccessClearance);
 router.get('/history', controller.listTransactions);
 router.get('/receipts/:receiptOrRef', controller.getReceipt);
 
 router.post('/initiate', paymentWriteLimiter, controller.initiatePayment);
 router.post('/:reference/submit-otp', paymentWriteLimiter, controller.submitAuthorizationStep);
+router.post('/:reference/bank-proof', paymentWriteLimiter, controller.submitBankDepositProof);
 router.post('/:reference/fallback', paymentWriteLimiter, controller.switchToFallbackMethod);
 router.post('/:reference/cancel', paymentWriteLimiter, controller.cancelPayment);
 router.post('/:reference/sandbox-confirm', paymentWriteLimiter, controller.triggerSandboxWebhook);
@@ -64,6 +67,11 @@ router.get(
   '/reports/summary',
   restrictTo('ADMIN', 'SUPER_ADMIN', 'ACCOUNTANT', 'DEVELOPER'),
   controller.getFinancialReports
+);
+router.get(
+  '/reports/export',
+  restrictTo('ADMIN', 'SUPER_ADMIN', 'ACCOUNTANT', 'DEVELOPER'),
+  controller.exportFinancialReportsCsv
 );
 router.post(
   '/:reference/admin-action',

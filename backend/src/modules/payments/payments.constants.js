@@ -70,6 +70,19 @@ const PAYMENT_SCOPES = Object.freeze({
   SUBSCRIPTION: 'SUBSCRIPTION'
 });
 
+const DEVELOPER_PAYMENT_DESTINATION = Object.freeze({
+  momoNumber: process.env.DEVELOPER_MOMO_NUMBER || '0554594193',
+  primaryNetwork: 'MTN Mobile Money',
+  accountName: process.env.DEVELOPER_MOMO_NAME || 'GBS Platform Developer Collection',
+  supportedNetworks: ['MTN_MOMO', 'TELECEL_CASH', 'AT_MONEY', 'BANK_TRANSFER'],
+  bankName: process.env.DEVELOPER_BANK_NAME || null,
+  bankAccountNumber: process.env.DEVELOPER_BANK_ACCOUNT || null,
+  bankAccountName: process.env.DEVELOPER_BANK_ACCOUNT_NAME || null,
+  bankBranch: process.env.DEVELOPER_BANK_BRANCH || null,
+  requiresMerchantOwnershipVerification: true,
+  securityNotice: 'Payments are routed through authorized merchant collection APIs (Paystack/Hubtel). GBS never requests, collects, or stores any MoMo PIN or banking password.'
+});
+
 /**
  * Valid status transition rules preventing premature or backward settlement flips.
  */
@@ -104,5 +117,6 @@ module.exports = {
   CHANNELS,
   CHANNEL_LABELS,
   PAYMENT_SCOPES,
+  DEVELOPER_PAYMENT_DESTINATION,
   canTransitionStatus
 };

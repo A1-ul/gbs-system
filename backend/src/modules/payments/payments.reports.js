@@ -173,6 +173,68 @@ async function getFinancialReports(tenantId, query = {}) {
   };
 }
 
+function _csvCell(val) {
+  const s = val === null || val === undefined ? '' : String(val);
+  if (/[",\r\n]/.test(s)) {
+    return `"${s.replace(/"/g, '""')}"`;
+  }
+  return s;
+}
+
+async function exportFinancialReportCsv(tenantId, query = {}) {
+  const report = await getFinancialReports(tenantId, query);
+  const reportType = String(query.reportType || 'TRANSACTIONS').toUpperCase();
+  const lines = [];
+
+  if (reportType === 'OUTSTANDING') {
+    lines.push(['Student ID', 'Student Code', 'Student Name', 'Email', 'Total Billed', 'Total Paid', 'Outstanding Balance', 'Open Invoices'].map(_csvCell).join(','));
+    for (const st of report.outstandingStudents || []) {
+      lines.push([
+        st.studentId,
+        st.studentCode,
+        st.studentName,
+        st.email || '',
+        Number(st.totalBilled || 0).toFixed(2),
+        Number(st.totalPaid || 0).toFixed(2),
+        Number(st.outstandingBalance || 0).toFixed(2),
+        st.openInvoices || 0
+      ].map(_csvCell).join(','));
+    }
+  } else {
+    const rows =
+      reportType === 'FAILED'
+        ? report.failedTransactions || []
+        : reportType === 'REFUNDS'
+          ? report.reversedOrRefundedTransactions || []
+          : reportType === 'SUBSCRIPTIONS'
+            ? report.subscriptionCollections || []
+            : report.recentTransactions || [];
+    lines.push(['Reference', 'Receipt Number', 'Tenant ID', 'Scope', 'Student ID', 'Gateway', 'Channel', 'Status', 'Currency', 'Amount', 'Provider Ref', 'Date'].map(_csvCell).join(','));
+    for (const tx of rows) {
+      lines.push([
+        tx.reference || tx.transactionRef || '',
+        tx.receiptNumber || '',
+        tx.tenantId || '',
+        tx.paymentScope || '',
+        tx.studentId || '',
+        tx.gateway || '',
+        tx.channel || tx.paymentMethod || '',
+        tx.gatewayStatus || '',
+        tx.currency || 'GHS',
+        Number(tx.amountPaid || 0).toFixed(2),
+        tx.providerReference || '',
+        tx.paidAt || tx.createdAt || ''
+      ].map(_csvCell).join(','));
+    }
+  }
+
+  return {
+    filename: `gbs-payment-report-${reportType.toLowerCase()}-${String(report.period || 'all').toLowerCase()}.csv`,
+    csv: lines.join('\r\n')
+  };
+}
+
 module.exports = {
-  getFinancialReports
+  getFinancialReports,
+  exportFinancialReportCsv
 };

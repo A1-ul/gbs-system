@@ -101,6 +101,11 @@ export default function OfficialPaymentGatewayModal({
   const [preferHostedCheckout, setPreferHostedCheckout] = useState(false);
 
   const [activeTransaction, setActiveTransaction] = useState(null);
+  const [developerDestination, setDeveloperDestination] = useState(null);
+  const [bankProofSlip, setBankProofSlip] = useState("");
+  const [bankProofBankName, setBankProofBankName] = useState("");
+  const [bankProofDepositor, setBankProofDepositor] = useState("");
+  const [bankProofNote, setBankProofNote] = useState("");
   const [fallbackOptions, setFallbackOptions] = useState([]);
   const [otpInput, setOtpInput] = useState("");
   const [verifiedReceipt, setVerifiedReceipt] = useState(null);
@@ -165,6 +170,10 @@ export default function OfficialPaymentGatewayModal({
     setInfoMsg("");
     setActiveTransaction(null);
     setVerifiedReceipt(null);
+    setBankProofSlip("");
+    setBankProofBankName("");
+    setBankProofDepositor("");
+    setBankProofNote("");
     setFallbackOptions([]);
     setOtpInput("");
     setPreferHostedCheckout(false);
@@ -215,6 +224,7 @@ export default function OfficialPaymentGatewayModal({
           }).catch(() => null);
           const channels = res?.data?.data?.channels || [];
           setAvailableChannels(channels);
+          setDeveloperDestination(res?.data?.data?.developerPaymentDestination || null);
           if (channels.length > 0) {
             setSelectedChannel(channels[0].channel);
             setSelectedGateway(channels[0].primaryGateway);
@@ -236,6 +246,36 @@ export default function OfficialPaymentGatewayModal({
 
   const selectedChannelConfig = availableChannels.find((c) => c.channel === selectedChannel) || null;
   const isMomoChannel = ["MTN_MOMO", "TELECEL_CASH", "AT_MONEY"].includes(selectedChannel);
+
+  const handleSubmitBankProof = async (e) => {
+    e.preventDefault();
+    if (!activeTransaction?.reference || !bankProofSlip.trim()) {
+      setErrorMsg("Enter your bank deposit slip number or transfer reference.");
+      return;
+    }
+    setLoading(true);
+    setErrorMsg("");
+    try {
+      const endpoint = allowPublicOnboarding
+        ? `/payments/onboarding/${encodeURIComponent(activeTransaction.reference)}/bank-proof`
+        : `/payments/${encodeURIComponent(activeTransaction.reference)}/bank-proof`;
+      const res = await apiClient.post(endpoint, {
+        bankSlipReference: bankProofSlip.trim(),
+        bankName: bankProofBankName.trim() || undefined,
+        depositorName: bankProofDepositor.trim() || undefined,
+        receiptNote: bankProofNote.trim() || undefined
+      });
+      const data = res.data?.data;
+      if (data?.transaction) {
+        setActiveTransaction(data.transaction);
+        setInfoMsg(data.customerMessage || "Bank deposit proof submitted for finance office verification.");
+      }
+    } catch (err) {
+      setErrorMsg(err.response?.data?.message || "Could not submit bank deposit proof.");
+    } finally {
+      setLoading(false);
+    }
+  };
 
   const handleSelectChannel = (chObj) => {
     setSelectedChannel(chObj.channel);
@@ -714,6 +754,30 @@ export default function OfficialPaymentGatewayModal({
                         <strong style={{ color: "#f87171", fontSize: "1.02rem" }}>{safeCurrency} {Number(statement.feeSummary.outstandingBalance).toFixed(2)}</strong>
                       </div>
                     </div>
+                    {statement.accessClearance && (
+                      <div style={{ marginTop: "10px", paddingTop: "8px", borderTop: "1px solid rgba(148,163,184,0.15)", display: "flex", gap: "8px", flexWrap: "wrap", fontSize: "0.72rem" }}>
+                        <span style={{ padding: "3px 8px", borderRadius: "999px", background: statement.accessClearance.courseRegistrationAllowed ? "rgba(16,185,129,0.2)" : "rgba(245,158,11,0.2)", color: statement.accessClearance.courseRegistrationAllowed ? "#6ee7b7" : "#fcd34d", fontWeight: 700 }}>
+                          Course Registration: {statement.accessClearance.courseRegistrationAllowed ? "Cleared" : "Pending Fee Clearance"}
+                        </span>
+                        <span style={{ padding: "3px 8px", borderRadius: "999px", background: statement.accessClearance.resultsViewingAllowed ? "rgba(16,185,129,0.2)" : "rgba(245,158,11,0.2)", color: statement.accessClearance.resultsViewingAllowed ? "#6ee7b7" : "#fcd34d", fontWeight: 700 }}>
+                          Results Access: {statement.accessClearance.resultsViewingAllowed ? "Cleared" : "Pending Full Settlement"}
+                        </span>
+                      </div>
+                    )}
+                  </div>
+                )}
+
+                {paymentScope === "SUBSCRIPTION" && (
+                  <div style={{ background: "rgba(56, 189, 248, 0.08)", border: "1px solid rgba(56, 189, 248, 0.35)", borderRadius: "12px", padding: "12px 14px", fontSize: "0.8rem", color: "#e0f2fe" }}>
+                    <div style={{ fontWeight: 800, color: "#38bdf8", marginBottom: "4px" }}>
+                      🏛️ Designated GBS Developer Subscription Payment Destination
+                    </div>
+                    <div>
+                      Main Mobile Money Number: <strong style={{ color: "#fbbf24", fontSize: "0.92rem" }}>{developerDestination?.momoNumber || "0554594193"}</strong> ({developerDestination?.primaryNetwork || "MTN Mobile Money"})
+                    </div>
+                    <div style={{ fontSize: "0.73rem", color: "#94a3b8", marginTop: "4px" }}>
+                      {developerDestination?.securityNotice || "Routed through authorized merchant collection APIs (Paystack/Hubtel). GBS never requests or stores any MoMo PIN."}
+                    </div>
                   </div>
                 )}
 
@@ -959,6 +1023,59 @@ export default function OfficialPaymentGatewayModal({
                 </button>
               </form>
             )}
+
+            {(activeTransaction.channel === "BANK_TRANSFER" || activeTransaction.authorizationType === "BANK_REFERENCE") &&
+              !["SUCCESSFUL", "CANCELLED", "REFUNDED", "REVERSED"].includes(activeTransaction.gatewayStatus) && (
+                <form
+                  onSubmit={handleSubmitBankProof}
+                  style={{ background: "rgba(16, 185, 129, 0.08)", border: "1px solid rgba(16, 185, 129, 0.35)", borderRadius: "10px", padding: "12px", display: "flex", flexDirection: "column", gap: "8px" }}
+                >
+                  <strong style={{ fontSize: "0.82rem", color: "#6ee7b7" }}>
+                    🏦 Submit Bank Deposit / Transfer Reference for Verification
+                  </strong>
+                  <span style={{ fontSize: "0.74rem", color: "#cbd5e1" }}>
+                    After completing your bank branch deposit or transfer, submit your bank slip reference below. An authorized finance officer will verify it before marking the invoice paid.
+                  </span>
+                  <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(170px, 1fr))", gap: "8px" }}>
+                    <input
+                      type="text"
+                      required
+                      placeholder="Bank Slip / Transfer Ref *"
+                      value={bankProofSlip}
+                      onChange={(e) => setBankProofSlip(e.target.value)}
+                      style={{ padding: "8px 10px", borderRadius: "8px", border: "1px solid rgba(148,163,184,0.35)", background: "#020617", color: "#fff", fontSize: "0.8rem" }}
+                    />
+                    <input
+                      type="text"
+                      placeholder="Bank Name (e.g. GCB Bank)"
+                      value={bankProofBankName}
+                      onChange={(e) => setBankProofBankName(e.target.value)}
+                      style={{ padding: "8px 10px", borderRadius: "8px", border: "1px solid rgba(148,163,184,0.35)", background: "#020617", color: "#fff", fontSize: "0.8rem" }}
+                    />
+                    <input
+                      type="text"
+                      placeholder="Depositor Full Name"
+                      value={bankProofDepositor}
+                      onChange={(e) => setBankProofDepositor(e.target.value)}
+                      style={{ padding: "8px 10px", borderRadius: "8px", border: "1px solid rgba(148,163,184,0.35)", background: "#020617", color: "#fff", fontSize: "0.8rem" }}
+                    />
+                  </div>
+                  <input
+                    type="text"
+                    placeholder="Optional receipt note or teller reference"
+                    value={bankProofNote}
+                    onChange={(e) => setBankProofNote(e.target.value)}
+                    style={{ padding: "8px 10px", borderRadius: "8px", border: "1px solid rgba(148,163,184,0.35)", background: "#020617", color: "#fff", fontSize: "0.8rem" }}
+                  />
+                  <button
+                    type="submit"
+                    disabled={loading}
+                    style={{ alignSelf: "flex-start", background: "#059669", color: "#fff", border: "none", borderRadius: "8px", padding: "8px 14px", fontWeight: 700, cursor: "pointer", fontSize: "0.8rem" }}
+                  >
+                    {loading ? "Submitting..." : "Submit Bank Proof for Finance Review"}
+                  </button>
+                </form>
+              )}
 
             {resolvedCheckoutUrl && (
               <a
