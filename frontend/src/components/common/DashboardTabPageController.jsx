@@ -155,13 +155,10 @@ export default function DashboardTabPageController() {
   }, []);
 
   // Configure browser history.scrollRestoration = "manual" for non-developer routes
+  // (DeveloperDashboard manages its own self-contained manual scroll restoration without interference)
   useEffect(() => {
     if (typeof window === "undefined" || !("scrollRestoration" in window.history)) return;
     if (isDev) {
-      // Do not interfere with Developer Dashboard scroll restoration
-      try {
-        window.history.scrollRestoration = "auto";
-      } catch { }
       return;
     }
     try {

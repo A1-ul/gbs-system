@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef, useCallback } from "react";
+import React, { useState, useEffect, useLayoutEffect, useRef, useCallback } from "react";
 import { useNavigate, useLocation, useParams, useNavigationType } from "react-router-dom";
 import apiClient from "../../../api/client/apiClient";
 import { getApiBaseUrl } from "../../../api/client/apiConfig";
@@ -70,7 +70,65 @@ async function devFetch(url, options = {}) {
   }
 }
 
-const DEV_SCROLL_SNAPSHOT_KEY = "gbs_dev_scroll_snapshots_v2";
+const DEV_SCROLL_SNAPSHOT_KEY = "gbs_dev_scroll_snapshots_v3";
+const devMemoryScrollByKey = new Map();
+const devMemoryScrollByRoute = new Map();
+const devTrackedScrollContainers = new Set();
+
+const SYNTHETIC_RECORD_PATTERN = /oxford-prep\.edu|oxford preparatory|intruder\.chrome@test\.com|demo student|st\. peter international|kingsley international|royal oak international|green valley|st\. charles live|gbs-opr-|secondary postgresql replica in sync|400% connection burst/i;
+
+function isSyntheticTestRecord(item) {
+  if (!item) return false;
+  try {
+    return SYNTHETIC_RECORD_PATTERN.test(typeof item === "string" ? item : JSON.stringify(item));
+  } catch {
+    return false;
+  }
+}
+
+function purgeStaleSyntheticLocalStorage() {
+  if (typeof window === "undefined") return;
+  const listKeys = [
+    "gbs_incoming_onboarding_applications",
+    "gbs_archived_onboarded_tenants",
+    "gbs_dev_security_violations",
+    "gbs_momo_subscription_reconciliations",
+    "gbs_dev_headmaster_messages",
+    "gbs_deleted_tenant_archives"
+  ];
+  for (const key of listKeys) {
+    try {
+      const raw = localStorage.getItem(key);
+      if (!raw) continue;
+      const parsed = JSON.parse(raw);
+      if (Array.isArray(parsed)) {
+        const cleaned = parsed.filter((entry) => !isSyntheticTestRecord(entry));
+        if (cleaned.length !== parsed.length) {
+          localStorage.setItem(key, JSON.stringify(cleaned));
+        }
+      }
+    } catch { }
+  }
+  try {
+    const trialsRaw = localStorage.getItem("gbs_dev_staff_intrusion_trials");
+    if (trialsRaw) {
+      const trials = JSON.parse(trialsRaw);
+      if (trials && typeof trials === "object") {
+        const cleaned = {};
+        let changed = false;
+        Object.entries(trials).forEach(([k, v]) => {
+          if (isSyntheticTestRecord(k) || isSyntheticTestRecord(v)) {
+            changed = true;
+          } else {
+            cleaned[k] = v;
+          }
+        });
+        if (changed) localStorage.setItem("gbs_dev_staff_intrusion_trials", JSON.stringify(cleaned));
+      }
+    }
+  } catch { }
+}
+
 const DEV_MODULE_LABELS = {
   onboarding: "Tenant Onboarding & Approvals",
   headmaster_verifications: "Headmaster Picture Verification",
@@ -102,18 +160,109 @@ function readDevScrollMap() {
   }
 }
 
-function writeDevScrollSnapshot(entryKey, routeKey, y) {
+function getDevContainerDescriptor(el) {
+  if (!el || el.nodeType !== 1) return null;
+  if (el.id) return `#${el.id}`;
+  const testId = el.getAttribute("data-testid");
+  if (testId) return `[data-testid="${testId}"]`;
+  const cls = String(el.className || "").trim().split(/\s+/).filter(Boolean).slice(0, 2).join(".");
+  const tag = el.tagName.toLowerCase();
+  const baseSel = cls ? `${tag}.${cls}` : tag;
   try {
+    const all = Array.from(document.querySelectorAll(baseSel));
+    const idx = all.indexOf(el);
+    return idx >= 0 ? `${baseSel}@@${idx}` : baseSel;
+  } catch {
+    return baseSel;
+  }
+}
+
+function findDevContainerByDescriptor(desc) {
+  if (!desc || typeof document === "undefined") return null;
+  try {
+    if (desc.includes("@@")) {
+      const [sel, idxStr] = desc.split("@@");
+      const all = document.querySelectorAll(sel);
+      return all[Number(idxStr)] || null;
+    }
+    return document.querySelector(desc);
+  } catch {
+    return null;
+  }
+}
+
+function captureDevScrollSnapshot(extra = {}) {
+  if (typeof window === "undefined") return null;
+  const containers = [];
+  const seen = new Set();
+  const candidates = [
+    ...Array.from(devTrackedScrollContainers),
+    ...Array.from(document.querySelectorAll(".dev-table-container, .table-responsive, .incoming-apps-list, .dev-console-box, .dev-module-switcher-menu, [data-gbs-scrollable]"))
+  ];
+  for (const el of candidates) {
+    if (!el || seen.has(el) || !document.contains(el)) continue;
+    seen.add(el);
+    if (el.scrollTop > 0 || el.scrollLeft > 0) {
+      const descriptor = getDevContainerDescriptor(el);
+      if (descriptor) {
+        containers.push({
+          descriptor,
+          top: Math.round(el.scrollTop),
+          left: Math.round(el.scrollLeft)
+        });
+      }
+    }
+  }
+  return {
+    windowX: Math.max(0, Math.round(window.scrollX || window.pageXOffset || 0)),
+    windowY: Math.max(0, Math.round(window.scrollY || window.pageYOffset || 0)),
+    containers,
+    overviewTab: extra.overviewTab || null,
+    tenantConsoleFilter: extra.tenantConsoleFilter || null,
+    securityIntrusionFilter: extra.securityIntrusionFilter || null,
+    savedAt: Date.now()
+  };
+}
+
+function writeDevScrollSnapshot(entryKey, routeKey, snapshotOrY, persistSession = true) {
+  try {
+    const snap =
+      typeof snapshotOrY === "number"
+        ? { windowX: 0, windowY: Math.max(0, Math.round(snapshotOrY)), containers: [], savedAt: Date.now() }
+        : snapshotOrY;
+    if (!snap) return;
+    if (entryKey) devMemoryScrollByKey.set(entryKey, snap);
+    if (routeKey) devMemoryScrollByRoute.set(routeKey, snap);
+    if (!persistSession) return;
     const map = readDevScrollMap();
-    const safeY = Math.max(0, Math.round(Number(y) || 0));
-    if (entryKey) map[`k:${entryKey}`] = safeY;
-    if (routeKey) map[`r:${routeKey}`] = safeY;
+    if (entryKey) map[`k:${entryKey}`] = snap;
+    if (routeKey) map[`r:${routeKey}`] = snap;
     const keys = Object.keys(map);
     if (keys.length > 100) {
       keys.slice(0, keys.length - 100).forEach((k) => delete map[k]);
     }
     sessionStorage.setItem(DEV_SCROLL_SNAPSHOT_KEY, JSON.stringify(map));
   } catch { }
+}
+
+function readDevScrollSnapshot(entryKey, routeKey) {
+  if (entryKey && devMemoryScrollByKey.has(entryKey)) return devMemoryScrollByKey.get(entryKey);
+  if (routeKey && devMemoryScrollByRoute.has(routeKey)) return devMemoryScrollByRoute.get(routeKey);
+  const map = readDevScrollMap();
+  const raw = (entryKey && map[`k:${entryKey}`]) || (routeKey && map[`r:${routeKey}`]) || null;
+  if (typeof raw === "number" && Number.isFinite(raw)) {
+    return { windowX: 0, windowY: raw, containers: [] };
+  }
+  return raw && typeof raw === "object" ? raw : null;
+}
+
+function resetDevWindowScrollInstant() {
+  if (typeof window === "undefined") return;
+  try {
+    window.scrollTo({ top: 0, left: 0, behavior: "instant" });
+  } catch {
+    window.scrollTo(0, 0);
+  }
 }
 
 export default function DeveloperDashboard() {
@@ -173,18 +322,33 @@ export default function DeveloperDashboard() {
     };
   }, []);
 
-  // Active Tab synchronized with Dedicated Developer Module Routes (/developer-control-center/dashboard/:moduleId)
-  const [activeTabState, setActiveTabState] = useState(() => {
+  // Overview Tab kept separate from Dedicated Module Route (:moduleId) so Browser/App Back restores exact Overview layout & height
+  const [overviewTabState, setOverviewTabState] = useState(() => {
     try {
-      if (urlModuleId) return urlModuleId;
+      const snap = readDevScrollSnapshot(location.key, `${location.pathname}${location.search || ""}`);
+      if (snap?.overviewTab) return snap.overviewTab;
       if (queryTabParam) return queryTabParam;
-      const stored = sessionStorage.getItem("gbs_dev_active_tab");
-      if (stored) return stored;
     } catch { }
     return "telemetry";
   });
+  const [devModuleMenuOpen, setDevModuleMenuOpen] = useState(false);
+  const devSwitcherRef = useRef(null);
+  const isDevRestoringScrollRef = useRef(false);
+  const devNavTrailDepthRef = useRef(0);
+  const devPrevRouteRef = useRef(`${location.pathname}${location.search || ""}`);
 
-  const activeTab = urlModuleId || activeTabState;
+  const activeTab = urlModuleId || queryTabParam || overviewTabState;
+
+  const saveCurrentDevScroll = useCallback((persistSession = true) => {
+    if (isDevRestoringScrollRef.current) return;
+    const curRouteKey = `${location.pathname}${location.search || ""}`;
+    const snap = captureDevScrollSnapshot({
+      overviewTab: overviewTabState
+    });
+    if (snap) {
+      writeDevScrollSnapshot(location.key, curRouteKey, snap, persistSession);
+    }
+  }, [location.key, location.pathname, location.search, overviewTabState]);
 
   const setActiveTab = useCallback((nextTabOrUpdater) => {
     const resolved =
@@ -194,36 +358,40 @@ export default function DeveloperDashboard() {
     const cleanTab = String(resolved || "telemetry").trim();
     if (!cleanTab) return;
 
-    // Capture exact scroll position of current page before opening dedicated module page
-    const curRouteKey = `${location.pathname}${location.search || ""}`;
-    writeDevScrollSnapshot(location.key, curRouteKey, window.scrollY);
+    // Capture exact window + nested container scroll position of current page BEFORE navigating to dedicated module page
+    saveCurrentDevScroll(true);
+    setDevModuleMenuOpen(false);
 
-    setActiveTabState(cleanTab);
     try {
       sessionStorage.setItem("gbs_dev_active_tab", cleanTab);
     } catch { }
 
     const targetPath = `${devBasePath}/${encodeURIComponent(cleanTab)}`;
     if (location.pathname !== targetPath) {
+      devNavTrailDepthRef.current += 1;
       navigate(targetPath);
     }
-  }, [activeTab, devBasePath, location.key, location.pathname, location.search, navigate]);
+  }, [activeTab, devBasePath, location.pathname, navigate, saveCurrentDevScroll]);
 
   const handleDevBack = useCallback(() => {
-    const curRouteKey = `${location.pathname}${location.search || ""}`;
-    writeDevScrollSnapshot(location.key, curRouteKey, window.scrollY);
-    if (window.history.length > 1) {
+    saveCurrentDevScroll(true);
+    setDevModuleMenuOpen(false);
+    if (devNavTrailDepthRef.current > 0 || window.history.length > 1) {
+      devNavTrailDepthRef.current = Math.max(0, devNavTrailDepthRef.current - 1);
       navigate(-1);
     } else {
       navigate(devBasePath);
     }
-  }, [devBasePath, location.key, location.pathname, location.search, navigate]);
+  }, [devBasePath, navigate, saveCurrentDevScroll]);
 
   const handleDevOverview = useCallback(() => {
-    const curRouteKey = `${location.pathname}${location.search || ""}`;
-    writeDevScrollSnapshot(location.key, curRouteKey, window.scrollY);
-    navigate(devBasePath);
-  }, [devBasePath, location.key, location.pathname, location.search, navigate]);
+    saveCurrentDevScroll(true);
+    setDevModuleMenuOpen(false);
+    if (location.pathname !== devBasePath) {
+      devNavTrailDepthRef.current += 1;
+      navigate(devBasePath);
+    }
+  }, [devBasePath, location.pathname, navigate, saveCurrentDevScroll]);
 
   const openCurrentTabInNewPage = useCallback((tabKey) => {
     const targetTab = tabKey || activeTab || "telemetry";
@@ -231,9 +399,10 @@ export default function DeveloperDashboard() {
     window.open(fullUrl, "_blank", "noopener,noreferrer");
   }, [activeTab, devBasePath]);
 
-  // IRONCLAD DEVELOPER ACCESS GUARD + IMMUTABLE SYSTEM ENGLISH LOCK
+  // IRONCLAD DEVELOPER ACCESS GUARD + IMMUTABLE SYSTEM ENGLISH LOCK + STALE SYNTHETIC CACHE PURGE
   useEffect(() => {
     stopAndRestoreEnglishForDeveloper();
+    purgeStaleSyntheticLocalStorage();
     const devToken = localStorage.getItem("gbs_dev_token");
     let devProfile = null;
     try {
@@ -247,56 +416,161 @@ export default function DeveloperDashboard() {
     }
   }, [navigate]);
 
-  // Sync activeTabState when URL route changes (Browser Back/Forward or direct link)
+  // Close Switch Module menu on outside click or Escape
   useEffect(() => {
-    const nextFromUrl = urlModuleId || queryTabParam;
-    if (nextFromUrl && nextFromUrl !== activeTabState) {
-      setActiveTabState(nextFromUrl);
-      try {
-        sessionStorage.setItem("gbs_dev_active_tab", nextFromUrl);
-      } catch { }
-    }
-  }, [urlModuleId, queryTabParam, activeTabState]);
+    if (!devModuleMenuOpen) return undefined;
+    const handleOutside = (e) => {
+      if (devSwitcherRef.current && !devSwitcherRef.current.contains(e.target)) {
+        setDevModuleMenuOpen(false);
+      }
+    };
+    const handleEsc = (e) => {
+      if (e.key === "Escape") setDevModuleMenuOpen(false);
+    };
+    document.addEventListener("pointerdown", handleOutside, true);
+    document.addEventListener("keydown", handleEsc);
+    return () => {
+      document.removeEventListener("pointerdown", handleOutside, true);
+      document.removeEventListener("keydown", handleEsc);
+    };
+  }, [devModuleMenuOpen]);
 
-  // Exact per-entry scroll position capture & Back/Forward restoration (self-contained inside Developer Portal)
+  // Configure browser manual scroll restoration so Developer Back/Forward NEVER resets to top
   useEffect(() => {
+    if (typeof window === "undefined" || !("scrollRestoration" in window.history)) return undefined;
+    try {
+      window.history.scrollRestoration = "manual";
+    } catch { }
+    return undefined;
+  }, []);
+
+  // Exact per-entry scroll position restoration on POP (Back/Forward) & instant top reset on PUSH to new module page
+  useLayoutEffect(() => {
     const routeKey = `${location.pathname}${location.search || ""}`;
-    let timer1 = null;
-    let timer2 = null;
+    const prevRouteKey = devPrevRouteRef.current;
+    devPrevRouteRef.current = routeKey;
+    setDevModuleMenuOpen(false);
+
+    let cancelled = false;
+    const timers = [];
     let rafId = null;
+    let observer = null;
 
     if (navType === "POP") {
-      const map = readDevScrollMap();
-      const targetY =
-        map[`k:${location.key}`] !== undefined
-          ? map[`k:${location.key}`]
-          : map[`r:${routeKey}`];
-      if (typeof targetY === "number" && Number.isFinite(targetY)) {
-        const applyRestore = () => window.scrollTo(0, targetY);
-        rafId = requestAnimationFrame(applyRestore);
-        timer1 = setTimeout(applyRestore, 70);
-        timer2 = setTimeout(applyRestore, 200);
+      const snap = readDevScrollSnapshot(location.key, routeKey);
+      if (snap) {
+        if (!urlModuleId && snap.overviewTab) {
+          setOverviewTabState(snap.overviewTab);
+        }
+        isDevRestoringScrollRef.current = true;
+        const targetX = Number(snap.windowX || 0);
+        const targetY = Number(snap.windowY || 0);
+        const containers = Array.isArray(snap.containers) ? snap.containers : [];
+
+        const applyOnce = () => {
+          if (cancelled) return;
+          try {
+            window.scrollTo({ left: targetX, top: targetY, behavior: "instant" });
+          } catch {
+            window.scrollTo(targetX, targetY);
+          }
+          for (const c of containers) {
+            const node = findDevContainerByDescriptor(c.descriptor);
+            if (node) {
+              node.scrollTop = Number(c.top || 0);
+              node.scrollLeft = Number(c.left || 0);
+            }
+          }
+        };
+
+        applyOnce();
+        rafId = requestAnimationFrame(applyOnce);
+        timers.push(setTimeout(applyOnce, 45));
+        timers.push(setTimeout(applyOnce, 130));
+        timers.push(setTimeout(applyOnce, 280));
+        timers.push(setTimeout(() => {
+          applyOnce();
+          isDevRestoringScrollRef.current = false;
+        }, 480));
+
+        if (typeof MutationObserver !== "undefined" && targetY > 0) {
+          observer = new MutationObserver(() => {
+            if (!cancelled && isDevRestoringScrollRef.current) {
+              applyOnce();
+            }
+          });
+          const rootEl = document.getElementById("root");
+          if (rootEl) observer.observe(rootEl, { childList: true, subtree: true });
+        }
       }
-    } else if (isFullPageTab) {
-      window.scrollTo(0, 0);
+    } else if (navType === "PUSH" && prevRouteKey !== routeKey) {
+      isDevRestoringScrollRef.current = false;
+      resetDevWindowScrollInstant();
     }
 
-    const handleScroll = () => {
-      writeDevScrollSnapshot(location.key, routeKey, window.scrollY);
+    return () => {
+      cancelled = true;
+      isDevRestoringScrollRef.current = false;
+      if (rafId) cancelAnimationFrame(rafId);
+      timers.forEach((t) => clearTimeout(t));
+      if (observer) observer.disconnect();
+    };
+  }, [location.key, location.pathname, location.search, navType, urlModuleId]);
+
+  // Continuously track window & nested scrollable containers + pre-navigation pointer/touch/keyboard capture
+  useEffect(() => {
+    let persistTimer = null;
+    const scheduleSave = () => {
+      if (isDevRestoringScrollRef.current) return;
+      saveCurrentDevScroll(false);
+      if (persistTimer) clearTimeout(persistTimer);
+      persistTimer = setTimeout(() => {
+        if (!isDevRestoringScrollRef.current) saveCurrentDevScroll(true);
+      }, 60);
     };
 
+    const handleCaptureScroll = (e) => {
+      const target = e.target;
+      if (target && target !== document && target !== document.documentElement && target !== document.body) {
+        devTrackedScrollContainers.add(target);
+      }
+      scheduleSave();
+    };
+
+    const handlePreNav = (e) => {
+      if (isDevRestoringScrollRef.current) return;
+      const interactive = e.target?.closest?.("a[href], button, .dev-tab-btn, .infra-photo-card, .console-stat-card, .dev-inscription-box, [role='button']");
+      if (interactive) {
+        saveCurrentDevScroll(true);
+      }
+    };
+
+    const handleKeyPreNav = (e) => {
+      if (e.key === "Enter" || e.key === " ") handlePreNav(e);
+    };
+
+    const handlePageHide = () => saveCurrentDevScroll(true);
     const onVoiceTab = (e) => { if (e?.detail?.tab) setActiveTab(e.detail.tab); };
-    window.addEventListener("scroll", handleScroll, { passive: true });
+
+    window.addEventListener("scroll", scheduleSave, { passive: true });
+    document.addEventListener("scroll", handleCaptureScroll, { capture: true, passive: true });
+    document.addEventListener("pointerdown", handlePreNav, { capture: true, passive: true });
+    document.addEventListener("touchstart", handlePreNav, { capture: true, passive: true });
+    document.addEventListener("keydown", handleKeyPreNav, { capture: true, passive: true });
+    window.addEventListener("pagehide", handlePageHide);
     window.addEventListener("gbs_open_dashboard_tab", onVoiceTab);
 
     return () => {
-      if (rafId) cancelAnimationFrame(rafId);
-      if (timer1) clearTimeout(timer1);
-      if (timer2) clearTimeout(timer2);
-      window.removeEventListener("scroll", handleScroll);
+      if (persistTimer) clearTimeout(persistTimer);
+      window.removeEventListener("scroll", scheduleSave);
+      document.removeEventListener("scroll", handleCaptureScroll, true);
+      document.removeEventListener("pointerdown", handlePreNav, true);
+      document.removeEventListener("touchstart", handlePreNav, true);
+      document.removeEventListener("keydown", handleKeyPreNav, true);
+      window.removeEventListener("pagehide", handlePageHide);
       window.removeEventListener("gbs_open_dashboard_tab", onVoiceTab);
     };
-  }, [location.key, location.pathname, location.search, navType, isFullPageTab, setActiveTab]);
+  }, [saveCurrentDevScroll, setActiveTab]);
 
   // State Management (100% Zero-Mock, Live Database Records)
   const [metrics, setMetrics] = useState({
@@ -698,42 +972,12 @@ export default function DeveloperDashboard() {
     }
   };
 
-  // Tenant Security Violations & Unauthorized Developer Login Intrusion State
-  const [securityViolations, setSecurityViolations] = useState(() => {
-    try {
-      const stored = localStorage.getItem("gbs_dev_security_violations");
-      if (stored) {
-        const parsed = JSON.parse(stored);
-        if (Array.isArray(parsed)) {
-          return parsed.filter((v) => !isIdPermanentlyDeleted(v.id));
-        }
-      }
-    } catch { }
-    return [];
-  });
+  // Tenant Security Violations & Unauthorized Developer Login Intrusion State (Live Backend Truth)
+  const [securityViolations, setSecurityViolations] = useState([]);
   const [securityIntrusionFilter, setSecurityIntrusionFilter] = useState("ALL"); // "ALL" | "IMPLICATED" | "TRANSMITTED"
 
   // Registered Staff Developer Breach Tracker & Repeat Trials Watchlist
-  const [staffBreachTrials, setStaffBreachTrials] = useState(() => {
-    try {
-      const stored = localStorage.getItem("gbs_dev_staff_intrusion_trials");
-      if (stored) {
-        const parsed = JSON.parse(stored);
-        if (parsed && typeof parsed === "object") {
-          const filtered = {};
-          Object.entries(parsed).forEach(([k, val]) => {
-            if (!isIdPermanentlyDeleted(k) && !isIdPermanentlyDeleted(val?.email)) {
-              filtered[k] = val;
-            }
-          });
-          return filtered;
-        }
-      }
-    } catch {
-      return {};
-    }
-    return {};
-  });
+  const [staffBreachTrials, setStaffBreachTrials] = useState({});
 
   useEffect(() => {
     const syncViolations = () => {
@@ -944,11 +1188,11 @@ export default function DeveloperDashboard() {
   });
   const [showNewAlertModal, setShowNewAlertModal] = useState(false);
 
-  // New License Form State
+  // New License Form State (Zero Prefilled Demo Values)
   const [newLicense, setNewLicense] = useState({
-    subscriptionId: 1,
-    maxUsers: 500,
-    maxStudents: 5000,
+    subscriptionId: "",
+    maxUsers: 0,
+    maxStudents: 0,
     durationDays: 365
   });
   const [showLicenseModal, setShowLicenseModal] = useState(false);
@@ -971,13 +1215,8 @@ export default function DeveloperDashboard() {
     facialVerified: false,
     facialVerificationHash: ""
   });
-  const [incomingApplications, setIncomingApplications] = useState(() => {
-    try {
-      return JSON.parse(localStorage.getItem("gbs_incoming_onboarding_applications") || "[]");
-    } catch {
-      return [];
-    }
-  });
+  // Live Database Authoritative Queue (Never hydrated from stale fake browser localStorage)
+  const [incomingApplications, setIncomingApplications] = useState([]);
   const [touchBiometricScanning, setTouchBiometricScanning] = useState(false);
 
   // Configurable Per-Student Onboarding Rates (JHS, SHS, University)
@@ -2373,15 +2612,13 @@ export default function DeveloperDashboard() {
     }
   });
 
-  // Live fetch of all institutional onboarding registrations from PostgreSQL backend API
+  // Live fetch of all institutional onboarding registrations from PostgreSQL backend API (Authoritative Source of Truth)
   const fetchOnboardingApplications = async () => {
     try {
-      const token = localStorage.getItem("gbs_dev_token") || localStorage.getItem("gbs_token");
-      const authHeaders = token ? { Authorization: `Bearer ${token}` } : {};
-      const onbRes = await fetch(`${BASE_URL}/onboarding/pending`, { headers: authHeaders });
+      const onbRes = await devFetch(`${BASE_URL}/onboarding/pending`);
       if (onbRes.ok) {
         const onbData = await onbRes.json();
-        const rawApps = onbData.data?.applications || [];
+        const rawApps = (onbData.data?.applications || []).filter((a) => !isSyntheticTestRecord(a));
         const dbApps = rawApps.map((a) => {
           const isPending = !a.isApproved && a.status !== "APPROVED" && a.status !== "REJECTED";
           return {
@@ -2408,20 +2645,13 @@ export default function DeveloperDashboard() {
           };
         });
 
-        // Also merge any local-only submissions that haven't hit the DB yet
-        let localApps = [];
+        // Always sync authoritative backend truth (clear any stale/synthetic localStorage queue entries)
+        setIncomingApplications(dbApps);
         try {
-          localApps = JSON.parse(localStorage.getItem("gbs_incoming_onboarding_applications") || "[]");
+          localStorage.setItem("gbs_incoming_onboarding_applications", JSON.stringify(dbApps));
         } catch { }
 
-        const localOnly = localApps.filter(
-          (p) => !dbApps.some((d) => d.id === p.id || (d.tenantCode && d.tenantCode === p.tenantCode) || (d.institutionName && d.institutionName?.toLowerCase() === p.institutionName?.toLowerCase()))
-        );
-
-        const allApplications = [...dbApps, ...localOnly];
-        setIncomingApplications(allApplications);
-
-        // Populate archivedTenants with all approved registrations from DB
+        // Populate archivedTenants strictly with real approved registrations from DB
         const approvedFromDb = dbApps
           .filter((a) => a.isApproved || a.status === "APPROVED" || a.status === "APPROVED_AND_ARCHIVED")
           .map((a) => ({
@@ -2435,18 +2665,7 @@ export default function DeveloperDashboard() {
             archiveRef: `ARC-${a.id}`
           }));
 
-        if (approvedFromDb.length > 0) {
-          setArchivedTenants((prev) => {
-            const prevList = Array.isArray(prev) ? prev : [];
-            const merged = [...approvedFromDb];
-            prevList.forEach((p) => {
-              if (!merged.some((m) => m.id === p.id || (m.assignedTenantCode && m.assignedTenantCode === p.assignedTenantCode) || (m.institutionName && m.institutionName?.toLowerCase() === p.institutionName?.toLowerCase()))) {
-                merged.push(p);
-              }
-            });
-            return merged;
-          });
-        }
+        setArchivedTenants(approvedFromDb);
       }
     } catch (err) {
       console.warn("Could not sync onboarding applications:", err);
@@ -2577,31 +2796,21 @@ export default function DeveloperDashboard() {
         }
       }
 
-      // 8b. Developer <-> Headmaster Persistent Directives
+      // 8b. Developer <-> Headmaster Persistent Directives (Authoritative Live Backend Truth)
       try {
         const hmMsgRes = await fetch(`${BASE_URL}/headmaster-messages`, { headers: authHeaders });
         if (hmMsgRes.ok) {
           const hmJson = await hmMsgRes.json();
-          const serverMsgs = Array.isArray(hmJson?.data?.messages) ? hmJson.data.messages : [];
-          if (serverMsgs.length > 0) {
-            setHeadmasterMessages((prev) => {
-              const mergedMap = new Map();
-              for (const item of [...serverMsgs, ...prev]) {
-                if (!item || isIdPermanentlyDeleted(item.id) || isIdPermanentlyDeleted(item.threadId)) continue;
-                if (!mergedMap.has(item.id)) {
-                  mergedMap.set(item.id, {
-                    ...item,
-                    replies: Array.isArray(item.replies)
-                      ? item.replies.filter((r) => !isIdPermanentlyDeleted(r.id))
-                      : []
-                  });
-                }
-              }
-              const nextList = Array.from(mergedMap.values());
-              try { localStorage.setItem("gbs_dev_headmaster_messages", JSON.stringify(nextList)); } catch { }
-              return nextList;
-            });
-          }
+          const serverMsgs = (Array.isArray(hmJson?.data?.messages) ? hmJson.data.messages : [])
+            .filter((item) => item && !isIdPermanentlyDeleted(item.id) && !isIdPermanentlyDeleted(item.threadId) && !isSyntheticTestRecord(item))
+            .map((item) => ({
+              ...item,
+              replies: Array.isArray(item.replies)
+                ? item.replies.filter((r) => !isIdPermanentlyDeleted(r.id))
+                : []
+            }));
+          setHeadmasterMessages(serverMsgs);
+          try { localStorage.setItem("gbs_dev_headmaster_messages", JSON.stringify(serverMsgs)); } catch { }
         }
       } catch { }
 
@@ -2685,20 +2894,11 @@ export default function DeveloperDashboard() {
               else localStorage.removeItem("gbs_dev_login_locked");
             } catch { }
             if (Array.isArray(secPayload.events)) {
-              const backendEvents = secPayload.events.filter((ev) => !isIdPermanentlyDeleted(ev.id));
-              setSecurityViolations((prev) => {
-                const mergedMap = new Map();
-                for (const item of [...backendEvents, ...prev]) {
-                  if (item && item.id && !isIdPermanentlyDeleted(item.id) && !mergedMap.has(item.id)) {
-                    mergedMap.set(item.id, item);
-                  }
-                }
-                const nextList = Array.from(mergedMap.values());
-                try {
-                  localStorage.setItem("gbs_dev_security_violations", JSON.stringify(nextList));
-                } catch { }
-                return nextList;
-              });
+              const backendEvents = secPayload.events.filter((ev) => !isIdPermanentlyDeleted(ev.id) && !isSyntheticTestRecord(ev));
+              setSecurityViolations(backendEvents);
+              try {
+                localStorage.setItem("gbs_dev_security_violations", JSON.stringify(backendEvents));
+              } catch { }
             }
           }
         }
@@ -4874,7 +5074,7 @@ export default function DeveloperDashboard() {
           headmasterEmail: hmEmail,
           headmasterPhone: tenantOnboardForm.headmasterPhone,
           headmaster: { name: hmName, email: hmEmail, phone: tenantOnboardForm.headmasterPhone },
-          maxStudents: tenantOnboardForm.maxStudents || 2500,
+          maxStudents: Number(tenantOnboardForm.maxStudents || 0),
           createdAt: new Date().toISOString(),
           isOtpVerified: true
         },
@@ -5338,7 +5538,7 @@ export default function DeveloperDashboard() {
       ></div>
       <div className="dev-dashboard-real-overlay"></div>
       {/* Universal Navigation & Scroll Controls */}
-      <WindowControlsBar title="Developer Mission Control" />
+      <WindowControlsBar title="Developer Mission Control" onBack={handleDevBack} />
 
       {/* Prominent Top Center System Branding */}
       <TopCenterSystemBanner roleTitle="Developer Mission Control" isDeveloper={true} />
@@ -5359,7 +5559,7 @@ export default function DeveloperDashboard() {
               type="button"
               data-testid="dev-module-back-btn"
               onClick={handleDevBack}
-              style={{ background: "rgba(30, 41, 59, 0.9)", border: "1.5px solid #38bdf8", color: "#e0f2fe", borderRadius: "8px", padding: "6px 14px", fontWeight: 800, cursor: "pointer", fontSize: "0.8rem" }}
+              style={{ background: "rgba(30, 41, 59, 0.95)", border: "1.5px solid #38bdf8", color: "#e0f2fe", borderRadius: "8px", padding: "6px 14px", fontWeight: 800, cursor: "pointer", fontSize: "0.82rem" }}
             >
               ← Back
             </button>
@@ -5367,18 +5567,44 @@ export default function DeveloperDashboard() {
               type="button"
               data-testid="dev-module-overview-btn"
               onClick={handleDevOverview}
-              style={{ background: "rgba(16, 185, 129, 0.2)", border: "1.5px solid #10b981", color: "#6ee7b7", borderRadius: "8px", padding: "6px 14px", fontWeight: 800, cursor: "pointer", fontSize: "0.8rem" }}
+              style={{ background: "rgba(16, 185, 129, 0.2)", border: "1.5px solid #10b981", color: "#6ee7b7", borderRadius: "8px", padding: "6px 14px", fontWeight: 800, cursor: "pointer", fontSize: "0.82rem" }}
             >
               🏠 Developer Overview
             </button>
             <span style={{ background: "#0284c7", color: "#fff", padding: "3px 10px", borderRadius: "999px", fontSize: "0.72rem", fontWeight: 900 }}>
-              FULL-PAGE MODULE
+              DEDICATED MODULE PAGE
             </span>
             <span>
               <strong style={{ color: "#38bdf8" }}>{DEV_MODULE_LABELS[activeTab] || activeTab}</strong>
             </span>
           </div>
-          <div style={{ display: "flex", gap: "8px", flexWrap: "wrap" }}>
+          <div style={{ display: "flex", gap: "8px", flexWrap: "wrap", alignItems: "center" }}>
+            <div className="dev-module-switcher-wrap" ref={devSwitcherRef}>
+              <button
+                type="button"
+                data-testid="dev-module-switcher-btn"
+                onClick={() => setDevModuleMenuOpen((o) => !o)}
+                style={{ background: "rgba(30, 41, 59, 0.92)", border: "1.5px solid #d4af37", color: "#fde68a", borderRadius: "8px", padding: "6px 14px", fontWeight: 800, cursor: "pointer", fontSize: "0.8rem" }}
+              >
+                ☰ Switch Module ▾
+              </button>
+              {devModuleMenuOpen && (
+                <div className="dev-module-switcher-menu" role="menu">
+                  {Object.entries(DEV_MODULE_LABELS).map(([key, label]) => (
+                    <button
+                      key={key}
+                      type="button"
+                      role="menuitem"
+                      className={`dev-module-switcher-item ${activeTab === key ? "active" : ""}`}
+                      onClick={() => setActiveTab(key)}
+                    >
+                      <span>{label}</span>
+                      {activeTab === key && <span style={{ color: "#38bdf8", fontSize: "0.72rem" }}>● ACTIVE</span>}
+                    </button>
+                  ))}
+                </div>
+              )}
+            </div>
             <button
               type="button"
               onClick={() => openCurrentTabInNewPage(activeTab)}
@@ -5450,35 +5676,35 @@ export default function DeveloperDashboard() {
             </div>
           </div>
 
-          {/* ENVIRONMENT & PROVENANCE CLUSTER CONTROLLER */}
+          {/* ORIGINAL LIVE PRODUCTION CLUSTER CONTROLLER */}
           <div
             className="dev-env-cluster-widget"
             style={{
               display: "flex",
               alignItems: "center",
               gap: "8px",
-              background: systemEnv?.activeEnvironment === "PRODUCTION" ? "rgba(16, 185, 129, 0.16)" : "rgba(245, 158, 11, 0.16)",
-              border: `1.5px solid ${systemEnv?.activeEnvironment === "PRODUCTION" ? "#10b981" : "#f59e0b"}`,
+              background: "rgba(16, 185, 129, 0.16)",
+              border: "1.5px solid #10b981",
               borderRadius: "10px",
               padding: "4px 10px",
               cursor: "pointer"
             }}
             onClick={handleToggleEnvironment}
-            aria-label={`Active Environment: ${systemEnv?.activeEnvironment || "PRODUCTION"}. Click to toggle Sandbox / Live Production mode.`}
+            aria-label="Original Live Production Mode — Click to re-verify production cluster status"
           >
             <div style={{
               width: "10px",
               height: "10px",
               borderRadius: "50%",
-              background: systemEnv?.activeEnvironment === "PRODUCTION" ? "#10b981" : "#f59e0b",
-              boxShadow: systemEnv?.activeEnvironment === "PRODUCTION" ? "0 0 10px #10b981" : "0 0 10px #f59e0b"
+              background: "#10b981",
+              boxShadow: "0 0 10px #10b981"
             }}></div>
             <div style={{ textAlign: "left" }}>
               <div style={{ fontSize: "0.62rem", color: "#94a3b8", fontWeight: 800, textTransform: "uppercase" }}>
-                CLUSTER ENVIRONMENT
+                OPERATING MODE
               </div>
-              <div style={{ fontSize: "0.78rem", fontWeight: 900, color: systemEnv?.activeEnvironment === "PRODUCTION" ? "#34d399" : "#fbbf24" }}>
-                {systemEnv?.activeEnvironment === "PRODUCTION" ? "🟢 PRODUCTION (LIVE)" : "🟡 DEV SANDBOX"}
+              <div style={{ fontSize: "0.78rem", fontWeight: 900, color: "#34d399" }}>
+                🟢 LIVE PRODUCTION
               </div>
             </div>
             <button
@@ -5628,8 +5854,8 @@ export default function DeveloperDashboard() {
               </p>
 
               <div className="dev-hero-pills">
-                <span className={`telemetry-pill ${systemEnv?.activeEnvironment === "PRODUCTION" ? "healthy" : ""}`} style={{ fontWeight: 800 }}>
-                  {systemEnv?.activeEnvironment === "PRODUCTION" ? "🟢 PRODUCTION CLUSTER [LIVE]" : "🟡 DEV SANDBOX [ISOLATED]"}
+                <span className="telemetry-pill healthy" style={{ fontWeight: 800 }}>
+                  🟢 ORIGINAL PRODUCTION CLUSTER [LIVE]
                 </span>
                 <span className="telemetry-pill healthy">● Kernel: ONLINE</span>
                 <span className={`telemetry-pill ${metrics.database?.connected === true ? "healthy" : ""}`}>
@@ -5680,7 +5906,7 @@ export default function DeveloperDashboard() {
                 <p>Active PostgreSQL clusters across 3 regions with zero-loss WAL streaming and automated failover.</p>
                 <div className="infra-stat-row">
                   <span>Load Avg: {metrics.cpu?.loadAvg?.[0] !== undefined ? metrics.cpu.loadAvg[0].toFixed(2) : "0.00"}</span>
-                  <span className="text-emerald">Sync Lag: 0.00ms</span>
+                  <span className="text-emerald">Pool: {metrics.database?.poolSize ?? 0}/{metrics.database?.maxPoolSize || 25}</span>
                 </div>
               </div>
             </div>
@@ -5700,10 +5926,10 @@ export default function DeveloperDashboard() {
               </div>
               <div className="infra-card-body">
                 <h4>Facial Liveness & Optical Perimeter</h4>
-                <p>Sub-millisecond 3D pupil reflection analysis and 2D presentation attack rejection engine.</p>
+                <p>Hardware webcam biometric verification and intrusion monitoring for Developer Mission Control.</p>
                 <div className="infra-stat-row">
-                  <span>Anti-Spoofing: 99.4%</span>
-                  <span className="text-purple">Confidence: 99.6%</span>
+                  <span>Locks: {metrics.metrics?.activeLocks ?? 0}</span>
+                  <span className="text-purple">Intrusions: {securityViolations.length}</span>
                 </div>
               </div>
             </div>
@@ -6555,7 +6781,7 @@ export default function DeveloperDashboard() {
                                 App Ref: <strong style={{ color: "#fbbf24" }}>{app.appRef || app.id}</strong> • Tenant Code: <strong style={{ color: "#cbd5e1" }}>{app.tenantCode || `GBS-${idx + 1}`}</strong>
                               </div>
                               <div style={{ fontSize: "0.75rem", color: "#34d399", marginTop: "2px" }}>
-                                Declared Population: <strong>{app.totalStudentsEnrolled || 500} Students</strong> • Onboarding Fee: <strong>GHS {app.calculatedFee || app.paymentAmount || 2500}</strong>
+                                Declared Population: <strong>{Number(app.totalStudentsEnrolled || 0)} Students</strong> • Onboarding Fee: <strong>GHS {Number(app.calculatedFee || app.paymentAmount || 0)}</strong>
                               </div>
                             </div>
 
@@ -6572,41 +6798,51 @@ export default function DeveloperDashboard() {
                                   flexShrink: 0,
                                   background: "#0f172a",
                                   position: "relative",
-                                  cursor: "pointer"
+                                  cursor: "pointer",
+                                  display: "flex",
+                                  alignItems: "center",
+                                  justifyContent: "center"
                                 }}
                               >
-                                <img
-                                  src={app.facePhoto || app.headmasterPhoto || app.institutionLogo || "/assets/admin-dashboard-bg.jpg"}
-                                  alt={app.headmasterName || "Headmaster Face"}
-                                  style={{ width: "100%", height: "100%", objectFit: "cover" }}
-                                  onError={(e) => { e.target.src = "/assets/admin-dashboard-bg.jpg"; }}
-                                />
-                                <span style={{
-                                  position: "absolute",
-                                  bottom: "1px",
-                                  right: "1px",
-                                  background: "#10b981",
-                                  color: "#fff",
-                                  fontSize: "8px",
-                                  fontWeight: 800,
-                                  padding: "1px 3px",
-                                  borderRadius: "3px"
-                                }}>
-                                  ✓BIO
-                                </span>
+                                {app.facePhoto || app.headmasterPhoto || app.institutionLogo ? (
+                                  <img
+                                    src={app.facePhoto || app.headmasterPhoto || app.institutionLogo}
+                                    alt={app.headmasterName || "Headmaster Face"}
+                                    style={{ width: "100%", height: "100%", objectFit: "cover" }}
+                                  />
+                                ) : (
+                                  <span style={{ fontSize: "1.35rem", fontWeight: 900, color: "#38bdf8" }}>
+                                    {(app.headmasterName || app.institutionName || "H").slice(0, 1).toUpperCase()}
+                                  </span>
+                                )}
+                                {app.biometricFaceToken && (
+                                  <span style={{
+                                    position: "absolute",
+                                    bottom: "1px",
+                                    right: "1px",
+                                    background: "#10b981",
+                                    color: "#fff",
+                                    fontSize: "8px",
+                                    fontWeight: 800,
+                                    padding: "1px 3px",
+                                    borderRadius: "3px"
+                                  }}>
+                                    ✓BIO
+                                  </span>
+                                )}
                               </div>
                               <div>
-                                <span style={{ fontSize: "0.72rem", color: "#94a3b8", display: "block" }}>Headmaster Biometric Facial Scan</span>
-                                <strong style={{ color: "#f8fafc", fontSize: "0.85rem" }}>{app.headmasterName}</strong>
-                                <div style={{ fontSize: "0.75rem", color: "#38bdf8" }}>{app.headmasterPhone}</div>
-                                <div style={{ fontSize: "0.72rem", color: "#64748b" }}>{app.headmasterEmail}</div>
+                                <span style={{ fontSize: "0.72rem", color: "#94a3b8", display: "block" }}>Headmaster Profile</span>
+                                <strong style={{ color: "#f8fafc", fontSize: "0.85rem" }}>{app.headmasterName || "Not provided"}</strong>
+                                <div style={{ fontSize: "0.75rem", color: "#38bdf8" }}>{app.headmasterPhone || "Not provided"}</div>
+                                <div style={{ fontSize: "0.72rem", color: "#64748b" }}>{app.headmasterEmail || "Not provided"}</div>
                               </div>
                             </div>
 
                             <div>
                               <span style={{ fontSize: "0.72rem", color: "#94a3b8", display: "block" }}>MoMo Payment Proof</span>
-                              <strong style={{ color: "#34d399", fontSize: "0.85rem" }}>Txn: {app.momoTxnId || "MTN-REC-PENDING"}</strong>
-                              <div style={{ fontSize: "0.75rem", color: "#cbd5e1" }}>Amount: <strong>GHS {app.paymentAmount || "500"}</strong></div>
+                              <strong style={{ color: "#34d399", fontSize: "0.85rem" }}>Txn: {app.momoTxnId || "Pending reference"}</strong>
+                              <div style={{ fontSize: "0.75rem", color: "#cbd5e1" }}>Amount: <strong>GHS {Number(app.paymentAmount || 0)}</strong></div>
                               <div style={{ fontSize: "0.7rem", color: "#fbbf24" }}>Sent to: 0554594193 GABRIELKUBI OSEI-APPIAH</div>
                             </div>
 
@@ -7386,11 +7622,11 @@ export default function DeveloperDashboard() {
                         </td>
                         <td>
                           <div style={{ fontWeight: 600, color: "#cbd5e1" }}>{t.headmaster?.name || "Appointed Administrator"}</div>
-                          <div style={{ fontSize: "0.72rem", color: "#94a3b8" }}>{t.headmaster?.email || "admin@institution.edu"}</div>
+                          <div style={{ fontSize: "0.72rem", color: "#94a3b8" }}>{t.headmaster?.email || "Not provided"}</div>
                         </td>
                         <td>
                           <div style={{ fontWeight: 700, color: "#34d399", display: "flex", alignItems: "center", gap: "6px" }}>
-                            <span>📱</span> {t.headmaster?.phone || t.adminPhone || "N/A"}
+                            <span>📱</span> {t.headmaster?.phone || t.adminPhone || "Not provided"}
                           </div>
                           <div style={{ fontSize: "0.68rem", color: "#6ee7b7" }}>Registered Mobile Number</div>
                         </td>
@@ -7399,7 +7635,7 @@ export default function DeveloperDashboard() {
                             {t.subscription?.tier || "ENTERPRISE"}
                           </span>
                         </td>
-                        <td style={{ fontWeight: 600 }}>{t.maxStudents || t.subscription?.maxStudents || 2500} Students</td>
+                        <td style={{ fontWeight: 600 }}>{Number(t.maxStudents || t.subscription?.maxStudents || 0)} Students</td>
                         <td>
                           <span className="status-badge active" style={{ display: "inline-flex", alignItems: "center", gap: "4px" }}>
                             <span>✅</span> OTP VERIFIED

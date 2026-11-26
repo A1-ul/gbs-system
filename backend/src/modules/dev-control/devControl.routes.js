@@ -534,10 +534,90 @@ router.get('/cloud-sync-status', ...requireDev, async (req, res) => {
       totalBackups: backups.length,
       latestBackup: backups[0] || null,
       lastStoreUpdate: store.updatedAt,
-      offlineReady: true,
+    offlineReady: true,
       dataProtectionActive: true
     }
   });
+});
+
+// 23. Developer Maintenance — Purge Any Residual Synthetic / Test Onboarding, Alert, or Intrusion Records
+router.post('/maintenance/purge-synthetic-data', ...requireDev, async (req, res, next) => {
+  try {
+    const SYNTHETIC_RE = /oxford-prep\.edu|oxford preparatory|intruder\.chrome@test\.com|demo student|st\. peter international|kingsley international|royal oak international|green valley|st\. charles live|gbs-opr-|secondary postgresql replica in sync|400% connection burst/i;
+    const isSyntheticObj = (o) => SYNTHETIC_RE.test(JSON.stringify(o || {}));
+
+    const store = readPersistentStore();
+    const before = {
+      institutions: (store.institutions || []).length,
+      registeredUsers: (store.registeredUsers || []).length,
+      intrusions: (store.intrusionViolations || []).length,
+      alerts: (store.systemAlerts || []).length
+    };
+    store.institutions = (store.institutions || []).filter((x) => !isSyntheticObj(x));
+    store.registeredUsers = (store.registeredUsers || []).filter((x) => !isSyntheticObj(x));
+    store.intrusionViolations = (store.intrusionViolations || []).filter((x) => !isSyntheticObj(x));
+    store.staffBreachTrials = (store.staffBreachTrials || []).filter((x) => !isSyntheticObj(x));
+    store.systemAlerts = (store.systemAlerts || []).filter((x) => !isSyntheticObj(x));
+    store.schoolClinicProfiles = (store.schoolClinicProfiles || []).filter((x) => !isSyntheticObj(x));
+    store.schoolClinicVisits = (store.schoolClinicVisits || []).filter((x) => !isSyntheticObj(x));
+    if (store.developerSecurity && Array.isArray(store.developerSecurity.intrusionEvents)) {
+      store.developerSecurity.intrusionEvents = store.developerSecurity.intrusionEvents.filter((x) => !isSyntheticObj(x));
+    }
+    if (store.prismaModels) {
+      if (Array.isArray(store.prismaModels.Tenant)) {
+        store.prismaModels.Tenant = store.prismaModels.Tenant.filter((t) => Number(t.id) === 1 || !isSyntheticObj(t));
+      }
+      if (Array.isArray(store.prismaModels.Subscription)) {
+        const validTenantIds = new Set((store.prismaModels.Tenant || []).map((t) => Number(t.id)));
+        store.prismaModels.Subscription = store.prismaModels.Subscription.filter((s) => validTenantIds.has(Number(s.tenantId)));
+      }
+    }
+    writePersistentStore(store);
+
+    let pgSummary = { online: false, deletedRegs: 0, deletedAlerts: 0, deletedTenants: 0 };
+    if (typeof prisma.isPostgresOnline === 'function' && (await prisma.isPostgresOnline())) {
+      pgSummary.online = true;
+      const regs = await prisma.institutionRegistration.findMany().catch(() => []);
+      const badRegIds = regs.filter(isSyntheticObj).map((r) => r.id);
+      if (badRegIds.length > 0) {
+        const dr = await prisma.institutionRegistration.deleteMany({ where: { id: { in: badRegIds } } }).catch(() => ({ count: 0 }));
+        pgSummary.deletedRegs = dr.count || 0;
+      }
+      const alerts = await prisma.systemAlert.findMany().catch(() => []);
+      const badAlertIds = alerts.filter(isSyntheticObj).map((a) => a.id);
+      if (badAlertIds.length > 0) {
+        const da = await prisma.systemAlert.deleteMany({ where: { id: { in: badAlertIds } } }).catch(() => ({ count: 0 }));
+        pgSummary.deletedAlerts = da.count || 0;
+      }
+      const tenants = await prisma.tenant.findMany({ where: { id: { not: 1 } } }).catch(() => []);
+      const badTenantIds = tenants.filter(isSyntheticObj).map((t) => t.id);
+      if (badTenantIds.length > 0) {
+        await prisma.subscription.deleteMany({ where: { tenantId: { in: badTenantIds } } }).catch(() => {});
+        await prisma.systemLock.deleteMany({ where: { tenantId: { in: badTenantIds } } }).catch(() => {});
+        await prisma.auditLog.deleteMany({ where: { tenantId: { in: badTenantIds } } }).catch(() => {});
+        await prisma.user.deleteMany({ where: { tenantId: { in: badTenantIds } } }).catch(() => {});
+        const dt = await prisma.tenant.deleteMany({ where: { id: { in: badTenantIds } } }).catch(() => ({ count: 0 }));
+        pgSummary.deletedTenants = dt.count || 0;
+      }
+    }
+
+    return res.status(200).json({
+      status: 'success',
+      message: 'All synthetic/test onboarding, alert, and intrusion records have been permanently cleared.',
+      data: {
+        storeBefore: before,
+        storeAfter: {
+          institutions: store.institutions.length,
+          registeredUsers: store.registeredUsers.length,
+          intrusions: store.intrusionViolations.length,
+          alerts: store.systemAlerts.length
+        },
+        postgresql: pgSummary
+      }
+    });
+  } catch (err) {
+    return next(err);
+  }
 });
 
 module.exports = router;
