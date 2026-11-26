@@ -245,8 +245,8 @@ export function StudentDashboard({ initialTab } = {}) {
     try {
       const video = proctorVideoRef.current;
       if (!video || video.readyState < 2) return null;
-      const w = compactForLiveStream ? 320 : 480;
-      const h = compactForLiveStream ? 180 : 270;
+      const w = compactForLiveStream ? 240 : 480;
+      const h = compactForLiveStream ? 135 : 270;
       const snapCanvas = proctorSnapCanvasRef.current || document.createElement("canvas");
       if (snapCanvas.width !== w) snapCanvas.width = w;
       if (snapCanvas.height !== h) snapCanvas.height = h;
@@ -254,7 +254,7 @@ export function StudentDashboard({ initialTab } = {}) {
       const sCtx = snapCanvas.getContext("2d");
       if (!sCtx) return null;
       sCtx.drawImage(video, 0, 0, w, h);
-      return snapCanvas.toDataURL("image/jpeg", compactForLiveStream ? 0.56 : 0.72);
+      return snapCanvas.toDataURL("image/jpeg", compactForLiveStream ? 0.48 : 0.72);
     } catch {
       return null;
     }
@@ -561,13 +561,32 @@ export function StudentDashboard({ initialTab } = {}) {
     let lastSignalMs = Date.now() - 5000;
     const processedSigIds = new Set();
 
-    const STUN_CFG = {
+    const DEFAULT_PROCTOR_ICE = {
       iceServers: [
         { urls: "stun:stun.l.google.com:19302" },
         { urls: "stun:stun1.l.google.com:19302" },
-        { urls: "stun:stun2.l.google.com:19302" }
-      ]
+        { urls: "stun:stun.relay.metered.ca:80" },
+        {
+          urls: [
+            "turn:openrelay.metered.ca:80",
+            "turn:openrelay.metered.ca:443",
+            "turn:openrelay.metered.ca:443?transport=tcp"
+          ],
+          username: "openrelayproject",
+          credential: "openrelayproject"
+        }
+      ],
+      iceCandidatePoolSize: 8,
+      bundlePolicy: "max-bundle",
+      rtcpMuxPolicy: "require"
     };
+    let activeIceConfig = DEFAULT_PROCTOR_ICE;
+    const pendingIceByViewer = new Map(); // viewerId -> Array<RTCIceCandidateInit>
+    apiClient.get("/video/calls/ice-servers").then((res) => {
+      if (res?.data?.data?.iceServers?.length) {
+        activeIceConfig = { ...DEFAULT_PROCTOR_ICE, ...res.data.data };
+      }
+    }).catch(() => { });
 
     const getExamIdentity = () => {
       const stuName = `${studentProfile?.firstName || "Student"} ${studentProfile?.lastName || ""}`.trim();
@@ -693,12 +712,40 @@ export function StudentDashboard({ initialTab } = {}) {
         if (prevPc) {
           try { prevPc.close(); } catch { }
         }
-        const pc = new RTCPeerConnection(STUN_CFG);
+        const pc = new RTCPeerConnection(activeIceConfig);
         proctorPeersRef.current.set(viewerId, pc);
+        pendingIceByViewer.set(viewerId, []);
 
         proctorStreamRef.current.getVideoTracks().forEach((track) => {
-          pc.addTrack(track, proctorStreamRef.current);
+          const sender = pc.addTrack(track, proctorStreamRef.current);
+          try {
+            const params = sender.getParameters() || {};
+            params.degradationPreference = "maintain-framerate";
+            if (!Array.isArray(params.encodings) || params.encodings.length === 0) {
+              params.encodings = [{}];
+            }
+            params.encodings[0].maxFramerate = 30;
+            params.encodings[0].maxBitrate = 600000;
+            sender.setParameters(params).catch(() => { });
+          } catch { }
         });
+
+        try {
+          if (typeof RTCRtpSender !== "undefined" && typeof RTCRtpSender.getCapabilities === "function") {
+            const caps = RTCRtpSender.getCapabilities("video");
+            if (caps?.codecs?.length) {
+              const preferred = [
+                ...caps.codecs.filter((c) => /VP8|H264/i.test(c.mimeType)),
+                ...caps.codecs.filter((c) => !/VP8|H264/i.test(c.mimeType))
+              ];
+              for (const tr of pc.getTransceivers?.() || []) {
+                if (tr.sender?.track?.kind === "video" && typeof tr.setCodecPreferences === "function") {
+                  tr.setCodecPreferences(preferred);
+                }
+              }
+            }
+          }
+        } catch { }
 
         pc.onicecandidate = (evt) => {
           if (evt.candidate) {
@@ -719,6 +766,7 @@ export function StudentDashboard({ initialTab } = {}) {
           if (["failed", "closed", "disconnected"].includes(pc.connectionState)) {
             if (proctorPeersRef.current.get(viewerId) === pc) {
               proctorPeersRef.current.delete(viewerId);
+              pendingIceByViewer.delete(viewerId);
             }
           }
         };
@@ -746,12 +794,23 @@ export function StudentDashboard({ initialTab } = {}) {
         try {
           if (pc.signalingState === "have-local-offer") {
             await pc.setRemoteDescription(new RTCSessionDescription(sig.data));
+            const queued = pendingIceByViewer.get(viewerId) || [];
+            pendingIceByViewer.set(viewerId, []);
+            for (const cand of queued) {
+              try { await pc.addIceCandidate(new RTCIceCandidate(cand)); } catch { }
+            }
           }
         } catch { }
       } else if (sig.signalType === "ICE_CANDIDATE" && sig.data) {
-        try {
-          await pc.addIceCandidate(new RTCIceCandidate(sig.data));
-        } catch { }
+        if (pc.remoteDescription) {
+          try {
+            await pc.addIceCandidate(new RTCIceCandidate(sig.data));
+          } catch { }
+        } else {
+          const q = pendingIceByViewer.get(viewerId) || [];
+          q.push(sig.data);
+          pendingIceByViewer.set(viewerId, q);
+        }
       }
     };
 
@@ -769,23 +828,51 @@ export function StudentDashboard({ initialTab } = {}) {
       } catch { }
     };
 
+    // Instant SSE listener so Teacher WATCH_REQUEST triggers 30fps WebRTC in <250ms
+    let proctorSse = null;
+    try {
+      if (typeof EventSource !== "undefined") {
+        const tok = localStorage.getItem("gbs_token") || sessionStorage.getItem("gbs_token") || "";
+        const base = String(apiClient.defaults?.baseURL || "/api/v1").replace(/\/+$/, "");
+        if (tok) {
+          proctorSse = new EventSource(`${base}/ai-exam/proctor/stream?token=${encodeURIComponent(tok)}`);
+          proctorSse.addEventListener("proctor_webrtc_signal", (evt) => {
+            try {
+              const d = JSON.parse(evt.data);
+              const s = d?.signal;
+              if (s && String(s.targetRole || "").toUpperCase() === "STUDENT") {
+                const { sessionKey } = getExamIdentity();
+                if (!s.sessionKey || String(s.sessionKey) === String(sessionKey)) {
+                  handleIncomingWebRtcSignal(s);
+                }
+              }
+            } catch { }
+          });
+        }
+      }
+    } catch { }
+
     sendHeartbeatAndPollMessages().then(() => {
       if (active) {
-        frameTimer = setTimeout(pumpLiveFrame, 120);
+        frameTimer = setTimeout(pumpLiveFrame, 80);
       }
     });
     const hbInterval = setInterval(sendHeartbeatAndPollMessages, 3000);
-    signalPollTimer = setInterval(pollWebRtcSignals, 500);
+    signalPollTimer = setInterval(pollWebRtcSignals, 280);
 
     return () => {
       active = false;
       clearInterval(hbInterval);
       if (frameTimer) clearTimeout(frameTimer);
       if (signalPollTimer) clearInterval(signalPollTimer);
+      if (proctorSse) {
+        try { proctorSse.close(); } catch { }
+      }
       proctorPeersRef.current.forEach((pc) => {
         try { pc.close(); } catch { }
       });
       proctorPeersRef.current.clear();
+      pendingIceByViewer.clear();
     };
   }, [examStarted, examSubmitted, activeExam?.id]);
 

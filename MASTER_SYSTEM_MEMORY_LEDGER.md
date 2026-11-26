@@ -354,5 +354,13 @@ node frontend/scripts/build-frontend-memory.cjs
 * **Verification Verdict (`index-D9UpQVNf.js`):** Backend syntax checks (`9/9` pass), end-to-end local PostgreSQL video & multi-gateway payment verification (`6/6` suites pass), clean Vite production build synced to `backend/public/`, `0` native HTML tooltips, pushed to `origin/main` and verified live on `https://gbs-system.onrender.com`.
 
 ---
+
+## 19. PHASE V2.22.1 — TEACHER EXAM MONITOR WALL DIRECT 30 FPS 1.0x WEBRTC LIVE CAMERA STREAMING (NOV 2026)
+
+* **Smart, Fast 30 FPS Proctoring Wall:** Replaced slow HTTP JPEG `<img>` wall cards in `TeacherLiveProctoringPanel.jsx` with `LiveStudentWallVideo`—streaming direct **30 FPS 1.0x WebRTC `<video>`** (`⚡ 30 FPS LIVE`) straight from each active student's camera with STUN+TURN relay (`/api/v1/video/calls/ice-servers` + OpenRelay), ICE candidate queueing, stable SSE (`activeWatchStudentKeyRef`), and `0ms` MediaStream handoff into the Fullscreen Watch Modal.
+* **Student 30 FPS Hardware-Tuned Streamer:** Upgraded `StudentDashboard.jsx` with STUN+TURN, per-viewer `pendingIceByViewer` queues, VP8/H264 codec preference + `maintain-framerate` 30fps sender tuning, instant SSE `WATCH_REQUEST` listener (`<250ms` connect), and fixed `aiExam.service.js` `< sinceMs` signal filtering.
+* **Verification Verdict (`index-BLjYOmNR.js`):** `aiExam.service.js` passed `node --check`, Vite build succeeded (`index-BLjYOmNR.js`), synced to `backend/public/`, `0` tooltips, pushed to `origin/main` and verified live on `https://gbs-system.onrender.com`.
+
+---
 *Certified & Archived in System Memory by Gabriel Osei — Lead Architect & Developer.*  
 *GBS Company of Management System — Real-Life Production Foundation.*

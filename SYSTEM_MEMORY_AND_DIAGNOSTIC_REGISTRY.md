@@ -443,6 +443,20 @@ flowchart TD
 - **Verification Verdict (Bundle `index-D9UpQVNf.js`):**
   - **Localhost Verification:** All 9 modified backend files passed `node --check`; end-to-end verification suite passed 6/6 suites (ICE/TURN provisioning, Developer <-> Headmaster signaling + same-ms ICE delivery, `0554594193` destination, MTN/Telecel/AT Money + duplicate webhook idempotency, Bank proof `UNDER_REVIEW` -> finance approval -> automatic student access clearance recalculation, Developer subscription tracker + CSV export); Vite build succeeded (`index-D9UpQVNf.js`), synced to `backend/public/`, `0` `title=` tooltips.
 
+---
+
+## 20. Teacher Exam Monitor Wall Direct 30 FPS 1.0x WebRTC Live Camera Streaming (Nov 2026 — v2.22.1)
+
+- **Root Causes Resolved:**
+  1. Teacher Monitor Wall cards in [`TeacherLiveProctoringPanel.jsx`](file:///d:/version1/GBS_SYSTEM/frontend/src/components/common/TeacherLiveProctoringPanel.jsx) previously rendered HTTP-polled JPEG `<img>` snapshots (~1–2 FPS over cloud latency) instead of direct 30 FPS WebRTC `<video>`.
+  2. Proctoring WebRTC on both [`StudentDashboard.jsx`](file:///d:/version1/GBS_SYSTEM/frontend/src/modules/portal/pages/dashboards/student/StudentDashboard.jsx) and [`TeacherLiveProctoringPanel.jsx`](file:///d:/version1/GBS_SYSTEM/frontend/src/components/common/TeacherLiveProctoringPanel.jsx) used STUN-only without TURN relays and lacked `pendingIce` queues.
+  3. [`aiExam.service.js`](file:///d:/version1/GBS_SYSTEM/backend/src/modules/ai-exam/aiExam.service.js) filtered WebRTC signals with `<= sinceMs` (dropping same-ms ICE candidates) and `TeacherLiveProctoringPanel.jsx` tore down its SSE stream whenever `activeWatchStudentKey` changed.
+- **Upgrades Applied:**
+  - Added `LiveStudentWallVideo` in [`TeacherLiveProctoringPanel.jsx`](file:///d:/version1/GBS_SYSTEM/frontend/src/components/common/TeacherLiveProctoringPanel.jsx) so every active student camera card streams direct **30 FPS 1.0x WebRTC `<video>`** (`⚡ 30 FPS LIVE`) with dynamic STUN+TURN (`/api/v1/video/calls/ice-servers` + OpenRelay), ICE candidate queueing, stable SSE (`activeWatchStudentKeyRef`), and `0ms` MediaStream handoff into the Fullscreen Watch Modal.
+  - Upgraded [`StudentDashboard.jsx`](file:///d:/version1/GBS_SYSTEM/frontend/src/modules/portal/pages/dashboards/student/StudentDashboard.jsx) with STUN+TURN ICE servers, per-viewer `pendingIceByViewer` queues, VP8/H264 hardware codec preference + `maintain-framerate` 30fps sender tuning, instant SSE `WATCH_REQUEST` listener (`<250ms` handshake), and lightweight `240x135` JPEG fallback.
+  - Fixed [`aiExam.service.js`](file:///d:/version1/GBS_SYSTEM/backend/src/modules/ai-exam/aiExam.service.js) `getProctorWebRtcSignals` (`< sinceMs`).
+- **Verification Verdict (Bundle `index-BLjYOmNR.js`):** `node --check` passed on `aiExam.service.js`; Vite build succeeded (`index-BLjYOmNR.js`), synced to `backend/public/`, `0` `title=` tooltips, deployed to `https://gbs-system.onrender.com`.
+
 
 
 

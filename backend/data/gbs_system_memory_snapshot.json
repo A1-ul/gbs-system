@@ -1,7 +1,7 @@
 {
   "systemName": "GBS MANAGEMENT SYSTEM (Global Brightest Stars Educational Management System)",
-  "version": "2.22.0-PRODUCTION-BLUEPRINT",
-  "savedAt": "2026-11-26T21:38:00Z",
+  "version": "2.22.1-PRODUCTION-BLUEPRINT",
+  "savedAt": "2026-11-26T21:52:00Z",
   "status": "PRODUCTION_READY_VERIFIED",
   "architecture": {
     "frontend": {
@@ -505,11 +505,18 @@
       "rootCause": "1) LiveInSystemCallModal used STUN-only ICE_CONFIG (failing behind symmetric NAT/4G), matched isInitiator by userId string alone (missing Developer email/role matching because getCallState omitted initiatorEmail), killed getUserMedia streams after 3.5-6.5s permission timeout, replaced remoteStreamRef on each ontrack (dropping audio when video arrived), swallowed remoteAudioRef.play() autoplay rejections silently, and liveCall.service.js dropped same-ms signals via <= sinceIso; 2) payments.reconciler.js lacked automatic student access clearance recalculation and could trigger Postgres 25P02 transaction aborts if an audit/notification userId failed FK check; payments lacked bank-proof submission, Developer subscription revenue tracker with 0554594193 destination, and CSV report export.",
       "resolution": "1) Added GET /api/v1/video/calls/ice-servers (STUN + env TURN / Twilio NTS / OpenRelay TCP+UDP port 80/443 TURN), fixed liveCall.service.js getCallState (< sinceIso + initiatorEmail), and upgraded LiveInSystemCallModal.jsx with dynamic ICE/TURN, Developer-safe isMeInitiator, 45s non-destructive permission timeout, persistent single remoteStreamRef track merging, autoplay-block detection + next-gesture auto-unlock, polling participant re-offer, and Reconnect Video/Audio control (plus removed hardcoded fallback phone). 2) Upgraded payments.constants.js, payments.reconciler.js, payments.service.js, payments.reports.js, payments.controller.js, payments.routes.js, OfficialPaymentGatewayModal.jsx, and PaymentGatewayAdminPanel.jsx with DEVELOPER_PAYMENT_DESTINATION (0554594193 via authorized gateways, zero PIN collection), POST /:reference/bank-proof (strict UNDER_REVIEW until finance approves), automatic _recalculateStudentAccessClearance (courseRegistrationAllowed, resultsViewingAllowed, examClearanceAllowed preserving disciplinary/academic/admin holds) + GET /student-clearance, safe FK-checked audit/notification userId inside PostgreSQL $transaction, Developer Subscriptions tab + tracker, and GET /reports/export CSV downloads. Verified end-to-end against local PostgreSQL + Vite production build (index-D9UpQVNf.js) + 0 tooltips + live Render deployment.",
       "status": "PERMANENTLY_GUARDED"
+    },
+    {
+      "issueCode": "DIAG-V222-1-PROCTORING-30FPS-WEBRTC-WALL-AND-TURN",
+      "symptom": "During online examinations, student AI proctoring camera video on the Teacher Exam Monitor Dashboard appeared very slow/choppy compared to the live camera on the student device.",
+      "rootCause": "1) TeacherLiveProctoringPanel.jsx wall cards rendered static JPEG <img> snapshots over HTTP POST round-trips (~1-2 FPS over cloud internet) instead of direct 30 FPS WebRTC <video>; 2) StudentDashboard.jsx & TeacherLiveProctoringPanel.jsx proctoring WebRTC used STUN-only without TURN relays and lacked pending ICE candidate queues; 3) aiExam.service.js getProctorWebRtcSignals dropped same-ms ICE candidates via <= sinceMs; 4) TeacherLiveProctoringPanel.jsx included activeWatchStudentKey in the SSE useEffect deps, tearing down SSE mid-handshake when opening a student camera.",
+      "resolution": "1) Built LiveStudentWallVideo inside TeacherLiveProctoringPanel.jsx so every live student camera card on the Teacher Monitor Wall automatically streams direct 30 FPS 1.0x WebRTC <video> (using dynamic STUN+TURN from /api/v1/video/calls/ice-servers + OpenRelay fallback, ICE candidate queueing, and 0ms shared MediaStream handoff into the Fullscreen Watch Modal); removed activeWatchStudentKey from SSE useEffect deps. 2) Upgraded StudentDashboard.jsx proctoring streamer with STUN+TURN ICE servers, per-viewer pending ICE queues, VP8/H264 hardware codec preference + maintain-framerate 30fps sender tuning, instant SSE WATCH_REQUEST listener (<250ms connect), and lightweight 240x135 JPEG fallback. 3) Fixed aiExam.service.js getProctorWebRtcSignals (< sinceMs). Built Vite bundle index-BLjYOmNR.js, synced to backend/public/, 0 tooltips, deployed to Render.",
+      "status": "PERMANENTLY_GUARDED"
     }
   ],
   "verificationSummary": {
-    "latestVerifiedCommit": "v2.22-HEAD",
-    "latestLiveBundleHash": "index-D9UpQVNf.js",
+    "latestVerifiedCommit": "v2.22.1-HEAD",
+    "latestLiveBundleHash": "index-BLjYOmNR.js",
     "liveProductionUrl": "https://gbs-system.onrender.com",
     "autoMemoryRuleFile": "AGENTS.md",
     "backendTestSuitesPassed": "36/36 v2.21 comprehensive API + RBAC + Missed Calls + Defaulters Loop + Exam Vetting + OMR Scanner + PWA/Apple checks + 18/18 upgrade regression checks (verify_upgrade_e2e.js) + 0 native HTML tooltips + 0 Prisma errors",

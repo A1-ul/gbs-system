@@ -5,6 +5,224 @@ import { printHtmlSafely } from "../../utils/safeWindow";
 import { getActiveSchoolName } from "../../utils/schoolBranding";
 import { getActiveAuthToken, getAccessToken } from "../../utils/tokenStorage";
 
+const DEFAULT_PROCTOR_ICE_CONFIG = {
+  iceServers: [
+    { urls: "stun:stun.l.google.com:19302" },
+    { urls: "stun:stun1.l.google.com:19302" },
+    { urls: "stun:stun.relay.metered.ca:80" },
+    {
+      urls: [
+        "turn:openrelay.metered.ca:80",
+        "turn:openrelay.metered.ca:443",
+        "turn:openrelay.metered.ca:443?transport=tcp"
+      ],
+      username: "openrelayproject",
+      credential: "openrelayproject"
+    }
+  ],
+  iceCandidatePoolSize: 8,
+  bundlePolicy: "max-bundle",
+  rtcpMuxPolicy: "require"
+};
+
+/**
+ * Ultra-fast direct 30 FPS 1.0x WebRTC <video> receiver for each live student camera tile
+ * on the Teacher Exam Monitor Wall. Connects automatically with STUN+TURN relay & ICE queueing,
+ * and shares its MediaStream with the Fullscreen Watch Modal for 0ms instant zoom.
+ */
+function LiveStudentWallVideo({
+  sessionKey,
+  studentName,
+  snapshotDataUrl,
+  cameraActive,
+  iceConfig,
+  registerSignalListener,
+  onStreamReady
+}) {
+  const videoRef = useRef(null);
+  const [webrtcLive, setWebrtcLive] = useState(false);
+
+  useEffect(() => {
+    if (!sessionKey || !cameraActive || typeof RTCPeerConnection !== "function") {
+      setWebrtcLive(false);
+      return undefined;
+    }
+
+    let active = true;
+    const viewerId = `wall_${Date.now()}_${Math.floor(Math.random() * 9000 + 1000)}`;
+    const processedIds = new Set();
+    const pendingIce = [];
+    let offerReceived = false;
+    let lastSigMs = Date.now() - 2500;
+
+    const pc = new RTCPeerConnection(iceConfig || DEFAULT_PROCTOR_ICE_CONFIG);
+    try {
+      if (typeof pc.addTransceiver === "function") {
+        pc.addTransceiver("video", { direction: "recvonly" });
+      }
+    } catch { }
+
+    pc.ontrack = (evt) => {
+      const stream = evt.streams?.[0] || new MediaStream([evt.track]);
+      if (typeof onStreamReady === "function") onStreamReady(sessionKey, stream);
+      if (videoRef.current) {
+        videoRef.current.srcObject = stream;
+        videoRef.current.muted = true;
+        videoRef.current.playsInline = true;
+        videoRef.current.playbackRate = 1.0;
+        videoRef.current.play().catch(() => { });
+      }
+      if (active) setWebrtcLive(true);
+    };
+
+    pc.onicecandidate = (evt) => {
+      if (evt.candidate && active) {
+        apiClient.post("/ai-exam/proctor/webrtc/signal", {
+          sessionKey,
+          viewerId,
+          senderRole: "TEACHER",
+          targetRole: "STUDENT",
+          signalType: "ICE_CANDIDATE",
+          data: evt.candidate
+        }).catch(() => { });
+      }
+    };
+
+    pc.onconnectionstatechange = () => {
+      if (!active) return;
+      if (pc.connectionState === "connected") {
+        setWebrtcLive(true);
+      } else if (["failed", "closed"].includes(pc.connectionState)) {
+        setWebrtcLive(false);
+      }
+    };
+
+    const handleSig = async (sig) => {
+      if (!active || !sig?.id || processedIds.has(sig.id)) return;
+      if (String(sig.sessionKey) !== String(sessionKey)) return;
+      if (String(sig.targetRole || "").toUpperCase() !== "TEACHER") return;
+      if (sig.viewerId && String(sig.viewerId) !== viewerId) return;
+      processedIds.add(sig.id);
+      if (sig.createdAtMs && sig.createdAtMs > lastSigMs) lastSigMs = sig.createdAtMs;
+
+      if (sig.signalType === "OFFER" && sig.data) {
+        offerReceived = true;
+        try {
+          await pc.setRemoteDescription(new RTCSessionDescription(sig.data));
+          const queued = pendingIce.splice(0, pendingIce.length);
+          for (const cand of queued) {
+            try { await pc.addIceCandidate(new RTCIceCandidate(cand)); } catch { }
+          }
+          const ans = await pc.createAnswer();
+          await pc.setLocalDescription(ans);
+          await apiClient.post("/ai-exam/proctor/webrtc/signal", {
+            sessionKey,
+            viewerId,
+            senderRole: "TEACHER",
+            targetRole: "STUDENT",
+            signalType: "ANSWER",
+            data: ans
+          });
+        } catch { }
+      } else if (sig.signalType === "ICE_CANDIDATE" && sig.data) {
+        if (pc.remoteDescription) {
+          try { await pc.addIceCandidate(new RTCIceCandidate(sig.data)); } catch { }
+        } else {
+          pendingIce.push(sig.data);
+        }
+      }
+    };
+
+    const unregister = typeof registerSignalListener === "function" ? registerSignalListener(viewerId, handleSig) : null;
+
+    const requestStream = () => {
+      if (!active) return;
+      apiClient.post("/ai-exam/proctor/webrtc/signal", {
+        sessionKey,
+        viewerId,
+        senderRole: "TEACHER",
+        targetRole: "STUDENT",
+        signalType: "WATCH_REQUEST"
+      }).catch(() => { });
+    };
+
+    requestStream();
+    const retryTimer = setTimeout(() => {
+      if (active && !offerReceived) requestStream();
+    }, 1100);
+
+    const pollTimer = setInterval(async () => {
+      if (!active || pc.connectionState === "connected") return;
+      try {
+        const res = await apiClient.get("/ai-exam/proctor/webrtc/signals", {
+          params: { sessionKey, targetRole: "TEACHER", viewerId, sinceMs: lastSigMs }
+        });
+        const list = res?.data?.data?.signals || [];
+        for (const s of list) {
+          await handleSig(s);
+        }
+      } catch { }
+    }, 450);
+
+    return () => {
+      active = false;
+      clearTimeout(retryTimer);
+      clearInterval(pollTimer);
+      if (typeof unregister === "function") unregister();
+      if (typeof onStreamReady === "function") onStreamReady(sessionKey, null);
+      apiClient.post("/ai-exam/proctor/webrtc/signal", {
+        sessionKey,
+        viewerId,
+        senderRole: "TEACHER",
+        targetRole: "STUDENT",
+        signalType: "WATCH_STOP"
+      }).catch(() => { });
+      try { pc.close(); } catch { }
+    };
+  }, [sessionKey, cameraActive, iceConfig, registerSignalListener, onStreamReady]);
+
+  return (
+    <>
+      <video
+        ref={videoRef}
+        autoPlay
+        muted
+        playsInline
+        style={{
+          position: "absolute",
+          inset: 0,
+          width: "100%",
+          height: "100%",
+          objectFit: "cover",
+          opacity: webrtcLive ? 1 : 0,
+          transform: "translateZ(0)",
+          willChange: "transform",
+          pointerEvents: "none"
+        }}
+      />
+      {!webrtcLive && snapshotDataUrl && (
+        <img
+          src={snapshotDataUrl}
+          alt={`Live camera feed - ${studentName}`}
+          style={{ width: "100%", height: "100%", objectFit: "cover" }}
+        />
+      )}
+      {!webrtcLive && !snapshotDataUrl && (
+        <div style={{ textAlign: "center", padding: "10px", color: "#94a3b8", fontSize: "0.75rem" }}>
+          <div style={{ fontSize: "1.6rem", marginBottom: "4px" }}>🛡️</div>
+          <strong>Focus &amp; Tab-Lock Active</strong>
+          <div>{cameraActive ? "Connecting 30 FPS live webcam..." : "Camera standby on examinee device"}</div>
+        </div>
+      )}
+      {webrtcLive && (
+        <div style={{ position: "absolute", top: "6px", left: "6px", background: "rgba(6, 78, 59, 0.9)", border: "1px solid #34d399", color: "#a7f3d0", fontSize: "0.64rem", fontWeight: 900, padding: "2px 7px", borderRadius: "6px" }}>
+          ⚡ 30 FPS LIVE
+        </div>
+      )}
+    </>
+  );
+}
+
 /**
  * TeacherLiveProctoringPanel
  * Real-time AI Exam Proctoring Wall for Teachers:
@@ -46,6 +264,44 @@ export default function TeacherLiveProctoringPanel({
   const watchViewerIdRef = useRef("");
   const watchFrameTimestampsRef = useRef([]);
   const watchSignalHandlerRef = useRef(null);
+  const activeWatchStudentKeyRef = useRef(null);
+  const wallSignalListenersRef = useRef(new Map());
+  const wallStreamsRef = useRef(new Map());
+  const [proctorIceConfig, setProctorIceConfig] = useState(DEFAULT_PROCTOR_ICE_CONFIG);
+
+  activeWatchStudentKeyRef.current = activeWatchStudentKey;
+
+  useEffect(() => {
+    apiClient.get("/video/calls/ice-servers").then((res) => {
+      if (res?.data?.data?.iceServers?.length) {
+        setProctorIceConfig({ ...DEFAULT_PROCTOR_ICE_CONFIG, ...res.data.data });
+      }
+    }).catch(() => { });
+  }, []);
+
+  const registerWallSignalListener = useCallback((viewerId, handler) => {
+    wallSignalListenersRef.current.set(viewerId, handler);
+    return () => {
+      wallSignalListenersRef.current.delete(viewerId);
+    };
+  }, []);
+
+  const handleWallStreamReady = useCallback((sessKey, stream) => {
+    if (stream) {
+      wallStreamsRef.current.set(String(sessKey), stream);
+      if (String(activeWatchStudentKeyRef.current || "") === String(sessKey) && watchRemoteVideoRef.current) {
+        watchRemoteStreamRef.current = stream;
+        watchRemoteVideoRef.current.srcObject = stream;
+        watchRemoteVideoRef.current.muted = true;
+        watchRemoteVideoRef.current.playsInline = true;
+        watchRemoteVideoRef.current.playbackRate = 1.0;
+        watchRemoteVideoRef.current.play().catch(() => { });
+        setWatchWebRtcLive(true);
+      }
+    } else {
+      wallStreamsRef.current.delete(String(sessKey));
+    }
+  }, []);
 
   const activeWatchSession = activeWatchStudentKey
     ? liveSessions.find((s) => String(s.sessionKey || s.studentId) === String(activeWatchStudentKey)) || null
@@ -121,7 +377,7 @@ export default function TeacherLiveProctoringPanel({
             const nextSess = d?.session;
             if (!nextSess?.sessionKey) return;
             const nowMs = Date.now();
-            if (String(nextSess.sessionKey) === String(activeWatchStudentKey || "")) {
+            if (String(nextSess.sessionKey) === String(activeWatchStudentKeyRef.current || "")) {
               const arr = [...watchFrameTimestampsRef.current.filter((t) => nowMs - t <= 2000), nowMs];
               watchFrameTimestampsRef.current = arr;
               setWatchMeasuredFps(Math.max(1, Math.round(arr.length / 2)));
@@ -141,8 +397,13 @@ export default function TeacherLiveProctoringPanel({
         eventSource.addEventListener("proctor_webrtc_signal", (evt) => {
           try {
             const d = JSON.parse(evt.data);
-            if (d?.signal && typeof watchSignalHandlerRef.current === "function") {
-              watchSignalHandlerRef.current(d.signal);
+            if (d?.signal) {
+              if (typeof watchSignalHandlerRef.current === "function") {
+                watchSignalHandlerRef.current(d.signal);
+              }
+              wallSignalListenersRef.current.forEach((fn) => {
+                try { fn(d.signal); } catch { }
+              });
             }
           } catch { }
         });
@@ -179,35 +440,48 @@ export default function TeacherLiveProctoringPanel({
         try { eventSource.close(); } catch { }
       }
     };
-  }, [fetchProctoringData, fetchLiveOnly, selectedExamId, activeWatchStudentKey]);
+  }, [fetchProctoringData, fetchLiveOnly, selectedExamId]);
 
   // Real-time 1.0x WebRTC 30 FPS Live Video Receiver when Teacher opens Enlarged Watch & Student Profile Modal
   useEffect(() => {
     const sessKey = activeWatchStudentKey;
-    setWatchWebRtcLive(false);
     setWatchMeasuredFps(0);
     watchFrameTimestampsRef.current = [];
-    watchRemoteStreamRef.current = null;
 
     if (!sessKey || typeof RTCPeerConnection !== "function") {
+      setWatchWebRtcLive(false);
+      watchRemoteStreamRef.current = null;
       watchSignalHandlerRef.current = null;
       return;
     }
+
+    // 0ms instant zoom: reuse the already-live 30 FPS WebRTC MediaStream from the Teacher Wall card!
+    const existingWallStream = wallStreamsRef.current.get(String(sessKey));
+    if (existingWallStream && existingWallStream.getVideoTracks().some((t) => t.readyState === "live")) {
+      watchRemoteStreamRef.current = existingWallStream;
+      if (watchRemoteVideoRef.current) {
+        watchRemoteVideoRef.current.srcObject = existingWallStream;
+        watchRemoteVideoRef.current.muted = true;
+        watchRemoteVideoRef.current.playsInline = true;
+        watchRemoteVideoRef.current.playbackRate = 1.0;
+        watchRemoteVideoRef.current.play().catch(() => { });
+      }
+      setWatchWebRtcLive(true);
+      return;
+    }
+
+    setWatchWebRtcLive(false);
+    watchRemoteStreamRef.current = null;
 
     let active = true;
     const viewerId = `invig_${Date.now()}_${Math.floor(Math.random() * 900 + 100)}`;
     watchViewerIdRef.current = viewerId;
     const processedSigIds = new Set();
+    const pendingIce = [];
     let offerReceived = false;
     let lastSigMs = Date.now() - 3000;
 
-    const pc = new RTCPeerConnection({
-      iceServers: [
-        { urls: "stun:stun.l.google.com:19302" },
-        { urls: "stun:stun1.l.google.com:19302" },
-        { urls: "stun:stun2.l.google.com:19302" }
-      ]
-    });
+    const pc = new RTCPeerConnection(proctorIceConfig || DEFAULT_PROCTOR_ICE_CONFIG);
     watchPcRef.current = pc;
 
     try {
@@ -263,6 +537,10 @@ export default function TeacherLiveProctoringPanel({
         offerReceived = true;
         try {
           await pc.setRemoteDescription(new RTCSessionDescription(sig.data));
+          const queued = pendingIce.splice(0, pendingIce.length);
+          for (const cand of queued) {
+            try { await pc.addIceCandidate(new RTCIceCandidate(cand)); } catch { }
+          }
           const answer = await pc.createAnswer();
           await pc.setLocalDescription(answer);
           await apiClient.post("/ai-exam/proctor/webrtc/signal", {
@@ -275,9 +553,13 @@ export default function TeacherLiveProctoringPanel({
           });
         } catch { }
       } else if (sig.signalType === "ICE_CANDIDATE" && sig.data) {
-        try {
-          await pc.addIceCandidate(new RTCIceCandidate(sig.data));
-        } catch { }
+        if (pc.remoteDescription) {
+          try {
+            await pc.addIceCandidate(new RTCIceCandidate(sig.data));
+          } catch { }
+        } else {
+          pendingIce.push(sig.data);
+        }
       }
     };
 
@@ -826,7 +1108,17 @@ export default function TeacherLiveProctoringPanel({
                       }}
                       style={{ position: "relative", width: "100%", height: "175px", borderRadius: "8px", overflow: "hidden", background: "#020617", border: "1px solid rgba(212, 175, 55, 0.32)", display: "flex", alignItems: "center", justifyContent: "center", cursor: "pointer" }}
                     >
-                      {sess.snapshotDataUrl ? (
+                      {sess.cameraActive && sess.status !== "SUBMITTED" ? (
+                        <LiveStudentWallVideo
+                          sessionKey={sessKey}
+                          studentName={sess.studentName}
+                          snapshotDataUrl={sess.snapshotDataUrl}
+                          cameraActive={Boolean(sess.cameraActive)}
+                          iceConfig={proctorIceConfig}
+                          registerSignalListener={registerWallSignalListener}
+                          onStreamReady={handleWallStreamReady}
+                        />
+                      ) : sess.snapshotDataUrl ? (
                         <img
                           src={sess.snapshotDataUrl}
                           alt={`Live camera feed - ${sess.studentName}`}

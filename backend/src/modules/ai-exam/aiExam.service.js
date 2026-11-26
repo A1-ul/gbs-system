@@ -1257,7 +1257,7 @@ const getProctorWebRtcSignals = async (tenantId = 1, query = {}) => {
     if (sessionKey && item.sessionKey !== sessionKey) return false;
     if (targetRole && item.targetRole !== targetRole) return false;
     if (viewerId && item.viewerId !== viewerId) return false;
-    if (sinceMs > 0 && item.createdAtMs <= sinceMs) return false;
+    if (sinceMs > 0 && item.createdAtMs < sinceMs) return false;
     return true;
   });
 };
