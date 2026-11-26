@@ -2,21 +2,27 @@
 
 const express = require('express');
 const devControlController = require('./devControl.controller');
+const { protect } = require('../../middleware/auth.middleware');
+const { restrictTo } = require('../../middleware/rbac.middleware');
 
 const router = express.Router();
+const requireDev = [protect, restrictTo('DEVELOPER')];
+const requireDevOrHeadmaster = [protect, restrictTo('ADMIN', 'SUPER_ADMIN', 'HEADMASTER', 'PRINCIPAL', 'DEVELOPER')];
 
-// 1. Authentication, Security Lockdown, Intruder Evidence & PIN Security
+// 1. Public Pre-Login Authentication, Security Lockdown & PIN Verification
 router.post('/auth/login', devControlController.devLogin);
 router.post('/verify-pin', devControlController.verifyPin);
 router.get('/security/login-status', devControlController.getSecurityLoginStatus);
 router.post('/security/intrusion', devControlController.reportIntrusionAndLock);
-router.get('/security/intrusions', devControlController.getIntrusionEvents);
 router.post('/security/re-enable', devControlController.reEnableDeveloperLogin);
 
-// 2. Real-Time Telemetry & Monitoring (Step 33)
-router.get('/metrics', devControlController.getMetrics);
-router.get('/telemetry', devControlController.getMetrics);
-router.get('/infrastructure-monitor', async (req, res, next) => {
+// Strictly Developer-Only Intrusion Log Read
+router.get('/security/intrusions', ...requireDev, devControlController.getIntrusionEvents);
+
+// 2. Real-Time Telemetry & Monitoring (Developer Only)
+router.get('/metrics', ...requireDev, devControlController.getMetrics);
+router.get('/telemetry', ...requireDev, devControlController.getMetrics);
+router.get('/infrastructure-monitor', ...requireDev, async (req, res, next) => {
   try {
     const { cloudInfraManager } = require('../../core/infrastructure/cloudInfraManager');
     const prismaClient = require('../../core/database/prisma.client');
@@ -26,7 +32,7 @@ router.get('/infrastructure-monitor', async (req, res, next) => {
     next(err);
   }
 });
-router.get('/pool-status', async (req, res, next) => {
+router.get('/pool-status', ...requireDev, async (req, res, next) => {
   try {
     const prismaClient = require('../../core/database/prisma.client');
     const { connectionPoolManager } = require('../../core/database/connectionPoolManager');
@@ -40,104 +46,106 @@ router.get('/pool-status', async (req, res, next) => {
 });
 
 // 3. Developer Tenant Registration Console (Actual DB Counts)
-router.get('/tenant-console', devControlController.getTenantConsole);
-router.get('/tenants', devControlController.getTenantConsole);
+router.get('/tenant-console', ...requireDev, devControlController.getTenantConsole);
+router.get('/tenants', ...requireDev, devControlController.getTenantConsole);
 
 // 4. Enterprise Countdown Engine (Step 36)
-router.get('/countdowns', devControlController.getCountdowns);
+router.get('/countdowns', ...requireDev, devControlController.getCountdowns);
 
 // 5. Developer Tenant Command Center (Actions & Deletion)
-router.post('/tenants/:id/action', devControlController.tenantAction);
-router.delete('/tenants/:id', devControlController.deleteTenant);
-router.post('/tenants/batch-delete', devControlController.batchDeleteTenants);
+router.post('/tenants/:id/action', ...requireDev, devControlController.tenantAction);
+router.delete('/tenants/:id', ...requireDev, devControlController.deleteTenant);
+router.post('/tenants/batch-delete', ...requireDev, devControlController.batchDeleteTenants);
 
 // Deleted Institutions Archive Depot (Restoration & Purge)
-router.get('/tenants/deleted-archives', devControlController.getDeletedTenantArchives);
-router.post('/tenants/:id/restore', devControlController.restoreDeletedTenant);
-router.delete('/tenants/:id/purge', devControlController.purgeArchivedTenant);
+router.get('/tenants/deleted-archives', ...requireDev, devControlController.getDeletedTenantArchives);
+router.post('/tenants/:id/restore', ...requireDev, devControlController.restoreDeletedTenant);
+router.delete('/tenants/:id/purge', ...requireDev, devControlController.purgeArchivedTenant);
 
 // 6. System Lock & Remote Management (Step 35)
-router.post('/toggle-lock', devControlController.toggleLock);
-router.post('/system-lock', devControlController.toggleLock);
-router.post('/system/lock', devControlController.toggleLock);
+router.post('/toggle-lock', ...requireDev, devControlController.toggleLock);
+router.post('/system-lock', ...requireDev, devControlController.toggleLock);
+router.post('/system/lock', ...requireDev, devControlController.toggleLock);
 
 // 7. Backup & Disaster Recovery (Step 37)
-router.post('/backup-now', devControlController.triggerBackup);
-router.post('/backup/trigger', devControlController.triggerBackup);
-router.get('/backups', devControlController.getBackups);
-router.delete('/backups/:id', devControlController.deleteBackup);
-router.post('/backups/batch-delete', devControlController.batchDeleteBackups);
+router.post('/backup-now', ...requireDev, devControlController.triggerBackup);
+router.post('/backup/trigger', ...requireDev, devControlController.triggerBackup);
+router.get('/backups', ...requireDev, devControlController.getBackups);
+router.delete('/backups/:id', ...requireDev, devControlController.deleteBackup);
+router.post('/backups/batch-delete', ...requireDev, devControlController.batchDeleteBackups);
 
 // 8. Subscription Expiry & Auto-Lock Process
-router.post('/auto-lock-process', devControlController.autoLockProcess);
+router.post('/auto-lock-process', ...requireDev, devControlController.autoLockProcess);
 
 // 9. Remote Service Controls
-router.post('/service-action', devControlController.serviceAction);
+router.post('/service-action', ...requireDev, devControlController.serviceAction);
 
-// 10. Facial Liveness & Biometric Verification (Blueprint Box 11, Step 1b & 2b)
-router.post('/facial-verify', devControlController.facialVerify);
-router.post('/security/facial-verify', devControlController.facialVerify);
+// 10. Facial Liveness & Biometric Verification (Developer Only)
+router.post('/facial-verify', ...requireDev, devControlController.facialVerify);
+router.post('/security/facial-verify', ...requireDev, devControlController.facialVerify);
 
-// 11. System Infrastructure Alerts (Blueprint Box 9 & 10)
-router.get('/alerts', devControlController.getAlerts);
-router.post('/alerts', devControlController.createAlert);
-router.patch('/alerts/:id/resolve', devControlController.resolveAlert);
-router.delete('/alerts/:id', devControlController.deleteAlert);
-router.post('/alerts/batch-resolve', devControlController.batchResolveAlerts);
-router.post('/alerts/batch-delete', devControlController.batchDeleteAlerts);
+// 11. System Infrastructure Alerts (Developer Only)
+router.get('/alerts', ...requireDev, devControlController.getAlerts);
+router.post('/alerts', ...requireDev, devControlController.createAlert);
+router.patch('/alerts/:id/resolve', ...requireDev, devControlController.resolveAlert);
+router.delete('/alerts/:id', ...requireDev, devControlController.deleteAlert);
+router.post('/alerts/batch-resolve', ...requireDev, devControlController.batchResolveAlerts);
+router.post('/alerts/batch-delete', ...requireDev, devControlController.batchDeleteAlerts);
 
-// 12. System Audit Logs & Diagnostics (Blueprint Box 9)
-router.get('/audit-logs', devControlController.getLogs);
-router.get('/logs', devControlController.getLogs);
-router.patch('/audit-logs/:id/archive', devControlController.archiveAuditLog);
-router.post('/audit-logs/batch-archive', devControlController.batchArchiveAuditLogs);
-router.delete('/audit-logs/:id', devControlController.deleteAuditLog);
-router.post('/audit-logs/batch-delete', devControlController.batchDeleteAuditLogs);
+// 12. System Audit Logs & Diagnostics (Developer Only)
+router.get('/audit-logs', ...requireDev, devControlController.getLogs);
+router.get('/logs', ...requireDev, devControlController.getLogs);
+router.patch('/audit-logs/:id/archive', ...requireDev, devControlController.archiveAuditLog);
+router.post('/audit-logs/batch-archive', ...requireDev, devControlController.batchArchiveAuditLogs);
+router.delete('/audit-logs/:id', ...requireDev, devControlController.deleteAuditLog);
+router.post('/audit-logs/batch-delete', ...requireDev, devControlController.batchDeleteAuditLogs);
 
-// 13. Deployment History & Release Control
-router.get('/deployments', devControlController.getDeployments);
-router.post('/deployments', devControlController.createDeployment);
-router.post('/deployments/rollback', devControlController.rollbackDeployment);
-router.patch('/deployments/:id/archive', devControlController.archiveDeployment);
-router.post('/deployments/batch-archive', devControlController.batchArchiveDeployments);
-router.delete('/deployments/:id', devControlController.deleteDeployment);
-router.post('/deployments/batch-delete', devControlController.batchDeleteDeployments);
+// 13. Deployment History & Release Control (Developer Only)
+router.get('/deployments', ...requireDev, devControlController.getDeployments);
+router.post('/deployments', ...requireDev, devControlController.createDeployment);
+router.post('/deployments/rollback', ...requireDev, devControlController.rollbackDeployment);
+router.patch('/deployments/:id/archive', ...requireDev, devControlController.archiveDeployment);
+router.post('/deployments/batch-archive', ...requireDev, devControlController.batchArchiveDeployments);
+router.delete('/deployments/:id', ...requireDev, devControlController.deleteDeployment);
+router.post('/deployments/batch-delete', ...requireDev, devControlController.batchDeleteDeployments);
 
 // 14. Enterprise Licensing & Subscription Controls
-router.get('/licenses', devControlController.getLicenses);
-router.get('/country-subscriptions', devControlController.getCountrySubscriptions);
-router.post('/licenses', devControlController.issueLicense);
-router.delete('/licenses/:id', devControlController.deleteLicense);
-router.post('/licenses/batch-delete', devControlController.batchDeleteLicenses);
-router.delete('/subscriptions/:id', devControlController.deleteSubscriptionControl);
-router.get('/headmaster-messages', devControlController.getHeadmasterMessages);
-router.post('/headmaster-messages', devControlController.createHeadmasterMessage);
-router.post('/headmaster-messages/:threadId/replies', devControlController.replyToHeadmasterMessage);
-router.delete('/headmaster-messages/:threadId', devControlController.deleteHeadmasterMessageThread);
-router.delete('/headmaster-messages/:threadId/replies/:replyId', devControlController.deleteHeadmasterMessageReply);
-router.delete('/intrusion-violations/:id', devControlController.deleteIntrusionViolation);
+router.get('/licenses', ...requireDev, devControlController.getLicenses);
+router.get('/country-subscriptions', ...requireDev, devControlController.getCountrySubscriptions);
+router.post('/licenses', ...requireDev, devControlController.issueLicense);
+router.delete('/licenses/:id', ...requireDev, devControlController.deleteLicense);
+router.post('/licenses/batch-delete', ...requireDev, devControlController.batchDeleteLicenses);
+router.delete('/subscriptions/:id', ...requireDev, devControlController.deleteSubscriptionControl);
 
-// 15. Developer Tenant Onboarding & Mobile OTP Provisioning
-router.post('/tenants/onboard-otp', devControlController.initiateTenantOnboard);
-router.post('/dispatch-otp', devControlController.initiateTenantOnboard);
-router.post('/tenants/verify-onboard', devControlController.verifyTenantOnboard);
-router.get('/tenants/onboarded', devControlController.getOnboardedTenants);
+// Headmaster <-> Developer Direct Directive Messaging (Authenticated Headmaster or Developer)
+router.get('/headmaster-messages', ...requireDevOrHeadmaster, devControlController.getHeadmasterMessages);
+router.post('/headmaster-messages', ...requireDevOrHeadmaster, devControlController.createHeadmasterMessage);
+router.post('/headmaster-messages/:threadId/replies', ...requireDevOrHeadmaster, devControlController.replyToHeadmasterMessage);
+router.delete('/headmaster-messages/:threadId', ...requireDev, devControlController.deleteHeadmasterMessageThread);
+router.delete('/headmaster-messages/:threadId/replies/:replyId', ...requireDev, devControlController.deleteHeadmasterMessageReply);
+router.delete('/intrusion-violations/:id', ...requireDev, devControlController.deleteIntrusionViolation);
 
-// 16. Developer Tenant Location Locator (Search by Headmaster's Mobile Contact)
-router.get('/tenant-locator', devControlController.locateTenantByHeadmaster);
+// 15. Developer Tenant Onboarding & Mobile OTP Provisioning (Developer Only)
+router.post('/tenants/onboard-otp', ...requireDev, devControlController.initiateTenantOnboard);
+router.post('/dispatch-otp', ...requireDev, devControlController.initiateTenantOnboard);
+router.post('/tenants/verify-onboard', ...requireDev, devControlController.verifyTenantOnboard);
+router.get('/tenants/onboarded', ...requireDev, devControlController.getOnboardedTenants);
 
-// 17. Tenant Subscription Status Query (For Headmaster & Admin Portal)
-router.get('/tenant-subscription/:idOrCode', devControlController.getTenantSubscription);
-router.get('/tenants/:idOrCode/subscription', devControlController.getTenantSubscription);
+// 16. Developer Tenant Location Locator (Developer Only)
+router.get('/tenant-locator', ...requireDev, devControlController.locateTenantByHeadmaster);
 
-// 18. Developer Onboarding Review & Approvals
-router.get('/onboarding/pending', devControlController.getPendingOnboardings);
-router.get('/onboarding-registrations', devControlController.getPendingOnboardings);
-router.post('/onboarding/:id/approve', devControlController.approveOnboarding);
-router.post('/onboarding/:id/reject', devControlController.rejectOnboarding);
+// 17. Tenant Subscription Status Query (Authenticated Institutional Portal & Developer)
+router.get('/tenant-subscription/:idOrCode', protect, devControlController.getTenantSubscription);
+router.get('/tenants/:idOrCode/subscription', protect, devControlController.getTenantSubscription);
 
-// 19. Developer Direct SMS to Headmaster
-router.post('/sms/send-headmaster', devControlController.sendHeadmasterSms);
+// 18. Developer Onboarding Review & Approvals (Developer Only)
+router.get('/onboarding/pending', ...requireDev, devControlController.getPendingOnboardings);
+router.get('/onboarding-registrations', ...requireDev, devControlController.getPendingOnboardings);
+router.post('/onboarding/:id/approve', ...requireDev, devControlController.approveOnboarding);
+router.post('/onboarding/:id/reject', ...requireDev, devControlController.rejectOnboarding);
+
+// 19. Developer Direct SMS to Headmaster (Developer Only)
+router.post('/sms/send-headmaster', ...requireDev, devControlController.sendHeadmasterSms);
 
 // 20. AI Developer Diagnostics, System Memory & Blueprint Verification
 const fs = require('fs');
@@ -155,8 +163,8 @@ const {
 } = require('../../core/database/persistentStore');
 const prisma = require('../../core/database/prisma.client');
 
-// 21. GBS Production & Development Environment Management & Live Provenance
-router.get('/environment', async (req, res) => {
+// 21. GBS Production & Development Environment Management & Live Provenance (Developer Only)
+router.get('/environment', ...requireDev, async (req, res) => {
   const store = readPersistentStore();
   const pgStatus = typeof prisma.getPostgresLiveStatus === 'function'
     ? await prisma.getPostgresLiveStatus()
@@ -221,7 +229,7 @@ router.get('/environment', async (req, res) => {
   });
 });
 
-router.post('/environment/set', (req, res) => {
+router.post('/environment/set', ...requireDev, (req, res) => {
   const { environment } = req.body || {};
   const targetEnv = String(environment || 'PRODUCTION').toUpperCase() === 'DEVELOPMENT' ? 'DEVELOPMENT' : 'PRODUCTION';
   writePersistentStore((curr) => ({
@@ -235,48 +243,48 @@ router.post('/environment/set', (req, res) => {
   });
 });
 
-// 22. Safe Database Backup & Restore Protection Mechanism
-router.post('/backup/create', (req, res) => {
+// 22. Safe Database Backup & Restore Protection Mechanism (Developer Only)
+router.post('/backup/create', ...requireDev, (req, res, next) => {
   try {
     const label = req.body?.label || 'developer_snapshot';
     const backupResult = createDatabaseBackup(label);
-    res.status(201).json({
+    return res.status(201).json({
       status: 'success',
       message: `Database backup created successfully (${backupResult.fileName}).`,
       data: backupResult
     });
   } catch (err) {
-    res.status(500).json({ status: 'error', message: err.message });
+    return next(err);
   }
 });
 
-router.get('/backup/list', (req, res) => {
+router.get('/backup/list', ...requireDev, (req, res, next) => {
   try {
     const list = listDatabaseBackups();
-    res.status(200).json({
+    return res.status(200).json({
       status: 'success',
       results: list.length,
       data: { backups: list }
     });
   } catch (err) {
-    res.status(500).json({ status: 'error', message: err.message });
+    return next(err);
   }
 });
 
-router.post('/backup/restore', (req, res) => {
+router.post('/backup/restore', ...requireDev, (req, res, next) => {
   try {
     const { fileName } = req.body || {};
     if (!fileName) {
-      return res.status(400).json({ status: 'error', message: 'Please specify the backup fileName to restore.' });
+      return res.status(400).json({ status: 'fail', message: 'Please specify the backup fileName to restore.' });
     }
     const restoreResult = restoreDatabaseBackup(fileName);
-    res.status(200).json({
+    return res.status(200).json({
       status: 'success',
       message: `System successfully restored from backup '${fileName}'. A pre-restore safety snapshot was also preserved.`,
       data: restoreResult
     });
   } catch (err) {
-    res.status(500).json({ status: 'error', message: err.message });
+    return next(err);
   }
 });
 
@@ -289,7 +297,7 @@ const loadSystemMemory = () => {
   return { diagnosticCauseAndFixKnowledgeBase: [], dashboardsAndRoutesMemory: [] };
 };
 
-router.get('/system-memory', (req, res) => {
+router.get('/system-memory', protect, (req, res) => {
   const memory = loadSystemMemory();
   res.status(200).json({
     status: 'success',
@@ -298,7 +306,7 @@ router.get('/system-memory', (req, res) => {
   });
 });
 
-router.post('/system-memory', (req, res) => {
+router.post('/system-memory', ...requireDev, (req, res) => {
   const memory = loadSystemMemory();
   const { symptom, issueCode, rootCause, resolution } = req.body || {};
 
@@ -314,10 +322,10 @@ router.post('/system-memory', (req, res) => {
       status: 'success',
       matched: Boolean(matched),
       diagnosis: matched || {
-        issueCode: 'DIAG-LIVE-CHECK',
+        issueCode: 'DIAG-NO-EXACT-MATCH',
         symptom,
-        rootCause: 'Inspected against GBS System Memory — all 95 endpoints and Hybrid Cloud-Local Prisma Engine are active.',
-        resolution: 'Verify payload fields and check /api/v1/dev-control/system-memory for full route & schema rules.'
+        rootCause: 'No prior recorded incident matched this exact symptom in GBS System Memory.',
+        resolution: 'Inspect live server logs, PostgreSQL health, and /api/v1/rcce/error-monitor for exact error diagnostics.'
       }
     });
   }
@@ -352,7 +360,7 @@ router.post('/system-memory', (req, res) => {
   });
 });
 
-router.post('/ai/analyze-crash', (req, res) => {
+router.post('/ai/analyze-crash', ...requireDev, (req, res) => {
   const memory = loadSystemMemory();
   const query = String(req.body?.errorLog || req.body?.symptom || req.body?.query || '').toLowerCase();
   const matched = query
@@ -364,40 +372,55 @@ router.post('/ai/analyze-crash', (req, res) => {
     )
     : null;
 
+  const kbCount = (memory.diagnosticCauseAndFixKnowledgeBase || []).length;
+  const dashCount = (memory.dashboardsAndRoutesMemory || []).length;
+
   res.status(200).json({
     status: 'success',
     data: {
-      issueCode: matched?.issueCode || 'DIAG-SYSTEM-HEALTHY',
+      matched: Boolean(matched),
+      issueCode: matched?.issueCode || 'DIAG-NO-KNOWN-FAILURE',
       rootCause:
         matched?.rootCause ||
-        'Automated diagnostic scan completed against GBS System Memory — all 95 endpoints and hybrid persistent storage are healthy.',
+        `Analyzed against ${kbCount} recorded incident patterns across ${dashCount} registered portals — no matching known crash signature found.`,
       recommendation:
         matched?.resolution ||
-        'System is operating with full failover resilience and real-time sync across all 9 dashboards.',
-      confidence: 0.99,
+        'Inspect /api/v1/rcce/error-monitor and live backend request logs for exact stack traces and HTTP status diagnostics.',
+      confidence: matched ? 0.96 : 0.65,
       timestamp: new Date().toISOString()
     }
   });
 });
 
-router.get('/ai/verify-blueprint', (req, res) => {
-  const memory = loadSystemMemory();
-  res.status(200).json({
-    status: 'success',
-    data: {
-      verified: true,
-      complianceScore: 100,
-      modulesChecked: 19,
-      endpointsVerified: memory.verificationSummary?.totalEndpointsVerified || '95/95',
-      dashboardsVerified: memory.verificationSummary?.browserRoutesWalkedThrough || '9/9',
-      statusLabel: 'ALL_BLUEPRINT_DOMAINS_VERIFIED',
-      timestamp: new Date().toISOString()
-    }
-  });
+router.get('/ai/verify-blueprint', ...requireDev, async (req, res, next) => {
+  try {
+    const memory = loadSystemMemory();
+    const pgStatus = typeof prisma.getPostgresLiveStatus === 'function'
+      ? await prisma.getPostgresLiveStatus(false)
+      : { active: await checkPostgresReachable(1500) };
+    const portalsCount = (memory.dashboardsAndRoutesMemory || []).length;
+    const guardsCount = (memory.diagnosticCauseAndFixKnowledgeBase || []).length;
+    return res.status(200).json({
+      status: 'success',
+      data: {
+        verified: Boolean(pgStatus.active),
+        databaseActive: Boolean(pgStatus.active),
+        version: memory.version || 'PRODUCTION',
+        latestVerifiedCommit: memory.verificationSummary?.latestVerifiedCommit || null,
+        latestLiveBundleHash: memory.verificationSummary?.latestLiveBundleHash || null,
+        portalsRegistered: portalsCount,
+        guardedDiagnosticsCount: guardsCount,
+        statusLabel: pgStatus.active ? 'PRODUCTION_DATABASE_VERIFIED' : 'DATABASE_STANDBY_ATTENTION_REQUIRED',
+        timestamp: new Date().toISOString()
+      }
+    });
+  } catch (err) {
+    return next(err);
+  }
 });
 
 // 22. Cloud Host Data Synchronization & Offline-to-Cloud Backup Engine
-router.post('/sync-to-cloud', async (req, res) => {
+router.post('/sync-to-cloud', ...requireDevOrHeadmaster, async (req, res, next) => {
   try {
     const pgStatus = typeof prisma.getPostgresLiveStatus === 'function'
       ? await prisma.getPostgresLiveStatus(true)
@@ -479,15 +502,17 @@ router.post('/sync-to-cloud', async (req, res) => {
       }
     });
   } catch (err) {
-    res.status(200).json({
-      status: 'success',
-      message: 'Local persistence intact. Changes preserved in persistent store.',
-      data: { cloudConnected: false, databaseActive: false, syncStatus: 'OFFLINE_STANDBY', error: err.message }
+    return res.status(503).json({
+      success: false,
+      status: 'error',
+      code: 'CLOUD_SYNC_FAILED',
+      message: `Cloud/PostgreSQL synchronization failed: ${err.message}`,
+      data: { cloudConnected: false, databaseActive: false, syncStatus: 'SYNC_FAILED' }
     });
   }
 });
 
-router.get('/cloud-sync-status', async (req, res) => {
+router.get('/cloud-sync-status', ...requireDev, async (req, res) => {
   const pgStatus = typeof prisma.getPostgresLiveStatus === 'function'
     ? await prisma.getPostgresLiveStatus()
     : { active: await checkPostgresReachable(2000), ...getPostgresTargetInfo() };

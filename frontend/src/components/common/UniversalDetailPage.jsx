@@ -200,14 +200,11 @@ export default function UniversalDetailPage() {
     let isMounted = true;
     const fetchRecord = async () => {
       try {
-        // Query environment
+        // Query environment using authenticated apiClient
         try {
-          const envRes = await fetch(`${getApiBaseUrl()}/dev-control/environment`);
-          if (envRes.ok) {
-            const envJson = await envRes.json();
-            if (envJson.data?.activeEnvironment && isMounted) {
-              setEnvironment(envJson.data.activeEnvironment);
-            }
+          const envRes = await apiClient.get("/dev-control/environment");
+          if (envRes?.data?.data?.activeEnvironment && isMounted) {
+            setEnvironment(envRes.data.data.activeEnvironment);
           }
         } catch (_) { }
 

@@ -30,7 +30,9 @@ const BUILTIN_DEMO_RECOVERY_CREDS = {
   "staff@gbs.com": "Staff123!",
   "hr@gbs.com": "Hr123!",
   "alumni@gbs.com": "Alumni123!",
-  "secretary@gbs.com": "Secretary123!"
+  "secretary@gbs.com": "Secretary123!",
+  "doctor@gbs.com": "Doctor123!",
+  "nurse@gbs.com": "Nurse123!"
 };
 
 function readCleanToken(key) {
@@ -213,8 +215,10 @@ axiosInstance.interceptors.request.use(
       config.headers.Authorization = `Bearer ${token}`;
     }
 
-    config.headers["X-GBS-Mode"] = isDemoSandboxMode() ? "DEMO_SANDBOX" : "LIVE_PRODUCTION";
-    config.headers["X-System-Mode"] = config.headers["X-GBS-Mode"];
+    // Developer Control Center ALWAYS operates in Original Production Mode — never Demo Sandbox
+    const resolvedMode = isDevRoute ? "LIVE_PRODUCTION" : (isDemoSandboxMode() ? "DEMO_SANDBOX" : "LIVE_PRODUCTION");
+    config.headers["X-GBS-Mode"] = resolvedMode;
+    config.headers["X-System-Mode"] = resolvedMode;
 
     const instTypeHeader = readCleanToken("gbs_institution_type");
     if (instTypeHeader && !config.headers["X-Demo-Institution-Type"]) {
@@ -445,10 +449,22 @@ axiosInstance.interceptors.response.use(
       typeof window.showGBSOpenNotice === "function"
     ) {
       if (!url.includes("/auth/login") && !url.includes("/health")) {
-        let title = "COMMAND FEEDBACK NOTICE";
+        let title = status ? `HTTP ${status} REQUEST ERROR` : "COMMAND FEEDBACK NOTICE";
         if (rcceCode === "DEMO_TRIAL_LIMIT_REACHED") title = "DEMO TRIAL LIMIT REACHED (10/10)";
-        else if (status === 403) title = "SECURITY / ACCESS RESTRICTION";
-        else if (status === 503 || rcceCode === "SYSTEM_MAINTENANCE_ACTIVE") title = "SYSTEM MAINTENANCE ACTIVE";
+        else if (status === 400) title = "INVALID REQUEST (400)";
+        else if (status === 403) title = "ACCESS DENIED (403)";
+        else if (status === 404) title = "RESOURCE NOT FOUND (404)";
+        else if (status === 405) title = "METHOD NOT ALLOWED (405)";
+        else if (status === 408) title = "REQUEST TIMEOUT (408)";
+        else if (status === 409) title = "RECORD CONFLICT (409)";
+        else if (status === 422) title = "VALIDATION FAILED (422)";
+        else if (status === 423) title = "SECURITY LOCKDOWN ACTIVE (423)";
+        else if (status === 429) title = "RATE LIMIT EXCEEDED (429)";
+        else if (status === 501) title = "NOT IMPLEMENTED (501)";
+        else if (status === 502) title = "UPSTREAM BAD GATEWAY (502)";
+        else if (status === 503 || rcceCode === "SYSTEM_MAINTENANCE_ACTIVE") title = "SERVICE UNAVAILABLE (503)";
+        else if (status === 504) title = "GATEWAY TIMEOUT (504)";
+        else if (status >= 500) title = `SERVER ERROR (${status})`;
         else if (!error.response) title = "NETWORK OFFLINE WARNING";
         else if (rcceCode) {
           const prefix = rcceCode.split("_")[0];
@@ -471,9 +487,10 @@ axiosInstance.interceptors.response.use(
           if (titles[prefix]) title = titles[prefix];
         }
 
+        const isHardError = !error.response || status === 401 || status === 403 || status === 404 || status === 405 || status === 409 || status === 423 || status >= 500;
         window.showGBSOpenNotice(
           String(serverErrMsg),
-          status === 403 || status === 503 ? "error" : "warning",
+          isHardError ? "error" : "warning",
           title
         );
       }

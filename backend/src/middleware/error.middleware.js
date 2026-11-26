@@ -11,34 +11,49 @@ class AppError extends Error {
 }
 
 const errorHandler = (err, req, res, next) => {
-  err.statusCode = err.statusCode || 500;
-  err.status = err.status || 'error';
+  const rawMessage = String(err.message || 'Something went wrong on the server');
+  const lower = rawMessage.toLowerCase();
+  const isPrismaErr = lower.includes('prisma') || (err.name && err.name.includes('Prisma'));
 
-  let cleanMessage = err.message || 'Something went wrong on the server';
-  if (cleanMessage.toLowerCase().includes('prisma') || (err.name && err.name.includes('Prisma'))) {
-    cleanMessage = 'Database service verification complete. Action synchronized with system ledger.';
-    err.statusCode = 200; // Allow client to treat as graceful operational response
+  let resolvedStatus = err.statusCode && err.statusCode >= 400 && err.statusCode < 600 ? err.statusCode : 500;
+  let cleanMessage = rawMessage;
+
+  if (isPrismaErr) {
+    if (err.code === 'P2025') {
+      resolvedStatus = 404;
+      cleanMessage = 'Requested database record was not found.';
+    } else if (err.code === 'P2002') {
+      resolvedStatus = 409;
+      cleanMessage = 'A record with these unique details already exists.';
+    } else if (err.code === 'P2003' || err.code === 'P2000') {
+      resolvedStatus = 400;
+      cleanMessage = 'Invalid reference or field value supplied for database operation.';
+    } else {
+      resolvedStatus = 503;
+      cleanMessage = 'Database service is currently unavailable. Please retry shortly.';
+    }
   }
 
+  const statusLabel = resolvedStatus >= 500 ? 'error' : 'fail';
+
   if (envConfig.env === 'development') {
-    res.status(err.statusCode).json({
-      status: err.status,
+    res.status(resolvedStatus).json({
+      success: false,
+      status: statusLabel,
       message: cleanMessage,
-      error: err.isOperational ? err : { message: cleanMessage }
+      error: err.isOperational ? err : { message: cleanMessage, code: err.code }
     });
   } else {
-    if (err.isOperational) {
-      res.status(err.statusCode).json({
-        status: err.status,
-        message: cleanMessage
-      });
-    } else {
+    if (resolvedStatus >= 500) {
       console.error('ERROR 💥:', err);
-      res.status(err.statusCode || 500).json({
-        status: 'error',
-        message: cleanMessage
-      });
     }
+    res.status(resolvedStatus).json({
+      success: false,
+      status: statusLabel,
+      message: resolvedStatus >= 500 && !err.isOperational && !isPrismaErr
+        ? 'An unexpected internal server error occurred.'
+        : cleanMessage
+    });
   }
 };
 

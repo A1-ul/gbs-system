@@ -20,27 +20,23 @@ const LOCAL_MEMORY_TOPICS = [
     phrases: ["developer login", "developer dashboard", "who created gbs", "who built gbs", "dev portal", "mission control"],
     keywords: ["developer", "motherland"],
     answer:
-      "I do not disclose developer details, internal engineering controls, or developer portal information. I can explain the exact portals and daily activities for institutional users: Headmaster/Admin, Teacher/Lecturer, School Secretary, Student, Parent/Guardian, Accountant/Bursar, Non-Teaching Staff, HR Officer, and Alumni.",
+      "I do not disclose developer details, internal engineering controls, or developer portal information. I can explain the exact portals and daily activities for institutional users: Headmaster/Admin, Separate School Clinic (Doctors & Nurses), Teacher/Lecturer, School Secretary, Student, Parent/Guardian, Accountant/Bursar, Non-Teaching Staff, HR Officer, and Alumni.",
     tab: null
   },
   {
     id: "role_headmaster",
-    phrases: ["headmaster portal", "admin portal", "principal portal", "headmaster dashboard", "admin dashboard", "headmaster role"],
     phrases: ["headmaster portal", "admin portal", "principal portal", "headmaster dashboard", "admin dashboard", "headmaster role", "headmaster performance"],
     keywords: ["headmaster", "principal", "chancellor", "rector", "provost"],
     answer:
-      "The Headmaster / Principal Portal (/portal/admin/dashboard) includes Pending Staff & Admissions Approvals, Staff Duty Attendance Monitor (+2h auto clock-out), School Stationery Price Authority Desk (exclusive control to set official Textbook, Cardigan, Socks, and School Bag prices), Live Faculty & Parent Video/Voice Conferences, Academics/Timetables/Defaulters Compliance, All-Campus School Clinic & Sickbay Registry, Bus Transport, and 4-Month Term Trial / Per-Student Subscription Management.",
-    "The Headmaster / Principal Portal serves as the executive command center of the school. End-to-end roles and performance tracking include: approving newly registered staff (Teachers, Secretary, Clinic Doctors/Nurses, Accountants, HR, Staff) and walk-in or online student admissions; holding exclusive authority to add school stationery items and set or edit official stationery prices across classes; vetting Teacher 16-element Ghana NaCCA lesson plans and end-of-term examinations; monitoring full-term Staff Duty Clock-In and auto clock-out compliance; overseeing academic schedules, promotions, defaulters compliance, bus routes, inbuilt CCTV, institutional System Language, live 30fps video/voice conferences, and term subscription renewals; plus viewing their own read-only medical health status.",
+      "The Headmaster / Principal Portal serves as the executive command center of the school. End-to-end roles and performance tracking include: approving newly registered staff (Teachers, Secretary, Clinic Doctors/Nurses, Accountants, HR, Staff) and walk-in or online student admissions; holding exclusive authority to add school stationery items and set or edit official stationery prices across classes; vetting Teacher 16-element Ghana NaCCA lesson plans and end-of-term examinations; monitoring full-term Staff Duty Clock-In and auto clock-out compliance; overseeing academic schedules, promotions, defaulters compliance, bus routes, inbuilt CCTV, institutional System Language, live 30fps video/voice conferences, and term subscription renewals; plus viewing their own read-only medical health status.",
     route: "/portal/admin/dashboard"
   },
   {
     id: "role_teacher",
-    phrases: ["teacher portal", "lecturer portal", "teacher dashboard", "lecturer dashboard", "teacher role", "lecturer role", "teacher activities", "faculty portal", "know about the teacher", "about the teacher"],
     phrases: ["teacher portal", "lecturer portal", "teacher dashboard", "lecturer dashboard", "teacher role", "lecturer role", "teacher activities", "teacher performance", "faculty portal", "know about the teacher", "about the teacher"],
     keywords: ["teacher", "lecturer", "faculty", "instructor", "educator"],
     answer:
-      "The Teacher / Lecturer Portal (/portal/teacher/dashboard) connects Faculty directly to Staff Duty Clock-In, Daily Student Attendance Roll Call, Class Topic Video Platform (upload/record lessons), Assignments & Homework Grading, AI-Proctored Exam Creation & Live Camera Wall (issue warnings, save evidence snapshots, deduct lost marks), High-Speed Live Class & Parent Video/Voice Calls, Tier Academics & University/TVET Placements, Defaulters Compliance Monitor, School Stationery Catalog & Requests, Direct SMS Inbox, and Personal Clinic Health Dossier.",
-    "The Teacher / Lecturer Portal drives classroom delivery and student academic performance end to end: Staff Duty Clock-In; tick-by-tick daily student attendance roll call and weekly archives; 16-element Ghana NaCCA lesson planning with Headmaster vetting and post-lesson reflections; end-of-term exam vetting, live 1.0x real-time exam invigilation camera wall (warnings, saved evidence, lost-mark deductions), and unlimited-question AI exam script scanning; Class Topic Video recording/uploading; assignments, defaulters tracking, live online classes and parent calls; read-only viewing of Headmaster stationery prices; and read-only viewing of their own personal medical health status.",
+      "The Teacher / Lecturer Portal drives classroom delivery and student academic performance end to end: Staff Duty Clock-In; tick-by-tick daily student attendance roll call and weekly archives; 16-element Ghana NaCCA lesson planning with Headmaster vetting and post-lesson reflections; end-of-term exam vetting, live 1.0x real-time exam invigilation camera wall (warnings, saved evidence, lost-mark deductions), and unlimited-question AI exam script scanning; Class Topic Video recording/uploading; assignments, defaulters tracking, live online classes and parent calls; read-only viewing of Headmaster stationery prices; and read-only viewing of their own personal medical health status.",
     route: "/portal/teacher/dashboard"
   },
   {
@@ -53,82 +49,66 @@ const LOCAL_MEMORY_TOPICS = [
   },
   {
     id: "role_secretary",
-    phrases: ["secretary portal", "secretary dashboard", "school secretary", "front desk portal", "secretary role", "secretary activities", "about the secretary"],
     phrases: ["secretary portal", "secretary dashboard", "school secretary", "front desk portal", "secretary role", "secretary activities", "secretary performance", "about the secretary"],
     keywords: ["secretary", "visitor log", "circular", "official letter", "appointment", "appointments", "minutes", "reception"],
     answer:
-      "The School Secretary Portal (/portal/secretary/dashboard) manages Front-Desk Campus Visitor Check-In/Out Logs, Official Letters, Circulars, Certificates & Meeting Minutes, Headmaster Appointments Scheduling, Staff Duty Clock-In, School Stationery Store Sales & Expenses (auto-synced directly to Accountant Expenses Ledger), Direct SMS & Voice Notes, Live Video/Voice Calls, and Personal Clinic Health Dossier.",
-    "The School Secretary Portal manages the school's front-office workflow end to end: Staff Duty Clock-In, Campus Visitor Check-In and Check-Out logs, Official School Letters, Parent/Staff Circulars and Meeting Minutes, Headmaster Appointments scheduling and completion tracking, Direct Mobile SMS, Voice Notes, and Live 30fps Video/Voice Calls, plus read-only access to the Headmaster Stationery Price List and their own read-only personal medical health status.",
+      "The School Secretary Portal manages the school's front-office workflow end to end: Staff Duty Clock-In, Campus Visitor Check-In and Check-Out logs, Official School Letters, Parent/Staff Circulars and Meeting Minutes, Headmaster Appointments scheduling and completion tracking, Direct Mobile SMS, Voice Notes, and Live 30fps Video/Voice Calls, plus read-only access to the Headmaster Stationery Price List and their own read-only personal medical health status.",
     route: "/portal/secretary/dashboard"
   },
   {
     id: "role_student",
-    phrases: ["student portal", "student dashboard", "student role", "student activities", "about the student", "undergraduate portal"],
     phrases: ["student portal", "student dashboard", "student role", "student activities", "student performance", "about the student", "undergraduate portal"],
     keywords: ["student", "pupil", "apprentice", "undergraduate", "learner"],
     answer:
-      "The Student Portal (/portal/student/dashboard) gives learners their Live Timetable, Class Topic Video Player, Homework Submissions, Report Cards, AI-Proctored Exam Runner & Live Cooperative Study Rooms, separated Internships & Academic Attachments (for TVET/University), School Stationery Catalog & Requests, Fee Balance & MoMo/Card Checkout, Bus Transport, and Self-Only Clinic Health Record.",
-    "The Student Portal supports learners end to end: live timetables, Teacher Class Topic Videos, homework submissions, digital syllabus library, AI-proctored online exams, live cooperative study video conferencing, verified report cards and transcripts, tier-native Internships and Academic Attachments, student self-payment of school fees into official School Bank or MoMo accounts with automatic Student Payee referencing, official stationery price browsing, and read-only personal medical health status.",
+      "The Student Portal supports learners end to end: live timetables, Teacher Class Topic Videos, homework submissions, digital syllabus library, AI-proctored online exams, live cooperative study video conferencing, verified report cards and transcripts, tier-native Internships and Academic Attachments, student self-payment of school fees into official School Bank or MoMo accounts with automatic Student Payee referencing, official stationery price browsing, and read-only personal medical health status.",
     route: "/portal/student/dashboard"
   },
   {
     id: "role_parent",
-    phrases: ["parent portal", "guardian portal", "parent dashboard", "parent role", "guardian role", "parent activities", "about the parent"],
     phrases: ["parent portal", "guardian portal", "parent dashboard", "parent role", "guardian role", "parent activities", "parent performance", "about the parent"],
     keywords: ["parent", "guardian", "mother", "father", "ward"],
     answer:
-      "The Parent / Guardian Portal (/portal/parent/dashboard) provides Linked Ward Switching, Attendance & Report Card Monitoring, Tuition Payment via Any Phone MoMo/Card, Headmaster-Priced School Stationery Catalog & Orders, Live Video/Voice Calls with Headmaster & Teachers, Direct SMS & Voice Notes, Bus Transit Status, and Linked Ward Clinic Health Info.",
-    "The Parent / Guardian Portal connects families end to end: linked ward switching, real-time daily attendance and verified report cards, school fee settlement via MTN MoMo, Telecel Cash, AT Money, Visa, Mastercard, or Bank Transfer with live tracking of both parent-paid and student self-paid receipts, Headmaster-priced School Stationery browsing, live 30fps Video/Voice calls and Direct SMS with the Headmaster and Teachers, bus route monitoring, and read-only linked ward medical health status.",
+      "The Parent / Guardian Portal connects families end to end: linked ward switching, real-time daily attendance and verified report cards, school fee settlement via MTN MoMo, Telecel Cash, AT Money, Visa, Mastercard, or Bank Transfer with live tracking of both parent-paid and student self-paid receipts, Headmaster-priced School Stationery browsing, live 30fps Video/Voice calls and Direct SMS with the Headmaster and Teachers, bus route monitoring, and read-only linked ward medical health status.",
     route: "/portal/parent/dashboard"
   },
   {
     id: "role_accountant",
-    phrases: ["accountant portal", "bursar portal", "finance portal", "accountant dashboard", "bursar dashboard", "accountant role", "about the accountant"],
     phrases: ["accountant portal", "bursar portal", "finance portal", "accountant dashboard", "bursar dashboard", "accountant role", "accountant performance", "about the accountant"],
     keywords: ["accountant", "bursar", "treasury", "auditing", "bookkeeping"],
     answer:
-      "The Accountant / Bursar Portal (/portal/accountant/dashboard) operates Financial Telemetry, Class Fee Structures & Student Invoices, Multi-Gateway MoMo/Card Payment Reconciliation, School Stationery Revenue & Auto-Synced Expenses Audit (STATIONERY_SUPPLIES), Operating Expenses Ledger, HR Payroll & Loans, GAAP/IFRS Statements, and Personal Clinic Access.",
-    "The Accountant / Bursar Portal drives financial performance end to end: configuring class fee schedules and Official School Bank & MoMo receiving accounts, generating student invoices and debtor arrears holds, auditing live database payments separating Student Self-Payments vs Parent Payments with full Student Payee references, reviewing School Stationery revenue & expense audits (with read-only catalog prices), managing operating expenses, Alumni endowment gifts, HR payroll, and GAAP/IFRS financial statements, plus read-only personal medical health status.",
+      "The Accountant / Bursar Portal drives financial performance end to end: configuring class fee schedules and Official School Bank & MoMo receiving accounts, generating student invoices and debtor arrears holds, auditing live database payments separating Student Self-Payments vs Parent Payments with full Student Payee references, reviewing School Stationery revenue & expense audits (with read-only catalog prices), managing operating expenses, Alumni endowment gifts, HR payroll, and GAAP/IFRS financial statements, plus read-only personal medical health status.",
     route: "/portal/accountant/dashboard"
   },
   {
     id: "role_staff",
-    phrases: ["staff portal", "staff dashboard", "non-teaching staff", "staff role", "staff activities", "about the staff"],
     phrases: ["staff portal", "staff dashboard", "non-teaching staff", "staff role", "staff activities", "staff performance", "about the staff"],
     keywords: ["non-teaching", "storekeeper", "logistics"],
     answer:
-      "The Non-Teaching Staff Portal (/portal/staff/dashboard) handles Staff Duty Clock-In (+2h auto-clock-out), Campus Inventory & Asset Tracking, School Stationery Sales & Expense Sync to Accountancy, Transport Dispatch, Leave Requests, Live Calls, and Personal Clinic Health Dossier.",
-    "The Non-Teaching Staff Portal coordinates daily campus operations end to end: Staff Duty Clock-In (+2h auto clock-out), assigned duties, campus inventory depot and asset tracking, facility maintenance SLA tickets, safety incident escalation, live Voice/Video calls, read-only viewing of Headmaster Stationery prices, and read-only personal medical health status.",
+      "The Non-Teaching Staff Portal coordinates daily campus operations end to end: Staff Duty Clock-In (+2h auto clock-out), assigned duties, campus inventory depot and asset tracking, facility maintenance SLA tickets, safety incident escalation, live Voice/Video calls, read-only viewing of Headmaster Stationery prices, and read-only personal medical health status.",
     route: "/portal/staff/dashboard"
   },
   {
     id: "role_hr",
-    phrases: ["hr portal", "hr dashboard", "human resource portal", "hr role", "hr activities"],
     phrases: ["hr portal", "hr dashboard", "human resource portal", "hr role", "hr activities", "hr performance"],
     keywords: ["hr", "human resource", "personnel", "contracts"],
     answer:
-      "The Human Resources (HR) Portal (/portal/hr/dashboard) oversees Personnel Directories, Contracts, Leave Approvals, Staff Attendance Audits with the Headmaster, Payroll Grading, Staff Loans, and Personal Clinic Health Access.",
-    "The Human Resources (HR) Portal manages workforce performance end to end: Staff & Faculty Directory, contracts, Headmaster HR audit directives, leave approvals, full-term Staff Duty Attendance audits, payroll salary tiers, and read-only personal medical health status.",
+      "The Human Resources (HR) Portal manages workforce performance end to end: Staff & Faculty Directory, contracts, Headmaster HR audit directives, leave approvals, full-term Staff Duty Attendance audits, payroll salary tiers, and read-only personal medical health status.",
     route: "/portal/hr/dashboard"
   },
   {
     id: "role_alumni",
-    phrases: ["alumni portal", "alumni dashboard", "alumni role", "alumni activities"],
     phrases: ["alumni portal", "alumni dashboard", "alumni role", "alumni activities", "alumni performance"],
     keywords: ["alumni", "former student", "graduated"],
     answer:
-      "The Alumni Portal (/portal/alumni/dashboard) gives graduated cohorts Verified Academic Transcripts, Honours Tracking, Reunions, Mentorship, and Institutional Endowment Pledges.",
-    "The Alumni Portal connects graduated cohorts end to end: Day-1-to-graduation cumulative records, official sealed digital transcript requests, graduation clearance verification, completion batches, Zoom reunions and mentorship, and endowment pledges synced live to the Accountant ledger.",
+      "The Alumni Portal connects graduated cohorts end to end: Day-1-to-graduation cumulative records, official sealed digital transcript requests, graduation clearance verification, completion batches, Zoom reunions and mentorship, and endowment pledges synced live to the Accountant ledger.",
     route: "/portal/alumni/dashboard"
   },
   {
     id: "school_stationery",
-    phrases: ["school stationery", "stationery store", "stationary store", "school items", "who sets the price", "stationery expense"],
     phrases: ["school stationery", "stationery store", "stationary store", "school items", "who sets the price", "stationery price"],
     keywords: ["stationery", "stationary", "textbook", "textbooks", "cardigan", "cardigans", "socks", "school bag", "school bags", "exercise book", "uniforms", "bookshop"],
     answer:
-      "School Stationery Store displays Textbooks, Cardigans, School Socks, School Bags, Exercise Books, and Uniforms across every dashboard. Strictly ONLY the Headmaster can set or edit prices. Secretaries, Staff, and Accountants record sales and store expenses, and all stationery expenses sync automatically into the Accountant Expenses Ledger (STATIONERY_SUPPLIES) for auditing.",
-    "School Stationery Pricing Policy: Strictly ONLY the Headmaster has authority to add stationery items and set or edit official prices across every class level. Teachers, Secretaries, Clinic Doctors and Nurses, HR, and all other staff only view the listed stationery prices in read-only mode without adding or editing prices.",
+      "School Stationery Pricing Policy: Strictly ONLY the Headmaster has authority to add stationery items and set or edit official prices across every class level. Teachers, Secretaries, Clinic Doctors and Nurses, HR, and all other staff only view the listed stationery prices in read-only mode without adding or editing prices.",
     tab: "stationery"
   },
   {
@@ -141,12 +121,10 @@ const LOCAL_MEMORY_TOPICS = [
   },
   {
     id: "clinic",
-    phrases: ["school clinic", "medical record", "sickbay treatment", "health dossier"],
     phrases: ["school clinic", "medical record", "sickbay treatment", "health dossier", "health status"],
     keywords: ["clinic", "sickbay", "medical", "health", "doctor", "nurse", "sick", "hospital", "medicine", "blood", "genotype", "allergy"],
     answer:
-      "In the GBS School Clinic, privacy is strictly enforced: regular users (Student, Teacher, Secretary, Staff, HR, Accountant) only view their own personal health profile and visit history, and Parents only view their linked ward's health profile — without clinic admin queues or other people's data. Only the Headmaster sees all Staff and Student clinic profiles, Sickbay admissions, treatments, and pharmacy stock on the Headmaster Dashboard.",
-    "The School Clinic runs as a separate dashboard operated exclusively by School Doctors and Nurses, who manage medical profiles, consultations, sickbay admissions, and pharmacy stock. All other staff (Headmaster, Teachers, Secretary, Accountant, HR, Non-Teaching Staff) and Students only view their own medical health status in read-only mode without editing and cannot see clinic operations; Parents view only their linked ward's health status.",
+      "The School Clinic runs as a separate dashboard operated exclusively by School Doctors and Nurses, who manage medical profiles, consultations, sickbay admissions, and pharmacy stock. All other staff (Headmaster, Teachers, Secretary, Accountant, HR, Non-Teaching Staff) and Students only view their own medical health status in read-only mode without editing and cannot see clinic operations; Parents view only their linked ward's health status.",
     tab: "clinic"
   },
   {
@@ -162,8 +140,7 @@ const LOCAL_MEMORY_TOPICS = [
     phrases: ["each user", "every portal", "all portals", "all roles", "all users", "explain roles"],
     keywords: ["roles", "responsibilities", "dashboards", "duties"],
     answer:
-      "GBS links 9 institutional portals: Headmaster/Admin (approvals, stationery pricing, all clinic dossiers, term renewals), Teacher/Lecturer (attendance, topic videos, AI-proctored exams, live class calls, placements), School Secretary (visitor logs, official letters/circulars, appointments, stationery sales & expenses), Student (timetables, proctored exams, homework, stationery orders), Parent (ward progress, MoMo fee checkout, calls), Accountant (invoices, payroll, synced stationery expense audit), Non-Teaching Staff (inventory, stationery, transport), HR (contracts, leave, attendance audits), and Alumni (transcripts & pledges).",
-    "GBS links 10 unified institutional portals: Headmaster/Principal (approvals, exclusive stationery pricing authority, lesson & exam vetting, staff attendance, CCTV, language, and own read-only health status), separate School Clinic (operated strictly by School Doctors and Nurses for medical dossiers, consultations, sickbay, and pharmacy), Teacher/Lecturer (attendance, NaCCA lesson plans, topic videos, 1.0x AI-proctored exams, unlimited script scanner, live class calls, and read-only stationery prices & own health status), School Secretary (front-office visitor logs, official letters/circulars, appointments, and read-only stationery prices & own health status), Student (timetables, proctored exams, self-payments, library, stationery orders, and own health status), Parent (ward progress, MoMo fee checkout, calls, and ward read-only health status), Accountant (invoices, payroll, financial statements, and read-only stationery audit), Non-Teaching Staff (campus logistics, duties, maintenance, and read-only stationery prices & own health status), HR (contracts, leave, payroll structure, attendance audits, and read-only stationery prices & own health status), and Alumni (cumulative transcripts, clearance, & pledges).",
+      "GBS links 10 unified institutional portals: Headmaster/Principal (approvals, exclusive stationery pricing authority, lesson & exam vetting, staff attendance, CCTV, language, and own read-only health status), separate School Clinic (operated strictly by School Doctors and Nurses for medical dossiers, consultations, sickbay, and pharmacy), Teacher/Lecturer (attendance, NaCCA lesson plans, topic videos, 1.0x AI-proctored exams, unlimited script scanner, live class calls, and read-only stationery prices & own health status), School Secretary (front-office visitor logs, official letters/circulars, appointments, and read-only stationery prices & own health status), Student (timetables, proctored exams, self-payments, library, stationery orders, and own health status), Parent (ward progress, MoMo fee checkout, calls, and ward read-only health status), Accountant (invoices, payroll, financial statements, and read-only stationery audit), Non-Teaching Staff (campus logistics, duties, maintenance, and read-only stationery prices & own health status), HR (contracts, leave, payroll structure, attendance audits, and read-only stationery prices & own health status), and Alumni (cumulative transcripts, clearance, & pledges).",
     tab: null
   },
   {
@@ -350,7 +327,6 @@ function buildLocalQuestionFormation(rawQuery, moduleLabel = "GBS Unified System
 const INTRO_GREETING =
   "Hello! Welcome to GBS SYSTEM. What action, what command, what activities, or what information do you want to know and learn on GBS SYSTEM? We are ready to answer you!";
 
-const AMERICAN_MALE_VOICE_KEYWORDS = [
 const CLEAR_ACTIVE_VOICE_PRIORITY = [
   "microsoft andrew online (natural)",
   "microsoft guy online (natural)",
@@ -367,7 +343,6 @@ const CLEAR_ACTIVE_VOICE_PRIORITY = [
   "microsoft mark",
   "microsoft guy",
   "microsoft david",
-  "microsoft mark",
   "microsoft andrew",
   "microsoft christopher",
   "microsoft eric",
@@ -379,51 +354,16 @@ const CLEAR_ACTIVE_VOICE_PRIORITY = [
   "microsoft brandon",
   "google us english male",
   "aaron",
-  "alex",
-  "fred",
   "nathan",
   "evan",
   "tom",
-  "bruce",
-  "ralph",
   "matthew",
-  "joey",
-  "justin",
   "stephen",
-  "male"
   "microsoft zira",
   "natural",
   "neural",
   "online",
   "enhanced"
-];
-
-const FEMALE_VOICE_EXCLUDE_KEYWORDS = [
-  "zira",
-  "aria",
-  "jenny",
-  "michelle",
-  "sara",
-  "ana",
-  "emma",
-  "ava",
-  "samantha",
-  "victoria",
-  "karen",
-  "moira",
-  "tessa",
-  "fiona",
-  "allison",
-  "nicky",
-  "susan",
-  "kate",
-  "hazel",
-  "libby",
-  "sonia",
-  "natasha",
-  "clara",
-  "female",
-  "woman"
 ];
 
 export function selectPreferredAmericanMaleVoice(voices = []) {
@@ -437,156 +377,138 @@ export function selectPreferredAmericanMaleVoice(voices = []) {
     const isUsEnglish = lang === "en-us" || lang.startsWith("en-us");
     const isGbEnglish = lang === "en-gb" || lang.startsWith("en-gb");
     const isAnyEnglish = lang.startsWith("en");
-    const isFemale = FEMALE_VOICE_EXCLUDE_KEYWORDS.some((kw) => name.includes(kw));
-    const maleIdx = AMERICAN_MALE_VOICE_KEYWORDS.findIndex((kw) => name.includes(kw));
-    const isMale = maleIdx !== -1;
 
-    if (isUsEnglish) score += 100;
-    else if (isAnyEnglish) score += 35;
     if (isUsEnglish) score += 90;
     else if (isGbEnglish) score += 75;
     else if (isAnyEnglish) score += 50;
 
-    if (isMale) {
-      score += 120 - Math.min(maleIdx, 30);
-      // Prioritize clear, natural, lively modern Neural/Online voices over robotic legacy SAPI voices
-      if (name.includes("natural") || name.includes("neural") || name.includes("online") || name.includes("enhanced")) {
-        score += 110;
+    // Prioritize clear, natural, lively modern Neural/Online voices over robotic legacy SAPI voices
+    if (name.includes("natural") || name.includes("neural") || name.includes("online") || name.includes("enhanced")) {
+      score += 110;
+    }
+    if (name.includes("google us english") || name.includes("google uk english")) {
+      score += 95;
+    }
+
+    const priIdx = CLEAR_ACTIVE_VOICE_PRIORITY.findIndex((kw) => name.includes(kw));
+    if (priIdx !== -1) {
+      score += 80 - Math.min(priIdx * 2, 55);
+    }
+
+    // Penalize muffled/robotic legacy voices when clearer voices exist
+    if (name.includes("espeak") || name.includes("festival") || name.includes("sam ")) {
+      score -= 80;
+    }
+
+    return score;
+  };
+
+  let best = voices[0];
+  let bestScore = -Infinity;
+  for (const v of voices) {
+    const sc = scoreVoice(v);
+    if (sc > bestScore) {
+      bestScore = sc;
+      best = v;
+    }
+  }
+  return best || null;
+}
+
+/**
+ * Clean raw URL paths and technical punctuation so TTS speaks naturally, clearly, and actively.
+ */
+function formatTextForClearSpeech(rawText = "") {
+  return String(rawText || "")
+    .replace(/\(\/portal\/[a-z0-9/_-]+\)/gi, "")
+    .replace(/\/portal\/[a-z0-9/_-]+/gi, "the dedicated portal page")
+    .replace(/\s*•\s*/g, ", ")
+    .replace(/\s*→\s*/g, " to ")
+    .replace(/\s*;\s*/g, ". ")
+    .replace(/\s+/g, " ")
+    .trim();
+}
+
+/**
+ * Split long responses into crisp natural sentences (~180-220 chars) so Chrome/Edge/Safari
+ * deliver every word with bright, steady, active intonation without dull droning or cutoff.
+ */
+function splitSpeechIntoNaturalChunks(cleanText = "") {
+  if (!cleanText) return [];
+  const rawSentences = cleanText.match(/[^.!?]+[.!?]*/g) || [cleanText];
+  const chunks = [];
+  let buffer = "";
+
+  for (const rawS of rawSentences) {
+    const s = rawS.trim();
+    if (!s) continue;
+    if ((buffer + " " + s).trim().length <= 210) {
+      buffer = (buffer ? `${buffer} ${s}` : s);
+    } else {
+      if (buffer) chunks.push(buffer);
+      if (s.length <= 230) {
+        buffer = s;
+      } else {
+        // Split very long clause at commas cleanly
+        const parts = s.split(/,\s+/);
+        let sub = "";
+        for (const p of parts) {
+          if ((sub + ", " + p).length <= 210) {
+            sub = sub ? `${sub}, ${p}` : p;
+          } else {
+            if (sub) chunks.push(sub);
+            sub = p;
+          }
+        }
+        buffer = sub;
       }
-      if (isFemale) {
-        score -= 140;
-        if (name.includes("google us english") || name.includes("google uk english")) {
-          score += 95;
-        }
-        if (name.includes("natural") || name.includes("online") || name.includes("neural") || name.includes("enhanced")) {
-          score += 18;
+    }
+  }
+  if (buffer) chunks.push(buffer);
+  return chunks;
+}
 
-          const priIdx = CLEAR_ACTIVE_VOICE_PRIORITY.findIndex((kw) => name.includes(kw));
-          if (priIdx !== -1) {
-            score += 80 - Math.min(priIdx * 3, 55);
-          }
-          if (isUsEnglish && !isFemale && (name.includes("google us english") || name.includes("en-us"))) {
-            score += 20;
+const DONE_INTENT_REGEX = /\b(we are done|i am done|i'm done|yes done|done now|all done|finished|nothing else|no more|no other|that's all|that is all|conversation is over|go to sleep|go off|sleep now|goodbye|bye bye|stop listening|turn off)\b/i;
+const ANOTHER_INTENT_REGEX = /\b(there is another|another question|another one|one more|not done|not yet|have another|more help|still here)\b/i;
+const FOLLOWUP_PROMPT = "Are we done with what you want, or is there another? Tell me if there is another, or say we are done.";
 
-            // Penalize muffled/robotic legacy voices when clearer voices exist
-            if (name.includes("espeak") || name.includes("festival") || name.includes("sam ")) {
-              score -= 80;
-            }
+export default function GBSVoiceAssistant() {
+  const navigate = useNavigate();
 
-            return score;
-          };
+  const [isOpen, setIsOpen] = useState(false);
+  const [isMinimized, setIsMinimized] = useState(false);
+  const [isSleeping, setIsSleeping] = useState(true);
+  const [assistantPos, setAssistantPos] = useState(() => {
+    try {
+      const saved = JSON.parse(localStorage.getItem("gbs_voice_assistant_pos") || "null");
+      if (saved && typeof saved.right === "number" && typeof saved.bottom === "number") {
+        return saved;
+      }
+    } catch { }
+    return { right: 20, bottom: 20 };
+  });
+  const dragStateRef = useRef({ active: false, startX: 0, startY: 0, startRight: 20, startBottom: 20, moved: false });
+  const [isListening, setIsListening] = useState(false);
+  const [isSpeaking, setIsSpeaking] = useState(false);
+  const [transcript, setTranscript] = useState("");
+  const [typedInput, setTypedInput] = useState("");
+  const [assistantResponse, setAssistantResponse] = useState(INTRO_GREETING);
+  const [conversationMessages, setConversationMessages] = useState([]);
+  const [continuousListening, setContinuousListening] = useState(true);
+  const [speechSupported, setSpeechSupported] = useState(true);
+  const [memorySyncedVersion, setMemorySyncedVersion] = useState("2.19.0");
 
-          let best = voices[0];
-          let bestScore = -Infinity;
-          for (const v of voices) {
-            const sc = scoreVoice(v);
-            if (sc > bestScore) {
-              bestScore = sc;
-              best = v;
-            }
-          }
-          return best || null;
-        }
-
-        /**
-         * Clean raw URL paths and technical punctuation so TTS speaks naturally, clearly, and actively.
-         */
-        function formatTextForClearSpeech(rawText = "") {
-          return String(rawText || "")
-            .replace(/\(\/portal\/[a-z0-9/_-]+\)/gi, "")
-            .replace(/\/portal\/[a-z0-9/_-]+/gi, "the dedicated portal page")
-            .replace(/\s*•\s*/g, ", ")
-            .replace(/\s*→\s*/g, " to ")
-            .replace(/\s*;\s*/g, ". ")
-            .replace(/\s+/g, " ")
-            .trim();
-        }
-
-        /**
-         * Split long responses into crisp natural sentences (~180-220 chars) so Chrome/Edge/Safari
-         * deliver every word with bright, steady, active intonation without dull droning or cutoff.
-         */
-        function splitSpeechIntoNaturalChunks(cleanText = "") {
-          if (!cleanText) return [];
-          const rawSentences = cleanText.match(/[^.!?]+[.!?]*/g) || [cleanText];
-          const chunks = [];
-          let buffer = "";
-
-          for (const rawS of rawSentences) {
-            const s = rawS.trim();
-            if (!s) continue;
-            if ((buffer + " " + s).trim().length <= 210) {
-              buffer = (buffer ? `${buffer} ${s}` : s);
-            } else {
-              if (buffer) chunks.push(buffer);
-              if (s.length <= 230) {
-                buffer = s;
-              } else {
-                // Split very long clause at commas cleanly
-                const parts = s.split(/,\s+/);
-                let sub = "";
-                for (const p of parts) {
-                  if ((sub + ", " + p).length <= 210) {
-                    sub = sub ? `${sub}, ${p}` : p;
-                  } else {
-                    if (sub) chunks.push(sub);
-                    sub = p;
-                  }
-                }
-                buffer = sub;
-              }
-            }
-          }
-          if (buffer) chunks.push(buffer);
-          return chunks;
-        }
-
-        const DONE_INTENT_REGEX = /\b(we are done|i am done|i'm done|yes done|done now|all done|finished|nothing else|no more|no other|that's all|that is all|conversation is over|go to sleep|go off|sleep now|goodbye|bye bye|stop listening|turn off)\b/i;
-        const ANOTHER_INTENT_REGEX = /\b(there is another|another question|another one|one more|not done|not yet|have another|more help|still here)\b/i;
-        const FOLLOWUP_PROMPT = "Are we done with what you want, or is there another? Tell me if there is another, or say we are done.";
-
-        export default function GBSVoiceAssistant() {
-          const navigate = useNavigate();
-
-          const [isOpen, setIsOpen] = useState(false);
-          const [isMinimized, setIsMinimized] = useState(false);
-          const [isSleeping, setIsSleeping] = useState(true);
-          const [assistantPos, setAssistantPos] = useState(() => {
-            try {
-              const saved = JSON.parse(localStorage.getItem("gbs_voice_assistant_pos") || "null");
-              if (saved && typeof saved.right === "number" && typeof saved.bottom === "number") {
-                return saved;
-              }
-            } catch { }
-            return { right: 20, bottom: 20 };
-          });
-          const dragStateRef = useRef({ active: false, startX: 0, startY: 0, startRight: 20, startBottom: 20, moved: false });
-          const [isListening, setIsListening] = useState(false);
-          const [isSpeaking, setIsSpeaking] = useState(false);
-          const [transcript, setTranscript] = useState("");
-          const [typedInput, setTypedInput] = useState("");
-          const [assistantResponse, setAssistantResponse] = useState(INTRO_GREETING);
-          const [conversationMessages, setConversationMessages] = useState([]);
-          const [continuousListening, setContinuousListening] = useState(true);
-          const [speechSupported, setSpeechSupported] = useState(true);
-          const [memorySyncedVersion, setMemorySyncedVersion] = useState("2.7.0");
-
-          const [voiceRate, setVoiceRate] = useState(() => {
-            try {
-              const saved = parseFloat(localStorage.getItem("gbs_voice_rate") || "");
-              if (Number.isFinite(saved) && saved >= 0.72 && saved <= 1.0) return saved;
-              const saved = parseFloat(localStorage.getItem("gbs_voice_rate_v2") || "");
-              if (Number.isFinite(saved) && saved >= 0.90 && saved <= 1.15) return saved;
-            } catch { }
-            return 0.88; // Clear, measured American English speaking pace (never fast mode)
-            return 1.02; // Active, crisp, work-ready speaking pace — clear & engaged, never sleepy and never rushing
-          });
-          const [voicePitch, setVoicePitch] = useState(0.93);
-          const [voicePitch] = useState(1.06); // Bright, alert, clear vocal tone
-          const [selectedVoiceIndex, setSelectedVoiceIndex] = useState(0);
-          const [availableVoices, setAvailableVoices] = useState([]);
-          const [activeVoiceLabel, setActiveVoiceLabel] = useState("US English Male");
-          const [activeVoiceLabel, setActiveVoiceLabel] = useState("Clear Active English");
+  const [voiceRate, setVoiceRate] = useState(() => {
+    try {
+      const saved = parseFloat(localStorage.getItem("gbs_voice_rate_v2") || "");
+      if (Number.isFinite(saved) && saved >= 0.90 && saved <= 1.15) return saved;
+    } catch { }
+    return 1.02; // Active, crisp, work-ready speaking pace — clear & engaged, never sleepy and never rushing
+  });
+  const [voicePitch] = useState(1.06); // Bright, alert, clear vocal tone
+  const [selectedVoiceIndex, setSelectedVoiceIndex] = useState(0);
+  const [availableVoices, setAvailableVoices] = useState([]);
+  const [activeVoiceLabel, setActiveVoiceLabel] = useState("Clear Active English");
 
           const recognitionRef = useRef(null);
           const synthRef = useRef(typeof window !== "undefined" ? window.speechSynthesis : null);
@@ -802,35 +724,9 @@ export function selectPreferredAmericanMaleVoice(voices = []) {
               (availableVoices && availableVoices.length > 0)
                 ? availableVoices
                 : (typeof window !== "undefined" && window.speechSynthesis?.getVoices ? window.speechSynthesis.getVoices() : []);
-            const utterance = new SpeechSynthesisUtterance(text);
-            const preferredMaleUsVoice = selectPreferredAmericanMaleVoice(allVoices);
-            const chosenVoice = preferredMaleUsVoice || allVoices[selectedVoiceIndex] || allVoices[0] || null;
-            if (chosenVoice) {
-              utterance.voice = chosenVoice;
-              const lowerName = String(chosenVoice.name || "").toLowerCase();
-              const soundsFemale = FEMALE_VOICE_EXCLUDE_KEYWORDS.some((kw) => lowerName.includes(kw));
-              // Keep warm, clear American male tone; lower pitch slightly if OS only exposes a neutral/female fallback voice
-              utterance.pitch = soundsFemale ? 0.78 : voicePitch;
-            } else {
-              utterance.pitch = voicePitch;
-            }
-            utterance.rate = Math.min(0.98, Math.max(0.75, Number(voiceRate) || 0.88));
-            utterance.lang = "en-US";
-            utterance.volume = 1.0;
             const chosenVoice = allVoices[selectedVoiceIndex] || selectPreferredAmericanMaleVoice(allVoices) || allVoices[0] || null;
             const effectiveRate = Math.min(1.12, Math.max(0.92, Number(voiceRate) || 1.02));
             const effectivePitch = Math.min(1.14, Math.max(1.02, Number(voicePitch) || 1.06));
-
-            utterance.onstart = () => {
-              setIsSpeaking(true);
-              isSpeakingRef.current = true;
-              clearSilenceTimer();
-              if (recognitionRef.current) {
-                try {
-                  recognitionRef.current.stop();
-                } catch { }
-              }
-            };
 
             let finished = false;
             const finishSpeech = () => {
@@ -845,9 +741,6 @@ export function selectPreferredAmericanMaleVoice(voices = []) {
               }
             };
 
-            utterance.onend = finishSpeech;
-            utterance.onerror = finishSpeech;
-            synthRef.current.speak(utterance);
             const speakChunkAt = (idx) => {
               if (idx >= chunks.length) {
                 finishSpeech();
@@ -1115,12 +1008,6 @@ export function selectPreferredAmericanMaleVoice(voices = []) {
             // 1. Explicit Pure-Navigation Portal Commands (Explanations fall through to full System Memory AI)
             const isExplanationQuery = /\b(explain|how|what|why|tell me|want to know|know about|describe|pull clinic|pull medical|can)\b/i.test(cleanCmd);
             if (!isExplanationQuery && (cleanCmd.includes("open clinic") || cleanCmd.includes("go to clinic") || cleanCmd === "school clinic" || cleanCmd.includes("open sickbay"))) {
-              triggerDashboardTab("clinic");
-              const stats = memoryCatalogRef.current?.liveStats;
-              const statLine = stats
-                ? ` Active Clinic Ledger shows ${stats.clinicProfilesCount} registered medical profiles, ${stats.clinicVisitsCount} total consultations, and ${stats.activeSickbayCount} active Sickbay admission.`
-                : "";
-              executeReply(`Opening the School Clinic & Admission Medical Registry now.${statLine}`, { openTab: "clinic" });
               const currentUserRole = (() => {
                 try {
                   return String(JSON.parse(localStorage.getItem("gbs_user") || "{}")?.role || "").toUpperCase();
@@ -1138,125 +1025,123 @@ export function selectPreferredAmericanMaleVoice(voices = []) {
               return;
             }
 
-            if (!isExplanationQuery && (cleanCmd.includes("login") || cleanCmd.includes("sign in") || cleanCmd.includes("open headmaster") || cleanCmd.includes("open secretary") || cleanCmd.includes("open student") || cleanCmd.includes("open teacher") || cleanCmd.includes("open parent") || cleanCmd.includes("open accountant") || cleanCmd.includes("open staff"))) {
-              if (!isExplanationQuery && (cleanCmd.includes("login") || cleanCmd.includes("sign in") || cleanCmd.includes("open headmaster") || cleanCmd.includes("open secretary") || cleanCmd.includes("open student") || cleanCmd.includes("open teacher") || cleanCmd.includes("open parent") || cleanCmd.includes("open accountant") || cleanCmd.includes("open staff") || cleanCmd.includes("open doctor") || cleanCmd.includes("open nurse"))) {
-                if (cleanCmd.includes("doctor") || cleanCmd.includes("nurse") || cleanCmd.includes("clinic")) {
-                  executeReply("Opening the School Clinic Doctor and Nurse Login Portal now.", { navigateTo: "/login/clinic" });
-                  return;
-                }
-                if (cleanCmd.includes("admin") || cleanCmd.includes("headmaster")) {
-                  executeReply("Opening the Headmaster Executive Command Portal now.", { navigateTo: "/login/admin" });
-                  return;
-                }
-                if (cleanCmd.includes("secretary")) {
-                  executeReply("Opening the School Secretary Portal now.", { navigateTo: "/login/secretary" });
-                  return;
-                }
-                if (cleanCmd.includes("teacher") || cleanCmd.includes("lecturer")) {
-                  executeReply("Opening the Teacher & Lecturer Portal now.", { navigateTo: "/login/teacher" });
-                  return;
-                }
-                if (cleanCmd.includes("student")) {
-                  executeReply("Navigating to the Student Learning Hub now.", { navigateTo: "/login/student" });
-                  return;
-                }
-                if (cleanCmd.includes("parent") || cleanCmd.includes("guardian")) {
-                  executeReply("Opening the Parent & Guardian Portal now.", { navigateTo: "/login/parent" });
-                  return;
-                }
-                if (cleanCmd.includes("accountant") || cleanCmd.includes("finance")) {
-                  executeReply("Opening the Accountant & Treasury Portal now.", { navigateTo: "/login/accountant" });
-                  return;
-                }
-                if (cleanCmd.includes("staff") || cleanCmd.includes("hr")) {
-                  executeReply("Opening the Staff & HR Portal now.", { navigateTo: "/login/staff" });
-                  return;
-                }
-                if (cleanCmd.includes("main login") || cleanCmd.includes("login")) {
-                  executeReply("Opening the Main GBS Login Gateway.", { navigateTo: "/login" });
-                  return;
-                }
-              }
-
-              if (cleanCmd.includes("onboard") || cleanCmd.includes("register school") || cleanCmd.includes("first page")) {
-                executeReply("Opening the School Onboarding First Page.", { navigateTo: "/onboarding" });
+            if (!isExplanationQuery && (cleanCmd.includes("login") || cleanCmd.includes("sign in") || cleanCmd.includes("open headmaster") || cleanCmd.includes("open secretary") || cleanCmd.includes("open student") || cleanCmd.includes("open teacher") || cleanCmd.includes("open parent") || cleanCmd.includes("open accountant") || cleanCmd.includes("open staff") || cleanCmd.includes("open doctor") || cleanCmd.includes("open nurse"))) {
+              if (cleanCmd.includes("doctor") || cleanCmd.includes("nurse") || cleanCmd.includes("clinic")) {
+                executeReply("Opening the School Clinic Doctor and Nurse Login Portal now.", { navigateTo: "/login/clinic" });
                 return;
               }
-
-              if (DEVELOPER_NONDISCLOSURE_PATTERN.test(cleanCmd)) {
-                executeReply(
-                  "I do not disclose developer details, internal engineering controls, or developer portal information. Ask me instead about the Headmaster, Teacher, Student, Parent, Accountant, Staff, HR, or Alumni portals and activities.",
-                  null,
-                  {
-                    interpretation: "You asked about internal developer controls. Institutional assistants strictly protect non-disclosure boundaries.",
-                    explanationText: "How your question was formed: You asked about internal platform controls, which are kept strictly non-disclosed so the assistant stays focused on institutional users.",
-                    actionTaken: "Protected developer non-disclosure boundary and offered institutional role help."
-                  }
-                );
+              if (cleanCmd.includes("admin") || cleanCmd.includes("headmaster")) {
+                executeReply("Opening the Headmaster Executive Command Portal now.", { navigateTo: "/login/admin" });
                 return;
               }
-
-              if (cleanCmd.startsWith("enter my name") || cleanCmd.startsWith("my name is") || cleanCmd.startsWith("enter name")) {
-                const nameVal = cleanCmd.replace(/^(enter my name|my name is|enter name)\s*(is|to)?\s*/i, "").trim();
-                const inputEl = document.querySelector('input[name*="name" i], input[id*="name" i], input[placeholder*="name" i]');
-                if (inputEl && nameVal) {
-                  inputEl.value = nameVal;
-                  inputEl.dispatchEvent(new Event("input", { bubbles: true }));
-                  executeReply(`Entered name ${nameVal} into the active form.`);
-                } else {
-                  executeReply(`Noted name ${nameVal}. Open a form first if you want me to fill it automatically.`);
-                }
+              if (cleanCmd.includes("secretary")) {
+                executeReply("Opening the School Secretary Portal now.", { navigateTo: "/login/secretary" });
                 return;
               }
-
-              if (cleanCmd.includes("submit") || cleanCmd.includes("click submit")) {
-                const submitBtn = document.querySelector('button[type="submit"], .role-login-submit, .btn-submit, .gbs-btn-primary');
-                if (submitBtn) {
-                  submitBtn.click();
-                  executeReply("Submitted the active form cleanly.");
-                } else {
-                  executeReply("No active submit button was found on this view.");
-                }
+              if (cleanCmd.includes("teacher") || cleanCmd.includes("lecturer")) {
+                executeReply("Opening the Teacher & Lecturer Portal now.", { navigateTo: "/login/teacher" });
                 return;
               }
-
-              // 2. Live Backend System Memory Query (generous 4500ms timeout so backend formation + answer resolves reliably)
-              try {
-                const controller = new AbortController();
-                const timer = setTimeout(() => controller.abort(), 4500);
-                const res = await apiClient.post("/ai/assistant-query", { query: raw }, { signal: controller.signal });
-                clearTimeout(timer);
-                const result = res?.data?.data;
-                if (result?.speechText) {
-                  if (result.liveStats) {
-                    memoryCatalogRef.current = { ...(memoryCatalogRef.current || {}), liveStats: result.liveStats };
-                  }
-                  const formation = result.questionFormation || buildLocalQuestionFormation(raw, result.topicId || "GBS System Memory");
-                  executeReply(result.answerText || result.speechText, result.action || null, formation);
-                  return;
-                }
-              } catch { }
-
-              // 3. Instant Local System Memory Fallback (<5ms offline-capable explanation + question formation breakdown)
-              const localHit = matchInstantLocalMemory(cleanCmd);
-              if (localHit) {
-                const localFormation = buildLocalQuestionFormation(raw, localHit.id);
-                executeReply(localHit.answer, { openTab: localHit.tab, navigateTo: localHit.route }, localFormation);
+              if (cleanCmd.includes("student")) {
+                executeReply("Navigating to the Student Learning Hub now.", { navigateTo: "/login/student" });
                 return;
               }
+              if (cleanCmd.includes("parent") || cleanCmd.includes("guardian")) {
+                executeReply("Opening the Parent & Guardian Portal now.", { navigateTo: "/login/parent" });
+                return;
+              }
+              if (cleanCmd.includes("accountant") || cleanCmd.includes("finance")) {
+                executeReply("Opening the Accountant & Treasury Portal now.", { navigateTo: "/login/accountant" });
+                return;
+              }
+              if (cleanCmd.includes("staff") || cleanCmd.includes("hr")) {
+                executeReply("Opening the Staff & HR Portal now.", { navigateTo: "/login/staff" });
+                return;
+              }
+              if (cleanCmd.includes("main login") || cleanCmd.includes("login")) {
+                executeReply("Opening the Main GBS Login Gateway.", { navigateTo: "/login" });
+                return;
+              }
+            }
 
-              const stats = memoryCatalogRef.current?.liveStats;
-              const statsNote = stats
-                ? ` Live workspace summary: ${stats.clinicProfilesCount} medical registrations, ${stats.clinicVisitsCount} clinic visits (${stats.activeSickbayCount} active in Sickbay), and ${stats.pendingStaffApprovalsCount} pending staff approvals.`
-                : "";
-              const generalFormation = buildLocalQuestionFormation(raw, "GBS Unified System Overview");
+            if (cleanCmd.includes("onboard") || cleanCmd.includes("register school") || cleanCmd.includes("first page")) {
+              executeReply("Opening the School Onboarding First Page.", { navigateTo: "/onboarding" });
+              return;
+            }
+
+            if (DEVELOPER_NONDISCLOSURE_PATTERN.test(cleanCmd)) {
               executeReply(
-                `On GBS SYSTEM (v${memorySyncedVersion}), each institutional user operates inside a portal tailored to your registered institution (Nursery–JHS, SHS, TVET, or University): Headmasters approve users, set official School Stationery prices, inspect Staff Clock-In logs, configure language settings, and manage all clinic dossiers; Teachers/Lecturers deliver coursework, Topic Videos, AI-proctored exam cameras, live calls, and Internships/Attachments; School Secretaries handle visitor logs, official letters/circulars, appointments, and stationery sales/expenses; Students take proctored exams and submit assignments or placements; Parents monitor wards and pay fees via MoMo; Accountants reconcile fees & synced stationery expenses; Non-Teaching Staff manage campus logistics; HR handles contracts & leave; Alumni access transcripts.`,
-                `On GBS SYSTEM (v${memorySyncedVersion}), 10 institutional portals operate as one linked system across Nursery–JHS, SHS, TVET, and University: Headmasters approve users, hold exclusive authority to add and edit official School Stationery prices, vet NaCCA lesson plans and exams, inspect Staff Clock-In logs, and configure system language; School Doctors and Nurses exclusively operate the separate School Clinic Dashboard for medical dossiers, consultations, sickbay admissions, and pharmacy stock while all other staff only view their own read-only health status; Teachers/Lecturers deliver coursework, Topic Videos, 1.0x AI-proctored exams, unlimited script scanning, and live class calls while viewing listed stationery prices read-only; School Secretaries handle front-office visitor logs, official letters, and appointments; Students access timetables, proctored exams, self-payments, and 42 Jolly Phonics plus 17-country alphabets; Parents monitor wards and pay fees; Accountants reconcile finances; Non-Teaching Staff manage logistics; HR manages contracts and leave; and Alumni access cumulative transcripts.`,
+                "I do not disclose developer details, internal engineering controls, or developer portal information. Ask me instead about the Headmaster, Separate School Clinic, Teacher, Secretary, Student, Parent, Accountant, Staff, HR, or Alumni portals and activities.",
                 null,
-                generalFormation
+                {
+                  interpretation: "You asked about internal developer controls. Institutional assistants strictly protect non-disclosure boundaries.",
+                  explanationText: "How your question was formed: You asked about internal platform controls, which are kept strictly non-disclosed so the assistant stays focused on institutional users.",
+                  actionTaken: "Protected developer non-disclosure boundary and offered institutional role help."
+                }
               );
-            };
+              return;
+            }
+
+            if (cleanCmd.startsWith("enter my name") || cleanCmd.startsWith("my name is") || cleanCmd.startsWith("enter name")) {
+              const nameVal = cleanCmd.replace(/^(enter my name|my name is|enter name)\s*(is|to)?\s*/i, "").trim();
+              const inputEl = document.querySelector('input[name*="name" i], input[id*="name" i], input[placeholder*="name" i]');
+              if (inputEl && nameVal) {
+                inputEl.value = nameVal;
+                inputEl.dispatchEvent(new Event("input", { bubbles: true }));
+                executeReply(`Entered name ${nameVal} into the active form.`);
+              } else {
+                executeReply(`Noted name ${nameVal}. Open a form first if you want me to fill it automatically.`);
+              }
+              return;
+            }
+
+            if (cleanCmd.includes("submit") || cleanCmd.includes("click submit")) {
+              const submitBtn = document.querySelector('button[type="submit"], .role-login-submit, .btn-submit, .gbs-btn-primary');
+              if (submitBtn) {
+                submitBtn.click();
+                executeReply("Submitted the active form cleanly.");
+              } else {
+                executeReply("No active submit button was found on this view.");
+              }
+              return;
+            }
+
+            // 2. Live Backend System Memory Query (generous 4500ms timeout so backend formation + answer resolves reliably)
+            try {
+              const controller = new AbortController();
+              const timer = setTimeout(() => controller.abort(), 4500);
+              const res = await apiClient.post("/ai/assistant-query", { query: raw }, { signal: controller.signal });
+              clearTimeout(timer);
+              const result = res?.data?.data;
+              if (result?.speechText) {
+                if (result.liveStats) {
+                  memoryCatalogRef.current = { ...(memoryCatalogRef.current || {}), liveStats: result.liveStats };
+                }
+                const formation = result.questionFormation || buildLocalQuestionFormation(raw, result.topicId || "GBS System Memory");
+                executeReply(result.answerText || result.speechText, result.action || null, formation);
+                return;
+              }
+            } catch { }
+
+            // 3. Instant Local System Memory Fallback (<5ms offline-capable explanation + question formation breakdown)
+            const localHit = matchInstantLocalMemory(cleanCmd);
+            if (localHit) {
+              const localFormation = buildLocalQuestionFormation(raw, localHit.id);
+              executeReply(localHit.answer, { openTab: localHit.tab, navigateTo: localHit.route }, localFormation);
+              return;
+            }
+
+            const stats = memoryCatalogRef.current?.liveStats;
+            const statsNote = stats
+              ? ` Live workspace summary: ${stats.clinicProfilesCount} medical registrations, ${stats.clinicVisitsCount} clinic visits (${stats.activeSickbayCount} active in Sickbay), and ${stats.pendingStaffApprovalsCount} pending staff approvals.`
+              : "";
+            const generalFormation = buildLocalQuestionFormation(raw, "GBS Unified System Overview");
+            executeReply(
+              `On GBS SYSTEM (v${memorySyncedVersion}), 10 institutional portals operate as one linked system across Nursery–JHS, SHS, TVET, and University: Headmasters approve users, hold exclusive authority to add and edit official School Stationery prices, vet NaCCA lesson plans and exams, inspect Staff Clock-In logs, and configure system language; School Doctors and Nurses exclusively operate the separate School Clinic Dashboard for medical dossiers, consultations, sickbay admissions, and pharmacy stock while all other staff only view their own read-only health status; Teachers/Lecturers deliver coursework, Topic Videos, 1.0x AI-proctored exams, unlimited script scanning, and live class calls while viewing listed stationery prices read-only; School Secretaries handle front-office visitor logs, official letters, and appointments; Students access timetables, proctored exams, self-payments, and 42 Jolly Phonics plus 17-country alphabets; Parents monitor wards and pay fees; Accountants reconcile finances; Non-Teaching Staff manage logistics; HR manages contracts and leave; and Alumni access cumulative transcripts.${statsNote}`,
+              null,
+              generalFormation
+            );
+          };
 
             processCommandRef.current = processVoiceCommand;
 
@@ -1480,9 +1365,6 @@ export function selectPreferredAmericanMaleVoice(voices = []) {
                         <div style={{ padding: "10px 14px", borderTop: "1px solid rgba(212, 175, 55, 0.25)", background: "rgba(4, 10, 22, 0.95)" }}>
                           <div style={{ display: "flex", gap: "5px", flexWrap: "wrap", marginBottom: "8px" }}>
                             {[
-                              { label: "👥 User Roles", cmd: "Explain all institutional user roles and daily activities" },
-                              { label: "🏥 School Clinic", cmd: "Explain School Clinic privacy and Headmaster profiles" },
-                              { label: "🎓 Placements & Tiers", cmd: "Explain Internships, Attachments, and institution streams" },
                               { label: "👥 All Portal Roles", cmd: "Explain all institutional user roles and end to end performance on each dashboard" },
                               { label: "🏥 School Clinic", cmd: "Explain the separate School Clinic dashboard for doctors and nurses and staff health status privacy" },
                               { label: "🔊 42 Phonics & Alphabets", cmd: "Explain the 42 Jolly Phonics sounds and country language alphabets in the translator" },
@@ -1573,13 +1455,9 @@ export function selectPreferredAmericanMaleVoice(voices = []) {
                             </button>
 
                             <div style={{ display: "inline-flex", alignItems: "center", gap: "4px", fontSize: "10.5px", color: "#cbd5e1" }}>
-                              <span style={{ color: "#7dd3fc", fontWeight: 700 }}>🇺🇸 Male:</span>
                               <span style={{ color: "#7dd3fc", fontWeight: 700 }}>🎙️ Tone:</span>
                               {[
-                                { label: "Slow", val: 0.8 },
-                                { label: "Clear", val: 0.88 },
-                                { label: "Steady", val: 0.95 }
-                      { label: "Measured", val: 0.94 },
+                                { label: "Measured", val: 0.94 },
                                 { label: "Active", val: 1.02 },
                                 { label: "Brisk", val: 1.08 }
                               ].map((opt) => (
@@ -1588,7 +1466,6 @@ export function selectPreferredAmericanMaleVoice(voices = []) {
                                   type="button"
                                   onClick={() => {
                                     setVoiceRate(opt.val);
-                                    try { localStorage.setItem("gbs_voice_rate", String(opt.val)); } catch { }
                                     try { localStorage.setItem("gbs_voice_rate_v2", String(opt.val)); } catch { }
                                   }}
                                   style={{

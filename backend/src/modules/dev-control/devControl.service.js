@@ -315,6 +315,17 @@ const getTenantCountdowns = async () => {
 
   tenants = tenants.filter((t) => Boolean(t && (t.name || t.code)));
   const dynamicList = authService.getDynamicInstitutions ? authService.getDynamicInstitutions() : [];
+  const realStudentCountsByTenant = new Map();
+  try {
+    const grouped = await prisma.user.groupBy({
+      by: ['tenantId'],
+      where: { role: 'STUDENT', isDeleted: false },
+      _count: { _all: true }
+    });
+    for (const g of grouped || []) {
+      realStudentCountsByTenant.set(Number(g.tenantId), Number(g._count?._all || 0));
+    }
+  } catch { }
   const now = Date.now();
 
   return tenants.map((t) => {
@@ -404,28 +415,34 @@ const getTenantCountdowns = async () => {
       dynMatch?.adminName ||
       dynMatch?.repFullName ||
       (adminUser ? `${adminUser.firstName || ''} ${adminUser.lastName || ''}`.trim() : '') ||
-      'Headmaster';
+      'Unassigned Headmaster';
     const hmEmail =
       t.headmasterEmail ||
       dynMatch?.adminEmail ||
       dynMatch?.officialEmail ||
       adminUser?.email ||
-      'admin@gbs.edu';
+      null;
     const hmPhone =
       t.headmasterPhone ||
       dynMatch?.adminPhone ||
       dynMatch?.officialPhone ||
       dynMatch?.repPhone ||
-      '+233-24-555-0199';
+      null;
     const hmPhoto = t.headmasterPhoto || dynMatch?.facePhoto || dynMatch?.institutionLogo || null;
+    const realEnrolledStudents = Number(
+      t.totalStudentsEnrolled ??
+      dynMatch?.totalStudentsEnrolled ??
+      realStudentCountsByTenant.get(Number(t.id)) ??
+      0
+    );
 
     return {
       tenantId: t.id,
       tenantName: t.name,
       tenantCode: t.code,
-      institutionType: t.institutionType || dynMatch?.institutionType || 'SHS',
-      totalStudentsEnrolled: Number(t.totalStudentsEnrolled || dynMatch?.totalStudentsEnrolled || 300),
-      activeStudents: Number(t.totalStudentsEnrolled || dynMatch?.totalStudentsEnrolled || 300),
+      institutionType: t.institutionType || dynMatch?.institutionType || 'NURSERY_TO_JHS',
+      totalStudentsEnrolled: realEnrolledStudents,
+      activeStudents: realEnrolledStudents,
       subscriptionPlan: planName,
       trialStartDate: trialStart,
       trialEndDate: trialEnd,
@@ -995,9 +1012,9 @@ const developerTenantAction = async (tenantId, action, params = {}, developer = 
     }
 
     case 'CHANGE_HEADMASTER': {
-      const hmName = params.headmasterName || params.fullName || params.name || tenant.headmasterName || 'Headmaster';
-      const hmEmail = params.headmasterEmail || params.email || tenant.headmasterEmail || 'admin@school.edu';
-      const hmPhone = params.headmasterPhone || params.phone || tenant.headmasterPhone || '+233-24-555-0199';
+      const hmName = params.headmasterName || params.fullName || params.name || tenant.headmasterName || null;
+      const hmEmail = params.headmasterEmail || params.email || tenant.headmasterEmail || null;
+      const hmPhone = params.headmasterPhone || params.phone || tenant.headmasterPhone || null;
       const hmPhoto = params.headmasterPhoto || params.pictureBase64 || tenant.headmasterPhoto || null;
       const hmQual = params.qualification || '';
       const hmRes = params.resolutionNumber || '';
@@ -1049,10 +1066,10 @@ const developerTenantAction = async (tenantId, action, params = {}, developer = 
         name: tenant.name,
         tenantName: tenant.name,
         institutionType: tenant.institutionType || 'NURSERY_TO_JHS',
-        headmasterName: tenant.headmasterName || 'Headmaster',
-        email: tenant.headmasterEmail || 'admin@school.edu',
-        headmasterEmail: tenant.headmasterEmail || 'admin@school.edu',
-        headmasterPhone: tenant.headmasterPhone || '+233-24-555-0199',
+        headmasterName: tenant.headmasterName || 'Unassigned Headmaster',
+        email: tenant.headmasterEmail || null,
+        headmasterEmail: tenant.headmasterEmail || null,
+        headmasterPhone: tenant.headmasterPhone || null,
         deletedAt: new Date().toISOString(),
         archivedBy: 'Developer Gabriel (gabosei48@gmail.com)',
         deletionReason: params.reason || 'Deleted from active tenancy by Developer Gabriel',
@@ -3609,17 +3626,17 @@ const getOnboardedTenants = async () => {
       dynMatch?.adminEmail ||
       inst?.adminEmail ||
       headmaster?.email ||
-      'admin@school.com';
+      null;
     const hmPhone =
       t.headmasterPhone ||
       dynMatch?.adminPhone ||
       dynMatch?.officialPhone ||
       inst?.adminPhone ||
       headmaster?.registrationProfile?.phone ||
-      '+233-24-555-0199';
+      null;
     const hmPhoto = t.headmasterPhoto || dynMatch?.facePhoto || null;
-    const planName = t.subscriptions?.[0]?.planName || t.planName || dynMatch?.subscriptionPlan || 'Enterprise Trial';
-    const maxStu = Number(t.totalStudentsEnrolled || dynMatch?.totalStudentsEnrolled || 2500);
+    const planName = t.subscriptions?.[0]?.planName || t.planName || dynMatch?.subscriptionPlan || '4-Month Full Term Free Trial (120 Days)';
+    const maxStu = Number(t.totalStudentsEnrolled ?? dynMatch?.totalStudentsEnrolled ?? 0);
 
     return {
       id: t.id,

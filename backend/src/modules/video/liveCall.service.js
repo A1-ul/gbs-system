@@ -250,7 +250,15 @@ async function getCallDirectory(req) {
             isDeleted: false,
             role: { in: ['ADMIN', 'SUPER_ADMIN', 'HEADMASTER', 'PRINCIPAL'] }
           },
-          select: { id: true, tenantId: true, firstName: true, lastName: true, email: true, role: true, phone: true }
+          select: {
+            id: true,
+            tenantId: true,
+            firstName: true,
+            lastName: true,
+            email: true,
+            role: true,
+            registrationProfile: { select: { phone: true, whatsappPhone: true } }
+          }
         }).catch(() => [])
       ]);
 
@@ -262,7 +270,7 @@ async function getCallDirectory(req) {
           userId: String(adm.id),
           name: `${adm.firstName || ''} ${adm.lastName || ''}`.trim() || adm.email,
           email: adm.email,
-          phone: adm.phone || tObj?.headmasterPhone || '',
+          phone: adm.registrationProfile?.phone || adm.registrationProfile?.whatsappPhone || tObj?.headmasterPhone || '',
           tenantId: adm.tenantId || 1,
           tenantName: tObj?.name || 'GBS Main Institution',
           tenantCode: tObj?.code || 'DEFAULT'
@@ -316,7 +324,14 @@ async function getCallDirectory(req) {
   try {
     dbUsers = await prisma.user.findMany({
       where: { tenantId: tid, isActive: true, isLocked: false },
-      select: { id: true, firstName: true, lastName: true, email: true, role: true, phone: true }
+      select: {
+        id: true,
+        firstName: true,
+        lastName: true,
+        email: true,
+        role: true,
+        registrationProfile: { select: { phone: true, whatsappPhone: true } }
+      }
     }).catch(() => []);
   } catch {
     dbUsers = [];
@@ -337,7 +352,7 @@ async function getCallDirectory(req) {
       name: fullName,
       email,
       role,
-      phone: u.phone || '',
+      phone: u.phone || u.registrationProfile?.phone || u.registrationProfile?.whatsappPhone || '',
       studentName: u.studentName || u.wardName || '',
       isOnline: presence.isOnline
     });

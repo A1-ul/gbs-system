@@ -11,73 +11,75 @@ const { readPersistentStore } = require("../../core/database/persistentStore");
 router.get("/status", (req, res, next) => controller.getStatus(req, res, next));
 router.get("/", (req, res, next) => controller.getStatus(req, res, next));
 
-router.get("/dashboard", protect, async (req, res) => {
-  const tid = parseInt(req.tenantId || req.user?.tenantId || 1, 10) || 1;
-  const store = readPersistentStore();
-  let studentCount = 0;
-  let teacherCount = 0;
-  let invoiceCount = 0;
+router.get("/dashboard", protect, async (req, res, next) => {
   try {
-    [studentCount, teacherCount, invoiceCount] = await Promise.all([
+    const tid = parseInt(req.tenantId || req.user?.tenantId || 1, 10) || 1;
+    const store = readPersistentStore();
+    const [studentCount, teacherCount, invoiceCount] = await Promise.all([
       prisma.user.count({ where: { tenantId: tid, role: "STUDENT", isDeleted: false } }),
       prisma.user.count({ where: { tenantId: tid, role: "TEACHER", isDeleted: false } }),
-      prisma.invoice.count({ where: { tenantId: tid } }).catch(() => 0)
+      prisma.invoice.count({ where: { tenantId: tid } })
     ]);
-  } catch { }
-  return res.status(200).json({
-    status: "success",
-    data: {
-      tenantId: tid,
-      totalStudents: studentCount,
-      totalTeachers: teacherCount,
-      totalInvoices: invoiceCount,
-      registeredInstitutions: (store.institutions || []).length,
-      timestamp: new Date().toISOString()
-    }
-  });
+    return res.status(200).json({
+      status: "success",
+      data: {
+        tenantId: tid,
+        totalStudents: studentCount,
+        totalTeachers: teacherCount,
+        totalInvoices: invoiceCount,
+        registeredInstitutions: (store.institutions || []).length,
+        timestamp: new Date().toISOString()
+      }
+    });
+  } catch (err) {
+    return next(err);
+  }
 });
 
-router.get("/stats", protect, async (req, res) => {
-  const tid = parseInt(req.tenantId || req.user?.tenantId || 1, 10) || 1;
-  let users = 0;
+router.get("/stats", protect, async (req, res, next) => {
   try {
-    users = await prisma.user.count({ where: { tenantId: tid, isDeleted: false } });
-  } catch { }
-  return res.status(200).json({
-    status: "success",
-    data: { tenantId: tid, activeUsers: users, uptimeSeconds: Math.round(process.uptime()) }
-  });
+    const tid = parseInt(req.tenantId || req.user?.tenantId || 1, 10) || 1;
+    const users = await prisma.user.count({ where: { tenantId: tid, isDeleted: false } });
+    return res.status(200).json({
+      status: "success",
+      data: { tenantId: tid, activeUsers: users, uptimeSeconds: Math.round(process.uptime()) }
+    });
+  } catch (err) {
+    return next(err);
+  }
 });
 
-router.get("/charts", protect, async (req, res) => {
-  const tid = parseInt(req.tenantId || req.user?.tenantId || 1, 10) || 1;
-  let roleGroups = [];
+router.get("/charts", protect, async (req, res, next) => {
   try {
-    roleGroups = await prisma.user.groupBy({
+    const tid = parseInt(req.tenantId || req.user?.tenantId || 1, 10) || 1;
+    const roleGroups = await prisma.user.groupBy({
       by: ["role"],
       where: { tenantId: tid, isDeleted: false },
       _count: { _all: true }
     });
-  } catch { }
-  return res.status(200).json({
-    status: "success",
-    data: {
-      roleDistribution: roleGroups.map((g) => ({ role: g.role, count: g._count._all }))
-    }
-  });
+    return res.status(200).json({
+      status: "success",
+      data: {
+        roleDistribution: roleGroups.map((g) => ({ role: g.role, count: g._count._all }))
+      }
+    });
+  } catch (err) {
+    return next(err);
+  }
 });
 
-router.get("/activity", protect, async (req, res) => {
-  const tid = parseInt(req.tenantId || req.user?.tenantId || 1, 10) || 1;
-  let logs = [];
+router.get("/activity", protect, async (req, res, next) => {
   try {
-    logs = await prisma.auditLog.findMany({
+    const tid = parseInt(req.tenantId || req.user?.tenantId || 1, 10) || 1;
+    const logs = await prisma.auditLog.findMany({
       where: { tenantId: tid },
       orderBy: { createdAt: "desc" },
       take: 25
     });
-  } catch { }
-  return res.status(200).json({ status: "success", results: logs.length, data: { activities: logs } });
+    return res.status(200).json({ status: "success", results: logs.length, data: { activities: logs } });
+  } catch (err) {
+    return next(err);
+  }
 });
 
 module.exports = router;

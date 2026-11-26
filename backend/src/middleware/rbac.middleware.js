@@ -12,20 +12,46 @@ const restrictTo = (...roles) => {
     }
 
     const userRole = normalizeRole(req.user.role);
+    const effectiveRoles = roles.map(normalizeRole);
 
-    // Demo Headmaster / Admin walkthrough users move freely across all walkthrough portals without permission popups
-    if (HEADMASTER_ADMIN_ROLES.includes(userRole) && isDemoSandboxRequest(req)) {
+    // STRICT SECURITY BOUNDARY: Developer Control Center & DEVELOPER-only routes MUST NEVER be bypassed by institutional or demo accounts
+    const isDeveloperOnlyRoute =
+      String(req.originalUrl || '').includes('/dev-control') ||
+      (effectiveRoles.length === 1 && effectiveRoles[0] === 'DEVELOPER');
+
+    if (isDeveloperOnlyRoute) {
+      if (effectiveRoles.includes(userRole)) {
+        return next();
+      }
+      if (userRole === 'DEVELOPER') {
+        return next();
+      }
+      return next(new AppError('Access Denied: System Developer privileges are required for this endpoint.', 403));
+    }
+
+    // Strict Clinic medical operations (Doctor/Nurse exclusive) must not be bypassed by Headmaster demo walkthrough
+    const isClinicExclusiveRoute =
+      effectiveRoles.length > 0 &&
+      effectiveRoles.every((r) => ['CLINIC_DOCTOR', 'CLINIC_NURSE', 'DOCTOR', 'NURSE', 'DEVELOPER'].includes(r));
+
+    // Demo Headmaster / Admin walkthrough users move freely across institutional walkthrough portals without permission popups
+    if (HEADMASTER_ADMIN_ROLES.includes(userRole) && isDemoSandboxRequest(req) && !isClinicExclusiveRoute) {
       return next();
     }
 
-    // Explicit Demo Walkthrough GET exploration when user opted into Demo Sandbox mode (without bypassing Student/Parent write guards)
+    // Explicit Demo Walkthrough GET exploration when user opted into Demo Sandbox mode (without bypassing Student/Parent write guards or Developer/Clinic boundaries)
     const explicitDemoHeader = String(req.headers?.['x-gbs-mode'] || '').trim().toUpperCase() === 'DEMO_SANDBOX';
-    if (explicitDemoHeader && req.method === 'GET' && isDemoSandboxRequest(req) && !req.originalUrl.includes('/payments/reports/')) {
+    if (
+      explicitDemoHeader &&
+      req.method === 'GET' &&
+      isDemoSandboxRequest(req) &&
+      !isClinicExclusiveRoute &&
+      !req.originalUrl.includes('/payments/reports/')
+    ) {
       return next();
     }
 
     // HEADMASTER, PRINCIPAL, ADMIN, SUPER_ADMIN share institutional headmaster privileges, and DEVELOPER has root access
-    const effectiveRoles = roles.map(normalizeRole);
     const hasAdminTier = effectiveRoles.some((r) => HEADMASTER_ADMIN_ROLES.includes(r));
     if (hasAdminTier) {
       for (const adminRole of HEADMASTER_ADMIN_ROLES) {

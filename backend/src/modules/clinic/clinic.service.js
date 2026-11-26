@@ -242,7 +242,7 @@ async function listClinicProfiles(req) {
     });
 
     const dbAdmissions = await prisma.admissionApplication.findMany({
-      where: { tenantId: tidNum, isDeleted: false }
+      where: { tenantId: tidNum }
     }).catch(() => []);
     dbAdmissions.forEach((app) => {
       const fullName = `${app.studentFirstName || ''} ${app.studentLastName || ''}`.trim();

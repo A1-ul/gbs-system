@@ -211,37 +211,50 @@ const triggerBackup = async (req, res, next) => {
   }
 };
 
-// 9. Query System Backups
+// 9. Query System Backups (Real PostgreSQL rows + real disk snapshots — zero hardcoded mock backups)
 const getBackups = async (req, res, next) => {
   try {
-    let backups = [];
+    const { listDatabaseBackups } = require('../../core/database/persistentStore');
+    let dbBackups = [];
+    let dbFailed = false;
     try {
-      backups = await prisma.systemBackup.findMany({
+      dbBackups = await prisma.systemBackup.findMany({
         orderBy: { createdAt: 'desc' },
-        take: 20
+        take: 50
       });
     } catch (dbErr) {
-      console.warn('System backups lookup notice (using fallback):', dbErr.message);
-      backups = [
-        {
-          id: 1,
-          filename: 'gbs_enterprise_master_backup.sql.enc',
-          fileSizeMb: 24.5,
-          backupType: 'FULL_ENTERPRISE',
-          isEncrypted: true,
-          storagePath: '/backups/database/gbs_enterprise_master_backup.sql.enc',
-          status: 'COMPLETED',
-          createdAt: new Date().toISOString()
-        }
-      ];
+      dbFailed = true;
+      console.warn('System backups DB lookup notice:', dbErr.message);
     }
-    res.status(200).json({
+
+    const diskBackups = (listDatabaseBackups() || []).map((f, idx) => ({
+      id: `disk_${idx + 1}_${f.fileName}`,
+      filename: f.fileName,
+      fileSizeMb: Number(((f.fileSizeKb || 0) / 1024).toFixed(3)),
+      backupType: 'SNAPSHOT_FILE',
+      isEncrypted: false,
+      storagePath: f.filePath || f.fileName,
+      status: 'COMPLETED',
+      createdAt: f.createdAt || f.timestamp || new Date().toISOString()
+    }));
+
+    if (dbFailed && diskBackups.length === 0) {
+      return res.status(503).json({
+        success: false,
+        status: 'error',
+        code: 'SYSTEM_DATABASE_UNAVAILABLE',
+        message: 'Unable to retrieve system backups from PostgreSQL and no local snapshot files exist.'
+      });
+    }
+
+    const merged = dbBackups.length > 0 ? dbBackups : diskBackups;
+    return res.status(200).json({
       status: 'success',
-      results: backups.length,
-      data: { backups }
+      results: merged.length,
+      data: { backups: merged }
     });
   } catch (error) {
-    next(error);
+    return next(error);
   }
 };
 
@@ -403,88 +416,97 @@ const issueLicense = async (req, res, next) => {
   }
 };
 
-// 17. Delete System Backup & Batch Deletion
+// 17. Delete System Backup & Batch Deletion (Honest 400/404/200 status codes — never mask failed deletes)
 const deleteBackup = async (req, res, next) => {
   try {
-    const { id } = req.params;
-    try {
-      await prisma.systemBackup.delete({ where: { id: parseInt(id, 10) } });
-    } catch (dbErr) {
-      console.warn(`Backup #${id} deletion db notice:`, dbErr.message);
+    const numId = parseInt(req.params.id, 10);
+    if (!Number.isInteger(numId) || numId <= 0) {
+      return res.status(400).json({ success: false, status: 'fail', message: 'Valid numeric backup ID is required.' });
     }
-    res.status(200).json({ status: 'success', message: `Backup #${id} deleted successfully.` });
+    const existing = await prisma.systemBackup.findUnique({ where: { id: numId } });
+    if (!existing) {
+      return res.status(404).json({ success: false, status: 'fail', message: `Backup #${numId} was not found.` });
+    }
+    await prisma.systemBackup.delete({ where: { id: numId } });
+    return res.status(200).json({ status: 'success', message: `Backup #${numId} deleted successfully.` });
   } catch (error) {
-    next(error);
+    return next(error);
   }
 };
 
 const batchDeleteBackups = async (req, res, next) => {
   try {
-    const { ids } = req.body;
-    if (Array.isArray(ids) && ids.length > 0) {
-      try {
-        await prisma.systemBackup.deleteMany({
-          where: { id: { in: ids.map(id => parseInt(id, 10)) } }
-        });
-      } catch (dbErr) {
-        console.warn('Batch backups delete db notice:', dbErr.message);
-      }
+    const { ids } = req.body || {};
+    const validIds = Array.isArray(ids) ? ids.map((id) => parseInt(id, 10)).filter((n) => Number.isInteger(n) && n > 0) : [];
+    if (validIds.length === 0) {
+      return res.status(400).json({ success: false, status: 'fail', message: 'At least one valid numeric backup ID is required.' });
     }
-    res.status(200).json({ status: 'success', message: `${ids?.length || 0} backups deleted successfully.` });
+    const result = await prisma.systemBackup.deleteMany({
+      where: { id: { in: validIds } }
+    });
+    if (!result.count) {
+      return res.status(404).json({ success: false, status: 'fail', message: 'None of the specified backup records were found.' });
+    }
+    return res.status(200).json({ status: 'success', message: `${result.count} backup(s) deleted successfully.`, data: { deletedCount: result.count } });
   } catch (error) {
-    next(error);
+    return next(error);
   }
 };
 
 // 18. Delete System Alert & Batch Operations
 const deleteAlert = async (req, res, next) => {
   try {
-    const { id } = req.params;
-    try {
-      await prisma.systemAlert.delete({ where: { id: parseInt(id, 10) } });
-    } catch (dbErr) {
-      console.warn(`Alert #${id} deletion db notice:`, dbErr.message);
+    const numId = parseInt(req.params.id, 10);
+    if (!Number.isInteger(numId) || numId <= 0) {
+      return res.status(400).json({ success: false, status: 'fail', message: 'Valid numeric alert ID is required.' });
     }
-    res.status(200).json({ status: 'success', message: `Alert #${id} deleted successfully.` });
+    const existing = await prisma.systemAlert.findUnique({ where: { id: numId } });
+    if (!existing) {
+      return res.status(404).json({ success: false, status: 'fail', message: `Alert #${numId} was not found.` });
+    }
+    await prisma.systemAlert.delete({ where: { id: numId } });
+    return res.status(200).json({ status: 'success', message: `Alert #${numId} deleted successfully.` });
   } catch (error) {
-    next(error);
+    return next(error);
   }
 };
 
 const batchResolveAlerts = async (req, res, next) => {
   try {
-    const { ids } = req.body;
-    if (Array.isArray(ids) && ids.length > 0) {
-      try {
-        await prisma.systemAlert.updateMany({
-          where: { id: { in: ids.map(id => parseInt(id, 10)) } },
-          data: { isResolved: true }
-        });
-      } catch (dbErr) {
-        console.warn('Batch alerts resolve db notice:', dbErr.message);
-      }
+    const { ids } = req.body || {};
+    const validIds = Array.isArray(ids) ? ids.map((id) => parseInt(id, 10)).filter((n) => Number.isInteger(n) && n > 0) : [];
+    if (validIds.length === 0) {
+      return res.status(400).json({ success: false, status: 'fail', message: 'At least one valid numeric alert ID is required.' });
     }
-    res.status(200).json({ status: 'success', message: `${ids?.length || 0} alerts resolved successfully.` });
+    const result = await prisma.systemAlert.updateMany({
+      where: { id: { in: validIds } },
+      data: { isResolved: true }
+    });
+    if (!result.count) {
+      return res.status(404).json({ success: false, status: 'fail', message: 'None of the specified alerts were found.' });
+    }
+    return res.status(200).json({ status: 'success', message: `${result.count} alert(s) resolved successfully.`, data: { updatedCount: result.count } });
   } catch (error) {
-    next(error);
+    return next(error);
   }
 };
 
 const batchDeleteAlerts = async (req, res, next) => {
   try {
-    const { ids } = req.body;
-    if (Array.isArray(ids) && ids.length > 0) {
-      try {
-        await prisma.systemAlert.deleteMany({
-          where: { id: { in: ids.map(id => parseInt(id, 10)) } }
-        });
-      } catch (dbErr) {
-        console.warn('Batch alerts delete db notice:', dbErr.message);
-      }
+    const { ids } = req.body || {};
+    const validIds = Array.isArray(ids) ? ids.map((id) => parseInt(id, 10)).filter((n) => Number.isInteger(n) && n > 0) : [];
+    if (validIds.length === 0) {
+      return res.status(400).json({ success: false, status: 'fail', message: 'At least one valid numeric alert ID is required.' });
     }
-    res.status(200).json({ status: 'success', message: `${ids?.length || 0} alerts deleted successfully.` });
+    const result = await prisma.systemAlert.deleteMany({
+      where: { id: { in: validIds } }
+    });
+    if (!result.count) {
+      return res.status(404).json({ success: false, status: 'fail', message: 'None of the specified alerts were found.' });
+    }
+    return res.status(200).json({ status: 'success', message: `${result.count} alert(s) deleted successfully.`, data: { deletedCount: result.count } });
   } catch (error) {
-    next(error);
+    return next(error);
   }
 };
 

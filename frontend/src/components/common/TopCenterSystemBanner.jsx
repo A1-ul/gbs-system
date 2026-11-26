@@ -352,7 +352,7 @@ export default function TopCenterSystemBanner({
     setSyncingCloud(true);
     setSyncFeedback(null);
     try {
-      const token = localStorage.getItem("gbs_dev_token") || localStorage.getItem("gbs_token") || "";
+      const token = localStorage.getItem("gbs_dev_token") || localStorage.getItem("gbs_token") || localStorage.getItem("gbs_access_token") || "";
       const res = await fetch(resolveApiUrl("/api/v1/dev-control/sync-to-cloud"), {
         method: "POST",
         headers: {
@@ -360,20 +360,29 @@ export default function TopCenterSystemBanner({
           ...(token ? { Authorization: `Bearer ${token}` } : {})
         }
       });
-      const data = await res.json();
-      const msg = data?.message || "✓ Local data safely synced and point-in-time backup created!";
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok || data?.success === false) {
+        const errMsg = data?.message || `Cloud synchronization failed (HTTP ${res.status}).`;
+        setSyncFeedback(errMsg);
+        if (window.showGBSOpenNotice) {
+          window.showGBSOpenNotice(errMsg, "error", `CLOUD SYNC FAILED (${res.status})`);
+        }
+        setTimeout(() => setSyncFeedback(null), 6000);
+        return;
+      }
+      const msg = data?.message || "Database synchronization confirmed and snapshot created.";
       setSyncFeedback(msg);
       if (window.showGBSOpenNotice) {
         window.showGBSOpenNotice(msg, "success", "CLOUD & POSTGRESQL SYNC");
       }
       setTimeout(() => setSyncFeedback(null), 5000);
-    } catch {
-      const fallbackMsg = "✓ Local data preserved safely in offline storage. Backup created.";
-      setSyncFeedback(fallbackMsg);
+    } catch (err) {
+      const errMsg = `Unable to reach server for cloud synchronization: ${err?.message || "Network error"}`;
+      setSyncFeedback(errMsg);
       if (window.showGBSOpenNotice) {
-        window.showGBSOpenNotice(fallbackMsg, "info", "LOCAL BACKUP PRESERVED");
+        window.showGBSOpenNotice(errMsg, "error", "CLOUD SYNC NETWORK ERROR");
       }
-      setTimeout(() => setSyncFeedback(null), 5000);
+      setTimeout(() => setSyncFeedback(null), 6000);
     } finally {
       setSyncingCloud(false);
     }

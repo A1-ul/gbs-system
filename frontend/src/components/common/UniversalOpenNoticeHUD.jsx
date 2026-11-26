@@ -229,25 +229,27 @@ export default function UniversalOpenNoticeHUD() {
         const networkFiredAfterClick = Number(window.__gbsLastNetworkActivityAt || 0) >= clickTime - 25;
         const validationFailed = lastInvalidAt >= clickTime - 50;
 
-        // Only show fallback confirmation for synchronous UI commands when no API/validation event handled it
+        // Only show a local UI notice for genuine synchronous non-network controls (never claim backend synchronization!)
         if (
           !hasPendingNetwork &&
           !networkFiredAfterClick &&
           !validationFailed &&
           lastDispatchedRef.current.time < clickTime
         ) {
-          const isDanger =
-            lower.includes("delete") ||
-            lower.includes("purge") ||
-            lower.includes("reject") ||
-            lower.includes("lock") ||
-            lower.includes("suspend") ||
-            lower.includes("kill");
-          showNotice(
-            `Command "${rawLabel}" processed and synchronized with active session state.`,
-            isDanger ? "warning" : "info",
-            "USER COMMAND EXECUTED"
-          );
+          const isLocalOnlyAction =
+            lower.includes("copy") ||
+            lower.includes("print") ||
+            lower.includes("export") ||
+            lower.includes("download") ||
+            lower.includes("clear") ||
+            lower.includes("reset");
+          if (isLocalOnlyAction) {
+            showNotice(
+              `Action "${rawLabel}" completed.`,
+              "info",
+              "INTERFACE ACTION COMPLETED"
+            );
+          }
         }
       }, 360);
     };

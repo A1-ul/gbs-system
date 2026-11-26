@@ -424,19 +424,24 @@ const {
 } = require('./database/persistentStore');
 const prisma = require('./database/prisma.client');
 
-app.get('/api/v1/audit/logs', async (req, res) => {
+const { restrictTo } = require('../middleware/rbac.middleware');
+
+app.get('/api/v1/audit/logs', protect, restrictTo('ADMIN', 'SUPER_ADMIN', 'HEADMASTER', 'PRINCIPAL', 'DEVELOPER'), async (req, res, next) => {
   try {
+    const isDev = String(req.user?.role || '').toUpperCase() === 'DEVELOPER';
+    const tid = parseInt(req.tenantId || req.user?.tenantId || 1, 10) || 1;
     const logs = await prisma.auditLog.findMany({
+      where: isDev ? {} : { tenantId: tid },
       orderBy: { createdAt: 'desc' },
       take: 50
     });
-    res.status(200).json({ status: 'success', results: logs.length, data: { logs } });
-  } catch {
-    res.status(200).json({ status: 'success', results: 0, data: { logs: [] } });
+    return res.status(200).json({ status: 'success', results: logs.length, data: { logs } });
+  } catch (err) {
+    return next(new AppError(`Audit log database query failed: ${err.message}`, 503));
   }
 });
 
-app.get('/api/v1/topic-videos', (req, res) => {
+app.get('/api/v1/topic-videos', protect, (req, res) => {
   const store = readPersistentStore();
   res.status(200).json({
     status: 'success',
@@ -445,23 +450,30 @@ app.get('/api/v1/topic-videos', (req, res) => {
   });
 });
 
-app.post('/api/v1/topic-videos', (req, res) => {
+app.post('/api/v1/topic-videos', protect, restrictTo('TEACHER', 'ADMIN', 'SUPER_ADMIN', 'HEADMASTER', 'PRINCIPAL', 'DEVELOPER'), (req, res, next) => {
   const body = req.body || {};
+  const title = String(body.title || '').trim();
+  const videoUrl = String(body.videoUrl || '').trim();
+  if (!title) {
+    return next(new AppError('Topic video title is required.', 400));
+  }
+  if (!videoUrl) {
+    return next(new AppError('A valid topic video file or stream URL is required.', 400));
+  }
+
   const newVideo = {
     id: body.id || `vid_${Date.now()}`,
-    title: String(body.title || 'Recorded Topic Lesson').trim(),
+    title,
     subject: String(body.subject || 'General Subject').trim(),
     className: String(body.className || 'All Classes').trim(),
-    teacherName: String(body.teacherName || 'Subject Teacher').trim(),
-    teacherEmail: String(body.teacherEmail || 'teacher@gbs.com').trim(),
+    teacherName: String(body.teacherName || `${req.user?.firstName || ''} ${req.user?.lastName || ''}`.trim() || 'Subject Teacher').trim(),
+    teacherEmail: String(body.teacherEmail || req.user?.email || '').trim(),
     absenceNote: String(
       body.absenceNote ||
       'Topic Introduction in Teacher Absence — Watch this lesson completely and review the attached topic notes.'
     ).trim(),
     lessonSummary: String(body.lessonSummary || '').trim(),
-    videoUrl:
-      body.videoUrl ||
-      'https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/ForBiggerBlazes.mp4',
+    videoUrl,
     videoType: body.videoType || 'UPLOADED_VIDEO',
     fileName: body.fileName || null,
     durationLabel: body.durationLabel || '10:00',
@@ -474,19 +486,19 @@ app.post('/api/v1/topic-videos', (req, res) => {
     topicVideos: [newVideo, ...(curr.topicVideos || []).filter((v) => v.id !== newVideo.id)]
   }));
 
-  res.status(201).json({
+  return res.status(201).json({
     status: 'success',
     message: `Topic video "${newVideo.title}" uploaded and published to the class platform for students to watch!`,
     data: { video: newVideo, totalVideos: (updated.topicVideos || []).length }
   });
 });
 
-app.post('/api/v1/topic-videos/:id/watch', (req, res) => {
+app.post('/api/v1/topic-videos/:id/watch', protect, (req, res, next) => {
   const { id } = req.params;
   const { studentName, studentEmail, studentQuestion } = req.body || {};
   const watchRecord = {
-    studentName: studentName || 'Enrolled Student',
-    studentEmail: studentEmail || 'student@gbs.com',
+    studentName: studentName || `${req.user?.firstName || ''} ${req.user?.lastName || ''}`.trim() || 'Enrolled Student',
+    studentEmail: studentEmail || req.user?.email || '',
     studentQuestion: studentQuestion || 'Watched topic video lesson completely.',
     watchedAt: new Date().toISOString()
   };
@@ -506,29 +518,42 @@ app.post('/api/v1/topic-videos/:id/watch', (req, res) => {
     return { ...curr, topicVideos: videos };
   });
 
-  res.status(200).json({
+  if (!targetVideo) {
+    return next(new AppError(`Topic video '${id}' was not found.`, 404));
+  }
+
+  return res.status(200).json({
     status: 'success',
     message: 'Student topic video attendance & feedback recorded for teacher review.',
     data: { video: targetVideo }
   });
 });
 
-app.delete('/api/v1/topic-videos/:id', (req, res) => {
+app.delete('/api/v1/topic-videos/:id', protect, restrictTo('TEACHER', 'ADMIN', 'SUPER_ADMIN', 'HEADMASTER', 'PRINCIPAL', 'DEVELOPER'), (req, res, next) => {
   const { id } = req.params;
+  const store = readPersistentStore();
+  const exists = (store.topicVideos || []).some((v) => String(v.id) === String(id));
+  if (!exists) {
+    return next(new AppError(`Topic video '${id}' was not found.`, 404));
+  }
   writePersistentStore((curr) => ({
     ...curr,
     topicVideos: (curr.topicVideos || []).filter((v) => String(v.id) !== String(id))
   }));
-  res.status(200).json({
+  return res.status(200).json({
     status: 'success',
     message: 'Topic video removed from class platform.'
   });
 });
 
-app.post('/api/v1/subscriptions/calculate-and-subscribe', (req, res) => {
+app.post('/api/v1/subscriptions/calculate-and-subscribe', (req, res, next) => {
   const body = req.body || {};
   const tier = String(body.institutionType || body.tier || 'NURSERY_TO_JHS').toUpperCase();
-  const studentCount = Math.max(1, parseInt(body.studentCount || body.totalStudentsEnrolled || 100, 10));
+  const rawStudentCount = body.studentCount !== undefined ? body.studentCount : body.totalStudentsEnrolled;
+  if (rawStudentCount !== undefined && (!Number.isFinite(Number(rawStudentCount)) || Number(rawStudentCount) <= 0)) {
+    return next(new AppError('studentCount must be a positive integer greater than 0.', 400));
+  }
+  const studentCount = Math.max(1, parseInt(rawStudentCount || 100, 10));
   // Official GBS Student Subscription Rates:
   // Nursery–JHS = GH₵3/mo (12/term) | SHS = GH₵5/mo (20/term) | TVET & University = GH₵10/mo (40/semester)
   const ratePerStudent = (tier.includes('UNI') || tier.includes('TERTIARY') || tier.includes('TECH') || tier.includes('TVET') || tier.includes('VOCAT') || tier.includes('POLYTECH'))
@@ -734,9 +759,52 @@ if (frontendDistPath) {
   });
 }
 
-// Unhandled route handler
+// Unhandled route handler: accurately distinguish 405 Method Not Allowed from 404 Not Found on /api/*
+let cachedRouteMethodMap = null;
+function collectAllowedMethodsForPath(requestPath) {
+  if (!cachedRouteMethodMap) {
+    cachedRouteMethodMap = [];
+    const scanStack = (stack, prefix = '') => {
+      for (const layer of stack || []) {
+        if (layer.route && layer.route.path) {
+          const methods = Object.keys(layer.route.methods || {}).filter(Boolean).map((m) => m.toUpperCase());
+          const rawPaths = Array.isArray(layer.route.path) ? layer.route.path : [layer.route.path];
+          for (const rp of rawPaths) {
+            const full = (prefix + rp).replace(/\/+/g, '/').replace(/\/$/, '') || '/';
+            const regexStr = '^' + full.replace(/[.*+?^${}()|[\]\\]/g, '\\$&').replace(/\\:[^/]+/g, '[^/]+') + '$';
+            cachedRouteMethodMap.push({ regex: new RegExp(regexStr, 'i'), methods });
+          }
+        } else if (layer.name === 'router' && layer.handle && layer.handle.stack) {
+          const sub = (layer.regexp?.source || '')
+            .replace(/^\\\^/, '').replace(/^\^/, '')
+            .replace(/\\\//g, '/')
+            .replace(/\(\?=\\\/\|\$\)$/, '').replace(/\(\?=\/\|\$\)$/, '')
+            .replace(/\$$/, '').replace(/\/\?$/, '');
+          scanStack(layer.handle.stack, prefix + sub);
+        }
+      }
+    };
+    scanStack(app._router ? app._router.stack : []);
+  }
+  const cleanPath = String(requestPath || '').split('?')[0].replace(/\/$/, '') || '/';
+  const allowed = new Set();
+  for (const entry of cachedRouteMethodMap) {
+    if (entry.regex.test(cleanPath)) {
+      entry.methods.forEach((m) => { if (m !== '_ALL') allowed.add(m); });
+    }
+  }
+  return Array.from(allowed);
+}
+
 app.all('*', (req, res, next) => {
-  next(new AppError(`Can't find ${req.originalUrl} on this server!`, 404));
+  if (req.path.startsWith('/api')) {
+    const allowedMethods = collectAllowedMethodsForPath(req.path);
+    if (allowedMethods.length > 0 && !allowedMethods.includes(req.method.toUpperCase())) {
+      res.setHeader('Allow', allowedMethods.join(', '));
+      return next(new AppError(`HTTP method ${req.method} is not allowed on ${req.path}. Allowed: ${allowedMethods.join(', ')}`, 405));
+    }
+  }
+  return next(new AppError(`Can't find ${req.originalUrl} on this server!`, 404));
 });
 
 // Central Error Handler (GBS-RCCE Normalized)

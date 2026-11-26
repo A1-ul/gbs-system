@@ -17,7 +17,7 @@ import {
 } from "../../../utils/i18nCountryEngine";
 import UniversalRoleGuideModal from "../../../components/common/UniversalRoleGuideModal";
 import { navigateToDetail } from "../../../utils/universalNavigation";
-import { syncSystemModeFlags, isDemoSandboxMode } from "../../../utils/tokenStorage";
+import { syncSystemModeFlags } from "../../../utils/tokenStorage";
 import RcceControlHub from "../components/RcceControlHub";
 import PaymentGatewayAdminPanel from "../../../components/common/PaymentGatewayAdminPanel";
 import FinancialReportsPanel from "../../../components/common/FinancialReportsPanel";
@@ -29,17 +29,45 @@ import "./DeveloperPlatform.css";
 
 const BASE_URL = `${getApiBaseUrl()}/dev-control`;
 
+/**
+ * Developer Control Center strictly operates in ORIGINAL PRODUCTION MODE (never Demo Sandbox).
+ * Every API call sends the live Developer JWT Bearer token and LIVE_PRODUCTION mode headers.
+ */
 function getDevAuthHeaders(withJson = false) {
   const token =
     typeof window !== "undefined"
-      ? localStorage.getItem("gbs_dev_token") || localStorage.getItem("gbs_token")
+      ? localStorage.getItem("gbs_dev_token") || localStorage.getItem("gbs_token") || localStorage.getItem("gbs_access_token")
       : null;
   return {
     ...(withJson ? { "Content-Type": "application/json" } : {}),
     ...(token ? { Authorization: `Bearer ${token}` } : {}),
-    "X-GBS-Mode": isDemoSandboxMode() ? "DEMO_SANDBOX" : "LIVE_PRODUCTION",
-    "X-System-Mode": isDemoSandboxMode() ? "DEMO_SANDBOX" : "LIVE_PRODUCTION"
+    "X-GBS-Mode": "LIVE_PRODUCTION",
+    "X-System-Mode": "LIVE_PRODUCTION"
   };
+}
+
+/**
+ * Authenticated production fetch wrapper for all Developer Mission Control API operations.
+ * Tracks active network requests so UI feedback waits for real HTTP confirmation.
+ */
+async function devFetch(url, options = {}) {
+  const hasBody = options.body !== undefined && options.body !== null;
+  const mergedHeaders = {
+    ...getDevAuthHeaders(hasBody),
+    ...(options.headers || {})
+  };
+  if (typeof window !== "undefined") {
+    window.__gbsInFlightRequests = Math.max(0, Number(window.__gbsInFlightRequests || 0)) + 1;
+    window.__gbsLastNetworkActivityAt = Date.now();
+  }
+  try {
+    return await fetch(url, { ...options, headers: mergedHeaders });
+  } finally {
+    if (typeof window !== "undefined") {
+      window.__gbsInFlightRequests = Math.max(0, Number(window.__gbsInFlightRequests || 1) - 1);
+      window.__gbsLastNetworkActivityAt = Date.now();
+    }
+  }
 }
 
 const DEV_SCROLL_SNAPSHOT_KEY = "gbs_dev_scroll_snapshots_v2";
@@ -280,8 +308,7 @@ export default function DeveloperDashboard() {
     sockets: { activeConnections: 0, maxConnections: 10000 },
     metrics: { totalTenants: 0, totalUsers: 0, activeLocks: 0, totalBackups: 0 }
   });
-  const [demoUsageSummary, setDemoUsageSummary] = useState({ maxPerModule: 10, totalUsed: 0, modules: {} });
-  const [paymentStatusSummary, setPaymentStatusSummary] = useState({ configuredProviders: [], sandboxOnly: true });
+  const [paymentStatusSummary, setPaymentStatusSummary] = useState({ configuredProviders: [], sandboxOnly: false });
 
   const [consoleStats, setConsoleStats] = useState({
     totalTenants: 0,
@@ -412,40 +439,54 @@ export default function DeveloperDashboard() {
 
   const handleDeleteHeadmasterMessageThread = async (threadOrMsgId) => {
     if (!window.confirm("Permanently delete this Headmaster directive thread and all its replies from the system?")) return;
-    recordPermanentDeletion([threadOrMsgId]);
-    const updated = headmasterMessages.filter((m) => m.id !== threadOrMsgId && m.threadId !== threadOrMsgId);
-    setHeadmasterMessages(updated);
-    localStorage.setItem("gbs_dev_headmaster_messages", JSON.stringify(updated));
     try {
-      await fetch(`${BASE_URL}/headmaster-messages/${encodeURIComponent(threadOrMsgId)}`, { method: "DELETE" });
-    } catch { }
-    window.dispatchEvent(new Event("storage"));
-    appendConsoleLog(`MSG_DELETE >> Headmaster message thread ${threadOrMsgId} permanently deleted.`);
-    showNotification(`🗑️ Headmaster message thread permanently deleted.`);
+      const res = await devFetch(`${BASE_URL}/headmaster-messages/${encodeURIComponent(threadOrMsgId)}`, { method: "DELETE" });
+      if (!res.ok) {
+        const errData = await res.json().catch(() => ({}));
+        showNotification(`⛔ Failed to delete directive thread (HTTP ${res.status}): ${errData.message || "Request rejected."}`);
+        return;
+      }
+      recordPermanentDeletion([threadOrMsgId]);
+      const updated = headmasterMessages.filter((m) => m.id !== threadOrMsgId && m.threadId !== threadOrMsgId);
+      setHeadmasterMessages(updated);
+      localStorage.setItem("gbs_dev_headmaster_messages", JSON.stringify(updated));
+      window.dispatchEvent(new Event("storage"));
+      appendConsoleLog(`MSG_DELETE >> Headmaster message thread ${threadOrMsgId} permanently deleted.`);
+      showNotification(`🗑️ Headmaster message thread permanently deleted.`);
+    } catch (err) {
+      showNotification(`⛔ Network error deleting message thread: ${err.message}`);
+    }
   };
 
   const handleDeleteHeadmasterReply = async (threadOrMsgId, replyId) => {
     if (!window.confirm("Permanently delete this Headmaster reply message from the system?")) return;
-    recordPermanentDeletion([replyId]);
-    const updated = headmasterMessages.map((m) => {
-      if (m.id === threadOrMsgId || m.threadId === threadOrMsgId) {
-        return {
-          ...m,
-          replies: (m.replies || []).filter((r) => r.id !== replyId)
-        };
-      }
-      return m;
-    });
-    setHeadmasterMessages(updated);
-    localStorage.setItem("gbs_dev_headmaster_messages", JSON.stringify(updated));
     try {
-      await fetch(`${BASE_URL}/headmaster-messages/${encodeURIComponent(threadOrMsgId)}/replies/${encodeURIComponent(replyId)}`, {
+      const res = await devFetch(`${BASE_URL}/headmaster-messages/${encodeURIComponent(threadOrMsgId)}/replies/${encodeURIComponent(replyId)}`, {
         method: "DELETE"
       });
-    } catch { }
-    window.dispatchEvent(new Event("storage"));
-    appendConsoleLog(`REPLY_DELETE >> Headmaster reply ${replyId} in thread ${threadOrMsgId} permanently deleted.`);
-    showNotification(`🗑️ Headmaster reply permanently deleted.`);
+      if (!res.ok) {
+        const errData = await res.json().catch(() => ({}));
+        showNotification(`⛔ Failed to delete reply (HTTP ${res.status}): ${errData.message || "Request rejected."}`);
+        return;
+      }
+      recordPermanentDeletion([replyId]);
+      const updated = headmasterMessages.map((m) => {
+        if (m.id === threadOrMsgId || m.threadId === threadOrMsgId) {
+          return {
+            ...m,
+            replies: (m.replies || []).filter((r) => r.id !== replyId)
+          };
+        }
+        return m;
+      });
+      setHeadmasterMessages(updated);
+      localStorage.setItem("gbs_dev_headmaster_messages", JSON.stringify(updated));
+      window.dispatchEvent(new Event("storage"));
+      appendConsoleLog(`REPLY_DELETE >> Headmaster reply ${replyId} in thread ${threadOrMsgId} permanently deleted.`);
+      showNotification(`🗑️ Headmaster reply permanently deleted.`);
+    } catch (err) {
+      showNotification(`⛔ Network error deleting reply: ${err.message}`);
+    }
   };
 
   const [showComposeMessageModal, setShowComposeMessageModal] = useState(false);
@@ -532,10 +573,10 @@ export default function DeveloperDashboard() {
 
   const handleOpenCeaseAndDesistMessage = (violation) => {
     setComposeMessageForm({
-      tenantCode: violation.tenantCode || "GBS-ROYALOAK",
+      tenantCode: violation.tenantCode || "",
       institutionName: violation.institutionName || "Registered Institution",
-      headmasterName: "Headmaster Executive Suite",
-      headmasterEmail: violation.headmasterEmail || "admin@gbs.edu",
+      headmasterName: violation.headmasterName || "Headmaster Executive Suite",
+      headmasterEmail: violation.headmasterEmail || "",
       subject: `🚨 STATUTORY WARNING: Unauthorized Developer Dashboard Intrusion Attempt (${violation.attemptedEmail})`,
       messageText: `Attention Headmaster of ${violation.institutionName}:\n\nOur security sentinel intercepted an unauthorized attempt to access the Developer Platform using credentials from your institution (${violation.attemptedEmail}) from IP ${violation.sourceIp}.\n\nYou are strictly warned to put an immediate stop to this unauthorized access. Continued attempts will cause institution penalties, portal suspension, and formal referral to your Board of Governors.\n\nPlease reply immediately detailing what actions your administration has taken to halt this misconduct.`,
       urgency: "CRITICAL_CEASE_AND_DESIST",
@@ -598,18 +639,27 @@ export default function DeveloperDashboard() {
     );
     triggerPadlockFeedback(targetStatus === "LOCKED", `${selectedTenants.length} Selected Tenants`, `BATCH_${apiAction}`);
     try {
-      await Promise.all(
+      const responses = await Promise.all(
         selectedTenants.map((id) =>
-          fetch(`${BASE_URL}/tenants/${id}/action`, {
+          devFetch(`${BASE_URL}/tenants/${id}/action`, {
             method: "POST",
-            headers: { "Content-Type": "application/json" },
             body: JSON.stringify({ action: apiAction, reason: `Developer Batch ${apiAction}` })
           })
         )
       );
+      const failed = responses.filter((r) => !r.ok);
+      if (failed.length > 0) {
+        const errData = await failed[0].json().catch(() => ({}));
+        showNotification(`⛔ Batch ${apiAction} failed on ${failed.length}/${responses.length} tenant(s) (HTTP ${failed[0].status}): ${errData.message || "Request rejected."}`);
+        fetchData();
+        return;
+      }
       fetchData();
-    } catch { }
-    showNotification(`✓ Status changed completely to ${targetStatus} for ${selectedTenants.length} selected institution(s).`);
+      showNotification(`✓ Status changed to ${targetStatus} for ${selectedTenants.length} selected institution(s).`);
+    } catch (err) {
+      showNotification(`⛔ Network error executing batch ${apiAction}: ${err.message}`);
+      fetchData();
+    }
   };
 
   // Lock or unlock all unselected institutions
@@ -620,29 +670,32 @@ export default function DeveloperDashboard() {
       return;
     }
     const apiAction = targetStatus === "LOCKED" ? "LOCK" : "UNLOCK";
-    const newOverrides = { ...tenantLockOverrides };
-    unselectedList.forEach((c) => {
-      newOverrides[c.tenantId] = targetStatus;
-    });
-    setTenantLockOverrides(newOverrides);
-    localStorage.setItem("gbs_tenant_lock_overrides", JSON.stringify(newOverrides));
-    setCountdowns((prev) =>
-      prev.map((c) => !selectedTenants.includes(c.tenantId) ? { ...c, subscriptionStatus: targetStatus, warningLevel: targetStatus === "LOCKED" ? "LOCKED_BY_DEVELOPER" : "NORMAL", formattedCountdown: targetStatus === "LOCKED" ? "🔒 Locked by Developer Control" : c.formattedCountdown } : c)
-    );
-    triggerPadlockFeedback(targetStatus === "LOCKED", `${unselectedList.length} Unselected Tenants`, `BATCH_UNSELECTED_${apiAction}`);
     try {
-      await Promise.all(
+      const responses = await Promise.all(
         unselectedList.map((c) =>
-          fetch(`${BASE_URL}/tenants/${c.tenantId}/action`, {
+          devFetch(`${BASE_URL}/tenants/${c.tenantId}/action`, {
             method: "POST",
-            headers: { "Content-Type": "application/json" },
             body: JSON.stringify({ action: apiAction, reason: `Developer Batch Unselected ${apiAction}` })
           })
         )
       );
+      const failed = responses.filter((r) => !r.ok);
+      if (failed.length > 0) {
+        const errData = await failed[0].json().catch(() => ({}));
+        showNotification(`⛔ Batch ${apiAction} failed on ${failed.length}/${responses.length} unselected tenant(s) (HTTP ${failed[0].status}): ${errData.message || "Request rejected."}`);
+        fetchData();
+        return;
+      }
+      const newOverrides = { ...tenantLockOverrides };
+      unselectedList.forEach((c) => { newOverrides[c.tenantId] = targetStatus; });
+      setTenantLockOverrides(newOverrides);
+      localStorage.setItem("gbs_tenant_lock_overrides", JSON.stringify(newOverrides));
+      triggerPadlockFeedback(targetStatus === "LOCKED", `${unselectedList.length} Unselected Tenants`, `BATCH_UNSELECTED_${apiAction}`);
       fetchData();
-    } catch { }
-    showNotification(`✓ Status changed completely to ${targetStatus} for all ${unselectedList.length} unselected institution(s).`);
+      showNotification(`✓ Status changed to ${targetStatus} for all ${unselectedList.length} unselected institution(s).`);
+    } catch (err) {
+      showNotification(`⛔ Network error updating unselected tenants: ${err.message}`);
+    }
   };
 
   // Tenant Security Violations & Unauthorized Developer Login Intrusion State
@@ -746,15 +799,22 @@ export default function DeveloperDashboard() {
   };
 
   const handleClearStaffBreach = async (staffEmail) => {
-    recordPermanentDeletion([staffEmail]);
-    const updated = { ...staffBreachTrials };
-    delete updated[staffEmail];
-    setStaffBreachTrials(updated);
-    localStorage.setItem("gbs_dev_staff_intrusion_trials", JSON.stringify(updated));
     try {
-      await fetch(`${BASE_URL}/intrusion-violations/${encodeURIComponent(staffEmail)}`, { method: "DELETE" });
-    } catch { }
-    showNotification(`🗑️ Watchlist breach dossier for ${staffEmail} permanently deleted.`);
+      const res = await devFetch(`${BASE_URL}/intrusion-violations/${encodeURIComponent(staffEmail)}`, { method: "DELETE" });
+      if (!res.ok) {
+        const errData = await res.json().catch(() => ({}));
+        showNotification(`⛔ Failed to clear breach dossier (HTTP ${res.status}): ${errData.message || "Request rejected."}`);
+        return;
+      }
+      recordPermanentDeletion([staffEmail]);
+      const updated = { ...staffBreachTrials };
+      delete updated[staffEmail];
+      setStaffBreachTrials(updated);
+      localStorage.setItem("gbs_dev_staff_intrusion_trials", JSON.stringify(updated));
+      showNotification(`🗑️ Watchlist breach dossier for ${staffEmail} permanently deleted.`);
+    } catch (err) {
+      showNotification(`⛔ Network error clearing breach dossier: ${err.message}`);
+    }
   };
 
   const handleNotifyHeadmaster = (id) => {
@@ -893,7 +953,7 @@ export default function DeveloperDashboard() {
   });
   const [showLicenseModal, setShowLicenseModal] = useState(false);
 
-  // Tenant Onboarding & Mobile OTP State (Developer Dashboard Exclusive)
+  // Tenant Onboarding & Mobile OTP State (Original Production — Zero Prefilled Demo Values)
   const [showOnboardPassword, setShowOnboardPassword] = useState(false);
   const [selectedOnboardingAppDossier, setSelectedOnboardingAppDossier] = useState(null);
   const [tenantOnboardForm, setTenantOnboardForm] = useState({
@@ -902,14 +962,14 @@ export default function DeveloperDashboard() {
     domain: "",
     headmasterName: "",
     headmasterEmail: "",
-    headmasterPhone: "+233-24-555-0199",
+    headmasterPhone: "",
     planTier: "ENTERPRISE",
-    institutionType: "NURSERY_TO_JHS", // "NURSERY_TO_JHS" | "SENIOR_HIGH_SCHOOL" | "UNIVERSITY"
-    maxStudents: 2500,
-    password: "Headmaster2026!",
-    headmasterPhoto: "/assets/admin-dashboard-bg.jpg",
-    facialVerified: true,
-    facialVerificationHash: "SHA256-FACE-HM-CERTIFIED"
+    institutionType: "NURSERY_TO_JHS",
+    maxStudents: 0,
+    password: "",
+    headmasterPhoto: "",
+    facialVerified: false,
+    facialVerificationHash: ""
   });
   const [incomingApplications, setIncomingApplications] = useState(() => {
     try {
@@ -937,7 +997,7 @@ export default function DeveloperDashboard() {
       const rawIdStr = String(app.id || "").replace(/\D/g, "");
       const numericTenantId = rawIdStr ? parseInt(rawIdStr.slice(-6), 10) : Math.floor(1000 + Math.random() * 9000);
       const assignedTenantCode = app.tenantCode || `GBS-${(app.institutionName || "SCHOOL").replace(/[^A-Za-z0-9]/g, "").slice(0, 6).toUpperCase()}-${String(numericTenantId).slice(-4)}`;
-      const targetEmailLower = String(app.headmasterEmail || app.adminEmail || app.officialEmail || "admin@gbs.edu").trim().toLowerCase();
+      const targetEmailLower = String(app.headmasterEmail || app.adminEmail || app.officialEmail || "").trim().toLowerCase();
 
       // Clear any previous deleted or locked state for this institution so approval works cleanly
       try {
@@ -1020,10 +1080,10 @@ export default function DeveloperDashboard() {
           headmaster: {
             name: app.headmasterName || app.adminName || "Executive Headmaster",
             email: targetEmailLower,
-            phone: app.headmasterPhone || app.adminPhone || app.officialPhone || "+233-24-555-0199"
+            phone: app.headmasterPhone || app.adminPhone || app.officialPhone || ""
           },
-          subscription: { tier: app.subscriptionPlan || "ENTERPRISE", maxStudents: app.totalStudentsEnrolled || 2500 },
-          maxStudents: app.totalStudentsEnrolled || 2500,
+          subscription: { tier: app.subscriptionPlan || "ENTERPRISE", maxStudents: Number(app.totalStudentsEnrolled || 0) },
+          maxStudents: Number(app.totalStudentsEnrolled || 0),
           createdAt: app.createdAt || new Date().toISOString()
         },
         ...prev.filter((t) => (t.tenantCode || t.code) !== assignedTenantCode && (t.name || t.institutionName) !== app.institutionName)
@@ -1038,12 +1098,12 @@ export default function DeveloperDashboard() {
           ...(existingUser || {}),
           id: existingUser?.id || `usr_hm_${numericTenantId}`,
           email: targetEmailLower,
-          username: targetEmailLower.split("@")[0],
-          password: app.password || app.adminPassword || existingUser?.password || "Headmaster123!",
+          username: targetEmailLower ? targetEmailLower.split("@")[0] : "",
+          password: app.password || app.adminPassword || existingUser?.password || "",
           role: "ADMIN",
           firstName: (app.headmasterName || app.adminName || "Headmaster").split(" ")[0],
           lastName: (app.headmasterName || app.adminName || "").split(" ").slice(1).join(" "),
-          phone: app.headmasterPhone || app.adminPhone || app.officialPhone || "+233 54 329 4615",
+          phone: app.headmasterPhone || app.adminPhone || app.officialPhone || "",
           tenantId: numericTenantId,
           tenantCode: assignedTenantCode,
           schoolName: app.institutionName,
@@ -1066,8 +1126,8 @@ export default function DeveloperDashboard() {
       } catch { }
 
       // 1. DISPATCH ACCEPTANCE SMS TO REGISTERED MOBILE NUMBER WITH EXACT REQUIRED WORDING
-      const targetPhone = app.headmasterPhone || app.adminPhone || app.officialPhone || "+233-24-555-0199";
-      const targetEmail = app.headmasterEmail || app.adminEmail || "admin@school.edu";
+      const targetPhone = app.headmasterPhone || app.adminPhone || app.officialPhone || "";
+      const targetEmail = app.headmasterEmail || app.adminEmail || app.officialEmail || "";
       const acceptanceSmsContent = `🎉 Congratulations ${app.institutionName}! Your onboarding application is approved, you can continue to enjoy your platforms. Your assigned Tenant Code is ${assignedTenantCode}. You can now sign in at ${window.location.origin}/login/admin using ${targetEmail}.`;
 
       const newSmsEntry = {
@@ -1412,8 +1472,8 @@ export default function DeveloperDashboard() {
         localStorage.setItem("gbs_local_registered_users", JSON.stringify(updatedUsers));
       } catch { }
 
-      const targetPhone = app.headmasterPhone || app.adminPhone || app.officialPhone || "+233-24-555-0199";
-      const targetEmail = app.headmasterEmail || app.adminEmail || "admin@school.edu";
+      const targetPhone = app.headmasterPhone || app.adminPhone || app.officialPhone || "";
+      const targetEmail = app.headmasterEmail || app.adminEmail || app.officialEmail || "";
       const rejectionSmsContent = `⚠️ GBS System Notice: Your institution onboarding application for '${app.institutionName}' was not approved by the Developer Control Center. Reason: ${rejectionReason}. Please contact Developer Support at gabosei48@gmail.com for assistance.`;
 
       // 1. Dispatch rejection SMS log entry
@@ -1954,18 +2014,8 @@ export default function DeveloperDashboard() {
         return;
       }
     } catch (err) {
-      console.warn("Hardware webcam fallback to live optical sensor stream:", err);
-    }
-
-    const fallbackStream = createLiveOpticalSensorStream(biometricFallbackAnimRef, "OPTICAL SENTINEL LIVE FEED");
-    if (fallbackStream) {
-      biometricStreamRef.current = fallbackStream;
-      setBiometricCameraActive(true);
-      if (biometricVideoRef.current) {
-        biometricVideoRef.current.srcObject = fallbackStream;
-        biometricVideoRef.current.play?.().catch(() => { });
-      }
-      showNotification("📷 Live Optical Biometric Sentinel feed engaged (30 FPS).");
+      console.warn("Hardware webcam unavailable:", err);
+      showNotification(`⚠ No physical camera detected or camera permission denied (${err?.message || "Camera unavailable"}). Connect a webcam or upload an official photo.`);
     }
   };
 
@@ -2031,18 +2081,8 @@ export default function DeveloperDashboard() {
         return;
       }
     } catch (err) {
-      console.warn("Headmaster onboarding camera notice, engaging live optical feed:", err);
-    }
-
-    const fallbackStream = createLiveOpticalSensorStream(onboardHeadmasterFallbackAnimRef, "HEADMASTER LIVE CAMERA");
-    if (fallbackStream) {
-      onboardHeadmasterStreamRef.current = fallbackStream;
-      setOnboardCameraActive(true);
-      if (onboardHeadmasterVideoRef.current) {
-        onboardHeadmasterVideoRef.current.srcObject = fallbackStream;
-        onboardHeadmasterVideoRef.current.play?.().catch(() => { });
-      }
-      showNotification("📸 Headmaster live optical camera feed active. Click 'Snap & Use Live Photo' to capture.");
+      console.warn("Headmaster onboarding camera unavailable:", err);
+      showNotification(`⚠ No physical camera detected or camera permission denied (${err?.message || "Camera unavailable"}). Upload an official Headmaster portrait photo instead.`);
     }
   };
 
@@ -2121,17 +2161,21 @@ export default function DeveloperDashboard() {
     setBiometricScanning(false);
 
     try {
-      fetch(`${BASE_URL}/facial-verify`, {
+      const res = await devFetch(`${BASE_URL}/facial-verify`, {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          imageBase64: frameBase64 || "DEV_LIVE_FRAME_ENCODED",
-          devPin: "00000000",
+          imageBase64: frameBase64 || null,
           challengeType: "DYNAMIC_PUPIL_REFLECTION",
           clearanceToken
         })
-      }).catch(() => { });
-    } catch { }
+      });
+      if (!res.ok) {
+        const errData = await res.json().catch(() => ({}));
+        showNotification(`⛔ Biometric verification rejected by server (HTTP ${res.status}): ${errData.message || "Verification failed."}`);
+      }
+    } catch (err) {
+      showNotification(`⛔ Network error recording biometric verification: ${err.message}`);
+    }
   };
 
   const handleOpenChangeHeadmaster = (tenant) => {
@@ -2240,12 +2284,11 @@ export default function DeveloperDashboard() {
     };
     setAuditLogs((prev) => [newLog, ...prev]);
 
-    // 5. Persist to backend database
+    // 5. Persist to backend database (Confirm real persistence before notifying success)
     if (tId) {
       try {
-        await fetch(`${BASE_URL}/tenants/${tId}/action`, {
+        const res = await devFetch(`${BASE_URL}/tenants/${tId}/action`, {
           method: "POST",
-          headers: { "Content-Type": "application/json" },
           body: JSON.stringify({
             action: "CHANGE_HEADMASTER",
             headmasterName: headmasterChangeForm.newHeadmasterName,
@@ -2255,8 +2298,16 @@ export default function DeveloperDashboard() {
             resolutionNumber: headmasterChangeForm.appointmentRef
           })
         });
+        const data = await res.json().catch(() => ({}));
+        if (!res.ok) {
+          showNotification(`⛔ Headmaster handover failed (HTTP ${res.status}): ${data.message || "Backend rejected update."}`);
+          return;
+        }
         fetchData();
-      } catch { }
+      } catch (err) {
+        showNotification(`⛔ Network error persisting Headmaster handover: ${err.message}`);
+        return;
+      }
     }
 
     // 6. Trigger real photographic padlock feedback
@@ -2341,14 +2392,14 @@ export default function DeveloperDashboard() {
             tenantCode: a.tenantCode,
             institutionType: a.institutionType || "NURSERY_TO_JHS",
             headmasterName: a.headmasterName || a.adminName || a.repFullName || "Executive Headmaster",
-            headmasterPhone: a.headmasterPhone || a.adminPhone || a.officialPhone || a.repPhone || "—",
-            headmasterEmail: a.headmasterEmail || a.adminEmail || a.officialEmail || a.repEmail || "admin@school.edu",
-            totalStudentsEnrolled: a.totalStudentsEnrolled || a.maxStudents || 500,
-            calculatedFee: a.calculatedFee || a.calculatedBaseFee || a.paymentAmount || 500,
-            paymentAmount: a.paymentAmount || (a.calculatedBaseFee ? String(a.calculatedBaseFee) : "500"),
-            momoTxnId: a.momoTxnId || a.momoRef || a.momoTransactionId || "MOMO-VERIFIED",
-            facePhoto: a.facePhoto || a.headmasterPhoto || a.institutionLogo || a.scannedFacePhoto || "/assets/admin-dashboard-bg.jpg",
-            biometricFaceToken: a.biometricFaceToken || a.facialVerificationHash || `HM-BIO-${a.id || Date.now()}`,
+            headmasterPhone: a.headmasterPhone || a.adminPhone || a.officialPhone || a.repPhone || "",
+            headmasterEmail: a.headmasterEmail || a.adminEmail || a.officialEmail || a.repEmail || "",
+            totalStudentsEnrolled: Number(a.totalStudentsEnrolled || a.maxStudents || 0),
+            calculatedFee: Number(a.calculatedFee || a.calculatedBaseFee || a.paymentAmount || 0),
+            paymentAmount: String(a.paymentAmount ?? a.calculatedBaseFee ?? 0),
+            momoTxnId: a.momoTxnId || a.momoRef || a.momoTransactionId || "",
+            facePhoto: a.facePhoto || a.headmasterPhoto || a.institutionLogo || a.scannedFacePhoto || null,
+            biometricFaceToken: a.biometricFaceToken || a.facialVerificationHash || null,
             status: isPending ? "PENDING_DEVELOPER_APPROVAL" : (a.status || "APPROVED"),
             isApproved: Boolean(a.isApproved),
             createdAt: a.createdAt,
@@ -2578,7 +2629,7 @@ export default function DeveloperDashboard() {
 
       // 10b. Deleted Tenant Archives Depot
       try {
-        const delRes = await fetch(`${BASE_URL}/tenants/deleted-archives`);
+        const delRes = await devFetch(`${BASE_URL}/tenants/deleted-archives`);
         if (delRes.ok) {
           const delData = await delRes.json();
           if (Array.isArray(delData.data?.archives)) {
@@ -2588,7 +2639,7 @@ export default function DeveloperDashboard() {
         }
       } catch { }
 
-      const sRes = await fetch(`${getApiBaseUrl()}/sms/logs`);
+      const sRes = await devFetch(`${getApiBaseUrl()}/sms/logs`);
       if (sRes.ok) {
         const sData = await sRes.json();
         if (sData.data?.logs) setSmsLogs(sData.data.logs);
@@ -2657,16 +2708,9 @@ export default function DeveloperDashboard() {
         }
       } catch { }
 
-      // 13. Real Demo Trial Quota & Payment Gateway Readiness Truth
+      // 13. Live Production Payment Gateway Readiness Truth (No Demo Mode on Developer Portal)
       try {
-        const [demoRes, payRes] = await Promise.all([
-          fetch(`${getApiBaseUrl()}/auth/demo-usage`, { headers: authHeaders }).catch(() => null),
-          fetch(`${getApiBaseUrl()}/payments/status`, { headers: authHeaders }).catch(() => null)
-        ]);
-        if (demoRes?.ok) {
-          const dJson = await demoRes.json();
-          if (dJson?.data) setDemoUsageSummary(dJson.data);
-        }
+        const payRes = await devFetch(`${getApiBaseUrl()}/payments/status`).catch(() => null);
         if (payRes?.ok) {
           const pJson = await payRes.json();
           if (pJson?.data) {
@@ -2685,46 +2729,25 @@ export default function DeveloperDashboard() {
     }
   };
 
-  const handleResetDemoCountersFromDev = async () => {
-    try {
-      const res = await fetch(`${getApiBaseUrl()}/auth/demo-reset`, {
-        method: "POST",
-        headers: getDevAuthHeaders(true)
-      });
-      if (res.ok) {
-        const json = await res.json();
-        if (json?.data) setDemoUsageSummary(json.data);
-        localStorage.removeItem("gbs_demo_entry_counters");
-        window.dispatchEvent(new CustomEvent("gbs_demo_usage_updated"));
-        showNotification("✓ Demo Sandbox 10-entry trial counters reset to 0/10 across all modules.");
-      } else {
-        showNotification("⚠ Could not reset Demo Sandbox trial counters.");
-      }
-    } catch (err) {
-      showNotification(`⚠ Error resetting demo trial counters: ${err.message}`);
-    }
-  };
-
   const handleToggleEnvironment = async () => {
-    const nextEnv = systemEnv?.activeEnvironment === "PRODUCTION" ? "DEVELOPMENT" : "PRODUCTION";
+    // Developer Control Center enforces Original Production Mode (never switches Developer into Demo Sandbox)
     try {
-      showNotification(`⏳ Switching system cluster environment to ${nextEnv}...`);
-      const res = await fetch(`${BASE_URL}/environment/set`, {
+      showNotification("⏳ Confirming LIVE PRODUCTION cluster mode...");
+      const res = await devFetch(`${BASE_URL}/environment/set`, {
         method: "POST",
-        headers: getDevAuthHeaders(true),
-        body: JSON.stringify({ environment: nextEnv })
+        body: JSON.stringify({ environment: "PRODUCTION" })
       });
-      const data = await res.json();
+      const data = await res.json().catch(() => ({}));
       if (res.ok) {
-        localStorage.setItem("gbs_system_environment", nextEnv);
-        syncSystemModeFlags(nextEnv === "PRODUCTION" ? "LIVE_PRODUCTION" : "DEMO_SANDBOX");
-        showNotification(`✓ System active environment switched to ${nextEnv}`);
+        localStorage.setItem("gbs_system_environment", "PRODUCTION");
+        syncSystemModeFlags("LIVE_PRODUCTION");
+        showNotification("✓ Developer Mission Control confirmed in ORIGINAL PRODUCTION MODE.");
         fetchData();
       } else {
-        showNotification(`⚠ Failed to switch environment: ${data.message}`);
+        showNotification(`⛔ Failed to confirm production environment (HTTP ${res.status}): ${data.message || "Request rejected"}`);
       }
     } catch (err) {
-      showNotification(`⚠ Error updating environment: ${err.message}`);
+      showNotification(`⛔ Error confirming production environment: ${err.message}`);
     }
   };
 
@@ -3136,13 +3159,13 @@ export default function DeveloperDashboard() {
       tenant.officialPhone ||
       tenant.headmasterPhone ||
       tenant.adminPhone ||
-      "+233-24-555-0199";
+      "";
     const headmasterEmail =
       tenant.headmaster?.email ||
       tenant.officialEmail ||
       tenant.headmasterEmail ||
       tenant.adminEmail ||
-      "admin@gbs.com";
+      "";
     const targetTenantId = parseInt(tenant.tenantId || tenant.id, 10) || 1;
     const tenantName = tenant.tenantName || tenant.institutionName || tenant.name || "Registered Institution";
 
@@ -3172,52 +3195,36 @@ export default function DeveloperDashboard() {
     }
   };
 
-  const handleSendUrgentCallAlert = () => {
+  const handleSendUrgentCallAlert = async () => {
     const alertMsg = customSmsMessage.trim() || `🚨 URGENT DEVELOPER CALL REQUEST: Engineer Gabriel Osei requested an in-system video conference regarding Institutional Tenancy & Server Synchronization. Please sign into your Admin Command Center immediately.`;
-    const targetPhone = showHeadmasterOfflineNoticeModal.phone || "+233-24-555-0199";
+    const targetPhone = showHeadmasterOfflineNoticeModal.phone || "";
+    if (!targetPhone) {
+      showNotification("⛔ No registered Headmaster phone number is on file for this institution.");
+      return;
+    }
     try {
-      // Dispatches real SMS with registered school name [WITHIN DE BRAIN ACADEMY]
-      fetch(`${getApiBaseUrl()}/sms/send-school-sms`, {
+      const smsRes = await devFetch(`${getApiBaseUrl()}/sms/send-school-sms`, {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           phone: targetPhone,
           message: alertMsg,
           schoolName: showHeadmasterOfflineNoticeModal.tenantName || "Registered School"
         })
-      }).catch(() => { });
-    } catch { }
-    try {
-      const notifs = JSON.parse(localStorage.getItem("gbs_headmaster_notifications") || "[]");
-      notifs.unshift({
-        id: `CALL-ALERT-${Date.now()}`,
-        title: "🚨 Priority Direct SMS / Video Conference Directive",
-        content: alertMsg,
-        createdAt: new Date().toISOString(),
-        isRead: false
       });
-      localStorage.setItem("gbs_headmaster_notifications", JSON.stringify(notifs));
-
-      setSmsLogs((prev) => [
-        {
-          id: Date.now(),
-          recipientName: showHeadmasterOfflineNoticeModal.headmasterName,
-          recipientPhone: targetPhone,
-          sender: "GBS_DEV_CONTROL",
-          content: alertMsg,
-          otp: "CALL-REQ",
-          status: "DELIVERED",
-          latencyMs: 140,
-          timestamp: new Date().toISOString(),
-          type: "HEADMASTER_CALL_REQUEST"
-        },
-        ...prev
-      ]);
-    } catch { }
-    appendConsoleLog(`SMS-GATEWAY >> Dispatched direct SMS to ${showHeadmasterOfflineNoticeModal.headmasterName} (${targetPhone}): "${alertMsg.substring(0, 40)}..." [STATUS: DELIVERED]`);
-    setShowHeadmasterOfflineNoticeModal((prev) => ({ ...prev, isOpen: false }));
-    setCustomSmsMessage("");
-    showNotification(`📲 Urgent SMS Dispatched to Headmaster ${showHeadmasterOfflineNoticeModal.headmasterName} (${targetPhone})!`);
+      const smsJson = await smsRes.json().catch(() => ({}));
+      if (!smsRes.ok || smsJson?.success === false) {
+        showNotification(`⛔ Urgent SMS dispatch failed (HTTP ${smsRes.status}): ${smsJson?.message || "SMS gateway rejected request."}`);
+        return;
+      }
+      const deliveryStatus = smsJson?.data?.carrierStatus || smsJson?.data?.status || "IN_APP_DELIVERED";
+      appendConsoleLog(`SMS-GATEWAY >> Dispatched direct SMS to ${showHeadmasterOfflineNoticeModal.headmasterName} (${targetPhone}) [STATUS: ${deliveryStatus}]`);
+      setShowHeadmasterOfflineNoticeModal((prev) => ({ ...prev, isOpen: false }));
+      setCustomSmsMessage("");
+      showNotification(`✓ ${smsJson?.message || `Urgent SMS dispatched to ${showHeadmasterOfflineNoticeModal.headmasterName} (${targetPhone}) [${deliveryStatus}].`}`);
+      fetchData();
+    } catch (err) {
+      showNotification(`⛔ Network error dispatching urgent SMS: ${err.message}`);
+    }
   };
 
   const handleHeadmasterPhotoUpload = (e) => {
@@ -3352,17 +3359,19 @@ export default function DeveloperDashboard() {
         prev.map((t) => ({ ...t, status: "ACTIVE" }))
       );
 
-      // 3. Persist unlock in backend PostgreSQL
-      try {
-        await fetch(`${BASE_URL}/toggle-lock`, {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
-            isLocked: false,
-            reason: `MoMo Payment Reconciled (${reconItem.txnId}) for ${reconItem.tenantName}. All records and institutional access restored.`
-          })
-        });
-      } catch { }
+      // 3. Persist unlock in backend PostgreSQL before confirming success
+      const unlockRes = await devFetch(`${BASE_URL}/toggle-lock`, {
+        method: "POST",
+        body: JSON.stringify({
+          isLocked: false,
+          reason: `MoMo Payment Reconciled (${reconItem.txnId}) for ${reconItem.tenantName}. All records and institutional access restored.`
+        })
+      });
+      const unlockData = await unlockRes.json().catch(() => ({}));
+      if (!unlockRes.ok) {
+        showNotification(`⛔ Failed to persist unlock on server (HTTP ${unlockRes.status}): ${unlockData.message || "Request rejected."}`);
+        return;
+      }
 
       showNotification(`✓ MoMo Payment verified for "${reconItem.tenantName}". System unlocked and all institution data safely restored!`);
       fetchData();
@@ -3381,46 +3390,27 @@ export default function DeveloperDashboard() {
 
   const handleDeleteSubscriptionControl = async (subOrTenantId, label = "Subscription Record") => {
     if (!window.confirm(`Permanently delete subscription control record for "${label}" (#${subOrTenantId}) from the system?`)) return;
-    recordPermanentDeletion([subOrTenantId, `sub_${subOrTenantId}`]);
     try {
-      await fetch(`${BASE_URL}/subscriptions/${encodeURIComponent(subOrTenantId)}`, { method: "DELETE" });
-    } catch { }
-    setCountdowns((prev) => prev.filter((c) => c.tenantId !== subOrTenantId && c.tenantCode !== subOrTenantId));
-    setOnboardedTenants((prev) => prev.filter((t) => (t.id || t.tenantId) !== subOrTenantId && (t.tenantCode || t.code) !== subOrTenantId));
-    appendConsoleLog(`SUB_DELETE >> Subscription control record for "${label}" (#${subOrTenantId}) permanently deleted.`);
-    showNotification(`🗑️ Subscription control record for "${label}" permanently deleted.`);
+      const res = await devFetch(`${BASE_URL}/subscriptions/${encodeURIComponent(subOrTenantId)}`, { method: "DELETE" });
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) {
+        showNotification(`⛔ Failed to delete subscription record (HTTP ${res.status}): ${data.message || "Request rejected."}`);
+        return;
+      }
+      recordPermanentDeletion([subOrTenantId, `sub_${subOrTenantId}`]);
+      setCountdowns((prev) => prev.filter((c) => c.tenantId !== subOrTenantId && c.tenantCode !== subOrTenantId));
+      setOnboardedTenants((prev) => prev.filter((t) => (t.id || t.tenantId) !== subOrTenantId && (t.tenantCode || t.code) !== subOrTenantId));
+      appendConsoleLog(`SUB_DELETE >> Subscription control record for "${label}" (#${subOrTenantId}) permanently deleted.`);
+      showNotification(`🗑️ Subscription control record for "${label}" permanently deleted.`);
+      fetchData();
+    } catch (err) {
+      showNotification(`⛔ Network error deleting subscription control record: ${err.message}`);
+    }
   };
 
-  const handleExecuteSubscriptionAutoLock = () => {
-    localStorage.setItem("gbs_system_locked", "true");
-    window.dispatchEvent(new CustomEvent("gbs_system_lock_changed", { detail: { isLocked: true } }));
-
-    const preLockSnapshot = {
-      id: Date.now(),
-      filename: `auto_lock_pre_lock_backup_${Date.now()}.sql`,
-      fileSizeMb: 24.2,
-      backupType: "PRE_LOCK_EMERGENCY_BACKUP",
-      isEncrypted: true,
-      storagePath: `/backups/system/auto_lock_pre_lock_backup_${Date.now()}.sql`,
-      status: "COMPLETED",
-      createdAt: new Date().toISOString()
-    };
-    setBackups((prev) => [preLockSnapshot, ...prev]);
-
-    setCountdowns((prev) =>
-      prev.map((c) => ({
-        ...c,
-        subscriptionStatus: "LOCKED",
-        warningLevel: "AUTO_LOCKED_PAYMENT_FAILURE",
-        isExpired: true,
-        formattedCountdown: "0 Days 0 Hours 0 Mins (Payment Failed - System Locked)"
-      }))
-    );
-    setOnboardedTenants((prev) =>
-      prev.map((t) => ({ ...t, status: "LOCKED" }))
-    );
-    handleAutoLockProcess({ forceEnforce: true });
-    showNotification("🔒 Auto-Lock Pipeline Executed: Delinquent institutions locked. All institutional records snapshotted in encrypted backup. Platform Continuation MoMo: 0554594193 (GABRIEL KUBI OSEI-APPIAH) displayed.");
+  const handleExecuteSubscriptionAutoLock = async () => {
+    // Delegate directly to the real backend Auto-Lock & Encrypted Backup Pipeline (zero fabricated local snapshots)
+    await handleAutoLockProcess({ forceEnforce: true });
   };
 
   // 3. Developer Tenant Actions
@@ -3534,20 +3524,20 @@ export default function DeveloperDashboard() {
         window.dispatchEvent(new CustomEvent("gbs_system_lock_changed", { detail: { isLocked: false } }));
       }
 
-      const res = await fetch(`${BASE_URL}/tenants/${tenantId}/action`, {
+      const res = await devFetch(`${BASE_URL}/tenants/${tenantId}/action`, {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ action, ...params })
       });
-      const data = await res.json();
+      const data = await res.json().catch(() => ({}));
       if (res.ok) {
         showNotification(`✓ Action '${action}' executed successfully on Tenant #${tenantId}. ${action === "LOCK" ? "All institutional data snapshotted & protected." : "All records restored & access unfrozen."}`);
         fetchData();
       } else {
-        showNotification(`⚠ Failed: ${data.message || "Action error"}`);
+        showNotification(`⛔ Failed (HTTP ${res.status}): ${data.message || "Action rejected by backend."}`);
+        fetchData();
       }
     } catch (err) {
-      showNotification("⚠ Error executing tenant action.");
+      showNotification(`⛔ Error executing tenant action: ${err.message}`);
     } finally {
       setActionLoadingMap((prev) => ({ ...prev, [tenantId]: false, [`${tenantId}-${action}`]: false }));
     }
@@ -3637,11 +3627,10 @@ export default function DeveloperDashboard() {
       setMasterTenantLockStatus("ACTIVE");
       triggerPadlockFeedback(false, `${batchIds.length} Multi-Selected Tenants`, "BATCH_SUBSCRIPTION_RENEWAL");
       try {
-        await Promise.all(
+        const batchResponses = await Promise.all(
           batchIds.map((id) =>
-            fetch(`${BASE_URL}/tenants/${id}/action`, {
+            devFetch(`${BASE_URL}/tenants/${id}/action`, {
               method: "POST",
-              headers: { "Content-Type": "application/json" },
               body: JSON.stringify({
                 action: "RENEW_SUBSCRIPTION",
                 duration,
@@ -3650,9 +3639,17 @@ export default function DeveloperDashboard() {
             })
           )
         );
+        const failed = batchResponses.filter((r) => !r.ok);
+        if (failed.length > 0) {
+          const errData = await failed[0].json().catch(() => ({}));
+          showNotification(`⛔ Batch renewal failed on ${failed.length}/${batchResponses.length} tenant(s) (HTTP ${failed[0].status}): ${errData.message || "Server rejected request."}`);
+        } else {
+          showNotification(`✓ Batch Subscription Renewal confirmed on server for ${batchIds.length} tenant(s) (${durationLabel})!`);
+        }
         fetchData();
-      } catch { }
-      showNotification(`✓ Batch Subscription Renewal executed for ${batchIds.length} tenants (${durationLabel})!`);
+      } catch (err) {
+        showNotification(`⛔ Network error during batch subscription renewal: ${err.message}`);
+      }
       setSelectedTenants([]);
       setShowRenewModal(false);
       setRenewTargetTenant(null);
@@ -3758,25 +3755,26 @@ export default function DeveloperDashboard() {
     window.dispatchEvent(new CustomEvent("gbs_announcements_updated"));
     window.dispatchEvent(new CustomEvent("storage", { key: "gbs_tenant_subscription" }));
 
-    // 6. Backend API Call
+    // 6. Backend API Call (Confirm real PostgreSQL persistence — never report fake local success on failure)
     try {
-      const res = await fetch(`${BASE_URL}/tenants/${tId}/action`, {
+      const res = await devFetch(`${BASE_URL}/tenants/${tId}/action`, {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           action: "RENEW_SUBSCRIPTION",
           duration,
           notes
         })
       });
+      const data = await res.json().catch(() => ({}));
       if (res.ok) {
         showNotification(`✓ Subscription Renewed for "${tName}" for ${durationLabel}! Status is now ACTIVE and reflected on Headmaster's Portal.`);
         fetchData();
       } else {
-        showNotification(`✓ Renewal dispatched locally for "${tName}" (${durationLabel}).`);
+        showNotification(`⛔ Subscription renewal failed (HTTP ${res.status}): ${data.message || "Backend rejected renewal."}`);
+        fetchData();
       }
     } catch (err) {
-      showNotification(`✓ Local renewal active for "${tName}" (${durationLabel}).`);
+      showNotification(`⛔ Network error renewing subscription for "${tName}": ${err.message}`);
     } finally {
       setActionLoadingMap((prev) => ({ ...prev, [tId]: false, [`${tId}-RENEW`]: false }));
       setRenewSubmitting(false);
@@ -3985,8 +3983,8 @@ export default function DeveloperDashboard() {
       tenantCode: target?.tenantCode || target?.code || `GBS-ARC-${tenantId}`,
       institutionType: target?.institutionType || "NURSERY_TO_JHS",
       headmasterName: target?.headmaster?.name || target?.headmasterName || target?.adminName || "Headmaster",
-      headmasterEmail: target?.headmaster?.email || target?.headmasterEmail || target?.adminEmail || "admin@school.edu",
-      headmasterPhone: target?.headmaster?.phone || target?.headmasterPhone || target?.officialPhone || "+233-24-555-0199",
+      headmasterEmail: target?.headmaster?.email || target?.headmasterEmail || target?.adminEmail || "",
+      headmasterPhone: target?.headmaster?.phone || target?.headmasterPhone || target?.officialPhone || "",
       deletedAt: new Date().toISOString(),
       archivedBy: "Developer Gabriel (gabosei48@gmail.com)",
       deletionReason: "Archived from active tenancy by Developer",
@@ -4019,17 +4017,18 @@ export default function DeveloperDashboard() {
       };
       localStorage.setItem("gbs_deleted_tenant_lockouts", JSON.stringify([newLockout, ...deletedLockouts.filter(l => l.tenantId !== tenantId)]));
 
-      // Dispatch deletion notification SMS to tenant
+      // Dispatch deletion notification SMS to tenant only if a real Headmaster phone is registered
       const alertMsg = "Access Denied: Your institution has been deleted from the system, so you cannot access the system unless you re-register for approval.";
-      fetch(`${getApiBaseUrl()}/sms/send`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          recipient: archiveRecord.headmasterPhone,
-          message: alertMsg,
-          schoolName: label
-        })
-      }).catch(() => { });
+      if (archiveRecord.headmasterPhone) {
+        devFetch(`${getApiBaseUrl()}/sms/send`, {
+          method: "POST",
+          body: JSON.stringify({
+            recipient: archiveRecord.headmasterPhone,
+            message: alertMsg,
+            schoolName: label
+          })
+        }).catch(() => { });
+      }
     } catch { }
 
     setCountdowns((prev) => prev.filter((c) => c.tenantId !== tenantId));
@@ -4037,7 +4036,7 @@ export default function DeveloperDashboard() {
     setSelectedTenants((prev) => prev.filter((id) => id !== tenantId));
 
     try {
-      const res = await fetch(`${BASE_URL}/tenants/${tenantId}`, {
+      const res = await devFetch(`${BASE_URL}/tenants/${tenantId}`, {
         method: "DELETE"
       });
       if (res.ok) {
@@ -4045,16 +4044,13 @@ export default function DeveloperDashboard() {
         showNotification(`📁 Tenant "${label}" archived safely in Deleted Archives Depot. You can restore it anytime.`);
         fetchData();
       } else {
-        await fetch(`${BASE_URL}/tenants/${tenantId}/action`, {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ action: "DELETE_TENANT" })
-        });
-        showNotification(`📁 Tenant "${label}" archived successfully in Deleted Archives Depot.`);
+        const errData = await res.json().catch(() => ({}));
+        showNotification(`⛔ Failed to archive/delete tenant "${label}" (HTTP ${res.status}): ${errData.message || "Request rejected."}`);
         fetchData();
       }
     } catch (err) {
-      showNotification(`📁 Tenant "${label}" archived in Deleted Archives Depot.`);
+      showNotification(`⛔ Network error deleting tenant "${label}": ${err.message}`);
+      fetchData();
     }
   };
 
@@ -4062,10 +4058,18 @@ export default function DeveloperDashboard() {
     const tid = archiveItem.tenantId || archiveItem.id;
     const label = archiveItem.tenantName || `Tenant #${tid}`;
     try {
-      await fetch(`${BASE_URL}/tenants/${tid}/restore`, {
+      const res = await devFetch(`${BASE_URL}/tenants/${tid}/restore`, {
         method: "POST"
       });
-    } catch { }
+      if (!res.ok) {
+        const errData = await res.json().catch(() => ({}));
+        showNotification(`⛔ Failed to restore tenant "${label}" (HTTP ${res.status}): ${errData.message || "Restore rejected."}`);
+        return;
+      }
+    } catch (err) {
+      showNotification(`⛔ Network error restoring tenant "${label}": ${err.message}`);
+      return;
+    }
 
     const updatedArchives = deletedTenantArchives.filter((a) => (a.tenantId || a.id) !== tid);
     setDeletedTenantArchives(updatedArchives);
@@ -4175,16 +4179,22 @@ export default function DeveloperDashboard() {
     setSelectedTenants([]);
 
     try {
-      await fetch(`${BASE_URL}/tenants/batch-delete`, {
+      const res = await devFetch(`${BASE_URL}/tenants/batch-delete`, {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ ids: idsToDelete })
       });
-      appendConsoleLog(`BATCH_DELETE >> ${idsToDelete.length} tenant(s) permanently deleted.`);
-      showNotification(`🗑️ ${idsToDelete.length} selected tenant(s) permanently deleted from the platform.`);
+      const data = await res.json().catch(() => ({}));
+      if (res.ok) {
+        appendConsoleLog(`BATCH_DELETE >> ${idsToDelete.length} tenant(s) permanently deleted.`);
+        showNotification(`🗑️ ${data.message || `${idsToDelete.length} selected tenant(s) permanently deleted from the platform.`}`);
+        fetchData();
+      } else {
+        showNotification(`⛔ Batch tenant deletion failed (HTTP ${res.status}): ${data.message || "Request rejected."}`);
+        fetchData();
+      }
+    } catch (err) {
+      showNotification(`⛔ Network error during batch tenant deletion: ${err.message}`);
       fetchData();
-    } catch {
-      showNotification(`🗑️ ${idsToDelete.length} tenant(s) permanently removed.`);
     }
   };
 
@@ -4195,92 +4205,109 @@ export default function DeveloperDashboard() {
   const handleRollback = async (targetVersion) => {
     if (!window.confirm(`Initiate emergency automated rollback to ${targetVersion}?`)) return;
     try {
-      const res = await fetch(`${BASE_URL}/deployments/rollback`, {
+      const res = await devFetch(`${BASE_URL}/deployments/rollback`, {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ version: targetVersion, reason: "Developer Manual Rollback Verification" })
       });
-      const data = await res.json();
+      const data = await res.json().catch(() => ({}));
       if (res.ok) {
-        showNotification(`✓ ${data.data.message}`);
+        showNotification(`✓ ${data.data?.message || data.message || `Rollback to ${targetVersion} executed.`}`);
         fetchData();
+      } else {
+        showNotification(`⛔ Rollback failed (HTTP ${res.status}): ${data.message || "Request rejected."}`);
       }
     } catch (err) {
-      showNotification("⚠ Rollback execution error.");
+      showNotification(`⛔ Rollback execution error: ${err.message}`);
     }
   };
 
   const handleArchiveDeployment = async (depId, isArchived = true) => {
-    setDeployments((prev) =>
-      prev.map((d) =>
-        d.id === depId
-          ? { ...d, isArchived, status: isArchived ? "ARCHIVED" : "DEPLOYED_ACTIVE" }
-          : d
-      )
-    );
     try {
-      await fetch(`${BASE_URL}/deployments/${depId}/archive`, {
+      const res = await devFetch(`${BASE_URL}/deployments/${depId}/archive`, {
         method: "PATCH",
-        headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ isArchived })
       });
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) {
+        showNotification(`⛔ Failed to update deployment #${depId} (HTTP ${res.status}): ${data.message || "Request rejected."}`);
+        return;
+      }
+      setDeployments((prev) =>
+        prev.map((d) =>
+          d.id === depId
+            ? { ...d, isArchived, status: isArchived ? "ARCHIVED" : "DEPLOYED_ACTIVE" }
+            : d
+        )
+      );
       showNotification(`📦 Deployment #${depId} ${isArchived ? "archived" : "restored to active releases"}.`);
       fetchData();
-    } catch {
-      showNotification(`📦 Deployment #${depId} ${isArchived ? "archived" : "restored"}.`);
+    } catch (err) {
+      showNotification(`⛔ Error updating deployment #${depId}: ${err.message}`);
     }
   };
 
   const handleDeleteDeployment = async (depId, versionLabel = "") => {
     if (!window.confirm(`Delete deployment record ${versionLabel || `#${depId}`}?`)) return;
-    recordPermanentDeletion([depId]);
-    setDeployments((prev) => prev.filter((d) => d.id !== depId));
-    setSelectedDeploymentIds((prev) => prev.filter((id) => id !== depId));
     try {
-      await fetch(`${BASE_URL}/deployments/${depId}`, { method: "DELETE" });
+      const res = await devFetch(`${BASE_URL}/deployments/${depId}`, { method: "DELETE" });
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) {
+        showNotification(`⛔ Failed to delete deployment ${versionLabel || `#${depId}`} (HTTP ${res.status}): ${data.message || "Request rejected."}`);
+        return;
+      }
+      recordPermanentDeletion([depId]);
+      setDeployments((prev) => prev.filter((d) => d.id !== depId));
+      setSelectedDeploymentIds((prev) => prev.filter((id) => id !== depId));
       showNotification(`🗑️ Deployment ${versionLabel || `#${depId}`} permanently deleted.`);
       fetchData();
-    } catch {
-      showNotification(`🗑️ Deployment ${versionLabel || `#${depId}`} permanently removed.`);
+    } catch (err) {
+      showNotification(`⛔ Error deleting deployment ${versionLabel || `#${depId}`}: ${err.message}`);
     }
   };
 
   const handleBatchArchiveDeployments = async (isArchived = true) => {
     if (selectedDeploymentIds.length === 0) return;
     const ids = [...selectedDeploymentIds];
-    setDeployments((prev) =>
-      prev.map((d) =>
-        ids.includes(d.id) ? { ...d, isArchived, status: isArchived ? "ARCHIVED" : "DEPLOYED_ACTIVE" } : d
-      )
-    );
-    setSelectedDeploymentIds([]);
     try {
-      await fetch(`${BASE_URL}/deployments/batch-archive`, {
+      const res = await devFetch(`${BASE_URL}/deployments/batch-archive`, {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ ids, isArchived })
       });
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) {
+        showNotification(`⛔ Batch deployment update failed (HTTP ${res.status}): ${data.message || "Request rejected."}`);
+        return;
+      }
+      setSelectedDeploymentIds([]);
       showNotification(`📦 ${ids.length} deployment(s) ${isArchived ? "archived" : "unarchived"}.`);
       fetchData();
-    } catch { }
+    } catch (err) {
+      showNotification(`⛔ Error archiving deployments: ${err.message}`);
+    }
   };
 
   const handleBatchDeleteDeployments = async () => {
     if (selectedDeploymentIds.length === 0) return;
     if (!window.confirm(`Delete ${selectedDeploymentIds.length} selected deployment(s)?`)) return;
     const ids = [...selectedDeploymentIds];
-    recordPermanentDeletion(ids);
-    setDeployments((prev) => prev.filter((d) => !ids.includes(d.id)));
-    setSelectedDeploymentIds([]);
     try {
-      await fetch(`${BASE_URL}/deployments/batch-delete`, {
+      const res = await devFetch(`${BASE_URL}/deployments/batch-delete`, {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ ids })
       });
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) {
+        showNotification(`⛔ Batch deployment delete failed (HTTP ${res.status}): ${data.message || "Request rejected."}`);
+        return;
+      }
+      recordPermanentDeletion(ids);
+      setDeployments((prev) => prev.filter((d) => !ids.includes(d.id)));
+      setSelectedDeploymentIds([]);
       showNotification(`🗑️ ${ids.length} deployment(s) permanently deleted.`);
       fetchData();
-    } catch { }
+    } catch (err) {
+      showNotification(`⛔ Error deleting deployments: ${err.message}`);
+    }
   };
 
   // 6b. Audit Logs Archive & Deletion (Developer & Security Audit Logs)
@@ -4288,67 +4315,87 @@ export default function DeveloperDashboard() {
   const [selectedAuditLogIds, setSelectedAuditLogIds] = useState([]);
 
   const handleArchiveAuditLog = async (logId, isArchived = true) => {
-    setAuditLogs((prev) =>
-      prev.map((l) => (l.id === logId ? { ...l, isArchived } : l))
-    );
     try {
-      await fetch(`${BASE_URL}/audit-logs/${logId}/archive`, {
+      const res = await devFetch(`${BASE_URL}/audit-logs/${logId}/archive`, {
         method: "PATCH",
-        headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ isArchived })
       });
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) {
+        showNotification(`⛔ Failed to update audit log #${logId} (HTTP ${res.status}): ${data.message || "Request rejected."}`);
+        return;
+      }
+      setAuditLogs((prev) =>
+        prev.map((l) => (l.id === logId ? { ...l, isArchived } : l))
+      );
       showNotification(`📦 Audit log #${logId} ${isArchived ? "archived to vault" : "restored to active logs"}.`);
       fetchData();
-    } catch {
-      showNotification(`📦 Audit log #${logId} ${isArchived ? "archived" : "restored"}.`);
+    } catch (err) {
+      showNotification(`⛔ Error updating audit log #${logId}: ${err.message}`);
     }
   };
 
   const handleDeleteAuditLog = async (logId) => {
-    recordPermanentDeletion([logId]);
-    setAuditLogs((prev) => prev.filter((l) => l.id !== logId));
-    setSelectedAuditLogIds((prev) => prev.filter((id) => id !== logId));
     try {
-      await fetch(`${BASE_URL}/audit-logs/${logId}`, { method: "DELETE" });
+      const res = await devFetch(`${BASE_URL}/audit-logs/${logId}`, { method: "DELETE" });
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) {
+        showNotification(`⛔ Failed to delete audit log #${logId} (HTTP ${res.status}): ${data.message || "Request rejected."}`);
+        return;
+      }
+      recordPermanentDeletion([logId]);
+      setAuditLogs((prev) => prev.filter((l) => l.id !== logId));
+      setSelectedAuditLogIds((prev) => prev.filter((id) => id !== logId));
       showNotification(`🗑️ Audit log #${logId} permanently deleted.`);
       fetchData();
-    } catch { }
+    } catch (err) {
+      showNotification(`⛔ Error deleting audit log #${logId}: ${err.message}`);
+    }
   };
 
   const handleBatchArchiveAuditLogs = async (isArchived = true, customIds = null) => {
     const ids = customIds || [...selectedAuditLogIds];
     if (ids.length === 0) return;
-    setAuditLogs((prev) =>
-      prev.map((l) => (ids.includes(l.id) ? { ...l, isArchived } : l))
-    );
-    setSelectedAuditLogIds([]);
     try {
-      await fetch(`${BASE_URL}/audit-logs/batch-archive`, {
+      const res = await devFetch(`${BASE_URL}/audit-logs/batch-archive`, {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ ids, isArchived })
       });
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) {
+        showNotification(`⛔ Batch audit log update failed (HTTP ${res.status}): ${data.message || "Request rejected."}`);
+        return;
+      }
+      setSelectedAuditLogIds([]);
       showNotification(`📦 ${ids.length} developer & security audit log(s) ${isArchived ? "archived" : "restored"}.`);
       fetchData();
-    } catch { }
+    } catch (err) {
+      showNotification(`⛔ Error archiving audit logs: ${err.message}`);
+    }
   };
 
   const handleBatchDeleteAuditLogs = async () => {
     if (selectedAuditLogIds.length === 0) return;
     if (!window.confirm(`Permanently delete ${selectedAuditLogIds.length} selected audit log(s)?`)) return;
     const ids = [...selectedAuditLogIds];
-    recordPermanentDeletion(ids);
-    setAuditLogs((prev) => prev.filter((l) => !ids.includes(l.id)));
-    setSelectedAuditLogIds([]);
     try {
-      await fetch(`${BASE_URL}/audit-logs/batch-delete`, {
+      const res = await devFetch(`${BASE_URL}/audit-logs/batch-delete`, {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ ids })
       });
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) {
+        showNotification(`⛔ Batch audit log deletion failed (HTTP ${res.status}): ${data.message || "Request rejected."}`);
+        return;
+      }
+      recordPermanentDeletion(ids);
+      setAuditLogs((prev) => prev.filter((l) => !ids.includes(l.id)));
+      setSelectedAuditLogIds([]);
       showNotification(`🗑️ ${ids.length} audit log(s) permanently deleted.`);
       fetchData();
-    } catch { }
+    } catch (err) {
+      showNotification(`⛔ Error deleting audit logs: ${err.message}`);
+    }
   };
 
   // 7. Issue License
@@ -4614,17 +4661,17 @@ export default function DeveloperDashboard() {
                   ...(data || {}),
                   tenantName: data?.tenantId ? data.tenantName : (hit.name || query),
                   tenantCode: data?.tenantId ? data.tenantCode : `GBS-MAP-${Math.abs(Math.round(lat * 100))}`,
-                  headmasterName: data?.headmasterName || "Verified Campus Location",
-                  headmasterPhone: data?.headmasterPhone || "+233 54 329 4615",
-                  headmasterEmail: data?.headmasterEmail || "gabosei48@gmail.com",
+                  headmasterName: data?.headmasterName || "Geocoded Location (Unregistered)",
+                  headmasterPhone: data?.headmasterPhone || "",
+                  headmasterEmail: data?.headmasterEmail || "",
                   address: hit.display_name || query,
                   city,
                   region,
                   country,
                   latitude: lat,
                   longitude: lng,
-                  activeStudents: data?.activeStudents || 450,
-                  status: data?.status || "ACTIVE"
+                  activeStudents: Number(data?.activeStudents || 0),
+                  status: data?.status || "GEOCODED_ONLY"
                 };
               }
             }
@@ -4633,21 +4680,10 @@ export default function DeveloperDashboard() {
       }
 
       if (!data) {
-        data = {
-          tenantName: `Academic Enclave (${query})`,
-          tenantCode: `GBS-${digitsOnly.slice(-4) || "CAMPUS"}`,
-          headmasterName: "Executive Headmaster",
-          headmasterPhone: digitsOnly.length >= 7 ? query : "+233 54 329 4615",
-          headmasterEmail: `headmaster.${digitsOnly.slice(-4) || "verified"}@gbs.edu`,
-          address: query,
-          city: "Accra",
-          region: "Greater Accra",
-          country: "Ghana",
-          latitude: 5.60372,
-          longitude: -0.18696,
-          activeStudents: 450,
-          status: "ACTIVE"
-        };
+        setLocatedTenant(null);
+        setLocatorSearching(false);
+        showNotification(`⚠️ No registered school or geocoded campus location matched "${query}".`, "warning");
+        return;
       }
 
       const mapQuery =
@@ -4671,24 +4707,22 @@ export default function DeveloperDashboard() {
   const handleFacialVerify = async () => {
     try {
       showNotification("Scanning biometric facial landmarks & evaluating anti-spoofing gradient...");
-      const res = await fetch(`${BASE_URL}/facial-verify`, {
+      const res = await devFetch(`${BASE_URL}/facial-verify`, {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          imageBase64: "data:image/jpeg;base64,DEV_FACIAL_SCAN_BUFFER_ROOT",
-          devPin: "00000000",
+          imageBase64: biometricScanResult?.frameBase64 || null,
           challengeType: "DYNAMIC_PUPIL_REFLECTION"
         })
       });
-      const data = await res.json();
+      const data = await res.json().catch(() => ({}));
       if (res.ok && data.data?.verified) {
         setFacialStatus(data.data);
         showNotification(`✓ Facial Liveness Verified: ${(data.data.livenessScore * 100).toFixed(1)}% confidence. Root clearance confirmed.`);
       } else {
-        showNotification(`⚠ Facial verification failed: ${data.message || "Unknown error"}`);
+        showNotification(`⛔ Facial verification failed (HTTP ${res.status}): ${data.message || "Unknown error"}`);
       }
     } catch (err) {
-      showNotification("⚠ Biometric verification connection error.");
+      showNotification(`⛔ Biometric verification connection error: ${err.message}`);
     }
   };
 
@@ -4700,76 +4734,38 @@ export default function DeveloperDashboard() {
       return;
     }
 
-    const activePhoto = tenantOnboardForm.headmasterPhoto || "/assets/admin-dashboard-bg.jpg";
-    const activeHash = tenantOnboardForm.facialVerificationHash || `SHA256-FACE-HM-${Date.now()}`;
     const preparedForm = {
       ...tenantOnboardForm,
-      headmasterPhoto: activePhoto,
-      facialVerified: true,
-      facialVerificationHash: activeHash
+      headmasterPhoto: tenantOnboardForm.headmasterPhoto || null,
+      facialVerified: Boolean(tenantOnboardForm.facialVerified && tenantOnboardForm.headmasterPhoto),
+      facialVerificationHash: tenantOnboardForm.facialVerificationHash || null
     };
     setTenantOnboardForm(preparedForm);
 
-    const fallbackOtp = String(Math.floor(100000 + Math.random() * 900000));
-    const fallbackSms = {
-      id: Date.now(),
-      recipientName: preparedForm.headmasterName || "Headmaster",
-      recipientPhone: preparedForm.headmasterPhone,
-      sender: "DEVELOPER_CONTROL_CENTER",
-      senderPhone: "+1-800-GBS-ROOT",
-      otp: fallbackOtp,
-      content: `[GBS ENTERPRISE GATEWAY] Welcome to GBS System! Your Tenant Registration OTP for '${preparedForm.institutionName}' is ${fallbackOtp}. Authorized by Developer Root Clearance.`,
-      status: "DELIVERED",
-      latencyMs: 92,
-      timestamp: new Date().toISOString(),
-      type: "TENANT_ONBOARDING"
-    };
-
     setLoading(true);
     try {
-      const token = localStorage.getItem("gbs_dev_token") || localStorage.getItem("gbs_token");
-      const res = await fetch(`${BASE_URL}/tenants/onboard-otp`, {
+      const res = await devFetch(`${BASE_URL}/tenants/onboard-otp`, {
         method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          ...(token ? { Authorization: `Bearer ${token}` } : {})
-        },
         body: JSON.stringify(preparedForm)
       });
-      const data = await res.json();
+      const data = await res.json().catch(() => ({}));
       if (res.ok && data.data?.sms) {
         const dispatchedSms = data.data.sms;
         setSmsLogs((prev) => [dispatchedSms, ...(Array.isArray(prev) ? prev : [])]);
-        showNotification(`✓ ${data.data?.message || data.message || `OTP (${dispatchedSms.otp}) dispatched to ${preparedForm.headmasterPhone}`}`);
+        showNotification(`✓ ${data.data?.message || data.message || `OTP dispatched to ${preparedForm.headmasterPhone}`}`);
         setTenantOtpModal({
           isOpen: true,
           dispatchedSms,
-          inputOtp: String(dispatchedSms.otp || ""),
+          inputOtp: "",
           verifying: false,
           error: null
         });
         fetchData();
       } else {
-        setSmsLogs((prev) => [fallbackSms, ...(Array.isArray(prev) ? prev : [])]);
-        showNotification(`✓ OTP (${fallbackOtp}) dispatched via GBS SMS Gateway to ${preparedForm.headmasterPhone}.`);
-        setTenantOtpModal({
-          isOpen: true,
-          dispatchedSms: fallbackSms,
-          inputOtp: fallbackOtp,
-          verifying: false,
-          error: null
-        });
+        showNotification(`⛔ OTP dispatch failed (HTTP ${res.status}): ${data.message || "Backend rejected onboarding OTP request."}`);
       }
     } catch (err) {
-      setSmsLogs((prev) => [fallbackSms, ...(Array.isArray(prev) ? prev : [])]);
-      showNotification(`✓ OTP (${fallbackOtp}) dispatched via GBS Resilient SMS Gateway to ${preparedForm.headmasterPhone}.`);
-      setTenantOtpModal({
-        isOpen: true,
-        dispatchedSms: fallbackSms,
-        inputOtp: fallbackOtp,
-        verifying: false,
-        error: null
-      });
+      showNotification(`⛔ Network error dispatching onboarding OTP: ${err.message}`);
     } finally {
       setLoading(false);
     }
@@ -4818,7 +4814,7 @@ export default function DeveloperDashboard() {
           id: `usr_hm_${assignedId}`,
           email: hmEmail,
           username: hmEmail.split("@")[0],
-          password: tenantOnboardForm.password || "Headmaster2026!",
+          password: tenantOnboardForm.password || "",
           role: "ADMIN",
           firstName: hmName.split(" ")[0] || "Headmaster",
           lastName: hmName.split(" ").slice(1).join(" ") || "",
@@ -4893,52 +4889,43 @@ export default function DeveloperDashboard() {
         domain: "",
         headmasterName: "",
         headmasterEmail: "",
-        headmasterPhone: "+233-24-555-0199",
+        headmasterPhone: "",
         planTier: "ENTERPRISE",
         institutionType: "NURSERY_TO_JHS",
-        maxStudents: 2500,
-        password: "Headmaster2026!",
-        headmasterPhoto: "/assets/admin-dashboard-bg.jpg",
-        facialVerified: true,
-        facialVerificationHash: "SHA256-FACE-HM-CERTIFIED"
+        maxStudents: 0,
+        password: "",
+        headmasterPhoto: "",
+        facialVerified: false,
+        facialVerificationHash: ""
       });
       fetchData();
     };
 
     try {
-      const token = localStorage.getItem("gbs_dev_token") || localStorage.getItem("gbs_token");
-      const res = await fetch(`${BASE_URL}/tenants/verify-onboard`, {
+      const res = await devFetch(`${BASE_URL}/tenants/verify-onboard`, {
         method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          ...(token ? { Authorization: `Bearer ${token}` } : {})
-        },
         body: JSON.stringify({
           phone: tenantOnboardForm.headmasterPhone,
           otp: enteredOtp,
           tenantData: tenantOnboardForm
         })
       });
-      const data = await res.json();
+      const data = await res.json().catch(() => ({}));
       if (res.ok) {
         commitProvisionedTenantLocally(data.data?.message || data.message, data.data?.tenant);
-      } else if (
-        tenantOtpModal.dispatchedSms?.otp &&
-        String(tenantOtpModal.dispatchedSms.otp).trim() === enteredOtp
-      ) {
-        commitProvisionedTenantLocally();
       } else {
-        setTenantOtpModal((prev) => ({ ...prev, verifying: false, error: data.message || "Invalid OTP code. Please enter the exact 6-digit code dispatched to the Headmaster's mobile phone." }));
+        setTenantOtpModal((prev) => ({
+          ...prev,
+          verifying: false,
+          error: data.message || `OTP verification rejected (HTTP ${res.status}). Please confirm the exact 6-digit code.`
+        }));
       }
     } catch (err) {
-      if (
-        tenantOtpModal.dispatchedSms?.otp &&
-        String(tenantOtpModal.dispatchedSms.otp).trim() === enteredOtp
-      ) {
-        commitProvisionedTenantLocally();
-      } else {
-        setTenantOtpModal((prev) => ({ ...prev, verifying: false, error: "Verification server unreachable or OTP mismatch. Please confirm the dispatched 6-digit OTP code." }));
-      }
+      setTenantOtpModal((prev) => ({
+        ...prev,
+        verifying: false,
+        error: `Verification request failed: ${err?.message || "Server unreachable."}`
+      }));
     }
   };
 
@@ -4960,16 +4947,17 @@ export default function DeveloperDashboard() {
   const handleDeleteBackup = async (id, filename) => {
     if (!window.confirm(`Delete backup #${id} (${filename}) permanently from database?`)) return;
     try {
-      const res = await fetch(`${BASE_URL}/backups/${id}`, { method: "DELETE" });
+      const res = await devFetch(`${BASE_URL}/backups/${id}`, { method: "DELETE" });
+      const data = await res.json().catch(() => ({}));
       if (res.ok) {
-        showNotification(`✓ Backup #${id} permanently deleted from PostgreSQL.`);
+        showNotification(`✓ ${data.message || `Backup #${id} permanently deleted from PostgreSQL.`}`);
         setSelectedBackups((prev) => prev.filter((i) => i !== id));
         fetchData();
       } else {
-        showNotification("⚠ Failed to delete backup.");
+        showNotification(`⛔ Failed to delete backup (HTTP ${res.status}): ${data.message || "Request rejected."}`);
       }
     } catch (err) {
-      showNotification("⚠ Error deleting backup.");
+      showNotification(`⛔ Error deleting backup: ${err.message}`);
     }
   };
 
@@ -4977,20 +4965,20 @@ export default function DeveloperDashboard() {
     if (selectedBackups.length === 0) return;
     if (!window.confirm(`Permanently delete all ${selectedBackups.length} selected backups from database?`)) return;
     try {
-      const res = await fetch(`${BASE_URL}/backups/batch-delete`, {
+      const res = await devFetch(`${BASE_URL}/backups/batch-delete`, {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ ids: selectedBackups })
       });
+      const data = await res.json().catch(() => ({}));
       if (res.ok) {
-        showNotification(`✓ Successfully deleted ${selectedBackups.length} backups from PostgreSQL.`);
+        showNotification(`✓ ${data.message || `Successfully deleted ${selectedBackups.length} backups from PostgreSQL.`}`);
         setSelectedBackups([]);
         fetchData();
       } else {
-        showNotification("⚠ Batch backup deletion failed.");
+        showNotification(`⛔ Batch backup deletion failed (HTTP ${res.status}): ${data.message || "Request rejected."}`);
       }
     } catch (err) {
-      showNotification("⚠ Error performing batch backup deletion.");
+      showNotification(`⛔ Error performing batch backup deletion: ${err.message}`);
     }
   };
 
@@ -5011,36 +4999,37 @@ export default function DeveloperDashboard() {
   const handleDeleteAlert = async (id) => {
     if (!window.confirm(`Delete alert #${id} permanently?`)) return;
     try {
-      const res = await fetch(`${BASE_URL}/alerts/${id}`, { method: "DELETE" });
+      const res = await devFetch(`${BASE_URL}/alerts/${id}`, { method: "DELETE" });
+      const data = await res.json().catch(() => ({}));
       if (res.ok) {
-        showNotification(`✓ Alert #${id} deleted from database.`);
+        showNotification(`✓ ${data.message || `Alert #${id} deleted from database.`}`);
         setSelectedAlerts((prev) => prev.filter((i) => i !== id));
         fetchData();
       } else {
-        showNotification("⚠ Failed to delete alert.");
+        showNotification(`⛔ Failed to delete alert (HTTP ${res.status}): ${data.message || "Request rejected."}`);
       }
     } catch (err) {
-      showNotification("⚠ Error deleting alert.");
+      showNotification(`⛔ Error deleting alert: ${err.message}`);
     }
   };
 
   const handleBatchResolveAlerts = async () => {
     if (selectedAlerts.length === 0) return;
     try {
-      const res = await fetch(`${BASE_URL}/alerts/batch-resolve`, {
+      const res = await devFetch(`${BASE_URL}/alerts/batch-resolve`, {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ ids: selectedAlerts })
       });
+      const data = await res.json().catch(() => ({}));
       if (res.ok) {
-        showNotification(`✓ Successfully resolved ${selectedAlerts.length} alerts.`);
+        showNotification(`✓ ${data.message || `Successfully resolved ${selectedAlerts.length} alerts.`}`);
         setSelectedAlerts([]);
         fetchData();
       } else {
-        showNotification("⚠ Batch resolve failed.");
+        showNotification(`⛔ Batch resolve failed (HTTP ${res.status}): ${data.message || "Request rejected."}`);
       }
     } catch (err) {
-      showNotification("⚠ Error resolving alerts.");
+      showNotification(`⛔ Error resolving alerts: ${err.message}`);
     }
   };
 
@@ -5048,20 +5037,20 @@ export default function DeveloperDashboard() {
     if (selectedAlerts.length === 0) return;
     if (!window.confirm(`Permanently delete all ${selectedAlerts.length} selected alerts?`)) return;
     try {
-      const res = await fetch(`${BASE_URL}/alerts/batch-delete`, {
+      const res = await devFetch(`${BASE_URL}/alerts/batch-delete`, {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ ids: selectedAlerts })
       });
+      const data = await res.json().catch(() => ({}));
       if (res.ok) {
-        showNotification(`✓ Successfully deleted ${selectedAlerts.length} alerts.`);
+        showNotification(`✓ ${data.message || `Successfully deleted ${selectedAlerts.length} alerts.`}`);
         setSelectedAlerts([]);
         fetchData();
       } else {
-        showNotification("⚠ Batch alert deletion failed.");
+        showNotification(`⛔ Batch alert deletion failed (HTTP ${res.status}): ${data.message || "Request rejected."}`);
       }
     } catch (err) {
-      showNotification("⚠ Error deleting alerts.");
+      showNotification(`⛔ Error deleting alerts: ${err.message}`);
     }
   };
 
@@ -7059,7 +7048,7 @@ export default function DeveloperDashboard() {
                       <input
                         type="tel"
                         required
-                        placeholder="e.g. +233-24-555-0199"
+                        placeholder="Enter registered phone (e.g. +233 XX XXX XXXX)"
                         value={tenantOnboardForm.headmasterPhone}
                         onChange={(e) => setTenantOnboardForm({ ...tenantOnboardForm, headmasterPhone: e.target.value })}
                       />
@@ -9610,7 +9599,7 @@ export default function DeveloperDashboard() {
                               <button
                                 className="action-btn-sm"
                                 style={{ background: "linear-gradient(135deg, #0284c7, #0369a1)", color: "#fff", display: "inline-flex", alignItems: "center", gap: "4px" }}
-                                onClick={() => handleCallHeadmaster({ id: c.tenantId, name: c.tenantName, headmaster: { name: c.headmaster?.name || c.headmasterName || "Headmaster", phone: c.headmaster?.phone || c.headmasterPhone || "+233-24-555-0199", email: c.headmaster?.email || c.headmasterEmail || "admin@gbs.edu" } })}
+                                onClick={() => handleCallHeadmaster({ id: c.tenantId, name: c.tenantName, headmaster: { name: c.headmaster?.name || c.headmasterName || "Headmaster", phone: c.headmaster?.phone || c.headmasterPhone || "", email: c.headmaster?.email || c.headmasterEmail || "" } })}
                               >
                                 📹 Video Call
                               </button>
@@ -9679,17 +9668,13 @@ export default function DeveloperDashboard() {
                   <span style={{ fontSize: "0.72rem", color: "#64748b" }}>Max: {metrics.sockets?.maxConnections || 10000}</span>
                 </div>
                 <div className="metric-box">
-                  <span className="box-title">Demo Trial Mode Quota</span>
-                  <span className="box-val" style={{ color: "#fbbf24" }}>
-                    {demoUsageSummary.totalUsed || 0} Entries (Max {demoUsageSummary.maxPerModule || 10}/Module)
+                  <span className="box-title">Production Operating Mode</span>
+                  <span className="box-val" style={{ color: "#34d399" }}>
+                    LIVE PRODUCTION
                   </span>
-                  <button
-                    type="button"
-                    onClick={handleResetDemoCountersFromDev}
-                    style={{ marginTop: "6px", background: "rgba(245, 158, 11, 0.16)", border: "1px solid #f59e0b", color: "#fcd34d", borderRadius: "6px", padding: "3px 8px", fontSize: "0.72rem", fontWeight: 700, cursor: "pointer" }}
-                  >
-                    🔄 Reset Demo Quota
-                  </button>
+                  <span style={{ fontSize: "0.72rem", color: "#94a3b8" }}>
+                    Gateways: {paymentStatusSummary.configuredProviders?.length > 0 ? paymentStatusSummary.configuredProviders.join(", ") : "Standard Verified"} • Zero Demo / Zero Mock
+                  </span>
                 </div>
               </div>
 
@@ -12366,7 +12351,7 @@ export default function DeveloperDashboard() {
                   style={{ width: "100%", background: "#020617", border: "1px solid rgba(255,255,255,0.15)", borderRadius: "8px", padding: "8px 10px", color: "#f8fafc", fontSize: "0.82rem", resize: "none", boxSizing: "border-box" }}
                 />
                 <div style={{ display: "flex", justifyContent: "space-between", fontSize: "0.7rem", color: "#64748b", marginTop: "2px" }}>
-                  <span>Recipient: {showHeadmasterOfflineNoticeModal.phone || "+233-24-555-0199"}</span>
+                  <span>Recipient: {showHeadmasterOfflineNoticeModal.phone || "No registered phone on file"}</span>
                   <span>{customSmsMessage.length} chars</span>
                 </div>
               </div>
@@ -12442,11 +12427,11 @@ export default function DeveloperDashboard() {
                 try {
                   activeProfile = JSON.parse(localStorage.getItem("gbs_headmaster_profile") || "null");
                 } catch { }
-                const currentName = activeProfile?.name || selectedDossierTenant?.headmaster?.name || selectedDossierTenant?.adminName || "Prof. Arthur Sterling";
-                const currentPhoto = activeProfile?.photo || "/assets/admin-avatar.jpg";
-                const currentPhone = activeProfile?.phone || selectedDossierTenant?.headmasterPhone || "+233-24-555-0199";
-                const currentEmail = activeProfile?.email || selectedDossierTenant?.headmaster?.email || "admin@gbs.edu";
-                const currentHash = activeProfile?.facialHash || "SHA256-FACE-HM-9824102";
+                const currentName = activeProfile?.name || selectedDossierTenant?.headmaster?.name || selectedDossierTenant?.adminName || "Unassigned Headmaster";
+                const currentPhoto = activeProfile?.photo || selectedDossierTenant?.headmaster?.photo || "/assets/admin-avatar.jpg";
+                const currentPhone = activeProfile?.phone || selectedDossierTenant?.headmaster?.phone || selectedDossierTenant?.headmasterPhone || "Not provided";
+                const currentEmail = activeProfile?.email || selectedDossierTenant?.headmaster?.email || selectedDossierTenant?.headmasterEmail || "Not provided";
+                const currentHash = activeProfile?.facialHash || selectedDossierTenant?.facialVerificationHash || "Not enrolled";
 
                 return (
                   <div style={{ background: "rgba(15, 23, 42, 0.8)", border: "1.5px solid rgba(16, 185, 129, 0.4)", borderRadius: "12px", padding: "1.25rem", marginBottom: "1.5rem" }}>
@@ -12992,7 +12977,7 @@ export default function DeveloperDashboard() {
                         tenantCode: code,
                         institutionName: found.institutionName || code,
                         headmasterName: found.officialHeadmasterName || "Headmaster",
-                        headmasterEmail: found.officialEmail || "admin@gbs.edu"
+                        headmasterEmail: found.officialEmail || ""
                       });
                     }}
                     style={{ width: "100%", padding: "10px", background: "#020617", border: "1px solid #334155", borderRadius: "8px", color: "#fff", fontSize: "0.85rem" }}
@@ -13141,7 +13126,7 @@ export default function DeveloperDashboard() {
                     <input
                       type="tel"
                       required
-                      placeholder="e.g. +233-24-555-0199"
+                      placeholder="Enter headmaster mobile number"
                       value={headmasterChangeForm.newHeadmasterPhone}
                       onChange={(e) => setHeadmasterChangeForm({ ...headmasterChangeForm, newHeadmasterPhone: e.target.value })}
                       style={{ width: "100%", padding: "10px", background: "#020617", border: "1px solid #334155", borderRadius: "8px", color: "#fff", boxSizing: "border-box" }}
