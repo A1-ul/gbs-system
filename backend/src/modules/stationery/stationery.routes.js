@@ -24,6 +24,8 @@ const ALL_SCHOOL_ROLES = [
   'STUDENT',
   'HR',
   'ALUMNI',
+  'CLINIC_DOCTOR',
+  'CLINIC_NURSE',
   'DEVELOPER'
 ];
 
@@ -32,9 +34,6 @@ const STORE_OPERATOR_ROLES = [
   'SUPER_ADMIN',
   'HEADMASTER',
   'PRINCIPAL',
-  'SECRETARY',
-  'ACCOUNTANT',
-  'STAFF',
   'DEVELOPER'
 ];
 
@@ -44,7 +43,6 @@ const AUDIT_ROLES = [
   'HEADMASTER',
   'PRINCIPAL',
   'ACCOUNTANT',
-  'SECRETARY',
   'DEVELOPER'
 ];
 

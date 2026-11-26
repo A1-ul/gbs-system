@@ -23,6 +23,8 @@ enum UserRole {
   DEVELOPER
   HR
   ALUMNI
+  CLINIC_DOCTOR
+  CLINIC_NURSE
 }
 
 enum SubscriptionStatus {

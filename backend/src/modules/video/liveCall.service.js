@@ -392,6 +392,7 @@ async function getCallDirectory(req) {
     parents: contacts.filter((c) => c.role === 'PARENT'),
     students: contacts.filter((c) => c.role === 'STUDENT'),
     alumni: contacts.filter((c) => c.role === 'ALUMNI'),
+    clinic: contacts.filter((c) => ['CLINIC_DOCTOR', 'CLINIC_NURSE'].includes(c.role)),
     staff: contacts.filter((c) => ['SECRETARY', 'STAFF', 'HR', 'ACCOUNTANT', 'CLINIC_DOCTOR', 'CLINIC_NURSE'].includes(c.role))
   };
 }

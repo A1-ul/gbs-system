@@ -19,6 +19,8 @@ const ROLES = [
   { id: "ACCOUNTANT", title: "Finance Portal", icon: "📊", desc: "Payroll & Invoices", color: "#ec4899" },
   { id: "STAFF", title: "Staff Portal", icon: "💼", desc: "Operations & Logistics", color: "#64748b" },
   { id: "HR", title: "HR Portal", icon: "👔", desc: "Staff & Institutional HR", color: "#a855f7" },
+  { id: "CLINIC_DOCTOR", title: "School Clinic (Doctor)", icon: "🩺", desc: "Medical Doctors Only", color: "#10b981" },
+  { id: "CLINIC_NURSE", title: "School Clinic (Nurse)", icon: "🏥", desc: "Clinic Nurses & Sickbay", color: "#14b8a6" },
   { id: "ALUMNI", title: "Alumni Portal", icon: "🏛️", desc: "Transcripts & Batches", color: "#06b6d4" }
 ];
 
@@ -225,6 +227,8 @@ export default function MainLoginPage() {
             ACCOUNTANT: "/portal/accountant/dashboard",
             STAFF: "/portal/staff/dashboard",
             HR: "/portal/hr/dashboard",
+            CLINIC_DOCTOR: "/portal/clinic/dashboard",
+            CLINIC_NURSE: "/portal/clinic/dashboard",
             ALUMNI: "/portal/alumni/dashboard",
             DEVELOPER: "/developer-control-center/dashboard"
           };
@@ -246,6 +250,8 @@ export default function MainLoginPage() {
     ACCOUNTANT: { email: "accountant@gbs.com", password: "Accountant123!" },
     STAFF: { email: "staff@gbs.com", password: "Staff123!" },
     HR: { email: "hr@gbs.com", password: "Hr123!" },
+    CLINIC_DOCTOR: { email: "doctor@gbs.com", password: "Doctor123!" },
+    CLINIC_NURSE: { email: "nurse@gbs.com", password: "Nurse123!" },
     ALUMNI: { email: "alumni@gbs.com", password: "Alumni123!" }
   };
 
@@ -279,13 +285,15 @@ export default function MainLoginPage() {
         throw new Error(result?.message || "Authentication failed");
       }
 
-      const rawRole = result?.data?.user?.role || selectedRole;
+      const rawRole = String(result?.data?.user?.role || selectedRole).toUpperCase();
       if (rawRole === "DEVELOPER") {
         navigate("/developer-control-center/dashboard");
       } else if (rawRole === "SUPER_ADMIN" || rawRole === "ADMIN") {
         navigate("/portal/admin/dashboard");
+      } else if (["CLINIC_DOCTOR", "CLINIC_NURSE", "DOCTOR", "NURSE", "CLINIC"].includes(rawRole)) {
+        navigate("/portal/clinic/dashboard");
       } else {
-        navigate(`/portal/${String(rawRole).toLowerCase()}/dashboard`);
+        navigate(`/portal/${rawRole.toLowerCase()}/dashboard`);
       }
     } catch (err) {
       const message =
@@ -562,6 +570,7 @@ export default function MainLoginPage() {
             <Link to="/login/accountant" style={{ color: "#f472b6", textDecoration: "none" }}>Accountant</Link> •
             <Link to="/login/staff" style={{ color: "#cbd5e1", textDecoration: "none" }}>Staff</Link> •
             <Link to="/login/hr" style={{ color: "#c084fc", textDecoration: "none", fontWeight: "700" }}>HR Portal</Link> •
+            <Link to="/login/clinic" style={{ color: "#34d399", textDecoration: "none", fontWeight: "700" }}>School Clinic</Link> •
             <Link to="/portal/alumni/dashboard" style={{ color: "#06b6d4", textDecoration: "none" }}>Alumni</Link>
           </div>
         </div>

@@ -21,23 +21,37 @@ import {
 } from "../../utils/globalNavigationScrollManager";
 
 /**
- * Tag overview-only sibling blocks that precede <nav className="role-tab-nav">
- * inside institutional dashboards ONLY when displaying a dedicated module page route
- * (/portal/:role/dashboard/:moduleId), so the requested module renders immediately at top
- * without showing accidental sections of the dashboard overview above it.
+ * Find primary top-level dashboard navigation containers (strictly excluding nested sub-tab bars
+ * inside workspace cards or modals).
  */
-function syncOverviewBlockVisibility(isModulePageView, shouldCenterActiveTab = false) {
+function getPrimaryDashboardTabNavs() {
+  if (typeof document === "undefined") return [];
+  return Array.from(document.querySelectorAll("nav.role-tab-nav")).filter(
+    (nav) => !nav.closest(".role-workspace-card, .modal-box, [role='dialog']")
+  );
+}
+
+/**
+ * Tag overview-only sibling blocks AND primary overview tab wall inside institutional dashboards
+ * ONLY when displaying a dedicated module page route (/portal/:role/dashboard/:moduleId),
+ * so the requested module renders immediately at top as a true dedicated application page.
+ */
+function syncOverviewBlockVisibility(isModulePageView) {
   if (typeof document === "undefined") return;
 
   // Clear any previously tagged nodes first
   document.querySelectorAll("[data-gbs-overview-section='true']").forEach((el) => {
     el.removeAttribute("data-gbs-overview-section");
   });
+  document.querySelectorAll("[data-gbs-primary-tab-nav='true']").forEach((el) => {
+    el.removeAttribute("data-gbs-primary-tab-nav");
+  });
 
   if (!isModulePageView) return;
 
-  const navs = document.querySelectorAll(".role-tab-nav");
+  const navs = getPrimaryDashboardTabNavs();
   navs.forEach((nav) => {
+    nav.setAttribute("data-gbs-primary-tab-nav", "true");
     const parent = nav.parentElement;
     if (!parent) return;
 
@@ -68,16 +82,21 @@ function syncOverviewBlockVisibility(isModulePageView, shouldCenterActiveTab = f
       }
       sibling = sibling.previousElementSibling;
     }
-
-    // Center the active tab horizontally ONLY on fresh PUSH navigation (never overwrite POP scroll restoration!)
-    if (shouldCenterActiveTab) {
-      const activeBtn = nav.querySelector(".role-tab-btn.active");
-      if (activeBtn && nav.scrollWidth > nav.clientWidth) {
-        const desiredLeft = activeBtn.offsetLeft - nav.clientWidth / 2 + activeBtn.clientWidth / 2;
-        nav.scrollLeft = Math.max(0, desiredLeft);
-      }
-    }
   });
+}
+
+function collectDashboardModuleMenuItems() {
+  const navs = getPrimaryDashboardTabNavs();
+  const primary = navs[0];
+  if (!primary) return [];
+  const buttons = Array.from(primary.querySelectorAll("button.role-tab-btn"));
+  return buttons
+    .map((btn, idx) => ({
+      index: idx,
+      label: (btn.textContent || "").replace(/\s+/g, " ").trim(),
+      isActive: btn.classList.contains("active")
+    }))
+    .filter((item) => item.label.length > 0);
 }
 
 /**
@@ -104,6 +123,9 @@ export default function DashboardTabPageController() {
   const [resolvedTitle, setResolvedTitle] = useState(() =>
     routeInfo.moduleId ? resolveModuleTitle(routeInfo.moduleId) : ""
   );
+  const [moduleMenuOpen, setModuleMenuOpen] = useState(false);
+  const [moduleMenuItems, setModuleMenuItems] = useState([]);
+  const switcherMenuRef = useRef(null);
 
   const prevLocationRef = useRef({
     key: location.key,
@@ -178,8 +200,8 @@ export default function DashboardTabPageController() {
       scheduleSave();
     };
 
-    // Snapshot immediately right before any click on links/buttons/cards that might navigate
-    const handlePointerDownCapture = (e) => {
+    // Snapshot immediately right before any click/touch/keyboard action that might navigate
+    const handlePreNavCapture = (e) => {
       if (isScrollRestorationInProgress()) return;
       const interactive = e.target?.closest?.(
         "a[href], button, .role-kpi-box, .role-kpi-card, .module-card-link, [role='button']"
@@ -189,13 +211,20 @@ export default function DashboardTabPageController() {
       }
     };
 
+    const handleKeyDownCapture = (e) => {
+      if (e.key !== "Enter" && e.key !== " ") return;
+      handlePreNavCapture(e);
+    };
+
     const handlePageHide = () => {
       saveScrollSnapshotForEntry(currentEntryKey, currentRouteKey);
     };
 
     window.addEventListener("scroll", handleWindowScroll, { passive: true });
     document.addEventListener("scroll", handleCaptureScroll, { capture: true, passive: true });
-    document.addEventListener("pointerdown", handlePointerDownCapture, { capture: true, passive: true });
+    document.addEventListener("pointerdown", handlePreNavCapture, { capture: true, passive: true });
+    document.addEventListener("touchstart", handlePreNavCapture, { capture: true, passive: true });
+    document.addEventListener("keydown", handleKeyDownCapture, { capture: true, passive: true });
     window.addEventListener("pagehide", handlePageHide);
     window.addEventListener("beforeunload", handlePageHide);
 
@@ -206,7 +235,9 @@ export default function DashboardTabPageController() {
       }
       window.removeEventListener("scroll", handleWindowScroll);
       document.removeEventListener("scroll", handleCaptureScroll, true);
-      document.removeEventListener("pointerdown", handlePointerDownCapture, true);
+      document.removeEventListener("pointerdown", handlePreNavCapture, true);
+      document.removeEventListener("touchstart", handlePreNavCapture, true);
+      document.removeEventListener("keydown", handleKeyDownCapture, true);
       window.removeEventListener("pagehide", handlePageHide);
       window.removeEventListener("beforeunload", handlePageHide);
     };
@@ -258,21 +289,25 @@ export default function DashboardTabPageController() {
     document.body.classList.toggle("gbs-module-page-view", isModulePage);
     document.body.classList.remove("gbs-tab-page-view", "gbs-full-display-mode");
 
+    // Close Switch Module dropdown on any route change
+    setModuleMenuOpen(false);
+
     // Synchronize overview block visibility immediately + after lazy dashboard renders
-    const centerOnPush = navigationType !== "POP";
-    syncOverviewBlockVisibility(isModulePage, centerOnPush);
+    syncOverviewBlockVisibility(isModulePage);
     const domSyncRaf = requestAnimationFrame(() => {
-      syncOverviewBlockVisibility(isModulePage, centerOnPush);
+      syncOverviewBlockVisibility(isModulePage);
       if (routeInfo.moduleId) {
         setResolvedTitle(resolveModuleTitle(routeInfo.moduleId));
+        setModuleMenuItems(collectDashboardModuleMenuItems());
       }
     });
     const domSyncDelayed = setTimeout(() => {
-      syncOverviewBlockVisibility(isModulePage, false);
+      syncOverviewBlockVisibility(isModulePage);
       if (routeInfo.moduleId) {
         setResolvedTitle(resolveModuleTitle(routeInfo.moduleId));
+        setModuleMenuItems(collectDashboardModuleMenuItems());
       }
-    }, 180);
+    }, 200);
 
     // Handle Scroll Position:
     // - POP (Browser Back / Forward or Application Back): restore exact previous window + container scroll!
@@ -317,11 +352,50 @@ export default function DashboardTabPageController() {
     };
   }, [isDev, isModulePage]);
 
+  // Close module switcher menu on outside click or Escape key
+  useEffect(() => {
+    if (!moduleMenuOpen) return undefined;
+    const onOutsideClick = (e) => {
+      if (switcherMenuRef.current && !switcherMenuRef.current.contains(e.target)) {
+        setModuleMenuOpen(false);
+      }
+    };
+    const onKeyDown = (e) => {
+      if (e.key === "Escape") setModuleMenuOpen(false);
+    };
+    document.addEventListener("mousedown", onOutsideClick);
+    document.addEventListener("keydown", onKeyDown);
+    return () => {
+      document.removeEventListener("mousedown", onOutsideClick);
+      document.removeEventListener("keydown", onKeyDown);
+    };
+  }, [moduleMenuOpen]);
+
+  const handleToggleModuleSwitcher = useCallback(() => {
+    setModuleMenuItems(collectDashboardModuleMenuItems());
+    setModuleMenuOpen((prev) => !prev);
+  }, []);
+
+  const handleSwitchModuleByIndex = useCallback((idx) => {
+    setModuleMenuOpen(false);
+    const navs = getPrimaryDashboardTabNavs();
+    const primary = navs[0];
+    if (!primary) return;
+    const buttons = primary.querySelectorAll("button.role-tab-btn");
+    const targetBtn = buttons[idx];
+    if (targetBtn) {
+      saveActiveScrollSnapshot();
+      targetBtn.click();
+    }
+  }, []);
+
   const handleAppBack = useCallback(() => {
+    setModuleMenuOpen(false);
     performSmartBack(navigate, location, routeInfo.baseDashboardPath);
   }, [navigate, location, routeInfo.baseDashboardPath]);
 
   const handleGoToOverview = useCallback(() => {
+    setModuleMenuOpen(false);
     saveActiveScrollSnapshot();
     if (routeInfo.baseDashboardPath) {
       navigate(routeInfo.baseDashboardPath);
@@ -430,7 +504,79 @@ export default function DashboardTabPageController() {
         </div>
       </div>
 
-      <div style={{ display: "flex", alignItems: "center", gap: "8px", flexWrap: "wrap" }}>
+      <div style={{ display: "flex", alignItems: "center", gap: "8px", flexWrap: "wrap", position: "relative" }} ref={switcherMenuRef}>
+        <button
+          type="button"
+          onClick={handleToggleModuleSwitcher}
+          data-testid="module-page-switcher-btn"
+          aria-expanded={moduleMenuOpen}
+          aria-label="Switch dashboard module"
+          style={{
+            background: moduleMenuOpen ? "rgba(56, 189, 248, 0.28)" : "rgba(15, 23, 42, 0.82)",
+            border: "1px solid rgba(56, 189, 248, 0.6)",
+            color: "#bae6fd",
+            borderRadius: "8px",
+            padding: "7px 12px",
+            minHeight: "38px",
+            fontSize: "0.78rem",
+            fontWeight: 800,
+            cursor: "pointer",
+            display: "inline-flex",
+            alignItems: "center",
+            gap: "6px"
+          }}
+        >
+          ☰ Switch Module {moduleMenuOpen ? "▴" : "▾"}
+        </button>
+
+        {moduleMenuOpen && moduleMenuItems.length > 0 && (
+          <div
+            data-testid="module-page-switcher-menu"
+            className="gbs-module-switcher-menu"
+            style={{
+              position: "absolute",
+              top: "calc(100% + 8px)",
+              right: 0,
+              width: "min(340px, 92vw)",
+              maxHeight: "min(70dvh, 480px)",
+              overflowY: "auto",
+              background: "linear-gradient(160deg, #061224 0%, #0d1f3d 100%)",
+              border: "1.5px solid #d4af37",
+              borderRadius: "12px",
+              padding: "8px",
+              boxShadow: "0 18px 42px rgba(2, 6, 23, 0.85)",
+              zIndex: 10005,
+              display: "flex",
+              flexDirection: "column",
+              gap: "4px"
+            }}
+          >
+            <div style={{ fontSize: "0.68rem", fontWeight: 900, color: "#f6dd84", textTransform: "uppercase", padding: "4px 8px 6px", borderBottom: "1px solid rgba(212, 175, 55, 0.25)" }}>
+              {portalLabel} — Portal Modules ({moduleMenuItems.length})
+            </div>
+            {moduleMenuItems.map((item) => (
+              <button
+                key={`${item.index}-${item.label}`}
+                type="button"
+                onClick={() => handleSwitchModuleByIndex(item.index)}
+                style={{
+                  textAlign: "left",
+                  padding: "9px 11px",
+                  borderRadius: "8px",
+                  border: item.isActive ? "1px solid #d4af37" : "1px solid transparent",
+                  background: item.isActive ? "rgba(212, 175, 55, 0.22)" : "rgba(15, 23, 42, 0.55)",
+                  color: item.isActive ? "#fef08a" : "#e2e8f0",
+                  fontSize: "0.82rem",
+                  fontWeight: item.isActive ? 800 : 600,
+                  cursor: "pointer"
+                }}
+              >
+                {item.isActive ? "● " : ""}{item.label}
+              </button>
+            ))}
+          </div>
+        )}
+
         <button
           type="button"
           onClick={handleGoToOverview}

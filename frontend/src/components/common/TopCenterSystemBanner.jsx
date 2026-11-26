@@ -45,6 +45,7 @@ const DASHBOARDS_LIST = [
   { path: "/portal/accountant/dashboard", title: "Accountant Desk", icon: "💰" },
   { path: "/portal/staff/dashboard", title: "Staff Ops", icon: "👔" },
   { path: "/portal/hr/dashboard", title: "HR Portal", icon: "📋" },
+  { path: "/portal/clinic/dashboard", title: "School Clinic", icon: "🏥" },
   { path: "/portal/alumni/dashboard", title: "Alumni Hub", icon: "🏛️" },
   { path: "/developer-control-center/dashboard", title: "Developer Center", icon: "🛡️" }
 ];

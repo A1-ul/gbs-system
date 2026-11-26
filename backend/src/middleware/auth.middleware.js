@@ -23,7 +23,9 @@ const ROLE_DEFAULT_IDS = {
   STAFF: 6,
   HR: 7,
   ALUMNI: 8,
-  SECRETARY: 9
+  SECRETARY: 9,
+  CLINIC_DOCTOR: 10,
+  CLINIC_NURSE: 11
 };
 
 const ROLE_CANONICAL_BUILTIN_ID = {
@@ -39,7 +41,9 @@ const ROLE_CANONICAL_BUILTIN_ID = {
   STAFF: 'usr_staff_master',
   HR: 'usr_hr_master',
   ALUMNI: 'usr_alumni_master',
-  SECRETARY: 'usr_secretary_master'
+  SECRETARY: 'usr_secretary_master',
+  CLINIC_DOCTOR: 'usr_clinic_doctor_master',
+  CLINIC_NURSE: 'usr_clinic_nurse_master'
 };
 
 const BUILTIN_DEMO_EMAILS = new Set([
@@ -53,7 +57,9 @@ const BUILTIN_DEMO_EMAILS = new Set([
   'staff@gbs.com',
   'hr@gbs.com',
   'alumni@gbs.com',
-  'secretary@gbs.com'
+  'secretary@gbs.com',
+  'doctor@gbs.com',
+  'nurse@gbs.com'
 ]);
 
 const toNumericId = (val, fallback = 1) => {
@@ -296,7 +302,9 @@ const protect = async (req, res, next) => {
           'usr_alumni_master',
           'usr_alumni1',
           'usr_secretary_master',
-          'usr_secretary1'
+          'usr_secretary1',
+          'usr_clinic_doctor_master',
+          'usr_clinic_nurse_master'
         ]);
         const normalizedRole = String(decoded.role || '').toUpperCase();
         const normalizedEmail = String(decoded.email || req.headers['x-user-email'] || '').trim().toLowerCase();

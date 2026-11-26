@@ -579,9 +579,9 @@ async function recordExpense(req) {
   const tid = parseInt(req.tenantId || req.user?.tenantId || 1, 10) || 1;
   const body = req.body || {};
   const role = normalizeRole(req.user?.role);
-  const allowedExpenseRecorders = ['ADMIN', 'SUPER_ADMIN', 'HEADMASTER', 'PRINCIPAL', 'SECRETARY', 'ACCOUNTANT', 'STAFF', 'DEVELOPER'];
+  const allowedExpenseRecorders = ['ADMIN', 'SUPER_ADMIN', 'HEADMASTER', 'PRINCIPAL', 'DEVELOPER'];
   if (!allowedExpenseRecorders.includes(role)) {
-    throw new AppError('Only authorized school staff (Headmaster, Secretary, Accountant, Storekeeper) may log stationery expenses.', 403);
+    throw new AppError('Only the Institution Headmaster may record stationery store restock expenses.', 403);
   }
 
   const amount = Number(body.amount);
@@ -601,7 +601,7 @@ async function recordExpense(req) {
 
   const expenseTitle = String(
     body.title ||
-      (matchedItem ? `Stationery Restock: ${matchedItem.name}${restockQty > 0 ? ` (${restockQty} ${matchedItem.unitLabel}s)` : ''}` : '')
+    (matchedItem ? `Stationery Restock: ${matchedItem.name}${restockQty > 0 ? ` (${restockQty} ${matchedItem.unitLabel}s)` : ''}` : '')
   ).trim();
   if (!expenseTitle) {
     throw new AppError('Expense title or selected stationery item is required.', 400);

@@ -16,14 +16,22 @@ const DISPOSITIONS = [
 ];
 
 export default function SchoolClinicHubPanel({
-  mode = "ADMIN", // "ADMIN" | "TEACHER" | "STUDENT" | "PARENT" | "STAFF" | "HR" | "ACCOUNTANT"
+  mode = "STUDENT", // Clinical operations ONLY for "CLINIC_DOCTOR" | "CLINIC_NURSE" | "DOCTOR" | "NURSE" | "CLINIC"; all other portals are strictly Read-Only Personal Health Status!
   currentUser = null,
-  onFeedback = null
+  onFeedback = null,
+  forcedSubTab = null,
+  onSubTabChange = null,
+  hideInternalClockWidget = false
 }) {
   const normalizedMode = String(mode || "STUDENT").toUpperCase();
-  const isHeadmasterClinic = ["ADMIN", "SUPER_ADMIN", "HEADMASTER", "PRINCIPAL", "DEVELOPER"].includes(normalizedMode);
+  const isClinicOperator = ["CLINIC_DOCTOR", "CLINIC_NURSE", "DOCTOR", "NURSE", "CLINIC"].includes(normalizedMode);
 
-  const [activeSubTab, setActiveSubTab] = useState(isHeadmasterClinic ? "DIRECTORY_PROFILES" : "MY_HEALTH");
+  const [internalSubTab, setInternalSubTab] = useState(isClinicOperator ? "DIRECTORY_PROFILES" : "MY_HEALTH");
+  const activeSubTab = forcedSubTab || internalSubTab;
+  const setActiveSubTab = (next) => {
+    setInternalSubTab(next);
+    if (typeof onSubTabChange === "function") onSubTabChange(next);
+  };
   const [loading, setLoading] = useState(false);
   const [statusMsg, setStatusMsg] = useState(null);
 
@@ -32,12 +40,11 @@ export default function SchoolClinicHubPanel({
   const [summary, setSummary] = useState(null);
   const [inventory, setInventory] = useState([]);
 
-  // Headmaster Cross-Portal Dossier & Staff/Student Directory Filters
+  // Clinic Doctor/Nurse Cross-Portal Dossier & Staff/Student Directory Filters
   const [pullQuery, setPullQuery] = useState("");
   const [pulledDossier, setPulledDossier] = useState(null);
   const [directoryFilter, setDirectoryFilter] = useState("ALL"); // ALL | STUDENT | STAFF_TEACHER
   const [selectedPersonId, setSelectedPersonId] = useState(null);
-  const [showSelfUpdateForm, setShowSelfUpdateForm] = useState(false);
 
   const callerEmail = String(currentUser?.email || "").trim().toLowerCase();
   const callerFullName = `${currentUser?.firstName || ""} ${currentUser?.lastName || ""}`.trim();
@@ -99,7 +106,7 @@ export default function SchoolClinicHubPanel({
         apiClient.get("/clinic/profiles").catch(() => null),
         apiClient.get("/clinic/visits").catch(() => null)
       ];
-      if (isHeadmasterClinic) {
+      if (isClinicOperator) {
         requests.push(apiClient.get("/clinic/inventory").catch(() => null));
       }
 
@@ -110,34 +117,48 @@ export default function SchoolClinicHubPanel({
 
       if (!Array.isArray(nextProfiles)) {
         const localProfs = isDemo ? getTenantScopedRecord("clinic_profiles", []) : [];
-        nextProfiles = isHeadmasterClinic
+        nextProfiles = isClinicOperator
           ? localProfs
           : localProfs.filter((p) => {
               const e = String(p.email || "").toLowerCase();
               const g = String(p.guardianEmail || "").toLowerCase();
               return callerEmail && (e === callerEmail || g === callerEmail);
             });
+      } else if (!isClinicOperator && nextProfiles.length > 1 && normalizedMode !== "PARENT") {
+        // Defense-in-depth: even in Demo Sandbox walkthrough, non-clinic portals ONLY show the active user's own health status
+        const own = nextProfiles.filter((p) => {
+          const e = String(p.email || "").toLowerCase();
+          const nm = String(p.fullName || "").toLowerCase();
+          return (callerEmail && e === callerEmail) || (callerFullName && nm === callerFullName.toLowerCase());
+        });
+        nextProfiles = own.length > 0 ? own : nextProfiles.slice(0, 1);
       }
 
       if (!Array.isArray(nextVisits)) {
         const localVisits = isDemo ? getTenantScopedRecord("clinic_visits", []) : [];
-        nextVisits = isHeadmasterClinic
+        nextVisits = isClinicOperator
           ? localVisits
           : localVisits.filter((v) => {
               const pe = String(v.patientEmail || "").toLowerCase();
               const ge = String(v.guardianEmail || "").toLowerCase();
               return callerEmail && (pe === callerEmail || ge === callerEmail);
             });
+      } else if (!isClinicOperator && normalizedMode !== "PARENT") {
+        nextVisits = nextVisits.filter((v) => {
+          const pe = String(v.patientEmail || "").toLowerCase();
+          const pn = String(v.patientName || "").toLowerCase();
+          return (callerEmail && pe === callerEmail) || (callerFullName && pn === callerFullName.toLowerCase());
+        });
       }
 
       setProfiles(nextProfiles);
       setVisits(nextVisits);
-      setSummary(isHeadmasterClinic ? visRes?.data?.data?.summary ?? null : null);
-      setInventory(isHeadmasterClinic ? invRes?.data?.data?.inventory ?? (isDemo ? getTenantScopedRecord("clinic_inventory", []) : []) : []);
+      setSummary(isClinicOperator ? visRes?.data?.data?.summary ?? null : null);
+      setInventory(isClinicOperator ? invRes?.data?.data?.inventory ?? (isDemo ? getTenantScopedRecord("clinic_inventory", []) : []) : []);
     } finally {
       setLoading(false);
     }
-  }, [isHeadmasterClinic, isDemo, callerEmail]);
+  }, [isClinicOperator, isDemo, callerEmail, callerFullName, normalizedMode]);
 
   useEffect(() => {
     loadClinicData();
@@ -159,7 +180,7 @@ export default function SchoolClinicHubPanel({
 
   const handlePullRecords = async (e, explicitQuery = null) => {
     if (e) e.preventDefault();
-    if (!isHeadmasterClinic) return;
+    if (!isClinicOperator) return;
     const effectiveQuery = explicitQuery !== null ? String(explicitQuery) : pullQuery.trim();
     if (explicitQuery !== null) setPullQuery(effectiveQuery);
     setLoading(true);
@@ -187,8 +208,8 @@ export default function SchoolClinicHubPanel({
 
   const handleAdmitOrTreat = async (e) => {
     e.preventDefault();
-    if (!isHeadmasterClinic) {
-      return notify("Clinic consultation intake is restricted to the Headmaster Clinic Command.", true);
+    if (!isClinicOperator) {
+      return notify("Access Denied: Only School Clinic Doctors and Nurses can operate the School Clinic.", true);
     }
     if (!visitForm.patientName || !visitForm.chiefComplaint) {
       return notify("Patient Name and Symptoms / Chief Complaint are required.", true);
@@ -219,7 +240,7 @@ export default function SchoolClinicHubPanel({
   };
 
   const handleDischargeFromSickbay = async (visitId, nextDisposition = "TREATED_AND_RETURNED_TO_CLASS") => {
-    if (!isHeadmasterClinic) return;
+    if (!isClinicOperator) return;
     try {
       const res = await apiClient.patch(`/clinic/visits/${visitId}`, { disposition: nextDisposition, discharge: true });
       await loadClinicData();
@@ -231,7 +252,10 @@ export default function SchoolClinicHubPanel({
 
   const handleSaveMedicalProfile = async (e) => {
     e.preventDefault();
-    if (isHeadmasterClinic && !profileForm.fullName && !profileForm.email) {
+    if (!isClinicOperator) {
+      return notify("Access Denied: Only School Clinic Doctors and Nurses can edit medical dossiers.", true);
+    }
+    if (!profileForm.fullName && !profileForm.email) {
       return notify("Full Name or Email is required for Admission Medical Registration.", true);
     }
     const demoCheck = checkDemoEntryLimit("clinic", "School Clinic Medical Profiles", profiles.length);
@@ -244,11 +268,7 @@ export default function SchoolClinicHubPanel({
       trackDemoEntryCreated("clinic");
       await loadClinicData();
       setTenantScopedRecord("clinic_profiles", [saved, ...profiles]);
-      if (isHeadmasterClinic) {
-        setProfileForm((prev) => ({ ...prev, fullName: "", email: "", phone: "", admissionNumber: "", nhisNumber: "" }));
-      } else {
-        setShowSelfUpdateForm(false);
-      }
+      setProfileForm((prev) => ({ ...prev, fullName: "", email: "", phone: "", admissionNumber: "", nhisNumber: "" }));
       notify(res?.data?.message || `📋 Medical dossier updated cleanly for ${saved.fullName}.`);
     } catch (err) {
       notify(err?.response?.data?.message || "Failed to save Medical Dossier.", true);
@@ -257,7 +277,7 @@ export default function SchoolClinicHubPanel({
 
   const handleAddInventory = async (e) => {
     e.preventDefault();
-    if (!isHeadmasterClinic) return;
+    if (!isClinicOperator) return;
     if (!medForm.itemName.trim()) return notify("Medicine name is required.", true);
     const demoCheck = checkDemoEntryLimit("clinic", "School Clinic Pharmacy Items", inventory.length);
     if (!demoCheck.allowed) {
@@ -274,41 +294,47 @@ export default function SchoolClinicHubPanel({
     }
   };
 
-  // Strict Personal / Linked-Ward View for non-Headmaster users (Student, Teacher, Parent, Staff, HR, Accountant)
-  if (!isHeadmasterClinic) {
+  // STRICT READ-ONLY PERSONAL / LINKED-WARD MEDICAL HEALTH STATUS FOR ALL NON-CLINIC STAFF & USERS
+  // (Headmaster, Teacher, Secretary, Accountant, HR, Non-Teaching Staff, Student, Parent)
+  // They ONLY see their medical health status WITHOUT editing and CANNOT see what is happening inside the School Clinic.
+  if (!isClinicOperator) {
     const isParentView = normalizedMode === "PARENT";
+    const latestVisit = visits[0] || null;
+    const primaryProfile = profiles[0] || null;
+    const healthClearance = primaryProfile?.medicalClearanceStatus || (latestVisit && !latestVisit.dischargedAt && latestVisit.disposition === "ADMITTED_TO_SICKBAY" ? "UNDER_OBSERVATION" : "CLEARED");
+
     return (
-      <div className="role-workspace-card" style={{ padding: "22px", borderRadius: "16px", marginBottom: "24px" }}>
+      <div
+        className="role-workspace-card"
+        data-testid="clinic-readonly-health-status"
+        style={{ padding: "22px", borderRadius: "16px", marginBottom: "24px" }}
+      >
         <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: "12px", marginBottom: "16px" }}>
           <div>
             <span style={{ fontSize: "0.75rem", fontWeight: 800, color: "#f5d061", letterSpacing: "1px", textTransform: "uppercase" }}>
-              🔒 {isParentView ? "Linked Ward Health & Medical Info Only" : "Personal Health & Medical Info Only"}
+              🔒 {isParentView ? "Linked Ward Medical Health Status (View Only)" : "Personal Medical Health Status (Read-Only)"}
             </span>
             <h2 style={{ margin: "4px 0 0 0", color: "#ffffff", fontSize: "1.35rem" }}>
-              {isParentView ? "My Ward Health Dossier & Visit History" : "My Personal Health & Medical Dossier"}
+              {isParentView ? "My Ward Medical Health Status" : "My Personal Medical Health Status"}
             </h2>
             <p style={{ margin: "4px 0 0 0", fontSize: "0.82rem", color: "#cbd5e1" }}>
-              Health privacy enforced: you only see {isParentView ? "your linked child's" : "your own"} personal medical dossier and clinic visits. School clinic operations are managed strictly by the Headmaster.
+              Medical confidentiality enforced: You can only view {isParentView ? "your linked child's" : "your own"} verified health status without editing. School Clinic operations are strictly restricted to School Doctors and Nurses on the separate School Clinic Dashboard.
             </p>
           </div>
-          <div style={{ display: "flex", gap: "8px", flexWrap: "wrap" }}>
-            {!isParentView && (
-              <button
-                type="button"
-                onClick={() => setShowSelfUpdateForm((prev) => !prev)}
-                style={{
-                  background: "rgba(16, 185, 129, 0.2)",
-                  border: "1px solid #34d399",
-                  color: "#6ee7b7",
-                  borderRadius: "10px",
-                  padding: "8px 14px",
-                  fontWeight: 800,
-                  cursor: "pointer"
-                }}
-              >
-                {showSelfUpdateForm ? "✕ Close Edit" : "✏️ Update My Allergies / Emergency Info"}
-              </button>
-            )}
+          <div style={{ display: "flex", gap: "8px", flexWrap: "wrap", alignItems: "center" }}>
+            <span
+              style={{
+                background: healthClearance === "CLEARED" ? "rgba(16, 185, 129, 0.22)" : "rgba(245, 158, 11, 0.22)",
+                border: `1px solid ${healthClearance === "CLEARED" ? "#34d399" : "#f59e0b"}`,
+                color: healthClearance === "CLEARED" ? "#6ee7b7" : "#fde68a",
+                borderRadius: "999px",
+                padding: "6px 14px",
+                fontWeight: 900,
+                fontSize: "0.78rem"
+              }}
+            >
+              🩺 Health Status: {healthClearance.replace(/_/g, " ")}
+            </span>
             <button
               type="button"
               onClick={loadClinicData}
@@ -323,7 +349,7 @@ export default function SchoolClinicHubPanel({
                 cursor: "pointer"
               }}
             >
-              {loading ? "⏳ Syncing..." : "🔄 Refresh My Health Record"}
+              {loading ? "⏳ Syncing..." : "🔄 Refresh Health Status"}
             </button>
           </div>
         </div>
@@ -344,50 +370,28 @@ export default function SchoolClinicHubPanel({
           </div>
         )}
 
-        {["TEACHER", "STAFF", "HR", "ACCOUNTANT", "CLINIC_DOCTOR", "CLINIC_NURSE", "DOCTOR", "NURSE"].includes(normalizedMode) && (
-          <StaffAttendanceClockWidget
-            isClinicDesk={true}
-            currentUser={currentUser}
-            onFeedback={notify}
-          />
-        )}
-
-        {showSelfUpdateForm && !isParentView && (
-          <form onSubmit={handleSaveMedicalProfile} style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(195px, 1fr))", gap: "10px", padding: "16px", background: "rgba(6, 15, 30, 0.65)", borderRadius: "12px", marginBottom: "16px", border: "1px solid rgba(52, 211, 153, 0.4)" }}>
-            <h4 style={{ gridColumn: "1 / -1", margin: 0, color: "#6ee7b7" }}>🩺 Update My Personal Medical Information</h4>
-            <select value={profileForm.bloodGroup} onChange={(e) => setProfileForm({ ...profileForm, bloodGroup: e.target.value })} style={inputStyle}>
-              {BLOOD_GROUPS.map((bg) => <option key={bg} value={bg}>Blood Group: {bg}</option>)}
-            </select>
-            <select value={profileForm.genotype} onChange={(e) => setProfileForm({ ...profileForm, genotype: e.target.value })} style={inputStyle}>
-              {GENOTYPES.map((g) => <option key={g} value={g}>Genotype: {g}</option>)}
-            </select>
-            <input placeholder="Known Allergies (e.g. Penicillin)" value={profileForm.allergies} onChange={(e) => setProfileForm({ ...profileForm, allergies: e.target.value })} style={inputStyle} />
-            <input placeholder="Chronic Conditions (e.g. Asthma)" value={profileForm.chronicConditions} onChange={(e) => setProfileForm({ ...profileForm, chronicConditions: e.target.value })} style={inputStyle} />
-            <input placeholder="NHIS / Health Insurance ID" value={profileForm.nhisNumber} onChange={(e) => setProfileForm({ ...profileForm, nhisNumber: e.target.value })} style={inputStyle} />
-            <input placeholder="Emergency Kin Phone" value={profileForm.emergencyContactPhone} onChange={(e) => setProfileForm({ ...profileForm, emergencyContactPhone: e.target.value })} style={inputStyle} />
-            <button type="submit" style={{ ...primaryBtnStyle, gridColumn: "1 / -1" }}>💾 Save My Personal Health Info</button>
-          </form>
-        )}
-
         <div style={{ display: "grid", gap: "16px" }}>
           <div>
             <h4 style={{ margin: "0 0 10px 0", color: "#f5d061" }}>
-              🪪 {isParentView ? "Linked Ward Medical Profile(s)" : "Personal Baseline Health Profile"}
+              🪪 {isParentView ? "Linked Ward Medical Health Summary (Read-Only)" : "My Baseline Medical Health Summary (Read-Only)"}
             </h4>
             {profiles.length === 0 ? (
               <div style={{ padding: "14px", borderRadius: "10px", background: "rgba(6, 15, 30, 0.5)", color: "#cbd5e1", fontSize: "0.86rem" }}>
-                No personal medical admission record has been logged yet{isParentView ? " for your linked ward" : " for your account"}.
+                No medical screening profile has been recorded yet{isParentView ? " for your linked ward" : " for your account"}. Please visit the School Clinic so a School Doctor or Nurse can update your medical status.
               </div>
             ) : (
               <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(260px, 1fr))", gap: "12px" }}>
                 {profiles.map((p) => (
                   <div key={p.id} style={{ padding: "14px", borderRadius: "12px", background: "rgba(6, 15, 30, 0.72)", border: "1px solid rgba(212, 175, 55, 0.45)" }}>
-                    <div style={{ fontSize: "0.72rem", fontWeight: 800, color: "#f5d061" }}>{p.personRole} • {p.admissionNumber || "REGISTERED"}</div>
+                    <div style={{ fontSize: "0.72rem", fontWeight: 800, color: "#f5d061" }}>
+                      {p.personRole} • {p.admissionNumber || "REGISTERED"} • STATUS: {p.medicalClearanceStatus || "CLEARED"}
+                    </div>
                     <strong style={{ display: "block", fontSize: "1.02rem", color: "#ffffff", margin: "4px 0" }}>{p.fullName}</strong>
                     <div style={{ fontSize: "0.82rem", color: "#cbd5e1", lineHeight: 1.55 }}>
                       <div>Blood Group: <strong style={{ color: "#7dd3fc" }}>{p.bloodGroup}</strong> • Genotype: <strong>{p.genotype}</strong></div>
                       <div>Allergies: <strong>{p.allergies || "None Reported"}</strong></div>
                       <div>Chronic Conditions: <strong>{p.chronicConditions || "None Reported"}</strong></div>
+                      <div>Immunization: <strong>{p.immunizationStatus || "Verified"}</strong></div>
                       <div>Emergency Contact: <strong>{p.emergencyContactPhone || p.phone || "On File"}</strong></div>
                     </div>
                   </div>
@@ -398,7 +402,7 @@ export default function SchoolClinicHubPanel({
 
           <div>
             <h4 style={{ margin: "0 0 10px 0", color: "#7dd3fc" }}>
-              🩺 {isParentView ? "Linked Ward Clinic Visits" : "My Clinic Visits & Checkup History"} ({visits.length})
+              🩺 {isParentView ? "Linked Ward Medical Checkup Status" : "My Personal Medical Checkup History"} ({visits.length})
             </h4>
             <div style={{ overflowX: "auto" }}>
               <table style={{ width: "100%", borderCollapse: "collapse", fontSize: "0.84rem" }}>
@@ -406,9 +410,9 @@ export default function SchoolClinicHubPanel({
                   <tr>
                     <th style={thStyle}>Date</th>
                     <th style={thStyle}>Vitals</th>
-                    <th style={thStyle}>Reason &amp; Clinical Note</th>
-                    <th style={thStyle}>Medication</th>
-                    <th style={thStyle}>Status</th>
+                    <th style={thStyle}>Clinical Assessment</th>
+                    <th style={thStyle}>Prescribed Care</th>
+                    <th style={thStyle}>Health Status</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -432,7 +436,7 @@ export default function SchoolClinicHubPanel({
     );
   }
 
-  // HEADMASTER COMMAND VIEW: Full Staff & Student Health Profiles + Complete Clinic Operations
+  // SCHOOL DOCTORS & NURSES CLINICAL OPERATIONS VIEW (DEDICATED SCHOOL CLINIC DASHBOARD ONLY)
   const staffAndTeachersCount = profiles.filter((p) => String(p.personRole || "").toUpperCase() !== "STUDENT").length;
   const studentsCount = profiles.filter((p) => String(p.personRole || "").toUpperCase() === "STUDENT").length;
   const filteredDirectory = profiles.filter((p) => {
@@ -456,10 +460,10 @@ export default function SchoolClinicHubPanel({
       <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: "12px", marginBottom: "16px" }}>
         <div>
           <span style={{ fontSize: "0.75rem", fontWeight: 800, color: "#f5d061", letterSpacing: "1px", textTransform: "uppercase" }}>
-            🏥 Headmaster School Clinic Command • All Staff &amp; Student Medical Registry
+            🏥 School Clinic Clinical Operations • Doctors &amp; Nurses Only
           </span>
           <h2 style={{ margin: "4px 0 0 0", color: "#ffffff", fontSize: "1.35rem" }}>
-            Complete Staff &amp; Student Clinic Profiles, Sickbay &amp; Pharmacy Hub
+            Complete Staff &amp; Student Medical Registry, Sickbay &amp; Pharmacy Hub
           </h2>
         </div>
         <button
@@ -505,11 +509,13 @@ export default function SchoolClinicHubPanel({
       </div>
 
       {/* School Clinic Medical Officer (Doctor / Nurse) Clock-In & Clock-Out Desk */}
-      <StaffAttendanceClockWidget
-        isClinicDesk={true}
-        currentUser={currentUser}
-        onFeedback={notify}
-      />
+      {!hideInternalClockWidget && (
+        <StaffAttendanceClockWidget
+          isClinicDesk={true}
+          currentUser={currentUser}
+          onFeedback={notify}
+        />
+      )}
 
       {/* Cross-Portal Medical Record Pull Bar */}
       <form onSubmit={(e) => handlePullRecords(e, null)} style={{ display: "flex", gap: "10px", flexWrap: "wrap", marginBottom: "16px", padding: "12px", background: "rgba(6, 15, 30, 0.72)", borderRadius: "12px", border: "1px solid rgba(56, 189, 248, 0.35)" }}>
@@ -557,8 +563,11 @@ export default function SchoolClinicHubPanel({
         </div>
       )}
 
-      {/* Navigation Tabs */}
-      <div className="role-tab-nav" style={{ marginBottom: "16px" }}>
+      {/* Clinic Sub-Navigation Tabs (isolated class name so DashboardTabPageController never mistakes it for primary portal tabs) */}
+      <div
+        className="clinic-subtab-nav"
+        style={{ display: "flex", flexWrap: "wrap", gap: "8px", marginBottom: "16px" }}
+      >
         {[
           { id: "DIRECTORY_PROFILES", label: `👥 All Staff & Student Health Profiles (${profiles.length})` },
           { id: "TREAT_ADMIT", label: "🩺 Admit / Treat Student or Staff" },

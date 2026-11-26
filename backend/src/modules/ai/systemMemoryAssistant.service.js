@@ -29,94 +29,105 @@ function loadMemorySnapshot() {
 }
 
 const ROLE_ACTIVITIES_GUIDE = {
-  ADMIN: 'Headmaster / Principal Portal (/portal/admin/dashboard): Approves newly registered staff (Teachers, Secretary, Accountants, HR) and incoming student admissions; configures institution branding and System Language; sets and edits official School Stationery item prices (Textbooks, Cardigans, Socks, School Bags); monitors full-term Staff Duty Clock-In and auto-clock-out compliance; inspects teacher lesson notes, timetables, defaulters compliance, and bus routes; manages School Clinic profiles and sickbay treatments; hosts Live Faculty and Parent Video/Voice Conferences; and renews institutional term subscriptions.',
-  TEACHER: 'Teacher / Lecturer Portal (/portal/teacher/dashboard): Clocks in upon reporting to campus; marks daily student class attendance registers; creates and grades homework and assignments; authors multi-format timed exams and monitors the live AI-Proctoring Camera Wall to issue warnings, save video/camera evidence, and subtract lost marks; uploads pre-recorded lessons inside the Class Topic Video Platform; manages class lesson notes, TVET/University placements, Defaulters compliance, School Stationery price catalog & order requests, Live Class Video/Voice Conferences and Parent Calls, Direct SMS Inbox, and personal Clinic health records.',
-  SECRETARY: 'School Secretary Portal (/portal/secretary/dashboard): Clocks in for front-office duty; logs daily Campus Visitors (check-in and check-out); drafts and dispatches Official Letters, Circulars, Certificates, and Meeting Minutes; coordinates Headmaster Appointments; records School Stationery item sales at Headmaster-locked prices and logs store/restock expenses that sync directly into the Accountant Expenses Ledger; handles Direct SMS and Live Voice/Video calls; and views personal Clinic health information.',
-  STUDENT: 'Student / Undergraduate Portal (/portal/student/dashboard): Follows live class timetables, watches Teacher Topic Videos in offline/adaptive playback, submits assignments and cooperative conference tasks, sits AI-proctored online exams, views verified report cards and academic transcripts, submits Internship or Academic Attachment forms (for TVET/University), checks Fee Balance & pays via Mobile Money/Card, browses Headmaster-approved School Stationery items (Textbooks, Cardigans, Socks, Bags) and submits order requests, joins Live Class Video Conferences, and checks personal Clinic health dossier.',
-  PARENT: 'Parent / Guardian Portal (/portal/parent/dashboard): Monitors child attendance rolls, verified report cards, exam schedules, and campus transport stops; settles tuition and fee balances seamlessly via MTN MoMo, Telecel Cash, AT Money, Visa, Mastercard, or Bank Transfer; browses official Headmaster-priced School Stationery packages (Textbooks, Cardigans, Socks, Bags) for wards; joins Parent-Teacher Conferences and direct Video/Voice calls with the Headmaster or Teachers; views Direct SMS notices; and inspects only their own child medical Clinic profile.',
-  ACCOUNTANT: 'Accountant / Bursar Portal (/portal/accountant/dashboard): Configures class fee schedules and fee accounts, generates and reconciles Student Invoices, audits Paystack/Hubtel/MoMo/Bank fee receipts, tracks debtor compliance holds, runs School Stationery Revenue & Expense Audits automatically synced from Stationery Store restock/operating expenses (STATIONERY_SUPPLIES), records institutional expenses and payroll disbursements, views Financial Telemetry & Trial Balance / Income Statements, and monitors own Clinic health record.',
-  STAFF: 'Non-Teaching Staff Portal (/portal/staff/dashboard): Performs Staff Duty Clock-In / Early Clock-Out with reason / +2h Auto-Clock-Out; manages campus inventory stock, asset allocations, transport logistics, and operational maintenance requests; logs School Stationery store sales and supply expenses synced to Accountancy; and accesses personal Clinic records and Video/Voice calls.',
-  HR: 'Human Resources (HR) Portal (/portal/hr/dashboard): Manages institutional personnel profiles, staff recruitment, contracts, payroll salary grades, staff leave requests, disciplinary logs, full Staff Duty Attendance audits with the Headmaster, and personal Clinic health dossiers.',
-  ALUMNI: 'Alumni Member Portal (/portal/alumni/dashboard): Requests verified digital academic transcripts, checks graduation honours, participates in alumni cohorts, mentorship, events, and endowment pledges audited by Accountancy.'
+  ADMIN: 'Headmaster / Principal Portal (/portal/admin/dashboard): Serves as the chief executive command center of the school. End-to-end responsibilities and performance duties include: verifying and approving all newly registered staff (Teachers, Secretary, Clinic Doctors/Nurses, Accountants, HR, Staff) and incoming walk-in or online student admissions; holding EXCLUSIVE authority to add school stationery items and set or edit official stationery prices across every class level; vetting and approving Teacher Ghana NaCCA 16-element lesson plans and end-of-term/semester examinations; monitoring full-term Staff Duty Clock-In, early clock-out reasons, and 2-hour auto clock-out compliance; overseeing academic calendars, promotions, defaulters compliance, bus transport routes, inbuilt campus CCTV, institutional System Language & branding, live Faculty/Parent 30fps video/voice conferences, and 4-month trial / student-based term subscriptions. For medical privacy, the Headmaster views only their own personal health status (read-only) while Doctors and Nurses operate the separate School Clinic Dashboard.',
+  TEACHER: 'Teacher / Lecturer Portal (/portal/teacher/dashboard): Drives day-to-day classroom instruction and student academic performance. End-to-end responsibilities include: clocking in upon arrival for Headmaster term attendance monitoring; marking individual tick-by-tick daily student attendance registers (Present, Absent, Late, Excused) with archive wrapping; authoring 16-element Ghana NaCCA learner-centred lesson plans and schemes of work, submitting them for Headmaster vetting, responding to revision notes, and logging post-lesson reflections; creating multi-format exams and submitting end-of-term exams for Headmaster vetting; invigilating live exams over the 1.0x real-time proctoring camera wall (issuing warnings, saving evidence snapshots, deducting lost marks); scanning unlimited-question exam scripts with custom answer keys; uploading/recording Class Topic Videos for absent-day learning; tracking Defaulters compliance and tier-native placements; hosting live online classes & parent video/voice calls; viewing the read-only official Stationery Price List set by the Headmaster (no price editing); and viewing only their own personal medical health status (read-only).',
+  CLINIC: 'School Clinic Dashboard (/portal/clinic/dashboard — Operated Strictly by School Doctors & Nurses ONLY): Operates as an integrated yet confidential medical portal within the school. End-to-end responsibilities and performance tracking include: clocking in at the Clinic Medical Desk; maintaining the school-wide Student & Staff Medical Profile Registry automatically synced from Admissions and Staff onboarding (Blood Group, Genotype, Allergies, Chronic Conditions, NHIS, Medical Clearance); admitting, examining, and treating students and staff with full vitals (temperature, blood pressure, pulse), clinical diagnoses, prescriptions, sickbay occupancy tracking, and formal sickbay discharges; pulling cross-portal medical dossiers during emergencies; dispatching automated emergency clinic SMS alerts to parents and guardians; managing School Clinic Pharmacy & first-aid inventory with low-stock alerts; conducting emergency voice/video consultations; and viewing the read-only Stationery Price List. All other school staff and Headmaster cannot operate the clinic or view other people\'s clinical records—they only view their own read-only medical health status.',
+  SECRETARY: 'School Secretary Portal (/portal/secretary/dashboard): Runs the school\'s front-office operations and official communications. End-to-end responsibilities and performance duties include: clocking in for front-office duty; checking Campus Visitors in and out with full timestamped reference logs (parents, inspectors, vendors, guests); drafting, publishing, and archiving Official School Letters, Parent/Staff Circulars, and Meeting Minutes; scheduling and tracking Headmaster Appointments through completion; operating live 30fps Voice/Video calls, Direct Mobile SMS, and Voice Notes; viewing the official Headmaster Stationery Price List (read-only, without editing prices); and viewing only their own personal medical health status (read-only).',
+  STUDENT: 'Student / Undergraduate Portal (/portal/student/dashboard): Empowers learners end-to-end across daily studies, assessments, and fee compliance. Responsibilities and performance features include: following live class timetables and academic schedules; watching Teacher Class Topic Videos and catch-up recordings; submitting homework assignments and borrowing digital syllabus textbooks; sitting AI-proctored online examinations and joining cooperative peer study video conferences; viewing verified terminal report cards, GPA/CGPA, and cumulative transcripts; participating in tier-native courses, shift streams, and separated Industrial Internships vs Academic Attachments (for TVET/University); viewing live fee bills and paying school fees directly into official School Bank or School MoMo accounts with automatic Student Payee referencing synced live to Parents and the Accountant; viewing Headmaster stationery prices; and viewing only their own personal medical health status (read-only).',
+  PARENT: 'Parent / Guardian Portal (/portal/parent/dashboard): Connects guardians directly to their child\'s academic, financial, and attendance performance in real time. End-to-end features include: switching across linked wards; reviewing live daily attendance rolls, verified report cards, exam progress, and bus transit pickup stops; settling school fees cleanly via MTN MoMo, Telecel Cash, AT Money, Visa, Mastercard, or Bank Transfer into official School Bank/MoMo accounts while tracking both parent-paid and student self-paid official receipts; viewing Headmaster-priced School Stationery lists; joining live 30fps Video/Voice calls and Direct SMS chats with the Headmaster and Teachers; and viewing only their linked ward\'s medical health status (read-only, without editing).',
+  ACCOUNTANT: 'Accountant / Bursar Portal (/portal/accountant/dashboard): Safeguards institutional financial integrity, fee collection, and audit readiness. End-to-end responsibilities and performance metrics include: configuring class fee structures, hostel tiers, and Official School Bank & School MoMo receiving accounts; generating student invoices and tracking debtor compliance holds; auditing live database fee payments across MoMo, Card, and Bank channels with clear separation between Student Self-Payments and Parent Payments plus full Student Payee referencing; reviewing School Stationery revenue & expense audit feeds (read-only catalog prices set by the Headmaster); tracking operating expenses, Headmaster procurement, Alumni philanthropic endowment gifts, and HR payroll disbursements; generating GAAP/IFRS financial statements and trial balances; clocking in for staff duty; and viewing only their own personal medical health status (read-only).',
+  STAFF: 'Non-Teaching Staff Portal (/portal/staff/dashboard): Executes campus operations, logistics, and facility reliability. End-to-end responsibilities and performance tracking include: Staff Duty Clock-In, mandatory early clock-out reasons, and +2h auto clock-out; executing assigned operational duties and shift tasks; managing campus inventory depot supplies and equipment; tracking facility maintenance SLA tickets; escalating campus safety incidents; joining campus Voice/Video calls and Direct SMS; viewing the official Headmaster Stationery Price List (read-only, no editing); and viewing only their own personal medical health status (read-only).',
+  HR: 'Human Resources (HR) Portal (/portal/hr/dashboard): Oversees workforce excellence, contracts, and staff compliance. End-to-end responsibilities and performance metrics include: maintaining the institutional Staff & Faculty Directory and employment contracts; executing Headmaster HR audit directives; reviewing and approving staff leave & absence requests; configuring payroll salary grouping tiers synced with Accountancy; auditing full-term staff duty attendance compliance; and viewing only their own personal medical health status (read-only).',
+  ALUMNI: 'Alumni Member Portal (/portal/alumni/dashboard): Keeps graduated cohorts permanently linked to their alma mater. End-to-end capabilities include: reviewing cumulative Day-1-to-graduation academic records; requesting official sealed digital transcripts; verifying graduation clearance and sign-off status; exploring completion batches and global alumni directories; scheduling Zoom reunions and mentorship sessions; and contributing endowment & scholarship pledges that sync live into the Accountant\'s philanthropic ledger.'
 };
 
 const PORTAL_COMPONENTS_INDEX = {
   ADMIN: [
-    'Executive Overview & Pending Staff Approvals',
-    'Staff Duty Attendance Monitor (Clock-In, Bypass, Early Reason & Auto-Clock-Out)',
-    'Admissions Desk & Enrollment Sync',
-    'School Stationery Price Authority Desk (Set/Edit Textbook, Cardigan, Socks & Bag Prices)',
-    'Live Video Conferences & Parent/Developer Direct Calls',
-    'Academics, Timetables & Defaulters Compliance Monitor',
-    'School Clinic All-Campus Medical & Sickbay Registry',
-    'Subscription Billing (4-Month Term Free Trial & Per-Student Term Renewals)'
+    'Executive Overview, KPI Telemetry & Pending Staff / Admissions Approvals',
+    'Exclusive School Stationery Price Authority Desk (ONLY Headmaster Adds & Edits Official Prices)',
+    'Teacher NaCCA 16-Element Lesson Plans & End-of-Term Exam Vetting Desks',
+    'Full-Term Staff & Clinic Duty Attendance Monitor (+2h Auto Clock-Out)',
+    'Academics, Promotions, Timetables & Defaulters Compliance Monitor',
+    'Inbuilt Campus CCTV Matrix, Bus Transport Routes & Institutional Language Control',
+    'Live 30fps Video/Voice Conferencing & Direct Mobile SMS',
+    '4-Month Term Free Trial & Active-Student Subscription Management',
+    'Personal Medical Health Status (Read-Only)'
   ],
   TEACHER: [
-    'Teacher Command Overview & Staff Clock-In Widget',
-    'Daily Student Attendance Roll Call',
-    'Class Topic Video Platform (Upload & Stream Lesson Topics)',
-    'Assignments, Lesson Notes & Homework Grading',
-    'AI-Proctored Exams & Live Camera Wall (Warnings, Snapshot Evidence & Exact Mark Deduction)',
-    'Live Online Class & Parent Video/Voice Conferencing (30fps SSE WebRTC)',
-    'Tier Academics, Placements (TVET/University) & Defaulters Tracker',
-    'School Stationery Catalog (Headmaster Prices) & Order Desk',
-    'Direct SMS Inbox & Personal Clinic Health Dossier'
+    'Faculty Command Overview & Staff Duty Clock-In',
+    'Tick-by-Tick Individual Student Daily Attendance Register & Weekly Archives',
+    'Ghana NaCCA 16-Element Learner-Centred Lesson Plan Studio & Headmaster Vetting Loop',
+    'End-of-Term Exam Vetting, Multi-Format Exams & 1.0x Real-Time Live Invigilation Camera Wall',
+    'Unlimited-Question AI Exam Script Scanner & Individual Grading',
+    'Class Topic Video Platform (Record/Upload Lessons for Absent-Day Learning)',
+    'Assignments, Curriculum Placements, Defaulters Monitor & Live Class Video Calls',
+    'Official Stationery Price List (Read-Only View — No Adding/Editing Prices)',
+    'Personal Medical Health Status (Read-Only View — No Editing)'
+  ],
+  CLINIC: [
+    'Dedicated School Clinic Command (Exclusively Operated by School Doctors & Nurses)',
+    'All Staff & Student Medical Profile Registry (Synced from Admissions & Onboarding)',
+    'Patient Consultation Intake, Vitals Recording, Diagnosis & Sickbay Admission/Discharge',
+    'Cross-Portal Emergency Medical Dossier Pull & Parent SMS Alerts',
+    'School Clinic Pharmacy & First-Aid Stock Control with Low-Stock Alerts',
+    'Clinic Medical Officer Duty Clock-In Desk & Emergency Voice/Video Calls',
+    'Official Stationery Price List (Read-Only View)'
   ],
   SECRETARY: [
-    'Front-Office Executive Overview & Staff Clock-In Widget',
-    'Campus Visitor Log (Check-In / Check-Out Tracking)',
-    'Official Letters, Parent/Staff Circulars & Meeting Minutes',
-    'Headmaster Appointments & Front-Desk Scheduling',
-    'School Stationery Desk (Record Sales at Locked Prices & Sync Store Expenses to Accountant)',
-    'Direct SMS Messenger, Inbox & Voice Notes',
-    'Live Video / Voice Calls & Faculty Meetings',
-    'Personal Clinic Health Dossier'
+    'Secretariat Office Overview & Front-Office Staff Duty Clock-In',
+    'Campus Visitor Front-Desk Check-In & Check-Out Ledger',
+    'Official Letters, Parent/Staff Circulars & Meeting Minutes Archive',
+    'Headmaster Appointments Scheduler & Completion Tracking',
+    'Live 30fps Voice/Video Calls, Direct SMS Inbox & Voice Notes',
+    'Official Stationery Price List (Read-Only View — No Adding/Editing Prices)',
+    'Personal Medical Health Status (Read-Only View — No Editing)'
   ],
   STUDENT: [
-    'Student Command Hub & Live Timetable',
-    'Class Topic Video Player & Saved Lesson Notes',
-    'Homework Submissions & Report Cards',
-    'Online AI-Proctored Exam Runner & Live Cooperative Study Rooms',
-    'University Internships / Academic Attachments & TVET Practicals',
-    'School Stationery Store (Browse Approved Prices & Request Textbooks/Uniforms/Bags)',
-    'Student Fees, Receipts & Bus Transport',
-    'Personal Clinic Health Information (Self-Only)'
+    'Scholar Hub Overview, Live Timetable & Academic Schedule',
+    'Class Topic Video Player, Catch-Up Recordings & Digital Syllabus Library',
+    'Homework Submissions, AI-Proctored Exams & Cooperative Study Video Rooms',
+    'Verified Report Cards, Cumulative Transcripts & Tier-Native Internships / Attachments',
+    'Student Self-Payment of School Fees (Official School Bank & MoMo Accounts + Payee Reference)',
+    'School Stationery Price Catalog & Item Requests',
+    'Personal Medical Health Status (Read-Only View)'
   ],
   PARENT: [
     'Parent Overview & Linked Ward Switcher',
-    'Ward Attendance & Academic Progress Report Cards',
-    'Fee Statements & Direct Any-Phone MoMo / Card Checkout',
-    'School Stationery & Textbook Price Guide & Ward Orders',
-    'Live Video / Voice Call with Headmaster & Teachers',
-    'Direct SMS & Voice Notes Inbox',
-    'Campus Bus Route & Linked Ward Medical Clinic Profile'
+    'Real-Time Ward Attendance Rolls & Verified Academic Report Cards',
+    'School Fee Checkout (MTN MoMo, Telecel, AT Money, Card, Bank) & Ward Self-Payment Audit Receipts',
+    'School Stationery Official Price Guide & Orders',
+    'Live 30fps Video/Voice Calls & Direct SMS with Headmaster & Teachers',
+    'Bus Transit Tracking & Linked Ward Medical Health Status (Read-Only View)'
   ],
   ACCOUNTANT: [
-    'Finance Telemetry & KPI Dashboard',
-    'Fee Structures & Student Invoice Generator',
-    'Multi-Gateway Payments & Reconciliation Ledger (MoMo / Card / Bank)',
-    'School Stationery Expenses & Revenue Audit Panel (Auto-Synced STATIONERY_SUPPLIES Ledger)',
-    'Operating Expenses Ledger & Vendor Tracking',
-    'HR Payroll Disbursements & Loan Tracking',
-    'Statements, Audit Trail & Debtor Compliance'
+    'Financial Telemetry KPI Dashboard & Live Revenue Analytics',
+    'Class Fee Structures, Official School Bank/MoMo Receiving Accounts & Student Invoicing',
+    'Live Database Payment Reconciliation (Student Self-Paid vs Parent-Paid + Payee References)',
+    'Debtor Arrears Registry & Financial Compliance Holds',
+    'School Stationery Price Catalog (Read-Only) & Synced Financial Audit Feed',
+    'Operating Expenses, Alumni Philanthropic Gifts, Procurement & HR Payroll Ledger',
+    'GAAP/IFRS Financial Statements & Personal Medical Health Status (Read-Only)'
   ],
   STAFF: [
-    'Staff Operations Overview & Duty Clock-In Widget',
-    'Campus Inventory, Stock & Asset Ledger',
-    'School Stationery Desk (Sales & Restock Expenses -> Accountant Sync)',
-    'Transport Dispatch & Campus Facility Requests',
-    'Leave Applications & Personal Clinic Health Dossier'
+    'Campus Operations Overview & Staff Duty Clock-In',
+    'Operational Duties & Shift Task Tracker',
+    'Campus Inventory Depot & Equipment Asset Ledger',
+    'Facility Maintenance SLA Command & Safety Incident Escalation',
+    'Live Voice/Video Calls, Direct SMS & Official Stationery Price List (Read-Only)',
+    'Personal Medical Health Status (Read-Only View)'
   ],
   HR: [
-    'HR Executive Workforce Overview',
-    'Staff Directory, Contracts & Onboarding Compliance',
-    'Staff Attendance Compliance & Leave Management',
-    'Payroll Grading & Staff Loan Review'
+    'HR Workforce Overview & Staff Duty Clock-In',
+    'Staff & Faculty Directory, Contracts & Onboarding Compliance',
+    'Headmaster HR Audit Directives & Full-Term Attendance Compliance',
+    'Staff Leave & Absence Approvals + Payroll Salary Tier Grouping',
+    'Personal Medical Health Status (Read-Only View)'
   ],
   ALUMNI: [
-    'Alumni Overview & Graduation Cohort Directory',
-    'Verified Official Transcript Requests',
-    'Mentorship Events & Endowment Pledges'
+    'Alumni Overview & Completion Batch Directory',
+    'Cumulative Academic Records & Official Sealed Transcript Requests',
+    'Graduation Clearance & Sign-Off Verification',
+    'Zoom Reunions, Mentorship & Endowment Pledges (Live Sync to Accountant)'
   ]
 };
 
@@ -185,24 +196,38 @@ const CORE_TOPICS = [
     action: { navigateTo: '/portal/alumni/dashboard' }
   },
   {
+    id: 'role_clinic',
+    phrases: ['clinic portal', 'school clinic dashboard', 'doctor portal', 'nurse portal', 'clinic dashboard', 'clinic role', 'doctor role', 'nurse role', 'about the clinic', 'about school clinic'],
+    keywords: ['clinic', 'doctor', 'nurse', 'sickbay', 'medical', 'health status', 'pharmacy'],
+    speech: `${ROLE_ACTIVITIES_GUIDE.CLINIC} Key School Clinic Portal modules include: ${PORTAL_COMPONENTS_INDEX.CLINIC.join('; ')}.`,
+    action: { navigateTo: '/portal/clinic/dashboard' }
+  },
+  {
     id: 'all_roles_explained',
-    phrases: ['each user', 'every portal', 'all portals', 'all roles', 'who uses', 'what does each'],
-    keywords: ['role', 'roles', 'responsibilities', 'portals', 'dashboards', 'duties'],
-    speech: `GBS connects 9 synchronized institutional portals: ${Object.values(ROLE_ACTIVITIES_GUIDE).join(' ')}`,
+    phrases: ['each user', 'every portal', 'all portals', 'all roles', 'who uses', 'what does each', 'end to end roles', 'portal performance', 'each dashboard'],
+    keywords: ['role', 'roles', 'responsibilities', 'portals', 'dashboards', 'duties', 'performance'],
+    speech: `GBS connects 10 synchronized institutional portals operating as one unified school system: ${Object.values(ROLE_ACTIVITIES_GUIDE).join(' ')}`,
     action: null
   },
   {
     id: 'school_stationery',
     phrases: ['school stationery', 'stationery store', 'stationary store', 'school items', 'who sets the price', 'stationery price', 'stationery expense'],
     keywords: ['stationery', 'stationary', 'textbook', 'textbooks', 'cardigan', 'cardigans', 'socks', 'school bag', 'school bags', 'exercise book', 'uniforms', 'bookshop', 'items sold'],
-    speech: 'School Stationery Store records and displays all school-sold items (Textbooks, Cardigans, School Socks, School Bags, Exercise Books, Uniforms) across every dashboard (Headmaster, Secretary, Accountant, Teacher, Staff, Parent, and Student). Strictly ONLY the Headmaster has authority to set or edit official item prices. Secretaries, Staff, and Accountants record sales at the Headmaster-locked prices and log store restock/operating expenses, which automatically post into the Accountant Expenses Ledger under STATIONERY_SUPPLIES for immediate accounting and auditing.',
+    speech: 'Official School Stationery Pricing Policy: Strictly ONLY the Headmaster has authority to add stationery items and set or edit official prices (Textbooks, Cardigans, Socks, School Bags, Exercise Books, Uniforms) across every class level. Teachers, School Secretaries, Clinic staff, HR, and all other staff only view the listed stationery prices in read-only mode without adding or editing prices. Accountants view the read-only catalog alongside the synced stationery financial audit ledger.',
     action: { openTab: 'stationery' }
   },
   {
+    id: 'jolly_phonics_alphabets',
+    phrases: ['jolly phonics', '42 sounds', '42 jolly phonics', 'country alphabets', 'how letters are written', 'letter sounds', 'alphabet writing'],
+    keywords: ['phonics', 'jolly', 'alphabet', 'alphabets', 'letters', 'writing', 'trace', 'handwriting', 'pronunciation'],
+    speech: 'Inside the Universal Language Translator, users can open Mode 4 (42 Jolly Phonics Sounds & Writing) to hear all 42 official Jolly Phonics sounds across Groups 1 to 7 with IPA, kinesthetic actions, example words, and an interactive 4-line letter tracing pad, AND Mode 5 (Country & Language Alphabets) covering all 17 countries on GBS (Ghana Twi/Ga/Ewe/English, Nigeria Hausa/Yoruba, Kenya Kiswahili, South Africa isiZulu, UK, US, Canada, France, Germany, Spain, Brazil, UAE & Saudi Arabic RTL, India Hindi Devanagari, China Pinyin & Hanzi strokes, and Japan Hiragana) to hear letter sounds and practice writing every alphabet.',
+    action: { trigger: 'openTranslator' }
+  },
+  {
     id: 'clinic',
-    phrases: ['school clinic', 'medical record', 'sickbay treatment', 'health dossier'],
+    phrases: ['school clinic', 'medical record', 'sickbay treatment', 'health dossier', 'medical health status'],
     keywords: ['clinic', 'sickbay', 'medical', 'health', 'doctor', 'nurse', 'sick', 'hospital', 'treatment', 'medicine', 'blood', 'genotype', 'allergy'],
-    speech: 'School Clinic enforces medical confidentiality: Students, Teachers, Secretary, Staff, HR, and Accountants see only their own personal health information and visit records, and Parents see only their linked ward health information — clinic operations are never exposed to regular users. On the Headmaster Dashboard, the Headmaster views all Staff and Student clinic profiles with each individual health record and manages full Sickbay treatments and pharmacy supplies.',
+    speech: 'The School Clinic operates as a separate institutional dashboard (/portal/clinic/dashboard) exclusively managed by School Doctors and Nurses, who handle student and staff medical profiles, consultations, sickbay admissions, pharmacy stock, and emergency alerts. All remaining staff (including Headmaster, Teachers, Secretary, Accountant, HR, Non-Teaching Staff) and Students only view their own personal medical health status in read-only mode without editing and cannot see internal clinic operations; Parents view only their linked ward\'s health status in read-only mode.',
     action: { openTab: 'clinic' }
   },
   {
@@ -373,8 +398,10 @@ const TOPIC_HUMAN_LABELS = {
   role_accountant: 'Accountant / Bursar Portal Components & Audit Role',
   role_staff: 'Non-Teaching Staff Portal Components & Role',
   role_hr: 'HR Management Portal Components & Role',
+  role_clinic: 'School Clinic Dashboard (Doctors & Nurses Only)',
   role_alumni: 'Alumni Portal Components & Role',
-  school_stationery: 'School Stationery Store, Headmaster Pricing & Accountant Expense Sync',
+  jolly_phonics_alphabets: '42 Jolly Phonics Sounds & Country/Language Alphabets Writing Studio',
+  school_stationery: 'Headmaster-Only Stationery Pricing & Read-Only Staff Price List',
   clinic: 'Personal Health & School Clinic Dossier',
   clinic_pull: 'Personal Health & Medical Record Lookup',
   academics_placements: 'Tier-Tailored Academics, Placements (Internships vs Attachments), Streams & Student Leadership',
@@ -456,17 +483,20 @@ function buildTenantLiveStats(req) {
   const store = readPersistentStore();
   const role = String(req?.user?.role || '').toUpperCase();
   const isHeadmaster = ['ADMIN', 'SUPER_ADMIN', 'HEADMASTER', 'PRINCIPAL'].includes(role);
+  const isClinicOperator = ['CLINIC_DOCTOR', 'CLINIC_NURSE', 'DOCTOR', 'NURSE', 'CLINIC'].includes(role);
   const callerEmail = String(req?.user?.email || '').trim().toLowerCase();
 
   const allProfiles = (store.schoolClinicProfiles || []).filter((p) => String(p.tenantId || '1') === tid);
   const allVisits = (store.schoolClinicVisits || []).filter((v) => String(v.tenantId || '1') === tid);
-  const scopedProfiles = isHeadmaster
+  const scopedProfiles = isClinicOperator
     ? allProfiles
     : allProfiles.filter((p) => callerEmail && String(p.email || '').toLowerCase() === callerEmail);
-  const scopedVisits = isHeadmaster
+  const scopedVisits = isClinicOperator
     ? allVisits
     : allVisits.filter((v) => callerEmail && String(v.patientEmail || '').toLowerCase() === callerEmail);
-  const sickbayActive = scopedVisits.filter((v) => v.disposition === 'ADMITTED_TO_SICKBAY' && !v.dischargedAt);
+  const sickbayActive = isClinicOperator
+    ? scopedVisits.filter((v) => v.disposition === 'ADMITTED_TO_SICKBAY' && !v.dischargedAt)
+    : [];
 
   const uniInternships = (store.universityInternships || []).filter((i) => String(i.tenantId || '1') === tid);
   const uniAttachments = (store.universityAttachments || []).filter((a) => String(a.tenantId || '1') === tid);
@@ -475,6 +505,8 @@ function buildTenantLiveStats(req) {
     (u) => String(u.tenantId || '1') === tid && String(u.status || '').toUpperCase().includes('PENDING')
   );
   const stationeryItemsCount = ((store.prismaModels?.StationeryItem || []).filter((i) => String(i.tenantId || '1') === tid && i.isActive !== false)).length;
+  const secretaryRecordsCount = ((store.prismaModels?.SecretaryRecord || []).filter((r) => String(r.tenantId || '1') === tid)).length;
+  const lessonPlansCount = ((store.teacherLessonPlans || []).filter((p) => String(p.tenantId || '1') === tid)).length;
 
   return {
     tenantId: tid,
@@ -485,6 +517,8 @@ function buildTenantLiveStats(req) {
     universityAttachmentsCount: uniAttachments.length,
     universityStreamsCount: uniStreams.length,
     stationeryItemsCount,
+    secretaryRecordsCount,
+    lessonPlansCount,
     pendingStaffApprovalsCount: isHeadmaster ? pendingStaff.length : 0
   };
 }
@@ -554,22 +588,23 @@ function answerUserQuery(req, rawQuery = '') {
     };
   }
 
-  // Pull specific School Clinic records strictly following role privacy rules
+  // Pull specific School Clinic records strictly following Clinic Doctor/Nurse vs Read-Only Health Privacy rules
   if (/(pull clinic|pull medical|clinic record|medical record|who is in sickbay|\bsickbay\b)/i.test(qLower)) {
     const allVisits = (store.schoolClinicVisits || []).filter((v) => String(v.tenantId || '1') === tid);
     const allProfiles = (store.schoolClinicProfiles || []).filter((p) => String(p.tenantId || '1') === tid);
+    const isClinicOperator = ['CLINIC_DOCTOR', 'CLINIC_NURSE', 'DOCTOR', 'NURSE', 'CLINIC'].includes(callerRole);
     const formation = analyzeAndExplainQuestionFormation(query, 'clinic_pull');
 
-    if (isHeadmaster) {
+    if (isClinicOperator) {
       const activeSickbay = allVisits.filter((v) => v.disposition === 'ADMITTED_TO_SICKBAY' && !v.dischargedAt);
-      const answerText = `Headmaster School Clinic Registry holds ${allProfiles.length} Staff and Student profiles, ${allVisits.length} total clinic consultations, and ${activeSickbay.length} active Sickbay patient. Opening the School Clinic records view now.`;
+      const answerText = `School Clinic Medical Registry holds ${allProfiles.length} Staff and Student profiles, ${allVisits.length} total clinic consultations, and ${activeSickbay.length} active Sickbay patient. Opening the School Clinic Dashboard now.`;
       return {
         topicId: 'clinic_pull',
         questionFormation: formation,
         answerText,
         speechText: `${answerText} ${formation.explanationText}`,
         detailedAnswer: `${answerText}\n\n${formation.explanationText}`,
-        action: { openTab: 'clinic' },
+        action: { navigateTo: '/portal/clinic/dashboard' },
         pulledRecords: { profilesCount: allProfiles.length, visits: allVisits.slice(0, 10), activeSickbay },
         liveStats
       };
@@ -577,7 +612,7 @@ function answerUserQuery(req, rawQuery = '') {
 
     const ownProfiles = allProfiles.filter((p) => callerEmail && String(p.email || '').toLowerCase() === callerEmail);
     const ownVisits = allVisits.filter((v) => callerEmail && (String(v.patientEmail || '').toLowerCase() === callerEmail || (callerRole === 'PARENT' && String(v.guardianEmail || '').toLowerCase() === callerEmail)));
-    const answerText = `Opening your personal health dossier. You have ${ownProfiles.length} personal health registration profile and ${ownVisits.length} personal clinic consultation record visible to your account only.`;
+    const answerText = `Medical privacy enforced: Only School Doctors and Nurses operate the separate School Clinic Dashboard. Opening your personal read-only medical health status: you have ${ownProfiles.length} baseline health profile and ${ownVisits.length} personal checkup record visible only to you.`;
     return {
       topicId: 'clinic_pull',
       questionFormation: formation,
@@ -585,7 +620,7 @@ function answerUserQuery(req, rawQuery = '') {
       speechText: `${answerText} ${formation.explanationText}`,
       detailedAnswer: `${answerText}\n\n${formation.explanationText}`,
       action: { openTab: 'clinic' },
-      pulledRecords: { profilesCount: ownProfiles.length, visits: ownVisits.slice(0, 10), ownHealthOnly: true },
+      pulledRecords: { profilesCount: ownProfiles.length, visits: ownVisits.slice(0, 10), ownHealthOnly: true, readOnly: true },
       liveStats
     };
   }

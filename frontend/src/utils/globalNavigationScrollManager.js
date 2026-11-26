@@ -119,6 +119,7 @@ export function parsePortalDashboardRoute(pathname = "", search = "") {
 export function getInstitutionalPortalLabel(roleOrPath = "") {
   const s = String(roleOrPath || "").toLowerCase();
   if (s.includes("admin") || s.includes("headmaster") || s.includes("owner")) return "Headmaster Command Center";
+  if (s.includes("clinic") || s.includes("doctor") || s.includes("nurse")) return "School Clinic & Medical Command";
   if (s.includes("teacher")) return "Teacher Academic Suite";
   if (s.includes("student")) return "Student Learning Portal";
   if (s.includes("parent")) return "Parent & Guardian Portal";
@@ -151,15 +152,22 @@ const MODULE_TITLE_MAP = {
   busTransport: "Student Bus Boarding & Route Fares",
   cctv: "Inbuilt Campus CCTV & Mobile Link",
   defaulters: "Defaulters Compliance Registry",
-  clinic: "School Clinic & Sickbay",
+  clinic: "My Medical Health Status",
   stationery: "School Stationery & Price Desk",
   staffAttendance: "Staff & Clinic Attendance",
+  // School Clinic (Doctors & Nurses Only)
+  directory: "School Medical Profiles Directory",
+  treat: "Consultations & Sickbay Treatment",
+  visits: "Clinical Visits & Sickbay Admissions",
+  registrations: "Admissions Medical Registration Queue",
+  pharmacy: "Clinic Pharmacy & Medication Stock",
   // Teacher
   attendance: "Student Attendance Register",
   classes: "Assigned Classes & Rosters",
   assignments: "Lessons & Assignments",
   exams: "Exams & Result Grading",
   examsMonitor: "Live Exams Monitor & Proctoring",
+  examPapers: "End-of-Term Exam Papers & Vetting",
   scanner: "Exam Script Scanner & Marking",
   meetings: "Live Video Conferences & Classrooms",
   topicVideos: "Class Topic Videos",
@@ -219,16 +227,17 @@ const MODULE_TITLE_MAP = {
 export function resolveModuleTitle(moduleId = "") {
   const clean = String(moduleId || "").trim();
   if (!clean) return "Workspace Module";
-  if (MODULE_TITLE_MAP[clean]) return MODULE_TITLE_MAP[clean];
 
-  // Try matching active tab button text in DOM for exact localized/custom titles
+  // Prefer active primary tab button text in DOM for exact context-aware labels (e.g. Stationery Price List vs Headmaster Desk)
   try {
     if (typeof document !== "undefined") {
-      const activeBtn = document.querySelector(".role-tab-nav .role-tab-btn.active");
+      const activeBtn = document.querySelector("nav.role-tab-nav .role-tab-btn.active");
       const text = activeBtn?.textContent?.replace(/\s+/g, " ").trim();
       if (text) return text.slice(0, 76);
     }
   } catch { }
+
+  if (MODULE_TITLE_MAP[clean]) return MODULE_TITLE_MAP[clean];
 
   return clean
     .replace(/[_-]+/g, " ")
@@ -250,6 +259,7 @@ export function resolveSafeFallbackDashboardPath(pathname = "") {
     const user = rawUser ? JSON.parse(rawUser) : null;
     const role = String(user?.role || localStorage.getItem("gbs_auth_role") || "").toUpperCase();
     if (role === "ADMIN" || role === "SUPER_ADMIN" || role === "HEADMASTER") return "/portal/admin/dashboard";
+    if (role === "CLINIC_DOCTOR" || role === "CLINIC_NURSE" || role === "DOCTOR" || role === "NURSE" || role === "CLINIC") return "/portal/clinic/dashboard";
     if (role === "TEACHER") return "/portal/teacher/dashboard";
     if (role === "STUDENT") return "/portal/student/dashboard";
     if (role === "PARENT") return "/portal/parent/dashboard";
@@ -389,8 +399,83 @@ function captureContainerScrolls() {
   return results.slice(0, 30);
 }
 
+function getWindowScrollCoords() {
+  const se = document.scrollingElement || document.documentElement;
+  const windowX = Math.max(
+    0,
+    Math.round(window.scrollX ?? window.pageXOffset ?? se?.scrollLeft ?? document.documentElement.scrollLeft ?? 0)
+  );
+  const windowY = Math.max(
+    0,
+    Math.round(window.scrollY ?? window.pageYOffset ?? se?.scrollTop ?? document.documentElement.scrollTop ?? 0)
+  );
+  return { windowX, windowY };
+}
+
+const activeOverviewTabsByStorageKey = new Map();
+
+export function registerCurrentOverviewTab(storageKey, tab) {
+  if (!storageKey || !tab) return;
+  activeOverviewTabsByStorageKey.set(String(storageKey), String(tab));
+}
+
+function captureSafeFilterControls() {
+  const filters = [];
+  try {
+    const root = document.querySelector(".role-main, .role-main-content, .dashboard-main, main") || document.body;
+    if (!root) return filters;
+    const els = root.querySelectorAll('input[type="search"], input[type="text"], select');
+    for (const el of els) {
+      if (filters.length >= 16) break;
+      if (el.closest("[role='dialog'], .modal-box, [data-gbs-no-restore]")) continue;
+      const type = String(el.type || "").toLowerCase();
+      const name = String(el.name || el.id || el.getAttribute("aria-label") || el.placeholder || "").toLowerCase();
+      // Strictly never capture sensitive credentials, passwords, OTPs, pins, or payment inputs
+      if (/pass|pin|otp|token|secret|card|cvv|email|phone|amount|price|salary/.test(name)) continue;
+      const isSearchOrFilter =
+        el.tagName === "SELECT" ||
+        type === "search" ||
+        el.hasAttribute("data-gbs-filter-state") ||
+        /search|filter|find|class|term|subject|grade|status|category|year|country|lang/.test(name);
+      if (!isSearchOrFilter) continue;
+      const val = String(el.value ?? "");
+      if (!val) continue;
+      const selector = computeStableSelector(el);
+      if (!selector) continue;
+      filters.push({ tag: el.tagName, selector, value: val });
+    }
+  } catch { }
+  return filters;
+}
+
+function restoreSafeFilterControls(filters) {
+  if (!Array.isArray(filters) || filters.length === 0) return;
+  try {
+    const inputSetter = Object.getOwnPropertyDescriptor(window.HTMLInputElement.prototype, "value")?.set;
+    const selectSetter = Object.getOwnPropertyDescriptor(window.HTMLSelectElement.prototype, "value")?.set;
+    for (const item of filters) {
+      let el = null;
+      try {
+        el = document.querySelector(item.selector);
+      } catch { }
+      if (!el || el.tagName !== item.tag) continue;
+      if (String(el.value ?? "") === String(item.value ?? "")) continue;
+      if (el.tagName === "INPUT" && inputSetter) {
+        inputSetter.call(el, item.value);
+        el.dispatchEvent(new Event("input", { bubbles: true }));
+      } else if (el.tagName === "SELECT" && selectSetter) {
+        const hasOption = Array.from(el.options || []).some((opt) => opt.value === item.value);
+        if (hasOption) {
+          selectSetter.call(el, item.value);
+          el.dispatchEvent(new Event("change", { bubbles: true }));
+        }
+      }
+    }
+  } catch { }
+}
+
 /**
- * Capture current window scroll + nested scrollable containers.
+ * Capture current window scroll + nested scrollable containers + safe page/filter/overview-tab context.
  */
 export function captureCurrentScrollSnapshot(pathname, search) {
   if (typeof window === "undefined") return null;
@@ -399,19 +484,34 @@ export function captureCurrentScrollSnapshot(pathname, search) {
   if (isDeveloperRoute(pathStr)) return null;
 
   const parsed = parsePortalDashboardRoute(pathStr, searchStr);
-  const windowX = Math.max(0, Math.round(window.scrollX || window.pageXOffset || document.documentElement.scrollLeft || 0));
-  const windowY = Math.max(0, Math.round(window.scrollY || window.pageYOffset || document.documentElement.scrollTop || 0));
+  const { windowX, windowY } = getWindowScrollCoords();
+
+  const overviewTabs = {};
+  for (const [k, v] of activeOverviewTabsByStorageKey.entries()) {
+    overviewTabs[k] = v;
+  }
 
   return {
     windowX,
     windowY,
     containers: captureContainerScrolls(),
+    filters: captureSafeFilterControls(),
+    overviewTabs,
     pathname: pathStr,
     search: searchStr,
     role: parsed.role,
     moduleId: parsed.moduleId,
     savedAt: Date.now()
   };
+}
+
+export function readSavedOverviewTab(entryKey, routeKey, storageKey) {
+  if (!storageKey) return null;
+  const snap = readScrollSnapshot(entryKey, routeKey);
+  if (snap && snap.overviewTabs && snap.overviewTabs[storageKey]) {
+    return snap.overviewTabs[storageKey];
+  }
+  return null;
 }
 
 /**
@@ -511,6 +611,7 @@ export function cancelPendingScrollRestoration() {
 
 function instantWindowScroll(x, y) {
   const html = document.documentElement;
+  const se = document.scrollingElement || html;
   const prevBehavior = html.style.scrollBehavior;
   html.style.scrollBehavior = "auto";
   try {
@@ -518,8 +619,16 @@ function instantWindowScroll(x, y) {
   } catch {
     window.scrollTo(x, y);
   }
+  if (se && (Math.abs((se.scrollTop || 0) - y) > 2 || Math.abs((se.scrollLeft || 0) - x) > 2)) {
+    try {
+      se.scrollTop = y;
+      se.scrollLeft = x;
+    } catch { }
+  }
   html.style.scrollBehavior = prevBehavior;
 }
+
+let pendingTopResetTimer = null;
 
 /**
  * Scroll newly pushed page instantaneously to top (0, 0) without triggering smooth animation
@@ -528,11 +637,21 @@ function instantWindowScroll(x, y) {
 export function resetScrollToTopInstant() {
   if (typeof window === "undefined") return;
   cancelPendingScrollRestoration();
+  if (pendingTopResetTimer) {
+    clearTimeout(pendingTopResetTimer);
+    pendingTopResetTimer = null;
+  }
   isRestoringScroll = true;
   instantWindowScroll(0, 0);
   requestAnimationFrame(() => {
     instantWindowScroll(0, 0);
-    isRestoringScroll = false;
+    requestAnimationFrame(() => {
+      instantWindowScroll(0, 0);
+      pendingTopResetTimer = setTimeout(() => {
+        isRestoringScroll = false;
+        pendingTopResetTimer = null;
+      }, 80);
+    });
   });
 }
 
@@ -553,6 +672,8 @@ export function restoreScrollSnapshotAsync(entryKey, routeKey, options = {}) {
   const targetX = Math.max(0, Number(snapshot.windowX || 0));
   const targetY = Math.max(0, Number(snapshot.windowY || 0));
   const containers = Array.isArray(snapshot.containers) ? snapshot.containers : [];
+  const savedFilters = Array.isArray(snapshot.filters) ? snapshot.filters : [];
+  let filtersRestoredOnce = false;
 
   const maxWaitMs = Number(options.maxWaitMs || 1800);
   const settleGraceMs = Number(options.settleGraceMs || 260);
@@ -651,14 +772,19 @@ export function restoreScrollSnapshotAsync(entryKey, routeKey, options = {}) {
   const applyTick = () => {
     if (cancelled) return;
 
-    const maxScrollY = Math.max(0, document.documentElement.scrollHeight - window.innerHeight);
-    const maxScrollX = Math.max(0, document.documentElement.scrollWidth - window.innerWidth);
+    if (!filtersRestoredOnce && savedFilters.length > 0) {
+      restoreSafeFilterControls(savedFilters);
+      filtersRestoredOnce = true;
+    }
+
+    const se = document.scrollingElement || document.documentElement;
+    const maxScrollY = Math.max(0, (se?.scrollHeight || document.documentElement.scrollHeight) - window.innerHeight);
+    const maxScrollX = Math.max(0, (se?.scrollWidth || document.documentElement.scrollWidth) - window.innerWidth);
 
     instantWindowScroll(targetX, targetY);
     const containersReady = applyContainers();
 
-    const actualY = window.scrollY || document.documentElement.scrollTop || 0;
-    const actualX = window.scrollX || document.documentElement.scrollLeft || 0;
+    const { windowX: actualX, windowY: actualY } = getWindowScrollCoords();
 
     const canReachY = targetY === 0 || maxScrollY >= targetY - 2;
     const canReachX = targetX === 0 || maxScrollX >= targetX - 2;

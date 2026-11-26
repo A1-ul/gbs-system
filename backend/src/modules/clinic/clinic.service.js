@@ -22,10 +22,11 @@ function normalizeEmail(v) {
   return String(v || '').trim().toLowerCase();
 }
 
-const HEADMASTER_CLINIC_ROLES = new Set(['ADMIN', 'SUPER_ADMIN', 'HEADMASTER', 'PRINCIPAL', 'DEVELOPER']);
+// Strictly ONLY School Doctors & Nurses operate the School Clinic Dashboard
+const CLINIC_OPERATOR_ROLES = new Set(['CLINIC_DOCTOR', 'CLINIC_NURSE', 'DOCTOR', 'NURSE', 'CLINIC']);
 
-function isHeadmasterClinicRole(role) {
-  return HEADMASTER_CLINIC_ROLES.has(String(role || '').trim().toUpperCase());
+function isClinicOperatorRole(role) {
+  return CLINIC_OPERATOR_ROLES.has(String(role || '').trim().toUpperCase());
 }
 
 function matchesCallerIdentity(profileRecord, user) {
@@ -171,7 +172,7 @@ async function listClinicProfiles(req) {
       u &&
       !u.isDeleted &&
       String(u.tenantId || '1') === tidStr &&
-      ['STUDENT', 'TEACHER', 'STAFF', 'HR', 'ACCOUNTANT'].includes(String(u.role || '').toUpperCase())
+      ['STUDENT', 'TEACHER', 'STAFF', 'HR', 'ACCOUNTANT', 'SECRETARY', 'ADMIN', 'SUPER_ADMIN', 'CLINIC_DOCTOR', 'CLINIC_NURSE'].includes(String(u.role || '').toUpperCase())
   );
 
   storeUsers.forEach((u) => {
@@ -277,11 +278,11 @@ async function listClinicProfiles(req) {
 
   const allProfiles = Array.from(profileMap.values());
   const role = String(req.user?.role || '').toUpperCase();
-  if (isHeadmasterClinicRole(role)) {
+  if (isClinicOperatorRole(role)) {
     return allProfiles;
   }
 
-  // Strictly personal health visibility for non-Headmaster roles (never expose school-wide clinic roster)
+  // Strictly personal read-only health status visibility for all non-Clinic roles (never expose school-wide clinic operations)
   if (role === 'PARENT') {
     const parentMatches = allProfiles.filter((p) => matchesParentWardProfile(p, req.user));
     if (parentMatches.length > 0) return parentMatches;
@@ -326,11 +327,11 @@ async function listClinicVisits(req) {
   let visits = (store.schoolClinicVisits || []).filter((v) => String(v.tenantId || '1') === tidStr);
 
   const role = String(req.user?.role || '').toUpperCase();
-  const isHeadmasterView = isHeadmasterClinicRole(role);
+  const isClinicOperatorView = isClinicOperatorRole(role);
   const callerEmail = normalizeEmail(req.user?.email);
   const callerPhoneDigits = String(req.user?.phone || '').replace(/\D+/g, '');
 
-  if (!isHeadmasterView) {
+  if (!isClinicOperatorView) {
     if (role === 'PARENT') {
       visits = visits.filter((v) => {
         if (v.patientRole !== 'STUDENT') return false;
@@ -351,9 +352,10 @@ async function listClinicVisits(req) {
   const profiles = await listClinicProfiles(req);
   const activeSickbay = visits.filter((v) => v.disposition === 'ADMITTED_TO_SICKBAY' && !v.dischargedAt);
 
-  if (!isHeadmasterView) {
+  if (!isClinicOperatorView) {
     return {
       ownHealthOnly: true,
+      readOnly: true,
       visits,
       summary: null
     };
@@ -599,7 +601,10 @@ async function updateClinicVisit(req, visitId) {
 async function pullPatientMedicalDossier(req, rawQuery = '') {
   const tidStr = resolveTidStr(req);
   const role = String(req.user?.role || '').toUpperCase();
-  const isHeadmasterView = isHeadmasterClinicRole(role);
+  const isClinicOperatorView = isClinicOperatorRole(role);
+  if (!isClinicOperatorView) {
+    throw new AppError('Access Denied: Only School Clinic Doctors and Nurses may pull cross-campus medical dossiers.', 403);
+  }
   const q = String(rawQuery || '').trim().toLowerCase();
   const profiles = await listClinicProfiles(req);
   const { visits } = await listClinicVisits(req);
@@ -624,17 +629,15 @@ async function pullPatientMedicalDossier(req, rawQuery = '') {
       String(v.diagnosis || '').toLowerCase().includes(q)
   );
 
-  const callerEmail = normalizeEmail(req.user?.email);
   const clinicSmsAlerts = (store.dispatchedSmsMessages || []).filter(
     (m) =>
       String(m.tenantId || '1') === tidStr &&
       String(m.subject || m.rawMessage || '').toLowerCase().includes('clinic') &&
-      (isHeadmasterView || (callerEmail && normalizeEmail(m.recipientEmail) === callerEmail)) &&
       (!q || String(m.rawMessage || m.subject || m.recipientName || '').toLowerCase().includes(q))
   );
 
   return {
-    ownHealthOnly: !isHeadmasterView,
+    ownHealthOnly: false,
     query: rawQuery,
     matchedProfiles,
     matchedVisits,

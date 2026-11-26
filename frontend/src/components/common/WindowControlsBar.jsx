@@ -118,6 +118,7 @@ export default function WindowControlsBar({
       if (path.includes("/portal/accountant")) return "ACCOUNTANT";
       if (path.includes("/portal/hr") || path === "/hr") return "HR";
       if (path.includes("/portal/secretary")) return "SECRETARY";
+      if (path.includes("/portal/clinic")) return "CLINIC_DOCTOR";
       if (path.includes("/portal/staff")) return "STAFF";
       if (path.includes("/portal/alumni")) return "ALUMNI";
       if (path.includes("/portal/inventory") || path === "/inventory") return "INVENTORY";

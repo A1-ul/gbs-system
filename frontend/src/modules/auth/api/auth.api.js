@@ -128,6 +128,28 @@ const BUILTIN_OFFLINE_USERS = [
     tenantId: "1",
     tenantCode: "GBS-MAIN",
     tenantName: "GBS International School (Main Branch)"
+  },
+  {
+    email: "doctor@gbs.com",
+    username: "doctor1",
+    passwords: ["Doctor123!"],
+    role: "CLINIC_DOCTOR",
+    firstName: "Dr. Kwame",
+    lastName: "Mensah",
+    tenantId: "1",
+    tenantCode: "GBS-MAIN",
+    tenantName: "GBS International School (Main Branch)"
+  },
+  {
+    email: "nurse@gbs.com",
+    username: "nurse1",
+    passwords: ["Nurse123!"],
+    role: "CLINIC_NURSE",
+    firstName: "Nurse Akosua",
+    lastName: "Boateng",
+    tenantId: "1",
+    tenantCode: "GBS-MAIN",
+    tenantName: "GBS International School (Main Branch)"
   }
 ];
 

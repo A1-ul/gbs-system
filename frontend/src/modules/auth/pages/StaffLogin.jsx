@@ -9,7 +9,22 @@ export default function StaffLogin({ defaultRole = "STAFF" }) {
   const isAlumni = defaultRole === "ALUMNI" || window.location.pathname.includes("/alumni");
   const isHR = defaultRole === "HR" || window.location.pathname.includes("/hr");
   const isSecretary = defaultRole === "SECRETARY" || window.location.pathname.includes("/secretary");
-  const roleKey = isAlumni ? "ALUMNI" : isHR ? "HR" : isSecretary ? "SECRETARY" : "STAFF";
+  const isClinicNurse = defaultRole === "CLINIC_NURSE" || window.location.pathname.includes("/clinic_nurse");
+  const isClinic =
+    isClinicNurse ||
+    defaultRole === "CLINIC_DOCTOR" ||
+    window.location.pathname.includes("/clinic");
+  const roleKey = isAlumni
+    ? "ALUMNI"
+    : isHR
+      ? "HR"
+      : isSecretary
+        ? "SECRETARY"
+        : isClinicNurse
+          ? "CLINIC_NURSE"
+          : isClinic
+            ? "CLINIC_DOCTOR"
+            : "STAFF";
 
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -24,12 +39,15 @@ export default function StaffLogin({ defaultRole = "STAFF" }) {
     try {
       const res = await login({ email: email.trim(), password, portalRole: roleKey });
       if (res?.status === "success") {
-        if (isAlumni) {
+        const loggedRole = String(res?.data?.user?.role || roleKey).toUpperCase();
+        if (isAlumni || loggedRole === "ALUMNI") {
           navigate("/portal/alumni/dashboard");
-        } else if (isHR) {
+        } else if (isHR || loggedRole === "HR") {
           navigate("/portal/hr/dashboard");
-        } else if (isSecretary) {
+        } else if (isSecretary || loggedRole === "SECRETARY") {
           navigate("/portal/secretary/dashboard");
+        } else if (isClinic || ["CLINIC_DOCTOR", "CLINIC_NURSE", "DOCTOR", "NURSE"].includes(loggedRole)) {
+          navigate("/portal/clinic/dashboard");
         } else {
           navigate("/portal/staff/dashboard");
         }
@@ -67,15 +85,15 @@ export default function StaffLogin({ defaultRole = "STAFF" }) {
         <div 
           className="role-badge-pill" 
           style={{ 
-            borderColor: isAlumni ? "rgba(99, 102, 241, 0.5)" : isHR ? "rgba(168, 85, 247, 0.4)" : isSecretary ? "rgba(14, 165, 233, 0.45)" : "rgba(100, 116, 139, 0.4)", 
-            color: isAlumni ? "#818cf8" : isHR ? "#c084fc" : isSecretary ? "#38bdf8" : "#94a3b8", 
-            background: isAlumni ? "rgba(99, 102, 241, 0.15)" : isHR ? "rgba(168, 85, 247, 0.15)" : isSecretary ? "rgba(14, 165, 233, 0.15)" : "rgba(100, 116, 139, 0.15)" 
+            borderColor: isAlumni ? "rgba(99, 102, 241, 0.5)" : isHR ? "rgba(168, 85, 247, 0.4)" : isSecretary ? "rgba(14, 165, 233, 0.45)" : isClinic ? "rgba(16, 185, 129, 0.5)" : "rgba(100, 116, 139, 0.4)", 
+            color: isAlumni ? "#818cf8" : isHR ? "#c084fc" : isSecretary ? "#38bdf8" : isClinic ? "#34d399" : "#94a3b8", 
+            background: isAlumni ? "rgba(99, 102, 241, 0.15)" : isHR ? "rgba(168, 85, 247, 0.15)" : isSecretary ? "rgba(14, 165, 233, 0.15)" : isClinic ? "rgba(16, 185, 129, 0.16)" : "rgba(100, 116, 139, 0.15)" 
           }}
         >
-          {isAlumni ? "🏛️ ALUMNI & CONVOCATION NETWORK" : isHR ? "👔 HUMAN RESOURCES & COMPLIANCE PORTAL" : isSecretary ? "🗂️ SCHOOL SECRETARY & FRONT OFFICE PORTAL" : "💼 LOGISTICS & CAMPUS STAFF PORTAL"}
+          {isAlumni ? "🏛️ ALUMNI & CONVOCATION NETWORK" : isHR ? "👔 HUMAN RESOURCES & COMPLIANCE PORTAL" : isSecretary ? "🗂️ SCHOOL SECRETARY & FRONT OFFICE PORTAL" : isClinic ? "🏥 SCHOOL CLINIC — DOCTORS & NURSES ONLY" : "💼 LOGISTICS & CAMPUS STAFF PORTAL"}
         </div>
         <h2 className="role-login-title">
-          {isAlumni ? "ALUMNI NETWORK SIGN IN" : isHR ? "HR PORTAL SIGN IN" : isSecretary ? "SECRETARY PORTAL SIGN IN" : "STAFF SIGN IN"}
+          {isAlumni ? "ALUMNI NETWORK SIGN IN" : isHR ? "HR PORTAL SIGN IN" : isSecretary ? "SECRETARY PORTAL SIGN IN" : isClinic ? "SCHOOL CLINIC SIGN IN" : "STAFF SIGN IN"}
         </h2>
         <p className="role-login-sub">
           {isAlumni 
@@ -83,43 +101,64 @@ export default function StaffLogin({ defaultRole = "STAFF" }) {
             : isHR 
             ? "GBS School Management System • Directorate of Human Resources" 
             : isSecretary
-            ? "GBS School Management System • Front Office, Correspondence & Stationery"
+            ? "GBS School Management System • Front Office, Correspondence & Records"
+            : isClinic
+            ? "GBS School Management System • Authorized School Doctors & Nurses Only"
             : "GBS School Management System • Shifts, Operations & Logistics"}
         </p>
         <form onSubmit={handleSubmit} className="role-login-form">
-          <div style={{ display: "flex", justifyContent: "flex-end", marginBottom: "8px" }}>
-            <button
-              type="button"
-              onClick={() => {
-                setError(null);
-                if (isAlumni) { setEmail("alumni@gbs.com"); setPassword("Alumni123!"); }
-                else if (isHR) { setEmail("hr@gbs.com"); setPassword("Hr123!"); }
-                else if (isSecretary) { setEmail("secretary@gbs.com"); setPassword("Secretary123!"); }
-                else { setEmail("staff@gbs.com"); setPassword("Staff123!"); }
-              }}
-              style={{
-                background: "rgba(100, 116, 139, 0.2)",
-                border: "1px solid rgba(148, 163, 184, 0.4)",
-                color: "#cbd5e1",
-                padding: "3px 10px",
-                borderRadius: "14px",
-                fontSize: "0.74rem",
-                fontWeight: "700",
-                cursor: "pointer"
-              }}
-            >
-              ⚡ Fill {isAlumni ? "Alumni" : isHR ? "HR" : isSecretary ? "Secretary" : "Staff"} Demo Login
-            </button>
+          <div style={{ display: "flex", justifyContent: "flex-end", gap: "6px", flexWrap: "wrap", marginBottom: "8px" }}>
+            {isClinic ? (
+              <>
+                <button
+                  type="button"
+                  onClick={() => { setError(null); setEmail("doctor@gbs.com"); setPassword("Doctor123!"); }}
+                  style={{ background: "rgba(16, 185, 129, 0.2)", border: "1px solid rgba(52, 211, 153, 0.5)", color: "#6ee7b7", padding: "3px 10px", borderRadius: "14px", fontSize: "0.74rem", fontWeight: "700", cursor: "pointer" }}
+                >
+                  🩺 Fill Doctor Demo
+                </button>
+                <button
+                  type="button"
+                  onClick={() => { setError(null); setEmail("nurse@gbs.com"); setPassword("Nurse123!"); }}
+                  style={{ background: "rgba(20, 184, 166, 0.2)", border: "1px solid rgba(45, 212, 191, 0.5)", color: "#5eead4", padding: "3px 10px", borderRadius: "14px", fontSize: "0.74rem", fontWeight: "700", cursor: "pointer" }}
+                >
+                  🏥 Fill Nurse Demo
+                </button>
+              </>
+            ) : (
+              <button
+                type="button"
+                onClick={() => {
+                  setError(null);
+                  if (isAlumni) { setEmail("alumni@gbs.com"); setPassword("Alumni123!"); }
+                  else if (isHR) { setEmail("hr@gbs.com"); setPassword("Hr123!"); }
+                  else if (isSecretary) { setEmail("secretary@gbs.com"); setPassword("Secretary123!"); }
+                  else { setEmail("staff@gbs.com"); setPassword("Staff123!"); }
+                }}
+                style={{
+                  background: "rgba(100, 116, 139, 0.2)",
+                  border: "1px solid rgba(148, 163, 184, 0.4)",
+                  color: "#cbd5e1",
+                  padding: "3px 10px",
+                  borderRadius: "14px",
+                  fontSize: "0.74rem",
+                  fontWeight: "700",
+                  cursor: "pointer"
+                }}
+              >
+                ⚡ Fill {isAlumni ? "Alumni" : isHR ? "HR" : isSecretary ? "Secretary" : "Staff"} Demo Login
+              </button>
+            )}
           </div>
           <div className="form-group">
             <label htmlFor="staff-email">
-              {isAlumni ? "Alumni Email / Degree ID" : isHR ? "HR Email / Officer ID" : isSecretary ? "Secretary Email / ID" : "Staff Email / Employee ID"}
+              {isAlumni ? "Alumni Email / Degree ID" : isHR ? "HR Email / Officer ID" : isSecretary ? "Secretary Email / ID" : isClinic ? "School Doctor / Nurse Email" : "Staff Email / Employee ID"}
             </label>
             <input 
               id="staff-email" 
               type="text" 
               required 
-              placeholder={isAlumni ? "e.g. alumni@gbs.edu" : isHR ? "e.g. hr@gbs.edu" : isSecretary ? "e.g. secretary@gbs.edu" : "Enter staff email"} 
+              placeholder={isAlumni ? "e.g. alumni@gbs.edu" : isHR ? "e.g. hr@gbs.edu" : isSecretary ? "e.g. secretary@gbs.edu" : isClinic ? "e.g. doctor@gbs.com or nurse@gbs.com" : "Enter staff email"} 
               value={email} 
               onChange={(e) => setEmail(e.target.value)} 
             />
@@ -164,15 +203,15 @@ export default function StaffLogin({ defaultRole = "STAFF" }) {
             }} 
             disabled={loading}
           >
-            {loading ? "VERIFYING CREDENTIALS..." : (isAlumni ? "ACCESS ALUMNI PORTAL" : isHR ? "ACCESS HR PORTAL" : "ACCESS STAFF PORTAL")}
+            {loading ? "VERIFYING CREDENTIALS..." : (isAlumni ? "ACCESS ALUMNI PORTAL" : isHR ? "ACCESS HR PORTAL" : isSecretary ? "ACCESS SECRETARY PORTAL" : isClinic ? "ACCESS SCHOOL CLINIC PORTAL" : "ACCESS STAFF PORTAL")}
           </button>
         </form>
         <div style={{ textAlign: "center", margin: "12px 0" }}>
           <Link 
-            to={isAlumni ? "/signup/alumni" : isHR ? "/signup/hr" : "/signup/staff"} 
+            to={isAlumni ? "/signup/alumni" : isHR ? "/signup/hr" : isSecretary ? "/signup/secretary" : isClinic ? "/signup/clinic" : "/signup/staff"} 
             style={{ color: "#94a3b8", fontSize: "0.85rem", textDecoration: "none", fontWeight: "600" }}
           >
-            {isAlumni ? "✨ Graduated Scholar? Register Alumni Profile →" : isHR ? "✨ HR Executive? Register HR Directorate →" : "✨ New operational employee? Register Staff Account →"}
+            {isAlumni ? "✨ Graduated Scholar? Register Alumni Profile →" : isHR ? "✨ HR Executive? Register HR Directorate →" : isSecretary ? "✨ School Secretary? Register Front-Office Account →" : isClinic ? "✨ School Doctor or Nurse? Register Clinic Account →" : "✨ New operational employee? Register Staff Account →"}
           </Link>
         </div>
         <div className="role-switch-grid">

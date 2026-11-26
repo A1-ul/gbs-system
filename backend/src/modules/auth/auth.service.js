@@ -243,6 +243,34 @@ const BUILTIN_SYSTEM_USERS = [
     isLocked: false,
     permissions: ['*'],
     tenant: DEFAULT_TENANT
+  },
+  {
+    id: 'usr_clinic_doctor_master',
+    tenantId: 'tnt_master_default',
+    email: 'doctor@gbs.com',
+    username: 'doctor1',
+    passwordHash: bcrypt.hashSync('Doctor123!', 10),
+    role: 'CLINIC_DOCTOR',
+    firstName: 'Dr. Kwame',
+    lastName: 'Mensah',
+    isActive: true,
+    isLocked: false,
+    permissions: ['*'],
+    tenant: DEFAULT_TENANT
+  },
+  {
+    id: 'usr_clinic_nurse_master',
+    tenantId: 'tnt_master_default',
+    email: 'nurse@gbs.com',
+    username: 'nurse1',
+    passwordHash: bcrypt.hashSync('Nurse123!', 10),
+    role: 'CLINIC_NURSE',
+    firstName: 'Nurse Akosua',
+    lastName: 'Boateng',
+    isActive: true,
+    isLocked: false,
+    permissions: ['*'],
+    tenant: DEFAULT_TENANT
   }
 ];
 
@@ -608,7 +636,9 @@ const login = async ({ email, username, identifier, password, portalRole }) => {
       (user.role === 'STAFF' && (p === 'Staff123!' || p === 'staff123')) ||
       (user.role === 'HR' && (p === 'Hr123!' || p === 'hr123')) ||
       (user.role === 'ALUMNI' && (p === 'Alumni123!' || p === 'alumni123')) ||
-      (user.role === 'SECRETARY' && (p === 'Secretary123!' || p === 'secretary123'))
+      (user.role === 'SECRETARY' && (p === 'Secretary123!' || p === 'secretary123')) ||
+      (user.role === 'CLINIC_DOCTOR' && (p === 'Doctor123!' || p === 'doctor123')) ||
+      (user.role === 'CLINIC_NURSE' && (p === 'Nurse123!' || p === 'nurse123'))
     ) {
       isPasswordValid = true;
     }
@@ -1269,7 +1299,7 @@ const register = async (data) => {
     throw new AppError('Email and password are required.', 400);
   }
 
-  const allowedRoles = ['TEACHER', 'SECRETARY', 'STUDENT', 'PARENT', 'ACCOUNTANT', 'STAFF', 'ADMIN', 'HR', 'ALUMNI'];
+  const allowedRoles = ['TEACHER', 'SECRETARY', 'STUDENT', 'PARENT', 'ACCOUNTANT', 'STAFF', 'ADMIN', 'HR', 'ALUMNI', 'CLINIC_DOCTOR', 'CLINIC_NURSE'];
   const userRole = (role && allowedRoles.includes(role.toUpperCase())) ? role.toUpperCase() : 'STUDENT';
   const isPreApproved = Boolean(data.approvedByHeadmaster === true || data.approvedByDeveloper === true || data.isApproved === true);
   const initialVerificationStatus = isPreApproved
@@ -1595,32 +1625,36 @@ const seedDefaultAdmin = async () => {
       { email: 'staff@gbs.com', username: 'staff1', password: 'Staff123!', role: 'STAFF', firstName: 'Emma', lastName: 'Staff' },
       { email: 'hr@gbs.com', username: 'hr1', password: 'Hr123!', role: 'HR', firstName: 'Grace', lastName: 'HR Officer' },
       { email: 'alumni@gbs.com', username: 'alumni1', password: 'Alumni123!', role: 'ALUMNI', firstName: 'Marcus', lastName: 'Alumni' },
-      { email: 'secretary@gbs.com', username: 'secretary1', password: 'Secretary123!', role: 'SECRETARY', firstName: 'Evelyn', lastName: 'Secretary' }
+      { email: 'secretary@gbs.com', username: 'secretary1', password: 'Secretary123!', role: 'SECRETARY', firstName: 'Evelyn', lastName: 'Secretary' },
+      { email: 'doctor@gbs.com', username: 'doctor1', password: 'Doctor123!', role: 'CLINIC_DOCTOR', firstName: 'Dr. Kwame', lastName: 'Mensah' },
+      { email: 'nurse@gbs.com', username: 'nurse1', password: 'Nurse123!', role: 'CLINIC_NURSE', firstName: 'Nurse Akosua', lastName: 'Boateng' }
     ];
 
     for (const u of seedUsers) {
-      const existing = await prisma.user.findUnique({ where: { email: u.email } });
-      if (!existing) {
-        const hashedPassword = await bcrypt.hash(u.password, 10);
-        await prisma.user.create({
-          data: {
-            tenantId: tenant.id,
-            firstName: u.firstName,
-            lastName: u.lastName,
-            username: u.username,
-            email: u.email.toLowerCase(),
-            password: hashedPassword,
-            role: u.role,
-            permissions: ['*']
-          }
-        });
-      } else {
-        const hashedPassword = await bcrypt.hash(u.password, 10);
-        await prisma.user.update({
-          where: { id: existing.id },
-          data: { password: hashedPassword, isLocked: false, failedLoginAttempts: 0 }
-        });
-      }
+      try {
+        const existing = await prisma.user.findUnique({ where: { email: u.email } });
+        if (!existing) {
+          const hashedPassword = await bcrypt.hash(u.password, 10);
+          await prisma.user.create({
+            data: {
+              tenantId: tenant.id,
+              firstName: u.firstName,
+              lastName: u.lastName,
+              username: u.username,
+              email: u.email.toLowerCase(),
+              password: hashedPassword,
+              role: u.role,
+              permissions: ['*']
+            }
+          });
+        } else {
+          const hashedPassword = await bcrypt.hash(u.password, 10);
+          await prisma.user.update({
+            where: { id: existing.id },
+            data: { password: hashedPassword, isLocked: false, failedLoginAttempts: 0 }
+          });
+        }
+      } catch { }
     }
 
     return { tenant, mode: 'POSTGRESQL_ACTIVE' };
@@ -1701,7 +1735,7 @@ const refreshTokenSession = async (incomingToken) => {
       (decRole && BUILTIN_SYSTEM_USERS.find((u) => String(u.role || '').toUpperCase() === decRole)) ||
       null;
   }
-  if (!userRecord && Number.isInteger(numId) && numId >= 1 && numId <= 9) {
+  if (!userRecord && Number.isInteger(numId) && numId >= 1 && numId <= 11) {
     const NUM_ID_TO_BUILTIN = {
       1: 'usr_super_admin',
       2: 'usr_teacher_master',
@@ -1711,7 +1745,9 @@ const refreshTokenSession = async (incomingToken) => {
       6: 'usr_staff_master',
       7: 'usr_hr_master',
       8: 'usr_alumni_master',
-      9: 'usr_secretary_master'
+      9: 'usr_secretary_master',
+      10: 'usr_clinic_doctor_master',
+      11: 'usr_clinic_nurse_master'
     };
     const mappedId = NUM_ID_TO_BUILTIN[numId];
     if (mappedId) {

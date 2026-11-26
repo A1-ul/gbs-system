@@ -2276,7 +2276,7 @@ export default function TeacherDashboard() {
       type: "success",
       message: `✏️ Plan details loaded into authoring form. Address the Headmaster's remarks and click "Submit to Headmaster for Vetting".`
     });
-    window.scrollTo({ top: 600, behavior: "smooth" });
+    document.querySelector(".role-workspace-card form")?.scrollIntoView({ behavior: "smooth", block: "nearest" });
   };
 
   const fetchExams = async (classId) => {

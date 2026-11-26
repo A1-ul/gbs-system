@@ -27,6 +27,7 @@ const StaffDashboard = lazy(() => import("../modules/portal/pages/dashboards/sta
 const AlumniDashboard = lazy(() => import("../modules/alumni/pages/AlumniDashboard"));
 const HRDashboard = lazy(() => import("../modules/portal/pages/dashboards/hr/HRDashboard"));
 const SecretaryDashboard = lazy(() => import("../modules/portal/pages/dashboards/secretary/SecretaryDashboard"));
+const ClinicDashboard = lazy(() => import("../modules/portal/pages/dashboards/clinic/ClinicDashboard"));
 const GlobalEducationalNewsPage = lazy(() => import("../modules/news/pages/GlobalEducationalNewsPage"));
 
 const DeveloperLogin = lazy(() => import("../modules/developer-platform/pages/DeveloperLogin"));
@@ -188,7 +189,9 @@ function ProtectedPortalRoute({ children, loginPath = "/login", allowedRoles = n
       const ownPortal =
         userRole === "ADMIN" || userRole === "SUPER_ADMIN"
           ? "/portal/admin/dashboard"
-          : `/portal/${userRole.toLowerCase()}/dashboard`;
+          : ["CLINIC_DOCTOR", "CLINIC_NURSE", "DOCTOR", "NURSE", "CLINIC"].includes(userRole)
+            ? "/portal/clinic/dashboard"
+            : `/portal/${userRole.toLowerCase()}/dashboard`;
       return <Navigate to={ownPortal} replace />;
     }
   } catch { }
@@ -229,6 +232,9 @@ export default function AppRouter() {
           <Route path="/signup/alumni" element={<SignUpPage defaultRole="ALUMNI" />} />
           <Route path="/signup/staff" element={<SignUpPage defaultRole="STAFF" />} />
           <Route path="/signup/secretary" element={<SignUpPage defaultRole="SECRETARY" />} />
+          <Route path="/signup/clinic" element={<SignUpPage defaultRole="CLINIC_DOCTOR" />} />
+          <Route path="/signup/clinic_doctor" element={<SignUpPage defaultRole="CLINIC_DOCTOR" />} />
+          <Route path="/signup/clinic_nurse" element={<SignUpPage defaultRole="CLINIC_NURSE" />} />
 
           {/* Blueprint Section 2: Dedicated Role-Based Login Pages */}
           <Route path="/login/admin" element={<AdminLogin />} />
@@ -240,6 +246,9 @@ export default function AppRouter() {
           <Route path="/login/hr" element={<StaffLogin defaultRole="HR" />} />
           <Route path="/login/alumni" element={<StaffLogin defaultRole="ALUMNI" />} />
           <Route path="/login/secretary" element={<StaffLogin defaultRole="SECRETARY" />} />
+          <Route path="/login/clinic" element={<StaffLogin defaultRole="CLINIC_DOCTOR" />} />
+          <Route path="/login/clinic_doctor" element={<StaffLogin defaultRole="CLINIC_DOCTOR" />} />
+          <Route path="/login/clinic_nurse" element={<StaffLogin defaultRole="CLINIC_NURSE" />} />
           <Route path="/forgot-password" element={<ForgotPassword />} />
           <Route path="/reset-password" element={<ResetPassword />} />
 
@@ -254,6 +263,9 @@ export default function AppRouter() {
           <Route path="/portal/hr/dashboard/:moduleId?" element={<ProtectedPortalRoute loginPath="/login/hr" allowedRoles={["HR"]}><HRDashboard /></ProtectedPortalRoute>} />
           <Route path="/portal/alumni/dashboard/:moduleId?" element={<ProtectedPortalRoute loginPath="/login/alumni" allowedRoles={["ALUMNI"]}><AlumniDashboard /></ProtectedPortalRoute>} />
           <Route path="/portal/secretary/dashboard/:moduleId?" element={<ProtectedPortalRoute loginPath="/login/secretary" allowedRoles={["SECRETARY"]}><SecretaryDashboard /></ProtectedPortalRoute>} />
+          <Route path="/portal/clinic/dashboard/:moduleId?" element={<ProtectedPortalRoute loginPath="/login/clinic" allowedRoles={["CLINIC_DOCTOR", "CLINIC_NURSE", "DOCTOR", "NURSE"]}><ClinicDashboard /></ProtectedPortalRoute>} />
+          <Route path="/portal/clinic_doctor/dashboard/:moduleId?" element={<Navigate to="/portal/clinic/dashboard" replace />} />
+          <Route path="/portal/clinic_nurse/dashboard/:moduleId?" element={<Navigate to="/portal/clinic/dashboard" replace />} />
           <Route path="/portal/developer/dashboard" element={<Navigate to="/developer-control-center/dashboard" replace />} />
           <Route path="/portal/:role/dashboard/:moduleId?" element={<ProtectedPortalRoute loginPath="/login"><RoleDashboardView /></ProtectedPortalRoute>} />
 

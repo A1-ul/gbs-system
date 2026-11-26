@@ -785,6 +785,22 @@ if (process.env.GBS_NO_LISTEN !== '1') {
             await prismaClient.$executeRawUnsafe(`
             DO $$
             BEGIN
+              IF EXISTS (SELECT 1 FROM pg_type WHERE typname = 'UserRole') THEN
+                IF NOT EXISTS (
+                  SELECT 1 FROM pg_enum e
+                  JOIN pg_type t ON e.enumtypid = t.oid
+                  WHERE t.typname = 'UserRole' AND e.enumlabel = 'CLINIC_DOCTOR'
+                ) THEN
+                  ALTER TYPE "UserRole" ADD VALUE 'CLINIC_DOCTOR';
+                END IF;
+                IF NOT EXISTS (
+                  SELECT 1 FROM pg_enum e
+                  JOIN pg_type t ON e.enumtypid = t.oid
+                  WHERE t.typname = 'UserRole' AND e.enumlabel = 'CLINIC_NURSE'
+                ) THEN
+                  ALTER TYPE "UserRole" ADD VALUE 'CLINIC_NURSE';
+                END IF;
+              END IF;
               IF EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name = 'cctv_streams' AND column_name = 'rtsp_endpoint') THEN
                 UPDATE cctv_streams SET rtsp_endpoint = COALESCE(stream_url, 'rtsp://stream.gbs-system.edu/live/cam_default') WHERE rtsp_endpoint IS NULL;
               END IF;

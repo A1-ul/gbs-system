@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useCallback, useMemo } from "react";
 import apiClient from "../../api/client/apiClient";
+import { isDemoSandboxMode } from "../../utils/tokenStorage";
 
 const CATEGORIES = [
   { id: "ALL", label: "All School Items" },
@@ -70,13 +71,30 @@ export default function SchoolStationeryHubPanel({
   isDark = false,
   onExpenseRecorded = null
 }) {
-  const roleUpper = String(currentUser?.role || mode || "STAFF").trim().toUpperCase();
-  const isHeadmaster = ["ADMIN", "SUPER_ADMIN", "HEADMASTER", "PRINCIPAL"].includes(roleUpper);
-  const canOperateStore = isHeadmaster || ["SECRETARY", "ACCOUNTANT", "STAFF", "DEVELOPER"].includes(roleUpper);
-  const canViewAudit = isHeadmaster || ["ACCOUNTANT", "SECRETARY", "DEVELOPER"].includes(roleUpper);
+  // Strictly evaluate portal mode first so Headmaster pricing tools NEVER leak onto Teacher, Secretary, Staff, HR, Clinic, Accountant, Student, or Parent dashboards
+  const modeUpper = String(mode || currentUser?.role || "STAFF").trim().toUpperCase();
+  const userRoleUpper = String(currentUser?.role || "").trim().toUpperCase();
+  const isHeadmasterPortal = ["ADMIN", "SUPER_ADMIN", "HEADMASTER", "PRINCIPAL"].includes(modeUpper);
+  const isHeadmaster =
+    isHeadmasterPortal &&
+    (isDemoSandboxMode() ||
+      !userRoleUpper ||
+      ["ADMIN", "SUPER_ADMIN", "HEADMASTER", "PRINCIPAL", "DEVELOPER"].includes(userRoleUpper));
+  const isStaffPriceListOnly = [
+    "TEACHER",
+    "STAFF",
+    "HR",
+    "SECRETARY",
+    "CLINIC",
+    "CLINIC_DOCTOR",
+    "CLINIC_NURSE"
+  ].includes(modeUpper);
+  const canRequestItem = ["STUDENT", "PARENT"].includes(modeUpper);
+  const canOperateStore = isHeadmaster;
+  const canViewAudit = isHeadmaster || modeUpper === "ACCOUNTANT";
 
   const [activeSubTab, setActiveSubTab] = useState(
-    mode === "ACCOUNTANT" ? "AUDIT" : "CATALOG"
+    modeUpper === "ACCOUNTANT" ? "CATALOG" : "CATALOG"
   );
   const [items, setItems] = useState([]);
   const [schoolClasses, setSchoolClasses] = useState([]);
@@ -119,7 +137,7 @@ export default function SchoolStationeryHubPanel({
     itemId: "",
     quantity: "1",
     buyerName: `${currentUser?.firstName || ""} ${currentUser?.lastName || ""}`.trim() || "",
-    buyerRole: canOperateStore ? "STUDENT" : roleUpper,
+    buyerRole: canOperateStore ? "STUDENT" : modeUpper,
     buyerClass: currentUser?.className || currentUser?.gradeLevel || "",
     notes: ""
   });
@@ -473,12 +491,16 @@ export default function SchoolStationeryHubPanel({
             OFFICIAL SCHOOL BOOKSHOP &amp; STATIONERY STORE
           </span>
           <h3 style={{ margin: 0, fontSize: "1.2rem", fontWeight: 900, color: "#f6dd84" }}>
-            🎒 School Stationery, Uniforms &amp; Textbooks Store
+            🎒 {isStaffPriceListOnly ? "Official School Stationery Price List (View Only)" : "School Stationery, Uniforms & Textbooks Store"}
           </h3>
           <p style={{ margin: "4px 0 0", fontSize: "0.82rem", color: "#e2e8f0" }}>
             {isHeadmaster
-              ? "Headmaster Authority Active: You hold exclusive authority to set & edit official item prices displayed across every portal."
-              : "All prices below are officially fixed by the Institution Headmaster. Sales & restock expenses sync automatically to Accountancy."}
+              ? "Headmaster Authority Active: You hold exclusive authority to add stationery items, set & edit official prices, and manage store stock across every portal."
+              : isStaffPriceListOnly
+                ? "Read-Only Stationery Price List: Staff may only view the official prices listed by the Headmaster. Adding or editing prices is strictly restricted to the Headmaster."
+                : modeUpper === "ACCOUNTANT"
+                  ? "Read-Only Price Catalog & Financial Audit: Official stationery prices are set strictly by the Headmaster; view synced store revenue & expenses in the Audit tab."
+                  : "All prices below are officially fixed by the Institution Headmaster and cannot be edited by other users."}
           </p>
         </div>
 
@@ -497,25 +519,27 @@ export default function SchoolStationeryHubPanel({
               cursor: "pointer"
             }}
           >
-            📚 Catalog &amp; Prices ({items.length})
+            📚 Listed Prices ({items.length})
           </button>
 
-          <button
-            type="button"
-            onClick={() => setActiveSubTab("SALES_ORDERS")}
-            style={{
-              padding: "8px 14px",
-              borderRadius: "8px",
-              border: activeSubTab === "SALES_ORDERS" ? "2px solid #f6dd84" : "1px solid rgba(255,255,255,0.22)",
-              background: activeSubTab === "SALES_ORDERS" ? "#cfa028" : "rgba(255,255,255,0.08)",
-              color: activeSubTab === "SALES_ORDERS" ? "#081833" : "#f8fafc",
-              fontWeight: 800,
-              fontSize: "0.82rem",
-              cursor: "pointer"
-            }}
-          >
-            🛒 {canOperateStore ? "Record Sale / Orders" : "Request Item"} ({transactions.length})
-          </button>
+          {(canOperateStore || canRequestItem) && (
+            <button
+              type="button"
+              onClick={() => setActiveSubTab("SALES_ORDERS")}
+              style={{
+                padding: "8px 14px",
+                borderRadius: "8px",
+                border: activeSubTab === "SALES_ORDERS" ? "2px solid #f6dd84" : "1px solid rgba(255,255,255,0.22)",
+                background: activeSubTab === "SALES_ORDERS" ? "#cfa028" : "rgba(255,255,255,0.08)",
+                color: activeSubTab === "SALES_ORDERS" ? "#081833" : "#f8fafc",
+                fontWeight: 800,
+                fontSize: "0.82rem",
+                cursor: "pointer"
+              }}
+            >
+              🛒 {canOperateStore ? "Record Sale / Orders" : "Request Item"} ({transactions.length})
+            </button>
+          )}
 
           {canOperateStore && (
             <button
@@ -771,6 +795,7 @@ export default function SchoolStationeryHubPanel({
             </form>
           ) : (
             <div
+              data-testid="stationery-readonly-price-notice"
               style={{
                 background: surfaceBg,
                 border: cardBorder,
@@ -785,7 +810,7 @@ export default function SchoolStationeryHubPanel({
                 gap: "8px"
               }}
             >
-              <span>🔒 <strong>Price Lock Policy:</strong> Unit prices are strictly set and updated only by the Headmaster. You can record sales/orders or browse items transparently.</span>
+              <span>🔒 <strong>Official Stationery Price List (Read-Only):</strong> Only the Headmaster has access to create stationery items and edit prices. You can view the listed prices by category and class level below.</span>
             </div>
           )}
 
@@ -878,7 +903,7 @@ export default function SchoolStationeryHubPanel({
                         </span>
                       </div>
 
-                      {isEditing ? (
+                      {isEditing && isHeadmaster ? (
                         <div style={{ display: "flex", flexDirection: "column", gap: "6px" }}>
                           <input
                             type="text"
@@ -1039,35 +1064,37 @@ export default function SchoolStationeryHubPanel({
                       )}
                     </div>
 
-                    {!isEditing && (
+                    {!isEditing && (canOperateStore || canRequestItem || isHeadmaster) && (
                       <div style={{ display: "flex", gap: "6px", flexWrap: "wrap" }}>
-                        <button
-                          type="button"
-                          onClick={() => {
-                            setSaleForm((prev) => ({
-                              ...prev,
-                              itemId: item.id,
-                              quantity: "1",
-                              buyerClass: classFilter !== "ALL_CLASSES"
-                                ? classFilter
-                                : (item.targetClass && item.targetClass !== "ALL_CLASSES" ? item.targetClass : prev.buyerClass)
-                            }));
-                            setActiveSubTab("SALES_ORDERS");
-                          }}
-                          style={{
-                            flex: 1,
-                            padding: "7px 10px",
-                            borderRadius: "8px",
-                            border: "none",
-                            background: "#081833",
-                            color: "#f6dd84",
-                            fontWeight: 800,
-                            fontSize: "0.78rem",
-                            cursor: "pointer"
-                          }}
-                        >
-                          {canOperateStore ? "Record Sale" : "Order Item"}
-                        </button>
+                        {(canOperateStore || canRequestItem) && (
+                          <button
+                            type="button"
+                            onClick={() => {
+                              setSaleForm((prev) => ({
+                                ...prev,
+                                itemId: item.id,
+                                quantity: "1",
+                                buyerClass: classFilter !== "ALL_CLASSES"
+                                  ? classFilter
+                                  : (item.targetClass && item.targetClass !== "ALL_CLASSES" ? item.targetClass : prev.buyerClass)
+                              }));
+                              setActiveSubTab("SALES_ORDERS");
+                            }}
+                            style={{
+                              flex: 1,
+                              padding: "7px 10px",
+                              borderRadius: "8px",
+                              border: "none",
+                              background: "#081833",
+                              color: "#f6dd84",
+                              fontWeight: 800,
+                              fontSize: "0.78rem",
+                              cursor: "pointer"
+                            }}
+                          >
+                            {canOperateStore ? "Record Sale" : "Order Item"}
+                          </button>
+                        )}
                         {isHeadmaster && (
                           <button
                             type="button"
@@ -1107,7 +1134,7 @@ export default function SchoolStationeryHubPanel({
       )}
 
       {/* TAB 2: RECORD SALES OR SUBMIT ITEM ORDER REQUEST */}
-      {activeSubTab === "SALES_ORDERS" && (
+      {activeSubTab === "SALES_ORDERS" && (canOperateStore || canRequestItem) && (
         <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(300px, 1fr))", gap: "16px" }}>
           <form
             onSubmit={handleSubmitSaleOrOrder}

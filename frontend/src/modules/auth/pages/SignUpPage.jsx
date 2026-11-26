@@ -13,6 +13,8 @@ const ONBOARDING_TRACKS = [
   { id: "PARENT", title: "Parent / Guardian", icon: "👨‍👩‍👧", desc: "Family & Child Monitoring", color: "#f59e0b" },
   { id: "ACCOUNTANT", title: "Accountant / Bursar", icon: "📊", desc: "Finance & Payroll Officer", color: "#ec4899" },
   { id: "HR", title: "Human Resources (HR)", icon: "🛡️", desc: "HR Manager & Faculty Auditing", color: "#06b6d4" },
+  { id: "CLINIC_DOCTOR", title: "School Clinic Doctor", icon: "🩺", desc: "Licensed School Medical Doctor", color: "#10b981" },
+  { id: "CLINIC_NURSE", title: "School Clinic Nurse", icon: "🏥", desc: "School Nurse & Sickbay Officer", color: "#14b8a6" },
   { id: "ALUMNI", title: "Alumni / Graduate", icon: "🏛️", desc: "Graduates, Mentorship & Alumni Network", color: "#6366f1" },
   { id: "STAFF", title: "Staff & Operations", icon: "💼", desc: "Logistics & Administrative", color: "#64748b" },
   { id: "HEADMASTER_REPLACEMENT", title: "Headmaster Replacement", icon: "👑", desc: "Executive Succession & Picture Upload", color: "#38bdf8" }
@@ -152,6 +154,8 @@ export default function SignUpPage({ defaultRole }) {
     if (location.pathname.includes("/parent")) return "PARENT";
     if (location.pathname.includes("/accountant")) return "ACCOUNTANT";
     if (location.pathname.includes("/hr")) return "HR";
+    if (location.pathname.includes("/clinic_nurse")) return "CLINIC_NURSE";
+    if (location.pathname.includes("/clinic")) return "CLINIC_DOCTOR";
     if (location.pathname.includes("/alumni")) return "ALUMNI";
     if (location.pathname.includes("/staff")) return "STAFF";
     return "INSTITUTION";

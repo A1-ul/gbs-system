@@ -26,89 +26,127 @@ const LOCAL_MEMORY_TOPICS = [
   {
     id: "role_headmaster",
     phrases: ["headmaster portal", "admin portal", "principal portal", "headmaster dashboard", "admin dashboard", "headmaster role"],
+    phrases: ["headmaster portal", "admin portal", "principal portal", "headmaster dashboard", "admin dashboard", "headmaster role", "headmaster performance"],
     keywords: ["headmaster", "principal", "chancellor", "rector", "provost"],
     answer:
       "The Headmaster / Principal Portal (/portal/admin/dashboard) includes Pending Staff & Admissions Approvals, Staff Duty Attendance Monitor (+2h auto clock-out), School Stationery Price Authority Desk (exclusive control to set official Textbook, Cardigan, Socks, and School Bag prices), Live Faculty & Parent Video/Voice Conferences, Academics/Timetables/Defaulters Compliance, All-Campus School Clinic & Sickbay Registry, Bus Transport, and 4-Month Term Trial / Per-Student Subscription Management.",
+    "The Headmaster / Principal Portal serves as the executive command center of the school. End-to-end roles and performance tracking include: approving newly registered staff (Teachers, Secretary, Clinic Doctors/Nurses, Accountants, HR, Staff) and walk-in or online student admissions; holding exclusive authority to add school stationery items and set or edit official stationery prices across classes; vetting Teacher 16-element Ghana NaCCA lesson plans and end-of-term examinations; monitoring full-term Staff Duty Clock-In and auto clock-out compliance; overseeing academic schedules, promotions, defaulters compliance, bus routes, inbuilt CCTV, institutional System Language, live 30fps video/voice conferences, and term subscription renewals; plus viewing their own read-only medical health status.",
     route: "/portal/admin/dashboard"
   },
   {
     id: "role_teacher",
     phrases: ["teacher portal", "lecturer portal", "teacher dashboard", "lecturer dashboard", "teacher role", "lecturer role", "teacher activities", "faculty portal", "know about the teacher", "about the teacher"],
+    phrases: ["teacher portal", "lecturer portal", "teacher dashboard", "lecturer dashboard", "teacher role", "lecturer role", "teacher activities", "teacher performance", "faculty portal", "know about the teacher", "about the teacher"],
     keywords: ["teacher", "lecturer", "faculty", "instructor", "educator"],
     answer:
       "The Teacher / Lecturer Portal (/portal/teacher/dashboard) connects Faculty directly to Staff Duty Clock-In, Daily Student Attendance Roll Call, Class Topic Video Platform (upload/record lessons), Assignments & Homework Grading, AI-Proctored Exam Creation & Live Camera Wall (issue warnings, save evidence snapshots, deduct lost marks), High-Speed Live Class & Parent Video/Voice Calls, Tier Academics & University/TVET Placements, Defaulters Compliance Monitor, School Stationery Catalog & Requests, Direct SMS Inbox, and Personal Clinic Health Dossier.",
+    "The Teacher / Lecturer Portal drives classroom delivery and student academic performance end to end: Staff Duty Clock-In; tick-by-tick daily student attendance roll call and weekly archives; 16-element Ghana NaCCA lesson planning with Headmaster vetting and post-lesson reflections; end-of-term exam vetting, live 1.0x real-time exam invigilation camera wall (warnings, saved evidence, lost-mark deductions), and unlimited-question AI exam script scanning; Class Topic Video recording/uploading; assignments, defaulters tracking, live online classes and parent calls; read-only viewing of Headmaster stationery prices; and read-only viewing of their own personal medical health status.",
     route: "/portal/teacher/dashboard"
+  },
+  {
+    id: "role_clinic",
+    phrases: ["clinic portal", "school clinic dashboard", "doctor portal", "nurse portal", "clinic dashboard", "clinic role", "doctor role", "nurse role", "about the clinic", "clinic performance"],
+    keywords: ["clinic", "doctor", "nurse", "sickbay", "medical", "pharmacy", "health status"],
+    answer:
+      "The separate School Clinic Dashboard is operated strictly by authorized School Doctors and Nurses only. End-to-end medical operations include: managing all student and staff medical profiles automatically linked from Admissions; recording consultations, vitals, clinical diagnoses, prescriptions, sickbay admissions and discharges; pulling emergency cross-portal medical dossiers; dispatching parent medical SMS alerts; managing School Clinic pharmacy stock; clocking in at the Clinic Desk; and viewing read-only Stationery prices. Remaining school staff and Headmaster cannot operate the clinic and only see their own medical health status in read-only mode.",
+    route: "/portal/clinic/dashboard"
   },
   {
     id: "role_secretary",
     phrases: ["secretary portal", "secretary dashboard", "school secretary", "front desk portal", "secretary role", "secretary activities", "about the secretary"],
+    phrases: ["secretary portal", "secretary dashboard", "school secretary", "front desk portal", "secretary role", "secretary activities", "secretary performance", "about the secretary"],
     keywords: ["secretary", "visitor log", "circular", "official letter", "appointment", "appointments", "minutes", "reception"],
     answer:
       "The School Secretary Portal (/portal/secretary/dashboard) manages Front-Desk Campus Visitor Check-In/Out Logs, Official Letters, Circulars, Certificates & Meeting Minutes, Headmaster Appointments Scheduling, Staff Duty Clock-In, School Stationery Store Sales & Expenses (auto-synced directly to Accountant Expenses Ledger), Direct SMS & Voice Notes, Live Video/Voice Calls, and Personal Clinic Health Dossier.",
+    "The School Secretary Portal manages the school's front-office workflow end to end: Staff Duty Clock-In, Campus Visitor Check-In and Check-Out logs, Official School Letters, Parent/Staff Circulars and Meeting Minutes, Headmaster Appointments scheduling and completion tracking, Direct Mobile SMS, Voice Notes, and Live 30fps Video/Voice Calls, plus read-only access to the Headmaster Stationery Price List and their own read-only personal medical health status.",
     route: "/portal/secretary/dashboard"
   },
   {
     id: "role_student",
     phrases: ["student portal", "student dashboard", "student role", "student activities", "about the student", "undergraduate portal"],
+    phrases: ["student portal", "student dashboard", "student role", "student activities", "student performance", "about the student", "undergraduate portal"],
     keywords: ["student", "pupil", "apprentice", "undergraduate", "learner"],
     answer:
       "The Student Portal (/portal/student/dashboard) gives learners their Live Timetable, Class Topic Video Player, Homework Submissions, Report Cards, AI-Proctored Exam Runner & Live Cooperative Study Rooms, separated Internships & Academic Attachments (for TVET/University), School Stationery Catalog & Requests, Fee Balance & MoMo/Card Checkout, Bus Transport, and Self-Only Clinic Health Record.",
+    "The Student Portal supports learners end to end: live timetables, Teacher Class Topic Videos, homework submissions, digital syllabus library, AI-proctored online exams, live cooperative study video conferencing, verified report cards and transcripts, tier-native Internships and Academic Attachments, student self-payment of school fees into official School Bank or MoMo accounts with automatic Student Payee referencing, official stationery price browsing, and read-only personal medical health status.",
     route: "/portal/student/dashboard"
   },
   {
     id: "role_parent",
     phrases: ["parent portal", "guardian portal", "parent dashboard", "parent role", "guardian role", "parent activities", "about the parent"],
+    phrases: ["parent portal", "guardian portal", "parent dashboard", "parent role", "guardian role", "parent activities", "parent performance", "about the parent"],
     keywords: ["parent", "guardian", "mother", "father", "ward"],
     answer:
       "The Parent / Guardian Portal (/portal/parent/dashboard) provides Linked Ward Switching, Attendance & Report Card Monitoring, Tuition Payment via Any Phone MoMo/Card, Headmaster-Priced School Stationery Catalog & Orders, Live Video/Voice Calls with Headmaster & Teachers, Direct SMS & Voice Notes, Bus Transit Status, and Linked Ward Clinic Health Info.",
+    "The Parent / Guardian Portal connects families end to end: linked ward switching, real-time daily attendance and verified report cards, school fee settlement via MTN MoMo, Telecel Cash, AT Money, Visa, Mastercard, or Bank Transfer with live tracking of both parent-paid and student self-paid receipts, Headmaster-priced School Stationery browsing, live 30fps Video/Voice calls and Direct SMS with the Headmaster and Teachers, bus route monitoring, and read-only linked ward medical health status.",
     route: "/portal/parent/dashboard"
   },
   {
     id: "role_accountant",
     phrases: ["accountant portal", "bursar portal", "finance portal", "accountant dashboard", "bursar dashboard", "accountant role", "about the accountant"],
+    phrases: ["accountant portal", "bursar portal", "finance portal", "accountant dashboard", "bursar dashboard", "accountant role", "accountant performance", "about the accountant"],
     keywords: ["accountant", "bursar", "treasury", "auditing", "bookkeeping"],
     answer:
       "The Accountant / Bursar Portal (/portal/accountant/dashboard) operates Financial Telemetry, Class Fee Structures & Student Invoices, Multi-Gateway MoMo/Card Payment Reconciliation, School Stationery Revenue & Auto-Synced Expenses Audit (STATIONERY_SUPPLIES), Operating Expenses Ledger, HR Payroll & Loans, GAAP/IFRS Statements, and Personal Clinic Access.",
+    "The Accountant / Bursar Portal drives financial performance end to end: configuring class fee schedules and Official School Bank & MoMo receiving accounts, generating student invoices and debtor arrears holds, auditing live database payments separating Student Self-Payments vs Parent Payments with full Student Payee references, reviewing School Stationery revenue & expense audits (with read-only catalog prices), managing operating expenses, Alumni endowment gifts, HR payroll, and GAAP/IFRS financial statements, plus read-only personal medical health status.",
     route: "/portal/accountant/dashboard"
   },
   {
     id: "role_staff",
     phrases: ["staff portal", "staff dashboard", "non-teaching staff", "staff role", "staff activities", "about the staff"],
+    phrases: ["staff portal", "staff dashboard", "non-teaching staff", "staff role", "staff activities", "staff performance", "about the staff"],
     keywords: ["non-teaching", "storekeeper", "logistics"],
     answer:
       "The Non-Teaching Staff Portal (/portal/staff/dashboard) handles Staff Duty Clock-In (+2h auto-clock-out), Campus Inventory & Asset Tracking, School Stationery Sales & Expense Sync to Accountancy, Transport Dispatch, Leave Requests, Live Calls, and Personal Clinic Health Dossier.",
+    "The Non-Teaching Staff Portal coordinates daily campus operations end to end: Staff Duty Clock-In (+2h auto clock-out), assigned duties, campus inventory depot and asset tracking, facility maintenance SLA tickets, safety incident escalation, live Voice/Video calls, read-only viewing of Headmaster Stationery prices, and read-only personal medical health status.",
     route: "/portal/staff/dashboard"
   },
   {
     id: "role_hr",
     phrases: ["hr portal", "hr dashboard", "human resource portal", "hr role", "hr activities"],
+    phrases: ["hr portal", "hr dashboard", "human resource portal", "hr role", "hr activities", "hr performance"],
     keywords: ["hr", "human resource", "personnel", "contracts"],
     answer:
       "The Human Resources (HR) Portal (/portal/hr/dashboard) oversees Personnel Directories, Contracts, Leave Approvals, Staff Attendance Audits with the Headmaster, Payroll Grading, Staff Loans, and Personal Clinic Health Access.",
+    "The Human Resources (HR) Portal manages workforce performance end to end: Staff & Faculty Directory, contracts, Headmaster HR audit directives, leave approvals, full-term Staff Duty Attendance audits, payroll salary tiers, and read-only personal medical health status.",
     route: "/portal/hr/dashboard"
   },
   {
     id: "role_alumni",
     phrases: ["alumni portal", "alumni dashboard", "alumni role", "alumni activities"],
+    phrases: ["alumni portal", "alumni dashboard", "alumni role", "alumni activities", "alumni performance"],
     keywords: ["alumni", "former student", "graduated"],
     answer:
       "The Alumni Portal (/portal/alumni/dashboard) gives graduated cohorts Verified Academic Transcripts, Honours Tracking, Reunions, Mentorship, and Institutional Endowment Pledges.",
+    "The Alumni Portal connects graduated cohorts end to end: Day-1-to-graduation cumulative records, official sealed digital transcript requests, graduation clearance verification, completion batches, Zoom reunions and mentorship, and endowment pledges synced live to the Accountant ledger.",
     route: "/portal/alumni/dashboard"
   },
   {
     id: "school_stationery",
     phrases: ["school stationery", "stationery store", "stationary store", "school items", "who sets the price", "stationery expense"],
+    phrases: ["school stationery", "stationery store", "stationary store", "school items", "who sets the price", "stationery price"],
     keywords: ["stationery", "stationary", "textbook", "textbooks", "cardigan", "cardigans", "socks", "school bag", "school bags", "exercise book", "uniforms", "bookshop"],
     answer:
       "School Stationery Store displays Textbooks, Cardigans, School Socks, School Bags, Exercise Books, and Uniforms across every dashboard. Strictly ONLY the Headmaster can set or edit prices. Secretaries, Staff, and Accountants record sales and store expenses, and all stationery expenses sync automatically into the Accountant Expenses Ledger (STATIONERY_SUPPLIES) for auditing.",
+    "School Stationery Pricing Policy: Strictly ONLY the Headmaster has authority to add stationery items and set or edit official prices across every class level. Teachers, Secretaries, Clinic Doctors and Nurses, HR, and all other staff only view the listed stationery prices in read-only mode without adding or editing prices.",
     tab: "stationery"
+  },
+  {
+    id: "jolly_phonics_alphabets",
+    phrases: ["jolly phonics", "42 sounds", "42 jolly phonics", "country alphabets", "how letters are written", "alphabet writing"],
+    keywords: ["phonics", "jolly", "alphabet", "alphabets", "handwriting", "trace", "letter sounds"],
+    answer:
+      "Open the Universal Language Translator to access Mode 4 (All 42 Jolly Phonics Sounds across Groups 1 to 7 with audio, actions, example words, and a 4-line letter tracing canvas) and Mode 5 (Country & Language Alphabets for all 17 countries on the system including Ghana Twi, Ga, Ewe, Nigeria Hausa and Yoruba, Kenya Kiswahili, South Africa isiZulu, French, German, Spanish, Portuguese, Arabic RTL, Hindi Devanagari, Chinese Pinyin and Hanzi strokes, and Japanese Hiragana).",
+    tab: null
   },
   {
     id: "clinic",
     phrases: ["school clinic", "medical record", "sickbay treatment", "health dossier"],
+    phrases: ["school clinic", "medical record", "sickbay treatment", "health dossier", "health status"],
     keywords: ["clinic", "sickbay", "medical", "health", "doctor", "nurse", "sick", "hospital", "medicine", "blood", "genotype", "allergy"],
     answer:
       "In the GBS School Clinic, privacy is strictly enforced: regular users (Student, Teacher, Secretary, Staff, HR, Accountant) only view their own personal health profile and visit history, and Parents only view their linked ward's health profile — without clinic admin queues or other people's data. Only the Headmaster sees all Staff and Student clinic profiles, Sickbay admissions, treatments, and pharmacy stock on the Headmaster Dashboard.",
+    "The School Clinic runs as a separate dashboard operated exclusively by School Doctors and Nurses, who manage medical profiles, consultations, sickbay admissions, and pharmacy stock. All other staff (Headmaster, Teachers, Secretary, Accountant, HR, Non-Teaching Staff) and Students only view their own medical health status in read-only mode without editing and cannot see clinic operations; Parents view only their linked ward's health status.",
     tab: "clinic"
   },
   {
@@ -125,6 +163,7 @@ const LOCAL_MEMORY_TOPICS = [
     keywords: ["roles", "responsibilities", "dashboards", "duties"],
     answer:
       "GBS links 9 institutional portals: Headmaster/Admin (approvals, stationery pricing, all clinic dossiers, term renewals), Teacher/Lecturer (attendance, topic videos, AI-proctored exams, live class calls, placements), School Secretary (visitor logs, official letters/circulars, appointments, stationery sales & expenses), Student (timetables, proctored exams, homework, stationery orders), Parent (ward progress, MoMo fee checkout, calls), Accountant (invoices, payroll, synced stationery expense audit), Non-Teaching Staff (inventory, stationery, transport), HR (contracts, leave, attendance audits), and Alumni (transcripts & pledges).",
+    "GBS links 10 unified institutional portals: Headmaster/Principal (approvals, exclusive stationery pricing authority, lesson & exam vetting, staff attendance, CCTV, language, and own read-only health status), separate School Clinic (operated strictly by School Doctors and Nurses for medical dossiers, consultations, sickbay, and pharmacy), Teacher/Lecturer (attendance, NaCCA lesson plans, topic videos, 1.0x AI-proctored exams, unlimited script scanner, live class calls, and read-only stationery prices & own health status), School Secretary (front-office visitor logs, official letters/circulars, appointments, and read-only stationery prices & own health status), Student (timetables, proctored exams, self-payments, library, stationery orders, and own health status), Parent (ward progress, MoMo fee checkout, calls, and ward read-only health status), Accountant (invoices, payroll, financial statements, and read-only stationery audit), Non-Teaching Staff (campus logistics, duties, maintenance, and read-only stationery prices & own health status), HR (contracts, leave, payroll structure, attendance audits, and read-only stationery prices & own health status), and Alumni (cumulative transcripts, clearance, & pledges).",
     tab: null
   },
   {
@@ -312,6 +351,20 @@ const INTRO_GREETING =
   "Hello! Welcome to GBS SYSTEM. What action, what command, what activities, or what information do you want to know and learn on GBS SYSTEM? We are ready to answer you!";
 
 const AMERICAN_MALE_VOICE_KEYWORDS = [
+const CLEAR_ACTIVE_VOICE_PRIORITY = [
+  "microsoft andrew online (natural)",
+  "microsoft guy online (natural)",
+  "microsoft aria online (natural)",
+  "microsoft christopher online (natural)",
+  "microsoft brian online (natural)",
+  "microsoft jenny online (natural)",
+  "google us english",
+  "google uk english male",
+  "google uk english female",
+  "samantha",
+  "alex",
+  "daniel",
+  "microsoft mark",
   "microsoft guy",
   "microsoft david",
   "microsoft mark",
@@ -338,6 +391,11 @@ const AMERICAN_MALE_VOICE_KEYWORDS = [
   "justin",
   "stephen",
   "male"
+  "microsoft zira",
+  "natural",
+  "neural",
+  "online",
+  "enhanced"
 ];
 
 const FEMALE_VOICE_EXCLUDE_KEYWORDS = [
@@ -377,6 +435,7 @@ export function selectPreferredAmericanMaleVoice(voices = []) {
     let score = 0;
 
     const isUsEnglish = lang === "en-us" || lang.startsWith("en-us");
+    const isGbEnglish = lang === "en-gb" || lang.startsWith("en-gb");
     const isAnyEnglish = lang.startsWith("en");
     const isFemale = FEMALE_VOICE_EXCLUDE_KEYWORDS.some((kw) => name.includes(kw));
     const maleIdx = AMERICAN_MALE_VOICE_KEYWORDS.findIndex((kw) => name.includes(kw));
@@ -384,1038 +443,1195 @@ export function selectPreferredAmericanMaleVoice(voices = []) {
 
     if (isUsEnglish) score += 100;
     else if (isAnyEnglish) score += 35;
+    if (isUsEnglish) score += 90;
+    else if (isGbEnglish) score += 75;
+    else if (isAnyEnglish) score += 50;
 
     if (isMale) {
       score += 120 - Math.min(maleIdx, 30);
-    }
-    if (isFemale) {
-      score -= 140;
-    }
-    if (name.includes("natural") || name.includes("online") || name.includes("neural") || name.includes("enhanced")) {
-      score += 18;
-    }
-    if (isUsEnglish && !isFemale && (name.includes("google us english") || name.includes("en-us"))) {
-      score += 20;
-    }
-    return score;
-  };
-
-  let best = voices[0];
-  let bestScore = -Infinity;
-  for (const v of voices) {
-    const sc = scoreVoice(v);
-    if (sc > bestScore) {
-      bestScore = sc;
-      best = v;
-    }
-  }
-  return best || null;
-}
-
-const DONE_INTENT_REGEX = /\b(we are done|i am done|i'm done|yes done|done now|all done|finished|nothing else|no more|no other|that's all|that is all|conversation is over|go to sleep|go off|sleep now|goodbye|bye bye|stop listening|turn off)\b/i;
-const ANOTHER_INTENT_REGEX = /\b(there is another|another question|another one|one more|not done|not yet|have another|more help|still here)\b/i;
-const FOLLOWUP_PROMPT = "Are we done with what you want, or is there another? Tell me if there is another, or say we are done.";
-
-export default function GBSVoiceAssistant() {
-  const navigate = useNavigate();
-
-  const [isOpen, setIsOpen] = useState(false);
-  const [isMinimized, setIsMinimized] = useState(false);
-  const [isSleeping, setIsSleeping] = useState(true);
-  const [assistantPos, setAssistantPos] = useState(() => {
-    try {
-      const saved = JSON.parse(localStorage.getItem("gbs_voice_assistant_pos") || "null");
-      if (saved && typeof saved.right === "number" && typeof saved.bottom === "number") {
-        return saved;
+      // Prioritize clear, natural, lively modern Neural/Online voices over robotic legacy SAPI voices
+      if (name.includes("natural") || name.includes("neural") || name.includes("online") || name.includes("enhanced")) {
+        score += 110;
       }
-    } catch { }
-    return { right: 20, bottom: 20 };
-  });
-  const dragStateRef = useRef({ active: false, startX: 0, startY: 0, startRight: 20, startBottom: 20, moved: false });
-  const [isListening, setIsListening] = useState(false);
-  const [isSpeaking, setIsSpeaking] = useState(false);
-  const [transcript, setTranscript] = useState("");
-  const [typedInput, setTypedInput] = useState("");
-  const [assistantResponse, setAssistantResponse] = useState(INTRO_GREETING);
-  const [conversationMessages, setConversationMessages] = useState([]);
-  const [continuousListening, setContinuousListening] = useState(true);
-  const [speechSupported, setSpeechSupported] = useState(true);
-  const [memorySyncedVersion, setMemorySyncedVersion] = useState("2.7.0");
-
-  const [voiceRate, setVoiceRate] = useState(() => {
-    try {
-      const saved = parseFloat(localStorage.getItem("gbs_voice_rate") || "");
-      if (Number.isFinite(saved) && saved >= 0.72 && saved <= 1.0) return saved;
-    } catch { }
-    return 0.88; // Clear, measured American English speaking pace (never fast mode)
-  });
-  const [voicePitch, setVoicePitch] = useState(0.93);
-  const [selectedVoiceIndex, setSelectedVoiceIndex] = useState(0);
-  const [availableVoices, setAvailableVoices] = useState([]);
-  const [activeVoiceLabel, setActiveVoiceLabel] = useState("US English Male");
-
-  const recognitionRef = useRef(null);
-  const synthRef = useRef(typeof window !== "undefined" ? window.speechSynthesis : null);
-  const isSpeakingRef = useRef(false);
-  const isOpenRef = useRef(false);
-  const isSleepingRef = useRef(true);
-  const continuousRef = useRef(true);
-  const processCommandRef = useRef(null);
-  const silenceTimerRef = useRef(null);
-  const lastTranscriptRef = useRef("");
-  const lastRawQueryRef = useRef("");
-  const lastProcessedRef = useRef({ text: "", time: 0 });
-  const memoryCatalogRef = useRef(null);
-  const chatEndRef = useRef(null);
-
-  useEffect(() => {
-    isOpenRef.current = isOpen;
-  }, [isOpen]);
-
-  useEffect(() => {
-    isSleepingRef.current = isSleeping;
-  }, [isSleeping]);
-
-  useEffect(() => {
-    continuousRef.current = continuousListening;
-  }, [continuousListening]);
-
-  useEffect(() => {
-    if (chatEndRef.current) {
-      chatEndRef.current.scrollIntoView({ behavior: "smooth" });
-    }
-  }, [conversationMessages, isOpen]);
-
-  // Preload System Memory from backend for sub-50ms instant voice answers
-  const refreshSystemMemory = async () => {
-    try {
-      const res = await apiClient.get("/ai/system-memory");
-      const data = res?.data?.data;
-      if (data) {
-        memoryCatalogRef.current = data;
-        if (data.version) setMemorySyncedVersion(data.version);
-      }
-    } catch { }
-  };
-
-  useEffect(() => {
-    refreshSystemMemory();
-  }, []);
-
-  useEffect(() => {
-    if (typeof window === "undefined" || !("speechSynthesis" in window)) {
-      setSpeechSupported(false);
-      return;
-    }
-    const loadVoices = () => {
-      const voices = window.speechSynthesis.getVoices();
-      if (voices && voices.length > 0) {
-        const englishVoices = voices.filter((v) => String(v.lang || "").toLowerCase().startsWith("en"));
-        const pool = englishVoices.length > 0 ? englishVoices : voices;
-        setAvailableVoices(pool);
-        const preferred = selectPreferredAmericanMaleVoice(pool);
-        if (preferred) {
-          const prefIdx = pool.indexOf(preferred);
-          if (prefIdx >= 0) setSelectedVoiceIndex(prefIdx);
-          setActiveVoiceLabel(`${preferred.name} (${preferred.lang || "en-US"})`);
+      if (isFemale) {
+        score -= 140;
+        if (name.includes("google us english") || name.includes("google uk english")) {
+          score += 95;
         }
-      }
-    };
-    loadVoices();
-    if (window.speechSynthesis.onvoiceschanged !== undefined) {
-      window.speechSynthesis.onvoiceschanged = loadVoices;
-    }
-  }, []);
+        if (name.includes("natural") || name.includes("online") || name.includes("neural") || name.includes("enhanced")) {
+          score += 18;
 
-  const appendMessage = (sender, text, formation = null, answerOnly = null) => {
-    const time = new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" });
-    setConversationMessages((prev) => [...prev.slice(-28), { sender, text, time, formation, answerOnly }]);
-  };
-
-  const safelyStartRecognition = () => {
-    if (
-      !recognitionRef.current ||
-      !isOpenRef.current ||
-      isSleepingRef.current ||
-      !continuousRef.current ||
-      isSpeakingRef.current
-    ) {
-      return;
-    }
-    try {
-      recognitionRef.current.start();
-    } catch {
-      // recognition already started
-    }
-  };
-
-  const clearSilenceTimer = () => {
-    if (silenceTimerRef.current) {
-      clearTimeout(silenceTimerRef.current);
-      silenceTimerRef.current = null;
-    }
-  };
-
-  // Continuous speech recognizer with instant 550ms end-of-statement reaction
-  useEffect(() => {
-    if (typeof window === "undefined") return;
-    const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
-
-    if (!SpeechRecognition) {
-      setSpeechSupported(false);
-      return;
-    }
-
-    const recognition = new SpeechRecognition();
-    recognition.continuous = true;
-    recognition.interimResults = true;
-    recognition.lang = getLanguageProfile().speechLocale || "en-US";
-
-    const syncRecognitionLocale = () => {
-      try {
-        recognition.lang = getLanguageProfile().speechLocale || "en-US";
-      } catch { }
-    };
-    window.addEventListener("gbs_locale_changed", syncRecognitionLocale);
-
-    recognition.onstart = () => {
-      setIsListening(true);
-    };
-
-    const dispatchCapturedStatement = (phrase) => {
-      const clean = String(phrase || "").trim();
-      if (!clean) return;
-      const now = Date.now();
-      const prev = lastProcessedRef.current;
-      if (prev.text === clean.toLowerCase() && now - prev.time < 2600) {
-        return; // Deduplicate identical interim+final firing
-      }
-      lastProcessedRef.current = { text: clean.toLowerCase(), time: now };
-      clearSilenceTimer();
-      lastTranscriptRef.current = "";
-      if (processCommandRef.current) {
-        processCommandRef.current(clean);
-      }
-    };
-
-    recognition.onresult = (event) => {
-      let currentTranscript = "";
-      for (let i = event.resultIndex; i < event.results.length; i++) {
-        currentTranscript += event.results[i][0].transcript;
-      }
-      const trimmed = currentTranscript.trim();
-      setTranscript(trimmed);
-      lastTranscriptRef.current = trimmed;
-
-      const lastResult = event.results[event.results.length - 1];
-      if (lastResult?.isFinal && trimmed) {
-        dispatchCapturedStatement(trimmed);
-      } else if (trimmed.length >= 2) {
-        // Fast end-of-statement trigger: fires 550ms after speaker finishes sentence without waiting 2-3s
-        clearSilenceTimer();
-        silenceTimerRef.current = setTimeout(() => {
-          if (lastTranscriptRef.current === trimmed && !isSpeakingRef.current && isOpenRef.current && !isSleepingRef.current) {
-            dispatchCapturedStatement(trimmed);
+          const priIdx = CLEAR_ACTIVE_VOICE_PRIORITY.findIndex((kw) => name.includes(kw));
+          if (priIdx !== -1) {
+            score += 80 - Math.min(priIdx * 3, 55);
           }
-        }, 550);
-      }
-    };
+          if (isUsEnglish && !isFemale && (name.includes("google us english") || name.includes("en-us"))) {
+            score += 20;
 
-    recognition.onerror = (event) => {
-      if (event.error === "not-allowed" || event.error === "service-not-allowed") {
-        setIsListening(false);
-      }
-    };
+            // Penalize muffled/robotic legacy voices when clearer voices exist
+            if (name.includes("espeak") || name.includes("festival") || name.includes("sam ")) {
+              score -= 80;
+            }
 
-    recognition.onend = () => {
-      clearSilenceTimer();
-      if (isOpenRef.current && !isSleepingRef.current && continuousRef.current && !isSpeakingRef.current) {
-        setTimeout(() => safelyStartRecognition(), 140);
-      } else {
-        setIsListening(false);
-      }
-    };
+            return score;
+          };
 
-    recognitionRef.current = recognition;
-
-    return () => {
-      clearSilenceTimer();
-      window.removeEventListener("gbs_locale_changed", syncRecognitionLocale);
-      try {
-        recognition.stop();
-      } catch { }
-    };
-  }, []);
-
-  const speakAloud = (text, onComplete = null) => {
-    if (!synthRef.current || !("speechSynthesis" in window)) {
-      if (onComplete) onComplete();
-      return;
-    }
-
-    try {
-      synthRef.current.cancel();
-    } catch { }
-
-    const allVoices =
-      (availableVoices && availableVoices.length > 0)
-        ? availableVoices
-        : (typeof window !== "undefined" && window.speechSynthesis?.getVoices ? window.speechSynthesis.getVoices() : []);
-    const utterance = new SpeechSynthesisUtterance(text);
-    const preferredMaleUsVoice = selectPreferredAmericanMaleVoice(allVoices);
-    const chosenVoice = preferredMaleUsVoice || allVoices[selectedVoiceIndex] || allVoices[0] || null;
-    if (chosenVoice) {
-      utterance.voice = chosenVoice;
-      const lowerName = String(chosenVoice.name || "").toLowerCase();
-      const soundsFemale = FEMALE_VOICE_EXCLUDE_KEYWORDS.some((kw) => lowerName.includes(kw));
-      // Keep warm, clear American male tone; lower pitch slightly if OS only exposes a neutral/female fallback voice
-      utterance.pitch = soundsFemale ? 0.78 : voicePitch;
-    } else {
-      utterance.pitch = voicePitch;
-    }
-    utterance.rate = Math.min(0.98, Math.max(0.75, Number(voiceRate) || 0.88));
-    utterance.lang = "en-US";
-    utterance.volume = 1.0;
-
-    utterance.onstart = () => {
-      setIsSpeaking(true);
-      isSpeakingRef.current = true;
-      clearSilenceTimer();
-      if (recognitionRef.current) {
-        try {
-          recognitionRef.current.stop();
-        } catch { }
-      }
-    };
-
-    const finishSpeech = () => {
-      setIsSpeaking(false);
-      isSpeakingRef.current = false;
-      if (onComplete) {
-        onComplete();
-      } else {
-        setTimeout(() => safelyStartRecognition(), 120);
-      }
-    };
-
-    utterance.onend = finishSpeech;
-    utterance.onerror = finishSpeech;
-    synthRef.current.speak(utterance);
-  };
-
-  const enterSleepMode = (
-    goodbyeText = "Alright, we are done. I am going off to sleep now. Click me anytime you need help on GBS SYSTEM!"
-  ) => {
-    clearSilenceTimer();
-    isSleepingRef.current = true;
-    setIsSleeping(true);
-    setIsListening(false);
-    setTranscript("");
-    setAssistantResponse(goodbyeText);
-    appendMessage("assistant", goodbyeText);
-
-    if (recognitionRef.current) {
-      try {
-        recognitionRef.current.stop();
-      } catch { }
-    }
-
-    speakAloud(goodbyeText, () => {
-      setTimeout(() => {
-        isOpenRef.current = false;
-        setIsOpen(false);
-      }, 380);
-    });
-
-    if (!synthRef.current || !("speechSynthesis" in window)) {
-      setTimeout(() => {
-        isOpenRef.current = false;
-        setIsOpen(false);
-      }, 750);
-    }
-  };
-
-  const wakeAndStartConversation = () => {
-    isSleepingRef.current = false;
-    isOpenRef.current = true;
-    setIsSleeping(false);
-    setIsMinimized(false);
-    setIsOpen(true);
-    setContinuousListening(true);
-    continuousRef.current = true;
-    refreshSystemMemory();
-
-    setAssistantResponse(INTRO_GREETING);
-    appendMessage("assistant", INTRO_GREETING);
-    speakAloud(INTRO_GREETING);
-  };
-
-  const handleDragStart = (e) => {
-    if (e.target.closest("button[data-no-drag='true']")) return;
-    const clientX = e.touches ? e.touches[0].clientX : e.clientX;
-    const clientY = e.touches ? e.touches[0].clientY : e.clientY;
-    dragStateRef.current = {
-      active: true,
-      startX: clientX,
-      startY: clientY,
-      startRight: assistantPos.right,
-      startBottom: assistantPos.bottom,
-      moved: false
-    };
-  };
-
-  useEffect(() => {
-    const onMove = (e) => {
-      if (!dragStateRef.current.active) return;
-      const clientX = e.touches ? e.touches[0].clientX : e.clientX;
-      const clientY = e.touches ? e.touches[0].clientY : e.clientY;
-      const dx = clientX - dragStateRef.current.startX;
-      const dy = clientY - dragStateRef.current.startY;
-      if (Math.abs(dx) > 4 || Math.abs(dy) > 4) {
-        dragStateRef.current.moved = true;
-      }
-      const maxRight = Math.max(20, (typeof window !== "undefined" ? window.innerWidth : 1200) - 90);
-      const maxBottom = Math.max(20, (typeof window !== "undefined" ? window.innerHeight : 800) - 80);
-      const nextRight = Math.max(8, Math.min(maxRight, dragStateRef.current.startRight - dx));
-      const nextBottom = Math.max(8, Math.min(maxBottom, dragStateRef.current.startBottom - dy));
-      const nextPos = { right: nextRight, bottom: nextBottom };
-      setAssistantPos(nextPos);
-      try {
-        localStorage.setItem("gbs_voice_assistant_pos", JSON.stringify(nextPos));
-      } catch { }
-    };
-    const onUp = () => {
-      if (dragStateRef.current.active) {
-        setTimeout(() => {
-          dragStateRef.current.active = false;
-          dragStateRef.current.moved = false;
-        }, 60);
-      }
-    };
-    window.addEventListener("mousemove", onMove);
-    window.addEventListener("mouseup", onUp);
-    window.addEventListener("touchmove", onMove, { passive: true });
-    window.addEventListener("touchend", onUp);
-    return () => {
-      window.removeEventListener("mousemove", onMove);
-      window.removeEventListener("mouseup", onUp);
-      window.removeEventListener("touchmove", onMove);
-      window.removeEventListener("touchend", onUp);
-    };
-  }, []);
-
-  const toggleAssistant = () => {
-    if (dragStateRef.current.moved) return;
-    if (!isOpen || isSleeping) {
-      wakeAndStartConversation();
-    } else if (isMinimized) {
-      setIsMinimized(false);
-    } else {
-      enterSleepMode("Going off to sleep now. Click me anytime you need help on GBS SYSTEM!");
-    }
-  };
-
-  useEffect(() => {
-    const handleVoiceTrigger = (e) => {
-      isSleepingRef.current = false;
-      isOpenRef.current = true;
-      setIsSleeping(false);
-      setIsOpen(true);
-      if (e?.detail?.query && processCommandRef.current) {
-        processCommandRef.current(e.detail.query);
-      } else {
-        wakeAndStartConversation();
-      }
-    };
-
-    window.addEventListener("gbs_open_voice_assistant", handleVoiceTrigger);
-    window.gbsVoiceAssistant = {
-      open: wakeAndStartConversation,
-      close: () => enterSleepMode(),
-      sleep: () => enterSleepMode(),
-      speak: (text) => speakAloud(text),
-      command: (cmd) => processCommandRef.current && processCommandRef.current(cmd)
-    };
-
-    return () => {
-      window.removeEventListener("gbs_open_voice_assistant", handleVoiceTrigger);
-      delete window.gbsVoiceAssistant;
-    };
-  }, []);
-
-  const triggerDashboardTab = (tabName) => {
-    if (!tabName) return;
-    window.dispatchEvent(new CustomEvent("gbs_open_dashboard_tab", { detail: { tab: tabName } }));
-  };
-
-  const matchInstantLocalMemory = (cleanCmd) => {
-    const qTokens = cleanCmd.split(/[^a-z0-9]+/).filter(Boolean);
-    const wantsPortalBreakdown = /\b(portal|dashboard|role|activities|duties|tabs|features|about)\b/i.test(cleanCmd);
-    let best = null;
-    let bestScore = 0;
-    for (const item of LOCAL_MEMORY_TOPICS) {
-      let score = 0;
-      for (const ph of (item.phrases || [])) {
-        if (cleanCmd.includes(ph)) score += 10;
-      }
-      for (const kw of (item.keywords || [])) {
-        if (kw.includes(" ")) {
-          if (cleanCmd.includes(kw)) score += 6;
-        } else if (qTokens.includes(kw) || cleanCmd.includes(kw)) {
-          score += qTokens.includes(kw) ? 4 : 2;
+          let best = voices[0];
+          let bestScore = -Infinity;
+          for (const v of voices) {
+            const sc = scoreVoice(v);
+            if (sc > bestScore) {
+              bestScore = sc;
+              best = v;
+            }
+          }
+          return best || null;
         }
-      }
-      if (wantsPortalBreakdown && item.id.startsWith("role_") && score > 0) {
-        score += 4;
-      }
-      if (score > bestScore) {
-        bestScore = score;
-        best = item;
-      }
-    }
-    return bestScore > 0 ? best : null;
-  };
 
-  const executeReply = (replyCore, extraAction = null, questionFormation = null) => {
-    if (extraAction?.openTab) triggerDashboardTab(extraAction.openTab);
-    if (extraAction?.navigateTo) navigate(extraAction.navigateTo);
-    if (extraAction?.trigger === "openTranslator" && typeof window.openGBSScreenTranslator === "function") {
-      window.openGBSScreenTranslator();
-    }
-
-    const resolvedFormation =
-      questionFormation ||
-      (lastRawQueryRef.current ? buildLocalQuestionFormation(lastRawQueryRef.current, extraAction?.openTab || "GBS System Action") : null);
-    const formationLine = resolvedFormation?.explanationText ? ` ${resolvedFormation.explanationText}` : "";
-    const combinedCore = replyCore.includes("How your question was formed:")
-      ? replyCore
-      : `${replyCore}${formationLine}`;
-    const fullTurnReply = `${combinedCore} ${FOLLOWUP_PROMPT}`;
-    setAssistantResponse(fullTurnReply);
-    appendMessage("assistant", fullTurnReply, resolvedFormation, replyCore);
-    speakAloud(fullTurnReply);
-
-    if (typeof window !== "undefined" && typeof window.showGBSOpenNotice === "function") {
-      window.showGBSOpenNotice(replyCore, "info", "GBS SYSTEM ASSISTANT");
-    }
-  };
-
-  const processVoiceCommand = async (rawText) => {
-    const raw = String(rawText || "").trim();
-    const text = raw.toLowerCase();
-    if (!text) return;
-
-    lastRawQueryRef.current = raw;
-    appendMessage("user", raw);
-    setTranscript("");
-
-    const cleanCmd = text.replace(/^(hey|hello|hi|ok|okay)?\s*gbs\s*/i, "").trim();
-
-    if (DONE_INTENT_REGEX.test(cleanCmd) || cleanCmd === "done" || cleanCmd === "sleep" || cleanCmd === "no") {
-      enterSleepMode();
-      return;
-    }
-
-    if (ANOTHER_INTENT_REGEX.test(cleanCmd)) {
-      const promptMore = "Yes, I am listening! Tell me your next action, command, activity, or question on GBS SYSTEM.";
-      setAssistantResponse(promptMore);
-      appendMessage("assistant", promptMore);
-      speakAloud(promptMore);
-      return;
-    }
-
-    // 1. Explicit Pure-Navigation Portal Commands (Explanations fall through to full System Memory AI)
-    const isExplanationQuery = /\b(explain|how|what|why|tell me|want to know|know about|describe|pull clinic|pull medical|can)\b/i.test(cleanCmd);
-    if (!isExplanationQuery && (cleanCmd.includes("open clinic") || cleanCmd.includes("go to clinic") || cleanCmd === "school clinic" || cleanCmd.includes("open sickbay"))) {
-      triggerDashboardTab("clinic");
-      const stats = memoryCatalogRef.current?.liveStats;
-      const statLine = stats
-        ? ` Active Clinic Ledger shows ${stats.clinicProfilesCount} registered medical profiles, ${stats.clinicVisitsCount} total consultations, and ${stats.activeSickbayCount} active Sickbay admission.`
-        : "";
-      executeReply(`Opening the School Clinic & Admission Medical Registry now.${statLine}`, { openTab: "clinic" });
-      return;
-    }
-
-    if (!isExplanationQuery && (cleanCmd.includes("login") || cleanCmd.includes("sign in") || cleanCmd.includes("open headmaster") || cleanCmd.includes("open secretary") || cleanCmd.includes("open student") || cleanCmd.includes("open teacher") || cleanCmd.includes("open parent") || cleanCmd.includes("open accountant") || cleanCmd.includes("open staff"))) {
-      if (cleanCmd.includes("admin") || cleanCmd.includes("headmaster")) {
-        executeReply("Opening the Headmaster Executive Command Portal now.", { navigateTo: "/login/admin" });
-        return;
-      }
-      if (cleanCmd.includes("secretary")) {
-        executeReply("Opening the School Secretary Portal now.", { navigateTo: "/login/secretary" });
-        return;
-      }
-      if (cleanCmd.includes("teacher") || cleanCmd.includes("lecturer")) {
-        executeReply("Opening the Teacher & Lecturer Portal now.", { navigateTo: "/login/teacher" });
-        return;
-      }
-      if (cleanCmd.includes("student")) {
-        executeReply("Navigating to the Student Learning Hub now.", { navigateTo: "/login/student" });
-        return;
-      }
-      if (cleanCmd.includes("parent") || cleanCmd.includes("guardian")) {
-        executeReply("Opening the Parent & Guardian Portal now.", { navigateTo: "/login/parent" });
-        return;
-      }
-      if (cleanCmd.includes("accountant") || cleanCmd.includes("finance")) {
-        executeReply("Opening the Accountant & Treasury Portal now.", { navigateTo: "/login/accountant" });
-        return;
-      }
-      if (cleanCmd.includes("staff") || cleanCmd.includes("hr")) {
-        executeReply("Opening the Staff & HR Portal now.", { navigateTo: "/login/staff" });
-        return;
-      }
-      if (cleanCmd.includes("main login") || cleanCmd.includes("login")) {
-        executeReply("Opening the Main GBS Login Gateway.", { navigateTo: "/login" });
-        return;
-      }
-    }
-
-    if (cleanCmd.includes("onboard") || cleanCmd.includes("register school") || cleanCmd.includes("first page")) {
-      executeReply("Opening the School Onboarding First Page.", { navigateTo: "/onboarding" });
-      return;
-    }
-
-    if (DEVELOPER_NONDISCLOSURE_PATTERN.test(cleanCmd)) {
-      executeReply(
-        "I do not disclose developer details, internal engineering controls, or developer portal information. Ask me instead about the Headmaster, Teacher, Student, Parent, Accountant, Staff, HR, or Alumni portals and activities.",
-        null,
-        {
-          interpretation: "You asked about internal developer controls. Institutional assistants strictly protect non-disclosure boundaries.",
-          explanationText: "How your question was formed: You asked about internal platform controls, which are kept strictly non-disclosed so the assistant stays focused on institutional users.",
-          actionTaken: "Protected developer non-disclosure boundary and offered institutional role help."
+        /**
+         * Clean raw URL paths and technical punctuation so TTS speaks naturally, clearly, and actively.
+         */
+        function formatTextForClearSpeech(rawText = "") {
+          return String(rawText || "")
+            .replace(/\(\/portal\/[a-z0-9/_-]+\)/gi, "")
+            .replace(/\/portal\/[a-z0-9/_-]+/gi, "the dedicated portal page")
+            .replace(/\s*•\s*/g, ", ")
+            .replace(/\s*→\s*/g, " to ")
+            .replace(/\s*;\s*/g, ". ")
+            .replace(/\s+/g, " ")
+            .trim();
         }
-      );
-      return;
-    }
 
-    if (cleanCmd.startsWith("enter my name") || cleanCmd.startsWith("my name is") || cleanCmd.startsWith("enter name")) {
-      const nameVal = cleanCmd.replace(/^(enter my name|my name is|enter name)\s*(is|to)?\s*/i, "").trim();
-      const inputEl = document.querySelector('input[name*="name" i], input[id*="name" i], input[placeholder*="name" i]');
-      if (inputEl && nameVal) {
-        inputEl.value = nameVal;
-        inputEl.dispatchEvent(new Event("input", { bubbles: true }));
-        executeReply(`Entered name ${nameVal} into the active form.`);
-      } else {
-        executeReply(`Noted name ${nameVal}. Open a form first if you want me to fill it automatically.`);
-      }
-      return;
-    }
+        /**
+         * Split long responses into crisp natural sentences (~180-220 chars) so Chrome/Edge/Safari
+         * deliver every word with bright, steady, active intonation without dull droning or cutoff.
+         */
+        function splitSpeechIntoNaturalChunks(cleanText = "") {
+          if (!cleanText) return [];
+          const rawSentences = cleanText.match(/[^.!?]+[.!?]*/g) || [cleanText];
+          const chunks = [];
+          let buffer = "";
 
-    if (cleanCmd.includes("submit") || cleanCmd.includes("click submit")) {
-      const submitBtn = document.querySelector('button[type="submit"], .role-login-submit, .btn-submit, .gbs-btn-primary');
-      if (submitBtn) {
-        submitBtn.click();
-        executeReply("Submitted the active form cleanly.");
-      } else {
-        executeReply("No active submit button was found on this view.");
-      }
-      return;
-    }
-
-    // 2. Live Backend System Memory Query (generous 4500ms timeout so backend formation + answer resolves reliably)
-    try {
-      const controller = new AbortController();
-      const timer = setTimeout(() => controller.abort(), 4500);
-      const res = await apiClient.post("/ai/assistant-query", { query: raw }, { signal: controller.signal });
-      clearTimeout(timer);
-      const result = res?.data?.data;
-      if (result?.speechText) {
-        if (result.liveStats) {
-          memoryCatalogRef.current = { ...(memoryCatalogRef.current || {}), liveStats: result.liveStats };
+          for (const rawS of rawSentences) {
+            const s = rawS.trim();
+            if (!s) continue;
+            if ((buffer + " " + s).trim().length <= 210) {
+              buffer = (buffer ? `${buffer} ${s}` : s);
+            } else {
+              if (buffer) chunks.push(buffer);
+              if (s.length <= 230) {
+                buffer = s;
+              } else {
+                // Split very long clause at commas cleanly
+                const parts = s.split(/,\s+/);
+                let sub = "";
+                for (const p of parts) {
+                  if ((sub + ", " + p).length <= 210) {
+                    sub = sub ? `${sub}, ${p}` : p;
+                  } else {
+                    if (sub) chunks.push(sub);
+                    sub = p;
+                  }
+                }
+                buffer = sub;
+              }
+            }
+          }
+          if (buffer) chunks.push(buffer);
+          return chunks;
         }
-        const formation = result.questionFormation || buildLocalQuestionFormation(raw, result.topicId || "GBS System Memory");
-        executeReply(result.answerText || result.speechText, result.action || null, formation);
-        return;
-      }
-    } catch { }
 
-    // 3. Instant Local System Memory Fallback (<5ms offline-capable explanation + question formation breakdown)
-    const localHit = matchInstantLocalMemory(cleanCmd);
-    if (localHit) {
-      const localFormation = buildLocalQuestionFormation(raw, localHit.id);
-      executeReply(localHit.answer, { openTab: localHit.tab, navigateTo: localHit.route }, localFormation);
-      return;
-    }
+        const DONE_INTENT_REGEX = /\b(we are done|i am done|i'm done|yes done|done now|all done|finished|nothing else|no more|no other|that's all|that is all|conversation is over|go to sleep|go off|sleep now|goodbye|bye bye|stop listening|turn off)\b/i;
+        const ANOTHER_INTENT_REGEX = /\b(there is another|another question|another one|one more|not done|not yet|have another|more help|still here)\b/i;
+        const FOLLOWUP_PROMPT = "Are we done with what you want, or is there another? Tell me if there is another, or say we are done.";
 
-    const stats = memoryCatalogRef.current?.liveStats;
-    const statsNote = stats
-      ? ` Live workspace summary: ${stats.clinicProfilesCount} medical registrations, ${stats.clinicVisitsCount} clinic visits (${stats.activeSickbayCount} active in Sickbay), and ${stats.pendingStaffApprovalsCount} pending staff approvals.`
-      : "";
-    const generalFormation = buildLocalQuestionFormation(raw, "GBS Unified System Overview");
-    executeReply(
-      `On GBS SYSTEM (v${memorySyncedVersion}), each institutional user operates inside a portal tailored to your registered institution (Nursery–JHS, SHS, TVET, or University): Headmasters approve users, set official School Stationery prices, inspect Staff Clock-In logs, configure language settings, and manage all clinic dossiers; Teachers/Lecturers deliver coursework, Topic Videos, AI-proctored exam cameras, live calls, and Internships/Attachments; School Secretaries handle visitor logs, official letters/circulars, appointments, and stationery sales/expenses; Students take proctored exams and submit assignments or placements; Parents monitor wards and pay fees via MoMo; Accountants reconcile fees & synced stationery expenses; Non-Teaching Staff manage campus logistics; HR handles contracts & leave; Alumni access transcripts.`,
-      null,
-      generalFormation
-    );
-  };
+        export default function GBSVoiceAssistant() {
+          const navigate = useNavigate();
 
-  processCommandRef.current = processVoiceCommand;
+          const [isOpen, setIsOpen] = useState(false);
+          const [isMinimized, setIsMinimized] = useState(false);
+          const [isSleeping, setIsSleeping] = useState(true);
+          const [assistantPos, setAssistantPos] = useState(() => {
+            try {
+              const saved = JSON.parse(localStorage.getItem("gbs_voice_assistant_pos") || "null");
+              if (saved && typeof saved.right === "number" && typeof saved.bottom === "number") {
+                return saved;
+              }
+            } catch { }
+            return { right: 20, bottom: 20 };
+          });
+          const dragStateRef = useRef({ active: false, startX: 0, startY: 0, startRight: 20, startBottom: 20, moved: false });
+          const [isListening, setIsListening] = useState(false);
+          const [isSpeaking, setIsSpeaking] = useState(false);
+          const [transcript, setTranscript] = useState("");
+          const [typedInput, setTypedInput] = useState("");
+          const [assistantResponse, setAssistantResponse] = useState(INTRO_GREETING);
+          const [conversationMessages, setConversationMessages] = useState([]);
+          const [continuousListening, setContinuousListening] = useState(true);
+          const [speechSupported, setSpeechSupported] = useState(true);
+          const [memorySyncedVersion, setMemorySyncedVersion] = useState("2.7.0");
 
-  const handleTypedSubmit = (e) => {
-    e.preventDefault();
-    if (!typedInput.trim()) return;
-    const msg = typedInput.trim();
-    setTypedInput("");
-    processVoiceCommand(msg);
-  };
+          const [voiceRate, setVoiceRate] = useState(() => {
+            try {
+              const saved = parseFloat(localStorage.getItem("gbs_voice_rate") || "");
+              if (Number.isFinite(saved) && saved >= 0.72 && saved <= 1.0) return saved;
+              const saved = parseFloat(localStorage.getItem("gbs_voice_rate_v2") || "");
+              if (Number.isFinite(saved) && saved >= 0.90 && saved <= 1.15) return saved;
+            } catch { }
+            return 0.88; // Clear, measured American English speaking pace (never fast mode)
+            return 1.02; // Active, crisp, work-ready speaking pace — clear & engaged, never sleepy and never rushing
+          });
+          const [voicePitch, setVoicePitch] = useState(0.93);
+          const [voicePitch] = useState(1.06); // Bright, alert, clear vocal tone
+          const [selectedVoiceIndex, setSelectedVoiceIndex] = useState(0);
+          const [availableVoices, setAvailableVoices] = useState([]);
+          const [activeVoiceLabel, setActiveVoiceLabel] = useState("US English Male");
+          const [activeVoiceLabel, setActiveVoiceLabel] = useState("Clear Active English");
 
-  return (
-    <>
-      {/* Brain-Only Movable Assistant Symbol (Free from dashboard blockages & zero tooltips) */}
-      <div
-        className="gbs-voice-assistant-launcher"
-        onMouseDown={handleDragStart}
-        onTouchStart={handleDragStart}
-        style={{
-          position: "fixed",
-          bottom: `${assistantPos.bottom}px`,
-          right: `${assistantPos.right}px`,
-          zIndex: 99999,
-          display: "flex",
-          alignItems: "center",
-          userSelect: "none",
-          cursor: "grab"
-        }}
-      >
-        <button
-          type="button"
-          aria-label="GBS Brain Assistant"
-          data-testid="gbs-brain-assistant-btn"
-          onClick={toggleAssistant}
-          style={{
-            width: "50px",
-            height: "50px",
-            borderRadius: "50%",
-            border: isOpen && !isSleeping ? "2.5px solid #f5d061" : "2px solid #d4af37",
-            background: isOpen && !isSleeping
-              ? "radial-gradient(circle at 35% 35%, #d4af37 0%, #0d2247 58%, #060f1e 100%)"
-              : "radial-gradient(circle at 35% 35%, #0d2247 0%, #081833 75%, #060f1e 100%)",
-            boxShadow: isOpen && !isSleeping
-              ? "0 0 24px rgba(212, 175, 55, 0.72), 0 0 36px rgba(56, 189, 248, 0.35)"
-              : "0 4px 16px rgba(0, 0, 0, 0.55), 0 0 12px rgba(212, 175, 55, 0.35)",
-            display: "flex",
-            alignItems: "center",
-            justifyContent: "center",
-            cursor: "pointer",
-            outline: "none",
-            transition: "all 0.25s ease",
-            transform: isOpen && !isSleeping ? "scale(1.06)" : "scale(1)"
-          }}
-        >
-          <span style={{ fontSize: "23px", lineHeight: 1 }} aria-hidden="true">🧠</span>
-        </button>
-      </div>
+          const recognitionRef = useRef(null);
+          const synthRef = useRef(typeof window !== "undefined" ? window.speechSynthesis : null);
+          const isSpeakingRef = useRef(false);
+          const isOpenRef = useRef(false);
+          const isSleepingRef = useRef(true);
+          const continuousRef = useRef(true);
+          const processCommandRef = useRef(null);
+          const silenceTimerRef = useRef(null);
+          const lastTranscriptRef = useRef("");
+          const lastRawQueryRef = useRef("");
+          const lastProcessedRef = useRef({ text: "", time: 0 });
+          const memoryCatalogRef = useRef(null);
+          const chatEndRef = useRef(null);
 
-      {/* Continuous Movable & Minimizable Conversation Window */}
-      {isOpen && (
-        <div
-          style={{
-            position: "fixed",
-            bottom: `${Math.min(
-              Math.max(12, (typeof window !== "undefined" ? window.innerHeight : 800) - (isMinimized ? 80 : 520)),
-              assistantPos.bottom + 66
-            )}px`,
-            right: `${Math.min(
-              Math.max(12, (typeof window !== "undefined" ? window.innerWidth : 1200) - (isMinimized ? 350 : 420)),
-              assistantPos.right
-            )}px`,
-            width: isMinimized ? "340px" : "410px",
-            maxWidth: "calc(100vw - 24px)",
-            maxHeight: isMinimized ? "62px" : "80vh",
-            background: "linear-gradient(155deg, rgba(8, 24, 51, 0.98) 0%, rgba(13, 34, 71, 0.98) 100%)",
-            border: "2px solid #d4af37",
-            borderRadius: "20px",
-            boxShadow: "0 25px 60px rgba(0, 0, 0, 0.85), 0 0 35px rgba(212, 175, 55, 0.35)",
-            backdropFilter: "blur(20px)",
-            zIndex: 99998,
-            overflow: "hidden",
-            display: "flex",
-            flexDirection: "column",
-            color: "#f8fafc",
-            fontFamily: "system-ui, -apple-system, sans-serif"
-          }}
-        >
-          {/* Draggable Header with Minimize & Sleep Controls */}
-          <div
-            onMouseDown={handleDragStart}
-            onTouchStart={handleDragStart}
-            style={{
-              padding: "12px 14px",
-              background: "linear-gradient(135deg, #050f23 0%, #0d2247 100%)",
-              borderBottom: isMinimized ? "none" : "1px solid rgba(212, 175, 55, 0.45)",
-              display: "flex",
-              justifyContent: "space-between",
-              alignItems: "center",
-              cursor: "grab",
-              gap: "8px"
-            }}
-          >
-            <div style={{ display: "flex", alignItems: "center", gap: "8px", minWidth: 0 }}>
-              <span style={{ color: "#d4af37", fontSize: "14px" }}>⠿</span>
-              <span style={{ fontSize: "17px" }}>🧠</span>
-              <div style={{ minWidth: 0 }}>
-                <strong style={{ fontSize: "12px", color: "#f6dd84", display: "block", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
-                  GBS SYSTEM ASSISTANT
-                </strong>
-                <span style={{ fontSize: "10px", color: isSleeping ? "#94a3b8" : "#34d399", fontWeight: 700, display: "block" }}>
-                  {isMinimized
-                    ? "Minimized • Click Expand to view chat"
-                    : isSleeping
-                      ? "Sleeping • Click brain icon to wake"
-                      : isSpeaking
-                        ? "🔊 Answering live from System Memory..."
-                        : isListening
-                          ? `● Listening Active • Memory v${memorySyncedVersion}`
-                          : `● Ready • Memory v${memorySyncedVersion} Linked`}
-                </span>
-              </div>
-            </div>
+          useEffect(() => {
+            isOpenRef.current = isOpen;
+          }, [isOpen]);
 
-            <div style={{ display: "flex", alignItems: "center", gap: "5px", flexShrink: 0 }}>
-              <button
-                type="button"
-                data-no-drag="true"
-                onClick={() => setIsMinimized((m) => !m)}
-                style={{
-                  background: "rgba(212, 175, 55, 0.18)",
-                  border: "1px solid rgba(212, 175, 55, 0.6)",
-                  color: "#f6dd84",
-                  fontSize: "11px",
-                  fontWeight: 800,
-                  cursor: "pointer",
-                  padding: "4px 9px",
-                  borderRadius: "999px"
-                }}
-              >
-                {isMinimized ? "🗖 Expand" : "🗕 Minimize"}
-              </button>
-              <button
-                type="button"
-                data-no-drag="true"
-                onClick={() => enterSleepMode()}
-                style={{
-                  background: "rgba(239, 68, 68, 0.18)",
-                  border: "1px solid rgba(239, 68, 68, 0.5)",
-                  color: "#fca5a5",
-                  fontSize: "11px",
-                  fontWeight: 800,
-                  cursor: "pointer",
-                  padding: "4px 9px",
-                  borderRadius: "999px"
-                }}
-                aria-label="Finish conversation and put assistant to sleep"
-              >
-                😴 Done / Sleep
-              </button>
-            </div>
-          </div>
+          useEffect(() => {
+            isSleepingRef.current = isSleeping;
+          }, [isSleeping]);
 
-          {!isMinimized && (
-            <>
+          useEffect(() => {
+            continuousRef.current = continuousListening;
+          }, [continuousListening]);
 
-              {/* Multi-Turn Thread */}
-              <div style={{ padding: "14px 16px", flex: 1, overflowY: "auto", display: "flex", flexDirection: "column", gap: "10px" }}>
-                {conversationMessages.map((m, idx) => (
-                  <div
-                    key={idx}
+          useEffect(() => {
+            if (chatEndRef.current) {
+              chatEndRef.current.scrollIntoView({ behavior: "smooth" });
+            }
+          }, [conversationMessages, isOpen]);
+
+          // Preload System Memory from backend for sub-50ms instant voice answers
+          const refreshSystemMemory = async () => {
+            try {
+              const res = await apiClient.get("/ai/system-memory");
+              const data = res?.data?.data;
+              if (data) {
+                memoryCatalogRef.current = data;
+                if (data.version) setMemorySyncedVersion(data.version);
+              }
+            } catch { }
+          };
+
+          useEffect(() => {
+            refreshSystemMemory();
+          }, []);
+
+          useEffect(() => {
+            if (typeof window === "undefined" || !("speechSynthesis" in window)) {
+              setSpeechSupported(false);
+              return;
+            }
+            const loadVoices = () => {
+              const voices = window.speechSynthesis.getVoices();
+              if (voices && voices.length > 0) {
+                const englishVoices = voices.filter((v) => String(v.lang || "").toLowerCase().startsWith("en"));
+                const pool = englishVoices.length > 0 ? englishVoices : voices;
+                setAvailableVoices(pool);
+                const preferred = selectPreferredAmericanMaleVoice(pool);
+                if (preferred) {
+                  const prefIdx = pool.indexOf(preferred);
+                  if (prefIdx >= 0) setSelectedVoiceIndex(prefIdx);
+                  setActiveVoiceLabel(`${preferred.name} (${preferred.lang || "en-US"})`);
+                }
+              }
+            };
+            loadVoices();
+            if (window.speechSynthesis.onvoiceschanged !== undefined) {
+              window.speechSynthesis.onvoiceschanged = loadVoices;
+            }
+          }, []);
+
+          const appendMessage = (sender, text, formation = null, answerOnly = null) => {
+            const time = new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" });
+            setConversationMessages((prev) => [...prev.slice(-28), { sender, text, time, formation, answerOnly }]);
+          };
+
+          const safelyStartRecognition = () => {
+            if (
+              !recognitionRef.current ||
+              !isOpenRef.current ||
+              isSleepingRef.current ||
+              !continuousRef.current ||
+              isSpeakingRef.current
+            ) {
+              return;
+            }
+            try {
+              recognitionRef.current.start();
+            } catch {
+              // recognition already started
+            }
+          };
+
+          const clearSilenceTimer = () => {
+            if (silenceTimerRef.current) {
+              clearTimeout(silenceTimerRef.current);
+              silenceTimerRef.current = null;
+            }
+          };
+
+          // Continuous speech recognizer with instant 550ms end-of-statement reaction
+          useEffect(() => {
+            if (typeof window === "undefined") return;
+            const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+
+            if (!SpeechRecognition) {
+              setSpeechSupported(false);
+              return;
+            }
+
+            const recognition = new SpeechRecognition();
+            recognition.continuous = true;
+            recognition.interimResults = true;
+            recognition.lang = getLanguageProfile().speechLocale || "en-US";
+
+            const syncRecognitionLocale = () => {
+              try {
+                recognition.lang = getLanguageProfile().speechLocale || "en-US";
+              } catch { }
+            };
+            window.addEventListener("gbs_locale_changed", syncRecognitionLocale);
+
+            recognition.onstart = () => {
+              setIsListening(true);
+            };
+
+            const dispatchCapturedStatement = (phrase) => {
+              const clean = String(phrase || "").trim();
+              if (!clean) return;
+              const now = Date.now();
+              const prev = lastProcessedRef.current;
+              if (prev.text === clean.toLowerCase() && now - prev.time < 2600) {
+                return; // Deduplicate identical interim+final firing
+              }
+              lastProcessedRef.current = { text: clean.toLowerCase(), time: now };
+              clearSilenceTimer();
+              lastTranscriptRef.current = "";
+              if (processCommandRef.current) {
+                processCommandRef.current(clean);
+              }
+            };
+
+            recognition.onresult = (event) => {
+              let currentTranscript = "";
+              for (let i = event.resultIndex; i < event.results.length; i++) {
+                currentTranscript += event.results[i][0].transcript;
+              }
+              const trimmed = currentTranscript.trim();
+              setTranscript(trimmed);
+              lastTranscriptRef.current = trimmed;
+
+              const lastResult = event.results[event.results.length - 1];
+              if (lastResult?.isFinal && trimmed) {
+                dispatchCapturedStatement(trimmed);
+              } else if (trimmed.length >= 2) {
+                // Fast end-of-statement trigger: fires 550ms after speaker finishes sentence without waiting 2-3s
+                clearSilenceTimer();
+                silenceTimerRef.current = setTimeout(() => {
+                  if (lastTranscriptRef.current === trimmed && !isSpeakingRef.current && isOpenRef.current && !isSleepingRef.current) {
+                    dispatchCapturedStatement(trimmed);
+                  }
+                }, 550);
+              }
+            };
+
+            recognition.onerror = (event) => {
+              if (event.error === "not-allowed" || event.error === "service-not-allowed") {
+                setIsListening(false);
+              }
+            };
+
+            recognition.onend = () => {
+              clearSilenceTimer();
+              if (isOpenRef.current && !isSleepingRef.current && continuousRef.current && !isSpeakingRef.current) {
+                setTimeout(() => safelyStartRecognition(), 140);
+              } else {
+                setIsListening(false);
+              }
+            };
+
+            recognitionRef.current = recognition;
+
+            return () => {
+              clearSilenceTimer();
+              window.removeEventListener("gbs_locale_changed", syncRecognitionLocale);
+              try {
+                recognition.stop();
+              } catch { }
+            };
+          }, []);
+
+          const speakAloud = (text, onComplete = null) => {
+            if (!synthRef.current || !("speechSynthesis" in window)) {
+              if (onComplete) onComplete();
+              return;
+            }
+
+            try {
+              synthRef.current.cancel();
+            } catch { }
+
+            const cleanedSpeech = formatTextForClearSpeech(text);
+            const chunks = splitSpeechIntoNaturalChunks(cleanedSpeech);
+            if (chunks.length === 0) {
+              if (onComplete) onComplete();
+              return;
+            }
+
+            const allVoices =
+              (availableVoices && availableVoices.length > 0)
+                ? availableVoices
+                : (typeof window !== "undefined" && window.speechSynthesis?.getVoices ? window.speechSynthesis.getVoices() : []);
+            const utterance = new SpeechSynthesisUtterance(text);
+            const preferredMaleUsVoice = selectPreferredAmericanMaleVoice(allVoices);
+            const chosenVoice = preferredMaleUsVoice || allVoices[selectedVoiceIndex] || allVoices[0] || null;
+            if (chosenVoice) {
+              utterance.voice = chosenVoice;
+              const lowerName = String(chosenVoice.name || "").toLowerCase();
+              const soundsFemale = FEMALE_VOICE_EXCLUDE_KEYWORDS.some((kw) => lowerName.includes(kw));
+              // Keep warm, clear American male tone; lower pitch slightly if OS only exposes a neutral/female fallback voice
+              utterance.pitch = soundsFemale ? 0.78 : voicePitch;
+            } else {
+              utterance.pitch = voicePitch;
+            }
+            utterance.rate = Math.min(0.98, Math.max(0.75, Number(voiceRate) || 0.88));
+            utterance.lang = "en-US";
+            utterance.volume = 1.0;
+            const chosenVoice = allVoices[selectedVoiceIndex] || selectPreferredAmericanMaleVoice(allVoices) || allVoices[0] || null;
+            const effectiveRate = Math.min(1.12, Math.max(0.92, Number(voiceRate) || 1.02));
+            const effectivePitch = Math.min(1.14, Math.max(1.02, Number(voicePitch) || 1.06));
+
+            utterance.onstart = () => {
+              setIsSpeaking(true);
+              isSpeakingRef.current = true;
+              clearSilenceTimer();
+              if (recognitionRef.current) {
+                try {
+                  recognitionRef.current.stop();
+                } catch { }
+              }
+            };
+
+            let finished = false;
+            const finishSpeech = () => {
+              if (finished) return;
+              finished = true;
+              setIsSpeaking(false);
+              isSpeakingRef.current = false;
+              if (onComplete) {
+                onComplete();
+              } else {
+                setTimeout(() => safelyStartRecognition(), 120);
+              }
+            };
+
+            utterance.onend = finishSpeech;
+            utterance.onerror = finishSpeech;
+            synthRef.current.speak(utterance);
+            const speakChunkAt = (idx) => {
+              if (idx >= chunks.length) {
+                finishSpeech();
+                return;
+              }
+              const utterance = new SpeechSynthesisUtterance(chunks[idx]);
+              if (chosenVoice) {
+                utterance.voice = chosenVoice;
+                utterance.lang = chosenVoice.lang || "en-US";
+              } else {
+                utterance.lang = "en-US";
+              }
+              utterance.rate = effectiveRate;
+              utterance.pitch = effectivePitch;
+              utterance.volume = 1.0;
+
+              if (idx === 0) {
+                utterance.onstart = () => {
+                  setIsSpeaking(true);
+                  isSpeakingRef.current = true;
+                  clearSilenceTimer();
+                  if (recognitionRef.current) {
+                    try {
+                      recognitionRef.current.stop();
+                    } catch { }
+                  }
+                };
+              }
+
+              utterance.onend = () => {
+                if (idx + 1 < chunks.length) {
+                  speakChunkAt(idx + 1);
+                } else {
+                  finishSpeech();
+                }
+              };
+              utterance.onerror = finishSpeech;
+              synthRef.current.speak(utterance);
+            };
+
+            speakChunkAt(0);
+          };
+
+          const enterSleepMode = (
+            goodbyeText = "Alright, we are done. I am going off to sleep now. Click me anytime you need help on GBS SYSTEM!"
+          ) => {
+            clearSilenceTimer();
+            isSleepingRef.current = true;
+            setIsSleeping(true);
+            setIsListening(false);
+            setTranscript("");
+            setAssistantResponse(goodbyeText);
+            appendMessage("assistant", goodbyeText);
+
+            if (recognitionRef.current) {
+              try {
+                recognitionRef.current.stop();
+              } catch { }
+            }
+
+            speakAloud(goodbyeText, () => {
+              setTimeout(() => {
+                isOpenRef.current = false;
+                setIsOpen(false);
+              }, 380);
+            });
+
+            if (!synthRef.current || !("speechSynthesis" in window)) {
+              setTimeout(() => {
+                isOpenRef.current = false;
+                setIsOpen(false);
+              }, 750);
+            }
+          };
+
+          const wakeAndStartConversation = () => {
+            isSleepingRef.current = false;
+            isOpenRef.current = true;
+            setIsSleeping(false);
+            setIsMinimized(false);
+            setIsOpen(true);
+            setContinuousListening(true);
+            continuousRef.current = true;
+            refreshSystemMemory();
+
+            setAssistantResponse(INTRO_GREETING);
+            appendMessage("assistant", INTRO_GREETING);
+            speakAloud(INTRO_GREETING);
+          };
+
+          const handleDragStart = (e) => {
+            if (e.target.closest("button[data-no-drag='true']")) return;
+            const clientX = e.touches ? e.touches[0].clientX : e.clientX;
+            const clientY = e.touches ? e.touches[0].clientY : e.clientY;
+            dragStateRef.current = {
+              active: true,
+              startX: clientX,
+              startY: clientY,
+              startRight: assistantPos.right,
+              startBottom: assistantPos.bottom,
+              moved: false
+            };
+          };
+
+          useEffect(() => {
+            const onMove = (e) => {
+              if (!dragStateRef.current.active) return;
+              const clientX = e.touches ? e.touches[0].clientX : e.clientX;
+              const clientY = e.touches ? e.touches[0].clientY : e.clientY;
+              const dx = clientX - dragStateRef.current.startX;
+              const dy = clientY - dragStateRef.current.startY;
+              if (Math.abs(dx) > 4 || Math.abs(dy) > 4) {
+                dragStateRef.current.moved = true;
+              }
+              const maxRight = Math.max(20, (typeof window !== "undefined" ? window.innerWidth : 1200) - 90);
+              const maxBottom = Math.max(20, (typeof window !== "undefined" ? window.innerHeight : 800) - 80);
+              const nextRight = Math.max(8, Math.min(maxRight, dragStateRef.current.startRight - dx));
+              const nextBottom = Math.max(8, Math.min(maxBottom, dragStateRef.current.startBottom - dy));
+              const nextPos = { right: nextRight, bottom: nextBottom };
+              setAssistantPos(nextPos);
+              try {
+                localStorage.setItem("gbs_voice_assistant_pos", JSON.stringify(nextPos));
+              } catch { }
+            };
+            const onUp = () => {
+              if (dragStateRef.current.active) {
+                setTimeout(() => {
+                  dragStateRef.current.active = false;
+                  dragStateRef.current.moved = false;
+                }, 60);
+              }
+            };
+            window.addEventListener("mousemove", onMove);
+            window.addEventListener("mouseup", onUp);
+            window.addEventListener("touchmove", onMove, { passive: true });
+            window.addEventListener("touchend", onUp);
+            return () => {
+              window.removeEventListener("mousemove", onMove);
+              window.removeEventListener("mouseup", onUp);
+              window.removeEventListener("touchmove", onMove);
+              window.removeEventListener("touchend", onUp);
+            };
+          }, []);
+
+          const toggleAssistant = () => {
+            if (dragStateRef.current.moved) return;
+            if (!isOpen || isSleeping) {
+              wakeAndStartConversation();
+            } else if (isMinimized) {
+              setIsMinimized(false);
+            } else {
+              enterSleepMode("Going off to sleep now. Click me anytime you need help on GBS SYSTEM!");
+            }
+          };
+
+          useEffect(() => {
+            const handleVoiceTrigger = (e) => {
+              isSleepingRef.current = false;
+              isOpenRef.current = true;
+              setIsSleeping(false);
+              setIsOpen(true);
+              if (e?.detail?.query && processCommandRef.current) {
+                processCommandRef.current(e.detail.query);
+              } else {
+                wakeAndStartConversation();
+              }
+            };
+
+            window.addEventListener("gbs_open_voice_assistant", handleVoiceTrigger);
+            window.gbsVoiceAssistant = {
+              open: wakeAndStartConversation,
+              close: () => enterSleepMode(),
+              sleep: () => enterSleepMode(),
+              speak: (text) => speakAloud(text),
+              command: (cmd) => processCommandRef.current && processCommandRef.current(cmd)
+            };
+
+            return () => {
+              window.removeEventListener("gbs_open_voice_assistant", handleVoiceTrigger);
+              delete window.gbsVoiceAssistant;
+            };
+          }, []);
+
+          const triggerDashboardTab = (tabName) => {
+            if (!tabName) return;
+            window.dispatchEvent(new CustomEvent("gbs_open_dashboard_tab", { detail: { tab: tabName } }));
+          };
+
+          const matchInstantLocalMemory = (cleanCmd) => {
+            const qTokens = cleanCmd.split(/[^a-z0-9]+/).filter(Boolean);
+            const wantsPortalBreakdown = /\b(portal|dashboard|role|activities|duties|tabs|features|about)\b/i.test(cleanCmd);
+            let best = null;
+            let bestScore = 0;
+            for (const item of LOCAL_MEMORY_TOPICS) {
+              let score = 0;
+              for (const ph of (item.phrases || [])) {
+                if (cleanCmd.includes(ph)) score += 10;
+              }
+              for (const kw of (item.keywords || [])) {
+                if (kw.includes(" ")) {
+                  if (cleanCmd.includes(kw)) score += 6;
+                } else if (qTokens.includes(kw) || cleanCmd.includes(kw)) {
+                  score += qTokens.includes(kw) ? 4 : 2;
+                }
+              }
+              if (wantsPortalBreakdown && item.id.startsWith("role_") && score > 0) {
+                score += 4;
+              }
+              if (score > bestScore) {
+                bestScore = score;
+                best = item;
+              }
+            }
+            return bestScore > 0 ? best : null;
+          };
+
+          const executeReply = (replyCore, extraAction = null, questionFormation = null) => {
+            if (extraAction?.openTab) triggerDashboardTab(extraAction.openTab);
+            if (extraAction?.navigateTo) navigate(extraAction.navigateTo);
+            if (extraAction?.trigger === "openTranslator" && typeof window.openGBSScreenTranslator === "function") {
+              window.openGBSScreenTranslator();
+            }
+
+            const resolvedFormation =
+              questionFormation ||
+              (lastRawQueryRef.current ? buildLocalQuestionFormation(lastRawQueryRef.current, extraAction?.openTab || "GBS System Action") : null);
+            const formationLine = resolvedFormation?.explanationText ? ` ${resolvedFormation.explanationText}` : "";
+            const combinedCore = replyCore.includes("How your question was formed:")
+              ? replyCore
+              : `${replyCore}${formationLine}`;
+            const fullTurnReply = `${combinedCore} ${FOLLOWUP_PROMPT}`;
+            setAssistantResponse(fullTurnReply);
+            appendMessage("assistant", fullTurnReply, resolvedFormation, replyCore);
+            speakAloud(fullTurnReply);
+
+            if (typeof window !== "undefined" && typeof window.showGBSOpenNotice === "function") {
+              window.showGBSOpenNotice(replyCore, "info", "GBS SYSTEM ASSISTANT");
+            }
+          };
+
+          const processVoiceCommand = async (rawText) => {
+            const raw = String(rawText || "").trim();
+            const text = raw.toLowerCase();
+            if (!text) return;
+
+            lastRawQueryRef.current = raw;
+            appendMessage("user", raw);
+            setTranscript("");
+
+            const cleanCmd = text.replace(/^(hey|hello|hi|ok|okay)?\s*gbs\s*/i, "").trim();
+
+            if (DONE_INTENT_REGEX.test(cleanCmd) || cleanCmd === "done" || cleanCmd === "sleep" || cleanCmd === "no") {
+              enterSleepMode();
+              return;
+            }
+
+            if (ANOTHER_INTENT_REGEX.test(cleanCmd)) {
+              const promptMore = "Yes, I am listening! Tell me your next action, command, activity, or question on GBS SYSTEM.";
+              setAssistantResponse(promptMore);
+              appendMessage("assistant", promptMore);
+              speakAloud(promptMore);
+              return;
+            }
+
+            // 1. Explicit Pure-Navigation Portal Commands (Explanations fall through to full System Memory AI)
+            const isExplanationQuery = /\b(explain|how|what|why|tell me|want to know|know about|describe|pull clinic|pull medical|can)\b/i.test(cleanCmd);
+            if (!isExplanationQuery && (cleanCmd.includes("open clinic") || cleanCmd.includes("go to clinic") || cleanCmd === "school clinic" || cleanCmd.includes("open sickbay"))) {
+              triggerDashboardTab("clinic");
+              const stats = memoryCatalogRef.current?.liveStats;
+              const statLine = stats
+                ? ` Active Clinic Ledger shows ${stats.clinicProfilesCount} registered medical profiles, ${stats.clinicVisitsCount} total consultations, and ${stats.activeSickbayCount} active Sickbay admission.`
+                : "";
+              executeReply(`Opening the School Clinic & Admission Medical Registry now.${statLine}`, { openTab: "clinic" });
+              const currentUserRole = (() => {
+                try {
+                  return String(JSON.parse(localStorage.getItem("gbs_user") || "{}")?.role || "").toUpperCase();
+                } catch {
+                  return "";
+                }
+              })();
+              const isClinicAuthorized = ["CLINIC_DOCTOR", "CLINIC_NURSE", "DOCTOR", "NURSE"].includes(currentUserRole);
+              if (isClinicAuthorized) {
+                executeReply("Opening the dedicated School Clinic & Medical Command Dashboard for authorized doctors and nurses now.", { navigateTo: "/portal/clinic/dashboard" });
+              } else {
+                triggerDashboardTab("clinic");
+                executeReply("Opening your read-only personal Medical Health Status panel now. Full School Clinic operations are strictly restricted to School Doctors and Nurses.", { openTab: "clinic" });
+              }
+              return;
+            }
+
+            if (!isExplanationQuery && (cleanCmd.includes("login") || cleanCmd.includes("sign in") || cleanCmd.includes("open headmaster") || cleanCmd.includes("open secretary") || cleanCmd.includes("open student") || cleanCmd.includes("open teacher") || cleanCmd.includes("open parent") || cleanCmd.includes("open accountant") || cleanCmd.includes("open staff"))) {
+              if (!isExplanationQuery && (cleanCmd.includes("login") || cleanCmd.includes("sign in") || cleanCmd.includes("open headmaster") || cleanCmd.includes("open secretary") || cleanCmd.includes("open student") || cleanCmd.includes("open teacher") || cleanCmd.includes("open parent") || cleanCmd.includes("open accountant") || cleanCmd.includes("open staff") || cleanCmd.includes("open doctor") || cleanCmd.includes("open nurse"))) {
+                if (cleanCmd.includes("doctor") || cleanCmd.includes("nurse") || cleanCmd.includes("clinic")) {
+                  executeReply("Opening the School Clinic Doctor and Nurse Login Portal now.", { navigateTo: "/login/clinic" });
+                  return;
+                }
+                if (cleanCmd.includes("admin") || cleanCmd.includes("headmaster")) {
+                  executeReply("Opening the Headmaster Executive Command Portal now.", { navigateTo: "/login/admin" });
+                  return;
+                }
+                if (cleanCmd.includes("secretary")) {
+                  executeReply("Opening the School Secretary Portal now.", { navigateTo: "/login/secretary" });
+                  return;
+                }
+                if (cleanCmd.includes("teacher") || cleanCmd.includes("lecturer")) {
+                  executeReply("Opening the Teacher & Lecturer Portal now.", { navigateTo: "/login/teacher" });
+                  return;
+                }
+                if (cleanCmd.includes("student")) {
+                  executeReply("Navigating to the Student Learning Hub now.", { navigateTo: "/login/student" });
+                  return;
+                }
+                if (cleanCmd.includes("parent") || cleanCmd.includes("guardian")) {
+                  executeReply("Opening the Parent & Guardian Portal now.", { navigateTo: "/login/parent" });
+                  return;
+                }
+                if (cleanCmd.includes("accountant") || cleanCmd.includes("finance")) {
+                  executeReply("Opening the Accountant & Treasury Portal now.", { navigateTo: "/login/accountant" });
+                  return;
+                }
+                if (cleanCmd.includes("staff") || cleanCmd.includes("hr")) {
+                  executeReply("Opening the Staff & HR Portal now.", { navigateTo: "/login/staff" });
+                  return;
+                }
+                if (cleanCmd.includes("main login") || cleanCmd.includes("login")) {
+                  executeReply("Opening the Main GBS Login Gateway.", { navigateTo: "/login" });
+                  return;
+                }
+              }
+
+              if (cleanCmd.includes("onboard") || cleanCmd.includes("register school") || cleanCmd.includes("first page")) {
+                executeReply("Opening the School Onboarding First Page.", { navigateTo: "/onboarding" });
+                return;
+              }
+
+              if (DEVELOPER_NONDISCLOSURE_PATTERN.test(cleanCmd)) {
+                executeReply(
+                  "I do not disclose developer details, internal engineering controls, or developer portal information. Ask me instead about the Headmaster, Teacher, Student, Parent, Accountant, Staff, HR, or Alumni portals and activities.",
+                  null,
+                  {
+                    interpretation: "You asked about internal developer controls. Institutional assistants strictly protect non-disclosure boundaries.",
+                    explanationText: "How your question was formed: You asked about internal platform controls, which are kept strictly non-disclosed so the assistant stays focused on institutional users.",
+                    actionTaken: "Protected developer non-disclosure boundary and offered institutional role help."
+                  }
+                );
+                return;
+              }
+
+              if (cleanCmd.startsWith("enter my name") || cleanCmd.startsWith("my name is") || cleanCmd.startsWith("enter name")) {
+                const nameVal = cleanCmd.replace(/^(enter my name|my name is|enter name)\s*(is|to)?\s*/i, "").trim();
+                const inputEl = document.querySelector('input[name*="name" i], input[id*="name" i], input[placeholder*="name" i]');
+                if (inputEl && nameVal) {
+                  inputEl.value = nameVal;
+                  inputEl.dispatchEvent(new Event("input", { bubbles: true }));
+                  executeReply(`Entered name ${nameVal} into the active form.`);
+                } else {
+                  executeReply(`Noted name ${nameVal}. Open a form first if you want me to fill it automatically.`);
+                }
+                return;
+              }
+
+              if (cleanCmd.includes("submit") || cleanCmd.includes("click submit")) {
+                const submitBtn = document.querySelector('button[type="submit"], .role-login-submit, .btn-submit, .gbs-btn-primary');
+                if (submitBtn) {
+                  submitBtn.click();
+                  executeReply("Submitted the active form cleanly.");
+                } else {
+                  executeReply("No active submit button was found on this view.");
+                }
+                return;
+              }
+
+              // 2. Live Backend System Memory Query (generous 4500ms timeout so backend formation + answer resolves reliably)
+              try {
+                const controller = new AbortController();
+                const timer = setTimeout(() => controller.abort(), 4500);
+                const res = await apiClient.post("/ai/assistant-query", { query: raw }, { signal: controller.signal });
+                clearTimeout(timer);
+                const result = res?.data?.data;
+                if (result?.speechText) {
+                  if (result.liveStats) {
+                    memoryCatalogRef.current = { ...(memoryCatalogRef.current || {}), liveStats: result.liveStats };
+                  }
+                  const formation = result.questionFormation || buildLocalQuestionFormation(raw, result.topicId || "GBS System Memory");
+                  executeReply(result.answerText || result.speechText, result.action || null, formation);
+                  return;
+                }
+              } catch { }
+
+              // 3. Instant Local System Memory Fallback (<5ms offline-capable explanation + question formation breakdown)
+              const localHit = matchInstantLocalMemory(cleanCmd);
+              if (localHit) {
+                const localFormation = buildLocalQuestionFormation(raw, localHit.id);
+                executeReply(localHit.answer, { openTab: localHit.tab, navigateTo: localHit.route }, localFormation);
+                return;
+              }
+
+              const stats = memoryCatalogRef.current?.liveStats;
+              const statsNote = stats
+                ? ` Live workspace summary: ${stats.clinicProfilesCount} medical registrations, ${stats.clinicVisitsCount} clinic visits (${stats.activeSickbayCount} active in Sickbay), and ${stats.pendingStaffApprovalsCount} pending staff approvals.`
+                : "";
+              const generalFormation = buildLocalQuestionFormation(raw, "GBS Unified System Overview");
+              executeReply(
+                `On GBS SYSTEM (v${memorySyncedVersion}), each institutional user operates inside a portal tailored to your registered institution (Nursery–JHS, SHS, TVET, or University): Headmasters approve users, set official School Stationery prices, inspect Staff Clock-In logs, configure language settings, and manage all clinic dossiers; Teachers/Lecturers deliver coursework, Topic Videos, AI-proctored exam cameras, live calls, and Internships/Attachments; School Secretaries handle visitor logs, official letters/circulars, appointments, and stationery sales/expenses; Students take proctored exams and submit assignments or placements; Parents monitor wards and pay fees via MoMo; Accountants reconcile fees & synced stationery expenses; Non-Teaching Staff manage campus logistics; HR handles contracts & leave; Alumni access transcripts.`,
+                `On GBS SYSTEM (v${memorySyncedVersion}), 10 institutional portals operate as one linked system across Nursery–JHS, SHS, TVET, and University: Headmasters approve users, hold exclusive authority to add and edit official School Stationery prices, vet NaCCA lesson plans and exams, inspect Staff Clock-In logs, and configure system language; School Doctors and Nurses exclusively operate the separate School Clinic Dashboard for medical dossiers, consultations, sickbay admissions, and pharmacy stock while all other staff only view their own read-only health status; Teachers/Lecturers deliver coursework, Topic Videos, 1.0x AI-proctored exams, unlimited script scanning, and live class calls while viewing listed stationery prices read-only; School Secretaries handle front-office visitor logs, official letters, and appointments; Students access timetables, proctored exams, self-payments, and 42 Jolly Phonics plus 17-country alphabets; Parents monitor wards and pay fees; Accountants reconcile finances; Non-Teaching Staff manage logistics; HR manages contracts and leave; and Alumni access cumulative transcripts.`,
+                null,
+                generalFormation
+              );
+            };
+
+            processCommandRef.current = processVoiceCommand;
+
+            const handleTypedSubmit = (e) => {
+              e.preventDefault();
+              if (!typedInput.trim()) return;
+              const msg = typedInput.trim();
+              setTypedInput("");
+              processVoiceCommand(msg);
+            };
+
+            return (
+              <>
+                {/* Brain-Only Movable Assistant Symbol (Free from dashboard blockages & zero tooltips) */}
+                <div
+                  className="gbs-voice-assistant-launcher"
+                  onMouseDown={handleDragStart}
+                  onTouchStart={handleDragStart}
+                  style={{
+                    position: "fixed",
+                    bottom: `${assistantPos.bottom}px`,
+                    right: `${assistantPos.right}px`,
+                    zIndex: 99999,
+                    display: "flex",
+                    alignItems: "center",
+                    userSelect: "none",
+                    cursor: "grab"
+                  }}
+                >
+                  <button
+                    type="button"
+                    aria-label="GBS Brain Assistant"
+                    data-testid="gbs-brain-assistant-btn"
+                    onClick={toggleAssistant}
                     style={{
-                      alignSelf: m.sender === "user" ? "flex-end" : "flex-start",
-                      maxWidth: "88%",
-                      background: m.sender === "user" ? "rgba(37, 99, 235, 0.35)" : "rgba(8, 20, 40, 0.92)",
-                      border: m.sender === "user" ? "1px solid rgba(56, 189, 248, 0.55)" : "1px solid rgba(212, 175, 55, 0.42)",
-                      borderRadius: "12px",
-                      padding: "9px 12px",
-                      fontSize: "12.5px",
-                      lineHeight: 1.45,
-                      color: m.sender === "user" ? "#e0f2fe" : "#f8fafc"
+                      width: "50px",
+                      height: "50px",
+                      borderRadius: "50%",
+                      border: isOpen && !isSleeping ? "2.5px solid #f5d061" : "2px solid #d4af37",
+                      background: isOpen && !isSleeping
+                        ? "radial-gradient(circle at 35% 35%, #d4af37 0%, #0d2247 58%, #060f1e 100%)"
+                        : "radial-gradient(circle at 35% 35%, #0d2247 0%, #081833 75%, #060f1e 100%)",
+                      boxShadow: isOpen && !isSleeping
+                        ? "0 0 24px rgba(212, 175, 55, 0.72), 0 0 36px rgba(56, 189, 248, 0.35)"
+                        : "0 4px 16px rgba(0, 0, 0, 0.55), 0 0 12px rgba(212, 175, 55, 0.35)",
+                      display: "flex",
+                      alignItems: "center",
+                      justifyContent: "center",
+                      cursor: "pointer",
+                      outline: "none",
+                      transition: "all 0.25s ease",
+                      transform: isOpen && !isSleeping ? "scale(1.06)" : "scale(1)"
                     }}
                   >
-                    <div style={{ fontSize: "10px", color: m.sender === "user" ? "#7dd3fc" : "#f5d061", fontWeight: 800, marginBottom: "3px" }}>
-                      {m.sender === "user" ? "You" : "GBS System Memory AI"} • {m.time}
-                    </div>
-                    {m.formation ? (
-                      <div style={{ display: "flex", flexDirection: "column", gap: "6px" }}>
-                        <div>{m.answerOnly || m.text}</div>
-                        <div
-                          style={{
-                            background: "rgba(212, 175, 55, 0.14)",
-                            borderLeft: "3px solid #f6dd84",
-                            borderRadius: "6px",
-                            padding: "6px 8px",
-                            fontSize: "11px",
-                            color: "#fef08a"
-                          }}
-                        >
-                          <strong style={{ color: "#f6dd84" }}>🧩 Question Formation Explained:</strong>{" "}
-                          {(m.formation.explanationText || m.formation.interpretation || "").replace(/^How your question was formed:\s*/i, "")}
-                        </div>
-                        <div style={{ fontSize: "10.8px", color: "#cbd5e1", fontStyle: "italic" }}>
-                          {FOLLOWUP_PROMPT}
-                        </div>
-                      </div>
-                    ) : (
-                      <div>{m.text}</div>
-                    )}
-                  </div>
-                ))}
+                    <span style={{ fontSize: "23px", lineHeight: 1 }} aria-hidden="true">🧠</span>
+                  </button>
+                </div>
 
-                {transcript && (
-                  <div style={{ fontSize: "12px", color: "#7dd3fc", fontStyle: "italic", padding: "4px 8px" }}>
-                    🎙️ Hearing live: "{transcript}"
-                  </div>
-                )}
-                <div ref={chatEndRef} />
-              </div>
-
-              {/* Quick Memory Queries + Continuous Reply Bar */}
-              <div style={{ padding: "10px 14px", borderTop: "1px solid rgba(212, 175, 55, 0.25)", background: "rgba(4, 10, 22, 0.95)" }}>
-                <div style={{ display: "flex", gap: "5px", flexWrap: "wrap", marginBottom: "8px" }}>
-                  {[
-                    { label: "👥 User Roles", cmd: "Explain all institutional user roles and daily activities" },
-                    { label: "🏥 School Clinic", cmd: "Explain School Clinic privacy and Headmaster profiles" },
-                    { label: "🎓 Placements & Tiers", cmd: "Explain Internships, Attachments, and institution streams" },
-                    { label: "✅ Done (Sleep)", cmd: "We are done" }
-                  ].map((chip) => (
-                    <button
-                      key={chip.label}
-                      type="button"
-                      onClick={() => processVoiceCommand(chip.cmd)}
+                {/* Continuous Movable & Minimizable Conversation Window */}
+                {isOpen && (
+                  <div
+                    style={{
+                      position: "fixed",
+                      bottom: `${Math.min(
+                        Math.max(12, (typeof window !== "undefined" ? window.innerHeight : 800) - (isMinimized ? 80 : 520)),
+                        assistantPos.bottom + 66
+                      )}px`,
+                      right: `${Math.min(
+                        Math.max(12, (typeof window !== "undefined" ? window.innerWidth : 1200) - (isMinimized ? 350 : 420)),
+                        assistantPos.right
+                      )}px`,
+                      width: isMinimized ? "340px" : "410px",
+                      maxWidth: "calc(100vw - 24px)",
+                      maxHeight: isMinimized ? "62px" : "80vh",
+                      background: "linear-gradient(155deg, rgba(8, 24, 51, 0.98) 0%, rgba(13, 34, 71, 0.98) 100%)",
+                      border: "2px solid #d4af37",
+                      borderRadius: "20px",
+                      boxShadow: "0 25px 60px rgba(0, 0, 0, 0.85), 0 0 35px rgba(212, 175, 55, 0.35)",
+                      backdropFilter: "blur(20px)",
+                      zIndex: 99998,
+                      overflow: "hidden",
+                      display: "flex",
+                      flexDirection: "column",
+                      color: "#f8fafc",
+                      fontFamily: "system-ui, -apple-system, sans-serif"
+                    }}
+                  >
+                    {/* Draggable Header with Minimize & Sleep Controls */}
+                    <div
+                      onMouseDown={handleDragStart}
+                      onTouchStart={handleDragStart}
                       style={{
-                        background: chip.label.includes("Done") ? "rgba(245, 158, 11, 0.18)" : "rgba(15, 35, 71, 0.9)",
-                        border: chip.label.includes("Done") ? "1px solid #f59e0b" : "1px solid rgba(212, 175, 55, 0.45)",
-                        color: chip.label.includes("Done") ? "#fde68a" : "#f5d061",
-                        borderRadius: "999px",
-                        padding: "4px 9px",
-                        fontSize: "10.8px",
-                        fontWeight: 700,
-                        cursor: "pointer"
+                        padding: "12px 14px",
+                        background: "linear-gradient(135deg, #050f23 0%, #0d2247 100%)",
+                        borderBottom: isMinimized ? "none" : "1px solid rgba(212, 175, 55, 0.45)",
+                        display: "flex",
+                        justifyContent: "space-between",
+                        alignItems: "center",
+                        cursor: "grab",
+                        gap: "8px"
                       }}
                     >
-                      {chip.label}
-                    </button>
-                  ))}
-                </div>
+                      <div style={{ display: "flex", alignItems: "center", gap: "8px", minWidth: 0 }}>
+                        <span style={{ color: "#d4af37", fontSize: "14px" }}>⠿</span>
+                        <span style={{ fontSize: "17px" }}>🧠</span>
+                        <div style={{ minWidth: 0 }}>
+                          <strong style={{ fontSize: "12px", color: "#f6dd84", display: "block", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
+                            GBS SYSTEM ASSISTANT
+                          </strong>
+                          <span style={{ fontSize: "10px", color: isSleeping ? "#94a3b8" : "#34d399", fontWeight: 700, display: "block" }}>
+                            {isMinimized
+                              ? "Minimized • Click Expand to view chat"
+                              : isSleeping
+                                ? "Sleeping • Click brain icon to wake"
+                                : isSpeaking
+                                  ? "🔊 Answering live from System Memory..."
+                                  : isListening
+                                    ? `● Listening Active • Memory v${memorySyncedVersion}`
+                                    : `● Ready • Memory v${memorySyncedVersion} Linked`}
+                          </span>
+                        </div>
+                      </div>
 
-                <form onSubmit={handleTypedSubmit} style={{ display: "flex", gap: "6px" }}>
-                  <input
-                    type="text"
-                    placeholder="Ask anything about GBS SYSTEM or say command..."
-                    value={typedInput}
-                    onChange={(e) => setTypedInput(e.target.value)}
-                    style={{
-                      flex: 1,
-                      background: "#081428",
-                      color: "#f8fafc",
-                      border: "1px solid rgba(212, 175, 55, 0.45)",
-                      borderRadius: "8px",
-                      padding: "8px 10px",
-                      fontSize: "12.5px",
-                      outline: "none"
-                    }}
-                  />
-                  <button
-                    type="submit"
-                    style={{
-                      background: "linear-gradient(135deg, #0f2347, #d4af37)",
-                      color: "#ffffff",
-                      border: "1px solid #f5d061",
-                      borderRadius: "8px",
-                      padding: "8px 14px",
-                      fontSize: "12px",
-                      fontWeight: 800,
-                      cursor: "pointer"
-                    }}
-                  >
-                    Ask
-                  </button>
-                </form>
+                      <div style={{ display: "flex", alignItems: "center", gap: "5px", flexShrink: 0 }}>
+                        <button
+                          type="button"
+                          data-no-drag="true"
+                          onClick={() => setIsMinimized((m) => !m)}
+                          style={{
+                            background: "rgba(212, 175, 55, 0.18)",
+                            border: "1px solid rgba(212, 175, 55, 0.6)",
+                            color: "#f6dd84",
+                            fontSize: "11px",
+                            fontWeight: 800,
+                            cursor: "pointer",
+                            padding: "4px 9px",
+                            borderRadius: "999px"
+                          }}
+                        >
+                          {isMinimized ? "🗖 Expand" : "🗕 Minimize"}
+                        </button>
+                        <button
+                          type="button"
+                          data-no-drag="true"
+                          onClick={() => enterSleepMode()}
+                          style={{
+                            background: "rgba(239, 68, 68, 0.18)",
+                            border: "1px solid rgba(239, 68, 68, 0.5)",
+                            color: "#fca5a5",
+                            fontSize: "11px",
+                            fontWeight: 800,
+                            cursor: "pointer",
+                            padding: "4px 9px",
+                            borderRadius: "999px"
+                          }}
+                          aria-label="Finish conversation and put assistant to sleep"
+                        >
+                          😴 Done / Sleep
+                        </button>
+                      </div>
+                    </div>
 
-                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: "6px", marginTop: "8px" }}>
-                  <button
-                    type="button"
-                    onClick={() => {
-                      if (!speechSupported) return;
-                      if (isListening && recognitionRef.current) {
-                        continuousRef.current = false;
-                        setContinuousListening(false);
-                        try { recognitionRef.current.stop(); } catch { }
-                      } else {
-                        continuousRef.current = true;
-                        setContinuousListening(true);
-                        safelyStartRecognition();
-                      }
-                    }}
-                    style={{
-                      background: isListening ? "#b91c1c" : "#1d4ed8",
-                      color: "#ffffff",
-                      border: "none",
-                      borderRadius: "8px",
-                      padding: "6px 12px",
-                      fontSize: "11.5px",
-                      fontWeight: 700,
-                      cursor: speechSupported ? "pointer" : "not-allowed",
-                      opacity: speechSupported ? 1 : 0.6
-                    }}
-                  >
-                    {isListening ? "⏹️ Pause Mic" : "🎙️ Keep Listening"}
-                  </button>
+                    {!isMinimized && (
+                      <>
 
-                  <div style={{ display: "inline-flex", alignItems: "center", gap: "4px", fontSize: "10.5px", color: "#cbd5e1" }}>
-                    <span style={{ color: "#7dd3fc", fontWeight: 700 }}>🇺🇸 Male:</span>
-                    {[
-                      { label: "Slow", val: 0.8 },
-                      { label: "Clear", val: 0.88 },
-                      { label: "Steady", val: 0.95 }
-                    ].map((opt) => (
-                      <button
-                        key={opt.label}
-                        type="button"
-                        onClick={() => {
-                          setVoiceRate(opt.val);
-                          try { localStorage.setItem("gbs_voice_rate", String(opt.val)); } catch { }
-                        }}
-                        style={{
-                          background: Math.abs(voiceRate - opt.val) < 0.02 ? "#d4af37" : "#0f2347",
-                          color: Math.abs(voiceRate - opt.val) < 0.02 ? "#081833" : "#f5d061",
-                          border: "1px solid rgba(212, 175, 55, 0.5)",
-                          borderRadius: "6px",
-                          padding: "3px 6px",
-                          fontSize: "10px",
-                          fontWeight: 800,
-                          cursor: "pointer"
-                        }}
-                      >
-                        {opt.label}
-                      </button>
-                    ))}
+                        {/* Multi-Turn Thread */}
+                        <div style={{ padding: "14px 16px", flex: 1, overflowY: "auto", display: "flex", flexDirection: "column", gap: "10px" }}>
+                          {conversationMessages.map((m, idx) => (
+                            <div
+                              key={idx}
+                              style={{
+                                alignSelf: m.sender === "user" ? "flex-end" : "flex-start",
+                                maxWidth: "88%",
+                                background: m.sender === "user" ? "rgba(37, 99, 235, 0.35)" : "rgba(8, 20, 40, 0.92)",
+                                border: m.sender === "user" ? "1px solid rgba(56, 189, 248, 0.55)" : "1px solid rgba(212, 175, 55, 0.42)",
+                                borderRadius: "12px",
+                                padding: "9px 12px",
+                                fontSize: "12.5px",
+                                lineHeight: 1.45,
+                                color: m.sender === "user" ? "#e0f2fe" : "#f8fafc"
+                              }}
+                            >
+                              <div style={{ fontSize: "10px", color: m.sender === "user" ? "#7dd3fc" : "#f5d061", fontWeight: 800, marginBottom: "3px" }}>
+                                {m.sender === "user" ? "You" : "GBS System Memory AI"} • {m.time}
+                              </div>
+                              {m.formation ? (
+                                <div style={{ display: "flex", flexDirection: "column", gap: "6px" }}>
+                                  <div>{m.answerOnly || m.text}</div>
+                                  <div
+                                    style={{
+                                      background: "rgba(212, 175, 55, 0.14)",
+                                      borderLeft: "3px solid #f6dd84",
+                                      borderRadius: "6px",
+                                      padding: "6px 8px",
+                                      fontSize: "11px",
+                                      color: "#fef08a"
+                                    }}
+                                  >
+                                    <strong style={{ color: "#f6dd84" }}>🧩 Question Formation Explained:</strong>{" "}
+                                    {(m.formation.explanationText || m.formation.interpretation || "").replace(/^How your question was formed:\s*/i, "")}
+                                  </div>
+                                  <div style={{ fontSize: "10.8px", color: "#cbd5e1", fontStyle: "italic" }}>
+                                    {FOLLOWUP_PROMPT}
+                                  </div>
+                                </div>
+                              ) : (
+                                <div>{m.text}</div>
+                              )}
+                            </div>
+                          ))}
+
+                          {transcript && (
+                            <div style={{ fontSize: "12px", color: "#7dd3fc", fontStyle: "italic", padding: "4px 8px" }}>
+                              🎙️ Hearing live: "{transcript}"
+                            </div>
+                          )}
+                          <div ref={chatEndRef} />
+                        </div>
+
+                        {/* Quick Memory Queries + Continuous Reply Bar */}
+                        <div style={{ padding: "10px 14px", borderTop: "1px solid rgba(212, 175, 55, 0.25)", background: "rgba(4, 10, 22, 0.95)" }}>
+                          <div style={{ display: "flex", gap: "5px", flexWrap: "wrap", marginBottom: "8px" }}>
+                            {[
+                              { label: "👥 User Roles", cmd: "Explain all institutional user roles and daily activities" },
+                              { label: "🏥 School Clinic", cmd: "Explain School Clinic privacy and Headmaster profiles" },
+                              { label: "🎓 Placements & Tiers", cmd: "Explain Internships, Attachments, and institution streams" },
+                              { label: "👥 All Portal Roles", cmd: "Explain all institutional user roles and end to end performance on each dashboard" },
+                              { label: "🏥 School Clinic", cmd: "Explain the separate School Clinic dashboard for doctors and nurses and staff health status privacy" },
+                              { label: "🔊 42 Phonics & Alphabets", cmd: "Explain the 42 Jolly Phonics sounds and country language alphabets in the translator" },
+                              { label: "✅ Done (Sleep)", cmd: "We are done" }
+                            ].map((chip) => (
+                              <button
+                                key={chip.label}
+                                type="button"
+                                onClick={() => processVoiceCommand(chip.cmd)}
+                                style={{
+                                  background: chip.label.includes("Done") ? "rgba(245, 158, 11, 0.18)" : "rgba(15, 35, 71, 0.9)",
+                                  border: chip.label.includes("Done") ? "1px solid #f59e0b" : "1px solid rgba(212, 175, 55, 0.45)",
+                                  color: chip.label.includes("Done") ? "#fde68a" : "#f5d061",
+                                  borderRadius: "999px",
+                                  padding: "4px 9px",
+                                  fontSize: "10.8px",
+                                  fontWeight: 700,
+                                  cursor: "pointer"
+                                }}
+                              >
+                                {chip.label}
+                              </button>
+                            ))}
+                          </div>
+
+                          <form onSubmit={handleTypedSubmit} style={{ display: "flex", gap: "6px" }}>
+                            <input
+                              type="text"
+                              placeholder="Ask anything about GBS SYSTEM or say command..."
+                              value={typedInput}
+                              onChange={(e) => setTypedInput(e.target.value)}
+                              style={{
+                                flex: 1,
+                                background: "#081428",
+                                color: "#f8fafc",
+                                border: "1px solid rgba(212, 175, 55, 0.45)",
+                                borderRadius: "8px",
+                                padding: "8px 10px",
+                                fontSize: "12.5px",
+                                outline: "none"
+                              }}
+                            />
+                            <button
+                              type="submit"
+                              style={{
+                                background: "linear-gradient(135deg, #0f2347, #d4af37)",
+                                color: "#ffffff",
+                                border: "1px solid #f5d061",
+                                borderRadius: "8px",
+                                padding: "8px 14px",
+                                fontSize: "12px",
+                                fontWeight: 800,
+                                cursor: "pointer"
+                              }}
+                            >
+                              Ask
+                            </button>
+                          </form>
+
+                          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: "6px", marginTop: "8px" }}>
+                            <button
+                              type="button"
+                              onClick={() => {
+                                if (!speechSupported) return;
+                                if (isListening && recognitionRef.current) {
+                                  continuousRef.current = false;
+                                  setContinuousListening(false);
+                                  try { recognitionRef.current.stop(); } catch { }
+                                } else {
+                                  continuousRef.current = true;
+                                  setContinuousListening(true);
+                                  safelyStartRecognition();
+                                }
+                              }}
+                              style={{
+                                background: isListening ? "#b91c1c" : "#1d4ed8",
+                                color: "#ffffff",
+                                border: "none",
+                                borderRadius: "8px",
+                                padding: "6px 12px",
+                                fontSize: "11.5px",
+                                fontWeight: 700,
+                                cursor: speechSupported ? "pointer" : "not-allowed",
+                                opacity: speechSupported ? 1 : 0.6
+                              }}
+                            >
+                              {isListening ? "⏹️ Pause Mic" : "🎙️ Keep Listening"}
+                            </button>
+
+                            <div style={{ display: "inline-flex", alignItems: "center", gap: "4px", fontSize: "10.5px", color: "#cbd5e1" }}>
+                              <span style={{ color: "#7dd3fc", fontWeight: 700 }}>🇺🇸 Male:</span>
+                              <span style={{ color: "#7dd3fc", fontWeight: 700 }}>🎙️ Tone:</span>
+                              {[
+                                { label: "Slow", val: 0.8 },
+                                { label: "Clear", val: 0.88 },
+                                { label: "Steady", val: 0.95 }
+                      { label: "Measured", val: 0.94 },
+                                { label: "Active", val: 1.02 },
+                                { label: "Brisk", val: 1.08 }
+                              ].map((opt) => (
+                                <button
+                                  key={opt.label}
+                                  type="button"
+                                  onClick={() => {
+                                    setVoiceRate(opt.val);
+                                    try { localStorage.setItem("gbs_voice_rate", String(opt.val)); } catch { }
+                                    try { localStorage.setItem("gbs_voice_rate_v2", String(opt.val)); } catch { }
+                                  }}
+                                  style={{
+                                    background: Math.abs(voiceRate - opt.val) < 0.02 ? "#d4af37" : "#0f2347",
+                                    color: Math.abs(voiceRate - opt.val) < 0.02 ? "#081833" : "#f5d061",
+                                    border: "1px solid rgba(212, 175, 55, 0.5)",
+                                    borderRadius: "6px",
+                                    padding: "3px 6px",
+                                    fontSize: "10px",
+                                    fontWeight: 800,
+                                    cursor: "pointer"
+                                  }}
+                                >
+                                  {opt.label}
+                                </button>
+                              ))}
+                            </div>
+
+                            <button
+                              type="button"
+                              onClick={() => speakAloud(assistantResponse)}
+                              style={{
+                                background: "#0f2347",
+                                color: "#f5d061",
+                                border: "1px solid rgba(212, 175, 55, 0.45)",
+                                borderRadius: "8px",
+                                padding: "6px 12px",
+                                fontSize: "11.5px",
+                                fontWeight: 700,
+                                cursor: "pointer"
+                              }}
+                            >
+                              🔊 Replay
+                            </button>
+                          </div>
+                          <div style={{ marginTop: "4px", fontSize: "10px", color: "#94a3b8", textAlign: "right" }}>
+                            Voice: <strong style={{ color: "#f6dd84" }}>{activeVoiceLabel}</strong> • Speed {voiceRate.toFixed(2)}x
+                          </div>
+                        </div>
+                      </>
+                    )}
                   </div>
-
-                  <button
-                    type="button"
-                    onClick={() => speakAloud(assistantResponse)}
-                    style={{
-                      background: "#0f2347",
-                      color: "#f5d061",
-                      border: "1px solid rgba(212, 175, 55, 0.45)",
-                      borderRadius: "8px",
-                      padding: "6px 12px",
-                      fontSize: "11.5px",
-                      fontWeight: 700,
-                      cursor: "pointer"
-                    }}
-                  >
-                    🔊 Replay
-                  </button>
-                </div>
-                <div style={{ marginTop: "4px", fontSize: "10px", color: "#94a3b8", textAlign: "right" }}>
-                  Voice: <strong style={{ color: "#f6dd84" }}>{activeVoiceLabel}</strong> • Speed {voiceRate.toFixed(2)}x
-                </div>
-              </div>
-            </>
-          )}
-        </div>
-      )}
-    </>
-  );
-}
+                )}
+              </>
+            );
+          }

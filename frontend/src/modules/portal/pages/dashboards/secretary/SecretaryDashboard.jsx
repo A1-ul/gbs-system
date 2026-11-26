@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useCallback, useMemo } from "react";
+import { useNavigate } from "react-router-dom";
 import apiClient from "../../../../../api/client/apiClient";
 import TopCenterSystemBanner from "../../../../../components/common/TopCenterSystemBanner";
 import WindowControlsBar from "../../../../../components/common/WindowControlsBar";
@@ -11,10 +12,12 @@ import VoiceNoteRecorder from "../../../../../components/common/VoiceNoteRecorde
 import { useDashboardTabSync } from "../../../../../hooks/useDashboardTabSync";
 import { checkDemoEntryLimit, trackDemoEntryCreated } from "../../../../../utils/demoLimitGuard";
 import { getDashboardTheme } from "../../../../../utils/dashboardTheme";
+import { getActiveSchoolName, getActiveSchoolLogo } from "../../../../../utils/schoolBranding";
 import { getUserAvatar, rotateUserAvatar, getLocalFallbackAvatar } from "../../../../../utils/userAvatars";
 import "../staff/StaffDashboard.css";
 
 export default function SecretaryDashboard() {
+  const navigate = useNavigate();
   const currentUser = useMemo(() => {
     try {
       const saved = JSON.parse(localStorage.getItem("gbs_user") || "null");
@@ -32,6 +35,8 @@ export default function SecretaryDashboard() {
   const { activeTab, setActiveTab } = useDashboardTabSync("visitors", "gbs_secretary_active_tab");
   const [avatarUrl, setAvatarUrl] = useState(() => getUserAvatar("SECRETARY"));
   const [isNavyMode, setIsNavyMode] = useState(() => getDashboardTheme() === "navy");
+  const [schoolName, setSchoolName] = useState(() => getActiveSchoolName({ isDeveloperContext: false }));
+  const [schoolLogo, setSchoolLogo] = useState(() => getActiveSchoolLogo({ isDeveloperContext: false }));
   const [overview, setOverview] = useState({
     activeVisitors: 0,
     totalVisitorsLogged: 0,
@@ -68,18 +73,35 @@ export default function SecretaryDashboard() {
 
   useEffect(() => {
     const syncTheme = () => setIsNavyMode(getDashboardTheme() === "navy");
+    const syncBranding = () => {
+      setSchoolName(getActiveSchoolName({ isDeveloperContext: false }));
+      setSchoolLogo(getActiveSchoolLogo({ isDeveloperContext: false }));
+    };
     const tabHandler = (e) => {
       if (e?.detail?.tab) setActiveTab(e.detail.tab);
     };
     window.addEventListener("gbs_theme_changed", syncTheme);
     window.addEventListener("gbs_ui_theme_changed", syncTheme);
+    window.addEventListener("gbs_school_branding_updated", syncBranding);
     window.addEventListener("gbs_open_dashboard_tab", tabHandler);
     return () => {
       window.removeEventListener("gbs_theme_changed", syncTheme);
       window.removeEventListener("gbs_ui_theme_changed", syncTheme);
+      window.removeEventListener("gbs_school_branding_updated", syncBranding);
       window.removeEventListener("gbs_open_dashboard_tab", tabHandler);
     };
-  }, []);
+  }, [setActiveTab]);
+
+  const handleLogout = () => {
+    try {
+      localStorage.removeItem("gbs_token");
+      localStorage.removeItem("gbs_access_token");
+      localStorage.removeItem("gbs_user");
+      localStorage.removeItem("gbs_auth_role");
+      sessionStorage.clear();
+    } catch { }
+    navigate("/login/secretary");
+  };
 
   const fetchSecretaryData = useCallback(async () => {
     setLoading(true);
@@ -202,46 +224,116 @@ export default function SecretaryDashboard() {
       className={`role-dashboard-wrapper staff-theme ${isNavyMode ? "theme-navy" : ""}`}
       data-testid="secretary-dashboard-root"
     >
-      <TopCenterSystemBanner roleTitle="School Secretary & Front Office" />
-      <LiveCallLauncherAndReceiver
-        variant="GLOBAL_RECEIVER"
-        userRole="SECRETARY"
-        currentUser={currentUser}
-        onFeedback={(msg, isErr) => setFeedback({ type: isErr ? "error" : "success", message: msg })}
+      {/* Authentic Real-Life Secretarial Office & Document Desk Ambient Backdrop */}
+      <div
+        className="role-dashboard-bg"
+        style={{ backgroundImage: "url('/assets/real/secretary_office_desk.jpg')" }}
       />
+      <div className="role-dashboard-overlay" />
 
-      <div className="role-dashboard-container">
-        <WindowControlsBar
-          title="School Secretary & Front Office Portal"
+      <div className="role-dashboard-content">
+        <TopCenterSystemBanner roleTitle="School Secretary & Front Office" />
+        <LiveCallLauncherAndReceiver
+          variant="GLOBAL_RECEIVER"
+          userRole="SECRETARY"
+          currentUser={currentUser}
+          onFeedback={(msg, isErr) => setFeedback({ type: isErr ? "error" : "success", message: msg })}
         />
 
-        <main className="role-main-content">
-          {/* Hero Section matching Master Blueprint Navy & Gold */}
-          <section className="role-hero-showcase">
-            <div className="role-hero-left">
-              <div className="role-identity-pill">
+        <header className="role-header">
+          <div className="role-header-brand">
+            <img
+              src={schoolLogo || "/assets/gbs_crest_badge.jpg"}
+              alt="School Crest"
+              className="role-crest"
+              onError={(e) => { e.target.src = "/assets/gbs_crest_badge.jpg"; }}
+            />
+            <div className="role-brand-text">
+              <span className="role-brand-title">{String(schoolName || "OFFICIAL INSTITUTION").toUpperCase()}</span>
+              <span className="role-portal-badge" style={{ color: "#38bdf8" }}>
+                🗂️ SCHOOL SECRETARY &amp; FRONT OFFICE PORTAL
+              </span>
+            </div>
+          </div>
+
+          <div className="role-status-ticker">
+            <span className="ticker-dot" />
+            <span>FRONT DESK • OFFICIAL CORRESPONDENCE • APPOINTMENTS</span>
+          </div>
+
+          <div className="role-header-actions">
+            <button
+              type="button"
+              className="role-action-btn"
+              onClick={() => setActiveTab("visitors")}
+            >
+              🪪 Visitor Log
+            </button>
+            <button
+              type="button"
+              className="role-action-btn"
+              onClick={() => setActiveTab("letters")}
+            >
+              ✉️ Letters &amp; Circulars
+            </button>
+            <button
+              type="button"
+              className="role-action-btn logout"
+              onClick={handleLogout}
+            >
+              🚪 Sign Out
+            </button>
+          </div>
+        </header>
+
+        <main className="role-main">
+          <WindowControlsBar
+            title="School Secretary & Front Office Portal"
+          />
+
+          {/* Blueprint 2-Column Hero Showcase — Real-Life Secretarial Office & Documents Filling the Hero Frame */}
+          <section className="role-hero-banner" data-testid="secretary-hero-banner">
+            <div className="role-hero-text">
+              <div style={{ display: "flex", alignItems: "center", gap: "14px", marginBottom: "10px", flexWrap: "wrap" }}>
                 <img
                   src={avatarUrl}
                   alt="School Secretary"
-                  className="role-avatar-ring"
                   onClick={() => setAvatarUrl(rotateUserAvatar("SECRETARY"))}
                   onError={(e) => {
                     e.target.onerror = null;
                     e.target.src = getLocalFallbackAvatar("SECRETARY");
                   }}
+                  style={{
+                    width: "68px",
+                    height: "68px",
+                    borderRadius: "50%",
+                    objectFit: "cover",
+                    border: "2.5px solid #d4af37",
+                    boxShadow: "0 0 18px rgba(212, 175, 55, 0.45)",
+                    cursor: "pointer"
+                  }}
                 />
                 <div>
-                  <span className="role-portal-tag">🗂️ FRONT OFFICE &amp; SECRETARIAT DESK</span>
-                  <h1>Welcome, {currentUser?.firstName || "School"} {currentUser?.lastName || "Secretary"}!</h1>
-                  <p>Manage Campus Visitors, Official Letters &amp; Circulars, Headmaster Appointments &amp; School Stationery</p>
+                  <span style={{ display: "inline-block", fontSize: "0.72rem", fontWeight: 800, color: "#f6dd84", letterSpacing: "1px", textTransform: "uppercase", background: "rgba(212, 175, 55, 0.18)", border: "1px solid rgba(212, 175, 55, 0.55)", padding: "3px 10px", borderRadius: "999px" }}>
+                    🗂️ FRONT OFFICE &amp; SECRETARIAT DESK
+                  </span>
+                  <h1 style={{ margin: "6px 0 2px" }}>
+                    Welcome, {currentUser?.firstName || "School"} {currentUser?.lastName || "Secretary"}!
+                  </h1>
                 </div>
               </div>
+              <p className="role-hero-sub">
+                Coordinate Campus Visitors, Official School Letters &amp; Circulars, Headmaster Appointments, Communications, and View Official Headmaster Stationery Prices.
+              </p>
 
-              <div className="role-kpi-strip">
+              <div className="role-kpi-row">
                 <div
-                  className="role-kpi-card"
+                  className="role-kpi-box"
                   onClick={() => setActiveTab("visitors")}
                   style={{ cursor: "pointer" }}
+                  role="button"
+                  tabIndex={0}
+                  onKeyDown={(e) => { if (e.key === "Enter" || e.key === " ") setActiveTab("visitors"); }}
                   aria-label="Open Visitor Front-Desk Log"
                 >
                   <span className="role-kpi-icon">🪪</span>
@@ -252,9 +344,12 @@ export default function SecretaryDashboard() {
                 </div>
 
                 <div
-                  className="role-kpi-card"
+                  className="role-kpi-box"
                   onClick={() => setActiveTab("letters")}
                   style={{ cursor: "pointer" }}
+                  role="button"
+                  tabIndex={0}
+                  onKeyDown={(e) => { if (e.key === "Enter" || e.key === " ") setActiveTab("letters"); }}
                   aria-label="Open Letters and Circulars"
                 >
                   <span className="role-kpi-icon">✉️</span>
@@ -265,9 +360,12 @@ export default function SecretaryDashboard() {
                 </div>
 
                 <div
-                  className="role-kpi-card"
+                  className="role-kpi-box"
                   onClick={() => setActiveTab("appointments")}
                   style={{ cursor: "pointer" }}
+                  role="button"
+                  tabIndex={0}
+                  onKeyDown={(e) => { if (e.key === "Enter" || e.key === " ") setActiveTab("appointments"); }}
                   aria-label="Open Headmaster Appointments"
                 >
                   <span className="role-kpi-icon">📅</span>
@@ -278,32 +376,42 @@ export default function SecretaryDashboard() {
                 </div>
 
                 <div
-                  className="role-kpi-card"
+                  className="role-kpi-box"
                   onClick={() => setActiveTab("stationery")}
                   style={{ cursor: "pointer" }}
-                  aria-label="Open School Stationery Store"
+                  role="button"
+                  tabIndex={0}
+                  onKeyDown={(e) => { if (e.key === "Enter" || e.key === " ") setActiveTab("stationery"); }}
+                  aria-label="Open School Stationery Price List"
                 >
                   <span className="role-kpi-icon">🎒</span>
                   <div className="role-kpi-data">
-                    <span className="role-kpi-title">Stationery Catalog</span>
+                    <span className="role-kpi-title">Stationery Prices</span>
                     <strong className="role-kpi-num">{overview.stationeryItemsCount} Items</strong>
                   </div>
                 </div>
               </div>
             </div>
 
-            <div className="role-hero-photo-frame">
+            {/* Full-Bleed Real-Life Secretarial Office & Official Documents Showcase Image */}
+            <div
+              className="role-hero-photo-frame"
+              data-testid="secretary-real-office-image-frame"
+              style={{ minHeight: "340px", height: "100%", width: "100%", border: "2px solid rgba(212, 175, 55, 0.58)" }}
+            >
               <img
-                src="/assets/staff-dashboard-bg.jpg"
-                alt="School Secretary Front Office"
+                src="/assets/real/secretary_office_desk.jpg"
+                alt="School Secretary at Executive Secretarial Office Desk with Official School Documents"
+                data-testid="secretary-real-office-img"
+                style={{ width: "100%", height: "100%", minHeight: "340px", objectFit: "cover", objectPosition: "center", display: "block" }}
               />
               <div className="photo-live-pill">
-                <span className="ticker-dot"></span>
+                <span className="ticker-dot" />
                 <span>SECRETARIAT LIVE OFFICE</span>
               </div>
               <div className="photo-caption-tag">
-                <strong>School Administration Desk</strong>
-                <span>Front Office • Stationery • Correspondence</span>
+                <strong>Executive Secretariat &amp; Document Desk</strong>
+                <span>Official Files • Circulars • Front Office</span>
               </div>
             </div>
           </section>
@@ -363,7 +471,7 @@ export default function SecretaryDashboard() {
               onClick={() => setActiveTab("stationery")}
               style={{ borderLeft: "3px solid #d4af37" }}
             >
-              🎒 School Stationery &amp; Expenses
+              🎒 Stationery Price List
             </button>
             <button
               type="button"
@@ -378,7 +486,7 @@ export default function SecretaryDashboard() {
               onClick={() => setActiveTab("clinic")}
               style={{ borderLeft: "3px solid #10b981" }}
             >
-              🏥 My Health &amp; Clinic Info
+              🩺 My Health Status
             </button>
           </nav>
 

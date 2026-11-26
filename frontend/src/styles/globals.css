@@ -1097,30 +1097,16 @@ body.gbs-module-page-view .dashboard-main {
   padding: 0.75rem clamp(0.75rem, 2vw, 1.5rem) 2rem !important;
 }
 
-/* Clean wrapped module navigation strip so ALL tabs remain visible in clear order without hidden off-screen tabs */
-body.gbs-module-page-view .role-tab-nav {
-  display: flex !important;
-  flex-wrap: wrap !important;
-  overflow-x: visible !important;
-  overflow-y: visible !important;
-  gap: 7px !important;
-  padding: 8px 10px !important;
-  margin-bottom: 0.95rem !important;
-}
-
-body.gbs-module-page-view .role-tab-nav .role-tab-btn {
-  flex: 0 1 auto !important;
-  white-space: normal !important;
-  text-align: left !important;
-  min-width: auto !important;
-  padding: 7px 12px !important;
-  font-size: 0.79rem !important;
-  line-height: 1.25 !important;
+/* Hide the multi-row Overview tab wall on dedicated module pages so the requested module renders immediately at top;
+   users switch modules via the compact "Switch Module" dropdown or Back/Overview controls in the sticky Module Page Bar. */
+body.gbs-module-page-view [data-gbs-primary-tab-nav="true"] {
+  display: none !important;
 }
 
 body.gbs-module-page-view .role-workspace-card {
-  min-height: calc(100dvh - 180px);
+  min-height: calc(100dvh - 150px);
   scroll-margin-top: 72px;
+  margin-top: 0 !important;
 }
 
 .role-workspace-card,
@@ -1186,18 +1172,10 @@ body.gbs-module-page-view .role-workspace-card {
     padding: 0.55rem 0.65rem calc(72px + env(safe-area-inset-bottom, 0px)) !important;
   }
 
-  body.gbs-module-page-view .role-tab-nav {
-    flex-wrap: wrap !important;
-    overflow-x: visible !important;
-    padding: 6px !important;
-    margin-bottom: 0.65rem !important;
-  }
-
-  body.gbs-module-page-view .role-tab-nav .role-tab-btn {
-    flex: 1 1 calc(50% - 8px) !important;
-    min-width: 135px !important;
-    padding: 7px 10px !important;
-    font-size: 0.75rem !important;
+  .gbs-module-switcher-menu {
+    right: 0 !important;
+    left: auto !important;
+    width: min(320px, 94vw) !important;
   }
 }
 

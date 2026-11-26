@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useRef } from "react";
 import { createPortal } from "react-dom";
+import PhonicsAndAlphabetsLearningStudio from "./PhonicsAndAlphabetsLearningStudio";
 import {
   SUPPORTED_TRANSLATION_LANGUAGES,
   RECEIVER_ROLES,
@@ -212,7 +213,14 @@ export default function UniversalLanguageTranslatorModal({
   };
 
   useEffect(() => {
-    if (!isOpen || translatorMode === "RECEIVED_MESSAGES_INBOX") return;
+    if (
+      !isOpen ||
+      translatorMode === "RECEIVED_MESSAGES_INBOX" ||
+      translatorMode === "JOLLY_PHONICS_42" ||
+      translatorMode === "COUNTRY_ALPHABETS"
+    ) {
+      return;
+    }
     let isMounted = true;
     const timer = setTimeout(async () => {
       if (!isMounted) return;
@@ -598,8 +606,74 @@ export default function UniversalLanguageTranslatorModal({
                 Read incoming translated messages with full sender details & audio readout
               </div>
             </button>
+
+            <button
+              type="button"
+              data-no-hud-notice="true"
+              data-testid="translator-mode-jolly-phonics"
+              onClick={() => setTranslatorMode("JOLLY_PHONICS_42")}
+              style={{
+                padding: "12px 14px",
+                borderRadius: "10px",
+                cursor: "pointer",
+                textAlign: "left",
+                border:
+                  translatorMode === "JOLLY_PHONICS_42"
+                    ? "2px solid #38bdf8"
+                    : "1px solid rgba(56, 189, 248, 0.35)",
+                background:
+                  translatorMode === "JOLLY_PHONICS_42"
+                    ? "linear-gradient(135deg, rgba(14, 165, 233, 0.3), rgba(8, 47, 73, 0.72))"
+                    : "rgba(39, 39, 42, 0.65)",
+                color: "#fffbeb",
+              }}
+            >
+              <div style={{ fontWeight: 900, fontSize: "13px", color: "#7dd3fc" }}>
+                🔊 4. 42 Jolly Phonics Sounds &amp; Writing
+              </div>
+              <div style={{ fontSize: "11px", color: "#d6d3d1", marginTop: "3px" }}>
+                Hear all 42 phonics sounds (Groups 1–7), actions, words &amp; trace how letters are written
+              </div>
+            </button>
+
+            <button
+              type="button"
+              data-no-hud-notice="true"
+              data-testid="translator-mode-country-alphabets"
+              onClick={() => setTranslatorMode("COUNTRY_ALPHABETS")}
+              style={{
+                padding: "12px 14px",
+                borderRadius: "10px",
+                cursor: "pointer",
+                textAlign: "left",
+                border:
+                  translatorMode === "COUNTRY_ALPHABETS"
+                    ? "2px solid #fbbf24"
+                    : "1px solid rgba(212, 175, 55, 0.35)",
+                background:
+                  translatorMode === "COUNTRY_ALPHABETS"
+                    ? "linear-gradient(135deg, rgba(212, 175, 55, 0.3), rgba(120, 53, 15, 0.65))"
+                    : "rgba(39, 39, 42, 0.65)",
+                color: "#fffbeb",
+              }}
+            >
+              <div style={{ fontWeight: 900, fontSize: "13px", color: "#fde68a" }}>
+                🌍 5. Country &amp; Language Alphabets
+              </div>
+              <div style={{ fontSize: "11px", color: "#d6d3d1", marginTop: "3px" }}>
+                Learn letter sounds &amp; how alphabets are written across all 17 countries &amp; languages
+              </div>
+            </button>
           </div>
         </div>
+
+        {translatorMode === "JOLLY_PHONICS_42" && (
+          <PhonicsAndAlphabetsLearningStudio mode="JOLLY_PHONICS" />
+        )}
+
+        {translatorMode === "COUNTRY_ALPHABETS" && (
+          <PhonicsAndAlphabetsLearningStudio mode="COUNTRY_ALPHABETS" />
+        )}
 
         {/* INBOX VIEW: RECEIVED TRANSLATED MESSAGES WITH SENDER DETAILS */}
         {translatorMode === "RECEIVED_MESSAGES_INBOX" && (
@@ -848,7 +922,9 @@ export default function UniversalLanguageTranslatorModal({
           </div>
         )}
 
-        {translatorMode !== "RECEIVED_MESSAGES_INBOX" && (
+        {translatorMode !== "RECEIVED_MESSAGES_INBOX" &&
+          translatorMode !== "JOLLY_PHONICS_42" &&
+          translatorMode !== "COUNTRY_ALPHABETS" && (
           <>
             {/* Language Grid */}
             <div style={{ marginBottom: "14px" }}>

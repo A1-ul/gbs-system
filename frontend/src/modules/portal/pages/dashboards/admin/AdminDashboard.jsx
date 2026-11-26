@@ -6324,7 +6324,7 @@ export function AdminDashboard({ initialTab } = {}) {
               onClick={() => setActiveTab("clinic")}
               style={{ borderLeft: "3px solid #10b981", color: activeTab === "clinic" ? "#ffffff" : "#6ee7b7", fontWeight: 800 }}
             >
-              🏥 School Clinic &amp; Medical Registry
+              🩺 My Health Status
             </button>
             <button
               type="button"
@@ -10469,7 +10469,7 @@ export function AdminDashboard({ initialTab } = {}) {
                                         setCommCustomNumber(item.contact);
                                       }
                                       setCommRecipientName(item.recipient);
-                                      window.scrollTo({ top: 300, behavior: "smooth" });
+                                      document.querySelector(".role-workspace-card form")?.scrollIntoView({ behavior: "smooth", block: "nearest" });
                                     }}
                                     style={{
                                       fontSize: "0.75rem",
@@ -12070,7 +12070,7 @@ export function AdminDashboard({ initialTab } = {}) {
 
           {activeTab === "clinic" && (
             <SchoolClinicHubPanel
-              mode="ADMIN"
+              mode="SELF"
               currentUser={currentUser}
               onFeedback={(msg) => setFeedback({ type: "success", message: msg })}
             />
