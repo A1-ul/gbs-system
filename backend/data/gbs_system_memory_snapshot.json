@@ -529,13 +529,13 @@
     }
   ],
   "verificationSummary": {
-    "latestVerifiedCommit": "v2.24.0-HEAD",
+    "latestVerifiedCommit": "c5652c3",
     "latestLiveBundleHash": "index-CW4YQmNY.js",
     "liveProductionUrl": "https://gbs-system.onrender.com",
     "autoMemoryRuleFile": "AGENTS.md",
     "backendTestSuitesPassed": "51/51 v2.24.0 local API + Real Chrome CDP E2E checks (Central Engine /health security & 8-field Developer panel, exact 401/403/404/405(Allow) HTTP codes, Demo->Production tenant 99 403 isolation, 3-user Full-Mesh targeted conference signaling & /leave, Staff Clock-In GPS/Day/Date/Time/Photo Proof/Reporting & Closing Time/Headmaster Verification, GBS Live Map Ghana +233/0 consent & revocation) + 17/17 Exam Vetting/Payments/RCCE checks in verify_upgrade_e2e.js + 0 native HTML tooltips + 0 Prisma errors",
     "chromeE2EDashboardsVerified": "Real Headless Chrome CDP Desktop (1440x900) & Mobile (390x844) verified locally (51/51): Developer Dashboard 8-field Central Engine Health Panel (ONLINE), Headmaster Clock-In Reporting/Closing Time sync + dedicated /staffAttendance page + Back button exact 0px scroll restoration (320px->320px), Teacher Dashboard Reporting/Closing Time sync + Central Engine Online banner + Multi-User Live Video Conference instant camera (640x360 in 799ms) + seamless Video->Voice->Video restoration (640px), Mobile 390x844 layout, 0 HTML title tooltips, 0 uncaught JS errors",
-    "liveRenderHttpAuditPassed": "Pending live Render post-push audit on https://gbs-system.onrender.com for bundle index-CW4YQmNY.js (previous v2.21/v2.23 audits 100% green)",
+    "liveRenderHttpAuditPassed": "25/25 live Render production checks passed on https://gbs-system.onrender.com (commit c5652c3, bundle index-CW4YQmNY.js): /api/v1/health 200 (centralEngine ONLINE, database truthful DEGRADED/LOCAL_PERSISTENT_STANDBY until DATABASE_URL is attached on Render, 0 leaked DB secrets), exact 401/403/405(Allow), Demo->tenant 99 blocked 403, 3-peer Full-Mesh targeted signaling & non-host /leave, Staff Clock-In schedule & 400 validation, GBS Live Map exact unauthorized message & null coords, SPA routes 200 OK",
     "institutionSeparationUniversityClinicVoiceVerified": "2026-11-20 Tier-Tailored School Portals (JHS/SHS/TVET/University), Separated Internships/Attachments, Clinic Privacy & Non-Disclosure Verified",
     "multiMillionSchoolDatabaseMandate": {
       "enforced": true,
