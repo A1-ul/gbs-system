@@ -2,6 +2,7 @@ import React, { useState, useEffect, useCallback } from "react";
 import { rcceApi, displayRcceNotice } from "../../../utils/rcceClient";
 import { copyTextSafely } from "../../../utils/safeWindow";
 import { resetDemoSandboxData } from "../../../utils/tokenStorage";
+import CentralEngineHealthPanel from "./CentralEngineHealthPanel";
 
 export default function RcceControlHub() {
   const [activeSubTab, setActiveSubTab] = useState("catalogue"); // 'catalogue' | 'telemetry' | 'maintenance' | 'audit' | 'errors' | 'privacy' | 'events'
@@ -412,6 +413,7 @@ export default function RcceControlHub() {
       {/* SUB-TAB 2: TRUE ENGINE TELEMETRY & DEMO 10-ENTRY CAP */}
       {activeSubTab === "telemetry" && (
         <div style={{ display: "flex", flexDirection: "column", gap: 20 }}>
+          <CentralEngineHealthPanel compact={true} />
           <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(270px, 1fr))", gap: 16 }}>
             <div style={{ background: "#0f172a", borderRadius: 10, padding: 18, border: "1px solid #334155" }}>
               <h4 style={{ margin: "0 0 12px 0", color: "#d4af37", fontSize: 15, fontWeight: 700 }}>

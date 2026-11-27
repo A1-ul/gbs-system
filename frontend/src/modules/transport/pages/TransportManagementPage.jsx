@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import apiClient from '../../../api/client/apiClient';
 import { getActiveSchoolName } from '../../../utils/schoolBranding';
 import { isDemoSandboxMode } from '../../../utils/tokenStorage';
+import GBSLiveMapMobileTracker from '../../../components/common/GBSLiveMapMobileTracker';
 import '../pages/TransportManagement.css';
 import '../../library/pages/LibraryManagement.css';
 
@@ -449,7 +450,20 @@ export default function TransportManagementPage() {
           >
             ➕ Add Route / Vehicle
           </button>
+          <button
+            className={`tab-btn ${activeTab === 'liveMap' ? 'active' : ''}`}
+            onClick={() => setActiveTab('liveMap')}
+          >
+            🛰️ Live Mobile GPS Map
+          </button>
         </div>
+
+        {/* Tab: GBS Live Map Authorized Mobile Tracking (Transport Drivers & Authorized Personnel) */}
+        {activeTab === 'liveMap' && (
+          <div style={{ marginTop: '12px' }}>
+            <GBSLiveMapMobileTracker systemContext="GBS Transport Fleet Live Map" />
+          </div>
+        )}
 
         {/* Tab 1: Routes */}
         {activeTab === 'routes' && (

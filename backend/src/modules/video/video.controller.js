@@ -100,6 +100,19 @@ async function answerCall(req, res, next) {
   }
 }
 
+async function leaveCall(req, res, next) {
+  try {
+    const session = await liveCallService.leaveCall(req);
+    return res.status(200).json({
+      success: true,
+      message: 'Left conference room cleanly.',
+      data: { session }
+    });
+  } catch (err) {
+    return next(err);
+  }
+}
+
 async function declineCall(req, res, next) {
   try {
     const session = await liveCallService.declineCall(req);
@@ -159,6 +172,7 @@ async function streamCallEvents(req, res, next) {
     const { session } = liveCallService.resolveCallLocation(req, callId);
     const callerId = String(req.user?.id || req.user?.email || '');
     const callerEmail = String(req.user?.email || '').trim().toLowerCase() || null;
+    const callerPeerKey = callerEmail || callerId;
 
     res.setHeader('Content-Type', 'text/event-stream');
     res.setHeader('Cache-Control', 'no-cache, no-transform');
@@ -183,9 +197,18 @@ async function streamCallEvents(req, res, next) {
       if (!evt) return;
       if (evt.type === 'webrtc_signal' && evt.item) {
         const sig = evt.item;
+        const sKey = sig.senderKey || sig.senderEmail || String(sig.senderId || '');
+        if (sKey && callerPeerKey && String(sKey).toLowerCase() === callerPeerKey.toLowerCase()) return;
         if (sig.senderEmail && callerEmail && sig.senderEmail === callerEmail) return;
-        if (!sig.senderEmail && String(sig.senderId) === callerId) return;
-        if (sig.targetUserId && callerId && String(sig.targetUserId) !== callerId) return;
+        if (!sig.senderEmail && !sig.senderKey && String(sig.senderId) === callerId) return;
+        if (sig.targetPeerKey) {
+          const targetLower = String(sig.targetPeerKey).trim().toLowerCase();
+          if (targetLower !== callerPeerKey.toLowerCase() && targetLower !== callerId.toLowerCase() && (!callerEmail || targetLower !== callerEmail)) {
+            return;
+          }
+        } else if (sig.targetUserId && callerId && String(sig.targetUserId) !== callerId && (!callerEmail || String(sig.targetUserId).toLowerCase() !== callerEmail)) {
+          return;
+        }
       }
       writeEvent(evt.type || 'update', evt);
     };
@@ -225,6 +248,7 @@ module.exports = {
   getMissedCalls,
   acknowledgeMissedCall,
   answerCall,
+  leaveCall,
   declineCall,
   endCall,
   postSignal,

@@ -17,7 +17,9 @@ const DEMO_ACCOUNT_EMAILS = new Set([
   'staff@gbs.com',
   'hr@gbs.com',
   'alumni@gbs.com',
-  'secretary@gbs.com'
+  'secretary@gbs.com',
+  'doctor@gbs.com',
+  'nurse@gbs.com'
 ]);
 
 const DEMO_ACCOUNT_USERNAMES = new Set([
@@ -29,7 +31,9 @@ const DEMO_ACCOUNT_USERNAMES = new Set([
   'staff1',
   'hr1',
   'alumni1',
-  'secretary1'
+  'secretary1',
+  'doctor1',
+  'nurse1'
 ]);
 
 const DEMO_ACCOUNT_IDS = new Set([
@@ -170,8 +174,7 @@ function isDemoSandboxRequest(req) {
   }
 
   const modeHeader = String(req.headers?.['x-gbs-mode'] || '').trim().toUpperCase();
-  const tid = resolveTenantId(req, 1);
-  if (modeHeader === 'DEMO_SANDBOX' && tid === 1) {
+  if (modeHeader === 'DEMO_SANDBOX') {
     return true;
   }
 

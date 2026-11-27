@@ -32,6 +32,7 @@ router.post('/calls/initiate', controller.initiateCall);
 router.get('/calls/:callId/stream', controller.streamCallEvents);
 router.get('/calls/:callId', controller.getCallState);
 router.post('/calls/:callId/answer', controller.answerCall);
+router.post('/calls/:callId/leave', controller.leaveCall);
 router.post('/calls/:callId/decline', controller.declineCall);
 router.post('/calls/:callId/end', controller.endCall);
 router.post('/calls/:callId/signal', controller.postSignal);

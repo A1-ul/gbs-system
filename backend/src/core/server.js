@@ -73,10 +73,14 @@ app.use(cors({
 }));
 app.use(hpp());
 
-// Rate limiting
+// Rate limiting (exclude health/version probes so intelligent monitoring never gets 429 throttled)
 const limiter = rateLimit({
   windowMs: envConfig.rateLimit.windowMs,
   max: envConfig.rateLimit.maxRequests,
+  skip: (req) => {
+    const p = String(req.path || '');
+    return p === '/v1/health' || p === '/v1/rcce/health' || p === '/v1/app-version';
+  },
   message: 'Too many requests from this IP, please try again later.'
 });
 app.use('/api', limiter);
@@ -103,16 +107,25 @@ if (envConfig.env === 'development') {
   app.use(morgan('dev'));
 }
 
-// Health check
+// Health check — independently monitors Central Engine & Database without exposing credentials or private server internals
 const buildHealthPayload = async () => {
-  let dbStatus = { active: false, databaseActive: false, role: 'STANDBY_LOCAL', databaseRole: 'UNKNOWN', mode: 'FALLBACK' };
+  const probeStartMs = Date.now();
+  const hasDatabaseUrl = Boolean(String(process.env.DATABASE_URL || '').trim());
+  let maintenanceActive = false;
+  try {
+    const { businessRulesEngine } = require('../rcce/businessRulesEngine');
+    const maint = businessRulesEngine.getMaintenanceState();
+    maintenanceActive = Boolean(maint?.active);
+  } catch { }
+
+  let dbStatus = { active: false, connected: false, status: 'STANDBY', role: 'STANDBY_FALLBACK', mode: 'STANDBY_FALLBACK', latencyMs: null };
   try {
     const prisma = require('./database/prisma.client');
     if (typeof prisma.getPostgresLiveStatus === 'function') {
       let healthTimer;
       const timeoutPromise = new Promise((resolve) => {
         healthTimer = setTimeout(() => {
-          resolve({ active: false, connected: false, status: 'INITIALIZING', role: 'INITIALIZING', mode: 'PROBING' });
+          resolve({ active: false, connected: false, status: 'INITIALIZING', role: 'INITIALIZING', mode: 'PROBING', latencyMs: 4000 });
         }, 4000);
       });
       dbStatus = await Promise.race([
@@ -120,28 +133,66 @@ const buildHealthPayload = async () => {
         timeoutPromise
       ]).finally(() => clearTimeout(healthTimer));
     }
-  } catch (e) {
-    dbStatus = { active: false, databaseActive: false, role: 'ERROR', databaseRole: 'ERROR', error: e.message };
+  } catch {
+    dbStatus = { active: false, connected: false, status: 'ERROR', role: 'ERROR', mode: 'ERROR', latencyMs: Date.now() - probeStartMs };
   }
+
   const isPgActive = Boolean(dbStatus?.databaseActive ?? dbStatus?.active ?? dbStatus?.connected);
+  const databaseState = isPgActive
+    ? 'ONLINE'
+    : (dbStatus?.mode === 'PROBING' ? 'DEGRADED' : (hasDatabaseUrl ? 'OFFLINE' : 'DEGRADED'));
+  const centralEngineState = maintenanceActive ? 'MAINTENANCE' : 'ONLINE';
+  const overallStatus = maintenanceActive
+    ? 'MAINTENANCE'
+    : (isPgActive ? 'ONLINE' : 'DEGRADED');
+  const uptimeSeconds = Math.floor(process.uptime());
+  const responseTimeMs = Math.max(1, Date.now() - probeStartMs);
+  const dbSummary = isPgActive
+    ? 'Primary PostgreSQL database connected and healthy.'
+    : hasDatabaseUrl
+      ? 'Primary database temporarily unreachable; resilient standby storage active.'
+      : 'Standby persistent store active (primary PostgreSQL URL not attached in this environment).';
+
   return {
     status: 'success',
-    message: 'GBS Enterprise Backend is online and operational.',
+    overallStatus,
+    message: overallStatus === 'ONLINE'
+      ? 'GBS Central Engine and primary database are online and operational.'
+      : overallStatus === 'MAINTENANCE'
+        ? 'GBS Central Engine is in scheduled maintenance mode.'
+        : 'GBS Central Engine is online; database is operating in degraded/standby mode.',
+    uptimeSeconds,
+    responseTimeMs,
+    centralEngine: {
+      status: centralEngineState,
+      responsive: true,
+      maintenanceActive,
+      uptimeSeconds
+    },
     databaseActive: isPgActive,
-    databaseRole: dbStatus?.databaseRole || dbStatus?.role || (isPgActive ? 'PRIMARY_ACTIVE' : 'STANDBY_LOCAL'),
+    databaseRole: isPgActive ? 'PRIMARY_ACTIVE' : 'STANDBY_FALLBACK',
     database: {
-      ...dbStatus,
-      databaseActive: isPgActive
+      status: databaseState,
+      active: isPgActive,
+      connected: isPgActive,
+      databaseActive: isPgActive,
+      role: isPgActive ? 'PRIMARY_ACTIVE' : 'STANDBY_FALLBACK',
+      mode: isPgActive ? 'POSTGRESQL_LIVE' : (hasDatabaseUrl ? 'STANDBY_FAILOVER' : 'LOCAL_PERSISTENT_STANDBY'),
+      latencyMs: typeof dbStatus?.latencyMs === 'number' ? dbStatus.latencyMs : null,
+      summary: dbSummary,
+      checkedAt: new Date().toISOString()
     },
     timestamp: new Date().toISOString()
   };
 };
 
 app.get('/health', async (req, res) => {
+  res.setHeader('Cache-Control', 'no-store, no-cache, must-revalidate');
   const payload = await buildHealthPayload();
   res.status(200).json(payload);
 });
 app.get('/api/v1/health', async (req, res) => {
+  res.setHeader('Cache-Control', 'no-store, no-cache, must-revalidate');
   const payload = await buildHealthPayload();
   res.status(200).json(payload);
 });
@@ -817,6 +868,11 @@ const HOST = process.env.HOST || '0.0.0.0';
 let server = null;
 if (process.env.GBS_NO_LISTEN !== '1') {
   server = app.listen(PORT, HOST, async () => {
+    // Prevent Render / reverse-proxy 60s idle keep-alive race drops (502 / ECONNRESET)
+    if (server) {
+      server.keepAliveTimeout = 65000;
+      server.headersTimeout = 66000;
+    }
     console.log(`🚀 [GBS SYSTEM] Server running on http://${HOST}:${PORT} (LAN & Mobile accessible) in ${envConfig.env} mode.`);
     try {
       initializeSocket(server);

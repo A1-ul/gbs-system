@@ -6,10 +6,11 @@ import {
   getActiveAuthToken,
   getUser
 } from "../../utils/tokenStorage";
+import { recordApiResult, getConnectionSnapshot } from "../../utils/connectionMonitor";
 
 const axiosInstance = axios.create({
   baseURL: getApiBaseUrl(),
-  timeout: 15000,
+  timeout: 25000,
   headers: {
     "Content-Type": "application/json",
   },
@@ -254,6 +255,7 @@ axiosInstance.interceptors.request.use(
 
     if (typeof window !== "undefined" && !config.__gbsTrackedInFlight) {
       config.__gbsTrackedInFlight = true;
+      config.__gbsStartTime = Date.now();
       window.__gbsInFlightRequests = Math.max(0, Number(window.__gbsInFlightRequests || 0)) + 1;
       window.__gbsLastNetworkActivityAt = Date.now();
     }
@@ -266,6 +268,15 @@ axiosInstance.interceptors.request.use(
 axiosInstance.interceptors.response.use(
   (response) => {
     releaseInFlightRequest(response?.config);
+    try {
+      const durationMs = response?.config?.__gbsStartTime ? Date.now() - response.config.__gbsStartTime : null;
+      recordApiResult({
+        ok: true,
+        endpoint: String(response?.config?.url || ""),
+        status: response.status,
+        durationMs
+      });
+    } catch { }
     try {
       const method = String(response?.config?.method || "get").toLowerCase();
       const url = String(response?.config?.url || "");
@@ -395,14 +406,52 @@ axiosInstance.interceptors.response.use(
       } catch { }
     }
 
+    const reqMethod = String(originalRequest.method || "get").toLowerCase();
+    const durationMs = originalRequest.__gbsStartTime ? Date.now() - originalRequest.__gbsStartTime : null;
+
+    // Intelligent controlled retry (1 attempt) for idempotent GET requests experiencing transient network/gateway blips
+    const isTransientTransportFailure = !error.response || status === 502 || status === 504;
+    if (
+      reqMethod === "get" &&
+      isTransientTransportFailure &&
+      !originalRequest._networkRetryDone &&
+      !url.includes("/health") &&
+      (typeof navigator === "undefined" || navigator.onLine !== false)
+    ) {
+      originalRequest._networkRetryDone = true;
+      originalRequest.__gbsStartTime = Date.now();
+      await new Promise((r) => setTimeout(r, 1200));
+      return axiosInstance(originalRequest);
+    }
+
+    try {
+      recordApiResult({
+        ok: false,
+        endpoint: url,
+        status: status || 0,
+        durationMs,
+        reason: error.response?.data?.message || error.message || "Connection error"
+      });
+    } catch { }
+
     const rcceCode = error.response?.data?.code;
     let serverErrMsg =
       error.response?.data?.message ||
       error.response?.data?.error ||
       error.message;
 
+    const connSnap = getConnectionSnapshot();
+    const isBackgroundPoll =
+      url.includes("/video/calls/incoming") ||
+      url.includes("/sms/inbox") ||
+      url.includes("/app-version") ||
+      url.includes("/translate/inbox") ||
+      url.includes("/health");
+
     if (!error.response) {
-      serverErrMsg = "System offline: Unable to reach the GBS Central Engine. Check network connection.";
+      serverErrMsg = connSnap.isConfirmedOffline
+        ? "Central Engine offline: Unable to reach GBS backend. Automatic reconnection is active."
+        : "Temporary connection interruption — reconnecting to GBS Central Engine...";
     }
 
     if (status === 401 && !isAuthAttempt) {
@@ -418,12 +467,15 @@ axiosInstance.interceptors.response.use(
       return Promise.reject(error);
     }
 
-    const reqMethod = String(originalRequest.method || "get").toLowerCase();
     const suppressDemoPermissionNotice =
       status === 403 &&
       reqMethod === "get" &&
       isDemoSandboxMode() &&
       rcceCode !== "DEMO_TRIAL_LIMIT_REACHED";
+
+    // Prevent false offline popup storms on transient background poll hiccups before offline is confirmed
+    const suppressTransientOfflineNotice =
+      !error.response && (isBackgroundPoll || !connSnap.isConfirmedOffline);
 
     if (typeof window !== "undefined") {
       try {
@@ -445,6 +497,7 @@ axiosInstance.interceptors.response.use(
 
     if (
       !suppressDemoPermissionNotice &&
+      !suppressTransientOfflineNotice &&
       typeof window !== "undefined" &&
       typeof window.showGBSOpenNotice === "function"
     ) {

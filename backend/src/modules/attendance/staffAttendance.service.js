@@ -4,6 +4,7 @@ const prisma = require('../../core/database/prisma.client');
 const { readPersistentStore, writePersistentStore } = require('../../core/database/persistentStore');
 const { AppError } = require('../../middleware/error.middleware');
 const { isDemoSandboxRequest } = require('../../middleware/demoLimit.middleware');
+const socketServer = require('../../core/socket/socketServer');
 
 const STAFF_ROLES = new Set([
   'ADMIN',
@@ -37,13 +38,83 @@ const ROLE_TO_DEPARTMENT = {
 };
 
 const DEFAULT_SETTINGS = Object.freeze({
+  reportingTime: '07:30',
   closingTime: '16:00',
-  lateCutoffTime: '08:15',
+  lateCutoffTime: '08:00',
   autoClockOutDelayMinutes: 120,
   activeTerm: 'Term 1 (2026/2027)',
   academicYear: '2026-2027',
-  enforceClockOutReasonBeforeClose: true
+  workplaceLocationName: 'Main School Campus',
+  enforceClockOutReasonBeforeClose: true,
+  requirePhotoProof: true
 });
+
+const DAY_NAMES = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
+
+function formatHumanDate(date = new Date()) {
+  try {
+    return date.toLocaleDateString('en-GB', {
+      weekday: 'long',
+      day: '2-digit',
+      month: 'long',
+      year: 'numeric'
+    });
+  } catch {
+    return `${DAY_NAMES[date.getDay()] || ''}, ${formatLocalDateStr(date)}`;
+  }
+}
+
+function format12HourTime(hhmm = '07:30') {
+  const clean = parseHHMM(hhmm, '07:30');
+  const [h, m] = clean.split(':').map((v) => parseInt(v, 10));
+  const suffix = h >= 12 ? 'PM' : 'AM';
+  const h12 = h % 12 === 0 ? 12 : h % 12;
+  return `${pad2(h12)}:${pad2(m)} ${suffix}`;
+}
+
+function hhmmToMinutes(hhmm = '07:30') {
+  const clean = parseHHMM(hhmm, '07:30');
+  const [h, m] = clean.split(':').map((v) => parseInt(v, 10));
+  return h * 60 + m;
+}
+
+let staffAttendanceSchemaEnsured = false;
+async function ensureStaffAttendanceSchema() {
+  if (staffAttendanceSchemaEnsured) return;
+  try {
+    const online = typeof prisma.isPostgresOnline === 'function' ? await prisma.isPostgresOnline() : false;
+    if (!online) return;
+    await prisma.$executeRawUnsafe(`
+      DO $$
+      BEGIN
+        IF EXISTS (SELECT 1 FROM information_schema.tables WHERE table_name = 'tenant_attendance_policies') THEN
+          ALTER TABLE tenant_attendance_policies ADD COLUMN IF NOT EXISTS reporting_time VARCHAR(16) DEFAULT '07:30';
+          ALTER TABLE tenant_attendance_policies ADD COLUMN IF NOT EXISTS workplace_location_name VARCHAR(255);
+          ALTER TABLE tenant_attendance_policies ADD COLUMN IF NOT EXISTS require_photo_proof BOOLEAN DEFAULT TRUE;
+        END IF;
+        IF EXISTS (SELECT 1 FROM information_schema.tables WHERE table_name = 'staff_attendance_records') THEN
+          ALTER TABLE staff_attendance_records ADD COLUMN IF NOT EXISTS day_of_week VARCHAR(32);
+          ALTER TABLE staff_attendance_records ADD COLUMN IF NOT EXISTS clock_in_time_label VARCHAR(64);
+          ALTER TABLE staff_attendance_records ADD COLUMN IF NOT EXISTS workplace_location TEXT;
+          ALTER TABLE staff_attendance_records ADD COLUMN IF NOT EXISTS latitude DOUBLE PRECISION;
+          ALTER TABLE staff_attendance_records ADD COLUMN IF NOT EXISTS longitude DOUBLE PRECISION;
+          ALTER TABLE staff_attendance_records ADD COLUMN IF NOT EXISTS accuracy_meters DOUBLE PRECISION;
+          ALTER TABLE staff_attendance_records ADD COLUMN IF NOT EXISTS location_source VARCHAR(48);
+          ALTER TABLE staff_attendance_records ADD COLUMN IF NOT EXISTS clock_in_photo_url TEXT;
+          ALTER TABLE staff_attendance_records ADD COLUMN IF NOT EXISTS reporting_time_snapshot VARCHAR(16);
+          ALTER TABLE staff_attendance_records ADD COLUMN IF NOT EXISTS closing_time_snapshot VARCHAR(16);
+          ALTER TABLE staff_attendance_records ADD COLUMN IF NOT EXISTS punctuality_status VARCHAR(32);
+          ALTER TABLE staff_attendance_records ADD COLUMN IF NOT EXISTS minutes_late INTEGER DEFAULT 0;
+          ALTER TABLE staff_attendance_records ADD COLUMN IF NOT EXISTS verification_status VARCHAR(32) DEFAULT 'PENDING_VERIFICATION';
+          ALTER TABLE staff_attendance_records ADD COLUMN IF NOT EXISTS verified_by VARCHAR(160);
+          ALTER TABLE staff_attendance_records ADD COLUMN IF NOT EXISTS verified_at TIMESTAMPTZ;
+          ALTER TABLE staff_attendance_records ADD COLUMN IF NOT EXISTS verification_note TEXT;
+        END IF;
+      END $$;
+    `).catch(() => { });
+    staffAttendanceSchemaEnsured = true;
+  } catch { }
+}
 
 function pad2(n) {
   return String(n).padStart(2, '0');
@@ -86,17 +157,30 @@ function getTenantSettings(tid = '1') {
   const cleanTid = String(parseInt(tid, 10) || 1);
   const store = readPersistentStore();
   const saved = store.staffAttendanceSettings?.[cleanTid] || {};
+  const reportingTime = parseHHMM(saved.reportingTime || DEFAULT_SETTINGS.reportingTime, DEFAULT_SETTINGS.reportingTime);
+  const closingTime = parseHHMM(saved.closingTime || DEFAULT_SETTINGS.closingTime, DEFAULT_SETTINGS.closingTime);
+  const lateCutoffTime = parseHHMM(saved.lateCutoffTime || saved.reportingTime || DEFAULT_SETTINGS.lateCutoffTime, DEFAULT_SETTINGS.lateCutoffTime);
   return {
     tenantId: parseInt(cleanTid, 10) || 1,
-    closingTime: parseHHMM(saved.closingTime || DEFAULT_SETTINGS.closingTime, DEFAULT_SETTINGS.closingTime),
-    lateCutoffTime: parseHHMM(saved.lateCutoffTime || DEFAULT_SETTINGS.lateCutoffTime, DEFAULT_SETTINGS.lateCutoffTime),
+    reportingTime,
+    reportingTimeLabel: format12HourTime(reportingTime),
+    closingTime,
+    closingTimeLabel: format12HourTime(closingTime),
+    lateCutoffTime,
+    lateCutoffTimeLabel: format12HourTime(lateCutoffTime),
     autoClockOutDelayMinutes: Math.max(30, parseInt(saved.autoClockOutDelayMinutes || DEFAULT_SETTINGS.autoClockOutDelayMinutes, 10) || 120),
     activeTerm: String(saved.activeTerm || DEFAULT_SETTINGS.activeTerm).trim(),
     academicYear: String(saved.academicYear || DEFAULT_SETTINGS.academicYear).trim(),
+    workplaceLocationName: String(saved.workplaceLocationName || DEFAULT_SETTINGS.workplaceLocationName).trim(),
     enforceClockOutReasonBeforeClose:
       saved.enforceClockOutReasonBeforeClose !== undefined
         ? Boolean(saved.enforceClockOutReasonBeforeClose)
         : DEFAULT_SETTINGS.enforceClockOutReasonBeforeClose,
+    requirePhotoProof:
+      saved.requirePhotoProof !== undefined
+        ? Boolean(saved.requirePhotoProof)
+        : DEFAULT_SETTINGS.requirePhotoProof,
+    updatedBy: saved.updatedBy || null,
     updatedAt: saved.updatedAt || null
   };
 }
@@ -166,6 +250,44 @@ async function syncAttendanceRecordToPrisma(entry) {
         status: String(entry.status || 'CLOCKED_IN')
       }
     }).catch(() => { });
+    await ensureStaffAttendanceSchema();
+    await prisma.$executeRawUnsafe(
+      `UPDATE staff_attendance_records
+       SET day_of_week = $1,
+           clock_in_time_label = $2,
+           workplace_location = $3,
+           latitude = $4,
+           longitude = $5,
+           accuracy_meters = $6,
+           location_source = $7,
+           clock_in_photo_url = $8,
+           reporting_time_snapshot = $9,
+           closing_time_snapshot = $10,
+           punctuality_status = $11,
+           minutes_late = $12,
+           verification_status = $13,
+           verified_by = $14,
+           verified_at = $15,
+           verification_note = $16
+       WHERE id = $17`,
+      entry.dayOfWeek || null,
+      entry.clockInTimeLabel || null,
+      entry.workplaceLocation || null,
+      typeof entry.latitude === 'number' ? entry.latitude : null,
+      typeof entry.longitude === 'number' ? entry.longitude : null,
+      typeof entry.accuracyMeters === 'number' ? entry.accuracyMeters : null,
+      entry.locationSource || null,
+      entry.clockInPhotoDataUrl || null,
+      entry.reportingTimeSnapshot || null,
+      entry.closingTimeSnapshot || null,
+      entry.punctualityStatus || null,
+      Number(entry.minutesLate || 0),
+      entry.verificationStatus || 'PENDING_VERIFICATION',
+      entry.verifiedBy || null,
+      entry.verifiedAt ? new Date(entry.verifiedAt) : null,
+      entry.verificationNote || null,
+      String(entry.id)
+    ).catch(() => { });
   } catch { }
 }
 
@@ -173,7 +295,14 @@ async function syncAttendanceRecordToPrisma(entry) {
  * Automatically clocks out any open CLOCKED_IN shift once (closingTime + 2 hours) has elapsed,
  * or if the shift belongs to an earlier date whose auto-close threshold has passed.
  */
-async function runAutoClockOutSweep(tenantIdFilter = null) {
+let lastAutoSweepByTenant = new Map();
+async function runAutoClockOutSweep(tenantIdFilter = null, force = false) {
+  const cacheKey = tenantIdFilter ? String(parseInt(tenantIdFilter, 10) || 1) : 'ALL';
+  const nowCheck = Date.now();
+  if (!force && nowCheck - (lastAutoSweepByTenant.get(cacheKey) || 0) < 30000) {
+    return { autoClosedCount: 0, records: [], skippedRecent: true };
+  }
+  lastAutoSweepByTenant.set(cacheKey, nowCheck);
   const store = readPersistentStore();
   const map = store.staffAttendanceLogs || {};
   const tenantIds = tenantIdFilter ? [String(parseInt(tenantIdFilter, 10) || 1)] : Object.keys(map);
@@ -233,13 +362,37 @@ async function runAutoClockOutSweep(tenantIdFilter = null) {
 }
 
 function buildDemoStarterStaffLogs(tenantId = 1) {
+  const nowObj = new Date();
   const dateStr = todayDateStr();
+  const dayOfWeek = DAY_NAMES[nowObj.getDay()] || 'Weekday';
+  const dateFmt = formatHumanDate(nowObj);
+  const settings = getTenantSettings(String(tenantId));
   const baseMorning = new Date(`${dateStr}T07:38:00.000Z`).toISOString();
   const docIn = new Date(`${dateStr}T07:25:00.000Z`).toISOString();
   const nurseIn = new Date(`${dateStr}T07:30:00.000Z`).toISOString();
   const bursarIn = new Date(`${dateStr}T07:50:00.000Z`).toISOString();
+  const baseFields = {
+    dayOfWeek,
+    clockInDateFormatted: dateFmt,
+    reportingTimeSnapshot: settings.reportingTime,
+    reportingTimeLabel: settings.reportingTimeLabel,
+    closingTimeSnapshot: settings.closingTime,
+    closingTimeLabel: settings.closingTimeLabel,
+    punctualityStatus: 'ON_TIME',
+    minutesLate: 0,
+    latitude: null,
+    longitude: null,
+    accuracyMeters: null,
+    locationSource: 'WORKPLACE_LOCATION_DECLARED',
+    clockInPhotoDataUrl: null,
+    verificationStatus: 'PENDING_VERIFICATION',
+    verifiedBy: null,
+    verifiedAt: null,
+    verificationNote: ''
+  };
   return [
     {
+      ...baseFields,
       id: `SATT-DEMO-DOC-${tenantId}`,
       tenantId: Number(tenantId) || 1,
       staffId: 'stf_clinic_doc_1',
@@ -251,6 +404,8 @@ function buildDemoStarterStaffLogs(tenantId = 1) {
       isClinicStaff: true,
       shiftDate: dateStr,
       clockInAt: docIn,
+      clockInTimeLabel: '07:25:00 AM',
+      workplaceLocation: 'School Clinic Sickbay — Main Campus',
       clockOutAt: null,
       durationMinutes: null,
       hoursWorkedLabel: 'Active On Duty',
@@ -260,6 +415,7 @@ function buildDemoStarterStaffLogs(tenantId = 1) {
       lateFlag: false
     },
     {
+      ...baseFields,
       id: `SATT-DEMO-NRS-${tenantId}`,
       tenantId: Number(tenantId) || 1,
       staffId: 'stf_clinic_nurse_1',
@@ -271,6 +427,8 @@ function buildDemoStarterStaffLogs(tenantId = 1) {
       isClinicStaff: true,
       shiftDate: dateStr,
       clockInAt: nurseIn,
+      clockInTimeLabel: '07:30:00 AM',
+      workplaceLocation: 'School Clinic Triage Desk — Main Campus',
       clockOutAt: null,
       durationMinutes: null,
       hoursWorkedLabel: 'Active On Duty',
@@ -280,6 +438,7 @@ function buildDemoStarterStaffLogs(tenantId = 1) {
       lateFlag: false
     },
     {
+      ...baseFields,
       id: `SATT-DEMO-TCH-${tenantId}`,
       tenantId: Number(tenantId) || 1,
       staffId: 'usr_teacher_master',
@@ -291,6 +450,8 @@ function buildDemoStarterStaffLogs(tenantId = 1) {
       isClinicStaff: false,
       shiftDate: dateStr,
       clockInAt: baseMorning,
+      clockInTimeLabel: '07:38:00 AM',
+      workplaceLocation: 'Academic Block A — Staff Room',
       clockOutAt: null,
       durationMinutes: null,
       hoursWorkedLabel: 'Active On Duty',
@@ -300,6 +461,7 @@ function buildDemoStarterStaffLogs(tenantId = 1) {
       lateFlag: false
     },
     {
+      ...baseFields,
       id: `SATT-DEMO-ACC-${tenantId}`,
       tenantId: Number(tenantId) || 1,
       staffId: 'usr_accountant_master',
@@ -311,6 +473,8 @@ function buildDemoStarterStaffLogs(tenantId = 1) {
       isClinicStaff: false,
       shiftDate: dateStr,
       clockInAt: bursarIn,
+      clockInTimeLabel: '07:50:00 AM',
+      workplaceLocation: 'Administration Block — Bursary Office',
       clockOutAt: null,
       durationMinutes: null,
       hoursWorkedLabel: 'Active On Duty',
@@ -388,20 +552,38 @@ async function updateAttendanceSettings(req) {
   const tid = String(parseInt(req.tenantId || req.user?.tenantId || 1, 10) || 1);
   const payload = req.body || {};
   const current = getTenantSettings(tid);
+  const reportingTime = parseHHMM(payload.reportingTime || current.reportingTime, current.reportingTime);
+  const closingTime = parseHHMM(payload.closingTime || current.closingTime, current.closingTime);
+  let lateCutoffTime = parseHHMM(payload.lateCutoffTime || current.lateCutoffTime, current.lateCutoffTime);
+  if (hhmmToMinutes(lateCutoffTime) < hhmmToMinutes(reportingTime)) {
+    lateCutoffTime = reportingTime;
+  }
+
   const nextSettings = {
     tenantId: parseInt(tid, 10) || 1,
-    closingTime: parseHHMM(payload.closingTime || current.closingTime, current.closingTime),
-    lateCutoffTime: parseHHMM(payload.lateCutoffTime || current.lateCutoffTime, current.lateCutoffTime),
+    reportingTime,
+    reportingTimeLabel: format12HourTime(reportingTime),
+    closingTime,
+    closingTimeLabel: format12HourTime(closingTime),
+    lateCutoffTime,
+    lateCutoffTimeLabel: format12HourTime(lateCutoffTime),
     autoClockOutDelayMinutes:
       payload.autoClockOutDelayMinutes !== undefined
         ? Math.max(30, parseInt(payload.autoClockOutDelayMinutes, 10) || 120)
         : current.autoClockOutDelayMinutes,
     activeTerm: String(payload.activeTerm || current.activeTerm).trim(),
     academicYear: String(payload.academicYear || current.academicYear).trim(),
+    workplaceLocationName: String(
+      payload.workplaceLocationName !== undefined ? payload.workplaceLocationName : current.workplaceLocationName
+    ).trim() || DEFAULT_SETTINGS.workplaceLocationName,
     enforceClockOutReasonBeforeClose:
       payload.enforceClockOutReasonBeforeClose !== undefined
         ? Boolean(payload.enforceClockOutReasonBeforeClose)
         : current.enforceClockOutReasonBeforeClose,
+    requirePhotoProof:
+      payload.requirePhotoProof !== undefined
+        ? Boolean(payload.requirePhotoProof)
+        : current.requirePhotoProof,
     updatedBy: `${req.user?.firstName || ''} ${req.user?.lastName || ''}`.trim() || req.user?.email || 'Headmaster',
     updatedAt: new Date().toISOString()
   };
@@ -417,6 +599,7 @@ async function updateAttendanceSettings(req) {
   try {
     const online = typeof prisma.isPostgresOnline === 'function' ? await prisma.isPostgresOnline() : false;
     if (online && prisma.tenantAttendancePolicy) {
+      await ensureStaffAttendanceSchema();
       await prisma.tenantAttendancePolicy.upsert({
         where: { tenantId: parseInt(tid, 10) || 1 },
         update: {
@@ -437,7 +620,23 @@ async function updateAttendanceSettings(req) {
           enforceClockOutReasonBeforeClose: nextSettings.enforceClockOutReasonBeforeClose
         }
       }).catch(() => { });
+      await prisma.$executeRawUnsafe(
+        `UPDATE tenant_attendance_policies
+         SET reporting_time = $1, workplace_location_name = $2, require_photo_proof = $3
+         WHERE tenant_id = $4`,
+        nextSettings.reportingTime,
+        nextSettings.workplaceLocationName,
+        Boolean(nextSettings.requirePhotoProof),
+        parseInt(tid, 10) || 1
+      ).catch(() => { });
     }
+  } catch { }
+
+  try {
+    socketServer.emitToTenant(parseInt(tid, 10) || 1, 'staff_attendance_policy_updated', {
+      tenantId: parseInt(tid, 10) || 1,
+      settings: nextSettings
+    });
   } catch { }
 
   await runAutoClockOutSweep(tid);
@@ -536,8 +735,74 @@ async function clockInStaff(req) {
   }
 
   const now = payload.clockInAt ? new Date(payload.clockInAt) : new Date();
-  const [lateH, lateM] = parseHHMM(settings.lateCutoffTime, '08:15').split(':').map((v) => parseInt(v, 10));
-  const lateFlag = now.getHours() > lateH || (now.getHours() === lateH && now.getMinutes() > lateM);
+  const isExecutiveSelf = ['ADMIN', 'SUPER_ADMIN', 'HEADMASTER', 'PRINCIPAL', 'DEVELOPER'].includes(id.staffRole);
+
+  // Extract & validate workplace location, GPS coordinates, and live camera photo proof
+  const rawLat = payload.latitude !== undefined && payload.latitude !== null && payload.latitude !== '' ? Number(payload.latitude) : null;
+  const rawLng = payload.longitude !== undefined && payload.longitude !== null && payload.longitude !== '' ? Number(payload.longitude) : null;
+  const hasValidGps =
+    rawLat !== null &&
+    rawLng !== null &&
+    Number.isFinite(rawLat) &&
+    Number.isFinite(rawLng) &&
+    Math.abs(rawLat) <= 90 &&
+    Math.abs(rawLng) <= 180;
+  const latitude = hasValidGps ? Number(rawLat.toFixed(6)) : null;
+  const longitude = hasValidGps ? Number(rawLng.toFixed(6)) : null;
+  const accuracyMeters =
+    hasValidGps && Number.isFinite(Number(payload.accuracyMeters))
+      ? Math.max(0, Math.round(Number(payload.accuracyMeters)))
+      : null;
+
+  const rawLocationText = String(payload.workplaceLocation || payload.locationName || payload.location || '').trim();
+  const workplaceLocation =
+    rawLocationText ||
+    (hasValidGps ? `GPS Verified (${latitude}, ${longitude})` : '');
+
+  if (!workplaceLocation && !hasValidGps) {
+    throw new AppError(
+      'Please add your exact workplace location (or capture live GPS location) before clocking in.',
+      400
+    );
+  }
+
+  const rawPhoto = String(payload.clockInPhotoDataUrl || payload.photoProofDataUrl || payload.photoDataUrl || '').trim();
+  let clockInPhotoDataUrl = null;
+  if (rawPhoto) {
+    if (!/^data:image\/(jpeg|jpg|png|webp);base64,/i.test(rawPhoto)) {
+      throw new AppError('Workplace proof photo must be a valid captured JPEG, PNG, or WebP image.', 400);
+    }
+    if (rawPhoto.length > 3.5 * 1024 * 1024) {
+      throw new AppError('Workplace proof photo is too large. Please capture a standard camera image.', 400);
+    }
+    clockInPhotoDataUrl = rawPhoto;
+  } else if (settings.requirePhotoProof !== false && !isExecutiveSelf && payload.allowWithoutPhoto !== true) {
+    throw new AppError(
+      'Please take a live workplace picture on the system as evidence of your exact workplace location before clocking in.',
+      400
+    );
+  }
+
+  const locationSource = hasValidGps
+    ? (rawLocationText ? 'GPS_AND_ADDRESS_VERIFIED' : 'GPS_VERIFIED')
+    : 'WORKPLACE_LOCATION_DECLARED';
+
+  const nowMinutes = now.getHours() * 60 + now.getMinutes();
+  const reportingMins = hhmmToMinutes(settings.reportingTime || DEFAULT_SETTINGS.reportingTime);
+  const lateCutoffMins = Math.max(reportingMins, hhmmToMinutes(settings.lateCutoffTime || settings.reportingTime));
+  const lateFlag = nowMinutes > lateCutoffMins;
+  const minutesLate = Math.max(0, nowMinutes - reportingMins);
+  const minutesEarly = Math.max(0, reportingMins - nowMinutes);
+  const punctualityStatus = lateFlag
+    ? 'LATE'
+    : nowMinutes <= reportingMins
+      ? 'EARLY_OR_ON_TIME'
+      : 'ON_TIME';
+
+  const dayOfWeek = DAY_NAMES[now.getDay()] || '';
+  const clockInDateFormatted = formatHumanDate(now);
+  const clockInTimeLabel = now.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' });
+
   let { closeDate, autoCloseDate } = computeClosingAndAutoCloseDates(
     shiftDate,
     settings.closingTime,
@@ -563,13 +828,35 @@ async function clockInStaff(req) {
     termLabel: settings.activeTerm,
     academicYear: settings.academicYear,
     shiftDate,
+    dayOfWeek,
+    clockInDateFormatted,
+    clockInTimeLabel,
     clockInAt: now.toISOString(),
     clockOutAt: null,
     scheduledCloseAt: closeDate.toISOString(),
     autoCloseAt: autoCloseDate.toISOString(),
+    reportingTimeSnapshot: settings.reportingTime,
+    reportingTimeLabel: settings.reportingTimeLabel || format12HourTime(settings.reportingTime),
+    closingTimeSnapshot: settings.closingTime,
+    closingTimeLabel: settings.closingTimeLabel || format12HourTime(settings.closingTime),
+    punctualityStatus,
+    minutesLate,
+    minutesEarly,
+    workplaceLocation,
+    latitude,
+    longitude,
+    accuracyMeters,
+    locationSource,
+    clockInPhotoDataUrl,
+    photoCapturedAt: clockInPhotoDataUrl ? (payload.photoCapturedAt || now.toISOString()) : null,
+    sentToHeadmasterAt: now.toISOString(),
+    verificationStatus: isExecutiveSelf ? 'VERIFIED' : 'PENDING_VERIFICATION',
+    verifiedBy: isExecutiveSelf ? id.staffName : null,
+    verifiedAt: isExecutiveSelf ? now.toISOString() : null,
+    verificationNote: isExecutiveSelf ? 'Headmaster self clock-in' : '',
     durationMinutes: null,
     hoursWorkedLabel: 'Active On Duty',
-    clockInNote: String(payload.notes || payload.clockInNote || 'Reported to school and clocked in to begin duties.').trim(),
+    clockInNote: String(payload.notes || payload.clockInNote || `Reported at ${workplaceLocation} and submitted workplace proof for Headmaster verification.`).trim(),
     clockOutNote: '',
     clockOutReason: '',
     bypassedClockIn: false,
@@ -602,7 +889,92 @@ async function clockInStaff(req) {
   });
 
   await syncAttendanceRecordToPrisma(entry);
+
+  try {
+    socketServer.emitToTenant(parseInt(tid, 10) || 1, 'staff_clock_in_submitted', {
+      id: entry.id,
+      staffName: entry.staffName,
+      staffRole: entry.staffRole,
+      department: entry.department,
+      shiftDate: entry.shiftDate,
+      dayOfWeek: entry.dayOfWeek,
+      clockInTimeLabel: entry.clockInTimeLabel,
+      workplaceLocation: entry.workplaceLocation,
+      hasPhotoProof: Boolean(entry.clockInPhotoDataUrl),
+      punctualityStatus: entry.punctualityStatus,
+      verificationStatus: entry.verificationStatus
+    });
+  } catch { }
+
   return entry;
+}
+
+async function verifyStaffClockInRecord(req) {
+  const tid = String(parseInt(req.tenantId || req.user?.tenantId || 1, 10) || 1);
+  const recordId = String(req.params.recordId || '').trim();
+  if (!recordId) {
+    throw new AppError('Attendance record ID is required for verification.', 400);
+  }
+  const decisionRaw = String(req.body?.decision || req.body?.verificationStatus || 'VERIFIED').trim().toUpperCase();
+  const allowedDecisions = new Set(['VERIFIED', 'QUERIED', 'REJECTED']);
+  if (!allowedDecisions.has(decisionRaw)) {
+    throw new AppError('Verification decision must be VERIFIED, QUERIED, or REJECTED.', 400);
+  }
+  const verifierName = `${req.user?.firstName || ''} ${req.user?.lastName || ''}`.trim() || req.user?.name || req.user?.email || 'Headmaster';
+  const verifierRole = String(req.user?.role || 'ADMIN').toUpperCase();
+  const verificationNote = String(req.body?.verificationNote || req.body?.note || '').trim() ||
+    (decisionRaw === 'VERIFIED'
+      ? 'Workplace location, time, date, and photo evidence verified by Headmaster.'
+      : decisionRaw === 'QUERIED'
+        ? 'Headmaster requested clarification regarding workplace proof.'
+        : 'Clock-in proof rejected by Headmaster.');
+  const nowIso = new Date().toISOString();
+
+  let updatedEntry = null;
+  writePersistentStore((curr) => {
+    const prevMap = curr.staffAttendanceLogs || {};
+    const list = Array.isArray(prevMap[tid]) ? [...prevMap[tid]] : [];
+    const idx = list.findIndex((item) => String(item.id) === recordId);
+    if (idx === -1) return curr;
+    updatedEntry = {
+      ...list[idx],
+      verificationStatus: decisionRaw,
+      verifiedBy: verifierName,
+      verifiedByRole: verifierRole,
+      verifiedAt: nowIso,
+      verificationNote,
+      markedPresent: decisionRaw !== 'REJECTED'
+    };
+    list[idx] = updatedEntry;
+    return {
+      ...curr,
+      staffAttendanceLogs: {
+        ...prevMap,
+        [tid]: list
+      }
+    };
+  });
+
+  if (!updatedEntry) {
+    throw new AppError(`Staff attendance record "${recordId}" was not found in this institution.`, 404);
+  }
+
+  await syncAttendanceRecordToPrisma(updatedEntry);
+
+  try {
+    socketServer.emitToTenant(parseInt(tid, 10) || 1, 'staff_clock_in_verified', {
+      id: updatedEntry.id,
+      staffId: updatedEntry.staffId,
+      staffEmail: updatedEntry.staffEmail,
+      staffName: updatedEntry.staffName,
+      verificationStatus: updatedEntry.verificationStatus,
+      verifiedBy: updatedEntry.verifiedBy,
+      verifiedAt: updatedEntry.verifiedAt,
+      verificationNote: updatedEntry.verificationNote
+    });
+  } catch { }
+
+  return updatedEntry;
 }
 
 async function clockOutStaff(req) {
@@ -798,6 +1170,11 @@ async function getAllStaffAttendance(req) {
   const clockedOutToday = todayLogs.filter((l) => l.status === 'CLOCKED_OUT' || l.status === 'AUTO_CLOCKED_OUT').length;
   const clinicMedicalCount = logs.filter((l) => l.isClinicStaff).length;
   const clinicOnDutyNow = logs.filter((l) => l.isClinicStaff && l.status === 'CLOCKED_IN').length;
+  const pendingVerificationCount = logs.filter((l) => l.status !== 'BYPASSED_UNMARKED' && (!l.verificationStatus || l.verificationStatus === 'PENDING_VERIFICATION')).length;
+  const verifiedPresentCount = logs.filter((l) => l.verificationStatus === 'VERIFIED').length;
+  const queriedCount = logs.filter((l) => l.verificationStatus === 'QUERIED' || l.verificationStatus === 'REJECTED').length;
+  const lateArrivalsCount = logs.filter((l) => Boolean(l.lateFlag)).length;
+  const withPhotoProofCount = logs.filter((l) => Boolean(l.clockInPhotoDataUrl)).length;
   const availableTerms = Array.from(
     new Set([settings.activeTerm, ...logs.map((l) => l.termLabel).filter(Boolean)])
   );
@@ -818,6 +1195,11 @@ async function getAllStaffAttendance(req) {
       autoClockedOutCount,
       bypassedCount,
       presentTodayCount: todayLogs.filter((l) => l.status !== 'BYPASSED_UNMARKED' && l.markedPresent !== false).length,
+      pendingVerificationCount,
+      verifiedPresentCount,
+      queriedCount,
+      lateArrivalsCount,
+      withPhotoProofCount,
       clinicMedicalCount,
       clinicStaffCount: clinicMedicalCount,
       clinicOnDutyNow,
@@ -842,6 +1224,7 @@ module.exports = {
   clockInStaff,
   clockOutStaff,
   bypassClockInStaff,
+  verifyStaffClockInRecord,
   getMyStaffAttendanceStatus,
   getAllStaffAttendance,
   getTenantSettings,

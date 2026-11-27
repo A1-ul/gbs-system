@@ -25,6 +25,7 @@ import UniversalLanguageTranslatorModal from "./UniversalLanguageTranslatorModal
 import DirectSMSMessengerModal from "./DirectSMSMessengerModal";
 import MobileAppPushHubModal from "./MobileAppPushHubModal";
 import CloudCDNMediaHubModal from "./CloudCDNMediaHubModal";
+import { subscribeConnectionMonitor, getConnectionSnapshot } from "../../utils/connectionMonitor";
 
 /**
  * TopCenterSystemBanner
@@ -123,6 +124,7 @@ export default function TopCenterSystemBanner({
   });
   const [cleaned, setCleaned] = useState(false);
   const [isOnline, setIsOnline] = useState(() => typeof navigator !== "undefined" ? navigator.onLine : true);
+  const [connStatus, setConnStatus] = useState(() => getConnectionSnapshot());
   const [syncingCloud, setSyncingCloud] = useState(false);
   const [syncFeedback, setSyncFeedback] = useState(null);
   const [showTranslatorModal, setShowTranslatorModal] = useState(false);
@@ -171,6 +173,10 @@ export default function TopCenterSystemBanner({
 
     const handleOnline = () => setIsOnline(true);
     const handleOffline = () => setIsOnline(false);
+    const unsubscribeConn = subscribeConnectionMonitor((snap) => {
+      setConnStatus(snap);
+      setIsOnline(snap.frontendStatus === "ONLINE" && snap.centralEngineStatus !== "OFFLINE");
+    });
     const handleInstitutionChanged = () => setInstitutionTypeState(getActiveInstitutionType());
     const handleLocaleChanged = () => setLocaleVersion((v) => v + 1);
 
@@ -195,6 +201,7 @@ export default function TopCenterSystemBanner({
     window.addEventListener("storage", handleUpdate);
     window.addEventListener("storage", handleInstitutionChanged);
     return () => {
+      unsubscribeConn();
       window.removeEventListener("online", handleOnline);
       window.removeEventListener("offline", handleOffline);
       window.removeEventListener("gbs_school_branding_updated", handleUpdate);
@@ -605,19 +612,44 @@ export default function TopCenterSystemBanner({
         </button>
         <span style={{ color: "#475569" }}>•</span>
         <span
+          data-testid="banner-connection-status"
           style={{
             display: "inline-flex",
             alignItems: "center",
             gap: "5px",
             padding: "3px 10px",
             borderRadius: "12px",
-            background: isOnline ? "rgba(16, 185, 129, 0.15)" : "rgba(245, 158, 11, 0.2)",
-            border: `1px solid ${isOnline ? "rgba(16, 185, 129, 0.4)" : "rgba(245, 158, 11, 0.5)"}`,
-            color: isOnline ? "#34d399" : "#fbbf24",
+            background: connStatus?.centralEngineStatus === "OFFLINE" || !isOnline
+              ? "rgba(239, 68, 68, 0.2)"
+              : connStatus?.centralEngineStatus === "RECONNECTING" || connStatus?.overallStatus === "DEGRADED"
+                ? "rgba(245, 158, 11, 0.2)"
+                : "rgba(16, 185, 129, 0.15)",
+            border: `1px solid ${
+              connStatus?.centralEngineStatus === "OFFLINE" || !isOnline
+                ? "rgba(239, 68, 68, 0.55)"
+                : connStatus?.centralEngineStatus === "RECONNECTING" || connStatus?.overallStatus === "DEGRADED"
+                  ? "rgba(245, 158, 11, 0.5)"
+                  : "rgba(16, 185, 129, 0.4)"
+            }`,
+            color: connStatus?.centralEngineStatus === "OFFLINE" || !isOnline
+              ? "#fca5a5"
+              : connStatus?.centralEngineStatus === "RECONNECTING" || connStatus?.overallStatus === "DEGRADED"
+                ? "#fbbf24"
+                : "#34d399",
             fontWeight: "700"
           }}
         >
-          {isOnline ? "🟢 Online (Cloud Ready)" : "🟠 Offline Mode (Local Safe Storage)"}
+          {connStatus?.frontendStatus === "OFFLINE"
+            ? "🔴 Offline (No Internet)"
+            : connStatus?.centralEngineStatus === "OFFLINE"
+              ? "🔴 Central Engine Offline (Retrying...)"
+              : connStatus?.centralEngineStatus === "RECONNECTING"
+                ? "🟡 Reconnecting to Central Engine..."
+                : connStatus?.centralEngineStatus === "MAINTENANCE"
+                  ? "🟠 Maintenance Mode"
+                  : connStatus?.databaseStatus === "DEGRADED"
+                    ? `🟢 Engine Online • Standby DB${connStatus?.apiResponseTimeMs ? ` (${connStatus.apiResponseTimeMs}ms)` : ""}`
+                    : `🟢 Central Engine Online${connStatus?.apiResponseTimeMs ? ` (${connStatus.apiResponseTimeMs}ms)` : ""}`}
         </span>
         <span style={{ color: "#475569" }}>•</span>
         <button

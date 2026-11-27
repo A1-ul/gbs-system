@@ -1,5 +1,7 @@
 import React, { useEffect, useState, useCallback, useRef } from "react";
+import { io } from "socket.io-client";
 import apiClient from "../../api/client/apiClient";
+import { getServerBaseUrl } from "../../api/client/apiConfig";
 import { hasActiveAuthSession } from "../../utils/tokenStorage";
 import {
   startIncomingRingtone,
@@ -54,8 +56,9 @@ export default function LiveCallLauncherAndReceiver({
   const isAccountant = roleUpper === "ACCOUNTANT";
   const isHR = roleUpper === "HR";
   const isStaff = roleUpper === "STAFF";
+  const isClinic = roleUpper === "CLINIC_DOCTOR" || roleUpper === "CLINIC_NURSE";
   const isAlumni = roleUpper === "ALUMNI";
-  const isCampusStaff = isSecretary || isAccountant || isHR || isStaff;
+  const isCampusStaff = isSecretary || isAccountant || isHR || isStaff || isClinic;
 
   const [incomingCalls, setIncomingCalls] = useState([]);
   const [missedCalls, setMissedCalls] = useState([]);
@@ -127,7 +130,42 @@ export default function LiveCallLauncherAndReceiver({
     authPausedRef.current = false;
     pollIncomingAndConferences();
     loadDirectory();
-    const timer = setInterval(pollIncomingAndConferences, 5000);
+
+    // Pre-warm ICE/TURN servers in background so answering/joining any video call connects in 0ms
+    if (typeof window !== "undefined" && !window.__gbsCachedIceConfig && hasActiveAuthSession({ isDeveloperContext: isDeveloper })) {
+      apiClient.get("/video/calls/ice-servers")
+        .then((res) => {
+          if (res?.data?.data?.iceServers?.length) {
+            window.__gbsCachedIceConfig = { ...res.data.data, cachedAt: Date.now() };
+          }
+        })
+        .catch(() => { });
+    }
+
+    // Instant Socket.IO push for incoming calls & active conferences (<100ms instead of waiting for polling)
+    let callSock = null;
+    try {
+      const serverUrl = getServerBaseUrl();
+      if (serverUrl && hasActiveAuthSession({ isDeveloperContext: isDeveloper })) {
+        const tid = parseInt(resolvedUser?.tenantId || localStorage.getItem("gbs_tenant_id") || "1", 10) || 1;
+        callSock = io(serverUrl, {
+          transports: ["websocket", "polling"],
+          withCredentials: true,
+          reconnectionAttempts: 5
+        });
+        callSock.on("connect", () => {
+          callSock.emit("join_tenant", { tenantId: tid, userId: resolvedUser?.id || resolvedUser?.email });
+        });
+        callSock.on("incoming_call_invite", () => {
+          pollIncomingAndConferences();
+        });
+        callSock.on("call_ended", () => {
+          pollIncomingAndConferences();
+        });
+      }
+    } catch { }
+
+    const timer = setInterval(pollIncomingAndConferences, 4000);
     const onAuthExpired = () => {
       authPausedRef.current = true;
     };
@@ -142,13 +180,16 @@ export default function LiveCallLauncherAndReceiver({
     window.addEventListener("storage", onAuthUpdated);
     return () => {
       clearInterval(timer);
+      if (callSock) {
+        try { callSock.disconnect(); } catch { }
+      }
       stopIncomingRingtone();
       window.removeEventListener("gbs_auth_session_expired", onAuthExpired);
       window.removeEventListener("gbs_auth_session_cleared", onAuthExpired);
       window.removeEventListener("gbs_auth_session_updated", onAuthUpdated);
       window.removeEventListener("storage", onAuthUpdated);
     };
-  }, [pollIncomingAndConferences, loadDirectory]);
+  }, [pollIncomingAndConferences, loadDirectory, isDeveloper, resolvedUser?.tenantId, resolvedUser?.id, resolvedUser?.email]);
 
   // Play real incoming telephone ringing tone with caller name & position whenever a call is ringing
   const activeIncomingId = incomingCalls[0]?.id || null;

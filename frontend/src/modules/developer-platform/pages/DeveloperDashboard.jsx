@@ -19,6 +19,7 @@ import UniversalRoleGuideModal from "../../../components/common/UniversalRoleGui
 import { navigateToDetail } from "../../../utils/universalNavigation";
 import { syncSystemModeFlags } from "../../../utils/tokenStorage";
 import RcceControlHub from "../components/RcceControlHub";
+import CentralEngineHealthPanel from "../components/CentralEngineHealthPanel";
 import PaymentGatewayAdminPanel from "../../../components/common/PaymentGatewayAdminPanel";
 import FinancialReportsPanel from "../../../components/common/FinancialReportsPanel";
 import UniversityOperationsPanel from "../../../components/common/UniversityOperationsPanel";
@@ -9941,6 +9942,8 @@ export default function DeveloperDashboard() {
                   {paymentStatusSummary.sandboxOnly && " Payment gateways are running with Test/Sandbox fallback until live PAYSTACK_SECRET_KEY / HUBTEL credentials are set."}
                 </div>
               )}
+
+              <CentralEngineHealthPanel />
             </section>
 
             {/* 4. Remote System Management Controls (Step 35) */}

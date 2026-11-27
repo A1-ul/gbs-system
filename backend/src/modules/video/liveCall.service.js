@@ -63,6 +63,13 @@ function formatCallerName(user = {}) {
   );
 }
 
+function resolvePeerKey(user = {}) {
+  const email = String(user.email || user.senderEmail || '').trim().toLowerCase();
+  if (email) return email;
+  const uid = String(user.id || user.userId || user.senderId || '').trim();
+  return uid || 'peer';
+}
+
 function touchPresence(user = {}, tid = 1) {
   if (!user) return;
   const email = String(user.email || '').trim().toLowerCase();
@@ -524,10 +531,12 @@ async function initiateCall(req) {
     returnedAt: null,
     participants: [
       {
+        peerKey: resolvePeerKey(req.user),
         userId: initiatorUserId,
         email: String(req.user?.email || '').trim().toLowerCase() || null,
         name: initiatorName,
         role: initiatorRole,
+        position: formatRolePosition(initiatorRole),
         joinedAt: new Date().toISOString(),
         audioMuted: false,
         videoOff: mediaMode === 'VOICE'
@@ -842,15 +851,19 @@ async function answerOrJoinCall(req) {
         throw new AppError(`This call session has already ${c.status.toLowerCase()}.`, 400);
       }
       const existingParticipants = Array.isArray(c.participants) ? [...c.participants] : [];
+      const peerKey = resolvePeerKey(req.user);
       const alreadyIn = existingParticipants.some((p) =>
-        userEmail && p.email ? p.email === userEmail : String(p.userId) === userId
+        (p.peerKey && p.peerKey === peerKey) ||
+        (userEmail && p.email ? p.email === userEmail : String(p.userId) === userId)
       );
       if (!alreadyIn) {
         existingParticipants.push({
+          peerKey,
           userId,
           email: userEmail,
           name: userName,
           role: userRole,
+          position: formatRolePosition(userRole),
           joinedAt: new Date().toISOString(),
           audioMuted: Boolean(req.body?.audioMuted),
           videoOff: c.mediaMode === 'VOICE' || Boolean(req.body?.videoOff)
@@ -871,19 +884,61 @@ async function answerOrJoinCall(req) {
   }
   await syncCallSessionToPrisma(updatedSession);
 
+  const joinedPeerKey = resolvePeerKey(req.user);
   socketServer.emitToRoom(`call_${tid}_${updatedSession.roomCode}`, 'call_status_changed', {
     callId: updatedSession.id,
     roomCode: updatedSession.roomCode,
     status: updatedSession.status,
     participants: updatedSession.participants,
-    joinedBy: { userId, name: userName, role: userRole }
+    joinedBy: { peerKey: joinedPeerKey, userId, email: userEmail, name: userName, role: userRole }
   });
   emitCallStreamEvent(updatedSession.id, updatedSession.roomCode, 'participant_joined', {
     status: updatedSession.status,
     participants: updatedSession.participants,
-    joinedBy: { userId, name: userName, role: userRole }
+    joinedBy: { peerKey: joinedPeerKey, userId, email: userEmail, name: userName, role: userRole }
   });
 
+  return updatedSession;
+}
+
+async function leaveCall(req) {
+  const callId = req.params.callId;
+  const { tid } = resolveCallLocation(req, callId);
+  const peerKey = resolvePeerKey(req.user);
+  const userId = String(req.user?.id || req.user?.email || '');
+  const userEmail = String(req.user?.email || '').trim().toLowerCase() || null;
+  const userName = formatCallerName(req.user);
+  let updatedSession = null;
+
+  saveTenantCallStore(tid, (list) =>
+    list.map((c) => {
+      if (String(c.id) !== String(callId) && String(c.roomCode) !== String(callId)) return c;
+      const remaining = (c.participants || []).filter((p) => {
+        if (p.peerKey && p.peerKey === peerKey) return false;
+        if (userEmail && p.email && p.email === userEmail) return false;
+        if (!userEmail && String(p.userId) === userId) return false;
+        return true;
+      });
+      const shouldEnd = c.callScope === 'DIRECT' || remaining.length === 0;
+      updatedSession = {
+        ...c,
+        participants: remaining,
+        status: shouldEnd ? 'ENDED' : c.status,
+        endedAt: shouldEnd ? (c.endedAt || new Date().toISOString()) : c.endedAt
+      };
+      return updatedSession;
+    })
+  );
+
+  if (!updatedSession) {
+    throw new AppError(`Call session "${callId}" not found.`, 404);
+  }
+  await syncCallSessionToPrisma(updatedSession);
+  emitCallStreamEvent(updatedSession.id, updatedSession.roomCode, updatedSession.status === 'ENDED' ? 'call_ended' : 'participant_left', {
+    status: updatedSession.status,
+    participants: updatedSession.participants,
+    leftBy: { peerKey, userId, email: userEmail, name: userName }
+  });
   return updatedSession;
 }
 
@@ -1018,8 +1073,11 @@ async function postSignalOrChat(req) {
         id: `SIG-${Date.now()}-${Math.floor(100 + Math.random() * 900)}`,
         senderId,
         senderEmail: String(req.user?.email || '').trim().toLowerCase() || null,
+        senderKey: resolvePeerKey(req.user),
         senderName,
+        senderRole: String(req.user?.role || 'USER').toUpperCase(),
         targetUserId: body.targetUserId ? String(body.targetUserId) : null,
+        targetPeerKey: body.targetPeerKey ? String(body.targetPeerKey).trim().toLowerCase() : null,
         signalType: normalizedSignalType,
         payload:
           normalizedSignalType === 'MEDIA_MODE'
@@ -1032,7 +1090,7 @@ async function postSignalOrChat(req) {
         ...c,
         mediaMode: nextMediaMode,
         participants: nextParticipants,
-        signals: [...(c.signals || []), sig].slice(-120)
+        signals: [...(c.signals || []), sig].slice(-400)
       };
       return updatedCall;
     })
@@ -1080,13 +1138,26 @@ async function getCallState(req) {
   const sinceIso = req.query?.since ? String(req.query.since) : null;
   const callerId = String(req.user?.id || req.user?.email || '');
   const callerEmail = String(req.user?.email || '').trim().toLowerCase() || null;
+  const callerPeerKey = resolvePeerKey(req.user);
   const signals = (call.signals || []).filter((s) => {
-    if (s.senderEmail && callerEmail) {
-      if (s.senderEmail === callerEmail) return false;
-    } else if (String(s.senderId) === callerId) {
+    const sKey = s.senderKey || s.senderEmail || String(s.senderId || '');
+    if (sKey && callerPeerKey && String(sKey).toLowerCase() === callerPeerKey.toLowerCase()) {
       return false;
     }
-    if (s.targetUserId && callerId && String(s.targetUserId) !== callerId) return false;
+    if (s.senderEmail && callerEmail && s.senderEmail === callerEmail) {
+      return false;
+    }
+    if (!s.senderEmail && !s.senderKey && String(s.senderId) === callerId) {
+      return false;
+    }
+    if (s.targetPeerKey) {
+      const targetLower = String(s.targetPeerKey).trim().toLowerCase();
+      if (targetLower !== callerPeerKey.toLowerCase() && targetLower !== callerId.toLowerCase() && (!callerEmail || targetLower !== callerEmail)) {
+        return false;
+      }
+    } else if (s.targetUserId && callerId && String(s.targetUserId) !== callerId && (!callerEmail || String(s.targetUserId).toLowerCase() !== callerEmail)) {
+      return false;
+    }
     if (sinceIso && s.createdAt < sinceIso) return false;
     return true;
   });
@@ -1226,6 +1297,7 @@ module.exports = {
   getMissedCalls,
   acknowledgeMissedCall,
   answerOrJoinCall,
+  leaveCall,
   declineCall,
   endCall,
   postSignalOrChat,

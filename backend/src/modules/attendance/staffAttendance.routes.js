@@ -29,7 +29,7 @@ router.put('/settings', restrictTo(...EXECUTIVE_VIEW_ACCESS), async (req, res, n
     const settings = await staffAttendanceService.updateAttendanceSettings(req);
     res.status(200).json({
       status: 'success',
-      message: `School attendance policy updated (Closing Time: ${settings.closingTime}, Auto Clock-Out: +${Math.round((settings.autoClockOutDelayMinutes || 120) / 60)}h, Term: ${settings.activeTerm}).`,
+      message: `Official attendance schedule updated — Reporting Time: ${settings.reportingTimeLabel || settings.reportingTime}, Closing Time: ${settings.closingTimeLabel || settings.closingTime}, Auto Clock-Out: +${Math.round((settings.autoClockOutDelayMinutes || 120) / 60)}h, Term: ${settings.activeTerm}.`,
       data: { settings }
     });
   } catch (err) {
@@ -64,7 +64,20 @@ router.post('/clock-in', restrictTo(...ALL_STAFF_ACCESS), async (req, res, next)
     const entry = await staffAttendanceService.clockInStaff(req);
     res.status(201).json({
       status: 'success',
-      message: `Clocked in successfully: ${entry.staffName} (${entry.designation}) at ${new Date(entry.clockInAt).toLocaleTimeString()}.`,
+      message: `Clocked in successfully: ${entry.staffName} (${entry.designation}) on ${entry.dayOfWeek}, ${entry.shiftDate} at ${entry.clockInTimeLabel} (${entry.workplaceLocation}) — proof sent to Headmaster for verification.`,
+      data: { record: entry }
+    });
+  } catch (err) {
+    next(err);
+  }
+});
+
+router.patch('/:recordId/verify', restrictTo(...EXECUTIVE_VIEW_ACCESS), async (req, res, next) => {
+  try {
+    const entry = await staffAttendanceService.verifyStaffClockInRecord(req);
+    res.status(200).json({
+      status: 'success',
+      message: `Headmaster verification updated: ${entry.staffName} marked ${entry.verificationStatus}.`,
       data: { record: entry }
     });
   } catch (err) {
