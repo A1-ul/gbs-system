@@ -2851,6 +2851,26 @@ const recordDeveloperIntrusionAndLock = async (payload = {}) => {
   const nowIso = new Date().toISOString();
   const eventId = payload.id || `INTRUSION-${Date.now()}-${Math.floor(100 + Math.random() * 900)}`;
 
+  const rawLocation = payload.location && typeof payload.location === 'object' ? payload.location : {};
+  const parsedLat = Number(rawLocation.latitude ?? payload.latitude);
+  const parsedLng = Number(rawLocation.longitude ?? payload.longitude);
+  const hasRealCoords = Number.isFinite(parsedLat) && Number.isFinite(parsedLng) && Math.abs(parsedLat) <= 90 && Math.abs(parsedLng) <= 180;
+  const locationInfo = {
+    latitude: hasRealCoords ? Number(parsedLat.toFixed(6)) : null,
+    longitude: hasRealCoords ? Number(parsedLng.toFixed(6)) : null,
+    accuracyMeters: Number.isFinite(Number(rawLocation.accuracyMeters ?? payload.accuracyMeters))
+      ? Math.round(Number(rawLocation.accuracyMeters ?? payload.accuracyMeters))
+      : null,
+    address: String(rawLocation.address || payload.locationAddress || '').trim() || null,
+    timezone: String(rawLocation.timezone || payload.timezone || '').trim() || null,
+    source: hasRealCoords ? String(rawLocation.source || 'BROWSER_GPS') : (rawLocation.source || 'IP_AND_TIMEZONE'),
+    permissionDenied: Boolean(rawLocation.permissionDenied),
+    capturedAt: rawLocation.capturedAt || nowIso
+  };
+  const locationSummary = hasRealCoords
+    ? `${locationInfo.address ? `${locationInfo.address} ` : ''}(${locationInfo.latitude}, ${locationInfo.longitude}${locationInfo.accuracyMeters ? ` ±${locationInfo.accuracyMeters}m` : ''})`
+    : (locationInfo.address || (locationInfo.timezone ? `Timezone: ${locationInfo.timezone} | IP: ${String(payload.sourceIp || 'External Client').trim()}` : `IP: ${String(payload.sourceIp || 'External Client').trim()}`));
+
   const eventRecord = {
     id: eventId,
     category: payload.category || (payload.isRegisteredStaff ? 'REGISTERED_STAFF_BREACH' : 'UNREGISTERED_INTRUDER_EXTERNAL'),
@@ -2864,12 +2884,14 @@ const recordDeveloperIntrusionAndLock = async (payload = {}) => {
     trialCount: Math.max(1, parseInt(payload.trialCount || 1, 10) || 1),
     capturedPhoto,
     intruderPhoto: capturedPhoto,
+    location: locationInfo,
+    locationSummary,
     sourceIp: String(payload.sourceIp || 'External Client').trim(),
     userAgent: String(payload.userAgent || '').trim().slice(0, 260),
     timestamp: nowIso,
     formattedTime: new Date().toLocaleTimeString(),
     status: 'LOGIN_LOCKED_EVIDENCE_SENT',
-    penaltyNotice: payload.penaltyNotice || `SECURITY LOCKDOWN: False entry attempt (${attemptedEmail}) to Developer Portal intercepted. Camera snapshot captured and transmitted to Developer Dashboard.`
+    penaltyNotice: payload.penaltyNotice || `SECURITY LOCKDOWN: False entry attempt (${attemptedEmail}) to Developer Portal intercepted. Camera snapshot & location (${locationSummary}) captured and transmitted to Developer Dashboard.`
   };
 
   writePersistentStore((curr) => {

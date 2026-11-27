@@ -22,6 +22,7 @@ import RcceControlHub from "../components/RcceControlHub";
 import PaymentGatewayAdminPanel from "../../../components/common/PaymentGatewayAdminPanel";
 import FinancialReportsPanel from "../../../components/common/FinancialReportsPanel";
 import UniversityOperationsPanel from "../../../components/common/UniversityOperationsPanel";
+import GBSLiveMapMobileTracker from "../../../components/common/GBSLiveMapMobileTracker";
 import { stopAndRestoreEnglishForDeveloper } from "../../../utils/domTranslator";
 import "./DeveloperPlatform.css";
 
@@ -357,6 +358,7 @@ export default function DeveloperDashboard() {
     // Capture exact window + nested container scroll position of current page BEFORE navigating to dedicated module page
     saveCurrentDevScroll(true);
     setDevModuleMenuOpen(false);
+    setOverviewTabState(cleanTab);
 
     try {
       sessionStorage.setItem("gbs_dev_active_tab", cleanTab);
@@ -5579,20 +5581,35 @@ export default function DeveloperDashboard() {
               <button
                 type="button"
                 data-testid="dev-module-switcher-btn"
-                onClick={() => setDevModuleMenuOpen((o) => !o)}
+                aria-haspopup="menu"
+                aria-expanded={devModuleMenuOpen}
+                onMouseDown={(e) => e.stopPropagation()}
+                onClick={(e) => {
+                  e.stopPropagation();
+                  setDevModuleMenuOpen((o) => !o);
+                }}
                 style={{ background: "rgba(30, 41, 59, 0.92)", border: "1.5px solid #d4af37", color: "#fde68a", borderRadius: "8px", padding: "6px 14px", fontWeight: 800, cursor: "pointer", fontSize: "0.8rem" }}
               >
-                ☰ Switch Module ▾
+                ☰ Switch Module {devModuleMenuOpen ? "▴" : "▾"}
               </button>
               {devModuleMenuOpen && (
-                <div className="dev-module-switcher-menu" role="menu">
+                <div
+                  className="dev-module-switcher-menu"
+                  role="menu"
+                  onMouseDown={(e) => e.stopPropagation()}
+                  onPointerDown={(e) => e.stopPropagation()}
+                >
                   {Object.entries(DEV_MODULE_LABELS).map(([key, label]) => (
                     <button
                       key={key}
                       type="button"
                       role="menuitem"
                       className={`dev-module-switcher-item ${activeTab === key ? "active" : ""}`}
-                      onClick={() => setActiveTab(key)}
+                      onMouseDown={(e) => e.stopPropagation()}
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        setActiveTab(key);
+                      }}
                     >
                       <span>{label}</span>
                       {activeTab === key && <span style={{ color: "#38bdf8", fontSize: "0.72rem" }}>● ACTIVE</span>}
@@ -8368,7 +8385,29 @@ export default function DeveloperDashboard() {
                             </td>
                             <td style={{ padding: "12px", fontSize: "0.75rem", color: "#94a3b8" }}>
                               <div style={{ color: "#cbd5e1", fontFamily: "monospace" }}>IP: {vio.sourceIp}</div>
-                              <div style={{ maxWidth: "160px", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }} aria-label={vio.userAgent}>
+                              <div style={{ color: "#38bdf8", fontWeight: 700, marginTop: "3px" }}>
+                                📍 {vio.locationSummary || (vio.location?.latitude != null ? `${vio.location.latitude}, ${vio.location.longitude}` : "IP / Network Origin Logged")}
+                              </div>
+                              {vio.location?.latitude != null && vio.location?.longitude != null && (
+                                <a
+                                  href={`https://maps.google.com/?q=${vio.location.latitude},${vio.location.longitude}`}
+                                  target="_blank"
+                                  rel="noopener noreferrer"
+                                  style={{ color: "#34d399", fontSize: "0.7rem", fontWeight: 800, textDecoration: "underline", display: "inline-block", marginTop: "2px" }}
+                                >
+                                  🗺️ View Intruder GPS Pin
+                                </a>
+                              )}
+                              {(vio.capturedPhoto || vio.intruderPhoto) && (
+                                <div style={{ marginTop: "6px" }}>
+                                  <img
+                                    src={vio.capturedPhoto || vio.intruderPhoto}
+                                    alt={`Intruder capture for ${vio.attemptedEmail}`}
+                                    style={{ width: "86px", height: "62px", objectFit: "cover", borderRadius: "6px", border: "1.5px solid #ef4444" }}
+                                  />
+                                </div>
+                              )}
+                              <div style={{ maxWidth: "160px", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", marginTop: "3px" }} aria-label={vio.userAgent}>
                                 {vio.userAgent}
                               </div>
                             </td>
@@ -11459,6 +11498,8 @@ export default function DeveloperDashboard() {
                 Launch Dedicated Locator Window ↗
               </button>
             </div>
+
+            <GBSLiveMapMobileTracker systemContext="GBS Developer Multi-Tenant Live Map" />
 
             {/* TENANT LOCATION SEARCH CARD */}
             <div style={{ background: "linear-gradient(135deg, #0f172a, #1e293b)", border: "1.5px solid #38bdf8", borderRadius: "14px", padding: "1.5rem", marginBottom: "1.5rem" }}>

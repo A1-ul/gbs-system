@@ -1,7 +1,7 @@
 {
   "systemName": "GBS MANAGEMENT SYSTEM (Global Brightest Stars Educational Management System)",
-  "version": "2.22.1-PRODUCTION-BLUEPRINT",
-  "savedAt": "2026-11-26T21:52:00Z",
+  "version": "2.23.0-PRODUCTION-BLUEPRINT",
+  "savedAt": "2026-11-27T14:52:00Z",
   "status": "PRODUCTION_READY_VERIFIED",
   "architecture": {
     "frontend": {
@@ -512,11 +512,18 @@
       "rootCause": "1) TeacherLiveProctoringPanel.jsx wall cards rendered static JPEG <img> snapshots over HTTP POST round-trips (~1-2 FPS over cloud internet) instead of direct 30 FPS WebRTC <video>; 2) StudentDashboard.jsx & TeacherLiveProctoringPanel.jsx proctoring WebRTC used STUN-only without TURN relays and lacked pending ICE candidate queues; 3) aiExam.service.js getProctorWebRtcSignals dropped same-ms ICE candidates via <= sinceMs; 4) TeacherLiveProctoringPanel.jsx included activeWatchStudentKey in the SSE useEffect deps, tearing down SSE mid-handshake when opening a student camera.",
       "resolution": "1) Built LiveStudentWallVideo inside TeacherLiveProctoringPanel.jsx so every live student camera card on the Teacher Monitor Wall automatically streams direct 30 FPS 1.0x WebRTC <video> (using dynamic STUN+TURN from /api/v1/video/calls/ice-servers + OpenRelay fallback, ICE candidate queueing, and 0ms shared MediaStream handoff into the Fullscreen Watch Modal); removed activeWatchStudentKey from SSE useEffect deps. 2) Upgraded StudentDashboard.jsx proctoring streamer with STUN+TURN ICE servers, per-viewer pending ICE queues, VP8/H264 hardware codec preference + maintain-framerate 30fps sender tuning, instant SSE WATCH_REQUEST listener (<250ms connect), and lightweight 240x135 JPEG fallback. 3) Fixed aiExam.service.js getProctorWebRtcSignals (< sinceMs). Built Vite bundle index-BLjYOmNR.js, synced to backend/public/, 0 tooltips, deployed to Render.",
       "status": "PERMANENTLY_GUARDED"
+    },
+    {
+      "issueCode": "GBS-UPGRADE-2026-11-27-LIVEMAP-DEMO-DEVSEC-PROCTOR-VOICE",
+      "symptom": "store.teacherLessonPlans.filter crash, Developer Switch Module broken, Developer intruder missing location and user-facing captured photo, slow Exam Monitor camera wall, AI Voice incoming call announcement, Demo 10-entry cap, and GBS Live Map authorized mobile number tracking.",
+      "rootCause": "store.teacherLessonPlans object vs array mismatch; .dev-module-page-bar stacking context and event propagation; missing geolocation and lockdown photo preview on DeveloperLogin; LiveStudentWallVideo ICE teardown and per-frame React re-renders; single-shot call announcement; 10-entry Demo 403 block; missing consent-based mobile location service.",
+      "resolution": "Normalized store.teacherLessonPlans in systemMemoryAssistant.service.js; fixed Developer Switch Module z-index and propagation; added intruder GPS/IP location and user-facing captured photo on DeveloperLogin plus removed hardcoded offline password bypasses; optimized LiveStudentWallVideo with iceConfigRef, WATCH_REQUEST retry, and zero-rerender direct DOM frame bus plus faster StudentDashboard fallback; upgraded callRingtoneEngine and LiveCallLauncherAndReceiver across all 11 dashboards for repeated AI Voice Assistant position+name announcements; enabled unlimited isolated Demo learning with 403 cross-tenant production guard; built consent-based multi-tenant GBS Live Map mobile location tracking (mobileLocation.service.js, /api/v1/tracking/mobile-location/*, Socket.IO rooms, GBSLiveMapMobileTracker.jsx across all 5 Live Map dashboards). Bundle index-BSmskAaW.js synced to backend/public/.",
+      "status": "PERMANENTLY_GUARDED"
     }
   ],
   "verificationSummary": {
-    "latestVerifiedCommit": "v2.22.1-HEAD",
-    "latestLiveBundleHash": "index-BLjYOmNR.js",
+    "latestVerifiedCommit": "v2.23.0-HEAD",
+    "latestLiveBundleHash": "index-BSmskAaW.js",
     "liveProductionUrl": "https://gbs-system.onrender.com",
     "autoMemoryRuleFile": "AGENTS.md",
     "backendTestSuitesPassed": "36/36 v2.21 comprehensive API + RBAC + Missed Calls + Defaulters Loop + Exam Vetting + OMR Scanner + PWA/Apple checks + 18/18 upgrade regression checks (verify_upgrade_e2e.js) + 0 native HTML tooltips + 0 Prisma errors",

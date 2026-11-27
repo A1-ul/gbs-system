@@ -48,10 +48,12 @@ const devLogin = async (req, res, next) => {
         }
       }
       if (!pinValid) {
+        const clientIp = String(req.headers['x-forwarded-for'] || req.ip || '127.0.0.1').split(',')[0].trim();
         const lockRes = await devControlService.recordDeveloperIntrusionAndLock({
           attemptedEmail: cleanEmail || 'anonymous@unknown',
           capturedPhoto: capturedPhoto || null,
-          sourceIp: req.ip || '127.0.0.1',
+          location: req.body?.location || null,
+          sourceIp: clientIp,
           userAgent: req.headers['user-agent'] || '',
           penaltyNotice: `SECURITY LOCKDOWN: False entry attempt (${cleanEmail || 'empty input'}) to Developer Login intercepted.`
         });
@@ -60,6 +62,7 @@ const devLogin = async (req, res, next) => {
           loginLocked: true,
           lockEventId: lockRes.event.id,
           lockedAt: lockRes.lockedAt,
+          locationSummary: lockRes.event.locationSummary,
           message: 'there has been a false entry to the developer login page to access the developer portal'
         });
       }

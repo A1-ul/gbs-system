@@ -13,8 +13,9 @@
 let ringAudioCtx = null;
 let outgoingTimer = null;
 let incomingTimer = null;
+let voiceAnnounceTimer = null;
 let activeOscillators = [];
-let lastAnnouncedCallId = null;
+let activeIncomingAnnouncementCallId = null;
 
 function ensureRingAudioContext() {
   if (typeof window === "undefined") return null;
@@ -112,11 +113,48 @@ export function stopOutgoingRingbackTone() {
 }
 
 /**
- * Starts classic incoming telephone ringing tone + vibrates mobile devices + announces
- * caller name and position once per incoming call ID.
+ * Builds the clear GBS AI Voice Assistant incoming call announcement phrase,
+ * e.g. "You have an incoming video call from the Headmaster, Dr. Arthur Pendleton."
+ */
+export function buildIncomingCallAnnouncementPhrase({ callerName, callerPosition, mediaMode = "VIDEO" } = {}) {
+  const modeLabel = String(mediaMode || "VIDEO").toUpperCase() === "VOICE" ? "voice call" : "video call";
+  const cleanPos = String(callerPosition || "").trim();
+  const cleanName = String(callerName || "").trim();
+  if (cleanPos && cleanName) {
+    return `You have an incoming ${modeLabel} from the ${cleanPos}, ${cleanName}.`;
+  }
+  if (cleanPos) {
+    return `You have an incoming ${modeLabel} from the ${cleanPos}.`;
+  }
+  if (cleanName) {
+    return `You have an incoming ${modeLabel} from ${cleanName}.`;
+  }
+  return `You have an incoming ${modeLabel}.`;
+}
+
+function speakIncomingCallAnnouncement(phrase) {
+  if (typeof window === "undefined" || !("speechSynthesis" in window) || !phrase) return;
+  try {
+    window.speechSynthesis.cancel();
+    const u = new SpeechSynthesisUtterance(phrase);
+    u.rate = 0.98;
+    u.pitch = 1.04;
+    u.volume = 1.0;
+    const voices = window.speechSynthesis.getVoices?.() || [];
+    const preferred = voices.find((v) => /en[-_](GB|US|GH|NG)/i.test(v.lang)) || voices[0];
+    if (preferred) u.voice = preferred;
+    window.speechSynthesis.speak(u);
+  } catch { }
+}
+
+/**
+ * Starts classic incoming telephone ringing tone + vibrates mobile devices +
+ * triggers the GBS AI Voice Assistant to announce the caller's position and full name
+ * repeatedly while the call is ringing across all user dashboards.
  */
 export function startIncomingRingtone({ callId, callerName, callerPosition, mediaMode = "VIDEO" } = {}) {
   stopIncomingRingtone();
+  activeIncomingAnnouncementCallId = callId || `call_${Date.now()}`;
 
   const ringPattern = () => {
     // Classic double-pulse ringtone (bright chime + dual bell frequencies)
@@ -130,32 +168,62 @@ export function startIncomingRingtone({ callId, callerName, callerPosition, medi
   };
 
   ringPattern();
-  incomingTimer = setInterval(ringPattern, 2750);
+  incomingTimer = setInterval(ringPattern, 3200);
 
-  // Announce caller name & position clearly once per incoming call so user immediately knows who is calling
-  if (callId && lastAnnouncedCallId !== callId && typeof window !== "undefined" && "speechSynthesis" in window) {
-    lastAnnouncedCallId = callId;
+  const phrase = buildIncomingCallAnnouncementPhrase({ callerName, callerPosition, mediaMode });
+
+  // Notify GBS AI Voice Assistant globally so the assistant UI reflects & announces the incoming call
+  if (typeof window !== "undefined") {
     try {
-      const modeLabel = String(mediaMode || "VIDEO").toUpperCase() === "VOICE" ? "voice call" : "video call";
-      const posSuffix = callerPosition ? `, ${callerPosition}` : "";
-      const phrase = `Incoming ${modeLabel} from ${callerName || "a school member"}${posSuffix}.`;
-      const u = new SpeechSynthesisUtterance(phrase);
-      u.rate = 1.02;
-      u.pitch = 1.05;
-      u.volume = 0.9;
-      setTimeout(() => {
-        if (incomingTimer) {
-          try { window.speechSynthesis.speak(u); } catch { }
+      window.dispatchEvent(new CustomEvent("gbs_voice_ai_incoming_call", {
+        detail: {
+          active: true,
+          callId: activeIncomingAnnouncementCallId,
+          callerName: callerName || "School Member",
+          callerPosition: callerPosition || "Staff Member",
+          mediaMode: String(mediaMode || "VIDEO").toUpperCase(),
+          phrase
         }
-      }, 900);
+      }));
     } catch { }
   }
+
+  // Speak immediately after first ring chime, then repeat every 5.8s while still ringing
+  const currentId = activeIncomingAnnouncementCallId;
+  setTimeout(() => {
+    if (incomingTimer && activeIncomingAnnouncementCallId === currentId) {
+      speakIncomingCallAnnouncement(phrase);
+    }
+  }, 850);
+
+  voiceAnnounceTimer = setInterval(() => {
+    if (incomingTimer && activeIncomingAnnouncementCallId === currentId) {
+      speakIncomingCallAnnouncement(phrase);
+    }
+  }, 5800);
 }
 
 export function stopIncomingRingtone() {
   if (incomingTimer) {
     clearInterval(incomingTimer);
     incomingTimer = null;
+  }
+  if (voiceAnnounceTimer) {
+    clearInterval(voiceAnnounceTimer);
+    voiceAnnounceTimer = null;
+  }
+  if (activeIncomingAnnouncementCallId) {
+    activeIncomingAnnouncementCallId = null;
+    if (typeof window !== "undefined") {
+      try {
+        if ("speechSynthesis" in window) {
+          window.speechSynthesis.cancel();
+        }
+        window.dispatchEvent(new CustomEvent("gbs_voice_ai_incoming_call", {
+          detail: { active: false }
+        }));
+      } catch { }
+    }
   }
   if (typeof navigator !== "undefined" && typeof navigator.vibrate === "function") {
     try { navigator.vibrate(0); } catch { }

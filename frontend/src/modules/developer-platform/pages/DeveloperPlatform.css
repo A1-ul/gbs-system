@@ -755,7 +755,8 @@
 .dev-module-page-bar {
   position: sticky;
   top: 0;
-  z-index: 60;
+  z-index: 10050;
+  overflow: visible;
   background: linear-gradient(135deg, rgba(8, 24, 51, 0.98) 0%, rgba(15, 23, 42, 0.98) 100%);
   border-bottom: 2px solid rgba(56, 189, 248, 0.65);
   padding: 10px clamp(12px, 2vw, 24px);
@@ -770,21 +771,22 @@
 
 .dev-module-switcher-wrap {
   position: relative;
+  z-index: 10060;
 }
 
 .dev-module-switcher-menu {
   position: absolute;
   top: calc(100% + 8px);
   right: 0;
-  width: min(320px, 88vw);
-  max-height: 68vh;
+  width: min(330px, 90vw);
+  max-height: 70vh;
   overflow-y: auto;
   background: #081428;
   border: 1.5px solid #38bdf8;
   border-radius: 12px;
   padding: 8px;
-  box-shadow: 0 20px 50px rgba(0, 0, 0, 0.85);
-  z-index: 9999;
+  box-shadow: 0 24px 60px rgba(0, 0, 0, 0.92);
+  z-index: 10090;
   display: flex;
   flex-direction: column;
   gap: 4px;

@@ -465,3 +465,17 @@ flowchart TD
 
 
 
+
+---
+
+## 21. GBS Live Map Authorized Mobile Tracking, Unlimited Isolated Demo, Fast Exam Camera, Voice AI Call Alerts, Developer Intruder Capture & Switch Module Fix (Nov 27, 2026 — v2.23.0)
+
+- **Root Causes & Upgrades Completed:**
+  1. **`store.teacherLessonPlans.filter` Crash Fixed:** Normalized `store.teacherLessonPlans` (tenant-keyed object or array) and guarded all `store.*` lookups in `backend/src/modules/ai/systemMemoryAssistant.service.js`.
+  2. **Developer Dashboard Switch Module Fixed:** Elevated `.dev-module-page-bar` (`z-index: 10050`, `overflow: visible`) and `.dev-module-switcher-menu` (`z-index: 10090`) in `DeveloperPlatform.css`, stopped event propagation on Switch Module controls, and synced `overviewTabState` in `DeveloperDashboard.jsx`.
+  3. **Developer Intruder Location, Auto Photo Display & Strict Lockout:** Upgraded `DeveloperLogin.jsx`, `devControl.controller.js`, `devControl.service.js`, and `DeveloperDashboard.jsx` Intrusion Sentinel to capture real browser GPS + IP/timezone, display the captured image directly to the unauthorized user with *"Your image has been taken and has been sent to the Developer Dashboard"*, auto-disable login until authentic backend-verified Developer credentials are entered, and removed weak client-side hardcoded password fallbacks.
+  4. **Exam Monitor Camera Speed Optimization:** Eliminated WebRTC `iceConfig` teardown in `LiveStudentWallVideo` (`TeacherLiveProctoringPanel.jsx`), added periodic `WATCH_REQUEST` retry until connected, added zero-React-re-render direct DOM frame updates for fallback frames, and upgraded `StudentDashboard.jsx` with camera warm-up wait + ~18 FPS fallback pump.
+  5. **AI Voice Assistant Incoming Call Announcements (All Users):** Upgraded `callRingtoneEngine.js` and `LiveCallLauncherAndReceiver.jsx` across all 11 dashboards to clearly announce `"You have an incoming [video/voice] call from the [Position], [Full Name]."` repeatedly while ringing and broadcast `gbs_voice_ai_incoming_call`.
+  6. **Unlimited Isolated Demo Mode:** Updated `backend/src/middleware/demoLimit.middleware.js` and `frontend/src/utils/demoLimitGuard.js` so users can freely practice in Demo without 10-entry limits while strictly blocking Demo access to any real production tenant (`tenantId > 1` returns `403 DEMO_PRODUCTION_ISOLATION_VIOLATION`).
+  7. **GBS LIVE MAP — Authorized Mobile Number Location Tracking:** Built `backend/src/modules/tracking/mobileLocation.service.js`, mounted `/api/v1/tracking/mobile-location/*` with anti-enumeration rate limiting, multi-tenant isolation, explicit owner consent, Ghanaian (`+233`/`0`-prefixed) & international E.164 normalization, real-time Socket.IO rooms (`socketServer.js`), and reusable `GBSLiveMapMobileTracker.jsx` integrated into `LiveTrackingDashboard`, `EmergencyLocatorPage`, `DeveloperDashboard`, `AdminDashboard`, and `ParentDashboard`.
+- **Verification Verdict (Bundle `index-BSmskAaW.js`):** All 7 modified backend files passed `node --check`; automated verification suite passed 3/3 (lessonPlans filter fix, Demo unlimited + strict tenant isolation, Mobile Location normalization/consent/LIVE/isolation/revocation); Vite production build succeeded (`index-BSmskAaW.js`) and synced to `backend/public/`.

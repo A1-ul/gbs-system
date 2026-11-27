@@ -32,10 +32,83 @@ export default function DeveloperLogin() {
   // Facial Scan Access & Intruder Capture State
   const [showFacialCaptureModal, setShowFacialCaptureModal] = useState(false);
   const [facialScanStatus, setFacialScanStatus] = useState("IDLE"); // "IDLE" | "SCANNING" | "CAPTURED_MISMATCH"
-  const [capturedIntruderPhoto, setCapturedIntruderPhoto] = useState(null);
+  const [capturedIntruderPhoto, setCapturedIntruderPhoto] = useState(() => {
+    try {
+      return sessionStorage.getItem("gbs_dev_last_intruder_photo") || null;
+    } catch {
+      return null;
+    }
+  });
+  const [capturedIntruderLocation, setCapturedIntruderLocation] = useState(() => {
+    try {
+      return JSON.parse(sessionStorage.getItem("gbs_dev_last_intruder_location") || "null");
+    } catch {
+      return null;
+    }
+  });
   const videoRef = useRef(null);
   const canvasRef = useRef(null);
   const streamRef = useRef(null);
+
+  // Capture honest intruder device location (real browser geolocation if permitted + timezone; never fabricated)
+  const captureIntruderLocation = async () => {
+    const tz = (() => {
+      try {
+        return Intl.DateTimeFormat().resolvedOptions().timeZone || null;
+      } catch {
+        return null;
+      }
+    })();
+    if (typeof navigator === "undefined" || !navigator.geolocation) {
+      return {
+        latitude: null,
+        longitude: null,
+        accuracyMeters: null,
+        timezone: tz,
+        source: "IP_AND_TIMEZONE",
+        permissionDenied: false,
+        capturedAt: new Date().toISOString()
+      };
+    }
+    try {
+      const pos = await new Promise((resolve, reject) => {
+        const timer = setTimeout(() => reject(new Error("GEO_TIMEOUT")), 2500);
+        navigator.geolocation.getCurrentPosition(
+          (p) => {
+            clearTimeout(timer);
+            resolve(p);
+          },
+          (err) => {
+            clearTimeout(timer);
+            reject(err);
+          },
+          { enableHighAccuracy: true, timeout: 2200, maximumAge: 60000 }
+        );
+      });
+      const lat = Number(pos.coords.latitude.toFixed(6));
+      const lng = Number(pos.coords.longitude.toFixed(6));
+      const acc = Math.round(pos.coords.accuracy || 0);
+      return {
+        latitude: lat,
+        longitude: lng,
+        accuracyMeters: acc || null,
+        timezone: tz,
+        source: "BROWSER_GPS",
+        permissionDenied: false,
+        capturedAt: new Date().toISOString()
+      };
+    } catch (err) {
+      return {
+        latitude: null,
+        longitude: null,
+        accuracyMeters: null,
+        timezone: tz,
+        source: "IP_AND_TIMEZONE",
+        permissionDenied: err?.code === 1,
+        capturedAt: new Date().toISOString()
+      };
+    }
+  };
 
   useEffect(() => {
     let active = true;
@@ -301,6 +374,7 @@ export default function DeveloperLogin() {
   const dispatchIntrusionLockdown = async ({
     attemptedEmail,
     capturedPhoto,
+    location = null,
     lockEventId = null,
     attemptCount = 1,
     identity = null,
@@ -309,6 +383,11 @@ export default function DeveloperLogin() {
     const cleanEmail = String(attemptedEmail || "anonymous@unknown").trim().toLowerCase();
     const idInfo = identity || resolveStaffOrExternalIdentity(cleanEmail);
     const eventId = lockEventId || `INTRUDER-${Date.now()}`;
+    const resolvedLocation = location || (await captureIntruderLocation());
+    const locSummary =
+      resolvedLocation?.latitude != null && resolvedLocation?.longitude != null
+        ? `GPS (${resolvedLocation.latitude}, ${resolvedLocation.longitude}${resolvedLocation.accuracyMeters ? ` ±${resolvedLocation.accuracyMeters}m` : ""})`
+        : `Timezone: ${resolvedLocation?.timezone || "Recorded"} | Network IP Logged`;
 
     const record = {
       id: eventId,
@@ -330,6 +409,8 @@ export default function DeveloperLogin() {
       trialCount: attemptCount,
       capturedPhoto,
       intruderPhoto: capturedPhoto,
+      location: resolvedLocation,
+      locationSummary: locSummary,
       timestamp: new Date().toISOString(),
       formattedTime: new Date().toLocaleTimeString(),
       sourceIp: idInfo.isRegisteredStaff
@@ -339,8 +420,21 @@ export default function DeveloperLogin() {
       status: "LOGIN_LOCKED_EVIDENCE_SENT",
       penaltyNotice:
         penaltyNotice ||
-        `SECURITY LOCKDOWN: False entry attempt (${cleanEmail}) to Developer Login intercepted. Camera snapshot transmitted to Developer Dashboard.`
+        `SECURITY LOCKDOWN: False entry attempt (${cleanEmail}) to Developer Login intercepted. Camera image & location (${locSummary}) transmitted to Developer Dashboard.`
     };
+
+    if (capturedPhoto) {
+      setCapturedIntruderPhoto(capturedPhoto);
+      try {
+        sessionStorage.setItem("gbs_dev_last_intruder_photo", capturedPhoto);
+      } catch { }
+    }
+    if (resolvedLocation) {
+      setCapturedIntruderLocation(resolvedLocation);
+      try {
+        sessionStorage.setItem("gbs_dev_last_intruder_location", JSON.stringify(resolvedLocation));
+      } catch { }
+    }
 
     try {
       const existingViolations = JSON.parse(localStorage.getItem("gbs_dev_security_violations") || "[]");
@@ -416,30 +510,32 @@ export default function DeveloperLogin() {
       setShowFacialCaptureModal(false);
       return;
     }
-    if (email.trim().toLowerCase() === permanentEmail.toLowerCase() && password.trim() === "0543294615Gab") {
-      let token = null;
-      try {
-        const res = await apiClient.post("/dev-control/auth/login", {
-          username: permanentEmail.toLowerCase(),
-          email: permanentEmail.toLowerCase(),
-          password: password.trim()
-        });
-        const realJwt = res.data?.token || res.data?.data?.accessToken;
-        const realRefresh = res.data?.refreshToken || res.data?.data?.refreshToken;
-        if (realJwt) token = realJwt;
-        if (realRefresh) localStorage.setItem("gbs_refresh_token", realRefresh);
-      } catch (err) {
-        if (err?.response?.status === 423) {
-          setLoginLocked(true);
-          return;
-        }
+    const cleanEmail = email.trim().toLowerCase();
+    const cleanPass = password.trim();
+    if (!cleanEmail || !cleanPass) {
+      triggerFacialScanVerification();
+      return;
+    }
+    try {
+      const res = await apiClient.post("/dev-control/auth/login", {
+        username: cleanEmail,
+        email: cleanEmail,
+        password: cleanPass
+      });
+      const realJwt = res.data?.token || res.data?.data?.accessToken;
+      const realRefresh = res.data?.refreshToken || res.data?.data?.refreshToken;
+      if (!realJwt) {
+        triggerFacialScanVerification();
+        return;
       }
-      if (!token) token = `gbs_dev_token_${Date.now()}`;
-      localStorage.setItem("gbs_dev_token", token);
-      localStorage.setItem("gbs_token", token);
-      localStorage.setItem("gbs_access_token", token);
+      if (realRefresh) localStorage.setItem("gbs_refresh_token", realRefresh);
+      localStorage.setItem("gbs_dev_token", realJwt);
+      localStorage.setItem("gbs_token", realJwt);
+      localStorage.setItem("gbs_access_token", realJwt);
       window.dispatchEvent(new CustomEvent("gbs_auth_session_updated"));
       localStorage.removeItem("gbs_dev_login_locked");
+      sessionStorage.removeItem("gbs_dev_last_intruder_photo");
+      sessionStorage.removeItem("gbs_dev_last_intruder_location");
       sessionStorage.setItem("gbs_dev_gate_unlocked", "true");
       localStorage.setItem(
         "gbs_developer",
@@ -459,7 +555,11 @@ export default function DeveloperLogin() {
         );
       }
       navigate("/developer-control-center/dashboard");
-    } else {
+    } catch (err) {
+      if (err?.response?.status === 423) {
+        setLoginLocked(true);
+        return;
+      }
       triggerFacialScanVerification();
     }
   };
@@ -490,7 +590,11 @@ export default function DeveloperLogin() {
         window.dispatchEvent(new CustomEvent("gbs_auth_session_updated"));
         localStorage.removeItem("gbs_dev_login_locked");
         localStorage.removeItem("gbs_dev_console_locked");
+        sessionStorage.removeItem("gbs_dev_last_intruder_photo");
+        sessionStorage.removeItem("gbs_dev_last_intruder_location");
         sessionStorage.setItem("gbs_dev_gate_unlocked", "true");
+        setCapturedIntruderPhoto(null);
+        setCapturedIntruderLocation(null);
         localStorage.setItem(
           "gbs_developer",
           JSON.stringify({
@@ -516,26 +620,19 @@ export default function DeveloperLogin() {
         return;
       }
     } catch (err) {
-      if (!err?.response && cleanEmail === permanentEmail && cleanPass === "0543294615Gab") {
-        const offlineToken = `gbs_dev_token_${Date.now()}`;
-        localStorage.setItem("gbs_dev_token", offlineToken);
-        localStorage.setItem("gbs_token", offlineToken);
-        localStorage.removeItem("gbs_dev_login_locked");
-        localStorage.removeItem("gbs_dev_console_locked");
-        sessionStorage.setItem("gbs_dev_gate_unlocked", "true");
-        setLoginLocked(false);
-        navigate("/developer-control-center/dashboard");
-        return;
-      }
-      const intruderShot = await captureStealthCameraSnapshot(cleanEmail);
+      const [intruderShot, intruderLoc] = await Promise.all([
+        captureStealthCameraSnapshot(cleanEmail),
+        captureIntruderLocation()
+      ]);
       await dispatchIntrusionLockdown({
         attemptedEmail: cleanEmail,
         capturedPhoto: intruderShot,
+        location: intruderLoc,
         penaltyNotice: `LOCKED RE-ENABLE REJECTED: Failed credential verification by "${cleanEmail}" while Developer Portal disabled.`
       });
       setReEnableError(
         err?.response?.data?.message ||
-        "Invalid Developer Gmail or Password. Access remains disabled until the exact authorized Developer credentials are entered."
+        "Invalid Developer Gmail or Password. Your image and location have been captured and sent to the Developer Dashboard. Access remains disabled until the exact authorized Developer credentials are entered."
       );
     } finally {
       setReEnableLoading(false);
@@ -576,7 +673,11 @@ export default function DeveloperLogin() {
         }
         localStorage.removeItem("gbs_dev_login_locked");
         localStorage.removeItem("gbs_dev_console_locked");
+        sessionStorage.removeItem("gbs_dev_last_intruder_photo");
+        sessionStorage.removeItem("gbs_dev_last_intruder_location");
         sessionStorage.setItem("gbs_dev_gate_unlocked", "true");
+        setCapturedIntruderPhoto(null);
+        setCapturedIntruderLocation(null);
         localStorage.setItem(
           "gbs_developer",
           JSON.stringify({
@@ -616,21 +717,24 @@ export default function DeveloperLogin() {
         setPassword("");
         setReEnableEmail("");
         setReEnablePassword("");
-        // Continue transmitting stealth intruder snapshot evidence in background without delaying lock UI
+        // Continue transmitting stealth intruder snapshot & location evidence
         const identity = resolveStaffOrExternalIdentity(cleanEmail);
         const quickPhoto = generateForensicIntruderSnapshot(cleanEmail);
-        captureStealthCameraSnapshot(cleanEmail)
-          .catch(() => quickPhoto)
-          .then((capturedPhoto) =>
+        Promise.all([
+          captureStealthCameraSnapshot(cleanEmail).catch(() => quickPhoto),
+          captureIntruderLocation().catch(() => null)
+        ])
+          .then(([capturedPhoto, intruderLoc]) =>
             dispatchIntrusionLockdown({
               attemptedEmail: cleanEmail,
               capturedPhoto: capturedPhoto || quickPhoto,
+              location: intruderLoc,
               lockEventId: backendLockEventId,
               attemptCount: 1,
               identity,
               penaltyNotice:
                 err?.response?.data?.message ||
-                `SECURITY LOCKDOWN: False entry attempt (${cleanEmail}) to Developer Login intercepted. Camera snapshot transmitted to Developer Dashboard.`
+                `SECURITY LOCKDOWN: False entry attempt (${cleanEmail}) to Developer Login intercepted. Camera snapshot & location transmitted to Developer Dashboard.`
             })
           )
           .catch(() => { });
@@ -638,20 +742,9 @@ export default function DeveloperLogin() {
         return;
       }
       backendLockEventId = err?.response?.data?.lockEventId || null;
-      if (!err?.response && cleanEmail === permanentEmail.toLowerCase() && cleanPass === "0543294615Gab") {
-        const offlineToken = `gbs_dev_token_${Date.now()}`;
-        localStorage.setItem("gbs_dev_token", offlineToken);
-        localStorage.setItem("gbs_token", offlineToken);
-        localStorage.removeItem("gbs_dev_login_locked");
-        localStorage.removeItem("gbs_dev_console_locked");
-        sessionStorage.setItem("gbs_dev_gate_unlocked", "true");
-        navigate("/developer-control-center/dashboard");
-        setLoading(false);
-        return;
-      }
     }
 
-    // 2. False entry intercepted: Capture camera snapshot, transmit to Developer Dashboard, and disable login page
+    // 2. False entry intercepted: Capture camera snapshot & location, display to user, transmit to Developer Dashboard, and disable login page
     const identity = resolveStaffOrExternalIdentity(cleanEmail);
 
     let attemptsMap = {};
@@ -662,19 +755,23 @@ export default function DeveloperLogin() {
     attemptsMap[cleanEmail] = attemptCount;
     localStorage.setItem("gbs_dev_failed_attempts", JSON.stringify(attemptsMap));
 
-    const photoShot = await captureStealthCameraSnapshot(cleanEmail);
+    const [photoShot, intruderLoc] = await Promise.all([
+      captureStealthCameraSnapshot(cleanEmail),
+      captureIntruderLocation()
+    ]);
     await dispatchIntrusionLockdown({
       attemptedEmail: cleanEmail,
       capturedPhoto: photoShot,
+      location: intruderLoc,
       lockEventId: backendLockEventId,
       attemptCount,
       identity,
       penaltyNotice: identity.isRegisteredStaff
-        ? `SECURITY LOCKDOWN: Unauthorized Developer attempt by ${identity.staffRole} (${identity.exactRegisteredSchool}). Camera snapshot sent to Developer Dashboard.`
-        : `SECURITY LOCKDOWN: False entry by unregistered user (${cleanEmail}). Camera snapshot transmitted to Developer Dashboard and Developer Login disabled.`
+        ? `SECURITY LOCKDOWN: Unauthorized Developer attempt by ${identity.staffRole} (${identity.exactRegisteredSchool}). Camera snapshot & location sent to Developer Dashboard.`
+        : `SECURITY LOCKDOWN: False entry by unregistered user (${cleanEmail}). Camera snapshot & location transmitted to Developer Dashboard and Developer Login disabled.`
     });
 
-    setError("there has been a false entry to the developer login page to access the developer portal");
+    setError("Your image has been taken and has been sent to the Developer Dashboard. The system has been automatically disabled until the right and correct login is entered.");
     setLoading(false);
   };
 
@@ -761,9 +858,43 @@ export default function DeveloperLogin() {
                 </div>
               </div>
             </div>
-            <p style={{ color: "#cbd5e1", fontSize: "0.8rem", lineHeight: 1.5, margin: "0 0 1rem" }}>
-              The standard Developer Login page has been disabled for security. The intruder camera snapshot and session details have been transmitted to the Developer Dashboard for action. Enter the exact Developer Gmail and Password in the empty fields below to re-enable access and continue.
+            <p style={{ color: "#cbd5e1", fontSize: "0.8rem", lineHeight: 1.5, margin: "0 0 0.9rem" }}>
+              <strong style={{ color: "#fde047" }}>Your image has been taken and has been sent to the Developer Dashboard.</strong> The system has been automatically disabled until the right and correct Developer Gmail and Password are entered below.
             </p>
+            {capturedIntruderPhoto && (
+              <div
+                data-testid="dev-intruder-captured-evidence"
+                style={{
+                  marginBottom: "1rem",
+                  background: "rgba(2, 6, 23, 0.85)",
+                  border: "1.5px solid rgba(239, 68, 68, 0.7)",
+                  borderRadius: "10px",
+                  padding: "10px",
+                  textAlign: "center"
+                }}
+              >
+                <div style={{ color: "#f87171", fontSize: "0.74rem", fontWeight: 900, textTransform: "uppercase", marginBottom: "6px", letterSpacing: "0.5px" }}>
+                  📸 CAPTURED IMAGE — TRANSMITTED TO DEVELOPER DASHBOARD
+                </div>
+                <img
+                  src={capturedIntruderPhoto}
+                  alt="Captured unauthorized login attempt"
+                  style={{
+                    width: "100%",
+                    maxHeight: "200px",
+                    objectFit: "cover",
+                    borderRadius: "8px",
+                    border: "1px solid rgba(248, 113, 113, 0.6)"
+                  }}
+                />
+                <div style={{ color: "#7dd3fc", fontSize: "0.74rem", fontWeight: 700, marginTop: "6px" }}>
+                  📍 Location Logged:{" "}
+                  {capturedIntruderLocation?.latitude != null && capturedIntruderLocation?.longitude != null
+                    ? `${capturedIntruderLocation.latitude}, ${capturedIntruderLocation.longitude}${capturedIntruderLocation.accuracyMeters ? ` (±${capturedIntruderLocation.accuracyMeters}m)` : ""}`
+                    : `Network IP & Timezone (${capturedIntruderLocation?.timezone || "Recorded"})`}
+                </div>
+              </div>
+            )}
 
             <form onSubmit={handleReEnableAccess} autoComplete="off">
               <div className="form-group" style={{ marginBottom: "1rem" }}>

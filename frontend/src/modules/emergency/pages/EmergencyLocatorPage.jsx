@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { getApiBaseUrl } from '../../../api/client/apiConfig';
 import { resolveWorldwideLocation } from '../../../utils/globalLocationResolver';
+import GBSLiveMapMobileTracker from '../../../components/common/GBSLiveMapMobileTracker';
 import './EmergencyLocatorPage.css';
 
 const API_BASE = getApiBaseUrl();
@@ -450,10 +451,13 @@ export default function EmergencyLocatorPage() {
                 </div>
               </div>
 
+              {/* Authorized Mobile Number Real-Time Location Tracking Console */}
+              <GBSLiveMapMobileTracker systemContext="GBS Emergency Locator Live Map" compact={true} />
+
               {/* Real Live Google Map Iframe */}
               <div style={{ position: "relative", width: "100%", height: "380px", borderRadius: "10px", overflow: "hidden", border: "1px solid rgba(255,255,255,0.12)", background: "#0f172a" }}>
                 <iframe
-                  title="Live Google Map Guardian Tracking"
+                  aria-label="Live Google Map Guardian Tracking"
                   width="100%"
                   height="100%"
                   style={{ border: 0 }}

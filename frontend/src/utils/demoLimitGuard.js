@@ -24,9 +24,9 @@ export function resetClientDemoCounters() {
 }
 
 /**
- * Checks whether a Demo Sandbox user can create another record in `moduleKey`
- * (capped at 10 entries per module so users can learn the exact real system).
- * Returns `{ allowed: true }` unconditionally in Live Production mode.
+ * Demo Sandbox allows unlimited learning practice across all modules before registering,
+ * while strictly isolating sandbox data from real production tenants (zero real/production
+ * data can ever be stored in Demo mode).
  */
 export function checkDemoEntryLimit(moduleKey, moduleLabel = "records", currentCount = 0) {
   if (!isDemoSandboxMode()) {
@@ -37,27 +37,14 @@ export function checkDemoEntryLimit(moduleKey, moduleLabel = "records", currentC
   const recorded = Number(counters[moduleKey] || 0);
   const used = Math.max(recorded, Number(currentCount) || 0);
 
-  if (used >= MAX_DEMO_ENTRIES) {
-    const message = `Demo Trial Limit Reached (${used}/${MAX_DEMO_ENTRIES} entries used for ${moduleLabel}). Demo Sandbox runs the exact live system for learning up to ${MAX_DEMO_ENTRIES} entries per module. Register or sign into a Live School account for unlimited production records, or click "Reset Demo Data" in the top banner to practice again.`;
-    if (typeof window !== "undefined" && typeof window.showGBSOpenNotice === "function") {
-      window.showGBSOpenNotice(message, "warning", "DEMO TRIAL LIMIT REACHED (10/10)");
-    }
-    return {
-      allowed: false,
-      isDemo: true,
-      used,
-      limit: MAX_DEMO_ENTRIES,
-      remaining: 0,
-      message
-    };
-  }
-
   return {
     allowed: true,
     isDemo: true,
+    unlimitedLearning: true,
+    isolatedSandbox: true,
     used,
-    limit: MAX_DEMO_ENTRIES,
-    remaining: MAX_DEMO_ENTRIES - used
+    limit: Infinity,
+    remaining: Infinity
   };
 }
 

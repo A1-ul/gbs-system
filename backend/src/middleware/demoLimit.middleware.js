@@ -259,61 +259,50 @@ function demoLimitMiddleware(req, res, next) {
     return next();
   }
 
-  const classification = classifyDemoResourceBucket(req);
-  if (!classification) {
-    return next();
-  }
-
-  const { bucket, label } = classification;
-  const store = readPersistentStore();
-  const counters = store.demoTrialCounters && typeof store.demoTrialCounters === 'object'
-    ? store.demoTrialCounters
-    : {};
-  const used = Math.max(0, Number(counters[bucket] || 0));
-
-  res.setHeader('X-GBS-Demo-Mode', 'true');
-  res.setHeader('X-GBS-Demo-Limit', String(MAX_DEMO_ENTRIES));
-  res.setHeader('X-GBS-Demo-Used', String(used));
-  res.setHeader('X-GBS-Demo-Remaining', String(Math.max(0, MAX_DEMO_ENTRIES - used)));
-
-  if (used >= MAX_DEMO_ENTRIES) {
-    const limitMsg = `Demo Trial Limit Reached (${used}/${MAX_DEMO_ENTRIES} entries used for ${label}). Demo Sandbox runs the full real workflow for learning up to ${MAX_DEMO_ENTRIES} entries per module. Switch to a Live School account for unlimited records, or click "Reset Demo Data" in the top banner to practice again.`;
+  // Strict Sandbox Isolation: Demo sessions MUST NEVER write to or read real production tenants (tenantId > 1).
+  const requestedTenantId = resolveTenantId(req, 1);
+  if (requestedTenantId > 1) {
     return res.status(403).json({
       success: false,
       status: 'error',
-      code: 'DEMO_TRIAL_LIMIT_REACHED',
-      message: limitMsg,
-      data: {
-        limit: MAX_DEMO_ENTRIES,
-        used,
-        remaining: 0,
-        module: bucket,
-        label
-      },
-      errors: [{ message: limitMsg, code: 'DEMO_TRIAL_LIMIT_REACHED' }],
+      code: 'DEMO_PRODUCTION_ISOLATION_VIOLATION',
+      message: 'Demo Sandbox is strictly isolated from real production institutions. No real production data can be stored or accessed in Demo mode.',
       timestamp: new Date().toISOString(),
-      requestId: req.requestId || 'REQ-DEMO-LIMIT'
+      requestId: req.requestId || 'REQ-DEMO-ISOLATION'
     });
   }
 
-  let incremented = false;
-  res.once('finish', () => {
-    if (incremented) return;
-    if (res.statusCode >= 200 && res.statusCode < 300) {
-      incremented = true;
-      writePersistentStore((curr) => {
-        const nextCounters = {
-          ...(curr.demoTrialCounters && typeof curr.demoTrialCounters === 'object' ? curr.demoTrialCounters : {})
-        };
-        nextCounters[bucket] = Math.max(0, Number(nextCounters[bucket] || 0)) + 1;
-        return {
-          ...curr,
-          demoTrialCounters: nextCounters,
-          updatedAt: new Date().toISOString()
-        };
-      });
-    }
-  });
+  // Force Demo requests strictly onto isolated Sandbox Tenant 1
+  req.tenantId = 1;
+  req.isDemoSandbox = true;
+
+  res.setHeader('X-GBS-Demo-Mode', 'true');
+  res.setHeader('X-GBS-Demo-Policy', 'UNLIMITED_LEARNING_ISOLATED_SANDBOX');
+  res.setHeader('X-GBS-Demo-Limit', 'UNLIMITED');
+
+  // Track usage telemetry for informational display only — NEVER block users from learning in Demo mode
+  const classification = classifyDemoResourceBucket(req);
+  if (classification) {
+    const { bucket } = classification;
+    let incremented = false;
+    res.once('finish', () => {
+      if (incremented) return;
+      if (res.statusCode >= 200 && res.statusCode < 300) {
+        incremented = true;
+        writePersistentStore((curr) => {
+          const nextCounters = {
+            ...(curr.demoTrialCounters && typeof curr.demoTrialCounters === 'object' ? curr.demoTrialCounters : {})
+          };
+          nextCounters[bucket] = Math.max(0, Number(nextCounters[bucket] || 0)) + 1;
+          return {
+            ...curr,
+            demoTrialCounters: nextCounters,
+            updatedAt: new Date().toISOString()
+          };
+        });
+      }
+    });
+  }
 
   return next();
 }

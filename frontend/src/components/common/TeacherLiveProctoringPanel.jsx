@@ -37,10 +37,24 @@ function LiveStudentWallVideo({
   cameraActive,
   iceConfig,
   registerSignalListener,
+  registerFrameListener,
   onStreamReady
 }) {
   const videoRef = useRef(null);
+  const imgRef = useRef(null);
+  const iceConfigRef = useRef(iceConfig || DEFAULT_PROCTOR_ICE_CONFIG);
+  iceConfigRef.current = iceConfig || DEFAULT_PROCTOR_ICE_CONFIG;
   const [webrtcLive, setWebrtcLive] = useState(false);
+
+  // Zero-re-render direct DOM frame update for silky-smooth ~15-20 FPS fallback motion before/without WebRTC
+  useEffect(() => {
+    if (!sessionKey || typeof registerFrameListener !== "function") return undefined;
+    return registerFrameListener(String(sessionKey), (nextSnap) => {
+      if (imgRef.current && nextSnap) {
+        imgRef.current.src = nextSnap;
+      }
+    });
+  }, [sessionKey, registerFrameListener]);
 
   useEffect(() => {
     if (!sessionKey || !cameraActive || typeof RTCPeerConnection !== "function") {
@@ -55,7 +69,7 @@ function LiveStudentWallVideo({
     let offerReceived = false;
     let lastSigMs = Date.now() - 2500;
 
-    const pc = new RTCPeerConnection(iceConfig || DEFAULT_PROCTOR_ICE_CONFIG);
+    const pc = new RTCPeerConnection(iceConfigRef.current || DEFAULT_PROCTOR_ICE_CONFIG);
     try {
       if (typeof pc.addTransceiver === "function") {
         pc.addTransceiver("video", { direction: "recvonly" });
@@ -92,8 +106,9 @@ function LiveStudentWallVideo({
       if (!active) return;
       if (pc.connectionState === "connected") {
         setWebrtcLive(true);
-      } else if (["failed", "closed"].includes(pc.connectionState)) {
+      } else if (["failed", "closed", "disconnected"].includes(pc.connectionState)) {
         setWebrtcLive(false);
+        offerReceived = false;
       }
     };
 
@@ -147,9 +162,12 @@ function LiveStudentWallVideo({
     };
 
     requestStream();
-    const retryTimer = setTimeout(() => {
-      if (active && !offerReceived) requestStream();
-    }, 1100);
+    // Periodically re-request WebRTC offer until live stream connects (handles student camera warm-up race)
+    const retryInterval = setInterval(() => {
+      if (active && !offerReceived && pc.connectionState !== "connected") {
+        requestStream();
+      }
+    }, 2200);
 
     const pollTimer = setInterval(async () => {
       if (!active || pc.connectionState === "connected") return;
@@ -162,11 +180,11 @@ function LiveStudentWallVideo({
           await handleSig(s);
         }
       } catch { }
-    }, 450);
+    }, 350);
 
     return () => {
       active = false;
-      clearTimeout(retryTimer);
+      clearInterval(retryInterval);
       clearInterval(pollTimer);
       if (typeof unregister === "function") unregister();
       if (typeof onStreamReady === "function") onStreamReady(sessionKey, null);
@@ -179,7 +197,7 @@ function LiveStudentWallVideo({
       }).catch(() => { });
       try { pc.close(); } catch { }
     };
-  }, [sessionKey, cameraActive, iceConfig, registerSignalListener, onStreamReady]);
+  }, [sessionKey, cameraActive, registerSignalListener, onStreamReady]);
 
   return (
     <>
@@ -202,9 +220,10 @@ function LiveStudentWallVideo({
       />
       {!webrtcLive && snapshotDataUrl && (
         <img
+          ref={imgRef}
           src={snapshotDataUrl}
           alt={`Live camera feed - ${studentName}`}
-          style={{ width: "100%", height: "100%", objectFit: "cover" }}
+          style={{ width: "100%", height: "100%", objectFit: "cover", transform: "translateZ(0)" }}
         />
       )}
       {!webrtcLive && !snapshotDataUrl && (
@@ -266,6 +285,8 @@ export default function TeacherLiveProctoringPanel({
   const watchSignalHandlerRef = useRef(null);
   const activeWatchStudentKeyRef = useRef(null);
   const wallSignalListenersRef = useRef(new Map());
+  const wallFrameListenersRef = useRef(new Map());
+  const lastReactFrameSyncRef = useRef(new Map());
   const wallStreamsRef = useRef(new Map());
   const [proctorIceConfig, setProctorIceConfig] = useState(DEFAULT_PROCTOR_ICE_CONFIG);
 
@@ -283,6 +304,16 @@ export default function TeacherLiveProctoringPanel({
     wallSignalListenersRef.current.set(viewerId, handler);
     return () => {
       wallSignalListenersRef.current.delete(viewerId);
+    };
+  }, []);
+
+  const registerWallFrameListener = useCallback((sessKey, handler) => {
+    const key = String(sessKey);
+    wallFrameListenersRef.current.set(key, handler);
+    return () => {
+      if (wallFrameListenersRef.current.get(key) === handler) {
+        wallFrameListenersRef.current.delete(key);
+      }
     };
   }, []);
 
@@ -376,21 +407,33 @@ export default function TeacherLiveProctoringPanel({
             const d = JSON.parse(evt.data);
             const nextSess = d?.session;
             if (!nextSess?.sessionKey) return;
+            const sessKeyStr = String(nextSess.sessionKey);
             const nowMs = Date.now();
-            if (String(nextSess.sessionKey) === String(activeWatchStudentKeyRef.current || "")) {
+            // Instant 0ms DOM frame push directly into the tile's <img> (zero React re-render overhead!)
+            const directImgUpdater = wallFrameListenersRef.current.get(sessKeyStr);
+            if (directImgUpdater && nextSess.snapshotDataUrl) {
+              directImgUpdater(nextSess.snapshotDataUrl);
+            }
+            if (sessKeyStr === String(activeWatchStudentKeyRef.current || "")) {
               const arr = [...watchFrameTimestampsRef.current.filter((t) => nowMs - t <= 2000), nowMs];
               watchFrameTimestampsRef.current = arr;
               setWatchMeasuredFps(Math.max(1, Math.round(arr.length / 2)));
             }
-            setLiveSessions((prev) => {
-              const idx = prev.findIndex((s) => String(s.sessionKey) === String(nextSess.sessionKey));
-              if (idx >= 0) {
-                const copy = [...prev];
-                copy[idx] = nextSess;
-                return copy;
-              }
-              return [nextSess, ...prev];
-            });
+            // Only trigger React state sync for new sessions or throttled every 1200ms (keeps UI & video silky smooth)
+            const lastSync = lastReactFrameSyncRef.current.get(sessKeyStr) || 0;
+            const needsFullSync = !directImgUpdater || (nowMs - lastSync >= 1200) || sessKeyStr === String(activeWatchStudentKeyRef.current || "");
+            if (needsFullSync) {
+              lastReactFrameSyncRef.current.set(sessKeyStr, nowMs);
+              setLiveSessions((prev) => {
+                const idx = prev.findIndex((s) => String(s.sessionKey) === sessKeyStr);
+                if (idx >= 0) {
+                  const copy = [...prev];
+                  copy[idx] = nextSess;
+                  return copy;
+                }
+                return [nextSess, ...prev];
+              });
+            }
           } catch { }
         });
 
@@ -1116,6 +1159,7 @@ export default function TeacherLiveProctoringPanel({
                           cameraActive={Boolean(sess.cameraActive)}
                           iceConfig={proctorIceConfig}
                           registerSignalListener={registerWallSignalListener}
+                          registerFrameListener={registerWallFrameListener}
                           onStreamReady={handleWallStreamReady}
                         />
                       ) : sess.snapshotDataUrl ? (

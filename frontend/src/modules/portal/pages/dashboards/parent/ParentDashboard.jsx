@@ -16,6 +16,7 @@ import { copyTextSafely } from "../../../../../utils/safeWindow";
 import SchoolClinicHubPanel from "../../../../../components/common/SchoolClinicHubPanel";
 import SchoolStationeryHubPanel from "../../../../../components/common/SchoolStationeryHubPanel";
 import LiveCallLauncherAndReceiver from "../../../../../components/common/LiveCallLauncherAndReceiver";
+import GBSLiveMapMobileTracker from "../../../../../components/common/GBSLiveMapMobileTracker";
 import { useDashboardTabSync } from "../../../../../hooks/useDashboardTabSync";
 import "./ParentDashboard.css";
 
@@ -1711,6 +1712,8 @@ export default function ParentDashboard() {
                   </button>
                 </div>
               </div>
+
+              <GBSLiveMapMobileTracker systemContext="GBS Parent Guardian Live Map" compact={true} />
 
               <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(320px, 1fr))", gap: "1.5rem" }}>
                 {/* Left: Live Google Maps Embed */}

@@ -4,7 +4,8 @@ import { hasActiveAuthSession } from "../../utils/tokenStorage";
 import {
   startIncomingRingtone,
   stopIncomingRingtone,
-  formatRolePositionLabel
+  formatRolePositionLabel,
+  buildIncomingCallAnnouncementPhrase
 } from "../../utils/callRingtoneEngine";
 import LiveInSystemCallModal from "./LiveInSystemCallModal";
 
@@ -374,7 +375,14 @@ export default function LiveCallLauncherAndReceiver({
             <strong style={{ fontSize: "1.06rem", display: "block", marginTop: "2px" }}>
               {incomingCalls[0].initiatorName} ({incomingCalls[0].initiatorPosition || formatRolePositionLabel(incomingCalls[0].initiatorRole)}) is calling you
             </strong>
-            <span style={{ fontSize: "0.78rem", color: "#cbd5e1" }}>
+            <div style={{ fontSize: "0.78rem", color: "#a7f3d0", fontWeight: 700, marginTop: "3px" }}>
+              🤖 AI Voice Assistant Announcing: "{buildIncomingCallAnnouncementPhrase({
+                callerName: incomingCalls[0].initiatorName,
+                callerPosition: incomingCalls[0].initiatorPosition || formatRolePositionLabel(incomingCalls[0].initiatorRole),
+                mediaMode: incomingCalls[0].mediaMode
+              })}"
+            </div>
+            <span style={{ fontSize: "0.76rem", color: "#cbd5e1" }}>
               {incomingCalls[0].title}
             </span>
           </div>

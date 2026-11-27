@@ -681,9 +681,9 @@ export function StudentDashboard({ initialTab } = {}) {
       if (!active) return;
       const elapsed = performance.now() - t0;
       const hasWebRtcWatchers = proctorPeersRef.current.size > 0;
-      // When direct 30fps WebRTC is already streaming to teacher, throttle JPEG backup slightly to save CPU/bandwidth
-      const targetIntervalMs = hasWebRtcWatchers ? 400 : 100;
-      const nextDelay = Math.max(40, targetIntervalMs - elapsed);
+      // When direct 30fps WebRTC is streaming to teacher, throttle JPEG backup to save CPU; otherwise pump smooth ~18 FPS natural motion
+      const targetIntervalMs = hasWebRtcWatchers ? 450 : 55;
+      const nextDelay = Math.max(20, targetIntervalMs - elapsed);
       frameTimer = setTimeout(pumpLiveFrame, nextDelay);
     };
 
@@ -707,7 +707,14 @@ export function StudentDashboard({ initialTab } = {}) {
       }
 
       if (sig.signalType === "WATCH_REQUEST") {
-        if (typeof RTCPeerConnection !== "function" || !proctorStreamRef.current) return;
+        if (typeof RTCPeerConnection !== "function") return;
+        // Wait briefly if webcam hardware is still warming up so WATCH_REQUEST is never dropped
+        if (!proctorStreamRef.current) {
+          for (let waitStep = 0; waitStep < 15 && active && !proctorStreamRef.current; waitStep += 1) {
+            await new Promise((r) => setTimeout(r, 100));
+          }
+          if (!active || !proctorStreamRef.current) return;
+        }
         const prevPc = proctorPeersRef.current.get(viewerId);
         if (prevPc) {
           try { prevPc.close(); } catch { }

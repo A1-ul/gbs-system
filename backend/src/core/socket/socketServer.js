@@ -108,6 +108,26 @@ function initializeSocket(server) {
                 } catch { }
             });
 
+            socket.on("join_mobile_location_watch", function (payload = {}) {
+                try {
+                    const tid = parseInt(payload.tenantId || 1, 10) || 1;
+                    const deviceId = String(payload.deviceId || "").trim();
+                    if (deviceId) {
+                        socket.join(`loc_tenant_${tid}_device_${deviceId}`);
+                    }
+                } catch { }
+            });
+
+            socket.on("leave_mobile_location_watch", function (payload = {}) {
+                try {
+                    const tid = parseInt(payload.tenantId || 1, 10) || 1;
+                    const deviceId = String(payload.deviceId || "").trim();
+                    if (deviceId) {
+                        socket.leave(`loc_tenant_${tid}_device_${deviceId}`);
+                    }
+                } catch { }
+            });
+
             socket.on("join_call_room", function (payload = {}) {
                 try {
                     const room = String(payload.roomCode || payload.roomId || payload.callId || "").trim();

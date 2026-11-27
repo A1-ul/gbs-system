@@ -26,6 +26,7 @@ import OfficialPaymentGatewayModal from "../../../../../components/common/Offici
 import PaymentGatewayAdminPanel from "../../../../../components/common/PaymentGatewayAdminPanel";
 import ExamVettingHubPanel from "../../../../../components/common/ExamVettingHubPanel";
 import LessonNotesVettingModal from "../../../../../components/common/LessonNotesVettingModal";
+import GBSLiveMapMobileTracker from "../../../../../components/common/GBSLiveMapMobileTracker";
 import { openUrlSafely } from "../../../../../utils/safeWindow";
 import { isDemoSandboxMode } from "../../../../../utils/tokenStorage";
 import { checkDemoEntryLimit, trackDemoEntryCreated } from "../../../../../utils/demoLimitGuard";
@@ -9640,6 +9641,8 @@ export function AdminDashboard({ initialTab } = {}) {
                 </div>
               </div>
 
+              <GBSLiveMapMobileTracker systemContext="GBS Headmaster Emergency & Live Map" compact={true} />
+
               <form onSubmit={handleSearchEmergencyLocator} style={{ background: "rgba(2, 6, 23, 0.5)", padding: "1.25rem", borderRadius: "12px", marginBottom: "1rem", display: "flex", gap: "12px", flexWrap: "wrap" }}>
                 <input
                   type="text"
@@ -11634,190 +11637,190 @@ export function AdminDashboard({ initialTab } = {}) {
                     onSubmit={handleScheduleZoomMeeting}
                     style={{ background: "rgba(15, 23, 42, 0.75)", border: "1px solid rgba(59, 130, 246, 0.3)", borderRadius: "14px", padding: "1.5rem" }}
                   >
-                  <div style={{ display: "flex", alignItems: "center", gap: "10px", marginBottom: "1rem", borderBottom: "1px solid rgba(255,255,255,0.08)", paddingBottom: "10px" }}>
-                    <span style={{ fontSize: "1.3rem" }}>🎥</span>
-                    <div>
-                      <h3 style={{ margin: 0, color: "#60a5fa", fontSize: "1.05rem", fontWeight: 800 }}>
-                        SCHEDULE FACULTY ONLINE ZOOM / WHATSAPP MEETING
-                      </h3>
-                      <span style={{ fontSize: "0.75rem", color: "#94a3b8" }}>
-                        Host live online conference via Zoom, WhatsApp Video/Group, Google Meet, or Microsoft Teams
-                      </span>
+                    <div style={{ display: "flex", alignItems: "center", gap: "10px", marginBottom: "1rem", borderBottom: "1px solid rgba(255,255,255,0.08)", paddingBottom: "10px" }}>
+                      <span style={{ fontSize: "1.3rem" }}>🎥</span>
+                      <div>
+                        <h3 style={{ margin: 0, color: "#60a5fa", fontSize: "1.05rem", fontWeight: 800 }}>
+                          SCHEDULE FACULTY ONLINE ZOOM / WHATSAPP MEETING
+                        </h3>
+                        <span style={{ fontSize: "0.75rem", color: "#94a3b8" }}>
+                          Host live online conference via Zoom, WhatsApp Video/Group, Google Meet, or Microsoft Teams
+                        </span>
+                      </div>
                     </div>
-                  </div>
 
-                  <div style={{ marginBottom: "10px" }}>
-                    <label style={{ display: "block", fontSize: "0.75rem", color: "#94a3b8", marginBottom: "4px" }}>
-                      Online Communication & Meeting Platform *
-                    </label>
-                    <select
-                      value={zoomMeetingPlatform}
-                      onChange={(e) => {
-                        const plat = e.target.value;
-                        setZoomMeetingPlatform(plat);
-                        const generated = formatDirectMeetingUrl(academicPlan.zoomUrl, academicPlan.zoomTopic, plat);
-                        setAcademicPlan({ ...academicPlan, zoomUrl: generated });
-                      }}
-                      className="filter-select"
-                      style={{ width: "100%", padding: "8px 10px", fontSize: "0.82rem", fontWeight: 700, color: "#38bdf8" }}
-                    >
-                      <option value="ZOOM">🎥 Zoom Video Conference (Inbuilt Studio + External Zoom)</option>
-                      <option value="WHATSAPP">💚 WhatsApp Live Group / Video Call Platform</option>
-                      <option value="GOOGLE_MEET">📹 Google Meet Live Conference</option>
-                      <option value="MICROSOFT_TEAMS">🟣 Microsoft Teams Faculty Room</option>
-                    </select>
-                  </div>
-
-                  <div style={{ marginBottom: "12px" }}>
-                    <label style={{ display: "block", fontSize: "0.75rem", color: "#94a3b8", marginBottom: "4px" }}>
-                      Meeting Agenda / Topic *
-                    </label>
-                    <input
-                      type="text"
-                      className="filter-input"
-                      style={{ width: "100%" }}
-                      value={academicPlan.zoomTopic}
-                      onChange={(e) => setAcademicPlan({ ...academicPlan, zoomTopic: e.target.value })}
-                      required
-                    />
-                  </div>
-
-                  <div style={{ marginBottom: "12px" }}>
-                    <label style={{ display: "block", fontSize: "0.75rem", color: "#94a3b8", marginBottom: "4px" }}>
-                      Meeting Access URL (Zoom / WhatsApp / Meet Link) *
-                    </label>
-                    <input
-                      type="url"
-                      className="filter-input"
-                      style={{ width: "100%", fontFamily: "monospace", color: "#38bdf8" }}
-                      value={academicPlan.zoomUrl}
-                      onChange={(e) => setAcademicPlan({ ...academicPlan, zoomUrl: e.target.value })}
-                      required
-                    />
-                  </div>
-
-                  <div style={{ marginBottom: "1rem" }}>
-                    <label style={{ display: "block", fontSize: "0.75rem", color: "#94a3b8", marginBottom: "4px" }}>
-                      Meeting Date & Scheduled Time *
-                    </label>
-                    <input
-                      type="datetime-local"
-                      className="filter-input"
-                      style={{ width: "100%" }}
-                      value={academicPlan.zoomDate}
-                      onChange={(e) => setAcademicPlan({ ...academicPlan, zoomDate: e.target.value })}
-                      required
-                    />
-                  </div>
-
-                  <div style={{ background: "rgba(59, 130, 246, 0.1)", border: "1px solid rgba(59, 130, 246, 0.25)", padding: "10px", borderRadius: "8px", marginBottom: "1rem" }}>
-                    <span style={{ fontSize: "0.75rem", color: "#93c5fd", display: "block", marginBottom: "8px" }}>
-                      ✓ Launch a real in-system HD Video & Audio Conference with Staff, Parents, Teachers, or Students — or share an external link.
-                    </span>
-                    <div style={{ marginBottom: "8px" }}>
-                      <label style={{ display: "block", fontSize: "0.72rem", color: "#cbd5e1", fontWeight: 700, marginBottom: "4px" }}>
-                        Target Conference Audience (In-System Live Video Camera & Audio)
+                    <div style={{ marginBottom: "10px" }}>
+                      <label style={{ display: "block", fontSize: "0.75rem", color: "#94a3b8", marginBottom: "4px" }}>
+                        Online Communication & Meeting Platform *
                       </label>
                       <select
-                        value={headmasterConferenceAudience}
-                        onChange={(e) => setHeadmasterConferenceAudience(e.target.value)}
+                        value={zoomMeetingPlatform}
+                        onChange={(e) => {
+                          const plat = e.target.value;
+                          setZoomMeetingPlatform(plat);
+                          const generated = formatDirectMeetingUrl(academicPlan.zoomUrl, academicPlan.zoomTopic, plat);
+                          setAcademicPlan({ ...academicPlan, zoomUrl: generated });
+                        }}
                         className="filter-select"
-                        style={{ width: "100%", padding: "7px 10px", fontSize: "0.8rem", fontWeight: 700, color: "#34d399" }}
+                        style={{ width: "100%", padding: "8px 10px", fontSize: "0.82rem", fontWeight: 700, color: "#38bdf8" }}
                       >
-                        <option value="ALL_CAMPUS_CONFERENCE">🌐 All Campus (Staff, Teachers, Parents & Students)</option>
-                        <option value="STAFF_CONFERENCE">🏢 All Staff & Administration (Staff, HR, Bursar, Secretary, Teachers)</option>
-                        <option value="FACULTY_CONFERENCE">👩‍🏫 Teachers & Faculty Only</option>
-                        <option value="PARENT_CONFERENCE">👨‍👩‍👧 Parents & Guardians PTA Conference</option>
-                        <option value="STUDENT_CONFERENCE">🎓 Students Live Campus Assembly</option>
+                        <option value="ZOOM">🎥 Zoom Video Conference (Inbuilt Studio + External Zoom)</option>
+                        <option value="WHATSAPP">💚 WhatsApp Live Group / Video Call Platform</option>
+                        <option value="GOOGLE_MEET">📹 Google Meet Live Conference</option>
+                        <option value="MICROSOFT_TEAMS">🟣 Microsoft Teams Faculty Room</option>
                       </select>
                     </div>
-                    <div style={{ display: "flex", gap: "8px", flexWrap: "wrap" }}>
-                      <button
-                        type="button"
-                        onClick={() => handleLaunchHeadmasterLiveConference(academicPlan.zoomTopic, headmasterConferenceAudience, "VIDEO")}
-                        style={{
-                          background: "linear-gradient(135deg, #059669, #10b981)",
-                          color: "#fff",
-                          border: "none",
-                          padding: "8px 14px",
-                          borderRadius: "6px",
-                          fontSize: "0.78rem",
-                          fontWeight: 800,
-                          cursor: "pointer"
-                        }}
-                      >
-                        🎥 Launch Live Video Camera Conference Now
-                      </button>
-                      <button
-                        type="button"
-                        onClick={() => handleLaunchHeadmasterLiveConference(academicPlan.zoomTopic, headmasterConferenceAudience, "AUDIO")}
-                        style={{
-                          background: "linear-gradient(135deg, #2563eb, #1d4ed8)",
-                          color: "#fff",
-                          border: "none",
-                          padding: "8px 12px",
-                          borderRadius: "6px",
-                          fontSize: "0.75rem",
-                          fontWeight: 800,
-                          cursor: "pointer"
-                        }}
-                      >
-                        📞 Voice-Only Conference
-                      </button>
-                      <button
-                        type="button"
-                        onClick={() => {
-                          const directUrl = formatDirectMeetingUrl(academicPlan.zoomUrl, academicPlan.zoomTopic, zoomMeetingPlatform);
-                          const waMsg = encodeURIComponent(
-                            `🎥 *HEADMASTER FACULTY ONLINE MEETING (${zoomMeetingPlatform})*\nTopic: ${academicPlan.zoomTopic}\nScheduled: ${new Date(academicPlan.zoomDate).toLocaleString()}\nJoin Link: ${directUrl}`
-                          );
-                          window.open(`https://wa.me/?text=${waMsg}`, "_blank", "noopener,noreferrer");
-                        }}
-                        style={{
-                          background: "rgba(37, 211, 102, 0.2)",
-                          border: "1px solid #25d366",
-                          color: "#4ade80",
-                          padding: "7px 12px",
-                          borderRadius: "6px",
-                          fontSize: "0.75rem",
-                          fontWeight: 800,
-                          cursor: "pointer"
-                        }}
-                      >
-                        💚 Share Link via WhatsApp
-                      </button>
-                      <button
-                        type="button"
-                        onClick={() => {
-                          const directUrl = formatDirectMeetingUrl(academicPlan.zoomUrl, academicPlan.zoomTopic, zoomMeetingPlatform);
-                          navigator.clipboard?.writeText(directUrl);
-                          setFeedback({ type: "success", message: `📋 Working meeting link copied: ${directUrl}` });
-                        }}
-                        style={{
-                          background: "rgba(56, 189, 248, 0.16)",
-                          border: "1px solid #38bdf8",
-                          color: "#38bdf8",
-                          padding: "7px 10px",
-                          borderRadius: "6px",
-                          fontSize: "0.75rem",
-                          fontWeight: 800,
-                          cursor: "pointer"
-                        }}
-                      >
-                        📋 Copy Link
-                      </button>
-                    </div>
-                  </div>
 
-                  <button
-                    type="submit"
-                    className="btn-primary"
-                    style={{ width: "100%", padding: "10px", fontSize: "0.85rem", background: "linear-gradient(135deg, #10b981, #059669)", borderColor: "#059669" }}
-                    disabled={loading}
-                  >
-                    🎥 Schedule & Dispatch {zoomMeetingPlatform} Meeting Link to Faculty
-                  </button>
-                </form>
+                    <div style={{ marginBottom: "12px" }}>
+                      <label style={{ display: "block", fontSize: "0.75rem", color: "#94a3b8", marginBottom: "4px" }}>
+                        Meeting Agenda / Topic *
+                      </label>
+                      <input
+                        type="text"
+                        className="filter-input"
+                        style={{ width: "100%" }}
+                        value={academicPlan.zoomTopic}
+                        onChange={(e) => setAcademicPlan({ ...academicPlan, zoomTopic: e.target.value })}
+                        required
+                      />
+                    </div>
+
+                    <div style={{ marginBottom: "12px" }}>
+                      <label style={{ display: "block", fontSize: "0.75rem", color: "#94a3b8", marginBottom: "4px" }}>
+                        Meeting Access URL (Zoom / WhatsApp / Meet Link) *
+                      </label>
+                      <input
+                        type="url"
+                        className="filter-input"
+                        style={{ width: "100%", fontFamily: "monospace", color: "#38bdf8" }}
+                        value={academicPlan.zoomUrl}
+                        onChange={(e) => setAcademicPlan({ ...academicPlan, zoomUrl: e.target.value })}
+                        required
+                      />
+                    </div>
+
+                    <div style={{ marginBottom: "1rem" }}>
+                      <label style={{ display: "block", fontSize: "0.75rem", color: "#94a3b8", marginBottom: "4px" }}>
+                        Meeting Date & Scheduled Time *
+                      </label>
+                      <input
+                        type="datetime-local"
+                        className="filter-input"
+                        style={{ width: "100%" }}
+                        value={academicPlan.zoomDate}
+                        onChange={(e) => setAcademicPlan({ ...academicPlan, zoomDate: e.target.value })}
+                        required
+                      />
+                    </div>
+
+                    <div style={{ background: "rgba(59, 130, 246, 0.1)", border: "1px solid rgba(59, 130, 246, 0.25)", padding: "10px", borderRadius: "8px", marginBottom: "1rem" }}>
+                      <span style={{ fontSize: "0.75rem", color: "#93c5fd", display: "block", marginBottom: "8px" }}>
+                        ✓ Launch a real in-system HD Video & Audio Conference with Staff, Parents, Teachers, or Students — or share an external link.
+                      </span>
+                      <div style={{ marginBottom: "8px" }}>
+                        <label style={{ display: "block", fontSize: "0.72rem", color: "#cbd5e1", fontWeight: 700, marginBottom: "4px" }}>
+                          Target Conference Audience (In-System Live Video Camera & Audio)
+                        </label>
+                        <select
+                          value={headmasterConferenceAudience}
+                          onChange={(e) => setHeadmasterConferenceAudience(e.target.value)}
+                          className="filter-select"
+                          style={{ width: "100%", padding: "7px 10px", fontSize: "0.8rem", fontWeight: 700, color: "#34d399" }}
+                        >
+                          <option value="ALL_CAMPUS_CONFERENCE">🌐 All Campus (Staff, Teachers, Parents & Students)</option>
+                          <option value="STAFF_CONFERENCE">🏢 All Staff & Administration (Staff, HR, Bursar, Secretary, Teachers)</option>
+                          <option value="FACULTY_CONFERENCE">👩‍🏫 Teachers & Faculty Only</option>
+                          <option value="PARENT_CONFERENCE">👨‍👩‍👧 Parents & Guardians PTA Conference</option>
+                          <option value="STUDENT_CONFERENCE">🎓 Students Live Campus Assembly</option>
+                        </select>
+                      </div>
+                      <div style={{ display: "flex", gap: "8px", flexWrap: "wrap" }}>
+                        <button
+                          type="button"
+                          onClick={() => handleLaunchHeadmasterLiveConference(academicPlan.zoomTopic, headmasterConferenceAudience, "VIDEO")}
+                          style={{
+                            background: "linear-gradient(135deg, #059669, #10b981)",
+                            color: "#fff",
+                            border: "none",
+                            padding: "8px 14px",
+                            borderRadius: "6px",
+                            fontSize: "0.78rem",
+                            fontWeight: 800,
+                            cursor: "pointer"
+                          }}
+                        >
+                          🎥 Launch Live Video Camera Conference Now
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => handleLaunchHeadmasterLiveConference(academicPlan.zoomTopic, headmasterConferenceAudience, "AUDIO")}
+                          style={{
+                            background: "linear-gradient(135deg, #2563eb, #1d4ed8)",
+                            color: "#fff",
+                            border: "none",
+                            padding: "8px 12px",
+                            borderRadius: "6px",
+                            fontSize: "0.75rem",
+                            fontWeight: 800,
+                            cursor: "pointer"
+                          }}
+                        >
+                          📞 Voice-Only Conference
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => {
+                            const directUrl = formatDirectMeetingUrl(academicPlan.zoomUrl, academicPlan.zoomTopic, zoomMeetingPlatform);
+                            const waMsg = encodeURIComponent(
+                              `🎥 *HEADMASTER FACULTY ONLINE MEETING (${zoomMeetingPlatform})*\nTopic: ${academicPlan.zoomTopic}\nScheduled: ${new Date(academicPlan.zoomDate).toLocaleString()}\nJoin Link: ${directUrl}`
+                            );
+                            window.open(`https://wa.me/?text=${waMsg}`, "_blank", "noopener,noreferrer");
+                          }}
+                          style={{
+                            background: "rgba(37, 211, 102, 0.2)",
+                            border: "1px solid #25d366",
+                            color: "#4ade80",
+                            padding: "7px 12px",
+                            borderRadius: "6px",
+                            fontSize: "0.75rem",
+                            fontWeight: 800,
+                            cursor: "pointer"
+                          }}
+                        >
+                          💚 Share Link via WhatsApp
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => {
+                            const directUrl = formatDirectMeetingUrl(academicPlan.zoomUrl, academicPlan.zoomTopic, zoomMeetingPlatform);
+                            navigator.clipboard?.writeText(directUrl);
+                            setFeedback({ type: "success", message: `📋 Working meeting link copied: ${directUrl}` });
+                          }}
+                          style={{
+                            background: "rgba(56, 189, 248, 0.16)",
+                            border: "1px solid #38bdf8",
+                            color: "#38bdf8",
+                            padding: "7px 10px",
+                            borderRadius: "6px",
+                            fontSize: "0.75rem",
+                            fontWeight: 800,
+                            cursor: "pointer"
+                          }}
+                        >
+                          📋 Copy Link
+                        </button>
+                      </div>
+                    </div>
+
+                    <button
+                      type="submit"
+                      className="btn-primary"
+                      style={{ width: "100%", padding: "10px", fontSize: "0.85rem", background: "linear-gradient(135deg, #10b981, #059669)", borderColor: "#059669" }}
+                      disabled={loading}
+                    >
+                      🎥 Schedule & Dispatch {zoomMeetingPlatform} Meeting Link to Faculty
+                    </button>
+                  </form>
                 </div>
               </div>
 

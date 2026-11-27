@@ -486,27 +486,34 @@ function buildTenantLiveStats(req) {
   const isClinicOperator = ['CLINIC_DOCTOR', 'CLINIC_NURSE', 'DOCTOR', 'NURSE', 'CLINIC'].includes(role);
   const callerEmail = String(req?.user?.email || '').trim().toLowerCase();
 
-  const allProfiles = (store.schoolClinicProfiles || []).filter((p) => String(p.tenantId || '1') === tid);
-  const allVisits = (store.schoolClinicVisits || []).filter((v) => String(v.tenantId || '1') === tid);
+  const safeArray = (val) => (Array.isArray(val) ? val : []);
+  const allProfiles = safeArray(store.schoolClinicProfiles).filter((p) => String(p?.tenantId || '1') === tid);
+  const allVisits = safeArray(store.schoolClinicVisits).filter((v) => String(v?.tenantId || '1') === tid);
   const scopedProfiles = isClinicOperator
     ? allProfiles
-    : allProfiles.filter((p) => callerEmail && String(p.email || '').toLowerCase() === callerEmail);
+    : allProfiles.filter((p) => callerEmail && String(p?.email || '').toLowerCase() === callerEmail);
   const scopedVisits = isClinicOperator
     ? allVisits
-    : allVisits.filter((v) => callerEmail && String(v.patientEmail || '').toLowerCase() === callerEmail);
+    : allVisits.filter((v) => callerEmail && String(v?.patientEmail || '').toLowerCase() === callerEmail);
   const sickbayActive = isClinicOperator
-    ? scopedVisits.filter((v) => v.disposition === 'ADMITTED_TO_SICKBAY' && !v.dischargedAt)
+    ? scopedVisits.filter((v) => v?.disposition === 'ADMITTED_TO_SICKBAY' && !v?.dischargedAt)
     : [];
 
-  const uniInternships = (store.universityInternships || []).filter((i) => String(i.tenantId || '1') === tid);
-  const uniAttachments = (store.universityAttachments || []).filter((a) => String(a.tenantId || '1') === tid);
-  const uniStreams = (store.universityStreams || []).filter((s) => String(s.tenantId || '1') === tid);
-  const pendingStaff = (store.registeredUsers || []).filter(
-    (u) => String(u.tenantId || '1') === tid && String(u.status || '').toUpperCase().includes('PENDING')
+  const uniInternships = safeArray(store.universityInternships).filter((i) => String(i?.tenantId || '1') === tid);
+  const uniAttachments = safeArray(store.universityAttachments).filter((a) => String(a?.tenantId || '1') === tid);
+  const uniStreams = safeArray(store.universityStreams).filter((s) => String(s?.tenantId || '1') === tid);
+  const pendingStaff = safeArray(store.registeredUsers).filter(
+    (u) => String(u?.tenantId || '1') === tid && String(u?.status || '').toUpperCase().includes('PENDING')
   );
-  const stationeryItemsCount = ((store.prismaModels?.StationeryItem || []).filter((i) => String(i.tenantId || '1') === tid && i.isActive !== false)).length;
-  const secretaryRecordsCount = ((store.prismaModels?.SecretaryRecord || []).filter((r) => String(r.tenantId || '1') === tid)).length;
-  const lessonPlansCount = ((store.teacherLessonPlans || []).filter((p) => String(p.tenantId || '1') === tid)).length;
+  const stationeryItemsCount = safeArray(store.prismaModels?.StationeryItem).filter((i) => String(i?.tenantId || '1') === tid && i?.isActive !== false).length;
+  const secretaryRecordsCount = safeArray(store.prismaModels?.SecretaryRecord).filter((r) => String(r?.tenantId || '1') === tid).length;
+  const rawLessonPlans = store.teacherLessonPlans;
+  const lessonPlansList = Array.isArray(rawLessonPlans)
+    ? rawLessonPlans.filter((p) => String(p?.tenantId || '1') === tid)
+    : (rawLessonPlans && typeof rawLessonPlans === 'object' && Array.isArray(rawLessonPlans[tid])
+      ? rawLessonPlans[tid]
+      : []);
+  const lessonPlansCount = lessonPlansList.length;
 
   return {
     tenantId: tid,

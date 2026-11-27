@@ -3,6 +3,7 @@ import { useNavigate } from "react-router-dom";
 import apiClient from "../../../api/client/apiClient";
 import { resolveWorldwideLocation } from "../../../utils/globalLocationResolver";
 import { isDemoSandboxMode } from "../../../utils/tokenStorage";
+import GBSLiveMapMobileTracker from "../../../components/common/GBSLiveMapMobileTracker";
 import "./LiveTracking.css";
 
 export default function LiveTrackingDashboard() {
@@ -455,6 +456,8 @@ export default function LiveTrackingDashboard() {
             </span>
           </div>
 
+          <GBSLiveMapMobileTracker systemContext="GBS Live Tracking Map" />
+
           <p style={{ color: "#94a3b8", fontSize: "0.85rem", margin: "0 0 1.25rem" }}>
             Search by School Name, Parent/Guardian Name, Campus Address, City, or Mobile Number (e.g. <code>Achimota School</code>, <code>David Mensah</code>, <code>Cape Coast</code>, <code>+233-24-555-0199</code>). Powered by live Google Maps and global internet geocoding.
           </p>
@@ -702,7 +705,7 @@ export default function LiveTrackingDashboard() {
 
           <div style={{ position: "relative", minHeight: "520px", background: "#020617" }}>
             <iframe
-              title="Live Google Map"
+              aria-label="Live Google Map"
               src={currentEmbedUrl}
               width="100%"
               height="520"

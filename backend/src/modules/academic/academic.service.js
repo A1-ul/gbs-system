@@ -850,13 +850,13 @@ const promoteStudents = async (tenantId, options = {}, operatorUser) => {
   const invoiceDelegate = prisma.studentInvoice || prisma.invoice;
   const unpaidInvoices = invoiceDelegate
     ? await invoiceDelegate.findMany({
-        where: {
-          tenantId: tid,
-          status: { not: 'PAID' },
-          balanceDue: { gt: 0 }
-        },
-        select: { studentId: true, balanceDue: true }
-      })
+      where: {
+        tenantId: tid,
+        status: { not: 'PAID' },
+        balanceDue: { gt: 0 }
+      },
+      select: { studentId: true, balanceDue: true }
+    })
     : [];
 
   const debtorStudentIds = new Set(unpaidInvoices.map(inv => inv.studentId));
@@ -884,7 +884,7 @@ const promoteStudents = async (tenantId, options = {}, operatorUser) => {
 
     // Determine next class by gradeLevel + 1 or next in hierarchy
     const nextClass = classes.find(c => c.gradeLevel === currentClass.gradeLevel + 1) ||
-                      classes.find(c => c.gradeLevel > currentClass.gradeLevel);
+      classes.find(c => c.gradeLevel > currentClass.gradeLevel);
 
     if (!nextClass) {
       // Reached top level (e.g. Level 400 University) -> Graduate
