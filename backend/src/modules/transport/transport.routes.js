@@ -3,27 +3,37 @@
 const express = require('express');
 const router = express.Router();
 const controller = require('./transport.controller');
-const { optionalProtect } = require('../../utils/resolveTenantId');
+const { protect } = require('../../middleware/auth.middleware');
+const { restrictTo } = require('../../middleware/rbac.middleware');
+const { tenantStatusGuard, tenantIsolationGuard } = require('../../middleware/tenant.middleware');
 
-router.use(optionalProtect);
+const TRANSPORT_MANAGER_ROLES = [
+  'ADMIN', 'SUPER_ADMIN', 'HEADMASTER', 'PRINCIPAL',
+  'STAFF', 'SECRETARY', 'DEVELOPER'
+];
 
 router.get('/status', controller.getStatus);
-router.get('/stats', controller.getStats);
-router.get('/students', controller.getStudents);
 
-// Routes
+router.use(protect);
+router.use(tenantStatusGuard);
+router.use(tenantIsolationGuard);
+
+router.get('/stats', controller.getStats);
+router.get('/students', restrictTo(...TRANSPORT_MANAGER_ROLES), controller.getStudents);
+
+// Routes (All authenticated roles can view routes; only Transport/School Leadership can create/delete)
 router.get('/routes', controller.getRoutes);
-router.post('/routes', controller.createRoute);
-router.delete('/routes/:id', controller.deleteRoute);
+router.post('/routes', restrictTo(...TRANSPORT_MANAGER_ROLES), controller.createRoute);
+router.delete('/routes/:id', restrictTo(...TRANSPORT_MANAGER_ROLES), controller.deleteRoute);
 
 // Vehicles / Fleet
 router.get('/vehicles', controller.getVehicles);
-router.post('/vehicles', controller.createVehicle);
+router.post('/vehicles', restrictTo(...TRANSPORT_MANAGER_ROLES), controller.createVehicle);
 
 // Student Assignments
 router.get('/assignments', controller.getAssignments);
-router.post('/assignments', controller.assignStudent);
-router.delete('/assignments/:id', controller.removeAssignment);
+router.post('/assignments', restrictTo(...TRANSPORT_MANAGER_ROLES), controller.assignStudent);
+router.delete('/assignments/:id', restrictTo(...TRANSPORT_MANAGER_ROLES), controller.removeAssignment);
 
 // Base fallback
 router.get('/', controller.getRoutes);

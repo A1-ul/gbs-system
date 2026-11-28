@@ -31,5 +31,6 @@ router.get('/overview', restrictTo(...FRONT_OFFICE_ROLES), controller.getOvervie
 router.get('/records', restrictTo(...READ_CIRCULARS_ROLES), controller.getRecords);
 router.post('/records', restrictTo(...FRONT_OFFICE_ROLES), controller.createRecord);
 router.patch('/records/:id/status', restrictTo(...FRONT_OFFICE_ROLES), controller.updateStatus);
+router.delete('/records/:id', restrictTo(...FRONT_OFFICE_ROLES), controller.deleteRecord);
 
 module.exports = router;

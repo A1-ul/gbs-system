@@ -1898,10 +1898,11 @@ const vetTeacherLessonPlan = async (tenantId, planId, data = {}, operatorUser = 
   }
 
   const validStatuses = ['VETTED_APPROVED', 'REVISION_REQUIRED', 'UNDER_REVIEW'];
-  const status = validStatuses.includes(data.vettingStatus) ? data.vettingStatus : 'VETTED_APPROVED';
+  const requestedStatus = String(data.vettingStatus || data.status || data.decision || '').trim().toUpperCase();
+  const status = validStatuses.includes(requestedStatus) ? requestedStatus : 'VETTED_APPROVED';
   const nowIso = new Date().toISOString();
 
-  const remarks = String(data.headmasterRemarks || '').trim() || (
+  const remarks = String(data.headmasterRemarks || data.supervisorFeedback || data.remarks || '').trim() || (
     status === 'VETTED_APPROVED'
       ? 'Vetted, endorsed, and officially authorized for classroom instruction.'
       : status === 'REVISION_REQUIRED'
@@ -2198,11 +2199,18 @@ const getDefaultersReport = async (tenantId, query = {}, req = null) => {
   } else {
     try {
       const scheduledExams = [
-        ...(await prisma.exam.findMany({ where: { tenantId: tidNum } }).catch(() => [])),
+        ...(await prisma.exam.findMany({ where: { class: { tenantId: tidNum } } }).catch(() => [])),
         ...((store.universityExams || []).filter((e) => String(e.tenantId || '1') === tidStr))
       ];
+      const prismaAnswerSheets = await prisma.answerSheet.findMany({
+        where: { exam: { class: { tenantId: tidNum } } },
+        select: { studentId: true }
+      }).catch(() => []);
+      const normalizedPrismaSheets = (prismaAnswerSheets || []).map((s) => ({
+        studentId: s.studentId
+      }));
       const examSheets = [
-        ...(await prisma.examResult?.findMany({ where: { tenantId: tidNum } }).catch(() => []) || []),
+        ...normalizedPrismaSheets,
         ...((store.examAnswerSheets || []).filter((s) => String(s.tenantId || '1') === tidStr)),
         ...((store.universityCourseResults || []).filter((r) => String(r.tenantId || '1') === tidStr))
       ];

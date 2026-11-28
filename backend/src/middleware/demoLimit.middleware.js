@@ -57,7 +57,9 @@ const DEMO_ACCOUNT_IDS = new Set([
   'usr_alumni_master',
   'usr_alumni1',
   'usr_secretary_master',
-  'usr_secretary1'
+  'usr_secretary1',
+  'usr_clinic_doctor_master',
+  'usr_clinic_nurse_master'
 ]);
 
 const EXEMPT_PATH_PREFIXES = [
@@ -135,14 +137,11 @@ function decodeAuthHint(req) {
   const authHeader = String(req.headers?.authorization || '');
   if (authHeader.startsWith('Bearer ')) {
     const token = authHeader.slice(7).trim();
-    if (token.startsWith('gbs_dev_token_')) {
-      return { role: 'DEVELOPER', tenantId: 1 };
-    }
     try {
       const decoded = jwt.verify(token, envConfig.jwt.secret);
       if (decoded && typeof decoded === 'object') return decoded;
     } catch (_) {
-      // ignore invalid/opaque builtin tokens; check headers next
+      // Ignore invalid or expired tokens; never trust unsigned token prefixes
     }
   }
   const email = String(req.headers?.['x-user-email'] || '').trim().toLowerCase();

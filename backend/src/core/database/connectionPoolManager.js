@@ -261,7 +261,11 @@ class ConnectionPoolManager {
     if (utilizationPct >= CRITICAL_THRESHOLD_PCT) {
       level = 'CRITICAL_95';
       const msg = `CRITICAL DATABASE POOL ALERT: Connection pool utilization is at ${utilizationPct}% (${active}/${maxCap} connections active, threshold: ${CRITICAL_THRESHOLD_PCT}%). Immediate scaling or PgBouncer pooling advised.`;
-      console.error(`🚨 [DB-POOL CRITICAL 95%] ${msg}`);
+      const nowMs = Date.now();
+      if (isSimulation || !this._lastCriticalLogMs || nowMs - this._lastCriticalLogMs > 5000) {
+        console.error(`🚨 [DB-POOL CRITICAL 95%] ${msg}`);
+        this._lastCriticalLogMs = nowMs;
+      }
       this.metrics.lastCriticalAt = new Date().toISOString();
       alertRecord = {
         id: `DB-ALT-${Date.now()}`,
@@ -277,7 +281,11 @@ class ConnectionPoolManager {
     } else if (utilizationPct >= WARNING_THRESHOLD_PCT) {
       level = 'WARNING_80';
       const msg = `WARNING DATABASE POOL NOTICE: Connection pool utilization has reached ${utilizationPct}% (${active}/${maxCap} connections active, threshold: ${WARNING_THRESHOLD_PCT}%). Monitoring active connections and releasing idle sessions.`;
-      console.warn(`⚠️ [DB-POOL WARNING 80%] ${msg}`);
+      const nowMs = Date.now();
+      if (isSimulation || !this._lastWarningLogMs || nowMs - this._lastWarningLogMs > 5000) {
+        console.warn(`⚠️ [DB-POOL WARNING 80%] ${msg}`);
+        this._lastWarningLogMs = nowMs;
+      }
       this.metrics.lastWarningAt = new Date().toISOString();
       alertRecord = {
         id: `DB-ALT-${Date.now()}`,

@@ -1335,19 +1335,19 @@ export async function performFullTranslationAndMeaning(inputText, targetLangCode
 
   const meaningData = hasServerDict
     ? {
-        isSingleWord: !clean.includes(" "),
-        word: clean,
-        phonetic: serverMeaningFallback.phonetic || "",
-        partOfSpeech: serverMeaningFallback.partOfSpeech || (!clean.includes(" ") ? "word" : "Statement"),
-        definition: serverMeaningFallback.definition || "",
-        secondaryDefinition: serverMeaningFallback.secondaryDefinition || "",
-        example: serverMeaningFallback.example || "",
-        synonyms: Array.isArray(serverMeaningFallback.synonyms) ? serverMeaningFallback.synonyms : [],
-        keyTermsBreakdown: Array.isArray(serverMeaningFallback.keyTermsBreakdown) ? serverMeaningFallback.keyTermsBreakdown : []
-      }
+      isSingleWord: !clean.includes(" "),
+      word: clean,
+      phonetic: serverMeaningFallback.phonetic || "",
+      partOfSpeech: serverMeaningFallback.partOfSpeech || (!clean.includes(" ") ? "word" : "Statement"),
+      definition: serverMeaningFallback.definition || "",
+      secondaryDefinition: serverMeaningFallback.secondaryDefinition || "",
+      example: serverMeaningFallback.example || "",
+      synonyms: Array.isArray(serverMeaningFallback.synonyms) ? serverMeaningFallback.synonyms : [],
+      keyTermsBreakdown: Array.isArray(serverMeaningFallback.keyTermsBreakdown) ? serverMeaningFallback.keyTermsBreakdown : []
+    }
     : await lookupWordOrStatementMeaning(
-        langObj.code === "ENGLISH" && translatedText && !translatedText.includes(" ") ? translatedText : clean
-      );
+      langObj.code === "ENGLISH" && translatedText && !translatedText.includes(" ") ? translatedText : clean
+    );
 
   let backTranslation = "";
   if (translatedText && langObj.code !== "ENGLISH") {
@@ -1450,13 +1450,21 @@ export async function fetchTranslatedMessagesInbox({ receiverRole = "", limit = 
   let serverList = [];
   if (typeof window !== "undefined") {
     try {
-      const qs = new URLSearchParams();
-      if (receiverRole) qs.set("receiverRole", receiverRole);
-      qs.set("limit", String(limit));
-      const res = await fetch(resolveApiUrl(`/api/v1/translate/messages?${qs.toString()}`));
-      if (res.ok) {
-        const json = await res.json();
-        serverList = Array.isArray(json?.data?.messages) ? json.data.messages : [];
+      const authToken =
+        typeof localStorage !== "undefined"
+          ? localStorage.getItem("gbs_access_token") || localStorage.getItem("gbs_token") || localStorage.getItem("gbs_dev_token") || ""
+          : "";
+      if (authToken) {
+        const qs = new URLSearchParams();
+        if (receiverRole) qs.set("receiverRole", receiverRole);
+        qs.set("limit", String(limit));
+        const res = await fetch(resolveApiUrl(`/api/v1/translate/messages?${qs.toString()}`), {
+          headers: { Authorization: `Bearer ${authToken}` }
+        });
+        if (res.ok) {
+          const json = await res.json();
+          serverList = Array.isArray(json?.data?.messages) ? json.data.messages : [];
+        }
       }
     } catch { }
   }
@@ -1503,9 +1511,16 @@ export async function markTranslatedMessageRead(messageId, readerName = "Recipie
 
   if (typeof window !== "undefined") {
     try {
+      const authToken =
+        typeof localStorage !== "undefined"
+          ? localStorage.getItem("gbs_access_token") || localStorage.getItem("gbs_token") || localStorage.getItem("gbs_dev_token") || ""
+          : "";
       await fetch(resolveApiUrl(`/api/v1/translate/messages/${encodeURIComponent(messageId)}/read`), {
         method: "PATCH",
-        headers: { "Content-Type": "application/json" },
+        headers: {
+          "Content-Type": "application/json",
+          ...(authToken ? { Authorization: `Bearer ${authToken}` } : {})
+        },
         body: JSON.stringify({ readerName })
       });
     } catch { }
@@ -1574,9 +1589,16 @@ export async function sendTranslatedMessageToReceiver({
   // Persist to backend first so all devices/portals see the authoritative message & sender details
   if (typeof window !== "undefined") {
     try {
+      const msgAuthToken =
+        typeof localStorage !== "undefined"
+          ? localStorage.getItem("gbs_access_token") || localStorage.getItem("gbs_token") || localStorage.getItem("gbs_dev_token") || ""
+          : "";
       const postRes = await fetch(resolveApiUrl("/api/v1/translate/send-message"), {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: {
+          "Content-Type": "application/json",
+          ...(msgAuthToken ? { Authorization: `Bearer ${msgAuthToken}` } : {})
+        },
         body: JSON.stringify(messageRecord)
       });
       if (postRes.ok) {
@@ -1590,12 +1612,19 @@ export async function sendTranslatedMessageToReceiver({
     const phoneMatch = String(receiverContact || "").replace(/[\s()-]+/g, " ").match(/\+?\d[\d ]{6,16}\d/);
     if (phoneMatch) {
       try {
+        const authToken =
+          typeof localStorage !== "undefined"
+            ? localStorage.getItem("gbs_access_token") || localStorage.getItem("gbs_token") || localStorage.getItem("gbs_dev_token") || ""
+            : "";
         await fetch(resolveApiUrl("/api/v1/sms/send"), {
           method: "POST",
-          headers: { "Content-Type": "application/json" },
+          headers: {
+            "Content-Type": "application/json",
+            ...(authToken ? { Authorization: `Bearer ${authToken}` } : {})
+          },
           body: JSON.stringify({
-            to: phoneMatch[0].replace(/\s+/g, ""),
-            message: `[From ${senderName} (${senderRole}) • ${langObj.name}] ${finalTranslated}\n---\n[Original] ${cleanOriginal}`
+            recipientPhone: phoneMatch[0].replace(/\s+/g, ""),
+            content: `[From ${senderName} (${senderRole}) • ${langObj.name}] ${finalTranslated}\n---\n[Original] ${cleanOriginal}`
           })
         });
       } catch { }

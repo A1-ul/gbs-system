@@ -321,21 +321,21 @@ axiosInstance.interceptors.response.use(
         if (code) {
           const prefix = code.split("_")[0];
           const titles = {
-            AUTH: "AUTHENTICATION VERIFIED",
-            VALIDATION: "INPUT VALIDATED",
-            TENANT: "TENANT ENCLAVE CONFIRMED",
-            ADMISSION: "ADMISSION DESK CONFIRMED",
-            ACADEMIC: "ACADEMIC OPERATION CONFIRMED",
-            FINANCE: "FINANCIAL TRANSACTION CONFIRMED",
-            CLINIC: "SCHOOL CLINIC CONFIRMED",
-            UNIVERSITY: "UNIVERSITY SYSTEM CONFIRMED",
-            SMS: "DIRECT SMS DISPATCHED",
+            AUTH: "SIGN-IN VERIFIED",
+            VALIDATION: "DETAILS CHECKED",
+            TENANT: "SCHOOL ACCOUNT CONFIRMED",
+            ADMISSION: "ADMISSION SAVED",
+            ACADEMIC: "ACADEMIC RECORD SAVED",
+            FINANCE: "PAYMENT & FINANCE UPDATED",
+            CLINIC: "SCHOOL CLINIC UPDATED",
+            UNIVERSITY: "ACADEMICS UPDATED",
+            SMS: "SMS MESSAGE SENT",
             STAFF: "STAFF ACCESS UPDATED",
-            DEV: "DEVELOPER CONTROL EXECUTED",
-            RECORD: "DATABASE RECORD UPDATED",
-            NOTIFICATION: "COMMUNICATION DISPATCHED",
-            SYSTEM: "SYSTEM CORE CONFIRMED",
-            IDEMPOTENCY: "IDEMPOTENCY KEY LOCKED",
+            DEV: "DEVELOPER ACTION COMPLETED",
+            RECORD: "RECORD SAVED",
+            NOTIFICATION: "NOTIFICATION SENT",
+            SYSTEM: "ACTION COMPLETED",
+            IDEMPOTENCY: "DUPLICATE ACTION PREVENTED",
             REQUEST: "REQUEST SUBMITTED"
           };
           if (titles[prefix]) title = envelopeFailed ? `${prefix} OPERATION REJECTED` : titles[prefix];
@@ -450,8 +450,8 @@ axiosInstance.interceptors.response.use(
 
     if (!error.response) {
       serverErrMsg = connSnap.isConfirmedOffline
-        ? "Central Engine offline: Unable to reach GBS backend. Automatic reconnection is active."
-        : "Temporary connection interruption — reconnecting to GBS Central Engine...";
+        ? "Connection lost: We cannot reach the school server right now. Reconnecting automatically..."
+        : "Brief connection pause — reconnecting automatically...";
     }
 
     if (status === 401 && !isAuthAttempt) {
@@ -459,9 +459,9 @@ axiosInstance.interceptors.response.use(
       if (now - lastAuthRedirectNoticeAt > 8000 && typeof window !== "undefined" && typeof window.showGBSOpenNotice === "function") {
         lastAuthRedirectNoticeAt = now;
         window.showGBSOpenNotice(
-          "Your authentication session expired. Please sign in again to get a fresh token.",
+          "Your session has ended. Please sign in again to continue.",
           "warning",
-          "SESSION RENEWAL REQUIRED"
+          "PLEASE SIGN IN AGAIN"
         );
       }
       return Promise.reject(error);
@@ -502,40 +502,40 @@ axiosInstance.interceptors.response.use(
       typeof window.showGBSOpenNotice === "function"
     ) {
       if (!url.includes("/auth/login") && !url.includes("/health")) {
-        let title = status ? `HTTP ${status} REQUEST ERROR` : "COMMAND FEEDBACK NOTICE";
-        if (rcceCode === "DEMO_TRIAL_LIMIT_REACHED") title = "DEMO TRIAL LIMIT REACHED (10/10)";
-        else if (status === 400) title = "INVALID REQUEST (400)";
-        else if (status === 403) title = "ACCESS DENIED (403)";
-        else if (status === 404) title = "RESOURCE NOT FOUND (404)";
-        else if (status === 405) title = "METHOD NOT ALLOWED (405)";
-        else if (status === 408) title = "REQUEST TIMEOUT (408)";
-        else if (status === 409) title = "RECORD CONFLICT (409)";
-        else if (status === 422) title = "VALIDATION FAILED (422)";
-        else if (status === 423) title = "SECURITY LOCKDOWN ACTIVE (423)";
-        else if (status === 429) title = "RATE LIMIT EXCEEDED (429)";
-        else if (status === 501) title = "NOT IMPLEMENTED (501)";
-        else if (status === 502) title = "UPSTREAM BAD GATEWAY (502)";
-        else if (status === 503 || rcceCode === "SYSTEM_MAINTENANCE_ACTIVE") title = "SERVICE UNAVAILABLE (503)";
-        else if (status === 504) title = "GATEWAY TIMEOUT (504)";
-        else if (status >= 500) title = `SERVER ERROR (${status})`;
-        else if (!error.response) title = "NETWORK OFFLINE WARNING";
+        let title = status ? `REQUEST ISSUE (${status})` : "SYSTEM NOTICE";
+        if (rcceCode === "DEMO_TRIAL_LIMIT_REACHED") title = "DEMO ACCESS NOTICE";
+        else if (status === 400) title = "PLEASE CHECK YOUR INPUT (400)";
+        else if (status === 403) title = "ACCESS NOT ALLOWED (403)";
+        else if (status === 404) title = "RECORD NOT FOUND (404)";
+        else if (status === 405) title = "ACTION NOT SUPPORTED (405)";
+        else if (status === 408) title = "REQUEST TOOK TOO LONG (408)";
+        else if (status === 409) title = "RECORD ALREADY EXISTS (409)";
+        else if (status === 422) title = "PLEASE CHECK REQUIRED DETAILS (422)";
+        else if (status === 423) title = "SECURITY LOCK ACTIVE (423)";
+        else if (status === 429) title = "TOO MANY REQUESTS (429)";
+        else if (status === 501) title = "FEATURE NOT AVAILABLE (501)";
+        else if (status === 502) title = "TEMPORARY CONNECTION ISSUE (502)";
+        else if (status === 503 || rcceCode === "SYSTEM_MAINTENANCE_ACTIVE") title = "SERVICE TEMPORARILY UNAVAILABLE (503)";
+        else if (status === 504) title = "SERVER TOOK TOO LONG (504)";
+        else if (status >= 500) title = `SERVER ISSUE (${status})`;
+        else if (!error.response) title = "CONNECTION PAUSED";
         else if (rcceCode) {
           const prefix = rcceCode.split("_")[0];
           const titles = {
-            AUTH: "AUTHENTICATION RESTRICTION",
-            VALIDATION: "INPUT VALIDATION NOTICE",
-            TENANT: "TENANT ISOLATION BARRIER",
-            ADMISSION: "ADMISSION REGISTRATION NOTICE",
-            ACADEMIC: "ACADEMIC SYSTEM NOTICE",
-            FINANCE: "FINANCIAL TRANSACTION NOTICE",
-            CLINIC: "SCHOOL CLINIC RESTRICTION",
-            UNIVERSITY: "UNIVERSITY TIER RESTRICTION",
+            AUTH: "SIGN-IN REQUIRED",
+            VALIDATION: "PLEASE CHECK YOUR INPUT",
+            TENANT: "SCHOOL PRIVACY RESTRICTION",
+            ADMISSION: "ADMISSION NOTICE",
+            ACADEMIC: "ACADEMIC NOTICE",
+            FINANCE: "PAYMENT & FINANCE NOTICE",
+            CLINIC: "SCHOOL CLINIC PRIVACY",
+            UNIVERSITY: "INSTITUTION TIER NOTICE",
             SMS: "SMS DELIVERY NOTICE",
-            STAFF: "STAFF APPROVAL REQUIRED",
-            DEV: "DEVELOPER ACCESS RESTRICTION",
-            DEMO: "DEMO TRIAL LIMIT NOTICE",
-            RECORD: "RECORD INTEGRITY NOTICE",
-            IDEMPOTENCY: "DUPLICATE SUBMISSION PREVENTED"
+            STAFF: "HEADMASTER APPROVAL REQUIRED",
+            DEV: "DEVELOPER ACCESS ONLY",
+            DEMO: "DEMO MODE NOTICE",
+            RECORD: "RECORD NOTICE",
+            IDEMPOTENCY: "DUPLICATE ACTION PREVENTED"
           };
           if (titles[prefix]) title = titles[prefix];
         }

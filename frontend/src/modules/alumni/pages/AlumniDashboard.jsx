@@ -568,48 +568,66 @@ export default function AlumniDashboard() {
     }
   };
 
-  // Handle Donate Endowment: Records the gift in the institutional ledger for the Accountant Dashboard
-  const handleDonateEndowment = (e) => {
+  // Handle Donate Endowment: Persists the gift to the live backend ledger for Accountant Dashboard across all devices
+  const handleDonateEndowment = async (e) => {
     e.preventDefault();
     const demoCheck = checkDemoEntryLimit("alumni_pledges", "Alumni Endowment Pledges");
     if (!demoCheck.allowed) {
       setAlumniNotice({ type: "error", message: demoCheck.message });
       return;
     }
-    const pledged = parseFloat(alumniPledgeForm.pledgedAmount) || 100;
+    const pledged = parseFloat(alumniPledgeForm.pledgedAmount) || 0;
+    if (!Number.isFinite(pledged) || pledged <= 0) {
+      setAlumniNotice({ type: "error", message: "Please enter a valid gift or pledge amount greater than zero." });
+      return;
+    }
     const redeemed = parseFloat(alumniPledgeForm.redeemedAmount || 0);
     const status = redeemed >= pledged ? "FULFILLED" : redeemed > 0 ? "PARTIALLY_FULFILLED" : "PLEDGED";
 
-    const newGift = {
-      id: `ALM-PLG-${Date.now().toString().slice(-4)}`,
-      donorName: alumniPledgeForm.donorName.trim() || alumniProfile?.fullName || "Alumnus Contributor",
+    const payload = {
+      donorName: alumniPledgeForm.donorName.trim() || alumniProfile?.fullName || "Alumni Contributor",
       gradClass: alumniPledgeForm.gradClass.trim() || `Class of ${alumniProfile?.gradYear || "2018"}`,
-      contact: alumniPledgeForm.contact.trim() || alumniProfile?.phone || "+233 24 555 8192",
-      email: alumniPledgeForm.email.trim() || alumniProfile?.email || "alumni@alumni.org",
-      campaign: alumniPledgeForm.campaign.trim(),
+      contact: alumniPledgeForm.contact.trim() || alumniProfile?.phone || "",
+      email: alumniPledgeForm.email.trim() || alumniProfile?.email || "",
+      campaign: alumniPledgeForm.campaign.trim() || "General Campus Endowment",
       pledgedAmount: pledged,
       redeemedAmount: redeemed,
       fulfillmentStatus: status,
       paymentMethod: alumniPledgeForm.paymentMethod,
       notes: alumniPledgeForm.notes || "",
-      date: new Date().toISOString().split("T")[0],
-      receiptRef: `GBS-ALM-REC-${Math.floor(1000 + Math.random() * 9000)}`
+      date: new Date().toISOString().split("T")[0]
     };
 
     try {
-      const existing = JSON.parse(localStorage.getItem("gbs_alumni_pledges_and_gifts") || "[]");
-      const updated = [newGift, ...existing];
-      localStorage.setItem("gbs_alumni_pledges_and_gifts", JSON.stringify(updated));
-      trackDemoEntryCreated("alumni_pledges");
-      window.dispatchEvent(new Event("gbs_alumni_gift_added"));
-      window.dispatchEvent(new Event("storage"));
-    } catch { }
+      const res = await apiClient.post("/finance/alumni-gifts", payload);
+      const savedGift = res?.data?.data?.gift || {
+        ...payload,
+        id: `ALM-PLG-${Date.now().toString().slice(-4)}`,
+        receiptRef: `GBS-ALM-REC-${Math.floor(1000 + Math.random() * 9000)}`
+      };
 
-    setDonationSuccess(true);
-    setTimeout(() => {
-      setShowDonateModal(false);
-      setDonationSuccess(false);
-    }, 2000);
+      try {
+        const existing = JSON.parse(localStorage.getItem("gbs_alumni_pledges_and_gifts") || "[]");
+        const updated = [savedGift, ...existing.filter((x) => String(x.id) !== String(savedGift.id))];
+        localStorage.setItem("gbs_alumni_pledges_and_gifts", JSON.stringify(updated));
+        trackDemoEntryCreated("alumni_pledges");
+        window.dispatchEvent(new Event("gbs_alumni_gift_added"));
+        window.dispatchEvent(new Event("storage"));
+      } catch { }
+
+      setDonationSuccess(true);
+      setAlumniNotice({
+        type: "success",
+        message: `Thank you! Your gift (${savedGift.receiptRef}) has been saved and sent to the School Accountant.`
+      });
+      setTimeout(() => {
+        setShowDonateModal(false);
+        setDonationSuccess(false);
+      }, 2000);
+    } catch (err) {
+      const errMsg = err?.response?.data?.message || "Could not save your endowment gift right now. Please try again.";
+      setAlumniNotice({ type: "error", message: errMsg });
+    }
   };
 
   return (
@@ -1829,58 +1847,58 @@ export default function AlumniDashboard() {
                     );
                   }
                   return dirItems.map((member, idx) => (
-                  <div
-                    key={idx}
-                    style={{
-                      background: "rgba(15, 23, 42, 0.7)",
-                      border: "1px solid rgba(255, 255, 255, 0.08)",
-                      borderRadius: "12px",
-                      padding: "1.25rem",
-                      display: "flex",
-                      alignItems: "center",
-                      gap: "12px"
-                    }}
-                  >
-                    <div style={{
-                      width: "48px",
-                      height: "48px",
-                      borderRadius: "12px",
-                      background: "rgba(99, 102, 241, 0.2)",
-                      display: "flex",
-                      alignItems: "center",
-                      justifyContent: "center",
-                      fontSize: "1.5rem"
-                    }}>
-                      {member.icon}
-                    </div>
-                    <div style={{ flex: 1 }}>
-                      <h4 style={{ margin: 0, fontSize: "0.95rem", color: "#f8fafc", fontWeight: "800" }}>{member.name}</h4>
-                      <p style={{ margin: "2px 0", fontSize: "0.78rem", color: "#38bdf8" }}>{member.role} • {member.org}</p>
-                      <span style={{ fontSize: "0.72rem", color: "#94a3b8" }}>{member.batch} • {member.city}</span>
-                    </div>
-                    <button
-                      type="button"
-                      onClick={() => {
-                        const msg = `Connection request sent to ${member.name} (${member.org})!`;
-                        setAlumniNotice({ type: "success", message: msg });
-                        if (typeof window !== "undefined" && typeof window.showGBSOpenNotice === "function") {
-                          window.showGBSOpenNotice(msg, "success", "ALUMNI CONNECTION SENT");
-                        }
-                      }}
+                    <div
+                      key={idx}
                       style={{
-                        background: "rgba(56, 189, 248, 0.15)",
-                        border: "1px solid rgba(56, 189, 248, 0.3)",
-                        color: "#38bdf8",
-                        padding: "6px 10px",
-                        borderRadius: "6px",
-                        cursor: "pointer",
-                        fontSize: "0.75rem",
-                        fontWeight: "700"
+                        background: "rgba(15, 23, 42, 0.7)",
+                        border: "1px solid rgba(255, 255, 255, 0.08)",
+                        borderRadius: "12px",
+                        padding: "1.25rem",
+                        display: "flex",
+                        alignItems: "center",
+                        gap: "12px"
                       }}
                     >
-                      Connect
-                    </button>
-                  </div>
+                      <div style={{
+                        width: "48px",
+                        height: "48px",
+                        borderRadius: "12px",
+                        background: "rgba(99, 102, 241, 0.2)",
+                        display: "flex",
+                        alignItems: "center",
+                        justifyContent: "center",
+                        fontSize: "1.5rem"
+                      }}>
+                        {member.icon}
+                      </div>
+                      <div style={{ flex: 1 }}>
+                        <h4 style={{ margin: 0, fontSize: "0.95rem", color: "#f8fafc", fontWeight: "800" }}>{member.name}</h4>
+                        <p style={{ margin: "2px 0", fontSize: "0.78rem", color: "#38bdf8" }}>{member.role} • {member.org}</p>
+                        <span style={{ fontSize: "0.72rem", color: "#94a3b8" }}>{member.batch} • {member.city}</span>
+                      </div>
+                      <button
+                        type="button"
+                        onClick={() => {
+                          const msg = `Connection request sent to ${member.name} (${member.org})!`;
+                          setAlumniNotice({ type: "success", message: msg });
+                          if (typeof window !== "undefined" && typeof window.showGBSOpenNotice === "function") {
+                            window.showGBSOpenNotice(msg, "success", "ALUMNI CONNECTION SENT");
+                          }
+                        }}
+                        style={{
+                          background: "rgba(56, 189, 248, 0.15)",
+                          border: "1px solid rgba(56, 189, 248, 0.3)",
+                          color: "#38bdf8",
+                          padding: "6px 10px",
+                          borderRadius: "6px",
+                          cursor: "pointer",
+                          fontSize: "0.75rem",
+                          fontWeight: "700"
+                        }}
+                      >
+                        Connect
+                      </button>
+                    </div>
                   ));
                 })()}
               </div>

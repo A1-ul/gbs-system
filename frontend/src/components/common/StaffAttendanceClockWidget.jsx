@@ -111,11 +111,11 @@ export default function StaffAttendanceClockWidget({
     try {
       const params = isClinicDesk
         ? {
-            isClinicStaff: "true",
-            staffName: clinicStaffName,
-            staffEmail: clinicStaffEmail,
-            staffRole: clinicStaffRole
-          }
+          isClinicStaff: "true",
+          staffName: clinicStaffName,
+          staffEmail: clinicStaffEmail,
+          staffRole: clinicStaffRole
+        }
         : {};
       const res = await apiClient.get("/staff-attendance/my-status", { params });
       if (res?.data?.data) {
@@ -347,20 +347,20 @@ export default function StaffAttendanceClockWidget({
 
       const payload = isClinicDesk
         ? {
-            ...proofPayload,
-            isClinicStaff: true,
-            staffName: clinicStaffName.trim() || defaultName,
-            staffEmail: clinicStaffEmail.trim() || storedUser.email || "",
-            staffRole: clinicMeta.value,
-            department: clinicMeta.department,
-            designation: clinicMeta.designation,
-            notes: shiftNote.trim() || "Reported to school clinic and submitted workplace proof."
-          }
+          ...proofPayload,
+          isClinicStaff: true,
+          staffName: clinicStaffName.trim() || defaultName,
+          staffEmail: clinicStaffEmail.trim() || storedUser.email || "",
+          staffRole: clinicMeta.value,
+          department: clinicMeta.department,
+          designation: clinicMeta.designation,
+          notes: shiftNote.trim() || "Reported to school clinic and submitted workplace proof."
+        }
         : {
-            ...proofPayload,
-            staffRole: defaultRole,
-            notes: shiftNote.trim() || "Reported to workplace and submitted live location + photo proof for Headmaster verification."
-          };
+          ...proofPayload,
+          staffRole: defaultRole,
+          notes: shiftNote.trim() || "Reported to workplace and submitted live location + photo proof for Headmaster verification."
+        };
 
       const res = await apiClient.post("/staff-attendance/clock-in", payload);
       const entry = res?.data?.data?.record || res?.data?.data;
@@ -400,7 +400,7 @@ export default function StaffAttendanceClockWidget({
       });
       notify(
         res?.data?.message ||
-          "Bypassed clock-in prompt. Note: You are NOT marked present at work or on duty until you clock in with workplace proof.",
+        "Bypassed clock-in prompt. Note: You are NOT marked present at work or on duty until you clock in with workplace proof.",
         false
       );
       setWelcomeDismissed(true);
@@ -429,20 +429,20 @@ export default function StaffAttendanceClockWidget({
       const clinicMeta = CLINICAL_ROLES.find((r) => r.value === clinicStaffRole) || CLINICAL_ROLES[0];
       const payload = isClinicDesk
         ? {
-            isClinicStaff: true,
-            staffName: clinicStaffName.trim() || defaultName,
-            staffEmail: clinicStaffEmail.trim() || storedUser.email || "",
-            staffRole: clinicMeta.value,
-            shiftId: statusData?.activeShift?.id || null,
-            reason: trimmedReason || "End of scheduled school/clinic closing time.",
-            notes: shiftNote.trim() || trimmedReason || "Clinic shift closed and clocked out cleanly."
-          }
+          isClinicStaff: true,
+          staffName: clinicStaffName.trim() || defaultName,
+          staffEmail: clinicStaffEmail.trim() || storedUser.email || "",
+          staffRole: clinicMeta.value,
+          shiftId: statusData?.activeShift?.id || null,
+          reason: trimmedReason || "End of scheduled school/clinic closing time.",
+          notes: shiftNote.trim() || trimmedReason || "Clinic shift closed and clocked out cleanly."
+        }
         : {
-            shiftId: statusData?.activeShift?.id || null,
-            staffRole: defaultRole,
-            reason: trimmedReason || "End of school/work closing time.",
-            notes: shiftNote.trim() || trimmedReason || "Closing duty clocked out cleanly."
-          };
+          shiftId: statusData?.activeShift?.id || null,
+          staffRole: defaultRole,
+          reason: trimmedReason || "End of school/work closing time.",
+          notes: shiftNote.trim() || trimmedReason || "Closing duty clocked out cleanly."
+        };
 
       const res = await apiClient.post("/staff-attendance/clock-out", payload);
       notify(res?.data?.message || "✅ Clocked out cleanly at close of work.");
@@ -927,9 +927,8 @@ export default function StaffAttendanceClockWidget({
                     : verificationStatus === "QUERIED" || verificationStatus === "REJECTED"
                       ? "rgba(239, 68, 68, 0.22)"
                       : "rgba(56, 189, 248, 0.18)",
-                  border: `1px solid ${
-                    verificationStatus === "VERIFIED" ? "#10b981" : verificationStatus === "QUERIED" || verificationStatus === "REJECTED" ? "#ef4444" : "#38bdf8"
-                  }`,
+                  border: `1px solid ${verificationStatus === "VERIFIED" ? "#10b981" : verificationStatus === "QUERIED" || verificationStatus === "REJECTED" ? "#ef4444" : "#38bdf8"
+                    }`,
                   color: verificationStatus === "VERIFIED" ? "#6ee7b7" : verificationStatus === "QUERIED" || verificationStatus === "REJECTED" ? "#fca5a5" : "#7dd3fc"
                 }}
               >

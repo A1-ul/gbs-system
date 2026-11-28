@@ -47,7 +47,7 @@ export default function AcademicManagementPage() {
         setSubjects(subRes.data.data.subjects || []);
       }
     } catch (err) {
-      setError(err.response?.data?.message || "Failed to load academic records from PostgreSQL.");
+      setError(err.response?.data?.message || "Failed to load academic records.");
     } finally {
       setLoading(false);
     }
@@ -334,7 +334,7 @@ export default function AcademicManagementPage() {
           <div className="classes-grid-container">
             {loading ? (
               <div className="loading-state">
-                <span className="spinner-dot"></span> Loading live academic classes from PostgreSQL...
+                <span className="spinner-dot"></span> Loading classes...
               </div>
             ) : filteredClasses.length === 0 ? (
               <div className="empty-state">
@@ -423,7 +423,7 @@ export default function AcademicManagementPage() {
 
             {loading ? (
               <div className="loading-state">
-                <span className="spinner-dot"></span> Loading subjects from PostgreSQL...
+                <span className="spinner-dot"></span> Loading subjects...
               </div>
             ) : filteredSubjects.length === 0 ? (
               <div className="empty-state">

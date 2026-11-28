@@ -48,4 +48,10 @@ router.get('/class-fee-matrix', financeController.getClassFeeMatrix);
 router.post('/class-fee-increment', restrictTo('SUPER_ADMIN', 'ADMIN', 'ACCOUNTANT', 'DEVELOPER'), financeController.updateClassFeeIncrement);
 router.put('/class-fee-increment', restrictTo('SUPER_ADMIN', 'ADMIN', 'ACCOUNTANT', 'DEVELOPER'), financeController.updateClassFeeIncrement);
 
+// 9. Cross-Dashboard Alumni Endowment Gifts & Pledges (Alumni <-> Accountant Live Sync)
+router.get('/alumni-gifts', restrictTo('ALUMNI', 'ACCOUNTANT', 'ADMIN', 'SUPER_ADMIN', 'HEADMASTER', 'PRINCIPAL', 'DEVELOPER'), financeController.getAlumniGifts);
+router.post('/alumni-gifts', restrictTo('ALUMNI', 'ACCOUNTANT', 'ADMIN', 'SUPER_ADMIN', 'HEADMASTER', 'PRINCIPAL', 'DEVELOPER'), financeController.createAlumniGift);
+router.patch('/alumni-gifts/:id', restrictTo('ACCOUNTANT', 'ADMIN', 'SUPER_ADMIN', 'HEADMASTER', 'PRINCIPAL', 'DEVELOPER'), financeController.updateAlumniGift);
+router.delete('/alumni-gifts/:id', restrictTo('ACCOUNTANT', 'ADMIN', 'SUPER_ADMIN', 'HEADMASTER', 'PRINCIPAL', 'DEVELOPER'), financeController.deleteAlumniGift);
+
 module.exports = router;

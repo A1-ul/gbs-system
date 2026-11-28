@@ -163,7 +163,12 @@ class CloudInfraManager {
    */
   async getComprehensiveInfrastructureReport(prismaClient = null) {
     if (prismaClient && typeof prismaClient.$queryRawUnsafe === 'function') {
-      await connectionPoolManager.syncLivePostgresStats(prismaClient.$queryRawUnsafe.bind(prismaClient));
+      const lastProbedTs = connectionPoolManager.postgresServerCapacity?.lastProbedAt
+        ? new Date(connectionPoolManager.postgresServerCapacity.lastProbedAt).getTime()
+        : 0;
+      if (!lastProbedTs || Date.now() - lastProbedTs > 10000) {
+        await connectionPoolManager.syncLivePostgresStats(prismaClient.$queryRawUnsafe.bind(prismaClient));
+      }
     }
 
     const poolStatus = connectionPoolManager.getPoolStatus();
@@ -205,10 +210,17 @@ class CloudInfraManager {
       Math.max(2, Math.round(poolStatus.activeConnections * 6 + (poolStatus.waitingRequests > 0 ? 25 : 2)))
     );
 
-    // Scan backend data & public directories for storage audit
+    // Scan backend data & public directories for storage audit (15s TTL cache prevents blocking Node.js event loop on telemetry bursts)
     const backendRoot = path.resolve(__dirname, '../../..');
-    const dataScan = this._scanStorageDirectory(path.join(backendRoot, 'data'), 1024 * 1024);
-    const publicScan = this._scanStorageDirectory(path.join(backendRoot, 'public'), 1024 * 1024);
+    const nowScanMs = Date.now();
+    if (!this._cachedStorageAudit || nowScanMs - this._cachedStorageAuditAt > 15000) {
+      this._cachedStorageAudit = {
+        dataScan: this._scanStorageDirectory(path.join(backendRoot, 'data'), 1024 * 1024),
+        publicScan: this._scanStorageDirectory(path.join(backendRoot, 'public'), 1024 * 1024)
+      };
+      this._cachedStorageAuditAt = nowScanMs;
+    }
+    const { dataScan, publicScan } = this._cachedStorageAudit;
     const backups = listDatabaseBackups();
 
     const store = readPersistentStore();

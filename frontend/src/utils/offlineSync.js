@@ -10,6 +10,10 @@ class OfflineSyncEngine {
   constructor() {
     this.isOnline = typeof navigator !== "undefined" ? navigator.onLine : true;
     this.queueKey = "gbs_offline_mutation_queue";
+    this.rejectedKey = "gbs_offline_sync_rejected";
+    this.maxQueueSize = 200;
+    this.maxRetryAttempts = 5;
+    this.syncing = false;
     this.listeners = new Set();
 
     if (typeof window !== "undefined") {
@@ -20,7 +24,7 @@ class OfflineSyncEngine {
 
   handleConnectivityChange(isOnline) {
     this.isOnline = isOnline;
-    console.log(`[GBS Offline Sync Engine] Connectivity status changed: ${isOnline ? "ONLINE 🟢" : "OFFLINE 🔴"}`);
+    console.log(`[GBS Offline Sync Engine] Connectivity status changed: ${isOnline ? "ONLINE" : "OFFLINE"}`);
 
     if (isOnline) {
       this.syncPendingMutations();
@@ -33,7 +37,7 @@ class OfflineSyncEngine {
     const queue = this.getQueue();
     this.listeners.forEach((callback) => {
       try {
-        callback({ isOnline: this.isOnline, pendingCount: queue.length });
+        callback({ isOnline: this.isOnline, pendingCount: queue.length, syncing: this.syncing });
       } catch (e) {
         console.warn("Offline listener error:", e);
       }
@@ -41,87 +45,147 @@ class OfflineSyncEngine {
 
     if (typeof window !== "undefined") {
       window.dispatchEvent(new CustomEvent("gbs_network_status_change", {
-        detail: { isOnline: this.isOnline, pendingCount: queue.length }
+        detail: { isOnline: this.isOnline, pendingCount: queue.length, syncing: this.syncing }
       }));
     }
   }
 
   subscribe(callback) {
     this.listeners.add(callback);
-    callback({ isOnline: this.isOnline, pendingCount: this.getQueue().length });
+    callback({ isOnline: this.isOnline, pendingCount: this.getQueue().length, syncing: this.syncing });
     return () => this.listeners.delete(callback);
   }
 
   getQueue() {
     try {
-      return JSON.parse(localStorage.getItem(this.queueKey) || "[]");
+      const parsed = JSON.parse(localStorage.getItem(this.queueKey) || "[]");
+      return Array.isArray(parsed) ? parsed : [];
     } catch {
       return [];
     }
   }
 
+  _getAuthToken() {
+    try {
+      return (
+        localStorage.getItem("gbs_access_token") ||
+        localStorage.getItem("gbs_token") ||
+        localStorage.getItem("gbs_dev_token") ||
+        ""
+      );
+    } catch {
+      return "";
+    }
+  }
+
+  _recordRejected(item, status, reason) {
+    try {
+      const prev = JSON.parse(localStorage.getItem(this.rejectedKey) || "[]");
+      const list = Array.isArray(prev) ? prev : [];
+      list.unshift({
+        id: item.id,
+        endpoint: item.endpoint,
+        method: item.method,
+        description: item.description,
+        status,
+        reason: String(reason || "Validation rejected").slice(0, 240),
+        failedAt: new Date().toISOString()
+      });
+      localStorage.setItem(this.rejectedKey, JSON.stringify(list.slice(0, 25)));
+    } catch { }
+  }
+
   /**
-   * Enqueue a database mutation when offline
+   * Enqueue a data mutation when offline
    */
   enqueueMutation(endpoint, method, payload, description) {
     const queue = this.getQueue();
     const mutation = {
-      id: `MUT-${Date.now()}-${Math.random().toString(36).substr(2, 5)}`,
+      id: `MUT-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`,
       endpoint,
-      method: method.toUpperCase(),
+      method: String(method || "POST").toUpperCase(),
       payload,
-      description: description || `${method.toUpperCase()} ${endpoint}`,
+      description: description || `${String(method || "POST").toUpperCase()} ${endpoint}`,
+      attempts: 0,
       timestamp: new Date().toISOString()
     };
     queue.push(mutation);
-    localStorage.setItem(this.queueKey, JSON.stringify(queue));
+    const bounded = queue.slice(-this.maxQueueSize);
+    localStorage.setItem(this.queueKey, JSON.stringify(bounded));
     this.notifyListeners();
     return mutation;
   }
 
   /**
-   * Flush and sync all stored offline mutations to the backend server
+   * Flush and sync all stored offline mutations to the server safely (single-flight + idempotent)
    */
   async syncPendingMutations() {
-    const queue = this.getQueue();
-    if (queue.length === 0) return { syncedCount: 0, failedCount: 0 };
-
-    console.log(`[GBS Offline Sync Engine] Back online! Flusing ${queue.length} pending mutations to PostgreSQL database...`);
-
-    let syncedCount = 0;
-    const remainingQueue = [];
-
-    for (const item of queue) {
-      try {
-        const response = await fetch(resolveApiUrl(item.endpoint), {
-          method: item.method,
-          headers: {
-            "Content-Type": "application/json",
-            Authorization: localStorage.getItem("gbs_token") ? `Bearer ${localStorage.getItem("gbs_token")}` : ""
-          },
-          body: item.payload ? JSON.stringify(item.payload) : undefined
-        });
-
-        if (response.ok) {
-          syncedCount++;
-        } else {
-          remainingQueue.push(item);
-        }
-      } catch (err) {
-        remainingQueue.push(item);
-      }
+    if (this.syncing) {
+      return { syncedCount: 0, failedCount: this.getQueue().length, skipped: true };
     }
+    const queue = this.getQueue();
+    if (queue.length === 0) return { syncedCount: 0, failedCount: 0, droppedCount: 0 };
 
-    localStorage.setItem(this.queueKey, JSON.stringify(remainingQueue));
+    this.syncing = true;
     this.notifyListeners();
 
-    if (typeof window !== "undefined" && syncedCount > 0) {
+    let syncedCount = 0;
+    let droppedCount = 0;
+    const remainingQueue = [];
+    const authToken = this._getAuthToken();
+
+    try {
+      for (const item of queue) {
+        const nextAttempts = Number(item.attempts || 0) + 1;
+        try {
+          const headers = {
+            "Content-Type": "application/json",
+            "X-Idempotency-Key": item.id
+          };
+          if (authToken) {
+            headers.Authorization = `Bearer ${authToken}`;
+          }
+
+          const response = await fetch(resolveApiUrl(item.endpoint), {
+            method: item.method,
+            headers,
+            body: item.payload !== undefined && item.payload !== null ? JSON.stringify(item.payload) : undefined
+          });
+
+          if (response.ok || response.status === 409) {
+            syncedCount++;
+          } else if (response.status === 400 || response.status === 404 || response.status === 422) {
+            droppedCount++;
+            this._recordRejected(item, response.status, response.statusText || "Request rejected by server");
+          } else if (nextAttempts < this.maxRetryAttempts) {
+            remainingQueue.push({ ...item, attempts: nextAttempts });
+          } else {
+            droppedCount++;
+            this._recordRejected(item, response.status, "Maximum retry attempts reached");
+          }
+        } catch (err) {
+          if (nextAttempts < this.maxRetryAttempts) {
+            remainingQueue.push({ ...item, attempts: nextAttempts });
+          } else {
+            droppedCount++;
+            this._recordRejected(item, 0, err?.message || "Network error after maximum retries");
+          }
+        }
+      }
+
+      localStorage.setItem(this.queueKey, JSON.stringify(remainingQueue));
+    } finally {
+      this.syncing = false;
+      this.notifyListeners();
+    }
+
+    if (typeof window !== "undefined" && (syncedCount > 0 || droppedCount > 0)) {
       window.dispatchEvent(new CustomEvent("gbs_offline_synced", {
-        detail: { syncedCount, remaining: remainingQueue.length }
+        detail: { syncedCount, remaining: remainingQueue.length, droppedCount }
       }));
     }
 
-    return { syncedCount, failedCount: remainingQueue.length };
+    return { syncedCount, failedCount: remainingQueue.length, droppedCount };
   }
 }
 

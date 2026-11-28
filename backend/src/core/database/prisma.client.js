@@ -1089,8 +1089,8 @@ const createResilientPrismaClient = () => {
   if (process.env.DATABASE_URL) {
     client.$connect()
       .then(() => {
-        connectionPoolManager.ensureOptimizedMultiTenantIndexes(origExecuteRawUnsafe).catch(() => {});
-        connectionPoolManager.syncLivePostgresStats(origQueryRawUnsafe).catch(() => {});
+        connectionPoolManager.ensureOptimizedMultiTenantIndexes(origExecuteRawUnsafe).catch(() => { });
+        connectionPoolManager.syncLivePostgresStats(origQueryRawUnsafe).catch(() => { });
       })
       .catch(() => { });
   }
@@ -1152,9 +1152,9 @@ const createResilientPrismaClient = () => {
       };
     }
 
-    // Fast-path cache (5s TTL) + single-flight deduplication to prevent redundant DB health query storms
+    // Fast-path cache (10s TTL) + single-flight deduplication to prevent redundant DB health query storms
     const nowTs = Date.now();
-    if (!forceRefresh && cachedLiveStatusPayload && nowTs - lastLiveStatusAt < 5000) {
+    if (!forceRefresh && cachedLiveStatusPayload && nowTs - lastLiveStatusAt < 10000) {
       return {
         ...cachedLiveStatusPayload,
         poolActiveConnections: poolSnap.activeConnections || 1,
@@ -1188,7 +1188,12 @@ const createResilientPrismaClient = () => {
           4000
         ).catch(() => connectionPoolManager.getPoolStatus());
 
-        await connectionPoolManager.ensureOptimizedMultiTenantIndexes(origExecuteRawUnsafe).catch(() => {});
+        // Run idempotent index optimization asynchronously in the background so /health probes never stall on DDL locks
+        if (!connectionPoolManager.indexesOptimized) {
+          setImmediate(() => {
+            connectionPoolManager.ensureOptimizedMultiTenantIndexes(origExecuteRawUnsafe).catch(() => { });
+          });
+        }
 
         const latencyMs = Date.now() - start;
         const info = Array.isArray(rows) && rows[0] ? rows[0] : {};

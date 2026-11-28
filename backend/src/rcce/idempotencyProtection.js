@@ -10,8 +10,9 @@ const crypto = require('crypto');
  */
 
 class IdempotencyProtection {
-  constructor(windowMs = 60000) {
+  constructor(windowMs = 60000, maxEntries = 2000) {
     this.windowMs = windowMs;
+    this.maxEntries = maxEntries;
     this.cache = new Map();
   }
 
@@ -92,6 +93,14 @@ class IdempotencyProtection {
       const time = v.completedAt || v.startedAt;
       if (now - time > this.windowMs) {
         this.cache.delete(k);
+      }
+    }
+    if (this.cache.size > this.maxEntries) {
+      const overflow = this.cache.size - this.maxEntries;
+      let removed = 0;
+      for (const k of this.cache.keys()) {
+        this.cache.delete(k);
+        if (++removed >= overflow) break;
       }
     }
   }

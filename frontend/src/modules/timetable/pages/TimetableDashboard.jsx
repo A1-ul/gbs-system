@@ -375,7 +375,7 @@ export default function TimetableDashboard() {
         <div className="timetable-grid-wrapper">
           {loading ? (
             <div className="timetable-loading">
-              <span className="spinner-dot"></span> Loading real-time weekly schedule from PostgreSQL...
+              <span className="spinner-dot"></span> Loading weekly timetable...
             </div>
           ) : classes.length === 0 ? (
             <div className="timetable-empty">

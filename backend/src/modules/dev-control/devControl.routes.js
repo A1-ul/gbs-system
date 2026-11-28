@@ -1,6 +1,7 @@
 'use strict';
 
 const express = require('express');
+const rateLimit = require('express-rate-limit');
 const devControlController = require('./devControl.controller');
 const { protect } = require('../../middleware/auth.middleware');
 const { restrictTo } = require('../../middleware/rbac.middleware');
@@ -9,12 +10,28 @@ const router = express.Router();
 const requireDev = [protect, restrictTo('DEVELOPER')];
 const requireDevOrHeadmaster = [protect, restrictTo('ADMIN', 'SUPER_ADMIN', 'HEADMASTER', 'PRINCIPAL', 'DEVELOPER')];
 
+const devAuthLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000,
+  max: 60,
+  standardHeaders: true,
+  legacyHeaders: false,
+  message: { status: 'error', message: 'Too many Developer authentication attempts. Please wait before trying again.' }
+});
+
+const devPinLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000,
+  max: 30,
+  standardHeaders: true,
+  legacyHeaders: false,
+  message: { status: 'error', message: 'Too many PIN verification attempts. Please wait before trying again.' }
+});
+
 // 1. Public Pre-Login Authentication, Security Lockdown & PIN Verification
-router.post('/auth/login', devControlController.devLogin);
-router.post('/verify-pin', devControlController.verifyPin);
+router.post('/auth/login', devAuthLimiter, devControlController.devLogin);
+router.post('/verify-pin', devPinLimiter, devControlController.verifyPin);
 router.get('/security/login-status', devControlController.getSecurityLoginStatus);
-router.post('/security/intrusion', devControlController.reportIntrusionAndLock);
-router.post('/security/re-enable', devControlController.reEnableDeveloperLogin);
+router.post('/security/intrusion', devAuthLimiter, devControlController.reportIntrusionAndLock);
+router.post('/security/re-enable', devAuthLimiter, devControlController.reEnableDeveloperLogin);
 
 // Strictly Developer-Only Intrusion Log Read
 router.get('/security/intrusions', ...requireDev, devControlController.getIntrusionEvents);
@@ -297,7 +314,7 @@ const loadSystemMemory = () => {
   return { diagnosticCauseAndFixKnowledgeBase: [], dashboardsAndRoutesMemory: [] };
 };
 
-router.get('/system-memory', protect, (req, res) => {
+router.get('/system-memory', ...requireDev, (req, res) => {
   const memory = loadSystemMemory();
   res.status(200).json({
     status: 'success',
@@ -534,7 +551,7 @@ router.get('/cloud-sync-status', ...requireDev, async (req, res) => {
       totalBackups: backups.length,
       latestBackup: backups[0] || null,
       lastStoreUpdate: store.updatedAt,
-    offlineReady: true,
+      offlineReady: true,
       dataProtectionActive: true
     }
   });
@@ -592,10 +609,10 @@ router.post('/maintenance/purge-synthetic-data', ...requireDev, async (req, res,
       const tenants = await prisma.tenant.findMany({ where: { id: { not: 1 } } }).catch(() => []);
       const badTenantIds = tenants.filter(isSyntheticObj).map((t) => t.id);
       if (badTenantIds.length > 0) {
-        await prisma.subscription.deleteMany({ where: { tenantId: { in: badTenantIds } } }).catch(() => {});
-        await prisma.systemLock.deleteMany({ where: { tenantId: { in: badTenantIds } } }).catch(() => {});
-        await prisma.auditLog.deleteMany({ where: { tenantId: { in: badTenantIds } } }).catch(() => {});
-        await prisma.user.deleteMany({ where: { tenantId: { in: badTenantIds } } }).catch(() => {});
+        await prisma.subscription.deleteMany({ where: { tenantId: { in: badTenantIds } } }).catch(() => { });
+        await prisma.systemLock.deleteMany({ where: { tenantId: { in: badTenantIds } } }).catch(() => { });
+        await prisma.auditLog.deleteMany({ where: { tenantId: { in: badTenantIds } } }).catch(() => { });
+        await prisma.user.deleteMany({ where: { tenantId: { in: badTenantIds } } }).catch(() => { });
         const dt = await prisma.tenant.deleteMany({ where: { id: { in: badTenantIds } } }).catch(() => ({ count: 0 }));
         pgSummary.deletedTenants = dt.count || 0;
       }

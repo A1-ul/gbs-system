@@ -7,8 +7,8 @@ const { readPersistentStore } = require('../../core/database/persistentStore');
 const MEMORY_PATH = path.resolve(__dirname, '../../../data/gbs_system_memory_snapshot.json');
 let cachedMemory = { mtimeMs: 0, data: null };
 
-// Strictly withhold ALL internal developer, control-center, and infrastructure engineering identities from non-developer outputs
-const DEVELOPER_SENSITIVE_PATTERN = /\b(developer|dev-control|developer-control-center|dev_token|gabosei|gabriel\s*kubi|osei-appiah|0554594193|rcce|creator|who\s+built|who\s+made|who\s+created|who\s+developed|intruder\s+snapshot|system\s+owner|dev\s*mode|control\s+center)\b/i;
+// Strictly withhold ALL internal developer, control-center, credential, and infrastructure engineering details from non-developer outputs
+const DEVELOPER_SENSITIVE_PATTERN = /\b(developer|dev-control|developer-control-center|dev_token|gabosei|gabriel\s*kubi|osei-appiah|0554594193|rcce|creator|who\s+built|who\s+made|who\s+created|who\s+developed|intruder\s+snapshot|system\s+owner|dev\s*mode|control\s+center|jwt[_\s]?secret|api[_\s]?keys?|database\s+password|db[_\s]?password|master\s+pin|webhook\s+secret|private\s+key|env\s+file|root\s+password|server\s+secret)\b/i;
 
 function isDeveloperSensitiveText(str) {
   return DEVELOPER_SENSITIVE_PATTERN.test(String(str || ''));
@@ -583,7 +583,7 @@ function answerUserQuery(req, rawQuery = '') {
   // Strict Non-Disclosure Shield: NEVER disclose anything about the system developer or internal developer controls
   if (isDeveloperSensitiveText(qLower)) {
     const formation = analyzeAndExplainQuestionFormation(query, 'privacy_shield');
-    const answerText = 'Internal platform administration and architecture details are confidential and not disclosed by the GBS Assistant. I can gladly explain any institutional role (Headmaster, Teacher, Secretary, Student, Parent, Accountant, Staff, HR, or Alumni) and all portal activities.';
+    const answerText = 'Internal platform administration, credentials, and architecture details are confidential and not disclosed by the GBS Assistant. I can gladly explain any institutional role (Headmaster, Teacher, Secretary, Student, Parent, Accountant, Staff, HR, School Clinic Doctor/Nurse, or Alumni) and all school portal activities.';
     return {
       topicId: 'privacy_shield',
       action: null,

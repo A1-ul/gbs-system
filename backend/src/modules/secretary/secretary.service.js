@@ -220,9 +220,37 @@ async function updateRecordStatus(req) {
   });
 }
 
+async function deleteRecord(req) {
+  const tid = parseInt(req.tenantId || req.user?.tenantId || 1, 10) || 1;
+  const id = String(req.params.id || '').trim();
+
+  const existing = await prisma.secretaryRecord.findFirst({
+    where: { id, tenantId: tid }
+  });
+  if (!existing) {
+    throw new AppError('Secretary record not found.', 404);
+  }
+
+  await prisma.secretaryRecord.delete({ where: { id: existing.id } });
+
+  await prisma.auditLog.create({
+    data: {
+      tenantId: tid,
+      userId: parseNumericUserId(req.user),
+      module: 'SECRETARY_FRONT_DESK',
+      action: `SECRETARY_${existing.recordType}_DELETED`,
+      details: `${getActorName(req.user)} deleted ${existing.recordType} (${existing.referenceCode}): "${existing.title}".`,
+      ipAddress: '127.0.0.1'
+    }
+  }).catch(() => { });
+
+  return { deleted: true, id: existing.id, referenceCode: existing.referenceCode };
+}
+
 module.exports = {
   getOverview,
   listRecords,
   createRecord,
-  updateRecordStatus
+  updateRecordStatus,
+  deleteRecord
 };

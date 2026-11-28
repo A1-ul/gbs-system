@@ -380,7 +380,7 @@ export default function TopCenterSystemBanner({
       const msg = data?.message || "Database synchronization confirmed and snapshot created.";
       setSyncFeedback(msg);
       if (window.showGBSOpenNotice) {
-        window.showGBSOpenNotice(msg, "success", "CLOUD & POSTGRESQL SYNC");
+        window.showGBSOpenNotice(msg, "success", "SCHOOL DATA SYNC");
       }
       setTimeout(() => setSyncFeedback(null), 5000);
     } catch (err) {
@@ -624,13 +624,12 @@ export default function TopCenterSystemBanner({
               : connStatus?.centralEngineStatus === "RECONNECTING" || connStatus?.overallStatus === "DEGRADED"
                 ? "rgba(245, 158, 11, 0.2)"
                 : "rgba(16, 185, 129, 0.15)",
-            border: `1px solid ${
-              connStatus?.centralEngineStatus === "OFFLINE" || !isOnline
-                ? "rgba(239, 68, 68, 0.55)"
-                : connStatus?.centralEngineStatus === "RECONNECTING" || connStatus?.overallStatus === "DEGRADED"
-                  ? "rgba(245, 158, 11, 0.5)"
-                  : "rgba(16, 185, 129, 0.4)"
-            }`,
+            border: `1px solid ${connStatus?.centralEngineStatus === "OFFLINE" || !isOnline
+              ? "rgba(239, 68, 68, 0.55)"
+              : connStatus?.centralEngineStatus === "RECONNECTING" || connStatus?.overallStatus === "DEGRADED"
+                ? "rgba(245, 158, 11, 0.5)"
+                : "rgba(16, 185, 129, 0.4)"
+              }`,
             color: connStatus?.centralEngineStatus === "OFFLINE" || !isOnline
               ? "#fca5a5"
               : connStatus?.centralEngineStatus === "RECONNECTING" || connStatus?.overallStatus === "DEGRADED"

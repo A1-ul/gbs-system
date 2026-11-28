@@ -284,7 +284,7 @@ export default function AssignmentDashboard() {
           <div>
             <h1>Student Assignments & Homework Distribution</h1>
             <p className="header-subtitle">
-              PostgreSQL Curriculum Submissions • Teacher Grading Ledger & Student Performance Telemetry
+              Class Homework & Submissions • Teacher Grading & Student Progress
             </p>
           </div>
         </div>
@@ -339,8 +339,8 @@ export default function AssignmentDashboard() {
       <div className="filter-bar">
         <div className="filter-group">
           <label>Academic Class:</label>
-          <select 
-            value={selectedClassId} 
+          <select
+            value={selectedClassId}
             onChange={(e) => {
               setSelectedClassId(e.target.value);
               setSelectedSubjectId('');
@@ -356,8 +356,8 @@ export default function AssignmentDashboard() {
 
         <div className="filter-group">
           <label>Curriculum Subject:</label>
-          <select 
-            value={selectedSubjectId} 
+          <select
+            value={selectedSubjectId}
             onChange={(e) => setSelectedSubjectId(e.target.value)}
           >
             <option value="">All Subjects</option>
@@ -371,8 +371,8 @@ export default function AssignmentDashboard() {
 
         <div className="filter-group search-group">
           <label>Search Keyword:</label>
-          <input 
-            type="text" 
+          <input
+            type="text"
             placeholder="Search by assignment title or topic..."
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
@@ -442,7 +442,7 @@ export default function AssignmentDashboard() {
         {loadingAssignments ? (
           <div className="loading-state">
             <div className="spinner"></div>
-            <p>Loading assignments from PostgreSQL...</p>
+            <p>Loading assignments...</p>
           </div>
         ) : filteredAssignments.length === 0 ? (
           <div className="empty-state">
@@ -494,7 +494,7 @@ export default function AssignmentDashboard() {
                       )}
                     </div>
                     <div className="progress-track">
-                      <div 
+                      <div
                         className="progress-fill"
                         style={{
                           width: `${a.metrics?.submissionRatePct || 0}%`
@@ -505,19 +505,19 @@ export default function AssignmentDashboard() {
 
                   {/* Card Actions */}
                   <div className="card-actions">
-                    <button 
+                    <button
                       className="card-btn review"
                       onClick={() => handleOpenReview(a)}
                     >
                       🔍 Submissions ({a.metrics?.totalSubmissions || 0})
                     </button>
-                    <button 
+                    <button
                       className="card-btn submit"
                       onClick={() => handleOpenSubmit(a)}
                     >
                       📤 Submit Work
                     </button>
-                    <button 
+                    <button
                       className="card-btn delete"
                       onClick={() => handleDeleteAssignment(a.id, a.title)}
                     >
@@ -543,8 +543,8 @@ export default function AssignmentDashboard() {
             <form onSubmit={handleCreateAssignment} className="modal-form">
               <div className="form-group">
                 <label>Assignment Title *</label>
-                <input 
-                  type="text" 
+                <input
+                  type="text"
                   required
                   placeholder="e.g. Unit 3 Problem Set on Linear Equations"
                   value={createFormData.title}
@@ -555,7 +555,7 @@ export default function AssignmentDashboard() {
               <div className="form-row">
                 <div className="form-group">
                   <label>Class Cohort *</label>
-                  <select 
+                  <select
                     value={createFormData.classId}
                     onChange={(e) => {
                       const cid = e.target.value;
@@ -575,7 +575,7 @@ export default function AssignmentDashboard() {
 
                 <div className="form-group">
                   <label>Curriculum Subject *</label>
-                  <select 
+                  <select
                     value={createFormData.subjectId}
                     onChange={(e) => setCreateFormData({ ...createFormData, subjectId: e.target.value })}
                   >
@@ -589,8 +589,8 @@ export default function AssignmentDashboard() {
               <div className="form-row">
                 <div className="form-group">
                   <label>Due Date & Time *</label>
-                  <input 
-                    type="datetime-local" 
+                  <input
+                    type="datetime-local"
                     required
                     value={createFormData.dueDate}
                     onChange={(e) => setCreateFormData({ ...createFormData, dueDate: e.target.value })}
@@ -599,8 +599,8 @@ export default function AssignmentDashboard() {
 
                 <div className="form-group">
                   <label>Maximum Score (Points) *</label>
-                  <input 
-                    type="number" 
+                  <input
+                    type="number"
                     min="1"
                     max="1000"
                     required
@@ -612,7 +612,7 @@ export default function AssignmentDashboard() {
 
               <div className="form-group">
                 <label>Instructions & Prompt</label>
-                <textarea 
+                <textarea
                   rows="4"
                   placeholder="Provide detailed submission instructions, required sections, and rubric..."
                   value={createFormData.description}
@@ -622,8 +622,8 @@ export default function AssignmentDashboard() {
 
               <div className="form-group">
                 <label>Attachment / Resource URL (Optional)</label>
-                <input 
-                  type="url" 
+                <input
+                  type="url"
                   placeholder="https://cdn.school.edu/materials/problem-set.pdf"
                   value={createFormData.attachmentUrl}
                   onChange={(e) => setCreateFormData({ ...createFormData, attachmentUrl: e.target.value })}
@@ -659,7 +659,7 @@ export default function AssignmentDashboard() {
               {loadingSubmissions ? (
                 <div className="loading-state">
                   <div className="spinner"></div>
-                  <p>Loading student submissions from PostgreSQL...</p>
+                  <p>Loading student submissions...</p>
                 </div>
               ) : submissionsList.length === 0 ? (
                 <div className="empty-state">
@@ -705,8 +705,8 @@ export default function AssignmentDashboard() {
                         <div className="grading-control-row">
                           <div className="score-input-wrap">
                             <label>Grade Score (/{selectedAssignmentForReview.maxScore}):</label>
-                            <input 
-                              type="number" 
+                            <input
+                              type="number"
                               step="0.5"
                               min="0"
                               max={selectedAssignmentForReview.maxScore}
@@ -727,8 +727,8 @@ export default function AssignmentDashboard() {
 
                           <div className="feedback-input-wrap">
                             <label>Faculty Feedback & Rubric Notes:</label>
-                            <input 
-                              type="text" 
+                            <input
+                              type="text"
                               placeholder="Detailed feedback..."
                               value={currentFeedback}
                               onChange={(e) => {
@@ -744,7 +744,7 @@ export default function AssignmentDashboard() {
                             />
                           </div>
 
-                          <button 
+                          <button
                             className="save-grade-btn"
                             disabled={savingGradeId === sub.id}
                             onClick={() => handleSaveGrade(sub.id)}
@@ -782,7 +782,7 @@ export default function AssignmentDashboard() {
 
               <div className="form-group">
                 <label>Written Solution / Working Notes *</label>
-                <textarea 
+                <textarea
                   rows="5"
                   required
                   placeholder="Enter your written solution, code snippets, or notes..."
@@ -793,8 +793,8 @@ export default function AssignmentDashboard() {
 
               <div className="form-group">
                 <label>Document / File Link (Optional)</label>
-                <input 
-                  type="url" 
+                <input
+                  type="url"
                   placeholder="https://cdn.gbs-system.edu/uploads/solution-file.pdf"
                   value={submissionAttachmentUrl}
                   onChange={(e) => setSubmissionAttachmentUrl(e.target.value)}

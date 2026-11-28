@@ -131,20 +131,23 @@ d:\version1\GBS_SYSTEM\
 
 ---
 
-## 3. THE 100% REMOTE SELF-ONBOARDING & PRICING MULTIPLIER ENGINE
+## 3. THE 100% REMOTE SELF-ONBOARDING & OFFICIAL STUDENT-BASED SUBSCRIPTION ENGINE
 
-### Mathematical Multiplier Formula:
-$$\text{Total Remote Onboarding Fee} = \text{Enrolled Students} \times \text{Institutional Rate}$$
+*Updated Source of Truth:* [`pricingEngine.js`](file:///d:/version1/GBS_SYSTEM/frontend/src/utils/pricingEngine.js) & [`GBS_SYSTEM_FOUNDATION_AND_BLUEPRINT.md`](file:///d:/version1/GBS_SYSTEM/GBS_SYSTEM_FOUNDATION_AND_BLUEPRINT.md).
 
-| Institutional Tier | Default Multiplier Rate | Sample Population | Computed Onboarding Fee |
+### Official Student-Based Subscription Formula (4-Month Full Term Free Trial for All New Institutions):
+$$\text{Monthly Charge} = \text{Active Students} \times \text{Rate} \qquad | \qquad \text{Term / Semester (4 Months)} = \text{Monthly Charge} \times 4$$
+
+| Institutional Tier | Official Monthly Rate | 4-Month Term / Semester Rate | 300 Active Students (1 Term / Semester) |
 | :--- | :---: | :---: | :---: |
-| **Nursery / Primary / JHS** | **GH₵ 5.00** | 300 students | **GH₵ 1,500.00** |
-| **Senior High School (SHS)** | **GH₵ 10.00** | 300 students | **GH₵ 3,000.00** |
-| **University / Tertiary** | **GH₵ 20.00** | 500 students | **GH₵ 10,000.00** |
+| **Nursery / Primary / JHS** | **GH₵ 3.00** | **GH₵ 12.00** | **GH₵ 3,600.00** |
+| **Senior High School (SHS)** | **GH₵ 5.00** | **GH₵ 20.00** | **GH₵ 6,000.00** |
+| **Technical / TVET Institute** | **GH₵ 10.00** | **GH₵ 40.00** | **GH₵ 12,000.00** |
+| **University / Tertiary** | **GH₵ 10.00** | **GH₵ 40.00** | **GH₵ 12,000.00** |
 
-### Strict Fee Delineation:
-* **One-Time Onboarding Fee**: Dedicated PostgreSQL schema initialization, legacy paper/Excel data migration, digital twin campus mapping, video staff onboarding.
-* **Recurring Cloud Subscription**: 24/7 cloud server hosting, automated daily encrypted backups, disaster recovery failover, SMS/email gateway quotas, continuous software updates. Billed monthly, termly, or annually.
+### Strict Subscription Rules:
+* **4-Month Full Term Free Trial:** 120 days free for every new institution. Zero fixed tenant fees or base surcharges.
+* **Multi-Month Discounts:** 3 months (3% off), 6 months (5% off), 9 months (7% off), 12 months (10% off). Inactive, archived, graduated, or deleted students are excluded from billing.
 
 ---
 
@@ -378,3 +381,71 @@ node frontend/scripts/build-frontend-memory.cjs
 * **Staff Clock-In Location, Day/Date/Time, Live Photo Proof, Headmaster Verification & Exact Reporting/Closing Times:** Upgraded `staffAttendance.service.js`, `staffAttendance.routes.js`, `StaffAttendanceClockWidget.jsx`, and `HeadmasterStaffAttendanceView.jsx` so Headmaster sets exact Reporting & Closing Times displayed on both Clock-In and all Staff dashboards, staff capture real GPS + workplace location + watermarked live workplace photo proof with Day/Date/Exact Time, and Headmaster verifies or queries submissions with real-time Socket.IO feedback.
 * **GBS Central Engine Offline Diagnosis & Developer 8-Field Health Panel:** Hardened `server.js` (`/health` & `/api/v1/health` independent Central Engine vs Database status, `Cache-Control: no-store`, zero leaked DB details, `keepAliveTimeout=65000ms`), created `connectionMonitor.js` (2-failure hysteresis + exponential backoff) & `CentralEngineHealthPanel.jsx` (all 8 truthful health metrics on Developer Dashboard & RCCE hub), updated `axios.js` & `TopCenterSystemBanner.jsx`, added Live Mobile GPS Map tab to `TransportManagementPage.jsx`, and closed the `demoLimit.middleware.js` `X-GBS-Mode` cross-tenant gap (`403`).
 * **Verification Verdict (`index-CW4YQmNY.js`, Commit `c5652c3`):** **51 / 51** Local API + Real Headless Chrome CDP checks passed (`0` failures, Desktop `1440x900` & Mobile `390x844`, `0px` Back scroll drift, `0` HTML `title=` tooltips, `0` uncaught JS errors) + **25 / 25** Live Render production checks passed on `https://gbs-system.onrender.com` (`index-CW4YQmNY.js`, `0` failures).
+
+---
+
+### Phase 23 — 12-Phase Working System Milestone: Phase 1 (System Foundation & Purpose) Verified (Nov 27, 2026 — v2.25.0)
+* Audited all **12 Dashboards** (Headmaster, Teacher, Secretary, Student, Parent, Accountant, Staff, HR, School Clinic Doctor, School Clinic Nurse, Alumni, Developer Control Center), 4 institution tiers, 84 backend API prefixes, pricing rules, and documentation.
+* Fixed broken orphan button in `StudentDashboard.jsx` (`schedule` → `timetable`), aligned `HRDashboard.jsx` health tab label to `🩺 My Health Status`, replaced 13 user-facing technical jargon strings (`PostgreSQL`/`RBAC`) with simple everyday English across Admin/Teacher/Student/Staff dashboards without changing any working logic, created unified [`GBS_SYSTEM_FOUNDATION_AND_BLUEPRINT.md`](file:///d:/version1/GBS_SYSTEM/GBS_SYSTEM_FOUNDATION_AND_BLUEPRINT.md), and reconciled all blueprint/memory docs.
+* **Verification Verdict (Local):** Vite build succeeded (`index-Bb8IgnbT.js`, 321 modules), assets synced cleanly to `backend/public/`, `0` orphan tabs, `0` HTML `title=` tooltips, backend syntax passed. **Checklist Progress: `1/12 Verified`.**
+
+---
+
+### Phase 24 — 12-Phase Working System Milestone: Phase 2 (System Architecture) Verified (Nov 27, 2026 — v2.25.1)
+* Audited Frontend ↔ Backend ↔ PostgreSQL/Hybrid DB ↔ Socket.IO ↔ GBS-RCCE ↔ Render (`render.yaml`) across **22,710 files** (`0` rogue `PrismaClient`, `0` unmounted frontend API calls, `0` hardcoded `localhost:5001`, `0` raw relative `/api/` fetches, `0` legacy domain references).
+* Upgraded global API feedback titles & RCCE error messages in `axios.js` and `systemErrorHandler.js` to simple, clear plain English (translatable across all 15 languages) while strictly preserving exact HTTP `400/401/403/404/405(Allow)/409/422/503` semantics and changing zero working logic.
+* **Verification Verdict (Local):** `11/11` live server/PostgreSQL/Socket.IO/20-user concurrency (`116ms`) checks passed, `17/17` core Exam Vetting/Payments/RCCE checks passed, Vite build (`index-D0idrlGP.js`, 321 modules) synced cleanly to `backend/public/`. **Checklist Progress: `2/12 Verified`.**
+
+---
+
+### Phase 25 — 12-Phase Working System Milestone: Phase 3 (User Registration & Authentication) Verified (Nov 27, 2026 — v2.25.2)
+* Closed forged `gbs_dev_token_*` bypass in `auth.middleware.js` (`401`), eliminated all 4 plaintext Developer password references from `frontend/src` (`0` remaining), wired complete `clearAuthStorage()` + server `httpOnly` cookie logout across **all 12 dashboards**, prevented `auth.api.js` from masking backend `400/409` registration errors as fake success, and added Clinic Doctor & Nurse to `tokenStorage.js` demo sets.
+* **Verification Verdict (Local):** `21/21` live auth E2E checks passed across all 12 dashboards (logins, `/auth/me`, `/auth/refresh-token`, `/auth/logout` cookie clear, public registration → pending `403` → Headmaster approval `200` → OTP password reset → new password `200` / old password `401`), Vite build (`index-DMKq7SD1.js`, 321 modules) synced cleanly to `backend/public/`. **Checklist Progress: `3/12 Verified`.**
+
+---
+
+### Phase 26 — 12-Phase Working System Milestone: Phase 4 (Database & Information Management) Verified (Nov 27, 2026 — v2.25.3)
+* Audited all **90 Prisma models** & active backend services (`0` volatile RAM-only core services), added authorized tenant-scoped `DELETE /api/v1/secretary/records/:id` and strictly Headmaster-only `DELETE /api/v1/stationery/items/:id` (with `AuditLog`), and eliminated all fabricated Live-mode financial numbers/static CSV spreadsheets in `AccountantDashboard.jsx` plus fake live exam counts in `StudentDashboard.jsx`.
+* **Verification Verdict (Local):** **16/16** true **2-process CRUD & full server-restart persistence** checks passed across Admissions, Stationery, Secretary, Teacher Lesson Plans, and Clinic Profiles (`9/9` Process A create/update/logout → `7/7` brand-new Process B restart persistence + `401`/`403` protection + `200` authorized delete & removal), `0` HTML tooltips, Vite build (`index-BglTT2N5.js`, 321 modules) synced cleanly to `backend/public/`. **Checklist Progress: `4/12 Verified`.**
+
+---
+
+### Phase 27 — 12-Phase Working System Milestone: Phase 5 (User Roles & Permissions / RBAC) Verified (Nov 27, 2026 — v2.25.4)
+* Audited backend RBAC enforcement and frontend role confinement across all **12 dashboards** and closed 6 real cross-role access-boundary defects: locked `hr.routes.js` & `user.routes.js` (`protect` + tenant guards + role `restrictTo`), stopped `parent.service.js` Live-mode random student auto-linking & blocked unlinked-child inspection (`403`) plus Student/Alumni emergency-search (`403`), enforced strict Student-own & Parent-linked-ward ownership on `finance.controller.js` (`403` cross-student invoices/payments), locked Teacher/Headmaster exam creation, answer keys, grading, and proctor evidence in `aiExam.routes.js` (`403` for Students), and gated Student Dashboard exam-publish simulation button strictly to `isDemoSandboxMode()`.
+* **Verification Verdict (Local):** All 7 modified backend files passed `node --check`; **10/10** live RBAC suites (**46/46** cross-role HTTP assertions across all 12 dashboards) passed 100%; `0` HTML tooltips; `gbs_persistent_store.json` clean; Vite build (`index-CMKWoDLf.js`, 321 modules) synced cleanly to `backend/public/`. **Checklist Progress: `5/12 Verified`.**
+
+---
+
+### Phase 28 — 12-Phase Working System Milestone: Phase 6 (Functional Modules & Operations) Verified (Nov 27, 2026 — v2.25.5)
+* Audited and verified all **15 functional departments** across **all 12 dashboards** live against PostgreSQL + Express and surgically resolved 5 real operational defects: added idempotent `ensureLibraryTables()` in `library.service.js` fixing `42703` missing columns on `library_books`/`library_loans` (restoring native PG book catalog, search, borrow & return + removing fake US phone), fixed `academic.service.js` Defaulters Report Prisma query crash (`exam.class.tenantId` + `answerSheet.findMany`), locked `inventory.routes.js`/`library.routes.js`/`facility.routes.js`/`transport.routes.js`/`sms.routes.js` with strict `protect` + tenant/role guards, fixed `languageTranslatorEngine.js` SMS payload/auth, added `tenantId` isolation to `/api/v1/topic-videos` (`server.js`) & `inventory.service.js`, and included `SUPER_ADMIN`/`SECRETARY`/`CLINIC_DOCTOR`/`CLINIC_NURSE` in `hr.service.js` staff profiles.
+* **Verification Verdict (Local):** All 10 modified backend files passed `node --check`; **97/97** live operational checks across all 15 departments & 12 dashboards passed (`0` failures, `0` Prisma errors); `0` HTML tooltips; `gbs_persistent_store.json` clean; Vite build (`index-B4C9TjZn.js`, 321 modules) synced cleanly to `backend/public/`. **Checklist Progress: `6/12 Verified`.**
+
+---
+
+### Phase 29 — 12-Phase Working System Milestone: Phase 7 (Cross-Module Integration & Data Exchange) Verified (Nov 27, 2026 — v2.25.6)
+* Audited and verified all **12 cross-dashboard data exchange bridges** across **all 12 dashboards** live on PostgreSQL + Express and surgically resolved 4 integration defects: built true server-persisted cross-device **Alumni Endowment Gifts ↔ Accountant Ledger** sync (`GET/POST/PATCH/DELETE /api/v1/finance/alumni-gifts` with `AuditLog` + Socket.IO + RBAC across `finance.controller.js`, `finance.routes.js`, `AlumniDashboard.jsx`, and `AccountantDashboard.jsx`), eliminated Admissions `P2002` `applicationNumber` collisions (`admissions.service.js`), fixed `staffAttendance.service.js` `WHERE "tenantId"` PostgreSQL `42703` mismatch, and hardened `academic.service.js` `vetTeacherLessonPlan()` status/remarks handling.
+* **Verification Verdict (Local):** All 5 modified backend files passed `node --check`; **51/51** live cross-dashboard integration assertions passed across all 12 bridges (`0` failures, `0` Prisma errors); `0` HTML tooltips; `gbs_persistent_store.json` clean; Vite build (`index-tBFzTKA7.js`, 321 modules) synced cleanly to `backend/public/`. **Checklist Progress: `7/12 Verified`.**
+
+---
+
+### Phase 30 — 12-Phase Working System Milestone: Phase 8 (Automation & Intelligence) Verified (Nov 27, 2026 — v2.25.7)
+* Mathematically and behaviorally verified all **11 automation & intelligence engines** live against PostgreSQL + Express and surgically fixed 2 gaps: extended GBS-RCCE `idempotencyProtection.guard` in `server.js` to `/api/v1/finance/payments`, `/api/v1/finance/alumni-gifts`, and `/api/v1/admissions/inquiry` (preventing duplicate writes), normalized `ai.controller.js` `queryVoiceAssistant` to accept `query`/`question`/`prompt`/`q`, and expanded `systemMemoryAssistant.service.js` `DEVELOPER_SENSITIVE_PATTERN` to strictly block JWT secrets, API keys, DB/root passwords, webhook secrets, and master PINs.
+* **Verification Verdict (Local):** All 3 modified backend files passed `node --check`; **31/31** live automation & mathematical assertions passed across all 11 engines (`0` failures, `0` Prisma errors, `gbs_persistent_store.json` clean). **Checklist Progress: `8/12 Verified`.**
+
+---
+
+### Phase 31 — 12-Phase Working System Milestone: Phase 9 (User Interface, UX, Plain-English Clarity & Exact Feedback) Verified in Real Chrome CDP (Nov 27, 2026 — v2.25.8)
+* Scanned all **10,158** frontend source files (`0` native HTML tooltips), replaced 30+ visible technical database/RBAC jargon strings across 18 institutional screens (`MainLoginPage`, `SignUpPage`, `AdminDashboard`, `ParentDashboard`, `AdmissionWorkflowDashboard`, `AttendanceDashboard`, `AcademicManagementPage`, `AssignmentDashboard`, `OnlineLearningDashboard`, `TimetableDashboard`, `FacilityManagementPage`, `HRStaffManagementPage`, `RoleDashboardView`, `VoiceAuthModal`, `BiometricFaceScannerModal`, `TopCenterSystemBanner`, `UniversalRoleGuideModal`, `ParentPortalDashboard`) with simple everyday plain English (zero logic altered), and audited `UniversalOpenNoticeHUD` & `TenantLocaleTranslatorController`.
+* **Verification Verdict (Local Real Headless Chrome CDP — Bundle `index-CACV9Z6q.js`):** **12/12** Desktop (`1440×900`) dashboards + **6/6** Mobile (`390×844`) portals rendered with `0` uncaught JS errors, `0` broken images, and `0` native HTML tooltips; **11/11** institutional dashboards rendered `0` raw `PostgreSQL`/`Prisma`/`RBAC` text; Headmaster dedicated module navigation & Back scroll restoration passed (`<=5px` drift); Arabic RTL (`dir="rtl"`, `lang="ar"`) verified on Teacher Dashboard while Developer Control Center remained strictly Standard English LTR; clean Vite build (`index-CACV9Z6q.js`, 321 modules) synced to `backend/public/`. **Checklist Progress: `9/12 Verified`.**
+
+---
+
+### Phase 32 — 12-Phase Working System Milestone: Phase 10 (Security & Protection) Verified (Nov 28, 2026 — v2.25.9)
+* Audited all **47 active mounted backend route files**, JWT/password handling, raw SQL queries, payment webhook HMAC adapters, multi-tenant/Demo isolation, backup/restore path safety, and `frontend/src` secret/DOM sinks, and closed 6 high-impact security flaws without breaking any working feature: eliminated all unsigned Bearer prefix auth bypasses (`auth.middleware.js`, `middlewares/auth.middleware.js`, `demoLimit.middleware.js`), stripped `password`/`passwordHash` from `req.user` & `/api/v1/auth/me` (`auth.middleware.js`, `auth.controller.js`), parameterized all 3 raw SQL fallbacks in `user.service.js`, locked 10 previously unprotected operational/security/infrastructure/exam/translated-inbox routes (`cctv`, `digitalTwin`, `migration`, `push`, `cdn`, `shard`, `monitoring /metrics`, `aiExam`, `translate /messages & /send-message` + Bearer auth in `languageTranslatorEngine.js`, and `/dev-control/system-memory`), enforced own-tenant checks on `getTenantSubscription`, added dedicated login/PIN/reset brute-force rate limiters (`auth.routes.js`, `devControl.routes.js`), and removed plaintext `localStorage` password caching in `auth.api.js`.
+* **Verification Verdict (Local):** All `16/16` modified backend files passed `node --check`; **`25/25`** live security & penetration assertions passed (`0` failures, `0` Prisma errors — bcrypt DB hashes, `0` password leaks, `7/7` JWT forgery `401` blocks, `4/4` HMAC webhook `401` rejections, `14/14` unauth `401` blocks, `13/13` Student `403` RBAC blocks, `9/9` authorized `200` continuity, SQLi/path-traversal defense, Demo→Tenant 99 `403`, Helmet + rate-limit headers, `0` `/health` secrets, Developer `403→423→200` intrusion shield, backup & `AuditLog` verified); `0` HTML tooltips; clean Vite build (`index-BRlU0CvM.js`, 321 modules) synced to `backend/public/`. **Checklist Progress: `10/12 Verified`.**
+
+---
+
+### Phase 33 — 12-Phase Working System Milestone: Phase 11 (Testing, Performance & Reliability) Verified (Nov 28, 2026 — v2.25.10)
+* Executed full regression testing, 12-role simultaneous interactive & 120-request 60-way peak burst benchmarking, memory/cache audits, and real Chrome CDP network-outage/recovery verification, and resolved 4 real performance & reliability bottlenecks: added `mtimeMs`-keyed snapshot caching + `O(1)` deletion `Set` lookups in `persistentStore.js`, bounded 3s sanitized user-lookup caching + lazy store read in `auth.middleware.js`, non-blocking `setImmediate()` index optimization in `prisma.client.js`, parallel `Promise.all` + 15s storage-scan/10s PG-stats caching in `devControl.service.js` & `cloudInfraManager.js`, bounded `idempotencyProtection.js` cache (`maxEntries=2000`), and hardened `frontend/src/utils/offlineSync.js` (single-flight lock, multi-key Bearer auth, `X-Idempotency-Key`, bounded retries, permanent 4xx dead-letter handling).
+* **Verification Verdict (Local — Bundle `index-C3vTNNcQ.js`):** **`13/13`** Phase 11 performance & reliability checks passed (`0` failures, `0` Prisma errors) + **`17/17`** core `verify_upgrade_e2e.js` suites passed: Interactive 12-role simultaneous wave **`12/12` `200 OK` in `226 ms`** (`p50=181ms, p95=225ms`, `/dev-control/metrics` `3481ms → 48-87ms`); Peak 120-request 60-way burst **`120/120` `200 OK` in `1,614 ms` (`74 req/s` — `3.7×` speedup, `p50=517ms`, `p95=817ms`, `max=841ms`, `0` 5xx, stable `+23.83 MB` heap)**; Real Chrome CDP offline→queue→online auto-recovery & live server persistence passed (`0` crashes, `0` data loss); `4/4` Mobile (`390×844`) portals + PWA shell passed; `0` HTML tooltips; Vite build (`index-C3vTNNcQ.js`) synced cleanly to `backend/public/`. **Checklist Progress: `11/12 Verified`.**

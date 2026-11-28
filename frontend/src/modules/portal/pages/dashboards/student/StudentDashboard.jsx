@@ -18,7 +18,7 @@ import { getActiveInstitutionType, getInstitutionRoleProfile } from "../../../..
 import UniversityOperationsPanel from "../../../../../components/common/UniversityOperationsPanel";
 import SchoolClinicHubPanel from "../../../../../components/common/SchoolClinicHubPanel";
 import SchoolStationeryHubPanel from "../../../../../components/common/SchoolStationeryHubPanel";
-import { isDemoSandboxMode } from "../../../../../utils/tokenStorage";
+import { isDemoSandboxMode, clearAuthStorage } from "../../../../../utils/tokenStorage";
 import { checkDemoEntryLimit, trackDemoEntryCreated } from "../../../../../utils/demoLimitGuard";
 import { useDashboardTabSync } from "../../../../../hooks/useDashboardTabSync";
 import { performSmartBack } from "../../../../../utils/globalNavigationScrollManager";
@@ -2520,8 +2520,8 @@ export function StudentDashboard({ initialTab } = {}) {
   };
 
   const handleLogout = () => {
-    localStorage.removeItem("gbs_token");
-    localStorage.removeItem("gbs_user");
+    clearAuthStorage();
+    sessionStorage.clear();
     navigate("/login/student");
   };
 
@@ -3530,13 +3530,13 @@ export function StudentDashboard({ initialTab } = {}) {
                             <div style={{ color: "#34d399", fontWeight: "700", fontSize: "1rem", marginTop: "2px" }}>✅ Verified & Marked</div>
                           </div>
                           <div>
-                            <span style={{ fontSize: "0.75rem", color: "#94a3b8", textTransform: "uppercase" }}>Deterministic Grade</span>
+                            <span style={{ fontSize: "0.75rem", color: "#94a3b8", textTransform: "uppercase" }}>Official Grade</span>
                             <div style={{ color: "#fbbf24", fontWeight: "700", fontSize: "1rem", marginTop: "2px" }}>
-                              {examScoreResult?.grade || "Grade A (85%)"}
+                              {examScoreResult?.grade || "Pending Grading"}
                             </div>
                           </div>
                           <div>
-                            <span style={{ fontSize: "0.75rem", color: "#94a3b8", textTransform: "uppercase" }}>PostgreSQL Audit Seal</span>
+                            <span style={{ fontSize: "0.75rem", color: "#94a3b8", textTransform: "uppercase" }}>Official Verification Seal</span>
                             <div style={{ color: "#38bdf8", fontWeight: "700", fontSize: "1rem", marginTop: "2px" }}>SECURE-GBS-2026</div>
                           </div>
                         </div>
@@ -3550,15 +3550,17 @@ export function StudentDashboard({ initialTab } = {}) {
                           >
                             📄 View Official Grade on Report Card
                           </button>
-                          <button
-                            type="button"
-                            className="btn-secondary"
-                            style={{ borderColor: "#10b981", color: "#34d399", padding: "10px 20px" }}
-                            onClick={handlePublishNewExamSession}
-                            aria-label="Faculty/Teacher publishes a new exam session"
-                          >
-                            📢 Simulate Faculty Publishing Next Exam Session
-                          </button>
+                          {isDemoSandboxMode() && (
+                            <button
+                              type="button"
+                              className="btn-secondary"
+                              style={{ borderColor: "#10b981", color: "#34d399", padding: "10px 20px" }}
+                              onClick={handlePublishNewExamSession}
+                              aria-label="Demo: Simulate Teacher publishing a new exam session"
+                            >
+                              📢 Demo: Preview Next Exam Session
+                            </button>
+                          )}
                         </div>
                       </div>
                     ) : (
@@ -3567,20 +3569,20 @@ export function StudentDashboard({ initialTab } = {}) {
                         <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(200px, 1fr))", gap: "1rem", marginBottom: "1.5rem" }}>
                           <div style={{ background: "rgba(15, 23, 42, 0.7)", border: "1px solid rgba(56, 189, 248, 0.2)", borderRadius: "10px", padding: "1rem" }}>
                             <span style={{ fontSize: "0.75rem", color: "#94a3b8", textTransform: "uppercase", fontWeight: "700" }}>Total Scheduled</span>
-                            <div style={{ fontSize: "1.6rem", fontWeight: "800", color: "#38bdf8", marginTop: "4px" }}>{exams.length || 3} Papers</div>
-                            <span style={{ fontSize: "0.75rem", color: "#cbd5e1" }}>Assigned by Subject Faculty</span>
+                            <div style={{ fontSize: "1.6rem", fontWeight: "800", color: "#38bdf8", marginTop: "4px" }}>{isDemoSandboxMode() ? (exams.length || 3) : exams.length} Papers</div>
+                            <span style={{ fontSize: "0.75rem", color: "#cbd5e1" }}>Assigned by Subject Teacher</span>
                           </div>
                           <div style={{ background: "rgba(15, 23, 42, 0.7)", border: "1px solid rgba(245, 158, 11, 0.2)", borderRadius: "10px", padding: "1rem" }}>
                             <span style={{ fontSize: "0.75rem", color: "#94a3b8", textTransform: "uppercase", fontWeight: "700" }}>Exams Remaining</span>
                             <div style={{ fontSize: "1.6rem", fontWeight: "800", color: "#fbbf24", marginTop: "4px" }}>
-                              {exams.length > 0 ? exams.length : 3} Remaining
+                              {isDemoSandboxMode() ? (exams.length > 0 ? exams.length : 3) : exams.length} Remaining
                             </div>
                             <span style={{ fontSize: "0.75rem", color: "#fef08a" }}>Pending student submission</span>
                           </div>
                           <div style={{ background: "rgba(15, 23, 42, 0.7)", border: "1px solid rgba(16, 185, 129, 0.2)", borderRadius: "10px", padding: "1rem" }}>
                             <span style={{ fontSize: "0.75rem", color: "#94a3b8", textTransform: "uppercase", fontWeight: "700" }}>Grading System</span>
-                            <div style={{ fontSize: "1.4rem", fontWeight: "800", color: "#34d399", marginTop: "4px" }}>Deterministic AI/OMR</div>
-                            <span style={{ fontSize: "0.75rem", color: "#a7f3d0" }}>Instant PostgreSQL Verification</span>
+                            <div style={{ fontSize: "1.4rem", fontWeight: "800", color: "#34d399", marginTop: "4px" }}>Verified Auto-Grading</div>
+                            <span style={{ fontSize: "0.75rem", color: "#a7f3d0" }}>Instant Official Result Check</span>
                           </div>
                           <div style={{ background: "rgba(15, 23, 42, 0.7)", border: "1px solid rgba(168, 85, 247, 0.2)", borderRadius: "10px", padding: "1rem" }}>
                             <span style={{ fontSize: "0.75rem", color: "#94a3b8", textTransform: "uppercase", fontWeight: "700" }}>Current Academic Term</span>
@@ -4180,7 +4182,7 @@ export function StudentDashboard({ initialTab } = {}) {
                                 <div>
                                   <h3 style={{ margin: 0, color: "#c084fc", fontSize: "1.2rem" }}>{activeExam?.title || "Academic Evaluation"}</h3>
                                   <span style={{ fontSize: "0.8rem", color: "#94a3b8" }}>
-                                    PostgreSQL Question Bank • Objective & Essay Assessment • {academicLevel} ({academicTerm})
+                                    Official Exam Paper • Objective & Essay Assessment • {academicLevel} ({academicTerm})
                                   </span>
                                 </div>
                                 <div style={{ display: "flex", gap: "8px", alignItems: "center" }}>
@@ -4844,7 +4846,7 @@ export function StudentDashboard({ initialTab } = {}) {
                 <button
                   type="button"
                   className="btn-secondary"
-                  onClick={() => setActiveTab("schedule")}
+                  onClick={() => setActiveTab("timetable")}
                 >
                   ← Back to Timetable
                 </button>

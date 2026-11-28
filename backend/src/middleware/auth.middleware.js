@@ -11,6 +11,34 @@ const {
 const DEV_JWT_FALLBACK_SECRET =
   process.env.DEV_JWT_SECRET || 'GBS_ENTERPRISE_DEV_SECRET_KEY_99812';
 
+// Short-lived in-memory user-lookup cache (3s TTL, bounded to 500 entries) to prevent DB pool saturation under burst traffic
+// Security guards (isPermanentlyDeleted, isTenantLockedOut, token signature & expiry) ALWAYS run on every single request.
+const AUTH_USER_CACHE = new Map();
+const AUTH_USER_CACHE_TTL_MS = 3000;
+const AUTH_USER_CACHE_MAX = 500;
+
+function getCachedDbUser(numericUserId) {
+  const entry = AUTH_USER_CACHE.get(numericUserId);
+  if (!entry) return null;
+  if (Date.now() > entry.expiresAt) {
+    AUTH_USER_CACHE.delete(numericUserId);
+    return null;
+  }
+  return { ...entry.user, tenant: entry.user.tenant ? { ...entry.user.tenant } : undefined };
+}
+
+function setCachedDbUser(numericUserId, userObj) {
+  if (!userObj) return;
+  if (AUTH_USER_CACHE.size >= AUTH_USER_CACHE_MAX) {
+    const oldest = AUTH_USER_CACHE.keys().next().value;
+    if (oldest !== undefined) AUTH_USER_CACHE.delete(oldest);
+  }
+  const copy = { ...userObj, tenant: userObj.tenant ? { ...userObj.tenant } : undefined };
+  delete copy.password;
+  delete copy.passwordHash;
+  AUTH_USER_CACHE.set(numericUserId, { user: copy, expiresAt: Date.now() + AUTH_USER_CACHE_TTL_MS });
+}
+
 const ROLE_DEFAULT_IDS = {
   SUPER_ADMIN: 1,
   ADMIN: 1,
@@ -112,37 +140,6 @@ const protect = async (req, res, next) => {
       }
       if (devVerified) {
         decoded = devVerified;
-      } else if (tokenStr.startsWith('gbs_dev_token_')) {
-        decoded = {
-          id: 1,
-          role: 'DEVELOPER',
-          devId: 'gbs_developer',
-          username: 'gabosei48@gmail.com',
-          tenantId: 1
-        };
-      } else if (
-        tokenStr.startsWith('gbs_builtin_jwt_') ||
-        tokenStr.startsWith('gbs_local_jwt_') ||
-        tokenStr.startsWith('gbs_onboarded_jwt_')
-      ) {
-        const headerRole = String(req.headers['x-user-role'] || 'HEADMASTER').toUpperCase();
-        const headerEmail = String(req.headers['x-user-email'] || '').trim().toLowerCase();
-        const headerTenant = req.headers['x-tenant-id'] || 1;
-        const storeSnap = readPersistentStore();
-        const allUsers = [
-          ...(Array.isArray(storeSnap.registeredUsers) ? storeSnap.registeredUsers : []),
-          ...(Array.isArray(storeSnap.users) ? storeSnap.users : [])
-        ];
-        const matchedUser = headerEmail
-          ? allUsers.find((u) => String(u.email || '').trim().toLowerCase() === headerEmail)
-          : null;
-        const resolvedRole = String(matchedUser?.role || headerRole || 'ADMIN').toUpperCase();
-        decoded = {
-          id: matchedUser?.id || ROLE_CANONICAL_BUILTIN_ID[resolvedRole] || ROLE_DEFAULT_IDS[resolvedRole] || 1,
-          role: resolvedRole,
-          email: matchedUser?.email || headerEmail || undefined,
-          tenantId: matchedUser?.tenantId || headerTenant
-        };
       } else {
         throw jwtErr;
       }
@@ -180,52 +177,60 @@ const protect = async (req, res, next) => {
     let user = null;
     try {
       if (Number.isInteger(numericUserId) && String(numericUserId) === String(decoded.id)) {
-        user = await prisma.user.findUnique({
-          where: { id: numericUserId },
-          include: {
-            tenant: true,
-            registrationProfile: {
-              select: {
-                verificationStatus: true,
-                phone: true,
-                whatsappPhone: true
+        user = getCachedDbUser(numericUserId);
+        if (!user) {
+          user = await prisma.user.findUnique({
+            where: { id: numericUserId },
+            include: {
+              tenant: true,
+              registrationProfile: {
+                select: {
+                  verificationStatus: true,
+                  phone: true,
+                  whatsappPhone: true
+                }
               }
             }
+          });
+          if (user) {
+            if (user.registrationProfile) {
+              user.verificationStatus = user.registrationProfile.verificationStatus;
+              user.phone = user.phone || user.registrationProfile.phone || user.registrationProfile.whatsappPhone || null;
+            }
+            delete user.password;
+            delete user.passwordHash;
+            setCachedDbUser(numericUserId, user);
           }
-        });
-        if (user && user.registrationProfile) {
-          user.verificationStatus = user.registrationProfile.verificationStatus;
-          user.phone = user.phone || user.registrationProfile.phone || user.registrationProfile.whatsappPhone || null;
         }
       }
     } catch { }
 
-    const store = readPersistentStore();
     let matchedInst = null;
-    if (!user && numericTenantId !== 1 && Array.isArray(store.institutions)) {
-      matchedInst = store.institutions.find(
-        (inst) =>
-          String(inst.id) === String(decoded.tenantId) ||
-          String(inst.tenantId) === String(numericTenantId) ||
-          String(inst.tenantUid) === String(decoded.tenantId) ||
-          String(inst.tenantCode) === String(decoded.tenantId) ||
-          `usr_hm_${inst.id}` === String(decoded.id)
-      );
-      if (matchedInst) {
-        const st = String(matchedInst.status || '').toUpperCase();
-        if (matchedInst.isDeleted || st === 'DELETED' || st === 'ARCHIVED_DELETED' || st === 'PURGED') {
-          return next(new AppError('Access Denied: Your institution has been deleted from the system, so you cannot access the system unless you re-register for approval.', 403));
-        }
-        if (matchedInst.isLocked === true || matchedInst.isActive === false || st === 'LOCKED' || st === 'SUSPENDED' || st === 'DISABLED') {
-          return next(new AppError(`Access Denied: Your institution '${matchedInst.institutionName || matchedInst.name || 'your institution'}' is currently LOCKED / SUSPENDED by the System Developer and cannot access the system.`, 403));
-        }
-        if (st === 'REJECTED' || st === 'PENDING_DEVELOPER_APPROVAL' || st === 'PENDING_APPROVAL' || st === 'PENDING' || matchedInst.isApproved === false) {
-          return next(new AppError('Access Denied: Your institution has not been approved by the System Developer.', 403));
+    if (!user) {
+      const store = readPersistentStore();
+      if (numericTenantId !== 1 && Array.isArray(store.institutions)) {
+        matchedInst = store.institutions.find(
+          (inst) =>
+            String(inst.id) === String(decoded.tenantId) ||
+            String(inst.tenantId) === String(numericTenantId) ||
+            String(inst.tenantUid) === String(decoded.tenantId) ||
+            String(inst.tenantCode) === String(decoded.tenantId) ||
+            `usr_hm_${inst.id}` === String(decoded.id)
+        );
+        if (matchedInst) {
+          const st = String(matchedInst.status || '').toUpperCase();
+          if (matchedInst.isDeleted || st === 'DELETED' || st === 'ARCHIVED_DELETED' || st === 'PURGED') {
+            return next(new AppError('Access Denied: Your institution has been deleted from the system, so you cannot access the system unless you re-register for approval.', 403));
+          }
+          if (matchedInst.isLocked === true || matchedInst.isActive === false || st === 'LOCKED' || st === 'SUSPENDED' || st === 'DISABLED') {
+            return next(new AppError(`Access Denied: Your institution '${matchedInst.institutionName || matchedInst.name || 'your institution'}' is currently LOCKED / SUSPENDED by the System Developer and cannot access the system.`, 403));
+          }
+          if (st === 'REJECTED' || st === 'PENDING_DEVELOPER_APPROVAL' || st === 'PENDING_APPROVAL' || st === 'PENDING' || matchedInst.isApproved === false) {
+            return next(new AppError('Access Denied: Your institution has not been approved by the System Developer.', 403));
+          }
         }
       }
-    }
 
-    if (!user) {
       const allStoreUsers = [
         ...(Array.isArray(store.registeredUsers) ? store.registeredUsers : []),
         ...(Array.isArray(store.users) ? store.users : [])
@@ -389,6 +394,8 @@ const protect = async (req, res, next) => {
 
     user.id = toNumericId(user.id, fallbackId);
     user.tenantId = toNumericId(user.tenantId, 1);
+    delete user.password;
+    delete user.passwordHash;
     req.user = user;
     req.tenantId = user.tenantId;
     next();

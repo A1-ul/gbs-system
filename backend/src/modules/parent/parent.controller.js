@@ -1,6 +1,7 @@
 'use strict';
 
 const service = require('./parent.service');
+const { isDemoSandboxRequest } = require('../../middleware/demoLimit.middleware');
 
 async function linkParentStudent(req, res, next) {
   try {
@@ -19,7 +20,10 @@ async function getMyChildren(req, res, next) {
   try {
     // If user is PARENT, use their ID; else allow parentId param
     const parentId = req.user.role === 'PARENT' ? req.user.id : (req.query.parentId || req.user.id);
-    const children = await service.getParentChildren(req.tenantId, parentId);
+    const children = await service.getParentChildren(req.tenantId, parentId, {
+      isDemo: isDemoSandboxRequest(req),
+      actorUser: req.user
+    });
     res.status(200).json({
       status: 'success',
       results: children.length,
@@ -33,7 +37,7 @@ async function getMyChildren(req, res, next) {
 async function getChildOverview(req, res, next) {
   try {
     const parentId = req.user.role === 'PARENT' ? req.user.id : (req.query.parentId || req.user.id);
-    const overview = await service.getChildOverview(req.tenantId, parentId, req.params.studentId);
+    const overview = await service.getChildOverview(req.tenantId, parentId, req.params.studentId, req.user);
     res.status(200).json({
       status: 'success',
       data: { overview }

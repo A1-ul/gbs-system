@@ -163,10 +163,15 @@ const getInstitutions = async (req, res, next) => {
 
 const getMe = async (req, res) => {
   await attachInstitutionMetadata(req.user, req);
+  const safeUser = req.user ? { ...req.user } : null;
+  if (safeUser) {
+    delete safeUser.password;
+    delete safeUser.passwordHash;
+  }
   res.status(200).json({
     status: 'success',
     data: {
-      user: req.user
+      user: safeUser
     }
   });
 };

@@ -17,7 +17,7 @@ import {
 } from "../../../utils/i18nCountryEngine";
 import UniversalRoleGuideModal from "../../../components/common/UniversalRoleGuideModal";
 import { navigateToDetail } from "../../../utils/universalNavigation";
-import { syncSystemModeFlags } from "../../../utils/tokenStorage";
+import { syncSystemModeFlags, clearAuthStorage } from "../../../utils/tokenStorage";
 import RcceControlHub from "../components/RcceControlHub";
 import CentralEngineHealthPanel from "../components/CentralEngineHealthPanel";
 import PaymentGatewayAdminPanel from "../../../components/common/PaymentGatewayAdminPanel";
@@ -3200,10 +3200,9 @@ export default function DeveloperDashboard() {
           }
         }
       } catch (err) {
-        if (cleanEmail === "gabosei48@gmail.com" && cleanPass === "0543294615Gab") {
-          isVerified = true;
-          token = `gbs_dev_token_${Date.now()}`;
-        }
+        setGateError("Unable to reach the server to verify Developer credentials. Please check your connection and try again.");
+        setGateLoading(false);
+        return;
       }
 
       if (isVerified) {
@@ -3253,14 +3252,42 @@ export default function DeveloperDashboard() {
   const handleBiometricGateUnlock = async () => {
     const cleanEmail = gateEmailInput.trim().toLowerCase();
     const cleanPass = gatePasswordInput.trim();
-    if (!cleanEmail || !cleanPass || cleanEmail !== "gabosei48@gmail.com" || cleanPass !== "0543294615Gab") {
-      setGateError("Access Denied: Biometric clearance strictly requires entering valid Developer Gmail and Password above.");
+    if (!cleanEmail || !cleanPass) {
+      setGateError("Access Denied: Please enter your valid Developer Gmail and Password above before biometric verification.");
       return;
     }
     setGateLoading(true);
     setGateError(null);
-    showNotification("🧬 Engaging optical biometric scanner... Analyzing pupil reflection & 3D mesh");
-    await new Promise((r) => setTimeout(r, 800));
+    showNotification("🧬 Engaging optical biometric scanner... Verifying credentials with server");
+
+    let liveToken = null;
+    try {
+      const authRes = await fetch(`${BASE_URL}/auth/login`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ email: cleanEmail, password: cleanPass })
+      });
+      if (!authRes.ok) {
+        const errBody = await authRes.json().catch(() => ({}));
+        setGateError(errBody?.message || "Access Denied: Invalid Developer credentials.");
+        setGateLoading(false);
+        return;
+      }
+      const authData = await authRes.json();
+      liveToken = authData?.token || authData?.data?.token || null;
+      if (authData?.refreshToken) {
+        localStorage.setItem("gbs_refresh_token", authData.refreshToken);
+      }
+      if (!liveToken) {
+        setGateError("Server did not issue a valid Developer session token. Please try again.");
+        setGateLoading(false);
+        return;
+      }
+    } catch {
+      setGateError("Cannot reach the server to verify Developer credentials. Please check your connection and try again.");
+      setGateLoading(false);
+      return;
+    }
 
     const clearanceToken = `BIO-SEC-ROOT-${Date.now().toString(16).toUpperCase()}-${Math.floor(1000 + Math.random() * 9000)}`;
     const verifiedData = {
@@ -3282,15 +3309,18 @@ export default function DeveloperDashboard() {
     localStorage.removeItem("gbs_dev_console_locked");
     sessionStorage.setItem("gbs_dev_biometric_clearance", JSON.stringify(verifiedData));
     sessionStorage.setItem("gbs_dev_gate_unlocked", "true");
-    localStorage.setItem("gbs_dev_token", `gbs_dev_token_${Date.now()}`);
+    localStorage.setItem("gbs_dev_token", liveToken);
+    localStorage.setItem("gbs_token", liveToken);
+    localStorage.setItem("gbs_access_token", liveToken);
     setGateLoginLocked(false);
     setIsDevGateUnlocked(true);
     setGateEmailInput("");
     setGatePasswordInput("");
     playPadlockSound(false);
     triggerPadlockFeedback(false, "Gabriel Osei (Chief Developer)", "BIOMETRIC_ROOT_UNLOCK");
-    showNotification("✓ BIOMETRIC CLEARANCE CONFIRMED: 99.8% Anti-Spoofing. Level-5 Root Clearance Granted. Mission Control Unlocked.");
+    showNotification("✓ BIOMETRIC CLEARANCE CONFIRMED: Level-5 Root Clearance Granted. Mission Control Unlocked.");
     setGateLoading(false);
+    fetchData();
   };
 
   const handleLockConsole = () => {
@@ -5283,11 +5313,7 @@ export default function DeveloperDashboard() {
 
   // Universal Logout Function
   const handleLogout = () => {
-    localStorage.removeItem("gbs_dev_token");
-    localStorage.removeItem("gbs_developer");
-    localStorage.removeItem("gbs_dev_console_locked");
-    localStorage.removeItem("gbs_token");
-    localStorage.removeItem("gbs_user");
+    clearAuthStorage({ includeDeveloper: true });
     sessionStorage.removeItem("gbs_dev_gate_unlocked");
     sessionStorage.clear();
     navigate("/login");

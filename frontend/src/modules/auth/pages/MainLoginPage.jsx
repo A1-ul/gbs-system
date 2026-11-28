@@ -327,7 +327,7 @@ export default function MainLoginPage() {
         </div>
         <div className="live-status-item">
           <span className={`status-dot ${systemChecks.postgresDb ? "online" : "offline"}`}></span>
-          PostgreSQL DB Layer: <strong>{systemChecks.postgresDb ? "ACTIVE PRIMARY (82 Tables)" : `STANDBY (${systemChecks.postgresRole})`}</strong>
+          School Database: <strong>{systemChecks.postgresDb ? "ONLINE & READY" : `BACKUP MODE (${systemChecks.postgresRole})`}</strong>
         </div>
         <div className="live-status-item">
           <span className="status-dot online"></span>

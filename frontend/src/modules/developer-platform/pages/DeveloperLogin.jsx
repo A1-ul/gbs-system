@@ -579,8 +579,8 @@ export default function DeveloperLogin() {
         email: cleanEmail,
         password: cleanPass
       });
-      if (response.data?.token || response.data?.status === "success") {
-        const token = response.data?.token || `gbs_dev_token_${Date.now()}`;
+      if (response.data?.token || response.data?.data?.token) {
+        const token = response.data?.token || response.data?.data?.token;
         if (response.data?.refreshToken) {
           localStorage.setItem("gbs_refresh_token", response.data.refreshToken);
         }

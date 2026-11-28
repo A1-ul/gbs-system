@@ -554,7 +554,27 @@ const locateTenantByHeadmaster = async (req, res, next) => {
 const getTenantSubscription = async (req, res, next) => {
   try {
     const { idOrCode } = req.params;
+    const actorRole = String(req.user?.role || '').toUpperCase();
     const subInfo = await devControlService.getTenantSubscription(idOrCode);
+    if (actorRole !== 'DEVELOPER') {
+      const actorTid = parseInt(req.tenantId || req.user?.tenantId || 1, 10) || 1;
+      const actorCode = String(req.user?.tenant?.code || req.user?.tenantCode || '').trim().toLowerCase();
+      const actorName = String(req.user?.tenant?.name || req.user?.schoolName || '').trim().toLowerCase();
+      const paramClean = String(idOrCode || '').trim().toLowerCase();
+      const subTid = parseInt(subInfo?.tenantId || subInfo?.id || 0, 10) || 0;
+      const subCode = String(subInfo?.tenantCode || subInfo?.code || '').trim().toLowerCase();
+      const isOwnTenant =
+        (subTid > 0 && subTid === actorTid) ||
+        (paramClean === String(actorTid)) ||
+        (actorCode && (paramClean === actorCode || subCode === actorCode)) ||
+        (actorName && paramClean === actorName);
+      if (!isOwnTenant) {
+        return res.status(403).json({
+          status: 'fail',
+          message: 'Access denied: you may only view subscription details for your own school.'
+        });
+      }
+    }
     res.status(200).json({
       status: 'success',
       data: subInfo

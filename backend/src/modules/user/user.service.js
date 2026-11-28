@@ -54,11 +54,21 @@ const getUsers = async (tenantId, roleFilter) => {
   } catch (err) {
     console.warn('[User Service] getUsers fallback triggered:', err.message);
     try {
+      const params = [];
       let rawSql = 'SELECT id, "tenantId", "firstName", "lastName", username, email, role, permissions, "isActive", "isLocked", "createdAt" FROM users WHERE "isDeleted" = false';
-      if (tenantId) rawSql += ` AND "tenantId" = ${parseInt(tenantId, 10)}`;
-      if (roleFilter) rawSql += ` AND role = '${roleFilter.toUpperCase()}'`;
+      if (tenantId) {
+        const tidNum = parseInt(tenantId, 10);
+        if (Number.isFinite(tidNum)) {
+          params.push(tidNum);
+          rawSql += ` AND "tenantId" = $${params.length}`;
+        }
+      }
+      if (roleFilter) {
+        params.push(String(roleFilter).trim().toUpperCase());
+        rawSql += ` AND role = $${params.length}`;
+      }
       rawSql += ' ORDER BY "createdAt" DESC LIMIT 100';
-      return await prisma.$queryRawUnsafe(rawSql);
+      return await prisma.$queryRawUnsafe(rawSql, ...params);
     } catch {
       return [];
     }
@@ -89,9 +99,16 @@ const getUserCountsByRole = async (tenantId) => {
   } catch (err) {
     console.warn('[User Service] Warning in prisma.user.findMany for counts:', err.message);
     try {
+      const params = [];
       let rawSql = 'SELECT id, role, "isActive", "isLocked" FROM users WHERE "isDeleted" = false';
-      if (tenantId) rawSql += ` AND "tenantId" = ${parseInt(tenantId, 10)}`;
-      users = await prisma.$queryRawUnsafe(rawSql);
+      if (tenantId) {
+        const tidNum = parseInt(tenantId, 10);
+        if (Number.isFinite(tidNum)) {
+          params.push(tidNum);
+          rawSql += ` AND "tenantId" = $${params.length}`;
+        }
+      }
+      users = await prisma.$queryRawUnsafe(rawSql, ...params);
     } catch (rawErr) {
       console.warn('[User Service] Raw query fallback also failed:', rawErr.message);
       users = [];
@@ -191,10 +208,17 @@ const getUsersByRole = async (tenantId, role) => {
   } catch (err) {
     console.warn(`[User Service] getUsersByRole fallback for ${role}:`, err.message);
     try {
-      let rawSql = `SELECT id, "tenantId", "firstName", "lastName", username, email, role, permissions, "isActive", "isLocked", "createdAt" FROM users WHERE "isDeleted" = false AND role = '${role.toUpperCase()}'`;
-      if (tenantId) rawSql += ` AND "tenantId" = ${parseInt(tenantId, 10)}`;
+      const params = [String(role).trim().toUpperCase()];
+      let rawSql = 'SELECT id, "tenantId", "firstName", "lastName", username, email, role, permissions, "isActive", "isLocked", "createdAt" FROM users WHERE "isDeleted" = false AND role = $1';
+      if (tenantId) {
+        const tidNum = parseInt(tenantId, 10);
+        if (Number.isFinite(tidNum)) {
+          params.push(tidNum);
+          rawSql += ` AND "tenantId" = $${params.length}`;
+        }
+      }
       rawSql += ' ORDER BY "createdAt" DESC LIMIT 100';
-      return await prisma.$queryRawUnsafe(rawSql);
+      return await prisma.$queryRawUnsafe(rawSql, ...params);
     } catch {
       return [];
     }

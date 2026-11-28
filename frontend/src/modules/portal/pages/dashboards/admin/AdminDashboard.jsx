@@ -28,7 +28,7 @@ import ExamVettingHubPanel from "../../../../../components/common/ExamVettingHub
 import LessonNotesVettingModal from "../../../../../components/common/LessonNotesVettingModal";
 import GBSLiveMapMobileTracker from "../../../../../components/common/GBSLiveMapMobileTracker";
 import { openUrlSafely } from "../../../../../utils/safeWindow";
-import { isDemoSandboxMode } from "../../../../../utils/tokenStorage";
+import { isDemoSandboxMode, clearAuthStorage } from "../../../../../utils/tokenStorage";
 import { checkDemoEntryLimit, trackDemoEntryCreated } from "../../../../../utils/demoLimitGuard";
 import { useDashboardTabSync } from "../../../../../hooks/useDashboardTabSync";
 import "./AdminDashboard.css";
@@ -4371,7 +4371,7 @@ export function AdminDashboard({ initialTab } = {}) {
       if (res.data?.status === "success") {
         setFeedback({
           type: "success",
-          message: `Staff member ${staffForm.firstName} ${staffForm.lastName} (${staffForm.role}) verified via OTP and activated in PostgreSQL!`
+          message: `Staff member ${staffForm.firstName} ${staffForm.lastName} (${staffForm.role}) has been verified and activated in the school system!`
         });
         setShowStaffModal(false);
         setStaffOtpModal({ step: "FORM", dispatchedSms: null, inputOtp: "", verifying: false, error: null });
@@ -4666,7 +4666,7 @@ export function AdminDashboard({ initialTab } = {}) {
       });
       setFeedback({
         type: "success",
-        message: `Class '${newClass.name}' (Registration Code: ${newClass.code}) and ${newClass.subjects?.length || 0} assigned course(s) created in PostgreSQL!`
+        message: `Class '${newClass.name}' (Registration Code: ${newClass.code}) and ${newClass.subjects?.length || 0} assigned subject(s) saved successfully!`
       });
       fetchAcademicData();
     } catch (err) {
@@ -5191,7 +5191,7 @@ export function AdminDashboard({ initialTab } = {}) {
           console.warn(`Failed to reject ${appId}`, e);
         }
       }
-      setFeedback({ type: "success", message: `Batch rejected ${successCount} of ${selectedApps.length} applications in PostgreSQL.` });
+      setFeedback({ type: "success", message: `Rejected ${successCount} of ${selectedApps.length} application(s) and updated school records.` });
       setSelectedApps([]);
       fetchAdmissions();
     } catch (err) {
@@ -5203,7 +5203,7 @@ export function AdminDashboard({ initialTab } = {}) {
 
   const handleBatchDelete = async () => {
     if (selectedApps.length === 0) return;
-    if (!window.confirm(`Are you sure you want to permanently delete all ${selectedApps.length} selected applications from PostgreSQL?`)) {
+    if (!window.confirm(`Are you sure you want to permanently delete all ${selectedApps.length} selected application(s)?`)) {
       return;
     }
     setLoading(true);
@@ -5385,8 +5385,8 @@ export function AdminDashboard({ initialTab } = {}) {
   };
 
   const handleLogout = () => {
-    localStorage.removeItem("gbs_token");
-    localStorage.removeItem("gbs_user");
+    clearAuthStorage();
+    sessionStorage.clear();
     navigate("/login/admin");
   };
 
@@ -5490,7 +5490,7 @@ export function AdminDashboard({ initialTab } = {}) {
             <span>School: <strong>{reportSchoolName || getActiveSchoolName(currentUser)}</strong></span>
             <span>Headmaster: <strong>{currentUser.firstName} {currentUser.lastName}</strong></span>
             <span>Tenancy: <strong>{currentUser?.tenantCode || localStorage.getItem("gbs_tenant_code") || "ACTIVE"}</strong></span>
-            <span>Security: <strong>VOICE &amp; RBAC ACTIVE</strong></span>
+            <span>Security: <strong>VOICE &amp; ROLE ACCESS ACTIVE</strong></span>
           </div>
 
           <div className="role-header-actions">
@@ -8760,7 +8760,7 @@ export function AdminDashboard({ initialTab } = {}) {
                 </div>
 
                 <button type="submit" className="btn-primary" disabled={loading} style={{ padding: "10px 24px" }}>
-                  {loading ? "Creating Class & Courses..." : `🚀 Create Class & Commit ${newClass.subjects?.length || 0} Course(s) to PostgreSQL`}
+                  {loading ? "Creating Class & Courses..." : `🚀 Create Class & Save ${newClass.subjects?.length || 0} Course(s)`}
                 </button>
               </form>
 
@@ -12196,7 +12196,7 @@ export function AdminDashboard({ initialTab } = {}) {
                         AUDIT REFERENCE RECORD
                       </h3>
                       <span style={{ fontSize: "0.75rem", color: "#38bdf8", fontFamily: "monospace" }}>
-                        AUDIT-REF-{String(selectedAuditLog.id).padStart(6, "0")} • Immutable PostgreSQL Log
+                        AUDIT-REF-{String(selectedAuditLog.id).padStart(6, "0")} • Verified School Activity Log
                       </span>
                     </div>
                   </div>
@@ -13204,7 +13204,7 @@ export function AdminDashboard({ initialTab } = {}) {
                     <span>🛡️</span> ALL DATA & RECORDS SAFELY PRESERVED
                   </div>
                   <div style={{ fontSize: "0.8rem", color: "#cbd5e1", lineHeight: "1.4" }}>
-                    All student rosters, grades, admissions, and financial records have been automatically snapshotted in encrypted PostgreSQL storage. No data is lost. Full system access is restored immediately upon payment.
+                    All student rosters, grades, admissions, and financial records have been safely backed up in secure school storage. No data is lost. Full system access is restored immediately upon payment.
                   </div>
                 </div>
 

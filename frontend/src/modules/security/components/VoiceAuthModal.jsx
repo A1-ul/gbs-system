@@ -221,7 +221,7 @@ export default function VoiceAuthModal() {
           {matchStatus === "PASS" && (
             <div className="status-badge pass">
               ✅ SPEAKER IDENTITY VERIFIED — PASS (Confidence: {confidenceScore}%)
-              <div className="rbac-eval-note">RBAC Evaluation: Access Granted to User Dashboard</div>
+              <div className="rbac-eval-note">Access Verified: Opening Your Dashboard</div>
             </div>
           )}
 
@@ -255,7 +255,7 @@ export default function VoiceAuthModal() {
               onClick={handleVerifyVoice}
               disabled={loading || !sttText.trim()}
             >
-              {loading ? "VERIFYING VOICE IDENTITY..." : "⚡ VERIFY & EVALUATE RBAC"}
+              {loading ? "VERIFYING VOICE IDENTITY..." : "⚡ VERIFY VOICE & SIGN IN"}
             </button>
           </div>
         </main>

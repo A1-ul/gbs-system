@@ -66,26 +66,34 @@ const getSystemMetrics = async () => {
   let totalActiveLocks = 0;
   let totalBackups = 0;
 
-  const pgLive = typeof prisma.getPostgresLiveStatus === 'function'
-    ? await prisma.getPostgresLiveStatus()
-    : { active: true, engine: 'PostgreSQL', status: 'ACTIVE', poolActiveConnections: 5, poolMaxConnections: 20, latencyMs: 1 };
+  const [pgLive, countResults, infrastructureReport] = await Promise.all([
+    typeof prisma.getPostgresLiveStatus === 'function'
+      ? prisma.getPostgresLiveStatus()
+      : Promise.resolve({ active: true, engine: 'PostgreSQL', status: 'ACTIVE', poolActiveConnections: 5, poolMaxConnections: 20, latencyMs: 1 }),
+    Promise.all([
+      prisma.tenant.count({ where: { isDeleted: false } }),
+      prisma.user.count({ where: { isDeleted: false } }),
+      prisma.systemLock.count({ where: { isLocked: true } }),
+      prisma.systemBackup.count()
+    ]).catch((err) => {
+      console.warn('System telemetry db lookup notice (resilience active):', err.message);
+      const dynInstitutions = authService.getDynamicInstitutions ? authService.getDynamicInstitutions() : [];
+      const storeFallback = readPersistentStore();
+      return [
+        dynInstitutions.length,
+        Math.max(
+          0,
+          Array.isArray(storeFallback.registeredUsers) ? storeFallback.registeredUsers.length : 0,
+          Array.isArray(storeFallback.users) ? storeFallback.users.length : 0
+        ),
+        0,
+        0
+      ];
+    }),
+    cloudInfraManager.getComprehensiveInfrastructureReport(prisma).catch(() => null)
+  ]);
 
-  try {
-    totalTenants = await prisma.tenant.count({ where: { isDeleted: false } });
-    totalUsers = await prisma.user.count({ where: { isDeleted: false } });
-    totalActiveLocks = await prisma.systemLock.count({ where: { isLocked: true } });
-    totalBackups = await prisma.systemBackup.count();
-  } catch (err) {
-    console.warn('System telemetry db lookup notice (resilience active):', err.message);
-    const dynInstitutions = authService.getDynamicInstitutions ? authService.getDynamicInstitutions() : [];
-    const storeFallback = readPersistentStore();
-    totalTenants = dynInstitutions.length;
-    totalUsers = Math.max(
-      0,
-      Array.isArray(storeFallback.registeredUsers) ? storeFallback.registeredUsers.length : 0,
-      Array.isArray(storeFallback.users) ? storeFallback.users.length : 0
-    );
-  }
+  [totalTenants, totalUsers, totalActiveLocks, totalBackups] = countResults;
 
   const socketStats = socketServer.getSocketStats ? socketServer.getSocketStats() : { activeConnections: 0 };
   const memUsage = process.memoryUsage();
@@ -130,7 +138,7 @@ const getSystemMetrics = async () => {
       databaseName: pgLive.database || 'gbs_system',
       connectionPool: pgLive.connectionPool || connectionPoolManager.getPoolStatus()
     },
-    infrastructure: await cloudInfraManager.getComprehensiveInfrastructureReport(prisma).catch(() => null),
+    infrastructure: infrastructureReport,
     metrics: {
       totalTenants,
       totalUsers,

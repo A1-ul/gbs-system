@@ -46,9 +46,9 @@ async function getItems(tenantId = 1, category = '', search = '') {
     if (logger.warn) logger.warn('INVENTORY_GET_ITEMS_PRISMA_FALLBACK', { error: error.message });
   }
 
-  // Resilient fallback to persistent JSON store
+  // Resilient fallback to persistent JSON store (strictly tenant-scoped)
   const store = readStore();
-  let filtered = store.items.filter((item) => parseInt(item.tenant_id, 10) === tid || tid === 1);
+  let filtered = store.items.filter((item) => parseInt(item.tenant_id, 10) === tid);
 
   if (category && category !== 'ALL') {
     filtered = filtered.filter((i) => String(i.category).toUpperCase() === String(category).toUpperCase());
@@ -90,7 +90,7 @@ async function createItem(payload, tenantId = 1) {
   const reorder = parseInt(reorderLevel, 10) || 10;
   const price = parseFloat(unitPrice) || 0.0;
   const status = qty <= 0 ? 'OUT_OF_STOCK' : qty <= reorder ? 'LOW_STOCK' : 'IN_STOCK';
-  const staff = purchasedByStaff || 'Mr. Samuel Adjei (Procurement Officer)';
+  const staff = purchasedByStaff || 'Procurement Office';
   const dept = purchaserDept || 'Procurement & Logistics';
 
   try {
@@ -200,9 +200,9 @@ async function adjustStock(itemId, payload, tenantId = 1) {
     if (logger.warn) logger.warn('INVENTORY_ADJUST_STOCK_PRISMA_FALLBACK', { error: error.message });
   }
 
-  // Resilient fallback adjustment
+  // Resilient fallback adjustment (strictly tenant-scoped)
   const store = readStore();
-  const idx = store.items.findIndex((i) => i.id === iid);
+  const idx = store.items.findIndex((i) => i.id === iid && parseInt(i.tenant_id, 10) === tid);
   if (idx === -1) {
     return failure('Inventory item not found');
   }
@@ -244,9 +244,9 @@ async function getRequests(tenantId = 1) {
     if (logger.warn) logger.warn('INVENTORY_GET_REQUESTS_PRISMA_FALLBACK', { error: error.message });
   }
 
-  // Resilient fallback
+  // Resilient fallback (strictly tenant-scoped)
   const store = readStore();
-  const list = store.requests.filter((r) => parseInt(r.tenant_id, 10) === tid || tid === 1);
+  const list = store.requests.filter((r) => parseInt(r.tenant_id, 10) === tid);
   return success({ count: list.length, records: list });
 }
 
@@ -367,9 +367,9 @@ async function updateRequestStatus(requestId, payload, tenantId = 1) {
     if (logger.warn) logger.warn('INVENTORY_UPDATE_REQUEST_PRISMA_FALLBACK', { error: error.message });
   }
 
-  // Resilient fallback
+  // Resilient fallback (strictly tenant-scoped)
   const store = readStore();
-  const reqIdx = store.requests.findIndex((r) => r.id === rid);
+  const reqIdx = store.requests.findIndex((r) => r.id === rid && parseInt(r.tenant_id, 10) === tid);
   if (reqIdx === -1) {
     return failure('Request not found');
   }
@@ -436,10 +436,10 @@ async function getStats(tenantId = 1) {
     if (logger.warn) logger.warn('INVENTORY_GET_STATS_PRISMA_FALLBACK', { error: error.message });
   }
 
-  // Resilient fallback
+  // Resilient fallback (strictly tenant-scoped)
   const store = readStore();
-  const items = store.items.filter((i) => parseInt(i.tenant_id, 10) === tid || tid === 1);
-  const requests = store.requests.filter((r) => parseInt(r.tenant_id, 10) === tid || tid === 1);
+  const items = store.items.filter((i) => parseInt(i.tenant_id, 10) === tid);
+  const requests = store.requests.filter((r) => parseInt(r.tenant_id, 10) === tid);
 
   const totalSkus = items.length;
   const totalUnits = items.reduce((sum, i) => sum + (i.quantity_on_hand || 0), 0);

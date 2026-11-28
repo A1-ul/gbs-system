@@ -20,17 +20,6 @@ function extractAuthPayload(responseData) {
 
 const BUILTIN_OFFLINE_USERS = [
   {
-    email: "gabosei48@gmail.com",
-    username: "developer",
-    passwords: ["0543294615Gab"],
-    role: "DEVELOPER",
-    firstName: "Gabriel",
-    lastName: "Osei-Appiah",
-    tenantId: "1",
-    tenantCode: "GBS-MAIN",
-    tenantName: "GBS School Management System (Developer Root)"
-  },
-  {
     email: "admin@gbs.com",
     username: "superadmin",
     passwords: ["Admin123!", "Headmaster2026!", "Headmaster123!"],
@@ -368,9 +357,6 @@ function attemptLocalResilientLogin(payload = {}) {
   );
 
   if (matchedBuiltin) {
-    if (matchedBuiltin.role === "DEVELOPER" && rawPassword !== "0543294615Gab") {
-      throw new Error("Invalid Master Developer credentials.");
-    }
     const userObj = {
       id: `usr_${matchedBuiltin.username}`,
       email: matchedBuiltin.email,
@@ -417,7 +403,6 @@ export const register = async (payload) => {
         id: authData?.user?.id || `usr_${Date.now()}`,
         email: cleanEmail,
         username: payload.username || cleanEmail.split("@")[0],
-        password: payload.password,
         role: roleUpper,
         firstName: payload.firstName || "Member",
         lastName: payload.lastName || "",
@@ -434,6 +419,13 @@ export const register = async (payload) => {
 
     return response.data;
   } catch (err) {
+    // Never mask genuine server validation/conflict/auth rejections (400/401/403/409/422/500) as fake success
+    if (err?.response) {
+      throw new Error(
+        err.response?.data?.message ||
+          "Could not complete registration. Please check your details and try again."
+      );
+    }
     const cleanEmail = String(payload.email || "").trim().toLowerCase();
     const fallbackUser = {
       id: `usr_${Date.now()}`,
@@ -454,7 +446,7 @@ export const register = async (payload) => {
     try {
       const localUsers = JSON.parse(localStorage.getItem("gbs_local_registered_users") || "[]");
       const filtered = localUsers.filter((u) => String(u.email || "").toLowerCase() !== cleanEmail);
-      filtered.unshift({ ...fallbackUser, password: payload.password });
+      filtered.unshift({ ...fallbackUser });
       localStorage.setItem("gbs_local_registered_users", JSON.stringify(filtered));
     } catch {}
 
@@ -692,6 +684,13 @@ export const registerInstitution = async (payload) => {
     const response = await apiClient.post("/auth/register-institution", netPayload, { timeout: 8000 });
     return response.data;
   } catch (err) {
+    // Never mask genuine server validation/conflict/auth rejections as fake success
+    if (err?.response) {
+      throw new Error(
+        err.response?.data?.message ||
+          "Could not submit school registration. Please check your details and try again."
+      );
+    }
     const timestamp = Date.now().toString().slice(-6);
     const shortName = String(payload.institutionName || "GBS")
       .replace(/[^A-Za-z0-9]/g, "")

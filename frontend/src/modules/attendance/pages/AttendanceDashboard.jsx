@@ -280,7 +280,7 @@ export default function AttendanceDashboard() {
       };
 
       const res = await axios.post(`${API_BASE}/attendance/mark`, payload, authHeaders);
-      setSaveSuccessMessage(`Attendance saved to PostgreSQL! ${res.data?.message || ''}`);
+      setSaveSuccessMessage(`Attendance saved successfully! ${res.data?.message || ''}`);
       // Refresh roster to update individual stats
       fetchRoster(selectedClassId);
     } catch (err) {
@@ -328,7 +328,7 @@ export default function AttendanceDashboard() {
           <div>
             <h1>Attendance Tracking & Marking Engine</h1>
             <p className="header-subtitle">
-              PostgreSQL ACID Attendance Ledger • Real-time Session Records & Chronic Absenteeism Telemetry
+              Daily Attendance Register • Live Roll-Call Records & Attendance Reports
             </p>
           </div>
         </div>
@@ -514,7 +514,7 @@ export default function AttendanceDashboard() {
           <div className="table-header-row">
             <div>
               <h2>Class Roster ({roster.length} Students)</h2>
-              <p>Select attendance status for each enrolled student and click save to commit to PostgreSQL.</p>
+              <p>Select attendance status for each enrolled student and click Save Attendance.</p>
             </div>
 
             <div className="quick-marking-controls" style={{ display: 'flex', alignItems: 'center', gap: '12px', flexWrap: 'wrap' }}>
@@ -535,7 +535,7 @@ export default function AttendanceDashboard() {
           {loadingRoster ? (
             <div className="loading-state">
               <div className="spinner"></div>
-              <p>Loading enrolled class roster from PostgreSQL...</p>
+              <p>Loading class student roster...</p>
             </div>
           ) : roster.length === 0 ? (
             <div className="empty-state">
@@ -659,7 +659,7 @@ export default function AttendanceDashboard() {
           <div className="table-header-row">
             <div>
               <h2>Session Attendance Ledger ({attendanceDate})</h2>
-              <p>Historical audit records stored in PostgreSQL for the selected date and class.</p>
+              <p>Saved attendance history for the selected date and class.</p>
             </div>
             {historyMetrics && (
               <div className="history-metric-badge">
@@ -671,7 +671,7 @@ export default function AttendanceDashboard() {
           {loadingHistory ? (
             <div className="loading-state">
               <div className="spinner"></div>
-              <p>Loading historical records from PostgreSQL...</p>
+              <p>Loading saved attendance records...</p>
             </div>
           ) : historyRecords.length === 0 ? (
             <div className="empty-state">

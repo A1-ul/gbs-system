@@ -337,11 +337,11 @@ export default function FacilityManagementPage() {
       <section className="facility-ledger-card">
         <div className="ledger-header">
           <h3>Active Campus Maintenance Work Orders</h3>
-          <span className="ledger-count">{tickets.length} Records in PostgreSQL</span>
+          <span className="ledger-count">{tickets.length} Maintenance Tickets</span>
         </div>
 
         {loading ? (
-          <div className="facility-loading">Connecting to PostgreSQL facility records...</div>
+          <div className="facility-loading">Loading maintenance records...</div>
         ) : tickets.length === 0 ? (
           <div className="facility-empty">No work orders matching selected filter criteria.</div>
         ) : (

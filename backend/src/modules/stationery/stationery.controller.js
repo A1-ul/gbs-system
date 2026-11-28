@@ -97,10 +97,24 @@ async function getAuditSummary(req, res, next) {
   }
 }
 
+async function deleteItem(req, res, next) {
+  try {
+    const result = await stationeryService.deleteItem(req);
+    res.status(200).json({
+      status: 'success',
+      message: `Headmaster removed stationery item "${result.name}".`,
+      data: result
+    });
+  } catch (err) {
+    next(err);
+  }
+}
+
 module.exports = {
   getCatalog,
   createItem,
   updateItem,
+  deleteItem,
   recordSale,
   recordExpense,
   approveOrder,

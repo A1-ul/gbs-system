@@ -1,15 +1,18 @@
 'use strict';
 
 const bcrypt = require('bcryptjs');
+const crypto = require('crypto');
 const prisma = require('../../core/database/prisma.client');
 const { AppError } = require('../../middleware/error.middleware');
 
 /**
- * Generates unique enterprise admission application number: ADM-2026-XXXX
+ * Generates collision-resistant unique admission application number: ADM-YYYY-TTTTT-XXXX
  */
 function generateApplicationNumber() {
-  const rand = Math.floor(1000 + Math.random() * 9000);
-  return `ADM-2026-${rand}`;
+  const year = new Date().getFullYear();
+  const timePart = Date.now().toString().slice(-5);
+  const randHex = crypto.randomBytes(2).toString('hex').toUpperCase();
+  return `ADM-${year}-${timePart}-${randHex}`;
 }
 
 /**
@@ -717,7 +720,7 @@ async function updateApplication(tenantId, applicationId, payload, adminUser) {
       action: 'ADMISSION_APPLICATION_UPDATED',
       details: `Updated admission application ${updated.applicationNumber} (${updated.studentFirstName} ${updated.studentLastName}).`
     }
-  }).catch(() => {});
+  }).catch(() => { });
 
   return updated;
 }

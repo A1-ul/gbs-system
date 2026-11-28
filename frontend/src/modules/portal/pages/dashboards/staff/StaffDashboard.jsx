@@ -674,7 +674,7 @@ export default function StaffDashboard() {
                     {tasks.length === 0 ? (
                       <tr>
                         <td colSpan="6" style={{ textAlign: "center", padding: "1.5rem", color: "#94a3b8" }}>
-                          No operational duties or work orders logged in PostgreSQL.
+                          No duties or work orders have been recorded yet.
                         </td>
                       </tr>
                     ) : (

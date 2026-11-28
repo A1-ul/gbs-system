@@ -131,7 +131,7 @@ export default function ParentPortalDashboard() {
       <div className="parent-container">
         {loading ? (
           <div className="parent-state-box">
-            <p>Loading linked student profiles from PostgreSQL...</p>
+            <p>Loading your linked child profiles...</p>
           </div>
         ) : error ? (
           <div className="parent-state-box error-box">

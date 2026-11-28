@@ -167,7 +167,7 @@ export default function OnlineLearningDashboard() {
       } else {
         setActionNotice({
           type: 'success',
-          text: `✅ Joined! Attendance logged into PostgreSQL. Virtual Video Classroom is LIVE!`
+          text: `✅ Joined! Attendance saved. Live Video Classroom is ready!`
         });
       }
 
@@ -611,7 +611,7 @@ export default function OnlineLearningDashboard() {
         {/* Meeting Cards Grid */}
         {loading ? (
           <div className="learning-state-card">
-            <p>Loading active sessions and virtual classrooms from PostgreSQL...</p>
+            <p>Loading active classes and video sessions...</p>
           </div>
         ) : error ? (
           <div className="learning-state-card error-card">

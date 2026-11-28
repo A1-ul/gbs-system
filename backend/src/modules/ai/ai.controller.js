@@ -234,7 +234,7 @@ async function getSystemMemory(req, res, next) {
 
 async function queryVoiceAssistant(req, res, next) {
     try {
-        const query = req.body?.query || req.query?.q || "";
+        const query = req.body?.query || req.body?.question || req.body?.prompt || req.query?.q || "";
         const result = systemMemoryAssistant.answerUserQuery(req, query);
         return res.status(200).json({ status: "success", data: result });
     } catch (error) {

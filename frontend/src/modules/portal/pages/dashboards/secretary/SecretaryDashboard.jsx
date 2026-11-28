@@ -14,6 +14,7 @@ import { checkDemoEntryLimit, trackDemoEntryCreated } from "../../../../../utils
 import { getDashboardTheme } from "../../../../../utils/dashboardTheme";
 import { getActiveSchoolName, getActiveSchoolLogo } from "../../../../../utils/schoolBranding";
 import { getUserAvatar, rotateUserAvatar, getLocalFallbackAvatar } from "../../../../../utils/userAvatars";
+import { clearAuthStorage } from "../../../../../utils/tokenStorage";
 import "../staff/StaffDashboard.css";
 
 export default function SecretaryDashboard() {
@@ -97,10 +98,7 @@ export default function SecretaryDashboard() {
 
   const handleLogout = () => {
     try {
-      localStorage.removeItem("gbs_token");
-      localStorage.removeItem("gbs_access_token");
-      localStorage.removeItem("gbs_user");
-      localStorage.removeItem("gbs_auth_role");
+      clearAuthStorage();
       sessionStorage.clear();
     } catch { }
     navigate("/login/secretary");

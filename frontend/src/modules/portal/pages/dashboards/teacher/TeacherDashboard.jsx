@@ -39,7 +39,7 @@ import DigitalSignaturePadModal from "../../../../../components/common/DigitalSi
 import { getActiveSchoolName, getActiveSchoolLogo } from "../../../../../utils/schoolBranding";
 import { printHtmlSafely, copyTextSafely } from "../../../../../utils/safeWindow";
 import { checkDemoEntryLimit, trackDemoEntryCreated } from "../../../../../utils/demoLimitGuard";
-import { isDemoSandboxMode } from "../../../../../utils/tokenStorage";
+import { isDemoSandboxMode, clearAuthStorage } from "../../../../../utils/tokenStorage";
 import { useDashboardTabSync } from "../../../../../hooks/useDashboardTabSync";
 import { performSmartBack } from "../../../../../utils/globalNavigationScrollManager";
 import "./TeacherDashboard.css";
@@ -2874,7 +2874,7 @@ export default function TeacherDashboard() {
       }
       setFeedback({
         type: "success",
-        message: `✅ Saved & Published: Successfully committed and published grades for ${successCount} student(s) to PostgreSQL and Student Dashboards!`
+        message: `✅ Saved & Published: Grades for ${successCount} student(s) have been saved and sent to their Student Dashboards!`
       });
     } catch (err) {
       setFeedback({ type: "error", message: "Failed to batch save student grades." });
@@ -4153,7 +4153,7 @@ export default function TeacherDashboard() {
       }
       setFeedback({
         type: "success",
-        message: `Examination scores recorded, committed directly to PostgreSQL, and published to student dashboards for ${savedCount} students!`
+        message: `Exam scores saved and published to Student Dashboards for ${savedCount} student(s)!`
       });
     } catch (err) {
       setFeedback({
@@ -4166,8 +4166,8 @@ export default function TeacherDashboard() {
   };
 
   const handleLogout = () => {
-    localStorage.removeItem("gbs_token");
-    localStorage.removeItem("gbs_user");
+    clearAuthStorage();
+    sessionStorage.clear();
     navigate("/login/teacher");
   };
 
@@ -6174,7 +6174,7 @@ export default function TeacherDashboard() {
               <div className="workspace-title-row">
                 <div>
                   <h2><span>🎯</span> EXAMINATIONS, ASSESSMENTS & INDIVIDUAL RESULT GRADING</h2>
-                  <p>Teachers enter each student grade with respect to exact score gotten, saving student-by-student to PostgreSQL.</p>
+                  <p>Enter each student's exact exam score one by one. Every mark saves safely to school records.</p>
                 </div>
                 <div style={{ display: "flex", gap: "10px", flexWrap: "wrap", alignItems: "center" }}>
                   <button
@@ -12624,7 +12624,7 @@ export default function TeacherDashboard() {
                       <span>📝</span> MANUAL ENTRY FOR WRITTEN & MARKED EXAMS RECORDS
                     </h2>
                     <p style={{ margin: "4px 0 0", fontSize: "0.82rem", color: "#94a3b8" }}>
-                      Enter scores for physical papers marked directly by teacher (not online CBT and not AI scanner). Records save student-by-student to PostgreSQL gradebook and can be published to student transcripts.
+                      Enter scores for physical papers marked directly by the teacher (not online exams and not the AI scanner). Each student's score saves safely to the gradebook and can be published to student report cards.
                     </p>
                   </div>
                 </div>

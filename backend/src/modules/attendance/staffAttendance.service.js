@@ -623,7 +623,7 @@ async function updateAttendanceSettings(req) {
       await prisma.$executeRawUnsafe(
         `UPDATE tenant_attendance_policies
          SET reporting_time = $1, workplace_location_name = $2, require_photo_proof = $3
-         WHERE tenant_id = $4`,
+         WHERE "tenantId" = $4`,
         nextSettings.reportingTime,
         nextSettings.workplaceLocationName,
         Boolean(nextSettings.requirePhotoProof),

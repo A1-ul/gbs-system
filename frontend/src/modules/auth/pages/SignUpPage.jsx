@@ -774,7 +774,7 @@ export default function SignUpPage({ defaultRole }) {
         </div>
         <div className="topbar-telemetry">
           <span className="telemetry-pill">
-            <span className="dot online"></span> PostgreSQL Multi-Tenant
+            <span className="dot online"></span> Secure School Account
           </span>
           <span className="telemetry-pill">
             <span className="dot online"></span> Tier-1 Security Encryption

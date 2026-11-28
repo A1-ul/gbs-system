@@ -46,9 +46,23 @@ async function updateStatus(req, res, next) {
   }
 }
 
+async function deleteRecord(req, res, next) {
+  try {
+    const result = await secretaryService.deleteRecord(req);
+    res.status(200).json({
+      status: 'success',
+      message: `Record ${result.referenceCode} deleted successfully.`,
+      data: result
+    });
+  } catch (err) {
+    next(err);
+  }
+}
+
 module.exports = {
   getOverview,
   getRecords,
   createRecord,
-  updateStatus
+  updateStatus,
+  deleteRecord
 };

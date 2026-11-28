@@ -13,7 +13,7 @@ import StaffAttendanceClockWidget from "../../../../../components/common/StaffAt
 import LiveCallLauncherAndReceiver from "../../../../../components/common/LiveCallLauncherAndReceiver";
 import { navigateToDetail } from "../../../../../utils/universalNavigation";
 import { getActiveSchoolName, getActiveSchoolLogo } from "../../../../../utils/schoolBranding";
-import { isDemoSandboxMode } from "../../../../../utils/tokenStorage";
+import { isDemoSandboxMode, clearAuthStorage } from "../../../../../utils/tokenStorage";
 import { checkDemoEntryLimit, trackDemoEntryCreated } from "../../../../../utils/demoLimitGuard";
 import { useDashboardTabSync } from "../../../../../hooks/useDashboardTabSync";
 import { performSmartBack } from "../../../../../utils/globalNavigationScrollManager";
@@ -413,21 +413,29 @@ export default function AccountantDashboard() {
   });
 
   useEffect(() => {
-    const syncAlumniGifts = () => {
+    let active = true;
+    const fetchServerAlumniGifts = async () => {
       try {
-        const stored = JSON.parse(localStorage.getItem("gbs_alumni_pledges_and_gifts") || "[]");
-        if (Array.isArray(stored) && stored.length > 0) {
-          setAlumniPledges(stored);
+        const res = await apiClient.get("/finance/alumni-gifts");
+        const serverGifts = res?.data?.data?.gifts;
+        if (active && Array.isArray(serverGifts) && (serverGifts.length > 0 || !isDemoTenant)) {
+          setAlumniPledges(serverGifts);
         }
       } catch { }
+    };
+    fetchServerAlumniGifts();
+
+    const syncAlumniGifts = () => {
+      fetchServerAlumniGifts();
     };
     window.addEventListener("gbs_alumni_gift_added", syncAlumniGifts);
     window.addEventListener("storage", syncAlumniGifts);
     return () => {
+      active = false;
       window.removeEventListener("gbs_alumni_gift_added", syncAlumniGifts);
       window.removeEventListener("storage", syncAlumniGifts);
     };
-  }, []);
+  }, [isDemoTenant]);
 
   const [newAlumniPledgeForm, setNewAlumniPledgeForm] = useState({
     donorName: "",
@@ -440,7 +448,7 @@ export default function AccountantDashboard() {
     paymentMethod: "MTN Mobile Money"
   });
 
-  const handleRecordAlumniPledge = (e) => {
+  const handleRecordAlumniPledge = async (e) => {
     e.preventDefault();
     const pledged = parseFloat(newAlumniPledgeForm.pledgedAmount);
     if (!pledged || pledged <= 0) {
@@ -450,8 +458,7 @@ export default function AccountantDashboard() {
     const redeemed = parseFloat(newAlumniPledgeForm.redeemedAmount || 0);
     const status = redeemed >= pledged ? "FULFILLED" : redeemed > 0 ? "PARTIALLY_FULFILLED" : "PLEDGED";
 
-    const newRecord = {
-      id: `ALM-PLG-${Date.now().toString().slice(-4)}`,
+    const payload = {
       donorName: newAlumniPledgeForm.donorName.trim(),
       gradClass: newAlumniPledgeForm.gradClass.trim(),
       contact: newAlumniPledgeForm.contact.trim(),
@@ -461,30 +468,43 @@ export default function AccountantDashboard() {
       redeemedAmount: redeemed,
       fulfillmentStatus: status,
       paymentMethod: newAlumniPledgeForm.paymentMethod,
-      date: new Date().toISOString().split("T")[0],
-      receiptRef: `GBS-ALM-REC-${Date.now().toString().slice(-4)}`
+      date: new Date().toISOString().split("T")[0]
     };
 
-    const updated = [newRecord, ...alumniPledges];
-    setAlumniPledges(updated);
     try {
-      localStorage.setItem("gbs_alumni_pledges_and_gifts", JSON.stringify(updated));
-    } catch { }
+      const res = await apiClient.post("/finance/alumni-gifts", payload);
+      const savedRecord = res?.data?.data?.gift || {
+        ...payload,
+        id: `ALM-PLG-${Date.now().toString().slice(-4)}`,
+        receiptRef: `GBS-ALM-REC-${Date.now().toString().slice(-4)}`
+      };
 
-    setFeedback({
-      type: "success",
-      message: `🎉 Alumni gift from ${newRecord.donorName} recorded! Pledged: ${currencySymbol}${pledged.toLocaleString()} (Redeemed: ${currencySymbol}${redeemed.toLocaleString()}).`
-    });
-    setNewAlumniPledgeForm({
-      donorName: "",
-      gradClass: "Class of 2010",
-      contact: "",
-      email: "",
-      campaign: "STEM Scholarship Endowment",
-      pledgedAmount: "",
-      redeemedAmount: "",
-      paymentMethod: "MTN Mobile Money"
-    });
+      const updated = [savedRecord, ...alumniPledges.filter((x) => String(x.id) !== String(savedRecord.id))];
+      setAlumniPledges(updated);
+      try {
+        localStorage.setItem("gbs_alumni_pledges_and_gifts", JSON.stringify(updated));
+      } catch { }
+
+      setFeedback({
+        type: "success",
+        message: `Alumni gift from ${savedRecord.donorName} saved! Pledged: ${currencySymbol}${pledged.toLocaleString()} (Redeemed: ${currencySymbol}${redeemed.toLocaleString()}).`
+      });
+      setNewAlumniPledgeForm({
+        donorName: "",
+        gradClass: "Class of 2010",
+        contact: "",
+        email: "",
+        campaign: "STEM Scholarship Endowment",
+        pledgedAmount: "",
+        redeemedAmount: "",
+        paymentMethod: "MTN Mobile Money"
+      });
+    } catch (err) {
+      setFeedback({
+        type: "error",
+        message: err?.response?.data?.message || "Could not save this alumni gift. Please check the details and try again."
+      });
+    }
   };
 
   // 🏛️ Headmaster Purchases & Procurement Audit Ledger State
@@ -755,7 +775,8 @@ export default function AccountantDashboard() {
     const actualExpenses = expenses.reduce((acc, e) => acc + (parseFloat(e.amount) || 0), 0);
 
     // Institutional Campus Maintenance & Inventory Valuation for Complete Audit Clearance
-    let campusInventoryValuation = 45800.00;
+    const isDemo = isDemoSandboxMode();
+    let campusInventoryValuation = isDemo ? 45800.00 : 0;
     try {
       const depotStock = JSON.parse(localStorage.getItem("gbs_inventory_depot_items") || "[]");
       if (Array.isArray(depotStock) && depotStock.length > 0) {
@@ -765,7 +786,7 @@ export default function AccountantDashboard() {
 
     const campusMaintenanceTotal = headmasterPurchases
       .filter(p => (p.category || "").toLowerCase().includes("maintenance") || (p.itemDescription || "").toLowerCase().includes("maintenance") || (p.itemDescription || "").toLowerCase().includes("repair"))
-      .reduce((acc, p) => acc + (parseFloat(p.amount) || 0), 0) + 14200.00;
+      .reduce((acc, p) => acc + (parseFloat(p.amount) || 0), 0) + (isDemo ? 14200.00 : 0);
 
     const totalAuditedExpenditures = actualExpenses + campusMaintenanceTotal;
     const actualPending = Math.max(0, totalMatrixBilled - actualCollected);
@@ -778,7 +799,7 @@ export default function AccountantDashboard() {
       startDate: targetReq.startDate,
       endDate: targetReq.endDate,
       currencySymbol: currencySymbol,
-      totalBilled: totalMatrixBilled || 148500,
+      totalBilled: isDemo ? (totalMatrixBilled || 148500) : totalMatrixBilled,
       totalCollected: actualCollected,
       totalPending: actualPending,
       totalExpenses: actualExpenses,
@@ -1437,6 +1458,11 @@ export default function AccountantDashboard() {
     const now = new Date();
     const dateStr = now.toISOString().split("T")[0];
     const timeStr = now.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' });
+    const isDemo = isDemoSandboxMode();
+    const realBilled = Number(telemetry.totalBilled || 0) || (isDemo ? 148500 : 0);
+    const realCollected = Number(telemetry.totalCollected || 0) || (isDemo ? 124200 : 0);
+    const realExpenses = Number(telemetry.totalExpenses || 0) || (isDemo ? 31200 : 0);
+    const realRate = Number(telemetry.collectionRate || 0) || (realBilled > 0 ? Math.round((realCollected / realBilled) * 1000) / 10 : (isDemo ? 83.6 : 0));
     const newArchive = {
       academicYear: `Year ${currentFinancialYear} (${currentFinancialYear}-${currentFinancialYear + 1})`,
       yearNumber: currentFinancialYear,
@@ -1444,11 +1470,11 @@ export default function AccountantDashboard() {
       wrappedTime: timeStr,
       wrappedTimestamp: now.toISOString(),
       reportStatus: `REPORT HAS BEEN WRAPPED • Year: ${currentFinancialYear} | Date: ${dateStr} | Time: ${timeStr}`,
-      totalInvoiced: telemetry.totalBilled || 148500,
-      totalCollected: telemetry.totalCollected || 124200,
-      totalExpenses: telemetry.totalExpenses || 31200,
-      netSurplus: (telemetry.totalCollected || 124200) - (telemetry.totalExpenses || 31200),
-      collectionRate: `${telemetry.collectionRate || 83.6}%`,
+      totalInvoiced: realBilled,
+      totalCollected: realCollected,
+      totalExpenses: realExpenses,
+      netSurplus: realCollected - realExpenses,
+      collectionRate: `${realRate}%`,
       auditorStatus: "GAAP & IFRS CERTIFIED UNQUALIFIED OPINION",
       auditChecksum: `SHA256: ${Math.random().toString(36).substring(2, 10)}${Math.random().toString(36).substring(2, 10)}`.toUpperCase()
     };
@@ -1486,8 +1512,8 @@ export default function AccountantDashboard() {
   };
 
   const handleLogout = () => {
-    localStorage.removeItem("gbs_token");
-    localStorage.removeItem("gbs_user");
+    clearAuthStorage();
+    sessionStorage.clear();
     navigate("/login/accountant");
   };
 
@@ -3367,31 +3393,39 @@ export default function AccountantDashboard() {
               {/* Live Database Multi-Gateway & Period Financial Report */}
               <FinancialReportsPanel currencySymbol={currencySymbol === "$" ? "GHS" : (currencySymbol || "GHS")} />
 
-              {/* Financial Telemetry Cards */}
-              <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(260px, 1fr))", gap: "1rem", marginBottom: "2rem" }}>
-                <div className="item-card" style={{ cursor: "pointer" }} onClick={() => setShowAuditModal(true)}>
-                  <span className="role-portal-badge" style={{ color: "#34d399" }}>Gross Billing</span>
-                  <h2 style={{ margin: "4px 0", color: "#f8fafc" }}>{currencySymbol}{(telemetry.totalBilled || 148500).toLocaleString()}</h2>
-                  <p style={{ fontSize: "0.8rem", color: "#94a3b8" }}>Total tuition, laboratory, and hostel billings. Click to audit.</p>
-                </div>
-                <div className="item-card" style={{ cursor: "pointer" }} onClick={() => setShowAuditModal(true)}>
-                  <span className="role-portal-badge" style={{ color: "#3b82f6" }}>Actual Revenue Collected</span>
-                  <h2 style={{ margin: "4px 0", color: "#34d399" }}>{currencySymbol}{(telemetry.totalCollected || 124200).toLocaleString()}</h2>
-                  <p style={{ fontSize: "0.8rem", color: "#94a3b8" }}>Reconciled payments in bank & MoMo accounts. Click to audit.</p>
-                </div>
-                <div className="item-card" style={{ cursor: "pointer" }} onClick={() => setShowAuditModal(true)}>
-                  <span className="role-portal-badge" style={{ color: "#f87171" }}>Operating Expenses</span>
-                  <h2 style={{ margin: "4px 0", color: "#f87171" }}>{currencySymbol}{(telemetry.totalExpenses || 31200).toLocaleString()}</h2>
-                  <p style={{ fontSize: "0.8rem", color: "#94a3b8" }}>Campus power, technology, and maintenance. Click to audit.</p>
-                </div>
-                <div className="item-card" style={{ cursor: "pointer" }} onClick={() => setShowAuditModal(true)}>
-                  <span className="role-portal-badge" style={{ color: "#f59e0b" }}>Net Operating Surplus</span>
-                  <h2 style={{ margin: "4px 0", color: "#10b981" }}>
-                    {currencySymbol}{((telemetry.totalCollected || 124200) - (telemetry.totalExpenses || 31200)).toLocaleString()}
-                  </h2>
-                  <p style={{ fontSize: "0.8rem", color: "#94a3b8" }}>Current net operating surplus. Click to audit.</p>
-                </div>
-              </div>
+              {/* Financial Summary Cards (Strict Live Database Figures; Demo Preview Only in Demo Sandbox) */}
+              {(() => {
+                const isDemo = isDemoSandboxMode();
+                const shownBilled = Number(telemetry.totalBilled || 0) || (isDemo ? 148500 : 0);
+                const shownCollected = Number(telemetry.totalCollected || 0) || (isDemo ? 124200 : 0);
+                const shownExpenses = Number(telemetry.totalExpenses || 0) || (isDemo ? 31200 : 0);
+                return (
+                  <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(260px, 1fr))", gap: "1rem", marginBottom: "2rem" }}>
+                    <div className="item-card" style={{ cursor: "pointer" }} onClick={() => setShowAuditModal(true)}>
+                      <span className="role-portal-badge" style={{ color: "#34d399" }}>Gross Billing</span>
+                      <h2 style={{ margin: "4px 0", color: "#f8fafc" }}>{currencySymbol}{shownBilled.toLocaleString()}</h2>
+                      <p style={{ fontSize: "0.8rem", color: "#94a3b8" }}>Total tuition, laboratory, and hostel billings. Click to audit.</p>
+                    </div>
+                    <div className="item-card" style={{ cursor: "pointer" }} onClick={() => setShowAuditModal(true)}>
+                      <span className="role-portal-badge" style={{ color: "#3b82f6" }}>Actual Revenue Collected</span>
+                      <h2 style={{ margin: "4px 0", color: "#34d399" }}>{currencySymbol}{shownCollected.toLocaleString()}</h2>
+                      <p style={{ fontSize: "0.8rem", color: "#94a3b8" }}>Reconciled payments in bank &amp; MoMo accounts. Click to audit.</p>
+                    </div>
+                    <div className="item-card" style={{ cursor: "pointer" }} onClick={() => setShowAuditModal(true)}>
+                      <span className="role-portal-badge" style={{ color: "#f87171" }}>Operating Expenses</span>
+                      <h2 style={{ margin: "4px 0", color: "#f87171" }}>{currencySymbol}{shownExpenses.toLocaleString()}</h2>
+                      <p style={{ fontSize: "0.8rem", color: "#94a3b8" }}>Campus power, technology, and maintenance. Click to audit.</p>
+                    </div>
+                    <div className="item-card" style={{ cursor: "pointer" }} onClick={() => setShowAuditModal(true)}>
+                      <span className="role-portal-badge" style={{ color: "#f59e0b" }}>Net Operating Surplus</span>
+                      <h2 style={{ margin: "4px 0", color: "#10b981" }}>
+                        {currencySymbol}{(shownCollected - shownExpenses).toLocaleString()}
+                      </h2>
+                      <p style={{ fontSize: "0.8rem", color: "#94a3b8" }}>Current net operating surplus. Click to audit.</p>
+                    </div>
+                  </div>
+                );
+              })()}
 
               {/* Automatic Year-End Detection & Rollover Prompt Banner */}
               <div style={{
@@ -3573,7 +3607,13 @@ export default function AccountantDashboard() {
                         URL.revokeObjectURL(url);
                       };
 
-                      // 1. Master Annual Financial Ledger
+                      // 1. Master Annual Financial Ledger (Strict Live Database Figures)
+                      const isDemoExport = isDemoSandboxMode();
+                      const expBilled = Number(telemetry.totalBilled || 0) || (isDemoExport ? 148500 : 0);
+                      const expCollected = Number(telemetry.totalCollected || 0) || (isDemoExport ? 124200 : 0);
+                      const expPending = Number(telemetry.totalPending || 0) || Math.max(0, expBilled - expCollected);
+                      const expExpenses = Number(telemetry.totalExpenses || 0) || (isDemoExport ? 31200 : 0);
+                      const expRate = Number(telemetry.collectionRate || 0) || (expBilled > 0 ? Math.round((expCollected / expBilled) * 1000) / 10 : 0);
                       const masterCSV = [
                         [`${(reportSchoolName || "INSTITUTION").toUpperCase()} - MASTER FINANCIAL LEDGER`, `Financial Year: ${currentFinancialYear}`],
                         ["Institution", reportSchoolName],
@@ -3581,43 +3621,47 @@ export default function AccountantDashboard() {
                         ["Currency Standard", currencySymbol],
                         [""],
                         ["Summary Metric", "Amount (" + currencySymbol + ")"],
-                        ["Total Gross Billing", (telemetry.totalBilled || 148500)],
-                        ["Total Reconciled Collections", (telemetry.totalCollected || 124200)],
-                        ["Total Outstanding Arrears Due", (telemetry.totalPending || 24300)],
-                        ["Collection Efficiency Rate", `${telemetry.collectionRate || 83.6}%`],
-                        ["Annual Operational Outflow (Salaries + Utilities)", "143500.00"],
-                        ["Net Operating Surplus", "42000.00"],
-                        ["Statutory SSNIT / GRA Filing Status", "VERIFIED COMPLIANT (SHA256-SSNIT-2026-GH)"]
+                        ["Total Gross Billing", expBilled.toFixed(2)],
+                        ["Total Reconciled Collections", expCollected.toFixed(2)],
+                        ["Total Outstanding Arrears Due", expPending.toFixed(2)],
+                        ["Collection Efficiency Rate", `${expRate}%`],
+                        ["Total Recorded Operating Expenses", expExpenses.toFixed(2)],
+                        ["Net Operating Surplus", (expCollected - expExpenses).toFixed(2)],
+                        ["Statutory Compliance Status", "OFFICIAL SCHOOL LEDGER EXPORT"]
                       ].map(row => row.map(cell => `"${String(cell).replace(/"/g, '""')}"`).join(",")).join("\n");
 
-                      // 2. Student Enrollment by Class / Academic Tier & Fee Multiplier
+                      // 2. Student Enrollment by Class / Academic Tier & Fee Multiplier (Live Class Matrix)
+                      const matrixRows = (Array.isArray(classFeeMatrix) && classFeeMatrix.length > 0)
+                        ? classFeeMatrix.map((c) => {
+                          const count = Number(c.studentCount || 0);
+                          const fee = Number(c.feePerStudent || 0);
+                          const gross = count * fee;
+                          const col = Number(c.collected || 0);
+                          const arr = Math.max(0, gross - col);
+                          const eff = gross > 0 ? `${Math.round((col / gross) * 1000) / 10}%` : "0%";
+                          return [c.className || c.code || "Class", String(count), fee.toFixed(2), gross.toFixed(2), col.toFixed(2), arr.toFixed(2), eff, "LIVE RECORD"];
+                        })
+                        : [["No class fee structures recorded yet", "0", "0.00", "0.00", "0.00", "0.00", "0%", "EMPTY"]];
                       const feeMatrixCSV = [
                         ["STUDENT ENROLLMENT BY CLASS / ACADEMIC TIER & FEE MULTIPLIER", `Financial Year: ${currentFinancialYear}`],
-                        ["Academic Tier / Class Level", "Enrolled Students", `Fee Standard (${currencySymbol})`, `Gross Billing Yield (${currencySymbol})`, `Reconciled Collections (${currencySymbol})`, `Outstanding Arrears (${currencySymbol})`, "Collection Efficiency", "Audit Clearance"],
-                        ["Nursery & Kindergarten (Pre-School)", "85", "1200", "102000", "98400", "3600", "96.5%", "AUDITED PASSED"],
-                        ["Primary 1 to Primary 3 (Lower Basic)", "140", "1400", "196000", "182000", "14000", "92.9%", "AUDITED PASSED"],
-                        ["Primary 4 to Primary 6 (Upper Basic)", "165", "1550", "255750", "238000", "17750", "93.1%", "AUDITED PASSED"],
-                        ["Junior High School (JHS 1 - JHS 3)", "180", "1850", "333000", "312500", "20500", "93.8%", "AUDITED PASSED"],
-                        ["Senior High School - STEM Specialization", "120", "2400", "288000", "264000", "24000", "91.7%", "AUDITED PASSED"],
-                        ["Senior High School - Business & Arts", "95", "2200", "209000", "195800", "13200", "93.7%", "AUDITED PASSED"],
-                        ["Undergraduate / College Foundation", "75", "3200", "240000", "217600", "22400", "90.7%", "AUDITED PASSED"],
-                        ["Postgraduate / Executive Diploma", "40", "4500", "180000", "171000", "9000", "95.0%", "AUDITED PASSED"]
+                        ["Academic Tier / Class Level", "Enrolled Students", `Fee Standard (${currencySymbol})`, `Gross Billing Yield (${currencySymbol})`, `Reconciled Collections (${currencySymbol})`, `Outstanding Arrears (${currencySymbol})`, "Collection Efficiency", "Audit Status"],
+                        ...matrixRows
                       ].map(row => row.map(cell => `"${String(cell).replace(/"/g, '""')}"`).join(",")).join("\n");
 
-                      // 3. Monthly Staff Payroll & Operating Expenses
+                      // 3. Recorded Operating Expenses (Live Expenses Table)
+                      const expenseRows = (Array.isArray(expenses) && expenses.length > 0)
+                        ? expenses.map((ex) => [
+                          ex.date || ex.createdAt?.slice(0, 10) || "Recorded",
+                          ex.category || "Operations",
+                          ex.description || ex.title || "School Expense",
+                          Number(ex.amount || 0).toFixed(2),
+                          ex.status || "RECORDED"
+                        ])
+                        : [["No operating expenses recorded yet", "-", "-", "0.00", "EMPTY"]];
                       const expensesCSV = [
-                        ["MONTHLY STAFF PAYROLL & OPERATING EXPENSES SPREADSHEET", `Financial Year: ${currentFinancialYear}`],
-                        ["Calendar Month", "Academic Faculty Payroll", "Administrative & Support", "Campus Utilities & Bandwidth", "Statutory SSNIT (13.5%)", "Total Disbursement", "Audit Clearance Digest"],
-                        ["January", "48200", "24500", "12400", "9814", "94914", "SHA256-PAY-01-CLEARED"],
-                        ["February", "48200", "24500", "11800", "9814", "94314", "SHA256-PAY-02-CLEARED"],
-                        ["March", "48200", "24500", "13200", "9814", "95714", "SHA256-PAY-03-CLEARED"],
-                        ["April", "48200", "24500", "10900", "9814", "93414", "SHA256-PAY-04-CLEARED"],
-                        ["May", "48200", "24500", "12100", "9814", "94614", "SHA256-PAY-05-CLEARED"],
-                        ["June", "48200", "24500", "14500", "9814", "97014", "SHA256-PAY-06-CLEARED"],
-                        ["July", "48200", "24500", "11200", "9814", "93714", "SHA256-PAY-07-CLEARED"],
-                        ["August", "48200", "24500", "10800", "9814", "93314", "SHA256-PAY-08-CLEARED"],
-                        ["September", "52400", "26000", "15800", "10584", "104784", "SHA256-PAY-09-CLEARED"],
-                        ["October", "52400", "26000", "16200", "10584", "105184", "SHA256-PAY-10-CLEARED"]
+                        ["OPERATING EXPENSES LEDGER SPREADSHEET", `Financial Year: ${currentFinancialYear}`],
+                        ["Date", "Category", "Description", `Amount (${currencySymbol})`, "Status"],
+                        ...expenseRows
                       ].map(row => row.map(cell => `"${String(cell).replace(/"/g, '""')}"`).join(",")).join("\n");
 
                       // 4. Debtor Registry & Arrears Audit

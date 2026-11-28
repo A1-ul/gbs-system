@@ -8,6 +8,60 @@ const DATA_DIR = path.resolve(__dirname, '../../../data');
 const BACKUPS_DIR = path.join(DATA_DIR, 'backups');
 const STORE_FILE = path.join(DATA_DIR, 'gbs_persistent_store.json');
 
+let _storeCacheData = null;
+let _storeCacheMtimeMs = -1;
+let _storeCacheSize = -1;
+let _storeCacheDeletedSet = new Set();
+let _storeCacheDeletedLowerSet = new Set();
+
+function _refreshCacheIndexes(data) {
+  _storeCacheData = data;
+  const list = Array.isArray(data?.permanentlyDeletedIds) ? data.permanentlyDeletedIds : [];
+  _storeCacheDeletedSet = new Set(list.map((x) => String(x).trim()));
+  _storeCacheDeletedLowerSet = new Set(list.map((x) => String(x).trim().toLowerCase()));
+}
+
+function _normalizeStoreShape(parsed) {
+  if (!Array.isArray(parsed.topicVideos)) parsed.topicVideos = [];
+  if (!Array.isArray(parsed.institutions)) parsed.institutions = [];
+  if (!Array.isArray(parsed.users)) parsed.users = [];
+  if (!Array.isArray(parsed.subscriptions)) parsed.subscriptions = [];
+  if (!Array.isArray(parsed.registeredUsers)) parsed.registeredUsers = [];
+  if (!Array.isArray(parsed.deletedTenantArchives)) parsed.deletedTenantArchives = [];
+  if (!Array.isArray(parsed.deletedTenantLockouts)) parsed.deletedTenantLockouts = [];
+  if (!Array.isArray(parsed.permanentlyDeletedIds)) parsed.permanentlyDeletedIds = [];
+  if (!Array.isArray(parsed.enterpriseLicenses)) parsed.enterpriseLicenses = [];
+  if (!Array.isArray(parsed.headmasterMessages)) parsed.headmasterMessages = [];
+  if (!Array.isArray(parsed.translatedMessages)) parsed.translatedMessages = [];
+  if (!Array.isArray(parsed.intrusionViolations)) parsed.intrusionViolations = [];
+  if (!Array.isArray(parsed.staffBreachTrials)) parsed.staffBreachTrials = [];
+  if (!Array.isArray(parsed.usedTrialInstitutions)) parsed.usedTrialInstitutions = [];
+  if (!parsed.prismaModels || typeof parsed.prismaModels !== 'object') parsed.prismaModels = {};
+  if (!parsed.rawSqlTables || typeof parsed.rawSqlTables !== 'object') parsed.rawSqlTables = {};
+  if (!parsed.systemEnvironment) {
+    parsed.systemEnvironment = (process.env.GBS_ENVIRONMENT || process.env.NODE_ENV || 'PRODUCTION').toUpperCase();
+  }
+  return parsed;
+}
+
+function getCachedReadOnlyStore() {
+  try {
+    if (fs.existsSync(STORE_FILE)) {
+      const st = fs.statSync(STORE_FILE);
+      if (_storeCacheData && st.mtimeMs === _storeCacheMtimeMs && st.size === _storeCacheSize) {
+        return _storeCacheData;
+      }
+      const raw = fs.readFileSync(STORE_FILE, 'utf8');
+      const parsed = _normalizeStoreShape(JSON.parse(raw));
+      _storeCacheMtimeMs = st.mtimeMs;
+      _storeCacheSize = st.size;
+      _refreshCacheIndexes(parsed);
+      return _storeCacheData;
+    }
+  } catch (_) { }
+  return ensureStoreFile();
+}
+
 function ensureDirectories() {
   if (!fs.existsSync(DATA_DIR)) {
     fs.mkdirSync(DATA_DIR, { recursive: true });
@@ -19,11 +73,8 @@ function ensureDirectories() {
 
 function getActiveEnvironment() {
   try {
-    if (fs.existsSync(STORE_FILE)) {
-      const raw = fs.readFileSync(STORE_FILE, 'utf8');
-      const parsed = JSON.parse(raw);
-      if (parsed.systemEnvironment) return parsed.systemEnvironment;
-    }
+    const snap = getCachedReadOnlyStore();
+    if (snap?.systemEnvironment) return snap.systemEnvironment;
   } catch (_) { }
   return (process.env.GBS_ENVIRONMENT || process.env.NODE_ENV || 'PRODUCTION').toUpperCase();
 }
@@ -111,15 +162,28 @@ function ensureStoreFile() {
 }
 
 function readPersistentStore() {
-  return ensureStoreFile();
+  const cached = getCachedReadOnlyStore();
+  try {
+    return typeof structuredClone === 'function' ? structuredClone(cached) : JSON.parse(JSON.stringify(cached));
+  } catch {
+    return ensureStoreFile();
+  }
 }
 
 function writePersistentStore(updater) {
   try {
-    const current = ensureStoreFile();
-    const updated = typeof updater === 'function' ? updater(current) : { ...current, ...updater };
+    const current = readPersistentStore();
+    const updated = _normalizeStoreShape(
+      typeof updater === 'function' ? updater(current) : { ...current, ...updater }
+    );
     updated.updatedAt = new Date().toISOString();
     fs.writeFileSync(STORE_FILE, JSON.stringify(updated, null, 2), 'utf8');
+    try {
+      const st = fs.statSync(STORE_FILE);
+      _storeCacheMtimeMs = st.mtimeMs;
+      _storeCacheSize = st.size;
+      _refreshCacheIndexes(updated);
+    } catch { }
     return updated;
   } catch (err) {
     return ensureStoreFile();
@@ -146,9 +210,8 @@ function isPermanentlyDeleted(id) {
   if (id === undefined || id === null) return false;
   const target = String(id).trim();
   if (!target) return false;
-  const store = readPersistentStore();
-  const list = Array.isArray(store.permanentlyDeletedIds) ? store.permanentlyDeletedIds : [];
-  return list.some((item) => String(item).trim() === target);
+  getCachedReadOnlyStore();
+  return _storeCacheDeletedSet.has(target);
 }
 
 function addDeletedTenantLockout(lockoutEntry) {
@@ -187,12 +250,12 @@ function addDeletedTenantLockout(lockoutEntry) {
 
 function isTenantLockedOut(criteria = {}) {
   if (!criteria || typeof criteria !== 'object') return false;
-  const store = readPersistentStore();
+  const store = getCachedReadOnlyStore();
   const lockouts = [
     ...(Array.isArray(store.deletedTenantLockouts) ? store.deletedTenantLockouts : []),
     ...(Array.isArray(store.deletedTenantArchives) ? store.deletedTenantArchives : [])
   ];
-  const deletedIds = new Set(Array.isArray(store.permanentlyDeletedIds) ? store.permanentlyDeletedIds.map((x) => String(x).toLowerCase()) : []);
+  const deletedIds = _storeCacheDeletedLowerSet;
 
   const cId = String(criteria.id || criteria.tenantId || '').trim().toLowerCase();
   const cCode = String(criteria.code || criteria.tenantCode || '').trim().toLowerCase();
@@ -257,13 +320,13 @@ function removeDeletedTenantLockout(criteria = {}) {
       : [];
     const deletedIds = Array.isArray(current.permanentlyDeletedIds)
       ? current.permanentlyDeletedIds.filter((x) => {
-          const val = String(x).trim().toLowerCase();
-          if (cId && (val === cId || val === `tenant:${cId}`)) return false;
-          if (cCode && val === cCode) return false;
-          if (cName && val === cName) return false;
-          if (cEmail && val === cEmail) return false;
-          return true;
-        })
+        const val = String(x).trim().toLowerCase();
+        if (cId && (val === cId || val === `tenant:${cId}`)) return false;
+        if (cCode && val === cCode) return false;
+        if (cName && val === cName) return false;
+        if (cEmail && val === cEmail) return false;
+        return true;
+      })
       : [];
 
     return {

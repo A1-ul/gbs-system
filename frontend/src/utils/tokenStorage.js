@@ -175,7 +175,9 @@ export const DEMO_ACCOUNT_EMAILS = new Set([
   "staff@gbs.com",
   "hr@gbs.com",
   "alumni@gbs.com",
-  "secretary@gbs.com"
+  "secretary@gbs.com",
+  "doctor@gbs.com",
+  "nurse@gbs.com"
 ]);
 
 export const DEMO_ACCOUNT_USERNAMES = new Set([
@@ -187,7 +189,9 @@ export const DEMO_ACCOUNT_USERNAMES = new Set([
   "staff1",
   "hr1",
   "alumni1",
-  "secretary1"
+  "secretary1",
+  "doctor1",
+  "nurse1"
 ]);
 
 export const DEMO_ACCOUNT_IDS = new Set([
@@ -211,7 +215,9 @@ export const DEMO_ACCOUNT_IDS = new Set([
   "usr_alumni_master",
   "usr_alumni1",
   "usr_secretary_master",
-  "usr_secretary1"
+  "usr_secretary1",
+  "usr_clinic_doctor_master",
+  "usr_clinic_nurse_master"
 ]);
 
 export const WORKSPACE_MUTABLE_KEYS = [
@@ -321,7 +327,20 @@ export async function resetDemoSandboxData({ reloadPage = true } = {}) {
   }
 }
 
-export function clearAuthStorage() {
+export function clearAuthStorage({ includeDeveloper = false } = {}) {
+  try {
+    const activeToken = getActiveAuthToken({ isDeveloperContext: includeDeveloper });
+    const base = getApiBaseUrl();
+    fetch(`${base}/auth/logout`, {
+      method: "POST",
+      credentials: "include",
+      headers: {
+        "Content-Type": "application/json",
+        ...(activeToken ? { Authorization: `Bearer ${activeToken}` } : {})
+      },
+      body: "{}"
+    }).catch(() => { });
+  } catch { }
   localStorage.removeItem("gbs_token");
   localStorage.removeItem("gbs_access_token");
   localStorage.removeItem("gbs_refresh_token");
@@ -329,6 +348,11 @@ export function clearAuthStorage() {
   localStorage.removeItem("gbs_auth_role");
   localStorage.removeItem("gbs_tenant_id");
   localStorage.removeItem("gbs_tenant");
+  if (includeDeveloper) {
+    localStorage.removeItem("gbs_dev_token");
+    localStorage.removeItem("gbs_developer");
+    localStorage.removeItem("gbs_dev_console_locked");
+  }
   if (typeof window !== "undefined") {
     window.dispatchEvent(new CustomEvent("gbs_auth_session_cleared"));
   }

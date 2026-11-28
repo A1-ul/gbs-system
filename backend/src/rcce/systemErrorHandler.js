@@ -61,7 +61,7 @@ function rcceCentralErrorHandler(err, req, res, next) {
         : 'AUTH_UNAUTHORIZED'
     );
     userFacingMessage = err.name === 'TokenExpiredError'
-      ? 'Your authentication token has expired. Please sign in again.'
+      ? 'Your session has expired. Please sign in again.'
       : rawMessage;
   }
   // 3. Permission & Access Rejections (403)
@@ -80,7 +80,7 @@ function rcceCentralErrorHandler(err, req, res, next) {
       lowerMsg.includes('suspended') ||
       lowerMsg.includes('deleted');
     userFacingMessage = lowerMsg.includes('cross-tenant')
-      ? 'Access denied: Cross-tenant data querying or manipulation is strictly forbidden.'
+      ? 'Access denied: You can only view or change records for your own school.'
       : (isDescriptiveAuthMsg ? rawMessage : 'You do not have permission to perform this operation.');
   }
   // 4. Method Not Allowed (405)
@@ -134,7 +134,7 @@ function rcceCentralErrorHandler(err, req, res, next) {
   else if (derivedStatus === 400 || derivedStatus === 422 || err.type === 'entity.parse.failed' || lowerMsg.includes('missing') || lowerMsg.includes('required') || lowerMsg.includes('must provide') || lowerMsg.includes('invalid')) {
     derivedStatus = derivedStatus || (err.type === 'entity.parse.failed' ? 400 : 400);
     code = code || (derivedStatus === 422 ? 'VALIDATION_FAILED' : 'VALIDATION_MISSING_REQUIRED');
-    userFacingMessage = err.type === 'entity.parse.failed' ? 'Malformed JSON payload in request body.' : rawMessage;
+    userFacingMessage = err.type === 'entity.parse.failed' ? 'The request data could not be read. Please check your details and try again.' : rawMessage;
   }
   else {
     derivedStatus = derivedStatus || 500;

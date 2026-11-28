@@ -224,7 +224,7 @@ export default function AdmissionWorkflowDashboard() {
 
   // Approve & Provision Student Account (Stage 5)
   const handleApproveApplication = async () => {
-    if (!window.confirm(`Are you ready to officially approve ${selectedApp.studentFirstName} ${selectedApp.studentLastName} and automatically provision their student account and parent account in PostgreSQL?`)) {
+    if (!window.confirm(`Are you ready to officially approve ${selectedApp.studentFirstName} ${selectedApp.studentLastName} and automatically create their student and parent accounts?`)) {
       return;
     }
     try {
@@ -238,7 +238,7 @@ export default function AdmissionWorkflowDashboard() {
         setProvisionResult(json.data);
         setActionNotice({
           type: 'success',
-          text: `🎉 Admission Approved! Student account "${json.data.studentUser.email}" provisioned and enrolled into PostgreSQL!`
+          text: `🎉 Admission Approved! Student account "${json.data.studentUser.email}" has been created and enrolled!`
         });
         handleOpenDossier(selectedApp.id);
         fetchData();
@@ -407,7 +407,7 @@ export default function AdmissionWorkflowDashboard() {
         {/* Applications List */}
         {loading ? (
           <div className="adm-state-box">
-            <p>Loading live admissions pipeline from PostgreSQL...</p>
+            <p>Loading live admissions applications...</p>
           </div>
         ) : error ? (
           <div className="adm-state-box error-box">
@@ -660,7 +660,7 @@ export default function AdmissionWorkflowDashboard() {
               <div className="provision-success-banner">
                 <span className="banner-icon">🎉</span>
                 <div>
-                  <strong>Student Account Successfully Provisioned in PostgreSQL!</strong>
+                  <strong>Student Account Created Successfully!</strong>
                   <p>
                     Login Email: <code>{provisionResult.studentUser.email}</code> • Role: <code>STUDENT</code> • Class Enrollment: <code>{selectedApp.targetClass?.name || 'Class Enrolled'}</code>
                   </p>

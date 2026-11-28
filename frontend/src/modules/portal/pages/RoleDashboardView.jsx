@@ -22,9 +22,9 @@ const ROLE_CONFIGS = {
     tagline: "Global Institutional Governance, Tenancy, Security & Cross-Check Verification",
     stats: [
       { label: "Active Modules", value: "18 Operational", icon: "🏛️" },
-      { label: "Security Enforcement", value: "Voice & RBAC Active", icon: "🛡️" },
-      { label: "Database Engine", value: "PostgreSQL Online", icon: "⚡" },
-      { label: "Tenant Status", value: "Multi-Tenant Guarded", icon: "🏢" }
+      { label: "Security Protection", value: "Voice & Role Access Active", icon: "🛡️" },
+      { label: "School Database", value: "Online & Ready", icon: "⚡" },
+      { label: "School Workspace", value: "Private & Protected", icon: "🏢" }
     ],
     quickLinks: [
       { title: "Registration Roster", desc: "User Counts & Drop-List Verification", path: "#registration-roster", icon: "👥", color: "#3b82f6" },
@@ -290,7 +290,7 @@ export default function RoleDashboardView() {
         <div className="telemetry-ticker">
           <div className="ticker-item">
             <span className="pulse-green"></span>
-            <span>PostgreSQL: <strong>CONNECTED</strong></span>
+            <span>School Database: <strong>CONNECTED</strong></span>
           </div>
           <div className="ticker-item">
             <span>Voice Security: <strong>ACTIVE</strong></span>
@@ -368,7 +368,7 @@ export default function RoleDashboardView() {
           <div className="section-header-row">
             <div>
               <h2><span>⚡</span> OPERATIONAL MODULES & MASTER SUBSYSTEMS</h2>
-              <p className="section-subtext">PostgreSQL Database Backed • Live Functional Services</p>
+              <p className="section-subtext">Live School Database • Ready to Use</p>
             </div>
           </div>
 
@@ -396,7 +396,7 @@ export default function RoleDashboardView() {
       <footer className="dashboard-footer">
         <div className="footer-content">
           <span>{tenantSchoolName} • Enterprise Production Architecture</span>
-          <span>PostgreSQL Active • Zero Fake Data • Absolute Real Implementation</span>
+          <span>Live School Database • Real Records • Verified Operations</span>
         </div>
       </footer>
     </div>

@@ -13,6 +13,7 @@ import { useDashboardTabSync } from "../../../../../hooks/useDashboardTabSync";
 import { getDashboardTheme } from "../../../../../utils/dashboardTheme";
 import { getActiveSchoolName, getActiveSchoolLogo } from "../../../../../utils/schoolBranding";
 import { getUserAvatar, rotateUserAvatar, getLocalFallbackAvatar } from "../../../../../utils/userAvatars";
+import { clearAuthStorage } from "../../../../../utils/tokenStorage";
 import "../teacher/TeacherDashboard.css";
 
 const CLINIC_TAB_TO_SECTION = {
@@ -106,10 +107,7 @@ export default function ClinicDashboard() {
 
   const handleLogout = () => {
     try {
-      localStorage.removeItem("gbs_token");
-      localStorage.removeItem("gbs_access_token");
-      localStorage.removeItem("gbs_user");
-      localStorage.removeItem("gbs_auth_role");
+      clearAuthStorage();
       sessionStorage.clear();
     } catch { }
     navigate("/login/clinic");

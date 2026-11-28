@@ -3,6 +3,8 @@
 const express = require('express');
 const { readPersistentStore, writePersistentStore } = require('../../core/database/persistentStore');
 const socketServer = require('../../core/socket/socketServer');
+const { protect } = require('../../middleware/auth.middleware');
+const { tenantStatusGuard } = require('../../middleware/tenant.middleware');
 
 const router = express.Router();
 const { translateBatchTexts } = require('./uiBatchTranslator.service');
@@ -478,14 +480,12 @@ router.post('/batch', async (req, res) => {
   }
 });
 
-router.post('/send-message', async (req, res) => {
+router.post('/send-message', protect, tenantStatusGuard, async (req, res) => {
   try {
+    const authTid = parseInt(req.tenantId || req.user?.tenantId || 1, 10) || 1;
+    const isDev = String(req.user?.role || '').toUpperCase() === 'DEVELOPER';
     const {
-      senderId = null,
-      senderName = 'School Portal User',
-      senderRole = 'USER',
-      senderEmail = '',
-      tenantId = 1,
+      senderName = '',
       receiverRole = 'PARENT',
       receiverRoleLabel = '',
       receiverName = 'All Recipients',
@@ -502,13 +502,18 @@ router.post('/send-message', async (req, res) => {
       return res.status(400).json({ status: 'error', message: 'Message text is required.' });
     }
 
+    const effectiveTenantId = isDev && req.body?.tenantId ? String(req.body.tenantId) : String(authTid);
+    const derivedName = String(
+      senderName || `${req.user?.firstName || ''} ${req.user?.lastName || ''}`.trim() || req.user?.email || 'School Portal User'
+    ).trim();
+
     const record = {
       id: `TR-MSG-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`,
-      tenantId: String(tenantId || '1'),
-      senderId,
-      senderName: String(senderName || 'School Portal User').trim(),
-      senderRole: String(senderRole || 'USER').trim().toUpperCase(),
-      senderEmail: String(senderEmail || '').trim(),
+      tenantId: effectiveTenantId,
+      senderId: req.user?.id || null,
+      senderName: derivedName,
+      senderRole: String(req.user?.role || 'USER').trim().toUpperCase(),
+      senderEmail: String(req.user?.email || '').trim(),
       receiverRole: String(receiverRole || 'PARENT').trim().toUpperCase(),
       receiverRoleLabel: String(receiverRoleLabel || receiverRole || 'PARENT').trim(),
       receiverName: String(receiverName || 'All Recipients').trim(),
@@ -550,10 +555,14 @@ router.post('/send-message', async (req, res) => {
   }
 });
 
-router.get('/messages', (req, res) => {
+router.get('/messages', protect, tenantStatusGuard, (req, res) => {
   try {
     const store = readPersistentStore();
-    const all = Array.isArray(store.translatedMessages) ? store.translatedMessages : [];
+    const isDev = String(req.user?.role || '').toUpperCase() === 'DEVELOPER';
+    const authTid = String(parseInt(req.tenantId || req.user?.tenantId || 1, 10) || 1);
+    const all = (Array.isArray(store.translatedMessages) ? store.translatedMessages : []).filter(
+      (m) => isDev || String(m.tenantId || '1') === authTid
+    );
     const roleFilter = String(req.query?.receiverRole || req.query?.role || '').trim().toUpperCase();
     const limit = Math.min(200, Math.max(1, parseInt(req.query?.limit, 10) || 100));
 
@@ -579,16 +588,18 @@ router.get('/messages', (req, res) => {
   }
 });
 
-router.patch('/messages/:id/read', (req, res) => {
+router.patch('/messages/:id/read', protect, tenantStatusGuard, (req, res) => {
   try {
     const msgId = String(req.params.id || '').trim();
+    const isDev = String(req.user?.role || '').toUpperCase() === 'DEVELOPER';
+    const authTid = String(parseInt(req.tenantId || req.user?.tenantId || 1, 10) || 1);
     const readerName = String(req.body?.readerName || req.user?.email || 'Recipient').trim();
     let updatedMsg = null;
 
     writePersistentStore((curr) => {
       const list = Array.isArray(curr.translatedMessages) ? curr.translatedMessages : [];
       const nextList = list.map((m) => {
-        if (String(m.id) === msgId) {
+        if (String(m.id) === msgId && (isDev || String(m.tenantId || '1') === authTid)) {
           updatedMsg = { ...m, read: true, readAt: new Date().toISOString(), readBy: readerName };
           return updatedMsg;
         }
@@ -596,6 +607,10 @@ router.patch('/messages/:id/read', (req, res) => {
       });
       return { ...curr, translatedMessages: nextList };
     });
+
+    if (!updatedMsg) {
+      return res.status(404).json({ status: 'fail', message: 'Translated message not found for your school.' });
+    }
 
     return res.status(200).json({
       status: 'success',

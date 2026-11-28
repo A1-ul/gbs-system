@@ -10,7 +10,7 @@ import { getUserAvatar } from "../../../../../utils/userAvatars";
 import UniversalRoleGuideModal from "../../../../../components/common/UniversalRoleGuideModal";
 import { navigateToDetail } from "../../../../../utils/universalNavigation";
 import { getActiveSchoolName, getActiveSchoolLogo } from "../../../../../utils/schoolBranding";
-import { isDemoSandboxMode } from "../../../../../utils/tokenStorage";
+import { isDemoSandboxMode, clearAuthStorage } from "../../../../../utils/tokenStorage";
 import { checkDemoEntryLimit, trackDemoEntryCreated } from "../../../../../utils/demoLimitGuard";
 import { copyTextSafely } from "../../../../../utils/safeWindow";
 import SchoolClinicHubPanel from "../../../../../components/common/SchoolClinicHubPanel";
@@ -411,7 +411,7 @@ export default function ParentDashboard() {
       setParentApplications((prev) => [newApp, ...prev]);
       setFeedback({
         type: "success",
-        message: `✅ Admission application for ${admissionForm.studentFirstName} ${admissionForm.studentLastName} submitted directly to Headmaster's review pipeline in PostgreSQL!`
+        message: `✅ Admission application for ${admissionForm.studentFirstName} ${admissionForm.studentLastName} has been sent directly to the Headmaster for review!`
       });
 
       setAdmissionForm((prev) => ({
@@ -926,8 +926,8 @@ export default function ParentDashboard() {
   };
 
   const handleLogout = () => {
-    localStorage.removeItem("gbs_token");
-    localStorage.removeItem("gbs_user");
+    clearAuthStorage();
+    sessionStorage.clear();
     navigate("/login/parent");
   };
 

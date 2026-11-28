@@ -33,7 +33,7 @@ export default function BiometricFaceScannerModal({ isOpen, onClose, onScanCompl
       if (videoRef.current.srcObject !== streamRef.current) {
         videoRef.current.srcObject = streamRef.current;
       }
-      videoRef.current.play?.().catch(() => {});
+      videoRef.current.play?.().catch(() => { });
     }
   }, [isOpen, capturedImage, isHardwareActive, stream]);
 
@@ -189,7 +189,7 @@ export default function BiometricFaceScannerModal({ isOpen, onClose, onScanCompl
         setIsHardwareActive(true);
         if (videoRef.current) {
           videoRef.current.srcObject = mediaStream;
-          videoRef.current.play?.().catch(() => {});
+          videoRef.current.play?.().catch(() => { });
         }
         setLivenessStatus("Live webcam active. Position face in the biometric oval and click 'Capture & Scan Face Now'.");
         return;
@@ -335,7 +335,7 @@ export default function BiometricFaceScannerModal({ isOpen, onClose, onScanCompl
 
         <h3 className="face-scan-title">Headmaster & Executive Facial Onboarding</h3>
         <p className="face-scan-desc">
-          Capture and register your official device camera face biometric profile into the institutional PostgreSQL credential vault.
+          Capture and register your face profile into your secure school account.
         </p>
 
         <div className="face-scan-view-area">
@@ -347,7 +347,7 @@ export default function BiometricFaceScannerModal({ isOpen, onClose, onScanCompl
                   autoPlay
                   playsInline
                   muted
-                  onLoadedMetadata={() => videoRef.current?.play?.().catch(() => {})}
+                  onLoadedMetadata={() => videoRef.current?.play?.().catch(() => { })}
                   className="live-video-element"
                 />
               ) : (

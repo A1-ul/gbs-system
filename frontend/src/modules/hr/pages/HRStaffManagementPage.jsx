@@ -149,7 +149,7 @@ export default function HRStaffManagementPage() {
       setDriverProfiles(updated);
       localStorage.setItem('gbs_driver_profiles', JSON.stringify(updated));
 
-      showToast(`Driver profile for ${driverForm.fullName} created and registered into PostgreSQL!`, 'success');
+      showToast(`Driver profile for ${driverForm.fullName} saved successfully!`, 'success');
 
       setDriverForm({
         fullName: '',
@@ -819,7 +819,7 @@ export default function HRStaffManagementPage() {
                   </div>
 
                   <button type="submit" className="btn-primary" style={{ width: '100%', marginTop: '16px' }}>
-                    🚀 Commit Driver Profile & Provision Vehicle to PostgreSQL
+                    🚀 Save Driver Profile & Assign Vehicle
                   </button>
                 </form>
               </div>

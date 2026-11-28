@@ -370,10 +370,13 @@ app.use('/api/v1', demoLimitMiddleware);
 app.post('/api/v1/auth/register', idempotencyProtection.guard('USER_REGISTRATION'));
 app.post('/api/v1/auth/signup', idempotencyProtection.guard('USER_REGISTRATION'));
 app.post('/api/v1/payments/initiate', idempotencyProtection.guard('FEE_PAYMENT'));
+app.post('/api/v1/finance/payments', idempotencyProtection.guard('FINANCE_FEE_PAYMENT'));
+app.post('/api/v1/finance/alumni-gifts', idempotencyProtection.guard('ALUMNI_ENDOWMENT_GIFT'));
 app.post('/api/v1/ai-exam/vetting/submit', idempotencyProtection.guard('EXAM_VETTING_SUBMISSION'));
 app.post('/api/v1/exams/vetting/submit', idempotencyProtection.guard('EXAM_VETTING_SUBMISSION'));
 app.post('/api/v1/subscriptions/calculate-and-subscribe', idempotencyProtection.guard('SUBSCRIPTION_BILLING'));
 app.post('/api/v1/admissions', idempotencyProtection.guard('ADMISSION_SUBMISSION'));
+app.post('/api/v1/admissions/inquiry', idempotencyProtection.guard('ADMISSION_INQUIRY'));
 app.post('/api/v1/admissions/inquiries', idempotencyProtection.guard('ADMISSION_INQUIRY'));
 app.post('/api/v1/clinic/visits', idempotencyProtection.guard('CLINIC_ENCOUNTER'));
 app.post('/api/v1/university/internships', idempotencyProtection.guard('UNIVERSITY_INTERNSHIP'));
@@ -494,15 +497,21 @@ app.get('/api/v1/audit/logs', protect, restrictTo('ADMIN', 'SUPER_ADMIN', 'HEADM
 
 app.get('/api/v1/topic-videos', protect, (req, res) => {
   const store = readPersistentStore();
+  const isDev = String(req.user?.role || '').toUpperCase() === 'DEVELOPER';
+  const tid = parseInt(req.tenantId || req.user?.tenantId || 1, 10) || 1;
+  const videos = (store.topicVideos || []).filter(
+    (v) => isDev || (parseInt(v.tenantId || 1, 10) || 1) === tid
+  );
   res.status(200).json({
     status: 'success',
-    results: (store.topicVideos || []).length,
-    data: { videos: store.topicVideos || [] }
+    results: videos.length,
+    data: { videos }
   });
 });
 
 app.post('/api/v1/topic-videos', protect, restrictTo('TEACHER', 'ADMIN', 'SUPER_ADMIN', 'HEADMASTER', 'PRINCIPAL', 'DEVELOPER'), (req, res, next) => {
   const body = req.body || {};
+  const tid = parseInt(req.tenantId || req.user?.tenantId || 1, 10) || 1;
   const title = String(body.title || '').trim();
   const videoUrl = String(body.videoUrl || '').trim();
   if (!title) {
@@ -514,6 +523,7 @@ app.post('/api/v1/topic-videos', protect, restrictTo('TEACHER', 'ADMIN', 'SUPER_
 
   const newVideo = {
     id: body.id || `vid_${Date.now()}`,
+    tenantId: tid,
     title,
     subject: String(body.subject || 'General Subject').trim(),
     className: String(body.className || 'All Classes').trim(),
@@ -537,15 +547,21 @@ app.post('/api/v1/topic-videos', protect, restrictTo('TEACHER', 'ADMIN', 'SUPER_
     topicVideos: [newVideo, ...(curr.topicVideos || []).filter((v) => v.id !== newVideo.id)]
   }));
 
+  const tenantVideosCount = (updated.topicVideos || []).filter(
+    (v) => (parseInt(v.tenantId || 1, 10) || 1) === tid
+  ).length;
+
   return res.status(201).json({
     status: 'success',
     message: `Topic video "${newVideo.title}" uploaded and published to the class platform for students to watch!`,
-    data: { video: newVideo, totalVideos: (updated.topicVideos || []).length }
+    data: { video: newVideo, totalVideos: tenantVideosCount }
   });
 });
 
 app.post('/api/v1/topic-videos/:id/watch', protect, (req, res, next) => {
   const { id } = req.params;
+  const tid = parseInt(req.tenantId || req.user?.tenantId || 1, 10) || 1;
+  const isDev = String(req.user?.role || '').toUpperCase() === 'DEVELOPER';
   const { studentName, studentEmail, studentQuestion } = req.body || {};
   const watchRecord = {
     studentName: studentName || `${req.user?.firstName || ''} ${req.user?.lastName || ''}`.trim() || 'Enrolled Student',
@@ -557,7 +573,7 @@ app.post('/api/v1/topic-videos/:id/watch', protect, (req, res, next) => {
   let targetVideo = null;
   writePersistentStore((curr) => {
     const videos = (curr.topicVideos || []).map((v) => {
-      if (String(v.id) === String(id)) {
+      if (String(v.id) === String(id) && (isDev || (parseInt(v.tenantId || 1, 10) || 1) === tid)) {
         const filtered = (v.watchedBy || []).filter(
           (w) => w.studentEmail !== watchRecord.studentEmail
         );
@@ -582,14 +598,20 @@ app.post('/api/v1/topic-videos/:id/watch', protect, (req, res, next) => {
 
 app.delete('/api/v1/topic-videos/:id', protect, restrictTo('TEACHER', 'ADMIN', 'SUPER_ADMIN', 'HEADMASTER', 'PRINCIPAL', 'DEVELOPER'), (req, res, next) => {
   const { id } = req.params;
+  const tid = parseInt(req.tenantId || req.user?.tenantId || 1, 10) || 1;
+  const isDev = String(req.user?.role || '').toUpperCase() === 'DEVELOPER';
   const store = readPersistentStore();
-  const exists = (store.topicVideos || []).some((v) => String(v.id) === String(id));
+  const exists = (store.topicVideos || []).some(
+    (v) => String(v.id) === String(id) && (isDev || (parseInt(v.tenantId || 1, 10) || 1) === tid)
+  );
   if (!exists) {
     return next(new AppError(`Topic video '${id}' was not found.`, 404));
   }
   writePersistentStore((curr) => ({
     ...curr,
-    topicVideos: (curr.topicVideos || []).filter((v) => String(v.id) !== String(id))
+    topicVideos: (curr.topicVideos || []).filter(
+      (v) => !(String(v.id) === String(id) && (isDev || (parseInt(v.tenantId || 1, 10) || 1) === tid))
+    )
   }));
   return res.status(200).json({
     status: 'success',

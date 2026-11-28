@@ -18,11 +18,17 @@ router.get('/children', controller.getMyChildren);
 // 2. Parent viewing specific child's overview (attendance, online classes, homework)
 router.get('/children/:studentId/overview', controller.getChildOverview);
 
-// 3. Admin Emergency Locator search by phone number (Blueprint Box 8)
-router.get('/emergency-search', controller.searchEmergencyContact);
-router.post('/emergency-search', controller.searchEmergencyContact);
-router.get('/search', controller.searchEmergencyContact);
-router.post('/search', controller.searchEmergencyContact);
+const EMERGENCY_SEARCH_ROLES = [
+  'SUPER_ADMIN', 'ADMIN', 'HEADMASTER', 'PRINCIPAL',
+  'TEACHER', 'SECRETARY', 'CLINIC_DOCTOR', 'CLINIC_NURSE',
+  'STAFF', 'HR', 'DEVELOPER'
+];
+
+// 3. Authorized School Emergency Locator search by phone number (strictly blocked for Student/Alumni)
+router.get('/emergency-search', restrictTo(...EMERGENCY_SEARCH_ROLES), controller.searchEmergencyContact);
+router.post('/emergency-search', restrictTo(...EMERGENCY_SEARCH_ROLES), controller.searchEmergencyContact);
+router.get('/search', restrictTo(...EMERGENCY_SEARCH_ROLES), controller.searchEmergencyContact);
+router.post('/search', restrictTo(...EMERGENCY_SEARCH_ROLES), controller.searchEmergencyContact);
 router.post('/live-location', controller.updateLiveLocation);
 
 // 4. Admin managing parent-student links

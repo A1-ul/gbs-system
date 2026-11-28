@@ -7,41 +7,29 @@ const { tenantStatusGuard, tenantIsolationGuard } = require('../../middleware/te
 
 const router = express.Router();
 
-// Optional auth middleware for read-only roster & count endpoints so dashboards and universal detail pages never fail with 401
-const optionalProtect = (req, res, next) => {
-  const authHeader = req.headers.authorization;
-  if (!authHeader || !authHeader.startsWith('Bearer ')) {
-    return next();
-  }
-  protect(req, res, next);
-};
+// All user directory & management endpoints require valid session authentication & tenant isolation
+router.use(protect);
+router.use(tenantStatusGuard);
+router.use(tenantIsolationGuard);
 
 // 1. Live role count aggregations (Master Blueprint Mandatory Requirement)
-router.get('/counts-by-role', optionalProtect, userController.getUserCounts);
+router.get('/counts-by-role', userController.getUserCounts);
 
 // 2. Cross-check registered user list by role
-router.get('/by-role/:role', optionalProtect, userController.getUsersByRole);
+router.get('/by-role/:role', userController.getUsersByRole);
 
 // 2b. Headmaster Pending Staff Applications Queue (must sit BEFORE /:id routes)
 router.get(
   '/pending-staff',
-  protect,
-  tenantStatusGuard,
-  tenantIsolationGuard,
   restrictTo('SUPER_ADMIN', 'ADMIN', 'DEVELOPER'),
   userController.getPendingStaff
 );
 
 // 3. User profile verification & qualification inspection
-router.get('/:id/profile-verification', optionalProtect, userController.getProfileVerification);
+router.get('/:id/profile-verification', userController.getProfileVerification);
 
 // 7. General user listing
-router.get('/', optionalProtect, userController.getUsers);
-
-// All user mutation routes require valid session authentication & tenant isolation
-router.use(protect);
-router.use(tenantStatusGuard);
-router.use(tenantIsolationGuard);
+router.get('/', userController.getUsers);
 
 // 4. Admin qualification verification & approval
 router.patch(

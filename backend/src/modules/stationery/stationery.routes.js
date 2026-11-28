@@ -54,6 +54,7 @@ router.get('/catalog', restrictTo(...ALL_SCHOOL_ROLES), controller.getCatalog);
 router.post('/items', restrictTo('ADMIN', 'SUPER_ADMIN', 'HEADMASTER', 'PRINCIPAL'), controller.createItem);
 router.put('/items/:id', restrictTo('ADMIN', 'SUPER_ADMIN', 'HEADMASTER', 'PRINCIPAL'), controller.updateItem);
 router.patch('/items/:id', restrictTo('ADMIN', 'SUPER_ADMIN', 'HEADMASTER', 'PRINCIPAL'), controller.updateItem);
+router.delete('/items/:id', restrictTo('ADMIN', 'SUPER_ADMIN', 'HEADMASTER', 'PRINCIPAL'), controller.deleteItem);
 
 // Sales & Order Requests (unitPrice strictly locked to Headmaster catalog value)
 router.post('/sales', restrictTo(...ALL_SCHOOL_ROLES), controller.recordSale);

@@ -3,6 +3,81 @@
 const prisma = require('../../core/database/prisma.client');
 const logger = require('../../utils/logger') || console;
 
+let libraryTablesEnsured = false;
+let ensureLibraryPromise = null;
+
+async function ensureLibraryTables() {
+  if (libraryTablesEnsured) return true;
+  if (ensureLibraryPromise) return ensureLibraryPromise;
+
+  ensureLibraryPromise = (async () => {
+    try {
+      if (typeof prisma.isPostgresOnline === 'function') {
+        const online = await prisma.isPostgresOnline();
+        if (!online) {
+          libraryTablesEnsured = true;
+          return true;
+        }
+      }
+      const ddl = [
+        `CREATE TABLE IF NOT EXISTS library_books (
+          id SERIAL PRIMARY KEY,
+          tenant_id INTEGER NOT NULL DEFAULT 1,
+          isbn VARCHAR(100) NOT NULL,
+          title VARCHAR(255) NOT NULL,
+          author VARCHAR(255) NOT NULL,
+          category VARCHAR(100) DEFAULT 'GENERAL',
+          shelf_location VARCHAR(100) DEFAULT 'Section A-1',
+          total_copies INTEGER NOT NULL DEFAULT 1,
+          available_copies INTEGER NOT NULL DEFAULT 1,
+          class_level VARCHAR(100) DEFAULT 'General',
+          subject_name VARCHAR(150) DEFAULT 'General Studies',
+          ebook_url TEXT,
+          created_at TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+          updated_at TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP
+        )`,
+        `ALTER TABLE library_books ADD COLUMN IF NOT EXISTS class_level VARCHAR(100) DEFAULT 'General'`,
+        `ALTER TABLE library_books ADD COLUMN IF NOT EXISTS subject_name VARCHAR(150) DEFAULT 'General Studies'`,
+        `ALTER TABLE library_books ADD COLUMN IF NOT EXISTS ebook_url TEXT`,
+        `CREATE TABLE IF NOT EXISTS library_loans (
+          id SERIAL PRIMARY KEY,
+          tenant_id INTEGER NOT NULL DEFAULT 1,
+          book_id INTEGER NOT NULL REFERENCES library_books(id) ON DELETE CASCADE,
+          borrower_id INTEGER NOT NULL DEFAULT 1,
+          borrower_name VARCHAR(255) NOT NULL,
+          borrower_role VARCHAR(50) DEFAULT 'STUDENT',
+          borrowed_at TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+          due_date TIMESTAMP(3) NOT NULL,
+          returned_at TIMESTAMP(3),
+          status VARCHAR(50) DEFAULT 'BORROWED',
+          fine_amount NUMERIC(10,2) DEFAULT 0,
+          fine_paid BOOLEAN DEFAULT FALSE,
+          student_id_code VARCHAR(100),
+          class_level VARCHAR(100) DEFAULT 'General',
+          contact_phone VARCHAR(60),
+          created_at TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP
+        )`,
+        `ALTER TABLE library_loans ADD COLUMN IF NOT EXISTS student_id_code VARCHAR(100)`,
+        `ALTER TABLE library_loans ADD COLUMN IF NOT EXISTS class_level VARCHAR(100) DEFAULT 'General'`,
+        `ALTER TABLE library_loans ADD COLUMN IF NOT EXISTS contact_phone VARCHAR(60)`
+      ];
+      for (const stmt of ddl) {
+        try {
+          await prisma.$executeRawUnsafe(stmt);
+        } catch (err) {
+          if (logger.warn) logger.warn('ENSURE_LIBRARY_TABLES_NOTICE', { error: err.message });
+        }
+      }
+      libraryTablesEnsured = true;
+      return true;
+    } finally {
+      ensureLibraryPromise = null;
+    }
+  })();
+
+  return ensureLibraryPromise;
+}
+
 function success(data = null, message = null) {
   return {
     success: true,
@@ -21,6 +96,7 @@ function failure(message) {
 
 async function getBooks(tenantId = 1, search = '') {
   try {
+    await ensureLibraryTables();
     const tid = parseInt(tenantId, 10) || 1;
     let query = 'SELECT * FROM library_books WHERE tenant_id = $1';
     const params = [tid];
@@ -44,6 +120,7 @@ async function getBooks(tenantId = 1, search = '') {
 
 async function getBookById(id, tenantId = 1) {
   try {
+    await ensureLibraryTables();
     const tid = parseInt(tenantId, 10) || 1;
     const bid = parseInt(id, 10);
     const books = await prisma.$queryRawUnsafe(
@@ -64,6 +141,7 @@ async function getBookById(id, tenantId = 1) {
 
 async function createBook(payload, tenantId = 1) {
   try {
+    await ensureLibraryTables();
     const tid = parseInt(tenantId, 10) || 1;
     const { isbn, title, author, category, shelfLocation, totalCopies, classLevel, subjectName, ebookUrl } = payload;
 
@@ -90,6 +168,7 @@ async function createBook(payload, tenantId = 1) {
 
 async function updateBook(id, payload, tenantId = 1) {
   try {
+    await ensureLibraryTables();
     const tid = parseInt(tenantId, 10) || 1;
     const bid = parseInt(id, 10);
     const { title, author, category, shelfLocation, totalCopies } = payload;
@@ -125,6 +204,7 @@ async function updateBook(id, payload, tenantId = 1) {
 
 async function deleteBook(id, tenantId = 1) {
   try {
+    await ensureLibraryTables();
     const tid = parseInt(tenantId, 10) || 1;
     const bid = parseInt(id, 10);
     await prisma.$queryRawUnsafe(
@@ -141,6 +221,7 @@ async function deleteBook(id, tenantId = 1) {
 
 async function borrowBook(payload, tenantId = 1) {
   try {
+    await ensureLibraryTables();
     const tid = parseInt(tenantId, 10) || 1;
     const { bookId, borrowerId, borrowerName, borrowerRole, dueDays, studentIdCode, classLevel, contactPhone } = payload;
 
@@ -170,7 +251,7 @@ async function borrowBook(payload, tenantId = 1) {
       INSERT INTO library_loans (tenant_id, book_id, borrower_id, borrower_name, borrower_role, due_date, status, student_id_code, class_level, contact_phone)
       VALUES ($1, $2, $3, $4, $5, $6, 'BORROWED', $7, $8, $9)
       RETURNING *;
-    `, tid, bid, uid, borrowerName || 'Student Borrower', borrowerRole || 'STUDENT', dueDate, studentIdCode || `GBS-STU-${uid}`, classLevel || 'General', contactPhone || '+1 (555) 019-2834');
+    `, tid, bid, uid, borrowerName || 'Student Borrower', borrowerRole || 'STUDENT', dueDate, studentIdCode || `GBS-STU-${uid}`, classLevel || 'General', contactPhone || '');
 
     await prisma.$executeRawUnsafe(
       'UPDATE library_books SET available_copies = available_copies - 1, updated_at = NOW() WHERE id = $1',
@@ -186,6 +267,7 @@ async function borrowBook(payload, tenantId = 1) {
 
 async function returnBook(loanId, tenantId = 1) {
   try {
+    await ensureLibraryTables();
     const tid = parseInt(tenantId, 10) || 1;
     const lid = parseInt(loanId, 10);
 
@@ -209,7 +291,7 @@ async function returnBook(loanId, tenantId = 1) {
     let fine = 0;
     if (now > dueDate) {
       const overdueDays = Math.ceil((now - dueDate) / (1000 * 60 * 60 * 24));
-      fine = overdueDays * 1.50; // $1.50 per overdue day
+      fine = overdueDays * 1.50;
     }
 
     const updated = await prisma.$queryRawUnsafe(`
@@ -226,7 +308,7 @@ async function returnBook(loanId, tenantId = 1) {
       loan.book_id
     );
 
-    return success(updated[0], fine > 0 ? `Book returned. Overdue fine calculated: $${fine.toFixed(2)}` : 'Book returned successfully with zero fines');
+    return success(updated[0], fine > 0 ? `Book returned. Overdue fine calculated: GH₵ ${fine.toFixed(2)}` : 'Book returned successfully with zero fines');
   } catch (error) {
     if (logger.error) logger.error('LIBRARY_RETURN_BOOK_ERROR', { error: error.message });
     return failure('Failed to process return');
@@ -235,6 +317,7 @@ async function returnBook(loanId, tenantId = 1) {
 
 async function getLoans(tenantId = 1, status = '') {
   try {
+    await ensureLibraryTables();
     const tid = parseInt(tenantId, 10) || 1;
     let query = `
       SELECT l.*, b.title as book_title, b.isbn, b.author, b.class_level as book_class_level, b.subject_name as book_subject
@@ -263,6 +346,7 @@ async function getLoans(tenantId = 1, status = '') {
 
 async function getStats(tenantId = 1) {
   try {
+    await ensureLibraryTables();
     const tid = parseInt(tenantId, 10) || 1;
     const bookStats = await prisma.$queryRawUnsafe(`
       SELECT 

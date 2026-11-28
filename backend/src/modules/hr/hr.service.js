@@ -22,11 +22,16 @@ function failure(message) {
 async function getStaffProfiles(tenantId = 1) {
   try {
     const tid = parseInt(tenantId, 10) || 1;
-    // Fetch users with roles TEACHER, ACCOUNTANT, STAFF, ADMIN
+    // Fetch all institutional staff roles across the school
     const users = await prisma.user.findMany({
       where: {
         tenantId: tid,
-        role: { in: ['TEACHER', 'ACCOUNTANT', 'STAFF', 'ADMIN', 'HR'] }
+        role: {
+          in: [
+            'TEACHER', 'ACCOUNTANT', 'STAFF', 'ADMIN', 'SUPER_ADMIN',
+            'HR', 'SECRETARY', 'CLINIC_DOCTOR', 'CLINIC_NURSE'
+          ]
+        }
       },
       select: {
         id: true,

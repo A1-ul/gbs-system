@@ -579,7 +579,7 @@ export default function HRDashboard() {
               { id: "leaves", label: "🏖️ Leave & Absence Management", icon: "📅", count: leaveRequests.filter(l => l.status === "PENDING").length },
               { id: "payroll_structure", label: "💳 Payroll & Salary Tiers", icon: "📊" },
               { id: "calls", label: "🎥 Live Video & Voice Calls", icon: "📹" },
-              { id: "clinic", label: "🏥 School Clinic & Teacher Health", icon: "🩺" }
+              { id: "clinic", label: "🩺 My Health Status", icon: "🩺" }
             ].map(tab => (
               <button
                 key={tab.id}

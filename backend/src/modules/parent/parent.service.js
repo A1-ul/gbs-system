@@ -97,7 +97,7 @@ async function linkParentStudent(tenantId, payload, adminUser) {
 /**
  * Retrieve children linked to a parent user
  */
-async function getParentChildren(tenantId, parentId) {
+async function getParentChildren(tenantId, parentId, { isDemo = false } = {}) {
   const tid = parseInt(tenantId, 10);
   const pid = parseInt(parentId, 10);
 
@@ -117,8 +117,8 @@ async function getParentChildren(tenantId, parentId) {
     }
   });
 
-  // If no explicit links, find active students in this tenant to automatically link or present
-  if (links.length === 0) {
+  // Auto-link sample demo wards STRICTLY in Demo Sandbox on Tenant 1 — NEVER auto-link unrelated students in Live Production!
+  if (links.length === 0 && isDemo && tid === 1) {
     const defaultStudents = await prisma.user.findMany({
       where: { tenantId: tid, role: 'STUDENT', isActive: true },
       take: 2,
@@ -235,15 +235,19 @@ async function getParentChildren(tenantId, parentId) {
 /**
  * Retrieve detailed child overview for Parent Portal dashboard
  */
-async function getChildOverview(tenantId, parentId, studentId) {
+async function getChildOverview(tenantId, parentId, studentId, actorUser = null) {
   const tid = parseInt(tenantId, 10);
   const pid = parseInt(parentId, 10);
   const sid = parseInt(studentId, 10);
 
-  // Check link existence (unless super admin)
+  // Strict Parent Privacy Check: A PARENT may ONLY inspect students officially linked to them
   const link = await prisma.parentStudentLink.findFirst({
     where: { tenantId: tid, parentId: pid, studentId: sid }
   });
+  const actorRole = String(actorUser?.role || '').trim().toUpperCase();
+  if (actorRole === 'PARENT' && !link) {
+    throw new AppError('Access denied: You can only view records for your own linked children.', 403);
+  }
 
   const student = await prisma.user.findFirst({
     where: { id: sid, tenantId: tid, role: 'STUDENT' },

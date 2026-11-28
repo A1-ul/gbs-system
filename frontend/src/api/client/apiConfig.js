@@ -3,7 +3,7 @@
  * Centralized API & Server URL detection for Desktop, Mobile Phone Browsers, Cloud deployments, and LAN clients.
  * Supports:
  * 1. Vite dev/preview proxy (:3000 / :5173) via same-origin so localhost, LAN mobile devices, and single-port tunnels work cleanly
- * 2. Render static frontend CDN (gbs-frontend.onrender.com -> gbs-school.onrender.com) and explicit VITE_API_BASE_URL overrides
+ * 2. Render static frontend CDN (gbs-frontend.onrender.com -> gbs-system.onrender.com) and explicit VITE_API_BASE_URL overrides
  * 3. Same-origin production hosting and direct Express backend serving
  */
 

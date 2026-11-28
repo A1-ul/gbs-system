@@ -779,10 +779,33 @@ async function getAuditSummary(req) {
   };
 }
 
+async function deleteItem(req) {
+  assertHeadmasterPriceAuthority(req.user);
+  const tid = parseInt(req.tenantId || req.user?.tenantId || 1, 10) || 1;
+  const id = String(req.params.id || '').trim();
+  const existing = await prisma.stationeryItem.findFirst({ where: { id, tenantId: tid } });
+  if (!existing) {
+    throw new AppError('Stationery item not found.', 404);
+  }
+  await prisma.stationeryItem.delete({ where: { id: existing.id } });
+  await prisma.auditLog.create({
+    data: {
+      tenantId: tid,
+      userId: parseNumericUserId(req.user),
+      module: 'SCHOOL_STATIONERY',
+      action: 'STATIONERY_ITEM_DELETED',
+      details: `${getActorDisplayName(req.user)} deleted stationery item "${existing.name}" (${existing.itemCode}).`,
+      ipAddress: '127.0.0.1'
+    }
+  }).catch(() => { });
+  return { deleted: true, id: existing.id, name: existing.name };
+}
+
 module.exports = {
   listCatalog,
   createItem,
   updateItem,
+  deleteItem,
   recordSaleOrOrder,
   recordExpense,
   approveOrderRequest,

@@ -32,7 +32,7 @@ const ROLE_GUIDES = {
         steps: [
           "Click '📹 Inbuilt CCTV & Mobile' in the header to view live encrypted campus camera feeds (Main Gate, Exam Hall, Administration, Science Block) and pair with the Headmaster's smartphone.",
           "Open the '🚨 Emergency Parent Locator' tab to look up any student's guardian phone number and launch live Google Maps GPS directions to their home/workplace.",
-          "Monitor security status ('VOICE & RBAC ACTIVE') and review audit logs for any unauthorized deletion attempts."
+          "Monitor security status ('VOICE & ROLE ACCESS ACTIVE') and review activity logs for any unauthorized deletion attempts."
         ]
       },
       {
